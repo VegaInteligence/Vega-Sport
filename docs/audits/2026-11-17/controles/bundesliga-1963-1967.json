@@ -1,0 +1,59 @@
+{
+  "seasons": [
+    {
+      "year": 1963,
+      "official_matches": 240,
+      "public_rows": 265,
+      "no_public_home_away_pair": 0,
+      "multiples": 25,
+      "excess_rows": 25,
+      "matches_with_exact_entry": 237,
+      "public_dates_disagree": 3,
+      "public_scores_disagree": 0
+    },
+    {
+      "year": 1964,
+      "official_matches": 240,
+      "public_rows": 269,
+      "no_public_home_away_pair": 0,
+      "multiples": 29,
+      "excess_rows": 29,
+      "matches_with_exact_entry": 235,
+      "public_dates_disagree": 6,
+      "public_scores_disagree": 0
+    },
+    {
+      "year": 1965,
+      "official_matches": 306,
+      "public_rows": 338,
+      "no_public_home_away_pair": 0,
+      "multiples": 32,
+      "excess_rows": 32,
+      "matches_with_exact_entry": 300,
+      "public_dates_disagree": 6,
+      "public_scores_disagree": 0
+    },
+    {
+      "year": 1966,
+      "official_matches": 306,
+      "public_rows": 320,
+      "no_public_home_away_pair": 0,
+      "multiples": 14,
+      "excess_rows": 14,
+      "matches_with_exact_entry": 303,
+      "public_dates_disagree": 3,
+      "public_scores_disagree": 0
+    }
+  ],
+  "sources": 68,
+  "totals": {
+    "official_matches": 1092,
+    "public_rows": 1192,
+    "no_public_home_away_pair": 0,
+    "multiples": 100,
+    "excess_rows": 100,
+    "matches_with_exact_entry": 1075,
+    "public_dates_disagree": 18,
+    "public_scores_disagree": 0
+  }
+}

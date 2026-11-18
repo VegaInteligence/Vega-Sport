@@ -1,0 +1,169 @@
+{
+  "period": {
+    "primary_schedule": {
+      "pairs": 20,
+      "components": 10,
+      "team_ids": 25,
+      "empty_crest": 15,
+      "both_sides_have_no_crest": 5,
+      "one_side_has_a_crest": 15,
+      "countries": {
+        "ESP": 5,
+        "FRA": 15
+      },
+      "primary_witness_sides": 676,
+      "primary_witness_matches": 592,
+      "all_source_witness_sides": 2263,
+      "all_source_witness_matches": 2017,
+      "upper_bound_full_lifetime_top_flight_stored_sides": 20937,
+      "upper_bound_full_lifetime_top_flight_stored_matches": 19096
+    },
+    "primary_examples": {
+      "pairs": 5,
+      "components": 3,
+      "team_ids": 7,
+      "empty_crest": 4,
+      "both_sides_have_no_crest": 1,
+      "one_side_has_a_crest": 4,
+      "countries": {
+        "ESP": 1,
+        "ITA": 3,
+        "SCO": 1
+      },
+      "primary_witness_sides": 192,
+      "primary_witness_matches": 192,
+      "all_source_witness_sides": 758,
+      "all_source_witness_matches": 758,
+      "upper_bound_full_lifetime_top_flight_stored_sides": 10210,
+      "upper_bound_full_lifetime_top_flight_stored_matches": 10210
+    },
+    "all_primary": {
+      "pairs": 25,
+      "components": 13,
+      "team_ids": 32,
+      "empty_crest": 19,
+      "both_sides_have_no_crest": 6,
+      "one_side_has_a_crest": 19,
+      "countries": {
+        "ESP": 6,
+        "FRA": 15,
+        "ITA": 3,
+        "SCO": 1
+      },
+      "primary_witness_sides": 868,
+      "primary_witness_matches": 777,
+      "all_source_witness_sides": 3021,
+      "all_source_witness_matches": 2739,
+      "upper_bound_full_lifetime_top_flight_stored_sides": 31147,
+      "upper_bound_full_lifetime_top_flight_stored_matches": 28906
+    },
+    "external_period_candidate": {
+      "pairs": 3,
+      "components": 3,
+      "team_ids": 6,
+      "empty_crest": 4,
+      "both_sides_have_no_crest": 1,
+      "one_side_has_a_crest": 2,
+      "countries": {
+        "ESP": 1,
+        "ITA": 1,
+        "SCO": 1
+      },
+      "primary_witness_sides": 0,
+      "primary_witness_matches": 0,
+      "all_source_witness_sides": 446,
+      "all_source_witness_matches": 446,
+      "upper_bound_full_lifetime_top_flight_stored_sides": 5280,
+      "upper_bound_full_lifetime_top_flight_stored_matches": 5280
+    },
+    "hold": {
+      "pairs": 7,
+      "components": 5,
+      "team_ids": 11,
+      "empty_crest": 7,
+      "both_sides_have_no_crest": 3,
+      "one_side_has_a_crest": 4,
+      "countries": {
+        "FRA": 1,
+        "ITA": 6
+      },
+      "primary_witness_sides": 66,
+      "primary_witness_matches": 66,
+      "all_source_witness_sides": 1158,
+      "all_source_witness_matches": 1090,
+      "upper_bound_full_lifetime_top_flight_stored_sides": 10089,
+      "upper_bound_full_lifetime_top_flight_stored_matches": 9583
+    },
+    "all_candidates": {
+      "pairs": 35,
+      "components": 21,
+      "team_ids": 49,
+      "empty_crest": 30,
+      "both_sides_have_no_crest": 10,
+      "one_side_has_a_crest": 25,
+      "countries": {
+        "ESP": 7,
+        "FRA": 16,
+        "ITA": 10,
+        "SCO": 2
+      },
+      "primary_witness_sides": 934,
+      "primary_witness_matches": 818,
+      "all_source_witness_sides": 4625,
+      "all_source_witness_matches": 4073,
+      "upper_bound_full_lifetime_top_flight_stored_sides": 46516,
+      "upper_bound_full_lifetime_top_flight_stored_matches": 42181
+    }
+  },
+  "same_event": {
+    "dfb_event_confirmed": {
+      "pairs": 1,
+      "fixture_clusters": 88,
+      "distinct_physical_matches": 176,
+      "all_physical_sides": 352,
+      "sides_on_split_key": 176
+    },
+    "hold_one_id_two_period_candidates": {
+      "pairs": 2,
+      "fixture_clusters": 242,
+      "distinct_physical_matches": 484,
+      "all_physical_sides": 968,
+      "sides_on_split_key": 484
+    },
+    "hold_restructuring_or_successor": {
+      "pairs": 2,
+      "fixture_clusters": 15,
+      "distinct_physical_matches": 30,
+      "all_physical_sides": 60,
+      "sides_on_split_key": 30
+    },
+    "insufficient_distinct_opponents": {
+      "pairs": 4,
+      "fixture_clusters": 21,
+      "distinct_physical_matches": 42,
+      "all_physical_sides": 84,
+      "sides_on_split_key": 42
+    },
+    "recurring_other_source_confirmation_required": {
+      "pairs": 4,
+      "fixture_clusters": 403,
+      "distinct_physical_matches": 806,
+      "all_physical_sides": 1612,
+      "sides_on_split_key": 806
+    },
+    "reject_different_opponents": {
+      "pairs": 3,
+      "fixture_clusters": 3,
+      "distinct_physical_matches": 6,
+      "all_physical_sides": 12,
+      "sides_on_split_key": 6
+    },
+    "all": {
+      "pairs": 16,
+      "fixture_clusters": 772,
+      "distinct_physical_matches": 1544,
+      "all_physical_sides": 3088,
+      "sides_on_split_key": 1544
+    }
+  }
+}

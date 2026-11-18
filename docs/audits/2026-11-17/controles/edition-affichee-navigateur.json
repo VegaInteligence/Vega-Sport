@@ -1,0 +1,18 @@
+{
+  "setup": "Production vegasport.vercel.app, browser config.json, clean named session, user-facing season select.",
+  "rerun": "python3 browser.py",
+  "expected": "The historical year selects artwork verified for that edition. Unverified family logos should not occupy the fallback.",
+  "actual": "1930 and 2018 loaded the same 2026 mark; AFCON 2023 and Asian Cup 2023 had no header image.",
+  "selected_years": {
+    "world1930": "1930",
+    "world2018": "2018",
+    "afcon2023": "2023",
+    "asia2023": "2023"
+  },
+  "sha256": {
+    "afcon2023.png": "783952e94730764d4b403ec2cb2c85577bb125f8d68029ee610635f86078361d",
+    "asia2023.png": "7652ded01d399964f98e58e401b998b0a705113ba37c9b5b72749056c80dd046",
+    "world1930.png": "9ece0993aca9f4cb7f25dbdbc98061677fbb31863e04d4521cc48790a8f78a33",
+    "world2018.png": "9ece0993aca9f4cb7f25dbdbc98061677fbb31863e04d4521cc48790a8f78a33"
+  }
+}

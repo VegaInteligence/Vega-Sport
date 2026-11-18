@@ -1,0 +1,64 @@
+[
+  {
+    "viewport": {
+      "width": 1440,
+      "height": 1000,
+      "key": "desktop"
+    },
+    "page": "https://vegasport.vercel.app/matchs/?season=2026%2F2027&league=l_2Mh0jT&id=m_08LEIz&view=players",
+    "actor": "p_13nLyq",
+    "rankRequest": "https://dngp6kh9jx2bl.cloudfront.net/api/rankings/match?match=m_08LEIz",
+    "received": "https://dngp6kh9jx2bl.cloudfront.net/api/rankings/match?match=m_08LEIz",
+    "HTTP": 200,
+    "rank": {
+      "playerId": "p_13nLyq",
+      "teamId": "t_2Mlwuk",
+      "name": "Aleksei Tataev",
+      "imageUrl": "https://cdn.pitchapi.dev/images/players/b28f58570fa2b2eb5611e9777a07ba6adb5ecff05a3581b4e83a5405d4b9f00f.webp",
+      "team": "FC Orenburg",
+      "role": "centre_back",
+      "position": "Défenseur central",
+      "minutes": 90,
+      "goals": 0,
+      "assists": 0,
+      "grade": 48.5,
+      "rank": 8
+    },
+    "atBefore": "2026-11-18T04:31:07.710Z",
+    "before": "48",
+    "atAfter": "2026-11-18T04:31:09.222Z",
+    "after": "49",
+    "intervention": "only request timing; continuation uses original GET and unmodified live response"
+  },
+  {
+    "viewport": {
+      "width": 390,
+      "height": 844,
+      "key": "mobile"
+    },
+    "page": "https://vegasport.vercel.app/matchs/?season=2026%2F2027&league=l_2Mh0jT&id=m_08LEIz&view=players",
+    "actor": "p_13nLyq",
+    "rankRequest": "https://dngp6kh9jx2bl.cloudfront.net/api/rankings/match?match=m_08LEIz",
+    "received": "https://dngp6kh9jx2bl.cloudfront.net/api/rankings/match?match=m_08LEIz",
+    "HTTP": 200,
+    "rank": {
+      "playerId": "p_13nLyq",
+      "teamId": "t_2Mlwuk",
+      "name": "Aleksei Tataev",
+      "imageUrl": "https://cdn.pitchapi.dev/images/players/b28f58570fa2b2eb5611e9777a07ba6adb5ecff05a3581b4e83a5405d4b9f00f.webp",
+      "team": "FC Orenburg",
+      "role": "centre_back",
+      "position": "Défenseur central",
+      "minutes": 90,
+      "goals": 0,
+      "assists": 0,
+      "grade": 48.5,
+      "rank": 8
+    },
+    "atBefore": "2026-11-18T04:31:09.626Z",
+    "before": "48",
+    "atAfter": "2026-11-18T04:31:09.705Z",
+    "after": "49",
+    "intervention": "only request timing; continuation uses original GET and unmodified live response"
+  }
+]

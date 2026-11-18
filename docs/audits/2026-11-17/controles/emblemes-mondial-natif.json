@@ -1,0 +1,40 @@
+[
+  {
+    "role": "edition_emblem",
+    "status": "candidate for independent new attestation",
+    "family_provider": "pitchapi",
+    "family_key": "l_1XLtP0",
+    "family_guard": 198,
+    "edition_guard": 1003,
+    "season_id": 2022,
+    "native_label": "2022",
+    "fifa_tournament_year": 2022,
+    "original_source_family": 64,
+    "original_source_edition": 292,
+    "source_edition_key": "open-cups:world-cup-history:2022",
+    "verified_FIFA_match_ids": 64,
+    "display_sha256": "7ea5437671e51526ef7474803cf0bdb495b7f484fab08b3a4dc7e9de31a2a0e0",
+    "image_url": "https://api.fifa.com/api/v3/picture/tournaments-sq-4/255711",
+    "fixture_evidence_file": "native-crosswalk.csv",
+    "fixture_evidence_sha256": "4bb1b7ad8ad4b08fdb7456ce12f11e8150a129ac7be4bc87063a3bde6ff4a529"
+  },
+  {
+    "role": "edition_emblem",
+    "status": "candidate for independent new attestation",
+    "family_provider": "pitchapi",
+    "family_key": "l_1XLtP0",
+    "family_guard": 198,
+    "edition_guard": 1004,
+    "season_id": 2025,
+    "native_label": "2026",
+    "fifa_tournament_year": 2026,
+    "original_source_family": 64,
+    "original_source_edition": 293,
+    "source_edition_key": "open-cups:world-cup-history:2026",
+    "verified_FIFA_match_ids": 104,
+    "display_sha256": "e8ebaefe22dce779251e8c8c9bc085bfb44da7f1b0c6af753dbb794cb2a0a611",
+    "image_url": "https://api.fifa.com/api/v3/picture/tournaments-sq-4/285023",
+    "fixture_evidence_file": "native-crosswalk.csv",
+    "fixture_evidence_sha256": "4bb1b7ad8ad4b08fdb7456ce12f11e8150a129ac7be4bc87063a3bde6ff4a529"
+  }
+]

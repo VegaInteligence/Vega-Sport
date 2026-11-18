@@ -1,0 +1,29 @@
+{
+  "at": "2026-11-18 04:35:55.256176+00:00",
+  "snapshot": "4410366:4410366:",
+  "extra_float_digits": "1",
+  "node": "v26.4.0",
+  "frontend": "17ca0f76175301e77ae43fe137467222f594b40a",
+  "api": "8018e0836ca0f32e8b2eb51fc2847154abff7f13",
+  "api_round_source": "const round = (v, d) => (v === null || v === undefined ? null : Math.round(v * 10 ** d) / 10 ** d);",
+  "format_source": "const numberFormats = new Map();\nconst formatNumber = (value, digits = 0) => {\n  if (!isNumber(value)) return \"—\";\n  let format = numberFormats.get(digits);\n  if (!format) {\n    format = new Intl.NumberFormat(\"fr-FR\", {\n      minimumFractionDigits: digits,\n      maximumFractionDigits: digits,\n    });\n    numberFormats.set(digits, format);\n  }\n  return format.format(value);\n};\n",
+  "pg_driver": "8.23.1",
+  "all": {
+    "stored": 2282580,
+    "joined": 2282580,
+    "eligible": 1945601,
+    "hidden": 336979,
+    "different_integer": 97029,
+    "raised_one": 97029,
+    "lowered_one": 0,
+    "hidden_would_differ": 17107,
+    "half_unit_eligible": 0,
+    "half_tenth_eligible": 0,
+    "abs_z_one_cameo": 0,
+    "groups": 25369,
+    "threshold_appears_after_projection": 0,
+    "threshold_disappears_after_projection": 0
+  },
+  "eligible_fraction": 0.04987096532125549,
+  "boundary_examples": []
+}

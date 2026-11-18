@@ -1,0 +1,80 @@
+season,vega,dfb_team,method,exact_date_opponent_score_witnesses,distinct_opponents
+1963,1. FC Kaiserslautern,1-fc-kaiserslautern,DFB calendar name,30,15
+1963,1. FC Köln,1-fc-koeln,DFB calendar name,29,15
+1963,1. FC Nürnberg,1-fc-nuernberg,DFB calendar name,30,15
+1963,1. FC Saarbrücken,1-fc-saarbruecken,DFB calendar name,29,15
+1963,Borussia Dortmund,borussia-dortmund,DFB calendar name,30,15
+1963,Eintracht Braunschweig,eintracht-braunschweig,DFB calendar name,28,15
+1963,Eintracht Frankfurt,eintracht-frankfurt,DFB calendar name,30,15
+1963,FC Schalke 04,fc-schalke-04,DFB calendar name,30,15
+1963,Frankfurter SG Eintracht,eintracht-frankfurt,season-local label checked by dated opponents and score,2,1
+1963,Hamburger SV,hamburger-sv,DFB calendar name,30,15
+1963,Hertha BSC,hertha-bsc,DFB calendar name,30,15
+1963,Karlsruher SC,karlsruher-sc,DFB calendar name,30,15
+1963,MSV Duisburg,msv-duisburg,season-local label checked by dated opponents and score,30,15
+1963,Meidericher SV,msv-duisburg,DFB calendar name,25,15
+1963,Preußen Münster,preussen-muenster,season-local label checked by dated opponents and score,30,15
+1963,TSV 1860 München,tsv-1860-muenchen,DFB calendar name,30,15
+1963,VfB Stuttgart,vfb-stuttgart,DFB calendar name,29,15
+1963,Werder Bremen,werder-bremen,season-local label checked by dated opponents and score,29,15
+1964,1. FC Kaiserslautern,1-fc-kaiserslautern,DFB calendar name,30,15
+1964,1. FC Köln,1-fc-koeln,DFB calendar name,30,15
+1964,1. FC Nürnberg,1-fc-nuernberg,DFB calendar name,30,15
+1964,Borussia Dortmund,borussia-dortmund,DFB calendar name,28,15
+1964,Borussia Neunkirchen,borussia-neunkirchen,DFB calendar name,2,1
+1964,Eintracht Braunschweig,eintracht-braunschweig,DFB calendar name,30,15
+1964,Eintracht Frankfurt,eintracht-frankfurt,DFB calendar name,30,15
+1964,FC Schalke 04,fc-schalke-04,DFB calendar name,29,15
+1964,Frankfurter SG Eintracht,eintracht-frankfurt,season-local label checked by dated opponents and score,2,1
+1964,Hamburger SV,hamburger-sv,DFB calendar name,30,15
+1964,Hannover 96,hannover-96,DFB calendar name,30,15
+1964,Hertha BSC,hertha-bsc,DFB calendar name,30,15
+1964,Karlsruher SC,karlsruher-sc,DFB calendar name,29,15
+1964,MSV Duisburg,msv-duisburg,season-local label checked by dated opponents and score,28,15
+1964,Meidericher SV,msv-duisburg,DFB calendar name,28,15
+1964,TSV 1860 München,tsv-1860-muenchen,DFB calendar name,29,15
+1964,VfB Borussia Neunkirchen,borussia-neunkirchen,season-local label checked by dated opponents and score,28,15
+1964,VfB Stuttgart,vfb-stuttgart,DFB calendar name,29,15
+1964,Werder Bremen,werder-bremen,season-local label checked by dated opponents and score,30,15
+1965,1. FC Kaiserslautern,1-fc-kaiserslautern,DFB calendar name,33,17
+1965,1. FC Köln,1-fc-koeln,DFB calendar name,33,17
+1965,1. FC Nürnberg,1-fc-nuernberg,DFB calendar name,33,17
+1965,Bayern München,bayern-muenchen,DFB calendar name,33,17
+1965,Bor. Mönchengladbach,borussia-moenchengladbach,season-local label checked by dated opponents and score,34,17
+1965,Borussia Dortmund,borussia-dortmund,DFB calendar name,34,17
+1965,Borussia Neunkirchen,borussia-neunkirchen,DFB calendar name,2,1
+1965,Eintracht Braunschweig,eintracht-braunschweig,DFB calendar name,34,17
+1965,Eintracht Frankfurt,eintracht-frankfurt,DFB calendar name,33,17
+1965,FC Schalke 04,fc-schalke-04,DFB calendar name,33,17
+1965,Frankfurter SG Eintracht,eintracht-frankfurt,season-local label checked by dated opponents and score,1,1
+1965,Hamburger SV,hamburger-sv,DFB calendar name,34,17
+1965,Hannover 96,hannover-96,DFB calendar name,34,17
+1965,Karlsruher SC,karlsruher-sc,DFB calendar name,34,17
+1965,MSV Duisburg,msv-duisburg,season-local label checked by dated opponents and score,34,17
+1965,Meidericher SV,msv-duisburg,DFB calendar name,32,17
+1965,SC Tasmania 1900 Berlin (-1973),sv-tasmania-berlin,season-local label checked by dated opponents and score,34,17
+1965,TSV 1860 München,tsv-1860-muenchen,DFB calendar name,32,17
+1965,Tasmania 1900 Berlin,sv-tasmania-berlin,season-local label checked by dated opponents and score,2,1
+1965,VfB Borussia Neunkirchen,borussia-neunkirchen,season-local label checked by dated opponents and score,33,17
+1965,VfB Stuttgart,vfb-stuttgart,DFB calendar name,32,17
+1965,Werder Bremen,werder-bremen,season-local label checked by dated opponents and score,33,17
+1966,1. FC Kaiserslautern,1-fc-kaiserslautern,DFB calendar name,34,17
+1966,1. FC Köln,1-fc-koeln,DFB calendar name,33,17
+1966,1. FC Nürnberg,1-fc-nuernberg,DFB calendar name,34,17
+1966,Bayern München,bayern-muenchen,DFB calendar name,34,17
+1966,Bor. Mönchengladbach,borussia-moenchengladbach,season-local label checked by dated opponents and score,33,17
+1966,Borussia Dortmund,borussia-dortmund,DFB calendar name,33,17
+1966,Eintracht Braunschweig,eintracht-braunschweig,DFB calendar name,33,17
+1966,Eintracht Frankfurt,eintracht-frankfurt,DFB calendar name,34,17
+1966,FC Schalke 04,fc-schalke-04,DFB calendar name,34,17
+1966,Fortuna Düsseldorf,fortuna-duesseldorf,DFB calendar name,34,17
+1966,Frankfurter SG Eintracht,eintracht-frankfurt,season-local label checked by dated opponents and score,1,1
+1966,Hamburger SV,hamburger-sv,DFB calendar name,34,17
+1966,Hannover 96,hannover-96,DFB calendar name,34,17
+1966,Karlsruher SC,karlsruher-sc,DFB calendar name,34,17
+1966,MSV Duisburg,msv-duisburg,DFB calendar name,33,17
+1966,Meidericher SV,msv-duisburg,season-local label checked by dated opponents and score,14,14
+1966,Rot-Weiss Essen,rot-weiss-essen,DFB calendar name,34,17
+1966,TSV 1860 München,tsv-1860-muenchen,DFB calendar name,34,17
+1966,VfB Stuttgart,vfb-stuttgart,DFB calendar name,33,17
+1966,Werder Bremen,werder-bremen,season-local label checked by dated opponents and score,34,17

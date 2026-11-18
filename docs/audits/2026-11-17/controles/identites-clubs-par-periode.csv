@@ -1,0 +1,36 @@
+country,team_a,name_a,crest_a,team_b,name_b,crest_b,classification,flags,external_keys,seasons_a,seasons_b,witnessed_physical_sides,head_to_head,concurrent_incompatible_top_days,first_conflict_day,affected_top_flight_physical_sides_a,affected_top_flight_physical_sides_b,final_status
+ESP,457,Mallorca,4909,4058,RCD Mallorca,,external_period_candidate,,football-data:Mallorca,2023,2004 2010,113,0,0,,189,1026,external_period_candidate
+ESP,475,Real Betis,4927,12579,Real Betis Balompié,,organizer_period_link,,football-data:Betis | organizer:5,1996 2004 2013 2015 2023,2020,232,0,0,,2044,38,primary_schedule
+ESP,609,Real Sociedad,5061,12577,Real Sociedad de Fútbol,,organizer_period_link,,football-data:Sociedad | organizer:16,1996 2004 2010 2013 2015 2023,2020,269,0,0,,2618,38,primary_schedule
+ESP,876,Celta Vigo,5328,4050,RC Celta,,organizer_period_link,,football-data:Celta | organizer:6,1996 2023,2013 2015,156,0,0,,1710,304,primary_schedule
+ESP,876,Celta Vigo,5328,12578,RC Celta de Vigo,,organizer_period_link,,football-data:Celta | organizer:6,1996 2023,2020,118,0,0,,1710,38,primary_schedule
+ESP,3840,Athletic Bilbao,,4709,Athletic Club,315582,external_period_candidate,,football-data:Ath Bilbao,1996 2004 2010,2013 2015 2020 2023,270,0,0,,2572,543,primary_examples
+ESP,4050,RC Celta,,12578,RC Celta de Vigo,,organizer_period_link,,football-data:Celta | organizer:6,2013 2015,2020,114,0,0,,304,38,primary_schedule
+FRA,469,Brest,4921,4236,Stade Brestois 29,,organizer_period_link,,football-data:Brest | organizer:44,2023,2020,72,0,0,,188,66,primary_schedule
+FRA,469,Brest,4921,7792,Stade Brest,,organizer_period_link,,football-data:Brest | organizer:44,2023,2010,72,0,0,,188,192,primary_schedule
+FRA,490,Nice,4942,4238,OGC Nice,,organizer_period_link,,football-data:Nice | organizer:30,2023,1996 2004 2010 2013 2015 2020,262,0,0,,188,2218,primary_schedule
+FRA,541,Lille,4993,4233,Lille OSC,,organizer_period_link,,football-data:Lille | organizer:158,2023,1996 2004 2010 2013 2015 2020,262,0,0,,188,2245,primary_schedule
+FRA,546,Lyon,4998,4235,Olympique Lyonnais,,organizer_period_link,,football-data:Lyon | organizer:159,2023,2015 2020,110,0,0,,188,292,primary_schedule
+FRA,546,Lyon,4998,6128,Olympique Lyon,,organizer_period_link,,football-data:Lyon | organizer:159,2023,1996 2004 2010 2013,186,0,0,,188,2030,primary_schedule
+FRA,727,Marseille,5179,4240,Olympique Marseille,,organizer_period_link,,football-data:Marseille | organizer:1,2023,1996 2004 2010 2013 2015 2020,262,0,0,,188,2372,primary_schedule
+FRA,775,Rennes,5227,4241,Stade Rennais,,organizer_period_link,,football-data:Rennes | organizer:14,2023,2015 2020,110,0,0,,188,292,primary_schedule
+FRA,775,Rennes,5227,6076,Stade Rennes,,organizer_period_link,,football-data:Rennes | organizer:14,2023,1996 2004 2010 2013,186,0,0,,188,1866,primary_schedule
+FRA,4231,Montpellier HSC,,5236,Montpellier,323560,hold,history_review:montpellier,football-data:Montpellier | organizer:10,1996 2010 2013 2015 2020,2023,224,0,0,,956,144,hold
+FRA,4235,Olympique Lyonnais,,6128,Olympique Lyon,,organizer_period_link,,football-data:Lyon | organizer:159,2015 2020,1996 2004 2010 2013,228,0,0,,292,2030,primary_schedule
+FRA,4236,Stade Brestois 29,,7792,Stade Brest,,organizer_period_link,,football-data:Brest | organizer:44,2020,2010,76,0,0,,66,192,primary_schedule
+FRA,4239,Stade de Reims,,5245,Reims,323569,organizer_period_link,,football-data:Reims | organizer:41,2015 2020,2023,110,0,0,,180,144,primary_schedule
+FRA,4239,Stade de Reims,,6130,Stade Reims,,organizer_period_link,,football-data:Reims | organizer:41,2015 2020,2013,114,0,0,,180,1122,primary_schedule
+FRA,4241,Stade Rennais,,6076,Stade Rennes,,organizer_period_link,,football-data:Rennes | organizer:14,2015 2020,1996 2004 2010 2013,228,0,0,,292,1866,primary_schedule
+FRA,5245,Reims,323569,6130,Stade Reims,,organizer_period_link,,football-data:Reims | organizer:41,2023,2013,72,0,0,,144,1122,primary_schedule
+ITA,478,Lazio,4930,3923,Lazio Roma,,external_period_candidate,,football-data:Lazio,2023,1996 2004 2010 2013 2015,224,0,0,,201,2643,primary_examples
+ITA,478,Lazio,4930,12571,SS Lazio,,external_period_candidate,,football-data:Lazio,2023,2020,76,0,0,,201,38,primary_examples
+ITA,534,Atalanta,4986,12567,Atalanta BC,,external_period_candidate,,football-data:Atalanta,1996 2004 2013 2015 2023,2020,224,0,0,,2261,38,external_period_candidate
+ITA,593,Sampdoria,5045,12582,UC Sampdoria,,hold,history_review:sampdoria,football-data:Sampdoria,1996 2004 2010 2013 2015,2020,224,0,0,,2236,38,hold
+ITA,778,Fiorentina,5230,3905,ACF Fiorentina,,hold,history_review:fiorentina,football-data:Fiorentina,2023,1996 2004 2010 2013 2015 2020,262,0,0,,201,2818,hold
+ITA,3909,Parma Calcio 1913,,8260,Parma AC,,hold,history_review:parma,football-data:Parma,2020,1996,72,0,0,,114,481,hold
+ITA,3909,Parma Calcio 1913,,10560,Parma FC,,hold,history_review:parma,football-data:Parma,2020,2004 2010 2013,152,0,0,,114,380,hold
+ITA,3923,Lazio Roma,,12571,SS Lazio,,external_period_candidate,,football-data:Lazio,1996 2004 2010 2013 2015,2020,224,0,0,,2643,38,primary_examples
+ITA,4696,Bologna,315554,12568,Bologna FC 1909,,hold,history_review:bologna,football-data:Bologna,1996 2004 2010 2013 2015 2023,2020,262,0,0,,2683,38,hold
+ITA,8260,Parma AC,,10560,Parma FC,,hold,history_review:parma,football-data:Parma,1996,2004 2010 2013,148,0,0,,481,380,hold
+SCO,697,Heart of Midlothian,5149,5874,Hearts,,external_period_candidate,,football-data:Hearts,2023,1996 2004 2010 2013 2015,226,0,0,,266,3947,primary_examples
+SCO,4337,Hamilton Academical,,8804,Hamilton,,external_period_candidate,,football-data:Hamilton,2020,2010 2015,109,0,0,,1500,266,external_period_candidate

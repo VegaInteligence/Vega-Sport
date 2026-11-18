@@ -87,3 +87,7 @@ Pour la Copa América 2024, les scores et buteurs internationaux donnent 32 matc
 ## CAN masculine senior
 
 International Results fournit les 156 résultats stockés pour les phases finales 2021, 2023 et 2025. Les résumés et remplacements ESPN permettent le décompte des participations. En 2023, les événements de StatsBomb et 32 rapports techniques de la CAF apportent une vérification indépendante. Les archives d’audit comprennent la provenance pour chaque champ. L’usage de ces sources dans le contrôle ne les inscrit pas dans les collecteurs de production. [Résultats et richesse des sources](preuves/tracks/5-players/afcon-participation/editions.csv) · [Disponibilité des mesures ESPN](preuves/tracks/5-players/afcon-participation/espn-field-coverage.csv) · [Définitions comparées](preuves/tracks/5-players/afcon-participation/summary.json)
+
+## Producteur allemand de résultats et de buts
+
+Le compilateur source agrège footballcsv et des fichiers de buteurs historiques sous une même étiquette de match. En Bundesliga 1963/64 à 1966/67, 100 groupes de buts ont produit un second match pour un résultat enregistré, avec 349 buts à préserver. Les 68 calendriers d’équipes et les 100 feuilles du DFB établissent les identités de ces événements et vérifient les sources complémentaires. [Contrôle par édition](preuves/full-archive-verification/fingerprint-check/dfb-league/summary.json) · [Contrôle des buts et de leurs bénéficiaires](preuves/full-archive-verification/fingerprint-check/dfb-league/goals-comparison.json)

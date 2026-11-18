@@ -1,0 +1,346 @@
+{
+  "snapshots": [
+    {
+      "at": "2026-11-18 02:02:22.142267+00:00",
+      "snapshot": "4403005:4403005:",
+      "database": "vega_v2",
+      "isolation": "repeatable read",
+      "read_only": "on"
+    },
+    {
+      "at": "2026-11-18 04:22:35.281819+00:00",
+      "snapshot": "4409756:4409756:",
+      "database": "vega_v2",
+      "isolation": "repeatable read",
+      "read_only": "on"
+    }
+  ],
+  "worker_image": "361769570630.dkr.ecr.us-east-2.amazonaws.com/vega-v2-worker:8018e0836ca0f32e8b2eb51fc2847154abff7f13",
+  "queries": 44,
+  "tables": {
+    "award-role-2021": {
+      "rows_before": 21,
+      "rows_after": 21,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "award-role-2022": {
+      "rows_before": 17,
+      "rows_after": 17,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "award-role-2023": {
+      "rows_before": 21,
+      "rows_after": 21,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "award-role-2024": {
+      "rows_before": 12,
+      "rows_after": 12,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "award-role-2025": {
+      "rows_before": 11,
+      "rows_after": 11,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "award-role-2026": {
+      "rows_before": 8,
+      "rows_after": 8,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "editions": {
+      "rows_before": 2149,
+      "rows_after": 2149,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "player-distributions": {
+      "rows_before": 301,
+      "rows_after": 301,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "player-event-cues-2021": {
+      "rows_before": 5,
+      "rows_after": 5,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "player-event-cues-2022": {
+      "rows_before": 12,
+      "rows_after": 12,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "player-event-cues-2023": {
+      "rows_before": 24,
+      "rows_after": 24,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "player-event-cues-2024": {
+      "rows_before": 29,
+      "rows_after": 29,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "player-event-cues-2025": {
+      "rows_before": 18,
+      "rows_after": 18,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "player-event-cues-2026": {
+      "rows_before": 25,
+      "rows_after": 25,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "player-grade-integrity-2021": {
+      "rows_before": 1,
+      "rows_after": 1,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "player-grade-integrity-2022": {
+      "rows_before": 1,
+      "rows_after": 1,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "player-grade-integrity-2023": {
+      "rows_before": 1,
+      "rows_after": 1,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "player-grade-integrity-2024": {
+      "rows_before": 1,
+      "rows_after": 1,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "player-grade-integrity-2025": {
+      "rows_before": 1,
+      "rows_after": 1,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "player-grade-integrity-2026": {
+      "rows_before": 1,
+      "rows_after": 1,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "player-participations-2021": {
+      "rows_before": 37,
+      "rows_after": 37,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "player-participations-2022": {
+      "rows_before": 44,
+      "rows_after": 44,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "player-participations-2023": {
+      "rows_before": 48,
+      "rows_after": 48,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "player-participations-2024": {
+      "rows_before": 87,
+      "rows_after": 87,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "player-participations-2025": {
+      "rows_before": 83,
+      "rows_after": 83,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "player-participations-2026": {
+      "rows_before": 110,
+      "rows_after": 110,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "player-pending-2021": {
+      "rows_before": 21,
+      "rows_after": 21,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "player-pending-2022": {
+      "rows_before": 17,
+      "rows_after": 17,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "player-pending-2023": {
+      "rows_before": 21,
+      "rows_after": 21,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "player-pending-2024": {
+      "rows_before": 12,
+      "rows_after": 12,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "player-pending-2025": {
+      "rows_before": 11,
+      "rows_after": 11,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "player-pending-2026": {
+      "rows_before": 8,
+      "rows_after": 8,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "player-scores-2021": {
+      "rows_before": 23,
+      "rows_after": 23,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "player-scores-2022": {
+      "rows_before": 30,
+      "rows_after": 30,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "player-scores-2023": {
+      "rows_before": 31,
+      "rows_after": 31,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "player-scores-2024": {
+      "rows_before": 65,
+      "rows_after": 65,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "player-scores-2025": {
+      "rows_before": 77,
+      "rows_after": 77,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "player-scores-2026": {
+      "rows_before": 75,
+      "rows_after": 75,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "player-shot-actor-seasons": {
+      "rows_before": 6,
+      "rows_after": 6,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "run-times": {
+      "rows_before": 6,
+      "rows_after": 6,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "sample-keys": {
+      "rows_before": 23,
+      "rows_after": 23,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "season-universe": {
+      "rows_before": 50,
+      "rows_after": 50,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "team-exact": {
+      "rows_before": 399,
+      "rows_after": 399,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "team-grade-integrity": {
+      "rows_before": 26,
+      "rows_after": 26,
+      "same_columns": true,
+      "same_rows_including_order": true
+    },
+    "team-sides-all": {
+      "rows_before": 2254,
+      "rows_after": 2254,
+      "same_columns": true,
+      "same_rows_including_order": true
+    }
+  },
+  "grids": {
+    "coverage-by-edition-and-entity.csv": {
+      "rows": 6447,
+      "identical_cell_values": true,
+      "before_sha256": "1d5bc66b1afdee2f3cb55778cca6306759cfe64ceb871fb59c7b0829eb7b86b7",
+      "after_sha256": "1d5bc66b1afdee2f3cb55778cca6306759cfe64ceb871fb59c7b0829eb7b86b7"
+    },
+    "coverage-by-season-and-entity.csv": {
+      "rows": 471,
+      "identical_cell_values": true,
+      "before_sha256": "d115ffe8dcfc5d4d6b73d6f109bb4c41143fb226ca45da7e45dcb2e60f2eba73",
+      "after_sha256": "d115ffe8dcfc5d4d6b73d6f109bb4c41143fb226ca45da7e45dcb2e60f2eba73"
+    }
+  },
+  "second_task_exit": 0,
+  "second_task_end_state": "INACTIVE",
+  "counts": {
+    "club": {
+      "expected_proven": 161982,
+      "actual_valid": 161982,
+      "recorded_matches": 588781,
+      "finished": 576512,
+      "algorithm_inputs_before_coverage": 0,
+      "admitted_without_power_match": 0,
+      "known_participations_minimum": 1149053,
+      "known_participants_without_stats": 0,
+      "known_participants_without_measured_minutes": 0,
+      "intentionally_hidden_cameo": 0
+    },
+    "national team": {
+      "expected_proven": 1864,
+      "actual_valid": 1864,
+      "recorded_matches": 588781,
+      "finished": 576512,
+      "algorithm_inputs_before_coverage": 0,
+      "admitted_without_power_match": 0,
+      "known_participations_minimum": 2188,
+      "known_participants_without_stats": 0,
+      "known_participants_without_measured_minutes": 0,
+      "intentionally_hidden_cameo": 0
+    },
+    "player": {
+      "expected_proven": 2282580,
+      "actual_valid": 2282580,
+      "recorded_matches": 588781,
+      "finished": 576512,
+      "algorithm_inputs_before_coverage": 2297613,
+      "admitted_without_power_match": 15033,
+      "known_participations_minimum": 2308335,
+      "known_participants_without_stats": 8808,
+      "known_participants_without_measured_minutes": 1914,
+      "intentionally_hidden_cameo": 336979
+    }
+  }
+}

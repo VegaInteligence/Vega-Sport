@@ -1,0 +1,33 @@
+{
+  "snapshot": [
+    "2026-11-18 04:34:58.3326+00",
+    "4410322:4410322:",
+    "on"
+  ],
+  "pairs": 100,
+  "source_keys": 200,
+  "all_probed_keys": 216,
+  "direct_match_provider_keys": 0,
+  "catalog_relations": 33,
+  "other_checked_rows": 16,
+  "duplicate_dependencies": {
+    "core.match_events": 349
+  },
+  "positive_own_goals": 0,
+  "positive_penalties": 0,
+  "checks": {
+    "score_steps": 349,
+    "beneficiary_side_consistent": 349,
+    "beneficiary_id_to_remap": 208,
+    "actor_name_exact_normalized": 340,
+    "minute_agrees": 349,
+    "dfb_label_Elfmeter": 24
+  },
+  "minute_differences": {
+    "0": 349
+  },
+  "csv_inputs": {
+    "match-detail-goals.csv": "43346e90c5bf33684c728c44cb7dc29f275a4ad572c104b0c362ff4ca1bdd87d",
+    "official-vs-public.csv": "14c34b09d1abd4a05014488973a461ce4a06b3e8bc95baef2d1baef6c5581955"
+  }
+}

@@ -1,0 +1,550 @@
+[
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1963-1964/teams/1-fc-kaiserslautern",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1963-1964/teams/1-fc-kaiserslautern",
+    "at": "2026-11-18T04:29:24.755296+00:00",
+    "status": 200,
+    "sha256": "5d6bb306d675d9dbddf2d512d7c7e3292cdf1cba663b9adda47319541fc5e628",
+    "bytes": 137430
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1963-1964/teams/1-fc-koeln",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1963-1964/teams/1-fc-koeln",
+    "at": "2026-11-18T04:29:24.435022+00:00",
+    "status": 200,
+    "sha256": "b71230d51763be5ec0ad6fe88f7abffa1f1a0134464ddb934fac7f584a21d28d",
+    "bytes": 134114
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1963-1964/teams/1-fc-nuernberg",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1963-1964/teams/1-fc-nuernberg",
+    "at": "2026-11-18T04:29:24.915135+00:00",
+    "status": 200,
+    "sha256": "d434a2e5bf9657eb7a5860b7c2a5a2a185514eaf01799b1a3218393a18986a3b",
+    "bytes": 137370
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1963-1964/teams/1-fc-saarbruecken",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1963-1964/teams/1-fc-saarbruecken",
+    "at": "2026-11-18T04:29:27.319760+00:00",
+    "status": 200,
+    "sha256": "d815787d21712b09363859e2c2373b24643bd2dfdf58366bd03544a22371fedb",
+    "bytes": 130875
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1963-1964/teams/borussia-dortmund",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1963-1964/teams/borussia-dortmund",
+    "at": "2026-11-18T04:29:27.807805+00:00",
+    "status": 200,
+    "sha256": "b3186d87818eff8430f042cb74ccc3e0a3d9fa8f13829812ed30dbf4047b6b0c",
+    "bytes": 139535
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1963-1964/teams/eintracht-braunschweig",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1963-1964/teams/eintracht-braunschweig",
+    "at": "2026-11-18T04:29:27.485277+00:00",
+    "status": 200,
+    "sha256": "4bcf723db9c18c1efe743b384fc93933f43399b30497ea982559456c1472a360",
+    "bytes": 135376
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1963-1964/teams/eintracht-frankfurt",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1963-1964/teams/eintracht-frankfurt",
+    "at": "2026-11-18T04:29:29.069967+00:00",
+    "status": 200,
+    "sha256": "cc89babff88a88b699f039fa222de9959357198c21b52b9217e0d27655a80e35",
+    "bytes": 142895
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1963-1964/teams/fc-schalke-04",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1963-1964/teams/fc-schalke-04",
+    "at": "2026-11-18T04:29:29.064551+00:00",
+    "status": 200,
+    "sha256": "880e9123ce34094096d0bde2908079027e1313a60aecb73d575ceaac556ce743",
+    "bytes": 136735
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1963-1964/teams/hamburger-sv",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1963-1964/teams/hamburger-sv",
+    "at": "2026-11-18T04:29:29.381469+00:00",
+    "status": 200,
+    "sha256": "03801f4c98ff093a9e98eb87a3db7015ee705f362f7099c3dd0b9feab3219b6a",
+    "bytes": 137051
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1963-1964/teams/hertha-bsc",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1963-1964/teams/hertha-bsc",
+    "at": "2026-11-18T04:29:30.642110+00:00",
+    "status": 200,
+    "sha256": "6601a99055a681a12221a841cf24f724d4b0125dd0f13b6e485df2deb1fced44",
+    "bytes": 133578
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1963-1964/teams/karlsruher-sc",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1963-1964/teams/karlsruher-sc",
+    "at": "2026-11-18T04:29:30.650724+00:00",
+    "status": 200,
+    "sha256": "b505a362304f518a2d4f57dc17b3cbec748b7022df904594ce6fd50ae9b807cc",
+    "bytes": 134097
+  },
+  {
+    "key": "dfb-msv-1963",
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1963-1964/teams/msv-duisburg",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1963-1964/teams/msv-duisburg",
+    "at": "2026-11-18T04:06:09.173941+00:00",
+    "status": 200,
+    "bytes": 132270,
+    "sha256": "d18aa7eeefa44e52cdfd54710f7cd97c49b61f5bff2275034a2e536cde7cf517"
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1963-1964/teams/preussen-muenster",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1963-1964/teams/preussen-muenster",
+    "at": "2026-11-18T04:29:31.109366+00:00",
+    "status": 200,
+    "sha256": "71604d5350fdbb00d4edff10bea19052c2a50da52bdbd1410b80d7215467afb4",
+    "bytes": 130984
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1963-1964/teams/tsv-1860-muenchen",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1963-1964/teams/tsv-1860-muenchen",
+    "at": "2026-11-18T04:29:33.126182+00:00",
+    "status": 200,
+    "sha256": "6cabb3eb81254aa93ee82c99b0a5028147ee0d26d550bbdd5b4ecc82d4a8adc7",
+    "bytes": 134489
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1963-1964/teams/vfb-stuttgart",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1963-1964/teams/vfb-stuttgart",
+    "at": "2026-11-18T04:29:32.963883+00:00",
+    "status": 200,
+    "sha256": "ba1f32d8a2741d1b2bd8e4ec22fb365a95cccbc2f99f8462e5cad385ac592985",
+    "bytes": 136479
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1963-1964/teams/werder-bremen",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1963-1964/teams/werder-bremen",
+    "at": "2026-11-18T04:29:33.522225+00:00",
+    "status": 200,
+    "sha256": "2381b9132079e2446f6e3aded335b2ae45ccb2cd7633fdc923b27ad2ecd5c5b6",
+    "bytes": 138312
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1964-1965/teams/1-fc-kaiserslautern",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1964-1965/teams/1-fc-kaiserslautern",
+    "at": "2026-11-18T04:29:34.871841+00:00",
+    "status": 200,
+    "sha256": "5a9a58cd1f5a27cb0195699689f1bcbcc907b6642ba31a7750a0020163e7d1d7",
+    "bytes": 136440
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1964-1965/teams/1-fc-koeln",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1964-1965/teams/1-fc-koeln",
+    "at": "2026-11-18T04:29:35.021204+00:00",
+    "status": 200,
+    "sha256": "7a8fcf1dfc9e2e28e2a933d0b7c417a4823f132ae01abde1c364cadc02dddf4f",
+    "bytes": 135645
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1964-1965/teams/1-fc-nuernberg",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1964-1965/teams/1-fc-nuernberg",
+    "at": "2026-11-18T04:29:35.516210+00:00",
+    "status": 200,
+    "sha256": "23cf18c3f346042290c71b505809a9a2b8fc2af075d3d6012cbbb339e561364f",
+    "bytes": 136844
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1964-1965/teams/borussia-dortmund",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1964-1965/teams/borussia-dortmund",
+    "at": "2026-11-18T04:29:36.640857+00:00",
+    "status": 200,
+    "sha256": "18e2ab12ce8885c27feaf3bb992393ce11e9e92afbcbe7440dc1645d8b782cb4",
+    "bytes": 138189
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1964-1965/teams/borussia-neunkirchen",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1964-1965/teams/borussia-neunkirchen",
+    "at": "2026-11-18T04:29:36.712316+00:00",
+    "status": 200,
+    "sha256": "1cbc161914a57831de392403a23d683cc9015d17d99d8fe93f285490c35dba51",
+    "bytes": 132786
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1964-1965/teams/eintracht-braunschweig",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1964-1965/teams/eintracht-braunschweig",
+    "at": "2026-11-18T04:29:37.254813+00:00",
+    "status": 200,
+    "sha256": "c67e7ccff92cc585a7abda835df3b52c2ffe3b4e7b5b5c8b54d30ed459ecb4d2",
+    "bytes": 136630
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1964-1965/teams/eintracht-frankfurt",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1964-1965/teams/eintracht-frankfurt",
+    "at": "2026-11-18T04:29:38.415126+00:00",
+    "status": 200,
+    "sha256": "78e5959970279a3ea5f89e28c0d3f081e0d1849de8c1b89f8a11ba926fb38241",
+    "bytes": 141846
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1964-1965/teams/fc-schalke-04",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1964-1965/teams/fc-schalke-04",
+    "at": "2026-11-18T04:29:38.474654+00:00",
+    "status": 200,
+    "sha256": "21829f9ef346d70917441280388dd8606d7ad0d8b150c5d8c40a17f0d628ad43",
+    "bytes": 137368
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1964-1965/teams/hamburger-sv",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1964-1965/teams/hamburger-sv",
+    "at": "2026-11-18T04:29:39.206799+00:00",
+    "status": 200,
+    "sha256": "29c6f8b4cc9576520445a3280228da821717ec16e31b99e9307e7ed7b63182ce",
+    "bytes": 138838
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1964-1965/teams/hannover-96",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1964-1965/teams/hannover-96",
+    "at": "2026-11-18T04:29:39.992494+00:00",
+    "status": 200,
+    "sha256": "0a3bcc8fbdc027c63909284da2e096ead7ffe6e313500b9db34fd351fcf2ef7c",
+    "bytes": 133603
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1964-1965/teams/hertha-bsc",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1964-1965/teams/hertha-bsc",
+    "at": "2026-11-18T04:29:40.165334+00:00",
+    "status": 200,
+    "sha256": "343d0b95702f2f1ae02b62d679ce245f29c0bbc77704f3f0853d38fb71d2f618",
+    "bytes": 135084
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1964-1965/teams/karlsruher-sc",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1964-1965/teams/karlsruher-sc",
+    "at": "2026-11-18T04:29:41.420739+00:00",
+    "status": 200,
+    "sha256": "d52e4ac61cef99af9625d034148e712fc21aa1201ba1d95125aae10f2fdcb0e7",
+    "bytes": 134821
+  },
+  {
+    "key": "dfb-msv-1964",
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1964-1965/teams/msv-duisburg",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1964-1965/teams/msv-duisburg",
+    "at": "2026-11-18T04:06:10.856228+00:00",
+    "status": 200,
+    "bytes": 134066,
+    "sha256": "e33cdf14abd00364585f727472ac3a2bb115c71591e49308f4868ffca35d1bbd"
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1964-1965/teams/tsv-1860-muenchen",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1964-1965/teams/tsv-1860-muenchen",
+    "at": "2026-11-18T04:29:41.964667+00:00",
+    "status": 200,
+    "sha256": "a84f64c22285faa03590a17131589659c0a11fc938bdd4ed60fb777cd91d61a5",
+    "bytes": 133834
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1964-1965/teams/vfb-stuttgart",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1964-1965/teams/vfb-stuttgart",
+    "at": "2026-11-18T04:29:41.788420+00:00",
+    "status": 200,
+    "sha256": "b42ca73231c4998ac404ae1a5ad2105fff76846a18dffbdc1244cc18bc2eb54a",
+    "bytes": 139762
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1964-1965/teams/werder-bremen",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1964-1965/teams/werder-bremen",
+    "at": "2026-11-18T04:29:43.097326+00:00",
+    "status": 200,
+    "sha256": "eb181c8112c91334d1ad42be97a82dd856563e64aebce8b3e4da7bf11378613d",
+    "bytes": 138688
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1965-1966/teams/1-fc-kaiserslautern",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1965-1966/teams/1-fc-kaiserslautern",
+    "at": "2026-11-18T04:29:43.624811+00:00",
+    "status": 200,
+    "sha256": "0796d68034196513ff4c3426ea70009b03412772be02237e516d3f991157287a",
+    "bytes": 152313
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1965-1966/teams/1-fc-koeln",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1965-1966/teams/1-fc-koeln",
+    "at": "2026-11-18T04:29:43.705871+00:00",
+    "status": 200,
+    "sha256": "5a08552dee54b6154703e71e2eeffce009c1212fcacf310c4f9470232049d057",
+    "bytes": 151329
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1965-1966/teams/1-fc-nuernberg",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1965-1966/teams/1-fc-nuernberg",
+    "at": "2026-11-18T04:29:44.836156+00:00",
+    "status": 200,
+    "sha256": "e4e8a9e8534034437898bf2f3d7054fad4da3c96f4395664917299840d6306e7",
+    "bytes": 149857
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1965-1966/teams/bayern-muenchen",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1965-1966/teams/bayern-muenchen",
+    "at": "2026-11-18T04:29:45.591421+00:00",
+    "status": 200,
+    "sha256": "5513214d62e22f80033bdc9dd282c1aa3d67f8e58b678a81b874098ba99ed8fc",
+    "bytes": 155013
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1965-1966/teams/borussia-dortmund",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1965-1966/teams/borussia-dortmund",
+    "at": "2026-11-18T04:29:45.625359+00:00",
+    "status": 200,
+    "sha256": "357648c5ad40a8e734090bd1e91cc9ab8e3e76a386e2d0f59385b82fca486387",
+    "bytes": 152706
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1965-1966/teams/borussia-moenchengladbach",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1965-1966/teams/borussia-moenchengladbach",
+    "at": "2026-11-18T04:29:46.870573+00:00",
+    "status": 200,
+    "sha256": "99dac8c36bf842e349573703720b4b62bd030b84863b6e44343e65a65a47ba4b",
+    "bytes": 157625
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1965-1966/teams/borussia-neunkirchen",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1965-1966/teams/borussia-neunkirchen",
+    "at": "2026-11-18T04:29:47.479984+00:00",
+    "status": 200,
+    "sha256": "fb07063ae96f66fa65f835ec5900b86d1c4d76b1750712cb32978e0ea47e49dd",
+    "bytes": 147392
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1965-1966/teams/eintracht-braunschweig",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1965-1966/teams/eintracht-braunschweig",
+    "at": "2026-11-18T04:29:47.297761+00:00",
+    "status": 200,
+    "sha256": "004170d4cc453b9203c645ce9968992fa21862dc8f63bea3076cd682ede8dd31",
+    "bytes": 150406
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1965-1966/teams/eintracht-frankfurt",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1965-1966/teams/eintracht-frankfurt",
+    "at": "2026-11-18T04:29:48.859580+00:00",
+    "status": 200,
+    "sha256": "09ecfe2970ef6955eb042d81626f171ee8948a4b96d3ead9ec5bf5c5210856af",
+    "bytes": 155863
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1965-1966/teams/fc-schalke-04",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1965-1966/teams/fc-schalke-04",
+    "at": "2026-11-18T04:29:49.289948+00:00",
+    "status": 200,
+    "sha256": "13c938bbf53f99959cc6d866ddd5c81f19b02e274a0eb6b8b80b029bd14ee221",
+    "bytes": 152633
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1965-1966/teams/hamburger-sv",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1965-1966/teams/hamburger-sv",
+    "at": "2026-11-18T04:29:49.511740+00:00",
+    "status": 200,
+    "sha256": "5ddff8ede31c9ec06b3b9d4d55dbbd4acfe5ba8f26f20b588f2143e229065d3a",
+    "bytes": 153230
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1965-1966/teams/hannover-96",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1965-1966/teams/hannover-96",
+    "at": "2026-11-18T04:29:50.940812+00:00",
+    "status": 200,
+    "sha256": "39158f34ec7d9bb5650533f15ed508645f9fe5735e7a41302966df35dcf3a3ee",
+    "bytes": 147731
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1965-1966/teams/karlsruher-sc",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1965-1966/teams/karlsruher-sc",
+    "at": "2026-11-18T04:29:51.425505+00:00",
+    "status": 200,
+    "sha256": "38b28a7c87e25c9249cd6238a80a75153cf7d4ea96f3fafe6991388bebe6c4de",
+    "bytes": 150192
+  },
+  {
+    "key": "dfb-msv-1965",
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1965-1966/teams/msv-duisburg",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1965-1966/teams/msv-duisburg",
+    "at": "2026-11-18T04:06:11.134782+00:00",
+    "status": 200,
+    "bytes": 147051,
+    "sha256": "7f162f8780c02cc847a54388c886aa1e5461eb56a562de1a8a6c7b41b93b4154"
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1965-1966/teams/sv-tasmania-berlin",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1965-1966/teams/sv-tasmania-berlin",
+    "at": "2026-11-18T04:29:51.564004+00:00",
+    "status": 200,
+    "sha256": "2007c172ed5217bbbd0d74ee5f55963534cd6fafbe56b716069aeab242c39aa1",
+    "bytes": 146952
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1965-1966/teams/tsv-1860-muenchen",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1965-1966/teams/tsv-1860-muenchen",
+    "at": "2026-11-18T04:29:53.157064+00:00",
+    "status": 200,
+    "sha256": "31a9eb545f726baac50c519202c926395f848fb2e0075482cbacea5424d09590",
+    "bytes": 148785
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1965-1966/teams/vfb-stuttgart",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1965-1966/teams/vfb-stuttgart",
+    "at": "2026-11-18T04:29:53.175916+00:00",
+    "status": 200,
+    "sha256": "a478519b2a4c21890b38ef3e9a51e11293f65aed02ebe1a05a862f658d3837d6",
+    "bytes": 152892
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1965-1966/teams/werder-bremen",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1965-1966/teams/werder-bremen",
+    "at": "2026-11-18T04:29:53.500081+00:00",
+    "status": 200,
+    "sha256": "f452c4f0b3f630e2449484857568e9f926cbc3fb54b5f81fd26c1fbbb61b95f4",
+    "bytes": 151868
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1966-1967/teams/1-fc-kaiserslautern",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1966-1967/teams/1-fc-kaiserslautern",
+    "at": "2026-11-18T04:29:54.978821+00:00",
+    "status": 200,
+    "sha256": "848c238689fed7b0e7f4df5e910fffd4f705a32ede032e1e22804bf5a719f712",
+    "bytes": 151712
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1966-1967/teams/1-fc-koeln",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1966-1967/teams/1-fc-koeln",
+    "at": "2026-11-18T04:29:55.170832+00:00",
+    "status": 200,
+    "sha256": "583621868bbeb4944f998ecd1f9a411a64deaad38dfd74af0c2e030a4496e625",
+    "bytes": 151215
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1966-1967/teams/1-fc-nuernberg",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1966-1967/teams/1-fc-nuernberg",
+    "at": "2026-11-18T04:29:55.637460+00:00",
+    "status": 200,
+    "sha256": "293ff19d0d8f677d0d609d5f7977c33d046fbf3f6478f9348c6db90e048d331d",
+    "bytes": 152357
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1966-1967/teams/bayern-muenchen",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1966-1967/teams/bayern-muenchen",
+    "at": "2026-11-18T04:29:58.602814+00:00",
+    "status": 200,
+    "sha256": "fce2c28c0978ccd21f581c8b3fd44b4f7c0c4c86e04dcf635334efcde902d588",
+    "bytes": 155591
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1966-1967/teams/borussia-dortmund",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1966-1967/teams/borussia-dortmund",
+    "at": "2026-11-18T04:29:57.962699+00:00",
+    "status": 200,
+    "sha256": "f9344b24f7ff9f831889bea004fb1661fead6b46caca83d07b04b06fe2ad8da2",
+    "bytes": 154087
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1966-1967/teams/borussia-moenchengladbach",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1966-1967/teams/borussia-moenchengladbach",
+    "at": "2026-11-18T04:29:59.980399+00:00",
+    "status": 200,
+    "sha256": "59c2ed13ffb15074fcad1384cb777c57612fd41c74f1ddbaf3257ede90b11a8d",
+    "bytes": 157733
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1966-1967/teams/eintracht-braunschweig",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1966-1967/teams/eintracht-braunschweig",
+    "at": "2026-11-18T04:30:00.759701+00:00",
+    "status": 200,
+    "sha256": "683490b4461c970d93b9352d52560dcae0d4bc153c03bdc4e2743bec20d66586",
+    "bytes": 150022
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1966-1967/teams/eintracht-frankfurt",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1966-1967/teams/eintracht-frankfurt",
+    "at": "2026-11-18T04:30:01.333795+00:00",
+    "status": 200,
+    "sha256": "613f259d1959fa86319539cfb50bd783c1d310d8630be5550e64a8212113bd56",
+    "bytes": 154404
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1966-1967/teams/fc-schalke-04",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1966-1967/teams/fc-schalke-04",
+    "at": "2026-11-18T04:30:02.161676+00:00",
+    "status": 200,
+    "sha256": "5d2081eef1bff3e2ec2872596c7ce3b17c39478af25939e4d3a6a16fc940ece4",
+    "bytes": 150973
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1966-1967/teams/fortuna-duesseldorf",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1966-1967/teams/fortuna-duesseldorf",
+    "at": "2026-11-18T04:30:03.013854+00:00",
+    "status": 200,
+    "sha256": "30f3e4923c43d5e153cc26b9d18b720bc285bc9fc15345cce3f9ae114df839c7",
+    "bytes": 151527
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1966-1967/teams/hamburger-sv",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1966-1967/teams/hamburger-sv",
+    "at": "2026-11-18T04:30:03.330295+00:00",
+    "status": 200,
+    "sha256": "e9640eefb980b718155343cace272d281ba389f3de763b481336a81c88a894fd",
+    "bytes": 150858
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1966-1967/teams/hannover-96",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1966-1967/teams/hannover-96",
+    "at": "2026-11-18T04:30:04.433472+00:00",
+    "status": 200,
+    "sha256": "24fa654f526f694d610aac16b386cb7f814e723218e6f5d96012c36de4179aa2",
+    "bytes": 147155
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1966-1967/teams/karlsruher-sc",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1966-1967/teams/karlsruher-sc",
+    "at": "2026-11-18T04:30:05.444724+00:00",
+    "status": 200,
+    "sha256": "a33836f4a75a46c5ef0bd3ce340c6e717b04da3914a41fc2608dde66573f1f9d",
+    "bytes": 148074
+  },
+  {
+    "key": "dfb-msv-1966",
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1966-1967/teams/msv-duisburg",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1966-1967/teams/msv-duisburg",
+    "at": "2026-11-18T04:06:11.128117+00:00",
+    "status": 200,
+    "bytes": 145945,
+    "sha256": "8a1bde7656349b874f34e1cf23765be2dcf20d1b95ecd1e8ae5392552a0837a2"
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1966-1967/teams/rot-weiss-essen",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1966-1967/teams/rot-weiss-essen",
+    "at": "2026-11-18T04:30:05.682099+00:00",
+    "status": 200,
+    "sha256": "ef34be63f886e20b1e2a8e5a2530fd9a9b2e228e0bb5bd75b8a23dc8c9c1a696",
+    "bytes": 145667
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1966-1967/teams/tsv-1860-muenchen",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1966-1967/teams/tsv-1860-muenchen",
+    "at": "2026-11-18T04:30:06.381883+00:00",
+    "status": 200,
+    "sha256": "42bb33d55d96ba1340af39f8915ca0327a3abb53041d9964786e6378bc0122c3",
+    "bytes": 148076
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1966-1967/teams/vfb-stuttgart",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1966-1967/teams/vfb-stuttgart",
+    "at": "2026-11-18T04:30:07.309143+00:00",
+    "status": 200,
+    "sha256": "fd17423cb35d9751bb4c5a73e820e5bc1c9f6d626af1bb3c8f87e95da8e43d4d",
+    "bytes": 152584
+  },
+  {
+    "url": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1966-1967/teams/werder-bremen",
+    "final": "https://datencenter.dfb.de/competitions/bundesliga/seasons/1966-1967/teams/werder-bremen",
+    "at": "2026-11-18T04:30:07.500906+00:00",
+    "status": 200,
+    "sha256": "da9290c2a0953c93dede2bdf3e0917f31735f3c89754f382d612fdd68512dc44",
+    "bytes": 153727
+  }
+]
