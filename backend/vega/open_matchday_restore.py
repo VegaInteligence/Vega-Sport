@@ -1,12 +1,14 @@
-"""Restore the 35 Open Matchday identities from reviewed captures on a dedicated local copy.
+"""Restore the 35 Open Matchday identities from reviewed before and after captures.
 
 A dry run is the default. Applying requires the original capture digests and an explicit
 opt-in. This path restores two tables and signals the affected edition reads. It never
-derives a parent row from a CSV or rewrites the preserved Elo. Run with the copy's owner.
+derives a parent row from a CSV or rewrites Elo. Run as the schema owner.
 """
 import argparse
+from datetime import datetime
 from hashlib import sha256
 import json
+import os
 from pathlib import Path
 import re
 from urllib.parse import urlsplit
@@ -16,7 +18,10 @@ import psycopg
 from psycopg import sql
 from psycopg.types.json import Jsonb
 
-from .store import connect_local
+from .migrate import owner_url
+from .sources.open_matchday_history import RESULTS
+from .store import StoreError, connect_local
+from .worker import connect
 
 
 IDS = tuple((*range(8049, 8061), *range(8290, 8302), *range(8534, 8545)))
@@ -121,6 +126,8 @@ def inspect_capture(before, after):
     for fact, key in zip(facts, keys, strict=True):
         ident, home, away, day, hs, aws, edition = fact
         m, p = by_id[ident], key_by_id[ident]
+        proof = RESULTS.get(key) or {}
+        require(proof.get("id_at_incident") == ident and proof.get("score") == [hs, aws], "sporting attestation mismatch")
         require([m[c] for c in ("id", "home_team_id", "away_team_id", "match_date", "home_score",
                                "away_score", "competition_season_id")] == fact
                 and m["season_id"] == 2026 and m["source"] == "open_matchday" and m["status"] == "finished"
@@ -209,7 +216,7 @@ def guard_references(conn, capture, matches):
                 for m in matches if m["round_id"] is not None), "round edition mismatch")
 
 
-def verify_elo(conn, elo, bits, run):
+def verify_elo(conn, elo, bits, run, captured_after):
     have = select_rows(conn, ELO, sql.SQL("t.match_id=ANY(%s)"), (list(IDS),))
     actual_bits = conn.execute("""
         SELECT match_id,team_id,jsonb_build_object('elo_before',encode(float4send(elo_before),'hex'),
@@ -217,8 +224,23 @@ def verify_elo(conn, elo, bits, run):
           'result',encode(float4send(result),'hex'),'stakes',encode(float4send(stakes),'hex'))
         FROM agg.team_elo WHERE match_id=ANY(%s) ORDER BY match_id,team_id
     """, (list(IDS),)).fetchall()
-    require(same_rows(elo, have) and bits == [list(r) for r in actual_bits]
-            and same_rows(run, select_rows(conn, "agg.power_runs", sql.SQL("t.id=2097"))), "Elo drift on the copy")
+    original_run = select_rows(conn, "agg.power_runs", sql.SQL("t.id=2097"))
+    if (same_rows(elo, have) and bits == [list(r) for r in actual_bits] and same_rows(run, original_run)):
+        return {"preserved_elo": 70, "elo_pending_sides": 0, "elo_run": 2097}
+    require(not have and not actual_bits and same_rows([dict(run[0], status="superseded")], original_run),
+            "Elo drift: the 70 signed sides must all match or all have been superseded")
+    published = select_rows(conn, "agg.power_runs", sql.SQL("t.kind='elo' AND t.season_id IS NULL AND t.status='published'"))
+    require(len(published) == 1, "Elo drift: expected one later published run")
+    later = published[0]
+    require(later["id"] > 2097 and later["finished_at"] and later["matches"] and
+            datetime.fromisoformat(later["finished_at"]) > datetime.fromisoformat(captured_after),
+            "Elo drift: newer publication not established")
+    counted, malformed = conn.execute("""
+        SELECT count(*),count(*) FILTER (WHERE n<>2 OR NOT same_run)
+          FROM (SELECT count(*) AS n,bool_and(run_id=%s) AS same_run FROM agg.team_elo GROUP BY match_id) checks
+    """, (later["id"],)).fetchone()
+    require(counted == later["matches"] and not malformed, "Elo drift: incomplete later published population")
+    return {"preserved_elo": 0, "elo_pending_sides": 70, "elo_run": later["id"]}
 
 
 def guard_sequence(conn):
@@ -257,6 +279,8 @@ def restore(conn, before, after, apply):
         conn.execute("SET LOCAL lock_timeout='3s'")
         if apply:
             require(conn.execute("SELECT pg_try_advisory_xact_lock(hashtextextended('vega_v2_migrate',0))").fetchone()[0], "migration busy")
+        require(conn.execute("""SELECT pg_has_role(relowner,'USAGE') FROM pg_class
+            WHERE oid='core.matches'::regclass""").fetchone()[0], "maintenance requires the match table owner")
         guard_schema(conn, before, after)
         checks = dependencies(conn)
         expected = captured - {MATCHES}
@@ -266,7 +290,7 @@ def restore(conn, before, after, apply):
                                                                  "ops.resource_versions"}
             conn.execute(sql.SQL("LOCK TABLE {} IN SHARE ROW EXCLUSIVE MODE NOWAIT").format(sql.SQL(", ").join(map(typed, sorted(locked)))))
         guard_references(conn, before, parents)
-        verify_elo(conn, elo, bits, run)
+        elo_state = verify_elo(conn, elo, bits, run, after["at"])
         needed = current_state(conn, facts, parents, bindings)
         guard_sequence(conn)
         for table, predicates in checks.items():
@@ -279,13 +303,13 @@ def restore(conn, before, after, apply):
         for table, data in ((MATCHES, parents), (BINDINGS, bindings)):
             columns = {r[0] for r in conn.execute("SELECT attname FROM pg_attribute WHERE attrelid=%s::regclass AND attnum>0 AND NOT attisdropped", (table,))}
             require(all(set(r) == columns for r in data), "incomplete physical row: " + table)
-        report = {"would_restore": len(IDS) if needed else 0, "restored": 0, "preserved_elo": 70, "edition_versions": {}}
+        report = {"would_restore": len(IDS) if needed else 0, "restored": 0, **elo_state, "edition_versions": {}}
         if needed and apply:
             for table, data in ((MATCHES, parents), (BINDINGS, bindings)):
                 conn.execute(sql.SQL("INSERT INTO {} SELECT * FROM jsonb_populate_recordset(NULL::{},%s)").format(typed(table), typed(table)),
                              (Jsonb(data),))
             require(not current_state(conn, facts, parents, bindings), "restored identity differs")
-            verify_elo(conn, elo, bits, run)
+            require(verify_elo(conn, elo, bits, run, after["at"]) == elo_state, "Elo drift during restoration")
             conn.execute("UPDATE core.competition_seasons SET cup_updated_at=now() WHERE id=ANY(%s)", (list(FOLDERS),))
             for edition in sorted(FOLDERS):
                 version = conn.execute("""INSERT INTO ops.resource_versions(resource_kind,resource_id) VALUES('competition_season',%s)
@@ -298,23 +322,31 @@ def restore(conn, before, after, apply):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--dsn", required=True)
+    destination = parser.add_mutually_exclusive_group(required=True)
+    destination.add_argument("--dsn", help="dedicated loopback rehearsal database")
+    destination.add_argument("--maintenance", action="store_true", help="use the schema owner configuration of vega.migrate")
     for name in ("preimage", "postimage"):
         parser.add_argument("--" + name, required=True, type=Path)
         parser.add_argument("--" + name + "-sha256", required=True)
     parser.add_argument("--apply", action="store_true")
     args = parser.parse_args(argv)
     try:
-        target = urlsplit(args.dsn)
-        require(target.hostname == "127.0.0.1" and re.fullmatch(r"/vega_v2_open_matchday_restore_[a-z0-9_]+", target.path)
-                and not target.query and not target.fragment, "dedicated loopback copy required")
+        dsn = owner_url(os.environ) if args.maintenance else args.dsn
+        if args.maintenance:
+            require(dsn, "V2_MIGRATION_DATABASE_URL or V2_DB_HOST/NAME/USER/PASSWORD is required")
+            connector = connect
+        else:
+            target = urlsplit(dsn)
+            require(target.hostname == "127.0.0.1" and re.fullmatch(r"/vega_v2_open_matchday_restore_[a-z0-9_]+", target.path)
+                    and not target.query and not target.fragment, "dedicated loopback copy required")
+            connector = connect_local
         before = load_capture(args.preimage, args.preimage_sha256)
         after = load_capture(args.postimage, args.postimage_sha256)
-        with connect_local(args.dsn) as conn:
+        with connector(dsn) as conn:
             print(json.dumps(restore(conn, before, after, args.apply)))
     except psycopg.errors.LockNotAvailable:
         parser.exit(1, "restoration copy busy\n")
-    except (Refusal, psycopg.Error, KeyError, ValueError, TypeError, OSError, zlib.error) as error:
+    except (Refusal, StoreError, psycopg.Error, KeyError, ValueError, TypeError, OSError, zlib.error) as error:
         parser.exit(1, f"restoration refused: {error}\n")
 
 
