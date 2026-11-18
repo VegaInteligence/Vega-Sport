@@ -106,3 +106,5 @@ Les 42 feuilles officielles de matchs joués établissent 924 titularisations et
 Seraing–Beerschot, le 18 septembre, reçoit le statut fédéral de forfait et un score administratif de 0–5. Vega le marque terminé et s’en sert pour donner deux notes Elo en plus des 84 côtés des matchs joués. Le calcul 2097 perd 12,31 points pour Seraing et les donne à Beerschot. Retirer cette seule observation à niveaux d’entrée fixes modifie les cotes Elo après match sur 32 côtés, 16 rencontres ultérieures et neuf équipes, jusqu’au 13 novembre. L’écart maximal est de 11,97 points. La validation reproduit les 163 846 côtés du scénario publié à un pas de représentation près. [Forfait dans RDS](controles/belgique-u21-forfait-rds.json) · [Rejeu](controles/belgique-u21-elo-sensibilite.json) · [32 côtés ultérieurs](controles/belgique-u21-elo-32-cotes.csv)
 
 Les six sorties de comparaison ont été reproduites à l’octet à partir des entrées gelées. [Reçu et commande](controles/belgique-u21-rejeu.json)
+
+[Recalcul de sept millésimes depuis les statistiques et comparaison aux six lecteurs publics](RECALCUL-JOUEURS.md)

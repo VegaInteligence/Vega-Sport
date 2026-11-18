@@ -39,3 +39,5 @@ Deux matchs illustrent le choix du résultat utilisé par l’Elo. Pour le forfa
 ## Correctifs et publication
 
 Les deux avis Fable 5.2 portent la décision CHANGES_REQUESTED. Les relecteurs ont jugé cohérentes les comparaisons numériques des contributions et de l’Elo persisté, puis demandé des corrections de couverture et de portée. Les constats ci-dessus répondent à ces demandes. L’approbation indépendante de cette révision et la validation de la branche intégrée restent ouvertes. Aucun de ces contrôles n’a écrit de score ou d’écusson dans la base de production. [Reproduction des mesures](contre-lecture/REPRODUCTION.md) · [Suivi de l’audit VI-27](https://linear.app/vegainteligence/issue/VI-27)
+
+[Recalcul de sept millésimes depuis les statistiques et comparaison aux six lecteurs publics](RECALCUL-JOUEURS.md)

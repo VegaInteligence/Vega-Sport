@@ -15,3 +15,5 @@ La branche d’intégration part du commit de production `8018e0836c`. Les ligne
 Les changements de cette revue n’ont donné lieu à aucun déploiement, aucune fusion en production et aucune réécriture des observations sportives dans RDS. Le chantier des calculs et celui des identités restent suivis dans [VI-19](https://linear.app/vegainteligence/issue/VI-19) et [VI-21](https://linear.app/vegainteligence/issue/VI-21).
 
 [Classements, postes de joueurs et profils de clubs français et allemands](CLASSEMENTS-ET-IDENTITES.md)
+
+[Recalcul de sept millésimes depuis les statistiques et comparaison aux six lecteurs publics](RECALCUL-JOUEURS.md)

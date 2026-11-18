@@ -43,3 +43,5 @@ Le contrôle de la Coupe du monde utilise les 1 068 feuilles FIFA figées, les 2
 La [publication transactionnelle](notes-transaction/README.md) contient les SQL et leurs résultats, un tableau par édition, un tableau par saison et le détail des causes par édition. Le [mode de reproduction](notes-transaction/rejeu.md) indique comment vérifier les empreintes et régénérer les tables hors réseau.
 
 [Classements, postes de joueurs et profils de clubs français et allemands](CLASSEMENTS-ET-IDENTITES.md)
+
+[Recalcul de sept millésimes depuis les statistiques et comparaison aux six lecteurs publics](RECALCUL-JOUEURS.md)

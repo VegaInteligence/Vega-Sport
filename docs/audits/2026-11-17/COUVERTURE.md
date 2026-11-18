@@ -40,3 +40,5 @@ Les [91 critères détaillés](registres/requirements.csv) donnent pour chaque s
 ## Prévisions datées et données requises
 
 Dans un contrôle sur les fonctions de production, les entrées de l’ancien match et le dernier référentiel de notes sont fixes. Ajouter des observations ultérieures au référentiel des primitives suffit à modifier la note et la variable de composition d’équipe utilisée par la prévision suivante. À 0,6 npxG, les deux valeurs restent à l’intérieur des quantiles. La note passe de 86,1519 à 48,2575 et la variable de composition de 0,104350 à −0,004013. Ce contrôle synthétique établit la dépendance dans le code. Son effet sur les prévisions effectivement émises reste inconnu. Les 41 tests existants de puissance et six de composition passent aussi. [Entrées, bornes et résultats](controles/prevision-composition-temoin.json) · [Commandes et tests](controles/prevision-composition-recu.json)
+
+[Recalcul de sept millésimes depuis les statistiques et comparaison aux six lecteurs publics](RECALCUL-JOUEURS.md)
