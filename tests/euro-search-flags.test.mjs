@@ -120,11 +120,12 @@ test("all 24 Euro 2024 countries resolve to locally available flags", async () =
   assert.equal(nationalFlagCode("Géorgie", "2024"), "ge");
   assert.equal(nationalFlagCode("Yugoslavia", "1998"), "yu-1992");
   assert.equal(nationalFlagCode("Serbia and Montenegro", "2006"), "yu-1992");
-  assert.equal(nationalFlagCode("Yugoslavia", "1990"), null);
+  // The old editions have their flags too (18 Nov 2026): the star of 1946–1991 here.
+  assert.equal(nationalFlagCode("Yugoslavia", "1990"), "yu-1946");
   assert.equal(nationalFlagCode("Yugoslavia", "2018"), null);
   assert.equal(nationalFlagCode("Winner Match 45", "2028"), null);
   assert.equal(nationalFlagCode("Unknown", "2028"), null);
-  assert.equal(nationalFlagCode("Spain", "1950"), null);
+  assert.equal(nationalFlagCode("Spain", "1950"), "es");
 });
 
 test("Spain–Georgia displays both flags in the national bracket, never in a club bracket", async () => {

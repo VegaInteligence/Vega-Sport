@@ -60,27 +60,41 @@ for (const [name, code] of Object.entries({
 }))
   add(name, code);
 
-/** Unknown slots and old editions are left blank rather than guessed. */
+// The teams of the past and the flag they played under: West Germany's and Czechoslovakia's are their successors', the
+// Dutch East Indies played under the Netherlands'; the Soviet Union, East Germany and Zaire are drawn in the site's
+// own style (competition-selector.css), the flag library having none.
+const PAST_FLAGS = Object.fromEntries(
+  Object.entries({
+    "West Germany": "de",
+    Czechoslovakia: "cz",
+    "Dutch East Indies": "nl",
+    "Soviet Union": "su",
+    "East Germany": "dd",
+    Zaire: "zr",
+  }).map(([name, code]) => [key(name), code]),
+);
+const YUGOSLAVIA = ["yugoslavia", "yougoslavie"];
+const SERBIA_MONTENEGRO = ["serbia and montenegro", "serbie et montenegro"];
+
+/**
+ * A national team's flag in an edition (the user, 18 November 2026: every edition has its flags, the old ones too): a
+ * country of today has its flag whatever the year, a team of the past the one it played under. Yugoslavia has the
+ * kingdom's plain tricolour before 1946, the star until 1991, the plain tricolour again until 2006 (Serbia and
+ * Montenegro's too) and none after, nor without a year. An unknown slot is left blank rather than guessed.
+ */
 export function nationalFlagCode(name, season) {
   const year = /(?:19|20)\d{2}/.exec(String(season || ""));
-  if (year && Number(year[0]) < 1994) return null;
   const normalized = key(name);
-  // The 1992–2006 federation used the same blue, white and red tricolour.
-  if (
-    year &&
-    Number(year[0]) <= 2006 &&
-    [
-      "yugoslavia",
-      "yougoslavie",
-      "serbia and montenegro",
-      "serbie et montenegro",
-    ].includes(normalized)
-  )
-    return "yu-1992";
-  return names.get(normalized) || null;
+  if (YUGOSLAVIA.includes(normalized) || SERBIA_MONTENEGRO.includes(normalized)) {
+    if (!year || Number(year[0]) > 2006) return null;
+    return YUGOSLAVIA.includes(normalized) && Number(year[0]) >= 1946 && Number(year[0]) <= 1991 ? "yu-1946" : "yu-1992";
+  }
+  return PAST_FLAGS[normalized] || names.get(normalized) || null;
 }
 
 export function nationalTeamName(name, season) {
+  // A team of the past keeps its own name: its flag's code is its successor's (West Germany's is Germany's).
+  if (PAST_TEAMS[key(name)]) return PAST_TEAMS[key(name)];
   const code = nationalFlagCode(name, season);
   return code?.length === 2
     ? displays[1]?.of(code.toUpperCase()) || name
