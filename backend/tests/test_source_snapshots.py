@@ -542,7 +542,7 @@ class OpenMatchdayGuardTest(SnapshotDatabase):
         header = "date,home,away,ft_home,ft_away"
         row = "2026-08-31,AFC Telford,Bedford,0,1"
         plain = f"{header}\n{row}\n"
-        enriched = f"{header},ht_home,ht_away,home_corners\n{row},0,0,4\n"
+        enriched = f"{header},ht_home,ht_away,home_corners\n{row},0,1,4\n"
         scope = [league(folder, results=1, fixtures=0)]
         def read_result(day, body):
             self.assertEqual(self.read(scope, self.files(folder, results=body, fixtures=None), NOW + timedelta(days=day)),
@@ -554,7 +554,7 @@ class OpenMatchdayGuardTest(SnapshotDatabase):
         original, before_position = read_result(1, plain)
         state, position = read_result(2, enriched)
         self.assertEqual((state[0:5], position), (original[0:5], before_position))
-        self.assertEqual(state[5:8], (0, 0, original[7] + 1))
+        self.assertEqual(state[5:8], (0, 1, original[7] + 1))
         self.assertEqual(state[10][0][1:4], ["all", None, 4])
         self.assertEqual(read_result(3, plain), (state, position))
 
