@@ -537,6 +537,41 @@ class OpenMatchdayGuardTest(SnapshotDatabase):
         self.assertEqual(self.state()[0], result)
 
 
+    def test_sparse_open_matchday_correction_keeps_other_fields_and_the_halftime_pair(self):
+        original = self.before[0]
+        match = original[1]
+        home, away = self.x("SELECT home_team_id, away_team_id FROM core.matches WHERE id=%s", (match,)).fetchone()
+        self.x("""UPDATE core.team_match_stats SET xg=1.25,passes=455
+                   WHERE season_id=2026 AND match_id=%s AND team_id=%s AND period='all'""", (match, home))
+
+        def extra_row():
+            self.x("""INSERT INTO core.team_match_stats(season_id,match_id,team_id,period,blocked_shots)
+                       VALUES (2026,%s,%s,'second_half',4) ON CONFLICT DO NOTHING""", (match, away))
+
+        def stats():
+            return self.x("""SELECT team_id,period::text,corners,blocked_shots,xg,passes,xmin::text
+                              FROM core.team_match_stats WHERE season_id=2026 AND match_id=%s ORDER BY team_id,period""",
+                          (match,)).fetchall()
+
+        extra_row()
+        before = stats()
+        source = "date,home,away,ft_home,ft_away,home_corners\n2026-11-01,North FC,South FC,2,1,0\n"
+        self.assertEqual(self.read([league()], self.files(results=source), NOW + timedelta(days=1)), ("ok", 2, 0))
+        state = self.state()[0]
+        self.assertEqual(state[:5], original[:5])
+        self.assertEqual(state[7], original[7] + 1)
+        with self.subTest("score at halftime"):
+            self.assertEqual(state[5:7], (1, 0))
+        with self.subTest("same key outside columns"):
+            self.assertEqual(stats()[0][:6], (home, "all", 0, None, 1.25, 455))
+        with self.subTest("independent period"):
+            self.assertEqual(stats()[-1], before[-1])
+        extra_row()
+        before, stamps = stats(), self.stamps()
+        no_halftime_or_stats = "date,home,away,ft_home,ft_away,ht_home\n2026-11-01,North FC,South FC,2,1,1\n"
+        self.assertEqual(self.read([league()], self.files(results=no_halftime_or_stats), NOW + timedelta(days=2)), ("ok", 2, 0))
+        self.assertEqual((self.state()[0], stats(), self.stamps()[1]), (state, before, stamps[1]))
+
     def test_attested_final_accepts_late_stats_without_moving_the_match(self):
         folder = "ENG_6_national-league-north"
         header = "date,home,away,ft_home,ft_away"

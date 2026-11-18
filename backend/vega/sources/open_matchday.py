@@ -178,32 +178,27 @@ def _row_stats(item):
     return out
 
 
-def _by_team_period(rows):
-    return sorted(rows, key=lambda r: (r[0], r[1]))
-
-
-def _stats_rows(row, home, away, stored=()):
-    """The match's team_match_stats rows: (team, period, {column: value}). A cell the file does not state (its
-    column absent or the cell empty) keeps the stored value; a stated one, 0 included, replaces it
-    (FAILURE_MODES.md §22)."""
+def _write_stats(conn, season, match, row, home, away):
+    """Merge the cells present in this source, including zero, at the team and period key."""
     teams = {"home": home, "away": away}
-    merged = {(team, period): dict(columns) for team, period, columns in stored}
-    for (side, period), stats in row["stats"].items():
-        if stats:
-            merged.setdefault((teams[side], period), {}).update(stats)
-    return _by_team_period((team, period, columns) for (team, period), columns in merged.items() if columns)
-
-
-def _stored_stats(conn, season_id, ids):
-    out = {}
-    if ids:
-        for match, team, period, *values in conn.execute(
-            f"""SELECT match_id, team_id, period::text, {', '.join(STATS.values())} FROM core.team_match_stats
-                WHERE season_id = %s AND match_id = ANY(%s)""",
-            (season_id, list(ids)),
-        ):
-            out.setdefault(match, []).append((team, period, {c: v for c, v in zip(STATS.values(), values) if v is not None}))
-    return {match: _by_team_period(rows) for match, rows in out.items()}
+    reported = {}
+    for (side, period), columns in row["stats"].items():
+        if columns:
+            reported.setdefault((teams[side], period), {}).update(columns)
+    changed = 0
+    for (team, period), columns in sorted(reported.items()):
+        keys = ("season_id", "match_id", "team_id", "period")
+        names = (*keys, *columns)
+        values = ", ".join(["%s"] * len(names))
+        assignments = ", ".join(f"{name}=EXCLUDED.{name}" for name in columns)
+        differs = " OR ".join(f"stored.{name} IS DISTINCT FROM EXCLUDED.{name}" for name in columns)
+        changed += conn.execute(
+            f"""INSERT INTO core.team_match_stats AS stored ({', '.join(names)}) VALUES ({values})
+                ON CONFLICT ({', '.join(keys)}) DO UPDATE
+                SET {assignments}, updated_at=now() WHERE {differs}""",
+            [season, match, team, period, *columns.values()],
+        ).rowcount
+    return bool(changed)
 
 
 def save(conn, folder, name, season, results, fixtures, now, *, declared_results=None):
@@ -249,7 +244,6 @@ def save(conn, folder, name, season, results, fixtures, now, *, declared_results
         (comp, season_id, season, cup_key, name, SOURCE, now, now),
     ).fetchone()[0]
     before.update(snapshot.elsewhere(conn, "open_matchday", edition, [key for key in snap if key not in before]))
-    stats_before = _stored_stats(conn, season_id, [m["id"] for m in before.values()])
     changes = 0
     reserved = {before[key]["archive_position"] for key in preserved}
     position = 0
@@ -260,7 +254,6 @@ def save(conn, folder, name, season, results, fixtures, now, *, declared_results
             # A previously attested result can gain optional data without moving
             # its row or replacing the facts that established its identity.
             values = {"archive_position": found["archive_position"]}
-            values.update({name: row[name] for name in ("home_score_ht", "away_score_ht") if row[name] is not None})
         else:
             while position in reserved:
                 position += 1
@@ -275,19 +268,18 @@ def save(conn, folder, name, season, results, fixtures, now, *, declared_results
                 "competition_season_id": edition, "season_id": season_id, "source": "open_matchday", "status": row["status"],
                 "match_date": row["date"], "home_team_id": home, "away_team_id": away, "home_team_name": row["home"], "away_team_name": row["away"],
                 "round_id": round_id, "home_score": row["home_score"], "away_score": row["away_score"],
-                "home_score_ht": row["home_score_ht"], "away_score_ht": row["away_score_ht"], "archive_position": position,
+                "archive_position": position,
             }
             position += 1
-        stats = _stats_rows(row, home, away, stats_before.get(found["id"], []) if found is not None else ())
-        restated = found is not None and stats_before.get(found["id"], []) != stats
-        mid, outcome = snapshot.write(conn, "open_matchday", key, values, found, changed=restated)
-        changes += outcome in ("inserted", "updated")
-        if outcome == "inserted" or restated:
-            conn.execute("DELETE FROM core.team_match_stats WHERE season_id=%s AND match_id=%s", (season_id, mid))
-            for team, period, columns in stats:
-                cols = ["season_id", "match_id", "team_id", "period", *columns]
-                conn.execute(f"INSERT INTO core.team_match_stats({', '.join(cols)}) VALUES ({', '.join(['%s'] * len(cols))})",
-                             [season_id, mid, team, period, *columns.values()])
+        if row["home_score_ht"] is not None and row["away_score_ht"] is not None:
+            values.update(home_score_ht=row["home_score_ht"], away_score_ht=row["away_score_ht"])
+        mid, outcome = snapshot.write(conn, "open_matchday", key, values, found)
+        match_changed = outcome in ("inserted", "updated")
+        stats_changed = _write_stats(conn, season_id, mid, row, home, away)
+        if stats_changed and not match_changed:
+            conn.execute("""UPDATE core.matches SET revision=revision+1, updated_at=now()
+                            WHERE id=%s AND season_id=%s""", (mid, season_id))
+        changes += match_changed or stats_changed
     changes += snapshot.remove(conn, "open_matchday", before, status)
     if changes:
         conn.execute("UPDATE core.competition_seasons SET cup_updated_at=%s WHERE id=%s", (now, edition))
