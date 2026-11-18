@@ -10,8 +10,8 @@
 //  3. Transfers not read, valuations name their club: one badge at the first valuation that
 //     names a club and one at each valuation whose club differs from the last named one;
 //     a valuation without a club changes nothing. They are estimates, said so, not transfers.
-//  4. Transfers read: a move inside a club (youth, reserve side) and a move whose destination
-//     is no club are neither drawn nor listed. A row without a valid date is dropped.
+//  4. Transfers read: a move whose destination is no club is neither drawn nor listed. A row
+//     without a valid date is dropped.
 //  5. The curve starts with the club of the last move made on or before the first
 //     valuation; without one, with the first valuation's own club; without either, with none.
 //  6. Every later move is drawn at its own date, also after the last valuation. Two exceptions:
@@ -19,6 +19,16 @@
 //     move within 92 days is not drawn. Both stay in the list.
 //  7. A loan made permanent shows the club twice (the loan, then the transfer): two facts.
 //  8. Wording: a fee of nothing is not shown; a kind the provider does not give is an arrival.
+//
+// Found on the first real rows (production, 18 Nov 2026: Yamal, Mbappé, Giroud)
+// 13. The provider lists youth and reserve sides as clubs (« FC Barcelona U19 », « AS Monaco
+//     Youth », « FC Porto B »): one we do not hold is not a club joined, whatever the kind of
+//     move, and not the curve's first club either. One of our teams always is a club (a
+//     reserve side playing in a league we hold has its id).
+// 14. A move inside a club is an arrival when it is the promotion to the first team (Yamal's
+//     only move to « Barcelona »): drawn, listed, and the curve's first club when made before
+//     the first valuation. A move inside the club he is already shown at is nothing.
+// 15. The provider marks a dissolved club in its name (« Tours FC (- 2025) »): not shown.
 //
 // Where a badge sits (services/curve-badges.js), in the drawing's own units
 //  9. A badge floats above the highest point of the line under its own width, not only above
@@ -108,13 +118,13 @@ test("with transfers: the club of the first valuation, then every arrival at its
     move("2026-02-30", "transfer", LILLE, ARSENAL),
   ]);
   assert.deepEqual(drawn(moves), ["2008-08-18 Tours", "2010-07-01 Montpellier", "2012-06-26 Arsenal", "2018-01-31 Chelsea", "2025-07-01 Lille"]);
-  // The move inside Grenoble is not listed; the moves made before the curve are.
+  // The moves made before the curve are listed, his promotion to Grenoble's first team first.
   assert.deepEqual(listed(moves), [
-    "2007-07-01 Istres", "2008-06-30 Grenoble", "2008-07-01 Tours", "2010-07-01 Montpellier", "2012-06-26 Arsenal", "2018-01-31 Chelsea", "2025-07-01 Lille",
+    "2005-07-01 Grenoble", "2007-07-01 Istres", "2008-06-30 Grenoble", "2008-07-01 Tours", "2010-07-01 Montpellier", "2012-06-26 Arsenal", "2018-01-31 Chelsea", "2025-07-01 Lille",
   ]);
   // The first badge is the transfer that brought him there, drawn at the first valuation.
   const [start, , , chelsea, lille] = moves.curve;
-  assert.deepEqual([start.at, start.date, start.kind, start.key], ["2008-08-18", "2008-07-01", "transfer", moves.list[2].key]);
+  assert.deepEqual([start.at, start.date, start.kind, start.key], ["2008-08-18", "2008-07-01", "transfer", moves.list[3].key]);
   assert.deepEqual(moveTip(start), { title: "Grenoble → Tours", rows: [["Transfert", "01/07/2008"], ["Montant", marketValue(150000)]] });
   assert.deepEqual(moveTip(chelsea), { title: "Arsenal → Chelsea", rows: [["Transfert", "31/01/2018"], ["Montant", "17 M€"]] });
   assert.deepEqual(moveTip(lille), { title: "Los Angeles FC → Lille", rows: [["Transfert libre", "01/07/2025"]] });
@@ -178,6 +188,60 @@ test("a return from loan is drawn when he stays: no other move within 92 days", 
     [move("2019-01-15", "loan", CHELSEA, LILLE), move("2019-06-30", "loan_return", LILLE, CHELSEA), move("2019-07-01", "free", CHELSEA, null)]);
   assert.deepEqual(drawn(released), ["2018-06-01 Chelsea", "2019-01-15 Lille"]);
   assert.deepEqual(listed(released), ["2019-01-15 Lille", "2019-06-30 Chelsea"]);
+});
+
+test("a youth or reserve side we do not hold is no club; the promotion to the first team is an arrival", () => {
+  const BARCA = club("Barcelona", "t_bar"), MONACO = club("Monaco", "t_asm"), PSG = club("Paris Saint-Germain", "t_psg");
+  // Yamal as the provider lists him: his only move to « Barcelona » is inside the club.
+  const yamal = careerMoves([value("2023-08-21", 2e7, BARCA), value("2026-07-22", 2e8, BARCA)], [
+    move("2014-07-01", "free", club("CF La Torreta Youth"), club("FC Barcelona Youth")),
+    move("2021-07-01", "internal", club("FC Barcelona Youth"), club("FC Barcelona U16")),
+    move("2022-07-01", "internal", club("FC Barcelona U16"), club("FC Barcelona U19")),
+    move("2023-07-01", "internal", club("FC Barcelona U19"), BARCA),
+  ]);
+  assert.deepEqual(drawn(yamal), ["2023-08-21 Barcelona"]);
+  assert.deepEqual(listed(yamal), ["2023-07-01 Barcelona"]);
+  assert.deepEqual(moveTip(yamal.curve[0]), { title: "FC Barcelona U19 → Barcelona", rows: [["Équipe première", "01/07/2023"]] });
+  assert.equal(moveNote(yamal.list[0]), "juil. 2023 · Équipe première");
+  // Mbappé: first valued in Monaco's under-19s (no club of ours: no first badge), promoted a month later.
+  const mbappe = careerMoves([value("2015-12-02", 5e4, club("AS Monaco U19")), value("2026-07-22", 1.8e8, club("Real Madrid", "t_rma"))], [
+    move("2013-07-01", "free", club("INF Clairefontaine Youth"), club("AS Monaco Youth")),
+    move("2015-07-01", "internal", club("AS Monaco Youth"), club("AS Monaco U19")),
+    move("2016-01-01", "internal", club("AS Monaco U19"), MONACO),
+    move("2017-08-31", "loan", MONACO, PSG),
+    move("2018-06-30", "loan_return", PSG, MONACO),
+    move("2018-07-01", "transfer", MONACO, PSG, 180000000),
+  ]);
+  assert.deepEqual(drawn(mbappe), ["2016-01-01 Monaco", "2017-08-31 Paris Saint-Germain", "2018-07-01 Paris Saint-Germain"]);
+  assert.deepEqual(listed(mbappe), ["2016-01-01 Monaco", "2017-08-31 Paris Saint-Germain", "2018-06-30 Monaco", "2018-07-01 Paris Saint-Germain"]);
+  // Back and forth with the reserve side: nothing; a reserve side we hold is a club like another.
+  const OURS_B = club("Barcelona B", "t_bab");
+  const shuffled = careerMoves([value("2020-01-01", 1e6, BARCA), value("2026-01-01", 1e6, BARCA)], [
+    move("2019-07-01", "internal", club("FC Barcelona U19"), BARCA),
+    move("2021-01-10", "internal", BARCA, club("FC Barcelona Atlètic Reserves")),
+    move("2021-03-01", "internal", club("FC Barcelona Atlètic Reserves"), BARCA),
+    move("2022-07-01", "internal", BARCA, OURS_B),
+    move("2023-07-01", "transfer", OURS_B, club("Villarreal CF B")),
+    move("2024-07-01", "loan", club("Villarreal CF B"), club("B 93 Copenhagen")),
+  ]);
+  assert.deepEqual(drawn(shuffled), ["2020-01-01 Barcelona", "2022-07-01 Barcelona B", "2024-07-01 B 93 Copenhagen"]);
+  assert.deepEqual(listed(shuffled), ["2019-07-01 Barcelona", "2022-07-01 Barcelona B", "2024-07-01 B 93 Copenhagen"]);
+  // Without transfers: a valuation in a youth side changes nothing.
+  const estimates = careerMoves([value("2015-12-02", 5e4, club("AS Monaco U19")), value("2016-06-01", 1e6, MONACO), value("2017-01-01", 2e6, club("AS Monaco B")), value("2018-01-01", 9e7, PSG)], null);
+  assert.deepEqual(drawn(estimates), ["2016-06-01 Monaco", "2018-01-01 Paris Saint-Germain"]);
+});
+
+test("a dissolved club keeps its name without the provider's mark", () => {
+  const TOURS_GONE = club("Tours FC (- 2025)");
+  const moves = careerMoves([value("2008-08-18", 50000, club("Grenoble", "t_gre")), value("2012-01-10", 9e6)], [
+    move("2008-09-01", "transfer", GRENOBLE, TOURS_GONE, 150000),
+    move("2010-07-01", "transfer", TOURS_GONE, MONTPELLIER, 2000000),
+    move("2011-07-01", "loan", MONTPELLIER, club("SC Bastia (1905 - 2017)")),
+    move("2011-12-31", "loan", club("SC Bastia (1905 - 2017)"), club("SE Itapirense (SP)")),
+  ]);
+  assert.deepEqual(drawn(moves), ["2008-08-18 Grenoble", "2008-09-01 Tours FC", "2010-07-01 Montpellier", "2011-07-01 SC Bastia", "2011-12-31 SE Itapirense (SP)"]);
+  assert.equal(moveTip(moves.curve[2]).title, "Tours FC → Montpellier");
+  assert.deepEqual(drawn(careerMoves([value("2009-01-01", 1e6, TOURS_GONE), value("2010-01-01", 1e6, club("Tours FC"))], null)), ["2009-01-01 Tours FC"]);
 });
 
 const flat = [{ x: 0, y: 100 }, { x: 200, y: 100 }];
