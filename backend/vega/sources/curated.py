@@ -338,7 +338,8 @@ def cup_logos(conn):
             if not row or not logo.get("imageUrl"):
                 unmatched += 1
                 continue
-            if ref[0] == "pitchapi" and row[1] is not None:
+            if (ref[0] == "pitchapi" and row[1] is not None
+                    or conn.execute("SELECT core.family_artwork_requires_proof(%s)", (row[0],)).fetchone()[0]):
                 continue
             if asset is None:
                 # One asset per image, whatever the number of competitions it is the logo of.
