@@ -107,6 +107,22 @@ export function matchForecast(value) {
   return total > 0.98 && total < 1.02 ? { home: value.home, draw: value.draw, away: value.away } : null;
 }
 
+/**
+ * A row's own sides (the API's `sides`, VI-30): each side's team id and crest reference, under the names the bracket
+ * reads (homeImage, awayImage). A side comes only from its row's foreign key, never from a name; a malformed one is
+ * left out.
+ */
+function ownSides(row) {
+  const out = {};
+  for (const [side, id, image] of [["home", "homeTeamId", "homeImage"], ["away", "awayTeamId", "awayImage"]]) {
+    const value = row?.sides?.[side];
+    if (typeof value?.id !== "string" || !value.id) continue;
+    out[id] = value.id;
+    if (typeof value.image_url === "string" && value.image_url) out[image] = value.image_url;
+  }
+  return out;
+}
+
 export function normalizeSupplementalCup(results, fixtures) {
   const completed = [], keys = new Set();
   for (const [index, row] of (results || []).entries()) {
@@ -116,7 +132,7 @@ export function normalizeSupplementalCup(results, fixtures) {
     const day = validDay(row.date) ? row.date : "";
     keys.add(identity(day, home, away));
     const roundName = String(row.round_name || row.round || row.stage || "").trim();
-    completed.push({ key: "result:" + index, date: day, home, away, score, roundName, round: readableRound(roundName), status: "finished", gw: String(row.gw ?? "").trim() });
+    completed.push({ key: "result:" + index, date: day, home, away, score, roundName, round: readableRound(roundName), status: "finished", gw: String(row.gw ?? "").trim(), ...ownSides(row) });
   }
   const scheduled = [];
   for (const [index, row] of (fixtures || []).entries()) {
@@ -126,7 +142,7 @@ export function normalizeSupplementalCup(results, fixtures) {
     if (keys.has(identity(day, home, away))) continue;
     const roundName = String(row.round_name || row.round || row.stage || "").trim();
     const forecast = matchForecast(row.forecast);
-    scheduled.push({ key: "fixture:" + index, date: day, home, away, score: null, roundName, round: readableRound(roundName), status: "scheduled", gw: String(row.gw ?? "").trim(), ...(forecast && { forecast }) });
+    scheduled.push({ key: "fixture:" + index, date: day, home, away, score: null, roundName, round: readableRound(roundName), status: "scheduled", gw: String(row.gw ?? "").trim(), ...(forecast && { forecast }), ...ownSides(row) });
   }
   return [...completed, ...scheduled];
 }
@@ -134,6 +150,10 @@ export function normalizeSupplementalCup(results, fixtures) {
 /** The results-v1 matches of International Results in the open-cups shape normalizeOpenCup reads. */
 export function resultsAsOpenCup(matches) {
   return (matches || []).map((match) => ({ date: match.date, team1: match.home, team2: match.away, round: match.round || "", score: Array.isArray(match.score) ? { ft: match.score } : undefined }));
+}
+
+export function normalizeRoundSides(matches) {
+  return (matches || []).map((match) => ({ ...match, ...ownSides(match) }));
 }
 
 export function normalizeOpenCup(matches) {
@@ -146,7 +166,7 @@ export function normalizeOpenCup(matches) {
     if (extra) notes.push("après prolongation");
     if (penalties) notes.push("tirs au but " + penalties[0] + " – " + penalties[1]);
     const forecast = score ? null : matchForecast(match.forecast);
-    return [{ key: "open:" + index, date: validDay(match.date) ? match.date : "", home, away, score, penalties, notes, roundName: String(match.round || ""), number: Number.isInteger(match.num) ? match.num : null, round: readableRound(match.round, match.group), status: score ? "finished" : "scheduled", ...(forecast && { forecast }) }];
+    return [{ key: "open:" + index, date: validDay(match.date) ? match.date : "", home, away, score, penalties, notes, roundName: String(match.round || ""), number: Number.isInteger(match.num) ? match.num : null, round: readableRound(match.round, match.group), status: score ? "finished" : "scheduled", ...(forecast && { forecast }), ...ownSides(match) }];
   });
 }
 

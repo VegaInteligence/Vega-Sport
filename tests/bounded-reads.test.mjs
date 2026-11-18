@@ -409,10 +409,10 @@ test("navbar focus/typing selects the advertised read path and cancels its debou
       calls = [],
       pending = [],
       controllers = [],
+      cupKinds = new Set(),
       state = [scenario.query, true, true, 0, ""];
     let stateIndex = 0,
-      legacyLoads = 0,
-      cupLoads = 0;
+      legacyLoads = 0;
     const context = {
       manifest: {
         ...manifest,
@@ -477,8 +477,9 @@ test("navbar focus/typing selects the advertised read path and cancels its debou
         },
       },
       "../services/catalog-client.js": {
-        cupIndex: async () => {
-          cupLoads++;
+        servesCupWorkerIndex: () => false,
+        cupIndex: async (kind) => {
+          cupKinds.add(kind);
           return { competitions: [] };
         },
       },
@@ -523,10 +524,10 @@ test("navbar focus/typing selects the advertised read path and cancels its debou
     const hasQuery = scenario.query.length >= 2;
     assert.equal(calls.length, scenario.advertised && hasQuery ? 1 : 0);
     assert.equal(legacyLoads, !scenario.advertised && hasQuery ? 1 : 0);
-    assert.equal(
-      cupLoads,
-      !scenario.advertised && hasQuery ? 2 : 0,
-      "bounded search never downloads the auxiliary cup catalogues",
+    assert.deepEqual(
+      [...cupKinds],
+      hasQuery ? (scenario.advertised ? ["supplemental"] : ["supplemental", "worker"]) : [],
+      "typing reads the supplementary competition catalogue without the retired worker index on the bounded backend",
     );
     for (const cleanup of cleanups)
       if (typeof cleanup === "function") cleanup();

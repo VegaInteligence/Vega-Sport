@@ -55,6 +55,7 @@ function Fixture({ entry, week, compact, competitions }) {
           name={competition.name}
           url={competition.imageUrl}
           className="crest fixture-competition-crest"
+          initials={false}
         />
         <span className="fixture-competition-copy">
           <span className="fixture-competition-name">{competition.name}</span>

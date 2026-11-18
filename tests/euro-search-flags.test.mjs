@@ -198,6 +198,7 @@ test("the Euro results list also displays flags for both national teams", async 
       "./KnockoutBracket.jsx": { __esModule: true, default: () => null },
       "./NationalFlag.jsx": { __esModule: true, default: flag.default },
       "../services/resources.js": { useResource: () => ({}), json: () => {} },
+      "../services/competition-artwork.js": await import("../dashboard/frontend/src/services/competition-artwork.js"),
       "../services/catalog-client.js": { cupTable: () => {} },
       "../services/competition-selector.js": {
         competitionCountryLabel: String,

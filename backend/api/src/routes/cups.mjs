@@ -24,6 +24,7 @@ import { createHash } from "node:crypto";
 import { matchesEtag, reject, send, validateParams } from "../http.mjs";
 import { fixture, forecastOf } from "./matches.mjs";
 import { standingsBody } from "./reference.mjs";
+import { editionArtworkFields } from "../edition-artwork.mjs";
 
 const LEAGUE = /^l_(?:[A-Za-z0-9]{6}|v\d{7})$/,
   YEAR = /^\d{4}(?:\/\d{4})?$/;
@@ -59,16 +60,28 @@ async function forecastsOf(read, ids) {
   return new Map(rows.map((r) => [Number(r.match_key), r]));
 }
 
+/**
+ * A row's two sides by its own foreign keys (136, 144, VI-30): the public id of the team each FK names and that team's
+ * crest reference (null without one); a side without an FK is left out, and `sides` when both are. Beside the CSV
+ * line, which keeps the source's spelling: a name never chooses a crest.
+ */
+function ownSides(r) {
+  const sides = {};
+  for (const side of ["home", "away"])
+    if (r[`${side}_team_public_id`]) sides[side] = { id: r[`${side}_team_public_id`], image_url: r[`${side}_image_url`] ?? null };
+  return Object.keys(sides).length ? { sides } : {};
+}
+
 /** A row of main's catalogue tables (the source's CSV line), from typed facts; a fixture with its forecast. */
 export function tableRow(r, f) {
   const row = { gw: text(r.gw), away: r.away, date: r.date ?? "", home: r.home, time: "" };
-  if (r.status !== "finished") return f ? { ...row, forecast: forecastOf(f) } : row;
+  if (r.status !== "finished") return { ...row, ...(f && { forecast: forecastOf(f) }), ...ownSides(r) };
   const sides = {};
   for (const side of ["home", "away"])
     for (const k of ["shots", "target", "fouls", "corners", "yellow", "red", "corners_1h", "corners_2h"]) sides[`${side}_${k}`] = text(r[`${side}_${k}`]);
   return {
     ...row, source: "", ft_away: text(r.away_score), ft_home: text(r.home_score), ht_away: text(r.away_score_ht), ht_home: text(r.home_score_ht),
-    ft_result: outcome(r.home_score, r.away_score), ht_result: outcome(r.home_score_ht, r.away_score_ht), goal_minutes: "", ...sides,
+    ft_result: outcome(r.home_score, r.away_score), ht_result: outcome(r.home_score_ht, r.away_score_ht), goal_minutes: "", ...sides, ...ownSides(r),
   };
 }
 
@@ -107,6 +120,7 @@ const openCupMatch = (m) => {
     ...(m.date != null && { date: m.date }),
     team1: m.home,
     team2: m.away,
+    ...ownSides(m),
     ...(Object.keys(score).length && { score }),
     // The source's own word for a match never played (1938 Sweden–Austria).
     ...(m.status === "canceled" && { status: "canceled" }),
@@ -129,6 +143,7 @@ const openLigaMatch = (competition, season) => (m) => {
   const periods = finished && competition === "germany-cup" && ["2025/2026", "2026/2027"].includes(season) ? periodsOf(m) : {};
   return {
     key: `openliga:${m.key}`, date: m.date ?? "", home: m.home, away: m.away, homeId: m.home_key, awayId: m.away_key,
+    ...ownSides(m),
     score: finished ? pair(m.home_score, m.away_score) : null,
     penalties: finished ? pair(m.home_penalty_score, m.away_penalty_score) : null,
     ...(Object.keys(periods).length && { periods }),
@@ -155,18 +170,19 @@ const nationsMatch = (m) => ({
 export async function cupBody(read, competitionId, season) {
   const [e] = await read("SELECT * FROM api.cup_editions WHERE competition_id=$1 AND season=$2", [competitionId, season]);
   if (!e) return null;
-  const rows = await read("SELECT * FROM api.cup_matches WHERE competition_season_id=$1 ORDER BY position, match_id", [e.competition_season_id]);
   const source = SOURCES[e.kind](e);
+  const artwork = editionArtworkFields(e.edition_emblem_url);
   if (e.format === "table-v1") {
     const table = await read("SELECT * FROM api.cup_table_rows WHERE competition_season_id=$1 ORDER BY position", [e.competition_season_id]);
     const forecasts = await forecastsOf(read, table.filter((r) => r.status !== "finished" && r.match_id != null).map((r) => r.match_id));
     const body = {
-      name: e.name, season, source,
+      name: e.name, season, source, ...artwork,
       results: table.filter((r) => r.status === "finished").map((r) => tableRow(r)),
       fixtures: table.filter((r) => r.status !== "finished").map((r) => tableRow(r, forecasts.get(Number(r.match_id)))),
     };
     return { body, worker: { checkedAt: iso(e.checked_at), updatedAt: iso(e.updated_at) } };
   }
+  const rows = await read("SELECT * FROM api.cup_matches WHERE competition_season_id=$1 ORDER BY position, match_id", [e.competition_season_id]);
   const forecasts = await forecastsOf(read, rows.filter((r) => r.status !== "finished").map((r) => r.match_id));
   const each = (build) => (r) => withForecast(build(r), forecasts.get(Number(r.match_id)));
   const body =
@@ -177,7 +193,7 @@ export async function cupBody(read, competitionId, season) {
         : e.competition === "nations-league"
           ? { season, matches: rows.map(each(nationsMatch)), source }
           : { name: e.name, season, matches: rows.map(each(tournamentMatch(e.competition))), source };
-  return { body, worker: { checkedAt: iso(e.checked_at), updatedAt: iso(e.updated_at) } };
+  return { body: { ...body, ...artwork }, worker: { checkedAt: iso(e.checked_at), updatedAt: iso(e.updated_at) } };
 }
 
 async function nativeSnapshot(read, competition, season) {
@@ -194,11 +210,14 @@ async function nativeSnapshot(read, competition, season) {
       id: f.id, season: f.season, date: f.date, time_utc: f.time_utc, status: f.status,
       home_team: f.home_team, away_team: f.away_team, league: { ...f.league, season: f.season },
       score_home: f.score_home, score_away: f.score_away,
+      ...editionArtworkFields(row.edition_emblem_url),
     };
   });
   const rounds = Object.fromEntries(rows.filter((r) => r.round).map((r) => [r.id, { name: r.round, playoff: r.playoff }]));
   const at = iso(state?.published_at);
-  return { matches, rounds, worker: { checkedAt: at, updatedAt: at } };
+  // Prefer the provider's edition label over the warehouse season label when both match.
+  const selected = rows.find((row) => row.native_season === season) ?? rows[0];
+  return { matches, rounds, ...editionArtworkFields(selected.edition_emblem_url), worker: { checkedAt: at, updatedAt: at } };
 }
 
 export function createCupRoute(read) {
@@ -221,7 +240,7 @@ export function createCupRoute(read) {
       if (p.kind !== "supplemental") reject(404, "Donnée indisponible.");
       const [revision] = await read("SELECT * FROM api.source_revisions WHERE source='open-matchday'");
       const editions = await read(
-        `SELECT e.competition,e.name,e.season,e.logo_url,(SELECT count(*) FILTER(WHERE t.status='finished')::int FROM api.cup_table_rows t WHERE t.competition_season_id=e.competition_season_id) results,
+        `SELECT e.competition,e.name,e.season,e.logo_url,e.competition_id,(SELECT count(*) FILTER(WHERE t.status='finished')::int FROM api.cup_table_rows t WHERE t.competition_season_id=e.competition_season_id) results,
            (SELECT count(*) FILTER(WHERE t.status<>'finished')::int FROM api.cup_table_rows t WHERE t.competition_season_id=e.competition_season_id) fixtures
          FROM api.cup_editions e WHERE e.kind='open-matchday' ORDER BY e.competition,e.season`,
       );
@@ -239,6 +258,8 @@ export function createCupRoute(read) {
           tables: { goals: { rows: 0 }, results: { rows: e.results }, fixtures: { rows: e.fixtures } }, country_code: e.competition.split("_")[0],
           // The edition's own competition's verified logo (its FK), additive (§22).
           ...(e.logo_url && { image_url: e.logo_url }),
+          // The edition's competition, by the id /api/cups/index gives it (its FK): the site opens either id (VI-30).
+          competition_id: e.competition_id,
         })),
       }, "catalog");
     }

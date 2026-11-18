@@ -18,6 +18,7 @@
 import { createHash } from "node:crypto";
 import { matchesEtag, reject, send, validateParams } from "../http.mjs";
 import { readPageArgs } from "../publication.mjs";
+import { editionArtworkFields } from "../edition-artwork.mjs";
 
 const hash = (value) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
 const normalizeText = (value) =>
@@ -77,7 +78,7 @@ async function archiveMeta(read, season) {
   if (!row?.present) reject(404, "Archive introuvable.");
   const sources = Object.fromEntries((row.sources || []).map((s) => [s.source, { digest: s.revision, publishedAt: s.retrieved_at }]));
   return {
-    version: hash([season, String(row.version ?? 0), sources]),
+    version: hash(["edition-artwork", season, String(row.version ?? 0), sources]),
     sourceDigests: Object.fromEntries(Object.entries(sources).map(([k, v]) => [k, v.digest])),
     sources,
   };
@@ -105,7 +106,7 @@ export async function archiveRead(req, params, read) {
   if (!matchKey && (req.method === "HEAD" || matchesEtag(req.headers.get("if-none-match"), etag))) return send(req, null, 200, { etag, ttl: 30 });
   const [overview] = await read(
     `WITH m AS (SELECT * FROM api.archive_matches WHERE season=$1)
-     SELECT (SELECT coalesce(json_agg(json_build_object('id',e.id,'name',e.name,'country',e.country,
+     SELECT (SELECT coalesce(json_agg(json_build_object('id',e.id,'name',e.name,'country',e.country,'emblem',e.edition_emblem_url,
          'matches',(SELECT count(*) FROM m WHERE m.competition_id=e.id),
          'withGoals',(SELECT count(*) FROM m WHERE m.competition_id=e.id AND m.goal_count>0),
          'goals',(SELECT coalesce(sum(goal_count),0) FROM m WHERE m.competition_id=e.id)) ORDER BY e.position),'[]'::json)
@@ -116,7 +117,10 @@ export async function archiveRead(req, params, read) {
          'competitions',(SELECT count(*) FROM api.archive_editions WHERE season=$1)) AS summary`,
     [season],
   );
-  const data = { season, competitions: overview.competitions, summary: overview.summary };
+  const competitions = overview.competitions.map(({ emblem, ...edition }) => ({
+    ...edition, ...editionArtworkFields(emblem),
+  }));
+  const data = { season, competitions, summary: overview.summary };
   if (matchKey) {
     const [row] = await read(
       `SELECT to_json(m) AS match,(SELECT coalesce(json_agg(g ORDER BY g.seq),'[]'::json) FROM api.archive_goals g

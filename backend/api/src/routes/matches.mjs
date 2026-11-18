@@ -19,6 +19,7 @@
  * Added here: `teams=t_…,t_…` (exactly two) keeps the meetings of two clubs, whatever the
  * season, so that a head-to-head is one read and not a league's whole history.
  */
+import { editionArtworkFields } from "../edition-artwork.mjs";
 import { createHash } from "node:crypto";
 import { matchesEtag, reject, send, validateParams } from "../http.mjs";
 
@@ -81,7 +82,7 @@ function keyset(alias, dayParam, idParam, order = "asc") {
 
 const FIXTURE_COLUMNS = `f.id,f.season,f.native_season,f.day,f.time_utc,f.status,f.round_name,f.has_playoff,
  f.home_team_id,f.home_name,f.home_image_url,f.away_team_id,f.away_name,f.away_image_url,
- f.league_id,f.league_name,f.league_image_url,f.score_home,f.score_away,f.score_penalty_home,f.score_penalty_away`;
+ f.league_id,f.league_name,f.league_image_url,f.edition_emblem_url,f.score_home,f.score_away,f.score_penalty_home,f.score_penalty_away`;
 
 /** The model's forecast of a match to come (api.match_forecasts' shares), as the site reads it; null without one. */
 export function forecastOf(f) {
@@ -95,6 +96,7 @@ export function fixture(row) {
   const forecast = row.status === "not_started" ? forecastOf(row.forecast) : null;
   return {
     ...(forecast && { forecast }),
+    ...editionArtworkFields(row.edition_emblem_url),
     id: row.id,
     season: row.native_season ?? row.season,
     date: row.day,
@@ -239,6 +241,7 @@ export function summaryMatch(r) {
         id: x.id,
         leagueId: x.league.id,
         league: x.league.name,
+        ...editionArtworkFields(f.edition_emblem_url),
         season: x.season,
         date: x.date,
         timeUtc: x.time_utc,
@@ -289,6 +292,7 @@ export function summaryMatch(r) {
       season: f.season,
       leagueId: f.league_id,
       league: f.league_name,
+      ...editionArtworkFields(f.edition_emblem_url),
       country: f.country,
       date: f.day,
       timeUtc: f.time_utc,

@@ -92,8 +92,13 @@ export function ClubEmptySeason({ dossier, played = 0 }) {
  * mount after a long read into their initials. The source goes through the
  * site's checked resolver, as Media's does: a Vega reference is read through
  * /api/assets, never from its reserved host; a refused one shows the initials.
+ * A failure belongs to its source: a new url is a new attempt, as Media's (VI-30).
  */
-export function Picture({
+export function Picture(props) {
+  return <PictureAttempt key={props.url || ""} {...props} />;
+}
+
+function PictureAttempt({
   name = "",
   url,
   className = "crest",

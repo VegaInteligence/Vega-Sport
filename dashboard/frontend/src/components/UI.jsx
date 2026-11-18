@@ -12,7 +12,7 @@ import {
   mediaImageSource,
   title,
 } from "../services/format.js";
-export function Media({ name = "", url, fallbackUrl, className = "crest" }) {
+export function Media({ name = "", url, fallbackUrl, className = "crest", initials = true }) {
   // Source changes remount the attempt state, including a deferred first reveal.
   return (
     <MediaSource
@@ -21,10 +21,11 @@ export function Media({ name = "", url, fallbackUrl, className = "crest" }) {
       url={url}
       fallbackUrl={fallbackUrl}
       className={className}
+      initials={initials}
     />
   );
 }
-function MediaSource({ name, url, fallbackUrl, className }) {
+function MediaSource({ name, url, fallbackUrl, className, initials }) {
   const [failed, setFailed] = useState(false);
   const [directFailed, setDirectFailed] = useState(false);
   const [fallbackFailed, setFallbackFailed] = useState(false);
@@ -48,14 +49,14 @@ function MediaSource({ name, url, fallbackUrl, className }) {
   return (
     <span
       ref={element}
-      className={`${className} ${mediaStyles.media}`}
+      className={`${className} ${mediaStyles.media}${!initials && (!src || loaded !== src) ? " " + mediaStyles.empty : ""}`}
       aria-hidden="true"
       data-page-media=""
       data-media-state={
         !src ? "fallback" : loaded === src ? "ready" : "loading"
       }
     >
-      {loaded !== src || !src ? (
+      {initials && (loaded !== src || !src) ? (
         <span className={`image-fallback ${mediaStyles.fallback}`}>
           {(typeof name === "string" ? name : "")
             .split(/\s+/)

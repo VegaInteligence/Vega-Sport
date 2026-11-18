@@ -57,8 +57,10 @@ export const cupIndex = (kind) => load("/api/cup-index", { kind });
  */
 export const servesCupWorkerIndex = (manifest) =>
   manifest?.capabilities?.cupWorkerIndex === true;
-export const cupTable = (competition, season, kind) =>
-  load("/api/cup-table", { competition, season, kind });
+export const cupTable = (competition, season, kind, options) =>
+  load("/api/cup-table", { competition, season, kind }, options);
+export const cupEditionTable = (competition, season, options) =>
+  load("/api/cups/edition", { competition, season }, options);
 export const associationRanking = (year) =>
   load("/api/rankings/associations", { year });
 export async function clubRanking(club) {

@@ -61,6 +61,24 @@ test("the club hero's crest resolves a Vega reference through /api/assets, never
   assert.ok(!html.includes('src="https://media.vega.invalid'), html);
 });
 
+// VI-30 V19 (FAILURE_MODES_VI30.md, written before the code): a failure belongs to one source. Picture is keyed by its
+// url, as Media is, so a new url starts a new attempt instead of keeping the previous one's initials.
+test("a new url is a new attempt: Picture's attempt is keyed by its source", async () => {
+  const { Picture } = await loadUI();
+  const other = `https://media.vega.invalid/sha256/${"b".repeat(64)}.png`;
+  let first, second;
+  assert.doesNotThrow(() => {
+    first = Picture({ name: "Churchill Brothers", url: REFERENCE });
+    second = Picture({ name: "Churchill Brothers", url: other });
+  }, "Picture must only wrap its keyed attempt (no hook of its own)");
+  assert.equal(first.type, second.type);
+  assert.deepEqual([first.key, second.key], [REFERENCE, other]);
+  assert.equal(Picture({ name: "Churchill Brothers" }).key, "");
+  // The markup is the same as before.
+  assert.equal(renderToStaticMarkup(h(Picture, { name: "Churchill Brothers", url: REFERENCE })),
+    renderToStaticMarkup(h(Picture, { name: "Churchill Brothers", url: REFERENCE, className: "crest" })));
+});
+
 test("a provider image goes the same way; a refused source shows the initials", async () => {
   const { Crest, Picture } = await loadUI();
   const pitch = renderToStaticMarkup(h(Crest, { club: { name: "Arsenal", imageUrl: "https://cdn.pitchapi.dev/images/teams/a.png" } }));

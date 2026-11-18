@@ -14,3 +14,9 @@
 .imageReady {
   opacity: 1;
 }
+
+.empty.empty {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}

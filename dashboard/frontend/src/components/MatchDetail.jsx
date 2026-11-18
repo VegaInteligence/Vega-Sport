@@ -1,4 +1,5 @@
 import { nationalFlagCode } from "../services/national-flags.js";
+import { editionArtworkUrl } from "../services/competition-artwork.js";
 import React, {
   lazy,
   Suspense,
@@ -515,8 +516,11 @@ export default function MatchDetail({ match }) {
       <section className="match-scoreboard" aria-label="Résumé du match">
         <div className="scoreboard-meta">
           <div>
-            {competition && (
-              <Media name={competition.name} url={competition.imageUrl} />
+            {(competition || match.editionArtwork) && (
+              <Media
+                url={editionArtworkUrl(match.leagueId, competition?.imageUrl, match.editionArtwork)}
+                initials={false}
+              />
             )}
             <span>{match.league || competition?.name}</span>
           </div>

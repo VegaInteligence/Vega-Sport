@@ -15,10 +15,11 @@ export async function cupWorkerSnapshot(
     throw new Error("Route de données invalide.");
   // A cup of the complementary sources is read by its Vega id (api-routes.js).
   const cup = await cupId(kind, competition, async (url) => {
-    const response = await publicApiFetch(apiUrl(url), { signal });
+    const response = await publicApiFetch(apiUrl(url));
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return response.json();
   });
+  signal?.throwIfAborted();
   const paths = cup ? cupPaths(cup, season) : null;
   if (paths) fallbackUrl = paths.edition;
   const path = apiUrl(
@@ -69,7 +70,8 @@ export async function cupWorkerSnapshot(
           name: String(match.round_name),
           playoff: match.has_playoff === true,
         };
-    return { ...saved, matches, rounds };
+    const editionArtwork = saved?.editionArtwork ?? matches.find((row) => row.season === String(season))?.editionArtwork;
+    return { ...saved, matches, rounds, editionArtwork };
   }
   const value = fresh || saved;
   if (

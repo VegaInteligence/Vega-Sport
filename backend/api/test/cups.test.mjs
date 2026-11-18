@@ -13,6 +13,8 @@ const samples = JSON.parse(
   spawnSync("python3", ["-c", "import json,sys;sys.path.insert(0,sys.argv[1]);from cup_samples import SAMPLES;print(json.dumps(SAMPLES))",
     fileURLToPath(new URL("../../tests", import.meta.url))], { encoding: "utf8" }).stdout,
 );
+// Exact compatibility for all existing match fields, alongside optional FK metadata.
+const withoutMatchSides = (body) => ({ ...body, matches: body.matches.map(({ sides, ...match }) => match) });
 const sample = (kind, competition, season) => samples.find(([k, c, s]) => k === kind && c === competition && s === season)[3];
 
 // The cups by their Vega id, found through the index (as the site does).
@@ -39,10 +41,10 @@ test("cup editions round-trip main's source projections", { skip }, async () => 
   const nations = await cupId("nations-league", "results-v1");
   assert.ok(euro && germany && nations);
   const edition = (id, season) => get(`/api/cups/edition?competition=${id}&season=${encodeURIComponent(season)}`);
-  assert.deepEqual((await edition(euro, "2024")).body, sample("open-cups", "euro", "2024"));
-  assert.deepEqual((await edition(euro, "2028")).body, sample("open-cups", "euro", "2028")); // no score yet
+  assert.deepEqual(withoutMatchSides((await edition(euro, "2024")).body), sample("open-cups", "euro", "2024"));
+  assert.deepEqual(withoutMatchSides((await edition(euro, "2028")).body), sample("open-cups", "euro", "2028")); // no score yet
   const germanySource = sample("openligadb", "germany-cup", "2025/2026").source;
-  assert.deepEqual((await edition(germany, "2025/2026")).body, {
+  assert.deepEqual(withoutMatchSides((await edition(germany, "2025/2026")).body), {
     competition: "germany-cup", season: "2025/2026", source: germanySource,
     matches: [{
       key: "openliga:80173", date: "2026-02-10", home: "Hertha BSC", away: "SC Freiburg", homeId: "54", awayId: "112",
@@ -60,7 +62,7 @@ test("cup editions round-trip main's source projections", { skip }, async () => 
   assert.deepEqual((await edition(afcon, "2023")).body, sample("nations-results", "afcon", "2023"));
   // A match the source cancels comes back canceled, without a score (FAILURE_MODES.md §19, 19f).
   const worldCup = await cupId("world-cup-history", "matches-v1");
-  assert.deepEqual((await edition(worldCup, "1938")).body, sample("open-cups", "world-cup-history", "1938"));
+  assert.deepEqual(withoutMatchSides((await edition(worldCup, "1938")).body), sample("open-cups", "world-cup-history", "1938"));
   assert.equal((await edition(euro, "1990")).response.status, 404);
   assert.equal((await get("/api/cups/edition?competition=euro&season=2024")).response.status, 400);
   assert.equal((await get(`/api/cups/edition?competition=${euro}`)).response.status, 400);
@@ -71,7 +73,7 @@ test("cup editions round-trip main's source projections", { skip }, async () => 
 test("cup snapshots: editions with their worker times, native cups, standings", { skip }, async () => {
   const euro = await cupId("euro", "matches-v1");
   const snapshot = (await get(`/api/cup-snapshot?kind=edition&competition=${euro}&season=2024`)).body;
-  assert.deepEqual(snapshot, { ...sample("open-cups", "euro", "2024"), worker: { checkedAt: "2025-09-20T08:00:00.000Z", updatedAt: "2025-09-20T08:00:00.000Z" } });
+  assert.deepEqual(withoutMatchSides(snapshot), { ...sample("open-cups", "euro", "2024"), worker: { checkedAt: "2025-09-20T08:00:00.000Z", updatedAt: "2025-09-20T08:00:00.000Z" } });
   const nations = await cupId("nations-league", "results-v1");
   assert.equal((await get(`/api/cup-snapshot?kind=edition&competition=${nations}&season=2026/2027`)).body.matches.length, 1);
   const native = (await get("/api/cup-snapshot?kind=native&competition=l_3FJFUl&season=2025/2026")).body;
@@ -110,12 +112,15 @@ test("open-matchday catalogue and tables, as main's", { skip }, async () => {
   assert.deepEqual(index.competitions.map((c) => [c.folder, c.name, c.season, c.tables.results.rows, c.tables.fixtures.rows, c.country_code]), [
     ["AUT_CUP_ofb-cup", "OFB Cup", "2026/2027", 7, 4, "AUT"], ["ENG_1_premier-league", "Premier League", "2026/2027", 5, 3, "ENG"],
   ]);
+  // The source's line stays byte for byte; beside it, each side's own FK (VI-30, FAILURE_MODES_VI30.md V10).
+  const line = ({ sides, ...rest }) => rest;
   for (const folder of ["ENG_1_premier-league", "AUT_CUP_ofb-cup"]) {
     const results = (await get(`/api/cup-table?competition=${folder}&season=2026%2F2027&kind=results`)).body;
     // Not kept: the local kick-off time, the goal minutes (no side) and the row's sub-source.
-    assert.deepEqual(results, csv(`${folder}.results_2627.csv`).map((r) => ({ ...r, time: "", goal_minutes: "", source: "" })), folder);
+    assert.deepEqual(results.map(line), csv(`${folder}.results_2627.csv`).map((r) => ({ ...r, time: "", goal_minutes: "", source: "" })), folder);
     const fixtures = (await get(`/api/cup-table?competition=${folder}&season=2026%2F2027&kind=fixtures`)).body;
-    assert.deepEqual(fixtures, csv(`${folder}.fixtures_2627.csv`).map((r) => ({ ...r, time: "" })), folder);
+    assert.deepEqual(fixtures.map(line), csv(`${folder}.fixtures_2627.csv`).map((r) => ({ ...r, time: "" })), folder);
+    for (const r of [...results, ...fixtures]) assert.ok(r.sides?.home?.id && r.sides?.away?.id, `${folder}: ${r.home} – ${r.away}`);
   }
   assert.equal((await get("/api/cup-index?kind=worker")).response.status, 404);
   assert.equal((await get("/api/cup-table?competition=XYZ_1_none&season=2026%2F2027&kind=results")).response.status, 404);

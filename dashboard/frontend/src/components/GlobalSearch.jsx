@@ -22,7 +22,7 @@ import {
 } from "../services/global-search.js";
 import { cachedResource, useResource } from "../services/resources.js";
 import { nationName, useNations } from "../services/nations.js";
-import { cupIndex } from "../services/catalog-client.js";
+import { cupIndex, servesCupWorkerIndex } from "../services/catalog-client.js";
 import {
   hasBoundedSearch,
   searchIdentities,
@@ -87,6 +87,7 @@ export default function GlobalSearch({ sheet = false, onClose }) {
   const season = f?.season;
   const remote = hasBoundedSearch(f?.manifest);
   const needle = query.trim();
+  const searchCompetitions = armed && needle.length >= 2;
   const searchKey = JSON.stringify([
     season,
     needle.toLocaleLowerCase("fr"),
@@ -95,12 +96,12 @@ export default function GlobalSearch({ sheet = false, onClose }) {
   const legacyCups = useResource(
     "supplemental-cup-index",
     () => cupIndex("supplemental"),
-    !remote && armed && needle.length >= 2,
+    searchCompetitions,
   );
   const workerCups = useResource(
     "cup-worker-index",
     () => cupIndex("worker"),
-    !remote && armed && needle.length >= 2,
+    searchCompetitions && (!remote || servesCupWorkerIndex(f?.manifest)),
   );
   // Compatibility with a backend deployed before the discovery endpoint. The
   // complete legacy index is requested only after typing, never on hover/focus.
@@ -161,7 +162,7 @@ export default function GlobalSearch({ sheet = false, onClose }) {
   const loading =
     open &&
     needle.length >= 2 &&
-    (remote ? !ready || remoteResult.loading : legacySearch.loading);
+    (legacyCups.loading || (remote ? !ready || remoteResult.loading : legacySearch.loading));
   const searchError = remote ? currentRemote?.error : legacySearch.error;
   // The national teams, read once the search is in use.
   const nationList = useNations(armed ? f?.season : null);
@@ -404,6 +405,7 @@ export default function GlobalSearch({ sheet = false, onClose }) {
                           <Media
                             name={item.name}
                             url={item.imageUrl}
+                            initials={kind !== "competitions"}
                             className={
                               kind === "players" ? "player-avatar" : "crest"
                             }
