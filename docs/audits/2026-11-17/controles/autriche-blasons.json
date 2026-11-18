@@ -1,0 +1,698 @@
+[
+  {
+    "root": 3250,
+    "name": "Atus Velden",
+    "official": "Velden",
+    "sha256": "bbd4ae159b85964f08b97c4fea38cb51ed076ac5999f930fb90e1117e427eca7",
+    "nearest": {
+      "id": 7155,
+      "name": "Bishop's Stortford",
+      "rmse": 0.3124
+    },
+    "flags": [],
+    "historic_homonyms": [
+      [
+        "1420",
+        "ATUS Velden"
+      ]
+    ]
+  },
+  {
+    "root": 3252,
+    "name": "Deutschlandsberger",
+    "official": "Deutschlandsberg",
+    "sha256": "c7c41cdf2836ace643d02e58139862807cea983831738a9a94f401a3023752c5",
+    "nearest": {
+      "id": 7626,
+      "name": "Urania Hamburg",
+      "rmse": 0.2756
+    },
+    "flags": [],
+    "historic_homonyms": []
+  },
+  {
+    "root": 3253,
+    "name": "Amstetten",
+    "official": "SKU Ertl Glas Amstetten",
+    "sha256": "0cdd4b2e6612f68fca2414f49dcc08a025c5ad5781e6da49935255dbc26e2d33",
+    "nearest": {
+      "id": 1191,
+      "name": "Auckland City FC (NZL)",
+      "rmse": 0.29369
+    },
+    "flags": [],
+    "historic_homonyms": []
+  },
+  {
+    "root": 3254,
+    "name": "Dornbirn",
+    "official": "FC Dornbirn 1913",
+    "sha256": "e117aa002724a771a80c6e612263eb555f896f5d580614abc744e5ee5872c471",
+    "nearest": {
+      "id": 7592,
+      "name": "Olympia Bocholt",
+      "rmse": 0.23662
+    },
+    "flags": [],
+    "historic_homonyms": []
+  },
+  {
+    "root": 3256,
+    "name": "Horn",
+    "official": "SV Horn",
+    "sha256": "d00a0398fbe614b67669369ab14df62a260292e0e06a322bf3423b2539a165e5",
+    "nearest": {
+      "id": 2915,
+      "name": "Purmersteijn",
+      "rmse": 0.26887
+    },
+    "flags": [],
+    "historic_homonyms": []
+  },
+  {
+    "root": 3257,
+    "name": "Floridsdorfer AC",
+    "official": "FAC Wien",
+    "sha256": "1a7c39b85f27b0e65868e61ec1725fcda38d5be780eb60f0d01bcb12c10d7137",
+    "nearest": {
+      "id": 7206,
+      "name": "Union Titus Petange",
+      "rmse": 0.24079
+    },
+    "flags": [],
+    "historic_homonyms": [
+      [
+        "1471",
+        "Floridsdorfer AC"
+      ],
+      [
+        "4188",
+        "Floridsdorfer AC"
+      ]
+    ]
+  },
+  {
+    "root": 3258,
+    "name": "Lafnitz",
+    "official": "Lafnitz",
+    "sha256": "756b8682112235271974dfa8e5708ebb25603f23a0b6f46d1285022f86b3212b",
+    "nearest": {
+      "id": 7206,
+      "name": "Union Titus Petange",
+      "rmse": 0.26998
+    },
+    "flags": [],
+    "historic_homonyms": []
+  },
+  {
+    "root": 3259,
+    "name": "Warth",
+    "official": "Scheiblingkirchen - Warth",
+    "sha256": "befa07bb968f9ec95f6ca78274da322a7739a3a22646db89d6ea2f9f778a49ca",
+    "nearest": {
+      "id": 2537,
+      "name": "Farnborough",
+      "rmse": 0.26434
+    },
+    "flags": [],
+    "historic_homonyms": []
+  },
+  {
+    "root": 3260,
+    "name": "Lauterach",
+    "official": "intemann FC Lauterach",
+    "sha256": "8c5f90cb3124fdd8efb39f39615cb4976b7b58836e7993d9650eb6226fcb7b0c",
+    "nearest": {
+      "id": 7950,
+      "name": "FC Gohfeld",
+      "rmse": 0.30628
+    },
+    "flags": [],
+    "historic_homonyms": []
+  },
+  {
+    "root": 3262,
+    "name": "Leoben",
+    "official": "DSV Leoben",
+    "sha256": "daa200c58b4cd79335e7e7584340615b97d516394b51e3aa094cb43e728d452f",
+    "nearest": {
+      "id": 9156,
+      "name": "FC Bremerhaven",
+      "rmse": 0.32863
+    },
+    "flags": [],
+    "historic_homonyms": []
+  },
+  {
+    "root": 3263,
+    "name": "ASK Voitsberg",
+    "official": "Voitsberg",
+    "sha256": "4dec73067a88c71a1bf120e03a3667ac04317feda6efeaf6af811747a13b2734",
+    "nearest": {
+      "id": 7278,
+      "name": "Chikhura",
+      "rmse": 0.36916
+    },
+    "flags": [],
+    "historic_homonyms": [
+      [
+        "1465",
+        "ASK Voitsberg"
+      ]
+    ]
+  },
+  {
+    "root": 3264,
+    "name": "Leobendorf",
+    "official": "SV Leobendorf",
+    "sha256": "4b3319390f899d283dd9e7837ba7a573324bf39b9d7521b8fd69ca58cce45f40",
+    "nearest": {
+      "id": 223,
+      "name": "Milsami",
+      "rmse": 0.27058
+    },
+    "flags": [],
+    "historic_homonyms": []
+  },
+  {
+    "root": 3266,
+    "name": "Seekirchen",
+    "official": "SV teampool Seekirchen",
+    "sha256": "e13e13121747d19b04f3939d96966fc3cc6484b9d0da50a84e425ca08d2a0384",
+    "nearest": {
+      "id": 7535,
+      "name": "Rot-Weiß Hasborn",
+      "rmse": 0.29481
+    },
+    "flags": [],
+    "historic_homonyms": []
+  },
+  {
+    "root": 3267,
+    "name": "Tillmitsch",
+    "official": "SV Fleischereimaschinen Schenk Tillmitsch",
+    "sha256": "39f7fbdd5f35efbde1fc39dab66421216bc5d889289828402de7ad712ea5d864",
+    "nearest": {
+      "id": 167,
+      "name": "Russia Premier League 2019/20",
+      "rmse": 0.31369
+    },
+    "flags": [],
+    "historic_homonyms": []
+  },
+  {
+    "root": 3268,
+    "name": "St. Polten",
+    "official": "SKN St. Pölten",
+    "sha256": "14ac648cfe960b114ccf67eedd61e06dee772cbf11c3f90a68a5cb01ab6c4c12",
+    "nearest": {
+      "id": 7592,
+      "name": "Olympia Bocholt",
+      "rmse": 0.33381
+    },
+    "flags": [],
+    "historic_homonyms": []
+  },
+  {
+    "root": 3269,
+    "name": "Traiskirchen",
+    "official": "FCM Traiskirchen",
+    "sha256": "98045a234f808936c39663eb63b7ec8eb1468531378f4de8f68644ae70025f92",
+    "nearest": {
+      "id": 220,
+      "name": "Apollon",
+      "rmse": 0.29707
+    },
+    "flags": [],
+    "historic_homonyms": []
+  },
+  {
+    "root": 3270,
+    "name": "Bleiburg",
+    "official": "Bleiburg",
+    "sha256": "0f99aebe1cf3cf0b0e108255a0c590647a583c1abba050a120b6203c1664fda1",
+    "nearest": {
+      "id": 10253,
+      "name": "FC BW Brühl",
+      "rmse": 0.32026
+    },
+    "flags": [],
+    "historic_homonyms": []
+  },
+  {
+    "root": 3271,
+    "name": "Union Gurten",
+    "official": "Union Raiffeisen Gurten",
+    "sha256": "38d61f958d8843600d00b419bfd7e317644cd690517e5d9a4c4f1aa9b221f657",
+    "nearest": {
+      "id": 3236,
+      "name": "Queen's Park",
+      "rmse": 0.35627
+    },
+    "flags": [],
+    "historic_homonyms": [
+      [
+        "1418",
+        "Union Gurten"
+      ],
+      [
+        "4631",
+        "Union Gurten"
+      ]
+    ]
+  },
+  {
+    "root": 3273,
+    "name": "Wieselburg",
+    "official": "Wieselburg",
+    "sha256": "ba8aca6b65593f90cf1b12d04396a1e61ed7dcedb99c48acaeb85c7630d3f373",
+    "nearest": {
+      "id": 7592,
+      "name": "Olympia Bocholt",
+      "rmse": 0.27491
+    },
+    "flags": [],
+    "historic_homonyms": []
+  },
+  {
+    "root": 3275,
+    "name": "Dietach",
+    "official": "Union PROCON Dietach",
+    "sha256": "f9f579a366e649b999984fea17d3f36626ed115fc8024056683499043eb1742b",
+    "nearest": {
+      "id": 7638,
+      "name": "TuRa Harksheide",
+      "rmse": 0.33742
+    },
+    "flags": [],
+    "historic_homonyms": []
+  },
+  {
+    "root": 3276,
+    "name": "Bischofshofen",
+    "official": "Bischofshofen Sportklub 1933",
+    "sha256": "b5ea49a0397d38863d699f95e44458cd6e75a153a953792389d126e6b407eafa",
+    "nearest": {
+      "id": 241,
+      "name": "Copa América 2024",
+      "rmse": 0.10828
+    },
+    "flags": [],
+    "historic_homonyms": []
+  },
+  {
+    "root": 3277,
+    "name": "Donaufeld Wien",
+    "official": "SR Donaufeld",
+    "sha256": "ed01c3a44f85bd3a6b731f93236006ce051d9f9c8d0ab1a82247225caedd43f5",
+    "nearest": {
+      "id": 3758,
+      "name": "Ol. Nicosia",
+      "rmse": 0.29925
+    },
+    "flags": [],
+    "historic_homonyms": []
+  },
+  {
+    "root": 3279,
+    "name": "FC Lustenau",
+    "official": "FC Lustenau 1907",
+    "sha256": "5b09ebf12031e227af849f11e9a9a832c472cc5b71984f77ba5bca0a1a15e464",
+    "nearest": {
+      "id": 394,
+      "name": "Isloch",
+      "rmse": 0.29837
+    },
+    "flags": [],
+    "historic_homonyms": [
+      [
+        "11519",
+        "FC Lustenau"
+      ]
+    ]
+  },
+  {
+    "root": 3280,
+    "name": "Kitzbuhel",
+    "official": "FC Powerspine Kitzbühel",
+    "sha256": "253250d3c19cd69f83bf99a26a6d830b5600cacedd0844ce6cd849cef8d93a61",
+    "nearest": {
+      "id": 2891,
+      "name": "Achilles Veen",
+      "rmse": 0.30935
+    },
+    "flags": [],
+    "historic_homonyms": []
+  },
+  {
+    "root": 3281,
+    "name": "Hohenems",
+    "official": "VfB Hohenems",
+    "sha256": "eb49b8b564928e40da9d6a3cd5b176e251ebb586b44c1efe77a9016d29d5d0f2",
+    "nearest": {
+      "id": 7592,
+      "name": "Olympia Bocholt",
+      "rmse": 0.25885
+    },
+    "flags": [],
+    "historic_homonyms": []
+  },
+  {
+    "root": 3282,
+    "name": "Hertha Wels",
+    "official": "FC Hertha Wels",
+    "sha256": "288b34aa7a1252d29184997618278ba2f4bf86e506850ba82f2eb03d456f6cfe",
+    "nearest": {
+      "id": 7206,
+      "name": "Union Titus Petange",
+      "rmse": 0.2347
+    },
+    "flags": [],
+    "historic_homonyms": []
+  },
+  {
+    "root": 3283,
+    "name": "Kalsdorf",
+    "official": "Kalsdorf",
+    "sha256": "ef762ba7787d78d4d43d45ad829491c1a824c475acd860f17e34e28c17eaaeb0",
+    "nearest": {
+      "id": 2941,
+      "name": "Heerjansdam",
+      "rmse": 0.35766
+    },
+    "flags": [],
+    "historic_homonyms": []
+  },
+  {
+    "root": 3284,
+    "name": "Kremser",
+    "official": "SPG Krems SC / Getzersdorf KM",
+    "sha256": "172b623a7319df29a73a3950bd8a29718e56a2d7e05400efc1a5aee0da1b966f",
+    "nearest": {
+      "id": 415,
+      "name": "Cosmos",
+      "rmse": 0.35198
+    },
+    "flags": [
+      "published club crest and multi-club Spielgemeinschaft have different scope"
+    ],
+    "historic_homonyms": []
+  },
+  {
+    "root": 3286,
+    "name": "Leonfelden",
+    "official": "SPG VORTUNA Bad Leonfelden / Schenkenfelden",
+    "sha256": "b7b5ff1db2495301552dce6e4d4b2b4a429b1123b2f64adc8b83c8c97c81ffe3",
+    "nearest": {
+      "id": 3758,
+      "name": "Ol. Nicosia",
+      "rmse": 0.27106
+    },
+    "flags": [
+      "published club crest and multi-club Spielgemeinschaft have different scope"
+    ],
+    "historic_homonyms": []
+  },
+  {
+    "root": 3287,
+    "name": "Bregenz",
+    "official": "SW Bregenz",
+    "sha256": "fe3325b5e4f6985b9e7e0e709783172333016477af8aec3cda80b6e0bc985d18",
+    "nearest": {
+      "id": 394,
+      "name": "Isloch",
+      "rmse": 0.30726
+    },
+    "flags": [],
+    "historic_homonyms": []
+  },
+  {
+    "root": 3288,
+    "name": "Mattersburg SV 2020",
+    "official": "Mattersburger Sportverein 2020",
+    "sha256": "15bb83a82d1926ed3438330c3e0b297893e69853525e92ad9b859c4bfd3e9baa",
+    "nearest": {
+      "id": 7592,
+      "name": "Olympia Bocholt",
+      "rmse": 0.25063
+    },
+    "flags": [],
+    "historic_homonyms": []
+  },
+  {
+    "root": 3289,
+    "name": "First Vienna",
+    "official": "First Vienna FC 1894",
+    "sha256": "2ab057c2fdd15b20b3a02c441d8f718c63535eb9d089d6589a03b64bf13c3646",
+    "nearest": {
+      "id": 3592,
+      "name": "CK United",
+      "rmse": 0.27602
+    },
+    "flags": [],
+    "historic_homonyms": []
+  },
+  {
+    "root": 3290,
+    "name": "SV Oberwart",
+    "official": "SV Klöcher Bau Oberwart",
+    "sha256": "428d855075d78e295c63a56ebb3e20df2af446dc8bb2543c0dc61acae7c27839",
+    "nearest": {
+      "id": 77,
+      "name": "Ludogorets",
+      "rmse": 0.23916
+    },
+    "flags": [],
+    "historic_homonyms": [
+      [
+        "1446",
+        "SV Oberwart"
+      ]
+    ]
+  },
+  {
+    "root": 3291,
+    "name": "Treibach",
+    "official": "Treibach",
+    "sha256": "400facfcc25e5eaafeaf3c59a07a5bfb3383ca595422cf107be7c3cecbe8bcee",
+    "nearest": {
+      "id": 7206,
+      "name": "Union Titus Petange",
+      "rmse": 0.24458
+    },
+    "flags": [],
+    "historic_homonyms": []
+  },
+  {
+    "root": 3292,
+    "name": "Kapfenberg",
+    "official": "KSV 1919",
+    "sha256": "8d173edd4a95883b5ed0bb185270ab9a5c93bdef07f5e2d19a9b73f20e0bd279",
+    "nearest": {
+      "id": 7206,
+      "name": "Union Titus Petange",
+      "rmse": 0.28144
+    },
+    "flags": [],
+    "historic_homonyms": []
+  },
+  {
+    "root": 3293,
+    "name": "Vorwarts Steyr",
+    "official": "SK Vorwärts Steyr",
+    "sha256": "7cf676e4a77781088dd9993ede45b314e47970cbb117d2c0452b18a24aa63082",
+    "nearest": {
+      "id": 8069,
+      "name": "Eintracht Haiger (alt)",
+      "rmse": 0.33235
+    },
+    "flags": [],
+    "historic_homonyms": [
+      [
+        "4158",
+        "Vorwärts Steyr"
+      ]
+    ]
+  },
+  {
+    "root": 3294,
+    "name": "Kuchl",
+    "official": "SV Kuchl",
+    "sha256": "dab821b648213762bf550e139058332feec1e2e7480aed6a9a4a5378716201c9",
+    "nearest": {
+      "id": 223,
+      "name": "Milsami",
+      "rmse": 0.30504
+    },
+    "flags": [],
+    "historic_homonyms": []
+  },
+  {
+    "root": 3295,
+    "name": "Wacker Innsbruck",
+    "official": "FC Wacker Innsbruck",
+    "sha256": "2975b877d13fbdb12d1d2d64dad26fe935226235ced733be8f7066f44373f407",
+    "nearest": {
+      "id": 3169,
+      "name": "Berwick",
+      "rmse": 0.26772
+    },
+    "flags": [],
+    "historic_homonyms": []
+  },
+  {
+    "root": 3296,
+    "name": "Reichenau",
+    "official": "SVG Reichenau",
+    "sha256": "80f050aebf78ee13777c3b9a835140f0ac423307dd02e771a6d1ccf81de4faa4",
+    "nearest": {
+      "id": 3694,
+      "name": "Penrhyncoch",
+      "rmse": 0.25436
+    },
+    "flags": [],
+    "historic_homonyms": []
+  },
+  {
+    "root": 3297,
+    "name": "Wals-Grunau",
+    "official": "SV Wals - Grünau",
+    "sha256": "c4348988fd063e9904c3815cf3b5be349fe48b36d292f6cc31bb8498cee3e7ff",
+    "nearest": {
+      "id": 12227,
+      "name": "Bergerac Périgord FC",
+      "rmse": 0.26692
+    },
+    "flags": [],
+    "historic_homonyms": []
+  },
+  {
+    "root": 3298,
+    "name": "A. Salzburg",
+    "official": "SV Austria Salzburg",
+    "sha256": "8c5d16bb7fbe89f0290e7a8a2af830f566b701ea73527845207ea8494906d9e6",
+    "nearest": {
+      "id": 7206,
+      "name": "Union Titus Petange",
+      "rmse": 0.23104
+    },
+    "flags": [],
+    "historic_homonyms": []
+  },
+  {
+    "root": 3299,
+    "name": "Wiener Viktoria",
+    "official": "Wiener Viktoria",
+    "sha256": "156c6c47d1b71f98481f3a83e624da7cf0e5de29424e6710625dbfde2a4eac92",
+    "nearest": {
+      "id": 3169,
+      "name": "Berwick",
+      "rmse": 0.21084
+    },
+    "flags": [],
+    "historic_homonyms": []
+  },
+  {
+    "root": 3300,
+    "name": "Parndorf",
+    "official": "SC / ESV Parndorf 1919",
+    "sha256": "4b4adf6f0cb9121f86f84f436d7c467bfe37159d57676ceb9db745f5187ce2de",
+    "nearest": {
+      "id": 3662,
+      "name": "Beveren U21",
+      "rmse": 0.32115
+    },
+    "flags": [],
+    "historic_homonyms": []
+  },
+  {
+    "root": 3301,
+    "name": "Leithaprodersdorf",
+    "official": "SV Leithaprodersdorf",
+    "sha256": "6c2029ab82d77bc71a9ad70501bd48680872bc6ca4f4c848854636aed948d1eb",
+    "nearest": {
+      "id": 8220,
+      "name": "SGK Heidelberg",
+      "rmse": 0.29023
+    },
+    "flags": [],
+    "historic_homonyms": []
+  },
+  {
+    "root": 3303,
+    "name": "SC Imst",
+    "official": "SC Sparkasse Imst 1933",
+    "sha256": "8f7a95c462921d2a50f141f622dde4d3f02f69250ce8cbc5e2c93c6210182f02",
+    "nearest": {
+      "id": 386,
+      "name": "Swift Hesper",
+      "rmse": 0.28499
+    },
+    "flags": [],
+    "historic_homonyms": [
+      [
+        "1476",
+        "SC Imst"
+      ]
+    ]
+  },
+  {
+    "root": 3305,
+    "name": "Schwaz",
+    "official": "SC EGLO Schwaz",
+    "sha256": "ac5a17b859bed4acc09e3e5abc4b36930684584fcb3a26d464f1404a38937530",
+    "nearest": {
+      "id": 7206,
+      "name": "Union Titus Petange",
+      "rmse": 0.28363
+    },
+    "flags": [],
+    "historic_homonyms": []
+  },
+  {
+    "root": 3306,
+    "name": "Wallern/St Marienkirchen",
+    "official": "SPG Wallern / St. Marienk./P KM",
+    "sha256": "7ae7f2f4ba6cecaa9b296ef8b31a0142ace8142a5694830e196c8d13f7b17aae",
+    "nearest": {
+      "id": 3588,
+      "name": "Wexford",
+      "rmse": 0.29208
+    },
+    "flags": [
+      "published club crest and multi-club Spielgemeinschaft have different scope"
+    ],
+    "historic_homonyms": []
+  },
+  {
+    "root": 3307,
+    "name": "Wiener Sport-Club",
+    "official": "Wiener Sport - Club",
+    "sha256": "e379f3899bc2d72917e0e0d2571aeba2d5bdc5a34c05e9d727096230a64cf1bc",
+    "nearest": {
+      "id": 2537,
+      "name": "Farnborough",
+      "rmse": 0.31543
+    },
+    "flags": [],
+    "historic_homonyms": [
+      [
+        "4675",
+        "Wiener Sport-Club"
+      ]
+    ]
+  },
+  {
+    "root": 3309,
+    "name": "Wienerberger",
+    "official": "SV Wienerberg 1921",
+    "sha256": "b5bccef84f75456be5e264c51fd75a8a0c18f1b91cbe20a0839bfcc1ea510b53",
+    "nearest": {
+      "id": 7206,
+      "name": "Union Titus Petange",
+      "rmse": 0.23545
+    },
+    "flags": [],
+    "historic_homonyms": []
+  }
+]

@@ -1,0 +1,1965 @@
+{
+  "rds_at": "2026-11-18 01:34:03.838743+00:00",
+  "source_editions": [
+    "UNIQA ÖFB Cup 2026/27"
+  ],
+  "official_games": 56,
+  "separate_shootouts": 7,
+  "played_extra_time": 10,
+  "comparison": {
+    "final": {
+      "equal": 56
+    },
+    "half": {
+      "both_absent": 56
+    },
+    "regulation": {
+      "both_absent": 56
+    },
+    "extra_time": {
+      "not_applicable": 46,
+      "both_absent": 10
+    },
+    "penalties": {
+      "not_applicable": 49,
+      "both_absent": 7
+    }
+  },
+  "exceptions": [
+    {
+      "rds_match": 5725,
+      "official_match": "4072715",
+      "name": "Atus Velden – SK Austria Klagenfurt",
+      "field": "half",
+      "official": [
+        1,
+        0
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5725,
+      "official_match": "4072715",
+      "name": "Atus Velden – SK Austria Klagenfurt",
+      "field": "regulation",
+      "official": [
+        1,
+        2
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5726,
+      "official_match": "4072725",
+      "name": "Deutschlandsberger – Amstetten",
+      "field": "half",
+      "official": [
+        1,
+        0
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5726,
+      "official_match": "4072725",
+      "name": "Deutschlandsberger – Amstetten",
+      "field": "regulation",
+      "official": [
+        1,
+        1
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5726,
+      "official_match": "4072725",
+      "name": "Deutschlandsberger – Amstetten",
+      "field": "extra_time",
+      "official": [
+        1,
+        1
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5726,
+      "official_match": "4072725",
+      "name": "Deutschlandsberger – Amstetten",
+      "field": "penalties",
+      "official": [
+        3,
+        1
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5727,
+      "official_match": "4072741",
+      "name": "Dornbirn – Ried",
+      "field": "half",
+      "official": [
+        0,
+        2
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5727,
+      "official_match": "4072741",
+      "name": "Dornbirn – Ried",
+      "field": "regulation",
+      "official": [
+        1,
+        5
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5728,
+      "official_match": "4072724",
+      "name": "Horn – Floridsdorfer AC",
+      "field": "half",
+      "official": [
+        0,
+        0
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5728,
+      "official_match": "4072724",
+      "name": "Horn – Floridsdorfer AC",
+      "field": "regulation",
+      "official": [
+        1,
+        1
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5728,
+      "official_match": "4072724",
+      "name": "Horn – Floridsdorfer AC",
+      "field": "extra_time",
+      "official": [
+        1,
+        1
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5728,
+      "official_match": "4072724",
+      "name": "Horn – Floridsdorfer AC",
+      "field": "penalties",
+      "official": [
+        2,
+        4
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5729,
+      "official_match": "4072716",
+      "name": "Lafnitz – Warth",
+      "field": "half",
+      "official": [
+        2,
+        0
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5729,
+      "official_match": "4072716",
+      "name": "Lafnitz – Warth",
+      "field": "regulation",
+      "official": [
+        3,
+        1
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5730,
+      "official_match": "4072743",
+      "name": "Lauterach – Wolfsberger AC",
+      "field": "half",
+      "official": [
+        0,
+        3
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5730,
+      "official_match": "4072743",
+      "name": "Lauterach – Wolfsberger AC",
+      "field": "regulation",
+      "official": [
+        1,
+        5
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5731,
+      "official_match": "4072729",
+      "name": "Leoben – ASK Voitsberg",
+      "field": "half",
+      "official": [
+        0,
+        5
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5731,
+      "official_match": "4072729",
+      "name": "Leoben – ASK Voitsberg",
+      "field": "regulation",
+      "official": [
+        0,
+        6
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5732,
+      "official_match": "4072740",
+      "name": "Leobendorf – Altach",
+      "field": "half",
+      "official": [
+        0,
+        0
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5732,
+      "official_match": "4072740",
+      "name": "Leobendorf – Altach",
+      "field": "regulation",
+      "official": [
+        0,
+        1
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5733,
+      "official_match": "4072742",
+      "name": "Seekirchen – Sturm Graz",
+      "field": "half",
+      "official": [
+        0,
+        1
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5733,
+      "official_match": "4072742",
+      "name": "Seekirchen – Sturm Graz",
+      "field": "regulation",
+      "official": [
+        0,
+        3
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5734,
+      "official_match": "4072726",
+      "name": "Tillmitsch – St. Polten",
+      "field": "half",
+      "official": [
+        0,
+        0
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5734,
+      "official_match": "4072726",
+      "name": "Tillmitsch – St. Polten",
+      "field": "regulation",
+      "official": [
+        1,
+        1
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5734,
+      "official_match": "4072726",
+      "name": "Tillmitsch – St. Polten",
+      "field": "extra_time",
+      "official": [
+        1,
+        2
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5735,
+      "official_match": "4072717",
+      "name": "Traiskirchen – Bleiburg",
+      "field": "half",
+      "official": [
+        1,
+        0
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5735,
+      "official_match": "4072717",
+      "name": "Traiskirchen – Bleiburg",
+      "field": "regulation",
+      "official": [
+        4,
+        0
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5736,
+      "official_match": "4072734",
+      "name": "Union Gurten – BW Linz",
+      "field": "half",
+      "official": [
+        1,
+        0
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5736,
+      "official_match": "4072734",
+      "name": "Union Gurten – BW Linz",
+      "field": "regulation",
+      "official": [
+        1,
+        1
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5736,
+      "official_match": "4072734",
+      "name": "Union Gurten – BW Linz",
+      "field": "extra_time",
+      "official": [
+        1,
+        3
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5737,
+      "official_match": "4072745",
+      "name": "Wieselburg – WSG Tirol",
+      "field": "half",
+      "official": [
+        0,
+        2
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5737,
+      "official_match": "4072745",
+      "name": "Wieselburg – WSG Tirol",
+      "field": "regulation",
+      "official": [
+        0,
+        6
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5738,
+      "official_match": "4072720",
+      "name": "Dietach – Bischofshofen",
+      "field": "half",
+      "official": [
+        0,
+        0
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5738,
+      "official_match": "4072720",
+      "name": "Dietach – Bischofshofen",
+      "field": "regulation",
+      "official": [
+        2,
+        2
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5738,
+      "official_match": "4072720",
+      "name": "Dietach – Bischofshofen",
+      "field": "extra_time",
+      "official": [
+        3,
+        3
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5738,
+      "official_match": "4072720",
+      "name": "Dietach – Bischofshofen",
+      "field": "penalties",
+      "official": [
+        5,
+        6
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5739,
+      "official_match": "4072738",
+      "name": "Donaufeld Wien – Grazer AK",
+      "field": "half",
+      "official": [
+        0,
+        1
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5739,
+      "official_match": "4072738",
+      "name": "Donaufeld Wien – Grazer AK",
+      "field": "regulation",
+      "official": [
+        0,
+        4
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5740,
+      "official_match": "4072719",
+      "name": "FC Lustenau – Kitzbuhel",
+      "field": "half",
+      "official": [
+        0,
+        3
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5740,
+      "official_match": "4072719",
+      "name": "FC Lustenau – Kitzbuhel",
+      "field": "regulation",
+      "official": [
+        1,
+        4
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5741,
+      "official_match": "4072730",
+      "name": "Hohenems – Hertha Wels",
+      "field": "half",
+      "official": [
+        1,
+        2
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5741,
+      "official_match": "4072730",
+      "name": "Hohenems – Hertha Wels",
+      "field": "regulation",
+      "official": [
+        1,
+        2
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5742,
+      "official_match": "4072735",
+      "name": "Kalsdorf – LASK",
+      "field": "half",
+      "official": [
+        0,
+        1
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5742,
+      "official_match": "4072735",
+      "name": "Kalsdorf – LASK",
+      "field": "regulation",
+      "official": [
+        0,
+        7
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5743,
+      "official_match": "4072739",
+      "name": "Kremser – Austria Lustenau",
+      "field": "half",
+      "official": [
+        0,
+        0
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5743,
+      "official_match": "4072739",
+      "name": "Kremser – Austria Lustenau",
+      "field": "regulation",
+      "official": [
+        0,
+        1
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5744,
+      "official_match": "4072731",
+      "name": "Leonfelden – Bregenz",
+      "field": "half",
+      "official": [
+        0,
+        3
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5744,
+      "official_match": "4072731",
+      "name": "Leonfelden – Bregenz",
+      "field": "regulation",
+      "official": [
+        0,
+        5
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5745,
+      "official_match": "4072728",
+      "name": "Mattersburg SV 2020 – First Vienna",
+      "field": "half",
+      "official": [
+        0,
+        2
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5745,
+      "official_match": "4072728",
+      "name": "Mattersburg SV 2020 – First Vienna",
+      "field": "regulation",
+      "official": [
+        1,
+        2
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5746,
+      "official_match": "4072736",
+      "name": "SV Oberwart – Salzburg",
+      "field": "half",
+      "official": [
+        1,
+        3
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5746,
+      "official_match": "4072736",
+      "name": "SV Oberwart – Salzburg",
+      "field": "regulation",
+      "official": [
+        1,
+        7
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5747,
+      "official_match": "4072727",
+      "name": "Treibach – Kapfenberg",
+      "field": "half",
+      "official": [
+        0,
+        2
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5747,
+      "official_match": "4072727",
+      "name": "Treibach – Kapfenberg",
+      "field": "regulation",
+      "official": [
+        1,
+        4
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5748,
+      "official_match": "4072718",
+      "name": "Vorwarts Steyr – Kuchl",
+      "field": "half",
+      "official": [
+        0,
+        0
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5748,
+      "official_match": "4072718",
+      "name": "Vorwarts Steyr – Kuchl",
+      "field": "regulation",
+      "official": [
+        1,
+        0
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5749,
+      "official_match": "4072732",
+      "name": "Wacker Innsbruck – Reichenau",
+      "field": "half",
+      "official": [
+        2,
+        0
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5749,
+      "official_match": "4072732",
+      "name": "Wacker Innsbruck – Reichenau",
+      "field": "regulation",
+      "official": [
+        3,
+        0
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5750,
+      "official_match": "4072733",
+      "name": "Wals-Grunau – A. Salzburg",
+      "field": "half",
+      "official": [
+        0,
+        2
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5750,
+      "official_match": "4072733",
+      "name": "Wals-Grunau – A. Salzburg",
+      "field": "regulation",
+      "official": [
+        1,
+        5
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5751,
+      "official_match": "4072721",
+      "name": "Wiener Viktoria – Parndorf",
+      "field": "half",
+      "official": [
+        1,
+        1
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5751,
+      "official_match": "4072721",
+      "name": "Wiener Viktoria – Parndorf",
+      "field": "regulation",
+      "official": [
+        1,
+        3
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5752,
+      "official_match": "4072723",
+      "name": "Leithaprodersdorf – Admira Moedling",
+      "field": "half",
+      "official": [
+        2,
+        0
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5752,
+      "official_match": "4072723",
+      "name": "Leithaprodersdorf – Admira Moedling",
+      "field": "regulation",
+      "official": [
+        2,
+        1
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5753,
+      "official_match": "4072746",
+      "name": "SC Imst – Hartberg",
+      "field": "half",
+      "official": [
+        1,
+        2
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5753,
+      "official_match": "4072746",
+      "name": "SC Imst – Hartberg",
+      "field": "regulation",
+      "official": [
+        1,
+        3
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5754,
+      "official_match": "4072722",
+      "name": "Schwaz – Wallern/St Marienkirchen",
+      "field": "half",
+      "official": [
+        1,
+        2
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5754,
+      "official_match": "4072722",
+      "name": "Schwaz – Wallern/St Marienkirchen",
+      "field": "regulation",
+      "official": [
+        2,
+        3
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5755,
+      "official_match": "4072744",
+      "name": "Wiener Sport-Club – Austria Wien",
+      "field": "half",
+      "official": [
+        0,
+        1
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5755,
+      "official_match": "4072744",
+      "name": "Wiener Sport-Club – Austria Wien",
+      "field": "regulation",
+      "official": [
+        0,
+        5
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5756,
+      "official_match": "4072737",
+      "name": "Wienerberger – Rapid Wien",
+      "field": "half",
+      "official": [
+        0,
+        1
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5756,
+      "official_match": "4072737",
+      "name": "Wienerberger – Rapid Wien",
+      "field": "regulation",
+      "official": [
+        0,
+        3
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5757,
+      "official_match": "4167034",
+      "name": "Altach – Bischofshofen",
+      "field": "half",
+      "official": [
+        5,
+        0
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5757,
+      "official_match": "4167034",
+      "name": "Altach – Bischofshofen",
+      "field": "regulation",
+      "official": [
+        7,
+        0
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5758,
+      "official_match": "4167028",
+      "name": "Floridsdorfer AC – Bregenz",
+      "field": "half",
+      "official": [
+        0,
+        0
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5758,
+      "official_match": "4167028",
+      "name": "Floridsdorfer AC – Bregenz",
+      "field": "regulation",
+      "official": [
+        0,
+        0
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5758,
+      "official_match": "4167028",
+      "name": "Floridsdorfer AC – Bregenz",
+      "field": "extra_time",
+      "official": [
+        0,
+        0
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5758,
+      "official_match": "4167028",
+      "name": "Floridsdorfer AC – Bregenz",
+      "field": "penalties",
+      "official": [
+        4,
+        5
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5759,
+      "official_match": "4167025",
+      "name": "Kapfenberg – Hertha Wels",
+      "field": "half",
+      "official": [
+        0,
+        0
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5759,
+      "official_match": "4167025",
+      "name": "Kapfenberg – Hertha Wels",
+      "field": "regulation",
+      "official": [
+        0,
+        1
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5760,
+      "official_match": "4167032",
+      "name": "Wallern/St Marienkirchen – Ried",
+      "field": "half",
+      "official": [
+        0,
+        4
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5760,
+      "official_match": "4167032",
+      "name": "Wallern/St Marienkirchen – Ried",
+      "field": "regulation",
+      "official": [
+        1,
+        5
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5761,
+      "official_match": "4167030",
+      "name": "SK Austria Klagenfurt – Rapid Wien",
+      "field": "half",
+      "official": [
+        1,
+        2
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5761,
+      "official_match": "4167030",
+      "name": "SK Austria Klagenfurt – Rapid Wien",
+      "field": "regulation",
+      "official": [
+        2,
+        5
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5762,
+      "official_match": "4167023",
+      "name": "A. Salzburg – First Vienna",
+      "field": "half",
+      "official": [
+        0,
+        1
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5762,
+      "official_match": "4167023",
+      "name": "A. Salzburg – First Vienna",
+      "field": "regulation",
+      "official": [
+        0,
+        4
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5763,
+      "official_match": "4167027",
+      "name": "ASK Voitsberg – Sturm Graz",
+      "field": "half",
+      "official": [
+        0,
+        1
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5763,
+      "official_match": "4167027",
+      "name": "ASK Voitsberg – Sturm Graz",
+      "field": "regulation",
+      "official": [
+        1,
+        4
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5764,
+      "official_match": "4167024",
+      "name": "BW Linz – Wacker Innsbruck",
+      "field": "half",
+      "official": [
+        2,
+        0
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5764,
+      "official_match": "4167024",
+      "name": "BW Linz – Wacker Innsbruck",
+      "field": "regulation",
+      "official": [
+        2,
+        3
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5765,
+      "official_match": "4167038",
+      "name": "Deutschlandsberger – LASK",
+      "field": "half",
+      "official": [
+        0,
+        4
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5765,
+      "official_match": "4167038",
+      "name": "Deutschlandsberger – LASK",
+      "field": "regulation",
+      "official": [
+        1,
+        6
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5766,
+      "official_match": "4167029",
+      "name": "Lafnitz – Austria Lustenau",
+      "field": "half",
+      "official": [
+        2,
+        2
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5766,
+      "official_match": "4167029",
+      "name": "Lafnitz – Austria Lustenau",
+      "field": "regulation",
+      "official": [
+        2,
+        6
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5767,
+      "official_match": "4167031",
+      "name": "Leithaprodersdorf – WSG Tirol",
+      "field": "half",
+      "official": [
+        0,
+        2
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5767,
+      "official_match": "4167031",
+      "name": "Leithaprodersdorf – WSG Tirol",
+      "field": "regulation",
+      "official": [
+        0,
+        4
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5768,
+      "official_match": "4167036",
+      "name": "Traiskirchen – Austria Wien",
+      "field": "half",
+      "official": [
+        0,
+        4
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5768,
+      "official_match": "4167036",
+      "name": "Traiskirchen – Austria Wien",
+      "field": "regulation",
+      "official": [
+        0,
+        6
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5769,
+      "official_match": "4167037",
+      "name": "Kitzbuhel – Grazer AK",
+      "field": "half",
+      "official": [
+        0,
+        1
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5769,
+      "official_match": "4167037",
+      "name": "Kitzbuhel – Grazer AK",
+      "field": "regulation",
+      "official": [
+        0,
+        2
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5770,
+      "official_match": "4167033",
+      "name": "Parndorf – Wolfsberger AC",
+      "field": "half",
+      "official": [
+        0,
+        0
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5770,
+      "official_match": "4167033",
+      "name": "Parndorf – Wolfsberger AC",
+      "field": "regulation",
+      "official": [
+        1,
+        1
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5770,
+      "official_match": "4167033",
+      "name": "Parndorf – Wolfsberger AC",
+      "field": "extra_time",
+      "official": [
+        2,
+        2
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5770,
+      "official_match": "4167033",
+      "name": "Parndorf – Wolfsberger AC",
+      "field": "penalties",
+      "official": [
+        4,
+        5
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5771,
+      "official_match": "4167026",
+      "name": "St. Polten – Salzburg",
+      "field": "half",
+      "official": [
+        0,
+        2
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5771,
+      "official_match": "4167026",
+      "name": "St. Polten – Salzburg",
+      "field": "regulation",
+      "official": [
+        0,
+        3
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5772,
+      "official_match": "4167035",
+      "name": "Vorwarts Steyr – Hartberg",
+      "field": "half",
+      "official": [
+        0,
+        4
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5772,
+      "official_match": "4167035",
+      "name": "Vorwarts Steyr – Hartberg",
+      "field": "regulation",
+      "official": [
+        0,
+        4
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5773,
+      "official_match": "4185029",
+      "name": "Austria Wien – Hartberg",
+      "field": "half",
+      "official": [
+        1,
+        1
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5773,
+      "official_match": "4185029",
+      "name": "Austria Wien – Hartberg",
+      "field": "regulation",
+      "official": [
+        1,
+        1
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5773,
+      "official_match": "4185029",
+      "name": "Austria Wien – Hartberg",
+      "field": "extra_time",
+      "official": [
+        1,
+        1
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5773,
+      "official_match": "4185029",
+      "name": "Austria Wien – Hartberg",
+      "field": "penalties",
+      "official": [
+        3,
+        5
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5774,
+      "official_match": "4185033",
+      "name": "First Vienna – Rapid Wien",
+      "field": "half",
+      "official": [
+        0,
+        1
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5774,
+      "official_match": "4185033",
+      "name": "First Vienna – Rapid Wien",
+      "field": "regulation",
+      "official": [
+        0,
+        3
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5775,
+      "official_match": "4185028",
+      "name": "Grazer AK – Altach",
+      "field": "half",
+      "official": [
+        0,
+        1
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5775,
+      "official_match": "4185028",
+      "name": "Grazer AK – Altach",
+      "field": "regulation",
+      "official": [
+        0,
+        4
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5776,
+      "official_match": "4185031",
+      "name": "Hertha Wels – Wolfsberger AC",
+      "field": "half",
+      "official": [
+        1,
+        0
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5776,
+      "official_match": "4185031",
+      "name": "Hertha Wels – Wolfsberger AC",
+      "field": "regulation",
+      "official": [
+        1,
+        0
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5777,
+      "official_match": "4185027",
+      "name": "Bregenz – Salzburg",
+      "field": "half",
+      "official": [
+        1,
+        2
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5777,
+      "official_match": "4185027",
+      "name": "Bregenz – Salzburg",
+      "field": "regulation",
+      "official": [
+        2,
+        3
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5778,
+      "official_match": "4185030",
+      "name": "LASK – Ried",
+      "field": "half",
+      "official": [
+        0,
+        1
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5778,
+      "official_match": "4185030",
+      "name": "LASK – Ried",
+      "field": "regulation",
+      "official": [
+        3,
+        3
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5778,
+      "official_match": "4185030",
+      "name": "LASK – Ried",
+      "field": "extra_time",
+      "official": [
+        5,
+        4
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5779,
+      "official_match": "4185026",
+      "name": "Wacker Innsbruck – WSG Tirol",
+      "field": "half",
+      "official": [
+        1,
+        1
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5779,
+      "official_match": "4185026",
+      "name": "Wacker Innsbruck – WSG Tirol",
+      "field": "regulation",
+      "official": [
+        1,
+        1
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5779,
+      "official_match": "4185026",
+      "name": "Wacker Innsbruck – WSG Tirol",
+      "field": "extra_time",
+      "official": [
+        2,
+        2
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5779,
+      "official_match": "4185026",
+      "name": "Wacker Innsbruck – WSG Tirol",
+      "field": "penalties",
+      "official": [
+        3,
+        4
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5780,
+      "official_match": "4185032",
+      "name": "Austria Lustenau – Sturm Graz",
+      "field": "half",
+      "official": [
+        2,
+        1
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    },
+    {
+      "rds_match": 5780,
+      "official_match": "4185032",
+      "name": "Austria Lustenau – Sturm Graz",
+      "field": "regulation",
+      "official": [
+        3,
+        2
+      ],
+      "stored": [
+        null,
+        null
+      ],
+      "status": "both_absent"
+    }
+  ]
+}

@@ -1,28 +1,28 @@
 {
-  "records": 1186,
+  "records": 1232,
   "by_type": {
     "competition": 104,
-    "team": 1082
+    "team": 1128
   },
-  "distinct_images": 1149,
+  "distinct_images": 1195,
   "converted": 128,
-  "manifest_sha256": "65ce8b3af81e88bc0b5cbdeebb88956f07b77dcb7da524c861f76e9bf60c9550",
-  "zip_sha256": "10d7a8ed7c075216c666715f6ff2a3bacd81f31fb2e39104ff3b255dd33c49b2",
-  "zip_bytes": 95931553,
+  "manifest_sha256": "955daa5119c98decd12360553add3add5a656a1aae36a7ae9159127117c8dff8",
+  "zip_sha256": "34c452fdbfc68fa364eb2ac7859279c84ba4eaf138fdbf22577c9a467a0d34eb",
+  "zip_bytes": 97459952,
   "inputs": [
     {
-      "source_pack": "artwork-expanded-1134c",
-      "manifest_sha256": "2045df18065ab2b652ac4ee3d783249859e0c9952c211a3c1db1bde4a3b583ef",
+      "source_pack": "artwork-expanded-1186",
+      "manifest_sha256": "65ce8b3af81e88bc0b5cbdeebb88956f07b77dcb7da524c861f76e9bf60c9550",
       "by_type": {
         "competition": 104,
-        "team": 1030
+        "team": 1082
       }
     },
     {
-      "source_pack": "tracks/7-artwork/active-english-followup/english-profile-v1",
-      "manifest_sha256": "75054abac01c850aaeee906157e3fa88bcec132acc09f2795933576a850ee53d",
+      "source_pack": "tracks/7-artwork/austrian-federation/profile",
+      "manifest_sha256": "e41d9326fa1e916ab8dd3a329d7d832bf57bc4792b9571254edd4b01a5cbeb7b",
       "by_type": {
-        "team": 52
+        "team": 46
       }
     }
   ]

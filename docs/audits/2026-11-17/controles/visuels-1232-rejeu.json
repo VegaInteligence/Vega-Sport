@@ -1,0 +1,73 @@
+{
+  "previous_manifest": "65ce8b3af81e88bc0b5cbdeebb88956f07b77dcb7da524c861f76e9bf60c9550",
+  "previous_records": 1186,
+  "tag": "checked1232",
+  "started": "2026-11-18T01:32:39.830964+00:00",
+  "production_writes": 0,
+  "initial_production_pointers": 1611,
+  "records": 1232,
+  "manifest": "955daa5119c98decd12360553add3add5a656a1aae36a7ae9159127117c8dff8",
+  "archive_sha256": "34c452fdbfc68fa364eb2ac7859279c84ba4eaf138fdbf22577c9a467a0d34eb",
+  "commands": [
+    [
+      "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/ci-clean/bin/python",
+      "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/verify_artwork_pack.py",
+      "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/logos-verifies-1232.zip",
+      "--manifest-sha256",
+      "955daa5119c98decd12360553add3add5a656a1aae36a7ae9159127117c8dff8"
+    ],
+    [
+      "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/ci-clean/bin/python",
+      "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/root-checks/artwork_snapshot.py",
+      "/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-20261117",
+      "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/artwork-expanded-1232",
+      "955daa5119c98decd12360553add3add5a656a1aae36a7ae9159127117c8dff8",
+      "checked1232direct",
+      "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/root-checks/artwork-checked1232/direct"
+    ],
+    [
+      "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/ci-clean/bin/python",
+      "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/root-checks/artwork_snapshot.py",
+      "/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-20261117",
+      "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/artwork-expanded-1186",
+      "65ce8b3af81e88bc0b5cbdeebb88956f07b77dcb7da524c861f76e9bf60c9550",
+      "checked1232incremental",
+      "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/root-checks/artwork-checked1232/incremental"
+    ]
+  ],
+  "modes": {
+    "direct": {
+      "linked_before_stage": 2843,
+      "complete_verified_image_hashes": 1232,
+      "unchanged_original_pointers": 1611,
+      "unexpected_links": 0,
+      "clubs_competitions_after": [
+        2603,
+        186
+      ]
+    },
+    "incremental": {
+      "linked_before_stage": 2797,
+      "complete_verified_image_hashes": 1232,
+      "unchanged_original_pointers": 1611,
+      "unexpected_links": 0,
+      "clubs_competitions_after": [
+        2603,
+        186
+      ],
+      "added": 46,
+      "prior_stage_preserved": 1186,
+      "repeat": {
+        "already_linked": 1232
+      }
+    }
+  },
+  "status": "passed",
+  "ended": "2026-11-18T01:33:41.459572+00:00",
+  "sources_sha256": {
+    "verify_artwork_upgrade.py": "5a2fbe662f3adfa10f4a43ead77e1fa675829ce5b77ac8d61680c3c91668d66d",
+    "artwork_snapshot.py": "e0b9a094da995068dcd87a141de24a22bb84c3c69a9e25c0b1422ff64f040ad3",
+    "artwork.py": "e53dd0f791456eb419df6ffc7a87cfc1e67d0a73f0d123ad7b07b145e81f400a",
+    "media.py": "bc433dc88d4feb261f26ed92821b4bc4871ffbd10371df79ed105843b7235f72"
+  }
+}
