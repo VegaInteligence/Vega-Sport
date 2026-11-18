@@ -215,3 +215,12 @@
 - Not handled: orphan `agg.cohorts` of removed editions (not served: the only API view inner-joins competitions); logs (`ops.fetch_log`, `parse_failures`); global fitted models keep their earlier fits.
 - Incidents: my first local PostgreSQL port (54319) was another session's server; `test_databases.py` dropped and recreated that server's `vega_v2_*_test` bases (not its e2e ones). The checkout was renamed to /home/romai/Vega at 22:35 (not by me); `git worktree repair` relinked this worktree and three other sessions' worktrees.
 - Next action: full test runs, commit, push branch, CI; deploy only on the user's word; then seasons back to 2010 (big seven first).
+
+## Match header — the five KPIs on one row (18 Nov 2026, worktree `~/Agents/worktrees/vega-match-kpis-20261118`, branch `claude/match-kpis-one-row`)
+
+- Goal (user, 18 Nov, on Argentina–France 2022): xG, Tirs, Tirs cadrés, Possession and Discipline on one row; Discipline was wrapping below.
+- Cause: `.fiveKpis` (MatchTabs.module.css) and the global `.match-kpis` (analysis.css, 4 columns) tied on specificity; analysis.css won in production.
+- Fix (CSS only): `:global(.match-kpis).fiveKpis`; values never wrap; 5 columns above 900px, 3 + 2 down to 481px, then 2 + 2 + Discipline across. Breakpoints measured: values stop fitting five abreast below ~860px.
+- No mock-up: the user stated the layout. Linear not checked (connector is the employer's workspace).
+- Verified on a local build against production data at 8 widths (one-line values, no overflow, inner borders only); site tests 729/729. Evidence: `~/Agents/claude-runs/match-kpis-one-row-20261118/README.md`.
+- 18 Nov, user (resumed from ~/Perso/Vega after the checkout moved): « balançons tout ça » → rebased on origin/main, pushed to main; production check below.
