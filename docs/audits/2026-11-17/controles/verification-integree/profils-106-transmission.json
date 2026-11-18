@@ -1,0 +1,5 @@
+{
+  "issue": "VI-31",
+  "id": "08bda931-7c63-4385-99b4-0957fcc9b044",
+  "body": "Le correctif de planification des profils d’effectif est intégré à `d29eac65d75ca4eb038a2fc5b24e1bb93d1ae2ab` sur `codex/production-architecture-audit` (lot `413aaeb75c`). Le rejeu PostgreSQL 18 part des 106 vraies clés déjà reliées à leur joueur Vega. Avant correction, les 106 restent aux priorités 2, 3, 4 ou 9 et le lecteur traite le transfert témoin en priorité 1. Avec le correctif, le premier plan fait 106 promotions, le second aucune. Le lecteur traite les 106 profils en deux lots de 100 et 6. Le gestionnaire public renvoie 106 HTTP 200 sur les mêmes identités, avec des réponses fournisseur contrôlées. Les échéances, reprises, lectures antérieures et autres types d’unités sont préservés. Les 44 tests Transfermarkt passent sur le commit du lot. Le worker de production reste sur sa révision antérieure. Après déploiement, contrôler que les priorités évoluent et que le fournisseur rend les fiches réellement disponibles. Le conflit de réserve Estudiantes et les extrémités sans club canonique restent coordonnés sous VI-21."
+}

@@ -1,0 +1,7 @@
+{
+  "sha256": "8ce26e7d8345eacd1daae9806c44c9e5729dee2fe014e9503c8452f1a16553e7",
+  "replay_exit": 0,
+  "evidence_directory_and_network_denied": true,
+  "stdout_sha256": "ac01aba9c154cdd3898f0cd2d9cc4418a00ed552c407a1888a5fbca01c0a1993",
+  "actual": "{\n  \"status\": \"PASS\",\n  \"files\": 36,\n  \"transfers_replayed\": 37,\n  \"candidate_pairs\": 5,\n  \"explicit_free_controls\": 5,\n  \"squad_profiles_pending\": 106,\n  \"reserve_values\": 3,\n  \"reserve_transfers\": 4,\n  \"omd_rows_filtered_first\": 8,\n  \"omd_only_rows_grouped_all_sources\": 4,\n  \"limits\": \"Offline projected evidence and exact pure functions. No production write, no fresh HTTP request, no full Reader/DB E2E. Infinite starvation, independent existence of two transfers per pair, and legal transfer dates are unproved.\"\n}\n"
+}

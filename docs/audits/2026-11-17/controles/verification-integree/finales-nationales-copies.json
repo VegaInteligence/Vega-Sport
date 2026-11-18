@@ -1,0 +1,44 @@
+{
+  "at": "2026-11-18 16:02:54.650807+00:00",
+  "snapshot": "4444307:4444307:",
+  "population": {
+    "logical": 1628,
+    "multiple": 132,
+    "observations": 1760,
+    "eligible_nations": 153,
+    "native_masks_finished_pair": 0,
+    "multiple_with_finished_scores": 132
+  },
+  "finals": [
+    {
+      "hi": 1130,
+      "id": 836,
+      "lo": 1032,
+      "daykey": "1982-07-11",
+      "status": "not_started",
+      "provider": "openfootball",
+      "collected": false,
+      "season_id": 1981,
+      "away_score": null,
+      "home_score": null,
+      "away_team_id": 1130,
+      "home_team_id": 1032,
+      "competition_season_id": 282
+    },
+    {
+      "hi": 5496,
+      "id": 1056,
+      "lo": 5490,
+      "daykey": "1998-07-12",
+      "status": "not_started",
+      "provider": "openfootball",
+      "collected": false,
+      "season_id": 1997,
+      "away_score": null,
+      "home_score": null,
+      "away_team_id": 5490,
+      "home_team_id": 5496,
+      "competition_season_id": 286
+    }
+  ]
+}

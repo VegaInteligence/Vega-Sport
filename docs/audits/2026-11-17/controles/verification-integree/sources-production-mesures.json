@@ -1,0 +1,236 @@
+{
+  "at": "2026-11-18 15:59:30.089006+00:00",
+  "snapshot": "4444153:4444153:",
+  "rds": {
+    "stored_matches": 588758,
+    "missing_or_wrong_edition": 0,
+    "paired_finished": 576487
+  },
+  "distinct_editions": 2149,
+  "distinct_competitions": 208,
+  "multiple_fixture_providers_in_one_physical_edition": 0,
+  "providers": {
+    "pitchapi": {
+      "edition_provider_rows": 304,
+      "matches": 84371,
+      "finished": 75355,
+      "finished_scored": 75355
+    },
+    "openfootball": {
+      "edition_provider_rows": 241,
+      "matches": 65926,
+      "finished": 65126,
+      "finished_scored": 64606
+    },
+    "openligadb": {
+      "edition_provider_rows": 3,
+      "matches": 167,
+      "finished": 159,
+      "finished_scored": 159
+    },
+    "international_results": {
+      "edition_provider_rows": 8,
+      "matches": 373,
+      "finished": 373,
+      "finished_scored": 373
+    },
+    "open_matchday": {
+      "edition_provider_rows": 30,
+      "matches": 4682,
+      "finished": 2576,
+      "finished_scored": 2576
+    },
+    "engsoccerdata": {
+      "edition_provider_rows": 736,
+      "matches": 179928,
+      "finished": 179587,
+      "finished_scored": 179587
+    },
+    "worldclub": {
+      "edition_provider_rows": 360,
+      "matches": 63159,
+      "finished": 63159,
+      "finished_scored": 63159
+    },
+    "footballcsv": {
+      "edition_provider_rows": 467,
+      "matches": 190152,
+      "finished": 190152,
+      "finished_scored": 190152
+    }
+  },
+  "scheduled_status_at_capture": {
+    "ok": 173
+  },
+  "precedences": {
+    "configured": 35,
+    "native_resolved": 35,
+    "supplemental_copies": 0
+  },
+  "cross_source_same_date_team_groups": 287,
+  "cross_source_candidate_rows": 576,
+  "cross_source_with_conflicting_complete_scores": 0,
+  "mixed_provider_results": [
+    {
+      "providers": [
+        "openfootball",
+        "pitchapi"
+      ],
+      "edition_relation": "different_editions",
+      "estimated_date": false,
+      "same_day_team_pair_groups": 132,
+      "candidate_rows": "264",
+      "conflicting_score_groups": 0
+    },
+    {
+      "providers": [
+        "openfootball",
+        "worldclub"
+      ],
+      "edition_relation": "different_editions",
+      "estimated_date": false,
+      "same_day_team_pair_groups": 115,
+      "candidate_rows": "230",
+      "conflicting_score_groups": 0
+    },
+    {
+      "providers": [
+        "openligadb",
+        "open_matchday"
+      ],
+      "edition_relation": "different_editions",
+      "estimated_date": false,
+      "same_day_team_pair_groups": 40,
+      "candidate_rows": "82",
+      "conflicting_score_groups": 0
+    }
+  ],
+  "ligue1_all": [
+    {
+      "edition_id": 2919,
+      "season": "1994/1995",
+      "authoritative_match_source": "worldclub",
+      "fixtures": 346,
+      "finished": 346,
+      "with_stored_score_all_statuses": 346,
+      "finished_with_score": 346
+    },
+    {
+      "edition_id": 4986,
+      "season": "2014/2015",
+      "authoritative_match_source": "openfootball",
+      "fixtures": 380,
+      "finished": 380,
+      "with_stored_score_all_statuses": 380,
+      "finished_with_score": 380
+    },
+    {
+      "edition_id": 5026,
+      "season": "2015/2016",
+      "authoritative_match_source": "openfootball",
+      "fixtures": 380,
+      "finished": 380,
+      "with_stored_score_all_statuses": 380,
+      "finished_with_score": 380
+    },
+    {
+      "edition_id": 5067,
+      "season": "2016/2017",
+      "authoritative_match_source": "openfootball",
+      "fixtures": 380,
+      "finished": 380,
+      "with_stored_score_all_statuses": 380,
+      "finished_with_score": 380
+    },
+    {
+      "edition_id": 5103,
+      "season": "2017/2018",
+      "authoritative_match_source": "openfootball",
+      "fixtures": 380,
+      "finished": 380,
+      "with_stored_score_all_statuses": 380,
+      "finished_with_score": 380
+    },
+    {
+      "edition_id": 5148,
+      "season": "2018/2019",
+      "authoritative_match_source": "openfootball",
+      "fixtures": 380,
+      "finished": 380,
+      "with_stored_score_all_statuses": 380,
+      "finished_with_score": 380
+    },
+    {
+      "edition_id": 393,
+      "season": "2019/2020",
+      "authoritative_match_source": "openfootball",
+      "fixtures": 380,
+      "finished": 380,
+      "with_stored_score_all_statuses": 279,
+      "finished_with_score": 279
+    },
+    {
+      "edition_id": 5227,
+      "season": "2020/2021",
+      "authoritative_match_source": "openfootball",
+      "fixtures": 380,
+      "finished": 380,
+      "with_stored_score_all_statuses": 380,
+      "finished_with_score": 380
+    },
+    {
+      "edition_id": 418,
+      "season": "2021/2022",
+      "authoritative_match_source": "pitchapi",
+      "fixtures": 380,
+      "finished": 380,
+      "with_stored_score_all_statuses": 380,
+      "finished_with_score": 380
+    },
+    {
+      "edition_id": 419,
+      "season": "2022/2023",
+      "authoritative_match_source": "pitchapi",
+      "fixtures": 380,
+      "finished": 380,
+      "with_stored_score_all_statuses": 380,
+      "finished_with_score": 380
+    },
+    {
+      "edition_id": 420,
+      "season": "2023/2024",
+      "authoritative_match_source": "pitchapi",
+      "fixtures": 307,
+      "finished": 306,
+      "with_stored_score_all_statuses": 307,
+      "finished_with_score": 306
+    },
+    {
+      "edition_id": 421,
+      "season": "2024/2025",
+      "authoritative_match_source": "pitchapi",
+      "fixtures": 306,
+      "finished": 306,
+      "with_stored_score_all_statuses": 306,
+      "finished_with_score": 306
+    },
+    {
+      "edition_id": 422,
+      "season": "2025/2026",
+      "authoritative_match_source": "pitchapi",
+      "fixtures": 306,
+      "finished": 306,
+      "with_stored_score_all_statuses": 306,
+      "finished_with_score": 306
+    },
+    {
+      "edition_id": 30,
+      "season": "2026/2027",
+      "authoritative_match_source": "pitchapi",
+      "fixtures": 306,
+      "finished": 90,
+      "with_stored_score_all_statuses": 90,
+      "finished_with_score": 90
+    }
+  ]
+}

@@ -1,0 +1,110 @@
+{
+  "status": "passed",
+  "candidate": "17306e6da6dcf116cdfc61f26749ef3d01a46e47",
+  "postgres_major": 18,
+  "physical_restore": {
+    "would_restore": 35,
+    "restored": 35,
+    "preserved_elo": 70,
+    "elo_pending_sides": 0,
+    "elo_run": 2097,
+    "edition_versions": {
+      "332": 1,
+      "333": 1,
+      "334": 1
+    }
+  },
+  "verified_old_api_ids": 35,
+  "ordinary_collect_finished": [
+    374,
+    374,
+    375
+  ],
+  "rolling_finished": {
+    "4": 341,
+    "10": 369,
+    "17": 386,
+    "18": 396,
+    "future": 397
+  },
+  "enriched_match": {
+    "id": 8049,
+    "competition_season_id": 332,
+    "season_id": 2026,
+    "round_id": 7918,
+    "archive_position": 0,
+    "home_team_id": 2552,
+    "away_team_id": 2558,
+    "full_time": [
+      0,
+      1
+    ],
+    "organizer_confirmed_half_time": [
+      0,
+      1
+    ],
+    "revision": 2,
+    "controlled_home_corners": 4
+  },
+  "without_enrichment_http": {
+    "ENG_6_national-league-north": 304,
+    "ENG_6_national-league-south": 304,
+    "ENG_7_northern-premier-league": 304
+  },
+  "completed_elo_noop": {
+    "would_restore": 0,
+    "restored": 0,
+    "preserved_elo": 70,
+    "elo_pending_sides": 0,
+    "elo_run": 3101,
+    "edition_versions": {}
+  },
+  "superseded_elo_still_pending": {
+    "would_restore": 35,
+    "restored": 35,
+    "preserved_elo": 0,
+    "elo_pending_sides": 70,
+    "elo_run": 3100,
+    "edition_versions": {
+      "332": 2,
+      "333": 2,
+      "334": 2
+    }
+  },
+  "artifacts": {
+    "evidence": "REVIEW-EVIDENCE.md",
+    "portable_zip": {
+      "path": "rejeu-open-matchday.zip",
+      "sha256": "e9d33847b5a5a2247bc4458f1605edf87b2c176901d3f329c0fef9e3e9f2787f"
+    },
+    "portable_run": {
+      "summary": "portable-run/summary.json",
+      "log": "17-portable-run.log"
+    },
+    "input_archives": {
+      "identities": {
+        "filename": "35-matchs-identites-et-elo.zip",
+        "sha256": "db35bdf6cc5f7799cb679a8160c096a49c6bd8475130ad3895709c0fd06c0f6b"
+      },
+      "windows": {
+        "filename": "capsule-completude-partage-20261118.zip",
+        "sha256": "fc4217fb8548405aa136af3f68b2853783814a12852b1c6f3251a79a4aa6f83c"
+      }
+    },
+    "normal_source_tests": {
+      "count": 29,
+      "full_suite": "18-locked-source-snapshots-suite.log",
+      "corrected_ht_control": "16-e2e-attested-ht.log"
+    }
+  },
+  "scope": {
+    "postgres": "local disposable PostgreSQL 18",
+    "real_captures": "signed targeted relational preimage and postimage",
+    "publication_rotations": "two controlled later Elo publications, no model run",
+    "production_execution": false
+  },
+  "completed_elo_negative_controls": {
+    "partial_published_sides_rejected": true,
+    "wrong_published_pair_rejected": true
+  }
+}

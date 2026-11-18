@@ -1,0 +1,673 @@
+{
+  "source_sha256": "5dc3b5a266e493ac0c98eebdb691cddbff70497bf3719113ab27bb80bfb8c176",
+  "candidate": "d29eac65d75ca4eb038a2fc5b24e1bb93d1ae2ab",
+  "database": "postgresql://postgres@127.0.0.1:55471/vega_v2_vi31_squad_coordd29ea",
+  "before": {
+    "3": 20,
+    "9": 18,
+    "2": 65,
+    "4": 3
+  },
+  "after": {
+    "1": 106
+  },
+  "initial_plan": 106,
+  "repeat_plan": 0,
+  "first_step": "ok",
+  "before_after_all_fields_except_priority_equal": true,
+  "repeat_identical_xmin": true,
+  "calls": [
+    {
+      "path": "/players",
+      "keys": [
+        "99617",
+        "1025089",
+        "64352",
+        "930995",
+        "935245",
+        "939290",
+        "975860",
+        "990258",
+        "990731",
+        "1017551",
+        "1086619",
+        "1125371",
+        "1129837",
+        "1162486",
+        "1175619",
+        "1179041",
+        "1213685",
+        "1309041",
+        "1414664",
+        "181690",
+        "21327",
+        "254968",
+        "285283",
+        "31653",
+        "340791",
+        "412363",
+        "412935",
+        "412937",
+        "427568",
+        "432859",
+        "445610",
+        "445788",
+        "451642",
+        "453770",
+        "454336",
+        "455922",
+        "457341",
+        "458734",
+        "46083",
+        "462252",
+        "462699",
+        "464349",
+        "471621",
+        "479589",
+        "481688",
+        "486639",
+        "489428",
+        "492319",
+        "492955",
+        "495666",
+        "502676",
+        "50806",
+        "512352",
+        "51894",
+        "519056",
+        "549378",
+        "557410",
+        "561078",
+        "565436",
+        "566068",
+        "566626",
+        "576033",
+        "589753",
+        "591361",
+        "605017",
+        "616431",
+        "623095",
+        "624258",
+        "624698",
+        "640556",
+        "644563",
+        "667749",
+        "670882",
+        "683554",
+        "692608",
+        "708453",
+        "709726",
+        "732990",
+        "743376",
+        "745596",
+        "748808",
+        "75411",
+        "774771",
+        "788522",
+        "79647",
+        "823525",
+        "829243",
+        "834483",
+        "851551",
+        "859924",
+        "889613",
+        "895905",
+        "909017",
+        "909673",
+        "909946",
+        "909991",
+        "916558",
+        "922892",
+        "926301",
+        "657817"
+      ]
+    },
+    {
+      "path": "/players",
+      "keys": [
+        "1046188",
+        "195605",
+        "542586",
+        "652797",
+        "655894",
+        "675500"
+      ]
+    }
+  ],
+  "raw_written": 106,
+  "API_view_observed_contracts": 106,
+  "API_HTTP": [
+    {
+      "status": 200,
+      "id": "p_v0000079",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0000092",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0000228",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0000707",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0000709",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0000794",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0001264",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0001435",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0001805",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0001975",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0003498",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0003499",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0003540",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0003653",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0003660",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0006577",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0006585",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0006949",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0008282",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0008477",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0008603",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0011820",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0012961",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0018363",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0018368",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0018775",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0019648",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0019692",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0020627",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0020941",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0020952",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0021306",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0021307",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0021412",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0021417",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0022607",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0023603",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0024687",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0024950",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0025018",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0028125",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0030167",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0030400",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0030484",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0031450",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0031968",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0032771",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0033047",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0033198",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0033272",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0033294",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0033558",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0033630",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0033764",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0033773",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0033923",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0034370",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0034627",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0035074",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0035646",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0035831",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0035832",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0035847",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0036269",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0036282",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0036445",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0036508",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0036670",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0037168",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0037612",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0037641",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0037799",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0037807",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0037927",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0039111",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0039229",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0039268",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0039271",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0039285",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0039713",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0039985",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0040134",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0040485",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0040868",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0040923",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0040926",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0040943",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0041173",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0041448",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0041812",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0041843",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0041865",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0042345",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0042687",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0043239",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0043754",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0043790",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0045295",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0047308",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0048108",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0048279",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0048932",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0049660",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0051087",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0052713",
+      "observed_contract_until": "2027-11-18"
+    },
+    {
+      "status": 200,
+      "id": "p_v0054351",
+      "observed_contract_until": "2027-11-18"
+    }
+  ],
+  "completed_profile_rows_unchanged": true,
+  "canonical_links_unchanged": true
+}

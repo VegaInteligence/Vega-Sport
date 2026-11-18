@@ -1,0 +1,51 @@
+{
+  "variant": "Independent replay by the project coordinator on a separate disposable database.",
+  "runtime_commit": "b98dfadedcc7e7a75174eadc509ab962646cb9d3",
+  "equivalent_product_commit": "17306e6da6dcf116cdfc61f26749ef3d01a46e47",
+  "test_only_commit_changed_between_these_runs": true,
+  "physical_snapshot": "2026-11-18 04:50 UTC",
+  "cases": {
+    "dry-run": 0,
+    "bad-sha": 1,
+    "concurrent-writer": 1,
+    "occupied-id": 1,
+    "shunted-key": 1,
+    "same-pair-other-id": 1,
+    "moved-parent": 1,
+    "changed-elo": 1,
+    "apply": 0,
+    "repeat": 0
+  },
+  "successful_actions": {
+    "dry-run": {
+      "would_restore": 35,
+      "restored": 0,
+      "preserved_elo": 70,
+      "elo_pending_sides": 0,
+      "elo_run": 2097,
+      "edition_versions": {}
+    },
+    "apply": {
+      "would_restore": 35,
+      "restored": 35,
+      "preserved_elo": 70,
+      "elo_pending_sides": 0,
+      "elo_run": 2097,
+      "edition_versions": {
+        "332": 1,
+        "333": 1,
+        "334": 1
+      }
+    },
+    "repeat": {
+      "would_restore": 0,
+      "restored": 0,
+      "preserved_elo": 70,
+      "elo_pending_sides": 0,
+      "elo_run": 2097,
+      "edition_versions": {}
+    }
+  },
+  "old_ids_visible_as_read_role": 35,
+  "http_raw_sha256": "8a3da94e3528d7fae42e7c4b802896f26bc2170af9390fec8bdcece32c7b8abe"
+}

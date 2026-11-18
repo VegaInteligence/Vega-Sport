@@ -1,974 +1,1323 @@
-diff --git a/docs/calculs/09-audit-2026-11/FAILURE_MODES_VI30.md b/docs/calculs/09-audit-2026-11/FAILURE_MODES_VI30.md
+diff --git a/docs/calculs/09-audit-2026-11/FAILURE_MODES.md b/docs/calculs/09-audit-2026-11/FAILURE_MODES.md
+index 8b19aff978..5c40147272 100644
+--- a/docs/calculs/09-audit-2026-11/FAILURE_MODES.md
++++ b/docs/calculs/09-audit-2026-11/FAILURE_MODES.md
+@@ -245,6 +245,100 @@ integer` are appended at the end.
+ - `backend/tests/test_audit_player_aggregates.py::HalvesRealFixtureTest`
+ - adjusted expectation in `backend/api/test/players.test.mjs` (§12).
+ 
++### 4.1 Each metric's own coverage (137, audit 15c; written before the tests)
++
++The audit asked for each half metric's coverage and observed minutes, as the season aggregates
++give them (SOURCE_AUDIT §15, « Mi-temps »). §4 kept complete halves only, and the route published
++nothing else. A half missing one metric lost all of its others, and a player without a complete
++half answered 404 as if he had not played. In the production census (17 Nov 2026, read-only, six
++seasons):
++- 216,659 of 2,738,261 eligible half rows were left out (9,691,563 of 105,381,499 minutes);
++- 214,383 of them for missing touches alone;
++- 15,342 player-season-period groups were hidden entirely although they had positive passing.
++
++The real fixture shows the same pattern: both goalkeepers publish passes, recoveries and duels
++per half, but no touches.
++
++**Failure modes:**
++
++| ID | Failure |
++|---|---|
++| FM-HC.1 | A published metric of an eligible half is dropped because another metric of the same half is unknown. |
++| FM-HC.2 | A player whose eligible halves all miss one metric answers 404, as if he had not played. |
++| FM-HC.3 | An unknown metric is served as 0 (a NULL summed, or `Math.round(null)`). |
++| FM-HC.4 | A metric's rate is divided by minutes in which that metric was not observed. |
++| FM-HC.5 | xG's structural zero is applied without an observed zero shots (shots unknown), or over a published NaN or ±∞. |
++| FM-HC.6 | Halves of a canceled or unfinished match, or with 0 or unknown minutes, are counted. |
++| FM-HC.7 | `first` or `second` changes (values, nulls or shape) for an existing client. |
++| FM-HC.8 | The read scans more than the asked player's season. |
++| FM-HC.9 | The coverage's exclusions drift from 129's complete-half rule. |
++| FM-HC.10 | A stored single-precision xG is read at 6 significant digits (`real::numeric`): 0.12345679 is summed as 0.123457 (Astra review, 18 Nov). |
++| FM-HC.11 | The decimal a stored xG is read as depends on the reading session's `extra_float_digits` (`real::text` gives 6 digits at 0, the shortest exact digits at 1 or 3), so one base gives two bodies and two ETags. |
++| FM-HC.12 | The sum is converted to binary before the HTTP answer (a `float8` sum, or the binary value of each input): 0.12345679 + 1.2345678 becomes 1.3580245524644852. |
++
++**Contract:**
++- **Eligible half:** finished match and minutes > 0, as in 129. A 0-minute half is not played, even when the source credits it a touch.
++- **View `api.player_half_coverage` (137):**
++  - one row per (season, player, period) with at least one eligible half, complete or not;
++  - `matches` and `minutes`: the eligible halves;
++  - `excluded_matches` and `excluded_minutes`: the eligible halves outside 129's complete sample. The rule is the same, so they equal 129's columns wherever 129 has a row.
++- **Each route metric m:**
++  - `m_count`: the eligible halves where m is known;
++  - `m_minutes`: their minutes, 0 without any;
++  - `m_sum`: its sum on them, NULL without any.
++- **Known:**
++  - for every metric but xG, not NULL;
++  - for xG, a finite value, or a blank with an observed 0 shots.
++  - These xG values stay unknown: a blank with unknown shots, a blank with a shot, NaN, +∞ and −∞.
++- **Route:**
++  - `first` and `second` are unchanged: 129's complete halves, or null without one.
++  - `coverage.first` and `coverage.second` are each `{matches, minutes, excluded: {matches, minutes}, stats}`, where `stats` maps every route metric to `{sum, count, minutes}`.
++  - An unmeasured metric is `{sum: null, count: 0, minutes: 0}`, never 0. A period without an eligible half is null.
++  - **xG precision:**
++    - each stored single-precision xG is read as its shortest decimal that reads back as the same stored value, PostgreSQL's own shortest output forced whatever the session's `extra_float_digits` (`core.real_decimal`);
++    - these decimals are summed exactly (`xg_sum numeric`);
++    - the route converts the sum to a JSON number once, at the end. The binary input (0.12345679104328156 for 0.12345679) is never what is summed.
++  - The route reads both views in one statement, each filtered by the season and player asked.
++  - **Types:** every `sum`, `count` and `minutes` is a JSON number (or `sum: null`). The legacy `first.xg` stays 129's float sum rounded to 2 decimals, so it is not the coverage's exact sum.
++  - **Journal:** 137 was corrected in place before any release. It is only on `codex/audit-1-linear` (`c3c8232747`): not on `main`, and production runs `8018e0836c`. Disposable test bases re-create their schema. An environment that applied the first 137 must recreate the view (`MIGRATION_CHECKSUM_CHANGED` otherwise).
++- **Rate:** 90 × `sum` / `minutes` of the same metric.
++- **404:** only for a player without an eligible half in the season. A player with eligible but no complete halves answers 200, with `first` and `second` null. This replaces §4's 404 for such players, whose prior assertions were `player-halves.test.mjs` (Demi Inconnu) and `players.test.mjs` (p_aaaab1).
++- **Site:** unchanged. `halfRows` reads `first` and `second` only. It shows the same tables and still hides a player without complete halves. Showing `coverage` is a frontend change, and needs a design the user approves.
++
++**Expected outcomes** (synthetic seed of `player-halves.test.mjs`, season 2025/2026):
++
++| Player | Status | `first` / `second` | Coverage |
++|---|---|---|---|
++| Moitiés Test (p_aaab30) | 200 | unchanged (§4) | First half: 3 halves, 135 min, excluded 2 / 90. Touches 50 on 2 halves / 90 min (50 per 90, not 33.3), tackles 1 / 90 min, passes 23 / 135 min, xG 0.7. Second half: 3 / 130, excluded 1 / 45, xG 0.2 on 2 halves / 85 min. |
++| Demi Inconnu (p_aaab31) | 200 (was 404) | null, null | First-half xG unmeasured (a shot without xG), passes 4. Second-half recoveries unmeasured, structural xG 0 on 1 half. |
++| Passe Seule (p_aaab32) | 200 | null, null | First half: passes 14 on 1 half / 45 min, every other metric unmeasured. Second half: null (0 and unknown minutes). |
++| Non Fini (p_aaab33) | 200 | null, second half m1 | First-half xG unmeasured (NaN, +∞, −∞), shots 3. Second half: xG 0.4 and shots 1 on 1 half (m3's shots are unknown, so its blank xG stays unknown). |
++| Rien Mesuré (p_aaab34) | 200 | null, null | 1 half (45 min and 30 min), excluded entirely, every metric unmeasured. |
++| Hors Saison (p_aaab35) | 404 | — | Only a canceled match, a match not started and a 0-minute half. |
++| Zéro Observé (p_aaab36) | 200 | first: all 0 | Every metric 0 on 1 half / 45 min (a measured zero, unlike Rien Mesuré). |
++| Précision Fine (p_aaab37) | 200 | first xG 1.36, second xG 0.12 (129, unchanged) | First half, three values: xG 1.35802459 on 3 halves / 135 min (0.12345679 + 1.2345678 + a structural 0). It is not 1.358027 (6 digits) and not 1.3580245524644852 (binary). Second half, one value among mixed rows (supported 0.12345679, a blank with 2 shots, NaN): 0.12345679 on 1 half / 45 min. The same body and ETag at `extra_float_digits` 0, 1 and 3. |
++
++Expected decimals:
++- The stored values are exact in `half-fixture.mjs`.
++- They were computed by an oracle independent of PostgreSQL (Python `struct` and `decimal`): `tracks/1-linear/half-coverage/precision/binary32_oracle.py` in the track evidence.
++
++**Real fixture `match_m_08LEIz`** (FC Orenburg–CSKA Moscow, 1 Nov 2026):
++- The goalkeepers Bogdan Ovsyannikov (`p_4McHHL`) and Maksim Borisko (`p_3yNPPF`) answer 200 (were 404), with `first` and `second` null:
++  - Ovsyannikov: passes 2 and 7, recoveries 6 and 6, duels won 0 and 2;
++  - Borisko: passes 6 and 5, recoveries 9 and 5, duels won 2 and 1;
++  - for both: touches unmeasured, structural xG 0, 1 half / 45 min each.
++- Damián Puebla (`p_02x0dj`) is unchanged: first half xG 0.28 and shots 3. His coverage equals his totals.
++- Egor Nazarenko (`p_3o0rP8`) stays 404: his only row is a 0-minute second half (1 touch, 1 pass).
++- Astra's probe, with Puebla's first-half xG set to the stored value of 0.12345679: `coverage.first.stats.xg` is `{sum: 0.12345679, count: 1, minutes: 45}`. It was 0.123457, an error of +0.00000021, while the legacy `first.xg` stays 0.12.
++- Over the 28 players:
++  - first half: 22 halves / 990 min, excluded 2 / 90, passes 226 / 990 min, touches 460 / 900 min;
++  - second half: 28 halves / 990 min, excluded 2 / 90, passes 185 / 990 min, touches 452 / 900 min.
++
++**Tests:**
++- `backend/api/test/player-halves.test.mjs` (synthetic, through the route; bounded statement; view identity);
++- `backend/api/test/player-halves-real.test.mjs` (the real match, written by the collector's path);
++- adjusted expectation in `backend/api/test/players.test.mjs`.
++
+ ## 5. B4 — Returns from absence on the club stream (audit 15g)
+ 
+ **Failure modes:**
+@@ -1438,3 +1532,900 @@ the normalizer's NULL for an ordinary goal shot (VI-21).
+ End to end: on a local database, one cohort is re-marked every minute for 70 simulated minutes while another
+ is marked once. The first is refreshed at the maximum wait, once only, and stays queued after its last
+ re-mark. The second is refreshed 10 minutes after its mark.
++
++## 19. Cup and open-matchday snapshots (VI-27, written before the tests)
++
++Batch of [VI-27](https://linear.app/vegainteligence/issue/VI-27), 17 Nov 2026, baseline `8018e0836c`.
++Source fixes only: no method version, Elo, forecast or identity rule changes (VI-19 and VI-21 keep
++them). This batch replays nothing in production.
++
++### 19.1 What production holds (read-only, 17 Nov 2026, 18:13 UTC)
++
++- `worldcup.json` at `516d3825` and `euro.json` at `7bbf6309`: 26 editions, 1,222 fixtures, the same
++  1,222 in RDS. Upstream, 1,170 are played; RDS marks 505 finished. All 665 missing results are the
++  array encoding `"score": [2, 1]` in 18 World Cups (1950 to 2014, and 2022). `cups.match_rows` reads
++  an object score only: 1962 is 0/32 finished, 1974 0/38, 2022 57/64 (England–USA 0–0 among them).
++- 1938 Sweden–Austria is `"status": "canceled"`, without a score. `open-cups.mjs` drops `status`, so
++  RDS holds the match as `not_started`.
++- `cups.save` digests the projection's raw body. A parser fix alone leaves that digest unchanged:
++  no stored edition would be written again.
++- `cups.save` and `open_matchday.save` delete every match of the edition absent from the snapshot.
++  Local reproduction (`sources/repro/red.log`): a 200 with an empty match list, a CSV with other
++  headers and a manifest describing neither file each empty a populated edition. A fixture row with
++  the key of a result turns the finished match `not_started`, without score or statistics. An
++  unreadable body (502) already keeps the edition.
++- `open_matchday.save` updates every match and rewrites its statistics every six hours, without a
++  revision: a change cannot be told from a re-read.
++- The manifest declares, per folder, the rows of each file (`results`, `fixtures`) and its `errors`.
++  At `496e94ec` each of the 65 European files parses to exactly its declared count of distinct keys.
++
++### 19.2 The rules
++
++**OpenFootball scores.** One rule for `open-cups.mjs` and `cups.match_rows`. The display helpers of
++`openfootball-history.js` read the same encodings.
++
++| Source `score` | Stored |
++|---|---|
++| absent, `null` or `{}` | no result: `not_started` (`canceled` when the source says so), every score NULL |
++| `[h, a]` | full time: `finished`, score h–a; no 90-minute, extra-time or shoot-out value |
++| `{ft}`, `{ft, ht}` | as today: the final score is `ft` |
++| `{et, …}` | the final score is `et`; the 90-minute score is `ft` when given, never inferred |
++| `{…, p}` | the shoot-out, beside a final score |
++| anything else | the edition is invalid (`INVALID_SCORE`) |
++
++A pair is two non-negative integers: no boolean, float, string or `null`. The parts are `ft`, `ht`,
++`et` and `p` only. `ht` or `p` without `ft` or `et` is incomplete. A source `status` of `canceled`
++(or `cancelled`) is stored `canceled` and comes without a score. Any other status, or a canceled
++match with a score, makes the edition invalid (`INVALID_STATUS`). The projection writes every score
++in the object form (`[h, a]` becomes `{ft: [h, a]}`) and passes `status`. The read API gives
++`status` back for a canceled match.
++
++**One version of what is stored.** A cup edition's digest is the hash of the rows it stores
++(`CUP_ROWS_VERSION`, the name, then the key and values of every match in source order), not the hash
++of the source's body. A parser change that changes a stored value changes the digest, so the
++edition is written again at its next due read, once. An edition whose rows are unchanged is not
++written again.
++
++**A match changes only when its values do.** On a write, a match whose stored values equal the new
++ones is left alone (no `revision`, no `updated_at`). One that differs is updated with
++`revision + 1`. A change of source order alone moves `archive_position` and nothing else. The
++edition's `cup_updated_at` moves only when a match is added, changed or removed, or the edition is
++renamed. `cup_checked_at` is the last accepted read. Open-matchday statistics are rewritten only when
++they differ, and a statistics change is a change of its match.
++
++**A snapshot replaces an edition only when it is complete and keeps its results.** Before any write:
++- open-matchday: the folder's manifest declares integer counts (not booleans) and no `errors`. Each
++  declared file is read. A results file has `date, home, away, ft_home, ft_away`; a fixtures file has
++  `date, home, away`. Each holds exactly its declared number of rows. Every result row has both
++  sides, a date and two non-negative integer goals. A fixture row without both sides or a date names
++  no match and is skipped, as today. A half-time score is kept only when both halves are integers;
++- a result and a fixture with the same key are one match: the result, with its score and statistics;
++- a match the base holds finished must still be in the snapshot, finished (a score correction is
++  accepted). One that is absent (`SNAPSHOT_DROPS_RESULT`) or no longer finished (`RESULT_DOWNGRADED`)
++  keeps the whole edition as it was. The exception is a match listed in the reviewed `RETRACTIONS`
++  (`vega/sources/snapshot.py`), with its reviewer, date and reason;
++- a match not yet played may leave a complete snapshot (rescheduled, decided, withdrawn).
++
++**A rejected snapshot changes nothing and says so.** A cup edition (one scope) fails with its code in
++`ops.source_runs`; its digest, `cup_checked_at`, matches, scores and keys stay unchanged. A rejected
++open-matchday folder is skipped and its edition is unchanged. The folder counts in `unmatched`, as an
++unreadable one already does, and `ops.parse_failures` holds its code and the folder. The other folders
++are written. The removal of an open-matchday copy of a league PitchAPI holds (`drop_copy`, `COVERED`,
++`SUPERSEDED`, VI-21) is a separate path and is unchanged.
++
++### 19.3 Failure modes and expected outcomes
++
++| # | Situation | Expected | Class |
++|---|---|---|---|
++| 19a | `score: [0, 0]` (2022 England–USA), `[2, 1]` | `finished` 0–0, 2–1; 90-minute, extra-time and shoot-out scores NULL | CR |
++| 19b | `{ft: [3, 3], et: [4, 4]}` (1954 England–Belgium) | final 4–4, 90 minutes 3–3, extra time 4–4 | BC |
++| 19c | `{et: [2, 1]}` without `ft` | final 2–1, 90 minutes NULL | BC |
++| 19d | `{ft: [1, 1], et: [1, 1], p: [4, 3]}` | final 1–1, 90 minutes 1–1, shoot-out 4–3 | BC |
++| 19e | no score; `{}` | `not_started`, NULL scores | BC |
++| 19f | `status: canceled` (1938 Sweden–Austria) | `canceled`, NULL scores; the read API says `canceled` | CR |
++| 19g | `[2]`, `[2, -1]`, `[2, 1.5]`, `[true, 0]`, `"2-1"`, `{ft: [1, null]}`, `{ht: [1, 0]}`, `{p: [4, 3]}`, `{ft: [1, 0], x: [0, 0]}` | `INVALID_SCORE`, edition unchanged; the projection answers 502 with that code | NC |
++| 19h | a canceled match with a score; `status: postponed` | `INVALID_STATUS`, edition unchanged | NC |
++| 19i | the 26 frozen editions | 1,170 finished, 665 of them array-encoded in 18 World Cups, 1 canceled, 51 to play; Python and JS give every match the same final score | CR |
++| 19j | 1962 and 2022 stored as the baseline stores them (raw digest, array scores `not_started`), then read again, unchanged, by the new code | written once: every played match finished, same match ids, `revision + 1` on changed matches only; the next read changes nothing | CR |
++| 19k | the same edition with its matches in another order | positions follow the source; no revision change, `cup_updated_at` unchanged | NC |
++| 19l | a populated cup edition, then a 200 with no match | `SNAPSHOT_DROPS_RESULT` in `ops.source_runs`; edition, digest and `cup_checked_at` unchanged | CR |
++| 19m | a cup snapshot without one finished match, or with it unplayed | `SNAPSHOT_DROPS_RESULT`, `RESULT_DOWNGRADED`; edition unchanged | CR |
++| 19n | a cup snapshot correcting a score (2–1 to 2–2), adding a match and dropping an unplayed one | accepted: `revision + 1` on the corrected match, the new match written, the unplayed one gone | BC |
++| 19o | a reviewed retraction in `RETRACTIONS` | that match alone may go; the others stay protected | NC |
++| 19p | open-matchday: a fixture with the key of a result (`fixtures: true`) | one match, finished 2–1, its statistics kept | CR |
++| 19q | open-matchday: other headers; a header-only file; fewer rows than declared; manifest `errors`; boolean counts | folder skipped, edition unchanged, `unmatched` + 1, one `ops.parse_failures` row with the code | CR |
++| 19r | open-matchday: a result row with an empty or non-integer goal | folder skipped, edition unchanged (`INVALID_RESULT_ROW`) | NC |
++| 19s | open-matchday: a finished match absent from the new results, or listed only as a fixture | folder skipped, edition unchanged | CR |
++| 19t | open-matchday: one folder rejected and another valid in the same summary | the valid one written, the rejected one unchanged | CR |
++| 19u | open-matchday: the same files read twice | no match update or revision, statistics untouched (`updated_at` and statistics rows unchanged); `cup_checked_at` advances | CR |
++| 19v | open-matchday: a corrected score or statistic | that match updated with `revision + 1`; `cup_updated_at` moves | NC |
++| 19w | open-matchday: a fixture no longer listed in a complete snapshot | removed | BC |
++| 19x | open-matchday: a league PitchAPI holds (`COVERED`) | removed by `drop_copy` as before | BC |
++| 19y | the display helpers (`historicalScore`, `historicalCsvRow`) on `[2, 1]` | 2–1, full time 2–1 | CR |
++| 19z | Football.TXT (`openfootball-cups.js`): `2-1 a.e.t. (1-1)`, `2-1 a.e.t. (1-1, 0-0)` | after extra time 2–1, 90 minutes 1–1 (the first pair in brackets) | CR |
++| 19z′ | `2-1 a.e.t.` without brackets | after extra time 2–1, 90 minutes unknown (no `ft`) | CR |
++| 19z″ | `5-4 pen. 1-1 a.e.t. (1-1, 0-0)`; `4-3 pen. (2-1, 0-1)`; `4-1 (3-0)` | 1–1 after extra time and 90 minutes, shoot-out 5–4; 90 minutes 2–1, shoot-out 4–3; 90 minutes 4–1 (as today) | BC |
++
++**Football.TXT scores.** A line writes the score after extra time before `a.e.t.`, then in brackets the
++90-minute score and the half time: `2-1 a.e.t. (1-1, 0-0)` (2021 Club World Cup final, Chelsea–Palmeiras,
++1–1 after 90 minutes). The parser keeps the 90-minute score from the brackets and no longer copies the
++score after extra time into it. A line without the brackets leaves the 90 minutes unknown. A shoot-out
++without extra time is unchanged: its brackets give the 90 minutes.
++
++**Existing expectations adjusted (they encode the defect).**
++- The manifest of the trimmed open-matchday fixture (`backend/tests/fixtures/open_matchday/build_summary.json`)
++  declares the full upstream counts (100 results and 280 fixtures for the Premier League, 56 and 4 for
++  the ÖFB Cup) beside files trimmed to 5 + 3 and 7 + 4 rows. Under 19q that manifest describes truncated
++  files, so its counts become those of the trimmed files. No assertion of `test_open_matchday.py` changes.
++- `tests/cup-sources.test.mjs` expects `{ft: [2, 1], et: [2, 1]}` for `2-1 a.e.t. (1-1)` and for the
++  Club World Cup final `2-1 a.e.t. (1-1, 0-0)`. Under 19z both become `{ft: [1, 1], et: [2, 1]}`.
++
++**Not changed (recorded):**
++- The Coupe de France reader (`openfootball-france-cup.js`) has no `a.e.t.` case. It is outside this
++  batch's frozen evidence and is left as it is.
++- Football.TXT half times stay unread, as before.
++- The Elo and the nation pages read `core.matches` at their next pass. There is no new dirty scope or
++  trigger (VI-21 owns the schedule).
++- Rows sharing a key still make one match, written from the last of them, as before: two undecided
++  fixtures (« N.N. ») of one day, or a result listed twice. The one exception is 19p: a fixture never
++  overrides a result.
++- `ops.parse_failures.family` is NULL for these rows. The status route's `parseFailures` lists them
++  with `family: null`, which the column already allows.
++
++End to end: the frozen 1962, 1938 and 2022 bodies go through the real projection, the real writer and
++a local PostgreSQL 18, first stored as the baseline code stores them, then replayed. The cup read
++gives the corrected matches back. Each rejection scenario of `sources/repro/probe.py` keeps its edition.
++
++### 19.4 Competition logos (written before the tests)
++
++The user asked for real logos only (17 Nov 2026): an image of the exact competition, with its
++provenance, or the missing state. In production 126 of 208 competitions have no logo link.
++`curated.cup_logos` skips the `open-matchday:` keys of `shared/cup-logos.json`, yet the eleven domestic
++cups they name are in the base (`cup:open-matchday:<folder>`, ids 87–97, no logo). The nine national cup
++archives (`cup:open-cups:<key>`), OpenLigaDB's DFB-Pokal (`cup:openligadb:germany-cup`) and
++International Results' Nations League (`cup:nations-results:nations-league`) have none either. The site
++shows each as an edition of one of those cups (`cup-archives.js` `NATIONAL_CUP_ARCHIVES` and
++`GERMAN_CUP_FOLDER`; `cup-catalog.js`, Nations League « Ligues A à D »).
++
++Rules:
++- An `open-matchday:<folder>` key gives its logo to the competition keyed `cup:open-matchday:<folder>`.
++- The same cup under another source's key takes that logo through the site's own mappings above,
++  never through a name.
++- One asset per URL. A competition keeps its logo when the file has none for it, and a PitchAPI
++  competition's own logo is never replaced.
++- The continental and national-team cups (Libertadores, Sudamericana, CONCACAF, CAF, AFCON, Copa
++  América, Asian Cup, Gold Cup), the open-matchday leagues and the archive competitions have no
++  reviewed image in the repository. They stay without a logo and are listed as missing.
++
++| # | Situation | Expected | Class |
++|---|---|---|---|
++| L1 | an `open-matchday:<folder>` key and its competition in the base | logo linked, kind `logo`, author `SportScore` | CR |
++| L2 | an archive, OpenLigaDB or International Results edition of the same cup | the same asset as its cup | CR |
++| L3 | a key whose competition is not in the base yet | counted unmatched, nothing created | BC |
++| L4 | a PitchAPI competition with its own logo | unchanged | BC |
++| L5 | a key or an alias that no source family or site mapping names | the drift test fails | NC |
++| L6 | the same pass twice | no new asset, no competition update | BC |
++
++## 20. Archive producer: statuses, labels, stable keys, safe replay (VI-27 lot 2, written before the tests)
++
++### 20.1 What production holds (read-only, 17 Nov 2026)
++
++- `football.json` at `e6744429`, 2019/20. Seven files mark 520 matches `"status": "cancelled"` with
++  `"score": {}`: be.1 8, en.3 106, en.4 112, fr.1 101, fr.2 100, nl.1 74, sco.1 19. `archives.match_row`
++  knows only `not_played`, so all 520 are stored `finished` without a score. ru.1 holds 236 results and
++  4 `"status": "awarded"` (0–3), all stored `finished`.
++- `2019-20/ru.2.json` (SHA-256 `7eda7c91…6597`) has exactly ru.1's match array (SHA-256 `66b0f56e…ef22`).
++  Both are published: 240 Russian results appear twice, under two divisions.
++- 1,783 goal-only archive matches (`g:` keys, worldclub) have no away team. Their label carries tabs and
++  line breaks (`1. FC Köln vs. Bayern München 5:1 \t…\n…(Hinspiel 0:3)`), which `parseGoalMatch` does
++  not read. The whole label became an invented home team: 1,781 team rows. Normalized, 1,782 labels give
++  two sides; 1,735 of their scores equal the stored score, 47 differ, 1 label does not parse.
++- A goal-only key is `g:<league>:<date>:<index>`, the index being the group's place in the season's
++  group list. Grouping events differently renumbers every later group of the season.
++- `Loader.season` deletes every stored archive match of the season absent from the edition, so a
++  missing source family or a partial input prunes. A moved `archive_position` bumps the revision.
++
++### 20.2 The rules
++
++**Statuses** (shared/openfootball-history.js notes, edition.mjs, `archives.match_row`):
++
++| Source | Stored | Notes |
++|---|---|---|
++| no status, a score | `finished`, as today | as today |
++| `not_played`, `cancelled`, `canceled`, no score | `canceled`, NULL scores | « Rencontre non disputée » (with the source's reason) |
++| `awarded`, a score | `awarded`, its score | none added |
++| `cancelled` with a score; `awarded` without one; any other status | the season is refused (`ArchiveError`) before any write | |
++
++A status-less row without a score keeps today's storage and is counted, never reclassified here.
++
++**Reviewed copy.** `build_openfootball_history.py` holds the reviewed exclusion of `2019-20/ru.2.json` at
++its SHA-256, a copy of `2019-20/ru.1.json`. At that hash ru.2 is left out of the season and listed
++under `excluded` in the index. Other bytes fail the build until re-reviewed. Two other competitions of
++one season with identical non-empty match arrays fail the build: no winner is chosen.
++
++**Labels and stable keys** (`dashboard/shared/archive.js`):
++- `parseGoalMatch` reads a label with its whitespace collapsed (tabs, line breaks, NBSP). The raw label
++  stays as it is.
++- Keys keep their legacy numbering. A group's index is the legacy index of the constituent the legacy
++  parser understood, else of its earliest constituent. Every other legacy key it now contains, and every
++  legacy goal-only key whose goals now belong to a results match, is listed in `absorbed` with the key
++  that holds those goals.
++- A label that still does not parse names no team: no team entity is created, and the raw label is the
++  displayed home name.
++- A label the legacy parser did not read whose parsed score differs from the legacy score keeps its
++  legacy values (`held: score_conflict`): label parsing never chooses a score.
++
++**Suffixes.** « n.V. » and « i.E. » are read as words with their dots. The former case-insensitive pattern
++also matched the « ie » of « (Hinspiel 0:3) ». It turned 1,741 of the 1,782 parsed census labels into
++penalty shoot-outs, with their score taken from the last goal. A published goal-only match with such a
++suffix therefore shows in the plan as a corrected note or score, to review like any change.
++
++**Replay guard** (`Loader.season`). A stored archive match or edition the candidate no longer holds is
++removed only when explained:
++- the edition is not imported because PitchAPI holds it (existing rule after 2020/21);
++- its edition is a reviewed exclusion;
++- its key is `absorbed`.
++The last two also need the match to have no dependent row besides its own goal events. Any other removal
++(a missing source family, a partial input, an unexplained key) refuses the season with `ArchiveError`, and
++nothing of it is written. A change of `archive_position` alone updates that column only.
++
++**Plan and apply.** `python -m vega.archives --sources … --plan out.json` reads only: no insert, no
++sequence, no rollback. It lists, sorted, every season's matches by class: new, changed (before and
++after values), position only, absorbed, removed (with the rule) or refused. It also gives the stored id
++and revision, the teams to create (by key, no id), and the source and parser hashes. Two plans of the
++same inputs and base are byte-identical. `--apply out.json --plan-sha256 <digest>` recomputes the plan
++under an advisory lock and refuses on any difference (drift). Otherwise it writes the seasons through the
++normal loader.
++
++### 20.3 Failure modes and expected outcomes
++
++| # | Situation | Expected | Class |
++|---|---|---|---|
++| 20a | The seven pinned 2019/20 files | 520 `canceled`, NULL scores, the note; no `finished` row without a score among them | CR |
++| 20b | ru.1 | 240 results: 236 `finished`, 4 `awarded` 0–3, keys and ids unchanged | CR |
++| 20c | ru.2 at its reviewed hash | not imported, listed `excluded` | CR |
++| 20d | ru.2 with other bytes; another identical pair | the build fails | NC |
++| 20e | `cancelled` with a score; `awarded` without one; `postponed` | the season is refused, base unchanged | NC |
++| 20f | The twelve witness labels | two sides, score and suffix | CR |
++| 20g | The full census (1,783 production rows) | per-row disposition summing to 1,783: 1,735 repairable, 47 held, 1 unparsed | CR |
++| 20h | An unparsed label | match kept, no team created, the raw label as home name | NC |
++| 20i | Legacy keys against new keys | every legacy key kept, or listed `absorbed` | CR |
++| 20j | A stored season replayed after the change | repaired rows keep their id with `revision + 1`; a second run writes nothing | CR |
++| 20k | A replay without one source family; an unexplained removal | refused; the other family, its goals and editions intact | CR |
++| 20l | A removal before later matches | they move position only | NC |
++| 20m | A–B and B–A the same day; one pair in two competitions | distinct | BC |
++| 20n | The plan twice on the same inputs; with the files in another order | identical bytes; identical season plans (the archive's own hash differs) | NC |
++| 20o | An excluded or absorbed match with a dependent row | refused, nothing deleted | NC |
++
++**Not changed (recorded):** the 1,781 invented team rows stay; their ids, keys and dependents are listed
++for VI-21. No team is deleted or merged. The 47 score conflicts and the unparsed label wait for an
++authoritative source. Status-less rows without a score are counted, not reclassified.
++
++## 21. Authentic artwork: pack import, UEFA crests, the image gate (VI-27 lot 2, written before the tests)
++
++### 21.1 What production holds
++
++- 9,854 of 11,329 clubs and 126 of 208 competitions have no image link. `uefa.save` stores each club's
++  `img.uefa.com` logo on its ranking row and never on the club. The site's image gate (`format.js`
++  `safeImageUrl`, repeated in `media-registry.js`) accepts PitchAPI, Commons and TheSports only. `Media`
++  needs it even when a mirrored copy exists, so any other image renders as initials.
++- The reviewed pack (`artwork-release/manifest.json`, SHA-256 `385e97b4…cf4d`) has 613 records (516 teams,
++  97 competitions) and 576 display files. Each record binds an entity (`resolve_using` provider and key)
++  to an original file (`origin_sha256`) and a display raster (`display_sha256`, `display_format`), with
++  its publisher URL, page and evidence. The pack's directories are `originals/<sha256>` and
++  `images/<sha256>`. 41 vector or AVIF/GIF originals were converted offline to PNG.
++
++### 21.2 The rules
++
++**One reference per packed image.** A pack asset without an accepted provider URL is stored as
++`https://media.vega.invalid/sha256/<display sha256>.<png|jpg|webp>`. That is a reference the base
++resolves, never fetched and never a provider's URL. Its S3 key is the existing content address of the
++display bytes. The publisher's URL, page, author and licence stay in the asset (`source_page_url`,
++`author`, `license`, as stated) and in the import receipt, with both hashes.
++
++**The importer** (`python -m vega.artwork --manifest M --pack D --expected-manifest-sha256 H --plan R`,
++`--apply` to write):
++- before any write it checks the manifest's digest against H, its schema and counts, and that every path
++  stays in D. Each original and display file must have its byte count and hash; each display must be a
++  PNG, JPEG or WebP of at most 4 MB, read by its bytes. One entity bound to two different displays is a
++  manifest conflict. Any failure stops everything;
++- per record it resolves `(entity_type, provider, key)`, following a merged team to the club it is. The
++  entity's kind, name and country must match the record (national team against club, ranking row for a
++  UEFA key). Otherwise the record is coded and nothing is written for it;
++- it writes the display bytes, checks them, then links the asset only where the entity has none
++  (`… WHERE crest_asset_id IS NULL`). It never overwrites an image, an asset or its provenance. It bumps
++  the team (or each edition of the competition) and `home`, only on a new link;
++- every record has one outcome: `linked`, `already_linked`, `kept_existing`, `entity_not_found`,
++  `identity_drift`, `proof_missing`, `asset_conflict`, `manifest_conflict`, `storage_failed`. The outcomes
++  sum to the manifest's count. A second apply writes nothing.
++
++**UEFA crests in the ongoing source.** `uefa.save` fills an empty club crest from that row's exact
++`https://img.uefa.com/imgml/TP/teams/logos/70x70/<its id>.png`, for a club linked by that UEFA id. It
++keeps an existing crest and writes nothing on a second run. The mirror accepts this exact form; a
++redirect must stay in it.
++
++**One image gate in the site** (`services/image-source.js`, used by `format.js` and `media-registry.js`).
++It accepts the three existing shapes, the Vega reference and the UEFA form, with no credentials and no
++port. The two new forms take no query or fragment and need the exact path, hash and extension. The
++API's `/api/assets` and `media=1` lookups stay the only way to a copy: no address is built from a
++reference.
++
++### 21.3 Failure modes and expected outcomes
++
++| # | Situation | Expected | Class |
++|---|---|---|---|
++| 21a | A UEFA record: key, ranking row, crest NULL | linked; `/api/assets` 307 to its copy; the gate accepts | CR |
++| 21b | An official club or league page's image, a vector rendition | linked by its Vega reference, both hashes kept, rendered | CR |
++| 21c | An entity with an image (PitchAPI's, lot 1's cup logos) | `kept_existing` or `already_linked`, unchanged | BC |
++| 21d | The same pack twice | no new asset, link or version | NC |
++| 21e | Key absent; national team for a club record; name or country drift; UEFA key without its ranking row | coded, nothing written | NC |
++| 21f | A wrong hash, a short file, SVG or GIF bytes as display, over 4 MB, a path leaving the pack, another manifest digest | refused before any write | NC |
++| 21g | An entity bound to two displays | `manifest_conflict` | NC |
++| 21h | An existing asset with the reference but other bytes | `asset_conflict`, nothing overwritten | NC |
++| 21i | The storage write fails | `storage_failed`, no link | NC |
++| 21j | A crest written by PitchAPI between check and link | the importer's link does not land; `kept_existing` | NC |
++| 21k | `uefa.save` on a club without a crest, with one, then again | filled once; kept; no second write | CR |
++| 21l | The gate: the three shapes; the reference; UEFA; credentials, port, query, other host or path | accepted; accepted; accepted; refused | CR |
++| 21m | The real pack (613 records) on a seeded base | outcomes sum to 613; API and browser show the images | CR |
++
++## 22. Corrections after the Astra and Fable reviews (VI-27, 17 Nov 2026, written before the tests)
++
++The reviews (`reviews/corrections.md` C1–C6, `reviews/astra-review.md` F1–F9) showed that the first lot 2
++candidate was unsafe. These are the rules of the correction. Where safety cannot be proved, the stored
++fact is kept and the record is listed as held. A hold is never counted as a repair and never changes a
++stored row, so it cannot change what is scored.
++
++### 22.1 Rules
++
++**Source measurements (C1).**
++- In open-matchday, a statistic cell missing from a later file, as an absent column or an empty cell, is
++  not an instruction to clear it: the stored value is kept. A cell that states a number, `0` included,
++  replaces the stored value, once. Score and result guards (§19) are unchanged.
++- In `/api/cups/edition`, a match with an extra-time score and no known 90-minute score has no `ft`. The
++  final score stands in for `ft` only when there is no extra time. 0–0 and penalties are kept.
++
++**Archive producer: one legacy reading, units and holds (C2).**
++- The published rows are rebuilt by the baseline code itself (`dashboard/shared/archive-legacy.js`, a
++  frozen copy of `8018e0836c`'s `buildArchiveSeason`, with its label reading, score selection, notes and
++  attachment). The corrected reading is compared with it unit by unit. A unit is the set of legacy and
++  corrected rows sharing a source goal event, plus each results row.
++- When a unit's corrected keys equal its legacy keys, the corrected rows are the candidate, unless one
++  of them changes a legacy score, drops a legacy note or loses goals. When the keys differ (an
++  absorption, a merge, a split), the whole unit keeps its legacy rows, flagged `held`. A results row of
++  such a unit keeps its results-file values and its published goals (`heldGoals`). Nothing is
++  absorbed or deleted in this lot: an absorption needs a reviewed transfer of its dependents (VI-21).
++- Exact names first: a goal's side is the side whose name equals the goal's team (case, accents and
++  punctuation folded). Similarity decides only when neither side is exact.
++- In footballcsv europe `champs.csv` only, each side must read `Name › ASSOCIATION (N)`, with `(N)` an
++  appearance ordinal. Any other form stops the build. Such a side is never a new team: its existing
++  binding is used, otherwise it names no team (`provisional`). The raw label stays the stored name.
++- Reviewed quarantines (`QUARANTINE` in `vega/archives.py`, exact keys, source file and SHA-256):
++  - the 33 CONCACAF matches filed under `g:champions-league` 2008/09;
++  - Paris FC–Lyon `g:fra-coupe-de-france:2021-12-17:2247` (abandoned; no stored status represents
++    "both lost");
++  - Bradford–Luton `g:eng-league-cup:1990-10-10:389` (its candidate target's 1–1 contradicts its 0–2).
++
++  They are held as stored. On an empty base they are not written.
++- Loader holds, per stored match, all reported with their reason. The match is kept as stored when the
++  candidate:
++  - changes its score pair or its status (other than finished → canceled without a score, or
++    finished → awarded with the same score);
++  - clears a team id of the match or of a goal;
++  - drops a note, or loses goals;
++  - would rewrite goals beside goal facts the archive does not write (player ids, own goal, penalty,
++    period).
++- Only `event_type = 'goal'` rows are ever deleted or rewritten. Cards and other events stay.
++- A source family recorded in `core.source_revisions` (results, goals) that is missing from the inputs
++  refuses the run before any write. A season the goals index lists without its file refuses the run.
++- A held malformed label never creates a team. It uses the team its exact label is already bound to,
++  if any.
++
++**Plan and apply (C3).**
++- `season_plan` is the only decision. `Loader.season` executes a plan's entries and nothing else.
++- Each entry carries the exact stored and candidate columns, the exact stored and candidate goal rows,
++  every stored event of the match, the team bindings it reads and its revision.
++- Apply re-plans each season under its lock and writes it only if that plan equals the approved one.
++  Teams created by this apply are the only `new:` identities accepted later.
++- The team cache lives one season.
++- `core.source_revisions` and `ops.resource_versions` change only with a season that writes, and only
++  when their values differ. A refused, drifted or no-op apply changes neither, so the archive API's
++  ETag stays.
++- Outcomes are `complete`, `partial` (a season held or drifted) or `refused`. The exit codes are 0, 3
++  and 1.
++- A run with no mode refuses (exit 2). `--fresh` imports only into seasons that hold no archive match.
++
++**Role, package and transport (C4).**
++- Dependencies are read through `ops.archive_match_dependents(bigint[])`, a fixed-search-path
++  `SECURITY DEFINER` function (migration 134) executable by `vega_collect` only. It reports:
++  - every `match_id` or `*_match_id` column of core, agg and ops;
++  - every `(entity_type, entity_id)` reference to a match;
++  - events the archive does not own.
++
++  `vega_collect` gains no table privilege.
++- The parser fingerprint names its files logically: `vega/archives.py`, `vega/store.py`,
++  `archives/edition.mjs`, `archives/builders/*.py`, `shared/*.js` (the shared files the edition
++  imports), each resolved from the running module, `VEGA_ARCHIVE_EDITION` and `VEGA_ARCHIVE_SCRIPTS`.
++  A missing file is an error. The checkout and the image give the same manifest for the same bytes.
++- Plan transport: `--plan-store` writes the plan into `ops.archive_plans` under its SHA-256. `--show-plan`
++  reads it. `--apply-stored SHA` applies it and stores the receipt in the same row. A second apply of
++  the same plan writes nothing.
++
++**Artwork (C5).**
++- Records are grouped by resolved canonical entity as well as by binding. Two displays for one
++  entity are a `manifest_conflict` for every record involved. Identical duplicates are one link plus
++  `duplicate`.
++- The upload happens outside any transaction and lock. The link transaction then re-reads, under
++  `lock_timeout`:
++  - the binding, the merge chain and the entity's image (`identity_drift` or `kept_existing` on a
++    change);
++  - the asset's key, hash and URL (`asset_conflict` on a change).
++- Any exception of `put` is `storage_failed`. The run stops there. The receipt, rewritten after every
++  record, lists the done, failed and unattempted records. The exit is non-zero.
++- `uefa.save` follows the existing merge pointer to its canonical club (one level, the canonical not
++  merged, not national). It fills that club's empty crest and holds an inconsistent chain. It never
++  writes the alias.
++
++### 22.2 Failure modes and expected outcomes
++
++| # | Situation | Expected | Class |
++|---|---|---|---|
++| 22a | Open-matchday: same result, later file without the statistic columns, or with empty cells | stats, ids, revision, `cup_updated_at` kept | NC |
++| 22b | Open-matchday: a stated `0` replaces a stored 11; replayed | one update; replay writes nothing | CR |
++| 22c | Cups: source `{et:[2,1]}`; `{ft:[1,1],et:[2,1]}`; `{ft:[0,0],et:[0,0],p:[4,3]}` through `cups.save`, PostgreSQL and `/api/cups/edition` | `{et:[2,1]}`; both kept; all three kept | CR |
++| 22d | Legacy-readable `M vs. N 3:1 (Hinspiel 0:0)`, last goal 2–1 | the legacy 2–1 row kept, held `score_change` | NC |
++| 22e | Goal-only `Wien vs. Rapid 3:1 (Hinspiel 0:0)` and result Wiener–Rapid 3–1 | both legacy keys kept, the result without these goals, held `absorption` | NC |
++| 22f | Goal teams Manchester United / Real Madrid against a City / Atlético opponent | home / away | CR |
++| 22g | A stored goal with a team, a candidate goal without | the match held, its goals kept | NC |
++| 22h | A corrected scorer on a match with a card | goals rewritten, the card kept | CR |
++| 22i | The goals family missing; a listed goals season without its file | run refused, nothing written | NC |
++| 22j | Fewer goals for a stored match | held `goals_lost`, goals kept | NC |
++| 22k | `champs.csv` sides with ordinals, fresh and stored; another feed's `Club (2)` | no team minted; stored ids kept; other feed unchanged | NC |
++| 22l | A `champs.csv` side not of the exact form | build fails | NC |
++| 22m | Quarantined keys (CONCACAF, Paris–Lyon, Bradford) stored, and on an empty base | kept as stored; not written | NC |
++| 22n | Two seasons sharing a new team, plan then apply | both applied, one team; repeat apply writes nothing | CR |
++| 22o | Between plan and apply: a card added, a binding moved, a team created by someone else | that season `drift`, nothing written | NC |
++| 22p | Refused, drifted and no-op applies | source revisions, versions and the real `/api/read/archive` ETag unchanged | NC |
++| 22q | No mode; `--fresh` on a season with archive rows | exit 2; refused | NC |
++| 22r | A season with a held record and a repair | the repair applied, the hold listed, outcome `partial`, exit 3 | CR |
++| 22s | Plan and apply under `SET ROLE vega_collect`; agg read directly | works; denied | CR |
++| 22t | The image layout; a parser file missing | same manifest as the checkout; error | NC |
++| 22u | Plan stored, applied by digest from another process, applied again | receipt stored; second apply writes nothing | CR |
++| 22v | Two aliases of one canonical club with two displays; with one display | `manifest_conflict` ×2; one link + `duplicate` | NC |
++| 22w | During the upload: the binding moves; the asset's hash changes; a crest lands | `identity_drift`; `asset_conflict`; `kept_existing`; no wrong link | NC |
++| 22x | `put` raises a non-`MediaError` (botocore `ClientError`) | `storage_failed`, receipt with done and unattempted records, exit 1 | NC |
++| 22y | `uefa.save` with the UEFA id bound to a merged alias, twice | the canonical club gets the crest once; the alias untouched | CR |
++| 22z | 613 pack applied, then the 958 pack, then again | 613 `already_linked` + 345 new, counted apart; repeat writes nothing | CR |
++
++## 23. Archive deletions, primary overlaps, durable applies and typed facts (VI-27, 18 Nov 2026, written before the tests)
++
++Two controlled local data losses were reproduced under `vega_collect` on clones of the 494,713-row reconstruction
++(`full-archive-verification/stored-ru2-goal-repair-2251-v2.json`, `empty-primary-repair-2251-v2.json`):
++- a goal recorded on a reviewed ru.2 copy after its removal was planned was deleted with it (1 → 0), the stored
++  plan reporting `partial`;
++- registering an empty 2024/25 PitchAPI Ekstraklasa edition made the stored Polish archive edition "covered": its
++  119 matches and 339 goals were deleted, the plan reporting `complete`.
++
++The accepted plan (`tracks/4-history/accepted-plan.md`) fixes these rules.
++
++### 23.1 Rules
++
++**A deletion binds everything it would delete.**
++- Each planned removal carries:
++  - the match's full stored row and its revision;
++  - every event row of the match, goals included;
++  - its round and edition;
++  - the dependency inventory (`ops.archive_match_dependents`, which now also counts every event);
++  - for a reviewed copy, the retained twin: key, date, sides, score and provenance.
++- A match with any event or dependency is held, never deleted (`removal_has_dependents`).
++- Apply locks the season's archive matches and the removed matches' events. It then re-plans, and any difference
++  in what a removal binds is a refusal of the season before any write.
++- Just before the deletion, the apply takes SHARE locks on every relation naming a match without a foreign key
++  (`ops.archive_lock_match_references()`, migration 140, bounded by `lock_timeout`). It re-reads the inventory and
++  deletes only if it is still empty. Writers with a foreign key wait on the match lock and then fail on the deleted
++  match, so their conflict is exposed. Writers without one wait for the commit. That residual race is reported (the
++  receipt's post-commit reference check). The rollout requires writers drained (C4).
++- An edition is removed only with no match, round or other fact left on it.
++
++**A primary edition is routing, not proof of coverage.**
++- After 2020, a competition PitchAPI holds that season is not imported when the base has no archive edition of it
++  (the existing route).
++- An archive edition already stored for it keeps its matches, goals, ids and provenance: every match is held
++  (`primary_overlap`) and the edition is kept. This holds with an empty, partial or complete primary edition.
++  Reconciling the two is VI-21's.
++
++**Durable, owned applies.**
++- `ops.archive_plan_seasons(sha256, label)` records each season's decision in the transaction that writes it (outcome,
++  counts, created identities).
++- A stored plan is applied by one session at a time (`pg_try_advisory_lock` on its digest): a second gets
++  `ArchiveError`, writing nothing.
++- A season already decided is not attempted again. The identities it created are restored for the following
++  seasons, so a run can resume after a crash.
++- `applied_at` and the receipt are stamped only when every planned season has a decision. A subset run stamps
++  nothing beyond its own seasons.
++- `--show-plan SHA` writes the stored bytes, whose SHA-256 is the digest.
++
++**Published observations change only when reviewed** (per field, on a stored match):
++- The score pair: held `score_change`.
++- The status: only finished → canceled (no score, source `cancelled`) and finished → awarded (same score, source
++  `awarded`). Any other change is held `status_change`.
++- Extra-time, penalty and shoot-out columns: a value may be added where none was stored. A stored value never
++  changes or goes (`phase_change`).
++- Goals: never fewer (`goals_lost`); never a cleared team (`team_cleared`).
++
++**Typed facts from reviewed sources.**
++- `VERIFIED_SHOOTOUTS` (`vega/archives.py`) lists the seven UEFA shoot-outs of
++  `verified-seven-shootouts-repair-2251-v2.json`. Each has its goal-only key, date, both sides as the label names
++  them, the sporting tally, the home/away kicks and the UEFA document's SHA-256. Kicks are written only when the key,
++  date, sides and tally all match. Otherwise they stay unknown.
++- A goal's side in an OpenFootball UEFA results row (`YYYY-YY/uefa.*`), whose team names carry their association
++  (`Real Madrid (ESP)`): after exact names fail, the name without its ` (ABC)` suffix is compared exactly. Only one
++  side may match; otherwise the side stays unknown. The stored names and suffixes are kept.
++
++### 23.2 Failure modes and expected outcomes
++
++| # | Situation | Expected | Class |
++|---|---|---|---|
++| 23a | A reviewed copy planned for removal gets a goal before the apply | season refused (`drift`), the goal and the match kept | NC |
++| 23b | A second connection inserts a goal on it while the apply holds its locks | the apply deletes; the late insert fails on its foreign key and is retried by its writer; no orphan | NC |
++| 23c | A second connection's uncommitted goal before the apply takes its locks | the apply waits, sees it, refuses the season | NC |
++| 23d | A clean reviewed copy (no event, no dependency) | removed, with its binding in the receipt | CR |
++| 23e | A provider binding of a removed match planned or added before the apply | held, or refused; nothing deleted | NC |
++| 23f | A stored archive edition, then an empty, partial or complete PitchAPI edition of it | every match, goal and id kept, held `primary_overlap`; repeat writes nothing | NC |
++| 23g | No archive edition stored and a PitchAPI edition | not imported (unchanged route) | BC |
++| 23h | Two processes apply one stored plan | one applies, the other is refused | NC |
++| 23i | A crash after the first of two seasons | per-season decision kept; restart applies the second with the first's created teams; plan stamped once | CR |
++| 23j | A subset of a stored plan's seasons | only those decided; the plan not stamped applied | NC |
++| 23k | `--show-plan` output | byte-identical to the stored plan, SHA-256 = digest | CR |
++| 23l | A stored score, status or phase value differing from the candidate | held with its field; a reviewed cancellation or award applies | NC |
++| 23m | The seven verified shoot-outs; one with another tally | kicks typed; the other left unknown | CR |
++| 23n | `Real Madrid` scoring in `Real Madrid (ESP)`–`Atlético Madrid (ESP)`; two sides with one base name | home; unknown | CR |
++
++## 24. Removal guards that hold after the commit (VI-27, 18 Nov 2026, written before the tests)
++
++The pinned Astra review of §23 (18 Nov) found that §23's SHARE locks close the window before the commit only. A
++writer without a foreign key that is blocked by them resumes after the commit with the removed match's id. So does a
++writer starting later. The review also found four other faults:
++- rounds and editions were deleted without an inventory of what references them (FKs with CASCADE or SET NULL from
++  agg, ops and core);
++- the twin of a reviewed copy was compared with the compiler's candidate, not with the stored row;
++- `apply_stored` read `applied_at` before taking the plan's lock;
++- an edition's name, country or order changed without a new publication.
++
++### 24.1 Rules
++
++- **Tombstones** (`ops.archive_removals`, migration 141). The transaction that deletes an archive match, edition or
++  round records its kind, id, season, key and plan digest. A tombstone is never removed.
++- **The guard.** Every relation of core, agg and ops that names a match or an edition without a foreign key carries
++  the `archive_removed_reference` trigger. It covers:
++  - `match_id` and `*_match_id` columns without a foreign key to `core.matches`;
++  - `competition_season_id` columns without a foreign key to `core.competition_seasons`;
++  - polymorphic `(entity_type, entity_id)` references to a match;
++  - `ops.resource_versions` of kind `match` or `competition_season`.
++
++  An insert or update naming a tombstoned id fails with `foreign_key_violation`, so a writer that resumes after the
++  commit, or starts later, is refused and can retry.
++  - Writers with a foreign key wait on the row lock, then fail on the missing row.
++  - A test lists every such relation and fails if one has no guard.
++- **Editions and rounds.** One goes only when `ops.archive_edition_dependents` reports nothing, at the plan and again
++  under its locks. That function covers every column naming it, with or without a foreign key, its versions and its
++  emblem. Otherwise the edition is kept and its plan entry says why (`edition_has_dependents`). Edition and round rows
++  are locked `FOR UPDATE` for the deletion.
++- **The twin is the stored row.** A copy goes only beside its twin's stored match: same date, team ids, names, score
++  and status. The plan binds that row in full, so a change to the twin refuses the season.
++- **Ownership.** `apply_stored` takes the plan's lock, then reads its state.
++- **Publication.** An edition whose stored name, country or position changes is a write: the season's version moves.
++- **Conflicts.** A deadlock or a serialization failure in an apply is `lock_timeout`, never `applied`. Nothing is
++  decided, so a later run retries.
++- **Edition emblem storage.** Migration 141 also adds `core.competition_seasons.emblem_asset_id`: nullable, FK to
++  `core.assets`, distinct from the family logo (the joint edition-emblem arbitration of 18 Nov). An edition with an
++  emblem has a dependency and is never removed.
++
++### 24.2 Failure modes and expected outcomes
++
++| # | Situation | Expected | Class |
++|---|---|---|---|
++| 24a | A writer without a foreign key (provider binding, match version) blocked by the deletion's locks, released by its commit | its insert fails (`foreign_key_violation`); no orphan | NC |
++| 24b | The same writer starting after the removal | refused the same way | NC |
++| 24c | A removed copy's edition with a version, a scope or an emblem | the matches go, the edition stays (`edition_has_dependents`) | NC |
++| 24d | The twin's stored row differs from the copy (name, team, score) | the copy held `twin_mismatch` | NC |
++| 24e | A plan stamped applied while its applier read it unstamped | refused after the lock | NC |
++| 24f | A stored edition's name changed | the season's version moves | CR |
++| 24g | A deadlock between the apply and another writer, both under their real roles | `lock_timeout`, nothing written, the other writer goes on | NC |
++| 24h | Every relation naming a match or an edition without a foreign key | carries the guard | NC |
++
++## 25. OpenLigaDB DFB-Pokal match phases (VI-27, specified before tests)
++
++The typed reader applies to the 2025/26 and 2026/27 DFB-Pokal editions. The two sealed OpenLigaDB
++responses have 119 unique matches, eight fixtures and 111 finished matches. The DFB sheets attest
++110 native half-times, a missing native 0–0 for 80173, 21 regulation and extra-time pairs for
++matches going to extra time, and 13 shoot-outs. Eight native type-2 pairs are wrong; 11 shoot-out
++tallies differ from actual kicks. Match 79584 lacks an extra-time row. The 111 playing finals
++remain as published.
++
++| Input or replay | Expected |
++| --- | --- |
++| Exact frozen editions | Keep keys, sides, dates, order and finals. Add phases by native match ID; preserve 0–0. |
++| 79584, provider type 2 changes to 1–1 and ET is still missing | Keep official final 2–1, 90 1–1 and ET 2–1. |
++| 80173, provider adds half-time 0–0 or publishes direct 4–5 | Accept convergence with zero sporting writes. |
++| Attested third result, swapped sides, changed date or contradictory tuple | Refuse with match key and retain edition. |
++| Completed match loses a known HT, ET, regulation or penalty phase, or is downgraded | Refuse refresh, retain known observations, edition and digest. |
++| Unattested ET previously unseen | Preserve actual final/ET; keep regulation unknown even with a type-2 pair. |
++| Unattested P 5–6 after level ET 1–1 | Store 4–5; a subsequent unverified 4–5 raw tally conflicts with the accepted kicks. |
++| P without ET, P below ET, non-level ET for a shoot-out, or tied P | Refuse as unreviewed. |
++| Missing or unordered/contradictory observation | Missing or malformed data and contradictory duplicates are invalid; source tuple order alone has no sporting effect. |
++| Future fixture carrying known result tuples | Remain scheduled, with no score or published phases. |
++| Other OpenLigaDB editions, Nations League and direct penalties from OpenFootball | Published behavior and digest remain stable. |
++| Two more reads of each frozen edition | Zero match writes; keep revisions, row versions, match timestamps, digest and edition publication timestamp. |
++| Accepted or refused new native observation | Keep its immutable, independently inspectable phase evidence with decision and ledger digest; keep raw evidence away from the public response. |
++
++Read contract uses optional `periods`. A 90-minute score is omitted when the match reached
++extra time and regulation is unknown. Separate the official kicks from the raw native tally.
++
++## 26. Verified emblems for individual competition editions (VI-27, specified before tests)
++
++The loader verifies all input byte hashes before upload and accepts only records explicitly
++typed as `competition_edition` with role `edition_emblem`. Exact source identity is required
++through the family binding, the edition key plus season (for archives), or the certified
++family/season pair (for native editions). Its pointer is separate from the family logo.
++
++| Input or concurrent change | Expected |
++| --- | --- |
++| 18 FIFA, four continental cup, 23 archive and two native attestations in their respective sealed packs | 47 edition links to 41 display images, including two native and their correct internal season IDs. |
++| Same display shared by several editions | Reuse the verified asset; distinct edition links retain their own provenance. |
++| Old envelope without a role, documentary poster, bad key, wrong family or year | Reject input or hold the binding clearly. No link. |
++| Two aliases to one exact edition, two different displays | Both held as manifest conflicts. |
++| New edition pointer, changed identity or asset during upload | Keep the winning state; no stale attachment. |
++| Destination upload or checksum failure | No link; receipt retains prior committed results and next unattempted records. |
++| Apply repeated or ordinary cup refresh after apply | Preserve links, provenance and publication versions. |
++| Family contains a wrongly used edition logo | Clear only the sealed family/URL/hash association and retain the asset. Reject unqualified reimport for that family. |
++| Explicitly scoped archive/native link | Invalidate the corresponding archive resource or native publication path without reusing an emblem in the family catalogue. |
++
++## 27. Apply reviewed deletions and updates in the same archive season (VI-27, specified before test)
++
++A reviewed ru.2 copy can have an exact stored ru.1 twin whose order or other permitted field
++will be updated by the very same approved plan. Guard and delete the copy against the twin's
++locked pre-image before updating the twin. Both changes commit together. A late external
++change or a new dependent still aborts the whole season. The frozen 52-object replay observed
++the self-conflict at `r:2019-20/ru.2:237` and rolled back every one of the 240 approved removals.
++
++## 28. Attested scores and publication for OpenFootball cups (VI-27, specified before replay)
++
++For Tours–Lorient, the exact [awarded] marker, score, edition, oriented sides and date
++identify the attested FFF decision. Preserve the administrative 0–3 and qualification as
++awarded and keep all playing phases absent. A later snapshot that omits the marker or
++match cannot undo an accepted award. Other markers do not authorize a status change.
++
++The national World Cup has 67 exact reviewed halftime repairs (six corrections and 61 fills).
++The native final, raw halftime and both explicitly timed goal arms must agree with the reviewed
++case, or the candidate contributes no correction. Source-earned goals stay on the recorded
++beneficiary's side, including own goals, and 45+ stays in the first half. Missing arms, implausible
++or out-of-order clocks, wrong totals and the official minute-0 anomaly provide no new halftime.
++Those 67 decisions keep the original keys, all playing finals, ET, penalties and cancellation.
++
++The 2021–23 Club World Cup text has 22 explicit halftimes; apply the bracket syntax only for the
++three scoped texts. Keep the first pair after extra time distinct from the 90-minute and
++halftime pairs. Preserve known phases when a later response loses the supporting observations.
++Only an accepted change bumps the cup's edition publication resource. Repeated identical inputs
++and refused updates leave sporting versions and API bodies intact.
++
++## 29. Scoped World Cup family-logo cleanup (VI-27, specified before replay)
++
++The two verified wrong logos are detached only by exact provider binding, family identity,
++source URL and content digest. Existing different logos survive migration. Refreshes and
++an older writer retain their unrelated competition updates while the scoped attachment is
++suppressed. A verified family-specific pack may supply a new logo with explicit provenance.
++Edition-specific links and the old source asset remain available independently.
++
++## 30. Attested Bundesliga pair and date decisions, 1963–1967 (VI-27, specified before tests)
++
++The 100 published pairs and 17 dates come from exact adjudicated source observations. Use
++the surviving result key, keep every old goal's non-identity columns and rebind by its
++reviewed side. A fresh import constructs the canonical shape and text alias. A reviewed
++upgrade retains the target's ID and the old numeric link. Timestamps, scores, event order,
++sequence IDs and all other annotations in stored transfers stay intact.
++
++An occupied target, enriched or incomplete event family, source key or member drift,
++non-foreign-key dependent, mismatching date, or contrary alias holds the whole affected
++case. One late competing write aborts the signed season. Add the former match tombstone
++before exposing the commit. A stale worker cannot recreate an alias key, remove the
++canonical goals, or restore the pre-correction date. The archive read checks its edition
++version after fetching the data, including through the commit.
++
++## 31. Three reviewed Scottish archive observations (VI-27, documented before replay)
++
++Queen's Park–St Mirren on 30 August 1924 and Queen's Park–Hamilton on 23 November 1946
++are independently attested 2–1 results. Edit only the scoped final, with exact native input
++hash, key, date and oriented participants, the known old score, no attached events or other
++dependent, and an atomic amendment receipt. Preserve the raw score and public key. Repeated
++inputs produce no new writes. An old worker cannot reinstate the erroneous result.
++
++The 4 January 1919 Clydebank–Morton winner and score remain as observed. Neither archive
++binding labelled Clydebank has an appearance around this date in the measured clone. Keep
++the existing match and identify the missing dated participant binding in the plan; adding
++a name-only team or merging the Airdrieonians root would not repair that missing proof.
++The return ties and verified shared grounds in 1903 remain exactly as previously published.
++
++## 32. Match grade precision in ranking and report JSON (VI-32)
++
++The ranking exposes the grade rounded to a tenth. Reusing that value for a whole-number
++display can round twice. In Orenburg–CSKA, Tataev's recorded grade was 48.4903434662912
++and the ranking's 48.5 displays as 49 with the site's French integer formatter. The
++rankings API keeps the tenth and exposes the precise value of the same SQL row as
++`gradeExact` for an already visible grade. The report propagates it beside the tenth in
++`grades`, `best` and `playerOfMatch`, leaving all existing picks and ordering intact.
++
++| Situation | Expected |
++|---|---|
++| Two source grades on opposite sides of 48.5 both publish the tenth 48.5 | Each exact value survives JSON; the grade's integer can be formatted directly and the original ranking order survives |
++| SQL stores a new index that takes the same visible row from 48.49 to 48.51 | Legacy response fields remain identical; exact value, report JSON and ranking ETag change with the revision |
++| Grade is exactly 0 or 100 | Both representations retain the measured number |
++| Grade is hidden by the existing minutes and index rules, or the source value is non-finite | Precise field is null and legacy visibility, ordering and rank remain as before |
++| Older ranking result lacks the precise field | The report keeps its historical row shape and grade |
++| Incoming precise field is invalid, out of range, disagrees with the historical tenth, or accompanies a hidden legacy grade | The report keeps the legacy grade and discards the invalid precision |
++| Unknown match or invalid query | Ranking retains its 404 or 400 response |
++
++The PostgreSQL-to-ranking-to-report check uses the normal read role, HTTP responses and
++the public report handler. The recorded football witness is replayed with the captured
++grades as inputs. The database fixture also models a new publication within the same
++tenth. Changes to the match tabs, images and share text are outside this transport step.
++
++## 33. Transfermarkt refreshes keep what was accepted (VI-31, written before the tests)
++
++Batch of [VI-31](https://linear.app/vegainteligence/issue/VI-31), 18 Nov 2026, baseline `1b28961a88`
++(the reader code is the deployed `8018e0836c`'s). Reader and migration 139 only: no identity merge, no
++replay, no repair of production rows (VI-21 keeps merges and global links). Values, injuries and squads
++still replace their lists; they are separate exposures with their own owners.
++
++### 33.1 What the deployed reader does
++
++- `write_transfers` deletes every Transfermarkt transfer of the player, then inserts the response. A 404 is
++  read as an empty history and recorded as a 200. A 200 without `history`, an empty list or a list cut to
++  one move each therefore empties or shortens a stored history, and the next read gives the same moves new
++  row ids. Two real histories (26 and 29 moves read from RDS) fall to 0, 0 and 2 on a local copy
++  (`transfer-read-queue/verification-original.json` in the track evidence).
++- `contract` deletes every other Transfermarkt contract of the player, so a move, a renewal or a key held
++  by another source drops the earlier spells. It changes nothing when the profile's club is not one of
++  ours: the earlier spell stays published as confirmed after the player left.
++- `api.confirmed_player_contracts` has no quarantine filter: a link doubted after its contract was written
++  keeps it published. The profile view finds a doubt through `ops.provider_links.entity_id` only.
++- `write_search` writes the provider's player rows without the contract step, so the next profile read
++  sees no change and never asks for the transfers again.
++- `failed()` builds `timedelta(hours=2 ** attempts)` before its cap: from 35 attempts it raises
++  `OverflowError` and the reader process stops.
++- A list of the wrong type (`"terminated": {}`) raises a `TypeError`, which also stops the process.
++
++### 33.2 The rules
++
++**A transfers response is checked whole before anything is written.** The response must hold a
++`history` object with at least one of its two lists (`terminated`, `pending`). Every element must be an
++object with a numeric `id`. The same `id` twice is one move when the two records state no different fact;
++otherwise the response is refused. A refusal writes no fact and goes through `failed()`: the true HTTP
++status, a code, the attempts and the bounded wait are stored, and `read_at` and `rows_written` keep the
++last accepted read.
++
++| Response | Player holds | Facts | Queue |
++|---|---|---|---|
++| 404 | no Transfermarkt move | none | 404, no code, normal period |
++| 404 | a move | unchanged | 404, `HISTORY_MISSING`, backoff |
++| 200, no `history`, `data: null`, no list | anything | unchanged | 200, `HISTORY_MISSING`, backoff |
++| 200, both lists empty | a completed move | unchanged | 200, `HISTORY_EMPTY`, backoff |
++| 200, both lists empty | nothing, or announced moves only | the announcements marked absent | 200, no code |
++| 200, a list or `history` of another type | anything | unchanged | 200, `SCHEMA_CHANGED` (schema stop as before) |
++| 200, an element without object or numeric `id` | anything | unchanged | 200, `HISTORY_INVALID` |
++| 200, one `id` with two different facts | anything | unchanged | 200, `HISTORY_CONFLICT` |
++| 200, valid | anything | upserted by key; absent moves marked absent | 200, no code, `rows_written` = moves listed |
++
++**A listed move updates its own row.** The row is found by player, source and native key, and keeps its
++id. A field the record states replaces the stored one; a field it omits or gives as null keeps it. A fee
++of 0 is stated only by a free transfer (`fee.value` 0 with the label « free transfer »); any other 0 is
++no amount, as for the values. When the kind of move changes and no fee is stated, the old fee is cleared.
++A club key that changes takes the new key and its canonical club, or NULL; never the old club's. The same
++club key keeps the canonical club resolved now, else the one stored. A completed move listed again as
++announced keeps its completed facts (an older snapshot). An announced move listed as completed becomes
++completed in place. A listed move has `absent_since` NULL and `as_of` the read day.
++
++**A move missing from an accepted history keeps its facts.** It gets `absent_since`, the first day it was
++missing, until a later history lists it again. A shorter list proves no withdrawal, and an absent
++announcement is not a cancellation. Rows of other sources, and Transfermarkt rows without a key, are
++never touched. One row per player and Transfermarkt key (unique partial index, migration 139). Writers of
++one player are serialized (a transaction lock per player): two readers at once give one row per key.
++
++**A contract is a dated fact; the current one is a dated choice.** A profile record changes contracts only
++when it has its `attributes` and `clubAssignments` blocks, one current club key, and valid dates
++for both the start and expiry. The expiry cannot be before the start. Then:
++- its spell, when the club is ours and the expiry known, is written at (player, club, start) or updated in
++  place (same source); `superseded_on` NULL. A key another source holds is left as it is;
++- every other Transfermarkt contract of the player not yet set aside is superseded:
++  - from the new start, when that start is later than its own (a move, a renewal; a future start keeps
++    today's contract until then);
++  - from the read day, when the new start is not later but the record's expiry is current (a return from
++    a loan, a correction);
++  - otherwise not: an older record without a current expiry is a stale one.
++
++A superseded contract keeps its end date as observed; no end date is invented. A record of a club that is
++not ours supersedes the same way and writes nothing. `api.confirmed_player_contracts` reads a contract
++while `superseded_on` is NULL or later than today, and no Transfermarkt contract of a doubted link. A link
++is doubted when a quarantined `ops.provider_links` row names the player or the key of his current link,
++so a quarantine still holds when `entity_id` names an older player. `api.player_profiles` finds its doubt
++the same way. Both keep their columns.
++
++**One step for a player record, from the profile or the search.** Both reads compare the record with the
++provider row first (club, start and expiry: transfers due now; value: values due now), then write the
++row, then, for a linked player, the contract. A record without its `attributes` or `clubAssignments`
++blocks or carries a malformed contract keeps the known contract fields. A search with such a record
++makes the profile due now. Player 30095's two expiries (contract 2028-06-30, provider row 2027-06-30) stay as they are: the
++next complete record of either path decides.
++
++**Health.** The wait of a failed unit is `2 ** min(attempts, 8)` hours, at most 7 days: no overflow. A
++refusal of one player returns `failed` and the reader reads the next unit; only `SCHEMA_CHANGED` counts
++toward the schema stop.
++
++**Rollback.** A Transfermarkt transfer or contract is never deleted by a refresh. Migration 139 refuses
++such a deletion (`TRANSFERMARKT_HISTORY_KEPT`) unless the transaction sets
++`vega.allow_history_delete = 'on'` (a person's decision). The reader before VI-31 deletes on every read, so
++a rollback first stops the reader (`UPDATE ops.transfermarkt_state SET gave_up_at = now() WHERE id = 1`,
++honoured by both versions) and keeps it stopped until a preserving version runs again. If the stop is
++forgotten, its deletions fail and its process restarts every 5 minutes; nothing is deleted. Dropping
++the index would not make that reader safe.
++
++### 33.3 Failure modes and expected outcomes
++
++| # | Situation | Expected | Base |
++|---|---|---|---|
++| 20a | 404 on a first read | no fact; 404, no code, next due after the period | red (200) |
++| 20b | 404 after an accepted history | ids, keys, dates, clubs and kinds unchanged; 404, `HISTORY_MISSING`, attempts 1, backoff; `read_at` and `rows_written` of the accepted read | red |
++| 20c | 200 without `history`, or `data: null`, on a first read or after a history | no fact; 200, `HISTORY_MISSING` | red |
++| 20d | 200, empty lists, after a completed move | unchanged; 200, `HISTORY_EMPTY` | red |
++| 20e | 200, empty lists, on a first read | accepted; 200, no code, 0 rows | green |
++| 20f | 200, empty lists, announcements only | announcements kept, `absent_since` today; 200, no code | red |
++| 20g | `terminated` an object; `history` a list | unchanged; `SCHEMA_CHANGED`; no exception | red (TypeError) |
++| 20h | an element not an object; an `id` empty or not numeric | unchanged; `HISTORY_INVALID` | red |
++| 20i | one `id` twice with another date | unchanged; `HISTORY_CONFLICT`. The same record twice: one row | red |
++| 20j | a valid history without one completed move, then with it again | listed moves updated in place; the missing one kept, `absent_since` its first day (kept on a second short read), NULL when listed again, same id | red |
++| 20k | the same history twice | same ids, keys and facts; no new row | red (new ids) |
++| 20l | stated date, fee, free transfer, value, expiry, season, kind; omitted or null fields | stated fields replaced in place, 0 for the free transfer; omitted and null fields kept; a kind change without fee clears the fee | red |
++| 20m | a club key changed; a club linked between two reads | new key with its own canonical club or NULL; same key keeps the re-resolved club | red |
++| 20n | announced → completed; completed → announced in a later response | completed in place, same id; completed facts kept | red |
++| 20o | another source's transfer, a Transfermarkt row without key | untouched by every read | red (the keyless row) |
++| 20p | two readers on one player at once | one row per key, the second's facts on the first's row | red |
++| 20q | a unit failing for the 41st time | no exception; due in 7 days | red (OverflowError) |
++| 20r | normal entry (`step`): one player's history refused, another's valid | `failed` then `ok`; the reader not paused; the refused unit counted failing in `api.provider_reader_progress` | red |
++| 20s | a move to another of our clubs | old spell kept, superseded from the new start; profile shows the new club | red |
++| 20t | a renewal at the same club | old spell kept, superseded from the renewal; profile shows the new expiry | red |
++| 20u | a move starting tomorrow; the same move started yesterday | today's contract still confirmed; after the start, the new one | red |
++| 20v | another source holds the observed key | its row unchanged; earlier Transfermarkt spells kept and superseded; profile: its expiry confirmed, the provider's observed beside it | red |
++| 20w | a move to a club not ours | no row; earlier spells superseded from its start; no confirmed contract; observed contract of that club | red |
++| 20x | no club, no start, expiry before start, record without its blocks | nothing changes | green |
++| 20y | an older record whose expiry is past or missing | nothing superseded | red |
++| 20z | back from a loan: the parent's superseded key with a current expiry | parent revived, loan spell superseded from the read day, one confirmed contract | red |
++| 20aa | the same profile twice | no new row; `as_of` only | green |
++| 20ab | the expiry corrected on the same key | end date updated in place | green |
++| 20ac | the link quarantined after the contract, `entity_id` naming another player | no confirmed contract, no observed Transfermarkt contract, through the view and `/api/players/{id}` | red |
++| 20ad | a search reads a linked player whose club changed | contract step applied; transfers due now; provider row written after the comparison | red |
++| 20ae | a record without its blocks, from a search or a profile | provider row keeps its fields; no contract change; from a search, profile due now | red |
++| 20af | an unlinked or doubted player's record | provider row only, no contract | green |
++| 20ag | migration 139 over NULL Transfermarkt keys and repeated keys of another source | applied; the index covers Transfermarkt's non-null keys | — |
++| 20ah | migration 139 over a repeated Transfermarkt player/key | stops with `TRANSFER_KEYS_NOT_UNIQUE` and the first pair; nothing changed; 139 not recorded | — |
++| 20ai | the deployed writer's deletions after 139 | refused with `TRANSFERMARKT_HISTORY_KEPT`; every row kept; with `vega.allow_history_delete = 'on'`, allowed | — |
++
++End to end: the real `Reader` (`read` and `step`), controlled HTTP answers, all migrations on a local
++PostgreSQL 18, the queue, `api.player_profiles` and the read API's `/api/players/{id}`. Contract dates
++are relative to the base's `current_date`. Independently, the 55 real moves of two players
++(`replay.py --expect protected`) and the thirteen observations of `reproduce-history.py`.
++
++### 33.4. Expiry evidence on a new club observation (VI-31 continuation)
++
++A record can contain both profile blocks and still omit or corrupt the contract expiry. It may
++refresh independent profile facts, but the last dated contract and its staging provenance remain
++authoritative. Missing, invalid and explicit null have distinct meanings:
++
++| Situation | Expected |
++|---|---|
++| A new club and start with `contractUntil` omitted | Keep the last accepted staging tuple, both views and every contract. Profile HTTP 200 keeps the accepted values. The profile queue reports `CONTRACT_MISSING` and a bounded retry |
++| A new club and start with `contractUntil` malformed, including trailing garbage after a valid date prefix | The same preservation, with `CONTRACT_INVALID` in the profile queue |
++| An incomplete expiry comes from the club search | Preserve the same observations. Make the player's ordinary profile read due now |
++| The provider explicitly gives `null` | No date is measured. Preserve any dated observation and treat the profile payload as accepted, without inventing a contract or a termination. A valid current club remains available for club linking when no dated claim exists |
++| A valid later club spell or a valid correction to the same spell, now expired | Publish the new dated spell or apply the stated correction. Keep the historical row and its source. An expired observed end can remove its current presentation |
++
++An empty assignment or an undated profile reply supplies no documented release date. Historical
++transfer events and dated end corrections still retain their existing independent meaning.
+diff --git a/docs/calculs/09-audit-2026-11/FAILURE_MODES_SPORTSCORE.md b/docs/calculs/09-audit-2026-11/FAILURE_MODES_SPORTSCORE.md
 new file mode 100644
-index 0000000000..173987a691
+index 0000000000..540ef32608
 --- /dev/null
-+++ b/docs/calculs/09-audit-2026-11/FAILURE_MODES_VI30.md
-@@ -0,0 +1,126 @@
-+# VI-30 — authentic artwork in the existing slots (written before the tests)
++++ b/docs/calculs/09-audit-2026-11/FAILURE_MODES_SPORTSCORE.md
+@@ -0,0 +1,311 @@
++# SportScore official standings: failure modes, edge cases and expected outcomes (VI-29)
 +
-+Track 7 of [VI-27](https://linear.app/vegainteligence/issue/VI-27), issue
-+[VI-30](https://linear.app/vegainteligence/issue/VI-30), 18 Nov 2026, base `d4d3fbc542`. A
-+track-specific file, so that it does not collide with the shared `FAILURE_MODES.md` (§20–§22 are
-+other tracks'); the coordinator may fold it in as a section at integration.
++## Reprise on 18 November — additional cases before implementation
 +
-+Read paths only. No ingestion, asset import, URL gate, identity merge, forecast, extra-time or
-+scoring change: the primary worker owns the importer, `/api/assets`, `image-source.js`, the cup
-+extra-time serializer (`openCupMatch`, `openLigaMatch`, `notes`) and migration 134; VI-19 owns
-+forecasts; VI-21 owns identities and `drop_copy`.
++| Situation | Expected |
++|---|---|
++| All accepted groups are renamed and rearranged, the cross-group table disappears, and there is no independently reviewed retirement | Refuse the body. Keep the cross-group table, each accepted club association, the observation time and the public ETag |
++| Groups are renamed with their memberships intact and the cross-group table stays | Accept the complete replacement with the new group names |
++| One table splits into disjoint tables with every previously observed member and the same sporting figures | Accept the complete split. The normal point correction and verified phase controls also remain valid |
++| Every Allsvenskan club exceeds the internal kickoff count, and the sporting rows agree with the organiser for the exact edition | Accept the full table, including a repeat or a points-only correction. Fetch the organiser only for this calendar guard and preserve SportScore as the writer of the standings |
++| A later Allsvenskan match changes W/D/L and goals beyond the internal calendar, with matching season-labelled organiser rows | Refresh the proof and accept the update. A cache match is usable only while its sporting rows still agree |
++| The organiser is unavailable, serves a different season or disagrees on sporting rows | Refuse the incomplete-calendar update. Preserve accepted rows, dates, and public ETags |
++| The previous year's authentic final table is submitted for the current Swedish season, including a control with unchanged club identities | Refuse the update. A table no longer matches the attested sporting rows just because every team name links |
++| The Japanese table corresponds to J1 2026/27 but the candidate edition is labelled 2027/28 in Vega | Do not qualify the table against that target. The primary calendar's season association remains VI-21 |
 +
-+## 1. What the branch does (measured in the rehearsal, 18 Nov 2026)
++### Japanese legacy observation already served (additional acceptance before correction)
 +
-+Commit `d4d3fbc542` already resolves the club hero's crest through the checked resolver (`Picture`)
-+and publishes a competition's own logo in the cup catalogue (migration 135). Measured on the root
-+harness (`root-checks/role-ui/partial-739c98`), both viewports:
++The organiser's 380-match J1 2026/27 calendar matches Vega's fixtures exactly. The matches were
++split between the native 2026 and 2027 editions. The 20 SportScore rows observed in November 2026
++belong to J1 2026/27 and are currently attached to the native 2027 edition, whose first stored
++kickoff is 13 February 2027. This is positive evidence for this specific already-accepted
++observation. A reader-only correction identifies the public competition, its canonical/native
++season labels and the full sporting observation. The same rows may be observed again before
++the first stored kickoff while the legacy collector is still active.
 +
-+- `/competitions?id=l_v0000130`, the id `/api/cups/index` publishes for Cymru North, shows
-+  « Compétition inconnue ou indisponible ». `CompetitionsPage` looks an id up by `c.id` only, and the
-+  catalogue entry is `open-matchday:WAL_2_cymru-north`; its loading guard covers `open-matchday:`
-+  ids only. The supplemental index (`/api/cup-index?kind=supplemental`), from which the entry is
-+  built, does not carry the edition's competition id.
-+- The 29 Cymru North results show initials in all 58 side slots, though each side's team has a
-+  stored crest in the base. `api.cup_table_rows` (127) joins both teams but selects neither id nor
-+  crest; `tableRow` emits names only; `CupMatch` renders `<Media name={name} />`.
-+- `Picture` keeps its failure across a change of `url` (`useState` without a key), unlike `Media`,
-+  which remounts its attempt on a new source.
++- Preserve the official stored rows, source and observation times. Bump the affected edition's
++  resource version when the migration changes the read. The old HTTP ETag must not produce 304.
++- Return the ordinary unavailable response for the current affected edition and explicit
++  requests for `2027` and `2027/2028`. A historic edition cannot substitute for the known
++  unavailable current one. The bad native association is not an eligible Vega fallback.
++- Preserve the exact SQL and HTTP replies of the other 59 observed editions.
++- Accept an independent, distinct verified future table on the same public competition. Once
++  the observation is represented under the correct edition, return it for that edition and
++  maintain explicit unavailability of the still unresolved edition. The local simulation does
++  not perform the real calendar resolution.
++
++### Initial official observation (additional acceptance before correction)
++
++| Case | Initial evidence | Expected |
++|---|---|---|
++| S50 | Ordinary league, three rostered clubs and a scheduled Cedar match. Widget has only the two that have played | `INCOMPLETE_TABLE`. No official rows, 404 when no computed result exists. The complete retry is accepted |
++| S51 | Ordinary league has a known complete roster and an empty schedule | Accept a full table with all clubs at zero |
++| S52 | Cup's named groups are in the native schedule. A rostered club appears only in a qualifying round | Accept the complete group tables without requiring the qualifying club |
++| S53 | A cup body exists but the base cannot establish the table's phase or membership | `UNVERIFIED_TABLE`, last computed view or explicit absence |
++| S54 | Both native groups are known, but the incoming named groups swap their club assignments | `INCOMPLETE_TABLE`; keep the computed response and its ETag |
++
++> Résumé : une réponse SportScore HTTP 200 ne remplace un classement officiel accepté que si elle
++> décrit entièrement l'édition courante. Une lecture refusée ne vide pas la table, ne la date pas à
++> nouveau et ne crée aucun alias. Le classement servi reste l'officiel tant qu'il est complet et
++> que les résultats comptés depuis son observation n'ont pas bougé, sinon celui de Vega.
++
++- **Status:** stage 1 written on 18 Nov 2026 at 01:58 UTC, before the first tests (cases S1–S26).
++  Stage 2 adds the reconciled pinned-Astra amendments of 18 Nov: completeness of a first table,
++  results that move after an observation, attested corrections, and no invented tie-break. It was
++  written before the tests of S27–S35 and before migration 138. Stage 3 answers two red witnesses of
++  18 Nov. In one, the World Cup's ranking of third-placed teams was dropped while every club stayed
++  in its group. In the other, rows of another provider or stage took over the public table. Stage 3
++  was written before the tests of S36–S40 and before their code. Stage 4 (this version) answers
++  Astra's review of 18 Nov, 11:40 UTC, on the real World Cup body. Two responses were accepted:
++  Uruguay left the 12-row third-placed ranking while staying in its group (60 rows became 59), and
++  the twelve groups were renamed while that ranking was left out (60 became 48). Stage 4 was written
++  before the tests of S41–S47 and before their code.
++- **Issue:** [VI-29](https://linear.app/vegainteligence/issue/VI-29), track file of the VI-27 audit, so
++  that it does not collide with `FAILURE_MODES.md` (§19 belongs to the cups and open-matchday batch).
++- **Baseline:** `1b28961a88` (production image `8018e0836c`). The adapter, view and route have the
++  same bytes in both.
++- **Scope:** `backend/vega/sources/sportscore.py`, migration `138_sportscore_standings.sql` (one column,
++  one function, the `api.standings` selection), their tests and this file. `sources.run_due`, the HTTP
++  client, the read route, the other adapters, the identity rules and the site are unchanged.
++- **Conventions:** those of `FAILURE_MODES.md` §0. Test classes: **CR** fails on the baseline because
++  of the defect; **BC** holds on the baseline and must keep holding; **NC** is a new contract.
++
++## 1. What the baseline does (reproduced locally, 17 Nov 2026, 22:33 UTC, and 18 Nov, 02:06 UTC)
++
++`sportscore.run` reads the current edition's table and:
++
++- deletes every stored SportScore row of the edition when a HTTP 200 has `tables: []`, or when one
++  name cannot be linked. It bumps the edition's version and returns `ok`;
++- accepts a subset: a 3-team table followed by 2 linkable rows stores 2 rows;
++- links the last unpaired row to the last unpaired team of the edition ("the last team left"). A
++  club of the previous season (`Fjord Rovers`) took Cedar Athletic's row, and its name was stored as
++  a SportScore spelling of Cedar;
++- stores a missing or non-numeric field as `NULL` over a known value;
++- drops silently a second row of the same team (`ON CONFLICT DO NOTHING`), and skips a malformed row;
++- raises `AttributeError` on a table that is not an object. `run_due` does not catch it, so one such
++  body ends the whole sources pass.
++
++`api.standings` serves an edition's official rows as soon as one exists: one row hides Vega's whole
++table, however old the observation and however many results were counted since.
++
++Production (read-only, 17 Nov 2026, 22:51 UTC): fifteen editions have unlinked names. Their last
++runs are `ok` with zero rows written. Whether a complete table was lost before is not measured.
 +
 +## 2. The rules
 +
-+**A side is its row's own foreign key.** A table row (`/api/cup-table`, the `table-v1` body of
-+`/api/cups/edition` and `/api/cup-snapshot?kind=edition`) gains an additive `sides` object:
++"Counted" means what Vega's own table counts (`calculator.STANDINGS_SQL`): finished matches with
++both scores, of a regular or group round, or of none. `core.table_results(edition)` (migration 138)
++gives each club's counted results, `{played, won, drawn, lost, goals for, goals against}`. The writer
++and `api.standings` both read that one function.
 +
-+```json
-+{ "home": "Brickfield", "away": "Llanuwchllyn", "…": "the CSV fields, unchanged",
-+  "sides": { "home": { "id": "t_v0003688", "image_url": "https://media.vega.invalid/sha256/….jpg" },
-+             "away": { "id": "t_v0003689", "image_url": "https://media.vega.invalid/sha256/….png" } } }
-+```
++### 2.1 What a response must be before it replaces anything
 +
-+- `sides.home` (`sides.away`) is present only when the row's `home_team_id` (`away_team_id`) is set.
-+  `sides` is omitted when neither is.
-+- `id` is the public id of the team the FK names, after one `merged_into` hop: merges move every
-+  match and leave the merged row as a pointer to the kept team, never to another pointer
-+  (`identity.py merge_teams`, 094). The API already resolves a merged team's public id the same way
-+  (`api.internal_id`, 096).
-+- `image_url` is that team's crest asset reference as stored (`core.assets.source_url`), else `null`.
-+  The site resolves it through its one gate (`safeImageUrl`, `/api/assets`), as every other crest.
-+- `home` and `away` keep the source's spelling. Names never choose a crest: two clubs spelled alike
-+  each keep their own row's FK.
-+- The provider keys `homeId`/`awayId` of the other cup bodies are unchanged and unrelated.
++Checked in this order. The first failure refuses the whole response with its code: `sources.run_due`
++rolls the scope back, records `status = 'error'` and the code, writes the detail to
++`ops.parse_failures`, and retries after `RETRY_AFTER` (1 h). The HTTP status alone accepts nothing.
 +
-+**A competition answers to its canonical id.** The supplemental index's items gain
-+`competition_id`, the public id of the edition's competition (`api.cup_editions.competition_id`,
-+the edition's FK). The site's entry keeps its id `open-matchday:<folder>` and carries the canonical
-+id as `canonicalId`. A page asked for `l_v…` opens the entry whose id or `canonicalId` it is; the
-+URL is not rewritten; the directory and the search list the entry once. An item whose canonical id
-+is a native competition's id is that competition: it is not listed a second time (exact identity,
-+before the existing name-and-country rule).
++| # | Rule | Code |
++|---|---|---|
++| 1 | The body is an object for `sport = football` and this competition's slug, with a `tables` list (unchanged) | `UNEXPECTED_RESPONSE` |
++| 2 | Every table is an object with a `rows` list; at most 30 tables and 100 rows a table (they were cut silently before). Every row is an object with a non-empty `team`, and `pos`, `p` and `pts` known. A known number is an integer (an integral float is accepted, as before; booleans and strings are not). `pos ≥ 1`; `p`, `w`, `d`, `l`, `gf`, `ga ≥ 0`; `pts` may be negative (a deduction) | `INVALID_ROW` |
++| 3 | At least one row | `EMPTY_TABLE` |
++| 4 | Several tables have distinct names. One table is stored without a name, as before | `DUPLICATE_GROUP` |
++| 5 | Within a table, one row per name | `DUPLICATE_ROW` |
++| 6 | Within a table, clubs sharing a position have equal points. That is the only invariant every ranking shares; no tie-break order is assumed | `DUPLICATE_POSITION` |
++| 7 | A single table holds every position it names: `pos ≤` its row count. Tables of a split may continue one numbering (7–12), so this is not checked across tables | `INCOMPLETE_TABLE` |
++| 8 | No name designates a club of the previous or next edition of the competition that this edition does not hold | `WRONG_EDITION` |
++| 9 | Every name designates exactly one team of the current edition: a known spelling, or its distinctive words when one team is clearly closest. There is no pairing by elimination | `UNMATCHED_TEAMS` |
++| 10 | Within a table, no two rows designate one team | `DUPLICATE_ROW` |
++| 11 | If every club is more than 4 matches ahead of the edition's kicked-off matches in counted rounds, require independent season evidence when available. The Swedish league's organiser corroborates the exact native year, each club, and played/W/D/L/GF/GA for one complete table. Other scopes still use the calendar guard | `UNVERIFIED_EDITION` for missing or conflicting Swedish corroboration; `WRONG_EDITION` for a scope without a corroboration path |
++| 12 | Every club of Vega's own table (a club with a counted result in the edition) is in one of the response's tables. Each group is not required to hold the edition's clubs | `INCOMPLETE_TABLE` |
++| 13 | Every club of the accepted table that is still a team of the edition is in the response, unless each of its accepted rows is retired (`RETIRED_ROWS`, below) | `INCOMPLETE_TABLE` |
++| 13b | Every accepted table stays under its name or as the unique new table with exactly its clubs. This includes rankings whose clubs all appear in other tables. A single table may split into disjoint tables that cover its entire membership and preserve its known sporting totals. A table can be retired through `sportscore.RETIRED_TABLES` for the edition, with reviewer, date and reason. A table may also be added | `INCOMPLETE_TABLE` |
++| 13c | Within each table that stays, its accepted clubs stay. A **partition table** owns at least one club no other accepted table holds (a league table, a group). Each of its accepted clubs stays in it. A **cross table** holds only clubs that another accepted table also holds (a ranking of third-placed teams). Its members may change as the competition advances, but each club that leaves must be replaced by a club that joins: it never shrinks. Two exemptions: a club no longer a team of the edition, and a row in `sportscore.RETIRED_ROWS` (`{(LEAGUES key, season label, table name, club's public id): "reviewer, date: reason"}`). A retired row lets that club leave that table of that edition, and nothing else | `INCOMPLETE_TABLE` |
++| 14 | A field known in the accepted row of a club stays known | `MISSING_FIELD` |
++| 15 | A club's `p` does not go down within the same table, unless the edition's own results attest it: `p` equals the club's counted matches now (a correction the results show, such as an annulled match), or `p` is at most the club's counted matches since the accepted observation (a phase counted from then) | `PLAYED_DECREASED` |
 +
-+**Lookups wait for the catalogue that can answer them.** An `l_v…` id not found yet waits for the
-+supplemental index like an `open-matchday:` id: the loading state while it loads, the retry notice
-+when it fails, « Compétition inconnue ou indisponible » only once it answered without the id. Neither
-+route depends on `/api/cups/index`.
++An edition-only club name is affirmative evidence of another edition (`WRONG_EDITION`). The
++legacy rule-11 calendar refusal uses the same code for other scopes; the count alone cannot prove
++a different season. Allsvenskan can corroborate when the current native label agrees with the
++canonical season start. An unqualified table yields `UNVERIFIED_EDITION` if that organiser response
++is unavailable, malformed or different. The proof is looked up on demand through the bounded
++public-source HTTPS client. The process caches one matching proof for up to one refresh period
++plus five minutes. A different sporting row always requires a new lookup. Points and positions
++remain SportScore's fields, including a complete points deduction.
 +
-+**The site carries the sides to the existing slots.** `normalizeSupplementalCup` copies a side's
-+`id` and `image_url` to `homeTeamId`/`awayTeamId` and `homeImage`/`awayImage` (the names the bracket
-+already reads). `CupMatch` passes the image to its two `Media` slots; the national-team branch keeps
-+its flags. Two legs combined keep the first leg's sides in the displayed order.
++Not checked, on purpose: points against wins and draws (a deduction breaks it), `w + d + l = p` (no
++evidence the widget guarantees it), any order between positions and points (a split shown as one
++table breaks it), and the edition's team count (a group's completeness is never inferred from the
++league's number of teams).
 +
-+**`Picture` restarts on a new source.** Its attempt is keyed by its `url`, as `Media`'s is. Markup,
-+classes and the plain (non-deferred) image stay as they are.
++### 2.2 What an accepted response does
++
++- **The writer's scope:** SportScore's rows of the edition without a stage (it writes none). It reads,
++  compares, replaces and dates those rows only. Rows of another provider, or SportScore rows of a
++  stage, are left in storage as they are.
++- Each stored row keeps its **basis**: the club's counted results when the row was observed
++  (`core.standings_official.basis`, migration 138). It is the observation's own record of what it
++  could reflect.
++- **Same rows as stored** (a valid repeat): nothing is written and the version does not move.
++  - The edition's counted results equal the basis (nothing counted since): `as_of` becomes the new
++    observation time.
++  - Results moved, and every club whose results moved now agrees with its official row: our results
++    caught up with the table. `as_of` moves, the basis is updated, the version goes up once.
++  - Otherwise SportScore is behind the results: `as_of` and the basis stay.
++- **Rows without a basis** (written before 138): their first identical repeat records the basis and
++  moves `as_of`, unless a counted match finished (`first_finished_at`) after their `as_of`.
++- **Different rows:** the edition's SportScore rows are replaced, with `as_of` the observation time
++  and the basis now. Each row's spelling is recorded for its team. The edition's version goes up once.
++- A correction is accepted like any change: fewer points (deduction), a new ordering, a split into
++  named tables that hold every club, a club's new spelling linked by its distinctive words, and an
++  attested lower `p` (rule 15).
++- A new edition starts with no accepted table. Its first complete response is accepted. The previous
++  edition keeps its last accepted rows and their date.
++
++### 2.3 Which table `api.standings` serves (migration 138)
++
++**One authority.** The official table of an edition is SportScore's current table: its rows without
++a stage. Production holds no other (18 Nov 2026, 07:52 UTC: 1,086 official rows in 60 editions, all
++SportScore, no key with two providers). Rows of another provider, and SportScore rows of a stage,
++stay stored. They are never served, and they neither qualify nor disqualify the official table. A
++fresher row of another provider does not replace a club's row, and a row of another phase vouches
++for no other scope. Making another provider authoritative takes an explicit change of this view.
++
++An edition's official table is **qualified** when:
++- **complete:** it holds every club of Vega's own table of the edition;
++- **current:** every row's basis equals its club's counted results now. A row without a basis is
++  current while no counted match finished after its `as_of`.
++
++| Edition's state | Served |
++|---|---|
++| Official rows, qualified | the official rows, `fetchedAt` = their `as_of` |
++| Official rows not qualified, Vega's table exists | Vega's table, `source: "Vega"`, `fetchedAt` = its `updated_at`. The official rows stay stored with their date |
++| Official rows, no Vega table | the official rows, dated (nothing better exists) |
++| No official rows, Vega's table | Vega's table |
++| Neither | no rows: `/api/standings` answers 404 |
++
++The choice reads data only, never the clock. The same base always serves the same body, so the
++content-hash ETag changes exactly when the served table does. A match that finishes after the
++observation, even one that kicked off before it, changes the counted results. So do a corrected or
++an annulled result. A detail written later (statistics, line-ups, a referee) does not. Refusals
++write nothing, so they cannot make a table current again. A closed edition keeps its last official
++table. It is served while it stays qualified.
++
++Affirmative wrong-season evidence refuses the response and leaves the accepted table in storage.
++The edition's own data then decides what is served. A new edition that SportScore has not reached
++yet has no official rows, so Vega's table is served. No marker is kept for a refused response.
++A marker would hide a correct final table when SportScore moves to the next season before our
++edition closes. It would also need a write that survives the refusal's rollback, which `run_due`
++does not offer.
 +
 +## 3. Failure modes and expected outcomes
 +
-+| # | Situation | Expected | Covered by |
++Unless a case says otherwise, it starts from an accepted 3-club table observed at 08:00 UTC: Aster
++City 8 (Vega counts 10: a 2-point deduction), Birch Town 7, Cedar Athletic 1. No match of the edition
++is stored, and Vega's own table exists (written 07:50). The next read is at 11:00. "Unchanged" means:
++the same stored rows, `as_of` 08:00, the same edition version, `last_success_at` 08:00, the same
++`/api/standings` body, 304 for the previous ETag. Every 200 is also asked again with its own ETag
++(304 expected).
++
++Cases S27–S35 store the edition's matches. "REAL" is a double round-robin of the three clubs:
++Aster 2–0 Birch, Birch 1–1 Aster, Aster 3–0 Cedar, Cedar 0–2 Aster, Birch 2–1 Cedar, Cedar 1–0 Birch.
++Vega counts Aster 10, Birch 4, Cedar 3; the official table deducts 2 from Aster (8, 4, 3).
++
++| # | Next response or event | Expected | Class |
 +|---|---|---|---|
-+| V1 | both FKs set, both teams with a stored crest (Cymru North, 29 rows) | `sides` from each row's FK; both slots decode that crest's bytes | API contract; E2E 58/58 under both URLs and viewports |
-+| V2 | FK set, team without a crest | `{ id, image_url: null }`; initials | API contract |
-+| V3 | one FK null; both null | the side omitted; `sides` omitted; the source name and initials | API contract |
-+| V4 | two clubs spelled alike, in different rows | each row its own id and crest; a name never borrows one | API contract |
-+| V5 | an FK naming a merged team | the kept team's id and crest; the source spelling kept | API contract |
-+| V6 | a stored reference the gate refuses (other host, query) | passed as stored; the site requests nothing and shows initials | site render test |
-+| V7 | the crest's object answers 404 | initials, no other image (directory and hero) | E2E (Churchill control) |
-+| V8 | a national-team cup | flags as today; images ignored | site render test |
-+| V9 | a fixture | `sides` beside its forecast | API contract |
-+| V10 | the CSV part of every row | byte for byte as before (`sides` aside) | API contract (adjusted, see §4) |
-+| V11 | two legs, the second reversed | the combined tie keeps the first leg's images, in displayed order | site unit test |
-+| V12 | `/competitions?id=l_v0000130` | the same entry, edition and header as `open-matchday:WAL_2_cymru-north`; URL kept; one directory card | E2E; site unit test |
-+| V13 | an `l_v…` id while the supplemental index loads | the loading state, never « inconnue » | E2E (delayed index) |
-+| V14 | an `l_v…` id when the supplemental index fails | the retry notice; « Réessayer » opens the entry | E2E (failed index) |
-+| V15 | an `l_v…` id no catalogue holds | « Compétition inconnue ou indisponible » | E2E |
-+| V16 | an item without `competition_id` (an older API) | no alias, as today | site unit test |
-+| V17 | `/api/cups/index` unavailable | both URLs still open, sides still shown | E2E |
-+| V18 | an item whose canonical id is a native competition's | listed once, as the native one | site unit test |
-+| V19 | `Picture` given a new `url` after a failure | a new attempt with the new source | site unit test |
-+| V20 | `RankingDialog`'s raw `imageUrl` | changed only if a club row is observed broken | E2E observation |
++| S1 | First observation: a complete table with the deduction | Accepted: 3 rows, `as_of` 08:00, version +1; served SportScore 8, 7, 1 | BC |
++| S2 | HTTP 200, `tables: []` | `EMPTY_TABLE`; unchanged | CR |
++| S3 | 3 → 2 rows, both linkable | `INCOMPLETE_TABLE`; unchanged | CR |
++| S4 | Two names the base does not know | `UNMATCHED_TEAMS` (missing evidence); unchanged | CR |
++| S5 | Third row named a club of the previous edition (Fjord Rovers) | `WRONG_EDITION` (affirmative); unchanged; no spelling added to Cedar | CR |
++| S6 | Third row a reviewed alias of Cedar (Bluebirds), corrected to 2 points | Accepted on Cedar; version +1; served 8, 7, 2 | BC |
++| S7 | Goals scored missing for Aster (known before) | `MISSING_FIELD`; unchanged | CR |
++| S8 | A non-numeric points value | `INVALID_ROW`; unchanged | CR |
++| S9 | Birch Town listed twice | `DUPLICATE_ROW`; unchanged | CR |
++| S10 | Birch and Cedar both 2nd, with different points | `DUPLICATE_POSITION`; unchanged | CR |
++| S11 | First observation: two clubs level on points, difference and goals share 2nd | Accepted, both 2nd | BC |
++| S12 | First observation: two named groups, each with a 1st | Accepted, two tables | BC |
++| S13 | The 3 clubs split into two named tables (Top: 1, 2; Bottom: 3) | Accepted as a phase change; two tables | BC |
++| S14 | Complete correction: Birch 7 → 4 points (deduction) | Accepted; version +1; served with 4 | BC |
++| S15 | Identical table | Nothing written; version unchanged; `as_of` and `fetchedAt` 11:00; the ETag changes with `fetchedAt` | BC |
++| S16 | Identical table after a counted match (kicked off 09:00) finished | Nothing written; `as_of` stays 08:00; Vega's table served | NC |
++| S17 | S2 at 11:00, again at 11:30, then at 12:00 | 11:30 not due (retry after 1 h); 12:00 refused again; `as_of` and `last_success_at` stay 08:00 | CR |
++| S18 | HTTP 503 | `HTTP_503`; unchanged (the baseline already keeps it) | BC |
++| S19 | No accepted table; the first response refused (S4's names) | `UNMATCHED_TEAMS`; Vega's table served | CR |
++| S20 | No accepted table, no Vega table, first response refused | `/api/standings` 404 | CR |
++| S21 | A counted match kicked off at 09:00 and finished; S2 at 11:00; a complete new table at 14:00 | 11:00: refused, Vega served (its `updated_at`), official rows kept at 08:00. 14:00: accepted, SportScore served at 14:00 | NC |
++| S22 | A play-off match kicked off at 09:00 and finished | Still the official table: Vega's table does not count it | BC |
++| S23 | Next season: the edition is closed and a new one is current; SportScore shows the new clubs | New edition accepted; the closed edition keeps its rows, served for its season | BC |
++| S24 | New edition current; SportScore still shows last season (Cedar, a club of the closed edition only) | `WRONG_EDITION`; the new edition has no official rows: Vega's table served | CR |
++| S25 | A table that is not an object | `INVALID_ROW`; the other scopes of the pass still run | CR |
++| S26 | The same 3 clubs, every `p` lower, no result since (a fresh start) | `PLAYED_DECREASED`; unchanged | CR |
++| S27 | REAL stored; first observation: Aster and Birch only (rows 1–2 of 3) | `INCOMPLETE_TABLE` (Cedar has counted results); Vega's table served | CR |
++| S28 | A group stage (A: Aster–Birch, B: Cedar–Elm Park) stored; first observation: group A only; then both groups | 1st: `INCOMPLETE_TABLE`, Vega's two groups served. 2nd: accepted, two official tables | CR |
++| S29 | Aster–Birch kicked off 07:00, in play at the 08:00 observation; it finishes at 08:50; identical table at 11:00; the updated table at 14:00 | 11:00: nothing written, `as_of` stays 08:00, Vega served. 14:00: accepted, SportScore | CR |
++| S30 | REAL stored and accepted; Cedar 1–0 Birch corrected to 0–0 at 09:00; identical table at 11:00; the corrected table at 14:00 | 11:00: `as_of` stays, Vega served. 14:00: accepted | CR |
++| S31 | REAL accepted; Cedar 1–0 Birch annulled at 09:00; at 11:00 SportScore shows Birch and Cedar with 3 played | Accepted: the lower `p` equals the counted matches | BC |
++| S32 | REAL accepted; Aster 1–0 Cedar at 09:00 opens a new phase; at 11:00 SportScore counts that phase only (1, 0, 1 played) | Accepted: each `p` is at most the counted matches since 08:00 | BC |
++| S33 | A closed league: the next edition (Aster, Birch, Dune) is current with 1–2 matches kicked off a club; SportScore shows those clubs with 10 played | `WRONG_EDITION` (played counts); Vega's table served; the closed edition keeps its table | CR |
++| S34 | First observation: Birch and Cedar share 2nd, equal points, different goal difference | Accepted: no tie-break is assumed | BC |
++| S35 | Rows written before 138 (no basis), Vega's table holding the same clubs; a counted match finishes at 09:00; identical table at 11:00; a new table at 14:00 | 08:30: served SportScore. 11:00: `as_of` stays, Vega served. 14:00: accepted with a basis, SportScore | CR |
++| S36 | A group stage (A: Aster–Birch, B: Cedar–Elm Park). 08:00: the two groups. 11:00: the same plus a ranking of the second-placed teams (Elm, Birch). 14:00: the two groups only. 17:00: the three tables again | 08:00 and 11:00 accepted (a table may be added). 14:00: `INCOMPLETE_TABLE`, the three tables kept and served. 17:00: a valid repeat, `as_of` 17:00 | CR |
++| S37 | S36's three tables at 08:00; at 11:00 the two groups only, the ranking listed in `RETIRED_TABLES` | Accepted: two tables | BC |
++| S38 | REAL accepted; an `other` row for Aster (777 points, a stale basis, observed the day before) stored at 09:00; HTTP 503 at 11:00; identical table at 14:00 | 11:00: SportScore served unchanged. 14:00: a valid repeat. The `other` row stays stored, never served | CR |
++| S39 | REAL accepted; an `other` row for Aster (777 points, the current basis, observed a day later) stored; HTTP 503 at 11:00 | SportScore served unchanged: Aster 8, no mixed source | CR |
++| S40 | REAL accepted; a SportScore row of stage `old-playoff` for Aster (777 points, a stale basis) stored; HTTP 503 at 11:00; identical table at 14:00 | 11:00: SportScore served unchanged. 14:00: a valid repeat; the staged row stays stored, untouched | CR |
 +
-+## 4. Existing expectations adjusted
++Cases S41–S47 start from S36's group stage, accepted whole at 08:00. Group A (Aster, Birch) and group B
++(Cedar, Elm Park) are partition tables. The ranking of second-placed teams (Elm 1st, Birch 2nd) is a
++cross table: each of its clubs is also in its group. These cases are the World Cup witnesses at small
++scale.
 +
-+`backend/api/test/cups.test.mjs` « open-matchday catalogue and tables, as main's » compares each
-+`/api/cup-table` row to the CSV line with `deepEqual`. Under V1 a row also has `sides`. The CSV part
-+stays compared byte for byte; `sides` is asserted on its own (V10).
++| # | Next response or event | Expected | Class |
++|---|---|---|---|
++| S41 | 11:00: the ranking without Birch (2 → 1 rows), Birch still in group A; 14:00: the three tables again | 11:00: `INCOMPLETE_TABLE`, the six rows, their date and ETag kept (previous ETag 304). 14:00: a valid repeat | CR |
++| S42 | Birch 2–0 Aster at 09:00 (group A: Birch 1st, Aster 2nd); 11:00: the groups and a ranking of Aster and Elm (Birch replaced by Aster) | Accepted: the same count, other members, as the stage advances | BC |
++| S43 | 11:00: the three tables, Elm with 0 points instead of 1 in group B and in the ranking (a deduction) | Accepted: a complete correction | BC |
++| S44 | 11:00: the two groups renamed ("Round 1 / Group A", "Round 1 / Group B"), the ranking left out | `INCOMPLETE_TABLE`: the renamed groups are found by their clubs, so no new phase; the ranking is missing. Kept | CR |
++| S45 | 11:00: group A without Birch, Birch still in the ranking | `INCOMPLETE_TABLE`: a partition table lost a club. Kept | CR |
++| S46 | Birch's row of the ranking in `RETIRED_ROWS`; 11:00: the ranking without Birch | Accepted: 5 rows | BC |
++| S47 | The same retirement; 11:00: the ranking without Elm (Birch kept) | `INCOMPLETE_TABLE`: the retirement covers Birch only | CR |
 +
-+## 5. Not changed (recorded)
++## 4. Existing expectations adjusted (they encode the defect)
 +
-+- The other cup formats (`matches-v1`, `rounds-v1`, `results-v1`: national archives, OpenLigaDB,
-+  International Results) serialize their sides in `openCupMatch` and `openLigaMatch`, owned by the
-+  primary worker's extra-time change. Their list slots still show initials; extending them waits for
-+  that change (`api.cup_matches` already joins both teams).
-+- An open-matchday folder holding two editions would give two entries with the same id
-+  (`supplementalCupCatalog` makes one per item). Production holds one edition per folder (30, all
-+  2026/2027, registry of 17 Nov 2026): not observed, not changed.
-+- `Archive.jsx` and the complementary leagues' standings have no badge slot; no slot is added.
++- `backend/tests/test_sources.py::UefaTest::test_sportscore_official_tables` expected a table naming
++  two clubs foreign to the edition to delete the accepted table (`standings() == []`), raise the
++  version, and return `(0, 2)`. It now expects `SourceError("UNMATCHED_TEAMS")`, the accepted table
++  kept and the version unchanged. Its fixture also stores the edition's matches (8 a club): its
++  12-played table on an edition with no match at all is, by rule 11, another season's. Its other
++  assertions are unchanged.
++- `backend/tests/test_calculator.py::ApiViewTest::test_cup_tie_and_standings` expected one official
++  row (team 3) to replace the computed 3-club table ("An official table, once observed, replaces the
++  computed one"). It now expects that single row to leave Vega's table served, and an official table
++  holding the three clubs to replace it.
 +
-+## Emblèmes d'édition et emplacements sans visuel
++## 5. Not changed, and what stays open (recorded)
 +
-+- **E1 — famille et édition.** L'emblème exact provient du pointeur qualifié de l'édition. Les coupes, snapshots natifs, rencontres natives et archives à saison explicite exposent `editionArtwork: { imageUrl, role: "edition_emblem" }` lorsque le pointeur existe. L'index des familles, les anciens champs familiaux et les octets des assets restent stables. Aucun repli depuis une saison voisine, une affiche ou un logo d'organisateur.
-+- **E2 — sélection.** Sur les deux familles Mondial, le logo daté 2026 ne remplit ni l'annuaire familial ni une édition sans image. Les saisons 1930/1958 restent sans emblème. La sélection 2026 native garde son libellé malgré la saison SQL 2025. CAN 2021, 2023, 2025, Asie 2023 et les éditions FIFA attestées chargent chacune les bytes du manifeste dans le slot existant. Vérifier l'accès direct, un retour, un changement rapide et une erreur réseau sans retour d'image de l'ancienne saison.
-+- **E3 — placement.** L'annuaire et le titre conservent le nom et le slot de compétition quand l'image manque ou échoue. Trophées et initiales n'y représentent aucune compétition. Les icônes fonctionnelles, noms, dimensions, images des équipes et drapeaux nationaux gardent leur rôle.
-+- **E4 — compatibilité.** La réponse historique pour une entrée sans emblème omet l'extension. Le repli de snapshot lit la même édition via le corps de coupe ou ses fixtures natives. Les archives exposent l'emblème de la clé et de la saison demandées, y compris si deux associations authentiques partagent un fichier. Le sélecteur d'archives sans slot reste utilisable.
-+- **E5 — revalidation.** Une liaison change l'ETag des lectures affectées et la répétition conserve la nouvelle valeur. Les pages d'archives suivent la version `archive_season`, les fixtures la génération publiée, et les corps de coupe leur propre représentation. Vérifier le sidecar archive et la route d'asset des coupes sans sidecar. Tester sur PostgreSQL et HTTP locaux sans modifier la production.
++- `sources.run_due`, `record_run` and `RETRY_AFTER`: a refusal reuses the existing bounded retry.
++- No marker of a refused response is stored (§2.3). The only schema change is the basis column and
++  the function that computes it.
++- The 50 names unlinked in production stay unlinked: no alias is added by this batch. Their scopes
++  will read `error` / `UNMATCHED_TEAMS` instead of `ok` after deployment.
++- A first table seen before any counted result of the edition (a season's first days) can only be
++  checked by its positions: a missing last row is not detected until its club has a counted result.
++- A league whose play-off rounds are named like matchdays has them counted by Vega's own table. The
++  official table then reads as behind after each such match, and Vega's table is served until
++  SportScore's table changes. The round names belong to the store, outside this batch. Witness:
++  `store.round_stage("bronze")` is `regular`, so the World Cup 2026 bronze final (France 4–6 England,
++  match 69466) counts as a fourth group match in Vega's table (146 sides instead of 144). VI-21 owns
++  the round mapping.
++- A table retired by `RETIRED_TABLES`, or a row by `RETIRED_ROWS`, is only removed at the next
++  accepted response; neither has an entry today.
++- Partition and cross tables are told apart by the accepted observation's own clubs, not by names.
++  When every table holds only clubs found in another (an overall table beside its phase groups),
++  every table counts as a cross table: a club may move between them, and none of them may shrink.
++- A closed league whose edition is still current, never had an accepted table, and meets
++  SportScore's next season (fewer matches for the same clubs) is not detected.
 +
-+- **E6 — coupe de clubs non tabulaire.** La projection des côtés `table-v1` laisse au lecteur `matches-v1` les initiales quand bien même son FK a un vrai écusson. Témoin : les 48 rencontres de groupe CAF 2024/25 puis les 96 emplacements observables. Utiliser les mêmes identités et références sur les deux voies de lecture, en gardant la représentation des drapeaux nationaux, le nom de source et le score par période. Les écussons illustrent le profil, leur dessin historique à la date du match reste à documenter.
-+
-+- **E7 — recherche bornée.** Quand le manifeste active la recherche bornée des joueurs et clubs, le client continue à chercher les compétitions dans son catalogue. En désactivant l'index complémentaire dans ce mode, « Cymru North » disparaît aussi bien sur ordinateur que téléphone. La recherche doit charger ce catalogue après saisie, donner une seule entrée Cymru North, montrer son logo propre et ouvrir sa fiche. Une panne du catalogue ne doit pas cacher les résultats natifs ni déclencher le chargement général des joueurs et des clubs.
-diff --git a/infra/aws/import-test.sh b/infra/aws/import-test.sh
-index b8c356fb27..2c46eb1cc3 100755
---- a/infra/aws/import-test.sh
-+++ b/infra/aws/import-test.sh
-@@ -42,7 +42,8 @@ run vega-v2-backfill backfill "[\"--lanes\",\"backfill\",\"--until-idle\",\"--ba
- 
- if [ -n "$ARCHIVES" ]; then
-   echo "== 3. Archive season $ARCHIVE_SEASON"
--  run vega-v2-archives archives "[\"--sources\",\"s3://$ARCHIVES/data/sources\",\"--seasons\",\"$ARCHIVE_SEASON\"]"
-+  # --fresh: a season already holding archive matches is refused (a repair needs a reviewed plan, FAILURE_MODES.md §22).
-+  run vega-v2-archives archives "[\"--sources\",\"s3://$ARCHIVES/data/sources\",\"--seasons\",\"$ARCHIVE_SEASON\",\"--fresh\"]"
- else
-   echo "== 3. Archive season skipped (ARCHIVE_SOURCES_BUCKET not set)"
- fi
-diff --git a/infra/aws/worker.yaml b/infra/aws/worker.yaml
-index 374874f08c..73ddcb82d9 100644
---- a/infra/aws/worker.yaml
-+++ b/infra/aws/worker.yaml
-@@ -251,7 +251,9 @@ Resources:
-           Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/vega-v2-worker:${ImageTag}'
-           Essential: true
-           EntryPoint: [python, -m, vega.archives]
--          Command: [--sources, !Sub 's3://${ArchiveSourcesBucket}/data/sources']
-+          # --fresh: seasons holding no archive match only; a repair of stored archives goes through a reviewed
-+          # plan (--plan-store, then --apply-stored <sha256>), FAILURE_MODES.md §22.
-+          Command: [--sources, !Sub 's3://${ArchiveSourcesBucket}/data/sources', --fresh]
-           Secrets:
-             - {Name: V2_DATABASE_URL, ValueFrom: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${CollectUrlParameter}'}
-           LogConfiguration:
-diff --git a/tests/archive-association-sides.test.mjs b/tests/archive-association-sides.test.mjs
-new file mode 100644
-index 0000000000..50ee11cf96
---- /dev/null
-+++ b/tests/archive-association-sides.test.mjs
-@@ -0,0 +1,24 @@
-+// FAILURE_MODES.md §23 (23n), written before the code: in an OpenFootball UEFA results row, whose team names carry their
-+// association (« Real Madrid (ESP) »), a goal's team is compared, after exact names, with each name without its suffix.
-+// One side only may match; the stored names keep their suffix; no other feed is read this way.
-+import test from "node:test";
-+import assert from "node:assert/strict";
-+import { goalSide } from "../dashboard/shared/archive.js";
-+
-+const uefa = (team1, team2, competitionId = "2013-14/uefa.cl") => ({ competitionId, team1, team2 });
-+
-+test("23n: the association suffix of an OpenFootball UEFA row is read for the goal's side", () => {
-+  assert.equal(goalSide({ team: "Real Madrid" }, uefa("Real Madrid (ESP)", "Atlético Madrid (ESP)")), "home");
-+  assert.equal(goalSide({ team: "Atlético Madrid" }, uefa("Real Madrid (ESP)", "Atlético Madrid (ESP)")), "away");
-+  assert.equal(goalSide({ team: "Dinamo Zagreb" }, uefa("Dinamo Zagreb (CRO)", "Dinamo Kiev (UKR)", "2012-13/uefa.cl")), "home");
-+  assert.equal(goalSide({ team: "Dinamo Kiev" }, uefa("Dinamo Zagreb (CRO)", "Dinamo Kiev (UKR)", "2012-13/uefa.cl")), "away");
-+});
-+
-+test("23n: ambiguous or other feeds stay as they were", () => {
-+  // Both sides with one base name: unknown.
-+  assert.equal(goalSide({ team: "Dinamo" }, uefa("Dinamo (CRO)", "Dinamo (UKR)")), null);
-+  // Not an OpenFootball UEFA row: the suffix is a name, read by similarity as before (a tie stays unknown).
-+  assert.equal(goalSide({ team: "Real Madrid" }, uefa("Real Madrid (ESP)", "Atlético Madrid (ESP)", "england/2013-14/eng.1")), null);
-+  // Lower-case or longer codes are not an association.
-+  assert.equal(goalSide({ team: "Real Madrid" }, uefa("Real Madrid (esp)", "Atlético Madrid (esp)")), null);
-+});
-diff --git a/tests/archive-corrections.test.mjs b/tests/archive-corrections.test.mjs
-new file mode 100644
-index 0000000000..00176457f9
---- /dev/null
-+++ b/tests/archive-corrections.test.mjs
-@@ -0,0 +1,84 @@
-+// FAILURE_MODES.md §22 (22d, 22e, 22f, legacy pin), written before the code: the published rows are rebuilt by
-+// the baseline code itself, a unit whose keys or scores the corrected reading would change keeps its legacy rows,
-+// and a goal's side is first the side named exactly.
-+import test from "node:test";
-+import assert from "node:assert/strict";
-+import { createHash } from "node:crypto";
-+import { readFileSync } from "node:fs";
-+import { buildArchiveSeason, goalSide } from "../dashboard/shared/archive.js";
-+
-+const event = (date, match, minute, player, team, score) => ({ date, match, minute, player, team, score });
-+const goals = (id, events) => ({ season: "2000/2001", competitions: [{ id, name: id, country: "Österreich", events }] });
-+const byKey = (edition) => Object.fromEntries(edition.matches.map((m) => [m.key, m]));
-+
-+test("the legacy reading is the baseline's own files, byte for byte", () => {
-+  // git show 8018e0836c:dashboard/shared/<file> | shasum -a 256
-+  const pinned = {
-+    "archive.js": "296e7abe672b5617e49eb05c5fb9253ea713a924237a8db8697b064f2db4df44",
-+    "openfootball-history.js": "a03306601834994bc081ee6e94e46a60f6e8aca9f86797679dc1b1fcb9973e31",
-+    "archive-text.js": "9fd698d0a2a8b401ec97b6c63d1cc5e8d773c75e04d6cb11206bd8e3970cec22",
-+  };
-+  for (const [name, digest] of Object.entries(pinned)) {
-+    const body = readFileSync(new URL(`../dashboard/shared/legacy-8018e08/${name}`, import.meta.url));
-+    assert.equal(createHash("sha256").update(body).digest("hex"), digest, name);
-+  }
-+});
-+
-+test("22d: a legacy-readable label whose corrected score differs keeps its legacy row, held", () => {
-+  // Astra's literal: one observed goal at 50' ending 2–1 under « M vs. N 3:1 (Hinspiel 0:0) ».
-+  const edition = buildArchiveSeason(null, goals("x", [event("2000-09-01", "M vs. N 3:1 (Hinspiel 0:0)", "50", "P", "M", [2, 1])]));
-+  const [row] = edition.matches;
-+  assert.equal(row.key, "g:x:2000-09-01:0");
-+  assert.deepEqual(row.score, [2, 1]); // the published (legacy) score
-+  assert.deepEqual(row.notes, ["tirs au but"]); // the published notes
-+  assert.equal(row.held, "score_change");
-+  assert.deepEqual(row.candidate?.score, [3, 1]); // the corrected reading, reported only
-+});
-+
-+test("22e: an absorption the legacy reading did not make keeps both legacy keys, the result without these goals", () => {
-+  const results = {
-+    season: "2000/2001",
-+    competitions: [{ id: "at.1", name: "Bundesliga", country: "Österreich", matches: [
-+      { date: "2000-09-02", team1: "Wiener", team2: "Rapid", score: { ft: [3, 1] } },
-+    ] }],
-+  };
-+  const edition = buildArchiveSeason(results, goals("aut", [event("2000-09-02", "Wien vs. Rapid 3:1 (Hinspiel 0:0)", "50", "P", "Wien", [2, 1])]));
-+  const rows = byKey(edition);
-+  assert.deepEqual(Object.keys(rows).sort(), ["g:aut:2000-09-02:0", "r:at.1:0"]);
-+  assert.equal(rows["r:at.1:0"].goals, null);
-+  assert.equal(rows["g:aut:2000-09-02:0"].held, "absorption");
-+  assert.deepEqual(rows["g:aut:2000-09-02:0"].score, [2, 1]);
-+  assert.deepEqual(edition.absorbed, []); // nothing is absorbed
-+  assert.deepEqual(edition.held.map((h) => [h.reason, h.legacy, h.candidate]), [
-+    ["absorption", ["g:aut:2000-09-02:0", "r:at.1:0"], ["r:at.1:0"]],
-+  ]);
-+});
-+
-+test("22f: a goal's side is first the side named exactly", () => {
-+  assert.equal(goalSide({ team: "Manchester United" }, { team1: "Manchester United", team2: "Manchester City" }), "home");
-+  assert.equal(goalSide({ team: "Manchester City" }, { team1: "Manchester United", team2: "Manchester City" }), "away");
-+  assert.equal(goalSide({ team: "Real Madrid" }, { team1: "Atlético Madrid", team2: "Real Madrid" }), "away");
-+  assert.equal(goalSide({ team: "real  madrid." }, { team1: "Atlético Madrid", team2: "Real Madrid" }), "away"); // case, spaces, dots
-+  assert.equal(goalSide({ team: "West Ham United" }, { team1: "Arsenal FC", team2: "West Ham United FC" }), "away"); // similarity
-+  assert.equal(goalSide({ team: "Manchester" }, { team1: "Manchester United", team2: "Manchester City" }), null); // still a tie
-+});
-+
-+test("22g (edition): a legacy side the corrected reading would lose holds the unit", () => {
-+  // A parsed legacy label: the legacy side of each goal is established; the corrected rows must keep it.
-+  const edition = buildArchiveSeason(null, goals("eng", [
-+    event("2000-09-03", "Manchester United vs. Manchester City 1:0", "10", "P", "Manchester United", [1, 0]),
-+  ]));
-+  const [row] = edition.matches;
-+  assert.equal(row.held, undefined);
-+  assert.equal(row.goals[0].side, "home");
-+});
-+
-+test("an unchanged unit is the corrected row; a malformed legacy label is repaired in place with its key", () => {
-+  const edition = buildArchiveSeason(null, goals("dfb", [
-+    event("1972-04-12", "1. FC Köln vs. Bayern München 5:1 \t\t\n\t(Hinspiel 0:3)", "80", "P2", "Bayern München", [5, 1]),
-+  ]));
-+  const [row] = edition.matches;
-+  assert.equal(row.key, "g:dfb:1972-04-12:0");
-+  assert.deepEqual([row.team1, row.team2, row.score, row.held], ["1. FC Köln", "Bayern München", [5, 1], undefined]);
-+  assert.equal(row.goals[0].side, "away");
-+});
-diff --git a/tests/archive-goal-keys.test.mjs b/tests/archive-goal-keys.test.mjs
-new file mode 100644
-index 0000000000..e70e1a5f51
---- /dev/null
-+++ b/tests/archive-goal-keys.test.mjs
-@@ -0,0 +1,83 @@
-+// FAILURE_MODES.md §20 (20f, 20h, 20i and the score-conflict hold), written before the code: a goal
-+// label laid out on several lines is read, keys keep their legacy numbering, and label parsing never
-+// chooses a score nor names an invented team.
-+import test from "node:test";
-+import assert from "node:assert/strict";
-+import { buildArchiveSeason, parseGoalMatch } from "../dashboard/shared/archive.js";
-+
-+const event = (date, match, minute, player, team, score) => ({ date, match, minute, player, team, score });
-+const season = (events, results = null) => buildArchiveSeason(results, {
-+  season: "1971/1972", competitions: [{ id: "dfb-pokal", name: "DFB-Pokal", country: "Deutschland", events }],
-+});
-+const byKey = (edition) => Object.fromEntries(edition.matches.map((m) => [m.key, m]));
-+
-+test("a goal label laid out on several lines is read; the raw label is kept", () => {
-+  // Production labels (17 Nov 2026, worldclub DFB-Pokal 1971/72).
-+  assert.deepEqual(parseGoalMatch("1. FC Köln vs. Bayern München 5:1 \t\t\t\n\t\t\t\t\t\n\t\t\t(Hinspiel 0:3)"),
-+    { team1: "1. FC Köln", team2: "Bayern München", score: [5, 1], suffix: "(Hinspiel 0:3)" });
-+  assert.equal(parseGoalMatch("1. FC Kaiserslautern vs. Rot-Weiß Oberhausen 5:0 n.V.\t\t\n\t\t(Hinspiel 1:3)").suffix, "n.V. (Hinspiel 1:3)");
-+  assert.deepEqual(parseGoalMatch("A vs. B 2:1"), { team1: "A", team2: "B", score: [2, 1], suffix: "" });
-+  assert.deepEqual(parseGoalMatch("Werder Bremen vs. Hannover 96 2:1 i.E."), { team1: "Werder Bremen", team2: "Hannover 96", score: [2, 1], suffix: "i.E." });
-+  assert.equal(parseGoalMatch("no label here"), null);
-+});
-+
-+test("goal-only keys keep their legacy numbering; a merge the legacy reading did not make is held (§22)", () => {
-+  const edition = season([
-+    event("1972-04-05", "Clean A vs. Clean B 1:0", "10", "P1", "Clean A", [1, 0]),
-+    // One match, captured once with layout whitespace (legacy: unread) and once clean (legacy: read).
-+    // (The unread capture holds the final goal: its legacy score is the label's, so nothing is held.)
-+    event("1972-04-12", "1. FC Köln vs. Bayern München 5:1 \t\t\n\t(Hinspiel 0:3)", "80", "P2", "1. FC Köln", [5, 1]),
-+    event("1972-04-12", "1. FC Köln vs. Bayern München 5:1 (Hinspiel 0:3)", "5", "P3", "1. FC Köln", [1, 0]),
-+    event("1972-04-19", "X vs. Y 2:2\n\t(Hinspiel 1:1)", "30", "P4", "X", [1, 0]),
-+    event("1972-04-19", "X vs. Y 2:2\n\t(Hinspiel 1:1)", "60", "P5", "Y", [2, 2]),
-+    event("1972-05-01", "garbage without a score", "1", "P6", "Somebody", [1, 0]),
-+  ]);
-+  const matches = byKey(edition);
-+  assert.deepEqual(Object.keys(matches).sort(), [
-+    "g:dfb-pokal:1972-04-05:0", "g:dfb-pokal:1972-04-12:1", "g:dfb-pokal:1972-04-12:2", "g:dfb-pokal:1972-04-19:3", "g:dfb-pokal:1972-05-01:4",
-+  ]);
-+  // §22: the two captures stay the two published rows, each with its own goal; nothing is absorbed.
-+  assert.deepEqual([1, 2].map((i) => [matches[`g:dfb-pokal:1972-04-12:${i}`].held, matches[`g:dfb-pokal:1972-04-12:${i}`].goals.length]),
-+    [["absorption", 1], ["absorption", 1]]);
-+  assert.deepEqual(edition.absorbed, []);
-+  assert.deepEqual(edition.held.map((h) => [h.reason, h.legacy, h.candidate]),
-+    [["absorption", ["g:dfb-pokal:1972-04-12:1", "g:dfb-pokal:1972-04-12:2"], ["g:dfb-pokal:1972-04-12:2"]]]);
-+  // Read now, same score as the legacy one: repaired in place, under its legacy key.
-+  const xy = matches["g:dfb-pokal:1972-04-19:3"];
-+  assert.deepEqual([xy.team1, xy.team2, xy.score, xy.held ?? null], ["X", "Y", [2, 2], null]);
-+  // Never read: no team, the raw label shown.
-+  const garbage = matches["g:dfb-pokal:1972-05-01:4"];
-+  assert.deepEqual([garbage.team1, garbage.team2, garbage.unparsedLabel], ["", "", "garbage without a score"]);
-+});
-+
-+test("a newly read label whose score differs from the legacy one keeps its legacy values", () => {
-+  const edition = season([
-+    event("1972-04-12", "M vs. N 3:1\n\t(Hinspiel 0:0)", "5", "P1", "M", [1, 0]),
-+    event("1972-04-12", "M vs. N 3:1\n\t(Hinspiel 0:0)", "50", "P2", "M", [2, 1]),
-+  ]);
-+  const [match] = edition.matches;
-+  assert.equal(match.key, "g:dfb-pokal:1972-04-12:0");
-+  assert.equal(match.held, "score_change");
-+  assert.deepEqual([match.team1, match.team2, match.score], ["M vs. N 3:1\n\t(Hinspiel 0:0)", "", [2, 1]]);
-+});
-+
-+test("a legacy goal-only key whose goals would now join a results match is held, both rows kept (§22)", () => {
-+  const results = { season: "1971/1972", competitions: [{ id: "de.cup", name: "DFB-Pokal", country: "Deutschland", matches: [
-+    { date: "1972-04-12", team1: "1. FC Köln", team2: "Bayern München", score: { ft: [5, 1] } },
-+  ] }] };
-+  const edition = season([
-+    event("1972-04-12", "1. FC Köln vs. Bayern München 5:1 \t\t\n\t(Hinspiel 0:3)", "80", "P2", "1. FC Köln", [5, 1]),
-+  ], results);
-+  assert.deepEqual(edition.matches.map((m) => [m.key, m.goals?.length ?? 0, m.held ?? m.heldGoals ?? null]).sort(),
-+    [["g:dfb-pokal:1972-04-12:0", 1, "absorption"], ["r:de.cup:0", 0, "absorption"]]);
-+  assert.deepEqual(edition.absorbed, []);
-+});
-+
-+test("A–B and B–A the same day, and one pair in two competitions, stay distinct", () => {
-+  const edition = buildArchiveSeason(null, { season: "1971/1972", competitions: [
-+    { id: "a", name: "A", country: "X", events: [event("1972-04-12", "A vs. B 1:0", "5", "P1", "A", [1, 0]), event("1972-04-12", "B vs. A 0:2", "9", "P2", "A", [0, 1])] },
-+    { id: "b", name: "B", country: "X", events: [event("1972-04-12", "A vs. B 1:0", "5", "P1", "A", [1, 0])] },
-+  ] });
-+  assert.equal(edition.matches.length, 3);
-+  assert.deepEqual(edition.absorbed, []);
-+});
-diff --git a/tests/bounded-reads.test.mjs b/tests/bounded-reads.test.mjs
-index 300a6cbbab..680361ad10 100644
---- a/tests/bounded-reads.test.mjs
-+++ b/tests/bounded-reads.test.mjs
-@@ -409,10 +409,10 @@ test("navbar focus/typing selects the advertised read path and cancels its debou
-       calls = [],
-       pending = [],
-       controllers = [],
-+      cupKinds = new Set(),
-       state = [scenario.query, true, true, 0, ""];
-     let stateIndex = 0,
--      legacyLoads = 0,
--      cupLoads = 0;
-+      legacyLoads = 0;
-     const context = {
-       manifest: {
-         ...manifest,
-@@ -477,8 +477,9 @@ test("navbar focus/typing selects the advertised read path and cancels its debou
-         },
-       },
-       "../services/catalog-client.js": {
--        cupIndex: async () => {
--          cupLoads++;
-+        servesCupWorkerIndex: () => false,
-+        cupIndex: async (kind) => {
-+          cupKinds.add(kind);
-           return { competitions: [] };
-         },
-       },
-@@ -523,10 +524,10 @@ test("navbar focus/typing selects the advertised read path and cancels its debou
-     const hasQuery = scenario.query.length >= 2;
-     assert.equal(calls.length, scenario.advertised && hasQuery ? 1 : 0);
-     assert.equal(legacyLoads, !scenario.advertised && hasQuery ? 1 : 0);
--    assert.equal(
--      cupLoads,
--      !scenario.advertised && hasQuery ? 2 : 0,
--      "bounded search never downloads the auxiliary cup catalogues",
-+    assert.deepEqual(
-+      [...cupKinds],
-+      hasQuery ? (scenario.advertised ? ["supplemental"] : ["supplemental", "worker"]) : [],
-+      "typing reads the supplementary competition catalogue without the retired worker index on the bounded backend",
-     );
-     for (const cleanup of cleanups)
-       if (typeof cleanup === "function") cleanup();
-diff --git a/tests/club-empty-season.test.mjs b/tests/club-empty-season.test.mjs
-index 211233cf5d..dacbed58e9 100644
---- a/tests/club-empty-season.test.mjs
-+++ b/tests/club-empty-season.test.mjs
-@@ -53,6 +53,8 @@ async function loadUI() {
-     "../services/club-scout.js": { METRICS: {}, SITUATION_LABELS: {}, STYLE_AXES: [], formatMetric: String, rolling: () => [] },
-     // What the tables show side by side, on the same matches (pure; the real module).
-     "../services/club-supported.js": supported,
-+    // The checked image resolver (the real module).
-+    "../services/format.js": await import("../dashboard/frontend/src/services/format.js"),
-     // A CSS module: every class reads as its own name.
-     "./ClubScout.module.css": { __esModule: true, default: new Proxy({}, { get: (_, name) => String(name) }) },
-   };
-diff --git a/tests/club-missing-render.test.mjs b/tests/club-missing-render.test.mjs
-index 106a11711d..fe21a3ea0b 100644
---- a/tests/club-missing-render.test.mjs
-+++ b/tests/club-missing-render.test.mjs
-@@ -66,6 +66,8 @@ const common = {
-   "../hooks/FootballContext.jsx": { useFootball: () => ({ href: (url, params) => `${url}?${new URLSearchParams(params)}` }) },
-   "./Hint.jsx": { Hint: () => null, Term: ({ children }) => children },
-   "../services/club-supported.js": supported,
-+  // The checked image resolver (the real module): Picture goes through it (FAILURE_MODES.md §22).
-+  "../services/format.js": await import("../dashboard/frontend/src/services/format.js"),
- };
- const ui = await load("ClubScoutUI.jsx", {
-   ...common,
-diff --git a/tests/club-picture-media.test.mjs b/tests/club-picture-media.test.mjs
-new file mode 100644
-index 0000000000..ac1b44e835
---- /dev/null
-+++ b/tests/club-picture-media.test.mjs
-@@ -0,0 +1,91 @@
-+// FAILURE_MODES.md §22 (C6), written before the code: the club hero's plain image (ClubScoutUI.jsx Picture, Crest)
-+// goes through the site's checked resolver like Media: a Vega reference is never fetched from its reserved host, an
-+// image the gate refuses shows the initials.
-+import test from "node:test";
-+import assert from "node:assert/strict";
-+import fs from "node:fs/promises";
-+import path from "node:path";
-+import vm from "node:vm";
-+import { createRequire } from "node:module";
-+import { fileURLToPath } from "node:url";
-+import * as format from "../dashboard/frontend/src/services/format.js";
-+
-+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-+const requireLocal = createRequire(path.join(root, "dashboard/package.json"));
-+const React = requireLocal("react");
-+const { renderToStaticMarkup } = requireLocal("react-dom/server");
-+const babel = requireLocal("next/dist/compiled/babel/core");
-+const preset = requireLocal("next/dist/compiled/babel/preset-react");
-+const commonjs = requireLocal("next/dist/compiled/babel/plugin-transform-modules-commonjs");
-+const h = React.createElement;
-+
-+async function loadUI() {
-+  const filename = path.join(root, "dashboard/frontend/src/components/ClubScoutUI.jsx");
-+  const code = babel.transformSync(await fs.readFile(filename, "utf8"), {
-+    presets: [[preset, { runtime: "classic" }]], plugins: [commonjs], babelrc: false, configFile: false, filename,
-+  }).code;
-+  const stubs = {
-+    "./Hint.jsx": { Hint: () => null, Term: ({ children }) => children },
-+    "../services/glossary.js": { explain: () => null },
-+    react: React,
-+    "next/link": { __esModule: true, default: ({ children, ...props }) => h("a", props, children) },
-+    "./Icon.jsx": { __esModule: true, default: () => null },
-+    "./PhoneFold.jsx": { useCardFold: () => ({ section: {}, head: {}, part: "", button: null, wrap: (c) => c }) },
-+    "../hooks/FootballContext.jsx": { useFootball: () => null },
-+    "./PlayerScoutCharts.jsx": { PercentileBar: () => null, toneVar: () => "" },
-+    "./RankingDialog.jsx": { RankingTrigger: () => null },
-+    "../services/club-scout.js": { METRICS: {}, SITUATION_LABELS: {}, STYLE_AXES: [], formatMetric: String, rolling: () => [] },
-+    "../services/club-supported.js": {},
-+    "../services/format.js": format,
-+    "./ClubScout.module.css": { __esModule: true, default: new Proxy({}, { get: (_, name) => String(name) }) },
-+  };
-+  const mod = { exports: {} };
-+  vm.runInThisContext("(function(require,module,exports){" + code + "\n})", { filename })(
-+    (name) => {
-+      if (!(name in stubs)) throw new Error("Unexpected import: " + name);
-+      return stubs[name];
-+    },
-+    mod,
-+    mod.exports,
-+  );
-+  return mod.exports;
-+}
-+
-+const REFERENCE = `https://media.vega.invalid/sha256/${"a".repeat(64)}.png`;
-+
-+test("the club hero's crest resolves a Vega reference through /api/assets, never its reserved host", async () => {
-+  const { Crest } = await loadUI();
-+  const html = renderToStaticMarkup(h(Crest, { club: { name: "Churchill Brothers", imageUrl: REFERENCE } }));
-+  assert.match(html, /<img/);
-+  assert.ok(html.includes(`/api/assets?url=${encodeURIComponent(REFERENCE).replaceAll("%", "%")}`.replace(/&/g, "&amp;")), html);
-+  assert.ok(!html.includes('src="https://media.vega.invalid'), html);
-+});
-+
-+// VI-30 V19 (FAILURE_MODES_VI30.md, written before the code): a failure belongs to one source. Picture is keyed by its
-+// url, as Media is, so a new url starts a new attempt instead of keeping the previous one's initials.
-+test("a new url is a new attempt: Picture's attempt is keyed by its source", async () => {
-+  const { Picture } = await loadUI();
-+  const other = `https://media.vega.invalid/sha256/${"b".repeat(64)}.png`;
-+  let first, second;
-+  assert.doesNotThrow(() => {
-+    first = Picture({ name: "Churchill Brothers", url: REFERENCE });
-+    second = Picture({ name: "Churchill Brothers", url: other });
-+  }, "Picture must only wrap its keyed attempt (no hook of its own)");
-+  assert.equal(first.type, second.type);
-+  assert.deepEqual([first.key, second.key], [REFERENCE, other]);
-+  assert.equal(Picture({ name: "Churchill Brothers" }).key, "");
-+  // The markup is the same as before.
-+  assert.equal(renderToStaticMarkup(h(Picture, { name: "Churchill Brothers", url: REFERENCE })),
-+    renderToStaticMarkup(h(Picture, { name: "Churchill Brothers", url: REFERENCE, className: "crest" })));
-+});
-+
-+test("a provider image goes the same way; a refused source shows the initials", async () => {
-+  const { Crest, Picture } = await loadUI();
-+  const pitch = renderToStaticMarkup(h(Crest, { club: { name: "Arsenal", imageUrl: "https://cdn.pitchapi.dev/images/teams/a.png" } }));
-+  assert.ok(pitch.includes("/api/assets?url=https%3A%2F%2Fcdn.pitchapi.dev%2Fimages%2Fteams%2Fa.png"), pitch);
-+  for (const url of ["https://evil.example/x.png", "javascript:alert(1)", `${REFERENCE}?x=1`, undefined]) {
-+    const html = renderToStaticMarkup(h(Picture, { name: "Churchill Brothers", url }));
-+    assert.doesNotMatch(html, /<img/, String(url));
-+    assert.match(html, /CB/);
-+  }
-+});
-diff --git a/tests/competition-render.test.mjs b/tests/competition-render.test.mjs
-index 84300d3d8a..a4eaaf19eb 100644
---- a/tests/competition-render.test.mjs
-+++ b/tests/competition-render.test.mjs
-@@ -67,6 +67,7 @@ test("competition page renders a result-derived league table and its limits", as
-     "../services/compact-reads.js": await import("../dashboard/frontend/src/services/compact-reads.js"),
-     "../services/fixtures.js": await import("../dashboard/frontend/src/services/fixtures.js"),
-     "../model.js": { csvString: () => "" },
-+    "../services/competition-artwork.js": await import("../dashboard/frontend/src/services/competition-artwork.js"),
-     "../services/catalog-client.js": await import("../dashboard/frontend/src/services/catalog-client.js"),
-     "../components/SeasonSelect.jsx": { __esModule: true, default: ({ label, allLabel, seasons }) => elem("select", { "aria-label": label }, allLabel && elem("option", { value: "all" }, allLabel), seasons.map((value) => elem("option", { key: value, value }, value))) },
-     "../../../shared/competition-scope.js": { EUROPE_FOCUS_IDS: new Set(), inEuropeFocus: () => false },
-diff --git a/tests/complementary-leagues.test.mjs b/tests/complementary-leagues.test.mjs
-index 4ed564162b..b749c93cd0 100644
---- a/tests/complementary-leagues.test.mjs
-+++ b/tests/complementary-leagues.test.mjs
-@@ -74,6 +74,7 @@ test("a league's page: its standings, its matches, its projection, no bracket",
-     "../services/format.js": { date: String, seasonLabel: String },
-     "../services/fixtures.js": { parisDay: () => "2026-11-17" },
-     "../services/resources.js": { useResource: () => ({ value: { matches } }) },
-+    "../services/competition-artwork.js": await import("../dashboard/frontend/src/services/competition-artwork.js"),
-     "../services/catalog-client.js": { cupTable: async () => [] },
-     "../services/competition-selector.js": { competitionCountryLabel: () => "Angleterre" },
-     "../services/cup-matches.js": cupMatches,
-diff --git a/tests/cup-catalog-alias.test.mjs b/tests/cup-catalog-alias.test.mjs
-new file mode 100644
-index 0000000000..439380ec80
---- /dev/null
-+++ b/tests/cup-catalog-alias.test.mjs
-@@ -0,0 +1,58 @@
-+// VI-30 (docs/calculs/09-audit-2026-11/FAILURE_MODES_VI30.md V12–V18, written before the code): a supplemental entry
-+// answers to its edition's canonical competition id (the API's `competition_id`), never by a name; one entry per
-+// competition in the directory and the search; a lookup waits for the catalogue that can answer it.
-+import test from "node:test";
-+import assert from "node:assert/strict";
-+import { awaitsCupIndex, findCompetition, mergeCupCatalog, supplementalCupCatalog, supplementalLeagueCatalog } from "../dashboard/frontend/src/services/cup-catalog.js";
-+import { globalCompetitionCatalog } from "../dashboard/frontend/src/services/global-search.js";
-+
-+const FAW = `https://media.vega.invalid/sha256/${"0b2958916b260998034409a86e6ede3879dd706020e0371df9b9e03ddb826022"}.png`;
-+const index = {
-+  meta: { source_generated_at_utc: "2026-11-17T07:19:26Z" },
-+  competitions: [
-+    { name: "Cymru North", folder: "WAL_2_cymru-north", season: "2026/2027", tables: { results: { rows: 29 }, fixtures: { rows: 0 } }, country_code: "WAL", image_url: FAW, competition_id: "l_v0000130" },
-+    { name: "OFB Cup", folder: "AUT_CUP_ofb-cup", season: "2026/2027", tables: { results: { rows: 7 }, fixtures: { rows: 4 } }, country_code: "AUT", competition_id: "l_v0000087" },
-+    // An older API (no canonical id), and a malformed one.
-+    { name: "Cymru South", folder: "WAL_3_cymru-south", season: "2026/2027", tables: { results: { rows: 29 } }, country_code: "WAL" },
-+    { name: "National League", folder: "ENG_5_national-league", season: "2026/2027", tables: { results: { rows: 36 } }, country_code: "ENG", competition_id: "open-matchday:x" },
-+  ],
-+};
-+
-+test("V12/V16: an entry carries its edition's canonical id, only a well-formed one", () => {
-+  const leagues = supplementalLeagueCatalog(index);
-+  const north = leagues.find((c) => c.folder === "WAL_2_cymru-north");
-+  assert.deepEqual([north.id, north.canonicalId, north.imageUrl], ["open-matchday:WAL_2_cymru-north", "l_v0000130", FAW]);
-+  assert.equal("canonicalId" in leagues.find((c) => c.folder === "WAL_3_cymru-south"), false);
-+  assert.equal("canonicalId" in leagues.find((c) => c.folder === "ENG_5_national-league"), false);
-+  assert.equal(supplementalCupCatalog(index)[0].canonicalId, "l_v0000087");
-+});
-+
-+test("V12/V15: a lookup by the source key or the canonical id finds the same entry; an unknown id none", () => {
-+  const catalog = mergeCupCatalog([{ id: "l_3FJFUl", name: "Ligue 1", country: "FRA", seasons: ["2026/2027"] }], index);
-+  const bySource = findCompetition(catalog, "open-matchday:WAL_2_cymru-north");
-+  assert.ok(bySource);
-+  assert.equal(findCompetition(catalog, "l_v0000130"), bySource);
-+  assert.equal(findCompetition(catalog, "l_v0000087").id, "open-matchday:AUT_CUP_ofb-cup");
-+  assert.equal(findCompetition(catalog, "l_v9999999"), undefined);
-+  assert.equal(findCompetition(catalog, ""), undefined);
-+  assert.equal(findCompetition(catalog, "l_3FJFUl").name, "Ligue 1");
-+  // One entry for the competition, in the directory and in the search.
-+  assert.equal(catalog.filter((c) => c.name === "Cymru North").length, 1);
-+  assert.equal(globalCompetitionCatalog([], index).filter((c) => c.name === "Cymru North").length, 1);
-+});
-+
-+test("V18: an item whose canonical id is a native competition's is that competition, listed once", () => {
-+  const native = [{ id: "l_0ALvwF", name: "Serie A", country: "ITA", seasons: ["2026/2027"] }];
-+  const copy = { competitions: [{ name: "Italian top flight", folder: "ITA_1_serie-a", season: "2026/2027", tables: { results: { rows: 8 } }, country_code: "ITA", competition_id: "l_0ALvwF" }] };
-+  assert.deepEqual(supplementalLeagueCatalog(copy, native), []);
-+  const catalog = mergeCupCatalog(native, copy);
-+  assert.equal(catalog.filter((c) => c.country === "ITA").length, 1);
-+  // The native entry answers its own id, never the copy.
-+  assert.equal(findCompetition(catalog, "l_0ALvwF").name, "Serie A");
-+});
-+
-+test("V13/V14: the ids a supplemental index can answer wait for it", () => {
-+  assert.equal(awaitsCupIndex("open-matchday:WAL_2_cymru-north"), true);
-+  assert.equal(awaitsCupIndex("l_v0000130"), true);
-+  for (const id of ["l_3FJFUl", "open-cup:euro", "", null, undefined]) assert.equal(awaitsCupIndex(id), false, String(id));
-+});
-diff --git a/tests/cup-catalog-logo.test.mjs b/tests/cup-catalog-logo.test.mjs
-new file mode 100644
-index 0000000000..2ec6bf02e3
---- /dev/null
-+++ b/tests/cup-catalog-logo.test.mjs
-@@ -0,0 +1,24 @@
-+// C6 (FAILURE_MODES.md §22), written before the code: the competition header's Media gets the verified logo the API
-+// gives for the edition's own competition; a cup without one keeps the existing fallback, never another's logo.
-+import test from "node:test";
-+import assert from "node:assert/strict";
-+import { mergeCupCatalog, supplementalCupCatalog, supplementalLeagueCatalog } from "../dashboard/frontend/src/services/cup-catalog.js";
-+
-+const REFERENCE = `https://media.vega.invalid/sha256/${"0b2958916b260998034409a86e6ede3879dd706020e0371df9b9e03ddb826022"}.png`;
-+const index = {
-+  meta: { source_generated_at_utc: "2026-11-17T07:19:26Z" },
-+  competitions: [
-+    { name: "Cymru North", folder: "WAL_2_cymru-north", season: "2026/2027", tables: { results: { rows: 29 }, fixtures: { rows: 0 } }, country_code: "WAL", image_url: REFERENCE },
-+    { name: "OFB Cup", folder: "AUT_CUP_ofb-cup", season: "2026/2027", tables: { results: { rows: 7 }, fixtures: { rows: 4 } }, country_code: "AUT" },
-+  ],
-+};
-+
-+test("a supplemental league or cup carries the logo of its own competition", () => {
-+  const [league] = supplementalLeagueCatalog(index);
-+  assert.deepEqual([league.id, league.imageUrl], ["open-matchday:WAL_2_cymru-north", REFERENCE]);
-+  const [cup] = supplementalCupCatalog(index);
-+  assert.equal(cup.id, "open-matchday:AUT_CUP_ofb-cup");
-+  assert.equal(cup.imageUrl, undefined);
-+  const merged = mergeCupCatalog([], index);
-+  assert.equal(merged.find((c) => c.id === "open-matchday:WAL_2_cymru-north").imageUrl, REFERENCE);
-+});
-diff --git a/tests/cup-forecast.test.mjs b/tests/cup-forecast.test.mjs
-index 9782fbdb1f..291ac96246 100644
---- a/tests/cup-forecast.test.mjs
-+++ b/tests/cup-forecast.test.mjs
-@@ -70,6 +70,7 @@ test("an upcoming match shows its forecast in the list, a played one its score",
-     "../services/format.js": { date: String, seasonLabel: String },
-     "../services/fixtures.js": { parisDay: () => "2026-11-17" },
-     "../services/resources.js": { useResource: () => ({}) },
-+    "../services/competition-artwork.js": await import("../dashboard/frontend/src/services/competition-artwork.js"),
-     "../services/catalog-client.js": { cupTable: async () => [] },
-     "../services/competition-selector.js": { competitionCountryLabel: () => "" },
-     "../services/cup-matches.js": cupMatches,
-@@ -114,6 +115,7 @@ test("a complementary league's projection has its tab, as a league's", async ()
-     "../services/format.js": { date: String, seasonLabel: String },
-     "../services/fixtures.js": { parisDay: () => "2026-11-17" },
-     "../services/resources.js": { useResource: () => ({}) },
-+    "../services/competition-artwork.js": await import("../dashboard/frontend/src/services/competition-artwork.js"),
-     "../services/catalog-client.js": { cupTable: async () => [] },
-     "../services/competition-selector.js": { competitionCountryLabel: () => "" },
-     "../services/cup-matches.js": cupMatches,
-diff --git a/tests/cup-render.test.mjs b/tests/cup-render.test.mjs
-index 11a0f62ebf..72771440d1 100644
---- a/tests/cup-render.test.mjs
-+++ b/tests/cup-render.test.mjs
-@@ -28,6 +28,7 @@ test("cup view identifies the edition and preserves penalty shootouts", async ()
-     "../services/format.js": { date: String, seasonLabel: (value) => /^\d{4}$/.test(value) ? `${value}/${Number(value) + 1}` : value },
-     "../services/fixtures.js": { parisDay: () => "2026-11-02" },
-     "../services/resources.js": { useResource: () => ({ value: { matches: rows } }), json: () => {} },
-+    "../services/competition-artwork.js": await import("../dashboard/frontend/src/services/competition-artwork.js"),
-     "../services/catalog-client.js": { cupTable: async () => ({ matches: [] }) },
-     "../data-url.js": { dataUrl: (path) => path },
-     "../services/competition-selector.js": { competitionCountryLabel: () => "France" },
-diff --git a/tests/cup-sides.test.mjs b/tests/cup-sides.test.mjs
-new file mode 100644
-index 0000000000..3e4178cfcc
---- /dev/null
-+++ b/tests/cup-sides.test.mjs
-@@ -0,0 +1,117 @@
-+// VI-30 (docs/calculs/09-audit-2026-11/FAILURE_MODES_VI30.md, written before the code): a table row's `sides` (each
-+// side's own FK: the team's public id and its crest reference, or null) reach the list's two existing Media slots and
-+// the bracket; names never choose an image; a national-team cup keeps its flags.
-+import test from "node:test";
-+import assert from "node:assert/strict";
-+import path from "node:path";
-+import fs from "node:fs/promises";
-+import vm from "node:vm";
-+import { createRequire } from "node:module";
-+import { fileURLToPath } from "node:url";
-+import { normalizeSupplementalCup, numberedCupRounds } from "../dashboard/frontend/src/services/cup-matches.js";
-+import { combineCupLegs } from "../dashboard/frontend/src/services/knockout-bracket.js";
-+
-+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-+const require = createRequire(path.join(root, "dashboard/package.json"));
-+const React = require("react");
-+const { renderToStaticMarkup } = require("react-dom/server");
-+const babel = require("next/dist/compiled/babel/core");
-+const preset = require("next/dist/compiled/babel/preset-react");
-+const commonjs = require("next/dist/compiled/babel/plugin-transform-modules-commonjs");
-+const elem = React.createElement;
-+
-+const ref = (byte) => `https://media.vega.invalid/sha256/${byte.repeat(32)}.png`;
-+const side = (id, byte) => ({ id, image_url: byte ? ref(byte) : null });
-+const result = (home, away, score, sides, extra = {}) => ({ gw: "1", date: "2026-08-01", home, away, ft_home: String(score[0]), ft_away: String(score[1]), ...(sides && { sides }), ...extra });
-+
-+test("V1/V2/V3: a side's id and crest are copied from its own row, and only when given", () => {
-+  const [both, partial, none, noCrest] = normalizeSupplementalCup([
-+    result("Brickfield", "Llanuwchllyn", [5, 1], { home: side("t_v0003688", "16"), away: side("t_v0003689", "6b") }),
-+    result("Atus Velden", "A. Klagenfurt", [1, 2], { away: side("t_v0000002", "aa") }),
-+    result("Deutschlandsberger", "Amstetten", [1, 1], undefined),
-+    result("Hull", "Coventry", [2, 0], { home: side("t_v0000003", null), away: side("t_v0000004", null) }),
-+  ], []);
-+  assert.deepEqual([both.homeTeamId, both.homeImage, both.awayTeamId, both.awayImage], ["t_v0003688", ref("16"), "t_v0003689", ref("6b")]);
-+  assert.deepEqual([partial.home, partial.homeTeamId, partial.homeImage, partial.awayTeamId, partial.awayImage], ["Atus Velden", undefined, undefined, "t_v0000002", ref("aa")]);
-+  for (const key of ["homeTeamId", "awayTeamId", "homeImage", "awayImage"]) assert.equal(key in none, false, key);
-+  assert.deepEqual([noCrest.homeTeamId, noCrest.homeImage, noCrest.awayImage], ["t_v0000003", undefined, undefined]);
-+});
-+
-+test("V4: two clubs spelled alike keep their own rows' images; a malformed side is ignored", () => {
-+  const rows = normalizeSupplementalCup(
-+    [result("Ipswich", "Sunderland", [2, 1], { home: side("t_v1", null), away: side("t_v0000010", null) })],
-+    [{ gw: "2", date: "2026-11-21", home: "Aston Villa", away: "Sunderland", sides: { home: side("t_v2", null), away: side("t_v0009402", "2b") } },
-+     { gw: "2", date: "2026-11-22", home: "X", away: "Y", sides: { home: { id: 7, image_url: ref("cc") }, away: { id: "t_v3", image_url: 42 } } }],
-+  );
-+  const [first, twin, odd] = rows;
-+  assert.equal(first.awayImage, undefined);
-+  assert.deepEqual([twin.awayTeamId, twin.awayImage], ["t_v0009402", ref("2b")]);
-+  assert.deepEqual([odd.homeTeamId, odd.homeImage, odd.awayTeamId, odd.awayImage], [undefined, undefined, "t_v3", undefined]);
-+  assert.equal(twin.status, "scheduled");
-+});
-+
-+test("V11: two legs combined keep the first leg's sides, in the displayed order", () => {
-+  // A two-legged semi-final (the round's name as the source gives it), the second leg reversed.
-+  const legs = normalizeSupplementalCup([
-+    result("A", "B", [1, 0], { home: side("t_a", "0a"), away: side("t_b", "0b") }, { gw: "5", date: "2027-01-10", round_name: "Semi-finals" }),
-+    result("B", "A", [2, 2], { home: side("t_b", "0b"), away: side("t_a", "0a") }, { gw: "6", date: "2027-01-17", round_name: "Semi-finals" }),
-+  ], []);
-+  const [tie] = combineCupLegs(numberedCupRounds(legs));
-+  assert.deepEqual([tie.home, tie.homeImage, tie.away, tie.awayImage], ["A", ref("0a"), "B", ref("0b")]);
-+  assert.deepEqual(tie.legs.map((l) => l.score), [[1, 0], [2, 2]]);
-+});
-+
-+async function cupComponent(flags) {
-+  const cupMatches = await import("../dashboard/frontend/src/services/cup-matches.js");
-+  // A Media that shows what it was given; a flag that names its team.
-+  const Media = ({ name, url }) => elem("i", { "data-media": name, "data-url": url ?? "" });
-+  const NationalFlag = ({ name }) => { flags.push(name); return elem("b", { "data-flag": name }); };
-+  const stubs = {
-+    react: React,
-+    "./UI.jsx": { Card: ({ children }) => elem("section", null, children), Media, Pager: () => null, Segments: () => null, AsyncState: () => null, Empty: ({ children }) => elem("p", null, children) },
-+    "./KnockoutBracket.jsx": { __esModule: true, default: () => null },
-+    "./NationalFlag.jsx": { __esModule: true, default: NationalFlag },
-+    "../services/format.js": { date: String, seasonLabel: String },
-+    "../services/fixtures.js": { parisDay: () => "2026-11-18" },
-+    "../services/resources.js": { useResource: () => ({}) },
-+    "../services/competition-artwork.js": await import("../dashboard/frontend/src/services/competition-artwork.js"),
-+    "../services/catalog-client.js": { cupTable: async () => [] },
-+    "../services/competition-selector.js": { competitionCountryLabel: () => "" },
-+    "../services/cup-matches.js": cupMatches,
-+    "../services/knockout-bracket.js": { combineCupLegs: (m) => m, knockoutStage: () => null },
-+    "../services/cup-worker-client.js": { cupWorkerSnapshot: async () => ({ matches: [] }) },
-+    "../services/cup-archives.js": { NATIONAL_CUP_ARCHIVES: {}, GERMAN_CUP_FOLDER: "GER_CUP_dfb-pokal", isGermanCupSeason: () => false },
-+    "./SeasonProjection.jsx": { __esModule: true, default: () => null },
-+    "../services/cup-projection.js": { useCupProjection: () => null },
-+    "./Hint.jsx": { Term: ({ children }) => children },
-+    "../services/forecasts.js": { share: String },
-+    "./MatchForecastBar.jsx": { __esModule: true, default: () => null },
-+  };
-+  const filename = path.join(root, "dashboard/frontend/src/components/CupCompetition.jsx");
-+  const compiled = babel.transformSync(await fs.readFile(filename, "utf8"), { presets: [[preset, { runtime: "classic" }]], plugins: [commonjs], babelrc: false, configFile: false, filename }).code;
-+  const mod = { exports: {} };
-+  vm.runInThisContext("(function(require,module,exports){" + compiled + "\n})", { filename })((name) => { if (!(name in stubs)) throw Error("Unexpected import " + name); return stubs[name]; }, mod, mod.exports);
-+  return mod.exports;
-+}
-+
-+test("V1/V3: the list's two existing Media slots receive each side's own crest, in order; none without one", async () => {
-+  const { CupMatchList } = await cupComponent([]);
-+  const matches = normalizeSupplementalCup([
-+    result("Brickfield", "Llanuwchllyn", [5, 1], { home: side("t_v0003688", "16"), away: side("t_v0003689", "6b") }),
-+    result("Atus Velden", "A. Klagenfurt", [1, 2], { away: side("t_v0000002", "aa") }, { date: "2026-07-24" }),
-+  ], []);
-+  const html = renderToStaticMarkup(elem(CupMatchList, { matches, status: "finished", query: "", page: 1, onPage: () => {} }));
-+  const slots = [...html.matchAll(/<i data-media="([^"]*)" data-url="([^"]*)"><\/i>/g)].map((m) => [m[1], m[2]]);
-+  assert.deepEqual(slots, [["Brickfield", ref("16")], ["Llanuwchllyn", ref("6b")], ["Atus Velden", ""], ["A. Klagenfurt", ref("aa")]]);
-+  // The row keeps the main lists' design: the name beside its badge, the score between.
-+  assert.match(html, /<span class="team-name home-team"><span>Brickfield<\/span><i data-media="Brickfield"/);
-+});
-+
-+test("V8: a national-team cup keeps its flags and ignores any image", async () => {
-+  const flags = [];
-+  const { CupMatchList } = await cupComponent(flags);
-+  const matches = [{ key: "n", date: "2024-06-14", home: "Germany", away: "Scotland", score: [5, 1], status: "finished", round: "", homeImage: ref("de"), awayImage: ref("5c") }];
-+  const html = renderToStaticMarkup(elem(CupMatchList, { matches, status: "finished", query: "", page: 1, onPage: () => {}, nationalTeams: true, season: "2024" }));
-+  assert.deepEqual(flags, ["Germany", "Scotland"]);
-+  assert.doesNotMatch(html, /data-media=/);
-+});
-diff --git a/tests/cup-sources.test.mjs b/tests/cup-sources.test.mjs
-index cd247525db..b020c98e12 100644
---- a/tests/cup-sources.test.mjs
-+++ b/tests/cup-sources.test.mjs
-@@ -13,7 +13,8 @@ test("archive parser preserves shootouts, extra time and an unscored final", ()
-   const text = "# Matches 3\n▪ Round of 16\nFri Jan 10 2025\n  20:00  A   v B   5-4 pen. 1-1 a.e.t. (1-1, 0-0)\n▪ Semifinals\nSat Feb 1\n  20:00  A   v C   2-1 a.e.t. (1-1)\n▪ Final\nSun May 4\n  15:00  A   v D\n";
-   const rows = parseOpenCupText(text, 2024);
-   assert.deepEqual(rows[0].score, { ft: [1, 1], p: [5, 4], et: [1, 1] });
--  assert.deepEqual(rows[1].score, { ft: [2, 1], et: [2, 1] });
-+  // After extra time 2–1; the brackets give the 90 minutes, 1–1 (FAILURE_MODES.md §19, 19z).
-+  assert.deepEqual(rows[1].score, { ft: [1, 1], et: [2, 1] });
-   assert.equal(rows[2].score, undefined);
-   assert.throws(() => parseOpenCupText(text.replace("# Matches 3", "# Matches 4"), 2024), /Incomplete/);
- });
-@@ -75,8 +76,9 @@ test("the yearly Club World Cups are read from their text files, in the season o
-     assert.equal(status, 200);
-     assert.deepEqual(asked, ["https://raw.githubusercontent.com/openfootball/club-worldcup/master/2021/clubworldcup.txt"]);
-     assert.deepEqual([body.name, body.season, body.matches.length, body.source.url], ["Club World Cup 2021", "2021", 8, "https://github.com/openfootball/club-worldcup"]);
--    assert.deepEqual(body.matches[0], { round: "Round 1", date: "2022-02-03", team1: "Al Jazira Club (UAE)", team2: "AS Pirae (TAH)", score: { ft: [4, 1] } });
--    assert.deepEqual(body.matches.at(-1), { round: "Final", date: "2022-02-12", team1: "Chelsea FC (ENG)", team2: "Palmeiras (BRA)", score: { ft: [2, 1], et: [2, 1] } });
-+    assert.deepEqual(body.matches[0], { round: "Round 1", date: "2022-02-03", team1: "Al Jazira Club (UAE)", team2: "AS Pirae (TAH)", score: { ft: [4, 1], ht: [3, 0] } });
-+    // Chelsea–Palmeiras, 1–1 after 90 minutes (FAILURE_MODES.md §19, 19z).
-+    assert.deepEqual(body.matches.at(-1), { round: "Final", date: "2022-02-12", team1: "Chelsea FC (ENG)", team2: "Palmeiras (BRA)", score: { ft: [1, 1], et: [2, 1], ht: [0, 0] } });
-     // An edition before the base's first season is not read.
-     assert.equal((await read("2019"))[0], 400);
-     assert.equal(asked.length, 1);
-@@ -154,3 +156,49 @@ test("the confederations' cups' rounds read in French", () => {
-   assert.deepEqual(rows.map((r) => r.round), ["Finale", "Demi-finales", "Huitièmes de finale", "Tour préliminaire 2", "Tour préliminaire 1", "Tour préliminaire",
-     "Phase de groupes · Journée 3", "Groupe G", "Barrages"]);
- });
-+
-+// FAILURE_MODES.md §19 (19a, 19f, 19g): openfootball/worldcup.json at 516d3825 (CC0) writes most of
-+// 1950–2014 and seven 2022 results as arrays, and cancels 1938 Sweden–Austria.
-+test("the World Cup projection writes array results as objects and keeps the source's status", async () => {
-+  const { GET } = await import("../backend/sources/projections/open-cups.mjs");
-+  const original = globalThis.fetch;
-+  const read = async (season, matches) => {
-+    globalThis.fetch = async () => Response.json({ name: "World Cup " + season, matches });
-+    const response = await GET(new Request("http://bridge/api/open-cups?competition=world-cup-history&season=" + season));
-+    return [response.status, await response.json()];
-+  };
-+  try {
-+    const [status, body] = await read("1938", [
-+      { round: "First round", date: "1938-06-05", team1: "Sweden", team2: "Austria", status: "canceled" },
-+      { round: "First round", date: "1938-06-05", team1: "France", team2: "Belgium", score: { ft: [3, 1], ht: [2, 1] } },
-+    ]);
-+    assert.equal(status, 200);
-+    assert.deepEqual(body.matches, [
-+      { round: "First round", date: "1938-06-05", team1: "Sweden", team2: "Austria", status: "canceled" },
-+      { round: "First round", date: "1938-06-05", team1: "France", team2: "Belgium", score: { ft: [3, 1], ht: [2, 1] } },
-+    ]);
-+    const [, wc1962] = await read("1962", [{ round: "Matchday 1", group: "Group 1", date: "1962-05-30", team1: "Uruguay", team2: "Colombia", score: [2, 1] }]);
-+    assert.deepEqual(wc1962.matches[0].score, { ft: [2, 1] });
-+    const [, wc2022] = await read("2022", [{ round: "Matchday 6", group: "Group B", date: "2022-11-25", team1: "England", team2: "USA", score: [0, 0] }]);
-+    assert.deepEqual(wc2022.matches[0].score, { ft: [0, 0] });
-+    // A malformed score makes the edition unreadable, with its code: the last valid one stays.
-+    for (const score of [[2], [2, -1], [2, 1.5], [true, 0], "2-1", { ft: [1, null] }, { ht: [1, 0] }, { p: [4, 3] }, { ft: [1, 0], x: [0, 0] }]) {
-+      const [code, failed] = await read("1962", [{ date: "1962-05-30", team1: "Uruguay", team2: "Colombia", score }]);
-+      assert.equal(code, 502, JSON.stringify(score));
-+      assert.equal(failed.code, "INVALID_SCORE");
-+    }
-+  } finally {
-+    globalThis.fetch = original;
-+  }
-+});
-+
-+// FAILURE_MODES.md §19 (19z′, 19z″): a score after extra time is never the 90 minutes' too.
-+test("Football.TXT keeps the 90 minutes apart from extra time", () => {
-+  const text = "# Matches 4\n▪ Final\nSat May 3 2025\n  20:00  A   v B   2-1 a.e.t.\n  20:00  C   v D   5-4 pen. 1-1 a.e.t. (1-1, 0-0)\nSun May 4\n  20:00  E   v F   4-3 pen. (2-1, 0-1)\n  20:00  G   v H   4-1 (3-0)\n";
-+  assert.deepEqual(parseOpenCupText(text, 2024).map((row) => row.score), [
-+    { et: [2, 1] },
-+    { ft: [1, 1], et: [1, 1], p: [5, 4] },
-+    { ft: [2, 1], p: [4, 3] },
-+    { ft: [4, 1] },
-+  ]);
-+});
-diff --git a/tests/euro-search-flags.test.mjs b/tests/euro-search-flags.test.mjs
-index 3eed16fa34..279c1b1a6f 100644
---- a/tests/euro-search-flags.test.mjs
-+++ b/tests/euro-search-flags.test.mjs
-@@ -198,6 +198,7 @@ test("the Euro results list also displays flags for both national teams", async
-       "./KnockoutBracket.jsx": { __esModule: true, default: () => null },
-       "./NationalFlag.jsx": { __esModule: true, default: flag.default },
-       "../services/resources.js": { useResource: () => ({}), json: () => {} },
-+      "../services/competition-artwork.js": await import("../dashboard/frontend/src/services/competition-artwork.js"),
-       "../services/catalog-client.js": { cupTable: () => {} },
-       "../services/competition-selector.js": {
-         competitionCountryLabel: String,
-diff --git a/tests/image-source.test.mjs b/tests/image-source.test.mjs
-new file mode 100644
-index 0000000000..34cde6bd65
---- /dev/null
-+++ b/tests/image-source.test.mjs
-@@ -0,0 +1,47 @@
-+// FAILURE_MODES.md §21 (21l), written before the code: one image gate for the site, accepting the
-+// three provider shapes, Vega's reference to a reviewed packed image and the exact UEFA club logo.
-+import test from "node:test";
-+import assert from "node:assert/strict";
-+import { acceptedImageSource } from "../dashboard/frontend/src/services/image-source.js";
-+import { safeImageUrl } from "../dashboard/frontend/src/services/format.js";
-+
-+const HASH = "54bb97457ba1934e9c87d71fb5e1cf9a9068f151df4f7d671691f7097fc8a6db";
-+const accepted = [
-+  "https://cdn.pitchapi.dev/images/teams/0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef.png",
-+  "https://upload.wikimedia.org/wikipedia/commons/a/ab/Logo.png",
-+  "https://img.thesports.com/football/competition/6f803b0ca5b52b392cb3fb4225ad7186.png",
-+  `https://media.vega.invalid/sha256/${HASH}.png`,
-+  `https://media.vega.invalid/sha256/${HASH}.jpg`,
-+  `https://media.vega.invalid/sha256/${HASH}.webp`,
-+  "https://img.uefa.com/imgml/TP/teams/logos/70x70/64125.png",
-+];
-+const refused = [
-+  "https://evil.example/logo.png",
-+  "http://img.uefa.com/imgml/TP/teams/logos/70x70/64125.png",
-+  "https://user:pass@img.uefa.com/imgml/TP/teams/logos/70x70/64125.png",
-+  "https://img.uefa.com:8443/imgml/TP/teams/logos/70x70/64125.png",
-+  "https://img.uefa.com/imgml/TP/teams/logos/70x70/64125.png?w=1",
-+  "https://img.uefa.com/imgml/TP/teams/logos/70x70/64125.png#x",
-+  "https://img.uefa.com/imgml/TP/teams/logos/140x140/64125.png",
-+  "https://img.uefa.com/imgml/TP/teams/logos/70x70/64125.svg",
-+  "https://img.uefa.com/imgml/TP/teams/logos/70x70/abc.png",
-+  `https://media.vega.invalid/sha256/${HASH}.svg`,
-+  `https://media.vega.invalid/sha256/${HASH.slice(1)}.png`,
-+  `https://media.vega.invalid/sha256/${HASH.toUpperCase()}.png`,
-+  `https://media.vega.invalid/sha256/${HASH}.png?x=1`,
-+  `https://media.vega.invalid/other/${HASH}.png`,
-+  `https://media.vega.invalid:444/sha256/${HASH}.png`,
-+  "https://cdn.pitchapi.dev:8443/images/teams/a.png",
-+  "not a url",
-+  "",
-+];
-+
-+test("the image gate accepts the provider shapes, the packed-image reference and the UEFA club logo", () => {
-+  for (const url of accepted) assert.equal(acceptedImageSource(url), true, url);
-+  for (const url of refused) assert.equal(acceptedImageSource(url), false, url);
-+});
-+
-+test("the site asks the API for an accepted image, and for nothing else", () => {
-+  for (const url of accepted) assert.equal(safeImageUrl(url).includes("/api/assets?url=" + encodeURIComponent(url)), true, url);
-+  for (const url of refused) assert.equal(safeImageUrl(url), "", url);
-+});
-diff --git a/tests/openfootball_history.test.mjs b/tests/openfootball_history.test.mjs
-index 23250d930e..5467cfa53f 100644
---- a/tests/openfootball_history.test.mjs
-+++ b/tests/openfootball_history.test.mjs
-@@ -135,3 +135,18 @@ test("source-only final scores, unplayed ties and neutral venues remain explicit
-     /Rencontre non disputée/,
-   );
- });
-+
-+// FAILURE_MODES.md §19 (19y): worldcup.json writes a full-time result as an array too
-+// (1962 Uruguay–Colombia, 2022 England–USA); the display and the CSV read it as the score.
-+test("an OpenFootball full-time array is the match's score", () => {
-+  const match = { date: "1962-05-30", team1: "Uruguay", team2: "Colombia", score: [2, 1] };
-+  assert.deepEqual(historicalScore(match), [2, 1]);
-+  assert.deepEqual(historicalScore({ ...match, score: [0, 0] }), [0, 0]);
-+  const row = Object.fromEntries(
-+    HISTORICAL_CSV_FIELDS.map((key, index) => [key, historicalCsvRow({ competition: "World Cup 1962", match })[index]]),
-+  );
-+  assert.deepEqual([row.home_goals, row.away_goals, row.home_goals_90, row.away_goals_90], [2, 1, 2, 1]);
-+  assert.deepEqual([row.penalties_home, row.penalties_away], [null, null]);
-+  assert.deepEqual(historicalScoreNotes(match), []);
-+  for (const score of [[2], [2, -1], [2, 1.5], [2, "1"]]) assert.deepEqual(historicalScore({ ...match, score }), [null, null]);
-+});
++End to end (`tracks/2-ingestion/sportscore-authority/e2e`): the real HTTPS client against a loopback
++replay of the widget, `sources.run_due`, PostgreSQL 18, `api.standing_rows`, and the read API
++handler as `vega_read`. The script runs every case above on the baseline and on the candidate. It
++keeps the bodies, SQL rows, ETags and verdicts.

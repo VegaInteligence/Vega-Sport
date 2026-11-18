@@ -1,0 +1,81 @@
+{
+  "source_rds": "2026-11-18 14:53:52.910047+00:00",
+  "function_sha256": "75d3b2a829b585d8dbadb60d1fb2a6b4233e7f74d220a0f76bab0ebb6fdb93ff",
+  "run": 2097,
+  "reference": "Current or restored population versus all 236 admitted. Same fixed per-team starting seeds and stakes.",
+  "conditions": [
+    "All 201 additional fixtures enter as ordinary domestic home games in their evidenced competition/season. They have no historical Vega match ID.",
+    "Both observed clubs have no other game on that date in either population. First-to-last-second sensitivity is identical.",
+    "No level refit, extra stats, individual grade or production writes. The 35 historical rows keep their original identifiers."
+  ],
+  "official_fixtures": 575,
+  "missing_current": 236,
+  "historical_ids_kept": 35,
+  "new_official_references": 201,
+  "baseline_admitted_matches": 81898,
+  "scenario_matches": 82134,
+  "new_team_sides_all_236": 472,
+  "admitting_201_after_restoring_35": {
+    "common_sides": 163866,
+    "sides_abs_change_gt_001": 954,
+    "matches_abs_change_gt_001": 491,
+    "last_club_elo_abs_change_gt_001": 122,
+    "max_abs_common_side": 54.96662,
+    "max_abs_last_club": 44.64688,
+    "largest_last_club_deltas": [
+      {
+        "team_id": 3397,
+        "delta": -44.64688
+      },
+      {
+        "team_id": 3395,
+        "delta": -35.10587
+      },
+      {
+        "team_id": 2620,
+        "delta": -30.59425
+      },
+      {
+        "team_id": 3405,
+        "delta": -29.77634
+      },
+      {
+        "team_id": 2588,
+        "delta": 28.51432
+      }
+    ]
+  },
+  "admitting_all_236_from_current": {
+    "common_sides": 163796,
+    "sides_abs_change_gt_001": 886,
+    "matches_abs_change_gt_001": 457,
+    "last_club_elo_abs_change_gt_001": 122,
+    "max_abs_common_side": 64.18907,
+    "max_abs_last_club": 53.65138,
+    "largest_last_club_deltas": [
+      {
+        "team_id": 3397,
+        "delta": -53.65138
+      },
+      {
+        "team_id": 3395,
+        "delta": -43.24528
+      },
+      {
+        "team_id": 2620,
+        "delta": -38.99055
+      },
+      {
+        "team_id": 3400,
+        "delta": 34.75155
+      },
+      {
+        "team_id": 2588,
+        "delta": 34.48925
+      }
+    ]
+  },
+  "full_global_elo_movement_from_only_fixing_8625": 0,
+  "same_club_same_day_conflicts": 0,
+  "identical_if_all_201_played_at_end_of_utc_day": true
+}

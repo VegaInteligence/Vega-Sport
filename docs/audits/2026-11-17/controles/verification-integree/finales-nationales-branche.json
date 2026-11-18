@@ -1,0 +1,350 @@
+{
+  "candidate": "d29eac65d75ca4eb038a2fc5b24e1bb93d1ae2ab",
+  "database": "postgresql://postgres@127.0.0.1:55439/vega_v2_nations_l18_coord1604",
+  "postgres": 180006,
+  "inputs_sha256": {
+    "world-cup-history-1982.json": "09e239bbe5878cfdcf41e64f1925e73d90cce13426f87ca8a8c6a3fb309be134",
+    "world-cup-history-1998.json": "6f3c10cf74f0cc5d7e9d37defc4e2841672b525b02f7416524772af0e5403acc",
+    "rds-target-projection.json": "e678e4d96fec398f40ec6510f1d00323d3219680834197a0b5b99eb5d7cd07fa",
+    "nations-1547.json": "c38d04bc058ef57a156a8bae8df70dcc7d0c90f48ed24081bc163387c39ce280"
+  },
+  "source": "only the two archived OpenFootball editions, plus a separate controlled copy test",
+  "before": {
+    "1982": {
+      "status": 200,
+      "etag": "W/\"nations-v1-1c2f186614f352661b61b0632ab5dad96dc147130cb2f4593d91c487a07a7086\"",
+      "body_sha256": "2023afed221f972d788ff040eead3c825dbc350b33522ad7d0d04e1e42fbd2dd",
+      "team": "Italie",
+      "id": "t_v0001032",
+      "stage": "Finale",
+      "tone": null,
+      "games": 7,
+      "played_status": {
+        "not_started": 7
+      },
+      "final": {
+        "date": "1982-07-11",
+        "season": "1981/1982",
+        "competition": "World Cup",
+        "edition": "open-cups:world-cup-history:1982",
+        "round": "Final",
+        "status": "not_started",
+        "home": {
+          "id": "t_v0001032",
+          "name": "Italie",
+          "imageUrl": null
+        },
+        "away": {
+          "id": "t_v0001130",
+          "name": "West Germany",
+          "imageUrl": null
+        },
+        "homeScore": null,
+        "awayScore": null,
+        "homePenalties": null,
+        "awayPenalties": null
+      }
+    },
+    "1998": {
+      "status": 200,
+      "etag": "W/\"nations-v1-59f4220a6c92c2c4d008210340c586ed423dd1d3df4f6ba7f21793177f31713f\"",
+      "body_sha256": "856d03b0628f2f27475fa3c59c8aebdc0b8759bdc9c9cb1a62f5da9c2947c395",
+      "team": "France",
+      "id": "t_2ysHaw",
+      "stage": "Finale",
+      "tone": null,
+      "games": 7,
+      "played_status": {
+        "not_started": 5,
+        "finished": 2
+      },
+      "final": {
+        "date": "1998-07-12",
+        "season": "1997/1998",
+        "competition": "World Cup",
+        "edition": "open-cups:world-cup-history:1998",
+        "round": "Final",
+        "status": "not_started",
+        "home": {
+          "id": "t_3PHH2o",
+          "name": "Brazil",
+          "imageUrl": null
+        },
+        "away": {
+          "id": "t_2ysHaw",
+          "name": "France",
+          "imageUrl": null
+        },
+        "homeScore": null,
+        "awayScore": null,
+        "homePenalties": null,
+        "awayPenalties": null
+      }
+    }
+  },
+  "after": {
+    "1982": {
+      "status": 200,
+      "etag": "W/\"nations-v1-573ce607cc5ce766150cffe083507cbaa67ab5ab0beaab008914d7969b08eea8\"",
+      "body_sha256": "f38435c38ae34a60ac3c3bb57e2b17e08a4d3dfbf782115d00e5a6103ec47a3c",
+      "team": "Italie",
+      "id": "t_v0001032",
+      "stage": "Vainqueur",
+      "tone": "gold",
+      "games": 7,
+      "played_status": {
+        "finished": 7
+      },
+      "final": {
+        "date": "1982-07-11",
+        "season": "1981/1982",
+        "competition": "World Cup",
+        "edition": "open-cups:world-cup-history:1982",
+        "round": "Final",
+        "status": "finished",
+        "home": {
+          "id": "t_v0001032",
+          "name": "Italie",
+          "imageUrl": null
+        },
+        "away": {
+          "id": "t_v0001130",
+          "name": "West Germany",
+          "imageUrl": null
+        },
+        "homeScore": 3,
+        "awayScore": 1,
+        "homePenalties": null,
+        "awayPenalties": null
+      }
+    },
+    "1998": {
+      "status": 200,
+      "etag": "W/\"nations-v1-c98e5355cfb1f089896c7b992185b82e94afae96921e9e5ddba97866edb8ed1b\"",
+      "body_sha256": "d87f1b795cdeedc1dc25255fb48718b74a181d20826d2e6aa865f0f6e0c2ce5b",
+      "team": "France",
+      "id": "t_2ysHaw",
+      "stage": "Vainqueur",
+      "tone": "gold",
+      "games": 7,
+      "played_status": {
+        "finished": 7
+      },
+      "final": {
+        "date": "1998-07-12",
+        "season": "1997/1998",
+        "competition": "World Cup",
+        "edition": "open-cups:world-cup-history:1998",
+        "round": "Final",
+        "status": "finished",
+        "home": {
+          "id": "t_3PHH2o",
+          "name": "Brazil",
+          "imageUrl": null
+        },
+        "away": {
+          "id": "t_2ysHaw",
+          "name": "France",
+          "imageUrl": null
+        },
+        "homeScore": 0,
+        "awayScore": 3,
+        "homePenalties": null,
+        "awayPenalties": null
+      }
+    }
+  },
+  "physical_finals_after": [
+    {
+      "id": 836,
+      "source": "openfootball",
+      "status": "finished",
+      "date": "1982-07-11",
+      "home_id": 1032,
+      "away_id": 1130,
+      "home_score": 3,
+      "away_score": 1,
+      "edition": "open-cups:world-cup-history:1982"
+    },
+    {
+      "id": 1056,
+      "source": "openfootball",
+      "status": "finished",
+      "date": "1998-07-12",
+      "home_id": 5496,
+      "away_id": 5490,
+      "home_score": 0,
+      "away_score": 3,
+      "edition": "open-cups:world-cup-history:1998"
+    }
+  ],
+  "rows_written": {
+    "open-cups:world-cup-history:1982": 52,
+    "open-cups:world-cup-history:1998": 64
+  },
+  "repeat_rows_written": {
+    "open-cups:world-cup-history:1982": 0,
+    "open-cups:world-cup-history:1998": 0
+  },
+  "conditional": {
+    "1982": {
+      "status": 304,
+      "etag": "W/\"nations-v1-573ce607cc5ce766150cffe083507cbaa67ab5ab0beaab008914d7969b08eea8\""
+    },
+    "1998": {
+      "status": 304,
+      "etag": "W/\"nations-v1-c98e5355cfb1f089896c7b992185b82e94afae96921e9e5ddba97866edb8ed1b\""
+    }
+  },
+  "same_116_match_ids": true,
+  "controlled_duplicates_scored": {
+    "1982": {
+      "status": 200,
+      "etag": "W/\"nations-v1-a001e90c571d86daf624f13f5f7c8ae6cc27a429e404e8535331fbcd98b81f69\"",
+      "body_sha256": "708475268f8e15b6fc77e7d809e63ecd023a498a3f589a39eab9bbf883377510",
+      "team": "Italie",
+      "id": "t_v0001032",
+      "stage": "Vainqueur",
+      "tone": "gold",
+      "games": 7,
+      "played_status": {
+        "finished": 7
+      },
+      "final": {
+        "date": "1982-07-11",
+        "season": "1981/1982",
+        "competition": "World Cup",
+        "edition": null,
+        "round": "Final",
+        "status": "finished",
+        "home": {
+          "id": "t_v0001130",
+          "name": "West Germany",
+          "imageUrl": null
+        },
+        "away": {
+          "id": "t_v0001032",
+          "name": "Italie",
+          "imageUrl": null
+        },
+        "homeScore": 1,
+        "awayScore": 3,
+        "homePenalties": null,
+        "awayPenalties": null,
+        "id": "m_v0001057"
+      }
+    },
+    "1998": {
+      "status": 200,
+      "etag": "W/\"nations-v1-85907ceb9b9342c123a2ffa983e6a8010d7046a3d380e6484f6b23643b9016d0\"",
+      "body_sha256": "847bc8bb1b09b15b3c27bbe2c4a961328ea24c8b92213dc0b5a56d98c687b146",
+      "team": "France",
+      "id": "t_2ysHaw",
+      "stage": "Vainqueur",
+      "tone": "gold",
+      "games": 7,
+      "played_status": {
+        "finished": 7
+      },
+      "final": {
+        "date": "1998-07-12",
+        "season": "1997/1998",
+        "competition": "World Cup",
+        "edition": null,
+        "round": "Final",
+        "status": "finished",
+        "home": {
+          "id": "t_2ysHaw",
+          "name": "France",
+          "imageUrl": null
+        },
+        "away": {
+          "id": "t_3PHH2o",
+          "name": "Brazil",
+          "imageUrl": null
+        },
+        "homeScore": 3,
+        "awayScore": 0,
+        "homePenalties": null,
+        "awayPenalties": null,
+        "id": "m_v0001058"
+      }
+    }
+  },
+  "controlled_duplicates_unscored": {
+    "1982": {
+      "status": 200,
+      "etag": "W/\"nations-v1-bc6276be4686cec18f5abd9e76b6e62c053fa6ee2ee82782b7b1b3f1d16d8b4c\"",
+      "body_sha256": "a82e07d2fd4d85dc6597099c42c3ddf30be76658f43be27ecc3d321b4db7297b",
+      "team": "Italie",
+      "id": "t_v0001032",
+      "stage": "Finale",
+      "tone": null,
+      "games": 7,
+      "played_status": {
+        "finished": 6,
+        "not_started": 1
+      },
+      "final": {
+        "date": "1982-07-11",
+        "season": "1981/1982",
+        "competition": "World Cup",
+        "edition": null,
+        "round": "Final",
+        "status": "not_started",
+        "home": {
+          "id": "t_v0001130",
+          "name": "West Germany",
+          "imageUrl": null
+        },
+        "away": {
+          "id": "t_v0001032",
+          "name": "Italie",
+          "imageUrl": null
+        },
+        "homeScore": null,
+        "awayScore": null,
+        "homePenalties": null,
+        "awayPenalties": null,
+        "id": "m_v0001057"
+      }
+    },
+    "1998": {
+      "status": 200,
+      "etag": "W/\"nations-v1-86570cfbef81100165546772976f2b06b6efa2193a6419e434b418bcd0987194\"",
+      "body_sha256": "a98ec25e76559bab1b320922fcce43f3d7a4ac24d624319227cc3735740f55d3",
+      "team": "France",
+      "id": "t_2ysHaw",
+      "stage": "Finale",
+      "tone": null,
+      "games": 7,
+      "played_status": {
+        "finished": 6,
+        "not_started": 1
+      },
+      "final": {
+        "date": "1998-07-12",
+        "season": "1997/1998",
+        "competition": "World Cup",
+        "edition": null,
+        "round": "Final",
+        "status": "not_started",
+        "home": {
+          "id": "t_2ysHaw",
+          "name": "France",
+          "imageUrl": null
+        },
+        "away": {
+          "id": "t_3PHH2o",
+          "name": "Brazil",
+          "imageUrl": null
+        },
+        "homeScore": null,
+        "awayScore": null,
+        "homePenalties": null,
+        "awayPenalties": null,
+        "id": "m_v0001058"
+      }
+    }
+  }
+}

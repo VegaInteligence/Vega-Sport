@@ -1,0 +1,30 @@
+{
+  "status": "passed",
+  "candidate": "413aaeb75c7289c55be1607ffe6891b22e4c4e8a",
+  "observed_source_sha256": "5dc3b5a266e493ac0c98eebdb691cddbff70497bf3719113ab27bb80bfb8c176",
+  "priorities_before": {
+    "3": 20,
+    "9": 18,
+    "2": 65,
+    "4": 3
+  },
+  "priorities_after": {
+    "1": 106
+  },
+  "planned_actions": [
+    106,
+    0
+  ],
+  "profile_batch_sizes": [
+    100,
+    6
+  ],
+  "successful_profile_rows": 106,
+  "published_profile_views": 106,
+  "HTTP_200": 106,
+  "canonical_ids_unchanged": true,
+  "local_fixture_responses": true,
+  "production_written": false,
+  "source_suite_count": 44,
+  "portable_zip_sha256": "b74a7a8e0c8597f1575053b5b31187eed0a63051aaba5441abcee8077367ba6e"
+}

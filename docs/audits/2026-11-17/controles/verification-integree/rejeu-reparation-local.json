@@ -1,0 +1,116 @@
+{
+  "status": "passed",
+  "candidate": "17306e6da6dcf116cdfc61f26749ef3d01a46e47",
+  "postgres_major": 18,
+  "physical_restore": {
+    "would_restore": 35,
+    "restored": 35,
+    "preserved_elo": 70,
+    "elo_pending_sides": 0,
+    "elo_run": 2097,
+    "edition_versions": {
+      "332": 1,
+      "333": 1,
+      "334": 1
+    }
+  },
+  "verified_old_api_ids": 35,
+  "ordinary_collect_finished": [
+    374,
+    374,
+    375
+  ],
+  "rolling_finished": {
+    "4": 341,
+    "10": 369,
+    "17": 386,
+    "18": 396,
+    "future": 397
+  },
+  "enriched_match": [
+    8049,
+    332,
+    2026,
+    7918,
+    0,
+    2552,
+    2558,
+    0,
+    1,
+    0,
+    1,
+    2,
+    4
+  ],
+  "without_enrichment_http": {
+    "ENG_6_national-league-north": 304,
+    "ENG_6_national-league-south": 304,
+    "ENG_7_northern-premier-league": 304
+  },
+  "completed_elo_noop": {
+    "would_restore": 0,
+    "restored": 0,
+    "preserved_elo": 70,
+    "elo_pending_sides": 0,
+    "elo_run": 3101,
+    "edition_versions": {}
+  },
+  "superseded_elo_still_pending": {
+    "would_restore": 35,
+    "restored": 35,
+    "preserved_elo": 0,
+    "elo_pending_sides": 70,
+    "elo_run": 3100,
+    "edition_versions": {
+      "332": 2,
+      "333": 2,
+      "334": 2
+    }
+  },
+  "transcripts": {
+    "workflow": {
+      "command": [
+        "/Library/Frameworks/Python.framework/Versions/3.14/bin/python3",
+        "/private/var/folders/8z/mp96_9353w79bsgv7kftgk2h0000gn/T/Vega Matchday Portable blx17jhw/Nouveau dossier du propriétaire/tracks/4-history/restauration-open-matchday/workflow.py",
+        "/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-20261117",
+        "portable1physical",
+        "--portable",
+        "--real-preimage",
+        "/private/var/folders/8z/mp96_9353w79bsgv7kftgk2h0000gn/T/Vega Matchday Portable blx17jhw/Nouveau dossier du propriétaire/delivery/rds-preimage/avant-v3/inputs.json.zlib"
+      ],
+      "log": "tracks/4-history/restauration-open-matchday/workflow.log"
+    },
+    "continuity": {
+      "command": [
+        "/Library/Frameworks/Python.framework/Versions/3.14/bin/python3",
+        "/private/var/folders/8z/mp96_9353w79bsgv7kftgk2h0000gn/T/Vega Matchday Portable blx17jhw/Nouveau dossier du propriétaire/tracks/4-history/restauration-open-matchday/continuity.py",
+        "/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-20261117",
+        "portable1continuity",
+        "--template",
+        "portable1physical",
+        "--enrichment"
+      ],
+      "log": "tracks/4-history/restauration-open-matchday/continuity.log"
+    },
+    "rolling": {
+      "command": [
+        "/Library/Frameworks/Python.framework/Versions/3.14/bin/python3",
+        "/private/var/folders/8z/mp96_9353w79bsgv7kftgk2h0000gn/T/Vega Matchday Portable blx17jhw/Nouveau dossier du propriétaire/tracks/4-history/restauration-open-matchday/rolling.py",
+        "/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-20261117",
+        "portable1rolling"
+      ],
+      "log": "tracks/4-history/restauration-open-matchday/rolling.log"
+    },
+    "maintenance": {
+      "command": [
+        "/Library/Frameworks/Python.framework/Versions/3.14/bin/python3",
+        "/private/var/folders/8z/mp96_9353w79bsgv7kftgk2h0000gn/T/Vega Matchday Portable blx17jhw/Nouveau dossier du propriétaire/tracks/4-history/restauration-open-matchday/maintenance.py",
+        "/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-20261117",
+        "portable1maintenance",
+        "--template",
+        "portable1physical"
+      ],
+      "log": "tracks/4-history/restauration-open-matchday/maintenance.log"
+    }
+  }
+}

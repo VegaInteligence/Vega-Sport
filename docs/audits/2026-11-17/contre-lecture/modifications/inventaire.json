@@ -149,7 +149,7 @@
     "tests/image-source.test.mjs",
     "tests/openfootball_history.test.mjs"
   ],
-  "application_diff_sha256": "9f52cd5d31e115bd71fb262f749e409bdb81955901b786014c8f8a64074ee83e",
+  "application_diff_sha256": "6cce5e7dd1517702c050d5e25c4430b4e1779d7277a9a07c6dc246953090058f",
   "parts": [
     {
       "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-001.patch",
@@ -271,8 +271,8 @@
     },
     {
       "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-008.patch",
-      "sha256": "3243fe68327f56ccabacc1ec238ce012a92b2ccef983eb3cd3d0f197b3f0dc29",
-      "bytes": 74638,
+      "sha256": "15ef7a16dec600bba11fa2ba073c6966997e6906d83ee5db8dc9cc1a523e9908",
+      "bytes": 80346,
       "paths": [
         "backend/tests/test_calculator.py",
         "backend/tests/test_dfb_periods.py",
@@ -321,38 +321,38 @@
     },
     {
       "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-013.patch",
-      "sha256": "01d12032ae8c593dd749689df7c4ced23a5ef604b90831bdc5625fa839ca2191",
-      "bytes": 113343,
+      "sha256": "c5a10ca7a914e32c30e4f1fa94281027657ee8338f5b18c07abe1db526745b78",
+      "bytes": 70860,
       "paths": [
         "backend/vega/open_matchday_restore.py",
         "backend/vega/sources/__init__.py",
         "backend/vega/sources/cup_periods.py",
         "backend/vega/sources/cups.py",
         "backend/vega/sources/curated.py",
-        "backend/vega/sources/data/open_matchday_history.json",
-        "backend/vega/sources/dfb_pokal_periods.json"
+        "backend/vega/sources/data/open_matchday_history.json"
       ]
     },
     {
       "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-014.patch",
-      "sha256": "7b4204926a9e2b4a601538e43b0cfdd0b82cc4a17bf651804b0fd2e1779ec341",
-      "bytes": 107126,
+      "sha256": "f3e3ba88202d5c42da80eb912dbbbe5a30073e9d3e21fee53ca7d66668c78abd",
+      "bytes": 75734,
       "paths": [
+        "backend/vega/sources/dfb_pokal_periods.json",
         "backend/vega/sources/open_matchday.py",
         "backend/vega/sources/open_matchday_history.py",
-        "backend/vega/sources/snapshot.py",
-        "backend/vega/sources/sportscore.py",
-        "backend/vega/sources/uefa.py",
-        "backend/vega/transfermarkt.py",
-        "dashboard/frontend/src/competition-selector.css",
-        "dashboard/frontend/src/components/ClubScoutUI.jsx"
+        "backend/vega/sources/snapshot.py"
       ]
     },
     {
       "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-015.patch",
-      "sha256": "9e2980d24f23bfc50652ab622ffbb2b244a428974228d6f9cd8b1f285e7e9b39",
-      "bytes": 90976,
+      "sha256": "e41a4bcbc9e3710a7876a3b26fac6cdd5d72bd7a5b7469f61f233466c266157c",
+      "bytes": 114172,
       "paths": [
+        "backend/vega/sources/sportscore.py",
+        "backend/vega/sources/uefa.py",
+        "backend/vega/transfermarkt.py",
+        "dashboard/frontend/src/competition-selector.css",
+        "dashboard/frontend/src/components/ClubScoutUI.jsx",
         "dashboard/frontend/src/components/CupCompetition.jsx",
         "dashboard/frontend/src/components/GlobalSearch.jsx",
         "dashboard/frontend/src/components/MatchDetail.jsx",
@@ -366,7 +366,14 @@
         "dashboard/frontend/src/services/cup-catalog.js",
         "dashboard/frontend/src/services/cup-matches.js",
         "dashboard/frontend/src/services/cup-worker-client.js",
-        "dashboard/frontend/src/services/football-client.js",
+        "dashboard/frontend/src/services/football-client.js"
+      ]
+    },
+    {
+      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-016.patch",
+      "sha256": "a7e418733978876830a83e7345d38ba27f58dec505f1e61f209d9cf9e2dc97e3",
+      "bytes": 54936,
+      "paths": [
         "dashboard/frontend/src/services/format.js",
         "dashboard/frontend/src/services/image-source.js",
         "dashboard/frontend/src/services/media-registry.js",
@@ -383,7 +390,7 @@
       ]
     },
     {
-      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-016.patch",
+      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-017.patch",
       "sha256": "2d17a2d4de9362314b239c0ed48d212ba83a0c320756285e1b2743666f2330df",
       "bytes": 112887,
       "paths": [
@@ -392,7 +399,7 @@
       ]
     },
     {
-      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-017.patch",
+      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-018.patch",
       "sha256": "4d85e444dea8a25c0c97c4824b5956ba16c4d8aba7685c642bb474f9b2b5bb8c",
       "bytes": 65611,
       "paths": [

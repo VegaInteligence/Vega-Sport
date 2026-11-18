@@ -1,0 +1,41 @@
+{
+  "zip": "vi22-navigation-production.zip",
+  "sha256": "034afab85f43931029576ac563f9adbea9b6a09603ea42e54d4f6e40179bf99a",
+  "bytes": 315376,
+  "verification": {
+    "status": "PASS",
+    "reports": [
+      {
+        "viewport": 393,
+        "started": "2026-11-18T15:42:10.571Z",
+        "finished": "2026-11-18T15:42:46.246Z",
+        "steps": {
+          "opened-club": 17,
+          "opened-played": 6,
+          "opened-future": 6,
+          "featured-cup": 3,
+          "similarity": 1,
+          "unranked": 1
+        },
+        "errors": 0
+      },
+      {
+        "viewport": 1440,
+        "started": "2026-11-18T15:42:10.558Z",
+        "finished": "2026-11-18T15:42:46.185Z",
+        "steps": {
+          "opened-club": 17,
+          "opened-played": 6,
+          "opened-future": 6,
+          "featured-cup": 3,
+          "similarity": 1,
+          "unranked": 1
+        },
+        "errors": 0
+      }
+    ],
+    "actual_navigation_clicks": 58,
+    "other_observations": 10,
+    "screenshots": 6
+  }
+}

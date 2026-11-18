@@ -35,16 +35,16 @@ ok
 test_22q_no_mode_refuses_and_fresh_needs_an_empty_season (test_archive_corrections.CorrectionsTest.test_22q_no_mode_refuses_and_fresh_needs_an_empty_season) ... a mode is required: --plan, --plan-store, --show-plan, --apply, --apply-stored or --fresh (FAILURE_MODES.md §22)
 season=2015/2016 matches=4 held=0
 archives seasons=1 matches=4
-/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/ci-clean/lib/python3.14/site-packages/psycopg/_connection_base.py:153: ResourceWarning: <psycopg.Connection object at 0x108d11f90> was deleted while still open. Please use 'with' or '.close()' to close the connection properly
+/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/ci-clean/lib/python3.14/site-packages/psycopg/_connection_base.py:153: ResourceWarning: <psycopg.Connection object at 0x10a96e210> was deleted while still open. Please use 'with' or '.close()' to close the connection properly
   __warn(
 refused: --fresh: 1 season(s) already hold archive matches (2015/2016); repairs need a reviewed plan
-/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/ci-clean/lib/python3.14/site-packages/psycopg/_connection_base.py:153: ResourceWarning: <psycopg.Connection object at 0x108d12350> was deleted while still open. Please use 'with' or '.close()' to close the connection properly
+/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/ci-clean/lib/python3.14/site-packages/psycopg/_connection_base.py:153: ResourceWarning: <psycopg.Connection object at 0x10a96e5d0> was deleted while still open. Please use 'with' or '.close()' to close the connection properly
   __warn(
 ok
 test_22r_a_held_record_beside_a_repair_is_a_partial_apply (test_archive_corrections.CorrectionsTest.test_22r_a_held_record_beside_a_repair_is_a_partial_apply) ... season=2015/2016 matches=4 held=0
 season=2015/2016 outcome=partial
 {"resumed":[],"seasons":{"2015/2016":"partial"},"status":"partial"}
-/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/ci-clean/lib/python3.14/site-packages/psycopg/_connection_base.py:153: ResourceWarning: <psycopg.Connection object at 0x108cfe9e0> was deleted while still open. Please use 'with' or '.close()' to close the connection properly
+/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/ci-clean/lib/python3.14/site-packages/psycopg/_connection_base.py:153: ResourceWarning: <psycopg.Connection object at 0x10a9af100> was deleted while still open. Please use 'with' or '.close()' to close the connection properly
   __warn(
 ok
 test_22s_the_collect_role_plans_and_applies_and_still_cannot_read_agg (test_archive_corrections.CorrectionsTest.test_22s_the_collect_role_plans_and_applies_and_still_cannot_read_agg) ... season=2015/2016 matches=4 held=0
@@ -62,7 +62,7 @@ ok
 test_23j_a_subset_decides_only_its_seasons (test_archive_deletions.DurableApplyTest.test_23j_a_subset_decides_only_its_seasons) ... season=2014/2015 outcome=applied
 season=2015/2016 outcome=applied
 ok
-test_23k_show_plan_writes_the_stored_bytes (test_archive_deletions.DurableApplyTest.test_23k_show_plan_writes_the_stored_bytes) ... /Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/ci-clean/lib/python3.14/site-packages/psycopg/_connection_base.py:153: ResourceWarning: <psycopg.Connection object at 0x108c0b950> was deleted while still open. Please use 'with' or '.close()' to close the connection properly
+test_23k_show_plan_writes_the_stored_bytes (test_archive_deletions.DurableApplyTest.test_23k_show_plan_writes_the_stored_bytes) ... /Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/ci-clean/lib/python3.14/site-packages/psycopg/_connection_base.py:153: ResourceWarning: <psycopg.Connection object at 0x10a85fa50> was deleted while still open. Please use 'with' or '.close()' to close the connection properly
   __warn(
 ok
 test_23f_empty_partial_or_complete_primary_editions_keep_the_archive (test_archive_deletions.PrimaryOverlapTest.test_23f_empty_partial_or_complete_primary_editions_keep_the_archive) ... season=2021/2022 matches=2 held=0
@@ -505,6 +505,8 @@ test_19v_a_corrected_score_or_statistic_is_a_change_of_its_match (test_source_sn
 test_19w_a_fixture_no_longer_listed_is_removed (test_source_snapshots.OpenMatchdayGuardTest.test_19w_a_fixture_no_longer_listed_is_removed) ... ok
 test_22a_missing_statistic_columns_or_cells_keep_the_stored_values (test_source_snapshots.OpenMatchdayGuardTest.test_22a_missing_statistic_columns_or_cells_keep_the_stored_values) ... ok
 test_22b_a_stated_zero_replaces_the_stored_value_once (test_source_snapshots.OpenMatchdayGuardTest.test_22b_a_stated_zero_replaces_the_stored_value_once) ... ok
+test_a_qualified_league_keeps_only_the_proven_rolling_prefix (test_source_snapshots.OpenMatchdayGuardTest.test_a_qualified_league_keeps_only_the_proven_rolling_prefix) ... ok
+test_attested_final_accepts_late_stats_without_moving_the_match (test_source_snapshots.OpenMatchdayGuardTest.test_attested_final_accepts_late_stats_without_moving_the_match) ... ok
 test_19a_to_19f_each_encoding_is_stored_as_the_source_says (test_source_snapshots.ScoreRulesTest.test_19a_to_19f_each_encoding_is_stored_as_the_source_says) ... ok
 test_19g_19h_a_malformed_score_or_status_makes_the_edition_invalid (test_source_snapshots.ScoreRulesTest.test_19g_19h_a_malformed_score_or_status_makes_the_edition_invalid) ... ok
 test_19i_the_frozen_editions_through_the_projection (test_source_snapshots.ScoreRulesTest.test_19i_the_frozen_editions_through_the_projection) ... ok
@@ -536,6 +538,7 @@ test_a_search_is_confirmed_by_the_squad (test_transfermarkt.PureTest.test_a_sear
 test_records_are_read_field_by_field (test_transfermarkt.PureTest.test_records_are_read_field_by_field) ... ok
 test_without_a_birth_date_the_exact_name_in_a_season_of_his_links (test_transfermarkt.PureTest.test_without_a_birth_date_the_exact_name_in_a_season_of_his_links) ... ok
 test_a_profiles_current_club_votes_like_a_valuation (test_transfermarkt.ReaderTest.test_a_profiles_current_club_votes_like_a_valuation) ... ok
+test_due_squad_profiles_gain_priority_without_resetting_the_queue (test_transfermarkt.ReaderTest.test_due_squad_profiles_gain_priority_without_resetting_the_queue) ... ok
 test_injuries_come_first_after_profiles_and_clubs (test_transfermarkt.ReaderTest.test_injuries_come_first_after_profiles_and_clubs) ... ok
 test_the_reader_links_reads_and_pauses (test_transfermarkt.ReaderTest.test_the_reader_links_reads_and_pauses) ... ok
 test_20ac_a_quarantine_after_publication_hides_the_contract (test_transfermarkt_history.ContractTest.test_20ac_a_quarantine_after_publication_hides_the_contract) ... ok
@@ -671,6 +674,6 @@ test_the_terms_follow_the_table_columns (test_xg.FitTest.test_the_terms_follow_t
 test_too_few_shots_or_no_goal_give_no_model (test_xg.FitTest.test_too_few_shots_or_no_goal_give_no_model) ... ok
 
 ----------------------------------------------------------------------
-Ran 559 tests in 738.277s
+Ran 562 tests in 325.629s
 
 OK

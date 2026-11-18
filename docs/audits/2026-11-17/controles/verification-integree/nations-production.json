@@ -1,0 +1,53 @@
+[
+  {
+    "status": 200,
+    "at": "2026-11-18T15:47:27.340702+00:00",
+    "url": "https://vegasport.vercel.app/api/nations/t_2ysHaw?season=2026%2F2027",
+    "body_sha256": "6108161d8b572fda0f1757d18552f51ae42e42d788b9af964191a331cfcfac60",
+    "etag": "W/\"nations-v1-3ed98040a4f7ba84ca9e9900c2da1a2914c2f9338d2145a0d41b16d81c259f96\"",
+    "cache_age": null,
+    "id": "t_2ysHaw",
+    "team": "France",
+    "year": 1998,
+    "stage": "Finale",
+    "games": 7,
+    "played_status": {
+      "not_started": 5,
+      "finished": 2
+    },
+    "final": {
+      "date": "1998-07-12",
+      "round": "Final",
+      "status": "not_started",
+      "homeScore": null,
+      "awayScore": null,
+      "home": "Brazil",
+      "away": "France"
+    }
+  },
+  {
+    "status": 200,
+    "at": "2026-11-18T15:47:26.908742+00:00",
+    "url": "https://vegasport.vercel.app/api/nations/t_v0001032?season=2026%2F2027",
+    "body_sha256": "3bd645c8e7b0b15de01bf62d05248f075832e4278257d650a555d5271e74d452",
+    "etag": "W/\"nations-v1-d8dac7459d783bdd6f1ee3174cd7c8bde0545e1dbb68c9e660b3c9ff70825217\"",
+    "cache_age": null,
+    "id": "t_v0001032",
+    "team": "Italie",
+    "year": 1982,
+    "stage": "Finale",
+    "games": 7,
+    "played_status": {
+      "not_started": 7
+    },
+    "final": {
+      "date": "1982-07-11",
+      "round": "Final",
+      "status": "not_started",
+      "homeScore": null,
+      "awayScore": null,
+      "home": "Italie",
+      "away": "West Germany"
+    }
+  }
+]
