@@ -1,0 +1,30 @@
+{
+  "setup": "Signed edition grid; RDS inputs 2097 and calendar; normal public federation responses for 43 reported outcomes; local worker code from the indicated production hash. Private raw bodies are kept separately.",
+  "expected": "Organizer identity, exhaustive 11-team round robin, 42 matches played, one administrative outcome, unchanged authoritative scores, two genuine Elo outputs for the forfeit, and exact reproduction on the common rows. Signed player grid must classify no domestic positive minutes.",
+  "run_argv": [
+    "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/ci-clean/bin/python",
+    "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/tracks/6-teams/awarded-belgium/verify.py",
+    "/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-20261117"
+  ],
+  "outputs": {
+    "calendar-comparison.json": "034faa70d86f72ca52e42df4cd30ef47ab1943d98473dc4dc75f80ab2dc6a4b4",
+    "fixtures-110.csv": "f95b263ad940104d19fdcb3d2dc44d98a1f63bac57676a44ca4d04a2551bb335",
+    "sensitivity.json": "2f666be00d16914e4dca8a499c7fbe5aecf3a670f19c3d2a7738b4774e39ef9b",
+    "changed-after.csv": "378443cf291592c9bf719c431c5e8bb572e2974a862d55591b04b692b80d21a1",
+    "appearances-summary.json": "4afbe6fbf65742849fe030660ba9d1eb501f2e0a93ea916652d1742995ccacd5",
+    "appearances-43.csv": "24a95d67cd07c332fbb90dfa7f5640cb00b4fef86b5f001c0eb7430032f1c86e"
+  },
+  "grid_sha256": "64153a8ae5504b4bd53d0c4b995593f42729d8caaee341b786a1b4b3a78c0035",
+  "source": {
+    "capture": "81ba9bed464a4375cf8b12f6f5285cb87b7535198dbb6f4642871492aeceb466",
+    "query": "b7d9e543d6d239f204387b023f231a94a2b923755ef0c3a2e3c18683d0c787fd",
+    "rds_receipt": "e0fc05a53fddff7e398234d4c2e44230c818430d07162b652ebb72af34197d75",
+    "rds_input": "10ca2033d259fa6eb50b902db12589d333c083ccb961d37a9f015a2a56565f12"
+  },
+  "logs": {
+    "calendar.py": "{\"forfeitByOneTeam\": {\"fixtures\": 1, \"same_calendar_dates\": 1, \"same_scores\": 1, \"exact_known_kickoffs\": 0, \"null_db_kickoff\": 1, \"elo_sides\": 2, \"player_scores\": 0}, \"planned\": {\"fixtures\": 67, \"same_calendar_dates\": 66, \"same_scores\": 67, \"exact_known_kickoffs\": 0, \"null_db_kickoff\": 67, \"elo_sides\": 0, \"player_scores\": 0}, \"finished\": {\"fixtures\": 42, \"same_calendar_dates\": 42, \"same_scores\": 42, \"exact_known_kickoffs\": 0, \"null_db_kickoff\": 42, \"elo_sides\": 84, \"player_scores\": 0}}",
+    "replay.py": "{\"run\": 2097, \"full_sides_within_one_ulp\": 163846, \"later_sides_with_different_f32_after\": 32, \"distinct_later_matches\": 16, \"distinct_later_teams\": 9, \"maximum_later_absolute_points\": 11.973395015428878, \"latest_changed_after\": \"2026-11-13\"}",
+    "appearances.py": "{\"finished_or_administrative\": 43, \"matches_with_any_named_appearance\": 42, \"both_eleven_named_starters\": 42, \"adm_match_appearances\": 0, \"rds_matches_with_player_scores\": 0, \"counts\": {\"home_starters\": 462, \"away_starters\": 462, \"home_substitutes_entered\": 177, \"away_substitutes_entered\": 187, \"home_bench_only_or_unproven\": 115, \"away_bench_only_or_unproven\": 102, \"proven_appearances\": 1288, \"rds_player_scores\": 0}, \"observations\": \"Starts and substitutions in the public reports prove participation only. Ball actions, minutes and eligibility for all Vega dimensions require independent evidence.\"}"
+  },
+  "result": "passed; all six generated files identical after second run"
+}

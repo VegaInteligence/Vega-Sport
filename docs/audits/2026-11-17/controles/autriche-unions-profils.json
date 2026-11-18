@@ -1,0 +1,46 @@
+[
+  {
+    "root": 3284,
+    "disposition": "qualified_2026_first_team_profile",
+    "qualified_matches": [
+      5743
+    ],
+    "all_frozen_matches": 1,
+    "evidence": [
+      "krems-original-cup-post",
+      "krems-original-cup-metadata",
+      "krems-cup-screen.jpg",
+      "krems-review-metadata",
+      "krems-test-double-post",
+      "krems-july-instagram.jpg",
+      "krems-team",
+      "krems-team-photo.jpg"
+    ],
+    "asset": "sources/krems-crest.png",
+    "image_transformed": false,
+    "institutional_union_emblem_all_history_established": false,
+    "period_specific_kit_asset": false,
+    "all_future_fixtures_qualified": false,
+    "provider_merge_authorized": false
+  },
+  {
+    "root": 3286,
+    "disposition": "hold_no_first_team_graphic_evidence",
+    "qualified_matches": [],
+    "all_frozen_matches": 1,
+    "evidence": [
+      "schenkenfelden-schedule",
+      "schenkenfelden-search-union",
+      "schenkenfelden-search-cup",
+      "schenkenfelden-search-leonfelden",
+      "leonfelden-football-ref",
+      "leonfelden-football-http",
+      "leonfelden-facebook",
+      "leonfelden-instagram",
+      "bregenz-cup-union"
+    ],
+    "reason": "Own schedule covers 1b/1c/reserve; no qualified own first-team graphic. Social posts not accessible. Organizer/member generic logos excluded.",
+    "proof_of_no_emblem_exists": false,
+    "provider_merge_authorized": false
+  }
+]

@@ -1,0 +1,48 @@
+{
+  "at": [
+    "vega_v2",
+    "2026-11-18 06:18:44.680998+00",
+    "4415414:4415414:",
+    "on"
+  ],
+  "club_ids": 11,
+  "matched_unique_ordered_opponents": 110,
+  "mixed_status": {
+    "finished/finished": 42,
+    "forfeitByOneTeam/finished": 1,
+    "planned/not_started": 67
+  },
+  "rds_sha256": "10ca2033d259fa6eb50b902db12589d333c083ccb961d37a9f015a2a56565f12",
+  "records_sha256": "f95b263ad940104d19fdcb3d2dc44d98a1f63bac57676a44ca4d04a2551bb335",
+  "source_sha256": "4ad5daa2dd50f36a7d2a2847591ee1d300acbb866aa4550b712e66fd421bf234",
+  "state": {
+    "finished": {
+      "elo_sides": 84,
+      "exact_known_kickoffs": 0,
+      "fixtures": 42,
+      "null_db_kickoff": 42,
+      "player_scores": 0,
+      "same_calendar_dates": 42,
+      "same_scores": 42
+    },
+    "forfeitByOneTeam": {
+      "elo_sides": 2,
+      "exact_known_kickoffs": 0,
+      "fixtures": 1,
+      "null_db_kickoff": 1,
+      "player_scores": 0,
+      "same_calendar_dates": 1,
+      "same_scores": 1
+    },
+    "planned": {
+      "elo_sides": 0,
+      "exact_known_kickoffs": 0,
+      "fixtures": 67,
+      "null_db_kickoff": 67,
+      "player_scores": 0,
+      "same_calendar_dates": 66,
+      "same_scores": 67
+    }
+  },
+  "unique_organizer_fixtures": 110
+}

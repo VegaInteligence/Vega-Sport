@@ -1,14 +1,13 @@
 {
-  "manifest": "72cbc81b5865b5b7c444976b1bc1a1bad9af6d6b4e8fcef24270b523db2be78b",
-  "records": 1571,
+  "manifest": "cd1efc8dc3bca26cd2f23664645f58a85fae25df1282873a9abe193791a50d2e",
+  "records": 1572,
   "records_at_baseline": 1468,
-  "closed_from_the_99": 91,
-  "named_open": 4,
+  "closed_from_the_99": 92,
+  "named_open": 3,
   "bracket_slots": 4,
   "open_ids": [
     2685,
     2947,
-    3284,
     3286,
     5012,
     5017,
@@ -16,13 +15,13 @@
     13541
   ],
   "original_active_with_missing_pointer": 840,
-  "verified_active_of_840": 832,
+  "verified_active_of_840": 833,
   "eligible_active_club_identities_undetermined": true,
   "structurally_malformed_name_flags": 1782,
   "clubs": {
-    "verified_candidate": 1467,
+    "verified_candidate": 1468,
     "published_profile": 1475,
-    "unresolved": 8061
+    "unresolved": 8060
   },
   "competitions": {
     "published_profile": 82,
@@ -33,6 +32,7 @@
     "tracks/7-artwork/europe-current-residual/decisions.csv": 40,
     "tracks/7-artwork/residual-active-1468/six-attributions.csv": 6,
     "tracks/7-artwork/dutch-current-residual/decisions-35.csv": 34,
+    "tracks/7-artwork/austrian-unions-followup/decisions.json": 1,
     "tracks/7-artwork/swiss-current-residual/decisions.csv": 10,
     "tracks/7-artwork/lausanne-ouchy-3358/decisions.csv": 1
   }

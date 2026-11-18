@@ -1,0 +1,118 @@
+{
+ "at": "2026-11-18 06:24:36.081061+00:00",
+ "database": "vega_v2",
+ "columns": [
+  "transaction_read_only",
+  "match_record",
+  "match_keys",
+  "team_elo",
+  "scoring_view",
+  "coverage",
+  "player_grades",
+  "player_power",
+  "player_stats",
+  "lineup_players",
+  "match_events",
+  "team_stats",
+  "forecasts",
+  "lineup_forecasts"
+ ],
+ "rows": [
+  [
+   "on",
+   {
+    "id": 13507,
+    "leg": null,
+    "note": null,
+    "source": "open_matchday",
+    "status": "finished",
+    "revision": 1,
+    "round_id": 13372,
+    "venue_id": null,
+    "season_id": 2026,
+    "attendance": null,
+    "away_score": 5,
+    "group_name": null,
+    "home_score": 0,
+    "is_neutral": null,
+    "kickoff_at": null,
+    "match_date": "2026-09-18",
+    "referee_id": null,
+    "updated_at": "2026-11-18T06:15:44.715054+00:00",
+    "archive_key": null,
+    "has_playoff": null,
+    "away_team_id": 3657,
+    "home_team_id": 3664,
+    "match_number": null,
+    "away_score_90": null,
+    "away_score_et": null,
+    "away_score_ht": null,
+    "home_score_90": null,
+    "home_score_et": null,
+    "home_score_ht": null,
+    "away_team_name": "Beerschot VA U21",
+    "home_team_name": "Seraing U21",
+    "date_unverified": null,
+    "archive_position": 18,
+    "first_finished_at": null,
+    "away_penalty_score": null,
+    "home_penalty_score": null,
+    "decided_on_penalties": null,
+    "competition_season_id": 358
+   },
+   [
+    {
+     "provider": "open_matchday",
+     "entity_id": 13507,
+     "is_current": true,
+     "updated_at": "2026-11-09T13:44:00.588525+00:00",
+     "entity_type": "match",
+     "provider_key": "BEL_U21_pro-league:2026/2027:2026-09-18|Seraing U21|Beerschot VA U21"
+    }
+   ],
+   [
+    {
+     "result": 1,
+     "run_id": 2097,
+     "stakes": 1,
+     "team_id": 3657,
+     "expected": 0.38461223,
+     "match_id": 13507,
+     "elo_after": 1212.4723,
+     "season_id": 2026,
+     "elo_before": 1200.1646,
+     "kickoff_at": "2026-09-18T00:00:00+00:00"
+    },
+    {
+     "result": 0,
+     "run_id": 2097,
+     "stakes": 1,
+     "team_id": 3664,
+     "expected": 0.61538774,
+     "match_id": 13507,
+     "elo_after": 1209.5071,
+     "season_id": 2026,
+     "elo_before": 1221.8148,
+     "kickoff_at": "2026-09-18T00:00:00+00:00"
+    }
+   ],
+   {
+    "match_id": 13507,
+    "season_id": 2026,
+    "penalties_away": null,
+    "penalties_home": null,
+    "own_goals_for_away": null,
+    "own_goals_for_home": null
+   },
+   null,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ]
+ ]
+}

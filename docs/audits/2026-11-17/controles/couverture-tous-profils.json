@@ -4,8 +4,8 @@
     "competition_pointers": "2026-11-18 03:26:16.720277+00:00"
   },
   "cohort_last_complete_day": "2026-11-17",
-  "manifest": "72cbc81b5865b5b7c444976b1bc1a1bad9af6d6b4e8fcef24270b523db2be78b",
-  "manifest_records": 1571,
+  "manifest": "cd1efc8dc3bca26cd2f23664645f58a85fae25df1282873a9abe193791a50d2e",
+  "manifest_records": 1572,
   "source_sha256": {
     "db/root_artwork_snapshot_nov18_verified/census.json": "44fa659347f4ddb398f0e7da475e847ff5dd0b884a479575d98e639ea511b3c8",
     "db/root_artwork_snapshot_nov18_verified/entities.json": "d461b7681d2da82276dcb3bf6f630f130d8097efa6958573ffed66268abe2b7b",
@@ -23,18 +23,18 @@
   },
   "classes": {
     "club_like": {
-      "verified_candidate": 1467,
+      "verified_candidate": 1468,
       "published_profile": 1475,
-      "unresolved": 8061
+      "unresolved": 8060
     },
     "club_like_by_activity": {
       "no_fixture|verified_candidate": 225,
       "recent_finished|published_profile": 1361,
       "older_or_other_only|verified_candidate": 410,
       "older_or_other_only|unresolved": 7829,
-      "recent_finished|verified_candidate": 822,
+      "recent_finished|verified_candidate": 823,
       "no_fixture|unresolved": 224,
-      "recent_finished|unresolved": 4,
+      "recent_finished|unresolved": 3,
       "future_only|verified_candidate": 10,
       "future_only|unresolved": 4,
       "older_or_other_only|published_profile": 114
@@ -52,14 +52,14 @@
     },
     "unresolved_club_prior_evidence": {
       "no_qualifying_identity_in_examined_fixture_sources": 877,
-      "outside_examined_fixture_exposure": 3962,
+      "outside_examined_fixture_exposure": 3961,
       "held_after_identification": 1436,
       "name_contains_literal_fixture": 1782,
       "bracket_slot": 4
     },
     "unresolved_club_prior_keyed_sources": {
       "openfootball": 684,
-      "open_matchday": 228,
+      "open_matchday": 227,
       "vega": 7145,
       "pitchapi": 4
     },
