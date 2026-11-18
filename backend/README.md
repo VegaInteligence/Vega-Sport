@@ -146,6 +146,7 @@ Chaque route liste en tête de fichier ses écarts voulus avec l'API précédent
   - **Le relancer** après lecture des refus (`ops.transfermarkt_blocks`) :
     `UPDATE ops.transfermarkt_state SET gave_up_at = NULL, paused_until = NULL, blocks_in_row = 0, blocked_since = NULL WHERE id = 1;`
   - **Avancement :** la vue `api.provider_reader_progress`.
+  - **Ce que le site en lit** (migration 135) : `/api/player-market-values?id=` nomme le club de chaque estimation quand il est connu (`club`), et `/api/players/{id}/transfers` donne les transferts faits du joueur, du plus ancien au plus récent, avec le club quitté et le club rejoint. Un de nos clubs porte son identifiant, notre nom et son écusson ; un autre, le seul nom du fournisseur. Un joueur dont les transferts n’ont pas encore été lus répond 404, pas une liste vide.
 - coefficients UEFA, avec les points par saison et les clubs encore en lice ;
 - classement FIFA, toutes les éditions depuis 2021 ;
 - classements officiels SportScore, écrits seulement si chaque ligne désigne un club de l'édition ;
