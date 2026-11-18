@@ -68,7 +68,8 @@ def build(db, store):
     x = db.execute
     for index, case in enumerate(CASES, 1):
         k = ids(index)
-        x("INSERT INTO core.competitions(id, name, kind) VALUES (%s, %s, 'league')", (k["competition"], "Demo " + case["id"]))
+        x("INSERT INTO core.competitions(id, name, kind) VALUES (%s, %s, %s::core.competition_kind)",
+          (k["competition"], "Demo " + case["id"], case.get("kind", "league")))
         x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('competition','pitchapi',%s,%s)",
           (case["key"], k["competition"]))
         for label, edition in k["editions"].items():

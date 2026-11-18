@@ -15,6 +15,7 @@ results attest it. Anything else is refused with its code: the scope fails (sour
 table keeps its rows and its date, and the scope is tried again after RETRY_AFTER. A name of a club
 of the previous or next edition is wrong-season evidence (WRONG_EDITION); a name nothing
 designates is missing evidence (UNMATCHED_TEAMS). No row is ever given to a team by elimination.
+The first table also needs the league roster or positive evidence of the native group phase.
 The writer reads and replaces SportScore's rows without a stage only (OWN).
 
 Each accepted row keeps its basis: the club's results Vega counted when it was observed
@@ -460,6 +461,55 @@ def _clubs_by_table(rows):
     return out
 
 
+def _group_key(name):
+    return normalize(re.sub(r"^(?:group|groupe)\s+", "", (name or "").strip(), flags=re.IGNORECASE))
+
+
+def _first_observation(conn, edition, kind, tables, linked, members):
+    """A first read must cover the evidenced population, including clubs on zero matches."""
+    proposed = {_group_key(name): {linked[row["name"]] for row in rows} for name, rows in tables}
+    if len(proposed) != len(tables):
+        raise SourceError("UNVERIFIED_TABLE", f"edition {edition}: ambiguous group names")
+
+    # Named groups are independent of the season's union of clubs, which can include another
+    # phase. A scheduled fixture is evidence of membership even before either club has played.
+    phase = {}
+    for name, team in conn.execute(
+        """SELECT DISTINCT m.group_name, x.team_id
+           FROM core.matches m LEFT JOIN core.rounds r ON r.id = m.round_id
+           CROSS JOIN LATERAL (VALUES (m.home_team_id), (m.away_team_id)) x(team_id)
+           WHERE m.competition_season_id = %s AND m.status <> 'canceled' AND x.team_id IS NOT NULL
+             AND nullif(btrim(m.group_name), '') IS NOT NULL
+             AND coalesce(r.stage, 'regular') IN ('regular', 'group')""", (edition,)
+    ):
+        phase.setdefault(_group_key(name), set()).add(team)
+
+    if phase:
+        known = set().union(*phase.values())
+        if sum(map(len, phase.values())) != len(known):
+            raise SourceError("UNVERIFIED_TABLE", f"edition {edition}: native groups overlap across phases")
+        for name, expected in sorted(phase.items()):
+            if name in proposed:
+                complete = proposed[name] & known == expected
+            else:
+                complete = any(clubs & known == expected for label, clubs in proposed.items() if label not in phase)
+            if not complete:
+                raise SourceError("INCOMPLETE_TABLE", f"edition {edition}: group {name!r} does not cover its native roster")
+        return
+
+    present = set().union(*proposed.values())
+    # Without phase evidence, an ordinary league can publish the entire roster, including at
+    # zero played. A smaller named phase or an unverified cup cannot use the league's roster.
+    partition = sum(map(len, proposed.values())) == len(present)
+    absent = members - present
+    if kind != "league" or not partition or (absent and set(proposed) != {""}):
+        raise SourceError("UNVERIFIED_TABLE", f"edition {edition}: the table's phase or full roster is unverified")
+    if absent:
+        names = _team_names(conn, absent)
+        raise SourceError("INCOMPLETE_TABLE", f"edition {edition}: clubs of the league roster missing: "
+                          + ", ".join(names[team] for team in sorted(absent)))
+
+
 def _public_ids(conn, teams):
     """The clubs' public ids (api.public_id's rule), the keys of RETIRED_ROWS."""
     found = dict(conn.execute("""SELECT entity_id, provider_key FROM core.provider_ids
@@ -590,14 +640,16 @@ def run(conn, get, scope, now):
     key = scope.split(":", 1)[1]
     slug = LEAGUES[key]
     edition = conn.execute(
-        """SELECT cs.id, se.label, cs.native_label, se.id FROM core.provider_ids p JOIN core.competition_seasons cs ON cs.competition_id = p.entity_id
+        """SELECT cs.id, se.label, cs.native_label, se.id, c.kind::text
+           FROM core.provider_ids p JOIN core.competition_seasons cs ON cs.competition_id = p.entity_id
            JOIN core.seasons se ON se.id = cs.season_id
+           JOIN core.competitions c ON c.id = cs.competition_id
            WHERE p.entity_type = 'competition' AND p.provider = 'pitchapi' AND p.provider_key = %s AND p.is_current AND cs.is_current""",
         (key,),
     ).fetchone()
     if edition is None:  # not collected (yet): no call
         return 0, 0
-    edition, season, native_label, year = edition
+    edition, season, native_label, year, kind = edition
     tables = parse(get(URL + "?" + urlencode({"sport": "football", "slug": slug})), slug)
     check(tables)
     teams = link(conn, edition, tables)
@@ -614,6 +666,8 @@ def run(conn, get, scope, now):
         stored[(group, team)] = dict(zip(FIELDS, values), basis=tuple(basis) if basis is not None else None)
         observed = as_of if observed is None or (as_of is not None and as_of < observed) else observed
     members = {team for (team,) in conn.execute("SELECT team_id FROM core.team_seasons WHERE competition_season_id = %s", (edition,))}
+    if not stored:
+        _first_observation(conn, edition, kind, tables, teams, members)
     compare(conn, edition, (key, season), fresh, stored, members, {team: row["name"] for (_, team), row in fresh.items()}, counted)
     if {k: {f: r[f] for f in FIELDS} for k, r in fresh.items()} == {k: {f: r[f] for f in FIELDS} for k, r in stored.items()}:
         repeat(conn, edition, stored, observed, counted, now)

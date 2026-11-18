@@ -173,6 +173,10 @@ SECOND_NAME = "Ranking of second placed teams"
 SECOND = [row("Elm Park", 1, 0, 1, 0, 2, 2, 1), row("Birch Town", 2, 0, 0, 1, 0, 1, 0)]
 GROUPS = (("Group A", GROUP_A), ("Group B", GROUP_B))
 GROUPS_AND_SECOND = GROUPS + ((SECOND_NAME, SECOND),)
+EARLY_GAMES = [game("ab", "Aster City", "Birch Town", (1, 0), T0 - DAY),
+               game("ca", "Cedar Athletic", "Aster City", None, T0 + DAY, status="not_started")]
+EARLY = GROUP_A + [row("Cedar Athletic", 3, 0, 0, 0, 0, 0, 0)]
+ZERO = [row(team, position, 0, 0, 0, 0, 0, 0) for position, team in enumerate(TEAMS[CURRENT], 1)]
 # Stage 4: the group stage accepted whole, then Birch 2-0 Aster moving Aster to group A's 2nd place.
 THREE_ACCEPTED = dict(code=None, official=stored(*GROUPS_AND_SECOND), as_of=T0, version=1, success=T0,
                       served=served("SportScore", T0, *GROUPS_AND_SECOND))
@@ -441,6 +445,33 @@ CASES = [
                 dict(at=LATER, body=tables(*RENAMED, (SECOND_NAME, SECOND)),
                      expect=dict(code=None, official=stored(*RENAMED, (SECOND_NAME, SECOND)), as_of=LATER, version=2,
                                  success=LATER, served=served("SportScore", LATER, *RENAMED, (SECOND_NAME, SECOND))))]),
+    dict(id="S50", key="l_49KZaB", note="first league response omits a member without a played result",
+         accepted=False, vega=False, matches=EARLY_GAMES,
+         steps=[dict(at=T0, body=tables(("", EARLY[:2])),
+                     expect=dict(code="INCOMPLETE_TABLE", official=[], as_of=None, version=None, success=None, served=None)),
+                dict(at=LATER, body=tables(("", EARLY)),
+                     expect=dict(code=None, official=stored((None, EARLY)), as_of=LATER, version=1, success=LATER,
+                                 served=served("SportScore", LATER, (None, EARLY))))]),
+    dict(id="S51", key="l_49Zmno", note="full roster accepted at zero before a calendar is reported",
+         accepted=False, vega=False,
+         steps=[dict(at=T0, body=tables(("", ZERO)),
+                     expect=dict(code=None, official=stored((None, ZERO)), as_of=T0, version=1, success=T0,
+                                 served=served("SportScore", T0, (None, ZERO))))]),
+    dict(id="S52", key="l_4auCPk", kind="cup", note="known initial group phase excludes a qualifying-only club",
+         accepted=False, extra=("Elm Park", "Fjord Rovers"), vega=GROUP_VEGA,
+         matches=GROUP_GAMES + [game("q1", "Fjord Rovers", "Aster City", None, T0 + DAY, status="not_started", stage="qualifying")],
+         steps=[dict(at=T0, body=tables(*GROUPS),
+                     expect=dict(code=None, official=stored(*GROUPS), as_of=T0, version=1, success=T0,
+                                 served=served("SportScore", T0, *GROUPS)))]),
+    dict(id="S53", key="l_4d6Bwl", kind="cup", note="first observed cup table with no independently known phase",
+         accepted=False, vega=False,
+         steps=[dict(at=T0, body=tables(("Group A", ZERO)),
+                     expect=dict(code="UNVERIFIED_TABLE", official=[], as_of=None, version=None, success=None, served=None))]),
+    dict(id="S54", key="l_4DWyTT", kind="cup", note="the first table swaps two known groups without a phase change",
+         accepted=False, extra=("Elm Park",), matches=GROUP_GAMES, vega=GROUP_VEGA,
+         steps=[dict(at=T0, body=tables(("Group A", GROUP_B), ("Group B", GROUP_A)),
+                     expect=dict(code="INCOMPLETE_TABLE", official=[], as_of=None, version=None, success=None,
+                                 served=served("Vega", VEGA_AT, ("A", GROUP_VEGA[:2]), ("B", GROUP_VEGA[2:]))))]),
 ]
 
 for _case in CASES:

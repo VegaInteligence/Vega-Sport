@@ -34,6 +34,16 @@ the first stored kickoff while the legacy collector is still active.
   maintain explicit unavailability of the still unresolved edition. The local simulation does
   not perform the real calendar resolution.
 
+### Initial official observation (additional acceptance before correction)
+
+| Case | Initial evidence | Expected |
+|---|---|---|
+| S50 | Ordinary league, three rostered clubs and a scheduled Cedar match. Widget has only the two that have played | `INCOMPLETE_TABLE`. No official rows, 404 when no computed result exists. The complete retry is accepted |
+| S51 | Ordinary league has a known complete roster and an empty schedule | Accept a full table with all clubs at zero |
+| S52 | Cup's named groups are in the native schedule. A rostered club appears only in a qualifying round | Accept the complete group tables without requiring the qualifying club |
+| S53 | A cup body exists but the base cannot establish the table's phase or membership | `UNVERIFIED_TABLE`, last computed view or explicit absence |
+| S54 | Both native groups are known, but the incoming named groups swap their club assignments | `INCOMPLETE_TABLE`; keep the computed response and its ETag |
+
 > Résumé : une réponse SportScore HTTP 200 ne remplace un classement officiel accepté que si elle
 > décrit entièrement l'édition courante. Une lecture refusée ne vide pas la table, ne la date pas à
 > nouveau et ne crée aucun alias. Le classement servi reste l'officiel tant qu'il est complet et
