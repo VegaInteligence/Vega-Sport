@@ -1,5 +1,9 @@
 # Vega-Sport — intégrité, calculs et couverture en production
 
+**[Situation consolidée, mesures et correctifs du 18 novembre](SITUATION.md)** · [91 exigences](registres/requirements.csv) · [Grille par compétition, saison et entité](controles/verification-integree/scores-par-edition.csv.gz)
+
+Les sections ci-dessous conservent la chronologie et les mesures des premiers passages.
+
 [État des exigences, corrections sur branche et validations encore ouvertes](ETAT.md)
 
 La contre-lecture distingue la couverture technique et sportive des notes de joueurs, le score club-saison sur 100 et les terrains et tours réellement fournis au calcul Elo. [Contre-lecture du 18 novembre](CONTRE-LECTURE.md)

@@ -1,3 +1,5 @@
+[Situation consolidée, mesures et correctifs du 18 novembre](SITUATION.md) · Cette page conserve les constats et les limites à la date de chaque relevé.
+
 # Publication et suivis
 
 [État des décisions et des validations](ETAT.md)

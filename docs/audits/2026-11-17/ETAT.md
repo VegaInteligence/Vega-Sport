@@ -1,3 +1,5 @@
+[Situation consolidée, mesures et correctifs du 18 novembre](SITUATION.md) · Cette page conserve les constats et les limites à la date de chaque relevé.
+
 # État au 18 novembre 2026
 
 **La branche contient des corrections candidates. La livraison globale reste ouverte.** À 11 h 26 UTC, le worker et le rattrapage AWS exécutent le déploiement `8018e0836c`. Les deux empreintes Lambda concordent. Vercel et la branche principale pointent vers `17ca0f7617`. À 11 h 23 UTC, Linear compte huit tickets récemment clos et huit tickets actifs. [AWS et Git](controles/etat-execution/deploiement-1126.json) · [Vercel](controles/etat-execution/vercel-1126.json) · [Linear](controles/etat-execution/linear-1123.json)
