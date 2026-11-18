@@ -572,6 +572,7 @@ html[data-theme="light"] {
 }
 
 /* Player of the week */
+/* The photo's ring reaches 5px past its column: this card does not clip, the surname clips itself. */
 .home-potw {
   position: relative;
   display: flex;
@@ -579,12 +580,13 @@ html[data-theme="light"] {
   gap: 10px;
   padding: 16px 0;
   background: none;
+  overflow: visible;
 }
 .home-potw-ghost {
   position: absolute;
   top: 48px;
-  right: -6px;
-  left: -6px;
+  right: 0;
+  left: 0;
   overflow: hidden;
   color: transparent;
   font-size: 118px;
