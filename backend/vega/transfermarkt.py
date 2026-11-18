@@ -597,7 +597,7 @@ class Reader:
 
     def plan(self, *, link=False):
         """Links from the snapshot, clubs and squads (daily, `link`), quarantines, and the units
-        of every link and every club met; each insert skips what is already queued."""
+        of every link and every club met. Pending squad profiles can gain priority in place."""
         now = self.now()
         with self.conn.transaction():
             self.conn.execute("SET LOCAL lock_timeout = '5s'")
@@ -793,15 +793,17 @@ class Reader:
                  UNION SELECT provider_club FROM core.provider_players WHERE provider = 'transfermarkt' AND provider_club IS NOT NULL) k
                WHERE NOT EXISTS (SELECT 1 FROM core.provider_clubs c WHERE c.provider = 'transfermarkt' AND c.provider_key = k.club)
                ON CONFLICT DO NOTHING""", (now,)).rowcount
-        # Every squad member never read: his profile (to link him), at his squad's priority.
+        # Every unread squad profile, at its best squad priority. Keep its original due time
+        # and retry state. A completed read (including a recorded 404) keeps its own schedule.
         queued += self.conn.execute(
-            """INSERT INTO ops.transfermarkt_reads(kind, provider_key, priority, next_due_at)
+            """INSERT INTO ops.transfermarkt_reads AS queued(kind, provider_key, priority, next_due_at)
                SELECT 'profile', q.player_key, min(least(9, greatest(1, %s - q.season_year + 1)))::smallint, %s::timestamptz
                FROM core.provider_squads q
                WHERE q.provider = 'transfermarkt'
                  AND NOT EXISTS (SELECT 1 FROM core.provider_players pp WHERE pp.provider = 'transfermarkt' AND pp.provider_key = q.player_key)
                GROUP BY q.player_key
-               ON CONFLICT DO NOTHING""", (current, now)).rowcount
+               ON CONFLICT (kind, provider_key) DO UPDATE SET priority = EXCLUDED.priority
+               WHERE queued.read_at IS NULL AND queued.priority > EXCLUDED.priority""", (current, now)).rowcount
         return queued
 
     # Units --------------------------------------------------------------------

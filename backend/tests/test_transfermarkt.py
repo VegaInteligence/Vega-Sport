@@ -283,6 +283,77 @@ class ReaderTest(unittest.TestCase):
         finally:
             self.db.execute("DELETE FROM ops.transfermarkt_reads WHERE provider_key LIKE '7700%'")
 
+    def test_due_squad_profiles_gain_priority_without_resetting_the_queue(self):
+        x = self.db.execute
+        with self.db.transaction(force_rollback=True):
+            now = x("SELECT now()").fetchone()[0]
+            due, later = now - timedelta(hours=1), now + timedelta(hours=6)
+            calls = []
+
+            def fetch(path, params):
+                keys = [value for name, value in params if name == "ids[]"]
+                calls.append((path, keys))
+                return 200, {}, body([player(key, f"Profile {key}", None) for key in keys])
+
+            reader = tm.Reader(self.db, fetch, interval=0, jitter=0, clock=lambda: now, log=lambda *a, **k: None)
+            reader.plan()
+            x("UPDATE ops.transfermarkt_reads SET next_due_at=%s", (later,))
+            x("""INSERT INTO core.provider_clubs(provider,provider_key,name,read_on)
+                 VALUES ('transfermarkt','35123','Squad contrôle',current_date)""")
+            for key, years in {
+                "35101": (2026, 2025), "35102": (2026,), "35103": (2025,), "35104": (2026,),
+                "35105": (2026,), "35106": (2026,), "35107": (2026,), "35108": (2024,),
+            }.items():
+                for year in years:
+                    x("""INSERT INTO core.provider_squads(provider,club_key,season_year,player_key,read_on)
+                         VALUES ('transfermarkt','35123',%s,%s,current_date)""", (year, key))
+            x("""INSERT INTO core.provider_players(provider,provider_key,name,read_on)
+                 VALUES ('transfermarkt','35107','Fiche existante',current_date)""")
+            for row in (
+                ("profile", "35101", 3, due, None, 0, None, None, 0),
+                ("profile", "35103", 1, due, None, 0, None, None, 0),
+                ("profile", "35104", 6, later, None, 3, 500, "HTTP_500", 0),
+                ("profile", "35105", 9, later, due, 0, 200, None, 1),
+                ("profile", "35106", 9, later, due, 1, 404, "NOT_FOUND", 0),
+                ("profile", "35107", 9, later, None, 0, None, None, 0),
+                ("profile", "35108", 9, later, None, 0, None, None, 0),
+                ("transfers", "35101", 1, due, None, 0, None, None, 0),
+                ("values", "35101", 4, later, None, 1, 503, "HTTP_503", 0),
+                ("injuries", "35101", 8, later, None, 0, None, None, 0),
+            ):
+                x("INSERT INTO ops.transfermarkt_reads VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)", row)
+
+            def rows():
+                return {(kind, key): (data, version) for kind, key, data, version in x(
+                    "SELECT kind,provider_key,to_jsonb(r),xmin::text FROM ops.transfermarkt_reads r"
+                    " WHERE provider_key LIKE '3510%' ORDER BY kind,provider_key")}
+
+            def links():
+                return x("SELECT to_jsonb(i) FROM core.provider_ids i ORDER BY entity_type,provider,provider_key").fetchall()
+
+            before = rows()
+            identities = links()
+            x("SET LOCAL ROLE vega_collect")
+            self.assertEqual(reader.plan(), 4)
+            after = rows()
+            expected = {("profile", "35101"): 1, ("profile", "35104"): 1, ("profile", "35108"): 3}
+            for unit, (data, version) in before.items():
+                if unit in expected:
+                    self.assertEqual(after[unit][0], dict(data, priority=expected[unit]))
+                else:
+                    self.assertEqual(after[unit], (data, version))
+            new = after[("profile", "35102")][0]
+            self.assertEqual(new["priority"], 1)
+            self.assertEqual(datetime.fromisoformat(new["next_due_at"]), now)
+            self.assertEqual(reader.plan(), 0)
+            self.assertEqual(rows(), after)
+            self.assertEqual(reader.step(), "ok")
+            self.assertEqual(calls[0][0], "/players")
+            self.assertEqual(set(calls[0][1]), {"35101", "35102", "35103"})
+            self.assertEqual(rows()[("profile", "35104")], after[("profile", "35104")])
+            self.assertEqual(rows()[("transfers", "35101")], after[("transfers", "35101")])
+            self.assertEqual(links(), identities)
+
     def test_the_reader_links_reads_and_pauses(self):
         api = FakeApi()
         now = datetime.now(timezone.utc)
