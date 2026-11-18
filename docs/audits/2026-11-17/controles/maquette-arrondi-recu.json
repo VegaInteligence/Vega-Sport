@@ -1,0 +1,95 @@
+{
+  "status": "prototype_observed",
+  "public_release_changed": false,
+  "production_writes": 0,
+  "match_ids": [
+    "m_08LEIz",
+    "m_21vqiJ"
+  ],
+  "setup": "Site public accessible, Python 3, Chromium Playwright configuré dans browser-config.json, CLI du guide Playwright. Depuis ce répertoire de preuve.",
+  "commands": [
+    "python3 create.py",
+    "PWCLI=\"$HOME/.codex/skills/playwright/scripts/playwright_cli.sh\"",
+    "\"$PWCLI\" --session=vi32-scope-preview open about:blank --config=browser-config.json",
+    "\"$PWCLI\" --session=vi32-scope-preview run-code --filename=preview.cjs > preview.log",
+    "\"$PWCLI\" --session=vi32-scope-preview close",
+    "python3 capture-report.py",
+    "python3 verify.py"
+  ],
+  "intervention": "Seulement dans le navigateur de maquette : le champ de rang visible est remplacé par la précision enregistrée pour 23 joueurs, et les deux représentations de Nagbe du rapport reçoivent la précision du lecteur de performance. Les six notes masquées dans le classement restent masquées dans la réponse.",
+  "expected": "Tataev 48 et Rybchinskiy 49 dans le tableau après chargement du classement, Nagbe 63 dans la version technique du rapport.",
+  "observations": {
+    "rank": [
+      {
+        "viewport": {
+          "name": "desktop",
+          "width": 1440,
+          "height": 1000
+        },
+        "tataev": "Aleksei Tataev\nFC Orenburg\n\t90\t48\t0\t0\t0,15\t0,02\t1 (1)\t1\t13 / 20\t—\t5\t3\t4\t—",
+        "rybchinskiy": "Dmitri Rybchinskiy\nFC Orenburg ▼ 82′\n\t82\t49\t0\t0\t—\t0,31\t—\t1\t13 / 20\t1 / 2\t9\t6\t6\t—",
+        "ranked": 29,
+        "prototype": "The sandboxed browser reads the full stored precision of visible Vega grades supplied in this preview. Live ranking fields are preserved in archived controls."
+      },
+      {
+        "viewport": {
+          "name": "mobile",
+          "width": 390,
+          "height": 844
+        },
+        "tataev": "Aleksei Tataev\nFC Orenburg\n\t90\t48\t0\t0\t0,15\t0,02\t1 (1)\t1\t13 / 20\t—\t5\t3\t4\t—",
+        "rybchinskiy": "Dmitri Rybchinskiy\nFC Orenburg ▼ 82′\n\t82\t49\t0\t0\t—\t0,31\t—\t1\t13 / 20\t1 / 2\t9\t6\t6\t—",
+        "ranked": 29,
+        "prototype": "The sandboxed browser reads the full stored precision of visible Vega grades supplied in this preview. Live ranking fields are preserved in archived controls."
+      }
+    ],
+    "report": [
+      {
+        "viewport": {
+          "name": "desktop",
+          "width": 1440,
+          "height": 1000
+        },
+        "provenance": {
+          "before": 63.5,
+          "corrected": 63.4600021554732,
+          "sourceCount": 2
+        },
+        "row": "Darlington Nagbe\tColumbus Crew\tAilier / milieu offensif\t90\t0\t1\t63"
+      },
+      {
+        "viewport": {
+          "name": "mobile",
+          "width": 390,
+          "height": 844
+        },
+        "provenance": {
+          "before": 63.5,
+          "corrected": 63.4600021554732,
+          "sourceCount": 2
+        },
+        "row": "Darlington Nagbe\tColumbus Crew\tAilier / milieu offensif\t90\t0\t1\t63"
+      }
+    ]
+  },
+  "source_sha256": {
+    "tracks/5-players/public-grade-lineage/preuve/orenburg.csv": "acac50f0a839750ddf1120642a01e8dc40216f50140190f1b6f473a1bb7e108c",
+    "tracks/1-linear/grade-rounding-plan/astra/measured.json": "5a7e3d44bd94ea9b4758245cb4be4f3a46e382c9c9c741d7d699f6a465ac7ec1",
+    "tracks/1-linear/grade-rounding-plan/astra/public/other-report.json.gz": "ad530a688824d1525428e9c3253c3b847632b91b47410a9d575ae40643260899",
+    "tracks/1-linear/grade-rounding-plan/astra/public/rank.json.gz": "a6b9f25c8babc729a986a4e68b3ddf47e23ee398659d818463dd64c88452d884"
+  },
+  "artifact_sha256": {
+    "browser-config.json": "6cdb3e81f9fee39cd9afc804bb02aff549029a1c32d063550f342356cb5a5d0d",
+    "create.py": "b5a1d5e0b5a9baef03cae5a2e261b51ebf4910fc7ca4206db23ba50a0cc546f5",
+    "preview.cjs": "da00800db9569fcd02bd243c4f50643a2bda16ceda026b9931bc343f94abbfb8",
+    "preview.log": "6f7a726e903caf729c265b3b5c6be41fe4680e48952eff6b5300037af73740a4",
+    "capture-report.py": "78c4e5fdbf23b8a23ff7d9f80a099ca267ca712e6daa33ce85c6624b5551a5c1",
+    "report.cjs": "be717d3058c37a5e32cf2f515d1c25b25de6b29b477ee1a242b9fed560e5c0a4",
+    "report-run.log": "21c5d36ad09fc73f6d1dda4e3b4bf9e025b6273da5a364e9cafb0f6cdb6046f2",
+    "verify.py": "b2bd0ab7f2316c05f39d4cbbf8db18dcfca667881ac9f75c0f240f6bbf7b76df",
+    "desktop.png": "fb92655cdafe3fa98085d5f95724e0776bf8a32f94674d759c9a51c7ad103b3a",
+    "mobile.png": "78a9f1dac45b945c9d7f9806e35dae868e58ee5cb2ebc5f9027e1c1c0523621f",
+    "report-desktop.png": "4c8fe725302f0203ece1fc9ecbf41b1c187f2b9c0ded891f099389e7dd8e2a75",
+    "report-mobile.png": "0b13472d88847e3dfd9221e83da326529dc9ffce7ea43470caaf55390da05c29"
+  }
+}

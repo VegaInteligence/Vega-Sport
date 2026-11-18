@@ -1,0 +1,59 @@
+{
+  "started": "2026-11-18T04:54:55.422944+00:00",
+  "production_writes": 0,
+  "environment": "Private PG18 filesystem socket, TCP disabled. Disposable cluster and local file sink.",
+  "importer_sha256": "e53dd0f791456eb419df6ffc7a87cfc1e67d0a73f0d123ad7b07b145e81f400a",
+  "baseline_manifest_sha256": "7d64edeaee4887e0f81f8ba8900867a1cbd33e45653bb6563fdf2f057b35f769",
+  "profile_manifest_sha256": "40aee8386c0733d6e7ffe664e4f4c4f861091fc6c49c1583b02b1e50fdc02940",
+  "postgres_version": "18.6",
+  "steps": {
+    "baseline": {
+      "planned": {
+        "linked": 1467
+      },
+      "applied": {
+        "linked": 1467
+      },
+      "repeat": {
+        "already_linked": 1467
+      },
+      "previous_pointers": 1611,
+      "previous_pointers_preserved": true,
+      "unexpected_changes": 0,
+      "changed": 1467
+    },
+    "profile": {
+      "planned": {
+        "linked": 1
+      },
+      "applied": {
+        "linked": 1
+      },
+      "repeat": {
+        "already_linked": 1
+      },
+      "previous_pointers": 3078,
+      "previous_pointers_preserved": true,
+      "unexpected_changes": 0,
+      "changed": 1
+    }
+  },
+  "status": "passed",
+  "order": "upgrade",
+  "final_profile_pointers": 3079,
+  "unchanged_original_pointers": 1611,
+  "all_non_target_pointers_preserved": true,
+  "distinct_new_objects": 1431,
+  "unchanged_english_fragment": 5802,
+  "final_profile_sha256": "8bbb6a12b7fd6cea3147edd4aedd6762d266c6dd03872dfbe66c571b5b3da4b4",
+  "fixtures_input_hashes": {
+    "db/media_state_verified/entities.json": "0a5d42de0c9280306b2ae7262a7bf2308971c818e566066d618bbe6dc9900f16",
+    "db/media_state_verified/keys.json": "8bf22e7dc03598b4998da07c5607ad8053b2f057b34255a4f0cd477bf08a3b58",
+    "db/media_state_verified/assets.json": "fd755a07a3e29d16cab6b8b3f9fc1672319e61d19f99d2cacc31fe6f288fcc6d",
+    "db/media_context_verified/editions.json": "35fa71c975beaf5c2b24bb3084f1b5bfe4b83f8671b7eaf5a5ddf56e776e42d8",
+    "db/media_context_verified/ranking-rows.json": "26a0f2ea6d97d563f879f439d5b0cfa2a6edfabf7a9d11fa71f3318cfe6defc7",
+    "db/media_context_verified/competition-seasons.json": "ed26d364ff166d5922e76e99c2580d06cc7e1453469aff81f958fa7fe3da03d6"
+  },
+  "closed_private_cluster": true,
+  "ended": "2026-11-18T04:55:00.421805+00:00"
+}

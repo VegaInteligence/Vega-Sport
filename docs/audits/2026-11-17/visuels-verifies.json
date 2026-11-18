@@ -1,26 +1,26 @@
 {
-  "records": 1467,
+  "records": 1468,
   "by_type": {
     "competition": 104,
-    "team": 1363
+    "team": 1364
   },
-  "distinct_images": 1430,
+  "distinct_images": 1431,
   "converted": 159,
-  "manifest_sha256": "7d64edeaee4887e0f81f8ba8900867a1cbd33e45653bb6563fdf2f057b35f769",
-  "zip_sha256": "859f336d90474e471e34298a4ee5d4097cf4f555a1e9de124b06fcca799d60d5",
-  "zip_bytes": 125431227,
+  "manifest_sha256": "a57921d6d30b3a3394b88249cadc740bcff0a7f9f9b54ffdd9a7063690b992db",
+  "zip_sha256": "42e562ef869b73ebd64c6f476743976d4a867ebefcf632f3cebbb46215ea81f4",
+  "zip_bytes": 125482814,
   "inputs": [
     {
-      "source_pack": "artwork-expanded-1466",
-      "manifest_sha256": "0006fcb54dcbc7d9c7de8eaadd63d3c362b3666d20166d2e34abe6ad24dfa110",
+      "source_pack": "artwork-expanded-1467",
+      "manifest_sha256": "7d64edeaee4887e0f81f8ba8900867a1cbd33e45653bb6563fdf2f057b35f769",
       "by_type": {
         "competition": 104,
-        "team": 1362
+        "team": 1363
       }
     },
     {
-      "source_pack": "tracks/7-artwork/english-historic-roots/profile",
-      "manifest_sha256": "ffaa69c63e8a5d0106061620aba6a80146a4d8b491976f66d95abbe6f3151876",
+      "source_pack": "tracks/7-artwork/scottish-historic-roots/profile",
+      "manifest_sha256": "40aee8386c0733d6e7ffe664e4f4c4f861091fc6c49c1583b02b1e50fdc02940",
       "by_type": {
         "team": 1
       }

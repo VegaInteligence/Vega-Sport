@@ -1,0 +1,22 @@
+{
+  "profile_root": 5872,
+  "new_profile_links": 1,
+  "other_requested_roots_deferred": 5,
+  "root_ids_examined": 22,
+  "typed_scottish_league_seasons": 300,
+  "spfl_tables": 90,
+  "exact_home_away_rows": 295,
+  "rows_with_disagreements": 5,
+  "fixture_sides": 10269,
+  "distinct_source_fixtures": 9349,
+  "third_lanark_seasons_matched": 58,
+  "upstream_requests": 110,
+  "successful_gets": 106,
+  "pg18_verified_orders": [
+    "direct",
+    "upgrade"
+  ],
+  "final_profile_pointers": 3079,
+  "checksums": "passed",
+  "production_writes": 0
+}
