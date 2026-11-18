@@ -8,7 +8,25 @@ const TRANSIT_DAYS = 92;
 const time = (date) => Date.parse(`${date}T00:00:00Z`);
 const dated = (date) =>
   typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date) && !Number.isNaN(time(date)) && new Date(time(date)).toISOString().slice(0, 10) === date;
-const named = (club) => (typeof club?.name === "string" && club.name.trim() ? club : null);
+/** The provider's mark of a dissolved club, at the end of its name: « Tours FC (- 2025) ». */
+const DISSOLVED = /\s*\((?:\d{4}\s*)?-\s*\d{4}\)\s*$/;
+/**
+ * A youth or reserve side as the provider names it (« FC Barcelona U19 », « AS Monaco Youth »,
+ * « FC Porto B »): the reader's RESERVE names (backend/vega/transfermarkt.py), a lone letter or
+ * numeral counted at the name's end only (« B 93 » is a club).
+ */
+const YOUTH_SIDE = /(?:\s(?:b|c|ii|iii)$|\bu\s?-?(?:1[5-9]|2[0-3])\b|reserv|youth|juvenil|primavera|\bjong\b|academy)/i;
+/** A club as it is shown: its name without the provider's mark. */
+function labelled(club) {
+  if (typeof club?.name !== "string") return null;
+  const name = club.name.replace(DISSOLVED, "").trim();
+  return name ? (name === club.name ? club : { ...club, name }) : null;
+}
+/** A club a player joins: one of our teams, or a provider's club that is no youth or reserve side. */
+function joined(club) {
+  const shown = labelled(club);
+  return shown && (shown.id || !YOUTH_SIDE.test(shown.name)) ? shown : null;
+}
 
 /**
  * What the value curve draws (`curve`) and what the card lists under it (`list`).
@@ -23,7 +41,7 @@ export function careerMoves(values, transfers) {
     const seen = [];
     let previous;
     for (const value of values) {
-      const club = named(value.club);
+      const club = joined(value.club);
       const identity = club && (club.id || club.name);
       if (!identity || identity === previous) continue;
       previous = identity;
@@ -31,26 +49,32 @@ export function careerMoves(values, transfers) {
     }
     return { curve: seen, list: seen };
   }
-  // A move inside a club (youth, reserve side) is no arrival; a row without a date has no place.
-  const moves = transfers
+  // A row without a date has no place. A move inside a club counts when it brings him to a
+  // club he was not shown at: the promotion to the first team.
+  const moves = [];
+  let current = null;
+  for (const { row, index } of transfers
     .map((row, index) => ({ row, index }))
-    .filter(({ row }) => dated(row?.date) && row.kind !== "internal")
-    .sort((a, b) => a.row.date.localeCompare(b.row.date) || a.index - b.index)
-    .map(({ row, index }) => ({
-      key: `${row.date}:${index}`, date: row.date, at: row.date, club: named(row.to), kind: row.kind ?? null,
-      from: named(row.from), feeEur: row.feeEur > 0 ? row.feeEur : null,
-    }));
+    .filter(({ row }) => dated(row?.date))
+    .sort((a, b) => a.row.date.localeCompare(b.row.date) || a.index - b.index)) {
+    const club = joined(row.to);
+    const identity = club && (club.id || club.name);
+    if (row.kind === "internal" && (!club || identity === current)) continue;
+    current = identity;
+    moves.push({ key: `${row.date}:${index}`, date: row.date, at: row.date, club, kind: row.kind ?? null, from: labelled(row.from), feeEur: row.feeEur > 0 ? row.feeEur : null });
+  }
   const drawn = moves.filter((move, i) => {
     const next = moves[i + 1];
     if (!move.club || move.date <= first) return false;
     if (next?.date === move.date) return false;
     return !(move.kind === "loan_return" && next && time(next.date) - time(move.date) <= TRANSIT_DAYS * DAY);
   });
-  const list = moves.filter((move) => move.club);
-  const before = list.filter((move) => move.date <= first).at(-1);
-  const own = named(values[0].club);
-  const start = before
+  const before = moves.filter((move) => move.date <= first).at(-1);
+  const own = joined(values[0].club);
+  // The curve's first club: where his last move before it brought him, else the club the first
+  // valuation itself names.
+  const start = before?.club
     ? { ...before, at: first }
     : own && { key: "start", date: first, at: first, club: own, kind: "estimate", from: null, feeEur: null };
-  return { curve: start ? [start, ...drawn] : drawn, list };
+  return { curve: start ? [start, ...drawn] : drawn, list: moves.filter((move) => move.club) };
 }
