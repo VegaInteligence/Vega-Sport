@@ -2268,3 +2268,164 @@ The PostgreSQL-to-ranking-to-report check uses the normal read role, HTTP respon
 the public report handler. The recorded football witness is replayed with the captured
 grades as inputs. The database fixture also models a new publication within the same
 tenth. Changes to the match tabs, images and share text are outside this transport step.
+
+## 33. Transfermarkt refreshes keep what was accepted (VI-31, written before the tests)
+
+Batch of [VI-31](https://linear.app/vegainteligence/issue/VI-31), 18 Nov 2026, baseline `1b28961a88`
+(the reader code is the deployed `8018e0836c`'s). Reader and migration 139 only: no identity merge, no
+replay, no repair of production rows (VI-21 keeps merges and global links). Values, injuries and squads
+still replace their lists; they are separate exposures with their own owners.
+
+### 33.1 What the deployed reader does
+
+- `write_transfers` deletes every Transfermarkt transfer of the player, then inserts the response. A 404 is
+  read as an empty history and recorded as a 200. A 200 without `history`, an empty list or a list cut to
+  one move each therefore empties or shortens a stored history, and the next read gives the same moves new
+  row ids. Two real histories (26 and 29 moves read from RDS) fall to 0, 0 and 2 on a local copy
+  (`transfer-read-queue/verification-original.json` in the track evidence).
+- `contract` deletes every other Transfermarkt contract of the player, so a move, a renewal or a key held
+  by another source drops the earlier spells. It changes nothing when the profile's club is not one of
+  ours: the earlier spell stays published as confirmed after the player left.
+- `api.confirmed_player_contracts` has no quarantine filter: a link doubted after its contract was written
+  keeps it published. The profile view finds a doubt through `ops.provider_links.entity_id` only.
+- `write_search` writes the provider's player rows without the contract step, so the next profile read
+  sees no change and never asks for the transfers again.
+- `failed()` builds `timedelta(hours=2 ** attempts)` before its cap: from 35 attempts it raises
+  `OverflowError` and the reader process stops.
+- A list of the wrong type (`"terminated": {}`) raises a `TypeError`, which also stops the process.
+
+### 33.2 The rules
+
+**A transfers response is checked whole before anything is written.** The response must hold a
+`history` object with at least one of its two lists (`terminated`, `pending`). Every element must be an
+object with a numeric `id`. The same `id` twice is one move when the two records state no different fact;
+otherwise the response is refused. A refusal writes no fact and goes through `failed()`: the true HTTP
+status, a code, the attempts and the bounded wait are stored, and `read_at` and `rows_written` keep the
+last accepted read.
+
+| Response | Player holds | Facts | Queue |
+|---|---|---|---|
+| 404 | no Transfermarkt move | none | 404, no code, normal period |
+| 404 | a move | unchanged | 404, `HISTORY_MISSING`, backoff |
+| 200, no `history`, `data: null`, no list | anything | unchanged | 200, `HISTORY_MISSING`, backoff |
+| 200, both lists empty | a completed move | unchanged | 200, `HISTORY_EMPTY`, backoff |
+| 200, both lists empty | nothing, or announced moves only | the announcements marked absent | 200, no code |
+| 200, a list or `history` of another type | anything | unchanged | 200, `SCHEMA_CHANGED` (schema stop as before) |
+| 200, an element without object or numeric `id` | anything | unchanged | 200, `HISTORY_INVALID` |
+| 200, one `id` with two different facts | anything | unchanged | 200, `HISTORY_CONFLICT` |
+| 200, valid | anything | upserted by key; absent moves marked absent | 200, no code, `rows_written` = moves listed |
+
+**A listed move updates its own row.** The row is found by player, source and native key, and keeps its
+id. A field the record states replaces the stored one; a field it omits or gives as null keeps it. A fee
+of 0 is stated only by a free transfer (`fee.value` 0 with the label « free transfer »); any other 0 is
+no amount, as for the values. When the kind of move changes and no fee is stated, the old fee is cleared.
+A club key that changes takes the new key and its canonical club, or NULL; never the old club's. The same
+club key keeps the canonical club resolved now, else the one stored. A completed move listed again as
+announced keeps its completed facts (an older snapshot). An announced move listed as completed becomes
+completed in place. A listed move has `absent_since` NULL and `as_of` the read day.
+
+**A move missing from an accepted history keeps its facts.** It gets `absent_since`, the first day it was
+missing, until a later history lists it again. A shorter list proves no withdrawal, and an absent
+announcement is not a cancellation. Rows of other sources, and Transfermarkt rows without a key, are
+never touched. One row per player and Transfermarkt key (unique partial index, migration 139). Writers of
+one player are serialized (a transaction lock per player): two readers at once give one row per key.
+
+**A contract is a dated fact; the current one is a dated choice.** A profile record changes contracts only
+when it has its `attributes` and `clubAssignments` blocks, one current club key, and valid dates
+for both the start and expiry. The expiry cannot be before the start. Then:
+- its spell, when the club is ours and the expiry known, is written at (player, club, start) or updated in
+  place (same source); `superseded_on` NULL. A key another source holds is left as it is;
+- every other Transfermarkt contract of the player not yet set aside is superseded:
+  - from the new start, when that start is later than its own (a move, a renewal; a future start keeps
+    today's contract until then);
+  - from the read day, when the new start is not later but the record's expiry is current (a return from
+    a loan, a correction);
+  - otherwise not: an older record without a current expiry is a stale one.
+
+A superseded contract keeps its end date as observed; no end date is invented. A record of a club that is
+not ours supersedes the same way and writes nothing. `api.confirmed_player_contracts` reads a contract
+while `superseded_on` is NULL or later than today, and no Transfermarkt contract of a doubted link. A link
+is doubted when a quarantined `ops.provider_links` row names the player or the key of his current link,
+so a quarantine still holds when `entity_id` names an older player. `api.player_profiles` finds its doubt
+the same way. Both keep their columns.
+
+**One step for a player record, from the profile or the search.** Both reads compare the record with the
+provider row first (club, start and expiry: transfers due now; value: values due now), then write the
+row, then, for a linked player, the contract. A record without its `attributes` or `clubAssignments`
+blocks or carries a malformed contract keeps the known contract fields. A search with such a record
+makes the profile due now. Player 30095's two expiries (contract 2028-06-30, provider row 2027-06-30) stay as they are: the
+next complete record of either path decides.
+
+**Health.** The wait of a failed unit is `2 ** min(attempts, 8)` hours, at most 7 days: no overflow. A
+refusal of one player returns `failed` and the reader reads the next unit; only `SCHEMA_CHANGED` counts
+toward the schema stop.
+
+**Rollback.** A Transfermarkt transfer or contract is never deleted by a refresh. Migration 139 refuses
+such a deletion (`TRANSFERMARKT_HISTORY_KEPT`) unless the transaction sets
+`vega.allow_history_delete = 'on'` (a person's decision). The reader before VI-31 deletes on every read, so
+a rollback first stops the reader (`UPDATE ops.transfermarkt_state SET gave_up_at = now() WHERE id = 1`,
+honoured by both versions) and keeps it stopped until a preserving version runs again. If the stop is
+forgotten, its deletions fail and its process restarts every 5 minutes; nothing is deleted. Dropping
+the index would not make that reader safe.
+
+### 33.3 Failure modes and expected outcomes
+
+| # | Situation | Expected | Base |
+|---|---|---|---|
+| 20a | 404 on a first read | no fact; 404, no code, next due after the period | red (200) |
+| 20b | 404 after an accepted history | ids, keys, dates, clubs and kinds unchanged; 404, `HISTORY_MISSING`, attempts 1, backoff; `read_at` and `rows_written` of the accepted read | red |
+| 20c | 200 without `history`, or `data: null`, on a first read or after a history | no fact; 200, `HISTORY_MISSING` | red |
+| 20d | 200, empty lists, after a completed move | unchanged; 200, `HISTORY_EMPTY` | red |
+| 20e | 200, empty lists, on a first read | accepted; 200, no code, 0 rows | green |
+| 20f | 200, empty lists, announcements only | announcements kept, `absent_since` today; 200, no code | red |
+| 20g | `terminated` an object; `history` a list | unchanged; `SCHEMA_CHANGED`; no exception | red (TypeError) |
+| 20h | an element not an object; an `id` empty or not numeric | unchanged; `HISTORY_INVALID` | red |
+| 20i | one `id` twice with another date | unchanged; `HISTORY_CONFLICT`. The same record twice: one row | red |
+| 20j | a valid history without one completed move, then with it again | listed moves updated in place; the missing one kept, `absent_since` its first day (kept on a second short read), NULL when listed again, same id | red |
+| 20k | the same history twice | same ids, keys and facts; no new row | red (new ids) |
+| 20l | stated date, fee, free transfer, value, expiry, season, kind; omitted or null fields | stated fields replaced in place, 0 for the free transfer; omitted and null fields kept; a kind change without fee clears the fee | red |
+| 20m | a club key changed; a club linked between two reads | new key with its own canonical club or NULL; same key keeps the re-resolved club | red |
+| 20n | announced → completed; completed → announced in a later response | completed in place, same id; completed facts kept | red |
+| 20o | another source's transfer, a Transfermarkt row without key | untouched by every read | red (the keyless row) |
+| 20p | two readers on one player at once | one row per key, the second's facts on the first's row | red |
+| 20q | a unit failing for the 41st time | no exception; due in 7 days | red (OverflowError) |
+| 20r | normal entry (`step`): one player's history refused, another's valid | `failed` then `ok`; the reader not paused; the refused unit counted failing in `api.provider_reader_progress` | red |
+| 20s | a move to another of our clubs | old spell kept, superseded from the new start; profile shows the new club | red |
+| 20t | a renewal at the same club | old spell kept, superseded from the renewal; profile shows the new expiry | red |
+| 20u | a move starting tomorrow; the same move started yesterday | today's contract still confirmed; after the start, the new one | red |
+| 20v | another source holds the observed key | its row unchanged; earlier Transfermarkt spells kept and superseded; profile: its expiry confirmed, the provider's observed beside it | red |
+| 20w | a move to a club not ours | no row; earlier spells superseded from its start; no confirmed contract; observed contract of that club | red |
+| 20x | no club, no start, expiry before start, record without its blocks | nothing changes | green |
+| 20y | an older record whose expiry is past or missing | nothing superseded | red |
+| 20z | back from a loan: the parent's superseded key with a current expiry | parent revived, loan spell superseded from the read day, one confirmed contract | red |
+| 20aa | the same profile twice | no new row; `as_of` only | green |
+| 20ab | the expiry corrected on the same key | end date updated in place | green |
+| 20ac | the link quarantined after the contract, `entity_id` naming another player | no confirmed contract, no observed Transfermarkt contract, through the view and `/api/players/{id}` | red |
+| 20ad | a search reads a linked player whose club changed | contract step applied; transfers due now; provider row written after the comparison | red |
+| 20ae | a record without its blocks, from a search or a profile | provider row keeps its fields; no contract change; from a search, profile due now | red |
+| 20af | an unlinked or doubted player's record | provider row only, no contract | green |
+| 20ag | migration 139 over NULL Transfermarkt keys and repeated keys of another source | applied; the index covers Transfermarkt's non-null keys | — |
+| 20ah | migration 139 over a repeated Transfermarkt player/key | stops with `TRANSFER_KEYS_NOT_UNIQUE` and the first pair; nothing changed; 139 not recorded | — |
+| 20ai | the deployed writer's deletions after 139 | refused with `TRANSFERMARKT_HISTORY_KEPT`; every row kept; with `vega.allow_history_delete = 'on'`, allowed | — |
+
+End to end: the real `Reader` (`read` and `step`), controlled HTTP answers, all migrations on a local
+PostgreSQL 18, the queue, `api.player_profiles` and the read API's `/api/players/{id}`. Contract dates
+are relative to the base's `current_date`. Independently, the 55 real moves of two players
+(`replay.py --expect protected`) and the thirteen observations of `reproduce-history.py`.
+
+### 33.4. Expiry evidence on a new club observation (VI-31 continuation)
+
+A record can contain both profile blocks and still omit or corrupt the contract expiry. It may
+refresh independent profile facts, but the last dated contract and its staging provenance remain
+authoritative. Missing, invalid and explicit null have distinct meanings:
+
+| Situation | Expected |
+|---|---|
+| A new club and start with `contractUntil` omitted | Keep the last accepted staging tuple, both views and every contract. Profile HTTP 200 keeps the accepted values. The profile queue reports `CONTRACT_MISSING` and a bounded retry |
+| A new club and start with `contractUntil` malformed, including trailing garbage after a valid date prefix | The same preservation, with `CONTRACT_INVALID` in the profile queue |
+| An incomplete expiry comes from the club search | Preserve the same observations. Make the player's ordinary profile read due now |
+| The provider explicitly gives `null` | No date is measured. Preserve any dated observation and treat the profile payload as accepted, without inventing a contract or a termination. A valid current club remains available for club linking when no dated claim exists |
+| A valid later club spell or a valid correction to the same spell, now expired | Publish the new dated spell or apply the stated correction. Keep the historical row and its source. An expired observed end can remove its current presentation |
+
+An empty assignment or an undated profile reply supplies no documented release date. Historical
+transfer events and dated end corrections still retain their existing independent meaning.

@@ -70,8 +70,10 @@ class PureTest(unittest.TestCase):
             {"id": 3, "transferSource": {"clubId": 1}, "transferDestination": {"clubId": 2}, "typeDetails": {"type": "ACTIVE_LOAN_TRANSFER"},
              "details": {"date": "2015-01-01", "isPending": True}},
         ]}})
+        # A free transfer states a fee of 0, an observed zero; it read None before VI-31, which kept a
+        # correction to a free transfer from applying (FAILURE_MODES.md §20, case 20l).
         self.assertEqual([(t["key"], t["kind"], t["fee"], t["from"], t["to"], t["pending"]) for t in transfers],
-                         [("1", "transfer", 180000000, "3524", "583", False), ("2", "free", None, "583", "418", False), ("3", "loan", None, "1", "2", True)])
+                         [("1", "transfer", 180000000, "3524", "583", False), ("2", "free", 0, "583", "418", False), ("3", "loan", None, "1", "2", True)])
         self.assertEqual(tm.parse_transfers(None), [])
         injuries = tm.parse_injuries({"injuries": [
             {"seasonId": 2025, "name": "Hamstring injury", "start": "2026-03-01", "end": "2026-03-20", "missedGamesCount": 4},

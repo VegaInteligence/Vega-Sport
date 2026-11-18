@@ -83,7 +83,13 @@ Code : [transfermarkt.py](../../../backend/vega/transfermarkt.py). Un processus 
 - ses blessures (dates, jours, matchs manqués) ;
 - son contrat avec un de nos clubs.
 
-Les transferts et les blessures sont remplacés en entier à chaque lecture, parce que Transfermarkt corrige ses noms et ses dates.
+Les blessures sont remplacées en entier à chaque lecture, parce qu’une blessure n’a pas de clé chez Transfermarkt.
+
+**Les transferts et les contrats ne sont jamais effacés** (migration 139, [modes d’échec §20](../09-audit-2026-11/FAILURE_MODES.md)) :
+- un transfert est mis à jour par sa clé Transfermarkt et garde sa ligne. Un champ donné remplace l’ancien, un champ absent ou vide le laisse. Un transfert libre a un montant de 0 ;
+- un transfert que Transfermarkt ne liste plus garde ses faits et la date du premier jour où il manquait (`absent_since`). Une liste plus courte ne prouve aucune annulation ;
+- une réponse qui ne peut pas être un historique complet n’écrit rien : un 404 après un historique, l’absence d’historique, deux listes vides après un transfert terminé, un élément illisible, une même clé avec deux faits. La file garde le vrai statut HTTP et un code (`HISTORY_MISSING`, `HISTORY_EMPTY`, `HISTORY_INVALID`, `HISTORY_CONFLICT`), puis relit plus tard. Un premier 404 est une réponse ordinaire ;
+- un contrat est un fait daté. Quand Transfermarkt nomme un autre contrat (transfert, renouvellement, retour de prêt, club hors de notre base), l’ancien est écarté à la date du changement (`superseded_on`). Sa date de fin reste celle observée. Un départ futur laisse le contrat d’aujourd’hui en place jusqu’à ce jour.
 
 **Comment un joueur est relié.** Jamais par le nom seul.
 - **Le jeu du 6 juillet 2026** : ses liens sont repris tels quels.
@@ -95,7 +101,7 @@ Les transferts et les blessures sont remplacés en entier à chaque lecture, par
   - sans date de naissance chez nous (91 % de nos joueurs le 16 novembre 2026) : le même nom exact, le seul des deux côtés dans le club, que Transfermarkt place dans une saison où il a joué pour nous dans ce club (ou l’année d’avant). Quand Transfermarkt donne sa date de naissance, il doit avoir de 15 à 45 ans lors de ses matchs pour nous. C’est la règle du lecteur Wikidata.
 - Transfermarkt ne remplit jamais nos dates de naissance : elles restent celles de nos sources.
 
-**Quarantaine.** Si Transfermarkt donne une autre date de naissance que la nôtre, le lien est mis en doute. Rien de ce joueur n’est alors montré, ni valeur ni contrat, jusqu’à ce qu’une personne regarde.
+**Quarantaine.** Si Transfermarkt donne une autre date de naissance que la nôtre, le lien est mis en doute. Rien de ce joueur n’est alors montré, ni valeur ni contrat, jusqu’à ce qu’une personne regarde. Cela vaut aussi pour un contrat écrit avant le doute, et quand la quarantaine désigne l’ancien joueur d’une clé que nous avons fusionnée.
 
 **Ordre de lecture.** Les joueurs de la saison en cours d’abord, puis les saisons précédentes. Ensuite, chaque élément est relu à son rythme :
 - un joueur de la saison en cours : profil et blessures chaque semaine, valeurs et transferts quand le profil dit qu’ils ont changé, au plus tard tous les mois ;

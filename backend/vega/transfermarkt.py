@@ -6,9 +6,14 @@ What it keeps, as typed rows (a response is never stored):
 - the players it reads (core.provider_players) and the clubs' squads (core.provider_squads)
   and names (core.provider_clubs);
 - for a player linked to one of ours: his market values (core.player_market_values, with the
-  club of each valuation), transfers (core.player_transfers) and injuries
-  (core.player_injuries), replaced whole at each read, and his contract with one of our clubs
-  (core.player_contracts) when its start is known.
+  club of each valuation) and injuries (core.player_injuries), replaced whole at each read;
+- his transfers (core.player_transfers), each kept by its key and never deleted: a move the
+  provider no longer lists keeps its facts and the first day it was missed (absent_since). A
+  response that cannot be a whole history (a 404 after one, no history, empty lists after a
+  completed move, an unusable element, one key with two facts) writes nothing;
+- his contracts with our clubs (core.player_contracts), each a dated fact kept; the one the
+  provider no longer names is set aside from the day of the change (superseded_on), its observed
+  expiry kept (FAILURE_MODES.md §20).
 
 Links (core.provider_ids, how each was made in ops.provider_links):
 - the snapshot of 6 July 2026 (player_fact_snapshot.py), as it stands;
@@ -81,6 +86,11 @@ PERIODS = {
     "search": (30, 90, 365, 365),  # a club not found yet is searched again
 }
 NOT_FOUND_AGAIN = timedelta(days=90)
+# A failed unit waits 2 ** attempts hours, at most a week; the exponent stops at 8 (256 h) before
+# the timedelta is built, which overflows from 35 attempts.
+RETRY_MAX, RETRY_EXPONENT_MAX = timedelta(days=7), 8
+# The transfers route answered 404: no history known to the provider (FAILURE_MODES.md §20).
+HTTP_404 = object()
 # Names that are no club: a player without one, retired, unknown or on a break.
 NO_CLUB = {"withoutclub", "retired", "unknown", "careerbreak", "vereinslos", "karriereende", "unbekannt", "pause"}
 RESERVE = re.compile(r"(?:\b(?:b|c|ii|iii)\b|\bu\s?-?(?:1[5-9]|2[0-3])\b|reserv|youth|juvenil|primavera|jong\b|academy)", re.I)
@@ -177,6 +187,16 @@ def _day(value):
         return None
 
 
+def _contract_day(value):
+    """A calendar date or ISO timestamp in a contract claim, validated in full."""
+    if not isinstance(value, str) or not re.match(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}(?:$|T| )", value):
+        return None
+    try:
+        return date.fromisoformat(value) if len(value) == 10 else datetime.fromisoformat(value).date()
+    except ValueError:
+        return None
+
+
 def _key(value):
     text = str(value) if value is not None and not isinstance(value, bool) else ""
     return text if re.fullmatch(r"[0-9]{1,10}", text) else None
@@ -203,27 +223,53 @@ def _container(data, key, kind=list):
     return value
 
 
+def _obj(value):
+    return value if isinstance(value, dict) else {}
+
+
 def parse_player(record):
-    """A player record of /players: the facts kept, or None when it has no id."""
+    """The facts of a /players record, or None without an id.
+
+    Having both blocks supports the ordinary profile facts. A dated contract additionally
+    requires an unambiguous current club, start and expiry. Explicit null supplies no date.
+    """
     if not isinstance(record, dict) or not _key(record.get("id")):
         return None
-    life = record.get("lifeDates") or {}
-    attributes = record.get("attributes") or {}
-    foot = str((attributes.get("preferredFoot") or {}).get("name") or "").strip().lower()
+    life = _obj(record.get("lifeDates"))
+    attributes = _obj(record.get("attributes"))
+    foot = str(_obj(attributes.get("preferredFoot")).get("name") or "").strip().lower()
     height = attributes.get("height")
     height = round(height * 100) if isinstance(height, (int, float)) and not isinstance(height, bool) else None
-    current = next((a for a in record.get("clubAssignments") or [] if isinstance(a, dict) and a.get("type") == "current"), None)
-    value = (record.get("marketValueDetails") or {}).get("current")
+    assignments = record.get("clubAssignments")
+    current = [a for a in assignments if isinstance(a, dict) and a.get("type") == "current"] if isinstance(assignments, list) else []
+    spell = current[0] if len(current) == 1 else {}
+    club, joined = _key(spell.get("clubId")), _contract_day(spell.get("start"))
+    raw_expiry = attributes.get("contractUntil")
+    expiry = _contract_day(raw_expiry)
+    complete = isinstance(record.get("attributes"), dict) and isinstance(assignments, list)
+    dated_contract = complete and club is not None and joined is not None and expiry is not None and joined <= expiry
+    undated_assignment = complete and (not current or club is not None) and "contractUntil" in attributes and raw_expiry is None
+    contract_issue = None
+    if complete and current:
+        if "contractUntil" not in attributes:
+            contract_issue = "CONTRACT_MISSING"
+        elif raw_expiry is not None and not dated_contract:
+            contract_issue = "CONTRACT_INVALID"
+    value = _obj(record.get("marketValueDetails")).get("current")
     return {
+        "complete": complete,
+        "dated_contract": dated_contract,
+        "undated_assignment": undated_assignment,
+        "contract_issue": contract_issue,
         "key": _key(record["id"]),
         "name": record.get("name") if isinstance(record.get("name"), str) else None,
         "birth_date": None if life.get("isDateOfBirthUnknown") else _day(life.get("dateOfBirth")),
-        "position": (attributes.get("position") or {}).get("name") or None,
+        "position": _obj(attributes.get("position")).get("name") or None,
         "height_cm": height if height and 140 <= height <= 220 else None,
         "foot": foot if foot in ("left", "right", "both") else None,
-        "contract_until": _day(attributes.get("contractUntil")),
-        "club": _key((current or {}).get("clubId")),
-        "joined_on": _day((current or {}).get("start")),
+        "contract_until": expiry,
+        "club": club,
+        "joined_on": joined,
         "value": _money(value),
         "value_on": _day((value or {}).get("determined")) if isinstance(value, dict) else None,
     }
@@ -268,33 +314,80 @@ def parse_values(data):
     return sorted(out.values())
 
 
+def _free(record):
+    """A free transfer: its fee's label says so."""
+    fee = _obj(_obj(record.get("details")).get("fee"))
+    return str(_obj(fee.get("compact")).get("content") or "").strip().lower() == "free transfer"
+
+
 def transfer_kind(record):
-    kind = (record.get("typeDetails") or {}).get("type") or ""
+    kind = _obj(record.get("typeDetails")).get("type") or ""
     if kind == "STANDARD":
-        fee = (record.get("details") or {}).get("fee") or {}
-        label = str(((fee.get("compact") or {}) if isinstance(fee, dict) else {}).get("content") or "").strip().lower()
-        return "free" if label == "free transfer" else "transfer"
+        return "free" if _free(record) else "transfer"
     return TRANSFER_KINDS.get(kind)
 
 
+# The facts a move's record can state; a field it omits or gives as null states nothing. The
+# clubs ("from", "to") are written with their canonical club (Reader.move_changes).
+MOVE_FACTS = ("date", "season", "from", "to", "kind", "fee", "value", "contract_until")
+MOVE_COLUMNS = {"date": "transfer_date", "season": "season_label", "kind": "kind", "fee": "fee_eur",
+                "value": "market_value_eur", "contract_until": "contract_until"}
+
+
+def _move(record, announced):
+    """A move's facts as its record states them. The fee is a positive amount, or 0 for a free
+    transfer (its label attests it; another 0 is no amount, as for the values). A move of the
+    pending list, or marked pending, is announced."""
+    details = _obj(record.get("details"))
+    display = _obj(details.get("season")).get("display")
+    fee = _money(details.get("fee"))
+    move = {
+        "key": _key(record["id"]), "date": _day(details.get("date")),
+        "season": display.strip() if isinstance(display, str) and display.strip() else None,
+        "from": _key(_obj(record.get("transferSource")).get("clubId")), "to": _key(_obj(record.get("transferDestination")).get("clubId")),
+        "kind": transfer_kind(record), "fee": fee if fee is not None else (0 if _free(record) else None),
+        "value": _money(details.get("marketValue")), "contract_until": _day(details.get("contractUntilDate")),
+        "pending": announced or bool(details.get("isPending")),
+    }
+    move["stated"] = frozenset(f for f in MOVE_FACTS if move[f] is not None) | {"pending"}
+    return move
+
+
+def transfer_history(data):
+    """The moves of a /transfer/history/player response, one per key, checked whole before
+    anything is written; Failed when the response cannot be a whole history: no history object
+    or none of its two lists (HISTORY_MISSING), a list or the history of another type
+    (SCHEMA_CHANGED), an element without an object or a numeric id (HISTORY_INVALID), one key
+    with two different stated facts (HISTORY_CONFLICT). The same move twice is one."""
+    if not isinstance(data, dict):
+        raise Failed("HISTORY_MISSING" if data is None else "SCHEMA_CHANGED")
+    history = data.get("history")
+    if history is None:
+        raise Failed("HISTORY_MISSING")
+    if not isinstance(history, dict):
+        raise Failed("SCHEMA_CHANGED")
+    lists = {name: history.get(name) for name in ("pending", "terminated")}
+    if any(records is not None and not isinstance(records, list) for records in lists.values()):
+        raise Failed("SCHEMA_CHANGED")
+    if all(records is None for records in lists.values()):
+        raise Failed("HISTORY_MISSING")
+    moves = {}
+    for name, records in lists.items():
+        for record in records or []:
+            if not isinstance(record, dict) or not _key(record.get("id")):
+                raise Failed("HISTORY_INVALID")
+            move, seen = _move(record, name == "pending"), moves.get(_key(record["id"]))
+            if seen is not None:
+                if any(seen[f] != move[f] for f in seen["stated"] & move["stated"]):
+                    raise Failed("HISTORY_CONFLICT")
+                move = {**seen, **{f: move[f] for f in move["stated"]}, "stated": seen["stated"] | move["stated"]}
+            moves[move["key"]] = move
+    return list(moves.values())
+
+
 def parse_transfers(data):
-    """The transfers of a history, pending ones included (marked)."""
-    if data is None:
-        return []
-    history = _container(data, "history", dict)
-    out = []
-    for record in (history.get("pending") or []) + (history.get("terminated") or []):
-        if not isinstance(record, dict) or not _key(record.get("id")):
-            continue
-        details = record.get("details") or {}
-        source, target = record.get("transferSource") or {}, record.get("transferDestination") or {}
-        out.append({
-            "key": _key(record["id"]), "date": _day(details.get("date")), "season": (details.get("season") or {}).get("display"),
-            "from": _key(source.get("clubId")), "to": _key(target.get("clubId")), "kind": transfer_kind(record),
-            "fee": _money(details.get("fee")), "value": _money(details.get("marketValue")),
-            "contract_until": _day(details.get("contractUntilDate")), "pending": bool(details.get("isPending")),
-        })
-    return out
+    """The transfers of a history, pending ones included (marked); none for no response."""
+    return [] if data is None else transfer_history(data)
 
 
 def injury_kind(label):
@@ -741,7 +834,7 @@ class Reader:
     def failed(self, kind, units, error):
         for key, _ in units:
             attempts = self.conn.execute("SELECT attempts FROM ops.transfermarkt_reads WHERE kind = %s AND provider_key = %s", (kind, key)).fetchone()
-            wait = min(timedelta(hours=2 ** (attempts[0] if attempts else 0)), timedelta(days=7))
+            wait = min(timedelta(hours=2 ** min(attempts[0] if attempts else 0, RETRY_EXPONENT_MAX)), RETRY_MAX)
             self.conn.execute(
                 """UPDATE ops.transfermarkt_reads SET next_due_at = now() + %s, attempts = attempts + 1, last_http_status = %s, error_code = %s
                    WHERE kind = %s AND provider_key = %s""", (wait, error.status, error.code, kind, key))
@@ -776,7 +869,7 @@ class Reader:
                 try:
                     data = self.get(f"/transfer/history/player/{keys[0]}")
                 except Missing:
-                    data = None
+                    data = HTTP_404  # write_transfers decides: an ordinary answer, or a refusal after a history
             elif kind == "injuries":
                 data = self.get(f"/player/{keys[0]}/injury")
             else:
@@ -856,8 +949,9 @@ class Reader:
             return 0
         today = self.now().date()
         written = 0
+        # The same /players records as a profile read's: the same step for each.
         for p in data["players"].values():
-            written += self.provider_player(p, today)
+            written += self.observe(p, today, search_priority=priority)
         for club, year, members in data["squads"]:
             self.conn.execute("DELETE FROM core.provider_squads WHERE provider = 'transfermarkt' AND club_key = %s AND season_year = %s", (club, year))
             for player, shirt in members:
@@ -883,17 +977,66 @@ class Reader:
         return written
 
     def provider_player(self, p, today):
+        """Write ordinary profile facts and keep the provenance of the last dated contract."""
+        if p["complete"]:
+            update = """name = EXCLUDED.name, birth_date = EXCLUDED.birth_date,
+                 position = EXCLUDED.position, height_cm = EXCLUDED.height_cm, preferred_foot = EXCLUDED.preferred_foot,
+                 market_value_eur = EXCLUDED.market_value_eur, market_value_on = EXCLUDED.market_value_on"""
+        else:
+            update = ", ".join(f"{c} = coalesce(core.provider_players.{c}, EXCLUDED.{c})" for c in (
+                "name", "birth_date", "position", "height_cm", "preferred_foot", "market_value_eur", "market_value_on"))
+        values = {**p, "today": today}
+        if p["dated_contract"]:
+            update += """, contract_until = EXCLUDED.contract_until, provider_club = EXCLUDED.provider_club,
+                         joined_on = EXCLUDED.joined_on, read_on = EXCLUDED.read_on"""
+        elif p["undated_assignment"]:
+            # Club identity can be observed without a measured expiry. Keep an accepted dated
+            # tuple together, including the provenance used by the read API.
+            update += ", " + ", ".join(
+                f"{field} = CASE WHEN core.provider_players.contract_until IS NULL THEN EXCLUDED.{field} ELSE core.provider_players.{field} END"
+                for field in ("provider_club", "joined_on", "read_on")
+            )
+        else:
+            values.update(contract_until=None, club=None, joined_on=None)
         self.conn.execute(
-            """INSERT INTO core.provider_players(provider, provider_key, name, birth_date, position, height_cm, preferred_foot, contract_until,
+            f"""INSERT INTO core.provider_players(provider, provider_key, name, birth_date, position, height_cm, preferred_foot, contract_until,
                  provider_club, joined_on, market_value_eur, market_value_on, read_on)
                VALUES ('transfermarkt', %(key)s, %(name)s, %(birth_date)s, %(position)s, %(height_cm)s, %(foot)s, %(contract_until)s,
                  %(club)s, %(joined_on)s, %(value)s, %(value_on)s, %(today)s)
-               ON CONFLICT (provider, provider_key) DO UPDATE SET name = EXCLUDED.name, birth_date = EXCLUDED.birth_date,
-                 position = EXCLUDED.position, height_cm = EXCLUDED.height_cm, preferred_foot = EXCLUDED.preferred_foot,
-                 contract_until = EXCLUDED.contract_until, provider_club = EXCLUDED.provider_club, joined_on = EXCLUDED.joined_on,
-                 market_value_eur = EXCLUDED.market_value_eur, market_value_on = EXCLUDED.market_value_on, read_on = EXCLUDED.read_on""",
-            {**p, "today": today})
+               ON CONFLICT (provider, provider_key) DO UPDATE SET {update}""",
+            values)
         return 1
+
+    def observe(self, p, today, *, search_priority=None):
+        """One /players record, from a profile read or a club search (search_priority, the search
+        unit's): what changed since the provider's row is compared first (club, start or expiry:
+        the transfers are due now; value: the values), then the row is written, then, for a player
+        linked to one of ours, his contracts. A fragment or contract issue from a search makes
+        the player's profile due now. Only a dated claim changes contract facts."""
+        key = p["key"]
+        before = self.conn.execute(
+            """SELECT market_value_eur, market_value_on, provider_club, joined_on, contract_until FROM core.provider_players
+               WHERE provider = 'transfermarkt' AND provider_key = %s""", (key,)).fetchone()
+        written = self.provider_player(p, today)
+        if not p["complete"] or p["contract_issue"]:
+            if search_priority is not None:
+                self.conn.execute(
+                    """INSERT INTO ops.transfermarkt_reads(kind, provider_key, priority, next_due_at) VALUES ('profile', %s, %s, now())
+                       ON CONFLICT (kind, provider_key) DO UPDATE SET next_due_at = least(ops.transfermarkt_reads.next_due_at, EXCLUDED.next_due_at)""",
+                    (key, search_priority))
+            if not p["complete"]:
+                return written
+        player = self.player_of(key)
+        if player is None:
+            return written
+        if before is not None and (before[0], before[1]) != (p["value"], p["value_on"]):
+            self.conn.execute("UPDATE ops.transfermarkt_reads SET next_due_at = now() WHERE kind = 'values' AND provider_key = %s", (key,))
+        if p["dated_contract"]:
+            written += self.contract(player, p, today)
+        if (before is not None and (p["dated_contract"] or (p["undated_assignment"] and before[4] is None))
+                and tuple(before[2:]) != (p["club"], p["joined_on"], p["contract_until"])):
+            self.conn.execute("UPDATE ops.transfermarkt_reads SET next_due_at = now() WHERE kind = 'transfers' AND provider_key = %s", (key,))
+        return written
 
     def write_profile(self, units, data):
         if not isinstance(data, list):
@@ -907,35 +1050,56 @@ class Reader:
             if p is None:
                 self.done("profile", key, priority, 0, status=404, error="NOT_FOUND", again=NOT_FOUND_AGAIN)
                 continue
-            before = self.conn.execute(
-                "SELECT market_value_eur, market_value_on, provider_club, contract_until FROM core.provider_players WHERE provider = 'transfermarkt' AND provider_key = %s",
-                (key,)).fetchone()
-            written += self.provider_player(p, today)
-            player = self.player_of(key)
-            if player is not None:
-                written += self.contract(player, p, today)
-                # What changed since the last profile: the values or the transfers are due now.
-                if before is not None and (before[0], before[1]) != (p["value"], p["value_on"]):
-                    self.conn.execute("UPDATE ops.transfermarkt_reads SET next_due_at = now() WHERE kind = 'values' AND provider_key = %s", (key,))
-                if before is not None and (before[2], before[3]) != (p["club"], p["contract_until"]):
-                    self.conn.execute("UPDATE ops.transfermarkt_reads SET next_due_at = now() WHERE kind = 'transfers' AND provider_key = %s", (key,))
-            self.done("profile", key, priorities[key], 1)
+            written += self.observe(p, today)
+            if p["contract_issue"]:
+                self.failed("profile", [(key, priority)], Failed(p["contract_issue"], 200))
+            else:
+                self.done("profile", key, priorities[key], 1)
         return written
 
     def contract(self, player, p, today):
-        """The player's contract with his club, when the club is ours and its start known; an
-        older contract the provider gave him is closed by the newer one (removed)."""
+        """The player's contracts after a dated record naming his club, start and expiry.
+
+        Nothing is deleted (FAILURE_MODES.md §20):
+        - the record's spell, at one of our clubs with its expiry, is written at (club, start), or
+          updated in place when it is the provider's own row; another source's row at that key
+          stays as it is;
+        - every other contract of the provider not yet set aside is superseded from the record's
+          start when that start is later than its own (a move, a renewal; a start to come keeps
+          today's contract until then), from today when the record's expiry is still to come
+          (back from a loan, a correction); an older record without a current expiry is stale
+          and sets nothing aside. A superseded contract keeps its observed end date."""
+        joined, until = p["joined_on"], p["contract_until"]
         team = self.team_of(p["club"])
-        if team is None or p["joined_on"] is None or p["contract_until"] is None or p["contract_until"] < p["joined_on"]:
-            return 0
-        self.conn.execute(
-            "DELETE FROM core.player_contracts WHERE player_id = %s AND source = 'transfermarkt' AND (team_id, start_date) <> (%s, %s)",
-            (player, team, p["joined_on"]))
-        return self.conn.execute(
-            """INSERT INTO core.player_contracts(player_id, team_id, start_date, end_date, source, as_of)
-               VALUES (%s, %s, %s, %s, 'transfermarkt', %s)
-               ON CONFLICT (player_id, team_id, start_date) DO UPDATE SET end_date = EXCLUDED.end_date, as_of = EXCLUDED.as_of, updated_at = now()
-               WHERE core.player_contracts.source = 'transfermarkt'""", (player, team, p["joined_on"], p["contract_until"], today)).rowcount
+        current = until >= today
+        self.conn.execute("SELECT pg_advisory_xact_lock(hashtext('transfermarkt.contracts'), %s)", (player,))
+        held = {(team_id, start): (source, superseded) for team_id, start, source, superseded in self.conn.execute(
+            "SELECT team_id, start_date, source::text, superseded_on FROM core.player_contracts WHERE player_id = %s", (player,)).fetchall()}
+        observed = (team, joined) if team is not None else None
+        written = 0
+        if observed is not None:
+            if observed not in held:
+                written += self.conn.execute(
+                    """INSERT INTO core.player_contracts(player_id, team_id, start_date, end_date, source, as_of)
+                       VALUES (%s, %s, %s, %s, 'transfermarkt', %s)""", (player, team, joined, until, today)).rowcount
+            elif held[observed][0] == PROVIDER:
+                # The provider's own fact: its expiry corrected in place; a current claim again.
+                written += self.conn.execute(
+                    """UPDATE core.player_contracts SET end_date = %s, as_of = %s, updated_at = now(),
+                         superseded_on = CASE WHEN %s THEN NULL ELSE superseded_on END
+                       WHERE player_id = %s AND team_id = %s AND start_date = %s
+                         AND (end_date, as_of, superseded_on) IS DISTINCT FROM (%s, %s, CASE WHEN %s THEN NULL ELSE superseded_on END)""",
+                    (until, today, current, player, team, joined, until, today, current)).rowcount
+        for (team_id, start), (source, superseded) in held.items():
+            if source != PROVIDER or (team_id, start) == observed or (superseded is not None and superseded <= today):
+                continue
+            day = joined if joined > start else today if current else None
+            if day is None or (superseded is not None and superseded <= day):
+                continue
+            written += self.conn.execute(
+                "UPDATE core.player_contracts SET superseded_on = %s, updated_at = now() WHERE player_id = %s AND team_id = %s AND start_date = %s",
+                (day, player, team_id, start)).rowcount
+        return written
 
     def write_club(self, units, data):
         if not isinstance(data, list):
@@ -979,22 +1143,83 @@ class Reader:
         return written
 
     def write_transfers(self, units, data):
+        """A player's transfers after a read (FAILURE_MODES.md §20). Each move the response lists
+        is written by its key, in place; a move it no longer lists keeps its facts and the first day
+        it was missed (absent_since); nothing is deleted. A response that cannot be a whole history
+        raises Failed with its true HTTP status: nothing is written, the unit is tried again later,
+        and its read_at and rows_written stay those of the last accepted read. Refused: a 404 when
+        the player holds a Transfermarkt move (a first 404 is an ordinary answer), empty lists when
+        he holds a completed one, and whatever transfer_history refuses."""
         (key, priority), = units
-        rows = parse_transfers(data)
+        try:
+            moves = None if data is HTTP_404 else transfer_history(data)
+        except Failed as error:
+            raise Failed(error.code, error.status or 200) from None
         player = self.player_of(key)
+        if player is None:
+            self.done("transfers", key, priority, 0, status=404 if moves is None else 200)
+            return 0
+        # One writer per player at a time: a second reader of the same player waits, then merges.
+        self.conn.execute("SELECT pg_advisory_xact_lock(hashtext('transfermarkt.transfers'), %s)", (player,))
+        cursor = self.conn.execute(
+            """SELECT id, source_key, transfer_date, season_label, from_provider_club, from_team_id, to_provider_club, to_team_id,
+                      kind::text AS kind, fee_eur, market_value_eur, contract_until, pending, absent_since, as_of
+               FROM core.player_transfers WHERE player_id = %s AND source = 'transfermarkt'""", (player,))
+        names = [c.name for c in cursor.description]
+        held = [dict(zip(names, row)) for row in cursor.fetchall()]
+        if moves is None:
+            if held:
+                raise Failed("HISTORY_MISSING", 404)
+            self.done("transfers", key, priority, 0, status=404)
+            return 0
+        if not moves and any(not row["pending"] for row in held):
+            raise Failed("HISTORY_EMPTY", 200)
         today = self.now().date()
-        written = 0
-        if player is not None:
-            self.conn.execute("DELETE FROM core.player_transfers WHERE player_id = %s AND source = 'transfermarkt'", (player,))
-            for t in rows:
-                written += self.conn.execute(
+        stored = {row["source_key"]: row for row in held if row["source_key"] is not None}
+        for move in moves:
+            row = stored.get(move["key"])
+            if row is None:
+                self.conn.execute(
                     """INSERT INTO core.player_transfers(player_id, transfer_date, from_team_id, to_team_id, kind, fee_eur, source, as_of, source_key,
                          season_label, from_provider_club, to_provider_club, market_value_eur, contract_until, pending)
                        VALUES (%s, %s, %s, %s, %s, %s, 'transfermarkt', %s, %s, %s, %s, %s, %s, %s, %s)""",
-                    (player, t["date"], self.team_of(t["from"]), self.team_of(t["to"]), t["kind"], t["fee"], today, t["key"], t["season"],
-                     t["from"], t["to"], t["value"], t["contract_until"], t["pending"])).rowcount
-        self.done("transfers", key, priority, written)
-        return written
+                    (player, move["date"], self.team_of(move["from"]), self.team_of(move["to"]), move["kind"], move["fee"], today, move["key"],
+                     move["season"], move["from"], move["to"], move["value"], move["contract_until"], move["pending"]))
+                continue
+            changes = self.move_changes(row, move, today)
+            if changes:
+                self.conn.execute(
+                    f"UPDATE core.player_transfers SET {', '.join(f'{c} = %s' for c in changes)}, updated_at = now() WHERE id = %s",
+                    (*changes.values(), row["id"]))
+        self.conn.execute(
+            """UPDATE core.player_transfers SET absent_since = %s, updated_at = now()
+               WHERE player_id = %s AND source = 'transfermarkt' AND source_key IS NOT NULL AND absent_since IS NULL
+                 AND NOT (source_key = ANY(%s))""", (today, player, [move["key"] for move in moves]))
+        self.done("transfers", key, priority, len(moves))
+        return len(moves)
+
+    def move_changes(self, row, move, today):
+        """The columns of the stored move `row` that the record `move` changes. A field the record
+        states replaces the stored one, one it omits or gives as null stays. A new club key takes
+        its own canonical club or none, never the old key's; the same key keeps the club resolved
+        now, else the one attached since. When the kind changes and no fee is stated, the old fee
+        goes: it was the fee of another kind of move. A completed move listed as announced is an
+        older snapshot: its completed facts stay; it is only no longer absent."""
+        if not row["pending"] and move["pending"]:
+            new = {"absent_since": None}
+        else:
+            new = {column: move[field] for field, column in MOVE_COLUMNS.items() if move[field] is not None}
+            if move["fee"] is None and move["kind"] is not None and move["kind"] != row["kind"]:
+                new["fee_eur"] = None
+            for side in ("from", "to"):
+                club = move[side]
+                if club is None:
+                    continue
+                team = self.team_of(club)
+                new[f"{side}_provider_club"] = club
+                new[f"{side}_team_id"] = team if team is not None or club != row[f"{side}_provider_club"] else row[f"{side}_team_id"]
+            new.update(pending=move["pending"], absent_since=None, as_of=today)
+        return {column: value for column, value in new.items() if row[column] != value}
 
     def write_injuries(self, units, data):
         (key, priority), = units
