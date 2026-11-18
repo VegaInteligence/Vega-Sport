@@ -7,11 +7,12 @@ Tout chiffre du site n'est pas un calcul de Vega. Cette page liste ce qui est fo
 | Valeur | Source | Note |
 | --- | --- | --- |
 | xG, npxG, xG en jeu / CPA, xGOT, xA, buts évités | PitchAPI | aucun modèle Vega |
-| Note du match | PitchAPI | pas une note Vega validée |
 | Classement FIFA, coefficients UEFA clubs et associations | FIFA, UEFA, SportsAPI | collectés par le worker (`backend/vega/sources/fifa.py`, `uefa.py`) |
 | Classements officiels (fournisseur, UEFA) | fournisseurs | contrôlés, jamais recalculés |
 | Palmarès | Wikipédia / Wikidata | voir [PLAYER_HONOURS.md](../../PLAYER_HONOURS.md) |
 | Archives de buts historiques | schochastics/football-data | voir [HISTORICAL_GOALS.md](../../HISTORICAL_GOALS.md) |
+
+La note de match du joueur est calculée par Vega sur 100. [Formule et provenance](../02-metriques-attendues/04-note-du-match.md)
 
 ## Pas encore calculé
 

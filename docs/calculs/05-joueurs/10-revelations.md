@@ -1,15 +1,15 @@
 # Révélations
 
-Des joueurs que le classement de puissance ne classe pas encore, faute de minutes, et qui jouent déjà comme ses titulaires ([breakout.py](../../../backend/vega/breakout.py), `/api/rankings/breakouts`).
+Le signal « Révélation » repère des joueurs sous le seuil de minutes des titulaires de référence, dont le rendement est déjà comparable à celui de ces titulaires. Leur classement de puissance peut déjà comporter un rang provisoire. [Règle](../../../backend/vega/breakout.py) · [API](../../../backend/api/src/routes/rankings.mjs)
 
 ## La règle
 
 Un joueur est signalé sur une saison quand :
 
 1. il a joué **au moins 270 minutes** mais reste **sous le seuil de minutes du classement** (900 minutes sur une saison entière, la moitié des minutes du joueur le plus utilisé tant que la saison n'en est pas là) ;
-2. son championnat est **mesuré** (erreur-type de son niveau d'au plus 45 points, version 4) ;
-3. son **rendement par 90 minutes régularisé** (celui du classement, § 8 de la méthode : il ramène vers la moyenne un joueur qui a peu joué) est **au niveau du meilleur cinquième des titulaires de son rôle** (les joueurs classés du même rôle, au moins 30) ;
-4. il n'a **jamais été titulaire** (classé) lors d'une saison antérieure de la base ;
+2. sa ligne de puissance porte `linked = true`. Pour les championnats masculins, la marge interne donne ce statut jusqu’à 45 points à l’entrée et 52 points pour un championnat déjà mesuré ;
+3. son **rendement par 90 minutes régularisé** (celui du classement, § 8 de la méthode : il ramène vers la moyenne un joueur qui a peu joué) est **au niveau du meilleur cinquième des titulaires de son rôle** (les joueurs du même rôle admissibles en minutes, avec `linked = true` et un rendement renseigné, au moins 30) ;
+4. aucune saison antérieure de la base ne le marque admissible en minutes (`eligible`) ;
 5. sa date de naissance est **connue** et il a **moins de 23 ans** au 1ᵉʳ août de la saison. Elle n'est connue que pour une minorité de joueurs (Wikidata, club par club) : un joueur dont l'âge est inconnu n'est pas signalé.
 
 Les règles 4 et 5 écartent les joueurs établis qui ont peu joué (un titulaire blessé a le rendement d'un titulaire). La première liste, calculée sans exiger l'âge, s'ouvrait sur un international de retour de blessure et deux joueurs de 35 ans et plus : la base ne détient ni leurs saisons d'avant 2025/2026 ni leur âge. La liste est donc courte aujourd'hui (les 119 joueurs que la règle 3 retient en 2026/2027 n'ont pas tous un âge connu) et s'allonge à mesure que les dates de naissance arrivent. Le « centile » affiché est la part des titulaires de son rôle que le joueur dépasse ; les signalés sont rangés par ce centile.
@@ -33,6 +33,6 @@ Ce que la vérification ne couvre pas : les règles 4 et 5 (2025/2026 est la pre
 ## Où il se lit
 
 - Page « Classement des joueurs » : la liste « Révélations » de la saison, les vingt premiers, avec la part des titulaires de leur poste qu'ils dépassent.
-- Fiche d'un joueur signalé : une phrase sous l'Indice Vega (« Révélation : en 610 minutes, son rendement par 90 minutes le place devant 93 % des titulaires à son poste »). Un joueur sous le seuil de minutes n'a pas de score au classement ; cette phrase est tout ce que le classement dit de lui.
+- Fiche d'un joueur signalé : une phrase sous l'Indice Vega (« Révélation : en 610 minutes, son rendement par 90 minutes le place devant 93 % des titulaires à son poste »). La fiche peut présenter à la fois ce signal, le score de puissance et son rang provisoire.
 
 Recalculé avec les modèles de la saison, après le classement (`agg.player_breakouts`, `agg.breakout_runs`). L'API ne sert une liste que si la règle en vigueur l'a calculée ; une saison terminée est recalculée une fois quand la règle change. Au 13 novembre 2026, dix joueurs de 2026/2027 sont signalés.

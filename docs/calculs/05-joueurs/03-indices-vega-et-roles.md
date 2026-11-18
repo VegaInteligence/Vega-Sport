@@ -15,7 +15,7 @@ s_k = \begin{cases} \text{centile}_k & \text{sens « max »} \\ 100 - \text{cent
 $$
 
 - **Tous** les centiles doivent exister ; s'il en manque un, l'indice est `null` (pas de moyenne partielle).
-- Un indicateur non classable (xA) avec un poids > 0 rend l'indice impossible.
+- Le xA de saison peut recevoir un poids positif lorsque son centile est disponible.
 - Chaque composante affiche sa part (`w_k / Σ w`) et sa contribution (`s_k × w_k / Σ w`).
 - Indice par défaut « Mon indice » : passes réussies, occasions créées, récupérations, poids 1 chacun, sens « max », 450 minutes minimum.
 
@@ -44,9 +44,9 @@ Les rôles sont triés du plus haut au plus bas.
 2. **Rang** = son rang parmi les joueurs classés de son rôle (`roleRank`) ;
 3. **Sur** = nombre de joueurs classés de ce rôle (`roleCount`).
 
-Un joueur qui a un score sans être classé (championnat au niveau provisoire, erreur-type au-dessus de 45 points ; ou championnat féminin, noté entre joueuses) a son niveau, pas de rang.
+Avec un indice calculé, le joueur reçoit un rang dans son univers et un rang à son poste. Les classements masculin et féminin commencent chacun à 1. Sur la fiche, le rang est provisoire sous le seuil de minutes. Chez les hommes, une sélection seule, un club sans championnat dans la base ou un championnat de niveau provisoire peuvent également le rendre provisoire. [Lecture de la fiche et de l’univers](../../../backend/api/src/routes/rankings.mjs)
 
-Pour une saison sans classement de puissance, ou un joueur qui n'y a pas de score (trop peu de minutes), la colonne garde l'ancien calcul :
+Quand l’API ne fournit aucun score de puissance pour ce joueur et cette saison, la fiche utilise le calcul descriptif ci-dessous si les comparaisons et les matchs nécessaires sont disponibles :
 1. **Niveau actuel** = valeur arrondie du **meilleur rôle** du joueur (le premier rôle dont l'indice existe) ;
 2. **Rang** = `1 + nombre de joueurs de la cohorte dont l'indice sur ce même rôle est strictement supérieur` ;
 3. **Sur** = nombre de joueurs de la cohorte ayant un indice sur ce rôle, plus le joueur.

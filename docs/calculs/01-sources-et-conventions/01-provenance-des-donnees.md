@@ -45,10 +45,11 @@ Clés utilisées par les calculs du profil club ([club-scout.js](../../../dashbo
 
 ## Niveau joueur dans un match
 
+Vega calcule la note du joueur sur 100 à partir de sa contribution dans la rencontre. Le champ `rating_title` des anciennes archives PitchAPI a été retiré des tables de lecture par la migration 108. [Note du match](../02-metriques-attendues/04-note-du-match.md)
+
 | Champ Vega | Champ PitchAPI |
 | --- | --- |
 | `minutes` | `minutes_played` |
-| `rating` | `rating_title` (note /10) |
 | `goals`, `assists` | `goals`, `assists` |
 | `xg` | `expected_goals` |
 | `npxg` | `expected_goals_non_penalty` |
