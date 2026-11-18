@@ -1,12 +1,17 @@
 import { normalizeText } from "../model.js";
 import { NATIONAL_CUP_ARCHIVES, GERMAN_CUP_FOLDER, GERMAN_CUP_SEASONS } from "./cup-archives.js";
 import cupLogos from "../../../shared/cup-logos.json" with { type: "json" };
+import { familyArtworkUrl, WORLD_CUP_ID } from "./competition-artwork.js";
+
+export { WORLD_CUP_ID } from "./competition-artwork.js";
 
 /** Cup logos refreshed by the previous pipeline's refresh_cup_logos.mjs. */
 const CUP_LOGOS = cupLogos.logos || {};
-const withLogo = (competition) => competition.imageUrl || !CUP_LOGOS[competition.id]?.imageUrl ? competition : { ...competition, imageUrl: CUP_LOGOS[competition.id].imageUrl };
+function withLogo(competition) {
+  const imageUrl = familyArtworkUrl(competition.id, competition.imageUrl || CUP_LOGOS[competition.id]?.imageUrl);
+  return imageUrl === competition.imageUrl ? competition : { ...competition, imageUrl };
+}
 
-export const WORLD_CUP_ID = "l_1XLtP0";
 export const WORLD_CUP_FALLBACK = { id: WORLD_CUP_ID, name: "Coupe du monde", country: "INT", seasons: ["2026", "2022"] };
 export const OPEN_CUP_CATALOG = [
   { id: "open-cup:france-cup", name: "Coupe de France", country: "FRA", source: "openfootball", sourceKey: "france-cup", seasons: ["2024/2025"], defaultSeason: "2024/2025", aliases: ["French Cup"], coverage: "Archive 2024/2025" },
@@ -22,7 +27,7 @@ export const OPEN_CUP_CATALOG = [
   { id: "nations-results:copa-america", name: "Copa América", country: "CONMEBOL", source: "nations-results", sourceKey: "copa-america", seasons: ["2024"], defaultSeason: "2024", aliases: ["Copa America"], coverage: "Résultats" },
   { id: "nations-results:asian-cup", name: "Coupe d’Asie des nations", country: "AFC", source: "nations-results", sourceKey: "asian-cup", seasons: ["2023"], defaultSeason: "2023", aliases: ["AFC Asian Cup", "Asian Cup"], coverage: "Résultats" },
   { id: "nations-results:gold-cup", name: "Gold Cup", country: "CONCACAF", source: "nations-results", sourceKey: "gold-cup", seasons: ["2025", "2023"], defaultSeason: "2025", aliases: ["CONCACAF Gold Cup"], coverage: "Résultats" },
-  { id: "open-cup:world-cup-history", name: "Coupe du monde — archives", country: "INT", source: "openfootball", sourceKey: "world-cup-history", seasons: ["2018", "2014", "2010", "2006", "2002", "1998", "1994", "1990", "1986", "1982", "1978", "1974", "1970", "1966", "1962", "1958", "1954", "1950", "1938", "1934", "1930"], defaultSeason: "2018", aliases: ["World Cup", "Mondial"] },
+  { id: "open-cup:world-cup-history", name: "Coupe du monde — archives", country: "INT", source: "openfootball", sourceKey: "world-cup-history", seasons: ["2026", "2022", "2018", "2014", "2010", "2006", "2002", "1998", "1994", "1990", "1986", "1982", "1978", "1974", "1970", "1966", "1962", "1958", "1954", "1950", "1938", "1934", "1930"], defaultSeason: "2018", aliases: ["World Cup", "Mondial"] },
 ];
 const CUP_LABELS = {
   "ESP_CUP_copa-del-rey": ["Coupe du Roi", "Copa del Rey"],
@@ -40,6 +45,19 @@ const CUP_LABELS = {
 
 /** The verified logo the API gives for the edition's own competition (its FK), never another's (FAILURE_MODES.md §22). */
 const ownLogo = (item) => (typeof item.image_url === "string" && item.image_url ? { imageUrl: item.image_url } : {});
+/** A Vega competition id (PitchAPI's key, else l_v and seven digits), as /api/cups/index publishes it. */
+const COMPETITION_ID = /^l_(?:[A-Za-z0-9]{6}|v\d{7})$/;
+/** The edition's competition by its canonical id (the API's `competition_id`, the edition's FK), never by a name (VI-30). */
+const ownIdentity = (item) => (typeof item.competition_id === "string" && COMPETITION_ID.test(item.competition_id) ? { canonicalId: item.competition_id } : {});
+
+/** The entry a page asks for: by its own id, else by the canonical id it answers to (FAILURE_MODES_VI30.md V12). */
+export function findCompetition(catalog, id) {
+  if (!id) return undefined;
+  return catalog.find((c) => c.id === id) || catalog.find((c) => c.canonicalId === id);
+}
+
+/** Whether an id not found yet may still come with the supplemental index (its source key or a canonical l_v id). */
+export const awaitsCupIndex = (id) => typeof id === "string" && (id.startsWith("open-matchday:") || /^l_v\d{7}$/.test(id));
 
 /** Only promote actual cup datasets with at least one collected match. */
 export function supplementalCupCatalog(index) {
@@ -52,7 +70,7 @@ export function supplementalCupCatalog(index) {
     const labels = CUP_LABELS[item.folder] || [item.name || item.folder];
     const archive = NATIONAL_CUP_ARCHIVES[item.folder];
     const editions = [season, ...Object.keys(item.editions || {}).filter((value) => /^\d{4}\/\d{4}$/.test(value)), ...(archive ? [archive.season] : []), ...(item.folder === GERMAN_CUP_FOLDER ? GERMAN_CUP_SEASONS : [])];
-    return [{ id: "open-matchday:" + item.folder, name: labels[0], country: item.country_code || "", source: "open-matchday", folder: item.folder, seasons: [...new Set(editions)].sort().reverse(), defaultSeason: season, aliases: [...labels.slice(1), item.name || ""], tables: item.tables, editions: item.editions || null, sourceDate: index.meta?.source_generated_at_utc || index.meta?.retrieved_at_utc || null, ...ownLogo(item) }];
+    return [{ id: "open-matchday:" + item.folder, name: labels[0], country: item.country_code || "", source: "open-matchday", folder: item.folder, seasons: [...new Set(editions)].sort().reverse(), defaultSeason: season, aliases: [...labels.slice(1), item.name || ""], tables: item.tables, editions: item.editions || null, sourceDate: index.meta?.source_generated_at_utc || index.meta?.retrieved_at_utc || null, ...ownLogo(item), ...ownIdentity(item) }];
   });
 }
 
@@ -96,11 +114,14 @@ const COUNTRY_CODES = { IRE: "IRL" };
 export function supplementalLeagueCatalog(index, native = []) {
   if (!Array.isArray(index?.competitions)) return [];
   const held = new Set((native || []).map((c) => normalizeText(c.name || "") + "|" + (c.country || "")));
+  const heldIds = new Set((native || []).map((c) => c.id));
   return index.competitions.flatMap((item) => {
     if (!/^[A-Z]{3}_[A-Z0-9]+_[a-z0-9-]+$/i.test(item.folder || "") || /_CUP_/i.test(item.folder)) return [];
     if (!(Number(item.tables?.results?.rows) > 0 || Number(item.tables?.fixtures?.rows) > 0)) return [];
     const season = /^\d{4}\/\d{4}$/.test(item.season || "") ? item.season : "";
     if (!season) return [];
+    // The main source's own competition (the same canonical id, VI-30), then a copy by its name and country.
+    if (ownIdentity(item).canonicalId && heldIds.has(item.competition_id)) return [];
     const code = item.country_code || item.folder.split("_")[0];
     const country = COUNTRY_CODES[code] || code;
     if (held.has(normalizeText(item.name || "") + "|" + country) || held.has(normalizeText(item.name || "") + "|" + code)) return [];
@@ -108,7 +129,7 @@ export function supplementalLeagueCatalog(index, native = []) {
     const editions = [season, ...Object.keys(item.editions || {}).filter((value) => /^\d{4}\/\d{4}$/.test(value))];
     return [{ id: "open-matchday:" + item.folder, name: labels[0], country, source: "open-matchday", kind: "league", folder: item.folder,
       seasons: [...new Set(editions)].sort().reverse(), defaultSeason: season, aliases: [...new Set([...labels.slice(1), item.name || ""])].filter(Boolean),
-      tables: item.tables, editions: item.editions || null, sourceDate: index.meta?.source_generated_at_utc || index.meta?.retrieved_at_utc || null, ...ownLogo(item) }];
+      tables: item.tables, editions: item.editions || null, sourceDate: index.meta?.source_generated_at_utc || index.meta?.retrieved_at_utc || null, ...ownLogo(item), ...ownIdentity(item) }];
   });
 }
 
@@ -124,5 +145,6 @@ export function mergeCupCatalog(nativeCompetitions, supplementalIndex, workerNat
   const ids = new Set(native.map((competition) => competition.id));
   const world = ids.has(WORLD_CUP_ID) ? [] : [WORLD_CUP_FALLBACK];
   const extras = [...supplementalCupCatalog(supplementalIndex), ...supplementalLeagueCatalog(supplementalIndex, nativeCompetitions)];
-  return [...native, ...world, ...OPEN_CUP_CATALOG, ...extras.filter((cup) => !ids.has(cup.id))].map(withLogo);
+  // An entry whose canonical id is a native competition's is that competition: listed once, as the native one.
+  return [...native, ...world, ...OPEN_CUP_CATALOG, ...extras.filter((cup) => !ids.has(cup.id) && !ids.has(cup.canonicalId))].map(withLogo);
 }

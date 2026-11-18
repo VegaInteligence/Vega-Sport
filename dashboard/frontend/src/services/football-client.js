@@ -146,6 +146,7 @@ export class FootballDataClient {
           matches: saved.matches,
           rounds: saved.rounds || {},
           source: "snapshot",
+          editionArtwork: saved.editionArtwork,
         };
       } catch (error) {
         if (error.name === "AbortError") {
@@ -176,6 +177,7 @@ export class FootballDataClient {
                   season: match.season ?? season,
                 })),
           source: "api",
+          editionArtwork: matches.find((match) => match.season === String(season))?.editionArtwork,
         };
       } catch (error) {
         if (error.name === "AbortError") {
@@ -334,6 +336,7 @@ export class FootballDataClient {
       league:
         typeof match.league === "string" ? match.league : match.league?.name,
       season: match.season,
+      ...(match.editionArtwork && { editionArtwork: match.editionArtwork }),
       home: {
         ...match.home_team,
         imageUrl: match.home_team?.image_url,

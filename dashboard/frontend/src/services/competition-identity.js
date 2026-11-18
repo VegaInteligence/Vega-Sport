@@ -1,3 +1,4 @@
+import { editionArtworkUrl } from "./competition-artwork.js";
 import { countryLabel } from "./competition-selector.js";
 
 /** Fill missing season metadata from the provider catalogue using stable IDs. */
@@ -49,16 +50,17 @@ export function competitionIndex(...collections) {
 export function fixtureCompetition(fixture, index) {
   const league =
     fixture?.league && typeof fixture.league === "object" ? fixture.league : {};
-  const info = index.get(league.id || fixture?.leagueId) || {};
+  const id = league.id || fixture?.leagueId || "";
+  const info = index.get(id) || {};
   const country = info.country || league.country || league.country_code || "";
   return {
-    id: league.id || fixture?.leagueId || "",
+    id,
     name:
       league.name ||
       info.name ||
       (typeof fixture?.league === "string" ? fixture.league : "") ||
       "Compétition",
     country: country ? countryLabel(country) : "",
-    imageUrl: league.image_url || league.imageUrl || info.imageUrl || "",
+    imageUrl: editionArtworkUrl(id, league.image_url || league.imageUrl || info.imageUrl || "", fixture?.editionArtwork),
   };
 }

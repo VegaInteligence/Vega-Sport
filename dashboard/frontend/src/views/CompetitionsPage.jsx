@@ -28,6 +28,7 @@ import {
   defaultCompetitionMatchStatus,
   orderCompetitionMatches,
 } from "../services/competition-matches.js";
+import { editionArtworkUrl } from "../services/competition-artwork.js";
 import { normalizeText, seasonLabel } from "../services/format.js";
 import { useResource } from "../services/resources.js";
 import { competitionFixturePreview } from "../services/fixture-pages.js";
@@ -52,6 +53,8 @@ import SeasonProjection from "../components/SeasonProjection.jsx";
 import { useSeasonProjection } from "../services/forecasts.js";
 import {
   WORLD_CUP_ID,
+  awaitsCupIndex,
+  findCompetition,
   mergeCupCatalog,
   competitionSearchText,
   normalizeCompetitionQuery,
@@ -148,7 +151,7 @@ function Fixtures({ competition, day, initialSeason }) {
   const f = useFootball();
   const [season, setSeason] = useState(
     (initialSeason &&
-      competition?.seasons?.find((s) => seasonLabel(s) === initialSeason)) ||
+      competition?.seasons?.find((s) => String(s) === initialSeason || seasonLabel(s) === initialSeason)) ||
       competition?.seasons?.find((s) => seasonLabel(s) === f.season) ||
       competition?.seasons?.[0] ||
       f.season,
@@ -241,6 +244,8 @@ function Fixtures({ competition, day, initialSeason }) {
   // The league replayed to its end, where the base projects it (a domestic league in progress).
   const projection = useSeasonProjection(supported ? competition?.id : null, seasonLabel(season));
   const overviewFixtures = resource.value || preview.value;
+  const artwork = resource.error || resource.refreshError ? null : overviewFixtures?.editionArtwork;
+  const imageUrl = editionArtworkUrl(competition?.id, competition?.imageUrl, artwork);
   return (
     <div
       className={
@@ -252,7 +257,7 @@ function Fixtures({ competition, day, initialSeason }) {
         title={
           competition ? (
             <span className="competition-detail-title">
-              <Media name={competition.name} url={competition.imageUrl} />
+              <Media url={imageUrl} initials={false} />
               <span>
                 <strong>{competition.name}</strong>
                 <small>{competitionCountryLabel(competition)}</small>
@@ -536,9 +541,8 @@ export default function CompetitionsPage() {
     (choice.ready
       ? preferredCompetition(catalog, choice.saved, choice.country)
       : null);
-  const selected = (id ? expandedCatalog : catalog).find(
-    (c) => c.id === chosenId,
-  );
+  // By its own id or the canonical id it answers to (l_v…, VI-30): the URL keeps the id it was asked with.
+  const selected = findCompetition(id ? expandedCatalog : catalog, chosenId);
   const directoryCatalog = europeOnly
     ? expandedCatalog.filter(inEuropeFocus)
     : expandedCatalog;
@@ -566,7 +570,7 @@ export default function CompetitionsPage() {
     if (
       !id ||
       f.focus !== "europe" ||
-      inEuropeFocus(expandedCatalog.find((c) => c.id === id) || { id })
+      inEuropeFocus(findCompetition(expandedCatalog, id) || { id })
     )
       return;
     const url = new URL(window.location.href);
@@ -655,6 +659,7 @@ export default function CompetitionsPage() {
                     name={c.name}
                     url={c.imageUrl}
                     className="crest league-spotlight-logo"
+                    initials={false}
                   />
                   <span>
                     <strong>{c.name}</strong>
@@ -684,15 +689,15 @@ export default function CompetitionsPage() {
               />
             ) : (
               <Fixtures
-                key={selected.id}
+                key={`${selected.id}:${requestedEdition}`}
                 competition={selected}
-                initialSeason={openSeason}
+                initialSeason={requestedEdition || openSeason}
               />
             )
           ) : (!id && !choice.ready) ||
-            (id?.startsWith("open-matchday:") && cupIndex.loading) ? (
+            (awaitsCupIndex(id) && cupIndex.loading) ? (
             <Skeleton data-page-loading="" label="Chargement de la compétition…" />
-          ) : id?.startsWith("open-matchday:") && cupIndex.error ? (
+          ) : awaitsCupIndex(id) && cupIndex.error ? (
             <div className="notice" role="alert">
               Les coupes nationales sont indisponibles.{" "}
               <button
@@ -791,16 +796,7 @@ export default function CompetitionsPage() {
                       onClick={() => chooseCompetition(c.id)}
                     >
                       <div className="competition-card-header">
-                        {c.imageUrl ? (
-                          <Media name={c.name} url={c.imageUrl} />
-                        ) : (
-                          <span
-                            className="crest competition-card-fallback"
-                            aria-hidden="true"
-                          >
-                            <Icon name="trophy" />
-                          </span>
-                        )}
+                        <Media url={c.imageUrl} initials={false} />
                         <div>
                           <h3>{c.name}</h3>
                           <p>

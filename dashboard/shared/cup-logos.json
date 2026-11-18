@@ -1,18 +1,6 @@
 {
   "retrievedAt": "2026-11-03T08:18:40.373Z",
   "logos": {
-    "l_1XLtP0": {
-      "imageUrl": "https://img.thesports.com/football/competition/da617cd58cd9cffaae0daec865457fb5.png",
-      "source": "SportScore",
-      "slug": "fifa-world-cup",
-      "name": "FIFA World Cup"
-    },
-    "open-cup:world-cup-history": {
-      "imageUrl": "https://img.thesports.com/football/competition/da617cd58cd9cffaae0daec865457fb5.png",
-      "source": "SportScore",
-      "slug": "fifa-world-cup",
-      "name": "FIFA World Cup"
-    },
     "open-cup:club-world-cup": {
       "imageUrl": "https://img.thesports.com/football/competition/ceac41ef85151074cdbfc87f09e1b8a9.png",
       "source": "SportScore",

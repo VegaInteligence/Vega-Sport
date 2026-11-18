@@ -4,10 +4,11 @@ import { Card, Media, Pager, Segments, AsyncState, Empty } from "./UI.jsx";
 import { date, seasonLabel } from "../services/format.js";
 import { parisDay } from "../services/fixtures.js";
 import KnockoutBracket from "./KnockoutBracket.jsx";
+import { cupEditionTable, cupTable } from "../services/catalog-client.js";
 import { useResource } from "../services/resources.js";
-import { cupTable } from "../services/catalog-client.js";
+import { editionArtworkUrl } from "../services/competition-artwork.js";
 import { competitionCountryLabel } from "../services/competition-selector.js";
-import { normalizeOpenCup, normalizeSupplementalCup, filterCupMatches, resultsAsOpenCup, leagueTable, numberedCupRounds } from "../services/cup-matches.js";
+import { normalizeOpenCup, normalizeRoundSides, normalizeSupplementalCup, filterCupMatches, resultsAsOpenCup, leagueTable, numberedCupRounds } from "../services/cup-matches.js";
 import { combineCupLegs, knockoutStage } from "../services/knockout-bracket.js";
 import { cupWorkerSnapshot } from "../services/cup-worker-client.js";
 import { NATIONAL_CUP_ARCHIVES, GERMAN_CUP_FOLDER, isGermanCupSeason } from "../services/cup-archives.js";
@@ -34,16 +35,19 @@ function LeagueStandings({ name, matches }) {
     <p className="nations-note">Classement calculé à partir des résultats disponibles.</p>
   </>;
 }
-/** A cup's match, in the main lists' design (date, teams around the score, round), and its forecast before kick-off. */
+/**
+ * A cup's match, in the main lists' design (date, teams around the score, round), and its forecast before kick-off.
+ * A club's badge is the crest of its own side (homeImage, awayImage: the row's foreign key, VI-30), else its initials.
+ */
 function CupMatch({ match, nationalTeams, season }) {
-  const badge = (name) => (nationalTeams ? <NationalFlag name={name} season={season || match.date} /> : <Media name={name} />);
+  const badge = (name, image) => (nationalTeams ? <NationalFlag name={name} season={season || match.date} /> : <Media name={name} url={image} />);
   return (
     <div className="match-row cup-match">
       <span className="match-date">{match.date ? date(match.date) : "Date à préciser"}</span>
       <span className="match-teams">
-        <span className="team-name home-team"><span>{match.home}</span>{badge(match.home)}</span>
+        <span className="team-name home-team"><span>{match.home}</span>{badge(match.home, match.homeImage)}</span>
         <strong className="score">{match.score ? match.score[0] + " – " + match.score[1] : "À venir"}</strong>
-        <span className="team-name">{badge(match.away)}<span>{match.away}</span></span>
+        <span className="team-name">{badge(match.away, match.awayImage)}<span>{match.away}</span></span>
         {match.notes?.length > 0 && <span className="cup-match-notes">{match.notes.join(" · ")}</span>}
         {match.status === "scheduled" && <MatchForecastBar home={match.home} away={match.away} forecast={match.forecast} />}
       </span>
@@ -83,29 +87,44 @@ export default function CupCompetition({ competition, initialSeason }) {
     : germany && isGermanCupSeason(season) ? "openligadb"
     : archive && season === archive.season ? "archive"
     : "unavailable";
-  const resource = useResource("cup:" + competition.id + ":" + mode + ":" + view + ":" + season + ":" + version, async () => {
+  const resource = useResource("cup:" + competition.id + ":" + mode + ":" + view + ":" + season + ":" + version, async ({ signal }) => {
     if (mode === "supplemental") {
-      const [results, fixtures] = await Promise.all(["results", "fixtures"].map(kind => tables?.[kind] && Number(tables[kind].rows) !== 0 ? cupTable(competition.folder,season,kind) : []));
+      const payload = competition.canonicalId
+        ? await cupEditionTable(competition.canonicalId, season, { signal }).catch(() => {
+            signal.throwIfAborted();
+            return null;
+          })
+        : null;
+      const validTable = Array.isArray(payload?.results) && Array.isArray(payload?.fixtures);
+      const [results, fixtures] = validTable ? [payload.results, payload.fixtures] : await Promise.all(["results", "fixtures"].map(kind => tables?.[kind] && Number(tables[kind].rows) !== 0 ? cupTable(competition.folder, season, kind, { signal }) : []));
       // A cup's numbered rounds named by their ties (its bracket, VI-19); a league's matches as they are.
       const normalized = normalizeSupplementalCup(results, fixtures);
       const matches = league ? normalized : numberedCupRounds(normalized);
-      if (view !== "bracket") return { matches };
-      return matches.some((match) => knockoutStage(match.roundName)) ? { matches: combineCupLegs(matches) } : { matches, unavailable: true };
+      const editionArtwork = validTable ? payload.editionArtwork : undefined;
+      if (view !== "bracket") return { matches, editionArtwork };
+      return matches.some((match) => knockoutStage(match.roundName))
+        ? { matches: combineCupLegs(matches), editionArtwork }
+        : { matches, unavailable: true, editionArtwork };
     }
     if (mode === "unavailable") return { matches: [], unavailable: true };
-    if (mode === "openligadb") return cupWorkerSnapshot("openligadb", "germany-cup", season, "/api/openligadb?competition=germany-cup&season=" + encodeURIComponent(season));
+    if (mode === "openligadb") {
+      const payload = await cupWorkerSnapshot("openligadb", "germany-cup", season, "/api/openligadb?competition=germany-cup&season=" + encodeURIComponent(season), { signal });
+      return { ...payload, matches: normalizeRoundSides(payload.matches) };
+    }
     if (mode === "results") {
       // International Results: played matches only, without rounds (results-v1).
-      const payload = await cupWorkerSnapshot("nations-results", competition.sourceKey, season, null);
-      return { matches: normalizeOpenCup(resultsAsOpenCup(payload.matches)), source: payload.source };
+      const payload = await cupWorkerSnapshot("nations-results", competition.sourceKey, season, null, { signal });
+      return { matches: normalizeOpenCup(resultsAsOpenCup(payload.matches)), source: payload.source, editionArtwork: payload.editionArtwork };
     }
     const key = mode === "archive" ? archive.key : competition.sourceKey;
-    const payload = await cupWorkerSnapshot("open-cups", key, season, "/api/open-cups?competition=" + encodeURIComponent(key) + "&season=" + encodeURIComponent(season));
+    const payload = await cupWorkerSnapshot("open-cups", key, season, "/api/open-cups?competition=" + encodeURIComponent(key) + "&season=" + encodeURIComponent(season), { signal });
     const matches = normalizeOpenCup(payload.matches);
-    return { matches: mode === "archive" && archive.twoLegged && view === "bracket" ? combineCupLegs(matches) : matches, source: payload.source };
+    return { matches: mode === "archive" && archive.twoLegged && view === "bracket" ? combineCupLegs(matches) : matches, source: payload.source, editionArtwork: payload.editionArtwork };
   });
+  const artwork = resource.error || resource.refreshError ? null : resource.value?.editionArtwork;
+  const imageUrl = editionArtworkUrl(competition.id, competition.imageUrl, artwork);
   return (
-    <Card className="cup-detail" title={<span className="competition-detail-title"><Media name={competition.name} url={competition.imageUrl} /><span><strong>{competition.name}</strong><small>{competitionCountryLabel(competition)}</small></span></span>}>
+    <Card className="cup-detail" title={<span className="competition-detail-title"><Media url={imageUrl} initials={false} /><span><strong>{competition.name}</strong><small>{competitionCountryLabel(competition)}</small></span></span>}>
       <div className="cup-controls">
         <label>Édition
           <select aria-label="Édition de la coupe" value={season} onChange={(event) => { const next = event.target.value; setSeason(next); setStatus(competition.sourceKey === "euro" && next === "2028" ? "scheduled" : "finished"); setPage(1); }}>

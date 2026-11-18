@@ -67,6 +67,7 @@ test("competition page renders a result-derived league table and its limits", as
     "../services/compact-reads.js": await import("../dashboard/frontend/src/services/compact-reads.js"),
     "../services/fixtures.js": await import("../dashboard/frontend/src/services/fixtures.js"),
     "../model.js": { csvString: () => "" },
+    "../services/competition-artwork.js": await import("../dashboard/frontend/src/services/competition-artwork.js"),
     "../services/catalog-client.js": await import("../dashboard/frontend/src/services/catalog-client.js"),
     "../components/SeasonSelect.jsx": { __esModule: true, default: ({ label, allLabel, seasons }) => elem("select", { "aria-label": label }, allLabel && elem("option", { value: "all" }, allLabel), seasons.map((value) => elem("option", { key: value, value }, value))) },
     "../../../shared/competition-scope.js": { EUROPE_FOCUS_IDS: new Set(), inEuropeFocus: () => false },
