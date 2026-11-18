@@ -224,3 +224,11 @@
 - No mock-up: the user stated the layout. Linear not checked (connector is the employer's workspace).
 - Verified on a local build against production data at 8 widths (one-line values, no overflow, inner borders only); site tests 729/729. Evidence: `~/Agents/claude-runs/match-kpis-one-row-20261118/README.md`.
 - 18 Nov, user (resumed from ~/Perso/Vega after the checkout moved): « balançons tout ça » → rebased on origin/main, pushed to main; production check below.
+
+## Player page « Forme récente » as thin bars (18 Nov 2026) — done
+
+- Ask: the recent-form curve looked dated; show each match at its point, make it finer.
+- Validated design: thin bars on a faint 0–100 rail, a hairline curve over their tops, the average as a dotted hairline; under each bar the opponent's crest, vs/à and name, result dot + score from the player's side, date; hover tip (competition, minutes, goals / assists, « Voir le match »); on touch, a first tap shows the match under the chart. Rejected along the way: the curve with grade badges, thick bars, 2 px stems.
+- Built as `FormBars.jsx` (shared `LineChart` untouched); a bar's tone follows the rounded figure.
+- Shipped `f29f32df63` on main (« tu peux pousser sur main et mettre en ligne sur Vercel »): tests first (`tests/player-recent-form.test.mjs`), site suite 737/737, Vercel success, production E2E 23/23 (Martínez, Haaland; desktop, phone, light). Evidence: scratchpad `45f7e519…/form/e2e`.
+- Linear overlap check not done (the connector opens another workspace).
