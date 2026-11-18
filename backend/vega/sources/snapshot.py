@@ -37,24 +37,30 @@ COLUMNS = {
 def _read(conn, provider, where, args):
     names = list(COLUMNS)
     rows = conn.execute(
-        f"""SELECT p.provider_key, m.id, m.revision, m.xmin::text, {', '.join(COLUMNS.values())}
+        f"""SELECT p.provider_key, p.is_current, m.id, m.revision, m.xmin::text, {', '.join(COLUMNS.values())}
             FROM core.matches m JOIN core.provider_ids p ON p.entity_type = 'match' AND p.provider = %s AND p.entity_id = m.id
             WHERE {where}""",
         (provider, *args),
     ).fetchall()
-    return {key: {"id": match, "revision": revision, "row_version": version, **dict(zip(names, columns))}
-            for key, match, revision, version, *columns in rows}
+    return {key: {"id": match, "revision": revision, "row_version": version, "is_current": current, **dict(zip(names, columns))}
+            for key, current, match, revision, version, *columns in rows}
 
 
 def stored(conn, provider, edition):
-    """{provider key: {"id", "revision", column: value}} of the edition's matches (none for a new edition)."""
-    return {} if edition is None else _read(conn, provider, "m.competition_season_id = %s", (edition,))
+    """{current provider key: {"id", "revision", column: value}} of the edition's matches."""
+    return {} if edition is None else _read(conn, provider, "m.competition_season_id = %s AND p.is_current", (edition,))
 
 
 def elsewhere(conn, provider, edition, keys):
-    """The same, for those of `keys` the provider gave a match of another edition: the writer moves
-    such a match into this edition, as it always did, rather than creating a second one."""
-    return _read(conn, provider, "p.provider_key = ANY(%s) AND m.competition_season_id IS DISTINCT FROM %s", (list(keys), edition)) if keys else {}
+    """Resolve current keys of another edition and refuse incoming keys retired in any edition."""
+    if not keys:
+        return {}
+    matches = _read(conn, provider, "p.provider_key = ANY(%s) AND (NOT p.is_current OR m.competition_season_id IS DISTINCT FROM %s)",
+                    (list(keys), edition))
+    retired = sorted(key for key, match in matches.items() if not match["is_current"])
+    if retired:
+        raise SourceError("INACTIVE_MATCH_KEY", f"{provider}: retired match keys in the snapshot: {', '.join(retired[:5])}")
+    return matches
 
 
 def guard(provider, before, after, label):
@@ -97,21 +103,28 @@ def write(conn, provider, key, values, found, changed=False):
         return found["id"], None
     # PostgreSQL rechecks this row version after waiting on a concurrent update. A user-facing
     # revision alone misses revisions of archive_position and maintenance changes to a row.
-    updated = conn.execute(f"UPDATE core.matches SET {assignments} WHERE id=%s AND xmin::text=%s",
-                           (*args, found["id"], found["row_version"]))
+    updated = conn.execute(
+        f"""UPDATE core.matches m SET {assignments} WHERE m.id=%s AND m.xmin::text=%s
+              AND EXISTS (SELECT 1 FROM core.provider_ids p WHERE p.entity_type='match' AND p.provider=%s
+                            AND p.provider_key=%s AND p.entity_id=m.id AND p.is_current)""",
+        (*args, found["id"], found["row_version"], provider, key),
+    )
     if updated.rowcount != 1:
         raise SourceError("SNAPSHOT_CHANGED", f"{provider}: {key} changed after the snapshot read")
     return found["id"], outcome
 
 
 def remove(conn, provider, before, keep):
-    """Delete the edition's matches the snapshot no longer holds (guard() allowed it); returns how many."""
+    """Delete matches whose current keys the snapshot withdrew, including their former aliases."""
     gone = {m["id"]: (m["row_version"], key) for key, m in before.items() if key not in keep}
     if gone:
         deleted = {match for (match,) in conn.execute(
-            """DELETE FROM core.matches m USING unnest(%s::integer[], %s::text[]) observed(id, version)
-                WHERE m.id=observed.id AND m.xmin::text=observed.version RETURNING m.id""",
-            (list(gone), [version for version, _ in gone.values()]),
+            """DELETE FROM core.matches m USING unnest(%s::integer[], %s::text[], %s::text[]) observed(id, version, key)
+                WHERE m.id=observed.id AND m.xmin::text=observed.version
+                  AND EXISTS (SELECT 1 FROM core.provider_ids p WHERE p.entity_type='match' AND p.provider=%s
+                               AND p.provider_key=observed.key AND p.entity_id=m.id AND p.is_current)
+                RETURNING m.id""",
+            (list(gone), [version for version, _ in gone.values()], [key for _, key in gone.values()], provider),
         ).fetchall()}
         if deleted != gone.keys():
             missed = ", ".join(sorted(gone[match][1] for match in gone.keys() - deleted)[:5])

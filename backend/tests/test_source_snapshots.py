@@ -604,6 +604,34 @@ class OpenMatchdayGuardTest(SnapshotDatabase):
         after, = self.state()
         self.assertEqual(after[:9], self.before[1][:9])  # the remaining fixture moves to position 0
 
+    def test_only_the_current_provider_key_drives_a_snapshot(self):
+        initial = self.public_matches()
+        retired = (self.before[0][0].replace("2026-11-01", "2026-11-02"),
+                   self.before[1][0].replace("2026-11-29", "2026-11-30"))
+        for (mid, *_), key in zip(initial, retired):
+            self.x("""INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id,is_current)
+                      VALUES ('match','open_matchday',%s,%s,false)""", (key, mid))
+        before = self.state()
+        self.assertEqual(len(before), 4)
+        with self.subTest(check="unchanged source"):
+            self.assertEqual(self.read([league()], self.files(), NOW + timedelta(days=1)), ("ok", 2, 0))
+            self.assertEqual(self.public_matches(), initial)
+            self.assertEqual(self.state(), before)
+
+        older = FIXTURES + "2026-11-02,North FC,South FC,15\n2026-11-30,South FC,North FC,16\n"
+        with self.subTest(check="inactive keys supplied"):
+            self.assertEqual(self.read([league(fixtures=3)], self.files(fixtures=older), NOW + timedelta(days=2)), ("ok", 0, 1))
+            self.assertEqual(self.state(), before)
+            failure = next(message for code, message in self.failures() if code == "INACTIVE_MATCH_KEY")
+            self.assertTrue(all(key in failure for key in retired))
+
+        with self.subTest(check="ordinary fixture withdrawal"):
+            self.assertEqual(self.read([league(fixtures=0)], self.files(fixtures=None), NOW + timedelta(days=3)), ("ok", 1, 0))
+            self.assertEqual(self.public_matches(), initial[:1])
+            self.assertEqual(self.state(), [r for r in before if r[1] == initial[0][0]])
+            self.assertIsNone(self.x("SELECT entity_id FROM core.provider_ids WHERE provider='open_matchday' AND provider_key=%s",
+                                     (retired[1],)).fetchone())
+
 
     # 22a, 22b (FAILURE_MODES.md §22, written before the code): a later file without a statistic keeps it; a
     # stated value, 0 included, replaces it once.
