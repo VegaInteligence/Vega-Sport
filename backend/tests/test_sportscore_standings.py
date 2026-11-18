@@ -181,7 +181,16 @@ class SportScoreWriterQualificationTest(SportScoreDatabase):
         self.assert_refused(replace(START, 0, team="Aster City Women", pts=9), 3, "UNMATCHED_TEAMS")
         self.alias("Aster City Women")
         self.assert_refused(replace(START, 0, team="Aster City Women", pts=9), 6, "UNMATCHED_TEAMS")
-        self.assert_refused(replace(START, 0, team="Aster City (W)", pts=9), 9, "UNMATCHED_TEAMS")
+        self.alias("Aster City WFC")
+        names = ("Aster City (W)", "Aster City Féminines", "Aster City Femenino", "Aster City Femminile", "Aster City WFC")
+        for hours, name in enumerate(names, 3):
+            with self.subTest(name=name):
+                self.assert_refused(replace(START, 0, team=name, pts=9), hours * 3, "UNMATCHED_TEAMS")
+
+    def test_a_canonical_wfc_club_name_stays_admissible(self):
+        self.db.execute("UPDATE core.teams SET name='Aster City W.F.C.' WHERE id=101")
+        self.assertIsNone(self.write(replace(START, 0, team="Aster City WFC")))
+        self.assertEqual(self.read()[0][:2], (101, "Aster City W.F.C."))
 
     def test_womens_edition_admits_unmarked_and_explicit_womens_names(self):
         self.db.execute("UPDATE core.competitions SET name='Saudi Women’s Premier League' WHERE id=401")
@@ -190,6 +199,7 @@ class SportScoreWriterQualificationTest(SportScoreDatabase):
         self.assertEqual(self.read()[0][:2], (101, "Aster City"))
         self.assertIn((101, "Aster City Women"), self.aliases())
         self.assert_refused(replace(START, 0, team="Aster City Men", pts=10), 6, "UNMATCHED_TEAMS")
+        self.assert_refused(replace(START, 0, team="Aster City Männer", pts=10), 9, "UNMATCHED_TEAMS")
 
     def test_an_exact_homonym_is_ambiguous(self):
         self.assertIsNone(self.write(START))

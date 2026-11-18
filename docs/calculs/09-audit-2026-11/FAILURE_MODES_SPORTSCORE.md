@@ -175,6 +175,10 @@ It verifies the current edition again and commits the table and the source statu
 An observation older than or equal to an already recorded attempt is superseded
 (`STALE_OBSERVATION`). The newest attempt keeps its metadata when older failures arrive later.
 
+In a men's edition, WFC in an incoming name needs an exact match with an existing canonical
+name, canonical short name or reviewed spelling. A previously learned variant alone cannot
+establish that identity.
+
 An edition-only club name is affirmative evidence of another edition (`WRONG_EDITION`). The
 legacy rule-11 calendar refusal uses the same code for other scopes; the count alone cannot prove
 a different season. Allsvenskan can corroborate when the current native label agrees with the
