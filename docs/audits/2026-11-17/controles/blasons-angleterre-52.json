@@ -1,0 +1,38 @@
+{
+  "started": "2026-11-18T01:19:36.161136+00:00",
+  "production_writes": 0,
+  "environment": "Private PG18 filesystem socket, TCP disabled. Disposable cluster and local file sink.",
+  "importer_sha256": "e53dd0f791456eb419df6ffc7a87cfc1e67d0a73f0d123ad7b07b145e81f400a",
+  "baseline_manifest_sha256": "2045df18065ab2b652ac4ee3d783249859e0c9952c211a3c1db1bde4a3b583ef",
+  "profile_manifest_sha256": "75054abac01c850aaeee906157e3fa88bcec132acc09f2795933576a850ee53d",
+  "postgres_version": "18.6",
+  "status": "passed",
+  "baseline_applied": {
+    "linked": 1134
+  },
+  "existing_live_links_preserved": 1611,
+  "existing_links_after_baseline_preserved": 2745,
+  "plan": {
+    "linked": 52
+  },
+  "applied": {
+    "linked": 52
+  },
+  "repeat": {
+    "already_linked": 52
+  },
+  "changed_team_pointers": 52,
+  "unexpected_changes": 0,
+  "verified_object_digests": 52,
+  "competitions_changed": 0,
+  "fixtures_input_hashes": {
+    "db/media_state_verified/entities.json": "0a5d42de0c9280306b2ae7262a7bf2308971c818e566066d618bbe6dc9900f16",
+    "db/media_state_verified/keys.json": "8bf22e7dc03598b4998da07c5607ad8053b2f057b34255a4f0cd477bf08a3b58",
+    "db/media_state_verified/assets.json": "fd755a07a3e29d16cab6b8b3f9fc1672319e61d19f99d2cacc31fe6f288fcc6d",
+    "db/media_context_verified/editions.json": "35fa71c975beaf5c2b24bb3084f1b5bfe4b83f8671b7eaf5a5ddf56e776e42d8",
+    "db/media_context_verified/ranking-rows.json": "26a0f2ea6d97d563f879f439d5b0cfa2a6edfabf7a9d11fa71f3318cfe6defc7",
+    "db/media_context_verified/competition-seasons.json": "ed26d364ff166d5922e76e99c2580d06cc7e1453469aff81f958fa7fe3da03d6"
+  },
+  "closed_private_cluster": true,
+  "ended": "2026-11-18T01:19:39.943370+00:00"
+}

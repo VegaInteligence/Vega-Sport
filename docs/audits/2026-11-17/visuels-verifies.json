@@ -1,28 +1,28 @@
 {
-  "records": 1134,
+  "records": 1186,
   "by_type": {
     "competition": 104,
-    "team": 1030
+    "team": 1082
   },
-  "distinct_images": 1097,
-  "converted": 85,
-  "manifest_sha256": "2045df18065ab2b652ac4ee3d783249859e0c9952c211a3c1db1bde4a3b583ef",
-  "zip_sha256": "da6c82933369cf2ce822b6d9fb6deb60d893efa5ed9fbae26a9a132233dbe2e0",
-  "zip_bytes": 90675537,
+  "distinct_images": 1149,
+  "converted": 128,
+  "manifest_sha256": "65ce8b3af81e88bc0b5cbdeebb88956f07b77dcb7da524c861f76e9bf60c9550",
+  "zip_sha256": "10d7a8ed7c075216c666715f6ff2a3bacd81f31fb2e39104ff3b255dd33c49b2",
+  "zip_bytes": 95931553,
   "inputs": [
     {
-      "source_pack": "artwork-expanded-1012",
-      "manifest_sha256": "1a01f3cb2f8ad422a595f9ed69227034ac9dd2d74b64e06193d503c563399634",
+      "source_pack": "artwork-expanded-1134c",
+      "manifest_sha256": "2045df18065ab2b652ac4ee3d783249859e0c9952c211a3c1db1bde4a3b583ef",
       "by_type": {
         "competition": 104,
-        "team": 908
+        "team": 1030
       }
     },
     {
-      "source_pack": "tracks/7-artwork/active-unlinked-clubs/profile-pack-v3",
-      "manifest_sha256": "beaaf82cdfe4004721bcfb8574ac60dd564b1b9971dc77fd8ceaeec3fc6da2a5",
+      "source_pack": "tracks/7-artwork/active-english-followup/english-profile-v1",
+      "manifest_sha256": "75054abac01c850aaeee906157e3fa88bcec132acc09f2795933576a850ee53d",
       "by_type": {
-        "team": 122
+        "team": 52
       }
     }
   ]
