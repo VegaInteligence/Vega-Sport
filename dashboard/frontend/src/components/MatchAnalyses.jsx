@@ -70,7 +70,6 @@ function Momentum({ match, points, goals }) {
               y={home ? mid - h : mid}
               width="9"
               height={Math.max(1, h)}
-              rx="2"
               fill={home ? HOME : AWAY}
               opacity={at && at.minute !== p.minute ? 0.45 : 0.9}
             />

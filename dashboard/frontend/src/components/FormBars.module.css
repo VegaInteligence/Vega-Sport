@@ -37,7 +37,7 @@
   stroke-linecap: round;
 }
 .dot {
-  fill: var(--surface);
+  fill: var(--bg);
   stroke: var(--accent);
   stroke-width: 1.5;
 }
@@ -48,7 +48,7 @@
   font-variant-numeric: tabular-nums;
   /* a halo of the card's colour: the hairlines pass behind the figure */
   paint-order: stroke;
-  stroke: var(--surface);
+  stroke: var(--bg);
   stroke-width: 5px;
   stroke-linejoin: round;
 }

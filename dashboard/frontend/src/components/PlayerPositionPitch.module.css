@@ -43,7 +43,7 @@
   aspect-ratio: 100 / 140;
   overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 0;
   background: color-mix(in srgb, var(--accent) 8%, var(--surface-raised));
 }
 .markings {
@@ -70,7 +70,7 @@
   transform: translate(-50%, -50%);
   padding: 3px 4px 3px 7px;
   border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
-  border-radius: 99px;
+  border-radius: 0;
   background: var(--surface-raised);
   box-shadow: 0 2px 8px #00000010;
   white-space: nowrap;
@@ -87,7 +87,7 @@
   align-items: center;
   justify-content: center;
   padding: 0 4px;
-  border-radius: 99px;
+  border-radius: 0;
   background: var(--surface);
   color: var(--ink-strong);
   font-size: 11px;

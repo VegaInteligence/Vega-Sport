@@ -233,7 +233,6 @@ function NeutralBar({ value }) {
     <div
       style={{
         height: 6,
-        borderRadius: 999,
         background: "var(--surface-subtle)",
         overflow: "hidden",
       }}
@@ -846,7 +845,7 @@ export function MultiLine({
                   cy={y(serie.values[active])}
                   r="4"
                   fill={serie.color}
-                  stroke="var(--surface)"
+                  stroke="var(--bg)"
                   strokeWidth="2"
                 />
               ),
