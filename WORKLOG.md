@@ -182,5 +182,7 @@
 - Deploy: migrations 136 and 137 and the reader reach the base only with a Deploy run (135, the other session's, is deployed since 18:18 UTC: nothing else rides along).
 - Linear: overlap check not done (the connector opens another workspace; nothing is written there).
 - Shipped to main 18 Nov: `be54fcf8ff` and `4c02046447`; CI green on the branch before and after the rebase (runs 44372498360, 44373983731).
-- Not deployed: starting the Deploy workflow was refused by the permission classifier (the user had asked for the data in the base, not named a deploy). Until a Deploy run, the base on AWS holds none of these rows.
-- Next action: the Deploy run on the user's explicit word or by his hand (`gh workflow run deploy.yml --ref main`); after it, the counts in production (75,669 rows, 964 pairs, the credit row), then the route and the match page (mock-up first).
+- Deployed 18 Nov on the user's word (« Deploie »): Deploy run 44383534681 green at 19:53 UTC (worker image `20798adfc3`, « migration exit code: 0 »: 136 and 137 applied).
+- The load itself is not verified in production: it runs in the worker's source pass, no public route reads these tables, and the session has no AWS access. What is known: the isolated pilot of CI (run 44374914429, the worker's loop on the real sources in a throwaway base) logged `source=fjelstul scope=worldcup outcome=ok`; the worker already reads raw.githubusercontent.com with the same client (open-matchday). To see it: the status page (Vega Status, `/api/ops/status`): source `fjelstul`, scope `worldcup`, 75,669 rows and 0 unmatched expected.
+- Corrected: the README said the archives' index lists this credit; it lists the `results/…` sources only.
+- Next action: the route that serves a match's details (it will also make the load readable from outside), then the archived match's page, mock-up first.

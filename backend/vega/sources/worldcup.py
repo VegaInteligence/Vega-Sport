@@ -6,7 +6,8 @@ line-ups, cards and substitutions; the squads; the awards. The user chose it on 
 
 Licence: CC-BY-SA 4.0. Wherever these rows are shown, the author and the licence are named, with what the base
 changes: the values are typed, and a match is paired with the base's own. The credit is a row of
-core.source_revisions (SOURCE), as the other sources', which the API lists with the archives' index.
+core.source_revisions (SOURCE), as the other sources'; no route serves it yet (the archives' index lists the result
+archives' sources only): the route that will serve these rows serves it with them.
 
 What is read: seventeen files of data-csv/ at one commit (COMMIT), each checked against its SHA-256 (FILES): the
 repository can change, the base reads the same bytes or nothing. The other ten files repeat these or what the base
