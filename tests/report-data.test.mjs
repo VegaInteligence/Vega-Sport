@@ -37,6 +37,39 @@ test("a player's season: totals, per 90, the season grade of 20 minutes or more,
   assert.match(reportThread(r), /^Kylian \(Real Madrid\) en six images\. 2 buts et 1 passe décisive en 3 matchs cette saison\.\nvegasport\.vercel\.app$/);
 });
 
+// The report's value curve names the clubs he joined as the player page does (same rules:
+// tests/player-transfer-curve.test.mjs). Failure modes: transfers not read → the valuations'
+// clubs stand in; neither → no club, the curve as before; a club without a crest keeps its name
+// (the card draws its initials); the history itself stays { date, valueEur }.
+test("a player's value curve: the clubs he joined, from his transfers or else his valuations", () => {
+  const read = { data: { matches: [], appearances: [] } };
+  const club = (id, name) => ({ id, name, image_url: `https://img.test/${id}.png` });
+  const history = [
+    { date: "2020-01-01", valueEur: 1e6, club: { name: "Tours FC" } },
+    { date: "2022-01-01", valueEur: 5e6, club: club("t_a", "Arsenal") },
+    { date: "2024-01-01", valueEur: 3e6, club: club("t_c", "Chelsea") },
+  ];
+  const values = { data: { source: "Transfermarkt", history } };
+  const transfers = { data: { transfers: [
+    { date: "2021-07-01", kind: "transfer", feeEur: 2e6, from: { name: "Tours FC" }, to: club("t_a", "Arsenal") },
+    { date: "2023-01-31", kind: "loan", feeEur: null, from: club("t_a", "Arsenal"), to: club("t_c", "Chelsea") },
+    { date: "2025-07-01", kind: "free", feeEur: null, from: club("t_c", "Chelsea"), to: null },
+  ] } };
+  const build = (extra) => buildPlayerReport({ id: "p_aaaaa1", season: "2026/2027", read, power: null, profile: null, ...extra }, today).values;
+  const drawn = build({ values, transfers });
+  assert.deepEqual(drawn.clubs, [
+    { at: "2020-01-01", name: "Tours FC", imageUrl: null },
+    { at: "2021-07-01", name: "Arsenal", imageUrl: "https://img.test/t_a.png" },
+    { at: "2023-01-31", name: "Chelsea", imageUrl: "https://img.test/t_c.png" },
+  ]);
+  assert.deepEqual(drawn.history, history.map(({ date, valueEur }) => ({ date, valueEur })));
+  // Transfers not read: each club at the first valuation made there.
+  assert.deepEqual(build({ values, transfers: null }).clubs.map((c) => `${c.at} ${c.name}`), ["2020-01-01 Tours FC", "2022-01-01 Arsenal", "2024-01-01 Chelsea"]);
+  // Neither transfers nor a club on the valuations, or no valuation at all.
+  assert.deepEqual(build({ values: { data: { history: history.map(({ date, valueEur }) => ({ date, valueEur })) } }, transfers: null }).clubs, []);
+  assert.deepEqual(build({ values: null, transfers }).clubs, []);
+});
+
 test("a club's season: record, top players, projection and coming matches", () => {
   const read = { data: {
     teams: [{ id: "t1", name: "Real Madrid", country: "ESP" }],
