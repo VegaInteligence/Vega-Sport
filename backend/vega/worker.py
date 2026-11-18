@@ -440,6 +440,12 @@ class Worker:
                 self._scoped = now.date()
                 if removed:
                     print("scope purge " + " ".join(f"{k}={v}" for k, v in sorted(removed.items())), flush=True)
+            # The archive matches stored twice become one (archives.merge_twins), before the Elo reads them.
+            from . import archives
+
+            ok, merged = self._daily_step(("archive twins",), now, lambda: archives.merge_twins(self.conn))
+            if ok and merged:
+                print(f"archive twins merged={sum(merged.values())} seasons={len(merged)}", flush=True)
         if self._analyzed != now.date():
             # Autovacuum analyses each partition, never the partitioned table itself (056).
             ok, tables = self._daily_step(("analyze",), now, scalar("SELECT ops.analyze_partitioned()"))
