@@ -24,8 +24,10 @@
 //  9. A badge floats above the highest point of the line under its own width, not only above
 //     the point at its date: on a slope it clears the line.
 // 10. A badge that would cover an earlier one is raised above it, as often as needed.
-// 11. A badge never leaves the drawing by the top; its foot is on the line, and past the
-//     line's last point at the last point's height.
+// 11. A badge is never pushed back down onto another to stay in the drawing (three moves of
+//     one winter near the curve's peak covered each other): the chart is told how far the
+//     highest badge rises above its top edge, and grows by that much.
+// 12. A badge's foot is on the line, and past the line's last point at the last point's height.
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
@@ -34,7 +36,7 @@ import {
   moveNote,
   moveTip,
 } from "../dashboard/frontend/src/services/player-transfers.js";
-import { placeBadges } from "../dashboard/frontend/src/services/curve-badges.js";
+import { badgeOverflow, placeBadges } from "../dashboard/frontend/src/services/curve-badges.js";
 import { marketValue } from "../dashboard/frontend/src/services/player-market-values.js";
 
 const club = (name, id) => (id ? { id, name, image_url: `https://img.test/${id}.png` } : { name });
@@ -200,10 +202,18 @@ test("a badge that would cover an earlier one is raised above it", () => {
   assert.deepEqual(placeBadges(flat, [{ x: 50 }, { x: 74 }], { radius: 10, gap: 6, spacing: 4 }).map((b) => b.y), [84, 84]);
 });
 
-test("a badge stays in the drawing, and past the line's end its foot is at the last height", () => {
+test("the chart is told how far the highest badge rises above its top edge", () => {
   const high = [{ x: 0, y: 20 }, { x: 200, y: 20 }];
-  assert.equal(placeBadges(high, [{ x: 50 }], { radius: 10, gap: 6 })[0].y, 10);
-  assert.equal(placeBadges(high, [{ x: 50 }], { radius: 10, gap: 6, top: 14 })[0].y, 14);
+  const stack = placeBadges(high, [{ x: 50 }, { x: 60 }, { x: 70 }], { radius: 10, gap: 6, spacing: 4 });
+  // Raised above one another, never held back: 4, then 24 higher each.
+  assert.deepEqual(stack.map((b) => b.y), [4, -20, -44]);
+  assert.equal(badgeOverflow(stack, 10), 54);
+  assert.equal(badgeOverflow(stack, 10, 2), 56);
+  assert.equal(badgeOverflow(placeBadges(flat, [{ x: 50 }], { radius: 10, gap: 6 }), 10), 0);
+  assert.equal(badgeOverflow([], 10), 0);
+});
+
+test("past the line's end a badge's foot is at the last height", () => {
   const ends = placeBadges([{ x: 0, y: 100 }, { x: 100, y: 60 }], [{ x: 160 }], { radius: 10, gap: 6 });
   assert.deepEqual(ends, [{ x: 160, y: 44, footY: 60 }]);
   // One point only (a single valuation).
