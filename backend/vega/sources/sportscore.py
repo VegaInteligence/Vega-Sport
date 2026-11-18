@@ -144,6 +144,7 @@ OWN = "competition_season_id = %s AND source = 'sportscore' AND stage IS NULL"
 # The counts of a row, never negative; in core.table_results' order, the basis: what Vega counted
 # of a club when its row was observed.
 RESULTS = ("played", "won", "drawn", "lost", "goals_for", "goals_against")
+OUTCOMES = ("won", "drawn", "lost")
 NO_RESULT = (0,) * len(RESULTS)
 # Not every club can be this far ahead of the matches the edition has kicked off for it: last
 # season's final table seen at the next season's start is about thirty ahead, and four leaves
@@ -245,6 +246,10 @@ def check(tables):
         label = group or "the table"
         seen, ranks = set(), {}
         for row in rows:
+            outcomes = [row[field] for field in OUTCOMES if row[field] is not None]
+            total = sum(outcomes)
+            if total > row["played"] or (len(outcomes) == len(OUTCOMES) and total != row["played"]):
+                raise SourceError("INVALID_ROW", f"{label}: {row['name']}: {total} reported results for {row['played']} matches")
             key = normalize(row["name"])
             if key in seen:
                 raise SourceError("DUPLICATE_ROW", f"{row['name']} twice in {label}")
@@ -261,29 +266,88 @@ def check(tables):
             raise SourceError("INCOMPLETE_TABLE", f"position {max(ranks)} in a table of {len(rows)} rows")
 
 
+# Pairs confirmed by the clubs or organisers, bound to the current PitchAPI identity
+# and its canonical name. "B" and "U23" do not imply equivalence for other clubs.
+REVIEWED_SPELLINGS = {
+    # https://www.kaagent.be/nl/nieuws/07-08-2025/jong-kaa-gent-begint-aan-competitie
+    # https://sportscore.com/football/team/gent-b/k82rekh3o61repz/
+    ("t_1ekXAt", "gentu23"): ("Gent B",),
+    # https://www.krcgenk.be/nl/nieuws/5167/maandag-eerste-training-jong-genk
+    ("t_48QCy0", "genku23"): ("Jong Genk",),
+    # https://rccelta.es/app/uploads/2024/10/RCCelta_CCAA_T23-24_definitiva.pdf
+    ("t_4YXkkv", "celtafortuna"): ("Celta Vigo B",),
+    # https://liga1.pe/bienvenidos-alianza-udh-y-juan-pablo-ii/
+    ("t_1XzLP9", "juanpabloiicollege"): ("Juan Pablo II",),
+}
+BRANDED_RESERVES = {"celtafortuna": "reserve-b"}
+AGE_GROUP = re.compile(r"\b(?:u(?:nder)?|sub)[ -]*(\d{1,2})s?\b")
+SIDE_SUFFIXES = {"b": "reserve-b", "ii": "reserve-b", "c": "reserve-c", "iii": "reserve-c", "iv": "reserve-d",
+                 "reserves": "reserve-b", "reserve": "reserve-b", "reserva": "reserve-b", "amateure": "reserve-b",
+                 "youth": "youth", "academy": "academy", "juvenil": "youth", "primavera": "primavera"}
+CLUB_SUFFIXES = frozenset({"fc", "cf", "sc", "ac", "afc", "fk", "sk", "sv"})
+
+
+def _ascii(name):
+    return unicodedata.normalize("NFKD", name or "").encode("ascii", "ignore").decode().lower()
+
+
+def _squad(name):
+    # Classify affirmative squad markers. An initial letter or a club's founding year is
+    # part of its name, while a separate final B/II or an age group identifies a side.
+    separate = re.sub(r"(?<=[a-z])(?=(?:III?|U-?\d+|[BC])\b)", " ", name)
+    plain = _ascii(separate)
+    branded = BRANDED_RESERVES.get(normalize(name))
+    if branded:
+        return branded
+    age = AGE_GROUP.search(plain)
+    if age:
+        return "u" + age[1]
+    plain = re.sub(r"\b(?:[a-z]\.)+[a-z]\.?", lambda form: form[0].replace(".", ""), plain)
+    words = re.findall(r"[a-z0-9]+", plain)
+    while len(words) > 1 and words[-1] in CLUB_SUFFIXES:
+        words.pop()
+    if len(words) > 1:
+        if words[0] == "jong":
+            return "reserve-b"
+        return SIDE_SUFFIXES.get(words[-1])
+
+
 def _spellings(conn, query, args):
-    names, spelled = {}, {}
-    for team, *spellings in conn.execute(query, args).fetchall():
-        names.setdefault(team, set()).update(normalize(s) for s in spellings if s)
-        spelled.setdefault(team, set()).update(s for s in spellings if s)
-    return names, spelled
+    names, spelled, squads, rejected = {}, {}, {}, set()
+    for team, canonical, short, alias, provider_key in conn.execute(query, args).fetchall():
+        squad = squads.setdefault(team, _squad(canonical))
+        reviewed = REVIEWED_SPELLINGS.get((provider_key, normalize(canonical)), ())
+        reviewed_keys = {normalize(name) for name in reviewed}
+        for spelling in (canonical, short, alias, *reviewed):
+            if not spelling:
+                continue
+            key = normalize(spelling)
+            if _squad(spelling) == squad or key in reviewed_keys:
+                names.setdefault(team, set()).add(key)
+                spelled.setdefault(team, set()).add(spelling)
+            else:
+                rejected.add(key)
+    return names, spelled, squads, rejected
 
 
 def _edition_teams(conn, edition):
-    return _spellings(conn, """SELECT t.id, t.name, t.short_name, n.name FROM core.team_seasons ts JOIN core.teams t ON t.id = ts.team_id
+    return _spellings(conn, """SELECT t.id, t.name, t.short_name, n.name, p.provider_key
+           FROM core.team_seasons ts JOIN core.teams t ON t.id = ts.team_id
            LEFT JOIN core.entity_names n ON n.entity_type = 'team' AND n.entity_id = t.id
+           LEFT JOIN core.provider_ids p ON p.entity_type='team' AND p.provider='pitchapi' AND p.entity_id=t.id AND p.is_current
            WHERE ts.competition_season_id = %s""", (edition,))
 
 
 def _neighbour_teams(conn, edition):
     """The teams of the competition's previous and next editions that this edition does not hold:
     a row naming one of them is another season's table."""
-    names, _ = _spellings(conn, """SELECT t.id, t.name, t.short_name, n.name
+    names, _, _, _ = _spellings(conn, """SELECT t.id, t.name, t.short_name, n.name, p.provider_key
            FROM core.competition_seasons e
            JOIN core.competition_seasons o ON o.competition_id = e.competition_id AND o.season_id IN (e.season_id - 1, e.season_id + 1)
            JOIN core.team_seasons ts ON ts.competition_season_id = o.id
            JOIN core.teams t ON t.id = ts.team_id
            LEFT JOIN core.entity_names n ON n.entity_type = 'team' AND n.entity_id = t.id
+           LEFT JOIN core.provider_ids p ON p.entity_type='team' AND p.provider='pitchapi' AND p.entity_id=t.id AND p.is_current
            WHERE e.id = %s AND NOT EXISTS (SELECT 1 FROM core.team_seasons x WHERE x.competition_season_id = e.id AND x.team_id = t.id)""",
                           (edition,))
     return names
@@ -296,8 +360,8 @@ FORM_WORDS = {"fc", "cf", "sc", "ac", "as", "af", "afc", "ssc", "ss", "us", "rc"
 
 
 def _tokens(name):
-    plain = unicodedata.normalize("NFKD", name or "").encode("ascii", "ignore").decode().lower()
-    return {t for t in re.split(r"[^a-z0-9]+", plain) if t and t not in FORM_WORDS}
+    plain = AGE_GROUP.sub("", _ascii(name))
+    return {t for t in re.split(r"[^a-z0-9]+", plain) if t and t not in FORM_WORDS and t not in SIDE_SUFFIXES and t != "jong"}
 
 
 def _closeness(source_tokens, team_tokens):
@@ -323,21 +387,26 @@ def _exact(wanted, teams):
     return found
 
 
-def _closest(rows, spelled):
+def _closest(rows, spelled, squads=None):
     """Distinctive words, over the rows and teams still unpaired: a row takes the team it is
     closest to only when that team is not as close to another row, and no other team ties."""
+    words = {name: _tokens(name) for name in rows}
+    team_words = {team: [_tokens(name) for name in names] for team, names in spelled.items()}
+    source_squads = {name: _squad(name) for name in rows} if squads is not None else {}
+    scores = {(name, team): max((_closeness(tokens, variant) for variant in variants), default=0)
+              for name, tokens in words.items() for team, variants in team_words.items()
+              if squads is None or source_squads[name] == squads[team]}
     found = {}
     while True:
         left = [n for n in rows if n not in found]
         free = [t for t in spelled if t not in found.values()]
-        scores = {(n, t): max((_closeness(_tokens(n), _tokens(s)) for s in spelled[t]), default=0) for n in left for t in free}
         paired = False
         for n in left:
-            ranked = sorted(((scores[(n, t)], t) for t in free), reverse=True)
+            ranked = sorted(((scores.get((n, t), 0), t) for t in free), reverse=True)
             if not ranked or ranked[0][0] == 0 or (len(ranked) > 1 and ranked[1][0] == ranked[0][0]):
                 continue
             team = ranked[0][1]
-            if any(scores[(other, team)] >= ranked[0][0] for other in left if other != n):
+            if any(scores.get((other, team), 0) >= ranked[0][0] for other in left if other != n):
                 continue
             found[n] = team
             paired = True
@@ -362,13 +431,16 @@ def link(conn, edition, tables):
     """{row name: team id} of a response, every name designating one team of the edition;
     SourceError WRONG_EDITION, UNMATCHED_TEAMS or DUPLICATE_ROW otherwise."""
     wanted = {row["name"] for _, rows in tables for row in rows}
-    teams, spelled = _edition_teams(conn, edition)
+    teams, spelled, squads, rejected = _edition_teams(conn, edition)
     found = _exact(wanted, teams)
     others = _neighbour_teams(conn, edition)
     foreign = sorted(name for name in wanted - set(found) if any(normalize(name) in keys for keys in others.values()))
     if foreign:
         raise SourceError("WRONG_EDITION", f"edition {edition}: {', '.join(foreign)}: clubs of the previous or next edition only")
-    found.update(_closest(wanted - set(found), {t: s for t, s in spelled.items() if t not in found.values()}))
+    # A known but contradictory spelling, or an exact homonym, cannot become a match by prefix.
+    known = rejected.union(*teams.values())
+    unmatched = {name for name in wanted - set(found) if normalize(name) not in known}
+    found.update(_closest(unmatched, {t: s for t, s in spelled.items() if t not in found.values()}, squads))
     unmatched = sorted(wanted - set(found))
     if unmatched:
         raise SourceError("UNMATCHED_TEAMS", f"edition {edition}: not linked: {', '.join(unmatched)}")
