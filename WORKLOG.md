@@ -112,3 +112,19 @@
 - Decision: due at the earlier of `queued_at + 10 min` and `first_queued_at + 60 min` (migration `133_cohort_max_wait.sql`, a column a re-mark leaves unchanged); claim order by due time; re-marked during its refresh → the wait restarts from the claim. FAILURE_MODES §18; French note in `05-joueurs/02-centiles-et-cohortes.md`.
 - Validated locally: Python 428 OK (3.14), API 182/182; a 70-minute simulated scenario with the real refresh (refreshed at minute 60, once).
 - Shipped 17 Nov (« Yes, push and deploy »): `8018e0836c`, Deploy run 44131657417; migration 133 applied 17:01:35 UTC; `team:2021:europe` (re-marked 180 more times meanwhile) republished at 18:01:40 UTC, at the maximum wait. Closed.
+
+## Major tournaments: tiles, edition pages, bracket on one screen (18 Nov 2026, scratchpad worktree `wt`, branch `claude/tournament-editions`)
+
+- Goal (user, 18 Nov): on a nation's page, « Grands tournois » redesigned and each edition a link to its own page (World Cup 2026, Euro 2024, …) with its bracket; the bracket fits one screen, no scrolling (it was 1,940 px tall for the 2026 World Cup).
+- Linear: the connector of this session is another workspace (`inception-technology1`), not Vega Inteligence: the In Progress check could not be done there and no issue was created. Checked instead: branches and open pull requests (VI-30's logos, no overlap).
+- User decisions (18 Nov): the mock-up validated (« je valide tes maquettes, tu peux les mettre directement en ligne »); proposal A for the tiles (the user left the choice). Mock-up: scratchpad `e6ee2704…/mock`.
+- Built:
+  - Tiles: a row per competition with its own medals (never a total across competitions: the base holds no Euro before 2020), a tile per edition with a six-step gauge, each a link to its edition on its bracket, the nation followed (`tournament-runs.js`, `tournamentEdition`).
+  - Edition page (`EditionHeader.jsx`): one row (competition, edition between two arrows, team followed, views); the World Cup's archive and its collected editions under one selector (`competitionEditions`); edition, view and team in the address; a cup outside the featured row has no row of leagues above it. The World Cup and the Euro open on their bracket and have « Groupes ».
+  - Bracket (`KnockoutBracket.jsx`, `bracketSides`): both halves towards the final, champion above, third place below, height from the screen; one round a screen under 1,080 px; every cup uses it (two-legged ties included). French names of national teams.
+  - Bracket data: the third-place match under every archive name; a replayed tie as one tie; 1934's and 1938's round of 16; a tie without a score still links.
+  - Worker: the open-cups reader reads a score written as a bare pair (`cups.READER` 2, each edition read again once; migration 134 marks them due).
+- Measured before the correction, read-only (replay of `elo_updates` on the public API's matches; it reproduces production within 0.1 point at the median, 18 at most): 658 more results rated (969 → 1,627 national-team matches); for the 54 ranked nations a median change of 4.3 points, 69 at most (Netherlands 8th → 4th), 12 nations by more than 25, 39 ranks change, the top three do not. Script and report: scratchpad `evidence/` (`measure.mjs`, `elo-measure-report.json`).
+- Validated locally: site tests 707/707 (tests written first: `tests/tournament-editions.test.mjs`), build, 31 E2E checks on the built site against the production API (`evidence/local`). The base's reader test runs in CI only (the schema needs PostgreSQL 18; the local server is 16).
+- The bracket is whole in the window at 1920×1080, 1440×900 and 1366×768; the page itself still scrolls to the site's footer. On a phone the round of 32 exceeds the screen by a few ties.
+- Next action: CI on the branch, push to main, the site's production check, the Deploy workflow for the worker, then the scores once the editions are read again.
