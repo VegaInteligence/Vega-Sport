@@ -226,6 +226,7 @@ const overview = load("components/PlayerScoutOverview.jsx", {
   "./PlayerScoutCharts.jsx": { fmt: (value, digits = 0) => Number(value).toFixed(digits), LineChart: record("LineChart", Noop),
     TipBody: record("TipBody", Noop), PercentileBadge: ({ label }) => label, PercentilePizza: Noop, ToneLegend: Noop, PercentileBar: Noop },
   "./ClubScoutUI.jsx": { clubStyles: classes },
+  "./FormBars.jsx": { __esModule: true, default: record("FormBars", Noop) },
   "./Hint.jsx": { Hint: Noop, Term: ({ children }) => children },
   "./UI.jsx": { Segments: Noop, Skeleton: Noop },
 });
@@ -244,9 +245,28 @@ test("the recent-form tooltip keeps an unknown goal or assist unknown, and a kno
   const cohorts = real["../services/scouting.js"].buildCohorts([profile], 450);
   seen.length = 0;
   renderToStaticMarkup(e(overview.default, { profile, cohorts, ready: false, season, matches: [], onTab: () => {} }));
-  const chart = last("LineChart");
+  const chart = last("FormBars");
   assert.equal(chart?.ariaLabel, "Note des derniers matchs");
-  assert.deepEqual(byMatch(chart), EXPECTED);
+  assert.deepEqual(Object.fromEntries(chart.items.map((item) => [item.matchId, item.goalsAssists])), EXPECTED);
+});
+
+test("the recent-form bars read each match from the player's side, oldest first", () => {
+  const profile = seasonPlayer.aggregateSeason(gradedSeason(), P);
+  const cohorts = real["../services/scouting.js"].buildCohorts([profile], 450);
+  const side = (id, score) => ({ id, name: id === "t_000001" ? "Club Test" : "Rival", imageUrl: `${id}.png`, score });
+  const matches = [
+    { id: "m1", home: side("t_000002", 2), away: side("t_000001", 1) },
+    { id: "m2", home: side("t_000001", 3), away: side("t_000002", 3) },
+  ];
+  seen.length = 0;
+  renderToStaticMarkup(e(overview.default, { profile, cohorts, ready: false, season, matches, onTab: () => {} }));
+  const items = last("FormBars").items;
+  assert.deepEqual(items.map((item) => item.matchId), ["m1", "m2", "m3"]);
+  assert.deepEqual(items[0], { ...items[0], home: false, opponent: { name: "Rival", imageUrl: "t_000002.png" },
+    score: { for: 1, against: 2 }, result: "D", competition: "Ligue Test", minutes: 90, grade: 60 });
+  assert.deepEqual([items[1].home, items[1].result, items[1].score], [true, "N", { for: 3, against: 3 }]);
+  // m3 is not among the page's matches: no opponent, score or result is made up.
+  assert.deepEqual([items[2].opponent, items[2].score, items[2].result, items[2].home], [null, null, null, null]);
 });
 
 test("the Matchs tab's grade tooltip keeps an unknown goal or assist unknown, and a known zero (§16.3)", () => {

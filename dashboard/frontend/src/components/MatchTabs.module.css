@@ -160,8 +160,13 @@
 }
 
 /* ----------------------------------------------------------------- header */
-.fiveKpis {
+/* Qualified by the global .match-kpis so the five columns outrank its four
+ * (analysis.css) whatever order the two stylesheets load in. */
+:global(.match-kpis).fiveKpis {
   grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+.fiveKpis strong {
+  white-space: nowrap;
 }
 .kpi {
   position: relative;
@@ -188,9 +193,36 @@
 .cardCount .red {
   margin-left: 6px;
 }
-@media (max-width: 760px) {
-  .fiveKpis {
+/* Five abreast down to 900px, three then two, then two, two and the cards across. */
+@media (max-width: 900px) {
+  :global(.match-kpis).fiveKpis {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  :global(.match-kpis).fiveKpis > div:nth-child(2) {
+    border-right: 1px solid var(--border);
+  }
+  :global(.match-kpis).fiveKpis > div:nth-child(3) {
+    border-right: 0;
+  }
+  :global(.match-kpis).fiveKpis > div:nth-child(-n + 3) {
+    border-bottom: 1px solid var(--border);
+  }
+}
+@media (max-width: 480px) {
+  :global(.match-kpis).fiveKpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  :global(.match-kpis).fiveKpis > div:nth-child(3) {
+    border-right: 1px solid var(--border);
+  }
+  :global(.match-kpis).fiveKpis > div:nth-child(2n) {
+    border-right: 0;
+  }
+  :global(.match-kpis).fiveKpis > div:nth-child(-n + 4) {
+    border-bottom: 1px solid var(--border);
+  }
+  :global(.match-kpis).fiveKpis > div:nth-child(5) {
+    grid-column: 1 / -1;
   }
 }
 

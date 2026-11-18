@@ -35,7 +35,13 @@ BINDINGS = "core.provider_ids"
 ELO = "agg.team_elo"
 MATCH_STATS = "core.team_match_stats"
 ENRICHMENT_COLUMNS = {"home_score_ht", "away_score_ht", "revision", "updated_at"}
-ADDED_DEPENDENCIES = {"core.archive_match_attestations", "ops.archive_removals"}
+# Relations naming a match created after the reviewed captures: 141, 143, and the Fjelstul World Cup Database's pair
+# (137_worldcup_database.sql).
+ADDED_DEPENDENCIES = {"core.archive_match_attestations", "ops.archive_removals", "core.worldcup_matches"}
+# The Fjelstul World Cup Database's own match keys (137_worldcup_database.sql): text keys of core.worldcup_matches, never
+# an id of core.matches.
+FJELSTUL_MATCH_KEYS = frozenset({"core.worldcup_matches", "core.worldcup_appearances", "core.worldcup_goals",
+                                 "core.worldcup_bookings", "core.worldcup_substitutions", "core.worldcup_shootout_kicks"})
 REFS = {
     "season_id": ("core.seasons", "season_id", ("id", "label")),
     "competition_season_id_season_id": ("core.competition_seasons", "competition_season_id",
@@ -183,6 +189,8 @@ def dependencies(conn):
         queries.setdefault(table, set()).add(expression.as_string(conn))
 
     for table, column, data_type in attributes:
+        if column == "match_key" and data_type == "text" and table in FJELSTUL_MATCH_KEYS:
+            continue
         if (column in ("match_id", "match_key") or column.endswith("_match_id")
                 or (table == "core.archive_match_attestations" and column == "former_id")):
             require(data_type in ("int2", "int4", "int8"), "unreviewed reference type: " + table + "." + column)

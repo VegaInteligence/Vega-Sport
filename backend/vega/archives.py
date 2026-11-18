@@ -40,6 +40,7 @@ import sys
 import tempfile
 import unicodedata
 
+from . import scope
 from .store import Store
 
 from . import archive_attestations
@@ -90,7 +91,9 @@ SHARED_FILES = ("archive.js", "archive-text.js", "openfootball-history.js",
 def code_manifest():
     """{logical name: SHA-256} of every file the plan depends on, wherever it runs; ArchiveError if one is missing."""
     shared = EDITION.resolve().parents[2] / "dashboard/shared"
-    files = {"vega/archives.py": HERE / "archives.py", "vega/store.py": HERE / "store.py", "archives/edition.mjs": EDITION}
+    # scope.py: the archive families the user removed are not selected (Loader.selection).
+    files = {"vega/archives.py": HERE / "archives.py", "vega/scope.py": HERE / "scope.py", "vega/store.py": HERE / "store.py",
+             "archives/edition.mjs": EDITION}
     files.update({f"shared/{name}": shared / name for name in SHARED_FILES})
     for attachment in (HERE / "archive_attestations.py", archive_attestations.BUNDESLIGA_PATH, archive_attestations.SCOTLAND_PATH):
         files[f"vega/{attachment.name}"] = attachment
@@ -475,6 +478,9 @@ class Loader:
         edition of it is kept, every match of it held (`overlap`): a primary edition is routing, not proof that it
         holds these matches or their goals (FAILURE_MODES.md §23)."""
         competitions, matches = data["competitions"], data["matches"]
+        # The archives of the leagues the user removed (scope.py) are not loaded.
+        competitions = [c for c in competitions if family(c["id"]) not in scope.REMOVED_ARCHIVES]
+        matches = [m for m in matches if family(m["competitionId"]) not in scope.REMOVED_ARCHIVES]
         if int(label[:4]) <= LAST_ARCHIVE_SEASON:
             return competitions, matches, set()
         ours = self.uncovered(label, competitions)

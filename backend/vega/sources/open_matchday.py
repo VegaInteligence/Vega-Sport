@@ -28,6 +28,7 @@ import re
 
 from . import SourceError, failure, open_matchday_history, snapshot
 from .cups import _round, _team
+from ..scope import REMOVED_FOLDERS
 from ..seasons import sporting_season
 from ..store import Store
 
@@ -333,6 +334,8 @@ def run(conn, get, scope, now):
         folder = str(league.get("folder") or "").split("/")[-1]
         if not FOLDER.fullmatch(folder) or folder.split("_", 1)[0] not in EUROPE:
             continue
+        if folder in REMOVED_FOLDERS:
+            continue  # removed by the user (18 Nov 2026); what was written before goes with scope.purge
         if held(conn, folder, season):
             # PitchAPI holds this league this season: its copy would double its matches. One read
             # before (until 17 Nov 2026) is removed (the user's yes, VI-21).

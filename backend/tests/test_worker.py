@@ -17,7 +17,7 @@ import psycopg
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from vega import calculator, models, planner
+from vega import calculator, models, planner, scope
 from vega.jobs import DETAIL_FAMILIES, claim, enqueue, enqueue_or_revive
 from vega.pitchapi import PitchClient
 from vega.store import Store, StoreError, connect_local, migrate
@@ -1136,6 +1136,115 @@ class WorkerTest(unittest.TestCase):
         ).fetchone()[0]
         self.assertEqual((label, self.watch("m_llllll")[0]), ("2024/2025", "final"))
         self.assertEqual(self.db.execute("SELECT count(*) FROM ops.parse_failures").fetchone()[0], 0)
+
+    def test_a_removed_league_is_neither_collected_nor_kept(self):
+        # The user removed some leagues (18 Nov 2026, scope.REMOVED); PitchAPI's day calendar
+        # and catalogue still list them. Nothing of them is written: no competition, edition,
+        # match, watch or team seen only there, and neither their league nor their teams are read.
+        removed = {"id": "l_2ApGa4", "name": "J. League", "country_code": "JPN"}
+        far, near = {"id": "t_jjjjjj", "name": "Far FC"}, {"id": "t_kkkkkk", "name": "Near FC"}
+        self.assertIn(removed["id"], scope.REMOVED)
+        kick = self.now + timedelta(hours=5)
+        gone = dict(match("m_jjjjjj", kick, "not_started"), league=removed, home_team=far, away_team=near)
+        del gone["season"]  # as /date gives it: the edition is read from the league's profile
+        self.calendar(match("m_aaaaaa", kick, "not_started"), gone)
+        self.api.routes["/leagues"] = {"leagues": [dict(LIGUE1, seasons=["2025/2026"]), dict(removed, seasons=["2026"])]}
+        self.api.routes["/leagues/" + removed["id"]] = dict(removed, season="2026")
+        self.at(self.now)
+        self.drain()
+        self.at(self.now)
+        self.drain()
+        self.assertTrue(self.mid("m_aaaaaa"))
+        keys = [r[0] for r in self.db.execute("SELECT provider_key FROM core.provider_ids WHERE provider='pitchapi'")]
+        for key in ("l_2ApGa4", "m_jjjjjj", "t_jjjjjj", "t_kkkkkk"):
+            self.assertNotIn(key, keys)
+        self.assertEqual(self.db.execute("SELECT count(*) FROM core.competitions WHERE name='J. League'").fetchone()[0], 0)
+        self.assertNotIn("/leagues/" + removed["id"], self.api.calls)
+        self.assertFalse([c for c in self.api.calls if c in ("/teams/t_jjjjjj", "/teams/t_kkkkkk")])
+
+    def test_a_removed_league_already_in_the_base_is_purged(self):
+        # Collected in full before its removal: two editions, a finished match with its 12
+        # families, a match to come with its watch, rounds, calculations. The purge removes the
+        # league and all of it; a kept league sharing a team keeps everything; a second purge
+        # finds nothing; the calculations run again on what is left.
+        gone = {"id": "l_2ApGa4", "name": "J. League", "country_code": "JPN"}
+        far, near = {"id": "t_jjjjjj", "name": "Far FC"}, {"id": "t_kkkkkk", "name": "Near FC"}
+        other = {"id": "p_jjjjjj", "name": "Player Seen There Only"}
+        start = self.now
+        before = scope.REMOVED
+        scope.REMOVED = {}
+        try:
+            played, coming = start - timedelta(hours=3), start + timedelta(hours=30)
+            self.calendar(
+                match("m_aaaaaa", played, "finished", (2, 0)),
+                dict(match("m_jjjjjj", played, "finished", (1, 1)), league=gone),
+                dict(match("m_kkkkkk", coming, "not_started"), league=gone, home_team=far, away_team=near),
+                dict(match("m_llllll", played - timedelta(days=200), "finished", (0, 1), season="2024/2025"), league=gone),
+            )
+            self.api.routes["/leagues"] = {"leagues": [dict(LIGUE1, seasons=["2025/2026"]), dict(gone, seasons=["2024/2025", "2025/2026"])]}
+            self.api.routes["/leagues/" + gone["id"]] = dict(gone, season="2025/2026")
+            for key, kick, score, league in (("m_aaaaaa", played, (2, 0), LIGUE1), ("m_jjjjjj", played, (1, 1), gone)):
+                self.api.routes["/matches/" + key] = dict(match(key, kick, "finished", score), league=league)
+                self.api.routes.update(details(key))
+            # The removed league's match is played by a player seen nowhere else.
+            players = json.loads(json.dumps(self.api.routes["/matches/m_jjjjjj/players"]).replace(PLAYER["id"], other["id"]))
+            self.api.routes["/matches/m_jjjjjj/players"] = players
+            self.api.routes["/matches/m_jjjjjj/lineups"]["home"]["starters"][0]["player_id"] = other["id"]
+            self.api.routes.update({"/players/" + other["id"]: other, "/teams/" + far["id"]: far, "/teams/" + near["id"]: near})
+            self.at(start)
+            self.drain()
+            self.at(start)
+            self.drain()
+            self.worker.calculate()
+        finally:
+            scope.REMOVED = before
+        x = self.db.execute
+        comp = x("SELECT entity_id FROM core.provider_ids WHERE entity_type='competition' AND provider_key='l_2ApGa4'").fetchone()[0]
+        editions = [r[0] for r in x("SELECT id FROM core.competition_seasons WHERE competition_id=%s", (comp,))]
+        matches = [r[0] for r in x("SELECT id FROM core.matches WHERE competition_season_id = ANY(%s)", (editions,))]
+        self.assertEqual((len(editions), len(matches)), (2, 3))
+        self.assertTrue(x("SELECT count(*) FROM ops.family_state WHERE match_id = ANY(%s)", (matches,)).fetchone()[0])
+        kept = x("SELECT count(*) FROM core.matches").fetchone()[0] - 3
+        kept_stats = x("SELECT count(*) FROM ops.family_state WHERE NOT match_id = ANY(%s)", (matches,)).fetchone()[0]
+        # Published player rankings of both seasons (2024/25 has only removed matches) and of one
+        # without them: the purge sends the first two back to be ranked again (power.stale_rankings),
+        # since a past season's ranking is otherwise never computed again.
+        from vega.power import METHOD_VERSION, stale_rankings
+
+        seasons = dict(x("SELECT label, id FROM core.seasons").fetchall())
+        untouched = Store(self.db).season("2019/2020")
+        for season in (seasons["2024/2025"], seasons["2025/2026"], untouched):
+            x("INSERT INTO agg.power_runs(kind,season_id,method_version,status) VALUES ('players',%s,%s,'published')", (season, METHOD_VERSION))
+        self.assertEqual(stale_rankings(self.db), [])
+        followed = """SELECT p.provider_key FROM ops.reference_state r JOIN core.provider_ids p
+                      ON p.entity_type::text = r.entity_type::text AND p.entity_id = r.entity_id AND p.provider = 'pitchapi' ORDER BY 1"""
+        self.assertEqual([r[0] for r in x(followed)], ["p_aaaaaa", "p_jjjjjj", "t_aaaaaa", "t_bbbbbb", "t_jjjjjj", "t_kkkkkk"])
+
+        self.assertEqual(scope.purge(self.db), {"competitions": 1, "editions": 2, "matches": 3})
+        # A team or player seen only there is no longer read every month (its profile stays);
+        # one that also plays elsewhere still is.
+        self.assertEqual([r[0] for r in x(followed)], ["p_aaaaaa", "t_aaaaaa", "t_bbbbbb"])
+        self.assertEqual(x("SELECT count(*) FROM core.players WHERE name = 'Player Seen There Only'").fetchone()[0], 1)
+        self.assertEqual(stale_rankings(self.db), [seasons["2025/2026"], seasons["2024/2025"]])
+        self.assertEqual(x("SELECT count(*) FROM core.competitions WHERE id=%s", (comp,)).fetchone()[0], 0)
+        self.assertEqual(x("SELECT count(*) FROM core.competition_seasons WHERE id = ANY(%s)", (editions,)).fetchone()[0], 0)
+        self.assertEqual(x("SELECT count(*) FROM core.matches WHERE id = ANY(%s)", (matches,)).fetchone()[0], 0)
+        self.assertEqual(x("SELECT count(*) FROM ops.match_watch WHERE match_id = ANY(%s)", (matches,)).fetchone()[0], 0)
+        self.assertEqual(
+            x("""SELECT count(*) FROM core.provider_ids WHERE (entity_type='match' AND entity_id = ANY(%s))
+                 OR (entity_type='competition' AND entity_id=%s)""", (matches, comp)).fetchone()[0], 0)
+        self.assertEqual(x("SELECT count(*) FROM ops.fetch_jobs WHERE (entity_type='match' AND entity_id = ANY(%s)) OR competition_season_id = ANY(%s)"
+                           " OR (entity_type='competition' AND entity_id=%s)", (matches, editions, comp)).fetchone()[0], 0)
+        # The kept league is whole, and the teams stay (they may play elsewhere).
+        self.assertEqual(x("SELECT count(*) FROM core.matches").fetchone()[0], kept)
+        self.assertEqual(x("SELECT count(*) FROM ops.family_state").fetchone()[0], kept_stats)
+        self.assertTrue(self.mid("m_aaaaaa"))
+        self.assertEqual(x("SELECT count(*) FROM core.teams WHERE id IN (SELECT entity_id FROM core.provider_ids WHERE provider_key IN ('t_aaaaaa','t_bbbbbb'))").fetchone()[0], 2)
+        self.assertEqual(scope.purge(self.db), {})
+        self.worker.calculate()
+        self.at(start)
+        self.drain()
+        self.assertEqual(x("SELECT count(*) FROM core.provider_ids WHERE provider_key IN ('l_2ApGa4','m_jjjjjj','m_kkkkkk','m_llllll')").fetchone()[0], 0)
 
     def test_backfill_reads_its_leagues_before_any_catalogue(self):
         # A fresh base (first deploy, 2026-11-09): the weekly catalogue waits behind live
