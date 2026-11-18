@@ -1,28 +1,28 @@
 {
-  "records": 1572,
+  "records": 1577,
   "by_type": {
     "competition": 104,
-    "team": 1468
+    "team": 1473
   },
-  "distinct_images": 1494,
-  "converted": 162,
-  "manifest_sha256": "cd1efc8dc3bca26cd2f23664645f58a85fae25df1282873a9abe193791a50d2e",
-  "zip_sha256": "a3754276ef43e0d5e17de6377da5247e075bb1e33a7a3f9f6806b7116478acb4",
-  "zip_bytes": 131101735,
+  "distinct_images": 1499,
+  "converted": 164,
+  "manifest_sha256": "e75cd1af492442a401bbefc1422e6c5f67848a9ce92e66a8aab1cbc0c4090baa",
+  "zip_sha256": "6e5813415c117f207ccfd96a0060674f89182df695725758ed4c1668a3d65745",
+  "zip_bytes": 131239033,
   "inputs": [
     {
-      "source_pack": "artwork-expanded-1571",
-      "manifest_sha256": "72cbc81b5865b5b7c444976b1bc1a1bad9af6d6b4e8fcef24270b523db2be78b",
+      "source_pack": "artwork-expanded-1572",
+      "manifest_sha256": "cd1efc8dc3bca26cd2f23664645f58a85fae25df1282873a9abe193791a50d2e",
       "by_type": {
         "competition": 104,
-        "team": 1467
+        "team": 1468
       }
     },
     {
-      "source_pack": "tracks/7-artwork/austrian-unions-followup/profile",
-      "manifest_sha256": "bdf8c602e36ead7f12f77b0302fb519b2ecc36b71470749323942dfe5a411f2a",
+      "source_pack": "tracks/7-artwork/historic-fr-six-identity/profile",
+      "manifest_sha256": "db3f16dfc598af39c607f3ca6b3cb2e8decd314fcbcff9f63bc9c2346031b7da",
       "by_type": {
-        "team": 1
+        "team": 5
       }
     }
   ]
