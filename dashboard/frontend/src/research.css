@@ -170,7 +170,7 @@
   background: none;
   color: var(--muted);
   cursor: pointer;
-  border-radius: 3px;
+  border-radius: 0;
   vertical-align: middle;
 }
 .icon-button .icon {
@@ -775,7 +775,7 @@
   flex: 1;
   height: 4px;
   min-width: 56px;
-  border-radius: 2px;
+  border-radius: 0;
   background: var(--grid);
   overflow: hidden;
 }
@@ -803,7 +803,7 @@
 .club-goal-legend i {
   width: 8px;
   height: 8px;
-  border-radius: 2px;
+  border-radius: 0;
 }
 .club-goal-row {
   display: grid;
@@ -824,7 +824,7 @@
   display: block;
   height: 7px;
   min-width: 2px;
-  border-radius: 2px;
+  border-radius: 0;
 }
 .club-goal-legend .is-for,
 .club-goal-bars .is-for {
@@ -1016,9 +1016,10 @@
 .club-workspace .club-overview-info > .card {
   min-width: 0;
   margin: 0;
-  border: 1px solid var(--border);
+  border: 0;
+  border-top: 1px solid var(--border-strong);
   border-radius: var(--radius-lg);
-  background: var(--surface-raised);
+  background: none;
 }
 .club-overview-panel {
   padding: 20px;

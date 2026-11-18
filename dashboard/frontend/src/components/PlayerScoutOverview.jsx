@@ -187,10 +187,10 @@ const shortDate = (value) =>
     : "—";
 
 /** `fold`: on a phone the card shows closed, its heading alone (PhoneFold). */
-function Card({ title, text, actions, children, fold = false }) {
+function Card({ title, text, actions, children, fold = false, className = "" }) {
   const f = useCardFold(fold, title);
   return (
-    <section className={s.card} {...f.section}>
+    <section className={`${s.card} ${className}`.trim()} {...f.section}>
       <div className={s.cardHead} {...f.head}>
         <div>
           <h3>
@@ -374,31 +374,48 @@ export function playerStyleTags(metrics, limit = 6) {
     .map((item) => item.tag);
 }
 
-function TraitList({ items, metrics }) {
-  if (!items.length)
+/** His highest and lowest centiles in one table: strengths first, then weaknesses. */
+function TraitTable({ high, low, metrics }) {
+  if (!high.length && !low.length)
     return <p className={s.note}>Aucun indicateur classable.</p>;
+  const row = (item) => {
+    const metric = metrics.get(item.key);
+    const percentile = metric?.percentile ?? item.percentile;
+    return (
+      <tr key={item.key} className={toneClass(percentile)}>
+        <th scope="row">
+          <RankingTrigger target={{ type: "metric", key: item.key }}>
+            {label(item.key)}
+          </RankingTrigger>
+          <Hint text={metricHint(item.key)} label={label(item.key)} />
+        </th>
+        <td>
+          {fmt(item.value, metric?.decimals ?? 2, { unit: metric?.unit })}
+          {metric?.unit ? "" : " /90"}
+        </td>
+        <td>
+          {percentile == null ? "—" : Math.round(percentile)}
+          <i
+            className={s.traitBar}
+            style={{ "--w": `${percentile ?? 0}%` }}
+            aria-hidden="true"
+          />
+        </td>
+      </tr>
+    );
+  };
   return (
-    <ul className={s.traits}>
-      {items.map((item) => {
-        const metric = metrics.get(item.key);
-        const percentile = metric?.percentile ?? item.percentile;
-        return (
-          <li key={item.key} className={toneClass(percentile)}>
-            <span>
-              <RankingTrigger target={{ type: "metric", key: item.key }}>
-                {label(item.key)}
-              </RankingTrigger>
-              <Hint text={metricHint(item.key)} label={label(item.key)} />
-            </span>
-            <small>
-              {fmt(item.value, metric?.decimals ?? 2, { unit: metric?.unit })}
-              {metric?.unit ? "" : " /90"}
-            </small>
-            <PercentileBadge value={percentile} />
-          </li>
-        );
-      })}
-    </ul>
+    <table className={s.traitTable}>
+      <thead>
+        <tr>
+          <th scope="col">Indicateur</th>
+          <th scope="col">Valeur</th>
+          <th scope="col">Centile</th>
+        </tr>
+      </thead>
+      {high.length > 0 && <tbody>{high.map(row)}</tbody>}
+      {low.length > 0 && <tbody>{low.map(row)}</tbody>}
+    </table>
   );
 }
 
@@ -654,14 +671,9 @@ export default function PlayerScoutOverview({
         </Card>
       </div>
       <div className={`${s.block} ${s.grid4}`}>
-        <Card title="Points forts" text="Centiles les plus élevés">
+        <Card title="Points forts et faibles" className={s.traitCard}>
           <Pending ready={ready}>
-            <TraitList items={traits.high} metrics={metrics} />
-          </Pending>
-        </Card>
-        <Card title="Points faibles" text="Centiles les plus bas">
-          <Pending ready={ready}>
-            <TraitList items={traits.low} metrics={metrics} />
+            <TraitTable high={traits.high} low={traits.low} metrics={metrics} />
           </Pending>
         </Card>
         <Card

@@ -640,7 +640,6 @@ export function HeatmapPitch({ grid }) {
                 y={y * h + 0.4}
                 width={w - 0.8}
                 height={h - 0.8}
-                rx="1.2"
                 fill="var(--accent)"
                 fillOpacity={(value / max) * 0.85}
               />
@@ -801,7 +800,6 @@ export function InjuryTimeline({ seasons, injuries }) {
                 style={{
                   position: "relative",
                   height: 18,
-                  borderRadius: 4,
                   background:
                     "repeating-linear-gradient(90deg, var(--mq-track) 0 calc(100% / 12 - 1px), var(--mq-gap) calc(100% / 12 - 1px) calc(100% / 12))",
                 }}
@@ -831,7 +829,6 @@ export function InjuryTimeline({ seasons, injuries }) {
                         bottom: 3,
                         left: `${(start / 365) * 100}%`,
                         width: `max(6px, ${(length / 365) * 100}%)`,
-                        borderRadius: 3,
                         background:
                           item.type === "suspension"
                             ? "var(--muted-light)"
@@ -1500,14 +1497,12 @@ export function Gauge({ value, label, size = 180 }) {
         fill="none"
         stroke="var(--mq-track)"
         strokeWidth="10"
-        strokeLinecap="round"
       />
       <path
         d={arc(a0, at)}
         fill="none"
         stroke="var(--accent)"
         strokeWidth="10"
-        strokeLinecap="round"
       />
       <text x={c} y={c + 8} textAnchor="middle" className={s.gaugeValue}>
         {value}

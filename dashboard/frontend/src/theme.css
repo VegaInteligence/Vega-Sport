@@ -15,11 +15,11 @@
   --text-xl: 20px;
   --text-2xl: 28px;
 
-  --radius-xs: 4px;
-  --radius-sm: 6px;
-  --radius: 8px;
-  --radius-lg: 12px;
-  --radius-xl: var(--statarena-radius, 14px);
+  --radius-xs: 0;
+  --radius-sm: 0;
+  --radius: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
 
   --control-h: 34px;
   --header-h: 56px;

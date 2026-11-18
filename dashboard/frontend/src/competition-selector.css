@@ -430,7 +430,7 @@
   width: 20px;
   height: 15px;
   line-height: 15px;
-  border-radius: 2px;
+  border-radius: 0;
   box-shadow: 0 0 0 1px var(--border);
   vertical-align: middle;
 }
@@ -483,12 +483,12 @@
 .edition-stepper button:focus-visible, .edition-stepper select:focus-visible, .edition-followed:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .edition-stepper select { height: 32px; padding: 0 6px; color: var(--ink-strong); background: var(--surface-subtle); border: 0; border-inline: 1px solid var(--border); border-radius: 0; font-size: var(--text-lg); font-weight: 700; font-variant-numeric: tabular-nums; cursor: pointer; }
 .edition-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-left: auto; }
-.edition-followed { display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 10px; color: var(--ink-strong); background: var(--accent-soft); border: 1px solid var(--accent-line); border-radius: 999px; font-size: var(--text-sm); font-weight: 600; cursor: pointer; }
+.edition-followed { display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 10px; color: var(--ink-strong); background: var(--accent-soft); border: 1px solid var(--accent-line); border-radius: 0; font-size: var(--text-sm); font-weight: 600; cursor: pointer; }
 .edition-followed span:last-child { color: var(--muted); font-weight: 400; }
 .edition-card .knockout-section { margin-top: 0; }
 .cup-match-own .score { color: var(--accent); background: var(--accent-soft); }
 .edition-groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
-.edition-group { min-width: 0; padding: 10px 12px; background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius); }
+.edition-group { min-width: 0; padding: 10px 12px; background: none; border: 1px solid var(--border); border-radius: var(--radius); }
 .edition-group h3 { margin: 0 0 6px; color: var(--ink-strong); font-size: var(--text-sm); }
 /* A group's table is as wide as its card: the shared tables' 800 px floor is not for it. */
 .edition-group .data-table { width: 100%; min-width: 0; font-size: var(--text-sm); }
@@ -577,7 +577,7 @@
 .knockout-winner { color: var(--ink-strong); font-weight: 650; }
 .knockout-winner strong { font-weight: 700; }
 .knockout-loser { color: var(--muted); }
-.knockout-tag { position: absolute; top: -7px; right: 7px; padding: 0 5px; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 6px; font-size: 9px; line-height: 12px; }
+.knockout-tag { position: absolute; top: -7px; right: 7px; padding: 0 5px; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 0; font-size: 9px; line-height: 12px; }
 .knockout-crest { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; flex: 0 0 18px; }
 .knockout-crest img { width: 100%; height: 100%; object-fit: contain; }
 .knockout-legs { display: flex; gap: 10px; margin-top: 2px; color: var(--muted); font-size: var(--text-2xs); line-height: 16px; }
@@ -635,7 +635,7 @@
 .cup-directory-section + .cup-directory-section { margin-top: 26px; }
 .cup-directory-section > h3 { margin: 0 0 10px; color: var(--ink-strong); font-size: var(--text-md); }
 .cup-directory-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 8px; }
-.cup-directory-card { display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 62px; padding: 10px 12px; text-align: left; color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.cup-directory-card { display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 62px; padding: 10px 12px; text-align: left; color: var(--ink); background: none; border: 1px solid var(--border); border-radius: var(--radius-lg); }
 .cup-directory-card:hover { background: var(--surface-hover); border-color: var(--border-strong); }
 .cup-directory-card[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
 .cup-directory-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -652,7 +652,7 @@
 .cup-bracket-unavailable .chart-empty { padding-bottom: 16px; }
 .cup-bracket-unavailable > button { display: block; margin: 0 auto 20px; }
 .nations-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-.nations-group { min-width: 0; padding: 14px; background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.nations-group { min-width: 0; padding: 14px; background: none; border: 1px solid var(--border); border-radius: var(--radius-lg); }
 .nations-group h3 { margin: 0 0 10px; color: var(--ink-strong); font-size: var(--text-sm); }
 .nations-table { min-width: 460px; font-size: var(--text-xs); }
 .nations-table th, .nations-table td { padding: 7px 6px; text-align: center; }
@@ -745,7 +745,7 @@
   gap: 14px;
   padding: 16px 8px;
   border: 1px solid var(--line, var(--surface-hover));
-  border-radius: 12px;
+  border-radius: 0;
   background: var(--surface-raised);
 }
 .team-pitch-line {
@@ -794,7 +794,7 @@
 .wcm-side-home { flex-direction: row-reverse; text-align: right; }
 .wcm-side strong { display: block; color: var(--ink-strong); font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
 .wcm-side small { display: block; margin-top: 4px; color: var(--muted); font-size: var(--text-sm); }
-.fi.national-flag.wcm-big-flag { flex: 0 0 56px; width: 56px; height: 42px; border-radius: 6px; }
+.fi.national-flag.wcm-big-flag { flex: 0 0 56px; width: 56px; height: 42px; border-radius: 0; }
 .wcm-result { text-align: center; }
 .wcm-result strong { display: block; color: var(--ink-strong); font-size: 52px; font-weight: 750; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 .wcm-result strong i { margin: 0 10px; color: var(--muted-light); font-style: normal; font-weight: 400; }
@@ -823,7 +823,7 @@
 .wcm-ico { flex: none; display: inline-grid; place-items: center; width: 18px; font-style: normal; line-height: 1; }
 .wcm-on { color: #4cc38a; }
 .wcm-off { color: var(--danger); }
-.wcm-card { flex: none; display: inline-block; width: 11px; height: 15px; border-radius: 2px; background: #f2c230; }
+.wcm-card { flex: none; display: inline-block; width: 11px; height: 15px; border-radius: 0; background: #f2c230; }
 .wcm-card-red { background: #e5484d; }
 .wcm-card-second_yellow { background: linear-gradient(135deg, #f2c230 0 50%, #e5484d 50% 100%); }
 .wcm-lineups, .wcm-kicks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; }

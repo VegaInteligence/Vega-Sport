@@ -134,7 +134,6 @@ export default function FormBars({ items, average, ariaLabel }) {
             y={0}
             width={Math.max(0, column - 8)}
             height={height}
-            rx={8}
           />
         )}
         <line

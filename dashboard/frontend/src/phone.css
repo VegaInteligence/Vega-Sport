@@ -61,7 +61,7 @@
   .player-ranking-field select {
     height: 40px;
     min-height: 40px;
-    border-radius: 20px;
+    border-radius: 0;
   }
   .filter-rail .filter-field {
     flex: none;
@@ -86,7 +86,7 @@
   /* A search field takes the same rounded shape, on its own row. */
   .filter-search .filter-input-wrap,
   .club-directory-search {
-    border-radius: 22px;
+    border-radius: 0;
   }
   .filter-search .filter-input-wrap > .icon:first-child,
   .club-directory-search > .icon:first-child {
@@ -157,7 +157,7 @@
     flex: none;
     min-height: 56px;
     padding: 8px 16px 8px 10px;
-    border-radius: 18px;
+    border-radius: 0;
   }
   .league-spotlight-logo {
     flex-basis: 34px;
@@ -204,12 +204,12 @@
   /* A switch in one of these rows is a pill too. */
   .filter-rail .segmented-control,
   .competition-detail-controls .segmented-control {
-    border-radius: 20px;
+    border-radius: 0;
   }
   .filter-rail .segmented-control button,
   .competition-detail-controls .segmented-control button {
     min-height: 40px;
-    border-radius: 20px;
+    border-radius: 0;
   }
   /* The players table's toolbar: its rail takes the row, the count goes
      under it. */
@@ -239,7 +239,7 @@
     min-height: 44px;
     padding: 0 14px 0 16px;
     border: 1px solid var(--border);
-    border-radius: 22px;
+    border-radius: 0;
     background: var(--surface-subtle);
     color: var(--ink);
     font-size: var(--text-sm);

@@ -130,7 +130,7 @@
 .track {
   position: relative;
   height: 5px;
-  border-radius: 2px;
+  border-radius: 0;
   background: var(--border-strong);
 }
 .barFill {
