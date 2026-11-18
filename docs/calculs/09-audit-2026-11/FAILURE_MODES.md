@@ -1608,6 +1608,18 @@ remain attached to a retained match. An incoming historical key refuses the chan
 with `INACTIVE_MATCH_KEY`. A permitted withdrawal of the current key removes the match and
 the provider's keys for it, including historical keys.
 
+The writer locks only matches it is about to change or withdraw. It then reads and locks their
+provider keys in a separate statement. A changed key set gives `SNAPSHOT_CHANGED`. A match linked
+to another provider gives `SHARED_MATCH`. Adding or changing a provider key takes a shared lock
+on its match first. An insert waiting on a withdrawal fails if the match has gone. The snapshot
+still skips unchanged rows.
+
+A withdrawal refuses `MATCH_HAS_DEPENDENTS` when another input holds the match, including
+odds or any match event. It reuses the archive dependency catalogue and also checks plain goals.
+Open Matchday may remove the statistics it supplies for the whole match and the corners it
+supplies by half. The writer locks the statistics rows before checking for additional fields.
+Foreign keys protect concurrent addition of dependent rows through the parent lock.
+
 **A snapshot replaces an edition only when it is complete and keeps its results.** Before any write:
 - open-matchday: the folder's manifest declares integer counts (not booleans) and no `errors`. Each
   declared file is read. A results file has `date, home, away, ft_home, ft_away`; a fixtures file has

@@ -16,6 +16,8 @@ The removal of an open-matchday copy of a league PitchAPI holds (open_matchday.d
 reviewed decision of its own (VI-21) and does not pass through here.
 """
 
+from psycopg.errors import LockNotAvailable
+
 from . import SourceError
 
 # Results a later, complete snapshot of their source really withdrew or left unplayed, written here
@@ -37,13 +39,17 @@ COLUMNS = {
 def _read(conn, provider, where, args):
     names = list(COLUMNS)
     rows = conn.execute(
-        f"""SELECT p.provider_key, p.is_current, m.id, m.revision, m.xmin::text, {', '.join(COLUMNS.values())}
+        f"""SELECT p.provider_key, p.is_current, m.id, m.revision, m.xmin::text,
+             (SELECT jsonb_agg(jsonb_build_array(k.provider,k.provider_key,k.is_current))
+              FROM core.provider_ids k WHERE k.entity_type='match' AND k.entity_id=m.id),
+             {', '.join(COLUMNS.values())}
             FROM core.matches m JOIN core.provider_ids p ON p.entity_type = 'match' AND p.provider = %s AND p.entity_id = m.id
             WHERE {where}""",
         (provider, *args),
     ).fetchall()
-    return {key: {"id": match, "revision": revision, "row_version": version, "is_current": current, **dict(zip(names, columns))}
-            for key, current, match, revision, version, *columns in rows}
+    return {key: {"id": match, "revision": revision, "row_version": version, "is_current": current, "keys": keys,
+                  **dict(zip(names, columns))}
+            for key, current, match, revision, version, keys, *columns in rows}
 
 
 def stored(conn, provider, edition):
@@ -80,6 +86,62 @@ def guard(provider, before, after, label):
                                     f"{'lacks' if code == 'SNAPSHOT_DROPS_RESULT' else 'leaves unplayed'}: {shown}")
 
 
+def _claim(conn, provider, expected):
+    """Lock the affected parents, then check their current keys in a fresh statement."""
+    ids = sorted(expected)
+    parents = {match: (version, source) for match, version, source in conn.execute(
+        """SELECT id,xmin::text,source::text FROM core.matches WHERE id=ANY(%s)
+           ORDER BY id FOR UPDATE""", (ids,))}
+    try:
+        keys = conn.execute(
+            """SELECT entity_id,provider::text,provider_key,is_current FROM core.provider_ids
+                WHERE entity_type='match' AND entity_id=ANY(%s)
+                ORDER BY entity_id,provider,provider_key FOR UPDATE NOWAIT""", (ids,)).fetchall()
+    except LockNotAvailable as error:
+        # A concurrent key UPDATE already past its row lock can be waiting on our parent.
+        # Refuse this snapshot and let the key writer finish, rather than waiting on it.
+        raise SourceError("SNAPSHOT_CHANGED", f"{provider}: match keys are being changed") from error
+    ownership = {}
+    for match, owner, key, active in keys:
+        ownership.setdefault(match, set()).add((owner, key, active))
+    for match, (old, key) in expected.items():
+        parent = parents.get(match)
+        if parent is None or parent[0] != old["row_version"] or ownership.get(match) != set(map(tuple, old["keys"])):
+            raise SourceError("SNAPSHOT_CHANGED", f"{provider}: {key} or its keys changed after the snapshot read")
+        if parent[1] != provider or any(owner != provider for owner, _, _ in old["keys"]):
+            raise SourceError("SHARED_MATCH", f"{provider}: {key} is held by another source")
+
+
+def _guard_dependents(conn, provider, ids, stat_columns):
+    owned = ["core.provider_ids.entity_id"]
+    if stat_columns:
+        # The match lock excludes late FK inserts. Existing statistic rows can be
+        # enriched without taking that lock, so lock them before checking their fields.
+        try:
+            stats = conn.execute(
+                """SELECT s.match_id,jsonb_strip_nulls(to_jsonb(s)) -
+                          (ARRAY['season_id','match_id','team_id','period','updated_at']::text[] ||
+                           CASE WHEN s.period='all' THEN %s::text[] ELSE ARRAY['corners']::text[] END)
+                   FROM core.team_match_stats s WHERE s.match_id=ANY(%s)
+                   ORDER BY season_id,match_id,team_id,period FOR UPDATE NOWAIT""", (stat_columns, ids)).fetchall()
+        except LockNotAvailable as error:
+            raise SourceError("SNAPSHOT_CHANGED", f"{provider}: match statistics are being enriched") from error
+        for match, fields in stats:
+            if fields:
+                raise SourceError("MATCH_HAS_DEPENDENTS", f"{provider}: match {match} has other team statistics: "
+                                  + ", ".join(sorted(fields)))
+        owned.append("core.team_match_stats.match_id")
+    for start in range(0, len(ids), 5000):
+        batch = ids[start:start + 5000]
+        found = conn.execute(
+            """SELECT d.match_id,d.dependency FROM ops.archive_match_dependents(%s::integer[]) d
+                 WHERE d.dependency <> ALL(%s)
+               UNION ALL SELECT e.match_id,'core.match_events' FROM core.match_events e WHERE e.match_id=ANY(%s)
+               LIMIT 1""", (batch, owned, batch)).fetchone()
+        if found:
+            raise SourceError("MATCH_HAS_DEPENDENTS", f"{provider}: match {found[0]} is held by {found[1]}")
+
+
 def write(conn, provider, key, values, found, changed=False):
     """Insert, update or leave one match: "inserted", "updated", "moved" (its place alone) or None.
 
@@ -101,34 +163,20 @@ def write(conn, provider, key, values, found, changed=False):
         args, outcome = [values["archive_position"]], "moved"
     else:
         return found["id"], None
-    # PostgreSQL rechecks this row version after waiting on a concurrent update. A user-facing
-    # revision alone misses revisions of archive_position and maintenance changes to a row.
-    updated = conn.execute(
-        f"""UPDATE core.matches m SET {assignments} WHERE m.id=%s AND m.xmin::text=%s
-              AND EXISTS (SELECT 1 FROM core.provider_ids p WHERE p.entity_type='match' AND p.provider=%s
-                            AND p.provider_key=%s AND p.entity_id=m.id AND p.is_current)""",
-        (*args, found["id"], found["row_version"], provider, key),
-    )
-    if updated.rowcount != 1:
-        raise SourceError("SNAPSHOT_CHANGED", f"{provider}: {key} changed after the snapshot read")
+    # The physical version includes changes of archive_position and corrections that
+    # do not bump the public revision. The parent and key locks survive until commit.
+    _claim(conn, provider, {found["id"]: (found, key)})
+    conn.execute(f"UPDATE core.matches SET {assignments} WHERE id=%s", (*args, found["id"]))
     return found["id"], outcome
 
 
-def remove(conn, provider, before, keep):
+def remove(conn, provider, before, keep, stat_columns=None):
     """Delete matches whose current keys the snapshot withdrew, including their former aliases."""
-    gone = {m["id"]: (m["row_version"], key) for key, m in before.items() if key not in keep}
+    gone = {m["id"]: (m, key) for key, m in before.items() if key not in keep}
     if gone:
-        deleted = {match for (match,) in conn.execute(
-            """DELETE FROM core.matches m USING unnest(%s::integer[], %s::text[], %s::text[]) observed(id, version, key)
-                WHERE m.id=observed.id AND m.xmin::text=observed.version
-                  AND EXISTS (SELECT 1 FROM core.provider_ids p WHERE p.entity_type='match' AND p.provider=%s
-                               AND p.provider_key=observed.key AND p.entity_id=m.id AND p.is_current)
-                RETURNING m.id""",
-            (list(gone), [version for version, _ in gone.values()], [key for _, key in gone.values()], provider),
-        ).fetchall()}
-        if deleted != gone.keys():
-            missed = ", ".join(sorted(gone[match][1] for match in gone.keys() - deleted)[:5])
-            raise SourceError("SNAPSHOT_CHANGED", f"{provider}: cannot remove matches changed after the snapshot read: {missed}")
+        _claim(conn, provider, gone)
+        _guard_dependents(conn, provider, list(gone), stat_columns)
         conn.execute("DELETE FROM core.provider_ids WHERE entity_type='match' AND provider=%s AND entity_id = ANY(%s)",
                      (provider, list(gone)))
+        conn.execute("DELETE FROM core.matches WHERE id=ANY(%s)", (list(gone),))
     return len(gone)

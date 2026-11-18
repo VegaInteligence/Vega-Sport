@@ -20,6 +20,8 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from threading import Event, Thread
+from time import monotonic, sleep
 import unittest
 from unittest.mock import patch
 from urllib.parse import urlparse
@@ -631,6 +633,157 @@ class OpenMatchdayGuardTest(SnapshotDatabase):
             self.assertEqual(self.state(), [r for r in before if r[1] == initial[0][0]])
             self.assertIsNone(self.x("SELECT entity_id FROM core.provider_ids WHERE provider='open_matchday' AND provider_key=%s",
                                      (retired[1],)).fetchone())
+
+    @staticmethod
+    def blocked(observer, waiter, timeout=5):
+        limit = monotonic() + timeout
+        while monotonic() < limit:
+            if observer.execute("SELECT cardinality(pg_blocking_pids(%s)) > 0", (waiter.info.backend_pid,)).fetchone()[0]:
+                return True
+            sleep(.02)
+        return False
+
+    def fixture_dependents(self):
+        match = self.public_matches()[1][0]
+        self.x("""INSERT INTO core.team_match_stats(season_id,match_id,team_id,period,total_shots)
+                  SELECT season_id,id,away_team_id,'all',9 FROM core.matches WHERE id=%s""", (match,))
+        return match
+
+    def test_shared_match_and_its_statistics_survive_a_withdrawal(self):
+        match = self.fixture_dependents()
+        self.x("""INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id)
+                  VALUES ('match','pitchapi','m_shared',%s)""", (match,))
+        before = self.state()
+        outcome = self.read([league(fixtures=0)], self.files(fixtures=None), NOW+timedelta(days=1))
+        self.assertEqual(self.state(), before)
+        self.assertEqual(outcome, ("ok", 0, 1))
+        self.assertIn("SHARED_MATCH", {code for code, _ in self.failures()})
+
+    def test_third_party_odds_and_unattributed_events_survive_withdrawal(self):
+        for dependent in ("odds", "goal", "possession", "half_shots"):
+            with self.subTest(dependent=dependent):
+                self.setUp()
+                match = self.public_matches()[1][0]
+                if dependent == "odds":
+                    self.x("""INSERT INTO core.match_odds(season_id,match_id,bookmaker,title,home,draw,away,
+                                  first_home,first_draw,first_away,fetched_at)
+                              SELECT season_id,id,'book','Book',2.5,3,3.5,2.5,3,3.5,now() FROM core.matches WHERE id=%s""",
+                           (match,))
+                    query = "SELECT home,draw,away FROM api.match_odds WHERE match_key=%s"
+                elif dependent == "goal":
+                    self.x("""INSERT INTO core.match_events(season_id,match_id,seq,event_type,team_id)
+                              SELECT season_id,id,1,'goal',home_team_id FROM core.matches WHERE id=%s""", (match,))
+                    query = "SELECT event_type,team_id FROM core.match_events WHERE match_id=%s"
+                else:
+                    self.x("""INSERT INTO core.team_match_stats(season_id,match_id,team_id,period,possession_pct,total_shots)
+                              SELECT season_id,id,home_team_id,%s,%s,%s FROM core.matches WHERE id=%s""",
+                           (("all", 60, None, match) if dependent == "possession" else ("first_half", None, 0, match)))
+                    query = "SELECT period,possession_pct,total_shots FROM core.team_match_stats WHERE match_id=%s"
+                data = self.x(query, (match,)).fetchall()
+                self.assertTrue(data)
+                before = self.public_matches()
+                self.assertEqual(self.read([league(fixtures=0)], self.files(fixtures=None), NOW+timedelta(days=1)), ("ok", 0, 1))
+                self.assertEqual(self.public_matches(), before)
+                self.assertEqual(self.x(query, (match,)).fetchall(), data)
+                self.assertIn("MATCH_HAS_DEPENDENTS", {code for code, _ in self.failures()})
+
+    def test_withdrawal_preserves_an_enrichment_of_an_existing_statistics_row(self):
+        from vega.store import connect_local
+
+        match = self.fixture_dependents()
+        outcomes, complete = [], Event()
+
+        def withdraw():
+            outcomes.append(self.read([league(fixtures=0)], self.files(fixtures=None), NOW+timedelta(days=1)))
+            complete.set()
+
+        with connect_local(DSN) as writer, writer.transaction():
+            writer.execute("UPDATE core.team_match_stats SET possession_pct=60 WHERE match_id=%s", (match,))
+            worker = Thread(target=withdraw)
+            worker.start()
+            complete.wait(2)
+        worker.join(10)
+        self.assertFalse(worker.is_alive())
+        self.assertEqual(outcomes, [("ok", 0, 1)])
+        self.assertEqual(self.x("SELECT total_shots,possession_pct FROM core.team_match_stats WHERE match_id=%s",
+                                (match,)).fetchall(), [(9, 60.0)])
+
+    def test_a_concurrent_rotation_protects_withdrawal_update_and_reorder(self):
+        from vega.store import connect_local
+
+        actions = (
+            ("withdraw", self.files(fixtures=None), 0),
+            ("historical alias", self.files(fixtures=None), 0),
+            ("update", self.files(fixtures=FIXTURES.replace(",16", ",17")), 1),
+            ("reorder", self.files(), 1),
+        )
+        for action, files, fixtures in actions:
+            with self.subTest(action=action), connect_local(DSN) as writer:
+                self.setUp()
+                match = self.fixture_dependents()
+                if action == "reorder":
+                    self.x("UPDATE core.matches SET archive_position=12 WHERE id=%s", (match,))
+                original = self.public_matches()
+                outcomes = []
+                with writer.transaction():
+                    writer.execute("SELECT id FROM core.matches WHERE id=%s FOR UPDATE", (match,))
+                    rotates = action != "historical alias"
+                    if rotates:
+                        writer.execute("""UPDATE core.provider_ids SET is_current=false WHERE entity_type='match'
+                                          AND provider='open_matchday' AND entity_id=%s AND is_current""", (match,))
+                    writer.execute("""INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id,is_current)
+                                      VALUES ('match','open_matchday','next:alias',%s,%s)""",
+                                   (match, rotates))
+                    worker = Thread(target=lambda: outcomes.append(self.read([league(fixtures=fixtures)], files, NOW+timedelta(days=1))))
+                    worker.start()
+                    waiting = self.blocked(writer, self.db)
+                worker.join(10)
+                self.assertFalse(worker.is_alive())
+                self.assertTrue(waiting)
+                self.assertEqual(self.public_matches(), original)
+                self.assertEqual(outcomes, [("ok", 0, 1)])
+                self.assertIn("SNAPSHOT_CHANGED", {code for code, _ in self.failures()})
+                self.assertEqual(self.x("SELECT total_shots FROM core.team_match_stats WHERE match_id=%s", (match,)).fetchall(), [(9,)])
+                self.assertEqual(self.x("""SELECT is_current FROM core.provider_ids WHERE entity_type='match'
+                                          AND entity_id=%s ORDER BY 1""", (match,)).fetchall(), [(False,), (True,)])
+
+    def test_key_added_while_a_withdrawal_commits_cannot_become_orphaned(self):
+        from vega.store import connect_local
+
+        match = self.fixture_dependents()
+        ready = Event()
+        added = []
+        remove = snapshot.remove
+        with connect_local(DSN) as writer:
+            def attach():
+                ready.set()
+                try:
+                    writer.execute("""INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id)
+                                      VALUES ('match','pitchapi','m_late',%s)""", (match,))
+                except psycopg.errors.ForeignKeyViolation:
+                    added.append("missing parent")
+                else:
+                    added.append("inserted")
+
+            worker = Thread(target=attach)
+            waited = []
+
+            def pause(conn, *args):
+                count = remove(conn, *args)
+                worker.start()
+                self.assertTrue(ready.wait(5))
+                waited.append(self.blocked(conn, writer, timeout=1))
+                return count
+
+            with patch.object(snapshot, "remove", pause):
+                outcome = self.read([league(fixtures=0)], self.files(fixtures=None), NOW+timedelta(days=1))
+            worker.join(10)
+        self.assertFalse(worker.is_alive())
+        self.assertEqual(outcome, ("ok", 1, 0))
+        self.assertEqual(added, ["missing parent"])
+        self.assertEqual(waited, [True])
+        self.assertIsNone(self.x("SELECT 1 FROM core.provider_ids WHERE entity_type='match' AND entity_id=%s", (match,)).fetchone())
+        self.assertIsNone(self.x("SELECT 1 FROM core.team_match_stats WHERE match_id=%s", (match,)).fetchone())
 
 
     # 22a, 22b (FAILURE_MODES.md §22, written before the code): a later file without a statistic keeps it; a
