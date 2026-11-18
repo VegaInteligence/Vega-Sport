@@ -1,4 +1,5 @@
 import { normalizeText } from "../model.js";
+import { isFinalPool1950 } from "../../../shared/world-cup-1950.js";
 import { parisDay, validDay } from "./fixtures.js";
 
 function scoreNumber(value) {
@@ -20,6 +21,8 @@ function readableRound(round, group) {
     .replace(/^Finals,\s*/i, "")
     .replace(/^(?:Qualifying,|Qual\.)\s*Round\s+(\d+)$/i, "Tour préliminaire $1")
     .replace(/^Preliminary round$/i, "Tour préliminaire")
+    .replace(/^Final Round$/i, "Poule finale")
+    .replace(/^Group ([A-Z]|\d+) Play-off$/i, "Groupe $1 · Barrage")
     .replace(/^Group,\s*Matchday\s+(\d+)$/i, "Phase de groupes · Journée $1")
     .replace(/^Playoffs$/i, "Barrages")
     .replace(/^Gruppe\s+([A-Z0-9]+)$/i, "Groupe $1")
@@ -36,12 +39,7 @@ function readableRound(round, group) {
   return [first, second && second !== first ? second : ""].filter(Boolean).join(" · ");
 }
 
-/**
- * A league's standings from its matches (a complementary league, VI-19): points, goal difference, goals scored, then
- * the name; a team with no match played yet is in the table all the same. Computed from the results the source gives:
- * no deduction or head-to-head rule can be read from them.
- */
-export function leagueTable(matches) {
+function tally(matches, winPoints) {
   const rows = new Map();
   const row = (name) => rows.get(name) || rows.set(name, { name, played: 0, wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0, points: 0 }).get(name);
   for (const match of matches || []) {
@@ -50,13 +48,19 @@ export function leagueTable(matches) {
     const [hs, as] = match.score;
     home.played++; away.played++;
     home.goalsFor += hs; home.goalsAgainst += as; away.goalsFor += as; away.goalsAgainst += hs;
-    if (hs > as) { home.wins++; away.losses++; home.points += 3; }
-    else if (hs < as) { away.wins++; home.losses++; away.points += 3; }
+    if (hs > as) { home.wins++; away.losses++; home.points += winPoints; }
+    else if (hs < as) { away.wins++; home.losses++; away.points += winPoints; }
     else { home.draws++; away.draws++; home.points++; away.points++; }
   }
-  return [...rows.values()]
-    .map((r) => ({ ...r, difference: r.goalsFor - r.goalsAgainst }))
-    .sort((a, b) => b.points - a.points || b.difference - a.difference || b.goalsFor - a.goalsFor || a.name.localeCompare(b.name, "fr"))
+  return [...rows.values()].map((r) => ({ ...r, difference: r.goalsFor - r.goalsAgainst }));
+}
+
+const displayOrder = (a, b) => b.difference - a.difference || b.goalsFor - a.goalsFor || a.name.localeCompare(b.name, "fr");
+
+/** Standings of a complementary league (VI-19), as before: points, goal difference, goals and name. */
+export function leagueTable(matches) {
+  return tally(matches, 3)
+    .sort((a, b) => b.points - a.points || displayOrder(a, b))
     .map((r, i) => ({ position: i + 1, ...r }));
 }
 
@@ -161,39 +165,140 @@ export function normalizeOpenCup(matches) {
     const home = String(match.team1 || "").trim(), away = String(match.team2 || "").trim();
     if (!home || !away) return [];
     const regulation = pair(match.score?.ft), extra = pair(match.score?.et), penalties = pair(match.score?.p);
-    const score = extra || regulation;
+    const canceled = match.status === "canceled";
+    const score = canceled ? null : extra || regulation;
     const notes = [];
     if (extra) notes.push("après prolongation");
     if (penalties) notes.push("tirs au but " + penalties[0] + " – " + penalties[1]);
     const forecast = score ? null : matchForecast(match.forecast);
-    return [{ key: "open:" + index, date: validDay(match.date) ? match.date : "", home, away, score, penalties, notes, roundName: String(match.round || ""), group: String(match.group || ""), number: Number.isInteger(match.num) ? match.num : null, round: readableRound(match.round, match.group), status: score ? "finished" : "scheduled", ...(forecast && { forecast }), ...ownSides(match) }];
+    return [{ key: "open:" + index, ...(match.id && { id: match.id }), date: validDay(match.date) ? match.date : "", home, away, score, penalties: canceled ? null : penalties, notes, roundName: String(match.round || ""), group: String(match.group || ""), number: Number.isInteger(match.num) ? match.num : null, round: readableRound(match.round, match.group), status: canceled ? "canceled" : score ? "finished" : "scheduled", ...(forecast && !canceled && { forecast }), ...ownSides(match) }];
   });
 }
 
-/**
- * An edition's groups (a tournament of the archives): one table per group the source names, in the groups' order, each
- * computed as a league's (leagueTable). 1950's final round, a group the source names by its round alone, is the
- * « Poule finale ». An edition without groups has no table.
- */
-export function groupTables(matches) {
+const worldCupYear = (year) => [1930, 1934, 1938].includes(year) || (year >= 1950 && year <= 2026 && (year - 1950) % 4 === 0);
+const euroYear = (year) => year >= 1980 && year <= 2028 && year % 4 === 0;
+
+function groupRules(competition, season) {
+  const year = /^\d{4}$/.test(String(season)) ? Number(season) : 0;
+  if (competition === "world-cup-history" && worldCupYear(year)) {
+    const tieBreak = [1954, 1958].includes(year) ? "playoff"
+      : year >= 1994 && year <= 2022 ? "fifa"
+      : year >= 1974 && year <= 1990 ? "overall" : null;
+    return { win: year < 1994 ? 2 : 3, tieBreak, finalPool: year === 1950 };
+  }
+  if (competition === "euro" && euroYear(year)) {
+    return { win: year < 1996 ? 2 : 3, tieBreak: [2020, 2024].includes(year) ? "uefa" : null };
+  }
+  return { win: null, tieBreak: null };
+}
+
+const compare = (a, b) => {
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return b[i] - a[i];
+  }
+  return 0;
+};
+
+/** Each block is ranked ahead of the next one. Teams within a block share the place. */
+function rankBlocks(rows, metrics) {
+  const sorted = rows.map((row) => ({ row, values: metrics(row) })).sort((a, b) => compare(a.values, b.values));
+  const blocks = [];
+  let previous;
+  for (const { row, values } of sorted) {
+    if (!previous || compare(previous, values)) blocks.push([]);
+    blocks.at(-1).push(row);
+    previous = values;
+  }
+  return blocks;
+}
+
+const overall = (row) => [row.difference, row.goalsFor];
+const played = (match) => match.status === "finished" && Array.isArray(match.score);
+
+function headToHead(rows, matches, win, reapply) {
+  if (rows.length < 2) return [rows];
+  const teams = new Set(rows.map((row) => row.name));
+  const games = matches.filter((m) => played(m) && m.home !== m.away && teams.has(m.home) && teams.has(m.away));
+  const pairs = new Set(games.map((m) => JSON.stringify([m.home, m.away].sort())));
+  const expected = rows.length * (rows.length - 1) / 2;
+  if (games.length !== expected || pairs.size !== expected) return null;
+  const miniTable = new Map(tally(games, win).map((row) => [row.name, row]));
+  const blocks = rankBlocks(rows, ({ name }) => [miniTable.get(name).points, ...overall(miniTable.get(name))]);
+  if (reapply && blocks.length > 1) return blocks.flatMap((block) => headToHead(block, games, win, true) ?? [block]);
+  return blocks;
+}
+
+function breakTie(rows, { matches, playoffs }, { win, tieBreak }) {
+  if (rows.length < 2) return [rows];
+  if (tieBreak === "playoff" && rows.length === 2) {
+    const teams = new Set(rows.map((row) => row.name));
+    const games = playoffs.filter((m) => played(m) && m.home !== m.away && teams.has(m.home) && teams.has(m.away));
+    if (games.length === 1 && games[0].score[0] !== games[0].score[1]) {
+      const game = games[0], winner = game.score[0] > game.score[1] ? game.home : game.away;
+      return rankBlocks(rows, (row) => [Number(row.name === winner)]);
+    }
+  }
+  if (tieBreak === "overall") return rankBlocks(rows, overall);
+  if (tieBreak === "fifa") return rankBlocks(rows, overall).flatMap((block) => headToHead(block, matches, win, false) ?? [block]);
+  if (tieBreak === "uefa") {
+    const direct = headToHead(rows, matches, win, true);
+    return direct ? direct.flatMap((block) => rankBlocks(block, overall)) : [rows];
+  }
+  return [rows];
+}
+
+function standings(group, rules, today) {
+  const { name, matches } = group;
+  const pool = name === "Poule finale";
+  const missing = matches.filter((m) => !played(m) && m.status !== "canceled" && (!m.date || m.date < today));
+  const affected = new Set(missing.flatMap((m) => [m.home, m.away]));
+  const table = tally(matches, rules.win);
+  const ranked = rules.win !== null && !missing.length && table.some((row) => row.played) &&
+    (!pool || (rules.finalPool && matches.every(played) && isFinalPool1950(matches)));
+  const blocks = ranked
+    ? rankBlocks(table, (row) => [row.points]).flatMap((block) => breakTie(block, group, rules))
+    : [table];
+  let position = 1;
+  const rows = blocks.flatMap((block) => {
+    const current = position;
+    position += block.length;
+    return block.sort(displayOrder).map((row) => {
+      const hasPoints = rules.win !== null && !affected.has(row.name) && (row.played > 0 || ranked);
+      return { ...row, position: ranked ? current : null, tied: ranked && block.length > 1,
+        points: hasPoints ? row.points : null, difference: hasPoints ? row.difference : null };
+    });
+  });
+  return { name, rows, unresolved: rows.some((row) => row.tied) };
+}
+
+/** Archive groups: explicit group, round-only group, separating play-off, or 1950 final pool. */
+export function groupTables(matches, { competition, season, today = parisDay(Date.now()) } = {}) {
   const groups = new Map();
   for (const match of matches || []) {
-    const name = match.group ? readableRound(match.group) : /^final round$/i.test(String(match.roundName || "").trim()) ? "Poule finale" : "";
+    const round = String(match.roundName ?? "").trim();
+    const playoff = /^(Group (?:[a-z]|\d+)) Play-?off$/i.exec(round)?.[1];
+    const namedGroup = match.group || (/^Group (?:[a-z]|\d+)$/i.test(round) ? round : "");
+    const name = playoff ? readableRound(playoff) : namedGroup ? readableRound(namedGroup) : /^final round$/i.test(round) ? "Poule finale" : "";
     if (!name) continue;
-    (groups.get(name) || groups.set(name, []).get(name)).push(match);
+    if (!groups.has(name)) groups.set(name, { name, matches: [], playoffs: [] });
+    groups.get(name)[playoff ? "playoffs" : "matches"].push(match);
   }
-  return [...groups.entries()]
-    .sort((a, b) => (a[0] === "Poule finale") - (b[0] === "Poule finale") || a[0].localeCompare(b[0], "fr", { numeric: true }))
-    .map(([name, rows]) => ({ name, rows: leagueTable(rows) }));
+  const rules = groupRules(competition, season);
+  return [...groups.values()]
+    .filter((group) => group.matches.length)
+    .sort((a, b) => (a.name === "Poule finale") - (b.name === "Poule finale") || a.name.localeCompare(b.name, "fr", { numeric: true }))
+    .map((group) => standings(group, rules, today));
 }
 
 /** Keep past unscored matches out of the upcoming list. */
-export function filterCupMatches(matches, status, query = "", now = Date.now()) {
+export function filterCupMatches(matches, status, query = "", now = Date.now(), teamLabel) {
   const needle = normalizeText(query).trim(), today = parisDay(now);
   const rows = (matches || []).filter((match) => {
     if (status === "finished" && match.status !== "finished") return false;
     if (status === "scheduled" && (match.status !== "scheduled" || (match.date && match.date < today))) return false;
-    return !needle || normalizeText(match.home + " " + match.away + " " + (match.round || "")).includes(needle);
+    const sourceNames = [match.home, match.away, match.round].join(" ");
+    const names = teamLabel ? [sourceNames, teamLabel(match.home), teamLabel(match.away)].join(" ") : sourceNames;
+    return !needle || normalizeText(names).includes(needle);
   });
   return rows.sort((a, b) => {
     if (!a.date || !b.date) return a.date ? -1 : b.date ? 1 : a.key.localeCompare(b.key);

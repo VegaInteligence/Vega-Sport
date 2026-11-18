@@ -116,7 +116,12 @@ export function mergeCupReplays(matches) {
     if (!first) continue;
     const swapped = teamName(first.home) !== teamName(match.home);
     const turn = (pair) => (pair && swapped ? [pair[1], pair[0]] : pair);
-    replays.set(first.key, { ...first, date: match.date || first.date, score: turn(match.score), penalties: turn(match.penalties), status: match.status, notes: [...new Set([...(match.notes || []), "match rejoué"])] });
+    replays.set(first.key, {
+      ...first, key: match.key, id: match.id, number: match.number,
+      date: match.date, score: turn(match.score), penalties: turn(match.penalties), status: match.status,
+      notes: [...new Set([...(match.notes || []), "match rejoué"])],
+      replayOf: { id: first.id, date: first.date, score: first.score },
+    });
     dropped.add(match.key);
   }
   return replays.size ? rows.flatMap((match) => (dropped.has(match.key) ? [] : [replays.get(match.key) || match])) : rows;

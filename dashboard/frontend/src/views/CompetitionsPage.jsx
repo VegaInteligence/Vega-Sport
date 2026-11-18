@@ -58,6 +58,7 @@ import {
   findCompetition,
   mergeCupCatalog,
   competitionEditions,
+  editionView,
   competitionSearchText,
   normalizeCompetitionQuery,
 } from "../services/cup-catalog.js";
@@ -157,9 +158,9 @@ export function SupplementalPanel({
  * A collected competition's page. A cup's (`hasKnockout`) has the edition's head: the page that holds it may offer a
  * sister competition's editions in the same selector (`editions`, `onEdition`: the World Cup's archive), open a view
  * (`initialView`), follow a team through the bracket (`highlight`, `onHighlight`) and be told of the view chosen
- * (`onView`: its address follows).
+ * (`onView`, `onSeason`: its address follows).
  */
-function Fixtures({ competition, day, initialSeason, initialView, editions, onEdition, onView, highlight = "", onHighlight, heading = false }) {
+function Fixtures({ competition, day, initialSeason, initialView, editions, onEdition, onView, onSeason, highlight = "", onHighlight, heading = false }) {
   const f = useFootball();
   const [season, setSeason] = useState(
     (initialSeason &&
@@ -195,6 +196,7 @@ function Fixtures({ competition, day, initialSeason, initialView, editions, onEd
     const other = (editions || []).find((edition) => edition.season === String(value) && edition.id !== competition.id);
     if (other) return onEdition?.(other);
     setSeason(value);
+    onSeason?.(String(value));
     const next = seasonLabel(value);
     if (f.manifest.seasons.some((s) => s.id === next)) f.changeSeason(next);
     setPage(1);
@@ -475,13 +477,20 @@ function Fixtures({ competition, day, initialSeason, initialView, editions, onEd
 const VIEW_OF_PARAM = { tableau: "bracket", groupes: "groups", classement: "standings", matchs: "matches" };
 const PARAM_OF_VIEW = { bracket: "tableau", groups: "groupes", standings: "classement", matches: "matchs" };
 
+function availableView(id, edition, view) {
+  if (!view) return "";
+  const firstView = editionView({ id, edition });
+  if (firstView === "matchs" || (firstView === "groupes" && view !== "matchs")) return firstView;
+  return view;
+}
+
 export default function CompetitionsPage() {
   const f = useFootball();
   const params = useSearchParams();
   const id = params.get("id");
   const requestedEdition = params.get("edition") || "";
   // A cup edition's view and the team followed through it (a nation's tile leads here) are in the address.
-  const requestedView = VIEW_OF_PARAM[params.get("view") || ""] || "";
+  const viewParam = params.get("view") || "";
   const followed = params.get("team") || "";
   const [query, setQuery] = useState("");
   const [country, setCountry] = useState("all");
@@ -673,24 +682,37 @@ export default function CompetitionsPage() {
     );
   // A cup outside the featured row has a page of its own: no row of leagues above it, its name as the page's title.
   const standalone = !directory && isCup(selected) && !FEATURED_EUROPE_IDS.includes(selected.id);
+  const currentView = selected ? availableView(selected.id, requestedEdition || openSeason, viewParam) : viewParam;
+  useEffect(() => {
+    if (currentView === viewParam) return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("id") !== id || url.searchParams.get("view") !== viewParam) return;
+    url.searchParams.set("view", currentView);
+    window.history.replaceState(null, "", url.pathname + url.search);
+  }, [id, viewParam, currentView]);
   // The edition's address: what it holds, and what changes.
-  const editionAddress = (next) =>
-    f.href("/competitions/", {
-      // The id the address was asked with (a canonical l_v… id included, VI-30), else the competition chosen.
+  const editionAddress = (next) => {
+    const address = {
+      // Preserve canonical IDs when changing the current page's controls (VI-30).
       id: id || selected.id,
       edition: requestedEdition,
-      view: params.get("view") || "",
+      view: currentView,
       team: followed,
       ...next,
-    });
+    };
+    address.view = availableView(next.id || selected.id, address.edition || openSeason, address.view);
+    return f.href("/competitions/", address);
+  };
+  const replaceEditionAddress = (next) => window.history.replaceState(null, "", editionAddress(next));
   const edition = selected && {
-    initialView: requestedView,
+    initialView: VIEW_OF_PARAM[currentView] || "",
     highlight: followed,
     heading: standalone,
     editions: competitionEditions(selected, expandedCatalog),
     onEdition: (entry) => window.history.pushState(null, "", editionAddress({ id: entry.id, edition: entry.season })),
-    onView: (view) => window.history.replaceState(null, "", editionAddress({ view: PARAM_OF_VIEW[view] || "" })),
-    onHighlight: (team) => window.history.replaceState(null, "", editionAddress({ team })),
+    onSeason: (season) => replaceEditionAddress({ edition: season }),
+    onView: (view) => replaceEditionAddress({ view: view === "standings" && selected.id === WORLD_CUP_ID ? "groupes" : PARAM_OF_VIEW[view] || "" }),
+    onHighlight: (team) => replaceEditionAddress({ team }),
   };
   return (
     <Layout
@@ -766,7 +788,6 @@ export default function CompetitionsPage() {
                 competition={selected}
                 name={selected.id === WORLD_CUP_ARCHIVE_ID ? "Coupe du monde" : selected.name}
                 initialSeason={requestedEdition || openSeason}
-                onSeason={(season) => window.history.replaceState(null, "", editionAddress({ edition: season }))}
                 {...edition}
               />
             ) : (

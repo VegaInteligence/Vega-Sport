@@ -39,8 +39,9 @@ function LeagueStandings({ name, matches }) {
   </>;
 }
 /** A tournament's groups (the archives' World Cups and Euros): one table a group, computed from its results. */
-function GroupTables({ matches, season, highlight }) {
-  const tables = useMemo(() => groupTables(matches), [matches]);
+function GroupTables({ matches, competition, season, highlight }) {
+  const today = parisDay(Date.now());
+  const tables = useMemo(() => groupTables(matches, { competition, season, today }), [matches, competition, season, today]);
   if (!tables.length) return <Empty>Cette édition ne s’est pas jouée en groupes.</Empty>;
   return (
     <div className="edition-groups">
@@ -51,9 +52,9 @@ function GroupTables({ matches, season, highlight }) {
             <thead><tr><th scope="col">#</th><th scope="col">Équipe</th><th scope="col"><Term>J</Term></th><th scope="col"><Term>Diff.</Term></th><th scope="col"><Term>Pts</Term></th></tr></thead>
             <tbody>{table.rows.map((row) => (
               <tr key={row.name} className={highlight && sameNationalTeam(row.name, highlight) ? "edition-own" : undefined}>
-                <td>{row.position}</td>
+                <td title={row.tied ? "Départage indisponible" : undefined}>{row.position == null ? "—" : row.position + (row.tied ? "=" : "")}</td>
                 <th scope="row"><span className="cup-match-team"><NationalFlag name={row.name} season={season} />{nationalTeamLabel(row.name)}</span></th>
-                <td>{row.played}</td><td>{row.difference > 0 ? "+" : ""}{row.difference}</td><td><strong>{row.points}</strong></td>
+                <td>{row.played}</td><td>{row.difference == null ? "—" : (row.difference > 0 ? "+" : "") + row.difference}</td><td><strong>{row.points ?? "—"}</strong></td>
               </tr>
             ))}</tbody>
           </table>
@@ -74,7 +75,7 @@ function CupMatch({ match, nationalTeams, season, highlight }) {
       <span className="match-date">{match.date ? date(match.date) : "Date à préciser"}</span>
       <span className="match-teams">
         <span className="team-name home-team"><span>{label(match.home)}</span>{badge(match.home, match.homeImage)}</span>
-        <strong className="score">{match.score ? match.score[0] + " – " + match.score[1] : "À venir"}</strong>
+        <strong className="score">{match.status === "canceled" ? "Annulé" : match.score ? match.score[0] + " – " + match.score[1] : "À venir"}</strong>
         <span className="team-name">{badge(match.away, match.awayImage)}<span>{label(match.away)}</span></span>
         {match.notes?.length > 0 && <span className="cup-match-notes">{match.notes.join(" · ")}</span>}
         {match.status === "scheduled" && <MatchForecastBar home={match.home} away={match.away} forecast={match.forecast} />}
@@ -103,8 +104,11 @@ export default function CupCompetition({ competition, initialSeason, name = comp
   const nationalTeams = ["euro", "world-cup-history", "afcon", "copa-america", "asian-cup", "gold-cup"].includes(competition.sourceKey);
   // A national teams' tournament with rounds (the World Cup's archive, the Euro) opens on its bracket and has its groups.
   const tournament = nationalTeams && supportsBracket;
-  const views = tournament ? ["bracket", "groups", "matches"] : league ? ["standings", "matches", "projection"] : supportsBracket ? ["matches", "bracket", "projection"] : ["matches"];
-  const [view, setViewState] = useState(views.includes(initialView) && initialView !== "projection" ? initialView : views[0]);
+  const finalPool = competition.sourceKey === "world-cup-history" && season === "1950";
+  const tournamentViews = [...(finalPool ? [] : [["bracket", "Tableau"]]), ["groups", "Groupes"], ["matches", "Matchs"]];
+  const views = tournament ? tournamentViews.map(([value]) => value) : league ? ["standings", "matches", "projection"] : supportsBracket ? ["matches", "bracket", "projection"] : ["matches"];
+  const [preferredView, setViewState] = useState(initialView === "projection" ? "" : initialView);
+  const view = views.includes(preferredView) ? preferredView : views[0];
   const setView = (next) => { setViewState(next); onView?.(next); };
   const archive = NATIONAL_CUP_ARCHIVES[competition.folder];
   const germany = competition.folder === GERMAN_CUP_FOLDER;
@@ -112,7 +116,10 @@ export default function CupCompetition({ competition, initialSeason, name = comp
   const projection = useCupProjection(competition, typeof season === "string" ? season : String(season));
   const projected = projection?.format === "knockout" || (!projection?.format && projection?.teams?.length > 0);
   const showProjection = view === "projection" && projected;
-  const [status, setStatus] = useState(competition.source === "open-matchday" && !Number(competition.tables?.results?.rows) ? "scheduled" : "finished");
+  const [status, setStatus] = useState(
+    (competition.source === "open-matchday" && !Number(competition.tables?.results?.rows)) ||
+    (competition.sourceKey === "euro" && season === "2028") ? "scheduled" : "finished",
+  );
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const tables = competition.editions?.[season] || (season === competition.defaultSeason ? competition.tables : null);
@@ -175,7 +182,7 @@ export default function CupCompetition({ competition, initialSeason, name = comp
       <EditionHeader imageUrl={imageUrl} name={name} heading={heading} season={season} onSeason={pickSeason} label="Édition de la coupe"
         editions={(editions || competition.seasons.map((value) => ({ season: value, id: competition.id }))).map((edition) => ({ ...edition, label: editionLabel(competition, edition.season) }))}>
         {highlight && nationalTeams && <FollowedTeam label={nationalTeamLabel(highlight)} flag={<NationalFlag name={highlight} season={season} />} onClear={() => onHighlight?.("")} />}
-        {tournament && <Segments label="Vue de la compétition" value={view} onChange={setView} items={[["bracket", "Tableau"], ["groups", "Groupes"], ["matches", "Matchs"]]} />}
+        {tournament && <Segments label="Vue de la compétition" value={view} onChange={setView} items={tournamentViews} />}
         {supportsBracket && !tournament && <Segments label="Vue de la compétition" value={view} onChange={setView} items={[["matches", "Matchs"], ["bracket", "Tableau"], ...(projected ? [["projection", "Projection"]] : [])]} />}
         {league && <Segments label="Vue de la compétition" value={view} onChange={setView} items={[["standings", "Classement"], ["matches", "Matchs"], ...(projected ? [["projection", "Projection"]] : [])]} />}
       </EditionHeader>
@@ -189,7 +196,7 @@ export default function CupCompetition({ competition, initialSeason, name = comp
       <AsyncState resource={resource}>
         {(value) => value.unavailable ? <div className="cup-bracket-unavailable"><Empty>Les tours de cette édition ne sont pas disponibles.</Empty>{archive && season !== archive.season && <button className="button button-secondary" onClick={() => setSeason(archive.season)}>Voir le tableau {archive.season}</button>}</div> : <>
           {value.matches.some((match) => match.status === "scheduled" && match.date && match.date < parisDay(Date.now())) && <p className="cup-source">Certains scores de cette édition ne sont pas encore renseignés.</p>}
-          {view === "bracket" ? <KnockoutBracket matches={value.matches} nationalTeams={nationalTeams} season={season} highlight={highlight} trophy={trophyArt({ title: name, trophyYear: Number(String(season).slice(0, 4)) })} /> : view === "groups" ? <GroupTables matches={value.matches} season={season} highlight={highlight} /> : view === "standings" ? <LeagueStandings name={competition.name} matches={value.matches} /> : <CupMatchList matches={value.matches} status={status} query={query} page={page} onPage={setPage} nationalTeams={nationalTeams} season={season} highlight={highlight} />}
+          {view === "bracket" ? <KnockoutBracket matches={value.matches} nationalTeams={nationalTeams} season={season} highlight={highlight} trophy={trophyArt({ title: name, trophyYear: Number(String(season).slice(0, 4)) })} /> : view === "groups" ? <GroupTables matches={value.matches} competition={competition.sourceKey} season={season} highlight={highlight} /> : view === "standings" ? <LeagueStandings name={competition.name} matches={value.matches} /> : <CupMatchList matches={value.matches} status={status} query={query} page={page} onPage={setPage} nationalTeams={nationalTeams} season={season} highlight={highlight} />}
         </>}
       </AsyncState>
       </>}
@@ -197,7 +204,7 @@ export default function CupCompetition({ competition, initialSeason, name = comp
   );
 }
 export function CupMatchList({ matches, status, query, page, onPage, nationalTeams = false, season, highlight = "" }) {
-  const rows = useMemo(() => filterCupMatches(matches, status, query), [matches, status, query]);
+  const rows = useMemo(() => filterCupMatches(matches, status, query, Date.now(), nationalTeams ? nationalTeamLabel : undefined), [matches, status, query, nationalTeams]);
   const pages = Math.max(1, Math.ceil(rows.length / 30)), current = Math.min(page, pages);
   return <>
     <div className="cup-match-list">{rows.slice((current - 1) * 30, current * 30).map((match) => <CupMatch key={match.key} match={match} nationalTeams={nationalTeams} season={season} highlight={highlight} />)}</div>

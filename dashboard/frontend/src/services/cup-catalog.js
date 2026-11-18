@@ -166,7 +166,15 @@ export function tournamentEdition(tournament, year) {
   // The archive's own editions: not the collected World Cup's, which the archive also reads.
   const seasons = cup.id === WORLD_CUP_ARCHIVE_ID ? cup.seasons.filter((season) => !WORLD_CUP_FALLBACK.seasons.includes(season)) : cup.seasons;
   if (seasons.includes(edition)) return { id: cup.id, edition };
-  return tournament === "world-cup" && edition > seasons[0] ? { id: WORLD_CUP_ID, edition } : null;
+  return tournament === "world-cup" && WORLD_CUP_FALLBACK.seasons.includes(edition) ? { id: WORLD_CUP_ID, edition } : null;
+}
+
+/** The public view of a nation's edition link. */
+export function editionView(page) {
+  if (!page) return null;
+  if (page.id.startsWith("nations-results:")) return "matchs";
+  if (page.id === WORLD_CUP_ARCHIVE_ID && page.edition === "1950") return "groupes";
+  return "tableau";
 }
 
 /**

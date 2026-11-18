@@ -24,13 +24,14 @@ function MatchCard({ match, view }) {
     { name: match.away, image: match.awayImage },
   ];
   const label = (name) => bracketTeamLabel(nationalTeams ? nationalTeamLabel(name) : name);
-  const tag = match.penalties ? "t.a.b." : match.notes?.includes("après prolongation") ? "a.p." : null;
+  const canceled = match.status === "canceled";
+  const tag = canceled ? "Annulé" : match.penalties ? "t.a.b." : match.notes?.includes("après prolongation") ? "a.p." : null;
   const followed = teams.some((team) => follows(team.name));
   const dimmed = hover && !teams.some((team) => teamKey(team.name) === hover);
   return (
     <Tag
       className={"knockout-match" + (href ? " knockout-match-link" : "") + (followed ? " knockout-followed" : "") + (dimmed ? " knockout-dimmed" : "")}
-      title={[match.date ? date(match.date) : "", match.penalties ? "tirs au but" : tag ? "après prolongation" : "", ...(match.notes?.includes("match rejoué") ? ["match rejoué"] : [])].filter(Boolean).join(" · ") || undefined}
+      title={[match.date ? date(match.date) : "", canceled ? "Annulé" : match.penalties ? "tirs au but" : tag ? "après prolongation" : "", ...(match.notes?.includes("match rejoué") ? ["match rejoué"] : [])].filter(Boolean).join(" · ") || undefined}
       {...(href ? { href, prefetch: false } : {})}
     >
       {tag && <span className="knockout-tag">{tag}</span>}
@@ -52,7 +53,7 @@ function MatchCard({ match, view }) {
             <span className="knockout-team-name" title={label(team.name)}>{label(team.name)}</span>
             {match.score ? (
               <strong>{match.score[index]}</strong>
-            ) : index === 0 && match.date ? (
+            ) : index === 0 && match.date && !canceled ? (
               <span className="knockout-when">{date(match.date)}</span>
             ) : (
               <strong>–</strong>
@@ -103,7 +104,7 @@ const ThirdPlace = ({ match, view }) =>
 
 /** The round a phone opens on: the first one still to be played, else the final. */
 function openRound(rounds) {
-  const pending = rounds.findIndex((round) => round.matches.some((match) => match.status !== "finished"));
+  const pending = rounds.findIndex((round) => round.matches.some((match) => !["finished", "canceled"].includes(match.status)));
   return pending === -1 ? rounds.length - 1 : pending;
 }
 
@@ -136,7 +137,7 @@ export default function KnockoutBracket({ matches, hrefForMatch, nationalTeams =
     return <Empty>Le tableau apparaîtra lorsque les matchs à élimination directe seront disponibles.</Empty>;
   const started = rounds.some((round) => round.matches.some((match) => match.status === "finished"));
   const legs = rounds.some((round) => round.matches.some((match) => match.legs?.length));
-  const current = phoneRound ?? openRound(rounds);
+  const current = phoneRound == null ? openRound(rounds) : Math.min(phoneRound, rounds.length - 1);
   const column = (round, index, side) => (
     <div key={side + round.key} className={"knockout-column knockout-" + side + (index === 0 ? " knockout-first" : "") + (index === sides.rounds.length - 1 ? " knockout-last" : "")}>
       {round[side].map((match) => (
