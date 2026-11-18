@@ -10,6 +10,9 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { normalizeSupplementalCup, numberedCupRounds } from "../dashboard/frontend/src/services/cup-matches.js";
 import { combineCupLegs } from "../dashboard/frontend/src/services/knockout-bracket.js";
+import { editionHeaderStub } from "./edition-stubs.mjs";
+import * as nationalFlags from "../dashboard/frontend/src/services/national-flags.js";
+import * as trophies from "../dashboard/frontend/src/services/trophy-art.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const require = createRequire(path.join(root, "dashboard/package.json"));
@@ -71,6 +74,9 @@ async function cupComponent(flags) {
     "./UI.jsx": { Card: ({ children }) => elem("section", null, children), Media, Pager: () => null, Segments: () => null, AsyncState: () => null, Empty: ({ children }) => elem("p", null, children) },
     "./KnockoutBracket.jsx": { __esModule: true, default: () => null },
     "./NationalFlag.jsx": { __esModule: true, default: NationalFlag },
+    "./EditionHeader.jsx": editionHeaderStub(React),
+    "../services/national-flags.js": nationalFlags,
+    "../services/trophy-art.js": trophies,
     "../services/format.js": { date: String, seasonLabel: String },
     "../services/fixtures.js": { parisDay: () => "2026-11-18" },
     "../services/resources.js": { useResource: () => ({}) },

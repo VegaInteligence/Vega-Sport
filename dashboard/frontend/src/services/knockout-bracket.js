@@ -16,7 +16,8 @@ export function knockoutStage(value) {
   if (/^(?:1\/8|round of 16|huitiemes de finale)$/.test(name)) return "round16";
   if (/^(?:1\/4|quarter ?finals?|quarts? de finale)$/.test(name)) return "quarter";
   if (/^(?:1\/2|semi ?finals?|demi finales?)$/.test(name)) return "semi";
-  if (/^(?:third place|match for third place|match pour la troisieme place|bronze)$/.test(name)) return "third";
+  // The archives' names of the third-place match: « Third place match », « Third-place play-off », « Match for third place ».
+  if (/^(?:third place(?: match| play ?off)?|match for third place|match pour la troisieme place|bronze)$/.test(name)) return "third";
   if (/^(?:final|finale)$/.test(name)) return "final";
   return null;
 }
@@ -87,24 +88,55 @@ function predecessor(name, previous, used) {
   const candidates = previous.filter((match) => {
     if (used.has(match.key)) return false;
     if (reference) return match.number === Number(reference[1]);
-    if (match.status !== "finished" || !target) return false;
-    const won = winner(match);
+    if (!target) return false;
+    // A tie without a score (a walkover, a round to come) is its two teams': the one candidate links, two link nothing.
+    const won = match.status === "finished" ? winner(match) : null;
     return won ? won === target : [teamName(match.home), teamName(match.away)].includes(target);
   });
   return candidates.length === 1 ? candidates[0] : null;
 }
 
+// A first knockout round the archives name without its size (1934's « Preliminary round », 1938's « First round »).
+const FIRST_ROUND = /^(?:first|preliminary|1st) round$/i;
+
+const pairKey = (match) => [teamName(match.home), teamName(match.away)].sort().join("|");
+
+/**
+ * A replayed tie as one tie (1934, 1938: « Quarter-finals, Replays »): the first match takes the replay's score, day and
+ * notes, in its own team order, and is marked « match rejoué ». A replay whose first match the source does not hold is
+ * left as it is, out of the bracket.
+ */
+export function mergeCupReplays(matches) {
+  const rows = [...(matches || [])];
+  const replays = new Map(), dropped = new Set();
+  for (const match of rows) {
+    const base = /^(.+?),?\s+replays?$/i.exec(String(match.roundName || "").trim())?.[1];
+    if (!base || !knockoutStage(base) && !FIRST_ROUND.test(base)) continue;
+    const first = rows.find((row) => row !== match && String(row.roundName || "").trim().toLowerCase() === base.toLowerCase() && pairKey(row) === pairKey(match) && !replays.has(row.key));
+    if (!first) continue;
+    const swapped = teamName(first.home) !== teamName(match.home);
+    const turn = (pair) => (pair && swapped ? [pair[1], pair[0]] : pair);
+    replays.set(first.key, { ...first, date: match.date || first.date, score: turn(match.score), penalties: turn(match.penalties), status: match.status, notes: [...new Set([...(match.notes || []), "match rejoué"])] });
+    dropped.add(match.key);
+  }
+  return replays.size ? rows.flatMap((match) => (dropped.has(match.key) ? [] : [replays.get(match.key) || match])) : rows;
+}
+
 /** Connect rounds only when the source makes every displayed crossing unambiguous. */
 export function buildKnockoutBracket(matches) {
-  const groups = new Map(), thirdPlace = [];
-  for (const match of matches || []) {
+  const groups = new Map(), thirdPlace = [], unnamed = [];
+  for (const match of mergeCupReplays(matches)) {
     const stage = knockoutStage(match.roundName || match.round);
+    if (!stage && !match.group && FIRST_ROUND.test(String(match.roundName || "").trim())) unnamed.push(match);
     if (!stage) continue;
     if (stage === "third") { thirdPlace.push(match); continue; }
     const rows = groups.get(stage) || [];
     rows.push(match);
     groups.set(stage, rows);
   }
+  // That first round is the round before the first named one when it holds exactly twice its ties.
+  const firstNamed = STAGES.findIndex((stage) => groups.has(stage.key));
+  if (firstNamed > 0 && unnamed.length === groups.get(STAGES[firstNamed].key).length * 2) groups.set(STAGES[firstNamed - 1].key, unnamed);
   let rounds = STAGES.filter((stage) => groups.has(stage.key)).map((stage) => ({ ...stage, matches: [...groups.get(stage.key)].sort(dateOrder) }));
   let preliminary = null;
   if (rounds.length > 1 && rounds[0].key === "round32" && rounds[1].key === "round16" && rounds[0].matches.length === rounds[1].matches.length && rounds[0].matches.some((match) => match.legs?.length)) {
@@ -132,6 +164,27 @@ export function buildKnockoutBracket(matches) {
 }
 
 export function bracketWinner(match) { return winner(match); }
+
+/**
+ * The bracket as two halves towards its final: per round, its first half on the left and its second on the right, in
+ * bracket order; `half` slots a side; the final alone, the third-place match and the champion (the final's winner, by
+ * the shoot-out when the score is level; nobody for a final unplayed or undecided). Null when the crossings are not
+ * known or there is no final: the rounds are then listed one by one.
+ */
+export function bracketSides(bracket) {
+  const rounds = bracket?.rounds || [], last = rounds.at(-1);
+  if (!last || last.key !== "final" || last.matches.length !== 1 || (rounds.length > 1 && !bracket.connected)) return null;
+  const sides = rounds.slice(0, -1);
+  if (sides.some((round, index) => round.matches.length !== 2 ** (sides.length - index))) return null;
+  const final = last.matches[0], won = final.status === "finished" ? winner(final) : null;
+  return {
+    half: sides.length ? sides[0].matches.length / 2 : 1,
+    rounds: sides.map((round) => ({ key: round.key, label: round.label, left: round.matches.slice(0, round.matches.length / 2), right: round.matches.slice(round.matches.length / 2) })),
+    final,
+    third: bracket.thirdPlace?.[0] || null,
+    champion: won ? (teamName(final.home) === won ? final.home : final.away) : null,
+  };
+}
 export function bracketTeamLabel(name) {
   return String(name || "À déterminer")
     .replace(/^Winner Match (\d+)$/i, "Vainqueur match $1")
