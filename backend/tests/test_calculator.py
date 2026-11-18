@@ -311,12 +311,20 @@ class ApiViewTest(CalculatorTest):
         ).fetchall()
         self.assertEqual([r[0] for r in rows], [1, 2, 3])
         self.assertEqual({r[2] for r in rows}, {"vega"})
-        # An official table, once observed, replaces the computed one.
+        # An official table replaces the computed one only when it holds every club of it (VI-29,
+        # FAILURE_MODES_SPORTSCORE.md §2.3 and §4: one official row used to hide the whole table).
         self.db.execute(
             "INSERT INTO core.standings_official(competition_season_id,team_id,position,points,source,as_of) VALUES(1,3,1,9,'sportscore',now())"
         )
         self.assertEqual(
-            self.db.execute("SELECT team_id, source FROM api.standings WHERE competition_season_id=1").fetchall(),
-            [(3, "sportscore")],
+            {r[1] for r in self.db.execute("SELECT team_id, source FROM api.standings WHERE competition_season_id=1").fetchall()},
+            {"vega"},
+        )
+        self.db.execute(
+            "INSERT INTO core.standings_official(competition_season_id,team_id,position,points,source,as_of) VALUES(1,1,2,6,'sportscore',now()),(1,2,3,1,'sportscore',now())"
+        )
+        self.assertEqual(
+            self.db.execute("SELECT team_id, source FROM api.standings WHERE competition_season_id=1 ORDER BY position").fetchall(),
+            [(3, "sportscore"), (1, "sportscore"), (2, "sportscore")],
         )
         self.db.execute("DELETE FROM core.standings_official")
