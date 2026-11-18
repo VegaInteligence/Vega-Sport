@@ -38,6 +38,32 @@ def source_score(value):
     return [int(match.group(1)), int(match.group(2))] if match else None
 
 
+# footballcsv/europe-champions-league champs.csv names a side « Name › ASSOCIATION (N) », N the club's appearance
+# number in that edition (1, 2, … in date order), not an identity: all 13,108 sides of the pinned 66393c8d input,
+# 2,639 club/edition sequences, read so (FAILURE_MODES.md §22). Only this feed is read this way; any other form
+# stops the build.
+APPEARANCE = re.compile(r'(.*?)\s+›\s+([A-Z]{3})\s+\((\d+)\)')
+
+
+def appearance_sides(name, rows):
+    """{row index: {'team1': side, 'team2': side}} of a champs.csv; ValueError for a side of another form or an
+    appearance out of sequence."""
+    out, seen = {}, {}
+    for index, row in enumerate(rows):
+        sides = {}
+        for side, field in (('team1', 'Team 1'), ('team2', 'Team 2')):
+            raw = row.get(field) or ''
+            found = APPEARANCE.fullmatch(raw)
+            if not found: raise ValueError(f'{name}: side {raw!r} is not « Name › ASSOCIATION (N) »')
+            label, association, ordinal = found.group(1), found.group(2), int(found.group(3))
+            key = (label, association)
+            if ordinal != seen.get(key, 0) + 1: raise ValueError(f'{name}: {raw!r} is not appearance {seen.get(key, 0) + 1}')
+            seen[key] = ordinal
+            sides[side] = {'raw': raw, 'label': label, 'association': association, 'ordinal': ordinal}
+        out[index] = sides
+    return out
+
+
 def competition_name(repo, code, year):
     if repo == 'europe' and code == 'champs': return 'Coupe d’Europe des clubs champions' if year < 1992 else 'Ligue des champions'
     if repo == 'deutschland' and code == 'de.1': return 'Bundesliga'
@@ -76,9 +102,12 @@ def build(output, sources):
                 required = {'Date','Team 1','FT','Team 2'}
                 if not required.issubset(set(reader.fieldnames or [])): raise ValueError(f'Unknown CSV schema: {name}')
                 matches = []
-                for row in reader:
+                rows = list(reader)
+                sides = appearance_sides(name, rows) if repo == 'europe' and code == 'champs' else {}
+                for number, row in enumerate(rows):
                     match = {'round':row.get('Round') or row.get('Matchday'), 'date':source_date(row.get('Date') or ''),
                              'team1':row.get('Team 1'), 'team2':row.get('Team 2'), 'sourceFields':row}
+                    if number in sides: match['sides'] = sides[number]
                     scores={key:value for key,field in (('ft','FT'),('ht','HT'),('et','ET'),('p','P')) if (value:=source_score(row.get(field))) is not None}
                     if scores: match['score'] = scores
                     matches.append(match)

@@ -42,7 +42,8 @@ run vega-v2-backfill backfill "[\"--lanes\",\"backfill\",\"--until-idle\",\"--ba
 
 if [ -n "$ARCHIVES" ]; then
   echo "== 3. Archive season $ARCHIVE_SEASON"
-  run vega-v2-archives archives "[\"--sources\",\"s3://$ARCHIVES/data/sources\",\"--seasons\",\"$ARCHIVE_SEASON\"]"
+  # --fresh: a season already holding archive matches is refused (a repair needs a reviewed plan, FAILURE_MODES.md §22).
+  run vega-v2-archives archives "[\"--sources\",\"s3://$ARCHIVES/data/sources\",\"--seasons\",\"$ARCHIVE_SEASON\",\"--fresh\"]"
 else
   echo "== 3. Archive season skipped (ARCHIVE_SOURCES_BUCKET not set)"
 fi

@@ -251,7 +251,9 @@ Resources:
           Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/vega-v2-worker:${ImageTag}'
           Essential: true
           EntryPoint: [python, -m, vega.archives]
-          Command: [--sources, !Sub 's3://${ArchiveSourcesBucket}/data/sources']
+          # --fresh: seasons holding no archive match only; a repair of stored archives goes through a reviewed
+          # plan (--plan-store, then --apply-stored <sha256>), FAILURE_MODES.md §22.
+          Command: [--sources, !Sub 's3://${ArchiveSourcesBucket}/data/sources', --fresh]
           Secrets:
             - {Name: V2_DATABASE_URL, ValueFrom: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${CollectUrlParameter}'}
           LogConfiguration:
