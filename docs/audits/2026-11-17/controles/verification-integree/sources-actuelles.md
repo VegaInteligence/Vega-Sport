@@ -1,0 +1,20 @@
+# Matrice des sources après déploiement
+
+À 17 h 11 UTC, RDS recense les calendriers ci-dessous. Chaque édition physique a un seul producteur de rencontres. Deux éditions distinctes peuvent décrire une même compétition réelle. Les colonnes de résultats complets exigent les deux scores.
+
+| Fournisseur | Éditions | Matchs | Terminés | Terminés avec score | Propriété et décision |
+|---|---:|---:|---:|---:|---|
+| pitchapi | 304 | 84 371 | 75 355 | 75 355 | Calendriers et statistiques natifs des compétitions couvertes, dont la Ligue 1 actuelle. Vérifier l’exhaustivité réelle par organisateur. |
+| open_matchday | 30 | 4 682 | 2 576 | 2 576 | Ligues et coupes complémentaires. La priorité de catalogue sur 35 périmètres évite leur reprise en parallèle, mais exige un contrôle des calendriers natifs incomplets. |
+| openfootball | 241 | 65 926 | 65 791 | 65 271 | Archives de championnats et d’éditions de coupes, avec périodes et tirs au but quand établis. Garder la priorité des résultats natifs concordants et l’identité des replays. |
+| openligadb | 3 | 167 | 159 | 159 | Coupes allemandes et compétitions sélectionnées, dont la Ligue des nations. Garder les rencontres effectivement distinctes et leurs scores par période. |
+| international_results | 8 | 409 | 409 | 409 | Résultats des sélections et pays/terrains le cas échéant. Le fichier ne porte pas les phases. Un téléchargement commun aux éditions évite de relire les mêmes octets. |
+| footballcsv | 467 | 190 152 | 190 152 | 190 152 | Calendriers historiques par fichier. Les chevauchements de saisons demandent des correspondances d’édition et de clubs prouvées. |
+| engsoccerdata | 736 | 179 928 | 179 587 | 179 587 | Résultats historiques de championnats par pays et saison. Conserver la provenance des désaccords et demander une preuve pour choisir le score. |
+| worldclub | 360 | 63 159 | 63 159 | 63 159 | Observations historiques dérivées de matchs et buteurs. Conserver la limite de couverture quand la source dépend de la présence d’événements. |
+
+Les 16 sélections OpenLigaDB et les 38 d’International Results sont distinctes en Ligue des nations 2026/27. La couverture complémentaire justifie de garder les deux. La Liga, les coupes, les championnats anciens et les équipes nationales doivent être vérifiés à la même granularité d’édition et de champ. [2 149 éditions](sources-actuelles-par-edition.csv.gz) · [Census d’intégrité](integrite-apres-deploiement.zip)
+
+Les autres sources alimentent des champs différents. **SportScore** fournit des observations de classement. Pour la vérification des 16 lignes de l’Allsvenskan suédoise, le code de branche consulte le service GraphQL de l’organisateur Sportomedia, avec un contrôle d’année et du tableau reçu. Ce fournisseur est un témoin indépendant du classement. **Transfermarkt** et son export daté fournissent profils, mouvements, effectifs et contrats. Les registres de compétition, **UEFA**, **FIFA**, **Wikidata** et **Wikimedia** participent aux identités ou visuels selon leurs références. Les origines média, S3 et CloudFront transportent les images. **The Odds API** est facultative. Le 18 novembre à 18 h 17 UTC, ni les définitions ECS actives worker/backfill 143 ni les surcharges de leurs tâches ne fournissent le nom de clé attendu. Aucun fichier d’environnement n’est attaché. Le code sans cette option renvoie zéro périmètre dû. [Vérification du paramétrage ECS](odds-activation.json) Les notes de match Vega sont calculées par Vega. [Champs, tables, consommateurs, cadences et recouvrements](../../SOURCES.md) · [Champs détaillés par fournisseur dans le classeur](../../../../vega-sport-data-coverage.xlsx)
+
+**Source historique candidate.** Sur 700 rencontres masculines de Coupe du monde, Fjelstul apporte des descriptions de poste à examiner et 25 divergences d’apparitions à arbitrer. Les 700 matchs existent déjà en base. Ce relevé évite de compter cette source prospective comme un neuvième producteur de calendrier. [Comparaison par édition](source-mondiaux/synthese-portable.md)
