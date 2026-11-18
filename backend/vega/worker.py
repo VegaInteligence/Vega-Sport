@@ -435,7 +435,7 @@ class Worker:
         if self._scoped != now.date():
             # The competitions the user removed (scope.py): what was written of them before
             # goes, before this pass's levels and rankings are computed.
-            ok, removed = self._daily_step(("scope",), now, lambda: scope.purge(self.conn))
+            ok, removed = self._daily_step(("scope",), now, lambda: scope.purge(self.conn, self.calc_conn))
             if ok:
                 self._scoped = now.date()
                 if removed:
