@@ -148,7 +148,7 @@ class ImportTest(unittest.TestCase):
                     scope.REMOVED_ARCHIVES.update(removed)
                 keys = lambda: sorted(r[0] for r in x("SELECT archive_key FROM core.competition_seasons WHERE archive_key LIKE 'engsoccerdata/scotland/%'"))
                 self.assertEqual(len(keys()), 3)
-                self.assertEqual(scope.purge(self.db), {"competitions": 2, "editions": 2, "matches": 2})
+                self.assertEqual(scope.purge(self.db, self.db), {"competitions": 2, "editions": 2, "matches": 2})
                 self.assertEqual(keys(), ["engsoccerdata/scotland/1/2005"])
                 self.assertEqual(x("SELECT count(*) FROM core.provider_ids WHERE provider_key LIKE 'archive:engsoccerdata/scotland/%'").fetchone()[0], 1)
                 with self.db.transaction():

@@ -194,14 +194,14 @@ class OpenMatchdayTest(unittest.TestCase):
                 written, unmatched = open_matchday.run(self.db, get, "europe", NOW)
                 self.assertEqual((written, unmatched), (7 + 4, 0))
                 self.assertFalse([url for url in calls if "/ENG_1_premier-league/" in url])
-                self.assertEqual(scope.purge(self.db), {"competitions": 1, "editions": 1, "matches": 5 + 3})
+                self.assertEqual(scope.purge(self.db, self.db), {"competitions": 1, "editions": 1, "matches": 5 + 3})
                 left = self.db.execute("SELECT split_part(cup_key, ':', 2) FROM core.competition_seasons WHERE cup_key IS NOT NULL").fetchall()
                 self.assertEqual(left, [("AUT_CUP_ofb-cup",)])
                 self.assertEqual(self.db.execute("SELECT count(*) FROM core.matches WHERE source = 'open_matchday'").fetchone()[0], 7 + 4)
                 self.assertEqual(self.db.execute(
                     "SELECT count(*) FROM core.provider_ids WHERE provider_key LIKE 'ENG_1_premier-league:%%' OR provider_key = 'cup:open-matchday:ENG_1_premier-league'"
                 ).fetchone()[0], 0)
-                self.assertEqual(scope.purge(self.db), {})
+                self.assertEqual(scope.purge(self.db, self.db), {})
                 raise psycopg.Rollback()
         except psycopg.Rollback:
             pass
