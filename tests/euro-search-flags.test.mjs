@@ -152,6 +152,7 @@ test("Spain–Georgia displays both flags in the national bracket, never in a cl
       "../services/format.js": { date: String },
       "../model.js": { normalizeText },
       "../services/knockout-bracket.js": bracket,
+      "../services/cup-matches.js": cupMatches,
       "../services/national-flags.js": nationalFlags,
       "./NationalFlag.jsx": { __esModule: true, default: flag.default },
     },

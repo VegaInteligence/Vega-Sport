@@ -13,7 +13,7 @@
 // 34n–34p Euro 2028's groups named in the round, with codes for teams; an edition's rule unknown; a canceled match.
 // 34x–34aa A run without rounds has no phase and no gauge; the gauges of the new stages; links only to editions the
 //         site holds, on a view the edition has.
-// 34ab    1950's page opens on its groups and has no bracket.
+// 34ab    1950's page opens on its groups and the explicit Tableau shows the final pool.
 // 34ae–34ag « Italie » finds Italy's matches; a canceled match reads « Annulé »; a replayed tie carries its replay's id.
 //
 // The archive editions are read from the frozen OpenFootball files through the bridge's projection, as the API serves
@@ -239,15 +239,17 @@ test("34ag. a replayed tie shows its replay and carries the replay's identity, t
 const ARCHIVE = { id: "open-cup:world-cup-history", name: "Coupe du monde — archives", country: "INT", source: "openfootball", sourceKey: "world-cup-history",
   seasons: ["2026", "2022", "2018", "1998", "1982", "1958", "1954", "1950", "1938"], defaultSeason: "2018" };
 
-test("34ab. 1950's page opens on its groups, without a bracket; the shared positions are said", async () => {
+test("34ab. 1950's page opens on its groups and offers its pool through Tableau; the shared positions are said", async () => {
   const CupCompetition = (await cupComponent({ matches: await edition("world-cup-history:1950") })).default;
-  const html = render(CupCompetition, { competition: ARCHIVE, initialSeason: "1950", initialView: "bracket" });
-  assert.doesNotMatch(html, /data-view="bracket"/);
+  const html = render(CupCompetition, { competition: ARCHIVE, initialSeason: "1950", initialView: "" });
+  assert.match(html, /data-view="bracket"/);
   assert.doesNotMatch(html, /Tableau éliminatoire/);
   assert.match(html, /Poule finale/);
   // Group 2's three teams level on two points: « 2= », the tie-break unavailable.
   assert.equal((html.match(/>2=</g) || []).length, 3);
   assert.match(html, /title="Départage indisponible"/);
+  const tableView = render(CupCompetition, { competition: ARCHIVE, initialSeason: "1950", initialView: "bracket" });
+  assert.match(tableView, /Tableau éliminatoire/);
   // 1998 keeps its bracket first.
   const CupCompetition1998 = (await cupComponent({ matches: await edition("world-cup-history:1998") })).default;
   const html1998 = render(CupCompetition1998, { competition: ARCHIVE, initialSeason: "1998", initialView: "" });

@@ -8,6 +8,7 @@ import { Empty, Media } from "./UI.jsx";
 import { date } from "../services/format.js";
 import { normalizeText } from "../model.js";
 import { bracketSides, bracketTeamLabel, bracketWinner, buildKnockoutBracket } from "../services/knockout-bracket.js";
+import { bracketGroups, finalGroup } from "../services/cup-matches.js";
 import { nationalFlagCode, nationalTeamLabel, sameNationalTeam } from "../services/national-flags.js";
 import NationalFlag from "./NationalFlag.jsx";
 
@@ -78,18 +79,40 @@ function MatchCard({ match, view }) {
 function Champion({ sides, view, trophy }) {
   if (!sides.champion) return null;
   const { nationalTeams, season } = view;
-  const image = teamKey(sides.final.home) === teamKey(sides.champion) ? sides.final.homeImage : sides.final.awayImage;
+  const image = !sides.final ? null : teamKey(sides.final.home) === teamKey(sides.champion) ? sides.final.homeImage : sides.final.awayImage;
   return (
     <div className="knockout-champion">
       {trophy && <img src={trophy} alt="" />}
       <b>
-        {nationalTeams && nationalFlagCode(sides.champion, season || sides.final.date) ? (
-          <NationalFlag name={sides.champion} season={season || sides.final.date} />
+        {nationalTeams && nationalFlagCode(sides.champion, season || sides.final?.date) ? (
+          <NationalFlag name={sides.champion} season={season || sides.final?.date} />
         ) : image ? (
           <Media name={sides.champion} url={image} className="knockout-crest" />
         ) : null}
         {bracketTeamLabel(nationalTeams ? nationalTeamLabel(sides.champion) : sides.champion)}
       </b>
+    </div>
+  );
+}
+
+/* A group the bracket starts from (1974's and 1978's second round, 1982's, 1930's groups) or ends with (1950's final
+ * round): its table, with the established winner highlighted. */
+function GroupCard({ table, view }) {
+  const { nationalTeams, season, follows } = view;
+  const leader = table.rows.find((row) => row.position === 1 && !row.tied);
+  return (
+    <div className={"knockout-match knockout-group" + (table.rows.some((row) => follows(row.name)) ? " knockout-followed" : "")}>
+      <div className="knockout-group-name">
+        <span>{table.name}</span>
+        <span>Pts</span>
+      </div>
+      {table.rows.map((row) => (
+        <div key={row.name} className={"knockout-team" + (leader ? (row === leader ? " knockout-winner" : " knockout-loser") : "") + (follows(row.name) ? " knockout-own" : "")}>
+          {nationalTeams && nationalFlagCode(row.name, season) ? <NationalFlag name={row.name} season={season} /> : null}
+          <span className="knockout-team-name" title={nationalTeams ? nationalTeamLabel(row.name) : row.name}>{nationalTeams ? nationalTeamLabel(row.name) : row.name}</span>
+          <strong>{row.points ?? "—"}</strong>
+        </div>
+      ))}
     </div>
   );
 }
@@ -108,11 +131,13 @@ function openRound(rounds) {
   return pending === -1 ? rounds.length - 1 : pending;
 }
 
-export default function KnockoutBracket({ matches, hrefForMatch, nationalTeams = false, season, highlight = "", trophy = null }) {
+export default function KnockoutBracket({ matches, hrefForMatch, nationalTeams = false, competition, season, highlight = "", trophy = null }) {
   const bracket = useMemo(() => buildKnockoutBracket(matches), [matches]);
   const early = bracket.rounds.length > 1 && bracket.rounds[0].key === "round64" ? bracket.rounds[0] : null;
   const rounds = early ? bracket.rounds.slice(1) : bracket.rounds;
   const sides = useMemo(() => bracketSides({ ...bracket, rounds }), [bracket, early]);
+  const groups = useMemo(() => bracketGroups(sides, matches, { competition, season }), [sides, matches, competition, season]);
+  const last = useMemo(() => finalGroup(matches, { competition, season }), [matches, competition, season]);
   const [hover, setHover] = useState("");
   const [phoneRound, setPhoneRound] = useState(null);
   // The bracket takes the height the screen leaves under its own top edge.
@@ -133,22 +158,42 @@ export default function KnockoutBracket({ matches, hrefForMatch, nationalTeams =
     onHover: setHover,
     follows: (name) => Boolean(highlight) && (nationalTeams ? sameNationalTeam(name, highlight) : teamKey(name) === teamKey(highlight)),
   };
-  if (!bracket.rounds.length && !bracket.preliminary && !bracket.thirdPlace.length)
-    return <Empty>Le tableau apparaîtra lorsque les matchs à élimination directe seront disponibles.</Empty>;
+  if (!bracket.rounds.length && !bracket.preliminary && !bracket.thirdPlace.length) {
+    if (!last) return <Empty>Le tableau apparaîtra lorsque les matchs à élimination directe seront disponibles.</Empty>;
+    return (
+      <section className="knockout-section knockout-final-group" aria-label="Tableau éliminatoire">
+        <Champion sides={{ champion: last.champion }} view={view} trophy={trophy} />
+        <GroupCard table={last.table} view={view} />
+      </section>
+    );
+  }
   const started = rounds.some((round) => round.matches.some((match) => match.status === "finished"));
   const legs = rounds.some((round) => round.matches.some((match) => match.legs?.length));
-  const current = phoneRound == null ? openRound(rounds) : Math.min(phoneRound, rounds.length - 1);
+  // A phone's tabs: the groups the bracket starts from, then its rounds.
+  const tabs = [...(groups ? [{ key: "groups", label: groups.label === "Second tour" ? "2e tour" : "Groupes", tables: [...groups.left, ...groups.right] }] : []), ...rounds];
+  const activeTab = tabs.find((tab) => tab.key === phoneRound) ?? tabs[openRound(rounds) + (groups ? 1 : 0)];
+  // With groups before it, a round's ties are twice as tall: two groups lead to each tie of the first round.
+  const depth = groups ? 1 : 0;
   const column = (round, index, side) => (
-    <div key={side + round.key} className={"knockout-column knockout-" + side + (index === 0 ? " knockout-first" : "") + (index === sides.rounds.length - 1 ? " knockout-last" : "")}>
+    <div key={side + round.key} className={"knockout-column knockout-" + side + (index === 0 && !groups ? " knockout-first" : "") + (index === sides.rounds.length - 1 ? " knockout-last" : "")}>
       {round[side].map((match) => (
-        <div className="knockout-slot" key={match.key} style={{ gridRow: "span " + 2 ** index }}>
+        <div className="knockout-slot" key={match.key} style={{ gridRow: "span " + 2 ** (index + depth) }}>
           <MatchCard match={match} view={view} />
         </div>
       ))}
     </div>
   );
+  const groupColumn = (side) => (
+    <div key={side + "groups"} className={"knockout-column knockout-first knockout-" + side + (sides.rounds.length ? "" : " knockout-last")}>
+      {groups[side].map((table) => (
+        <div className="knockout-slot" key={table.name}>
+          <GroupCard table={table} view={view} />
+        </div>
+      ))}
+    </div>
+  );
   return (
-    <section className={"knockout-section" + (legs ? " knockout-two-legged" : "")} aria-label="Tableau éliminatoire">
+    <section className={"knockout-section" + (legs ? " knockout-two-legged" : "") + (groups ? " knockout-with-groups" : "")} aria-label="Tableau éliminatoire">
       {early && (
         <details className="knockout-early">
           <summary>Trente-deuxièmes de finale · {early.matches.length} matchs</summary>
@@ -163,13 +208,16 @@ export default function KnockoutBracket({ matches, hrefForMatch, nationalTeams =
       )}
       {sides ? (
         <>
-          <div className="knockout-bracket" style={{ "--knockout-columns": sides.rounds.length * 2 + 1, "--knockout-half": sides.half }}>
+          <div className="knockout-bracket" style={{ "--knockout-columns": sides.rounds.length * 2 + 1 + (groups ? 2 : 0), "--knockout-half": groups ? groups.left.length : sides.half }}>
             <div className="knockout-labels" aria-hidden="true">
+              {groups && <span>{groups.label}</span>}
               {sides.rounds.map((round) => <span key={"left" + round.key}>{round.label}</span>)}
               <span className="knockout-label-final">Finale</span>
               {[...sides.rounds].reverse().map((round) => <span key={"right" + round.key}>{round.label}</span>)}
+              {groups && <span>{groups.label}</span>}
             </div>
             <div className="knockout-grid" ref={grid}>
+              {groups && groupColumn("left")}
               {sides.rounds.map((round, index) => column(round, index, "left"))}
               <div className="knockout-centre">
                 <Champion sides={sides} view={view} trophy={trophy} />
@@ -177,21 +225,26 @@ export default function KnockoutBracket({ matches, hrefForMatch, nationalTeams =
                 <ThirdPlace match={sides.third} view={view} />
               </div>
               {sides.rounds.map((round, index) => column(round, index, "right")).reverse()}
+              {groups && groupColumn("right")}
             </div>
           </div>
           <div className="knockout-phone">
             <div className="segmented-control knockout-rounds" aria-label="Tour du tableau">
-              {rounds.map((round, index) => (
-                <button key={round.key} type="button" aria-pressed={index === current} onClick={() => setPhoneRound(index)}>
-                  {SHORT[round.key] || round.label}
+              {tabs.map((tab) => (
+                <button key={tab.key} type="button" aria-pressed={tab === activeTab} onClick={() => setPhoneRound(tab.key)}>
+                  {SHORT[tab.key] || tab.label}
                 </button>
               ))}
             </div>
-            {rounds[current].key === "final" && <Champion sides={sides} view={view} trophy={trophy} />}
-            <div className={"knockout-list" + (rounds[current].matches.length < 3 ? " knockout-list-single" : "")}>
-              {rounds[current].matches.map((match) => <MatchCard key={match.key} match={match} view={view} />)}
-            </div>
-            {rounds[current].key === "final" && <ThirdPlace match={sides.third} view={view} />}
+            {activeTab.key === "final" && <Champion sides={sides} view={view} trophy={trophy} />}
+            {activeTab.tables ? (
+              <div className="knockout-list">{activeTab.tables.map((table) => <GroupCard key={table.name} table={table} view={view} />)}</div>
+            ) : (
+              <div className={"knockout-list" + (activeTab.matches.length < 3 ? " knockout-list-single" : "")}>
+                {activeTab.matches.map((match) => <MatchCard key={match.key} match={match} view={view} />)}
+              </div>
+            )}
+            {activeTab.key === "final" && <ThirdPlace match={sides.third} view={view} />}
           </div>
         </>
       ) : (
