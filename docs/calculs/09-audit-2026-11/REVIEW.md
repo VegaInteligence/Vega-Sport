@@ -1,5 +1,7 @@
 # Revue et corrections de l’audit des calculs
 
+Le contrôle du 18 novembre couvre les 38 critères initiaux, les nouvelles familles de calcul et les grilles de production par compétition, saison et type de participant. Les nombres et les limites ci-dessous gardent la date du relevé historique. [État actuel et preuves](../../audits/2026-11-17/SITUATION.md) · [Registre critère par critère](../../audits/2026-11-17/registres/requirements.csv)
+
 17 novembre 2026 — branche `codex/calculation-audit-20261117`, base
 `a912ed319e4a0441f09b3f55151393e28c9a215c`.
 

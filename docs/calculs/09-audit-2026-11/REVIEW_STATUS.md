@@ -1,5 +1,7 @@
 # État de la revue — reprise du 17 novembre 2026 (étape 8)
 
+Le contrôle du 18 novembre couvre les 38 critères initiaux, les nouvelles familles de calcul et les grilles de production par compétition, saison et type de participant. Les nombres et les limites ci-dessous gardent la date du relevé historique. [État actuel et preuves](../../audits/2026-11-17/SITUATION.md) · [Registre critère par critère](../../audits/2026-11-17/registres/requirements.csv)
+
 La session à qui l’utilisateur a confié VI-23 l’a rebasée sur `main` (migrations 128–131, puis 132),
 a fait faire la revue finale (Opus) et l’a mesurée en lecture seule sur la production. Un bloquant :
 les tirs de but ne portent jamais « faux » pour l’indicateur contre son camp, si bien que la règle de

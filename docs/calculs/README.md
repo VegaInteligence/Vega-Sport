@@ -101,4 +101,6 @@ Il décrit le code tel qu'il est au 9 novembre 2026, et les corrections de l'aud
 
 ## Audit du 16 novembre 2026
 
+[Vérification de production du 18 novembre](../audits/2026-11-17/SITUATION.md) · [Couverture des notes par compétition, saison et entité](../audits/2026-11-17/controles/verification-integree/scores-actuels-par-edition.csv.gz) · [Formules et évolutions recensées](../audits/2026-11-17/registres/requirements-README.md)
+
 [Revue et corrections](09-audit-2026-11/REVIEW.md) · [Suivi de chaque constat](09-audit-2026-11/TRACEABILITY.md) · [Audit original inchangé](09-audit-2026-11/SOURCE_AUDIT.md).

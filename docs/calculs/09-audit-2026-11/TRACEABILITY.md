@@ -1,5 +1,7 @@
 # Calculation audit of 16 November 2026 — traceability (VI-23, stages 2 to 7)
 
+Le contrôle du 18 novembre couvre les 38 critères initiaux, les nouvelles familles de calcul et les grilles de production par compétition, saison et type de participant. Les nombres et les limites ci-dessous gardent la date du relevé historique. [État actuel et preuves](../../audits/2026-11-17/SITUATION.md) · [Registre critère par critère](../../audits/2026-11-17/registres/requirements.csv)
+
 **Checkpoint status:** independent implementation accepted by Astra on v3; fresh Opus correction verification unavailable after two quota failures. No joint final signoff; VI-23 remains In Progress. See [REVIEW_STATUS](REVIEW_STATUS.md).
 
 Every item and subitem of the audit (`prototypes/calculation-audit/context/original-audit.md`), and
