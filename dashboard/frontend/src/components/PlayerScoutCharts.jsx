@@ -1,5 +1,6 @@
 "use client";
-import React, { useId, useRef, useState } from "react";
+import React, { useEffect, useId, useRef, useState } from "react";
+import { badgeOverflow, placeBadges } from "../services/curve-badges.js";
 import s from "./PlayerScoutCharts.module.css";
 
 export const chartTokens = s.root;
@@ -871,6 +872,31 @@ export function injuryTotals(injuries, currentSeason) {
 
 /* ----------------------------------------------------------- line chart */
 
+/** Pixels on the screen per unit of a drawing `width` units wide, once it is laid out;
+ * measured only for a chart that asks (`wanted`). */
+function useScale(ref, width, wanted) {
+  const [scale, setScale] = useState(null);
+  useEffect(() => {
+    const node = ref.current;
+    if (!wanted || !node) return undefined;
+    const read = () => setScale(node.clientWidth / width || null);
+    read();
+    const observer = new ResizeObserver(read);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [ref, width, wanted]);
+  return scale;
+}
+
+/** A badge's size on the screen, whatever the drawing's own scale. */
+const BADGE = 22;
+
+/**
+ * `badges` ({ key, x, name, icon, tip, onActive }, by x, in the unit of `xValue`) float above
+ * the line at their own x, each on a stem down to the line: a club's crest at the date of a
+ * transfer. They get a band above the plot, which grows when badges close in time are
+ * stacked, and one dated after the last point extends the axis to its date.
+ */
 export function LineChart({
   points,
   domain,
@@ -887,23 +913,48 @@ export function LineChart({
   xValue,
   xTicks,
   leftMargin = 36,
-  markers = [],
+  badges = [],
 }) {
   const t = useTip();
+  const scale = useScale(t.ref, width, badges.length > 0);
   const [active, setActive] = useState(null);
-  const m = { top: 14, right: 16, bottom: 26, left: leftMargin };
-  const axisGap = markers.length ? 12 : 8;
-  const markerDiameter = 20;
-  const iw = width - m.left - m.right,
-    ih = height - m.top - m.bottom;
+  // Room beside the axis for a badge on the first point.
+  const inset = badges.length ? 10 : 0;
+  const axisGap = badges.length ? 12 : 8;
+  const left = leftMargin,
+    right = 16;
+  const iw = width - left - right,
+    ih = height - 14 - 26;
   const xValues = xValue ? points.map(xValue) : points.map((_, i) => i);
   const xMin = Math.min(...xValues);
-  const xRange = Math.max(...xValues) - xMin;
+  const xLast = Math.max(...xValues);
+  const xEnd = Math.max(xLast, ...badges.map((badge) => badge.x));
+  const xRange = xEnd - xMin;
   const xAt = (value) =>
-    m.left + iw * (xRange > 0 ? (value - xMin) / xRange : 0.5);
+    left + inset + (iw - inset) * (xRange > 0 ? (value - xMin) / xRange : 0.5);
   const x = (i) => xAt(xValues[i]);
-  const y = (v) =>
-    m.top + ih - ((v - domain[0]) / (domain[1] - domain[0])) * ih;
+  const rise = (v) => ((v - domain[0]) / (domain[1] - domain[0])) * ih;
+  // The badges' band over the plot: 20 units, and what a stack of badges needs beyond them.
+  // Sizes meant on the screen are turned into the drawing's units: nothing is placed before
+  // the drawing is measured.
+  const radius = BADGE / 2 / (scale || 1);
+  const band = badges.length ? 20 : 0;
+  const loose = scale
+    ? placeBadges(
+        points.map((p, i) => ({ x: x(i), y: 14 + band + ih - rise(p.y) })),
+        badges.map((badge) => ({ x: xAt(badge.x) })),
+        { radius, gap: 7 / scale, margin: 2 / scale, spacing: 4 / scale },
+      )
+    : [];
+  const lift = Math.ceil(badgeOverflow(loose, radius, 3 / (scale || 1)));
+  const spots = loose.map((spot) => ({
+    x: spot.x,
+    y: spot.y + lift,
+    footY: spot.footY + lift,
+  }));
+  const m = { top: 14 + band + lift, right, bottom: 26, left };
+  const full = height + band + lift;
+  const y = (v) => m.top + ih - rise(v);
   const line = points
     .map((p, i) => `${i ? "L" : "M"}${x(i)} ${y(p.y)}`)
     .join("");
@@ -927,7 +978,7 @@ export function LineChart({
   };
   return (
     <div className={s.chart} ref={t.ref} style={cap(width * GROW)}>
-      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={ariaLabel}>
+      <svg viewBox={`0 0 ${width} ${full}`} role="img" aria-label={ariaLabel}>
         <defs>
           <linearGradient id={gradient} x1="0" x2="0" y1="0" y2="1">
             <stop offset="0" stopColor={color} stopOpacity="0.22" />
@@ -1002,6 +1053,38 @@ export function LineChart({
             strokeWidth="2"
           />
         ))}
+        {xEnd > xLast && (
+          <line
+            x1={x(points.length - 1)}
+            x2={xAt(xEnd)}
+            y1={y(points.at(-1).y)}
+            y2={y(points.at(-1).y)}
+            stroke={color}
+            strokeWidth="2"
+            strokeDasharray="2 5"
+            strokeLinecap="round"
+          />
+        )}
+        {spots.map((spot, i) => (
+          <g key={badges[i].key}>
+            <line
+              x1={spot.x}
+              x2={spot.x}
+              y1={spot.footY}
+              y2={spot.y + radius}
+              stroke={color}
+              strokeWidth="1"
+            />
+            <circle
+              cx={spot.x}
+              cy={spot.footY}
+              r="3.5"
+              fill="var(--mq-gap)"
+              stroke={color}
+              strokeWidth="2"
+            />
+          </g>
+        ))}
         {xTicks
           ? xTicks.map(({ value, label }, i) => {
               let anchor = "middle";
@@ -1011,7 +1094,7 @@ export function LineChart({
                 <text
                   key={value}
                   x={xAt(value)}
-                  y={height - 6}
+                  y={full - 6}
                   textAnchor={anchor}
                   className={s.axisText}
                 >
@@ -1024,7 +1107,7 @@ export function LineChart({
                 <text
                   key={`l${i}`}
                   x={x(i)}
-                  y={height - 6}
+                  y={full - 6}
                   textAnchor="middle"
                   className={s.axisText}
                 >
@@ -1046,22 +1129,40 @@ export function LineChart({
           }}
         />
       </svg>
-      {markers.map(({ index, name, icon }) => (
-        <span
-          key={index}
-          role="img"
-          aria-label={`${name}, ${points[index].x}, ${format(points[index].y)}`}
-          className={s.lineMarker}
-          style={{
-            left: `${(x(index) * 100) / width}%`,
-            top: `${(y(points[index].y) * 100) / height}%`,
-            width: `${(markerDiameter * 100) / width}%`,
-          }}
-          {...tipHandlers(t, pointTip(index), (on) => setActive(on ? index : null))}
-        >
-          {icon}
-        </span>
-      ))}
+      {spots.map((spot, i) => {
+        const badge = badges[i];
+        const show = (event) => {
+          t.showFor(event.currentTarget, badge.tip);
+          badge.onActive?.(true);
+        };
+        const hide = () => {
+          t.hide();
+          badge.onActive?.(false);
+        };
+        return (
+          <span
+            key={badge.key}
+            role="img"
+            aria-label={badge.name}
+            tabIndex={0}
+            className={s.lineBadge}
+            style={{
+              left: `${(spot.x * 100) / width}%`,
+              top: `${(spot.y * 100) / full}%`,
+              width: BADGE,
+              height: BADGE,
+            }}
+            onPointerEnter={show}
+            onPointerDown={show}
+            // A finger lifted leaves the badge: its tip stays until the next touch.
+            onPointerLeave={(event) => event.pointerType !== "touch" && hide()}
+            onFocus={show}
+            onBlur={hide}
+          >
+            {badge.icon}
+          </span>
+        );
+      })}
       <Tip tip={t.tip} />
     </div>
   );

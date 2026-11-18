@@ -1,16 +1,19 @@
 "use client";
-import React from "react";
+import React, { useMemo, useState } from "react";
 import { marketDate, marketValue } from "../services/player-market-values.js";
 import {
   loadMarketClubCrests,
   marketClubCrest,
 } from "../services/player-market-clubs.js";
+import { careerMoves } from "../services/career-moves.js";
+import { moveNote, moveTip } from "../services/player-transfers.js";
 import { useResource } from "../services/resources.js";
 import { LineChart, TipBody } from "./PlayerScoutCharts.jsx";
 import { Media, Skeleton } from "./UI.jsx";
 import s from "./PlayerScout.module.css";
 
 const day = 86_400_000;
+const time = (date) => Date.parse(`${date}T00:00:00Z`);
 const timeFormats = [
   { day: "numeric", month: "short" },
   { month: "short", year: "2-digit" },
@@ -20,11 +23,12 @@ const timeFormats = [
     new Intl.DateTimeFormat("fr-FR", { ...options, timeZone: "UTC" }),
 );
 
-function timeTicks(points) {
+/** From the first valuation to the last, or to a transfer made since. */
+function timeTicks(points, end) {
   const first = points[0].time;
-  const span = points.at(-1).time - first;
+  const span = end - first;
   if (!span) return [{ value: first, label: points[0].x }];
-  const count = Math.min(5, points.length);
+  const count = Math.max(2, Math.min(5, points.length));
   const format = timeFormats[span < 180 * day ? 0 : span < 1461 * day ? 1 : 2];
   return Array.from({ length: count }, (_, i) => {
     const value = first + (span * i) / (count - 1);
@@ -44,50 +48,64 @@ function valueScale(points) {
   };
 }
 
+/** `transfers`: the player's transfers, null when they were not read; nothing is drawn of
+ * them while they load (`transfersPending`), so the valuations' clubs never flash first. */
 export default function PlayerMarketValueCard({
   values,
+  transfers,
+  transfersPending,
   loading,
   error,
   teams,
   lookupSeason,
 }) {
+  const [active, setActive] = useState(null);
   const latest = values.at(-1);
-  const clubs = [];
-  let previousClub;
-  const points = values.map((value, index) => {
-    const x = marketDate(value.date);
-    const name =
-      typeof value.clubName === "string" ? value.clubName.trim() : "";
-    const club = name && (value.clubId || name);
-    if (club && club !== previousClub) {
-      clubs.push({ index, name, date: x, crest: marketClubCrest(name, teams) });
-      previousClub = club;
-    }
-    return {
-      x,
-      y: value.valueEur,
-      time: Date.parse(`${value.date}T00:00:00Z`),
-      club: name,
-    };
-  });
+  const moves = useMemo(
+    () =>
+      transfersPending
+        ? { curve: [], list: [] }
+        : careerMoves(values, transfers),
+    [values, transfers, transfersPending],
+  );
+  const points = values.map((value) => ({
+    x: marketDate(value.date),
+    y: value.valueEur,
+    time: time(value.date),
+    club: value.club?.name,
+  }));
+  // A club of ours comes with its crest; another one is looked for by its name.
+  const known = (club) => club.image_url || marketClubCrest(club.name, teams);
   const missing = [
-    ...new Set(clubs.filter((club) => !club.crest).map((club) => club.name)),
+    ...new Set(
+      [...moves.curve, ...moves.list]
+        .filter((move) => !known(move.club))
+        .map((move) => move.club.name),
+    ),
   ].sort();
   const lookup = useResource(
     `market-crests:${lookupSeason}:${JSON.stringify(missing)}`,
     ({ signal }) => loadMarketClubCrests(missing, lookupSeason, { signal }),
     Boolean(lookupSeason && missing.length),
   );
-  const markers = clubs.map((club) => ({
-    ...club,
-    icon: (
-      <Media
-        name={club.name}
-        url={club.crest || lookup.value?.[club.name]}
-        className={s.marketClubCrest}
-      />
-    ),
-  }));
+  const crest = (club) => (
+    <Media
+      name={club.name}
+      url={known(club) || lookup.value?.[club.name]}
+      className={s.marketClubCrest}
+    />
+  );
+  const badges = moves.curve.map((move) => {
+    const tip = moveTip(move);
+    return {
+      key: move.key,
+      x: time(move.at),
+      name: [tip.title, ...tip.rows.map((row) => row.join(" "))].join(", "),
+      icon: crest(move.club),
+      tip: <TipBody title={tip.title} rows={tip.rows} />,
+      onActive: (on) => setActive(on ? move.key : null),
+    };
+  });
 
   return (
     <section className={s.card}>
@@ -113,8 +131,11 @@ export default function PlayerMarketValueCard({
               leftMargin={64}
               points={points}
               xValue={(point) => point.time}
-              xTicks={timeTicks(points)}
-              markers={markers}
+              xTicks={timeTicks(
+                points,
+                Math.max(points.at(-1).time, ...badges.map((badge) => badge.x)),
+              )}
+              badges={badges}
               format={marketValue}
               tip={(point) => (
                 <TipBody
@@ -128,21 +149,23 @@ export default function PlayerMarketValueCard({
               ariaLabel="Historique des estimations de valeur marchande"
             />
           </div>
-          {clubs.length > 0 && (
-            <div className={s.marketClubs}>
-              <p className={s.note}>Clubs aux dates des estimations</p>
-              <ol>
-                {markers.map(({ index, name, date, icon }) => (
-                  <li key={index}>
-                    {icon}
-                    <div>
-                      <strong>{name}</strong>
-                      <small>{date}</small>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            </div>
+          {moves.list.length > 0 && (
+            <ol className={s.marketClubs}>
+              {moves.list.map((move) => (
+                <li
+                  key={move.key}
+                  className={
+                    move.key === active ? s.marketClubActive : undefined
+                  }
+                >
+                  {crest(move.club)}
+                  <div>
+                    <strong>{move.club.name}</strong>
+                    <small>{moveNote(move)}</small>
+                  </div>
+                </li>
+              ))}
+            </ol>
           )}
         </>
       ) : (
