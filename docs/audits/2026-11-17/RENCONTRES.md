@@ -67,3 +67,9 @@ Le premier flux structuré des rôles contredisait les feuilles d’après-match
 ## Successions de clubs en Angleterre
 
 Sur 20 330 rencontres et 22 fiches anglaises, les limites chronologiques empêchent plusieurs rattachements actuels. Les 184 matchs de la racine 9405, nommée FC Halifax Town, précèdent tous la création de ce club en 2008. La fiche 5947 couvre les deux périodes. Bradford Park Avenue 5941 traverse la liquidation de 1974. Six rencontres de Southport 5731 sont antérieures à la fondation de 1888. Le club confirme 2 200 rencontres de championnat au moyen des totaux de 50 saisons. L’écusson officiel de la fiche distincte Oxford University 5608 a été validé dans le lot de 1 467. [22 fiches et sources](controles/clubs-anglais-sources.csv) · [Limites chronologiques](controles/clubs-anglais-chronologie.json) · [Import Oxford](controles/oxford-visuel.json)
+
+## Identités et statistiques de la CAN masculine
+
+En 2023, la date de naissance et le nom externes donnent un candidat Vega unique pour 284 joueurs ESPN couvrant 958 apparitions. Deux personnes apparaissent chacune sous deux identifiants externes dans les flux événementiels. L’alignement individuel exige la résolution des variantes avant toute liaison ou fusion. [Trois éditions](controles/can-editions.csv) · [Feuilles, changements et rejeu hors ligne](controles/can/README.md) · [Capture RDS](controles/can-capture-rds.json)
+
+Sur 980 lignes individuelles comparables entre la CAF et StatsBomb, 191 concordent sur les passes tentées, 268 sur les passes réussies et 917 sur les tirs. ESPN donne zéro sur toutes les 113 lignes d’arrêts de gardien en 2021 et les 1 612 lignes de tirs subis en 2025. Une apparition prouvée établit qui a joué. La possibilité de calculer la note Vega dépend encore des entrées exigées pour le poste. [Comparaison des conventions](controles/can-comparaison-statistiques.json) · [Disponibilité des champs ESPN](controles/can-champs-espn.csv)

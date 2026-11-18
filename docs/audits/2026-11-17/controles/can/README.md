@@ -1,0 +1,9 @@
+# CAN masculine senior : résultats RDS et feuilles ESPN
+
+Le relevé RDS du 18 novembre 2026 à 03 h 45 UTC et les 156 résumés ESPN datés donnent 312 côtés pour les trois éditions. Les fichiers enregistrent les identifiants de rencontre, d’équipe et de joueur utilisés pour réconcilier les sources. Un remplaçant compte comme ayant joué lorsqu’il entre. Les 1 354 changements publiés par ESPN permettent de vérifier chaque entrée et sortie sur les feuilles du même éditeur.
+
+Depuis ce dossier, exécuter `python3 verify.py` avec Python 3.10 ou plus récent. Résultat attendu et obtenu : 52 matchs par édition, 1 567 apparitions en 2021, 1 607 en 2023 et 1 612 en 2025. Les 312 Elo d’équipe sont présents et les 156 matchs ont zéro composition, statistique et note individuelle en base. Le contrôleur vérifie les deux côtés et les scores, y compris quand les organisateurs désignent le domicile dans un ordre différent. Les colonnes de faits vides du jeu de données sportif restent distinctes du décompte zéro de lignes en base.
+
+Les URL de [sources-espn.csv](sources-espn.csv) permettent de recapturer les corps et d’en vérifier le SHA-256 avant comparaison. [Rencontres RDS](matches-rds.csv) · [Côtés alignés](sides-espn.csv) · [Feuilles de présence](registrations-espn.csv) · [Événements de substitution](substitutions-espn.csv) · [Vérificateur](verify.py)
+
+Pour l’édition 2023, le contrôle indépendant de 52 flux événementiels confirme les 1 607 apparitions. L’organisateur fournit 32 rapports consultables couvrant 981 apparitions. Les définitions techniques de certaines actions diffèrent entre ces sources. Elles doivent être arbitrées champ par champ avant tout calcul interne. [Archive CAF](https://www.cafonline.com/afcon2025/archive/2023/) · [Publication de StatsBomb](https://blogarchive.statsbomb.com/news/statsbomb-release-free-2023-african-cup-of-nations-data/)

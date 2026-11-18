@@ -1,0 +1,4 @@
+edition,rds_edition,matches,sides,CAF_technical_reports,StatsBomb_full_event_streams,ESPN_full_rosters,starters,entrants,appeared,distinct_ESPN_active_ids,listed_unused_ESPN,reversed_ESPN_RDS,shootouts_ESPN,RDS_elo_sides,team_sheets,lineups,stats,halves,advanced,events,shots,player_intermediates,player_grades
+2021,53152,52,104,0,0,52,1144,423,1567,519,753,3,6,104,0,0,0,0,0,0,0,0,0
+2023,53155,52,104,32,52,52,1144,463,1607,510,767,4,5,104,0,0,0,0,0,0,0,0,0
+2025,53156,52,104,0,0,52,1144,468,1612,543,1059,4,3,104,0,0,0,0,0,0,0,0,0

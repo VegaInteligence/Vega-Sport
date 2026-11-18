@@ -1,0 +1,20 @@
+[
+  {
+    "family": 64,
+    "url": "https://vegasport.vercel.app/api/assets?url=https%3A%2F%2Fimg.thesports.com%2Ffootball%2Fcompetition%2Fda617cd58cd9cffaae0daec865457fb5.png",
+    "http_status": 200,
+    "sha256": "27eb02a79c3a0f5964d889705d6c70150f0157234089da32b8858dbee0f1a2cd",
+    "db_sha256": "27eb02a79c3a0f5964d889705d6c70150f0157234089da32b8858dbee0f1a2cd",
+    "exact": true,
+    "mime": "image/png"
+  },
+  {
+    "family": 198,
+    "url": "https://vegasport.vercel.app/api/assets?url=https%3A%2F%2Fcdn.pitchapi.dev%2Fimages%2Fleagues%2F676031121ec155fbaa398a16b88b1f94e51f9c1eabf90087480b70b59c7ec04d.webp",
+    "http_status": 200,
+    "sha256": "676031121ec155fbaa398a16b88b1f94e51f9c1eabf90087480b70b59c7ec04d",
+    "db_sha256": "676031121ec155fbaa398a16b88b1f94e51f9c1eabf90087480b70b59c7ec04d",
+    "exact": true,
+    "mime": "image/webp"
+  }
+]

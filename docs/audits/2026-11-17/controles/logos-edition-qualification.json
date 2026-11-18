@@ -1,0 +1,68 @@
+{
+  "all_db_editions": 2149,
+  "target_editions": 50,
+  "emblems": 45,
+  "poster_only": 5,
+  "edition_bound_emblem_families": 16,
+  "emblem_displays": 41,
+  "emblem_origins": 41,
+  "all_media_displays": 46,
+  "emblem_key_types": {
+    "archive_key": 23,
+    "cup_key": 22
+  },
+  "emblem_originating_packs": {
+    "legacy": 15,
+    "british-hungarian": 12,
+    "fifa-emblems": 18
+  },
+  "emblem_family_logo_present": {
+    "no": 27,
+    "yes": 18
+  },
+  "guard_date_checks": {
+    "True": 50
+  },
+  "current_stored_logo_hash_matches": 0,
+  "existing_source_url_conflicts": 0,
+  "profile_loader_accepted": 0,
+  "separate_qualified_current_profile_editions": 7,
+  "packages": [
+    {
+      "source": "legacy",
+      "archive": "remaining-competition-art/edition-pack.zip",
+      "archive_sha256": "aa7579aa1f8f193e9817075d2a2977693f644aec19e421c0ff881e224cf27458",
+      "manifest": "edition-manifest.json",
+      "manifest_sha256": "3a5eb35528bc38544eb61b60350d619f5525ddfac2fcbc70e4b3d86df246be97",
+      "records": 15,
+      "loader_rejection": "record 0 (competition_edition {'provider': 'vega', 'key': 'archive:engsoccerdata/scotland/2', 'source_edition_key': 'engsoccerdata/scotland/2/2019', 'edition_key_type': 'archive_key'}): no typed entity binding"
+    },
+    {
+      "source": "british-hungarian",
+      "archive": "tracks/7-artwork/competition-traces/supplement/output/edition-pack.zip",
+      "archive_sha256": "a974258a571e277f15bdc3ea687d92ad36e20110908d2ecfce45416f1ef91ec9",
+      "manifest": "edition-manifest.json",
+      "manifest_sha256": "9a7af846da45e35b9444c94bc48e036ff9f92caba044970db424073b2f1493e5",
+      "records": 12,
+      "loader_rejection": "record 0 (competition_edition {'provider': 'vega', 'key': 'archive:hu.1', 'source_edition_key': '2018-19/hu.1', 'edition_key_type': 'archive_key'}): no typed entity binding"
+    },
+    {
+      "source": "fifa-emblems",
+      "archive": "tracks/7-artwork/world-cup-edition-marks/world-cup-edition-artwork.zip",
+      "archive_sha256": "cf228fa76980855f8bdaeb79133ab9ce1ecc9f45d424bc69441c50f44150d90f",
+      "manifest": "edition-pack/edition-emblems.json",
+      "manifest_sha256": "6a418218b72aaa5cc8c5af63eb84bb97b6058a80f1ffb32af4f4aae550c64f47",
+      "records": 18,
+      "loader_rejection": "record 0 (competition_edition {'provider': 'vega', 'key': 'cup:open-cups:world-cup-history', 'source_edition_key': 'open-cups:world-cup-history:1954', 'edition_key_type': 'cup_key'}): no typed entity binding"
+    },
+    {
+      "source": "fifa-posters",
+      "archive": "tracks/7-artwork/world-cup-edition-marks/world-cup-edition-artwork.zip",
+      "archive_sha256": "cf228fa76980855f8bdaeb79133ab9ce1ecc9f45d424bc69441c50f44150d90f",
+      "manifest": "edition-pack/edition-posters.json",
+      "manifest_sha256": "d2f1710e485f877d3fba2e150f3d19318f29b1005aff66b9ca117c151bd37e64",
+      "records": 5,
+      "loader_rejection": "the manifest does not list the records it counts"
+    }
+  ]
+}

@@ -1,0 +1,157 @@
+id,season_id,edition,match_date,status,source,home_team_id,home,away_team_id,away,home_score,away_score,home_score_90,away_score_90,home_score_et,away_score_et,home_penalty_score,away_penalty_score,team_sheets,lineups,stats,halves,advanced,events,shots,player_intermediates,player_grades,elo_teams
+738927,2021,53152,2022-01-09,finished,international_results,6564,Cameroon,13453,Burkina Faso,2,1,,,,,,,0,0,0,0,0,0,0,0,0,6564|13453
+738928,2021,53152,2022-01-09,finished,international_results,13454,Ethiopia,5471,Cape Verde,0,1,,,,,,,0,0,0,0,0,0,0,0,0,5471|13454
+738929,2021,53152,2022-01-10,finished,international_results,5488,Senegal,13457,Zimbabwe,1,0,,,,,,,0,0,0,0,0,0,0,0,0,5488|13457
+738930,2021,53152,2022-01-10,finished,international_results,13458,Guinea,13459,Malawi,1,0,,,,,,,0,0,0,0,0,0,0,0,0,13458|13459
+738931,2021,53152,2022-01-10,finished,international_results,5497,Morocco,5478,Ghana,1,0,,,,,,,0,0,0,0,0,0,0,0,0,5478|5497
+738932,2021,53152,2022-01-10,finished,international_results,13462,Comoros,13463,Gabon,0,1,,,,,,,0,0,0,0,0,0,0,0,0,13462|13463
+738933,2021,53152,2022-01-11,finished,international_results,1157,Nigeria,5472,Egypt,1,0,,,,,,,0,0,0,0,0,0,0,0,0,1157|5472
+738934,2021,53152,2022-01-11,finished,international_results,13466,Sudan,13467,Guinea-Bissau,0,0,,,,,,,0,0,0,0,0,0,0,0,0,13466|13467
+738935,2021,53152,2022-01-11,finished,international_results,5487,Algeria,13469,Sierra Leone,0,0,,,,,,,0,0,0,0,0,0,0,0,0,5487|13469
+738936,2021,53152,2022-01-12,finished,international_results,13470,Equatorial Guinea,5510,Ivory Coast,0,1,,,,,,,0,0,0,0,0,0,0,0,0,5510|13470
+738937,2021,53152,2022-01-12,finished,international_results,5502,Tunisia,13473,Mali,0,1,,,,,,,0,0,0,0,0,0,0,0,0,5502|13473
+738938,2021,53152,2022-01-12,finished,international_results,13474,Mauritania,13475,Gambia,0,1,,,,,,,0,0,0,0,0,0,0,0,0,13474|13475
+738939,2021,53152,2022-01-13,finished,international_results,6564,Cameroon,13454,Ethiopia,4,1,,,,,,,0,0,0,0,0,0,0,0,0,6564|13454
+738940,2021,53152,2022-01-13,finished,international_results,5471,Cape Verde,13453,Burkina Faso,0,1,,,,,,,0,0,0,0,0,0,0,0,0,5471|13453
+738941,2021,53152,2022-01-14,finished,international_results,5488,Senegal,13458,Guinea,0,0,,,,,,,0,0,0,0,0,0,0,0,0,5488|13458
+738942,2021,53152,2022-01-14,finished,international_results,13459,Malawi,13457,Zimbabwe,2,1,,,,,,,0,0,0,0,0,0,0,0,0,13457|13459
+738943,2021,53152,2022-01-14,finished,international_results,5497,Morocco,13462,Comoros,2,0,,,,,,,0,0,0,0,0,0,0,0,0,5497|13462
+738944,2021,53152,2022-01-14,finished,international_results,13463,Gabon,5478,Ghana,1,1,,,,,,,0,0,0,0,0,0,0,0,0,5478|13463
+738945,2021,53152,2022-01-15,finished,international_results,1157,Nigeria,13466,Sudan,3,1,,,,,,,0,0,0,0,0,0,0,0,0,1157|13466
+738946,2021,53152,2022-01-15,finished,international_results,13467,Guinea-Bissau,5472,Egypt,0,1,,,,,,,0,0,0,0,0,0,0,0,0,5472|13467
+738947,2021,53152,2022-01-16,finished,international_results,5510,Ivory Coast,13469,Sierra Leone,2,2,,,,,,,0,0,0,0,0,0,0,0,0,5510|13469
+738948,2021,53152,2022-01-16,finished,international_results,5487,Algeria,13470,Equatorial Guinea,0,1,,,,,,,0,0,0,0,0,0,0,0,0,5487|13470
+738949,2021,53152,2022-01-16,finished,international_results,13475,Gambia,13473,Mali,1,1,,,,,,,0,0,0,0,0,0,0,0,0,13473|13475
+738950,2021,53152,2022-01-16,finished,international_results,5502,Tunisia,13474,Mauritania,4,0,,,,,,,0,0,0,0,0,0,0,0,0,5502|13474
+738951,2021,53152,2022-01-17,finished,international_results,13453,Burkina Faso,13454,Ethiopia,1,1,,,,,,,0,0,0,0,0,0,0,0,0,13453|13454
+738952,2021,53152,2022-01-17,finished,international_results,6564,Cameroon,5471,Cape Verde,1,1,,,,,,,0,0,0,0,0,0,0,0,0,5471|6564
+738953,2021,53152,2022-01-18,finished,international_results,13459,Malawi,5488,Senegal,0,0,,,,,,,0,0,0,0,0,0,0,0,0,5488|13459
+738954,2021,53152,2022-01-18,finished,international_results,13457,Zimbabwe,13458,Guinea,2,1,,,,,,,0,0,0,0,0,0,0,0,0,13457|13458
+738955,2021,53152,2022-01-18,finished,international_results,13463,Gabon,5497,Morocco,2,2,,,,,,,0,0,0,0,0,0,0,0,0,5497|13463
+738956,2021,53152,2022-01-18,finished,international_results,5478,Ghana,13462,Comoros,2,3,,,,,,,0,0,0,0,0,0,0,0,0,5478|13462
+738957,2021,53152,2022-01-19,finished,international_results,5472,Egypt,13466,Sudan,1,0,,,,,,,0,0,0,0,0,0,0,0,0,5472|13466
+738958,2021,53152,2022-01-19,finished,international_results,13467,Guinea-Bissau,1157,Nigeria,0,2,,,,,,,0,0,0,0,0,0,0,0,0,1157|13467
+738959,2021,53152,2022-01-20,finished,international_results,5510,Ivory Coast,5487,Algeria,3,1,,,,,,,0,0,0,0,0,0,0,0,0,5487|5510
+738960,2021,53152,2022-01-20,finished,international_results,13469,Sierra Leone,13470,Equatorial Guinea,0,1,,,,,,,0,0,0,0,0,0,0,0,0,13469|13470
+738961,2021,53152,2022-01-20,finished,international_results,13475,Gambia,5502,Tunisia,1,0,,,,,,,0,0,0,0,0,0,0,0,0,5502|13475
+738962,2021,53152,2022-01-20,finished,international_results,13473,Mali,13474,Mauritania,2,0,,,,,,,0,0,0,0,0,0,0,0,0,13473|13474
+738963,2021,53152,2022-01-23,finished,international_results,13453,Burkina Faso,13463,Gabon,1,1,,,,,,,0,0,0,0,0,0,0,0,0,13453|13463
+738964,2021,53152,2022-01-23,finished,international_results,1157,Nigeria,5502,Tunisia,0,1,,,,,,,0,0,0,0,0,0,0,0,0,1157|5502
+738965,2021,53152,2022-01-24,finished,international_results,6564,Cameroon,13462,Comoros,2,1,,,,,,,0,0,0,0,0,0,0,0,0,6564|13462
+738966,2021,53152,2022-01-24,finished,international_results,13458,Guinea,13475,Gambia,0,1,,,,,,,0,0,0,0,0,0,0,0,0,13458|13475
+738967,2021,53152,2022-01-25,finished,international_results,5497,Morocco,13459,Malawi,2,1,,,,,,,0,0,0,0,0,0,0,0,0,5497|13459
+738968,2021,53152,2022-01-25,finished,international_results,5488,Senegal,5471,Cape Verde,2,0,,,,,,,0,0,0,0,0,0,0,0,0,5471|5488
+738969,2021,53152,2022-01-26,finished,international_results,5510,Ivory Coast,5472,Egypt,0,0,,,,,,,0,0,0,0,0,0,0,0,0,5472|5510
+738970,2021,53152,2022-01-26,finished,international_results,13473,Mali,13470,Equatorial Guinea,0,0,,,,,,,0,0,0,0,0,0,0,0,0,13470|13473
+738971,2021,53152,2022-01-29,finished,international_results,13453,Burkina Faso,5502,Tunisia,1,0,,,,,,,0,0,0,0,0,0,0,0,0,5502|13453
+738972,2021,53152,2022-01-29,finished,international_results,6564,Cameroon,13475,Gambia,2,0,,,,,,,0,0,0,0,0,0,0,0,0,6564|13475
+738973,2021,53152,2022-01-30,finished,international_results,5472,Egypt,5497,Morocco,2,1,,,,,,,0,0,0,0,0,0,0,0,0,5472|5497
+738974,2021,53152,2022-01-30,finished,international_results,5488,Senegal,13470,Equatorial Guinea,3,1,,,,,,,0,0,0,0,0,0,0,0,0,5488|13470
+738975,2021,53152,2022-02-02,finished,international_results,13453,Burkina Faso,5488,Senegal,1,3,,,,,,,0,0,0,0,0,0,0,0,0,5488|13453
+738976,2021,53152,2022-02-03,finished,international_results,6564,Cameroon,5472,Egypt,0,0,,,,,,,0,0,0,0,0,0,0,0,0,5472|6564
+738977,2021,53152,2022-02-05,finished,international_results,6564,Cameroon,13453,Burkina Faso,3,3,,,,,,,0,0,0,0,0,0,0,0,0,6564|13453
+738978,2021,53152,2022-02-06,finished,international_results,5488,Senegal,5472,Egypt,0,0,,,,,,,0,0,0,0,0,0,0,0,0,5472|5488
+738979,2023,53155,2024-01-13,finished,international_results,5510,Ivory Coast,13467,Guinea-Bissau,2,0,,,,,,,0,0,0,0,0,0,0,0,0,5510|13467
+738980,2023,53155,2024-01-14,finished,international_results,1157,Nigeria,13470,Equatorial Guinea,1,1,,,,,,,0,0,0,0,0,0,0,0,0,1157|13470
+738981,2023,53155,2024-01-14,finished,international_results,5472,Egypt,13476,Mozambique,2,2,,,,,,,0,0,0,0,0,0,0,0,0,5472|13476
+738982,2023,53155,2024-01-14,finished,international_results,5478,Ghana,5471,Cape Verde,1,2,,,,,,,0,0,0,0,0,0,0,0,0,5471|5478
+738983,2023,53155,2024-01-15,finished,international_results,5488,Senegal,13475,Gambia,3,0,,,,,,,0,0,0,0,0,0,0,0,0,5488|13475
+738984,2023,53155,2024-01-15,finished,international_results,6564,Cameroon,13458,Guinea,1,1,,,,,,,0,0,0,0,0,0,0,0,0,6564|13458
+738985,2023,53155,2024-01-15,finished,international_results,5487,Algeria,1168,Angola,1,1,,,,,,,0,0,0,0,0,0,0,0,0,1168|5487
+738986,2023,53155,2024-01-16,finished,international_results,13453,Burkina Faso,13474,Mauritania,1,0,,,,,,,0,0,0,0,0,0,0,0,0,13453|13474
+738987,2023,53155,2024-01-16,finished,international_results,5502,Tunisia,13478,Namibia,0,1,,,,,,,0,0,0,0,0,0,0,0,0,5502|13478
+738988,2023,53155,2024-01-16,finished,international_results,13473,Mali,5468,South Africa,2,0,,,,,,,0,0,0,0,0,0,0,0,0,5468|13473
+738989,2023,53155,2024-01-17,finished,international_results,5497,Morocco,13480,Tanzania,3,0,,,,,,,0,0,0,0,0,0,0,0,0,5497|13480
+738990,2023,53155,2024-01-17,finished,international_results,5485,DR Congo,13482,Zambia,1,1,,,,,,,0,0,0,0,0,0,0,0,0,5485|13482
+738991,2023,53155,2024-01-18,finished,international_results,13470,Equatorial Guinea,13467,Guinea-Bissau,4,2,,,,,,,0,0,0,0,0,0,0,0,0,13467|13470
+738992,2023,53155,2024-01-18,finished,international_results,5510,Ivory Coast,1157,Nigeria,0,1,,,,,,,0,0,0,0,0,0,0,0,0,1157|5510
+738993,2023,53155,2024-01-18,finished,international_results,5472,Egypt,5478,Ghana,2,2,,,,,,,0,0,0,0,0,0,0,0,0,5472|5478
+738994,2023,53155,2024-01-19,finished,international_results,5471,Cape Verde,13476,Mozambique,3,0,,,,,,,0,0,0,0,0,0,0,0,0,5471|13476
+738995,2023,53155,2024-01-19,finished,international_results,5488,Senegal,6564,Cameroon,3,1,,,,,,,0,0,0,0,0,0,0,0,0,5488|6564
+738996,2023,53155,2024-01-19,finished,international_results,13458,Guinea,13475,Gambia,1,0,,,,,,,0,0,0,0,0,0,0,0,0,13458|13475
+738997,2023,53155,2024-01-20,finished,international_results,5487,Algeria,13453,Burkina Faso,2,2,,,,,,,0,0,0,0,0,0,0,0,0,5487|13453
+738998,2023,53155,2024-01-20,finished,international_results,13474,Mauritania,1168,Angola,2,3,,,,,,,0,0,0,0,0,0,0,0,0,1168|13474
+738999,2023,53155,2024-01-20,finished,international_results,5502,Tunisia,13473,Mali,1,1,,,,,,,0,0,0,0,0,0,0,0,0,5502|13473
+739000,2023,53155,2024-01-21,finished,international_results,5468,South Africa,13478,Namibia,4,0,,,,,,,0,0,0,0,0,0,0,0,0,5468|13478
+739001,2023,53155,2024-01-21,finished,international_results,5497,Morocco,5485,DR Congo,1,1,,,,,,,0,0,0,0,0,0,0,0,0,5485|5497
+739002,2023,53155,2024-01-21,finished,international_results,13482,Zambia,13480,Tanzania,1,1,,,,,,,0,0,0,0,0,0,0,0,0,13480|13482
+739003,2023,53155,2024-01-22,finished,international_results,13467,Guinea-Bissau,1157,Nigeria,0,1,,,,,,,0,0,0,0,0,0,0,0,0,1157|13467
+739004,2023,53155,2024-01-22,finished,international_results,5510,Ivory Coast,13470,Equatorial Guinea,0,4,,,,,,,0,0,0,0,0,0,0,0,0,5510|13470
+739005,2023,53155,2024-01-22,finished,international_results,5471,Cape Verde,5472,Egypt,2,2,,,,,,,0,0,0,0,0,0,0,0,0,5471|5472
+739006,2023,53155,2024-01-22,finished,international_results,13476,Mozambique,5478,Ghana,2,2,,,,,,,0,0,0,0,0,0,0,0,0,5478|13476
+739007,2023,53155,2024-01-23,finished,international_results,13475,Gambia,6564,Cameroon,2,3,,,,,,,0,0,0,0,0,0,0,0,0,6564|13475
+739008,2023,53155,2024-01-23,finished,international_results,13458,Guinea,5488,Senegal,0,2,,,,,,,0,0,0,0,0,0,0,0,0,5488|13458
+739009,2023,53155,2024-01-23,finished,international_results,1168,Angola,13453,Burkina Faso,2,0,,,,,,,0,0,0,0,0,0,0,0,0,1168|13453
+739010,2023,53155,2024-01-23,finished,international_results,13474,Mauritania,5487,Algeria,1,0,,,,,,,0,0,0,0,0,0,0,0,0,5487|13474
+739011,2023,53155,2024-01-24,finished,international_results,13478,Namibia,13473,Mali,0,0,,,,,,,0,0,0,0,0,0,0,0,0,13473|13478
+739012,2023,53155,2024-01-24,finished,international_results,5468,South Africa,5502,Tunisia,0,0,,,,,,,0,0,0,0,0,0,0,0,0,5468|5502
+739013,2023,53155,2024-01-24,finished,international_results,13480,Tanzania,5485,DR Congo,0,0,,,,,,,0,0,0,0,0,0,0,0,0,5485|13480
+739014,2023,53155,2024-01-24,finished,international_results,13482,Zambia,5497,Morocco,0,1,,,,,,,0,0,0,0,0,0,0,0,0,5497|13482
+739015,2023,53155,2024-01-27,finished,international_results,1168,Angola,13478,Namibia,3,0,,,,,,,0,0,0,0,0,0,0,0,0,1168|13478
+739016,2023,53155,2024-01-27,finished,international_results,1157,Nigeria,6564,Cameroon,2,0,,,,,,,0,0,0,0,0,0,0,0,0,1157|6564
+739017,2023,53155,2024-01-28,finished,international_results,5472,Egypt,5485,DR Congo,1,1,,,,,,,0,0,0,0,0,0,0,0,0,5472|5485
+739018,2023,53155,2024-01-28,finished,international_results,13470,Equatorial Guinea,13458,Guinea,0,1,,,,,,,0,0,0,0,0,0,0,0,0,13458|13470
+739019,2023,53155,2024-01-29,finished,international_results,5471,Cape Verde,13474,Mauritania,1,0,,,,,,,0,0,0,0,0,0,0,0,0,5471|13474
+739020,2023,53155,2024-01-29,finished,international_results,5510,Ivory Coast,5488,Senegal,1,1,,,,,,,0,0,0,0,0,0,0,0,0,5488|5510
+739021,2023,53155,2024-01-30,finished,international_results,13473,Mali,13453,Burkina Faso,2,1,,,,,,,0,0,0,0,0,0,0,0,0,13453|13473
+739022,2023,53155,2024-01-30,finished,international_results,5497,Morocco,5468,South Africa,0,2,,,,,,,0,0,0,0,0,0,0,0,0,5468|5497
+739023,2023,53155,2024-02-02,finished,international_results,5485,DR Congo,13458,Guinea,3,1,,,,,,,0,0,0,0,0,0,0,0,0,5485|13458
+739024,2023,53155,2024-02-02,finished,international_results,1157,Nigeria,1168,Angola,1,0,,,,,,,0,0,0,0,0,0,0,0,0,1157|1168
+739025,2023,53155,2024-02-03,finished,international_results,5471,Cape Verde,5468,South Africa,0,0,,,,,,,0,0,0,0,0,0,0,0,0,5468|5471
+739026,2023,53155,2024-02-03,finished,international_results,5510,Ivory Coast,13473,Mali,2,1,,,,,,,0,0,0,0,0,0,0,0,0,5510|13473
+739027,2023,53155,2024-02-07,finished,international_results,5510,Ivory Coast,5485,DR Congo,1,0,,,,,,,0,0,0,0,0,0,0,0,0,5485|5510
+739028,2023,53155,2024-02-07,finished,international_results,1157,Nigeria,5468,South Africa,1,1,,,,,,,0,0,0,0,0,0,0,0,0,1157|5468
+739029,2023,53155,2024-02-10,finished,international_results,5468,South Africa,5485,DR Congo,0,0,,,,,,,0,0,0,0,0,0,0,0,0,5468|5485
+739030,2023,53155,2024-02-11,finished,international_results,5510,Ivory Coast,1157,Nigeria,2,1,,,,,,,0,0,0,0,0,0,0,0,0,1157|5510
+739031,2025,53156,2025-12-21,finished,international_results,5497,Morocco,13462,Comoros,2,0,,,,,,,0,0,0,0,0,0,0,0,0,5497|13462
+739032,2025,53156,2025-12-22,finished,international_results,13473,Mali,13482,Zambia,1,1,,,,,,,0,0,0,0,0,0,0,0,0,13473|13482
+739033,2025,53156,2025-12-22,finished,international_results,5468,South Africa,1168,Angola,2,1,,,,,,,0,0,0,0,0,0,0,0,0,1168|5468
+739034,2025,53156,2025-12-22,finished,international_results,5472,Egypt,13457,Zimbabwe,2,1,,,,,,,0,0,0,0,0,0,0,0,0,5472|13457
+739035,2025,53156,2025-12-23,finished,international_results,1157,Nigeria,13480,Tanzania,2,1,,,,,,,0,0,0,0,0,0,0,0,0,1157|13480
+739036,2025,53156,2025-12-23,finished,international_results,5502,Tunisia,13483,Uganda,3,1,,,,,,,0,0,0,0,0,0,0,0,0,5502|13483
+739037,2025,53156,2025-12-23,finished,international_results,5485,DR Congo,13484,Benin,1,0,,,,,,,0,0,0,0,0,0,0,0,0,5485|13484
+739038,2025,53156,2025-12-23,finished,international_results,5488,Senegal,13485,Botswana,3,0,,,,,,,0,0,0,0,0,0,0,0,0,5488|13485
+739039,2025,53156,2025-12-24,finished,international_results,13453,Burkina Faso,13470,Equatorial Guinea,2,1,,,,,,,0,0,0,0,0,0,0,0,0,13453|13470
+739040,2025,53156,2025-12-24,finished,international_results,5487,Algeria,13466,Sudan,3,0,,,,,,,0,0,0,0,0,0,0,0,0,5487|13466
+739041,2025,53156,2025-12-24,finished,international_results,5510,Ivory Coast,13476,Mozambique,1,0,,,,,,,0,0,0,0,0,0,0,0,0,5510|13476
+739042,2025,53156,2025-12-24,finished,international_results,6564,Cameroon,13463,Gabon,1,0,,,,,,,0,0,0,0,0,0,0,0,0,6564|13463
+739043,2025,53156,2025-12-26,finished,international_results,13482,Zambia,13462,Comoros,0,0,,,,,,,0,0,0,0,0,0,0,0,0,13462|13482
+739044,2025,53156,2025-12-26,finished,international_results,5497,Morocco,13473,Mali,1,1,,,,,,,0,0,0,0,0,0,0,0,0,5497|13473
+739045,2025,53156,2025-12-26,finished,international_results,1168,Angola,13457,Zimbabwe,1,1,,,,,,,0,0,0,0,0,0,0,0,0,1168|13457
+739046,2025,53156,2025-12-26,finished,international_results,5472,Egypt,5468,South Africa,1,0,,,,,,,0,0,0,0,0,0,0,0,0,5468|5472
+739047,2025,53156,2025-12-27,finished,international_results,13483,Uganda,13480,Tanzania,1,1,,,,,,,0,0,0,0,0,0,0,0,0,13480|13483
+739048,2025,53156,2025-12-27,finished,international_results,1157,Nigeria,5502,Tunisia,3,2,,,,,,,0,0,0,0,0,0,0,0,0,1157|5502
+739049,2025,53156,2025-12-27,finished,international_results,13484,Benin,13485,Botswana,1,0,,,,,,,0,0,0,0,0,0,0,0,0,13484|13485
+739050,2025,53156,2025-12-27,finished,international_results,5488,Senegal,5485,DR Congo,1,1,,,,,,,0,0,0,0,0,0,0,0,0,5485|5488
+739051,2025,53156,2025-12-28,finished,international_results,13470,Equatorial Guinea,13466,Sudan,0,1,,,,,,,0,0,0,0,0,0,0,0,0,13466|13470
+739052,2025,53156,2025-12-28,finished,international_results,5487,Algeria,13453,Burkina Faso,1,0,,,,,,,0,0,0,0,0,0,0,0,0,5487|13453
+739053,2025,53156,2025-12-28,finished,international_results,13463,Gabon,13476,Mozambique,2,3,,,,,,,0,0,0,0,0,0,0,0,0,13463|13476
+739054,2025,53156,2025-12-28,finished,international_results,5510,Ivory Coast,6564,Cameroon,1,1,,,,,,,0,0,0,0,0,0,0,0,0,5510|6564
+739055,2025,53156,2025-12-29,finished,international_results,5497,Morocco,13482,Zambia,3,0,,,,,,,0,0,0,0,0,0,0,0,0,5497|13482
+739056,2025,53156,2025-12-29,finished,international_results,13462,Comoros,13473,Mali,0,0,,,,,,,0,0,0,0,0,0,0,0,0,13462|13473
+739057,2025,53156,2025-12-29,finished,international_results,1168,Angola,5472,Egypt,0,0,,,,,,,0,0,0,0,0,0,0,0,0,1168|5472
+739058,2025,53156,2025-12-29,finished,international_results,13457,Zimbabwe,5468,South Africa,2,3,,,,,,,0,0,0,0,0,0,0,0,0,5468|13457
+739059,2025,53156,2025-12-30,finished,international_results,13483,Uganda,1157,Nigeria,1,3,,,,,,,0,0,0,0,0,0,0,0,0,1157|13483
+739060,2025,53156,2025-12-30,finished,international_results,13480,Tanzania,5502,Tunisia,1,1,,,,,,,0,0,0,0,0,0,0,0,0,5502|13480
+739061,2025,53156,2025-12-30,finished,international_results,13484,Benin,5488,Senegal,0,3,,,,,,,0,0,0,0,0,0,0,0,0,5488|13484
+739062,2025,53156,2025-12-30,finished,international_results,13485,Botswana,5485,DR Congo,0,3,,,,,,,0,0,0,0,0,0,0,0,0,5485|13485
+739063,2025,53156,2025-12-31,finished,international_results,13470,Equatorial Guinea,5487,Algeria,1,3,,,,,,,0,0,0,0,0,0,0,0,0,5487|13470
+739064,2025,53156,2025-12-31,finished,international_results,13466,Sudan,13453,Burkina Faso,0,2,,,,,,,0,0,0,0,0,0,0,0,0,13453|13466
+739065,2025,53156,2025-12-31,finished,international_results,13463,Gabon,5510,Ivory Coast,2,3,,,,,,,0,0,0,0,0,0,0,0,0,5510|13463
+739066,2025,53156,2025-12-31,finished,international_results,13476,Mozambique,6564,Cameroon,1,2,,,,,,,0,0,0,0,0,0,0,0,0,6564|13476
+739067,2025,53156,2026-01-03,finished,international_results,5488,Senegal,13466,Sudan,3,1,,,,,,,0,0,0,0,0,0,0,0,0,5488|13466
+739068,2025,53156,2026-01-03,finished,international_results,13473,Mali,5502,Tunisia,1,1,,,,,,,0,0,0,0,0,0,0,0,0,5502|13473
+739069,2025,53156,2026-01-04,finished,international_results,5497,Morocco,13480,Tanzania,1,0,,,,,,,0,0,0,0,0,0,0,0,0,5497|13480
+739070,2025,53156,2026-01-04,finished,international_results,5468,South Africa,6564,Cameroon,1,2,,,,,,,0,0,0,0,0,0,0,0,0,5468|6564
+739071,2025,53156,2026-01-05,finished,international_results,5472,Egypt,13484,Benin,3,1,,,,,,,0,0,0,0,0,0,0,0,0,5472|13484
+739072,2025,53156,2026-01-05,finished,international_results,1157,Nigeria,13476,Mozambique,4,0,,,,,,,0,0,0,0,0,0,0,0,0,1157|13476
+739073,2025,53156,2026-01-06,finished,international_results,5487,Algeria,5485,DR Congo,1,0,,,,,,,0,0,0,0,0,0,0,0,0,5485|5487
+739074,2025,53156,2026-01-06,finished,international_results,5510,Ivory Coast,13453,Burkina Faso,3,0,,,,,,,0,0,0,0,0,0,0,0,0,5510|13453
+739075,2025,53156,2026-01-09,finished,international_results,13473,Mali,5488,Senegal,0,1,,,,,,,0,0,0,0,0,0,0,0,0,5488|13473
+739076,2025,53156,2026-01-09,finished,international_results,5497,Morocco,6564,Cameroon,2,0,,,,,,,0,0,0,0,0,0,0,0,0,5497|6564
+739077,2025,53156,2026-01-10,finished,international_results,5487,Algeria,1157,Nigeria,0,2,,,,,,,0,0,0,0,0,0,0,0,0,1157|5487
+739078,2025,53156,2026-01-10,finished,international_results,5472,Egypt,5510,Ivory Coast,3,2,,,,,,,0,0,0,0,0,0,0,0,0,5472|5510
+739079,2025,53156,2026-01-14,finished,international_results,5488,Senegal,5472,Egypt,1,0,,,,,,,0,0,0,0,0,0,0,0,0,5472|5488
+739080,2025,53156,2026-01-14,finished,international_results,5497,Morocco,1157,Nigeria,0,0,,,,,,,0,0,0,0,0,0,0,0,0,1157|5497
+739081,2025,53156,2026-01-17,finished,international_results,5472,Egypt,1157,Nigeria,0,0,,,,,,,0,0,0,0,0,0,0,0,0,1157|5472
+739082,2025,53156,2026-01-18,finished,international_results,5497,Morocco,5488,Senegal,3,0,,,,,,,0,0,0,0,0,0,0,0,0,5488|5497
