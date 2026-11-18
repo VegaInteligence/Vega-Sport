@@ -1,0 +1,48 @@
+{
+  "rds_snapshot": [
+    "2026-11-18 05:14:06.569704+00",
+    "4412360:4412360:",
+    "on"
+  ],
+  "fixture_keys": 10,
+  "public_pages": 24,
+  "edition_sizes": {
+    "1903": 182,
+    "1918": 306,
+    "1924": 380,
+    "1946": 240
+  },
+  "exact_score_corrections": 2,
+  "exact_participant_corrections": 1,
+  "relocated_home_return_ties": 2,
+  "live_dependency_tables_inspected": 33,
+  "referencing_rows": 0,
+  "direct_provider_keys": 0,
+  "production_writes": 0,
+  "public_payload_sha256": {
+    "1903-page-1.receipt.json": "ffd40c89b76105d091a4d673aabacc03590f386aa9c45b703e0402b5b0047422",
+    "1903-page-2.receipt.json": "d0eeb38e9817b6a6ea42effe0b43cfee77e8344008ef5b481025d9999f0bed9f",
+    "1903-page-3.receipt.json": "369b1af41863418f76dfc6158eba0e1aa73a5fb905ce5d32f5829bfd6f1a904b",
+    "1903-page-4.receipt.json": "282bb4dc30864617420c54d0376847fa3435612c709e8d5d0ef6f422394b346e",
+    "1918-page-1.receipt.json": "3ea34a7fcc213a40d3bb448bea1dc3ff57f5aa70c882d541a81ae0142340c5e4",
+    "1918-page-2.receipt.json": "08e57ef2c1ef4c71286e665999a769feb0fcb1ed0ff06a8d3b6809bc0e49ac8a",
+    "1918-page-3.receipt.json": "4c7bde936f58a33048311fb8015805ad026a93d4389a5e6b3bbf1c97d1d50bc0",
+    "1918-page-4.receipt.json": "4d93117d5eaf001ce0adfdfcccaf58cd62776fba9e583a6c7af6f289d4a5e8d9",
+    "1918-page-5.receipt.json": "b7bc657faf5915042d6d4155e4127c5958172f0e5946a0a1f8a32aa7c456bd9f",
+    "1918-page-6.receipt.json": "acf5495c9053d6986c1c698146153d14bc6b00c2924eac2847cfd8b99dd65f71",
+    "1918-page-7.receipt.json": "e604489a80c82cad10394c4affa29f0595945890eb5c5b536adf6668312f4924",
+    "1924-page-1.receipt.json": "d3ecaf3e56eea76167fa12f7556f68c5cd33c26f6d7af79fc2497fda99ba7b3d",
+    "1924-page-2.receipt.json": "de4682bc73f400ad0865bc4a4d615454fe8c38d6fa35483f83b5766d1be7d130",
+    "1924-page-3.receipt.json": "778ad6ab82fabc553eab376acbaa186d57f2decb805e7dc7079cb07196bb8fec",
+    "1924-page-4.receipt.json": "7bf8a0f798970dc7c079f62bd097c6169c805f86838d08233bad5bdb8d340d34",
+    "1924-page-5.receipt.json": "461fc7091fc8f378e19106905de2324ea1afc311defce0fa97dee172e5700e2b",
+    "1924-page-6.receipt.json": "72c3ea9ca5f1d5df4dc283a3102162835f9e496c3b1998a681ce0f983a05529c",
+    "1924-page-7.receipt.json": "ae05725ce6d18e34f6b0ee1851235fa05616366146a0fc5ccf5a3c9533ddbd11",
+    "1924-page-8.receipt.json": "eb1676f4610a0bcb47a797685678c069bb464ab1d6bc8e8d04f6c51ff02e9269",
+    "1946-page-1.receipt.json": "9be356b4f802e81f114777bb3a8a5b372769526ab3bf957fdb4916125f020580",
+    "1946-page-2.receipt.json": "fb5d50b5b6d133891253a5386d6f325ce5574761becbc44215c6e663d901151e",
+    "1946-page-3.receipt.json": "f5db271f8a5dc19271777d9b7f63f11823adb4181a681444ca10dffbaa26a0a7",
+    "1946-page-4.receipt.json": "83e9a4bd99f1e2f5cfc0ea9bae3dd98610d1cfc4888fba9584151048d9c91c8c",
+    "1946-page-5.receipt.json": "80a8c1bad10234d2a1ff5d8bd1d4887b076ef5ab2b141a179668113cf806f837"
+  }
+}

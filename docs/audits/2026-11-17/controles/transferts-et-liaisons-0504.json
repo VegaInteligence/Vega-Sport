@@ -1,0 +1,100 @@
+{
+  "snapshot": {
+    "captured": "2026-11-18 05:04:55.361104+00:00",
+    "snapshot": "4411920:4411920:",
+    "database": "vega_v2",
+    "isolation": "repeatable read",
+    "read_only": "on"
+  },
+  "transport": {
+    "digest": "b689867f8c7c8acd151333b62ba42113bd9fa4e84197e091b1131e521db5deaa",
+    "image_digest": "sha256:8184f72a335b9b4c126e77ead0e71771b6a4a146ee1b7a026ed2c2c1a6aba352",
+    "ephemeral_definition": "INACTIVE"
+  },
+  "transfer_units": 23321,
+  "read_units": 896,
+  "never_read_units": 22425,
+  "stored_event_rows": 7243,
+  "players_with_stored_events": 896,
+  "distinct_event_source_keys": 7243,
+  "status_positive": 896,
+  "status_empty_200": 0,
+  "status_recorded_404": 0,
+  "mapping": {
+    "event_rows": 7243,
+    "missing_source_key": 0,
+    "repeated_player_source_key": 0,
+    "repeated_any_source_key": 0,
+    "both_resolved": 3474,
+    "one_resolved": 1760,
+    "neither_resolved": 2009,
+    "missing_raw_side": 0,
+    "missing_map_with_both_source_sides": 3769,
+    "pending_in_past": 0,
+    "future_marked_completed": 0
+  },
+  "current_due_priority_one": {
+    "profile": 0,
+    "club": 0,
+    "injuries": 0,
+    "search": 0,
+    "values": 1255,
+    "squad": 93,
+    "transfers": 21058
+  },
+  "hours_since_latest_transfer": 4.558,
+  "latest_transfer_read": "2026-11-18 00:31:27.830647+00:00",
+  "latest_provider_request": "2026-11-18 05:04:54.573706+00:00",
+  "provider_paused_until": null,
+  "provider_gave_up_at": null,
+  "provider_consecutive_blocks": 0,
+  "read_in_previous_hour_priority_one": {
+    "profile": 0,
+    "club": 57,
+    "injuries": 0,
+    "search": 0,
+    "values": 1304,
+    "squad": 0,
+    "transfers": 0
+  },
+  "two_historic_witnesses": {
+    "2106": {
+      "keys": 26,
+      "at_previous_capture": 26
+    },
+    "11656": {
+      "keys": 29,
+      "at_previous_capture": 29
+    }
+  },
+  "rows_changed_by_field_over_two_witnesses": {
+    "player_id": 0,
+    "name": 0,
+    "birth_date": 0,
+    "provider_key": 0,
+    "row_id": 0,
+    "source_key": 0,
+    "transfer_date": 0,
+    "season_label": 0,
+    "kind": 0,
+    "pending": 0,
+    "from_provider_club": 0,
+    "from_source_name": 5,
+    "from_team_id": 1,
+    "from_canonical_name": 1,
+    "to_provider_club": 0,
+    "to_source_name": 4,
+    "to_team_id": 1,
+    "to_canonical_name": 1,
+    "fee_eur": 0,
+    "market_value_eur": 0,
+    "contract_until": 0,
+    "as_of": 0
+  },
+  "hold": {
+    "missing_mappings": "Missing at least one canonical club, both provider side identifiers present.",
+    "http_status": "Deployed reader handles upstream 404 as a successful empty list. The final queue field alone cannot establish upstream response status.",
+    "absence": "Never-read provider units are not evidence of missing real-world transfers. Missing source data cannot be counted as empty history.",
+    "history": "These two captures cannot establish no loss in other histories or between the observations."
+  }
+}

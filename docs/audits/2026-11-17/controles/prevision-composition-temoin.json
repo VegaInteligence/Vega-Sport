@@ -1,0 +1,307 @@
+{
+  "verdict": "reproduced; historical features depend on later reference observations",
+  "python": "3.14.6",
+  "python_executable": "/Library/Frameworks/Python.framework/Versions/3.14/bin/python3",
+  "head": "1b28961a88e968d5602f9fb278fc3c471ebb7467",
+  "production_release": "8018e0836ca0f32e8b2eb51fc2847154abff7f13",
+  "source_sha256": {
+    "backend/vega/power.py": "75d3b2a829b585d8dbadb60d1fb2a6b4233e7f74d220a0f76bab0ebb6fdb93ff",
+    "backend/vega/lineup.py": "7bb215a4fc3a4a9cb7cfc7fba6bb3e7c1d68c020a6cfc911f06b505185d7e442",
+    "backend/vega/forecast.py": "a189d90dc65e007286c2397129aa70da39c63f10a8327d6e33ec190d59390bf7",
+    "backend/tests/test_power.py": "bb9328682614ad05187dd01f6a3420334d913f6157ef6443d9c513c23bc6ff59",
+    "backend/tests/test_lineup.py": "8847c48bab5f61ead8d47e9587164e5636850c40d82426c658239ad29ae67a84"
+  },
+  "method_version": "power-ranking-v8",
+  "lineup_model_version": "lineup-v1",
+  "fixed_reference_sha256_canonical": "d2c9ab4fd47963359443bfccc6987f0c09ef5a30a79e0a9c75cfa7acbdd88d4b",
+  "input_file_sha256": {
+    "inputs.json": "c1bfae9919847bfc8afc0e21d515356ee0af088c3a2db0cb365c6c8758dd9b09",
+    "frozen-grade-reference.json": "bd2f1123f56be725606084eb1722b1600021f65d8635d19eaa8f19ebcfd9d62e"
+  },
+  "fixed_reference_bounds": {
+    "reference_population": 1000,
+    "stored_quantile_points": 2001,
+    "raw_reference_contribution_min": -3.290526731491895,
+    "raw_reference_contribution_max": 3.2905267314919247,
+    "role_mean": 8.194660228166839e-17,
+    "role_spread": 0.999349417995043,
+    "competition_spread": 0.999349417995043,
+    "standardized_quantile_min": -3.292668882615206,
+    "standardized_quantile_max": 3.292668882615236,
+    "tail_probability_bounds": [
+      0.0005,
+      0.9995
+    ],
+    "output_z_bounds": [
+      -3.290526731491895,
+      3.2905267314919247
+    ],
+    "output_grade_bounds": [
+      13.076866522880293,
+      86.92313347711989
+    ],
+    "note": "The original 0.8-npxG held-out before-case exceeds the upper reference support and uses the documented half-observation tail cap. The 0.6 control is inside support in both scenarios."
+  },
+  "original_witness": {
+    "target_npxg": 0.8,
+    "target_in_reference_population": false,
+    "target_raw_row": {
+      "np_goals": null,
+      "npxg": 0.8,
+      "shots_on_target": null,
+      "big_chances_missed": null,
+      "assists": null,
+      "xa": null,
+      "chances_created": null,
+      "big_chances_created": null,
+      "passes_into_final_third": null,
+      "progressive_passes": null,
+      "progressive_carries": null,
+      "dribbles_succeeded": null,
+      "dribbles_total": null,
+      "tackles": null,
+      "interceptions": null,
+      "recoveries": null,
+      "clearances": null,
+      "shot_blocks": null,
+      "duels_won": null,
+      "duels_attempted": null,
+      "aerials_won": null,
+      "aerials_total": null,
+      "dribbled_past": null,
+      "errors_led_to_goal": null,
+      "accurate_passes": null,
+      "accurate_passes_total": null,
+      "dispossessed": null,
+      "touches": null,
+      "role": "winger",
+      "competition_id": 1,
+      "minutes_played": 90,
+      "delta": 0
+    },
+    "results": [
+      {
+        "scenario": "past_only",
+        "reference_rows": 80,
+        "expected_npxg": 0.25,
+        "indicator_dispersion": 0.11180339887498948,
+        "blocks": {
+          "finishing": 4.919349550499538
+        },
+        "contribution": 4.919349550499538,
+        "standardized_grade_input": 4.92255207429754,
+        "reference_support_state": "above",
+        "grade_index": 3.2905267314919247,
+        "grade": 86.92313347711989,
+        "lineup_kept_rows": [
+          [
+            0.1,
+            0.16397831834998455,
+            1,
+            0
+          ]
+        ]
+      },
+      {
+        "scenario": "with_future",
+        "reference_rows": 160,
+        "expected_npxg": 0.65,
+        "indicator_dispersion": 0.4153311931459038,
+        "blocks": {
+          "finishing": 0.36115755925730764
+        },
+        "contribution": 0.3611575592573076,
+        "standardized_grade_input": 0.3613926748282741,
+        "reference_support_state": "inside",
+        "grade_index": 0.3618141008485312,
+        "grade": 55.188182046484314,
+        "lineup_kept_rows": [
+          [
+            0.1,
+            0.012038585308576918,
+            1,
+            0
+          ]
+        ]
+      }
+    ]
+  },
+  "near_controls": {
+    "target_inside_reference_support": {
+      "target_npxg": 0.6,
+      "target_in_reference_population": false,
+      "target_raw_row": {
+        "np_goals": null,
+        "npxg": 0.6,
+        "shots_on_target": null,
+        "big_chances_missed": null,
+        "assists": null,
+        "xa": null,
+        "chances_created": null,
+        "big_chances_created": null,
+        "passes_into_final_third": null,
+        "progressive_passes": null,
+        "progressive_carries": null,
+        "dribbles_succeeded": null,
+        "dribbles_total": null,
+        "tackles": null,
+        "interceptions": null,
+        "recoveries": null,
+        "clearances": null,
+        "shot_blocks": null,
+        "duels_won": null,
+        "duels_attempted": null,
+        "aerials_won": null,
+        "aerials_total": null,
+        "dribbled_past": null,
+        "errors_led_to_goal": null,
+        "accurate_passes": null,
+        "accurate_passes_total": null,
+        "dispossessed": null,
+        "touches": null,
+        "role": "winger",
+        "competition_id": 1,
+        "minutes_played": 90,
+        "delta": 0
+      },
+      "results": [
+        {
+          "scenario": "past_only",
+          "reference_rows": 80,
+          "expected_npxg": 0.25,
+          "indicator_dispersion": 0.11180339887498948,
+          "blocks": {
+            "finishing": 3.1304951684997055
+          },
+          "contribution": 3.1304951684997055,
+          "standardized_grade_input": 3.132533138189343,
+          "reference_support_state": "inside",
+          "grade_index": 3.1755014151535277,
+          "grade": 86.15191881600943,
+          "lineup_kept_rows": [
+            [
+              0.1,
+              0.10434983894999017,
+              1,
+              0
+            ]
+          ]
+        },
+        {
+          "scenario": "with_future",
+          "reference_rows": 160,
+          "expected_npxg": 0.65,
+          "indicator_dispersion": 0.4153311931459038,
+          "blocks": {
+            "finishing": -0.1203858530857693
+          },
+          "contribution": -0.1203858530857693,
+          "standardized_grade_input": -0.12046422494275824,
+          "reference_support_state": "inside",
+          "grade_index": -0.12112909345090156,
+          "grade": 48.25751814691761,
+          "lineup_kept_rows": [
+            [
+              0.1,
+              -0.004012861769525644,
+              1,
+              0
+            ]
+          ]
+        }
+      ]
+    },
+    "target_included_in_annual_fit": {
+      "target_npxg": 0.8,
+      "target_in_reference_population": true,
+      "target_raw_row": {
+        "np_goals": null,
+        "npxg": 0.8,
+        "shots_on_target": null,
+        "big_chances_missed": null,
+        "assists": null,
+        "xa": null,
+        "chances_created": null,
+        "big_chances_created": null,
+        "passes_into_final_third": null,
+        "progressive_passes": null,
+        "progressive_carries": null,
+        "dribbles_succeeded": null,
+        "dribbles_total": null,
+        "tackles": null,
+        "interceptions": null,
+        "recoveries": null,
+        "clearances": null,
+        "shot_blocks": null,
+        "duels_won": null,
+        "duels_attempted": null,
+        "aerials_won": null,
+        "aerials_total": null,
+        "dribbled_past": null,
+        "errors_led_to_goal": null,
+        "accurate_passes": null,
+        "accurate_passes_total": null,
+        "dispossessed": null,
+        "touches": null,
+        "role": "winger",
+        "competition_id": 1,
+        "minutes_played": 90,
+        "delta": 0
+      },
+      "results": [
+        {
+          "scenario": "past_only",
+          "reference_rows": 81,
+          "expected_npxg": 0.25679012345679014,
+          "indicator_dispersion": 0.12662598918477122,
+          "blocks": {
+            "finishing": 4.289876667818675
+          },
+          "contribution": 4.289876667818675,
+          "standardized_grade_input": 4.29266940128438,
+          "reference_support_state": "above",
+          "grade_index": 3.2905267314919247,
+          "grade": 86.92313347711989,
+          "lineup_kept_rows": [
+            [
+              0.1,
+              0.1429958889272892,
+              1,
+              0
+            ]
+          ]
+        },
+        {
+          "scenario": "with_future",
+          "reference_rows": 161,
+          "expected_npxg": 0.6509316770186335,
+          "indicator_dispersion": 0.4142070194471593,
+          "blocks": {
+            "finishing": 0.35988845186720275
+          },
+          "contribution": 0.35988845186720275,
+          "standardized_grade_input": 0.3601227412422307,
+          "reference_support_state": "inside",
+          "grade_index": 0.36117946397935635,
+          "grade": 55.17914705236647,
+          "lineup_kept_rows": [
+            [
+              0.1,
+              0.011996281728906759,
+              1,
+              0
+            ]
+          ]
+        }
+      ]
+    }
+  },
+  "limits": [
+    "Synthetic function-level counterexample, not production bias or forecast calibration.",
+    "Original witness fits references on a separate synthetic population; the included-target control additionally mirrors annual self-inclusion.",
+    "Original grade reaches the upper tail cap; the inside-support control establishes that cap clipping is not necessary.",
+    "Only the first player-match contributes in the miniature lineup history. All six team lineups have eleven starters.",
+    "No full refresh, writer, SQL, scheduler, HTTP or production E2E was run.",
+    "Changing references can be legitimate for descriptive retrospective rankings; causality is required when treating those values as historical predictive inputs."
+  ]
+}

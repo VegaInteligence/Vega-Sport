@@ -1,0 +1,107 @@
+{
+  "collected_utc": "2026-11-18T05:53:28.215875+00:00",
+  "instance": "vega-football-db-postgres",
+  "instance_backups": {
+    "argv": [
+      "aws",
+      "rds",
+      "describe-db-instance-automated-backups",
+      "--db-instance-identifier",
+      "vega-football-db-postgres",
+      "--query",
+      "DBInstanceAutomatedBackups[].{id:DBInstanceIdentifier,state:Status,window:RestoreWindow,days:BackupRetentionPeriod}",
+      "--profile",
+      "statarena",
+      "--region",
+      "us-east-2",
+      "--output",
+      "json"
+    ],
+    "result": [
+      {
+        "id": "vega-football-db-postgres",
+        "state": "active",
+        "window": {
+          "EarliestTime": "2026-11-11T05:50:13+00:00",
+          "LatestTime": "2026-11-18T05:50:13+00:00"
+        },
+        "days": 7
+      }
+    ]
+  },
+  "snapshots": {
+    "argv": [
+      "aws",
+      "rds",
+      "describe-db-snapshots",
+      "--db-instance-identifier",
+      "vega-football-db-postgres",
+      "--query",
+      "DBSnapshots[].{time:SnapshotCreateTime,type:SnapshotType,state:Status}",
+      "--profile",
+      "statarena",
+      "--region",
+      "us-east-2",
+      "--output",
+      "json"
+    ],
+    "result": [
+      {
+        "time": "2026-11-11T04:50:18.105000+00:00",
+        "type": "automated",
+        "state": "available"
+      },
+      {
+        "time": "2026-11-12T04:50:18.291000+00:00",
+        "type": "automated",
+        "state": "available"
+      },
+      {
+        "time": "2026-11-13T04:50:15.249000+00:00",
+        "type": "automated",
+        "state": "available"
+      },
+      {
+        "time": "2026-11-14T04:50:14.787000+00:00",
+        "type": "automated",
+        "state": "available"
+      },
+      {
+        "time": "2026-11-15T04:50:19.004000+00:00",
+        "type": "automated",
+        "state": "available"
+      },
+      {
+        "time": "2026-11-16T04:50:06.524000+00:00",
+        "type": "automated",
+        "state": "available"
+      },
+      {
+        "time": "2026-11-17T04:50:18.481000+00:00",
+        "type": "automated",
+        "state": "available"
+      },
+      {
+        "time": "2026-11-18T04:50:10.119000+00:00",
+        "type": "automated",
+        "state": "available"
+      }
+    ]
+  },
+  "exports": {
+    "argv": [
+      "aws",
+      "rds",
+      "describe-export-tasks",
+      "--query",
+      "ExportTasks[?contains(SourceArn, 'vega-football-db-postgres')].{status:Status,start:TaskStartTime,completed:TaskEndTime}",
+      "--profile",
+      "statarena",
+      "--region",
+      "us-east-2",
+      "--output",
+      "json"
+    ],
+    "result": []
+  }
+}

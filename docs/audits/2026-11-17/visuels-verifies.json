@@ -1,28 +1,56 @@
 {
-  "records": 1468,
+  "records": 1571,
   "by_type": {
     "competition": 104,
-    "team": 1364
+    "team": 1467
   },
-  "distinct_images": 1431,
-  "converted": 159,
-  "manifest_sha256": "a57921d6d30b3a3394b88249cadc740bcff0a7f9f9b54ffdd9a7063690b992db",
-  "zip_sha256": "42e562ef869b73ebd64c6f476743976d4a867ebefcf632f3cebbb46215ea81f4",
-  "zip_bytes": 125482814,
+  "distinct_images": 1493,
+  "converted": 162,
+  "manifest_sha256": "72cbc81b5865b5b7c444976b1bc1a1bad9af6d6b4e8fcef24270b523db2be78b",
+  "zip_sha256": "072eee52cc88b4123319777cfe92c1dc8c334b7053514b4cae4d6b9f8d752fed",
+  "zip_bytes": 130841814,
   "inputs": [
     {
-      "source_pack": "artwork-expanded-1467",
-      "manifest_sha256": "7d64edeaee4887e0f81f8ba8900867a1cbd33e45653bb6563fdf2f057b35f769",
+      "source_pack": "artwork-expanded-1484",
+      "manifest_sha256": "68846d8c8068d703ae91c03046916bcbf3d70996d7c3e269b766a7a5e9845a07",
       "by_type": {
         "competition": 104,
-        "team": 1363
+        "team": 1380
       }
     },
     {
-      "source_pack": "tracks/7-artwork/scottish-historic-roots/profile",
-      "manifest_sha256": "40aee8386c0733d6e7ffe664e4f4c4f861091fc6c49c1583b02b1e50fdc02940",
+      "source_pack": "tracks/7-artwork/dutch-current-residual/profile",
+      "manifest_sha256": "ceedc2de3e81ee22d4b28acb1d1a01f33721c8424789442271c4657545e5acba",
+      "by_type": {
+        "team": 34
+      }
+    },
+    {
+      "source_pack": "tracks/7-artwork/europe-current-residual/profile",
+      "manifest_sha256": "91fa17434e82430dcd61f1d41da4b30cc9de14e297a34de70fa62effc70e8c0c",
+      "by_type": {
+        "team": 40
+      }
+    },
+    {
+      "source_pack": "tracks/7-artwork/lausanne-ouchy-3358/profile",
+      "manifest_sha256": "2c44d4bd1c925232adf9e7ac24a5a2f750293a90fc3737a1923238873ca324a7",
       "by_type": {
         "team": 1
+      }
+    },
+    {
+      "source_pack": "tracks/7-artwork/dfb-native-2025/profile",
+      "manifest_sha256": "1b9acc5729c6fb67380a429e73b5f1bdacddf3c05ed97cd294494e1cdcb82b29",
+      "by_type": {
+        "team": 9
+      }
+    },
+    {
+      "source_pack": "tracks/7-artwork/historical-leading-es-it/profile",
+      "manifest_sha256": "5203828767c80da2b488a95561a7f99ab1a6a9261262bc7e9d9c327f4bead488",
+      "by_type": {
+        "team": 3
       }
     }
   ]

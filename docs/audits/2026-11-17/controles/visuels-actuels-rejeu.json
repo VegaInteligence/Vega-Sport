@@ -1,69 +1,69 @@
 {
-  "previous_manifest": "7d64edeaee4887e0f81f8ba8900867a1cbd33e45653bb6563fdf2f057b35f769",
-  "previous_records": 1467,
-  "tag": "checked1468",
-  "started": "2026-11-18T04:57:31.979735+00:00",
+  "previous_manifest": "68846d8c8068d703ae91c03046916bcbf3d70996d7c3e269b766a7a5e9845a07",
+  "previous_records": 1484,
+  "tag": "checked1571v2",
+  "started": "2026-11-18T06:05:57.808615+00:00",
   "production_writes": 0,
   "initial_production_pointers": 1611,
-  "records": 1468,
-  "manifest": "a57921d6d30b3a3394b88249cadc740bcff0a7f9f9b54ffdd9a7063690b992db",
-  "archive_sha256": "42e562ef869b73ebd64c6f476743976d4a867ebefcf632f3cebbb46215ea81f4",
+  "records": 1571,
+  "manifest": "72cbc81b5865b5b7c444976b1bc1a1bad9af6d6b4e8fcef24270b523db2be78b",
+  "archive_sha256": "072eee52cc88b4123319777cfe92c1dc8c334b7053514b4cae4d6b9f8d752fed",
   "commands": [
     [
       "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/ci-clean/bin/python",
-      "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/verify_artwork_pack.py",
-      "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/logos-verifies-1468.zip",
+      "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/tracks/7-artwork/refresh-media-nov18/runner/verify_artwork_pack.py",
+      "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/logos-verifies-1571.zip",
       "--manifest-sha256",
-      "a57921d6d30b3a3394b88249cadc740bcff0a7f9f9b54ffdd9a7063690b992db"
+      "72cbc81b5865b5b7c444976b1bc1a1bad9af6d6b4e8fcef24270b523db2be78b"
     ],
     [
       "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/ci-clean/bin/python",
-      "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/root-checks/artwork_snapshot.py",
+      "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/tracks/7-artwork/refresh-media-nov18/runner/root-checks/artwork_snapshot.py",
       "/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-20261117",
-      "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/artwork-expanded-1468",
-      "a57921d6d30b3a3394b88249cadc740bcff0a7f9f9b54ffdd9a7063690b992db",
-      "checked1468direct",
-      "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/root-checks/artwork-checked1468/direct"
+      "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/artwork-expanded-1571",
+      "72cbc81b5865b5b7c444976b1bc1a1bad9af6d6b4e8fcef24270b523db2be78b",
+      "checked1571v2direct",
+      "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/tracks/7-artwork/refresh-media-nov18/runner/root-checks/artwork-checked1571v2/direct"
     ],
     [
       "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/ci-clean/bin/python",
-      "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/root-checks/artwork_snapshot.py",
+      "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/tracks/7-artwork/refresh-media-nov18/runner/root-checks/artwork_snapshot.py",
       "/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-20261117",
-      "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/artwork-expanded-1467",
-      "7d64edeaee4887e0f81f8ba8900867a1cbd33e45653bb6563fdf2f057b35f769",
-      "checked1468incremental",
-      "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/root-checks/artwork-checked1468/incremental"
+      "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/artwork-expanded-1484",
+      "68846d8c8068d703ae91c03046916bcbf3d70996d7c3e269b766a7a5e9845a07",
+      "checked1571v2incremental",
+      "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/tracks/7-artwork/refresh-media-nov18/runner/root-checks/artwork-checked1571v2/incremental"
     ]
   ],
   "modes": {
     "direct": {
-      "linked_before_stage": 3079,
-      "complete_verified_image_hashes": 1468,
+      "linked_before_stage": 3182,
+      "complete_verified_image_hashes": 1571,
       "unchanged_original_pointers": 1611,
       "unexpected_links": 0,
       "clubs_competitions_after": [
-        2839,
+        2942,
         186
       ]
     },
     "incremental": {
-      "linked_before_stage": 3078,
-      "complete_verified_image_hashes": 1468,
+      "linked_before_stage": 3095,
+      "complete_verified_image_hashes": 1571,
       "unchanged_original_pointers": 1611,
       "unexpected_links": 0,
       "clubs_competitions_after": [
-        2839,
+        2942,
         186
       ],
-      "added": 1,
-      "prior_stage_preserved": 1467,
+      "added": 87,
+      "prior_stage_preserved": 1484,
       "repeat": {
-        "already_linked": 1468
+        "already_linked": 1571
       }
     }
   },
   "status": "passed",
-  "ended": "2026-11-18T04:58:45.233665+00:00",
+  "ended": "2026-11-18T06:07:15.860090+00:00",
   "sources_sha256": {
     "verify_artwork_upgrade.py": "5a2fbe662f3adfa10f4a43ead77e1fa675829ce5b77ac8d61680c3c91668d66d",
     "artwork_snapshot.py": "e0b9a094da995068dcd87a141de24a22bb84c3c69a9e25c0b1422ff64f040ad3",

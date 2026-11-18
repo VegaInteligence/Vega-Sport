@@ -34,3 +34,7 @@ AWS sert `8018e0836c` et le site public sert `17ca0f7617`, avec les mêmes fichi
 | Tous les clubs et compétitions ont leur vrai logo | Tous les objets S3 déjà rattachés ont été relus. Les visuels retrouvés possèdent une provenance et une empreinte. Les cas historiques, les doublons d’identité et les identités impossibles sont distingués. Le rapport de livraison donne les nombres validés et leur statut de publication. |
 
 Les [91 critères détaillés](registres/requirements.csv) donnent pour chaque sous-point son état en production et sur la branche au commit indiqué. Les [26 changements de calcul](registres/new-calculations.csv) précisent le producteur et les lecteurs concernés.
+
+## Prévisions datées et données requises
+
+Dans un contrôle sur les fonctions de production, les entrées de l’ancien match et le dernier référentiel de notes sont fixes. Ajouter des observations ultérieures au référentiel des primitives suffit à modifier la note et la variable de composition d’équipe utilisée par la prévision suivante. À 0,6 npxG, les deux valeurs restent à l’intérieur des quantiles. La note passe de 86,1519 à 48,2575 et la variable de composition de 0,104350 à −0,004013. Ce contrôle synthétique établit la dépendance dans le code. Son effet sur les prévisions effectivement émises reste inconnu. Les 41 tests existants de puissance et six de composition passent aussi. [Entrées, bornes et résultats](controles/prevision-composition-temoin.json) · [Commandes et tests](controles/prevision-composition-recu.json)

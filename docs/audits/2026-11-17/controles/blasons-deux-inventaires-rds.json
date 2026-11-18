@@ -1,0 +1,49 @@
+{
+  "initial_count": 12076,
+  "new_count": 12079,
+  "added": [
+    [
+      "team",
+      13539
+    ],
+    [
+      "team",
+      13540
+    ],
+    [
+      "team",
+      13541
+    ]
+  ],
+  "removed": [],
+  "updated": 0,
+  "original_links": 1611,
+  "observed_links": 1611,
+  "all_original_links_unchanged": true,
+  "vicenza": [
+    "team",
+    13539,
+    "Vicenza",
+    "ITA",
+    null,
+    null,
+    null
+  ],
+  "vicenza_key": [
+    [
+      "team",
+      "pitchapi",
+      "t_0oRsTk",
+      13539,
+      true
+    ]
+  ],
+  "snapshot": [
+    "vega_v2",
+    "2026-11-18 06:05:03.881822+00",
+    "4414746:4414746:",
+    "on",
+    "repeatable read"
+  ],
+  "input_sha256": "3dcc53e56db7b019bd7535da781523f2202739d4b2ccd9bcb01f154c57416c5c"
+}

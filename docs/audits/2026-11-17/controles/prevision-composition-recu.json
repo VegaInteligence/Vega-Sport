@@ -1,0 +1,103 @@
+{
+  "started_at_utc": "2026-11-18T05:39:30.597660+00:00",
+  "ended_at_utc": "2026-11-18T05:39:31.096885+00:00",
+  "scope": "Offline documentary reproduction. No application changes, production access, refresh/write/API E2E or new scientific verdict.",
+  "passed": true,
+  "repository": "/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-tracks-20261117/5-players",
+  "environment_overrides": {
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "PYTHONPATH": "/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-tracks-20261117/5-players/backend",
+    "OPENBLAS_NUM_THREADS": "1",
+    "VECLIB_MAXIMUM_THREADS": "1"
+  },
+  "commands": [
+    {
+      "name": "witness",
+      "argv": [
+        "/Library/Frameworks/Python.framework/Versions/3.14/bin/python3",
+        "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/reviews/pinned-astra-science-witness-nov18/witness.py",
+        "/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-tracks-20261117/5-players"
+      ],
+      "cwd": "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/reviews/pinned-astra-science-witness-nov18",
+      "started_at_utc": "2026-11-18T05:39:30.628039+00:00",
+      "ended_at_utc": "2026-11-18T05:39:30.791033+00:00",
+      "exit_code": 0,
+      "stdout_file": "witness.stdout.log",
+      "stderr_file": "witness.stderr.log"
+    },
+    {
+      "name": "test-power",
+      "argv": [
+        "/Library/Frameworks/Python.framework/Versions/3.14/bin/python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "backend/tests",
+        "-p",
+        "test_power.py"
+      ],
+      "cwd": "/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-tracks-20261117/5-players",
+      "started_at_utc": "2026-11-18T05:39:30.791346+00:00",
+      "ended_at_utc": "2026-11-18T05:39:30.993194+00:00",
+      "exit_code": 0,
+      "stdout_file": "test-power.stdout.log",
+      "stderr_file": "test-power.stderr.log",
+      "tests_run": 41,
+      "expected_tests": 41,
+      "passed": true
+    },
+    {
+      "name": "test-lineup",
+      "argv": [
+        "/Library/Frameworks/Python.framework/Versions/3.14/bin/python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "backend/tests",
+        "-p",
+        "test_lineup.py"
+      ],
+      "cwd": "/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-tracks-20261117/5-players",
+      "started_at_utc": "2026-11-18T05:39:30.993352+00:00",
+      "ended_at_utc": "2026-11-18T05:39:31.075157+00:00",
+      "exit_code": 0,
+      "stdout_file": "test-lineup.stdout.log",
+      "stderr_file": "test-lineup.stderr.log",
+      "tests_run": 6,
+      "expected_tests": 6,
+      "passed": true
+    }
+  ],
+  "git_status_before": "",
+  "git_status_after": "",
+  "frozen_packets_unchanged": true,
+  "frozen_packet_sha256": {
+    "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/tracks/5-players/frozen-science-0526/evidence.md": "b82a65571f738349da2989aa756cac8607480852c07fbf2d5ef5bb5573978b0e",
+    "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/tracks/5-players/frozen-science-0526/candidate-evidence.md": "4f0f803f6493f80b32650567d6f3a96080237fbf6e3accbf9a35d882e9d422fc",
+    "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/tracks/5-players/frozen-science-0526/accepted-plan.md": "7a197a953a190134a10475e5e75dfd104d125da6c2756afa2901c77af4ab8381",
+    "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/tracks/5-players/frozen-science-0526/track-results.md": "4e26dc46197949caa67c3eee0bd8bdc51f22e45221ca6f8bb4200d7867a97674",
+    "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/tracks/5-players/frozen-science-0526/review-prompt.md": "41e84ead62530531bbdccac35f6afcb6acfc3ffdd8ee57d7f0d85ae6d876f28b",
+    "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/tracks/5-players/frozen-science-0526/pinned-astra-addendum.md": "e4bdf30efcc9165e76d23351975f1e72603b318fc10ce4c90a0da30e0e6191df",
+    "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/tracks/5-players/frozen-science-0526/receipt.json": "0a597c897e53cef7bb833ef1c04007d5a7eaef3daca7cc7c96c23e53583ab639",
+    "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/tracks/6-teams/frozen-science-0526/evidence.md": "3a15f2aedd8ee86dfdfeb876421c537ff601f79ec065e8d9303fe17251c1d64d",
+    "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/tracks/6-teams/frozen-science-0526/candidate-evidence.md": "bea806b8b52e90a600f9e9b1d37c151ffd0af02538725f7e85123ee2ff3a88d2",
+    "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/tracks/6-teams/frozen-science-0526/accepted-plan.md": "18c520157ca90ca3655eec157527b5fbbc0627f93255018de3904d5208824ed8",
+    "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/tracks/6-teams/frozen-science-0526/track-results.md": "69229b446311a1746ae3bb705693cbb6b15b7f206e6c841af19413e1cc95fa2b",
+    "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/tracks/6-teams/frozen-science-0526/review-prompt.md": "91dc8910d506d149cd516528036e91b34f8f364f16d8f5f042bb13020c84f81f",
+    "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/tracks/6-teams/frozen-science-0526/pinned-astra-addendum.md": "0ef0f514c3cf180a16f016137cb8820e427b8a8b4fa7b1507727bbe8f27899d5",
+    "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/tracks/6-teams/frozen-science-0526/receipt.json": "f4f18d1de1ec0f2b4d4d8c2963c4f1def9c2e01af065d4b38f449a1486a944b2"
+  },
+  "witness_sha256": "b0e1b8598544b532a7eb2d73c981a7e3753f6cf4b0f43674ae266eafe507a090",
+  "runner_sha256": "879f5e4f632903863d4e146a9a8320ae6caf9379ffeca03289374f29574cfe01",
+  "outputs_sha256": {
+    "result.json": "021cbbf57fcfef9e3b6735c08dd6f11856ae151f8c834e7511a82944f178eaf1",
+    "test-lineup.stderr.log": "8924f05e1ae6ee8ff22fafeb9af8e3e3c40c116f802f09710ae7b5214c18dc0c",
+    "test-lineup.stdout.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "test-power.stderr.log": "54825e627bae16d49f6a02a6ac14ba6595310c2c19cecadb325bfa346d184a97",
+    "test-power.stdout.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "witness.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "witness.stdout.log": "021cbbf57fcfef9e3b6735c08dd6f11856ae151f8c834e7511a82944f178eaf1"
+  }
+}

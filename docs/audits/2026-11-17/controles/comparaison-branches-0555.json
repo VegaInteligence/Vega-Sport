@@ -1,0 +1,20 @@
+{
+  "at": "2026-11-18T05:56:39.769591+00:00",
+  "remote_main": "17ca0f76175301e77ae43fe137467222f594b40a",
+  "source_document_sha256": "fdf03a62f1980fc74efe2be98d87119084802c9881a4cef93a4ae7267192baeb",
+  "owner_worktree": "v2-complete",
+  "owner_commit": "2b1ab2ad0249761157419c8268e7ecea3f455a57",
+  "owner_dirty": "",
+  "open_pull_requests": [],
+  "production_vs_remote": [
+    "M\tWORKLOG.md"
+  ],
+  "owner_vs_remote": [
+    "M\tWORKLOG.md",
+    "D\tbackend/sql/133_cohort_max_wait.sql",
+    "M\tbackend/tests/test_models.py",
+    "M\tbackend/vega/models.py",
+    "M\tdocs/calculs/05-joueurs/02-centiles-et-cohortes.md",
+    "M\tdocs/calculs/09-audit-2026-11/FAILURE_MODES.md"
+  ]
+}

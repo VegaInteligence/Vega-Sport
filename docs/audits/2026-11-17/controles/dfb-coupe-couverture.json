@@ -1,0 +1,70 @@
+{
+  "snapshot": [
+    "2026-11-18 05:41:15.047150+00:00",
+    "4413609:4413609:",
+    "vega_v2",
+    "on"
+  ],
+  "worker_commit": "8018e0836ca0f32e8b2eb51fc2847154abff7f13",
+  "source_code_sha256": {
+    "production_cups": "70f731fd1eedb21d6e21655e60abde94e066337d0f627eff7d11086ed94d7d9c",
+    "branch_cups": "93e0188234c632c4de61442a105e06d49346b608255d1ff8ea78785118bc4994",
+    "backend/sources/projections/openligadb.mjs": "c9e73f3307c9936c56d06d9ac0eb6e605a872dc782d822a7578d7528af9ff39d",
+    "dashboard/frontend/src/services/openligadb.js": "5fb016b965b926a6b0ed1158c785a183a4d8415b7b710b9a71d7da4456242b21",
+    "dashboard/frontend/src/services/competition-selector.js": "7b2b4b7c4b7c188c6569c8fcccd76d504aa7f9b8ba4aa78043c8b3e952a601dc"
+  },
+  "editions": {
+    "2025": {
+      "matches": 63,
+      "played": 63,
+      "dfb_half": 63,
+      "provider_half": 62,
+      "confirmed_provider_half": 62,
+      "provider_half_conflicts": 0,
+      "db_half": 0,
+      "playing_final_disagrees": 0,
+      "shootout_count": 8,
+      "rds_shootout_differs": 6,
+      "overtime": 14,
+      "provider_typed90_conflicts_in_overtime": 8,
+      "db_explicit_90_missing_in_overtime": 14
+    },
+    "2026": {
+      "matches": 56,
+      "played": 48,
+      "dfb_half": 48,
+      "provider_half": 48,
+      "confirmed_provider_half": 48,
+      "provider_half_conflicts": 0,
+      "db_half": 0,
+      "playing_final_disagrees": 0,
+      "shootout_count": 5,
+      "rds_shootout_differs": 5,
+      "overtime": 7,
+      "provider_typed90_conflicts_in_overtime": 0,
+      "db_explicit_90_missing_in_overtime": 7
+    }
+  },
+  "provider_sides": 238,
+  "provider_sides_with_image_reference": 238,
+  "provider_sides_with_http_url": 237,
+  "provider_image_schemes": {
+    "https": 233,
+    "http": 4,
+    "data": 1
+  },
+  "provider_teams": 83,
+  "provider_image_hosts": {
+    "upload.wikimedia.org": 170,
+    "assets.dfb.de": 5,
+    "i.imgur.com": 60,
+    "derivates.kicker.de": 2
+  },
+  "provider_teams_with_http_url": 82,
+  "provider_teams_with_http_url_missing_db_crest": 28,
+  "provider_teams_with_db_crest": 54,
+  "sides_with_artwork_in_projection": 0,
+  "official_sheets": 111,
+  "matched_physical_ids": 119,
+  "branch_production_and_RDS_phase_values_agree": true
+}
