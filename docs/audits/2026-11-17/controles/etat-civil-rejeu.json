@@ -1,0 +1,540 @@
+{
+  "input_sha256": "061d29a60c054e92dbd2b7aa32bdc7b317f67c8c47ebf74f3e029287d60fce21",
+  "adapter_sha256": "3b659fc594cb46228c7cd044a896b07dc579e2f6e1751cc2df29c0e73674a002",
+  "observations": {
+    "0": {
+      "adapter": [
+        0,
+        0
+      ],
+      "rows": [
+        [
+          1267,
+          "Hugo Lloris",
+          "1986-12-26",
+          "https://www.transfermarkt.com/hugo-lloris/profil/spieler/17965",
+          "1986-12-26",
+          "https://www.transfermarkt.com/hugo-lloris/profil/spieler/17965"
+        ],
+        [
+          10136,
+          "Sam Surridge",
+          "1998-07-28",
+          "https://www.transfermarkt.com/sam-surridge/profil/spieler/398402",
+          "1998-07-28",
+          "https://www.transfermarkt.com/sam-surridge/profil/spieler/398402"
+        ],
+        [
+          10237,
+          "Miguel Almirón",
+          "1994-02-10",
+          "https://www.transfermarkt.com/miguel-almiron/profil/spieler/272999",
+          "1994-02-10",
+          "https://www.transfermarkt.com/miguel-almiron/profil/spieler/272999"
+        ],
+        [
+          12775,
+          "Davinson Sánchez",
+          "1996-06-12",
+          "https://www.transfermarkt.com/davinson-sanchez/profil/spieler/341429",
+          "1996-06-12",
+          "https://www.transfermarkt.com/davinson-sanchez/profil/spieler/341429"
+        ],
+        [
+          13747,
+          "Hugo Larsson",
+          "2004-06-27",
+          "https://www.transfermarkt.com/hugo-larsson/profil/spieler/931838",
+          "2004-06-27",
+          "https://www.transfermarkt.com/hugo-larsson/profil/spieler/931838"
+        ],
+        [
+          19803,
+          "Tobias Bach",
+          "2003-06-04",
+          "https://www.transfermarkt.com/tobias-bach/profil/spieler/923776",
+          "2003-06-04",
+          "https://www.transfermarkt.com/tobias-bach/profil/spieler/923776"
+        ]
+      ],
+      "stale_citations": 0
+    },
+    "1": {
+      "adapter": [
+        6,
+        0
+      ],
+      "rows": [
+        [
+          1267,
+          "Hugo Lloris",
+          "1986-12-27",
+          "https://www.transfermarkt.com/hugo-lloris/profil/spieler/17965",
+          "1986-12-26",
+          "https://www.transfermarkt.com/hugo-lloris/profil/spieler/17965"
+        ],
+        [
+          10136,
+          "Sam Surridge",
+          "1998-07-29",
+          "https://www.transfermarkt.com/sam-surridge/profil/spieler/398402",
+          "1998-07-28",
+          "https://www.transfermarkt.com/sam-surridge/profil/spieler/398402"
+        ],
+        [
+          10237,
+          "Miguel Almirón",
+          "1994-02-11",
+          "https://www.transfermarkt.com/miguel-almiron/profil/spieler/272999",
+          "1994-02-10",
+          "https://www.transfermarkt.com/miguel-almiron/profil/spieler/272999"
+        ],
+        [
+          12775,
+          "Davinson Sánchez",
+          "1996-06-13",
+          "https://www.transfermarkt.com/davinson-sanchez/profil/spieler/341429",
+          "1996-06-12",
+          "https://www.transfermarkt.com/davinson-sanchez/profil/spieler/341429"
+        ],
+        [
+          13747,
+          "Hugo Larsson",
+          "2004-06-28",
+          "https://www.transfermarkt.com/hugo-larsson/profil/spieler/931838",
+          "2004-06-27",
+          "https://www.transfermarkt.com/hugo-larsson/profil/spieler/931838"
+        ],
+        [
+          19803,
+          "Tobias Bach",
+          "2003-06-05",
+          "https://www.transfermarkt.com/tobias-bach/profil/spieler/923776",
+          "2003-06-04",
+          "https://www.transfermarkt.com/tobias-bach/profil/spieler/923776"
+        ]
+      ],
+      "stale_citations": 6
+    },
+    "2": {
+      "adapter": [
+        0,
+        0
+      ],
+      "rows": [
+        [
+          1267,
+          "Hugo Lloris",
+          "1986-12-27",
+          "https://www.transfermarkt.com/hugo-lloris/profil/spieler/17965",
+          "1986-12-26",
+          "https://www.transfermarkt.com/hugo-lloris/profil/spieler/17965"
+        ],
+        [
+          10136,
+          "Sam Surridge",
+          "1998-07-29",
+          "https://www.transfermarkt.com/sam-surridge/profil/spieler/398402",
+          "1998-07-28",
+          "https://www.transfermarkt.com/sam-surridge/profil/spieler/398402"
+        ],
+        [
+          10237,
+          "Miguel Almirón",
+          "1994-02-11",
+          "https://www.transfermarkt.com/miguel-almiron/profil/spieler/272999",
+          "1994-02-10",
+          "https://www.transfermarkt.com/miguel-almiron/profil/spieler/272999"
+        ],
+        [
+          12775,
+          "Davinson Sánchez",
+          "1996-06-13",
+          "https://www.transfermarkt.com/davinson-sanchez/profil/spieler/341429",
+          "1996-06-12",
+          "https://www.transfermarkt.com/davinson-sanchez/profil/spieler/341429"
+        ],
+        [
+          13747,
+          "Hugo Larsson",
+          "2004-06-28",
+          "https://www.transfermarkt.com/hugo-larsson/profil/spieler/931838",
+          "2004-06-27",
+          "https://www.transfermarkt.com/hugo-larsson/profil/spieler/931838"
+        ],
+        [
+          19803,
+          "Tobias Bach",
+          "2003-06-05",
+          "https://www.transfermarkt.com/tobias-bach/profil/spieler/923776",
+          "2003-06-04",
+          "https://www.transfermarkt.com/tobias-bach/profil/spieler/923776"
+        ]
+      ],
+      "stale_citations": 6
+    }
+  },
+  "provider_calls": [
+    {
+      "step": 0,
+      "club": "Q301431",
+      "controlled_response": [
+        {
+          "p": {
+            "value": "http://www.wikidata.org/entity/Q124519274"
+          },
+          "names": {
+            "value": "Tobias Bach"
+          },
+          "birth": {
+            "value": "2003-06-04T00:00:00Z"
+          },
+          "prec": {
+            "value": "11"
+          }
+        }
+      ]
+    },
+    {
+      "step": 0,
+      "club": "Q495299",
+      "controlled_response": [
+        {
+          "p": {
+            "value": "http://www.wikidata.org/entity/Q20737387"
+          },
+          "names": {
+            "value": "Davinson Sánchez"
+          },
+          "birth": {
+            "value": "1996-06-12T00:00:00Z"
+          },
+          "prec": {
+            "value": "11"
+          }
+        }
+      ]
+    },
+    {
+      "step": 0,
+      "club": "Q38245",
+      "controlled_response": [
+        {
+          "p": {
+            "value": "http://www.wikidata.org/entity/Q111586862"
+          },
+          "names": {
+            "value": "Hugo Larsson"
+          },
+          "birth": {
+            "value": "2004-06-27T00:00:00Z"
+          },
+          "prec": {
+            "value": "11"
+          }
+        }
+      ]
+    },
+    {
+      "step": 0,
+      "club": "Q19490",
+      "controlled_response": [
+        {
+          "p": {
+            "value": "http://www.wikidata.org/entity/Q34982765"
+          },
+          "names": {
+            "value": "Sam Surridge"
+          },
+          "birth": {
+            "value": "1998-07-28T00:00:00Z"
+          },
+          "prec": {
+            "value": "11"
+          }
+        }
+      ]
+    },
+    {
+      "step": 0,
+      "club": "Q18716",
+      "controlled_response": [
+        {
+          "p": {
+            "value": "http://www.wikidata.org/entity/Q16145667"
+          },
+          "names": {
+            "value": "Miguel Almirón"
+          },
+          "birth": {
+            "value": "1994-02-10T00:00:00Z"
+          },
+          "prec": {
+            "value": "11"
+          }
+        }
+      ]
+    },
+    {
+      "step": 0,
+      "club": "Q18741",
+      "controlled_response": [
+        {
+          "p": {
+            "value": "http://www.wikidata.org/entity/Q1907"
+          },
+          "names": {
+            "value": "Hugo Lloris"
+          },
+          "birth": {
+            "value": "1986-12-26T00:00:00Z"
+          },
+          "prec": {
+            "value": "11"
+          }
+        }
+      ]
+    },
+    {
+      "step": 1,
+      "club": "Q301431",
+      "controlled_response": [
+        {
+          "p": {
+            "value": "http://www.wikidata.org/entity/Q124519274"
+          },
+          "names": {
+            "value": "Tobias Bach"
+          },
+          "birth": {
+            "value": "2003-06-05T00:00:00Z"
+          },
+          "prec": {
+            "value": "11"
+          }
+        }
+      ]
+    },
+    {
+      "step": 1,
+      "club": "Q495299",
+      "controlled_response": [
+        {
+          "p": {
+            "value": "http://www.wikidata.org/entity/Q20737387"
+          },
+          "names": {
+            "value": "Davinson Sánchez"
+          },
+          "birth": {
+            "value": "1996-06-13T00:00:00Z"
+          },
+          "prec": {
+            "value": "11"
+          }
+        }
+      ]
+    },
+    {
+      "step": 1,
+      "club": "Q38245",
+      "controlled_response": [
+        {
+          "p": {
+            "value": "http://www.wikidata.org/entity/Q111586862"
+          },
+          "names": {
+            "value": "Hugo Larsson"
+          },
+          "birth": {
+            "value": "2004-06-28T00:00:00Z"
+          },
+          "prec": {
+            "value": "11"
+          }
+        }
+      ]
+    },
+    {
+      "step": 1,
+      "club": "Q19490",
+      "controlled_response": [
+        {
+          "p": {
+            "value": "http://www.wikidata.org/entity/Q34982765"
+          },
+          "names": {
+            "value": "Sam Surridge"
+          },
+          "birth": {
+            "value": "1998-07-29T00:00:00Z"
+          },
+          "prec": {
+            "value": "11"
+          }
+        }
+      ]
+    },
+    {
+      "step": 1,
+      "club": "Q18716",
+      "controlled_response": [
+        {
+          "p": {
+            "value": "http://www.wikidata.org/entity/Q16145667"
+          },
+          "names": {
+            "value": "Miguel Almirón"
+          },
+          "birth": {
+            "value": "1994-02-11T00:00:00Z"
+          },
+          "prec": {
+            "value": "11"
+          }
+        }
+      ]
+    },
+    {
+      "step": 1,
+      "club": "Q18741",
+      "controlled_response": [
+        {
+          "p": {
+            "value": "http://www.wikidata.org/entity/Q1907"
+          },
+          "names": {
+            "value": "Hugo Lloris"
+          },
+          "birth": {
+            "value": "1986-12-27T00:00:00Z"
+          },
+          "prec": {
+            "value": "11"
+          }
+        }
+      ]
+    },
+    {
+      "step": 2,
+      "club": "Q301431",
+      "controlled_response": [
+        {
+          "p": {
+            "value": "http://www.wikidata.org/entity/Q124519274"
+          },
+          "names": {
+            "value": "Tobias Bach"
+          },
+          "birth": {
+            "value": "2003-06-05T00:00:00Z"
+          },
+          "prec": {
+            "value": "11"
+          }
+        }
+      ]
+    },
+    {
+      "step": 2,
+      "club": "Q495299",
+      "controlled_response": [
+        {
+          "p": {
+            "value": "http://www.wikidata.org/entity/Q20737387"
+          },
+          "names": {
+            "value": "Davinson Sánchez"
+          },
+          "birth": {
+            "value": "1996-06-13T00:00:00Z"
+          },
+          "prec": {
+            "value": "11"
+          }
+        }
+      ]
+    },
+    {
+      "step": 2,
+      "club": "Q38245",
+      "controlled_response": [
+        {
+          "p": {
+            "value": "http://www.wikidata.org/entity/Q111586862"
+          },
+          "names": {
+            "value": "Hugo Larsson"
+          },
+          "birth": {
+            "value": "2004-06-28T00:00:00Z"
+          },
+          "prec": {
+            "value": "11"
+          }
+        }
+      ]
+    },
+    {
+      "step": 2,
+      "club": "Q19490",
+      "controlled_response": [
+        {
+          "p": {
+            "value": "http://www.wikidata.org/entity/Q34982765"
+          },
+          "names": {
+            "value": "Sam Surridge"
+          },
+          "birth": {
+            "value": "1998-07-29T00:00:00Z"
+          },
+          "prec": {
+            "value": "11"
+          }
+        }
+      ]
+    },
+    {
+      "step": 2,
+      "club": "Q18716",
+      "controlled_response": [
+        {
+          "p": {
+            "value": "http://www.wikidata.org/entity/Q16145667"
+          },
+          "names": {
+            "value": "Miguel Almirón"
+          },
+          "birth": {
+            "value": "1994-02-11T00:00:00Z"
+          },
+          "prec": {
+            "value": "11"
+          }
+        }
+      ]
+    },
+    {
+      "step": 2,
+      "club": "Q18741",
+      "controlled_response": [
+        {
+          "p": {
+            "value": "http://www.wikidata.org/entity/Q1907"
+          },
+          "names": {
+            "value": "Hugo Lloris"
+          },
+          "birth": {
+            "value": "1986-12-27T00:00:00Z"
+          },
+          "prec": {
+            "value": "11"
+          }
+        }
+      ]
+    }
+  ],
+  "postgres": "PostgreSQL 18.6 (Debian 18.6-1.pgdg12+2) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 12.2.0-14+deb12u1) 12.2.0, 64-bit"
+}

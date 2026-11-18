@@ -1,0 +1,137 @@
+{
+  "pitch_profiles_http200": 29,
+  "pitch_profiles_with_birth_date": 0,
+  "public_profiles": 6,
+  "official_date_fields_present": 3,
+  "linked_athletes_with_empty_canonical_birth_but_staged_date": 17377,
+  "production_disagrees_with_explicit_cited_source": 0,
+  "stage_shadow_test_citation_disagreements": [
+    0,
+    6,
+    6
+  ],
+  "age_changed": {
+    "Malick Diouf": {
+      "matches": 0,
+      "minutes": 0
+    },
+    "Nathan Saliba": {
+      "matches": 74,
+      "minutes": 4830
+    },
+    "Serge Gnabry": {
+      "matches": 181,
+      "minutes": 9554
+    }
+  },
+  "breakout_same_current_inputs": {
+    "passed_nondob_gates": 855,
+    "baseline_young": 113,
+    "published": 126,
+    "baseline_unpublished": 0,
+    "published_not_reconstructed": 13,
+    "shared_age_young": 276,
+    "additional_young": 163,
+    "additional_known_older": 179,
+    "unknown_from_both": 298
+  },
+  "breakout_additional_distinct_people": 152,
+  "breakout_new_link_rules": {
+    "club_season_name": 163
+  },
+  "published_outside_current_gates": {
+    "past_regular": 13
+  },
+  "wikidata_birth_changes": {
+    "Q59490": [
+      [
+        "2026-09-15T23:08:20Z",
+        [
+          "+1995-07-14T00:00:00Z"
+        ]
+      ],
+      [
+        "2026-10-21T02:02:01Z",
+        [
+          "+1990-07-14T00:00:00Z"
+        ]
+      ],
+      [
+        "2026-11-15T00:57:37Z",
+        [
+          "+1995-07-14T00:00:00Z"
+        ]
+      ]
+    ],
+    "Q116908746": [
+      [
+        "2026-08-26T00:20:35Z",
+        [
+          "+2004-08-29T00:00:00Z"
+        ]
+      ]
+    ],
+    "Q123479947": [
+      [
+        "2026-09-26T17:49:29Z",
+        [
+          "+2004-12-28T00:00:00Z"
+        ]
+      ]
+    ]
+  },
+  "public_prior_regular": {
+    "public_player_seasons": 13,
+    "previous_regular_player_seasons": 18,
+    "previous_runs_finished_later": 18,
+    "public_years": {
+      "2022": 5,
+      "2023": 2,
+      "2024": 6
+    }
+  },
+  "official_review": {
+    "conflit_DOB": {
+      "observed_numeric_grades": 9,
+      "player_matches": 12,
+      "players": 3,
+      "year_player_pairs": 3
+    },
+    "conflit_DOB_entre_clubs": {
+      "observed_numeric_grades": 3,
+      "player_matches": 3,
+      "players": 1,
+      "year_player_pairs": 1
+    },
+    "nom_natif_atteste": {
+      "observed_numeric_grades": 41,
+      "player_matches": 58,
+      "players": 16,
+      "year_player_pairs": 17
+    },
+    "variante_a_confirmer": {
+      "observed_numeric_grades": 16,
+      "player_matches": 29,
+      "players": 9,
+      "year_player_pairs": 9
+    }
+  },
+  "identity_by_grade": {
+    "first_pass": {
+      "rows": 8453,
+      "graded": 5214
+    },
+    "official_context": {
+      "rows": 58,
+      "graded": 41
+    },
+    "cross_provider_id_conflicting_birth": {
+      "rows": 3,
+      "graded": 3
+    },
+    "still_uncertain": {
+      "rows": 41,
+      "graded": 25
+    }
+  }
+}
