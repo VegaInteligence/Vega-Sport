@@ -1,5 +1,6 @@
 import { normalizeText } from "../model.js";
 import { parisDay, validDay } from "./fixtures.js";
+import { knockoutStage } from "./knockout-bracket.js";
 
 function scoreNumber(value) {
   if (Number.isInteger(value) && value >= 0) return value;
@@ -165,7 +166,56 @@ export function groupTables(matches, { win = 3 } = {}) {
   }
   return [...groups.entries()]
     .sort((a, b) => (a[0] === "Poule finale") - (b[0] === "Poule finale") || a[0].localeCompare(b[0], "fr", { numeric: true }))
-    .map(([name, rows]) => ({ name, rows: leagueTable(rows, { win }) }));
+    .map(([name, rows]) => {
+      const days = rows.map((match) => match.date).filter(Boolean).sort();
+      return { name, rows: leagueTable(rows, { win }), from: days[0] || "", to: days.at(-1) || "" };
+    });
+}
+
+const sameTeam = (a, b) => normalizeText(a).trim() === normalizeText(b).trim();
+
+/**
+ * The groups a bracket starts from (`sides`: bracketSides), when its first round is played between group winners
+ * alone: 1930's semi-finals, the second round of 1974 and 1978 (its winners in the final) and of 1982 (in the
+ * semi-finals). Per side, the table of the group each team of the first round won, in the ties' team order; a team
+ * that won two groups comes from the later. « Second tour » when other groups were played before these, « Groupes »
+ * otherwise. Null when a team of the first round is not the winner of a group of its own that ended before the round
+ * (a round of 16 also holds runners-up; a cup has no group): the bracket then starts at that round.
+ */
+export function bracketGroups(sides, matches, options) {
+  if (!sides?.final) return null;
+  const first = sides.rounds[0];
+  const ties = first
+    ? { left: first.left, right: first.right }
+    : { left: [{ home: sides.final.home, date: sides.final.date }], right: [{ home: sides.final.away, date: sides.final.date }] };
+  const opening = [...ties.left, ...ties.right].map((match) => match.date).filter(Boolean).sort()[0];
+  if (!opening) return null;
+  const tables = groupTables(matches, options).filter((table) => table.to && table.to < opening);
+  const used = new Set();
+  const won = (team) => {
+    const table = tables.filter((t) => t.rows[0] && sameTeam(t.rows[0].name, team)).sort((a, b) => b.to.localeCompare(a.to))[0];
+    if (!table || used.has(table.name)) return null;
+    used.add(table.name);
+    return table;
+  };
+  const side = (list) => list.flatMap((match) => [match.home, match.away].filter(Boolean).map(won));
+  const left = side(ties.left), right = side(ties.right);
+  if (!left.length || !right.length || [...left, ...right].includes(null)) return null;
+  const start = [...left, ...right].map((table) => table.from).sort()[0];
+  return { label: tables.some((table) => !used.has(table.name) && table.to < start) ? "Second tour" : "Groupes", left, right };
+}
+
+/**
+ * The group that ends an edition without a final (1950's « Poule finale »): its table, and its leader as champion when
+ * it leads on points alone. Null when the edition has a knockout match, or no such group.
+ */
+export function finalGroup(matches, options) {
+  const rows = matches || [];
+  if (rows.some((match) => knockoutStage(match.roundName))) return null;
+  const table = groupTables(rows, options).find((t) => t.name === "Poule finale");
+  if (!table) return null;
+  const [first, second] = table.rows;
+  return { table, champion: first && (!second || first.points > second.points) ? first.name : null };
 }
 
 /** Keep past unscored matches out of the upcoming list. */
