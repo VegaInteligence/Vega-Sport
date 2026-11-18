@@ -1,0 +1,9 @@
+{
+  "git": "8018e0836ca0f32e8b2eb51fc2847154abff7f13",
+  "files": {
+    "backend/vega/power.py": "75d3b2a829b585d8dbadb60d1fb2a6b4233e7f74d220a0f76bab0ebb6fdb93ff",
+    "backend/vega/store.py": "497c7c602b9c84146a8ec201839b50dc07e42146887f6324a51526e3d26d70d0",
+    "backend/sql/032_power_rankings.sql": "a3f00c5719e162ffd0810434994c5c3c7a14cc7521c4ee573c60a6f853a20e52"
+  },
+  "reader_sha256": "ec8dd276bd174ad0ca943a46c87db1ef958ca76c87705dab80377875370429a3"
+}

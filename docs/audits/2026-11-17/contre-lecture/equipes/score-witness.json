@@ -1,0 +1,210 @@
+{
+  "node": "v26.4.0",
+  "mode": "real module + injected deterministic read function; no database and no network",
+  "checks": 17,
+  "examples": [
+    {
+      "elo": 1500,
+      "reference": 1500,
+      "expected": 50,
+      "actual": 50
+    },
+    {
+      "elo": 1700,
+      "reference": 1500,
+      "expected": 76,
+      "actual": 76
+    },
+    {
+      "elo": 1900,
+      "reference": 1500,
+      "expected": 90.9,
+      "actual": 90.9
+    },
+    {
+      "elo": 1500,
+      "reference": 1700,
+      "expected": 24,
+      "actual": 24
+    },
+    {
+      "elo": null,
+      "reference": 1500,
+      "expected": null,
+      "actual": null
+    },
+    {
+      "elo": 1500,
+      "reference": null,
+      "expected": null,
+      "actual": null
+    }
+  ],
+  "clubs1500": {
+    "season": "2024/2025",
+    "kind": "clubs",
+    "method": {
+      "version": "power-ranking-v8",
+      "computedAt": "2026-11-18T00:00:00Z"
+    },
+    "reference": 1500,
+    "rows": [
+      {
+        "rank": 1,
+        "teamId": "t_v0000001",
+        "name": "Controlled fixture",
+        "imageUrl": null,
+        "country": null,
+        "score": 50,
+        "elo": 1500,
+        "eloChange": 20,
+        "matches": 30,
+        "lastMatchAt": "2025-06-01T00:00:00Z",
+        "eloStart": null,
+        "eloPeak": null,
+        "eloLow": null,
+        "wins": null,
+        "draws": null,
+        "losses": null,
+        "results": null,
+        "expectedResults": null
+      }
+    ]
+  },
+  "clubs1700": {
+    "season": "2024/2025",
+    "kind": "clubs",
+    "method": {
+      "version": "power-ranking-v8",
+      "computedAt": "2026-11-18T00:00:00Z"
+    },
+    "reference": 1700,
+    "rows": [
+      {
+        "rank": 1,
+        "teamId": "t_v0000001",
+        "name": "Controlled fixture",
+        "imageUrl": null,
+        "country": null,
+        "score": 24,
+        "elo": 1500,
+        "eloChange": 20,
+        "matches": 30,
+        "lastMatchAt": "2025-06-01T00:00:00Z",
+        "eloStart": null,
+        "eloPeak": null,
+        "eloLow": null,
+        "wins": null,
+        "draws": null,
+        "losses": null,
+        "results": null,
+        "expectedResults": null
+      }
+    ]
+  },
+  "nations": {
+    "season": "2024/2025",
+    "kind": "nations",
+    "method": {
+      "version": "power-ranking-v8",
+      "computedAt": "2026-11-18T00:00:00Z"
+    },
+    "rows": [
+      {
+        "rank": 1,
+        "teamId": "t_v0000001",
+        "name": "Controlled fixture",
+        "imageUrl": null,
+        "country": null,
+        "elo": 1500,
+        "eloChange": 20,
+        "matches": 30,
+        "lastMatchAt": "2025-06-01T00:00:00Z",
+        "eloStart": null,
+        "eloPeak": null,
+        "eloLow": null,
+        "wins": null,
+        "draws": null,
+        "losses": null,
+        "results": null,
+        "expectedResults": null
+      }
+    ]
+  },
+  "profile": {
+    "t_v0000001": {
+      "rank": 1,
+      "score": 50,
+      "elo": 1500,
+      "eloChange": 20,
+      "matches": 30,
+      "eloStart": null,
+      "eloPeak": null,
+      "eloLow": null,
+      "wins": null,
+      "draws": null,
+      "losses": null,
+      "results": null,
+      "expectedResults": null
+    }
+  },
+  "calls": [
+    {
+      "sql": "SELECT * FROM api.power_clubs WHERE season_id=(SELECT k.season_id FROM api.season_keys k WHERE k.season=$1) AND scope=$2 ORDER BY rank, team_id LIMIT $3",
+      "args": [
+        "2024/2025",
+        "clubs",
+        30
+      ],
+      "reference": 1500
+    },
+    {
+      "sql": "SELECT coalesce(\n    (SELECT avg(level) FROM api.league_levels WHERE universe = 'men' AND linked AND coalesce(tier, 1) = 1),\n    (SELECT avg(level) FROM api.league_levels WHERE universe = 'men'))::float8 AS level",
+      "args": null,
+      "reference": 1500
+    },
+    {
+      "sql": "SELECT * FROM api.power_clubs WHERE season_id=(SELECT k.season_id FROM api.season_keys k WHERE k.season=$1) AND scope=$2 ORDER BY rank, team_id LIMIT $3",
+      "args": [
+        "2024/2025",
+        "clubs",
+        30
+      ],
+      "reference": 1700
+    },
+    {
+      "sql": "SELECT coalesce(\n    (SELECT avg(level) FROM api.league_levels WHERE universe = 'men' AND linked AND coalesce(tier, 1) = 1),\n    (SELECT avg(level) FROM api.league_levels WHERE universe = 'men'))::float8 AS level",
+      "args": null,
+      "reference": 1700
+    },
+    {
+      "sql": "SELECT * FROM api.power_clubs WHERE season_id=(SELECT k.season_id FROM api.season_keys k WHERE k.season=$1) AND scope=$2 ORDER BY rank, team_id LIMIT $3",
+      "args": [
+        "2024/2025",
+        "nations",
+        30
+      ],
+      "reference": 1500
+    },
+    {
+      "sql": "SELECT coalesce(\n    (SELECT avg(level) FROM api.league_levels WHERE universe = 'men' AND linked AND coalesce(tier, 1) = 1),\n    (SELECT avg(level) FROM api.league_levels WHERE universe = 'men'))::float8 AS level",
+      "args": null,
+      "reference": 1500
+    },
+    {
+      "sql": "SELECT * FROM api.power_clubs WHERE season_id=(SELECT k.season_id FROM api.season_keys k WHERE k.season=$1) AND scope='clubs' AND team_key=ANY(ARRAY(SELECT api.internal_id('team',k) FROM unnest($2::text[]) k))",
+      "args": [
+        "2024/2025",
+        [
+          "t_v0000001"
+        ]
+      ],
+      "reference": 1500
+    },
+    {
+      "sql": "SELECT coalesce(\n    (SELECT avg(level) FROM api.league_levels WHERE universe = 'men' AND linked AND coalesce(tier, 1) = 1),\n    (SELECT avg(level) FROM api.league_levels WHERE universe = 'men'))::float8 AS level",
+      "args": null,
+      "reference": 1500
+    }
+  ]
+}

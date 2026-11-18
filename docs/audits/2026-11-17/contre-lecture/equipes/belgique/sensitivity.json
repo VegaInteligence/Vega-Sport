@@ -1,0 +1,63 @@
+{
+  "run": 2097,
+  "published_at": "2026-11-18 01:49:24.867474+00:00",
+  "official_match": "7631244",
+  "official_type": "forfeitByOneTeam",
+  "match": [
+    13507,
+    2026,
+    "2026-09-18 00:00:00+00:00",
+    3664,
+    3657,
+    0,
+    5,
+    false,
+    "2026-09-18",
+    128,
+    358,
+    1.0
+  ],
+  "published_sides": [
+    [
+      13507,
+      3657,
+      2026,
+      1200.16455078125,
+      1212.4722900390625,
+      0.38461223244667053,
+      1.0,
+      1.0,
+      2097,
+      "2026-09-18 00:00:00+00:00"
+    ],
+    [
+      13507,
+      3664,
+      2026,
+      1221.8148193359375,
+      1209.507080078125,
+      0.6153877377510071,
+      0.0,
+      1.0,
+      2097,
+      "2026-09-18 00:00:00+00:00"
+    ]
+  ],
+  "full_sides_within_one_ulp": 163846,
+  "fixed_entry_levels": true,
+  "skipped_matches": 1,
+  "later_sides_with_different_f32_after": 32,
+  "distinct_later_matches": 16,
+  "distinct_later_teams": 9,
+  "maximum_later_absolute_points": 11.973395015428878,
+  "editions_of_later_sides": [
+    358
+  ],
+  "latest_changed_after": "2026-11-13",
+  "input_sha256": {
+    "tracks/7-artwork/belgium-u21-followup/sources/official/match-forfait/01-GetMatchDetail.json": "a90cfd5823a0e8b4dcdbef14eea124022b69f583d2a16e41a32b63a162209573",
+    "tracks/6-teams/published-nov18/snapshot/inputs.json.zlib": "9cc510d9a53a7ee0baa18f83603342460eb0a6e8f07435edea78bbc5601eb834",
+    "tracks/6-teams/published-nov18/refit/side-values.csv.gz": "5a3b1f180a1d4d3c4769c107b127b1e817395f1efe354e1d31e5f4aa730c1dd4"
+  },
+  "module_sha256": "75d3b2a829b585d8dbadb60d1fb2a6b4233e7f74d220a0f76bab0ebb6fdb93ff"
+}

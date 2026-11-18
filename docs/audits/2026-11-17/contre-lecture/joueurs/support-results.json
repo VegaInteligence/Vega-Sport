@@ -1,0 +1,150 @@
+{
+  "snapshot": [
+    "vega_v2",
+    "2026-11-18 07:12:11.328022+00",
+    "4418106:4418106:",
+    "on"
+  ],
+  "source_sha256": "b8433f5be50d0819df4803cad740875145b7bd986c9a717d3137739713835806",
+  "counts": {
+    "graded": 2282580,
+    "missing_or_wrong_power": 0,
+    "no_stopping": 104716,
+    "no_stats_row": 0,
+    "unmeasured_touches": 0,
+    "partial": 104792,
+    "keepers": 157066,
+    "keeper_blocks_1": 52665,
+    "keeper_blocks_3": 52051,
+    "keeper_blocks_4": 52350,
+    "outfield_partial": 76
+  },
+  "ungraded_by_award": {
+    "2020": {
+      "assignable_direct": 14411,
+      "assignable_history": 7,
+      "no_published_award": 0,
+      "pending": 14427,
+      "stats_newer_than_run": 14427,
+      "unknown_role": 9
+    },
+    "2021": {
+      "assignable_direct": 0,
+      "assignable_history": 0,
+      "no_published_award": 0,
+      "pending": 68,
+      "stats_newer_than_run": 0,
+      "unknown_role": 68
+    },
+    "2022": {
+      "assignable_direct": 0,
+      "assignable_history": 0,
+      "no_published_award": 0,
+      "pending": 135,
+      "stats_newer_than_run": 0,
+      "unknown_role": 135
+    },
+    "2023": {
+      "assignable_direct": 0,
+      "assignable_history": 0,
+      "no_published_award": 0,
+      "pending": 214,
+      "stats_newer_than_run": 0,
+      "unknown_role": 214
+    },
+    "2024": {
+      "assignable_direct": 0,
+      "assignable_history": 0,
+      "no_published_award": 0,
+      "pending": 94,
+      "stats_newer_than_run": 0,
+      "unknown_role": 94
+    },
+    "2025": {
+      "assignable_direct": 0,
+      "assignable_history": 0,
+      "no_published_award": 0,
+      "pending": 75,
+      "stats_newer_than_run": 0,
+      "unknown_role": 75
+    },
+    "2026": {
+      "assignable_direct": 0,
+      "assignable_history": 0,
+      "no_published_award": 0,
+      "pending": 20,
+      "stats_newer_than_run": 0,
+      "unknown_role": 20
+    }
+  },
+  "runs": {
+    "columns": [
+      "id",
+      "season_id",
+      "method_version",
+      "status",
+      "started_at",
+      "finished_at",
+      "matches",
+      "players"
+    ],
+    "rows": [
+      [
+        1886,
+        2020,
+        "power-ranking-v8",
+        "published",
+        "2026-11-15 19:47:38.650998+00",
+        "2026-11-15 19:47:38.782346+00",
+        0,
+        0
+      ],
+      [
+        2095,
+        2026,
+        "power-ranking-v8",
+        "published",
+        "2026-11-18 01:04:51.398291+00",
+        "2026-11-18 01:07:35.139134+00",
+        229455,
+        29710
+      ],
+      [
+        2096,
+        2025,
+        "power-ranking-v8",
+        "published",
+        "2026-11-18 01:07:37.063008+00",
+        "2026-11-18 01:15:32.551924+00",
+        652902,
+        37482
+      ],
+      [
+        2098,
+        2021,
+        "power-ranking-v8",
+        "published",
+        "2026-11-18 01:49:24.929991+00",
+        "2026-11-18 01:51:42.489635+00",
+        202911,
+        12271
+      ]
+    ]
+  },
+  "earliest": {
+    "columns": [
+      "stats_in_partition_2020",
+      "intermediate_award2020",
+      "grades_award2020",
+      "year_rank_2020"
+    ],
+    "rows": [
+      [
+        0,
+        0,
+        0,
+        0
+      ]
+    ]
+  }
+}

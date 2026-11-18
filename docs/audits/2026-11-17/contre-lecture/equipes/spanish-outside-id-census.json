@@ -1,0 +1,87 @@
+[
+  {
+    "official_fixture": "235744",
+    "first_id": 5227,
+    "second_id": 5230,
+    "first_team_ids": [
+      2685,
+      2686
+    ],
+    "second_team_ids": [
+      2691,
+      2692
+    ],
+    "first_day": "2026-09-27",
+    "second_day": "2026-09-27",
+    "exact_unordered_pair_equal": false,
+    "all_four_sides_stored": true
+  },
+  {
+    "official_fixture": "235996",
+    "first_id": 5241,
+    "second_id": 5243,
+    "first_team_ids": [
+      2686,
+      2685
+    ],
+    "second_team_ids": [
+      2692,
+      2691
+    ],
+    "first_day": "2026-10-11",
+    "second_day": "2026-10-11",
+    "exact_unordered_pair_equal": false,
+    "all_four_sides_stored": true
+  },
+  {
+    "official_fixture": "253571",
+    "first_id": 5244,
+    "second_id": 5258,
+    "first_team_ids": [
+      2697,
+      1000
+    ],
+    "second_team_ids": [
+      2724,
+      1000
+    ],
+    "first_day": "2026-10-27",
+    "second_day": "2026-10-27",
+    "exact_unordered_pair_equal": false,
+    "all_four_sides_stored": true
+  },
+  {
+    "official_fixture": "253522",
+    "first_id": 5263,
+    "second_id": 5283,
+    "first_team_ids": [
+      2731,
+      4705
+    ],
+    "second_team_ids": [
+      2687,
+      2765
+    ],
+    "first_day": "2026-10-29",
+    "second_day": "2026-10-29",
+    "exact_unordered_pair_equal": false,
+    "all_four_sides_stored": true
+  },
+  {
+    "official_fixture": "253542",
+    "first_id": 5264,
+    "second_id": 5266,
+    "first_team_ids": [
+      2733,
+      5392
+    ],
+    "second_team_ids": [
+      2737,
+      5392
+    ],
+    "first_day": "2026-10-29",
+    "second_day": "2026-10-29",
+    "exact_unordered_pair_equal": false,
+    "all_four_sides_stored": true
+  }
+]

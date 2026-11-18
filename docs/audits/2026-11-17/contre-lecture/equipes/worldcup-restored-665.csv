@@ -1,0 +1,666 @@
+match_id,public_match,edition,season_id,year,day,home_id,home,away_id,away,native_status,native_home_score,native_away_score,branch_status,branch_home_score,branch_away_score,branch_is_neutral,fifa_id,fifa_reversed_orientation,provider_key,projected_score_shape,upstream_score_shape,technical_id_admitted_2097
+1395,m_v0001395,292,2022,2022,2022-11-22,6568,Denmark,5502,Tunisia,not_started,,,finished,0,0,,400235466,False,world-cup-history:2022:2022-11-22|Denmark|Tunisia|,dict,list,False
+1390,m_v0001390,292,2022,2022,2022-11-22,5465,Mexico,6566,Poland,not_started,,,finished,0,0,,400235463,False,world-cup-history:2022:2022-11-22|Mexico|Poland|,dict,list,False
+1407,m_v0001407,292,2022,2022,2022-11-23,5497,Morocco,5482,Croatia,not_started,,,finished,0,0,,400235481,False,world-cup-history:2022:2022-11-23|Morocco|Croatia|,dict,list,False
+1419,m_v0001419,292,2022,2022,2022-11-24,5498,Uruguay,5469,South Korea,not_started,,,finished,0,0,,400235491,False,world-cup-history:2022:2022-11-24|Uruguay|South Korea|,dict,list,False
+1386,m_v0001386,292,2022,2022,2022-11-25,5504,England,5484,USA,not_started,,,finished,0,0,,400235457,False,world-cup-history:2022:2022-11-25|England|USA|,dict,list,False
+1411,m_v0001411,292,2022,2022,2022-12-01,5482,Croatia,5512,Belgium,not_started,,,finished,0,0,,400235478,False,world-cup-history:2022:2022-12-01|Croatia|Belgium|,dict,list,False
+1423,m_v0001423,292,2022,2022,2022-12-02,5478,Ghana,5498,Uruguay,not_started,,,finished,0,2,,400235494,False,world-cup-history:2022:2022-12-02|Ghana|Uruguay|,dict,list,False
+1261,m_v0001261,290,2013,2014,2014-06-14,5491,Colombia,1156,Greece,not_started,,,finished,3,0,,300186471,False,world-cup-history:2014:2014-06-14|Colombia|Greece|,dict,list,False
+1267,m_v0001267,290,2013,2014,2014-06-14,5498,Uruguay,6567,Costa Rica,not_started,,,finished,1,3,,300186489,False,world-cup-history:2014:2014-06-14|Uruguay|Costa Rica|,dict,list,False
+1268,m_v0001268,290,2013,2014,2014-06-14,5504,England,1032,Italy,not_started,,,finished,1,2,,300186513,False,world-cup-history:2014:2014-06-14|England|Italy|,dict,list,False
+1262,m_v0001262,290,2013,2014,2014-06-14,5510,Côte d'Ivoire,5475,Japan,not_started,,,finished,2,1,,300186507,False,world-cup-history:2014:2014-06-14|Côte d'Ivoire|Japan|,dict,list,False
+1273,m_v0001273,290,2013,2014,2014-06-15,5479,Switzerland,5493,Ecuador,not_started,,,finished,2,1,,300186494,False,world-cup-history:2014:2014-06-15|Switzerland|Ecuador|,dict,list,False
+1274,m_v0001274,290,2013,2014,2014-06-15,5490,France,1149,Honduras,not_started,,,finished,3,0,,300186496,False,world-cup-history:2014:2014-06-15|France|Honduras|,dict,list,False
+1279,m_v0001279,290,2013,2014,2014-06-15,5467,Argentina,5466,Bosnia-Herzegovina,not_started,,,finished,2,1,,300186477,False,world-cup-history:2014:2014-06-15|Argentina|Bosnia-Herzegovina|,dict,list,False
+1285,m_v0001285,290,2013,2014,2014-06-16,5508,Germany,5511,Portugal,not_started,,,finished,4,0,,300186475,False,world-cup-history:2014:2014-06-16|Germany|Portugal|,dict,list,False
+1280,m_v0001280,290,2013,2014,2014-06-16,5494,Iran,1157,Nigeria,not_started,,,finished,0,0,,300186505,False,world-cup-history:2014:2014-06-16|Iran|Nigeria|,dict,list,False
+1286,m_v0001286,290,2013,2014,2014-06-16,5478,Ghana,5484,USA,not_started,,,finished,1,2,,300186512,False,world-cup-history:2014:2014-06-16|Ghana|USA|,dict,list,False
+1291,m_v0001291,290,2013,2014,2014-06-17,5512,Belgium,5487,Algeria,not_started,,,finished,2,1,,300186479,False,world-cup-history:2014:2014-06-17|Belgium|Algeria|,dict,list,False
+1251,m_v0001251,290,2013,2014,2014-06-17,5496,Brazil,5465,Mexico,not_started,,,finished,0,0,,300186509,False,world-cup-history:2014:2014-06-17|Brazil|Mexico|,dict,list,False
+1292,m_v0001292,290,2013,2014,2014-06-17,1038,Russia,5469,South Korea,not_started,,,finished,1,1,,300186499,False,world-cup-history:2014:2014-06-17|Russia|South Korea|,dict,list,False
+1257,m_v0001257,290,2013,2014,2014-06-18,5483,Australia,5480,Netherlands,not_started,,,finished,2,3,,300186478,False,world-cup-history:2014:2014-06-18|Australia|Netherlands|,dict,list,False
+1258,m_v0001258,290,2013,2014,2014-06-18,5506,Spain,1116,Chile,not_started,,,finished,0,2,,300186498,False,world-cup-history:2014:2014-06-18|Spain|Chile|,dict,list,False
+1252,m_v0001252,290,2013,2014,2014-06-18,6564,Cameroon,5482,Croatia,not_started,,,finished,0,4,,300186453,False,world-cup-history:2014:2014-06-18|Cameroon|Croatia|,dict,list,False
+1263,m_v0001263,290,2013,2014,2014-06-19,5491,Colombia,5510,Côte d'Ivoire,not_started,,,finished,2,1,,300186468,False,world-cup-history:2014:2014-06-19|Colombia|Côte d'Ivoire|,dict,list,False
+1269,m_v0001269,290,2013,2014,2014-06-19,5498,Uruguay,5504,England,not_started,,,finished,2,1,,300186486,False,world-cup-history:2014:2014-06-19|Uruguay|England|,dict,list,False
+1264,m_v0001264,290,2013,2014,2014-06-19,5475,Japan,1156,Greece,not_started,,,finished,0,0,,300186454,False,world-cup-history:2014:2014-06-19|Japan|Greece|,dict,list,False
+1270,m_v0001270,290,2013,2014,2014-06-20,1032,Italy,6567,Costa Rica,not_started,,,finished,0,1,,300186500,False,world-cup-history:2014:2014-06-20|Italy|Costa Rica|,dict,list,False
+1275,m_v0001275,290,2013,2014,2014-06-20,5479,Switzerland,5490,France,not_started,,,finished,2,5,,300186514,False,world-cup-history:2014:2014-06-20|Switzerland|France|,dict,list,False
+1276,m_v0001276,290,2013,2014,2014-06-20,1149,Honduras,5493,Ecuador,not_started,,,finished,1,2,,300186463,False,world-cup-history:2014:2014-06-20|Honduras|Ecuador|,dict,list,False
+1281,m_v0001281,290,2013,2014,2014-06-21,5467,Argentina,5494,Iran,not_started,,,finished,1,0,,300186466,False,world-cup-history:2014:2014-06-21|Argentina|Iran|,dict,list,False
+1287,m_v0001287,290,2013,2014,2014-06-21,5508,Germany,5478,Ghana,not_started,,,finished,2,2,,300186493,False,world-cup-history:2014:2014-06-21|Germany|Ghana|,dict,list,False
+1282,m_v0001282,290,2013,2014,2014-06-21,1157,Nigeria,5466,Bosnia-Herzegovina,not_started,,,finished,1,0,,300186511,False,world-cup-history:2014:2014-06-21|Nigeria|Bosnia-Herzegovina|,dict,list,False
+1293,m_v0001293,290,2013,2014,2014-06-22,5512,Belgium,1038,Russia,not_started,,,finished,1,0,,300186481,False,world-cup-history:2014:2014-06-22|Belgium|Russia|,dict,list,False
+1294,m_v0001294,290,2013,2014,2014-06-22,5469,South Korea,5487,Algeria,not_started,,,finished,2,4,,300186495,False,world-cup-history:2014:2014-06-22|South Korea|Algeria|,dict,list,False
+1288,m_v0001288,290,2013,2014,2014-06-22,5484,USA,5511,Portugal,not_started,,,finished,2,2,,300186483,False,world-cup-history:2014:2014-06-22|USA|Portugal|,dict,list,False
+1260,m_v0001260,290,2013,2014,2014-06-23,5480,Netherlands,1116,Chile,not_started,,,finished,2,0,,300186470,False,world-cup-history:2014:2014-06-23|Netherlands|Chile|,dict,list,False
+1259,m_v0001259,290,2013,2014,2014-06-23,5483,Australia,5506,Spain,not_started,,,finished,0,3,,300186467,False,world-cup-history:2014:2014-06-23|Australia|Spain|,dict,list,False
+1254,m_v0001254,290,2013,2014,2014-06-23,5482,Croatia,5465,Mexico,not_started,,,finished,1,3,,300186452,False,world-cup-history:2014:2014-06-23|Croatia|Mexico|,dict,list,False
+1253,m_v0001253,290,2013,2014,2014-06-23,6564,Cameroon,5496,Brazil,not_started,,,finished,1,4,,300186472,False,world-cup-history:2014:2014-06-23|Cameroon|Brazil|,dict,list,False
+1272,m_v0001272,290,2013,2014,2014-06-24,6567,Costa Rica,5504,England,not_started,,,finished,0,0,,300186484,False,world-cup-history:2014:2014-06-24|Costa Rica|England|,dict,list,False
+1271,m_v0001271,290,2013,2014,2014-06-24,1032,Italy,5498,Uruguay,not_started,,,finished,0,1,,300186465,False,world-cup-history:2014:2014-06-24|Italy|Uruguay|,dict,list,False
+1265,m_v0001265,290,2013,2014,2014-06-24,5475,Japan,5491,Colombia,not_started,,,finished,1,4,,300186457,False,world-cup-history:2014:2014-06-24|Japan|Colombia|,dict,list,False
+1266,m_v0001266,290,2013,2014,2014-06-24,1156,Greece,5510,Côte d'Ivoire,not_started,,,finished,2,1,,300186455,False,world-cup-history:2014:2014-06-24|Greece|Côte d'Ivoire|,dict,list,False
+1283,m_v0001283,290,2013,2014,2014-06-25,1157,Nigeria,5467,Argentina,not_started,,,finished,2,3,,300186458,False,world-cup-history:2014:2014-06-25|Nigeria|Argentina|,dict,list,False
+1284,m_v0001284,290,2013,2014,2014-06-25,5466,Bosnia-Herzegovina,5494,Iran,not_started,,,finished,3,1,,300186464,False,world-cup-history:2014:2014-06-25|Bosnia-Herzegovina|Iran|,dict,list,False
+1278,m_v0001278,290,2013,2014,2014-06-25,5493,Ecuador,5490,France,not_started,,,finished,0,0,,300186515,False,world-cup-history:2014:2014-06-25|Ecuador|France|,dict,list,False
+1277,m_v0001277,290,2013,2014,2014-06-25,1149,Honduras,5479,Switzerland,not_started,,,finished,0,3,,300186482,False,world-cup-history:2014:2014-06-25|Honduras|Switzerland|,dict,list,False
+1289,m_v0001289,290,2013,2014,2014-06-26,5484,USA,5508,Germany,not_started,,,finished,0,1,,300186469,False,world-cup-history:2014:2014-06-26|USA|Germany|,dict,list,False
+1290,m_v0001290,290,2013,2014,2014-06-26,5511,Portugal,5478,Ghana,not_started,,,finished,2,1,,300186476,False,world-cup-history:2014:2014-06-26|Portugal|Ghana|,dict,list,False
+1296,m_v0001296,290,2013,2014,2014-06-26,5487,Algeria,1038,Russia,not_started,,,finished,1,1,,300186506,False,world-cup-history:2014:2014-06-26|Algeria|Russia|,dict,list,False
+1295,m_v0001295,290,2013,2014,2014-06-26,5469,South Korea,5512,Belgium,not_started,,,finished,0,1,,300186480,False,world-cup-history:2014:2014-06-26|South Korea|Belgium|,dict,list,False
+1185,m_v0001185,289,2009,2010,2010-06-11,5468,South Africa,5465,Mexico,not_started,,,finished,1,1,,300061454,False,world-cup-history:2010:2010-06-11|South Africa|Mexico|,dict,list,False
+1186,m_v0001186,289,2009,2010,2010-06-11,5498,Uruguay,5490,France,not_started,,,finished,0,0,,300061453,False,world-cup-history:2010:2010-06-11|Uruguay|France|,dict,list,False
+1191,m_v0001191,289,2009,2010,2010-06-12,5469,South Korea,1156,Greece,not_started,,,finished,2,0,,300061459,False,world-cup-history:2010:2010-06-12|South Korea|Greece|,dict,list,False
+1192,m_v0001192,289,2009,2010,2010-06-12,5467,Argentina,1157,Nigeria,not_started,,,finished,1,0,,300061460,False,world-cup-history:2010:2010-06-12|Argentina|Nigeria|,dict,list,False
+1197,m_v0001197,289,2009,2010,2010-06-12,5504,England,5484,USA,not_started,,,finished,1,1,,300061466,False,world-cup-history:2010:2010-06-12|England|USA|,dict,list,False
+1198,m_v0001198,289,2009,2010,2010-06-13,5487,Algeria,1056,Slovenia,not_started,,,finished,0,1,,300061465,False,world-cup-history:2010:2010-06-13|Algeria|Slovenia|,dict,list,False
+1203,m_v0001203,289,2009,2010,2010-06-13,6569,Serbia,5478,Ghana,not_started,,,finished,0,1,,300061471,False,world-cup-history:2010:2010-06-13|Serbia|Ghana|,dict,list,False
+1204,m_v0001204,289,2009,2010,2010-06-13,5508,Germany,5483,Australia,not_started,,,finished,4,0,,300111116,False,world-cup-history:2010:2010-06-13|Germany|Australia|,dict,list,False
+1209,m_v0001209,289,2009,2010,2010-06-14,5480,Netherlands,6568,Denmark,not_started,,,finished,2,0,,300061478,False,world-cup-history:2010:2010-06-14|Netherlands|Denmark|,dict,list,False
+1210,m_v0001210,289,2009,2010,2010-06-14,5475,Japan,6564,Cameroon,not_started,,,finished,1,0,,300061477,False,world-cup-history:2010:2010-06-14|Japan|Cameroon|,dict,list,False
+1215,m_v0001215,289,2009,2010,2010-06-14,1032,Italy,5473,Paraguay,not_started,,,finished,1,1,,300061484,False,world-cup-history:2010:2010-06-14|Italy|Paraguay|,dict,list,False
+1216,m_v0001216,289,2009,2010,2010-06-15,5492,New Zealand,1048,Slovakia,not_started,,,finished,1,1,,300061483,False,world-cup-history:2010:2010-06-15|New Zealand|Slovakia|,dict,list,False
+1221,m_v0001221,289,2009,2010,2010-06-15,5510,Côte d'Ivoire,5511,Portugal,not_started,,,finished,0,0,,300061489,False,world-cup-history:2010:2010-06-15|Côte d'Ivoire|Portugal|,dict,list,False
+1222,m_v0001222,289,2009,2010,2010-06-15,5496,Brazil,1136,North Korea,not_started,,,finished,2,1,,300061490,False,world-cup-history:2010:2010-06-15|Brazil|North Korea|,dict,list,False
+1227,m_v0001227,289,2009,2010,2010-06-16,1149,Honduras,1116,Chile,not_started,,,finished,0,1,,300061495,False,world-cup-history:2010:2010-06-16|Honduras|Chile|,dict,list,False
+1228,m_v0001228,289,2009,2010,2010-06-16,5506,Spain,5479,Switzerland,not_started,,,finished,0,1,,300111112,False,world-cup-history:2010:2010-06-16|Spain|Switzerland|,dict,list,False
+1187,m_v0001187,289,2009,2010,2010-06-16,5468,South Africa,5498,Uruguay,not_started,,,finished,0,3,,300061452,False,world-cup-history:2010:2010-06-16|South Africa|Uruguay|,dict,list,False
+1193,m_v0001193,289,2009,2010,2010-06-17,5467,Argentina,5469,South Korea,not_started,,,finished,4,1,,300061458,False,world-cup-history:2010:2010-06-17|Argentina|South Korea|,dict,list,False
+1194,m_v0001194,289,2009,2010,2010-06-17,1156,Greece,1157,Nigeria,not_started,,,finished,2,1,,300061457,False,world-cup-history:2010:2010-06-17|Greece|Nigeria|,dict,list,False
+1188,m_v0001188,289,2009,2010,2010-06-17,5490,France,5465,Mexico,not_started,,,finished,0,2,,300061451,False,world-cup-history:2010:2010-06-17|France|Mexico|,dict,list,False
+1205,m_v0001205,289,2009,2010,2010-06-18,5508,Germany,6569,Serbia,not_started,,,finished,0,1,,300061470,False,world-cup-history:2010:2010-06-18|Germany|Serbia|,dict,list,False
+1199,m_v0001199,289,2009,2010,2010-06-18,1056,Slovenia,5484,USA,not_started,,,finished,2,2,,300061463,False,world-cup-history:2010:2010-06-18|Slovenia|USA|,dict,list,False
+1200,m_v0001200,289,2009,2010,2010-06-18,5504,England,5487,Algeria,not_started,,,finished,0,0,,300061464,False,world-cup-history:2010:2010-06-18|England|Algeria|,dict,list,False
+1211,m_v0001211,289,2009,2010,2010-06-19,5480,Netherlands,5475,Japan,not_started,,,finished,1,0,,300111117,False,world-cup-history:2010:2010-06-19|Netherlands|Japan|,dict,list,False
+1206,m_v0001206,289,2009,2010,2010-06-19,5478,Ghana,5483,Australia,not_started,,,finished,1,1,,300061469,False,world-cup-history:2010:2010-06-19|Ghana|Australia|,dict,list,False
+1212,m_v0001212,289,2009,2010,2010-06-19,6564,Cameroon,6568,Denmark,not_started,,,finished,1,2,,300061475,False,world-cup-history:2010:2010-06-19|Cameroon|Denmark|,dict,list,False
+1217,m_v0001217,289,2009,2010,2010-06-20,1048,Slovakia,5473,Paraguay,not_started,,,finished,0,2,,300061481,False,world-cup-history:2010:2010-06-20|Slovakia|Paraguay|,dict,list,False
+1218,m_v0001218,289,2009,2010,2010-06-20,1032,Italy,5492,New Zealand,not_started,,,finished,1,1,,300061482,False,world-cup-history:2010:2010-06-20|Italy|New Zealand|,dict,list,False
+1223,m_v0001223,289,2009,2010,2010-06-20,5496,Brazil,5510,Côte d'Ivoire,not_started,,,finished,3,1,,300061488,False,world-cup-history:2010:2010-06-20|Brazil|Côte d'Ivoire|,dict,list,False
+1224,m_v0001224,289,2009,2010,2010-06-21,5511,Portugal,1136,North Korea,not_started,,,finished,7,0,,300061487,False,world-cup-history:2010:2010-06-21|Portugal|North Korea|,dict,list,False
+1229,m_v0001229,289,2009,2010,2010-06-21,1116,Chile,5479,Switzerland,not_started,,,finished,1,0,,300061493,False,world-cup-history:2010:2010-06-21|Chile|Switzerland|,dict,list,False
+1230,m_v0001230,289,2009,2010,2010-06-21,5506,Spain,1149,Honduras,not_started,,,finished,2,0,,300061494,False,world-cup-history:2010:2010-06-21|Spain|Honduras|,dict,list,False
+1189,m_v0001189,289,2009,2010,2010-06-22,5465,Mexico,5498,Uruguay,not_started,,,finished,0,1,,300061450,False,world-cup-history:2010:2010-06-22|Mexico|Uruguay|,dict,list,False
+1190,m_v0001190,289,2009,2010,2010-06-22,5490,France,5468,South Africa,not_started,,,finished,1,2,,300061449,False,world-cup-history:2010:2010-06-22|France|South Africa|,dict,list,False
+1195,m_v0001195,289,2009,2010,2010-06-22,1157,Nigeria,5469,South Korea,not_started,,,finished,2,2,,300111115,False,world-cup-history:2010:2010-06-22|Nigeria|South Korea|,dict,list,False
+1196,m_v0001196,289,2009,2010,2010-06-22,1156,Greece,5467,Argentina,not_started,,,finished,0,2,,300061455,False,world-cup-history:2010:2010-06-22|Greece|Argentina|,dict,list,False
+1201,m_v0001201,289,2009,2010,2010-06-23,5484,USA,5487,Algeria,not_started,,,finished,1,0,,300061461,False,world-cup-history:2010:2010-06-23|USA|Algeria|,dict,list,False
+1202,m_v0001202,289,2009,2010,2010-06-23,1056,Slovenia,5504,England,not_started,,,finished,0,1,,300061462,False,world-cup-history:2010:2010-06-23|Slovenia|England|,dict,list,False
+1207,m_v0001207,289,2009,2010,2010-06-23,5483,Australia,6569,Serbia,not_started,,,finished,2,1,,300061467,False,world-cup-history:2010:2010-06-23|Australia|Serbia|,dict,list,False
+1208,m_v0001208,289,2009,2010,2010-06-23,5478,Ghana,5508,Germany,not_started,,,finished,0,1,,300061468,False,world-cup-history:2010:2010-06-23|Ghana|Germany|,dict,list,False
+1220,m_v0001220,289,2009,2010,2010-06-24,5473,Paraguay,5492,New Zealand,not_started,,,finished,0,0,,300061479,False,world-cup-history:2010:2010-06-24|Paraguay|New Zealand|,dict,list,False
+1219,m_v0001219,289,2009,2010,2010-06-24,1048,Slovakia,1032,Italy,not_started,,,finished,3,2,,300061480,False,world-cup-history:2010:2010-06-24|Slovakia|Italy|,dict,list,False
+1214,m_v0001214,289,2009,2010,2010-06-24,6564,Cameroon,5480,Netherlands,not_started,,,finished,1,2,,300061473,False,world-cup-history:2010:2010-06-24|Cameroon|Netherlands|,dict,list,False
+1213,m_v0001213,289,2009,2010,2010-06-24,6568,Denmark,5475,Japan,not_started,,,finished,1,3,,300061474,False,world-cup-history:2010:2010-06-24|Denmark|Japan|,dict,list,False
+1226,m_v0001226,289,2009,2010,2010-06-25,1136,North Korea,5510,Côte d'Ivoire,not_started,,,finished,0,3,,300061486,False,world-cup-history:2010:2010-06-25|North Korea|Côte d'Ivoire|,dict,list,False
+1225,m_v0001225,289,2009,2010,2010-06-25,5511,Portugal,5496,Brazil,not_started,,,finished,0,0,,300111111,False,world-cup-history:2010:2010-06-25|Portugal|Brazil|,dict,list,False
+1231,m_v0001231,289,2009,2010,2010-06-25,1116,Chile,5506,Spain,not_started,,,finished,1,2,,300061491,False,world-cup-history:2010:2010-06-25|Chile|Spain|,dict,list,False
+1232,m_v0001232,289,2009,2010,2010-06-25,5479,Switzerland,1149,Honduras,not_started,,,finished,0,0,,300061492,False,world-cup-history:2010:2010-06-25|Switzerland|Honduras|,dict,list,False
+1233,m_v0001233,289,2009,2010,2010-06-26,5498,Uruguay,5469,South Korea,not_started,,,finished,2,1,,300061504,False,world-cup-history:2010:2010-06-26|Uruguay|South Korea|,dict,list,False
+1235,m_v0001235,289,2009,2010,2010-06-27,5508,Germany,5504,England,not_started,,,finished,4,1,,300061501,False,world-cup-history:2010:2010-06-27|Germany|England|,dict,list,False
+1236,m_v0001236,289,2009,2010,2010-06-27,5467,Argentina,5465,Mexico,not_started,,,finished,3,1,,300061502,False,world-cup-history:2010:2010-06-27|Argentina|Mexico|,dict,list,False
+1237,m_v0001237,289,2009,2010,2010-06-28,5480,Netherlands,1048,Slovakia,not_started,,,finished,2,1,,300111113,False,world-cup-history:2010:2010-06-28|Netherlands|Slovakia|,dict,list,False
+1238,m_v0001238,289,2009,2010,2010-06-28,5496,Brazil,1116,Chile,not_started,,,finished,3,0,,300061500,False,world-cup-history:2010:2010-06-28|Brazil|Chile|,dict,list,False
+1240,m_v0001240,289,2009,2010,2010-06-29,5506,Spain,5511,Portugal,not_started,,,finished,1,0,,300061498,False,world-cup-history:2010:2010-06-29|Spain|Portugal|,dict,list,False
+1241,m_v0001241,289,2009,2010,2010-07-02,5480,Netherlands,5496,Brazil,not_started,,,finished,2,1,,300061507,False,world-cup-history:2010:2010-07-02|Netherlands|Brazil|,dict,list,False
+1243,m_v0001243,289,2009,2010,2010-07-03,5467,Argentina,5508,Germany,not_started,,,finished,0,4,,300061505,False,world-cup-history:2010:2010-07-03|Argentina|Germany|,dict,list,False
+1244,m_v0001244,289,2009,2010,2010-07-03,5473,Paraguay,5506,Spain,not_started,,,finished,0,1,,300061506,False,world-cup-history:2010:2010-07-03|Paraguay|Spain|,dict,list,False
+1245,m_v0001245,289,2009,2010,2010-07-06,5498,Uruguay,5480,Netherlands,not_started,,,finished,2,3,,300061512,False,world-cup-history:2010:2010-07-06|Uruguay|Netherlands|,dict,list,False
+1246,m_v0001246,289,2009,2010,2010-07-07,5508,Germany,5506,Spain,not_started,,,finished,0,1,,300111114,False,world-cup-history:2010:2010-07-07|Germany|Spain|,dict,list,False
+1247,m_v0001247,289,2009,2010,2010-07-10,5498,Uruguay,5508,Germany,not_started,,,finished,2,3,,300061510,False,world-cup-history:2010:2010-07-10|Uruguay|Germany|,dict,list,False
+1128,m_v0001128,288,2005,2006,2006-06-10,1165,Trinidad and Tobago,5476,Sweden,not_started,,,finished,0,0,,97410004,False,world-cup-history:2006:2006-06-10|Trinidad and Tobago|Sweden|,dict,list,False
+1157,m_v0001157,288,2005,2006,2006-06-13,5490,France,5479,Switzerland,not_started,,,finished,0,0,,97410013,False,world-cup-history:2006:2006-06-13|France|Switzerland|,dict,list,False
+1141,m_v0001141,288,2005,2006,2006-06-16,5465,Mexico,1168,Angola,not_started,,,finished,0,0,,97410023,False,world-cup-history:2006:2006-06-16|Mexico|Angola|,dict,list,False
+1154,m_v0001154,288,2005,2006,2006-06-18,5475,Japan,5482,Croatia,not_started,,,finished,0,0,,97410028,False,world-cup-history:2006:2006-06-18|Japan|Croatia|,dict,list,False
+1137,m_v0001137,288,2005,2006,2006-06-21,5480,Netherlands,5467,Argentina,not_started,,,finished,0,0,,97410037,False,world-cup-history:2006:2006-06-21|Netherlands|Argentina|,dict,list,False
+1057,m_v0001057,287,2001,2002,2002-05-31,5490,France,5488,Senegal,not_started,,,finished,0,1,,43950001,False,world-cup-history:2002:2002-05-31|France|Senegal|,dict,list,False
+1081,m_v0001081,287,2001,2002,2002-06-01,1155,Ireland,6564,Cameroon,not_started,,,finished,1,1,,43950002,False,world-cup-history:2002:2002-06-01|Ireland|Cameroon|,dict,list,False
+1058,m_v0001058,287,2001,2002,2002-06-01,5498,Uruguay,6568,Denmark,not_started,,,finished,1,2,,43950003,False,world-cup-history:2002:2002-06-01|Uruguay|Denmark|,dict,list,False
+1082,m_v0001082,287,2001,2002,2002-06-01,5508,Germany,5474,Saudi Arabia,not_started,,,finished,8,0,,43950004,False,world-cup-history:2002:2002-06-01|Germany|Saudi Arabia|,dict,list,False
+1088,m_v0001088,287,2001,2002,2002-06-02,5467,Argentina,1157,Nigeria,not_started,,,finished,1,0,,43950007,False,world-cup-history:2002:2002-06-02|Argentina|Nigeria|,dict,list,False
+1063,m_v0001063,287,2001,2002,2002-06-02,5473,Paraguay,5468,South Africa,not_started,,,finished,2,2,,43950006,False,world-cup-history:2002:2002-06-02|Paraguay|South Africa|,dict,list,False
+1087,m_v0001087,287,2001,2002,2002-06-02,5504,England,5476,Sweden,not_started,,,finished,1,1,,43950005,False,world-cup-history:2002:2002-06-02|England|Sweden|,dict,list,False
+1064,m_v0001064,287,2001,2002,2002-06-02,5506,Spain,1056,Slovenia,not_started,,,finished,3,1,,43950008,False,world-cup-history:2002:2002-06-02|Spain|Slovenia|,dict,list,False
+1093,m_v0001093,287,2001,2002,2002-06-03,5482,Croatia,5465,Mexico,not_started,,,finished,0,1,,43950009,False,world-cup-history:2002:2002-06-03|Croatia|Mexico|,dict,list,False
+1069,m_v0001069,287,2001,2002,2002-06-03,5496,Brazil,5500,Turkey,not_started,,,finished,2,1,,43950010,False,world-cup-history:2002:2002-06-03|Brazil|Turkey|,dict,list,False
+1094,m_v0001094,287,2001,2002,2002-06-03,1032,Italy,5493,Ecuador,not_started,,,finished,2,0,,43950011,False,world-cup-history:2002:2002-06-03|Italy|Ecuador|,dict,list,False
+1070,m_v0001070,287,2001,2002,2002-06-04,1163,China,6567,Costa Rica,not_started,,,finished,0,2,,43950012,False,world-cup-history:2002:2002-06-04|China|Costa Rica|,dict,list,False
+1099,m_v0001099,287,2001,2002,2002-06-04,5475,Japan,5512,Belgium,not_started,,,finished,2,2,,43950013,False,world-cup-history:2002:2002-06-04|Japan|Belgium|,dict,list,False
+1075,m_v0001075,287,2001,2002,2002-06-04,5469,South Korea,6566,Poland,not_started,,,finished,2,0,,43950014,False,world-cup-history:2002:2002-06-04|South Korea|Poland|,dict,list,False
+1100,m_v0001100,287,2001,2002,2002-06-05,1038,Russia,5502,Tunisia,not_started,,,finished,2,0,,43950015,False,world-cup-history:2002:2002-06-05|Russia|Tunisia|,dict,list,False
+1076,m_v0001076,287,2001,2002,2002-06-05,5484,USA,5511,Portugal,not_started,,,finished,3,2,,43950016,False,world-cup-history:2002:2002-06-05|USA|Portugal|,dict,list,False
+1083,m_v0001083,287,2001,2002,2002-06-05,5508,Germany,1155,Ireland,not_started,,,finished,1,1,,43950017,False,world-cup-history:2002:2002-06-05|Germany|Ireland|,dict,list,False
+1060,m_v0001060,287,2001,2002,2002-06-06,6568,Denmark,5488,Senegal,not_started,,,finished,1,1,,43950020,False,world-cup-history:2002:2002-06-06|Denmark|Senegal|,dict,list,False
+1084,m_v0001084,287,2001,2002,2002-06-06,6564,Cameroon,5474,Saudi Arabia,not_started,,,finished,1,0,,43950019,False,world-cup-history:2002:2002-06-06|Cameroon|Saudi Arabia|,dict,list,False
+1059,m_v0001059,287,2001,2002,2002-06-06,5490,France,5498,Uruguay,not_started,,,finished,0,0,,43950018,False,world-cup-history:2002:2002-06-06|France|Uruguay|,dict,list,False
+1089,m_v0001089,287,2001,2002,2002-06-07,5476,Sweden,1157,Nigeria,not_started,,,finished,2,1,,43950021,False,world-cup-history:2002:2002-06-07|Sweden|Nigeria|,dict,list,False
+1065,m_v0001065,287,2001,2002,2002-06-07,5506,Spain,5473,Paraguay,not_started,,,finished,3,1,,43950022,False,world-cup-history:2002:2002-06-07|Spain|Paraguay|,dict,list,False
+1090,m_v0001090,287,2001,2002,2002-06-07,5467,Argentina,5504,England,not_started,,,finished,0,1,,43950023,False,world-cup-history:2002:2002-06-07|Argentina|England|,dict,list,False
+1066,m_v0001066,287,2001,2002,2002-06-08,5468,South Africa,1056,Slovenia,not_started,,,finished,1,0,,43950024,False,world-cup-history:2002:2002-06-08|South Africa|Slovenia|,dict,list,False
+1095,m_v0001095,287,2001,2002,2002-06-08,1032,Italy,5482,Croatia,not_started,,,finished,1,2,,43950025,False,world-cup-history:2002:2002-06-08|Italy|Croatia|,dict,list,False
+1071,m_v0001071,287,2001,2002,2002-06-08,5496,Brazil,1163,China,not_started,,,finished,4,0,,43950026,False,world-cup-history:2002:2002-06-08|Brazil|China|,dict,list,False
+1096,m_v0001096,287,2001,2002,2002-06-09,5465,Mexico,5493,Ecuador,not_started,,,finished,2,1,,43950027,False,world-cup-history:2002:2002-06-09|Mexico|Ecuador|,dict,list,False
+1072,m_v0001072,287,2001,2002,2002-06-09,6567,Costa Rica,5500,Turkey,not_started,,,finished,1,1,,43950028,False,world-cup-history:2002:2002-06-09|Costa Rica|Turkey|,dict,list,False
+1101,m_v0001101,287,2001,2002,2002-06-09,5475,Japan,1038,Russia,not_started,,,finished,1,0,,43950029,False,world-cup-history:2002:2002-06-09|Japan|Russia|,dict,list,False
+1077,m_v0001077,287,2001,2002,2002-06-10,5469,South Korea,5484,USA,not_started,,,finished,1,1,,43950030,False,world-cup-history:2002:2002-06-10|South Korea|USA|,dict,list,False
+1102,m_v0001102,287,2001,2002,2002-06-10,5502,Tunisia,5512,Belgium,not_started,,,finished,1,1,,43950031,False,world-cup-history:2002:2002-06-10|Tunisia|Belgium|,dict,list,False
+1078,m_v0001078,287,2001,2002,2002-06-10,5511,Portugal,6566,Poland,not_started,,,finished,4,0,,43950032,False,world-cup-history:2002:2002-06-10|Portugal|Poland|,dict,list,False
+1061,m_v0001061,287,2001,2002,2002-06-11,6568,Denmark,5490,France,not_started,,,finished,2,0,,43950033,False,world-cup-history:2002:2002-06-11|Denmark|France|,dict,list,False
+1062,m_v0001062,287,2001,2002,2002-06-11,5488,Senegal,5498,Uruguay,not_started,,,finished,3,3,,43950034,False,world-cup-history:2002:2002-06-11|Senegal|Uruguay|,dict,list,False
+1086,m_v0001086,287,2001,2002,2002-06-11,5474,Saudi Arabia,1155,Ireland,not_started,,,finished,0,3,,43950036,False,world-cup-history:2002:2002-06-11|Saudi Arabia|Ireland|,dict,list,False
+1085,m_v0001085,287,2001,2002,2002-06-11,6564,Cameroon,5508,Germany,not_started,,,finished,0,2,,43950035,False,world-cup-history:2002:2002-06-11|Cameroon|Germany|,dict,list,False
+1091,m_v0001091,287,2001,2002,2002-06-12,5476,Sweden,5467,Argentina,not_started,,,finished,1,1,,43950037,False,world-cup-history:2002:2002-06-12|Sweden|Argentina|,dict,list,False
+1092,m_v0001092,287,2001,2002,2002-06-12,1157,Nigeria,5504,England,not_started,,,finished,0,0,,43950038,False,world-cup-history:2002:2002-06-12|Nigeria|England|,dict,list,False
+1068,m_v0001068,287,2001,2002,2002-06-12,1056,Slovenia,5473,Paraguay,not_started,,,finished,1,3,,43950040,False,world-cup-history:2002:2002-06-12|Slovenia|Paraguay|,dict,list,False
+1067,m_v0001067,287,2001,2002,2002-06-12,5468,South Africa,5506,Spain,not_started,,,finished,2,3,,43950039,False,world-cup-history:2002:2002-06-12|South Africa|Spain|,dict,list,False
+1073,m_v0001073,287,2001,2002,2002-06-13,6567,Costa Rica,5496,Brazil,not_started,,,finished,2,5,,43950041,False,world-cup-history:2002:2002-06-13|Costa Rica|Brazil|,dict,list,False
+1074,m_v0001074,287,2001,2002,2002-06-13,5500,Turkey,1163,China,not_started,,,finished,3,0,,43950042,False,world-cup-history:2002:2002-06-13|Turkey|China|,dict,list,False
+1097,m_v0001097,287,2001,2002,2002-06-13,5465,Mexico,1032,Italy,not_started,,,finished,1,1,,43950043,False,world-cup-history:2002:2002-06-13|Mexico|Italy|,dict,list,False
+1098,m_v0001098,287,2001,2002,2002-06-13,5493,Ecuador,5482,Croatia,not_started,,,finished,1,0,,43950044,False,world-cup-history:2002:2002-06-13|Ecuador|Croatia|,dict,list,False
+1104,m_v0001104,287,2001,2002,2002-06-14,5512,Belgium,1038,Russia,not_started,,,finished,3,2,,43950046,False,world-cup-history:2002:2002-06-14|Belgium|Russia|,dict,list,False
+1103,m_v0001103,287,2001,2002,2002-06-14,5502,Tunisia,5475,Japan,not_started,,,finished,0,2,,43950045,False,world-cup-history:2002:2002-06-14|Tunisia|Japan|,dict,list,False
+1080,m_v0001080,287,2001,2002,2002-06-14,6566,Poland,5484,USA,not_started,,,finished,3,1,,43950048,False,world-cup-history:2002:2002-06-14|Poland|USA|,dict,list,False
+1079,m_v0001079,287,2001,2002,2002-06-14,5511,Portugal,5469,South Korea,not_started,,,finished,0,1,,43950047,False,world-cup-history:2002:2002-06-14|Portugal|South Korea|,dict,list,False
+1105,m_v0001105,287,2001,2002,2002-06-15,5508,Germany,5473,Paraguay,not_started,,,finished,1,0,,43950049,False,world-cup-history:2002:2002-06-15|Germany|Paraguay|,dict,list,False
+1106,m_v0001106,287,2001,2002,2002-06-15,6568,Denmark,5504,England,not_started,,,finished,0,3,,43950050,False,world-cup-history:2002:2002-06-15|Denmark|England|,dict,list,False
+1109,m_v0001109,287,2001,2002,2002-06-17,5465,Mexico,5484,USA,not_started,,,finished,0,2,,43950053,False,world-cup-history:2002:2002-06-17|Mexico|USA|,dict,list,False
+1110,m_v0001110,287,2001,2002,2002-06-17,5496,Brazil,5512,Belgium,not_started,,,finished,2,0,,43950054,False,world-cup-history:2002:2002-06-17|Brazil|Belgium|,dict,list,False
+1111,m_v0001111,287,2001,2002,2002-06-18,5475,Japan,5500,Turkey,not_started,,,finished,0,1,,43950055,False,world-cup-history:2002:2002-06-18|Japan|Turkey|,dict,list,False
+1113,m_v0001113,287,2001,2002,2002-06-21,5504,England,5496,Brazil,not_started,,,finished,1,2,,43950057,False,world-cup-history:2002:2002-06-21|England|Brazil|,dict,list,False
+1114,m_v0001114,287,2001,2002,2002-06-21,5508,Germany,5484,USA,not_started,,,finished,1,0,,43950058,False,world-cup-history:2002:2002-06-21|Germany|USA|,dict,list,False
+1117,m_v0001117,287,2001,2002,2002-06-25,5508,Germany,5469,South Korea,not_started,,,finished,1,0,,43950061,False,world-cup-history:2002:2002-06-25|Germany|South Korea|,dict,list,False
+1118,m_v0001118,287,2001,2002,2002-06-26,5496,Brazil,5500,Turkey,not_started,,,finished,1,0,,43950062,False,world-cup-history:2002:2002-06-26|Brazil|Turkey|,dict,list,False
+1119,m_v0001119,287,2001,2002,2002-06-29,5469,South Korea,5500,Turkey,not_started,,,finished,2,3,,43950063,False,world-cup-history:2002:2002-06-29|South Korea|Turkey|,dict,list,False
+1120,m_v0001120,287,2001,2002,2002-06-30,5508,Germany,5496,Brazil,not_started,,,finished,0,2,,43950064,False,world-cup-history:2002:2002-06-30|Germany|Brazil|,dict,list,False
+993,m_v0000993,286,1997,1998,1998-06-10,5496,Brazil,5501,Scotland,not_started,,,finished,2,1,,4000,False,world-cup-history:1998:1998-06-10|Brazil|Scotland|,dict,list,False
+994,m_v0000994,286,1997,1998,1998-06-10,5497,Morocco,5509,Norway,not_started,,,finished,2,2,,8725,False,world-cup-history:1998:1998-06-10|Morocco|Norway|,dict,list,False
+1000,m_v0001000,286,1997,1998,1998-06-11,1032,Italy,1116,Chile,not_started,,,finished,2,2,,8726,False,world-cup-history:1998:1998-06-11|Italy|Chile|,dict,list,False
+999,m_v0000999,286,1997,1998,1998-06-11,6564,Cameroon,5489,Austria,not_started,,,finished,1,1,,8727,False,world-cup-history:1998:1998-06-11|Cameroon|Austria|,dict,list,False
+1011,m_v0001011,286,1997,1998,1998-06-12,5473,Paraguay,1135,Bulgaria,not_started,,,finished,0,0,,8728,False,world-cup-history:1998:1998-06-12|Paraguay|Bulgaria|,dict,list,False
+1005,m_v0001005,286,1997,1998,1998-06-12,5474,Saudi Arabia,6568,Denmark,not_started,,,finished,0,1,,8729,False,world-cup-history:1998:1998-06-12|Saudi Arabia|Denmark|,dict,list,False
+1006,m_v0001006,286,1997,1998,1998-06-12,5490,France,5468,South Africa,not_started,,,finished,3,0,,8730,False,world-cup-history:1998:1998-06-12|France|South Africa|,dict,list,False
+1012,m_v0001012,286,1997,1998,1998-06-13,5506,Spain,1157,Nigeria,not_started,,,finished,2,3,,8731,False,world-cup-history:1998:1998-06-13|Spain|Nigeria|,dict,list,False
+1018,m_v0001018,286,1997,1998,1998-06-13,5469,South Korea,5465,Mexico,not_started,,,finished,1,3,,8732,False,world-cup-history:1998:1998-06-13|South Korea|Mexico|,dict,list,False
+1017,m_v0001017,286,1997,1998,1998-06-13,5480,Netherlands,5512,Belgium,not_started,,,finished,0,0,,8733,False,world-cup-history:1998:1998-06-13|Netherlands|Belgium|,dict,list,False
+1036,m_v0001036,286,1997,1998,1998-06-14,5467,Argentina,5475,Japan,not_started,,,finished,1,0,,8734,False,world-cup-history:1998:1998-06-14|Argentina|Japan|,dict,list,False
+1023,m_v0001023,286,1997,1998,1998-06-14,1117,Yugoslavia,5494,Iran,not_started,,,finished,1,0,,8735,False,world-cup-history:1998:1998-06-14|Yugoslavia|Iran|,dict,list,False
+1035,m_v0001035,286,1997,1998,1998-06-14,1160,Jamaica,5482,Croatia,not_started,,,finished,1,3,,8736,False,world-cup-history:1998:1998-06-14|Jamaica|Croatia|,dict,list,False
+1030,m_v0001030,286,1997,1998,1998-06-15,5504,England,5502,Tunisia,not_started,,,finished,2,0,,8740,False,world-cup-history:1998:1998-06-15|England|Tunisia|,dict,list,False
+1029,m_v0001029,286,1997,1998,1998-06-15,1058,Romania,5491,Colombia,not_started,,,finished,1,0,,8739,False,world-cup-history:1998:1998-06-15|Romania|Colombia|,dict,list,False
+1024,m_v0001024,286,1997,1998,1998-06-15,5508,Germany,5484,USA,not_started,,,finished,2,0,,8738,False,world-cup-history:1998:1998-06-15|Germany|USA|,dict,list,False
+995,m_v0000995,286,1997,1998,1998-06-16,5501,Scotland,5509,Norway,not_started,,,finished,1,1,,8741,False,world-cup-history:1998:1998-06-16|Scotland|Norway|,dict,list,False
+996,m_v0000996,286,1997,1998,1998-06-16,5496,Brazil,5497,Morocco,not_started,,,finished,3,0,,8742,False,world-cup-history:1998:1998-06-16|Brazil|Morocco|,dict,list,False
+1001,m_v0001001,286,1997,1998,1998-06-17,1116,Chile,5489,Austria,not_started,,,finished,1,1,,8743,False,world-cup-history:1998:1998-06-17|Chile|Austria|,dict,list,False
+1002,m_v0001002,286,1997,1998,1998-06-17,1032,Italy,6564,Cameroon,not_started,,,finished,3,0,,8744,False,world-cup-history:1998:1998-06-17|Italy|Cameroon|,dict,list,False
+1008,m_v0001008,286,1997,1998,1998-06-18,5468,South Africa,6568,Denmark,not_started,,,finished,1,1,,8746,False,world-cup-history:1998:1998-06-18|South Africa|Denmark|,dict,list,False
+1007,m_v0001007,286,1997,1998,1998-06-18,5490,France,5474,Saudi Arabia,not_started,,,finished,4,0,,8745,False,world-cup-history:1998:1998-06-18|France|Saudi Arabia|,dict,list,False
+1013,m_v0001013,286,1997,1998,1998-06-19,1157,Nigeria,1135,Bulgaria,not_started,,,finished,1,0,,8747,False,world-cup-history:1998:1998-06-19|Nigeria|Bulgaria|,dict,list,False
+1014,m_v0001014,286,1997,1998,1998-06-19,5506,Spain,5473,Paraguay,not_started,,,finished,0,0,,8748,False,world-cup-history:1998:1998-06-19|Spain|Paraguay|,dict,list,False
+1037,m_v0001037,286,1997,1998,1998-06-20,5475,Japan,5482,Croatia,not_started,,,finished,0,1,,8751,False,world-cup-history:1998:1998-06-20|Japan|Croatia|,dict,list,False
+1020,m_v0001020,286,1997,1998,1998-06-20,5512,Belgium,5465,Mexico,not_started,,,finished,2,2,,8750,False,world-cup-history:1998:1998-06-20|Belgium|Mexico|,dict,list,False
+1019,m_v0001019,286,1997,1998,1998-06-20,5480,Netherlands,5469,South Korea,not_started,,,finished,5,0,,8749,False,world-cup-history:1998:1998-06-20|Netherlands|South Korea|,dict,list,False
+1025,m_v0001025,286,1997,1998,1998-06-21,5508,Germany,1117,Yugoslavia,not_started,,,finished,2,2,,8753,False,world-cup-history:1998:1998-06-21|Germany|Yugoslavia|,dict,list,False
+1038,m_v0001038,286,1997,1998,1998-06-21,5467,Argentina,1160,Jamaica,not_started,,,finished,5,0,,8752,False,world-cup-history:1998:1998-06-21|Argentina|Jamaica|,dict,list,False
+1026,m_v0001026,286,1997,1998,1998-06-21,5484,USA,5494,Iran,not_started,,,finished,1,2,,8754,False,world-cup-history:1998:1998-06-21|USA|Iran|,dict,list,False
+1031,m_v0001031,286,1997,1998,1998-06-22,5491,Colombia,5502,Tunisia,not_started,,,finished,1,0,,8755,False,world-cup-history:1998:1998-06-22|Colombia|Tunisia|,dict,list,False
+1032,m_v0001032,286,1997,1998,1998-06-22,1058,Romania,5504,England,not_started,,,finished,2,1,,8756,False,world-cup-history:1998:1998-06-22|Romania|England|,dict,list,False
+1004,m_v0001004,286,1997,1998,1998-06-23,1116,Chile,6564,Cameroon,not_started,,,finished,1,1,,8760,False,world-cup-history:1998:1998-06-23|Chile|Cameroon|,dict,list,False
+1003,m_v0001003,286,1997,1998,1998-06-23,1032,Italy,5489,Austria,not_started,,,finished,2,1,,8757,False,world-cup-history:1998:1998-06-23|Italy|Austria|,dict,list,False
+998,m_v0000998,286,1997,1998,1998-06-23,5496,Brazil,5509,Norway,not_started,,,finished,1,2,,8759,False,world-cup-history:1998:1998-06-23|Brazil|Norway|,dict,list,False
+997,m_v0000997,286,1997,1998,1998-06-23,5501,Scotland,5497,Morocco,not_started,,,finished,0,3,,8758,False,world-cup-history:1998:1998-06-23|Scotland|Morocco|,dict,list,False
+1010,m_v0001010,286,1997,1998,1998-06-24,5468,South Africa,5474,Saudi Arabia,not_started,,,finished,2,2,,8764,False,world-cup-history:1998:1998-06-24|South Africa|Saudi Arabia|,dict,list,False
+1009,m_v0001009,286,1997,1998,1998-06-24,5490,France,6568,Denmark,not_started,,,finished,2,1,,8762,False,world-cup-history:1998:1998-06-24|France|Denmark|,dict,list,False
+1016,m_v0001016,286,1997,1998,1998-06-24,1157,Nigeria,5473,Paraguay,not_started,,,finished,1,3,,8763,False,world-cup-history:1998:1998-06-24|Nigeria|Paraguay|,dict,list,False
+1015,m_v0001015,286,1997,1998,1998-06-24,5506,Spain,1135,Bulgaria,not_started,,,finished,6,1,,8761,False,world-cup-history:1998:1998-06-24|Spain|Bulgaria|,dict,list,False
+1021,m_v0001021,286,1997,1998,1998-06-25,5512,Belgium,5469,South Korea,not_started,,,finished,1,1,,8765,False,world-cup-history:1998:1998-06-25|Belgium|South Korea|,dict,list,False
+1022,m_v0001022,286,1997,1998,1998-06-25,5480,Netherlands,5465,Mexico,not_started,,,finished,2,2,,8766,False,world-cup-history:1998:1998-06-25|Netherlands|Mexico|,dict,list,False
+1027,m_v0001027,286,1997,1998,1998-06-25,5508,Germany,5494,Iran,not_started,,,finished,2,0,,8767,False,world-cup-history:1998:1998-06-25|Germany|Iran|,dict,list,False
+1028,m_v0001028,286,1997,1998,1998-06-25,5484,USA,1117,Yugoslavia,not_started,,,finished,0,1,,8768,False,world-cup-history:1998:1998-06-25|USA|Yugoslavia|,dict,list,False
+1040,m_v0001040,286,1997,1998,1998-06-26,5467,Argentina,5482,Croatia,not_started,,,finished,1,0,,8772,False,world-cup-history:1998:1998-06-26|Argentina|Croatia|,dict,list,False
+1039,m_v0001039,286,1997,1998,1998-06-26,5475,Japan,1160,Jamaica,not_started,,,finished,1,2,,8771,False,world-cup-history:1998:1998-06-26|Japan|Jamaica|,dict,list,False
+1034,m_v0001034,286,1997,1998,1998-06-26,5491,Colombia,5504,England,not_started,,,finished,0,2,,8770,False,world-cup-history:1998:1998-06-26|Colombia|England|,dict,list,False
+1033,m_v0001033,286,1997,1998,1998-06-26,1058,Romania,5502,Tunisia,not_started,,,finished,1,1,,8769,False,world-cup-history:1998:1998-06-26|Romania|Tunisia|,dict,list,False
+1042,m_v0001042,286,1997,1998,1998-06-27,1032,Italy,5509,Norway,not_started,,,finished,1,0,,8774,False,world-cup-history:1998:1998-06-27|Italy|Norway|,dict,list,False
+1041,m_v0001041,286,1997,1998,1998-06-27,5496,Brazil,1116,Chile,not_started,,,finished,4,1,,8773,False,world-cup-history:1998:1998-06-27|Brazil|Chile|,dict,list,False
+1043,m_v0001043,286,1997,1998,1998-06-28,1157,Nigeria,6568,Denmark,not_started,,,finished,1,4,,8775,False,world-cup-history:1998:1998-06-28|Nigeria|Denmark|,dict,list,False
+1045,m_v0001045,286,1997,1998,1998-06-29,5508,Germany,5465,Mexico,not_started,,,finished,2,1,,8777,False,world-cup-history:1998:1998-06-29|Germany|Mexico|,dict,list,False
+1046,m_v0001046,286,1997,1998,1998-06-29,5480,Netherlands,1117,Yugoslavia,not_started,,,finished,2,1,,8778,False,world-cup-history:1998:1998-06-29|Netherlands|Yugoslavia|,dict,list,False
+1048,m_v0001048,286,1997,1998,1998-06-30,1058,Romania,5482,Croatia,not_started,,,finished,0,1,,8780,False,world-cup-history:1998:1998-06-30|Romania|Croatia|,dict,list,False
+1050,m_v0001050,286,1997,1998,1998-07-03,5496,Brazil,6568,Denmark,not_started,,,finished,3,2,,8782,False,world-cup-history:1998:1998-07-03|Brazil|Denmark|,dict,list,False
+1052,m_v0001052,286,1997,1998,1998-07-04,5480,Netherlands,5467,Argentina,not_started,,,finished,2,1,,8784,False,world-cup-history:1998:1998-07-04|Netherlands|Argentina|,dict,list,False
+1051,m_v0001051,286,1997,1998,1998-07-04,5508,Germany,5482,Croatia,not_started,,,finished,0,3,,8783,False,world-cup-history:1998:1998-07-04|Germany|Croatia|,dict,list,False
+1054,m_v0001054,286,1997,1998,1998-07-08,5490,France,5482,Croatia,not_started,,,finished,2,1,,8786,False,world-cup-history:1998:1998-07-08|France|Croatia|,dict,list,False
+1055,m_v0001055,286,1997,1998,1998-07-11,5480,Netherlands,5482,Croatia,not_started,,,finished,1,2,,8787,False,world-cup-history:1998:1998-07-11|Netherlands|Croatia|,dict,list,False
+1056,m_v0001056,286,1997,1998,1998-07-12,5496,Brazil,5490,France,not_started,,,finished,0,3,,8788,False,world-cup-history:1998:1998-07-12|Brazil|France|,dict,list,False
+953,m_v0000953,285,1993,1994,1994-06-17,5508,Germany,1119,Bolivia,not_started,,,finished,1,0,,3049,False,world-cup-history:1994:1994-06-17|Germany|Bolivia|,dict,list,False
+954,m_v0000954,285,1993,1994,1994-06-17,5506,Spain,5469,South Korea,not_started,,,finished,2,2,,3050,False,world-cup-history:1994:1994-06-17|Spain|South Korea|,dict,list,False
+941,m_v0000941,285,1993,1994,1994-06-18,5484,USA,5479,Switzerland,not_started,,,finished,1,1,,3051,False,world-cup-history:1994:1994-06-18|USA|Switzerland|,dict,list,False
+965,m_v0000965,285,1993,1994,1994-06-18,1032,Italy,1155,Ireland,not_started,,,finished,0,1,,3052,False,world-cup-history:1994:1994-06-18|Italy|Ireland|,dict,list,False
+942,m_v0000942,285,1993,1994,1994-06-18,5491,Colombia,1058,Romania,not_started,,,finished,1,3,,3053,False,world-cup-history:1994:1994-06-18|Colombia|Romania|,dict,list,False
+971,m_v0000971,285,1993,1994,1994-06-19,5512,Belgium,5497,Morocco,not_started,,,finished,1,0,,3054,False,world-cup-history:1994:1994-06-19|Belgium|Morocco|,dict,list,False
+966,m_v0000966,285,1993,1994,1994-06-19,5509,Norway,5465,Mexico,not_started,,,finished,1,0,,3055,False,world-cup-history:1994:1994-06-19|Norway|Mexico|,dict,list,False
+947,m_v0000947,285,1993,1994,1994-06-19,6564,Cameroon,5476,Sweden,not_started,,,finished,2,2,,3056,False,world-cup-history:1994:1994-06-19|Cameroon|Sweden|,dict,list,False
+948,m_v0000948,285,1993,1994,1994-06-20,5496,Brazil,1038,Russia,not_started,,,finished,2,0,,3057,False,world-cup-history:1994:1994-06-20|Brazil|Russia|,dict,list,False
+972,m_v0000972,285,1993,1994,1994-06-20,5480,Netherlands,5474,Saudi Arabia,not_started,,,finished,2,1,,3058,False,world-cup-history:1994:1994-06-20|Netherlands|Saudi Arabia|,dict,list,False
+959,m_v0000959,285,1993,1994,1994-06-21,5467,Argentina,1156,Greece,not_started,,,finished,4,0,,3059,False,world-cup-history:1994:1994-06-21|Argentina|Greece|,dict,list,False
+955,m_v0000955,285,1993,1994,1994-06-21,5508,Germany,5506,Spain,not_started,,,finished,1,1,,3060,False,world-cup-history:1994:1994-06-21|Germany|Spain|,dict,list,False
+960,m_v0000960,285,1993,1994,1994-06-21,1157,Nigeria,1135,Bulgaria,not_started,,,finished,3,0,,3061,False,world-cup-history:1994:1994-06-21|Nigeria|Bulgaria|,dict,list,False
+943,m_v0000943,285,1993,1994,1994-06-22,1058,Romania,5479,Switzerland,not_started,,,finished,1,4,,3062,False,world-cup-history:1994:1994-06-22|Romania|Switzerland|,dict,list,False
+944,m_v0000944,285,1993,1994,1994-06-22,5484,USA,5491,Colombia,not_started,,,finished,2,1,,3063,False,world-cup-history:1994:1994-06-22|USA|Colombia|,dict,list,False
+967,m_v0000967,285,1993,1994,1994-06-23,1032,Italy,5509,Norway,not_started,,,finished,1,0,,3064,False,world-cup-history:1994:1994-06-23|Italy|Norway|,dict,list,False
+956,m_v0000956,285,1993,1994,1994-06-23,5469,South Korea,1119,Bolivia,not_started,,,finished,0,0,,3065,False,world-cup-history:1994:1994-06-23|South Korea|Bolivia|,dict,list,False
+968,m_v0000968,285,1993,1994,1994-06-24,5465,Mexico,1155,Ireland,not_started,,,finished,2,1,,3066,False,world-cup-history:1994:1994-06-24|Mexico|Ireland|,dict,list,False
+949,m_v0000949,285,1993,1994,1994-06-24,5496,Brazil,6564,Cameroon,not_started,,,finished,3,0,,3067,False,world-cup-history:1994:1994-06-24|Brazil|Cameroon|,dict,list,False
+950,m_v0000950,285,1993,1994,1994-06-24,5476,Sweden,1038,Russia,not_started,,,finished,3,1,,3068,False,world-cup-history:1994:1994-06-24|Sweden|Russia|,dict,list,False
+974,m_v0000974,285,1993,1994,1994-06-25,5474,Saudi Arabia,5497,Morocco,not_started,,,finished,2,1,,3070,False,world-cup-history:1994:1994-06-25|Saudi Arabia|Morocco|,dict,list,False
+973,m_v0000973,285,1993,1994,1994-06-25,5512,Belgium,5480,Netherlands,not_started,,,finished,1,0,,3069,False,world-cup-history:1994:1994-06-25|Belgium|Netherlands|,dict,list,False
+961,m_v0000961,285,1993,1994,1994-06-25,5467,Argentina,1157,Nigeria,not_started,,,finished,2,1,,3071,False,world-cup-history:1994:1994-06-25|Argentina|Nigeria|,dict,list,False
+962,m_v0000962,285,1993,1994,1994-06-26,1156,Greece,1135,Bulgaria,not_started,,,finished,0,4,,3072,True,world-cup-history:1994:1994-06-26|Greece|Bulgaria|,dict,list,False
+945,m_v0000945,285,1993,1994,1994-06-26,5484,USA,1058,Romania,not_started,,,finished,0,1,,3073,False,world-cup-history:1994:1994-06-26|USA|Romania|,dict,list,False
+946,m_v0000946,285,1993,1994,1994-06-26,5479,Switzerland,5491,Colombia,not_started,,,finished,0,2,,3074,False,world-cup-history:1994:1994-06-26|Switzerland|Colombia|,dict,list,False
+958,m_v0000958,285,1993,1994,1994-06-27,5508,Germany,5469,South Korea,not_started,,,finished,3,2,,3076,False,world-cup-history:1994:1994-06-27|Germany|South Korea|,dict,list,False
+957,m_v0000957,285,1993,1994,1994-06-27,1119,Bolivia,5506,Spain,not_started,,,finished,1,3,,3075,False,world-cup-history:1994:1994-06-27|Bolivia|Spain|,dict,list,False
+970,m_v0000970,285,1993,1994,1994-06-28,1032,Italy,5465,Mexico,not_started,,,finished,1,1,,3078,False,world-cup-history:1994:1994-06-28|Italy|Mexico|,dict,list,False
+969,m_v0000969,285,1993,1994,1994-06-28,1155,Ireland,5509,Norway,not_started,,,finished,0,0,,3077,False,world-cup-history:1994:1994-06-28|Ireland|Norway|,dict,list,False
+952,m_v0000952,285,1993,1994,1994-06-28,5496,Brazil,5476,Sweden,not_started,,,finished,1,1,,3080,False,world-cup-history:1994:1994-06-28|Brazil|Sweden|,dict,list,False
+951,m_v0000951,285,1993,1994,1994-06-28,1038,Russia,6564,Cameroon,not_started,,,finished,6,1,,3079,False,world-cup-history:1994:1994-06-28|Russia|Cameroon|,dict,list,False
+976,m_v0000976,285,1993,1994,1994-06-29,5512,Belgium,5474,Saudi Arabia,not_started,,,finished,0,1,,3082,False,world-cup-history:1994:1994-06-29|Belgium|Saudi Arabia|,dict,list,False
+975,m_v0000975,285,1993,1994,1994-06-29,5497,Morocco,5480,Netherlands,not_started,,,finished,1,2,,3081,False,world-cup-history:1994:1994-06-29|Morocco|Netherlands|,dict,list,False
+963,m_v0000963,285,1993,1994,1994-06-30,1156,Greece,1157,Nigeria,not_started,,,finished,0,2,,3083,False,world-cup-history:1994:1994-06-30|Greece|Nigeria|,dict,list,False
+964,m_v0000964,285,1993,1994,1994-06-30,5467,Argentina,1135,Bulgaria,not_started,,,finished,0,2,,3084,False,world-cup-history:1994:1994-06-30|Argentina|Bulgaria|,dict,list,False
+977,m_v0000977,285,1993,1994,1994-07-02,5508,Germany,5512,Belgium,not_started,,,finished,3,2,,3085,False,world-cup-history:1994:1994-07-02|Germany|Belgium|,dict,list,False
+978,m_v0000978,285,1993,1994,1994-07-02,5506,Spain,5479,Switzerland,not_started,,,finished,3,0,,3086,False,world-cup-history:1994:1994-07-02|Spain|Switzerland|,dict,list,False
+979,m_v0000979,285,1993,1994,1994-07-03,5474,Saudi Arabia,5476,Sweden,not_started,,,finished,1,3,,3087,False,world-cup-history:1994:1994-07-03|Saudi Arabia|Sweden|,dict,list,False
+980,m_v0000980,285,1993,1994,1994-07-03,1058,Romania,5467,Argentina,not_started,,,finished,3,2,,3088,False,world-cup-history:1994:1994-07-03|Romania|Argentina|,dict,list,False
+981,m_v0000981,285,1993,1994,1994-07-04,5480,Netherlands,1155,Ireland,not_started,,,finished,2,0,,3089,False,world-cup-history:1994:1994-07-04|Netherlands|Ireland|,dict,list,False
+982,m_v0000982,285,1993,1994,1994-07-04,5496,Brazil,5484,USA,not_started,,,finished,1,0,,3090,False,world-cup-history:1994:1994-07-04|Brazil|USA|,dict,list,False
+985,m_v0000985,285,1993,1994,1994-07-09,1032,Italy,5506,Spain,not_started,,,finished,2,1,,3097,False,world-cup-history:1994:1994-07-09|Italy|Spain|,dict,list,False
+986,m_v0000986,285,1993,1994,1994-07-09,5480,Netherlands,5496,Brazil,not_started,,,finished,2,3,,3098,False,world-cup-history:1994:1994-07-09|Netherlands|Brazil|,dict,list,False
+987,m_v0000987,285,1993,1994,1994-07-10,1135,Bulgaria,5508,Germany,not_started,,,finished,2,1,,3096,False,world-cup-history:1994:1994-07-10|Bulgaria|Germany|,dict,list,False
+989,m_v0000989,285,1993,1994,1994-07-13,1135,Bulgaria,1032,Italy,not_started,,,finished,1,2,,3100,False,world-cup-history:1994:1994-07-13|Bulgaria|Italy|,dict,list,False
+990,m_v0000990,285,1993,1994,1994-07-13,5476,Sweden,5496,Brazil,not_started,,,finished,0,1,,3099,False,world-cup-history:1994:1994-07-13|Sweden|Brazil|,dict,list,False
+991,m_v0000991,285,1993,1994,1994-07-16,5476,Sweden,1135,Bulgaria,not_started,,,finished,4,0,,3103,False,world-cup-history:1994:1994-07-16|Sweden|Bulgaria|,dict,list,False
+895,m_v0000895,284,1989,1990,1990-06-08,5467,Argentina,6564,Cameroon,not_started,,,finished,0,1,,26,False,world-cup-history:1990:1990-06-08|Argentina|Cameroon|,dict,list,False
+907,m_v0000907,284,1989,1990,1990-06-09,1154,United Arab Emirates,5491,Colombia,not_started,,,finished,0,2,,119,False,world-cup-history:1990:1990-06-09|United Arab Emirates|Colombia|,dict,list,False
+896,m_v0000896,284,1989,1990,1990-06-09,1133,Soviet Union,1058,Romania,not_started,,,finished,0,2,,342,False,world-cup-history:1990:1990-06-09|Soviet Union|Romania|,dict,list,False
+889,m_v0000889,284,1989,1990,1990-06-09,1032,Italy,5489,Austria,not_started,,,finished,1,0,,42,False,world-cup-history:1990:1990-06-09|Italy|Austria|,dict,list,False
+890,m_v0000890,284,1989,1990,1990-06-10,5484,United States,1126,Czechoslovakia,not_started,,,finished,1,5,,355,False,world-cup-history:1990:1990-06-10|United States|Czechoslovakia|,dict,list,False
+908,m_v0000908,284,1989,1990,1990-06-10,1130,West Germany,1117,Yugoslavia,not_started,,,finished,4,1,,201,False,world-cup-history:1990:1990-06-10|West Germany|Yugoslavia|,dict,list,False
+901,m_v0000901,284,1989,1990,1990-06-10,5496,Brazil,5476,Sweden,not_started,,,finished,2,1,,75,False,world-cup-history:1990:1990-06-10|Brazil|Sweden|,dict,list,False
+902,m_v0000902,284,1989,1990,1990-06-11,6567,Costa Rica,5501,Scotland,not_started,,,finished,1,0,,127,False,world-cup-history:1990:1990-06-11|Costa Rica|Scotland|,dict,list,False
+919,m_v0000919,284,1989,1990,1990-06-11,5504,England,1155,Ireland,not_started,,,finished,1,1,,161,False,world-cup-history:1990:1990-06-11|England|Ireland|,dict,list,False
+913,m_v0000913,284,1989,1990,1990-06-12,5512,Belgium,5469,South Korea,not_started,,,finished,2,0,,57,False,world-cup-history:1990:1990-06-12|Belgium|South Korea|,dict,list,False
+920,m_v0000920,284,1989,1990,1990-06-12,5480,Netherlands,5472,Egypt,not_started,,,finished,1,1,,151,False,world-cup-history:1990:1990-06-12|Netherlands|Egypt|,dict,list,False
+914,m_v0000914,284,1989,1990,1990-06-13,5498,Uruguay,5506,Spain,not_started,,,finished,0,0,,180,False,world-cup-history:1990:1990-06-13|Uruguay|Spain|,dict,list,False
+897,m_v0000897,284,1989,1990,1990-06-13,5467,Argentina,1133,Soviet Union,not_started,,,finished,2,0,,30,False,world-cup-history:1990:1990-06-13|Argentina|Soviet Union|,dict,list,False
+909,m_v0000909,284,1989,1990,1990-06-14,1117,Yugoslavia,5491,Colombia,not_started,,,finished,1,0,,120,False,world-cup-history:1990:1990-06-14|Yugoslavia|Colombia|,dict,list,False
+898,m_v0000898,284,1989,1990,1990-06-14,6564,Cameroon,1058,Romania,not_started,,,finished,2,1,,108,False,world-cup-history:1990:1990-06-14|Cameroon|Romania|,dict,list,False
+891,m_v0000891,284,1989,1990,1990-06-14,1032,Italy,5484,United States,not_started,,,finished,1,0,,265,False,world-cup-history:1990:1990-06-14|Italy|United States|,dict,list,False
+892,m_v0000892,284,1989,1990,1990-06-15,5489,Austria,1126,Czechoslovakia,not_started,,,finished,0,1,,43,False,world-cup-history:1990:1990-06-15|Austria|Czechoslovakia|,dict,list,False
+910,m_v0000910,284,1989,1990,1990-06-15,1130,West Germany,1154,United Arab Emirates,not_started,,,finished,5,1,,198,False,world-cup-history:1990:1990-06-15|West Germany|United Arab Emirates|,dict,list,False
+903,m_v0000903,284,1989,1990,1990-06-16,5496,Brazil,6567,Costa Rica,not_started,,,finished,1,0,,73,False,world-cup-history:1990:1990-06-16|Brazil|Costa Rica|,dict,list,False
+904,m_v0000904,284,1989,1990,1990-06-16,5476,Sweden,5501,Scotland,not_started,,,finished,1,2,,348,False,world-cup-history:1990:1990-06-16|Sweden|Scotland|,dict,list,False
+921,m_v0000921,284,1989,1990,1990-06-16,5504,England,5480,Netherlands,not_started,,,finished,0,0,,160,False,world-cup-history:1990:1990-06-16|England|Netherlands|,dict,list,False
+922,m_v0000922,284,1989,1990,1990-06-17,1155,Ireland,5472,Egypt,not_started,,,finished,0,0,,152,False,world-cup-history:1990:1990-06-17|Ireland|Egypt|,dict,list,False
+915,m_v0000915,284,1989,1990,1990-06-17,5512,Belgium,5498,Uruguay,not_started,,,finished,3,1,,66,False,world-cup-history:1990:1990-06-17|Belgium|Uruguay|,dict,list,False
+916,m_v0000916,284,1989,1990,1990-06-17,5469,South Korea,5506,Spain,not_started,,,finished,1,3,,175,False,world-cup-history:1990:1990-06-17|South Korea|Spain|,dict,list,False
+900,m_v0000900,284,1989,1990,1990-06-18,6564,Cameroon,1133,Soviet Union,not_started,,,finished,0,4,,111,False,world-cup-history:1990:1990-06-18|Cameroon|Soviet Union|,dict,list,False
+899,m_v0000899,284,1989,1990,1990-06-18,5467,Argentina,1058,Romania,not_started,,,finished,1,1,,29,False,world-cup-history:1990:1990-06-18|Argentina|Romania|,dict,list,False
+911,m_v0000911,284,1989,1990,1990-06-19,1130,West Germany,5491,Colombia,not_started,,,finished,1,1,,114,False,world-cup-history:1990:1990-06-19|West Germany|Colombia|,dict,list,False
+912,m_v0000912,284,1989,1990,1990-06-19,1117,Yugoslavia,1154,United Arab Emirates,not_started,,,finished,4,1,,364,False,world-cup-history:1990:1990-06-19|Yugoslavia|United Arab Emirates|,dict,list,False
+894,m_v0000894,284,1989,1990,1990-06-19,5489,Austria,5484,United States,not_started,,,finished,2,1,,48,False,world-cup-history:1990:1990-06-19|Austria|United States|,dict,list,False
+893,m_v0000893,284,1989,1990,1990-06-19,1032,Italy,1126,Czechoslovakia,not_started,,,finished,2,0,,263,False,world-cup-history:1990:1990-06-19|Italy|Czechoslovakia|,dict,list,False
+906,m_v0000906,284,1989,1990,1990-06-20,5476,Sweden,6567,Costa Rica,not_started,,,finished,1,2,,128,False,world-cup-history:1990:1990-06-20|Sweden|Costa Rica|,dict,list,False
+905,m_v0000905,284,1989,1990,1990-06-20,5496,Brazil,5501,Scotland,not_started,,,finished,1,0,,74,False,world-cup-history:1990:1990-06-20|Brazil|Scotland|,dict,list,False
+917,m_v0000917,284,1989,1990,1990-06-21,5512,Belgium,5506,Spain,not_started,,,finished,1,2,,56,False,world-cup-history:1990:1990-06-21|Belgium|Spain|,dict,list,False
+918,m_v0000918,284,1989,1990,1990-06-21,5469,South Korea,5498,Uruguay,not_started,,,finished,0,1,,290,False,world-cup-history:1990:1990-06-21|South Korea|Uruguay|,dict,list,False
+924,m_v0000924,284,1989,1990,1990-06-21,1155,Ireland,5480,Netherlands,not_started,,,finished,1,1,,228,False,world-cup-history:1990:1990-06-21|Ireland|Netherlands|,dict,list,False
+923,m_v0000923,284,1989,1990,1990-06-21,5504,England,5472,Egypt,not_started,,,finished,1,0,,150,False,world-cup-history:1990:1990-06-21|England|Egypt|,dict,list,False
+926,m_v0000926,284,1989,1990,1990-06-23,1126,Czechoslovakia,6567,Costa Rica,not_started,,,finished,4,1,,129,False,world-cup-history:1990:1990-06-23|Czechoslovakia|Costa Rica|,dict,list,False
+927,m_v0000927,284,1989,1990,1990-06-24,5496,Brazil,5467,Argentina,not_started,,,finished,0,1,,25,False,world-cup-history:1990:1990-06-24|Brazil|Argentina|,dict,list,False
+928,m_v0000928,284,1989,1990,1990-06-24,1130,West Germany,5480,Netherlands,not_started,,,finished,2,1,,196,False,world-cup-history:1990:1990-06-24|West Germany|Netherlands|,dict,list,False
+930,m_v0000930,284,1989,1990,1990-06-25,1032,Italy,5498,Uruguay,not_started,,,finished,2,0,,264,False,world-cup-history:1990:1990-06-25|Italy|Uruguay|,dict,list,False
+934,m_v0000934,284,1989,1990,1990-06-30,1032,Italy,1155,Ireland,not_started,,,finished,1,0,,243,False,world-cup-history:1990:1990-06-30|Italy|Ireland|,dict,list,False
+935,m_v0000935,284,1989,1990,1990-07-01,1130,West Germany,1126,Czechoslovakia,not_started,,,finished,1,0,,197,False,world-cup-history:1990:1990-07-01|West Germany|Czechoslovakia|,dict,list,False
+939,m_v0000939,284,1989,1990,1990-07-07,1032,Italy,5504,England,not_started,,,finished,2,1,,162,False,world-cup-history:1990:1990-07-07|Italy|England|,dict,list,False
+940,m_v0000940,284,1989,1990,1990-07-08,1130,West Germany,5467,Argentina,not_started,,,finished,1,0,,27,False,world-cup-history:1990:1990-07-08|West Germany|Argentina|,dict,list,False
+837,m_v0000837,283,1985,1986,1986-05-31,1135,Bulgaria,1032,Italy,not_started,,,finished,1,1,,459,False,world-cup-history:1986:1986-05-31|Bulgaria|Italy|,dict,list,False
+855,m_v0000855,283,1985,1986,1986-06-01,5506,Spain,5496,Brazil,not_started,,,finished,0,1,,439,False,world-cup-history:1986:1986-06-01|Spain|Brazil|,dict,list,False
+849,m_v0000849,283,1985,1986,1986-06-01,5505,Canada,5490,France,not_started,,,finished,0,1,,468,False,world-cup-history:1986:1986-06-01|Canada|France|,dict,list,False
+850,m_v0000850,283,1985,1986,1986-06-02,1133,Soviet Union,1051,Hungary,not_started,,,finished,6,0,,610,False,world-cup-history:1986:1986-06-02|Soviet Union|Hungary|,dict,list,False
+838,m_v0000838,283,1985,1986,1986-06-02,5467,Argentina,5469,South Korea,not_started,,,finished,3,1,,395,False,world-cup-history:1986:1986-06-02|Argentina|South Korea|,dict,list,False
+867,m_v0000867,283,1985,1986,1986-06-02,5497,Morocco,6566,Poland,not_started,,,finished,0,0,,674,False,world-cup-history:1986:1986-06-02|Morocco|Poland|,dict,list,False
+856,m_v0000856,283,1985,1986,1986-06-03,5487,Algeria,1132,Northern Ireland,not_started,,,finished,1,1,,379,False,world-cup-history:1986:1986-06-03|Algeria|Northern Ireland|,dict,list,False
+843,m_v0000843,283,1985,1986,1986-06-03,5512,Belgium,5465,Mexico,not_started,,,finished,1,2,,428,False,world-cup-history:1986:1986-06-03|Belgium|Mexico|,dict,list,False
+868,m_v0000868,283,1985,1986,1986-06-03,5511,Portugal,5504,England,not_started,,,finished,1,0,,538,False,world-cup-history:1986:1986-06-03|Portugal|England|,dict,list,False
+844,m_v0000844,283,1985,1986,1986-06-04,5473,Paraguay,5477,Iraq,not_started,,,finished,1,0,,628,False,world-cup-history:1986:1986-06-04|Paraguay|Iraq|,dict,list,False
+861,m_v0000861,283,1985,1986,1986-06-04,5498,Uruguay,1130,West Germany,not_started,,,finished,1,1,,585,False,world-cup-history:1986:1986-06-04|Uruguay|West Germany|,dict,list,False
+862,m_v0000862,283,1985,1986,1986-06-04,5501,Scotland,6568,Denmark,not_started,,,finished,0,1,,517,False,world-cup-history:1986:1986-06-04|Scotland|Denmark|,dict,list,False
+851,m_v0000851,283,1985,1986,1986-06-05,5490,France,1133,Soviet Union,not_started,,,finished,1,1,,571,False,world-cup-history:1986:1986-06-05|France|Soviet Union|,dict,list,False
+839,m_v0000839,283,1985,1986,1986-06-05,1032,Italy,5467,Argentina,not_started,,,finished,1,1,,394,False,world-cup-history:1986:1986-06-05|Italy|Argentina|,dict,list,False
+840,m_v0000840,283,1985,1986,1986-06-05,5469,South Korea,1135,Bulgaria,not_started,,,finished,1,1,,460,False,world-cup-history:1986:1986-06-05|South Korea|Bulgaria|,dict,list,False
+852,m_v0000852,283,1985,1986,1986-06-06,1051,Hungary,5505,Canada,not_started,,,finished,2,0,,475,False,world-cup-history:1986:1986-06-06|Hungary|Canada|,dict,list,False
+857,m_v0000857,283,1985,1986,1986-06-06,5496,Brazil,5487,Algeria,not_started,,,finished,1,0,,377,False,world-cup-history:1986:1986-06-06|Brazil|Algeria|,dict,list,False
+869,m_v0000869,283,1985,1986,1986-06-06,5504,England,5497,Morocco,not_started,,,finished,0,0,,533,False,world-cup-history:1986:1986-06-06|England|Morocco|,dict,list,False
+845,m_v0000845,283,1985,1986,1986-06-07,5465,Mexico,5473,Paraguay,not_started,,,finished,1,1,,680,False,world-cup-history:1986:1986-06-07|Mexico|Paraguay|,dict,list,False
+858,m_v0000858,283,1985,1986,1986-06-07,1132,Northern Ireland,5506,Spain,not_started,,,finished,1,2,,551,False,world-cup-history:1986:1986-06-07|Northern Ireland|Spain|,dict,list,False
+870,m_v0000870,283,1985,1986,1986-06-07,6566,Poland,5511,Portugal,not_started,,,finished,1,0,,701,False,world-cup-history:1986:1986-06-07|Poland|Portugal|,dict,list,False
+846,m_v0000846,283,1985,1986,1986-06-08,5477,Iraq,5512,Belgium,not_started,,,finished,1,2,,427,False,world-cup-history:1986:1986-06-08|Iraq|Belgium|,dict,list,False
+863,m_v0000863,283,1985,1986,1986-06-08,1130,West Germany,5501,Scotland,not_started,,,finished,2,1,,580,False,world-cup-history:1986:1986-06-08|West Germany|Scotland|,dict,list,False
+864,m_v0000864,283,1985,1986,1986-06-08,6568,Denmark,5498,Uruguay,not_started,,,finished,6,1,,522,False,world-cup-history:1986:1986-06-08|Denmark|Uruguay|,dict,list,False
+853,m_v0000853,283,1985,1986,1986-06-09,1051,Hungary,5490,France,not_started,,,finished,0,3,,567,False,world-cup-history:1986:1986-06-09|Hungary|France|,dict,list,False
+854,m_v0000854,283,1985,1986,1986-06-09,1133,Soviet Union,5505,Canada,not_started,,,finished,2,0,,476,False,world-cup-history:1986:1986-06-09|Soviet Union|Canada|,dict,list,False
+842,m_v0000842,283,1985,1986,1986-06-10,5467,Argentina,1135,Bulgaria,not_started,,,finished,2,0,,389,False,world-cup-history:1986:1986-06-10|Argentina|Bulgaria|,dict,list,False
+841,m_v0000841,283,1985,1986,1986-06-10,5469,South Korea,1032,Italy,not_started,,,finished,2,3,,643,False,world-cup-history:1986:1986-06-10|South Korea|Italy|,dict,list,False
+847,m_v0000847,283,1985,1986,1986-06-11,5477,Iraq,5465,Mexico,not_started,,,finished,0,1,,627,False,world-cup-history:1986:1986-06-11|Iraq|Mexico|,dict,list,False
+848,m_v0000848,283,1985,1986,1986-06-11,5473,Paraguay,5512,Belgium,not_started,,,finished,2,2,,429,False,world-cup-history:1986:1986-06-11|Paraguay|Belgium|,dict,list,False
+871,m_v0000871,283,1985,1986,1986-06-11,5511,Portugal,5497,Morocco,not_started,,,finished,1,3,,675,False,world-cup-history:1986:1986-06-11|Portugal|Morocco|,dict,list,False
+872,m_v0000872,283,1985,1986,1986-06-11,5504,England,6566,Poland,not_started,,,finished,3,0,,537,False,world-cup-history:1986:1986-06-11|England|Poland|,dict,list,False
+860,m_v0000860,283,1985,1986,1986-06-12,5487,Algeria,5506,Spain,not_started,,,finished,0,3,,378,False,world-cup-history:1986:1986-06-12|Algeria|Spain|,dict,list,False
+859,m_v0000859,283,1985,1986,1986-06-12,1132,Northern Ireland,5496,Brazil,not_started,,,finished,0,3,,441,False,world-cup-history:1986:1986-06-12|Northern Ireland|Brazil|,dict,list,False
+865,m_v0000865,283,1985,1986,1986-06-13,6568,Denmark,1130,West Germany,not_started,,,finished,2,0,,512,False,world-cup-history:1986:1986-06-13|Denmark|West Germany|,dict,list,False
+866,m_v0000866,283,1985,1986,1986-06-13,5501,Scotland,5498,Uruguay,not_started,,,finished,0,0,,712,False,world-cup-history:1986:1986-06-13|Scotland|Uruguay|,dict,list,False
+873,m_v0000873,283,1985,1986,1986-06-15,5465,Mexico,1135,Bulgaria,not_started,,,finished,2,0,,463,False,world-cup-history:1986:1986-06-15|Mexico|Bulgaria|,dict,list,False
+876,m_v0000876,283,1985,1986,1986-06-16,5496,Brazil,6566,Poland,not_started,,,finished,4,0,,444,False,world-cup-history:1986:1986-06-16|Brazil|Poland|,dict,list,False
+875,m_v0000875,283,1985,1986,1986-06-16,5467,Argentina,5498,Uruguay,not_started,,,finished,1,0,,398,False,world-cup-history:1986:1986-06-16|Argentina|Uruguay|,dict,list,False
+877,m_v0000877,283,1985,1986,1986-06-17,1032,Italy,5490,France,not_started,,,finished,0,2,,568,False,world-cup-history:1986:1986-06-17|Italy|France|,dict,list,False
+878,m_v0000878,283,1985,1986,1986-06-17,5497,Morocco,1130,West Germany,not_started,,,finished,0,1,,574,False,world-cup-history:1986:1986-06-17|Morocco|West Germany|,dict,list,False
+879,m_v0000879,283,1985,1986,1986-06-18,5504,England,5473,Paraguay,not_started,,,finished,3,0,,536,False,world-cup-history:1986:1986-06-18|England|Paraguay|,dict,list,False
+880,m_v0000880,283,1985,1986,1986-06-18,6568,Denmark,5506,Spain,not_started,,,finished,1,5,,511,False,world-cup-history:1986:1986-06-18|Denmark|Spain|,dict,list,False
+884,m_v0000884,283,1985,1986,1986-06-22,5467,Argentina,5504,England,not_started,,,finished,2,1,,392,False,world-cup-history:1986:1986-06-22|Argentina|England|,dict,list,False
+886,m_v0000886,283,1985,1986,1986-06-25,5490,France,1130,West Germany,not_started,,,finished,0,2,,564,False,world-cup-history:1986:1986-06-25|France|West Germany|,dict,list,False
+885,m_v0000885,283,1985,1986,1986-06-25,5467,Argentina,5512,Belgium,not_started,,,finished,2,0,,388,False,world-cup-history:1986:1986-06-25|Argentina|Belgium|,dict,list,False
+888,m_v0000888,283,1985,1986,1986-06-29,5467,Argentina,1130,West Germany,not_started,,,finished,3,2,,393,False,world-cup-history:1986:1986-06-29|Argentina|West Germany|,dict,list,False
+797,m_v0000797,282,1981,1982,1982-06-13,5467,Argentina,5512,Belgium,not_started,,,finished,0,1,,749,False,world-cup-history:1982:1982-06-13|Argentina|Belgium|,dict,list,False
+785,m_v0000785,282,1981,1982,1982-06-14,1032,Italy,6566,Poland,not_started,,,finished,0,0,,995,False,world-cup-history:1982:1982-06-14|Italy|Poland|,dict,list,False
+815,m_v0000815,282,1981,1982,1982-06-14,5496,Brazil,1133,Soviet Union,not_started,,,finished,2,1,,791,False,world-cup-history:1982:1982-06-14|Brazil|Soviet Union|,dict,list,False
+786,m_v0000786,282,1981,1982,1982-06-15,1120,Peru,6564,Cameroon,not_started,,,finished,0,0,,833,False,world-cup-history:1982:1982-06-15|Peru|Cameroon|,dict,list,False
+798,m_v0000798,282,1981,1982,1982-06-15,1051,Hungary,1137,El Salvador,not_started,,,finished,10,1,,896,False,world-cup-history:1982:1982-06-15|Hungary|El Salvador|,dict,list,False
+816,m_v0000816,282,1981,1982,1982-06-15,5501,Scotland,5492,New Zealand,not_started,,,finished,5,2,,1051,False,world-cup-history:1982:1982-06-15|Scotland|New Zealand|,dict,list,False
+803,m_v0000803,282,1981,1982,1982-06-16,5504,England,5490,France,not_started,,,finished,3,1,,878,False,world-cup-history:1982:1982-06-16|England|France|,dict,list,False
+791,m_v0000791,282,1981,1982,1982-06-16,1130,West Germany,5487,Algeria,not_started,,,finished,1,2,,741,False,world-cup-history:1982:1982-06-16|West Germany|Algeria|,dict,list,False
+809,m_v0000809,282,1981,1982,1982-06-16,5506,Spain,1149,Honduras,not_started,,,finished,1,1,,901,False,world-cup-history:1982:1982-06-16|Spain|Honduras|,dict,list,False
+792,m_v0000792,282,1981,1982,1982-06-17,1116,Chile,5489,Austria,not_started,,,finished,0,1,,764,False,world-cup-history:1982:1982-06-17|Chile|Austria|,dict,list,False
+804,m_v0000804,282,1981,1982,1982-06-17,1126,Czechoslovakia,1148,Kuwait,not_started,,,finished,1,1,,1012,False,world-cup-history:1982:1982-06-17|Czechoslovakia|Kuwait|,dict,list,False
+810,m_v0000810,282,1981,1982,1982-06-17,1117,Yugoslavia,1132,Northern Ireland,not_started,,,finished,0,0,,1044,False,world-cup-history:1982:1982-06-17|Yugoslavia|Northern Ireland|,dict,list,False
+787,m_v0000787,282,1981,1982,1982-06-18,1032,Italy,1120,Peru,not_started,,,finished,1,1,,994,False,world-cup-history:1982:1982-06-18|Italy|Peru|,dict,list,False
+799,m_v0000799,282,1981,1982,1982-06-18,5467,Argentina,1051,Hungary,not_started,,,finished,4,1,,752,False,world-cup-history:1982:1982-06-18|Argentina|Hungary|,dict,list,False
+817,m_v0000817,282,1981,1982,1982-06-18,5496,Brazil,5501,Scotland,not_started,,,finished,4,1,,790,False,world-cup-history:1982:1982-06-18|Brazil|Scotland|,dict,list,False
+788,m_v0000788,282,1981,1982,1982-06-19,6566,Poland,6564,Cameroon,not_started,,,finished,0,0,,834,False,world-cup-history:1982:1982-06-19|Poland|Cameroon|,dict,list,False
+818,m_v0000818,282,1981,1982,1982-06-19,1133,Soviet Union,5492,New Zealand,not_started,,,finished,3,0,,1054,False,world-cup-history:1982:1982-06-19|Soviet Union|New Zealand|,dict,list,False
+800,m_v0000800,282,1981,1982,1982-06-19,5512,Belgium,1137,El Salvador,not_started,,,finished,1,0,,774,False,world-cup-history:1982:1982-06-19|Belgium|El Salvador|,dict,list,False
+793,m_v0000793,282,1981,1982,1982-06-20,1130,West Germany,1116,Chile,not_started,,,finished,4,1,,813,False,world-cup-history:1982:1982-06-20|West Germany|Chile|,dict,list,False
+805,m_v0000805,282,1981,1982,1982-06-20,5504,England,1126,Czechoslovakia,not_started,,,finished,2,0,,889,False,world-cup-history:1982:1982-06-20|England|Czechoslovakia|,dict,list,False
+811,m_v0000811,282,1981,1982,1982-06-20,5506,Spain,1117,Yugoslavia,not_started,,,finished,2,1,,903,False,world-cup-history:1982:1982-06-20|Spain|Yugoslavia|,dict,list,False
+806,m_v0000806,282,1981,1982,1982-06-21,5490,France,1148,Kuwait,not_started,,,finished,4,1,,919,False,world-cup-history:1982:1982-06-21|France|Kuwait|,dict,list,False
+794,m_v0000794,282,1981,1982,1982-06-21,5487,Algeria,5489,Austria,not_started,,,finished,0,2,,739,False,world-cup-history:1982:1982-06-21|Algeria|Austria|,dict,list,False
+812,m_v0000812,282,1981,1982,1982-06-21,1149,Honduras,1132,Northern Ireland,not_started,,,finished,1,1,,959,False,world-cup-history:1982:1982-06-21|Honduras|Northern Ireland|,dict,list,False
+789,m_v0000789,282,1981,1982,1982-06-22,6566,Poland,1120,Peru,not_started,,,finished,5,1,,1055,False,world-cup-history:1982:1982-06-22|Poland|Peru|,dict,list,False
+801,m_v0000801,282,1981,1982,1982-06-22,5512,Belgium,1051,Hungary,not_started,,,finished,1,1,,779,False,world-cup-history:1982:1982-06-22|Belgium|Hungary|,dict,list,False
+819,m_v0000819,282,1981,1982,1982-06-22,1133,Soviet Union,5501,Scotland,not_started,,,finished,2,2,,1071,False,world-cup-history:1982:1982-06-22|Soviet Union|Scotland|,dict,list,False
+790,m_v0000790,282,1981,1982,1982-06-23,1032,Italy,6564,Cameroon,not_started,,,finished,1,1,,828,False,world-cup-history:1982:1982-06-23|Italy|Cameroon|,dict,list,False
+820,m_v0000820,282,1981,1982,1982-06-23,5496,Brazil,5492,New Zealand,not_started,,,finished,4,0,,789,False,world-cup-history:1982:1982-06-23|Brazil|New Zealand|,dict,list,False
+802,m_v0000802,282,1981,1982,1982-06-23,5467,Argentina,1137,El Salvador,not_started,,,finished,2,0,,751,False,world-cup-history:1982:1982-06-23|Argentina|El Salvador|,dict,list,False
+807,m_v0000807,282,1981,1982,1982-06-24,5490,France,1126,Czechoslovakia,not_started,,,finished,1,1,,922,False,world-cup-history:1982:1982-06-24|France|Czechoslovakia|,dict,list,False
+795,m_v0000795,282,1981,1982,1982-06-24,5487,Algeria,1116,Chile,not_started,,,finished,3,2,,740,False,world-cup-history:1982:1982-06-24|Algeria|Chile|,dict,list,False
+813,m_v0000813,282,1981,1982,1982-06-24,1149,Honduras,1117,Yugoslavia,not_started,,,finished,0,1,,962,False,world-cup-history:1982:1982-06-24|Honduras|Yugoslavia|,dict,list,False
+808,m_v0000808,282,1981,1982,1982-06-25,5504,England,1148,Kuwait,not_started,,,finished,1,0,,882,False,world-cup-history:1982:1982-06-25|England|Kuwait|,dict,list,False
+796,m_v0000796,282,1981,1982,1982-06-25,1130,West Germany,5489,Austria,not_started,,,finished,1,0,,770,False,world-cup-history:1982:1982-06-25|West Germany|Austria|,dict,list,False
+814,m_v0000814,282,1981,1982,1982-06-25,5506,Spain,1132,Northern Ireland,not_started,,,finished,0,1,,902,True,world-cup-history:1982:1982-06-25|Spain|Northern Ireland|,dict,list,False
+830,m_v0000830,282,1981,1982,1982-06-28,5489,Austria,5490,France,not_started,,,finished,0,1,,767,False,world-cup-history:1982:1982-06-28|Austria|France|,dict,list,False
+821,m_v0000821,282,1981,1982,1982-06-28,6566,Poland,5512,Belgium,not_started,,,finished,3,0,,782,False,world-cup-history:1982:1982-06-28|Poland|Belgium|,dict,list,False
+827,m_v0000827,282,1981,1982,1982-06-29,1032,Italy,5467,Argentina,not_started,,,finished,2,1,,753,False,world-cup-history:1982:1982-06-29|Italy|Argentina|,dict,list,False
+824,m_v0000824,282,1981,1982,1982-06-29,1130,West Germany,5504,England,not_started,,,finished,0,0,,879,False,world-cup-history:1982:1982-06-29|West Germany|England|,dict,list,False
+831,m_v0000831,282,1981,1982,1982-07-01,5489,Austria,1132,Northern Ireland,not_started,,,finished,2,2,,771,False,world-cup-history:1982:1982-07-01|Austria|Northern Ireland|,dict,list,False
+822,m_v0000822,282,1981,1982,1982-07-01,5512,Belgium,1133,Soviet Union,not_started,,,finished,0,1,,783,False,world-cup-history:1982:1982-07-01|Belgium|Soviet Union|,dict,list,False
+828,m_v0000828,282,1981,1982,1982-07-02,5467,Argentina,5496,Brazil,not_started,,,finished,1,3,,750,False,world-cup-history:1982:1982-07-02|Argentina|Brazil|,dict,list,False
+825,m_v0000825,282,1981,1982,1982-07-02,1130,West Germany,5506,Spain,not_started,,,finished,2,1,,900,False,world-cup-history:1982:1982-07-02|West Germany|Spain|,dict,list,False
+832,m_v0000832,282,1981,1982,1982-07-04,1132,Northern Ireland,5490,France,not_started,,,finished,1,4,,920,True,world-cup-history:1982:1982-07-04|Northern Ireland|France|,dict,list,False
+823,m_v0000823,282,1981,1982,1982-07-04,1133,Soviet Union,6566,Poland,not_started,,,finished,0,0,,1058,True,world-cup-history:1982:1982-07-04|Soviet Union|Poland|,dict,list,False
+829,m_v0000829,282,1981,1982,1982-07-05,1032,Italy,5496,Brazil,not_started,,,finished,3,2,,788,False,world-cup-history:1982:1982-07-05|Italy|Brazil|,dict,list,False
+826,m_v0000826,282,1981,1982,1982-07-05,5506,Spain,5504,England,not_started,,,finished,0,0,,877,False,world-cup-history:1982:1982-07-05|Spain|England|,dict,list,False
+833,m_v0000833,282,1981,1982,1982-07-08,6566,Poland,1032,Italy,not_started,,,finished,0,2,,996,False,world-cup-history:1982:1982-07-08|Poland|Italy|,dict,list,False
+835,m_v0000835,282,1981,1982,1982-07-10,6566,Poland,5490,France,not_started,,,finished,3,2,,921,False,world-cup-history:1982:1982-07-10|Poland|France|,dict,list,False
+836,m_v0000836,282,1981,1982,1982-07-11,1032,Italy,1130,West Germany,not_started,,,finished,3,1,,923,False,world-cup-history:1982:1982-07-11|Italy|West Germany|,dict,list,False
+753,m_v0000753,281,1977,1978,1978-06-01,1130,West Germany,6566,Poland,not_started,,,finished,0,0,,2351,False,world-cup-history:1978:1978-06-01|West Germany|Poland|,dict,list,False
+748,m_v0000748,281,1977,1978,1978-06-02,1032,Italy,5490,France,not_started,,,finished,2,1,,2347,False,world-cup-history:1978:1978-06-02|Italy|France|,dict,list,False
+754,m_v0000754,281,1977,1978,1978-06-02,5502,Tunisia,5465,Mexico,not_started,,,finished,3,1,,2433,False,world-cup-history:1978:1978-06-02|Tunisia|Mexico|,dict,list,False
+747,m_v0000747,281,1977,1978,1978-06-02,5467,Argentina,1051,Hungary,not_started,,,finished,2,1,,2199,False,world-cup-history:1978:1978-06-02|Argentina|Hungary|,dict,list,False
+760,m_v0000760,281,1977,1978,1978-06-03,5496,Brazil,5476,Sweden,not_started,,,finished,1,1,,2253,True,world-cup-history:1978:1978-06-03|Brazil|Sweden|,dict,list,False
+759,m_v0000759,281,1977,1978,1978-06-03,5489,Austria,5506,Spain,not_started,,,finished,2,1,,2216,False,world-cup-history:1978:1978-06-03|Austria|Spain|,dict,list,False
+766,m_v0000766,281,1977,1978,1978-06-03,5480,Netherlands,5494,Iran,not_started,,,finished,3,0,,2388,False,world-cup-history:1978:1978-06-03|Netherlands|Iran|,dict,list,False
+765,m_v0000765,281,1977,1978,1978-06-03,1120,Peru,5501,Scotland,not_started,,,finished,3,1,,2451,False,world-cup-history:1978:1978-06-03|Peru|Scotland|,dict,list,False
+750,m_v0000750,281,1977,1978,1978-06-06,1032,Italy,1051,Hungary,not_started,,,finished,3,1,,2396,False,world-cup-history:1978:1978-06-06|Italy|Hungary|,dict,list,False
+755,m_v0000755,281,1977,1978,1978-06-06,6566,Poland,5502,Tunisia,not_started,,,finished,1,0,,2454,False,world-cup-history:1978:1978-06-06|Poland|Tunisia|,dict,list,False
+756,m_v0000756,281,1977,1978,1978-06-06,1130,West Germany,5465,Mexico,not_started,,,finished,6,0,,2350,False,world-cup-history:1978:1978-06-06|West Germany|Mexico|,dict,list,False
+749,m_v0000749,281,1977,1978,1978-06-06,5467,Argentina,5490,France,not_started,,,finished,2,1,,2197,False,world-cup-history:1978:1978-06-06|Argentina|France|,dict,list,False
+762,m_v0000762,281,1977,1978,1978-06-07,5496,Brazil,5506,Spain,not_started,,,finished,0,0,,2246,False,world-cup-history:1978:1978-06-07|Brazil|Spain|,dict,list,False
+761,m_v0000761,281,1977,1978,1978-06-07,5489,Austria,5476,Sweden,not_started,,,finished,1,0,,2224,False,world-cup-history:1978:1978-06-07|Austria|Sweden|,dict,list,False
+767,m_v0000767,281,1977,1978,1978-06-07,5501,Scotland,5494,Iran,not_started,,,finished,1,1,,2408,False,world-cup-history:1978:1978-06-07|Scotland|Iran|,dict,list,False
+768,m_v0000768,281,1977,1978,1978-06-07,5480,Netherlands,1120,Peru,not_started,,,finished,0,0,,2394,False,world-cup-history:1978:1978-06-07|Netherlands|Peru|,dict,list,False
+752,m_v0000752,281,1977,1978,1978-06-10,5490,France,1051,Hungary,not_started,,,finished,3,1,,2344,False,world-cup-history:1978:1978-06-10|France|Hungary|,dict,list,False
+758,m_v0000758,281,1977,1978,1978-06-10,1130,West Germany,5502,Tunisia,not_started,,,finished,0,0,,2352,False,world-cup-history:1978:1978-06-10|West Germany|Tunisia|,dict,list,False
+757,m_v0000757,281,1977,1978,1978-06-10,6566,Poland,5465,Mexico,not_started,,,finished,3,1,,2431,False,world-cup-history:1978:1978-06-10|Poland|Mexico|,dict,list,False
+751,m_v0000751,281,1977,1978,1978-06-10,5467,Argentina,1032,Italy,not_started,,,finished,0,1,,2200,True,world-cup-history:1978:1978-06-10|Argentina|Italy|,dict,list,False
+764,m_v0000764,281,1977,1978,1978-06-11,5496,Brazil,5489,Austria,not_started,,,finished,1,0,,2215,False,world-cup-history:1978:1978-06-11|Brazil|Austria|,dict,list,False
+763,m_v0000763,281,1977,1978,1978-06-11,5506,Spain,5476,Sweden,not_started,,,finished,1,0,,2337,False,world-cup-history:1978:1978-06-11|Spain|Sweden|,dict,list,False
+770,m_v0000770,281,1977,1978,1978-06-11,5501,Scotland,5480,Netherlands,not_started,,,finished,3,2,,2395,False,world-cup-history:1978:1978-06-11|Scotland|Netherlands|,dict,list,False
+769,m_v0000769,281,1977,1978,1978-06-11,1120,Peru,5494,Iran,not_started,,,finished,4,1,,2405,False,world-cup-history:1978:1978-06-11|Peru|Iran|,dict,list,False
+772,m_v0000772,281,1977,1978,1978-06-14,5489,Austria,5480,Netherlands,not_started,,,finished,1,5,,2220,True,world-cup-history:1978:1978-06-14|Austria|Netherlands|,dict,list,False
+771,m_v0000771,281,1977,1978,1978-06-14,1032,Italy,1130,West Germany,not_started,,,finished,0,0,,2349,True,world-cup-history:1978:1978-06-14|Italy|West Germany|,dict,list,False
+778,m_v0000778,281,1977,1978,1978-06-14,1120,Peru,5496,Brazil,not_started,,,finished,0,3,,2251,True,world-cup-history:1978:1978-06-14|Peru|Brazil|,dict,list,False
+777,m_v0000777,281,1977,1978,1978-06-14,5467,Argentina,6566,Poland,not_started,,,finished,2,0,,2202,False,world-cup-history:1978:1978-06-14|Argentina|Poland|,dict,list,False
+780,m_v0000780,281,1977,1978,1978-06-18,1120,Peru,6566,Poland,not_started,,,finished,0,1,,2450,True,world-cup-history:1978:1978-06-18|Peru|Poland|,dict,list,False
+774,m_v0000774,281,1977,1978,1978-06-18,5480,Netherlands,1130,West Germany,not_started,,,finished,2,2,,2348,True,world-cup-history:1978:1978-06-18|Netherlands|West Germany|,dict,list,False
+773,m_v0000773,281,1977,1978,1978-06-18,1032,Italy,5489,Austria,not_started,,,finished,1,0,,2221,False,world-cup-history:1978:1978-06-18|Italy|Austria|,dict,list,False
+779,m_v0000779,281,1977,1978,1978-06-18,5467,Argentina,5496,Brazil,not_started,,,finished,0,0,,2196,False,world-cup-history:1978:1978-06-18|Argentina|Brazil|,dict,list,False
+775,m_v0000775,281,1977,1978,1978-06-21,1032,Italy,5480,Netherlands,not_started,,,finished,1,2,,2391,True,world-cup-history:1978:1978-06-21|Italy|Netherlands|,dict,list,False
+776,m_v0000776,281,1977,1978,1978-06-21,5489,Austria,1130,West Germany,not_started,,,finished,3,2,,2217,False,world-cup-history:1978:1978-06-21|Austria|West Germany|,dict,list,False
+782,m_v0000782,281,1977,1978,1978-06-21,6566,Poland,5496,Brazil,not_started,,,finished,1,3,,2252,True,world-cup-history:1978:1978-06-21|Poland|Brazil|,dict,list,False
+781,m_v0000781,281,1977,1978,1978-06-21,5467,Argentina,1120,Peru,not_started,,,finished,6,0,,2201,False,world-cup-history:1978:1978-06-21|Argentina|Peru|,dict,list,False
+783,m_v0000783,281,1977,1978,1978-06-24,5496,Brazil,1032,Italy,not_started,,,finished,2,1,,2247,False,world-cup-history:1978:1978-06-24|Brazil|Italy|,dict,list,False
+715,m_v0000715,280,1973,1974,1974-06-13,5496,Brazil,1117,Yugoslavia,not_started,,,finished,0,0,,1986,False,world-cup-history:1974:1974-06-13|Brazil|Yugoslavia|,dict,list,False
+709,m_v0000709,280,1973,1974,1974-06-14,1130,West Germany,1116,Chile,not_started,,,finished,1,0,,2003,False,world-cup-history:1974:1974-06-14|West Germany|Chile|,dict,list,False
+710,m_v0000710,280,1973,1974,1974-06-14,1140,East Germany,5483,Australia,not_started,,,finished,2,0,,1955,False,world-cup-history:1974:1974-06-14|East Germany|Australia|,dict,list,False
+716,m_v0000716,280,1973,1974,1974-06-14,1142,Zaire,5501,Scotland,not_started,,,finished,0,2,,2176,False,world-cup-history:1974:1974-06-14|Zaire|Scotland|,dict,list,False
+722,m_v0000722,280,1973,1974,1974-06-15,5476,Sweden,1135,Bulgaria,not_started,,,finished,0,0,,1995,False,world-cup-history:1974:1974-06-15|Sweden|Bulgaria|,dict,list,False
+721,m_v0000721,280,1973,1974,1974-06-15,5498,Uruguay,5480,Netherlands,not_started,,,finished,0,2,,2098,False,world-cup-history:1974:1974-06-15|Uruguay|Netherlands|,dict,list,False
+727,m_v0000727,280,1973,1974,1974-06-15,1032,Italy,5495,Haiti,not_started,,,finished,3,1,,2083,False,world-cup-history:1974:1974-06-15|Italy|Haiti|,dict,list,False
+728,m_v0000728,280,1973,1974,1974-06-15,6566,Poland,5467,Argentina,not_started,,,finished,3,2,,1952,False,world-cup-history:1974:1974-06-15|Poland|Argentina|,dict,list,False
+712,m_v0000712,280,1973,1974,1974-06-18,5483,Australia,1130,West Germany,not_started,,,finished,0,3,,1954,False,world-cup-history:1974:1974-06-18|Australia|West Germany|,dict,list,False
+711,m_v0000711,280,1973,1974,1974-06-18,1116,Chile,1140,East Germany,not_started,,,finished,1,1,,2004,False,world-cup-history:1974:1974-06-18|Chile|East Germany|,dict,list,False
+718,m_v0000718,280,1973,1974,1974-06-18,5501,Scotland,5496,Brazil,not_started,,,finished,0,0,,1985,False,world-cup-history:1974:1974-06-18|Scotland|Brazil|,dict,list,False
+717,m_v0000717,280,1973,1974,1974-06-18,1117,Yugoslavia,1142,Zaire,not_started,,,finished,9,0,,2186,False,world-cup-history:1974:1974-06-18|Yugoslavia|Zaire|,dict,list,False
+723,m_v0000723,280,1973,1974,1974-06-19,5480,Netherlands,5476,Sweden,not_started,,,finished,0,0,,2097,False,world-cup-history:1974:1974-06-19|Netherlands|Sweden|,dict,list,False
+724,m_v0000724,280,1973,1974,1974-06-19,5498,Uruguay,1135,Bulgaria,not_started,,,finished,1,1,,1996,True,world-cup-history:1974:1974-06-19|Uruguay|Bulgaria|,dict,list,False
+730,m_v0000730,280,1973,1974,1974-06-19,5467,Argentina,1032,Italy,not_started,,,finished,1,1,,1949,False,world-cup-history:1974:1974-06-19|Argentina|Italy|,dict,list,False
+729,m_v0000729,280,1973,1974,1974-06-19,5495,Haiti,6566,Poland,not_started,,,finished,0,7,,2085,False,world-cup-history:1974:1974-06-19|Haiti|Poland|,dict,list,False
+713,m_v0000713,280,1973,1974,1974-06-22,5483,Australia,1116,Chile,not_started,,,finished,0,0,,1953,False,world-cup-history:1974:1974-06-22|Australia|Chile|,dict,list,False
+719,m_v0000719,280,1973,1974,1974-06-22,5501,Scotland,1117,Yugoslavia,not_started,,,finished,1,1,,2175,False,world-cup-history:1974:1974-06-22|Scotland|Yugoslavia|,dict,list,False
+720,m_v0000720,280,1973,1974,1974-06-22,1142,Zaire,5496,Brazil,not_started,,,finished,0,3,,1987,False,world-cup-history:1974:1974-06-22|Zaire|Brazil|,dict,list,False
+714,m_v0000714,280,1973,1974,1974-06-22,1140,East Germany,1130,West Germany,not_started,,,finished,1,0,,2062,False,world-cup-history:1974:1974-06-22|East Germany|West Germany|,dict,list,False
+725,m_v0000725,280,1973,1974,1974-06-23,5480,Netherlands,1135,Bulgaria,not_started,,,finished,4,1,,1990,True,world-cup-history:1974:1974-06-23|Netherlands|Bulgaria|,dict,list,False
+732,m_v0000732,280,1973,1974,1974-06-23,6566,Poland,1032,Italy,not_started,,,finished,2,1,,2129,False,world-cup-history:1974:1974-06-23|Poland|Italy|,dict,list,False
+726,m_v0000726,280,1973,1974,1974-06-23,5476,Sweden,5498,Uruguay,not_started,,,finished,3,0,,2181,False,world-cup-history:1974:1974-06-23|Sweden|Uruguay|,dict,list,False
+731,m_v0000731,280,1973,1974,1974-06-23,5467,Argentina,5495,Haiti,not_started,,,finished,4,1,,1947,False,world-cup-history:1974:1974-06-23|Argentina|Haiti|,dict,list,False
+739,m_v0000739,280,1973,1974,1974-06-26,1117,Yugoslavia,1130,West Germany,not_started,,,finished,0,2,,2066,False,world-cup-history:1974:1974-06-26|Yugoslavia|West Germany|,dict,list,False
+733,m_v0000733,280,1973,1974,1974-06-26,5496,Brazil,1140,East Germany,not_started,,,finished,1,0,,1982,False,world-cup-history:1974:1974-06-26|Brazil|East Germany|,dict,list,False
+734,m_v0000734,280,1973,1974,1974-06-26,5480,Netherlands,5467,Argentina,not_started,,,finished,4,0,,1948,False,world-cup-history:1974:1974-06-26|Netherlands|Argentina|,dict,list,False
+740,m_v0000740,280,1973,1974,1974-06-26,5476,Sweden,6566,Poland,not_started,,,finished,0,1,,2167,False,world-cup-history:1974:1974-06-26|Sweden|Poland|,dict,list,False
+742,m_v0000742,280,1973,1974,1974-06-30,6566,Poland,1117,Yugoslavia,not_started,,,finished,2,1,,2170,False,world-cup-history:1974:1974-06-30|Poland|Yugoslavia|,dict,list,False
+735,m_v0000735,280,1973,1974,1974-06-30,1140,East Germany,5480,Netherlands,not_started,,,finished,0,2,,2067,False,world-cup-history:1974:1974-06-30|East Germany|Netherlands|,dict,list,False
+736,m_v0000736,280,1973,1974,1974-06-30,5467,Argentina,5496,Brazil,not_started,,,finished,1,2,,1945,False,world-cup-history:1974:1974-06-30|Argentina|Brazil|,dict,list,False
+741,m_v0000741,280,1973,1974,1974-06-30,1130,West Germany,5476,Sweden,not_started,,,finished,4,2,,2065,False,world-cup-history:1974:1974-06-30|West Germany|Sweden|,dict,list,False
+743,m_v0000743,280,1973,1974,1974-07-03,6566,Poland,1130,West Germany,not_started,,,finished,0,1,,2064,False,world-cup-history:1974:1974-07-03|Poland|West Germany|,dict,list,False
+737,m_v0000737,280,1973,1974,1974-07-03,5467,Argentina,1140,East Germany,not_started,,,finished,1,1,,1946,False,world-cup-history:1974:1974-07-03|Argentina|East Germany|,dict,list,False
+738,m_v0000738,280,1973,1974,1974-07-03,5480,Netherlands,5496,Brazil,not_started,,,finished,2,0,,1983,False,world-cup-history:1974:1974-07-03|Netherlands|Brazil|,dict,list,False
+744,m_v0000744,280,1973,1974,1974-07-03,5476,Sweden,1117,Yugoslavia,not_started,,,finished,2,1,,2182,False,world-cup-history:1974:1974-07-03|Sweden|Yugoslavia|,dict,list,False
+745,m_v0000745,280,1973,1974,1974-07-06,5496,Brazil,6566,Poland,not_started,,,finished,0,1,,1984,False,world-cup-history:1974:1974-07-06|Brazil|Poland|,dict,list,False
+746,m_v0000746,280,1973,1974,1974-07-07,5480,Netherlands,1130,West Germany,not_started,,,finished,1,2,,2063,False,world-cup-history:1974:1974-07-07|Netherlands|West Germany|,dict,list,False
+677,m_v0000677,279,1969,1970,1970-05-31,5465,Mexico,1133,Soviet Union,not_started,,,finished,0,0,,1902,False,world-cup-history:1970:1970-05-31|Mexico|Soviet Union|,dict,list,False
+683,m_v0000683,279,1969,1970,1970-06-02,5498,Uruguay,1138,Israel,not_started,,,finished,2,0,,1881,False,world-cup-history:1970:1970-06-02|Uruguay|Israel|,dict,list,False
+689,m_v0000689,279,1969,1970,1970-06-02,1058,Romania,5504,England,not_started,,,finished,0,1,,1812,True,world-cup-history:1970:1970-06-02|Romania|England|,dict,list,False
+695,m_v0000695,279,1969,1970,1970-06-02,1120,Peru,1135,Bulgaria,not_started,,,finished,3,2,,1780,False,world-cup-history:1970:1970-06-02|Peru|Bulgaria|,dict,list,False
+690,m_v0000690,279,1969,1970,1970-06-03,1126,Czechoslovakia,5496,Brazil,not_started,,,finished,1,4,,1770,True,world-cup-history:1970:1970-06-03|Czechoslovakia|Brazil|,dict,list,False
+678,m_v0000678,279,1969,1970,1970-06-03,5512,Belgium,1137,El Salvador,not_started,,,finished,3,0,,1747,False,world-cup-history:1970:1970-06-03|Belgium|El Salvador|,dict,list,False
+684,m_v0000684,279,1969,1970,1970-06-03,1032,Italy,5476,Sweden,not_started,,,finished,1,0,,1883,False,world-cup-history:1970:1970-06-03|Italy|Sweden|,dict,list,False
+696,m_v0000696,279,1969,1970,1970-06-03,5497,Morocco,1130,West Germany,not_started,,,finished,1,2,,1839,True,world-cup-history:1970:1970-06-03|Morocco|West Germany|,dict,list,False
+697,m_v0000697,279,1969,1970,1970-06-06,1120,Peru,5497,Morocco,not_started,,,finished,3,0,,1893,False,world-cup-history:1970:1970-06-06|Peru|Morocco|,dict,list,False
+691,m_v0000691,279,1969,1970,1970-06-06,1058,Romania,1126,Czechoslovakia,not_started,,,finished,2,1,,1919,False,world-cup-history:1970:1970-06-06|Romania|Czechoslovakia|,dict,list,False
+679,m_v0000679,279,1969,1970,1970-06-06,1133,Soviet Union,5512,Belgium,not_started,,,finished,4,1,,1753,False,world-cup-history:1970:1970-06-06|Soviet Union|Belgium|,dict,list,False
+685,m_v0000685,279,1969,1970,1970-06-06,5498,Uruguay,1032,Italy,not_started,,,finished,0,0,,1884,False,world-cup-history:1970:1970-06-06|Uruguay|Italy|,dict,list,False
+692,m_v0000692,279,1969,1970,1970-06-07,5504,England,5496,Brazil,not_started,,,finished,0,1,,1764,True,world-cup-history:1970:1970-06-07|England|Brazil|,dict,list,False
+686,m_v0000686,279,1969,1970,1970-06-07,5476,Sweden,1138,Israel,not_started,,,finished,1,1,,1880,False,world-cup-history:1970:1970-06-07|Sweden|Israel|,dict,list,False
+680,m_v0000680,279,1969,1970,1970-06-07,5465,Mexico,1137,El Salvador,not_started,,,finished,4,0,,1820,False,world-cup-history:1970:1970-06-07|Mexico|El Salvador|,dict,list,False
+698,m_v0000698,279,1969,1970,1970-06-07,1135,Bulgaria,1130,West Germany,not_started,,,finished,2,5,,1774,True,world-cup-history:1970:1970-06-07|Bulgaria|West Germany|,dict,list,False
+681,m_v0000681,279,1969,1970,1970-06-10,1133,Soviet Union,1137,El Salvador,not_started,,,finished,2,0,,1823,False,world-cup-history:1970:1970-06-10|Soviet Union|El Salvador|,dict,list,False
+687,m_v0000687,279,1969,1970,1970-06-10,5498,Uruguay,5476,Sweden,not_started,,,finished,0,1,,1922,True,world-cup-history:1970:1970-06-10|Uruguay|Sweden|,dict,list,False
+699,m_v0000699,279,1969,1970,1970-06-10,1120,Peru,1130,West Germany,not_started,,,finished,1,3,,1840,True,world-cup-history:1970:1970-06-10|Peru|West Germany|,dict,list,False
+693,m_v0000693,279,1969,1970,1970-06-10,1058,Romania,5496,Brazil,not_started,,,finished,2,3,,1769,True,world-cup-history:1970:1970-06-10|Romania|Brazil|,dict,list,False
+682,m_v0000682,279,1969,1970,1970-06-11,5465,Mexico,5512,Belgium,not_started,,,finished,1,0,,1752,False,world-cup-history:1970:1970-06-11|Mexico|Belgium|,dict,list,False
+700,m_v0000700,279,1969,1970,1970-06-11,1135,Bulgaria,5497,Morocco,not_started,,,finished,1,1,,1779,False,world-cup-history:1970:1970-06-11|Bulgaria|Morocco|,dict,list,False
+688,m_v0000688,279,1969,1970,1970-06-11,1138,Israel,1032,Italy,not_started,,,finished,0,0,,1877,True,world-cup-history:1970:1970-06-11|Israel|Italy|,dict,list,False
+694,m_v0000694,279,1969,1970,1970-06-11,5504,England,1126,Czechoslovakia,not_started,,,finished,1,0,,1813,False,world-cup-history:1970:1970-06-11|England|Czechoslovakia|,dict,list,False
+703,m_v0000703,279,1969,1970,1970-06-14,5496,Brazil,1120,Peru,not_started,,,finished,4,2,,1768,False,world-cup-history:1970:1970-06-14|Brazil|Peru|,dict,list,False
+702,m_v0000702,279,1969,1970,1970-06-14,1032,Italy,5465,Mexico,not_started,,,finished,4,1,,1882,False,world-cup-history:1970:1970-06-14|Italy|Mexico|,dict,list,False
+705,m_v0000705,279,1969,1970,1970-06-17,5498,Uruguay,5496,Brazil,not_started,,,finished,1,3,,1771,True,world-cup-history:1970:1970-06-17|Uruguay|Brazil|,dict,list,False
+707,m_v0000707,279,1969,1970,1970-06-20,5498,Uruguay,1130,West Germany,not_started,,,finished,0,1,,1843,True,world-cup-history:1970:1970-06-20|Uruguay|West Germany|,dict,list,False
+708,m_v0000708,279,1969,1970,1970-06-21,5496,Brazil,1032,Italy,not_started,,,finished,4,1,,1765,False,world-cup-history:1970:1970-06-21|Brazil|Italy|,dict,list,False
+645,m_v0000645,278,1965,1966,1966-07-11,5504,England,5498,Uruguay,not_started,,,finished,0,0,,1636,False,world-cup-history:1966:1966-07-11|England|Uruguay|,dict,list,False
+651,m_v0000651,278,1965,1966,1966-07-12,1130,West Germany,5479,Switzerland,not_started,,,finished,5,0,,1656,False,world-cup-history:1966:1966-07-12|West Germany|Switzerland|,dict,list,False
+657,m_v0000657,278,1965,1966,1966-07-12,5496,Brazil,1135,Bulgaria,not_started,,,finished,2,0,,1596,False,world-cup-history:1966:1966-07-12|Brazil|Bulgaria|,dict,list,False
+663,m_v0000663,278,1965,1966,1966-07-12,1133,Soviet Union,1136,North Korea,not_started,,,finished,3,0,,1710,False,world-cup-history:1966:1966-07-12|Soviet Union|North Korea|,dict,list,False
+652,m_v0000652,278,1965,1966,1966-07-13,5467,Argentina,5506,Spain,not_started,,,finished,2,1,,1578,False,world-cup-history:1966:1966-07-13|Argentina|Spain|,dict,list,False
+646,m_v0000646,278,1965,1966,1966-07-13,5490,France,5465,Mexico,not_started,,,finished,1,1,,1650,False,world-cup-history:1966:1966-07-13|France|Mexico|,dict,list,False
+658,m_v0000658,278,1965,1966,1966-07-13,5511,Portugal,1051,Hungary,not_started,,,finished,3,1,,1675,False,world-cup-history:1966:1966-07-13|Portugal|Hungary|,dict,list,False
+664,m_v0000664,278,1965,1966,1966-07-13,1032,Italy,1116,Chile,not_started,,,finished,2,0,,1608,False,world-cup-history:1966:1966-07-13|Italy|Chile|,dict,list,False
+653,m_v0000653,278,1965,1966,1966-07-15,5506,Spain,5479,Switzerland,not_started,,,finished,2,1,,1641,False,world-cup-history:1966:1966-07-15|Spain|Switzerland|,dict,list,False
+659,m_v0000659,278,1965,1966,1966-07-15,1051,Hungary,5496,Brazil,not_started,,,finished,3,1,,1597,False,world-cup-history:1966:1966-07-15|Hungary|Brazil|,dict,list,False
+647,m_v0000647,278,1965,1966,1966-07-15,5498,Uruguay,5490,France,not_started,,,finished,2,1,,1653,False,world-cup-history:1966:1966-07-15|Uruguay|France|,dict,list,False
+665,m_v0000665,278,1965,1966,1966-07-15,1116,Chile,1136,North Korea,not_started,,,finished,1,1,,1609,True,world-cup-history:1966:1966-07-15|Chile|North Korea|,dict,list,False
+654,m_v0000654,278,1965,1966,1966-07-16,5467,Argentina,1130,West Germany,not_started,,,finished,0,0,,1579,True,world-cup-history:1966:1966-07-16|Argentina|West Germany|,dict,list,False
+666,m_v0000666,278,1965,1966,1966-07-16,1133,Soviet Union,1032,Italy,not_started,,,finished,1,0,,1682,False,world-cup-history:1966:1966-07-16|Soviet Union|Italy|,dict,list,False
+660,m_v0000660,278,1965,1966,1966-07-16,5511,Portugal,1135,Bulgaria,not_started,,,finished,3,0,,1602,False,world-cup-history:1966:1966-07-16|Portugal|Bulgaria|,dict,list,False
+648,m_v0000648,278,1965,1966,1966-07-16,5504,England,5465,Mexico,not_started,,,finished,2,0,,1634,False,world-cup-history:1966:1966-07-16|England|Mexico|,dict,list,False
+649,m_v0000649,278,1965,1966,1966-07-19,5465,Mexico,5498,Uruguay,not_started,,,finished,0,0,,1689,True,world-cup-history:1966:1966-07-19|Mexico|Uruguay|,dict,list,False
+655,m_v0000655,278,1965,1966,1966-07-19,5467,Argentina,5479,Switzerland,not_started,,,finished,2,0,,1582,False,world-cup-history:1966:1966-07-19|Argentina|Switzerland|,dict,list,False
+661,m_v0000661,278,1965,1966,1966-07-19,5511,Portugal,5496,Brazil,not_started,,,finished,3,1,,1598,False,world-cup-history:1966:1966-07-19|Portugal|Brazil|,dict,list,False
+667,m_v0000667,278,1965,1966,1966-07-19,1136,North Korea,1032,Italy,not_started,,,finished,1,0,,1679,False,world-cup-history:1966:1966-07-19|North Korea|Italy|,dict,list,False
+656,m_v0000656,278,1965,1966,1966-07-20,1130,West Germany,5506,Spain,not_started,,,finished,2,1,,1637,False,world-cup-history:1966:1966-07-20|West Germany|Spain|,dict,list,False
+668,m_v0000668,278,1965,1966,1966-07-20,1133,Soviet Union,1116,Chile,not_started,,,finished,2,1,,1610,False,world-cup-history:1966:1966-07-20|Soviet Union|Chile|,dict,list,False
+650,m_v0000650,278,1965,1966,1966-07-20,5504,England,5490,France,not_started,,,finished,2,0,,1632,False,world-cup-history:1966:1966-07-20|England|France|,dict,list,False
+662,m_v0000662,278,1965,1966,1966-07-20,1051,Hungary,1135,Bulgaria,not_started,,,finished,3,1,,1599,False,world-cup-history:1966:1966-07-20|Hungary|Bulgaria|,dict,list,False
+671,m_v0000671,278,1965,1966,1966-07-23,1133,Soviet Union,1051,Hungary,not_started,,,finished,2,1,,1676,False,world-cup-history:1966:1966-07-23|Soviet Union|Hungary|,dict,list,False
+672,m_v0000672,278,1965,1966,1966-07-23,5511,Portugal,1136,North Korea,not_started,,,finished,5,3,,1702,False,world-cup-history:1966:1966-07-23|Portugal|North Korea|,dict,list,False
+670,m_v0000670,278,1965,1966,1966-07-23,1130,West Germany,5498,Uruguay,not_started,,,finished,4,0,,1660,False,world-cup-history:1966:1966-07-23|West Germany|Uruguay|,dict,list,False
+669,m_v0000669,278,1965,1966,1966-07-23,5504,England,5467,Argentina,not_started,,,finished,1,0,,1577,False,world-cup-history:1966:1966-07-23|England|Argentina|,dict,list,False
+673,m_v0000673,278,1965,1966,1966-07-25,1130,West Germany,1133,Soviet Union,not_started,,,finished,2,1,,1659,False,world-cup-history:1966:1966-07-25|West Germany|Soviet Union|,dict,list,False
+674,m_v0000674,278,1965,1966,1966-07-26,5504,England,5511,Portugal,not_started,,,finished,2,1,,1635,False,world-cup-history:1966:1966-07-26|England|Portugal|,dict,list,False
+675,m_v0000675,278,1965,1966,1966-07-28,5511,Portugal,1133,Soviet Union,not_started,,,finished,2,1,,1709,False,world-cup-history:1966:1966-07-28|Portugal|Soviet Union|,dict,list,False
+619,m_v0000619,277,1961,1962,1962-05-30,1116,Chile,5479,Switzerland,not_started,,,finished,3,1,,1473,False,world-cup-history:1962:1962-05-30|Chile|Switzerland|,dict,list,False
+613,m_v0000613,277,1961,1962,1962-05-30,5498,Uruguay,5491,Colombia,not_started,,,finished,2,1,,1479,False,world-cup-history:1962:1962-05-30|Uruguay|Colombia|,dict,list,False
+625,m_v0000625,277,1961,1962,1962-05-30,5496,Brazil,5465,Mexico,not_started,,,finished,2,0,,1461,False,world-cup-history:1962:1962-05-30|Brazil|Mexico|,dict,list,False
+631,m_v0000631,277,1961,1962,1962-05-30,5467,Argentina,1135,Bulgaria,not_started,,,finished,1,0,,1447,False,world-cup-history:1962:1962-05-30|Argentina|Bulgaria|,dict,list,False
+632,m_v0000632,277,1961,1962,1962-05-31,1051,Hungary,5504,England,not_started,,,finished,2,1,,1490,False,world-cup-history:1962:1962-05-31|Hungary|England|,dict,list,False
+614,m_v0000614,277,1961,1962,1962-05-31,1133,Soviet Union,1117,Yugoslavia,not_started,,,finished,2,0,,1563,False,world-cup-history:1962:1962-05-31|Soviet Union|Yugoslavia|,dict,list,False
+620,m_v0000620,277,1961,1962,1962-05-31,1130,West Germany,1032,Italy,not_started,,,finished,0,0,,1507,False,world-cup-history:1962:1962-05-31|West Germany|Italy|,dict,list,False
+626,m_v0000626,277,1961,1962,1962-05-31,1126,Czechoslovakia,5506,Spain,not_started,,,finished,1,0,,1498,False,world-cup-history:1962:1962-05-31|Czechoslovakia|Spain|,dict,list,False
+633,m_v0000633,277,1961,1962,1962-06-02,5504,England,5467,Argentina,not_started,,,finished,3,1,,1450,False,world-cup-history:1962:1962-06-02|England|Argentina|,dict,list,False
+615,m_v0000615,277,1961,1962,1962-06-02,1117,Yugoslavia,5498,Uruguay,not_started,,,finished,3,1,,1564,False,world-cup-history:1962:1962-06-02|Yugoslavia|Uruguay|,dict,list,False
+621,m_v0000621,277,1961,1962,1962-06-02,1116,Chile,1032,Italy,not_started,,,finished,2,0,,1472,False,world-cup-history:1962:1962-06-02|Chile|Italy|,dict,list,False
+627,m_v0000627,277,1961,1962,1962-06-02,5496,Brazil,1126,Czechoslovakia,not_started,,,finished,0,0,,1462,False,world-cup-history:1962:1962-06-02|Brazil|Czechoslovakia|,dict,list,False
+616,m_v0000616,277,1961,1962,1962-06-03,1133,Soviet Union,5491,Colombia,not_started,,,finished,4,4,,1478,False,world-cup-history:1962:1962-06-03|Soviet Union|Colombia|,dict,list,False
+622,m_v0000622,277,1961,1962,1962-06-03,1130,West Germany,5479,Switzerland,not_started,,,finished,2,1,,1510,False,world-cup-history:1962:1962-06-03|West Germany|Switzerland|,dict,list,False
+634,m_v0000634,277,1961,1962,1962-06-03,1051,Hungary,1135,Bulgaria,not_started,,,finished,6,1,,1470,False,world-cup-history:1962:1962-06-03|Hungary|Bulgaria|,dict,list,False
+628,m_v0000628,277,1961,1962,1962-06-03,5506,Spain,5465,Mexico,not_started,,,finished,1,0,,1497,False,world-cup-history:1962:1962-06-03|Spain|Mexico|,dict,list,False
+623,m_v0000623,277,1961,1962,1962-06-06,1130,West Germany,1116,Chile,not_started,,,finished,2,0,,1471,False,world-cup-history:1962:1962-06-06|West Germany|Chile|,dict,list,False
+629,m_v0000629,277,1961,1962,1962-06-06,5496,Brazil,5506,Spain,not_started,,,finished,2,1,,1460,False,world-cup-history:1962:1962-06-06|Brazil|Spain|,dict,list,False
+617,m_v0000617,277,1961,1962,1962-06-06,1133,Soviet Union,5498,Uruguay,not_started,,,finished,2,1,,1562,False,world-cup-history:1962:1962-06-06|Soviet Union|Uruguay|,dict,list,False
+635,m_v0000635,277,1961,1962,1962-06-06,1051,Hungary,5467,Argentina,not_started,,,finished,0,0,,1451,False,world-cup-history:1962:1962-06-06|Hungary|Argentina|,dict,list,False
+618,m_v0000618,277,1961,1962,1962-06-07,1117,Yugoslavia,5491,Colombia,not_started,,,finished,5,0,,1480,False,world-cup-history:1962:1962-06-07|Yugoslavia|Colombia|,dict,list,False
+624,m_v0000624,277,1961,1962,1962-06-07,1032,Italy,5479,Switzerland,not_started,,,finished,3,0,,1532,False,world-cup-history:1962:1962-06-07|Italy|Switzerland|,dict,list,False
+630,m_v0000630,277,1961,1962,1962-06-07,5465,Mexico,1126,Czechoslovakia,not_started,,,finished,3,1,,1544,False,world-cup-history:1962:1962-06-07|Mexico|Czechoslovakia|,dict,list,False
+636,m_v0000636,277,1961,1962,1962-06-07,5504,England,1135,Bulgaria,not_started,,,finished,0,0,,1464,False,world-cup-history:1962:1962-06-07|England|Bulgaria|,dict,list,False
+637,m_v0000637,277,1961,1962,1962-06-10,1116,Chile,1133,Soviet Union,not_started,,,finished,2,1,,1474,False,world-cup-history:1962:1962-06-10|Chile|Soviet Union|,dict,list,False
+640,m_v0000640,277,1961,1962,1962-06-10,1126,Czechoslovakia,1051,Hungary,not_started,,,finished,1,0,,1525,False,world-cup-history:1962:1962-06-10|Czechoslovakia|Hungary|,dict,list,False
+638,m_v0000638,277,1961,1962,1962-06-10,1117,Yugoslavia,1130,West Germany,not_started,,,finished,1,0,,1511,False,world-cup-history:1962:1962-06-10|Yugoslavia|West Germany|,dict,list,False
+639,m_v0000639,277,1961,1962,1962-06-10,5496,Brazil,5504,England,not_started,,,finished,3,1,,1459,False,world-cup-history:1962:1962-06-10|Brazil|England|,dict,list,False
+642,m_v0000642,277,1961,1962,1962-06-13,1126,Czechoslovakia,1117,Yugoslavia,not_started,,,finished,3,1,,1559,False,world-cup-history:1962:1962-06-13|Czechoslovakia|Yugoslavia|,dict,list,False
+641,m_v0000641,277,1961,1962,1962-06-13,5496,Brazil,1116,Chile,not_started,,,finished,4,2,,1458,False,world-cup-history:1962:1962-06-13|Brazil|Chile|,dict,list,False
+643,m_v0000643,277,1961,1962,1962-06-16,1116,Chile,1117,Yugoslavia,not_started,,,finished,1,0,,1475,False,world-cup-history:1962:1962-06-16|Chile|Yugoslavia|,dict,list,False
+644,m_v0000644,277,1961,1962,1962-06-17,5496,Brazil,1126,Czechoslovakia,not_started,,,finished,3,1,,1463,False,world-cup-history:1962:1962-06-17|Brazil|Czechoslovakia|,dict,list,False
+591,m_v0000591,276,1957,1958,1958-06-08,5476,Sweden,5465,Mexico,not_started,,,finished,3,0,,1415,False,world-cup-history:1958:1958-06-08|Sweden|Mexico|,dict,list,False
+585,m_v0000585,276,1957,1958,1958-06-08,5490,France,5473,Paraguay,not_started,,,finished,7,3,,1386,False,world-cup-history:1958:1958-06-08|France|Paraguay|,dict,list,False
+578,m_v0000578,276,1957,1958,1958-06-08,1130,West Germany,5467,Argentina,not_started,,,finished,3,1,,1323,True,world-cup-history:1958:1958-06-08|West Germany|Argentina|,dict,list,False
+599,m_v0000599,276,1957,1958,1958-06-08,1133,Soviet Union,5504,England,not_started,,,finished,2,2,,1372,False,world-cup-history:1958:1958-06-08|Soviet Union|England|,dict,list,False
+592,m_v0000592,276,1957,1958,1958-06-08,1051,Hungary,6565,Wales,not_started,,,finished,1,1,,1407,False,world-cup-history:1958:1958-06-08|Hungary|Wales|,dict,list,False
+579,m_v0000579,276,1957,1958,1958-06-08,1132,Northern Ireland,1126,Czechoslovakia,not_started,,,finished,1,0,,1421,False,world-cup-history:1958:1958-06-08|Northern Ireland|Czechoslovakia|,dict,list,False
+586,m_v0000586,276,1957,1958,1958-06-08,1117,Yugoslavia,5501,Scotland,not_started,,,finished,1,1,,1434,False,world-cup-history:1958:1958-06-08|Yugoslavia|Scotland|,dict,list,False
+598,m_v0000598,276,1957,1958,1958-06-08,5496,Brazil,5489,Austria,not_started,,,finished,3,0,,1326,False,world-cup-history:1958:1958-06-08|Brazil|Austria|,dict,list,False
+587,m_v0000587,276,1957,1958,1958-06-11,1117,Yugoslavia,5490,France,not_started,,,finished,3,2,,1388,False,world-cup-history:1958:1958-06-11|Yugoslavia|France|,dict,list,False
+601,m_v0000601,276,1957,1958,1958-06-11,1133,Soviet Union,5489,Austria,not_started,,,finished,2,0,,1332,False,world-cup-history:1958:1958-06-11|Soviet Union|Austria|,dict,list,False
+600,m_v0000600,276,1957,1958,1958-06-11,5496,Brazil,5504,England,not_started,,,finished,0,0,,1339,False,world-cup-history:1958:1958-06-11|Brazil|England|,dict,list,False
+581,m_v0000581,276,1957,1958,1958-06-11,1130,West Germany,1126,Czechoslovakia,not_started,,,finished,2,2,,1391,False,world-cup-history:1958:1958-06-11|West Germany|Czechoslovakia|,dict,list,False
+580,m_v0000580,276,1957,1958,1958-06-11,5467,Argentina,1132,Northern Ireland,not_started,,,finished,3,1,,1324,False,world-cup-history:1958:1958-06-11|Argentina|Northern Ireland|,dict,list,False
+588,m_v0000588,276,1957,1958,1958-06-11,5473,Paraguay,5501,Scotland,not_started,,,finished,3,2,,1423,False,world-cup-history:1958:1958-06-11|Paraguay|Scotland|,dict,list,False
+593,m_v0000593,276,1957,1958,1958-06-11,5465,Mexico,6565,Wales,not_started,,,finished,1,1,,1418,False,world-cup-history:1958:1958-06-11|Mexico|Wales|,dict,list,False
+594,m_v0000594,276,1957,1958,1958-06-12,5476,Sweden,1051,Hungary,not_started,,,finished,2,1,,1406,False,world-cup-history:1958:1958-06-12|Sweden|Hungary|,dict,list,False
+595,m_v0000595,276,1957,1958,1958-06-15,5476,Sweden,6565,Wales,not_started,,,finished,0,0,,1438,False,world-cup-history:1958:1958-06-15|Sweden|Wales|,dict,list,False
+590,m_v0000590,276,1957,1958,1958-06-15,5473,Paraguay,1117,Yugoslavia,not_started,,,finished,3,3,,1426,False,world-cup-history:1958:1958-06-15|Paraguay|Yugoslavia|,dict,list,False
+583,m_v0000583,276,1957,1958,1958-06-15,1126,Czechoslovakia,5467,Argentina,not_started,,,finished,6,1,,1325,False,world-cup-history:1958:1958-06-15|Czechoslovakia|Argentina|,dict,list,False
+589,m_v0000589,276,1957,1958,1958-06-15,5490,France,5501,Scotland,not_started,,,finished,2,1,,1387,False,world-cup-history:1958:1958-06-15|France|Scotland|,dict,list,False
+582,m_v0000582,276,1957,1958,1958-06-15,1130,West Germany,1132,Northern Ireland,not_started,,,finished,2,2,,1389,False,world-cup-history:1958:1958-06-15|West Germany|Northern Ireland|,dict,list,False
+596,m_v0000596,276,1957,1958,1958-06-15,1051,Hungary,5465,Mexico,not_started,,,finished,4,0,,1403,False,world-cup-history:1958:1958-06-15|Hungary|Mexico|,dict,list,False
+603,m_v0000603,276,1957,1958,1958-06-15,5496,Brazil,1133,Soviet Union,not_started,,,finished,2,0,,1344,False,world-cup-history:1958:1958-06-15|Brazil|Soviet Union|,dict,list,False
+602,m_v0000602,276,1957,1958,1958-06-15,5504,England,5489,Austria,not_started,,,finished,2,2,,1327,False,world-cup-history:1958:1958-06-15|England|Austria|,dict,list,False
+597,m_v0000597,276,1957,1958,1958-06-17,6565,Wales,1051,Hungary,not_started,,,finished,2,1,,1408,False,world-cup-history:1958:1958-06-17|Wales|Hungary|,dict,list,False
+604,m_v0000604,276,1957,1958,1958-06-17,1133,Soviet Union,5504,England,not_started,,,finished,1,0,,1373,False,world-cup-history:1958:1958-06-17|Soviet Union|England|,dict,list,False
+608,m_v0000608,276,1957,1958,1958-06-19,1130,West Germany,1117,Yugoslavia,not_started,,,finished,1,0,,1392,False,world-cup-history:1958:1958-06-19|West Germany|Yugoslavia|,dict,list,False
+606,m_v0000606,276,1957,1958,1958-06-19,5476,Sweden,1133,Soviet Union,not_started,,,finished,2,0,,1437,False,world-cup-history:1958:1958-06-19|Sweden|Soviet Union|,dict,list,False
+607,m_v0000607,276,1957,1958,1958-06-19,5496,Brazil,6565,Wales,not_started,,,finished,1,0,,1345,False,world-cup-history:1958:1958-06-19|Brazil|Wales|,dict,list,False
+605,m_v0000605,276,1957,1958,1958-06-19,5490,France,1132,Northern Ireland,not_started,,,finished,4,0,,1385,False,world-cup-history:1958:1958-06-19|France|Northern Ireland|,dict,list,False
+609,m_v0000609,276,1957,1958,1958-06-24,5490,France,5496,Brazil,not_started,,,finished,2,5,,1340,True,world-cup-history:1958:1958-06-24|France|Brazil|,dict,list,False
+610,m_v0000610,276,1957,1958,1958-06-24,1130,West Germany,5476,Sweden,not_started,,,finished,1,3,,1390,True,world-cup-history:1958:1958-06-24|West Germany|Sweden|,dict,list,False
+611,m_v0000611,276,1957,1958,1958-06-28,1130,West Germany,5490,France,not_started,,,finished,3,6,,1382,True,world-cup-history:1958:1958-06-28|West Germany|France|,dict,list,False
+612,m_v0000612,276,1957,1958,1958-06-29,5476,Sweden,5496,Brazil,not_started,,,finished,2,5,,1343,True,world-cup-history:1958:1958-06-29|Sweden|Brazil|,dict,list,False
+562,m_v0000562,275,1953,1954,1954-06-16,5489,Austria,5501,Scotland,not_started,,,finished,1,0,,1236,False,world-cup-history:1954:1954-06-16|Austria|Scotland|,dict,list,False
+552,m_v0000552,275,1953,1954,1954-06-16,5496,Brazil,5465,Mexico,not_started,,,finished,5,0,,1249,False,world-cup-history:1954:1954-06-16|Brazil|Mexico|,dict,list,False
+553,m_v0000553,275,1953,1954,1954-06-16,1117,Yugoslavia,5490,France,not_started,,,finished,1,0,,1276,False,world-cup-history:1954:1954-06-16|Yugoslavia|France|,dict,list,False
+561,m_v0000561,275,1953,1954,1954-06-16,5498,Uruguay,1126,Czechoslovakia,not_started,,,finished,2,0,,1315,False,world-cup-history:1954:1954-06-16|Uruguay|Czechoslovakia|,dict,list,False
+566,m_v0000566,275,1953,1954,1954-06-17,5479,Switzerland,1032,Italy,not_started,,,finished,2,1,,1300,False,world-cup-history:1954:1954-06-17|Switzerland|Italy|,dict,list,False
+557,m_v0000557,275,1953,1954,1954-06-17,1051,Hungary,5469,South Korea,not_started,,,finished,9,0,,1294,False,world-cup-history:1954:1954-06-17|Hungary|South Korea|,dict,list,False
+556,m_v0000556,275,1953,1954,1954-06-17,1130,West Germany,5500,Turkey,not_started,,,finished,4,1,,1283,False,world-cup-history:1954:1954-06-17|West Germany|Turkey|,dict,list,False
+564,m_v0000564,275,1953,1954,1954-06-19,5498,Uruguay,5501,Scotland,not_started,,,finished,7,0,,1313,False,world-cup-history:1954:1954-06-19|Uruguay|Scotland|,dict,list,False
+563,m_v0000563,275,1953,1954,1954-06-19,5489,Austria,1126,Czechoslovakia,not_started,,,finished,5,0,,1238,False,world-cup-history:1954:1954-06-19|Austria|Czechoslovakia|,dict,list,False
+555,m_v0000555,275,1953,1954,1954-06-19,5490,France,5465,Mexico,not_started,,,finished,3,2,,1275,False,world-cup-history:1954:1954-06-19|France|Mexico|,dict,list,False
+558,m_v0000558,275,1953,1954,1954-06-20,1051,Hungary,1130,West Germany,not_started,,,finished,8,3,,1277,False,world-cup-history:1954:1954-06-20|Hungary|West Germany|,dict,list,False
+559,m_v0000559,275,1953,1954,1954-06-20,5500,Turkey,5469,South Korea,not_started,,,finished,7,0,,1304,False,world-cup-history:1954:1954-06-20|Turkey|South Korea|,dict,list,False
+568,m_v0000568,275,1953,1954,1954-06-20,1032,Italy,5512,Belgium,not_started,,,finished,4,1,,1243,False,world-cup-history:1954:1954-06-20|Italy|Belgium|,dict,list,False
+567,m_v0000567,275,1953,1954,1954-06-20,5504,England,5479,Switzerland,not_started,,,finished,2,0,,1263,False,world-cup-history:1954:1954-06-20|England|Switzerland|,dict,list,False
+560,m_v0000560,275,1953,1954,1954-06-23,1130,West Germany,5500,Turkey,not_started,,,finished,7,2,,1284,False,world-cup-history:1954:1954-06-23|West Germany|Turkey|,dict,list,False
+569,m_v0000569,275,1953,1954,1954-06-23,5479,Switzerland,1032,Italy,not_started,,,finished,4,1,,1301,False,world-cup-history:1954:1954-06-23|Switzerland|Italy|,dict,list,False
+570,m_v0000570,275,1953,1954,1954-06-26,5489,Austria,5479,Switzerland,not_started,,,finished,7,5,,1237,False,world-cup-history:1954:1954-06-26|Austria|Switzerland|,dict,list,False
+571,m_v0000571,275,1953,1954,1954-06-26,5498,Uruguay,5504,England,not_started,,,finished,4,2,,1264,False,world-cup-history:1954:1954-06-26|Uruguay|England|,dict,list,False
+572,m_v0000572,275,1953,1954,1954-06-27,1117,Yugoslavia,1130,West Germany,not_started,,,finished,0,2,,1285,True,world-cup-history:1954:1954-06-27|Yugoslavia|West Germany|,dict,list,False
+573,m_v0000573,275,1953,1954,1954-06-27,5496,Brazil,1051,Hungary,not_started,,,finished,2,4,,1248,True,world-cup-history:1954:1954-06-27|Brazil|Hungary|,dict,list,False
+574,m_v0000574,275,1953,1954,1954-06-30,1130,West Germany,5489,Austria,not_started,,,finished,6,1,,1233,False,world-cup-history:1954:1954-06-30|West Germany|Austria|,dict,list,False
+576,m_v0000576,275,1953,1954,1954-07-03,5498,Uruguay,5489,Austria,not_started,,,finished,1,3,,1239,True,world-cup-history:1954:1954-07-03|Uruguay|Austria|,dict,list,False
+577,m_v0000577,275,1953,1954,1954-07-04,1051,Hungary,1130,West Germany,not_started,,,finished,2,3,,1278,True,world-cup-history:1954:1954-07-04|Hungary|West Germany|,dict,list,False
+536,m_v0000536,274,1949,1950,1950-06-25,5504,England,1116,Chile,not_started,,,finished,2,0,,1192,False,world-cup-history:1950:1950-06-25|England|Chile|,dict,list,False
+537,m_v0000537,274,1949,1950,1950-06-25,5506,Spain,5484,United States,not_started,,,finished,3,1,,1208,False,world-cup-history:1950:1950-06-25|Spain|United States|,dict,list,False
+542,m_v0000542,274,1949,1950,1950-06-25,5476,Sweden,1032,Italy,not_started,,,finished,3,2,,1219,False,world-cup-history:1950:1950-06-25|Sweden|Italy|,dict,list,False
+539,m_v0000539,274,1949,1950,1950-06-29,5484,United States,5504,England,not_started,,,finished,1,0,,1202,False,world-cup-history:1950:1950-06-29|United States|England|,dict,list,False
+538,m_v0000538,274,1949,1950,1950-06-29,5506,Spain,1116,Chile,not_started,,,finished,2,0,,1193,False,world-cup-history:1950:1950-06-29|Spain|Chile|,dict,list,False
+543,m_v0000543,274,1949,1950,1950-06-29,5476,Sweden,5473,Paraguay,not_started,,,finished,2,2,,1228,False,world-cup-history:1950:1950-06-29|Sweden|Paraguay|,dict,list,False
+540,m_v0000540,274,1949,1950,1950-07-02,5506,Spain,5504,England,not_started,,,finished,1,0,,1199,False,world-cup-history:1950:1950-07-02|Spain|England|,dict,list,False
+541,m_v0000541,274,1949,1950,1950-07-02,1116,Chile,5484,United States,not_started,,,finished,5,2,,1194,False,world-cup-history:1950:1950-07-02|Chile|United States|,dict,list,False
+545,m_v0000545,274,1949,1950,1950-07-02,5498,Uruguay,1119,Bolivia,not_started,,,finished,8,0,,1185,False,world-cup-history:1950:1950-07-02|Uruguay|Bolivia|,dict,list,False
+544,m_v0000544,274,1949,1950,1950-07-02,1032,Italy,5473,Paraguay,not_started,,,finished,2,0,,1218,False,world-cup-history:1950:1950-07-02|Italy|Paraguay|,dict,list,False
+547,m_v0000547,274,1949,1950,1950-07-09,5496,Brazil,5476,Sweden,not_started,,,finished,7,1,,1189,False,world-cup-history:1950:1950-07-09|Brazil|Sweden|,dict,list,False
+546,m_v0000546,274,1949,1950,1950-07-09,5498,Uruguay,5506,Spain,not_started,,,finished,2,2,,1207,False,world-cup-history:1950:1950-07-09|Uruguay|Spain|,dict,list,False
+549,m_v0000549,274,1949,1950,1950-07-13,5498,Uruguay,5476,Sweden,not_started,,,finished,3,2,,1231,False,world-cup-history:1950:1950-07-13|Uruguay|Sweden|,dict,list,False
+548,m_v0000548,274,1949,1950,1950-07-13,5496,Brazil,5506,Spain,not_started,,,finished,6,1,,1186,False,world-cup-history:1950:1950-07-13|Brazil|Spain|,dict,list,False
+551,m_v0000551,274,1949,1950,1950-07-16,5498,Uruguay,5496,Brazil,not_started,,,finished,2,1,,1190,False,world-cup-history:1950:1950-07-16|Uruguay|Brazil|,dict,list,False
+550,m_v0000550,274,1949,1950,1950-07-16,5476,Sweden,5506,Spain,not_started,,,finished,3,1,,1206,False,world-cup-history:1950:1950-07-16|Sweden|Spain|,dict,list,False

@@ -1,0 +1,29 @@
+{
+  "match": 739114,
+  "at": "2026-11-18 06:53:49.335292+00:00",
+  "edition": 53161,
+  "teams": [
+    "Argentina",
+    "Colombia"
+  ],
+  "team_ids": [
+    5467,
+    5491
+  ],
+  "before": [
+    1605.5748291015625,
+    1553.5238037109375
+  ],
+  "after_stored": [
+    1615.7904052734375,
+    1543.3082275390625
+  ],
+  "stored_expected": 0.5743520259857178,
+  "expected_reconstructed_from_float4_before": 0.5743520128809901,
+  "stored_delta": 10.215576171875,
+  "formula_delta_at_1_20": 10.215551690856238,
+  "formula_delta_at_1_38": 11.747884444484672,
+  "difference_same_before": 1.5323327536284346,
+  "counterfactual_home_after_same_before": 1617.3227135460472,
+  "cumulative_replay": false
+}

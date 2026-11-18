@@ -1,0 +1,68 @@
+{
+  "snapshot": [
+    "vega_v2",
+    "2026-11-18 07:27:24.20705+00",
+    "4418809:4418809:",
+    "on"
+  ],
+  "source_sha256": "596f8f1871bc1a66fe2718344ecc01e8a60f951c94d497921928bc3e1a5c6cec",
+  "lines": 699,
+  "distinct_editions": 301,
+  "rows": [
+    {
+      "blocks": 1,
+      "missing_stopping": true,
+      "editions": 134,
+      "graded": 52665,
+      "measured_prevented": 0,
+      "measured_saves": 46343,
+      "positive_saves": 42431,
+      "measured_xgot_faced": 0,
+      "measured_conceded": 0,
+      "both_primitives": 0,
+      "three_primitives": 0,
+      "three_agree_to_cent": 0,
+      "distribution": 52665,
+      "aerial": 0,
+      "depth": 0,
+      "touches_missing": 0
+    },
+    {
+      "blocks": 3,
+      "missing_stopping": true,
+      "editions": 201,
+      "graded": 52051,
+      "measured_prevented": 0,
+      "measured_saves": 52051,
+      "positive_saves": 46376,
+      "measured_xgot_faced": 47990,
+      "measured_conceded": 52051,
+      "both_primitives": 47990,
+      "three_primitives": 0,
+      "three_agree_to_cent": 0,
+      "distribution": 52051,
+      "aerial": 52051,
+      "depth": 52051,
+      "touches_missing": 0
+    },
+    {
+      "blocks": 4,
+      "missing_stopping": false,
+      "editions": 192,
+      "graded": 52350,
+      "measured_prevented": 52350,
+      "measured_saves": 52350,
+      "positive_saves": 49503,
+      "measured_xgot_faced": 52293,
+      "measured_conceded": 52350,
+      "both_primitives": 52293,
+      "three_primitives": 52293,
+      "three_agree_to_cent": 48929,
+      "distribution": 52350,
+      "aerial": 52350,
+      "depth": 52350,
+      "touches_missing": 0
+    }
+  ],
+  "mismatched_to_cent": 3364
+}

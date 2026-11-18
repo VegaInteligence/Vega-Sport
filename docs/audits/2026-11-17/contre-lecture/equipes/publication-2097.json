@@ -1,0 +1,66 @@
+{
+  "source_before": "2026-11-17 21:58:21.697558+00:00",
+  "source_after": "2026-11-18 02:16:34.234527+00:00",
+  "from_run": 2088,
+  "to_run": 2097,
+  "previous_inputs": 81921,
+  "current_inputs": 81923,
+  "changed_shared": 0,
+  "removed": [],
+  "added": [
+    [
+      2651,
+      2026,
+      "2026-11-17 00:00:00+00:00",
+      6568,
+      5509,
+      2,
+      3,
+      false,
+      "2026-11-17",
+      76,
+      305,
+      1.05
+    ],
+    [
+      2652,
+      2026,
+      "2026-11-17 00:00:00+00:00",
+      6565,
+      5511,
+      2,
+      3,
+      false,
+      "2026-11-17",
+      76,
+      305,
+      1.05
+    ]
+  ],
+  "refit_rows": 163846,
+  "sides_by_kind": {
+    "national team": 1864,
+    "club": 161982
+  },
+  "bit_identical_all_five_fields": {
+    "national team": 1864,
+    "club": 156263
+  },
+  "max_binary32_steps": {
+    "national team": {
+      "before": 0,
+      "after": 0,
+      "expected": 0,
+      "result": 0,
+      "stakes": 0
+    },
+    "club": {
+      "before": 1,
+      "after": 1,
+      "expected": 1,
+      "result": 0,
+      "stakes": 0
+    }
+  },
+  "mismatching_edition_cells_across_snapshots": []
+}

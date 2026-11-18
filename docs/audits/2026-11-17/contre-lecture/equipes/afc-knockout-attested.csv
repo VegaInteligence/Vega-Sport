@@ -1,0 +1,16 @@
+official_number,date,home,away,home_ft,away_ft,stage
+37,2024-01-28,Australia,Indonesia,4,0,r16
+38,2024-01-28,Tajikistan,United Arab Emirates,1,1,r16
+39,2024-01-29,Iraq,Jordan,2,3,r16
+40,2024-01-29,Qatar,Palestine,2,1,r16
+41,2024-01-30,Uzbekistan,Thailand,2,1,r16
+42,2024-01-30,Saudi Arabia,South Korea,1,1,r16
+43,2024-01-31,Bahrain,Japan,1,3,r16
+44,2024-01-31,Iran,Syria,1,1,r16
+45,2024-02-02,Tajikistan,Jordan,0,1,quarter
+46,2024-02-02,Australia,South Korea,1,2,quarter
+47,2024-02-03,Iran,Japan,2,1,quarter
+48,2024-02-03,Qatar,Uzbekistan,1,1,quarter
+49,2024-02-06,Jordan,South Korea,2,0,semi
+50,2024-02-07,Iran,Qatar,2,3,semi
+51,2024-02-10,Jordan,Qatar,1,3,final

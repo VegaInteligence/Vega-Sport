@@ -1,0 +1,132 @@
+[
+  {
+    "first_id": 39986,
+    "second_id": 39987,
+    "first_day": "2026-09-14",
+    "second_day": "2026-09-14",
+    "days": 0,
+    "home_id": 723,
+    "away_id": 690,
+    "home": "Huracán",
+    "away": "Racing Club",
+    "reversed": false,
+    "first_score": [
+      2,
+      1
+    ],
+    "second_score": [
+      2,
+      1
+    ],
+    "same_kickoff": true,
+    "first_competition": 45,
+    "second_competition": 45,
+    "first_edition": 45,
+    "second_edition": 45,
+    "classification": "candidate by exact identity/date/score; sporting proof not inferred from this test"
+  },
+  {
+    "first_id": 39988,
+    "second_id": 39990,
+    "first_day": "2026-09-14",
+    "second_day": "2026-09-14",
+    "days": 0,
+    "home_id": 779,
+    "away_id": 538,
+    "home": "Deportivo Riestra",
+    "away": "Lanús",
+    "reversed": false,
+    "first_score": [
+      0,
+      3
+    ],
+    "second_score": [
+      0,
+      3
+    ],
+    "same_kickoff": true,
+    "first_competition": 45,
+    "second_competition": 45,
+    "first_edition": 45,
+    "second_edition": 45,
+    "classification": "candidate by exact identity/date/score; sporting proof not inferred from this test"
+  },
+  {
+    "first_id": 39989,
+    "second_id": 39991,
+    "first_day": "2026-09-14",
+    "second_day": "2026-09-14",
+    "days": 0,
+    "home_id": 505,
+    "away_id": 763,
+    "home": "Banfield",
+    "away": "Barracas Central",
+    "reversed": false,
+    "first_score": [
+      1,
+      1
+    ],
+    "second_score": [
+      1,
+      1
+    ],
+    "same_kickoff": true,
+    "first_competition": 45,
+    "second_competition": 45,
+    "first_edition": 45,
+    "second_edition": 45,
+    "classification": "candidate by exact identity/date/score; sporting proof not inferred from this test"
+  },
+  {
+    "first_id": 39992,
+    "second_id": 39993,
+    "first_day": "2026-09-15",
+    "second_day": "2026-09-15",
+    "days": 0,
+    "home_id": 725,
+    "away_id": 604,
+    "home": "Instituto",
+    "away": "Estudiantes de Río Cuarto",
+    "reversed": false,
+    "first_score": [
+      2,
+      1
+    ],
+    "second_score": [
+      2,
+      1
+    ],
+    "same_kickoff": true,
+    "first_competition": 45,
+    "second_competition": 45,
+    "first_edition": 45,
+    "second_edition": 45,
+    "classification": "candidate by exact identity/date/score; sporting proof not inferred from this test"
+  },
+  {
+    "first_id": 40022,
+    "second_id": 40023,
+    "first_day": "2026-09-22",
+    "second_day": "2026-09-22",
+    "days": 0,
+    "home_id": 538,
+    "away_id": 575,
+    "home": "Lanús",
+    "away": "Estudiantes",
+    "reversed": false,
+    "first_score": [
+      2,
+      1
+    ],
+    "second_score": [
+      2,
+      1
+    ],
+    "same_kickoff": true,
+    "first_competition": 45,
+    "second_competition": 45,
+    "first_edition": 45,
+    "second_edition": 45,
+    "classification": "candidate by exact identity/date/score; sporting proof not inferred from this test"
+  }
+]

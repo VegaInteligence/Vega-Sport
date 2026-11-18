@@ -1,0 +1,47 @@
+{
+  "21h05.json": {
+    "path": "final-scores/db/pending_verified/player-pending-2025.json",
+    "original_sha256": "8fa94d2c73f875363bb34f198574d60b3dd47f7adf5e4e4540bca7620ec8ddec",
+    "projection_sha256": "a63da10dc79bd91cf3358fb0418c3476adb8e4c1bbce265a6819d9f750fd6479"
+  },
+  "22h07.json": {
+    "path": "db/track5_longitudinal_20261117_verified/award-role-2025.json",
+    "original_sha256": "58ef1b1f21db5491d61c5de167d3dac5dee1c784046cebddd5e028c67d9e9a64",
+    "projection_sha256": "705f9aede047d4a6036eeb2c12595478d3230dc3711220274cebb02b072b2c15"
+  },
+  "02h02.json": {
+    "path": "tracks/5-players/atomic-coverage/after-cooldown/db/longitudinal/award-role-2025.json",
+    "original_sha256": "e3de1c0812ab6ddf1872d8aac4fd2ea4ce10b8a7b825787516dd8f97cf942f8c",
+    "projection_sha256": "9e6805724e5efd130373edec73b67505719c83b52b57651c96255b23003b558a"
+  },
+  "04h22.json": {
+    "path": "tracks/5-players/atomic-coverage/nov18-0422/db/longitudinal/award-role-2025.json",
+    "original_sha256": "71077de4e793c34994f8fa374ffbd74b817e1d15b9f3cf4605dd5939f3db902d",
+    "projection_sha256": "7041f4d937732a3bc33a37919c092474061990c516ebc749aa43f9f00b5d6d35"
+  },
+  "old-pending.sql": {
+    "path": "final-scores/db/pending_verified/player-pending-2025.sql",
+    "original_sha256": "e0ee85cda439bbd08680e9aba186868809f8e3b8399b70aa82a5ec961b377679",
+    "projection_sha256": "e0ee85cda439bbd08680e9aba186868809f8e3b8399b70aa82a5ec961b377679"
+  },
+  "old-award.sql": {
+    "path": "db/track5_longitudinal_20261117_verified/award-role-2025.sql",
+    "original_sha256": "d46169a36a78de1ffbf2892dae3ede309610a9fe457193ac8376f205c505989b",
+    "projection_sha256": "d46169a36a78de1ffbf2892dae3ede309610a9fe457193ac8376f205c505989b"
+  },
+  "07h12.json.gz": {
+    "path": "tracks/5-players/fable-corrections-nov18/rds/inputs.json.zlib",
+    "original_sha256": "b8433f5be50d0819df4803cad740875145b7bd986c9a717d3137739713835806",
+    "projection_sha256": "05c6d793fa6c6d50f1f888416cb48bdb55e109ed8ef3dc16f7cb10f63402d188"
+  },
+  "07h12-receipt.json": {
+    "path": "tracks/5-players/fable-corrections-nov18/rds/receipt.json",
+    "original_sha256": "f9545c323c303b53335da5035a068d49daaabaed501e15aec17859e30d9d4a6f",
+    "projection_sha256": "f9545c323c303b53335da5035a068d49daaabaed501e15aec17859e30d9d4a6f"
+  },
+  "07h12-query.py": {
+    "path": "tracks/5-players/fable-corrections-nov18/probe.py",
+    "original_sha256": "f7fc35ef81db3751be14ccf4641003bd2f4693a7575c5dd9f6184cd65004d63b",
+    "projection_sha256": "f7fc35ef81db3751be14ccf4641003bd2f4693a7575c5dd9f6184cd65004d63b"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "commit": "8018e0836ca0f32e8b2eb51fc2847154abff7f13",
+  "files": {
+    "backend/vega/power.py": "75d3b2a829b585d8dbadb60d1fb2a6b4233e7f74d220a0f76bab0ebb6fdb93ff",
+    "backend/vega/worker.py": "cb324dac1805150c6f56e3c6cbc808614282e7d7bc92bbd029a8bb019e815c87",
+    "backend/vega/jobs.py": "b1ad911ec7396fdec88d07077bd053e8850a5d16b92a07f2c4971bbf556a3a6f",
+    "backend/vega/store.py": "497c7c602b9c84146a8ec201839b50dc07e42146887f6324a51526e3d26d70d0",
+    "backend/vega/normalize.py": "5a9af76f9bd3c0a1eee464f6dfc222f6eadb1665d198d366c804808a6e28eb3b",
+    "backend/vega/models.py": "87e9ee3fc43f35d4ca06b1969034c3b9c96a486365165a6a2522219c675f181b",
+    "backend/sql/032_power_rankings.sql": "a3f00c5719e162ffd0810434994c5c3c7a14cc7521c4ee573c60a6f853a20e52",
+    "backend/sql/001_core.sql": "585fd4e9d52ffe30c89fe9860ef291c66aa8661bfe941f350d631a491cdbf8af"
+  },
+  "prior_parser_change": "cf7c4ceba07a6e104289d04136236beec90c541a"
+}

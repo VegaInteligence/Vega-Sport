@@ -1,0 +1,80 @@
+commit cf7c4ceba07a6e104289d04136236beec90c541a
+Author:     Lemonnier Hugo <hugo.lemonnier01@gmail.com>
+AuthorDate: Thu Nov 12 11:34:52 2026 +0100
+Commit:     Lemonnier Hugo <hugo.lemonnier01@gmail.com>
+CommitDate: Thu Nov 12 11:34:52 2026 +0100
+
+    [FIX] Stop four kinds of collection failures; count overlaps apart from warnings
+    
+    - a coach the source leaves blank ({"name": ""}) refused the whole line-up (97 matches);
+    - a line-up not published yet (no player) is unavailable, asked again at kick-off;
+    - the halves of extra time in the team statistics refused the match (17);
+    - a player profile the plan in use does not hold (403 PLAN_UPGRADE_REQUIRED, 1,949
+      players retried every day) is unavailable, asked again in 30 days;
+    - a match still not started hours after its kick-off, that no watch follows, is asked
+      once a day: a new date restarts its watch, the same one notes it as never final.
+    The status read counts the matches two sources hold (4,460) as overlaps, not warnings,
+    and plan-limited profiles as unavailable calls.
+    
+    Co-Authored-By: Claude Fable 5.2 <noreply@anthropic.com>
+
+diff --git a/backend/vega/normalize.py b/backend/vega/normalize.py
+index 6a8a2cf4b8..3522d70a0d 100644
+--- a/backend/vega/normalize.py
++++ b/backend/vega/normalize.py
+@@ -50,6 +50,9 @@ _PERIOD = {
+ }
+ 
+ 
++_EXTRA_PERIODS = ("FirstExtraHalf", "SecondExtraHalf")
++
++
+ def number(value, kind):
+     if value is None:
+         return None
+@@ -148,7 +151,10 @@ def _natural(out, kind, value):
+     if not value:
+         return None
+     name = value.get("name") if isinstance(value, dict) else value
+-    if not isinstance(name, str) or not name.strip():
++    # A reference the source leaves blank ({"name": ""}, a coach it does not know): none.
++    if name is None or (isinstance(name, str) and not name.strip()):
++        return None
++    if not isinstance(name, str):
+         raise NormalizationError("INVALID_REFERENCE")
+     out.references.append(EntityRef(kind, natural_name=name))
+     return name
+@@ -762,6 +768,13 @@ def normalize_family(family, data, *, match_id=None):
+                 out.add("shots", row)
+     elif family == "lineups":
+         obj = _object(data)
++        # A line-up the source has not published yet names a formation and no player
++        # ("starters": null, "subs": null): unavailable for now, not an error.
++        if all(
++            not (_object(obj.get(side)).get("starters") or _object(obj.get(side)).get("substitutes") or _object(obj.get(side)).get("subs"))
++            for side in ("home", "away")
++        ):
++            return NormalizedFamily(coverage="unavailable")
+         listed = set()
+         for side in ("home", "away"):
+             block = _object(obj.get(side))
+@@ -781,7 +794,7 @@ def normalize_family(family, data, *, match_id=None):
+                 players = block.get(
+                     key, block.get("subs") if key == "substitutes" else None
+                 )
+-                for order, item in enumerate(_list(players)):
++                for order, item in enumerate(_list(players if players is not None else [])):
+                     item = _object(item)
+                     player = _ref(out, "player", item)
+                     # A player the source lists twice keeps his first entry (starters come first).
+@@ -845,6 +858,10 @@ def normalize_family(family, data, *, match_id=None):
+         }
+         for period in _list(obj.get("periods")):
+             period = _object(period)
++            # The halves of extra time: core.team_match_stats holds the match and its two
++            # halves, and "All" already counts extra time. They are left out, not refused.
++            if period.get("period") in _EXTRA_PERIODS:
++                continue
+             rows = {
+                 side: {"team_id": teams[side], "period": _period(period.get("period"))}
+                 for side in teams

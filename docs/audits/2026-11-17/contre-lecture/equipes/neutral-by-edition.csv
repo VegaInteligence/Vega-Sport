@@ -1,0 +1,397 @@
+source,competition_id,competition,edition,edition_label,cup_key,NULL,false,true,matches
+international_results,240,Coupe d’Afrique des nations 2021,53152,2021,nations-results:afcon:2021,0,7,45,52
+international_results,240,Coupe d’Afrique des nations 2021,53155,2023,nations-results:afcon:2023,0,7,45,52
+international_results,240,Coupe d’Afrique des nations 2021,53156,2025,nations-results:afcon:2025,0,7,45,52
+international_results,241,Copa América 2024,53161,2024,nations-results:copa-america:2024,0,3,29,32
+international_results,242,Coupe d’Asie des nations 2023,53166,2023,nations-results:asian-cup:2023,0,7,44,51
+international_results,243,Gold Cup 2023,53167,2023,nations-results:gold-cup:2023,0,6,25,31
+international_results,243,Gold Cup 2023,53169,2025,nations-results:gold-cup:2025,0,7,24,31
+international_results,78,nations-league,308,2026/2027,nations-results:nations-league:2026/2027,72,0,0,72
+open_matchday,101,National League,331,2026/2027,open-matchday:ENG_5_national-league:2026/2027,200,0,0,200
+open_matchday,102,National League North,332,2026/2027,open-matchday:ENG_6_national-league-north:2026/2027,124,0,0,124
+open_matchday,103,National League South,333,2026/2027,open-matchday:ENG_6_national-league-south:2026/2027,122,0,0,122
+open_matchday,104,Northern Premier League,334,2026/2027,open-matchday:ENG_7_northern-premier-league:2026/2027,118,0,0,118
+open_matchday,106,Scottish Championship,336,2026/2027,open-matchday:SCO_2_championship:2026/2027,73,0,0,73
+open_matchday,107,Scottish League One,337,2026/2027,open-matchday:SCO_3_league-one:2026/2027,74,0,0,74
+open_matchday,108,Scottish League Two,338,2026/2027,open-matchday:SCO_4_league-two:2026/2027,70,0,0,70
+open_matchday,123,League of Ireland First Division,353,2026/2027,open-matchday:IRE_2_first-division:2026/2027,106,0,0,106
+open_matchday,124,League of Ireland National League,354,2026/2027,open-matchday:IRE_3_national-league:2026/2027,60,0,0,60
+open_matchday,126,I Liga,356,2026/2027,open-matchday:POL_2_division-1:2026/2027,106,0,0,106
+open_matchday,127,II Liga,357,2026/2027,open-matchday:POL_3_division-2:2026/2027,105,0,0,105
+open_matchday,128,Pro League U21,358,2026/2027,open-matchday:BEL_U21_pro-league:2026/2027,43,0,0,43
+open_matchday,129,Cymru Premier,359,2026/2027,open-matchday:WAL_1_cymru-premier:2026/2027,105,0,0,105
+open_matchday,130,Cymru North,360,2026/2027,open-matchday:WAL_2_cymru-north:2026/2027,106,0,0,106
+open_matchday,131,Cymru South,361,2026/2027,open-matchday:WAL_3_cymru-south:2026/2027,99,0,0,99
+open_matchday,134,Ukrainian Premier League,364,2026/2027,open-matchday:UKR_1_premier-league:2026/2027,90,0,0,90
+open_matchday,135,Cyprus League,365,2026/2027,open-matchday:CYP_1_first-division:2026/2027,63,0,0,63
+open_matchday,137,Prva Liga,367,2026/2027,open-matchday:SVN_1_prva-liga:2026/2027,74,0,0,74
+open_matchday,139,Kazakhstan Premier League,369,2026/2027,open-matchday:KAZ_1_premier-league:2026/2027,107,0,0,107
+open_matchday,87,EFL Cup (Carabao Cup),317,2026/2027,open-matchday:ENG_CUP_efl-cup:2026/2027,82,0,0,82
+open_matchday,88,FA Cup,318,2026/2027,open-matchday:ENG_CUP_fa-cup:2026/2027,142,0,0,142
+open_matchday,89,Copa del Rey,319,2026/2027,open-matchday:ESP_CUP_copa-del-rey:2026/2027,75,0,0,75
+open_matchday,90,Coppa Italia,320,2026/2027,open-matchday:ITA_CUP_coppa-italia:2026/2027,28,0,0,28
+open_matchday,92,KNVB Beker,322,2026/2027,open-matchday:NED_CUP_knvb-beker:2026/2027,94,0,0,94
+open_matchday,93,Taça de Portugal,323,2026/2027,open-matchday:POR_CUP_taca-de-portugal:2026/2027,113,0,0,113
+open_matchday,94,Scottish Cup,324,2026/2027,open-matchday:SCO_CUP_scottish-cup:2026/2027,50,0,0,50
+open_matchday,95,Scottish League Cup,325,2026/2027,open-matchday:SCO_CUP_league-cup:2026/2027,14,0,0,14
+open_matchday,96,OFB Cup,326,2026/2027,open-matchday:AUT_CUP_ofb-cup:2026/2027,56,0,0,56
+open_matchday,97,Swiss Cup,327,2026/2027,open-matchday:SUI_CUP_swiss-cup:2026/2027,48,0,0,48
+openfootball,236,Copa Libertadores 2021,53133,2021,open-cups:copa-libertadores:2021,155,0,0,155
+openfootball,236,Copa Libertadores 2021,53134,2022,open-cups:copa-libertadores:2022,155,0,0,155
+openfootball,236,Copa Libertadores 2021,53135,2023,open-cups:copa-libertadores:2023,155,0,0,155
+openfootball,236,Copa Libertadores 2021,53136,2024,open-cups:copa-libertadores:2024,155,0,0,155
+openfootball,236,Copa Libertadores 2021,53137,2025,open-cups:copa-libertadores:2025,154,0,0,154
+openfootball,236,Copa Libertadores 2021,53138,2026,open-cups:copa-libertadores:2026,126,0,0,126
+openfootball,237,Copa Sudamericana 2021,53139,2021,open-cups:copa-sudamericana:2021,157,0,0,157
+openfootball,237,Copa Sudamericana 2021,53140,2022,open-cups:copa-sudamericana:2022,157,0,0,157
+openfootball,237,Copa Sudamericana 2021,53141,2023,open-cups:copa-sudamericana:2023,157,0,0,157
+openfootball,237,Copa Sudamericana 2021,53142,2024,open-cups:copa-sudamericana:2024,157,0,0,157
+openfootball,237,Copa Sudamericana 2021,53144,2025,open-cups:copa-sudamericana:2025,64,0,0,64
+openfootball,238,Coupe des champions de la CONCACAF 2021,53145,2021,open-cups:concacaf-champions:2021,29,0,0,29
+openfootball,238,Coupe des champions de la CONCACAF 2021,53146,2022,open-cups:concacaf-champions:2022,30,0,0,30
+openfootball,238,Coupe des champions de la CONCACAF 2021,53147,2023,open-cups:concacaf-champions:2023,30,0,0,30
+openfootball,238,Coupe des champions de la CONCACAF 2021,53148,2024,open-cups:concacaf-champions:2024,51,0,0,51
+openfootball,238,Coupe des champions de la CONCACAF 2021,53149,2025,open-cups:concacaf-champions:2025,50,0,0,50
+openfootball,239,Ligue des champions de la CAF 2023/2024,53150,2023/2024,open-cups:caf-champions-league:2023/2024,138,0,0,138
+openfootball,239,Ligue des champions de la CAF 2023/2024,53151,2024/2025,open-cups:caf-champions-league:2024/2025,146,0,0,146
+openfootball,63,Euro 2021,268,2020,open-cups:euro:2020,51,0,0,51
+openfootball,63,Euro 2021,269,2024,open-cups:euro:2024,51,0,0,51
+openfootball,64,World Cup 1930,271,1930,open-cups:world-cup-history:1930,18,0,0,18
+openfootball,64,World Cup 1930,272,1934,open-cups:world-cup-history:1934,16,0,0,16
+openfootball,64,World Cup 1930,273,1938,open-cups:world-cup-history:1938,18,0,0,18
+openfootball,64,World Cup 1930,274,1950,open-cups:world-cup-history:1950,6,0,0,6
+openfootball,64,World Cup 1930,275,1954,open-cups:world-cup-history:1954,3,0,0,3
+openfootball,64,World Cup 1930,276,1958,open-cups:world-cup-history:1958,1,0,0,1
+openfootball,64,World Cup 1930,278,1966,open-cups:world-cup-history:1966,1,0,0,1
+openfootball,64,World Cup 1930,279,1970,open-cups:world-cup-history:1970,3,0,0,3
+openfootball,64,World Cup 1930,281,1978,open-cups:world-cup-history:1978,1,0,0,1
+openfootball,64,World Cup 1930,282,1982,open-cups:world-cup-history:1982,1,0,0,1
+openfootball,64,World Cup 1930,283,1986,open-cups:world-cup-history:1986,5,0,0,5
+openfootball,64,World Cup 1930,284,1990,open-cups:world-cup-history:1990,8,0,0,8
+openfootball,64,World Cup 1930,285,1994,open-cups:world-cup-history:1994,4,0,0,4
+openfootball,64,World Cup 1930,286,1998,open-cups:world-cup-history:1998,4,0,0,4
+openfootball,64,World Cup 1930,287,2002,open-cups:world-cup-history:2002,5,0,0,5
+openfootball,64,World Cup 1930,288,2006,open-cups:world-cup-history:2006,59,0,0,59
+openfootball,64,World Cup 1930,289,2010,open-cups:world-cup-history:2010,4,0,0,4
+openfootball,64,World Cup 1930,290,2014,open-cups:world-cup-history:2014,20,0,0,20
+openfootball,64,World Cup 1930,291,2018,open-cups:world-cup-history:2018,64,0,0,64
+openfootball,65,Club World Cup 2025,294,2025,open-cups:club-world-cup:2025,64,0,0,64
+openfootball,65,Club World Cup 2025,31672,2021,open-cups:club-world-cup:2021,8,0,0,8
+openfootball,65,Club World Cup 2025,31673,2022,open-cups:club-world-cup:2022,7,0,0,7
+openfootball,65,Club World Cup 2025,31675,2023,open-cups:club-world-cup:2023,7,0,0,7
+openfootball,66,Coupe de France 2024/2025,295,2024/2025,open-cups:france-cup:2024/2025,200,0,0,200
+openfootball,67,austria-cup-archive,296,2024/2025,open-cups:austria-cup-archive:2024/2025,63,0,0,63
+openfootball,68,germany-cup-archive,297,2024/2025,open-cups:germany-cup-archive:2024/2025,63,0,0,63
+openfootball,69,fa-cup-archive,298,2024/2025,open-cups:fa-cup-archive:2024/2025,123,0,0,123
+openfootball,70,efl-cup-archive,299,2024/2025,open-cups:efl-cup-archive:2024/2025,93,0,0,93
+openfootball,71,copa-del-rey-archive,300,2024/2025,open-cups:copa-del-rey-archive:2024/2025,126,0,0,126
+openfootball,72,coppa-italia-archive,301,2024/2025,open-cups:coppa-italia-archive:2024/2025,45,0,0,45
+openfootball,73,knvb-beker-archive,302,2024/2025,open-cups:knvb-beker-archive:2024/2025,109,0,0,109
+openfootball,74,portugal-cup-archive,303,2024/2025,open-cups:portugal-cup-archive:2024/2025,110,0,0,110
+openfootball,75,swiss-cup-archive,304,2024/2025,open-cups:swiss-cup-archive:2024/2025,62,0,0,62
+openligadb,76,nations-league,305,2026/2027,openligadb:nations-league:2026/2027,48,0,0,48
+openligadb,77,germany-cup,306,2025/2026,openligadb:germany-cup:2025/2026,63,0,0,63
+openligadb,77,germany-cup,307,2026/2027,openligadb:germany-cup:2026/2027,48,0,0,48
+pitchapi,1,Serie A,1,2026/2027,,110,0,0,110
+pitchapi,1,Serie A,949,2021/2022,,380,0,0,380
+pitchapi,1,Serie A,950,2022/2023,,381,0,0,381
+pitchapi,1,Serie A,951,2023/2024,,380,0,0,380
+pitchapi,1,Serie A,952,2024/2025,,380,0,0,380
+pitchapi,1,Serie A,953,2025/2026,,380,0,0,380
+pitchapi,10,Ligat ha'Al,10,2026/2027,,70,0,0,70
+pitchapi,10,Ligat ha'Al,872,2024/2025,,237,0,0,237
+pitchapi,10,Ligat ha'Al,873,2025/2026,,239,0,0,239
+pitchapi,11,1. Lig,11,2026/2027,,139,0,0,139
+pitchapi,11,1. Lig,705,2024/2025,,384,0,0,384
+pitchapi,11,1. Lig,706,2025/2026,,384,0,0,384
+pitchapi,12,Bundesliga,12,2026/2027,,81,0,0,81
+pitchapi,12,Bundesliga,738,2021/2022,,306,0,0,306
+pitchapi,12,Bundesliga,739,2022/2023,,306,0,0,306
+pitchapi,12,Bundesliga,740,2023/2024,,306,0,0,306
+pitchapi,12,Bundesliga,741,2024/2025,,305,0,0,305
+pitchapi,12,Bundesliga,742,2025/2026,,306,0,0,306
+pitchapi,13,Premiership,13,2026/2027,,74,0,0,74
+pitchapi,13,Premiership,913,2021/2022,,228,0,0,228
+pitchapi,13,Premiership,914,2022/2023,,228,0,0,228
+pitchapi,13,Premiership,915,2023/2024,,228,0,0,228
+pitchapi,13,Premiership,916,2024/2025,,228,0,0,228
+pitchapi,13,Premiership,917,2025/2026,,228,0,0,228
+pitchapi,14,Primera Division,14,2026,,227,0,0,227
+pitchapi,14,Primera Division,922,2024,,234,0,0,234
+pitchapi,14,Primera Division,923,2025,,233,0,0,233
+pitchapi,15,Allsvenskan,15,2026,,180,0,0,180
+pitchapi,15,Allsvenskan,729,2021,,240,0,0,240
+pitchapi,15,Allsvenskan,730,2022,,240,0,0,240
+pitchapi,15,Allsvenskan,731,2023,,240,0,0,240
+pitchapi,15,Allsvenskan,732,2024,,240,0,0,240
+pitchapi,15,Allsvenskan,733,2025,,240,0,0,240
+pitchapi,16,Serie A,16,2026,,287,0,0,287
+pitchapi,16,Serie A,942,2024,,242,0,0,242
+pitchapi,16,Serie A,943,2025,,311,0,0,311
+pitchapi,17,Challenger Pro League,17,2026/2027,,70,0,0,70
+pitchapi,17,Challenger Pro League,753,2025/2026,,277,0,0,277
+pitchapi,18,Primera A,18,2026,,394,0,0,394
+pitchapi,18,Primera A,919,2024,,429,0,0,429
+pitchapi,18,Primera A,920,2025,,450,0,0,450
+pitchapi,184,Besta deild,735,2024,,160,0,0,160
+pitchapi,184,Besta deild,736,2025,,159,0,0,159
+pitchapi,184,Besta deild,737,2026,,159,0,0,159
+pitchapi,185,Champions League,755,2021/2022,,125,0,0,125
+pitchapi,185,Champions League,756,2022/2023,,125,0,0,125
+pitchapi,185,Champions League,757,2023/2024,,125,0,0,125
+pitchapi,185,Champions League,758,2024/2025,,189,0,0,189
+pitchapi,185,Champions League,759,2025/2026,,189,0,0,189
+pitchapi,185,Champions League,760,2026/2027,,72,0,0,72
+pitchapi,186,Championship,761,2021/2022,,557,0,0,557
+pitchapi,186,Championship,762,2022/2023,,557,0,0,557
+pitchapi,186,Championship,763,2023/2024,,557,0,0,557
+pitchapi,186,Championship,764,2024/2025,,557,0,0,557
+pitchapi,186,Championship,765,2025/2026,,555,0,0,555
+pitchapi,186,Championship,766,2026/2027,,180,0,0,180
+pitchapi,187,Conference League,767,2021/2022,,138,0,0,138
+pitchapi,187,Conference League,768,2022/2023,,140,0,0,140
+pitchapi,187,Conference League,769,2023/2024,,141,0,0,141
+pitchapi,187,Conference League,770,2024/2025,,153,0,0,153
+pitchapi,187,Conference League,771,2025/2026,,153,0,0,153
+pitchapi,187,Conference League,772,2026/2027,,54,0,0,54
+pitchapi,188,Europa League,792,2021/2022,,139,0,0,139
+pitchapi,188,Europa League,793,2022/2023,,141,0,0,141
+pitchapi,188,Europa League,794,2023/2024,,141,0,0,141
+pitchapi,188,Europa League,795,2024/2025,,189,0,0,189
+pitchapi,188,Europa League,796,2025/2026,,189,0,0,189
+pitchapi,188,Europa League,797,2026/2027,,72,0,0,72
+pitchapi,189,Indian Super League,807,2021/2022,,115,0,0,115
+pitchapi,189,Indian Super League,808,2022/2023,,117,0,0,117
+pitchapi,189,Indian Super League,809,2023/2024,,138,0,0,138
+pitchapi,189,Indian Super League,810,2024/2025,,163,0,0,163
+pitchapi,189,Indian Super League,811,2025/2026,,86,0,0,86
+pitchapi,189,Indian Super League,812,2026/2027,,28,0,0,28
+pitchapi,19,Super League,19,2026,,240,0,0,240
+pitchapi,19,Super League,960,2024,,240,0,0,240
+pitchapi,19,Super League,961,2025,,240,0,0,240
+pitchapi,190,Ligue 2,881,2025/2026,,304,0,0,304
+pitchapi,190,Ligue 2,882,2026/2027,,98,0,0,98
+pitchapi,191,Paulista A1,892,2024,,104,0,0,104
+pitchapi,191,Paulista A1,893,2025,,104,0,0,104
+pitchapi,191,Paulista A1,894,2026,,72,0,0,72
+pitchapi,192,Premier Division,895,2024,,180,0,0,180
+pitchapi,192,Premier Division,896,2025,,179,0,0,179
+pitchapi,192,Premier Division,897,2026,,180,0,0,180
+pitchapi,193,Premier League,898,2025/2026,,322,0,0,322
+pitchapi,193,Premier League,899,2026/2027,,80,0,0,80
+pitchapi,194,Premier League,906,2024,,117,0,0,117
+pitchapi,194,Premier League,907,2025,,117,0,0,117
+pitchapi,194,Premier League,908,2026,,116,0,0,116
+pitchapi,195,Premier Soccer League,911,2025/2026,,182,0,0,182
+pitchapi,195,Premier Soccer League,912,2026/2027,,71,0,0,71
+pitchapi,196,Saudi Pro League,937,2022/2023,,1,0,0,1
+pitchapi,196,Saudi Pro League,938,2023/2024,,306,0,0,306
+pitchapi,196,Saudi Pro League,939,2024/2025,,304,0,0,304
+pitchapi,196,Saudi Pro League,940,2025/2026,,305,0,0,305
+pitchapi,196,Saudi Pro League,941,2026/2027,,104,0,0,104
+pitchapi,197,Women's Premier League,1000,2024/2025,,90,0,0,90
+pitchapi,197,Women's Premier League,1001,2025/2026,,56,0,0,56
+pitchapi,197,Women's Premier League,1002,2026/2027,,8,0,0,8
+pitchapi,198,World Cup,1003,2022,,64,0,0,64
+pitchapi,198,World Cup,1004,2026,,104,0,0,104
+pitchapi,2,LaLiga,2,2026/2027,,119,0,0,119
+pitchapi,2,LaLiga,829,2021/2022,,380,0,0,380
+pitchapi,2,LaLiga,830,2022/2023,,380,0,0,380
+pitchapi,2,LaLiga,831,2023/2024,,379,0,0,379
+pitchapi,2,LaLiga,832,2024/2025,,380,0,0,380
+pitchapi,2,LaLiga,833,2025/2026,,380,0,0,380
+pitchapi,20,Ekstraklasa,20,2026/2027,,124,0,0,124
+pitchapi,20,Ekstraklasa,778,2025/2026,,306,0,0,306
+pitchapi,21,K League 2,21,2026,,256,0,0,256
+pitchapi,21,K League 2,826,2024,,236,0,0,236
+pitchapi,21,K League 2,827,2025,,275,0,0,275
+pitchapi,22,J. League,140,2026,,339,0,0,339
+pitchapi,22,J. League,813,2022,,306,0,0,306
+pitchapi,22,J. League,814,2023,,306,0,0,306
+pitchapi,22,J. League,815,2024,,380,0,0,380
+pitchapi,22,J. League,816,2025,,380,0,0,380
+pitchapi,23,K League 1,23,2026,,202,0,0,202
+pitchapi,23,K League 1,821,2022,,228,0,0,228
+pitchapi,23,K League 1,822,2023,,228,0,0,228
+pitchapi,23,K League 1,823,2024,,227,0,0,227
+pitchapi,23,K League 1,824,2025,,228,0,0,228
+pitchapi,24,First Division A,24,2026/2027,,99,0,0,99
+pitchapi,24,First Division A,798,2021/2022,,328,0,0,328
+pitchapi,24,First Division A,799,2022/2023,,328,0,0,328
+pitchapi,24,First Division A,800,2023/2024,,311,0,0,311
+pitchapi,24,First Division A,801,2024/2025,,312,0,0,312
+pitchapi,24,First Division A,802,2025/2026,,313,0,0,313
+pitchapi,25,Premier League,25,2026/2027,,89,0,0,89
+pitchapi,25,Premier League,909,2025/2026,,240,0,0,240
+pitchapi,26,HNL,26,2026/2027,,64,0,0,64
+pitchapi,26,HNL,804,2024/2025,,180,0,0,180
+pitchapi,26,HNL,805,2025/2026,,180,0,0,180
+pitchapi,27,Super Liga,27,2026/2027,,104,0,0,104
+pitchapi,27,Super Liga,977,2024/2025,,296,0,0,296
+pitchapi,27,Super Liga,978,2025/2026,,296,0,0,296
+pitchapi,28,Saudi First Division,28,2026/2027,,94,0,0,94
+pitchapi,28,Saudi First Division,934,2024/2025,,275,0,0,275
+pitchapi,28,Saudi First Division,935,2025/2026,,307,0,0,307
+pitchapi,29,Veikkausliiga,29,2026,,177,0,0,177
+pitchapi,29,Veikkausliiga,994,2024,,167,0,0,167
+pitchapi,29,Veikkausliiga,995,2025,,177,0,0,177
+pitchapi,3,1. Liga,3,2026/2027,,111,0,0,111
+pitchapi,3,1. Liga,708,2024/2025,,276,0,0,276
+pitchapi,3,1. Liga,709,2025/2026,,275,0,0,275
+pitchapi,30,Ligue 1,30,2026/2027,,90,0,0,90
+pitchapi,30,Ligue 1,418,2021/2022,,380,0,0,380
+pitchapi,30,Ligue 1,419,2022/2023,,380,0,0,380
+pitchapi,30,Ligue 1,420,2023/2024,,306,0,0,306
+pitchapi,30,Ligue 1,421,2024/2025,,306,0,0,306
+pitchapi,30,Ligue 1,422,2025/2026,,306,0,0,306
+pitchapi,31,USL League One,31,2026,,279,0,0,279
+pitchapi,31,USL League One,991,2024,,139,0,0,139
+pitchapi,31,USL League One,992,2025,,216,0,0,216
+pitchapi,32,MLS Next Pro,32,2026,,437,0,0,437
+pitchapi,32,MLS Next Pro,889,2024,,421,0,0,421
+pitchapi,32,MLS Next Pro,890,2025,,421,0,0,421
+pitchapi,33,J3 League,33,2026/2027,,170,0,0,170
+pitchapi,33,J3 League,818,2024,,383,0,0,383
+pitchapi,33,J3 League,819,2025,,383,0,0,383
+pitchapi,34,Thai League 1,34,2026/2027,,62,0,0,62
+pitchapi,34,Thai League 1,986,2025/2026,,240,0,0,240
+pitchapi,35,2. Bundesliga,35,2026/2027,,90,0,0,90
+pitchapi,35,2. Bundesliga,714,2021/2022,,306,0,0,306
+pitchapi,35,2. Bundesliga,715,2022/2023,,306,0,0,306
+pitchapi,35,2. Bundesliga,716,2023/2024,,306,0,0,306
+pitchapi,35,2. Bundesliga,717,2024/2025,,306,0,0,306
+pitchapi,35,2. Bundesliga,718,2025/2026,,306,0,0,306
+pitchapi,36,LaLiga2,36,2026/2027,,150,0,0,150
+pitchapi,36,LaLiga2,835,2025/2026,,466,0,0,466
+pitchapi,37,Liga de Primera,37,2026,,214,0,0,214
+pitchapi,37,Liga de Primera,869,2024,,239,0,0,239
+pitchapi,37,Liga de Primera,870,2025,,240,0,0,240
+pitchapi,38,Serie B,38,2026,,380,0,0,380
+pitchapi,38,Serie B,955,2024,,380,0,0,380
+pitchapi,38,Serie B,956,2025,,380,0,0,380
+pitchapi,39,Liga 1,39,2026,,302,0,0,302
+pitchapi,39,Liga 1,847,2024,,306,0,0,306
+pitchapi,39,Liga 1,848,2025,,327,0,0,327
+pitchapi,4,Super Lig,4,2026/2027,,99,0,0,99
+pitchapi,4,Super Lig,972,2022/2023,,313,0,0,313
+pitchapi,4,Super Lig,973,2023/2024,,379,0,0,379
+pitchapi,4,Super Lig,974,2024/2025,,341,0,0,341
+pitchapi,4,Super Lig,975,2025/2026,,306,0,0,306
+pitchapi,40,Liga MX,40,2026/2027,,117,0,0,117
+pitchapi,40,Liga MX,853,2021/2022,,171,0,0,171
+pitchapi,40,Liga MX,854,2022/2023,,171,0,0,171
+pitchapi,40,Liga MX,855,2023/2024,,166,0,0,166
+pitchapi,40,Liga MX,856,2024/2025,,167,0,0,167
+pitchapi,40,Liga MX,857,2025/2026,,334,0,0,334
+pitchapi,41,Qatar Stars League,41,2026/2027,,54,0,0,54
+pitchapi,41,Qatar Stars League,931,2024/2025,,132,0,0,132
+pitchapi,41,Qatar Stars League,932,2025/2026,,130,0,0,130
+pitchapi,42,Super League 1,42,2026/2027,,69,0,0,69
+pitchapi,42,Super League 1,969,2024/2025,,1,0,0,1
+pitchapi,42,Super League 1,970,2025/2026,,236,0,0,236
+pitchapi,43,USL Championship,43,2026,,389,0,0,389
+pitchapi,43,USL Championship,988,2024,,423,0,0,423
+pitchapi,43,USL Championship,989,2025,,374,0,0,374
+pitchapi,44,Bundesliga,44,2026/2027,,72,0,0,72
+pitchapi,44,Bundesliga,744,2021/2022,,195,0,0,195
+pitchapi,44,Bundesliga,745,2022/2023,,195,0,0,195
+pitchapi,44,Bundesliga,746,2023/2024,,195,0,0,195
+pitchapi,44,Bundesliga,747,2024/2025,,195,0,0,195
+pitchapi,44,Bundesliga,748,2025/2026,,195,0,0,195
+pitchapi,45,Liga Profesional,45,2026,,497,0,0,497
+pitchapi,45,Liga Profesional,865,2023,,378,0,0,378
+pitchapi,45,Liga Profesional,866,2024,,377,0,0,377
+pitchapi,45,Liga Profesional,867,2025,,510,0,0,510
+pitchapi,46,Virsliga,46,2026,,179,0,0,179
+pitchapi,46,Virsliga,997,2024,,180,0,0,180
+pitchapi,46,Virsliga,998,2025,,180,0,0,180
+pitchapi,47,3. Liga,47,2026/2027,,130,0,0,130
+pitchapi,47,3. Liga,720,2024/2025,,380,0,0,380
+pitchapi,47,3. Liga,721,2025/2026,,380,0,0,380
+pitchapi,48,Eerste Divisie,48,2026/2027,,147,0,0,147
+pitchapi,48,Eerste Divisie,775,2024/2025,,380,0,0,380
+pitchapi,48,Eerste Divisie,776,2025/2026,,380,0,0,380
+pitchapi,49,Superligaen,49,2026/2027,,84,0,0,84
+pitchapi,49,Superligaen,980,2021/2022,,193,0,0,193
+pitchapi,49,Superligaen,981,2022/2023,,193,0,0,193
+pitchapi,49,Superligaen,982,2023/2024,,193,0,0,193
+pitchapi,49,Superligaen,983,2024/2025,,193,0,0,193
+pitchapi,49,Superligaen,984,2025/2026,,191,0,0,191
+pitchapi,5,Pro League,5,2026/2027,,49,0,0,49
+pitchapi,5,Pro League,928,2024/2025,,182,0,0,182
+pitchapi,5,Pro League,929,2025/2026,,182,0,0,182
+pitchapi,50,Division Profesional,50,2026,,243,0,0,243
+pitchapi,50,Division Profesional,773,2025,,263,0,0,263
+pitchapi,51,Eredivisie,51,2026/2027,,108,0,0,108
+pitchapi,51,Eredivisie,786,2021/2022,,312,0,0,312
+pitchapi,51,Eredivisie,787,2022/2023,,312,0,0,312
+pitchapi,51,Eredivisie,788,2023/2024,,309,0,0,309
+pitchapi,51,Eredivisie,789,2024/2025,,309,0,0,309
+pitchapi,51,Eredivisie,790,2025/2026,,309,0,0,309
+pitchapi,52,A-League,52,2026/2027,,23,0,0,23
+pitchapi,52,A-League,723,2021/2022,,161,0,0,161
+pitchapi,52,A-League,724,2022/2023,,163,0,0,163
+pitchapi,52,A-League,725,2023/2024,,169,0,0,169
+pitchapi,52,A-League,726,2024/2025,,176,0,0,176
+pitchapi,52,A-League,727,2025/2026,,163,0,0,163
+pitchapi,53,1. liga,53,2026/2027,,84,0,0,84
+pitchapi,53,1. liga,711,2024/2025,,195,0,0,195
+pitchapi,53,1. liga,712,2025/2026,,192,0,0,192
+pitchapi,54,Liga Portugal,54,2026/2027,,90,0,0,90
+pitchapi,54,Liga Portugal,859,2021/2022,,272,0,0,272
+pitchapi,54,Liga Portugal,860,2022/2023,,306,0,0,306
+pitchapi,54,Liga Portugal,861,2023/2024,,306,0,0,306
+pitchapi,54,Liga Portugal,862,2024/2025,,306,0,0,306
+pitchapi,54,Liga Portugal,863,2025/2026,,306,0,0,306
+pitchapi,55,Premier League,55,2026/2027,,100,0,0,100
+pitchapi,55,Premier League,900,2021/2022,,380,0,0,380
+pitchapi,55,Premier League,901,2022/2023,,380,0,0,380
+pitchapi,55,Premier League,902,2023/2024,,380,0,0,380
+pitchapi,55,Premier League,903,2024/2025,,380,0,0,380
+pitchapi,55,Premier League,904,2025/2026,,380,0,0,380
+pitchapi,56,Challenge League,56,2026/2027,,65,0,0,65
+pitchapi,56,Challenge League,750,2024/2025,,179,0,0,179
+pitchapi,56,Challenge League,751,2025/2026,,180,0,0,180
+pitchapi,57,Super League,57,2026/2027,,78,0,0,78
+pitchapi,57,Super League,963,2021/2022,,180,0,0,180
+pitchapi,57,Super League,964,2022/2023,,179,0,0,179
+pitchapi,57,Super League,965,2023/2024,,227,0,0,227
+pitchapi,57,Super League,966,2024/2025,,228,0,0,228
+pitchapi,57,Super League,967,2025/2026,,228,0,0,228
+pitchapi,58,Primera Division,58,2026,,200,0,0,200
+pitchapi,58,Primera Division,925,2024,,319,0,0,319
+pitchapi,58,Primera Division,926,2025,,240,0,0,240
+pitchapi,59,1. Division,259,2026/2027,,84,0,0,84
+pitchapi,59,1. Division,701,2024/2025,,192,0,0,192
+pitchapi,59,1. Division,702,2025/2026,,192,0,0,192
+pitchapi,6,MLS,6,2026,,510,0,0,510
+pitchapi,6,MLS,883,2021,,468,0,0,468
+pitchapi,6,MLS,884,2022,,486,0,0,486
+pitchapi,6,MLS,885,2023,,521,0,0,521
+pitchapi,6,MLS,886,2024,,522,0,0,522
+pitchapi,6,MLS,887,2025,,540,0,0,540
+pitchapi,60,League One,265,2026/2027,,163,0,0,163
+pitchapi,60,League One,837,2022/2023,,557,0,0,557
+pitchapi,60,League One,838,2023/2024,,557,0,0,557
+pitchapi,60,League One,839,2024/2025,,557,0,0,557
+pitchapi,60,League One,840,2025/2026,,557,0,0,557
+pitchapi,61,Serie A,266,2026,,303,0,0,303
+pitchapi,61,Serie A,945,2023,,379,0,0,379
+pitchapi,61,Serie A,946,2024,,378,0,0,378
+pitchapi,61,Serie A,947,2025,,377,0,0,377
+pitchapi,62,League Two,267,2026/2027,,174,0,0,174
+pitchapi,62,League Two,842,2022/2023,,557,0,0,557
+pitchapi,62,League Two,843,2023/2024,,557,0,0,557
+pitchapi,62,League Two,844,2024/2025,,557,0,0,557
+pitchapi,62,League Two,845,2025/2026,,557,0,0,557
+pitchapi,7,Serie B,7,2026/2027,,110,0,0,110
+pitchapi,7,Serie B,958,2025/2026,,390,0,0,390
+pitchapi,8,Liga I,8,2026/2027,,120,0,0,120
+pitchapi,8,Liga I,850,2024/2025,,315,0,0,315
+pitchapi,8,Liga I,851,2025/2026,,317,0,0,317
+pitchapi,9,Eliteserien,780,2021,,240,0,0,240
+pitchapi,9,Eliteserien,781,2022,,240,0,0,240
+pitchapi,9,Eliteserien,782,2023,,240,0,0,240
+pitchapi,9,Eliteserien,783,2024,,240,0,0,240
+pitchapi,9,Eliteserien,784,2025,,239,0,0,239
+pitchapi,9,Eliteserien,9,2026,,168,0,0,168

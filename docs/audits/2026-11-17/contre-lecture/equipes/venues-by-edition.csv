@@ -1,0 +1,73 @@
+organizer,competition,edition,venue,n
+FIFA,Club World Cup 2025,294,club_from_stadium_association_ground_unverified,7
+FIFA,Club World Cup 2025,294,club_home_ground_nominal_away,1
+FIFA,Club World Cup 2025,294,club_home_ground_nominal_home,2
+FIFA,Club World Cup 2025,294,neither_home_association,53
+FIFA,Club World Cup 2025,31672,club_from_stadium_association_ground_unverified,3
+FIFA,Club World Cup 2025,31672,neither_home_association,5
+FIFA,Club World Cup 2025,31673,club_from_stadium_association_ground_unverified,1
+FIFA,Club World Cup 2025,31673,neither_home_association,6
+FIFA,Club World Cup 2025,31675,club_from_stadium_association_ground_unverified,2
+FIFA,Club World Cup 2025,31675,neither_home_association,5
+FIFA,World Cup,1003,neither_home_association,61
+FIFA,World Cup,1003,nominal_away_hosts,1
+FIFA,World Cup,1003,nominal_home_hosts,2
+FIFA,World Cup,1004,neither_home_association,91
+FIFA,World Cup,1004,nominal_away_hosts,3
+FIFA,World Cup,1004,nominal_home_hosts,10
+FIFA,World Cup 1930,271,neither_home_association,14
+FIFA,World Cup 1930,271,nominal_home_hosts,4
+FIFA,World Cup 1930,272,neither_home_association,12
+FIFA,World Cup 1930,272,nominal_home_hosts,4
+FIFA,World Cup 1930,273,neither_home_association,16
+FIFA,World Cup 1930,273,nominal_home_hosts,2
+FIFA,World Cup 1930,274,neither_home_association,3
+FIFA,World Cup 1930,274,nominal_home_hosts,3
+FIFA,World Cup 1930,275,neither_home_association,3
+FIFA,World Cup 1930,276,neither_home_association,1
+FIFA,World Cup 1930,278,nominal_home_hosts,1
+FIFA,World Cup 1930,279,neither_home_association,3
+FIFA,World Cup 1930,281,nominal_away_hosts,1
+FIFA,World Cup 1930,282,neither_home_association,1
+FIFA,World Cup 1930,283,neither_home_association,4
+FIFA,World Cup 1930,283,nominal_away_hosts,1
+FIFA,World Cup 1930,284,neither_home_association,7
+FIFA,World Cup 1930,284,nominal_home_hosts,1
+FIFA,World Cup 1930,285,neither_home_association,4
+FIFA,World Cup 1930,286,neither_home_association,2
+FIFA,World Cup 1930,286,nominal_away_hosts,1
+FIFA,World Cup 1930,286,nominal_home_hosts,1
+FIFA,World Cup 1930,287,neither_home_association,3
+FIFA,World Cup 1930,287,nominal_away_hosts,1
+FIFA,World Cup 1930,287,nominal_home_hosts,1
+FIFA,World Cup 1930,288,neither_home_association,52
+FIFA,World Cup 1930,288,nominal_away_hosts,1
+FIFA,World Cup 1930,288,nominal_home_hosts,6
+FIFA,World Cup 1930,289,neither_home_association,4
+FIFA,World Cup 1930,290,neither_home_association,15
+FIFA,World Cup 1930,290,nominal_home_hosts,5
+FIFA,World Cup 1930,291,neither_home_association,59
+FIFA,World Cup 1930,291,nominal_away_hosts,2
+FIFA,World Cup 1930,291,nominal_home_hosts,3
+FIFA / LAFC,Club World Cup 2025,294,club_home_ground_nominal_home,1
+UEFA,Champions League,755,neither_home_association,1
+UEFA,Champions League,756,neither_home_association,1
+UEFA,Champions League,757,neither_home_association,1
+UEFA,Champions League,758,neither_home_association,1
+UEFA,Champions League,759,neither_home_association,1
+UEFA,Conference League,767,neither_home_association,1
+UEFA,Conference League,768,neither_home_association,1
+UEFA,Conference League,769,club_from_stadium_association_ground_unverified,1
+UEFA,Conference League,770,neither_home_association,1
+UEFA,Conference League,771,neither_home_association,1
+UEFA,Euro 2021,268,neither_home_association,24
+UEFA,Euro 2021,268,nominal_away_hosts,11
+UEFA,Euro 2021,268,nominal_home_hosts,16
+UEFA,Euro 2021,269,neither_home_association,46
+UEFA,Euro 2021,269,nominal_away_hosts,2
+UEFA,Euro 2021,269,nominal_home_hosts,3
+UEFA,Europa League,792,neither_home_association,1
+UEFA,Europa League,793,neither_home_association,1
+UEFA,Europa League,794,neither_home_association,1
+UEFA,Europa League,795,neither_home_association,1
+UEFA,Europa League,796,neither_home_association,1

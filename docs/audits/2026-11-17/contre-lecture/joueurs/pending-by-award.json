@@ -1,0 +1,77 @@
+{
+  "by_award": {
+    "2020": {
+      "assignable_direct": 14411,
+      "assignable_history": 7,
+      "no_published_award": 0,
+      "pending": 14427,
+      "stats_newer_than_run": 14427,
+      "unknown_role": 9
+    },
+    "2021": {
+      "assignable_direct": 0,
+      "assignable_history": 0,
+      "no_published_award": 0,
+      "pending": 68,
+      "stats_newer_than_run": 0,
+      "unknown_role": 68
+    },
+    "2022": {
+      "assignable_direct": 0,
+      "assignable_history": 0,
+      "no_published_award": 0,
+      "pending": 135,
+      "stats_newer_than_run": 0,
+      "unknown_role": 135
+    },
+    "2023": {
+      "assignable_direct": 0,
+      "assignable_history": 0,
+      "no_published_award": 0,
+      "pending": 214,
+      "stats_newer_than_run": 0,
+      "unknown_role": 214
+    },
+    "2024": {
+      "assignable_direct": 0,
+      "assignable_history": 0,
+      "no_published_award": 0,
+      "pending": 94,
+      "stats_newer_than_run": 0,
+      "unknown_role": 94
+    },
+    "2025": {
+      "assignable_direct": 0,
+      "assignable_history": 0,
+      "no_published_award": 0,
+      "pending": 75,
+      "stats_newer_than_run": 0,
+      "unknown_role": 75
+    },
+    "2026": {
+      "assignable_direct": 0,
+      "assignable_history": 0,
+      "no_published_award": 0,
+      "pending": 20,
+      "stats_newer_than_run": 0,
+      "unknown_role": 20
+    }
+  },
+  "input_sha256": {
+    "award-role-2021.json": "5509d97d71ab7c2d873bf2fba68d906ae204b2c54da78166f08442f0820dfca4",
+    "award-role-2022.json": "9f28b1c69c1272f3dd360937a8cdec8757994a81f386d73d44a98a15c68cb775",
+    "award-role-2023.json": "4c725d1eed59fc3f5d26f3f3ed0bd31eac7d79ad70a16058078dcd472f628f76",
+    "award-role-2024.json": "35ebe93d4b9e850e58f207ff38562860514cd019eafff23c892ba337e6f1738a",
+    "award-role-2025.json": "e3de1c0812ab6ddf1872d8aac4fd2ea4ce10b8a7b825787516dd8f97cf942f8c",
+    "award-role-2026.json": "e7734fd08fd0b14a5b53ec8276b2b11040ea63f2b9132ff42d0c610b81c5a9d2",
+    "player-pending-2021.json": "91d126521b137261b047ca8b16c9e5ce9c493b75d9d59f2ac56a0757968b4758",
+    "player-pending-2022.json": "ec37e4d678412ac0cc34b4e48417ee7cae93ab12c39d2f65b4c2faf56c67d150",
+    "player-pending-2023.json": "a1fc84bf95a867e6db03528191d20ec6fcd1a820fc8d76fd1c32a14e5d611285",
+    "player-pending-2024.json": "be662881e97f62f69a929797bb36b959bde59e557fd420222e83b5a1e4e59fb8",
+    "player-pending-2025.json": "f2ce35104f45bae38556f648b9703d1b1caa113e6c392a758246689c1d158a60",
+    "player-pending-2026.json": "f9c73ad52aad6aef2c70621d7b954988b380060f3ead583e18a0f3b8c39e7a3b"
+  },
+  "snapshot": [
+    "4403005:4403005:"
+  ]
+}

@@ -1,0 +1,111 @@
+{
+  "captured_at": "2026-11-17 22:52:48.730670+00:00",
+  "fixture": {
+    "id": 739082,
+    "public_id": "m_v0739082",
+    "edition": 53156,
+    "cup_key": "nations-results:afcon:2025",
+    "source": "international_results",
+    "match_date": "2026-01-18",
+    "status": "finished",
+    "home_team_id": 5497,
+    "home": "Morocco",
+    "away_team_id": 5488,
+    "away": "Senegal",
+    "home_score": 3,
+    "away_score": 0,
+    "home_score_90": null,
+    "away_score_90": null,
+    "home_score_et": null,
+    "away_score_et": null,
+    "provider": "international_results",
+    "provider_key": "2026-01-18|Morocco|Senegal",
+    "elo": [
+      [
+        5488,
+        1619.6517,
+        1607.6522,
+        0
+      ],
+      [
+        5497,
+        1559.6654,
+        1571.6649,
+        1
+      ]
+    ],
+    "currently_persisted_forecasts": 0,
+    "updated_at": "2026-11-14 17:07:21.782809+00:00"
+  },
+  "admitted_2097": [
+    739082,
+    2025,
+    "2026-01-18 00:00:00+00:00",
+    5497,
+    5488,
+    3,
+    0,
+    false,
+    "2026-01-18",
+    240,
+    53156,
+    1.2
+  ],
+  "stored_2097": [
+    [
+      739082,
+      5497,
+      2025,
+      1559.6654052734375,
+      1571.6649169921875,
+      0.5000197887420654,
+      1.0,
+      1.2000000476837158,
+      2097,
+      "2026-01-18 00:00:00+00:00"
+    ],
+    [
+      739082,
+      5488,
+      2025,
+      1619.6517333984375,
+      1607.6522216796875,
+      0.49998021125793457,
+      0.0,
+      1.2000000476837158,
+      2097,
+      "2026-01-18 00:00:00+00:00"
+    ]
+  ],
+  "stored_column_order": [
+    "match",
+    "team",
+    "season",
+    "before",
+    "after",
+    "expected",
+    "result",
+    "stakes",
+    "run",
+    "kickoff"
+  ],
+  "national_editions_scope_note": "312 sides refers to all three AFCON editions, not the final; final has two sides",
+  "fixed_before_state_sensitivity_to_played_result": [
+    {
+      "team": 5497,
+      "admin_result": 1.0,
+      "played_result": 0,
+      "stored_delta": 11.99951171875,
+      "unrounded_delta_difference": -24.0,
+      "meaning": "local arithmetic holding incoming ratings and stake fixed; not a replay or selected policy"
+    },
+    {
+      "team": 5488,
+      "admin_result": 0.0,
+      "played_result": 1,
+      "stored_delta": -11.99951171875,
+      "unrounded_delta_difference": 24.0,
+      "meaning": "local arithmetic holding incoming ratings and stake fixed; not a replay or selected policy"
+    }
+  ]
+}

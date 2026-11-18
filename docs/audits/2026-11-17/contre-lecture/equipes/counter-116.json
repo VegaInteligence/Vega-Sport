@@ -1,0 +1,110 @@
+{
+  "old_clock": {
+    "at": "2026-11-17 18:26:33.704738+00:00",
+    "database": "vega_v2",
+    "columns": [
+      "edition_id",
+      "name",
+      "missing_whole_matches",
+      "earliest_match",
+      "latest_match",
+      "first_row_change",
+      "last_row_change",
+      "updated_after_read",
+      "existed_at_read",
+      "elo_run",
+      "started_at",
+      "finished_at"
+    ],
+    "rows": [
+      [
+        324,
+        "Scottish Cup",
+        1,
+        "2026-10-24",
+        "2026-10-24",
+        "2026-11-17 18:15:30.367983+00:00",
+        "2026-11-17 18:15:30.367983+00:00",
+        1,
+        0,
+        2086,
+        "2026-11-17 17:03:29.919695+00:00",
+        "2026-11-17 17:03:59.419386+00:00"
+      ],
+      [
+        325,
+        "Scottish League Cup",
+        3,
+        "2026-08-14",
+        "2026-08-16",
+        "2026-11-17 18:15:30.367983+00:00",
+        "2026-11-17 18:15:30.367983+00:00",
+        3,
+        0,
+        2086,
+        "2026-11-17 17:03:29.919695+00:00",
+        "2026-11-17 17:03:59.419386+00:00"
+      ],
+      [
+        337,
+        "Scottish League One",
+        28,
+        "2026-08-01",
+        "2026-11-14",
+        "2026-11-17 18:15:30.367983+00:00",
+        "2026-11-17 18:15:30.367983+00:00",
+        28,
+        0,
+        2086,
+        "2026-11-17 17:03:29.919695+00:00",
+        "2026-11-17 17:03:59.419386+00:00"
+      ],
+      [
+        338,
+        "Scottish League Two",
+        26,
+        "2026-08-01",
+        "2026-11-14",
+        "2026-11-17 18:15:30.367983+00:00",
+        "2026-11-17 18:15:30.367983+00:00",
+        26,
+        0,
+        2086,
+        "2026-11-17 17:03:29.919695+00:00",
+        "2026-11-17 17:03:59.419386+00:00"
+      ]
+    ]
+  },
+  "old_orphan_capture_at": "2026-11-17 18:23:49.406110+00:00",
+  "old_orphan_rows": 116,
+  "later_clock": {
+    "at": "2026-11-17 21:01:04.861964+00:00",
+    "database": "vega_v2",
+    "columns": [
+      "edition_id",
+      "name",
+      "missing_whole_matches",
+      "earliest_match",
+      "latest_match",
+      "first_row_change",
+      "last_row_change",
+      "updated_after_read",
+      "existed_at_read",
+      "elo_run",
+      "started_at",
+      "finished_at"
+    ],
+    "rows": []
+  },
+  "all_2097_inputs": 81923,
+  "all_2097_stored_sides": 163846,
+  "2097_missing_or_extra_keys": 0,
+  "2097_wrong_seasons": 0,
+  "2097_four_scottish_editions_admitted": {
+    "337": 74,
+    "338": 70,
+    "325": 14,
+    "324": 50
+  },
+  "limitation": "old clock is aggregate only; cannot name the original 58 missing fixture keys from this file, and the later zero is a recorded read, not a fresh live read"
+}

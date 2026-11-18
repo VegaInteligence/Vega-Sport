@@ -1,0 +1,27 @@
+{
+  "deployment_code": "8018e0836ca0f32e8b2eb51fc2847154abff7f13",
+  "postgres_first": "18.6 (Debian 18.6-1.pgdg12+2)",
+  "postgres_third_team": "18.6",
+  "first_award_byte_identical": true,
+  "first_award_sha256": "2b7c149ec4ea38d52832989de0e8b5ccef7307b0fef8e8ff6a8f2c45b6d00e6c",
+  "third_team_old_sha256": "f12aba52e3b8b5b63aac774a93777d999638dfada8bfd41b406bf1edefa4384c",
+  "third_team_replay_sha256": "972719ba82624fa4a310809359e6ba89580785a0f37bb7678907984070f6b22b",
+  "third_team_all_numeric_outcomes_errors_and_semantic_rows_equal": true,
+  "identical_published_state_across_failed_attempts_in_both_experiments": true,
+  "hashed_tables_with_changed_serialized_rows_across_the_two_runs": {
+    "initial": [
+      "calc_runs",
+      "metric_definitions",
+      "player_match_grades",
+      "power_runs"
+    ],
+    "after_correction": [
+      "calc_runs",
+      "metric_definitions",
+      "player_match_grades",
+      "power_runs"
+    ]
+  },
+  "comparison": "The digest is for all serialized table columns, including locally generated run timestamps. Across the separate clusters table row counts, stored sporting outcomes, failure and recovery assertions agree. Within either execution the complete published state survived both failures unchanged.",
+  "checked_by": "offline local publication validation on 2026-11-18"
+}

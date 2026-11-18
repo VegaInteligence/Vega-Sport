@@ -1,0 +1,64 @@
+{
+  "fixture_registry_at": "2026-11-18 03:49:01.370267+00:00",
+  "fixture_registry_snapshot": "4408172:4408172:",
+  "elo_snapshot_at": "2026-11-18 02:16:34.234527+00:00",
+  "rated_distinct_exact_ids": 3135,
+  "selection": "finished, date known, both scores and exact team IDs known; archive_key IS NOT NULL; no merge or name inference",
+  "club_definition": "both is_national IS NOT TRUE, matching technical non-national scope; NULL does not establish official identity",
+  "registry_national_flags": {
+    "False": 263,
+    "None": 11373,
+    "True": 235
+  },
+  "counter": {
+    "archive_any_national_flag_null": 490927,
+    "club_0_rated_teams": 75863,
+    "club_both_strictly_prior": 652,
+    "club_both_on_or_before": 656,
+    "club_1_rated_teams": 161583,
+    "club_2_rated_teams": 253481
+  },
+  "all_archive_fixtures": 490927,
+  "older_986961_capture_at": "2026-11-17 18:23:51.287612+00:00",
+  "older_archive_club_sides": 986961,
+  "examples": [
+    {
+      "match_id": 92129,
+      "season_id": 1878,
+      "edition_id": 1366,
+      "competition": "FA Cup",
+      "archive_key": "engsoccerdata/facup/all/1878",
+      "day": "1878-11-16",
+      "home_id": 966,
+      "home": "Notts County",
+      "away_id": 5112,
+      "away": "Nottingham Forest",
+      "score": "1-3",
+      "source": "engsoccerdata",
+      "entity_type": "club",
+      "home_first_2097_day": "2023-08-05",
+      "away_first_2097_day": "2021-08-08",
+      "both_strictly_prior": false,
+      "both_on_or_before": false
+    },
+    {
+      "match_id": 733480,
+      "season_id": 2021,
+      "edition_id": 6594,
+      "competition": "Coupe de la Ligue",
+      "archive_key": "g:eng-league-cup",
+      "day": "2021-08-10",
+      "home_id": 995,
+      "home": "Reading",
+      "away_id": 5195,
+      "away": "Swansea City",
+      "score": "0-3",
+      "source": "worldclub",
+      "entity_type": "club",
+      "home_first_2097_day": "2021-08-07",
+      "away_first_2097_day": "2021-08-07",
+      "both_strictly_prior": true,
+      "both_on_or_before": true
+    }
+  ]
+}

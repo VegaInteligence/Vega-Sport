@@ -1,0 +1,242 @@
+{
+  "edition": 911,
+  "competition": 195,
+  "pitchapi": {
+    "competition": "l_1Kknkl",
+    "team": "t_1qdq3x",
+    "player": "p_3OP9kH"
+  },
+  "award": 2025,
+  "clocks": {
+    "early": "2026-11-17 21:05:48.739904+00:00",
+    "old": "2026-11-17 22:07:47.062133+00:00",
+    "02h02": "2026-11-18 02:02:22.142267+00:00",
+    "04h22": "2026-11-18 04:22:35.281819+00:00",
+    "morning": [
+      "vega_v2",
+      "2026-11-18 07:12:11.328022+00",
+      "4418106:4418106:",
+      "on"
+    ],
+    "independent": [
+      "vega_v2",
+      "2026-11-18 07:22:04.516519+00",
+      "4418564:4418564:",
+      "on"
+    ],
+    "jobs": [
+      "vega_v2",
+      "2026-11-18 07:24:59.624178+00",
+      "4418696:4418696:",
+      "on"
+    ],
+    "parse": [
+      "vega_v2",
+      "2026-11-18 07:30:57.322746+00",
+      "4418972:4418972:",
+      "on"
+    ]
+  },
+  "timeline": [
+    {
+      "source": "21h05",
+      "row": {
+        "edition_id": 911,
+        "award": 2025,
+        "pending_inputs": 1110,
+        "definitely_assignable_role": 0,
+        "with_role_and_measured_touches": 0,
+        "need_role_history": 1110,
+        "no_published_award": 0,
+        "stats_newer_than_run": 0,
+        "role_before_published_run": 0,
+        "earliest_source_update": "2026-11-10 23:21:14.232329+00:00",
+        "latest_source_update": "2026-11-12 20:48:01.593848+00:00",
+        "last_published_run": "2026-11-17 14:25:15.310859+00:00"
+      }
+    },
+    {
+      "source": "22h07",
+      "row": {
+        "edition_id": 911,
+        "award": 2025,
+        "pending": 1110,
+        "current_assignable": 0,
+        "current_assignable_touches": 0,
+        "recovered_by_award_history": 0,
+        "no_model_role_after_award_history": 1110,
+        "valid_stats_slot_shadowed_by_lineup": 0,
+        "assignable_stats_older_than_latest_player_start": 0,
+        "latest_player_run": 2085,
+        "latest_player_start": "2026-11-17 14:25:15.310859+00:00"
+      }
+    },
+    {
+      "source": "02h02",
+      "row": {
+        "edition_id": 911,
+        "award": 2025,
+        "pending": 14,
+        "current_assignable": 0,
+        "current_assignable_touches": 0,
+        "recovered_by_award_history": 0,
+        "no_model_role_after_award_history": 14,
+        "valid_stats_slot_shadowed_by_lineup": 0,
+        "assignable_stats_older_than_latest_player_start": 0,
+        "latest_player_run": 2096,
+        "latest_player_start": "2026-11-18 01:07:37.063008+00:00"
+      }
+    },
+    {
+      "source": "04h22",
+      "row": {
+        "edition_id": 911,
+        "award": 2025,
+        "pending": 14,
+        "current_assignable": 0,
+        "current_assignable_touches": 0,
+        "recovered_by_award_history": 0,
+        "no_model_role_after_award_history": 14,
+        "valid_stats_slot_shadowed_by_lineup": 0,
+        "assignable_stats_older_than_latest_player_start": 0,
+        "latest_player_run": 2096,
+        "latest_player_start": "2026-11-18 01:07:37.063008+00:00"
+      }
+    }
+  ],
+  "old_aggregate_only": true,
+  "net_pending_decrease": 1096,
+  "edition_counts": {
+    "id": 911,
+    "status": "finished",
+    "games": 182,
+    "stats": 7208,
+    "played": 5537,
+    "outside": 0,
+    "null_team": 0
+  },
+  "observed_players": 475,
+  "observed_teams": 14,
+  "older": {
+    "http200_lineups": 182,
+    "http200_stats": 182,
+    "lineups_parse_failures": 132,
+    "failure_first": "2026-11-10 23:21:11.81172+00",
+    "failure_last": "2026-11-12 10:21:01.116254+00"
+  },
+  "refetch": {
+    "unique_http200": 132,
+    "job_target_matches": 132,
+    "request_ids": 132,
+    "direct_fetch_job_fks": 0,
+    "first_http": "2026-11-18 00:36:13.426675+00",
+    "last_http": "2026-11-18 00:39:02.899994+00",
+    "first_lineup_write": "2026-11-18 00:36:13.430194+00",
+    "last_lineup_write": "2026-11-18 00:39:02.904057+00",
+    "fetch_to_lineup_ms": [
+      2.887,
+      46.747
+    ],
+    "fetch_to_job_done_ms": [
+      125.511,
+      1108.028
+    ],
+    "queue_run_after_bounds": [
+      "2026-11-11 23:21:25.221785+00",
+      "2026-11-13 10:21:09.590749+00"
+    ],
+    "lineups_slots": 5266,
+    "slots_with_positions": 5266,
+    "detailed": 2903,
+    "positive_minute_stats": 4014,
+    "positive_with_lineup_new": 4002,
+    "detailed_played": 2873,
+    "generic_played": 1129,
+    "unchanged_fixture_lineups": 50,
+    "first_match_updates_before_2093_start": 29,
+    "stats_updated_bounds": [
+      "2026-11-10 23:21:14.232329+00",
+      "2026-11-12 21:39:00.782815+00"
+    ]
+  },
+  "current": {
+    "graded": 5523,
+    "not_graded": 14,
+    "refetched_matches_containing_residuals": 7,
+    "without_lineup_but_graded": 5,
+    "grade_runs": {
+      "2096": 5342,
+      "2093": 101,
+      "2085": 49,
+      "1717": 28,
+      "2061": 3
+    },
+    "grade_runs_on_new_lineup_rows": {
+      "2096": 3876,
+      "2093": 66,
+      "2085": 36,
+      "1717": 21,
+      "2061": 3
+    },
+    "all_power_runs": {
+      "2096": 5523
+    }
+  },
+  "award_runs": [
+    {
+      "id": 1717,
+      "season_id": 2025,
+      "kind": "players",
+      "method_version": "power-ranking-v7",
+      "status": "superseded",
+      "started_at": "2026-11-15 17:45:15.160779+00",
+      "finished_at": "2026-11-15 17:52:31.220604+00",
+      "matches": 651805,
+      "players": 37361
+    },
+    {
+      "id": 2061,
+      "season_id": 2025,
+      "kind": "players",
+      "method_version": "power-ranking-v8",
+      "status": "superseded",
+      "started_at": "2026-11-16 20:11:36.23938+00",
+      "finished_at": "2026-11-16 20:18:14.869265+00",
+      "matches": 651805,
+      "players": 37361
+    },
+    {
+      "id": 2085,
+      "season_id": 2025,
+      "kind": "players",
+      "method_version": "power-ranking-v8",
+      "status": "superseded",
+      "started_at": "2026-11-17 14:25:15.310859+00",
+      "finished_at": "2026-11-17 14:34:24.488664+00",
+      "matches": 651805,
+      "players": 37361
+    },
+    {
+      "id": 2093,
+      "season_id": 2025,
+      "kind": "players",
+      "method_version": "power-ranking-v8",
+      "status": "superseded",
+      "started_at": "2026-11-18 00:36:41.58503+00",
+      "finished_at": "2026-11-18 00:44:25.423074+00",
+      "matches": 652517,
+      "players": 37436
+    },
+    {
+      "id": 2096,
+      "season_id": 2025,
+      "kind": "players",
+      "method_version": "power-ranking-v8",
+      "status": "published",
+      "started_at": "2026-11-18 01:07:37.063008+00",
+      "finished_at": "2026-11-18 01:15:32.551924+00",
+      "matches": 652902,
+      "players": 37482
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "rds_capture_at": "2026-11-17 23:36:27.117470+00:00",
+  "source_editions": 23,
+  "branch_rows": 1069,
+  "counts": {
+    "official_completed_pairs": 1068,
+    "restored": 665,
+    "restored_neutral_null": 665,
+    "restored_reversed_fifa_orientation": 38
+  },
+  "restored_projected_score_shapes": {
+    "dict": 665
+  },
+  "restored_upstream_score_shapes": {
+    "list": 665
+  },
+  "restored_ids_already_admitted_2097": 0,
+  "restored_by_year": {
+    "1950": 16,
+    "1954": 23,
+    "1958": 34,
+    "1962": 32,
+    "1966": 31,
+    "1970": 29,
+    "1974": 38,
+    "1978": 37,
+    "1982": 51,
+    "1986": 47,
+    "1990": 44,
+    "1994": 48,
+    "1998": 60,
+    "2002": 59,
+    "2006": 5,
+    "2010": 60,
+    "2014": 44,
+    "2022": 7
+  },
+  "selection": "old RDS status != finished, actual branch status finished, same official FIFA outcome after orientation check",
+  "not_established": "net new sporting matches after identity reconciliation and deduplication; post-deployment national side count"
+}
