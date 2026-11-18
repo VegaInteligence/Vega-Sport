@@ -1,3 +1,5 @@
+[Situation consolidée, mesures et correctifs du 18 novembre](SITUATION.md) · Cette page conserve les constats et les limites à la date de chaque relevé.
+
 # Couverture des exigences au 17 novembre 2026
 
 Les décomptes corrigés distinguent le poste, les statistiques réellement employées, le terrain, le tour et les rencontres incluses dans chaque comparaison. [Contre-lecture du 18 novembre](CONTRE-LECTURE.md)

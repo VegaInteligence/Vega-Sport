@@ -1,3 +1,5 @@
+[Situation consolidée, mesures et correctifs du 18 novembre](SITUATION.md) · Cette page conserve les constats et les limites à la date de chaque relevé.
+
 # Où s’arrêtent les notes Vega
 
 Les contrôles ultérieurs détaillent les premières années de notation, le support des gardiens, le rattrapage sud-africain et les entrées réelles du calcul des équipes. [Contre-lecture du 18 novembre](CONTRE-LECTURE.md)

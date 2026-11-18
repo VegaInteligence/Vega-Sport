@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "issueId": "VI-21",
+      "id": "9fd49ead-d579-4e5b-949a-10a4e913959f",
+      "body": "RDS, 18 novembre. À 13 h 56 UTC, 161 912 des 161 932 côtés de clubs admis ont leur Elo. Les 20 absences concernent dix résultats du 17 novembre entrés à 12 h 16 UTC (4 National League North, 2 South, 4 Northern Premier). Les 1 864 côtés de sélection sont servis. Le run Elo 2097 précède cette ingestion. À 14 h 20 UTC, le vrai `due_seasons` du worker renvoie une liste vide. Les matchs complémentaires à `cup_key` ne réveillent pas cette branche du calcul. Le lendemain UTC est la prochaine échéance calendaire possible pour la saison, sous réserve que le worker aboutisse. Dans le même passage, 35 rencontres historiques de ces trois ligues ont quitté la base et leurs 70 valeurs Elo restent associées à des IDs disparus. Recherche effectuée sur les IDs et les paires dans les deux sens à ±31 jours, toutes compétitions. VI-27 vérifie la garde du collecteur sur les deux versions du flux. VI-21 conserve la convergence après modification de source et la cohérence des publications Elo. Aucun recalcul de production lancé."
+    },
+    {
+      "issueId": "VI-27",
+      "id": "aafd3bd6-07c4-4dfa-823f-e3478e936c52",
+      "body": "Le flux Open Matchday est passé du commit 496e94ec à 13a43495. Les CSV des National League North, National League South et Northern Premier retirent trois journées entières (12 + 12 + 11 résultats précédemment publiés) pendant qu’ils ajoutent dix nouveaux résultats. Le relevé en lecture seule de 14 h 20 UTC retrouve zéro des 35 clés et zéro de ces paires dans les deux sens à ±31 jours dans les autres éditions. Soixante-dix valeurs d’Elo sont encore attachées aux anciens IDs. Le retrait du flux est établi. La validation sportive et le comportement de la garde de la branche font l’objet d’un rejeu sur copie. VI-21 conserve le recalcul. Ces constats remplacent la conclusion de couverture complète des clubs mesurée à 09 h 59."
+    }
+  ]
+}

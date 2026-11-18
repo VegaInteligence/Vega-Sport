@@ -1,3 +1,5 @@
+[Situation consolidée, mesures et correctifs du 18 novembre](SITUATION.md) · Cette page conserve les constats et les limites à la date de chaque relevé.
+
 # Ce que les contrôles du 18 novembre changent
 
 ## Notes des joueurs

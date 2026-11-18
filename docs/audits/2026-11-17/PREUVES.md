@@ -1,3 +1,5 @@
+[Situation consolidée, mesures et correctifs du 18 novembre](SITUATION.md) · Cette page conserve les constats et les limites à la date de chaque relevé.
+
 # Guide des preuves
 
 Les fichiers CSV utilisent la virgule comme séparateur, l’UTF-8 et une ligne d’en-tête. Le champ vide signifie que la mesure est inconnue ou sans objet pour cette ligne. La valeur numérique zéro correspond à une mesure ou à une exclusion établie par la requête.

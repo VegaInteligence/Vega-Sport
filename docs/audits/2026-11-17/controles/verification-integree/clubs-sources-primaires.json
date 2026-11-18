@@ -1,0 +1,49 @@
+[
+  {
+    "old_match_id": 8059,
+    "date": "2026-08-31",
+    "home": "Spennymoor Town",
+    "away": "Hednesford Town",
+    "home_score": 1,
+    "away_score": 1,
+    "publisher": "club participant",
+    "url": "https://htfc.co.uk/2026/08/match-report-spennymoor-town-1-1-hednesford-town/",
+    "final_url": "https://htfc.co.uk/2026/08/match-report-spennymoor-town-1-1-hednesford-town/",
+    "http_status": 200,
+    "sha256": "9df90d7ffa5c87fb97e1b5c139f8cb4916a18f832276872aec15bb048a4bd4c0",
+    "bytes": 220646,
+    "captured_at": "2026-11-18T14:23:10.597250+00:00",
+    "file": "8059.html"
+  },
+  {
+    "old_match_id": 8291,
+    "date": "2026-09-05",
+    "home": "Billericay Town",
+    "away": "Dorking Wanderers",
+    "home_score": 3,
+    "away_score": 3,
+    "publisher": "club participant",
+    "url": "https://dwfc.co.uk/2026/09/match-report-billericay-town-3-3-dorking-wanderers-05-09-26/",
+    "final_url": "https://dwfc.co.uk/2026/09/match-report-billericay-town-3-3-dorking-wanderers-05-09-26/",
+    "http_status": 200,
+    "sha256": "c31acaf71b351962ef71f01c603623a77bbf5a3ce7f3bbde847ef0fd89d23568",
+    "bytes": 53243,
+    "captured_at": "2026-11-18T14:23:16.696231+00:00",
+    "file": "8291.html"
+  },
+  {
+    "old_match_id": 8534,
+    "date": "2026-08-31",
+    "home": "Curzon Ashton",
+    "away": "Ashton United",
+    "home_score": 2,
+    "away_score": 0,
+    "publisher": "club participant",
+    "url": "https://curzon-ashton.co.uk/adam-barton-post-ashton-united-h/",
+    "http_status": 200,
+    "sha256": "41944802ac7899b9ce50185918321be3ec6c6a73fbd08301592c27ff47ce2644",
+    "bytes": 50170,
+    "captured_at": "2026-11-18T14:24:29.964550+00:00",
+    "file": "8534.html"
+  }
+]

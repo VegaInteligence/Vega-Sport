@@ -1,3 +1,5 @@
+[Situation consolidée, mesures et correctifs du 18 novembre](SITUATION.md) · Cette page conserve les constats et les limites à la date de chaque relevé.
+
 # Duels, niveaux des ligues et sources indépendantes
 
 Les contrôles joueurs et équipes rapprochent les publications de PostgreSQL, les calendriers officiels et les résultats administratifs datés. [Contre-lecture du 18 novembre](CONTRE-LECTURE.md)

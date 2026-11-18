@@ -1,0 +1,20 @@
+{
+  "at": "2026-11-18 13:29:13 UTC",
+  "entries": [
+    {
+      "issueId": "VI-21",
+      "id": "74206a6b-1fb6-4f2f-9c1f-3b39d88d326b",
+      "body": "Le tournoi japonais de transition du printemps 2026 et la J1 2026/27 ont été comparés séparément à l’organisateur. Sur les 200 matchs du printemps, 199 correspondent à l’édition Vega 140 par date, deux clubs et score. Cette même édition contient aussi 199 des 380 matchs de la ligue suivante. Les 181 autres sont dans l’édition 22. La lecture RDS à 13 h 25 UTC confirme que le 1–3 Nagasaki–Hiroshima du 6 février manque pour les deux identités canoniques, toutes compétitions confondues, même avec une tolérance de plusieurs jours. L’API publique sert encore le classement SportScore après 14 matchs sous le millésime 2027 et un classement calculé Vega de 32 à 34 matchs sous 2026. VI-29 protège la publication de l’observation erronée. VI-21 conserve la séparation des deux compétitions, les matchs, les membres et les recalculs dépendants. [Match officiel](https://www.jleague.jp/en/match/j1/2026/020603/)"
+    },
+    {
+      "issueId": "VI-29",
+      "id": "d135de7c-876a-41be-bf22-5b0832795aaf",
+      "body": "Contre-lecture indépendante du candidat f396b4ec42. En première collecte d’un championnat à trois clubs déjà liés, un retour de deux lignes passe quand le troisième club a une rencontre programmée mais encore aucun résultat compté. Le lecteur public répond 200 avec ces deux lignes. Le contrôle sur les trois clubs complets répond également 200. Témoin reproductible sous tracks/2-ingestion/reviews/astra-1420/initial-completeness.py. Correction réattribuée à Sol dans le worktree initial de VI-29 après le refus de quota effectif d’Opus. Le correctif doit préserver les groupes légitimes et le cas où le calendrier de l’organisateur est incomplet. La migration J1 147 et la résolution des éditions sous VI-21 restent distinctes."
+    },
+    {
+      "issueId": "VI-31",
+      "id": "bba4992e-4963-4e03-b190-e8c29b6a7f37",
+      "body": "La relecture a trouvé un cas de perte de contrat après le premier correctif. Un transfert vers un nouveau club avec échéance absente ou invalide pouvait faire disparaître le contrat daté encore valable du lecteur HTTP. Le correctif local 33266597f7 conserve la date publiée et laisse une observation à reprendre. Une nouvelle échéance valide remplace bien l’ancienne. Les deux suites Transfermarkt passent sur copie (43 cas, dont 34 parcours historiques). Les deux harnais indépendants conservent leurs comptes, 55 mouvements au deuxième passage et 11 liaisons qualifiées sur 13 observations. Intégré sur la branche d’audit dans 4d49daa545. CI combinée et contre-lecture du correctif en cours."
+    }
+  ]
+}

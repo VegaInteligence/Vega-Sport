@@ -1,0 +1,1899 @@
+diff --git a/backend/vega/sources/sportscore.py b/backend/vega/sources/sportscore.py
+index cb42bf2287..05268a3575 100644
+--- a/backend/vega/sources/sportscore.py
++++ b/backend/vega/sources/sportscore.py
+@@ -1,15 +1,32 @@
+ """Official league tables of SportScore (sportscore.com widget), as main's
+ /api/standings source (frontend/src/services/sportscore-standings.js).
+ 
+-SportScore gives the current table of a competition, without a season, and names
+-without ids. A table is written for the competition's current edition only when every
+-row designates exactly one team of that edition (normalized name, short name, a
+-known spelling, or the last team left); otherwise nothing official is kept and the
+-API serves Vega's own table. A table that names other clubs (a new season on one side
+-only) therefore never lands on the wrong edition.
++SportScore gives the current table of a competition, without a season, and names without ids.
++A response replaces the current edition's official table only when it is a whole table of that
++edition (docs/calculs/09-audit-2026-11/FAILURE_MODES_SPORTSCORE.md §2): every row valid, every name
++designating one team of the edition, no club repeated, no position shared between clubs of
++different points, the edition's own results consistent with it (every club with a counted result
++there, and organiser corroboration if every club is ahead of the matches kicked off), every club
++and every table of the accepted observation still there with what was known of it (a single table
++may split exhaustively, and explicit retirement is reviewed in RETIRED_TABLES), every table's
++clubs too (a group keeps its clubs; a ranking across groups may change members but never shrinks,
++unless a row is reviewed out in RETIRED_ROWS), and no club's played count going down unless the
++results attest it. Anything else is refused with its code: the scope fails (sources.run_due), the accepted
++table keeps its rows and its date, and the scope is tried again after RETRY_AFTER. A name of a club
++of the previous or next edition is wrong-season evidence (WRONG_EDITION); a name nothing
++designates is missing evidence (UNMATCHED_TEAMS). No row is ever given to a team by elimination.
++The first table also needs the league roster or positive evidence of the native group phase.
++The writer reads and replaces SportScore's rows without a stage only (OWN).
++
++Each accepted row keeps its basis: the club's results Vega counted when it was observed
++(core.table_results, migration 138). api.standings serves SportScore's table, and no other
++provider's, while it holds every club of Vega's own table and every basis is still the club's
++counted results; otherwise Vega's own table. A valid repeat moves the observation time only while
++the table is not behind those results.
+ """
+ 
+ from datetime import timedelta
++import json
+ import re
+ import unicodedata
+ from urllib.parse import urlencode
+@@ -99,49 +116,164 @@ LEAGUES = {
+     "l_4WFCIZ": "english-premier-league",
+ }
+ 
++# Tables of an accepted observation that a later response may leave out (§2.1, rule 13b), written
++# here once reviewed: {(LEAGUES key, season label, table name): "reviewer, date: reason"}. Without an
++# entry, a table that disappears while the edition's other tables remain refuses the response, even
++# when its clubs all appear elsewhere (the World Cup's ranking of third-placed teams). The pattern of
++# snapshot.RETRACTIONS.
++RETIRED_TABLES = {}
++# Rows a later response may leave out of a table that stays (§2.1, rule 13c), once reviewed:
++# {(LEAGUES key, season label, table name, the club's public id): "reviewer, date: reason"}. An
++# entry lets that club leave that table of that edition, and nothing else. A refusal's detail names
++# the key to review.
++RETIRED_ROWS = {}
++# A widget answer larger than this is not a league table (it was cut silently before).
++MAX_TABLES, MAX_ROWS = 30, 100
++# Stored column -> widget key. A row without its rank, matches or points is no standings row;
++# the other numbers may be unknown, until they have been known once (MISSING_FIELD).
++FIELDS = {"position": "pos", "played": "p", "won": "w", "drawn": "d", "lost": "l",
++          "goals_for": "gf", "goals_against": "ga", "points": "pts"}
++REQUIRED = ("position", "played", "points")
++COLUMNS = ("group_name", "team_id", *FIELDS)
++# The writer's own rows of an edition: SportScore's, without a stage (it writes none). Rows of
++# another provider or of a stage are neither read, replaced nor dated here (§2.2).
++OWN = "competition_season_id = %s AND source = 'sportscore' AND stage IS NULL"
++# The counts of a row, never negative; in core.table_results' order, the basis: what Vega counted
++# of a club when its row was observed.
++RESULTS = ("played", "won", "drawn", "lost", "goals_for", "goals_against")
++NO_RESULT = (0,) * len(RESULTS)
++# Not every club can be this far ahead of the matches the edition has kicked off for it: last
++# season's final table seen at the next season's start is about thirty ahead, and four leaves
++# room for fixtures our calendar lacks (§2.1, rule 11).
++SLACK = 4
++# The Allsvenskan site uses this season-specific table. Its recent form identifies the
++# competition and edition. Read it only when the Swedish primary calendar is too short.
++ALLSVENSKAN = "l_1XsMdH"
++ALLSVENSKAN_URL = "https://gql.sportomedia.se/graphql"
++ALLSVENSKAN_QUERY = """query VerifySeason($year: Int!) {
++  standingsForLeague(configLeagueName: "allsvenskan", configSeasonStartYear: $year, type: "total") {
++    standings { teamName teamId stats { name value } form { configLeagueName configSeasonStartYear } }
++  }
++}"""
++ALLSVENSKAN_FIELDS = ("gp", "w", "t", "l", "gf", "ga")
++# The organiser calls IF Brommapojkarna "BP". Bind that abbreviation to its organiser ID.
++ALLSVENSKAN_BP = 25591
++PROOF_TTL = PERIOD + timedelta(minutes=5)
++_allsvenskan_proof = None
++# The matches of rounds Vega's table counts that the edition has kicked off by an instant, per club.
++KICKED_OFF = """SELECT x.team_id, count(*) FROM core.matches m LEFT JOIN core.rounds r ON r.id = m.round_id
++  CROSS JOIN LATERAL (VALUES (m.home_team_id), (m.away_team_id)) AS x(team_id)
++  WHERE m.competition_season_id = %s AND m.kickoff_at <= %s AND x.team_id IS NOT NULL
++    AND coalesce(r.stage, 'regular') IN ('regular', 'group')
++  GROUP BY x.team_id"""
++# A row stored before 138 has no basis: it is behind once a counted match finished after it.
++# api.standings applies the same rule to such rows.
++FINISHED_SINCE = """SELECT EXISTS (
++  SELECT 1 FROM core.matches m LEFT JOIN core.rounds r ON r.id = m.round_id
++  WHERE m.competition_season_id = %s AND m.first_finished_at > %s AND m.status = 'finished'
++    AND m.home_score IS NOT NULL AND m.away_score IS NOT NULL AND coalesce(r.stage, 'regular') IN ('regular', 'group'))"""
++
+ 
+ def scopes(now):
+     return {f"standings:{key}": PERIOD for key in LEAGUES}
+ 
+ 
+-def _number(value):
+-    return value if isinstance(value, int) and not isinstance(value, bool) else (
+-        int(value) if isinstance(value, float) and value.is_integer() else None)
++def _number(row, key, where):
++    """A widget number: None when absent, an int when it is one (an integral float too)."""
++    value = row.get(key)
++    if value is None:
++        return None
++    if isinstance(value, bool) or not isinstance(value, (int, float)) or (isinstance(value, float) and not value.is_integer()):
++        raise SourceError("INVALID_ROW", f"{where}: {key}={value!r}")
++    return int(value)
+ 
+ 
+ def parse(payload, slug):
+-    """[(group name or None, [row dict])] of a widget response; SourceError if it is not one."""
++    """[(group name or None, [row dict])] of a widget response, its empty tables left out;
++    SourceError when it is not one: every row named, ranked, with its matches and points."""
+     if not isinstance(payload, dict) or payload.get("sport") != "football" or payload.get("competition_slug") != slug \
+             or not isinstance(payload.get("tables"), list):
+         raise SourceError("UNEXPECTED_RESPONSE")
++    if len(payload["tables"]) > MAX_TABLES:
++        raise SourceError("INVALID_ROW", f"{len(payload['tables'])} tables")
+     tables = []
+-    for table in payload["tables"][:30]:
+-        rows = [
+-            {"name": row["team"].strip(), "position": _number(row.get("pos")), "played": _number(row.get("p")),
+-             "won": _number(row.get("w")), "drawn": _number(row.get("d")), "lost": _number(row.get("l")),
+-             "goals_for": _number(row.get("gf")), "goals_against": _number(row.get("ga")), "points": _number(row.get("pts"))}
+-            for row in (table.get("rows") or [])[:100]
+-            if isinstance(row, dict) and isinstance(row.get("team"), str) and row["team"].strip()
+-        ]
++    for number, table in enumerate(payload["tables"], 1):
++        raw = table.get("rows") if isinstance(table, dict) else None
++        if not isinstance(table, dict) or not isinstance(raw if raw is not None else [], list):
++            raise SourceError("INVALID_ROW", f"table {number} is not a table")
++        if len(raw or []) > MAX_ROWS:
++            raise SourceError("INVALID_ROW", f"table {number}: {len(raw)} rows")
++        rows = []
++        for place, row in enumerate(raw or [], 1):
++            where = f"table {number} row {place}"
++            if not isinstance(row, dict) or not isinstance(row.get("team"), str) or not normalize(row["team"]):
++                raise SourceError("INVALID_ROW", f"{where}: no team")
++            parsed = {"name": row["team"].strip(), **{field: _number(row, key, where) for field, key in FIELDS.items()}}
++            unknown = [FIELDS[f] for f in REQUIRED if parsed[f] is None]
++            if unknown or parsed["position"] < 1 or any(parsed[f] is not None and parsed[f] < 0 for f in RESULTS):
++                raise SourceError("INVALID_ROW", f"{where} ({parsed['name']}): " + (f"no {', '.join(unknown)}" if unknown else "negative value"))
++            rows.append(parsed)
+         if rows:
+             group = table.get("group").strip() if isinstance(table.get("group"), str) else ""
+             tables.append((group or None, rows))
+     return tables
+ 
+ 
+-def _edition_teams(conn, edition):
++def check(tables):
++    """The response's own coherence, before any name is read (§2.1); SourceError otherwise."""
++    if not tables:
++        raise SourceError("EMPTY_TABLE", "no row")
++    groups = [group for group, _ in tables]
++    if len(tables) > 1 and len(set(groups)) != len(groups):
++        raise SourceError("DUPLICATE_GROUP", "two tables named " + repr(next(g for g in groups if groups.count(g) > 1)))
++    for group, rows in tables:
++        label = group or "the table"
++        seen, ranks = set(), {}
++        for row in rows:
++            key = normalize(row["name"])
++            if key in seen:
++                raise SourceError("DUPLICATE_ROW", f"{row['name']} twice in {label}")
++            seen.add(key)
++            ranks.setdefault(row["position"], []).append(row)
++        # Clubs sharing a rank have equal points: the one invariant of every ranking; no
++        # tie-break order (difference, goals, head to head) is assumed.
++        for position, tied in ranks.items():
++            if len({r["points"] for r in tied}) > 1:
++                raise SourceError("DUPLICATE_POSITION",
++                                  f"position {position} of {label}: {', '.join(r['name'] for r in tied)}, with different points")
++        # Tables of a split may continue one numbering (7-12): a single table holds all its ranks.
++        if len(tables) == 1 and max(ranks) > len(rows):
++            raise SourceError("INCOMPLETE_TABLE", f"position {max(ranks)} in a table of {len(rows)} rows")
++
++
++def _spellings(conn, query, args):
+     names, spelled = {}, {}
+-    for team, *spellings in conn.execute(
+-        """SELECT t.id, t.name, t.short_name, n.name FROM core.team_seasons ts JOIN core.teams t ON t.id = ts.team_id
+-           LEFT JOIN core.entity_names n ON n.entity_type = 'team' AND n.entity_id = t.id
+-           WHERE ts.competition_season_id = %s""",
+-        (edition,),
+-    ).fetchall():
++    for team, *spellings in conn.execute(query, args).fetchall():
+         names.setdefault(team, set()).update(normalize(s) for s in spellings if s)
+         spelled.setdefault(team, set()).update(s for s in spellings if s)
+     return names, spelled
+ 
+ 
++def _edition_teams(conn, edition):
++    return _spellings(conn, """SELECT t.id, t.name, t.short_name, n.name FROM core.team_seasons ts JOIN core.teams t ON t.id = ts.team_id
++           LEFT JOIN core.entity_names n ON n.entity_type = 'team' AND n.entity_id = t.id
++           WHERE ts.competition_season_id = %s""", (edition,))
++
++
++def _neighbour_teams(conn, edition):
++    """The teams of the competition's previous and next editions that this edition does not hold:
++    a row naming one of them is another season's table."""
++    names, _ = _spellings(conn, """SELECT t.id, t.name, t.short_name, n.name
++           FROM core.competition_seasons e
++           JOIN core.competition_seasons o ON o.competition_id = e.competition_id AND o.season_id IN (e.season_id - 1, e.season_id + 1)
++           JOIN core.team_seasons ts ON ts.competition_season_id = o.id
++           JOIN core.teams t ON t.id = ts.team_id
++           LEFT JOIN core.entity_names n ON n.entity_type = 'team' AND n.entity_id = t.id
++           WHERE e.id = %s AND NOT EXISTS (SELECT 1 FROM core.team_seasons x WHERE x.competition_season_id = e.id AND x.team_id = t.id)""",
++                          (edition,))
++    return names
++
++
+ # Words of a club's official name that say what it is, not which one ("Stade Rennais FC").
+ FORM_WORDS = {"fc", "cf", "sc", "ac", "as", "af", "afc", "ssc", "ss", "us", "rc", "aj", "ogc", "sco", "sk", "fk", "nk", "bk", "if",
+               "sv", "vfb", "vfl", "tsg", "bsc", "cd", "ud", "sd", "rcd", "club", "athletic", "stade", "sporting", "calcio", "de", "del",
+@@ -166,94 +298,393 @@ def _closeness(source_tokens, team_tokens):
+     return best
+ 
+ 
+-def link(conn, edition, tables):
+-    """{row name: team id} when every row designates one team, else None (and the count).
+-    A row is its team by a known spelling; else by its distinctive words ("LOSC Lille" is
+-    Lille, "Stade Rennais FC" is Rennes), when one team of the edition is clearly closest."""
+-    teams, spelled = _edition_teams(conn, edition)
+-    return pair({row["name"] for _, rows in tables for row in rows}, teams, spelled)
+-
+-
+-def pair(wanted, teams, spelled):
+-    """link() without the database: teams {id: normalized spellings}, spelled {id: spellings}."""
++def _exact(wanted, teams):
++    """{name: team} of the names one team's known spellings hold (normalized), and no other's."""
+     found = {}
+     for name in wanted:
+         hits = [team for team, keys in teams.items() if normalize(name) in keys]
+         if len(hits) == 1:
+             found[name] = hits[0]
+-    # Distinctive words, over the rows and teams still unpaired: a row takes the team it is
+-    # closest to only when that team is not as close to another row, and no other team ties.
++    return found
++
++
++def _closest(rows, spelled):
++    """Distinctive words, over the rows and teams still unpaired: a row takes the team it is
++    closest to only when that team is not as close to another row, and no other team ties."""
++    found = {}
+     while True:
+-        rows = [n for n in wanted if n not in found]
+-        free = [t for t in teams if t not in found.values()]
+-        scores = {(n, t): max((_closeness(_tokens(n), _tokens(s)) for s in spelled[t]), default=0) for n in rows for t in free}
++        left = [n for n in rows if n not in found]
++        free = [t for t in spelled if t not in found.values()]
++        scores = {(n, t): max((_closeness(_tokens(n), _tokens(s)) for s in spelled[t]), default=0) for n in left for t in free}
+         paired = False
+-        for n in rows:
++        for n in left:
+             ranked = sorted(((scores[(n, t)], t) for t in free), reverse=True)
+             if not ranked or ranked[0][0] == 0 or (len(ranked) > 1 and ranked[1][0] == ranked[0][0]):
+                 continue
+             team = ranked[0][1]
+-            if any(scores[(other, team)] >= ranked[0][0] for other in rows if other != n):
++            if any(scores[(other, team)] >= ranked[0][0] for other in left if other != n):
+                 continue
+             found[n] = team
+             paired = True
+             break
+         if not paired:
+-            break
+-    left_rows = wanted - set(found)
+-    left_teams = set(teams) - set(found.values())
+-    if len(left_rows) == 1 and len(left_teams) == 1:
+-        found[left_rows.pop()] = left_teams.pop()
++            return found
++
++
++def pair(wanted, teams, spelled):
++    """{row name: team id} when every name designates one team, else None; and the names left.
++    teams {id: normalized spellings}, spelled {id: spellings}: a known spelling, else the
++    distinctive words. A name left over is never given to the team left over."""
++    found = _exact(wanted, teams)
++    found.update(_closest(set(wanted) - set(found), {t: s for t, s in spelled.items() if t not in found.values()}))
+     if len(set(found.values())) != len(found):
+         return None, len(wanted)
+     missing = len(wanted) - len(found)
+     return (found if not missing else None), missing
+ 
+ 
++def link(conn, edition, tables):
++    """{row name: team id} of a response, every name designating one team of the edition;
++    SourceError WRONG_EDITION, UNMATCHED_TEAMS or DUPLICATE_ROW otherwise."""
++    wanted = {row["name"] for _, rows in tables for row in rows}
++    teams, spelled = _edition_teams(conn, edition)
++    found = _exact(wanted, teams)
++    others = _neighbour_teams(conn, edition)
++    foreign = sorted(name for name in wanted - set(found) if any(normalize(name) in keys for keys in others.values()))
++    if foreign:
++        raise SourceError("WRONG_EDITION", f"edition {edition}: {', '.join(foreign)}: clubs of the previous or next edition only")
++    found.update(_closest(wanted - set(found), {t: s for t, s in spelled.items() if t not in found.values()}))
++    unmatched = sorted(wanted - set(found))
++    if unmatched:
++        raise SourceError("UNMATCHED_TEAMS", f"edition {edition}: not linked: {', '.join(unmatched)}")
++    for group, rows in tables:
++        designated = [found[row["name"]] for row in rows]
++        if len(set(designated)) != len(designated):
++            twice = next(row["name"] for row in rows if designated.count(found[row["name"]]) > 1)
++            raise SourceError("DUPLICATE_ROW", f"edition {edition}: {twice} and another row of {group or 'the table'} are one team")
++    return found
++
++
++def _team_names(conn, teams):
++    return dict(conn.execute("SELECT id, name FROM core.teams WHERE id = ANY(%s)", (sorted(teams),)).fetchall())
++
++
++def _allsvenskan_rows(payload, year):
++    """A full season-labelled organiser table, in the fields needed for corroboration."""
++    if payload.get("errors"):
++        raise ValueError("GraphQL reported an error")
++    rows = payload["data"]["standingsForLeague"]["standings"]
++    if not isinstance(rows, list) or not 0 < len(rows) <= MAX_ROWS:
++        raise ValueError("missing or oversized organiser table")
++    teams, totals = set(), {}
++    for row in rows:
++        name, team, form = row["teamName"], row["teamId"], row["form"]
++        if (team, name) == (ALLSVENSKAN_BP, "BP"):
++            name = "Brommapojkarna"
++        if not isinstance(name, str) or not normalize(name) or name in totals or type(team) is not int or team in teams:
++            raise ValueError("missing or repeated organiser identity")
++        if not isinstance(form, list) or not form or any(
++            (match["configLeagueName"], match["configSeasonStartYear"]) != ("allsvenskan", year) for match in form
++        ):
++            raise ValueError("organiser match form does not prove the requested season")
++        stats = {item["name"]: item["value"] for item in row["stats"]}
++        parts = [stats[field] for field in ALLSVENSKAN_FIELDS]
++        if len(stats) != len(row["stats"]) or not all(isinstance(p, str) and p.isdecimal() for p in parts):
++            raise ValueError("invalid organiser sporting fields")
++        teams.add(team)
++        totals[name] = tuple(int(p) for p in parts)
++    return totals
++
++
++def _prove_allsvenskan(conn, get, edition, year, fresh, now):
++    """Link the organiser's clubs to the same edition and compare all sporting totals."""
++    global _allsvenskan_proof
++    target = {team: tuple(row[field] for field in RESULTS) for (group, team), row in fresh.items() if group is None}
++    if len(target) != len(fresh):
++        raise SourceError("UNVERIFIED_EDITION", f"edition {edition}: no organiser proof for grouped tables")
++
++    def matches(totals):
++        if len(totals) != len(target):
++            return False
++        teams = link(conn, edition, [(None, [{"name": name} for name in totals])])
++        return {teams[name]: numbers for name, numbers in totals.items()} == target
++
++    cached = _allsvenskan_proof
++    if cached and cached[0] == year and cached[1] <= now < cached[1] + PROOF_TTL:
++        # A new result cannot reuse the previous organiser table, even inside the TTL.
++        try:
++            if matches(cached[2]):
++                return
++        except SourceError:
++            pass
++    query = urlencode({"query": ALLSVENSKAN_QUERY, "variables": json.dumps({"year": year})})
++    try:
++        payload = get(f"{ALLSVENSKAN_URL}?{query}")
++        if not isinstance(payload, dict):
++            raise ValueError("invalid organiser response")
++        totals = _allsvenskan_rows(payload, year)
++        if not matches(totals):
++            raise ValueError("organiser and widget sporting rows differ")
++    except (SourceError, KeyError, TypeError, ValueError) as error:
++        detail = error.code if isinstance(error, SourceError) else str(error) if isinstance(error, ValueError) else "invalid organiser response"
++        raise SourceError("UNVERIFIED_EDITION", f"edition {edition}: Allsvenskan {year}: {detail}") from None
++    _allsvenskan_proof = (year, now, totals)
++
++
++def qualify(conn, get, key, edition, native_label, year, fresh, counted, now):
++    """The edition's own results against the response (§2.1, rules 11-12); SourceError otherwise.
++    fresh is {(group, team): row}, counted {team: core.table_results' results}."""
++    played = {}
++    for (_, team), row in fresh.items():
++        played[team] = max(played.get(team, 0), row["played"])
++    kicked = dict(conn.execute(KICKED_OFF, (edition, now)).fetchall())
++    ahead = {team: p for team, p in played.items() if p > kicked.get(team, 0) + SLACK}
++    if len(ahead) == len(played):
++        if key == ALLSVENSKAN and native_label == str(year):
++            _prove_allsvenskan(conn, get, edition, year, fresh, now)
++        else:
++            names = _team_names(conn, ahead)
++            raise SourceError("WRONG_EDITION", f"edition {edition}: every club ahead of the matches kicked off: "
++                              + ", ".join(f"{names[t]} {p} played, {kicked.get(t, 0)} kicked off" for t, p in sorted(ahead.items())))
++    absent = sorted(team for team, results in counted.items() if results[0] > 0 and team not in played)
++    if absent:
++        names = _team_names(conn, absent)
++        raise SourceError("INCOMPLETE_TABLE", f"edition {edition}: clubs of Vega's table missing: "
++                          + ", ".join(f"{names[t]} ({counted[t][0]} counted)" for t in absent))
++
++
++def _clubs_by_table(rows):
++    """{table name: {team ids}} of {(group, team): row}."""
++    out = {}
++    for group, team in rows:
++        out.setdefault(group, set()).add(team)
++    return out
++
++
++def _group_key(name):
++    return normalize(re.sub(r"^(?:group|groupe)\s+", "", (name or "").strip(), flags=re.IGNORECASE))
++
++
++def _first_observation(conn, edition, kind, tables, linked, members):
++    """A first read must cover the evidenced population, including clubs on zero matches."""
++    proposed = {_group_key(name): {linked[row["name"]] for row in rows} for name, rows in tables}
++    if len(proposed) != len(tables):
++        raise SourceError("UNVERIFIED_TABLE", f"edition {edition}: ambiguous group names")
++
++    # Named groups are independent of the season's union of clubs, which can include another
++    # phase. A scheduled fixture is evidence of membership even before either club has played.
++    phase = {}
++    for name, team in conn.execute(
++        """SELECT DISTINCT m.group_name, x.team_id
++           FROM core.matches m LEFT JOIN core.rounds r ON r.id = m.round_id
++           CROSS JOIN LATERAL (VALUES (m.home_team_id), (m.away_team_id)) x(team_id)
++           WHERE m.competition_season_id = %s AND m.status <> 'canceled' AND x.team_id IS NOT NULL
++             AND nullif(btrim(m.group_name), '') IS NOT NULL
++             AND coalesce(r.stage, 'regular') IN ('regular', 'group')""", (edition,)
++    ):
++        phase.setdefault(_group_key(name), set()).add(team)
++
++    if phase:
++        known = set().union(*phase.values())
++        if sum(map(len, phase.values())) != len(known):
++            raise SourceError("UNVERIFIED_TABLE", f"edition {edition}: native groups overlap across phases")
++        for name, expected in sorted(phase.items()):
++            if name in proposed:
++                complete = proposed[name] & known == expected
++            else:
++                complete = any(clubs & known == expected for label, clubs in proposed.items() if label not in phase)
++            if not complete:
++                raise SourceError("INCOMPLETE_TABLE", f"edition {edition}: group {name!r} does not cover its native roster")
++        return
++
++    present = set().union(*proposed.values())
++    # Without phase evidence, an ordinary league can publish the entire roster, including at
++    # zero played. A smaller named phase or an unverified cup cannot use the league's roster.
++    partition = sum(map(len, proposed.values())) == len(present)
++    absent = members - present
++    if kind != "league" or not partition or (absent and set(proposed) != {""}):
++        raise SourceError("UNVERIFIED_TABLE", f"edition {edition}: the table's phase or full roster is unverified")
++    if absent:
++        names = _team_names(conn, absent)
++        raise SourceError("INCOMPLETE_TABLE", f"edition {edition}: clubs of the league roster missing: "
++                          + ", ".join(names[team] for team in sorted(absent)))
++
++
++def _public_ids(conn, teams):
++    """The clubs' public ids (api.public_id's rule), the keys of RETIRED_ROWS."""
++    found = dict(conn.execute("""SELECT entity_id, provider_key FROM core.provider_ids
++                                 WHERE entity_type = 'team' AND provider = 'pitchapi' AND is_current AND entity_id = ANY(%s)""",
++                              (sorted(teams),)).fetchall())
++    return {team: found.get(team, f"t_v{team:07d}") for team in teams}
++
++
++def compare(conn, edition, retired, fresh, stored, members, names, counted):
++    """The accepted table's knowledge the response keeps (§2.1, rules 13-15); SourceError otherwise.
++    retired is the edition's (LEAGUES key, season label); fresh and stored are {(group, team): row}
++    (a stored row with its basis), members the edition's teams, names {team: a row name}, counted
++    {team: core.table_results' results}."""
++    accepted, now = _clubs_by_table(stored), _clubs_by_table(fresh)
++    keys = _public_ids(conn, {team for _, team in stored})
++
++    def may_leave(table, team):
++        """A club that may leave a table: no longer a team of the edition, or its row reviewed out."""
++        return team not in members or (*retired, table, keys[team]) in RETIRED_ROWS
++
++    def listed(teams, table=None):
++        shown = _team_names(conn, teams)
++        return ", ".join(f"{shown[t]} ({keys[t]})" if table is None else f"{shown[t]} (RETIRED_ROWS key {(*retired, table, keys[t])!r})"
++                         for t in sorted(teams))
++
++    # Rule 13: every club of the accepted observation is still somewhere.
++    present = {team for _, team in fresh}
++    dropped = {team for _, team in stored if team not in present
++               and not all(may_leave(table, team) for table, clubs in accepted.items() if team in clubs)}
++    if dropped:
++        raise SourceError("INCOMPLETE_TABLE", f"edition {edition}: clubs of the accepted table missing: {listed(dropped)}")
++    # Rule 13b: every accepted table stays, under its name or as the one new table with its clubs.
++    kept = {}
++    for table, clubs in accepted.items():
++        if table in now:
++            kept[table] = table
++        else:
++            same = [t for t, c in now.items() if t not in accepted and c == clubs]
++            if len(same) == 1:
++                kept[table] = same[0]
++    # A single table may split without losing a club or changing its sporting history. Disjoint
++    # names or changed memberships alone cannot retire existing groups or a cross-group table.
++    if not kept and set(accepted) == {None} and len(now) > 1:
++        clubs = accepted[None]
++        if (set().union(*now.values()) == clubs and sum(map(len, now.values())) == len(clubs)
++                and all(all(stored[(None, team)][field] in (None, row[field]) for field in RESULTS)
++                        for (_, team), row in fresh.items())):
++            return _compare_rows(edition, fresh, stored, names, counted)
++    lost = sorted((t for t in accepted if t not in kept and (*retired, t) not in RETIRED_TABLES), key=lambda g: g or "")
++    if lost:
++        raise SourceError("INCOMPLETE_TABLE", f"edition {edition}: tables of the accepted observation missing: " + ", ".join(
++            f"{t or 'the table'} ({len(accepted[t])} rows, RETIRED_TABLES key {(*retired, t)!r})" for t in lost))
++    # Rule 13c: within a table that stays. A partition table (it owns a club no other accepted table
++    # holds: a league table, a group) keeps each of its clubs. A cross table (only clubs another
++    # accepted table holds: a ranking across groups) may change members as the competition advances,
++    # each club that leaves replaced by one that joins: it never shrinks.
++    for table, target in kept.items():
++        clubs = accepted[table]
++        left = {team for team in clubs - now[target] if not may_leave(table, team)}
++        if not left:
++            continue
++        cross = all(any(team in other for t, other in accepted.items() if t != table) for team in clubs)
++        joined = now[target] - clubs
++        if not cross or len(left) > len(joined):
++            raise SourceError("INCOMPLETE_TABLE", f"edition {edition}: table {table or 'the table'} "
++                              f"({'cross' if cross else 'partition'}, {len(clubs)} rows accepted, {len(now[target])} now): "
++                              f"{listed(left, table)} left, {len(joined)} joined")
++    _compare_rows(edition, fresh, stored, names, counted)
++
++
++def _compare_rows(edition, fresh, stored, names, counted):
++    """Rules 14-15: each club's row keeps what was known of it, and its played count, unless attested."""
++    by_team = {}
++    for (group, team), row in stored.items():
++        by_team.setdefault(team, row)
++    for (group, team), row in fresh.items():
++        before = stored.get((group, team)) or by_team.get(team)
++        if before is None:
++            continue
++        lost = [FIELDS[f] for f in FIELDS if before[f] is not None and row[f] is None]
++        if lost:
++            raise SourceError("MISSING_FIELD", f"edition {edition}: {names[team]}: {', '.join(lost)} no longer given")
++        if (group, team) in stored and row["played"] < before["played"]:
++            # A lower count stands when the edition's results attest it: the club's counted matches
++            # now (a correction), or at most those since the observation (a phase counted from it).
++            counted_now = counted.get(team, NO_RESULT)[0]
++            since = counted_now - before["basis"][0] if before["basis"] is not None else None
++            if row["played"] != counted_now and (since is None or row["played"] > since):
++                raise SourceError("PLAYED_DECREASED", f"edition {edition}: {names[team]}: played {before['played']} -> {row['played']}, "
++                                  f"{counted_now} counted" + (f", {since} since the observation" if since is not None else ""))
++
++
++def _publish(conn, edition):
++    conn.execute(
++        """INSERT INTO ops.resource_versions(resource_kind, resource_id) VALUES ('competition_season', %s)
++           ON CONFLICT (resource_kind, resource_id) DO UPDATE SET version = ops.resource_versions.version + 1, updated_at = now()""",
++        (edition,),
++    )
++
++
++def repeat(conn, edition, stored, observed, counted, now):
++    """The same table seen again (§2.2): nothing written unless the observation time may move."""
++    def renew(teams):
++        conn.execute(f"UPDATE core.standings_official SET as_of = %s WHERE {OWN}", (now, edition))
++        for team in sorted(teams):
++            conn.execute(f"UPDATE core.standings_official SET basis = %s::smallint[] WHERE {OWN} AND team_id = %s",
++                         (list(counted.get(team, NO_RESULT)), edition, team))
++        if teams:
++            _publish(conn, edition)  # api.standings may serve the official table again
++
++    if any(row["basis"] is None for row in stored.values()):
++        # Stored before 138: it gets its basis unless a counted match finished after it.
++        if observed is None or not conn.execute(FINISHED_SINCE, (edition, observed)).fetchone()[0]:
++            renew({team for _, team in stored})
++        return
++    moved = {team for (_, team), row in stored.items() if row["basis"] != counted.get(team, NO_RESULT)}
++    caught_up = all(
++        any(all(row[f] is None or row[f] == v for f, v in zip(RESULTS, counted.get(team, NO_RESULT)))
++            for (_, t), row in stored.items() if t == team)
++        for team in moved)
++    if caught_up:
++        # Nothing counted since, or our results caught up with the table: it is current now.
++        renew(moved)
++    # Otherwise SportScore is behind the results: its observation time and basis stay.
++
++
+ def run(conn, get, scope, now):
+     key = scope.split(":", 1)[1]
+     slug = LEAGUES[key]
+     edition = conn.execute(
+-        """SELECT cs.id FROM core.provider_ids p JOIN core.competition_seasons cs ON cs.competition_id = p.entity_id
++        """SELECT cs.id, se.label, cs.native_label, se.id, c.kind::text
++           FROM core.provider_ids p JOIN core.competition_seasons cs ON cs.competition_id = p.entity_id
++           JOIN core.seasons se ON se.id = cs.season_id
++           JOIN core.competitions c ON c.id = cs.competition_id
+            WHERE p.entity_type = 'competition' AND p.provider = 'pitchapi' AND p.provider_key = %s AND p.is_current AND cs.is_current""",
+         (key,),
+     ).fetchone()
+     if edition is None:  # not collected (yet): no call
+         return 0, 0
+-    edition = edition[0]
++    edition, season, native_label, year, kind = edition
+     tables = parse(get(URL + "?" + urlencode({"sport": "football", "slug": slug})), slug)
+-    teams, unmatched = link(conn, edition, tables) if tables else (None, 0)
+-    fresh = sorted(
+-        (group if len(tables) > 1 else None, teams[row["name"]], row["position"], row["played"], row["won"], row["drawn"],
+-         row["lost"], row["goals_for"], row["goals_against"], row["points"])
+-        for group, rows in tables for row in rows
+-    ) if teams else []
+-    columns = "group_name, team_id, position, played, won, drawn, lost, goals_for, goals_against, points"
+-    stored = sorted(conn.execute(
+-        f"SELECT {columns} FROM core.standings_official WHERE competition_season_id = %s AND source = 'sportscore'", (edition,)
+-    ).fetchall(), key=lambda r: tuple((x is None, x) for x in r))
+-    fresh = sorted(set(fresh), key=lambda r: tuple((x is None, x) for x in r))
+-    if fresh == [tuple(r) for r in stored]:
+-        # Same table: only the observation time moves; no new publication.
+-        conn.execute("UPDATE core.standings_official SET as_of = %s WHERE competition_season_id = %s AND source = 'sportscore'", (now, edition))
+-        return 0, unmatched
+-    conn.execute("DELETE FROM core.standings_official WHERE competition_season_id = %s AND source = 'sportscore'", (edition,))
+-    for row in fresh:
++    check(tables)
++    teams = link(conn, edition, tables)
++    keep_groups = len(tables) > 1  # one table is stored without its name, as before
++    fresh = {(group if keep_groups else None, teams[row["name"]]): row for group, rows in tables for row in rows}
++    counted = {team: tuple(results) for team, results in conn.execute(
++        "SELECT team_id, results FROM core.table_results(%s)", (edition,)).fetchall()}
++    qualify(conn, get, key, edition, native_label, year, fresh, counted, now)
++    stored = {}
++    observed = None
++    for group, team, *values, basis, as_of in conn.execute(
++        f"SELECT {', '.join(COLUMNS)}, basis, as_of FROM core.standings_official WHERE {OWN}", (edition,)
++    ).fetchall():
++        stored[(group, team)] = dict(zip(FIELDS, values), basis=tuple(basis) if basis is not None else None)
++        observed = as_of if observed is None or (as_of is not None and as_of < observed) else observed
++    members = {team for (team,) in conn.execute("SELECT team_id FROM core.team_seasons WHERE competition_season_id = %s", (edition,))}
++    if not stored:
++        _first_observation(conn, edition, kind, tables, teams, members)
++    compare(conn, edition, (key, season), fresh, stored, members, {team: row["name"] for (_, team), row in fresh.items()}, counted)
++    if {k: {f: r[f] for f in FIELDS} for k, r in fresh.items()} == {k: {f: r[f] for f in FIELDS} for k, r in stored.items()}:
++        repeat(conn, edition, stored, observed, counted, now)
++        return 0, 0
++    conn.execute(f"DELETE FROM core.standings_official WHERE {OWN}", (edition,))
++    for (group, team), row in sorted(fresh.items(), key=lambda item: (item[0][0] or "", item[1]["position"], item[0][1])):
+         conn.execute(
+-            f"""INSERT INTO core.standings_official(competition_season_id, stage, {columns}, source, as_of)
+-                VALUES (%s, NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'sportscore', %s) ON CONFLICT DO NOTHING""",
+-            (edition, *row, now),
++            f"""INSERT INTO core.standings_official(competition_season_id, stage, {', '.join(COLUMNS)}, basis, source, as_of)
++                VALUES (%s, NULL, %s, %s, {', '.join(['%s'] * len(FIELDS))}, %s::smallint[], 'sportscore', %s)""",
++            (edition, group, team, *(row[f] for f in FIELDS), list(counted.get(team, NO_RESULT)), now),
+         )
+-    for group, rows in tables if teams else []:
++    for group, rows in tables:
+         for row in rows:
+             conn.execute(
+                 """INSERT INTO core.entity_names(entity_type, entity_id, name, normalized, kind, source)
+                    VALUES ('team', %s, %s, %s, 'source_spelling', 'sportscore') ON CONFLICT DO NOTHING""",
+                 (teams[row["name"]], row["name"], normalize(row["name"]) or row["name"].lower()),
+             )
+-    conn.execute(
+-        """INSERT INTO ops.resource_versions(resource_kind, resource_id) VALUES ('competition_season', %s)
+-           ON CONFLICT (resource_kind, resource_id) DO UPDATE SET version = ops.resource_versions.version + 1, updated_at = now()""",
+-        (edition,),
+-    )
+-    return len(fresh), unmatched
++    _publish(conn, edition)
++    return len(fresh), 0
+diff --git a/backend/vega/sources/uefa.py b/backend/vega/sources/uefa.py
+index e0c45ba80c..cab178be25 100644
+--- a/backend/vega/sources/uefa.py
++++ b/backend/vega/sources/uefa.py
+@@ -139,6 +139,25 @@ def link_team(conn, row):
+     return team, linked
+ 
+ 
++# A club's logo as UEFA publishes it for its own id (media.ALLOWED copies exactly this form).
++CLUB_LOGO = "https://img.uefa.com/imgml/TP/teams/logos/70x70/{}.png"
++
++
++def crest_club(conn, team):
++    """The club a UEFA id's crest belongs to: the bound team, or the canonical club it is merged into (one existing
++    pointer, followed, never set). None, and nothing written, for a national team or a chain merged again (§22)."""
++    row = conn.execute("SELECT merged_into, is_national FROM core.teams WHERE id = %s", (team,)).fetchone()
++    if row is None:
++        return None
++    merged, national = row
++    if merged is None:
++        return None if national else team
++    canonical = conn.execute("SELECT merged_into, is_national FROM core.teams WHERE id = %s", (merged,)).fetchone()
++    if canonical is None or canonical[0] is not None or canonical[1]:
++        return None
++    return merged
++
++
+ def save(conn, kind, year, rows, updated, now):
+     """Replace one edition's rows; returns (rows written, clubs not linked to a team)."""
+     label = f"{year - 1}/{year}"
+@@ -177,6 +196,20 @@ def save(conn, kind, year, rows, updated, now):
+                    ON CONFLICT (source_url) DO UPDATE SET source_url = EXCLUDED.source_url RETURNING id""",
+                 (row["logo"],),
+             ).fetchone()[0]
++        club = crest_club(conn, team) if kind == "uefa_clubs" and logo is not None and row["logo"] == CLUB_LOGO.format(row["id"]) else None
++        if club is not None:
++            # The club's own UEFA logo (its id in the path) is its crest when it has none: an existing
++            # crest, PitchAPI's first, is kept (VI-27, FAILURE_MODES.md §21); a merged alias's goes to its club (§22).
++            if conn.execute(
++                "UPDATE core.teams SET crest_asset_id = %s, updated_at = now() WHERE id = %s AND crest_asset_id IS NULL AND is_national IS NOT TRUE",
++                (logo, club),
++            ).rowcount:
++                for resource in (("team", club), ("home", 1)):
++                    conn.execute(
++                        """INSERT INTO ops.resource_versions(resource_kind, resource_id) VALUES (%s, %s)
++                           ON CONFLICT (resource_kind, resource_id) DO UPDATE SET version = ops.resource_versions.version + 1, updated_at = now()""",
++                        resource,
++                    )
+         conn.execute(
+             """INSERT INTO core.ranking_rows(edition_id, row_no, team_id, country_code, position, points, provider_key, entity_name,
+                  earned_points, teams_still_playing, image_asset_id) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+diff --git a/backend/vega/transfermarkt.py b/backend/vega/transfermarkt.py
+index d0090480ce..d6ba888cf4 100644
+--- a/backend/vega/transfermarkt.py
++++ b/backend/vega/transfermarkt.py
+@@ -6,9 +6,14 @@ What it keeps, as typed rows (a response is never stored):
+ - the players it reads (core.provider_players) and the clubs' squads (core.provider_squads)
+   and names (core.provider_clubs);
+ - for a player linked to one of ours: his market values (core.player_market_values, with the
+-  club of each valuation), transfers (core.player_transfers) and injuries
+-  (core.player_injuries), replaced whole at each read, and his contract with one of our clubs
+-  (core.player_contracts) when its start is known.
++  club of each valuation) and injuries (core.player_injuries), replaced whole at each read;
++- his transfers (core.player_transfers), each kept by its key and never deleted: a move the
++  provider no longer lists keeps its facts and the first day it was missed (absent_since). A
++  response that cannot be a whole history (a 404 after one, no history, empty lists after a
++  completed move, an unusable element, one key with two facts) writes nothing;
++- his contracts with our clubs (core.player_contracts), each a dated fact kept; the one the
++  provider no longer names is set aside from the day of the change (superseded_on), its observed
++  expiry kept (FAILURE_MODES.md §20).
+ 
+ Links (core.provider_ids, how each was made in ops.provider_links):
+ - the snapshot of 6 July 2026 (player_fact_snapshot.py), as it stands;
+@@ -81,6 +86,11 @@ PERIODS = {
+     "search": (30, 90, 365, 365),  # a club not found yet is searched again
+ }
+ NOT_FOUND_AGAIN = timedelta(days=90)
++# A failed unit waits 2 ** attempts hours, at most a week; the exponent stops at 8 (256 h) before
++# the timedelta is built, which overflows from 35 attempts.
++RETRY_MAX, RETRY_EXPONENT_MAX = timedelta(days=7), 8
++# The transfers route answered 404: no history known to the provider (FAILURE_MODES.md §20).
++HTTP_404 = object()
+ # Names that are no club: a player without one, retired, unknown or on a break.
+ NO_CLUB = {"withoutclub", "retired", "unknown", "careerbreak", "vereinslos", "karriereende", "unbekannt", "pause"}
+ RESERVE = re.compile(r"(?:\b(?:b|c|ii|iii)\b|\bu\s?-?(?:1[5-9]|2[0-3])\b|reserv|youth|juvenil|primavera|jong\b|academy)", re.I)
+@@ -177,6 +187,16 @@ def _day(value):
+         return None
+ 
+ 
++def _contract_day(value):
++    """A calendar date or ISO timestamp in a contract claim, validated in full."""
++    if not isinstance(value, str) or not re.match(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}(?:$|T| )", value):
++        return None
++    try:
++        return date.fromisoformat(value) if len(value) == 10 else datetime.fromisoformat(value).date()
++    except ValueError:
++        return None
++
++
+ def _key(value):
+     text = str(value) if value is not None and not isinstance(value, bool) else ""
+     return text if re.fullmatch(r"[0-9]{1,10}", text) else None
+@@ -203,27 +223,53 @@ def _container(data, key, kind=list):
+     return value
+ 
+ 
++def _obj(value):
++    return value if isinstance(value, dict) else {}
++
++
+ def parse_player(record):
+-    """A player record of /players: the facts kept, or None when it has no id."""
++    """The facts of a /players record, or None without an id.
++
++    Having both blocks supports the ordinary profile facts. A dated contract additionally
++    requires an unambiguous current club, start and expiry. Explicit null supplies no date.
++    """
+     if not isinstance(record, dict) or not _key(record.get("id")):
+         return None
+-    life = record.get("lifeDates") or {}
+-    attributes = record.get("attributes") or {}
+-    foot = str((attributes.get("preferredFoot") or {}).get("name") or "").strip().lower()
++    life = _obj(record.get("lifeDates"))
++    attributes = _obj(record.get("attributes"))
++    foot = str(_obj(attributes.get("preferredFoot")).get("name") or "").strip().lower()
+     height = attributes.get("height")
+     height = round(height * 100) if isinstance(height, (int, float)) and not isinstance(height, bool) else None
+-    current = next((a for a in record.get("clubAssignments") or [] if isinstance(a, dict) and a.get("type") == "current"), None)
+-    value = (record.get("marketValueDetails") or {}).get("current")
++    assignments = record.get("clubAssignments")
++    current = [a for a in assignments if isinstance(a, dict) and a.get("type") == "current"] if isinstance(assignments, list) else []
++    spell = current[0] if len(current) == 1 else {}
++    club, joined = _key(spell.get("clubId")), _contract_day(spell.get("start"))
++    raw_expiry = attributes.get("contractUntil")
++    expiry = _contract_day(raw_expiry)
++    complete = isinstance(record.get("attributes"), dict) and isinstance(assignments, list)
++    dated_contract = complete and club is not None and joined is not None and expiry is not None and joined <= expiry
++    undated_assignment = complete and (not current or club is not None) and "contractUntil" in attributes and raw_expiry is None
++    contract_issue = None
++    if complete and current:
++        if "contractUntil" not in attributes:
++            contract_issue = "CONTRACT_MISSING"
++        elif raw_expiry is not None and not dated_contract:
++            contract_issue = "CONTRACT_INVALID"
++    value = _obj(record.get("marketValueDetails")).get("current")
+     return {
++        "complete": complete,
++        "dated_contract": dated_contract,
++        "undated_assignment": undated_assignment,
++        "contract_issue": contract_issue,
+         "key": _key(record["id"]),
+         "name": record.get("name") if isinstance(record.get("name"), str) else None,
+         "birth_date": None if life.get("isDateOfBirthUnknown") else _day(life.get("dateOfBirth")),
+-        "position": (attributes.get("position") or {}).get("name") or None,
++        "position": _obj(attributes.get("position")).get("name") or None,
+         "height_cm": height if height and 140 <= height <= 220 else None,
+         "foot": foot if foot in ("left", "right", "both") else None,
+-        "contract_until": _day(attributes.get("contractUntil")),
+-        "club": _key((current or {}).get("clubId")),
+-        "joined_on": _day((current or {}).get("start")),
++        "contract_until": expiry,
++        "club": club,
++        "joined_on": joined,
+         "value": _money(value),
+         "value_on": _day((value or {}).get("determined")) if isinstance(value, dict) else None,
+     }
+@@ -268,33 +314,80 @@ def parse_values(data):
+     return sorted(out.values())
+ 
+ 
++def _free(record):
++    """A free transfer: its fee's label says so."""
++    fee = _obj(_obj(record.get("details")).get("fee"))
++    return str(_obj(fee.get("compact")).get("content") or "").strip().lower() == "free transfer"
++
++
+ def transfer_kind(record):
+-    kind = (record.get("typeDetails") or {}).get("type") or ""
++    kind = _obj(record.get("typeDetails")).get("type") or ""
+     if kind == "STANDARD":
+-        fee = (record.get("details") or {}).get("fee") or {}
+-        label = str(((fee.get("compact") or {}) if isinstance(fee, dict) else {}).get("content") or "").strip().lower()
+-        return "free" if label == "free transfer" else "transfer"
++        return "free" if _free(record) else "transfer"
+     return TRANSFER_KINDS.get(kind)
+ 
+ 
++# The facts a move's record can state; a field it omits or gives as null states nothing. The
++# clubs ("from", "to") are written with their canonical club (Reader.move_changes).
++MOVE_FACTS = ("date", "season", "from", "to", "kind", "fee", "value", "contract_until")
++MOVE_COLUMNS = {"date": "transfer_date", "season": "season_label", "kind": "kind", "fee": "fee_eur",
++                "value": "market_value_eur", "contract_until": "contract_until"}
++
++
++def _move(record, announced):
++    """A move's facts as its record states them. The fee is a positive amount, or 0 for a free
++    transfer (its label attests it; another 0 is no amount, as for the values). A move of the
++    pending list, or marked pending, is announced."""
++    details = _obj(record.get("details"))
++    display = _obj(details.get("season")).get("display")
++    fee = _money(details.get("fee"))
++    move = {
++        "key": _key(record["id"]), "date": _day(details.get("date")),
++        "season": display.strip() if isinstance(display, str) and display.strip() else None,
++        "from": _key(_obj(record.get("transferSource")).get("clubId")), "to": _key(_obj(record.get("transferDestination")).get("clubId")),
++        "kind": transfer_kind(record), "fee": fee if fee is not None else (0 if _free(record) else None),
++        "value": _money(details.get("marketValue")), "contract_until": _day(details.get("contractUntilDate")),
++        "pending": announced or bool(details.get("isPending")),
++    }
++    move["stated"] = frozenset(f for f in MOVE_FACTS if move[f] is not None) | {"pending"}
++    return move
++
++
++def transfer_history(data):
++    """The moves of a /transfer/history/player response, one per key, checked whole before
++    anything is written; Failed when the response cannot be a whole history: no history object
++    or none of its two lists (HISTORY_MISSING), a list or the history of another type
++    (SCHEMA_CHANGED), an element without an object or a numeric id (HISTORY_INVALID), one key
++    with two different stated facts (HISTORY_CONFLICT). The same move twice is one."""
++    if not isinstance(data, dict):
++        raise Failed("HISTORY_MISSING" if data is None else "SCHEMA_CHANGED")
++    history = data.get("history")
++    if history is None:
++        raise Failed("HISTORY_MISSING")
++    if not isinstance(history, dict):
++        raise Failed("SCHEMA_CHANGED")
++    lists = {name: history.get(name) for name in ("pending", "terminated")}
++    if any(records is not None and not isinstance(records, list) for records in lists.values()):
++        raise Failed("SCHEMA_CHANGED")
++    if all(records is None for records in lists.values()):
++        raise Failed("HISTORY_MISSING")
++    moves = {}
++    for name, records in lists.items():
++        for record in records or []:
++            if not isinstance(record, dict) or not _key(record.get("id")):
++                raise Failed("HISTORY_INVALID")
++            move, seen = _move(record, name == "pending"), moves.get(_key(record["id"]))
++            if seen is not None:
++                if any(seen[f] != move[f] for f in seen["stated"] & move["stated"]):
++                    raise Failed("HISTORY_CONFLICT")
++                move = {**seen, **{f: move[f] for f in move["stated"]}, "stated": seen["stated"] | move["stated"]}
++            moves[move["key"]] = move
++    return list(moves.values())
++
++
+ def parse_transfers(data):
+-    """The transfers of a history, pending ones included (marked)."""
+-    if data is None:
+-        return []
+-    history = _container(data, "history", dict)
+-    out = []
+-    for record in (history.get("pending") or []) + (history.get("terminated") or []):
+-        if not isinstance(record, dict) or not _key(record.get("id")):
+-            continue
+-        details = record.get("details") or {}
+-        source, target = record.get("transferSource") or {}, record.get("transferDestination") or {}
+-        out.append({
+-            "key": _key(record["id"]), "date": _day(details.get("date")), "season": (details.get("season") or {}).get("display"),
+-            "from": _key(source.get("clubId")), "to": _key(target.get("clubId")), "kind": transfer_kind(record),
+-            "fee": _money(details.get("fee")), "value": _money(details.get("marketValue")),
+-            "contract_until": _day(details.get("contractUntilDate")), "pending": bool(details.get("isPending")),
+-        })
+-    return out
++    """The transfers of a history, pending ones included (marked); none for no response."""
++    return [] if data is None else transfer_history(data)
+ 
+ 
+ def injury_kind(label):
+@@ -741,7 +834,7 @@ class Reader:
+     def failed(self, kind, units, error):
+         for key, _ in units:
+             attempts = self.conn.execute("SELECT attempts FROM ops.transfermarkt_reads WHERE kind = %s AND provider_key = %s", (kind, key)).fetchone()
+-            wait = min(timedelta(hours=2 ** (attempts[0] if attempts else 0)), timedelta(days=7))
++            wait = min(timedelta(hours=2 ** min(attempts[0] if attempts else 0, RETRY_EXPONENT_MAX)), RETRY_MAX)
+             self.conn.execute(
+                 """UPDATE ops.transfermarkt_reads SET next_due_at = now() + %s, attempts = attempts + 1, last_http_status = %s, error_code = %s
+                    WHERE kind = %s AND provider_key = %s""", (wait, error.status, error.code, kind, key))
+@@ -776,7 +869,7 @@ class Reader:
+                 try:
+                     data = self.get(f"/transfer/history/player/{keys[0]}")
+                 except Missing:
+-                    data = None
++                    data = HTTP_404  # write_transfers decides: an ordinary answer, or a refusal after a history
+             elif kind == "injuries":
+                 data = self.get(f"/player/{keys[0]}/injury")
+             else:
+@@ -856,8 +949,9 @@ class Reader:
+             return 0
+         today = self.now().date()
+         written = 0
++        # The same /players records as a profile read's: the same step for each.
+         for p in data["players"].values():
+-            written += self.provider_player(p, today)
++            written += self.observe(p, today, search_priority=priority)
+         for club, year, members in data["squads"]:
+             self.conn.execute("DELETE FROM core.provider_squads WHERE provider = 'transfermarkt' AND club_key = %s AND season_year = %s", (club, year))
+             for player, shirt in members:
+@@ -883,18 +977,67 @@ class Reader:
+         return written
+ 
+     def provider_player(self, p, today):
++        """Write ordinary profile facts and keep the provenance of the last dated contract."""
++        if p["complete"]:
++            update = """name = EXCLUDED.name, birth_date = EXCLUDED.birth_date,
++                 position = EXCLUDED.position, height_cm = EXCLUDED.height_cm, preferred_foot = EXCLUDED.preferred_foot,
++                 market_value_eur = EXCLUDED.market_value_eur, market_value_on = EXCLUDED.market_value_on"""
++        else:
++            update = ", ".join(f"{c} = coalesce(core.provider_players.{c}, EXCLUDED.{c})" for c in (
++                "name", "birth_date", "position", "height_cm", "preferred_foot", "market_value_eur", "market_value_on"))
++        values = {**p, "today": today}
++        if p["dated_contract"]:
++            update += """, contract_until = EXCLUDED.contract_until, provider_club = EXCLUDED.provider_club,
++                         joined_on = EXCLUDED.joined_on, read_on = EXCLUDED.read_on"""
++        elif p["undated_assignment"]:
++            # Club identity can be observed without a measured expiry. Keep an accepted dated
++            # tuple together, including the provenance used by the read API.
++            update += ", " + ", ".join(
++                f"{field} = CASE WHEN core.provider_players.contract_until IS NULL THEN EXCLUDED.{field} ELSE core.provider_players.{field} END"
++                for field in ("provider_club", "joined_on", "read_on")
++            )
++        else:
++            values.update(contract_until=None, club=None, joined_on=None)
+         self.conn.execute(
+-            """INSERT INTO core.provider_players(provider, provider_key, name, birth_date, position, height_cm, preferred_foot, contract_until,
++            f"""INSERT INTO core.provider_players(provider, provider_key, name, birth_date, position, height_cm, preferred_foot, contract_until,
+                  provider_club, joined_on, market_value_eur, market_value_on, read_on)
+                VALUES ('transfermarkt', %(key)s, %(name)s, %(birth_date)s, %(position)s, %(height_cm)s, %(foot)s, %(contract_until)s,
+                  %(club)s, %(joined_on)s, %(value)s, %(value_on)s, %(today)s)
+-               ON CONFLICT (provider, provider_key) DO UPDATE SET name = EXCLUDED.name, birth_date = EXCLUDED.birth_date,
+-                 position = EXCLUDED.position, height_cm = EXCLUDED.height_cm, preferred_foot = EXCLUDED.preferred_foot,
+-                 contract_until = EXCLUDED.contract_until, provider_club = EXCLUDED.provider_club, joined_on = EXCLUDED.joined_on,
+-                 market_value_eur = EXCLUDED.market_value_eur, market_value_on = EXCLUDED.market_value_on, read_on = EXCLUDED.read_on""",
+-            {**p, "today": today})
++               ON CONFLICT (provider, provider_key) DO UPDATE SET {update}""",
++            values)
+         return 1
+ 
++    def observe(self, p, today, *, search_priority=None):
++        """One /players record, from a profile read or a club search (search_priority, the search
++        unit's): what changed since the provider's row is compared first (club, start or expiry:
++        the transfers are due now; value: the values), then the row is written, then, for a player
++        linked to one of ours, his contracts. A fragment or contract issue from a search makes
++        the player's profile due now. Only a dated claim changes contract facts."""
++        key = p["key"]
++        before = self.conn.execute(
++            """SELECT market_value_eur, market_value_on, provider_club, joined_on, contract_until FROM core.provider_players
++               WHERE provider = 'transfermarkt' AND provider_key = %s""", (key,)).fetchone()
++        written = self.provider_player(p, today)
++        if not p["complete"] or p["contract_issue"]:
++            if search_priority is not None:
++                self.conn.execute(
++                    """INSERT INTO ops.transfermarkt_reads(kind, provider_key, priority, next_due_at) VALUES ('profile', %s, %s, now())
++                       ON CONFLICT (kind, provider_key) DO UPDATE SET next_due_at = least(ops.transfermarkt_reads.next_due_at, EXCLUDED.next_due_at)""",
++                    (key, search_priority))
++            if not p["complete"]:
++                return written
++        player = self.player_of(key)
++        if player is None:
++            return written
++        if before is not None and (before[0], before[1]) != (p["value"], p["value_on"]):
++            self.conn.execute("UPDATE ops.transfermarkt_reads SET next_due_at = now() WHERE kind = 'values' AND provider_key = %s", (key,))
++        if p["dated_contract"]:
++            written += self.contract(player, p, today)
++        if (before is not None and (p["dated_contract"] or (p["undated_assignment"] and before[4] is None))
++                and tuple(before[2:]) != (p["club"], p["joined_on"], p["contract_until"])):
++            self.conn.execute("UPDATE ops.transfermarkt_reads SET next_due_at = now() WHERE kind = 'transfers' AND provider_key = %s", (key,))
++        return written
++
+     def write_profile(self, units, data):
+         if not isinstance(data, list):
+             raise Failed("SCHEMA_CHANGED")
+@@ -907,35 +1050,56 @@ class Reader:
+             if p is None:
+                 self.done("profile", key, priority, 0, status=404, error="NOT_FOUND", again=NOT_FOUND_AGAIN)
+                 continue
+-            before = self.conn.execute(
+-                "SELECT market_value_eur, market_value_on, provider_club, contract_until FROM core.provider_players WHERE provider = 'transfermarkt' AND provider_key = %s",
+-                (key,)).fetchone()
+-            written += self.provider_player(p, today)
+-            player = self.player_of(key)
+-            if player is not None:
+-                written += self.contract(player, p, today)
+-                # What changed since the last profile: the values or the transfers are due now.
+-                if before is not None and (before[0], before[1]) != (p["value"], p["value_on"]):
+-                    self.conn.execute("UPDATE ops.transfermarkt_reads SET next_due_at = now() WHERE kind = 'values' AND provider_key = %s", (key,))
+-                if before is not None and (before[2], before[3]) != (p["club"], p["contract_until"]):
+-                    self.conn.execute("UPDATE ops.transfermarkt_reads SET next_due_at = now() WHERE kind = 'transfers' AND provider_key = %s", (key,))
+-            self.done("profile", key, priorities[key], 1)
++            written += self.observe(p, today)
++            if p["contract_issue"]:
++                self.failed("profile", [(key, priority)], Failed(p["contract_issue"], 200))
++            else:
++                self.done("profile", key, priorities[key], 1)
+         return written
+ 
+     def contract(self, player, p, today):
+-        """The player's contract with his club, when the club is ours and its start known; an
+-        older contract the provider gave him is closed by the newer one (removed)."""
++        """The player's contracts after a dated record naming his club, start and expiry.
++
++        Nothing is deleted (FAILURE_MODES.md §20):
++        - the record's spell, at one of our clubs with its expiry, is written at (club, start), or
++          updated in place when it is the provider's own row; another source's row at that key
++          stays as it is;
++        - every other contract of the provider not yet set aside is superseded from the record's
++          start when that start is later than its own (a move, a renewal; a start to come keeps
++          today's contract until then), from today when the record's expiry is still to come
++          (back from a loan, a correction); an older record without a current expiry is stale
++          and sets nothing aside. A superseded contract keeps its observed end date."""
++        joined, until = p["joined_on"], p["contract_until"]
+         team = self.team_of(p["club"])
+-        if team is None or p["joined_on"] is None or p["contract_until"] is None or p["contract_until"] < p["joined_on"]:
+-            return 0
+-        self.conn.execute(
+-            "DELETE FROM core.player_contracts WHERE player_id = %s AND source = 'transfermarkt' AND (team_id, start_date) <> (%s, %s)",
+-            (player, team, p["joined_on"]))
+-        return self.conn.execute(
+-            """INSERT INTO core.player_contracts(player_id, team_id, start_date, end_date, source, as_of)
+-               VALUES (%s, %s, %s, %s, 'transfermarkt', %s)
+-               ON CONFLICT (player_id, team_id, start_date) DO UPDATE SET end_date = EXCLUDED.end_date, as_of = EXCLUDED.as_of, updated_at = now()
+-               WHERE core.player_contracts.source = 'transfermarkt'""", (player, team, p["joined_on"], p["contract_until"], today)).rowcount
++        current = until >= today
++        self.conn.execute("SELECT pg_advisory_xact_lock(hashtext('transfermarkt.contracts'), %s)", (player,))
++        held = {(team_id, start): (source, superseded) for team_id, start, source, superseded in self.conn.execute(
++            "SELECT team_id, start_date, source::text, superseded_on FROM core.player_contracts WHERE player_id = %s", (player,)).fetchall()}
++        observed = (team, joined) if team is not None else None
++        written = 0
++        if observed is not None:
++            if observed not in held:
++                written += self.conn.execute(
++                    """INSERT INTO core.player_contracts(player_id, team_id, start_date, end_date, source, as_of)
++                       VALUES (%s, %s, %s, %s, 'transfermarkt', %s)""", (player, team, joined, until, today)).rowcount
++            elif held[observed][0] == PROVIDER:
++                # The provider's own fact: its expiry corrected in place; a current claim again.
++                written += self.conn.execute(
++                    """UPDATE core.player_contracts SET end_date = %s, as_of = %s, updated_at = now(),
++                         superseded_on = CASE WHEN %s THEN NULL ELSE superseded_on END
++                       WHERE player_id = %s AND team_id = %s AND start_date = %s
++                         AND (end_date, as_of, superseded_on) IS DISTINCT FROM (%s, %s, CASE WHEN %s THEN NULL ELSE superseded_on END)""",
++                    (until, today, current, player, team, joined, until, today, current)).rowcount
++        for (team_id, start), (source, superseded) in held.items():
++            if source != PROVIDER or (team_id, start) == observed or (superseded is not None and superseded <= today):
++                continue
++            day = joined if joined > start else today if current else None
++            if day is None or (superseded is not None and superseded <= day):
++                continue
++            written += self.conn.execute(
++                "UPDATE core.player_contracts SET superseded_on = %s, updated_at = now() WHERE player_id = %s AND team_id = %s AND start_date = %s",
++                (day, player, team_id, start)).rowcount
++        return written
+ 
+     def write_club(self, units, data):
+         if not isinstance(data, list):
+@@ -979,22 +1143,83 @@ class Reader:
+         return written
+ 
+     def write_transfers(self, units, data):
++        """A player's transfers after a read (FAILURE_MODES.md §20). Each move the response lists
++        is written by its key, in place; a move it no longer lists keeps its facts and the first day
++        it was missed (absent_since); nothing is deleted. A response that cannot be a whole history
++        raises Failed with its true HTTP status: nothing is written, the unit is tried again later,
++        and its read_at and rows_written stay those of the last accepted read. Refused: a 404 when
++        the player holds a Transfermarkt move (a first 404 is an ordinary answer), empty lists when
++        he holds a completed one, and whatever transfer_history refuses."""
+         (key, priority), = units
+-        rows = parse_transfers(data)
++        try:
++            moves = None if data is HTTP_404 else transfer_history(data)
++        except Failed as error:
++            raise Failed(error.code, error.status or 200) from None
+         player = self.player_of(key)
++        if player is None:
++            self.done("transfers", key, priority, 0, status=404 if moves is None else 200)
++            return 0
++        # One writer per player at a time: a second reader of the same player waits, then merges.
++        self.conn.execute("SELECT pg_advisory_xact_lock(hashtext('transfermarkt.transfers'), %s)", (player,))
++        cursor = self.conn.execute(
++            """SELECT id, source_key, transfer_date, season_label, from_provider_club, from_team_id, to_provider_club, to_team_id,
++                      kind::text AS kind, fee_eur, market_value_eur, contract_until, pending, absent_since, as_of
++               FROM core.player_transfers WHERE player_id = %s AND source = 'transfermarkt'""", (player,))
++        names = [c.name for c in cursor.description]
++        held = [dict(zip(names, row)) for row in cursor.fetchall()]
++        if moves is None:
++            if held:
++                raise Failed("HISTORY_MISSING", 404)
++            self.done("transfers", key, priority, 0, status=404)
++            return 0
++        if not moves and any(not row["pending"] for row in held):
++            raise Failed("HISTORY_EMPTY", 200)
+         today = self.now().date()
+-        written = 0
+-        if player is not None:
+-            self.conn.execute("DELETE FROM core.player_transfers WHERE player_id = %s AND source = 'transfermarkt'", (player,))
+-            for t in rows:
+-                written += self.conn.execute(
++        stored = {row["source_key"]: row for row in held if row["source_key"] is not None}
++        for move in moves:
++            row = stored.get(move["key"])
++            if row is None:
++                self.conn.execute(
+                     """INSERT INTO core.player_transfers(player_id, transfer_date, from_team_id, to_team_id, kind, fee_eur, source, as_of, source_key,
+                          season_label, from_provider_club, to_provider_club, market_value_eur, contract_until, pending)
+                        VALUES (%s, %s, %s, %s, %s, %s, 'transfermarkt', %s, %s, %s, %s, %s, %s, %s, %s)""",
+-                    (player, t["date"], self.team_of(t["from"]), self.team_of(t["to"]), t["kind"], t["fee"], today, t["key"], t["season"],
+-                     t["from"], t["to"], t["value"], t["contract_until"], t["pending"])).rowcount
+-        self.done("transfers", key, priority, written)
+-        return written
++                    (player, move["date"], self.team_of(move["from"]), self.team_of(move["to"]), move["kind"], move["fee"], today, move["key"],
++                     move["season"], move["from"], move["to"], move["value"], move["contract_until"], move["pending"]))
++                continue
++            changes = self.move_changes(row, move, today)
++            if changes:
++                self.conn.execute(
++                    f"UPDATE core.player_transfers SET {', '.join(f'{c} = %s' for c in changes)}, updated_at = now() WHERE id = %s",
++                    (*changes.values(), row["id"]))
++        self.conn.execute(
++            """UPDATE core.player_transfers SET absent_since = %s, updated_at = now()
++               WHERE player_id = %s AND source = 'transfermarkt' AND source_key IS NOT NULL AND absent_since IS NULL
++                 AND NOT (source_key = ANY(%s))""", (today, player, [move["key"] for move in moves]))
++        self.done("transfers", key, priority, len(moves))
++        return len(moves)
++
++    def move_changes(self, row, move, today):
++        """The columns of the stored move `row` that the record `move` changes. A field the record
++        states replaces the stored one, one it omits or gives as null stays. A new club key takes
++        its own canonical club or none, never the old key's; the same key keeps the club resolved
++        now, else the one attached since. When the kind changes and no fee is stated, the old fee
++        goes: it was the fee of another kind of move. A completed move listed as announced is an
++        older snapshot: its completed facts stay; it is only no longer absent."""
++        if not row["pending"] and move["pending"]:
++            new = {"absent_since": None}
++        else:
++            new = {column: move[field] for field, column in MOVE_COLUMNS.items() if move[field] is not None}
++            if move["fee"] is None and move["kind"] is not None and move["kind"] != row["kind"]:
++                new["fee_eur"] = None
++            for side in ("from", "to"):
++                club = move[side]
++                if club is None:
++                    continue
++                team = self.team_of(club)
++                new[f"{side}_provider_club"] = club
++                new[f"{side}_team_id"] = team if team is not None or club != row[f"{side}_provider_club"] else row[f"{side}_team_id"]
++            new.update(pending=move["pending"], absent_since=None, as_of=today)
++        return {column: value for column, value in new.items() if row[column] != value}
+ 
+     def write_injuries(self, units, data):
+         (key, priority), = units
+diff --git a/dashboard/frontend/src/competition-selector.css b/dashboard/frontend/src/competition-selector.css
+index 0e7c52514e..61aa9ad65d 100644
+--- a/dashboard/frontend/src/competition-selector.css
++++ b/dashboard/frontend/src/competition-selector.css
+@@ -538,8 +538,6 @@
+   flex: 2 1 260px;
+ }
+ /* Cups sit in the competition directory, with their logos. */
+-.competition-card-fallback { display: grid; place-items: center; color: var(--muted); background: var(--surface-subtle); }
+-.competition-card-fallback .icon { width: 18px; height: 18px; }
+ .cup-directory-heading { display: flex; align-items: end; justify-content: space-between; flex-wrap: wrap; gap: 14px; margin: 0 0 22px; }
+ .cup-directory-heading h2 { margin: 0; color: var(--ink-strong); font-size: var(--text-xl); }
+ .cup-directory-heading p { margin: 5px 0 0; color: var(--muted); font-size: var(--text-sm); }
+diff --git a/dashboard/frontend/src/components/ClubScoutUI.jsx b/dashboard/frontend/src/components/ClubScoutUI.jsx
+index 53f53c25c5..38861e218a 100644
+--- a/dashboard/frontend/src/components/ClubScoutUI.jsx
++++ b/dashboard/frontend/src/components/ClubScoutUI.jsx
+@@ -21,6 +21,7 @@ import {
+   partOf,
+   sumKnown,
+ } from "../services/club-supported.js";
++import { safeImageUrl } from "../services/format.js";
+ import s from "./ClubScout.module.css";
+ 
+ export const clubStyles = s;
+@@ -88,16 +89,23 @@ export function ClubEmptySeason({ dossier, played = 0 }) {
+ 
+ /**
+  * Plain images: the site's reveal deadline would freeze Media elements that
+- * mount after a long read into their initials.
++ * mount after a long read into their initials. The source goes through the
++ * site's checked resolver, as Media's does: a Vega reference is read through
++ * /api/assets, never from its reserved host; a refused one shows the initials.
++ * A failure belongs to its source: a new url is a new attempt, as Media's (VI-30).
+  */
+-export function Picture({
++export function Picture(props) {
++  return <PictureAttempt key={props.url || ""} {...props} />;
++}
++
++function PictureAttempt({
+   name = "",
+   url,
+   className = "crest",
+   round = false,
+ }) {
+   const [failed, setFailed] = useState(false);
+-  const src = failed ? null : url;
++  const src = failed ? null : safeImageUrl(url) || null;
+   const initials = name
+     .split(/\s+/)
+     .filter(Boolean)
+diff --git a/dashboard/frontend/src/components/CupCompetition.jsx b/dashboard/frontend/src/components/CupCompetition.jsx
+index b33105601f..25053b6c39 100644
+--- a/dashboard/frontend/src/components/CupCompetition.jsx
++++ b/dashboard/frontend/src/components/CupCompetition.jsx
+@@ -4,10 +4,11 @@ import { Card, Media, Pager, Segments, AsyncState, Empty } from "./UI.jsx";
+ import { date, seasonLabel } from "../services/format.js";
+ import { parisDay } from "../services/fixtures.js";
+ import KnockoutBracket from "./KnockoutBracket.jsx";
++import { cupEditionTable, cupTable } from "../services/catalog-client.js";
+ import { useResource } from "../services/resources.js";
+-import { cupTable } from "../services/catalog-client.js";
++import { editionArtworkUrl } from "../services/competition-artwork.js";
+ import { competitionCountryLabel } from "../services/competition-selector.js";
+-import { normalizeOpenCup, normalizeSupplementalCup, filterCupMatches, resultsAsOpenCup, leagueTable, numberedCupRounds } from "../services/cup-matches.js";
++import { normalizeOpenCup, normalizeRoundSides, normalizeSupplementalCup, filterCupMatches, resultsAsOpenCup, leagueTable, numberedCupRounds } from "../services/cup-matches.js";
+ import { combineCupLegs, knockoutStage } from "../services/knockout-bracket.js";
+ import { cupWorkerSnapshot } from "../services/cup-worker-client.js";
+ import { NATIONAL_CUP_ARCHIVES, GERMAN_CUP_FOLDER, isGermanCupSeason } from "../services/cup-archives.js";
+@@ -34,16 +35,19 @@ function LeagueStandings({ name, matches }) {
+     <p className="nations-note">Classement calculé à partir des résultats disponibles.</p>
+   </>;
+ }
+-/** A cup's match, in the main lists' design (date, teams around the score, round), and its forecast before kick-off. */
++/**
++ * A cup's match, in the main lists' design (date, teams around the score, round), and its forecast before kick-off.
++ * A club's badge is the crest of its own side (homeImage, awayImage: the row's foreign key, VI-30), else its initials.
++ */
+ function CupMatch({ match, nationalTeams, season }) {
+-  const badge = (name) => (nationalTeams ? <NationalFlag name={name} season={season || match.date} /> : <Media name={name} />);
++  const badge = (name, image) => (nationalTeams ? <NationalFlag name={name} season={season || match.date} /> : <Media name={name} url={image} />);
+   return (
+     <div className="match-row cup-match">
+       <span className="match-date">{match.date ? date(match.date) : "Date à préciser"}</span>
+       <span className="match-teams">
+-        <span className="team-name home-team"><span>{match.home}</span>{badge(match.home)}</span>
++        <span className="team-name home-team"><span>{match.home}</span>{badge(match.home, match.homeImage)}</span>
+         <strong className="score">{match.score ? match.score[0] + " – " + match.score[1] : "À venir"}</strong>
+-        <span className="team-name">{badge(match.away)}<span>{match.away}</span></span>
++        <span className="team-name">{badge(match.away, match.awayImage)}<span>{match.away}</span></span>
+         {match.notes?.length > 0 && <span className="cup-match-notes">{match.notes.join(" · ")}</span>}
+         {match.status === "scheduled" && <MatchForecastBar home={match.home} away={match.away} forecast={match.forecast} />}
+       </span>
+@@ -83,29 +87,44 @@ export default function CupCompetition({ competition, initialSeason }) {
+     : germany && isGermanCupSeason(season) ? "openligadb"
+     : archive && season === archive.season ? "archive"
+     : "unavailable";
+-  const resource = useResource("cup:" + competition.id + ":" + mode + ":" + view + ":" + season + ":" + version, async () => {
++  const resource = useResource("cup:" + competition.id + ":" + mode + ":" + view + ":" + season + ":" + version, async ({ signal }) => {
+     if (mode === "supplemental") {
+-      const [results, fixtures] = await Promise.all(["results", "fixtures"].map(kind => tables?.[kind] && Number(tables[kind].rows) !== 0 ? cupTable(competition.folder,season,kind) : []));
++      const payload = competition.canonicalId
++        ? await cupEditionTable(competition.canonicalId, season, { signal }).catch(() => {
++            signal.throwIfAborted();
++            return null;
++          })
++        : null;
++      const validTable = Array.isArray(payload?.results) && Array.isArray(payload?.fixtures);
++      const [results, fixtures] = validTable ? [payload.results, payload.fixtures] : await Promise.all(["results", "fixtures"].map(kind => tables?.[kind] && Number(tables[kind].rows) !== 0 ? cupTable(competition.folder, season, kind, { signal }) : []));
+       // A cup's numbered rounds named by their ties (its bracket, VI-19); a league's matches as they are.
+       const normalized = normalizeSupplementalCup(results, fixtures);
+       const matches = league ? normalized : numberedCupRounds(normalized);
+-      if (view !== "bracket") return { matches };
+-      return matches.some((match) => knockoutStage(match.roundName)) ? { matches: combineCupLegs(matches) } : { matches, unavailable: true };
++      const editionArtwork = validTable ? payload.editionArtwork : undefined;
++      if (view !== "bracket") return { matches, editionArtwork };
++      return matches.some((match) => knockoutStage(match.roundName))
++        ? { matches: combineCupLegs(matches), editionArtwork }
++        : { matches, unavailable: true, editionArtwork };
+     }
+     if (mode === "unavailable") return { matches: [], unavailable: true };
+-    if (mode === "openligadb") return cupWorkerSnapshot("openligadb", "germany-cup", season, "/api/openligadb?competition=germany-cup&season=" + encodeURIComponent(season));
++    if (mode === "openligadb") {
++      const payload = await cupWorkerSnapshot("openligadb", "germany-cup", season, "/api/openligadb?competition=germany-cup&season=" + encodeURIComponent(season), { signal });
++      return { ...payload, matches: normalizeRoundSides(payload.matches) };
++    }
+     if (mode === "results") {
+       // International Results: played matches only, without rounds (results-v1).
+-      const payload = await cupWorkerSnapshot("nations-results", competition.sourceKey, season, null);
+-      return { matches: normalizeOpenCup(resultsAsOpenCup(payload.matches)), source: payload.source };
++      const payload = await cupWorkerSnapshot("nations-results", competition.sourceKey, season, null, { signal });
++      return { matches: normalizeOpenCup(resultsAsOpenCup(payload.matches)), source: payload.source, editionArtwork: payload.editionArtwork };
+     }
+     const key = mode === "archive" ? archive.key : competition.sourceKey;
+-    const payload = await cupWorkerSnapshot("open-cups", key, season, "/api/open-cups?competition=" + encodeURIComponent(key) + "&season=" + encodeURIComponent(season));
++    const payload = await cupWorkerSnapshot("open-cups", key, season, "/api/open-cups?competition=" + encodeURIComponent(key) + "&season=" + encodeURIComponent(season), { signal });
+     const matches = normalizeOpenCup(payload.matches);
+-    return { matches: mode === "archive" && archive.twoLegged && view === "bracket" ? combineCupLegs(matches) : matches, source: payload.source };
++    return { matches: mode === "archive" && archive.twoLegged && view === "bracket" ? combineCupLegs(matches) : matches, source: payload.source, editionArtwork: payload.editionArtwork };
+   });
++  const artwork = resource.error || resource.refreshError ? null : resource.value?.editionArtwork;
++  const imageUrl = editionArtworkUrl(competition.id, competition.imageUrl, artwork);
+   return (
+-    <Card className="cup-detail" title={<span className="competition-detail-title"><Media name={competition.name} url={competition.imageUrl} /><span><strong>{competition.name}</strong><small>{competitionCountryLabel(competition)}</small></span></span>}>
++    <Card className="cup-detail" title={<span className="competition-detail-title"><Media url={imageUrl} initials={false} /><span><strong>{competition.name}</strong><small>{competitionCountryLabel(competition)}</small></span></span>}>
+       <div className="cup-controls">
+         <label>Édition
+           <select aria-label="Édition de la coupe" value={season} onChange={(event) => { const next = event.target.value; setSeason(next); setStatus(competition.sourceKey === "euro" && next === "2028" ? "scheduled" : "finished"); setPage(1); }}>
+diff --git a/dashboard/frontend/src/components/GlobalSearch.jsx b/dashboard/frontend/src/components/GlobalSearch.jsx
+index 4569d97312..8ef9ed68f2 100644
+--- a/dashboard/frontend/src/components/GlobalSearch.jsx
++++ b/dashboard/frontend/src/components/GlobalSearch.jsx
+@@ -22,7 +22,7 @@ import {
+ } from "../services/global-search.js";
+ import { cachedResource, useResource } from "../services/resources.js";
+ import { nationName, useNations } from "../services/nations.js";
+-import { cupIndex } from "../services/catalog-client.js";
++import { cupIndex, servesCupWorkerIndex } from "../services/catalog-client.js";
+ import {
+   hasBoundedSearch,
+   searchIdentities,
+@@ -87,6 +87,7 @@ export default function GlobalSearch({ sheet = false, onClose }) {
+   const season = f?.season;
+   const remote = hasBoundedSearch(f?.manifest);
+   const needle = query.trim();
++  const searchCompetitions = armed && needle.length >= 2;
+   const searchKey = JSON.stringify([
+     season,
+     needle.toLocaleLowerCase("fr"),
+@@ -95,12 +96,12 @@ export default function GlobalSearch({ sheet = false, onClose }) {
+   const legacyCups = useResource(
+     "supplemental-cup-index",
+     () => cupIndex("supplemental"),
+-    !remote && armed && needle.length >= 2,
++    searchCompetitions,
+   );
+   const workerCups = useResource(
+     "cup-worker-index",
+     () => cupIndex("worker"),
+-    !remote && armed && needle.length >= 2,
++    searchCompetitions && (!remote || servesCupWorkerIndex(f?.manifest)),
+   );
+   // Compatibility with a backend deployed before the discovery endpoint. The
+   // complete legacy index is requested only after typing, never on hover/focus.
+@@ -161,7 +162,7 @@ export default function GlobalSearch({ sheet = false, onClose }) {
+   const loading =
+     open &&
+     needle.length >= 2 &&
+-    (remote ? !ready || remoteResult.loading : legacySearch.loading);
++    (legacyCups.loading || (remote ? !ready || remoteResult.loading : legacySearch.loading));
+   const searchError = remote ? currentRemote?.error : legacySearch.error;
+   // The national teams, read once the search is in use.
+   const nationList = useNations(armed ? f?.season : null);
+@@ -404,6 +405,7 @@ export default function GlobalSearch({ sheet = false, onClose }) {
+                           <Media
+                             name={item.name}
+                             url={item.imageUrl}
++                            initials={kind !== "competitions"}
+                             className={
+                               kind === "players" ? "player-avatar" : "crest"
+                             }
+diff --git a/dashboard/frontend/src/components/MatchDetail.jsx b/dashboard/frontend/src/components/MatchDetail.jsx
+index 7576d5ecb7..6342f18308 100644
+--- a/dashboard/frontend/src/components/MatchDetail.jsx
++++ b/dashboard/frontend/src/components/MatchDetail.jsx
+@@ -1,4 +1,5 @@
+ import { nationalFlagCode } from "../services/national-flags.js";
++import { editionArtworkUrl } from "../services/competition-artwork.js";
+ import React, {
+   lazy,
+   Suspense,
+@@ -515,8 +516,11 @@ export default function MatchDetail({ match }) {
+       <section className="match-scoreboard" aria-label="Résumé du match">
+         <div className="scoreboard-meta">
+           <div>
+-            {competition && (
+-              <Media name={competition.name} url={competition.imageUrl} />
++            {(competition || match.editionArtwork) && (
++              <Media
++                url={editionArtworkUrl(match.leagueId, competition?.imageUrl, match.editionArtwork)}
++                initials={false}
++              />
+             )}
+             <span>{match.league || competition?.name}</span>
+           </div>
+diff --git a/dashboard/frontend/src/components/Media.module.css b/dashboard/frontend/src/components/Media.module.css
+index 40d9ae4985..28627932f0 100644
+--- a/dashboard/frontend/src/components/Media.module.css
++++ b/dashboard/frontend/src/components/Media.module.css
+@@ -14,3 +14,9 @@
+ .imageReady {
+   opacity: 1;
+ }
++
++.empty.empty {
++  background: transparent;
++  border-color: transparent;
++  box-shadow: none;
++}
+diff --git a/dashboard/frontend/src/components/UI.jsx b/dashboard/frontend/src/components/UI.jsx
+index 9e30d810e7..cd502947db 100644
+--- a/dashboard/frontend/src/components/UI.jsx
++++ b/dashboard/frontend/src/components/UI.jsx
+@@ -12,7 +12,7 @@ import {
+   mediaImageSource,
+   title,
+ } from "../services/format.js";
+-export function Media({ name = "", url, fallbackUrl, className = "crest" }) {
++export function Media({ name = "", url, fallbackUrl, className = "crest", initials = true }) {
+   // Source changes remount the attempt state, including a deferred first reveal.
+   return (
+     <MediaSource
+@@ -21,10 +21,11 @@ export function Media({ name = "", url, fallbackUrl, className = "crest" }) {
+       url={url}
+       fallbackUrl={fallbackUrl}
+       className={className}
++      initials={initials}
+     />
+   );
+ }
+-function MediaSource({ name, url, fallbackUrl, className }) {
++function MediaSource({ name, url, fallbackUrl, className, initials }) {
+   const [failed, setFailed] = useState(false);
+   const [directFailed, setDirectFailed] = useState(false);
+   const [fallbackFailed, setFallbackFailed] = useState(false);
+@@ -48,14 +49,14 @@ function MediaSource({ name, url, fallbackUrl, className }) {
+   return (
+     <span
+       ref={element}
+-      className={`${className} ${mediaStyles.media}`}
++      className={`${className} ${mediaStyles.media}${!initials && (!src || loaded !== src) ? " " + mediaStyles.empty : ""}`}
+       aria-hidden="true"
+       data-page-media=""
+       data-media-state={
+         !src ? "fallback" : loaded === src ? "ready" : "loading"
+       }
+     >
+-      {loaded !== src || !src ? (
++      {initials && (loaded !== src || !src) ? (
+         <span className={`image-fallback ${mediaStyles.fallback}`}>
+           {(typeof name === "string" ? name : "")
+             .split(/\s+/)
+diff --git a/dashboard/frontend/src/components/UpcomingMatches.jsx b/dashboard/frontend/src/components/UpcomingMatches.jsx
+index 9be67383ba..9a82394bd5 100644
+--- a/dashboard/frontend/src/components/UpcomingMatches.jsx
++++ b/dashboard/frontend/src/components/UpcomingMatches.jsx
+@@ -55,6 +55,7 @@ function Fixture({ entry, week, compact, competitions }) {
+           name={competition.name}
+           url={competition.imageUrl}
+           className="crest fixture-competition-crest"
++          initials={false}
+         />
+         <span className="fixture-competition-copy">
+           <span className="fixture-competition-name">{competition.name}</span>
+diff --git a/dashboard/frontend/src/server/report-data.js b/dashboard/frontend/src/server/report-data.js
+index 2f120886c6..abbd52e8e8 100644
+--- a/dashboard/frontend/src/server/report-data.js
++++ b/dashboard/frontend/src/server/report-data.js
+@@ -182,8 +182,15 @@ export function buildMatchReport({ id, match, stats, grades, live, forecast }, t
+     const item = items.get(key);
+     return { key, label, format, home: statValue(item.home), away: statValue(item.away), homeText: item.home, awayText: item.away };
+   });
+-  const rows = (grades?.grades || []).map((g) => ({ id: g.playerId, teamId: g.teamId, name: g.name, imageUrl: g.imageUrl || null, team: g.team,
+-    position: g.position, minutes: g.minutes, goals: g.goals ?? 0, assists: g.assists ?? 0, grade: num(g.grade), rank: g.rank }));
++  const rows = (grades?.grades || []).map((g) => {
++    const grade = num(g.grade), exact = num(g.gradeExact);
++    const row = { id: g.playerId, teamId: g.teamId, name: g.name, imageUrl: g.imageUrl || null, team: g.team,
++      position: g.position, minutes: g.minutes, goals: g.goals ?? 0, assists: g.assists ?? 0, grade, rank: g.rank };
++    if (Object.hasOwn(g, "gradeExact")) {
++      row.gradeExact = grade != null && exact != null && exact >= 0 && exact <= 100 && round(exact) === grade ? exact : null;
++    }
++    return row;
++  });
+   const best = (teamId) => rows.filter((r) => r.teamId === teamId && r.grade != null).sort((a, b) => b.grade - a.grade).slice(0, 3);
+   const points = (live?.points || []).map((p) => ({ minute: p.minute, home: num(p.home), draw: num(p.draw), away: num(p.away) }));
+   const before = points[0] || (forecast?.forecast ? { minute: 0, ...forecast.forecast } : null);
+diff --git a/dashboard/frontend/src/services/catalog-client.js b/dashboard/frontend/src/services/catalog-client.js
+index 4776f4fc5c..45b2b76c08 100644
+--- a/dashboard/frontend/src/services/catalog-client.js
++++ b/dashboard/frontend/src/services/catalog-client.js
+@@ -57,8 +57,10 @@ export const cupIndex = (kind) => load("/api/cup-index", { kind });
+  */
+ export const servesCupWorkerIndex = (manifest) =>
+   manifest?.capabilities?.cupWorkerIndex === true;
+-export const cupTable = (competition, season, kind) =>
+-  load("/api/cup-table", { competition, season, kind });
++export const cupTable = (competition, season, kind, options) =>
++  load("/api/cup-table", { competition, season, kind }, options);
++export const cupEditionTable = (competition, season, options) =>
++  load("/api/cups/edition", { competition, season }, options);
+ export const associationRanking = (year) =>
+   load("/api/rankings/associations", { year });
+ export async function clubRanking(club) {
+diff --git a/dashboard/frontend/src/services/competition-artwork.js b/dashboard/frontend/src/services/competition-artwork.js
+new file mode 100644
+index 0000000000..f7a730c10f
+--- /dev/null
++++ b/dashboard/frontend/src/services/competition-artwork.js
+@@ -0,0 +1,20 @@
++export const WORLD_CUP_ID = "l_1XLtP0";
++const WORLD_CUP_HISTORY_ID = "open-cup:world-cup-history";
++
++// Both catalogues carried the same 2026 edition mark as a family logo.
++const misattributedWorldCupLogo = "https://img.thesports.com/football/competition/da617cd58cd9cffaae0daec865457fb5.png";
++
++function worldCupFamily(id) {
++  return id === WORLD_CUP_ID || id === WORLD_CUP_HISTORY_ID || id === "l_v0000064";
++}
++
++export function familyArtworkUrl(id, imageUrl) {
++  return worldCupFamily(id) && imageUrl === misattributedWorldCupLogo ? undefined : imageUrl;
++}
++
++export function editionArtworkUrl(id, imageUrl, artwork) {
++  if (artwork?.role === "edition_emblem" && artwork.imageUrl) return artwork.imageUrl;
++  // A logo attributed to either World Cup family needs edition-specific evidence
++  // before it can fill a season's slot. Other competitions keep their own logo.
++  return worldCupFamily(id) ? undefined : imageUrl;
++}
+diff --git a/dashboard/frontend/src/services/competition-identity.js b/dashboard/frontend/src/services/competition-identity.js
+index d5328809a4..c49e1709da 100644
+--- a/dashboard/frontend/src/services/competition-identity.js
++++ b/dashboard/frontend/src/services/competition-identity.js
+@@ -1,3 +1,4 @@
++import { editionArtworkUrl } from "./competition-artwork.js";
+ import { countryLabel } from "./competition-selector.js";
+ 
+ /** Fill missing season metadata from the provider catalogue using stable IDs. */
+@@ -49,16 +50,17 @@ export function competitionIndex(...collections) {
+ export function fixtureCompetition(fixture, index) {
+   const league =
+     fixture?.league && typeof fixture.league === "object" ? fixture.league : {};
+-  const info = index.get(league.id || fixture?.leagueId) || {};
++  const id = league.id || fixture?.leagueId || "";
++  const info = index.get(id) || {};
+   const country = info.country || league.country || league.country_code || "";
+   return {
+-    id: league.id || fixture?.leagueId || "",
++    id,
+     name:
+       league.name ||
+       info.name ||
+       (typeof fixture?.league === "string" ? fixture.league : "") ||
+       "Compétition",
+     country: country ? countryLabel(country) : "",
+-    imageUrl: league.image_url || league.imageUrl || info.imageUrl || "",
++    imageUrl: editionArtworkUrl(id, league.image_url || league.imageUrl || info.imageUrl || "", fixture?.editionArtwork),
+   };
+ }
+diff --git a/dashboard/frontend/src/services/cup-catalog.js b/dashboard/frontend/src/services/cup-catalog.js
+index 445c3473e4..2c3554c99e 100644
+--- a/dashboard/frontend/src/services/cup-catalog.js
++++ b/dashboard/frontend/src/services/cup-catalog.js
+@@ -1,12 +1,17 @@
+ import { normalizeText } from "../model.js";
+ import { NATIONAL_CUP_ARCHIVES, GERMAN_CUP_FOLDER, GERMAN_CUP_SEASONS } from "./cup-archives.js";
+ import cupLogos from "../../../shared/cup-logos.json" with { type: "json" };
++import { familyArtworkUrl, WORLD_CUP_ID } from "./competition-artwork.js";
++
++export { WORLD_CUP_ID } from "./competition-artwork.js";
+ 
+ /** Cup logos refreshed by the previous pipeline's refresh_cup_logos.mjs. */
+ const CUP_LOGOS = cupLogos.logos || {};
+-const withLogo = (competition) => competition.imageUrl || !CUP_LOGOS[competition.id]?.imageUrl ? competition : { ...competition, imageUrl: CUP_LOGOS[competition.id].imageUrl };
++function withLogo(competition) {
++  const imageUrl = familyArtworkUrl(competition.id, competition.imageUrl || CUP_LOGOS[competition.id]?.imageUrl);
++  return imageUrl === competition.imageUrl ? competition : { ...competition, imageUrl };
++}
+ 
+-export const WORLD_CUP_ID = "l_1XLtP0";
+ export const WORLD_CUP_FALLBACK = { id: WORLD_CUP_ID, name: "Coupe du monde", country: "INT", seasons: ["2026", "2022"] };
+ export const OPEN_CUP_CATALOG = [
+   { id: "open-cup:france-cup", name: "Coupe de France", country: "FRA", source: "openfootball", sourceKey: "france-cup", seasons: ["2024/2025"], defaultSeason: "2024/2025", aliases: ["French Cup"], coverage: "Archive 2024/2025" },
+@@ -22,7 +27,7 @@ export const OPEN_CUP_CATALOG = [
+   { id: "nations-results:copa-america", name: "Copa América", country: "CONMEBOL", source: "nations-results", sourceKey: "copa-america", seasons: ["2024"], defaultSeason: "2024", aliases: ["Copa America"], coverage: "Résultats" },
+   { id: "nations-results:asian-cup", name: "Coupe d’Asie des nations", country: "AFC", source: "nations-results", sourceKey: "asian-cup", seasons: ["2023"], defaultSeason: "2023", aliases: ["AFC Asian Cup", "Asian Cup"], coverage: "Résultats" },
+   { id: "nations-results:gold-cup", name: "Gold Cup", country: "CONCACAF", source: "nations-results", sourceKey: "gold-cup", seasons: ["2025", "2023"], defaultSeason: "2025", aliases: ["CONCACAF Gold Cup"], coverage: "Résultats" },
+-  { id: "open-cup:world-cup-history", name: "Coupe du monde — archives", country: "INT", source: "openfootball", sourceKey: "world-cup-history", seasons: ["2018", "2014", "2010", "2006", "2002", "1998", "1994", "1990", "1986", "1982", "1978", "1974", "1970", "1966", "1962", "1958", "1954", "1950", "1938", "1934", "1930"], defaultSeason: "2018", aliases: ["World Cup", "Mondial"] },
++  { id: "open-cup:world-cup-history", name: "Coupe du monde — archives", country: "INT", source: "openfootball", sourceKey: "world-cup-history", seasons: ["2026", "2022", "2018", "2014", "2010", "2006", "2002", "1998", "1994", "1990", "1986", "1982", "1978", "1974", "1970", "1966", "1962", "1958", "1954", "1950", "1938", "1934", "1930"], defaultSeason: "2018", aliases: ["World Cup", "Mondial"] },
+ ];
+ const CUP_LABELS = {
+   "ESP_CUP_copa-del-rey": ["Coupe du Roi", "Copa del Rey"],
+@@ -38,6 +43,22 @@ const CUP_LABELS = {
+   "SUI_CUP_swiss-cup": ["Coupe de Suisse", "Swiss Cup"],
+ };
+ 
++/** The verified logo the API gives for the edition's own competition (its FK), never another's (FAILURE_MODES.md §22). */
++const ownLogo = (item) => (typeof item.image_url === "string" && item.image_url ? { imageUrl: item.image_url } : {});
++/** A Vega competition id (PitchAPI's key, else l_v and seven digits), as /api/cups/index publishes it. */
++const COMPETITION_ID = /^l_(?:[A-Za-z0-9]{6}|v\d{7})$/;
++/** The edition's competition by its canonical id (the API's `competition_id`, the edition's FK), never by a name (VI-30). */
++const ownIdentity = (item) => (typeof item.competition_id === "string" && COMPETITION_ID.test(item.competition_id) ? { canonicalId: item.competition_id } : {});
++
++/** The entry a page asks for: by its own id, else by the canonical id it answers to (FAILURE_MODES_VI30.md V12). */
++export function findCompetition(catalog, id) {
++  if (!id) return undefined;
++  return catalog.find((c) => c.id === id) || catalog.find((c) => c.canonicalId === id);
++}
++
++/** Whether an id not found yet may still come with the supplemental index (its source key or a canonical l_v id). */
++export const awaitsCupIndex = (id) => typeof id === "string" && (id.startsWith("open-matchday:") || /^l_v\d{7}$/.test(id));
++
+ /** Only promote actual cup datasets with at least one collected match. */
+ export function supplementalCupCatalog(index) {
+   if (!Array.isArray(index?.competitions)) return [];
+@@ -49,7 +70,7 @@ export function supplementalCupCatalog(index) {
+     const labels = CUP_LABELS[item.folder] || [item.name || item.folder];
+     const archive = NATIONAL_CUP_ARCHIVES[item.folder];
+     const editions = [season, ...Object.keys(item.editions || {}).filter((value) => /^\d{4}\/\d{4}$/.test(value)), ...(archive ? [archive.season] : []), ...(item.folder === GERMAN_CUP_FOLDER ? GERMAN_CUP_SEASONS : [])];
+-    return [{ id: "open-matchday:" + item.folder, name: labels[0], country: item.country_code || "", source: "open-matchday", folder: item.folder, seasons: [...new Set(editions)].sort().reverse(), defaultSeason: season, aliases: [...labels.slice(1), item.name || ""], tables: item.tables, editions: item.editions || null, sourceDate: index.meta?.source_generated_at_utc || index.meta?.retrieved_at_utc || null }];
++    return [{ id: "open-matchday:" + item.folder, name: labels[0], country: item.country_code || "", source: "open-matchday", folder: item.folder, seasons: [...new Set(editions)].sort().reverse(), defaultSeason: season, aliases: [...labels.slice(1), item.name || ""], tables: item.tables, editions: item.editions || null, sourceDate: index.meta?.source_generated_at_utc || index.meta?.retrieved_at_utc || null, ...ownLogo(item), ...ownIdentity(item) }];
+   });
+ }
+ 
+@@ -93,11 +114,14 @@ const COUNTRY_CODES = { IRE: "IRL" };
+ export function supplementalLeagueCatalog(index, native = []) {
+   if (!Array.isArray(index?.competitions)) return [];
+   const held = new Set((native || []).map((c) => normalizeText(c.name || "") + "|" + (c.country || "")));
++  const heldIds = new Set((native || []).map((c) => c.id));
+   return index.competitions.flatMap((item) => {
+     if (!/^[A-Z]{3}_[A-Z0-9]+_[a-z0-9-]+$/i.test(item.folder || "") || /_CUP_/i.test(item.folder)) return [];
+     if (!(Number(item.tables?.results?.rows) > 0 || Number(item.tables?.fixtures?.rows) > 0)) return [];
+     const season = /^\d{4}\/\d{4}$/.test(item.season || "") ? item.season : "";
+     if (!season) return [];
++    // The main source's own competition (the same canonical id, VI-30), then a copy by its name and country.
++    if (ownIdentity(item).canonicalId && heldIds.has(item.competition_id)) return [];
+     const code = item.country_code || item.folder.split("_")[0];
+     const country = COUNTRY_CODES[code] || code;
+     if (held.has(normalizeText(item.name || "") + "|" + country) || held.has(normalizeText(item.name || "") + "|" + code)) return [];
+@@ -105,7 +129,7 @@ export function supplementalLeagueCatalog(index, native = []) {
+     const editions = [season, ...Object.keys(item.editions || {}).filter((value) => /^\d{4}\/\d{4}$/.test(value))];
+     return [{ id: "open-matchday:" + item.folder, name: labels[0], country, source: "open-matchday", kind: "league", folder: item.folder,
+       seasons: [...new Set(editions)].sort().reverse(), defaultSeason: season, aliases: [...new Set([...labels.slice(1), item.name || ""])].filter(Boolean),
+-      tables: item.tables, editions: item.editions || null, sourceDate: index.meta?.source_generated_at_utc || index.meta?.retrieved_at_utc || null }];
++      tables: item.tables, editions: item.editions || null, sourceDate: index.meta?.source_generated_at_utc || index.meta?.retrieved_at_utc || null, ...ownLogo(item), ...ownIdentity(item) }];
+   });
+ }
+ 
+@@ -121,5 +145,6 @@ export function mergeCupCatalog(nativeCompetitions, supplementalIndex, workerNat
+   const ids = new Set(native.map((competition) => competition.id));
+   const world = ids.has(WORLD_CUP_ID) ? [] : [WORLD_CUP_FALLBACK];
+   const extras = [...supplementalCupCatalog(supplementalIndex), ...supplementalLeagueCatalog(supplementalIndex, nativeCompetitions)];
+-  return [...native, ...world, ...OPEN_CUP_CATALOG, ...extras.filter((cup) => !ids.has(cup.id))].map(withLogo);
++  // An entry whose canonical id is a native competition's is that competition: listed once, as the native one.
++  return [...native, ...world, ...OPEN_CUP_CATALOG, ...extras.filter((cup) => !ids.has(cup.id) && !ids.has(cup.canonicalId))].map(withLogo);
+ }
+diff --git a/dashboard/frontend/src/services/cup-matches.js b/dashboard/frontend/src/services/cup-matches.js
+index 3db7d70eef..655ffd2e0d 100644
+--- a/dashboard/frontend/src/services/cup-matches.js
++++ b/dashboard/frontend/src/services/cup-matches.js
+@@ -107,6 +107,22 @@ export function matchForecast(value) {
+   return total > 0.98 && total < 1.02 ? { home: value.home, draw: value.draw, away: value.away } : null;
+ }
+ 
++/**
++ * A row's own sides (the API's `sides`, VI-30): each side's team id and crest reference, under the names the bracket
++ * reads (homeImage, awayImage). A side comes only from its row's foreign key, never from a name; a malformed one is
++ * left out.
++ */
++function ownSides(row) {
++  const out = {};
++  for (const [side, id, image] of [["home", "homeTeamId", "homeImage"], ["away", "awayTeamId", "awayImage"]]) {
++    const value = row?.sides?.[side];
++    if (typeof value?.id !== "string" || !value.id) continue;
++    out[id] = value.id;
++    if (typeof value.image_url === "string" && value.image_url) out[image] = value.image_url;
++  }
++  return out;
++}
++
+ export function normalizeSupplementalCup(results, fixtures) {
+   const completed = [], keys = new Set();
+   for (const [index, row] of (results || []).entries()) {
+@@ -116,7 +132,7 @@ export function normalizeSupplementalCup(results, fixtures) {
+     const day = validDay(row.date) ? row.date : "";
+     keys.add(identity(day, home, away));
+     const roundName = String(row.round_name || row.round || row.stage || "").trim();
+-    completed.push({ key: "result:" + index, date: day, home, away, score, roundName, round: readableRound(roundName), status: "finished", gw: String(row.gw ?? "").trim() });
++    completed.push({ key: "result:" + index, date: day, home, away, score, roundName, round: readableRound(roundName), status: "finished", gw: String(row.gw ?? "").trim(), ...ownSides(row) });
+   }
+   const scheduled = [];
+   for (const [index, row] of (fixtures || []).entries()) {
+@@ -126,7 +142,7 @@ export function normalizeSupplementalCup(results, fixtures) {
+     if (keys.has(identity(day, home, away))) continue;
+     const roundName = String(row.round_name || row.round || row.stage || "").trim();
+     const forecast = matchForecast(row.forecast);
+-    scheduled.push({ key: "fixture:" + index, date: day, home, away, score: null, roundName, round: readableRound(roundName), status: "scheduled", gw: String(row.gw ?? "").trim(), ...(forecast && { forecast }) });
++    scheduled.push({ key: "fixture:" + index, date: day, home, away, score: null, roundName, round: readableRound(roundName), status: "scheduled", gw: String(row.gw ?? "").trim(), ...(forecast && { forecast }), ...ownSides(row) });
+   }
+   return [...completed, ...scheduled];
+ }
+@@ -136,6 +152,10 @@ export function resultsAsOpenCup(matches) {
+   return (matches || []).map((match) => ({ date: match.date, team1: match.home, team2: match.away, round: match.round || "", score: Array.isArray(match.score) ? { ft: match.score } : undefined }));
+ }
+ 
++export function normalizeRoundSides(matches) {
++  return (matches || []).map((match) => ({ ...match, ...ownSides(match) }));
++}
++
+ export function normalizeOpenCup(matches) {
+   return (matches || []).flatMap((match, index) => {
+     const home = String(match.team1 || "").trim(), away = String(match.team2 || "").trim();
+@@ -146,7 +166,7 @@ export function normalizeOpenCup(matches) {
+     if (extra) notes.push("après prolongation");
+     if (penalties) notes.push("tirs au but " + penalties[0] + " – " + penalties[1]);
+     const forecast = score ? null : matchForecast(match.forecast);
+-    return [{ key: "open:" + index, date: validDay(match.date) ? match.date : "", home, away, score, penalties, notes, roundName: String(match.round || ""), number: Number.isInteger(match.num) ? match.num : null, round: readableRound(match.round, match.group), status: score ? "finished" : "scheduled", ...(forecast && { forecast }) }];
++    return [{ key: "open:" + index, date: validDay(match.date) ? match.date : "", home, away, score, penalties, notes, roundName: String(match.round || ""), number: Number.isInteger(match.num) ? match.num : null, round: readableRound(match.round, match.group), status: score ? "finished" : "scheduled", ...(forecast && { forecast }), ...ownSides(match) }];
+   });
+ }
+ 
+diff --git a/dashboard/frontend/src/services/cup-worker-client.js b/dashboard/frontend/src/services/cup-worker-client.js
+index ca72a97064..8a5d46a9a4 100644
+--- a/dashboard/frontend/src/services/cup-worker-client.js
++++ b/dashboard/frontend/src/services/cup-worker-client.js
+@@ -15,10 +15,11 @@ export async function cupWorkerSnapshot(
+     throw new Error("Route de données invalide.");
+   // A cup of the complementary sources is read by its Vega id (api-routes.js).
+   const cup = await cupId(kind, competition, async (url) => {
+-    const response = await publicApiFetch(apiUrl(url), { signal });
++    const response = await publicApiFetch(apiUrl(url));
+     if (!response.ok) throw new Error(`HTTP ${response.status}`);
+     return response.json();
+   });
++  signal?.throwIfAborted();
+   const paths = cup ? cupPaths(cup, season) : null;
+   if (paths) fallbackUrl = paths.edition;
+   const path = apiUrl(
+@@ -69,7 +70,8 @@ export async function cupWorkerSnapshot(
+           name: String(match.round_name),
+           playoff: match.has_playoff === true,
+         };
+-    return { ...saved, matches, rounds };
++    const editionArtwork = saved?.editionArtwork ?? matches.find((row) => row.season === String(season))?.editionArtwork;
++    return { ...saved, matches, rounds, editionArtwork };
+   }
+   const value = fresh || saved;
+   if (
+diff --git a/dashboard/frontend/src/services/football-client.js b/dashboard/frontend/src/services/football-client.js
+index 34438017c2..3bcc12f7cd 100644
+--- a/dashboard/frontend/src/services/football-client.js
++++ b/dashboard/frontend/src/services/football-client.js
+@@ -146,6 +146,7 @@ export class FootballDataClient {
+           matches: saved.matches,
+           rounds: saved.rounds || {},
+           source: "snapshot",
++          editionArtwork: saved.editionArtwork,
+         };
+       } catch (error) {
+         if (error.name === "AbortError") {
+@@ -176,6 +177,7 @@ export class FootballDataClient {
+                   season: match.season ?? season,
+                 })),
+           source: "api",
++          editionArtwork: matches.find((match) => match.season === String(season))?.editionArtwork,
+         };
+       } catch (error) {
+         if (error.name === "AbortError") {
+@@ -334,6 +336,7 @@ export class FootballDataClient {
+       league:
+         typeof match.league === "string" ? match.league : match.league?.name,
+       season: match.season,
++      ...(match.editionArtwork && { editionArtwork: match.editionArtwork }),
+       home: {
+         ...match.home_team,
+         imageUrl: match.home_team?.image_url,
+diff --git a/dashboard/frontend/src/services/format.js b/dashboard/frontend/src/services/format.js
+index 5b1056c306..10cd6d7f39 100644
+--- a/dashboard/frontend/src/services/format.js
++++ b/dashboard/frontend/src/services/format.js
+@@ -1,3 +1,4 @@
++import { acceptedImageSource } from "./image-source.js";
+ import { apiUrl } from "../data-url.js";
+ export {
+   formatNumber as number,
+@@ -18,23 +19,9 @@ export const date = (value) =>
+       )
+     : "—";
+ export function safeImageUrl(value) {
+-  try {
+-    const u = new URL(value);
+-    return u.protocol === "https:" &&
+-      (u.hostname === "cdn.pitchapi.dev" ||
+-        (u.hostname === "upload.wikimedia.org" &&
+-          /^\/wikipedia\/commons\//.test(u.pathname)) ||
+-        (u.hostname === "img.thesports.com" &&
+-          /^\/football\/(?:team|competition)\/[a-z0-9]+\.(?:png|webp|jpe?g)$/i.test(
+-            u.pathname,
+-          ))) &&
+-      !u.username &&
+-      !u.password
+-      ? apiUrl(`/api/assets?url=${encodeURIComponent(u.href)}`)
+-      : "";
+-  } catch {
+-    return "";
+-  }
++  return acceptedImageSource(value)
++    ? apiUrl(`/api/assets?url=${encodeURIComponent(new URL(value).href)}`)
++    : "";
+ }
+ export function mediaImageSource(
+   url,
+diff --git a/dashboard/frontend/src/services/image-source.js b/dashboard/frontend/src/services/image-source.js
+new file mode 100644
+index 0000000000..0d8d7acf17
+--- /dev/null
++++ b/dashboard/frontend/src/services/image-source.js
+@@ -0,0 +1,31 @@
++/**
++ * The one image gate of the site (FAILURE_MODES.md §21): an image is asked of the API only when its
++ * URL is a known provider's, Vega's reference to a reviewed packed image, or UEFA's logo of a club.
++ * The API (/api/assets, media=1) then answers with the base's copy: no address is built from a URL.
++ */
++const VEGA_REFERENCE = /^\/sha256\/[a-f0-9]{64}\.(?:png|jpg|webp)$/;
++const UEFA_CLUB_LOGO = /^\/imgml\/TP\/teams\/logos\/70x70\/\d+\.png$/;
++
++export function acceptedImageSource(value) {
++  if (typeof value !== "string" || !value || value.length > 2048) return false;
++  let url;
++  try {
++    url = new URL(value);
++  } catch {
++    return false;
++  }
++  if (url.protocol !== "https:" || url.username || url.password || url.port) return false;
++  switch (url.hostname) {
++    case "cdn.pitchapi.dev":
++      return true;
++    case "upload.wikimedia.org":
++      return /^\/wikipedia\/commons\//.test(url.pathname);
++    case "img.thesports.com":
++      return /^\/football\/(?:team|competition)\/[a-z0-9]+\.(?:png|webp|jpe?g)$/i.test(url.pathname);
++  }
++  // The two exact forms: no query, no fragment.
++  if (url.search || url.hash || /[?#]/.test(value)) return false;
++  if (url.hostname === "media.vega.invalid") return VEGA_REFERENCE.test(url.pathname);
++  if (url.hostname === "img.uefa.com") return UEFA_CLUB_LOGO.test(url.pathname);
++  return false;
++}

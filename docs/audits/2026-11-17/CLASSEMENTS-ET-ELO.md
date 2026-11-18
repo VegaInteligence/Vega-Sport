@@ -1,3 +1,5 @@
+[Situation consolidée, mesures et correctifs du 18 novembre](SITUATION.md) · Cette page conserve les constats et les limites à la date de chaque relevé.
+
 # Classements, matchs rejoués et références des scores
 
 ## J1 2026/27 et Allsvenskan 2026

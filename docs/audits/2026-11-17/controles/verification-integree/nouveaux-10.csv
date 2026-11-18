@@ -1,0 +1,11 @@
+id,competition_season_id,season_id,match_date,status,home_team_id,home,away_team_id,away,home_score,away_score,revision,first_finished_at,updated_at,source,cup_key,competition,expected_elo_sides,observed_elo_sides
+8173,332,2026,2026-11-17,finished,2558,Bedford,2557,Chorley,1,2,1,,2026-11-18 12:16:08.785649+00:00,open_matchday,open-matchday:ENG_6_national-league-north:2026/2027,National League North,2,0
+8174,332,2026,2026-11-17,finished,2596,Oxford City,2588,Macclesfield,1,3,1,,2026-11-18 12:16:08.785649+00:00,open_matchday,open-matchday:ENG_6_national-league-north:2026/2027,National League North,2,0
+8176,332,2026,2026-11-17,finished,2565,Spalding United,3387,Hebburn Town,0,0,1,,2026-11-18 12:16:08.785649+00:00,open_matchday,open-matchday:ENG_6_national-league-north:2026/2027,National League North,2,0
+8177,332,2026,2026-11-17,finished,2606,Spennymoor,2607,Chester,0,5,1,,2026-11-18 12:16:08.785649+00:00,open_matchday,open-matchday:ENG_6_national-league-north:2026/2027,National League North,2,0
+8412,333,2026,2026-11-17,finished,2613,Tonbridge,2570,Chesham,2,0,1,,2026-11-18 12:16:08.785649+00:00,open_matchday,open-matchday:ENG_6_national-league-south:2026/2027,National League South,2,0
+8414,333,2026,2026-11-17,finished,2545,Truro,3393,Billericay,0,0,1,,2026-11-18 12:16:08.785649+00:00,open_matchday,open-matchday:ENG_6_national-league-south:2026/2027,National League South,2,0
+8653,334,2026,2026-11-17,finished,3413,Cleethorpes,2620,FC United,3,2,1,,2026-11-18 12:16:08.785649+00:00,open_matchday,open-matchday:ENG_7_northern-premier-league:2026/2027,Northern Premier League,2,0
+8654,334,2026,2026-11-17,finished,2576,Guiseley,3412,Ashton Utd,4,1,1,,2026-11-18 12:16:08.785649+00:00,open_matchday,open-matchday:ENG_7_northern-premier-league:2026/2027,Northern Premier League,2,0
+8655,334,2026,2026-11-17,finished,3403,Hyde,3399,Warrington Rylands,1,3,1,,2026-11-18 12:16:08.785649+00:00,open_matchday,open-matchday:ENG_7_northern-premier-league:2026/2027,Northern Premier League,2,0
+8656,334,2026,2026-11-17,finished,3405,Quorn,2562,Bury,5,4,1,,2026-11-18 12:16:08.785649+00:00,open_matchday,open-matchday:ENG_7_northern-premier-league:2026/2027,Northern Premier League,2,0

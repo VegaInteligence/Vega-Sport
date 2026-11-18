@@ -1,0 +1,2750 @@
+diff --git a/backend/vega/sources/__init__.py b/backend/vega/sources/__init__.py
+index e521b1823f..2c7fba18d8 100644
+--- a/backend/vega/sources/__init__.py
++++ b/backend/vega/sources/__init__.py
+@@ -2,7 +2,7 @@
+ 
+ Each adapter exposes SCOPES (scope -> period) and run(conn, get, scope, now) returning
+ (rows_written, unmatched). `due` and `run_due` schedule them from ops.source_runs;
+-the worker calls run_due once a day. Responses are processed in memory, never stored.
++the worker calls run_due once a day. Adapters can record narrow source evidence for their decisions.
+ """
+ 
+ from datetime import datetime, timedelta, timezone
+@@ -67,7 +67,7 @@ def run_due(conn, get, now=None, *, names=None):
+         if names and name not in names:
+             continue
+         for scope in due(conn, instant, name, adapter):
+-            code, written, unmatched = None, 0, 0
++            code, detail, refusal, written, unmatched = None, None, None, 0, 0
+             try:
+                 with conn.transaction():
+                     conn.execute(f"SET LOCAL lock_timeout = '{LOCK_WAIT}'")
+@@ -79,8 +79,11 @@ def run_due(conn, get, now=None, *, names=None):
+                     else "DATABASE_ERROR" if isinstance(error, psycopg.Error)
+                     else "INVALID_SOURCE_RESPONSE"
+                 )
++                if isinstance(error, SourceError):
++                    detail = error.detail
++                    refusal = getattr(error, "record_refusal", None)
+             try:
+-                record_run(conn, name, scope, instant, code, written, unmatched)
++                record_run(conn, name, scope, instant, code, written, unmatched, detail, refusal=refusal)
+             except psycopg.Error:
+                 # A status that cannot be written must not stop the other scopes.
+                 code = code or "STATUS_NOT_RECORDED"
+@@ -88,7 +91,7 @@ def run_due(conn, get, now=None, *, names=None):
+     return results
+ 
+ 
+-def record_run(conn, name, scope, instant, code, written, unmatched):
++def record_run(conn, name, scope, instant, code, written, unmatched, detail=None, *, refusal=None):
+     with conn.transaction():
+         conn.execute(
+             """INSERT INTO ops.source_runs(source, scope, last_attempt_at, last_success_at, status, error_code, rows_written, unmatched, updated_at)
+@@ -99,9 +102,24 @@ def record_run(conn, name, scope, instant, code, written, unmatched):
+                  unmatched=EXCLUDED.unmatched, updated_at=now()""",
+             (name, scope, instant, None if code else instant, "error" if code else "ok", code, written, unmatched),
+         )
++        if code and detail:
++            # What a refused snapshot would have changed (snapshot.py): the scope's status says that it
++            # failed, this says which matches.
++            failure(conn, code, f"{name}:{scope}: {detail}")
++        if refusal:
++            refusal(conn)
++
++
++def failure(conn, code, message, edition=None):
++    """One ops.parse_failures row: a source response that was not written (its code and why)."""
++    conn.execute("INSERT INTO ops.parse_failures(competition_season_id, error_code, message, at) VALUES (%s,%s,%s,now())",
++                 (edition, code, message[:2000]))
+ 
+ 
+ class SourceError(RuntimeError):
+-    def __init__(self, code):
++    """A source answer that is not written; `detail` (optional) names what it would have changed."""
++
++    def __init__(self, code, detail=None):
+         super().__init__(code)
+         self.code = code
++        self.detail = detail
+diff --git a/backend/vega/sources/cup_periods.py b/backend/vega/sources/cup_periods.py
+new file mode 100644
+index 0000000000..db05ddb958
+--- /dev/null
++++ b/backend/vega/sources/cup_periods.py
+@@ -0,0 +1,141 @@
++"""Typed OpenLigaDB DFB-Pokal periods. Other sources keep their own conventions."""
++from hashlib import sha256
++import json
++from pathlib import Path
++
++from psycopg.types.json import Jsonb
++
++from . import SourceError
++
++LEDGER_BYTES = Path(__file__).with_name("dfb_pokal_periods.json").read_bytes()
++DECISIONS = json.loads(LEDGER_BYTES)["decisions"]
++LEDGER_SHA256 = sha256(LEDGER_BYTES).hexdigest()
++DFB_SEASONS = {"2025/2026": (3, "Unknown", "Nachspielzeit"),
++               "2026/2027": (4, "AfterExtraTime", "Verlängerung")}
++TYPES = {
++    (1, "HalfTime", "Halbzeit"): "ht",
++    (2, "After90Minutes", "Endergebnis"): "ft",
++    (5, "AfterPenalties", "Elfmeterschießen"): "p",
++}
++COLUMNS = {"final": "score", "ft": "score_90", "ht": "score_ht", "et": "score_et", "p": "penalty_score"}
++
++
++def applies(kind, competition, season):
++    return kind == "openligadb" and competition == "germany-cup" and season in DFB_SEASONS
++
++
++def typed_results(season, key, raw):
++    if not isinstance(raw, list):
++        raise SourceError("INVALID_PERIODS", f"{key}: missing matchResults")
++    parts = {}
++    for result in raw:
++        if not isinstance(result, dict):
++            raise SourceError("INVALID_PERIODS", f"{key}: invalid result row")
++        kind = (result.get("resultTypeID"), result.get("resultTypeKind"), result.get("resultName"))
++        home, away = result.get("pointsTeam1"), result.get("pointsTeam2")
++        if type(kind[0]) is not int or not all(isinstance(s, str) for s in kind[1:]):
++            raise SourceError("INVALID_PERIODS", f"{key}: malformed result type")
++        label = "et" if kind == DFB_SEASONS[season] else TYPES.get(kind)
++        if label is None or not all(type(p) is int and 0 <= p <= 32767 for p in (home, away)):
++            raise SourceError("INVALID_PERIODS", f"{key}: unknown result type or invalid points {kind}")
++        pair = [home, away]
++        if label in parts and parts[label] != pair:
++            raise SourceError("INVALID_PERIODS", f"{key}: contradictory {label} rows")
++        parts[label] = pair
++    return parts
++
++
++def read(season, key, match):
++    parts = typed_results(season, key, match.get("results"))
++    decision = DECISIONS.get(key)
++    if decision:
++        if (season != decision["edition"] or match.get("date") != decision["date"]
++                or [match.get("homeId"), match.get("awayId")] != decision["sides"]
++                or match.get("status") != "finished"):
++            raise SourceError("PERIODS_CONFLICT", f"{key}: attested edition, sides, date or status changed")
++        official, observed = decision["official"], decision["observed"]
++        for label in COLUMNS.keys() - {"final"}:
++            if parts.get(label) not in (observed.get(label), official.get(label)):
++                raise SourceError("PERIODS_CONFLICT", f"{key}: {label} differs from native and DFB pairs")
++        # A converged 90-minute row (79584) can temporarily leave the old reader with
++        # no ET row and an incorrect final. The scoped attestation proves the actual final.
++        return dict(official, final=official["et"])
++    if match.get("status") != "finished":
++        return {}
++    ft, ht, et, shootout = (parts.get(k) for k in ("ft", "ht", "et", "p"))
++    final = et or ft
++    if final is None:
++        raise SourceError("PERIODS_UNREVIEWED", f"{key}: no playing result")
++    if final != match.get("score") or ht and any(a > b for a, b in zip(ht, final)):
++        raise SourceError("INVALID_PERIODS", f"{key}: playing result or half-time inconsistent")
++    kicks = None
++    if shootout:
++        if not et or et[0] != et[1] or shootout[0] == shootout[1] or any(a < b for a, b in zip(shootout, et)):
++            raise SourceError("PERIODS_UNREVIEWED", f"{key}: unproved cumulative shoot-out")
++        kicks = [a - b for a, b in zip(shootout, et)]
++    # For an unattested ET match, type 2 has no reliable interpretation as the 90-minute score.
++    return {"final": final, "ht": ht, "et": et, "p": kicks}
++
++
++def score_columns(parts):
++    return {f"{side}_{column}": parts[label][index] if parts.get(label) is not None else None
++            for label, column in COLUMNS.items() for index, side in enumerate(("home", "away"))}
++
++
++def guard(conn, provider, before, rows):
++    keys = {m[k] for _, m in rows for k in ("home_key", "away_key")}
++    bindings = dict(conn.execute(
++        "SELECT provider_key, entity_id FROM core.provider_ids WHERE entity_type='team' AND provider=%s AND provider_key=ANY(%s)",
++        (provider, list(keys)),
++    ).fetchall())
++    for key, new in rows:
++        old = before.get(key)
++        if not old or old["status"] != "finished":
++            continue
++        # Preserve the exact route's side identity. An alias already merged by the identity
++        # workflow can keep its published canonical id when it agrees with the provider binding.
++        for side in ("home", "away"):
++            previous = old[f"{side}_team_id"]
++            bound = bindings.get(new[f"{side}_key"])
++            if bound != previous:
++                merged = None if bound is None else conn.execute(
++                    "SELECT merged_into FROM core.teams WHERE id=%s", (bound,),
++                ).fetchone()
++                if not merged or merged[0] != previous:
++                    raise SourceError("PERIODS_CONFLICT", f"{key}: {side} identity changed")
++                new[f"{side}_existing_id"] = previous
++        if new["date"] != old["match_date"]:
++            raise SourceError("PERIODS_CONFLICT", f"{key}: match date changed")
++        decision = DECISIONS.get(key)
++        for label, column in COLUMNS.items():
++            frozen = [old[f"{side}_{column}"] for side in ("home", "away")]
++            candidate = [new[f"{side}_{column}"] for side in ("home", "away")]
++            # Only one of the ledger's known historical pre-images may change. An ET marker
++            # that was absent can be added, but an existing phase cannot be erased or guessed.
++            if frozen == [None, None] or frozen == candidate:
++                continue
++            if decision and label == "p" and frozen == decision["observed"].get(label):
++                continue
++            if decision and label in ("ht", "ft", "et") and frozen == decision["observed"].get(label):
++                continue
++            raise SourceError("PERIODS_CONFLICT", f"{key}: previously accepted {label} would change")
++
++
++def record(conn, scope, now, observation, status, code="", detail=None):
++    conn.execute(
++        """INSERT INTO ops.dfb_period_observations
++           (scope,source_sha256,ledger_sha256,status,code,observed_at,observation,detail)
++           VALUES (%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING""",
++        (scope, observation["sourceSha256"], LEDGER_SHA256, status, code, now, Jsonb(observation), detail),
++    )
++
++
++class Refusal(SourceError):
++    def __init__(self, error, scope, now, observation):
++        super().__init__(error.code, error.detail)
++        self.scope = scope
++        self.now = now
++        self.observation = observation
++
++    def record_refusal(self, conn):
++        record(conn, self.scope, self.now, self.observation, "refused", self.code, self.detail)
+diff --git a/backend/vega/sources/cups.py b/backend/vega/sources/cups.py
+index 4d48ac908d..b9ce32815b 100644
+--- a/backend/vega/sources/cups.py
++++ b/backend/vega/sources/cups.py
+@@ -3,15 +3,18 @@ source projections (scripts/source-projections, through backend/sources/bridge.m
+ editions main refreshes (scripts/aws_refresh_sources.mjs), written as typed matches.
+ 
+ A source answer that is not 200 keeps the last edition written (main: "une source
+-temporairement indisponible ne remplace pas son dernier instantané valide").
++temporairement indisponible ne remplace pas son dernier instantané valide"), and so does a 200
++that would drop or unplay a result already held, or whose scores cannot be read (snapshot.py,
++FAILURE_MODES.md §19).
+ """
+ 
+ from datetime import timedelta
+ import hashlib
+ import json
++import re
+ from urllib.parse import urlencode
+ 
+-from . import SourceError
++from . import SourceError, cup_periods, snapshot
+ from ..seasons import sporting_season
+ from ..store import Store
+ 
+@@ -69,19 +72,66 @@ def _pair(value):
+     return value if isinstance(value, list) and len(value) == 2 and all(isinstance(v, int) and not isinstance(v, bool) and v >= 0 for v in value) else None
+ 
+ 
++# The version of what match_rows stores: an edition's digest is that of its rows under this version,
++# so a reader that stores something else writes every edition again, once (FAILURE_MODES.md §19).
++CUP_ROWS_VERSION = "cup-rows-v2"
++SCORE_PARTS = ("ft", "ht", "et", "p")
++CANCELED = ("canceled", "cancelled")
++TOURS_AWARD = "france-cup:2024/2025:2024-12-21|Tours FC|FC Lorient|"
++CUP_PUBLICATION = {"club-world-cup", "world-cup-history", "france-cup"}
++
++
++def score_parts(score):
++    """An OpenFootball score as {part: [home, away]} ({} without a result).
++
++    worldcup.json writes a full-time result as {"ft": [2, 1], "ht": […]} or, in most editions
++    from 1950 to 2014 and seven matches of 2022, as [2, 1]: the same full-time result.
++    shared/openfootball-history.js openFootballScore reads it alike. Anything else is
++    INVALID_SCORE: the edition is not written."""
++    if score is None:
++        return {}
++    parts = {"ft": score} if isinstance(score, list) else score
++    if not isinstance(parts, dict) or any(k not in SCORE_PARTS or _pair(v) is None for k, v in parts.items()):
++        raise SourceError("INVALID_SCORE")
++    if parts and "ft" not in parts and "et" not in parts:
++        raise SourceError("INVALID_SCORE")  # a half time or a shoot-out without the match's score
++    return {k: list(v) for k, v in parts.items()}
++
++
++def _open_cup_status(m, parts, key):
++    status = m.get("status")
++    if status is None:
++        return "finished" if parts else "not_started"
++    if status == "awarded" and key == TOURS_AWARD and parts == {"ft": [0, 3]}:
++        return "awarded"
++    if status in CANCELED and not parts:
++        return "canceled"
++    raise SourceError("INVALID_STATUS")
++
++
++def _number(value):
++    return value if isinstance(value, int) and not isinstance(value, bool) and value > 0 else None
++
++
+ def match_rows(kind, competition, season, body):
+     """(provider key, row) per source match, in source order."""
+     out = []
++    typed_dfb = cup_periods.applies(kind, competition, season)
+     for position, m in enumerate(body.get("matches") or []):
+         if kind == "open-cups":
+-            score = m.get("score") if isinstance(m.get("score"), dict) else {}
+-            ft, ht, et, p = (_pair(score.get(k)) for k in ("ft", "ht", "et", "p"))
++            parts = score_parts(m.get("score"))
++            ft, ht, et, p = (parts.get(k) for k in SCORE_PARTS)
+             final = et or ft
+             key = f"{competition}:{season}:{m.get('date') or ''}|{m.get('team1') or ''}|{m.get('team2') or ''}|{m.get('num') or ''}"
++            status = _open_cup_status(m, parts, key)
++            if status == "awarded" and m.get("sourceStatus") != "[awarded]":
++                raise SourceError("INVALID_STATUS")
++            if status == "awarded":
++                ft = ht = et = p = None  # the administrative tally is not a phase played on the field
+             row = {
+                 "home": m.get("team1"), "away": m.get("team2"), "home_key": f"name:{m.get('team1')}", "away_key": f"name:{m.get('team2')}",
+-                "date": m.get("date") or None, "round": m.get("round") or None, "group": m.get("group"), "number": m.get("num"),
+-                "status": "finished" if final else "not_started",
++                "date": m.get("date") or None, "round": m.get("round") or None, "group": m.get("group"), "number": _number(m.get("num")),
++                "status": status,
+                 "home_score": final and final[0], "away_score": final and final[1],
+                 "home_score_90": ft[0] if ft and et else None, "away_score_90": ft[1] if ft and et else None,
+                 "home_score_ht": ht and ht[0], "away_score_ht": ht and ht[1],
+@@ -90,6 +140,8 @@ def match_rows(kind, competition, season, body):
+             }
+         else:
+             score, penalties = _pair(m.get("score")), _pair(m.get("penalties"))
++            if not typed_dfb and (m.get("status") == "finished" and score is None or m.get("penalties") is not None and penalties is None):
++                raise SourceError("INVALID_SCORE")  # a finished match without its score, or unreadable penalties
+             extra = "après prolongation" in (m.get("notes") or [])
+             row = {
+                 "home": m.get("home"), "away": m.get("away"), "home_key": str(m.get("homeId")), "away_key": str(m.get("awayId")),
+@@ -104,6 +156,8 @@ def match_rows(kind, competition, season, body):
+                 "is_neutral": m["neutral"] if isinstance(m.get("neutral"), bool) else None,
+             }
+             key = str(m["key"]).split(":", 1)[1]
++            if typed_dfb:
++                row.update(cup_periods.score_columns(cup_periods.read(season, key, m)))
+         out.append((key, dict(row, position=position)))
+     return out
+ 
+@@ -129,64 +183,129 @@ def _team(conn, provider, key, name):
+     return team
+ 
+ 
++def unique_rows(rows):
++    """One row per provider key, in source order. Rows sharing a key (two « N.N. » fixtures of a day)
++    are one match, written from the last of them, as the baseline writer did."""
++    last = {key: row for key, row in rows}
++    return [(key, row) for key, row in rows if last[key] is row]
++
++
++def rows_digest(name, rows):
++    """The digest of what an edition stores (CUP_ROWS_VERSION, its name, its rows in source order)."""
++    return hashlib.sha256(json.dumps({"version": CUP_ROWS_VERSION, "name": name, "rows": rows}, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
++
++
++def _round(conn, edition, name):
++    found = conn.execute("SELECT id FROM core.rounds WHERE competition_season_id=%s AND name=%s", (edition, name)).fetchone()
++    return found[0] if found else conn.execute("INSERT INTO core.rounds(competition_season_id, name) VALUES (%s,%s) RETURNING id", (edition, name)).fetchone()[0]
++
++
++def _guard_open_cup(before, rows, cup_key, reviewed_halves):
++    """Keep the already published phase/award when a later source body sheds a fact."""
++    statuses = {key: ("finished" if key == TOURS_AWARD and m["status"] == "awarded"
++                     and before.get(key, {}).get("home_score") == 0 and before[key].get("away_score") == 3
++                     else m["status"]) for key, m in rows}
++    snapshot.guard("openfootball", before, statuses, cup_key)
++    after = dict(rows)
++    for key, old in before.items():
++        new = after.get(key)
++        if old["status"] == "awarded" and (new is None or new["status"] != "awarded"):
++            raise SourceError("PERIODS_CONFLICT", f"{key}: the accepted award would be removed")
++        if not new or new["status"] == "awarded":
++            continue
++        for part in ("score_ht", "score_et", "score_90", "penalty_score"):
++            prior = [old[f"{side}_{part}"] for side in ("home", "away")]
++            next_pair = [new[f"{side}_{part}"] for side in ("home", "away")]
++            if prior == [None, None] or prior == next_pair:
++                continue
++            if part == "score_ht" and reviewed_halves.get(key) == prior:
++                continue
++            raise SourceError("PERIODS_CONFLICT", f"{key}: the known {part} would change")
++
++
++
+ def save(conn, kind, competition, season, body, now):
++    """Write one edition from its source body; returns the matches added, changed or removed.
++
++    Refused (SourceError, nothing written): unreadable scores or statuses, and a body that would
++    drop or unplay a result the base holds (snapshot.guard)."""
+     provider = PROVIDER[kind]
+     name = body.get("name") or competition
++    cup_key = f"{kind}:{competition}:{season}"
+     label = sporting_season(season, league_name=TOURNAMENTS.get(competition))
+     if label is None:
+         raise SourceError("INVALID_SEASON")
++    typed_dfb = cup_periods.applies(kind, competition, season)
++    if typed_dfb:
++        conn.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", (cup_key,))
++    source_rows = match_rows(kind, competition, season, body)
++    rows = unique_rows(source_rows)
++    if typed_dfb and len(source_rows) != len(rows):
++        raise SourceError("INVALID_PERIODS", f"{cup_key}: duplicate match keys")
++    digest = rows_digest(body.get("name"), rows)
++    stored = conn.execute("SELECT id, cup_digest, cup_name FROM core.competition_seasons WHERE cup_key=%s", (cup_key,)).fetchone()
++    before = {}
++    if stored is None or stored[1] != digest:
++        before = snapshot.stored(conn, provider, stored and stored[0])
++        if kind == "open-cups" and competition in CUP_PUBLICATION:
++            reviewed_halves = {
++                f"{competition}:{season}:{m.get('date') or ''}|{m.get('team1') or ''}|{m.get('team2') or ''}|{m.get('num') or ''}":
++                m["attestedHalf"]["before"] for m in body["matches"] if m.get("attestedHalf")
++            } if competition == "world-cup-history" else {}
++            _guard_open_cup(before, rows, cup_key, reviewed_halves)
++        else:
++            snapshot.guard(provider, before, {key: m["status"] for key, m in rows}, cup_key)
++        if typed_dfb:
++            cup_periods.guard(conn, provider, before, rows)
+     season_id = Store(conn).season(label)
+     family = f"cup:{kind}:{competition}"
+     row = conn.execute("SELECT entity_id FROM core.provider_ids WHERE entity_type='competition' AND provider='vega' AND provider_key=%s", (family,)).fetchone()
+     comp = row[0] if row else conn.execute("INSERT INTO core.competitions(name) VALUES (%s) RETURNING id", (name,)).fetchone()[0]
+     if not row:
+         conn.execute("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('competition','vega',%s,%s)", (family, comp))
+-    digest = hashlib.sha256(json.dumps([body.get("name"), body.get("matches")], sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+     source = body.get("source") or {}
+-    edition, changed = conn.execute(
++    # The read is accepted: its time, the edition's name and links (cup_checked_at: the last accepted read).
++    edition = conn.execute(
+         """INSERT INTO core.competition_seasons(competition_id, season_id, native_label, cup_key, cup_name, cup_source_url, cup_data_url,
+-             cup_digest, cup_checked_at, cup_updated_at)
+-           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
++             cup_checked_at, cup_updated_at)
++           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            ON CONFLICT (cup_key) DO UPDATE SET cup_name=EXCLUDED.cup_name, cup_source_url=EXCLUDED.cup_source_url,
+-             cup_data_url=EXCLUDED.cup_data_url, cup_checked_at=EXCLUDED.cup_checked_at,
+-             cup_updated_at=CASE WHEN core.competition_seasons.cup_digest IS DISTINCT FROM EXCLUDED.cup_digest
+-                                 THEN EXCLUDED.cup_updated_at ELSE core.competition_seasons.cup_updated_at END,
+-             cup_digest=EXCLUDED.cup_digest, updated_at=now()
+-           RETURNING id, cup_updated_at = %s""",
+-        (comp, season_id, season, f"{kind}:{competition}:{season}", body.get("name"), source.get("url"), source.get("dataUrl"),
+-         digest, now, now, now),
+-    ).fetchone()
+-    if not changed:
+-        return 0
+-    rows = match_rows(kind, competition, season, body)
+-    keep = []
++             cup_data_url=EXCLUDED.cup_data_url, cup_checked_at=EXCLUDED.cup_checked_at, updated_at=now()
++           RETURNING id""",
++        (comp, season_id, season, cup_key, body.get("name"), source.get("url"), source.get("dataUrl"), now, now),
++    ).fetchone()[0]
++    if stored is not None and stored[1] == digest:
++        return 0  # the same rows: nothing written again
++    elsewhere = snapshot.elsewhere(conn, provider, edition, [key for key, _ in rows if key not in before])
++    if typed_dfb and elsewhere:
++        raise SourceError("PERIODS_CONFLICT", f"match keys already bound to another edition: {', '.join(sorted(elsewhere))}")
++    before.update(elsewhere)
++    changes, keep = 0, set()
+     for key, m in rows:
+-        found = conn.execute("SELECT entity_id FROM core.provider_ids WHERE entity_type='match' AND provider=%s AND provider_key=%s", (provider, key)).fetchone()
+-        home = _team(conn, provider, m["home_key"], m["home"]) if m["home"] else None
+-        away = _team(conn, provider, m["away_key"], m["away"]) if m["away"] else None
+-        round_id = conn.execute(
+-            """INSERT INTO core.rounds(competition_season_id, name) VALUES (%s,%s)
+-               ON CONFLICT (competition_season_id, name) DO UPDATE SET name=EXCLUDED.name RETURNING id""",
+-            (edition, m["round"]),
+-        ).fetchone()[0] if m["round"] else None
++        home = m.get("home_existing_id") or (_team(conn, provider, m["home_key"], m["home"]) if m["home"] else None)
++        away = m.get("away_existing_id") or (_team(conn, provider, m["away_key"], m["away"]) if m["away"] else None)
+         values = {k: m[k] for k in ("status", "home_score", "away_score", "home_score_90", "away_score_90", "home_score_ht",
+                                      "away_score_ht", "home_score_et", "away_score_et", "home_penalty_score", "away_penalty_score", "is_neutral")}
+         values.update(competition_season_id=edition, season_id=season_id, match_date=m["date"], home_team_id=home, away_team_id=away,
+                       home_team_name=m["home"] or None, away_team_name=m["away"] or None,
+-                      round_id=round_id, group_name=m["group"], match_number=m["number"], archive_position=m["position"], source=provider)
+-        columns = list(values)
+-        if found:
+-            conn.execute(f"UPDATE core.matches SET {', '.join(f'{c}=%s' for c in columns)}, revision=revision+1, updated_at=now() WHERE id=%s",
+-                         [values[c] for c in columns] + [found[0]])
+-            mid = found[0]
+-        else:
+-            mid = conn.execute(f"INSERT INTO core.matches({', '.join(columns)}) VALUES ({', '.join(['%s'] * len(columns))}) RETURNING id",
+-                               [values[c] for c in columns]).fetchone()[0]
+-            conn.execute("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('match',%s,%s,%s)", (provider, key, mid))
+-        keep.append(mid)
+-    conn.execute("DELETE FROM core.matches WHERE competition_season_id=%s AND NOT id = ANY(%s)", (edition, keep))
+-    conn.execute("DELETE FROM core.provider_ids p WHERE p.entity_type='match' AND p.provider=%s AND NOT EXISTS (SELECT 1 FROM core.matches m WHERE m.id=p.entity_id)", (provider,))
+-    return len(rows)
++                      round_id=_round(conn, edition, m["round"]) if m["round"] else None, group_name=m["group"],
++                      match_number=m["number"], archive_position=m["position"], source=provider)
++        _, outcome = snapshot.write(conn, provider, key, values, before.get(key))
++        changes += outcome in ("inserted", "updated")
++        keep.add(key)
++    changes += snapshot.remove(conn, provider, before, keep)
++    renamed = stored is not None and stored[2] != body.get("name")
++    conn.execute(
++        "UPDATE core.competition_seasons SET cup_digest=%s, cup_updated_at=CASE WHEN %s THEN %s ELSE cup_updated_at END WHERE id=%s",
++        (digest, bool(changes) or renamed, now, edition),
++    )
++    if (changes or renamed) and (typed_dfb or kind == "open-cups" and competition in CUP_PUBLICATION):
++        conn.execute(
++            """INSERT INTO ops.resource_versions(resource_kind,resource_id) VALUES ('competition_season',%s)
++               ON CONFLICT (resource_kind,resource_id) DO UPDATE
++                 SET version=ops.resource_versions.version+1, updated_at=now()""", (edition,),
++        )
++    return changes
+ 
+ 
+ def run(conn, get, scope, now):
+@@ -195,9 +314,23 @@ def run(conn, get, scope, now):
+         raise ValueError(scope)
+     query = {"competition": competition, "season": season}
+     answer = bridge("projection", kind, urlencode(query)) or {}
+-    if answer.get("status") != 200 or not isinstance(answer.get("body"), dict):
+-        raise SourceError(f"HTTP_{answer.get('status') or 'ERROR'}")
+-    return save(conn, kind, competition, season, answer["body"], now), 0
++    body = answer.get("body")
++    observation = body.get("phaseObservation") if isinstance(body, dict) and cup_periods.applies(kind, competition, season) else None
++    try:
++        if answer.get("status") != 200 or not isinstance(body, dict):
++            # The projection names an unreadable body, else its HTTP status.
++            code = body.get("code") if isinstance(body, dict) else None
++            detail = body.get("detail") if observation else None
++            raise SourceError(code if isinstance(code, str) and re.fullmatch(r"[A-Z][A-Z0-9_]{0,63}", code)
++                              else f"HTTP_{answer.get('status') or 'ERROR'}", detail)
++        written = save(conn, kind, competition, season, body, now)
++    except SourceError as error:
++        if observation:
++            raise cup_periods.Refusal(error, scope, now, observation) from error
++        raise
++    if observation:
++        cup_periods.record(conn, scope, now, observation, "accepted")
++    return written, 0
+ 
+ 
+ class For:
+diff --git a/backend/vega/sources/curated.py b/backend/vega/sources/curated.py
+index 13553ae68b..5678a92aab 100644
+--- a/backend/vega/sources/curated.py
++++ b/backend/vega/sources/curated.py
+@@ -297,37 +297,60 @@ def country_names(conn):
+ 
+ 
+ # Site keys of shared/cup-logos.json -> the Vega key of the cup-source competition.
+-CUP_FAMILY = {"open-cup": "cup:open-cups:", "openligadb": "cup:openligadb:"}
++CUP_FAMILY = {"open-cup": "cup:open-cups:", "openligadb": "cup:openligadb:", "open-matchday": "cup:open-matchday:"}
++# The same cup under another source's key, which takes the logo of its site key: the site shows each
++# as an edition of that cup (cup-archives.js NATIONAL_CUP_ARCHIVES and GERMAN_CUP_FOLDER; cup-catalog.js,
++# the Nations League « Ligues A à D » of OpenLigaDB and International Results). Never by a name (VI-27).
++CUP_LOGO_ALSO = {
++    "open-matchday:AUT_CUP_ofb-cup": ("cup:open-cups:austria-cup-archive",),
++    "open-matchday:GER_CUP_dfb-pokal": ("cup:open-cups:germany-cup-archive", "cup:openligadb:germany-cup"),
++    "open-matchday:ENG_CUP_fa-cup": ("cup:open-cups:fa-cup-archive",),
++    "open-matchday:ENG_CUP_efl-cup": ("cup:open-cups:efl-cup-archive",),
++    "open-matchday:ESP_CUP_copa-del-rey": ("cup:open-cups:copa-del-rey-archive",),
++    "open-matchday:ITA_CUP_coppa-italia": ("cup:open-cups:coppa-italia-archive",),
++    "open-matchday:NED_CUP_knvb-beker": ("cup:open-cups:knvb-beker-archive",),
++    "open-matchday:POR_CUP_taca-de-portugal": ("cup:open-cups:portugal-cup-archive",),
++    "open-matchday:SUI_CUP_swiss-cup": ("cup:open-cups:swiss-cup-archive",),
++    "openligadb:nations-league": ("cup:nations-results:nations-league",),
++}
+ 
+ 
+ def cup_logos(conn):
+     """Competition logos of shared/cup-logos.json (main, SportScore): the logo of a
+-    cup-source competition, and of a PitchAPI one that has none."""
++    cup-source competition, of the same cup under another source's key (CUP_LOGO_ALSO), and of
++    a PitchAPI competition that has none. A competition not in the base yet counts unmatched."""
+     written = unmatched = 0
+     for key, logo in sorted(_shared("cup-logos.json")["logos"].items()):
+         family, _, name = key.partition(":")
+         if key.startswith("l_"):
+-            ref = ("pitchapi", key)
++            refs = [("pitchapi", key)]
+         elif family in CUP_FAMILY:
+-            ref = ("vega", CUP_FAMILY[family] + name)
++            refs = [("vega", CUP_FAMILY[family] + name), *(("vega", also) for also in CUP_LOGO_ALSO.get(key, ()))]
+         else:
+-            continue  # open-matchday: main's frozen catalogue
+-        row = conn.execute(
+-            "SELECT c.id, c.logo_asset_id FROM core.provider_ids p JOIN core.competitions c ON c.id = p.entity_id WHERE p.entity_type = 'competition' AND p.provider = %s AND p.provider_key = %s",
+-            ref,
+-        ).fetchone()
+-        if not row or not logo.get("imageUrl"):
+-            unmatched += 1
+-            continue
+-        if ref[0] == "pitchapi" and row[1] is not None:
++            unmatched += 1  # a site key no source family names (test_source_snapshots L5)
+             continue
+-        asset = conn.execute(
+-            """INSERT INTO core.assets(kind, source_url, author) VALUES ('logo', %s, %s)
+-               ON CONFLICT (source_url) DO UPDATE SET author = EXCLUDED.author RETURNING id""",
+-            (logo["imageUrl"], logo.get("source")),
+-        ).fetchone()[0]
+-        conn.execute("UPDATE core.competitions SET logo_asset_id = %s, updated_at = now() WHERE id = %s AND logo_asset_id IS DISTINCT FROM %s", (asset, row[0], asset))
+-        written += 1
++        asset = None
++        for ref in refs:
++            row = conn.execute(
++                "SELECT c.id, c.logo_asset_id FROM core.provider_ids p JOIN core.competitions c ON c.id = p.entity_id WHERE p.entity_type = 'competition' AND p.provider = %s AND p.provider_key = %s",
++                ref,
++            ).fetchone()
++            if not row or not logo.get("imageUrl"):
++                unmatched += 1
++                continue
++            if (ref[0] == "pitchapi" and row[1] is not None
++                    or conn.execute("SELECT core.family_artwork_requires_proof(%s)", (row[0],)).fetchone()[0]):
++                continue
++            if asset is None:
++                # One asset per image, whatever the number of competitions it is the logo of.
++                found = conn.execute("SELECT id FROM core.assets WHERE source_url = %s", (logo["imageUrl"],)).fetchone()
++                asset = found[0] if found else conn.execute(
++                    "INSERT INTO core.assets(kind, source_url, author) VALUES ('logo', %s, %s) RETURNING id", (logo["imageUrl"], logo.get("source"))
++                ).fetchone()[0]
++                conn.execute("UPDATE core.assets SET author = %s, updated_at = now() WHERE id = %s AND author IS DISTINCT FROM %s",
++                             (logo.get("source"), asset, logo.get("source")))
++            conn.execute("UPDATE core.competitions SET logo_asset_id = %s, updated_at = now() WHERE id = %s AND logo_asset_id IS DISTINCT FROM %s", (asset, row[0], asset))
++            written += 1
+     return written, unmatched
+ 
+ 
+diff --git a/backend/vega/sources/dfb_pokal_periods.json b/backend/vega/sources/dfb_pokal_periods.json
+new file mode 100644
+index 0000000000..8c007119a3
+--- /dev/null
++++ b/backend/vega/sources/dfb_pokal_periods.json
+@@ -0,0 +1,1735 @@
++{
++  "calendar_sha256": "f5d836bcf2d817dc3b82c0a2bff3d09fba94d6a59e0f8304995e1766c30884e7",
++  "decisions": {
++    "77179": {
++      "date": "2025-08-16",
++      "dfb_id": "2397676",
++      "dfb_sha256": "e1f23a976c1013521ab3e2a2a9519a350c051d95c2f0249e2e81a7943e48241a",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/fk-pirmasens-hamburger-sv-2397676",
++      "edition": "2025/2026",
++      "native_results": [
++        {
++          "pointsTeam1": 0,
++          "pointsTeam2": 0,
++          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
++          "resultID": 118420,
++          "resultName": "Halbzeit",
++          "resultOrderID": 1,
++          "resultTypeID": 1,
++          "resultTypeKind": "HalfTime"
++        },
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 2,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 118421,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        },
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 2,
++          "resultDescription": "Ergebnis nach Nachspielzeit",
++          "resultID": 118424,
++          "resultName": "Nachspielzeit",
++          "resultOrderID": 3,
++          "resultTypeID": 3,
++          "resultTypeKind": "Unknown"
++        }
++      ],
++      "observed": {
++        "et": [
++          1,
++          2
++        ],
++        "ft": [
++          1,
++          2
++        ],
++        "ht": [
++          0,
++          0
++        ]
++      },
++      "official": {
++        "et": [
++          1,
++          2
++        ],
++        "ft": [
++          1,
++          1
++        ],
++        "ht": [
++          0,
++          0
++        ],
++        "p": null
++      },
++      "provider": "openligadb",
++      "sides": [
++        "1058",
++        "100"
++      ]
++    },
++    "77184": {
++      "date": "2025-08-26",
++      "dfb_id": "2397670",
++      "dfb_sha256": "01b1138349552d90f324ed7edb9959c7694d5142330376c59b04b783d23775bf",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/eintracht-braunschweig-vfb-stuttgart-2397670",
++      "edition": "2025/2026",
++      "native_results": [
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
++          "resultID": 118568,
++          "resultName": "Halbzeit",
++          "resultOrderID": 1,
++          "resultTypeID": 1,
++          "resultTypeKind": "HalfTime"
++        },
++        {
++          "pointsTeam1": 3,
++          "pointsTeam2": 4,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 118569,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        },
++        {
++          "pointsTeam1": 4,
++          "pointsTeam2": 4,
++          "resultDescription": "Ergebnis nach Nachspielzeit",
++          "resultID": 118570,
++          "resultName": "Nachspielzeit",
++          "resultOrderID": 3,
++          "resultTypeID": 3,
++          "resultTypeKind": "Unknown"
++        },
++        {
++          "pointsTeam1": 11,
++          "pointsTeam2": 12,
++          "resultDescription": "Ergebnis nach Elfmeterschießen",
++          "resultID": 118571,
++          "resultName": "Elfmeterschießen",
++          "resultOrderID": 4,
++          "resultTypeID": 5,
++          "resultTypeKind": "AfterPenalties"
++        }
++      ],
++      "observed": {
++        "et": [
++          4,
++          4
++        ],
++        "ft": [
++          3,
++          4
++        ],
++        "ht": [
++          1,
++          1
++        ],
++        "p": [
++          11,
++          12
++        ]
++      },
++      "official": {
++        "et": [
++          4,
++          4
++        ],
++        "ft": [
++          3,
++          3
++        ],
++        "ht": [
++          1,
++          1
++        ],
++        "p": [
++          7,
++          8
++        ]
++      },
++      "provider": "openligadb",
++      "sides": [
++        "74",
++        "16"
++      ]
++    },
++    "77186": {
++      "date": "2025-08-16",
++      "dfb_id": "2397668",
++      "dfb_sha256": "77198d5f142763599eaf502152287521d6db1303fa5d27f50d0187e23e8880af",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/fv-illertissen-1-fc-nuernberg-2397668",
++      "edition": "2025/2026",
++      "native_results": [
++        {
++          "pointsTeam1": 2,
++          "pointsTeam2": 0,
++          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
++          "resultID": 118427,
++          "resultName": "Halbzeit",
++          "resultOrderID": 1,
++          "resultTypeID": 1,
++          "resultTypeKind": "HalfTime"
++        },
++        {
++          "pointsTeam1": 3,
++          "pointsTeam2": 3,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 118428,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        },
++        {
++          "pointsTeam1": 3,
++          "pointsTeam2": 3,
++          "resultDescription": "Ergebnis nach Nachspielzeit",
++          "resultID": 118444,
++          "resultName": "Nachspielzeit",
++          "resultOrderID": 3,
++          "resultTypeID": 3,
++          "resultTypeKind": "Unknown"
++        },
++        {
++          "pointsTeam1": 9,
++          "pointsTeam2": 8,
++          "resultDescription": "Ergebnis nach Elfmeterschießen",
++          "resultID": 118445,
++          "resultName": "Elfmeterschießen",
++          "resultOrderID": 4,
++          "resultTypeID": 5,
++          "resultTypeKind": "AfterPenalties"
++        }
++      ],
++      "observed": {
++        "et": [
++          3,
++          3
++        ],
++        "ft": [
++          3,
++          3
++        ],
++        "ht": [
++          2,
++          0
++        ],
++        "p": [
++          9,
++          8
++        ]
++      },
++      "official": {
++        "et": [
++          3,
++          3
++        ],
++        "ft": [
++          3,
++          3
++        ],
++        "ht": [
++          2,
++          0
++        ],
++        "p": [
++          6,
++          5
++        ]
++      },
++      "provider": "openligadb",
++      "sides": [
++        "2410",
++        "79"
++      ]
++    },
++    "77189": {
++      "date": "2025-08-16",
++      "dfb_id": "2397665",
++      "dfb_sha256": "96a576d52449b869733ce79ce4d927055b58a89b49c024b985bbd3bccffa3676",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/eintracht-norderstedt-fc-st-pauli-2397665",
++      "edition": "2025/2026",
++      "native_results": [
++        {
++          "pointsTeam1": 0,
++          "pointsTeam2": 0,
++          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
++          "resultID": 118429,
++          "resultName": "Halbzeit",
++          "resultOrderID": 1,
++          "resultTypeID": 1,
++          "resultTypeKind": "HalfTime"
++        },
++        {
++          "pointsTeam1": 0,
++          "pointsTeam2": 0,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 118430,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        },
++        {
++          "pointsTeam1": 0,
++          "pointsTeam2": 0,
++          "resultDescription": "Ergebnis nach Nachspielzeit",
++          "resultID": 118447,
++          "resultName": "Nachspielzeit",
++          "resultOrderID": 3,
++          "resultTypeID": 3,
++          "resultTypeKind": "Unknown"
++        },
++        {
++          "pointsTeam1": 2,
++          "pointsTeam2": 3,
++          "resultDescription": "Ergebnis nach Elfmeterschießen",
++          "resultID": 118446,
++          "resultName": "Elfmeterschießen",
++          "resultOrderID": 4,
++          "resultTypeID": 5,
++          "resultTypeKind": "AfterPenalties"
++        }
++      ],
++      "observed": {
++        "et": [
++          0,
++          0
++        ],
++        "ft": [
++          0,
++          0
++        ],
++        "ht": [
++          0,
++          0
++        ],
++        "p": [
++          2,
++          3
++        ]
++      },
++      "official": {
++        "et": [
++          0,
++          0
++        ],
++        "ft": [
++          0,
++          0
++        ],
++        "ht": [
++          0,
++          0
++        ],
++        "p": [
++          2,
++          3
++        ]
++      },
++      "provider": "openligadb",
++      "sides": [
++        "4342",
++        "98"
++      ]
++    },
++    "77190": {
++      "date": "2025-08-16",
++      "dfb_id": "2397664",
++      "dfb_sha256": "5867727076bb332667500b81624b25df60ad2edb8f83eee01f29f643f3357e4d",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/bfc-dynamo-vfl-bochum-2397664",
++      "edition": "2025/2026",
++      "native_results": [
++        {
++          "pointsTeam1": 0,
++          "pointsTeam2": 0,
++          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
++          "resultID": 118422,
++          "resultName": "Halbzeit",
++          "resultOrderID": 1,
++          "resultTypeID": 1,
++          "resultTypeKind": "HalfTime"
++        },
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 3,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 118423,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        },
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 3,
++          "resultDescription": "Ergebnis nach Nachspielzeit",
++          "resultID": 118437,
++          "resultName": "Nachspielzeit",
++          "resultOrderID": 3,
++          "resultTypeID": 3,
++          "resultTypeKind": "Unknown"
++        }
++      ],
++      "observed": {
++        "et": [
++          1,
++          3
++        ],
++        "ft": [
++          1,
++          3
++        ],
++        "ht": [
++          0,
++          0
++        ]
++      },
++      "official": {
++        "et": [
++          1,
++          3
++        ],
++        "ft": [
++          1,
++          1
++        ],
++        "ht": [
++          0,
++          0
++        ],
++        "p": null
++      },
++      "provider": "openligadb",
++      "sides": [
++        "1634",
++        "129"
++      ]
++    },
++    "77193": {
++      "date": "2025-08-18",
++      "dfb_id": "2397661",
++      "dfb_sha256": "dfe67f839b628c67e3858101b94ac2d215c16b0a84bb820786603c6ee0c1bbc4",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/preussen-muenster-hertha-bsc-2397661",
++      "edition": "2025/2026",
++      "native_results": [
++        {
++          "pointsTeam1": 0,
++          "pointsTeam2": 0,
++          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
++          "resultID": 118475,
++          "resultName": "Halbzeit",
++          "resultOrderID": 1,
++          "resultTypeID": 1,
++          "resultTypeKind": "HalfTime"
++        },
++        {
++          "pointsTeam1": 0,
++          "pointsTeam2": 0,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 118476,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        },
++        {
++          "pointsTeam1": 0,
++          "pointsTeam2": 0,
++          "resultDescription": "Ergebnis nach Nachspielzeit",
++          "resultID": 127391,
++          "resultName": "Nachspielzeit",
++          "resultOrderID": 3,
++          "resultTypeID": 3,
++          "resultTypeKind": "Unknown"
++        },
++        {
++          "pointsTeam1": 3,
++          "pointsTeam2": 5,
++          "resultDescription": "Ergebnis nach Elfmeterschießen",
++          "resultID": 118479,
++          "resultName": "Elfmeterschießen",
++          "resultOrderID": 4,
++          "resultTypeID": 5,
++          "resultTypeKind": "AfterPenalties"
++        }
++      ],
++      "observed": {
++        "et": [
++          0,
++          0
++        ],
++        "ft": [
++          0,
++          0
++        ],
++        "ht": [
++          0,
++          0
++        ],
++        "p": [
++          3,
++          5
++        ]
++      },
++      "official": {
++        "et": [
++          0,
++          0
++        ],
++        "ft": [
++          0,
++          0
++        ],
++        "ht": [
++          0,
++          0
++        ],
++        "p": [
++          3,
++          5
++        ]
++      },
++      "provider": "openligadb",
++      "sides": [
++        "188",
++        "54"
++      ]
++    },
++    "77201": {
++      "date": "2025-08-17",
++      "dfb_id": "2397653",
++      "dfb_sha256": "a7711d7e3f370f8351ee16cff4470d8296328198db8bb851a0b5dde0229d7208",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/1-fc-lok-leipzig-fc-schalke-04-2397653",
++      "edition": "2025/2026",
++      "native_results": [
++        {
++          "pointsTeam1": 0,
++          "pointsTeam2": 0,
++          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
++          "resultID": 118462,
++          "resultName": "Halbzeit",
++          "resultOrderID": 1,
++          "resultTypeID": 1,
++          "resultTypeKind": "HalfTime"
++        },
++        {
++          "pointsTeam1": 0,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 118463,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        },
++        {
++          "pointsTeam1": 0,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Nachspielzeit",
++          "resultID": 118464,
++          "resultName": "Nachspielzeit",
++          "resultOrderID": 3,
++          "resultTypeID": 3,
++          "resultTypeKind": "Unknown"
++        }
++      ],
++      "observed": {
++        "et": [
++          0,
++          1
++        ],
++        "ft": [
++          0,
++          1
++        ],
++        "ht": [
++          0,
++          0
++        ]
++      },
++      "official": {
++        "et": [
++          0,
++          1
++        ],
++        "ft": [
++          0,
++          0
++        ],
++        "ht": [
++          0,
++          0
++        ],
++        "p": null
++      },
++      "provider": "openligadb",
++      "sides": [
++        "1584",
++        "9"
++      ]
++    },
++    "79584": {
++      "date": "2025-10-29",
++      "dfb_id": "2411109",
++      "dfb_sha256": "d7817324d6b3540403e5346767289464f38def462bef571bd4b4926114b130e4",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/2-runde/1-fc-union-berlin-arminia-bielefeld-2411109",
++      "edition": "2025/2026",
++      "native_results": [
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
++          "resultID": 119938,
++          "resultName": "Halbzeit",
++          "resultOrderID": 1,
++          "resultTypeID": 1,
++          "resultTypeKind": "HalfTime"
++        },
++        {
++          "pointsTeam1": 2,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 119939,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        }
++      ],
++      "observed": {
++        "ft": [
++          2,
++          1
++        ],
++        "ht": [
++          1,
++          1
++        ]
++      },
++      "official": {
++        "et": [
++          2,
++          1
++        ],
++        "ft": [
++          1,
++          1
++        ],
++        "ht": [
++          1,
++          1
++        ],
++        "p": null
++      },
++      "provider": "openligadb",
++      "sides": [
++        "80",
++        "83"
++      ]
++    },
++    "79589": {
++      "date": "2025-10-28",
++      "dfb_id": "2411114",
++      "dfb_sha256": "3d80db111abc71cf016550f4e4cad6b529008a32b11da209c76378eca4736b15",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/2-runde/eintracht-frankfurt-borussia-dortmund-2411114",
++      "edition": "2025/2026",
++      "native_results": [
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 0,
++          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
++          "resultID": 119896,
++          "resultName": "Halbzeit",
++          "resultOrderID": 1,
++          "resultTypeID": 1,
++          "resultTypeKind": "HalfTime"
++        },
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 119897,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        },
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Nachspielzeit",
++          "resultID": 127392,
++          "resultName": "Nachspielzeit",
++          "resultOrderID": 3,
++          "resultTypeID": 3,
++          "resultTypeKind": "Unknown"
++        },
++        {
++          "pointsTeam1": 3,
++          "pointsTeam2": 5,
++          "resultDescription": "Ergebnis nach Elfmeterschießen",
++          "resultID": 120732,
++          "resultName": "Elfmeterschießen",
++          "resultOrderID": 4,
++          "resultTypeID": 5,
++          "resultTypeKind": "AfterPenalties"
++        }
++      ],
++      "observed": {
++        "et": [
++          1,
++          1
++        ],
++        "ft": [
++          1,
++          1
++        ],
++        "ht": [
++          1,
++          0
++        ],
++        "p": [
++          3,
++          5
++        ]
++      },
++      "official": {
++        "et": [
++          1,
++          1
++        ],
++        "ft": [
++          1,
++          1
++        ],
++        "ht": [
++          1,
++          0
++        ],
++        "p": [
++          2,
++          4
++        ]
++      },
++      "provider": "openligadb",
++      "sides": [
++        "91",
++        "7"
++      ]
++    },
++    "79593": {
++      "date": "2025-10-29",
++      "dfb_id": "2411118",
++      "dfb_sha256": "2d258b6e874b54d1d5aa21e0f6eff54f59219fd2fb00b36d146f59fcd1a0a200",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/2-runde/sc-paderborn-07-bayer-leverkusen-2411118",
++      "edition": "2025/2026",
++      "native_results": [
++        {
++          "pointsTeam1": 0,
++          "pointsTeam2": 0,
++          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
++          "resultID": 119919,
++          "resultName": "Halbzeit",
++          "resultOrderID": 1,
++          "resultTypeID": 1,
++          "resultTypeKind": "HalfTime"
++        },
++        {
++          "pointsTeam1": 2,
++          "pointsTeam2": 2,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 119920,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        },
++        {
++          "pointsTeam1": 2,
++          "pointsTeam2": 4,
++          "resultDescription": "Ergebnis nach Nachspielzeit",
++          "resultID": 119937,
++          "resultName": "Nachspielzeit",
++          "resultOrderID": 3,
++          "resultTypeID": 3,
++          "resultTypeKind": "Unknown"
++        }
++      ],
++      "observed": {
++        "et": [
++          2,
++          4
++        ],
++        "ft": [
++          2,
++          2
++        ],
++        "ht": [
++          0,
++          0
++        ]
++      },
++      "official": {
++        "et": [
++          2,
++          4
++        ],
++        "ft": [
++          1,
++          1
++        ],
++        "ht": [
++          0,
++          0
++        ],
++        "p": null
++      },
++      "provider": "openligadb",
++      "sides": [
++        "31",
++        "6"
++      ]
++    },
++    "79597": {
++      "date": "2025-10-28",
++      "dfb_id": "2411122",
++      "dfb_sha256": "057825a2b6f191683faaa560349c7b137760c8672d2f6cae0842468fa4e10df8",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/2-runde/fc-st-pauli-tsg-hoffenheim-2411122",
++      "edition": "2025/2026",
++      "native_results": [
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 0,
++          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
++          "resultID": 119906,
++          "resultName": "Halbzeit",
++          "resultOrderID": 1,
++          "resultTypeID": 1,
++          "resultTypeKind": "HalfTime"
++        },
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 119907,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        },
++        {
++          "pointsTeam1": 2,
++          "pointsTeam2": 2,
++          "resultDescription": "Ergebnis nach Nachspielzeit",
++          "resultID": 127393,
++          "resultName": "Nachspielzeit",
++          "resultOrderID": 3,
++          "resultTypeID": 3,
++          "resultTypeKind": "Unknown"
++        },
++        {
++          "pointsTeam1": 10,
++          "pointsTeam2": 9,
++          "resultDescription": "Ergebnis nach Elfmeterschießen",
++          "resultID": 120733,
++          "resultName": "Elfmeterschießen",
++          "resultOrderID": 4,
++          "resultTypeID": 5,
++          "resultTypeKind": "AfterPenalties"
++        }
++      ],
++      "observed": {
++        "et": [
++          2,
++          2
++        ],
++        "ft": [
++          1,
++          1
++        ],
++        "ht": [
++          1,
++          0
++        ],
++        "p": [
++          10,
++          9
++        ]
++      },
++      "official": {
++        "et": [
++          2,
++          2
++        ],
++        "ft": [
++          1,
++          1
++        ],
++        "ht": [
++          1,
++          0
++        ],
++        "p": [
++          8,
++          7
++        ]
++      },
++      "provider": "openligadb",
++      "sides": [
++        "98",
++        "175"
++      ]
++    },
++    "79781": {
++      "date": "2025-12-03",
++      "dfb_id": "2412762",
++      "dfb_sha256": "58973ef43b3f954597780a2f470049ba4e1c4625f8c5d81f7bfd2110799d6687",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/achtelfinale/hamburger-sv-holstein-kiel-2412762",
++      "edition": "2025/2026",
++      "native_results": [
++        {
++          "pointsTeam1": 0,
++          "pointsTeam2": 0,
++          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
++          "resultID": 120796,
++          "resultName": "Halbzeit",
++          "resultOrderID": 1,
++          "resultTypeID": 1,
++          "resultTypeKind": "HalfTime"
++        },
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 120797,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        },
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Nachspielzeit",
++          "resultID": 127394,
++          "resultName": "Nachspielzeit",
++          "resultOrderID": 3,
++          "resultTypeID": 3,
++          "resultTypeKind": "Unknown"
++        },
++        {
++          "pointsTeam1": 3,
++          "pointsTeam2": 5,
++          "resultDescription": "Ergebnis nach Elfmeterschießen",
++          "resultID": 120800,
++          "resultName": "Elfmeterschießen",
++          "resultOrderID": 4,
++          "resultTypeID": 5,
++          "resultTypeKind": "AfterPenalties"
++        }
++      ],
++      "observed": {
++        "et": [
++          1,
++          1
++        ],
++        "ft": [
++          1,
++          1
++        ],
++        "ht": [
++          0,
++          0
++        ],
++        "p": [
++          3,
++          5
++        ]
++      },
++      "official": {
++        "et": [
++          1,
++          1
++        ],
++        "ft": [
++          0,
++          0
++        ],
++        "ht": [
++          0,
++          0
++        ],
++        "p": [
++          2,
++          4
++        ]
++      },
++      "provider": "openligadb",
++      "sides": [
++        "100",
++        "104"
++      ]
++    },
++    "80173": {
++      "date": "2026-02-10",
++      "dfb_id": "2413233",
++      "dfb_sha256": "70b67b4712f27e63168ef2cd62cb1255419a3dea69dc1dce8a35bc095f3640d6",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/viertelfinale/hertha-bsc-sc-freiburg-2413233",
++      "edition": "2025/2026",
++      "native_results": [
++        {
++          "pointsTeam1": 0,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 123093,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        },
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Nachspielzeit",
++          "resultID": 123107,
++          "resultName": "Nachspielzeit",
++          "resultOrderID": 3,
++          "resultTypeID": 3,
++          "resultTypeKind": "Unknown"
++        },
++        {
++          "pointsTeam1": 5,
++          "pointsTeam2": 6,
++          "resultDescription": "Ergebnis nach Elfmeterschießen",
++          "resultID": 123108,
++          "resultName": "Elfmeterschießen",
++          "resultOrderID": 4,
++          "resultTypeID": 5,
++          "resultTypeKind": "AfterPenalties"
++        }
++      ],
++      "observed": {
++        "et": [
++          1,
++          1
++        ],
++        "ft": [
++          0,
++          1
++        ],
++        "p": [
++          5,
++          6
++        ]
++      },
++      "official": {
++        "et": [
++          1,
++          1
++        ],
++        "ft": [
++          0,
++          0
++        ],
++        "ht": [
++          0,
++          0
++        ],
++        "p": [
++          4,
++          5
++        ]
++      },
++      "provider": "openligadb",
++      "sides": [
++        "54",
++        "112"
++      ]
++    },
++    "81114": {
++      "date": "2026-04-23",
++      "dfb_id": "2416405",
++      "dfb_sha256": "7c7644913900262e2673acaae385cff126b4408a4bb6dcaa6b4503b619425ea5",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/halbfinale/vfb-stuttgart-sc-freiburg-2416405",
++      "edition": "2025/2026",
++      "native_results": [
++        {
++          "pointsTeam1": 0,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
++          "resultID": 124700,
++          "resultName": "Halbzeit",
++          "resultOrderID": 1,
++          "resultTypeID": 1,
++          "resultTypeKind": "HalfTime"
++        },
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 124701,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        },
++        {
++          "pointsTeam1": 2,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Nachspielzeit",
++          "resultID": 124702,
++          "resultName": "Nachspielzeit",
++          "resultOrderID": 3,
++          "resultTypeID": 3,
++          "resultTypeKind": "Unknown"
++        }
++      ],
++      "observed": {
++        "et": [
++          2,
++          1
++        ],
++        "ft": [
++          1,
++          1
++        ],
++        "ht": [
++          0,
++          1
++        ]
++      },
++      "official": {
++        "et": [
++          2,
++          1
++        ],
++        "ft": [
++          1,
++          1
++        ],
++        "ht": [
++          0,
++          1
++        ],
++        "p": null
++      },
++      "provider": "openligadb",
++      "sides": [
++        "16",
++        "112"
++      ]
++    },
++    "81840": {
++      "date": "2026-08-22",
++      "dfb_id": "2418315",
++      "dfb_sha256": "4d32e5fdbac41983f9d538db4c5403c3bed4bbf5f322dc45f1c585e4f6f981bc",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/sg-sonnenhof-grossaspach-arminia-bielefeld-2418315",
++      "edition": "2026/2027",
++      "native_results": [
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 2,
++          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
++          "resultID": 127285,
++          "resultName": "Halbzeit",
++          "resultOrderID": 1,
++          "resultTypeID": 1,
++          "resultTypeKind": "HalfTime"
++        },
++        {
++          "pointsTeam1": 2,
++          "pointsTeam2": 2,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 127286,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        },
++        {
++          "pointsTeam1": 2,
++          "pointsTeam2": 2,
++          "resultDescription": "Ergebnis nach Verlängerung",
++          "resultID": 127298,
++          "resultName": "Verlängerung",
++          "resultOrderID": 3,
++          "resultTypeID": 4,
++          "resultTypeKind": "AfterExtraTime"
++        },
++        {
++          "pointsTeam1": 5,
++          "pointsTeam2": 2,
++          "resultDescription": "Ergebnis nach Elfmeterschießen",
++          "resultID": 127301,
++          "resultName": "Elfmeterschießen",
++          "resultOrderID": 4,
++          "resultTypeID": 5,
++          "resultTypeKind": "AfterPenalties"
++        }
++      ],
++      "observed": {
++        "et": [
++          2,
++          2
++        ],
++        "ft": [
++          2,
++          2
++        ],
++        "ht": [
++          1,
++          2
++        ],
++        "p": [
++          5,
++          2
++        ]
++      },
++      "official": {
++        "et": [
++          2,
++          2
++        ],
++        "ft": [
++          2,
++          2
++        ],
++        "ht": [
++          1,
++          2
++        ],
++        "p": [
++          3,
++          0
++        ]
++      },
++      "provider": "openligadb",
++      "sides": [
++        "529",
++        "83"
++      ]
++    },
++    "81843": {
++      "date": "2026-08-24",
++      "dfb_id": "2418318",
++      "dfb_sha256": "c98eee1a81ed761ab8868d592d1f471560c74c16d17dc22b5ed91908dd6c7010",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/hallescher-fc-fc-schalke-04-2418318",
++      "edition": "2026/2027",
++      "native_results": [
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 0,
++          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
++          "resultID": 127384,
++          "resultName": "Halbzeit",
++          "resultOrderID": 1,
++          "resultTypeID": 1,
++          "resultTypeKind": "HalfTime"
++        },
++        {
++          "pointsTeam1": 2,
++          "pointsTeam2": 2,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 127385,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        },
++        {
++          "pointsTeam1": 2,
++          "pointsTeam2": 5,
++          "resultDescription": "Ergebnis nach Verlängerung",
++          "resultID": 127386,
++          "resultName": "Verlängerung",
++          "resultOrderID": 3,
++          "resultTypeID": 4,
++          "resultTypeKind": "AfterExtraTime"
++        }
++      ],
++      "observed": {
++        "et": [
++          2,
++          5
++        ],
++        "ft": [
++          2,
++          2
++        ],
++        "ht": [
++          1,
++          0
++        ]
++      },
++      "official": {
++        "et": [
++          2,
++          5
++        ],
++        "ft": [
++          2,
++          2
++        ],
++        "ht": [
++          1,
++          0
++        ],
++        "p": null
++      },
++      "provider": "openligadb",
++      "sides": [
++        "208",
++        "9"
++      ]
++    },
++    "81849": {
++      "date": "2026-08-22",
++      "dfb_id": "2418324",
++      "dfb_sha256": "d97b278e3a0b66c0e523a4fa5b6826662c1f9ad812293597ab28ed38a5627d72",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/1-fc-saarbruecken-hertha-bsc-2418324",
++      "edition": "2026/2027",
++      "native_results": [
++        {
++          "pointsTeam1": 0,
++          "pointsTeam2": 0,
++          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
++          "resultID": 127271,
++          "resultName": "Halbzeit",
++          "resultOrderID": 1,
++          "resultTypeID": 1,
++          "resultTypeKind": "HalfTime"
++        },
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 127272,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        },
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Verlängerung",
++          "resultID": 127294,
++          "resultName": "Verlängerung",
++          "resultOrderID": 3,
++          "resultTypeID": 4,
++          "resultTypeKind": "AfterExtraTime"
++        },
++        {
++          "pointsTeam1": 3,
++          "pointsTeam2": 5,
++          "resultDescription": "Ergebnis nach Elfmeterschießen",
++          "resultID": 127289,
++          "resultName": "Elfmeterschießen",
++          "resultOrderID": 4,
++          "resultTypeID": 5,
++          "resultTypeKind": "AfterPenalties"
++        }
++      ],
++      "observed": {
++        "et": [
++          1,
++          1
++        ],
++        "ft": [
++          1,
++          1
++        ],
++        "ht": [
++          0,
++          0
++        ],
++        "p": [
++          3,
++          5
++        ]
++      },
++      "official": {
++        "et": [
++          1,
++          1
++        ],
++        "ft": [
++          1,
++          1
++        ],
++        "ht": [
++          0,
++          0
++        ],
++        "p": [
++          2,
++          4
++        ]
++      },
++      "provider": "openligadb",
++      "sides": [
++        "3078",
++        "54"
++      ]
++    },
++    "81850": {
++      "date": "2026-08-22",
++      "dfb_id": "2418325",
++      "dfb_sha256": "2f4fd8f7c7d0f987caaae3114cb9e3d4a4a9224d9fba49541ea795ed0d23101a",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/fc-viktoria-koeln-1-fc-nuernberg-2418325",
++      "edition": "2026/2027",
++      "native_results": [
++        {
++          "pointsTeam1": 0,
++          "pointsTeam2": 0,
++          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
++          "resultID": 127273,
++          "resultName": "Halbzeit",
++          "resultOrderID": 1,
++          "resultTypeID": 1,
++          "resultTypeKind": "HalfTime"
++        },
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 127274,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        },
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Verlängerung",
++          "resultID": 127295,
++          "resultName": "Verlängerung",
++          "resultOrderID": 3,
++          "resultTypeID": 4,
++          "resultTypeKind": "AfterExtraTime"
++        },
++        {
++          "pointsTeam1": 5,
++          "pointsTeam2": 6,
++          "resultDescription": "Ergebnis nach Elfmeterschießen",
++          "resultID": 127293,
++          "resultName": "Elfmeterschießen",
++          "resultOrderID": 4,
++          "resultTypeID": 5,
++          "resultTypeKind": "AfterPenalties"
++        }
++      ],
++      "observed": {
++        "et": [
++          1,
++          1
++        ],
++        "ft": [
++          1,
++          1
++        ],
++        "ht": [
++          0,
++          0
++        ],
++        "p": [
++          5,
++          6
++        ]
++      },
++      "official": {
++        "et": [
++          1,
++          1
++        ],
++        "ft": [
++          1,
++          1
++        ],
++        "ht": [
++          0,
++          0
++        ],
++        "p": [
++          4,
++          5
++        ]
++      },
++      "provider": "openligadb",
++      "sides": [
++        "2199",
++        "79"
++      ]
++    },
++    "81859": {
++      "date": "2026-08-21",
++      "dfb_id": "2418334",
++      "dfb_sha256": "ce1a0bd60394fb956a1db22e8f0b25beeaebdc2c46da595d6493157f9732e515",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/sv-waldhof-mannheim-1-fc-kaiserslautern-2418334",
++      "edition": "2026/2027",
++      "native_results": [
++        {
++          "pointsTeam1": 0,
++          "pointsTeam2": 0,
++          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
++          "resultID": 127245,
++          "resultName": "Halbzeit",
++          "resultOrderID": 1,
++          "resultTypeID": 1,
++          "resultTypeKind": "HalfTime"
++        },
++        {
++          "pointsTeam1": 0,
++          "pointsTeam2": 0,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 127246,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        },
++        {
++          "pointsTeam1": 0,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Verlängerung",
++          "resultID": 127256,
++          "resultName": "Verlängerung",
++          "resultOrderID": 3,
++          "resultTypeID": 4,
++          "resultTypeKind": "AfterExtraTime"
++        }
++      ],
++      "observed": {
++        "et": [
++          0,
++          1
++        ],
++        "ft": [
++          0,
++          0
++        ],
++        "ht": [
++          0,
++          0
++        ]
++      },
++      "official": {
++        "et": [
++          0,
++          1
++        ],
++        "ft": [
++          0,
++          0
++        ],
++        "ht": [
++          0,
++          0
++        ],
++        "p": null
++      },
++      "provider": "openligadb",
++      "sides": [
++        "553",
++        "76"
++      ]
++    },
++    "81862": {
++      "date": "2026-08-24",
++      "dfb_id": "2418337",
++      "dfb_sha256": "75477ff29a460b89381dd03203ca3385af1fcfc991b968307578d9d026969382",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/vsg-altglienicke-vfl-wolfsburg-2418337",
++      "edition": "2026/2027",
++      "native_results": [
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 0,
++          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
++          "resultID": 127376,
++          "resultName": "Halbzeit",
++          "resultOrderID": 1,
++          "resultTypeID": 1,
++          "resultTypeKind": "HalfTime"
++        },
++        {
++          "pointsTeam1": 2,
++          "pointsTeam2": 2,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 127377,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        },
++        {
++          "pointsTeam1": 3,
++          "pointsTeam2": 3,
++          "resultDescription": "Ergebnis nach Verlängerung",
++          "resultID": 127382,
++          "resultName": "Verlängerung",
++          "resultOrderID": 3,
++          "resultTypeID": 4,
++          "resultTypeKind": "AfterExtraTime"
++        },
++        {
++          "pointsTeam1": 8,
++          "pointsTeam2": 9,
++          "resultDescription": "Ergebnis nach Elfmeterschießen",
++          "resultID": 127383,
++          "resultName": "Elfmeterschießen",
++          "resultOrderID": 4,
++          "resultTypeID": 5,
++          "resultTypeKind": "AfterPenalties"
++        }
++      ],
++      "observed": {
++        "et": [
++          3,
++          3
++        ],
++        "ft": [
++          2,
++          2
++        ],
++        "ht": [
++          1,
++          0
++        ],
++        "p": [
++          8,
++          9
++        ]
++      },
++      "official": {
++        "et": [
++          3,
++          3
++        ],
++        "ft": [
++          2,
++          2
++        ],
++        "ht": [
++          1,
++          0
++        ],
++        "p": [
++          5,
++          6
++        ]
++      },
++      "provider": "openligadb",
++      "sides": [
++        "4600",
++        "131"
++      ]
++    },
++    "87627": {
++      "date": "2026-10-28",
++      "dfb_id": "2430552",
++      "dfb_sha256": "9b3a705a3ac964592a42f01604acacd11f9a81ec979f3f43c871076fa0f31905",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/2-runde/holstein-kiel-tsg-hoffenheim-2430552",
++      "edition": "2026/2027",
++      "native_results": [
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
++          "resultID": 130476,
++          "resultName": "Halbzeit",
++          "resultOrderID": 1,
++          "resultTypeID": 1,
++          "resultTypeKind": "HalfTime"
++        },
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 130477,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        },
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Verlängerung",
++          "resultID": 130480,
++          "resultName": "Verlängerung",
++          "resultOrderID": 3,
++          "resultTypeID": 4,
++          "resultTypeKind": "AfterExtraTime"
++        },
++        {
++          "pointsTeam1": 5,
++          "pointsTeam2": 4,
++          "resultDescription": "Ergebnis nach Elfmeterschießen",
++          "resultID": 130481,
++          "resultName": "Elfmeterschießen",
++          "resultOrderID": 4,
++          "resultTypeID": 5,
++          "resultTypeKind": "AfterPenalties"
++        }
++      ],
++      "observed": {
++        "et": [
++          1,
++          1
++        ],
++        "ft": [
++          1,
++          1
++        ],
++        "ht": [
++          1,
++          1
++        ],
++        "p": [
++          5,
++          4
++        ]
++      },
++      "official": {
++        "et": [
++          1,
++          1
++        ],
++        "ft": [
++          1,
++          1
++        ],
++        "ht": [
++          1,
++          1
++        ],
++        "p": [
++          4,
++          3
++        ]
++      },
++      "provider": "openligadb",
++      "sides": [
++        "104",
++        "175"
++      ]
++    }
++  },
++  "source_body_sha256": {
++    "2025/2026": "b72e3d698a5262a130c6d77a505497ab9d08b0f1c31aaa1765e4f7039843b6e3",
++    "2026/2027": "85220cbd34ffa016837098f4e11e4b9532e57d0da431dbf8aa0f250a82cd23c9"
++  }
++}
+diff --git a/backend/vega/sources/open_matchday.py b/backend/vega/sources/open_matchday.py
+index 311a3e0e8a..cb88a54014 100644
+--- a/backend/vega/sources/open_matchday.py
++++ b/backend/vega/sources/open_matchday.py
+@@ -13,6 +13,12 @@ the team statistics the source gives (shots, shots on target, fouls, corners, pe
+ too, cards) become core.team_match_stats rows. The source's goal minutes name no side and
+ are not kept. Read every six hours; an unreadable competition is skipped, the others are
+ written.
++
++A competition's files replace its edition only as the complete snapshot the summary describes
++(read_files: its declared rows, no reported error) and only when they keep every result the
++base holds (snapshot.py); otherwise the edition stays as it was, the competition counts as
++unmatched and ops.parse_failures says why (FAILURE_MODES.md §19). A match whose values and
++statistics are unchanged is not written again.
+ """
+ 
+ import csv
+@@ -20,7 +26,7 @@ from datetime import timedelta
+ import io
+ import re
+ 
+-from . import SourceError
++from . import SourceError, failure, snapshot
+ from .cups import _team
+ from ..seasons import sporting_season
+ from ..store import Store
+@@ -57,6 +63,10 @@ SPELLINGS = {
+ }
+ # CSV columns -> team_match_stats columns, per side and period.
+ STATS = {"shots": "total_shots", "target": "shots_on_target", "fouls": "fouls", "corners": "corners", "yellow": "yellow_cards", "red": "red_cards"}
++PERIODS = (("all", ""), ("first_half", "_1h"), ("second_half", "_2h"))
++# The columns each file must have for its rows to name a match (and a result its score).
++HEADERS = {"results": {"date", "home", "away", "ft_home", "ft_away"}, "fixtures": {"date", "home", "away"}}
++DAY = re.compile(r"\d{4}-\d{2}-\d{2}")
+ 
+ 
+ # The source's country codes the base writes otherwise (core.countries, PitchAPI's teams).
+@@ -74,7 +84,11 @@ def scopes(now):
+ 
+ 
+ def _int(value):
+-    return int(value) if isinstance(value, str) and value.strip().isdigit() else None
++    return int(value) if isinstance(value, str) and re.fullmatch(r"[0-9]+", value.strip()) else None
++
++
++def _count(value):
++    return value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else None
+ 
+ 
+ def season_label(code):
+@@ -88,11 +102,121 @@ def rows(text):
+     return list(csv.DictReader(io.StringIO(text.lstrip("﻿"), newline="")))
+ 
+ 
++def read_files(get, league, code, folder):
++    """A competition's (results, fixtures) rows, as the summary describes them: integer counts and
++    no reported error, each declared file read with its columns and exactly its declared rows.
++    SourceError with a detail when they are not that complete snapshot; an unreadable file raises
++    the reader's own SourceError (no detail)."""
++    declared = {part: _count(league.get(part)) for part in HEADERS}
++    errors = league.get("errors", [])
++    if None in declared.values() or not isinstance(errors, list):
++        raise SourceError("MANIFEST_INVALID", f"results={league.get('results')!r} fixtures={league.get('fixtures')!r} errors={errors!r}")
++    if errors:
++        raise SourceError("SOURCE_REPORTED_ERRORS", "; ".join(map(str, errors)))
++    out = {}
++    for part, count in declared.items():
++        if not count:
++            out[part] = []
++            continue
++        text = get(f"{RAW}data/{folder}/{part}_{code}.csv", as_text=True)
++        reader = csv.DictReader(io.StringIO(text.lstrip("﻿"), newline=""))
++        if not HEADERS[part] <= set(reader.fieldnames or ()):
++            raise SourceError("INVALID_HEADER", f"{part}: {reader.fieldnames}")
++        out[part] = list(reader)
++        if len(out[part]) != count:
++            raise SourceError("ROW_COUNT_MISMATCH", f"{part}: {len(out[part])} rows, {count} declared")
++    return out["results"], out["fixtures"]
++
++
++def candidate(folder, season, results, fixtures, label):
++    """{provider key: row} of the snapshot, results first then fixtures, in source order.
++
++    A result row names both sides, its day and its two goals (INVALID_RESULT_ROW otherwise); a
++    fixture row without them names no match and is skipped. A fixture with the key of a result is
++    that result. Rows of one key otherwise make one match, from the last of them (as before)."""
++    out = {}
++    for status, items in (("finished", results), ("not_started", fixtures)):
++        for item in items:
++            home, away, day = (item.get("home") or "").strip(), (item.get("away") or "").strip(), (item.get("date") or "").strip()
++            home, away = SPELLINGS.get(home, home), SPELLINGS.get(away, away)
++            goals = (_int(item.get("ft_home")), _int(item.get("ft_away"))) if status == "finished" else (None, None)
++            if not home or not away or not DAY.fullmatch(day):
++                if status == "finished":
++                    raise SourceError("INVALID_RESULT_ROW", f"{label}: a result without its sides or day: {dict(item)}")
++                continue
++            if status == "finished" and None in goals:
++                raise SourceError("INVALID_RESULT_ROW", f"{label}: {day} {home}–{away} without its goals: {item.get('ft_home')!r}–{item.get('ft_away')!r}")
++            half = (_int(item.get("ht_home")), _int(item.get("ht_away")))
++            row = {
++                "status": status, "home": home, "away": away, "date": day, "round": (item.get("gw") or "").strip() or None,
++                "home_score": goals[0], "away_score": goals[1],
++                "home_score_ht": half[0] if None not in half else None, "away_score_ht": half[1] if None not in half else None,
++                "stats": _row_stats(item),
++            }
++            key = f"{folder}:{season}:{day}|{home}|{away}"
++            if key in out and out[key]["status"] == "finished" and status != "finished":
++                continue  # a fixture still listed after its result: the result is the match
++            out.pop(key, None)
++            out[key] = row
++    return out
++
++
++def _row_stats(item):
++    """{(side, period): {column: value}} of the statistics a CSV row gives (corners alone per half)."""
++    out = {}
++    for side in ("home", "away"):
++        for period, suffix in PERIODS:
++            stats = {}
++            for name, column in STATS.items():
++                value = _int(item.get(f"{side}_{name}{suffix}")) if suffix == "" or name == "corners" else None
++                if value is not None:
++                    stats[column] = value
++            out[(side, period)] = stats
++    return out
++
++
++def _by_team_period(rows):
++    return sorted(rows, key=lambda r: (r[0], r[1]))
++
++
++def _stats_rows(row, home, away, stored=()):
++    """The match's team_match_stats rows: (team, period, {column: value}). A cell the file does not state (its
++    column absent or the cell empty) keeps the stored value; a stated one, 0 included, replaces it
++    (FAILURE_MODES.md §22)."""
++    teams = {"home": home, "away": away}
++    merged = {(team, period): dict(columns) for team, period, columns in stored}
++    for (side, period), stats in row["stats"].items():
++        if stats:
++            merged.setdefault((teams[side], period), {}).update(stats)
++    return _by_team_period((team, period, columns) for (team, period), columns in merged.items() if columns)
++
++
++def _stored_stats(conn, season_id, ids):
++    out = {}
++    if ids:
++        for match, team, period, *values in conn.execute(
++            f"""SELECT match_id, team_id, period::text, {', '.join(STATS.values())} FROM core.team_match_stats
++                WHERE season_id = %s AND match_id = ANY(%s)""",
++            (season_id, list(ids)),
++        ):
++            out.setdefault(match, []).append((team, period, {c: v for c, v in zip(STATS.values(), values) if v is not None}))
++    return {match: _by_team_period(rows) for match, rows in out.items()}
++
++
+ def save(conn, folder, name, season, results, fixtures, now):
+-    """Replace one competition's edition; returns the matches written."""
++    """Replace one competition's edition by a complete snapshot; returns the matches it holds.
++
++    Refused (SourceError with a detail, nothing written): a result row without its sides, day or
++    goals, and a snapshot that drops or unplays a result the base holds (snapshot.guard). Matches
++    and statistics are written only where they changed."""
+     label = sporting_season(season)
+     if label is None:
+         raise SourceError("INVALID_SEASON")
++    cup_key = f"open-matchday:{folder}:{season}"
++    snap = candidate(folder, season, results, fixtures, cup_key)
++    stored = conn.execute("SELECT id FROM core.competition_seasons WHERE cup_key = %s", (cup_key,)).fetchone()
++    before = snapshot.stored(conn, "open_matchday", stored and stored[0])
++    snapshot.guard("open_matchday", before, {key: row["status"] for key, row in snap.items()}, cup_key)
+     season_id = Store(conn).season(label)
+     country = country_of(folder)
+     family = f"cup:open-matchday:{folder}"
+@@ -115,58 +239,40 @@ def save(conn, folder, name, season, results, fixtures, now):
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+            ON CONFLICT (cup_key) DO UPDATE SET cup_name=EXCLUDED.cup_name, cup_checked_at=EXCLUDED.cup_checked_at, updated_at=now()
+            RETURNING id""",
+-        (comp, season_id, season, f"open-matchday:{folder}:{season}", name, SOURCE, now, now),
++        (comp, season_id, season, cup_key, name, SOURCE, now, now),
+     ).fetchone()[0]
+-    keep = []
+-    position = 0
+-    for status, items in (("finished", results), ("not_started", fixtures)):
+-        for item in items:
+-            home_name, away_name, day = (item.get("home") or "").strip(), (item.get("away") or "").strip(), (item.get("date") or "").strip()
+-            home_name, away_name = SPELLINGS.get(home_name, home_name), SPELLINGS.get(away_name, away_name)
+-            if not home_name or not away_name or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", day):
+-                continue
+-            key = f"{folder}:{season}:{day}|{home_name}|{away_name}"
+-            home = _team(conn, "open_matchday", f"name:{home_name}", home_name)
+-            away = _team(conn, "open_matchday", f"name:{away_name}", away_name)
+-            round_id = None
+-            if (item.get("gw") or "").strip():
+-                round_id = conn.execute(
+-                    """INSERT INTO core.rounds(competition_season_id, name) VALUES (%s,%s)
+-                       ON CONFLICT (competition_season_id, name) DO UPDATE SET name=EXCLUDED.name RETURNING id""",
+-                    (edition, item["gw"].strip()),
+-                ).fetchone()[0]
+-            hs, as_ = (_int(item.get("ft_home")), _int(item.get("ft_away"))) if status == "finished" else (None, None)
+-            values = {
+-                "competition_season_id": edition, "season_id": season_id, "source": "open_matchday", "status": status if hs is not None or status == "not_started" else "not_started",
+-                "match_date": day, "home_team_id": home, "away_team_id": away, "home_team_name": home_name, "away_team_name": away_name,
+-                "round_id": round_id, "home_score": hs, "away_score": as_, "home_score_ht": _int(item.get("ht_home")), "away_score_ht": _int(item.get("ht_away")),
+-                "archive_position": position,
+-            }
+-            position += 1
+-            mid = conn.execute("SELECT entity_id FROM core.provider_ids WHERE entity_type='match' AND provider='open_matchday' AND provider_key=%s", (key,)).fetchone()
+-            columns = list(values)
+-            if mid:
+-                mid = mid[0]
+-                conn.execute(f"UPDATE core.matches SET {', '.join(f'{c}=%s' for c in columns)}, updated_at=now() WHERE id=%s", [values[c] for c in columns] + [mid])
+-            else:
+-                mid = conn.execute(f"INSERT INTO core.matches({', '.join(columns)}) VALUES ({', '.join(['%s'] * len(columns))}) RETURNING id",
+-                                   [values[c] for c in columns]).fetchone()[0]
+-                conn.execute("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('match','open_matchday',%s,%s)", (key, mid))
+-            keep.append(mid)
++    before.update(snapshot.elsewhere(conn, "open_matchday", edition, [key for key in snap if key not in before]))
++    stats_before = _stored_stats(conn, season_id, [m["id"] for m in before.values()])
++    changes = 0
++    for position, (key, row) in enumerate(snap.items()):
++        home = _team(conn, "open_matchday", f"name:{row['home']}", row["home"])
++        away = _team(conn, "open_matchday", f"name:{row['away']}", row["away"])
++        round_id = None
++        if row["round"]:
++            found_round = conn.execute("SELECT id FROM core.rounds WHERE competition_season_id=%s AND name=%s", (edition, row["round"])).fetchone()
++            round_id = found_round[0] if found_round else conn.execute(
++                "INSERT INTO core.rounds(competition_season_id, name) VALUES (%s,%s) RETURNING id", (edition, row["round"])).fetchone()[0]
++        values = {
++            "competition_season_id": edition, "season_id": season_id, "source": "open_matchday", "status": row["status"],
++            "match_date": row["date"], "home_team_id": home, "away_team_id": away, "home_team_name": row["home"], "away_team_name": row["away"],
++            "round_id": round_id, "home_score": row["home_score"], "away_score": row["away_score"],
++            "home_score_ht": row["home_score_ht"], "away_score_ht": row["away_score_ht"], "archive_position": position,
++        }
++        found = before.get(key)
++        stats = _stats_rows(row, home, away, stats_before.get(found["id"], []) if found is not None else ())
++        restated = found is not None and stats_before.get(found["id"], []) != stats
++        mid, outcome = snapshot.write(conn, "open_matchday", key, values, found, changed=restated)
++        changes += outcome in ("inserted", "updated")
++        if outcome == "inserted" or restated:
+             conn.execute("DELETE FROM core.team_match_stats WHERE season_id=%s AND match_id=%s", (season_id, mid))
+-            for side, team in (("home", home), ("away", away)):
+-                for period, suffix in (("all", ""), ("first_half", "_1h"), ("second_half", "_2h")):
+-                    stats = {column: _int(item.get(f"{side}_{name}{suffix}")) for name, column in STATS.items() if suffix == "" or name == "corners"}
+-                    stats = {k: v for k, v in stats.items() if v is not None}
+-                    if stats:
+-                        cols = ["season_id", "match_id", "team_id", "period", *stats]
+-                        conn.execute(f"INSERT INTO core.team_match_stats({', '.join(cols)}) VALUES ({', '.join(['%s'] * len(cols))})",
+-                                     [season_id, mid, team, period, *stats.values()])
+-    conn.execute("DELETE FROM core.matches WHERE competition_season_id=%s AND NOT id = ANY(%s)", (edition, keep))
+-    conn.execute(
+-        "DELETE FROM core.provider_ids p WHERE p.entity_type='match' AND p.provider='open_matchday' AND NOT EXISTS (SELECT 1 FROM core.matches m WHERE m.id=p.entity_id)"
+-    )
+-    return len(keep)
++            for team, period, columns in stats:
++                cols = ["season_id", "match_id", "team_id", "period", *columns]
++                conn.execute(f"INSERT INTO core.team_match_stats({', '.join(cols)}) VALUES ({', '.join(['%s'] * len(cols))})",
++                             [season_id, mid, team, period, *columns.values()])
++    changes += snapshot.remove(conn, "open_matchday", before, set(snap))
++    if changes:
++        conn.execute("UPDATE core.competition_seasons SET cup_updated_at=%s WHERE id=%s", (now, edition))
++    return len(snap)
+ 
+ 
+ def held(conn, folder, season):
+@@ -219,13 +325,17 @@ def run(conn, get, scope, now):
+                 drop_copy(conn, folder, season)
+             continue
+         try:
+-            results = rows(get(f"{RAW}data/{folder}/results_{code}.csv", as_text=True)) if league.get("results") else []
+-            fixtures = rows(get(f"{RAW}data/{folder}/fixtures_{code}.csv", as_text=True)) if league.get("fixtures") else []
+-        except SourceError:
+-            unmatched += 1  # this competition's files are unreadable now; the others go on
+-            continue
+-        with conn.transaction():
+-            written += save(conn, folder, league.get("league") or folder, season, results, fixtures, now)
++            results, fixtures = read_files(get, league, code, folder)
++            with conn.transaction():
++                written += save(conn, folder, league.get("league") or folder, season, results, fixtures, now)
++        except SourceError as error:
++            # This competition is not written now (its files unreadable, or not the complete snapshot that
++            # keeps its results): its edition stays as it was; the others go on.
++            unmatched += 1
++            if error.detail is not None:
++                cup_key = f"open-matchday:{folder}:{season}"
++                edition = conn.execute("SELECT id FROM core.competition_seasons WHERE cup_key = %s", (cup_key,)).fetchone()
++                failure(conn, error.code, f"{cup_key}: {error.detail}", edition and edition[0])
+     conn.execute(
+         """INSERT INTO core.source_revisions(source, name, url, license, revision, retrieved_at) VALUES ('open-matchday', 'open-matchday', %s, %s, %s, %s)
+            ON CONFLICT (source) DO UPDATE SET revision=EXCLUDED.revision, retrieved_at=EXCLUDED.retrieved_at""",
+diff --git a/backend/vega/sources/snapshot.py b/backend/vega/sources/snapshot.py
+new file mode 100644
+index 0000000000..04c0364047
+--- /dev/null
++++ b/backend/vega/sources/snapshot.py
+@@ -0,0 +1,103 @@
++"""A source edition replaced by a later snapshot of it (VI-27, FAILURE_MODES.md §19).
++
++The cup sources (cups.py) and open-matchday (open_matchday.py) publish each edition whole: the
++snapshot read now replaces the one read before. A snapshot can be partial (an empty or truncated
++file served with a 200, a fixture list still naming a match since played) while looking valid, so:
++
++- a match the base holds finished must still be in the snapshot, finished (`guard`): otherwise
++  the edition is kept as it was and the snapshot refused, unless the match is in RETRACTIONS;
++- a match whose values have not changed is not written again (`write`): no revision, no
++  `updated_at`; one that changed gets `revision + 1`; a new place in the source's order alone
++  moves `archive_position` only.
++
++The removal of an open-matchday copy of a league PitchAPI holds (open_matchday.drop_copy) is a
++reviewed decision of its own (VI-21) and does not pass through here.
++"""
++
++from . import SourceError
++
++# Results a later, complete snapshot of their source really withdrew or left unplayed, written here
++# once reviewed: {(provider, match provider key): "reviewer, date: reason"}. The next read of the
++# edition may then remove or downgrade that match, and that match only.
++RETRACTIONS = {}
++
++# The columns of core.matches a cup source writes, read back as the writers compare them.
++COLUMNS = {
++    "status": "m.status::text", "match_date": "m.match_date::text", "source": "m.source::text",
++    **{c: f"m.{c}" for c in (
++        "competition_season_id", "season_id", "home_team_id", "away_team_id", "home_team_name", "away_team_name", "round_id",
++        "group_name", "match_number", "archive_position", "is_neutral", "home_score", "away_score", "home_score_90",
++        "away_score_90", "home_score_ht", "away_score_ht", "home_score_et", "away_score_et", "home_penalty_score",
++        "away_penalty_score")},
++}
++
++
++def _read(conn, provider, where, args):
++    names = list(COLUMNS)
++    rows = conn.execute(
++        f"""SELECT p.provider_key, m.id, m.revision, {', '.join(COLUMNS.values())}
++            FROM core.matches m JOIN core.provider_ids p ON p.entity_type = 'match' AND p.provider = %s AND p.entity_id = m.id
++            WHERE {where}""",
++        (provider, *args),
++    ).fetchall()
++    return {r[0]: {"id": r[1], "revision": r[2], **dict(zip(names, r[3:]))} for r in rows}
++
++
++def stored(conn, provider, edition):
++    """{provider key: {"id", "revision", column: value}} of the edition's matches (none for a new edition)."""
++    return {} if edition is None else _read(conn, provider, "m.competition_season_id = %s", (edition,))
++
++
++def elsewhere(conn, provider, edition, keys):
++    """The same, for those of `keys` the provider gave a match of another edition: the writer moves
++    such a match into this edition, as it always did, rather than creating a second one."""
++    return _read(conn, provider, "p.provider_key = ANY(%s) AND m.competition_season_id IS DISTINCT FROM %s", (list(keys), edition)) if keys else {}
++
++
++def guard(provider, before, after, label):
++    """Refuse the snapshot when it would drop or downgrade a finished match of the edition.
++
++    `before`: stored(); `after`: {provider key: status} of the snapshot; `label`: the edition, for the detail."""
++    def reviewed(key):
++        return (provider, key) in RETRACTIONS
++
++    dropped = sorted(k for k, m in before.items() if m["status"] == "finished" and k not in after and not reviewed(k))
++    downgraded = sorted(k for k, m in before.items()
++                        if m["status"] == "finished" and k in after and after[k] != "finished" and not reviewed(k))
++    for code, keys in (("SNAPSHOT_DROPS_RESULT", dropped), ("RESULT_DOWNGRADED", downgraded)):
++        if keys:
++            shown = ", ".join(keys[:5]) + (f" and {len(keys) - 5} more" if len(keys) > 5 else "")
++            raise SourceError(code, f"{label}: {len(keys)} finished match(es) of {len(before)} kept, as the snapshot "
++                                    f"{'lacks' if code == 'SNAPSHOT_DROPS_RESULT' else 'leaves unplayed'}: {shown}")
++
++
++def write(conn, provider, key, values, found, changed=False):
++    """Insert, update or leave one match: "inserted", "updated", "moved" (its place alone) or None.
++
++    `values`: {column: value} of COLUMNS; `found`: its stored() entry or None; `changed`: a change
++    the columns do not show (its statistics)."""
++    columns = list(values)
++    if found is None:
++        mid = conn.execute(f"INSERT INTO core.matches({', '.join(columns)}) VALUES ({', '.join(['%s'] * len(columns))}) RETURNING id",
++                           [values[c] for c in columns]).fetchone()[0]
++        conn.execute("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('match',%s,%s,%s)",
++                     (provider, key, mid))
++        return mid, "inserted"
++    differs = [c for c in columns if c != "archive_position" and values[c] != found[c]]
++    if differs or changed:
++        conn.execute(f"UPDATE core.matches SET {', '.join(f'{c}=%s' for c in columns)}, revision=revision+1, updated_at=now() WHERE id=%s",
++                     [values[c] for c in columns] + [found["id"]])
++        return found["id"], "updated"
++    if values.get("archive_position") != found["archive_position"]:
++        conn.execute("UPDATE core.matches SET archive_position=%s WHERE id=%s", (values["archive_position"], found["id"]))
++        return found["id"], "moved"
++    return found["id"], None
++
++
++def remove(conn, provider, before, keep):
++    """Delete the edition's matches the snapshot no longer holds (guard() allowed it); returns how many."""
++    gone = [m["id"] for k, m in before.items() if k not in keep]
++    if gone:
++        conn.execute("DELETE FROM core.matches WHERE id = ANY(%s)", (gone,))
++        conn.execute("DELETE FROM core.provider_ids WHERE entity_type='match' AND provider=%s AND entity_id = ANY(%s)", (provider, gone))
++    return len(gone)

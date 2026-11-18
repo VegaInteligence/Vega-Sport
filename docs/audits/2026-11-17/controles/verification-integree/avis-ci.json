@@ -1,0 +1,52 @@
+{
+  "started": "2026-11-18T13:53:45.294091+00:00",
+  "finished": "2026-11-18T14:11:11.832078+00:00",
+  "source_before": {
+    "commit": "13f7be9f35c8bf7a4d41cefd69d6d2c585e47c07",
+    "status": "",
+    "diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "source_after": {
+    "commit": "13f7be9f35c8bf7a4d41cefd69d6d2c585e47c07",
+    "status": "",
+    "diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "source_unchanged": true,
+  "results": {
+    "backend_and_package": {
+      "python": 0,
+      "npm ci": 0,
+      "api": 0,
+      "api ZIP": 0,
+      "live ZIP": 0
+    },
+    "site": {
+      "bun install": 0,
+      "site": 0,
+      "site build": 0
+    },
+    "infra": {
+      "lint": 0,
+      "deploy shell": 0,
+      "secrets shell": 0
+    },
+    "worker": {
+      "build": 0,
+      "imports": 0,
+      "bridge": 0,
+      "archive": 0,
+      "paths": 0
+    }
+  },
+  "rerun": [
+    "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/ci-clean/bin/python",
+    "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/delivery/verification-integree/run-ci.py",
+    "candidat-apres-corrections-again",
+    "/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-20261117"
+  ],
+  "pg": "postgres (PostgreSQL) 18.6 (Debian 18.6-1.pgdg12+2)",
+  "node_api": "v24.15.0",
+  "node_site": "v26.4.0",
+  "python": "Python 3.14.6",
+  "bun": "1.4.4"
+}

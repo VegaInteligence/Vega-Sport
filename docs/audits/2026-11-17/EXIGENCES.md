@@ -1,3 +1,5 @@
+[Situation consolidée, mesures et correctifs du 18 novembre](SITUATION.md) · Cette page conserve les constats et les limites à la date de chaque relevé.
+
 Le rapport date ses observations. Ses chemins de preuve sont relatifs au sous-dossier correspondant de l’archive de vérification fournie avec la revue.
 
 # Astra current requirement matrix

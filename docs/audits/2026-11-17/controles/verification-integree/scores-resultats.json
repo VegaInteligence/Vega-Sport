@@ -1,0 +1,152 @@
+{
+  "snapshot": {
+    "at": "2026-11-18 13:56:55.890562+00:00",
+    "snapshot": "4438010:4438010:",
+    "database": "vega_v2",
+    "isolation": "repeatable read",
+    "read_only": "on"
+  },
+  "source_query_sha256": {
+    "award-role-2021": "9253d28a8b1d8e0ba2b7a591a13ab3211885174064cb77963d9cd18a004df91c",
+    "award-role-2022": "38f20506d713dda5eaaec5551f9c3b49388ff716e08965b630c8e2d90a289893",
+    "award-role-2023": "bbead43b2e07089e3c058e256301c4d8ca48e063b02c66a64cba8211691508e8",
+    "award-role-2024": "3e9292450b8d1302821ca4be19c6b7a18014a43ea1095c101930cc1902423aef",
+    "award-role-2025": "ff7e08cc64c4b6a039f27e623f22512d3d192acf13f693cea6b7408bc5ad6ce4",
+    "award-role-2026": "b75be08b2d2982cf3fa606954e0fb0ed22bcde0020b562caf26cf3a3bca96ea6",
+    "editions": "3b9ec62fe27e801fc70a4dacceb441adc8f9b34ef8a0d4a5d208738d0a175d42",
+    "player-distributions": "9c26820611a9fe1c5bcbfdb88bb682db503c52a9aff627d89e9e20653d6b205c",
+    "player-event-cues-2021": "d56ebc833a3d2cf83c4367e5ee62854a6367f1f95f0bfa53b608dc8f63958a6d",
+    "player-event-cues-2022": "6af5aaa306266daf3e321b7263d3c54bbf11df7ea6d5e81f2416d506b1c51c0d",
+    "player-event-cues-2023": "c0db72e8c4c5823d092a77e2a1853563b25995fdaf96321b63af2215699d6b5b",
+    "player-event-cues-2024": "d7c88399b3538fa8040ac872a98e65bf48260cb729e5fe0fd717319aa9b8280e",
+    "player-event-cues-2025": "4d6ddac080b58b0ab0118b9f70037965a0f53e39a7251207f37a07176adb4976",
+    "player-event-cues-2026": "de7a4a3433ef1328297e8e38397147e4a933dca14e2ac0d3dafe8fa9897199e5",
+    "player-grade-integrity-2021": "eb825c1a562b9daebe2e6609eb17716db50778840e927aeec94eb18a6e3b91aa",
+    "player-grade-integrity-2022": "d6bef505397c1df432f1f39a92ffef53c47322b7c15d5b06c01f43dc4a8f0bd4",
+    "player-grade-integrity-2023": "6a71021cdbabc5b1b8bccf19218f3d8fa4b148ebffffa69b885b20cda8a5583c",
+    "player-grade-integrity-2024": "a49e2548a1ff9e2df1d8080521384ab8d7133278bf6faf9fa3ba8914268787f0",
+    "player-grade-integrity-2025": "6c44f527b8e283d77b2816344b8160a2d487599d7e3d5f652de9cc37e4641524",
+    "player-grade-integrity-2026": "ba113be6509cdaef7f278e8e6bc05fb80883efe5a25015de87383ffa478a8580",
+    "player-participations-2021": "0a93173db75d4b83d31062c0361351df0fb4484f10af12b80dc66b4d89020082",
+    "player-participations-2022": "4560225af27c2a3928f16680e1ed110f9d6e82137fcb765965bdb341975ecd3b",
+    "player-participations-2023": "9fb02b796f44e44c4d68500f0936301ff3d43ebc5508d5448ed89ffe6a1db010",
+    "player-participations-2024": "cdb682526f8007cf8345dad8ab9a8af596a803258ef0f6b056347bc86a2de473",
+    "player-participations-2025": "3d880b6b658f42ce36631c409c3179936dcbde54d970822d25d0d004903e3d9f",
+    "player-participations-2026": "35b299a3b8641de2b47c3a2d5ae36506bedfe0287f0a3b7008ba186f05a7c04b",
+    "player-pending-2021": "cd97f91047a0a2a1f7ecc54569f0c4d6b2e83eebd050ece86ea140fe96e8bbfd",
+    "player-pending-2022": "aaf080803f22957af11f0c171fa6d3edaad766e22fd19004fa36c0385ed30a59",
+    "player-pending-2023": "0bfb9e4eb9bb7c6713257e97d27cd9b046a6e6e0c3390fda5cbcd87223d6cd54",
+    "player-pending-2024": "400157b2c89e47bda46823fd6064ed985378531527e5e3b4df590ba66e62d997",
+    "player-pending-2025": "6fd5df8fef4b0a5c2a26f9a8f11d8892c80916b05373ce7e6eec5cc83855b792",
+    "player-pending-2026": "b54a629bbdc514492d3e31cda40e757ed483aca3faa5a468bb9b9f06fab59d85",
+    "player-scores-2021": "1b3ae9d3b86d7370405e70d036f86a931af52e56d43952bce391af51f867de17",
+    "player-scores-2022": "b9a2a76c06a9a2d7773871b813c3418062e3645980ecacb0d085ea66d256f865",
+    "player-scores-2023": "42dc16fe6427b33d7c20a2ad8bd22900dd83cf417532d220192bd688e3ecd99e",
+    "player-scores-2024": "1567019cff4303a5a00a9a511cb33fbd9fa190a7a51ec8db4298d96ac627d471",
+    "player-scores-2025": "e86a78fb58572ce9e79e0352154180a8efb12b88b0a054d8fe39d65ec567d8f9",
+    "player-scores-2026": "8cf280f92302172b39724eabbfe9b3d1d779d8b74b2d2914bd33a948b01f2ecc",
+    "player-shot-actor-seasons": "aa83fe70004be07049d1cc272e2ddd408d1b66b37520eb85ef29395c5851a1ef",
+    "run-times": "291c4f0fafebf79fae39965db8918d25fa5a6a5bb7d415efb3523feafb6222d6",
+    "sample-keys": "7476266124793e448e876fc7b6b18ee93f89a565a51aae04fa7bca5a89c83086",
+    "season-universe": "2ef0f519c11d5f781e10684e53124e0bca05d163b064b7d97fc2b7514b3aec02",
+    "team-grade-integrity": "c3eeaedbd2c154e9df7df66b043a09d321f7e5df4d9590eca1fdb248548216a8",
+    "team-sides-all": "fd2fe6219b545216fed2314d35c8ccd58c41f4ebe329251efa59ad364c115573"
+  },
+  "rows": 6447,
+  "season_rows": 471,
+  "editions": 2149,
+  "competitions": 208,
+  "totals": {
+    "club": {
+      "expected_algorithm": 161932,
+      "actual_valid": 161912,
+      "missing_from_storage": 20
+    },
+    "national team": {
+      "expected_algorithm": 1864,
+      "actual_valid": 1864,
+      "missing_from_storage": 0
+    },
+    "player": {
+      "expected_algorithm": 2296998,
+      "actual_valid": 2282580,
+      "missing_from_storage": 14418,
+      "role_unavailable": 615
+    }
+  },
+  "pending_by_award": {
+    "2020": {
+      "assignable": 14418,
+      "unknown_role": 9
+    },
+    "2021": {
+      "assignable": 0,
+      "unknown_role": 68
+    },
+    "2022": {
+      "assignable": 0,
+      "unknown_role": 135
+    },
+    "2023": {
+      "assignable": 0,
+      "unknown_role": 214
+    },
+    "2024": {
+      "assignable": 0,
+      "unknown_role": 94
+    },
+    "2025": {
+      "assignable": 0,
+      "unknown_role": 75
+    },
+    "2026": {
+      "assignable": 0,
+      "unknown_role": 20
+    }
+  },
+  "output_sha256": {
+    "scores-par-edition.csv.gz": "90d2bb1a3a5f728cf56dbe185606f60d424bda59cd543703b2ac40814b1b1d1e",
+    "scores-par-saison.csv.gz": "c62bca55af4ab128375c0bd0248a1a5da3c48534b82fcff153ea09064e1531d6"
+  },
+  "missing_teams": [
+    {
+      "season_id": "2026",
+      "season": "2026/2027",
+      "competition_id": "102",
+      "competition": "National League North",
+      "edition_id": "332",
+      "country_code": "ENG",
+      "competition_kind": "",
+      "entity_type": "club",
+      "expected_algorithm": 232,
+      "actual_valid": 224,
+      "missing_from_storage": 8
+    },
+    {
+      "season_id": "2026",
+      "season": "2026/2027",
+      "competition_id": "103",
+      "competition": "National League South",
+      "edition_id": "333",
+      "country_code": "ENG",
+      "competition_kind": "",
+      "entity_type": "club",
+      "expected_algorithm": 224,
+      "actual_valid": 220,
+      "missing_from_storage": 4
+    },
+    {
+      "season_id": "2026",
+      "season": "2026/2027",
+      "competition_id": "104",
+      "competition": "Northern Premier League",
+      "edition_id": "334",
+      "country_code": "ENG",
+      "competition_kind": "",
+      "entity_type": "club",
+      "expected_algorithm": 222,
+      "actual_valid": 214,
+      "missing_from_storage": 8
+    }
+  ]
+}

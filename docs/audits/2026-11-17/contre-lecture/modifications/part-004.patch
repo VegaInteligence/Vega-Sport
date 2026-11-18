@@ -1,0 +1,874 @@
++      {"round": "Round of 16", "date": "2006-06-27", "team1": "Brazil", "team2": "Ghana", "score": {"ft": [3, 0], "ht": [2, 0]}},
++      {"round": "Round of 16", "date": "2006-06-27", "team1": "Spain", "team2": "France", "score": {"ft": [1, 3], "ht": [1, 1]}},
++      {"round": "Quarterfinals", "date": "2006-06-30", "team1": "Germany", "team2": "Argentina", "score": {"p": [4, 2], "et": [1, 1], "ft": [1, 1], "ht": [0, 0]}},
++      {"round": "Quarterfinals", "date": "2006-06-30", "team1": "Italy", "team2": "Ukraine", "score": {"ft": [3, 0], "ht": [1, 0]}},
++      {"round": "Quarterfinals", "date": "2006-07-01", "team1": "England", "team2": "Portugal", "score": {"p": [1, 3], "et": [0, 0], "ft": [0, 0]}},
++      {"round": "Quarterfinals", "date": "2006-07-01", "team1": "Brazil", "team2": "France", "score": {"ft": [0, 1], "ht": [0, 0]}},
++      {"round": "Semifinals", "date": "2006-07-04", "team1": "Germany", "team2": "Italy", "score": {"et": [0, 2], "ft": [0, 0]}},
++      {"round": "Semifinals", "date": "2006-07-05", "team1": "Portugal", "team2": "France", "score": {"ft": [0, 1], "ht": [0, 1]}},
++      {"round": "Third-place play-off", "date": "2006-07-08", "team1": "Germany", "team2": "Portugal", "score": {"ft": [3, 1], "ht": [0, 0]}},
++      {"round": "Final", "date": "2006-07-09", "team1": "Italy", "team2": "France", "score": {"p": [5, 3], "et": [1, 1], "ft": [1, 1], "ht": [1, 1]}}
++    ]},
++    "world-cup-history:2010": {"name": "World Cup 2010", "matches": [
++      {"round": "Matchday 1", "group": "Group A", "date": "2010-06-11", "team1": "South Africa", "team2": "Mexico", "score": [1, 1]},
++      {"round": "Matchday 1", "group": "Group A", "date": "2010-06-11", "team1": "Uruguay", "team2": "France", "score": [0, 0]},
++      {"round": "Matchday 6", "group": "Group A", "date": "2010-06-16", "team1": "South Africa", "team2": "Uruguay", "score": [0, 3]},
++      {"round": "Matchday 7", "group": "Group A", "date": "2010-06-17", "team1": "France", "team2": "Mexico", "score": [0, 2]},
++      {"round": "Matchday 12", "group": "Group A", "date": "2010-06-22", "team1": "Mexico", "team2": "Uruguay", "score": [0, 1]},
++      {"round": "Matchday 12", "group": "Group A", "date": "2010-06-22", "team1": "France", "team2": "South Africa", "score": [1, 2]},
++      {"round": "Matchday 2", "group": "Group B", "date": "2010-06-12", "team1": "South Korea", "team2": "Greece", "score": [2, 0]},
++      {"round": "Matchday 2", "group": "Group B", "date": "2010-06-12", "team1": "Argentina", "team2": "Nigeria", "score": [1, 0]},
++      {"round": "Matchday 7", "group": "Group B", "date": "2010-06-17", "team1": "Argentina", "team2": "South Korea", "score": [4, 1]},
++      {"round": "Matchday 7", "group": "Group B", "date": "2010-06-17", "team1": "Greece", "team2": "Nigeria", "score": [2, 1]},
++      {"round": "Matchday 12", "group": "Group B", "date": "2010-06-22", "team1": "Nigeria", "team2": "South Korea", "score": [2, 2]},
++      {"round": "Matchday 12", "group": "Group B", "date": "2010-06-22", "team1": "Greece", "team2": "Argentina", "score": [0, 2]},
++      {"round": "Matchday 2", "group": "Group C", "date": "2010-06-12", "team1": "England", "team2": "USA", "score": [1, 1]},
++      {"round": "Matchday 3", "group": "Group C", "date": "2010-06-13", "team1": "Algeria", "team2": "Slovenia", "score": [0, 1]},
++      {"round": "Matchday 8", "group": "Group C", "date": "2010-06-18", "team1": "Slovenia", "team2": "USA", "score": [2, 2]},
++      {"round": "Matchday 8", "group": "Group C", "date": "2010-06-18", "team1": "England", "team2": "Algeria", "score": [0, 0]},
++      {"round": "Matchday 13", "group": "Group C", "date": "2010-06-23", "team1": "USA", "team2": "Algeria", "score": [1, 0]},
++      {"round": "Matchday 13", "group": "Group C", "date": "2010-06-23", "team1": "Slovenia", "team2": "England", "score": [0, 1]},
++      {"round": "Matchday 3", "group": "Group D", "date": "2010-06-13", "team1": "Serbia", "team2": "Ghana", "score": [0, 1]},
++      {"round": "Matchday 3", "group": "Group D", "date": "2010-06-13", "team1": "Germany", "team2": "Australia", "score": [4, 0]},
++      {"round": "Matchday 8", "group": "Group D", "date": "2010-06-18", "team1": "Germany", "team2": "Serbia", "score": [0, 1]},
++      {"round": "Matchday 9", "group": "Group D", "date": "2010-06-19", "team1": "Ghana", "team2": "Australia", "score": [1, 1]},
++      {"round": "Matchday 13", "group": "Group D", "date": "2010-06-23", "team1": "Australia", "team2": "Serbia", "score": [2, 1]},
++      {"round": "Matchday 13", "group": "Group D", "date": "2010-06-23", "team1": "Ghana", "team2": "Germany", "score": [0, 1]},
++      {"round": "Matchday 4", "group": "Group E", "date": "2010-06-14", "team1": "Netherlands", "team2": "Denmark", "score": [2, 0]},
++      {"round": "Matchday 4", "group": "Group E", "date": "2010-06-14", "team1": "Japan", "team2": "Cameroon", "score": [1, 0]},
++      {"round": "Matchday 9", "group": "Group E", "date": "2010-06-19", "team1": "Netherlands", "team2": "Japan", "score": [1, 0]},
++      {"round": "Matchday 9", "group": "Group E", "date": "2010-06-19", "team1": "Cameroon", "team2": "Denmark", "score": [1, 2]},
++      {"round": "Matchday 14", "group": "Group E", "date": "2010-06-24", "team1": "Denmark", "team2": "Japan", "score": [1, 3]},
++      {"round": "Matchday 14", "group": "Group E", "date": "2010-06-24", "team1": "Cameroon", "team2": "Netherlands", "score": [1, 2]},
++      {"round": "Matchday 4", "group": "Group F", "date": "2010-06-14", "team1": "Italy", "team2": "Paraguay", "score": [1, 1]},
++      {"round": "Matchday 5", "group": "Group F", "date": "2010-06-15", "team1": "New Zealand", "team2": "Slovakia", "score": [1, 1]},
++      {"round": "Matchday 10", "group": "Group F", "date": "2010-06-20", "team1": "Slovakia", "team2": "Paraguay", "score": [0, 2]},
++      {"round": "Matchday 10", "group": "Group F", "date": "2010-06-20", "team1": "Italy", "team2": "New Zealand", "score": [1, 1]},
++      {"round": "Matchday 14", "group": "Group F", "date": "2010-06-24", "team1": "Slovakia", "team2": "Italy", "score": [3, 2]},
++      {"round": "Matchday 14", "group": "Group F", "date": "2010-06-24", "team1": "Paraguay", "team2": "New Zealand", "score": [0, 0]},
++      {"round": "Matchday 5", "group": "Group G", "date": "2010-06-15", "team1": "Côte d'Ivoire", "team2": "Portugal", "score": [0, 0]},
++      {"round": "Matchday 5", "group": "Group G", "date": "2010-06-15", "team1": "Brazil", "team2": "North Korea", "score": [2, 1]},
++      {"round": "Matchday 10", "group": "Group G", "date": "2010-06-20", "team1": "Brazil", "team2": "Côte d'Ivoire", "score": [3, 1]},
++      {"round": "Matchday 11", "group": "Group G", "date": "2010-06-21", "team1": "Portugal", "team2": "North Korea", "score": [7, 0]},
++      {"round": "Matchday 15", "group": "Group G", "date": "2010-06-25", "team1": "Portugal", "team2": "Brazil", "score": [0, 0]},
++      {"round": "Matchday 15", "group": "Group G", "date": "2010-06-25", "team1": "North Korea", "team2": "Côte d'Ivoire", "score": [0, 3]},
++      {"round": "Matchday 6", "group": "Group H", "date": "2010-06-16", "team1": "Honduras", "team2": "Chile", "score": [0, 1]},
++      {"round": "Matchday 6", "group": "Group H", "date": "2010-06-16", "team1": "Spain", "team2": "Switzerland", "score": [0, 1]},
++      {"round": "Matchday 11", "group": "Group H", "date": "2010-06-21", "team1": "Chile", "team2": "Switzerland", "score": [1, 0]},
++      {"round": "Matchday 11", "group": "Group H", "date": "2010-06-21", "team1": "Spain", "team2": "Honduras", "score": [2, 0]},
++      {"round": "Matchday 15", "group": "Group H", "date": "2010-06-25", "team1": "Chile", "team2": "Spain", "score": [1, 2]},
++      {"round": "Matchday 15", "group": "Group H", "date": "2010-06-25", "team1": "Switzerland", "team2": "Honduras", "score": [0, 0]},
++      {"round": "Round of 16", "date": "2010-06-26", "team1": "Uruguay", "team2": "South Korea", "score": [2, 1]},
++      {"round": "Round of 16", "date": "2010-06-26", "team1": "USA", "team2": "Ghana", "score": {"et": [1, 2], "ft": [1, 1]}},
++      {"round": "Round of 16", "date": "2010-06-27", "team1": "Germany", "team2": "England", "score": [4, 1]},
++      {"round": "Round of 16", "date": "2010-06-27", "team1": "Argentina", "team2": "Mexico", "score": [3, 1]},
++      {"round": "Round of 16", "date": "2010-06-28", "team1": "Netherlands", "team2": "Slovakia", "score": [2, 1]},
++      {"round": "Round of 16", "date": "2010-06-28", "team1": "Brazil", "team2": "Chile", "score": [3, 0]},
++      {"round": "Round of 16", "date": "2010-06-29", "team1": "Paraguay", "team2": "Japan", "score": {"p": [5, 3], "et": [0, 0], "ft": [0, 0]}},
++      {"round": "Round of 16", "date": "2010-06-29", "team1": "Spain", "team2": "Portugal", "score": [1, 0]},
++      {"round": "Quarterfinals", "date": "2010-07-02", "team1": "Netherlands", "team2": "Brazil", "score": [2, 1]},
++      {"round": "Quarterfinals", "date": "2010-07-02", "team1": "Uruguay", "team2": "Ghana", "score": {"p": [4, 2], "et": [1, 1], "ft": [1, 1]}},
++      {"round": "Quarterfinals", "date": "2010-07-03", "team1": "Argentina", "team2": "Germany", "score": [0, 4]},
++      {"round": "Quarterfinals", "date": "2010-07-03", "team1": "Paraguay", "team2": "Spain", "score": [0, 1]},
++      {"round": "Semifinals", "date": "2010-07-06", "team1": "Uruguay", "team2": "Netherlands", "score": [2, 3]},
++      {"round": "Semifinals", "date": "2010-07-07", "team1": "Germany", "team2": "Spain", "score": [0, 1]},
++      {"round": "Third-place play-off", "date": "2010-07-10", "team1": "Uruguay", "team2": "Germany", "score": [2, 3]},
++      {"round": "Final", "date": "2010-07-11", "team1": "Netherlands", "team2": "Spain", "score": {"et": [0, 1], "ft": [0, 0]}}
++    ]},
++    "world-cup-history:2014": {"name": "World Cup 2014", "matches": [
++      {"round": "Matchday 1", "group": "Group A", "date": "2014-06-12", "team1": "Brazil", "team2": "Croatia", "score": {"ft": [3, 1], "ht": [1, 1]}},
++      {"round": "Matchday 2", "group": "Group A", "date": "2014-06-13", "team1": "Mexico", "team2": "Cameroon", "score": {"ft": [1, 0], "ht": [0, 0]}},
++      {"round": "Matchday 6", "group": "Group A", "date": "2014-06-17", "team1": "Brazil", "team2": "Mexico", "score": [0, 0]},
++      {"round": "Matchday 7", "group": "Group A", "date": "2014-06-18", "team1": "Cameroon", "team2": "Croatia", "score": [0, 4]},
++      {"round": "Matchday 12", "group": "Group A", "date": "2014-06-23", "team1": "Cameroon", "team2": "Brazil", "score": [1, 4]},
++      {"round": "Matchday 12", "group": "Group A", "date": "2014-06-23", "team1": "Croatia", "team2": "Mexico", "score": [1, 3]},
++      {"round": "Matchday 2", "group": "Group B", "date": "2014-06-13", "team1": "Spain", "team2": "Netherlands", "score": {"ft": [1, 5], "ht": [1, 1]}},
++      {"round": "Matchday 2", "group": "Group B", "date": "2014-06-13", "team1": "Chile", "team2": "Australia", "score": {"ft": [3, 1], "ht": [2, 1]}},
++      {"round": "Matchday 7", "group": "Group B", "date": "2014-06-18", "team1": "Australia", "team2": "Netherlands", "score": [2, 3]},
++      {"round": "Matchday 7", "group": "Group B", "date": "2014-06-18", "team1": "Spain", "team2": "Chile", "score": [0, 2]},
++      {"round": "Matchday 12", "group": "Group B", "date": "2014-06-23", "team1": "Australia", "team2": "Spain", "score": [0, 3]},
++      {"round": "Matchday 12", "group": "Group B", "date": "2014-06-23", "team1": "Netherlands", "team2": "Chile", "score": [2, 0]},
++      {"round": "Matchday 3", "group": "Group C", "date": "2014-06-14", "team1": "Colombia", "team2": "Greece", "score": [3, 0]},
++      {"round": "Matchday 3", "group": "Group C", "date": "2014-06-14", "team1": "Côte d'Ivoire", "team2": "Japan", "score": [2, 1]},
++      {"round": "Matchday 8", "group": "Group C", "date": "2014-06-19", "team1": "Colombia", "team2": "Côte d'Ivoire", "score": [2, 1]},
++      {"round": "Matchday 8", "group": "Group C", "date": "2014-06-19", "team1": "Japan", "team2": "Greece", "score": [0, 0]},
++      {"round": "Matchday 13", "group": "Group C", "date": "2014-06-24", "team1": "Japan", "team2": "Colombia", "score": [1, 4]},
++      {"round": "Matchday 13", "group": "Group C", "date": "2014-06-24", "team1": "Greece", "team2": "Côte d'Ivoire", "score": [2, 1]},
++      {"round": "Matchday 3", "group": "Group D", "date": "2014-06-14", "team1": "Uruguay", "team2": "Costa Rica", "score": [1, 3]},
++      {"round": "Matchday 3", "group": "Group D", "date": "2014-06-14", "team1": "England", "team2": "Italy", "score": [1, 2]},
++      {"round": "Matchday 8", "group": "Group D", "date": "2014-06-19", "team1": "Uruguay", "team2": "England", "score": [2, 1]},
++      {"round": "Matchday 9", "group": "Group D", "date": "2014-06-20", "team1": "Italy", "team2": "Costa Rica", "score": [0, 1]},
++      {"round": "Matchday 13", "group": "Group D", "date": "2014-06-24", "team1": "Italy", "team2": "Uruguay", "score": [0, 1]},
++      {"round": "Matchday 13", "group": "Group D", "date": "2014-06-24", "team1": "Costa Rica", "team2": "England", "score": [0, 0]},
++      {"round": "Matchday 4", "group": "Group E", "date": "2014-06-15", "team1": "Switzerland", "team2": "Ecuador", "score": [2, 1]},
++      {"round": "Matchday 4", "group": "Group E", "date": "2014-06-15", "team1": "France", "team2": "Honduras", "score": [3, 0]},
++      {"round": "Matchday 9", "group": "Group E", "date": "2014-06-20", "team1": "Switzerland", "team2": "France", "score": [2, 5]},
++      {"round": "Matchday 9", "group": "Group E", "date": "2014-06-20", "team1": "Honduras", "team2": "Ecuador", "score": [1, 2]},
++      {"round": "Matchday 14", "group": "Group E", "date": "2014-06-25", "team1": "Honduras", "team2": "Switzerland", "score": [0, 3]},
++      {"round": "Matchday 14", "group": "Group E", "date": "2014-06-25", "team1": "Ecuador", "team2": "France", "score": [0, 0]},
++      {"round": "Matchday 4", "group": "Group F", "date": "2014-06-15", "team1": "Argentina", "team2": "Bosnia-Herzegovina", "score": [2, 1]},
++      {"round": "Matchday 5", "group": "Group F", "date": "2014-06-16", "team1": "Iran", "team2": "Nigeria", "score": [0, 0]},
++      {"round": "Matchday 10", "group": "Group F", "date": "2014-06-21", "team1": "Argentina", "team2": "Iran", "score": [1, 0]},
++      {"round": "Matchday 10", "group": "Group F", "date": "2014-06-21", "team1": "Nigeria", "team2": "Bosnia-Herzegovina", "score": [1, 0]},
++      {"round": "Matchday 14", "group": "Group F", "date": "2014-06-25", "team1": "Nigeria", "team2": "Argentina", "score": [2, 3]},
++      {"round": "Matchday 14", "group": "Group F", "date": "2014-06-25", "team1": "Bosnia-Herzegovina", "team2": "Iran", "score": [3, 1]},
++      {"round": "Matchday 5", "group": "Group G", "date": "2014-06-16", "team1": "Germany", "team2": "Portugal", "score": [4, 0]},
++      {"round": "Matchday 5", "group": "Group G", "date": "2014-06-16", "team1": "Ghana", "team2": "USA", "score": [1, 2]},
++      {"round": "Matchday 10", "group": "Group G", "date": "2014-06-21", "team1": "Germany", "team2": "Ghana", "score": [2, 2]},
++      {"round": "Matchday 11", "group": "Group G", "date": "2014-06-22", "team1": "USA", "team2": "Portugal", "score": [2, 2]},
++      {"round": "Matchday 15", "group": "Group G", "date": "2014-06-26", "team1": "USA", "team2": "Germany", "score": [0, 1]},
++      {"round": "Matchday 15", "group": "Group G", "date": "2014-06-26", "team1": "Portugal", "team2": "Ghana", "score": [2, 1]},
++      {"round": "Matchday 6", "group": "Group H", "date": "2014-06-17", "team1": "Belgium", "team2": "Algeria", "score": [2, 1]},
++      {"round": "Matchday 6", "group": "Group H", "date": "2014-06-17", "team1": "Russia", "team2": "South Korea", "score": [1, 1]},
++      {"round": "Matchday 11", "group": "Group H", "date": "2014-06-22", "team1": "Belgium", "team2": "Russia", "score": [1, 0]},
++      {"round": "Matchday 11", "group": "Group H", "date": "2014-06-22", "team1": "South Korea", "team2": "Algeria", "score": [2, 4]},
++      {"round": "Matchday 15", "group": "Group H", "date": "2014-06-26", "team1": "South Korea", "team2": "Belgium", "score": [0, 1]},
++      {"round": "Matchday 15", "group": "Group H", "date": "2014-06-26", "team1": "Algeria", "team2": "Russia", "score": [1, 1]},
++      {"round": "Round of 16", "date": "2014-06-28", "team1": "Brazil", "team2": "Chile", "score": {"p": [3, 2], "et": [1, 1], "ft": [1, 1], "ht": [1, 1]}},
++      {"round": "Round of 16", "date": "2014-06-28", "team1": "Colombia", "team2": "Uruguay", "score": {"ft": [2, 0], "ht": [1, 0]}},
++      {"round": "Round of 16", "date": "2014-06-29", "team1": "Netherlands", "team2": "Mexico", "score": {"ft": [2, 1], "ht": [0, 0]}},
++      {"round": "Round of 16", "date": "2014-06-29", "team1": "Costa Rica", "team2": "Greece", "score": {"p": [5, 3], "et": [1, 1], "ft": [1, 1], "ht": [0, 0]}},
++      {"round": "Round of 16", "date": "2014-06-30", "team1": "France", "team2": "Nigeria", "score": {"ft": [2, 0], "ht": [0, 0]}},
++      {"round": "Round of 16", "date": "2014-06-30", "team1": "Germany", "team2": "Algeria", "score": {"et": [2, 1], "ft": [0, 0], "ht": [0, 0]}},
++      {"round": "Round of 16", "date": "2014-07-01", "team1": "Argentina", "team2": "Switzerland", "score": {"et": [1, 0], "ft": [0, 0], "ht": [0, 0]}},
++      {"round": "Round of 16", "date": "2014-07-01", "team1": "Belgium", "team2": "USA", "score": {"et": [2, 1], "ft": [0, 0], "ht": [0, 0]}},
++      {"round": "Quarter-finals", "date": "2014-07-04", "team1": "France", "team2": "Germany", "score": {"ft": [0, 1], "ht": [0, 1]}},
++      {"round": "Quarter-finals", "date": "2014-07-04", "team1": "Brazil", "team2": "Colombia", "score": {"ft": [2, 1], "ht": [1, 0]}},
++      {"round": "Quarter-finals", "date": "2014-07-05", "team1": "Argentina", "team2": "Belgium", "score": {"ft": [1, 0], "ht": [1, 0]}},
++      {"round": "Quarter-finals", "date": "2014-07-05", "team1": "Netherlands", "team2": "Costa Rica", "score": {"p": [4, 3], "et": [0, 0], "ft": [0, 0], "ht": [0, 0]}},
++      {"round": "Semi-finals", "date": "2014-07-08", "team1": "Brazil", "team2": "Germany", "score": {"ft": [1, 7], "ht": [0, 5]}},
++      {"round": "Semi-finals", "date": "2014-07-09", "team1": "Netherlands", "team2": "Argentina", "score": {"p": [2, 4], "et": [0, 0], "ft": [0, 0], "ht": [0, 0]}},
++      {"round": "Match for third place", "date": "2014-07-12", "team1": "Brazil", "team2": "Netherlands", "score": {"ft": [0, 3], "ht": [0, 2]}},
++      {"round": "Final", "date": "2014-07-13", "team1": "Germany", "team2": "Argentina", "score": {"et": [1, 0], "ft": [0, 0], "ht": [0, 0]}}
++    ]},
++    "world-cup-history:2018": {"name": "World Cup 2018", "matches": [
++      {"round": "Matchday 1", "group": "Group A", "date": "2018-06-14", "team1": "Russia", "team2": "Saudi Arabia", "score": {"ft": [5, 0], "ht": [2, 0]}},
++      {"round": "Matchday 2", "group": "Group A", "date": "2018-06-15", "team1": "Egypt", "team2": "Uruguay", "score": {"ft": [0, 1], "ht": [0, 0]}},
++      {"round": "Matchday 6", "group": "Group A", "date": "2018-06-19", "team1": "Russia", "team2": "Egypt", "score": {"ft": [3, 1], "ht": [0, 0]}},
++      {"round": "Matchday 7", "group": "Group A", "date": "2018-06-20", "team1": "Uruguay", "team2": "Saudi Arabia", "score": {"ft": [1, 0], "ht": [1, 0]}},
++      {"round": "Matchday 12", "group": "Group A", "date": "2018-06-25", "team1": "Uruguay", "team2": "Russia", "score": {"ft": [3, 0], "ht": [2, 0]}},
++      {"round": "Matchday 12", "group": "Group A", "date": "2018-06-25", "team1": "Saudi Arabia", "team2": "Egypt", "score": {"ft": [2, 1], "ht": [1, 1]}},
++      {"round": "Matchday 2", "group": "Group B", "date": "2018-06-15", "team1": "Morocco", "team2": "Iran", "score": {"ft": [0, 1], "ht": [0, 0]}},
++      {"round": "Matchday 2", "group": "Group B", "date": "2018-06-15", "team1": "Portugal", "team2": "Spain", "score": {"ft": [3, 3], "ht": [2, 1]}},
++      {"round": "Matchday 7", "group": "Group B", "date": "2018-06-20", "team1": "Portugal", "team2": "Morocco", "score": {"ft": [1, 0], "ht": [1, 0]}},
++      {"round": "Matchday 7", "group": "Group B", "date": "2018-06-20", "team1": "Iran", "team2": "Spain", "score": {"ft": [0, 1], "ht": [0, 0]}},
++      {"round": "Matchday 12", "group": "Group B", "date": "2018-06-25", "team1": "Iran", "team2": "Portugal", "score": {"ft": [1, 1], "ht": [0, 1]}},
++      {"round": "Matchday 12", "group": "Group B", "date": "2018-06-25", "team1": "Spain", "team2": "Morocco", "score": {"ft": [2, 2], "ht": [1, 1]}},
++      {"round": "Matchday 3", "group": "Group C", "date": "2018-06-16", "team1": "France", "team2": "Australia", "score": {"ft": [2, 1], "ht": [0, 0]}},
++      {"round": "Matchday 3", "group": "Group C", "date": "2018-06-16", "team1": "Peru", "team2": "Denmark", "score": {"ft": [0, 1], "ht": [0, 0]}},
++      {"round": "Matchday 8", "group": "Group C", "date": "2018-06-21", "team1": "Denmark", "team2": "Australia", "score": {"ft": [1, 1], "ht": [1, 1]}},
++      {"round": "Matchday 8", "group": "Group C", "date": "2018-06-21", "team1": "France", "team2": "Peru", "score": {"ft": [1, 0], "ht": [1, 0]}},
++      {"round": "Matchday 13", "group": "Group C", "date": "2018-06-26", "team1": "Denmark", "team2": "France", "score": {"ft": [0, 0], "ht": [0, 0]}},
++      {"round": "Matchday 13", "group": "Group C", "date": "2018-06-26", "team1": "Australia", "team2": "Peru", "score": {"ft": [0, 2], "ht": [0, 1]}},
++      {"round": "Matchday 3", "group": "Group D", "date": "2018-06-16", "team1": "Argentina", "team2": "Iceland", "score": {"ft": [1, 1], "ht": [1, 1]}},
++      {"round": "Matchday 3", "group": "Group D", "date": "2018-06-16", "team1": "Croatia", "team2": "Nigeria", "score": {"ft": [2, 0], "ht": [1, 0]}},
++      {"round": "Matchday 8", "group": "Group D", "date": "2018-06-21", "team1": "Argentina", "team2": "Croatia", "score": {"ft": [0, 3], "ht": [0, 0]}},
++      {"round": "Matchday 9", "group": "Group D", "date": "2018-06-22", "team1": "Nigeria", "team2": "Iceland", "score": {"ft": [2, 0], "ht": [0, 0]}},
++      {"round": "Matchday 13", "group": "Group D", "date": "2018-06-26", "team1": "Nigeria", "team2": "Argentina", "score": {"ft": [1, 2], "ht": [0, 1]}},
++      {"round": "Matchday 13", "group": "Group D", "date": "2018-06-26", "team1": "Iceland", "team2": "Croatia", "score": {"ft": [1, 2], "ht": [0, 0]}},
++      {"round": "Matchday 4", "group": "Group E", "date": "2018-06-17", "team1": "Costa Rica", "team2": "Serbia", "score": {"ft": [0, 1], "ht": [0, 0]}},
++      {"round": "Matchday 4", "group": "Group E", "date": "2018-06-17", "team1": "Brazil", "team2": "Switzerland", "score": {"ft": [1, 1], "ht": [1, 0]}},
++      {"round": "Matchday 9", "group": "Group E", "date": "2018-06-22", "team1": "Brazil", "team2": "Costa Rica", "score": {"ft": [2, 0], "ht": [0, 0]}},
++      {"round": "Matchday 9", "group": "Group E", "date": "2018-06-22", "team1": "Serbia", "team2": "Switzerland", "score": {"ft": [1, 2], "ht": [1, 0]}},
++      {"round": "Matchday 14", "group": "Group E", "date": "2018-06-27", "team1": "Serbia", "team2": "Brazil", "score": {"ft": [0, 2], "ht": [0, 1]}},
++      {"round": "Matchday 14", "group": "Group E", "date": "2018-06-27", "team1": "Switzerland", "team2": "Costa Rica", "score": {"ft": [2, 2], "ht": [1, 0]}},
++      {"round": "Matchday 4", "group": "Group F", "date": "2018-06-17", "team1": "Germany", "team2": "Mexico", "score": {"ft": [0, 1], "ht": [0, 1]}},
++      {"round": "Matchday 5", "group": "Group F", "date": "2018-06-18", "team1": "Sweden", "team2": "South Korea", "score": {"ft": [1, 0], "ht": [0, 0]}},
++      {"round": "Matchday 10", "group": "Group F", "date": "2018-06-23", "team1": "South Korea", "team2": "Mexico", "score": {"ft": [1, 2], "ht": [0, 1]}},
++      {"round": "Matchday 10", "group": "Group F", "date": "2018-06-23", "team1": "Germany", "team2": "Sweden", "score": {"ft": [2, 1], "ht": [0, 1]}},
++      {"round": "Matchday 14", "group": "Group F", "date": "2018-06-27", "team1": "South Korea", "team2": "Germany", "score": {"ft": [2, 0], "ht": [0, 0]}},
++      {"round": "Matchday 14", "group": "Group F", "date": "2018-06-27", "team1": "Mexico", "team2": "Sweden", "score": {"ft": [0, 3], "ht": [0, 0]}},
++      {"round": "Matchday 5", "group": "Group G", "date": "2018-06-18", "team1": "Belgium", "team2": "Panama", "score": {"ft": [3, 0], "ht": [0, 0]}},
++      {"round": "Matchday 5", "group": "Group G", "date": "2018-06-18", "team1": "Tunisia", "team2": "England", "score": {"ft": [1, 2], "ht": [1, 1]}},
++      {"round": "Matchday 10", "group": "Group G", "date": "2018-06-23", "team1": "Belgium", "team2": "Tunisia", "score": {"ft": [5, 2], "ht": [3, 1]}},
++      {"round": "Matchday 11", "group": "Group G", "date": "2018-06-24", "team1": "England", "team2": "Panama", "score": {"ft": [6, 1], "ht": [5, 0]}},
++      {"round": "Matchday 15", "group": "Group G", "date": "2018-06-28", "team1": "England", "team2": "Belgium", "score": {"ft": [0, 1], "ht": [0, 0]}},
++      {"round": "Matchday 15", "group": "Group G", "date": "2018-06-28", "team1": "Panama", "team2": "Tunisia", "score": {"ft": [1, 2], "ht": [1, 0]}},
++      {"round": "Matchday 6", "group": "Group H", "date": "2018-06-19", "team1": "Colombia", "team2": "Japan", "score": {"ft": [1, 2], "ht": [1, 1]}},
++      {"round": "Matchday 6", "group": "Group H", "date": "2018-06-19", "team1": "Poland", "team2": "Senegal", "score": {"ft": [1, 2], "ht": [0, 1]}},
++      {"round": "Matchday 11", "group": "Group H", "date": "2018-06-24", "team1": "Japan", "team2": "Senegal", "score": {"ft": [2, 2], "ht": [1, 1]}},
++      {"round": "Matchday 11", "group": "Group H", "date": "2018-06-24", "team1": "Poland", "team2": "Colombia", "score": {"ft": [0, 3], "ht": [0, 1]}},
++      {"round": "Matchday 15", "group": "Group H", "date": "2018-06-28", "team1": "Japan", "team2": "Poland", "score": {"ft": [0, 1], "ht": [0, 1]}},
++      {"round": "Matchday 15", "group": "Group H", "date": "2018-06-28", "team1": "Senegal", "team2": "Colombia", "score": {"ft": [0, 1], "ht": [0, 1]}},
++      {"round": "Round of 16", "date": "2018-06-30", "team1": "France", "team2": "Argentina", "score": {"ft": [4, 3], "ht": [1, 1]}},
++      {"round": "Round of 16", "date": "2018-06-30", "team1": "Uruguay", "team2": "Portugal", "score": {"ft": [2, 1], "ht": [1, 0]}},
++      {"round": "Round of 16", "date": "2018-07-01", "team1": "Spain", "team2": "Russia", "score": {"p": [3, 4], "et": [1, 1], "ft": [1, 1], "ht": [1, 1]}},
++      {"round": "Round of 16", "date": "2018-07-01", "team1": "Croatia", "team2": "Denmark", "score": {"p": [3, 2], "et": [1, 1], "ft": [1, 1], "ht": [1, 1]}},
++      {"round": "Round of 16", "date": "2018-07-02", "team1": "Brazil", "team2": "Mexico", "score": {"ft": [2, 0], "ht": [0, 0]}},
++      {"round": "Round of 16", "date": "2018-07-02", "team1": "Belgium", "team2": "Japan", "score": {"ft": [3, 2], "ht": [0, 0]}},
++      {"round": "Round of 16", "date": "2018-07-03", "team1": "Sweden", "team2": "Switzerland", "score": {"ft": [1, 0], "ht": [0, 0]}},
++      {"round": "Round of 16", "date": "2018-07-03", "team1": "Colombia", "team2": "England", "score": {"p": [3, 4], "et": [1, 1], "ft": [1, 1], "ht": [0, 0]}},
++      {"round": "Quarter-finals", "date": "2018-07-06", "team1": "Uruguay", "team2": "France", "score": {"ft": [0, 2], "ht": [0, 1]}},
++      {"round": "Quarter-finals", "date": "2018-07-06", "team1": "Brazil", "team2": "Belgium", "score": {"ft": [1, 2], "ht": [0, 2]}},
++      {"round": "Quarter-finals", "date": "2018-07-07", "team1": "Sweden", "team2": "England", "score": {"ft": [0, 2], "ht": [0, 1]}},
++      {"round": "Quarter-finals", "date": "2018-07-07", "team1": "Russia", "team2": "Croatia", "score": {"p": [3, 4], "et": [2, 2], "ft": [1, 1], "ht": [1, 1]}},
++      {"round": "Semi-finals", "date": "2018-07-10", "team1": "France", "team2": "Belgium", "score": {"ft": [1, 0], "ht": [0, 0]}},
++      {"round": "Semi-finals", "date": "2018-07-11", "team1": "Croatia", "team2": "England", "score": {"et": [2, 1], "ft": [1, 1], "ht": [0, 1]}},
++      {"round": "Match for third place", "date": "2018-07-14", "team1": "Belgium", "team2": "England", "score": {"ft": [2, 0], "ht": [1, 0]}},
++      {"round": "Final", "date": "2018-07-15", "team1": "France", "team2": "Croatia", "score": {"ft": [4, 2], "ht": [2, 1]}}
++    ]},
++    "world-cup-history:2022": {"name": "World Cup 2022", "matches": [
++      {"round": "Matchday 1", "group": "Group A", "date": "2022-11-20", "team1": "Qatar", "team2": "Ecuador", "score": {"ft": [0, 2], "ht": [0, 2]}},
++      {"round": "Matchday 2", "group": "Group A", "date": "2022-11-21", "team1": "Senegal", "team2": "Netherlands", "score": {"ft": [0, 2], "ht": [0, 0]}},
++      {"round": "Matchday 6", "group": "Group A", "date": "2022-11-25", "team1": "Qatar", "team2": "Senegal", "score": {"ft": [1, 3], "ht": [0, 1]}},
++      {"round": "Matchday 6", "group": "Group A", "date": "2022-11-25", "team1": "Netherlands", "team2": "Ecuador", "score": {"ft": [1, 1], "ht": [1, 0]}},
++      {"round": "Matchday 10", "group": "Group A", "date": "2022-11-29", "team1": "Ecuador", "team2": "Senegal", "score": {"ft": [1, 2], "ht": [0, 1]}},
++      {"round": "Matchday 10", "group": "Group A", "date": "2022-11-29", "team1": "Netherlands", "team2": "Qatar", "score": {"ft": [2, 0], "ht": [1, 0]}},
++      {"round": "Matchday 2", "group": "Group B", "date": "2022-11-21", "team1": "England", "team2": "Iran", "score": {"ft": [6, 2], "ht": [3, 0]}},
++      {"round": "Matchday 2", "group": "Group B", "date": "2022-11-21", "team1": "USA", "team2": "Wales", "score": {"ft": [1, 1], "ht": [1, 0]}},
++      {"round": "Matchday 6", "group": "Group B", "date": "2022-11-25", "team1": "Wales", "team2": "Iran", "score": {"ft": [0, 2], "ht": [0, 0]}},
++      {"round": "Matchday 6", "group": "Group B", "date": "2022-11-25", "team1": "England", "team2": "USA", "score": [0, 0]},
++      {"round": "Matchday 10", "group": "Group B", "date": "2022-11-29", "team1": "Wales", "team2": "England", "score": {"ft": [0, 3], "ht": [0, 0]}},
++      {"round": "Matchday 10", "group": "Group B", "date": "2022-11-29", "team1": "Iran", "team2": "USA", "score": {"ft": [0, 1], "ht": [0, 1]}},
++      {"round": "Matchday 3", "group": "Group C", "date": "2022-11-22", "team1": "Argentina", "team2": "Saudi Arabia", "score": {"ft": [1, 2], "ht": [1, 0]}},
++      {"round": "Matchday 3", "group": "Group C", "date": "2022-11-22", "team1": "Mexico", "team2": "Poland", "score": [0, 0]},
++      {"round": "Matchday 7", "group": "Group C", "date": "2022-11-26", "team1": "Poland", "team2": "Saudi Arabia", "score": {"ft": [2, 0], "ht": [1, 0]}},
++      {"round": "Matchday 7", "group": "Group C", "date": "2022-11-26", "team1": "Argentina", "team2": "Mexico", "score": {"ft": [2, 0], "ht": [0, 0]}},
++      {"round": "Matchday 11", "group": "Group C", "date": "2022-11-30", "team1": "Poland", "team2": "Argentina", "score": {"ft": [0, 2], "ht": [0, 0]}},
++      {"round": "Matchday 11", "group": "Group C", "date": "2022-11-30", "team1": "Saudi Arabia", "team2": "Mexico", "score": {"ft": [1, 2], "ht": [0, 0]}},
++      {"round": "Matchday 3", "group": "Group D", "date": "2022-11-22", "team1": "Denmark", "team2": "Tunisia", "score": [0, 0]},
++      {"round": "Matchday 3", "group": "Group D", "date": "2022-11-22", "team1": "France", "team2": "Australia", "score": {"ft": [4, 1], "ht": [2, 1]}},
++      {"round": "Matchday 7", "group": "Group D", "date": "2022-11-26", "team1": "Tunisia", "team2": "Australia", "score": {"ft": [0, 1], "ht": [0, 1]}},
++      {"round": "Matchday 7", "group": "Group D", "date": "2022-11-26", "team1": "France", "team2": "Denmark", "score": {"ft": [2, 1], "ht": [0, 0]}},
++      {"round": "Matchday 11", "group": "Group D", "date": "2022-11-30", "team1": "Australia", "team2": "Denmark", "score": {"ft": [1, 0], "ht": [0, 0]}},
++      {"round": "Matchday 11", "group": "Group D", "date": "2022-11-30", "team1": "Tunisia", "team2": "France", "score": {"ft": [1, 0], "ht": [0, 0]}},
++      {"round": "Matchday 4", "group": "Group E", "date": "2022-11-23", "team1": "Germany", "team2": "Japan", "score": {"ft": [1, 2], "ht": [1, 0]}},
++      {"round": "Matchday 4", "group": "Group E", "date": "2022-11-23", "team1": "Spain", "team2": "Costa Rica", "score": {"ft": [7, 0], "ht": [3, 0]}},
++      {"round": "Matchday 8", "group": "Group E", "date": "2022-11-27", "team1": "Japan", "team2": "Costa Rica", "score": {"ft": [0, 1], "ht": [0, 0]}},
++      {"round": "Matchday 8", "group": "Group E", "date": "2022-11-27", "team1": "Spain", "team2": "Germany", "score": {"ft": [1, 1], "ht": [0, 0]}},
++      {"round": "Matchday 12", "group": "Group E", "date": "2022-12-01", "team1": "Japan", "team2": "Spain", "score": {"ft": [2, 1], "ht": [0, 0]}},
++      {"round": "Matchday 12", "group": "Group E", "date": "2022-12-01", "team1": "Costa Rica", "team2": "Germany", "score": {"ft": [2, 4], "ht": [0, 1]}},
++      {"round": "Matchday 4", "group": "Group F", "date": "2022-11-23", "team1": "Morocco", "team2": "Croatia", "score": [0, 0]},
++      {"round": "Matchday 4", "group": "Group F", "date": "2022-11-23", "team1": "Belgium", "team2": "Canada", "score": {"ft": [1, 0], "ht": [1, 0]}},
++      {"round": "Matchday 8", "group": "Group F", "date": "2022-11-27", "team1": "Belgium", "team2": "Morocco", "score": {"ft": [0, 2], "ht": [0, 0]}},
++      {"round": "Matchday 8", "group": "Group F", "date": "2022-11-27", "team1": "Croatia", "team2": "Canada", "score": {"ft": [4, 1], "ht": [2, 1]}},
++      {"round": "Matchday 12", "group": "Group F", "date": "2022-12-01", "team1": "Croatia", "team2": "Belgium", "score": [0, 0]},
++      {"round": "Matchday 12", "group": "Group F", "date": "2022-12-01", "team1": "Canada", "team2": "Morocco", "score": {"ft": [1, 2], "ht": [1, 2]}},
++      {"round": "Matchday 5", "group": "Group G", "date": "2022-11-24", "team1": "Switzerland", "team2": "Cameroon", "score": {"ft": [1, 0], "ht": [0, 0]}},
++      {"round": "Matchday 5", "group": "Group G", "date": "2022-11-24", "team1": "Brazil", "team2": "Serbia", "score": {"ft": [2, 0], "ht": [0, 0]}},
++      {"round": "Matchday 9", "group": "Group G", "date": "2022-11-28", "team1": "Cameroon", "team2": "Serbia", "score": {"ft": [3, 3], "ht": [1, 2]}},
++      {"round": "Matchday 9", "group": "Group G", "date": "2022-11-28", "team1": "Brazil", "team2": "Switzerland", "score": {"ft": [1, 0], "ht": [0, 0]}},
++      {"round": "Matchday 13", "group": "Group G", "date": "2022-12-02", "team1": "Serbia", "team2": "Switzerland", "score": {"ft": [2, 3], "ht": [2, 1]}},
++      {"round": "Matchday 13", "group": "Group G", "date": "2022-12-02", "team1": "Cameroon", "team2": "Brazil", "score": {"ft": [1, 0], "ht": [0, 0]}},
++      {"round": "Matchday 5", "group": "Group H", "date": "2022-11-24", "team1": "Uruguay", "team2": "South Korea", "score": [0, 0]},
++      {"round": "Matchday 5", "group": "Group H", "date": "2022-11-24", "team1": "Portugal", "team2": "Ghana", "score": {"ft": [3, 2], "ht": [0, 0]}},
++      {"round": "Matchday 9", "group": "Group H", "date": "2022-11-28", "team1": "South Korea", "team2": "Ghana", "score": {"ft": [2, 3], "ht": [0, 2]}},
++      {"round": "Matchday 9", "group": "Group H", "date": "2022-11-28", "team1": "Portugal", "team2": "Uruguay", "score": {"ft": [2, 0], "ht": [0, 0]}},
++      {"round": "Matchday 13", "group": "Group H", "date": "2022-12-02", "team1": "Ghana", "team2": "Uruguay", "score": [0, 2]},
++      {"round": "Matchday 13", "group": "Group H", "date": "2022-12-02", "team1": "South Korea", "team2": "Portugal", "score": {"ft": [2, 1], "ht": [1, 1]}},
++      {"round": "Round of 16", "date": "2022-12-03", "team1": "Netherlands", "team2": "USA", "score": {"ft": [3, 1], "ht": [2, 0]}},
++      {"round": "Round of 16", "date": "2022-12-03", "team1": "Argentina", "team2": "Australia", "score": {"ft": [2, 1], "ht": [1, 0]}},
++      {"round": "Round of 16", "date": "2022-12-04", "team1": "France", "team2": "Poland", "score": {"ft": [3, 1], "ht": [1, 0]}},
++      {"round": "Round of 16", "date": "2022-12-04", "team1": "England", "team2": "Senegal", "score": {"ft": [3, 0], "ht": [2, 0]}},
++      {"round": "Round of 16", "date": "2022-12-05", "team1": "Japan", "team2": "Croatia", "score": {"p": [1, 3], "et": [1, 1], "ft": [1, 1], "ht": [1, 0]}},
++      {"round": "Round of 16", "date": "2022-12-05", "team1": "Brazil", "team2": "South Korea", "score": {"ft": [4, 1], "ht": [4, 0]}},
++      {"round": "Round of 16", "date": "2022-12-06", "team1": "Morocco", "team2": "Spain", "score": {"p": [3, 0], "et": [0, 0], "ft": [0, 0], "ht": [0, 0]}},
++      {"round": "Round of 16", "date": "2022-12-06", "team1": "Portugal", "team2": "Switzerland", "score": {"ft": [6, 1], "ht": [2, 0]}},
++      {"round": "Quarter-finals", "date": "2022-12-09", "team1": "Croatia", "team2": "Brazil", "score": {"p": [4, 2], "et": [1, 1], "ft": [0, 0], "ht": [0, 0]}},
++      {"round": "Quarter-finals", "date": "2022-12-09", "team1": "Netherlands", "team2": "Argentina", "score": {"p": [3, 4], "et": [2, 2], "ft": [2, 2], "ht": [1, 0]}},
++      {"round": "Quarter-finals", "date": "2022-12-10", "team1": "Morocco", "team2": "Portugal", "score": {"ft": [1, 0], "ht": [1, 0]}},
++      {"round": "Quarter-finals", "date": "2022-12-10", "team1": "England", "team2": "France", "score": {"ft": [1, 2], "ht": [0, 1]}},
++      {"round": "Semi-finals", "date": "2022-12-13", "team1": "Argentina", "team2": "Croatia", "score": {"ft": [3, 0], "ht": [2, 0]}},
++      {"round": "Semi-finals", "date": "2022-12-14", "team1": "France", "team2": "Morocco", "score": {"ft": [2, 0], "ht": [1, 0]}},
++      {"round": "Match for third place", "date": "2022-12-17", "team1": "Croatia", "team2": "Morocco", "score": {"ft": [2, 1], "ht": [2, 1]}},
++      {"round": "Final", "date": "2022-12-18", "team1": "Argentina", "team2": "France", "score": {"p": [4, 2], "et": [3, 3], "ft": [2, 2], "ht": [2, 0]}}
++    ]},
++    "world-cup-history:2026": {"name": "World Cup 2026", "matches": [
++      {"round": "Matchday 1", "group": "Group A", "date": "2026-06-11", "team1": "Mexico", "team2": "South Africa", "score": {"ft": [2, 0], "ht": [1, 0]}},
++      {"round": "Matchday 1", "group": "Group A", "date": "2026-06-11", "team1": "South Korea", "team2": "Czech Republic", "score": {"ft": [2, 1], "ht": [0, 0]}},
++      {"round": "Matchday 8", "group": "Group A", "date": "2026-06-18", "team1": "Czech Republic", "team2": "South Africa", "score": {"ft": [1, 1], "ht": [1, 0]}},
++      {"round": "Matchday 8", "group": "Group A", "date": "2026-06-18", "team1": "Mexico", "team2": "South Korea", "score": {"ft": [1, 0], "ht": [0, 0]}},
++      {"round": "Matchday 14", "group": "Group A", "date": "2026-06-24", "team1": "Czech Republic", "team2": "Mexico", "score": {"ft": [0, 3], "ht": [0, 0]}},
++      {"round": "Matchday 14", "group": "Group A", "date": "2026-06-24", "team1": "South Africa", "team2": "South Korea", "score": {"ft": [1, 0], "ht": [0, 0]}},
++      {"round": "Matchday 2", "group": "Group B", "date": "2026-06-12", "team1": "Canada", "team2": "Bosnia & Herzegovina", "score": {"ft": [1, 1], "ht": [0, 1]}},
++      {"round": "Matchday 3", "group": "Group B", "date": "2026-06-13", "team1": "Qatar", "team2": "Switzerland", "score": {"ft": [1, 1], "ht": [0, 1]}},
++      {"round": "Matchday 8", "group": "Group B", "date": "2026-06-18", "team1": "Switzerland", "team2": "Bosnia & Herzegovina", "score": {"ft": [4, 1], "ht": [0, 0]}},
++      {"round": "Matchday 8", "group": "Group B", "date": "2026-06-18", "team1": "Canada", "team2": "Qatar", "score": {"ft": [6, 0], "ht": [3, 0]}},
++      {"round": "Matchday 14", "group": "Group B", "date": "2026-06-24", "team1": "Switzerland", "team2": "Canada", "score": {"ft": [2, 1], "ht": [0, 0]}},
++      {"round": "Matchday 14", "group": "Group B", "date": "2026-06-24", "team1": "Bosnia & Herzegovina", "team2": "Qatar", "score": {"ft": [3, 1], "ht": [2, 1]}},
++      {"round": "Matchday 3", "group": "Group C", "date": "2026-06-13", "team1": "Brazil", "team2": "Morocco", "score": {"ft": [1, 1], "ht": [1, 1]}},
++      {"round": "Matchday 3", "group": "Group C", "date": "2026-06-13", "team1": "Haiti", "team2": "Scotland", "score": {"ft": [0, 1], "ht": [0, 1]}},
++      {"round": "Matchday 9", "group": "Group C", "date": "2026-06-19", "team1": "Scotland", "team2": "Morocco", "score": {"ft": [0, 1], "ht": [0, 1]}},
++      {"round": "Matchday 9", "group": "Group C", "date": "2026-06-19", "team1": "Brazil", "team2": "Haiti", "score": {"ft": [3, 0], "ht": [3, 0]}},
++      {"round": "Matchday 14", "group": "Group C", "date": "2026-06-24", "team1": "Scotland", "team2": "Brazil", "score": {"ft": [0, 3], "ht": [0, 2]}},
++      {"round": "Matchday 14", "group": "Group C", "date": "2026-06-24", "team1": "Morocco", "team2": "Haiti", "score": {"ft": [4, 2], "ht": [2, 2]}},
++      {"round": "Matchday 2", "group": "Group D", "date": "2026-06-12", "team1": "USA", "team2": "Paraguay", "score": {"ft": [4, 1], "ht": [3, 0]}},
++      {"round": "Matchday 3", "group": "Group D", "date": "2026-06-13", "team1": "Australia", "team2": "Turkey", "score": {"ft": [2, 0], "ht": [1, 0]}},
++      {"round": "Matchday 9", "group": "Group D", "date": "2026-06-19", "team1": "USA", "team2": "Australia", "score": {"ft": [2, 0], "ht": [2, 0]}},
++      {"round": "Matchday 9", "group": "Group D", "date": "2026-06-19", "team1": "Turkey", "team2": "Paraguay", "score": {"ft": [0, 1], "ht": [0, 1]}},
++      {"round": "Matchday 15", "group": "Group D", "date": "2026-06-25", "team1": "Turkey", "team2": "USA", "score": {"ft": [3, 2], "ht": [2, 1]}},
++      {"round": "Matchday 15", "group": "Group D", "date": "2026-06-25", "team1": "Paraguay", "team2": "Australia", "score": {"ft": [0, 0], "ht": [0, 0]}},
++      {"round": "Matchday 4", "group": "Group E", "date": "2026-06-14", "team1": "Germany", "team2": "Curaçao", "score": {"ft": [7, 1], "ht": [3, 1]}},
++      {"round": "Matchday 4", "group": "Group E", "date": "2026-06-14", "team1": "Ivory Coast", "team2": "Ecuador", "score": {"ft": [1, 0], "ht": [0, 0]}},
++      {"round": "Matchday 10", "group": "Group E", "date": "2026-06-20", "team1": "Germany", "team2": "Ivory Coast", "score": {"ft": [2, 1], "ht": [0, 1]}},
++      {"round": "Matchday 10", "group": "Group E", "date": "2026-06-20", "team1": "Ecuador", "team2": "Curaçao", "score": {"ft": [0, 0], "ht": [0, 0]}},
++      {"round": "Matchday 15", "group": "Group E", "date": "2026-06-25", "team1": "Curaçao", "team2": "Ivory Coast", "score": {"ft": [0, 2], "ht": [0, 1]}},
++      {"round": "Matchday 15", "group": "Group E", "date": "2026-06-25", "team1": "Ecuador", "team2": "Germany", "score": {"ft": [2, 1], "ht": [1, 1]}},
++      {"round": "Matchday 4", "group": "Group F", "date": "2026-06-14", "team1": "Netherlands", "team2": "Japan", "score": {"ft": [2, 2], "ht": [0, 0]}},
++      {"round": "Matchday 4", "group": "Group F", "date": "2026-06-14", "team1": "Sweden", "team2": "Tunisia", "score": {"ft": [5, 1], "ht": [2, 1]}},
++      {"round": "Matchday 10", "group": "Group F", "date": "2026-06-20", "team1": "Netherlands", "team2": "Sweden", "score": {"ft": [5, 1], "ht": [2, 0]}},
++      {"round": "Matchday 10", "group": "Group F", "date": "2026-06-20", "team1": "Tunisia", "team2": "Japan", "score": {"ft": [0, 4], "ht": [0, 2]}},
++      {"round": "Matchday 15", "group": "Group F", "date": "2026-06-25", "team1": "Japan", "team2": "Sweden", "score": {"ft": [1, 1], "ht": [0, 0]}},
++      {"round": "Matchday 15", "group": "Group F", "date": "2026-06-25", "team1": "Tunisia", "team2": "Netherlands", "score": {"ft": [1, 3], "ht": [0, 2]}},
++      {"round": "Matchday 5", "group": "Group G", "date": "2026-06-15", "team1": "Belgium", "team2": "Egypt", "score": {"ft": [1, 1], "ht": [0, 1]}},
++      {"round": "Matchday 5", "group": "Group G", "date": "2026-06-15", "team1": "Iran", "team2": "New Zealand", "score": {"ft": [2, 2], "ht": [1, 1]}},
++      {"round": "Matchday 11", "group": "Group G", "date": "2026-06-21", "team1": "Belgium", "team2": "Iran", "score": {"ft": [0, 0], "ht": [0, 0]}},
++      {"round": "Matchday 11", "group": "Group G", "date": "2026-06-21", "team1": "New Zealand", "team2": "Egypt", "score": {"ft": [1, 3], "ht": [1, 0]}},
++      {"round": "Matchday 16", "group": "Group G", "date": "2026-06-26", "team1": "Egypt", "team2": "Iran", "score": {"ft": [1, 1], "ht": [1, 1]}},
++      {"round": "Matchday 16", "group": "Group G", "date": "2026-06-26", "team1": "New Zealand", "team2": "Belgium", "score": {"ft": [1, 5], "ht": [0, 1]}},
++      {"round": "Matchday 5", "group": "Group H", "date": "2026-06-15", "team1": "Spain", "team2": "Cape Verde", "score": {"ft": [0, 0], "ht": [0, 0]}},
++      {"round": "Matchday 5", "group": "Group H", "date": "2026-06-15", "team1": "Saudi Arabia", "team2": "Uruguay", "score": {"ft": [1, 1], "ht": [1, 0]}},
++      {"round": "Matchday 11", "group": "Group H", "date": "2026-06-21", "team1": "Spain", "team2": "Saudi Arabia", "score": {"ft": [4, 0], "ht": [3, 0]}},
++      {"round": "Matchday 11", "group": "Group H", "date": "2026-06-21", "team1": "Uruguay", "team2": "Cape Verde", "score": {"ft": [2, 2], "ht": [2, 1]}},
++      {"round": "Matchday 16", "group": "Group H", "date": "2026-06-26", "team1": "Cape Verde", "team2": "Saudi Arabia", "score": {"ft": [0, 0], "ht": [0, 0]}},
++      {"round": "Matchday 16", "group": "Group H", "date": "2026-06-26", "team1": "Uruguay", "team2": "Spain", "score": {"ft": [0, 1], "ht": [0, 1]}},
++      {"round": "Matchday 6", "group": "Group I", "date": "2026-06-16", "team1": "France", "team2": "Senegal", "score": {"ft": [3, 1], "ht": [0, 0]}},
++      {"round": "Matchday 6", "group": "Group I", "date": "2026-06-16", "team1": "Iraq", "team2": "Norway", "score": {"ft": [1, 4], "ht": [1, 2]}},
++      {"round": "Matchday 12", "group": "Group I", "date": "2026-06-22", "team1": "France", "team2": "Iraq", "score": {"ft": [3, 0], "ht": [1, 0]}},
++      {"round": "Matchday 12", "group": "Group I", "date": "2026-06-22", "team1": "Norway", "team2": "Senegal", "score": {"ft": [3, 2], "ht": [1, 0]}},
++      {"round": "Matchday 16", "group": "Group I", "date": "2026-06-26", "team1": "Norway", "team2": "France", "score": {"ft": [1, 4], "ht": [1, 3]}},
++      {"round": "Matchday 16", "group": "Group I", "date": "2026-06-26", "team1": "Senegal", "team2": "Iraq", "score": {"ft": [5, 0], "ht": [1, 0]}},
++      {"round": "Matchday 6", "group": "Group J", "date": "2026-06-16", "team1": "Argentina", "team2": "Algeria", "score": {"ft": [3, 0], "ht": [1, 0]}},
++      {"round": "Matchday 6", "group": "Group J", "date": "2026-06-16", "team1": "Austria", "team2": "Jordan", "score": {"ft": [3, 1], "ht": [1, 0]}},
++      {"round": "Matchday 12", "group": "Group J", "date": "2026-06-22", "team1": "Argentina", "team2": "Austria", "score": {"ft": [2, 0], "ht": [1, 0]}},
++      {"round": "Matchday 12", "group": "Group J", "date": "2026-06-22", "team1": "Jordan", "team2": "Algeria", "score": {"ft": [1, 2], "ht": [1, 0]}},
++      {"round": "Matchday 17", "group": "Group J", "date": "2026-06-27", "team1": "Algeria", "team2": "Austria", "score": {"ft": [3, 3], "ht": [1, 1]}},
++      {"round": "Matchday 17", "group": "Group J", "date": "2026-06-27", "team1": "Jordan", "team2": "Argentina", "score": {"ft": [1, 3], "ht": [0, 2]}},
++      {"round": "Matchday 7", "group": "Group K", "date": "2026-06-17", "team1": "Portugal", "team2": "DR Congo", "score": {"ft": [1, 1], "ht": [1, 1]}},
++      {"round": "Matchday 7", "group": "Group K", "date": "2026-06-17", "team1": "Uzbekistan", "team2": "Colombia", "score": {"ft": [1, 3], "ht": [0, 1]}},
++      {"round": "Matchday 13", "group": "Group K", "date": "2026-06-23", "team1": "Portugal", "team2": "Uzbekistan", "score": {"ft": [5, 0], "ht": [3, 0]}},
++      {"round": "Matchday 13", "group": "Group K", "date": "2026-06-23", "team1": "Colombia", "team2": "DR Congo", "score": {"ft": [1, 0], "ht": [0, 0]}},
++      {"round": "Matchday 17", "group": "Group K", "date": "2026-06-27", "team1": "Colombia", "team2": "Portugal", "score": {"ft": [0, 0], "ht": [0, 0]}},
++      {"round": "Matchday 17", "group": "Group K", "date": "2026-06-27", "team1": "DR Congo", "team2": "Uzbekistan", "score": {"ft": [3, 1], "ht": [0, 1]}},
++      {"round": "Matchday 7", "group": "Group L", "date": "2026-06-17", "team1": "England", "team2": "Croatia", "score": {"ft": [4, 2], "ht": [2, 2]}},
++      {"round": "Matchday 7", "group": "Group L", "date": "2026-06-17", "team1": "Ghana", "team2": "Panama", "score": {"ft": [1, 0], "ht": [0, 0]}},
++      {"round": "Matchday 13", "group": "Group L", "date": "2026-06-23", "team1": "England", "team2": "Ghana", "score": {"ft": [0, 0], "ht": [0, 0]}},
++      {"round": "Matchday 13", "group": "Group L", "date": "2026-06-23", "team1": "Panama", "team2": "Croatia", "score": {"ft": [0, 1], "ht": [0, 0]}},
++      {"round": "Matchday 17", "group": "Group L", "date": "2026-06-27", "team1": "Panama", "team2": "England", "score": {"ft": [0, 2], "ht": [0, 0]}},
++      {"round": "Matchday 17", "group": "Group L", "date": "2026-06-27", "team1": "Croatia", "team2": "Ghana", "score": {"ft": [2, 1], "ht": [1, 0]}},
++      {"round": "Round of 32", "num": 73, "date": "2026-06-28", "team1": "South Africa", "team2": "Canada", "score": {"ft": [0, 1], "ht": [0, 0]}},
++      {"round": "Round of 32", "num": 74, "date": "2026-06-29", "team1": "Germany", "team2": "Paraguay", "score": {"p": [3, 4], "et": [1, 1], "ft": [1, 1], "ht": [0, 1]}},
++      {"round": "Round of 32", "num": 75, "date": "2026-06-29", "team1": "Netherlands", "team2": "Morocco", "score": {"p": [2, 3], "et": [1, 1], "ft": [1, 1], "ht": [0, 0]}},
++      {"round": "Round of 32", "num": 76, "date": "2026-06-29", "team1": "Brazil", "team2": "Japan", "score": {"ft": [2, 1], "ht": [0, 1]}},
++      {"round": "Round of 32", "num": 77, "date": "2026-06-30", "team1": "France", "team2": "Sweden", "score": {"ft": [3, 0], "ht": [1, 0]}},
++      {"round": "Round of 32", "num": 78, "date": "2026-06-30", "team1": "Ivory Coast", "team2": "Norway", "score": {"ft": [1, 2], "ht": [0, 1]}},
++      {"round": "Round of 32", "num": 79, "date": "2026-06-30", "team1": "Mexico", "team2": "Ecuador", "score": {"ft": [2, 0], "ht": [1, 0]}},
++      {"round": "Round of 32", "num": 80, "date": "2026-07-01", "team1": "England", "team2": "DR Congo", "score": {"ft": [2, 1], "ht": [0, 1]}},
++      {"round": "Round of 32", "num": 81, "date": "2026-07-01", "team1": "USA", "team2": "Bosnia & Herzegovina", "score": {"ft": [2, 0], "ht": [1, 0]}},
++      {"round": "Round of 32", "num": 82, "date": "2026-07-01", "team1": "Belgium", "team2": "Senegal", "score": {"et": [3, 2], "ft": [2, 2], "ht": [0, 1]}},
++      {"round": "Round of 32", "num": 83, "date": "2026-07-02", "team1": "Portugal", "team2": "Croatia", "score": {"ft": [2, 1], "ht": [0, 0]}},
++      {"round": "Round of 32", "num": 84, "date": "2026-07-02", "team1": "Spain", "team2": "Austria", "score": {"ft": [3, 0], "ht": [1, 0]}},
++      {"round": "Round of 32", "num": 85, "date": "2026-07-02", "team1": "Switzerland", "team2": "Algeria", "score": {"ft": [2, 0], "ht": [1, 0]}},
++      {"round": "Round of 32", "num": 86, "date": "2026-07-03", "team1": "Argentina", "team2": "Cape Verde", "score": {"et": [3, 2], "ft": [1, 1], "ht": [1, 0]}},
++      {"round": "Round of 32", "num": 87, "date": "2026-07-03", "team1": "Colombia", "team2": "Ghana", "score": {"ft": [1, 0], "ht": [1, 0]}},
++      {"round": "Round of 32", "num": 88, "date": "2026-07-03", "team1": "Australia", "team2": "Egypt", "score": {"p": [2, 4], "et": [1, 1], "ft": [1, 1], "ht": [0, 1]}},
++      {"round": "Round of 16", "num": 89, "date": "2026-07-04", "team1": "Paraguay", "team2": "France", "score": {"ft": [0, 1], "ht": [0, 0]}},
++      {"round": "Round of 16", "num": 90, "date": "2026-07-04", "team1": "Canada", "team2": "Morocco", "score": {"ft": [0, 3], "ht": [0, 0]}},
++      {"round": "Round of 16", "num": 91, "date": "2026-07-05", "team1": "Brazil", "team2": "Norway", "score": {"ft": [1, 2], "ht": [0, 0]}},
++      {"round": "Round of 16", "num": 92, "date": "2026-07-05", "team1": "Mexico", "team2": "England", "score": {"ft": [2, 3], "ht": [1, 2]}},
++      {"round": "Round of 16", "num": 93, "date": "2026-07-06", "team1": "Portugal", "team2": "Spain", "score": {"ft": [0, 1], "ht": [0, 0]}},
++      {"round": "Round of 16", "num": 94, "date": "2026-07-06", "team1": "USA", "team2": "Belgium", "score": {"ft": [1, 4], "ht": [1, 2]}},
++      {"round": "Round of 16", "num": 95, "date": "2026-07-07", "team1": "Argentina", "team2": "Egypt", "score": {"ft": [3, 2], "ht": [0, 1]}},
++      {"round": "Round of 16", "num": 96, "date": "2026-07-07", "team1": "Switzerland", "team2": "Colombia", "score": {"p": [4, 3], "et": [0, 0], "ft": [0, 0], "ht": [0, 0]}},
++      {"round": "Quarter-final", "num": 97, "date": "2026-07-09", "team1": "France", "team2": "Morocco", "score": {"ft": [2, 0], "ht": [0, 0]}},
++      {"round": "Quarter-final", "num": 98, "date": "2026-07-10", "team1": "Spain", "team2": "Belgium", "score": {"ft": [2, 1], "ht": [1, 1]}},
++      {"round": "Quarter-final", "num": 99, "date": "2026-07-11", "team1": "Norway", "team2": "England", "score": {"et": [1, 2], "ft": [1, 1], "ht": [1, 1]}},
++      {"round": "Quarter-final", "num": 100, "date": "2026-07-11", "team1": "Argentina", "team2": "Switzerland", "score": {"et": [3, 1], "ft": [1, 1], "ht": [1, 0]}},
++      {"round": "Semi-final", "num": 101, "date": "2026-07-14", "team1": "France", "team2": "Spain", "score": {"ft": [0, 2], "ht": [0, 1]}},
++      {"round": "Semi-final", "num": 102, "date": "2026-07-15", "team1": "England", "team2": "Argentina", "score": {"ft": [1, 2], "ht": [0, 0]}},
++      {"round": "Match for third place", "num": 103, "date": "2026-07-18", "team1": "France", "team2": "England", "score": {"ft": [4, 6], "ht": [0, 4]}},
++      {"round": "Final", "num": 104, "date": "2026-07-19", "team1": "Spain", "team2": "Argentina", "score": {"et": [1, 0], "ft": [0, 0], "ht": [0, 0]}}
++    ]}
++  },
++  "sources": {
++    "euro:2020": {
++      "url": "https://raw.githubusercontent.com/openfootball/euro.json/7bbf6309bdda6896d6bb9ca218c1e15eaf418ce3/2020/euro.json",
++      "sha256": "c94006eded92eb8ab00eb291d8573c4a3522f095e6c94e3decd3cf9dcfcfe07e"
++    },
++    "euro:2024": {
++      "url": "https://raw.githubusercontent.com/openfootball/euro.json/7bbf6309bdda6896d6bb9ca218c1e15eaf418ce3/2024/euro.json",
++      "sha256": "fdb4b858cc88603e69fe3b1ce34923fc6b69a774d4c8416f2d166ea57c556609"
++    },
++    "euro:2028": {
++      "url": "https://raw.githubusercontent.com/openfootball/euro.json/7bbf6309bdda6896d6bb9ca218c1e15eaf418ce3/2028/euro.json",
++      "sha256": "cd758ff00ce2d1bbf4ef5402b832f6f9fb0773bb48cbd39cb03984123140b88a"
++    },
++    "world-cup-history:1930": {
++      "url": "https://raw.githubusercontent.com/openfootball/worldcup.json/516d3825c3bd23fdc298c4014e84bde78f2d4965/1930/worldcup.json",
++      "sha256": "18c20a8b6ef63b08a77369f12b6767405834e11486d0133a678d68387c996b42"
++    },
++    "world-cup-history:1934": {
++      "url": "https://raw.githubusercontent.com/openfootball/worldcup.json/516d3825c3bd23fdc298c4014e84bde78f2d4965/1934/worldcup.json",
++      "sha256": "ae5054f25ba25b4032a8c1e7ad21d7eca7d8f1c7c093bd822a8bd82ae7a26e7d"
++    },
++    "world-cup-history:1938": {
++      "url": "https://raw.githubusercontent.com/openfootball/worldcup.json/516d3825c3bd23fdc298c4014e84bde78f2d4965/1938/worldcup.json",
++      "sha256": "d87c839e395e7322a11e42ca5513be05be8eaac34727178c24be3fdb610d5b8a"
++    },
++    "world-cup-history:1950": {
++      "url": "https://raw.githubusercontent.com/openfootball/worldcup.json/516d3825c3bd23fdc298c4014e84bde78f2d4965/1950/worldcup.json",
++      "sha256": "145c6be968653d5e826601f7b83d65427be8db73c136811db2384de8fcc84dc4"
++    },
++    "world-cup-history:1954": {
++      "url": "https://raw.githubusercontent.com/openfootball/worldcup.json/516d3825c3bd23fdc298c4014e84bde78f2d4965/1954/worldcup.json",
++      "sha256": "089b2a6cdd39d903ee31390829c40b46e42958698c815d13f9131f954ad43943"
++    },
++    "world-cup-history:1958": {
++      "url": "https://raw.githubusercontent.com/openfootball/worldcup.json/516d3825c3bd23fdc298c4014e84bde78f2d4965/1958/worldcup.json",
++      "sha256": "c0c2b2628c015d9e727f8bcd7a498148c879eefc0a1bfaad4726cac0fe21a123"
++    },
++    "world-cup-history:1962": {
++      "url": "https://raw.githubusercontent.com/openfootball/worldcup.json/516d3825c3bd23fdc298c4014e84bde78f2d4965/1962/worldcup.json",
++      "sha256": "a459fefc54db91ceedb813dda09b4cdebf1c39ee6869d3a5fdd8a9e7022b5be9"
++    },
++    "world-cup-history:1966": {
++      "url": "https://raw.githubusercontent.com/openfootball/worldcup.json/516d3825c3bd23fdc298c4014e84bde78f2d4965/1966/worldcup.json",
++      "sha256": "2ed22b695808e588bf954ffe9fca33a86fe0883e825a01fe8399041ea35d0709"
++    },
++    "world-cup-history:1970": {
++      "url": "https://raw.githubusercontent.com/openfootball/worldcup.json/516d3825c3bd23fdc298c4014e84bde78f2d4965/1970/worldcup.json",
++      "sha256": "6291d3ab67405bbfa7962bbd1039c23945530f582d0eba8cb17eb32d55576468"
++    },
++    "world-cup-history:1974": {
++      "url": "https://raw.githubusercontent.com/openfootball/worldcup.json/516d3825c3bd23fdc298c4014e84bde78f2d4965/1974/worldcup.json",
++      "sha256": "2a117c62d94e5a516decce6026fd1976d291ad648c9612fe22ca57cd8c10a043"
++    },
++    "world-cup-history:1978": {
++      "url": "https://raw.githubusercontent.com/openfootball/worldcup.json/516d3825c3bd23fdc298c4014e84bde78f2d4965/1978/worldcup.json",
++      "sha256": "8fa2136edf5bf48b86e66cd4f23df3e40d961c4630752bd61616b6b13bdae4c8"
++    },
++    "world-cup-history:1982": {
++      "url": "https://raw.githubusercontent.com/openfootball/worldcup.json/516d3825c3bd23fdc298c4014e84bde78f2d4965/1982/worldcup.json",
++      "sha256": "09e239bbe5878cfdcf41e64f1925e73d90cce13426f87ca8a8c6a3fb309be134"
++    },
++    "world-cup-history:1986": {
++      "url": "https://raw.githubusercontent.com/openfootball/worldcup.json/516d3825c3bd23fdc298c4014e84bde78f2d4965/1986/worldcup.json",
++      "sha256": "66592b1c3f6eebbf45d80dafa44770c5620497e38391f03669c743399ee09155"
++    },
++    "world-cup-history:1990": {
++      "url": "https://raw.githubusercontent.com/openfootball/worldcup.json/516d3825c3bd23fdc298c4014e84bde78f2d4965/1990/worldcup.json",
++      "sha256": "72178e69a54155b2793f60f93a46e5f596045cca041d04646ca0f15edaee5828"
++    },
++    "world-cup-history:1994": {
++      "url": "https://raw.githubusercontent.com/openfootball/worldcup.json/516d3825c3bd23fdc298c4014e84bde78f2d4965/1994/worldcup.json",
++      "sha256": "5b547fc28ffbfa057ca0ad21093716380a7628a845b56d1681dbc2e3370721e2"
++    },
++    "world-cup-history:1998": {
++      "url": "https://raw.githubusercontent.com/openfootball/worldcup.json/516d3825c3bd23fdc298c4014e84bde78f2d4965/1998/worldcup.json",
++      "sha256": "6f3c10cf74f0cc5d7e9d37defc4e2841672b525b02f7416524772af0e5403acc"
++    },
++    "world-cup-history:2002": {
++      "url": "https://raw.githubusercontent.com/openfootball/worldcup.json/516d3825c3bd23fdc298c4014e84bde78f2d4965/2002/worldcup.json",
++      "sha256": "87514351fa080435594635870732ddc3e31b23a29f097f1f18916011b9cfaa20"
++    },
++    "world-cup-history:2006": {
++      "url": "https://raw.githubusercontent.com/openfootball/worldcup.json/516d3825c3bd23fdc298c4014e84bde78f2d4965/2006/worldcup.json",
++      "sha256": "5fbf1b945c34e5ec796161b9d62cea288a99e9132612bb028c731bf2a88550cc"
++    },
++    "world-cup-history:2010": {
++      "url": "https://raw.githubusercontent.com/openfootball/worldcup.json/516d3825c3bd23fdc298c4014e84bde78f2d4965/2010/worldcup.json",
++      "sha256": "a02429be186ba377d4099c79ee00ec57fe1b1926b7b34fc786c4cc671777efb3"
++    },
++    "world-cup-history:2014": {
++      "url": "https://raw.githubusercontent.com/openfootball/worldcup.json/516d3825c3bd23fdc298c4014e84bde78f2d4965/2014/worldcup.json",
++      "sha256": "a68c6150fca6e37b5e9ff2eba3100ad47241a5c1f6d518a8fabb555260c371a0"
++    },
++    "world-cup-history:2018": {
++      "url": "https://raw.githubusercontent.com/openfootball/worldcup.json/516d3825c3bd23fdc298c4014e84bde78f2d4965/2018/worldcup.json",
++      "sha256": "6af380e875cc52fe12073ab7862fbe8d3e5505ee029cb84d8b5480bf6d603d11"
++    },
++    "world-cup-history:2022": {
++      "url": "https://raw.githubusercontent.com/openfootball/worldcup.json/516d3825c3bd23fdc298c4014e84bde78f2d4965/2022/worldcup.json",
++      "sha256": "f4f0499c30076bc8e3702f400765900797fb22212a32aaa8137e1dfc49449a68"
++    },
++    "world-cup-history:2026": {
++      "url": "https://raw.githubusercontent.com/openfootball/worldcup.json/516d3825c3bd23fdc298c4014e84bde78f2d4965/2026/worldcup.json",
++      "sha256": "0ae2c18109b5aa86bc11928b43586ca430c234804d5bbf808d2c3bf2051ecfca"
++    }
++  }
++}
+diff --git a/backend/tests/fixtures/openfootball/france-2024.txt b/backend/tests/fixtures/openfootball/france-2024.txt
+new file mode 100644
+index 0000000000..430d69abaf
+--- /dev/null
++++ b/backend/tests/fixtures/openfootball/france-2024.txt
+@@ -0,0 +1,253 @@
++= French Coupe de France 2024/25
++
++# Date       Sun Nov 10 2024 - Sat May 24 2025 (195d)
++# Teams      201
++# Matches    200
++
++
++
++▪ Round 7
++  Sun Nov 10 2024
++    17:30  Jeunesse Evolution      v CS Moulien               7-6 pen. (0-0)
++  Fri Nov 15
++    19:00  Vendée Les Herbiers     v AC Ajaccio               2-1 (0-1)
++    20:00  Paris FC                v US Quevilly-Rouen        2-4 pen. (1-1, 1-1)
++           Angoulême CFC           v Rodez AF                 2-1 (1-0)
++  Sat Nov 16
++    13:45  FCSR Obernai            v FC Metz                  0-3 (0-0)
++           C'Chartres Football     v SM Caen                  0-4 (0-4)
++           Aviron Bayonnais        v Pau FC                   1-3 (1-2)
++    14:00  FC Freyming             v SC Bastia                0-4 (0-1)
++           Houilles AC             v US Boulogne              0-3 (0-1)
++           US Crépy-en-Valois      v Diables Noirs            2-4 pen. (0-0)
++           USC Corte               v ESA Linas-Montlhéry      4-2 pen. (1-1, 0-1)
++           AS Ginglin Cesson       v US Alençon               2-0 (1-0)
++           CS Feytiat              v Clermont Foot 63         0-3 (0-1)
++           FC Chaumont             v GOAL FC                  2-3 (1-3)
++    15:00  CG Haubourdin           v Red Star FC              1-7 (1-3)
++    15:30  US Raon-l'Etape         v ASC Biesheim             4-2 pen. (1-1, 0-1)
++           Ruffiac Malestroit Foot v FC Lorient               0-2 (0-1)
++           RC Saint-Joseph         v AS Samaritaine           2-1 (0-1)
++    16:00  FC PRJ                  v SA Mérignac              0-6 (0-3)
++    16:30  St-Pierre de Milizac    v Dinan Léhon              2-3 pen. (1-1, 0-1)
++    17:00  US Sarre-Union          v ES Thaon                 0-2 (0-0)
++           Vannes OC               v Le Mans FC               1-2 (0-1)
++           Saint-Colomban Locminé  v Sablé FC                 4-2 (2-0)
++           Olympique Saumur        v US Concarneau            0-2 (0-1)
++           RCO Agde                v SO Romorantin            9-8 pen. (1-1, 1-0)
++           FC Grandvillars         v Dijon FCO                2-4 (1-1)
++           ESB Marboz              v Cluses-Scionzier FC      0-1 (0-1)
++    17:30  US Nousseviller         v SR Colmar                0-3 (0-1)
++           FC Istres               v Cannet Rocheville        4-0 (3-0)
++    18:00  SAS Épinal              v AS Nancy Lorraine        2-4 (2-1)
++           JA Drancy               v Pays de Cassel           2-1 (2-0)
++           Gallia Lucciana         v Olympique Charleville Prix AM  2-1 (2-0)
++           Stade Béthunois         v USL Dunkerque            6-7 pen. (0-0)
++           Arras Football          v Valenciennes FC          0-2 (0-0)
++           AS Beauvais             v US Chantilly             1-0 (0-0)
++           FC Fleury 91            v Amiens SC                3-5 pen. (1-1, 1-0)
++           AS Vitré                v Stade Lavallois          4-5 pen. (0-0)
++           FC Saint-Lô Manche      v SU Dives Cabourg         4-5 pen. (1-1, 0-1)
++           US Philibertine         v Thouars Foot 79          3-0 (1-0)
++           Vendée Fontenay         v ESOF La Roche            1-2 (0-1)
++           US Colomiers            v Vierzon FC               4-5 pen. (2-2, 1-2)
++           FC Espaly               v Biars-Bretenoux          1-0 (0-0)
++           Canet Roussillon        v FC Versailles            1-3 (0-0)
++           Olympique Alès          v Stade Beaucairois        4-2 (2-2)
++           ASJR Football           v FC Bourgoin-Jallieu      0-4 (0-1)
++           GFA Rumilly Vallières   v Jura Dolois              1-0 (0-0)
++           FC Foron                v ESTAC Troyes             1-3 (0-1)
++           AS Guereins             v UF Mâconnais             0-4 (0-2)
++           FC Gueugnon             v FC Sochaux               1-3 (0-2)
++           FC Vesoul               v FC Annecy                1-6 (0-2)
++           OC Cesson-Sévigné       v TA Rennes                3-1 pen. (2-2, 0-0)
++           US Montagnarde          v Tours FC                 3-4 pen. (1-1, 1-1)
++    18:30  CS Blénod et Pont-á-Mousson v FCSR Haguenau            0-1 (0-1)
++           CA Boulay               v US Thionville-Lusitanos  0-3 (0-2)
++           FC Serquigny-Nassandres v EA Guingamp              0-5 (0-1)
++           Grenoble Foot 38        v FC Villefranche Beaujolais  10-9 pen. (1-1, 0-0)
++    19:00  Calais Beau Marais      v AC Paris 15              3-1 (2-1)
++           Chamois Niortais        v US Orléans               0-3 (0-0)
++           Cazaux Olympique        v La Roche VF              0-6 (0-3)
++           FC Comtal               v Le Puy Foot 43           0-2 (0-1)
++           ES Grau-du-Roi          v AS Cannes                0-2 (0-0)
++           Valence FC              v Marignane Gignac         1-0 (1-0)
++  Sun Nov 17
++    01:00  AS Dragon               v US Avranches             4-2 pen. (2-2, 2-0)
++    13:30  JS Saint-Pierroise      v Saint-Denis FC           1-4 (0-1)
++    14:00  FC Hettange Grande      v Luneville                2-3 pen. (3-3, 1-2)
++           Association Still-Mutzig v FA Illkirch Graffenstaden  1-0 (1-0)
++           RC Labourse             v FC 93 Bobigny            0-4 (0-1)
++           FC Raismes              v Entente Feignies Aulnoye  0-5 (0-2)
++           Etoile Club Anstaing Chéreng v FCM Aubervilliers        0-4 (0-1)
++           RC Roubaix              v SFC Neuilly-sur-Marne    4-5 (2-2)
++           Liancourt Clermont      v CS Brétigny              4-3 pen. (0-0)
++           CO Les Ulis             v RC Calais                1-3 (1-2)
++           Le Touquet-Paris-Plage AC v FC Porto Portugais d'Amiens  4-1 pen. (1-1, 1-0)
++           FC Fief-Gesté           v US Monnaie               1-3 (0-2)
++           MOS Caen                v US Bolbec                1-2 (0-2)
++           COBSP Football          v US Saint-Malo            1-2 (1-1)
++           ES Beaumont Saint-Cyr   v FCE Mérignac Arlac       1-0 (0-0)
++           Étoile Maritime         v USSA Vertou              0-3    [awarded]
++           Avenir Mourenxois       v FC Marmande 47           0-3 (0-1)
++           US Couzeix-Chaptelat    v Sauveteurs Brivois       1-0 (1-0)
++           AS Montferrand          v L'Union Saint-Jean FC    0-4 (0-1)
++           Olympique de Valence    v AC Arles-Avignon         1-0 (1-0)
++           Lempdes SF              v Carnoux FC               0-1 (0-1)
++           SC Anduzien             v Hauts Lyonnais           1-3 (0-1)
++           Chambéry SF             v FC Saint-Cyr Collonges   2-1 (0-1)
++           FC Valdahon Vercel      v Jura Sud                 0-4 (0-2)
++           Stade Paimpolais        v Stade Briochin           0-3 (0-1)
++           US Pays Saint-Omer      v US Noyelles-sous-Lens    4-5 pen. (1-1, 0-1)
++    17:00  FC Bressuire            v Girondins Bordeaux       0-2 (0-1)
++           FC Allobroges Asafia    v FC Martigues             0-5 (0-1)
++  Sat Nov 23
++    15:45  Aigles d'Or de Mana     v Étoile de Matoury        3-2 (1-2)
++
++
++▪ Round 8
++  Wed Nov 20
++    20:00  USC Corte               v Diables Noirs            2-0 (0-0)
++  Fri Nov 29
++    19:00  Stade Briochin          v US Saint-Malo            5-4 pen. (0-0)
++           US Orléans              v La Roche VF              2-4 pen. (1-1, 0-0)
++    19:30  SC Bastia               v AS Nancy Lorraine        2-0 (1-0)
++           US Raon-l'Etape         v FC Metz                  0-1 (0-1)
++    20:00  Calais Beau Marais      v Amiens SC                0-3 (0-0)
++           Chambéry SF             v Dijon FCO                0-2 (0-0)
++  Sat Nov 30
++    13:30  US Monnaie              v FC Lorient               0-5 (0-3)
++           SM Caen                 v US Bolbec                6-0 (1-0)
++    14:00  Association Still-Mutzig v Jeunesse Evolution       4-1 (3-1)
++           Stade Lavallois         v US Concarneau            5-3 pen. (2-2, 1-1)
++           Angoulême CFC           v Clermont Foot 63         1-2 (1-1)
++    14:30  FC 93 Bobigny           v Red Star FC              4-2 pen. (2-2, 1-1)
++           FCM Aubervilliers       v USL Dunkerque            0-2 (0-0)
++           US Philibertine         v Pau FC                   4-1 pen. (1-1, 1-0)
++    15:00  Liancourt Clermont      v US Quevilly-Rouen        0-1 (0-1)
++    16:00  Étoile de Matoury       v US Thionville-Lusitanos  0-2 (0-2)
++           Valenciennes FC         v SFC Neuilly-sur-Marne    4-3 (0-1)
++           Jura Sud                v FC Annecy                5-6 pen. (0-0)
++    17:00  SR Colmar               v FCSR Haguenau            3-4 pen. (1-1, 1-0)
++           RCO Agde                v Le Puy Foot 43           1-5 (0-2)
++           FC Istres               v Grenoble Foot 38         0-4 (0-1)
++           GFA Rumilly Vallières   v GOAL FC                  3-4 pen. (1-1, 1-0)
++           Cluses-Scionzier FC     v ESTAC Troyes             0-1 (0-1)
++    18:00  Le Touquet-Paris-Plage AC v RC Calais                0-1 (0-0)
++           Le Mans FC              v Saint-Colomban Locminé   4-0 (2-0)
++           Tours FC                v OC Cesson-Sévigné        3-0 (2-0)
++           Dinan Léhon             v EA Guingamp              1-4 (0-1)
++           SA Mérignac             v ES Beaumont Saint-Cyr    4-2 pen. (1-1, 0-0)
++           ESOF La Roche           v RC Saint-Joseph          1-3 (0-1)
++           L'Union Saint-Jean FC   v FC Versailles            2-1 (2-0)
++           Olympique Alès          v AS Cannes                1-5 (0-4)
++           Valence FC              v FC Martigues             0-2 (0-0)
++           FC Bourgoin-Jallieu     v Olympique de Valence     3-0 (1-0)
++           Carnoux FC              v Hauts Lyonnais           0-1 (0-1)
++           UF Mâconnais            v FC Sochaux               0-2 (0-0)
++    18:30  AS Ginglin Cesson       v FC Rouen 1899            0-3 (0-0)
++    20:00  SU Dives Cabourg        v AS Dragon                6-1 (4-0)
++           FC Marmande 47          v Vierzon FC               3-0    [awarded]
++  Sun Dec 1
++    13:30  Entente Feignies Aulnoye v Gallia Lucciana          1-0 (0-0)
++           US Couzeix-Chaptelat    v FC Espaly                0-3 (0-1)
++    13:45  US Boulogne             v AS Beauvais              4-2 (3-0)
++    14:00  US Noyelles-sous-Lens   v JA Drancy                0-3 (0-3)
++    15:00  Luneville               v ES Thaon                 0-4 (0-1)
++    16:00  Saint-Denis FC          v USSA Vertou              5-4 pen. (0-0)
++    17:00  Girondins Bordeaux      v Vendée Les Herbiers      2-0 (2-0)
++
++
++▪ Round 9
++  Fri Dec 20
++    20:45  FC Espaly               v Dijon FCO                4-3 pen. (1-1, 0-0)
++           GOAL FC                 v FC Annecy                1-2 (0-1)
++           ESTAC Troyes            v FC Metz                  3-0 (1-0)
++           FCSR Haguenau           v US Boulogne              4-1 (3-0)
++           SC Bastia               v RC Saint-Joseph          5-0 (4-0)
++           SA Mérignac             v Stade Lavallois          3-4 pen. (0-0)
++    21:00  FC Rouen 1899           v Lille OSC                0-1 (0-1)
++  Sat Dec 21
++           Tours FC                v FC Lorient               0-3    [awarded]
++    15:30  AS Cannes               v Grenoble Foot 38         3-2 (3-1)
++           FC Bourgoin-Jallieu     v FC Martigues             4-1 (3-1)
++           Hauts Lyonnais          v Toulouse FC              2-4 pen. (0-0)
++           SU Dives Cabourg        v Saint-Denis FC           2-0 (0-0)
++           Stade Briochin          v Havre AC                 1-0 (0-0)
++           La Roche VF             v Stade Brestois 29        0-1 (0-1)
++    18:00  USC Corte               v OGC Nice                 3-5 pen. (1-1, 1-0)
++           Le Puy Foot 43          v Montpellier HSC          4-0 (1-0)
++           ES Thaon                v Amiens SC                2-1 (0-1)
++           JA Drancy               v FC Nantes                0-4 (0-2)
++           Entente Feignies Aulnoye v Olympique Lyonnais       1-2 (0-1)
++    21:00  RC Calais               v RC Strasbourg            0-3 (0-0)
++  Sun Dec 22
++    14:45  L'Union Saint-Jean FC   v AS Monaco                1-4 (0-2)
++           AS Saint-Étienne        v Olympique Marseille      0-4 (0-2)
++           Association Still-Mutzig v Stade de Reims           1-3 (0-1)
++           AJ Auxerre              v USL Dunkerque            0-1 (0-1)
++           Girondins Bordeaux      v Stade Rennais            1-4 (1-1)
++    17:30  FC Sochaux              v Clermont Foot 63         5-3 pen. (0-0)
++           US Thionville-Lusitanos v Valenciennes FC          4-5 pen. (2-2, 0-1)
++           FC 93 Bobigny           v Angers SCO               0-1 (0-0)
++           US Philibertine         v US Quevilly-Rouen        0-2 (0-0)
++           FC Marmande 47          v Le Mans FC               0-7 (0-4)
++           EA Guingamp             v SM Caen                  2-1 (0-0)
++    21:00  RC Lens                 v Paris Saint-Germain      3-4 pen. (1-1, 0-0)
++
++
++▪ Round of 32
++  Tue Jan 14 2025
++    20:45  SC Bastia               v OGC Nice                 0-1 (0-0)
++           SU Dives Cabourg        v Le Puy Foot 43           1-0 (0-0)
++           Le Mans FC              v Valenciennes FC          4-3 pen. (1-1, 1-0)
++           EA Guingamp             v FC Sochaux               9-8 pen. (2-2, 1-2)
++           Stade de Reims          v AS Monaco                3-1 pen. (1-1, 1-0)
++    21:10  Olympique Marseille     v Lille OSC                3-4 pen. (1-1, 0-0)
++  Wed Jan 15
++    18:00  FC Bourgoin-Jallieu     v Olympique Lyonnais       4-2 pen. (2-2, 1-1)
++    18:30  Toulouse FC             v Stade Lavallois          2-1 (2-0)
++           US Quevilly-Rouen       v Angers SCO               2-3 (1-2)
++           ESTAC Troyes            v Stade Rennais            1-0 (0-0)
++           Stade Briochin          v FC Annecy                4-3 pen. (1-1, 0-1)
++           AS Cannes               v FC Lorient               2-1 (2-1)
++           Stade Brestois 29       v FC Nantes                2-1 (2-0)
++           ES Thaon                v RC Strasbourg            3-5 pen. (2-2, 2-2)
++    21:00  FC Espaly               v Paris Saint-Germain      2-4 (1-1)
++  Wed Jan 22
++    17:00  FCSR Haguenau           v USL Dunkerque            1-3 (1-0)
++
++
++▪ Round of 16
++  Tue Feb 4
++    19:00  ESTAC Troyes            v Stade Brestois 29        1-2 (0-0)
++           Lille OSC               v USL Dunkerque            4-5 pen. (1-1, 0-0)
++    21:10  Le Mans FC              v Paris Saint-Germain      0-2 (0-1)
++  Wed Feb 5
++    20:45  Stade Briochin          v OGC Nice                 2-1 (0-0)
++           Toulouse FC             v EA Guingamp              0-2 (0-0)
++           AS Cannes               v SU Dives Cabourg         5-3 (3-1)
++           RC Strasbourg           v Angers SCO               1-3 (1-2)
++  Thu Feb 6
++    21:00  FC Bourgoin-Jallieu     v Stade de Reims           2-3 pen. (0-0)
++
++
++▪ Quarterfinals
++  Tue Feb 25
++    21:00  AS Cannes               v EA Guingamp              3-1 (2-0)
++           Angers SCO              v Stade de Reims           3-5 pen. (1-1, 0-0)
++  Wed Feb 26
++    19:00  Stade Brestois 29       v USL Dunkerque            2-3 (1-0)
++    21:10  Stade Briochin          v Paris Saint-Germain      0-7 (0-2)
++
++
++▪ Semifinals
++  Tue Apr 1
++    21:10  USL Dunkerque           v Paris Saint-Germain      2-4 (2-1)
++  Wed Apr 2
++    21:00  AS Cannes               v Stade de Reims           1-2 (0-1)
++
++
++▪ Final
++  Sat May 24
++    21:00  Paris Saint-Germain     v Stade de Reims           3-0 (3-0)
+diff --git a/backend/tests/fixtures/openfootball/openfootball-2021.txt b/backend/tests/fixtures/openfootball/openfootball-2021.txt
+new file mode 100644
+index 0000000000..4d9090d347
+--- /dev/null
++++ b/backend/tests/fixtures/openfootball/openfootball-2021.txt
+@@ -0,0 +1,40 @@
++= Club World Cup 2021
++
++# Date       Thu Feb 3 - Sat Feb 12 2022 (9d)
++# Teams      7
++# Matches    8
++
++
++
++▪ Round 1
++  Thu Feb 3 2022
++    20:30  Al Jazira Club (UAE)    v AS Pirae (TAH)           4-1 (3-0)
++
++
++▪ Round 2
++  Sat Feb 5
++    20:30  Al Ahly SC (EGY)        v CF Monterrey (MEX)       1-0 (0-0)
++  Sun Feb 6
++    20:30  Al Hilal (KSA)          v Al Jazira Club (UAE)     6-1 (2-1)
++
++
++▪ Match 5th place
++  Wed Feb 9
++    17:30  CF Monterrey (MEX)      v Al Jazira Club (UAE)     3-1 (3-0)
++
++
++▪ Semifinals
++  Tue Feb 8
++    20:30  Palmeiras (BRA)         v Al Ahly SC (EGY)         2-0 (1-0)
++  Wed Feb 9
++    20:30  Al Hilal (KSA)          v Chelsea FC (ENG)         0-1 (0-1)
++
++
++▪ Match 3rd place
++  Sat Feb 12
++    17:00  Al Hilal (KSA)          v Al Ahly SC (EGY)         0-4 (0-3)
++
++
++▪ Final
++  Sat Feb 12
++    20:30  Chelsea FC (ENG)        v Palmeiras (BRA)          2-1 a.e.t. (1-1, 0-0)
+diff --git a/backend/tests/fixtures/openfootball/openfootball-2022.txt b/backend/tests/fixtures/openfootball/openfootball-2022.txt
+new file mode 100644
+index 0000000000..9cf82d5476
+--- /dev/null
++++ b/backend/tests/fixtures/openfootball/openfootball-2022.txt
+@@ -0,0 +1,34 @@
++= Club World Cup 2022
++
++# Date       Wed Feb 1 - Sat Feb 11 2023 (10d)
++# Teams      7
++# Matches    7
++
++
++
++▪ Round 1
++  Wed Feb 1 2023
++    20:00  Al Ahly SC (EGY)        v Auckland City FC (NZL)   3-0 (1-0)
++
++
++▪ Round 2
++  Sat Feb 4
++    15:30  Wydad AC (MAR)          v Al Hilal (KSA)           3-5 pen. 1-1 a.e.t. (1-1, 0-0)
++    18:00  Seattle Sounders (USA)  v Al Ahly SC (EGY)         0-1 (0-0)
++
++
++▪ Semifinals
++  Tue Feb 7
++    20:00  Flamengo RJ (BRA)       v Al Hilal (KSA)           2-3 (1-2)
++  Wed Feb 8
++    20:00  Al Ahly SC (EGY)        v Real Madrid (ESP)        1-4 (0-1)
++
++
++▪ Match 3rd place
++  Sat Feb 11
++    16:30  Flamengo RJ (BRA)       v Al Ahly SC (EGY)         4-2 (1-1)
++
++
++▪ Final
++  Sat Feb 11
++    20:00  Al Hilal (KSA)          v Real Madrid (ESP)        3-5 (1-2)
+diff --git a/backend/tests/fixtures/openfootball/openfootball-2023.txt b/backend/tests/fixtures/openfootball/openfootball-2023.txt
+new file mode 100644
+index 0000000000..1a68a1f961
+--- /dev/null
++++ b/backend/tests/fixtures/openfootball/openfootball-2023.txt
+@@ -0,0 +1,34 @@
++= Club World Cup 2023
++
++# Date       Tue Dec 12 - Fri Dec 22 2023 (10d)
++# Teams      7
++# Matches    7
++
++
++
++▪ Round 1
++  Tue Dec 12 2023
++    21:00  Al Ittihad (KSA)        v Auckland City FC (NZL)   3-0 (3-0)
++
++
++▪ Round 2
++  Fri Dec 15
++    17:30  Club León (MEX)         v Urawa Red Diamonds (JPN)  0-1 (0-0)
++    21:00  Al Ahly SC (EGY)        v Al Ittihad (KSA)         3-1 (1-0)
++
++
++▪ Semifinals
++  Mon Dec 18
++    21:00  Fluminense RJ (BRA)     v Al Ahly SC (EGY)         2-0 (0-0)
++  Tue Dec 19
++    21:00  Urawa Red Diamonds (JPN) v Manchester City (ENG)    0-3 (0-1)
++
++
++▪ Match 3rd place
++  Fri Dec 22
++    17:30  Urawa Red Diamonds (JPN) v Al Ahly SC (EGY)         2-4 (1-2)
++
++
++▪ Final
++  Fri Dec 22
++    21:00  Manchester City (ENG)   v Fluminense RJ (BRA)      4-0 (2-0)

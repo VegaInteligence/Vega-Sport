@@ -1,0 +1,1821 @@
+diff --git a/backend/Dockerfile b/backend/Dockerfile
+index 9f19323a2c..f41497467d 100644
+--- a/backend/Dockerfile
++++ b/backend/Dockerfile
+@@ -15,10 +15,13 @@ COPY backend/sql sql
+ # site's shared/archive.js.
+ COPY backend/archives backend/archives
+ COPY dashboard/shared/archive.js dashboard/shared/archive-text.js dashboard/shared/openfootball-history.js dashboard/shared/
++# The published reading the corrected one is compared with (8018e0836c's files, FAILURE_MODES.md §22).
++COPY dashboard/shared/legacy-8018e08 dashboard/shared/legacy-8018e08
+ # main's Wikidata and Commons readers (vega/sources/wikidata.py) and their imports.
+ COPY dashboard/frontend/src/services/wikidata-club.js dashboard/frontend/src/services/wikidata-club-identity.js \
+      dashboard/frontend/src/services/wikidata-stadium.js dashboard/frontend/src/services/stadium-plans.js \
+-     dashboard/frontend/src/services/format.js dashboard/frontend/src/services/player-aliases.js dashboard/frontend/src/services/
++     dashboard/frontend/src/services/format.js dashboard/frontend/src/services/image-source.js dashboard/frontend/src/services/player-aliases.js \
++     dashboard/frontend/src/services/
+ COPY dashboard/frontend/src/data-url.js dashboard/frontend/src/model.js dashboard/frontend/src/
+ # data-url.js imports this module to map the site's reads to the API's routes.
+ COPY dashboard/frontend/src/services/api-routes.js dashboard/frontend/src/services/
+diff --git a/backend/Dockerfile.dockerignore b/backend/Dockerfile.dockerignore
+index 174e439d01..40c00dd1b3 100644
+--- a/backend/Dockerfile.dockerignore
++++ b/backend/Dockerfile.dockerignore
+@@ -8,6 +8,8 @@
+ !dashboard/shared/archive.js
+ !dashboard/shared/archive-text.js
+ !dashboard/shared/openfootball-history.js
++!dashboard/shared/legacy-8018e08
++!dashboard/shared/legacy-8018e08/**
+ !backend/archives
+ !backend/archives/**
+ !backend/sources
+@@ -25,6 +27,7 @@
+ !dashboard/frontend/src/services/wikidata-stadium.js
+ !dashboard/frontend/src/services/stadium-plans.js
+ !dashboard/frontend/src/services/format.js
++!dashboard/frontend/src/services/image-source.js
+ !dashboard/frontend/src/services/player-aliases.js
+ !dashboard/frontend/src/data-url.js
+ !dashboard/frontend/src/services/api-routes.js
+diff --git a/backend/README.md b/backend/README.md
+index c092c5a612..3405f7736f 100644
+--- a/backend/README.md
++++ b/backend/README.md
+@@ -131,11 +131,12 @@ Chaque route liste en tête de fichier ses écarts voulus avec l'API précédent
+ 
+ - Le [jeu Transfermarkt de dcaribou](https://github.com/dcaribou/transfermarkt-datasets), arrêté au 6 juillet 2026, est relu par le collecteur sur l’ensemble de la base. La [projection reproductible](tools/build_player_fact_snapshot.py) conserve les identifiants source et les preuves de rapprochement. L’import complète les dates de naissance et pieds forts manquants. Les échéances et leurs clubs sont conservés dans `core.player_fact_observations` avec la date du jeu. Les contrats confirmés gardent la priorité dans les fiches. La route `/api/players/facts-coverage` donne les comptes de couverture.
+ - Les [estimations Transfermarkt datées](tools/build_market_value_snapshot.py) réutilisent ces correspondances. Leur date d’évaluation reste distincte de la date du jeu. La fiche donne la dernière estimation connue et `/api/player-market-values?id=` en donne l’historique.
+-- **Lecteur Transfermarkt** ([transfermarkt.py](vega/transfermarkt.py), migrations 113 et 114) : un processus enfant du worker (`--transfermarkt process`) lit l’API JSON de Transfermarkt, celle que documente le projet MIT felipeall/transfermarkt-api (v5), avec un client à lui (six routes, bibliothèque standard).
++- **Lecteur Transfermarkt** ([transfermarkt.py](vega/transfermarkt.py), migrations 113, 114 et 139) : un processus enfant du worker (`--transfermarkt process`) lit l’API JSON de Transfermarkt, celle que documente le projet MIT felipeall/transfermarkt-api (v5), avec un client à lui (six routes, bibliothèque standard).
+   - **Ce qu’il garde, en lignes typées :**
+     - les joueurs lus (`core.provider_players`), les effectifs (`core.provider_squads`) et les noms de clubs (`core.provider_clubs`) ;
+-    - pour un joueur relié : ses valeurs avec le club de chaque estimation, ses transferts et ses blessures, remplacés en entier à chaque lecture ;
+-    - son contrat avec un de nos clubs, quand le début est connu.
++    - pour un joueur relié : ses valeurs avec le club de chaque estimation et ses blessures, remplacées en entier à chaque lecture ;
++    - ses transferts, chacun mis à jour par sa clé et jamais effacé : un transfert que Transfermarkt ne liste plus garde ses faits et le premier jour où il manquait (`absent_since`). Une réponse qui ne peut pas être un historique complet n’écrit rien ; la file garde son vrai statut HTTP et un code `HISTORY_*` ([modes d’échec §20](../docs/calculs/09-audit-2026-11/FAILURE_MODES.md)) ;
++    - ses contrats avec nos clubs, chacun un fait daté gardé ; celui que Transfermarkt ne nomme plus est écarté à la date du changement (`superseded_on`), sa date de fin observée gardée.
+   - **Liens** (règle de chacun dans `ops.provider_links`) :
+     - le jeu du 6 juillet tel quel ;
+     - un club par les votes des valeurs de nos joueurs : au moins 3 joueurs et 60 % de chaque côté, jamais une équipe réserve vers l’équipe première ; un conflit va dans `ops.provider_link_conflicts` ;
+@@ -146,6 +147,7 @@ Chaque route liste en tête de fichier ses écarts voulus avec l'API précédent
+   - **Le relancer** après lecture des refus (`ops.transfermarkt_blocks`) :
+     `UPDATE ops.transfermarkt_state SET gave_up_at = NULL, paused_until = NULL, blocks_in_row = 0, blocked_since = NULL WHERE id = 1;`
+   - **Avancement :** la vue `api.provider_reader_progress`.
++  - **Revenir à une image d’avant la migration 139** : arrêter d’abord le lecteur, `UPDATE ops.transfermarkt_state SET gave_up_at = now() WHERE id = 1;`, et le laisser arrêté jusqu’au retour d’une version qui conserve l’historique. L’ancien lecteur efface à chaque lecture ; s’il tourne quand même, la migration 139 refuse ses suppressions (`TRANSFERMARKT_HISTORY_KEPT`) et son processus redémarre toutes les 5 minutes sans rien perdre. Une suppression voulue par une personne pose `SET LOCAL vega.allow_history_delete = 'on'` dans sa transaction.
+ - coefficients UEFA, avec les points par saison et les clubs encore en lice ;
+ - classement FIFA, toutes les éditions depuis 2021 ;
+ - classements officiels SportScore, écrits seulement si chaque ligne désigne un club de l'édition ;
+diff --git a/backend/api/src/edition-artwork.mjs b/backend/api/src/edition-artwork.mjs
+new file mode 100644
+index 0000000000..8f5c89b711
+--- /dev/null
++++ b/backend/api/src/edition-artwork.mjs
+@@ -0,0 +1,4 @@
++/** Optional document fields for the separately verified artwork of a competition edition. */
++export function editionArtworkFields(imageUrl) {
++  return imageUrl ? { editionArtwork: { imageUrl, role: "edition_emblem" } } : {};
++}
+diff --git a/backend/api/src/routes/archives.mjs b/backend/api/src/routes/archives.mjs
+index ffa9506e94..4d5ec08723 100644
+--- a/backend/api/src/routes/archives.mjs
++++ b/backend/api/src/routes/archives.mjs
+@@ -18,6 +18,7 @@
+ import { createHash } from "node:crypto";
+ import { matchesEtag, reject, send, validateParams } from "../http.mjs";
+ import { readPageArgs } from "../publication.mjs";
++import { editionArtworkFields } from "../edition-artwork.mjs";
+ 
+ const hash = (value) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
+ const normalizeText = (value) =>
+@@ -77,7 +78,7 @@ async function archiveMeta(read, season) {
+   if (!row?.present) reject(404, "Archive introuvable.");
+   const sources = Object.fromEntries((row.sources || []).map((s) => [s.source, { digest: s.revision, publishedAt: s.retrieved_at }]));
+   return {
+-    version: hash([season, String(row.version ?? 0), sources]),
++    version: hash(["edition-artwork", season, String(row.version ?? 0), sources]),
+     sourceDigests: Object.fromEntries(Object.entries(sources).map(([k, v]) => [k, v.digest])),
+     sources,
+   };
+@@ -97,11 +98,15 @@ export async function archiveRead(req, params, read) {
+   const paging = readPageArgs(params, 50);
+   const meta = await archiveMeta(read, season);
+   if (params.has("version") && params.get("version") !== meta.version) reject(409, "Les archives ont été actualisées. Rechargez la première page.");
++  const requireSameVersion = async () => {
++    if ((await archiveMeta(read, season)).version !== meta.version)
++      reject(409, "Les archives ont été actualisées. Rechargez la première page.");
++  };
+   const etag = `W/"archive-v2-${hash([meta.version, [...params].sort(([a], [b]) => a.localeCompare(b))])}"`;
+   if (!matchKey && (req.method === "HEAD" || matchesEtag(req.headers.get("if-none-match"), etag))) return send(req, null, 200, { etag, ttl: 30 });
+   const [overview] = await read(
+     `WITH m AS (SELECT * FROM api.archive_matches WHERE season=$1)
+-     SELECT (SELECT coalesce(json_agg(json_build_object('id',e.id,'name',e.name,'country',e.country,
++     SELECT (SELECT coalesce(json_agg(json_build_object('id',e.id,'name',e.name,'country',e.country,'emblem',e.edition_emblem_url,
+          'matches',(SELECT count(*) FROM m WHERE m.competition_id=e.id),
+          'withGoals',(SELECT count(*) FROM m WHERE m.competition_id=e.id AND m.goal_count>0),
+          'goals',(SELECT coalesce(sum(goal_count),0) FROM m WHERE m.competition_id=e.id)) ORDER BY e.position),'[]'::json)
+@@ -112,14 +117,20 @@ export async function archiveRead(req, params, read) {
+          'competitions',(SELECT count(*) FROM api.archive_editions WHERE season=$1)) AS summary`,
+     [season],
+   );
+-  const data = { season, competitions: overview.competitions, summary: overview.summary };
++  const competitions = overview.competitions.map(({ emblem, ...edition }) => ({
++    ...edition, ...editionArtworkFields(emblem),
++  }));
++  const data = { season, competitions, summary: overview.summary };
+   if (matchKey) {
+     const [row] = await read(
+       `SELECT to_json(m) AS match,(SELECT coalesce(json_agg(g ORDER BY g.seq),'[]'::json) FROM api.archive_goals g
+          WHERE g.season_id=m.season_id AND g.match_id=m.match_id) AS goals
+-       FROM api.archive_matches m WHERE m.season=$1 AND m.key=$2`,
++       FROM api.archive_matches m WHERE m.season=$1 AND
++         (m.key=$2 OR EXISTS(SELECT 1 FROM api.archive_match_aliases a WHERE a.season_id=m.season_id
++           AND a.match_id=m.match_id AND ($2=a.former_key OR $2=a.former_public_id)))`,
+       [season, matchKey],
+     );
++    await requireSameVersion();
+     if (!row?.goals?.length) reject(404, "Aucun but archivé pour ce match.");
+     const { hasGoals, goalCount, ...listing } = archiveListing(row.match);
+     data.match = { ...listing, goals: row.goals.map((g) => goal(g, row.match)) };
+@@ -128,7 +139,9 @@ export async function archiveRead(req, params, read) {
+   }
+   const needle = normalizeText(q).trim();
+   const filter = `m.season=$1 AND ($2='all' OR m.competition_id=$2) AND ($3='' OR position($3 IN ${norm("m.team1||' '||m.team2")})>0
+-     OR EXISTS(SELECT 1 FROM api.archive_goals g WHERE g.season_id=m.season_id AND g.match_id=m.match_id AND position($3 IN ${norm("g.player")})>0))`;
++     OR EXISTS(SELECT 1 FROM api.archive_goals g WHERE g.season_id=m.season_id AND g.match_id=m.match_id AND position($3 IN ${norm("g.player")})>0)
++     OR EXISTS(SELECT 1 FROM api.archive_match_aliases a WHERE a.season_id=m.season_id AND a.match_id=m.match_id
++          AND position($3 IN ${norm("a.former_home||' '||a.former_away")})>0))`;
+   const [counted] = await read(`SELECT count(*)::int AS total FROM api.archive_matches m WHERE ${filter}`, [season, competition, needle]);
+   const total = counted.total,
+     pages = Math.max(1, Math.ceil(total / paging.limit)),
+@@ -136,6 +149,7 @@ export async function archiveRead(req, params, read) {
+   const rows = await read(`SELECT m.* FROM api.archive_matches m WHERE ${filter} ORDER BY m.position LIMIT $4 OFFSET $5`, [
+     season, competition, needle, paging.limit, (page - 1) * paging.limit,
+   ]);
++  await requireSameVersion();
+   data.matches = rows.map(archiveListing);
+   const pagination = { total, pages, page, limit: paging.limit, hasMore: page < pages, version: meta.version };
+   return send(req, { data, meta, pagination }, 200, { etag, ttl: 30, maxBytes: 512 * 1024 });
+diff --git a/backend/api/src/routes/cups.mjs b/backend/api/src/routes/cups.mjs
+index 9b36bd9db4..5f56162a1d 100644
+--- a/backend/api/src/routes/cups.mjs
++++ b/backend/api/src/routes/cups.mjs
+@@ -24,6 +24,7 @@ import { createHash } from "node:crypto";
+ import { matchesEtag, reject, send, validateParams } from "../http.mjs";
+ import { fixture, forecastOf } from "./matches.mjs";
+ import { standingsBody } from "./reference.mjs";
++import { editionArtworkFields } from "../edition-artwork.mjs";
+ 
+ const LEAGUE = /^l_(?:[A-Za-z0-9]{6}|v\d{7})$/,
+   YEAR = /^\d{4}(?:\/\d{4})?$/;
+@@ -48,7 +49,7 @@ export { forecastOf };
+ 
+ /** A cup source's match with its forecast while it is still to play (every competition has its predictions, VI-19). */
+ export function withForecast(match, f) {
+-  const played = match.status === "finished" || Array.isArray(match.score) || match.score?.ft;
++  const played = ["finished", "awarded", "canceled"].includes(match.status) || Array.isArray(match.score) || match.score?.ft;
+   return f && !played ? { ...match, forecast: forecastOf(f) } : match;
+ }
+ 
+@@ -59,16 +60,28 @@ async function forecastsOf(read, ids) {
+   return new Map(rows.map((r) => [Number(r.match_key), r]));
+ }
+ 
++/**
++ * A row's two sides by its own foreign keys (136, 144, VI-30): the public id of the team each FK names and that team's
++ * crest reference (null without one); a side without an FK is left out, and `sides` when both are. Beside the CSV
++ * line, which keeps the source's spelling: a name never chooses a crest.
++ */
++function ownSides(r) {
++  const sides = {};
++  for (const side of ["home", "away"])
++    if (r[`${side}_team_public_id`]) sides[side] = { id: r[`${side}_team_public_id`], image_url: r[`${side}_image_url`] ?? null };
++  return Object.keys(sides).length ? { sides } : {};
++}
++
+ /** A row of main's catalogue tables (the source's CSV line), from typed facts; a fixture with its forecast. */
+ export function tableRow(r, f) {
+   const row = { gw: text(r.gw), away: r.away, date: r.date ?? "", home: r.home, time: "" };
+-  if (r.status !== "finished") return f ? { ...row, forecast: forecastOf(f) } : row;
++  if (r.status !== "finished") return { ...row, ...(f && { forecast: forecastOf(f) }), ...ownSides(r) };
+   const sides = {};
+   for (const side of ["home", "away"])
+     for (const k of ["shots", "target", "fouls", "corners", "yellow", "red", "corners_1h", "corners_2h"]) sides[`${side}_${k}`] = text(r[`${side}_${k}`]);
+   return {
+     ...row, source: "", ft_away: text(r.away_score), ft_home: text(r.home_score), ht_away: text(r.away_score_ht), ht_home: text(r.home_score_ht),
+-    ft_result: outcome(r.home_score, r.away_score), ht_result: outcome(r.home_score_ht, r.away_score_ht), goal_minutes: "", ...sides,
++    ft_result: outcome(r.home_score, r.away_score), ht_result: outcome(r.home_score_ht, r.away_score_ht), goal_minutes: "", ...sides, ...ownSides(r),
+   };
+ }
+ 
+@@ -84,13 +97,22 @@ function respond(req, body, family) {
+   return send(req, body, 200, { etag, ttl: 60 });
+ }
+ 
+-const openCupMatch = (m) => {
++const periodsOf = (m) => {
+   const score = {};
+-  const ft = m.home_score_90 != null ? pair(m.home_score_90, m.away_score_90) : pair(m.home_score, m.away_score);
++  // The 90-minute score: its own columns, else the final score when the match had no extra time. With extra
++  // time and no 90-minute score, regulation is unknown and `ft` is omitted (FAILURE_MODES.md §22).
++  const extra = pair(m.home_score_et, m.away_score_et);
++  const ft = m.home_score_90 != null ? pair(m.home_score_90, m.away_score_90) : extra ? null : pair(m.home_score, m.away_score);
+   if (ft) score.ft = ft;
+   if (pair(m.home_score_ht, m.away_score_ht)) score.ht = [m.home_score_ht, m.away_score_ht];
+-  if (pair(m.home_score_et, m.away_score_et)) score.et = [m.home_score_et, m.away_score_et];
++  if (extra) score.et = extra;
+   if (pair(m.home_penalty_score, m.away_penalty_score)) score.p = [m.home_penalty_score, m.away_penalty_score];
++  return score;
++};
++
++const openCupMatch = (m) => {
++  const awarded = m.status === "awarded";
++  const score = awarded ? {} : periodsOf(m);
+   return {
+     ...(m.round != null && { round: m.round }),
+     ...(m.group_name != null && { group: m.group_name }),
+@@ -98,7 +120,16 @@ const openCupMatch = (m) => {
+     ...(m.date != null && { date: m.date }),
+     team1: m.home,
+     team2: m.away,
++    ...ownSides(m),
+     ...(Object.keys(score).length && { score }),
++    // The source's own word for a match never played (1938 Sweden–Austria).
++    ...(m.status === "canceled" && { status: "canceled" }),
++    ...(awarded && {
++      status: "awarded", awardScore: pair(m.home_score, m.away_score),
++      ...(m.key === "france-cup:2024/2025:2024-12-21|Tours FC|FC Lorient|" && {
++        awardReason: { code: "federation_decision", source: "https://www.fff.fr/article/13900-lorient-qualifie-pour-les-16es-de-finale.html" },
++      }),
++    }),
+   };
+ };
+ 
+@@ -107,12 +138,15 @@ const notes = (m) => [
+   ...(pair(m.home_penalty_score, m.away_penalty_score) ? [`tirs au but ${m.home_penalty_score} – ${m.away_penalty_score}`] : []),
+ ];
+ 
+-const openLigaMatch = (competition) => (m) => {
++const openLigaMatch = (competition, season) => (m) => {
+   const finished = m.status === "finished";
++  const periods = finished && competition === "germany-cup" && ["2025/2026", "2026/2027"].includes(season) ? periodsOf(m) : {};
+   return {
+     key: `openliga:${m.key}`, date: m.date ?? "", home: m.home, away: m.away, homeId: m.home_key, awayId: m.away_key,
++    ...ownSides(m),
+     score: finished ? pair(m.home_score, m.away_score) : null,
+     penalties: finished ? pair(m.home_penalty_score, m.away_penalty_score) : null,
++    ...(Object.keys(periods).length && { periods }),
+     notes: notes(m), status: finished ? "finished" : "scheduled",
+     roundName: competition === "germany-cup" ? GERMAN_ROUND_NAMES[m.round] ?? "" : "",
+     round: m.round ?? "",
+@@ -136,29 +170,30 @@ const nationsMatch = (m) => ({
+ export async function cupBody(read, competitionId, season) {
+   const [e] = await read("SELECT * FROM api.cup_editions WHERE competition_id=$1 AND season=$2", [competitionId, season]);
+   if (!e) return null;
+-  const rows = await read("SELECT * FROM api.cup_matches WHERE competition_season_id=$1 ORDER BY position, match_id", [e.competition_season_id]);
+   const source = SOURCES[e.kind](e);
++  const artwork = editionArtworkFields(e.edition_emblem_url);
+   if (e.format === "table-v1") {
+     const table = await read("SELECT * FROM api.cup_table_rows WHERE competition_season_id=$1 ORDER BY position", [e.competition_season_id]);
+     const forecasts = await forecastsOf(read, table.filter((r) => r.status !== "finished" && r.match_id != null).map((r) => r.match_id));
+     const body = {
+-      name: e.name, season, source,
++      name: e.name, season, source, ...artwork,
+       results: table.filter((r) => r.status === "finished").map((r) => tableRow(r)),
+       fixtures: table.filter((r) => r.status !== "finished").map((r) => tableRow(r, forecasts.get(Number(r.match_id)))),
+     };
+     return { body, worker: { checkedAt: iso(e.checked_at), updatedAt: iso(e.updated_at) } };
+   }
++  const rows = await read("SELECT * FROM api.cup_matches WHERE competition_season_id=$1 ORDER BY position, match_id", [e.competition_season_id]);
+   const forecasts = await forecastsOf(read, rows.filter((r) => r.status !== "finished").map((r) => r.match_id));
+   const each = (build) => (r) => withForecast(build(r), forecasts.get(Number(r.match_id)));
+   const body =
+     e.format === "matches-v1"
+       ? { name: e.name, season, matches: rows.map(each(openCupMatch)), source }
+       : e.format === "rounds-v1"
+-        ? { competition: e.competition, season, matches: rows.map(each(openLigaMatch(e.competition))), source }
++        ? { competition: e.competition, season, matches: rows.map(each(openLigaMatch(e.competition, season))), source }
+         : e.competition === "nations-league"
+           ? { season, matches: rows.map(each(nationsMatch)), source }
+           : { name: e.name, season, matches: rows.map(each(tournamentMatch(e.competition))), source };
+-  return { body, worker: { checkedAt: iso(e.checked_at), updatedAt: iso(e.updated_at) } };
++  return { body: { ...body, ...artwork }, worker: { checkedAt: iso(e.checked_at), updatedAt: iso(e.updated_at) } };
+ }
+ 
+ async function nativeSnapshot(read, competition, season) {
+@@ -175,23 +210,27 @@ async function nativeSnapshot(read, competition, season) {
+       id: f.id, season: f.season, date: f.date, time_utc: f.time_utc, status: f.status,
+       home_team: f.home_team, away_team: f.away_team, league: { ...f.league, season: f.season },
+       score_home: f.score_home, score_away: f.score_away,
++      ...editionArtworkFields(row.edition_emblem_url),
+     };
+   });
+   const rounds = Object.fromEntries(rows.filter((r) => r.round).map((r) => [r.id, { name: r.round, playoff: r.playoff }]));
+   const at = iso(state?.published_at);
+-  return { matches, rounds, worker: { checkedAt: at, updatedAt: at } };
++  // Prefer the provider's edition label over the warehouse season label when both match.
++  const selected = rows.find((row) => row.native_season === season) ?? rows[0];
++  return { matches, rounds, ...editionArtworkFields(selected.edition_emblem_url), worker: { checkedAt: at, updatedAt: at } };
+ }
+ 
+ export function createCupRoute(read) {
+   return async (req, path, params) => {
+     if (path === "/api/cups/index") {
+       validate(params, {});
+-      const rows = await read("SELECT competition_id,competition,name,season,format,kind,source_url,data_url FROM api.cup_editions ORDER BY competition_id,season");
++      const rows = await read("SELECT competition_id,competition,name,season,format,kind,source_url,data_url,logo_url FROM api.cup_editions ORDER BY competition_id,season");
+       const cups = new Map();
+       for (const e of rows) {
+         const cup = cups.get(e.competition_id) ?? { id: e.competition_id, key: e.competition, seasons: [] };
+-        // The latest edition names the cup and its source.
+-        cups.set(e.competition_id, { ...cup, name: e.name ?? e.competition, format: e.format, source: SOURCES[e.kind](e), seasons: [...cup.seasons, e.season] });
++        // The latest edition names the cup and its source; the competition's own verified logo, when it has one (§22).
++        cups.set(e.competition_id, { ...cup, name: e.name ?? e.competition, format: e.format, source: SOURCES[e.kind](e), seasons: [...cup.seasons, e.season],
++          ...(e.logo_url && { imageUrl: e.logo_url }) });
+       }
+       return respond(req, { cups: [...cups.values()] }, "catalog");
+     }
+@@ -201,7 +240,7 @@ export function createCupRoute(read) {
+       if (p.kind !== "supplemental") reject(404, "Donnée indisponible.");
+       const [revision] = await read("SELECT * FROM api.source_revisions WHERE source='open-matchday'");
+       const editions = await read(
+-        `SELECT e.competition,e.name,e.season,(SELECT count(*) FILTER(WHERE t.status='finished')::int FROM api.cup_table_rows t WHERE t.competition_season_id=e.competition_season_id) results,
++        `SELECT e.competition,e.name,e.season,e.logo_url,e.competition_id,(SELECT count(*) FILTER(WHERE t.status='finished')::int FROM api.cup_table_rows t WHERE t.competition_season_id=e.competition_season_id) results,
+            (SELECT count(*) FILTER(WHERE t.status<>'finished')::int FROM api.cup_table_rows t WHERE t.competition_season_id=e.competition_season_id) fixtures
+          FROM api.cup_editions e WHERE e.kind='open-matchday' ORDER BY e.competition,e.season`,
+       );
+@@ -217,6 +256,10 @@ export function createCupRoute(read) {
+         competitions: editions.map((e) => ({
+           name: e.name, folder: e.competition, season: e.season,
+           tables: { goals: { rows: 0 }, results: { rows: e.results }, fixtures: { rows: e.fixtures } }, country_code: e.competition.split("_")[0],
++          // The edition's own competition's verified logo (its FK), additive (§22).
++          ...(e.logo_url && { image_url: e.logo_url }),
++          // The edition's competition, by the id /api/cups/index gives it (its FK): the site opens either id (VI-30).
++          competition_id: e.competition_id,
+         })),
+       }, "catalog");
+     }
+diff --git a/backend/api/src/routes/matches.mjs b/backend/api/src/routes/matches.mjs
+index c8d51a162d..e04cbf545c 100644
+--- a/backend/api/src/routes/matches.mjs
++++ b/backend/api/src/routes/matches.mjs
+@@ -19,6 +19,7 @@
+  * Added here: `teams=t_…,t_…` (exactly two) keeps the meetings of two clubs, whatever the
+  * season, so that a head-to-head is one read and not a league's whole history.
+  */
++import { editionArtworkFields } from "../edition-artwork.mjs";
+ import { createHash } from "node:crypto";
+ import { matchesEtag, reject, send, validateParams } from "../http.mjs";
+ 
+@@ -81,7 +82,7 @@ function keyset(alias, dayParam, idParam, order = "asc") {
+ 
+ const FIXTURE_COLUMNS = `f.id,f.season,f.native_season,f.day,f.time_utc,f.status,f.round_name,f.has_playoff,
+  f.home_team_id,f.home_name,f.home_image_url,f.away_team_id,f.away_name,f.away_image_url,
+- f.league_id,f.league_name,f.league_image_url,f.score_home,f.score_away,f.score_penalty_home,f.score_penalty_away`;
++ f.league_id,f.league_name,f.league_image_url,f.edition_emblem_url,f.score_home,f.score_away,f.score_penalty_home,f.score_penalty_away`;
+ 
+ /** The model's forecast of a match to come (api.match_forecasts' shares), as the site reads it; null without one. */
+ export function forecastOf(f) {
+@@ -95,6 +96,7 @@ export function fixture(row) {
+   const forecast = row.status === "not_started" ? forecastOf(row.forecast) : null;
+   return {
+     ...(forecast && { forecast }),
++    ...editionArtworkFields(row.edition_emblem_url),
+     id: row.id,
+     season: row.native_season ?? row.season,
+     date: row.day,
+@@ -239,6 +241,7 @@ export function summaryMatch(r) {
+         id: x.id,
+         leagueId: x.league.id,
+         league: x.league.name,
++        ...editionArtworkFields(f.edition_emblem_url),
+         season: x.season,
+         date: x.date,
+         timeUtc: x.time_utc,
+@@ -289,6 +292,7 @@ export function summaryMatch(r) {
+       season: f.season,
+       leagueId: f.league_id,
+       league: f.league_name,
++      ...editionArtworkFields(f.edition_emblem_url),
+       country: f.country,
+       date: f.day,
+       timeUtc: f.time_utc,
+diff --git a/backend/api/src/routes/profiles.mjs b/backend/api/src/routes/profiles.mjs
+index 0e8a91aa0b..ee002087c2 100644
+--- a/backend/api/src/routes/profiles.mjs
++++ b/backend/api/src/routes/profiles.mjs
+@@ -29,7 +29,10 @@
+  * the middle of a return (vega/returns.py, 087): its length, his minutes since against his
+  * usual ones, and the base's curve for an absence of that length.
+  * GET /api/players/{id}/halves?season= — the player's season by half (083): his minutes
+- * and totals in first halves and in second halves.
++ * and totals in first halves and in second halves, on his complete halves (129; null without
++ * one), and `coverage`: each metric on the halves of finished matches he played that publish
++ * it, `{sum, count, minutes}` (sum null when none does), with the halves the totals leave out
++ * (137). 404 only without a played half of a finished match in the season.
+  * GET /api/teams/{id}/age-profile?season= — minutes played by age on the match date.
+  * GET /api/teams/{id}/passing?season= — the club's most used passing triangle and its most
+  * linked pair, from the season's pass networks (083).
+@@ -121,6 +124,8 @@ export function keeperStanding(rows, min = FACED_MIN_SHOTS) {
+ const ACTION_VALUES = [["vaep", true], ["pv", true], ["xt", false]];
+ // Only what the source publishes per half: it gives no chances created or expected assists there.
+ const HALF_FIELDS = ["matches", "minutes", "goals", "shots", "xg", "touches_box", "dribbles", "passes", "touches", "duels_won", "tackles", "recoveries"];
++// The metrics among them, each with its own coverage (api.player_half_coverage, 137).
++const HALF_METRICS = HALF_FIELDS.slice(2);
+ 
+ /**
+  * The three players of a club who exchange the most passes: among the trios whose three
+@@ -426,18 +431,31 @@ export function createProfileRoute(read) {
+       validateParams(params, ["season"]);
+       const season = params.get("season");
+       if (!/^\d{4}\/\d{4}$/.test(season || "")) reject(400, "Paramètre invalide.");
++      // One statement (one snapshot): each period's coverage (137) and its complete halves (129),
++      // each view filtered by the season and the player, so that each reads his rows alone.
++      const scope = "season_id=(SELECT k.season_id FROM api.season_keys k WHERE k.season=$2) AND player_key=api.internal_id('player',$1)";
+       const rows = await read(
+-        `SELECT * FROM api.player_half_totals
+-         WHERE season_id=(SELECT k.season_id FROM api.season_keys k WHERE k.season=$2) AND player_key=api.internal_id('player',$1)`,
++        `SELECT c.*, to_jsonb(t) AS complete
++         FROM (SELECT * FROM api.player_half_coverage WHERE ${scope}) c
++         LEFT JOIN (SELECT * FROM api.player_half_totals WHERE ${scope}) t USING (period)`,
+         [halves[1], season],
+       );
+-      const half = (name) => {
+-        const r = rows.find((row) => row.period === name);
+-        return r ? Object.fromEntries(HALF_FIELDS.map((k) => [k, k === "xg" ? Math.round(r[k] * 100) / 100 : r[k]])) : null;
+-      };
+-      const first = half("first_half"), second = half("second_half");
+-      if (!first && !second) reject(404, "Donnée indisponible.");
+-      return respond(req, { id: halves[1], season, first, second });
++      // No played half of a finished match in the season: nothing to show.
++      if (!rows.length) reject(404, "Donnée indisponible.");
++      const of = (name) => rows.find((row) => row.period === name);
++      // The complete halves' totals, as before 137: null without a complete half.
++      const half = (r) => (r?.complete ? Object.fromEntries(HALF_FIELDS.map((k) => [k, k === "xg" ? Math.round(r.complete[k] * 100) / 100 : r.complete[k]])) : null);
++      // Every eligible half: each metric on the halves that publish it (its sum, null without
++      // any, never 0), and the halves the totals leave out. The xG sum comes as the exact decimal
++      // of its stored values (numeric, a string here): converted to a number once, here.
++      const sum = (k, v) => (k === "xg" && v !== null ? Number(v) : v);
++      const coverage = (r) => r ? {
++        matches: r.matches, minutes: r.minutes,
++        excluded: { matches: r.excluded_matches, minutes: r.excluded_minutes },
++        stats: Object.fromEntries(HALF_METRICS.map((k) => [k, { sum: sum(k, r[`${k}_sum`]), count: r[`${k}_count`], minutes: r[`${k}_minutes`] }])),
++      } : null;
++      const first = of("first_half"), second = of("second_half");
++      return respond(req, { id: halves[1], season, first: half(first), second: half(second), coverage: { first: coverage(first), second: coverage(second) } });
+     }
+     const faced = path.match(FACED);
+     if (faced) {
+diff --git a/backend/api/src/routes/rankings.mjs b/backend/api/src/routes/rankings.mjs
+index 9564795c7c..0e2f6d971e 100644
+--- a/backend/api/src/routes/rankings.mjs
++++ b/backend/api/src/routes/rankings.mjs
+@@ -49,7 +49,8 @@
+  * GET /api/rankings/match?match= — each player's grade in one match (vega/power.py, « Match
+  * grades »): how exceptional the match was for his role, whatever his season, on the season's
+  * 0–100 curve; ranked within the match among the grades shown (20 minutes or more, or a
+- * match a full standard deviation from the ordinary), the minutes beside each.
++ * match a full standard deviation from the ordinary), the minutes beside each. `grade`
++ * keeps its tenth; `gradeExact` is the visible, finite grade read from the same SQL row.
+  *
+  * GET /api/rankings/power/player?season=&player= — one player's power ranking of a
+  * season, for his page: the object of the player reads (powerOf) and `roleCount`, the
+@@ -662,11 +663,15 @@ async function matchGrades(read, params) {
+   let rank = 0;
+   return {
+     match: id,
+-    grades: ordered.map((r) => ({
+-      playerId: r.player_id, teamId: r.team_id ?? null, name: r.name ?? null, imageUrl: r.image_url ?? null, team: r.team ?? null,
+-      role: r.role, position: ROLE_LABEL[r.role] ?? r.role, minutes: r.minutes, goals: r.goals ?? null, assists: r.assists ?? null,
+-      grade: shown(r) ? round(r.grade, 1) : null, rank: shown(r) ? ++rank : null,
+-    })),
++    grades: ordered.map((r) => {
++      const visible = shown(r);
++      const gradeExact = visible && Number.isFinite(r.grade) && r.grade >= 0 && r.grade <= 100 ? r.grade : null;
++      return {
++        playerId: r.player_id, teamId: r.team_id ?? null, name: r.name ?? null, imageUrl: r.image_url ?? null, team: r.team ?? null,
++        role: r.role, position: ROLE_LABEL[r.role] ?? r.role, minutes: r.minutes, goals: r.goals ?? null, assists: r.assists ?? null,
++        grade: visible ? round(r.grade, 1) : null, rank: visible ? ++rank : null, gradeExact,
++      };
++    }),
+   };
+ }
+ 
+diff --git a/backend/api/src/routes/reference.mjs b/backend/api/src/routes/reference.mjs
+index 9bba050e0e..e0f7228b9a 100644
+--- a/backend/api/src/routes/reference.mjs
++++ b/backend/api/src/routes/reference.mjs
+@@ -43,14 +43,20 @@ export async function standings(req, p, read) {
+ /** The standings body of a competition (and season), or a 404. */
+ export async function standingsBody(read, competition, season) {
+   // Without a season: the current edition (else the latest one), as the legacy projection.
++  // Keep a reviewed unavailable edition in the selection so it cannot fall through to history.
+   // The league's editions by their key, then the rows of the one kept: named by the
+   // league's public id, which the view computes for each row, the tables of every edition
+   // of the base were built before one was kept (0.15 s on 11 November 2026).
+   const rows = await read(
+     `WITH edition AS (
+        SELECT k.competition_season_id FROM api.edition_keys k
+-       CROSS JOIN LATERAL (SELECT r.season,r.native_label,r.is_current FROM api.standing_rows r
+-         WHERE r.competition_season_id=k.competition_season_id LIMIT 1) s
++       CROSS JOIN LATERAL (
++         SELECT r.season,r.native_label,r.is_current FROM api.standing_rows r
++         WHERE r.competition_season_id=k.competition_season_id
++         UNION ALL
++         SELECT x.season,x.native_label,x.is_current FROM api.j1_standings_exclusion() x
++         WHERE x.competition_season_id=k.competition_season_id
++         LIMIT 1) s
+        WHERE k.league_id=$1 AND ($2::text IS NULL OR s.season=$2 OR s.native_label=$2)
+        ORDER BY s.is_current DESC,s.season DESC LIMIT 1)
+      SELECT r.* FROM api.standing_rows r WHERE r.competition_season_id=(SELECT competition_season_id FROM edition)
+diff --git a/backend/api/test/cup-sides.test.mjs b/backend/api/test/cup-sides.test.mjs
+new file mode 100644
+index 0000000000..60871e0f1d
+--- /dev/null
++++ b/backend/api/test/cup-sides.test.mjs
+@@ -0,0 +1,119 @@
++// VI-30 (docs/calculs/09-audit-2026-11/FAILURE_MODES_VI30.md, written before the code): an open-matchday table row
++// names its two sides by its own foreign keys, the team after one merged_into hop and that team's crest; a name never
++// chooses a crest. The edition's competition answers to its canonical id in the supplemental index.
++//
++// The cases are written after the seed, before the tests (the next test file seeds again): a crest for Arsenal, none
++// for Coventry, Man Utd merged into the seed's first club (which has a crest), the fixture's Sunderland a different
++// club with its own crest than the result's Sunderland, and two Austrian cup rows without one or both FKs.
++import { before, after, test } from "node:test";
++import assert from "node:assert/strict";
++import pg from "pg";
++import { get, skip } from "./context.mjs";
++
++const REF_ARSENAL = `https://media.vega.invalid/sha256/${"1a".repeat(32)}.png`;
++const REF_SUNDERLAND_TWIN = `https://media.vega.invalid/sha256/${"2b".repeat(32)}.png`;
++const table = (folder, kind) => get(`/api/cup-table?competition=${folder}&season=2026%2F2027&kind=${kind}`);
++const row = (rows, home, away) => rows.find((r) => r.home === home && r.away === away);
++
++let owner;
++const ids = {};
++before(async () => {
++  if (skip) return;
++  owner = new pg.Client({ connectionString: process.env.VEGA_V2_API_NODE_TEST_DSN });
++  await owner.connect();
++  const x = (sql, values) => owner.query(sql, values);
++  for (const name of ["Arsenal", "Coventry", "Man Utd", "Hull", "Sunderland", "Ipswich", "A. Klagenfurt"]) {
++    const { rows } = await x("SELECT entity_id FROM core.provider_ids WHERE entity_type='team' AND provider='open_matchday' AND provider_key=$1", [`name:${name}`]);
++    assert.equal(rows.length, 1, name);
++    ids[name] = rows[0].entity_id;
++  }
++  const publicId = async (id) => (await x("SELECT api.public_id('team', $1) AS id", [id])).rows[0].id;
++  for (const name of Object.keys(ids)) ids[`public:${name}`] = await publicId(ids[name]);
++  ids["public:seed1"] = await publicId(1);
++  await x(
++    `INSERT INTO core.assets(id,kind,source_url,s3_key,content_type) VALUES
++       (9401,'crest',$1,$2,'image/png'),(9402,'crest',$3,$4,'image/png')`,
++    [REF_ARSENAL, `sources/v2/images/${"1a".repeat(32)}.png`, REF_SUNDERLAND_TWIN, `sources/v2/images/${"2b".repeat(32)}.png`],
++  );
++  await x("UPDATE core.teams SET crest_asset_id=9401 WHERE id=$1", [ids.Arsenal]);
++  // V5: a pointer the identity pass left (merges move the matches; this FK still names the merged row).
++  await x("UPDATE core.teams SET merged_into=1 WHERE id=$1", [ids["Man Utd"]]);
++  // V4: another club spelled « Sunderland », with its own crest, on the fixture's row only.
++  await x("INSERT INTO core.teams(id,name,crest_asset_id) VALUES (9402,'Sunderland',9402)");
++  const { rowCount } = await x("UPDATE core.matches SET away_team_id=9402 WHERE home_team_name='Aston Villa' AND away_team_name='Sunderland'");
++  assert.equal(rowCount, 1);
++  // V3: one side without an FK, then both.
++  assert.equal((await x("UPDATE core.matches SET home_team_id=NULL WHERE home_team_name='Atus Velden' AND away_team_name='A. Klagenfurt'")).rowCount, 1);
++  assert.equal((await x("UPDATE core.matches SET home_team_id=NULL, away_team_id=NULL WHERE home_team_name='Deutschlandsberger'")).rowCount, 1);
++  // V9: a fixture with its forecast (the seed's model).
++  await x(
++    `INSERT INTO agg.match_forecasts(match_id,season_id,home_win,draw,away_win,home_goals,away_goals,likely_home,likely_away,home_elo,away_elo,model_id)
++     SELECT m.id, m.season_id, 0.6, 0.25, 0.15, 1.8, 0.9, 2, 0, 1700, 1500, (SELECT max(id) FROM agg.forecast_models)
++     FROM core.matches m WHERE m.home_team_name='Man City' AND m.away_team_name='Fulham'`,
++  );
++});
++after(() => owner?.end());
++
++test("V1/V2/V5: each side is the row's own FK, after one merged_into hop, with that team's crest or null", { skip }, async () => {
++  const { response, body } = await table("ENG_1_premier-league", "results");
++  assert.equal(response.status, 200);
++  assert.deepEqual(row(body, "Arsenal", "Coventry").sides, {
++    home: { id: ids["public:Arsenal"], image_url: REF_ARSENAL },
++    away: { id: ids["public:Coventry"], image_url: null },
++  });
++  // Man Utd's row names the merged team: the kept club's id and crest, the source's spelling kept.
++  const merged = row(body, "Hull", "Man Utd");
++  assert.equal(merged.away, "Man Utd");
++  assert.deepEqual(merged.sides.away, { id: ids["public:seed1"], image_url: "https://img.example/t1.png" });
++  assert.deepEqual(merged.sides.home, { id: ids["public:Hull"], image_url: null });
++  // Every row of this edition has both FKs.
++  for (const r of body) assert.ok(r.sides?.home?.id && r.sides?.away?.id, `${r.home} – ${r.away}`);
++});
++
++test("V4: two clubs spelled alike keep their own rows' crests", { skip }, async () => {
++  const results = (await table("ENG_1_premier-league", "results")).body;
++  const fixtures = (await table("ENG_1_premier-league", "fixtures")).body;
++  assert.deepEqual(row(results, "Ipswich", "Sunderland").sides.away, { id: ids["public:Sunderland"], image_url: null });
++  assert.deepEqual(row(fixtures, "Aston Villa", "Sunderland").sides.away, { id: "t_v0009402", image_url: REF_SUNDERLAND_TWIN });
++});
++
++test("V3: a side without its FK is omitted, and `sides` when both are", { skip }, async () => {
++  const body = (await table("AUT_CUP_ofb-cup", "results")).body;
++  const one = row(body, "Atus Velden", "A. Klagenfurt");
++  assert.equal(one.home, "Atus Velden");
++  assert.deepEqual(one.sides, { away: { id: ids["public:A. Klagenfurt"], image_url: null } });
++  const none = row(body, "Deutschlandsberger", "Amstetten");
++  assert.equal("sides" in none, false);
++  assert.equal(none.home, "Deutschlandsberger");
++});
++
++test("V9: a fixture carries its sides beside its forecast", { skip }, async () => {
++  const fixtures = (await table("ENG_1_premier-league", "fixtures")).body;
++  const f = row(fixtures, "Man City", "Fulham");
++  assert.deepEqual(f.forecast, { home: 0.6, draw: 0.25, away: 0.15 });
++  assert.ok(f.sides.home.id && f.sides.away.id);
++  assert.equal("ft_home" in f, false);
++});
++
++test("the edition body (table-v1) carries the same sides as /api/cup-table", { skip }, async () => {
++  const { cups } = (await get("/api/cups/index")).body;
++  const id = cups.find((c) => c.key === "ENG_1_premier-league" && c.format === "table-v1").id;
++  const body = (await get(`/api/cups/edition?competition=${id}&season=2026%2F2027`)).body;
++  const results = (await table("ENG_1_premier-league", "results")).body;
++  assert.equal(body.results.length, results.length);
++  assert.ok(body.results.every((r) => r.sides?.home?.id && r.sides?.away?.id));
++  assert.deepEqual(body.results.map((r) => r.sides), results.map((r) => r.sides));
++  const fixtures = (await table("ENG_1_premier-league", "fixtures")).body;
++  assert.deepEqual(body.fixtures.map((r) => r.sides), fixtures.map((r) => r.sides));
++});
++
++test("V12: the supplemental index names each edition's canonical competition, as the cups index does", { skip }, async () => {
++  const { cups } = (await get("/api/cups/index")).body;
++  const index = (await get("/api/cup-index?kind=supplemental")).body;
++  assert.ok(index.competitions.length > 0);
++  for (const c of index.competitions) {
++    const cup = cups.find((x) => x.key === c.folder && x.format === "table-v1");
++    assert.ok(cup, c.folder);
++    assert.equal(c.competition_id, cup.id, c.folder);
++  }
++});
+diff --git a/backend/api/test/cups.test.mjs b/backend/api/test/cups.test.mjs
+index 1cb7f93e75..2596b22351 100644
+--- a/backend/api/test/cups.test.mjs
++++ b/backend/api/test/cups.test.mjs
+@@ -13,6 +13,8 @@ const samples = JSON.parse(
+   spawnSync("python3", ["-c", "import json,sys;sys.path.insert(0,sys.argv[1]);from cup_samples import SAMPLES;print(json.dumps(SAMPLES))",
+     fileURLToPath(new URL("../../tests", import.meta.url))], { encoding: "utf8" }).stdout,
+ );
++// Exact compatibility for all existing match fields, alongside optional FK metadata.
++const withoutMatchSides = (body) => ({ ...body, matches: body.matches.map(({ sides, ...match }) => match) });
+ const sample = (kind, competition, season) => samples.find(([k, c, s]) => k === kind && c === competition && s === season)[3];
+ 
+ // The cups by their Vega id, found through the index (as the site does).
+@@ -39,12 +41,28 @@ test("cup editions round-trip main's source projections", { skip }, async () =>
+   const nations = await cupId("nations-league", "results-v1");
+   assert.ok(euro && germany && nations);
+   const edition = (id, season) => get(`/api/cups/edition?competition=${id}&season=${encodeURIComponent(season)}`);
+-  assert.deepEqual((await edition(euro, "2024")).body, sample("open-cups", "euro", "2024"));
+-  assert.deepEqual((await edition(euro, "2028")).body, sample("open-cups", "euro", "2028")); // no score yet
+-  assert.deepEqual((await edition(germany, "2025/2026")).body, sample("openligadb", "germany-cup", "2025/2026"));
++  assert.deepEqual(withoutMatchSides((await edition(euro, "2024")).body), sample("open-cups", "euro", "2024"));
++  assert.deepEqual(withoutMatchSides((await edition(euro, "2028")).body), sample("open-cups", "euro", "2028")); // no score yet
++  const germanySource = sample("openligadb", "germany-cup", "2025/2026").source;
++  assert.deepEqual(withoutMatchSides((await edition(germany, "2025/2026")).body), {
++    competition: "germany-cup", season: "2025/2026", source: germanySource,
++    matches: [{
++      key: "openliga:80173", date: "2026-02-10", home: "Hertha BSC", away: "SC Freiburg", homeId: "54", awayId: "112",
++      score: [1, 1], penalties: [4, 5], periods: { ft: [0, 0], ht: [0, 0], et: [1, 1], p: [4, 5] },
++      notes: ["après prolongation", "tirs au but 4 – 5"], status: "finished",
++      roundName: "Quarter-finals", round: "Quarts de finale", group: null,
++    }, {
++      key: "openliga:81581", date: "2026-05-23", home: "FC Bayern München", away: "VfB Stuttgart", homeId: "40", awayId: "16",
++      score: [3, 0], penalties: null, periods: { ft: [3, 0], ht: [0, 0] }, notes: [], status: "finished",
++      roundName: "Final", round: "Finale", group: null,
++    }],
++  });
+   assert.deepEqual((await edition(nations, "2026/2027")).body, sample("nations-results", "nations-league", "2026/2027"));
+   const afcon = await cupId("afcon", "results-v1");
+   assert.deepEqual((await edition(afcon, "2023")).body, sample("nations-results", "afcon", "2023"));
++  // A match the source cancels comes back canceled, without a score (FAILURE_MODES.md §19, 19f).
++  const worldCup = await cupId("world-cup-history", "matches-v1");
++  assert.deepEqual(withoutMatchSides((await edition(worldCup, "1938")).body), sample("open-cups", "world-cup-history", "1938"));
+   assert.equal((await edition(euro, "1990")).response.status, 404);
+   assert.equal((await get("/api/cups/edition?competition=euro&season=2024")).response.status, 400);
+   assert.equal((await get(`/api/cups/edition?competition=${euro}`)).response.status, 400);
+@@ -55,7 +73,7 @@ test("cup editions round-trip main's source projections", { skip }, async () =>
+ test("cup snapshots: editions with their worker times, native cups, standings", { skip }, async () => {
+   const euro = await cupId("euro", "matches-v1");
+   const snapshot = (await get(`/api/cup-snapshot?kind=edition&competition=${euro}&season=2024`)).body;
+-  assert.deepEqual(snapshot, { ...sample("open-cups", "euro", "2024"), worker: { checkedAt: "2025-09-20T08:00:00.000Z", updatedAt: "2025-09-20T08:00:00.000Z" } });
++  assert.deepEqual(withoutMatchSides(snapshot), { ...sample("open-cups", "euro", "2024"), worker: { checkedAt: "2025-09-20T08:00:00.000Z", updatedAt: "2025-09-20T08:00:00.000Z" } });
+   const nations = await cupId("nations-league", "results-v1");
+   assert.equal((await get(`/api/cup-snapshot?kind=edition&competition=${nations}&season=2026/2027`)).body.matches.length, 1);
+   const native = (await get("/api/cup-snapshot?kind=native&competition=l_3FJFUl&season=2025/2026")).body;
+@@ -94,12 +112,15 @@ test("open-matchday catalogue and tables, as main's", { skip }, async () => {
+   assert.deepEqual(index.competitions.map((c) => [c.folder, c.name, c.season, c.tables.results.rows, c.tables.fixtures.rows, c.country_code]), [
+     ["AUT_CUP_ofb-cup", "OFB Cup", "2026/2027", 7, 4, "AUT"], ["ENG_1_premier-league", "Premier League", "2026/2027", 5, 3, "ENG"],
+   ]);
++  // The source's line stays byte for byte; beside it, each side's own FK (VI-30, FAILURE_MODES_VI30.md V10).
++  const line = ({ sides, ...rest }) => rest;
+   for (const folder of ["ENG_1_premier-league", "AUT_CUP_ofb-cup"]) {
+     const results = (await get(`/api/cup-table?competition=${folder}&season=2026%2F2027&kind=results`)).body;
+     // Not kept: the local kick-off time, the goal minutes (no side) and the row's sub-source.
+-    assert.deepEqual(results, csv(`${folder}.results_2627.csv`).map((r) => ({ ...r, time: "", goal_minutes: "", source: "" })), folder);
++    assert.deepEqual(results.map(line), csv(`${folder}.results_2627.csv`).map((r) => ({ ...r, time: "", goal_minutes: "", source: "" })), folder);
+     const fixtures = (await get(`/api/cup-table?competition=${folder}&season=2026%2F2027&kind=fixtures`)).body;
+-    assert.deepEqual(fixtures, csv(`${folder}.fixtures_2627.csv`).map((r) => ({ ...r, time: "" })), folder);
++    assert.deepEqual(fixtures.map(line), csv(`${folder}.fixtures_2627.csv`).map((r) => ({ ...r, time: "" })), folder);
++    for (const r of [...results, ...fixtures]) assert.ok(r.sides?.home?.id && r.sides?.away?.id, `${folder}: ${r.home} – ${r.away}`);
+   }
+   assert.equal((await get("/api/cup-index?kind=worker")).response.status, 404);
+   assert.equal((await get("/api/cup-table?competition=XYZ_1_none&season=2026%2F2027&kind=results")).response.status, 404);
+diff --git a/backend/api/test/half-fixture.mjs b/backend/api/test/half-fixture.mjs
+new file mode 100644
+index 0000000000..fb1f9fa7f6
+--- /dev/null
++++ b/backend/api/test/half-fixture.mjs
+@@ -0,0 +1,74 @@
++// The halves the season-by-half tests write after the shared seed (test/seed.py), season
++// 2025/2026, team 1 (docs/calculs/09-audit-2026-11/FAILURE_MODES.md §4 and §4.1):
++// - Moitiés Test (p_aaab30) in m1 (two complete halves, the second without a shot and so
++//   without xG), m3 (a first half without tackles, a second whose shot has no xG), m5 (a first
++//   half without touches, a complete second half of 40 minutes) and the canceled m_aaad01
++//   (complete, not a match of the season);
++// - Demi Inconnu (p_aaab31) has incomplete halves only;
++// - Passe Seule (p_aaab32): one first half whose passes alone are published, second halves of
++//   0 and of unknown minutes;
++// - Non Fini (p_aaab33): xG published NaN, +∞ and −∞, and a blank xG whose shots are unknown;
++// - Rien Mesuré (p_aaab34): two played halves without any statistic;
++// - Hors Saison (p_aaab35): halves of a canceled match, of a match not started, of 0 minutes;
++// - Zéro Observé (p_aaab36): a complete half whose every statistic is a published 0;
++// - Précision Fine (p_aaab37): xG with more digits than 6 (§4.1 FM-HC.10–12). First halves: three
++//   complete ones, 0.12345679, 1.2345678 and no shot. Second halves: 0.12345679 beside a shot without
++//   xG and a NaN. Their stored single-precision values are 0.12345679104328155517578125 and
++//   1.23456776142120361328125 exactly; the shortest decimals reading back as them are the inputs.
++export const HALF_COLUMNS = ["minutes_played", "goals", "total_shots", "xg", "accurate_passes", "touches", "duels_won", "recoveries", "touches_opp_box", "dribbles_succeeded", "tackles"];
++const UNKNOWN = Array(10).fill(null);
++// (player, match, period, minutes, goals, shots, xg, passes, touches, duels won, recoveries, touches in the box, dribbles, tackles)
++export const HALVES = [
++  [130, 1, "first_half", 45, 1, 2, 0.6, 10, 30, 2, 3, 4, 1, 1],
++  [130, 1, "second_half", 45, 0, 0, null, 12, 25, 1, 2, 0, 0, 2],
++  [130, 3, "first_half", 45, 0, 1, 0.1, 8, 20, 1, 1, 1, 0, null],
++  [130, 3, "second_half", 45, 1, 1, null, 9, 22, 2, 1, 2, 1, 0],
++  [130, 5, "first_half", 45, 0, 0, null, 5, null, 0, 1, 0, 0, 0],
++  [130, 5, "second_half", 40, 0, 1, 0.2, 7, 18, 0, 2, 1, 2, 1],
++  [130, 9301, "first_half", 45, 2, 3, 1.5, 10, 30, 3, 3, 5, 2, 2],
++  [131, 1, "first_half", 45, 0, 1, null, 4, 12, 0, 1, 0, 0, 1],
++  [131, 3, "second_half", 45, 0, 0, null, 6, 15, 1, null, 0, 0, 0],
++  [132, 1, "first_half", 45, null, null, null, 14, null, null, null, null, null, null],
++  [132, 1, "second_half", 0, null, null, null, 0, null, null, null, null, null, null],
++  [132, 3, "second_half", null, null, null, null, 3, null, null, null, null, null, null],
++  [133, 1, "first_half", 45, 0, 0, NaN, 5, 10, 0, 1, 0, 0, 0],
++  [133, 3, "first_half", 45, 0, 1, Infinity, 6, 11, 1, 1, 1, 0, 0],
++  [133, 5, "first_half", 45, 1, 2, -Infinity, 7, 12, 1, 2, 2, 1, 1],
++  [133, 1, "second_half", 45, 0, 1, 0.4, 8, 13, 1, 1, 1, 0, 0],
++  [133, 3, "second_half", 45, 0, null, null, 9, 14, 0, 2, 0, 1, 1],
++  [134, 1, "first_half", 45, ...UNKNOWN],
++  [134, 3, "second_half", 30, ...UNKNOWN],
++  [135, 9301, "first_half", 45, 1, 1, 0.3, 5, 10, 1, 1, 1, 0, 0],
++  [135, 6, "first_half", 45, 0, 0, null, 5, 10, 1, 1, 0, 0, 0],
++  [135, 5, "second_half", 0, 0, 0, null, 0, 0, 0, 0, 0, 0, 0],
++  [136, 1, "first_half", 45, 0, 0, null, 0, 0, 0, 0, 0, 0, 0],
++  [137, 1, "first_half", 45, 0, 1, 0.12345679, 5, 10, 0, 1, 1, 0, 0],
++  [137, 3, "first_half", 45, 1, 2, 1.2345678, 6, 11, 1, 1, 1, 0, 1],
++  [137, 5, "first_half", 45, 0, 0, null, 7, 12, 1, 2, 0, 1, 0],
++  [137, 1, "second_half", 45, 0, 1, 0.12345679, 8, 13, 1, 1, 1, 0, 0],
++  [137, 3, "second_half", 45, 0, 2, null, 9, 14, 0, 2, 1, 1, 1],
++  [137, 5, "second_half", 45, 0, 0, NaN, 4, 9, 1, 0, 0, 0, 0],
++];
++export const HALF_PLAYERS = [
++  [130, "p_aaab30", "Moitiés Test"], [131, "p_aaab31", "Demi Inconnu"], [132, "p_aaab32", "Passe Seule"], [133, "p_aaab33", "Non Fini"],
++  [134, "p_aaab34", "Rien Mesuré"], [135, "p_aaab35", "Hors Saison"], [136, "p_aaab36", "Zéro Observé"],
++  [137, "p_aaab37", "Précision Fine"],
++];
++
++/** Writes the canceled m_aaad01, the players and their halves with `owner` (a pg client of the seeded base). */
++export async function writeHalves(owner) {
++  const x = (sql, values) => owner.query(sql, values);
++  await x(`INSERT INTO core.matches(id,competition_season_id,season_id,source,status,home_team_id,away_team_id,match_date,kickoff_at)
++           VALUES (9301,1,2025,'pitchapi','canceled',1,4,'2025-09-12','2025-09-12T19:00:00Z')`);
++  await x("INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id) VALUES ('match','pitchapi','m_aaad01',9301)");
++  for (const [id, key, name] of HALF_PLAYERS) {
++    await x("INSERT INTO core.players(id,name) VALUES ($1,$2)", [id, name]);
++    await x("INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id) VALUES ('player','pitchapi',$1,$2)", [key, id]);
++  }
++  for (const [player, match, period, ...values] of HALVES)
++    await x(
++      `INSERT INTO core.player_match_half_stats(season_id,match_id,team_id,player_id,period,${HALF_COLUMNS.join(",")})
++       VALUES (2025,$1,1,$2,$3,${HALF_COLUMNS.map((_, i) => `$${i + 4}`).join(",")})`,
++      [match, player, period, ...values],
++    );
++}
+diff --git a/backend/api/test/match-grade-precision.test.mjs b/backend/api/test/match-grade-precision.test.mjs
+new file mode 100644
+index 0000000000..264e8b80ce
+--- /dev/null
++++ b/backend/api/test/match-grade-precision.test.mjs
+@@ -0,0 +1,182 @@
++// PostgreSQL -> the rankings handler -> HTTP -> the report route (FAILURE_MODES §20).
++import { after, before, test } from "node:test";
++import assert from "node:assert/strict";
++import { spawnSync } from "node:child_process";
++import { once } from "node:events";
++import { createServer } from "node:http";
++import { fileURLToPath } from "node:url";
++import pg from "pg";
++import { GET as report } from "../../../dashboard/frontend/app/api/rapport/route.js";
++import { context, skip } from "./context.mjs";
++
++const MATCH = "m_aaaaa1";
++const ORENBURG = "m_08LEIz";
++const rankingPath = (id) => `/api/rankings/match?match=${id}`;
++const reportPath = (id) => `/api/rapport?id=${id}`;
++const integer = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 });
++const tenth = (grade) => Math.round(grade * 10) / 10;
++const indexOfGrade = (grade) => 4 * Math.log10(grade / (100 - grade));
++const withoutExact = ({ gradeExact, ...row }) => row;
++const reportRows = ({ grades, best, playerOfMatch }) => [...grades, ...best.home, ...best.away, playerOfMatch].filter(Boolean);
++let owner, server, origin, previousOrigin, rankingOverride;
++
++before(async () => {
++  if (skip) return;
++  owner = new pg.Client({ connectionString: process.env.VEGA_V2_API_NODE_TEST_DSN });
++  await owner.connect();
++  server = createServer(async (req, res) => {
++    const request = new Request(origin + req.url, { headers: req.headers });
++    try {
++      const response = req.url.startsWith("/api/rapport?")
++        ? await report(request)
++        : rankingOverride && req.url === rankingPath(MATCH)
++          ? Response.json(rankingOverride)
++          : await context.handle(request);
++      res.writeHead(response.status, Object.fromEntries(response.headers));
++      res.end(Buffer.from(await response.arrayBuffer()));
++    } catch {
++      res.writeHead(500).end();
++    }
++  });
++  server.listen(0, "127.0.0.1");
++  await once(server, "listening");
++  origin = `http://127.0.0.1:${server.address().port}`;
++  previousOrigin = process.env.ORION_API_ORIGIN;
++  process.env.ORION_API_ORIGIN = origin;
++});
++
++after(async () => {
++  if (previousOrigin === undefined) delete process.env.ORION_API_ORIGIN;
++  else process.env.ORION_API_ORIGIN = previousOrigin;
++  if (server?.listening) await new Promise((resolve) => server.close(resolve));
++  await owner?.end();
++});
++
++async function read(path, headers) {
++  const response = await fetch(origin + path, { headers });
++  return { response, body: response.status === 304 ? null : await response.json() };
++}
++
++async function setIndex(player, z) {
++  const { rowCount } = await owner.query(
++    `UPDATE agg.player_match_grades SET z=$1::real
++     WHERE season_id=2025 AND match_id=api.internal_id('match',$2) AND player_id=api.internal_id('player',$3)`,
++    [z, MATCH, player],
++  );
++  assert.equal(rowCount, 1, player);
++}
++
++function exactInDatabase(id) {
++  return context.reader.read("SELECT player_id, grade FROM api.match_grades WHERE match_key=api.internal_id('match',$1)", [id])
++    .then((rows) => new Map(rows.map(({ player_id, grade }) => [player_id, grade])));
++}
++
++test("ranking and report publish the precise score without changing old fields, even on a same-tenth revision", { skip }, async (t) => {
++  await setIndex("p_aaaab1", indexOfGrade(48.49));
++  await setIndex("p_aaaab4", indexOfGrade(48.52));
++  await setIndex("p_aaaab2", -0.6);
++  const before = await read(rankingPath(MATCH));
++  assert.equal(before.response.status, 200);
++  assert.deepEqual(before.body.grades.map(({ playerId, grade, rank }) => [playerId, grade, rank]), [
++    ["p_aaaab4", 48.5, 1], ["p_aaaab1", 48.5, 2], ["p_aaaab2", 41.5, 3], ["p_aaaab3", null, null],
++  ]);
++  const exact = await exactInDatabase(MATCH);
++  const initialReport = await read(reportPath(MATCH));
++  assert.equal(initialReport.response.status, 200);
++  const unchanged = await read(rankingPath(MATCH), { "If-None-Match": before.response.headers.get("etag") });
++  assert.equal(unchanged.response.status, 304);
++
++  // Only the bottom candidate changes; it stays below the other candidate and its tenth stays 48.5.
++  await setIndex("p_aaaab1", indexOfGrade(48.51));
++  const revised = await read(rankingPath(MATCH), { "If-None-Match": before.response.headers.get("etag") });
++  const revisedExact = await exactInDatabase(MATCH);
++  const revisedReport = await read(reportPath(MATCH));
++  const row = (rows) => rows.find((g) => (g.playerId ?? g.id) === "p_aaaab1");
++  t.diagnostic(JSON.stringify({
++    oldPublication: { sql: exact.get("p_aaaab1"), ranking: row(before.body.grades), report: row(initialReport.body.grades), etag: before.response.headers.get("etag") },
++    newPublication: { sql: revisedExact.get("p_aaaab1"), ranking: row(revised.body?.grades ?? []), report: row(revisedReport.body.grades), status: revised.response.status, etag: revised.response.headers.get("etag") },
++  }));
++  for (const grade of before.body.grades) {
++    assert.equal(grade.gradeExact, grade.grade === null ? null : exact.get(grade.playerId), grade.playerId);
++    if (grade.grade !== null) assert.equal(tenth(grade.gradeExact), grade.grade);
++  }
++  assert.equal(revised.response.status, 200);
++  assert.equal(revisedReport.response.status, 200);
++  assert.notEqual(revised.response.headers.get("etag"), before.response.headers.get("etag"));
++  assert.deepEqual(revised.body.grades.map(withoutExact), before.body.grades.map(withoutExact));
++  assert.deepEqual(reportRows(revisedReport.body).map(withoutExact), reportRows(initialReport.body).map(withoutExact));
++  for (const [ranking, result] of [[before.body, initialReport.body], [revised.body, revisedReport.body]]) {
++    const byId = new Map(ranking.grades.map((g) => [g.playerId, g.gradeExact]));
++    for (const player of reportRows(result)) assert.equal(player.gradeExact, byId.get(player.id), player.id);
++  }
++  assert.equal(row(revised.body.grades).gradeExact, revisedExact.get("p_aaaab1"));
++  assert.deepEqual([row(before.body.grades), row(revised.body.grades)].map((g) => integer.format(g.gradeExact)), ["48", "49"]);
++  assert.deepEqual([row(before.body.grades), row(revised.body.grades)].map((g) => integer.format(g.grade)), ["49", "49"]);
++});
++
++test("ranking protects hidden and non-finite notes and preserves the measured bounds and request errors", { skip }, async (t) => {
++  for (const [id, z] of [["p_aaaab1", "Infinity"], ["p_aaaab2", "-Infinity"], ["p_aaaab4", "NaN"]]) await setIndex(id, z);
++  const { response, body } = await read(rankingPath(MATCH));
++  t.diagnostic(JSON.stringify(body));
++  assert.equal(response.status, 200);
++  const graded = new Map(body.grades.map((g) => [g.playerId, [g.grade, g.gradeExact, g.rank]]));
++  assert.deepEqual(graded.get("p_aaaab1"), [100, 100, 2]);
++  assert.deepEqual(graded.get("p_aaaab2"), [0, 0, 3]);
++  assert.deepEqual(graded.get("p_aaaab3"), [null, null, null]);
++  assert.deepEqual(graded.get("p_aaaab4"), [null, null, 1]); // Legacy rank and null grade.
++  assert.equal((await read(rankingPath("m_aaaaa6"))).response.status, 404);
++  assert.equal((await read(rankingPath("aaaaa1"))).response.status, 400);
++  assert.equal((await read(rankingPath(MATCH) + "&x=1")).response.status, 400);
++});
++
++test("report accepts an old ranking response and rejects inconsistent or invalid precision", { skip }, async () => {
++  await setIndex("p_aaaab1", indexOfGrade(48.49));
++  const { body } = await read(rankingPath(MATCH));
++  const grades = body.grades.map(withoutExact);
++  rankingOverride = { ...body, grades };
++  try {
++    const legacy = await read(reportPath(MATCH));
++    assert.equal(legacy.response.status, 200);
++    assert.ok(reportRows(legacy.body).every((g) => !Object.hasOwn(g, "gradeExact")));
++    const expected = reportRows(legacy.body);
++    for (const invalid of [48.55, -1, 101, "48.49", "Infinity", null]) {
++      rankingOverride.grades = grades.map((g) => ({ ...g, gradeExact: g.playerId === "p_aaaab1" ? invalid : 99 }));
++      const updated = await read(reportPath(MATCH));
++      assert.equal(updated.response.status, 200);
++      assert.deepEqual(reportRows(updated.body).map(withoutExact), expected);
++      assert.ok(reportRows(updated.body).every((g) => g.gradeExact === null), String(invalid));
++    }
++  } finally {
++    rankingOverride = undefined;
++  }
++});
++
++test("the recorded Orenburg–CSKA boundary goes through SQL and both HTTP routes", { skip }, async (t) => {
++  const seed = spawnSync("python3", [fileURLToPath(new URL("./seed_match.py", import.meta.url)), process.env.VEGA_V2_API_NODE_TEST_DSN], { encoding: "utf8" });
++  assert.equal(seed.status, 0, seed.stderr);
++  const { rows: [{ id: run }] } = await owner.query(
++    "INSERT INTO agg.power_runs(kind,season_id,method_version,status) VALUES ('players',2026,'vi32-fixture','published') RETURNING id",
++  );
++  // Recorded grade values of these players (capture 18 November); recreate their real z storage.
++  const witnesses = [["p_3jm88H", "winger", 82, 48.5004176439616], ["p_13nLyq", "centre_back", 90, 48.4903434662912]];
++  for (const [id, role, minutes, exact] of witnesses) {
++    await owner.query(
++      `INSERT INTO agg.player_match_grades(season_id,match_id,player_id,award_season,team_id,role,minutes,z,first_z,run_id)
++       VALUES (2026,api.internal_id('match',$1),api.internal_id('player',$2),2026,api.internal_id('team','t_2Mlwuk'),$3,$4,$5::real,$5::real,$6)`,
++      [ORENBURG, id, role, minutes, indexOfGrade(exact), run],
++    );
++  }
++  const ranking = await read(rankingPath(ORENBURG));
++  const result = await read(reportPath(ORENBURG));
++  const sql = await exactInDatabase(ORENBURG);
++  t.diagnostic(JSON.stringify({ sql: [...sql], ranking: ranking.body, reportGrades: result.body.grades }));
++  assert.equal(ranking.response.status, 200);
++  assert.equal(result.response.status, 200);
++  assert.deepEqual(ranking.body.grades.map((g) => [g.playerId, g.grade, g.rank]), witnesses.map(([id], i) => [id, 48.5, i + 1]));
++  for (const [i, [id, , , recorded]] of witnesses.entries()) {
++    assert.ok(Math.abs(sql.get(id) - recorded) < 1e-6, id);
++    assert.equal(ranking.body.grades[i].gradeExact, sql.get(id));
++    assert.equal(result.body.grades[i].gradeExact, sql.get(id));
++  }
++  assert.deepEqual(result.body.grades.map((g) => integer.format(g.gradeExact)), ["49", "48"]);
++});
+diff --git a/backend/api/test/player-contract-history.test.mjs b/backend/api/test/player-contract-history.test.mjs
+new file mode 100644
+index 0000000000..5ad368529b
+--- /dev/null
++++ b/backend/api/test/player-contract-history.test.mjs
+@@ -0,0 +1,46 @@
++// Transfermarkt contracts kept as history (VI-31, FAILURE_MODES.md §20), on the seed of
++// test/seed.py: a doubted link confirms nothing, even when its quarantine row names the player the
++// link had before; a superseded spell leaves the current contract published. Written before 139.
++import { test, before, after } from "node:test";
++import assert from "node:assert/strict";
++import pg from "pg";
++import { get, skip } from "./context.mjs";
++
++const DSN = process.env.VEGA_V2_API_NODE_TEST_DSN;
++let admin;
++
++before(async () => {
++  if (skip) return;
++  admin = new pg.Client({ connectionString: DSN });
++  await admin.connect();
++  // Player 101: his Transfermarkt contract was written, then his link was doubted. The quarantine
++  // row still names 999, the player the key had before a merge.
++  await admin.query(`INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('player', 'transfermarkt', '900101', 101)`);
++  await admin.query(`INSERT INTO core.player_contracts(player_id, team_id, start_date, end_date, source, as_of)
++                     VALUES (101, 3, current_date - 10, current_date + 300, 'transfermarkt', current_date - 10)`);
++  await admin.query(`INSERT INTO core.provider_players(provider, provider_key, provider_club, joined_on, contract_until, read_on)
++                     VALUES ('transfermarkt', '900101', '3', current_date - 10, current_date + 300, current_date)`);
++  await admin.query(`INSERT INTO ops.provider_links(entity_type, provider, provider_key, entity_id, rule, quarantined_at, quarantine_reason)
++                     VALUES ('player', 'transfermarkt', '900101', 999, 'snapshot', now(), 'birth_date_differs')`);
++});
++after(() => admin?.end());
++
++test("a doubted link's Transfermarkt contract is confirmed nowhere, whoever its quarantine row names", { skip }, async () => {
++  const { response, body } = await get("/api/players/p_aaaab1");
++  assert.equal(response.status, 200);
++  for (const key of ["contract_until", "contract_team", "observed_contract_until", "observed_contract_team", "observed_contract_on"])
++    assert.equal(key in body.data, false, key);
++  const { data: coverage } = (await get("/api/players/facts-coverage")).body;
++  assert.equal(coverage.confirmed_expiries, 2);
++});
++
++test("a superseded Transfermarkt spell leaves the current contract published", { skip }, async () => {
++  // Player 102 left club 4 for club 1: the provider's spell there is kept, set aside 30 days ago.
++  await admin.query(`INSERT INTO core.player_contracts(player_id, team_id, start_date, end_date, source, as_of, superseded_on)
++                     VALUES (102, 4, current_date - 400, current_date + 400, 'transfermarkt', current_date - 400, current_date - 30)`);
++  const { rows: [{ until }] } = await admin.query("SELECT (current_date + 365)::text AS until");
++  const { data } = (await get("/api/players/p_aaaab2")).body;
++  assert.deepEqual([data.contract_team, data.contract_until], ["Olympique Été", until]);
++  const { data: coverage } = (await get("/api/players/facts-coverage")).body;
++  assert.equal(coverage.confirmed_expiries, 2);
++});
+diff --git a/backend/api/test/player-halves-real.test.mjs b/backend/api/test/player-halves-real.test.mjs
+new file mode 100644
+index 0000000000..daaf1f8a6b
+--- /dev/null
++++ b/backend/api/test/player-halves-real.test.mjs
+@@ -0,0 +1,123 @@
++// A season by half and each metric's coverage on a real match: the provider's own halves of
++// m_08LEIz (FC Orenburg–CSKA Moscow, Russian Premier League, 1 November 2026,
++// backend/tests/fixtures/match_m_08LEIz), written by the collector's path (test/seed_match.py:
++// normalize_family, then Store). Written before the correction:
++// docs/calculs/09-audit-2026-11/FAILURE_MODES.md §4.1.
++import { before, test } from "node:test";
++import assert from "node:assert/strict";
++import { spawnSync } from "node:child_process";
++import { readFileSync } from "node:fs";
++import { fileURLToPath } from "node:url";
++import pg from "pg";
++import { get, skip } from "./context.mjs";
++
++// The shared seed runs first (context.mjs); this file's database is the real match only.
++before(() => {
++  if (skip) return;
++  const seed = spawnSync("python3", [fileURLToPath(new URL("./seed_match.py", import.meta.url)), process.env.VEGA_V2_API_NODE_TEST_DSN], { encoding: "utf8" });
++  assert.equal(seed.status, 0, seed.stderr);
++});
++const SEASON = "2026/2027";
++const PLAYERS = JSON.parse(readFileSync(new URL("../../tests/fixtures/match_m_08LEIz/players_halves.json", import.meta.url), "utf8"))
++  .data.players.map((p) => p.player.id);
++const METRICS = ["goals", "shots", "xg", "touches_box", "dribbles", "passes", "touches", "duels_won", "tackles", "recoveries"];
++const NONE = [null, 0, 0];
++const covered = ([matches, minutes], [excludedMatches, excludedMinutes], values) => ({
++  matches, minutes, excluded: { matches: excludedMatches, minutes: excludedMinutes },
++  stats: Object.fromEntries(METRICS.map((key, i) => [key, { sum: values[i][0], count: values[i][1], minutes: values[i][2] }])),
++});
++const halves = (key) => get(`/api/players/${key}/halves?season=${SEASON}`);
++
++test("the goalkeepers, whose halves publish no touches, keep their other statistics", { skip }, async () => {
++  // Prior contract (129): 404, neither has a complete half. Each half: 45 minutes, no shot (xG 0),
++  // no touches published; passes, duels won and recoveries as the source gives them.
++  const keeper = ([passes, duels, recoveries]) =>
++    covered([1, 45], [1, 45], [[0, 1, 45], [0, 1, 45], [0, 1, 45], [0, 1, 45], [0, 1, 45], [passes, 1, 45], NONE, [duels, 1, 45], [0, 1, 45], [recoveries, 1, 45]]);
++  for (const [key, first, second] of [["p_4McHHL", [2, 0, 6], [7, 2, 6]], ["p_3yNPPF", [6, 2, 9], [5, 1, 5]]]) {
++    const { response, body } = await halves(key);
++    assert.equal(response.status, 200, key);
++    assert.deepEqual(body.data, { id: key, season: SEASON, first: null, second: null, coverage: { first: keeper(first), second: keeper(second) } });
++  }
++});
++
++test("a player with complete halves keeps his totals, which his coverage equals", { skip }, async () => {
++  const { response, body } = await halves("p_02x0dj");
++  assert.equal(response.status, 200);
++  const first = { matches: 1, minutes: 45, goals: 0, shots: 3, xg: 0.28, touches_box: 4, dribbles: 3, passes: 6, touches: 24, duels_won: 9, tackles: 0, recoveries: 2 };
++  const second = { matches: 1, minutes: 34, goals: 0, shots: 0, xg: 0, touches_box: 2, dribbles: 0, passes: 3, touches: 13, duels_won: 2, tackles: 0, recoveries: 0 };
++  const same = (half) => covered([1, half.minutes], [0, 0], METRICS.map((key) => [half[key], 1, half.minutes]));
++  assert.deepEqual(body.data, { id: "p_02x0dj", season: SEASON, first, second, coverage: { first: same(first), second: same(second) } });
++});
++
++test("a half of 0 minutes is not a played half, even with a touch", { skip }, async () => {
++  // Egor Nazarenko's only row: the second half, 0 minutes, 1 touch and 1 accurate pass.
++  assert.equal((await halves("p_3o0rP8")).response.status, 404);
++});
++
++test("over the match's players, the totals keep their complete halves and the coverage the rest", { skip }, async () => {
++  const sum = () => ({ matches: 0, minutes: 0, excluded: 0, excludedMinutes: 0, kept: 0, keptMinutes: 0, passes: [0, 0, 0], touches: [0, 0, 0], xg: 0 });
++  const total = { first: sum(), second: sum() };
++  let served = 0;
++  for (const key of PLAYERS) {
++    const { response, body } = await halves(key);
++    if (response.status === 404) continue;
++    assert.equal(response.status, 200, key);
++    served++;
++    for (const side of ["first", "second"]) {
++      const cover = body.data.coverage[side], kept = body.data[side];
++      if (!cover) {
++        assert.equal(kept, null, key);
++        continue;
++      }
++      const t = total[side];
++      t.matches += cover.matches;
++      t.minutes += cover.minutes;
++      t.excluded += cover.excluded.matches;
++      t.excludedMinutes += cover.excluded.minutes;
++      t.kept += kept?.matches ?? 0;
++      t.keptMinutes += kept?.minutes ?? 0;
++      for (const metric of ["passes", "touches"]) {
++        const s = cover.stats[metric];
++        t[metric] = [t[metric][0] + (s.sum ?? 0), t[metric][1] + s.count, t[metric][2] + s.minutes];
++      }
++      t.xg += cover.stats.xg.sum ?? 0;
++      // The totals are the complete halves; with nothing left out, each metric's coverage is the total.
++      assert.equal(kept?.matches ?? 0, cover.matches - cover.excluded.matches, key);
++      assert.equal(kept?.minutes ?? 0, cover.minutes - cover.excluded.minutes, key);
++      if (!cover.excluded.matches)
++        for (const metric of METRICS) assert.deepEqual(cover.stats[metric], { sum: kept[metric], count: kept.matches, minutes: kept.minutes }, `${key} ${side} ${metric}`);
++    }
++  }
++  assert.equal(served, 28);
++  total.first.xg = Math.round(total.first.xg * 100) / 100;
++  total.second.xg = Math.round(total.second.xg * 100) / 100;
++  assert.deepEqual(total, {
++    first: { matches: 22, minutes: 990, excluded: 2, excludedMinutes: 90, kept: 20, keptMinutes: 900, passes: [226, 22, 990], touches: [460, 20, 900], xg: 1.11 },
++    second: { matches: 28, minutes: 990, excluded: 2, excludedMinutes: 90, kept: 26, keptMinutes: 900, passes: [185, 28, 990], touches: [452, 26, 900], xg: 0.49 },
++  });
++});
++
++test("a stored xG with eight significant digits reaches the answer as stored (Astra's probe)", { skip }, async () => {
++  // Damián Puebla's first half with the stored value of 0.12345679 in place of the source's 0.28
++  // (tracks/1-linear/reviews/astra62-final-current/precision-check.py): the answer was 0.123457.
++  const owner = new pg.Client({ connectionString: process.env.VEGA_V2_API_NODE_TEST_DSN });
++  await owner.connect();
++  const set = (value) =>
++    owner.query(
++      `UPDATE core.player_match_half_stats SET xg=$1::real WHERE player_id=api.internal_id('player','p_02x0dj') AND period='first_half'
++       RETURNING xg::text AS stored`,
++      [value],
++    );
++  try {
++    const { rows: [previous] } = await owner.query(
++      "SELECT xg::text AS stored FROM core.player_match_half_stats WHERE player_id=api.internal_id('player','p_02x0dj') AND period='first_half'");
++    assert.deepEqual((await set("0.12345679")).rows, [{ stored: "0.12345679" }]);
++    const { response, body } = await halves("p_02x0dj");
++    assert.equal(response.status, 200);
++    assert.deepEqual(body.data.coverage.first.stats.xg, { sum: 0.12345679, count: 1, minutes: 45 });
++    assert.equal(body.data.first.xg, 0.12);
++    assert.deepEqual((await set(previous.stored)).rows, [previous]);
++  } finally {
++    await owner.end();
++  }
++});
+diff --git a/backend/api/test/player-halves.test.mjs b/backend/api/test/player-halves.test.mjs
+index f764d0e6db..dfe60aeea3 100644
+--- a/backend/api/test/player-halves.test.mjs
++++ b/backend/api/test/player-halves.test.mjs
+@@ -1,51 +1,39 @@
+ // /api/players/{id}/halves: a player's season by half on complete halves only (calculation
+-// audit of 16 Nov 2026, VI-23 B3). Written before the correction:
+-// docs/calculs/09-audit-2026-11/FAILURE_MODES.md §4.
++// audit of 16 Nov 2026, VI-23 B3), and each metric's own coverage (audit 15c, 137). Written
++// before the corrections: docs/calculs/09-audit-2026-11/FAILURE_MODES.md §4 and §4.1.
+ //
+-// A half counts when its match is finished and the route's every statistic is known (xG: or
+-// no shot). Rows written after the seed and before the tests (the next test file seeds again):
+-// Moitiés Test (p_aaab30) in m1 (two complete halves, the second without a shot and so without
+-// xG), m3 (a first half without tackles, a second whose shot has no xG), m5 (a first half
+-// without touches, a complete second half of 40 minutes) and the canceled m_aaad01 (complete,
+-// not a match of the season). Demi Inconnu (p_aaab31) has incomplete halves only.
++// A half is eligible when its match is finished and its minutes are positive; it is complete
++// when the route's every statistic is known (xG: or no shot). The rows (test/half-fixture.mjs)
++// are written after the seed and before the tests; the next test file seeds again.
+ import { before, after, test } from "node:test";
+ import assert from "node:assert/strict";
+ import pg from "pg";
+-import { get, skip } from "./context.mjs";
++import { createReader } from "../src/db.mjs";
++import { createHandler } from "../src/handler.mjs";
++import { context, get, skip } from "./context.mjs";
++import { writeHalves } from "./half-fixture.mjs";
+ 
+-const COLUMNS = ["minutes_played", "goals", "total_shots", "xg", "accurate_passes", "touches", "duels_won", "recoveries", "touches_opp_box", "dribbles_succeeded", "tackles"];
+-// (player, match, period, minutes, goals, shots, xg, passes, touches, duels won, recoveries, touches in the box, dribbles, tackles)
+-const HALVES = [
+-  [130, 1, "first_half", 45, 1, 2, 0.6, 10, 30, 2, 3, 4, 1, 1],
+-  [130, 1, "second_half", 45, 0, 0, null, 12, 25, 1, 2, 0, 0, 2],
+-  [130, 3, "first_half", 45, 0, 1, 0.1, 8, 20, 1, 1, 1, 0, null],
+-  [130, 3, "second_half", 45, 1, 1, null, 9, 22, 2, 1, 2, 1, 0],
+-  [130, 5, "first_half", 45, 0, 0, null, 5, null, 0, 1, 0, 0, 0],
+-  [130, 5, "second_half", 40, 0, 1, 0.2, 7, 18, 0, 2, 1, 2, 1],
+-  [130, 9301, "first_half", 45, 2, 3, 1.5, 10, 30, 3, 3, 5, 2, 2],
+-  [131, 1, "first_half", 45, 0, 1, null, 4, 12, 0, 1, 0, 0, 1],
+-  [131, 3, "second_half", 45, 0, 0, null, 6, 15, 1, null, 0, 0, 0],
+-];
++// The route's metrics, in the order of the coverage rows below.
++const METRICS = ["goals", "shots", "xg", "touches_box", "dribbles", "passes", "touches", "duels_won", "tackles", "recoveries"];
++const NONE = [null, 0, 0];
++/** One half's coverage: its eligible halves, those left out of the totals, and [sum, count, minutes] per metric. */
++const covered = ([matches, minutes], [excludedMatches, excludedMinutes], values) => ({
++  matches, minutes, excluded: { matches: excludedMatches, minutes: excludedMinutes },
++  stats: Object.fromEntries(METRICS.map((key, i) => [key, { sum: values[i][0], count: values[i][1], minutes: values[i][2] }])),
++});
++const halves = async (key) => {
++  const { response, body } = await get(`/api/players/${key}/halves?season=2025/2026`);
++  assert.equal(response.status, 200, key);
++  return body.data;
++};
++const per90 = (stat) => (stat.minutes > 0 ? Math.round((900 * stat.sum) / stat.minutes) / 10 : null);
+ 
+ let owner;
+ before(async () => {
+   if (skip) return;
+   owner = new pg.Client({ connectionString: process.env.VEGA_V2_API_NODE_TEST_DSN });
+   await owner.connect();
+-  const x = (sql, values) => owner.query(sql, values);
+-  await x(`INSERT INTO core.matches(id,competition_season_id,season_id,source,status,home_team_id,away_team_id,match_date,kickoff_at)
+-           VALUES (9301,1,2025,'pitchapi','canceled',1,4,'2025-09-12','2025-09-12T19:00:00Z')`);
+-  await x("INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id) VALUES ('match','pitchapi','m_aaad01',9301)");
+-  for (const [id, key, name] of [[130, "p_aaab30", "Moitiés Test"], [131, "p_aaab31", "Demi Inconnu"]]) {
+-    await x("INSERT INTO core.players(id,name) VALUES ($1,$2)", [id, name]);
+-    await x("INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id) VALUES ('player','pitchapi',$1,$2)", [key, id]);
+-  }
+-  for (const [player, match, period, ...values] of HALVES)
+-    await x(
+-      `INSERT INTO core.player_match_half_stats(season_id,match_id,team_id,player_id,period,${COLUMNS.join(",")})
+-       VALUES (2025,$1,1,$2,$3,${COLUMNS.map((_, i) => `$${i + 4}`).join(",")})`,
+-      [match, player, period, ...values],
+-    );
++  await writeHalves(owner);
+ });
+ after(() => owner?.end());
+ 
+@@ -73,6 +61,175 @@ test("the view counts what it left out and keeps an unknown unknown", { skip },
+   ]);
+ });
+ 
+-test("a player without a complete half has no season by half", { skip }, async () => {
+-  assert.equal((await get("/api/players/p_aaab31/halves?season=2025/2026")).response.status, 404);
++test("each metric is summed on the halves that publish it, with their own minutes (FM-HC.1, FM-HC.4)", { skip }, async () => {
++  const data = await halves("p_aaab30");
++  // First half: m1, m3 and m5 (m_aaad01 canceled); m3 publishes no tackles, m5 no touches.
++  assert.deepEqual(data.coverage.first, covered([3, 135], [2, 90], [
++    [1, 3, 135], [3, 3, 135], [0.7, 3, 135], [5, 3, 135], [1, 3, 135], [23, 3, 135], [50, 2, 90], [3, 3, 135], [1, 2, 90], [5, 3, 135],
++  ]));
++  // Second half: m3's shot has no xG; m1's half without a shot is a zero xG.
++  assert.deepEqual(data.coverage.second, covered([3, 130], [1, 45], [
++    [1, 3, 130], [2, 3, 130], [0.2, 2, 85], [3, 3, 130], [3, 3, 130], [28, 3, 130], [65, 3, 130], [3, 3, 130], [3, 3, 130], [5, 3, 130],
++  ]));
++  // Rates on each metric's own minutes: 50 touches in 90 minutes is 50 per 90 (not 33.3 on 135),
++  // 23 passes in 135 minutes 15.3 per 90.
++  assert.deepEqual([per90(data.coverage.first.stats.touches), per90(data.coverage.first.stats.passes), per90(data.coverage.first.stats.tackles)], [50, 15.3, 1]);
++  // The totals keep their complete halves: what they left out is the coverage's exclusion.
++  for (const side of ["first", "second"]) {
++    assert.equal(data[side].matches, data.coverage[side].matches - data.coverage[side].excluded.matches);
++    assert.equal(data[side].minutes, data.coverage[side].minutes - data.coverage[side].excluded.minutes);
++  }
++});
++
++test("a player without a complete half has his observed statistics and no totals (FM-HC.2)", { skip }, async () => {
++  // Prior contract (VI-23 B3, 129): 404, the route publishing complete halves only. The audit's
++  // requirement (15c: coverage and observed minutes per metric) supersedes it for a player who
++  // played: what was observed is served, the totals stay null.
++  const data = await halves("p_aaab31");
++  assert.deepEqual([data.first, data.second], [null, null]);
++  // First half: a shot without xG, so the xG alone is unmeasured.
++  assert.deepEqual(data.coverage.first, covered([1, 45], [1, 45], [
++    [0, 1, 45], [1, 1, 45], NONE, [0, 1, 45], [0, 1, 45], [4, 1, 45], [12, 1, 45], [0, 1, 45], [1, 1, 45], [1, 1, 45],
++  ]));
++  // Second half: no shot (xG 0), recoveries unpublished.
++  assert.deepEqual(data.coverage.second, covered([1, 45], [1, 45], [
++    [0, 1, 45], [0, 1, 45], [0, 1, 45], [0, 1, 45], [0, 1, 45], [6, 1, 45], [15, 1, 45], [1, 1, 45], [0, 1, 45], NONE,
++  ]));
++});
++
++test("a published metric is served alone, the unpublished ones stay unknown (FM-HC.1, FM-HC.3)", { skip }, async () => {
++  const data = await halves("p_aaab32");
++  assert.deepEqual([data.first, data.second], [null, null]);
++  // Its only played half: 14 passes in 45 minutes, nothing else published (no shot count: no xG).
++  assert.deepEqual(data.coverage.first, covered([1, 45], [1, 45], [NONE, NONE, NONE, NONE, NONE, [14, 1, 45], NONE, NONE, NONE, NONE]));
++  // Its second halves have 0 and unknown minutes: not played.
++  assert.equal(data.coverage.second, null);
++});
++
++test("an xG is known when finite, or blank on a half without a shot (FM-HC.5)", { skip }, async () => {
++  const data = await halves("p_aaab33");
++  // First half: NaN without a shot, +∞ and −∞ with shots: three unknown xG, never 0 or NaN.
++  assert.equal(data.first, null);
++  assert.deepEqual(data.coverage.first, covered([3, 135], [3, 135], [
++    [1, 3, 135], [3, 3, 135], NONE, [3, 3, 135], [1, 3, 135], [18, 3, 135], [33, 3, 135], [2, 3, 135], [1, 3, 135], [4, 3, 135],
++  ]));
++  // Second half: m3's shots are unknown, so its blank xG is unknown too; m1 is complete.
++  assert.deepEqual(data.second, {
++    matches: 1, minutes: 45, goals: 0, shots: 1, xg: 0.4, touches_box: 1, dribbles: 0, passes: 8, touches: 13, duels_won: 1, tackles: 0, recoveries: 1,
++  });
++  assert.deepEqual(data.coverage.second, covered([2, 90], [1, 45], [
++    [0, 2, 90], [1, 1, 45], [0.4, 1, 45], [1, 2, 90], [1, 2, 90], [17, 2, 90], [27, 2, 90], [1, 2, 90], [1, 2, 90], [3, 2, 90],
++  ]));
++});
++
++test("a measured zero is a zero, an unmeasured half is unknown (FM-HC.3)", { skip }, async () => {
++  const zero = await halves("p_aaab36");
++  assert.deepEqual(zero.first, {
++    matches: 1, minutes: 45, goals: 0, shots: 0, xg: 0, touches_box: 0, dribbles: 0, passes: 0, touches: 0, duels_won: 0, tackles: 0, recoveries: 0,
++  });
++  assert.deepEqual(zero.coverage, { first: covered([1, 45], [0, 0], METRICS.map(() => [0, 1, 45])), second: null });
++  // Played halves with no statistic: served as played, every metric unknown.
++  const blank = await halves("p_aaab34");
++  assert.deepEqual([blank.first, blank.second], [null, null]);
++  assert.deepEqual(blank.coverage, {
++    first: covered([1, 45], [1, 45], METRICS.map(() => NONE)),
++    second: covered([1, 30], [1, 30], METRICS.map(() => NONE)),
++  });
++});
++
++test("a player without a played half of a finished match has no season by half (FM-HC.6)", { skip }, async () => {
++  // A canceled match, a match not started and a 0-minute half: no half of the season.
++  assert.equal((await get("/api/players/p_aaab35/halves?season=2025/2026")).response.status, 404);
++  assert.equal((await get("/api/players/p_aaab30/halves?season=2024/2025")).response.status, 404);
++  assert.equal((await get("/api/players/p_aaab30/halves")).response.status, 400);
++});
++
++test("the coverage's exclusions are those of the complete halves' view (FM-HC.9)", { skip }, async () => {
++  const { rows } = await owner.query(
++    `SELECT c.season_id, c.player_key, c.period, c.matches, c.minutes, c.excluded_matches, c.excluded_minutes,
++            t.matches AS kept, t.minutes AS kept_minutes, t.excluded_matches AS t_excluded, t.excluded_minutes AS t_excluded_minutes
++     FROM api.player_half_coverage c FULL JOIN api.player_half_totals t USING (season_id, player_key, period)
++     ORDER BY 1, 2, 3`,
++  );
++  // Every group of the totals has its coverage; a group without a complete half has a coverage
++  // only (the seed's p_aaaab1 included: players.test.mjs).
++  assert.deepEqual(rows.map((r) => [r.player_key, r.period, r.kept]), [
++    [101, "first_half", null], [101, "second_half", null], [130, "first_half", 1], [130, "second_half", 2], [131, "first_half", null], [131, "second_half", null], [132, "first_half", null],
++    [133, "first_half", null], [133, "second_half", 1], [134, "first_half", null], [134, "second_half", null], [136, "first_half", 1],
++    [137, "first_half", 3], [137, "second_half", 1],
++  ]);
++  for (const r of rows) {
++    assert.equal(r.matches - r.excluded_matches, r.kept ?? 0, `${r.player_key} ${r.period}`);
++    assert.equal(r.minutes - r.excluded_minutes, r.kept_minutes ?? 0, `${r.player_key} ${r.period}`);
++    if (r.kept !== null) assert.deepEqual([r.excluded_matches, r.excluded_minutes], [r.t_excluded, r.t_excluded_minutes]);
++  }
++  // The read role reads it.
++  assert.equal((await context.reader.read("SELECT count(*)::int AS n FROM api.player_half_coverage"))[0].n, rows.length);
++});
++
++test("the route reads the asked player's season only, in one statement (FM-HC.8)", { skip }, async () => {
++  const statements = [];
++  const handle = createHandler({
++    read: (sql, values, options) => (statements.push({ sql, values }), context.reader.read(sql, values, options)),
++    mediaBase: "https://media.test/", clock: () => context.now,
++  });
++  const response = await handle(new Request("https://api.test/api/players/p_aaab30/halves?season=2025/2026"));
++  assert.equal(response.status, 200);
++  assert.equal(statements.length, 1);
++  const [{ "QUERY PLAN": [plan] }] = (await owner.query(`EXPLAIN (FORMAT JSON) ${statements[0].sql}`, statements[0].values)).rows;
++  // Every scan of the half statistics is filtered by the player below the views' aggregates.
++  const scans = [];
++  (function walk(node) {
++    if (/^player_match_half_stats/.test(node["Relation Name"] || "")) scans.push(node);
++    for (const child of node.Plans || []) walk(child);
++  })(plan.Plan);
++  assert.ok(scans.length > 0);
++  for (const scan of scans) assert.match([scan["Index Cond"], scan["Recheck Cond"], scan.Filter].join(" "), /\bplayer_id = /, JSON.stringify(scan));
++});
++
++test("a stored xG is summed at its own digits and converted once (FM-HC.10, FM-HC.12)", { skip }, async () => {
++  const data = await halves("p_aaab37");
++  // The totals keep 129's float sums rounded to 2 decimals.
++  assert.deepEqual([data.first.matches, data.first.xg, data.second.matches, data.second.xg], [3, 1.36, 1, 0.12]);
++  // Three values: 0.12345679 + 1.2345678 + a half without a shot. Not 1.358027 (each value read at
++  // 6 significant digits) nor 1.3580245524644852 (the stored binary values summed).
++  assert.deepEqual(data.coverage.first, covered([3, 135], [0, 0], [
++    [1, 3, 135], [3, 3, 135], [1.35802459, 3, 135], [2, 3, 135], [1, 3, 135], [18, 3, 135], [33, 3, 135], [2, 3, 135], [1, 3, 135], [4, 3, 135],
++  ]));
++  // One value beside a shot without xG and a NaN: 0.12345679 (not 0.123457) on its own half.
++  assert.deepEqual(data.coverage.second, covered([3, 135], [2, 90], [
++    [0, 3, 135], [3, 3, 135], [0.12345679, 1, 45], [2, 3, 135], [1, 3, 135], [21, 3, 135], [36, 3, 135], [2, 3, 135], [1, 3, 135], [3, 3, 135],
++  ]));
++  for (const side of ["first", "second"]) assert.equal(typeof data.coverage[side].stats.xg.sum, "number");
++});
++
++test("the answer and its ETag do not depend on the session's extra_float_digits (FM-HC.11)", { skip }, async () => {
++  // The same reader as production's (vega_read, createReader), each session set to 0, 1 or 3.
++  const answers = {};
++  for (const digits of [0, 1, 3]) {
++    const Pool = class extends pg.Pool {
++      constructor(config) { super({ ...config, options: `${config.options} -c extra_float_digits=${digits}` }); }
++    };
++    const reader = createReader(process.env.VEGA_V2_API_NODE_TEST_DSN, { role: "vega_read", Pool });
++    try {
++      const handle = createHandler({ read: reader.read, mediaBase: "https://media.test/", clock: () => context.now });
++      const [setting] = await reader.read("SELECT current_setting('extra_float_digits') AS digits");
++      assert.equal(setting.digits, String(digits));
++      for (const key of ["p_aaab37", "p_aaab30"]) {
++        const response = await handle(new Request(`https://api.test/api/players/${key}/halves?season=2025/2026`));
++        assert.equal(response.status, 200);
++        (answers[key] ??= []).push({ digits, etag: response.headers.get("etag"), body: await response.text() });
++      }
++    } finally {
++      await reader.end();
++    }
++  }
++  for (const [key, runs] of Object.entries(answers)) {
++    for (const run of runs.slice(1)) {
++      assert.equal(run.body, runs[0].body, `${key} at extra_float_digits ${run.digits}`);
++      assert.equal(run.etag, runs[0].etag, `${key} at extra_float_digits ${run.digits}`);
++    }
++  }
++  const coverage = JSON.parse(answers.p_aaab37[0].body).data.coverage;
++  assert.deepEqual([coverage.first.stats.xg.sum, coverage.second.stats.xg.sum], [1.35802459, 0.12345679]);
+ });
+diff --git a/backend/api/test/players.test.mjs b/backend/api/test/players.test.mjs
+index 56a691e960..6512d144c5 100644
+--- a/backend/api/test/players.test.mjs
++++ b/backend/api/test/players.test.mjs
+@@ -265,9 +265,22 @@ test("points before and after the changes, by the state of the score", async ()
+ 
+ test("a player's season by half", { skip }, async () => {
+   // The seed's two halves of p_aaaab1 are incomplete (VI-23 B3: the first has no tackles and
+-  // no recoveries, the second no duels won, dribbles or recoveries): no half to show, never a
+-  // 0. Complete halves are read in player-halves.test.mjs.
+-  assert.equal((await get("/api/players/p_aaaab1/halves?season=2025/2026")).response.status, 404);
++  // no recoveries, the second no duels won, dribbles or recoveries): no totals, never a 0.
++  // Prior contract (129): 404. Each metric's own coverage (audit 15c, 137; FAILURE_MODES §4.1)
++  // serves what was observed, an unpublished metric unknown. Complete halves are read in
++  // player-halves.test.mjs.
++  const { response, body } = await get("/api/players/p_aaaab1/halves?season=2025/2026");
++  assert.equal(response.status, 200);
++  const stat = (sum) => ({ sum, count: 1, minutes: 45 }), none = { sum: null, count: 0, minutes: 0 };
++  const half = (stats) => ({ matches: 1, minutes: 45, excluded: { matches: 1, minutes: 45 }, stats });
++  assert.deepEqual(body.data, {
++    id: "p_aaaab1", season: "2025/2026", first: null, second: null,
++    coverage: {
++      first: half({ goals: stat(2), shots: stat(3), xg: stat(0.9), touches_box: stat(4), dribbles: stat(1), passes: stat(8), touches: stat(20), duels_won: stat(3), tackles: none, recoveries: none }),
++      second: half({ goals: stat(0), shots: stat(1), xg: stat(0.3), touches_box: stat(2), dribbles: none, passes: stat(12), touches: stat(25), duels_won: none, tackles: stat(1), recoveries: none }),
++    },
++  });
++  // A player without any half of the season.
+   assert.equal((await get("/api/players/p_aaaab3/halves?season=2025/2026")).response.status, 404);
+   assert.equal((await get("/api/players/p_aaaab1/halves")).response.status, 400);
+ });
+diff --git a/backend/api/test/seed.py b/backend/api/test/seed.py
+index 4ba7fb387f..a793de6755 100644
+--- a/backend/api/test/seed.py
++++ b/backend/api/test/seed.py
+@@ -192,6 +192,10 @@ def main(dsn):
+     with db.transaction():
+         for kind, competition, season, body in SAMPLES:
+             cups.save(db, kind, competition, season, body, datetime(2025, 9, 20, 8, tzinfo=timezone.utc))
++        # Supplemental cup reads live alongside this suite's fixed native publication (generation 7).
++        # Their own notification and replay are exercised separately in the PostgreSQL snapshot suites.
++        db.execute("""DELETE FROM ops.resource_versions v USING core.competition_seasons cs
++                      WHERE v.resource_kind='competition_season' AND v.resource_id=cs.id AND cs.cup_key IS NOT NULL""")
+     # open-matchday competitions, from the real (trimmed) files of backend/tests/fixtures/open_matchday.
+     from test_open_matchday import fake_get
+     from vega.sources import open_matchday
+diff --git a/backend/archives/builders/build_footballcsv_history.py b/backend/archives/builders/build_footballcsv_history.py
+index 18242e722a..3a2731a820 100644
+--- a/backend/archives/builders/build_footballcsv_history.py
++++ b/backend/archives/builders/build_footballcsv_history.py
+@@ -38,6 +38,32 @@ def source_score(value):
+     return [int(match.group(1)), int(match.group(2))] if match else None
+ 
+ 
++# footballcsv/europe-champions-league champs.csv names a side « Name › ASSOCIATION (N) », N the club's appearance
++# number in that edition (1, 2, … in date order), not an identity: all 13,108 sides of the pinned 66393c8d input,
++# 2,639 club/edition sequences, read so (FAILURE_MODES.md §22). Only this feed is read this way; any other form
++# stops the build.
++APPEARANCE = re.compile(r'(.*?)\s+›\s+([A-Z]{3})\s+\((\d+)\)')
++
++
++def appearance_sides(name, rows):
++    """{row index: {'team1': side, 'team2': side}} of a champs.csv; ValueError for a side of another form or an
++    appearance out of sequence."""
++    out, seen = {}, {}
++    for index, row in enumerate(rows):
++        sides = {}
++        for side, field in (('team1', 'Team 1'), ('team2', 'Team 2')):
++            raw = row.get(field) or ''
++            found = APPEARANCE.fullmatch(raw)
++            if not found: raise ValueError(f'{name}: side {raw!r} is not « Name › ASSOCIATION (N) »')
++            label, association, ordinal = found.group(1), found.group(2), int(found.group(3))
++            key = (label, association)
++            if ordinal != seen.get(key, 0) + 1: raise ValueError(f'{name}: {raw!r} is not appearance {seen.get(key, 0) + 1}')
++            seen[key] = ordinal
++            sides[side] = {'raw': raw, 'label': label, 'association': association, 'ordinal': ordinal}
++        out[index] = sides
++    return out
++
++
+ def competition_name(repo, code, year):
+     if repo == 'europe' and code == 'champs': return 'Coupe d’Europe des clubs champions' if year < 1992 else 'Ligue des champions'
+     if repo == 'deutschland' and code == 'de.1': return 'Bundesliga'
+@@ -76,9 +102,12 @@ def build(output, sources):
+                 required = {'Date','Team 1','FT','Team 2'}
+                 if not required.issubset(set(reader.fieldnames or [])): raise ValueError(f'Unknown CSV schema: {name}')
+                 matches = []
+-                for row in reader:
++                rows = list(reader)
++                sides = appearance_sides(name, rows) if repo == 'europe' and code == 'champs' else {}
++                for number, row in enumerate(rows):
+                     match = {'round':row.get('Round') or row.get('Matchday'), 'date':source_date(row.get('Date') or ''),
+                              'team1':row.get('Team 1'), 'team2':row.get('Team 2'), 'sourceFields':row}
++                    if number in sides: match['sides'] = sides[number]
+                     scores={key:value for key,field in (('ft','FT'),('ht','HT'),('et','ET'),('p','P')) if (value:=source_score(row.get(field))) is not None}
+                     if scores: match['score'] = scores
+                     matches.append(match)
+diff --git a/backend/archives/builders/build_historical_goals.py b/backend/archives/builders/build_historical_goals.py
+index ba01e64e6a..dac869e7a9 100644
+--- a/backend/archives/builders/build_historical_goals.py
++++ b/backend/archives/builders/build_historical_goals.py
+@@ -58,7 +58,8 @@ def read_competition(path, competition):
+     seen, groups = set(), collections.defaultdict(list)
+     duplicates = unassigned = 0
+     with gzip.open(path, "rt", encoding="utf-8-sig", newline="") as stream:
+-        for row in csv.DictReader(stream):
++        reader = csv.DictReader(stream)
++        for row in reader:
+             key = tuple(row.values())
+             if key in seen:
+                 duplicates += 1
+@@ -78,6 +79,9 @@ def read_competition(path, competition):
+                 "score": [int(row["GH"]), int(row["GA"])],
+                 "match": row["game"],
+                 "sourceSeason": row["season"],
++                # Where the row is in the pinned file, for a receipt (FAILURE_MODES.md §22).
++                "sourceFile": path.name,
++                "sourceRow": reader.line_num,
+             }
+             groups[(season, calendar, row["date"], row["game"])].append(event)
+     for (_, _, _, game), events in groups.items():
+diff --git a/backend/archives/builders/build_openfootball_history.py b/backend/archives/builders/build_openfootball_history.py
+index 583e053428..48f7a4a8bc 100644
+--- a/backend/archives/builders/build_openfootball_history.py
++++ b/backend/archives/builders/build_openfootball_history.py
+@@ -27,6 +27,18 @@ SOURCE = 'https://github.com/openfootball/football.json'
+ REVISION = 'e6744429ee395bc86f247348c6184bb08d4eb361'
+ 
+ 
++# Files a reviewer found to copy another competition's matches, by their exact bytes (VI-27, 17 Nov 2026,
++# football.json e6744429): left out of the season and listed under "excluded". Other bytes fail the build
++# until reviewed again (FAILURE_MODES.md §20).
++REVIEWED_COPIES = {
++    '2019-20/ru.2.json': {
++        'sha256': '7eda7c911d458f248b24954d093fbf0790a1eab889de6030fe5cdfd220146597',
++        'copy_of': '2019-20/ru.1.json',
++        'note': 'Russia 1. Division 2019/20 repeats the 240 matches of Russia Premier League 2019/20 (ru.1, sha256 66b0f56e...ef22)',
++    },
++}
++
++
+ def scored(match):
+     score = match.get('score')
+     ft = score.get('ft') if isinstance(score, dict) else None
+@@ -36,6 +48,7 @@ def scored(match):
+ def build(archive, output, first_year=2010, last_year=2020, revision=REVISION):
+     archive, output = Path(archive), Path(output)
+     groups = defaultdict(list)
++    excluded = []
+     with zipfile.ZipFile(archive) as source:
+         for name in source.namelist():
+             parts = PurePosixPath(name).parts
+@@ -53,7 +66,16 @@ def build(archive, output, first_year=2010, last_year=2020, revision=REVISION):
+             country = COUNTRIES.get(code.split('.')[0])
+             if not country:
+                 continue
+-            item = json.loads(source.read(name))
++            raw_file = source.read(name)
++            file_key = '/'.join(parts[1:])
++            reviewed = REVIEWED_COPIES.get(file_key)
++            if reviewed is not None:
++                digest = hashlib.sha256(raw_file).hexdigest()
++                if digest != reviewed['sha256']:
++                    raise ValueError(f'{file_key} changed since its review as a copy of {reviewed["copy_of"]} ({digest}): review it again')
++                excluded.append({'file': file_key, 'sha256': digest, 'copy_of': reviewed['copy_of'], 'note': reviewed['note']})
++                continue
++            item = json.loads(raw_file)
+             if not isinstance(item, dict) or not isinstance(item.get('matches'), list):
+                 raise ValueError(f'Invalid source file: {name}')
+             if any(not isinstance(match, dict) for match in item['matches']):
+@@ -71,9 +93,18 @@ def build(archive, output, first_year=2010, last_year=2020, revision=REVISION):
+     source_info = {'name':'OpenFootball', 'url':SOURCE, 'license':'CC0-1.0', 'revision':revision,
+                    'archiveSha256':hashlib.sha256(archive.read_bytes()).hexdigest(),
+                    'coverage':'Résultats et calendriers seulement ; pas de statistiques joueurs ni xG.'}
+-    index = {'schemaVersion':1, 'source':source_info, 'seasons':[]}
++    index = {'schemaVersion':1, 'source':source_info, 'seasons':[], 'excluded':sorted(excluded, key=lambda e: e['file'])}
+     for label, competitions in sorted(groups.items(), reverse=True):
+         competitions.sort(key=lambda c: (c['country'], c['name'], c['id']))
++        # Two competitions with the very same matches: one copies the other, and nothing says which.
++        seen = {}
++        for competition in competitions:
++            if not competition['matches']:
++                continue
++            body = json.dumps(competition['matches'], sort_keys=True, ensure_ascii=False)
++            if body in seen:
++                raise ValueError(f"{competition['sourceFile']} repeats the matches of {seen[body]}: review which one is the competition")
++            seen[body] = competition['sourceFile']
+         payload = {'season':label, 'source':source_info, 'competitions':competitions}
+         raw = json.dumps(payload, ensure_ascii=False, separators=(',', ':'), allow_nan=False).encode('utf-8')
+         compressed = gzip.compress(raw, compresslevel=6, mtime=0)
+diff --git a/backend/archives/edition.mjs b/backend/archives/edition.mjs
+index 06cd63e015..8233942dab 100644
+--- a/backend/archives/edition.mjs
++++ b/backend/archives/edition.mjs
+@@ -9,20 +9,18 @@
+  */
+ import { readFileSync } from "node:fs";
+ import { gunzipSync } from "node:zlib";
+-import { buildArchiveSeason, teamSimilarity } from "../../dashboard/shared/archive.js";
++import { buildArchiveSeason } from "../../dashboard/shared/archive.js";
+ 
+ const read = (path) => (path && path !== "-" ? JSON.parse(gunzipSync(readFileSync(path)).toString("utf8")) : null);
+ const [resultsPath, goalsPath] = process.argv.slice(2);
+ const edition = buildArchiveSeason(read(resultsPath), read(goalsPath));
+-// The side a goal's team designates, compared as the archive page compares it.
+-const side = (goal, match) => {
+-  const home = teamSimilarity(goal.team, match.team1),
+-    away = teamSimilarity(goal.team, match.team2);
+-  return home > away ? "home" : away > home ? "away" : null;
+-};
++// Each goal carries the side shared/archive.js gave it (goalSide: the side named exactly first; a held row's
++// published side), FAILURE_MODES.md §22.
+ const matches = edition.matches.map(({ raw, ...match }) => ({
+   ...match,
+-  goals: match.goals ? match.goals.map((goal) => ({ ...goal, side: side(goal, match) })) : null,
++  goals: match.goals ? match.goals.map((goal) => ({ ...goal, side: goal.side ?? null })) : null,
++  // A side of the appearance-ordinal feed (build_footballcsv_history.py): never a team of its own.
++  ...(raw?.sides && { sides: raw.sides }),
+   // The typed facts of the results record that the edition's notes come from.
+   source: raw
+     ? {
+@@ -35,4 +33,4 @@ const matches = edition.matches.map(({ raw, ...match }) => ({
+       }
+     : null,
+ }));
+-process.stdout.write(JSON.stringify({ season: edition.season, competitions: edition.competitions, matches }));
++process.stdout.write(JSON.stringify({ season: edition.season, competitions: edition.competitions, matches, absorbed: edition.absorbed, held: edition.held }));
+diff --git a/backend/ci/test_databases.py b/backend/ci/test_databases.py
+index 4858f02a20..d14b47bb23 100644
+--- a/backend/ci/test_databases.py
++++ b/backend/ci/test_databases.py
+@@ -26,6 +26,13 @@ SUITES = {
+     "VEGA_V2_MODELS_TEST_DSN": "vega_v2_models_test",
+     "VEGA_V2_ROLES_TEST_DSN": "vega_v2_roles_test",
+     "VEGA_V2_SOURCES_TEST_DSN": "vega_v2_sources_test",
++    "VEGA_V2_SNAPSHOTS_TEST_DSN": "vega_v2_snapshots_test",
++    "VEGA_V2_DFB_PERIODS_TEST_DSN": "vega_v2_dfb_periods_test",
++    "VEGA_V2_ARCHIVE_REPAIR_TEST_DSN": "vega_v2_archive_repair_test",
++    "VEGA_V2_ARTWORK_TEST_DSN": "vega_v2_artwork_test",
++    "VEGA_V2_ARCHIVE_CORRECTIONS_TEST_DSN": "vega_v2_archive_corrections_test",
++    "VEGA_V2_ARCHIVE_DELETIONS_TEST_DSN": "vega_v2_archive_deletions_test",
++    "VEGA_V2_ARCHIVE_GUARDS_TEST_DSN": "vega_v2_archive_guards_test",
+     "VEGA_V2_MEDIA_TEST_DSN": "vega_v2_media_test",
+     "VEGA_V2_ARCHIVES_TEST_DSN": "vega_v2_archives_test",
+     "VEGA_V2_LIVE_TEST_DSN": "vega_v2_live_test",
+diff --git a/backend/sources/projections/open-cups.mjs b/backend/sources/projections/open-cups.mjs
+index 47c77065af..ea103513f1 100644
+--- a/backend/sources/projections/open-cups.mjs
++++ b/backend/sources/projections/open-cups.mjs
+@@ -1,6 +1,8 @@
+ import { parseFranceCup } from "../../../dashboard/frontend/src/services/openfootball-france-cup.js";
+ import { parseOpenCupText } from "../../../dashboard/frontend/src/services/openfootball-cups.js";
+ import { NATIONAL_CUP_ARCHIVES } from "../../../dashboard/frontend/src/services/cup-archives.js";
++import { openFootballScore } from "../../../dashboard/shared/openfootball-history.js";
++import { worldCupHalf } from "./world-cup-halves.mjs";
+ 
+ const WORLD_CUP_YEARS = new Set([
+   "1930",
+@@ -117,7 +119,7 @@ export async function GET(request) {
+         : source.format === "year-text"
+           ? {
+               name: "Club World Cup " + season,
+-              matches: parseOpenCupText(await response.text(), Number(season)),
++              matches: parseOpenCupText(await response.text(), Number(season), {}, { halfTime: true }),
+             }
+           : source.format === "continental-text"
+           ? {
+@@ -136,15 +138,30 @@ export async function GET(request) {
+           : await response.json();
+     if (!Array.isArray(data.matches) || data.matches.length > 1000)
+       throw new Error("Invalid source data");
+-    const matches = data.matches.map((match) => ({
+-      round: match.round,
+-      group: match.group,
+-      num: match.num,
+-      date: match.date,
+-      team1: match.team1 === UNDECIDED ? null : match.team1,
+-      team2: match.team2 === UNDECIDED ? null : match.team2,
+-      score: match.score,
+-    }));
++    const matches = data.matches.map((match) => {
++      // One score form, whatever the edition writes ([2, 1] or {ft: [2, 1]}); the source's own
++      // status (1938 Sweden–Austria: "canceled") is the cups adapter's to read (FAILURE_MODES.md §19).
++      let score = openFootballScore(match.score);
++      const half = competition === "world-cup-history" ? worldCupHalf(season, match, score) : null;
++      if (half) score = { ...score, ht: half.official_ht };
++      // This FFF decision is reviewed. Preserve the other native markers as observations
++      // without changing their published treatment while their decisions are unverified.
++      const nativeAward = competition === "france-cup" && match.status === "awarded";
++      const status = nativeAward && (match.date !== "2024-12-21" || match.team1 !== "Tours FC" || match.team2 !== "FC Lorient")
++        ? undefined : match.status;
++      return {
++        round: match.round,
++        group: match.group,
++        num: match.num,
++        date: match.date,
++        team1: match.team1 === UNDECIDED ? null : match.team1,
++        team2: match.team2 === UNDECIDED ? null : match.team2,
++        ...(score && { score }),
++        ...(typeof status === "string" && status && { status }),
++        ...(nativeAward && { sourceStatus: "[awarded]" }),
++        ...(half && { attestedHalf: { before: half.native_ht, fifaMatchId: half.fifa_match_id } }),
++      };
++    });
+     return Response.json(
+       {
+         name: data.name,
+@@ -163,11 +180,13 @@ export async function GET(request) {
+         },
+       },
+     );
+-  } catch {
++  } catch (error) {
+     return Response.json(
+       {
+         error:
+           "Les données de cette édition sont temporairement indisponibles.",
++        // A body that cannot be read names why (the cups adapter records it).
++        ...(error?.code === "INVALID_SCORE" && { code: error.code }),
+       },
+       { status: 502 },
+     );
+diff --git a/backend/sources/projections/openligadb.mjs b/backend/sources/projections/openligadb.mjs
+index f35043f686..ee45bb2561 100644
+--- a/backend/sources/projections/openligadb.mjs
++++ b/backend/sources/projections/openligadb.mjs
+@@ -1,3 +1,4 @@
++import { createHash } from "node:crypto";
+ import { normalizeOpenLigaMatches } from "../../../dashboard/frontend/src/services/openligadb.js";
+ 
+ const SOURCES = {
+@@ -29,6 +30,8 @@ export async function GET(request) {
+       { error: "Compétition ou édition indisponible." },
+       { status: 400 },
+     );
++  const typedDfb = competition === "germany-cup" && ["2025/2026", "2026/2027"].includes(season);
++  let phaseObservation;
+   try {
+     const response = await fetch(
+       "https://api.openligadb.de/getmatchdata/" + source.join("/"),
+@@ -42,8 +45,29 @@ export async function GET(request) {
+       },
+     );
+     if (!response.ok) throw new Error("Source unavailable");
+-    const rows = await response.json(),
+-      matches = normalizeOpenLigaMatches(rows, competition);
++    let rows;
++    if (typedDfb) {
++      const raw = Buffer.from(await response.arrayBuffer());
++      phaseObservation = { sourceSha256: createHash("sha256").update(raw).digest("hex") };
++      rows = JSON.parse(raw.toString("utf8"));
++      if (!Array.isArray(rows) || rows.length > 300) throw new Error("Invalid phase observation");
++      phaseObservation.matches = rows.map((row) => ({
++        matchID: row?.matchID, date: row?.matchDateTime || row?.matchDateTimeUTC,
++        matchIsFinished: row?.matchIsFinished, homeId: row?.team1?.teamId, awayId: row?.team2?.teamId,
++        matchResults: row?.matchResults,
++      }));
++    } else {
++      rows = await response.json();
++    }
++    const matches = normalizeOpenLigaMatches(rows, competition);
++    if (typedDfb) {
++      const byKey = new Map(phaseObservation.matches.map((row) => [`openliga:${row.matchID}`, row]));
++      for (const match of matches) match.results = byKey.get(match.key)?.matchResults;
++      const duplicates = matches.filter((match, index) => matches.findIndex((m) => m.key === match.key) !== index);
++      if (duplicates.length) {
++        return Response.json({ code: "INVALID_PERIODS", detail: "Duplicate match IDs: " + duplicates.map((m) => m.key).join(", "), phaseObservation }, { status: 422 });
++      }
++    }
+     if (!matches.length || matches.length !== rows.length)
+       throw new Error("Incomplete source data");
+     return Response.json(
+@@ -51,6 +75,7 @@ export async function GET(request) {
+         competition,
+         season,
+         matches,
++        ...(phaseObservation && { phaseObservation }),
+         source: {
+           name: "OpenLigaDB",
+           url: "https://www.openligadb.de/",
+@@ -66,6 +91,7 @@ export async function GET(request) {
+       },
+     );
+   } catch {
++    if (phaseObservation) return Response.json({ code: "INVALID_PERIODS", detail: "Unreadable OpenLigaDB phase observation", phaseObservation }, { status: 422 });
+     return Response.json(
+       {
+         error:

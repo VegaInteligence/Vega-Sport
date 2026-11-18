@@ -1,0 +1,67 @@
+# Vega-Sport · situation vérifiée le 18 novembre 2026
+
+**La production ne couvre pas encore tout le document.** Parmi les 38 critères tirés des 18 rubriques initiales, 12 disposent d’une preuve de production dans le périmètre demandé, 24 restent incomplets et deux mécanismes manquent. Il s’agit des contributions historiques disponibles à la date du pronostic et des coefficients effectivement employés au moment de sa publication. Huit tickets récemment clos ont été repris individuellement. La branche locale `codex/production-architecture-audit` réunit les corrections décrites ci-dessous. Les mesures en production ont été faites en lecture seule. [Document d’origine](../../calculs/09-audit-2026-11/SOURCE_AUDIT.md) · [Tickets](LINEAR.md)
+
+| Périmètre des 91 critères | Vérifié en production ou hérité | Vérifié sur branche | Incomplet | Manquant | Sans objet |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Production | 28 | 0 | 51 | 2 | 10 |
+| Branche | 28 | 4 | 54 | 2 | 3 |
+
+Chaque critère garde son témoin observable, ses limites, le propriétaire du prochain changement et les fichiers concernés. Le ZIP contient les preuves et le code cités dans les tableaux, avec un vérificateur hors ligne. [91 critères](registres/requirements.csv) · [26 calculs supplémentaires](registres/new-calculations.csv) · [Lire les dispositions](registres/requirements-README.md) · [Pièces justificatives](controles/verification-integree/pieces-exigences.zip)
+
+## Scores par match, compétition et saison
+
+La transaction RDS de **13 h 56 min 55 s UTC** couvre 2 149 éditions de 208 compétitions et 157 saisons. Les 6 447 lignes donnent l’attendu et le persisté pour chaque édition et type d’entité. La population des joueurs connue de Vega est une borne inférieure. La colonne des absences de rôle distingue les participations dont la note peut déjà être calculée de celles qui demandent encore des données.
+
+| Entité et mesure | Calculables sur les données connues | Persistés valides | Manquants |
+| --- | ---: | ---: | ---: |
+| Joueurs, note Vega | 2 296 998 | 2 282 580 | **14 418** |
+| Clubs, Elo par côté de match admis | 161 932 | 161 912 | **20** |
+| Sélections, Elo par côté de match admis | 1 864 | 1 864 | **0** |
+
+Les 14 418 notes calculables absentes appartiennent au millésime de récompense 2020. Pour 615 participations supplémentaires, l’historique disponible laisse le rôle de calcul indéterminé. Les notes viennent du modèle Vega. Sur les sept millésimes recalculés avec les entrées disponibles le matin, 517 588 des 2 282 580 notes stockées diffèrent de plus de 0,01 point de la valeur recalculée. Cela mesure la convergence sur les données présentes. L’état des entrées à la publication initiale n’est pas reconstruit. Parmi les notes publiées, 578 928 ont au moins un indicateur attendu manquant et 104 792 ont un composant entièrement absent. [Grille par édition](controles/verification-integree/scores-par-edition.csv.gz) · [Grille par saison](controles/verification-integree/scores-par-saison.csv.gz) · [SQL, réponses RDS et reproduction](controles/verification-integree/grilles.zip) · [Calcul numérique](RECALCUL-JOUEURS.md)
+
+Les 20 Elo manquants correspondent aux deux côtés de dix résultats du 17 novembre, entrés le 18 à 12 h 16 UTC. Huit côtés relèvent de National League North, quatre de National League South et huit de Northern Premier League. Le run 2097 précédait cette arrivée et le worker déployé ne voyait aucune saison due à 14 h 20 UTC. Les matchs complémentaires à eux seuls ne déclenchent pas ce chemin de recalcul. La même actualisation a retiré 35 anciens résultats et laissé 70 valeurs Elo associées à leurs anciens identifiants. Les 35 paires ont été cherchées dans toutes les compétitions à ±31 jours. Les sources antérieures et les comptes rendus de clubs figurent dans le dossier. VI-21 conserve le déclenchement des recalculs et les modèles. [35 rencontres](controles/verification-integree/dispositions-35.csv) · [Dix résultats entrants](controles/verification-integree/nouveaux-10.csv) · [Requête et porte d’éligibilité](controles/verification-integree/contrepreuve-elo.py) · [Transmission aux propriétaires](controles/verification-integree/elo-transmission.json)
+
+
+
+Le total Elo dépend des rencontres déjà admises en base. En 1934, l’Italie et l’Espagne ont joué un match d’appui distinct que la sélection d’entrées Elo exclut. Les classements de force et une note de performance par rencontre sont deux objets différents. Une méthode individuelle à partir de statistiques manquantes ne peut être évaluée en fabriquant des zéros. Le rapprochement des calendriers confirme également des absences en dehors de la grille.
+
+| Population observable | Trouvé | Conséquence |
+| --- | --- | --- |
+| Mondiaux des clubs 2021, 2022, 2023 et 2025 | 86 matchs, 2 707 participations attestées, 172 côtés Elo, zéro note individuelle | Rattacher les données nécessaires au calcul pour chaque apparition vérifiable. [Trois éditions](MONDIAL-DES-CLUBS-2021-23.md) · [Édition 2025](MONDIAL-DES-CLUBS-2025.md) |
+| Première division féminine saoudienne | 28 résultats selon la fédération, huit dans Vega pour la saison en cours. Les vingt autres apparaissent encore reportés dans la réponse du fournisseur. | L’absence dès le calendrier réduit le dénominateur. Une réponse statistique vide peut aussi effacer des données et laisser une note servie. [Comparaison fédération–fournisseur–Vega](PREMIERE-DIVISION-FEMININE-SAOUDIENNE.md) |
+| Qualifications UEFA de trois coupes, six saisons | Aucun des 2 489 matchs officiels retrouvé par les clés et la comparaison date/adversaires appliquée. Le témoin positif retrouve 2 475 des 2 478 matchs du tableau principal. | La production ne peut rattacher les notes de ces participants. Les feuilles officielles permettent de mesurer séparément les présences démontrées. [Rapprochement de calendriers](RENCONTRES.md) |
+| J1, tournoi transitoire et saison 2026/27 | 199 des 200 matchs du tournoi de printemps et 199 des 380 matchs de la saison suivante partagent l’édition 140. Les 181 autres matchs de ligue figurent dans l’édition 22. Le match Nagasaki–Hiroshima du 6 février manque. | VI-29 protège la lecture du classement mal daté. VI-21 garde le rattachement des compétitions et des saisons. [Capsule du printemps](controles/verification-integree/japon-printemps.zip) · [Championnat et classement](CLASSEMENTS-ET-ELO.md) |
+
+
+
+## Autorité des sources et intégrité des identités
+
+La matrice détaille les pipelines primaires et complémentaires, leur couverture, les champs, les tables et les lecteurs. PitchAPI porte le calendrier et les statistiques natifs. Les sources de coupes et d’archives apportent des compétitions, des éditions et des périodes supplémentaires. SportScore apporte les classements officiels corroborés. Les coefficients UEFA, les classements FIFA, les mouvements Transfermarkt et les fichiers de médias vérifiés ont des objets distincts. Les visuels livrés par un fournisseur se raccordent par domaine, identifiant et preuve des octets. Certaines URL renvoient à une fédération, une édition différente, un fichier manquant ou un homonyme. [Matrice des fournisseurs et arbitrages](SOURCES.md) · [Couverture par source et édition](sources-par-edition.csv.gz)
+
+Dans la fenêtre de 24 heures observée, PitchAPI a reçu 88 275 tentatives, dont 65 494 succès. Aucune combinaison famille–cible n’a deux succès dans cette fenêtre. Les journaux ne fournissent aucune empreinte de corps pour ces appels. En revanche, huit éditions internationales dues ensemble relisent huit fois le même fichier de 3 764 347 octets. Un partage du téléchargement entre éditions économiserait sept lectures tout en conservant les validations et dates de succès par édition. VI-21 en garde la mise en œuvre. [Mesures du collecteur et témoins](CONTROLES.md)
+
+Les recherches de doublons distinguent groupe candidat et identité vérifiée. Les mêmes noms et dates peuvent désigner deux personnes ou des matchs rejoués. Les tests de production ont trouvé zéro doublon exact d’édition canonique et zéro doublon de libellé de saison, mais 334 groupes de rencontres PitchAPI de même paire et même jour dans une édition au relevé initial. Lanús–Estudiantes est un doublon attesté. Sur 46 362 transferts, 26 450 manquent encore d’une extrémité canonique ou des deux. Les archives contiennent 1 783 lignes avec un score et sans visiteur identifié. Une fusion demande les preuves et l’historique des références concernées. [Décomptes et cas](INTEGRITE.md) · [Fiches et affectations](CLASSEMENTS-ET-IDENTITES.md)
+
+## Changements réunis et validation
+
+| Domaine | Comportement démontré sur la branche | Limite ou suite |
+| --- | --- | --- |
+| Mi-temps et classement joueur | Les agrégats de mi-temps exposent les minutes observées par statistique. Les lecteurs exposent la note exacte, le classement correspondant et l’invalidation des réponses conditionnelles. | Le rendu des valeurs de précision reste soumis à la validation visuelle. VI-28 et VI-32. |
+| Classements | Un premier tableau amputé conserve l’état antérieur. Les groupes, la Suède, la lecture J1 et les classements transversaux ont été testés sur les captures et le lecteur réel. 54 cas et 108 étapes passent sur le lot. | Le calendrier J1 et les autres décisions de saison restent chez VI-21. [Admission du premier tableau](controles/verification-integree/classement-initial.json) · [J1 et les autres éditions](controles/verification-integree/classement-j1.json) |
+| Transferts et contrats | La réingestion garde un contrat daté lorsque le nouveau profil omet l’échéance ou présente une date invalide. Un transfert complet et daté change bien le club. Les 55 identifiants des deux historiques réels sont conservés lors des rejeux dégradés. | Les observations sans club canonique restent distinctes. [File, profil et lecteur](controles/verification-integree/transferts.json) |
+| Archives | Le rejeu des 154 saisons retire 100 copies allemandes et 240 copies russes attestées. Le total de 2 883 événements est conservé et les 154 versions restent stables au second passage. La migration 149 vérifie la référence physique de l’alias et refuse une contradiction avec la trace du retrait. | Cinq références invalides sont refusées en base sur les contrôles. Le cas Clydebank 1919 reste en attente d’une preuve. [Rejeu complet](controles/verification-integree/controle-archive.json) · [Contraintes et cas témoins](controles/verification-integree/controle-fk.json) |
+| Emblèmes | Les lecteurs servent 47 associations certifiées d’édition pour 41 images. Sur 48 matchs CAF, 96 côtés sur 96 décodent le bon fichier sur ordinateur et sur mobile. Le contrôle des routes compte 26 succès sur 26 et 58 côtés de coupe sur 58 par format. | Les cellules sans attribution vérifiée restent vides. Le lecteur de famille et l’image d’édition sont contrôlés séparément. [Writer, API et cache](controles/verification-integree/writer-lecteur-logos.json) · [Routes et images](controles/verification-integree/routes-logos.json) |
+
+La CI complète du code réuni `13f7be9f35` passe avec **559 tests Python, 208 tests API et 729 tests du site**. La construction du site, le linter CloudFormation, les vérifications shell, l’image Linux ARM64 et ses quatre vérifications, puis les paquets des deux Lambda passent aussi. Les instantanés Git initial et final sont identiques et propres. Les résultats rapportent la version du runtime et la commande de rejeu. [Résultat de chaque étape](controles/verification-integree/avis-ci.json) · [Python](controles/verification-integree/tests-python.txt) · [API](controles/verification-integree/tests-api.txt) · [Site](controles/verification-integree/tests-site.txt)
+
+## Visuels authentiques
+
+Au relevé de production, 1 475 des 11 003 racines de clubs avaient une image, 82 des 208 familles de compétitions et 54 des 207 sélections avaient un écusson. Le lot de 1 605 associations vérifié sur copie comprend 1 501 fiches de club et 104 familles de compétitions. Après son import sur copie et les migrations de cette branche, **2 976 clubs et 184 familles de compétitions** possèdent un emblème. La migration 146 supprime deux attributions de famille erronées tout en conservant les fichiers et leurs attributions d’édition. Sur 840 fiches de club actives récemment ou programmées qui manquaient de visuel, 834 sont raccordées. Deux identités contradictoires et quatre places provisoires de tableau restent ouvertes. [Recensement par classe](controles/verification-integree/logos-1605.json) · [Effet réel des migrations](controles/verification-integree/logos-apres-migrations-1605.json)
+
+
+
+## Déploiement, propriétaires et revues
+
+Les vérifications du 18 novembre à 13 h 56–57 UTC situent le worker et le backfill AWS sur `8018e0836c`, et Git main et le déploiement Vercel prêt sur `17ca0f7617`. Ces révisions diffèrent seulement par le journal de travail. Les empreintes des deux Lambda correspondent aux paquets de référence. Les corrections et les répétitions de backfill présentées ici sont locales. Le suivi Linear conserve les huit tickets clos examinés et les huit tickets actifs avec leurs propriétaires. [AWS](controles/verification-integree/aws.json) · [Vercel](controles/verification-integree/vercel.json) · [Linear](controles/verification-integree/linear.json)

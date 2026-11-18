@@ -1,3 +1,5 @@
+[Situation consolidée, mesures et correctifs du 18 novembre](SITUATION.md) · Cette page conserve les constats et les limites à la date de chaque relevé.
+
 Le rapport date ses observations. Ses chemins de preuve sont relatifs au sous-dossier correspondant de l’archive de vérification fournie avec la revue.
 
 Run 2097 contains 163,846 Elo sides for 81,923 admitted matches. The former Scottish deficit was observed on 17 November and cleared that evening. The club-season ranking also serves an Elo-derived score out of 100. [Contre-lecture du 18 novembre](CONTRE-LECTURE.md)

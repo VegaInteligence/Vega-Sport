@@ -1,0 +1,13 @@
+{
+  "archive": "pieces-91-exigences.zip",
+  "sha256": "047f6dd2506b1ad35cbfb80468dee9e94d58fd3c4185a668c4257f3c711f3772",
+  "bytes": 5455922,
+  "verification": {
+    "commit_source": "13f7be9f35c8bf7a4d41cefd69d6d2c585e47c07",
+    "exigences": 91,
+    "calculs_additionnels": 26,
+    "pieces": 277,
+    "sources": 73,
+    "empreintes_verifiees": 354
+  }
+}

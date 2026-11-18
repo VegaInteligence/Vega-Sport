@@ -1,3 +1,5 @@
+[Situation consolidée, mesures et correctifs du 18 novembre](SITUATION.md) · Cette page conserve les constats et les limites à la date de chaque relevé.
+
 # Notes joueurs recalculées depuis les statistiques de match
 
 **Sur les 2 282 580 notes publiées, 517 588 diffèrent de plus de 0,01 point avec les entrées actuelles du même algorithme Vega.** Parmi elles, 122 268 diffèrent de plus de 0,1 et 2 713 de plus d’un point. La plus grande différence atteint 12,714 points. Les sept lectures ont eu lieu le 18 novembre 2026 entre 08 h 21 et 08 h 44 UTC. La comparaison permet de mesurer la convergence sur les données actuelles. Les entrées contemporaines de chaque publication historique restent en partie inconnues.

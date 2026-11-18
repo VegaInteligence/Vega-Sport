@@ -1,0 +1,37 @@
+{
+  "archive": "couverture-vega-20261118T135655Z.zip",
+  "sha256": "6cb98597714f16b854424d0525437215c6fa6299bfab106f8bfe2456103bc646",
+  "bytes": 333184,
+  "verification": {
+    "fichiers_verifies": 104,
+    "editions": 2149,
+    "competitions": 208,
+    "par_entite": {
+      "club": {
+        "expected_algorithm": 161932,
+        "actual_valid": 161912,
+        "missing_from_storage": 20
+      },
+      "national team": {
+        "expected_algorithm": 1864,
+        "actual_valid": 1864,
+        "missing_from_storage": 0
+      },
+      "player": {
+        "expected_algorithm": 2296998,
+        "actual_valid": 2282580,
+        "missing_from_storage": 14418,
+        "role_unavailable": 615
+      }
+    },
+    "lecture": {
+      "at": "2026-11-18 13:56:55.890562+00:00",
+      "snapshot": "4438010:4438010:",
+      "database": "vega_v2",
+      "isolation": "repeatable read",
+      "read_only": "on"
+    }
+  },
+  "command": "python3 -B verifier.py",
+  "log": "editions 2149 entity cells 6447 team policy replay True season universe True player score partitions [2021, 2022, 2023, 2024, 2025, 2026] event enrichment partitions [2021, 2022, 2023, 2024, 2025, 2026]\n6447 [('club', 161932, 161912), ('national team', 1864, 1864), ('player', 2282580, 2282580)]\n6447 {'club': Counter({'expected_algorithm': 161932, 'actual_valid': 161912, 'missing_from_storage': 20}), 'national team': Counter({'expected_algorithm': 1864, 'actual_valid': 1864, 'missing_from_storage': 0}), 'player': Counter({'expected_algorithm': 2296998, 'actual_valid': 2282580, 'missing_from_storage': 14418, 'role_unavailable': 615})}\n{\"fichiers_verifies\": 104, \"editions\": 2149, \"competitions\": 208, \"par_entite\": {\"club\": {\"expected_algorithm\": 161932, \"actual_valid\": 161912, \"missing_from_storage\": 20}, \"national team\": {\"expected_algorithm\": 1864, \"actual_valid\": 1864, \"missing_from_storage\": 0}, \"player\": {\"expected_algorithm\": 2296998, \"actual_valid\": 2282580, \"missing_from_storage\": 14418, \"role_unavailable\": 615}}, \"lecture\": {\"at\": \"2026-11-18 13:56:55.890562+00:00\", \"snapshot\": \"4438010:4438010:\", \"database\": \"vega_v2\", \"isolation\": \"repeatable read\", \"read_only\": \"on\"}}\n"
+}

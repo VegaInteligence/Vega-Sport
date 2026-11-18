@@ -1,0 +1,11 @@
+{
+  "role": "vega_collect",
+  "source_db": "vega_v2_track4_sol_bundesliga_upgrade",
+  "cases": {
+    "wrong_canonical_key": "23503",
+    "active_former_key": "23503",
+    "unretired_former_id": "23503",
+    "allowed_matching_key": "valid",
+    "allowed_former_text_without_id": "valid"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "commit": "c61e87afdae4439bf3cdcf7a3a58f58b45240286",
+  "git_clean": true,
+  "tested_code_sha256": {
+    "backend/vega/sources/sportscore.py": "926ab17eb9df86ff8bcc71a79bfdab5caf67a8ce3cd222ac35ac217743810df9",
+    "backend/vega/sources/__init__.py": "365c998457125e08e2515d71ccad02e702b88f3300caec9e5ab84562a7614d22",
+    "backend/vega/sources/http.py": "24f2240c9d208181bbf226fc1e0317ba6755565c5c335fd9cc76ae5de6aa6a8b",
+    "backend/vega/store.py": "497c7c602b9c84146a8ec201839b50dc07e42146887f6324a51526e3d26d70d0",
+    "backend/vega/api_schema.py": "40a2b85c96ca1e35d9fb482e5fb2eb60a21c202c6aa1186a3ca75f9bd7ca2be3",
+    "backend/sql/012_api_views.sql": "e5d3dbd391ad7f45a122f50b6bbcc29c57c671d6457a1e15fb281e1165d3d24c",
+    "backend/sql/022_api_rounds_standings.sql": "4302f5f2073473e3febffc8cbb6ed1c96157512b30148d8ea7ce33432042bde7",
+    "backend/sql/138_sportscore_standings.sql": "77ae8441d0a8a0a880dfa0c3c6584cfff98a3d94445de22735d7638d72108144",
+    "backend/api/src/routes/reference.mjs": "d7ec2dbf2f3675986233db8d2fe48d9a741858302847e89cc943368e547a39ff",
+    "backend/api/src/handler.mjs": "6b7d8a541c80eeee4224b86b66a6b915747176d0dbd234f3eb4acbd7eccf4777",
+    "backend/api/src/db.mjs": "0182168181cb601a1d339c8bc35a6b541d833b885024a9dd5561b5d3a187dab2",
+    "backend/api/src/http.mjs": "f841943ade4051696abbf60e603f862b8828f52a058acdecf94920dfa7e14cff",
+    "backend/tests/sportscore_cases.py": "6de269307f0039c35e755268e1dc802d5298f1b12b7e9ece9be7df3e0edbbc28",
+    "backend/tests/sportscore_replay.py": "769c302ec7d2476ddb0152d4de171df1874a72635d15b9cdb7217edd7b8a61f4"
+  },
+  "red": "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/tracks/2-ingestion/sportscore-authority/e2e/runs/20261118133950735822-sol-first-red/run.json",
+  "green": "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/tracks/2-ingestion/sportscore-authority/e2e/runs/20261118134320856902-sol-first-green/run.json",
+  "confirmed_case_count": 54,
+  "confirmed_step_count": 108,
+  "independent_http_replay": "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/tracks/2-ingestion/sol-reprise-1226/first-standings/initial-completeness.json"
+}

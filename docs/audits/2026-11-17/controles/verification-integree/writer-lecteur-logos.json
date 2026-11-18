@@ -1,0 +1,742 @@
+{
+  "run": "2026-11-18T14:17:02.612058+00:00",
+  "checks": [
+    {
+      "nom": "CAF profile bytes bound",
+      "succes": true
+    },
+    {
+      "nom": "CAF 48 group fixtures and 96 crest slots /api/cups/edition?",
+      "succes": true
+    },
+    {
+      "nom": "CAF 48 group fixtures and 96 crest slots /api/cup-snapshot?kind=edition&",
+      "succes": true
+    },
+    {
+      "nom": "writer-0-1",
+      "succes": true
+    },
+    {
+      "nom": "writer-0-2",
+      "succes": true
+    },
+    {
+      "nom": "writer-1-1",
+      "succes": true
+    },
+    {
+      "nom": "writer-1-2",
+      "succes": true
+    },
+    {
+      "nom": "writer-2-1",
+      "succes": true
+    },
+    {
+      "nom": "writer-2-2",
+      "succes": true
+    },
+    {
+      "nom": "writer-3-1",
+      "succes": true
+    },
+    {
+      "nom": "writer-3-2",
+      "succes": true
+    },
+    {
+      "nom": "writer preserved edition provenance",
+      "succes": true
+    },
+    {
+      "nom": "271 /api/cups/edition?competition=l_v0000064&season=1930",
+      "succes": true
+    },
+    {
+      "nom": "271 /api/cup-snapshot?kind=edition&competition=l_v0000064&season=1930",
+      "succes": true
+    },
+    {
+      "nom": "275 /api/cups/edition?competition=l_v0000064&season=1954",
+      "succes": true
+    },
+    {
+      "nom": "275 changed and stable ETag /api/cups/edition?competition=l_v0000064&season=1954",
+      "succes": true
+    },
+    {
+      "nom": "275 /api/cup-snapshot?kind=edition&competition=l_v0000064&season=1954",
+      "succes": true
+    },
+    {
+      "nom": "275 changed and stable ETag /api/cup-snapshot?kind=edition&competition=l_v0000064&season=1954",
+      "succes": true
+    },
+    {
+      "nom": "276 /api/cups/edition?competition=l_v0000064&season=1958",
+      "succes": true
+    },
+    {
+      "nom": "276 /api/cup-snapshot?kind=edition&competition=l_v0000064&season=1958",
+      "succes": true
+    },
+    {
+      "nom": "277 /api/cups/edition?competition=l_v0000064&season=1962",
+      "succes": true
+    },
+    {
+      "nom": "277 changed and stable ETag /api/cups/edition?competition=l_v0000064&season=1962",
+      "succes": true
+    },
+    {
+      "nom": "277 /api/cup-snapshot?kind=edition&competition=l_v0000064&season=1962",
+      "succes": true
+    },
+    {
+      "nom": "277 changed and stable ETag /api/cup-snapshot?kind=edition&competition=l_v0000064&season=1962",
+      "succes": true
+    },
+    {
+      "nom": "278 /api/cups/edition?competition=l_v0000064&season=1966",
+      "succes": true
+    },
+    {
+      "nom": "278 changed and stable ETag /api/cups/edition?competition=l_v0000064&season=1966",
+      "succes": true
+    },
+    {
+      "nom": "278 /api/cup-snapshot?kind=edition&competition=l_v0000064&season=1966",
+      "succes": true
+    },
+    {
+      "nom": "278 changed and stable ETag /api/cup-snapshot?kind=edition&competition=l_v0000064&season=1966",
+      "succes": true
+    },
+    {
+      "nom": "279 /api/cups/edition?competition=l_v0000064&season=1970",
+      "succes": true
+    },
+    {
+      "nom": "279 changed and stable ETag /api/cups/edition?competition=l_v0000064&season=1970",
+      "succes": true
+    },
+    {
+      "nom": "279 /api/cup-snapshot?kind=edition&competition=l_v0000064&season=1970",
+      "succes": true
+    },
+    {
+      "nom": "279 changed and stable ETag /api/cup-snapshot?kind=edition&competition=l_v0000064&season=1970",
+      "succes": true
+    },
+    {
+      "nom": "280 /api/cups/edition?competition=l_v0000064&season=1974",
+      "succes": true
+    },
+    {
+      "nom": "280 changed and stable ETag /api/cups/edition?competition=l_v0000064&season=1974",
+      "succes": true
+    },
+    {
+      "nom": "280 /api/cup-snapshot?kind=edition&competition=l_v0000064&season=1974",
+      "succes": true
+    },
+    {
+      "nom": "280 changed and stable ETag /api/cup-snapshot?kind=edition&competition=l_v0000064&season=1974",
+      "succes": true
+    },
+    {
+      "nom": "281 /api/cups/edition?competition=l_v0000064&season=1978",
+      "succes": true
+    },
+    {
+      "nom": "281 changed and stable ETag /api/cups/edition?competition=l_v0000064&season=1978",
+      "succes": true
+    },
+    {
+      "nom": "281 /api/cup-snapshot?kind=edition&competition=l_v0000064&season=1978",
+      "succes": true
+    },
+    {
+      "nom": "281 changed and stable ETag /api/cup-snapshot?kind=edition&competition=l_v0000064&season=1978",
+      "succes": true
+    },
+    {
+      "nom": "282 /api/cups/edition?competition=l_v0000064&season=1982",
+      "succes": true
+    },
+    {
+      "nom": "282 changed and stable ETag /api/cups/edition?competition=l_v0000064&season=1982",
+      "succes": true
+    },
+    {
+      "nom": "282 /api/cup-snapshot?kind=edition&competition=l_v0000064&season=1982",
+      "succes": true
+    },
+    {
+      "nom": "282 changed and stable ETag /api/cup-snapshot?kind=edition&competition=l_v0000064&season=1982",
+      "succes": true
+    },
+    {
+      "nom": "283 /api/cups/edition?competition=l_v0000064&season=1986",
+      "succes": true
+    },
+    {
+      "nom": "283 changed and stable ETag /api/cups/edition?competition=l_v0000064&season=1986",
+      "succes": true
+    },
+    {
+      "nom": "283 /api/cup-snapshot?kind=edition&competition=l_v0000064&season=1986",
+      "succes": true
+    },
+    {
+      "nom": "283 changed and stable ETag /api/cup-snapshot?kind=edition&competition=l_v0000064&season=1986",
+      "succes": true
+    },
+    {
+      "nom": "284 /api/cups/edition?competition=l_v0000064&season=1990",
+      "succes": true
+    },
+    {
+      "nom": "284 changed and stable ETag /api/cups/edition?competition=l_v0000064&season=1990",
+      "succes": true
+    },
+    {
+      "nom": "284 /api/cup-snapshot?kind=edition&competition=l_v0000064&season=1990",
+      "succes": true
+    },
+    {
+      "nom": "284 changed and stable ETag /api/cup-snapshot?kind=edition&competition=l_v0000064&season=1990",
+      "succes": true
+    },
+    {
+      "nom": "285 /api/cups/edition?competition=l_v0000064&season=1994",
+      "succes": true
+    },
+    {
+      "nom": "285 changed and stable ETag /api/cups/edition?competition=l_v0000064&season=1994",
+      "succes": true
+    },
+    {
+      "nom": "285 /api/cup-snapshot?kind=edition&competition=l_v0000064&season=1994",
+      "succes": true
+    },
+    {
+      "nom": "285 changed and stable ETag /api/cup-snapshot?kind=edition&competition=l_v0000064&season=1994",
+      "succes": true
+    },
+    {
+      "nom": "286 /api/cups/edition?competition=l_v0000064&season=1998",
+      "succes": true
+    },
+    {
+      "nom": "286 changed and stable ETag /api/cups/edition?competition=l_v0000064&season=1998",
+      "succes": true
+    },
+    {
+      "nom": "286 /api/cup-snapshot?kind=edition&competition=l_v0000064&season=1998",
+      "succes": true
+    },
+    {
+      "nom": "286 changed and stable ETag /api/cup-snapshot?kind=edition&competition=l_v0000064&season=1998",
+      "succes": true
+    },
+    {
+      "nom": "287 /api/cups/edition?competition=l_v0000064&season=2002",
+      "succes": true
+    },
+    {
+      "nom": "287 changed and stable ETag /api/cups/edition?competition=l_v0000064&season=2002",
+      "succes": true
+    },
+    {
+      "nom": "287 /api/cup-snapshot?kind=edition&competition=l_v0000064&season=2002",
+      "succes": true
+    },
+    {
+      "nom": "287 changed and stable ETag /api/cup-snapshot?kind=edition&competition=l_v0000064&season=2002",
+      "succes": true
+    },
+    {
+      "nom": "288 /api/cups/edition?competition=l_v0000064&season=2006",
+      "succes": true
+    },
+    {
+      "nom": "288 changed and stable ETag /api/cups/edition?competition=l_v0000064&season=2006",
+      "succes": true
+    },
+    {
+      "nom": "288 /api/cup-snapshot?kind=edition&competition=l_v0000064&season=2006",
+      "succes": true
+    },
+    {
+      "nom": "288 changed and stable ETag /api/cup-snapshot?kind=edition&competition=l_v0000064&season=2006",
+      "succes": true
+    },
+    {
+      "nom": "289 /api/cups/edition?competition=l_v0000064&season=2010",
+      "succes": true
+    },
+    {
+      "nom": "289 changed and stable ETag /api/cups/edition?competition=l_v0000064&season=2010",
+      "succes": true
+    },
+    {
+      "nom": "289 /api/cup-snapshot?kind=edition&competition=l_v0000064&season=2010",
+      "succes": true
+    },
+    {
+      "nom": "289 changed and stable ETag /api/cup-snapshot?kind=edition&competition=l_v0000064&season=2010",
+      "succes": true
+    },
+    {
+      "nom": "290 /api/cups/edition?competition=l_v0000064&season=2014",
+      "succes": true
+    },
+    {
+      "nom": "290 changed and stable ETag /api/cups/edition?competition=l_v0000064&season=2014",
+      "succes": true
+    },
+    {
+      "nom": "290 /api/cup-snapshot?kind=edition&competition=l_v0000064&season=2014",
+      "succes": true
+    },
+    {
+      "nom": "290 changed and stable ETag /api/cup-snapshot?kind=edition&competition=l_v0000064&season=2014",
+      "succes": true
+    },
+    {
+      "nom": "291 /api/cups/edition?competition=l_v0000064&season=2018",
+      "succes": true
+    },
+    {
+      "nom": "291 changed and stable ETag /api/cups/edition?competition=l_v0000064&season=2018",
+      "succes": true
+    },
+    {
+      "nom": "291 /api/cup-snapshot?kind=edition&competition=l_v0000064&season=2018",
+      "succes": true
+    },
+    {
+      "nom": "291 changed and stable ETag /api/cup-snapshot?kind=edition&competition=l_v0000064&season=2018",
+      "succes": true
+    },
+    {
+      "nom": "292 /api/cups/edition?competition=l_v0000064&season=2022",
+      "succes": true
+    },
+    {
+      "nom": "292 changed and stable ETag /api/cups/edition?competition=l_v0000064&season=2022",
+      "succes": true
+    },
+    {
+      "nom": "292 /api/cup-snapshot?kind=edition&competition=l_v0000064&season=2022",
+      "succes": true
+    },
+    {
+      "nom": "292 changed and stable ETag /api/cup-snapshot?kind=edition&competition=l_v0000064&season=2022",
+      "succes": true
+    },
+    {
+      "nom": "293 /api/cups/edition?competition=l_v0000064&season=2026",
+      "succes": true
+    },
+    {
+      "nom": "293 changed and stable ETag /api/cups/edition?competition=l_v0000064&season=2026",
+      "succes": true
+    },
+    {
+      "nom": "293 /api/cup-snapshot?kind=edition&competition=l_v0000064&season=2026",
+      "succes": true
+    },
+    {
+      "nom": "293 changed and stable ETag /api/cup-snapshot?kind=edition&competition=l_v0000064&season=2026",
+      "succes": true
+    },
+    {
+      "nom": "407 /api/read/archive?season=2019%2F2020&competition=engsoccerdata%2Fscotland%2F2%2F2019&media=1",
+      "succes": true
+    },
+    {
+      "nom": "407 changed and stable ETag /api/read/archive?season=2019%2F2020&competition=engsoccerdata%2Fscotland%2F2%2F2019&media=1",
+      "succes": true
+    },
+    {
+      "nom": "407 archive sidecar",
+      "succes": true
+    },
+    {
+      "nom": "408 /api/read/archive?season=2019%2F2020&competition=engsoccerdata%2Fscotland%2F3%2F2019&media=1",
+      "succes": true
+    },
+    {
+      "nom": "408 changed and stable ETag /api/read/archive?season=2019%2F2020&competition=engsoccerdata%2Fscotland%2F3%2F2019&media=1",
+      "succes": true
+    },
+    {
+      "nom": "408 archive sidecar",
+      "succes": true
+    },
+    {
+      "nom": "409 /api/read/archive?season=2019%2F2020&competition=engsoccerdata%2Fscotland%2F4%2F2019&media=1",
+      "succes": true
+    },
+    {
+      "nom": "409 changed and stable ETag /api/read/archive?season=2019%2F2020&competition=engsoccerdata%2Fscotland%2F4%2F2019&media=1",
+      "succes": true
+    },
+    {
+      "nom": "409 archive sidecar",
+      "succes": true
+    },
+    {
+      "nom": "1003 /api/cup-snapshot?kind=native&competition=l_1XLtP0&season=2022",
+      "succes": true
+    },
+    {
+      "nom": "1003 changed and stable ETag /api/cup-snapshot?kind=native&competition=l_1XLtP0&season=2022",
+      "succes": true
+    },
+    {
+      "nom": "1003 /api/fixtures?league=l_1XLtP0&season=2022",
+      "succes": true
+    },
+    {
+      "nom": "1003 changed and stable ETag /api/fixtures?league=l_1XLtP0&season=2022",
+      "succes": true
+    },
+    {
+      "nom": "1004 /api/cup-snapshot?kind=native&competition=l_1XLtP0&season=2026",
+      "succes": true
+    },
+    {
+      "nom": "1004 changed and stable ETag /api/cup-snapshot?kind=native&competition=l_1XLtP0&season=2026",
+      "succes": true
+    },
+    {
+      "nom": "1004 /api/fixtures?league=l_1XLtP0&season=2026",
+      "succes": true
+    },
+    {
+      "nom": "1004 changed and stable ETag /api/fixtures?league=l_1XLtP0&season=2026",
+      "succes": true
+    },
+    {
+      "nom": "2823 /api/read/archive?season=1989%2F1990&competition=soccerdata%2F1989-90%2Feng.1&media=1",
+      "succes": true
+    },
+    {
+      "nom": "2823 changed and stable ETag /api/read/archive?season=1989%2F1990&competition=soccerdata%2F1989-90%2Feng.1&media=1",
+      "succes": true
+    },
+    {
+      "nom": "2823 archive sidecar",
+      "succes": true
+    },
+    {
+      "nom": "2824 /api/read/archive?season=1989%2F1990&competition=soccerdata%2F1989-90%2Feng.2&media=1",
+      "succes": true
+    },
+    {
+      "nom": "2824 changed and stable ETag /api/read/archive?season=1989%2F1990&competition=soccerdata%2F1989-90%2Feng.2&media=1",
+      "succes": true
+    },
+    {
+      "nom": "2824 archive sidecar",
+      "succes": true
+    },
+    {
+      "nom": "2825 /api/read/archive?season=1989%2F1990&competition=soccerdata%2F1989-90%2Feng.3&media=1",
+      "succes": true
+    },
+    {
+      "nom": "2825 changed and stable ETag /api/read/archive?season=1989%2F1990&competition=soccerdata%2F1989-90%2Feng.3&media=1",
+      "succes": true
+    },
+    {
+      "nom": "2825 archive sidecar",
+      "succes": true
+    },
+    {
+      "nom": "2826 /api/read/archive?season=1989%2F1990&competition=soccerdata%2F1989-90%2Feng.4&media=1",
+      "succes": true
+    },
+    {
+      "nom": "2826 changed and stable ETag /api/read/archive?season=1989%2F1990&competition=soccerdata%2F1989-90%2Feng.4&media=1",
+      "succes": true
+    },
+    {
+      "nom": "2826 archive sidecar",
+      "succes": true
+    },
+    {
+      "nom": "2839 /api/read/archive?season=1990%2F1991&competition=soccerdata%2F1990-91%2Feng.2&media=1",
+      "succes": true
+    },
+    {
+      "nom": "2839 changed and stable ETag /api/read/archive?season=1990%2F1991&competition=soccerdata%2F1990-91%2Feng.2&media=1",
+      "succes": true
+    },
+    {
+      "nom": "2839 archive sidecar",
+      "succes": true
+    },
+    {
+      "nom": "2840 /api/read/archive?season=1990%2F1991&competition=soccerdata%2F1990-91%2Feng.3&media=1",
+      "succes": true
+    },
+    {
+      "nom": "2840 changed and stable ETag /api/read/archive?season=1990%2F1991&competition=soccerdata%2F1990-91%2Feng.3&media=1",
+      "succes": true
+    },
+    {
+      "nom": "2840 archive sidecar",
+      "succes": true
+    },
+    {
+      "nom": "2841 /api/read/archive?season=1990%2F1991&competition=soccerdata%2F1990-91%2Feng.4&media=1",
+      "succes": true
+    },
+    {
+      "nom": "2841 changed and stable ETag /api/read/archive?season=1990%2F1991&competition=soccerdata%2F1990-91%2Feng.4&media=1",
+      "succes": true
+    },
+    {
+      "nom": "2841 archive sidecar",
+      "succes": true
+    },
+    {
+      "nom": "2858 /api/read/archive?season=1991%2F1992&competition=soccerdata%2F1991-92%2Feng.2&media=1",
+      "succes": true
+    },
+    {
+      "nom": "2858 changed and stable ETag /api/read/archive?season=1991%2F1992&competition=soccerdata%2F1991-92%2Feng.2&media=1",
+      "succes": true
+    },
+    {
+      "nom": "2858 archive sidecar",
+      "succes": true
+    },
+    {
+      "nom": "2859 /api/read/archive?season=1991%2F1992&competition=soccerdata%2F1991-92%2Feng.3&media=1",
+      "succes": true
+    },
+    {
+      "nom": "2859 changed and stable ETag /api/read/archive?season=1991%2F1992&competition=soccerdata%2F1991-92%2Feng.3&media=1",
+      "succes": true
+    },
+    {
+      "nom": "2859 archive sidecar",
+      "succes": true
+    },
+    {
+      "nom": "2860 /api/read/archive?season=1991%2F1992&competition=soccerdata%2F1991-92%2Feng.4&media=1",
+      "succes": true
+    },
+    {
+      "nom": "2860 changed and stable ETag /api/read/archive?season=1991%2F1992&competition=soccerdata%2F1991-92%2Feng.4&media=1",
+      "succes": true
+    },
+    {
+      "nom": "2860 archive sidecar",
+      "succes": true
+    },
+    {
+      "nom": "3215 /api/read/archive?season=2005%2F2006&competition=england%2F2005-06%2Feng.2&media=1",
+      "succes": true
+    },
+    {
+      "nom": "3215 changed and stable ETag /api/read/archive?season=2005%2F2006&competition=england%2F2005-06%2Feng.2&media=1",
+      "succes": true
+    },
+    {
+      "nom": "3215 archive sidecar",
+      "succes": true
+    },
+    {
+      "nom": "3216 /api/read/archive?season=2005%2F2006&competition=england%2F2005-06%2Feng.3&media=1",
+      "succes": true
+    },
+    {
+      "nom": "3216 changed and stable ETag /api/read/archive?season=2005%2F2006&competition=england%2F2005-06%2Feng.3&media=1",
+      "succes": true
+    },
+    {
+      "nom": "3216 archive sidecar",
+      "succes": true
+    },
+    {
+      "nom": "3281 /api/read/archive?season=2007%2F2008&competition=england%2F2007-08%2Feng.3&media=1",
+      "succes": true
+    },
+    {
+      "nom": "3281 changed and stable ETag /api/read/archive?season=2007%2F2008&competition=england%2F2007-08%2Feng.3&media=1",
+      "succes": true
+    },
+    {
+      "nom": "3281 archive sidecar",
+      "succes": true
+    },
+    {
+      "nom": "3313 /api/read/archive?season=2008%2F2009&competition=england%2F2008-09%2Feng.4&media=1",
+      "succes": true
+    },
+    {
+      "nom": "3313 changed and stable ETag /api/read/archive?season=2008%2F2009&competition=england%2F2008-09%2Feng.4&media=1",
+      "succes": true
+    },
+    {
+      "nom": "3313 archive sidecar",
+      "succes": true
+    },
+    {
+      "nom": "4804 /api/read/archive?season=2009%2F2010&competition=engsoccerdata%2Fgreece%2Fall%2F2009&media=1",
+      "succes": true
+    },
+    {
+      "nom": "4804 changed and stable ETag /api/read/archive?season=2009%2F2010&competition=engsoccerdata%2Fgreece%2Fall%2F2009&media=1",
+      "succes": true
+    },
+    {
+      "nom": "4804 archive sidecar",
+      "succes": true
+    },
+    {
+      "nom": "5028 /api/read/archive?season=2015%2F2016&competition=engsoccerdata%2Fgreece%2Fall%2F2015&media=1",
+      "succes": true
+    },
+    {
+      "nom": "5028 changed and stable ETag /api/read/archive?season=2015%2F2016&competition=engsoccerdata%2Fgreece%2Fall%2F2015&media=1",
+      "succes": true
+    },
+    {
+      "nom": "5028 archive sidecar",
+      "succes": true
+    },
+    {
+      "nom": "5069 /api/read/archive?season=2016%2F2017&competition=engsoccerdata%2Fgreece%2Fall%2F2016&media=1",
+      "succes": true
+    },
+    {
+      "nom": "5069 changed and stable ETag /api/read/archive?season=2016%2F2017&competition=engsoccerdata%2Fgreece%2Fall%2F2016&media=1",
+      "succes": true
+    },
+    {
+      "nom": "5069 archive sidecar",
+      "succes": true
+    },
+    {
+      "nom": "5075 /api/read/archive?season=2016%2F2017&competition=engsoccerdata%2Fscotland%2F1%2F2016&media=1",
+      "succes": true
+    },
+    {
+      "nom": "5075 changed and stable ETag /api/read/archive?season=2016%2F2017&competition=engsoccerdata%2Fscotland%2F1%2F2016&media=1",
+      "succes": true
+    },
+    {
+      "nom": "5075 archive sidecar",
+      "succes": true
+    },
+    {
+      "nom": "5151 /api/read/archive?season=2018%2F2019&competition=2018-19%2Fhu.1&media=1",
+      "succes": true
+    },
+    {
+      "nom": "5151 changed and stable ETag /api/read/archive?season=2018%2F2019&competition=2018-19%2Fhu.1&media=1",
+      "succes": true
+    },
+    {
+      "nom": "5151 archive sidecar",
+      "succes": true
+    },
+    {
+      "nom": "5230 /api/read/archive?season=2020%2F2021&competition=2020-21%2Fhu.1&media=1",
+      "succes": true
+    },
+    {
+      "nom": "5230 changed and stable ETag /api/read/archive?season=2020%2F2021&competition=2020-21%2Fhu.1&media=1",
+      "succes": true
+    },
+    {
+      "nom": "5230 archive sidecar",
+      "succes": true
+    },
+    {
+      "nom": "53152 /api/cups/edition?competition=l_v0000240&season=2021",
+      "succes": true
+    },
+    {
+      "nom": "53152 changed and stable ETag /api/cups/edition?competition=l_v0000240&season=2021",
+      "succes": true
+    },
+    {
+      "nom": "53152 /api/cup-snapshot?kind=edition&competition=l_v0000240&season=2021",
+      "succes": true
+    },
+    {
+      "nom": "53152 changed and stable ETag /api/cup-snapshot?kind=edition&competition=l_v0000240&season=2021",
+      "succes": true
+    },
+    {
+      "nom": "53155 /api/cups/edition?competition=l_v0000240&season=2023",
+      "succes": true
+    },
+    {
+      "nom": "53155 changed and stable ETag /api/cups/edition?competition=l_v0000240&season=2023",
+      "succes": true
+    },
+    {
+      "nom": "53155 /api/cup-snapshot?kind=edition&competition=l_v0000240&season=2023",
+      "succes": true
+    },
+    {
+      "nom": "53155 changed and stable ETag /api/cup-snapshot?kind=edition&competition=l_v0000240&season=2023",
+      "succes": true
+    },
+    {
+      "nom": "53156 /api/cups/edition?competition=l_v0000240&season=2025",
+      "succes": true
+    },
+    {
+      "nom": "53156 changed and stable ETag /api/cups/edition?competition=l_v0000240&season=2025",
+      "succes": true
+    },
+    {
+      "nom": "53156 /api/cup-snapshot?kind=edition&competition=l_v0000240&season=2025",
+      "succes": true
+    },
+    {
+      "nom": "53156 changed and stable ETag /api/cup-snapshot?kind=edition&competition=l_v0000240&season=2025",
+      "succes": true
+    },
+    {
+      "nom": "53166 /api/cups/edition?competition=l_v0000242&season=2023",
+      "succes": true
+    },
+    {
+      "nom": "53166 changed and stable ETag /api/cups/edition?competition=l_v0000242&season=2023",
+      "succes": true
+    },
+    {
+      "nom": "53166 /api/cup-snapshot?kind=edition&competition=l_v0000242&season=2023",
+      "succes": true
+    },
+    {
+      "nom": "53166 changed and stable ETag /api/cup-snapshot?kind=edition&competition=l_v0000242&season=2023",
+      "succes": true
+    },
+    {
+      "nom": "family catalogue preserved on edition-only change",
+      "succes": true
+    },
+    {
+      "nom": "47 edition bindings exist in the local rehearsal",
+      "succes": true
+    },
+    {
+      "nom": "Chromium desktop and mobile",
+      "succes": true
+    }
+  ],
+  "source_sha256": "9bb8b3ab80fe75a9d7f45715fa4e3f810c91b95cbc3f0749ce972d2a08f5d8c8"
+}

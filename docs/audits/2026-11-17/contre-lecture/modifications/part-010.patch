@@ -1,0 +1,6 @@
+diff --git a/backend/vega/archive_bundesliga.json b/backend/vega/archive_bundesliga.json
+new file mode 100644
+index 0000000000..c7ec02253c
+--- /dev/null
++++ b/backend/vega/archive_bundesliga.json
+@@ -0,0 +1 @@

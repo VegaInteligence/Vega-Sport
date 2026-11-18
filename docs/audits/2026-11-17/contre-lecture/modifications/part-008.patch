@@ -1,0 +1,1146 @@
+diff --git a/backend/tests/test_calculator.py b/backend/tests/test_calculator.py
+index 88de63d314..61e0b65930 100644
+--- a/backend/tests/test_calculator.py
++++ b/backend/tests/test_calculator.py
+@@ -275,7 +275,7 @@ class ApiViewTest(CalculatorTest):
+         views = [r[0] for r in self.db.execute(
+             "SELECT table_schema||'.'||table_name FROM information_schema.views WHERE table_schema IN ('api','ops') ORDER BY 1"
+         )]
+-        self.assertEqual(len([v for v in views if v.startswith("api.")]), 156)  # 21 + 5 read API (016) + 3 players (019) + media (020) + 4 matches (021) + 2 (022) + cards (023) + 3 search (024) + 4 archives (025) + 4 rankings (026) + 4 Wikidata (027) + 2 cups (028) + honours (029) + 19 match details and profiles (031) + 2 power rankings (032) + cup tables (035) + power roles (037) + season keys (039) + 12 status page (043) + 2 home settings (044) + home leaders (046) + edition keys (047) + home player rows (048) + presence (053) + 2 performance peers (055) + player match keys (057) + 2 archive seasons (058) + 3 player list (060) + match keys (066) + power role counts (069) + 2 league strength (073) + 3 forecasts (076) + schedule forecasts (078) + pass partners (079) + 3 profile vectors (081) + 2 substitutions (082) + halves and pass edges (083) + 5 in-play (086) + 2 returns (087) + 2 breakouts (088) + action values (089) + 3 line-ups (090) + line-up forecasts (091) + pressing rows and keepers' shots (092) + match grades (099) + team age minutes (100) + player fact coverage (104) + confirmed contracts and market values (106) + grade editions (107) + 3 league rounds (109) + match odds (111) + league fates (112) + provider reader progress (114) + player injuries and injury reads (116) + cup stage odds (122) + team style centiles (123) + cup round opponents (124) + cup team groups (125) + match scoring (132)
++        self.assertEqual(len([v for v in views if v.startswith("api.")]), 158)  # 21 + 5 read API (016) + 3 players (019) + media (020) + 4 matches (021) + 2 (022) + cards (023) + 3 search (024) + 4 archives (025) + 4 rankings (026) + 4 Wikidata (027) + 2 cups (028) + honours (029) + 19 match details and profiles (031) + 2 power rankings (032) + cup tables (035) + power roles (037) + season keys (039) + 12 status page (043) + 2 home settings (044) + home leaders (046) + edition keys (047) + home player rows (048) + presence (053) + 2 performance peers (055) + player match keys (057) + 2 archive seasons (058) + 3 player list (060) + match keys (066) + power role counts (069) + 2 league strength (073) + 3 forecasts (076) + schedule forecasts (078) + pass partners (079) + 3 profile vectors (081) + 2 substitutions (082) + halves and pass edges (083) + 5 in-play (086) + 2 returns (087) + 2 breakouts (088) + action values (089) + 3 line-ups (090) + line-up forecasts (091) + pressing rows and keepers' shots (092) + match grades (099) + team age minutes (100) + player fact coverage (104) + confirmed contracts and market values (106) + grade editions (107) + 3 league rounds (109) + match odds (111) + league fates (112) + provider reader progress (114) + player injuries and injury reads (116) + cup stage odds (122) + team style centiles (123) + cup round opponents (124) + cup team groups (125) + match scoring (132) + half coverage (137) + archive match aliases (143)
+         self.assertEqual(len([v for v in views if v.startswith("ops.")]), 4)  # + live reliability (042)
+         for view in views:
+             self.db.execute(f"SELECT * FROM {view} LIMIT 5").fetchall()
+@@ -311,12 +311,20 @@ class ApiViewTest(CalculatorTest):
+         ).fetchall()
+         self.assertEqual([r[0] for r in rows], [1, 2, 3])
+         self.assertEqual({r[2] for r in rows}, {"vega"})
+-        # An official table, once observed, replaces the computed one.
++        # An official table replaces the computed one only when it holds every club of it (VI-29,
++        # FAILURE_MODES_SPORTSCORE.md §2.3 and §4: one official row used to hide the whole table).
+         self.db.execute(
+             "INSERT INTO core.standings_official(competition_season_id,team_id,position,points,source,as_of) VALUES(1,3,1,9,'sportscore',now())"
+         )
+         self.assertEqual(
+-            self.db.execute("SELECT team_id, source FROM api.standings WHERE competition_season_id=1").fetchall(),
+-            [(3, "sportscore")],
++            {r[1] for r in self.db.execute("SELECT team_id, source FROM api.standings WHERE competition_season_id=1").fetchall()},
++            {"vega"},
++        )
++        self.db.execute(
++            "INSERT INTO core.standings_official(competition_season_id,team_id,position,points,source,as_of) VALUES(1,1,2,6,'sportscore',now()),(1,2,3,1,'sportscore',now())"
++        )
++        self.assertEqual(
++            self.db.execute("SELECT team_id, source FROM api.standings WHERE competition_season_id=1 ORDER BY position").fetchall(),
++            [(3, "sportscore"), (1, "sportscore"), (2, "sportscore")],
+         )
+         self.db.execute("DELETE FROM core.standings_official")
+diff --git a/backend/tests/test_dfb_periods.py b/backend/tests/test_dfb_periods.py
+new file mode 100644
+index 0000000000..7eb0d61979
+--- /dev/null
++++ b/backend/tests/test_dfb_periods.py
+@@ -0,0 +1,231 @@
++"""Frozen OpenLigaDB -> Node bridge -> scheduled collect -> PG18 -> actual cup handler."""
++from contextlib import contextmanager
++from copy import deepcopy
++import csv
++from datetime import timedelta
++from hashlib import sha256
++import json
++import os
++from pathlib import Path
++import subprocess
++import unittest
++from unittest.mock import patch
++
++import test_source_snapshots as snapshots
++from vega import sources
++from vega.sources import cups
++
++DSN = os.environ.get("VEGA_V2_DFB_PERIODS_TEST_DSN")
++FIXTURES = snapshots.ROOT / "tests/fixtures/openligadb"
++RAW = {year: json.loads((FIXTURES / f"dfb-{year}.json").read_text()) for year in (2025, 2026)}
++with (FIXTURES / "dfb-oracle.csv").open() as handle:
++    ORACLE = {r["provider_key"]: r for r in csv.DictReader(handle)}
++RDS = json.loads((FIXTURES / "rds-preimage.json").read_text())
++PREIMAGE = {r["provider_key"]: r for values in RDS["rows"] if (r := dict(zip(RDS["columns"], values)))}
++NOW = snapshots.NOW
++SCORES = snapshots.SCORES
++URL = "https://api.openligadb.de/getmatchdata/"
++
++
++def edition(year):
++    return f"{year}/{year + 1}"
++
++
++def pair(value):
++    return tuple(map(int, value.split("/"))) if value else (None, None)
++
++
++def row_for(rows, key):
++    return next(m for m in rows if str(m["matchID"]) == str(key))
++
++
++def period(kind, pair_value):
++    kinds = {1: ("HalfTime", "Halbzeit"), 2: ("After90Minutes", "Endergebnis"),
++             3: ("Unknown", "Nachspielzeit"), 5: ("AfterPenalties", "Elfmeterschießen")}
++    return dict(resultID=90000 + kind, resultTypeID=kind, resultTypeKind=kinds[kind][0], resultName=kinds[kind][1],
++                resultOrderID=kind, pointsTeam1=pair_value[0], pointsTeam2=pair_value[1])
++
++
++@unittest.skipUnless(DSN and snapshots.psycopg and snapshots.NODE, "requires PG18 DFB periods test DB, psycopg and Node")
++class DfbPeriodsReplay(snapshots.SnapshotDatabase):
++    __unittest_skip__ = False
++    __unittest_skip_why__ = ""
++
++    @classmethod
++    def setUpClass(cls):
++        from vega.store import connect_local, migrate
++        from urllib.parse import urlparse
++
++        target = urlparse(DSN)
++        if target.hostname not in ("localhost", "127.0.0.1", "::1") or target.path != "/vega_v2_dfb_periods_test":
++            raise RuntimeError("dedicated local DFB periods test database required")
++        cls.db = connect_local(DSN)
++        cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
++        migrate(cls.db)
++
++    def setUp(self):
++        super().setUp()
++        self.x("TRUNCATE ops.dfb_period_observations") if self.x("SELECT to_regclass('ops.dfb_period_observations')").fetchone()[0] else None
++
++    @contextmanager
++    def serving_raw(self, year, rows, series="dfb"):
++        path = self.tmp / "openliga.json"
++        path.write_text(json.dumps(rows, ensure_ascii=False))
++        preload = snapshots.ROOT / "tests/fake_openligadb_fetch.mjs"
++        with patch.dict(os.environ, {"NODE_OPTIONS": f"--import={preload.as_uri()}",
++                                    "VEGA_TEST_OPENLIGA_URL": f"{URL}{series}/{year}", "VEGA_TEST_OPENLIGA": str(path)}):
++            yield
++
++    def refresh(self, year, rows, day=0, *, series="dfb"):
++        label = "germany-cup" if series == "dfb" else "nations-league"
++        scope = f"openligadb:{label}:{edition(year)}"
++        with self.serving_raw(year, rows, series), patch.object(cups, "scopes", lambda now: {scope: timedelta(seconds=1)}):
++            self.x("SET ROLE vega_collect")
++            try:
++                return sources.run_due(self.db, None, NOW + timedelta(days=day), names={"openligadb"})[("openligadb", scope)]
++            finally:
++                self.x("RESET ROLE")
++
++    def stamps(self, year):
++        return self.x("SELECT cup_digest, cup_checked_at, cup_updated_at FROM core.competition_seasons WHERE cup_key=%s",
++                      (f"openligadb:germany-cup:{edition(year)}",)).fetchone()
++
++    def state(self, year):
++        return {str(r[0]): r[1:] for r in self.x(
++            f"""SELECT p.provider_key, m.id, m.archive_position, {', '.join('m.' + c + ('::text' if c == 'status' else '') for c in SCORES)},
++                       m.revision, m.updated_at, m.xmin::text, m.home_team_id, m.away_team_id, m.match_date::text
++                FROM core.matches m JOIN core.competition_seasons cs ON cs.id = m.competition_season_id
++                JOIN core.provider_ids p ON p.entity_type = 'match' AND p.provider = 'openligadb' AND p.entity_id = m.id
++                WHERE cs.cup_key = %s ORDER BY m.archive_position""", (f"openligadb:germany-cup:{edition(year)}",)).fetchall()}
++
++    def api(self, year):
++        [competition] = self.x("SELECT competition_id FROM api.cup_editions WHERE competition='germany-cup' AND season=%s", (edition(year),)).fetchone()
++        js = """import {createReader} from './src/db.mjs'; import {createHandler} from './src/handler.mjs';
++const [dsn,id,season]=process.argv.slice(1);const r=createReader(dsn,{role:'vega_read'});const h=createHandler({read:r.read});
++const res=await h(new Request('https://local/api/cups/edition?'+new URLSearchParams({competition:id,season})));
++console.log(JSON.stringify({status:res.status, etag:res.headers.get('etag'), body:await res.json()}));await r.end();"""
++        call = subprocess.run([snapshots.NODE, "--input-type=module", "-e", js, DSN, str(competition), edition(year)],
++                              cwd=snapshots.ROOT / "api", check=True, capture_output=True, text=True, timeout=120)
++        result = json.loads(call.stdout.strip().splitlines()[-1])
++        self.assertEqual(result["status"], 200)
++        return result
++
++    def stage_rds_facts(self, year):
++        # Materialize identities/rounds by the normal writer, then restore the sealed RDS score
++        # pre-image onto these local keys. IDs and positions below are owned by the disposable DB.
++        self.assertEqual(self.refresh(year, RAW[year]), "ok")
++        for key, r in PREIMAGE.items():
++            if r["edition"].endswith(edition(year)):
++                self.x(f"""UPDATE core.matches SET {', '.join(c+'=%s' for c in SCORES)}, revision=9
++                           WHERE id = (SELECT entity_id FROM core.provider_ids
++                                       WHERE entity_type='match' AND provider='openligadb' AND provider_key=%s)""",
++                       tuple(r[c] for c in SCORES) + (key,))
++        self.x("UPDATE core.competition_seasons SET cup_digest=%s WHERE cup_key=%s",
++               ("staged-rds-preimage", f"openligadb:germany-cup:{edition(year)}"))
++
++    def test_every_key_from_clean_and_rds_preimage_through_repeat_and_read_api(self):
++        evidence = {}
++        for year, finished in ((2025, 63), (2026, 48)):
++            evidence[year] = {"source_sha256": sha256((FIXTURES / f"dfb-{year}.json").read_bytes()).hexdigest(), "rows": {}}
++            self.stage_rds_facts(year)
++            before, before_api = self.state(year), self.api(year)
++            self.assertEqual(self.refresh(year, RAW[year], 1), "ok")
++            after, after_api = self.state(year), self.api(year)
++            self.assertEqual(list(after), list(before))
++            self.assertEqual(len(after), len(RAW[year]))
++            count = [0, 0, 0, 0, 0]
++            for key, stored in after.items():
++                oracle, published = ORACLE[key], PREIMAGE[key]
++                self.assertEqual((stored[:2], stored[16:]), (before[key][:2], before[key][16:]), key)
++                self.assertEqual(stored[2:5], tuple(published[c] for c in SCORES[:3]), key)
++                extra = oracle["phase"] in ("ET", "PEN")
++                expected = (*pair(oracle["dfb_90"] if extra else ""), *pair(oracle["dfb_half"]),
++                            *pair(oracle["dfb_before_kicks"] if extra else ""), *pair(oracle["dfb_kicks"])) if stored[2] == "finished" else (None,) * 8
++                self.assertEqual(stored[5:13], expected, key)
++                self.assertEqual(stored[13] - before[key][13], int(stored[2] == "finished"), key)
++                if stored[2] != "finished":
++                    self.assertEqual(stored, before[key], key)
++                count = [a + int(b) for a, b in zip(count, (stored[7] is not None, extra, bool(oracle["dfb_kicks"]),
++                         stored[11:13] != before[key][11:13], stored[2] == "not_started"))]
++                evidence[year]["rows"][key] = {"rds": published, "local_before": before[key], "actual": stored, "expected_phases": expected}
++            self.assertEqual(count, [63, 14, 8, 6, 0] if year == 2025 else [48, 7, 5, 5, 8])
++            self.assertEqual(self.run_record("openligadb", f"openligadb:germany-cup:{edition(year)}"), ("ok", None, finished, 0))
++            self.assertEqual([m for m in after_api["body"]["matches"] if m["status"] == "scheduled"],
++                             [m for m in before_api["body"]["matches"] if m["status"] == "scheduled"])
++            stamps = self.stamps(year)
++            for day in (2, 3):
++                self.assertEqual(self.refresh(year, RAW[year], day), "ok")
++                self.assertEqual(self.state(year), after)
++                self.assertEqual(self.run_record("openligadb", f"openligadb:germany-cup:{edition(year)}"), ("ok", None, 0, 0))
++                self.assertEqual(self.stamps(year)[::2], stamps[::2])
++                self.assertGreater(self.stamps(year)[1], stamps[1])
++            self.assertEqual(self.api(year), after_api)
++            evidence[year].update(before_api=before_api, after_api=after_api, counts=count)
++        by_key = {m["key"]: m for m in evidence[2025]["after_api"]["body"]["matches"]}
++        self.assertEqual(by_key["openliga:80173"]["periods"], {"ht": [0, 0], "ft": [0, 0], "et": [1, 1], "p": [4, 5]})
++        self.assertEqual(by_key["openliga:79584"]["periods"], {"ht": [1, 1], "ft": [1, 1], "et": [2, 1]})
++        self.assertIn("après prolongation", by_key["openliga:79584"]["notes"])
++        if path := os.environ.get("VEGA_E2E_EVIDENCE"):
++            (Path(path) / "dfb-replay.json").write_text(json.dumps(evidence, ensure_ascii=False, default=str, indent=2) + "\n")
++
++    def test_attested_partial_convergence_and_third_state_use_separate_receipts(self):
++        rows = deepcopy(RAW[2025])
++        self.assertEqual(self.refresh(2025, rows), "ok")
++        old = self.state(2025)
++        match = row_for(rows, 79584)
++        match["matchResults"][1]["pointsTeam1"] = 1
++        a = row_for(rows, 80173)
++        a["matchResults"].append(period(1, (0, 0)))
++        a["matchResults"][2].update(pointsTeam1=4, pointsTeam2=5)
++        self.assertEqual(self.refresh(2025, rows, 1), "ok")
++        self.assertEqual(self.state(2025), old)
++        stable = self.stamps(2025)
++        for i, change in enumerate(("points", "date", "swap", "duplicate"), 2):
++            fresh = deepcopy(rows)
++            m = row_for(fresh, 79584)
++            if change == "points":
++                m["matchResults"][1]["pointsTeam1"] = 3
++            elif change == "date":
++                m["matchDateTime"] = "2025-10-28T20:45:00"
++            elif change == "swap":
++                m["team1"], m["team2"] = m["team2"], m["team1"]
++            else:
++                m["matchResults"].append(period(2, (4, 0)))
++            code = "INVALID_PERIODS" if change == "duplicate" else "PERIODS_CONFLICT"
++            self.assertEqual(self.refresh(2025, fresh, i), code)
++            self.assertEqual(self.stamps(2025), stable)
++            self.assertEqual(self.state(2025), old)
++            self.assertIn("79584", self.x("SELECT message FROM ops.parse_failures ORDER BY at DESC LIMIT 1").fetchone()[0])
++        seen = self.x("SELECT status, count(*) FROM ops.dfb_period_observations GROUP BY status ORDER BY status").fetchall()
++        self.assertEqual(seen, [("accepted", 2), ("refused", 4)])
++
++    def test_unattested_extra_time_and_incomplete_updates(self):
++        played = {**deepcopy(RAW[2025][0]), "matchID": 999999,
++                  "matchResults": [period(1, (0, 0)), period(2, (0, 0)), period(3, (1, 1)), period(5, (5, 6))]}
++        fixture = {**deepcopy(played), "matchID": 999998, "matchIsFinished": False}
++        self.assertEqual(self.refresh(2025, [played, fixture]), "ok")
++        [game, future] = self.api(2025)["body"]["matches"]
++        self.assertEqual(game["periods"], {"ht": [0, 0], "et": [1, 1], "p": [4, 5]})
++        self.assertEqual((future["status"], future["score"], future["notes"]), ("scheduled", None, []))
++        self.assertNotIn("periods", future)
++        before, stamps = self.state(2025), self.stamps(2025)
++        cases = [
++            ("ht gone", lambda m: m["matchResults"].pop(0), "PERIODS_CONFLICT"),
++            ("et gone", lambda m: (m["matchResults"].pop(), m["matchResults"].pop()), "PERIODS_CONFLICT"),
++            ("down", lambda m: m.update(matchIsFinished=False), "RESULT_DOWNGRADED"),
++            ("direct unknown", lambda m: m["matchResults"][-1].update(pointsTeam1=4, pointsTeam2=5), "PERIODS_CONFLICT"),
++            ("no projection", lambda m: m.pop("matchResults"), "INVALID_PERIODS"),
++            ("p without ET", lambda m: m["matchResults"].pop(2), "PERIODS_UNREVIEWED"),
++            ("p below ET", lambda m: m["matchResults"][-1].update(pointsTeam1=0), "PERIODS_UNREVIEWED"),
++            ("p tied", lambda m: m["matchResults"][-1].update(pointsTeam1=6), "PERIODS_UNREVIEWED"),
++            ("et not level", lambda m: m["matchResults"][2].update(pointsTeam1=2), "PERIODS_UNREVIEWED"),
++            ("unknown kind", lambda m: m["matchResults"][0].update(resultTypeKind="What"), "INVALID_PERIODS"),
++            ("bad points", lambda m: m["matchResults"][0].update(pointsTeam1=-1), "INVALID_PERIODS"),
++        ]
++        for day, (label, mutate, code) in enumerate(cases, 1):
++            with self.subTest(label):
++                changed = deepcopy(played)
++                mutate(changed)
++                self.assertEqual(self.refresh(2025, [changed, fixture], day), code)
++                self.assertEqual(self.state(2025), before)
++                self.assertEqual(self.stamps(2025), stamps)
+diff --git a/backend/tests/test_source_identity.py b/backend/tests/test_source_identity.py
+index 8d43894232..60ec88ad10 100644
+--- a/backend/tests/test_source_identity.py
++++ b/backend/tests/test_source_identity.py
+@@ -245,8 +245,8 @@ class SourceIdentityTest(unittest.TestCase):
+             curated.sportscore_ids(self.db)
+         zones = self.db.execute("SELECT zone::text, position_from, position_to FROM core.competition_zones WHERE competition_season_id=1 ORDER BY 2").fetchall()
+         self.assertEqual(zones, [("relegation", 18, 20)])  # Serie A: 20 teams, 3 relegated
+-        logo = self.db.execute("SELECT a.source_url FROM core.competitions c JOIN core.assets a ON a.id = c.logo_asset_id WHERE c.id = 2").fetchone()[0]
+-        self.assertTrue(logo.startswith("https://img.thesports.com/"))
++        # The shared historical fallback is edition art and must not populate the native World Cup family.
++        self.assertEqual(self.db.execute("SELECT logo_asset_id FROM core.competitions WHERE id=2").fetchone(), (None,))
+         slugs = dict(self.db.execute("SELECT entity_id, provider_key FROM core.provider_ids WHERE provider='sportscore'").fetchall())
+         self.assertEqual(slugs, {1: "italian-serie-a", 2: "fifa-world-cup"})
+ 
+diff --git a/backend/tests/test_source_snapshots.py b/backend/tests/test_source_snapshots.py
+new file mode 100644
+index 0000000000..dbc216d8e4
+--- /dev/null
++++ b/backend/tests/test_source_snapshots.py
+@@ -0,0 +1,715 @@
++"""Cup and open-matchday snapshots (VI-27), written before the code: FAILURE_MODES.md §19.
++
++The OpenFootball bodies are the frozen upstream files of fixtures/openfootball (CC0). The real
++bridge (backend/sources/bridge.mjs) runs the real projection, with fake_openfootball_fetch.mjs in
++place of the network; the real writers store them in a disposable local PostgreSQL
++(VEGA_V2_SNAPSHOTS_TEST_DSN, database vega_v2_snapshots_test), through sources.run_due's own
++transaction and status record. Every step commits, as in production: a write is told from a
++re-read by its revision, updated_at and row version.
++"""
++
++from contextlib import contextmanager
++import copy
++from datetime import datetime, timedelta, timezone
++import hashlib
++import json
++import os
++from pathlib import Path
++import re
++import shutil
++import subprocess
++import sys
++import tempfile
++import unittest
++from unittest.mock import patch
++from urllib.parse import urlparse
++
++ROOT = Path(__file__).resolve().parents[1]
++REPO = ROOT.parent
++sys.path.insert(0, str(ROOT))
++from vega import sources
++from vega.sources import SourceError, cups, curated, open_matchday
++
++try:
++    import psycopg
++except ImportError:
++    psycopg = None
++
++DSN = os.environ.get("VEGA_V2_SNAPSHOTS_TEST_DSN")
++NODE = shutil.which("node")
++FIXTURE = ROOT / "tests/fixtures/openfootball/editions.json"
++PRELOAD = ROOT / "tests/fake_openfootball_fetch.mjs"
++EDITIONS = json.loads(FIXTURE.read_text())["editions"]
++NOW = datetime(2026, 11, 17, 19, tzinfo=timezone.utc)
++SCORES = ("status", "home_score", "away_score", "home_score_90", "away_score_90", "home_score_ht", "away_score_ht",
++          "home_score_et", "away_score_et", "home_penalty_score", "away_penalty_score")
++# Played matches of each frozen edition (sources/upstream/reconciliation.csv, upstream_finished).
++UPSTREAM_FINISHED = {
++    "world-cup-history:1930": 18, "world-cup-history:1934": 17, "world-cup-history:1938": 18, "world-cup-history:1950": 22,
++    "world-cup-history:1954": 26, "world-cup-history:1958": 35, "world-cup-history:1962": 32, "world-cup-history:1966": 32,
++    "world-cup-history:1970": 32, "world-cup-history:1974": 38, "world-cup-history:1978": 38, "world-cup-history:1982": 52,
++    "world-cup-history:1986": 52, "world-cup-history:1990": 52, "world-cup-history:1994": 52, "world-cup-history:1998": 64,
++    "world-cup-history:2002": 64, "world-cup-history:2006": 64, "world-cup-history:2010": 64, "world-cup-history:2014": 64,
++    "world-cup-history:2018": 64, "world-cup-history:2022": 64, "world-cup-history:2026": 104,
++    "euro:2020": 51, "euro:2024": 51, "euro:2028": 0,
++}
++
++# Every frozen edition through the real projection in one node process, with the display helper's
++# final score of each source match (shared/openfootball-history.js historicalScore).
++CENSUS = r"""
++import { readFileSync } from "node:fs";
++const [fixture, projection, history] = process.argv.slice(1);
++const { editions } = JSON.parse(readFileSync(fixture, "utf8"));
++const { historicalScore } = await import(history);
++const { GET } = await import(projection);
++const out = {};
++for (const [key, body] of Object.entries(editions)) {
++  globalThis.fetch = async () => Response.json(body);
++  const [competition, season] = key.split(":");
++  const r = await GET(new Request(`http://bridge/api/open-cups?competition=${competition}&season=${season}`));
++  out[key] = { status: r.status, body: await r.json(), display: body.matches.map((m) => historicalScore(m)) };
++}
++process.stdout.write(JSON.stringify(out));
++"""
++
++
++def rows_of(*matches, season="1954"):
++    return cups.match_rows("open-cups", "world-cup-history", season, {"name": f"World Cup {season}", "matches": list(matches)})
++
++
++def scores_of(row):
++    return tuple(row[k] for k in SCORES)
++
++
++def expected_row(m):
++    """A source match's stored score columns, read from the table of §19.2 (independent of the writer)."""
++    score, status = m.get("score"), m.get("status")
++    if status in ("canceled", "cancelled"):
++        return ("canceled",) + (None,) * 10
++    if not score:
++        return ("not_started",) + (None,) * 10
++    parts = {"ft": score} if isinstance(score, list) else score
++    ft, ht, et, p = (tuple(parts[k]) if k in parts else (None, None) for k in ("ft", "ht", "et", "p"))
++    final = et if "et" in parts else ft
++    return ("finished", *final, *(ft if "et" in parts else (None, None)), *ht, *et, *p)
++
++
++class ScoreRulesTest(unittest.TestCase):
++    """19a–19i: one rule for every OpenFootball score encoding (no database)."""
++
++    def test_19a_to_19f_each_encoding_is_stored_as_the_source_says(self):
++        none = (None,) * 10
++        cases = {
++            # 19a: worldcup.json's full-time array (England–USA 2022, Uruguay–Colombia 1962).
++            "array 0-0": ({"score": [0, 0]}, ("finished", 0, 0) + (None,) * 8),
++            "array 2-1": ({"score": [2, 1]}, ("finished", 2, 1) + (None,) * 8),
++            # 19b: England–Belgium 1954, decided after extra time.
++            "after extra time": ({"score": {"ft": [3, 3], "et": [4, 4]}}, ("finished", 4, 4, 3, 3, None, None, 4, 4, None, None)),
++            # 19c: extra time without the 90-minute score: never inferred.
++            "extra time only": ({"score": {"et": [2, 1]}}, ("finished", 2, 1, None, None, None, None, 2, 1, None, None)),
++            # 19d: a shoot-out beside the score after extra time.
++            "shoot-out": ({"score": {"ft": [1, 1], "et": [1, 1], "p": [4, 3]}}, ("finished", 1, 1, 1, 1, None, None, 1, 1, 4, 3)),
++            "full time and half time": ({"score": {"ft": [3, 1], "ht": [2, 1]}}, ("finished", 3, 1, None, None, 2, 1, None, None, None, None)),
++            # 19e: no result yet.
++            "no score": ({}, ("not_started",) + none),
++            "empty score": ({"score": {}}, ("not_started",) + none),
++            "null score": ({"score": None}, ("not_started",) + none),
++            # 19f: Sweden–Austria 1938, canceled by the source.
++            "canceled": ({"status": "canceled"}, ("canceled",) + none),
++            "cancelled": ({"status": "cancelled"}, ("canceled",) + none),
++        }
++        for name, (extra, expected) in cases.items():
++            with self.subTest(name):
++                [(_, row)] = rows_of({"round": "Matchday 1", "date": "1954-06-16", "team1": "A", "team2": "B", **extra})
++                self.assertEqual(scores_of(row), expected)
++
++    def test_19g_19h_a_malformed_score_or_status_makes_the_edition_invalid(self):
++        for score in ([2], [2, -1], [2, 1.5], [True, 0], [2, "1"], "2-1", 3, {"ft": [1, None]}, {"ht": [1, 0]}, {"p": [4, 3]},
++                      {"ft": [1, 0], "x": [0, 0]}, {"ft": [1, 0, 0]}):
++            with self.subTest(score=score):
++                with self.assertRaises(SourceError) as caught:
++                    rows_of({"date": "1954-06-16", "team1": "A", "team2": "B", "score": score})
++                self.assertEqual(caught.exception.code, "INVALID_SCORE")
++        for extra in ({"status": "canceled", "score": [1, 0]}, {"status": "postponed"}, {"status": 3}):
++            with self.subTest(extra=extra):
++                with self.assertRaises(SourceError) as caught:
++                    rows_of({"date": "1954-06-16", "team1": "A", "team2": "B", **extra})
++                self.assertEqual(caught.exception.code, "INVALID_STATUS")
++
++    @unittest.skipUnless(NODE, "requires node")
++    def test_19i_the_frozen_editions_through_the_projection(self):
++        done = subprocess.run(
++            [NODE, "--input-type=module", "-e", CENSUS, str(FIXTURE), (REPO / "backend/sources/projections/open-cups.mjs").as_uri(),
++             (REPO / "dashboard/shared/openfootball-history.js").as_uri()],
++            capture_output=True, text=True, timeout=120,
++        )
++        self.assertEqual(done.returncode, 0, done.stderr)
++        projected = json.loads(done.stdout)
++        finished, arrays, array_editions, canceled, unplayed = 0, 0, set(), 0, 0
++        for key, body in EDITIONS.items():
++            answer = projected[key]
++            self.assertEqual(answer["status"], 200, key)
++            competition, season = key.split(":")
++            rows = cups.match_rows("open-cups", competition, season, answer["body"])
++            self.assertEqual(len(rows), len(body["matches"]), key)
++            played = 0
++            for (_, row), source, display in zip(rows, body["matches"], answer["display"]):
++                self.assertEqual(scores_of(row), expected_row(source), (key, source))
++                if row["status"] == "finished":
++                    played += 1
++                    if isinstance(source.get("score"), list):
++                        arrays += 1
++                        array_editions.add(key)
++                elif row["status"] == "canceled":
++                    canceled += 1
++                else:
++                    unplayed += 1
++                # The site's display helper and the stored row give the match the same score.
++                final = [row["home_score"], row["away_score"]] if row["status"] == "finished" else [None, None]
++                self.assertEqual(display, final, (key, source))
++            self.assertEqual(played, UPSTREAM_FINISHED[key], key)
++            finished += played
++        self.assertEqual((finished, arrays, len(array_editions), canceled, unplayed), (1170, 665, 18, 1, 51))
++
++
++def pair(m, home, away):
++    return (m.get("team1"), m.get("team2")) == (home, away)
++
++
++def baseline_digest(body):
++    """The digest the baseline writer stored: its projection's raw body (array scores kept, status dropped)."""
++    matches = [{k: m[k] for k in ("round", "group", "num", "date", "team1", "team2", "score") if k in m} for m in body["matches"]]
++    return hashlib.sha256(json.dumps([body["name"], matches], sort_keys=True, ensure_ascii=False).encode()).hexdigest()
++
++
++@unittest.skipUnless(DSN and psycopg and NODE, "requires a disposable local snapshots DB (VEGA_V2_SNAPSHOTS_TEST_DSN), psycopg and node")
++class SnapshotDatabase(unittest.TestCase):
++    @classmethod
++    def setUpClass(cls):
++        from vega.store import connect_local, migrate
++
++        target = urlparse(DSN)
++        if target.hostname not in ("localhost", "127.0.0.1", "::1") or target.path != "/vega_v2_snapshots_test":
++            raise RuntimeError("dedicated local snapshots DB required")
++        cls.db = connect_local(DSN)
++        cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
++        migrate(cls.db)
++
++    @classmethod
++    def tearDownClass(cls):
++        cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
++        cls.db.close()
++
++    def setUp(self):
++        self.x = self.db.execute
++        self.x("""TRUNCATE core.matches, core.rounds, core.competition_seasons, core.competitions, core.provider_ids,
++                  core.entity_names, core.teams, core.source_revisions, core.assets, ops.source_runs, ops.parse_failures
++                  RESTART IDENTITY CASCADE""")
++        self.tmp = Path(tempfile.mkdtemp())
++        self.addCleanup(shutil.rmtree, self.tmp, True)
++
++    # -- cups: the real bridge and projection, run_due's own transaction and status --
++    @contextmanager
++    def serving(self, editions):
++        path = self.tmp / f"editions-{len(list(self.tmp.iterdir()))}.json"
++        path.write_text(json.dumps({"editions": editions}))
++        with patch.dict(os.environ, {"NODE_OPTIONS": f"--import={PRELOAD.as_uri()}", "VEGA_TEST_OPENFOOTBALL": str(path)}):
++            yield
++
++    def read_cup(self, key, body, at):
++        """One due read of the edition `key` ("world-cup-history:1962") answering `body`: its outcome."""
++        scope = f"open-cups:{key}"
++        with self.serving({key: body}), patch.object(cups, "scopes", lambda now: {scope: timedelta(seconds=1)}):
++            return sources.run_due(self.db, None, at, names={"openfootball"})[("openfootball", scope)]
++
++    def edition(self, key):
++        return self.x("""SELECT id, cup_digest, cup_checked_at, cup_updated_at, cup_name FROM core.competition_seasons
++                         WHERE cup_key = %s""", (f"open-cups:{key}",)).fetchone()
++
++    def matches(self, key):
++        """Per provider key: id, position, the score columns, revision, updated_at and row version."""
++        return {r[0]: r[1:] for r in self.x(
++            f"""SELECT p.provider_key, m.id, m.archive_position, {', '.join('m.' + c + ('::text' if c == 'status' else '') for c in SCORES)},
++                       m.revision, m.updated_at, m.xmin::text
++                FROM core.matches m JOIN core.competition_seasons cs ON cs.id = m.competition_season_id
++                JOIN core.provider_ids p ON p.entity_type = 'match' AND p.entity_id = m.id
++                WHERE cs.cup_key = %s ORDER BY m.archive_position""", (f"open-cups:{key}",)).fetchall()}
++
++    def run_record(self, provider, scope):
++        return self.x("SELECT status, error_code, rows_written, unmatched FROM ops.source_runs WHERE source = %s AND scope = %s",
++                      (provider, scope)).fetchone()
++
++
++class CupReplayTest(SnapshotDatabase):
++    def store_as_baseline(self, key, body):
++        """The edition as the baseline writer left it: array scores and canceled matches not started, its raw digest."""
++        edition = self.edition(key)[0]
++        for position, m in enumerate(body["matches"]):
++            if isinstance(m.get("score"), list) or m.get("status"):
++                self.x(f"""UPDATE core.matches SET status = 'not_started', {', '.join(c + ' = NULL' for c in SCORES[1:])}
++                           WHERE competition_season_id = %s AND archive_position = %s""", (edition, position))
++        self.x("UPDATE core.competition_seasons SET cup_digest = %s WHERE id = %s", (baseline_digest(body), edition))
++
++    def test_19j_a_stored_edition_is_corrected_once_after_the_parser_upgrade(self):
++        for key, corrected in (("world-cup-history:1962", 32), ("world-cup-history:2022", 7), ("world-cup-history:1938", 1)):
++            with self.subTest(key):
++                body = EDITIONS[key]
++                self.assertEqual(self.read_cup(key, body, NOW), "ok")
++                self.store_as_baseline(key, body)
++                before, edition = self.matches(key), self.edition(key)
++                # The same upstream body, read by the new code.
++                self.assertEqual(self.read_cup(key, body, NOW + timedelta(days=8)), "ok")
++                after = self.matches(key)
++                self.assertEqual(self.run_record("openfootball", f"open-cups:{key}")[2], corrected)
++                self.assertEqual({k: v[0] for k, v in after.items()}, {k: v[0] for k, v in before.items()})  # same match ids
++                self.assertEqual([v[2:13] for v in after.values()], [expected_row(m) for m in body["matches"]])
++                changed = [k for k in after if before[k][2:13] != after[k][2:13]]
++                self.assertEqual(len(changed), corrected)
++                for k in after:
++                    self.assertEqual(after[k][13], before[k][13] + (1 if k in changed else 0), k)  # revision
++                    if k not in changed:
++                        self.assertEqual(after[k][14:], before[k][14:], k)  # untouched: updated_at and row version
++                now_edition = self.edition(key)
++                self.assertNotEqual(now_edition[1], edition[1])
++                self.assertGreater(now_edition[3], edition[3])
++                # A third read of the same body changes nothing; only the read time moves.
++                self.assertEqual(self.read_cup(key, body, NOW + timedelta(days=16)), "ok")
++                self.assertEqual(self.matches(key), after)
++                self.assertEqual(self.run_record("openfootball", f"open-cups:{key}")[2], 0)
++                last = self.edition(key)
++                self.assertEqual((last[1], last[3]), (now_edition[1], now_edition[3]))
++                self.assertGreater(last[2], now_edition[2])
++        canceled = self.x("""SELECT m.status::text, m.home_score, m.away_score FROM core.matches m
++                             WHERE m.home_team_name = 'Sweden' AND m.away_team_name = 'Austria'""").fetchone()
++        self.assertEqual(canceled, ("canceled", None, None))
++        england = self.x("""SELECT m.status::text, m.home_score, m.away_score FROM core.matches m
++                            WHERE m.home_team_name = 'England' AND m.away_team_name = 'USA'""").fetchone()
++        self.assertEqual(england, ("finished", 0, 0))
++
++    def test_19k_another_order_moves_positions_only(self):
++        key, body = "world-cup-history:1962", EDITIONS["world-cup-history:1962"]
++        self.assertEqual(self.read_cup(key, body, NOW), "ok")
++        before, edition = self.matches(key), self.edition(key)
++        reordered = dict(body, matches=list(reversed(body["matches"])))
++        self.assertEqual(self.read_cup(key, reordered, NOW + timedelta(days=8)), "ok")
++        after = self.matches(key)
++        self.assertEqual(list(after), list(reversed(list(before))))  # positions follow the source
++        for k in before:
++            self.assertEqual(after[k][0], before[k][0])
++            self.assertEqual(after[k][2:15], before[k][2:15], k)  # scores, revision and updated_at
++        self.assertEqual(self.edition(key)[3], edition[3])  # cup_updated_at
++        self.assertEqual(self.run_record("openfootball", f"open-cups:{key}")[2], 0)
++
++
++class CupGuardTest(SnapshotDatabase):
++    KEY = "world-cup-history:1938"
++
++    def setUp(self):
++        super().setUp()
++        self.body = copy.deepcopy(EDITIONS[self.KEY])
++        self.assertEqual(self.read_cup(self.KEY, self.body, NOW), "ok")
++        self.before, self.stored = self.matches(self.KEY), self.edition(self.KEY)
++
++    def assertKept(self, outcome, code):
++        self.assertEqual(outcome, code)
++        self.assertEqual(self.matches(self.KEY), self.before)  # ids, scores, revisions, row versions
++        self.assertEqual(self.edition(self.KEY), self.stored)  # digest, cup_checked_at, cup_updated_at
++        record = self.run_record("openfootball", f"open-cups:{self.KEY}")
++        self.assertEqual(record[:2], ("error", code))
++
++    def test_19l_a_200_without_matches_keeps_the_edition(self):
++        self.assertKept(self.read_cup(self.KEY, dict(self.body, matches=[]), NOW + timedelta(days=8)), "SNAPSHOT_DROPS_RESULT")
++        detail = self.x("SELECT error_code, message FROM ops.parse_failures").fetchall()
++        self.assertEqual([d[0] for d in detail], ["SNAPSHOT_DROPS_RESULT"])
++        self.assertIn("open-cups:world-cup-history:1938", detail[0][1])
++
++    def test_19m_a_result_dropped_or_unplayed_keeps_the_edition(self):
++        dropped = dict(self.body, matches=[m for m in self.body["matches"] if not pair(m, "France", "Belgium")])
++        self.assertKept(self.read_cup(self.KEY, dropped, NOW + timedelta(days=8)), "SNAPSHOT_DROPS_RESULT")
++        unplayed = copy.deepcopy(self.body)
++        for m in unplayed["matches"]:
++            if pair(m, "France", "Belgium"):
++                del m["score"]
++        self.assertKept(self.read_cup(self.KEY, unplayed, NOW + timedelta(days=16)), "RESULT_DOWNGRADED")
++
++    def test_19g_a_malformed_score_keeps_the_edition(self):
++        broken = copy.deepcopy(self.body)
++        broken["matches"][1]["score"] = {"ft": [6, None]}
++        self.assertKept(self.read_cup(self.KEY, broken, NOW + timedelta(days=8)), "INVALID_SCORE")
++
++    def test_19n_a_complete_correction_is_accepted(self):
++        # Synthetic changes of the 1938 body: Hungary–Dutch East Indies corrected from 6–0 to 6–1, a
++        # match of two synthetic teams added, the canceled (never played) Sweden–Austria withdrawn.
++        corrected = copy.deepcopy(self.body)
++        for m in corrected["matches"]:
++            if pair(m, "Hungary", "Dutch East Indies"):
++                m["score"] = {"ft": [6, 1], "ht": [4, 0]}
++        corrected["matches"] = [m for m in corrected["matches"] if m.get("status") != "canceled"]
++        corrected["matches"].append({"round": "Synthetic", "date": "1938-06-20", "team1": "Synthetic A", "team2": "Synthetic B", "score": {"ft": [1, 0]}})
++        self.assertEqual(self.read_cup(self.KEY, corrected, NOW + timedelta(days=8)), "ok")
++        after = self.matches(self.KEY)
++        hungary = next(k for k in after if "|Hungary|Dutch East Indies|" in k)
++        self.assertEqual((after[hungary][3], after[hungary][4], after[hungary][13]), (6, 1, self.before[hungary][13] + 1))
++        self.assertFalse([k for k in after if "|Sweden|Austria|" in k])
++        self.assertTrue([k for k in after if "|Synthetic A|Synthetic B|" in k])
++        unchanged = [k for k in self.before if k in after and k != hungary]
++        self.assertEqual(len(unchanged), len(self.before) - 2)
++        for k in unchanged:
++            self.assertEqual(after[k][2:15], self.before[k][2:15], k)  # scores, revision, updated_at (positions may move)
++        self.assertEqual(self.run_record("openfootball", f"open-cups:{self.KEY}")[:3], ("ok", None, 3))
++
++    def test_19o_a_reviewed_retraction_alone_may_go(self):
++        from vega.sources import snapshot
++
++        france = next(k for k in self.before if "|France|Belgium|" in k)
++        without = dict(self.body, matches=[m for m in self.body["matches"] if not pair(m, "France", "Belgium") and not pair(m, "Sweden", "Cuba")])
++        with patch.dict(snapshot.RETRACTIONS, {("openfootball", france): "test: reviewed retraction"}):
++            # The unreviewed Sweden–Cuba keeps the edition whole.
++            self.assertKept(self.read_cup(self.KEY, without, NOW + timedelta(days=8)), "SNAPSHOT_DROPS_RESULT")
++            alone = dict(self.body, matches=[m for m in self.body["matches"] if not pair(m, "France", "Belgium")])
++            self.assertEqual(self.read_cup(self.KEY, alone, NOW + timedelta(days=16)), "ok")
++        after = self.matches(self.KEY)
++        self.assertNotIn(france, after)
++        self.assertEqual(set(after), set(self.before) - {france})
++
++
++# -- open-matchday --
++FOLDER, OTHER = "ENG_5_national-league", "SCO_3_league-one"
++RESULTS = ("date,home,away,ft_home,ft_away,ht_home,ht_away,home_shots,away_shots,home_corners,away_corners\n"
++           "2026-11-01,North FC,South FC,2,1,1,0,11,7,6,3\n")
++FIXTURES = "date,home,away,gw\n2026-11-29,South FC,North FC,16\n"
++
++
++def league(folder=FOLDER, **over):
++    return {"league": "National League", "folder": "data/" + folder, "results": 1, "fixtures": 1, "errors": [], **over}
++
++
++class OpenMatchdayGuardTest(SnapshotDatabase):
++    def read(self, leagues, files, at):
++        """One due read of the europe scope: its outcome, rows written and unmatched."""
++        def get(url, *, as_text=False):
++            if url.endswith("build_summary.json"):
++                return {"season": "2627", "generated_utc": "2026-11-17T07:19:26Z", "leagues": leagues}
++            name = url.removeprefix(open_matchday.RAW + "data/")
++            if name not in files:
++                raise SourceError("HTTP_404")
++            return files[name]
++
++        outcome = sources.run_due(self.db, get, at, names={"open_matchday"})[("open_matchday", "europe")]
++        return (outcome, *self.run_record("open_matchday", "europe")[2:])
++
++    @staticmethod
++    def files(folder=FOLDER, results=RESULTS, fixtures=FIXTURES):
++        out = {}
++        if results is not None:
++            out[f"{folder}/results_2627.csv"] = results
++        if fixtures is not None:
++            out[f"{folder}/fixtures_2627.csv"] = fixtures
++        return out
++
++    def state(self, folder=FOLDER):
++        return self.x(
++            """SELECT p.provider_key, m.id, m.status::text, m.home_score, m.away_score, m.home_score_ht, m.away_score_ht,
++                      m.revision, m.updated_at, m.xmin::text,
++                      (SELECT json_agg(json_build_array(s.team_id, s.period::text, s.total_shots, s.corners, s.xmin::text)
++                                       ORDER BY s.team_id, s.period) FROM core.team_match_stats s
++                       WHERE s.season_id = m.season_id AND s.match_id = m.id)
++               FROM core.matches m JOIN core.competition_seasons cs ON cs.id = m.competition_season_id
++               JOIN core.provider_ids p ON p.entity_type = 'match' AND p.entity_id = m.id
++               WHERE cs.cup_key = %s ORDER BY 1""", (f"open-matchday:{folder}:2026/2027",)).fetchall()
++
++    def stamps(self, folder=FOLDER):
++        return self.x("SELECT cup_checked_at, cup_updated_at FROM core.competition_seasons WHERE cup_key = %s",
++                      (f"open-matchday:{folder}:2026/2027",)).fetchone()
++
++    def failures(self):
++        return self.x("SELECT error_code, message FROM ops.parse_failures ORDER BY id").fetchall()
++
++    def setUp(self):
++        super().setUp()
++        self.assertEqual(self.read([league()], self.files(), NOW), ("ok", 2, 0))
++        self.before = self.state()
++        self.assertEqual([r[2:7] for r in self.before], [
++            ("finished", 2, 1, 1, 0),  # North FC–South FC, 1 November
++            ("not_started", None, None, None, None),  # South FC–North FC, 29 November
++        ])
++        self.assertEqual(len(self.before[0][10]), 2)  # the result's statistics, one row per side
++
++    def assertKept(self, outcome, code, folder=FOLDER):
++        self.assertEqual(outcome[0], "ok")
++        self.assertGreaterEqual(outcome[2], 1)  # unmatched
++        self.assertEqual(self.state(folder), self.before)
++        found = [f for f in self.failures() if f[0] == code]
++        self.assertTrue(found, self.failures())
++        self.assertIn(f"open-matchday:{folder}:2026/2027", found[-1][1])
++
++    def test_19p_a_fixture_with_the_key_of_a_result_is_that_result(self):
++        stale = FIXTURES + "2026-11-01,North FC,South FC,15\n"
++        outcome = self.read([league(fixtures=2)], self.files(fixtures=stale), NOW + timedelta(days=1))
++        self.assertEqual(outcome, ("ok", 2, 0))
++        self.assertEqual(self.state(), self.before)
++
++    def test_19q_an_incomplete_folder_keeps_its_edition(self):
++        header = RESULTS.splitlines()[0] + "\n"
++        cases = (
++            ("other headers", "INVALID_HEADER", [league()],
++             self.files(results="kickoff,home_team,away_team,home_score,away_score\n2026-11-01,North FC,South FC,2,1\n")),
++            ("a header-only file", "ROW_COUNT_MISMATCH", [league()], self.files(results=header)),
++            ("fewer rows than declared", "ROW_COUNT_MISMATCH", [league(results=2)], self.files()),
++            ("errors reported", "SOURCE_REPORTED_ERRORS", [league(errors=["football-data: timeout"])], self.files()),
++            ("boolean counts", "MANIFEST_INVALID", [league(results=True, fixtures=True)], self.files()),
++            # sources/repro/probe.py missing_manifest_parts: a manifest describing neither file.
++            ("neither file", "MANIFEST_INVALID", [league(results=False, fixtures=False)], self.files()),
++        )
++        for days, (name, code, leagues, files) in enumerate(cases, 1):
++            with self.subTest(name):
++                self.assertKept(self.read(leagues, files, NOW + timedelta(days=days)), code)
++
++    def test_19r_a_result_row_without_its_goals_keeps_the_edition(self):
++        for days, goals in enumerate((",", "2,", "2,x", "2,-1"), 1):
++            with self.subTest(goals=goals):
++                row = f"2026-11-01,North FC,South FC,{goals},1,0,11,7,6,3\n"
++                self.assertKept(self.read([league()], self.files(results=RESULTS.splitlines()[0] + "\n" + row), NOW + timedelta(days=days)),
++                                "INVALID_RESULT_ROW")
++
++    def test_19s_a_result_dropped_or_listed_as_a_fixture_keeps_the_edition(self):
++        other = RESULTS.splitlines()[0] + "\n2026-11-08,North FC,East FC,0,0,0,0,5,5,2,2\n"
++        self.assertKept(self.read([league()], self.files(results=other), NOW + timedelta(days=1)), "SNAPSHOT_DROPS_RESULT")
++        as_fixture = "date,home,away,gw\n2026-11-01,North FC,South FC,15\n2026-11-29,South FC,North FC,16\n"
++        self.assertKept(self.read([league(results=0, fixtures=2)], self.files(results=None, fixtures=as_fixture), NOW + timedelta(days=2)),
++                        "RESULT_DOWNGRADED")
++
++    def test_19t_one_rejected_folder_does_not_hold_back_another(self):
++        files = {**self.files(results="kickoff,home_team\n2026-11-01,North FC\n"), **self.files(OTHER, results=RESULTS.replace("North FC", "Elgin"))}
++        outcome = self.read([league(), league(OTHER, league="Scottish League One", fixtures=0)], files, NOW + timedelta(days=1))
++        self.assertEqual(outcome, ("ok", 1, 1))
++        self.assertEqual(self.state(), self.before)
++        self.assertEqual([r[2:5] for r in self.state(OTHER)], [("finished", 2, 1)])
++
++    def test_19u_the_same_files_read_again_change_nothing(self):
++        checked, updated = self.stamps()
++        self.assertEqual(self.read([league()], self.files(), NOW + timedelta(days=1)), ("ok", 2, 0))
++        self.assertEqual(self.state(), self.before)  # no update: revision, updated_at, row versions, statistics
++        self.assertEqual(self.failures(), [])
++        stamps = self.stamps()
++        self.assertGreater(stamps[0], checked)
++        self.assertEqual(stamps[1], updated)
++
++    def test_19v_a_corrected_score_or_statistic_is_a_change_of_its_match(self):
++        _, updated = self.stamps()
++        corrected = RESULTS.replace(",2,1,1,0,11,", ",2,2,1,0,11,")
++        self.assertEqual(self.read([league()], self.files(results=corrected), NOW + timedelta(days=1)), ("ok", 2, 0))
++        result, fixture = self.state()
++        self.assertEqual((result[2:5], result[7]), (("finished", 2, 2), self.before[0][7] + 1))
++        self.assertEqual(fixture, self.before[1])
++        self.assertGreater(self.stamps()[1], updated)
++        shots = corrected.replace(",11,7,", ",12,7,")
++        self.assertEqual(self.read([league()], self.files(results=shots), NOW + timedelta(days=2)), ("ok", 2, 0))
++        again = self.state()[0]
++        home = again[10][0]  # North FC (the first team written), the whole match
++        self.assertEqual((again[7], home[1], home[2]), (result[7] + 1, "all", 12))
++
++    def test_19w_a_fixture_no_longer_listed_is_removed(self):
++        self.assertEqual(self.read([league(fixtures=0)], self.files(fixtures=None), NOW + timedelta(days=1)), ("ok", 1, 0))
++        self.assertEqual(self.state(), self.before[:1])
++
++
++    # 22a, 22b (FAILURE_MODES.md §22, written before the code): a later file without a statistic keeps it; a
++    # stated value, 0 included, replaces it once.
++    def test_22a_missing_statistic_columns_or_cells_keep_the_stored_values(self):
++        _, updated = self.stamps()
++        without_columns = "date,home,away,ft_home,ft_away,ht_home,ht_away\n2026-11-01,North FC,South FC,2,1,1,0\n"
++        empty_cells = RESULTS.splitlines()[0] + "\n2026-11-01,North FC,South FC,2,1,1,0,,,,\n"
++        for days, (name, results) in enumerate((("no statistic columns", without_columns), ("empty cells", empty_cells)), 1):
++            with self.subTest(name):
++                self.assertEqual(self.read([league()], self.files(results=results), NOW + timedelta(days=days)), ("ok", 2, 0))
++                self.assertEqual(self.state(), self.before)  # ids, revision, updated_at, statistics and their row versions
++                self.assertEqual(self.stamps()[1], updated)
++                self.assertEqual(self.failures(), [])
++
++    def test_22b_a_stated_zero_replaces_the_stored_value_once(self):
++        zero = RESULTS.replace(",11,7,", ",0,7,")
++        self.assertEqual(self.read([league()], self.files(results=zero), NOW + timedelta(days=1)), ("ok", 2, 0))
++        result = self.state()[0]
++        self.assertEqual((result[7], result[10][0][1], result[10][0][2]), (self.before[0][7] + 1, "all", 0))
++        self.assertEqual(result[10][1][2], 7)  # the other side's stated value
++        self.assertEqual(self.read([league()], self.files(results=zero), NOW + timedelta(days=2)), ("ok", 2, 0))
++        self.assertEqual(self.state()[0], result)
++
++
++class CupApiScoreTest(SnapshotDatabase):
++    """22c: the 90-minute score is never invented: source -> cups.save -> PostgreSQL -> the real /api/cups/edition."""
++
++    def edition_scores(self, matches):
++        with self.db.transaction():
++            cups.save(self.db, "open-cups", "euro", "2024", {"name": "Scores", "matches": matches}, NOW)
++        competition = self.x("SELECT competition_id FROM api.cup_editions WHERE competition = 'euro' AND season = '2024'").fetchone()[0]
++        js = """import {createReader} from './src/db.mjs';import {createHandler} from './src/handler.mjs';
++const [dsn,id]=process.argv.slice(1);const r=createReader(dsn,{role:'vega_read'});const h=createHandler({read:r.read});
++const res=await h(new Request('https://local/api/cups/edition?competition='+id+'&season=2024'));
++console.log(JSON.stringify({status:res.status,body:await res.json()}));await r.end();"""
++        done = subprocess.run([NODE, "--input-type=module", "-e", js, DSN, str(competition)], cwd=ROOT / "api", capture_output=True, text=True, timeout=120)
++        self.assertEqual(done.returncode, 0, done.stderr)
++        out = json.loads(done.stdout.strip().splitlines()[-1])
++        self.assertEqual(out["status"], 200)
++        return {(m["team1"], m["team2"]): m.get("score") for m in out["body"]["matches"]}
++
++    def test_22c_extra_time_without_regulation_has_no_ft(self):
++        scores = self.edition_scores([
++            {"date": "2024-07-01", "team1": "One", "team2": "Two", "score": {"et": [2, 1]}},
++            {"date": "2024-07-02", "team1": "Three", "team2": "Four", "score": {"ft": [1, 1], "et": [2, 1]}},
++            {"date": "2024-07-03", "team1": "Five", "team2": "Six", "score": {"ft": [0, 0], "et": [0, 0], "p": [4, 3]}},
++            {"date": "2024-07-04", "team1": "Seven", "team2": "Eight", "score": {"ft": [3, 0]}},
++        ])
++        self.assertEqual(scores[("One", "Two")], {"et": [2, 1]})
++        self.assertEqual(scores[("Three", "Four")], {"ft": [1, 1], "et": [2, 1]})
++        self.assertEqual(scores[("Five", "Six")], {"ft": [0, 0], "et": [0, 0], "p": [4, 3]})
++        self.assertEqual(scores[("Seven", "Eight")], {"ft": [3, 0]})
++
++
++class CupCatalogueLogoTest(SnapshotDatabase):
++    """C6 (FAILURE_MODES.md §22, written before the code): a cup-only competition's verified logo reaches the catalogue
++    by the edition's own competition (its FK), additively: source -> open_matchday.save -> PostgreSQL -> the real API."""
++
++    def api(self, path):
++        js = """import {createReader} from './src/db.mjs';import {createHandler} from './src/handler.mjs';
++const [dsn,path]=process.argv.slice(1);const r=createReader(dsn,{role:'vega_read'});const h=createHandler({read:r.read});
++const res=await h(new Request('https://local'+path));console.log(JSON.stringify({status:res.status,body:await res.json()}));await r.end();"""
++        done = subprocess.run([NODE, "--input-type=module", "-e", js, DSN, path], cwd=ROOT / "api", capture_output=True, text=True, timeout=120)
++        self.assertEqual(done.returncode, 0, done.stderr)
++        return json.loads(done.stdout.strip().splitlines()[-1])
++
++    def test_the_catalogue_carries_the_competition_logo(self):
++        results = open_matchday.rows("date,home,away,ft_home,ft_away\n2026-08-01,Brickfield,Llanuwchllyn,5,1\n")
++        with self.db.transaction():
++            open_matchday.save(self.db, "WAL_2_cymru-north", "Cymru North", "2026/2027", results, [], NOW)
++        reference = "https://media.vega.invalid/sha256/" + "0b2958916b260998034409a86e6ede3879dd706020e0371df9b9e03ddb826022" + ".png"
++        logo = self.x("INSERT INTO core.assets(kind, source_url, s3_key) VALUES ('logo', %s, 'sources/v2/images/x.png') RETURNING id", (reference,)).fetchone()[0]
++        competition = self.x("SELECT competition_id FROM core.competition_seasons WHERE cup_key LIKE 'open-matchday:WAL_2_cymru-north:%'").fetchone()[0]
++        self.x("UPDATE core.competitions SET logo_asset_id = %s WHERE id = %s", (logo, competition))
++        index = self.api("/api/cup-index?kind=supplemental")
++        self.assertEqual(index["status"], 200)
++        [entry] = index["body"]["competitions"]
++        self.assertEqual((entry["folder"], entry["image_url"]), ("WAL_2_cymru-north", reference))
++        cups = self.api("/api/cups/index")["body"]["cups"]
++        self.assertEqual([c.get("imageUrl") for c in cups if c["key"] == "WAL_2_cymru-north"], [reference])
++        # No logo: the field is absent, the body otherwise as before.
++        self.x("UPDATE core.competitions SET logo_asset_id = NULL WHERE id = %s", (competition,))
++        self.assertNotIn("image_url", self.api("/api/cup-index?kind=supplemental")["body"]["competitions"][0])
++
++
++class CupLogosTest(SnapshotDatabase):
++    """19.4 L1–L6: reviewed competition logos through curated.cup_logos."""
++
++    LOGOS = json.loads((REPO / "dashboard/shared/cup-logos.json").read_text())["logos"]
++
++    def competition(self, provider, key, name, logo=None):
++        comp = self.x("INSERT INTO core.competitions(name, logo_asset_id) VALUES (%s, %s) RETURNING id", (name, logo)).fetchone()[0]
++        self.x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('competition', %s, %s, %s)",
++               (provider, key, comp))
++        return comp
++
++    def logo(self, comp):
++        return self.x("""SELECT a.id, a.kind::text, a.source_url, a.author FROM core.competitions c
++                         LEFT JOIN core.assets a ON a.id = c.logo_asset_id WHERE c.id = %s""", (comp,)).fetchone()
++
++    def test_L1_to_L6(self):
++        own = self.x("INSERT INTO core.assets(kind, source_url) VALUES ('logo', 'https://cdn.pitchapi.dev/l/world-cup.png') RETURNING id").fetchone()[0]
++        ids = {
++            "aut": self.competition("vega", "cup:open-matchday:AUT_CUP_ofb-cup", "OFB Cup"),
++            "aut_archive": self.competition("vega", "cup:open-cups:austria-cup-archive", "austria-cup-archive"),
++            "dfb": self.competition("vega", "cup:open-matchday:GER_CUP_dfb-pokal", "DFB-Pokal"),
++            "dfb_archive": self.competition("vega", "cup:open-cups:germany-cup-archive", "germany-cup-archive"),
++            "dfb_openligadb": self.competition("vega", "cup:openligadb:germany-cup", "germany-cup"),
++            "unl": self.competition("vega", "cup:openligadb:nations-league", "nations-league"),
++            "unl_results": self.competition("vega", "cup:nations-results:nations-league", "nations-league"),
++            "world_cup": self.competition("pitchapi", "l_1XLtP0", "World Cup"),
++        }
++        self.x("""INSERT INTO core.family_artwork_qualifications(competition_id,asset_id,certificate,manifest_sha256)
++                  VALUES (%s,%s,'{"asset_role":"competition_logo","competition_identity_only":true}',repeat('a',64))""",
++               (ids["world_cup"], own))
++        self.x("UPDATE core.competitions SET logo_asset_id=%s WHERE id=%s", (own, ids["world_cup"]))
++        with self.db.transaction():
++            curated.cup_logos(self.db)
++        aut = self.logo(ids["aut"])
++        self.assertEqual(aut[1:], ("logo", self.LOGOS["open-matchday:AUT_CUP_ofb-cup"]["imageUrl"], "SportScore"))
++        self.assertEqual(self.logo(ids["aut_archive"])[0], aut[0])
++        self.assertEqual(self.logo(ids["dfb"])[2], self.LOGOS["open-matchday:GER_CUP_dfb-pokal"]["imageUrl"])
++        self.assertEqual({self.logo(ids[k])[0] for k in ("dfb", "dfb_archive", "dfb_openligadb")}, {self.logo(ids["dfb"])[0]})
++        self.assertEqual(self.logo(ids["unl_results"])[0], self.logo(ids["unl"])[0])
++        self.assertEqual(self.logo(ids["unl"])[2], self.LOGOS["openligadb:nations-league"]["imageUrl"])
++        self.assertEqual(self.logo(ids["world_cup"])[0], own)  # L4
++        # L3: the competitions of the other keys are not in this base: nothing created for them.
++        self.assertEqual(self.x("SELECT count(*) FROM core.competitions").fetchone()[0], len(ids))
++        # L6: a second pass writes nothing.
++        assets = self.x("SELECT count(*) FROM core.assets").fetchone()[0]
++        rows = self.x("SELECT id, logo_asset_id, updated_at, xmin::text FROM core.competitions ORDER BY id").fetchall()
++        with self.db.transaction():
++            curated.cup_logos(self.db)
++        self.assertEqual(self.x("SELECT count(*) FROM core.assets").fetchone()[0], assets)
++        self.assertEqual(self.x("SELECT id, logo_asset_id, updated_at, xmin::text FROM core.competitions ORDER BY id").fetchall(), rows)
++
++
++class CupLogoKeysTest(unittest.TestCase):
++    def test_L5_every_logo_key_and_alias_is_named_by_a_source_family_or_the_site(self):
++        logos = json.loads((REPO / "dashboard/shared/cup-logos.json").read_text())["logos"]
++        for key in logos:
++            self.assertTrue(key.startswith("l_") or key.split(":", 1)[0] in curated.CUP_FAMILY, key)
++        archives = dict(re.findall(r'"([A-Z]{3}_CUP_[a-z0-9-]+)": \{ key: "([a-z-]+)"',
++                                   (REPO / "dashboard/frontend/src/services/cup-archives.js").read_text()))
++        self.assertEqual(sorted(archives.values()), sorted(cups.NATIONAL_CUP_ARCHIVES))
++        site = {(f"open-matchday:{folder}", f"cup:open-cups:{key}") for folder, key in archives.items()}
++        site |= {("open-matchday:GER_CUP_dfb-pokal", "cup:openligadb:germany-cup"),
++                 ("openligadb:nations-league", "cup:nations-results:nations-league")}
++        aliases = {(key, also) for key, targets in curated.CUP_LOGO_ALSO.items() for also in targets}
++        self.assertEqual(aliases, site)
++        self.assertTrue(all(key in logos for key, _ in aliases))
++
++
++if __name__ == "__main__":
++    unittest.main()
++
++
++class CupPublishedPhasesTest(CupCatalogueLogoTest):
++    def edition_response(self, competition, season):
++        [public] = self.x("SELECT competition_id FROM api.cup_editions WHERE competition=%s AND season=%s",
++                          (competition, season)).fetchone()
++        return self.api(f"/api/cups/edition?competition={public}&season={season}")["body"]
++
++    def test_verified_award_and_source_loss(self):
++        text = (ROOT / "tests/fixtures/openfootball/france-2024.txt").read_text()
++        key = "france-cup:2024/2025"
++        self.assertEqual(self.read_cup(key, text.replace("[awarded]", ""), NOW), "ok")
++        match = lambda: next(m for m in self.edition_response("france-cup", "2024/2025")["matches"]
++                             if m["team1"] == "Tours FC" and m["team2"] == "FC Lorient")
++        self.assertEqual(match()["score"], {"ft": [0, 3]})
++        self.assertEqual(self.read_cup(key, text, NOW + timedelta(days=1)), "ok")
++        approved = match()
++        self.assertEqual((approved["status"], approved["awardScore"]), ("awarded", [0, 3]))
++        self.assertIn("fff.fr", approved["awardReason"]["source"])
++        self.assertNotIn("score", approved)
++        before = self.matches(key)
++        self.assertEqual(self.read_cup(key, text.replace("[awarded]", ""), NOW + timedelta(days=2)), "PERIODS_CONFLICT")
++        self.assertEqual(self.matches(key), before)
++        self.assertEqual(match(), approved)
++
++    def test_club_world_cup_22_halves_and_edition_notification(self):
++        from vega.worker import publish
++
++        count = 0
++        for year in (2021, 2022, 2023):
++            key = f"club-world-cup:{year}"
++            text = (ROOT / f"tests/fixtures/openfootball/openfootball-{year}.txt").read_text()
++            self.assertEqual(self.read_cup(key, text, NOW), "ok")
++            matches = self.edition_response("club-world-cup", str(year))["matches"]
++            count += len(matches)
++            self.assertTrue(all(m["score"].get("ht") is not None for m in matches))
++            if year == 2021:
++                self.assertEqual(matches[-1]["score"], {"ft": [1, 1], "ht": [0, 0], "et": [2, 1]})
++            generation = publish(self.db, NOW, force=True)
++            self.assertIsNotNone(generation)
++            old = self.matches(key)
++            self.assertEqual(self.read_cup(key, text, NOW + timedelta(days=1)), "ok")
++            self.assertIsNone(publish(self.db, NOW + timedelta(days=1), force=True))
++            self.assertEqual(self.matches(key), old)
++        self.assertEqual(count, 22)
+diff --git a/backend/tests/test_sources.py b/backend/tests/test_sources.py
+index 877d61c4d9..ffe50c023a 100644
+--- a/backend/tests/test_sources.py
++++ b/backend/tests/test_sources.py
+@@ -399,6 +399,13 @@ class UefaTest(unittest.TestCase):
+         x("""INSERT INTO core.teams(id, name, short_name, country_code) VALUES (30, 'Paris Saint-Germain', 'PSG', 'FRA'),
+              (31, 'Olympique de Marseille', 'Marseille', 'FRA'), (32, 'AS Monaco', NULL, 'FRA')""")
+         x("INSERT INTO core.team_seasons(team_id, competition_season_id) SELECT id, 70 FROM core.teams WHERE id IN (30, 31, 32)")
++        # The edition's own matches (FAILURE_MODES_SPORTSCORE.md §4): a table of 12 played a club is
++        # this edition's only if it has kicked off at least 8 a club (rule 11); here 8 each.
++        for n in range(12):
++            home, away = [(30, 31), (31, 32), (32, 30)][n % 3]
++            x("""INSERT INTO core.matches(competition_season_id, season_id, source, status, kickoff_at, home_team_id, away_team_id,
++                   home_score, away_score) VALUES (70, 2025, 'pitchapi', 'finished', %s, %s, %s, 1, 0)""",
++              (NOW - timedelta(days=n + 1), home, away))
+         table = [{"team": "Paris Saint Germain", "pos": 1, "p": 12, "w": 9, "d": 2, "l": 1, "gf": 30, "ga": 8, "gd": 22, "pts": 29},
+                  {"team": "Marseille", "pos": 2, "p": 12, "w": 8, "d": 2, "l": 2, "gf": 25, "ga": 12, "gd": 13, "pts": 26},
+                  {"team": "Monaco FC", "pos": 3, "p": 12, "w": 7, "d": 3, "l": 2, "gf": 20, "ga": 11, "gd": 9, "pts": 24}]
+@@ -430,12 +437,15 @@ class UefaTest(unittest.TestCase):
+         with self.db.transaction():
+             self.assertEqual(sportscore.run(self.db, get, "standings:l_4WFCIZ", NOW), (0, 0))
+         self.assertEqual(len(calls), 2)
+-        # A table naming clubs of another season: nothing official is kept.
++        # A table naming clubs the edition does not hold is refused and the accepted table stays
++        # (VI-29, FAILURE_MODES_SPORTSCORE.md §4: it used to be deleted, the version raised, "ok").
+         table[1]["team"], table[2]["team"] = "Paris FC", "Le Havre"
+-        with self.db.transaction():
+-            self.assertEqual(sportscore.run(self.db, get, "standings:l_3FJFUl", NOW), (0, 2))
+-        self.assertEqual(standings(), [])
+-        self.assertGreater(version(), published)
++        with self.assertRaises(SourceError) as refused:
++            with self.db.transaction():
++                sportscore.run(self.db, get, "standings:l_3FJFUl", NOW)
++        self.assertEqual(refused.exception.code, "UNMATCHED_TEAMS")
++        self.assertEqual(standings(), [(30, 1, 29), (31, 2, 26), (32, 3, 24)])
++        self.assertEqual(version(), published)
+         payload["competition_slug"] = "other"
+         with self.assertRaises(SourceError):
+             sportscore.run(self.db, get, "standings:l_3FJFUl", NOW)
+diff --git a/backend/tests/test_sportscore_standings.py b/backend/tests/test_sportscore_standings.py
+new file mode 100644
+index 0000000000..1362229499
+--- /dev/null
++++ b/backend/tests/test_sportscore_standings.py
+@@ -0,0 +1,75 @@
++"""SportScore official standings through sources.run_due, PostgreSQL and api.standing_rows:
++the cases of docs/calculs/09-audit-2026-11/FAILURE_MODES_SPORTSCORE.md §3 (sportscore_cases.py).
++The widget answers from memory; the end-to-end replay of the same cases over HTTPS and the read
++API is the VI-27 track's script."""
++
++import os
++from pathlib import Path
++import sys
++import unittest
++from urllib.parse import urlparse
++
++ROOT = Path(__file__).resolve().parents[1]
++sys.path.insert(0, str(ROOT))
++sys.path.insert(0, str(ROOT / "tests"))
++from vega import sources
++from vega.sources import SourceError, sportscore
++from sportscore_cases import CASES
++import sportscore_replay as replay
++
++try:
++    import psycopg
++except ImportError:
++    psycopg = None
++DSN = os.environ.get("VEGA_V2_SOURCES_TEST_DSN")
++
++
++@unittest.skipUnless(DSN and psycopg, "requires disposable local sources DB and psycopg")
++class SportScoreStandingsTest(unittest.TestCase):
++    @classmethod
++    def setUpClass(cls):
++        from vega.store import Store, connect_local, migrate
++
++        target = urlparse(DSN)
++        if target.hostname not in ("localhost", "127.0.0.1", "::1") or target.path != "/vega_v2_sources_test":
++            raise RuntimeError("dedicated local sources DB required")
++        cls.db = connect_local(DSN)
++        cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
++        migrate(cls.db)
++        with cls.db.transaction():
++            replay.build(cls.db, Store(cls.db))
++
++    @classmethod
++    def tearDownClass(cls):
++        cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
++        cls.db.close()
++
++    def test_every_case(self):
++        for index, case in enumerate(CASES, 1):
++            flipped = False
++            for number, step in enumerate(case["steps"]):
++                with self.subTest(case=case["id"], step=number, note=case["note"]):
++                    for event in step["before"]:
++                        replay.apply(self.db, index, event)
++                        flipped |= event[0] == "flip"
++
++                    def get(url, body=step["body"]):
++                        answer = replay.widget(body, replay.slug_of(url))
++                        if isinstance(answer, int):
++                            raise SourceError(f"HTTP_{answer}")
++                        return answer
++
++                    code = replay.play(sources, sportscore, self.db, case, step, get)
++                    seen = replay.observe(self.db, index, case, code, flipped)
++                    self.assertEqual(replay.compare(step["expect"], seen), {})
++        # A refusal names what it refused, for whoever reads ops.parse_failures (S4).
++        rows = self.db.execute(
++            "SELECT error_code, message FROM ops.parse_failures WHERE message LIKE %s", ("sportscore:standings:l_0ALvwF:%",)
++        ).fetchall()
++        self.assertEqual([r[0] for r in rows], ["UNMATCHED_TEAMS"])
++        self.assertIn("Ghost Wanderers", rows[0][1])
++        self.assertIn("Harbour United", rows[0][1])
++
++
++if __name__ == "__main__":
++    unittest.main()
+diff --git a/backend/tests/test_transfermarkt.py b/backend/tests/test_transfermarkt.py
+index 9cfb552490..f462bf4937 100644
+--- a/backend/tests/test_transfermarkt.py
++++ b/backend/tests/test_transfermarkt.py
+@@ -70,8 +70,10 @@ class PureTest(unittest.TestCase):
+             {"id": 3, "transferSource": {"clubId": 1}, "transferDestination": {"clubId": 2}, "typeDetails": {"type": "ACTIVE_LOAN_TRANSFER"},
+              "details": {"date": "2015-01-01", "isPending": True}},
+         ]}})
++        # A free transfer states a fee of 0, an observed zero; it read None before VI-31, which kept a
++        # correction to a free transfer from applying (FAILURE_MODES.md §20, case 20l).
+         self.assertEqual([(t["key"], t["kind"], t["fee"], t["from"], t["to"], t["pending"]) for t in transfers],
+-                         [("1", "transfer", 180000000, "3524", "583", False), ("2", "free", None, "583", "418", False), ("3", "loan", None, "1", "2", True)])
++                         [("1", "transfer", 180000000, "3524", "583", False), ("2", "free", 0, "583", "418", False), ("3", "loan", None, "1", "2", True)])
+         self.assertEqual(tm.parse_transfers(None), [])
+         injuries = tm.parse_injuries({"injuries": [
+             {"seasonId": 2025, "name": "Hamstring injury", "start": "2026-03-01", "end": "2026-03-20", "missedGamesCount": 4},

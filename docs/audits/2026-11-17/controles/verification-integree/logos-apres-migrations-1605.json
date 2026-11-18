@@ -1,0 +1,44 @@
+{
+  "status": "passed",
+  "db": "vega_v2_vi27_art_snapshot_caf1605migrate18",
+  "added_migrations": [
+    "135_cup_competition_logo.sql",
+    "136_cup_table_sides.sql",
+    "137_half_metric_coverage.sql",
+    "138_sportscore_standings.sql",
+    "139_transfermarkt_history.sql",
+    "140_archive_apply_decisions.sql",
+    "141_archive_removal_guards.sql",
+    "142_edition_artwork_provenance.sql",
+    "143_archive_match_attestations.sql",
+    "144_edition_artwork_reads.sql",
+    "145_dfb_period_observations.sql",
+    "146_world_cup_family_artwork.sql",
+    "147_j1_standings_observation.sql",
+    "148_attested_archive_scores.sql",
+    "149_validate_archive_attestation.sql"
+  ],
+  "old_pointers_including_pack": 3216,
+  "preserved_pointers_including_pack": 3214,
+  "asset_rows_unchanged": 3626,
+  "changed_family_version_keys": 26,
+  "changed": [
+    [
+      "competition",
+      64,
+      880975,
+      null
+    ],
+    [
+      "competition",
+      198,
+      268556,
+      null
+    ]
+  ],
+  "pack_repeat": {
+    "already_linked": 1605
+  },
+  "migration_repeat_unchanged": true,
+  "production_writes": 0
+}

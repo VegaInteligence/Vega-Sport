@@ -1,3 +1,5 @@
+[Situation consolidée, mesures et correctifs du 18 novembre](SITUATION.md) · Cette page conserve les constats et les limites à la date de chaque relevé.
+
 # État de la branche dans la nuit du 17 au 18 novembre
 
 [État des décisions et des validations](ETAT.md)

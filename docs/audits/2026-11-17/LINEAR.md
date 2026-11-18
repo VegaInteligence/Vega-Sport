@@ -1,3 +1,5 @@
+[Situation consolidée, mesures et correctifs du 18 novembre](SITUATION.md) · Cette page conserve les constats et les limites à la date de chaque relevé.
+
 Le rapport date ses observations. Ses chemins de preuve sont relatifs au sous-dossier correspondant de l’archive de vérification fournie avec la revue.
 
 **Clôture de la vérification de déploiement.** Les huit tickets du tableau étaient clos à la relecture. Le [rapport](README.md) ajoute les vérifications en navigateur et les résultats RDS complémentaires après le premier passage.

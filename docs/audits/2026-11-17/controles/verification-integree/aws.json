@@ -1,0 +1,42 @@
+{
+  "time_utc": "2026-11-18T13:57:34.411231+00:00",
+  "remote_main": "17ca0f76175301e77ae43fe137467222f594b40a",
+  "compared_release": "8018e0836ca0f32e8b2eb51fc2847154abff7f13",
+  "ecs": [
+    {
+      "name": "vega-v2-worker",
+      "definition": "arn:aws:ecs:us-east-2:361769570630:task-definition/vega-v2-worker:142",
+      "running": 1,
+      "pending": 0,
+      "state": "COMPLETED"
+    },
+    {
+      "name": "vega-v2-backfill",
+      "definition": "arn:aws:ecs:us-east-2:361769570630:task-definition/vega-v2-backfill:142",
+      "running": 1,
+      "pending": 0,
+      "state": "COMPLETED"
+    }
+  ],
+  "api": {
+    "name": "vega-v2-api",
+    "sha": "rrXidCMW2nHD70WCaIyXWq11mYRQqTjaQufyhcsrcUE=",
+    "updated": "2026-11-17T16:02:15.000+0000"
+  },
+  "live": {
+    "name": "vega-v2-live-read",
+    "sha": "jDiA+lBgjfBQ9lIfHG0VUdpOKx4ZUdzxY2FSTauCNyQ=",
+    "updated": "2026-11-17T11:45:48.000+0000"
+  },
+  "main_file_delta": [
+    "WORKLOG.md"
+  ],
+  "current_task_definitions_equal_initial": {
+    "vega-v2-worker": true,
+    "vega-v2-backfill": true
+  },
+  "lambda_checksums_equal_local_zip": {
+    "api": true,
+    "live": true
+  }
+}
