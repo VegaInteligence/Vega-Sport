@@ -12,7 +12,7 @@ may split exhaustively, and explicit retirement is reviewed in RETIRED_TABLES), 
 clubs too (a group keeps its clubs; a ranking across groups may change members but never shrinks,
 unless a row is reviewed out in RETIRED_ROWS), and no club's played count going down unless the
 results attest it. Anything else is refused with its code: the scope fails (sources.run_due), the accepted
-table keeps its rows and its date, and the scope is tried again after RETRY_AFTER. A name of a club
+table keeps its rows and its date, and the scope is tried again at the content or transport cadence. A name of a club
 of the previous or next edition is wrong-season evidence (WRONG_EDITION); a name nothing
 designates is missing evidence (UNMATCHED_TEAMS). No row is ever given to a team by elimination.
 The first table also needs the league roster or positive evidence of the native group phase.
@@ -20,17 +20,20 @@ The writer reads and replaces SportScore's rows without a stage only (OWN).
 
 Each accepted row keeps its basis: the club's results Vega counted when it was observed
 (core.table_results, migration 138). api.standings serves SportScore's table, and no other
-provider's, while it holds every club of Vega's own table and every basis is still the club's
-counted results; otherwise Vega's own table. A valid repeat moves the observation time only while
-the table is not behind those results.
+provider's, until the current results supersede it and a current, adequately covered
+Vega table is ready (migration 150). A valid repeat advances the observation time when
+the table still qualifies, including a fresh organiser proof for a short Swedish calendar.
 """
 
+from collections import Counter, defaultdict
 from datetime import timedelta
 import json
 import re
 import unicodedata
+from functools import partial
 from urllib.parse import urlencode
 
+from ..models import _is_league
 from . import SourceError, normalize
 
 URL = "https://sportscore.com/api/widget/standings/"
@@ -160,10 +163,18 @@ ALLSVENSKAN_FIELDS = ("gp", "w", "t", "l", "gf", "ga")
 ALLSVENSKAN_BP = 25591
 PROOF_TTL = PERIOD + timedelta(minutes=5)
 _allsvenskan_proof = None
+# Captured native schedules of the 2026/27 league phases. Other editions need their own evidence.
+UEFA_LEAGUE_PHASES = {"l_0bfbkO": 8, "l_38d9HA": 8, "l_2WZ2tt": 6}
+UEFA_LEAGUE_SEASON = "2026/2027"
+CONTENT_REFUSALS = frozenset({
+    "UNEXPECTED_RESPONSE", "INVALID_ROW", "EMPTY_TABLE", "DUPLICATE_GROUP", "DUPLICATE_POSITION",
+    "DUPLICATE_ROW", "WRONG_EDITION", "UNMATCHED_TEAMS", "UNVERIFIED_EDITION", "INCOMPLETE_TABLE",
+    "UNVERIFIED_TABLE", "MISSING_FIELD", "PLAYED_DECREASED",
+})
 # The matches of rounds Vega's table counts that the edition has kicked off by an instant, per club.
 KICKED_OFF = """SELECT x.team_id, count(*) FROM core.matches m LEFT JOIN core.rounds r ON r.id = m.round_id
   CROSS JOIN LATERAL (VALUES (m.home_team_id), (m.away_team_id)) AS x(team_id)
-  WHERE m.competition_season_id = %s AND m.kickoff_at <= %s AND x.team_id IS NOT NULL
+  WHERE m.competition_season_id = %s AND m.kickoff_at <= %s AND m.status <> 'canceled' AND x.team_id IS NOT NULL
     AND coalesce(r.stage, 'regular') IN ('regular', 'group')
   GROUP BY x.team_id"""
 # A row stored before 138 has no basis: it is behind once a counted match finished after it.
@@ -176,6 +187,10 @@ FINISHED_SINCE = """SELECT EXISTS (
 
 def scopes(now):
     return {f"standings:{key}": PERIOD for key in LEAGUES}
+
+
+def retry_after(code, period, transient):
+    return period if code in CONTENT_REFUSALS else min(period, transient)
 
 
 def _number(row, key, where):
@@ -396,8 +411,8 @@ def _allsvenskan_rows(payload, year):
     return totals
 
 
-def _prove_allsvenskan(conn, get, edition, year, fresh, now):
-    """Link the organiser's clubs to the same edition and compare all sporting totals."""
+def _prove_allsvenskan(conn, get, edition, year, fresh, now, *, require_fresh=False):
+    """Corroborate the edition and all sporting totals. Return whether this run fetched the proof."""
     global _allsvenskan_proof
     target = {team: tuple(row[field] for field in RESULTS) for (group, team), row in fresh.items() if group is None}
     if len(target) != len(fresh):
@@ -410,16 +425,19 @@ def _prove_allsvenskan(conn, get, edition, year, fresh, now):
         return {teams[name]: numbers for name, numbers in totals.items()} == target
 
     cached = _allsvenskan_proof
-    if cached and cached[0] == year and cached[1] <= now < cached[1] + PROOF_TTL:
+    if not require_fresh and cached and cached[:2] == (edition, year) and cached[2] <= now < cached[2] + PROOF_TTL:
         # A new result cannot reuse the previous organiser table, even inside the TTL.
         try:
-            if matches(cached[2]):
-                return
+            if matches(cached[3]):
+                return False
         except SourceError:
             pass
     query = urlencode({"query": ALLSVENSKAN_QUERY, "variables": json.dumps({"year": year})})
     try:
         payload = get(f"{ALLSVENSKAN_URL}?{query}")
+    except SourceError as error:
+        raise SourceError("ORGANISER_UNAVAILABLE", f"edition {edition}: Allsvenskan {year}: {error.code}") from None
+    try:
         if not isinstance(payload, dict):
             raise ValueError("invalid organiser response")
         totals = _allsvenskan_rows(payload, year)
@@ -428,10 +446,11 @@ def _prove_allsvenskan(conn, get, edition, year, fresh, now):
     except (SourceError, KeyError, TypeError, ValueError) as error:
         detail = error.code if isinstance(error, SourceError) else str(error) if isinstance(error, ValueError) else "invalid organiser response"
         raise SourceError("UNVERIFIED_EDITION", f"edition {edition}: Allsvenskan {year}: {detail}") from None
-    _allsvenskan_proof = (year, now, totals)
+    _allsvenskan_proof = (edition, year, now, totals)
+    return True
 
 
-def qualify(conn, get, key, edition, native_label, year, fresh, counted, now):
+def qualify(conn, edition, fresh, counted, now, verify):
     """The edition's own results against the response (§2.1, rules 11-12); SourceError otherwise.
     fresh is {(group, team): row}, counted {team: core.table_results' results}."""
     played = {}
@@ -439,9 +458,10 @@ def qualify(conn, get, key, edition, native_label, year, fresh, counted, now):
         played[team] = max(played.get(team, 0), row["played"])
     kicked = dict(conn.execute(KICKED_OFF, (edition, now)).fetchall())
     ahead = {team: p for team, p in played.items() if p > kicked.get(team, 0) + SLACK}
+    fetched_proof = False
     if len(ahead) == len(played):
-        if key == ALLSVENSKAN and native_label == str(year):
-            _prove_allsvenskan(conn, get, edition, year, fresh, now)
+        if verify is not None:
+            fetched_proof = verify()
         else:
             names = _team_names(conn, ahead)
             raise SourceError("WRONG_EDITION", f"edition {edition}: every club ahead of the matches kicked off: "
@@ -451,6 +471,7 @@ def qualify(conn, get, key, edition, native_label, year, fresh, counted, now):
         names = _team_names(conn, absent)
         raise SourceError("INCOMPLETE_TABLE", f"edition {edition}: clubs of Vega's table missing: "
                           + ", ".join(f"{names[t]} ({counted[t][0]} counted)" for t in absent))
+    return fetched_proof
 
 
 def _clubs_by_table(rows):
@@ -465,49 +486,63 @@ def _group_key(name):
     return normalize(re.sub(r"^(?:group|groupe)\s+", "", (name or "").strip(), flags=re.IGNORECASE))
 
 
-def _first_observation(conn, edition, kind, tables, linked, members):
-    """A first read must cover the evidenced population, including clubs on zero matches."""
-    proposed = {_group_key(name): {linked[row["name"]] for row in rows} for name, rows in tables}
+def _first_observation(conn, key, edition, season, native_label, kind, name, country, tables, linked, members):
+    """Admit only a full roster of a supported, independently evidenced first phase."""
+    proposed = {_group_key(label): {linked[row["name"]] for row in rows} for label, rows in tables}
+    present = set().union(*proposed.values())
     if len(proposed) != len(tables):
         raise SourceError("UNVERIFIED_TABLE", f"edition {edition}: ambiguous group names")
 
-    # Named groups are independent of the season's union of clubs, which can include another
-    # phase. A scheduled fixture is evidence of membership even before either club has played.
-    phase = {}
-    for name, team in conn.execute(
-        """SELECT DISTINCT m.group_name, x.team_id
+    phases = defaultdict(set)
+    groups = defaultdict(set)
+    scheduled = Counter()
+    for stage, group, team in conn.execute(
+        """SELECT coalesce(r.stage, 'regular'), nullif(btrim(m.group_name), ''), x.team_id
            FROM core.matches m LEFT JOIN core.rounds r ON r.id = m.round_id
            CROSS JOIN LATERAL (VALUES (m.home_team_id), (m.away_team_id)) x(team_id)
-           WHERE m.competition_season_id = %s AND m.status <> 'canceled' AND x.team_id IS NOT NULL
-             AND nullif(btrim(m.group_name), '') IS NOT NULL
-             AND coalesce(r.stage, 'regular') IN ('regular', 'group')""", (edition,)
+           WHERE m.competition_season_id = %s AND m.status <> 'canceled' AND x.team_id IS NOT NULL""", (edition,)
     ):
-        phase.setdefault(_group_key(name), set()).add(team)
+        phases[stage].add(team)
+        if stage in ("regular", "group"):
+            scheduled[team] += 1
+            if group is not None:
+                groups[_group_key(group)].add(team)
 
-    if phase:
-        known = set().union(*phase.values())
-        if sum(map(len, phase.values())) != len(known):
-            raise SourceError("UNVERIFIED_TABLE", f"edition {edition}: native groups overlap across phases")
-        for name, expected in sorted(phase.items()):
-            if name in proposed:
-                complete = proposed[name] & known == expected
-            else:
-                complete = any(clubs & known == expected for label, clubs in proposed.items() if label not in phase)
-            if not complete:
-                raise SourceError("INCOMPLETE_TABLE", f"edition {edition}: group {name!r} does not cover its native roster")
+    # A registered club is exempt only when independent phase data places it solely in qualifying.
+    qualifying_only = phases["qualifying"] - set().union(*(clubs for stage, clubs in phases.items() if stage != "qualifying"))
+    expected = members - qualifying_only
+    if groups:
+        known = set().union(*groups.values())
+        if sum(map(len, groups.values())) != len(known) or known != expected or known != set(scheduled):
+            raise SourceError("UNVERIFIED_TABLE", f"edition {edition}: incomplete or overlapping native groups")
+        claimed = set()
+        for label, clubs in sorted(groups.items()):
+            matches = [label] if label in proposed else [p for p, roster in proposed.items() if p not in groups and roster == clubs]
+            if len(matches) != 1 or proposed[matches[0]] != clubs:
+                raise SourceError("INCOMPLETE_TABLE", f"edition {edition}: group {label!r} does not cover its native roster")
+            claimed.add(matches[0])
+        # An additional ranking may only reuse clubs already assigned to the evidenced phase.
+        if present != known or any(sum(bool(roster & group) for group in groups.values()) < 2
+                                   for label, roster in proposed.items() if label not in claimed):
+            raise SourceError("UNVERIFIED_TABLE", f"edition {edition}: another table has no supported native phase")
         return
 
-    present = set().union(*proposed.values())
-    # Without phase evidence, an ordinary league can publish the entire roster, including at
-    # zero played. A smaller named phase or an unverified cup cannot use the league's roster.
-    partition = sum(map(len, proposed.values())) == len(present)
-    absent = members - present
-    if kind != "league" or not partition or (absent and set(proposed) != {""}):
-        raise SourceError("UNVERIFIED_TABLE", f"edition {edition}: the table's phase or full roster is unverified")
+    uefa_phase = (
+        country == "INT-2" and key in UEFA_LEAGUE_PHASES and season == native_label == UEFA_LEAGUE_SEASON
+        and len(scheduled) == 36 and set(scheduled.values()) == {UEFA_LEAGUE_PHASES[key]} and not phases["group"]
+    )
+    domestic_league = _is_league(kind, name, country) and not phases["group"]
+    if len(proposed) != 1 or not (domestic_league or uefa_phase):
+        raise SourceError("UNVERIFIED_TABLE", f"edition {edition}: the table's phase or format is unverified")
+    absent = expected - present
     if absent:
         names = _team_names(conn, absent)
-        raise SourceError("INCOMPLETE_TABLE", f"edition {edition}: clubs of the league roster missing: "
+        raise SourceError("INCOMPLETE_TABLE", f"edition {edition}: clubs of the native roster missing: "
                           + ", ".join(names[team] for team in sorted(absent)))
+    no_fixtures = not any(phases.values())
+    all_zero = all(row[field] in (None, 0) for _, rows in tables for row in rows for field in (*RESULTS, "points"))
+    if present != expected or (set(scheduled) != expected and not (no_fixtures and all_zero)):
+        raise SourceError("UNVERIFIED_TABLE", f"edition {edition}: the scheduled phase does not attest the proposed roster")
 
 
 def _public_ids(conn, teams):
@@ -610,7 +645,7 @@ def _publish(conn, edition):
     )
 
 
-def repeat(conn, edition, stored, observed, counted, now):
+def repeat(conn, edition, stored, observed, counted, now, verify=None, fetched_proof=False):
     """The same table seen again (§2.2): nothing written unless the observation time may move."""
     def renew(teams):
         conn.execute(f"UPDATE core.standings_official SET as_of = %s WHERE {OWN}", (now, edition))
@@ -621,26 +656,29 @@ def repeat(conn, edition, stored, observed, counted, now):
             _publish(conn, edition)  # api.standings may serve the official table again
 
     if any(row["basis"] is None for row in stored.values()):
-        # Stored before 138: it gets its basis unless a counted match finished after it.
-        if observed is None or not conn.execute(FINISHED_SINCE, (edition, observed)).fetchone()[0]:
-            renew({team for _, team in stored})
-        return
-    moved = {team for (_, team), row in stored.items() if row["basis"] != counted.get(team, NO_RESULT)}
-    caught_up = all(
-        any(all(row[f] is None or row[f] == v for f, v in zip(RESULTS, counted.get(team, NO_RESULT)))
-            for (_, t), row in stored.items() if t == team)
-        for team in moved)
-    if caught_up:
-        # Nothing counted since, or our results caught up with the table: it is current now.
-        renew(moved)
-    # Otherwise SportScore is behind the results: its observation time and basis stay.
+        # Rows written before 138 have no basis. A later result requires positive proof.
+        moved = {team for _, team in stored}
+        caught_up = observed is None or not conn.execute(FINISHED_SINCE, (edition, observed)).fetchone()[0]
+    else:
+        moved = {team for (_, team), row in stored.items() if row["basis"] != counted.get(team, NO_RESULT)}
+        caught_up = all(
+            any(all(row[f] is None or row[f] == v for f, v in zip(RESULTS, counted.get(team, NO_RESULT)))
+                for (_, t), row in stored.items() if t == team)
+            for team in moved)
+    if not caught_up:
+        shortfall = {row["played"] - counted.get(team, NO_RESULT)[0] for (_, team), row in stored.items()}
+        if verify is None or min(shortfall) < 0 or max(shortfall) == 0:
+            return
+        if not fetched_proof:
+            verify(require_fresh=True)
+    renew(moved)
 
 
 def run(conn, get, scope, now):
     key = scope.split(":", 1)[1]
     slug = LEAGUES[key]
     edition = conn.execute(
-        """SELECT cs.id, se.label, cs.native_label, se.id, c.kind::text
+        """SELECT cs.id, se.label, cs.native_label, se.id, c.kind::text, c.name, c.country_code
            FROM core.provider_ids p JOIN core.competition_seasons cs ON cs.competition_id = p.entity_id
            JOIN core.seasons se ON se.id = cs.season_id
            JOIN core.competitions c ON c.id = cs.competition_id
@@ -649,7 +687,7 @@ def run(conn, get, scope, now):
     ).fetchone()
     if edition is None:  # not collected (yet): no call
         return 0, 0
-    edition, season, native_label, year, kind = edition
+    edition, season, native_label, year, kind, name, country = edition
     tables = parse(get(URL + "?" + urlencode({"sport": "football", "slug": slug})), slug)
     check(tables)
     teams = link(conn, edition, tables)
@@ -657,7 +695,10 @@ def run(conn, get, scope, now):
     fresh = {(group if keep_groups else None, teams[row["name"]]): row for group, rows in tables for row in rows}
     counted = {team: tuple(results) for team, results in conn.execute(
         "SELECT team_id, results FROM core.table_results(%s)", (edition,)).fetchall()}
-    qualify(conn, get, key, edition, native_label, year, fresh, counted, now)
+    verify = None
+    if key == ALLSVENSKAN and native_label == str(year):
+        verify = partial(_prove_allsvenskan, conn, get, edition, year, fresh, now)
+    fetched_proof = qualify(conn, edition, fresh, counted, now, verify)
     stored = {}
     observed = None
     for group, team, *values, basis, as_of in conn.execute(
@@ -667,10 +708,10 @@ def run(conn, get, scope, now):
         observed = as_of if observed is None or (as_of is not None and as_of < observed) else observed
     members = {team for (team,) in conn.execute("SELECT team_id FROM core.team_seasons WHERE competition_season_id = %s", (edition,))}
     if not stored:
-        _first_observation(conn, edition, kind, tables, teams, members)
+        _first_observation(conn, key, edition, season, native_label, kind, name, country, tables, teams, members)
     compare(conn, edition, (key, season), fresh, stored, members, {team: row["name"] for (_, team), row in fresh.items()}, counted)
     if {k: {f: r[f] for f in FIELDS} for k, r in fresh.items()} == {k: {f: r[f] for f in FIELDS} for k, r in stored.items()}:
-        repeat(conn, edition, stored, observed, counted, now)
+        repeat(conn, edition, stored, observed, counted, now, verify, fetched_proof)
         return 0, 0
     conn.execute(f"DELETE FROM core.standings_official WHERE {OWN}", (edition,))
     for (group, team), row in sorted(fresh.items(), key=lambda item: (item[0][0] or "", item[1]["position"], item[0][1])):

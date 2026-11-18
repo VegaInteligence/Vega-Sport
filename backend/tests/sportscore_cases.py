@@ -68,9 +68,9 @@ START = [row("Aster City", 1, 3, 1, 0, 8, 1, 8), row("Birch Town", 2, 2, 1, 1, 5
          row("Cedar Athletic", 3, 0, 1, 3, 2, 7, 1)]
 VEGA = vega_rows([("Aster City", 1, 3, 1, 0, 8, 1), ("Birch Town", 2, 2, 1, 1, 5, 4), ("Cedar Athletic", 3, 0, 1, 3, 2, 7)])
 # Aster City 1-0 Birch Town, then Vega's table counting it.
-VEGA_AFTER = vega_rows([("Aster City", 1, 4, 1, 0, 9, 1), ("Birch Town", 2, 2, 1, 2, 5, 5), ("Cedar Athletic", 3, 0, 1, 3, 2, 7)])
-AFTER = [row("Aster City", 1, 4, 1, 0, 9, 1, 11), row("Birch Town", 2, 2, 1, 2, 5, 5, 7),
-         row("Cedar Athletic", 3, 0, 1, 3, 2, 7, 1)]
+VEGA_AFTER = vega_rows([("Aster City", 1, 4, 1, 0, 9, 1), ("Birch Town", 2, 1, 1, 3, 3, 6), ("Cedar Athletic", 3, 1, 0, 3, 2, 7)])
+AFTER = [row("Aster City", 1, 4, 1, 0, 9, 1, 11), row("Birch Town", 2, 1, 1, 3, 3, 6, 4),
+         row("Cedar Athletic", 3, 1, 0, 3, 2, 7, 3)]
 # 2027/2028, first matchday.
 NEXT_TABLE = [row("Aster City", 1, 1, 0, 0, 2, 0, 3), row("Dune Town", 2, 0, 1, 0, 1, 1, 1),
               row("Birch Town", 3, 0, 1, 0, 0, 0, 1)]
@@ -167,7 +167,7 @@ CORRECTED_BASIS = dict(REAL_BASIS, **{"Birch Town": (4, 1, 2, 1, 3, 4), "Cedar A
 ANNULLED_BASIS = dict(REAL_BASIS, **{"Birch Town": (3, 1, 1, 1, 3, 4), "Cedar Athletic": (3, 0, 0, 3, 1, 7)})
 PHASE_BASIS = dict(REAL_BASIS, **{"Aster City": (5, 4, 1, 0, 9, 1), "Cedar Athletic": (5, 1, 0, 4, 2, 8)})
 NO_BASIS = {"Aster City": None, "Birch Town": None, "Cedar Athletic": None}
-AFTER_BASIS = {"Aster City": (1, 1, 0, 0, 1, 0), "Birch Town": (1, 0, 0, 1, 0, 1), "Cedar Athletic": (0, 0, 0, 0, 0, 0)}
+AFTER_BASIS = dict(REAL_BASIS, **{"Aster City": (5, 4, 1, 0, 9, 1), "Birch Town": (5, 1, 1, 3, 3, 6)})
 # A ranking across groups, as the World Cup's of third-placed teams: its clubs are also in their group.
 SECOND_NAME = "Ranking of second placed teams"
 SECOND = [row("Elm Park", 1, 0, 1, 0, 2, 2, 1), row("Birch Town", 2, 0, 0, 1, 0, 1, 0)]
@@ -226,11 +226,9 @@ CASES = [
                      expect=dict(code=None, as_of=T0, version=1, success=T0,
                                  official=stored((None, replace(START, 2, pos=2, w=2, d=1, l=1, p=4, gf=5, ga=4, pts=7))),
                                  served=served("SportScore", T0, (None, replace(START, 2, pos=2, pts=7)))))]),
-    dict(id="S12", key="l_0S1uaf", note="first observation: two groups, a 1st in each", accepted=False,
+    dict(id="S12", key="l_0S1uaf", note="first observation: two unevidenced groups", accepted=False,
          steps=[dict(at=T0, body=tables(("Group A", START[:2]), ("Group B", [dict(START[2], pos=1)])),
-                     expect=dict(code=None, as_of=T0, version=1, success=T0,
-                                 official=stored(("Group A", START[:2]), ("Group B", [dict(START[2], pos=1)])),
-                                 served=served("SportScore", T0, ("Group A", START[:2]), ("Group B", [dict(START[2], pos=1)]))))]),
+                     expect=dict(code="UNVERIFIED_TABLE", official=[], as_of=None, version=None, success=None, served=VEGA_SERVED))]),
     dict(id="S13", key="l_0uqFK8", note="the table splits into two named tables",
          steps=[dict(at=LATER, body=tables(("Top", START[:2]), ("Bottom", START[2:])),
                      expect=dict(code=None, as_of=LATER, version=2, success=LATER,
@@ -244,12 +242,14 @@ CASES = [
          steps=[dict(at=LATER, body=tables(("", START)),
                      expect=dict(UNCHANGED, as_of=LATER, success=LATER, served=served("SportScore", LATER, (None, START))))]),
     dict(id="S16", key="l_1D8Xrl", note="identical table after a counted match",
-         steps=[dict(at=LATER, before=[match(T0 + H, vega=VEGA_AFTER, vega_at=T0 + 2 * H)], body=tables(("", START)),
-                     expect=dict(UNCHANGED, version=2, success=LATER, served=served("Vega", T0 + 2 * H, (None, VEGA_AFTER))))]),
+         accepted=False, matches=REAL_GAMES, vega=REAL_VEGA,
+         steps=[dict(at=T0, body=tables(("", REAL)), expect=REAL_ACCEPTED),
+                dict(at=LATER, before=[match(T0 + H, vega=VEGA_AFTER, vega_at=T0 + 2 * H)], body=tables(("", REAL)),
+                     expect=dict(REAL_ACCEPTED, version=2, success=LATER, served=served("Vega", T0 + 2 * H, (None, VEGA_AFTER))))]),
     dict(id="S17", key="l_1dmt9H", note="the same refusal again, and the bounded retry",
          steps=[dict(at=LATER, body=tables(), expect=refused("EMPTY_TABLE")),
-                dict(at=LATER + H / 2, body=tables(), expect=refused("NOT_DUE")),
-                dict(at=LATER + H, body=tables(), expect=refused("EMPTY_TABLE"))]),
+                dict(at=LATER + H, body=tables(), expect=refused("NOT_DUE")),
+                dict(at=LATER + 2 * H, body=tables(), expect=refused("EMPTY_TABLE"))]),
     dict(id="S18", key="l_1eJSA7", note="HTTP 503",
          steps=[dict(at=LATER, body=503, expect=refused("HTTP_503"))]),
     dict(id="S19", key="l_1Isor4", note="no accepted table, the first response refused", accepted=False,
@@ -259,8 +259,10 @@ CASES = [
          steps=[dict(at=T0, body=tables(("", TWO_UNKNOWN)),
                      expect=dict(code="UNMATCHED_TEAMS", official=[], as_of=None, version=None, success=None, served=None))]),
     dict(id="S21", key="l_1LMdEO", note="behind after a counted match, refused, then a new complete table",
-         steps=[dict(at=LATER, before=[match(T0 + H, vega=VEGA_AFTER, vega_at=T0 + 2 * H)], body=tables(),
-                     expect=refused("EMPTY_TABLE", version=2, served=served("Vega", T0 + 2 * H, (None, VEGA_AFTER)))),
+         accepted=False, matches=REAL_GAMES, vega=REAL_VEGA,
+         steps=[dict(at=T0, body=tables(("", REAL)), expect=REAL_ACCEPTED),
+                dict(at=LATER, before=[match(T0 + H, vega=VEGA_AFTER, vega_at=T0 + 2 * H)], body=tables(),
+                     expect=dict(REAL_ACCEPTED, code="EMPTY_TABLE", version=2, served=served("Vega", T0 + 2 * H, (None, VEGA_AFTER)))),
                 dict(at=T0 + 6 * H, body=tables(("", AFTER)),
                      expect=dict(code=None, official=stored((None, AFTER)), as_of=T0 + 6 * H, version=3, success=T0 + 6 * H,
                                  served=served("SportScore", T0 + 6 * H, (None, AFTER))))]),
@@ -300,9 +302,10 @@ CASES = [
                      expect=dict(code=None, official=stored(("Group A", GROUP_A), ("Group B", GROUP_B)), as_of=LATER, version=1,
                                  success=LATER, served=served("SportScore", LATER, ("Group A", GROUP_A), ("Group B", GROUP_B))))]),
     dict(id="S29", key="l_1XsMdH", note="a match in play at the observation finishes after it",
-         matches=[game("ip", "Aster City", "Birch Town", (1, 0), T0 - H, status="in_play")],
-         steps=[dict(at=LATER, before=[result("ip", (1, 0), T0 + timedelta(minutes=50), vega=VEGA_AFTER, vega_at=T0 + H)],
-                     body=tables(("", START)), expect=dict(UNCHANGED, version=2, success=LATER, served=served("Vega", T0 + H, (None, VEGA_AFTER)))),
+         accepted=False, vega=REAL_VEGA, matches=REAL_GAMES + [game("ip", "Aster City", "Birch Town", (1, 0), T0 - H, status="in_play")],
+         steps=[dict(at=T0, body=tables(("", REAL)), expect=REAL_ACCEPTED),
+                dict(at=LATER, before=[result("ip", (1, 0), T0 + timedelta(minutes=50), vega=VEGA_AFTER, vega_at=T0 + H)],
+                     body=tables(("", REAL)), expect=dict(REAL_ACCEPTED, version=2, success=LATER, served=served("Vega", T0 + H, (None, VEGA_AFTER)))),
                 dict(at=T0 + 6 * H, body=tables(("", AFTER)),
                      expect=dict(code=None, official=stored((None, AFTER)), as_of=T0 + 6 * H, version=3, success=T0 + 6 * H,
                                  served=served("SportScore", T0 + 6 * H, (None, AFTER))))]),
@@ -339,12 +342,12 @@ CASES = [
          steps=[dict(at=T0, body=tables(("", TIED)),
                      expect=dict(code=None, official=stored((None, TIED)), as_of=T0, version=1, success=T0,
                                  served=served("SportScore", T0, (None, TIED))))]),
-    dict(id="S35", key="l_2EKrnc", note="rows stored before migration 138, without a basis", accepted=False, legacy=START,
+    dict(id="S35", key="l_2EKrnc", note="rows stored before migration 138, without a basis", accepted=False, legacy=REAL, matches=REAL_GAMES, vega=REAL_VEGA,
          steps=[dict(at=T0 + H / 2, body=503,
-                     expect=dict(code="HTTP_503", official=stored((None, START)), as_of=T0, version=1, success=None,
-                                 served=served("SportScore", T0, (None, START)), basis=NO_BASIS)),
-                dict(at=LATER, before=[match(T0 + H, vega=VEGA_AFTER, vega_at=T0 + 2 * H + 55 * MINUTE)], body=tables(("", START)),
-                     expect=dict(code=None, official=stored((None, START)), as_of=T0, version=2, success=LATER,
+                     expect=dict(code="HTTP_503", official=stored((None, REAL)), as_of=T0, version=1, success=None,
+                                 served=served("SportScore", T0, (None, REAL)), basis=NO_BASIS)),
+                dict(at=LATER, before=[match(T0 + H, vega=VEGA_AFTER, vega_at=T0 + 2 * H + 55 * MINUTE)], body=tables(("", REAL)),
+                     expect=dict(code=None, official=stored((None, REAL)), as_of=T0, version=2, success=LATER,
                                  served=served("Vega", T0 + 2 * H + 55 * MINUTE, (None, VEGA_AFTER)), basis=NO_BASIS)),
                 dict(at=T0 + 6 * H, body=tables(("", AFTER)),
                      expect=dict(code=None, official=stored((None, AFTER)), as_of=T0 + 6 * H, version=3, success=T0 + 6 * H,
