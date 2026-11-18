@@ -15,10 +15,13 @@ COPY backend/sql sql
 # site's shared/archive.js.
 COPY backend/archives backend/archives
 COPY dashboard/shared/archive.js dashboard/shared/archive-text.js dashboard/shared/openfootball-history.js dashboard/shared/
+# The published reading the corrected one is compared with (8018e0836c's files, FAILURE_MODES.md §22).
+COPY dashboard/shared/legacy-8018e08 dashboard/shared/legacy-8018e08
 # main's Wikidata and Commons readers (vega/sources/wikidata.py) and their imports.
 COPY dashboard/frontend/src/services/wikidata-club.js dashboard/frontend/src/services/wikidata-club-identity.js \
      dashboard/frontend/src/services/wikidata-stadium.js dashboard/frontend/src/services/stadium-plans.js \
-     dashboard/frontend/src/services/format.js dashboard/frontend/src/services/player-aliases.js dashboard/frontend/src/services/
+     dashboard/frontend/src/services/format.js dashboard/frontend/src/services/image-source.js dashboard/frontend/src/services/player-aliases.js \
+     dashboard/frontend/src/services/
 COPY dashboard/frontend/src/data-url.js dashboard/frontend/src/model.js dashboard/frontend/src/
 # data-url.js imports this module to map the site's reads to the API's routes.
 COPY dashboard/frontend/src/services/api-routes.js dashboard/frontend/src/services/

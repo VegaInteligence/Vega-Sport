@@ -9,20 +9,18 @@
  */
 import { readFileSync } from "node:fs";
 import { gunzipSync } from "node:zlib";
-import { buildArchiveSeason, teamSimilarity } from "../../dashboard/shared/archive.js";
+import { buildArchiveSeason } from "../../dashboard/shared/archive.js";
 
 const read = (path) => (path && path !== "-" ? JSON.parse(gunzipSync(readFileSync(path)).toString("utf8")) : null);
 const [resultsPath, goalsPath] = process.argv.slice(2);
 const edition = buildArchiveSeason(read(resultsPath), read(goalsPath));
-// The side a goal's team designates, compared as the archive page compares it.
-const side = (goal, match) => {
-  const home = teamSimilarity(goal.team, match.team1),
-    away = teamSimilarity(goal.team, match.team2);
-  return home > away ? "home" : away > home ? "away" : null;
-};
+// Each goal carries the side shared/archive.js gave it (goalSide: the side named exactly first; a held row's
+// published side), FAILURE_MODES.md §22.
 const matches = edition.matches.map(({ raw, ...match }) => ({
   ...match,
-  goals: match.goals ? match.goals.map((goal) => ({ ...goal, side: side(goal, match) })) : null,
+  goals: match.goals ? match.goals.map((goal) => ({ ...goal, side: goal.side ?? null })) : null,
+  // A side of the appearance-ordinal feed (build_footballcsv_history.py): never a team of its own.
+  ...(raw?.sides && { sides: raw.sides }),
   // The typed facts of the results record that the edition's notes come from.
   source: raw
     ? {
@@ -35,4 +33,4 @@ const matches = edition.matches.map(({ raw, ...match }) => ({
       }
     : null,
 }));
-process.stdout.write(JSON.stringify({ season: edition.season, competitions: edition.competitions, matches }));
+process.stdout.write(JSON.stringify({ season: edition.season, competitions: edition.competitions, matches, absorbed: edition.absorbed, held: edition.held }));

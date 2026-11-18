@@ -104,13 +104,19 @@ class ImportTest(unittest.TestCase):
         self.assertEqual(dict(x("SELECT id, revision FROM core.matches").fetchall()), revisions)
         self.assertEqual(x("SELECT count(*) FROM core.match_events").fetchone()[0], 4)
         self.assertEqual(x("SELECT version FROM ops.resource_versions WHERE resource_kind='archive_season' AND resource_id=2015").fetchone()[0], 1)
-        # A row that differs from the sources (and a goal lost) is rewritten, and the season gets a new version.
-        x("UPDATE core.matches SET home_score=9 WHERE archive_key='r:2015-16/en.1:0'")
+        # A row that differs from the sources (a renamed side, a goal lost) is rewritten, and the season gets a new version.
+        x("UPDATE core.matches SET home_team_name='Arsenal' WHERE archive_key='r:2015-16/en.1:0'")
         x("DELETE FROM core.match_events WHERE seq=1 AND minute=57")
         self.assertEqual(archives.run(self.db, self.sources.name), {"2015/2016": 4})
-        self.assertEqual(x("SELECT home_score FROM core.matches WHERE archive_key='r:2015-16/en.1:0'").fetchone(), (0,))
+        self.assertEqual(x("SELECT home_team_name FROM core.matches WHERE archive_key='r:2015-16/en.1:0'").fetchone(), ("Arsenal FC",))
         self.assertEqual(x("SELECT count(*) FROM core.match_events").fetchone()[0], 4)
         self.assertEqual(x("SELECT version FROM ops.resource_versions WHERE resource_kind='archive_season' AND resource_id=2015").fetchone()[0], 2)
+        # A published score the sources contradict is held, not overwritten (FAILURE_MODES.md §23): nothing is written.
+        x("UPDATE core.matches SET home_score=9 WHERE archive_key='r:2015-16/en.1:0'")
+        self.assertEqual(archives.run(self.db, self.sources.name), {"2015/2016": 4})
+        self.assertEqual(x("SELECT home_score FROM core.matches WHERE archive_key='r:2015-16/en.1:0'").fetchone(), (9,))
+        self.assertEqual(x("SELECT version FROM ops.resource_versions WHERE resource_kind='archive_season' AND resource_id=2015").fetchone()[0], 2)
+        x("UPDATE core.matches SET home_score=0 WHERE archive_key='r:2015-16/en.1:0'")
         self.assertEqual(x("SELECT count(*) FROM core.teams").fetchone()[0], 7)  # Leicester plays twice
         # A calendar-year edition spans two sporting seasons under one key: each season has
         # its own edition row, and its matches point at it.
@@ -156,15 +162,17 @@ class ImportTest(unittest.TestCase):
             match = x("INSERT INTO core.matches(competition_season_id, season_id, status, source) VALUES (%s, 2021, 'finished', 'pitchapi') RETURNING id",
                       (edition,)).fetchone()[0]
             x("INSERT INTO core.match_events(season_id, match_id, seq, event_type, minute) VALUES (2021, %s, 0, 'goal', 10)", (match,))
+            # A primary edition is routing, not proof that it holds these matches and their goals: the stored archive
+            # edition stays, held whole (FAILURE_MODES.md §23); PitchAPI's own match and goal are left alone too.
             self.assertEqual(run(), {"2021/2022": 1})
-            self.assertEqual(editions(2021), [("g:eng-fa-cup", 1)])
+            self.assertEqual(editions(2021), [("g:eng-fa-cup", 1), ("g:eng-premier-league", 1)])
             self.assertEqual(x("SELECT count(*) FROM core.matches WHERE season_id=2021 AND archive_key IS NULL").fetchone()[0], 1)
             self.assertEqual(x("SELECT match_id = %s, count(*) FROM core.match_events WHERE season_id=2021 GROUP BY 1 ORDER BY 1", (match,)).fetchall(),
-                             [(False, 1), (True, 1)])
-            self.assertEqual(version(2021), (2,))
+                             [(False, 3), (True, 1)])
+            self.assertEqual(version(2021), (1,))
             self.assertEqual(run(), {"2021/2022": 1})
-            self.assertEqual(version(2021), (2,))
-            self.assertEqual(x("SELECT count(*) FROM core.match_events WHERE season_id=2021").fetchone()[0], 2)
+            self.assertEqual(version(2021), (1,))
+            self.assertEqual(x("SELECT count(*) FROM core.match_events WHERE season_id=2021").fetchone()[0], 4)
         loader = archives.Loader(self.db)
         league_only = {"competitions": [{"id": "g:eng-premier-league", "name": "Première division", "country": "Angleterre"}],
                        "matches": [{"key": "g:eng-premier-league:2022-08-06:0", "competitionId": "g:eng-premier-league", "date": "2022-08-06",

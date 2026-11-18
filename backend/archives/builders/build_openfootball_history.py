@@ -27,6 +27,18 @@ SOURCE = 'https://github.com/openfootball/football.json'
 REVISION = 'e6744429ee395bc86f247348c6184bb08d4eb361'
 
 
+# Files a reviewer found to copy another competition's matches, by their exact bytes (VI-27, 17 Nov 2026,
+# football.json e6744429): left out of the season and listed under "excluded". Other bytes fail the build
+# until reviewed again (FAILURE_MODES.md §20).
+REVIEWED_COPIES = {
+    '2019-20/ru.2.json': {
+        'sha256': '7eda7c911d458f248b24954d093fbf0790a1eab889de6030fe5cdfd220146597',
+        'copy_of': '2019-20/ru.1.json',
+        'note': 'Russia 1. Division 2019/20 repeats the 240 matches of Russia Premier League 2019/20 (ru.1, sha256 66b0f56e...ef22)',
+    },
+}
+
+
 def scored(match):
     score = match.get('score')
     ft = score.get('ft') if isinstance(score, dict) else None
@@ -36,6 +48,7 @@ def scored(match):
 def build(archive, output, first_year=2010, last_year=2020, revision=REVISION):
     archive, output = Path(archive), Path(output)
     groups = defaultdict(list)
+    excluded = []
     with zipfile.ZipFile(archive) as source:
         for name in source.namelist():
             parts = PurePosixPath(name).parts
@@ -53,7 +66,16 @@ def build(archive, output, first_year=2010, last_year=2020, revision=REVISION):
             country = COUNTRIES.get(code.split('.')[0])
             if not country:
                 continue
-            item = json.loads(source.read(name))
+            raw_file = source.read(name)
+            file_key = '/'.join(parts[1:])
+            reviewed = REVIEWED_COPIES.get(file_key)
+            if reviewed is not None:
+                digest = hashlib.sha256(raw_file).hexdigest()
+                if digest != reviewed['sha256']:
+                    raise ValueError(f'{file_key} changed since its review as a copy of {reviewed["copy_of"]} ({digest}): review it again')
+                excluded.append({'file': file_key, 'sha256': digest, 'copy_of': reviewed['copy_of'], 'note': reviewed['note']})
+                continue
+            item = json.loads(raw_file)
             if not isinstance(item, dict) or not isinstance(item.get('matches'), list):
                 raise ValueError(f'Invalid source file: {name}')
             if any(not isinstance(match, dict) for match in item['matches']):
@@ -71,9 +93,18 @@ def build(archive, output, first_year=2010, last_year=2020, revision=REVISION):
     source_info = {'name':'OpenFootball', 'url':SOURCE, 'license':'CC0-1.0', 'revision':revision,
                    'archiveSha256':hashlib.sha256(archive.read_bytes()).hexdigest(),
                    'coverage':'Résultats et calendriers seulement ; pas de statistiques joueurs ni xG.'}
-    index = {'schemaVersion':1, 'source':source_info, 'seasons':[]}
+    index = {'schemaVersion':1, 'source':source_info, 'seasons':[], 'excluded':sorted(excluded, key=lambda e: e['file'])}
     for label, competitions in sorted(groups.items(), reverse=True):
         competitions.sort(key=lambda c: (c['country'], c['name'], c['id']))
+        # Two competitions with the very same matches: one copies the other, and nothing says which.
+        seen = {}
+        for competition in competitions:
+            if not competition['matches']:
+                continue
+            body = json.dumps(competition['matches'], sort_keys=True, ensure_ascii=False)
+            if body in seen:
+                raise ValueError(f"{competition['sourceFile']} repeats the matches of {seen[body]}: review which one is the competition")
+            seen[body] = competition['sourceFile']
         payload = {'season':label, 'source':source_info, 'competitions':competitions}
         raw = json.dumps(payload, ensure_ascii=False, separators=(',', ':'), allow_nan=False).encode('utf-8')
         compressed = gzip.compress(raw, compresslevel=6, mtime=0)

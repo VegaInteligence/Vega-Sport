@@ -58,7 +58,8 @@ def read_competition(path, competition):
     seen, groups = set(), collections.defaultdict(list)
     duplicates = unassigned = 0
     with gzip.open(path, "rt", encoding="utf-8-sig", newline="") as stream:
-        for row in csv.DictReader(stream):
+        reader = csv.DictReader(stream)
+        for row in reader:
             key = tuple(row.values())
             if key in seen:
                 duplicates += 1
@@ -78,6 +79,9 @@ def read_competition(path, competition):
                 "score": [int(row["GH"]), int(row["GA"])],
                 "match": row["game"],
                 "sourceSeason": row["season"],
+                # Where the row is in the pinned file, for a receipt (FAILURE_MODES.md §22).
+                "sourceFile": path.name,
+                "sourceRow": reader.line_num,
             }
             groups[(season, calendar, row["date"], row["game"])].append(event)
     for (_, _, _, game), events in groups.items():

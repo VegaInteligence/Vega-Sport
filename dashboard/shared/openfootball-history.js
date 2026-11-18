@@ -75,6 +75,9 @@ export function historicalScore(match) {
     : historicalPair(score?.ft);
 }
 
+// A match the source says was never played (football.json: "cancelled"; the archive builders: "not_played").
+const CANCELED = new Set(["not_played", "cancelled", "canceled"]);
+
 export function historicalScoreNotes(match) {
   const notes = [];
   const score = scoreObject(match?.score);
@@ -84,7 +87,7 @@ export function historicalScoreNotes(match) {
   if (penalties.every((value) => value !== null))
     notes.push(`tirs au but ${penalties[0]} – ${penalties[1]}`);
   const fields = match?.sourceFields || {};
-  if (match?.status === "not_played")
+  if (CANCELED.has(match?.status))
     notes.push(
       `Rencontre non disputée${fields.nonmatch ? ` : ${fields.nonmatch}` : ""}`,
     );
