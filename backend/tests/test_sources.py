@@ -875,7 +875,10 @@ class UefaTest(unittest.TestCase):
                 self.assertEqual((get.calls, x(run).fetchone()), ([], (0, 0, "ok", None)))
                 # The archive replaces the final (its key changes): the pair is cleared, the next run pairs the new match.
                 old = x("SELECT match_id FROM core.worldcup_matches WHERE match_key='M-1974-38'").fetchone()[0]
+                # As in production, the cup reader deletes the replaced match under the collect role: the pair must not stop it.
+                x("SET LOCAL ROLE vega_collect")
                 cups.save(self.db, "open-cups", "world-cup-history", "1974", archive(final_number=38), NOW + timedelta(days=9))
+                x("RESET ROLE")
                 self.assertEqual(x("SELECT match_id FROM core.worldcup_matches WHERE match_key='M-1974-38'").fetchone(), (None,))
                 self.assertEqual(sources.run_due(self.db, get, NOW + timedelta(days=16), names={"fjelstul"}), {("fjelstul", "worldcup"): "ok"})
                 new = x("SELECT match_id FROM core.worldcup_matches WHERE match_key='M-1974-38'").fetchone()[0]
