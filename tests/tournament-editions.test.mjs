@@ -41,10 +41,20 @@
 //     (Serbia and Montenegro too) and none after, nor without a year (which flag is not known). A placeholder or an
 //     unknown name has none. Every code the archives' teams get has an image: the flag library's, or the site's own
 //     style, never an empty box.
+// 14. A bracket that starts from groups (the user, 18 Nov 2026: 1974 and 1978 showed their final alone, 1982 its
+//     semi-finals alone). These editions had no quarter-finals: a second round of groups sent each winner to the
+//     final (1974, 1978) or to the semi-finals (1982), as 1930's groups did. When every team of the bracket's first
+//     round is the winner of a distinct group that ended before it, those groups open the bracket, each on the side
+//     of the tie its winner plays, in that tie's team order: « Second tour » when other groups came before them,
+//     « Groupes » otherwise. A team that won two groups (its first-round group and its second-round one) comes from
+//     the later. A first round that also holds runners-up (a round of 16, 1954's quarter-finals), a team the computed
+//     table does not put first, a cup without groups: the bracket starts at its first round, as before.
+// 15. 1950 had no final: its « Poule finale » is the last stage. With no knockout match at all, that group is the
+//     bracket, and its leader the champion when it leads on points alone (level on points names nobody).
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { groupTables, normalizeOpenCup } from "../dashboard/frontend/src/services/cup-matches.js";
+import { bracketGroups, finalGroup, groupTables, normalizeOpenCup } from "../dashboard/frontend/src/services/cup-matches.js";
 import { bracketSides, buildKnockoutBracket, knockoutStage, mergeCupReplays } from "../dashboard/frontend/src/services/knockout-bracket.js";
 import { WORLD_CUP_ARCHIVE_ID, WORLD_CUP_ID, competitionEditions, tournamentEdition } from "../dashboard/frontend/src/services/cup-catalog.js";
 import { runDepth, runsByTournament } from "../dashboard/frontend/src/services/tournament-runs.js";
@@ -254,4 +264,73 @@ test("13. the flags of the old editions", () => {
     const drawn = css.includes(`.fi.national-flag.fi-${code} {`);
     assert.ok(drawn || fs.existsSync(new URL(`node_modules/flag-icons/flags/4x3/${code}.svg`, root)), `${name} ${year}: ${code} has no image`);
   }
+});
+
+// A group of three or four as the archives give it: every team once against each other, the first named winning all.
+const group = (name, teams, date) => teams.flatMap((a, i) => teams.slice(i + 1).map((b) => open("Matchday 1", a, b, ft(1, 0), { group: name, date })));
+
+test("14. a bracket that starts from groups", () => {
+  // 1974: a first round of groups, a second round of two groups, their winners in the final, their seconds for third place.
+  const wc74 = normalizeOpenCup([
+    ...group("Group 1", ["Netherlands", "Sweden", "Uruguay"], "1974-06-15"), ...group("Group 2", ["West Germany", "Poland", "Chile"], "1974-06-14"),
+    ...group("Group A", ["Netherlands", "Brazil", "East Germany", "Argentina"], "1974-06-30"), ...group("Group B", ["West Germany", "Poland", "Sweden", "Yugoslavia"], "1974-07-03"),
+    open("Match for third place", "Brazil", "Poland", ft(0, 1), { date: "1974-07-06" }), open("Final", "Netherlands", "West Germany", ft(1, 2), { date: "1974-07-07" }),
+  ]);
+  const start74 = bracketGroups(bracketSides(buildKnockoutBracket(wc74)), wc74, { win: 2 });
+  assert.equal(start74.label, "Second tour");
+  assert.deepEqual([start74.left.map((t) => t.name), start74.right.map((t) => t.name)], [["Groupe A"], ["Groupe B"]]);
+  assert.deepEqual(start74.left[0].rows.map((r) => [r.name, r.points]), [["Netherlands", 6], ["Brazil", 4], ["East Germany", 2], ["Argentina", 0]]);
+  // 1982: four groups of three, their winners in the semi-finals; each semi-final's groups on its side, in its order.
+  const wc82 = normalizeOpenCup([
+    ...group("Group 1", ["Poland", "Italy", "Peru"], "1982-06-14"),
+    ...group("Group A", ["Poland", "Soviet Union", "Belgium"], "1982-07-04"), ...group("Group B", ["West Germany", "England", "Spain"], "1982-07-05"),
+    ...group("Group C", ["Italy", "Brazil", "Argentina"], "1982-07-05"), ...group("Group D", ["France", "Austria", "Northern Ireland"], "1982-07-04"),
+    open("Semi-finals", "Poland", "Italy", ft(0, 2), { date: "1982-07-08" }), open("Semi-finals", "West Germany", "France", { ft: [1, 1], et: [3, 3], p: [5, 4] }, { date: "1982-07-08" }),
+    open("Third place match", "Poland", "France", ft(3, 2), { date: "1982-07-10" }), open("Final", "Italy", "West Germany", ft(3, 1), { date: "1982-07-11" }),
+  ]);
+  const start82 = bracketGroups(bracketSides(buildKnockoutBracket(wc82)), wc82, { win: 2 });
+  assert.equal(start82.label, "Second tour");
+  assert.deepEqual([start82.left.map((t) => t.name), start82.right.map((t) => t.name)], [["Groupe A", "Groupe C"], ["Groupe B", "Groupe D"]]);
+  // 1930: the groups are the only ones.
+  const wc30 = normalizeOpenCup([
+    ...group("Group 1", ["Argentina", "Chile", "France"], "1930-07-22"), ...group("Group 2", ["Yugoslavia", "Brazil", "Bolivia"], "1930-07-20"),
+    ...group("Group 3", ["Uruguay", "Romania", "Peru"], "1930-07-21"), ...group("Group 4", ["USA", "Paraguay", "Belgium"], "1930-07-20"),
+    open("Semi-finals", "Argentina", "USA", ft(6, 1), { date: "1930-07-26" }), open("Semi-finals", "Uruguay", "Yugoslavia", ft(6, 1), { date: "1930-07-27" }),
+    open("Final", "Uruguay", "Argentina", ft(4, 2), { date: "1930-07-30" }),
+  ]);
+  const start30 = bracketGroups(bracketSides(buildKnockoutBracket(wc30)), wc30, { win: 2 });
+  assert.equal(start30.label, "Groupes");
+  assert.deepEqual([start30.left.map((t) => t.name), start30.right.map((t) => t.name)], [["Groupe 3", "Groupe 2"], ["Groupe 1", "Groupe 4"]]);
+  // A first round that holds a runner-up; a finalist the computed table does not put first; no group; no bracket.
+  const runnerUp = normalizeOpenCup([
+    ...group("Group A", ["Spain", "Italy", "Croatia"], "2024-06-24"), ...group("Group B", ["England", "Denmark", "Serbia"], "2024-06-25"),
+    open("Final", "Spain", "Denmark", ft(2, 1), { date: "2024-07-14" }),
+  ]);
+  assert.equal(bracketGroups(bracketSides(buildKnockoutBracket(runnerUp)), runnerUp), null);
+  const club = normalizeOpenCup([open("Final", "Paris FC", "Quevilly", ft(2, 1), { date: "2025-05-24" })]);
+  assert.equal(bracketGroups(bracketSides(buildKnockoutBracket(club)), club), null);
+  assert.equal(bracketGroups(null, wc74), null);
+  // The groups must have ended before the round they open.
+  const later = normalizeOpenCup([...group("Group A", ["Spain", "Italy"], "2024-07-20"), ...group("Group B", ["England", "Denmark"], "2024-07-20"), open("Final", "Spain", "England", ft(2, 1), { date: "2024-07-14" })]);
+  assert.equal(bracketGroups(bracketSides(buildKnockoutBracket(later)), later), null);
+});
+
+test("15. 1950's final round is its bracket", () => {
+  const wc50 = normalizeOpenCup([
+    ...group("Group 1", ["Brazil", "Yugoslavia", "Switzerland"], "1950-07-01"),
+    open("Final Round", "Uruguay", "Spain", ft(2, 2), { date: "1950-07-09" }), open("Final Round", "Brazil", "Sweden", ft(7, 1), { date: "1950-07-09" }),
+    open("Final Round", "Brazil", "Spain", ft(6, 1), { date: "1950-07-13" }), open("Final Round", "Uruguay", "Sweden", ft(3, 2), { date: "1950-07-13" }),
+    open("Final Round", "Sweden", "Spain", ft(3, 1), { date: "1950-07-16" }), open("Final Round", "Uruguay", "Brazil", ft(2, 1), { date: "1950-07-16" }),
+  ]);
+  const last = finalGroup(wc50, { win: 2 });
+  assert.equal(last.table.name, "Poule finale");
+  assert.deepEqual(last.table.rows.map((r) => [r.name, r.points]), [["Uruguay", 5], ["Brazil", 4], ["Sweden", 2], ["Spain", 1]]);
+  assert.equal(last.champion, "Uruguay");
+  // Level on points at the top: nobody is named.
+  const level = normalizeOpenCup([open("Final Round", "A", "B", ft(1, 1), { date: "1950-07-09" }), open("Final Round", "C", "D", ft(1, 1), { date: "1950-07-09" })]);
+  assert.equal(finalGroup(level).champion, null);
+  // An edition with a knockout match, or without a final round, has none.
+  assert.equal(finalGroup(normalizeOpenCup([...group("Group 1", ["A", "B"], "1974-06-15"), open("Final", "A", "C", ft(1, 0), { date: "1974-07-07" })])), null);
+  assert.equal(finalGroup(normalizeOpenCup(group("Group 1", ["A", "B", "C"], "1974-06-15"))), null);
+  assert.equal(finalGroup(undefined), null);
 });

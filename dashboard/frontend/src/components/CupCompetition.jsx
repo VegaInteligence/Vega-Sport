@@ -145,6 +145,8 @@ export default function CupCompetition({ competition, initialSeason, name = comp
     const matches = normalizeOpenCup(payload.matches);
     return { matches: mode === "archive" && archive.twoLegged && view === "bracket" ? combineCupLegs(matches) : matches, source: payload.source };
   });
+  // A win was worth two points in the World Cups before 1994.
+  const win = competition.sourceKey === "world-cup-history" && Number(season) < 1994 ? 2 : 3;
   function pickSeason(next) {
     const other = (editions || []).find((edition) => edition.season === next && edition.id !== competition.id);
     if (other) return onEdition?.(other);
@@ -172,7 +174,7 @@ export default function CupCompetition({ competition, initialSeason, name = comp
       <AsyncState resource={resource}>
         {(value) => value.unavailable ? <div className="cup-bracket-unavailable"><Empty>Les tours de cette édition ne sont pas disponibles.</Empty>{archive && season !== archive.season && <button className="button button-secondary" onClick={() => setSeason(archive.season)}>Voir le tableau {archive.season}</button>}</div> : <>
           {value.matches.some((match) => match.status === "scheduled" && match.date && match.date < parisDay(Date.now())) && <p className="cup-source">Certains scores de cette édition ne sont pas encore renseignés.</p>}
-          {view === "bracket" ? <KnockoutBracket matches={value.matches} nationalTeams={nationalTeams} season={season} highlight={highlight} trophy={trophyArt({ title: name, trophyYear: Number(String(season).slice(0, 4)) })} /> : view === "groups" ? <GroupTables matches={value.matches} season={season} highlight={highlight} win={competition.sourceKey === "world-cup-history" && Number(season) < 1994 ? 2 : 3} /> : view === "standings" ? <LeagueStandings name={competition.name} matches={value.matches} /> : <CupMatchList matches={value.matches} status={status} query={query} page={page} onPage={setPage} nationalTeams={nationalTeams} season={season} highlight={highlight} />}
+          {view === "bracket" ? <KnockoutBracket matches={value.matches} nationalTeams={nationalTeams} season={season} highlight={highlight} win={win} trophy={trophyArt({ title: name, trophyYear: Number(String(season).slice(0, 4)) })} /> : view === "groups" ? <GroupTables matches={value.matches} season={season} highlight={highlight} win={win} /> : view === "standings" ? <LeagueStandings name={competition.name} matches={value.matches} /> : <CupMatchList matches={value.matches} status={status} query={query} page={page} onPage={setPage} nationalTeams={nationalTeams} season={season} highlight={highlight} />}
         </>}
       </AsyncState>
       </>}
