@@ -887,6 +887,269 @@ function useScale(ref, width, wanted) {
   }, [ref, width, wanted]);
   return scale;
 }
+/* ---------------------------------------------------- calendar columns */
+
+const DAY_MS = 86_400_000;
+const MONTH_NAMES = [
+  "janv.",
+  "févr.",
+  "mars",
+  "avr.",
+  "mai",
+  "juin",
+  "juil.",
+  "août",
+  "sept.",
+  "oct.",
+  "nov.",
+  "déc.",
+];
+const dayOf = (iso) => Date.parse(`${String(iso).slice(0, 10)}T00:00:00Z`);
+const monthStart = (time, step = 0) => {
+  const d = new Date(time);
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + step, 1);
+};
+
+/** One thin square column per match, placed at its real date: filled when he started,
+ * outlined when he came on, a dot under a match played after `shortRest` days or fewer,
+ * a gap of `gapDays` or more named, the last `windowDays` shaded. Drawn at its measured
+ * width, so its text keeps its size on every screen. `games`: { date, value, starter, rest }. */
+export function CalendarColumns({
+  games,
+  ticks = [0, 45, 90],
+  tickLabel = (v) => `${v}`,
+  shortRest,
+  windowDays,
+  gapDays = 12,
+  tip,
+  ariaLabel,
+}) {
+  const t = useTip();
+  const [width, setWidth] = useState(0);
+  const [active, setActive] = useState(null);
+  useEffect(() => {
+    const box = t.ref.current;
+    if (!box) return undefined;
+    const measure = () => setWidth(Math.round(box.clientWidth));
+    measure();
+    if (typeof ResizeObserver === "undefined") return undefined;
+    const observer = new ResizeObserver(measure);
+    observer.observe(box);
+    return () => observer.disconnect();
+  }, [t.ref]);
+  const phone = width > 0 && width < 520;
+  const height = phone ? 150 : 176;
+  if (!width || !games.length)
+    return (
+      <div
+        className={s.calendar}
+        ref={t.ref}
+        style={{ height }}
+        aria-label={ariaLabel}
+        role="img"
+      />
+    );
+
+  const m = { top: 10, right: 4, bottom: 24, left: 30 };
+  const iw = width - m.left - m.right,
+    ih = height - m.top - m.bottom;
+  const days = games.map((g) => dayOf(g.date));
+  const first = days[0] - 2 * DAY_MS,
+    last = days[days.length - 1] + 2 * DAY_MS;
+  const top =
+    Math.max(ticks[ticks.length - 1], ...games.map((g) => g.value)) / 0.94;
+  const x = (time) => m.left + (iw * (time - first)) / (last - first);
+  const y = (v) => m.top + ih - (v / top) * ih;
+  const base = y(0);
+  const spacing = Math.min(
+    Infinity,
+    ...days.slice(1).map((d, i) => x(d) - x(days[i])),
+  );
+  const bar = Math.max(2, Math.min(phone ? 5 : 8, spacing - 2));
+  const windowStart = days[days.length - 1] - windowDays * DAY_MS;
+  const inWindow = (d) => windowDays != null && d > windowStart;
+
+  const months = [];
+  for (let at = monthStart(first, 1); at < last; at = monthStart(at, 1))
+    months.push(at);
+  const monthLabels = [
+    { at: first, x: m.left },
+    ...months.map((at) => ({ at, x: x(at) + 4 })),
+  ].filter(
+    (label, i, all) =>
+      label.x < width - 28 && (!i || label.x - all[i - 1].x >= 34),
+  );
+
+  const gaps = days
+    .map((d, i) =>
+      i
+        ? {
+            days: Math.round((d - days[i - 1]) / DAY_MS),
+            x0: x(days[i - 1]),
+            x1: x(d),
+          }
+        : null,
+    )
+    .filter((gap) => gap && gap.days >= gapDays && gap.x1 - gap.x0 >= 34);
+
+  const show = (i, event) => {
+    setActive(i);
+    if (event) t.show(event, tip(games[i], i));
+  };
+  const pick = (event) => {
+    const box = event.currentTarget.getBoundingClientRect();
+    const px = event.clientX - box.left;
+    let best = 0;
+    days.forEach((d, i) => {
+      if (Math.abs(x(d) - px) < Math.abs(x(days[best]) - px)) best = i;
+    });
+    show(best, event);
+  };
+  const leave = () => {
+    setActive(null);
+    t.hide();
+  };
+
+  return (
+    <div className={s.calendar} ref={t.ref}>
+      <svg
+        data-chart="minutes"
+        width={width}
+        height={height}
+        viewBox={`0 0 ${width} ${height}`}
+        role="img"
+        aria-label={ariaLabel}
+        onPointerMove={pick}
+        onPointerLeave={leave}
+      >
+        {windowDays != null && (
+          <g data-window>
+            <rect
+              x={x(windowStart + DAY_MS / 2)}
+              y={m.top - 6}
+              width={width - m.right - x(windowStart + DAY_MS / 2)}
+              height={base - m.top + 6}
+              className={s.calendarWindow}
+            />
+            <text
+              x={width - m.right - 4}
+              y={m.top + 5}
+              textAnchor="end"
+              className={s.axisMuted}
+            >
+              {`${windowDays} j`}
+            </text>
+          </g>
+        )}
+        {ticks.map((v) => (
+          <g key={v}>
+            <line
+              x1={m.left}
+              x2={width - m.right}
+              y1={y(v)}
+              y2={y(v)}
+              className={v ? s.grid : s.gridStrong}
+            />
+            <text
+              data-y-tick
+              x={m.left - 8}
+              y={y(v) + 4}
+              textAnchor="end"
+              className={s.axisMuted}
+            >
+              {tickLabel(v)}
+            </text>
+          </g>
+        ))}
+        {months.map((at) => (
+          <line
+            key={at}
+            x1={x(at)}
+            x2={x(at)}
+            y1={base}
+            y2={base + 5}
+            className={s.gridStrong}
+          />
+        ))}
+        {monthLabels.map((label) => (
+          <text
+            data-month
+            key={label.at}
+            x={label.x}
+            y={height - 5}
+            className={s.axisText}
+          >
+            {MONTH_NAMES[new Date(label.at).getUTCMonth()]}
+          </text>
+        ))}
+        {gaps.map((gap) => (
+          <text
+            data-gap
+            key={gap.x0}
+            x={(gap.x0 + gap.x1) / 2}
+            y={y(ticks[Math.floor(ticks.length / 2)]) + 4}
+            textAnchor="middle"
+            className={s.axisMuted}
+          >
+            {gap.x1 - gap.x0 >= 128
+              ? `${gap.days} jours sans jouer`
+              : `${gap.days} j`}
+          </text>
+        ))}
+        {active != null && (
+          <line
+            x1={x(days[active])}
+            x2={x(days[active])}
+            y1={m.top - 6}
+            y2={base}
+            className={s.gridStrong}
+          />
+        )}
+        {games.map((g, i) => {
+          const cx = x(days[i]);
+          const h = base - y(g.value);
+          const starter = g.starter !== false;
+          return (
+            <g
+              key={g.date + i}
+              opacity={active != null && active !== i ? 0.55 : 1}
+            >
+              <rect
+                data-match
+                data-date={String(g.date).slice(0, 10)}
+                data-minutes={g.value}
+                data-starter={g.starter == null ? "" : String(g.starter)}
+                data-recent={String(inWindow(days[i]))}
+                x={starter ? cx - bar / 2 : cx - bar / 2 + 0.75}
+                y={starter ? base - h : base - h + 0.75}
+                width={starter ? bar : Math.max(0.5, bar - 1.5)}
+                height={starter ? h : Math.max(0, h - 0.75)}
+                className={starter ? s.columnOn : s.columnOff}
+                tabIndex={0}
+                aria-label={`${String(g.date).slice(0, 10)} : ${g.value}`}
+                onFocus={(event) => {
+                  setActive(i);
+                  t.showFor(event.currentTarget, tip(g, i));
+                }}
+                onBlur={leave}
+              />
+              {g.rest != null && g.rest <= shortRest && (
+                <circle
+                  data-short-rest
+                  cx={cx}
+                  cy={base + 7}
+                  r={2.5}
+                  className={s.shortRest}
+                />
+              )}
+            </g>
+          );
+        })}
+      </svg>
+      <Tip tip={t.tip} />
+    </div>
+  );
+}
 
 /** A badge's size on the screen, whatever the drawing's own scale. */
 const BADGE = 22;

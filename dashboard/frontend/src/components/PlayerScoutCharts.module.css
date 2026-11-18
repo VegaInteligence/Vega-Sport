@@ -345,3 +345,53 @@
   fill: var(--muted);
   font-size: 11px;
 }
+
+/* Calendar columns: one square column per match at its date (the « Physique » tab). */
+.calendar {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+.calendar svg {
+  display: block;
+  overflow: visible;
+}
+.axisMuted {
+  fill: var(--muted-light);
+  font-size: 11px;
+}
+.calendarWindow {
+  fill: var(--accent);
+  opacity: 0.05;
+}
+.columnOn {
+  fill: var(--accent);
+  outline: none;
+}
+.columnOff {
+  fill: var(--accent);
+  fill-opacity: 0.14;
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  outline: none;
+}
+.shortRest {
+  fill: var(--warning-ink);
+}
+.swatchColumn {
+  width: 8px;
+  height: 10px;
+  background: var(--accent);
+}
+.swatchColumnOff {
+  width: 8px;
+  height: 10px;
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.swatchRest {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--warning-ink);
+}
