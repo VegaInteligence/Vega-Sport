@@ -54,7 +54,7 @@
  * (135): the date, the kind (transfer, free, loan, loan_return, internal; null when the
  * provider gives none), the fee when it is known, the club left and the club joined. A club
  * of ours carries its id, our name and its crest; another one the provider's name alone; a
- * club nobody names is null. GET /api/player-market-values names each valuation's club the
+ * club nobody names, or a name that is no club (« Without Club », « Retired »), is null. GET /api/player-market-values names each valuation's club the
  * same way (`club`), when it is known.
  *
  * Differences with the legacy read: a field without a value is omitted; a competition
@@ -197,8 +197,14 @@ export function changeImpact(rows) {
 /** 100 for the same profile, 0 from the median distance between the player and the others. */
 export const similarity = (distance, median) => (median > 0 ? Math.max(0, Math.round(100 * (1 - distance / median))) : 0);
 const put = (o, k, v) => (v === null || v === undefined ? o : ((o[k] = v), o));
-/** A club as the transfers and the valuations name it: null when nobody names it. */
-const namedClub = (id, name, image) => (name ? put(put(put({}, "id", id), "name", name), "image_url", image) : null);
+/** transfermarkt.py NO_CLUB: provider names that are no club (a player without one, retired,
+ * unknown or on a break), in the reader's comparison form. A test keeps the two lists equal. */
+export const NO_CLUB = ["withoutclub", "retired", "unknown", "careerbreak", "vereinslos", "karriereende", "unbekannt", "pause"];
+const comparable = (name) => name.normalize("NFKD").toLowerCase().replace(/[^a-z0-9]/g, "");
+/** A club as the transfers and the valuations name it: null when nobody names it, or when
+ * the provider's name is no club. */
+const namedClub = (id, name, image) =>
+  name && (id || !NO_CLUB.includes(comparable(name))) ? put(put(put({}, "id", id), "name", name), "image_url", image) : null;
 
 function respond(req, data) {
   const etag = `W/"profile-v1-${createHash("sha256").update(JSON.stringify(data)).digest("hex")}"`;
