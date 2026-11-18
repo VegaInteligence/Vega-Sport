@@ -279,6 +279,7 @@ def save(conn, kind, competition, season, body, now):
     elsewhere = snapshot.elsewhere(conn, provider, edition, [key for key, _ in rows if key not in before])
     if typed_dfb and elsewhere:
         raise SourceError("PERIODS_CONFLICT", f"match keys already bound to another edition: {', '.join(sorted(elsewhere))}")
+    snapshot.guard(provider, elsewhere, {key: m["status"] for key, m in rows}, cup_key)
     before.update(elsewhere)
     changes, keep = 0, set()
     for key, m in rows:

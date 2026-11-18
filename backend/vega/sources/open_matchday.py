@@ -27,7 +27,7 @@ import io
 import re
 
 from . import SourceError, failure, open_matchday_history, snapshot
-from .cups import _team
+from .cups import _round, _team
 from ..seasons import sporting_season
 from ..store import Store
 
@@ -243,7 +243,9 @@ def save(conn, folder, name, season, results, fixtures, now, *, declared_results
            RETURNING id""",
         (comp, season_id, season, cup_key, name, SOURCE, now, now),
     ).fetchone()[0]
-    before.update(snapshot.elsewhere(conn, "open_matchday", edition, [key for key in snap if key not in before]))
+    elsewhere = snapshot.elsewhere(conn, "open_matchday", edition, [key for key in snap if key not in before])
+    snapshot.guard("open_matchday", elsewhere, status, cup_key)
+    before.update(elsewhere)
     changes = 0
     reserved = {before[key]["archive_position"] for key in preserved}
     position = 0
@@ -259,24 +261,26 @@ def save(conn, folder, name, season, results, fixtures, now, *, declared_results
                 position += 1
             home = _team(conn, "open_matchday", f"name:{row['home']}", row["home"])
             away = _team(conn, "open_matchday", f"name:{row['away']}", row["away"])
-            round_id = None
-            if row["round"]:
-                found_round = conn.execute("SELECT id FROM core.rounds WHERE competition_season_id=%s AND name=%s", (edition, row["round"])).fetchone()
-                round_id = found_round[0] if found_round else conn.execute(
-                    "INSERT INTO core.rounds(competition_season_id, name) VALUES (%s,%s) RETURNING id", (edition, row["round"])).fetchone()[0]
             values = {
                 "competition_season_id": edition, "season_id": season_id, "source": "open_matchday", "status": row["status"],
                 "match_date": row["date"], "home_team_id": home, "away_team_id": away, "home_team_name": row["home"], "away_team_name": row["away"],
-                "round_id": round_id, "home_score": row["home_score"], "away_score": row["away_score"],
+                "home_score": row["home_score"], "away_score": row["away_score"],
                 "archive_position": position,
             }
             position += 1
+        if row["round"]:
+            values["round_id"] = _round(conn, edition, row["round"])
+        elif found is not None and found["competition_season_id"] != edition:
+            values["round_id"] = None  # a round belongs to its former edition
         if row["home_score_ht"] is not None and row["away_score_ht"] is not None:
             values.update(home_score_ht=row["home_score_ht"], away_score_ht=row["away_score_ht"])
         mid, outcome = snapshot.write(conn, "open_matchday", key, values, found)
         match_changed = outcome in ("inserted", "updated")
         stats_changed = _write_stats(conn, season_id, mid, row, home, away)
-        if stats_changed and not match_changed:
+        if stats_changed and outcome is None:
+            snapshot.write(conn, "open_matchday", key, values, found, changed=True)
+        elif stats_changed and outcome == "moved":
+            # snapshot.write already checked and updated the same match in this transaction.
             conn.execute("""UPDATE core.matches SET revision=revision+1, updated_at=now()
                             WHERE id=%s AND season_id=%s""", (mid, season_id))
         changes += match_changed or stats_changed
