@@ -7,7 +7,7 @@ const PAIR = /(\d+)\s*[-–]\s*(\d+)/;
 // `calendar`: the competition is played within one calendar year (the South and North
 // American club cups): a date without its year is in `startYear`, not in the season's
 // second year from January to June.
-export function parseOpenCupText(text, startYear, roundNames = {}, { calendar = false } = {}) {
+export function parseOpenCupText(text, startYear, roundNames = {}, { calendar = false, halfTime = false } = {}) {
   if (typeof text !== "string" || !Number.isInteger(startYear)) throw new Error("Invalid cup archive");
   let day = "", round = "", candidates = 0;
   const matches = [];
@@ -54,6 +54,16 @@ export function parseOpenCupText(text, startYear, roundNames = {}, { calendar = 
       if (inside) score.ft = pairOf(inside);
     } else {
       score = { ft: first };
+    }
+    if (halfTime) {
+      const brackets = tail.match(/\(([^)]*)\)/)?.[1] || "";
+      const list = brackets.split(",").map((s) => s.trim().match(/^(\d+)\s*[-–]\s*(\d+)$/));
+      const expected = (score.et || score.p) ? 2 : 1;
+      if (list.length === expected && list.every(Boolean)) {
+        const ht = pairOf(list.at(-1));
+        const comparison = score.ft ?? score.et;
+        if (comparison && ht.every((n, i) => n <= comparison[i])) score.ht = ht;
+      }
     }
     matches.push({ round, date: day, team1: row[2].trim(), team2: row[3].trim(), score });
   }

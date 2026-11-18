@@ -14,7 +14,7 @@ import json
 import re
 from urllib.parse import urlencode
 
-from . import SourceError, snapshot
+from . import SourceError, cup_periods, snapshot
 from ..seasons import sporting_season
 from ..store import Store
 
@@ -77,6 +77,8 @@ def _pair(value):
 CUP_ROWS_VERSION = "cup-rows-v2"
 SCORE_PARTS = ("ft", "ht", "et", "p")
 CANCELED = ("canceled", "cancelled")
+TOURS_AWARD = "france-cup:2024/2025:2024-12-21|Tours FC|FC Lorient|"
+CUP_PUBLICATION = {"club-world-cup", "world-cup-history", "france-cup"}
 
 
 def score_parts(score):
@@ -96,10 +98,12 @@ def score_parts(score):
     return {k: list(v) for k, v in parts.items()}
 
 
-def _open_cup_status(m, parts):
+def _open_cup_status(m, parts, key):
     status = m.get("status")
     if status is None:
         return "finished" if parts else "not_started"
+    if status == "awarded" and key == TOURS_AWARD and parts == {"ft": [0, 3]}:
+        return "awarded"
     if status in CANCELED and not parts:
         return "canceled"
     raise SourceError("INVALID_STATUS")
@@ -112,16 +116,22 @@ def _number(value):
 def match_rows(kind, competition, season, body):
     """(provider key, row) per source match, in source order."""
     out = []
+    typed_dfb = cup_periods.applies(kind, competition, season)
     for position, m in enumerate(body.get("matches") or []):
         if kind == "open-cups":
             parts = score_parts(m.get("score"))
             ft, ht, et, p = (parts.get(k) for k in SCORE_PARTS)
             final = et or ft
             key = f"{competition}:{season}:{m.get('date') or ''}|{m.get('team1') or ''}|{m.get('team2') or ''}|{m.get('num') or ''}"
+            status = _open_cup_status(m, parts, key)
+            if status == "awarded" and m.get("sourceStatus") != "[awarded]":
+                raise SourceError("INVALID_STATUS")
+            if status == "awarded":
+                ft = ht = et = p = None  # the administrative tally is not a phase played on the field
             row = {
                 "home": m.get("team1"), "away": m.get("team2"), "home_key": f"name:{m.get('team1')}", "away_key": f"name:{m.get('team2')}",
                 "date": m.get("date") or None, "round": m.get("round") or None, "group": m.get("group"), "number": _number(m.get("num")),
-                "status": _open_cup_status(m, parts),
+                "status": status,
                 "home_score": final and final[0], "away_score": final and final[1],
                 "home_score_90": ft[0] if ft and et else None, "away_score_90": ft[1] if ft and et else None,
                 "home_score_ht": ht and ht[0], "away_score_ht": ht and ht[1],
@@ -130,7 +140,7 @@ def match_rows(kind, competition, season, body):
             }
         else:
             score, penalties = _pair(m.get("score")), _pair(m.get("penalties"))
-            if m.get("status") == "finished" and score is None or m.get("penalties") is not None and penalties is None:
+            if not typed_dfb and (m.get("status") == "finished" and score is None or m.get("penalties") is not None and penalties is None):
                 raise SourceError("INVALID_SCORE")  # a finished match without its score, or unreadable penalties
             extra = "après prolongation" in (m.get("notes") or [])
             row = {
@@ -146,6 +156,8 @@ def match_rows(kind, competition, season, body):
                 "is_neutral": m["neutral"] if isinstance(m.get("neutral"), bool) else None,
             }
             key = str(m["key"]).split(":", 1)[1]
+            if typed_dfb:
+                row.update(cup_periods.score_columns(cup_periods.read(season, key, m)))
         out.append((key, dict(row, position=position)))
     return out
 
@@ -188,6 +200,30 @@ def _round(conn, edition, name):
     return found[0] if found else conn.execute("INSERT INTO core.rounds(competition_season_id, name) VALUES (%s,%s) RETURNING id", (edition, name)).fetchone()[0]
 
 
+def _guard_open_cup(before, rows, cup_key, reviewed_halves):
+    """Keep the already published phase/award when a later source body sheds a fact."""
+    statuses = {key: ("finished" if key == TOURS_AWARD and m["status"] == "awarded"
+                     and before.get(key, {}).get("home_score") == 0 and before[key].get("away_score") == 3
+                     else m["status"]) for key, m in rows}
+    snapshot.guard("openfootball", before, statuses, cup_key)
+    after = dict(rows)
+    for key, old in before.items():
+        new = after.get(key)
+        if old["status"] == "awarded" and (new is None or new["status"] != "awarded"):
+            raise SourceError("PERIODS_CONFLICT", f"{key}: the accepted award would be removed")
+        if not new or new["status"] == "awarded":
+            continue
+        for part in ("score_ht", "score_et", "score_90", "penalty_score"):
+            prior = [old[f"{side}_{part}"] for side in ("home", "away")]
+            next_pair = [new[f"{side}_{part}"] for side in ("home", "away")]
+            if prior == [None, None] or prior == next_pair:
+                continue
+            if part == "score_ht" and reviewed_halves.get(key) == prior:
+                continue
+            raise SourceError("PERIODS_CONFLICT", f"{key}: the known {part} would change")
+
+
+
 def save(conn, kind, competition, season, body, now):
     """Write one edition from its source body; returns the matches added, changed or removed.
 
@@ -199,13 +235,28 @@ def save(conn, kind, competition, season, body, now):
     label = sporting_season(season, league_name=TOURNAMENTS.get(competition))
     if label is None:
         raise SourceError("INVALID_SEASON")
-    rows = unique_rows(match_rows(kind, competition, season, body))
+    typed_dfb = cup_periods.applies(kind, competition, season)
+    if typed_dfb:
+        conn.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", (cup_key,))
+    source_rows = match_rows(kind, competition, season, body)
+    rows = unique_rows(source_rows)
+    if typed_dfb and len(source_rows) != len(rows):
+        raise SourceError("INVALID_PERIODS", f"{cup_key}: duplicate match keys")
     digest = rows_digest(body.get("name"), rows)
     stored = conn.execute("SELECT id, cup_digest, cup_name FROM core.competition_seasons WHERE cup_key=%s", (cup_key,)).fetchone()
     before = {}
     if stored is None or stored[1] != digest:
         before = snapshot.stored(conn, provider, stored and stored[0])
-        snapshot.guard(provider, before, {key: m["status"] for key, m in rows}, cup_key)
+        if kind == "open-cups" and competition in CUP_PUBLICATION:
+            reviewed_halves = {
+                f"{competition}:{season}:{m.get('date') or ''}|{m.get('team1') or ''}|{m.get('team2') or ''}|{m.get('num') or ''}":
+                m["attestedHalf"]["before"] for m in body["matches"] if m.get("attestedHalf")
+            } if competition == "world-cup-history" else {}
+            _guard_open_cup(before, rows, cup_key, reviewed_halves)
+        else:
+            snapshot.guard(provider, before, {key: m["status"] for key, m in rows}, cup_key)
+        if typed_dfb:
+            cup_periods.guard(conn, provider, before, rows)
     season_id = Store(conn).season(label)
     family = f"cup:{kind}:{competition}"
     row = conn.execute("SELECT entity_id FROM core.provider_ids WHERE entity_type='competition' AND provider='vega' AND provider_key=%s", (family,)).fetchone()
@@ -225,11 +276,14 @@ def save(conn, kind, competition, season, body, now):
     ).fetchone()[0]
     if stored is not None and stored[1] == digest:
         return 0  # the same rows: nothing written again
-    before.update(snapshot.elsewhere(conn, provider, edition, [key for key, _ in rows if key not in before]))
+    elsewhere = snapshot.elsewhere(conn, provider, edition, [key for key, _ in rows if key not in before])
+    if typed_dfb and elsewhere:
+        raise SourceError("PERIODS_CONFLICT", f"match keys already bound to another edition: {', '.join(sorted(elsewhere))}")
+    before.update(elsewhere)
     changes, keep = 0, set()
     for key, m in rows:
-        home = _team(conn, provider, m["home_key"], m["home"]) if m["home"] else None
-        away = _team(conn, provider, m["away_key"], m["away"]) if m["away"] else None
+        home = m.get("home_existing_id") or (_team(conn, provider, m["home_key"], m["home"]) if m["home"] else None)
+        away = m.get("away_existing_id") or (_team(conn, provider, m["away_key"], m["away"]) if m["away"] else None)
         values = {k: m[k] for k in ("status", "home_score", "away_score", "home_score_90", "away_score_90", "home_score_ht",
                                      "away_score_ht", "home_score_et", "away_score_et", "home_penalty_score", "away_penalty_score", "is_neutral")}
         values.update(competition_season_id=edition, season_id=season_id, match_date=m["date"], home_team_id=home, away_team_id=away,
@@ -245,6 +299,12 @@ def save(conn, kind, competition, season, body, now):
         "UPDATE core.competition_seasons SET cup_digest=%s, cup_updated_at=CASE WHEN %s THEN %s ELSE cup_updated_at END WHERE id=%s",
         (digest, bool(changes) or renamed, now, edition),
     )
+    if (changes or renamed) and (typed_dfb or kind == "open-cups" and competition in CUP_PUBLICATION):
+        conn.execute(
+            """INSERT INTO ops.resource_versions(resource_kind,resource_id) VALUES ('competition_season',%s)
+               ON CONFLICT (resource_kind,resource_id) DO UPDATE
+                 SET version=ops.resource_versions.version+1, updated_at=now()""", (edition,),
+        )
     return changes
 
 
@@ -254,11 +314,23 @@ def run(conn, get, scope, now):
         raise ValueError(scope)
     query = {"competition": competition, "season": season}
     answer = bridge("projection", kind, urlencode(query)) or {}
-    if answer.get("status") != 200 or not isinstance(answer.get("body"), dict):
-        # The projection names an unreadable body (open-cups.mjs: INVALID_SCORE), else its HTTP status.
-        code = (answer.get("body") or {}).get("code") if isinstance(answer.get("body"), dict) else None
-        raise SourceError(code if isinstance(code, str) and re.fullmatch(r"[A-Z][A-Z0-9_]{0,63}", code) else f"HTTP_{answer.get('status') or 'ERROR'}")
-    return save(conn, kind, competition, season, answer["body"], now), 0
+    body = answer.get("body")
+    observation = body.get("phaseObservation") if isinstance(body, dict) and cup_periods.applies(kind, competition, season) else None
+    try:
+        if answer.get("status") != 200 or not isinstance(body, dict):
+            # The projection names an unreadable body, else its HTTP status.
+            code = body.get("code") if isinstance(body, dict) else None
+            detail = body.get("detail") if observation else None
+            raise SourceError(code if isinstance(code, str) and re.fullmatch(r"[A-Z][A-Z0-9_]{0,63}", code)
+                              else f"HTTP_{answer.get('status') or 'ERROR'}", detail)
+        written = save(conn, kind, competition, season, body, now)
+    except SourceError as error:
+        if observation:
+            raise cup_periods.Refusal(error, scope, now, observation) from error
+        raise
+    if observation:
+        cup_periods.record(conn, scope, now, observation, "accepted")
+    return written, 0
 
 
 class For:

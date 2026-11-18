@@ -2,7 +2,7 @@
 
 Each adapter exposes SCOPES (scope -> period) and run(conn, get, scope, now) returning
 (rows_written, unmatched). `due` and `run_due` schedule them from ops.source_runs;
-the worker calls run_due once a day. Responses are processed in memory, never stored.
+the worker calls run_due once a day. Adapters can record narrow source evidence for their decisions.
 """
 
 from datetime import datetime, timedelta, timezone
@@ -67,7 +67,7 @@ def run_due(conn, get, now=None, *, names=None):
         if names and name not in names:
             continue
         for scope in due(conn, instant, name, adapter):
-            code, detail, written, unmatched = None, None, 0, 0
+            code, detail, refusal, written, unmatched = None, None, None, 0, 0
             try:
                 with conn.transaction():
                     conn.execute(f"SET LOCAL lock_timeout = '{LOCK_WAIT}'")
@@ -79,9 +79,11 @@ def run_due(conn, get, now=None, *, names=None):
                     else "DATABASE_ERROR" if isinstance(error, psycopg.Error)
                     else "INVALID_SOURCE_RESPONSE"
                 )
-                detail = error.detail if isinstance(error, SourceError) else None
+                if isinstance(error, SourceError):
+                    detail = error.detail
+                    refusal = getattr(error, "record_refusal", None)
             try:
-                record_run(conn, name, scope, instant, code, written, unmatched, detail)
+                record_run(conn, name, scope, instant, code, written, unmatched, detail, refusal=refusal)
             except psycopg.Error:
                 # A status that cannot be written must not stop the other scopes.
                 code = code or "STATUS_NOT_RECORDED"
@@ -89,7 +91,7 @@ def run_due(conn, get, now=None, *, names=None):
     return results
 
 
-def record_run(conn, name, scope, instant, code, written, unmatched, detail=None):
+def record_run(conn, name, scope, instant, code, written, unmatched, detail=None, *, refusal=None):
     with conn.transaction():
         conn.execute(
             """INSERT INTO ops.source_runs(source, scope, last_attempt_at, last_success_at, status, error_code, rows_written, unmatched, updated_at)
@@ -104,6 +106,8 @@ def record_run(conn, name, scope, instant, code, written, unmatched, detail=None
             # What a refused snapshot would have changed (snapshot.py): the scope's status says that it
             # failed, this says which matches.
             failure(conn, code, f"{name}:{scope}: {detail}")
+        if refusal:
+            refusal(conn)
 
 
 def failure(conn, code, message, edition=None):

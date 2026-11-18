@@ -179,10 +179,16 @@ def _by_team_period(rows):
     return sorted(rows, key=lambda r: (r[0], r[1]))
 
 
-def _stats_rows(row, home, away):
-    """The match's team_match_stats rows: (team, period, {column: value})."""
+def _stats_rows(row, home, away, stored=()):
+    """The match's team_match_stats rows: (team, period, {column: value}). A cell the file does not state (its
+    column absent or the cell empty) keeps the stored value; a stated one, 0 included, replaces it
+    (FAILURE_MODES.md §22)."""
     teams = {"home": home, "away": away}
-    return _by_team_period((teams[side], period, stats) for (side, period), stats in row["stats"].items() if stats)
+    merged = {(team, period): dict(columns) for team, period, columns in stored}
+    for (side, period), stats in row["stats"].items():
+        if stats:
+            merged.setdefault((teams[side], period), {}).update(stats)
+    return _by_team_period((team, period, columns) for (team, period), columns in merged.items() if columns)
 
 
 def _stored_stats(conn, season_id, ids):
@@ -253,7 +259,7 @@ def save(conn, folder, name, season, results, fixtures, now):
             "home_score_ht": row["home_score_ht"], "away_score_ht": row["away_score_ht"], "archive_position": position,
         }
         found = before.get(key)
-        stats = _stats_rows(row, home, away)
+        stats = _stats_rows(row, home, away, stats_before.get(found["id"], []) if found is not None else ())
         restated = found is not None and stats_before.get(found["id"], []) != stats
         mid, outcome = snapshot.write(conn, "open_matchday", key, values, found, changed=restated)
         changes += outcome in ("inserted", "updated")

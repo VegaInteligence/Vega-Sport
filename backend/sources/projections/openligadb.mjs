@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { normalizeOpenLigaMatches } from "../../../dashboard/frontend/src/services/openligadb.js";
 
 const SOURCES = {
@@ -29,6 +30,8 @@ export async function GET(request) {
       { error: "Compétition ou édition indisponible." },
       { status: 400 },
     );
+  const typedDfb = competition === "germany-cup" && ["2025/2026", "2026/2027"].includes(season);
+  let phaseObservation;
   try {
     const response = await fetch(
       "https://api.openligadb.de/getmatchdata/" + source.join("/"),
@@ -42,8 +45,29 @@ export async function GET(request) {
       },
     );
     if (!response.ok) throw new Error("Source unavailable");
-    const rows = await response.json(),
-      matches = normalizeOpenLigaMatches(rows, competition);
+    let rows;
+    if (typedDfb) {
+      const raw = Buffer.from(await response.arrayBuffer());
+      phaseObservation = { sourceSha256: createHash("sha256").update(raw).digest("hex") };
+      rows = JSON.parse(raw.toString("utf8"));
+      if (!Array.isArray(rows) || rows.length > 300) throw new Error("Invalid phase observation");
+      phaseObservation.matches = rows.map((row) => ({
+        matchID: row?.matchID, date: row?.matchDateTime || row?.matchDateTimeUTC,
+        matchIsFinished: row?.matchIsFinished, homeId: row?.team1?.teamId, awayId: row?.team2?.teamId,
+        matchResults: row?.matchResults,
+      }));
+    } else {
+      rows = await response.json();
+    }
+    const matches = normalizeOpenLigaMatches(rows, competition);
+    if (typedDfb) {
+      const byKey = new Map(phaseObservation.matches.map((row) => [`openliga:${row.matchID}`, row]));
+      for (const match of matches) match.results = byKey.get(match.key)?.matchResults;
+      const duplicates = matches.filter((match, index) => matches.findIndex((m) => m.key === match.key) !== index);
+      if (duplicates.length) {
+        return Response.json({ code: "INVALID_PERIODS", detail: "Duplicate match IDs: " + duplicates.map((m) => m.key).join(", "), phaseObservation }, { status: 422 });
+      }
+    }
     if (!matches.length || matches.length !== rows.length)
       throw new Error("Incomplete source data");
     return Response.json(
@@ -51,6 +75,7 @@ export async function GET(request) {
         competition,
         season,
         matches,
+        ...(phaseObservation && { phaseObservation }),
         source: {
           name: "OpenLigaDB",
           url: "https://www.openligadb.de/",
@@ -66,6 +91,7 @@ export async function GET(request) {
       },
     );
   } catch {
+    if (phaseObservation) return Response.json({ code: "INVALID_PERIODS", detail: "Unreadable OpenLigaDB phase observation", phaseObservation }, { status: 422 });
     return Response.json(
       {
         error:
