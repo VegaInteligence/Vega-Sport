@@ -1,0 +1,26 @@
+{
+  "failing_status": {
+    "outcome": "DATABASE_ERROR",
+    "read": null,
+    "status": [
+      "2026-11-17 08:00:00+00:00",
+      null,
+      "error",
+      "DATABASE_ERROR"
+    ]
+  },
+  "concurrent_fetch": true,
+  "ordered_publications": {
+    "read": [
+      9,
+      "2026-11-17 11:00:00+00:00"
+    ],
+    "status": [
+      "2026-11-17 11:00:00+00:00",
+      "2026-11-17 11:00:00+00:00",
+      "ok",
+      null
+    ],
+    "version": 2
+  }
+}

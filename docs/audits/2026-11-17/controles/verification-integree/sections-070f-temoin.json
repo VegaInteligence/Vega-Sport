@@ -1,0 +1,47 @@
+{
+  "Aster City Women": {
+    "code": "UNMATCHED_TEAMS",
+    "acquired": 0,
+    "rows": 0
+  },
+  "Aster City Féminines": {
+    "code": "ok",
+    "acquired": 1,
+    "rows": 3
+  },
+  "Aster City Femenino": {
+    "code": "UNMATCHED_TEAMS",
+    "acquired": 0,
+    "rows": 0
+  },
+  "Aster City Femenina": {
+    "code": "UNMATCHED_TEAMS",
+    "acquired": 0,
+    "rows": 0
+  },
+  "Aster City Femminile": {
+    "code": "ok",
+    "acquired": 1,
+    "rows": 3
+  },
+  "Aster City WFC": {
+    "code": "ok",
+    "acquired": 1,
+    "rows": 3
+  },
+  "Aster City Ladies": {
+    "code": "UNMATCHED_TEAMS",
+    "acquired": 0,
+    "rows": 0
+  },
+  "Aster City Männer": {
+    "code": "ok",
+    "acquired": 1,
+    "rows": 3
+  },
+  "Aster City": {
+    "code": "ok",
+    "acquired": 1,
+    "rows": 3
+  }
+}

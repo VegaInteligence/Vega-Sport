@@ -1,0 +1,51 @@
+{
+  "pairs": 7,
+  "editions": [
+    {
+      "source_edition": 196,
+      "name": "Saudi Pro League",
+      "canonical": {
+        "Al Shabab": 5315,
+        "Al Hilal": 5317,
+        "Al Qadsiah": 5318,
+        "Al Nassr FC": 5322,
+        "Al Ittihad": 5325,
+        "Al Ahli SC": 5309,
+        "NEOM Sports Club": 5316
+      },
+      "compatible_variant": {
+        "Al Ahli SC Men": 5309,
+        "Al Ittihad Men": 5325,
+        "Al Qadsiah Men": 5318,
+        "NEOM Sports Club Men": 5316,
+        "Al Hilal Men": 5317,
+        "Al Nassr FC Men": 5322,
+        "Al Shabab Men": 5315
+      },
+      "contradictory_variant": "UNMATCHED_TEAMS"
+    },
+    {
+      "source_edition": 197,
+      "name": "Women's Premier League",
+      "canonical": {
+        "Al Shabab": 5584,
+        "Al Hilal": 5334,
+        "Al Qadsiah": 5328,
+        "Al Nassr": 5329,
+        "Al Ittihad": 5331,
+        "Al Ahli": 5327,
+        "Neom SC": 5330
+      },
+      "compatible_variant": {
+        "Al Nassr (W)": 5329,
+        "Al Shabab (W)": 5584,
+        "Neom SC (W)": 5330,
+        "Al Ittihad (W)": 5331,
+        "Al Ahli (W)": 5327,
+        "Al Qadsiah (W)": 5328,
+        "Al Hilal (W)": 5334
+      },
+      "contradictory_variant": "UNMATCHED_TEAMS"
+    }
+  ]
+}

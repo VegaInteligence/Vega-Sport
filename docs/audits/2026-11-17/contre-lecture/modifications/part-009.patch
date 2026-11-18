@@ -272,6 +272,23 @@ index 0000000000..7eb0d61979
 +                self.assertEqual(self.refresh(2025, [changed, fixture], day), code)
 +                self.assertEqual(self.state(2025), before)
 +                self.assertEqual(self.stamps(2025), stamps)
+diff --git a/backend/tests/test_live.py b/backend/tests/test_live.py
+index 5fb7fb82e2..f9e4cd9630 100644
+--- a/backend/tests/test_live.py
++++ b/backend/tests/test_live.py
+@@ -143,10 +143,10 @@ class IngestorTest(unittest.TestCase):
+         x("INSERT INTO core.competition_seasons(id, competition_id, season_id, native_label) VALUES (1, 1, 2025, '2025/2026')")
+         x("INSERT INTO core.teams(id, name) VALUES (1, 'Olympique Lyonnais'), (2, 'Paris Saint-Germain')")
+         x("INSERT INTO core.players(id, name) VALUES (7, 'A. Striker')")
+-        x("""INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES
+-             ('team','pitchapi','t_lyon01',1), ('team','pitchapi','t_psg001',2), ('player','pitchapi','p_aaaaa1',7), ('match','pitchapi','m_live01',10)""")
+         x("""INSERT INTO core.matches(id, competition_season_id, season_id, source, status, home_team_id, away_team_id, match_date, kickoff_at)
+              VALUES (10, 1, 2025, 'pitchapi', 'not_started', 1, 2, '2025-09-20', '2025-09-20T19:00:00Z')""")
++        x("""INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES
++             ('team','pitchapi','t_lyon01',1), ('team','pitchapi','t_psg001',2), ('player','pitchapi','p_aaaaa1',7), ('match','pitchapi','m_live01',10)""")
+         x("INSERT INTO core.match_coverage(season_id, match_id) VALUES (2025, 10)")
+         # The same fixture as a cup source wrote it: another row, never the one a feed is linked to.
+         x("INSERT INTO core.competitions(id, name) VALUES (2, 'Coupe')")
 diff --git a/backend/tests/test_source_identity.py b/backend/tests/test_source_identity.py
 index 8d43894232..60ec88ad10 100644
 --- a/backend/tests/test_source_identity.py
@@ -289,10 +306,10 @@ index 8d43894232..60ec88ad10 100644
  
 diff --git a/backend/tests/test_source_snapshots.py b/backend/tests/test_source_snapshots.py
 new file mode 100644
-index 0000000000..059d47c664
+index 0000000000..91ba1948e3
 --- /dev/null
 +++ b/backend/tests/test_source_snapshots.py
-@@ -0,0 +1,922 @@
+@@ -0,0 +1,1075 @@
 +"""Cup and open-matchday snapshots (VI-27), written before the code: FAILURE_MODES.md §19.
 +
 +The OpenFootball bodies are the frozen upstream files of fixtures/openfootball (CC0). The real
@@ -315,6 +332,8 @@ index 0000000000..059d47c664
 +import subprocess
 +import sys
 +import tempfile
++from threading import Event, Thread
++from time import monotonic, sleep
 +import unittest
 +from unittest.mock import patch
 +from urllib.parse import urlparse
@@ -927,6 +946,157 @@ index 0000000000..059d47c664
 +            self.assertIsNone(self.x("SELECT entity_id FROM core.provider_ids WHERE provider='open_matchday' AND provider_key=%s",
 +                                     (retired[1],)).fetchone())
 +
++    @staticmethod
++    def blocked(observer, waiter, timeout=5):
++        limit = monotonic() + timeout
++        while monotonic() < limit:
++            if observer.execute("SELECT cardinality(pg_blocking_pids(%s)) > 0", (waiter.info.backend_pid,)).fetchone()[0]:
++                return True
++            sleep(.02)
++        return False
++
++    def fixture_dependents(self):
++        match = self.public_matches()[1][0]
++        self.x("""INSERT INTO core.team_match_stats(season_id,match_id,team_id,period,total_shots)
++                  SELECT season_id,id,away_team_id,'all',9 FROM core.matches WHERE id=%s""", (match,))
++        return match
++
++    def test_shared_match_and_its_statistics_survive_a_withdrawal(self):
++        match = self.fixture_dependents()
++        self.x("""INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id)
++                  VALUES ('match','pitchapi','m_shared',%s)""", (match,))
++        before = self.state()
++        outcome = self.read([league(fixtures=0)], self.files(fixtures=None), NOW+timedelta(days=1))
++        self.assertEqual(self.state(), before)
++        self.assertEqual(outcome, ("ok", 0, 1))
++        self.assertIn("SHARED_MATCH", {code for code, _ in self.failures()})
++
++    def test_third_party_odds_and_unattributed_events_survive_withdrawal(self):
++        for dependent in ("odds", "goal", "possession", "half_shots"):
++            with self.subTest(dependent=dependent):
++                self.setUp()
++                match = self.public_matches()[1][0]
++                if dependent == "odds":
++                    self.x("""INSERT INTO core.match_odds(season_id,match_id,bookmaker,title,home,draw,away,
++                                  first_home,first_draw,first_away,fetched_at)
++                              SELECT season_id,id,'book','Book',2.5,3,3.5,2.5,3,3.5,now() FROM core.matches WHERE id=%s""",
++                           (match,))
++                    query = "SELECT home,draw,away FROM api.match_odds WHERE match_key=%s"
++                elif dependent == "goal":
++                    self.x("""INSERT INTO core.match_events(season_id,match_id,seq,event_type,team_id)
++                              SELECT season_id,id,1,'goal',home_team_id FROM core.matches WHERE id=%s""", (match,))
++                    query = "SELECT event_type,team_id FROM core.match_events WHERE match_id=%s"
++                else:
++                    self.x("""INSERT INTO core.team_match_stats(season_id,match_id,team_id,period,possession_pct,total_shots)
++                              SELECT season_id,id,home_team_id,%s,%s,%s FROM core.matches WHERE id=%s""",
++                           (("all", 60, None, match) if dependent == "possession" else ("first_half", None, 0, match)))
++                    query = "SELECT period,possession_pct,total_shots FROM core.team_match_stats WHERE match_id=%s"
++                data = self.x(query, (match,)).fetchall()
++                self.assertTrue(data)
++                before = self.public_matches()
++                self.assertEqual(self.read([league(fixtures=0)], self.files(fixtures=None), NOW+timedelta(days=1)), ("ok", 0, 1))
++                self.assertEqual(self.public_matches(), before)
++                self.assertEqual(self.x(query, (match,)).fetchall(), data)
++                self.assertIn("MATCH_HAS_DEPENDENTS", {code for code, _ in self.failures()})
++
++    def test_withdrawal_preserves_an_enrichment_of_an_existing_statistics_row(self):
++        from vega.store import connect_local
++
++        match = self.fixture_dependents()
++        outcomes, complete = [], Event()
++
++        def withdraw():
++            outcomes.append(self.read([league(fixtures=0)], self.files(fixtures=None), NOW+timedelta(days=1)))
++            complete.set()
++
++        with connect_local(DSN) as writer, writer.transaction():
++            writer.execute("UPDATE core.team_match_stats SET possession_pct=60 WHERE match_id=%s", (match,))
++            worker = Thread(target=withdraw)
++            worker.start()
++            complete.wait(2)
++        worker.join(10)
++        self.assertFalse(worker.is_alive())
++        self.assertEqual(outcomes, [("ok", 0, 1)])
++        self.assertEqual(self.x("SELECT total_shots,possession_pct FROM core.team_match_stats WHERE match_id=%s",
++                                (match,)).fetchall(), [(9, 60.0)])
++
++    def test_a_concurrent_rotation_protects_withdrawal_update_and_reorder(self):
++        from vega.store import connect_local
++
++        actions = (
++            ("withdraw", self.files(fixtures=None), 0),
++            ("historical alias", self.files(fixtures=None), 0),
++            ("update", self.files(fixtures=FIXTURES.replace(",16", ",17")), 1),
++            ("reorder", self.files(), 1),
++        )
++        for action, files, fixtures in actions:
++            with self.subTest(action=action), connect_local(DSN) as writer:
++                self.setUp()
++                match = self.fixture_dependents()
++                if action == "reorder":
++                    self.x("UPDATE core.matches SET archive_position=12 WHERE id=%s", (match,))
++                original = self.public_matches()
++                outcomes = []
++                with writer.transaction():
++                    writer.execute("SELECT id FROM core.matches WHERE id=%s FOR UPDATE", (match,))
++                    rotates = action != "historical alias"
++                    if rotates:
++                        writer.execute("""UPDATE core.provider_ids SET is_current=false WHERE entity_type='match'
++                                          AND provider='open_matchday' AND entity_id=%s AND is_current""", (match,))
++                    writer.execute("""INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id,is_current)
++                                      VALUES ('match','open_matchday','next:alias',%s,%s)""",
++                                   (match, rotates))
++                    worker = Thread(target=lambda: outcomes.append(self.read([league(fixtures=fixtures)], files, NOW+timedelta(days=1))))
++                    worker.start()
++                    waiting = self.blocked(writer, self.db)
++                worker.join(10)
++                self.assertFalse(worker.is_alive())
++                self.assertTrue(waiting)
++                self.assertEqual(self.public_matches(), original)
++                self.assertEqual(outcomes, [("ok", 0, 1)])
++                self.assertIn("SNAPSHOT_CHANGED", {code for code, _ in self.failures()})
++                self.assertEqual(self.x("SELECT total_shots FROM core.team_match_stats WHERE match_id=%s", (match,)).fetchall(), [(9,)])
++                self.assertEqual(self.x("""SELECT is_current FROM core.provider_ids WHERE entity_type='match'
++                                          AND entity_id=%s ORDER BY 1""", (match,)).fetchall(), [(False,), (True,)])
++
++    def test_key_added_while_a_withdrawal_commits_cannot_become_orphaned(self):
++        from vega.store import connect_local
++
++        match = self.fixture_dependents()
++        ready = Event()
++        added = []
++        remove = snapshot.remove
++        with connect_local(DSN) as writer:
++            def attach():
++                ready.set()
++                try:
++                    writer.execute("""INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id)
++                                      VALUES ('match','pitchapi','m_late',%s)""", (match,))
++                except psycopg.errors.ForeignKeyViolation:
++                    added.append("missing parent")
++                else:
++                    added.append("inserted")
++
++            worker = Thread(target=attach)
++            waited = []
++
++            def pause(conn, *args):
++                count = remove(conn, *args)
++                worker.start()
++                self.assertTrue(ready.wait(5))
++                waited.append(self.blocked(conn, writer, timeout=1))
++                return count
++
++            with patch.object(snapshot, "remove", pause):
++                outcome = self.read([league(fixtures=0)], self.files(fixtures=None), NOW+timedelta(days=1))
++            worker.join(10)
++        self.assertFalse(worker.is_alive())
++        self.assertEqual(outcome, ("ok", 1, 0))
++        self.assertEqual(added, ["missing parent"])
++        self.assertEqual(waited, [True])
++        self.assertIsNone(self.x("SELECT 1 FROM core.provider_ids WHERE entity_type='match' AND entity_id=%s", (match,)).fetchone())
++        self.assertIsNone(self.x("SELECT 1 FROM core.team_match_stats WHERE match_id=%s", (match,)).fetchone())
++
 +
 +    # 22a, 22b (FAILURE_MODES.md §22, written before the code): a later file without a statistic keeps it; a
 +    # stated value, 0 included, replaces it once.
@@ -1285,10 +1455,10 @@ index 584a53b962..4769290563 100644
              sportscore.run(self.db, get, "standings:l_3FJFUl", NOW)
 diff --git a/backend/tests/test_sportscore_standings.py b/backend/tests/test_sportscore_standings.py
 new file mode 100644
-index 0000000000..a70b1db30d
+index 0000000000..44d68b8e43
 --- /dev/null
 +++ b/backend/tests/test_sportscore_standings.py
-@@ -0,0 +1,186 @@
+@@ -0,0 +1,275 @@
 +"""SportScore official standings through sources.run_due, PostgreSQL and api.standing_rows:
 +the cases of docs/calculs/09-audit-2026-11/FAILURE_MODES_SPORTSCORE.md §3 (sportscore_cases.py).
 +The widget answers from memory; the end-to-end replay of the same cases over HTTPS and the read
@@ -1298,6 +1468,7 @@ index 0000000000..a70b1db30d
 +from pathlib import Path
 +import sys
 +import unittest
++from unittest.mock import patch
 +from urllib.parse import urlparse
 +
 +ROOT = Path(__file__).resolve().parents[1]
@@ -1466,6 +1637,31 @@ index 0000000000..a70b1db30d
 +        self.assertIsNone(self.write(replace(START, 0, team="Gent U23")))
 +        self.assert_refused(replace(START, 0, team="Gent B", pts=9), 3, "UNMATCHED_TEAMS")
 +
++    def test_gender_of_a_learned_name_cannot_contradict_the_edition(self):
++        self.assertIsNone(self.write(START))
++        self.assert_refused(replace(START, 0, team="Aster City Women", pts=9), 3, "UNMATCHED_TEAMS")
++        self.alias("Aster City Women")
++        self.assert_refused(replace(START, 0, team="Aster City Women", pts=9), 6, "UNMATCHED_TEAMS")
++        self.alias("Aster City WFC")
++        names = ("Aster City (W)", "Aster City Féminines", "Aster City Femenino", "Aster City Femminile", "Aster City WFC")
++        for hours, name in enumerate(names, 3):
++            with self.subTest(name=name):
++                self.assert_refused(replace(START, 0, team=name, pts=9), hours * 3, "UNMATCHED_TEAMS")
++
++    def test_a_canonical_wfc_club_name_stays_admissible(self):
++        self.db.execute("UPDATE core.teams SET name='Aster City W.F.C.' WHERE id=101")
++        self.assertIsNone(self.write(replace(START, 0, team="Aster City WFC")))
++        self.assertEqual(self.read()[0][:2], (101, "Aster City W.F.C."))
++
++    def test_womens_edition_admits_unmarked_and_explicit_womens_names(self):
++        self.db.execute("UPDATE core.competitions SET name='Saudi Women’s Premier League' WHERE id=401")
++        self.assertIsNone(self.write(START))
++        self.assertIsNone(self.write(replace(START, 0, team="Aster City Women", pts=9), 3))
++        self.assertEqual(self.read()[0][:2], (101, "Aster City"))
++        self.assertIn((101, "Aster City Women"), self.aliases())
++        self.assert_refused(replace(START, 0, team="Aster City Men", pts=10), 6, "UNMATCHED_TEAMS")
++        self.assert_refused(replace(START, 0, team="Aster City Männer", pts=10), 9, "UNMATCHED_TEAMS")
++
 +    def test_an_exact_homonym_is_ambiguous(self):
 +        self.assertIsNone(self.write(START))
 +        self.db.execute("INSERT INTO core.teams(id,name) VALUES (199,'Aster-City')")
@@ -1473,99 +1669,68 @@ index 0000000000..a70b1db30d
 +        self.assert_refused(replace(START, 0, pts=9), 3, "UNMATCHED_TEAMS")
 +
 +
++class SportScoreFreshnessTest(SportScoreDatabase):
++    def setUp(self):
++        self.db.execute("DELETE FROM core.standings_official WHERE competition_season_id=5001 AND source='sportscore'")
++        self.db.execute("DELETE FROM ops.resource_versions WHERE resource_kind='competition_season' AND resource_id=5001")
++        self.scope = "standings:" + CASES[0]["key"]
++        self.db.execute("DELETE FROM ops.source_runs WHERE source='sportscore' AND scope=%s", (self.scope,))
++
++    def read(self):
++        return self.db.execute("""SELECT team_id,points,as_of,version FROM api.standings s
++                                   JOIN ops.resource_versions v ON v.resource_kind='competition_season'
++                                   AND v.resource_id=s.competition_season_id
++                                   WHERE s.competition_season_id=5001 ORDER BY position""").fetchall()
++
++    def attempt(self):
++        return self.db.execute("""SELECT last_attempt_at,last_success_at,status,error_code,rows_written
++                                  FROM ops.source_runs WHERE source='sportscore' AND scope=%s""", (self.scope,)).fetchone()
++
++    def run_scope(self, conn, get, instant):
++        return sources.run_due(conn, get, instant, names={"sportscore"})[("sportscore", self.scope)]
++
++    def answer(self, rows, url):
++        return replay.widget(tables((None, rows)), replay.slug_of(url))
++
++    def test_first_publisher_remains_current_when_the_older_observation_finishes_last(self):
++        from vega.store import connect_local
++
++        with patch.object(sportscore, "scopes", lambda _: {self.scope: sportscore.PERIOD}), connect_local(DSN) as writer:
++            for delay in (3, 0):
++                with self.subTest(delay=delay):
++                    self.setUp()
++                    later = T0 + delay * H
++                    published = []
++
++                    def delayed(url):
++                        self.assertIsNone(self.attempt())
++                        self.assertEqual(self.run_scope(writer, lambda u: self.answer(replace(START, 0, pts=9), u), later), "ok")
++                        published.extend(self.read())
++                        return self.answer(START, url)
++
++                    self.assertEqual(self.run_scope(self.db, delayed, T0), "STALE_OBSERVATION")
++                    self.assertEqual(self.read(), published)
++                    self.assertEqual(published[0], (101, 9, later, 1))
++                    self.assertEqual(self.attempt(), (later, later, "ok", None, 3))
++
++    def test_an_older_transport_failure_cannot_replace_a_new_success_and_a_fresh_retry_works(self):
++        from vega.store import connect_local
++
++        with patch.object(sportscore, "scopes", lambda _: {self.scope: sportscore.PERIOD}), connect_local(DSN) as writer:
++            def fail(_):
++                raise SourceError("HTTP_503")
++
++            def delayed(url):
++                self.assertEqual(self.run_scope(writer, lambda u: self.answer(replace(START, 0, pts=9), u), T0 + 3 * H), "ok")
++                return fail(url)
++
++            self.assertEqual(self.run_scope(self.db, delayed, T0), "HTTP_503")
++            self.assertEqual(self.attempt(), (T0 + 3 * H, T0 + 3 * H, "ok", None, 3))
++            self.assertEqual(self.run_scope(self.db, fail, T0 + 6 * H), "HTTP_503")
++            self.assertEqual(self.attempt(), (T0 + 6 * H, T0 + 3 * H, "error", "HTTP_503", 0))
++            self.assertEqual(self.run_scope(self.db, lambda u: self.answer(START, u), T0 + 7 * H), "ok")
++            self.assertEqual(self.read()[0], (101, 8, T0 + 7 * H, 2))
++
++
 +if __name__ == "__main__":
 +    unittest.main()
-diff --git a/backend/tests/test_transfermarkt.py b/backend/tests/test_transfermarkt.py
-index 9cfb552490..db2334275a 100644
---- a/backend/tests/test_transfermarkt.py
-+++ b/backend/tests/test_transfermarkt.py
-@@ -70,8 +70,10 @@ class PureTest(unittest.TestCase):
-             {"id": 3, "transferSource": {"clubId": 1}, "transferDestination": {"clubId": 2}, "typeDetails": {"type": "ACTIVE_LOAN_TRANSFER"},
-              "details": {"date": "2015-01-01", "isPending": True}},
-         ]}})
-+        # A free transfer states a fee of 0, an observed zero; it read None before VI-31, which kept a
-+        # correction to a free transfer from applying (FAILURE_MODES.md §20, case 20l).
-         self.assertEqual([(t["key"], t["kind"], t["fee"], t["from"], t["to"], t["pending"]) for t in transfers],
--                         [("1", "transfer", 180000000, "3524", "583", False), ("2", "free", None, "583", "418", False), ("3", "loan", None, "1", "2", True)])
-+                         [("1", "transfer", 180000000, "3524", "583", False), ("2", "free", 0, "583", "418", False), ("3", "loan", None, "1", "2", True)])
-         self.assertEqual(tm.parse_transfers(None), [])
-         injuries = tm.parse_injuries({"injuries": [
-             {"seasonId": 2025, "name": "Hamstring injury", "start": "2026-03-01", "end": "2026-03-20", "missedGamesCount": 4},
-@@ -281,6 +283,77 @@ class ReaderTest(unittest.TestCase):
-         finally:
-             self.db.execute("DELETE FROM ops.transfermarkt_reads WHERE provider_key LIKE '7700%'")
- 
-+    def test_due_squad_profiles_gain_priority_without_resetting_the_queue(self):
-+        x = self.db.execute
-+        with self.db.transaction(force_rollback=True):
-+            now = x("SELECT now()").fetchone()[0]
-+            due, later = now - timedelta(hours=1), now + timedelta(hours=6)
-+            calls = []
-+
-+            def fetch(path, params):
-+                keys = [value for name, value in params if name == "ids[]"]
-+                calls.append((path, keys))
-+                return 200, {}, body([player(key, f"Profile {key}", None) for key in keys])
-+
-+            reader = tm.Reader(self.db, fetch, interval=0, jitter=0, clock=lambda: now, log=lambda *a, **k: None)
-+            reader.plan()
-+            x("UPDATE ops.transfermarkt_reads SET next_due_at=%s", (later,))
-+            x("""INSERT INTO core.provider_clubs(provider,provider_key,name,read_on)
-+                 VALUES ('transfermarkt','35123','Squad contrôle',current_date)""")
-+            for key, years in {
-+                "35101": (2026, 2025), "35102": (2026,), "35103": (2025,), "35104": (2026,),
-+                "35105": (2026,), "35106": (2026,), "35107": (2026,), "35108": (2024,),
-+            }.items():
-+                for year in years:
-+                    x("""INSERT INTO core.provider_squads(provider,club_key,season_year,player_key,read_on)
-+                         VALUES ('transfermarkt','35123',%s,%s,current_date)""", (year, key))
-+            x("""INSERT INTO core.provider_players(provider,provider_key,name,read_on)
-+                 VALUES ('transfermarkt','35107','Fiche existante',current_date)""")
-+            for row in (
-+                ("profile", "35101", 3, due, None, 0, None, None, 0),
-+                ("profile", "35103", 1, due, None, 0, None, None, 0),
-+                ("profile", "35104", 6, later, None, 3, 500, "HTTP_500", 0),
-+                ("profile", "35105", 9, later, due, 0, 200, None, 1),
-+                ("profile", "35106", 9, later, due, 1, 404, "NOT_FOUND", 0),
-+                ("profile", "35107", 9, later, None, 0, None, None, 0),
-+                ("profile", "35108", 9, later, None, 0, None, None, 0),
-+                ("transfers", "35101", 1, due, None, 0, None, None, 0),
-+                ("values", "35101", 4, later, None, 1, 503, "HTTP_503", 0),
-+                ("injuries", "35101", 8, later, None, 0, None, None, 0),
-+            ):
-+                x("INSERT INTO ops.transfermarkt_reads VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)", row)
-+
-+            def rows():
-+                return {(kind, key): (data, version) for kind, key, data, version in x(
-+                    "SELECT kind,provider_key,to_jsonb(r),xmin::text FROM ops.transfermarkt_reads r"
-+                    " WHERE provider_key LIKE '3510%' ORDER BY kind,provider_key")}
-+
-+            def links():
-+                return x("SELECT to_jsonb(i) FROM core.provider_ids i ORDER BY entity_type,provider,provider_key").fetchall()
-+
-+            before = rows()
-+            identities = links()
-+            x("SET LOCAL ROLE vega_collect")
-+            self.assertEqual(reader.plan(), 4)
-+            after = rows()
-+            expected = {("profile", "35101"): 1, ("profile", "35104"): 1, ("profile", "35108"): 3}
-+            for unit, (data, version) in before.items():
-+                if unit in expected:
-+                    self.assertEqual(after[unit][0], dict(data, priority=expected[unit]))
-+                else:
-+                    self.assertEqual(after[unit], (data, version))
-+            new = after[("profile", "35102")][0]
-+            self.assertEqual(new["priority"], 1)
-+            self.assertEqual(datetime.fromisoformat(new["next_due_at"]), now)
-+            self.assertEqual(reader.plan(), 0)
-+            self.assertEqual(rows(), after)
-+            self.assertEqual(reader.step(), "ok")
-+            self.assertEqual(calls[0][0], "/players")
-+            self.assertEqual(set(calls[0][1]), {"35101", "35102", "35103"})
-+            self.assertEqual(rows()[("profile", "35104")], after[("profile", "35104")])
-+            self.assertEqual(rows()[("transfers", "35101")], after[("transfers", "35101")])
-+            self.assertEqual(links(), identities)
-+
-     def test_the_reader_links_reads_and_pauses(self):
-         api = FakeApi()
-         now = datetime.now(timezone.utc)

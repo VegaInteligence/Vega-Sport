@@ -1,0 +1,7 @@
+{
+  "capture_sha256": "bb1e9363329ac4fb4cc74a16424dc87152396b211a8b0c6aacebe1891e0dba83",
+  "spellings": 838,
+  "explicit_markers_case_insensitive": "\\b(wom[ae]n(?:['’]s|s)?|ladies|femenin[ao]s?|feminin[eoas]*|femminil[ei]|frauen|dames|damallsvenskan|feminino|nadeshiko|femeni|donne|wfc|ladies|men['’]?s)\\b|\\((w|fem|women)\\)|(?:^|\\s)[wf]$",
+  "matching_pairs": [],
+  "scope": "Présence des marqueurs listés dans les deux libellés observés. Les graphies sans marqueur peuvent désigner des sections différentes et exigent un contexte sportif."
+}

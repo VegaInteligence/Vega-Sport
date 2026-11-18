@@ -48,6 +48,7 @@
     "backend/sql/148_attested_archive_scores.sql",
     "backend/sql/149_validate_archive_attestation.sql",
     "backend/sql/150_sportscore_standings_quarantine.sql",
+    "backend/sql/151_snapshot_match_ownership.sql",
     "backend/tests/cup_samples.py",
     "backend/tests/fake_openfootball_fetch.mjs",
     "backend/tests/fake_openligadb_fetch.mjs",
@@ -74,6 +75,7 @@
     "backend/tests/test_artwork.py",
     "backend/tests/test_calculator.py",
     "backend/tests/test_dfb_periods.py",
+    "backend/tests/test_live.py",
     "backend/tests/test_source_identity.py",
     "backend/tests/test_source_snapshots.py",
     "backend/tests/test_sources.py",
@@ -177,7 +179,7 @@
     "tests/tournament-editions.test.mjs",
     "tests/tournament-rules.test.mjs"
   ],
-  "application_diff_sha256": "5cf3db8c9b8f4211632e5c353fb45b63c84040537491495f36a19fb234064515",
+  "application_diff_sha256": "5cbfb321ca6b9c19c5eed1b7605f94e5ddc9f89b35e33810b38789e190849486",
   "parts": [
     {
       "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-001.patch",
@@ -241,10 +243,11 @@
     },
     {
       "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-003.patch",
-      "sha256": "a43eca01f876bc6a015a7451694b19107fa646e03eada2b69d53d23bc00a03b9",
-      "bytes": 14723,
+      "sha256": "24a03b6d71909e6ee62ea52e974ebd9b468fa1448fc71b9c83a23eed867b3e56",
+      "bytes": 16300,
       "paths": [
         "backend/sql/150_sportscore_standings_quarantine.sql",
+        "backend/sql/151_snapshot_match_ownership.sql",
         "backend/tests/cup_samples.py",
         "backend/tests/fake_openfootball_fetch.mjs",
         "backend/tests/fake_openligadb_fetch.mjs",
@@ -309,23 +312,24 @@
     },
     {
       "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-009.patch",
-      "sha256": "7b92ae69611ab2d0ed0e5c94abe6cc0a29b7a53a4a3c76189d07f4d7e0d2a49f",
-      "bytes": 99918,
+      "sha256": "fbe12f3651a91b249da8a9dbfeb89dd89b256805b2af1ef5740e00bda8840001",
+      "bytes": 109660,
       "paths": [
         "backend/tests/test_calculator.py",
         "backend/tests/test_dfb_periods.py",
+        "backend/tests/test_live.py",
         "backend/tests/test_source_identity.py",
         "backend/tests/test_source_snapshots.py",
         "backend/tests/test_sources.py",
-        "backend/tests/test_sportscore_standings.py",
-        "backend/tests/test_transfermarkt.py"
+        "backend/tests/test_sportscore_standings.py"
       ]
     },
     {
       "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-010.patch",
-      "sha256": "432b19f1f331b3d49aa3a64ef00df05412500b78ba7b1dcb5aab07fd82844680",
-      "bytes": 74927,
+      "sha256": "6f77533f318c7d36400bf6ebbf861d0721459974e3abfc96dbbeca7edea84f81",
+      "bytes": 80788,
       "paths": [
+        "backend/tests/test_transfermarkt.py",
         "backend/tests/test_transfermarkt_history.py",
         "backend/vega/archive_attestations.py"
       ]
@@ -359,8 +363,8 @@
     },
     {
       "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-014.patch",
-      "sha256": "86298dfb4ffa59ce1969acbf2bbad0b9d9016d51dbe435637ed4f32fb80fa306",
-      "bytes": 74135,
+      "sha256": "951c6aec8aaaa3628dfbe5416161adb4f2d923c6d6696c02eb26f8cf81943b6f",
+      "bytes": 75516,
       "paths": [
         "backend/vega/open_matchday_restore.py",
         "backend/vega/sources/__init__.py",
@@ -372,8 +376,8 @@
     },
     {
       "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-015.patch",
-      "sha256": "d21481574e56af7882a894eaa1c34f4ea424fa985377d8c2e828f30f9141830c",
-      "bytes": 77446,
+      "sha256": "e0a5a3333177ba7dd7dcc180ed3203f01e6332ddb3b5c6d6bb844c160bbd53eb",
+      "bytes": 80130,
       "paths": [
         "backend/vega/sources/dfb_pokal_periods.json",
         "backend/vega/sources/open_matchday.py",
@@ -383,8 +387,8 @@
     },
     {
       "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-016.patch",
-      "sha256": "31f2fa848c8c4145462bdf65b895adff0f735bce1942484c448920cadd3e25e9",
-      "bytes": 108332,
+      "sha256": "217491d9c68001e9a66307a418420c1d5d7e7ceae57a9fc930db87cfa4984588",
+      "bytes": 111541,
       "paths": [
         "backend/vega/sources/sportscore.py",
         "backend/vega/sources/uefa.py",
@@ -455,16 +459,16 @@
     },
     {
       "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-019.patch",
-      "sha256": "446e46f4eebadee77347c055ec81524a746a04752da9239f8e264477a458eba2",
-      "bytes": 91722,
+      "sha256": "b482034a66a64b496712caaff0f98cca42a021712d894ac5a05a18523a65742b",
+      "bytes": 92605,
       "paths": [
         "docs/calculs/09-audit-2026-11/FAILURE_MODES.md"
       ]
     },
     {
       "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-020.patch",
-      "sha256": "c1cb8ddfa22632639dfc561e721a5dbf61d09686fc4093169289a9b7fa916eeb",
-      "bytes": 112722,
+      "sha256": "536a992ce1a04d9bce99fb35e2265d05c96642103d9799f8def1ee4795899513",
+      "bytes": 113406,
       "paths": [
         "docs/calculs/09-audit-2026-11/FAILURE_MODES_SPORTSCORE.md",
         "docs/calculs/09-audit-2026-11/FAILURE_MODES_VI30.md",

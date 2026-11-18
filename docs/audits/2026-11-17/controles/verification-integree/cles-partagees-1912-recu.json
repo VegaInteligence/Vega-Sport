@@ -1,0 +1,32 @@
+{
+  "archive": "exposition-1912.zip",
+  "sha256": "936dcfee7f79d7cce916f4e0f02ff0d42682e677b733077374ee6ef55059d7c4",
+  "octets": 5708,
+  "fichiers_verifies": 11,
+  "rejeu_sans_reseau": {
+    "at": "2026-11-18 19:12:15.108125+00:00",
+    "matches": 9710,
+    "scheduled": 2249,
+    "shared": 0,
+    "keys": 94081,
+    "missing_parent": 0,
+    "standings_rows": 1086,
+    "standings_editions": 60,
+    "multiple_timestamps_within_an_edition": 0,
+    "sportscore_scopes": 76
+  },
+  "negatifs": [
+    {
+      "champ": "missing_parent",
+      "exit": 1,
+      "cause": "ValueError: missing_parent: 1 != 0"
+    },
+    {
+      "champ": "other_provider_evidence",
+      "exit": 1,
+      "cause": "ValueError: shared: 1 != 0"
+    }
+  ],
+  "requetes_correspondent_a_la_capture": true,
+  "definition_diagnostic_apres_lecture": "INACTIVE"
+}

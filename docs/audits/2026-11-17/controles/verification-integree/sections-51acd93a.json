@@ -1,0 +1,50 @@
+{
+  "commit": "51acd93a52ca41a59bc9e1663c67ba3fa3b858f2",
+  "result": {
+    "Aster City Women": {
+      "code": "UNMATCHED_TEAMS",
+      "acquired": 0,
+      "rows": 0
+    },
+    "Aster City Féminines": {
+      "code": "UNMATCHED_TEAMS",
+      "acquired": 0,
+      "rows": 0
+    },
+    "Aster City Femenino": {
+      "code": "UNMATCHED_TEAMS",
+      "acquired": 0,
+      "rows": 0
+    },
+    "Aster City Femenina": {
+      "code": "UNMATCHED_TEAMS",
+      "acquired": 0,
+      "rows": 0
+    },
+    "Aster City Femminile": {
+      "code": "UNMATCHED_TEAMS",
+      "acquired": 0,
+      "rows": 0
+    },
+    "Aster City WFC": {
+      "code": "UNMATCHED_TEAMS",
+      "acquired": 0,
+      "rows": 0
+    },
+    "Aster City Ladies": {
+      "code": "UNMATCHED_TEAMS",
+      "acquired": 0,
+      "rows": 0
+    },
+    "Aster City Männer": {
+      "code": "ok",
+      "acquired": 1,
+      "rows": 3
+    },
+    "Aster City": {
+      "code": "ok",
+      "acquired": 1,
+      "rows": 3
+    }
+  }
+}

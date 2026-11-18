@@ -1,0 +1,77 @@
+{
+  "status": "passed",
+  "local_database": "vega_v2_open_matchday_restore_elo1512099",
+  "cases": {
+    "missing-config": {
+      "returncode": 1,
+      "mode": "dry-run",
+      "operator_configured": false
+    },
+    "owner-path-dry-run": {
+      "returncode": 0,
+      "mode": "dry-run",
+      "operator_configured": true,
+      "report": {
+        "would_restore": 35,
+        "restored": 0,
+        "preserved_elo": 70,
+        "elo_pending_sides": 0,
+        "elo_run": 2097,
+        "edition_versions": {}
+      }
+    },
+    "mixed-floats": {
+      "returncode": 1,
+      "mode": "apply",
+      "operator_configured": true
+    },
+    "incomplete-published-run": {
+      "returncode": 1,
+      "mode": "apply",
+      "operator_configured": true
+    },
+    "latest-dry": {
+      "returncode": 0,
+      "mode": "dry-run",
+      "operator_configured": true,
+      "report": {
+        "would_restore": 35,
+        "restored": 0,
+        "preserved_elo": 0,
+        "elo_pending_sides": 70,
+        "elo_run": 2099,
+        "edition_versions": {}
+      }
+    },
+    "latest-apply": {
+      "returncode": 0,
+      "mode": "apply",
+      "operator_configured": true,
+      "report": {
+        "would_restore": 35,
+        "restored": 35,
+        "preserved_elo": 0,
+        "elo_pending_sides": 70,
+        "elo_run": 2099,
+        "edition_versions": {
+          "332": 2,
+          "333": 2,
+          "334": 2
+        }
+      }
+    },
+    "latest-repeat": {
+      "returncode": 0,
+      "mode": "apply",
+      "operator_configured": true,
+      "report": {
+        "would_restore": 0,
+        "restored": 0,
+        "preserved_elo": 0,
+        "elo_pending_sides": 70,
+        "elo_run": 2099,
+        "edition_versions": {}
+      }
+    }
+  }
+}

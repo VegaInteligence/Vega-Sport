@@ -1,9 +1,9 @@
 diff --git a/docs/calculs/09-audit-2026-11/FAILURE_MODES_SPORTSCORE.md b/docs/calculs/09-audit-2026-11/FAILURE_MODES_SPORTSCORE.md
 new file mode 100644
-index 0000000000..d3f4a27e15
+index 0000000000..7072556e91
 --- /dev/null
 +++ b/docs/calculs/09-audit-2026-11/FAILURE_MODES_SPORTSCORE.md
-@@ -0,0 +1,431 @@
+@@ -0,0 +1,440 @@
 +# SportScore official standings: failure modes, edge cases and expected outcomes (VI-29)
 +
 +## Stage 5 — 18 November 2026, 17:40 UTC, written before its tests and its code
@@ -165,7 +165,7 @@ index 0000000000..d3f4a27e15
 +| 6 | Within a table, clubs sharing a position have equal points. That is the only invariant every ranking shares; no tie-break order is assumed | `DUPLICATE_POSITION` |
 +| 7 | A single table holds every position it names: `pos ≤` its row count. Tables of a split may continue one numbering (7–12), so this is not checked across tables | `INCOMPLETE_TABLE` |
 +| 8 | No name designates a club of the previous or next edition of the competition that this edition does not hold | `WRONG_EDITION` |
-+| 9 | Every name designates exactly one team of the current edition through a known spelling or its distinctive words. Reserve and age-group markers must agree with the canonical identity, including when a spelling was previously learned. Reviewed spellings with different markers are tied to the canonical name and current PitchAPI team key. An ambiguous exact spelling cannot fall back to prefix matching | `UNMATCHED_TEAMS` |
++| 9 | Every name designates exactly one team of the current edition through a known spelling or its distinctive words. Reserve and age-group markers agree with the canonical identity. A gender marker agrees with the edition, including in a learned spelling. A women's edition admits its registered teams under an unmarked name too. Reviewed spellings with different squad markers are tied to the canonical name and current PitchAPI team key. An ambiguous exact spelling cannot fall back to prefix matching | `UNMATCHED_TEAMS` |
 +| 10 | Within a table, no two rows designate one team | `DUPLICATE_ROW` |
 +| 11 | If every club is more than 4 matches ahead of the edition's kicked-off matches in counted rounds, require independent season evidence when available. The Swedish league's organiser corroborates the exact native year, each club, and played/W/D/L/GF/GA for one complete table. Other scopes still use the calendar guard | `UNVERIFIED_EDITION` when the organiser serves another season, malformed rows or other totals. `ORGANISER_UNAVAILABLE` when it cannot be read (HTTP error, transport, not JSON; stage 5). `WRONG_EDITION` for a scope without a corroboration path |
 +| 12 | Every club of Vega's own table (a club with a counted result in the edition) is in one of the response's tables. Each group is not required to hold the edition's clubs | `INCOMPLETE_TABLE` |
@@ -175,6 +175,15 @@ index 0000000000..d3f4a27e15
 +| 13c | Within each table that stays, its accepted clubs stay. A **partition table** owns at least one club no other accepted table holds (a league table, a group). Each of its accepted clubs stays in it. A **cross table** holds only clubs that another accepted table also holds (a ranking of third-placed teams). Its members may change as the competition advances, but each club that leaves must be replaced by a club that joins: it never shrinks. Two exemptions: a club no longer a team of the edition, and a row in `sportscore.RETIRED_ROWS` (`{(LEAGUES key, season label, table name, club's public id): "reviewer, date: reason"}`). A retired row lets that club leave that table of that edition, and nothing else | `INCOMPLETE_TABLE` |
 +| 14 | A field known in the accepted row of a club stays known | `MISSING_FIELD` |
 +| 15 | A club's `p` does not go down within the same table, unless the edition's own results attest it: `p` equals the club's counted matches now (a correction the results show, such as an annulled match), or `p` is at most the club's counted matches since the accepted observation (a phase counted from then) | `PLAYED_DECREASED` |
++
++The publisher serialises changes for one competition only after reading and qualifying the widget.
++It verifies the current edition again and commits the table and the source status together.
++An observation older than or equal to an already recorded attempt is superseded
++(`STALE_OBSERVATION`). The newest attempt keeps its metadata when older failures arrive later.
++
++In a men's edition, WFC in an incoming name needs an exact match with an existing canonical
++name, canonical short name or reviewed spelling. A previously learned variant alone cannot
++establish that identity.
 +
 +An edition-only club name is affirmative evidence of another edition (`WRONG_EDITION`). The
 +legacy rule-11 calendar refusal uses the same code for other scopes; the count alone cannot prove

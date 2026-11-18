@@ -1,0 +1,114 @@
+{
+  "commit": "14068dfc943cddb3b31f8250e120e00c0fb8c7db",
+  "result": {
+    "newer_status": "ok",
+    "before_older_return": {
+      "status": 200,
+      "etag": "W/\"support-v1-1e399bca18cfee6a2d8c5f7431a2497150afd13415773d83b394f8ee98a5b74f\"",
+      "conditional_status": 304,
+      "fetched_at": "2026-11-17T11:00:00.000Z",
+      "first_row": {
+        "id": "t_000101",
+        "uefaId": null,
+        "imageUrl": null,
+        "name": "Aster City",
+        "wins": 3,
+        "draws": 1,
+        "losses": 0,
+        "played": 4,
+        "points": 9,
+        "goalsFor": 8,
+        "goalsAgainst": 1,
+        "difference": 7,
+        "position": 1
+      },
+      "source": "SportScore"
+    },
+    "before_older_db": [
+      [
+        "Aster City",
+        1,
+        4,
+        9,
+        "sportscore",
+        "2026-11-17 11:00:00+00:00",
+        1
+      ],
+      [
+        "Birch Town",
+        2,
+        4,
+        7,
+        "sportscore",
+        "2026-11-17 11:00:00+00:00",
+        1
+      ],
+      [
+        "Cedar Athletic",
+        3,
+        4,
+        1,
+        "sportscore",
+        "2026-11-17 11:00:00+00:00",
+        1
+      ]
+    ],
+    "older_status": "ok",
+    "conditional_after": {
+      "status": 200,
+      "etag": "W/\"support-v1-d19bf036d5540de42bf1492daffa10d937a2ab3899a394324aa6dce87d40fe18\"",
+      "conditional_status": 200,
+      "fetched_at": "2026-11-17T08:00:00.000Z",
+      "first_row": {
+        "id": "t_000101",
+        "uefaId": null,
+        "imageUrl": null,
+        "name": "Aster City",
+        "wins": 3,
+        "draws": 1,
+        "losses": 0,
+        "played": 4,
+        "points": 8,
+        "goalsFor": 8,
+        "goalsAgainst": 1,
+        "difference": 7,
+        "position": 1
+      },
+      "source": "SportScore"
+    },
+    "final_db": [
+      [
+        "Aster City",
+        1,
+        4,
+        8,
+        "sportscore",
+        "2026-11-17 08:00:00+00:00",
+        2
+      ],
+      [
+        "Birch Town",
+        2,
+        4,
+        7,
+        "sportscore",
+        "2026-11-17 08:00:00+00:00",
+        2
+      ],
+      [
+        "Cedar Athletic",
+        3,
+        4,
+        1,
+        "sportscore",
+        "2026-11-17 08:00:00+00:00",
+        2
+      ]
+    ],
+    "recorded_times": [
+      "2026-11-17 08:00:00+00:00",
+      "2026-11-17 08:00:00+00:00",
+      "ok"
+    ]
+  }
+}

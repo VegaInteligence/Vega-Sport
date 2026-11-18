@@ -1,0 +1,385 @@
+{
+  "migration": [
+    [
+      "134_archive_repair_boundary.sql",
+      "aa4b0f920b200335ba3ac63f95a750538f14e53f6d63b40b27b54e57ab75c167"
+    ],
+    [
+      "134_archive_scores_due.sql",
+      "89dcafc08b55b2f6b6bb8cbf22f485452de419e9d8b7f0bebb8b8585bfacd5f6"
+    ],
+    [
+      "135_cup_competition_logo.sql",
+      "af2352a8cb12bf6e1b148afbd3ade1f45e61ddb10cab94ddaa10c356009ffe25"
+    ],
+    [
+      "135_player_transfers.sql",
+      "131c37b1f505a7d7377de019e522a880bfad4c25005f6e039c33e308e29a6e94"
+    ],
+    [
+      "150_sportscore_standings_quarantine.sql",
+      "e26613fe9765c845c90c91b0804ec4a26347633e0ed5052421783726dee49836"
+    ]
+  ],
+  "B_commits": [
+    "DATABASE_ERROR",
+    []
+  ],
+  "B_http": {
+    "status": 200,
+    "etag": "W/\"support-v1-1b5c3581c9486ba18ad65b9e2f3fa4fd9a2485aedf7f044be9a01d8ff4ed46d7\"",
+    "conditional_status": 304,
+    "fetched_at": "2026-11-17T07:50:00.000Z",
+    "first_row": {
+      "id": "t_000101",
+      "uefaId": null,
+      "imageUrl": null,
+      "name": "Aster City",
+      "wins": 3,
+      "draws": 1,
+      "losses": 0,
+      "played": 4,
+      "points": 10,
+      "goalsFor": 8,
+      "goalsAgainst": 1,
+      "difference": 7,
+      "position": 1
+    },
+    "source": "Vega"
+  },
+  "A_resumes": [
+    "ok",
+    [
+      [
+        "Aster City",
+        1,
+        4,
+        8,
+        "sportscore",
+        "2026-11-17 08:00:00+00:00",
+        1
+      ],
+      [
+        "Birch Town",
+        2,
+        4,
+        7,
+        "sportscore",
+        "2026-11-17 08:00:00+00:00",
+        1
+      ],
+      [
+        "Cedar Athletic",
+        3,
+        4,
+        1,
+        "sportscore",
+        "2026-11-17 08:00:00+00:00",
+        1
+      ]
+    ]
+  ],
+  "A_http": {
+    "status": 200,
+    "etag": "W/\"support-v1-d19bf036d5540de42bf1492daffa10d937a2ab3899a394324aa6dce87d40fe18\"",
+    "conditional_status": 200,
+    "fetched_at": "2026-11-17T08:00:00.000Z",
+    "first_row": {
+      "id": "t_000101",
+      "uefaId": null,
+      "imageUrl": null,
+      "name": "Aster City",
+      "wins": 3,
+      "draws": 1,
+      "losses": 0,
+      "played": 4,
+      "points": 8,
+      "goalsFor": 8,
+      "goalsAgainst": 1,
+      "difference": 7,
+      "position": 1
+    },
+    "source": "SportScore"
+  },
+  "final_sport_run": [
+    [
+      "2026-11-17 08:00:00+00:00",
+      "2026-11-17 08:00:00+00:00"
+    ]
+  ],
+  "wrong_squad_first": [
+    "UNMATCHED_TEAMS",
+    [
+      [
+        "Aster City",
+        1,
+        4,
+        10,
+        "vega",
+        "2026-11-17 07:50:00+00:00",
+        1
+      ],
+      [
+        "Birch Town",
+        2,
+        4,
+        7,
+        "vega",
+        "2026-11-17 07:50:00+00:00",
+        1
+      ],
+      [
+        "Cedar Athletic",
+        3,
+        4,
+        1,
+        "vega",
+        "2026-11-17 07:50:00+00:00",
+        1
+      ]
+    ]
+  ],
+  "wrong_squad_http": {
+    "status": 200,
+    "etag": "W/\"support-v1-1b5c3581c9486ba18ad65b9e2f3fa4fd9a2485aedf7f044be9a01d8ff4ed46d7\"",
+    "conditional_status": 304,
+    "fetched_at": "2026-11-17T07:50:00.000Z",
+    "first_row": {
+      "id": "t_000101",
+      "uefaId": null,
+      "imageUrl": null,
+      "name": "Aster City",
+      "wins": 3,
+      "draws": 1,
+      "losses": 0,
+      "played": 4,
+      "points": 10,
+      "goalsFor": 8,
+      "goalsAgainst": 1,
+      "difference": 7,
+      "position": 1
+    },
+    "source": "Vega"
+  },
+  "learned_wrong_squad": [],
+  "impossible": [
+    "INVALID_ROW",
+    [
+      [
+        "Aster City",
+        1,
+        4,
+        10,
+        "vega",
+        "2026-11-17 07:50:00+00:00",
+        1
+      ],
+      [
+        "Birch Town",
+        2,
+        4,
+        7,
+        "vega",
+        "2026-11-17 07:50:00+00:00",
+        1
+      ],
+      [
+        "Cedar Athletic",
+        3,
+        4,
+        1,
+        "vega",
+        "2026-11-17 07:50:00+00:00",
+        1
+      ]
+    ]
+  ],
+  "impossible_http": {
+    "status": 200,
+    "etag": "W/\"support-v1-1b5c3581c9486ba18ad65b9e2f3fa4fd9a2485aedf7f044be9a01d8ff4ed46d7\"",
+    "conditional_status": 304,
+    "fetched_at": "2026-11-17T07:50:00.000Z",
+    "first_row": {
+      "id": "t_000101",
+      "uefaId": null,
+      "imageUrl": null,
+      "name": "Aster City",
+      "wins": 3,
+      "draws": 1,
+      "losses": 0,
+      "played": 4,
+      "points": 10,
+      "goalsFor": 8,
+      "goalsAgainst": 1,
+      "difference": 7,
+      "position": 1
+    },
+    "source": "Vega"
+  },
+  "om_initial": [
+    [
+      "ok",
+      [
+        2,
+        0
+      ]
+    ],
+    [
+      [
+        177,
+        "15",
+        "finished",
+        2,
+        1,
+        1,
+        1
+      ],
+      [
+        178,
+        "16",
+        "not_started",
+        null,
+        null,
+        1,
+        1
+      ]
+    ]
+  ],
+  "om_blank": [
+    [
+      "ok",
+      [
+        2,
+        0
+      ]
+    ],
+    [
+      [
+        177,
+        "15",
+        "finished",
+        2,
+        1,
+        1,
+        1
+      ],
+      [
+        178,
+        "16",
+        "not_started",
+        null,
+        null,
+        1,
+        2
+      ]
+    ]
+  ],
+  "A_blocked_on_pg": [
+    "Lock",
+    "transactionid"
+  ],
+  "B_keys_precommit": [
+    [
+      "ENG_5_national-league:2026/2027:2026-11-29|South FC|North FC",
+      false
+    ],
+    [
+      "next:key",
+      true
+    ],
+    [
+      "old:key",
+      false
+    ]
+  ],
+  "withdraw_after_key_rotation": [
+    {
+      "outcome": [
+        "ok",
+        [
+          0,
+          1
+        ]
+      ]
+    },
+    [
+      [
+        177,
+        "15",
+        "finished",
+        2,
+        1,
+        1,
+        1
+      ],
+      [
+        178,
+        "16",
+        "not_started",
+        null,
+        null,
+        1,
+        3
+      ]
+    ],
+    [
+      [
+        "old:key",
+        false
+      ],
+      [
+        "ENG_5_national-league:2026/2027:2026-11-29|South FC|North FC",
+        false
+      ],
+      [
+        "next:key",
+        true
+      ]
+    ]
+  ],
+  "reset_fixture": [
+    "ok",
+    [
+      0,
+      1
+    ]
+  ],
+  "shared_withdraw": [
+    [
+      "ok",
+      [
+        0,
+        1
+      ]
+    ],
+    [
+      [
+        177,
+        "15",
+        "finished",
+        2,
+        1,
+        1,
+        1
+      ],
+      [
+        178,
+        "16",
+        "not_started",
+        null,
+        null,
+        1,
+        4
+      ]
+    ],
+    [
+      [
+        "pitchapi",
+        "independently_attested_match",
+        178,
+        178
+      ]
+    ]
+  ],
+  "server": "PostgreSQL 18.6 (Debian 18.6-1.pgdg12+2) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 12.2.0-14+deb12u1) 12.2.0, 64-bit"
+}

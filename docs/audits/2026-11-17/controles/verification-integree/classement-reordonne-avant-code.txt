@@ -1,0 +1,35 @@
+"""An older request returns its response after a second worker already published a newer table."""
+import json,sys,uuid
+from pathlib import Path
+from importlib.util import module_from_spec,spec_from_file_location
+from unittest.mock import patch
+import psycopg
+from psycopg import sql
+spec=spec_from_file_location('source_fixtures',Path(sys.argv[1]).resolve())
+h=module_from_spec(spec)
+spec.loader.exec_module(h)
+opts={'host':'127.0.0.1','port':55439,'user':'postgres'}
+name='vega_v2_source_replay_'+uuid.uuid4().hex[:12]
+dsn='postgresql://postgres@127.0.0.1:55439/'+name
+result={}
+with psycopg.connect(dbname='postgres',autocommit=True,**opts) as admin:
+    admin.execute(sql.SQL('CREATE DATABASE {}').format(sql.Identifier(name)))
+    try:
+        with h.store.connect_local(dsn) as a, h.store.connect_local(dsn) as b:
+            h.store.migrate(a)
+            with a.transaction():h.fixture.build(a,h.store.Store(a))
+            scope='standings:'+h.c.CASES[0]['key']
+            later=[dict(row,pts=9) if index==0 else dict(row) for index,row in enumerate(h.c.START)]
+            def older_response(url):
+                result['newer_status']=h.sport_import(b,later,h.c.T0+3*h.c.H)
+                result['before_older_return']=h.public_standings(dsn)
+                result['before_older_db']=h.standings(b)
+                return h.fixture.widget(h.c.tables((None,h.c.START)),h.fixture.slug_of(url))
+            with patch.object(h.sport,'scopes',lambda now:{scope:h.sport.PERIOD}):
+                result['older_status']=h.sources.run_due(a,older_response,h.c.T0,names={'sportscore'})[('sportscore',scope)]
+            result['conditional_after']=h.public_standings(dsn,result['before_older_return']['etag'])
+            result['final_db']=h.standings(a)
+            result['recorded_times']=a.execute("SELECT last_attempt_at,last_success_at,status FROM ops.source_runs WHERE source='sportscore' AND scope=%s",(scope,)).fetchone()
+    finally:
+        admin.execute(sql.SQL('DROP DATABASE {} WITH (FORCE)').format(sql.Identifier(name)))
+print(json.dumps(result,ensure_ascii=False,indent=2,default=str))

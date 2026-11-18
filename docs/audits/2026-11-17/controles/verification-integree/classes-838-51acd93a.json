@@ -1,0 +1,14 @@
+{
+  "server": "18.6 (Debian 18.6-1.pgdg12+2)",
+  "head": "51acd93a52ca41a59bc9e1663c67ba3fa3b858f2",
+  "source": {
+    "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/delivery/actualisation-main-1803/corrections-revue/alias-reels/aliases.json": "bb1e9363329ac4fb4cc74a16424dc87152396b211a8b0c6aacebe1891e0dba83",
+    "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/delivery/actualisation-main-1803/corrections-revue/alias-reels/editions.json": "774de230182e451130da7bb05a337d4bd1ead572de234ae39281db8d5beb5b2d",
+    "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/delivery/actualisation-main-1803/corrections-revue/alias-reels/exact.json": "0f6c36785608de3796a66a33cabab6e32a98b2ace5a7e352d345a98277f15364"
+  },
+  "aliases": 838,
+  "official_editions": 60,
+  "aliases_without_official_edition": 20,
+  "checks": 872,
+  "failures": []
+}

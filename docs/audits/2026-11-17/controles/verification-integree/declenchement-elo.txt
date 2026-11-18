@@ -17,7 +17,19 @@ Les quatre matchs du 17 novembre 2026 sont Bedford Town–Chorley (1–2), Oxfor
 
 **Portée en production.** Les blobs Git de `worker.py` et `power.py` sont identiques à ceux du worker AWS `b2e6dd82d36a2ca0f439ec84bf2e5dbbcd3013d9` identifié dans le reçu existant. Le collecteur Open Matchday et le module de gestion des sources diffèrent entre les deux versions. L’expérience qualifie le mécanisme d’ordonnancement sur copie. Elle ne mesure ni la cause du run de production 2099 ni le délai du prochain rattrapage en service. Les autres sources, la cadence du processus ECS, les reprises après échec et les suppressions relèvent de contrôles distincts. E04k conserve la couverture ponctuelle précédemment mesurée et porte désormais un contre-exemple reproductible à la garantie de réveil. Le suivi du planificateur relève de VI-21. [Blobs Git](comparaison-git.json) · [Reçu AWS et lectures du service](../../actualisation-main-1750/production/README.md) · [Mesure T6 antérieure du prédicat à 14 h 20](../../../tracks/6-teams/ecart-elo-1356/README.md)
 
-## Rejouer
+## Rejouer la capsule distribuée
+
+Après extraction de `declenchement-elo.zip`, ouvrir le sous-dossier `e04k`. La première commande vérifie les empreintes hors ligne. La seconde exécute le worker sur un serveur PostgreSQL 18 local, à partir des sources embarquées. Elle utilise Python avec psycopg 3 et un répertoire de sortie neuf.
+
+```sh
+cd e04k
+python3 -I -B rejouer.py --verify-only
+python3 -I -B rejouer.py --port 55439 --out ../resultats-e04k
+```
+
+## Rejouer depuis le dossier de travail d’origine avec Git
+
+La commande suivante s’applique à la variante du script qui extrait le commit Git dans un répertoire temporaire. La capsule ci-dessus embarque déjà ces sources.
 
 Prérequis utilisés ici : serveur PostgreSQL 18 local dédié aux tests disponible sur `127.0.0.1:55439`, compte administrateur local `postgres`, Python 3.14.6 et psycopg 3.3.9, Git, tar et accès au commit. La commande se lance depuis ce dossier. Le nom du répertoire de résultat doit être neuf.
 

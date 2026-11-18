@@ -1,13 +1,13 @@
 {
   "archive": "pieces-91-exigences.zip",
-  "sha256": "9e5fdea2dd79be6f78533d13d4e6b6b1efdf71ce0c8ad26a0857bb60edc10f47",
-  "bytes": 5905744,
+  "sha256": "fb737ded1eadbf0120145a732ac2c3fd2c0c194934fbbde28e898ccd5875e2e1",
+  "bytes": 5922943,
   "verification": {
-    "commit_source": "070f7c82cf99cf240d77278eca152dcdc20803ab",
+    "commit_source": "51acd93a52ca41a59bc9e1663c67ba3fa3b858f2",
     "exigences": 91,
     "calculs_additionnels": 26,
-    "pieces": 382,
-    "sources": 90,
-    "empreintes_verifiees": 476
+    "pieces": 400,
+    "sources": 91,
+    "empreintes_verifiees": 495
   }
 }
