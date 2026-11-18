@@ -1,3 +1,363 @@
+diff --git a/backend/vega/open_matchday_restore.py b/backend/vega/open_matchday_restore.py
+new file mode 100644
+index 0000000000..53a8206d2d
+--- /dev/null
++++ b/backend/vega/open_matchday_restore.py
+@@ -0,0 +1,354 @@
++"""Restore the 35 Open Matchday identities from reviewed before and after captures.
++
++A dry run is the default. Applying requires the original capture digests and an explicit
++opt-in. This path restores two tables and signals the affected edition reads. It never
++derives a parent row from a CSV or rewrites Elo. Run as the schema owner.
++"""
++import argparse
++from datetime import datetime
++from hashlib import sha256
++import json
++import os
++from pathlib import Path
++import re
++from urllib.parse import urlsplit
++import zlib
++
++import psycopg
++from psycopg import sql
++from psycopg.types.json import Jsonb
++
++from .migrate import owner_url
++from .sources.open_matchday_history import RESULTS
++from .store import StoreError, connect_local
++from .worker import connect
++
++
++IDS = tuple((*range(8049, 8061), *range(8290, 8302), *range(8534, 8545)))
++FOLDERS = {
++    332: "ENG_6_national-league-north",
++    333: "ENG_6_national-league-south",
++    334: "ENG_7_northern-premier-league",
++}
++MATCHES = "core.matches"
++BINDINGS = "core.provider_ids"
++ELO = "agg.team_elo"
++ADDED_DEPENDENCIES = {"core.archive_match_attestations", "ops.archive_removals"}
++REFS = {
++    "season_id": ("core.seasons", "season_id", ("id", "label")),
++    "competition_season_id_season_id": ("core.competition_seasons", "competition_season_id",
++                                       ("id", "season_id", "competition_id", "cup_key", "native_label")),
++    "round_id": ("core.rounds", "round_id", ("id", "competition_season_id", "name", "stage")),
++    "home_team_id": ("core.teams", "home_team_id", ("id", "country_code", "name", "merged_into")),
++    "away_team_id": ("core.teams", "away_team_id", ("id", "country_code", "name", "merged_into")),
++    "venue_id": ("core.venues", "venue_id", ("id", "name", "city")),
++    "referee_id": ("core.referees", "referee_id", ("id", "name")),
++}
++
++
++class Refusal(RuntimeError):
++    """The reviewed copy and the current state do not agree."""
++
++
++def require(ok, message):
++    if not ok:
++        raise Refusal(message)
++
++
++def sha(data):
++    return sha256(data).hexdigest()
++
++
++def load_capture(path, expected):
++    with path.open("rb") as stream:
++        raw = stream.read(2_000_001)
++    require(len(raw) <= 2_000_000 and sha(raw) == expected, "capture digest or size mismatch")
++    decoder = zlib.decompressobj()
++    plain = decoder.decompress(raw, 4_000_001)
++    require(len(plain) <= 4_000_000 and decoder.eof and not decoder.unused_data, "incomplete capture compression")
++    view = json.loads(plain)
++    require(view["probe_version"] in ("astra-preimage-v2", "preimage-v3-private-restore") and view["read_only"] == "on", "wrong capture format")
++    for gap in view["not_verified"]:
++        table = gap.get("table")
++        # A private column makes a nonempty observation partial. No column value
++        # is required when the predicate was actually evaluated and found zero rows.
++        read = view["reads"].get("table." + table, {}) if table else {}
++        require(gap["reason"] == "columns_intentionally_omitted" and read.get("count") == 0 and read.get("ok"),
++                "incomplete capture dependency: " + str(gap.get("read", table)))
++    return view
++
++
++def rows(capture, key, count=None):
++    entry = capture["reads"][key]
++    require(entry["ok"] and entry.get("complete") and not entry.get("rls_active"), "incomplete read: " + key)
++    raw = entry["rows_json"]
++    require(sha("\n".join(raw).encode()) == entry["sha256"] and len(raw) == entry["count"], "corrupt read: " + key)
++    require(count is None or len(raw) == count, "unexpected rows in " + key)
++    require(not raw or not entry.get("omitted_columns"), "incomplete row in " + key)
++    return [json.loads(line) for line in raw]
++
++
++def plain_rows(capture, key, count=None):
++    entry = capture["reads"][key]
++    bounds = count is None or entry["count"] == len(entry["rows"]) == count
++    require(entry["ok"] and bounds, "incomplete read: " + key)
++    return entry["rows"]
++
++
++def typed(reference):
++    return sql.Identifier(*reference.split("."))
++
++
++def compact(value):
++    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
++
++
++def same_rows(actual, expected):
++    return sorted(map(compact, actual)) == sorted(map(compact, expected))
++
++
++def select_rows(conn, table, where, parameters=()):
++    return [r[0] for r in conn.execute(
++        sql.SQL("SELECT to_jsonb(t) FROM {} t WHERE {}").format(typed(table), where), parameters
++    )]
++
++
++def inspect_capture(before, after):
++    facts = before["witnesses"]
++    keys = before["provider_keys"]
++    require(facts == after["witnesses"] and [r[0] for r in facts] == list(IDS)
++            and keys == after["provider_keys"] and len(set(keys)) == len(keys) == len(IDS), "incident scope mismatch")
++    parents = rows(before, "table." + MATCHES, len(IDS))
++    bindings = rows(before, "table." + BINDINGS, len(IDS))
++    by_id = {r["id"]: r for r in parents}
++    key_by_id = {r["entity_id"]: r for r in bindings}
++    require(set(by_id) == set(key_by_id) == set(IDS), "duplicate physical row")
++    for fact, key in zip(facts, keys, strict=True):
++        ident, home, away, day, hs, aws, edition = fact
++        m, p = by_id[ident], key_by_id[ident]
++        proof = RESULTS.get(key) or {}
++        require(proof.get("id_at_incident") == ident and proof.get("score") == [hs, aws], "sporting attestation mismatch")
++        require([m[c] for c in ("id", "home_team_id", "away_team_id", "match_date", "home_score",
++                               "away_score", "competition_season_id")] == fact
++                and m["season_id"] == 2026 and m["source"] == "open_matchday" and m["status"] == "finished"
++                and home != away and hs >= 0 and aws >= 0
++                and key == f"{FOLDERS[edition]}:2026/2027:{day}|{m['home_team_name']}|{m['away_team_name']}"
++                and p["entity_type"] == "match" and p["provider"] == "open_matchday"
++                and p["provider_key"] == key and p["is_current"], "source identity mismatch")
++    require(not plain_rows(after, "id_and_pair_candidates", 0), "destination collision in signed capture")
++    table_keys = {k[6:] for k in before["reads"] if k.startswith("table.")}
++    require(table_keys == {k[6:] for k in after["reads"] if k.startswith("table.")}, "different capture dependency inventories")
++    for table in table_keys - {MATCHES, BINDINGS, ELO}:
++        rows(before, "table." + table, 0)
++    for table in table_keys - {ELO}:
++        rows(after, "table." + table, 0)
++    elo = rows(after, "table." + ELO, 70)
++    bits = plain_rows(after, "elo_float_bits", 70)
++    run = rows(after, "elo_runs", 1)
++    expected_sides = {(mid, team) for mid, home, away, *_ in facts for team in (home, away)}
++    require({(r["match_id"], r["team_id"]) for r in elo} == expected_sides
++            and all(r["run_id"] == 2097 and r["season_id"] == 2026 for r in elo)
++            and run[0]["id"] == 2097 and run[0]["status"] == "published"
++            and same_rows(elo, rows(before, "table." + ELO, 70))
++            and bits == plain_rows(before, "elo_float_bits", 70)
++            and same_rows(run, rows(before, "elo_runs", 1)), "Elo evidence differs across captures")
++    return facts, parents, bindings, table_keys, elo, bits, run
++
++
++def guard_schema(conn, before, after):
++    directory = Path(__file__).resolve().parents[1] / "sql"
++    known = {p.name: sha(p.read_text().encode()) for p in directory.glob("*.sql")}
++    applied = dict(conn.execute("SELECT version, encode(checksum,'hex') FROM ops.schema_migrations"))
++    require(applied == {k: h for k, h in known.items() if "vector_optional" not in k or k in applied}, "destination schema mismatch")
++    early = {k: h for k, h in known.items() if k <= "133_cohort_max_wait.sql" and ("vector_optional" not in k or k in applied)}
++    require(tuple(sorted(applied))[-1] == "149_validate_archive_attestation.sql", "unreviewed destination schema version")
++    for capture in (before, after):
++        require({n: h for n, h, _ in plain_rows(capture, "migrations")} == early, "preimage schema mismatch")
++
++
++def dependencies(conn):
++    attributes = conn.execute("""
++        SELECT n.nspname||'.'||c.relname,a.attname,t.typname
++        FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace JOIN pg_attribute a ON a.attrelid=c.oid
++          JOIN pg_type t ON t.oid=a.atttypid
++        WHERE n.nspname IN ('core','agg','ops') AND c.relkind IN ('r','p') AND NOT c.relispartition
++          AND a.attnum>0 AND NOT a.attisdropped
++    """).fetchall()
++    queries = {}
++    available = {(table,col) for table,col,_ in attributes}
++
++    def predicate(table, expression):
++        queries.setdefault(table, set()).add(expression.as_string(conn))
++
++    for table, column, data_type in attributes:
++        if (column in ("match_id", "match_key") or column.endswith("_match_id")
++                or (table == "core.archive_match_attestations" and column == "former_id")):
++            require(data_type in ("int2", "int4", "int8"), "unreviewed reference type: " + table + "." + column)
++            predicate(table, sql.SQL("t.{}=ANY(%s)").format(sql.Identifier(column)))
++        for id_col, type_col in (("entity_id","entity_type"), ("resource_id","resource_kind")):
++            if column == id_col and (table,type_col) in available:
++                require(data_type in ("int2", "int4", "int8"), "unreviewed polymorphic reference: " + table)
++                predicate(table, sql.SQL("t.{}=ANY(%s) AND t.{}::text='match'").format(sql.Identifier(column),sql.Identifier(type_col)))
++    for table, column in conn.execute("""
++        SELECT n.nspname||'.'||c.relname,a.attname
++          FROM pg_constraint k JOIN pg_class c ON c.oid=k.conrelid JOIN pg_namespace n ON c.relnamespace=n.oid
++          JOIN pg_attribute a ON a.attrelid=k.conrelid AND a.attnum=k.conkey[
++             array_position(k.confkey,(SELECT attnum FROM pg_attribute WHERE attrelid='core.matches'::regclass AND attname='id'))]
++         WHERE k.contype='f' AND k.confrelid='core.matches'::regclass AND NOT c.relispartition
++    """):
++        predicate(table, sql.SQL("t.{}=ANY(%s)").format(sql.Identifier(column)))
++    predicate("ops.archive_removals", sql.SQL("t.id=ANY(%s) AND t.kind='match'"))
++    return queries
++
++
++def guard_references(conn, capture, matches):
++    for name, (table, field, cols) in REFS.items():
++        actual_ids = {m[field] for m in matches if m[field] is not None}
++        saved = rows(capture, "parent.matches_" + name + "_fkey", len(actual_ids))
++        require({r["id"] for r in saved} == actual_ids, "missing parent evidence: " + field)
++        actual = select_rows(conn, table, sql.SQL("t.id=ANY(%s)"), (list(actual_ids),))
++        narrow = lambda records: [{col: r[col] for col in cols} for r in records]
++        require(same_rows(narrow(actual), narrow(saved)), "referenced parent drift: " + table)
++        if table == "core.teams":
++            require(all(t["merged_into"] is None for t in actual), "merged team needs identity review")
++    require(all(conn.execute("SELECT 1 FROM core.rounds WHERE id=%s AND competition_season_id=%s",
++                              (m["round_id"], m["competition_season_id"])).fetchone()
++                for m in matches if m["round_id"] is not None), "round edition mismatch")
++
++
++def verify_elo(conn, elo, bits, run, captured_after):
++    have = select_rows(conn, ELO, sql.SQL("t.match_id=ANY(%s)"), (list(IDS),))
++    actual_bits = conn.execute("""
++        SELECT match_id,team_id,jsonb_build_object('elo_before',encode(float4send(elo_before),'hex'),
++          'elo_after',encode(float4send(elo_after),'hex'),'expected',encode(float4send(expected),'hex'),
++          'result',encode(float4send(result),'hex'),'stakes',encode(float4send(stakes),'hex'))
++        FROM agg.team_elo WHERE match_id=ANY(%s) ORDER BY match_id,team_id
++    """, (list(IDS),)).fetchall()
++    original_run = select_rows(conn, "agg.power_runs", sql.SQL("t.id=2097"))
++    if (same_rows(elo, have) and bits == [list(r) for r in actual_bits] and same_rows(run, original_run)):
++        return {"preserved_elo": 70, "elo_pending_sides": 0, "elo_run": 2097}
++    require(not have and not actual_bits and same_rows([dict(run[0], status="superseded")], original_run),
++            "Elo drift: the 70 signed sides must all match or all have been superseded")
++    published = select_rows(conn, "agg.power_runs", sql.SQL("t.kind='elo' AND t.season_id IS NULL AND t.status='published'"))
++    require(len(published) == 1, "Elo drift: expected one later published run")
++    later = published[0]
++    require(later["id"] > 2097 and later["finished_at"] and later["matches"] and
++            datetime.fromisoformat(later["finished_at"]) > datetime.fromisoformat(captured_after),
++            "Elo drift: newer publication not established")
++    counted, malformed = conn.execute("""
++        SELECT count(*),count(*) FILTER (WHERE n<>2 OR NOT same_run)
++          FROM (SELECT count(*) AS n,bool_and(run_id=%s) AS same_run FROM agg.team_elo GROUP BY match_id) checks
++    """, (later["id"],)).fetchone()
++    require(counted == later["matches"] and not malformed, "Elo drift: incomplete later published population")
++    return {"preserved_elo": 0, "elo_pending_sides": 70, "elo_run": later["id"]}
++
++
++def guard_sequence(conn):
++    last, called = conn.execute("SELECT last_value,is_called FROM core.matches_id_seq").fetchone()
++    step, cycle, cache = conn.execute("SELECT seqincrement,seqcycle,seqcache FROM pg_sequence WHERE seqrelid='core.matches_id_seq'::regclass").fetchone()
++    max_existing = conn.execute("SELECT max(id) FROM core.matches").fetchone()[0] or 0
++    require(step == 1 and not cycle and cache == 1 and last + int(called) > max(max_existing, *IDS), "match identity sequence unsafe")
++
++
++def current_state(conn, facts, parents, bindings):
++    mids = list(IDS)
++    keys = [r["provider_key"] for r in bindings]
++    existing = select_rows(conn, MATCHES, sql.SQL("t.id=ANY(%s)"), (mids,))
++    keyed = select_rows(conn, BINDINGS, sql.SQL(
++        "t.entity_type='match' AND (t.entity_id=ANY(%s) OR (t.provider='open_matchday' AND t.provider_key=ANY(%s)))"),
++        (mids, keys))
++    for mid, home, away, day, _, _, eid in facts:
++        duplicate = conn.execute("""
++            SELECT id FROM core.matches WHERE match_date=%s AND id<>%s
++              AND ((home_team_id=%s AND away_team_id=%s) OR (home_team_id=%s AND away_team_id=%s)) LIMIT 1
++        """, (day,mid,home,away,away,home)).fetchone()
++        require(duplicate is None, "same-day pair collision at " + str(mid))
++    if existing or keyed:
++        require(same_rows(existing, parents) and same_rows(keyed, bindings), "physical identity or provider key collision")
++        return False
++    return True
++
++
++def restore(conn, before, after, apply):
++    facts, parents, bindings, captured, elo, bits, run = inspect_capture(before, after)
++    with conn.transaction():
++        if not apply:
++            conn.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
++        conn.execute("SET LOCAL TIME ZONE 'UTC'")
++        conn.execute("SET LOCAL statement_timeout='20s'")
++        conn.execute("SET LOCAL lock_timeout='3s'")
++        if apply:
++            require(conn.execute("SELECT pg_try_advisory_xact_lock(hashtextextended('vega_v2_migrate',0))").fetchone()[0], "migration busy")
++        require(conn.execute("""SELECT pg_has_role(relowner,'USAGE') FROM pg_class
++            WHERE oid='core.matches'::regclass""").fetchone()[0], "maintenance requires the match table owner")
++        guard_schema(conn, before, after)
++        checks = dependencies(conn)
++        expected = captured - {MATCHES}
++        require(expected <= set(checks) <= expected | ADDED_DEPENDENCIES, "unreviewed destination dependency inventory")
++        if apply:
++            locked = set(checks) | {v[0] for v in REFS.values()} | {MATCHES, "core.competitions", "agg.power_runs",
++                                                                 "ops.resource_versions"}
++            conn.execute(sql.SQL("LOCK TABLE {} IN SHARE ROW EXCLUSIVE MODE NOWAIT").format(sql.SQL(", ").join(map(typed, sorted(locked)))))
++        guard_references(conn, before, parents)
++        elo_state = verify_elo(conn, elo, bits, run, after["at"])
++        needed = current_state(conn, facts, parents, bindings)
++        guard_sequence(conn)
++        for table, predicates in checks.items():
++            if table in (ELO, BINDINGS):
++                continue
++            where = sql.SQL(" OR ").join(sql.SQL("(") + sql.SQL(p) + sql.SQL(")") for p in sorted(predicates))
++            occupied = conn.execute(sql.SQL("SELECT 1 FROM {} t WHERE {} LIMIT 1").format(typed(table), where),
++                                    tuple(list(IDS) for _ in predicates)).fetchone()
++            require(occupied is None, "unexpected dependent row in " + table)
++        for table, data in ((MATCHES, parents), (BINDINGS, bindings)):
++            columns = {r[0] for r in conn.execute("SELECT attname FROM pg_attribute WHERE attrelid=%s::regclass AND attnum>0 AND NOT attisdropped", (table,))}
++            require(all(set(r) == columns for r in data), "incomplete physical row: " + table)
++        report = {"would_restore": len(IDS) if needed else 0, "restored": 0, **elo_state, "edition_versions": {}}
++        if needed and apply:
++            for table, data in ((MATCHES, parents), (BINDINGS, bindings)):
++                conn.execute(sql.SQL("INSERT INTO {} SELECT * FROM jsonb_populate_recordset(NULL::{},%s)").format(typed(table), typed(table)),
++                             (Jsonb(data),))
++            require(not current_state(conn, facts, parents, bindings), "restored identity differs")
++            require(verify_elo(conn, elo, bits, run, after["at"]) == elo_state, "Elo drift during restoration")
++            conn.execute("UPDATE core.competition_seasons SET cup_updated_at=now() WHERE id=ANY(%s)", (list(FOLDERS),))
++            for edition in sorted(FOLDERS):
++                version = conn.execute("""INSERT INTO ops.resource_versions(resource_kind,resource_id) VALUES('competition_season',%s)
++                    ON CONFLICT(resource_kind,resource_id) DO UPDATE SET version=ops.resource_versions.version+1,updated_at=now()
++                    RETURNING version""", (edition,)).fetchone()[0]
++                report["edition_versions"][edition] = version
++            report["restored"] = len(IDS)
++        return report
++
++
++def main(argv=None):
++    parser = argparse.ArgumentParser(description=__doc__)
++    destination = parser.add_mutually_exclusive_group(required=True)
++    destination.add_argument("--dsn", help="dedicated loopback rehearsal database")
++    destination.add_argument("--maintenance", action="store_true", help="use the schema owner configuration of vega.migrate")
++    for name in ("preimage", "postimage"):
++        parser.add_argument("--" + name, required=True, type=Path)
++        parser.add_argument("--" + name + "-sha256", required=True)
++    parser.add_argument("--apply", action="store_true")
++    args = parser.parse_args(argv)
++    try:
++        dsn = owner_url(os.environ) if args.maintenance else args.dsn
++        if args.maintenance:
++            require(dsn, "V2_MIGRATION_DATABASE_URL or V2_DB_HOST/NAME/USER/PASSWORD is required")
++            connector = connect
++        else:
++            target = urlsplit(dsn)
++            require(target.hostname == "127.0.0.1" and re.fullmatch(r"/vega_v2_open_matchday_restore_[a-z0-9_]+", target.path)
++                    and not target.query and not target.fragment, "dedicated loopback copy required")
++            connector = connect_local
++        before = load_capture(args.preimage, args.preimage_sha256)
++        after = load_capture(args.postimage, args.postimage_sha256)
++        with connector(dsn) as conn:
++            print(json.dumps(restore(conn, before, after, args.apply)))
++    except psycopg.errors.LockNotAvailable:
++        parser.exit(1, "restoration copy busy\n")
++    except (Refusal, StoreError, psycopg.Error, KeyError, ValueError, TypeError, OSError, zlib.error) as error:
++        parser.exit(1, f"restoration refused: {error}\n")
++
++
++if __name__ == "__main__":
++    main()
 diff --git a/backend/vega/sources/__init__.py b/backend/vega/sources/__init__.py
 index e521b1823f..2c7fba18d8 100644
 --- a/backend/vega/sources/__init__.py
@@ -609,6 +969,370 @@ index 13553ae68b..5678a92aab 100644
      return written, unmatched
  
  
+diff --git a/backend/vega/sources/data/open_matchday_history.json b/backend/vega/sources/data/open_matchday_history.json
+new file mode 100644
+index 0000000000..50c412e582
+--- /dev/null
++++ b/backend/vega/sources/data/open_matchday_history.json
+@@ -0,0 +1,358 @@
++{
++  "schema": 1,
++  "scope": "open-matchday 2026/2027, 18 November 2026, 35 published finals",
++  "organizer_evidence_sha256": "bb7417660207c57b9e40631a657ded705d32d7ebc80cf3d8de2f1f7c56211fe5",
++  "verified_preimage_sha256": "ed7496ec232d3ef8c93b70439e3ccaa9ae56c0708c4c11cbedb4872012a1f74c",
++  "results": [
++    {
++      "id_at_incident": 8049,
++      "provider_key": "ENG_6_national-league-north:2026/2027:2026-08-31|AFC Telford|Bedford",
++      "score": [
++        0,
++        1
++      ],
++      "official_match_id": "g2661210",
++      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=373&page.size=600&page.number=1"
++    },
++    {
++      "id_at_incident": 8050,
++      "provider_key": "ENG_6_national-league-north:2026/2027:2026-08-31|Buxton|Merthyr Town",
++      "score": [
++        2,
++        1
++      ],
++      "official_match_id": "g2661211",
++      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=373&page.size=600&page.number=1"
++    },
++    {
++      "id_at_incident": 8051,
++      "provider_key": "ENG_6_national-league-north:2026/2027:2026-08-31|Chester|Morecambe",
++      "score": [
++        0,
++        1
++      ],
++      "official_match_id": "g2661212",
++      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=373&page.size=600&page.number=1"
++    },
++    {
++      "id_at_incident": 8052,
++      "provider_key": "ENG_6_national-league-north:2026/2027:2026-08-31|Chorley|Brackley Town",
++      "score": [
++        2,
++        2
++      ],
++      "official_match_id": "g2661213",
++      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=373&page.size=600&page.number=1"
++    },
++    {
++      "id_at_incident": 8053,
++      "provider_key": "ENG_6_national-league-north:2026/2027:2026-08-31|Harborough|Marine",
++      "score": [
++        2,
++        1
++      ],
++      "official_match_id": "g2661214",
++      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=373&page.size=600&page.number=1"
++    },
++    {
++      "id_at_incident": 8054,
++      "provider_key": "ENG_6_national-league-north:2026/2027:2026-08-31|King’s Lynn|Scarborough",
++      "score": [
++        3,
++        1
++      ],
++      "official_match_id": "g2661215",
++      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=373&page.size=600&page.number=1"
++    },
++    {
++      "id_at_incident": 8055,
++      "provider_key": "ENG_6_national-league-north:2026/2027:2026-08-31|Macclesfield|Hebburn Town",
++      "score": [
++        3,
++        0
++      ],
++      "official_match_id": "g2661216",
++      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=373&page.size=600&page.number=1"
++    },
++    {
++      "id_at_incident": 8056,
++      "provider_key": "ENG_6_national-league-north:2026/2027:2026-08-31|Radcliffe|Darlington",
++      "score": [
++        0,
++        1
++      ],
++      "official_match_id": "g2661217",
++      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=373&page.size=600&page.number=1"
++    },
++    {
++      "id_at_incident": 8057,
++      "provider_key": "ENG_6_national-league-north:2026/2027:2026-08-31|South Shields|Spalding United",
++      "score": [
++        1,
++        1
++      ],
++      "official_match_id": "g2661218",
++      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=373&page.size=600&page.number=1"
++    },
++    {
++      "id_at_incident": 8058,
++      "provider_key": "ENG_6_national-league-north:2026/2027:2026-08-31|Southport|Hereford",
++      "score": [
++        0,
++        1
++      ],
++      "official_match_id": "g2661219",
++      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=373&page.size=600&page.number=1"
++    },
++    {
++      "id_at_incident": 8059,
++      "provider_key": "ENG_6_national-league-north:2026/2027:2026-08-31|Spennymoor|Hednesford",
++      "score": [
++        1,
++        1
++      ],
++      "official_match_id": "g2661220",
++      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=373&page.size=600&page.number=1"
++    },
++    {
++      "id_at_incident": 8060,
++      "provider_key": "ENG_6_national-league-north:2026/2027:2026-08-31|Worksop|Oxford City",
++      "score": [
++        0,
++        1
++      ],
++      "official_match_id": "g2661221",
++      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=373&page.size=600&page.number=1"
++    },
++    {
++      "id_at_incident": 8290,
++      "provider_key": "ENG_6_national-league-south:2026/2027:2026-09-05|AFC Totton|Hampton & Richmond",
++      "score": [
++        4,
++        1
++      ],
++      "official_match_id": "g2660668",
++      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=372&page.size=600&page.number=1"
++    },
++    {
++      "id_at_incident": 8291,
++      "provider_key": "ENG_6_national-league-south:2026/2027:2026-09-05|Billericay|Dorking",
++      "score": [
++        3,
++        3
++      ],
++      "official_match_id": "g2660669",
++      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=372&page.size=600&page.number=1"
++    },
++    {
++      "id_at_incident": 8292,
++      "provider_key": "ENG_6_national-league-south:2026/2027:2026-09-05|Chelmsford|Salisbury",
++      "score": [
++        1,
++        1
++      ],
++      "official_match_id": "g2660670",
++      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=372&page.size=600&page.number=1"
++    },
++    {
++      "id_at_incident": 8293,
++      "provider_key": "ENG_6_national-league-south:2026/2027:2026-09-05|Dover|Maidenhead",
++      "score": [
++        0,
++        3
++      ],
++      "official_match_id": "g2660671",
++      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=372&page.size=600&page.number=1"
++    },
++    {
++      "id_at_incident": 8294,
++      "provider_key": "ENG_6_national-league-south:2026/2027:2026-09-05|Farnborough|Tonbridge",
++      "score": [
++        0,
++        4
++      ],
++      "official_match_id": "g2660672",
++      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=372&page.size=600&page.number=1"
++    },
++    {
++      "id_at_incident": 8295,
++      "provider_key": "ENG_6_national-league-south:2026/2027:2026-09-05|Hemel Hempstead|Farnham",
++      "score": [
++        1,
++        1
++      ],
++      "official_match_id": "g2660673",
++      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=372&page.size=600&page.number=1"
++    },
++    {
++      "id_at_incident": 8296,
++      "provider_key": "ENG_6_national-league-south:2026/2027:2026-09-05|Horsham FC|Dag & Red",
++      "score": [
++        1,
++        1
++      ],
++      "official_match_id": "g2660674",
++      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=372&page.size=600&page.number=1"
++    },
++    {
++      "id_at_incident": 8297,
++      "provider_key": "ENG_6_national-league-south:2026/2027:2026-09-05|Maidstone|Weston-super-Mare",
++      "score": [
++        1,
++        0
++      ],
++      "official_match_id": "g2660675",
++      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=372&page.size=600&page.number=1"
++    },
++    {
++      "id_at_incident": 8298,
++      "provider_key": "ENG_6_national-league-south:2026/2027:2026-09-05|Slough|Braintree",
++      "score": [
++        1,
++        2
++      ],
++      "official_match_id": "g2660676",
++      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=372&page.size=600&page.number=1"
++    },
++    {
++      "id_at_incident": 8299,
++      "provider_key": "ENG_6_national-league-south:2026/2027:2026-09-05|Torquay|Folkestone",
++      "score": [
++        3,
++        2
++      ],
++      "official_match_id": "g2660677",
++      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=372&page.size=600&page.number=1"
++    },
++    {
++      "id_at_incident": 8300,
++      "provider_key": "ENG_6_national-league-south:2026/2027:2026-09-05|Truro|Chesham",
++      "score": [
++        3,
++        1
++      ],
++      "official_match_id": "g2660678",
++      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=372&page.size=600&page.number=1"
++    },
++    {
++      "id_at_incident": 8301,
++      "provider_key": "ENG_6_national-league-south:2026/2027:2026-09-05|Walton & Hersham|Ebbsfleet",
++      "score": [
++        0,
++        2
++      ],
++      "official_match_id": "g2660679",
++      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=372&page.size=600&page.number=1"
++    },
++    {
++      "id_at_incident": 8534,
++      "provider_key": "ENG_7_northern-premier-league:2026/2027:2026-08-31|Curzon Ashton|Ashton Utd",
++      "score": [
++        2,
++        0
++      ],
++      "official_match_id": "6a5a0776ce9ef452b61f4173",
++      "official_calendar": "https://www.thenpl.co.uk/match/6a5a0776ce9ef452b61f4173"
++    },
++    {
++      "id_at_incident": 8535,
++      "provider_key": "ENG_7_northern-premier-league:2026/2027:2026-08-31|Emley|Guiseley",
++      "score": [
++        0,
++        4
++      ],
++      "official_match_id": "6a5a0776ce9ef452b61f4174",
++      "official_calendar": "https://www.thenpl.co.uk/match/6a5a0776ce9ef452b61f4174"
++    },
++    {
++      "id_at_incident": 8536,
++      "provider_key": "ENG_7_northern-premier-league:2026/2027:2026-08-31|FC United|Avro",
++      "score": [
++        3,
++        4
++      ],
++      "official_match_id": "6a5a0776ce9ef452b61f4175",
++      "official_calendar": "https://www.thenpl.co.uk/match/6a5a0776ce9ef452b61f4175"
++    },
++    {
++      "id_at_incident": 8537,
++      "provider_key": "ENG_7_northern-premier-league:2026/2027:2026-08-31|Gainsborough|Cleethorpes",
++      "score": [
++        0,
++        3
++      ],
++      "official_match_id": "6a5a0776ce9ef452b61f4176",
++      "official_calendar": "https://www.thenpl.co.uk/match/6a5a0776ce9ef452b61f4176"
++    },
++    {
++      "id_at_incident": 8538,
++      "provider_key": "ENG_7_northern-premier-league:2026/2027:2026-08-31|Hyde|Bury",
++      "score": [
++        2,
++        1
++      ],
++      "official_match_id": "6a5a0776ce9ef452b61f4177",
++      "official_calendar": "https://www.thenpl.co.uk/match/6a5a0776ce9ef452b61f4177"
++    },
++    {
++      "id_at_incident": 8539,
++      "provider_key": "ENG_7_northern-premier-league:2026/2027:2026-08-31|Ilkeston|Quorn",
++      "score": [
++        0,
++        2
++      ],
++      "official_match_id": "6a5a0776ce9ef452b61f4178",
++      "official_calendar": "https://www.thenpl.co.uk/match/6a5a0776ce9ef452b61f4178"
++    },
++    {
++      "id_at_incident": 8540,
++      "provider_key": "ENG_7_northern-premier-league:2026/2027:2026-08-31|Lancaster|Workington",
++      "score": [
++        0,
++        3
++      ],
++      "official_match_id": "6a5a0776ce9ef452b61f4179",
++      "official_calendar": "https://www.thenpl.co.uk/match/6a5a0776ce9ef452b61f4179"
++    },
++    {
++      "id_at_incident": 8541,
++      "provider_key": "ENG_7_northern-premier-league:2026/2027:2026-08-31|Stockton|Redcar Athletic",
++      "score": [
++        0,
++        2
++      ],
++      "official_match_id": "6a5a0776ce9ef452b61f417b",
++      "official_calendar": "https://www.thenpl.co.uk/match/6a5a0776ce9ef452b61f417b"
++    },
++    {
++      "id_at_incident": 8542,
++      "provider_key": "ENG_7_northern-premier-league:2026/2027:2026-08-31|Warrington Rylands|Bamber Bridge",
++      "score": [
++        3,
++        1
++      ],
++      "official_match_id": "6a5a0776ce9ef452b61f417c",
++      "official_calendar": "https://www.thenpl.co.uk/match/6a5a0776ce9ef452b61f417c"
++    },
++    {
++      "id_at_incident": 8543,
++      "provider_key": "ENG_7_northern-premier-league:2026/2027:2026-08-31|Whitby|Alfreton",
++      "score": [
++        1,
++        4
++      ],
++      "official_match_id": "6a5a0776ce9ef452b61f417d",
++      "official_calendar": "https://www.thenpl.co.uk/match/6a5a0776ce9ef452b61f417d"
++    },
++    {
++      "id_at_incident": 8544,
++      "provider_key": "ENG_7_northern-premier-league:2026/2027:2026-09-01|Leek|Warrington",
++      "score": [
++        1,
++        2
++      ],
++      "official_match_id": "6a5a0776ce9ef452b61f417a",
++      "official_calendar": "https://www.thenpl.co.uk/match/6a5a0776ce9ef452b61f417a"
++    }
++  ]
++}
 diff --git a/backend/vega/sources/dfb_pokal_periods.json b/backend/vega/sources/dfb_pokal_periods.json
 new file mode 100644
 index 0000000000..8c007119a3
@@ -2350,401 +3074,3 @@ index 0000000000..8c007119a3
 +    "2026/2027": "85220cbd34ffa016837098f4e11e4b9532e57d0da431dbf8aa0f250a82cd23c9"
 +  }
 +}
-diff --git a/backend/vega/sources/open_matchday.py b/backend/vega/sources/open_matchday.py
-index 311a3e0e8a..cb88a54014 100644
---- a/backend/vega/sources/open_matchday.py
-+++ b/backend/vega/sources/open_matchday.py
-@@ -13,6 +13,12 @@ the team statistics the source gives (shots, shots on target, fouls, corners, pe
- too, cards) become core.team_match_stats rows. The source's goal minutes name no side and
- are not kept. Read every six hours; an unreadable competition is skipped, the others are
- written.
-+
-+A competition's files replace its edition only as the complete snapshot the summary describes
-+(read_files: its declared rows, no reported error) and only when they keep every result the
-+base holds (snapshot.py); otherwise the edition stays as it was, the competition counts as
-+unmatched and ops.parse_failures says why (FAILURE_MODES.md §19). A match whose values and
-+statistics are unchanged is not written again.
- """
- 
- import csv
-@@ -20,7 +26,7 @@ from datetime import timedelta
- import io
- import re
- 
--from . import SourceError
-+from . import SourceError, failure, snapshot
- from .cups import _team
- from ..seasons import sporting_season
- from ..store import Store
-@@ -57,6 +63,10 @@ SPELLINGS = {
- }
- # CSV columns -> team_match_stats columns, per side and period.
- STATS = {"shots": "total_shots", "target": "shots_on_target", "fouls": "fouls", "corners": "corners", "yellow": "yellow_cards", "red": "red_cards"}
-+PERIODS = (("all", ""), ("first_half", "_1h"), ("second_half", "_2h"))
-+# The columns each file must have for its rows to name a match (and a result its score).
-+HEADERS = {"results": {"date", "home", "away", "ft_home", "ft_away"}, "fixtures": {"date", "home", "away"}}
-+DAY = re.compile(r"\d{4}-\d{2}-\d{2}")
- 
- 
- # The source's country codes the base writes otherwise (core.countries, PitchAPI's teams).
-@@ -74,7 +84,11 @@ def scopes(now):
- 
- 
- def _int(value):
--    return int(value) if isinstance(value, str) and value.strip().isdigit() else None
-+    return int(value) if isinstance(value, str) and re.fullmatch(r"[0-9]+", value.strip()) else None
-+
-+
-+def _count(value):
-+    return value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else None
- 
- 
- def season_label(code):
-@@ -88,11 +102,121 @@ def rows(text):
-     return list(csv.DictReader(io.StringIO(text.lstrip("﻿"), newline="")))
- 
- 
-+def read_files(get, league, code, folder):
-+    """A competition's (results, fixtures) rows, as the summary describes them: integer counts and
-+    no reported error, each declared file read with its columns and exactly its declared rows.
-+    SourceError with a detail when they are not that complete snapshot; an unreadable file raises
-+    the reader's own SourceError (no detail)."""
-+    declared = {part: _count(league.get(part)) for part in HEADERS}
-+    errors = league.get("errors", [])
-+    if None in declared.values() or not isinstance(errors, list):
-+        raise SourceError("MANIFEST_INVALID", f"results={league.get('results')!r} fixtures={league.get('fixtures')!r} errors={errors!r}")
-+    if errors:
-+        raise SourceError("SOURCE_REPORTED_ERRORS", "; ".join(map(str, errors)))
-+    out = {}
-+    for part, count in declared.items():
-+        if not count:
-+            out[part] = []
-+            continue
-+        text = get(f"{RAW}data/{folder}/{part}_{code}.csv", as_text=True)
-+        reader = csv.DictReader(io.StringIO(text.lstrip("﻿"), newline=""))
-+        if not HEADERS[part] <= set(reader.fieldnames or ()):
-+            raise SourceError("INVALID_HEADER", f"{part}: {reader.fieldnames}")
-+        out[part] = list(reader)
-+        if len(out[part]) != count:
-+            raise SourceError("ROW_COUNT_MISMATCH", f"{part}: {len(out[part])} rows, {count} declared")
-+    return out["results"], out["fixtures"]
-+
-+
-+def candidate(folder, season, results, fixtures, label):
-+    """{provider key: row} of the snapshot, results first then fixtures, in source order.
-+
-+    A result row names both sides, its day and its two goals (INVALID_RESULT_ROW otherwise); a
-+    fixture row without them names no match and is skipped. A fixture with the key of a result is
-+    that result. Rows of one key otherwise make one match, from the last of them (as before)."""
-+    out = {}
-+    for status, items in (("finished", results), ("not_started", fixtures)):
-+        for item in items:
-+            home, away, day = (item.get("home") or "").strip(), (item.get("away") or "").strip(), (item.get("date") or "").strip()
-+            home, away = SPELLINGS.get(home, home), SPELLINGS.get(away, away)
-+            goals = (_int(item.get("ft_home")), _int(item.get("ft_away"))) if status == "finished" else (None, None)
-+            if not home or not away or not DAY.fullmatch(day):
-+                if status == "finished":
-+                    raise SourceError("INVALID_RESULT_ROW", f"{label}: a result without its sides or day: {dict(item)}")
-+                continue
-+            if status == "finished" and None in goals:
-+                raise SourceError("INVALID_RESULT_ROW", f"{label}: {day} {home}–{away} without its goals: {item.get('ft_home')!r}–{item.get('ft_away')!r}")
-+            half = (_int(item.get("ht_home")), _int(item.get("ht_away")))
-+            row = {
-+                "status": status, "home": home, "away": away, "date": day, "round": (item.get("gw") or "").strip() or None,
-+                "home_score": goals[0], "away_score": goals[1],
-+                "home_score_ht": half[0] if None not in half else None, "away_score_ht": half[1] if None not in half else None,
-+                "stats": _row_stats(item),
-+            }
-+            key = f"{folder}:{season}:{day}|{home}|{away}"
-+            if key in out and out[key]["status"] == "finished" and status != "finished":
-+                continue  # a fixture still listed after its result: the result is the match
-+            out.pop(key, None)
-+            out[key] = row
-+    return out
-+
-+
-+def _row_stats(item):
-+    """{(side, period): {column: value}} of the statistics a CSV row gives (corners alone per half)."""
-+    out = {}
-+    for side in ("home", "away"):
-+        for period, suffix in PERIODS:
-+            stats = {}
-+            for name, column in STATS.items():
-+                value = _int(item.get(f"{side}_{name}{suffix}")) if suffix == "" or name == "corners" else None
-+                if value is not None:
-+                    stats[column] = value
-+            out[(side, period)] = stats
-+    return out
-+
-+
-+def _by_team_period(rows):
-+    return sorted(rows, key=lambda r: (r[0], r[1]))
-+
-+
-+def _stats_rows(row, home, away, stored=()):
-+    """The match's team_match_stats rows: (team, period, {column: value}). A cell the file does not state (its
-+    column absent or the cell empty) keeps the stored value; a stated one, 0 included, replaces it
-+    (FAILURE_MODES.md §22)."""
-+    teams = {"home": home, "away": away}
-+    merged = {(team, period): dict(columns) for team, period, columns in stored}
-+    for (side, period), stats in row["stats"].items():
-+        if stats:
-+            merged.setdefault((teams[side], period), {}).update(stats)
-+    return _by_team_period((team, period, columns) for (team, period), columns in merged.items() if columns)
-+
-+
-+def _stored_stats(conn, season_id, ids):
-+    out = {}
-+    if ids:
-+        for match, team, period, *values in conn.execute(
-+            f"""SELECT match_id, team_id, period::text, {', '.join(STATS.values())} FROM core.team_match_stats
-+                WHERE season_id = %s AND match_id = ANY(%s)""",
-+            (season_id, list(ids)),
-+        ):
-+            out.setdefault(match, []).append((team, period, {c: v for c, v in zip(STATS.values(), values) if v is not None}))
-+    return {match: _by_team_period(rows) for match, rows in out.items()}
-+
-+
- def save(conn, folder, name, season, results, fixtures, now):
--    """Replace one competition's edition; returns the matches written."""
-+    """Replace one competition's edition by a complete snapshot; returns the matches it holds.
-+
-+    Refused (SourceError with a detail, nothing written): a result row without its sides, day or
-+    goals, and a snapshot that drops or unplays a result the base holds (snapshot.guard). Matches
-+    and statistics are written only where they changed."""
-     label = sporting_season(season)
-     if label is None:
-         raise SourceError("INVALID_SEASON")
-+    cup_key = f"open-matchday:{folder}:{season}"
-+    snap = candidate(folder, season, results, fixtures, cup_key)
-+    stored = conn.execute("SELECT id FROM core.competition_seasons WHERE cup_key = %s", (cup_key,)).fetchone()
-+    before = snapshot.stored(conn, "open_matchday", stored and stored[0])
-+    snapshot.guard("open_matchday", before, {key: row["status"] for key, row in snap.items()}, cup_key)
-     season_id = Store(conn).season(label)
-     country = country_of(folder)
-     family = f"cup:open-matchday:{folder}"
-@@ -115,58 +239,40 @@ def save(conn, folder, name, season, results, fixtures, now):
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
-            ON CONFLICT (cup_key) DO UPDATE SET cup_name=EXCLUDED.cup_name, cup_checked_at=EXCLUDED.cup_checked_at, updated_at=now()
-            RETURNING id""",
--        (comp, season_id, season, f"open-matchday:{folder}:{season}", name, SOURCE, now, now),
-+        (comp, season_id, season, cup_key, name, SOURCE, now, now),
-     ).fetchone()[0]
--    keep = []
--    position = 0
--    for status, items in (("finished", results), ("not_started", fixtures)):
--        for item in items:
--            home_name, away_name, day = (item.get("home") or "").strip(), (item.get("away") or "").strip(), (item.get("date") or "").strip()
--            home_name, away_name = SPELLINGS.get(home_name, home_name), SPELLINGS.get(away_name, away_name)
--            if not home_name or not away_name or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", day):
--                continue
--            key = f"{folder}:{season}:{day}|{home_name}|{away_name}"
--            home = _team(conn, "open_matchday", f"name:{home_name}", home_name)
--            away = _team(conn, "open_matchday", f"name:{away_name}", away_name)
--            round_id = None
--            if (item.get("gw") or "").strip():
--                round_id = conn.execute(
--                    """INSERT INTO core.rounds(competition_season_id, name) VALUES (%s,%s)
--                       ON CONFLICT (competition_season_id, name) DO UPDATE SET name=EXCLUDED.name RETURNING id""",
--                    (edition, item["gw"].strip()),
--                ).fetchone()[0]
--            hs, as_ = (_int(item.get("ft_home")), _int(item.get("ft_away"))) if status == "finished" else (None, None)
--            values = {
--                "competition_season_id": edition, "season_id": season_id, "source": "open_matchday", "status": status if hs is not None or status == "not_started" else "not_started",
--                "match_date": day, "home_team_id": home, "away_team_id": away, "home_team_name": home_name, "away_team_name": away_name,
--                "round_id": round_id, "home_score": hs, "away_score": as_, "home_score_ht": _int(item.get("ht_home")), "away_score_ht": _int(item.get("ht_away")),
--                "archive_position": position,
--            }
--            position += 1
--            mid = conn.execute("SELECT entity_id FROM core.provider_ids WHERE entity_type='match' AND provider='open_matchday' AND provider_key=%s", (key,)).fetchone()
--            columns = list(values)
--            if mid:
--                mid = mid[0]
--                conn.execute(f"UPDATE core.matches SET {', '.join(f'{c}=%s' for c in columns)}, updated_at=now() WHERE id=%s", [values[c] for c in columns] + [mid])
--            else:
--                mid = conn.execute(f"INSERT INTO core.matches({', '.join(columns)}) VALUES ({', '.join(['%s'] * len(columns))}) RETURNING id",
--                                   [values[c] for c in columns]).fetchone()[0]
--                conn.execute("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('match','open_matchday',%s,%s)", (key, mid))
--            keep.append(mid)
-+    before.update(snapshot.elsewhere(conn, "open_matchday", edition, [key for key in snap if key not in before]))
-+    stats_before = _stored_stats(conn, season_id, [m["id"] for m in before.values()])
-+    changes = 0
-+    for position, (key, row) in enumerate(snap.items()):
-+        home = _team(conn, "open_matchday", f"name:{row['home']}", row["home"])
-+        away = _team(conn, "open_matchday", f"name:{row['away']}", row["away"])
-+        round_id = None
-+        if row["round"]:
-+            found_round = conn.execute("SELECT id FROM core.rounds WHERE competition_season_id=%s AND name=%s", (edition, row["round"])).fetchone()
-+            round_id = found_round[0] if found_round else conn.execute(
-+                "INSERT INTO core.rounds(competition_season_id, name) VALUES (%s,%s) RETURNING id", (edition, row["round"])).fetchone()[0]
-+        values = {
-+            "competition_season_id": edition, "season_id": season_id, "source": "open_matchday", "status": row["status"],
-+            "match_date": row["date"], "home_team_id": home, "away_team_id": away, "home_team_name": row["home"], "away_team_name": row["away"],
-+            "round_id": round_id, "home_score": row["home_score"], "away_score": row["away_score"],
-+            "home_score_ht": row["home_score_ht"], "away_score_ht": row["away_score_ht"], "archive_position": position,
-+        }
-+        found = before.get(key)
-+        stats = _stats_rows(row, home, away, stats_before.get(found["id"], []) if found is not None else ())
-+        restated = found is not None and stats_before.get(found["id"], []) != stats
-+        mid, outcome = snapshot.write(conn, "open_matchday", key, values, found, changed=restated)
-+        changes += outcome in ("inserted", "updated")
-+        if outcome == "inserted" or restated:
-             conn.execute("DELETE FROM core.team_match_stats WHERE season_id=%s AND match_id=%s", (season_id, mid))
--            for side, team in (("home", home), ("away", away)):
--                for period, suffix in (("all", ""), ("first_half", "_1h"), ("second_half", "_2h")):
--                    stats = {column: _int(item.get(f"{side}_{name}{suffix}")) for name, column in STATS.items() if suffix == "" or name == "corners"}
--                    stats = {k: v for k, v in stats.items() if v is not None}
--                    if stats:
--                        cols = ["season_id", "match_id", "team_id", "period", *stats]
--                        conn.execute(f"INSERT INTO core.team_match_stats({', '.join(cols)}) VALUES ({', '.join(['%s'] * len(cols))})",
--                                     [season_id, mid, team, period, *stats.values()])
--    conn.execute("DELETE FROM core.matches WHERE competition_season_id=%s AND NOT id = ANY(%s)", (edition, keep))
--    conn.execute(
--        "DELETE FROM core.provider_ids p WHERE p.entity_type='match' AND p.provider='open_matchday' AND NOT EXISTS (SELECT 1 FROM core.matches m WHERE m.id=p.entity_id)"
--    )
--    return len(keep)
-+            for team, period, columns in stats:
-+                cols = ["season_id", "match_id", "team_id", "period", *columns]
-+                conn.execute(f"INSERT INTO core.team_match_stats({', '.join(cols)}) VALUES ({', '.join(['%s'] * len(cols))})",
-+                             [season_id, mid, team, period, *columns.values()])
-+    changes += snapshot.remove(conn, "open_matchday", before, set(snap))
-+    if changes:
-+        conn.execute("UPDATE core.competition_seasons SET cup_updated_at=%s WHERE id=%s", (now, edition))
-+    return len(snap)
- 
- 
- def held(conn, folder, season):
-@@ -219,13 +325,17 @@ def run(conn, get, scope, now):
-                 drop_copy(conn, folder, season)
-             continue
-         try:
--            results = rows(get(f"{RAW}data/{folder}/results_{code}.csv", as_text=True)) if league.get("results") else []
--            fixtures = rows(get(f"{RAW}data/{folder}/fixtures_{code}.csv", as_text=True)) if league.get("fixtures") else []
--        except SourceError:
--            unmatched += 1  # this competition's files are unreadable now; the others go on
--            continue
--        with conn.transaction():
--            written += save(conn, folder, league.get("league") or folder, season, results, fixtures, now)
-+            results, fixtures = read_files(get, league, code, folder)
-+            with conn.transaction():
-+                written += save(conn, folder, league.get("league") or folder, season, results, fixtures, now)
-+        except SourceError as error:
-+            # This competition is not written now (its files unreadable, or not the complete snapshot that
-+            # keeps its results): its edition stays as it was; the others go on.
-+            unmatched += 1
-+            if error.detail is not None:
-+                cup_key = f"open-matchday:{folder}:{season}"
-+                edition = conn.execute("SELECT id FROM core.competition_seasons WHERE cup_key = %s", (cup_key,)).fetchone()
-+                failure(conn, error.code, f"{cup_key}: {error.detail}", edition and edition[0])
-     conn.execute(
-         """INSERT INTO core.source_revisions(source, name, url, license, revision, retrieved_at) VALUES ('open-matchday', 'open-matchday', %s, %s, %s, %s)
-            ON CONFLICT (source) DO UPDATE SET revision=EXCLUDED.revision, retrieved_at=EXCLUDED.retrieved_at""",
-diff --git a/backend/vega/sources/snapshot.py b/backend/vega/sources/snapshot.py
-new file mode 100644
-index 0000000000..04c0364047
---- /dev/null
-+++ b/backend/vega/sources/snapshot.py
-@@ -0,0 +1,103 @@
-+"""A source edition replaced by a later snapshot of it (VI-27, FAILURE_MODES.md §19).
-+
-+The cup sources (cups.py) and open-matchday (open_matchday.py) publish each edition whole: the
-+snapshot read now replaces the one read before. A snapshot can be partial (an empty or truncated
-+file served with a 200, a fixture list still naming a match since played) while looking valid, so:
-+
-+- a match the base holds finished must still be in the snapshot, finished (`guard`): otherwise
-+  the edition is kept as it was and the snapshot refused, unless the match is in RETRACTIONS;
-+- a match whose values have not changed is not written again (`write`): no revision, no
-+  `updated_at`; one that changed gets `revision + 1`; a new place in the source's order alone
-+  moves `archive_position` only.
-+
-+The removal of an open-matchday copy of a league PitchAPI holds (open_matchday.drop_copy) is a
-+reviewed decision of its own (VI-21) and does not pass through here.
-+"""
-+
-+from . import SourceError
-+
-+# Results a later, complete snapshot of their source really withdrew or left unplayed, written here
-+# once reviewed: {(provider, match provider key): "reviewer, date: reason"}. The next read of the
-+# edition may then remove or downgrade that match, and that match only.
-+RETRACTIONS = {}
-+
-+# The columns of core.matches a cup source writes, read back as the writers compare them.
-+COLUMNS = {
-+    "status": "m.status::text", "match_date": "m.match_date::text", "source": "m.source::text",
-+    **{c: f"m.{c}" for c in (
-+        "competition_season_id", "season_id", "home_team_id", "away_team_id", "home_team_name", "away_team_name", "round_id",
-+        "group_name", "match_number", "archive_position", "is_neutral", "home_score", "away_score", "home_score_90",
-+        "away_score_90", "home_score_ht", "away_score_ht", "home_score_et", "away_score_et", "home_penalty_score",
-+        "away_penalty_score")},
-+}
-+
-+
-+def _read(conn, provider, where, args):
-+    names = list(COLUMNS)
-+    rows = conn.execute(
-+        f"""SELECT p.provider_key, m.id, m.revision, {', '.join(COLUMNS.values())}
-+            FROM core.matches m JOIN core.provider_ids p ON p.entity_type = 'match' AND p.provider = %s AND p.entity_id = m.id
-+            WHERE {where}""",
-+        (provider, *args),
-+    ).fetchall()
-+    return {r[0]: {"id": r[1], "revision": r[2], **dict(zip(names, r[3:]))} for r in rows}
-+
-+
-+def stored(conn, provider, edition):
-+    """{provider key: {"id", "revision", column: value}} of the edition's matches (none for a new edition)."""
-+    return {} if edition is None else _read(conn, provider, "m.competition_season_id = %s", (edition,))
-+
-+
-+def elsewhere(conn, provider, edition, keys):
-+    """The same, for those of `keys` the provider gave a match of another edition: the writer moves
-+    such a match into this edition, as it always did, rather than creating a second one."""
-+    return _read(conn, provider, "p.provider_key = ANY(%s) AND m.competition_season_id IS DISTINCT FROM %s", (list(keys), edition)) if keys else {}
-+
-+
-+def guard(provider, before, after, label):
-+    """Refuse the snapshot when it would drop or downgrade a finished match of the edition.
-+
-+    `before`: stored(); `after`: {provider key: status} of the snapshot; `label`: the edition, for the detail."""
-+    def reviewed(key):
-+        return (provider, key) in RETRACTIONS
-+
-+    dropped = sorted(k for k, m in before.items() if m["status"] == "finished" and k not in after and not reviewed(k))
-+    downgraded = sorted(k for k, m in before.items()
-+                        if m["status"] == "finished" and k in after and after[k] != "finished" and not reviewed(k))
-+    for code, keys in (("SNAPSHOT_DROPS_RESULT", dropped), ("RESULT_DOWNGRADED", downgraded)):
-+        if keys:
-+            shown = ", ".join(keys[:5]) + (f" and {len(keys) - 5} more" if len(keys) > 5 else "")
-+            raise SourceError(code, f"{label}: {len(keys)} finished match(es) of {len(before)} kept, as the snapshot "
-+                                    f"{'lacks' if code == 'SNAPSHOT_DROPS_RESULT' else 'leaves unplayed'}: {shown}")
-+
-+
-+def write(conn, provider, key, values, found, changed=False):
-+    """Insert, update or leave one match: "inserted", "updated", "moved" (its place alone) or None.
-+
-+    `values`: {column: value} of COLUMNS; `found`: its stored() entry or None; `changed`: a change
-+    the columns do not show (its statistics)."""
-+    columns = list(values)
-+    if found is None:
-+        mid = conn.execute(f"INSERT INTO core.matches({', '.join(columns)}) VALUES ({', '.join(['%s'] * len(columns))}) RETURNING id",
-+                           [values[c] for c in columns]).fetchone()[0]
-+        conn.execute("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('match',%s,%s,%s)",
-+                     (provider, key, mid))
-+        return mid, "inserted"
-+    differs = [c for c in columns if c != "archive_position" and values[c] != found[c]]
-+    if differs or changed:
-+        conn.execute(f"UPDATE core.matches SET {', '.join(f'{c}=%s' for c in columns)}, revision=revision+1, updated_at=now() WHERE id=%s",
-+                     [values[c] for c in columns] + [found["id"]])
-+        return found["id"], "updated"
-+    if values.get("archive_position") != found["archive_position"]:
-+        conn.execute("UPDATE core.matches SET archive_position=%s WHERE id=%s", (values["archive_position"], found["id"]))
-+        return found["id"], "moved"
-+    return found["id"], None
-+
-+
-+def remove(conn, provider, before, keep):
-+    """Delete the edition's matches the snapshot no longer holds (guard() allowed it); returns how many."""
-+    gone = [m["id"] for k, m in before.items() if k not in keep]
-+    if gone:
-+        conn.execute("DELETE FROM core.matches WHERE id = ANY(%s)", (gone,))
-+        conn.execute("DELETE FROM core.provider_ids WHERE entity_type='match' AND provider=%s AND entity_id = ANY(%s)", (provider, gone))
-+    return len(gone)

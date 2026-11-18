@@ -1,0 +1,13 @@
+{
+  "zip_sha256": "fc4217fb8548405aa136af3f68b2853783814a12852b1c6f3251a79a4aa6f83c",
+  "files": 80,
+  "exit": 0,
+  "network_and_evidence_directory_denied": true,
+  "stdout_sha256": "33da7a241adb3927f3dc236fbf6af52e88061491401532f6cfbcd9734b180713",
+  "last_lines": [
+    "  \"candidates_with_exact_sporting_fact\": 0,",
+    "  \"exact_other_edition_ids\": []",
+    "}",
+    "OFFLINE VERIFICATION {\"status\": \"PASS\", \"official_finished\": 575, \"exact\": 338, \"absent\": 236, \"withdrawn_recent\": 35, \"prior_absences\": 201, \"prior_seen_earlier\": 22, \"prior_not_seen_four_snapshots\": 179, \"score_discrepancy\": 1, \"aligned_clubs\": 70, \"new_physical_ids_invented\": 0, \"global_exact_countermatches\": 0, \"known_alias_control\": \"zero_rows_in_known_alias_window\", \"network_calls\": 0}"
+  ]
+}

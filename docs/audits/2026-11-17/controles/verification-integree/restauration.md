@@ -1,0 +1,22 @@
+# Les 35 rencontres anglaises et leurs identifiants
+
+Les deux ligues organisatrices et les trois calendriers confirment les 35 dates, adversaires et scores retirés. Trois comptes rendus de clubs apportent une deuxième preuve. La lecture publique des trois tableaux du 18 novembre à 15 h 02 UTC retrouve dix résultats du 17 novembre et aucun des 35 anciens. Les trois GET répondent 200 et leurs requêtes conditionnelles 304.
+
+La sauvegarde automatique RDS du 18 novembre à 04 h 50 a été restaurée dans une instance de diagnostic privée et chiffrée de la même région. L’instance créée pour la vérification a été supprimée à 15 h 03 UTC. La sauvegarde et l’instance de production étaient disponibles après sa suppression. La copie a servi uniquement aux lectures des 35 identifiants. Les deux sondes en lecture seule confrontent 45 tables du schéma et leurs dépendances. La première tentative, sur la copie encore froide, a expiré sur 16 lectures. La seconde a parcouru les mêmes dépendances avec les clés de partition valides et a terminé les 59 lectures. Les résultats, les requêtes et leurs empreintes sont dans la capsule.
+
+| Références physiques ciblées | Sauvegarde de 04 h 50 | RDS après retrait |
+| --- | ---: | ---: |
+| Matchs | 35 | 0 |
+| Clés fournisseur des matchs | 35 | 0 |
+| Côtés Elo | 70 | 70 |
+| Lignes de statistiques de match associées | 0 | 0 |
+
+Les 70 Elo, leurs pondérations et les bits des nombres à virgule flottante concordent. Sur la copie, une réinsertion par le collecteur déployé alloue de nouvelles clés et laisse les anciennes valeurs orphelines. La réparation doit donc préserver l’identifiant physique, les relations et la lecture par table de compétition. La route générique de résumé réserve son catalogue aux matchs natifs. Le trajet public applicable aux trois compétitions est leur table de résultats.
+
+L’étude numérique exécute la fonction Elo du code déployé avec et sans les 35 résultats, en gardant les niveaux d’entrée et les pondérations fixes. Sur les 81 888 matchs communs aux deux relevés, aucun tuple d’entrée n’a changé. Le retrait des 35 explique des écarts de plus de 0,01 après match pour **871 côtés de 450 autres rencontres**. Le dernier Elo de **115 clubs** dépasse ce seuil. Pour les dix nouveaux matchs, chacun des vingt côtés change, de 0,35502 à 9,20296 points après match. Le contrôle historique reproduit les 163 846 valeurs par côté à un ULP près. Ces chiffres sont conditionnels aux paramètres conservés. [Rejeu autonome, données et requêtes](35-matchs-identites-et-elo.zip) · [Vérification de la capsule](35-matchs-recu.json) · [Trois tableaux publics](tables-publiques-35.json) · [Décision VI-27](https://linear.app/vegainteligence/issue/VI-27#comment-065aff81-6095-4b42-9529-fd1a777ca949)
+
+## Réparation disponible sur la branche
+
+Le commit `989676e5a7` fournit la commande de reprise des deux captures signées. Le contrôle démarre en lecture seule. Sur la copie de la base après retrait, le passage explicite en écriture recrée les 35 lignes et 35 liaisons avec leurs identifiants d’origine. Les 70 Elo déjà présents conservent leurs bits et les trois éditions changent de version. Un deuxième passage annonce zéro ligne à restaurer. Les tentatives avec collision d’identité, état partiel et dépendance inattendue sont refusées avant la validation de la transaction. [Commande de maintenance](../../../../../backend/vega/open_matchday_restore.py)
+
+Le commit `65c31737ec` protège les trois éditions anglaises contre la perte des résultats situés avant le début d’une fenêtre glissante suffisamment corroborée. Le périmètre de cette règle est limité aux trois dossiers 2026/27 vérifiés. Les omissions à l’intérieur de la fenêtre, les contradictions de score et les jeux vides font l’objet de contrôles séparés. Le rejeu sur les quatre versions publiques confirme que des matchs d’une même journée sportive peuvent disparaître à des dates différentes. La politique utilise la date du résultat et l’accord des faits observés. Le commit `773554b49a` utilise la configuration de maintenance du dépôt et traite la disparition des 70 anciens Elo lorsque le run 2097 a été entièrement remplacé par un nouveau calcul publié. Ce chemin remet les identifiants et signale à VI-21 les côtés à calculer. [Garde des résultats](../../../../../backend/vega/sources/open_matchday_history.py) · [Collecteur normal](../../../../../backend/vega/sources/open_matchday.py)

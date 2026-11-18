@@ -1,0 +1,44 @@
+{
+  "ENG_6_national-league-north": {
+    "date_min": "2026-09-05",
+    "date_max": "2026-11-17",
+    "lignes": 116,
+    "anciens_attendus": 12,
+    "anciens_retrouves": 0,
+    "nouveaux_attendus": 4,
+    "nouveaux_retrouves": 4,
+    "etag": "W/\"catalog-v1-6c423b23d4d2408f6a2ccbe542a62f4714056ca39cb75d769c2dceb472c107ee\"",
+    "get": 200,
+    "conditionnel": 304,
+    "url": "https://dngp6kh9jx2bl.cloudfront.net/api/cup-table?competition=ENG_6_national-league-north&season=2026%2F2027&kind=results",
+    "heure": "2026-11-18T15:02:33.347329+00:00"
+  },
+  "ENG_6_national-league-south": {
+    "date_min": "2026-09-08",
+    "date_max": "2026-11-17",
+    "lignes": 112,
+    "anciens_attendus": 12,
+    "anciens_retrouves": 0,
+    "nouveaux_attendus": 2,
+    "nouveaux_retrouves": 2,
+    "etag": "W/\"catalog-v1-c14e0e9b6844e2a003b19c60e6430b171a091b89d01f4cb51a917760b8f0462b\"",
+    "get": 200,
+    "conditionnel": 304,
+    "url": "https://dngp6kh9jx2bl.cloudfront.net/api/cup-table?competition=ENG_6_national-league-south&season=2026%2F2027&kind=results",
+    "heure": "2026-11-18T15:02:33.254124+00:00"
+  },
+  "ENG_7_northern-premier-league": {
+    "date_min": "2026-09-12",
+    "date_max": "2026-11-17",
+    "lignes": 111,
+    "anciens_attendus": 11,
+    "anciens_retrouves": 0,
+    "nouveaux_attendus": 4,
+    "nouveaux_retrouves": 4,
+    "etag": "W/\"catalog-v1-4c1518c21f8b88564cc0319b397cc6d99071e89a1a70a99cef815a937010f546\"",
+    "get": 200,
+    "conditionnel": 304,
+    "url": "https://dngp6kh9jx2bl.cloudfront.net/api/cup-table?competition=ENG_7_northern-premier-league&season=2026%2F2027&kind=results",
+    "heure": "2026-11-18T15:02:33.223025+00:00"
+  }
+}

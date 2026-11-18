@@ -83,12 +83,15 @@
     "backend/vega/archives.py",
     "backend/vega/artwork.py",
     "backend/vega/media.py",
+    "backend/vega/open_matchday_restore.py",
     "backend/vega/sources/__init__.py",
     "backend/vega/sources/cup_periods.py",
     "backend/vega/sources/cups.py",
     "backend/vega/sources/curated.py",
+    "backend/vega/sources/data/open_matchday_history.json",
     "backend/vega/sources/dfb_pokal_periods.json",
     "backend/vega/sources/open_matchday.py",
+    "backend/vega/sources/open_matchday_history.py",
     "backend/vega/sources/snapshot.py",
     "backend/vega/sources/sportscore.py",
     "backend/vega/sources/uefa.py",
@@ -146,7 +149,7 @@
     "tests/image-source.test.mjs",
     "tests/openfootball_history.test.mjs"
   ],
-  "application_diff_sha256": "c16a15b1ad81b6320544c12d15cff9b0417353552a581c9318de985078753ca1",
+  "application_diff_sha256": "9f52cd5d31e115bd71fb262f749e409bdb81955901b786014c8f8a64074ee83e",
   "parts": [
     {
       "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-001.patch",
@@ -268,8 +271,8 @@
     },
     {
       "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-008.patch",
-      "sha256": "2a9875c21657ab59602662ce62dfa87b3e39ca39548752f4f385a34a3db49c4e",
-      "bytes": 72960,
+      "sha256": "3243fe68327f56ccabacc1ec238ce012a92b2ccef983eb3cd3d0f197b3f0dc29",
+      "bytes": 74638,
       "paths": [
         "backend/tests/test_calculator.py",
         "backend/tests/test_dfb_periods.py",
@@ -318,28 +321,38 @@
     },
     {
       "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-013.patch",
-      "sha256": "e60094cf994ceec079d882800ef3203de2975c7a46f358444b9f5349ad8038eb",
-      "bytes": 102439,
+      "sha256": "01d12032ae8c593dd749689df7c4ced23a5ef604b90831bdc5625fa839ca2191",
+      "bytes": 113343,
       "paths": [
+        "backend/vega/open_matchday_restore.py",
         "backend/vega/sources/__init__.py",
         "backend/vega/sources/cup_periods.py",
         "backend/vega/sources/cups.py",
         "backend/vega/sources/curated.py",
-        "backend/vega/sources/dfb_pokal_periods.json",
-        "backend/vega/sources/open_matchday.py",
-        "backend/vega/sources/snapshot.py"
+        "backend/vega/sources/data/open_matchday_history.json",
+        "backend/vega/sources/dfb_pokal_periods.json"
       ]
     },
     {
       "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-014.patch",
-      "sha256": "0eddd8ef1802dd3725632c40568ceada585af0c7653d0c10cddf35b9756de771",
-      "bytes": 114870,
+      "sha256": "7b4204926a9e2b4a601538e43b0cfdd0b82cc4a17bf651804b0fd2e1779ec341",
+      "bytes": 107126,
       "paths": [
+        "backend/vega/sources/open_matchday.py",
+        "backend/vega/sources/open_matchday_history.py",
+        "backend/vega/sources/snapshot.py",
         "backend/vega/sources/sportscore.py",
         "backend/vega/sources/uefa.py",
         "backend/vega/transfermarkt.py",
         "dashboard/frontend/src/competition-selector.css",
-        "dashboard/frontend/src/components/ClubScoutUI.jsx",
+        "dashboard/frontend/src/components/ClubScoutUI.jsx"
+      ]
+    },
+    {
+      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-015.patch",
+      "sha256": "9e2980d24f23bfc50652ab622ffbb2b244a428974228d6f9cd8b1f285e7e9b39",
+      "bytes": 90976,
+      "paths": [
         "dashboard/frontend/src/components/CupCompetition.jsx",
         "dashboard/frontend/src/components/GlobalSearch.jsx",
         "dashboard/frontend/src/components/MatchDetail.jsx",
@@ -355,14 +368,7 @@
         "dashboard/frontend/src/services/cup-worker-client.js",
         "dashboard/frontend/src/services/football-client.js",
         "dashboard/frontend/src/services/format.js",
-        "dashboard/frontend/src/services/image-source.js"
-      ]
-    },
-    {
-      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-015.patch",
-      "sha256": "208063377a918cb0f31596f9d338050f776d78eefa1b6d73bff14ee0e0b462a7",
-      "bytes": 52079,
-      "paths": [
+        "dashboard/frontend/src/services/image-source.js",
         "dashboard/frontend/src/services/media-registry.js",
         "dashboard/frontend/src/services/openfootball-cups.js",
         "dashboard/frontend/src/services/openfootball-france-cup.js",

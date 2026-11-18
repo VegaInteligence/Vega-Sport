@@ -1,0 +1,18 @@
+{
+  "file": "35-matchs-identites-et-elo.zip",
+  "bytes": 5918533,
+  "sha256": "db35bdf6cc5f7799cb679a8160c096a49c6bd8475130ad3895709c0fd06c0f6b",
+  "command": "python3 -B verifier.py",
+  "outcome": {
+    "tables_relationnelles": 45,
+    "matchs_physiques": 35,
+    "cles_fournisseur": 35,
+    "elo_anciens_intacts": 70,
+    "cotes_controle_historique": 163846,
+    "maximum_ulp": 1,
+    "cotes_avec_ecart_sup_0_01": 871,
+    "matchs_avec_ecart_sup_0_01": 450,
+    "clubs_avec_dernier_elo_modifie": 115,
+    "nouveaux_cotes_affectes": 20
+  }
+}

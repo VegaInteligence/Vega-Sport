@@ -1,0 +1,63 @@
+{
+  "rows": 624,
+  "missing_by_type": {
+    "player": 14418,
+    "club": 20,
+    "national team": 0
+  },
+  "player_gaps": [
+    [
+      6162,
+      "MLS",
+      6
+    ],
+    [
+      3178,
+      "Eliteserien",
+      9
+    ],
+    [
+      2856,
+      "Allsvenskan",
+      15
+    ],
+    [
+      459,
+      "2. Bundesliga",
+      35
+    ],
+    [
+      404,
+      "First Division A",
+      24
+    ],
+    [
+      402,
+      "Superligaen",
+      49
+    ],
+    [
+      365,
+      "Liga MX",
+      40
+    ],
+    [
+      268,
+      "Bundesliga",
+      44
+    ],
+    [
+      214,
+      "Super League",
+      57
+    ],
+    [
+      110,
+      "Premiership",
+      13
+    ]
+  ],
+  "share_top_3_percent": "84.59",
+  "source_sha256": "90d2bb1a3a5f728cf56dbe185606f60d424bda59cd543703b2ac40814b1b1d1e",
+  "output_sha256": "a6cdd7468304789d8461c746a02306b7e5db9f67c2fce7522215d6fd9d9479d6"
+}

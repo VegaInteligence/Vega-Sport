@@ -1,0 +1,130 @@
+{
+  "file": "integrite-rds-1520.zip",
+  "bytes": 13528,
+  "sha256": "3e16766463690e8f79b3cf4892894a478a526ddd15cce6f4415ad0f8c4ea3386",
+  "result": {
+    "snapshot": "4442233:4442233:",
+    "at": "2026-11-18 15:20:35.223080+00:00",
+    "predicates": 13,
+    "read_only": "on",
+    "matches": 588758,
+    "candidate_match_groups": 915,
+    "candidate_match_rows": 1836,
+    "conflicting_score_groups": 4,
+    "same_day_groups_by_provider_and_edition": [
+      {
+        "providers": [
+          "pitchapi"
+        ],
+        "edition_relation": "same_edition",
+        "estimated_date": false,
+        "same_day_team_pair_groups": 334,
+        "candidate_rows": "672",
+        "conflicting_score_groups": 0
+      },
+      {
+        "providers": [
+          "openfootball"
+        ],
+        "edition_relation": "different_editions",
+        "estimated_date": false,
+        "same_day_team_pair_groups": 240,
+        "candidate_rows": "480",
+        "conflicting_score_groups": 0
+      },
+      {
+        "providers": [
+          "openfootball",
+          "pitchapi"
+        ],
+        "edition_relation": "different_editions",
+        "estimated_date": false,
+        "same_day_team_pair_groups": 132,
+        "candidate_rows": "264",
+        "conflicting_score_groups": 0
+      },
+      {
+        "providers": [
+          "openfootball",
+          "worldclub"
+        ],
+        "edition_relation": "different_editions",
+        "estimated_date": false,
+        "same_day_team_pair_groups": 115,
+        "candidate_rows": "230",
+        "conflicting_score_groups": 0
+      },
+      {
+        "providers": [
+          "engsoccerdata"
+        ],
+        "edition_relation": "same_edition",
+        "estimated_date": false,
+        "same_day_team_pair_groups": 48,
+        "candidate_rows": "96",
+        "conflicting_score_groups": 1
+      },
+      {
+        "providers": [
+          "openligadb",
+          "open_matchday"
+        ],
+        "edition_relation": "different_editions",
+        "estimated_date": false,
+        "same_day_team_pair_groups": 40,
+        "candidate_rows": "82",
+        "conflicting_score_groups": 0
+      },
+      {
+        "providers": [
+          "engsoccerdata"
+        ],
+        "edition_relation": "different_editions",
+        "estimated_date": false,
+        "same_day_team_pair_groups": 4,
+        "candidate_rows": "8",
+        "conflicting_score_groups": 3
+      },
+      {
+        "providers": [
+          "open_matchday"
+        ],
+        "edition_relation": "same_edition",
+        "estimated_date": false,
+        "same_day_team_pair_groups": 2,
+        "candidate_rows": "4",
+        "conflicting_score_groups": 0
+      }
+    ],
+    "entity_candidate_groups": {
+      "club_same_name_country": 0,
+      "competition_same_name_country_kind": 0,
+      "edition_same_competition_season": 0,
+      "nation_same_name_country": 0,
+      "player_same_name_dob": 0,
+      "season_same_normalized_label": 0,
+      "team_unspecified_kind_same_name_country": 7
+    },
+    "provider_keys": 211619,
+    "provider_groups": 24,
+    "target_missing": 0,
+    "multiple_current": 0,
+    "foreign_keys": 252,
+    "unvalidated_constraints": 0,
+    "finished_without_side": 1783,
+    "finished_without_score": 520,
+    "positive_minutes": 2297613,
+    "unrelated_team_positive_minutes": 0,
+    "active_team_contract_conflicts": 0,
+    "contracts": 12570,
+    "transfers": 104326,
+    "transfer_missing_canonical_endpoint": 64790,
+    "transfer_missing_raw_endpoint": 0,
+    "unique_source_keys_repeated": 0,
+    "candidate_groups_same_transfer_fact": 5,
+    "provider_squad_rows": 88239,
+    "provider_squad_rows_without_player_profile": 106,
+    "quarantined_links": 2,
+    "conflict_records": 3
+  }
+}

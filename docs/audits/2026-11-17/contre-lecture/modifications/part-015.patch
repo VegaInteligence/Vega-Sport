@@ -1,3 +1,631 @@
+diff --git a/dashboard/frontend/src/components/CupCompetition.jsx b/dashboard/frontend/src/components/CupCompetition.jsx
+index b33105601f..25053b6c39 100644
+--- a/dashboard/frontend/src/components/CupCompetition.jsx
++++ b/dashboard/frontend/src/components/CupCompetition.jsx
+@@ -4,10 +4,11 @@ import { Card, Media, Pager, Segments, AsyncState, Empty } from "./UI.jsx";
+ import { date, seasonLabel } from "../services/format.js";
+ import { parisDay } from "../services/fixtures.js";
+ import KnockoutBracket from "./KnockoutBracket.jsx";
++import { cupEditionTable, cupTable } from "../services/catalog-client.js";
+ import { useResource } from "../services/resources.js";
+-import { cupTable } from "../services/catalog-client.js";
++import { editionArtworkUrl } from "../services/competition-artwork.js";
+ import { competitionCountryLabel } from "../services/competition-selector.js";
+-import { normalizeOpenCup, normalizeSupplementalCup, filterCupMatches, resultsAsOpenCup, leagueTable, numberedCupRounds } from "../services/cup-matches.js";
++import { normalizeOpenCup, normalizeRoundSides, normalizeSupplementalCup, filterCupMatches, resultsAsOpenCup, leagueTable, numberedCupRounds } from "../services/cup-matches.js";
+ import { combineCupLegs, knockoutStage } from "../services/knockout-bracket.js";
+ import { cupWorkerSnapshot } from "../services/cup-worker-client.js";
+ import { NATIONAL_CUP_ARCHIVES, GERMAN_CUP_FOLDER, isGermanCupSeason } from "../services/cup-archives.js";
+@@ -34,16 +35,19 @@ function LeagueStandings({ name, matches }) {
+     <p className="nations-note">Classement calculé à partir des résultats disponibles.</p>
+   </>;
+ }
+-/** A cup's match, in the main lists' design (date, teams around the score, round), and its forecast before kick-off. */
++/**
++ * A cup's match, in the main lists' design (date, teams around the score, round), and its forecast before kick-off.
++ * A club's badge is the crest of its own side (homeImage, awayImage: the row's foreign key, VI-30), else its initials.
++ */
+ function CupMatch({ match, nationalTeams, season }) {
+-  const badge = (name) => (nationalTeams ? <NationalFlag name={name} season={season || match.date} /> : <Media name={name} />);
++  const badge = (name, image) => (nationalTeams ? <NationalFlag name={name} season={season || match.date} /> : <Media name={name} url={image} />);
+   return (
+     <div className="match-row cup-match">
+       <span className="match-date">{match.date ? date(match.date) : "Date à préciser"}</span>
+       <span className="match-teams">
+-        <span className="team-name home-team"><span>{match.home}</span>{badge(match.home)}</span>
++        <span className="team-name home-team"><span>{match.home}</span>{badge(match.home, match.homeImage)}</span>
+         <strong className="score">{match.score ? match.score[0] + " – " + match.score[1] : "À venir"}</strong>
+-        <span className="team-name">{badge(match.away)}<span>{match.away}</span></span>
++        <span className="team-name">{badge(match.away, match.awayImage)}<span>{match.away}</span></span>
+         {match.notes?.length > 0 && <span className="cup-match-notes">{match.notes.join(" · ")}</span>}
+         {match.status === "scheduled" && <MatchForecastBar home={match.home} away={match.away} forecast={match.forecast} />}
+       </span>
+@@ -83,29 +87,44 @@ export default function CupCompetition({ competition, initialSeason }) {
+     : germany && isGermanCupSeason(season) ? "openligadb"
+     : archive && season === archive.season ? "archive"
+     : "unavailable";
+-  const resource = useResource("cup:" + competition.id + ":" + mode + ":" + view + ":" + season + ":" + version, async () => {
++  const resource = useResource("cup:" + competition.id + ":" + mode + ":" + view + ":" + season + ":" + version, async ({ signal }) => {
+     if (mode === "supplemental") {
+-      const [results, fixtures] = await Promise.all(["results", "fixtures"].map(kind => tables?.[kind] && Number(tables[kind].rows) !== 0 ? cupTable(competition.folder,season,kind) : []));
++      const payload = competition.canonicalId
++        ? await cupEditionTable(competition.canonicalId, season, { signal }).catch(() => {
++            signal.throwIfAborted();
++            return null;
++          })
++        : null;
++      const validTable = Array.isArray(payload?.results) && Array.isArray(payload?.fixtures);
++      const [results, fixtures] = validTable ? [payload.results, payload.fixtures] : await Promise.all(["results", "fixtures"].map(kind => tables?.[kind] && Number(tables[kind].rows) !== 0 ? cupTable(competition.folder, season, kind, { signal }) : []));
+       // A cup's numbered rounds named by their ties (its bracket, VI-19); a league's matches as they are.
+       const normalized = normalizeSupplementalCup(results, fixtures);
+       const matches = league ? normalized : numberedCupRounds(normalized);
+-      if (view !== "bracket") return { matches };
+-      return matches.some((match) => knockoutStage(match.roundName)) ? { matches: combineCupLegs(matches) } : { matches, unavailable: true };
++      const editionArtwork = validTable ? payload.editionArtwork : undefined;
++      if (view !== "bracket") return { matches, editionArtwork };
++      return matches.some((match) => knockoutStage(match.roundName))
++        ? { matches: combineCupLegs(matches), editionArtwork }
++        : { matches, unavailable: true, editionArtwork };
+     }
+     if (mode === "unavailable") return { matches: [], unavailable: true };
+-    if (mode === "openligadb") return cupWorkerSnapshot("openligadb", "germany-cup", season, "/api/openligadb?competition=germany-cup&season=" + encodeURIComponent(season));
++    if (mode === "openligadb") {
++      const payload = await cupWorkerSnapshot("openligadb", "germany-cup", season, "/api/openligadb?competition=germany-cup&season=" + encodeURIComponent(season), { signal });
++      return { ...payload, matches: normalizeRoundSides(payload.matches) };
++    }
+     if (mode === "results") {
+       // International Results: played matches only, without rounds (results-v1).
+-      const payload = await cupWorkerSnapshot("nations-results", competition.sourceKey, season, null);
+-      return { matches: normalizeOpenCup(resultsAsOpenCup(payload.matches)), source: payload.source };
++      const payload = await cupWorkerSnapshot("nations-results", competition.sourceKey, season, null, { signal });
++      return { matches: normalizeOpenCup(resultsAsOpenCup(payload.matches)), source: payload.source, editionArtwork: payload.editionArtwork };
+     }
+     const key = mode === "archive" ? archive.key : competition.sourceKey;
+-    const payload = await cupWorkerSnapshot("open-cups", key, season, "/api/open-cups?competition=" + encodeURIComponent(key) + "&season=" + encodeURIComponent(season));
++    const payload = await cupWorkerSnapshot("open-cups", key, season, "/api/open-cups?competition=" + encodeURIComponent(key) + "&season=" + encodeURIComponent(season), { signal });
+     const matches = normalizeOpenCup(payload.matches);
+-    return { matches: mode === "archive" && archive.twoLegged && view === "bracket" ? combineCupLegs(matches) : matches, source: payload.source };
++    return { matches: mode === "archive" && archive.twoLegged && view === "bracket" ? combineCupLegs(matches) : matches, source: payload.source, editionArtwork: payload.editionArtwork };
+   });
++  const artwork = resource.error || resource.refreshError ? null : resource.value?.editionArtwork;
++  const imageUrl = editionArtworkUrl(competition.id, competition.imageUrl, artwork);
+   return (
+-    <Card className="cup-detail" title={<span className="competition-detail-title"><Media name={competition.name} url={competition.imageUrl} /><span><strong>{competition.name}</strong><small>{competitionCountryLabel(competition)}</small></span></span>}>
++    <Card className="cup-detail" title={<span className="competition-detail-title"><Media url={imageUrl} initials={false} /><span><strong>{competition.name}</strong><small>{competitionCountryLabel(competition)}</small></span></span>}>
+       <div className="cup-controls">
+         <label>Édition
+           <select aria-label="Édition de la coupe" value={season} onChange={(event) => { const next = event.target.value; setSeason(next); setStatus(competition.sourceKey === "euro" && next === "2028" ? "scheduled" : "finished"); setPage(1); }}>
+diff --git a/dashboard/frontend/src/components/GlobalSearch.jsx b/dashboard/frontend/src/components/GlobalSearch.jsx
+index 4569d97312..8ef9ed68f2 100644
+--- a/dashboard/frontend/src/components/GlobalSearch.jsx
++++ b/dashboard/frontend/src/components/GlobalSearch.jsx
+@@ -22,7 +22,7 @@ import {
+ } from "../services/global-search.js";
+ import { cachedResource, useResource } from "../services/resources.js";
+ import { nationName, useNations } from "../services/nations.js";
+-import { cupIndex } from "../services/catalog-client.js";
++import { cupIndex, servesCupWorkerIndex } from "../services/catalog-client.js";
+ import {
+   hasBoundedSearch,
+   searchIdentities,
+@@ -87,6 +87,7 @@ export default function GlobalSearch({ sheet = false, onClose }) {
+   const season = f?.season;
+   const remote = hasBoundedSearch(f?.manifest);
+   const needle = query.trim();
++  const searchCompetitions = armed && needle.length >= 2;
+   const searchKey = JSON.stringify([
+     season,
+     needle.toLocaleLowerCase("fr"),
+@@ -95,12 +96,12 @@ export default function GlobalSearch({ sheet = false, onClose }) {
+   const legacyCups = useResource(
+     "supplemental-cup-index",
+     () => cupIndex("supplemental"),
+-    !remote && armed && needle.length >= 2,
++    searchCompetitions,
+   );
+   const workerCups = useResource(
+     "cup-worker-index",
+     () => cupIndex("worker"),
+-    !remote && armed && needle.length >= 2,
++    searchCompetitions && (!remote || servesCupWorkerIndex(f?.manifest)),
+   );
+   // Compatibility with a backend deployed before the discovery endpoint. The
+   // complete legacy index is requested only after typing, never on hover/focus.
+@@ -161,7 +162,7 @@ export default function GlobalSearch({ sheet = false, onClose }) {
+   const loading =
+     open &&
+     needle.length >= 2 &&
+-    (remote ? !ready || remoteResult.loading : legacySearch.loading);
++    (legacyCups.loading || (remote ? !ready || remoteResult.loading : legacySearch.loading));
+   const searchError = remote ? currentRemote?.error : legacySearch.error;
+   // The national teams, read once the search is in use.
+   const nationList = useNations(armed ? f?.season : null);
+@@ -404,6 +405,7 @@ export default function GlobalSearch({ sheet = false, onClose }) {
+                           <Media
+                             name={item.name}
+                             url={item.imageUrl}
++                            initials={kind !== "competitions"}
+                             className={
+                               kind === "players" ? "player-avatar" : "crest"
+                             }
+diff --git a/dashboard/frontend/src/components/MatchDetail.jsx b/dashboard/frontend/src/components/MatchDetail.jsx
+index 7576d5ecb7..6342f18308 100644
+--- a/dashboard/frontend/src/components/MatchDetail.jsx
++++ b/dashboard/frontend/src/components/MatchDetail.jsx
+@@ -1,4 +1,5 @@
+ import { nationalFlagCode } from "../services/national-flags.js";
++import { editionArtworkUrl } from "../services/competition-artwork.js";
+ import React, {
+   lazy,
+   Suspense,
+@@ -515,8 +516,11 @@ export default function MatchDetail({ match }) {
+       <section className="match-scoreboard" aria-label="Résumé du match">
+         <div className="scoreboard-meta">
+           <div>
+-            {competition && (
+-              <Media name={competition.name} url={competition.imageUrl} />
++            {(competition || match.editionArtwork) && (
++              <Media
++                url={editionArtworkUrl(match.leagueId, competition?.imageUrl, match.editionArtwork)}
++                initials={false}
++              />
+             )}
+             <span>{match.league || competition?.name}</span>
+           </div>
+diff --git a/dashboard/frontend/src/components/Media.module.css b/dashboard/frontend/src/components/Media.module.css
+index 40d9ae4985..28627932f0 100644
+--- a/dashboard/frontend/src/components/Media.module.css
++++ b/dashboard/frontend/src/components/Media.module.css
+@@ -14,3 +14,9 @@
+ .imageReady {
+   opacity: 1;
+ }
++
++.empty.empty {
++  background: transparent;
++  border-color: transparent;
++  box-shadow: none;
++}
+diff --git a/dashboard/frontend/src/components/UI.jsx b/dashboard/frontend/src/components/UI.jsx
+index 9e30d810e7..cd502947db 100644
+--- a/dashboard/frontend/src/components/UI.jsx
++++ b/dashboard/frontend/src/components/UI.jsx
+@@ -12,7 +12,7 @@ import {
+   mediaImageSource,
+   title,
+ } from "../services/format.js";
+-export function Media({ name = "", url, fallbackUrl, className = "crest" }) {
++export function Media({ name = "", url, fallbackUrl, className = "crest", initials = true }) {
+   // Source changes remount the attempt state, including a deferred first reveal.
+   return (
+     <MediaSource
+@@ -21,10 +21,11 @@ export function Media({ name = "", url, fallbackUrl, className = "crest" }) {
+       url={url}
+       fallbackUrl={fallbackUrl}
+       className={className}
++      initials={initials}
+     />
+   );
+ }
+-function MediaSource({ name, url, fallbackUrl, className }) {
++function MediaSource({ name, url, fallbackUrl, className, initials }) {
+   const [failed, setFailed] = useState(false);
+   const [directFailed, setDirectFailed] = useState(false);
+   const [fallbackFailed, setFallbackFailed] = useState(false);
+@@ -48,14 +49,14 @@ function MediaSource({ name, url, fallbackUrl, className }) {
+   return (
+     <span
+       ref={element}
+-      className={`${className} ${mediaStyles.media}`}
++      className={`${className} ${mediaStyles.media}${!initials && (!src || loaded !== src) ? " " + mediaStyles.empty : ""}`}
+       aria-hidden="true"
+       data-page-media=""
+       data-media-state={
+         !src ? "fallback" : loaded === src ? "ready" : "loading"
+       }
+     >
+-      {loaded !== src || !src ? (
++      {initials && (loaded !== src || !src) ? (
+         <span className={`image-fallback ${mediaStyles.fallback}`}>
+           {(typeof name === "string" ? name : "")
+             .split(/\s+/)
+diff --git a/dashboard/frontend/src/components/UpcomingMatches.jsx b/dashboard/frontend/src/components/UpcomingMatches.jsx
+index 9be67383ba..9a82394bd5 100644
+--- a/dashboard/frontend/src/components/UpcomingMatches.jsx
++++ b/dashboard/frontend/src/components/UpcomingMatches.jsx
+@@ -55,6 +55,7 @@ function Fixture({ entry, week, compact, competitions }) {
+           name={competition.name}
+           url={competition.imageUrl}
+           className="crest fixture-competition-crest"
++          initials={false}
+         />
+         <span className="fixture-competition-copy">
+           <span className="fixture-competition-name">{competition.name}</span>
+diff --git a/dashboard/frontend/src/server/report-data.js b/dashboard/frontend/src/server/report-data.js
+index 2f120886c6..abbd52e8e8 100644
+--- a/dashboard/frontend/src/server/report-data.js
++++ b/dashboard/frontend/src/server/report-data.js
+@@ -182,8 +182,15 @@ export function buildMatchReport({ id, match, stats, grades, live, forecast }, t
+     const item = items.get(key);
+     return { key, label, format, home: statValue(item.home), away: statValue(item.away), homeText: item.home, awayText: item.away };
+   });
+-  const rows = (grades?.grades || []).map((g) => ({ id: g.playerId, teamId: g.teamId, name: g.name, imageUrl: g.imageUrl || null, team: g.team,
+-    position: g.position, minutes: g.minutes, goals: g.goals ?? 0, assists: g.assists ?? 0, grade: num(g.grade), rank: g.rank }));
++  const rows = (grades?.grades || []).map((g) => {
++    const grade = num(g.grade), exact = num(g.gradeExact);
++    const row = { id: g.playerId, teamId: g.teamId, name: g.name, imageUrl: g.imageUrl || null, team: g.team,
++      position: g.position, minutes: g.minutes, goals: g.goals ?? 0, assists: g.assists ?? 0, grade, rank: g.rank };
++    if (Object.hasOwn(g, "gradeExact")) {
++      row.gradeExact = grade != null && exact != null && exact >= 0 && exact <= 100 && round(exact) === grade ? exact : null;
++    }
++    return row;
++  });
+   const best = (teamId) => rows.filter((r) => r.teamId === teamId && r.grade != null).sort((a, b) => b.grade - a.grade).slice(0, 3);
+   const points = (live?.points || []).map((p) => ({ minute: p.minute, home: num(p.home), draw: num(p.draw), away: num(p.away) }));
+   const before = points[0] || (forecast?.forecast ? { minute: 0, ...forecast.forecast } : null);
+diff --git a/dashboard/frontend/src/services/catalog-client.js b/dashboard/frontend/src/services/catalog-client.js
+index 4776f4fc5c..45b2b76c08 100644
+--- a/dashboard/frontend/src/services/catalog-client.js
++++ b/dashboard/frontend/src/services/catalog-client.js
+@@ -57,8 +57,10 @@ export const cupIndex = (kind) => load("/api/cup-index", { kind });
+  */
+ export const servesCupWorkerIndex = (manifest) =>
+   manifest?.capabilities?.cupWorkerIndex === true;
+-export const cupTable = (competition, season, kind) =>
+-  load("/api/cup-table", { competition, season, kind });
++export const cupTable = (competition, season, kind, options) =>
++  load("/api/cup-table", { competition, season, kind }, options);
++export const cupEditionTable = (competition, season, options) =>
++  load("/api/cups/edition", { competition, season }, options);
+ export const associationRanking = (year) =>
+   load("/api/rankings/associations", { year });
+ export async function clubRanking(club) {
+diff --git a/dashboard/frontend/src/services/competition-artwork.js b/dashboard/frontend/src/services/competition-artwork.js
+new file mode 100644
+index 0000000000..f7a730c10f
+--- /dev/null
++++ b/dashboard/frontend/src/services/competition-artwork.js
+@@ -0,0 +1,20 @@
++export const WORLD_CUP_ID = "l_1XLtP0";
++const WORLD_CUP_HISTORY_ID = "open-cup:world-cup-history";
++
++// Both catalogues carried the same 2026 edition mark as a family logo.
++const misattributedWorldCupLogo = "https://img.thesports.com/football/competition/da617cd58cd9cffaae0daec865457fb5.png";
++
++function worldCupFamily(id) {
++  return id === WORLD_CUP_ID || id === WORLD_CUP_HISTORY_ID || id === "l_v0000064";
++}
++
++export function familyArtworkUrl(id, imageUrl) {
++  return worldCupFamily(id) && imageUrl === misattributedWorldCupLogo ? undefined : imageUrl;
++}
++
++export function editionArtworkUrl(id, imageUrl, artwork) {
++  if (artwork?.role === "edition_emblem" && artwork.imageUrl) return artwork.imageUrl;
++  // A logo attributed to either World Cup family needs edition-specific evidence
++  // before it can fill a season's slot. Other competitions keep their own logo.
++  return worldCupFamily(id) ? undefined : imageUrl;
++}
+diff --git a/dashboard/frontend/src/services/competition-identity.js b/dashboard/frontend/src/services/competition-identity.js
+index d5328809a4..c49e1709da 100644
+--- a/dashboard/frontend/src/services/competition-identity.js
++++ b/dashboard/frontend/src/services/competition-identity.js
+@@ -1,3 +1,4 @@
++import { editionArtworkUrl } from "./competition-artwork.js";
+ import { countryLabel } from "./competition-selector.js";
+ 
+ /** Fill missing season metadata from the provider catalogue using stable IDs. */
+@@ -49,16 +50,17 @@ export function competitionIndex(...collections) {
+ export function fixtureCompetition(fixture, index) {
+   const league =
+     fixture?.league && typeof fixture.league === "object" ? fixture.league : {};
+-  const info = index.get(league.id || fixture?.leagueId) || {};
++  const id = league.id || fixture?.leagueId || "";
++  const info = index.get(id) || {};
+   const country = info.country || league.country || league.country_code || "";
+   return {
+-    id: league.id || fixture?.leagueId || "",
++    id,
+     name:
+       league.name ||
+       info.name ||
+       (typeof fixture?.league === "string" ? fixture.league : "") ||
+       "Compétition",
+     country: country ? countryLabel(country) : "",
+-    imageUrl: league.image_url || league.imageUrl || info.imageUrl || "",
++    imageUrl: editionArtworkUrl(id, league.image_url || league.imageUrl || info.imageUrl || "", fixture?.editionArtwork),
+   };
+ }
+diff --git a/dashboard/frontend/src/services/cup-catalog.js b/dashboard/frontend/src/services/cup-catalog.js
+index 445c3473e4..2c3554c99e 100644
+--- a/dashboard/frontend/src/services/cup-catalog.js
++++ b/dashboard/frontend/src/services/cup-catalog.js
+@@ -1,12 +1,17 @@
+ import { normalizeText } from "../model.js";
+ import { NATIONAL_CUP_ARCHIVES, GERMAN_CUP_FOLDER, GERMAN_CUP_SEASONS } from "./cup-archives.js";
+ import cupLogos from "../../../shared/cup-logos.json" with { type: "json" };
++import { familyArtworkUrl, WORLD_CUP_ID } from "./competition-artwork.js";
++
++export { WORLD_CUP_ID } from "./competition-artwork.js";
+ 
+ /** Cup logos refreshed by the previous pipeline's refresh_cup_logos.mjs. */
+ const CUP_LOGOS = cupLogos.logos || {};
+-const withLogo = (competition) => competition.imageUrl || !CUP_LOGOS[competition.id]?.imageUrl ? competition : { ...competition, imageUrl: CUP_LOGOS[competition.id].imageUrl };
++function withLogo(competition) {
++  const imageUrl = familyArtworkUrl(competition.id, competition.imageUrl || CUP_LOGOS[competition.id]?.imageUrl);
++  return imageUrl === competition.imageUrl ? competition : { ...competition, imageUrl };
++}
+ 
+-export const WORLD_CUP_ID = "l_1XLtP0";
+ export const WORLD_CUP_FALLBACK = { id: WORLD_CUP_ID, name: "Coupe du monde", country: "INT", seasons: ["2026", "2022"] };
+ export const OPEN_CUP_CATALOG = [
+   { id: "open-cup:france-cup", name: "Coupe de France", country: "FRA", source: "openfootball", sourceKey: "france-cup", seasons: ["2024/2025"], defaultSeason: "2024/2025", aliases: ["French Cup"], coverage: "Archive 2024/2025" },
+@@ -22,7 +27,7 @@ export const OPEN_CUP_CATALOG = [
+   { id: "nations-results:copa-america", name: "Copa América", country: "CONMEBOL", source: "nations-results", sourceKey: "copa-america", seasons: ["2024"], defaultSeason: "2024", aliases: ["Copa America"], coverage: "Résultats" },
+   { id: "nations-results:asian-cup", name: "Coupe d’Asie des nations", country: "AFC", source: "nations-results", sourceKey: "asian-cup", seasons: ["2023"], defaultSeason: "2023", aliases: ["AFC Asian Cup", "Asian Cup"], coverage: "Résultats" },
+   { id: "nations-results:gold-cup", name: "Gold Cup", country: "CONCACAF", source: "nations-results", sourceKey: "gold-cup", seasons: ["2025", "2023"], defaultSeason: "2025", aliases: ["CONCACAF Gold Cup"], coverage: "Résultats" },
+-  { id: "open-cup:world-cup-history", name: "Coupe du monde — archives", country: "INT", source: "openfootball", sourceKey: "world-cup-history", seasons: ["2018", "2014", "2010", "2006", "2002", "1998", "1994", "1990", "1986", "1982", "1978", "1974", "1970", "1966", "1962", "1958", "1954", "1950", "1938", "1934", "1930"], defaultSeason: "2018", aliases: ["World Cup", "Mondial"] },
++  { id: "open-cup:world-cup-history", name: "Coupe du monde — archives", country: "INT", source: "openfootball", sourceKey: "world-cup-history", seasons: ["2026", "2022", "2018", "2014", "2010", "2006", "2002", "1998", "1994", "1990", "1986", "1982", "1978", "1974", "1970", "1966", "1962", "1958", "1954", "1950", "1938", "1934", "1930"], defaultSeason: "2018", aliases: ["World Cup", "Mondial"] },
+ ];
+ const CUP_LABELS = {
+   "ESP_CUP_copa-del-rey": ["Coupe du Roi", "Copa del Rey"],
+@@ -38,6 +43,22 @@ const CUP_LABELS = {
+   "SUI_CUP_swiss-cup": ["Coupe de Suisse", "Swiss Cup"],
+ };
+ 
++/** The verified logo the API gives for the edition's own competition (its FK), never another's (FAILURE_MODES.md §22). */
++const ownLogo = (item) => (typeof item.image_url === "string" && item.image_url ? { imageUrl: item.image_url } : {});
++/** A Vega competition id (PitchAPI's key, else l_v and seven digits), as /api/cups/index publishes it. */
++const COMPETITION_ID = /^l_(?:[A-Za-z0-9]{6}|v\d{7})$/;
++/** The edition's competition by its canonical id (the API's `competition_id`, the edition's FK), never by a name (VI-30). */
++const ownIdentity = (item) => (typeof item.competition_id === "string" && COMPETITION_ID.test(item.competition_id) ? { canonicalId: item.competition_id } : {});
++
++/** The entry a page asks for: by its own id, else by the canonical id it answers to (FAILURE_MODES_VI30.md V12). */
++export function findCompetition(catalog, id) {
++  if (!id) return undefined;
++  return catalog.find((c) => c.id === id) || catalog.find((c) => c.canonicalId === id);
++}
++
++/** Whether an id not found yet may still come with the supplemental index (its source key or a canonical l_v id). */
++export const awaitsCupIndex = (id) => typeof id === "string" && (id.startsWith("open-matchday:") || /^l_v\d{7}$/.test(id));
++
+ /** Only promote actual cup datasets with at least one collected match. */
+ export function supplementalCupCatalog(index) {
+   if (!Array.isArray(index?.competitions)) return [];
+@@ -49,7 +70,7 @@ export function supplementalCupCatalog(index) {
+     const labels = CUP_LABELS[item.folder] || [item.name || item.folder];
+     const archive = NATIONAL_CUP_ARCHIVES[item.folder];
+     const editions = [season, ...Object.keys(item.editions || {}).filter((value) => /^\d{4}\/\d{4}$/.test(value)), ...(archive ? [archive.season] : []), ...(item.folder === GERMAN_CUP_FOLDER ? GERMAN_CUP_SEASONS : [])];
+-    return [{ id: "open-matchday:" + item.folder, name: labels[0], country: item.country_code || "", source: "open-matchday", folder: item.folder, seasons: [...new Set(editions)].sort().reverse(), defaultSeason: season, aliases: [...labels.slice(1), item.name || ""], tables: item.tables, editions: item.editions || null, sourceDate: index.meta?.source_generated_at_utc || index.meta?.retrieved_at_utc || null }];
++    return [{ id: "open-matchday:" + item.folder, name: labels[0], country: item.country_code || "", source: "open-matchday", folder: item.folder, seasons: [...new Set(editions)].sort().reverse(), defaultSeason: season, aliases: [...labels.slice(1), item.name || ""], tables: item.tables, editions: item.editions || null, sourceDate: index.meta?.source_generated_at_utc || index.meta?.retrieved_at_utc || null, ...ownLogo(item), ...ownIdentity(item) }];
+   });
+ }
+ 
+@@ -93,11 +114,14 @@ const COUNTRY_CODES = { IRE: "IRL" };
+ export function supplementalLeagueCatalog(index, native = []) {
+   if (!Array.isArray(index?.competitions)) return [];
+   const held = new Set((native || []).map((c) => normalizeText(c.name || "") + "|" + (c.country || "")));
++  const heldIds = new Set((native || []).map((c) => c.id));
+   return index.competitions.flatMap((item) => {
+     if (!/^[A-Z]{3}_[A-Z0-9]+_[a-z0-9-]+$/i.test(item.folder || "") || /_CUP_/i.test(item.folder)) return [];
+     if (!(Number(item.tables?.results?.rows) > 0 || Number(item.tables?.fixtures?.rows) > 0)) return [];
+     const season = /^\d{4}\/\d{4}$/.test(item.season || "") ? item.season : "";
+     if (!season) return [];
++    // The main source's own competition (the same canonical id, VI-30), then a copy by its name and country.
++    if (ownIdentity(item).canonicalId && heldIds.has(item.competition_id)) return [];
+     const code = item.country_code || item.folder.split("_")[0];
+     const country = COUNTRY_CODES[code] || code;
+     if (held.has(normalizeText(item.name || "") + "|" + country) || held.has(normalizeText(item.name || "") + "|" + code)) return [];
+@@ -105,7 +129,7 @@ export function supplementalLeagueCatalog(index, native = []) {
+     const editions = [season, ...Object.keys(item.editions || {}).filter((value) => /^\d{4}\/\d{4}$/.test(value))];
+     return [{ id: "open-matchday:" + item.folder, name: labels[0], country, source: "open-matchday", kind: "league", folder: item.folder,
+       seasons: [...new Set(editions)].sort().reverse(), defaultSeason: season, aliases: [...new Set([...labels.slice(1), item.name || ""])].filter(Boolean),
+-      tables: item.tables, editions: item.editions || null, sourceDate: index.meta?.source_generated_at_utc || index.meta?.retrieved_at_utc || null }];
++      tables: item.tables, editions: item.editions || null, sourceDate: index.meta?.source_generated_at_utc || index.meta?.retrieved_at_utc || null, ...ownLogo(item), ...ownIdentity(item) }];
+   });
+ }
+ 
+@@ -121,5 +145,6 @@ export function mergeCupCatalog(nativeCompetitions, supplementalIndex, workerNat
+   const ids = new Set(native.map((competition) => competition.id));
+   const world = ids.has(WORLD_CUP_ID) ? [] : [WORLD_CUP_FALLBACK];
+   const extras = [...supplementalCupCatalog(supplementalIndex), ...supplementalLeagueCatalog(supplementalIndex, nativeCompetitions)];
+-  return [...native, ...world, ...OPEN_CUP_CATALOG, ...extras.filter((cup) => !ids.has(cup.id))].map(withLogo);
++  // An entry whose canonical id is a native competition's is that competition: listed once, as the native one.
++  return [...native, ...world, ...OPEN_CUP_CATALOG, ...extras.filter((cup) => !ids.has(cup.id) && !ids.has(cup.canonicalId))].map(withLogo);
+ }
+diff --git a/dashboard/frontend/src/services/cup-matches.js b/dashboard/frontend/src/services/cup-matches.js
+index 3db7d70eef..655ffd2e0d 100644
+--- a/dashboard/frontend/src/services/cup-matches.js
++++ b/dashboard/frontend/src/services/cup-matches.js
+@@ -107,6 +107,22 @@ export function matchForecast(value) {
+   return total > 0.98 && total < 1.02 ? { home: value.home, draw: value.draw, away: value.away } : null;
+ }
+ 
++/**
++ * A row's own sides (the API's `sides`, VI-30): each side's team id and crest reference, under the names the bracket
++ * reads (homeImage, awayImage). A side comes only from its row's foreign key, never from a name; a malformed one is
++ * left out.
++ */
++function ownSides(row) {
++  const out = {};
++  for (const [side, id, image] of [["home", "homeTeamId", "homeImage"], ["away", "awayTeamId", "awayImage"]]) {
++    const value = row?.sides?.[side];
++    if (typeof value?.id !== "string" || !value.id) continue;
++    out[id] = value.id;
++    if (typeof value.image_url === "string" && value.image_url) out[image] = value.image_url;
++  }
++  return out;
++}
++
+ export function normalizeSupplementalCup(results, fixtures) {
+   const completed = [], keys = new Set();
+   for (const [index, row] of (results || []).entries()) {
+@@ -116,7 +132,7 @@ export function normalizeSupplementalCup(results, fixtures) {
+     const day = validDay(row.date) ? row.date : "";
+     keys.add(identity(day, home, away));
+     const roundName = String(row.round_name || row.round || row.stage || "").trim();
+-    completed.push({ key: "result:" + index, date: day, home, away, score, roundName, round: readableRound(roundName), status: "finished", gw: String(row.gw ?? "").trim() });
++    completed.push({ key: "result:" + index, date: day, home, away, score, roundName, round: readableRound(roundName), status: "finished", gw: String(row.gw ?? "").trim(), ...ownSides(row) });
+   }
+   const scheduled = [];
+   for (const [index, row] of (fixtures || []).entries()) {
+@@ -126,7 +142,7 @@ export function normalizeSupplementalCup(results, fixtures) {
+     if (keys.has(identity(day, home, away))) continue;
+     const roundName = String(row.round_name || row.round || row.stage || "").trim();
+     const forecast = matchForecast(row.forecast);
+-    scheduled.push({ key: "fixture:" + index, date: day, home, away, score: null, roundName, round: readableRound(roundName), status: "scheduled", gw: String(row.gw ?? "").trim(), ...(forecast && { forecast }) });
++    scheduled.push({ key: "fixture:" + index, date: day, home, away, score: null, roundName, round: readableRound(roundName), status: "scheduled", gw: String(row.gw ?? "").trim(), ...(forecast && { forecast }), ...ownSides(row) });
+   }
+   return [...completed, ...scheduled];
+ }
+@@ -136,6 +152,10 @@ export function resultsAsOpenCup(matches) {
+   return (matches || []).map((match) => ({ date: match.date, team1: match.home, team2: match.away, round: match.round || "", score: Array.isArray(match.score) ? { ft: match.score } : undefined }));
+ }
+ 
++export function normalizeRoundSides(matches) {
++  return (matches || []).map((match) => ({ ...match, ...ownSides(match) }));
++}
++
+ export function normalizeOpenCup(matches) {
+   return (matches || []).flatMap((match, index) => {
+     const home = String(match.team1 || "").trim(), away = String(match.team2 || "").trim();
+@@ -146,7 +166,7 @@ export function normalizeOpenCup(matches) {
+     if (extra) notes.push("après prolongation");
+     if (penalties) notes.push("tirs au but " + penalties[0] + " – " + penalties[1]);
+     const forecast = score ? null : matchForecast(match.forecast);
+-    return [{ key: "open:" + index, date: validDay(match.date) ? match.date : "", home, away, score, penalties, notes, roundName: String(match.round || ""), number: Number.isInteger(match.num) ? match.num : null, round: readableRound(match.round, match.group), status: score ? "finished" : "scheduled", ...(forecast && { forecast }) }];
++    return [{ key: "open:" + index, date: validDay(match.date) ? match.date : "", home, away, score, penalties, notes, roundName: String(match.round || ""), number: Number.isInteger(match.num) ? match.num : null, round: readableRound(match.round, match.group), status: score ? "finished" : "scheduled", ...(forecast && { forecast }), ...ownSides(match) }];
+   });
+ }
+ 
+diff --git a/dashboard/frontend/src/services/cup-worker-client.js b/dashboard/frontend/src/services/cup-worker-client.js
+index ca72a97064..8a5d46a9a4 100644
+--- a/dashboard/frontend/src/services/cup-worker-client.js
++++ b/dashboard/frontend/src/services/cup-worker-client.js
+@@ -15,10 +15,11 @@ export async function cupWorkerSnapshot(
+     throw new Error("Route de données invalide.");
+   // A cup of the complementary sources is read by its Vega id (api-routes.js).
+   const cup = await cupId(kind, competition, async (url) => {
+-    const response = await publicApiFetch(apiUrl(url), { signal });
++    const response = await publicApiFetch(apiUrl(url));
+     if (!response.ok) throw new Error(`HTTP ${response.status}`);
+     return response.json();
+   });
++  signal?.throwIfAborted();
+   const paths = cup ? cupPaths(cup, season) : null;
+   if (paths) fallbackUrl = paths.edition;
+   const path = apiUrl(
+@@ -69,7 +70,8 @@ export async function cupWorkerSnapshot(
+           name: String(match.round_name),
+           playoff: match.has_playoff === true,
+         };
+-    return { ...saved, matches, rounds };
++    const editionArtwork = saved?.editionArtwork ?? matches.find((row) => row.season === String(season))?.editionArtwork;
++    return { ...saved, matches, rounds, editionArtwork };
+   }
+   const value = fresh || saved;
+   if (
+diff --git a/dashboard/frontend/src/services/football-client.js b/dashboard/frontend/src/services/football-client.js
+index 34438017c2..3bcc12f7cd 100644
+--- a/dashboard/frontend/src/services/football-client.js
++++ b/dashboard/frontend/src/services/football-client.js
+@@ -146,6 +146,7 @@ export class FootballDataClient {
+           matches: saved.matches,
+           rounds: saved.rounds || {},
+           source: "snapshot",
++          editionArtwork: saved.editionArtwork,
+         };
+       } catch (error) {
+         if (error.name === "AbortError") {
+@@ -176,6 +177,7 @@ export class FootballDataClient {
+                   season: match.season ?? season,
+                 })),
+           source: "api",
++          editionArtwork: matches.find((match) => match.season === String(season))?.editionArtwork,
+         };
+       } catch (error) {
+         if (error.name === "AbortError") {
+@@ -334,6 +336,7 @@ export class FootballDataClient {
+       league:
+         typeof match.league === "string" ? match.league : match.league?.name,
+       season: match.season,
++      ...(match.editionArtwork && { editionArtwork: match.editionArtwork }),
+       home: {
+         ...match.home_team,
+         imageUrl: match.home_team?.image_url,
+diff --git a/dashboard/frontend/src/services/format.js b/dashboard/frontend/src/services/format.js
+index 5b1056c306..10cd6d7f39 100644
+--- a/dashboard/frontend/src/services/format.js
++++ b/dashboard/frontend/src/services/format.js
+@@ -1,3 +1,4 @@
++import { acceptedImageSource } from "./image-source.js";
+ import { apiUrl } from "../data-url.js";
+ export {
+   formatNumber as number,
+@@ -18,23 +19,9 @@ export const date = (value) =>
+       )
+     : "—";
+ export function safeImageUrl(value) {
+-  try {
+-    const u = new URL(value);
+-    return u.protocol === "https:" &&
+-      (u.hostname === "cdn.pitchapi.dev" ||
+-        (u.hostname === "upload.wikimedia.org" &&
+-          /^\/wikipedia\/commons\//.test(u.pathname)) ||
+-        (u.hostname === "img.thesports.com" &&
+-          /^\/football\/(?:team|competition)\/[a-z0-9]+\.(?:png|webp|jpe?g)$/i.test(
+-            u.pathname,
+-          ))) &&
+-      !u.username &&
+-      !u.password
+-      ? apiUrl(`/api/assets?url=${encodeURIComponent(u.href)}`)
+-      : "";
+-  } catch {
+-    return "";
+-  }
++  return acceptedImageSource(value)
++    ? apiUrl(`/api/assets?url=${encodeURIComponent(new URL(value).href)}`)
++    : "";
+ }
+ export function mediaImageSource(
+   url,
+diff --git a/dashboard/frontend/src/services/image-source.js b/dashboard/frontend/src/services/image-source.js
+new file mode 100644
+index 0000000000..0d8d7acf17
+--- /dev/null
++++ b/dashboard/frontend/src/services/image-source.js
+@@ -0,0 +1,31 @@
++/**
++ * The one image gate of the site (FAILURE_MODES.md §21): an image is asked of the API only when its
++ * URL is a known provider's, Vega's reference to a reviewed packed image, or UEFA's logo of a club.
++ * The API (/api/assets, media=1) then answers with the base's copy: no address is built from a URL.
++ */
++const VEGA_REFERENCE = /^\/sha256\/[a-f0-9]{64}\.(?:png|jpg|webp)$/;
++const UEFA_CLUB_LOGO = /^\/imgml\/TP\/teams\/logos\/70x70\/\d+\.png$/;
++
++export function acceptedImageSource(value) {
++  if (typeof value !== "string" || !value || value.length > 2048) return false;
++  let url;
++  try {
++    url = new URL(value);
++  } catch {
++    return false;
++  }
++  if (url.protocol !== "https:" || url.username || url.password || url.port) return false;
++  switch (url.hostname) {
++    case "cdn.pitchapi.dev":
++      return true;
++    case "upload.wikimedia.org":
++      return /^\/wikipedia\/commons\//.test(url.pathname);
++    case "img.thesports.com":
++      return /^\/football\/(?:team|competition)\/[a-z0-9]+\.(?:png|webp|jpe?g)$/i.test(url.pathname);
++  }
++  // The two exact forms: no query, no fragment.
++  if (url.search || url.hash || /[?#]/.test(value)) return false;
++  if (url.hostname === "media.vega.invalid") return VEGA_REFERENCE.test(url.pathname);
++  if (url.hostname === "img.uefa.com") return UEFA_CLUB_LOGO.test(url.pathname);
++  return false;
++}
 diff --git a/dashboard/frontend/src/services/media-registry.js b/dashboard/frontend/src/services/media-registry.js
 index bd1cd43d22..faa8594329 100644
 --- a/dashboard/frontend/src/services/media-registry.js
