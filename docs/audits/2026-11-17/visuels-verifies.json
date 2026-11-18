@@ -1,28 +1,28 @@
 {
-  "records": 1577,
+  "records": 1584,
   "by_type": {
     "competition": 104,
-    "team": 1473
+    "team": 1480
   },
-  "distinct_images": 1499,
+  "distinct_images": 1503,
   "converted": 164,
-  "manifest_sha256": "e75cd1af492442a401bbefc1422e6c5f67848a9ce92e66a8aab1cbc0c4090baa",
-  "zip_sha256": "6e5813415c117f207ccfd96a0060674f89182df695725758ed4c1668a3d65745",
-  "zip_bytes": 131239033,
+  "manifest_sha256": "e97263f32d2f68ca5fcec05cad71a85f719dc76e35798c60fa6311e2e365124a",
+  "zip_sha256": "558214e7c86bdc516320e02095194b86f0febc17cf9502cb89a268bf0243bccb",
+  "zip_bytes": 131707553,
   "inputs": [
     {
-      "source_pack": "artwork-expanded-1572",
-      "manifest_sha256": "cd1efc8dc3bca26cd2f23664645f58a85fae25df1282873a9abe193791a50d2e",
+      "source_pack": "artwork-expanded-1577",
+      "manifest_sha256": "e75cd1af492442a401bbefc1422e6c5f67848a9ce92e66a8aab1cbc0c4090baa",
       "by_type": {
         "competition": 104,
-        "team": 1468
+        "team": 1473
       }
     },
     {
-      "source_pack": "tracks/7-artwork/historic-fr-six-identity/profile",
-      "manifest_sha256": "db3f16dfc598af39c607f3ca6b3cb2e8decd314fcbcff9f63bc9c2346031b7da",
+      "source_pack": "tracks/7-artwork/dfb-historic-profiles/profile",
+      "manifest_sha256": "f715495e91fb4add12d8a0c8eab2fe4bbc595bdcd15f2a75e8c020fad7e1da37",
       "by_type": {
-        "team": 5
+        "team": 7
       }
     }
   ]

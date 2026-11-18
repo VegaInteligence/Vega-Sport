@@ -1,0 +1,705 @@
+{
+  "input_case": "S30",
+  "edition": 5030,
+  "member": 3001,
+  "expected": "Fresh approved regular table remains visible; a minority fallback cannot replace a row by clock alone.",
+  "baseline": {
+    "status": 200,
+    "etag": "W/\"support-v1-4eb35b1e00979ff2bb012e4215057468d0731246171cd60db7a7a81114391a8b\"",
+    "body": {
+      "competition": "Demo S30",
+      "season": "2026/2027",
+      "source": "SportScore",
+      "fetchedAt": "2026-11-17T08:00:00.000Z",
+      "tables": [
+        {
+          "name": "",
+          "rows": [
+            {
+              "id": "t_003001",
+              "uefaId": null,
+              "imageUrl": null,
+              "name": "Aster City",
+              "wins": 3,
+              "draws": 1,
+              "losses": 0,
+              "played": 4,
+              "points": 8,
+              "goalsFor": 8,
+              "goalsAgainst": 1,
+              "difference": 7,
+              "position": 1
+            },
+            {
+              "id": "t_003002",
+              "uefaId": null,
+              "imageUrl": null,
+              "name": "Birch Town",
+              "wins": 1,
+              "draws": 1,
+              "losses": 2,
+              "played": 4,
+              "points": 4,
+              "goalsFor": 3,
+              "goalsAgainst": 5,
+              "difference": -2,
+              "position": 2
+            },
+            {
+              "id": "t_003003",
+              "uefaId": null,
+              "imageUrl": null,
+              "name": "Cedar Athletic",
+              "wins": 1,
+              "draws": 0,
+              "losses": 3,
+              "played": 4,
+              "points": 3,
+              "goalsFor": 2,
+              "goalsAgainst": 7,
+              "difference": -5,
+              "position": 3
+            }
+          ]
+        }
+      ]
+    },
+    "stored": [
+      [
+        3001,
+        "sportscore",
+        null,
+        null,
+        8,
+        [
+          4,
+          3,
+          1,
+          0,
+          8,
+          1
+        ],
+        "2026-11-17 08:00:00+00"
+      ],
+      [
+        3002,
+        "sportscore",
+        null,
+        null,
+        4,
+        [
+          4,
+          1,
+          1,
+          2,
+          3,
+          5
+        ],
+        "2026-11-17 08:00:00+00"
+      ],
+      [
+        3003,
+        "sportscore",
+        null,
+        null,
+        3,
+        [
+          4,
+          1,
+          0,
+          3,
+          2,
+          7
+        ],
+        "2026-11-17 08:00:00+00"
+      ]
+    ],
+    "served_sql": [
+      [
+        3001,
+        "sportscore",
+        8
+      ],
+      [
+        3002,
+        "sportscore",
+        4
+      ],
+      [
+        3003,
+        "sportscore",
+        3
+      ]
+    ]
+  },
+  "with_stale_secondary": {
+    "status": 200,
+    "etag": "W/\"support-v1-6f573d9123d5b224e4ecf22520deb33d303977d7736280b21904ad3094c64bab\"",
+    "body": {
+      "competition": "Demo S30",
+      "season": "2026/2027",
+      "source": "Vega",
+      "fetchedAt": "2026-11-17T07:50:00.000Z",
+      "tables": [
+        {
+          "name": "Demo S30",
+          "rows": [
+            {
+              "id": "t_003001",
+              "uefaId": null,
+              "imageUrl": null,
+              "name": "Aster City",
+              "wins": 3,
+              "draws": 1,
+              "losses": 0,
+              "played": 4,
+              "points": 10,
+              "goalsFor": 8,
+              "goalsAgainst": 1,
+              "difference": 7,
+              "position": 1
+            },
+            {
+              "id": "t_003002",
+              "uefaId": null,
+              "imageUrl": null,
+              "name": "Birch Town",
+              "wins": 1,
+              "draws": 1,
+              "losses": 2,
+              "played": 4,
+              "points": 4,
+              "goalsFor": 3,
+              "goalsAgainst": 5,
+              "difference": -2,
+              "position": 2
+            },
+            {
+              "id": "t_003003",
+              "uefaId": null,
+              "imageUrl": null,
+              "name": "Cedar Athletic",
+              "wins": 1,
+              "draws": 0,
+              "losses": 3,
+              "played": 4,
+              "points": 3,
+              "goalsFor": 2,
+              "goalsAgainst": 7,
+              "difference": -5,
+              "position": 3
+            }
+          ]
+        }
+      ]
+    },
+    "stored": [
+      [
+        3001,
+        "other",
+        null,
+        null,
+        777,
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "2026-11-16 08:00:00+00"
+      ],
+      [
+        3001,
+        "sportscore",
+        null,
+        null,
+        8,
+        [
+          4,
+          3,
+          1,
+          0,
+          8,
+          1
+        ],
+        "2026-11-17 08:00:00+00"
+      ],
+      [
+        3002,
+        "sportscore",
+        null,
+        null,
+        4,
+        [
+          4,
+          1,
+          1,
+          2,
+          3,
+          5
+        ],
+        "2026-11-17 08:00:00+00"
+      ],
+      [
+        3003,
+        "sportscore",
+        null,
+        null,
+        3,
+        [
+          4,
+          1,
+          0,
+          3,
+          2,
+          7
+        ],
+        "2026-11-17 08:00:00+00"
+      ]
+    ],
+    "served_sql": [
+      [
+        3001,
+        "vega",
+        10
+      ],
+      [
+        3002,
+        "vega",
+        4
+      ],
+      [
+        3003,
+        "vega",
+        3
+      ]
+    ]
+  },
+  "after_secondary_removed": {
+    "status": 200,
+    "etag": "W/\"support-v1-4eb35b1e00979ff2bb012e4215057468d0731246171cd60db7a7a81114391a8b\"",
+    "body": {
+      "competition": "Demo S30",
+      "season": "2026/2027",
+      "source": "SportScore",
+      "fetchedAt": "2026-11-17T08:00:00.000Z",
+      "tables": [
+        {
+          "name": "",
+          "rows": [
+            {
+              "id": "t_003001",
+              "uefaId": null,
+              "imageUrl": null,
+              "name": "Aster City",
+              "wins": 3,
+              "draws": 1,
+              "losses": 0,
+              "played": 4,
+              "points": 8,
+              "goalsFor": 8,
+              "goalsAgainst": 1,
+              "difference": 7,
+              "position": 1
+            },
+            {
+              "id": "t_003002",
+              "uefaId": null,
+              "imageUrl": null,
+              "name": "Birch Town",
+              "wins": 1,
+              "draws": 1,
+              "losses": 2,
+              "played": 4,
+              "points": 4,
+              "goalsFor": 3,
+              "goalsAgainst": 5,
+              "difference": -2,
+              "position": 2
+            },
+            {
+              "id": "t_003003",
+              "uefaId": null,
+              "imageUrl": null,
+              "name": "Cedar Athletic",
+              "wins": 1,
+              "draws": 0,
+              "losses": 3,
+              "played": 4,
+              "points": 3,
+              "goalsFor": 2,
+              "goalsAgainst": 7,
+              "difference": -5,
+              "position": 3
+            }
+          ]
+        }
+      ]
+    },
+    "stored": [
+      [
+        3001,
+        "sportscore",
+        null,
+        null,
+        8,
+        [
+          4,
+          3,
+          1,
+          0,
+          8,
+          1
+        ],
+        "2026-11-17 08:00:00+00"
+      ],
+      [
+        3002,
+        "sportscore",
+        null,
+        null,
+        4,
+        [
+          4,
+          1,
+          1,
+          2,
+          3,
+          5
+        ],
+        "2026-11-17 08:00:00+00"
+      ],
+      [
+        3003,
+        "sportscore",
+        null,
+        null,
+        3,
+        [
+          4,
+          1,
+          0,
+          3,
+          2,
+          7
+        ],
+        "2026-11-17 08:00:00+00"
+      ]
+    ],
+    "served_sql": [
+      [
+        3001,
+        "sportscore",
+        8
+      ],
+      [
+        3002,
+        "sportscore",
+        4
+      ],
+      [
+        3003,
+        "sportscore",
+        3
+      ]
+    ]
+  },
+  "with_later_secondary": {
+    "status": 200,
+    "etag": "W/\"support-v1-382135abf122397df7ce98b9a62a3edaec9e4924ee4acc021c20339177e8f40c\"",
+    "body": {
+      "competition": "Demo S30",
+      "season": "2026/2027",
+      "source": "other,SportScore",
+      "fetchedAt": "2026-11-18T08:00:00.000Z",
+      "tables": [
+        {
+          "name": "",
+          "rows": [
+            {
+              "id": "t_003001",
+              "uefaId": null,
+              "imageUrl": null,
+              "name": "Aster City",
+              "wins": 3,
+              "draws": 1,
+              "losses": 0,
+              "played": 4,
+              "points": 777,
+              "goalsFor": 8,
+              "goalsAgainst": 1,
+              "difference": 7,
+              "position": 1
+            },
+            {
+              "id": "t_003002",
+              "uefaId": null,
+              "imageUrl": null,
+              "name": "Birch Town",
+              "wins": 1,
+              "draws": 1,
+              "losses": 2,
+              "played": 4,
+              "points": 4,
+              "goalsFor": 3,
+              "goalsAgainst": 5,
+              "difference": -2,
+              "position": 2
+            },
+            {
+              "id": "t_003003",
+              "uefaId": null,
+              "imageUrl": null,
+              "name": "Cedar Athletic",
+              "wins": 1,
+              "draws": 0,
+              "losses": 3,
+              "played": 4,
+              "points": 3,
+              "goalsFor": 2,
+              "goalsAgainst": 7,
+              "difference": -5,
+              "position": 3
+            }
+          ]
+        }
+      ]
+    },
+    "stored": [
+      [
+        3001,
+        "other",
+        null,
+        null,
+        777,
+        [
+          4,
+          3,
+          1,
+          0,
+          8,
+          1
+        ],
+        "2026-11-18 08:00:00+00"
+      ],
+      [
+        3001,
+        "sportscore",
+        null,
+        null,
+        8,
+        [
+          4,
+          3,
+          1,
+          0,
+          8,
+          1
+        ],
+        "2026-11-17 08:00:00+00"
+      ],
+      [
+        3002,
+        "sportscore",
+        null,
+        null,
+        4,
+        [
+          4,
+          1,
+          1,
+          2,
+          3,
+          5
+        ],
+        "2026-11-17 08:00:00+00"
+      ],
+      [
+        3003,
+        "sportscore",
+        null,
+        null,
+        3,
+        [
+          4,
+          1,
+          0,
+          3,
+          2,
+          7
+        ],
+        "2026-11-17 08:00:00+00"
+      ]
+    ],
+    "served_sql": [
+      [
+        3001,
+        "other",
+        777
+      ],
+      [
+        3002,
+        "sportscore",
+        4
+      ],
+      [
+        3003,
+        "sportscore",
+        3
+      ]
+    ]
+  },
+  "with_stale_other_phase_same_source": {
+    "status": 200,
+    "etag": "W/\"support-v1-6f573d9123d5b224e4ecf22520deb33d303977d7736280b21904ad3094c64bab\"",
+    "body": {
+      "competition": "Demo S30",
+      "season": "2026/2027",
+      "source": "Vega",
+      "fetchedAt": "2026-11-17T07:50:00.000Z",
+      "tables": [
+        {
+          "name": "Demo S30",
+          "rows": [
+            {
+              "id": "t_003001",
+              "uefaId": null,
+              "imageUrl": null,
+              "name": "Aster City",
+              "wins": 3,
+              "draws": 1,
+              "losses": 0,
+              "played": 4,
+              "points": 10,
+              "goalsFor": 8,
+              "goalsAgainst": 1,
+              "difference": 7,
+              "position": 1
+            },
+            {
+              "id": "t_003002",
+              "uefaId": null,
+              "imageUrl": null,
+              "name": "Birch Town",
+              "wins": 1,
+              "draws": 1,
+              "losses": 2,
+              "played": 4,
+              "points": 4,
+              "goalsFor": 3,
+              "goalsAgainst": 5,
+              "difference": -2,
+              "position": 2
+            },
+            {
+              "id": "t_003003",
+              "uefaId": null,
+              "imageUrl": null,
+              "name": "Cedar Athletic",
+              "wins": 1,
+              "draws": 0,
+              "losses": 3,
+              "played": 4,
+              "points": 3,
+              "goalsFor": 2,
+              "goalsAgainst": 7,
+              "difference": -5,
+              "position": 3
+            }
+          ]
+        }
+      ]
+    },
+    "stored": [
+      [
+        3001,
+        "sportscore",
+        "old-playoff",
+        null,
+        777,
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "2026-11-16 08:00:00+00"
+      ],
+      [
+        3001,
+        "sportscore",
+        null,
+        null,
+        8,
+        [
+          4,
+          3,
+          1,
+          0,
+          8,
+          1
+        ],
+        "2026-11-17 08:00:00+00"
+      ],
+      [
+        3002,
+        "sportscore",
+        null,
+        null,
+        4,
+        [
+          4,
+          1,
+          1,
+          2,
+          3,
+          5
+        ],
+        "2026-11-17 08:00:00+00"
+      ],
+      [
+        3003,
+        "sportscore",
+        null,
+        null,
+        3,
+        [
+          4,
+          1,
+          0,
+          3,
+          2,
+          7
+        ],
+        "2026-11-17 08:00:00+00"
+      ]
+    ],
+    "served_sql": [
+      [
+        3001,
+        "vega",
+        10
+      ],
+      [
+        3002,
+        "vega",
+        4
+      ],
+      [
+        3003,
+        "vega",
+        3
+      ]
+    ]
+  },
+  "git_head": "1b28961a88e968d5602f9fb278fc3c471ebb7467",
+  "source_sha256": {
+    "backend/sql/138_sportscore_standings.sql": "4d6f61a78fabb9170112360880dbef444a16ca591f8c3fc1bc40feaa291305e0",
+    "backend/vega/sources/sportscore.py": "6336700466da05277fb3c47225fb9aba050426d07c6ffdd9226fd3e48565f718",
+    "backend/api/src/routes/reference.mjs": "3775aa3e1e3b45c21862d80dc7863e63962304da84db21a1bbdeec9edf5554e7"
+  }
+}

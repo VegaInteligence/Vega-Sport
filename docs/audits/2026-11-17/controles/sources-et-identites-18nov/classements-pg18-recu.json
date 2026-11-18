@@ -1,0 +1,114 @@
+{
+  "transport": "PASS",
+  "zip_sha256": "8172d1215149bcacbab77e15fb6d261d90af4c95ef03abfeb0c46b27c705699e",
+  "archive_bytes": 973165,
+  "manifest_sha256": "0e40099a7e91a0342a0211cf131becfd465abbecc63edbcb28eb2684f2a37727",
+  "files_in_manifest": 393,
+  "zip_entries": 394,
+  "files_match_empty_extraction": 394,
+  "checked_candidate_sources": 199,
+  "node_packages": 14,
+  "python_driver": "3.3.9",
+  "private_data_signatures_checked": [
+    "private_filesystem_home",
+    "private_key",
+    "aws_access_token",
+    "aws_account_arn_or_ecr",
+    "personal_github_token",
+    "credentialed_url"
+  ],
+  "private_data_signature_matches": 0,
+  "required_programs": "Python 3.13+, Node.js 20+, PostgreSQL 18 with libpq",
+  "multisource_full_receipt_matches": true,
+  "worldcup_seven_http_bodies_and_stored_values_match": true,
+  "two_local_pg18_repetitions": true,
+  "live_network_access": "not used",
+  "replay_result": {
+    "execution": "PASS",
+    "original_contracts": {
+      "qualify_single_authority": "FAIL",
+      "preserve_transversal_table": "FAIL",
+      "exclude_bronze_from_group_table": "FAIL"
+    },
+    "start_utc": "2026-11-18T08:29:13.946028+00:00",
+    "end_utc": "2026-11-18T08:29:19.085147+00:00",
+    "package_files_verified": 393,
+    "python": "3.14.6",
+    "node": "v26.4.0",
+    "postgres": "postgres (PostgreSQL) 18.6",
+    "client": "3.3.9 python 180006",
+    "production_census": {
+      "source": "sportscore",
+      "stored_rows": 1086,
+      "editions": 60,
+      "distinct_teams": 981,
+      "mixed_source_keys": 0,
+      "editions_with_multiple_tables": [
+        [
+          "USL Championship",
+          2,
+          25
+        ],
+        [
+          "World Cup",
+          13,
+          48
+        ]
+      ],
+      "captured": "2026-11-18 07:52:11.464988+00"
+    },
+    "multisource_get": {
+      "baseline": "SportScore",
+      "with_stale_secondary": "Vega",
+      "after_secondary_removed": "SportScore",
+      "with_later_secondary": "other,SportScore",
+      "with_stale_other_phase_same_source": "Vega"
+    },
+    "foreign_points_reproduced": 777,
+    "worldcup_counts": {
+      "00-rds-seed": [
+        60,
+        13,
+        12
+      ],
+      "01-complete": [
+        60,
+        13,
+        12
+      ],
+      "02-repeat": [
+        60,
+        13,
+        12
+      ],
+      "03-without-third": [
+        48,
+        12,
+        0
+      ],
+      "04-recovered": [
+        60,
+        13,
+        12
+      ],
+      "05-fallback-as-captured": [
+        0,
+        1,
+        0
+      ],
+      "06-fallback-bronze-excluded": [
+        0,
+        1,
+        0
+      ]
+    },
+    "fifa_dates_sides_scores_verified": 104,
+    "bronze_match": 69466,
+    "changed_positions": 7,
+    "numeric_group_totals": {
+      "observed": 146,
+      "group_only": 144
+    },
+    "worldcup_semantic_http_bodies_compared": 7
+  }
+}

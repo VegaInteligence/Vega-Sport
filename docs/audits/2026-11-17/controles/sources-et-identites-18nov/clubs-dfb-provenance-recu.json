@@ -1,0 +1,454 @@
+{
+  "zip": "clubs-dfb-provenance.zip",
+  "sha256": "2a87dee2a697aae3b6159c7cf619178b806125728eedce1dffae3fa9c8ea8c3f",
+  "octets": 1370633,
+  "archive_operateur": {
+    "zip": "evidence-bundle.zip",
+    "sha256": "8cea5e1b783811ad3483ad7a0ec5e105e6c89bdc9eea520be3b66d194234ca2a",
+    "bytes": 5718633,
+    "members": 254,
+    "two_builds_identical": true,
+    "all_archive_members_verified": true,
+    "hash_index_sha256": "9b8adb573a7eb4eafbeb7eb32de679b68611c8c35459aea3347747f53cadd0c7",
+    "scope": "Frozen research evidence and an unapplied profile pack; no product or database change."
+  },
+  "recu_chargeur_original": {
+    "sha256": "283a0e9df00f18cda8bf005a879f03ae8fa77c2d947013ad6fa1ad96f1946e86",
+    "bytes": 767
+  },
+  "champs_du_recu_chargeur": {
+    "manifest_sha256": "f715495e91fb4add12d8a0c8eab2fe4bbc595bdcd15f2a75e8c020fad7e1da37",
+    "zip_sha256": "3b4d219435087aaf956847660cc8bf91ad577b7fc90a6f4269a020ec9fbc4632",
+    "loader_sha256": "e53dd0f791456eb419df6ffc7a87cfc1e67d0a73f0d123ad7b07b145e81f400a",
+    "records": 7,
+    "distinct_rasters": 7,
+    "wrong_manifest_hash_rejected": true,
+    "production_writes": 0
+  },
+  "membres_extraits_a_loctet": {
+    "analysis-receipt.json": {
+      "sha256": "16be9623d1b0085036907b2d508b772a6cc5a160c292156e7311c0d909cdc1b7",
+      "bytes": 878
+    },
+    "build-receipt.json": {
+      "sha256": "347344c63ccbcd10f9812a913a385a0f5b56225e2b6e43477e1d3511846af000",
+      "bytes": 2588
+    },
+    "fixture-proofs.json": {
+      "sha256": "860d6b1ad697c9d128912ddeef99bd5de17b531ea3c8cd042aa32e56d090835d",
+      "bytes": 27761
+    },
+    "image-roles.json": {
+      "sha256": "b32a932d4522681aed4ac9bd638254a3b26899d29617d60759ad87cab449a4bc",
+      "bytes": 5744
+    },
+    "inputs/dfb/official.csv": {
+      "sha256": "7fe1432f305bb18ed4b51c48043f0b93c8283626b47ba7716c69a686833d60bc",
+      "bytes": 101579
+    },
+    "inputs/dfb/raw/1963-1-fc-kaiserslautern.json": {
+      "sha256": "3f8bbf03304a74a2720f8539ba86b8b8c7e1c48d8fab599fcca656ac89f61b51",
+      "bytes": 379
+    },
+    "inputs/dfb/raw/1963-1-fc-koeln.json": {
+      "sha256": "46c5e2319b829eaffcd758390762ab42ce21b024b9c31108ee0efbfb06b0cf0d",
+      "bytes": 361
+    },
+    "inputs/dfb/raw/1963-1-fc-nuernberg.json": {
+      "sha256": "87735fbce104d59e1c88517fafa50a0da85d5f2ab9062aaa03b5c86bd74bcaa7",
+      "bytes": 369
+    },
+    "inputs/dfb/raw/1963-1-fc-saarbruecken.json": {
+      "sha256": "4115ac431a89b2072367bcb8f7de21c5043c796dca1a73b25be842c6d4a02fea",
+      "bytes": 375
+    },
+    "inputs/dfb/raw/1963-borussia-dortmund.json": {
+      "sha256": "ad432cc73d9b48f83730063c9ee82db6ae4552e9f7db96e6df03864c23cb25f5",
+      "bytes": 375
+    },
+    "inputs/dfb/raw/1963-eintracht-braunschweig.json": {
+      "sha256": "a6f9b196b563bdcc601585c3ecf4f4fcc0fe980600c127c018b57c4e0b15dc40",
+      "bytes": 385
+    },
+    "inputs/dfb/raw/1963-eintracht-frankfurt.json": {
+      "sha256": "dfd1d0e575ee2d89453ae3bddc4a52c60b029b1cbed61f85d43a818b24e84b29",
+      "bytes": 379
+    },
+    "inputs/dfb/raw/1963-fc-schalke-04.json": {
+      "sha256": "e4beb6325d92554735672c0b4f1d0d2030c348cbf69228adf6bdd757db3407c5",
+      "bytes": 367
+    },
+    "inputs/dfb/raw/1963-hamburger-sv.json": {
+      "sha256": "e5a1d69556e0cb869d5e65e486897f83b1e853ee49c1b76d6559d1b7c185e527",
+      "bytes": 365
+    },
+    "inputs/dfb/raw/1963-hertha-bsc.json": {
+      "sha256": "cc1839b7d5e3e4e5808382247f69851bde7f1d59d6c441e7ac92b5053367b326",
+      "bytes": 361
+    },
+    "inputs/dfb/raw/1963-karlsruher-sc.json": {
+      "sha256": "7e5398748eaa84a3dcb48448ae97c00245c262a09fa0070ef44bde610c830e40",
+      "bytes": 367
+    },
+    "inputs/dfb/raw/1963-msv-duisburg.json": {
+      "sha256": "090107d8d69ec1da773a7ff587d08ac9f552f92eaf1588452cf8d61808f86330",
+      "bytes": 390
+    },
+    "inputs/dfb/raw/1963-preussen-muenster.json": {
+      "sha256": "e8749e30267ee8cc7de97fa58389c75e08ce721f4ad2112c6de7387b025f4565",
+      "bytes": 375
+    },
+    "inputs/dfb/raw/1963-tsv-1860-muenchen.json": {
+      "sha256": "cb6c93945097fd077a4a48348ce40807a57f1cb4ca600e56d044cd5021ea1a6a",
+      "bytes": 375
+    },
+    "inputs/dfb/raw/1963-vfb-stuttgart.json": {
+      "sha256": "d493c58b9902314e771b101bc9dae147689e1bf67f65cf64d8f8d2bcc6afbe1b",
+      "bytes": 367
+    },
+    "inputs/dfb/raw/1963-werder-bremen.json": {
+      "sha256": "cc37808099eeddc1298f3209b3601fa7bc4a8dde09f1375b102e1acffa12dfc9",
+      "bytes": 367
+    },
+    "inputs/dfb/raw/1964-1-fc-kaiserslautern.json": {
+      "sha256": "d492a79a8b97266c9081e450bbee32741dc1b6e2a033b760c05949f6b687abe1",
+      "bytes": 379
+    },
+    "inputs/dfb/raw/1964-1-fc-koeln.json": {
+      "sha256": "1a4e938fc792cc4181b4be3c02d176647650024c452314421524a47abff71aa4",
+      "bytes": 361
+    },
+    "inputs/dfb/raw/1964-1-fc-nuernberg.json": {
+      "sha256": "c6c3fc8dc97815ba00480a7c2265cb5b78c27cdac23333c0c2ae1e10bc4c36b3",
+      "bytes": 369
+    },
+    "inputs/dfb/raw/1964-borussia-dortmund.json": {
+      "sha256": "8e5c9e9ecabfac7ada62590192fa5d75443c8a1d76ffb01fddb5b7c81538b190",
+      "bytes": 375
+    },
+    "inputs/dfb/raw/1964-borussia-neunkirchen.json": {
+      "sha256": "a3f055bacefd94a991798f66680b3137a32f2474ff05566e659c835215f7434d",
+      "bytes": 381
+    },
+    "inputs/dfb/raw/1964-eintracht-braunschweig.json": {
+      "sha256": "8afb81e41529f5faf93db3248b24607464e089a3b6066a1f5fb6738dd47bcf44",
+      "bytes": 385
+    },
+    "inputs/dfb/raw/1964-eintracht-frankfurt.json": {
+      "sha256": "779e64bcb6f0393c935e6c7bee01623d1bd99f02cd8eb2b0483236e1f43dd7c0",
+      "bytes": 379
+    },
+    "inputs/dfb/raw/1964-fc-schalke-04.json": {
+      "sha256": "ef8c069f5670c1d5bbf8eea3e686c39792f8e2f03e4252a39607c5805147067b",
+      "bytes": 367
+    },
+    "inputs/dfb/raw/1964-hamburger-sv.json": {
+      "sha256": "c853b01d64daf48afc30009a29530eb7dfd61ef4df0107b7c1ed8706ff761a7b",
+      "bytes": 365
+    },
+    "inputs/dfb/raw/1964-hannover-96.json": {
+      "sha256": "d95e9a674f1c680d9324da578b15fd39abc84ed465f436028f1b77dc0bc78fdf",
+      "bytes": 363
+    },
+    "inputs/dfb/raw/1964-hertha-bsc.json": {
+      "sha256": "a2f53ac19405e28a1e21395f768350bc533bc1c95c2dd0f33da4b7165dbdfaa9",
+      "bytes": 361
+    },
+    "inputs/dfb/raw/1964-karlsruher-sc.json": {
+      "sha256": "9ad587c2289067eb78691c9aeac274ebab0cb43e6e224c4e41ac64a90a48b442",
+      "bytes": 367
+    },
+    "inputs/dfb/raw/1964-msv-duisburg.json": {
+      "sha256": "d39b62e1657038dc3af8be6aa33e7538ab58e2b35f6a9f00109dafe4b0146d5c",
+      "bytes": 390
+    },
+    "inputs/dfb/raw/1964-tsv-1860-muenchen.json": {
+      "sha256": "627bce8e54eb1a1635c45515d47ea414dc274bb6a2be733c213443797813d4d6",
+      "bytes": 375
+    },
+    "inputs/dfb/raw/1964-vfb-stuttgart.json": {
+      "sha256": "fa642e153ee6c7e380122a483d45bce7b09c40af326f0bb61879ca1260582492",
+      "bytes": 367
+    },
+    "inputs/dfb/raw/1964-werder-bremen.json": {
+      "sha256": "4b8f4c5f98d8d89bbb9641ece56e2942d6a76f8fd55aab62c7cd360452fe06c3",
+      "bytes": 367
+    },
+    "inputs/dfb/raw/1965-1-fc-kaiserslautern.json": {
+      "sha256": "d606463d22f7b80fe6bc464b63a6d9b147e0f83148c0f25c316babff8f339548",
+      "bytes": 379
+    },
+    "inputs/dfb/raw/1965-1-fc-koeln.json": {
+      "sha256": "8890dd45b9a532c002d0c7ce7d9cd1fb160745884d007f311fb396f90173248d",
+      "bytes": 361
+    },
+    "inputs/dfb/raw/1965-1-fc-nuernberg.json": {
+      "sha256": "f9ac2cef1066caf6d3dff6b89cbe475cd1082b3164a7b5417436467f98921993",
+      "bytes": 369
+    },
+    "inputs/dfb/raw/1965-bayern-muenchen.json": {
+      "sha256": "b358417b014f6ae3882f32e41c9352dd544b4832f3104c4c508f46b80006f290",
+      "bytes": 371
+    },
+    "inputs/dfb/raw/1965-borussia-dortmund.json": {
+      "sha256": "1da946c9c005f39c566d1dc373c5ab19071b4a759f64586e61f4a1597903c058",
+      "bytes": 375
+    },
+    "inputs/dfb/raw/1965-borussia-moenchengladbach.json": {
+      "sha256": "85c14686b2d33284f48942f2f83bbccf30ad0b518927ff63247185aec32a818f",
+      "bytes": 391
+    },
+    "inputs/dfb/raw/1965-borussia-neunkirchen.json": {
+      "sha256": "330f851ab99ddc1c247e100d077fd85b661abeed582ea65566725b7a078d9c05",
+      "bytes": 381
+    },
+    "inputs/dfb/raw/1965-eintracht-braunschweig.json": {
+      "sha256": "5a2bbf72a14e8c02045d81d4e70ca5f607a2573968181fac479712f7dc5b29bd",
+      "bytes": 385
+    },
+    "inputs/dfb/raw/1965-eintracht-frankfurt.json": {
+      "sha256": "d3aadbfb9a59f3df53b834b308320dffdb3d8e003212d3a827a05e90ecd6cb77",
+      "bytes": 379
+    },
+    "inputs/dfb/raw/1965-fc-schalke-04.json": {
+      "sha256": "ddf5aba0d511bcb34becb7af473df1545a26e4dff665ec3c45381a7126976ef1",
+      "bytes": 367
+    },
+    "inputs/dfb/raw/1965-hamburger-sv.json": {
+      "sha256": "e3b422ac5d779009842f3760cf7ce991540016fd95d1c014d5d574d789345d25",
+      "bytes": 365
+    },
+    "inputs/dfb/raw/1965-hannover-96.json": {
+      "sha256": "9fef85b539ccbe5dc0257d5965670e6f281a77c13f1a07313cfaf8e2c338db98",
+      "bytes": 363
+    },
+    "inputs/dfb/raw/1965-karlsruher-sc.json": {
+      "sha256": "4017a372064474d1d910581ec9290eef343c1dba5088d43b3a32d4728594968b",
+      "bytes": 367
+    },
+    "inputs/dfb/raw/1965-msv-duisburg.json": {
+      "sha256": "76610bdeb4861c984534cd3fb7f113d628907b2dbb33c20f95b8e125345cd7a6",
+      "bytes": 390
+    },
+    "inputs/dfb/raw/1965-sv-tasmania-berlin.json": {
+      "sha256": "efe5b35f1aca72c282a73af79e68ca9b2ae0288267539d915cd66819d704b765",
+      "bytes": 377
+    },
+    "inputs/dfb/raw/1965-tsv-1860-muenchen.json": {
+      "sha256": "ebe5528273821ee08d00ed39f8145201cf28d6f11cd0e4b1373e82b6af30993c",
+      "bytes": 375
+    },
+    "inputs/dfb/raw/1965-vfb-stuttgart.json": {
+      "sha256": "b2398ab174df174b1255138602fe0a8de11c7ac4ff354346cdf9d7c011306498",
+      "bytes": 367
+    },
+    "inputs/dfb/raw/1965-werder-bremen.json": {
+      "sha256": "e55890790a060920b24bf68c470459b85b398acfe3073b353ad40dc0d7744aa5",
+      "bytes": 367
+    },
+    "inputs/dfb/raw/1966-1-fc-kaiserslautern.json": {
+      "sha256": "be04c372df5d3e4c47acd36a3f21fa844538ecba33eebad2a3a6c0f42c3f86b4",
+      "bytes": 379
+    },
+    "inputs/dfb/raw/1966-1-fc-koeln.json": {
+      "sha256": "be6cce600ff877be449a82687dad510a20f840501e8d2118db2b05209ee13983",
+      "bytes": 361
+    },
+    "inputs/dfb/raw/1966-1-fc-nuernberg.json": {
+      "sha256": "93b9e8f0119b4628ab1527d96bf403a51ea5869890bdc41566137107fb4c7b6a",
+      "bytes": 369
+    },
+    "inputs/dfb/raw/1966-bayern-muenchen.json": {
+      "sha256": "89ee69a168fc767b77ab6b12e064f9fd3e4f1089ad778af2c4af0e992ce83089",
+      "bytes": 371
+    },
+    "inputs/dfb/raw/1966-borussia-dortmund.json": {
+      "sha256": "253433ddc265fe5ec7fc3fe78a117c705e2c9e64a838b98d310833e88b74c617",
+      "bytes": 375
+    },
+    "inputs/dfb/raw/1966-borussia-moenchengladbach.json": {
+      "sha256": "f082d2159c3d1ccf9e3f1caecb2e8edb29aede2c59c022f66ca78a2bed5d848f",
+      "bytes": 391
+    },
+    "inputs/dfb/raw/1966-eintracht-braunschweig.json": {
+      "sha256": "c955a9674f0843e2b50dd6d2df4a15a5f6e0fdb03fe191f8f817a085efea373b",
+      "bytes": 385
+    },
+    "inputs/dfb/raw/1966-eintracht-frankfurt.json": {
+      "sha256": "812f0cf4d3b969b4dbf47264872435d46527f4994c3b7ab2fc145698d2c60f3a",
+      "bytes": 379
+    },
+    "inputs/dfb/raw/1966-fc-schalke-04.json": {
+      "sha256": "493dbbe3d8f63e3078eb72ee4007ee35de68f29755105142bd8a35b5605afb00",
+      "bytes": 367
+    },
+    "inputs/dfb/raw/1966-fortuna-duesseldorf.json": {
+      "sha256": "2d2616903522d06d47874804e970e49773c64bfd1c2e1cc664fb11a0b8edccac",
+      "bytes": 379
+    },
+    "inputs/dfb/raw/1966-hamburger-sv.json": {
+      "sha256": "93f2a6ae4397a23fba18fa27a5a5c7bb089ca8d972a0a6d3f17d34ec19045650",
+      "bytes": 365
+    },
+    "inputs/dfb/raw/1966-hannover-96.json": {
+      "sha256": "d9a9589c311ed686ccaf2be731e4d4dc03bd0fcbba1d4579e3eaee7f4ecd8375",
+      "bytes": 363
+    },
+    "inputs/dfb/raw/1966-karlsruher-sc.json": {
+      "sha256": "25450b5691d22e2c866d635e48a558aef6efd23953faa54397aabe299d51edf8",
+      "bytes": 367
+    },
+    "inputs/dfb/raw/1966-msv-duisburg.json": {
+      "sha256": "97942299aa3042047b50094fc7aa96a5b70ef548bbcc68dd629d7097384939ae",
+      "bytes": 390
+    },
+    "inputs/dfb/raw/1966-rot-weiss-essen.json": {
+      "sha256": "a9ae6b3794cf5492f6aeb386289b0aeab73e6bc48cafceb5d954a98db0dc4a99",
+      "bytes": 371
+    },
+    "inputs/dfb/raw/1966-tsv-1860-muenchen.json": {
+      "sha256": "2238c7b226eeba91308e91dbf1300d34ee227546ce0c0e25a87405367ab39c71",
+      "bytes": 375
+    },
+    "inputs/dfb/raw/1966-vfb-stuttgart.json": {
+      "sha256": "ec5f2b5f7311c75d9758c03b8845d7170f335a8f66999be1b4aec9e7db4eeb3c",
+      "bytes": 367
+    },
+    "inputs/dfb/raw/1966-werder-bremen.json": {
+      "sha256": "d973be89465b3279efd384d30ff6cf94dd65d0c1e62f5a1496e39aa300af9a8c",
+      "bytes": 367
+    },
+    "primary-source-receipt.json": {
+      "sha256": "e7368f6aae825c68cddfa0fcce081e6e6f056e6948c0198dd9fbe04a0a331762",
+      "bytes": 4471
+    },
+    "profile/manifest.json": {
+      "sha256": "f715495e91fb4add12d8a0c8eab2fe4bbc595bdcd15f2a75e8c020fad7e1da37",
+      "bytes": 44869
+    },
+    "root-ledger.csv": {
+      "sha256": "472ad65665593635e7f6c91214b6d61c0af8c587d847666e25c9c202debc1689",
+      "bytes": 7895
+    },
+    "seven-dfb-historic-root-profiles-v1.zip": {
+      "sha256": "3b4d219435087aaf956847660cc8bf91ad577b7fc90a6f4269a020ec9fbc4632",
+      "bytes": 1304680
+    },
+    "source-urls.json": {
+      "sha256": "eab25ba866d02641d3f19383623cb8769fb9c095384023567e9507ad64b13361",
+      "bytes": 3020
+    },
+    "sources/1963-eintracht-frankfurt-header-image.json": {
+      "sha256": "e39c69dca243f8761fd51a4edc5e186e2971d070a234adad2f042f3ede092080",
+      "bytes": 431
+    },
+    "sources/1963-msv-duisburg-header-image.json": {
+      "sha256": "05b6585e9356cb5d03e1d50f14f50a70662f047576f6df23ebca6f48c3ea0c88",
+      "bytes": 443
+    },
+    "sources/1963-preussen-muenster-header-image.json": {
+      "sha256": "da78a99c3c53dc0c32fc79149fde5dc0e2bf2a1028fd2dce235c11f3f9287a85",
+      "bytes": 427
+    },
+    "sources/1963-tsv-1860-muenchen-header-image.json": {
+      "sha256": "ade0a0e0311bad6f6d75b013196fb7843d4a66066d390909b4f6660fdc9a1f31",
+      "bytes": 421
+    },
+    "sources/1964-borussia-neunkirchen-header-image.json": {
+      "sha256": "01d5c69f24a1cb38dd1b7c2c80035cb3a8ad30e82f387fe53f4d06b448a43c8f",
+      "bytes": 432
+    },
+    "sources/1965-borussia-moenchengladbach-header-image.json": {
+      "sha256": "3d0190b0ec8de7fbef43e7dc0de13cc5f4ea6c8df26befeae9ff82621b01a22c",
+      "bytes": 442
+    },
+    "sources/1965-sv-tasmania-berlin-header-image.json": {
+      "sha256": "75c7c5c06565c92c4996362430c4f3f32546bc938f0516066f433ae3563214ee",
+      "bytes": 422
+    },
+    "sources/frankfurt-history.json": {
+      "sha256": "25e02bbdde2e3ba1f33eaa4473d46c0889a234c7884b87635aa8c9a9ccd7d40c",
+      "bytes": 367
+    },
+    "sources/gladbach-1965.json": {
+      "sha256": "07f9f877d93bdde34b0efb1f18387c217dd7826f0333ab6ccdb27783da9bbf5a",
+      "bytes": 378
+    },
+    "sources/msv-1963.json": {
+      "sha256": "9c0b3f64642893d31e169defac53e4bd20b9f9ae415fc4e6b15c68168a0b3aea",
+      "bytes": 385
+    },
+    "sources/msv-history.json": {
+      "sha256": "438e5d3e89658460148f84433570a6b600791a6feca9efba50564e88cd986ab1",
+      "bytes": 503
+    },
+    "sources/muenchen-1966.json": {
+      "sha256": "1ac2bd7328a8f7c4cab6581215a33bbdb09c60bec28d67418e4b9870fe21901e",
+      "bytes": 420
+    },
+    "sources/muenchen-club-header.json": {
+      "sha256": "f6838844bcd887a2e81484b99ab2bf48496b9509cf2cc7d3fd529a7548f87471",
+      "bytes": 369
+    },
+    "sources/muenchen-current-club-crest.json": {
+      "sha256": "23eebcc8b860e2ce3b0623c7b32340fcd7e610a754b7a14bd4caa01dae3b1596",
+      "bytes": 406
+    },
+    "sources/muenchen-history.json": {
+      "sha256": "aa908c77f82a381cdd26fc395698d2c1e4c68162ff65e9b43e702b057021b4ec",
+      "bytes": 341
+    },
+    "sources/muenster-1963.json": {
+      "sha256": "5e0cda7619ec9176e97b704ad40862a5f67be24b8d60ab561728f9e54f79565f",
+      "bytes": 461
+    },
+    "sources/muenster-history.json": {
+      "sha256": "50c28a5951202003e4996718655c011e5053ad2c7be68a437737e71ebbcdd340",
+      "bytes": 377
+    },
+    "sources/neunkirchen-1965.json": {
+      "sha256": "1c1d3ba071cb2768299d5752b4de24e91ac62a6fe7173b20e6741b9cd4c012ea",
+      "bytes": 475
+    },
+    "sources/neunkirchen-profile.json": {
+      "sha256": "92eaf9a04125cd8de120e330a51d052895b9da5e8946125ab27a9ac8b728e45c",
+      "bytes": 361
+    },
+    "sources/tasmania-6889-pokal-1966.json": {
+      "sha256": "a6410f467856c7ad5cfd8cf48672fc5c4d86e9bf1bef65436b0cc9e76ff48859",
+      "bytes": 465
+    },
+    "sources/tasmania-6889-pokal-1970-71.json": {
+      "sha256": "a83ec793e93f515eb83fd785803aa4e9d1f5aff22d28e78872752cb5b56a33c0",
+      "bytes": 465
+    },
+    "sources/tasmania-6889-pokal-1971.json": {
+      "sha256": "7a6c1f5a8c52800aff07f83caa7e9745d7fb7227263fcf92c267da2223ed58ad",
+      "bytes": 465
+    },
+    "sources/tasmania-birthday.json": {
+      "sha256": "83b757d2de2587c9500d16ff237a9048fab84a71003cb41bf2927f84c68c0e40",
+      "bytes": 397
+    },
+    "sources/tasmania-current-header.json": {
+      "sha256": "40b6e96cf2c502c9d3d0da1e5f69e14edfd0991a79a6b1febddcc5213062a176",
+      "bytes": 431
+    },
+    "sources/tasmania-facts.json": {
+      "sha256": "ce3dcea8fd58aaa39d54c9937cf0f2c3ca639aebcfd6477089ac77a3d8f4cba6",
+      "bytes": 399
+    },
+    "sources/tasmania-history-illustration.json": {
+      "sha256": "46efdfd23e246ae838a4a242f9caf85612e89134c54308a060f238a4c00a63d8",
+      "bytes": 422
+    },
+    "sources/tasmania-history.json": {
+      "sha256": "e446cb537290295e99f5b587b6d2be160f4ffded3bd5083d619e96e0d72d79b4",
+      "bytes": 379
+    },
+    "sources/tasmania-home.json": {
+      "sha256": "443322c69cb441bb81eca5733e4122e00fa0c0ec1cd91cb096a8c2dc361716d6",
+      "bytes": 343
+    }
+  }
+}

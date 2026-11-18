@@ -1,0 +1,1138 @@
+{
+  "expected_primary_witnesses": 14,
+  "actual_primary_witnesses": 14,
+  "altered_witness_controls": [
+    {
+      "witness_match_id": 734037,
+      "root": 4240,
+      "mutation": "date",
+      "input": [
+        4240,
+        "2023-01-21",
+        4240,
+        4241,
+        1,
+        0
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 734037,
+      "root": 4240,
+      "mutation": "orientation",
+      "input": [
+        4240,
+        "2023-01-20",
+        4241,
+        4240,
+        1,
+        0
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 734037,
+      "root": 4240,
+      "mutation": "opponent",
+      "input": [
+        4240,
+        "2023-01-20",
+        4240,
+        -1,
+        1,
+        0
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 734037,
+      "root": 4240,
+      "mutation": "score",
+      "input": [
+        4240,
+        "2023-01-20",
+        4240,
+        4241,
+        2,
+        0
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 734037,
+      "root": 4240,
+      "mutation": "root",
+      "input": [
+        4238,
+        "2023-01-20",
+        4240,
+        4241,
+        1,
+        0
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 735327,
+      "root": 4240,
+      "mutation": "date",
+      "input": [
+        4240,
+        "2024-01-22",
+        4241,
+        4240,
+        1,
+        1
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 735327,
+      "root": 4240,
+      "mutation": "orientation",
+      "input": [
+        4240,
+        "2024-01-21",
+        4240,
+        4241,
+        1,
+        1
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 735327,
+      "root": 4240,
+      "mutation": "opponent",
+      "input": [
+        4240,
+        "2024-01-21",
+        -1,
+        4240,
+        1,
+        1
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 735327,
+      "root": 4240,
+      "mutation": "score",
+      "input": [
+        4240,
+        "2024-01-21",
+        4241,
+        4240,
+        2,
+        1
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 735327,
+      "root": 4240,
+      "mutation": "root",
+      "input": [
+        4238,
+        "2024-01-21",
+        4241,
+        4240,
+        1,
+        1
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 735333,
+      "root": 4238,
+      "mutation": "date",
+      "input": [
+        4238,
+        "2024-01-21",
+        4232,
+        4238,
+        2,
+        3
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 735333,
+      "root": 4238,
+      "mutation": "orientation",
+      "input": [
+        4238,
+        "2024-01-20",
+        4238,
+        4232,
+        2,
+        3
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 735333,
+      "root": 4238,
+      "mutation": "opponent",
+      "input": [
+        4238,
+        "2024-01-20",
+        -1,
+        4238,
+        2,
+        3
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 735333,
+      "root": 4238,
+      "mutation": "score",
+      "input": [
+        4238,
+        "2024-01-20",
+        4232,
+        4238,
+        3,
+        3
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 735333,
+      "root": 4238,
+      "mutation": "root",
+      "input": [
+        4240,
+        "2024-01-20",
+        4232,
+        4238,
+        2,
+        3
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 735275,
+      "root": 4238,
+      "mutation": "date",
+      "input": [
+        4238,
+        "2024-02-08",
+        4231,
+        4238,
+        1,
+        4
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 735275,
+      "root": 4238,
+      "mutation": "orientation",
+      "input": [
+        4238,
+        "2024-02-07",
+        4238,
+        4231,
+        1,
+        4
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 735275,
+      "root": 4238,
+      "mutation": "opponent",
+      "input": [
+        4238,
+        "2024-02-07",
+        -1,
+        4238,
+        1,
+        4
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 735275,
+      "root": 4238,
+      "mutation": "score",
+      "input": [
+        4238,
+        "2024-02-07",
+        4231,
+        4238,
+        2,
+        4
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 735275,
+      "root": 4238,
+      "mutation": "root",
+      "input": [
+        4240,
+        "2024-02-07",
+        4231,
+        4238,
+        1,
+        4
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 206371,
+      "root": 4238,
+      "mutation": "date",
+      "input": [
+        4238,
+        "1953-11-09",
+        552,
+        4238,
+        0,
+        3
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 206371,
+      "root": 4238,
+      "mutation": "orientation",
+      "input": [
+        4238,
+        "1953-11-08",
+        4238,
+        552,
+        0,
+        3
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 206371,
+      "root": 4238,
+      "mutation": "opponent",
+      "input": [
+        4238,
+        "1953-11-08",
+        -1,
+        4238,
+        0,
+        3
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 206371,
+      "root": 4238,
+      "mutation": "score",
+      "input": [
+        4238,
+        "1953-11-08",
+        552,
+        4238,
+        1,
+        3
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 206371,
+      "root": 4238,
+      "mutation": "root",
+      "input": [
+        4240,
+        "1953-11-08",
+        552,
+        4238,
+        0,
+        3
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 735435,
+      "root": 4233,
+      "mutation": "date",
+      "input": [
+        4233,
+        "2024-01-07",
+        4233,
+        12922,
+        12,
+        0
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 735435,
+      "root": 4233,
+      "mutation": "orientation",
+      "input": [
+        4233,
+        "2024-01-06",
+        12922,
+        4233,
+        12,
+        0
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 735435,
+      "root": 4233,
+      "mutation": "opponent",
+      "input": [
+        4233,
+        "2024-01-06",
+        4233,
+        -1,
+        12,
+        0
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 735435,
+      "root": 4233,
+      "mutation": "score",
+      "input": [
+        4233,
+        "2024-01-06",
+        4233,
+        12922,
+        13,
+        0
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 735435,
+      "root": 4233,
+      "mutation": "root",
+      "input": [
+        4240,
+        "2024-01-06",
+        4233,
+        12922,
+        12,
+        0
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 735326,
+      "root": 4233,
+      "mutation": "date",
+      "input": [
+        4233,
+        "2024-01-22",
+        6074,
+        4233,
+        0,
+        1
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 735326,
+      "root": 4233,
+      "mutation": "orientation",
+      "input": [
+        4233,
+        "2024-01-21",
+        4233,
+        6074,
+        0,
+        1
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 735326,
+      "root": 4233,
+      "mutation": "opponent",
+      "input": [
+        4233,
+        "2024-01-21",
+        -1,
+        4233,
+        0,
+        1
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 735326,
+      "root": 4233,
+      "mutation": "score",
+      "input": [
+        4233,
+        "2024-01-21",
+        6074,
+        4233,
+        1,
+        1
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 735326,
+      "root": 4233,
+      "mutation": "root",
+      "input": [
+        4240,
+        "2024-01-21",
+        6074,
+        4233,
+        0,
+        1
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 179504,
+      "root": 6076,
+      "mutation": "date",
+      "input": [
+        6076,
+        "1945-09-17",
+        6130,
+        6076,
+        5,
+        0
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 179504,
+      "root": 6076,
+      "mutation": "orientation",
+      "input": [
+        6076,
+        "1945-09-16",
+        6076,
+        6130,
+        5,
+        0
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 179504,
+      "root": 6076,
+      "mutation": "opponent",
+      "input": [
+        6076,
+        "1945-09-16",
+        -1,
+        6076,
+        5,
+        0
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 179504,
+      "root": 6076,
+      "mutation": "score",
+      "input": [
+        6076,
+        "1945-09-16",
+        6130,
+        6076,
+        6,
+        0
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 179504,
+      "root": 6076,
+      "mutation": "root",
+      "input": [
+        4240,
+        "1945-09-16",
+        6130,
+        6076,
+        5,
+        0
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 193520,
+      "root": 6076,
+      "mutation": "date",
+      "input": [
+        6076,
+        "1951-04-30",
+        6130,
+        6076,
+        0,
+        1
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 193520,
+      "root": 6076,
+      "mutation": "orientation",
+      "input": [
+        6076,
+        "1951-04-29",
+        6076,
+        6130,
+        0,
+        1
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 193520,
+      "root": 6076,
+      "mutation": "opponent",
+      "input": [
+        6076,
+        "1951-04-29",
+        -1,
+        6076,
+        0,
+        1
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 193520,
+      "root": 6076,
+      "mutation": "score",
+      "input": [
+        6076,
+        "1951-04-29",
+        6130,
+        6076,
+        1,
+        1
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 193520,
+      "root": 6076,
+      "mutation": "root",
+      "input": [
+        4240,
+        "1951-04-29",
+        6130,
+        6076,
+        0,
+        1
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 666654,
+      "root": 6076,
+      "mutation": "date",
+      "input": [
+        6076,
+        "2014-05-08",
+        4691,
+        6076,
+        1,
+        2
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 666654,
+      "root": 6076,
+      "mutation": "orientation",
+      "input": [
+        6076,
+        "2014-05-07",
+        6076,
+        4691,
+        1,
+        2
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 666654,
+      "root": 6076,
+      "mutation": "opponent",
+      "input": [
+        6076,
+        "2014-05-07",
+        -1,
+        6076,
+        1,
+        2
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 666654,
+      "root": 6076,
+      "mutation": "score",
+      "input": [
+        6076,
+        "2014-05-07",
+        4691,
+        6076,
+        2,
+        2
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 666654,
+      "root": 6076,
+      "mutation": "root",
+      "input": [
+        4240,
+        "2014-05-07",
+        4691,
+        6076,
+        1,
+        2
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 666477,
+      "root": 6076,
+      "mutation": "date",
+      "input": [
+        6076,
+        "2014-05-18",
+        6130,
+        6076,
+        1,
+        3
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 666477,
+      "root": 6076,
+      "mutation": "orientation",
+      "input": [
+        6076,
+        "2014-05-17",
+        6076,
+        6130,
+        1,
+        3
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 666477,
+      "root": 6076,
+      "mutation": "opponent",
+      "input": [
+        6076,
+        "2014-05-17",
+        -1,
+        6076,
+        1,
+        3
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 666477,
+      "root": 6076,
+      "mutation": "score",
+      "input": [
+        6076,
+        "2014-05-17",
+        6130,
+        6076,
+        2,
+        3
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 666477,
+      "root": 6076,
+      "mutation": "root",
+      "input": [
+        4240,
+        "2014-05-17",
+        6130,
+        6076,
+        1,
+        3
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 465975,
+      "root": 4245,
+      "mutation": "date",
+      "input": [
+        4245,
+        "1981-04-08",
+        4685,
+        4245,
+        0,
+        1
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 465975,
+      "root": 4245,
+      "mutation": "orientation",
+      "input": [
+        4245,
+        "1981-04-07",
+        4245,
+        4685,
+        0,
+        1
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 465975,
+      "root": 4245,
+      "mutation": "opponent",
+      "input": [
+        4245,
+        "1981-04-07",
+        -1,
+        4245,
+        0,
+        1
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 465975,
+      "root": 4245,
+      "mutation": "score",
+      "input": [
+        4245,
+        "1981-04-07",
+        4685,
+        4245,
+        1,
+        1
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 465975,
+      "root": 4245,
+      "mutation": "root",
+      "input": [
+        4240,
+        "1981-04-07",
+        4685,
+        4245,
+        0,
+        1
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 735535,
+      "root": 4245,
+      "mutation": "date",
+      "input": [
+        4245,
+        "2023-12-10",
+        12647,
+        4245,
+        1,
+        4
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 735535,
+      "root": 4245,
+      "mutation": "orientation",
+      "input": [
+        4245,
+        "2023-12-09",
+        4245,
+        12647,
+        1,
+        4
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 735535,
+      "root": 4245,
+      "mutation": "opponent",
+      "input": [
+        4245,
+        "2023-12-09",
+        -1,
+        4245,
+        1,
+        4
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 735535,
+      "root": 4245,
+      "mutation": "score",
+      "input": [
+        4245,
+        "2023-12-09",
+        12647,
+        4245,
+        2,
+        4
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 735535,
+      "root": 4245,
+      "mutation": "root",
+      "input": [
+        4240,
+        "2023-12-09",
+        12647,
+        4245,
+        1,
+        4
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 666475,
+      "root": 6128,
+      "mutation": "date",
+      "input": [
+        6128,
+        "2014-05-18",
+        4238,
+        6128,
+        0,
+        1
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 666475,
+      "root": 6128,
+      "mutation": "orientation",
+      "input": [
+        6128,
+        "2014-05-17",
+        6128,
+        4238,
+        0,
+        1
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 666475,
+      "root": 6128,
+      "mutation": "opponent",
+      "input": [
+        6128,
+        "2014-05-17",
+        -1,
+        6128,
+        0,
+        1
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 666475,
+      "root": 6128,
+      "mutation": "score",
+      "input": [
+        6128,
+        "2014-05-17",
+        4238,
+        6128,
+        1,
+        1
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    },
+    {
+      "witness_match_id": 666475,
+      "root": 6128,
+      "mutation": "root",
+      "input": [
+        4240,
+        "2014-05-17",
+        4238,
+        6128,
+        0,
+        1
+      ],
+      "actual_exact_matches": 0,
+      "expected_exact_matches": 0,
+      "passed": true
+    }
+  ],
+  "qualified_roots": [
+    4240,
+    4238,
+    4233,
+    6076,
+    4245
+  ],
+  "withheld_roots": [
+    6128
+  ],
+  "lyon_pre1950_rows": 34,
+  "production_writes": 0
+}

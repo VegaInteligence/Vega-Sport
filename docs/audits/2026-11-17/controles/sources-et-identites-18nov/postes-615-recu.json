@@ -1,0 +1,60 @@
+{
+  "zip": "postes-615-20261118.zip",
+  "sha256": "4fca8c415a076cb96b83c4630e7a849bee4cc3520a50c230c4a0848cc5b4cf07",
+  "octets": 104631,
+  "archive_members": 25,
+  "command": "python3 -I -B verify.py",
+  "python": "3.14.6",
+  "independent_rebuild": "same bytes",
+  "linked_local_files": 21,
+  "replay": {
+    "verification": "OK",
+    "fichiers_verifies": 24,
+    "participations": 2914,
+    "sans_role": 615,
+    "editions": 69,
+    "joueurs": 131,
+    "matchs": 587,
+    "chronologie": {
+      "futur_seul": 150,
+      "aucun_temoin_autre_annee": 441,
+      "anterieur_et_futur": 9,
+      "anterieur_seul": 15
+    },
+    "preuves_lfp": 8,
+    "homonymes": 18,
+    "avec_deux_lignes_positives": 4,
+    "candidats_nominaux": 313
+  },
+  "lookups": {
+    "126697": {
+      "rows": 1,
+      "statuses": [
+        "erreur_acteur_attestee"
+      ]
+    },
+    "45927": {
+      "rows": 18,
+      "statuses": [
+        "homonymes_distincts_attestes"
+      ]
+    }
+  },
+  "negative_controls": {
+    "unsigned_mutation": {
+      "exit_code": 1,
+      "last_message": "AssertionError: empreinte lecture-615.csv",
+      "failing_line": "assert hashlib.sha256((D/n).read_bytes()).hexdigest()==h, 'empreinte '+n"
+    },
+    "wrong_lfp_actor_with_updated_digest": {
+      "exit_code": 1,
+      "last_message": "AssertionError",
+      "failing_line": "assert f['player_id']==511296 and f['shirt']==29 and f['position']==4 and f['played']"
+    },
+    "false_asof_with_updated_digest": {
+      "exit_code": 1,
+      "last_message": "AssertionError",
+      "failing_line": "assert angles[k]==interpretation(decisions[k],prior,future)"
+    }
+  }
+}
