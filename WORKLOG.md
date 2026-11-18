@@ -144,13 +144,17 @@
 ## Player page — transfers on the market value curve (18 Nov 2026, scratchpad worktree `wt`, branch `claude/player-transfers`)
 
 - Ask (18 Nov): on « Carrière et marché », the value curve shows, at each transfer's date, the crest of the club the player joins; for every player, not Giroud alone.
-- Found: the card already draws club markers from a `clubName` on each valuation, which the API never served; the base holds the transfers (`core.player_transfers`) and each valuation's club (reader, 114), and no route served them.
-- Built: migration 135 (`api.player_transfers`, `api.player_transfer_reads`, the club columns of `api.player_market_values`), `GET /api/players/{id}/transfers`, `club` on each row of `/api/player-market-values`. Contract test written first (`e67b19fca9`): 3 of its 4 tests red before the route; API 186/186 on a local PostgreSQL 18 (binaries from npm, in the scratchpad).
-- Mockup validated 18 Nov (« Je valide et tu peux push sur Vega, c'est très bien. »): scratchpad `ab654013…/mock/` (`mock-*.png`, `maquette-transferts.html`). Direction shown:
-  - a crest badge above the curve, on a stem down to the transfer's date; a badge that would cover another is raised;
-  - the club of the first valuation at the curve's start;
-  - a return from loan followed by a new departure within 92 days stays in the list only;
-  - every move listed under the chart; a club without a crest as initials; moves inside a club left out.
-- Not known: how many players have their transfers read in production (no public route before 135 is deployed); the provider's pseudo-clubs (« Without Club », « Retired ») are to be checked on real rows before the frontend.
+- Found: the card drew club markers from a `clubName` on each valuation, which the API never served; the base holds the transfers (`core.player_transfers`) and each valuation's club (reader, 114), and no route served them.
+- Mockup validated 18 Nov (« Je valide et tu peux push sur Vega, c'est très bien. »): scratchpad `ab654013…/mock/`.
+- API (migration 135, views only): `GET /api/players/{id}/transfers` (the transfers made, oldest first; 404 until read), `club` on each row of `/api/player-market-values`. A club of ours carries its id, our name and its crest; another one the provider's name; a name that is no club (the reader's `NO_CLUB`: « Without Club », « Retired »…) is null.
+- Site, as validated:
+  - a crest badge above the curve on a stem at the transfer's date; the club of the first valuation at the curve's start; a move after the last valuation extends the curve, dashed;
+  - listed only: a return from loan followed by another move within 92 days, and all but the last move of one day; never shown: moves inside a club, a destination that is no club;
+  - transfers not read: each club at the first valuation made there, said to be an estimate;
+  - the list of moves under the chart; the same clubs on the report's value image.
+- Decided while building (not in the mockup): badges close in time are raised and the chart grows by what the stack needs (the E2E found three moves of one winter covering each other when held inside the drawing); the dashed extension.
+- Rules: `services/career-moves.js`; badge placement: `services/curve-badges.js`; tests written first (`tests/player-transfer-curve.test.mjs`, `tests/report-data.test.mjs`, `backend/api/test/player-transfers.test.mjs`).
+- Validated locally: API 187/187 and Python 430 OK on a local PostgreSQL 18; site tests 720/720; build; 111 E2E checks on the built site (nine scenarios, the routes stubbed as 135 answers). CI green on the branch for the API (run 44360788993). Evidence: scratchpad `ab654013…/evidence/transfers-ui/EVIDENCE.md` and `evidence/api-transfers/EVIDENCE.md`.
+- Not verified: real transfers. 135 is not deployed: the page stays as before until the Deploy run (`gh workflow run deploy.yml --ref main`, on the user's explicit word or by his hand). How many players have their transfers read is not known before that.
 - Linear: overlap check not done (the connector opens another workspace; nothing is written there).
-- Next action: push 135 and the route to main (the user's word covers the push; the Deploy run needs his explicit word or his hand); the frontend as validated, tests first, E2E with evidence; real transfers measured through the route once it is deployed.
+- Next action: after the Deploy run, the same E2E against production with nothing stubbed (`LIVE=1`), and a look at real rows (provider names, coverage).
