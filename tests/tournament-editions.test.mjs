@@ -26,18 +26,28 @@
 //     third-place outcomes 4, final 5, title 6; an unknown stage leaves the gauge empty.
 // 10. The runs by competition, each with its own medals: a nation's titles are counted in the competition they were
 //     won in, so the Euros the base does not hold (before 2020) are never implied by a World Cup's count.
-// 11. A national team's name in French whatever the edition's year (the flag alone is withheld before 1994), the home
+// 11. A national team's name in French whatever the edition's year, the home
 //     nations and the teams of the past included; a fixture's placeholder (« Winner Match 45 ») is left as it is.
 //     The same team under two spellings (« Italy », « Italie ») is one team; two unknown names are compared as text.
 // 12. The groups of an edition: one table per group the source names, in order; 1950's final round, which has no
-//     group name, is the « Poule finale »; an edition without groups (1934) has no table.
+//     group name, is the « Poule finale »; an edition without groups (1934) has no table. A World Cup win before 1994 is worth two
+//     points per its edition; a group with no identified edition gives no points or positions.
+// 13. Flags of the old editions (the user, 18 Nov 2026: « n'hésite pas à mettre les drapeaux »; before, an edition
+//     earlier than 1994 showed none). A country that exists today has its flag whatever the year. A team of the past
+//     has the flag it played under: West Germany's and Czechoslovakia's are their successors', the Dutch East Indies
+//     played under the Netherlands'; the Soviet Union, East Germany and Zaire have a drawing of their own; Yugoslavia
+//     has the kingdom's plain tricolour in 1930, the star from 1946 to 1991, the plain tricolour again up to 2006
+//     (Serbia and Montenegro too) and none after, nor without a year (which flag is not known). A placeholder or an
+//     unknown name has none. Every code the archives' teams get has an image: the flag library's, or the site's own
+//     style, never an empty box.
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import { groupTables, normalizeOpenCup } from "../dashboard/frontend/src/services/cup-matches.js";
 import { bracketSides, buildKnockoutBracket, knockoutStage, mergeCupReplays } from "../dashboard/frontend/src/services/knockout-bracket.js";
 import { WORLD_CUP_ARCHIVE_ID, WORLD_CUP_ID, competitionEditions, tournamentEdition } from "../dashboard/frontend/src/services/cup-catalog.js";
 import { runDepth, runsByTournament } from "../dashboard/frontend/src/services/tournament-runs.js";
-import { nationalTeamLabel, sameNationalTeam } from "../dashboard/frontend/src/services/national-flags.js";
+import { nationalFlagCode, nationalTeamLabel, nationalTeamName, sameNationalTeam } from "../dashboard/frontend/src/services/national-flags.js";
 
 const open = (round, team1, team2, score, extra = {}) => ({ round, team1, team2, ...(score ? { score } : {}), ...extra });
 const ft = (a, b) => ({ ft: [a, b] });
@@ -212,6 +222,36 @@ test("12. the groups of an edition, 1950's final round included", () => {
   assert.deepEqual(tables.map((t) => t.name), ["Groupe 1", "Groupe 2", "Poule finale"]);
   assert.ok(tables[0].rows.every((r) => r.position === null && r.points === null));
   assert.deepEqual(tables[2].rows.map((r) => r.name).sort(), ["Brazil", "Spain", "Sweden", "Uruguay"]);
+  // The page identifies the edition; both winning teams hold two points.
+  const historical = groupTables(rows, { competition: "world-cup-history", season: "1950" });
+  assert.deepEqual(historical[0].rows.map((r) => [r.name, r.points]), [["France", 2], ["Argentina", 2], ["Mexico", 0]]);
   assert.deepEqual(groupTables(normalizeOpenCup([open("Quarter-finals", "Italy", "Spain", ft(1, 0))])), []);
   assert.deepEqual(groupTables(undefined), []);
+});
+
+test("13. the flags of the old editions", () => {
+  const flag = (name, year) => nationalFlagCode(name, year);
+  assert.deepEqual([flag("Spain", "1950"), flag("Brazil", "1958"), flag("France", "1930"), flag("Netherlands", "1974"), flag("Germany", "1938"), flag("England", "1966")], ["es", "br", "fr", "nl", "de", "gb-eng"]);
+  assert.deepEqual([flag("West Germany", "1974"), flag("Czechoslovakia", "1962"), flag("Dutch East Indies", "1938")], ["de", "cz", "nl"]);
+  assert.deepEqual([flag("Soviet Union", "1966"), flag("East Germany", "1974"), flag("Zaire", "1974")], ["su", "dd", "zr"]);
+  assert.deepEqual(["1930", "1950", "1990", "1998", "2018", ""].map((year) => flag("Yugoslavia", year)), ["yu-1992", "yu-1946", "yu-1946", "yu-1992", null, null]);
+  assert.deepEqual([flag("Serbia and Montenegro", "2006"), flag("Serbia and Montenegro", "2010")], ["yu-1992", null]);
+  assert.deepEqual([flag("Winner Match 45", "2028"), flag("Unknown", "1954"), flag("", "1954")], [null, null, null]);
+  // A team of the past keeps its own name and is not its successor.
+  assert.equal(nationalTeamLabel("West Germany"), "Allemagne de l’Ouest");
+  assert.equal(sameNationalTeam("West Germany", "Germany"), false);
+  // Its flag's code is its successor's: the name read through the flag (the match pages) must not become « Allemagne ».
+  assert.equal(nationalTeamName("West Germany", "1974"), "Allemagne de l’Ouest");
+  assert.equal(nationalTeamName("Czechoslovakia", "1962"), "Tchécoslovaquie");
+  assert.equal(nationalTeamName("Spain", "1950"), "Espagne");
+  // Every code has an image.
+  const root = new URL("../dashboard/", import.meta.url);
+  const css = fs.readFileSync(new URL("frontend/src/competition-selector.css", root), "utf8");
+  const teams = ["Spain", "West Germany", "East Germany", "Soviet Union", "Czechoslovakia", "Yugoslavia", "Zaire", "Dutch East Indies", "Serbia and Montenegro", "Northern Ireland", "Wales", "Cuba", "Haiti", "Kuwait", "North Korea", "Israel", "El Salvador", "Bulgaria"];
+  for (const name of teams) for (const year of ["1930", "1958", "1974", "1990", "2006"]) {
+    const code = flag(name, year);
+    if (!code) continue;
+    const drawn = css.includes(`.fi.national-flag.fi-${code} {`);
+    assert.ok(drawn || fs.existsSync(new URL(`node_modules/flag-icons/flags/4x3/${code}.svg`, root)), `${name} ${year}: ${code} has no image`);
+  }
 });
