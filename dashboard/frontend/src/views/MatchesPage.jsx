@@ -16,6 +16,7 @@ import {
 } from "../services/match-resources.js";
 import { ResearchLists, useHasSaved } from "../components/ResearchUI.jsx";
 import PaginatedMatches from "../components/PaginatedMatches.jsx";
+import WorldCupArchiveMatch from "../components/WorldCupArchiveMatch.jsx";
 function RemoteDetail({ id }) {
   const f = useFootball(),
     resource = useResource(
@@ -35,7 +36,9 @@ export default function MatchesPage() {
   const f = useFootball(),
     [page, setPage] = useState(1),
     search = useSearchParams(),
-    id = search.get("id"),
+    // An archived World Cup match (its key in the Fjelstul World Cup Database): its own page.
+    archived = search.get("cdm"),
+    id = search.get("id") || archived,
     hasSaved = useHasSaved("matches"),
     tab = search.get("tab"),
     saved = tab === "saved" || (!tab && hasSaved),
@@ -46,7 +49,7 @@ export default function MatchesPage() {
     current = Math.min(page, pages);
   return (
     <Layout
-      path="/matchs/"
+      path={archived ? "/competitions/" : "/matchs/"}
       title="Calendrier"
       filters={!id && !saved}
       filterKind={upcoming || f.pagedMatches ? "fixtures" : "performances"}
@@ -80,7 +83,9 @@ export default function MatchesPage() {
         )
       }
     >
-      {id ? (
+      {archived ? (
+        <WorldCupArchiveMatch matchKey={archived} />
+      ) : id ? (
         <>
           {selected ? (
             <MatchDetail key={selected.id} match={selected} />
