@@ -138,8 +138,7 @@
   - These World Cups had no quarter-finals: a bracket whose first round is played between group winners alone starts from those groups (1930; the second round of 1974, 1978, 1982); 1950's final round is its bracket (`bracketGroups`, `finalGroup`).
   - Every tie of 2026 and 2022 opens its match page: a tie's collected match is found within a day and under either spelling (8 of 2026's 32 ties did not open).
   - CI green on each branch before main; 47 E2E checks pass on vegasport.vercel.app.
-- Open, the user's decision: match pages with line-ups for the archive (1930–2018) and the Euros. The base holds none (OpenFootball: stadiums, scorers for some editions). A candidate was read: the Fjelstul World Cup Database (GitHub, CC-BY-SA 4.0: attribution and share-alike; line-ups from 1970, goals, cards, referees, stadiums, 1930–2022; no Euro). It needs a source decision, a schema, a reader, a route and a page's mock-up.
-- Next action: the user's answer on that source; nothing else pending.
+- Decided by the user, 18 Nov (« c'est bien. Tu peux prendre cette data-là … tu la scrapes, tu la mets dans une base de données »): the Fjelstul World Cup Database, see the next section. The Euros stay without line-ups (no source).
 
 ## Player page — transfers on the market value curve (18 Nov 2026, scratchpad worktree `wt`, branch `claude/player-transfers`)
 
@@ -166,3 +165,20 @@
 - Left as they are: a club we do not hold shows its initials (« Tours FC », « Real Madrid Castilla »); a youth side named outside the reader's pattern (« Boavista FC CJ », « SC Salgueiros Y15 ») is still listed; touch was run in Chromium's emulation only.
 - Linear: overlap check not done (the connector opens another workspace; nothing is written there).
 - Next action: none; the reader reaches the remaining players on its own schedule.
+
+## World Cup details — the Fjelstul World Cup Database in the base (18 Nov 2026, scratchpad worktree `e6ee2704…/wt`, branch `claude/worldcup-details`)
+
+- Goal (user, 18 Nov): every World Cup match clickable with its details (line-ups…). The base held none for the archive (1930–2018). The user chose this source and asked for it in the base. This step is the data; the route and the match page come after (mock-up first).
+- Source, read on its files: github.com/jfjelstul/worldcup at commit `35a8667f…` (11 June 2026), CC-BY-SA 4.0 (attribution and share-alike: the user was told and said yes). 30 tournaments (22 men's 1930–2022, 8 women's); stadium, referee, managers and scorers of every match; line-ups, cards and substitutions from 1970 only; squads; awards.
+- Design (reviewed by an adviser agent, Opus, read-only; its points checked in the code before use):
+  - its own typed tables `core.worldcup_*` (137), provider `fjelstul` (136); nothing written to `core.players`, `core.teams` or the base's line-ups: its people are its own;
+  - the one link is a match's (`worldcup_matches.match_id`, cleared by itself when the archive replaces the match, made again at the next run);
+  - 17 of the 27 files, each pinned by its SHA-256: a file that differs writes nothing; a later run reads no file;
+  - the credit is the row `fjelstul-worldcup` of `core.source_revisions` (the existing table, not a new one);
+  - kept against the adviser's advice: 2022 is paired too (the pair states which match it is; serving is the route's choice, and the site opens the collected match there).
+- Measured before writing (read-only): with four reviewed spellings (United States/USA, Republic of Ireland/Ireland, Ivory Coast/Côte d'Ivoire, Bosnia and Herzegovina/Bosnia-Herzegovina) the 964 men's matches each pair with exactly one archived match, the scores agree on all; the one archived match without a pair is Sweden–Austria 1938 (a walkover).
+- Validated locally: tests first (`backend/tests/test_sources.py`, samples in `worldcup_samples.py`); Python 435 OK and API 187/187 on a local PostgreSQL 18; a full rehearsal on a disposable base with the real files and the 22 real archived editions: 75,669 rows in 2.5 s under the collect role, 964 of 964 paired, 0 score differing, nothing written to the base's players; the worker's own HTTP client reads the 17 pinned files (largest 4.7 MB of 8 allowed). Evidence: scratchpad `evidence/worldcup-database/`.
+- Not done: nothing is served yet (no route, no page); the site's « Licences » text must name this source as soon as a page shows its rows.
+- Deploy: migrations 136 and 137 and the reader reach the base only with a Deploy run (135, the other session's, is deployed since 18:18 UTC: nothing else rides along).
+- Linear: overlap check not done (the connector opens another workspace; nothing is written there).
+- Next action: CI on the branch, main, then the Deploy run on the user's word; after it, the counts in production (75,669 rows, 964 pairs).
