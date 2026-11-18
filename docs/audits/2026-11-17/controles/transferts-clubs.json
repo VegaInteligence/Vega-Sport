@@ -1,0 +1,32 @@
+{
+ "at": "2026-11-18 00:29:45.804575+00:00",
+ "database": "vega_v2",
+ "columns": [
+  "event_rows",
+  "missing_source_key",
+  "repeated_player_source_key",
+  "repeated_any_source_key",
+  "both_resolved",
+  "one_resolved",
+  "neither_resolved",
+  "missing_raw_side",
+  "missing_map_with_both_source_sides",
+  "pending_in_past",
+  "future_marked_completed"
+ ],
+ "rows": [
+  [
+   6864,
+   0,
+   0,
+   0,
+   2937,
+   1859,
+   2068,
+   0,
+   3927,
+   0,
+   0
+  ]
+ ]
+}

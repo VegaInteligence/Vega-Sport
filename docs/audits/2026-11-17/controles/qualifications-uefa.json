@@ -1,0 +1,37 @@
+{
+  "earlier_dataset": "2026-11-18 00:07:31.900180+00:00",
+  "newer_dataset": "2026-11-18 00:12:13.134316+00:00",
+  "registry": 11871,
+  "raw_revisions": 18,
+  "vega_fixtures_since_june_2021_any_competition": 97435,
+  "covers_through": "2028-07-09",
+  "db_counts": [
+    {
+      "all_matches": 588781,
+      "no_date_or_kickoff": 1424,
+      "undated_recent_season": 0
+    }
+  ],
+  "totals": {
+    "TOURNAMENT": {
+      "official": 2478,
+      "both_teams_seen": 2478,
+      "exact_global_candidate": 2474,
+      "adjacent_or_exact": 2475,
+      "one_team_seen": 0,
+      "extra_candidates": 0,
+      "numeric_match_code": 0
+    },
+    "QUALIFYING": {
+      "official": 2489,
+      "both_teams_seen": 1481,
+      "one_team_seen": 790,
+      "exact_global_candidate": 0,
+      "adjacent_or_exact": 0,
+      "extra_candidates": 0,
+      "numeric_match_code": 0
+    }
+  },
+  "memberships_reached": 326,
+  "official_distinct_clubs": 443
+}

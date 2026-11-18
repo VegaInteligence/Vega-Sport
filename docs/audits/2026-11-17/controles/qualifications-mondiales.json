@@ -1,0 +1,179 @@
+{
+  "rds_time": "2026-11-18 00:07:31.900180+00:00",
+  "rds_teams_with_aliases": 11871,
+  "rds_editions": 2149,
+  "all_rds_fixtures_20190604_to_20260403": 91553,
+  "both_typed_national": 531,
+  "rds_both_sides_mapped_to_potential_nations": 522,
+  "rds_unlinked_at_least_one_side": 109,
+  "fifa_fixtures": 1772,
+  "distinct_association_team_ids": 211,
+  "rds_candidate_pairs_within_one_day": 0,
+  "rds_qualifier_pairs_exact": 0,
+  "candidate_single_side_unrecognized_or_unknown_opponent": 0,
+  "candidate_single_side_distinct_fixtures": 0,
+  "external_qualifier_results_in_date_window": 1767,
+  "external_unrecognized_names": {},
+  "fifa_regular_status": 1755,
+  "control_worldcup2022": {
+    "fifa": 64,
+    "paired_all_types": 64,
+    "with_multiple_rds": 64
+  },
+  "per_edition": [
+    {
+      "scope": "FIFA World Cup 2026™ AFC Qualifiers",
+      "scheduled": 226,
+      "regular_status": 225,
+      "other_status": 1,
+      "both_sides_exact": 0,
+      "both_sides_near": 0,
+      "one_sided_candidates": 0,
+      "other_source_named": 225,
+      "other_source_score_equal": 225
+    },
+    {
+      "scope": "FIFA World Cup 2026™ CAF Qualifiers",
+      "scheduled": 263,
+      "regular_status": 256,
+      "other_status": 7,
+      "both_sides_exact": 0,
+      "both_sides_near": 0,
+      "one_sided_candidates": 0,
+      "other_source_named": 260,
+      "other_source_score_equal": 260
+    },
+    {
+      "scope": "FIFA World Cup 2026™ CONMEBOL Qualifiers",
+      "scheduled": 90,
+      "regular_status": 90,
+      "other_status": 0,
+      "both_sides_exact": 0,
+      "both_sides_near": 0,
+      "one_sided_candidates": 0,
+      "other_source_named": 90,
+      "other_source_score_equal": 90
+    },
+    {
+      "scope": "FIFA World Cup 2026™ Concacaf Qualifiers",
+      "scheduled": 100,
+      "regular_status": 99,
+      "other_status": 1,
+      "both_sides_exact": 0,
+      "both_sides_near": 0,
+      "one_sided_candidates": 0,
+      "other_source_named": 100,
+      "other_source_score_equal": 100
+    },
+    {
+      "scope": "FIFA World Cup 2026™ OFC Qualifiers",
+      "scheduled": 18,
+      "regular_status": 18,
+      "other_status": 0,
+      "both_sides_exact": 0,
+      "both_sides_near": 0,
+      "one_sided_candidates": 0,
+      "other_source_named": 18,
+      "other_source_score_equal": 18
+    },
+    {
+      "scope": "FIFA World Cup 2026™ Play-Off Tournament",
+      "scheduled": 4,
+      "regular_status": 4,
+      "other_status": 0,
+      "both_sides_exact": 0,
+      "both_sides_near": 0,
+      "one_sided_candidates": 0,
+      "other_source_named": 4,
+      "other_source_score_equal": 4
+    },
+    {
+      "scope": "FIFA World Cup 2026™ UEFA Qualifiers",
+      "scheduled": 204,
+      "regular_status": 204,
+      "other_status": 0,
+      "both_sides_exact": 0,
+      "both_sides_near": 0,
+      "one_sided_candidates": 0,
+      "other_source_named": 204,
+      "other_source_score_equal": 204
+    },
+    {
+      "scope": "FIFA World Cup Qatar 2022™ Qualifiers",
+      "scheduled": 2,
+      "regular_status": 2,
+      "other_status": 0,
+      "both_sides_exact": 0,
+      "both_sides_near": 0,
+      "one_sided_candidates": 0,
+      "other_source_named": 2,
+      "other_source_score_equal": 2
+    },
+    {
+      "scope": "Preliminary Competition for the 2022 FWC African Zone",
+      "scheduled": 158,
+      "regular_status": 158,
+      "other_status": 0,
+      "both_sides_exact": 0,
+      "both_sides_near": 0,
+      "one_sided_candidates": 0,
+      "other_source_named": 158,
+      "other_source_score_equal": 158
+    },
+    {
+      "scope": "Preliminary Competition for the 2022 FWC Asian Zone",
+      "scheduled": 230,
+      "regular_status": 224,
+      "other_status": 6,
+      "both_sides_exact": 0,
+      "both_sides_near": 0,
+      "one_sided_candidates": 0,
+      "other_source_named": 230,
+      "other_source_score_equal": 230
+    },
+    {
+      "scope": "Preliminary Competition for the 2022 FWC Concacaf Zone",
+      "scheduled": 118,
+      "regular_status": 118,
+      "other_status": 0,
+      "both_sides_exact": 0,
+      "both_sides_near": 0,
+      "one_sided_candidates": 0,
+      "other_source_named": 118,
+      "other_source_score_equal": 118
+    },
+    {
+      "scope": "Preliminary Competition for the 2022 FWC European Zone",
+      "scheduled": 258,
+      "regular_status": 258,
+      "other_status": 0,
+      "both_sides_exact": 0,
+      "both_sides_near": 0,
+      "one_sided_candidates": 0,
+      "other_source_named": 258,
+      "other_source_score_equal": 258
+    },
+    {
+      "scope": "Preliminary Competition for the 2022 FWC Oceanian Zone",
+      "scheduled": 11,
+      "regular_status": 10,
+      "other_status": 1,
+      "both_sides_exact": 0,
+      "both_sides_near": 0,
+      "one_sided_candidates": 0,
+      "other_source_named": 11,
+      "other_source_score_equal": 11
+    },
+    {
+      "scope": "Preliminary Competition for the 2022 FWC South American Zone",
+      "scheduled": 90,
+      "regular_status": 89,
+      "other_status": 1,
+      "both_sides_exact": 0,
+      "both_sides_near": 0,
+      "one_sided_candidates": 0,
+      "other_source_named": 89,
+      "other_source_score_equal": 89
+    }
+  ]
+}

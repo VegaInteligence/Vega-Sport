@@ -1,0 +1,44 @@
+{
+ "at": "2026-11-18 00:27:58.036944+00:00",
+ "database": "vega_v2",
+ "columns": [
+  "transfer_units",
+  "read_once",
+  "marked_positive",
+  "marked_empty",
+  "marked_404",
+  "latest_event_writes",
+  "first_latest_read",
+  "most_recent",
+  "event_rows",
+  "people",
+  "distinct_source_keys",
+  "pending",
+  "no_date",
+  "unlinked_from",
+  "unlinked_to",
+  "earliest",
+  "latest"
+ ],
+ "rows": [
+  [
+   19731,
+   819,
+   819,
+   0,
+   0,
+   6439,
+   "2026-11-17 23:50:29.467858+00:00",
+   "2026-11-18 00:27:55.763668+00:00",
+   6439,
+   819,
+   6439,
+   92,
+   1,
+   3219,
+   2437,
+   "1998-07-01",
+   "2027-07-01"
+  ]
+ ]
+}

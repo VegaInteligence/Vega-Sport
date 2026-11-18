@@ -1,0 +1,33 @@
+{
+ "at": "2026-11-18 00:03:53.941654+00:00",
+ "database": "vega_v2",
+ "columns": [
+  "id",
+  "kind",
+  "season_id",
+  "status",
+  "started_at",
+  "finished_at",
+  "method_version"
+ ],
+ "rows": [
+  [
+   2089,
+   "players",
+   2021,
+   "published",
+   "2026-11-17 19:47:16.655980+00:00",
+   "2026-11-17 19:48:46.223073+00:00",
+   "power-ranking-v8"
+  ],
+  [
+   2091,
+   "players",
+   2026,
+   "published",
+   "2026-11-18 00:01:09.494553+00:00",
+   "2026-11-18 00:03:25.025155+00:00",
+   "power-ranking-v8"
+  ]
+ ]
+}

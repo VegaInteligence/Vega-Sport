@@ -1,0 +1,632 @@
+{
+  "input_sha256": "ea10f1a3591b30cf2c515a649e54505b70b646aa351faa9677447f8dfa7ea73d",
+  "module_sha256": "e9aeed86f396de8100382bd87624e91a70b4edb292fce95e1bf984be1b5918ec",
+  "postgres": "PostgreSQL 18.6 (Debian 18.6-1.pgdg12+2) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 12.2.0-14+deb12u1) 12.2.0, 64-bit",
+  "initial": [
+    [
+      2106,
+      "1012766",
+      1323
+    ],
+    [
+      2106,
+      "1012767",
+      1322
+    ],
+    [
+      2106,
+      "1075969",
+      1331
+    ],
+    [
+      2106,
+      "1075970",
+      1330
+    ],
+    [
+      2106,
+      "1146335",
+      1321
+    ],
+    [
+      2106,
+      "1146336",
+      1320
+    ],
+    [
+      2106,
+      "1172649",
+      1319
+    ],
+    [
+      2106,
+      "1172650",
+      1318
+    ],
+    [
+      2106,
+      "1410124",
+      1317
+    ],
+    [
+      2106,
+      "1410125",
+      1316
+    ],
+    [
+      2106,
+      "1664251",
+      1315
+    ],
+    [
+      2106,
+      "1664252",
+      1314
+    ],
+    [
+      2106,
+      "1836587",
+      1313
+    ],
+    [
+      2106,
+      "1836588",
+      1312
+    ],
+    [
+      2106,
+      "2158414",
+      1311
+    ],
+    [
+      2106,
+      "3860309",
+      1310
+    ],
+    [
+      2106,
+      "5236225",
+      1309
+    ],
+    [
+      2106,
+      "610692",
+      1332
+    ],
+    [
+      2106,
+      "610693",
+      1329
+    ],
+    [
+      2106,
+      "615785",
+      1328
+    ],
+    [
+      2106,
+      "6559858",
+      1308
+    ],
+    [
+      2106,
+      "6559859",
+      1307
+    ],
+    [
+      2106,
+      "853161",
+      1327
+    ],
+    [
+      2106,
+      "853162",
+      1326
+    ],
+    [
+      2106,
+      "934534",
+      1325
+    ],
+    [
+      2106,
+      "934535",
+      1324
+    ],
+    [
+      11656,
+      "1008004",
+      3768
+    ],
+    [
+      11656,
+      "1069447",
+      3766
+    ],
+    [
+      11656,
+      "1069448",
+      3767
+    ],
+    [
+      11656,
+      "1287056",
+      3765
+    ],
+    [
+      11656,
+      "1287057",
+      3764
+    ],
+    [
+      11656,
+      "1287058",
+      3774
+    ],
+    [
+      11656,
+      "1287059",
+      3775
+    ],
+    [
+      11656,
+      "1544442",
+      3763
+    ],
+    [
+      11656,
+      "1544443",
+      3762
+    ],
+    [
+      11656,
+      "1833689",
+      3761
+    ],
+    [
+      11656,
+      "1872849",
+      3760
+    ],
+    [
+      11656,
+      "1872850",
+      3759
+    ],
+    [
+      11656,
+      "2174067",
+      3758
+    ],
+    [
+      11656,
+      "2174068",
+      3757
+    ],
+    [
+      11656,
+      "2567866",
+      3756
+    ],
+    [
+      11656,
+      "2567867",
+      3755
+    ],
+    [
+      11656,
+      "3012319",
+      3754
+    ],
+    [
+      11656,
+      "3057537",
+      3753
+    ],
+    [
+      11656,
+      "3201700",
+      3752
+    ],
+    [
+      11656,
+      "4459549",
+      3751
+    ],
+    [
+      11656,
+      "477138",
+      3773
+    ],
+    [
+      11656,
+      "477139",
+      3772
+    ],
+    [
+      11656,
+      "601918",
+      3771
+    ],
+    [
+      11656,
+      "601919",
+      3770
+    ],
+    [
+      11656,
+      "6587190",
+      3779
+    ],
+    [
+      11656,
+      "6587191",
+      3778
+    ],
+    [
+      11656,
+      "6587192",
+      3777
+    ],
+    [
+      11656,
+      "6587193",
+      3776
+    ],
+    [
+      11656,
+      "743019",
+      3769
+    ]
+  ],
+  "outcomes": {
+    "missing": {
+      "requests": [
+        [
+          "/transfer/history/player/110864",
+          404,
+          null
+        ],
+        [
+          "/transfer/history/player/154319",
+          404,
+          null
+        ],
+        [
+          "/transfer/history/player/110864",
+          404,
+          null
+        ],
+        [
+          "/transfer/history/player/154319",
+          404,
+          null
+        ]
+      ],
+      "passes": [
+        {
+          "reader": {
+            "Sam Johnstone": "ok",
+            "André Geraldes": "ok"
+          },
+          "count": 0,
+          "stable_keys_and_ids": false,
+          "sports_rows": [],
+          "queue": [
+            [
+              "110864",
+              200,
+              null,
+              0
+            ],
+            [
+              "154319",
+              200,
+              null,
+              0
+            ]
+          ]
+        },
+        {
+          "reader": {
+            "Sam Johnstone": "ok",
+            "André Geraldes": "ok"
+          },
+          "count": 0,
+          "stable_keys_and_ids": false,
+          "sports_rows": [],
+          "queue": [
+            [
+              "110864",
+              200,
+              null,
+              0
+            ],
+            [
+              "154319",
+              200,
+              null,
+              0
+            ]
+          ]
+        }
+      ]
+    },
+    "empty": {
+      "requests": [
+        [
+          "/transfer/history/player/110864",
+          200,
+          {
+            "history": {
+              "terminated": [],
+              "pending": []
+            }
+          }
+        ],
+        [
+          "/transfer/history/player/154319",
+          200,
+          {
+            "history": {
+              "terminated": [],
+              "pending": []
+            }
+          }
+        ],
+        [
+          "/transfer/history/player/110864",
+          200,
+          {
+            "history": {
+              "terminated": [],
+              "pending": []
+            }
+          }
+        ],
+        [
+          "/transfer/history/player/154319",
+          200,
+          {
+            "history": {
+              "terminated": [],
+              "pending": []
+            }
+          }
+        ]
+      ],
+      "passes": [
+        {
+          "reader": {
+            "Sam Johnstone": "ok",
+            "André Geraldes": "ok"
+          },
+          "count": 0,
+          "stable_keys_and_ids": false,
+          "sports_rows": [],
+          "queue": [
+            [
+              "110864",
+              200,
+              null,
+              0
+            ],
+            [
+              "154319",
+              200,
+              null,
+              0
+            ]
+          ]
+        },
+        {
+          "reader": {
+            "Sam Johnstone": "ok",
+            "André Geraldes": "ok"
+          },
+          "count": 0,
+          "stable_keys_and_ids": false,
+          "sports_rows": [],
+          "queue": [
+            [
+              "110864",
+              200,
+              null,
+              0
+            ],
+            [
+              "154319",
+              200,
+              null,
+              0
+            ]
+          ]
+        }
+      ]
+    },
+    "partial": {
+      "requests": [
+        [
+          "/transfer/history/player/110864",
+          200,
+          {
+            "history": {
+              "terminated": [
+                {
+                  "id": "610692",
+                  "transferSource": {
+                    "clubId": "5242"
+                  },
+                  "transferDestination": {
+                    "clubId": "985"
+                  },
+                  "details": {
+                    "date": "2011-07-01",
+                    "season": {
+                      "display": "11/12"
+                    },
+                    "isPending": false
+                  }
+                }
+              ],
+              "pending": []
+            }
+          }
+        ],
+        [
+          "/transfer/history/player/154319",
+          200,
+          {
+            "history": {
+              "terminated": [
+                {
+                  "id": "6587190",
+                  "transferSource": {
+                    "clubId": "59937"
+                  },
+                  "transferDestination": {
+                    "clubId": "56765"
+                  },
+                  "details": {
+                    "date": "2004-07-01",
+                    "season": {
+                      "display": "04/05"
+                    },
+                    "isPending": false
+                  }
+                }
+              ],
+              "pending": []
+            }
+          }
+        ],
+        [
+          "/transfer/history/player/110864",
+          200,
+          {
+            "history": {
+              "terminated": [
+                {
+                  "id": "610692",
+                  "transferSource": {
+                    "clubId": "5242"
+                  },
+                  "transferDestination": {
+                    "clubId": "985"
+                  },
+                  "details": {
+                    "date": "2011-07-01",
+                    "season": {
+                      "display": "11/12"
+                    },
+                    "isPending": false
+                  }
+                }
+              ],
+              "pending": []
+            }
+          }
+        ],
+        [
+          "/transfer/history/player/154319",
+          200,
+          {
+            "history": {
+              "terminated": [
+                {
+                  "id": "6587190",
+                  "transferSource": {
+                    "clubId": "59937"
+                  },
+                  "transferDestination": {
+                    "clubId": "56765"
+                  },
+                  "details": {
+                    "date": "2004-07-01",
+                    "season": {
+                      "display": "04/05"
+                    },
+                    "isPending": false
+                  }
+                }
+              ],
+              "pending": []
+            }
+          }
+        ]
+      ],
+      "passes": [
+        {
+          "reader": {
+            "Sam Johnstone": "ok",
+            "André Geraldes": "ok"
+          },
+          "count": 2,
+          "stable_keys_and_ids": false,
+          "sports_rows": [
+            [
+              2106,
+              "610692",
+              3780
+            ],
+            [
+              11656,
+              "6587190",
+              3781
+            ]
+          ],
+          "queue": [
+            [
+              "110864",
+              200,
+              null,
+              1
+            ],
+            [
+              "154319",
+              200,
+              null,
+              1
+            ]
+          ]
+        },
+        {
+          "reader": {
+            "Sam Johnstone": "ok",
+            "André Geraldes": "ok"
+          },
+          "count": 2,
+          "stable_keys_and_ids": false,
+          "sports_rows": [
+            [
+              2106,
+              "610692",
+              3782
+            ],
+            [
+              11656,
+              "6587190",
+              3783
+            ]
+          ],
+          "queue": [
+            [
+              "110864",
+              200,
+              null,
+              1
+            ],
+            [
+              "154319",
+              200,
+              null,
+              1
+            ]
+          ]
+        }
+      ]
+    }
+  },
+  "protected": false,
+  "original_loss": true
+}
