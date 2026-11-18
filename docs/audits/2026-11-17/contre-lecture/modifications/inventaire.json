@@ -1,5 +1,5 @@
 {
-  "base": "fc0deba100288117b0ea122e7199d1c9db9dcc37",
+  "base": "0e6b2ab35301a9df5d94e86f10affcdf7d1997ad",
   "application_paths": [
     "backend/Dockerfile",
     "backend/Dockerfile.dockerignore",
@@ -179,12 +179,12 @@
     "tests/tournament-editions.test.mjs",
     "tests/tournament-rules.test.mjs"
   ],
-  "application_diff_sha256": "5cbfb321ca6b9c19c5eed1b7605f94e5ddc9f89b35e33810b38789e190849486",
+  "application_diff_sha256": "65595b121efa83e2a6857ed53dab684aec9eb1ff1f7800b28a0f2d5a7d1be84b",
   "parts": [
     {
       "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-001.patch",
-      "sha256": "9d91216558ef36c3b405f0838037d4d5d9849353b929f89d72655808a9823984",
-      "bytes": 114679,
+      "sha256": "0f299e8231fea9f37ea6106f1d55c2dc6bdfe8c4f9f614950679d2bc36ee5efb",
+      "bytes": 111418,
       "paths": [
         "backend/Dockerfile",
         "backend/Dockerfile.dockerignore",
@@ -208,15 +208,15 @@
         "backend/api/test/players.test.mjs",
         "backend/api/test/seed.py",
         "backend/archives/builders/build_footballcsv_history.py",
-        "backend/archives/builders/build_historical_goals.py",
-        "backend/archives/builders/build_openfootball_history.py"
+        "backend/archives/builders/build_historical_goals.py"
       ]
     },
     {
       "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-002.patch",
-      "sha256": "ef86f386ae15774719a8f9a7b14e569536a7817227fb82018f537e81752f1f44",
-      "bytes": 113437,
+      "sha256": "90f1ec8ba452c828a69a52690c9c10d4108454002a181a7e5a85612e9607ebc2",
+      "bytes": 114863,
       "paths": [
+        "backend/archives/builders/build_openfootball_history.py",
         "backend/archives/edition.mjs",
         "backend/ci/test_databases.py",
         "backend/sources/projections/open-cups.mjs",
@@ -237,15 +237,15 @@
         "backend/sql/145_dfb_period_observations.sql",
         "backend/sql/146_world_cup_family_artwork.sql",
         "backend/sql/147_j1_standings_observation.sql",
-        "backend/sql/148_attested_archive_scores.sql",
-        "backend/sql/149_validate_archive_attestation.sql"
+        "backend/sql/148_attested_archive_scores.sql"
       ]
     },
     {
       "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-003.patch",
-      "sha256": "24a03b6d71909e6ee62ea52e974ebd9b468fa1448fc71b9c83a23eed867b3e56",
-      "bytes": 16300,
+      "sha256": "55d07bebe21cde94eaf5c5655630a8618004ec6ea8940007b735474990d72a8b",
+      "bytes": 19017,
       "paths": [
+        "backend/sql/149_validate_archive_attestation.sql",
         "backend/sql/150_sportscore_standings_quarantine.sql",
         "backend/sql/151_snapshot_match_ownership.sql",
         "backend/tests/cup_samples.py",
@@ -286,8 +286,8 @@
     },
     {
       "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-007.patch",
-      "sha256": "c01875ca21b1785a9d48c35a799cb6aae598f9d085dc1371ede64c748af295e4",
-      "bytes": 102176,
+      "sha256": "f498e213fe27455df0ea7b9393b30be1adf80376738c7e734dbdd433223bea2d",
+      "bytes": 103289,
       "paths": [
         "backend/tests/fixtures/openligadb/dfb-oracle.csv",
         "backend/tests/fixtures/openligadb/manifest.json",
@@ -299,7 +299,7 @@
     },
     {
       "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-008.patch",
-      "sha256": "dc76747371a6bcefb155d4ce72839f46bc06fdb6cc4c1827204d9c0d356cce0d",
+      "sha256": "f9bca773d55bf565ec44c63e76d8f96ae0d7216be5229d273a4f19fa1d632793",
       "bytes": 112097,
       "paths": [
         "backend/tests/test_archive_corrections.py",
@@ -312,30 +312,37 @@
     },
     {
       "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-009.patch",
-      "sha256": "fbe12f3651a91b249da8a9dbfeb89dd89b256805b2af1ef5740e00bda8840001",
-      "bytes": 109660,
+      "sha256": "c427c50e250ac1d685f8d4f66be37925d04ff4a85eea62407786a3c978733a3c",
+      "bytes": 89143,
       "paths": [
         "backend/tests/test_calculator.py",
         "backend/tests/test_dfb_periods.py",
         "backend/tests/test_live.py",
         "backend/tests/test_source_identity.py",
-        "backend/tests/test_source_snapshots.py",
-        "backend/tests/test_sources.py",
-        "backend/tests/test_sportscore_standings.py"
+        "backend/tests/test_source_snapshots.py"
       ]
     },
     {
       "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-010.patch",
-      "sha256": "6f77533f318c7d36400bf6ebbf861d0721459974e3abfc96dbbeca7edea84f81",
-      "bytes": 80788,
+      "sha256": "2d9f901159d24d7182794d327adc72e473bafc1d150f19fe14125eee33e86394",
+      "bytes": 109593,
       "paths": [
+        "backend/tests/test_sources.py",
+        "backend/tests/test_sportscore_standings.py",
         "backend/tests/test_transfermarkt.py",
-        "backend/tests/test_transfermarkt_history.py",
-        "backend/vega/archive_attestations.py"
+        "backend/tests/test_transfermarkt_history.py"
       ]
     },
     {
       "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-011.patch",
+      "sha256": "8506c2f48fd230cd673f2ce200adc32412ba55dad5cd701a679ca90c7620139d",
+      "bytes": 12548,
+      "paths": [
+        "backend/vega/archive_attestations.py"
+      ]
+    },
+    {
+      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-012.patch",
       "sha256": "7e5c10130b0d535e073cb4416e554a77ed946e6f9e088f06c6ae970b4c788fee",
       "bytes": 210,
       "paths": [
@@ -343,7 +350,7 @@
       ]
     },
     {
-      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-012.patch",
+      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-013.patch",
       "sha256": "149ecf7f5f6ce97832b1d52144f163097d56b9b102a3b70834dcda74b1f3d0bb",
       "bytes": 351051,
       "paths": [
@@ -351,9 +358,9 @@
       ]
     },
     {
-      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-013.patch",
-      "sha256": "19e27ad968615f9d9826fd790deeddcc84c7ed36c0a1ece9635c9687e3176437",
-      "bytes": 114073,
+      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-014.patch",
+      "sha256": "4e5db219fda2b53bddcc1daee6c1d9a734efa03cdf2e469a91e0acc6afb60c2d",
+      "bytes": 114516,
       "paths": [
         "backend/vega/archive_scotland.json",
         "backend/vega/archives.py",
@@ -362,9 +369,9 @@
       ]
     },
     {
-      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-014.patch",
-      "sha256": "951c6aec8aaaa3628dfbe5416161adb4f2d923c6d6696c02eb26f8cf81943b6f",
-      "bytes": 75516,
+      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-015.patch",
+      "sha256": "191ebe3bce934fbe0a1214a384deff3dd2192a7d55a8a915d10d558200c05f67",
+      "bytes": 80391,
       "paths": [
         "backend/vega/open_matchday_restore.py",
         "backend/vega/sources/__init__.py",
@@ -375,9 +382,9 @@
       ]
     },
     {
-      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-015.patch",
-      "sha256": "e0a5a3333177ba7dd7dcc180ed3203f01e6332ddb3b5c6d6bb844c160bbd53eb",
-      "bytes": 80130,
+      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-016.patch",
+      "sha256": "ed67d361d232aaac7346e0720e9f0c3809f696ffcefacee8cccfb9d95688be15",
+      "bytes": 81162,
       "paths": [
         "backend/vega/sources/dfb_pokal_periods.json",
         "backend/vega/sources/open_matchday.py",
@@ -386,9 +393,9 @@
       ]
     },
     {
-      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-016.patch",
-      "sha256": "217491d9c68001e9a66307a418420c1d5d7e7ceae57a9fc930db87cfa4984588",
-      "bytes": 111541,
+      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-017.patch",
+      "sha256": "19ea4e559a6def5b2dc7c0705d34861763e305bbcde385287dde5168f383385f",
+      "bytes": 112679,
       "paths": [
         "backend/vega/sources/sportscore.py",
         "backend/vega/sources/uefa.py",
@@ -401,7 +408,7 @@
       ]
     },
     {
-      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-017.patch",
+      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-018.patch",
       "sha256": "3b210c46e3b0e086c10dc51b87c5ec4b27435b1634085a09d066b1ccdc6c6bbd",
       "bytes": 113168,
       "paths": [
@@ -436,7 +443,7 @@
       ]
     },
     {
-      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-018.patch",
+      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-019.patch",
       "sha256": "25d23850144f1b5700550f2964490bc59dd26e7a8e1e0e29572da2a338cd62f8",
       "bytes": 52166,
       "paths": [
@@ -458,7 +465,7 @@
       ]
     },
     {
-      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-019.patch",
+      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-020.patch",
       "sha256": "b482034a66a64b496712caaff0f98cca42a021712d894ac5a05a18523a65742b",
       "bytes": 92605,
       "paths": [
@@ -466,9 +473,9 @@
       ]
     },
     {
-      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-020.patch",
-      "sha256": "536a992ce1a04d9bce99fb35e2265d05c96642103d9799f8def1ee4795899513",
-      "bytes": 113406,
+      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-021.patch",
+      "sha256": "799129b14d56e8cbaf1e03646bf53a142e6471de4dd37bcd59f1256f7641214d",
+      "bytes": 113804,
       "paths": [
         "docs/calculs/09-audit-2026-11/FAILURE_MODES_SPORTSCORE.md",
         "docs/calculs/09-audit-2026-11/FAILURE_MODES_VI30.md",
@@ -499,9 +506,9 @@
       ]
     },
     {
-      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-021.patch",
-      "sha256": "91f47f121d280f2ae3e8beab735967e901a7da7229ab730b54582b026ef4c0d8",
-      "bytes": 30222,
+      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-022.patch",
+      "sha256": "f0b93dc9b141b91fd0a1322ffc028b879d43d353603fd2e5904b7e12931a9197",
+      "bytes": 30620,
       "paths": [
         "tests/tournament-editions.test.mjs",
         "tests/tournament-rules.test.mjs"

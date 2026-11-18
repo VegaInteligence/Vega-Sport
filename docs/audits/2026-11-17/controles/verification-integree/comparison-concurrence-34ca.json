@@ -1,0 +1,80 @@
+{
+  "5956a83cd76bf0b41924795e05b5024c8e1770d6": {
+    "version": "5956a83cd76bf0b41924795e05b5024c8e1770d6",
+    "schema": "135_player_transfers.sql",
+    "seed": "ok",
+    "other": "ok",
+    "after_other": [
+      [
+        3,
+        1
+      ],
+      [
+        0,
+        1
+      ]
+    ],
+    "latest": "ok",
+    "after": [
+      [
+        2,
+        1
+      ],
+      [
+        1,
+        1
+      ]
+    ],
+    "triggered": true,
+    "repeat": "ok",
+    "after_repeat": [
+      [
+        2,
+        1
+      ],
+      [
+        1,
+        1
+      ]
+    ]
+  },
+  "34ca3b5b382d7a6a06da9d051170096ba1d700e8": {
+    "version": "34ca3b5b382d7a6a06da9d051170096ba1d700e8",
+    "schema": "151_snapshot_match_ownership.sql",
+    "seed": "ok",
+    "other": "ok",
+    "after_other": [
+      [
+        3,
+        1
+      ],
+      [
+        0,
+        1
+      ]
+    ],
+    "latest": "ok",
+    "after": [
+      [
+        3,
+        1
+      ],
+      [
+        1,
+        1
+      ]
+    ],
+    "triggered": true,
+    "repeat": "ok",
+    "after_repeat": [
+      [
+        3,
+        1
+      ],
+      [
+        1,
+        1
+      ]
+    ]
+  }
+}

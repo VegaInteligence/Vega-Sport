@@ -1,0 +1,22 @@
+{
+  "archive": "mondial-et-perimetre-202f24c0.zip",
+  "sha256": "1a6003b8a683f8a95440cc73849bd9e883448d01b5992e6ff9cd4416f8d7973c",
+  "octets": 2284897,
+  "fichiers": 154,
+  "reseau": "sandbox-exec deny network*",
+  "utc": "2026-11-18T22:22:00.620646+00:00",
+  "deux_extractions_et_corruption_csv": [
+    {
+      "code": 0,
+      "dernier_message": "PASS: 17 CSV, 75 669 lignes typées, 964 scores, 35 séances, 42 côtés à plusieurs sélectionneurs sur 41 matchs, classeur 130 → 99."
+    },
+    {
+      "code": 0,
+      "dernier_message": "PASS: 17 CSV, 75 669 lignes typées, 964 scores, 35 séances, 42 côtés à plusieurs sélectionneurs sur 41 matchs, classeur 130 → 99."
+    },
+    {
+      "code": 1,
+      "dernier_message": "ValueError: entrée manquante ou altérée : diff/co-selectionneurs-42.csv"
+    }
+  ]
+}

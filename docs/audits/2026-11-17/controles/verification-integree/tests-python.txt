@@ -35,16 +35,16 @@ ok
 test_22q_no_mode_refuses_and_fresh_needs_an_empty_season (test_archive_corrections.CorrectionsTest.test_22q_no_mode_refuses_and_fresh_needs_an_empty_season) ... a mode is required: --plan, --plan-store, --show-plan, --apply, --apply-stored or --fresh (FAILURE_MODES.md §22)
 season=2015/2016 matches=4 held=0
 archives seasons=1 matches=4
-/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/ci-clean/lib/python3.14/site-packages/psycopg/_connection_base.py:153: ResourceWarning: <psycopg.Connection object at 0x10ac3ee90> was deleted while still open. Please use 'with' or '.close()' to close the connection properly
+/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/ci-clean/lib/python3.14/site-packages/psycopg/_connection_base.py:153: ResourceWarning: <psycopg.Connection object at 0x10c8c7390> was deleted while still open. Please use 'with' or '.close()' to close the connection properly
   __warn(
 refused: --fresh: 1 season(s) already hold archive matches (2015/2016); repairs need a reviewed plan
-/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/ci-clean/lib/python3.14/site-packages/psycopg/_connection_base.py:153: ResourceWarning: <psycopg.Connection object at 0x10ac3f250> was deleted while still open. Please use 'with' or '.close()' to close the connection properly
+/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/ci-clean/lib/python3.14/site-packages/psycopg/_connection_base.py:153: ResourceWarning: <psycopg.Connection object at 0x10c8c7750> was deleted while still open. Please use 'with' or '.close()' to close the connection properly
   __warn(
 ok
 test_22r_a_held_record_beside_a_repair_is_a_partial_apply (test_archive_corrections.CorrectionsTest.test_22r_a_held_record_beside_a_repair_is_a_partial_apply) ... season=2015/2016 matches=4 held=0
 season=2015/2016 outcome=partial
 {"resumed":[],"seasons":{"2015/2016":"partial"},"status":"partial"}
-/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/ci-clean/lib/python3.14/site-packages/psycopg/_connection_base.py:153: ResourceWarning: <psycopg.Connection object at 0x10ac53ce0> was deleted while still open. Please use 'with' or '.close()' to close the connection properly
+/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/ci-clean/lib/python3.14/site-packages/psycopg/_connection_base.py:153: ResourceWarning: <psycopg.Connection object at 0x10c8150f0> was deleted while still open. Please use 'with' or '.close()' to close the connection properly
   __warn(
 ok
 test_22s_the_collect_role_plans_and_applies_and_still_cannot_read_agg (test_archive_corrections.CorrectionsTest.test_22s_the_collect_role_plans_and_applies_and_still_cannot_read_agg) ... season=2015/2016 matches=4 held=0
@@ -62,7 +62,7 @@ ok
 test_23j_a_subset_decides_only_its_seasons (test_archive_deletions.DurableApplyTest.test_23j_a_subset_decides_only_its_seasons) ... season=2014/2015 outcome=applied
 season=2015/2016 outcome=applied
 ok
-test_23k_show_plan_writes_the_stored_bytes (test_archive_deletions.DurableApplyTest.test_23k_show_plan_writes_the_stored_bytes) ... /Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/ci-clean/lib/python3.14/site-packages/psycopg/_connection_base.py:153: ResourceWarning: <psycopg.Connection object at 0x10abd4550> was deleted while still open. Please use 'with' or '.close()' to close the connection properly
+test_23k_show_plan_writes_the_stored_bytes (test_archive_deletions.DurableApplyTest.test_23k_show_plan_writes_the_stored_bytes) ... /Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/ci-clean/lib/python3.14/site-packages/psycopg/_connection_base.py:153: ResourceWarning: <psycopg.Connection object at 0x10c7d9050> was deleted while still open. Please use 'with' or '.close()' to close the connection properly
   __warn(
 ok
 test_23f_empty_partial_or_complete_primary_editions_keep_the_archive (test_archive_deletions.PrimaryOverlapTest.test_23f_empty_partial_or_complete_primary_editions_keep_the_archive) ... season=2021/2022 matches=2 held=0
@@ -114,6 +114,7 @@ test_20d_other_bytes_or_an_unreviewed_identical_pair_fail_the_build (test_archiv
 test_20a_a_cancelled_match_is_canceled_without_a_score (test_archive_repair.StatusTest.test_20a_a_cancelled_match_is_canceled_without_a_score) ... ok
 test_20b_an_awarded_result_keeps_its_score (test_archive_repair.StatusTest.test_20b_an_awarded_result_keeps_its_score) ... ok
 test_20e_a_contradictory_or_unknown_status_refuses_the_season (test_archive_repair.StatusTest.test_20e_a_contradictory_or_unknown_status_refuses_the_season) ... ok
+test_a_removed_archive_is_not_loaded_and_what_was_loaded_goes (test_archives.ImportTest.test_a_removed_archive_is_not_loaded_and_what_was_loaded_goes) ... ok
 test_import_and_reimport (test_archives.ImportTest.test_import_and_reimport) ... season=2015/2016 matches=4 held=0
 season=2015/2016 matches=4 held=0
 season=2015/2016 matches=4 held=0
@@ -369,6 +370,7 @@ test_no_key_nothing_due (test_odds.PureTest.test_no_key_nothing_due) ... ok
 test_two_spellings_of_one_club (test_odds.PureTest.test_two_spellings_of_one_club) ... ok
 test_a_copy_written_before_is_removed_once_pitchapi_holds_its_league (test_open_matchday.OpenMatchdayTest.test_a_copy_written_before_is_removed_once_pitchapi_holds_its_league) ... ok
 test_a_league_pitchapi_holds_this_season_is_not_read (test_open_matchday.OpenMatchdayTest.test_a_league_pitchapi_holds_this_season_is_not_read) ... ok
+test_a_removed_league_is_not_read_and_what_was_written_goes (test_open_matchday.OpenMatchdayTest.test_a_removed_league_is_not_read_and_what_was_written_goes) ... ok
 test_european_competitions_round_trip (test_open_matchday.OpenMatchdayTest.test_european_competitions_round_trip) ... /Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-20261117/backend/tests/test_open_matchday.py:130: ResourceWarning: unclosed file <_io.TextIOWrapper name='/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-20261117/backend/tests/fixtures/open_matchday/ENG_1_premier-league.results_2627.csv' mode='r' encoding='UTF-8'>
   source = list(csv.DictReader(open(FIXTURES / f"{folder}.results_2627.csv", newline="")))
 ResourceWarning: Enable tracemalloc to get the object allocation traceback
@@ -437,8 +439,8 @@ test_the_curve_is_the_minutes_of_each_match_back_beside_the_usual_ones (test_ret
 test_the_matches_back_stop_at_the_next_absence (test_returns.StepsTest.test_the_matches_back_stop_at_the_next_absence) ... ok
 test_calc_reads_core_writes_agg (test_roles.RolesTest.test_calc_reads_core_writes_agg) ... ok
 test_collect_writes_core_and_ops_and_creates_partitions (test_roles.RolesTest.test_collect_writes_core_and_ops_and_creates_partitions) ... ok
-test_migration_task_creates_logins_idempotently (test_roles.RolesTest.test_migration_task_creates_logins_idempotently) ... migrations applied=0 total=153 logins=vega_v2_collect,vega_v2_read
-migrations applied=0 total=153 logins=vega_v2_collect,vega_v2_read
+test_migration_task_creates_logins_idempotently (test_roles.RolesTest.test_migration_task_creates_logins_idempotently) ... migrations applied=0 total=156 logins=vega_v2_collect,vega_v2_read
+migrations applied=0 total=156 logins=vega_v2_collect,vega_v2_read
 ok
 test_owner_url_from_the_rds_secret (test_roles.RolesTest.test_owner_url_from_the_rds_secret) ... ok
 test_read_sees_api_only (test_roles.RolesTest.test_read_sees_api_only) ... ok
@@ -530,6 +532,10 @@ test_pagination_must_be_complete (test_sources.PureTest.test_pagination_must_be_
 test_player_facts_read_one_person_per_name (test_sources.PureTest.test_player_facts_read_one_person_per_name) ... ok
 test_sportscore_leagues_match_the_site (test_sources.PureTest.test_sportscore_leagues_match_the_site) ... ok
 test_sportscore_official_names_pair_with_the_clubs (test_sources.PureTest.test_sportscore_official_names_pair_with_the_clubs) ... ok
+test_worldcup_files_are_the_pinned_ones (test_sources.PureTest.test_worldcup_files_are_the_pinned_ones) ... ok
+test_worldcup_incoherent_files_are_refused (test_sources.PureTest.test_worldcup_incoherent_files_are_refused) ... ok
+test_worldcup_matches_pair_with_the_base (test_sources.PureTest.test_worldcup_matches_pair_with_the_base) ... ok
+test_worldcup_rows_are_typed (test_sources.PureTest.test_worldcup_rows_are_typed) ... ok
 test_a_club_without_country_takes_its_league_country (test_sources.UefaTest.test_a_club_without_country_takes_its_league_country) ... ok
 test_an_edition_read_before_the_bare_scores_is_read_again_once (test_sources.UefaTest.test_an_edition_read_before_the_bare_scores_is_read_again_once) ... ok
 test_bulk_player_snapshot_writes_under_the_production_collect_role (test_sources.UefaTest.test_bulk_player_snapshot_writes_under_the_production_collect_role) ... ok
@@ -543,6 +549,8 @@ test_sportscore_official_tables (test_sources.UefaTest.test_sportscore_official_
 test_wikidata_clubs_stadiums_portraits_and_plans (test_sources.UefaTest.test_wikidata_clubs_stadiums_portraits_and_plans) ... ok
 test_wikidata_one_failing_club_does_not_stop_the_others (test_sources.UefaTest.test_wikidata_one_failing_club_does_not_stop_the_others) ... ok
 test_wikidata_players_are_linked_inside_their_club (test_sources.UefaTest.test_wikidata_players_are_linked_inside_their_club) ... ok
+test_worldcup_database_is_loaded_and_paired_with_the_archive (test_sources.UefaTest.test_worldcup_database_is_loaded_and_paired_with_the_archive) ... ok
+test_worldcup_pairs_again_an_archived_match_truly_replaced (test_sources.UefaTest.test_worldcup_pairs_again_an_archived_match_truly_replaced) ... ok
 test_an_older_transport_failure_cannot_replace_a_new_success_and_a_fresh_retry_works (test_sportscore_standings.SportScoreFreshnessTest.test_an_older_transport_failure_cannot_replace_a_new_success_and_a_fresh_retry_works) ... ok
 test_first_publisher_remains_current_when_the_older_observation_finishes_last (test_sportscore_standings.SportScoreFreshnessTest.test_first_publisher_remains_current_when_the_older_observation_finishes_last) ... ok
 test_every_case (test_sportscore_standings.SportScoreStandingsTest.test_every_case) ... ok
@@ -647,6 +655,16 @@ test_a_new_ranking_method_recomputes_the_season_in_progress (test_worker.WorkerT
 test_a_profile_the_plan_does_not_hold_is_unavailable_not_failed (test_worker.WorkerTest.test_a_profile_the_plan_does_not_hold_is_unavailable_not_failed) ... ok
 test_a_ranked_season_gets_its_action_values_without_a_whole_pass (test_worker.WorkerTest.test_a_ranked_season_gets_its_action_values_without_a_whole_pass) ... ok
 test_a_refused_profile_logs_the_provider_s_reason_as_a_category (test_worker.WorkerTest.test_a_refused_profile_logs_the_provider_s_reason_as_a_category) ... ok
+test_a_removed_league_already_in_the_base_is_purged (test_worker.WorkerTest.test_a_removed_league_already_in_the_base_is_purged) ... family=summary job=15 error=RESOURCE_NOT_FOUND
+family=lineups job=18 error=RESOURCE_NOT_FOUND
+family=h2h job=19 error=RESOURCE_NOT_FOUND
+family=league_matches job=20 error=RESOURCE_NOT_FOUND
+family=league_matches job=22 error=RESOURCE_NOT_FOUND
+ok
+test_a_removed_league_is_neither_collected_nor_kept (test_worker.WorkerTest.test_a_removed_league_is_neither_collected_nor_kept) ... family=lineups job=14 error=RESOURCE_NOT_FOUND
+family=h2h job=15 error=RESOURCE_NOT_FOUND
+family=league_matches job=16 error=RESOURCE_NOT_FOUND
+ok
 test_an_error_code_never_carries_the_error_s_text (test_worker.WorkerTest.test_an_error_code_never_carries_the_error_s_text) ... ok
 test_archive_seasons_are_counted_once_a_day (test_worker.WorkerTest.test_archive_seasons_are_counted_once_a_day) ... analyze partitioned tables=20
 archive seasons changed=1
@@ -684,7 +702,7 @@ lineup model matches=0
 ok
 test_publication_advances_on_its_rhythm (test_worker.WorkerTest.test_publication_advances_on_its_rhythm) ... ok
 test_queue_lookups_read_a_few_rows_of_a_long_queue (test_worker.WorkerTest.test_queue_lookups_read_a_few_rows_of_a_long_queue) ... ok
-test_rescheduled_and_never_final_watches (test_worker.WorkerTest.test_rescheduled_and_never_final_watches) ... family=summary job=36 error=RESOURCE_NOT_FOUND
+test_rescheduled_and_never_final_watches (test_worker.WorkerTest.test_rescheduled_and_never_final_watches) ... family=summary job=45 error=RESOURCE_NOT_FOUND
 ok
 test_summary_edition_wins_over_the_assumed_one (test_worker.WorkerTest.test_summary_edition_wins_over_the_assumed_one) ... ok
 test_the_collection_goes_on_whatever_fails_around_it (test_worker.WorkerTest.test_the_collection_goes_on_whatever_fails_around_it) ... ok
@@ -700,6 +718,6 @@ test_the_terms_follow_the_table_columns (test_xg.FitTest.test_the_terms_follow_t
 test_too_few_shots_or_no_goal_give_no_model (test_xg.FitTest.test_too_few_shots_or_no_goal_give_no_model) ... ok
 
 ----------------------------------------------------------------------
-Ran 588 tests in 253.347s
+Ran 598 tests in 302.150s
 
 OK

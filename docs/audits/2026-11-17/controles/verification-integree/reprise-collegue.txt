@@ -1,0 +1,22 @@
+# Reprendre les corrections Vega-Sport
+
+Commencer par importer la branche avec les commandes de LIRE-D-ABORD.md. Le SHA de la branche inclut les preuves et la documentation. Le reçu CI dans validation identifie le SHA applicatif testé. Les avis dans avis-sur-34ca ont été rendus sur la version antérieure 34ca3b5b38.
+
+Avant les corrections, rapprocher les sept commits de la nouvelle production `0f368fd389` avec la branche. Trois conflits de fusion ont été détectés. [Détail des changements et mesures à reprendre](../production/dernier-deploiement.md)
+
+## Qui prend quoi
+
+| Priorité et propriétaire | Fichiers du dépôt | Critère de sortie observable |
+| --- | --- | --- |
+| 1 · VI-27, publication des coupes | backend/vega/sources/cups.py, backend/vega/sources/snapshot.py, backend/tests/test_source_snapshots.py | Deux collectes concurrentes Euro 2024 doivent laisser les deux scores de la dernière édition certifiée. L’omission du score à la mi-temps doit conserver le 3–0 connu et son origine. Vérifier en base et sur la route publique, puis répéter. |
+| 1 · VI-27, reports Open Matchday | backend/vega/sources/open_matchday.py, backend/vega/sources/snapshot.py | Reporter un match ayant une prévision et corriger un autre résultat dans la même édition. Préserver les identités, les heures vérifiées et l’historique des autres sources. Une référence tardive doit garder un parent. Tester les retraits réels et les collisions ambiguës dans des transactions séparées. |
+| 1 · VI-29, classement SportScore | backend/vega/sources/sportscore.py et tests de qualification SportScore | Faire arriver le quatrième club éligible entre la validation et la publication. La route doit renvoyer la dernière table admissible. Vérifier la correction, le deuxième passage et l’ETag. |
+| 1 · VI-31, historique des transferts | backend/vega/transfermarkt.py, backend/sql/139_transfermarkt_history.sql, backend/api/src/routes/profiles.mjs | Après un refus de collecte, les trois mouvements valides du témoin restent consultables. Traiter une absence confirmée, une réapparition et le premier échec sans historique. Vérifier 200, 304, 404 et les dates en base. |
+| Propriétaires actuels · VI-19, VI-21 | Plan et registre dans docs/audits/2026-11-17 | VI-19 conserve les prévisions et les coefficients historiques. VI-21 conserve la purge 42501, les calendriers primaires, les identités dont les quinze matchs de Barcelone, l’ordonnancement des recalculs et les trous dans les notes. Vérifier ces changements déployés dans la prochaine revue. |
+| Propriétaires actuels · VI-30, VI-32 | Matrice des sources, visuels et registre dans le même dossier | Pour les écussons, reprendre la livraison de 1 932 associations avec le partenaire de Hugo et mesurer la couverture après déploiement. Un écusson absent requiert une source authentique. Pour le lecteur de forme, reproduire le témoin Max Dowman à zéro match avec moyenne affichée à 50. |
+
+## Équivalences des chemins du brief d’origine
+
+Le brief original nomme le répertoire de preuves du Mac « E ». Dans cette extraction, les observations Astra de 34ca sont dans `collegue/temoins/`, sa réconciliation dans `collegue/risques-et-criteres.md`, les deux avis dans `avis-sur-34ca/` et le document initial dans `origine/`. Les données des trois domaines figurent dans `production/`, les essais de la fusion dans `validation/`. Le code et les pièces antérieures sont dans la branche importée. La matrice de tous les fournisseurs est dans `docs/audits/2026-11-17/SOURCES.md`; les 17 fichiers Fjelstul et les décisions de périmètre sont dans la capsule Mondial de `production/`.
+
+Pour les critères additionnels, conserver les 24 critères incomplets du sous-ensemble de 33. Pour les autres tickets, vérifier le propriétaire et la dernière activité dans Linear avant de reprendre les fichiers concernés. Refaire la mesure depuis la production après déploiement des propriétaires concernés. Utiliser une base locale jetable pour les tests en écriture. Réserver la prochaine revue Fable à Hugo et conserver l’avis indépendant Astra sur le même futur SHA applicatif et documentaire.

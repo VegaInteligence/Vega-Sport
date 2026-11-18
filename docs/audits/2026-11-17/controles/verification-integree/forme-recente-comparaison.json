@@ -1,0 +1,75 @@
+{
+  "setup": "Exact RecentForm source and seasonGrade with real React SSR; the receiving card shows its text prop; no production incidence count.",
+  "records": [
+    {
+      "sha": "fc0deba100288117b0ea122e7199d1c9db9dcc37",
+      "name": "empty",
+      "rows": [],
+      "grade": null,
+      "header": "<div>Forme récente Note des 0 derniers matchs notés</div>"
+    },
+    {
+      "sha": "fc0deba100288117b0ea122e7199d1c9db9dcc37",
+      "name": "limited",
+      "rows": [
+        {
+          "date": "2026-11-01",
+          "minutes": 9,
+          "gradeZ": 3,
+          "grade": 84
+        }
+      ],
+      "grade": null,
+      "header": "<div>Forme récente Note des 1 derniers matchs notés</div>"
+    },
+    {
+      "sha": "fc0deba100288117b0ea122e7199d1c9db9dcc37",
+      "name": "measured",
+      "rows": [
+        {
+          "date": "2026-11-01",
+          "minutes": 22,
+          "gradeZ": 2,
+          "grade": 76
+        }
+      ],
+      "grade": 75.97469266479578,
+      "header": "<div>Forme récente Note des 1 derniers matchs notés</div>"
+    },
+    {
+      "sha": "0e6b2ab35301a9df5d94e86f10affcdf7d1997ad",
+      "name": "empty",
+      "rows": [],
+      "grade": null,
+      "header": "<div>Forme récente 0 derniers matchs · moy. 50</div>"
+    },
+    {
+      "sha": "0e6b2ab35301a9df5d94e86f10affcdf7d1997ad",
+      "name": "limited",
+      "rows": [
+        {
+          "date": "2026-11-01",
+          "minutes": 9,
+          "gradeZ": 3,
+          "grade": 84
+        }
+      ],
+      "grade": null,
+      "header": "<div>Forme récente 1 derniers matchs · moy. 50</div>"
+    },
+    {
+      "sha": "0e6b2ab35301a9df5d94e86f10affcdf7d1997ad",
+      "name": "measured",
+      "rows": [
+        {
+          "date": "2026-11-01",
+          "minutes": 22,
+          "gradeZ": 2,
+          "grade": 76
+        }
+      ],
+      "grade": 75.97469266479578,
+      "header": "<div>Forme récente 1 derniers matchs · moy. 76</div>"
+    }
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "statut": "PASS",
+  "utc": "2026-11-18T23:45:20.658200+00:00",
+  "revision": "4c413029c173e96704f4752f843f186526e114cf",
+  "rev": "4c413029c173e96704f4752f843f186526e114cf",
+  "archive": "migrations-portables.zip",
+  "sha256": "94652654c5d5346efc9a672fc30033d3b5067d094209c3fb10171cedff87cfd9",
+  "octets": 1787687,
+  "migrations_finales_sha256": "929714b9681aa9edc521315e533ec5a27f7ffe65aff8866bf3d0371dbdd4ff4c",
+  "pg18": "18.6",
+  "manifest_verifie": true,
+  "fichiers_scelles": 30,
+  "rejeu_depuis_extraction": "PASS depuis 133 et 138, Elo 2097 et 2099 dans les deux cas",
+  "sources_138_et_156": {
+    "deja_appliquees": 138,
+    "total": 156,
+    "empreintes_et_dates_conservees": true,
+    "six_noms_doubles_prefixes": [
+      "136_cup_table_sides.sql",
+      "136_fjelstul_provider.sql",
+      "137_half_metric_coverage.sql",
+      "137_worldcup_database.sql",
+      "138_sportscore_standings.sql",
+      "138_worldcup_match_reads.sql"
+    ]
+  },
+  "marques_lectures_et_gardes_identiques": true,
+  "comparaison": "Tous les résultats 2097 et tous les cas 2099 concordent entre deux bases avec stockage indépendant. Les identifiants de transaction PostgreSQL et les noms temporaires de base varient.",
+  "sortie_double_publication_reextraite": {
+    "revision": "4c413029c173e96704f4752f843f186526e114cf",
+    "schema_cible": "151_snapshot_match_ownership.sql",
+    "historiques": [
+      "133_cohort_max_wait.sql",
+      "138_worldcup_match_reads.sql"
+    ],
+    "preuve_2097": "b911c3a34983c8f372f726ded89798fc5740b83ba6fd3e7e49f871b7712fd494",
+    "preuves_2099": {
+      "a": "76eca2b1e553acd588c5597627de75957f67774ba5ea6b535790c55708bcea07",
+      "b": "5438338a96e27ef23f3cee7bc518afa4b570499447c5a572d73ef6dbfcc3bac8"
+    },
+    "applications_2099": {
+      "a": {
+        "would_restore": 35,
+        "restored": 35,
+        "preserved_elo": 0,
+        "elo_pending_sides": 70,
+        "elo_run": 2099,
+        "edition_versions": {
+          "332": 2,
+          "333": 2,
+          "334": 2
+        }
+      },
+      "b": {
+        "would_restore": 35,
+        "restored": 35,
+        "preserved_elo": 0,
+        "elo_pending_sides": 70,
+        "elo_run": 2099,
+        "edition_versions": {
+          "332": 2,
+          "333": 2,
+          "334": 2
+        }
+      }
+    },
+    "statut": "PASS"
+  },
+  "restrictions_reseau": "boucle locale ouverte, destination externe 192.0.2.1:443 refusée EPERM",
+  "temoins_integrite": {
+    "absent": {
+      "code": 1,
+      "message": "inventaire divergent"
+    },
+    "altéré": {
+      "code": 1,
+      "message": "fichier altéré : inputs/world-cup-history-1982.json"
+    }
+  },
+  "perimetre_2099": "publication témoin représentative ; aucun recalcul en production mesuré",
+  "instance_privee": "arrêtée après contrôles, suppression automatique vérifiée"
+}

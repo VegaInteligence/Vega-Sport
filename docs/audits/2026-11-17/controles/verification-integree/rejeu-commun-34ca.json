@@ -1,0 +1,446 @@
+{
+  "sha": "34ca3b5b382d7a6a06da9d051170096ba1d700e8",
+  "reschedule": {
+    "initial": [
+      "ok",
+      2,
+      0
+    ],
+    "before": {
+      "status": 200,
+      "etag": "W/\"support-v1-797e28e551c98762550a37d72586248a53b37b71a0ea4ce6373a70d844579808\"",
+      "conditional": 304,
+      "body": {
+        "name": "National League",
+        "season": "2026/2027",
+        "source": {
+          "name": "open-matchday",
+          "url": "https://github.com/oladeeayo/open-matchday",
+          "license": "informational, non-commercial use with attribution"
+        },
+        "results": [
+          {
+            "gw": "15",
+            "away": "South FC",
+            "date": "2026-11-01",
+            "home": "North FC",
+            "time": "",
+            "source": "",
+            "ft_away": "1",
+            "ft_home": "2",
+            "ht_away": "0",
+            "ht_home": "1",
+            "ft_result": "H",
+            "ht_result": "H",
+            "goal_minutes": "",
+            "home_shots": "11",
+            "home_target": "",
+            "home_fouls": "",
+            "home_corners": "6",
+            "home_yellow": "",
+            "home_red": "",
+            "home_corners_1h": "",
+            "home_corners_2h": "",
+            "away_shots": "7",
+            "away_target": "",
+            "away_fouls": "",
+            "away_corners": "3",
+            "away_yellow": "",
+            "away_red": "",
+            "away_corners_1h": "",
+            "away_corners_2h": "",
+            "sides": {
+              "home": {
+                "id": "t_v0000001",
+                "image_url": null
+              },
+              "away": {
+                "id": "t_v0000002",
+                "image_url": null
+              }
+            }
+          }
+        ],
+        "fixtures": [
+          {
+            "gw": "16",
+            "away": "North FC",
+            "date": "2026-11-29",
+            "home": "South FC",
+            "time": "",
+            "forecast": {
+              "home": 0.4,
+              "draw": 0.3,
+              "away": 0.3
+            },
+            "sides": {
+              "home": {
+                "id": "t_v0000002",
+                "image_url": null
+              },
+              "away": {
+                "id": "t_v0000001",
+                "image_url": null
+              }
+            }
+          }
+        ]
+      }
+    },
+    "changed_files": [
+      "ok",
+      0,
+      1
+    ],
+    "after_refusal": {
+      "status": 200,
+      "etag": "W/\"support-v1-797e28e551c98762550a37d72586248a53b37b71a0ea4ce6373a70d844579808\"",
+      "conditional": 304,
+      "body": {
+        "name": "National League",
+        "season": "2026/2027",
+        "source": {
+          "name": "open-matchday",
+          "url": "https://github.com/oladeeayo/open-matchday",
+          "license": "informational, non-commercial use with attribution"
+        },
+        "results": [
+          {
+            "gw": "15",
+            "away": "South FC",
+            "date": "2026-11-01",
+            "home": "North FC",
+            "time": "",
+            "source": "",
+            "ft_away": "1",
+            "ft_home": "2",
+            "ht_away": "0",
+            "ht_home": "1",
+            "ft_result": "H",
+            "ht_result": "H",
+            "goal_minutes": "",
+            "home_shots": "11",
+            "home_target": "",
+            "home_fouls": "",
+            "home_corners": "6",
+            "home_yellow": "",
+            "home_red": "",
+            "home_corners_1h": "",
+            "home_corners_2h": "",
+            "away_shots": "7",
+            "away_target": "",
+            "away_fouls": "",
+            "away_corners": "3",
+            "away_yellow": "",
+            "away_red": "",
+            "away_corners_1h": "",
+            "away_corners_2h": "",
+            "sides": {
+              "home": {
+                "id": "t_v0000001",
+                "image_url": null
+              },
+              "away": {
+                "id": "t_v0000002",
+                "image_url": null
+              }
+            }
+          }
+        ],
+        "fixtures": [
+          {
+            "gw": "16",
+            "away": "North FC",
+            "date": "2026-11-29",
+            "home": "South FC",
+            "time": "",
+            "forecast": {
+              "home": 0.4,
+              "draw": 0.3,
+              "away": 0.3
+            },
+            "sides": {
+              "home": {
+                "id": "t_v0000002",
+                "image_url": null
+              },
+              "away": {
+                "id": "t_v0000001",
+                "image_url": null
+              }
+            }
+          }
+        ]
+      }
+    },
+    "physical_after_refusal": [
+      [
+        "2026-11-01",
+        "finished",
+        2,
+        1
+      ],
+      [
+        "2026-11-29",
+        "not_started",
+        null,
+        null
+      ]
+    ],
+    "reason": [
+      "MATCH_HAS_DEPENDENTS",
+      "open-matchday:ENG_5_national-league:2026/2027: open_matchday: match 2 is held by agg.match_forecasts.match_id"
+    ],
+    "control_without_forecast": [
+      "ok",
+      2,
+      0
+    ],
+    "physical_after_control": [
+      [
+        "2026-11-01",
+        "finished",
+        3,
+        1
+      ],
+      [
+        "2026-11-30",
+        "not_started",
+        null,
+        null
+      ]
+    ],
+    "after_control": {
+      "status": 200,
+      "etag": "W/\"support-v1-66626e0a4fa5c92f824881b9d4a95aeee40e492610470669d0c32bff52f6c182\"",
+      "conditional": 200,
+      "body": {
+        "name": "National League",
+        "season": "2026/2027",
+        "source": {
+          "name": "open-matchday",
+          "url": "https://github.com/oladeeayo/open-matchday",
+          "license": "informational, non-commercial use with attribution"
+        },
+        "results": [
+          {
+            "gw": "15",
+            "away": "South FC",
+            "date": "2026-11-01",
+            "home": "North FC",
+            "time": "",
+            "source": "",
+            "ft_away": "1",
+            "ft_home": "3",
+            "ht_away": "0",
+            "ht_home": "1",
+            "ft_result": "H",
+            "ht_result": "H",
+            "goal_minutes": "",
+            "home_shots": "11",
+            "home_target": "",
+            "home_fouls": "",
+            "home_corners": "6",
+            "home_yellow": "",
+            "home_red": "",
+            "home_corners_1h": "",
+            "home_corners_2h": "",
+            "away_shots": "7",
+            "away_target": "",
+            "away_fouls": "",
+            "away_corners": "3",
+            "away_yellow": "",
+            "away_red": "",
+            "away_corners_1h": "",
+            "away_corners_2h": "",
+            "sides": {
+              "home": {
+                "id": "t_v0000001",
+                "image_url": null
+              },
+              "away": {
+                "id": "t_v0000002",
+                "image_url": null
+              }
+            }
+          }
+        ],
+        "fixtures": [
+          {
+            "gw": "16",
+            "away": "North FC",
+            "date": "2026-11-30",
+            "home": "South FC",
+            "time": "",
+            "sides": {
+              "home": {
+                "id": "t_v0000002",
+                "image_url": null
+              },
+              "away": {
+                "id": "t_v0000001",
+                "image_url": null
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "transfers": {
+    "initial": {
+      "status": 200,
+      "etag": "W/\"profile-v1-7dd90bf76c05480039f0bdb37c997eee8e15375f3063c076429669fb0671e564\"",
+      "conditional": 304,
+      "body": {
+        "data": {
+          "id": "p_v0000401",
+          "transfers": [
+            {
+              "date": "2016-03-15",
+              "kind": null,
+              "feeEur": null,
+              "from": null,
+              "to": null
+            },
+            {
+              "date": "2018-09-01",
+              "kind": "transfer",
+              "feeEur": 2500000,
+              "from": {
+                "id": "t_v0000033",
+                "name": "Club 33"
+              },
+              "to": {
+                "id": "t_v0000011",
+                "name": "Club 11"
+              }
+            },
+            {
+              "date": "2022-10-10",
+              "kind": "free",
+              "feeEur": 0,
+              "from": {
+                "id": "t_v0000011",
+                "name": "Club 11"
+              },
+              "to": {
+                "id": "t_v0000022",
+                "name": "Club 22"
+              }
+            },
+            {
+              "date": "2024-12-18",
+              "kind": "loan",
+              "feeEur": null,
+              "from": {
+                "id": "t_v0000022",
+                "name": "Club 22"
+              },
+              "to": null
+            }
+          ]
+        }
+      }
+    },
+    "refusal_queue": {
+      "status": 404,
+      "code": "HISTORY_MISSING",
+      "attempts": 1,
+      "rows": 3,
+      "read_at": "2026-11-18 12:00:00+00:00",
+      "next_due_at": "2026-11-18 23:20:17.473362+00:00"
+    },
+    "after_refusal": {
+      "status": 404,
+      "etag": null,
+      "conditional": 404,
+      "body": {
+        "ok": false,
+        "available": false,
+        "error": {
+          "code": "RESOURCE_NOT_FOUND",
+          "message": "Donnée indisponible.",
+          "retry": false
+        }
+      }
+    },
+    "after_partial": {
+      "status": 200,
+      "etag": "W/\"profile-v1-7dd90bf76c05480039f0bdb37c997eee8e15375f3063c076429669fb0671e564\"",
+      "conditional": 304,
+      "body": {
+        "data": {
+          "id": "p_v0000401",
+          "transfers": [
+            {
+              "date": "2016-03-15",
+              "kind": null,
+              "feeEur": null,
+              "from": null,
+              "to": null
+            },
+            {
+              "date": "2018-09-01",
+              "kind": "transfer",
+              "feeEur": 2500000,
+              "from": {
+                "id": "t_v0000033",
+                "name": "Club 33"
+              },
+              "to": {
+                "id": "t_v0000011",
+                "name": "Club 11"
+              }
+            },
+            {
+              "date": "2022-10-10",
+              "kind": "free",
+              "feeEur": 0,
+              "from": {
+                "id": "t_v0000011",
+                "name": "Club 11"
+              },
+              "to": {
+                "id": "t_v0000022",
+                "name": "Club 22"
+              }
+            },
+            {
+              "date": "2024-12-18",
+              "kind": "loan",
+              "feeEur": null,
+              "from": {
+                "id": "t_v0000022",
+                "name": "Club 22"
+              },
+              "to": null
+            }
+          ]
+        }
+      }
+    },
+    "stored_after_partial": [
+      [
+        "81",
+        "2018-09-01",
+        null
+      ],
+      [
+        "82",
+        "2022-10-10",
+        null
+      ],
+      [
+        "83",
+        "2024-12-18",
+        "2026-11-18"
+      ],
+      [
+        null,
+        "2016-03-15",
+        null
+      ]
+    ]
+  }
+}

@@ -1,0 +1,2363 @@
+{
+  "comparison": {
+    "1753_1837": {
+      "additional_queries": [
+        "pulse-transferts"
+      ],
+      "by_edition": {
+        "added_rows": 0,
+        "after_rows": 6447,
+        "before_rows": 6447,
+        "cells_changed": 0,
+        "cells_compared": 128940,
+        "different_rows": 0,
+        "removed_rows": 0,
+        "shared_rows": 6447
+      },
+      "by_season": {
+        "added_rows": 0,
+        "after_rows": 471,
+        "before_rows": 471,
+        "cells_changed": 0,
+        "cells_compared": 3297,
+        "different_rows": 0,
+        "removed_rows": 0,
+        "shared_rows": 471
+      },
+      "raw_editions": {
+        "added_rows": 0,
+        "after_rows": 6447,
+        "before_rows": 6447,
+        "cells_changed": 0,
+        "cells_compared": 477078,
+        "different_rows": 0,
+        "removed_rows": 0,
+        "shared_rows": 6447
+      },
+      "same_query_bytes": 52
+    },
+    "1837_2209": {
+      "additional_queries": [
+        "pulse-fjelstul",
+        "pulse-fjelstul-notes",
+        "pulse-identites"
+      ],
+      "by_edition": {
+        "added_rows": 0,
+        "after_rows": 6447,
+        "before_rows": 6447,
+        "cells_changed": 0,
+        "cells_compared": 128940,
+        "different_rows": 0,
+        "removed_rows": 0,
+        "shared_rows": 6447
+      },
+      "by_season": {
+        "added_rows": 0,
+        "after_rows": 471,
+        "before_rows": 471,
+        "cells_changed": 0,
+        "cells_compared": 3297,
+        "different_rows": 0,
+        "removed_rows": 0,
+        "shared_rows": 471
+      },
+      "raw_editions": {
+        "added_rows": 0,
+        "after_rows": 6447,
+        "before_rows": 6447,
+        "cells_changed": 0,
+        "cells_compared": 477078,
+        "different_rows": 0,
+        "removed_rows": 0,
+        "shared_rows": 6447
+      },
+      "same_query_bytes": 53
+    }
+  },
+  "declared_keys": 35,
+  "domains": {
+    "archive": {
+      "by_entity": {
+        "club": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 26376,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 26376,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "national team": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "player": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        }
+      },
+      "competitions": 3,
+      "editions": 75,
+      "finished": 13188,
+      "matches": 13188
+    },
+    "dossier": {
+      "by_entity": {
+        "club": {
+          "actual_valid": 1664,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 1664,
+          "known_participations_minimum": 1664,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "national team": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "player": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        }
+      },
+      "competitions": 10,
+      "editions": 10,
+      "finished": 832,
+      "matches": 1590
+    },
+    "native": {
+      "by_entity": {
+        "club": {
+          "actual_valid": 31138,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 31138,
+          "known_participations_minimum": 31138,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "national team": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "player": {
+          "actual_valid": 463363,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 466219,
+          "known_participations_minimum": 472471,
+          "known_without_measured_minutes": 168,
+          "known_without_stats": 5939,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 2856,
+          "role_unavailable": 145
+        }
+      },
+      "competitions": 21,
+      "editions": 70,
+      "finished": 15569,
+      "matches": 16842
+    }
+  },
+  "fixture_sources": {
+    "engsoccerdata": {
+      "archive_finished_scored_both_teams": 179055,
+      "archive_recorded": 179928,
+      "finished": 179587,
+      "finished_scored": 179587,
+      "finished_scored_both_teams": 179055,
+      "recorded": 179928
+    },
+    "footballcsv": {
+      "archive_finished_scored_both_teams": 189933,
+      "archive_recorded": 190152,
+      "finished": 190152,
+      "finished_scored": 190152,
+      "finished_scored_both_teams": 189933,
+      "recorded": 190152
+    },
+    "international_results": {
+      "archive_finished_scored_both_teams": 0,
+      "archive_recorded": 0,
+      "finished": 409,
+      "finished_scored": 409,
+      "finished_scored_both_teams": 409,
+      "recorded": 409
+    },
+    "open_matchday": {
+      "archive_finished_scored_both_teams": 0,
+      "archive_recorded": 0,
+      "finished": 2576,
+      "finished_scored": 2576,
+      "finished_scored_both_teams": 2576,
+      "recorded": 4682
+    },
+    "openfootball": {
+      "archive_finished_scored_both_teams": 60836,
+      "archive_recorded": 61474,
+      "finished": 65791,
+      "finished_scored": 65271,
+      "finished_scored_both_teams": 65153,
+      "recorded": 65926
+    },
+    "openligadb": {
+      "archive_finished_scored_both_teams": 0,
+      "archive_recorded": 0,
+      "finished": 159,
+      "finished_scored": 159,
+      "finished_scored_both_teams": 159,
+      "recorded": 167
+    },
+    "pitchapi": {
+      "archive_finished_scored_both_teams": 0,
+      "archive_recorded": 0,
+      "finished": 75356,
+      "finished_scored": 75356,
+      "finished_scored_both_teams": 75356,
+      "recorded": 84371
+    },
+    "worldclub": {
+      "archive_finished_scored_both_teams": 62245,
+      "archive_recorded": 63159,
+      "finished": 63159,
+      "finished_scored": 63159,
+      "finished_scored_both_teams": 62245,
+      "recorded": 63159
+    }
+  },
+  "fjelstul": {
+    "all": {
+      "entered_substitutes": 5102,
+      "fjelstul_player_matches": 764,
+      "known_in_linked_tournaments": 20618,
+      "known_in_unlinked_tournaments": 6814,
+      "known_player_appearances": 27432,
+      "linked_matches": 964,
+      "managers": 2538,
+      "native_lineup_matches": 0,
+      "native_player_stat_matches": 0,
+      "referees": 1248,
+      "source_matches": 1248,
+      "starters": 22330,
+      "with_elo": 899
+    },
+    "linked_tournaments": 22,
+    "men_1970_2018": {
+      "entered_substitutes": 3223,
+      "fjelstul_player_matches": 700,
+      "known_in_linked_tournaments": 18623,
+      "known_in_unlinked_tournaments": 0,
+      "known_player_appearances": 18623,
+      "linked_matches": 700,
+      "managers": 1418,
+      "native_lineup_matches": 0,
+      "native_player_stat_matches": 0,
+      "referees": 700,
+      "source_matches": 700,
+      "starters": 15400,
+      "with_elo": 700
+    },
+    "men_2022": {
+      "entered_substitutes": 587,
+      "fjelstul_player_matches": 64,
+      "known_in_linked_tournaments": 1995,
+      "known_in_unlinked_tournaments": 0,
+      "known_player_appearances": 1995,
+      "linked_matches": 64,
+      "managers": 128,
+      "native_lineup_matches": 0,
+      "native_player_stat_matches": 0,
+      "referees": 64,
+      "source_matches": 64,
+      "starters": 1408,
+      "with_elo": 0
+    },
+    "tournaments": 30
+  },
+  "keys_with_edition": 34,
+  "pending_by_award": {
+    "2020": {
+      "assignable": 14418,
+      "unknown_role": 9
+    },
+    "2021": {
+      "assignable": 0,
+      "unknown_role": 68
+    },
+    "2022": {
+      "assignable": 0,
+      "unknown_role": 135
+    },
+    "2023": {
+      "assignable": 0,
+      "unknown_role": 214
+    },
+    "2024": {
+      "assignable": 0,
+      "unknown_role": 94
+    },
+    "2025": {
+      "assignable": 0,
+      "unknown_role": 75
+    },
+    "2026": {
+      "assignable": 0,
+      "unknown_role": 20
+    }
+  },
+  "pending_edition_count": 10,
+  "perimeter": {
+    "archive:engsoccerdata/scotland/2": {
+      "by_entity": {
+        "club": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 9544,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 9544,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "national team": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "player": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        }
+      },
+      "competition_ids": [
+        173
+      ],
+      "competitions": 1,
+      "domain": "archive",
+      "editions": 27,
+      "finished": 4772,
+      "label": "Scotland, second tier (Scottish Championship)",
+      "matches": 4772
+    },
+    "archive:engsoccerdata/scotland/3": {
+      "by_entity": {
+        "club": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 8418,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 8418,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "national team": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "player": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        }
+      },
+      "competition_ids": [
+        174
+      ],
+      "competitions": 1,
+      "domain": "archive",
+      "editions": 24,
+      "finished": 4209,
+      "label": "Scotland, third tier (Scottish League One)",
+      "matches": 4209
+    },
+    "archive:engsoccerdata/scotland/4": {
+      "by_entity": {
+        "club": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 8414,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 8414,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "national team": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "player": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        }
+      },
+      "competition_ids": [
+        175
+      ],
+      "competitions": 1,
+      "domain": "archive",
+      "editions": 24,
+      "finished": 4207,
+      "label": "Scotland, fourth tier (Scottish League Two)",
+      "matches": 4207
+    },
+    "cup:open-matchday:CYP_1_first-division": {
+      "by_entity": {
+        "club": {
+          "actual_valid": 126,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 126,
+          "known_participations_minimum": 126,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "national team": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "player": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        }
+      },
+      "competition_ids": [
+        135
+      ],
+      "competitions": 1,
+      "domain": "dossier",
+      "editions": 1,
+      "finished": 63,
+      "label": "Cyprus League",
+      "matches": 175
+    },
+    "cup:open-matchday:IRE_2_first-division": {
+      "by_entity": {
+        "club": {
+          "actual_valid": 212,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 212,
+          "known_participations_minimum": 212,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "national team": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "player": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        }
+      },
+      "competition_ids": [
+        123
+      ],
+      "competitions": 1,
+      "domain": "dossier",
+      "editions": 1,
+      "finished": 106,
+      "label": "League of Ireland First Division",
+      "matches": 106
+    },
+    "cup:open-matchday:IRE_3_national-league": {
+      "by_entity": {
+        "club": {
+          "actual_valid": 120,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 120,
+          "known_participations_minimum": 120,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "national team": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "player": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        }
+      },
+      "competition_ids": [
+        124
+      ],
+      "competitions": 1,
+      "domain": "dossier",
+      "editions": 1,
+      "finished": 60,
+      "label": "League of Ireland National League",
+      "matches": 62
+    },
+    "cup:open-matchday:KAZ_1_premier-league": {
+      "by_entity": {
+        "club": {
+          "actual_valid": 214,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 214,
+          "known_participations_minimum": 214,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "national team": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "player": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        }
+      },
+      "competition_ids": [
+        139
+      ],
+      "competitions": 1,
+      "domain": "dossier",
+      "editions": 1,
+      "finished": 107,
+      "label": "Kazakhstan Premier League",
+      "matches": 107
+    },
+    "cup:open-matchday:SCO_2_championship": {
+      "by_entity": {
+        "club": {
+          "actual_valid": 146,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 146,
+          "known_participations_minimum": 146,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "national team": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "player": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        }
+      },
+      "competition_ids": [
+        106
+      ],
+      "competitions": 1,
+      "domain": "dossier",
+      "editions": 1,
+      "finished": 73,
+      "label": "Scottish Championship",
+      "matches": 180
+    },
+    "cup:open-matchday:SCO_3_league-one": {
+      "by_entity": {
+        "club": {
+          "actual_valid": 148,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 148,
+          "known_participations_minimum": 148,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "national team": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "player": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        }
+      },
+      "competition_ids": [
+        107
+      ],
+      "competitions": 1,
+      "domain": "dossier",
+      "editions": 1,
+      "finished": 74,
+      "label": "Scottish League One",
+      "matches": 180
+    },
+    "cup:open-matchday:SCO_4_league-two": {
+      "by_entity": {
+        "club": {
+          "actual_valid": 140,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 140,
+          "known_participations_minimum": 140,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "national team": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "player": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        }
+      },
+      "competition_ids": [
+        108
+      ],
+      "competitions": 1,
+      "domain": "dossier",
+      "editions": 1,
+      "finished": 70,
+      "label": "Scottish League Two",
+      "matches": 180
+    },
+    "cup:open-matchday:SVN_1_prva-liga": {
+      "by_entity": {
+        "club": {
+          "actual_valid": 148,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 148,
+          "known_participations_minimum": 148,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "national team": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "player": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        }
+      },
+      "competition_ids": [
+        137
+      ],
+      "competitions": 1,
+      "domain": "dossier",
+      "editions": 1,
+      "finished": 74,
+      "label": "Prva Liga (SVN)",
+      "matches": 180
+    },
+    "cup:open-matchday:SWE_1_allsvenskan": {
+      "by_entity": {},
+      "competition_ids": [],
+      "competitions": 0,
+      "domain": "dossier",
+      "editions": 0,
+      "finished": 0,
+      "label": "Allsvenskan (SWE)",
+      "matches": 0
+    },
+    "cup:open-matchday:WAL_2_cymru-north": {
+      "by_entity": {
+        "club": {
+          "actual_valid": 212,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 212,
+          "known_participations_minimum": 212,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "national team": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "player": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        }
+      },
+      "competition_ids": [
+        130
+      ],
+      "competitions": 1,
+      "domain": "dossier",
+      "editions": 1,
+      "finished": 106,
+      "label": "Cymru North",
+      "matches": 213
+    },
+    "cup:open-matchday:WAL_3_cymru-south": {
+      "by_entity": {
+        "club": {
+          "actual_valid": 198,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 198,
+          "known_participations_minimum": 198,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "national team": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "player": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        }
+      },
+      "competition_ids": [
+        131
+      ],
+      "competitions": 1,
+      "domain": "dossier",
+      "editions": 1,
+      "finished": 99,
+      "label": "Cymru South",
+      "matches": 207
+    },
+    "l_1Kknkl": {
+      "by_entity": {
+        "club": {
+          "actual_valid": 506,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 506,
+          "known_participations_minimum": 506,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "national team": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "player": {
+          "actual_valid": 7669,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 7669,
+          "known_participations_minimum": 7761,
+          "known_without_measured_minutes": 1,
+          "known_without_stats": 77,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 14
+        }
+      },
+      "competition_ids": [
+        195
+      ],
+      "competitions": 1,
+      "domain": "native",
+      "editions": 2,
+      "finished": 253,
+      "label": "Premier Soccer League (RSA)",
+      "matches": 420
+    },
+    "l_1SGwQT": {
+      "by_entity": {
+        "club": {
+          "actual_valid": 308,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 308,
+          "known_participations_minimum": 308,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "national team": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "player": {
+          "actual_valid": 4118,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 4118,
+          "known_participations_minimum": 4141,
+          "known_without_measured_minutes": 1,
+          "known_without_stats": 22,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        }
+      },
+      "competition_ids": [
+        197
+      ],
+      "competitions": 1,
+      "domain": "native",
+      "editions": 3,
+      "finished": 154,
+      "label": "Women's Premier League (KSA)",
+      "matches": 202
+    },
+    "l_1TVRZW": {
+      "by_entity": {
+        "club": {
+          "actual_valid": 1388,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 1388,
+          "known_participations_minimum": 1388,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "national team": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "player": {
+          "actual_valid": 21646,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 21646,
+          "known_participations_minimum": 21885,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 239,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        }
+      },
+      "competition_ids": [
+        14
+      ],
+      "competitions": 1,
+      "domain": "native",
+      "editions": 3,
+      "finished": 694,
+      "label": "Primera Division (VEN)",
+      "matches": 700
+    },
+    "l_1XsMdH": {
+      "by_entity": {
+        "club": {
+          "actual_valid": 2760,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 2760,
+          "known_participations_minimum": 2760,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "national team": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "player": {
+          "actual_valid": 38706,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 41562,
+          "known_participations_minimum": 41677,
+          "known_without_measured_minutes": 22,
+          "known_without_stats": 65,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 2856,
+          "role_unavailable": 28
+        }
+      },
+      "competition_ids": [
+        15
+      ],
+      "competitions": 1,
+      "domain": "native",
+      "editions": 6,
+      "finished": 1380,
+      "label": "Allsvenskan (SWE)",
+      "matches": 1396
+    },
+    "l_1qpFVw": {
+      "by_entity": {
+        "club": {
+          "actual_valid": 1294,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 1294,
+          "known_participations_minimum": 1294,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "national team": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "player": {
+          "actual_valid": 19630,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 19630,
+          "known_participations_minimum": 19682,
+          "known_without_measured_minutes": 23,
+          "known_without_stats": 26,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 3
+        }
+      },
+      "competition_ids": [
+        189
+      ],
+      "competitions": 1,
+      "domain": "native",
+      "editions": 6,
+      "finished": 647,
+      "label": "Indian Super League (IND)",
+      "matches": 698
+    },
+    "l_1rPvVD": {
+      "by_entity": {
+        "club": {
+          "actual_valid": 936,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 936,
+          "known_participations_minimum": 936,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "national team": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "player": {
+          "actual_valid": 14539,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 14539,
+          "known_participations_minimum": 14586,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 47,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        }
+      },
+      "competition_ids": [
+        59
+      ],
+      "competitions": 1,
+      "domain": "native",
+      "editions": 3,
+      "finished": 468,
+      "label": "1. Division (DEN)",
+      "matches": 516
+    },
+    "l_20pNSc": {
+      "by_entity": {
+        "club": {
+          "actual_valid": 1440,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 1440,
+          "known_participations_minimum": 1440,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "national team": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "player": {
+          "actual_valid": 22132,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 22132,
+          "known_participations_minimum": 22193,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 61,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        }
+      },
+      "competition_ids": [
+        19
+      ],
+      "competitions": 1,
+      "domain": "native",
+      "editions": 3,
+      "finished": 720,
+      "label": "Super League (CHN)",
+      "matches": 720
+    },
+    "l_271pqa": {
+      "by_entity": {
+        "club": {
+          "actual_valid": 1534,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 1534,
+          "known_participations_minimum": 1534,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "national team": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "player": {
+          "actual_valid": 24095,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 24095,
+          "known_participations_minimum": 24132,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 37,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        }
+      },
+      "competition_ids": [
+        21
+      ],
+      "competitions": 1,
+      "domain": "native",
+      "editions": 3,
+      "finished": 767,
+      "label": "K League 2 (KOR)",
+      "matches": 783
+    },
+    "l_2ApGa4": {
+      "by_entity": {
+        "club": {
+          "actual_valid": 3422,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 3422,
+          "known_participations_minimum": 3422,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "national team": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "player": {
+          "actual_valid": 53364,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 53364,
+          "known_participations_minimum": 53465,
+          "known_without_measured_minutes": 11,
+          "known_without_stats": 71,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 19
+        }
+      },
+      "competition_ids": [
+        22
+      ],
+      "competitions": 1,
+      "domain": "native",
+      "editions": 6,
+      "finished": 1711,
+      "label": "J. League (JPN)",
+      "matches": 1951
+    },
+    "l_2EKrnc": {
+      "by_entity": {
+        "club": {
+          "actual_valid": 2226,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 2226,
+          "known_participations_minimum": 2226,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "national team": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "player": {
+          "actual_valid": 34406,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 34406,
+          "known_participations_minimum": 35039,
+          "known_without_measured_minutes": 19,
+          "known_without_stats": 551,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 63
+        }
+      },
+      "competition_ids": [
+        23
+      ],
+      "competitions": 1,
+      "domain": "native",
+      "editions": 5,
+      "finished": 1113,
+      "label": "K League 1 (KOR)",
+      "matches": 1132
+    },
+    "l_3CB6qX": {
+      "by_entity": {
+        "club": {
+          "actual_valid": 1354,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 1354,
+          "known_participations_minimum": 1354,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "national team": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "player": {
+          "actual_valid": 11438,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 11438,
+          "known_participations_minimum": 11755,
+          "known_without_measured_minutes": 46,
+          "known_without_stats": 271,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        }
+      },
+      "competition_ids": [
+        28
+      ],
+      "competitions": 1,
+      "domain": "native",
+      "editions": 3,
+      "finished": 677,
+      "label": "Saudi First Division (KSA)",
+      "matches": 755
+    },
+    "l_3Kf7Ni": {
+      "by_entity": {
+        "club": {
+          "actual_valid": 1268,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 1268,
+          "known_participations_minimum": 1268,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "national team": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "player": {
+          "actual_valid": 19474,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 19474,
+          "known_participations_minimum": 19537,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 63,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        }
+      },
+      "competition_ids": [
+        31
+      ],
+      "competitions": 1,
+      "domain": "native",
+      "editions": 3,
+      "finished": 634,
+      "label": "USL League One (USA)",
+      "matches": 635
+    },
+    "l_3Tn1kG": {
+      "by_entity": {
+        "club": {
+          "actual_valid": 2558,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 2558,
+          "known_participations_minimum": 2558,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "national team": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "player": {
+          "actual_valid": 38825,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 38825,
+          "known_participations_minimum": 39186,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 361,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        }
+      },
+      "competition_ids": [
+        32
+      ],
+      "competitions": 1,
+      "domain": "native",
+      "editions": 3,
+      "finished": 1279,
+      "label": "MLS Next Pro (USA)",
+      "matches": 1279
+    },
+    "l_3fglZv": {
+      "by_entity": {
+        "club": {
+          "actual_valid": 1872,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 1872,
+          "known_participations_minimum": 1872,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "national team": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "player": {
+          "actual_valid": 25943,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 25943,
+          "known_participations_minimum": 29514,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 3571,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        }
+      },
+      "competition_ids": [
+        33
+      ],
+      "competitions": 1,
+      "domain": "native",
+      "editions": 3,
+      "finished": 936,
+      "label": "J3 League (JPN)",
+      "matches": 1146
+    },
+    "l_3hW1NO": {
+      "by_entity": {
+        "club": {
+          "actual_valid": 604,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 604,
+          "known_participations_minimum": 604,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "national team": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "player": {
+          "actual_valid": 9385,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 9385,
+          "known_participations_minimum": 9407,
+          "known_without_measured_minutes": 1,
+          "known_without_stats": 21,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        }
+      },
+      "competition_ids": [
+        34
+      ],
+      "competitions": 1,
+      "domain": "native",
+      "editions": 2,
+      "finished": 302,
+      "label": "Thai League 1 (THA)",
+      "matches": 480
+    },
+    "l_3qNjzC": {
+      "by_entity": {
+        "club": {
+          "actual_valid": 1386,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 1386,
+          "known_participations_minimum": 1386,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "national team": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "player": {
+          "actual_valid": 21246,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 21246,
+          "known_participations_minimum": 21282,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 36,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        }
+      },
+      "competition_ids": [
+        37
+      ],
+      "competitions": 1,
+      "domain": "native",
+      "editions": 3,
+      "finished": 693,
+      "label": "Liga de Primera (CHI)",
+      "matches": 720
+    },
+    "l_3uNwVX": {
+      "by_entity": {
+        "club": {
+          "actual_valid": 1870,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 1870,
+          "known_participations_minimum": 1870,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "national team": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "player": {
+          "actual_valid": 28765,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 28765,
+          "known_participations_minimum": 28766,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 1,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        }
+      },
+      "competition_ids": [
+        39
+      ],
+      "competitions": 1,
+      "domain": "native",
+      "editions": 3,
+      "finished": 935,
+      "label": "Liga 1 (PER)",
+      "matches": 947
+    },
+    "l_45xKXM": {
+      "by_entity": {
+        "club": {
+          "actual_valid": 1078,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 1078,
+          "known_participations_minimum": 1078,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "national team": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "player": {
+          "actual_valid": 15964,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 15964,
+          "known_participations_minimum": 16174,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 210,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        }
+      },
+      "competition_ids": [
+        46
+      ],
+      "competitions": 1,
+      "domain": "native",
+      "editions": 3,
+      "finished": 539,
+      "label": "Virsliga (LVA)",
+      "matches": 540
+    },
+    "l_46aZMC": {
+      "by_entity": {
+        "club": {
+          "actual_valid": 804,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 804,
+          "known_participations_minimum": 804,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "national team": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "player": {
+          "actual_valid": 12594,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 12594,
+          "known_participations_minimum": 12752,
+          "known_without_measured_minutes": 44,
+          "known_without_stats": 96,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 18
+        }
+      },
+      "competition_ids": [
+        193
+      ],
+      "competitions": 1,
+      "domain": "native",
+      "editions": 2,
+      "finished": 402,
+      "label": "Premier League (EGY)",
+      "matches": 512
+    },
+    "l_4FPF2L": {
+      "by_entity": {
+        "club": {
+          "actual_valid": 1012,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 1012,
+          "known_participations_minimum": 1012,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "national team": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "player": {
+          "actual_valid": 16047,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 16047,
+          "known_participations_minimum": 16063,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 16,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        }
+      },
+      "competition_ids": [
+        50
+      ],
+      "competitions": 1,
+      "domain": "native",
+      "editions": 2,
+      "finished": 506,
+      "label": "Division Profesional (PAR)",
+      "matches": 527
+    },
+    "l_4dzm4e": {
+      "by_entity": {
+        "club": {
+          "actual_valid": 1518,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 1518,
+          "known_participations_minimum": 1518,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "national team": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "player": {
+          "actual_valid": 23377,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 23377,
+          "known_participations_minimum": 23474,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 97,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        }
+      },
+      "competition_ids": [
+        58
+      ],
+      "competitions": 1,
+      "domain": "native",
+      "editions": 3,
+      "finished": 759,
+      "label": "Primera Division (BOL)",
+      "matches": 783
+    }
+  },
+  "perimeter_snapshots": {
+    "exact_links": {
+      "at": "2026-11-18 22:14:35.476249+00:00",
+      "database": "vega_v2",
+      "isolation": "repeatable read",
+      "read_only": "on",
+      "snapshot": "4463942:4463942:"
+    },
+    "pitch_aggregate": {
+      "at": "2026-11-18 22:12:13.917706+00:00",
+      "database": "vega_v2",
+      "isolation": "repeatable read",
+      "read_only": "on",
+      "snapshot": "4463828:4463828:"
+    }
+  },
+  "physical": {
+    "all": {
+      "by_entity": {
+        "club": {
+          "actual_valid": 161934,
+          "archive_policy_excluded": 986961,
+          "expected_algorithm": 161934,
+          "known_participations_minimum": 1149005,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 8,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "national team": {
+          "actual_valid": 3252,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 3252,
+          "known_participations_minimum": 3590,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 338,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "player": {
+          "actual_valid": 2282608,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 2297026,
+          "known_participations_minimum": 2308364,
+          "known_without_measured_minutes": 1914,
+          "known_without_stats": 8809,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 14418,
+          "role_unavailable": 615
+        }
+      },
+      "competitions": 208,
+      "editions": 2149,
+      "finished": 577189,
+      "matches": 588794
+    },
+    "declared_removed_present": {
+      "by_entity": {
+        "club": {
+          "actual_valid": 32802,
+          "archive_policy_excluded": 26376,
+          "expected_algorithm": 32802,
+          "known_participations_minimum": 59178,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "national team": {
+          "actual_valid": 0,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 0,
+          "known_participations_minimum": 0,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "player": {
+          "actual_valid": 463363,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 466219,
+          "known_participations_minimum": 472471,
+          "known_without_measured_minutes": 168,
+          "known_without_stats": 5939,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 2856,
+          "role_unavailable": 145
+        }
+      },
+      "competitions": 34,
+      "editions": 155,
+      "finished": 29589,
+      "matches": 31620
+    },
+    "outside_list": {
+      "by_entity": {
+        "club": {
+          "actual_valid": 129132,
+          "archive_policy_excluded": 960585,
+          "expected_algorithm": 129132,
+          "known_participations_minimum": 1089827,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 8,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "national team": {
+          "actual_valid": 3252,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 3252,
+          "known_participations_minimum": 3590,
+          "known_without_measured_minutes": 0,
+          "known_without_stats": 0,
+          "matched_copies_excluded": 338,
+          "missing_from_storage": 0,
+          "role_unavailable": 0
+        },
+        "player": {
+          "actual_valid": 1819245,
+          "archive_policy_excluded": 0,
+          "expected_algorithm": 1830807,
+          "known_participations_minimum": 1835893,
+          "known_without_measured_minutes": 1746,
+          "known_without_stats": 2870,
+          "matched_copies_excluded": 0,
+          "missing_from_storage": 11562,
+          "role_unavailable": 470
+        }
+      },
+      "competitions": 174,
+      "editions": 1994,
+      "finished": 547600,
+      "matches": 557174
+    }
+  },
+  "pulses": {
+    "already_removed_match_ids": [
+      8049,
+      8050,
+      8051,
+      8052,
+      8053,
+      8054,
+      8055,
+      8056,
+      8057,
+      8058,
+      8059,
+      8060,
+      8290,
+      8291,
+      8292,
+      8293,
+      8294,
+      8295,
+      8296,
+      8297,
+      8298,
+      8299,
+      8300,
+      8301,
+      8534,
+      8535,
+      8536,
+      8537,
+      8538,
+      8539,
+      8540,
+      8541,
+      8542,
+      8543,
+      8544
+    ],
+    "elo_publications": [
+      {
+        "finished_at": "2026-11-18 17:16:04.503585+00:00",
+        "id": 2099,
+        "kind": "elo",
+        "matches": 82593,
+        "method_version": "power-ranking-v8",
+        "started_at": "2026-11-18 17:15:34.917412+00:00",
+        "status": "published"
+      },
+      {
+        "finished_at": "2026-11-18 01:49:24.867474+00:00",
+        "id": 2097,
+        "kind": "elo",
+        "matches": 81923,
+        "method_version": "power-ranking-v8",
+        "started_at": "2026-11-18 01:48:53.370889+00:00",
+        "status": "superseded"
+      },
+      {
+        "finished_at": "2026-11-18 01:04:51.345874+00:00",
+        "id": 2094,
+        "kind": "elo",
+        "matches": 81923,
+        "method_version": "power-ranking-v8",
+        "started_at": "2026-11-18 01:04:20.230488+00:00",
+        "status": "superseded"
+      },
+      {
+        "finished_at": "2026-11-18 00:36:41.533271+00:00",
+        "id": 2092,
+        "kind": "elo",
+        "matches": 81923,
+        "method_version": "power-ranking-v8",
+        "started_at": "2026-11-18 00:36:14.284909+00:00",
+        "status": "superseded"
+      },
+      {
+        "finished_at": "2026-11-18 00:01:09.442764+00:00",
+        "id": 2090,
+        "kind": "elo",
+        "matches": 81923,
+        "method_version": "power-ranking-v8",
+        "started_at": "2026-11-18 00:00:38.421426+00:00",
+        "status": "superseded"
+      },
+      {
+        "finished_at": "2026-11-17 19:47:16.608543+00:00",
+        "id": 2088,
+        "kind": "elo",
+        "matches": 81921,
+        "method_version": "power-ranking-v8",
+        "started_at": "2026-11-17 19:46:44.410848+00:00",
+        "status": "superseded"
+      },
+      {
+        "finished_at": "2026-11-17 17:03:59.419386+00:00",
+        "id": 2086,
+        "kind": "elo",
+        "matches": 81921,
+        "method_version": "power-ranking-v8",
+        "started_at": "2026-11-17 17:03:29.919695+00:00",
+        "status": "superseded"
+      },
+      {
+        "finished_at": "2026-11-17 14:14:44.539382+00:00",
+        "id": 2083,
+        "kind": "elo",
+        "matches": 81921,
+        "method_version": "power-ranking-v8",
+        "started_at": "2026-11-17 14:14:15.832440+00:00",
+        "status": "superseded"
+      },
+      {
+        "finished_at": "2026-11-17 13:44:44.972858+00:00",
+        "id": 2081,
+        "kind": "elo",
+        "matches": 81921,
+        "method_version": "power-ranking-v8",
+        "started_at": "2026-11-17 13:44:18.308397+00:00",
+        "status": "superseded"
+      },
+      {
+        "finished_at": "2026-11-17 10:57:36.438206+00:00",
+        "id": 2078,
+        "kind": "elo",
+        "matches": 81645,
+        "method_version": "power-ranking-v8",
+        "started_at": "2026-11-17 10:57:12.256834+00:00",
+        "status": "superseded"
+      },
+      {
+        "finished_at": "2026-11-17 07:43:08.147002+00:00",
+        "id": 2076,
+        "kind": "elo",
+        "matches": 80437,
+        "method_version": "power-ranking-v8",
+        "started_at": "2026-11-17 07:42:48.560023+00:00",
+        "status": "superseded"
+      },
+      {
+        "finished_at": "2026-11-17 05:01:54.510898+00:00",
+        "id": 2074,
+        "kind": "elo",
+        "matches": 80437,
+        "method_version": "power-ranking-v8",
+        "started_at": "2026-11-17 05:01:25.997769+00:00",
+        "status": "superseded"
+      }
+    ],
+    "historic_dirty_markers": 0,
+    "historic_ingestion_status_counts": {
+      "ok": 19
+    },
+    "migrations": [
+      {
+        "applied_at": "2026-11-17 17:01:35.402304+00:00",
+        "sha256": "4f08e25c4a3f694f8642911199948389b4feebe1ef644b1ece41be255e477609",
+        "version": "133_cohort_max_wait.sql"
+      },
+      {
+        "applied_at": "2026-11-18 16:52:50.615988+00:00",
+        "sha256": "89dcafc08b55b2f6b6bb8cbf22f485452de419e9d8b7f0bebb8b8585bfacd5f6",
+        "version": "134_archive_scores_due.sql"
+      },
+      {
+        "applied_at": "2026-11-18 18:22:31.334579+00:00",
+        "sha256": "131c37b1f505a7d7377de019e522a880bfad4c25005f6e039c33e308e29a6e94",
+        "version": "135_player_transfers.sql"
+      },
+      {
+        "applied_at": "2026-11-18 19:48:34.847280+00:00",
+        "sha256": "9b6372ba9f71e6d440ec125c9bb352a3af3958882e21544fa7430aa50e7eddb1",
+        "version": "136_fjelstul_provider.sql"
+      },
+      {
+        "applied_at": "2026-11-18 19:48:34.861740+00:00",
+        "sha256": "850925f676926e5fcc15e8d6880694cfbef82b28cd73889ed299efc40b7ad791",
+        "version": "137_worldcup_database.sql"
+      },
+      {
+        "applied_at": "2026-11-18 21:17:22.498570+00:00",
+        "sha256": "58306ad626fdfdddfe744446fa4216c2f7a8258cd51afbbaee3de8007beebbc4",
+        "version": "138_worldcup_match_reads.sql"
+      }
+    ],
+    "provider_match_keys": [
+      {
+        "is_current": true,
+        "match_keys": 84371,
+        "orphaned_match_keys": 0,
+        "provider": "pitchapi"
+      },
+      {
+        "is_current": true,
+        "match_keys": 4452,
+        "orphaned_match_keys": 0,
+        "provider": "openfootball"
+      },
+      {
+        "is_current": true,
+        "match_keys": 4682,
+        "orphaned_match_keys": 0,
+        "provider": "open_matchday"
+      },
+      {
+        "is_current": true,
+        "match_keys": 167,
+        "orphaned_match_keys": 0,
+        "provider": "openligadb"
+      },
+      {
+        "is_current": true,
+        "match_keys": 409,
+        "orphaned_match_keys": 0,
+        "provider": "international_results"
+      }
+    ]
+  },
+  "rows": {
+    "edition": 6447,
+    "pending": 10,
+    "season": 471
+  },
+  "saudi": {
+    "editions": [
+      {
+        "edition": 1000,
+        "missing_prior_audit": 0,
+        "physical_finished_2209": 90,
+        "saff_finished_prior_audit": 90,
+        "same_result_prior_audit": 90,
+        "season": "2024/2025"
+      },
+      {
+        "edition": 1001,
+        "missing_prior_audit": 0,
+        "physical_finished_2209": 56,
+        "saff_finished_prior_audit": 56,
+        "same_result_prior_audit": 56,
+        "season": "2025/2026"
+      },
+      {
+        "edition": 1002,
+        "missing_prior_audit": 20,
+        "physical_finished_2209": 8,
+        "saff_finished_prior_audit": 28,
+        "same_result_prior_audit": 8,
+        "season": "2026/2027"
+      }
+    ],
+    "league_key": "l_1SGwQT",
+    "official_calendar": "https://www.saff.com.sa/en/championship.php?id=428&type=all"
+  },
+  "snapshots": {
+    "1753": {
+      "at": "2026-11-18 17:53:27.125902+00:00",
+      "isolation": "repeatable read",
+      "read_only": "on",
+      "release": "b2e6dd82d36a2ca0f439ec84bf2e5dbbcd3013d9",
+      "snapshot": "4450752:4450752:",
+      "sql_count": 52
+    },
+    "1837": {
+      "at": "2026-11-18 18:37:54.915800+00:00",
+      "isolation": "repeatable read",
+      "read_only": "on",
+      "release": "5956a83cd76bf0b41924795e05b5024c8e1770d6",
+      "snapshot": "4452926:4452926:",
+      "sql_count": 53
+    },
+    "2209": {
+      "at": "2026-11-18 22:09:32.426054+00:00",
+      "isolation": "repeatable read",
+      "read_only": "on",
+      "release": "202f24c09eb4c8fb87d7190939bafbf09cb00393",
+      "snapshot": "4463672:4463672:",
+      "sql_count": 56
+    }
+  },
+  "verification": {
+    "1753": [
+      "editions 2149 entity cells 6447 team policy replay True season universe True player score partitions [2021, 2022, 2023, 2024, 2025, 2026] event enrichment partitions [2021, 2022, 2023, 2024, 2025, 2026]",
+      "6447 [('club', 161934, 161934), ('national team', 3252, 3252), ('player', 2282608, 2282608)]",
+      "6447 {'club': Counter({'expected_algorithm': 161934, 'actual_valid': 161934, 'missing_from_storage': 0}), 'national team': Counter({'expected_algorithm': 3252, 'actual_valid': 3252, 'missing_from_storage': 0}), 'player': Counter({'expected_algorithm': 2297026, 'actual_valid': 2282608, 'missing_from_storage': 14418, 'role_unavailable': 615})}"
+    ],
+    "1837": [
+      "editions 2149 entity cells 6447 team policy replay True season universe True player score partitions [2021, 2022, 2023, 2024, 2025, 2026] event enrichment partitions [2021, 2022, 2023, 2024, 2025, 2026]",
+      "6447 [('club', 161934, 161934), ('national team', 3252, 3252), ('player', 2282608, 2282608)]",
+      "6447 {'club': Counter({'expected_algorithm': 161934, 'actual_valid': 161934, 'missing_from_storage': 0}), 'national team': Counter({'expected_algorithm': 3252, 'actual_valid': 3252, 'missing_from_storage': 0}), 'player': Counter({'expected_algorithm': 2297026, 'actual_valid': 2282608, 'missing_from_storage': 14418, 'role_unavailable': 615})}"
+    ],
+    "2209": [
+      "editions 2149 entity cells 6447 team policy replay True season universe True player score partitions [2021, 2022, 2023, 2024, 2025, 2026] event enrichment partitions [2021, 2022, 2023, 2024, 2025, 2026]",
+      "6447 [('club', 161934, 161934), ('national team', 3252, 3252), ('player', 2282608, 2282608)]",
+      "6447 {'club': Counter({'expected_algorithm': 161934, 'actual_valid': 161934, 'missing_from_storage': 0}), 'national team': Counter({'expected_algorithm': 3252, 'actual_valid': 3252, 'missing_from_storage': 0}), 'player': Counter({'expected_algorithm': 2297026, 'actual_valid': 2282608, 'missing_from_storage': 14418, 'role_unavailable': 615})}"
+    ]
+  }
+}

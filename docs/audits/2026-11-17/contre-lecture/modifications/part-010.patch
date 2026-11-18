@@ -1,3 +1,603 @@
+diff --git a/backend/tests/test_sources.py b/backend/tests/test_sources.py
+index fa66db1b46..c456ebf8fe 100644
+--- a/backend/tests/test_sources.py
++++ b/backend/tests/test_sources.py
+@@ -98,20 +98,19 @@ class PureTest(unittest.TestCase):
+             {"round": "Semi-finals", "date": "1998-07-07", "team1": "Brazil", "team2": "Netherlands", "score": {"p": [4, 2], "et": [1, 1], "ft": [1, 1]}},
+             {"round": "Matchday 1", "date": "1998-06-10", "team1": "Brazil", "team2": "Scotland", "score": {"ft": [2, 1]}},
+             {"round": "Matchday 1", "date": "2028-06-09", "team1": "England", "team2": "A2"},
+-            # A pair that is no score: one number, a string, a negative, a boolean, three numbers.
+-            {"round": "Matchday 1", "date": "1998-06-11", "team1": "A", "team2": "B", "score": [1]},
+-            {"round": "Matchday 1", "date": "1998-06-11", "team1": "C", "team2": "D", "score": ["1", 2]},
+-            {"round": "Matchday 1", "date": "1998-06-11", "team1": "E", "team2": "F", "score": [-1, 2]},
+-            {"round": "Matchday 1", "date": "1998-06-11", "team1": "G", "team2": "H", "score": [True, 2]},
+-            {"round": "Matchday 1", "date": "1998-06-11", "team1": "I", "team2": "J", "score": [1, 2, 3]},
+         ]}
+         rows = [row for _, row in cups.match_rows("open-cups", "world-cup-history", "1998", body)]
+         read = [(r["status"], r["home_score"], r["away_score"], r["home_score_90"], r["home_score_et"], r["home_penalty_score"]) for r in rows]
+         self.assertEqual(read[:4], [("finished", 0, 3, None, None, None), ("finished", 1, 1, 1, 1, 4),
+                                     ("finished", 2, 1, None, None, None), ("not_started", None, None, None, None, None)])
+-        self.assertEqual(set(read[4:]), {("not_started", None, None, None, None, None)})
+-        # The other cup sources' readers have not changed: their editions are not read again.
+-        self.assertEqual(set(cups.READER), {"open-cups"})
++        # A pair that is no score (one number, a string, a negative, a boolean, three numbers) is no unplayed match:
++        # the edition is not written (FAILURE_MODES.md §19, 19g).
++        for score in ([1], ["1", 2], [-1, 2], [True, 2], [1, 2, 3]):
++            with self.subTest(score=score):
++                with self.assertRaises(SourceError) as caught:
++                    cups.match_rows("open-cups", "world-cup-history", "1998", {"matches": [
++                        {"round": "Matchday 1", "date": "1998-06-11", "team1": "A", "team2": "B", "score": score}]})
++                self.assertEqual(caught.exception.code, "INVALID_SCORE")
+ 
+     # The Fjelstul World Cup Database (vega/sources/worldcup.py; the user's decision of 18 November 2026). Failure
+     # modes and expected outcomes, written before the reader:
+@@ -280,6 +279,32 @@ class PureTest(unittest.TestCase):
+             uefa.fetch(get, "uefa_clubs", 2027)
+ 
+ 
++class FjelstulFiles:
++    """The Fjelstul World Cup Database's files as a run fetches them (worldcup_samples), and the URLs it asked for."""
++
++    def __init__(self, files):
++        self.files, self.calls = files, []
++
++    def __call__(self, url, *, as_text=False):
++        self.calls.append(url)
++        return self.files[url.rsplit("/", 1)[1].removesuffix(".csv")]
++
++
++def world_cup_1974(final_number=None):
++    """OpenFootball's 1974 World Cup, three matches: the final (the archive lists West Germany first), numbered when given."""
++    final = {"round": "Final", "date": "1974-07-07", "team1": "West Germany", "team2": "Netherlands", "score": [2, 1]}
++    return {"name": "World Cup 1974", "season": "1974", "source": {"name": "OpenFootball", "url": "https://github.com/openfootball/worldcup.json"}, "matches": [
++        dict(final, num=final_number) if final_number else final,
++        {"round": "Matchday 1", "group": "Group 1", "date": "1974-06-14", "team1": "USA", "team2": "Sweden", "score": {"ft": [1, 1], "et": [1, 1], "p": [4, 5]}},
++        {"round": "Matchday 1", "group": "Group 2", "date": "1974-06-13", "team1": "Brazil", "team2": "Yugoslavia", "score": [0, 0]}]}
++
++
++# The twelve tables of the Fjelstul World Cup Database (137_worldcup_database.sql), as one comparable sheet.
++WORLDCUP_TABLES = ("worldcup_tournaments", "worldcup_teams", "worldcup_stadiums", "worldcup_people", "worldcup_matches", "worldcup_squads",
++                   "worldcup_appearances", "worldcup_goals", "worldcup_bookings", "worldcup_substitutions", "worldcup_shootout_kicks",
++                   "worldcup_awards")
++
++
+ @unittest.skipUnless(DSN and psycopg, "requires disposable local sources DB and psycopg")
+ class UefaTest(unittest.TestCase):
+     @classmethod
+@@ -541,6 +566,13 @@ class UefaTest(unittest.TestCase):
+         x("""INSERT INTO core.teams(id, name, short_name, country_code) VALUES (30, 'Paris Saint-Germain', 'PSG', 'FRA'),
+              (31, 'Olympique de Marseille', 'Marseille', 'FRA'), (32, 'AS Monaco', NULL, 'FRA')""")
+         x("INSERT INTO core.team_seasons(team_id, competition_season_id) SELECT id, 70 FROM core.teams WHERE id IN (30, 31, 32)")
++        # The edition's own matches (FAILURE_MODES_SPORTSCORE.md §4): a table of 12 played a club is
++        # this edition's only if it has kicked off at least 8 a club (rule 11); here 8 each.
++        for n in range(12):
++            home, away = [(30, 31), (31, 32), (32, 30)][n % 3]
++            x("""INSERT INTO core.matches(competition_season_id, season_id, source, status, kickoff_at, home_team_id, away_team_id,
++                   home_score, away_score) VALUES (70, 2025, 'pitchapi', 'finished', %s, %s, %s, 1, 0)""",
++              (NOW - timedelta(days=n + 1), home, away))
+         table = [{"team": "Paris Saint Germain", "pos": 1, "p": 12, "w": 9, "d": 2, "l": 1, "gf": 30, "ga": 8, "gd": 22, "pts": 29},
+                  {"team": "Marseille", "pos": 2, "p": 12, "w": 8, "d": 2, "l": 2, "gf": 25, "ga": 12, "gd": 13, "pts": 26},
+                  {"team": "Monaco FC", "pos": 3, "p": 12, "w": 7, "d": 3, "l": 2, "gf": 20, "ga": 11, "gd": 9, "pts": 24}]
+@@ -572,12 +604,15 @@ class UefaTest(unittest.TestCase):
+         with self.db.transaction():
+             self.assertEqual(sportscore.run(self.db, get, "standings:l_4WFCIZ", NOW), (0, 0))
+         self.assertEqual(len(calls), 2)
+-        # A table naming clubs of another season: nothing official is kept.
++        # A table naming clubs the edition does not hold is refused and the accepted table stays
++        # (VI-29, FAILURE_MODES_SPORTSCORE.md §4: it used to be deleted, the version raised, "ok").
+         table[1]["team"], table[2]["team"] = "Paris FC", "Le Havre"
+-        with self.db.transaction():
+-            self.assertEqual(sportscore.run(self.db, get, "standings:l_3FJFUl", NOW), (0, 2))
+-        self.assertEqual(standings(), [])
+-        self.assertGreater(version(), published)
++        with self.assertRaises(SourceError) as refused:
++            with self.db.transaction():
++                sportscore.run(self.db, get, "standings:l_3FJFUl", NOW)
++        self.assertEqual(refused.exception.code, "UNMATCHED_TEAMS")
++        self.assertEqual(standings(), [(30, 1, 29), (31, 2, 26), (32, 3, 24)])
++        self.assertEqual(version(), published)
+         payload["competition_slug"] = "other"
+         with self.assertRaises(SourceError):
+             sportscore.run(self.db, get, "standings:l_3FJFUl", NOW)
+@@ -805,35 +840,61 @@ class UefaTest(unittest.TestCase):
+         # - a match pairs with the archived match of the same edition, day and teams (in the other order, under the
+         #   archive's spelling); the women's match pairs with none;
+         # - the collect role alone does it all (the rows, the pair, the credit);
+-        # - a later run reads no file; an archive that replaces a match clears its pair, and the next run pairs the
+-        #   new match;
++        # - a later run reads no file; an archive that numbers a match later keeps that match, its pair and its sheet
++        #   (a match truly replaced is paired again: test_worldcup_pairs_again_an_archived_match_truly_replaced);
+         # - a file that is not the pinned one changes nothing (SOURCE_CHANGED): the rows read before stay;
+         # - a new commit replaces every row and the pairs are made again.
+         x = self.db.execute
+-
+-        class Files:
+-            def __init__(self, files):
+-                self.files, self.calls = files, []
+-
+-            def __call__(self, url, *, as_text=False):
+-                self.calls.append(url)
+-                return self.files[url.rsplit("/", 1)[1].removesuffix(".csv")]
+-
+-        def archive(final_number=None):
+-            final = {"round": "Final", "date": "1974-07-07", "team1": "West Germany", "team2": "Netherlands", "score": [2, 1]}
+-            return {"name": "World Cup 1974", "season": "1974", "source": {"name": "OpenFootball", "url": "https://github.com/openfootball/worldcup.json"}, "matches": [
+-                dict(final, num=final_number) if final_number else final,
+-                {"round": "Matchday 1", "group": "Group 1", "date": "1974-06-14", "team1": "USA", "team2": "Sweden", "score": {"ft": [1, 1], "et": [1, 1], "p": [4, 5]}},
+-                {"round": "Matchday 1", "group": "Group 2", "date": "1974-06-13", "team1": "Brazil", "team2": "Yugoslavia", "score": [0, 0]}]}
+-
++        Files, archive = FjelstulFiles, world_cup_1974
+         pairs = """SELECT w.match_key, b.home_team_name, b.away_team_name FROM core.worldcup_matches w
+                    LEFT JOIN core.matches b ON b.id = w.match_id ORDER BY 1"""
+         run = "SELECT rows_written, unmatched, status, error_code FROM ops.source_runs WHERE source='fjelstul' AND scope='worldcup'"
+         files = worldcup_samples.texts()
+         pins, commit = worldcup.FILES, worldcup.COMMIT
++        keyed = "world-cup-history:1974:1974-07-07|West Germany|Netherlands|"
++        sheet = lambda: {t: [r[0] for r in x(f"SELECT to_jsonb(r)::text FROM core.{t} r ORDER BY 1")] for t in WORLDCUP_TABLES}
++        parent = lambda: x("""SELECT m.id, m.competition_season_id, m.season_id, m.match_date::text, m.home_team_id, m.away_team_id,
++                                     m.home_team_name, m.away_team_name, m.status::text, m.home_score, m.away_score, m.source::text,
++                                     m.match_number, array_agg(ARRAY[p.provider::text, p.provider_key, p.is_current::text] ORDER BY p.provider_key)
++                              FROM core.matches m JOIN core.provider_ids p ON p.entity_type = 'match' AND p.entity_id = m.id
++                              WHERE m.match_date = '1974-07-07' GROUP BY m.id""").fetchall()
++        edition = lambda: x("""SELECT cup_digest, cup_checked_at, cup_updated_at FROM core.competition_seasons
++                               WHERE cup_key = 'open-cups:world-cup-history:1974'""").fetchone()
++        listed = lambda: x("""SELECT m.id, p.provider_key, m.match_number, m.status::text, m.home_score, m.away_score, m.revision
++                              FROM core.matches m JOIN core.competition_seasons cs ON cs.id = m.competition_season_id
++                              JOIN core.provider_ids p ON p.entity_type = 'match' AND p.entity_id = m.id
++                              WHERE cs.cup_key = 'open-cups:world-cup-history:1974' ORDER BY m.id, p.provider_key""").fetchall()
++
++        def mixed(*numbers, reverse=False):
++            """The 1974 file listing the final without a number and, beside it, as each of `numbers` (its sides the other
++            way round with `reverse`)."""
++            body = archive()
++            final = body["matches"][0]
++            turned = {"team1": final["team2"], "team2": final["team1"], "score": final["score"][::-1]} if reverse else {}
++            body["matches"][1:1] = [dict(final, num=number, **turned) for number in numbers]
++            return body
++
++        def refused(name, body, code, prepare=None):
++            """`body` read under the collect role is refused with `code`, and nothing is written: the edition's row, its
++            matches and their keys, the final and the Fjelstul sheet stay as they were."""
++            with self.subTest(refused=name), self.db.transaction(force_rollback=True):
++                if prepare:
++                    x(*prepare)
++                state = (edition(), listed(), parent(), sheet())
++                x("SET LOCAL ROLE vega_collect")
++                try:
++                    with self.assertRaises(SourceError) as error:
++                        cups.save(self.db, "open-cups", "world-cup-history", "1974", body, NOW + timedelta(days=9))
++                finally:
++                    x("RESET ROLE")
++                self.assertEqual((error.exception.code, edition(), listed(), parent(), sheet()), (code, *state))
++
+         with self.db.transaction(force_rollback=True):
+             try:
+                 worldcup.FILES, worldcup.COMMIT = worldcup_samples.digests(files), "a" * 40
++                # The final listed both without a number and with one (the same day, the same two teams): two candidates for
++                # one match, never a number added to it. Refused whole (AMBIGUOUS_MATCH_NUMBER), from a first import on.
++                refused("first import: unnumbered and 38", mixed(38), "AMBIGUOUS_MATCH_NUMBER")
+                 cups.save(self.db, "open-cups", "world-cup-history", "1974", archive(), NOW)
+                 before = x("SELECT (SELECT count(*) FROM core.players), (SELECT count(*) FROM core.teams)").fetchone()
+                 get = Files(files)
+@@ -876,17 +937,78 @@ class UefaTest(unittest.TestCase):
+                 get = Files({})
+                 self.assertEqual(sources.run_due(self.db, get, NOW + timedelta(days=8), names={"fjelstul"}), {("fjelstul", "worldcup"): "ok"})
+                 self.assertEqual((get.calls, x(run).fetchone()), ([], (0, 0, "ok", None)))
+-                # The archive replaces the final (its key changes): the pair is cleared, the next run pairs the new match.
++                # OpenFootball numbers the final later (« num »: 38): its key changes, its edition, day, sides and result do not.
++                # Failure modes and expected outcomes, written before the writer handled it (VI-27, merging 202f24c09e):
++                # - the unnumbered key leaves the file: the guard must not read a result dropped (SNAPSHOT_DROPS_RESULT),
++                #   and the final must not be deleted and written again (its pair, its sheet, every row naming it);
++                # - the same parent keeps its id, edition, day, sides, result and provenance, its pair and the 38 Fjelstul
++                #   rows, under its one new key; vega_read reads one final; the same file again writes nothing, no new id;
++                # - a result changed with the number, the final listed twice, a new key a match already held: not the same
++                #   match for certain, the unnumbered key stays, the file is refused, nothing is written;
++                # - the final listed without a number beside one or more numbered versions of it (the same day, the same two
++                #   teams, in either order), before or after the transition: refused whole (AMBIGUOUS_MATCH_NUMBER), the one
++                #   parent, its result and the 38 rows kept; the admissible file is accepted after it;
++                # - matches each given their own number keep each their own parent.
+                 old = x("SELECT match_id FROM core.worldcup_matches WHERE match_key='M-1974-38'").fetchone()[0]
+-                # As in production, the cup reader deletes the replaced match under the collect role: the pair must not stop it.
++                held, fjelstul = parent(), sheet()
++                self.assertEqual([r[0] for r in held], [old])
++                self.assertEqual(held[0][6:], ("West Germany", "Netherlands", "finished", 2, 1, "openfootball", None, [["openfootball", keyed, "true"]]))
++                rescored = archive(final_number=38)
++                rescored["matches"][0]["score"] = [3, 1]
++                refused("the result changed with the number", rescored, "SNAPSHOT_DROPS_RESULT")
++                twice = archive(final_number=38)
++                twice["matches"].insert(1, dict(twice["matches"][0], num=39))
++                refused("two numbers for the unnumbered final", twice, "SNAPSHOT_DROPS_RESULT")
++                refused("the new key a former key of another match", archive(final_number=38), "SNAPSHOT_DROPS_RESULT",
++                        ("""INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id, is_current)
++                            SELECT 'match', 'openfootball', %s, id, false FROM core.matches WHERE match_date = '1974-06-14'""", (keyed + "38",)))
++                refused("held: unnumbered and 38", mixed(38), "AMBIGUOUS_MATCH_NUMBER")
++                refused("held: unnumbered, 38 and 39", mixed(38, 39), "AMBIGUOUS_MATCH_NUMBER")
++                refused("held: unnumbered and 38, the sides the other way", mixed(38, reverse=True), "AMBIGUOUS_MATCH_NUMBER")
++                # The normal transition, under the collect role: one match updated, in place.
++                x("SET LOCAL ROLE vega_collect")
++                self.assertEqual(cups.save(self.db, "open-cups", "world-cup-history", "1974", archive(final_number=38), NOW + timedelta(days=9)), 1)
++                x("RESET ROLE")
++                numbered = parent()
++                self.assertEqual(numbered, [(*held[0][:12], 38, [["openfootball", keyed + "38", "true"]])])
++                self.assertEqual(sheet(), fjelstul)
++                self.assertEqual(x("""SELECT count(*) FROM core.matches m JOIN core.competition_seasons cs ON cs.id = m.competition_season_id
++                                      WHERE cs.cup_key = 'open-cups:world-cup-history:1974'""").fetchone(), (3,))
++                # What the read role serves: the pair, the base's score on the archive's sides, one final under its new key.
++                x("SET LOCAL ROLE vega_read")
++                self.assertEqual(x("SELECT key, date::text, home, away FROM api.worldcup_match_index WHERE edition = 1974 ORDER BY key").fetchall(),
++                                 [("M-1974-01", "1974-06-14", "USA", "Sweden"), ("M-1974-38", "1974-07-07", "West Germany", "Netherlands")])
++                self.assertEqual(x("SELECT home, away, home_score, away_score, home_team_key FROM api.worldcup_match_heads WHERE key = 'M-1974-38'").fetchone(),
++                                 ("West Germany", "Netherlands", 2, 1, "T-02"))
++                self.assertEqual(x("SELECT key, match_number, status, home_score, away_score FROM api.cup_matches WHERE date = '1974-07-07'").fetchall(),
++                                 [(keyed + "38", 38, "finished", 2, 1)])
++                x("RESET ROLE")
++                # After the transition, the final listed again without its number beside 38: refused whole, nothing written.
++                refused("numbered: unnumbered and 38", mixed(38), "AMBIGUOUS_MATCH_NUMBER")
++                # The same file again: nothing written, no new id; the next Fjelstul run has nothing to pair.
+                 x("SET LOCAL ROLE vega_collect")
+-                cups.save(self.db, "open-cups", "world-cup-history", "1974", archive(final_number=38), NOW + timedelta(days=9))
++                self.assertEqual(cups.save(self.db, "open-cups", "world-cup-history", "1974", archive(final_number=38), NOW + timedelta(days=10)), 0)
+                 x("RESET ROLE")
+-                self.assertEqual(x("SELECT match_id FROM core.worldcup_matches WHERE match_key='M-1974-38'").fetchone(), (None,))
++                self.assertEqual(parent(), numbered)
+                 self.assertEqual(sources.run_due(self.db, get, NOW + timedelta(days=16), names={"fjelstul"}), {("fjelstul", "worldcup"): "ok"})
+-                new = x("SELECT match_id FROM core.worldcup_matches WHERE match_key='M-1974-38'").fetchone()[0]
+-                self.assertTrue(new is not None and new != old)
+-                self.assertEqual((get.calls, x(run).fetchone()), ([], (0, 0, "ok", None)))
++                self.assertEqual(x("SELECT match_id FROM core.worldcup_matches WHERE match_key='M-1974-38'").fetchone(), (old,))
++                self.assertEqual((get.calls, x(run).fetchone(), sheet()), ([], (0, 0, "ok", None), fjelstul))
++                # Every match given its own number: each keeps its parent and its result under its own key, the final its 38.
++                numbers = {"1974-07-07": 38, "1974-06-14": 2, "1974-06-13": 1}
++                distinct = archive(final_number=38)
++                for match in distinct["matches"]:
++                    match["num"] = numbers[match["date"]]
++                ids = {day: ident for ident, day in x("""SELECT m.id, m.match_date::text FROM core.matches m
++                                                        JOIN core.competition_seasons cs ON cs.id = m.competition_season_id
++                                                        WHERE cs.cup_key = 'open-cups:world-cup-history:1974'""").fetchall()}
++                x("SET LOCAL ROLE vega_collect")
++                self.assertEqual(cups.save(self.db, "open-cups", "world-cup-history", "1974", distinct, NOW + timedelta(days=11)), 2)
++                self.assertEqual(cups.save(self.db, "open-cups", "world-cup-history", "1974", distinct, NOW + timedelta(days=12)), 0)
++                x("RESET ROLE")
++                self.assertEqual(sorted((ident, key.rsplit("|", 1)[1], number, status, home, away) for ident, key, number, status, home, away, _ in listed()),
++                                 sorted([(ids["1974-07-07"], "38", 38, "finished", 2, 1), (ids["1974-06-14"], "2", 2, "finished", 1, 1),
++                                         (ids["1974-06-13"], "1", 1, "finished", 0, 0)]))
++                self.assertEqual((parent(), sheet()), (numbered, fjelstul))
+                 # A file that is not the pinned one: nothing changes.
+                 worldcup.COMMIT = "b" * 40
+                 changed = Files(dict(files, goals=files["goals"].replace("P-00002", "P-00001")))
+@@ -905,6 +1027,51 @@ class UefaTest(unittest.TestCase):
+             finally:
+                 worldcup.FILES, worldcup.COMMIT = pins, commit
+ 
++    def test_worldcup_pairs_again_an_archived_match_truly_replaced(self):
++        # The path that does replace a parent: an authorized removal outside the cup writer (the schema owner here) deletes
++        # the archived final and its keys; its foreign key clears the pair, the sheet stays. The archive read again under the
++        # collect role writes a new parent, and the next Fjelstul run pairs it, every other row of the sheet unchanged.
++        x = self.db.execute
++        files = worldcup_samples.texts()
++        run = "SELECT rows_written, unmatched, status, error_code FROM ops.source_runs WHERE source='fjelstul' AND scope='worldcup'"
++        final = "SELECT match_id, swapped FROM core.worldcup_matches WHERE match_key='M-1974-38'"
++        # The sheet but the final's link: what the replacement may not change.
++        sheet = lambda: {t: [r[0] for r in x(f"""SELECT (to_jsonb(r) - CASE WHEN '{t}' = 'worldcup_matches' AND to_jsonb(r)->>'match_key' = 'M-1974-38'
++                                                                             THEN 'match_id' ELSE '' END)::text FROM core.{t} r ORDER BY 1""")]
++                         for t in WORLDCUP_TABLES}
++        pins, commit = worldcup.FILES, worldcup.COMMIT
++        with self.db.transaction(force_rollback=True):
++            try:
++                worldcup.FILES, worldcup.COMMIT = worldcup_samples.digests(files), "a" * 40
++                cups.save(self.db, "open-cups", "world-cup-history", "1974", world_cup_1974(), NOW)
++                x("SET LOCAL ROLE vega_collect")
++                self.assertEqual(sources.run_due(self.db, FjelstulFiles(files), NOW, names={"fjelstul"}), {("fjelstul", "worldcup"): "ok"})
++                x("RESET ROLE")
++                old, swapped = x(final).fetchone()
++                self.assertTrue(old is not None and swapped)
++                kept = sheet()
++                x("DELETE FROM core.provider_ids WHERE entity_type = 'match' AND entity_id = %s", (old,))
++                x("DELETE FROM core.matches WHERE id = %s", (old,))
++                self.assertEqual((x(final).fetchone(), sheet()), ((None, True), kept))
++                x("SET LOCAL ROLE vega_collect")
++                self.assertEqual(cups.save(self.db, "open-cups", "world-cup-history", "1974", world_cup_1974(final_number=38), NOW + timedelta(days=9)), 1)
++                get = FjelstulFiles({})
++                self.assertEqual(sources.run_due(self.db, get, NOW + timedelta(days=16), names={"fjelstul"}), {("fjelstul", "worldcup"): "ok"})
++                x("RESET ROLE")
++                new, swapped = x(final).fetchone()
++                self.assertTrue(new is not None and new != old and swapped)
++                self.assertEqual(x("""SELECT p.provider_key, m.home_team_name, m.away_team_name, m.status::text, m.home_score, m.away_score
++                                      FROM core.matches m JOIN core.provider_ids p ON p.entity_type = 'match' AND p.entity_id = m.id
++                                      WHERE m.id = %s""", (new,)).fetchall(),
++                                 [("world-cup-history:1974:1974-07-07|West Germany|Netherlands|38", "West Germany", "Netherlands", "finished", 2, 1)])
++                self.assertEqual((get.calls, x(run).fetchone(), sheet()), ([], (0, 0, "ok", None), kept))
++                x("SET LOCAL ROLE vega_read")
++                self.assertEqual(x("SELECT key, date::text, home, away FROM api.worldcup_match_index WHERE edition = 1974 ORDER BY key").fetchall(),
++                                 [("M-1974-01", "1974-06-14", "USA", "Sweden"), ("M-1974-38", "1974-07-07", "West Germany", "Netherlands")])
++                x("RESET ROLE")
++            finally:
++                worldcup.FILES, worldcup.COMMIT = pins, commit
++
+     def test_player_honours(self):
+         from vega.store import Store
+ 
+diff --git a/backend/tests/test_sportscore_standings.py b/backend/tests/test_sportscore_standings.py
+new file mode 100644
+index 0000000000..44d68b8e43
+--- /dev/null
++++ b/backend/tests/test_sportscore_standings.py
+@@ -0,0 +1,275 @@
++"""SportScore official standings through sources.run_due, PostgreSQL and api.standing_rows:
++the cases of docs/calculs/09-audit-2026-11/FAILURE_MODES_SPORTSCORE.md §3 (sportscore_cases.py).
++The widget answers from memory; the end-to-end replay of the same cases over HTTPS and the read
++API is the VI-27 track's script."""
++
++import os
++from pathlib import Path
++import sys
++import unittest
++from unittest.mock import patch
++from urllib.parse import urlparse
++
++ROOT = Path(__file__).resolve().parents[1]
++sys.path.insert(0, str(ROOT))
++sys.path.insert(0, str(ROOT / "tests"))
++from vega import sources
++from vega.sources import SourceError, sportscore
++from sportscore_cases import CASES, H, START, T0, replace, tables, without
++import sportscore_replay as replay
++
++try:
++    import psycopg
++except ImportError:
++    psycopg = None
++DSN = os.environ.get("VEGA_V2_SOURCES_TEST_DSN")
++
++
++@unittest.skipUnless(DSN and psycopg, "requires disposable local sources DB and psycopg")
++class SportScoreDatabase(unittest.TestCase):
++    @classmethod
++    def setUpClass(cls):
++        from vega.store import Store, connect_local, migrate
++
++        target = urlparse(DSN)
++        if target.hostname not in ("localhost", "127.0.0.1", "::1") or target.path != "/vega_v2_sources_test":
++            raise RuntimeError("dedicated local sources DB required")
++        cls.db = connect_local(DSN)
++        cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
++        migrate(cls.db)
++        with cls.db.transaction():
++            replay.build(cls.db, Store(cls.db))
++
++    @classmethod
++    def tearDownClass(cls):
++        cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
++        cls.db.close()
++
++
++class SportScoreStandingsTest(SportScoreDatabase):
++    def test_every_case(self):
++        for index, case in enumerate(CASES, 1):
++            flipped = False
++            for number, step in enumerate(case["steps"]):
++                with self.subTest(case=case["id"], step=number, note=case["note"]):
++                    for event in step["before"]:
++                        replay.apply(self.db, index, event)
++                        flipped |= event[0] == "flip"
++
++                    def get(url, body=step["body"]):
++                        answer = replay.widget(body, replay.slug_of(url))
++                        if isinstance(answer, int):
++                            raise SourceError(f"HTTP_{answer}")
++                        return answer
++
++                    code = replay.play(sources, sportscore, self.db, case, step, get)
++                    seen = replay.observe(self.db, index, case, code, flipped)
++                    self.assertEqual(replay.compare(step["expect"], seen), {})
++        # A refusal names what it refused, for whoever reads ops.parse_failures (S4).
++        rows = self.db.execute(
++            "SELECT error_code, message FROM ops.parse_failures WHERE message LIKE %s", ("sportscore:standings:l_0ALvwF:%",)
++        ).fetchall()
++        self.assertEqual([r[0] for r in rows], ["UNMATCHED_TEAMS"])
++        self.assertIn("Ghost Wanderers", rows[0][1])
++        self.assertIn("Harbour United", rows[0][1])
++
++
++class SportScoreWriterQualificationTest(SportScoreDatabase):
++    def setUp(self):
++        transaction = self.db.transaction()
++        transaction.__enter__()
++        self.addCleanup(transaction.__exit__, psycopg.Rollback, psycopg.Rollback(), None)
++
++    def write(self, rows, hours=0):
++        body = tables((None, rows))
++        return replay.play(sources, sportscore, self.db, CASES[0], {"at": T0 + hours * H},
++                           lambda url: replay.widget(body, replay.slug_of(url)))
++
++    def read(self):
++        return self.db.execute("""SELECT s.team_id,s.team_name,s.played,s.won,s.drawn,s.lost,s.points,s.source,r.version
++                                  FROM api.standings s JOIN ops.resource_versions r
++                                    ON r.resource_kind='competition_season' AND r.resource_id=s.competition_season_id
++                                 WHERE s.competition_season_id=5001 ORDER BY s.position""").fetchall()
++
++    def alias(self, name):
++        self.db.execute("""INSERT INTO core.entity_names(entity_type,entity_id,name,normalized,kind,source)
++                           VALUES ('team',101,%s,%s,'source_spelling','sportscore') ON CONFLICT DO NOTHING""",
++                        (name, sources.normalize(name)))
++
++    def aliases(self):
++        return self.db.execute("""SELECT entity_id,name FROM core.entity_names
++                                 WHERE entity_type='team' AND entity_id BETWEEN 101 AND 103 ORDER BY 1,2""").fetchall()
++
++    def assert_refused(self, rows, hours, code):
++        prior, aliases = self.read(), self.aliases()
++        outcome = self.write(rows, hours)
++        self.assertEqual(self.read(), prior)
++        self.assertEqual(self.aliases(), aliases)
++        self.assertEqual(outcome, code)
++        failure = self.db.execute("SELECT error_code,message FROM ops.parse_failures ORDER BY id DESC LIMIT 1").fetchone()
++        self.assertEqual(failure[0], code)
++        self.assertIn(rows[0]["team"], failure[1])
++
++    def test_impossible_complete_and_partial_counts_keep_the_published_table(self):
++        self.assertIsNone(self.write(without(START, 0, "l")))
++        for step, changes in enumerate(({"w": 17}, {"w": 1}, {"w": 3, "d": 2, "l": None}), 1):
++            with self.subTest(changes=changes):
++                try:
++                    with self.db.transaction():
++                        self.assert_refused(replace(START, 0, **changes), step * 3, "INVALID_ROW")
++                        raise psycopg.Rollback()
++                except psycopg.Rollback:
++                    pass
++        corrected = replace(START, 0, w=2, d=2, pts=9)
++        self.assertIsNone(self.write(corrected, 12))
++        observed = self.read()
++        self.assertEqual(observed[0][:8], (101, "Aster City", 4, 2, 2, 0, 9, "sportscore"))
++        self.assertIsNone(self.write(corrected, 15))
++        self.assertEqual(self.read(), observed)
++
++    def test_known_good_partial_counts_and_points_deduction_are_published(self):
++        self.assertIsNone(self.write(without(START, 0, "l")))
++        self.assertEqual(self.read()[0][:8], (101, "Aster City", 4, 3, 1, None, 8, "sportscore"))
++
++    def test_new_and_previously_learned_reserve_aliases_are_refused_for_a_first_team(self):
++        self.assertIsNone(self.write(START))
++        for step, name in enumerate(("Aster City II", "Aster City B", "Aster City U-21"), 1):
++            with self.subTest(spelling=name):
++                self.assert_refused(replace(START, 0, team=name, pts=9), step * 3, "UNMATCHED_TEAMS")
++        self.alias("Aster City II")
++        self.assert_refused(replace(START, 0, team="Aster City II", pts=9), 12, "UNMATCHED_TEAMS")
++        self.assert_refused(replace(START, 0, team="AsterCityII", pts=9), 15, "UNMATCHED_TEAMS")
++
++    def test_a_real_reserve_accepts_its_own_name_and_variant_but_not_its_first_team(self):
++        self.db.execute("UPDATE core.teams SET name='Aster City II' WHERE id=101")
++        self.assertIsNone(self.write(replace(START, 0, team="Aster City II")))
++        self.assertIsNone(self.write(replace(START, 0, team="Aster City B", pts=9), 3))
++        self.assertIn((101, "Aster City B"), self.aliases())
++        self.assert_refused(replace(START, 0, pts=10), 6, "UNMATCHED_TEAMS")
++        self.alias("Aster City")
++        self.assert_refused(replace(START, 0, pts=10), 9, "UNMATCHED_TEAMS")
++        self.assert_refused(replace(START, 0, team="Aster City U21", pts=10), 12, "UNMATCHED_TEAMS")
++
++    def test_reviewed_spellings_stay_bound_to_their_canonical_identities(self):
++        cases = (
++            ("t_1ekXAt", "Gent U23", "Gent B", "Gent"),
++            ("t_48QCy0", "Genk U23", "Jong Genk", "Genk"),
++            ("t_4YXkkv", "Celta Fortuna", "Celta Vigo B", "Celta Vigo"),
++            ("t_1XzLP9", "Juan Pablo II College", "Juan Pablo II", None),
++            ("t_2UPrdj", "Heart of Midlothian", "Heart of Midlothian F.C.", None),
++        )
++        for key, canonical, spelling, first in cases:
++            with self.subTest(spelling=spelling):
++                with self.db.transaction():
++                    self.db.execute("UPDATE core.teams SET name=%s WHERE id=101", (canonical,))
++                    self.db.execute("UPDATE core.provider_ids SET provider_key=%s WHERE entity_type='team' AND provider='pitchapi' AND entity_id=101",
++                                    (key,))
++                    self.assertIsNone(self.write(replace(START, 0, team=spelling)))
++                    self.assertEqual(self.read()[0][:2], (101, canonical))
++                    self.assertIn((101, spelling), self.aliases())
++                    if first:
++                        self.assert_refused(replace(START, 0, team=first, pts=9), 3, "UNMATCHED_TEAMS")
++                    raise psycopg.Rollback()
++
++    def test_a_reviewed_spelling_does_not_belong_to_an_unrelated_homonym(self):
++        self.db.execute("UPDATE core.teams SET name='Gent U23' WHERE id=101")
++        self.assertIsNone(self.write(replace(START, 0, team="Gent U23")))
++        self.assert_refused(replace(START, 0, team="Gent B", pts=9), 3, "UNMATCHED_TEAMS")
++
++    def test_gender_of_a_learned_name_cannot_contradict_the_edition(self):
++        self.assertIsNone(self.write(START))
++        self.assert_refused(replace(START, 0, team="Aster City Women", pts=9), 3, "UNMATCHED_TEAMS")
++        self.alias("Aster City Women")
++        self.assert_refused(replace(START, 0, team="Aster City Women", pts=9), 6, "UNMATCHED_TEAMS")
++        self.alias("Aster City WFC")
++        names = ("Aster City (W)", "Aster City Féminines", "Aster City Femenino", "Aster City Femminile", "Aster City WFC")
++        for hours, name in enumerate(names, 3):
++            with self.subTest(name=name):
++                self.assert_refused(replace(START, 0, team=name, pts=9), hours * 3, "UNMATCHED_TEAMS")
++
++    def test_a_canonical_wfc_club_name_stays_admissible(self):
++        self.db.execute("UPDATE core.teams SET name='Aster City W.F.C.' WHERE id=101")
++        self.assertIsNone(self.write(replace(START, 0, team="Aster City WFC")))
++        self.assertEqual(self.read()[0][:2], (101, "Aster City W.F.C."))
++
++    def test_womens_edition_admits_unmarked_and_explicit_womens_names(self):
++        self.db.execute("UPDATE core.competitions SET name='Saudi Women’s Premier League' WHERE id=401")
++        self.assertIsNone(self.write(START))
++        self.assertIsNone(self.write(replace(START, 0, team="Aster City Women", pts=9), 3))
++        self.assertEqual(self.read()[0][:2], (101, "Aster City"))
++        self.assertIn((101, "Aster City Women"), self.aliases())
++        self.assert_refused(replace(START, 0, team="Aster City Men", pts=10), 6, "UNMATCHED_TEAMS")
++        self.assert_refused(replace(START, 0, team="Aster City Männer", pts=10), 9, "UNMATCHED_TEAMS")
++
++    def test_an_exact_homonym_is_ambiguous(self):
++        self.assertIsNone(self.write(START))
++        self.db.execute("INSERT INTO core.teams(id,name) VALUES (199,'Aster-City')")
++        self.db.execute("INSERT INTO core.team_seasons VALUES (199,5001)")
++        self.assert_refused(replace(START, 0, pts=9), 3, "UNMATCHED_TEAMS")
++
++
++class SportScoreFreshnessTest(SportScoreDatabase):
++    def setUp(self):
++        self.db.execute("DELETE FROM core.standings_official WHERE competition_season_id=5001 AND source='sportscore'")
++        self.db.execute("DELETE FROM ops.resource_versions WHERE resource_kind='competition_season' AND resource_id=5001")
++        self.scope = "standings:" + CASES[0]["key"]
++        self.db.execute("DELETE FROM ops.source_runs WHERE source='sportscore' AND scope=%s", (self.scope,))
++
++    def read(self):
++        return self.db.execute("""SELECT team_id,points,as_of,version FROM api.standings s
++                                   JOIN ops.resource_versions v ON v.resource_kind='competition_season'
++                                   AND v.resource_id=s.competition_season_id
++                                   WHERE s.competition_season_id=5001 ORDER BY position""").fetchall()
++
++    def attempt(self):
++        return self.db.execute("""SELECT last_attempt_at,last_success_at,status,error_code,rows_written
++                                  FROM ops.source_runs WHERE source='sportscore' AND scope=%s""", (self.scope,)).fetchone()
++
++    def run_scope(self, conn, get, instant):
++        return sources.run_due(conn, get, instant, names={"sportscore"})[("sportscore", self.scope)]
++
++    def answer(self, rows, url):
++        return replay.widget(tables((None, rows)), replay.slug_of(url))
++
++    def test_first_publisher_remains_current_when_the_older_observation_finishes_last(self):
++        from vega.store import connect_local
++
++        with patch.object(sportscore, "scopes", lambda _: {self.scope: sportscore.PERIOD}), connect_local(DSN) as writer:
++            for delay in (3, 0):
++                with self.subTest(delay=delay):
++                    self.setUp()
++                    later = T0 + delay * H
++                    published = []
++
++                    def delayed(url):
++                        self.assertIsNone(self.attempt())
++                        self.assertEqual(self.run_scope(writer, lambda u: self.answer(replace(START, 0, pts=9), u), later), "ok")
++                        published.extend(self.read())
++                        return self.answer(START, url)
++
++                    self.assertEqual(self.run_scope(self.db, delayed, T0), "STALE_OBSERVATION")
++                    self.assertEqual(self.read(), published)
++                    self.assertEqual(published[0], (101, 9, later, 1))
++                    self.assertEqual(self.attempt(), (later, later, "ok", None, 3))
++
++    def test_an_older_transport_failure_cannot_replace_a_new_success_and_a_fresh_retry_works(self):
++        from vega.store import connect_local
++
++        with patch.object(sportscore, "scopes", lambda _: {self.scope: sportscore.PERIOD}), connect_local(DSN) as writer:
++            def fail(_):
++                raise SourceError("HTTP_503")
++
++            def delayed(url):
++                self.assertEqual(self.run_scope(writer, lambda u: self.answer(replace(START, 0, pts=9), u), T0 + 3 * H), "ok")
++                return fail(url)
++
++            self.assertEqual(self.run_scope(self.db, delayed, T0), "HTTP_503")
++            self.assertEqual(self.attempt(), (T0 + 3 * H, T0 + 3 * H, "ok", None, 3))
++            self.assertEqual(self.run_scope(self.db, fail, T0 + 6 * H), "HTTP_503")
++            self.assertEqual(self.attempt(), (T0 + 6 * H, T0 + 3 * H, "error", "HTTP_503", 0))
++            self.assertEqual(self.run_scope(self.db, lambda u: self.answer(START, u), T0 + 7 * H), "ok")
++            self.assertEqual(self.read()[0], (101, 8, T0 + 7 * H, 2))
++
++
++if __name__ == "__main__":
++    unittest.main()
 diff --git a/backend/tests/test_transfermarkt.py b/backend/tests/test_transfermarkt.py
 index 9cfb552490..db2334275a 100644
 --- a/backend/tests/test_transfermarkt.py
@@ -996,236 +1596,3 @@ index 0000000000..4b47d41abe
 +
 +if __name__ == "__main__":
 +    unittest.main()
-diff --git a/backend/vega/archive_attestations.py b/backend/vega/archive_attestations.py
-new file mode 100644
-index 0000000000..103d6c73ef
---- /dev/null
-+++ b/backend/vega/archive_attestations.py
-@@ -0,0 +1,227 @@
-+"""Locked archive amendments for the exact evidence ledgers of VI-27."""
-+from collections import defaultdict
-+from hashlib import sha256
-+import json
-+from pathlib import Path
-+
-+from psycopg.types.json import Jsonb
-+
-+BUNDESLIGA_PATH = Path(__file__).with_name("archive_bundesliga.json")
-+SCOTLAND_PATH = Path(__file__).with_name("archive_scotland.json")
-+LEDGER = json.loads(BUNDESLIGA_PATH.read_bytes())
-+SCOTLAND = json.loads(SCOTLAND_PATH.read_bytes())
-+SEASONS = defaultdict(list)
-+for case in LEDGER["cases"]:
-+    SEASONS[case["official"]["season"]].append(case)
-+
-+
-+def observed_inputs(inputs):
-+    return {
-+        "bundesliga": all(inputs.get(path) == digest for path, digest in LEDGER["inputs"].items()),
-+        "scotland": all(inputs.get(path) == digest for path, digest in SCOTLAND["input"].items()),
-+    }
-+
-+
-+def _digest(case):
-+    return sha256(json.dumps(case, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
-+
-+
-+def prepare_scotland(conn, loader, season, matches, input_approved):
-+    source = {m["key"]: m for m in matches if m["key"].startswith(f"r:worldclub/scotland/{season}:")}
-+    cases = [c for c in SCOTLAND["cases"] if c["match"]["key"] in source]
-+    out = []
-+    for case in cases:
-+        native = case["match"]
-+        key, digest = native["key"], _digest(case)
-+        old = conn.execute("SELECT id FROM core.matches WHERE season_id=%s AND archive_key=%s", (season,key)).fetchone()
-+        r = loader.bind(season, [old[0]])[old[0]] if old else None
-+        edition = conn.execute("SELECT to_jsonb(cs) FROM core.competition_seasons cs WHERE id=%s",
-+                               (r["row"]["competition_season_id"],)).fetchone()[0] if r else None
-+        round_id = r["row"]["round_id"] if r else None
-+        stage = conn.execute("SELECT to_jsonb(r) FROM core.rounds r WHERE id=%s", (round_id,)).fetchone() if round_id else None
-+        alias = conn.execute("SELECT to_jsonb(a) FROM core.archive_match_attestations a WHERE season_id=%s AND canonical_key=%s",
-+                             (season,key)).fetchone()
-+        verified_score = {**native, "score":case["new_score"]}
-+        reason = case.get("held")
-+        if not reason and (not input_approved or source.get(key) != native):
-+            reason = "attestation_inputs_changed"
-+        if not reason and alias and (not r or alias[0]["proof_sha256"] != digest
-+                                    or alias[0]["match_id"] != r["row"]["id"]
-+                                    or not _matches_native(r["row"], verified_score, case["new_date"], edition)):
-+            reason = "attested_result_changed"
-+        if not reason and r and not alias and (r["events"] or r["dependents"]
-+                                              or not _matches_native(r["row"], native, case["prior_date"], edition)):
-+            reason = "attested_score_preimage_changed"
-+        locked = {"proof":case, "sha256":digest, "result":r, "origin":None,
-+                  "alias":alias and alias[0], "edition":edition, "round":stage and stage[0],
-+                  "class":"held" if reason else "unchanged" if alias else "change" if r else "new"}
-+        if reason:
-+            locked["reason"] = reason
-+        out.append(locked)
-+    return out
-+
-+
-+def _event_values(event, columns):
-+    return tuple(event[c] for c in columns)
-+
-+
-+def _matches_native(row, source, day, edition):
-+    return (row["status"] == "finished" and row["match_date"] == day and edition["archive_key"] == source["competitionId"]
-+            and [row["home_score"], row["away_score"]] == source["score"]
-+            and [row["home_team_name"], row["away_team_name"]] == [source["team1"], source["team2"]]
-+            and row["home_team_id"] is not None and row["away_team_id"] is not None)
-+
-+
-+def prepare_bundesliga(conn, loader, season, matches, input_approved, goal_rows, goal_columns):
-+    cases = SEASONS.get(str(season))
-+    if not cases:
-+        return []
-+    source = {m["key"]: m for m in matches}
-+    if not any(key.startswith(f"r:deutschland/{season}-") for key in source):
-+        return []
-+    known = {key: ident for key, ident in conn.execute(
-+        "SELECT archive_key,id FROM core.matches WHERE season_id=%s AND archive_key=ANY(%s)",
-+        (season, [m["key"] for c in cases for m in (c["match"], c.get("goals_observation")) if m]),
-+    ).fetchall()}
-+    if not known and not input_approved:
-+        return []
-+    aliases = dict(conn.execute(
-+        "SELECT canonical_key,to_jsonb(a) FROM core.archive_match_attestations a WHERE season_id=%s", (season,),
-+    ).fetchall())
-+    physical = loader.bind(season, known.values())
-+    editions = dict(conn.execute(
-+        "SELECT id,to_jsonb(cs) FROM core.competition_seasons cs WHERE id=ANY(%s)",
-+        (sorted({p["row"]["competition_season_id"] for p in physical.values() if p["row"]}),),
-+    ).fetchall())
-+    out = []
-+    for case in cases:
-+        match, goals = case["match"], case.get("goals_observation")
-+        rk, gk = match["key"], goals and goals["key"]
-+        if rk not in source and rk not in known:
-+            continue
-+        r, g, alias = physical.get(known.get(rk)), physical.get(known.get(gk)), aliases.get(rk)
-+        digest = _digest(case)
-+        bound_edition = editions.get(r["row"]["competition_season_id"]) if r else None
-+        round_id = r["row"]["round_id"] if r else None
-+        round_row = conn.execute("SELECT to_jsonb(r) FROM core.rounds r WHERE id=%s", (round_id,)).fetchone() if round_id else None
-+        item = {"proof": case, "sha256": digest, "result": r, "origin": g, "alias": alias,
-+                "edition": bound_edition, "round": round_row[0] if round_row else None}
-+        out.append(item)
-+        held = None
-+        if (not input_approved or source.get(rk) != match or (gk and source.get(gk) != goals)):
-+            held = "attestation_inputs_changed"
-+        elif alias:
-+            if not r or g or alias["proof_sha256"] != digest or alias["former_key"] != gk or alias["match_id"] != r["row"]["id"]:
-+                held = "archive_alias_conflict"
-+            elif not _matches_native(r["row"], match, case["new_date"], bound_edition):
-+                held = "attested_result_changed"
-+        elif r:
-+            row = r["row"]
-+            if r["dependents"] or not _matches_native(row, match, case["prior_date"], bound_edition):
-+                held = "attested_result_changed"
-+            elif goals:
-+                historical = g and g["row"]
-+                if (not historical or historical["competition_season_id"] != row["competition_season_id"]
-+                        or not _matches_native(historical, goals, goals["date"], bound_edition) or r["events"] or g["dependents"]
-+                        or not all(event["event_type"] == "goal" and all(event[c] is None for c in
-+                                   ("period", "player_id", "related_player_id", "is_own_goal", "is_penalty")) for event in g["events"])
-+                        or [_event_values(event, goal_columns) for event in g["events"]] !=
-+                           goal_rows(goals, historical["home_team_id"], historical["away_team_id"])):
-+                    held = "attested_goal_transfer_changed"
-+            elif [_event_values(event, goal_columns) for event in r["events"]] != goal_rows(
-+                    match, row["home_team_id"], row["away_team_id"]):
-+                held = "attested_date_events_changed"
-+        elif g:
-+            held = "attested_result_missing"
-+        item["class"] = "held" if held else "unchanged" if alias else "change" if r else "new"
-+        if held:
-+            item["reason"] = held
-+    return out
-+
-+
-+def project(matches, decisions):
-+    keep = {}
-+    hidden = set()
-+    for entry in decisions:
-+        case, status = entry["proof"], entry["class"]
-+        match, goals = case["match"], case.get("goals_observation")
-+        rk, gk = match["key"], goals and goals["key"]
-+        if status == "held":
-+            continue
-+        if gk:
-+            hidden.add(gk)
-+        keep[rk] = {**match, "date":case["new_date"], "goals":goals["goals"] if goals else match.get("goals")}
-+        if "new_score" in case:
-+            keep[rk]["score"] = case["new_score"]
-+    selected = [keep.get(m["key"], m) for m in matches if m["key"] not in hidden]
-+    selected.sort(key=lambda m: m["key"])
-+    selected.sort(key=lambda m: m.get("date") or "", reverse=True)
-+    return selected
-+
-+
-+def apply_existing(conn, loader, season, decisions, plan_sha256):
-+    changed = [e for e in decisions if e["class"] == "change"]
-+    if not changed:
-+        return False
-+    conn.execute("SELECT ops.archive_lock_references()")
-+    edition_ids = sorted({e["edition"]["id"] for e in changed})
-+    round_ids = sorted({e["round"]["id"] for e in changed if e["round"]})
-+    editions = dict(conn.execute("SELECT id,to_jsonb(cs) FROM core.competition_seasons cs WHERE id=ANY(%s) ORDER BY id FOR SHARE", (edition_ids,)).fetchall())
-+    rounds = dict(conn.execute("SELECT id,to_jsonb(r) FROM core.rounds r WHERE id=ANY(%s) ORDER BY id FOR SHARE", (round_ids,)).fetchall())
-+    for entry in changed:
-+        if editions.get(entry["edition"]["id"]) != entry["edition"]:
-+            return None
-+        if entry["round"] and rounds.get(entry["round"]["id"]) != entry["round"]:
-+            return None
-+    ids = [p["row"]["id"] for entry in changed for f in ("result", "origin") if (p := entry[f])]
-+    found = loader.bind(season, ids)
-+    for entry in changed:
-+        for kind in ("result", "origin"):
-+            bound = entry[kind]
-+            if bound and found[bound["row"]["id"]] != bound:
-+                return None
-+    for entry in changed:
-+        case, origin, retained = entry["proof"], entry["origin"], entry["result"]["row"]
-+        match_id = retained["id"]
-+        if origin:
-+            old_id = origin["row"]["id"]
-+            conn.execute(
-+                """UPDATE core.match_events SET match_id=%s,team_id=CASE WHEN team_id=%s THEN %s ELSE %s END
-+                   WHERE season_id=%s AND match_id=%s""",
-+                (match_id, origin["row"]["home_team_id"], retained["home_team_id"], retained["away_team_id"], season, old_id),
-+            )
-+            moved = [event for (event,) in conn.execute(
-+                "SELECT to_jsonb(e) FROM core.match_events e WHERE season_id=%s AND match_id=%s ORDER BY seq",
-+                (season, match_id),
-+            ).fetchall()]
-+            expected = [{**event, "match_id":match_id, "team_id":retained[f"{witness['side']}_team_id"]}
-+                        for event, witness in zip(origin["events"], case["goal_witnesses"], strict=True)]
-+            if moved != expected:
-+                return None
-+            conn.execute("""INSERT INTO ops.archive_removals(kind,id,season_id,archive_key,plan_sha256)
-+                            VALUES ('match',%s,%s,%s,%s)""", (old_id, season, origin["row"]["archive_key"], plan_sha256))
-+            conn.execute("DELETE FROM core.matches WHERE id=%s AND season_id=%s", (old_id, season))
-+    return True
-+
-+
-+def record(conn, season, decisions):
-+    for entry in decisions:
-+        if entry["class"] not in ("change", "new"):
-+            continue
-+        case = entry["proof"]
-+        rk, g = case["match"]["key"], case.get("goals_observation")
-+        retain, home, away = conn.execute(
-+            "SELECT id,home_score,away_score FROM core.matches WHERE season_id=%s AND archive_key=%s AND match_date=%s",
-+            (season, rk, case["new_date"]),
-+        ).fetchone()
-+        if "new_score" in case and [home, away] != case["new_score"]:
-+            raise RuntimeError(f"certified outcome {rk} was not written")
-+        authority = case.get("authority_key") or "dfb:" + case["official"]["dfb_id"]
-+        old_id = entry["origin"] and entry["origin"]["row"]["id"]
-+        conn.execute(
-+            """INSERT INTO core.archive_match_attestations
-+               (season_id,match_id,canonical_key,former_key,former_id,canonical_date,authority_key,proof_sha256,proof)
-+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
-+            (season, retain, rk, g and g["key"], old_id, case["new_date"], authority,
-+             entry["sha256"], Jsonb(case)),
-+        )

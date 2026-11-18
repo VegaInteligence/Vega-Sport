@@ -1,0 +1,40 @@
+{
+  "revision": "4c413029c173e96704f4752f843f186526e114cf",
+  "schema_cible": "151_snapshot_match_ownership.sql",
+  "historiques": [
+    "133_cohort_max_wait.sql",
+    "138_worldcup_match_reads.sql"
+  ],
+  "preuve_2097": "f5550faa2f871c38dec3eee6b27116118596a3f2e113a2e5a05dd843010a477f",
+  "preuves_2099": {
+    "a": "6ed0a0603ea3378be34c922ad50e356f1787431c0cf7208311c9444c9a2aad23",
+    "b": "b0b2f29b7cd2a00fd6741a0a7d5f86af1722e952d719d01438b74bd434a36db2"
+  },
+  "applications_2099": {
+    "a": {
+      "would_restore": 35,
+      "restored": 35,
+      "preserved_elo": 0,
+      "elo_pending_sides": 70,
+      "elo_run": 2099,
+      "edition_versions": {
+        "332": 2,
+        "333": 2,
+        "334": 2
+      }
+    },
+    "b": {
+      "would_restore": 35,
+      "restored": 35,
+      "preserved_elo": 0,
+      "elo_pending_sides": 70,
+      "elo_run": 2099,
+      "edition_versions": {
+        "332": 2,
+        "333": 2,
+        "334": 2
+      }
+    }
+  },
+  "statut": "PASS"
+}

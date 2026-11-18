@@ -1,0 +1,115 @@
+{
+  "archive": {
+    "bytes": 734380,
+    "file": "couverture-scores-2209.zip",
+    "sha256": "c41e792cf4a3c256a21e64bff02d24a9f21b9532aa1f2dc59ca714de79e3abec"
+  },
+  "captures": {
+    "1753": {
+      "at": "2026-11-18 17:53:27.125902+00:00",
+      "isolation": "repeatable read",
+      "read_only": "on",
+      "release": "b2e6dd82d36a2ca0f439ec84bf2e5dbbcd3013d9",
+      "sql_count": 52
+    },
+    "1837": {
+      "at": "2026-11-18 18:37:54.915800+00:00",
+      "isolation": "repeatable read",
+      "read_only": "on",
+      "release": "5956a83cd76bf0b41924795e05b5024c8e1770d6",
+      "sql_count": 53
+    },
+    "2209": {
+      "at": "2026-11-18 22:09:32.426054+00:00",
+      "isolation": "repeatable read",
+      "read_only": "on",
+      "release": "202f24c09eb4c8fb87d7190939bafbf09cb00393",
+      "sql_count": 56
+    }
+  },
+  "extract_and_verify": {
+    "command": "python3 -I -B verifier.py",
+    "derived_files": 9,
+    "exit_code": 0,
+    "files_checked": 367,
+    "rows": {
+      "edition": 6447,
+      "pending": 10,
+      "season": 471
+    },
+    "source_queries_per_snapshot": [
+      52,
+      53,
+      56
+    ],
+    "source_snapshots": 3
+  },
+  "manifest": {
+    "bytes": 63636,
+    "file": "manifeste.json",
+    "sha256": "137495eb54bf4adf538c741236fc4311ff480a2ae016c3ba72cb8ac21f52f6a0"
+  },
+  "negative_checks": {
+    "invalid_edition": {
+      "artifact": "verification-negative-liaison.log",
+      "bytes": 38,
+      "command": "python3 -I -B verifier.py --negative",
+      "exit_code": 1,
+      "observed": "liaison hors du catalogue exact · -1",
+      "sha256": "7026ea5fc1d23e1a9b0ff6c3e7ac05aa42272ea0beab0d0986d25e714da0edc8"
+    },
+    "modified_source": {
+      "artifact": "verification-negative-empreinte.log",
+      "bytes": 51,
+      "command": "python3 -I -B verifier.py",
+      "exit_code": 1,
+      "observed": "manifeste · fichier manquant, ajouté ou altéré",
+      "sha256": "e4f1b40f609bfe56ac51ff02e9be80a8d9960975e7f8abc51f325b890ca8c4e3"
+    }
+  },
+  "network": "denied for every verification invocation",
+  "outputs": {
+    "recap.md": {
+      "bytes": 7525,
+      "sha256": "97603a62f37afbade56976256a5b037a9ad6c5be5ecd0908fbb1cfb70bf7c16f"
+    },
+    "resultats/fjelstul-par-tournoi.csv": {
+      "bytes": 1643,
+      "sha256": "8eaca77031b293917da66beeb55f923a14b9b8446902a6a054b9343e92a46ef6"
+    },
+    "resultats/notes-en-attente.csv": {
+      "bytes": 2204,
+      "sha256": "abfe9caba47d142a1806eaaf0d8e326684b1cab7b9b023f9a6daef8438abb556"
+    },
+    "resultats/rencontres-par-source.csv": {
+      "bytes": 473,
+      "sha256": "144bbbd08d05b4b4200bc081f357b4a6222a745f2f878f315177a109a28fb177"
+    },
+    "resultats/resultats.json": {
+      "bytes": 71958,
+      "sha256": "2b7f7e511fcf65fdf03b6652feeab94b2385730d3110a0d7d5a147290c73b081"
+    },
+    "resultats/saudi-20-resultats-hors-perimetre.csv": {
+      "bytes": 2652,
+      "sha256": "99b7ac24b4d25b31ed979966bc66d21c92d3963f8fac19cd42cfbeedd97b544d"
+    },
+    "resultats/scores-par-competition-saison-et-entite.csv": {
+      "bytes": 583245,
+      "sha256": "f92f130e92b47132d0d5928a25407ef732378647c54cb8d0b3e9708a1aeabcdf"
+    },
+    "resultats/scores-par-edition.csv": {
+      "bytes": 1207509,
+      "sha256": "151daa13239b09254866acb5a2c1811197e6054cff9c6311d68ec168bf65e8c9"
+    },
+    "resultats/scores-par-perimetre.csv": {
+      "bytes": 11220,
+      "sha256": "079b691937105f3091eddfe3373197f6abf22efdd6a7806ed62684f6c45448c7"
+    },
+    "resultats/scores-par-saison.csv": {
+      "bytes": 21700,
+      "sha256": "319099ea4e05cc02427d2f8aeefb1fb5954bec604f4d20d747a13b16460eaf61"
+    }
+  },
+  "runtime": "Python 3.14.6 standard library",
+  "schema": 1
+}

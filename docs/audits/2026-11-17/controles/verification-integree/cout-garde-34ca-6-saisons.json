@@ -1,0 +1,98 @@
+{
+  "seconds_by_synthetic_award_year": {
+    "2021": {
+      "guard": {
+        "seconds": 2.785731,
+        "rows": 170332,
+        "updates": 15352,
+        "sum": 1828.5
+      },
+      "control": {
+        "seconds": 1.040556,
+        "rows": 170332,
+        "updates": 15352,
+        "sum": 1828.5
+      }
+    },
+    "2022": {
+      "control": {
+        "seconds": 1.335826,
+        "rows": 250775,
+        "updates": 22892,
+        "sum": 2765.25
+      },
+      "guard": {
+        "seconds": 3.911661,
+        "rows": 250775,
+        "updates": 22892,
+        "sum": 2765.25
+      }
+    },
+    "2023": {
+      "guard": {
+        "seconds": 4.460485,
+        "rows": 285184,
+        "updates": 26017,
+        "sum": 3144.125
+      },
+      "control": {
+        "seconds": 2.032768,
+        "rows": 285184,
+        "updates": 26017,
+        "sum": 3144.125
+      }
+    },
+    "2024": {
+      "control": {
+        "seconds": 3.685011,
+        "rows": 548568,
+        "updates": 49566,
+        "sum": 5970.0
+      },
+      "guard": {
+        "seconds": 7.831005,
+        "rows": 548568,
+        "updates": 49566,
+        "sum": 5970.0
+      }
+    },
+    "2025": {
+      "guard": {
+        "seconds": 10.119035,
+        "rows": 672448,
+        "updates": 61380,
+        "sum": 7416.0
+      },
+      "control": {
+        "seconds": 4.025131,
+        "rows": 672448,
+        "updates": 61380,
+        "sum": 7416.0
+      }
+    },
+    "2026": {
+      "control": {
+        "seconds": 1.700354,
+        "rows": 355301,
+        "updates": 32292,
+        "sum": 3786.5
+      },
+      "guard": {
+        "seconds": 4.900683,
+        "rows": 355301,
+        "updates": 32292,
+        "sum": 3786.5
+      }
+    }
+  },
+  "total": {
+    "guard": 34.0086,
+    "control": 13.819646
+  },
+  "total_appearances": 2282608,
+  "modified_appearances": 207499,
+  "setup_and_cleanup_seconds": 111.820704999991,
+  "drop_verified": true,
+  "delta_seconds": 20.188954,
+  "ratio": 2.4609
+}

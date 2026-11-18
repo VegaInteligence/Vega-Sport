@@ -1,0 +1,21 @@
+edition,semaine,saff_fixture,vega_match,pitchapi,domicile,exterieur,date_saff,heure_saff,date_vega,heure_vega_arabie,date_identique,heure_identique,score_saff,statut_vega,score_vega,resultat_manquant,resultat_identique,elo_cotes,notes_vega
+1002,3,33960,47934,m_3BsAZh,Neom SC,Al Ahli,2026-09-24,20:15,2026-09-24,20:15,True,True,1-1,postponed,,True,False,0,0
+1002,3,33961,47935,m_3FDunc,Al Nassr,Al Ula,2026-09-25,18:25,2026-09-25,18:25,True,True,3-1,postponed,,True,False,0,0
+1002,3,33962,47936,m_32ZoGQ,Al Ittihad,Al Qadsiah,2026-09-25,20:15,2026-09-25,20:15,True,True,1-2,postponed,,True,False,0,0
+1002,3,33963,47937,m_03bRbc,Al Hilal,Al Taraji,2026-09-26,18:25,2026-09-26,18:25,True,True,6-0,postponed,,True,False,0,0
+1002,4,33964,47938,m_13cn88,Al Ula,Al Hilal,2026-10-01,20:15,2026-10-01,20:15,True,True,1-3,postponed,,True,False,0,0
+1002,4,33965,47939,m_2Wifjb,Al Qadsiah,Neom SC,2026-10-02,18:05,2026-10-02,18:05,True,True,2-0,postponed,,True,False,0,0
+1002,4,33966,47940,m_0c3m9a,Al Ahli,Al Nassr,2026-10-02,20:15,2026-10-02,20:15,True,True,0-5,postponed,,True,False,0,0
+1002,4,33967,47941,m_1p0DLj,Al Taraji,Al Ittihad,2026-10-03,18:05,2026-10-03,18:05,True,True,0-4,postponed,,True,False,0,0
+1002,5,33968,47942,m_3r9FnN,Al Nassr,Al Hilal,2026-10-22,19:45,2026-10-22,19:45,True,True,2-1,postponed,,True,False,0,0
+1002,5,33969,47943,m_48MDYK,Neom SC,Al Taraji,2026-10-23,18:30,2026-10-23,18:30,True,True,4-2,postponed,,True,False,0,0
+1002,5,33970,47944,m_3JJMuv,Al Ittihad,Al Ula,2026-10-23,19:45,2026-10-23,19:45,True,True,4-0,postponed,,True,False,0,0
+1002,5,33971,47945,m_2hwKMj,Al Ahli,Al Qadsiah,2026-10-24,20:00,2026-10-24,18:30,True,False,0-10,postponed,,True,False,0,0
+1002,6,33972,47946,m_4K7BdB,Al Ula,Al Ahli,2026-10-29,19:45,2026-10-29,19:45,True,True,4-0,postponed,,True,False,0,0
+1002,6,33973,47947,m_211UVD,Al Hilal,Al Qadsiah,2026-10-30,17:55,2026-10-30,17:55,True,True,2-2,postponed,,True,False,0,0
+1002,6,33974,47948,m_1VpUUy,Al Ittihad,Neom SC,2026-10-30,19:45,2026-10-30,19:45,True,True,3-3,postponed,,True,False,0,0
+1002,6,33975,47976,m_2N1YBP,Al Taraji,Al Nassr,2026-10-31,17:15,2027-05-06,20:45,False,False,2-3,not_started,,True,False,0,0
+1002,7,33976,47950,m_4Z28Rd,Neom SC,Al Hilal,2026-11-05,19:45,2026-11-05,19:45,True,True,0-4,postponed,,True,False,0,0
+1002,7,33977,47951,m_3MNFbt,Al Taraji,Al Ula,2026-11-06,17:30,2026-11-06,17:30,True,True,2-5,postponed,,True,False,0,0
+1002,7,33978,47952,m_1NLzaW,Al Ahli,Al Ittihad,2026-11-06,20:00,2026-11-06,19:45,True,False,0-3,postponed,,True,False,0,0
+1002,7,33979,47953,m_4NnnLd,Al Qadsiah,Al Nassr,2026-11-07,17:30,2026-11-07,17:30,True,True,0-1,postponed,,True,False,0,0

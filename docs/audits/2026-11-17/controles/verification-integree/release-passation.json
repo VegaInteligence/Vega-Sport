@@ -1,0 +1,157 @@
+{
+  "checked": "2026-11-18T23:46:15.304301+00:00",
+  "tested_application": "4c413029c173e96704f4752f843f186526e114cf",
+  "branch_base": "0e6b2ab35301a9df5d94e86f10affcdf7d1997ad",
+  "main": "0f368fd38911b154caf9c83fcfdafe623dde01bb",
+  "site": {
+    "host": "vegasport.vercel.app",
+    "sha": "0f368fd38911b154caf9c83fcfdafe623dde01bb",
+    "state": "READY",
+    "url": "vega-gdhxkgmjw-vegainteligence.vercel.app",
+    "checked": "2026-11-18T23:45:42.066Z"
+  },
+  "deploy": {
+    "conclusion": "success",
+    "createdAt": "2026-11-18T23:03:01Z",
+    "headSha": "0f368fd38911b154caf9c83fcfdafe623dde01bb",
+    "status": "completed",
+    "updatedAt": "2026-11-18T23:11:46Z",
+    "url": "https://github.com/VegaInteligence/Vega-Sport/actions/runs/44417253103"
+  },
+  "jobs": [
+    {
+      "conclusion": "success",
+      "name": "deploy"
+    }
+  ],
+  "comparison": "https://github.com/VegaInteligence/Vega-Sport/compare/0e6b2ab35301a9df5d94e86f10affcdf7d1997ad...0f368fd38911b154caf9c83fcfdafe623dde01bb",
+  "commits_since_integration": [
+    "0f368fd38911b154caf9c83fcfdafe623dde01bb [FIX] An archive match stored twice becomes one",
+    "cb320895787ae9ec7174498b564e5b60b6dca373 [FIX] The competition purge runs under the production roles",
+    "63b1794771eb225856fa67e399778776f7f0fad3 [UPD] No cards and no rounded corners across the site",
+    "c1c5d9ca6bf3b35a163f0754522cff843e5af1b6 [UPD] WORKLOG: the minutes chart shipped, as its session recorded it",
+    "9c274321153d503dc53ad5410b3fcf1d1691713a [UPD] WORKLOG: notes left uncommitted in the main checkout",
+    "40f4d051ed062edffacd13b4cd4864ff3536d9b5 [UPD] Minutes per match as square columns on the real calendar",
+    "d4033c824f892a96cc266de445a725193c5f5c9f [UPD] WORKLOG: the match header's five KPIs verified in production"
+  ],
+  "changed_paths": [
+    "WORKLOG.md",
+    "backend/archives/twins.mjs",
+    "backend/tests/test_archives.py",
+    "backend/tests/test_open_matchday.py",
+    "backend/tests/test_worker.py",
+    "backend/vega/archives.py",
+    "backend/vega/scope.py",
+    "backend/vega/worker.py",
+    "dashboard/frontend/src/analysis.css",
+    "dashboard/frontend/src/brand-tokens.css",
+    "dashboard/frontend/src/competition-selector.css",
+    "dashboard/frontend/src/components/ClubScout.module.css",
+    "dashboard/frontend/src/components/ClubScoutAdvanced.module.css",
+    "dashboard/frontend/src/components/ClubScoutProfile.module.css",
+    "dashboard/frontend/src/components/ClubScoutTabs.module.css",
+    "dashboard/frontend/src/components/ClubScoutUI.jsx",
+    "dashboard/frontend/src/components/FormBars.jsx",
+    "dashboard/frontend/src/components/FormBars.module.css",
+    "dashboard/frontend/src/components/HomeMatchday.jsx",
+    "dashboard/frontend/src/components/MatchAnalyses.jsx",
+    "dashboard/frontend/src/components/MatchTabs.module.css",
+    "dashboard/frontend/src/components/Nations.module.css",
+    "dashboard/frontend/src/components/NotFoundGame.module.css",
+    "dashboard/frontend/src/components/PageLoader.module.css",
+    "dashboard/frontend/src/components/PlayerCompetitionMatches.module.css",
+    "dashboard/frontend/src/components/PlayerOverviewRadar.module.css",
+    "dashboard/frontend/src/components/PlayerPhysical.jsx",
+    "dashboard/frontend/src/components/PlayerPositionPitch.module.css",
+    "dashboard/frontend/src/components/PlayerProfileFilters.module.css",
+    "dashboard/frontend/src/components/PlayerProjection.module.css",
+    "dashboard/frontend/src/components/PlayerScout.module.css",
+    "dashboard/frontend/src/components/PlayerScoutCharts.jsx",
+    "dashboard/frontend/src/components/PlayerScoutCharts.module.css",
+    "dashboard/frontend/src/components/PlayerScoutOverview.jsx",
+    "dashboard/frontend/src/components/RankingDialog.module.css",
+    "dashboard/frontend/src/home.css",
+    "dashboard/frontend/src/openfootball-history.css",
+    "dashboard/frontend/src/phone.css",
+    "dashboard/frontend/src/research.css",
+    "dashboard/frontend/src/styles.css",
+    "dashboard/frontend/src/theme.css",
+    "dashboard/shared/archive.js",
+    "tests/archive.test.mjs"
+  ],
+  "merge_tree_exit": 1,
+  "merge_conflicts": [
+    "WORKLOG.md",
+    "backend/vega/archives.py",
+    "dashboard/shared/archive.js"
+  ],
+  "competition_catalogue": {
+    "http": 200,
+    "url": "https://dngp6kh9jx2bl.cloudfront.net/api/competitions",
+    "date": "Wed, 18 Nov 2026 23:46:15 GMT",
+    "etag": "W/\"profile-v1-b940fe5615707c6b84394ddce80277fe6c1cbfadb928b05d37b06a5cc4473cb3\"",
+    "cache": "Miss from cloudfront",
+    "count": 56,
+    "target_names_in_2209_rds": [
+      "1. Division",
+      "Allsvenskan",
+      "Cymru North",
+      "Cymru South",
+      "Cyprus League",
+      "Division Profesional",
+      "Indian Super League",
+      "J. League",
+      "J3 League",
+      "K League 1",
+      "K League 2",
+      "Kazakhstan Premier League",
+      "League of Ireland First Division",
+      "League of Ireland National League",
+      "Liga 1",
+      "Liga de Primera",
+      "MLS Next Pro",
+      "Premier League",
+      "Premier Soccer League",
+      "Primera Division",
+      "Prva Liga",
+      "Saudi First Division",
+      "Scottish Championship",
+      "Scottish League One",
+      "Scottish League Two",
+      "Super League",
+      "Thai League 1",
+      "USL League One",
+      "Virsliga",
+      "Women's Premier League",
+      "Écosse · Division 2",
+      "Écosse · Division 3",
+      "Écosse · Division 4"
+    ],
+    "still_listed_exact_name": [
+      {
+        "id": "l_2Mh0jT",
+        "name": "Premier League",
+        "country_code": "RUS"
+      },
+      {
+        "id": "l_3UiOcj",
+        "name": "Premier League",
+        "country_code": "CAN"
+      },
+      {
+        "id": "l_4WFCIZ",
+        "name": "Premier League",
+        "country_code": "ENG"
+      },
+      {
+        "id": "l_4d6Bwl",
+        "name": "Super League",
+        "country_code": "SUI"
+      }
+    ],
+    "has_image_url": 56,
+    "sha256": "14ac54f8ed0905493679815d0b4a6cb237ff2577a416391f66bc07b65dc6caf2",
+    "limitation": "Le catalogue public et la simple égalité de nom ne prouvent ni la suppression physique des éditions ni la validité des images."
+  },
+  "database": "Dernier instantané SQL intégral à 22 h 09 UTC. Au contrôle final STS a indiqué que la session statarena avait expiré. Aucune nouvelle lecture RDS au-delà du dernier instantané."
+}

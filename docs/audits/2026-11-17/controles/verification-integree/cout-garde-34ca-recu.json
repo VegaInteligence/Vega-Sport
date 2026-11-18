@@ -1,0 +1,17 @@
+{
+  "verified_at_utc": "2026-11-18T22:31:26.682365+00:00",
+  "matching_local_benchmark_databases_after_cleanup": [],
+  "files": {
+    "README.md": "160cd15c418e4f01d9e4864a7e9cedf4ae339e14899db426ff03052420a00621",
+    "bench.py": "044ea322374b693fb43c5b6d57f863fb75eeda3fb5fc497c0fecca286b82d2df",
+    "budget.md": "ddec64b559887943f49106d3455a920175a08f7e6b65333c62ce5249ba6520ce",
+    "receipt.json": "f6bf4009011ea6870e6d322435b5c8a9b3c2f3327b06b7a084c6fabe6b02d087",
+    "result.json": "fbdf6d55bca2974b37182b80d03192bb8dc91ac885be66a29ee8f81c9b45bb63",
+    "withdraw-plans.json": "07d2f0600af5a09dc840e4637b6788680a252ec23883266096ac19d6760b1e1f",
+    "grade-plan-guard.json": "7fa06ea76949f22eb6bbadd396d806981e992c5f0295356c4c517af530b64e49",
+    "grade-plan-control.json": "6148fa61e4087271a51a2e6f2514774776deed9dce218f09619499d03d4ed737",
+    "six-saisons/result.json": "2b9cf18917e61844984e3d7ed7d9b1dd7cef3103166fa2648a5b67687b418d0f",
+    "six-saisons/receipt.json": "918a628b979594734cdb0eb3aae2d2e9c4be0ede9359cc1d9b0ad98c44536de9",
+    "repartition-source.csv.gz": "a29edde7828d9f73c485eff29b9077bfa6f9df1bc07646391675321d8f9b0779"
+  }
+}

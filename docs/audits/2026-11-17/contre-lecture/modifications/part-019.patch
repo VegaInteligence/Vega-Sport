@@ -1,1122 +1,591 @@
-diff --git a/docs/calculs/09-audit-2026-11/FAILURE_MODES.md b/docs/calculs/09-audit-2026-11/FAILURE_MODES.md
-index 8b19aff978..6d4bd15730 100644
---- a/docs/calculs/09-audit-2026-11/FAILURE_MODES.md
-+++ b/docs/calculs/09-audit-2026-11/FAILURE_MODES.md
-@@ -245,6 +245,100 @@ integer` are appended at the end.
- - `backend/tests/test_audit_player_aggregates.py::HalvesRealFixtureTest`
- - adjusted expectation in `backend/api/test/players.test.mjs` (§12).
+diff --git a/dashboard/shared/legacy-8018e08/openfootball-history.js b/dashboard/shared/legacy-8018e08/openfootball-history.js
+new file mode 100644
+index 0000000000..0b4e1cc801
+--- /dev/null
++++ b/dashboard/shared/legacy-8018e08/openfootball-history.js
+@@ -0,0 +1,116 @@
++import { normalizeText } from "./archive-text.js";
++
++/** OpenFootball stays separate from PitchAPI; no player or xG fields are inferred. */
++export function historicalRows(season, competition = "all", query = "") {
++  const needle = normalizeText(query).trim();
++  const rows = [];
++  for (const league of season?.competitions || []) {
++    if (competition !== "all" && league.id !== competition) continue;
++    for (let i = 0; i < league.matches.length; i++) {
++      const match = league.matches[i];
++      if (
++        needle &&
++        !normalizeText(`${match.team1 || ""} ${match.team2 || ""}`).includes(
++          needle,
++        )
++      )
++        continue;
++      rows.push({
++        key: `${league.id}:${i}`,
++        competition: league.name,
++        country: league.country,
++        match,
++      });
++    }
++  }
++  rows.sort(
++    (a, b) =>
++      String(b.match.date || "").localeCompare(String(a.match.date || "")) ||
++      a.key.localeCompare(b.key),
++  );
++  return rows;
++}
++
++export function historicalPair(value) {
++  if (!Array.isArray(value) || value.length !== 2) return [null, null];
++  return value.map((item) =>
++    Number.isInteger(item) && item >= 0 ? item : null,
++  );
++}
++
++/** Show the final match score, with extra time distinguished from penalties. */
++export function historicalScore(match) {
++  const final = historicalPair(match?.score?.final);
++  if (final.every((value) => value !== null)) return final;
++  const extra = historicalPair(match?.score?.et);
++  return extra.every((value) => value !== null)
++    ? extra
++    : historicalPair(match?.score?.ft);
++}
++
++export function historicalScoreNotes(match) {
++  const notes = [];
++  const extra = historicalPair(match?.score?.et);
++  const penalties = historicalPair(match?.score?.p);
++  if (extra.every((value) => value !== null)) notes.push("après prolongation");
++  if (penalties.every((value) => value !== null))
++    notes.push(`tirs au but ${penalties[0]} – ${penalties[1]}`);
++  const fields = match?.sourceFields || {};
++  if (match?.status === "not_played")
++    notes.push(
++      `Rencontre non disputée${fields.nonmatch ? ` : ${fields.nonmatch}` : ""}`,
++    );
++  if ((fields.neutral || "").toLowerCase() === "yes")
++    notes.push("terrain neutre");
++  const comment = (fields.Comments || fields.notes || "").trim();
++  if (comment && comment.toLowerCase() !== "na")
++    notes.push(`Source : ${comment}`);
++  return notes;
++}
++
++export const HISTORICAL_CSV_FIELDS = [
++  "date",
++  "competition",
++  "round",
++  "home",
++  "home_goals",
++  "away_goals",
++  "away",
++  "home_goals_90",
++  "away_goals_90",
++  "penalties_home",
++  "penalties_away",
++  "notes",
++  "source_date",
++  "source_venue",
++  "source_attendance",
++  "source_neutral",
++  "status",
++  "date_note",
++];
++
++export function historicalCsvRow({ competition, match }) {
++  const [home90, away90] = historicalPair(match.score?.ft);
++  const [home, away] = historicalScore(match);
++  const [penaltiesHome, penaltiesAway] = historicalPair(match.score?.p);
++  return [
++    match.date,
++    competition,
++    match.round,
++    match.team1,
++    home,
++    away,
++    match.team2,
++    home90,
++    away90,
++    penaltiesHome,
++    penaltiesAway,
++    historicalScoreNotes(match).join(" · "),
++    match.sourceFields?.Date,
++    match.sourceFields?.Venue,
++    match.sourceFields?.attendance,
++    match.sourceFields?.neutral,
++    match.status,
++    match.dateNote,
++  ];
++}
+diff --git a/dashboard/shared/openfootball-history.js b/dashboard/shared/openfootball-history.js
+index 0b4e1cc801..2ef05dcd19 100644
+--- a/dashboard/shared/openfootball-history.js
++++ b/dashboard/shared/openfootball-history.js
+@@ -31,32 +31,63 @@ export function historicalRows(season, competition = "all", query = "") {
+   return rows;
+ }
  
-+### 4.1 Each metric's own coverage (137, audit 15c; written before the tests)
++const isPair = (value) => Array.isArray(value) && value.length === 2 && value.every((item) => Number.isInteger(item) && item >= 0);
 +
-+The audit asked for each half metric's coverage and observed minutes, as the season aggregates
-+give them (SOURCE_AUDIT §15, « Mi-temps »). §4 kept complete halves only, and the route published
-+nothing else. A half missing one metric lost all of its others, and a player without a complete
-+half answered 404 as if he had not played. In the production census (17 Nov 2026, read-only, six
-+seasons):
-+- 216,659 of 2,738,261 eligible half rows were left out (9,691,563 of 105,381,499 minutes);
-+- 214,383 of them for missing touches alone;
-+- 15,342 player-season-period groups were hidden entirely although they had positive passing.
++/** Two non-negative integer goals, or [null, null]: half a pair is no score. */
+ export function historicalPair(value) {
+-  if (!Array.isArray(value) || value.length !== 2) return [null, null];
+-  return value.map((item) =>
+-    Number.isInteger(item) && item >= 0 ? item : null,
+-  );
++  return isPair(value) ? [...value] : [null, null];
++}
 +
-+The real fixture shows the same pattern: both goalkeepers publish passes, recoveries and duels
-+per half, but no touches.
++// worldcup.json writes a full-time result as {ft: [2, 1], ht: […]} or, in most editions from 1950
++// to 2014 and seven matches of 2022, as [2, 1]: the same full-time result.
++const scoreObject = (score) => (Array.isArray(score) ? { ft: score } : score);
++const SCORE_PARTS = ["ft", "ht", "et", "p"];
 +
-+**Failure modes:**
++/**
++ * An OpenFootball score as the cup sources store it (open-cups.mjs, vega/sources/cups.py
++ * score_parts): {ft, ht, et, p}, each a [home, away] pair, or null without a result. Throws on
++ * anything else (an INVALID_SCORE: the edition is not written).
++ */
++export function openFootballScore(score) {
++  if (score === undefined || score === null) return null;
++  const parts = scoreObject(score);
++  if (!parts || typeof parts !== "object" || Array.isArray(parts)) throw invalidScore();
++  const keys = Object.keys(parts);
++  if (keys.some((key) => !SCORE_PARTS.includes(key) || !isPair(parts[key]))) throw invalidScore();
++  if (!keys.length) return null;
++  // A half time or a shoot-out without the match's score is incomplete.
++  if (!keys.includes("ft") && !keys.includes("et")) throw invalidScore();
++  return Object.fromEntries(keys.map((key) => [key, [...parts[key]]]));
++}
 +
-+| ID | Failure |
-+|---|---|
-+| FM-HC.1 | A published metric of an eligible half is dropped because another metric of the same half is unknown. |
-+| FM-HC.2 | A player whose eligible halves all miss one metric answers 404, as if he had not played. |
-+| FM-HC.3 | An unknown metric is served as 0 (a NULL summed, or `Math.round(null)`). |
-+| FM-HC.4 | A metric's rate is divided by minutes in which that metric was not observed. |
-+| FM-HC.5 | xG's structural zero is applied without an observed zero shots (shots unknown), or over a published NaN or ±∞. |
-+| FM-HC.6 | Halves of a canceled or unfinished match, or with 0 or unknown minutes, are counted. |
-+| FM-HC.7 | `first` or `second` changes (values, nulls or shape) for an existing client. |
-+| FM-HC.8 | The read scans more than the asked player's season. |
-+| FM-HC.9 | The coverage's exclusions drift from 129's complete-half rule. |
-+| FM-HC.10 | A stored single-precision xG is read at 6 significant digits (`real::numeric`): 0.12345679 is summed as 0.123457 (Astra review, 18 Nov). |
-+| FM-HC.11 | The decimal a stored xG is read as depends on the reading session's `extra_float_digits` (`real::text` gives 6 digits at 0, the shortest exact digits at 1 or 3), so one base gives two bodies and two ETags. |
-+| FM-HC.12 | The sum is converted to binary before the HTTP answer (a `float8` sum, or the binary value of each input): 0.12345679 + 1.2345678 becomes 1.3580245524644852. |
-+
-+**Contract:**
-+- **Eligible half:** finished match and minutes > 0, as in 129. A 0-minute half is not played, even when the source credits it a touch.
-+- **View `api.player_half_coverage` (137):**
-+  - one row per (season, player, period) with at least one eligible half, complete or not;
-+  - `matches` and `minutes`: the eligible halves;
-+  - `excluded_matches` and `excluded_minutes`: the eligible halves outside 129's complete sample. The rule is the same, so they equal 129's columns wherever 129 has a row.
-+- **Each route metric m:**
-+  - `m_count`: the eligible halves where m is known;
-+  - `m_minutes`: their minutes, 0 without any;
-+  - `m_sum`: its sum on them, NULL without any.
-+- **Known:**
-+  - for every metric but xG, not NULL;
-+  - for xG, a finite value, or a blank with an observed 0 shots.
-+  - These xG values stay unknown: a blank with unknown shots, a blank with a shot, NaN, +∞ and −∞.
-+- **Route:**
-+  - `first` and `second` are unchanged: 129's complete halves, or null without one.
-+  - `coverage.first` and `coverage.second` are each `{matches, minutes, excluded: {matches, minutes}, stats}`, where `stats` maps every route metric to `{sum, count, minutes}`.
-+  - An unmeasured metric is `{sum: null, count: 0, minutes: 0}`, never 0. A period without an eligible half is null.
-+  - **xG precision:**
-+    - each stored single-precision xG is read as its shortest decimal that reads back as the same stored value, PostgreSQL's own shortest output forced whatever the session's `extra_float_digits` (`core.real_decimal`);
-+    - these decimals are summed exactly (`xg_sum numeric`);
-+    - the route converts the sum to a JSON number once, at the end. The binary input (0.12345679104328156 for 0.12345679) is never what is summed.
-+  - The route reads both views in one statement, each filtered by the season and player asked.
-+  - **Types:** every `sum`, `count` and `minutes` is a JSON number (or `sum: null`). The legacy `first.xg` stays 129's float sum rounded to 2 decimals, so it is not the coverage's exact sum.
-+  - **Journal:** 137 was corrected in place before any release. It is only on `codex/audit-1-linear` (`c3c8232747`): not on `main`, and production runs `8018e0836c`. Disposable test bases re-create their schema. An environment that applied the first 137 must recreate the view (`MIGRATION_CHECKSUM_CHANGED` otherwise).
-+- **Rate:** 90 × `sum` / `minutes` of the same metric.
-+- **404:** only for a player without an eligible half in the season. A player with eligible but no complete halves answers 200, with `first` and `second` null. This replaces §4's 404 for such players, whose prior assertions were `player-halves.test.mjs` (Demi Inconnu) and `players.test.mjs` (p_aaaab1).
-+- **Site:** unchanged. `halfRows` reads `first` and `second` only. It shows the same tables and still hides a player without complete halves. Showing `coverage` is a frontend change, and needs a design the user approves.
-+
-+**Expected outcomes** (synthetic seed of `player-halves.test.mjs`, season 2025/2026):
-+
-+| Player | Status | `first` / `second` | Coverage |
-+|---|---|---|---|
-+| Moitiés Test (p_aaab30) | 200 | unchanged (§4) | First half: 3 halves, 135 min, excluded 2 / 90. Touches 50 on 2 halves / 90 min (50 per 90, not 33.3), tackles 1 / 90 min, passes 23 / 135 min, xG 0.7. Second half: 3 / 130, excluded 1 / 45, xG 0.2 on 2 halves / 85 min. |
-+| Demi Inconnu (p_aaab31) | 200 (was 404) | null, null | First-half xG unmeasured (a shot without xG), passes 4. Second-half recoveries unmeasured, structural xG 0 on 1 half. |
-+| Passe Seule (p_aaab32) | 200 | null, null | First half: passes 14 on 1 half / 45 min, every other metric unmeasured. Second half: null (0 and unknown minutes). |
-+| Non Fini (p_aaab33) | 200 | null, second half m1 | First-half xG unmeasured (NaN, +∞, −∞), shots 3. Second half: xG 0.4 and shots 1 on 1 half (m3's shots are unknown, so its blank xG stays unknown). |
-+| Rien Mesuré (p_aaab34) | 200 | null, null | 1 half (45 min and 30 min), excluded entirely, every metric unmeasured. |
-+| Hors Saison (p_aaab35) | 404 | — | Only a canceled match, a match not started and a 0-minute half. |
-+| Zéro Observé (p_aaab36) | 200 | first: all 0 | Every metric 0 on 1 half / 45 min (a measured zero, unlike Rien Mesuré). |
-+| Précision Fine (p_aaab37) | 200 | first xG 1.36, second xG 0.12 (129, unchanged) | First half, three values: xG 1.35802459 on 3 halves / 135 min (0.12345679 + 1.2345678 + a structural 0). It is not 1.358027 (6 digits) and not 1.3580245524644852 (binary). Second half, one value among mixed rows (supported 0.12345679, a blank with 2 shots, NaN): 0.12345679 on 1 half / 45 min. The same body and ETag at `extra_float_digits` 0, 1 and 3. |
-+
-+Expected decimals:
-+- The stored values are exact in `half-fixture.mjs`.
-+- They were computed by an oracle independent of PostgreSQL (Python `struct` and `decimal`): `tracks/1-linear/half-coverage/precision/binary32_oracle.py` in the track evidence.
-+
-+**Real fixture `match_m_08LEIz`** (FC Orenburg–CSKA Moscow, 1 Nov 2026):
-+- The goalkeepers Bogdan Ovsyannikov (`p_4McHHL`) and Maksim Borisko (`p_3yNPPF`) answer 200 (were 404), with `first` and `second` null:
-+  - Ovsyannikov: passes 2 and 7, recoveries 6 and 6, duels won 0 and 2;
-+  - Borisko: passes 6 and 5, recoveries 9 and 5, duels won 2 and 1;
-+  - for both: touches unmeasured, structural xG 0, 1 half / 45 min each.
-+- Damián Puebla (`p_02x0dj`) is unchanged: first half xG 0.28 and shots 3. His coverage equals his totals.
-+- Egor Nazarenko (`p_3o0rP8`) stays 404: his only row is a 0-minute second half (1 touch, 1 pass).
-+- Astra's probe, with Puebla's first-half xG set to the stored value of 0.12345679: `coverage.first.stats.xg` is `{sum: 0.12345679, count: 1, minutes: 45}`. It was 0.123457, an error of +0.00000021, while the legacy `first.xg` stays 0.12.
-+- Over the 28 players:
-+  - first half: 22 halves / 990 min, excluded 2 / 90, passes 226 / 990 min, touches 460 / 900 min;
-+  - second half: 28 halves / 990 min, excluded 2 / 90, passes 185 / 990 min, touches 452 / 900 min.
-+
-+**Tests:**
-+- `backend/api/test/player-halves.test.mjs` (synthetic, through the route; bounded statement; view identity);
-+- `backend/api/test/player-halves-real.test.mjs` (the real match, written by the collector's path);
-+- adjusted expectation in `backend/api/test/players.test.mjs`.
-+
- ## 5. B4 — Returns from absence on the club stream (audit 15g)
++function invalidScore() {
++  return Object.assign(new Error("Invalid OpenFootball score"), { code: "INVALID_SCORE" });
+ }
  
- **Failure modes:**
-@@ -1438,3 +1532,1016 @@ the normalizer's NULL for an ordinary goal shot (VI-21).
- End to end: on a local database, one cohort is re-marked every minute for 70 simulated minutes while another
- is marked once. The first is refreshed at the maximum wait, once only, and stays queued after its last
- re-mark. The second is refreshed 10 minutes after its mark.
-+
-+## 19. Cup and open-matchday snapshots (VI-27, written before the tests)
-+
-+Batch of [VI-27](https://linear.app/vegainteligence/issue/VI-27), 17 Nov 2026, baseline `8018e0836c`.
-+Source fixes only: no method version, Elo, forecast or identity rule changes (VI-19 and VI-21 keep
-+them). This batch replays nothing in production.
-+
-+### 19.1 What production holds (read-only, 17 Nov 2026, 18:13 UTC)
-+
-+- `worldcup.json` at `516d3825` and `euro.json` at `7bbf6309`: 26 editions, 1,222 fixtures, the same
-+  1,222 in RDS. Upstream, 1,170 are played; RDS marks 505 finished. All 665 missing results are the
-+  array encoding `"score": [2, 1]` in 18 World Cups (1950 to 2014, and 2022). `cups.match_rows` reads
-+  an object score only: 1962 is 0/32 finished, 1974 0/38, 2022 57/64 (England–USA 0–0 among them).
-+- 1938 Sweden–Austria is `"status": "canceled"`, without a score. `open-cups.mjs` drops `status`, so
-+  RDS holds the match as `not_started`.
-+- `cups.save` digests the projection's raw body. A parser fix alone leaves that digest unchanged:
-+  no stored edition would be written again.
-+- `cups.save` and `open_matchday.save` delete every match of the edition absent from the snapshot.
-+  Local reproduction (`sources/repro/red.log`): a 200 with an empty match list, a CSV with other
-+  headers and a manifest describing neither file each empty a populated edition. A fixture row with
-+  the key of a result turns the finished match `not_started`, without score or statistics. An
-+  unreadable body (502) already keeps the edition.
-+- `open_matchday.save` updates every match and rewrites its statistics every six hours, without a
-+  revision: a change cannot be told from a re-read.
-+- The manifest declares, per folder, the rows of each file (`results`, `fixtures`) and its `errors`.
-+  At `496e94ec` each of the 65 European files parses to exactly its declared count of distinct keys.
-+
-+### 19.2 The rules
-+
-+**OpenFootball scores.** One rule for `open-cups.mjs` and `cups.match_rows`. The display helpers of
-+`openfootball-history.js` read the same encodings.
-+
-+| Source `score` | Stored |
-+|---|---|
-+| absent, `null` or `{}` | no result: `not_started` (`canceled` when the source says so), every score NULL |
-+| `[h, a]` | full time: `finished`, score h–a; no 90-minute, extra-time or shoot-out value |
-+| `{ft}`, `{ft, ht}` | as today: the final score is `ft` |
-+| `{et, …}` | the final score is `et`; the 90-minute score is `ft` when given, never inferred |
-+| `{…, p}` | the shoot-out, beside a final score |
-+| anything else | the edition is invalid (`INVALID_SCORE`) |
-+
-+A pair is two non-negative integers: no boolean, float, string or `null`. The parts are `ft`, `ht`,
-+`et` and `p` only. `ht` or `p` without `ft` or `et` is incomplete. A source `status` of `canceled`
-+(or `cancelled`) is stored `canceled` and comes without a score. Any other status, or a canceled
-+match with a score, makes the edition invalid (`INVALID_STATUS`). The projection writes every score
-+in the object form (`[h, a]` becomes `{ft: [h, a]}`) and passes `status`. The read API gives
-+`status` back for a canceled match.
-+
-+**One version of what is stored.** A cup edition's digest is the hash of the rows it stores
-+(`CUP_ROWS_VERSION`, the name, then the key and values of every match in source order), not the hash
-+of the source's body. A parser change that changes a stored value changes the digest, so the
-+edition is written again at its next due read, once. An edition whose rows are unchanged is not
-+written again.
-+
-+**A match changes only when its values do.** On a write, a match whose stored values equal the new
-+ones is left alone (no `revision`, no `updated_at`). One that differs is updated with
-+`revision + 1`. A change of source order alone moves `archive_position` and nothing else. The
-+edition's `cup_updated_at` moves only when a match is added, changed or removed, or the edition is
-+renamed. `cup_checked_at` is the last accepted read. Open-matchday statistics are rewritten only when
-+they differ, and a statistics change is a change of its match.
-+
-+For Open Matchday, `gw` is optional. An omitted column or an empty cell keeps the round
-+already published in the same edition. A supplied round replaces it. A new match or a match
-+moved from another edition without a supplied round has no round.
-+
-+Concurrent changes are checked when a snapshot updates or removes a match. PostgreSQL
-+compares the row version with the version read for the snapshot. If another transaction
-+changed it, `SNAPSHOT_CHANGED` rolls back the edition before removing its provider keys.
-+The result guard also applies to an existing key read in another edition. Identical match
-+rows still require no write.
-+
-+Only a match's current provider key participates in comparing membership. Historical keys
-+remain attached to a retained match. An incoming historical key refuses the changed snapshot
-+with `INACTIVE_MATCH_KEY`. A permitted withdrawal of the current key removes the match and
-+the provider's keys for it, including historical keys.
-+
-+The writer locks only matches it is about to change or withdraw. It then reads and locks their
-+provider keys in a separate statement. A changed key set gives `SNAPSHOT_CHANGED`. A match linked
-+to another provider gives `SHARED_MATCH`. Adding or changing a provider key takes a shared lock
-+on its match first. An insert waiting on a withdrawal fails if the match has gone. The snapshot
-+still skips unchanged rows.
-+
-+A withdrawal refuses `MATCH_HAS_DEPENDENTS` when another input holds the match, including
-+odds or any match event. It reuses the archive dependency catalogue and also checks plain goals.
-+Open Matchday may remove the statistics it supplies for the whole match and the corners it
-+supplies by half. The writer locks the statistics rows before checking for additional fields.
-+Foreign keys protect concurrent addition of dependent rows through the parent lock.
-+
-+**A snapshot replaces an edition only when it is complete and keeps its results.** Before any write:
-+- open-matchday: the folder's manifest declares integer counts (not booleans) and no `errors`. Each
-+  declared file is read. A results file has `date, home, away, ft_home, ft_away`; a fixtures file has
-+  `date, home, away`. Each holds exactly its declared number of rows. Every result row has both
-+  sides, a date and two non-negative integer goals. A fixture row without both sides or a date names
-+  no match and is skipped, as today. A half-time score is kept only when both halves are integers;
-+- a result and a fixture with the same key are one match: the result, with its score and statistics;
-+- a match the base holds finished must still be in the snapshot, finished (a score correction is
-+  accepted). One that is absent (`SNAPSHOT_DROPS_RESULT`) or no longer finished (`RESULT_DOWNGRADED`)
-+  keeps the whole edition as it was. The exception is a match listed in the reviewed `RETRACTIONS`
-+  (`vega/sources/snapshot.py`), with its reviewer, date and reason;
-+- a match not yet played may leave a complete snapshot (rescheduled, decided, withdrawn).
-+
-+**A rejected snapshot changes nothing and says so.** A cup edition (one scope) fails with its code in
-+`ops.source_runs`; its digest, `cup_checked_at`, matches, scores and keys stay unchanged. A rejected
-+open-matchday folder is skipped and its edition is unchanged. The folder counts in `unmatched`, as an
-+unreadable one already does, and `ops.parse_failures` holds its code and the folder. The other folders
-+are written. The removal of an open-matchday copy of a league PitchAPI holds (`drop_copy`, `COVERED`,
-+`SUPERSEDED`, VI-21) is a separate path and is unchanged.
-+
-+### 19.3 Failure modes and expected outcomes
-+
-+| # | Situation | Expected | Class |
-+|---|---|---|---|
-+| 19a | `score: [0, 0]` (2022 England–USA), `[2, 1]` | `finished` 0–0, 2–1; 90-minute, extra-time and shoot-out scores NULL | CR |
-+| 19b | `{ft: [3, 3], et: [4, 4]}` (1954 England–Belgium) | final 4–4, 90 minutes 3–3, extra time 4–4 | BC |
-+| 19c | `{et: [2, 1]}` without `ft` | final 2–1, 90 minutes NULL | BC |
-+| 19d | `{ft: [1, 1], et: [1, 1], p: [4, 3]}` | final 1–1, 90 minutes 1–1, shoot-out 4–3 | BC |
-+| 19e | no score; `{}` | `not_started`, NULL scores | BC |
-+| 19f | `status: canceled` (1938 Sweden–Austria) | `canceled`, NULL scores; the read API says `canceled` | CR |
-+| 19g | `[2]`, `[2, -1]`, `[2, 1.5]`, `[true, 0]`, `"2-1"`, `{ft: [1, null]}`, `{ht: [1, 0]}`, `{p: [4, 3]}`, `{ft: [1, 0], x: [0, 0]}` | `INVALID_SCORE`, edition unchanged; the projection answers 502 with that code | NC |
-+| 19h | a canceled match with a score; `status: postponed` | `INVALID_STATUS`, edition unchanged | NC |
-+| 19i | the 26 frozen editions | 1,170 finished, 665 of them array-encoded in 18 World Cups, 1 canceled, 51 to play; Python and JS give every match the same final score | CR |
-+| 19j | 1962 and 2022 stored as the baseline stores them (raw digest, array scores `not_started`), then read again, unchanged, by the new code | written once: every played match finished, same match ids, `revision + 1` on changed matches only; the next read changes nothing | CR |
-+| 19k | the same edition with its matches in another order | positions follow the source; no revision change, `cup_updated_at` unchanged | NC |
-+| 19l | a populated cup edition, then a 200 with no match | `SNAPSHOT_DROPS_RESULT` in `ops.source_runs`; edition, digest and `cup_checked_at` unchanged | CR |
-+| 19m | a cup snapshot without one finished match, or with it unplayed | `SNAPSHOT_DROPS_RESULT`, `RESULT_DOWNGRADED`; edition unchanged | CR |
-+| 19n | a cup snapshot correcting a score (2–1 to 2–2), adding a match and dropping an unplayed one | accepted: `revision + 1` on the corrected match, the new match written, the unplayed one gone | BC |
-+| 19o | a reviewed retraction in `RETRACTIONS` | that match alone may go; the others stay protected | NC |
-+| 19p | open-matchday: a fixture with the key of a result (`fixtures: true`) | one match, finished 2–1, its statistics kept | CR |
-+| 19q | open-matchday: other headers; a header-only file; fewer rows than declared; manifest `errors`; boolean counts | folder skipped, edition unchanged, `unmatched` + 1, one `ops.parse_failures` row with the code | CR |
-+| 19r | open-matchday: a result row with an empty or non-integer goal | folder skipped, edition unchanged (`INVALID_RESULT_ROW`) | NC |
-+| 19s | open-matchday: a finished match absent from the new results, or listed only as a fixture | folder skipped, edition unchanged | CR |
-+| 19t | open-matchday: one folder rejected and another valid in the same summary | the valid one written, the rejected one unchanged | CR |
-+| 19u | open-matchday: the same files read twice | no match update or revision, statistics untouched (`updated_at` and statistics rows unchanged); `cup_checked_at` advances | CR |
-+| 19v | open-matchday: a corrected score or statistic | that match updated with `revision + 1`; `cup_updated_at` moves | NC |
-+| 19w | open-matchday: a fixture no longer listed in a complete snapshot | removed | BC |
-+| 19x | open-matchday: a league PitchAPI holds (`COVERED`) | removed by `drop_copy` as before | BC |
-+| 19y | the display helpers (`historicalScore`, `historicalCsvRow`) on `[2, 1]` | 2–1, full time 2–1 | CR |
-+| 19z | Football.TXT (`openfootball-cups.js`): `2-1 a.e.t. (1-1)`, `2-1 a.e.t. (1-1, 0-0)` | after extra time 2–1, 90 minutes 1–1 (the first pair in brackets) | CR |
-+| 19z′ | `2-1 a.e.t.` without brackets | after extra time 2–1, 90 minutes unknown (no `ft`) | CR |
-+| 19z″ | `5-4 pen. 1-1 a.e.t. (1-1, 0-0)`; `4-3 pen. (2-1, 0-1)`; `4-1 (3-0)` | 1–1 after extra time and 90 minutes, shoot-out 5–4; 90 minutes 2–1, shoot-out 4–3; 90 minutes 4–1 (as today) | BC |
-+
-+**Football.TXT scores.** A line writes the score after extra time before `a.e.t.`, then in brackets the
-+90-minute score and the half time: `2-1 a.e.t. (1-1, 0-0)` (2021 Club World Cup final, Chelsea–Palmeiras,
-+1–1 after 90 minutes). The parser keeps the 90-minute score from the brackets and no longer copies the
-+score after extra time into it. A line without the brackets leaves the 90 minutes unknown. A shoot-out
-+without extra time is unchanged: its brackets give the 90 minutes.
-+
-+**Existing expectations adjusted (they encode the defect).**
-+- The manifest of the trimmed open-matchday fixture (`backend/tests/fixtures/open_matchday/build_summary.json`)
-+  declares the full upstream counts (100 results and 280 fixtures for the Premier League, 56 and 4 for
-+  the ÖFB Cup) beside files trimmed to 5 + 3 and 7 + 4 rows. Under 19q that manifest describes truncated
-+  files, so its counts become those of the trimmed files. No assertion of `test_open_matchday.py` changes.
-+- `tests/cup-sources.test.mjs` expects `{ft: [2, 1], et: [2, 1]}` for `2-1 a.e.t. (1-1)` and for the
-+  Club World Cup final `2-1 a.e.t. (1-1, 0-0)`. Under 19z both become `{ft: [1, 1], et: [2, 1]}`.
-+
-+**Not changed (recorded):**
-+- The Coupe de France reader (`openfootball-france-cup.js`) has no `a.e.t.` case. It is outside this
-+  batch's frozen evidence and is left as it is.
-+- Football.TXT half times stay unread, as before.
-+- The Elo and the nation pages read `core.matches` at their next pass. There is no new dirty scope or
-+  trigger (VI-21 owns the schedule).
-+- Rows sharing a key still make one match, written from the last of them, as before: two undecided
-+  fixtures (« N.N. ») of one day, or a result listed twice. The one exception is 19p: a fixture never
-+  overrides a result.
-+- `ops.parse_failures.family` is NULL for these rows. The status route's `parseFailures` lists them
-+  with `family: null`, which the column already allows.
-+
-+End to end: the frozen 1962, 1938 and 2022 bodies go through the real projection, the real writer and
-+a local PostgreSQL 18, first stored as the baseline code stores them, then replayed. The cup read
-+gives the corrected matches back. Each rejection scenario of `sources/repro/probe.py` keeps its edition.
-+
-+### 19.4 Competition logos (written before the tests)
-+
-+The user asked for real logos only (17 Nov 2026): an image of the exact competition, with its
-+provenance, or the missing state. In production 126 of 208 competitions have no logo link.
-+`curated.cup_logos` skips the `open-matchday:` keys of `shared/cup-logos.json`, yet the eleven domestic
-+cups they name are in the base (`cup:open-matchday:<folder>`, ids 87–97, no logo). The nine national cup
-+archives (`cup:open-cups:<key>`), OpenLigaDB's DFB-Pokal (`cup:openligadb:germany-cup`) and
-+International Results' Nations League (`cup:nations-results:nations-league`) have none either. The site
-+shows each as an edition of one of those cups (`cup-archives.js` `NATIONAL_CUP_ARCHIVES` and
-+`GERMAN_CUP_FOLDER`; `cup-catalog.js`, Nations League « Ligues A à D »).
-+
-+Rules:
-+- An `open-matchday:<folder>` key gives its logo to the competition keyed `cup:open-matchday:<folder>`.
-+- The same cup under another source's key takes that logo through the site's own mappings above,
-+  never through a name.
-+- One asset per URL. A competition keeps its logo when the file has none for it, and a PitchAPI
-+  competition's own logo is never replaced.
-+- The continental and national-team cups (Libertadores, Sudamericana, CONCACAF, CAF, AFCON, Copa
-+  América, Asian Cup, Gold Cup), the open-matchday leagues and the archive competitions have no
-+  reviewed image in the repository. They stay without a logo and are listed as missing.
-+
-+| # | Situation | Expected | Class |
-+|---|---|---|---|
-+| L1 | an `open-matchday:<folder>` key and its competition in the base | logo linked, kind `logo`, author `SportScore` | CR |
-+| L2 | an archive, OpenLigaDB or International Results edition of the same cup | the same asset as its cup | CR |
-+| L3 | a key whose competition is not in the base yet | counted unmatched, nothing created | BC |
-+| L4 | a PitchAPI competition with its own logo | unchanged | BC |
-+| L5 | a key or an alias that no source family or site mapping names | the drift test fails | NC |
-+| L6 | the same pass twice | no new asset, no competition update | BC |
-+
-+## 20. Archive producer: statuses, labels, stable keys, safe replay (VI-27 lot 2, written before the tests)
-+
-+### 20.1 What production holds (read-only, 17 Nov 2026)
-+
-+- `football.json` at `e6744429`, 2019/20. Seven files mark 520 matches `"status": "cancelled"` with
-+  `"score": {}`: be.1 8, en.3 106, en.4 112, fr.1 101, fr.2 100, nl.1 74, sco.1 19. `archives.match_row`
-+  knows only `not_played`, so all 520 are stored `finished` without a score. ru.1 holds 236 results and
-+  4 `"status": "awarded"` (0–3), all stored `finished`.
-+- `2019-20/ru.2.json` (SHA-256 `7eda7c91…6597`) has exactly ru.1's match array (SHA-256 `66b0f56e…ef22`).
-+  Both are published: 240 Russian results appear twice, under two divisions.
-+- 1,783 goal-only archive matches (`g:` keys, worldclub) have no away team. Their label carries tabs and
-+  line breaks (`1. FC Köln vs. Bayern München 5:1 \t…\n…(Hinspiel 0:3)`), which `parseGoalMatch` does
-+  not read. The whole label became an invented home team: 1,781 team rows. Normalized, 1,782 labels give
-+  two sides; 1,735 of their scores equal the stored score, 47 differ, 1 label does not parse.
-+- A goal-only key is `g:<league>:<date>:<index>`, the index being the group's place in the season's
-+  group list. Grouping events differently renumbers every later group of the season.
-+- `Loader.season` deletes every stored archive match of the season absent from the edition, so a
-+  missing source family or a partial input prunes. A moved `archive_position` bumps the revision.
-+
-+### 20.2 The rules
-+
-+**Statuses** (shared/openfootball-history.js notes, edition.mjs, `archives.match_row`):
-+
-+| Source | Stored | Notes |
-+|---|---|---|
-+| no status, a score | `finished`, as today | as today |
-+| `not_played`, `cancelled`, `canceled`, no score | `canceled`, NULL scores | « Rencontre non disputée » (with the source's reason) |
-+| `awarded`, a score | `awarded`, its score | none added |
-+| `cancelled` with a score; `awarded` without one; any other status | the season is refused (`ArchiveError`) before any write | |
-+
-+A status-less row without a score keeps today's storage and is counted, never reclassified here.
-+
-+**Reviewed copy.** `build_openfootball_history.py` holds the reviewed exclusion of `2019-20/ru.2.json` at
-+its SHA-256, a copy of `2019-20/ru.1.json`. At that hash ru.2 is left out of the season and listed
-+under `excluded` in the index. Other bytes fail the build until re-reviewed. Two other competitions of
-+one season with identical non-empty match arrays fail the build: no winner is chosen.
-+
-+**Labels and stable keys** (`dashboard/shared/archive.js`):
-+- `parseGoalMatch` reads a label with its whitespace collapsed (tabs, line breaks, NBSP). The raw label
-+  stays as it is.
-+- Keys keep their legacy numbering. A group's index is the legacy index of the constituent the legacy
-+  parser understood, else of its earliest constituent. Every other legacy key it now contains, and every
-+  legacy goal-only key whose goals now belong to a results match, is listed in `absorbed` with the key
-+  that holds those goals.
-+- A label that still does not parse names no team: no team entity is created, and the raw label is the
-+  displayed home name.
-+- A label the legacy parser did not read whose parsed score differs from the legacy score keeps its
-+  legacy values (`held: score_conflict`): label parsing never chooses a score.
-+
-+**Suffixes.** « n.V. » and « i.E. » are read as words with their dots. The former case-insensitive pattern
-+also matched the « ie » of « (Hinspiel 0:3) ». It turned 1,741 of the 1,782 parsed census labels into
-+penalty shoot-outs, with their score taken from the last goal. A published goal-only match with such a
-+suffix therefore shows in the plan as a corrected note or score, to review like any change.
-+
-+**Replay guard** (`Loader.season`). A stored archive match or edition the candidate no longer holds is
-+removed only when explained:
-+- the edition is not imported because PitchAPI holds it (existing rule after 2020/21);
-+- its edition is a reviewed exclusion;
-+- its key is `absorbed`.
-+The last two also need the match to have no dependent row besides its own goal events. Any other removal
-+(a missing source family, a partial input, an unexplained key) refuses the season with `ArchiveError`, and
-+nothing of it is written. A change of `archive_position` alone updates that column only.
-+
-+**Plan and apply.** `python -m vega.archives --sources … --plan out.json` reads only: no insert, no
-+sequence, no rollback. It lists, sorted, every season's matches by class: new, changed (before and
-+after values), position only, absorbed, removed (with the rule) or refused. It also gives the stored id
-+and revision, the teams to create (by key, no id), and the source and parser hashes. Two plans of the
-+same inputs and base are byte-identical. `--apply out.json --plan-sha256 <digest>` recomputes the plan
-+under an advisory lock and refuses on any difference (drift). Otherwise it writes the seasons through the
-+normal loader.
-+
-+### 20.3 Failure modes and expected outcomes
-+
-+| # | Situation | Expected | Class |
-+|---|---|---|---|
-+| 20a | The seven pinned 2019/20 files | 520 `canceled`, NULL scores, the note; no `finished` row without a score among them | CR |
-+| 20b | ru.1 | 240 results: 236 `finished`, 4 `awarded` 0–3, keys and ids unchanged | CR |
-+| 20c | ru.2 at its reviewed hash | not imported, listed `excluded` | CR |
-+| 20d | ru.2 with other bytes; another identical pair | the build fails | NC |
-+| 20e | `cancelled` with a score; `awarded` without one; `postponed` | the season is refused, base unchanged | NC |
-+| 20f | The twelve witness labels | two sides, score and suffix | CR |
-+| 20g | The full census (1,783 production rows) | per-row disposition summing to 1,783: 1,735 repairable, 47 held, 1 unparsed | CR |
-+| 20h | An unparsed label | match kept, no team created, the raw label as home name | NC |
-+| 20i | Legacy keys against new keys | every legacy key kept, or listed `absorbed` | CR |
-+| 20j | A stored season replayed after the change | repaired rows keep their id with `revision + 1`; a second run writes nothing | CR |
-+| 20k | A replay without one source family; an unexplained removal | refused; the other family, its goals and editions intact | CR |
-+| 20l | A removal before later matches | they move position only | NC |
-+| 20m | A–B and B–A the same day; one pair in two competitions | distinct | BC |
-+| 20n | The plan twice on the same inputs; with the files in another order | identical bytes; identical season plans (the archive's own hash differs) | NC |
-+| 20o | An excluded or absorbed match with a dependent row | refused, nothing deleted | NC |
-+
-+**Not changed (recorded):** the 1,781 invented team rows stay; their ids, keys and dependents are listed
-+for VI-21. No team is deleted or merged. The 47 score conflicts and the unparsed label wait for an
-+authoritative source. Status-less rows without a score are counted, not reclassified.
-+
-+## 21. Authentic artwork: pack import, UEFA crests, the image gate (VI-27 lot 2, written before the tests)
-+
-+### 21.1 What production holds
-+
-+- 9,854 of 11,329 clubs and 126 of 208 competitions have no image link. `uefa.save` stores each club's
-+  `img.uefa.com` logo on its ranking row and never on the club. The site's image gate (`format.js`
-+  `safeImageUrl`, repeated in `media-registry.js`) accepts PitchAPI, Commons and TheSports only. `Media`
-+  needs it even when a mirrored copy exists, so any other image renders as initials.
-+- The reviewed pack (`artwork-release/manifest.json`, SHA-256 `385e97b4…cf4d`) has 613 records (516 teams,
-+  97 competitions) and 576 display files. Each record binds an entity (`resolve_using` provider and key)
-+  to an original file (`origin_sha256`) and a display raster (`display_sha256`, `display_format`), with
-+  its publisher URL, page and evidence. The pack's directories are `originals/<sha256>` and
-+  `images/<sha256>`. 41 vector or AVIF/GIF originals were converted offline to PNG.
-+
-+### 21.2 The rules
-+
-+**One reference per packed image.** A pack asset without an accepted provider URL is stored as
-+`https://media.vega.invalid/sha256/<display sha256>.<png|jpg|webp>`. That is a reference the base
-+resolves, never fetched and never a provider's URL. Its S3 key is the existing content address of the
-+display bytes. The publisher's URL, page, author and licence stay in the asset (`source_page_url`,
-+`author`, `license`, as stated) and in the import receipt, with both hashes.
-+
-+**The importer** (`python -m vega.artwork --manifest M --pack D --expected-manifest-sha256 H --plan R`,
-+`--apply` to write):
-+- before any write it checks the manifest's digest against H, its schema and counts, and that every path
-+  stays in D. Each original and display file must have its byte count and hash; each display must be a
-+  PNG, JPEG or WebP of at most 4 MB, read by its bytes. One entity bound to two different displays is a
-+  manifest conflict. Any failure stops everything;
-+- per record it resolves `(entity_type, provider, key)`, following a merged team to the club it is. The
-+  entity's kind, name and country must match the record (national team against club, ranking row for a
-+  UEFA key). Otherwise the record is coded and nothing is written for it;
-+- it writes the display bytes, checks them, then links the asset only where the entity has none
-+  (`… WHERE crest_asset_id IS NULL`). It never overwrites an image, an asset or its provenance. It bumps
-+  the team (or each edition of the competition) and `home`, only on a new link;
-+- every record has one outcome: `linked`, `already_linked`, `kept_existing`, `entity_not_found`,
-+  `identity_drift`, `proof_missing`, `asset_conflict`, `manifest_conflict`, `storage_failed`. The outcomes
-+  sum to the manifest's count. A second apply writes nothing.
-+
-+**UEFA crests in the ongoing source.** `uefa.save` fills an empty club crest from that row's exact
-+`https://img.uefa.com/imgml/TP/teams/logos/70x70/<its id>.png`, for a club linked by that UEFA id. It
-+keeps an existing crest and writes nothing on a second run. The mirror accepts this exact form; a
-+redirect must stay in it.
-+
-+**One image gate in the site** (`services/image-source.js`, used by `format.js` and `media-registry.js`).
-+It accepts the three existing shapes, the Vega reference and the UEFA form, with no credentials and no
-+port. The two new forms take no query or fragment and need the exact path, hash and extension. The
-+API's `/api/assets` and `media=1` lookups stay the only way to a copy: no address is built from a
-+reference.
-+
-+### 21.3 Failure modes and expected outcomes
-+
-+| # | Situation | Expected | Class |
-+|---|---|---|---|
-+| 21a | A UEFA record: key, ranking row, crest NULL | linked; `/api/assets` 307 to its copy; the gate accepts | CR |
-+| 21b | An official club or league page's image, a vector rendition | linked by its Vega reference, both hashes kept, rendered | CR |
-+| 21c | An entity with an image (PitchAPI's, lot 1's cup logos) | `kept_existing` or `already_linked`, unchanged | BC |
-+| 21d | The same pack twice | no new asset, link or version | NC |
-+| 21e | Key absent; national team for a club record; name or country drift; UEFA key without its ranking row | coded, nothing written | NC |
-+| 21f | A wrong hash, a short file, SVG or GIF bytes as display, over 4 MB, a path leaving the pack, another manifest digest | refused before any write | NC |
-+| 21g | An entity bound to two displays | `manifest_conflict` | NC |
-+| 21h | An existing asset with the reference but other bytes | `asset_conflict`, nothing overwritten | NC |
-+| 21i | The storage write fails | `storage_failed`, no link | NC |
-+| 21j | A crest written by PitchAPI between check and link | the importer's link does not land; `kept_existing` | NC |
-+| 21k | `uefa.save` on a club without a crest, with one, then again | filled once; kept; no second write | CR |
-+| 21l | The gate: the three shapes; the reference; UEFA; credentials, port, query, other host or path | accepted; accepted; accepted; refused | CR |
-+| 21m | The real pack (613 records) on a seeded base | outcomes sum to 613; API and browser show the images | CR |
-+
-+## 22. Corrections after the Astra and Fable reviews (VI-27, 17 Nov 2026, written before the tests)
-+
-+The reviews (`reviews/corrections.md` C1–C6, `reviews/astra-review.md` F1–F9) showed that the first lot 2
-+candidate was unsafe. These are the rules of the correction. Where safety cannot be proved, the stored
-+fact is kept and the record is listed as held. A hold is never counted as a repair and never changes a
-+stored row, so it cannot change what is scored.
-+
-+### 22.1 Rules
-+
-+**Source measurements (C1).**
-+- In open-matchday, a statistic cell missing from a later file, as an absent column or an empty cell, is
-+  not an instruction to clear it: the stored value is kept. A cell that states a number, `0` included,
-+  replaces the stored value, once. Score and result guards (§19) are unchanged.
-+- In `/api/cups/edition`, a match with an extra-time score and no known 90-minute score has no `ft`. The
-+  final score stands in for `ft` only when there is no extra time. 0–0 and penalties are kept.
-+
-+**Archive producer: one legacy reading, units and holds (C2).**
-+- The published rows are rebuilt by the baseline code itself (`dashboard/shared/archive-legacy.js`, a
-+  frozen copy of `8018e0836c`'s `buildArchiveSeason`, with its label reading, score selection, notes and
-+  attachment). The corrected reading is compared with it unit by unit. A unit is the set of legacy and
-+  corrected rows sharing a source goal event, plus each results row.
-+- When a unit's corrected keys equal its legacy keys, the corrected rows are the candidate, unless one
-+  of them changes a legacy score, drops a legacy note or loses goals. When the keys differ (an
-+  absorption, a merge, a split), the whole unit keeps its legacy rows, flagged `held`. A results row of
-+  such a unit keeps its results-file values and its published goals (`heldGoals`). Nothing is
-+  absorbed or deleted in this lot: an absorption needs a reviewed transfer of its dependents (VI-21).
-+- Exact names first: a goal's side is the side whose name equals the goal's team (case, accents and
-+  punctuation folded). Similarity decides only when neither side is exact.
-+- In footballcsv europe `champs.csv` only, each side must read `Name › ASSOCIATION (N)`, with `(N)` an
-+  appearance ordinal. Any other form stops the build. Such a side is never a new team: its existing
-+  binding is used, otherwise it names no team (`provisional`). The raw label stays the stored name.
-+- Reviewed quarantines (`QUARANTINE` in `vega/archives.py`, exact keys, source file and SHA-256):
-+  - the 33 CONCACAF matches filed under `g:champions-league` 2008/09;
-+  - Paris FC–Lyon `g:fra-coupe-de-france:2021-12-17:2247` (abandoned; no stored status represents
-+    "both lost");
-+  - Bradford–Luton `g:eng-league-cup:1990-10-10:389` (its candidate target's 1–1 contradicts its 0–2).
-+
-+  They are held as stored. On an empty base they are not written.
-+- Loader holds, per stored match, all reported with their reason. The match is kept as stored when the
-+  candidate:
-+  - changes its score pair or its status (other than finished → canceled without a score, or
-+    finished → awarded with the same score);
-+  - clears a team id of the match or of a goal;
-+  - drops a note, or loses goals;
-+  - would rewrite goals beside goal facts the archive does not write (player ids, own goal, penalty,
-+    period).
-+- Only `event_type = 'goal'` rows are ever deleted or rewritten. Cards and other events stay.
-+- A source family recorded in `core.source_revisions` (results, goals) that is missing from the inputs
-+  refuses the run before any write. A season the goals index lists without its file refuses the run.
-+- A held malformed label never creates a team. It uses the team its exact label is already bound to,
-+  if any.
-+
-+**Plan and apply (C3).**
-+- `season_plan` is the only decision. `Loader.season` executes a plan's entries and nothing else.
-+- Each entry carries the exact stored and candidate columns, the exact stored and candidate goal rows,
-+  every stored event of the match, the team bindings it reads and its revision.
-+- Apply re-plans each season under its lock and writes it only if that plan equals the approved one.
-+  Teams created by this apply are the only `new:` identities accepted later.
-+- The team cache lives one season.
-+- `core.source_revisions` and `ops.resource_versions` change only with a season that writes, and only
-+  when their values differ. A refused, drifted or no-op apply changes neither, so the archive API's
-+  ETag stays.
-+- Outcomes are `complete`, `partial` (a season held or drifted) or `refused`. The exit codes are 0, 3
-+  and 1.
-+- A run with no mode refuses (exit 2). `--fresh` imports only into seasons that hold no archive match.
-+
-+**Role, package and transport (C4).**
-+- Dependencies are read through `ops.archive_match_dependents(bigint[])`, a fixed-search-path
-+  `SECURITY DEFINER` function (migration 134) executable by `vega_collect` only. It reports:
-+  - every `match_id` or `*_match_id` column of core, agg and ops;
-+  - every `(entity_type, entity_id)` reference to a match;
-+  - events the archive does not own.
-+
-+  `vega_collect` gains no table privilege.
-+- The parser fingerprint names its files logically: `vega/archives.py`, `vega/store.py`,
-+  `archives/edition.mjs`, `archives/builders/*.py`, `shared/*.js` (the shared files the edition
-+  imports), each resolved from the running module, `VEGA_ARCHIVE_EDITION` and `VEGA_ARCHIVE_SCRIPTS`.
-+  A missing file is an error. The checkout and the image give the same manifest for the same bytes.
-+- Plan transport: `--plan-store` writes the plan into `ops.archive_plans` under its SHA-256. `--show-plan`
-+  reads it. `--apply-stored SHA` applies it and stores the receipt in the same row. A second apply of
-+  the same plan writes nothing.
-+
-+**Artwork (C5).**
-+- Records are grouped by resolved canonical entity as well as by binding. Two displays for one
-+  entity are a `manifest_conflict` for every record involved. Identical duplicates are one link plus
-+  `duplicate`.
-+- The upload happens outside any transaction and lock. The link transaction then re-reads, under
-+  `lock_timeout`:
-+  - the binding, the merge chain and the entity's image (`identity_drift` or `kept_existing` on a
-+    change);
-+  - the asset's key, hash and URL (`asset_conflict` on a change).
-+- Any exception of `put` is `storage_failed`. The run stops there. The receipt, rewritten after every
-+  record, lists the done, failed and unattempted records. The exit is non-zero.
-+- `uefa.save` follows the existing merge pointer to its canonical club (one level, the canonical not
-+  merged, not national). It fills that club's empty crest and holds an inconsistent chain. It never
-+  writes the alias.
-+
-+### 22.2 Failure modes and expected outcomes
-+
-+| # | Situation | Expected | Class |
-+|---|---|---|---|
-+| 22a | Open-matchday: same result, later file without the statistic columns, or with empty cells | stats, ids, revision, `cup_updated_at` kept | NC |
-+| 22b | Open-matchday: a stated `0` replaces a stored 11; replayed | one update; replay writes nothing | CR |
-+| 22c | Cups: source `{et:[2,1]}`; `{ft:[1,1],et:[2,1]}`; `{ft:[0,0],et:[0,0],p:[4,3]}` through `cups.save`, PostgreSQL and `/api/cups/edition` | `{et:[2,1]}`; both kept; all three kept | CR |
-+| 22d | Legacy-readable `M vs. N 3:1 (Hinspiel 0:0)`, last goal 2–1 | the legacy 2–1 row kept, held `score_change` | NC |
-+| 22e | Goal-only `Wien vs. Rapid 3:1 (Hinspiel 0:0)` and result Wiener–Rapid 3–1 | both legacy keys kept, the result without these goals, held `absorption` | NC |
-+| 22f | Goal teams Manchester United / Real Madrid against a City / Atlético opponent | home / away | CR |
-+| 22g | A stored goal with a team, a candidate goal without | the match held, its goals kept | NC |
-+| 22h | A corrected scorer on a match with a card | goals rewritten, the card kept | CR |
-+| 22i | The goals family missing; a listed goals season without its file | run refused, nothing written | NC |
-+| 22j | Fewer goals for a stored match | held `goals_lost`, goals kept | NC |
-+| 22k | `champs.csv` sides with ordinals, fresh and stored; another feed's `Club (2)` | no team minted; stored ids kept; other feed unchanged | NC |
-+| 22l | A `champs.csv` side not of the exact form | build fails | NC |
-+| 22m | Quarantined keys (CONCACAF, Paris–Lyon, Bradford) stored, and on an empty base | kept as stored; not written | NC |
-+| 22n | Two seasons sharing a new team, plan then apply | both applied, one team; repeat apply writes nothing | CR |
-+| 22o | Between plan and apply: a card added, a binding moved, a team created by someone else | that season `drift`, nothing written | NC |
-+| 22p | Refused, drifted and no-op applies | source revisions, versions and the real `/api/read/archive` ETag unchanged | NC |
-+| 22q | No mode; `--fresh` on a season with archive rows | exit 2; refused | NC |
-+| 22r | A season with a held record and a repair | the repair applied, the hold listed, outcome `partial`, exit 3 | CR |
-+| 22s | Plan and apply under `SET ROLE vega_collect`; agg read directly | works; denied | CR |
-+| 22t | The image layout; a parser file missing | same manifest as the checkout; error | NC |
-+| 22u | Plan stored, applied by digest from another process, applied again | receipt stored; second apply writes nothing | CR |
-+| 22v | Two aliases of one canonical club with two displays; with one display | `manifest_conflict` ×2; one link + `duplicate` | NC |
-+| 22w | During the upload: the binding moves; the asset's hash changes; a crest lands | `identity_drift`; `asset_conflict`; `kept_existing`; no wrong link | NC |
-+| 22x | `put` raises a non-`MediaError` (botocore `ClientError`) | `storage_failed`, receipt with done and unattempted records, exit 1 | NC |
-+| 22y | `uefa.save` with the UEFA id bound to a merged alias, twice | the canonical club gets the crest once; the alias untouched | CR |
-+| 22z | 613 pack applied, then the 958 pack, then again | 613 `already_linked` + 345 new, counted apart; repeat writes nothing | CR |
-+
-+## 23. Archive deletions, primary overlaps, durable applies and typed facts (VI-27, 18 Nov 2026, written before the tests)
-+
-+Two controlled local data losses were reproduced under `vega_collect` on clones of the 494,713-row reconstruction
-+(`full-archive-verification/stored-ru2-goal-repair-2251-v2.json`, `empty-primary-repair-2251-v2.json`):
-+- a goal recorded on a reviewed ru.2 copy after its removal was planned was deleted with it (1 → 0), the stored
-+  plan reporting `partial`;
-+- registering an empty 2024/25 PitchAPI Ekstraklasa edition made the stored Polish archive edition "covered": its
-+  119 matches and 339 goals were deleted, the plan reporting `complete`.
-+
-+The accepted plan (`tracks/4-history/accepted-plan.md`) fixes these rules.
-+
-+### 23.1 Rules
-+
-+**A deletion binds everything it would delete.**
-+- Each planned removal carries:
-+  - the match's full stored row and its revision;
-+  - every event row of the match, goals included;
-+  - its round and edition;
-+  - the dependency inventory (`ops.archive_match_dependents`, which now also counts every event);
-+  - for a reviewed copy, the retained twin: key, date, sides, score and provenance.
-+- A match with any event or dependency is held, never deleted (`removal_has_dependents`).
-+- Apply locks the season's archive matches and the removed matches' events. It then re-plans, and any difference
-+  in what a removal binds is a refusal of the season before any write.
-+- Just before the deletion, the apply takes SHARE locks on every relation naming a match without a foreign key
-+  (`ops.archive_lock_match_references()`, migration 140, bounded by `lock_timeout`). It re-reads the inventory and
-+  deletes only if it is still empty. Writers with a foreign key wait on the match lock and then fail on the deleted
-+  match, so their conflict is exposed. Writers without one wait for the commit. That residual race is reported (the
-+  receipt's post-commit reference check). The rollout requires writers drained (C4).
-+- An edition is removed only with no match, round or other fact left on it.
-+
-+**A primary edition is routing, not proof of coverage.**
-+- After 2020, a competition PitchAPI holds that season is not imported when the base has no archive edition of it
-+  (the existing route).
-+- An archive edition already stored for it keeps its matches, goals, ids and provenance: every match is held
-+  (`primary_overlap`) and the edition is kept. This holds with an empty, partial or complete primary edition.
-+  Reconciling the two is VI-21's.
-+
-+**Durable, owned applies.**
-+- `ops.archive_plan_seasons(sha256, label)` records each season's decision in the transaction that writes it (outcome,
-+  counts, created identities).
-+- A stored plan is applied by one session at a time (`pg_try_advisory_lock` on its digest): a second gets
-+  `ArchiveError`, writing nothing.
-+- A season already decided is not attempted again. The identities it created are restored for the following
-+  seasons, so a run can resume after a crash.
-+- `applied_at` and the receipt are stamped only when every planned season has a decision. A subset run stamps
-+  nothing beyond its own seasons.
-+- `--show-plan SHA` writes the stored bytes, whose SHA-256 is the digest.
-+
-+**Published observations change only when reviewed** (per field, on a stored match):
-+- The score pair: held `score_change`.
-+- The status: only finished → canceled (no score, source `cancelled`) and finished → awarded (same score, source
-+  `awarded`). Any other change is held `status_change`.
-+- Extra-time, penalty and shoot-out columns: a value may be added where none was stored. A stored value never
-+  changes or goes (`phase_change`).
-+- Goals: never fewer (`goals_lost`); never a cleared team (`team_cleared`).
-+
-+**Typed facts from reviewed sources.**
-+- `VERIFIED_SHOOTOUTS` (`vega/archives.py`) lists the seven UEFA shoot-outs of
-+  `verified-seven-shootouts-repair-2251-v2.json`. Each has its goal-only key, date, both sides as the label names
-+  them, the sporting tally, the home/away kicks and the UEFA document's SHA-256. Kicks are written only when the key,
-+  date, sides and tally all match. Otherwise they stay unknown.
-+- A goal's side in an OpenFootball UEFA results row (`YYYY-YY/uefa.*`), whose team names carry their association
-+  (`Real Madrid (ESP)`): after exact names fail, the name without its ` (ABC)` suffix is compared exactly. Only one
-+  side may match; otherwise the side stays unknown. The stored names and suffixes are kept.
-+
-+### 23.2 Failure modes and expected outcomes
-+
-+| # | Situation | Expected | Class |
-+|---|---|---|---|
-+| 23a | A reviewed copy planned for removal gets a goal before the apply | season refused (`drift`), the goal and the match kept | NC |
-+| 23b | A second connection inserts a goal on it while the apply holds its locks | the apply deletes; the late insert fails on its foreign key and is retried by its writer; no orphan | NC |
-+| 23c | A second connection's uncommitted goal before the apply takes its locks | the apply waits, sees it, refuses the season | NC |
-+| 23d | A clean reviewed copy (no event, no dependency) | removed, with its binding in the receipt | CR |
-+| 23e | A provider binding of a removed match planned or added before the apply | held, or refused; nothing deleted | NC |
-+| 23f | A stored archive edition, then an empty, partial or complete PitchAPI edition of it | every match, goal and id kept, held `primary_overlap`; repeat writes nothing | NC |
-+| 23g | No archive edition stored and a PitchAPI edition | not imported (unchanged route) | BC |
-+| 23h | Two processes apply one stored plan | one applies, the other is refused | NC |
-+| 23i | A crash after the first of two seasons | per-season decision kept; restart applies the second with the first's created teams; plan stamped once | CR |
-+| 23j | A subset of a stored plan's seasons | only those decided; the plan not stamped applied | NC |
-+| 23k | `--show-plan` output | byte-identical to the stored plan, SHA-256 = digest | CR |
-+| 23l | A stored score, status or phase value differing from the candidate | held with its field; a reviewed cancellation or award applies | NC |
-+| 23m | The seven verified shoot-outs; one with another tally | kicks typed; the other left unknown | CR |
-+| 23n | `Real Madrid` scoring in `Real Madrid (ESP)`–`Atlético Madrid (ESP)`; two sides with one base name | home; unknown | CR |
-+
-+## 24. Removal guards that hold after the commit (VI-27, 18 Nov 2026, written before the tests)
-+
-+The pinned Astra review of §23 (18 Nov) found that §23's SHARE locks close the window before the commit only. A
-+writer without a foreign key that is blocked by them resumes after the commit with the removed match's id. So does a
-+writer starting later. The review also found four other faults:
-+- rounds and editions were deleted without an inventory of what references them (FKs with CASCADE or SET NULL from
-+  agg, ops and core);
-+- the twin of a reviewed copy was compared with the compiler's candidate, not with the stored row;
-+- `apply_stored` read `applied_at` before taking the plan's lock;
-+- an edition's name, country or order changed without a new publication.
-+
-+### 24.1 Rules
-+
-+- **Tombstones** (`ops.archive_removals`, migration 141). The transaction that deletes an archive match, edition or
-+  round records its kind, id, season, key and plan digest. A tombstone is never removed.
-+- **The guard.** Every relation of core, agg and ops that names a match or an edition without a foreign key carries
-+  the `archive_removed_reference` trigger. It covers:
-+  - `match_id` and `*_match_id` columns without a foreign key to `core.matches`;
-+  - `competition_season_id` columns without a foreign key to `core.competition_seasons`;
-+  - polymorphic `(entity_type, entity_id)` references to a match;
-+  - `ops.resource_versions` of kind `match` or `competition_season`.
-+
-+  An insert or update naming a tombstoned id fails with `foreign_key_violation`, so a writer that resumes after the
-+  commit, or starts later, is refused and can retry.
-+  - Writers with a foreign key wait on the row lock, then fail on the missing row.
-+  - A test lists every such relation and fails if one has no guard.
-+- **Editions and rounds.** One goes only when `ops.archive_edition_dependents` reports nothing, at the plan and again
-+  under its locks. That function covers every column naming it, with or without a foreign key, its versions and its
-+  emblem. Otherwise the edition is kept and its plan entry says why (`edition_has_dependents`). Edition and round rows
-+  are locked `FOR UPDATE` for the deletion.
-+- **The twin is the stored row.** A copy goes only beside its twin's stored match: same date, team ids, names, score
-+  and status. The plan binds that row in full, so a change to the twin refuses the season.
-+- **Ownership.** `apply_stored` takes the plan's lock, then reads its state.
-+- **Publication.** An edition whose stored name, country or position changes is a write: the season's version moves.
-+- **Conflicts.** A deadlock or a serialization failure in an apply is `lock_timeout`, never `applied`. Nothing is
-+  decided, so a later run retries.
-+- **Edition emblem storage.** Migration 141 also adds `core.competition_seasons.emblem_asset_id`: nullable, FK to
-+  `core.assets`, distinct from the family logo (the joint edition-emblem arbitration of 18 Nov). An edition with an
-+  emblem has a dependency and is never removed.
-+
-+### 24.2 Failure modes and expected outcomes
-+
-+| # | Situation | Expected | Class |
-+|---|---|---|---|
-+| 24a | A writer without a foreign key (provider binding, match version) blocked by the deletion's locks, released by its commit | its insert fails (`foreign_key_violation`); no orphan | NC |
-+| 24b | The same writer starting after the removal | refused the same way | NC |
-+| 24c | A removed copy's edition with a version, a scope or an emblem | the matches go, the edition stays (`edition_has_dependents`) | NC |
-+| 24d | The twin's stored row differs from the copy (name, team, score) | the copy held `twin_mismatch` | NC |
-+| 24e | A plan stamped applied while its applier read it unstamped | refused after the lock | NC |
-+| 24f | A stored edition's name changed | the season's version moves | CR |
-+| 24g | A deadlock between the apply and another writer, both under their real roles | `lock_timeout`, nothing written, the other writer goes on | NC |
-+| 24h | Every relation naming a match or an edition without a foreign key | carries the guard | NC |
-+
-+## 25. OpenLigaDB DFB-Pokal match phases (VI-27, specified before tests)
-+
-+The typed reader applies to the 2025/26 and 2026/27 DFB-Pokal editions. The two sealed OpenLigaDB
-+responses have 119 unique matches, eight fixtures and 111 finished matches. The DFB sheets attest
-+110 native half-times, a missing native 0–0 for 80173, 21 regulation and extra-time pairs for
-+matches going to extra time, and 13 shoot-outs. Eight native type-2 pairs are wrong; 11 shoot-out
-+tallies differ from actual kicks. Match 79584 lacks an extra-time row. The 111 playing finals
-+remain as published.
-+
-+| Input or replay | Expected |
-+| --- | --- |
-+| Exact frozen editions | Keep keys, sides, dates, order and finals. Add phases by native match ID; preserve 0–0. |
-+| 79584, provider type 2 changes to 1–1 and ET is still missing | Keep official final 2–1, 90 1–1 and ET 2–1. |
-+| 80173, provider adds half-time 0–0 or publishes direct 4–5 | Accept convergence with zero sporting writes. |
-+| Attested third result, swapped sides, changed date or contradictory tuple | Refuse with match key and retain edition. |
-+| Completed match loses a known HT, ET, regulation or penalty phase, or is downgraded | Refuse refresh, retain known observations, edition and digest. |
-+| Unattested ET previously unseen | Preserve actual final/ET; keep regulation unknown even with a type-2 pair. |
-+| Unattested P 5–6 after level ET 1–1 | Store 4–5; a subsequent unverified 4–5 raw tally conflicts with the accepted kicks. |
-+| P without ET, P below ET, non-level ET for a shoot-out, or tied P | Refuse as unreviewed. |
-+| Missing or unordered/contradictory observation | Missing or malformed data and contradictory duplicates are invalid; source tuple order alone has no sporting effect. |
-+| Future fixture carrying known result tuples | Remain scheduled, with no score or published phases. |
-+| Other OpenLigaDB editions, Nations League and direct penalties from OpenFootball | Published behavior and digest remain stable. |
-+| Two more reads of each frozen edition | Zero match writes; keep revisions, row versions, match timestamps, digest and edition publication timestamp. |
-+| Accepted or refused new native observation | Keep its immutable, independently inspectable phase evidence with decision and ledger digest; keep raw evidence away from the public response. |
-+
-+Read contract uses optional `periods`. A 90-minute score is omitted when the match reached
-+extra time and regulation is unknown. Separate the official kicks from the raw native tally.
-+
-+## 26. Verified emblems for individual competition editions (VI-27, specified before tests)
-+
-+The loader verifies all input byte hashes before upload and accepts only records explicitly
-+typed as `competition_edition` with role `edition_emblem`. Exact source identity is required
-+through the family binding, the edition key plus season (for archives), or the certified
-+family/season pair (for native editions). Its pointer is separate from the family logo.
-+
-+| Input or concurrent change | Expected |
-+| --- | --- |
-+| 18 FIFA, four continental cup, 23 archive and two native attestations in their respective sealed packs | 47 edition links to 41 display images, including two native and their correct internal season IDs. |
-+| Same display shared by several editions | Reuse the verified asset; distinct edition links retain their own provenance. |
-+| Old envelope without a role, documentary poster, bad key, wrong family or year | Reject input or hold the binding clearly. No link. |
-+| Two aliases to one exact edition, two different displays | Both held as manifest conflicts. |
-+| New edition pointer, changed identity or asset during upload | Keep the winning state; no stale attachment. |
-+| Destination upload or checksum failure | No link; receipt retains prior committed results and next unattempted records. |
-+| Apply repeated or ordinary cup refresh after apply | Preserve links, provenance and publication versions. |
-+| Family contains a wrongly used edition logo | Clear only the sealed family/URL/hash association and retain the asset. Reject unqualified reimport for that family. |
-+| Explicitly scoped archive/native link | Invalidate the corresponding archive resource or native publication path without reusing an emblem in the family catalogue. |
-+
-+## 27. Apply reviewed deletions and updates in the same archive season (VI-27, specified before test)
-+
-+A reviewed ru.2 copy can have an exact stored ru.1 twin whose order or other permitted field
-+will be updated by the very same approved plan. Guard and delete the copy against the twin's
-+locked pre-image before updating the twin. Both changes commit together. A late external
-+change or a new dependent still aborts the whole season. The frozen 52-object replay observed
-+the self-conflict at `r:2019-20/ru.2:237` and rolled back every one of the 240 approved removals.
-+
-+## 28. Attested scores and publication for OpenFootball cups (VI-27, specified before replay)
-+
-+For Tours–Lorient, the exact [awarded] marker, score, edition, oriented sides and date
-+identify the attested FFF decision. Preserve the administrative 0–3 and qualification as
-+awarded and keep all playing phases absent. A later snapshot that omits the marker or
-+match cannot undo an accepted award. Other markers do not authorize a status change.
-+
-+The national World Cup has 67 exact reviewed halftime repairs (six corrections and 61 fills).
-+The native final, raw halftime and both explicitly timed goal arms must agree with the reviewed
-+case, or the candidate contributes no correction. Source-earned goals stay on the recorded
-+beneficiary's side, including own goals, and 45+ stays in the first half. Missing arms, implausible
-+or out-of-order clocks, wrong totals and the official minute-0 anomaly provide no new halftime.
-+Those 67 decisions keep the original keys, all playing finals, ET, penalties and cancellation.
-+
-+The 2021–23 Club World Cup text has 22 explicit halftimes; apply the bracket syntax only for the
-+three scoped texts. Keep the first pair after extra time distinct from the 90-minute and
-+halftime pairs. Preserve known phases when a later response loses the supporting observations.
-+Only an accepted change bumps the cup's edition publication resource. Repeated identical inputs
-+and refused updates leave sporting versions and API bodies intact.
-+
-+## 29. Scoped World Cup family-logo cleanup (VI-27, specified before replay)
-+
-+The two verified wrong logos are detached only by exact provider binding, family identity,
-+source URL and content digest. Existing different logos survive migration. Refreshes and
-+an older writer retain their unrelated competition updates while the scoped attachment is
-+suppressed. A verified family-specific pack may supply a new logo with explicit provenance.
-+Edition-specific links and the old source asset remain available independently.
-+
-+## 30. Attested Bundesliga pair and date decisions, 1963–1967 (VI-27, specified before tests)
-+
-+The 100 published pairs and 17 dates come from exact adjudicated source observations. Use
-+the surviving result key, keep every old goal's non-identity columns and rebind by its
-+reviewed side. A fresh import constructs the canonical shape and text alias. A reviewed
-+upgrade retains the target's ID and the old numeric link. Timestamps, scores, event order,
-+sequence IDs and all other annotations in stored transfers stay intact.
-+
-+An occupied target, enriched or incomplete event family, source key or member drift,
-+non-foreign-key dependent, mismatching date, or contrary alias holds the whole affected
-+case. One late competing write aborts the signed season. Add the former match tombstone
-+before exposing the commit. A stale worker cannot recreate an alias key, remove the
-+canonical goals, or restore the pre-correction date. The archive read checks its edition
-+version after fetching the data, including through the commit.
-+
-+## 31. Three reviewed Scottish archive observations (VI-27, documented before replay)
-+
-+Queen's Park–St Mirren on 30 August 1924 and Queen's Park–Hamilton on 23 November 1946
-+are independently attested 2–1 results. Edit only the scoped final, with exact native input
-+hash, key, date and oriented participants, the known old score, no attached events or other
-+dependent, and an atomic amendment receipt. Preserve the raw score and public key. Repeated
-+inputs produce no new writes. An old worker cannot reinstate the erroneous result.
-+
-+The 4 January 1919 Clydebank–Morton winner and score remain as observed. Neither archive
-+binding labelled Clydebank has an appearance around this date in the measured clone. Keep
-+the existing match and identify the missing dated participant binding in the plan; adding
-+a name-only team or merging the Airdrieonians root would not repair that missing proof.
-+The return ties and verified shared grounds in 1903 remain exactly as previously published.
-+
-+## 32. Match grade precision in ranking and report JSON (VI-32)
-+
-+The ranking exposes the grade rounded to a tenth. Reusing that value for a whole-number
-+display can round twice. In Orenburg–CSKA, Tataev's recorded grade was 48.4903434662912
-+and the ranking's 48.5 displays as 49 with the site's French integer formatter. The
-+rankings API keeps the tenth and exposes the precise value of the same SQL row as
-+`gradeExact` for an already visible grade. The report propagates it beside the tenth in
-+`grades`, `best` and `playerOfMatch`, leaving all existing picks and ordering intact.
-+
-+| Situation | Expected |
-+|---|---|
-+| Two source grades on opposite sides of 48.5 both publish the tenth 48.5 | Each exact value survives JSON; the grade's integer can be formatted directly and the original ranking order survives |
-+| SQL stores a new index that takes the same visible row from 48.49 to 48.51 | Legacy response fields remain identical; exact value, report JSON and ranking ETag change with the revision |
-+| Grade is exactly 0 or 100 | Both representations retain the measured number |
-+| Grade is hidden by the existing minutes and index rules, or the source value is non-finite | Precise field is null and legacy visibility, ordering and rank remain as before |
-+| Older ranking result lacks the precise field | The report keeps its historical row shape and grade |
-+| Incoming precise field is invalid, out of range, disagrees with the historical tenth, or accompanies a hidden legacy grade | The report keeps the legacy grade and discards the invalid precision |
-+| Unknown match or invalid query | Ranking retains its 404 or 400 response |
-+
-+The PostgreSQL-to-ranking-to-report check uses the normal read role, HTTP responses and
-+the public report handler. The recorded football witness is replayed with the captured
-+grades as inputs. The database fixture also models a new publication within the same
-+tenth. Changes to the match tabs, images and share text are outside this transport step.
-+
-+## 33. Transfermarkt refreshes keep what was accepted (VI-31, written before the tests)
-+
-+Batch of [VI-31](https://linear.app/vegainteligence/issue/VI-31), 18 Nov 2026, baseline `1b28961a88`
-+(the reader code is the deployed `8018e0836c`'s). Reader and migration 139 only: no identity merge, no
-+replay, no repair of production rows (VI-21 keeps merges and global links). Values, injuries and squads
-+still replace their lists; they are separate exposures with their own owners.
-+
-+### 33.1 What the deployed reader does
-+
-+- `write_transfers` deletes every Transfermarkt transfer of the player, then inserts the response. A 404 is
-+  read as an empty history and recorded as a 200. A 200 without `history`, an empty list or a list cut to
-+  one move each therefore empties or shortens a stored history, and the next read gives the same moves new
-+  row ids. Two real histories (26 and 29 moves read from RDS) fall to 0, 0 and 2 on a local copy
-+  (`transfer-read-queue/verification-original.json` in the track evidence).
-+- `contract` deletes every other Transfermarkt contract of the player, so a move, a renewal or a key held
-+  by another source drops the earlier spells. It changes nothing when the profile's club is not one of
-+  ours: the earlier spell stays published as confirmed after the player left.
-+- `api.confirmed_player_contracts` has no quarantine filter: a link doubted after its contract was written
-+  keeps it published. The profile view finds a doubt through `ops.provider_links.entity_id` only.
-+- `write_search` writes the provider's player rows without the contract step, so the next profile read
-+  sees no change and never asks for the transfers again.
-+- `failed()` builds `timedelta(hours=2 ** attempts)` before its cap: from 35 attempts it raises
-+  `OverflowError` and the reader process stops.
-+- A list of the wrong type (`"terminated": {}`) raises a `TypeError`, which also stops the process.
-+
-+### 33.2 The rules
-+
-+**A transfers response is checked whole before anything is written.** The response must hold a
-+`history` object with at least one of its two lists (`terminated`, `pending`). Every element must be an
-+object with a numeric `id`. The same `id` twice is one move when the two records state no different fact;
-+otherwise the response is refused. A refusal writes no fact and goes through `failed()`: the true HTTP
-+status, a code, the attempts and the bounded wait are stored, and `read_at` and `rows_written` keep the
-+last accepted read.
-+
-+| Response | Player holds | Facts | Queue |
-+|---|---|---|---|
-+| 404 | no Transfermarkt move | none | 404, no code, normal period |
-+| 404 | a move | unchanged | 404, `HISTORY_MISSING`, backoff |
-+| 200, no `history`, `data: null`, no list | anything | unchanged | 200, `HISTORY_MISSING`, backoff |
-+| 200, both lists empty | a completed move | unchanged | 200, `HISTORY_EMPTY`, backoff |
-+| 200, both lists empty | nothing, or announced moves only | the announcements marked absent | 200, no code |
-+| 200, a list or `history` of another type | anything | unchanged | 200, `SCHEMA_CHANGED` (schema stop as before) |
-+| 200, an element without object or numeric `id` | anything | unchanged | 200, `HISTORY_INVALID` |
-+| 200, one `id` with two different facts | anything | unchanged | 200, `HISTORY_CONFLICT` |
-+| 200, valid | anything | upserted by key; absent moves marked absent | 200, no code, `rows_written` = moves listed |
-+
-+**A listed move updates its own row.** The row is found by player, source and native key, and keeps its
-+id. A field the record states replaces the stored one; a field it omits or gives as null keeps it. A fee
-+of 0 is stated only by a free transfer (`fee.value` 0 with the label « free transfer »); any other 0 is
-+no amount, as for the values. When the kind of move changes and no fee is stated, the old fee is cleared.
-+A club key that changes takes the new key and its canonical club, or NULL; never the old club's. The same
-+club key keeps the canonical club resolved now, else the one stored. A completed move listed again as
-+announced keeps its completed facts (an older snapshot). An announced move listed as completed becomes
-+completed in place. A listed move has `absent_since` NULL and `as_of` the read day.
-+
-+**A move missing from an accepted history keeps its facts.** It gets `absent_since`, the first day it was
-+missing, until a later history lists it again. A shorter list proves no withdrawal, and an absent
-+announcement is not a cancellation. Rows of other sources, and Transfermarkt rows without a key, are
-+never touched. One row per player and Transfermarkt key (unique partial index, migration 139). Writers of
-+one player are serialized (a transaction lock per player): two readers at once give one row per key.
-+
-+**A contract is a dated fact; the current one is a dated choice.** A profile record changes contracts only
-+when it has its `attributes` and `clubAssignments` blocks, one current club key, and valid dates
-+for both the start and expiry. The expiry cannot be before the start. Then:
-+- its spell, when the club is ours and the expiry known, is written at (player, club, start) or updated in
-+  place (same source); `superseded_on` NULL. A key another source holds is left as it is;
-+- every other Transfermarkt contract of the player not yet set aside is superseded:
-+  - from the new start, when that start is later than its own (a move, a renewal; a future start keeps
-+    today's contract until then);
-+  - from the read day, when the new start is not later but the record's expiry is current (a return from
-+    a loan, a correction);
-+  - otherwise not: an older record without a current expiry is a stale one.
-+
-+A superseded contract keeps its end date as observed; no end date is invented. A record of a club that is
-+not ours supersedes the same way and writes nothing. `api.confirmed_player_contracts` reads a contract
-+while `superseded_on` is NULL or later than today, and no Transfermarkt contract of a doubted link. A link
-+is doubted when a quarantined `ops.provider_links` row names the player or the key of his current link,
-+so a quarantine still holds when `entity_id` names an older player. `api.player_profiles` finds its doubt
-+the same way. Both keep their columns.
-+
-+**One step for a player record, from the profile or the search.** Both reads compare the record with the
-+provider row first (club, start and expiry: transfers due now; value: values due now), then write the
-+row, then, for a linked player, the contract. A record without its `attributes` or `clubAssignments`
-+blocks or carries a malformed contract keeps the known contract fields. A search with such a record
-+makes the profile due now. Player 30095's two expiries (contract 2028-06-30, provider row 2027-06-30) stay as they are: the
-+next complete record of either path decides.
-+
-+**Health.** The wait of a failed unit is `2 ** min(attempts, 8)` hours, at most 7 days: no overflow. A
-+refusal of one player returns `failed` and the reader reads the next unit; only `SCHEMA_CHANGED` counts
-+toward the schema stop.
-+
-+**Rollback.** A Transfermarkt transfer or contract is never deleted by a refresh. Migration 139 refuses
-+such a deletion (`TRANSFERMARKT_HISTORY_KEPT`) unless the transaction sets
-+`vega.allow_history_delete = 'on'` (a person's decision). The reader before VI-31 deletes on every read, so
-+a rollback first stops the reader (`UPDATE ops.transfermarkt_state SET gave_up_at = now() WHERE id = 1`,
-+honoured by both versions) and keeps it stopped until a preserving version runs again. If the stop is
-+forgotten, its deletions fail and its process restarts every 5 minutes; nothing is deleted. Dropping
-+the index would not make that reader safe.
-+
-+### 33.3 Failure modes and expected outcomes
-+
-+| # | Situation | Expected | Base |
-+|---|---|---|---|
-+| 20a | 404 on a first read | no fact; 404, no code, next due after the period | red (200) |
-+| 20b | 404 after an accepted history | ids, keys, dates, clubs and kinds unchanged; 404, `HISTORY_MISSING`, attempts 1, backoff; `read_at` and `rows_written` of the accepted read | red |
-+| 20c | 200 without `history`, or `data: null`, on a first read or after a history | no fact; 200, `HISTORY_MISSING` | red |
-+| 20d | 200, empty lists, after a completed move | unchanged; 200, `HISTORY_EMPTY` | red |
-+| 20e | 200, empty lists, on a first read | accepted; 200, no code, 0 rows | green |
-+| 20f | 200, empty lists, announcements only | announcements kept, `absent_since` today; 200, no code | red |
-+| 20g | `terminated` an object; `history` a list | unchanged; `SCHEMA_CHANGED`; no exception | red (TypeError) |
-+| 20h | an element not an object; an `id` empty or not numeric | unchanged; `HISTORY_INVALID` | red |
-+| 20i | one `id` twice with another date | unchanged; `HISTORY_CONFLICT`. The same record twice: one row | red |
-+| 20j | a valid history without one completed move, then with it again | listed moves updated in place; the missing one kept, `absent_since` its first day (kept on a second short read), NULL when listed again, same id | red |
-+| 20k | the same history twice | same ids, keys and facts; no new row | red (new ids) |
-+| 20l | stated date, fee, free transfer, value, expiry, season, kind; omitted or null fields | stated fields replaced in place, 0 for the free transfer; omitted and null fields kept; a kind change without fee clears the fee | red |
-+| 20m | a club key changed; a club linked between two reads | new key with its own canonical club or NULL; same key keeps the re-resolved club | red |
-+| 20n | announced → completed; completed → announced in a later response | completed in place, same id; completed facts kept | red |
-+| 20o | another source's transfer, a Transfermarkt row without key | untouched by every read | red (the keyless row) |
-+| 20p | two readers on one player at once | one row per key, the second's facts on the first's row | red |
-+| 20q | a unit failing for the 41st time | no exception; due in 7 days | red (OverflowError) |
-+| 20r | normal entry (`step`): one player's history refused, another's valid | `failed` then `ok`; the reader not paused; the refused unit counted failing in `api.provider_reader_progress` | red |
-+| 20s | a move to another of our clubs | old spell kept, superseded from the new start; profile shows the new club | red |
-+| 20t | a renewal at the same club | old spell kept, superseded from the renewal; profile shows the new expiry | red |
-+| 20u | a move starting tomorrow; the same move started yesterday | today's contract still confirmed; after the start, the new one | red |
-+| 20v | another source holds the observed key | its row unchanged; earlier Transfermarkt spells kept and superseded; profile: its expiry confirmed, the provider's observed beside it | red |
-+| 20w | a move to a club not ours | no row; earlier spells superseded from its start; no confirmed contract; observed contract of that club | red |
-+| 20x | no club, no start, expiry before start, record without its blocks | nothing changes | green |
-+| 20y | an older record whose expiry is past or missing | nothing superseded | red |
-+| 20z | back from a loan: the parent's superseded key with a current expiry | parent revived, loan spell superseded from the read day, one confirmed contract | red |
-+| 20aa | the same profile twice | no new row; `as_of` only | green |
-+| 20ab | the expiry corrected on the same key | end date updated in place | green |
-+| 20ac | the link quarantined after the contract, `entity_id` naming another player | no confirmed contract, no observed Transfermarkt contract, through the view and `/api/players/{id}` | red |
-+| 20ad | a search reads a linked player whose club changed | contract step applied; transfers due now; provider row written after the comparison | red |
-+| 20ae | a record without its blocks, from a search or a profile | provider row keeps its fields; no contract change; from a search, profile due now | red |
-+| 20af | an unlinked or doubted player's record | provider row only, no contract | green |
-+| 20ag | migration 139 over NULL Transfermarkt keys and repeated keys of another source | applied; the index covers Transfermarkt's non-null keys | — |
-+| 20ah | migration 139 over a repeated Transfermarkt player/key | stops with `TRANSFER_KEYS_NOT_UNIQUE` and the first pair; nothing changed; 139 not recorded | — |
-+| 20ai | the deployed writer's deletions after 139 | refused with `TRANSFERMARKT_HISTORY_KEPT`; every row kept; with `vega.allow_history_delete = 'on'`, allowed | — |
-+
-+End to end: the real `Reader` (`read` and `step`), controlled HTTP answers, all migrations on a local
-+PostgreSQL 18, the queue, `api.player_profiles` and the read API's `/api/players/{id}`. Contract dates
-+are relative to the base's `current_date`. Independently, the 55 real moves of two players
-+(`replay.py --expect protected`) and the thirteen observations of `reproduce-history.py`.
-+
-+### 33.4. Expiry evidence on a new club observation (VI-31 continuation)
-+
-+A record can contain both profile blocks and still omit or corrupt the contract expiry. It may
-+refresh independent profile facts, but the last dated contract and its staging provenance remain
-+authoritative. Missing, invalid and explicit null have distinct meanings:
-+
-+| Situation | Expected |
-+|---|---|
-+| A new club and start with `contractUntil` omitted | Keep the last accepted staging tuple, both views and every contract. Profile HTTP 200 keeps the accepted values. The profile queue reports `CONTRACT_MISSING` and a bounded retry |
-+| A new club and start with `contractUntil` malformed, including trailing garbage after a valid date prefix | The same preservation, with `CONTRACT_INVALID` in the profile queue |
-+| An incomplete expiry comes from the club search | Preserve the same observations. Make the player's ordinary profile read due now |
-+| The provider explicitly gives `null` | No date is measured. Preserve any dated observation and treat the profile payload as accepted, without inventing a contract or a termination. A valid current club remains available for club linking when no dated claim exists |
-+| A valid later club spell or a valid correction to the same spell, now expired | Publish the new dated spell or apply the stated correction. Keep the historical row and its source. An expired observed end can remove its current presentation |
-+
-+An empty assignment or an undated profile reply supplies no documented release date. Historical
-+transfer events and dated end corrections still retain their existing independent meaning.
-+
-+## 34. Tournament editions: group tables, placings, phases and navigation (VI-27 B, 18 Nov 2026, written before the tests)
-+
-+Main's tournament pages (`2f25e3e58f`) ranked every group with three points a win, then goal difference, goals
-+and the name; read a round it did not know, or no round, as the first round; and gave 1950's final pool no placing.
-+The Astra–Fable decision of 18 Nov (`decision-plan.md`, registry C27–C30) sets the rules below. A rule the site does
-+not hold leaves the rank undetermined: no ordinal, medal or filled gauge is ever drawn from it.
-+
-+### 34.1 Rules
-+
-+**Points a win.** World Cup groups: 2 to 1990, 3 from 1994. Euro final-tournament groups: 2 to 1992, 3 from 1996
-+(Sweden 1992: two wins and a draw, 5 points; UEFA). Any other competition or edition: unknown, so neither points nor
-+positions are given.
-+
-+**Separating teams level on points**, per edition, each step only where the regulation is attested:
-+
-+| Editions | Steps, in order | Then |
-+|---|---|---|
-+| World Cup 1954, 1958 | the group's play-off (`Group N Play-off`), the winner ahead; it never counts in the group's totals | level |
-+| World Cup 1974–1990 | goal difference, goals scored | level (lots) |
-+| World Cup 1994–2014 | goal difference, goals scored, then among the teams level: points, goal difference, goals | level (lots) |
-+| World Cup 2018, 2022 | the same | level (fair play: cards the reader does not hold) |
-+| Euro 2020, 2024 | among the teams level: points, goal difference, goals, applied again to a remaining subset; then goal difference, goals | level (disciplinary points, qualifying ranking) |
-+| World Cup 1930, 1950, 1962–1970, 2026; Euro 2028; the rest | none declared | level |
-+
-+Teams still level share the position (« 2= » for both, the next one 4th); the cell says « Départage indisponible ».
-+Inside such a block the rows are listed by goal difference, goals and name, as display order only.
-+
-+**Groups.** A group is the match's `group`, else a round named `Group X` (Euro 2028), else 1950's `Final Round`
-+(« Poule finale »). A finished match counts with its final score, after extra time (England–Belgium 1954, 4–4). A
-+canceled match never counts. A group with a match dated before today and neither scored nor canceled has no
-+positions, and its teams with such a match have no points or difference. A group with nothing played yet has no
-+positions. 1950's final pool is ranked only when its six matches are scored and its points equal the attested table
-+(Uruguay 5, Brazil 4, Sweden 2, Spain 1).
-+
-+**A nation's run (`/api/nations/{id}`).** The stage is its last match's round. A round the reader does not know,
-+or none (International Results' tournaments), is « Phase non renseignée »: no tone and no gauge. Group rounds are
-+`Matchday N`, `Group …` (play-offs included), the collected source's day numbers (`1`, `2`, `3`), `First round` and
-+`Preliminary round`. A 1950 final-pool run takes its placing from the attested table only when the nation's three
-+final-pool matches are those of the table (each opponent once, each score as attested, the nation named as in the
-+table): 1st « Vainqueur » gold, 2nd « 2e » silver, 3rd « 3e » bronze, 4th « 4e ». Otherwise « Poule finale », no tone.
-+The site shows « Phase non renseignée » for a run whose matches carry no round, whatever the API says (an older API).
-+
-+**Navigation.** A run links only to an edition the site holds (the collected World Cup's 2022 and 2026, the
-+archive's own editions, the other tournaments' seasons), on a view that edition has: the matches for International
-+Results' tournaments, the groups for 1950, the bracket otherwise. Since the C28 refresh, an explicit « Tableau »
-+for 1950 shows its final pool and only names its champion when the six results match the attested table. The collected World Cup's
-+edition is in the address when it changes, so a reload keeps it. A national team's French name finds its matches
-+(« Italie », 1982) as its source name does (« Italy »). A match the source canceled (Sweden–Austria 1938) reads
-+« Annulé », never « À venir » or a missing score. A replayed tie shows its replay and carries the replay's identity,
-+the first match kept apart. A phone's chosen round stays within the bracket it is given.
-+
-+### 34.2 Failure modes and expected outcomes
-+
-+| # | Situation | Expected | On A |
-+|---|---|---|---|
-+| 34a | 1950 final pool, frozen archive through the projection | Uruguay 1st 5, Brazil 2nd 4, Sweden 3rd 2, Spain 4th 1 | red (7, 6, 3, 1 points) |
-+| 34b | 1950 final pool with one score missing (older API) | no positions | red |
-+| 34c | 1950 final pool whose scores disagree with the attested table | no positions | red |
-+| 34d | 1950 group 2: England, Chile, USA on 2 points | Spain 1st; the three share « 2= » | red |
-+| 34e | 1954 group 2 and its play-off (West Germany 7–2 Turkey) | Hungary, West Germany, Turkey, South Korea; West Germany and Turkey 2 matches, 2 points | red (Turkey 2nd) |
-+| 34f | 1958 group 1 and its play-off (Northern Ireland 2–1 a.e.t., 1–1 at 90) | West Germany, Northern Ireland, Czechoslovakia, Argentina; play-off outside the totals | red |
-+| 34g | 1954 group 4: England–Belgium 4–4 a.e.t. (3–3 at 90) | England 3 points, 6 goals for; Belgium 5 for | green on goals, red on points |
-+| 34h | Euro 2020 group F | France, Germany, Portugal, Hungary, none level | red (Portugal 2nd) |
-+| 34i | Euro 2024 group E, four teams on 4 points | Romania, Belgium, Slovakia, Ukraine | to observe |
-+| 34j | World Cup 1994 group E, four teams on 4 points | Mexico, Ireland, Italy, Norway | to observe |
-+| 34k | World Cup 2018 group H | Colombia 1st; Japan and Senegal « 2= », « Départage indisponible »; Poland 4th | red |
-+| 34l | World Cup 1982 group 1 | Poland, Italy, Cameroon, Peru (goals scored) | red (Poland 5 points) |
-+| 34m | Euro 1992 group 1 (UEFA witness, outside the catalogue) | Sweden 5, Denmark 3; France and England 2, « 3= » | red |
-+| 34n | Euro 2028: 36 matches, groups named in the round | six groups A–F, four slots each, no positions | red (« pas jouée en groupes ») |
-+| 34o | A group without its edition (rule unknown) | no positions, no points | red |
-+| 34p | A canceled group match | not counted, not a missing result | to observe |
-+| 34q | Nation run, last match without a round (Argentina, Copa América 2024) | « Phase non renseignée », no tone, 6 matches, link kept | red (« 1er tour ») |
-+| 34r | Nation run, an unknown round name | « Phase non renseignée » | red |
-+| 34s | Uruguay, Brazil, Sweden, Spain 1950 (attested matches) | Vainqueur gold, 2e silver, 3e bronze, 4e | red (1er tour) |
-+| 34t | Uruguay 1950 with Sweden twice and no Brazil (still 5 points) | Poule finale, no tone | red |
-+| 34u | Uruguay 1950: Spain 3–2, Sweden 3–2, Brazil 1–1 (still 5 points) | Poule finale, no tone | red |
-+| 34v | Uruguay 1950, the Brazil match without a score | Poule finale, no tone | red |
-+| 34w | Existing stages: final won, lost, unscored; third place; penalties; twice-held edition | unchanged | green |
-+| 34x | Site: a run with no round in its matches, older API saying « 1er tour » | « Phase non renseignée », no gauge, no medal | red |
-+| 34y | Site: gauge of « Poule finale », « 2e », an unknown stage | 4, 5, none | red |
-+| 34z | Run links: World Cup 2021, 2030 | none | red (collected World Cup) |
-+| 34aa | Run links: Copa América 2024, CAN 2023; World Cup 1950; 1998 | `view=matchs`; `view=groupes`; `view=tableau` | red |
-+| 34ab | 1950's page | opens on « Groupes »; explicit `view=tableau` shows the final pool | red |
-+| 34ac | Collected World Cup, 2026 then 2022 in the head, then reload | `edition=2022`, 2022 after reload | red |
-+| 34ad | Phone: « Finale » chosen in 2026, then a bracket with one round fewer | the last round shown, no error | red |
-+| 34ae | 1982 matches, search « Italie », then « Italy » | the final found both times | red |
-+| 34af | Sweden–Austria 1938 (`status: "canceled"`) | « Annulé » in the list; no missing-score notice for it | red |
-+| 34ag | A replayed tie whose two matches have ids | the replay's id and score; the first match under `replayOf` | red |
+ /** Show the final match score, with extra time distinguished from penalties. */
+ export function historicalScore(match) {
+-  const final = historicalPair(match?.score?.final);
++  const score = scoreObject(match?.score);
++  const final = historicalPair(score?.final);
+   if (final.every((value) => value !== null)) return final;
+-  const extra = historicalPair(match?.score?.et);
++  const extra = historicalPair(score?.et);
+   return extra.every((value) => value !== null)
+     ? extra
+-    : historicalPair(match?.score?.ft);
++    : historicalPair(score?.ft);
+ }
+ 
++// A match the source says was never played (football.json: "cancelled"; the archive builders: "not_played").
++const CANCELED = new Set(["not_played", "cancelled", "canceled"]);
++
+ export function historicalScoreNotes(match) {
+   const notes = [];
+-  const extra = historicalPair(match?.score?.et);
+-  const penalties = historicalPair(match?.score?.p);
++  const score = scoreObject(match?.score);
++  const extra = historicalPair(score?.et);
++  const penalties = historicalPair(score?.p);
+   if (extra.every((value) => value !== null)) notes.push("après prolongation");
+   if (penalties.every((value) => value !== null))
+     notes.push(`tirs au but ${penalties[0]} – ${penalties[1]}`);
+   const fields = match?.sourceFields || {};
+-  if (match?.status === "not_played")
++  if (CANCELED.has(match?.status))
+     notes.push(
+       `Rencontre non disputée${fields.nonmatch ? ` : ${fields.nonmatch}` : ""}`,
+     );
+@@ -90,9 +121,10 @@ export const HISTORICAL_CSV_FIELDS = [
+ ];
+ 
+ export function historicalCsvRow({ competition, match }) {
+-  const [home90, away90] = historicalPair(match.score?.ft);
++  const score = scoreObject(match.score);
++  const [home90, away90] = historicalPair(score?.ft);
+   const [home, away] = historicalScore(match);
+-  const [penaltiesHome, penaltiesAway] = historicalPair(match.score?.p);
++  const [penaltiesHome, penaltiesAway] = historicalPair(score?.p);
+   return [
+     match.date,
+     competition,
+diff --git a/dashboard/shared/tournament-stages.js b/dashboard/shared/tournament-stages.js
+new file mode 100644
+index 0000000000..bc0975947b
+--- /dev/null
++++ b/dashboard/shared/tournament-stages.js
+@@ -0,0 +1,16 @@
++export const UNKNOWN_STAGE_LABEL = "Phase non renseignée";
++
++/** Read only round labels that identify a stage in the competition sources. */
++export function stageKind(round) {
++  const name = String(round ?? "").trim().toLowerCase()
++    .replace(/^finals,\s*|,\s*replays?$/g, "");
++  if (/^(?:(?:match for )?third[ -]place(?: match| play[ -]?off)?|3rd place|bronze|match pour la troisi[eè]me place)$/.test(name)) return "third";
++  if (/^(?:the )?finale?s?$/.test(name)) return "final";
++  if (name === "final round") return "final-pool";
++  if (/^(?:semi[ -]?finals?|1\/2|demi(?:[ -]?finales?)?)$/.test(name)) return "semi";
++  if (/^(?:quarter[ -]?finals?|1\/4|quarts?(?: de finale)?)$/.test(name)) return "quarter";
++  if (/^(?:round of 16|1\/8|huiti[eè]mes?(?: de finale)?)$/.test(name)) return "r16";
++  if (/^(?:round of 32|1\/16|seizi[eè]mes?(?: de finale)?)$/.test(name)) return "r32";
++  if (/^(?:\d+|(?:matchday|journ[eé]e) \d+|(?:group|groupe|gruppe) [a-z0-9]+(?: play[ -]?off)?|(?:first|preliminary|1st) round|phase de groupes)$/.test(name)) return "group";
++  return "unknown";
++}
+diff --git a/dashboard/shared/world-cup-1950.js b/dashboard/shared/world-cup-1950.js
+new file mode 100644
+index 0000000000..97bfd3a82c
+--- /dev/null
++++ b/dashboard/shared/world-cup-1950.js
+@@ -0,0 +1,30 @@
++// FIFA's 1950 final pool and the six dated OpenFootball results checked against it (VI-27 B).
++// https://www.fifa.com/es/articles/cuantas-finales-mundial-participo-uruguay-historial
++export const WORLD_CUP_1950_EDITION = "open-cups:world-cup-history:1950";
++const PLACES = ["Uruguay", "Brazil", "Sweden", "Spain"];
++const GAMES = [
++  { date: "1950-07-09", home: "Uruguay", away: "Spain", score: [2, 2] },
++  { date: "1950-07-09", home: "Brazil", away: "Sweden", score: [7, 1] },
++  { date: "1950-07-13", home: "Brazil", away: "Spain", score: [6, 1] },
++  { date: "1950-07-13", home: "Uruguay", away: "Sweden", score: [3, 2] },
++  { date: "1950-07-16", home: "Sweden", away: "Spain", score: [3, 1] },
++  { date: "1950-07-16", home: "Uruguay", away: "Brazil", score: [2, 1] },
++];
++
++const signature = ({ date, home, away, score }) =>
++  JSON.stringify([date, ...(home < away ? [home, away, score?.[0], score?.[1]] : [away, home, score?.[1], score?.[0]])]);
++
++function corroborates(matches, expected) {
++  if (matches.length !== expected.length) return false;
++  const observed = new Set(matches.map(signature));
++  return expected.every((match) => observed.has(signature(match)));
++}
++
++export const isFinalPool1950 = (matches) => corroborates(matches, GAMES);
++
++export function finalPoolPosition1950(matches, team) {
++  const index = PLACES.indexOf(team);
++  if (index < 0) return null;
++  const expected = GAMES.filter(({ home, away }) => team === home || team === away);
++  return corroborates(matches, expected) ? index + 1 : null;
++}
+diff --git a/docs/calculs/01-sources-et-conventions/01-provenance-des-donnees.md b/docs/calculs/01-sources-et-conventions/01-provenance-des-donnees.md
+index 3a9ef64c25..df1e6499d2 100644
+--- a/docs/calculs/01-sources-et-conventions/01-provenance-des-donnees.md
++++ b/docs/calculs/01-sources-et-conventions/01-provenance-des-donnees.md
+@@ -45,10 +45,11 @@ Clés utilisées par les calculs du profil club ([club-scout.js](../../../dashbo
+ 
+ ## Niveau joueur dans un match
+ 
++Vega calcule la note du joueur sur 100 à partir de sa contribution dans la rencontre. Le champ `rating_title` des anciennes archives PitchAPI a été retiré des tables de lecture par la migration 108. [Note du match](../02-metriques-attendues/04-note-du-match.md)
++
+ | Champ Vega | Champ PitchAPI |
+ | --- | --- |
+ | `minutes` | `minutes_played` |
+-| `rating` | `rating_title` (note /10) |
+ | `goals`, `assists` | `goals`, `assists` |
+ | `xg` | `expected_goals` |
+ | `npxg` | `expected_goals_non_penalty` |
+@@ -83,7 +84,13 @@ Code : [transfermarkt.py](../../../backend/vega/transfermarkt.py). Un processus
+ - ses blessures (dates, jours, matchs manqués) ;
+ - son contrat avec un de nos clubs.
+ 
+-Les transferts et les blessures sont remplacés en entier à chaque lecture, parce que Transfermarkt corrige ses noms et ses dates.
++Les blessures sont remplacées en entier à chaque lecture, parce qu’une blessure n’a pas de clé chez Transfermarkt.
++
++**Les transferts et les contrats ne sont jamais effacés** (migration 139, [modes d’échec §20](../09-audit-2026-11/FAILURE_MODES.md)) :
++- un transfert est mis à jour par sa clé Transfermarkt et garde sa ligne. Un champ donné remplace l’ancien, un champ absent ou vide le laisse. Un transfert libre a un montant de 0 ;
++- un transfert que Transfermarkt ne liste plus garde ses faits et la date du premier jour où il manquait (`absent_since`). Une liste plus courte ne prouve aucune annulation ;
++- une réponse qui ne peut pas être un historique complet n’écrit rien : un 404 après un historique, l’absence d’historique, deux listes vides après un transfert terminé, un élément illisible, une même clé avec deux faits. La file garde le vrai statut HTTP et un code (`HISTORY_MISSING`, `HISTORY_EMPTY`, `HISTORY_INVALID`, `HISTORY_CONFLICT`), puis relit plus tard. Un premier 404 est une réponse ordinaire ;
++- un contrat est un fait daté. Quand Transfermarkt nomme un autre contrat (transfert, renouvellement, retour de prêt, club hors de notre base), l’ancien est écarté à la date du changement (`superseded_on`). Sa date de fin reste celle observée. Un départ futur laisse le contrat d’aujourd’hui en place jusqu’à ce jour.
+ 
+ **Comment un joueur est relié.** Jamais par le nom seul.
+ - **Le jeu du 6 juillet 2026** : ses liens sont repris tels quels.
+@@ -95,7 +102,7 @@ Les transferts et les blessures sont remplacés en entier à chaque lecture, par
+   - sans date de naissance chez nous (91 % de nos joueurs le 16 novembre 2026) : le même nom exact, le seul des deux côtés dans le club, que Transfermarkt place dans une saison où il a joué pour nous dans ce club (ou l’année d’avant). Quand Transfermarkt donne sa date de naissance, il doit avoir de 15 à 45 ans lors de ses matchs pour nous. C’est la règle du lecteur Wikidata.
+ - Transfermarkt ne remplit jamais nos dates de naissance : elles restent celles de nos sources.
+ 
+-**Quarantaine.** Si Transfermarkt donne une autre date de naissance que la nôtre, le lien est mis en doute. Rien de ce joueur n’est alors montré, ni valeur ni contrat, jusqu’à ce qu’une personne regarde.
++**Quarantaine.** Si Transfermarkt donne une autre date de naissance que la nôtre, le lien est mis en doute. Rien de ce joueur n’est alors montré, ni valeur ni contrat, jusqu’à ce qu’une personne regarde. Cela vaut aussi pour un contrat écrit avant le doute, et quand la quarantaine désigne l’ancien joueur d’une clé que nous avons fusionnée.
+ 
+ **Ordre de lecture.** Les joueurs de la saison en cours d’abord, puis les saisons précédentes. Ensuite, chaque élément est relu à son rythme :
+ - un joueur de la saison en cours : profil et blessures chaque semaine, valeurs et transferts quand le profil dit qu’ils ont changé, au plus tard tous les mois ;
+diff --git a/docs/calculs/02-metriques-attendues/02-xa.md b/docs/calculs/02-metriques-attendues/02-xa.md
+index 1f7a001284..4a9098119c 100644
+--- a/docs/calculs/02-metriques-attendues/02-xa.md
++++ b/docs/calculs/02-metriques-attendues/02-xa.md
+@@ -11,11 +11,10 @@ Le **xA** d'une passe est le xG du tir qu'elle a permis. Le xA d'un joueur dans
+ - **Accueil** : le xA d'un joueur n'est donné que s'il est renseigné sur tous ses matchs joués ; il sert de départage dans la liste des passeurs (`assists` décroissant, puis `xa`).
+ - **Effectif d'un club** : colonne « xG + xA » = somme saison du xG + somme saison du xA du joueur (un des deux absent compte pour 0, les deux absents → « — ») ([ClubScoutUI.jsx](../../../dashboard/frontend/src/components/ClubScoutUI.jsx#L1302)).
+ 
+-## Pourquoi le xA n'a jamais de centile
++## Classement du xA en saison et en match
+ 
+-PitchAPI **ne publie pas les xA nuls** : un joueur qui n'a créé aucun tir n'a pas `xa = 0`, il n'a pas de valeur. La distribution des xA ne contient donc que les joueurs qui ont déjà créé quelque chose ; un centile la comparerait à un groupe trié d'avance.
++En saison, le xA par 90 minutes peut recevoir un centile dans la cohorte du poste. Le joueur doit atteindre le seuil de minutes choisi (450 par défaut). Son xA doit couvrir tous ses matchs joués et toutes ses minutes. Il faut au moins 30 valeurs de joueurs comparables satisfaisant ces mêmes conditions. Un zéro omis est restitué lorsque la ligne et la couverture de la source l’autorisent. [Cohortes et centiles](../05-joueurs/02-centiles-et-cohortes.md) · [Couverture des zéros](../01-sources-et-conventions/02-valeurs-absentes-et-fiabilite.md)
+ 
+-Le xA est donc :
+-- affiché comme chiffre ;
+-- **exclu de tout centile, rang, indice Vega ou similarité** (`UNRANKED` dans [season-player.js](../../../dashboard/frontend/src/services/season-player.js#L80), `rankable: key !== "xa"` dans [scouting.js](../../../dashboard/frontend/src/services/scouting.js#L47), absent de `RANKED` dans [shared/player-profile.js](../../../dashboard/shared/player-profile.js#L104)) ;
+-- refusé dans un indice personnalisé : choisir le xA avec un poids > 0 renvoie « Un indicateur choisi ne permet pas un classement fiable. »
++L’indice personnalisé de saison accepte le xA avec un poids positif. Si un indicateur pondéré manque de centile, l’indice reste indisponible. Les voisins de style utilisent leur propre liste d’axes, qui exclut le xA. [Indice et similarité](../../../dashboard/frontend/src/services/scouting.js)
++
++Sur le profil d’une performance individuelle, le xA reste une valeur affichable sans centile de match. [Mesures classées en match](../../../dashboard/shared/player-profile.js)
+diff --git a/docs/calculs/05-joueurs/02-centiles-et-cohortes.md b/docs/calculs/05-joueurs/02-centiles-et-cohortes.md
+index 712abe8225..55503464a5 100644
+--- a/docs/calculs/05-joueurs/02-centiles-et-cohortes.md
++++ b/docs/calculs/05-joueurs/02-centiles-et-cohortes.md
+@@ -51,7 +51,7 @@ Code : `buildCohorts`, `rankMetric` dans [scouting.js](../../../dashboard/fronte
+ | Taille minimum | **30** joueurs ayant une valeur (`MIN_SEASON_PEERS`) |
+ | Valeurs comparées | **par 90 minutes** (taux en %) |
+ | Couverture exigée | la mesure doit être observée sur **tous les matchs joués** (`count = matches` et `minutes = minutes totales`), pour le joueur comme pour chaque pair |
+-| Zéros omis | un vide vaut zéro là où le fournisseur publie la mesure pour le match (voir [Valeurs absentes](../01-sources-et-conventions/02-valeurs-absentes-et-fiabilite.md)) ; le xA est classé comme les autres depuis |
++| Zéros omis | un vide vaut zéro là où le fournisseur publie la mesure pour le match (voir [Valeurs absentes](../01-sources-et-conventions/02-valeurs-absentes-et-fiabilite.md)) ; le xA suit les mêmes règles de couverture et de classement que les autres mesures de saison |
+ | Option « niveau comparable » | la cohorte est réduite aux joueurs des 30 clubs de niveau le plus proche (voir [Référentiels](../04-clubs/03-referentiels-et-niveau-europeen.md)) |
+ 
+ La règle de couverture évite de comparer un par 90 calculé sur 3 matchs avec un par 90 calculé sur 30.
+diff --git a/docs/calculs/05-joueurs/03-indices-vega-et-roles.md b/docs/calculs/05-joueurs/03-indices-vega-et-roles.md
+index 53fb748b70..c991f90757 100644
+--- a/docs/calculs/05-joueurs/03-indices-vega-et-roles.md
++++ b/docs/calculs/05-joueurs/03-indices-vega-et-roles.md
+@@ -15,7 +15,7 @@ s_k = \begin{cases} \text{centile}_k & \text{sens « max »} \\ 100 - \text{cent
+ $$
+ 
+ - **Tous** les centiles doivent exister ; s'il en manque un, l'indice est `null` (pas de moyenne partielle).
+-- Un indicateur non classable (xA) avec un poids > 0 rend l'indice impossible.
++- Le xA de saison peut recevoir un poids positif lorsque son centile est disponible.
+ - Chaque composante affiche sa part (`w_k / Σ w`) et sa contribution (`s_k × w_k / Σ w`).
+ - Indice par défaut « Mon indice » : passes réussies, occasions créées, récupérations, poids 1 chacun, sens « max », 450 minutes minimum.
+ 
+@@ -44,9 +44,9 @@ Les rôles sont triés du plus haut au plus bas.
+ 2. **Rang** = son rang parmi les joueurs classés de son rôle (`roleRank`) ;
+ 3. **Sur** = nombre de joueurs classés de ce rôle (`roleCount`).
+ 
+-Un joueur qui a un score sans être classé (championnat au niveau provisoire, erreur-type au-dessus de 45 points ; ou championnat féminin, noté entre joueuses) a son niveau, pas de rang.
++Avec un indice calculé, le joueur reçoit un rang dans son univers et un rang à son poste. Les classements masculin et féminin commencent chacun à 1. Sur la fiche, le rang est provisoire sous le seuil de minutes. Chez les hommes, une sélection seule, un club sans championnat dans la base ou un championnat de niveau provisoire peuvent également le rendre provisoire. [Lecture de la fiche et de l’univers](../../../backend/api/src/routes/rankings.mjs)
+ 
+-Pour une saison sans classement de puissance, ou un joueur qui n'y a pas de score (trop peu de minutes), la colonne garde l'ancien calcul :
++Quand l’API ne fournit aucun score de puissance pour ce joueur et cette saison, la fiche utilise le calcul descriptif ci-dessous si les comparaisons et les matchs nécessaires sont disponibles :
+ 1. **Niveau actuel** = valeur arrondie du **meilleur rôle** du joueur (le premier rôle dont l'indice existe) ;
+ 2. **Rang** = `1 + nombre de joueurs de la cohorte dont l'indice sur ce même rôle est strictement supérieur` ;
+ 3. **Sur** = nombre de joueurs de la cohorte ayant un indice sur ce rôle, plus le joueur.
+diff --git a/docs/calculs/05-joueurs/05-classements-joueurs.md b/docs/calculs/05-joueurs/05-classements-joueurs.md
+index 929eba69f3..56bd48230c 100644
+--- a/docs/calculs/05-joueurs/05-classements-joueurs.md
++++ b/docs/calculs/05-joueurs/05-classements-joueurs.md
+@@ -18,7 +18,7 @@
+ 
+ `seasonTotals` et `seasonLeaders` dans [home-insights.js](../../../dashboard/frontend/src/services/home-insights.js#L564), même calcul en SQL dans [home.mjs](../../../backend/api/src/routes/home.mjs).
+ 
+-Totaux saison par joueur (matchs avec minutes > 0) : matchs, minutes, buts, passes décisives, xG et xA (**seulement s'ils couvrent tous les matchs**, sinon `null`), note pondérée par les minutes. Le club affiché est le dernier club national : un match européen ne change pas de club. Un but ou une passe décisive absents y comptent pour 0 (convention de l'accueil, antérieure à l'audit) : un xG complet ne prouve pas des buts complets, et l'écart « Efficaces » / « Maladroits » de l'accueil, faute de profil apparié, se lit sur ces totaux tels quels.
++Totaux saison par joueur (matchs avec minutes > 0) : matchs, minutes, buts, passes décisives, xG et xA (**seulement s'ils couvrent tous les matchs**, sinon `null`), note Vega du z moyen pondéré par les minutes des matchs d’au moins 20 minutes dont le z est connu. Le club affiché est le dernier club national : un match européen ne change pas de club. Un but ou une passe décisive absents y comptent pour 0 (convention de l'accueil, antérieure à l'audit) : un xG complet ne prouve pas des buts complets, et l'écart « Efficaces » / « Maladroits » de l'accueil, faute de profil apparié, se lit sur ces totaux tels quels.
+ 
+ | Liste | Taille | Règle |
+ | --- | --- | --- |
+@@ -26,7 +26,7 @@ Totaux saison par joueur (matchs avec minutes > 0) : matchs, minutes, buts, pass
+ | Passeurs | 10 | comme l'annuaire |
+ | Efficaces | 8 | comme l'annuaire |
+ | Maladroits | 8 | comme l'annuaire |
+-| Notes | 10 | note pondérée, minutes ≥ `max(450, arrondi(0,4 × minutes max))` |
++| Notes | 10 | note Vega de saison, minutes notées ≥ `max(450, arrondi(0,4 × minutes max))` |
+ 
+ ## Joueur de la semaine
+ 
+diff --git a/docs/calculs/05-joueurs/07-lecture-du-scout.md b/docs/calculs/05-joueurs/07-lecture-du-scout.md
+index fbf1ed13de..eb828ad725 100644
+--- a/docs/calculs/05-joueurs/07-lecture-du-scout.md
++++ b/docs/calculs/05-joueurs/07-lecture-du-scout.md
+@@ -53,7 +53,7 @@ Toutes les phrases portent sur le même joueur et la même cohorte que le reste
+ 
+ ## Exemple
+ 
+-Un milieu joue 1 800 minutes sur la période, avec 2 buts, 3 passes décisives et une note moyenne de 7,05. Dans sa cohorte :
++Un milieu joue 1 800 minutes sur la période, marque 2 buts et donne 3 passes décisives. Dans cet exemple, le z moyen pondéré par les minutes des matchs admissibles vaut 0,5, ce qui donne une note Vega arrondie de 57 sur 100. Dans sa cohorte :
+ 
+ - Construction : passes réussies P84, précision des passes P78, ballons touchés P81 → `(84 + 78 + 81) / 3 = 81` ; Récupération : récupérations P88, interceptions P70, tacles P62 → 73 ; Création et Percussion plus bas ;
+ - parmi les axes de style, les plus hauts sont récupérations P88 et passes réussies P84, le plus bas dribbles réussis P12.
+@@ -62,7 +62,7 @@ La carte affiche :
+ 
+ - Meilleur rôle : construction, indice 81 sur 100 face aux milieux.
+ - Points forts : récupérations (P88) et passes réussies (P84).
+-- Production : 0,10 but et 0,15 passe décisive par 90 min, note moyenne 7,05.
++- Production : 0,10 but et 0,15 passe décisive par 90 min, note Vega 57 sur 100.
+ - Point de vigilance : dribbles réussis (P12).
+ 
+ `90 × 2 / 1 800 = 0,10` et `90 × 3 / 1 800 = 0,15`.
+diff --git a/docs/calculs/05-joueurs/08-audit-classement-puissance.md b/docs/calculs/05-joueurs/08-audit-classement-puissance.md
+index 9b60693c04..91e433e270 100644
+--- a/docs/calculs/05-joueurs/08-audit-classement-puissance.md
++++ b/docs/calculs/05-joueurs/08-audit-classement-puissance.md
+@@ -183,18 +183,18 @@ Tous les championnats, clubs et joueurs ont désormais une note sur la même éc
+ - cette retenue n'est pas un a priori cohérent : à l'équilibre, elle revient à un a priori dont la force baisse quand les liens augmentent, et 1500 est arbitraire ;
+ - compter les matchs ne dit pas si le niveau est mesuré. Un groupe de championnats qui ne jouent qu'entre eux (l'Amérique du Sud avec ses coupes, l'Arabie saoudite et sa deuxième division) paraît bien mesuré alors que sa place par rapport aux autres ne l'est pas. C'est ce qui faisait bondir l'Argentine de 98 points avec les coupes continentales, et ce qui laissait 31 championnats sans niveau.
+ 
+-**Le modèle** ([`power.py`](../../../backend/vega/power.py), « League levels (version 4) »). Le niveau ℓ de chaque championnat est le maximum a posteriori d'un seul modèle, qui réunit trois preuves :
+-- **Les matchs entre championnats.** Avec l'Elo relancé depuis les niveaux, un match apporte le score I_m (r − E)·c et l'information I_m E(1 − E)·c² sur les deux championnats (c = ln 10 / 400), divisés par la dispersion des résultats (φ = 0,73 ; les nuls la font passer sous 1).
++**Calcul des niveaux dans la version 4.** Le lecteur relance l’Elo depuis les niveaux et combine trois sources d’information. Pour les matchs, il emploie une sensibilité fixe de +1 et −1 sans propager les variations des Elo intermédiaires. La qualification initiale de maximum a posteriori a été réfutée pour la vraisemblance séquentielle annoncée. [Implémentation](../../../backend/vega/power.py) · [Contre-exemple du §3](../09-audit-2026-11/SOURCE_AUDIT.md)
++- **Les matchs entre championnats.** Avec l'Elo relancé depuis les niveaux, un match apporte le résidu pondéré I_m (r − E)·c et la courbure locale I_m E(1 − E)·c² sur les deux championnats (c = ln 10 / 400), divisés par la dispersion des résultats (φ = 0,73 ; les nuls la font passer sous 1).
+ - **Les joueurs qui changent de championnat.** On ne lit que ses matchs de championnat : un séjour en coupe d'Europe ou en sélection ne s'intercale jamais entre deux années. Son rendement par 90 minutes est pris par rapport à la moyenne de son championnat cette saison-là. On en retire ce qu'en garde n'importe quel joueur d'une année sur l'autre, mesuré sur ceux qui sont restés (c' = α + 0,63 c sur 9 599 joueurs restés des années 2024 et 2025). Ce qui reste vaut −κ\* (ℓ_b − ℓ_a) / 400 par passage (3 120 passages), avec la variance d'un passage et l'écart propre à une paire (τ_u = 0,09).
+ - **Un a priori, sous forme d'écarts plutôt que d'un retour à 1500.** Une deuxième division se tient sous la première de son pays d'un écart de division b (162 points, écart-type 49, mesuré sur 11 paires). Une première division se tient à la moyenne de sa confédération si au moins trois de ses championnats sont mesurés : UEFA 1492, CONMEBOL 1499, CONCACAF 1482, AFC 1439 ; la CAF prend la moyenne d'ensemble. L'écart-type entre championnats européens est de 111.
+ 
+-Tous ces réglages sont mesurés à chaque calcul sur les championnats que les seuls matchs et passages mesurent, à l'exception de κ\*. Les divisions de chaque championnat ont été relues une par une (`TIERS`) ; le Paulista A1, championnat d'État joué par des clubs de Serie A et de Serie B, est classé en deuxième division. Un championnat sans aucune preuve reçoit son a priori, et son erreur-type le dit. Un calcul qui ne converge pas en 40 pas échoue et laisse les niveaux d'avant.
++Tous ces réglages sont mesurés à chaque calcul sur les championnats que les seuls matchs et passages mesurent, à l'exception de κ\*. Les divisions de chaque championnat ont été relues une par une (`TIERS`) ; le Paulista A1, championnat d'État joué par des clubs de Serie A et de Serie B, est classé en deuxième division. Les championnats peu documentés dépendent davantage de l’a priori. La marge issue de la matrice du calcul sert au classement de leur statut. Un calcul qui ne converge pas en 40 pas échoue et laisse les niveaux d'avant.
+ 
+-**Mesuré.** Un championnat est **mesuré** (`linked`, ses joueurs classés) quand son erreur-type est d'au plus 45 points ; il le reste jusqu'à 52, pour qu'aucun championnat n'entre et ne sorte du classement à chaque calcul.
++**Statut utilisé par cette version.** `linked` vaut vrai lorsque la marge interne est au plus de 45 points, ou au plus de 52 si le championnat était déjà mesuré. Ces valeurs servent de seuils opérationnels. Leur interprétation comme erreurs-types statistiques reste à valider.
+ 
+ Pourquoi 45 : à ce seuil, une erreur sur le niveau déplace l'indice d'un joueur d'au plus un quart d'écart-type de son rôle. Le calcul est e / (√2 σ), σ = 132 étant l'écart-type des forces des clubs sur les matchs de championnat de 2026/2027 ; à 60 points, ce serait 0,32.
+ 
+-Les autres championnats ont un niveau marqué « provisoire » sur le site, avec sa marge, et leurs joueurs un score sans rang.
++La version 4 gardait un niveau et une marge pour les championnats masculins provisoires. Elle donnait à leurs joueurs un score sans rang. Les versions 5 et 6, décrites plus bas, ont modifié l’attribution du rang.
+ 
+ **Les coupes des autres confédérations** entrent dans l'Elo (`ELO_APART` supprimé). Les clubs de ces coupes sont reliés à ceux de PitchAPI par la passe d'identité, qui tourne avant l'Elo dans le même passage quotidien.
+ 
+@@ -256,7 +256,7 @@ Demande du propriétaire : un joueur doit avoir un rang dès son premier match,
+   - **En production** (relu le 15 novembre à 16 h 25 UTC, les 157 saisons recalculées en version 5) : 29 365 joueurs classés sur 29 692 en 2026/2027, 36 690 sur 37 361 en 2025/2026, 31 950 sur 32 627 en 2024/2025. Le chiffre mesuré avant comptait chaque joueur qui avait un indice ; le rang, lui, ne va qu'aux joueurs d'un club dont le championnat est dans la base.
+   - **Restent sans rang**, avec un score : en 2026/2027, les 327 joueurs de 17 clubs vus seulement en Ligue des champions, Ligue Europa ou Ligue Conférence, sans leur championnat ; en 2025/2026, 412 joueurs de tels clubs, 167 de championnats féminins (notées entre elles, sans rang dans le classement des hommes) et 92 connus seulement par leur sélection.
+   - **Écartée, la mesure au-dessus d'un niveau de remplacement** : ce niveau variait de plus de 25 % d'une année à l'autre pour trois rôles, et devenait positif en début de saison.
+-- **Note de match.** La contribution du match seule, ramenée à la dispersion de son rôle (et de sa compétition) dans la dernière année terminée, en score normal, sur la courbe 0–100. Elle est montrée sur la fiche du match à côté de la note PitchAPI, avec le rang du joueur dans le match.
++- **Note de match.** La contribution du match seule, ramenée à la dispersion de son rôle (et de sa compétition) dans la dernière année terminée, en score normal, sur la courbe 0–100. Dans cette version 5, la fiche affichait aussi la note PitchAPI. Depuis la version 7, la note Vega est la seule note de match affichée. [Note du match](../02-metriques-attendues/04-note-du-match.md)
+   - **En production** : chaque match joué des trois dernières saisons a sa note (651 805 en 2025/2026) ; un match complet moyen vaut 0,000 en écart standardisé, soit 50. Seules 2024/2025 et 2025/2026, terminées, sont gardées comme références.
+   - **Sans note du fournisseur** (certains championnats n'en ont pas), la carte « Meilleures notes » liste les meilleures notes Vega du match.
+   - **Sans minutes jouées** dans la source, un match n'a pas de note : le classement ne lit que les matchs où le joueur a des minutes.
+diff --git a/docs/calculs/05-joueurs/10-revelations.md b/docs/calculs/05-joueurs/10-revelations.md
+index 8aeaba369f..7a08587ddd 100644
+--- a/docs/calculs/05-joueurs/10-revelations.md
++++ b/docs/calculs/05-joueurs/10-revelations.md
+@@ -1,15 +1,15 @@
+ # Révélations
+ 
+-Des joueurs que le classement de puissance ne classe pas encore, faute de minutes, et qui jouent déjà comme ses titulaires ([breakout.py](../../../backend/vega/breakout.py), `/api/rankings/breakouts`).
++Le signal « Révélation » repère des joueurs sous le seuil de minutes des titulaires de référence, dont le rendement est déjà comparable à celui de ces titulaires. Leur classement de puissance peut déjà comporter un rang provisoire. [Règle](../../../backend/vega/breakout.py) · [API](../../../backend/api/src/routes/rankings.mjs)
+ 
+ ## La règle
+ 
+ Un joueur est signalé sur une saison quand :
+ 
+ 1. il a joué **au moins 270 minutes** mais reste **sous le seuil de minutes du classement** (900 minutes sur une saison entière, la moitié des minutes du joueur le plus utilisé tant que la saison n'en est pas là) ;
+-2. son championnat est **mesuré** (erreur-type de son niveau d'au plus 45 points, version 4) ;
+-3. son **rendement par 90 minutes régularisé** (celui du classement, § 8 de la méthode : il ramène vers la moyenne un joueur qui a peu joué) est **au niveau du meilleur cinquième des titulaires de son rôle** (les joueurs classés du même rôle, au moins 30) ;
+-4. il n'a **jamais été titulaire** (classé) lors d'une saison antérieure de la base ;
++2. sa ligne de puissance porte `linked = true`. Pour les championnats masculins, la marge interne donne ce statut jusqu’à 45 points à l’entrée et 52 points pour un championnat déjà mesuré ;
++3. son **rendement par 90 minutes régularisé** (celui du classement, § 8 de la méthode : il ramène vers la moyenne un joueur qui a peu joué) est **au niveau du meilleur cinquième des titulaires de son rôle** (les joueurs du même rôle admissibles en minutes, avec `linked = true` et un rendement renseigné, au moins 30) ;
++4. aucune saison antérieure de la base ne le marque admissible en minutes (`eligible`) ;
+ 5. sa date de naissance est **connue** et il a **moins de 23 ans** au 1ᵉʳ août de la saison. Elle n'est connue que pour une minorité de joueurs (Wikidata, club par club) : un joueur dont l'âge est inconnu n'est pas signalé.
+ 
+ Les règles 4 et 5 écartent les joueurs établis qui ont peu joué (un titulaire blessé a le rendement d'un titulaire). La première liste, calculée sans exiger l'âge, s'ouvrait sur un international de retour de blessure et deux joueurs de 35 ans et plus : la base ne détient ni leurs saisons d'avant 2025/2026 ni leur âge. La liste est donc courte aujourd'hui (les 119 joueurs que la règle 3 retient en 2026/2027 n'ont pas tous un âge connu) et s'allonge à mesure que les dates de naissance arrivent. Le « centile » affiché est la part des titulaires de son rôle que le joueur dépasse ; les signalés sont rangés par ce centile.
+@@ -33,6 +33,6 @@ Ce que la vérification ne couvre pas : les règles 4 et 5 (2025/2026 est la pre
+ ## Où il se lit
+ 
+ - Page « Classement des joueurs » : la liste « Révélations » de la saison, les vingt premiers, avec la part des titulaires de leur poste qu'ils dépassent.
+-- Fiche d'un joueur signalé : une phrase sous l'Indice Vega (« Révélation : en 610 minutes, son rendement par 90 minutes le place devant 93 % des titulaires à son poste »). Un joueur sous le seuil de minutes n'a pas de score au classement ; cette phrase est tout ce que le classement dit de lui.
++- Fiche d'un joueur signalé : une phrase sous l'Indice Vega (« Révélation : en 610 minutes, son rendement par 90 minutes le place devant 93 % des titulaires à son poste »). La fiche peut présenter à la fois ce signal, le score de puissance et son rang provisoire.
+ 
+ Recalculé avec les modèles de la saison, après le classement (`agg.player_breakouts`, `agg.breakout_runs`). L'API ne sert une liste que si la règle en vigueur l'a calculée ; une saison terminée est recalculée une fois quand la règle change. Au 13 novembre 2026, dix joueurs de 2026/2027 sont signalés.
+diff --git a/docs/calculs/07-limites/01-non-calcule-fictif-demo.md b/docs/calculs/07-limites/01-non-calcule-fictif-demo.md
+index ecda6df939..fca2c5dd7f 100644
+--- a/docs/calculs/07-limites/01-non-calcule-fictif-demo.md
++++ b/docs/calculs/07-limites/01-non-calcule-fictif-demo.md
+@@ -7,12 +7,13 @@ Tout chiffre du site n'est pas un calcul de Vega. Cette page liste ce qui est fo
+ | Valeur | Source | Note |
+ | --- | --- | --- |
+ | xG, npxG, xG en jeu / CPA, xGOT, xA, buts évités | PitchAPI | aucun modèle Vega |
+-| Note du match | PitchAPI | pas une note Vega validée |
+ | Classement FIFA, coefficients UEFA clubs et associations | FIFA, UEFA, SportsAPI | collectés par le worker (`backend/vega/sources/fifa.py`, `uefa.py`) |
+ | Classements officiels (fournisseur, UEFA) | fournisseurs | contrôlés, jamais recalculés |
+ | Palmarès | Wikipédia / Wikidata | voir [PLAYER_HONOURS.md](../../PLAYER_HONOURS.md) |
+ | Archives de buts historiques | schochastics/football-data | voir [HISTORICAL_GOALS.md](../../HISTORICAL_GOALS.md) |
+ 
++La note de match du joueur est calculée par Vega sur 100. [Formule et provenance](../02-metriques-attendues/04-note-du-match.md)
++
+ ## Pas encore calculé
+ 
+ - **Victoires attendues** : le modèle les produit (`outcomeChances`), mais elles ne sont ni conservées ni affichées (voir [xPts](../03-resultats-et-points-attendus/01-points-attendus-xpts.md)).
+diff --git a/docs/calculs/07-limites/02-points-d-attention.md b/docs/calculs/07-limites/02-points-d-attention.md
+index 1d0bb859f1..05dddcae92 100644
+--- a/docs/calculs/07-limites/02-points-d-attention.md
++++ b/docs/calculs/07-limites/02-points-d-attention.md
+@@ -35,7 +35,7 @@ Au niveau d'un match, `xg` et `shotsOnTarget` valent 0 quand le joueur n'a pas t
+ → [shared/player-profile.js](../../../dashboard/shared/player-profile.js#L57) vs [season-player.js](../../../dashboard/frontend/src/services/season-player.js#L203)
+ 
+ **9. Les grosses occasions créées sont classées au niveau saison malgré leurs zéros omis.** *(levé le 12 novembre 2026 : un vide vaut zéro là où le fournisseur publie la mesure, voir [Valeurs absentes](../01-sources-et-conventions/02-valeurs-absentes-et-fiabilite.md) ; le xA est classé à la même condition)*
+-Le code indique que le fournisseur ne publie jamais 0 pour le xA ni pour les grosses occasions. Le xA est exclu des classements, mais `bigChancesCreated` reste classable (`rankable: key !== "xa"`) et figure dans la pizza des milieux offensifs et attaquants. Avec la règle de couverture complète, seuls les joueurs ayant une valeur à **chaque** match entrent dans la distribution : le centile compare un groupe très sélectionné, et la plupart des joueurs n'en ont pas.
++Les centiles saison du xA et des grosses occasions créées exigent une observation sur tous les matchs et toutes les minutes du joueur, ainsi qu’une cohorte suffisante. Le lecteur restitue certains zéros omis lorsque la couverture est établie. Sur la fiche d’une performance individuelle, le xA reste sans centile.
+ → [scouting.js](../../../dashboard/frontend/src/services/scouting.js#L47), [PlayerScoutOverview.jsx](../../../dashboard/frontend/src/components/PlayerScoutOverview.jsx#L146)
+ 
+ **10. Deux définitions de la note saison (résolu le 15 novembre 2026).**
+diff --git a/docs/calculs/08-notes-vega/01-formules-et-raisons.md b/docs/calculs/08-notes-vega/01-formules-et-raisons.md
+index 29f7b4c2e1..2476ff0efc 100644
+--- a/docs/calculs/08-notes-vega/01-formules-et-raisons.md
++++ b/docs/calculs/08-notes-vega/01-formules-et-raisons.md
+@@ -12,7 +12,7 @@ Tout est sur une seule échelle, en **points Elo**. 400 points d'écart entre de
+ 
+ | Objet | Sa note | En une phrase |
+ | --- | --- | --- |
+-| Championnat | son niveau ℓ, avec une erreur-type | la force moyenne de ses clubs, tirée des matchs entre championnats, des joueurs qui changent de championnat et de sa division |
++| Championnat | son niveau ℓ et une marge interne en points Elo | la force moyenne de ses clubs, tirée des matchs entre championnats, des joueurs qui changent de championnat et de sa division |
+ | Club | sa force Elo R | il entre au niveau de son championnat, puis chaque résultat la corrige, selon ce que les deux forces prévoyaient |
+ | Joueur | son score de 0 à 100 | ce qu'il fait au-dessus de l'attendu de son rôle, match par match, plus le niveau du club où il le fait, comparé aux joueurs de son rôle |
+ 
+@@ -96,7 +96,7 @@ $$
+ 
+ ### 4.1 Ce qu'on cherche
+ 
+-ℓ_j, le niveau du championnat j : la force à laquelle ses clubs entrent dans l'Elo. Trois preuves le disent, avec des précisions différentes. Le niveau retenu est le **maximum a posteriori** d'un seul modèle qui les réunit, chacune comptée selon sa précision : plus une preuve est précise, plus elle pèse.
++Le niveau initial ℓ_j détermine la force d’entrée des clubs du championnat j. Le calcul combine les résultats entre championnats, les passages de joueurs et les hypothèses de division et de confédération. Il résout un système itératif approché. La dérivée des mises à jour Elo successives manque dans le terme des matchs, ce qui invalide son interprétation comme maximum a posteriori de la vraisemblance séquentielle annoncée. [Calcul](../../../backend/vega/power.py) · [Contre-exemple du §3](../09-audit-2026-11/SOURCE_AUDIT.md)
+ 
+ **Pourquoi un seul modèle.** La version 3 retenait le niveau vers 1500 dans la proportion liens / (liens + 30). Elle avait deux défauts :
+ - **Ce n'était pas un a priori cohérent.** À l'équilibre, sa force baissait quand les liens augmentaient, et 1500 est arbitraire.
+@@ -116,8 +116,8 @@ $$
+ \Lambda_{aa} \mathrel{+}= I_m E(1-E)c^2, \quad \Lambda_{bb} \mathrel{+}= I_m E(1-E)c^2, \quad \Lambda_{ab} = \Lambda_{ba} \mathrel{-}= I_m E(1-E)c^2
+ $$
+ 
+-- $g$ est la **pente** de la vraisemblance des résultats, $\Lambda$ son **information**. Les matchs à l'intérieur d'un championnat s'annulent : seul compte ce que ses clubs font contre les autres.
+-- Les deux sont divisés par la **dispersion** $\varphi = \sum (r - E)^2 / \sum E(1-E)$, sur ces mêmes matchs (0,73). Les nuls rendent les résultats moins dispersés qu'un pile ou face, et l'information est d'autant plus grande.
++- Pour un match entre deux championnats ajustés distincts, le code utilise +1 et −1 comme sensibilités de l’écart Elo aux deux niveaux initiaux. Il ajoute le résidu pondéré à $g$ et sa courbure locale à $\Lambda$. Tous les matchs font évoluer les Elo suivants, y compris les matchs internes. Le calcul de $g$ et de $\Lambda$ omet la propagation de ces dépendances.
++- Les deux sont divisés par la **dispersion** $\varphi = \sum (r - E)^2 / \sum E(1-E)$, sur ces mêmes matchs (0,73). Les nuls rendent les résultats moins dispersés qu'un pile ou face, ce qui augmente le poids numérique du terme des matchs lorsque la dispersion est inférieure à 1.
+ - Matchs lus : coupes d'Europe, coupes nationales entre divisions, Coupe du monde des clubs, Copa Libertadores et Sudamericana, Coupes des champions CONCACAF et CAF.
+ 
+ ### 4.3 Les joueurs qui changent de championnat
+@@ -204,15 +204,15 @@ Les divisions sont relues une par une (`TIERS`). Le Paulista A1, championnat d'
+ ### 4.5 Le calcul
+ 
+ 1. **Matchs et passages seuls**, avec un a priori très large (1500 ± 400) qui ne fixe que l'origine de l'échelle. On en tire $\tau_u$, puis $b$, $\tau_b$, $\tau_c$ et les moyennes de confédération.
+-2. **Les trois preuves ensemble.** Pas de Newton :
++2. **Les trois sources réunies.** Le calcul résout le système linéaire suivant à chaque itération.
+ 
+ $$
+ \ell \leftarrow \ell + (\Lambda_\text{matchs} + \Lambda_\text{passages} + \Lambda_\text{a priori})^{-1}\,(g_\text{matchs} + g_\text{passages} + g_\text{a priori})
+ $$
+ 
+    L'Elo est redéroulé à chaque pas, depuis les nouveaux niveaux. Le calcul s'arrête quand plus aucun niveau ne bouge de 0,25 point (7 pas en service). Au-delà de 40 pas, il échoue et les niveaux d'avant restent.
+-3. **L'origine de l'échelle.** Matchs et passages ne disent que des écarts. On décale tous les niveaux d'une même constante, pour que les championnats qui tiennent l'échelle gardent leur niveau d'avant. Ces championnats sont ceux mesurés à 25 points près contre le mieux mesuré : les cinq grands championnats, les championnats anglais, la 2. Bundesliga, les Pays-Bas, le Portugal.
+-4. **L'erreur-type** d'un niveau, contre la moyenne de ces championnats :
++3. **L’origine de l’échelle.** Le code décale ensemble les niveaux ajustés pour conserver, en moyenne, les valeurs antérieures des références disponibles. Les groupes hors ajustement gardent l’initialisation du lecteur. Ce décalage peut donc modifier l’espérance d’une rencontre entre groupes ajustés et groupes laissés à leur valeur initiale. Les références sont les championnats ordinaires à moins de 25 points de marge relative à la meilleure référence, avec repli sur celle-ci. Les cinq grands championnats, les divisions anglaises, la 2. Bundesliga, les Pays-Bas et le Portugal sont des exemples de la mesure historique.
++4. **Marge interne d’un niveau.** Le code inverse la matrice approchée et mesure l’écart à la moyenne des références selon la formule ci-dessous. La calibration de cette marge comme erreur-type d’un estimateur séquentiel reste à établir.
+ 
+ $$
+ \text{se}_j = \sqrt{v^\top \Lambda^{-1} v}, \qquad v = e_j - \tfrac{1}{|\text{réf}|}\mathbf{1}_\text{réf}
+@@ -220,7 +220,7 @@ $$
+ 
+ ### 4.6 Mesuré ou provisoire
+ 
+-Un championnat est **mesuré** quand se ≤ **45 points**. Il le reste jusqu'à **52**, pour qu'aucun championnat n'entre et ne sorte du classement à chaque calcul. Ses joueurs reçoivent un rang. Un championnat au-dessus est **provisoire** : il garde son niveau, affiché avec sa marge, et ses joueurs un score sans rang.
++Pour les championnats masculins ajustés, le statut **mesuré** s’ouvre lorsque la marge interne vaut au plus **45 points** et se conserve jusqu’à **52 points** inclus. Au-delà, le championnat garde son niveau et sa marge avec le statut **provisoire**. Dans le classement de puissance des joueurs, un indice publié donne toujours un rang dans son univers. Le statut provisoire du championnat masculin peut rendre ce rang provisoire.
+ 
+ Pourquoi 45 : une erreur e sur le niveau déplace l'indice d'un joueur d'environ $e/(\sqrt{2}\,\sigma)$ écart-type de son rôle, σ = 132 étant l'écart-type des forces des clubs sur les matchs de championnat de 2026/2027. On veut au plus un quart d'écart-type : e ≤ 0,25 × √2 × 132 ≈ 47, arrondi à 45. À 60 points, ce serait 0,32.
+ 
+@@ -398,11 +398,11 @@ $$
+ 
+ **Rangs.**
+ - Le **rang** est l'ordre de Z parmi tous les joueurs de son univers (hommes, femmes), puis T, puis les minutes, à égalité le même rang. Chaque univers est numéroté à partir de 1. Le **rang dans le rôle** suit le même ordre dans le rôle principal, et « sur N au poste » compte l'univers du joueur.
+-- Un rang est **provisoire** sous le seuil de minutes (`eligible` faux), dans un championnat provisoire (`linked` faux), dans un club qu'aucun championnat de la base ne connaît (vu seulement en coupe d'Europe, `in_league` faux), ou pour un joueur connu seulement par sa sélection. Le site en donne la raison. Le site le dit sur la fiche du joueur. L'incertitude d'un championnat provisoire est commune à tous ses joueurs : l'ordre entre eux est exact. Face aux autres, elle vaut environ ± 200 à 300 places dans les 500 premiers, et beaucoup plus au milieu du classement, où les joueurs sont serrés.
++- Sur la fiche et dans le classement complet, le rang est **provisoire** si le seuil de minutes n’est pas atteint. Ensuite, le lecteur donne aux hommes d’une sélection seule, d’un club sans championnat dans la base ou d’un championnat de niveau provisoire le motif correspondant. Une joueuse admissible en minutes a un rang dans l’univers féminin sans motif de ligue provisoire. Le statut renseigne sur la fiabilité des entrées. La marge interne de la ligue ne fournit pas un intervalle statistique validé pour le rang du joueur.
+ - **Centiles** des blocs et de T, R\* : rang moyen dans le rôle, (nombre en dessous + ½ égaux) / n.
+ - **Course au Ballon d'Or** : les trente premiers classés d'un club de première division.
+ 
+-Depuis la version 6 (15 novembre 2026), **tout joueur qui a joué a un rang**. Un joueur connu seulement par sa sélection, ou d'un club vu seulement en coupe d'Europe, est classé parmi les hommes, provisoirement : sa part de niveau vient de l'Elo de son équipe, mesurée contre les équipes de même nature (la moyenne des sélections pour une sélection), et son championnat n'est pas mesuré. Les joueuses d'un championnat féminin sont notées entre elles (leur propre κ, leurs propres moyennes et écarts-types) et ont leur propre classement. Un poste qui n'a encore aucun joueur éligible dans son univers (premiers jours d'une année, petit championnat féminin) est placé face aux joueurs éligibles de tous les postes de l'univers : C est déjà relatif à l'attendu du rôle, son centre est commun.
++Depuis la version 6 (15 novembre 2026), **tout joueur doté d’un indice a un rang dans son univers**. Un joueur connu seulement par sa sélection, ou d'un club vu seulement en coupe d'Europe, est classé parmi les hommes, provisoirement : sa part de niveau vient de l'Elo de son équipe, mesurée contre les équipes de même nature (la moyenne des sélections pour une sélection), et son championnat n'est pas mesuré. Les joueuses d'un championnat féminin sont notées entre elles (leur propre κ, leurs propres moyennes et écarts-types) et ont leur propre classement. Un poste qui n'a encore aucun joueur éligible dans son univers (premiers jours d'une année, petit championnat féminin) est placé face aux joueurs éligibles de tous les postes de l'univers : C est déjà relatif à l'attendu du rôle, son centre est commun.
+ 
+ **L'a priori de la saison passée (version 8, 15 novembre 2026).** En début de saison, quelques matchs ne disent pas grand-chose ; la saison passée du joueur en dit davantage. L'indice affiché les mêle :
+ 

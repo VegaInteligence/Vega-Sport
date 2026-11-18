@@ -1,1766 +1,2376 @@
-diff --git a/backend/vega/sources/sportscore.py b/backend/vega/sources/sportscore.py
-index cb42bf2287..9a132e6b5e 100644
---- a/backend/vega/sources/sportscore.py
-+++ b/backend/vega/sources/sportscore.py
-@@ -1,23 +1,44 @@
- """Official league tables of SportScore (sportscore.com widget), as main's
- /api/standings source (frontend/src/services/sportscore-standings.js).
- 
--SportScore gives the current table of a competition, without a season, and names
--without ids. A table is written for the competition's current edition only when every
--row designates exactly one team of that edition (normalized name, short name, a
--known spelling, or the last team left); otherwise nothing official is kept and the
--API serves Vega's own table. A table that names other clubs (a new season on one side
--only) therefore never lands on the wrong edition.
-+SportScore gives the current table of a competition, without a season, and names without ids.
-+A response replaces the current edition's official table only when it is a whole table of that
-+edition (docs/calculs/09-audit-2026-11/FAILURE_MODES_SPORTSCORE.md §2): every row valid, every name
-+designating one team of the edition, no club repeated, no position shared between clubs of
-+different points, the edition's own results consistent with it (every club with a counted result
-+there, and organiser corroboration if every club is ahead of the matches kicked off), every club
-+and every table of the accepted observation still there with what was known of it (a single table
-+may split exhaustively, and explicit retirement is reviewed in RETIRED_TABLES), every table's
-+clubs too (a group keeps its clubs; a ranking across groups may change members but never shrinks,
-+unless a row is reviewed out in RETIRED_ROWS), and no club's played count going down unless the
-+results attest it. Anything else is refused with its code: the scope fails (sources.run_due), the accepted
-+table keeps its rows and its date, and the scope is tried again at the content or transport cadence. A name of a club
-+of the previous or next edition is wrong-season evidence (WRONG_EDITION); a name nothing
-+designates is missing evidence (UNMATCHED_TEAMS). No row is ever given to a team by elimination.
-+The first table also needs the league roster or positive evidence of the native group phase.
-+The writer reads and replaces SportScore's rows without a stage only (OWN).
+diff --git a/backend/vega/sources/dfb_pokal_periods.json b/backend/vega/sources/dfb_pokal_periods.json
+new file mode 100644
+index 0000000000..8c007119a3
+--- /dev/null
++++ b/backend/vega/sources/dfb_pokal_periods.json
+@@ -0,0 +1,1735 @@
++{
++  "calendar_sha256": "f5d836bcf2d817dc3b82c0a2bff3d09fba94d6a59e0f8304995e1766c30884e7",
++  "decisions": {
++    "77179": {
++      "date": "2025-08-16",
++      "dfb_id": "2397676",
++      "dfb_sha256": "e1f23a976c1013521ab3e2a2a9519a350c051d95c2f0249e2e81a7943e48241a",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/fk-pirmasens-hamburger-sv-2397676",
++      "edition": "2025/2026",
++      "native_results": [
++        {
++          "pointsTeam1": 0,
++          "pointsTeam2": 0,
++          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
++          "resultID": 118420,
++          "resultName": "Halbzeit",
++          "resultOrderID": 1,
++          "resultTypeID": 1,
++          "resultTypeKind": "HalfTime"
++        },
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 2,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 118421,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        },
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 2,
++          "resultDescription": "Ergebnis nach Nachspielzeit",
++          "resultID": 118424,
++          "resultName": "Nachspielzeit",
++          "resultOrderID": 3,
++          "resultTypeID": 3,
++          "resultTypeKind": "Unknown"
++        }
++      ],
++      "observed": {
++        "et": [
++          1,
++          2
++        ],
++        "ft": [
++          1,
++          2
++        ],
++        "ht": [
++          0,
++          0
++        ]
++      },
++      "official": {
++        "et": [
++          1,
++          2
++        ],
++        "ft": [
++          1,
++          1
++        ],
++        "ht": [
++          0,
++          0
++        ],
++        "p": null
++      },
++      "provider": "openligadb",
++      "sides": [
++        "1058",
++        "100"
++      ]
++    },
++    "77184": {
++      "date": "2025-08-26",
++      "dfb_id": "2397670",
++      "dfb_sha256": "01b1138349552d90f324ed7edb9959c7694d5142330376c59b04b783d23775bf",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/eintracht-braunschweig-vfb-stuttgart-2397670",
++      "edition": "2025/2026",
++      "native_results": [
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
++          "resultID": 118568,
++          "resultName": "Halbzeit",
++          "resultOrderID": 1,
++          "resultTypeID": 1,
++          "resultTypeKind": "HalfTime"
++        },
++        {
++          "pointsTeam1": 3,
++          "pointsTeam2": 4,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 118569,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        },
++        {
++          "pointsTeam1": 4,
++          "pointsTeam2": 4,
++          "resultDescription": "Ergebnis nach Nachspielzeit",
++          "resultID": 118570,
++          "resultName": "Nachspielzeit",
++          "resultOrderID": 3,
++          "resultTypeID": 3,
++          "resultTypeKind": "Unknown"
++        },
++        {
++          "pointsTeam1": 11,
++          "pointsTeam2": 12,
++          "resultDescription": "Ergebnis nach Elfmeterschießen",
++          "resultID": 118571,
++          "resultName": "Elfmeterschießen",
++          "resultOrderID": 4,
++          "resultTypeID": 5,
++          "resultTypeKind": "AfterPenalties"
++        }
++      ],
++      "observed": {
++        "et": [
++          4,
++          4
++        ],
++        "ft": [
++          3,
++          4
++        ],
++        "ht": [
++          1,
++          1
++        ],
++        "p": [
++          11,
++          12
++        ]
++      },
++      "official": {
++        "et": [
++          4,
++          4
++        ],
++        "ft": [
++          3,
++          3
++        ],
++        "ht": [
++          1,
++          1
++        ],
++        "p": [
++          7,
++          8
++        ]
++      },
++      "provider": "openligadb",
++      "sides": [
++        "74",
++        "16"
++      ]
++    },
++    "77186": {
++      "date": "2025-08-16",
++      "dfb_id": "2397668",
++      "dfb_sha256": "77198d5f142763599eaf502152287521d6db1303fa5d27f50d0187e23e8880af",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/fv-illertissen-1-fc-nuernberg-2397668",
++      "edition": "2025/2026",
++      "native_results": [
++        {
++          "pointsTeam1": 2,
++          "pointsTeam2": 0,
++          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
++          "resultID": 118427,
++          "resultName": "Halbzeit",
++          "resultOrderID": 1,
++          "resultTypeID": 1,
++          "resultTypeKind": "HalfTime"
++        },
++        {
++          "pointsTeam1": 3,
++          "pointsTeam2": 3,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 118428,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        },
++        {
++          "pointsTeam1": 3,
++          "pointsTeam2": 3,
++          "resultDescription": "Ergebnis nach Nachspielzeit",
++          "resultID": 118444,
++          "resultName": "Nachspielzeit",
++          "resultOrderID": 3,
++          "resultTypeID": 3,
++          "resultTypeKind": "Unknown"
++        },
++        {
++          "pointsTeam1": 9,
++          "pointsTeam2": 8,
++          "resultDescription": "Ergebnis nach Elfmeterschießen",
++          "resultID": 118445,
++          "resultName": "Elfmeterschießen",
++          "resultOrderID": 4,
++          "resultTypeID": 5,
++          "resultTypeKind": "AfterPenalties"
++        }
++      ],
++      "observed": {
++        "et": [
++          3,
++          3
++        ],
++        "ft": [
++          3,
++          3
++        ],
++        "ht": [
++          2,
++          0
++        ],
++        "p": [
++          9,
++          8
++        ]
++      },
++      "official": {
++        "et": [
++          3,
++          3
++        ],
++        "ft": [
++          3,
++          3
++        ],
++        "ht": [
++          2,
++          0
++        ],
++        "p": [
++          6,
++          5
++        ]
++      },
++      "provider": "openligadb",
++      "sides": [
++        "2410",
++        "79"
++      ]
++    },
++    "77189": {
++      "date": "2025-08-16",
++      "dfb_id": "2397665",
++      "dfb_sha256": "96a576d52449b869733ce79ce4d927055b58a89b49c024b985bbd3bccffa3676",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/eintracht-norderstedt-fc-st-pauli-2397665",
++      "edition": "2025/2026",
++      "native_results": [
++        {
++          "pointsTeam1": 0,
++          "pointsTeam2": 0,
++          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
++          "resultID": 118429,
++          "resultName": "Halbzeit",
++          "resultOrderID": 1,
++          "resultTypeID": 1,
++          "resultTypeKind": "HalfTime"
++        },
++        {
++          "pointsTeam1": 0,
++          "pointsTeam2": 0,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 118430,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        },
++        {
++          "pointsTeam1": 0,
++          "pointsTeam2": 0,
++          "resultDescription": "Ergebnis nach Nachspielzeit",
++          "resultID": 118447,
++          "resultName": "Nachspielzeit",
++          "resultOrderID": 3,
++          "resultTypeID": 3,
++          "resultTypeKind": "Unknown"
++        },
++        {
++          "pointsTeam1": 2,
++          "pointsTeam2": 3,
++          "resultDescription": "Ergebnis nach Elfmeterschießen",
++          "resultID": 118446,
++          "resultName": "Elfmeterschießen",
++          "resultOrderID": 4,
++          "resultTypeID": 5,
++          "resultTypeKind": "AfterPenalties"
++        }
++      ],
++      "observed": {
++        "et": [
++          0,
++          0
++        ],
++        "ft": [
++          0,
++          0
++        ],
++        "ht": [
++          0,
++          0
++        ],
++        "p": [
++          2,
++          3
++        ]
++      },
++      "official": {
++        "et": [
++          0,
++          0
++        ],
++        "ft": [
++          0,
++          0
++        ],
++        "ht": [
++          0,
++          0
++        ],
++        "p": [
++          2,
++          3
++        ]
++      },
++      "provider": "openligadb",
++      "sides": [
++        "4342",
++        "98"
++      ]
++    },
++    "77190": {
++      "date": "2025-08-16",
++      "dfb_id": "2397664",
++      "dfb_sha256": "5867727076bb332667500b81624b25df60ad2edb8f83eee01f29f643f3357e4d",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/bfc-dynamo-vfl-bochum-2397664",
++      "edition": "2025/2026",
++      "native_results": [
++        {
++          "pointsTeam1": 0,
++          "pointsTeam2": 0,
++          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
++          "resultID": 118422,
++          "resultName": "Halbzeit",
++          "resultOrderID": 1,
++          "resultTypeID": 1,
++          "resultTypeKind": "HalfTime"
++        },
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 3,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 118423,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        },
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 3,
++          "resultDescription": "Ergebnis nach Nachspielzeit",
++          "resultID": 118437,
++          "resultName": "Nachspielzeit",
++          "resultOrderID": 3,
++          "resultTypeID": 3,
++          "resultTypeKind": "Unknown"
++        }
++      ],
++      "observed": {
++        "et": [
++          1,
++          3
++        ],
++        "ft": [
++          1,
++          3
++        ],
++        "ht": [
++          0,
++          0
++        ]
++      },
++      "official": {
++        "et": [
++          1,
++          3
++        ],
++        "ft": [
++          1,
++          1
++        ],
++        "ht": [
++          0,
++          0
++        ],
++        "p": null
++      },
++      "provider": "openligadb",
++      "sides": [
++        "1634",
++        "129"
++      ]
++    },
++    "77193": {
++      "date": "2025-08-18",
++      "dfb_id": "2397661",
++      "dfb_sha256": "dfe67f839b628c67e3858101b94ac2d215c16b0a84bb820786603c6ee0c1bbc4",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/preussen-muenster-hertha-bsc-2397661",
++      "edition": "2025/2026",
++      "native_results": [
++        {
++          "pointsTeam1": 0,
++          "pointsTeam2": 0,
++          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
++          "resultID": 118475,
++          "resultName": "Halbzeit",
++          "resultOrderID": 1,
++          "resultTypeID": 1,
++          "resultTypeKind": "HalfTime"
++        },
++        {
++          "pointsTeam1": 0,
++          "pointsTeam2": 0,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 118476,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        },
++        {
++          "pointsTeam1": 0,
++          "pointsTeam2": 0,
++          "resultDescription": "Ergebnis nach Nachspielzeit",
++          "resultID": 127391,
++          "resultName": "Nachspielzeit",
++          "resultOrderID": 3,
++          "resultTypeID": 3,
++          "resultTypeKind": "Unknown"
++        },
++        {
++          "pointsTeam1": 3,
++          "pointsTeam2": 5,
++          "resultDescription": "Ergebnis nach Elfmeterschießen",
++          "resultID": 118479,
++          "resultName": "Elfmeterschießen",
++          "resultOrderID": 4,
++          "resultTypeID": 5,
++          "resultTypeKind": "AfterPenalties"
++        }
++      ],
++      "observed": {
++        "et": [
++          0,
++          0
++        ],
++        "ft": [
++          0,
++          0
++        ],
++        "ht": [
++          0,
++          0
++        ],
++        "p": [
++          3,
++          5
++        ]
++      },
++      "official": {
++        "et": [
++          0,
++          0
++        ],
++        "ft": [
++          0,
++          0
++        ],
++        "ht": [
++          0,
++          0
++        ],
++        "p": [
++          3,
++          5
++        ]
++      },
++      "provider": "openligadb",
++      "sides": [
++        "188",
++        "54"
++      ]
++    },
++    "77201": {
++      "date": "2025-08-17",
++      "dfb_id": "2397653",
++      "dfb_sha256": "a7711d7e3f370f8351ee16cff4470d8296328198db8bb851a0b5dde0229d7208",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/1-fc-lok-leipzig-fc-schalke-04-2397653",
++      "edition": "2025/2026",
++      "native_results": [
++        {
++          "pointsTeam1": 0,
++          "pointsTeam2": 0,
++          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
++          "resultID": 118462,
++          "resultName": "Halbzeit",
++          "resultOrderID": 1,
++          "resultTypeID": 1,
++          "resultTypeKind": "HalfTime"
++        },
++        {
++          "pointsTeam1": 0,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 118463,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        },
++        {
++          "pointsTeam1": 0,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Nachspielzeit",
++          "resultID": 118464,
++          "resultName": "Nachspielzeit",
++          "resultOrderID": 3,
++          "resultTypeID": 3,
++          "resultTypeKind": "Unknown"
++        }
++      ],
++      "observed": {
++        "et": [
++          0,
++          1
++        ],
++        "ft": [
++          0,
++          1
++        ],
++        "ht": [
++          0,
++          0
++        ]
++      },
++      "official": {
++        "et": [
++          0,
++          1
++        ],
++        "ft": [
++          0,
++          0
++        ],
++        "ht": [
++          0,
++          0
++        ],
++        "p": null
++      },
++      "provider": "openligadb",
++      "sides": [
++        "1584",
++        "9"
++      ]
++    },
++    "79584": {
++      "date": "2025-10-29",
++      "dfb_id": "2411109",
++      "dfb_sha256": "d7817324d6b3540403e5346767289464f38def462bef571bd4b4926114b130e4",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/2-runde/1-fc-union-berlin-arminia-bielefeld-2411109",
++      "edition": "2025/2026",
++      "native_results": [
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
++          "resultID": 119938,
++          "resultName": "Halbzeit",
++          "resultOrderID": 1,
++          "resultTypeID": 1,
++          "resultTypeKind": "HalfTime"
++        },
++        {
++          "pointsTeam1": 2,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 119939,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        }
++      ],
++      "observed": {
++        "ft": [
++          2,
++          1
++        ],
++        "ht": [
++          1,
++          1
++        ]
++      },
++      "official": {
++        "et": [
++          2,
++          1
++        ],
++        "ft": [
++          1,
++          1
++        ],
++        "ht": [
++          1,
++          1
++        ],
++        "p": null
++      },
++      "provider": "openligadb",
++      "sides": [
++        "80",
++        "83"
++      ]
++    },
++    "79589": {
++      "date": "2025-10-28",
++      "dfb_id": "2411114",
++      "dfb_sha256": "3d80db111abc71cf016550f4e4cad6b529008a32b11da209c76378eca4736b15",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/2-runde/eintracht-frankfurt-borussia-dortmund-2411114",
++      "edition": "2025/2026",
++      "native_results": [
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 0,
++          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
++          "resultID": 119896,
++          "resultName": "Halbzeit",
++          "resultOrderID": 1,
++          "resultTypeID": 1,
++          "resultTypeKind": "HalfTime"
++        },
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 119897,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        },
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Nachspielzeit",
++          "resultID": 127392,
++          "resultName": "Nachspielzeit",
++          "resultOrderID": 3,
++          "resultTypeID": 3,
++          "resultTypeKind": "Unknown"
++        },
++        {
++          "pointsTeam1": 3,
++          "pointsTeam2": 5,
++          "resultDescription": "Ergebnis nach Elfmeterschießen",
++          "resultID": 120732,
++          "resultName": "Elfmeterschießen",
++          "resultOrderID": 4,
++          "resultTypeID": 5,
++          "resultTypeKind": "AfterPenalties"
++        }
++      ],
++      "observed": {
++        "et": [
++          1,
++          1
++        ],
++        "ft": [
++          1,
++          1
++        ],
++        "ht": [
++          1,
++          0
++        ],
++        "p": [
++          3,
++          5
++        ]
++      },
++      "official": {
++        "et": [
++          1,
++          1
++        ],
++        "ft": [
++          1,
++          1
++        ],
++        "ht": [
++          1,
++          0
++        ],
++        "p": [
++          2,
++          4
++        ]
++      },
++      "provider": "openligadb",
++      "sides": [
++        "91",
++        "7"
++      ]
++    },
++    "79593": {
++      "date": "2025-10-29",
++      "dfb_id": "2411118",
++      "dfb_sha256": "2d258b6e874b54d1d5aa21e0f6eff54f59219fd2fb00b36d146f59fcd1a0a200",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/2-runde/sc-paderborn-07-bayer-leverkusen-2411118",
++      "edition": "2025/2026",
++      "native_results": [
++        {
++          "pointsTeam1": 0,
++          "pointsTeam2": 0,
++          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
++          "resultID": 119919,
++          "resultName": "Halbzeit",
++          "resultOrderID": 1,
++          "resultTypeID": 1,
++          "resultTypeKind": "HalfTime"
++        },
++        {
++          "pointsTeam1": 2,
++          "pointsTeam2": 2,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 119920,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        },
++        {
++          "pointsTeam1": 2,
++          "pointsTeam2": 4,
++          "resultDescription": "Ergebnis nach Nachspielzeit",
++          "resultID": 119937,
++          "resultName": "Nachspielzeit",
++          "resultOrderID": 3,
++          "resultTypeID": 3,
++          "resultTypeKind": "Unknown"
++        }
++      ],
++      "observed": {
++        "et": [
++          2,
++          4
++        ],
++        "ft": [
++          2,
++          2
++        ],
++        "ht": [
++          0,
++          0
++        ]
++      },
++      "official": {
++        "et": [
++          2,
++          4
++        ],
++        "ft": [
++          1,
++          1
++        ],
++        "ht": [
++          0,
++          0
++        ],
++        "p": null
++      },
++      "provider": "openligadb",
++      "sides": [
++        "31",
++        "6"
++      ]
++    },
++    "79597": {
++      "date": "2025-10-28",
++      "dfb_id": "2411122",
++      "dfb_sha256": "057825a2b6f191683faaa560349c7b137760c8672d2f6cae0842468fa4e10df8",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/2-runde/fc-st-pauli-tsg-hoffenheim-2411122",
++      "edition": "2025/2026",
++      "native_results": [
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 0,
++          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
++          "resultID": 119906,
++          "resultName": "Halbzeit",
++          "resultOrderID": 1,
++          "resultTypeID": 1,
++          "resultTypeKind": "HalfTime"
++        },
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 119907,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        },
++        {
++          "pointsTeam1": 2,
++          "pointsTeam2": 2,
++          "resultDescription": "Ergebnis nach Nachspielzeit",
++          "resultID": 127393,
++          "resultName": "Nachspielzeit",
++          "resultOrderID": 3,
++          "resultTypeID": 3,
++          "resultTypeKind": "Unknown"
++        },
++        {
++          "pointsTeam1": 10,
++          "pointsTeam2": 9,
++          "resultDescription": "Ergebnis nach Elfmeterschießen",
++          "resultID": 120733,
++          "resultName": "Elfmeterschießen",
++          "resultOrderID": 4,
++          "resultTypeID": 5,
++          "resultTypeKind": "AfterPenalties"
++        }
++      ],
++      "observed": {
++        "et": [
++          2,
++          2
++        ],
++        "ft": [
++          1,
++          1
++        ],
++        "ht": [
++          1,
++          0
++        ],
++        "p": [
++          10,
++          9
++        ]
++      },
++      "official": {
++        "et": [
++          2,
++          2
++        ],
++        "ft": [
++          1,
++          1
++        ],
++        "ht": [
++          1,
++          0
++        ],
++        "p": [
++          8,
++          7
++        ]
++      },
++      "provider": "openligadb",
++      "sides": [
++        "98",
++        "175"
++      ]
++    },
++    "79781": {
++      "date": "2025-12-03",
++      "dfb_id": "2412762",
++      "dfb_sha256": "58973ef43b3f954597780a2f470049ba4e1c4625f8c5d81f7bfd2110799d6687",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/achtelfinale/hamburger-sv-holstein-kiel-2412762",
++      "edition": "2025/2026",
++      "native_results": [
++        {
++          "pointsTeam1": 0,
++          "pointsTeam2": 0,
++          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
++          "resultID": 120796,
++          "resultName": "Halbzeit",
++          "resultOrderID": 1,
++          "resultTypeID": 1,
++          "resultTypeKind": "HalfTime"
++        },
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 120797,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        },
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Nachspielzeit",
++          "resultID": 127394,
++          "resultName": "Nachspielzeit",
++          "resultOrderID": 3,
++          "resultTypeID": 3,
++          "resultTypeKind": "Unknown"
++        },
++        {
++          "pointsTeam1": 3,
++          "pointsTeam2": 5,
++          "resultDescription": "Ergebnis nach Elfmeterschießen",
++          "resultID": 120800,
++          "resultName": "Elfmeterschießen",
++          "resultOrderID": 4,
++          "resultTypeID": 5,
++          "resultTypeKind": "AfterPenalties"
++        }
++      ],
++      "observed": {
++        "et": [
++          1,
++          1
++        ],
++        "ft": [
++          1,
++          1
++        ],
++        "ht": [
++          0,
++          0
++        ],
++        "p": [
++          3,
++          5
++        ]
++      },
++      "official": {
++        "et": [
++          1,
++          1
++        ],
++        "ft": [
++          0,
++          0
++        ],
++        "ht": [
++          0,
++          0
++        ],
++        "p": [
++          2,
++          4
++        ]
++      },
++      "provider": "openligadb",
++      "sides": [
++        "100",
++        "104"
++      ]
++    },
++    "80173": {
++      "date": "2026-02-10",
++      "dfb_id": "2413233",
++      "dfb_sha256": "70b67b4712f27e63168ef2cd62cb1255419a3dea69dc1dce8a35bc095f3640d6",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/viertelfinale/hertha-bsc-sc-freiburg-2413233",
++      "edition": "2025/2026",
++      "native_results": [
++        {
++          "pointsTeam1": 0,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 123093,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        },
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Nachspielzeit",
++          "resultID": 123107,
++          "resultName": "Nachspielzeit",
++          "resultOrderID": 3,
++          "resultTypeID": 3,
++          "resultTypeKind": "Unknown"
++        },
++        {
++          "pointsTeam1": 5,
++          "pointsTeam2": 6,
++          "resultDescription": "Ergebnis nach Elfmeterschießen",
++          "resultID": 123108,
++          "resultName": "Elfmeterschießen",
++          "resultOrderID": 4,
++          "resultTypeID": 5,
++          "resultTypeKind": "AfterPenalties"
++        }
++      ],
++      "observed": {
++        "et": [
++          1,
++          1
++        ],
++        "ft": [
++          0,
++          1
++        ],
++        "p": [
++          5,
++          6
++        ]
++      },
++      "official": {
++        "et": [
++          1,
++          1
++        ],
++        "ft": [
++          0,
++          0
++        ],
++        "ht": [
++          0,
++          0
++        ],
++        "p": [
++          4,
++          5
++        ]
++      },
++      "provider": "openligadb",
++      "sides": [
++        "54",
++        "112"
++      ]
++    },
++    "81114": {
++      "date": "2026-04-23",
++      "dfb_id": "2416405",
++      "dfb_sha256": "7c7644913900262e2673acaae385cff126b4408a4bb6dcaa6b4503b619425ea5",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/halbfinale/vfb-stuttgart-sc-freiburg-2416405",
++      "edition": "2025/2026",
++      "native_results": [
++        {
++          "pointsTeam1": 0,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
++          "resultID": 124700,
++          "resultName": "Halbzeit",
++          "resultOrderID": 1,
++          "resultTypeID": 1,
++          "resultTypeKind": "HalfTime"
++        },
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 124701,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        },
++        {
++          "pointsTeam1": 2,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Nachspielzeit",
++          "resultID": 124702,
++          "resultName": "Nachspielzeit",
++          "resultOrderID": 3,
++          "resultTypeID": 3,
++          "resultTypeKind": "Unknown"
++        }
++      ],
++      "observed": {
++        "et": [
++          2,
++          1
++        ],
++        "ft": [
++          1,
++          1
++        ],
++        "ht": [
++          0,
++          1
++        ]
++      },
++      "official": {
++        "et": [
++          2,
++          1
++        ],
++        "ft": [
++          1,
++          1
++        ],
++        "ht": [
++          0,
++          1
++        ],
++        "p": null
++      },
++      "provider": "openligadb",
++      "sides": [
++        "16",
++        "112"
++      ]
++    },
++    "81840": {
++      "date": "2026-08-22",
++      "dfb_id": "2418315",
++      "dfb_sha256": "4d32e5fdbac41983f9d538db4c5403c3bed4bbf5f322dc45f1c585e4f6f981bc",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/sg-sonnenhof-grossaspach-arminia-bielefeld-2418315",
++      "edition": "2026/2027",
++      "native_results": [
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 2,
++          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
++          "resultID": 127285,
++          "resultName": "Halbzeit",
++          "resultOrderID": 1,
++          "resultTypeID": 1,
++          "resultTypeKind": "HalfTime"
++        },
++        {
++          "pointsTeam1": 2,
++          "pointsTeam2": 2,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 127286,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        },
++        {
++          "pointsTeam1": 2,
++          "pointsTeam2": 2,
++          "resultDescription": "Ergebnis nach Verlängerung",
++          "resultID": 127298,
++          "resultName": "Verlängerung",
++          "resultOrderID": 3,
++          "resultTypeID": 4,
++          "resultTypeKind": "AfterExtraTime"
++        },
++        {
++          "pointsTeam1": 5,
++          "pointsTeam2": 2,
++          "resultDescription": "Ergebnis nach Elfmeterschießen",
++          "resultID": 127301,
++          "resultName": "Elfmeterschießen",
++          "resultOrderID": 4,
++          "resultTypeID": 5,
++          "resultTypeKind": "AfterPenalties"
++        }
++      ],
++      "observed": {
++        "et": [
++          2,
++          2
++        ],
++        "ft": [
++          2,
++          2
++        ],
++        "ht": [
++          1,
++          2
++        ],
++        "p": [
++          5,
++          2
++        ]
++      },
++      "official": {
++        "et": [
++          2,
++          2
++        ],
++        "ft": [
++          2,
++          2
++        ],
++        "ht": [
++          1,
++          2
++        ],
++        "p": [
++          3,
++          0
++        ]
++      },
++      "provider": "openligadb",
++      "sides": [
++        "529",
++        "83"
++      ]
++    },
++    "81843": {
++      "date": "2026-08-24",
++      "dfb_id": "2418318",
++      "dfb_sha256": "c98eee1a81ed761ab8868d592d1f471560c74c16d17dc22b5ed91908dd6c7010",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/hallescher-fc-fc-schalke-04-2418318",
++      "edition": "2026/2027",
++      "native_results": [
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 0,
++          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
++          "resultID": 127384,
++          "resultName": "Halbzeit",
++          "resultOrderID": 1,
++          "resultTypeID": 1,
++          "resultTypeKind": "HalfTime"
++        },
++        {
++          "pointsTeam1": 2,
++          "pointsTeam2": 2,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 127385,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        },
++        {
++          "pointsTeam1": 2,
++          "pointsTeam2": 5,
++          "resultDescription": "Ergebnis nach Verlängerung",
++          "resultID": 127386,
++          "resultName": "Verlängerung",
++          "resultOrderID": 3,
++          "resultTypeID": 4,
++          "resultTypeKind": "AfterExtraTime"
++        }
++      ],
++      "observed": {
++        "et": [
++          2,
++          5
++        ],
++        "ft": [
++          2,
++          2
++        ],
++        "ht": [
++          1,
++          0
++        ]
++      },
++      "official": {
++        "et": [
++          2,
++          5
++        ],
++        "ft": [
++          2,
++          2
++        ],
++        "ht": [
++          1,
++          0
++        ],
++        "p": null
++      },
++      "provider": "openligadb",
++      "sides": [
++        "208",
++        "9"
++      ]
++    },
++    "81849": {
++      "date": "2026-08-22",
++      "dfb_id": "2418324",
++      "dfb_sha256": "d97b278e3a0b66c0e523a4fa5b6826662c1f9ad812293597ab28ed38a5627d72",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/1-fc-saarbruecken-hertha-bsc-2418324",
++      "edition": "2026/2027",
++      "native_results": [
++        {
++          "pointsTeam1": 0,
++          "pointsTeam2": 0,
++          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
++          "resultID": 127271,
++          "resultName": "Halbzeit",
++          "resultOrderID": 1,
++          "resultTypeID": 1,
++          "resultTypeKind": "HalfTime"
++        },
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 127272,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        },
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Verlängerung",
++          "resultID": 127294,
++          "resultName": "Verlängerung",
++          "resultOrderID": 3,
++          "resultTypeID": 4,
++          "resultTypeKind": "AfterExtraTime"
++        },
++        {
++          "pointsTeam1": 3,
++          "pointsTeam2": 5,
++          "resultDescription": "Ergebnis nach Elfmeterschießen",
++          "resultID": 127289,
++          "resultName": "Elfmeterschießen",
++          "resultOrderID": 4,
++          "resultTypeID": 5,
++          "resultTypeKind": "AfterPenalties"
++        }
++      ],
++      "observed": {
++        "et": [
++          1,
++          1
++        ],
++        "ft": [
++          1,
++          1
++        ],
++        "ht": [
++          0,
++          0
++        ],
++        "p": [
++          3,
++          5
++        ]
++      },
++      "official": {
++        "et": [
++          1,
++          1
++        ],
++        "ft": [
++          1,
++          1
++        ],
++        "ht": [
++          0,
++          0
++        ],
++        "p": [
++          2,
++          4
++        ]
++      },
++      "provider": "openligadb",
++      "sides": [
++        "3078",
++        "54"
++      ]
++    },
++    "81850": {
++      "date": "2026-08-22",
++      "dfb_id": "2418325",
++      "dfb_sha256": "2f4fd8f7c7d0f987caaae3114cb9e3d4a4a9224d9fba49541ea795ed0d23101a",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/fc-viktoria-koeln-1-fc-nuernberg-2418325",
++      "edition": "2026/2027",
++      "native_results": [
++        {
++          "pointsTeam1": 0,
++          "pointsTeam2": 0,
++          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
++          "resultID": 127273,
++          "resultName": "Halbzeit",
++          "resultOrderID": 1,
++          "resultTypeID": 1,
++          "resultTypeKind": "HalfTime"
++        },
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 127274,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        },
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Verlängerung",
++          "resultID": 127295,
++          "resultName": "Verlängerung",
++          "resultOrderID": 3,
++          "resultTypeID": 4,
++          "resultTypeKind": "AfterExtraTime"
++        },
++        {
++          "pointsTeam1": 5,
++          "pointsTeam2": 6,
++          "resultDescription": "Ergebnis nach Elfmeterschießen",
++          "resultID": 127293,
++          "resultName": "Elfmeterschießen",
++          "resultOrderID": 4,
++          "resultTypeID": 5,
++          "resultTypeKind": "AfterPenalties"
++        }
++      ],
++      "observed": {
++        "et": [
++          1,
++          1
++        ],
++        "ft": [
++          1,
++          1
++        ],
++        "ht": [
++          0,
++          0
++        ],
++        "p": [
++          5,
++          6
++        ]
++      },
++      "official": {
++        "et": [
++          1,
++          1
++        ],
++        "ft": [
++          1,
++          1
++        ],
++        "ht": [
++          0,
++          0
++        ],
++        "p": [
++          4,
++          5
++        ]
++      },
++      "provider": "openligadb",
++      "sides": [
++        "2199",
++        "79"
++      ]
++    },
++    "81859": {
++      "date": "2026-08-21",
++      "dfb_id": "2418334",
++      "dfb_sha256": "ce1a0bd60394fb956a1db22e8f0b25beeaebdc2c46da595d6493157f9732e515",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/sv-waldhof-mannheim-1-fc-kaiserslautern-2418334",
++      "edition": "2026/2027",
++      "native_results": [
++        {
++          "pointsTeam1": 0,
++          "pointsTeam2": 0,
++          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
++          "resultID": 127245,
++          "resultName": "Halbzeit",
++          "resultOrderID": 1,
++          "resultTypeID": 1,
++          "resultTypeKind": "HalfTime"
++        },
++        {
++          "pointsTeam1": 0,
++          "pointsTeam2": 0,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 127246,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        },
++        {
++          "pointsTeam1": 0,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Verlängerung",
++          "resultID": 127256,
++          "resultName": "Verlängerung",
++          "resultOrderID": 3,
++          "resultTypeID": 4,
++          "resultTypeKind": "AfterExtraTime"
++        }
++      ],
++      "observed": {
++        "et": [
++          0,
++          1
++        ],
++        "ft": [
++          0,
++          0
++        ],
++        "ht": [
++          0,
++          0
++        ]
++      },
++      "official": {
++        "et": [
++          0,
++          1
++        ],
++        "ft": [
++          0,
++          0
++        ],
++        "ht": [
++          0,
++          0
++        ],
++        "p": null
++      },
++      "provider": "openligadb",
++      "sides": [
++        "553",
++        "76"
++      ]
++    },
++    "81862": {
++      "date": "2026-08-24",
++      "dfb_id": "2418337",
++      "dfb_sha256": "75477ff29a460b89381dd03203ca3385af1fcfc991b968307578d9d026969382",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/vsg-altglienicke-vfl-wolfsburg-2418337",
++      "edition": "2026/2027",
++      "native_results": [
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 0,
++          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
++          "resultID": 127376,
++          "resultName": "Halbzeit",
++          "resultOrderID": 1,
++          "resultTypeID": 1,
++          "resultTypeKind": "HalfTime"
++        },
++        {
++          "pointsTeam1": 2,
++          "pointsTeam2": 2,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 127377,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        },
++        {
++          "pointsTeam1": 3,
++          "pointsTeam2": 3,
++          "resultDescription": "Ergebnis nach Verlängerung",
++          "resultID": 127382,
++          "resultName": "Verlängerung",
++          "resultOrderID": 3,
++          "resultTypeID": 4,
++          "resultTypeKind": "AfterExtraTime"
++        },
++        {
++          "pointsTeam1": 8,
++          "pointsTeam2": 9,
++          "resultDescription": "Ergebnis nach Elfmeterschießen",
++          "resultID": 127383,
++          "resultName": "Elfmeterschießen",
++          "resultOrderID": 4,
++          "resultTypeID": 5,
++          "resultTypeKind": "AfterPenalties"
++        }
++      ],
++      "observed": {
++        "et": [
++          3,
++          3
++        ],
++        "ft": [
++          2,
++          2
++        ],
++        "ht": [
++          1,
++          0
++        ],
++        "p": [
++          8,
++          9
++        ]
++      },
++      "official": {
++        "et": [
++          3,
++          3
++        ],
++        "ft": [
++          2,
++          2
++        ],
++        "ht": [
++          1,
++          0
++        ],
++        "p": [
++          5,
++          6
++        ]
++      },
++      "provider": "openligadb",
++      "sides": [
++        "4600",
++        "131"
++      ]
++    },
++    "87627": {
++      "date": "2026-10-28",
++      "dfb_id": "2430552",
++      "dfb_sha256": "9b3a705a3ac964592a42f01604acacd11f9a81ec979f3f43c871076fa0f31905",
++      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/2-runde/holstein-kiel-tsg-hoffenheim-2430552",
++      "edition": "2026/2027",
++      "native_results": [
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
++          "resultID": 130476,
++          "resultName": "Halbzeit",
++          "resultOrderID": 1,
++          "resultTypeID": 1,
++          "resultTypeKind": "HalfTime"
++        },
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
++          "resultID": 130477,
++          "resultName": "Endergebnis",
++          "resultOrderID": 2,
++          "resultTypeID": 2,
++          "resultTypeKind": "After90Minutes"
++        },
++        {
++          "pointsTeam1": 1,
++          "pointsTeam2": 1,
++          "resultDescription": "Ergebnis nach Verlängerung",
++          "resultID": 130480,
++          "resultName": "Verlängerung",
++          "resultOrderID": 3,
++          "resultTypeID": 4,
++          "resultTypeKind": "AfterExtraTime"
++        },
++        {
++          "pointsTeam1": 5,
++          "pointsTeam2": 4,
++          "resultDescription": "Ergebnis nach Elfmeterschießen",
++          "resultID": 130481,
++          "resultName": "Elfmeterschießen",
++          "resultOrderID": 4,
++          "resultTypeID": 5,
++          "resultTypeKind": "AfterPenalties"
++        }
++      ],
++      "observed": {
++        "et": [
++          1,
++          1
++        ],
++        "ft": [
++          1,
++          1
++        ],
++        "ht": [
++          1,
++          1
++        ],
++        "p": [
++          5,
++          4
++        ]
++      },
++      "official": {
++        "et": [
++          1,
++          1
++        ],
++        "ft": [
++          1,
++          1
++        ],
++        "ht": [
++          1,
++          1
++        ],
++        "p": [
++          4,
++          3
++        ]
++      },
++      "provider": "openligadb",
++      "sides": [
++        "104",
++        "175"
++      ]
++    }
++  },
++  "source_body_sha256": {
++    "2025/2026": "b72e3d698a5262a130c6d77a505497ab9d08b0f1c31aaa1765e4f7039843b6e3",
++    "2026/2027": "85220cbd34ffa016837098f4e11e4b9532e57d0da431dbf8aa0f250a82cd23c9"
++  }
++}
+diff --git a/backend/vega/sources/open_matchday.py b/backend/vega/sources/open_matchday.py
+index 5663452269..f74dc50a5c 100644
+--- a/backend/vega/sources/open_matchday.py
++++ b/backend/vega/sources/open_matchday.py
+@@ -13,6 +13,12 @@ the team statistics the source gives (shots, shots on target, fouls, corners, pe
+ too, cards) become core.team_match_stats rows. The source's goal minutes name no side and
+ are not kept. Read every six hours; an unreadable competition is skipped, the others are
+ written.
 +
-+Each accepted row keeps its basis: the club's results Vega counted when it was observed
-+(core.table_results, migration 138). api.standings serves SportScore's table, and no other
-+provider's, until the current results supersede it and a current, adequately covered
-+Vega table is ready (migration 150). A valid repeat advances the observation time when
-+the table still qualifies, including a fresh organiser proof for a short Swedish calendar.
++A competition's files replace its edition only as the complete snapshot the summary describes
++(read_files: its declared rows, no reported error) and only when they keep every result the
++base holds (snapshot.py); otherwise the edition stays as it was, the competition counts as
++unmatched and ops.parse_failures says why (FAILURE_MODES.md §19). A match whose values and
++statistics are unchanged is not written again.
  """
  
-+from collections import Counter, defaultdict
- from datetime import timedelta
-+import json
+ import csv
+@@ -20,8 +26,8 @@ from datetime import timedelta
+ import io
  import re
- import unicodedata
-+from functools import partial
- from urllib.parse import urlencode
  
--from . import SourceError, normalize
-+from ..models import _is_league
-+from . import SourceError, lock_scope, normalize
- 
- URL = "https://sportscore.com/api/widget/standings/"
- PERIOD = timedelta(hours=2)
-+ATOMIC_RUN_STATUS = True
- 
- # dashboard/frontend/src/services/sportscore-standings.js (main); a drift test compares them.
- LEAGUES = {
-@@ -99,47 +120,260 @@ LEAGUES = {
-     "l_4WFCIZ": "english-premier-league",
+-from . import SourceError
+-from .cups import _team
++from . import SourceError, failure, open_matchday_history, snapshot
++from .cups import _round, _team
+ from ..scope import REMOVED_FOLDERS
+ from ..seasons import sporting_season
+ from ..store import Store
+@@ -58,6 +64,10 @@ SPELLINGS = {
  }
- 
-+# Tables of an accepted observation that a later response may leave out (§2.1, rule 13b), written
-+# here once reviewed: {(LEAGUES key, season label, table name): "reviewer, date: reason"}. Without an
-+# entry, a table that disappears while the edition's other tables remain refuses the response, even
-+# when its clubs all appear elsewhere (the World Cup's ranking of third-placed teams). The pattern of
-+# snapshot.RETRACTIONS.
-+RETIRED_TABLES = {}
-+# Rows a later response may leave out of a table that stays (§2.1, rule 13c), once reviewed:
-+# {(LEAGUES key, season label, table name, the club's public id): "reviewer, date: reason"}. An
-+# entry lets that club leave that table of that edition, and nothing else. A refusal's detail names
-+# the key to review.
-+RETIRED_ROWS = {}
-+# A widget answer larger than this is not a league table (it was cut silently before).
-+MAX_TABLES, MAX_ROWS = 30, 100
-+# Stored column -> widget key. A row without its rank, matches or points is no standings row;
-+# the other numbers may be unknown, until they have been known once (MISSING_FIELD).
-+FIELDS = {"position": "pos", "played": "p", "won": "w", "drawn": "d", "lost": "l",
-+          "goals_for": "gf", "goals_against": "ga", "points": "pts"}
-+REQUIRED = ("position", "played", "points")
-+COLUMNS = ("group_name", "team_id", *FIELDS)
-+# The writer's own rows of an edition: SportScore's, without a stage (it writes none). Rows of
-+# another provider or of a stage are neither read, replaced nor dated here (§2.2).
-+OWN = "competition_season_id = %s AND source = 'sportscore' AND stage IS NULL"
-+# The counts of a row, never negative; in core.table_results' order, the basis: what Vega counted
-+# of a club when its row was observed.
-+RESULTS = ("played", "won", "drawn", "lost", "goals_for", "goals_against")
-+OUTCOMES = ("won", "drawn", "lost")
-+NO_RESULT = (0,) * len(RESULTS)
-+# Not every club can be this far ahead of the matches the edition has kicked off for it: last
-+# season's final table seen at the next season's start is about thirty ahead, and four leaves
-+# room for fixtures our calendar lacks (§2.1, rule 11).
-+SLACK = 4
-+# The Allsvenskan site uses this season-specific table. Its recent form identifies the
-+# competition and edition. Read it only when the Swedish primary calendar is too short.
-+ALLSVENSKAN = "l_1XsMdH"
-+ALLSVENSKAN_URL = "https://gql.sportomedia.se/graphql"
-+ALLSVENSKAN_QUERY = """query VerifySeason($year: Int!) {
-+  standingsForLeague(configLeagueName: "allsvenskan", configSeasonStartYear: $year, type: "total") {
-+    standings { teamName teamId stats { name value } form { configLeagueName configSeasonStartYear } }
-+  }
-+}"""
-+ALLSVENSKAN_FIELDS = ("gp", "w", "t", "l", "gf", "ga")
-+# The organiser calls IF Brommapojkarna "BP". Bind that abbreviation to its organiser ID.
-+ALLSVENSKAN_BP = 25591
-+PROOF_TTL = PERIOD + timedelta(minutes=5)
-+_allsvenskan_proof = None
-+# Captured native schedules of the 2026/27 league phases. Other editions need their own evidence.
-+UEFA_LEAGUE_PHASES = {"l_0bfbkO": 8, "l_38d9HA": 8, "l_2WZ2tt": 6}
-+UEFA_LEAGUE_SEASON = "2026/2027"
-+CONTENT_REFUSALS = frozenset({
-+    "UNEXPECTED_RESPONSE", "INVALID_ROW", "EMPTY_TABLE", "DUPLICATE_GROUP", "DUPLICATE_POSITION",
-+    "DUPLICATE_ROW", "WRONG_EDITION", "UNMATCHED_TEAMS", "UNVERIFIED_EDITION", "INCOMPLETE_TABLE",
-+    "UNVERIFIED_TABLE", "MISSING_FIELD", "PLAYED_DECREASED",
-+})
-+# The matches of rounds Vega's table counts that the edition has kicked off by an instant, per club.
-+KICKED_OFF = """SELECT x.team_id, count(*) FROM core.matches m LEFT JOIN core.rounds r ON r.id = m.round_id
-+  CROSS JOIN LATERAL (VALUES (m.home_team_id), (m.away_team_id)) AS x(team_id)
-+  WHERE m.competition_season_id = %s AND m.kickoff_at <= %s AND m.status <> 'canceled' AND x.team_id IS NOT NULL
-+    AND coalesce(r.stage, 'regular') IN ('regular', 'group')
-+  GROUP BY x.team_id"""
-+# A row stored before 138 has no basis: it is behind once a counted match finished after it.
-+# api.standings applies the same rule to such rows.
-+FINISHED_SINCE = """SELECT EXISTS (
-+  SELECT 1 FROM core.matches m LEFT JOIN core.rounds r ON r.id = m.round_id
-+  WHERE m.competition_season_id = %s AND m.first_finished_at > %s AND m.status = 'finished'
-+    AND m.home_score IS NOT NULL AND m.away_score IS NOT NULL AND coalesce(r.stage, 'regular') IN ('regular', 'group'))"""
-+
- 
- def scopes(now):
-     return {f"standings:{key}": PERIOD for key in LEAGUES}
+ # CSV columns -> team_match_stats columns, per side and period.
+ STATS = {"shots": "total_shots", "target": "shots_on_target", "fouls": "fouls", "corners": "corners", "yellow": "yellow_cards", "red": "red_cards"}
++PERIODS = (("all", ""), ("first_half", "_1h"), ("second_half", "_2h"))
++# The columns each file must have for its rows to name a match (and a result its score).
++HEADERS = {"results": {"date", "home", "away", "ft_home", "ft_away"}, "fixtures": {"date", "home", "away"}}
++DAY = re.compile(r"\d{4}-\d{2}-\d{2}")
  
  
--def _number(value):
--    return value if isinstance(value, int) and not isinstance(value, bool) else (
--        int(value) if isinstance(value, float) and value.is_integer() else None)
-+def retry_after(code, period, transient):
-+    return period if code in CONTENT_REFUSALS else min(period, transient)
-+
-+
-+def _number(row, key, where):
-+    """A widget number: None when absent, an int when it is one (an integral float too)."""
-+    value = row.get(key)
-+    if value is None:
-+        return None
-+    if isinstance(value, bool) or not isinstance(value, (int, float)) or (isinstance(value, float) and not value.is_integer()):
-+        raise SourceError("INVALID_ROW", f"{where}: {key}={value!r}")
-+    return int(value)
+ # The source's country codes the base writes otherwise (core.countries, PitchAPI's teams).
+@@ -75,7 +85,11 @@ def scopes(now):
  
  
- def parse(payload, slug):
--    """[(group name or None, [row dict])] of a widget response; SourceError if it is not one."""
-+    """[(group name or None, [row dict])] of a widget response, its empty tables left out;
-+    SourceError when it is not one: every row named, ranked, with its matches and points."""
-     if not isinstance(payload, dict) or payload.get("sport") != "football" or payload.get("competition_slug") != slug \
-             or not isinstance(payload.get("tables"), list):
-         raise SourceError("UNEXPECTED_RESPONSE")
-+    if len(payload["tables"]) > MAX_TABLES:
-+        raise SourceError("INVALID_ROW", f"{len(payload['tables'])} tables")
-     tables = []
--    for table in payload["tables"][:30]:
--        rows = [
--            {"name": row["team"].strip(), "position": _number(row.get("pos")), "played": _number(row.get("p")),
--             "won": _number(row.get("w")), "drawn": _number(row.get("d")), "lost": _number(row.get("l")),
--             "goals_for": _number(row.get("gf")), "goals_against": _number(row.get("ga")), "points": _number(row.get("pts"))}
--            for row in (table.get("rows") or [])[:100]
--            if isinstance(row, dict) and isinstance(row.get("team"), str) and row["team"].strip()
--        ]
-+    for number, table in enumerate(payload["tables"], 1):
-+        raw = table.get("rows") if isinstance(table, dict) else None
-+        if not isinstance(table, dict) or not isinstance(raw if raw is not None else [], list):
-+            raise SourceError("INVALID_ROW", f"table {number} is not a table")
-+        if len(raw or []) > MAX_ROWS:
-+            raise SourceError("INVALID_ROW", f"table {number}: {len(raw)} rows")
-+        rows = []
-+        for place, row in enumerate(raw or [], 1):
-+            where = f"table {number} row {place}"
-+            if not isinstance(row, dict) or not isinstance(row.get("team"), str) or not normalize(row["team"]):
-+                raise SourceError("INVALID_ROW", f"{where}: no team")
-+            parsed = {"name": row["team"].strip(), **{field: _number(row, key, where) for field, key in FIELDS.items()}}
-+            unknown = [FIELDS[f] for f in REQUIRED if parsed[f] is None]
-+            if unknown or parsed["position"] < 1 or any(parsed[f] is not None and parsed[f] < 0 for f in RESULTS):
-+                raise SourceError("INVALID_ROW", f"{where} ({parsed['name']}): " + (f"no {', '.join(unknown)}" if unknown else "negative value"))
-+            rows.append(parsed)
-         if rows:
-             group = table.get("group").strip() if isinstance(table.get("group"), str) else ""
-             tables.append((group or None, rows))
-     return tables
+ def _int(value):
+-    return int(value) if isinstance(value, str) and value.strip().isdigit() else None
++    return int(value) if isinstance(value, str) and re.fullmatch(r"[0-9]+", value.strip()) else None
++
++
++def _count(value):
++    return value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else None
  
  
--def _edition_teams(conn, edition):
--    names, spelled = {}, {}
--    for team, *spellings in conn.execute(
--        """SELECT t.id, t.name, t.short_name, n.name FROM core.team_seasons ts JOIN core.teams t ON t.id = ts.team_id
-+def check(tables):
-+    """The response's own coherence, before any name is read (§2.1); SourceError otherwise."""
-+    if not tables:
-+        raise SourceError("EMPTY_TABLE", "no row")
-+    groups = [group for group, _ in tables]
-+    if len(tables) > 1 and len(set(groups)) != len(groups):
-+        raise SourceError("DUPLICATE_GROUP", "two tables named " + repr(next(g for g in groups if groups.count(g) > 1)))
-+    for group, rows in tables:
-+        label = group or "the table"
-+        seen, ranks = set(), {}
-+        for row in rows:
-+            outcomes = [row[field] for field in OUTCOMES if row[field] is not None]
-+            total = sum(outcomes)
-+            if total > row["played"] or (len(outcomes) == len(OUTCOMES) and total != row["played"]):
-+                raise SourceError("INVALID_ROW", f"{label}: {row['name']}: {total} reported results for {row['played']} matches")
-+            key = normalize(row["name"])
-+            if key in seen:
-+                raise SourceError("DUPLICATE_ROW", f"{row['name']} twice in {label}")
-+            seen.add(key)
-+            ranks.setdefault(row["position"], []).append(row)
-+        # Clubs sharing a rank have equal points: the one invariant of every ranking; no
-+        # tie-break order (difference, goals, head to head) is assumed.
-+        for position, tied in ranks.items():
-+            if len({r["points"] for r in tied}) > 1:
-+                raise SourceError("DUPLICATE_POSITION",
-+                                  f"position {position} of {label}: {', '.join(r['name'] for r in tied)}, with different points")
-+        # Tables of a split may continue one numbering (7-12): a single table holds all its ranks.
-+        if len(tables) == 1 and max(ranks) > len(rows):
-+            raise SourceError("INCOMPLETE_TABLE", f"position {max(ranks)} in a table of {len(rows)} rows")
-+
-+
-+# Pairs confirmed by the clubs or organisers, bound to the current PitchAPI identity
-+# and its canonical name. "B" and "U23" do not imply equivalence for other clubs.
-+REVIEWED_SPELLINGS = {
-+    # https://www.kaagent.be/nl/nieuws/07-08-2025/jong-kaa-gent-begint-aan-competitie
-+    # https://sportscore.com/football/team/gent-b/k82rekh3o61repz/
-+    ("t_1ekXAt", "gentu23"): ("Gent B",),
-+    # https://www.krcgenk.be/nl/nieuws/5167/maandag-eerste-training-jong-genk
-+    ("t_48QCy0", "genku23"): ("Jong Genk",),
-+    # https://rccelta.es/app/uploads/2024/10/RCCelta_CCAA_T23-24_definitiva.pdf
-+    ("t_4YXkkv", "celtafortuna"): ("Celta Vigo B",),
-+    # https://liga1.pe/bienvenidos-alianza-udh-y-juan-pablo-ii/
-+    ("t_1XzLP9", "juanpabloiicollege"): ("Juan Pablo II",),
-+}
-+BRANDED_RESERVES = {"celtafortuna": "reserve-b"}
-+AGE_GROUP = re.compile(r"\b(?:u(?:nder)?|sub)[ -]*(\d{1,2})s?\b")
-+SIDE_SUFFIXES = {"b": "reserve-b", "ii": "reserve-b", "c": "reserve-c", "iii": "reserve-c", "iv": "reserve-d",
-+                 "reserves": "reserve-b", "reserve": "reserve-b", "reserva": "reserve-b", "amateure": "reserve-b",
-+                 "youth": "youth", "academy": "academy", "juvenil": "youth", "primavera": "primavera"}
-+CLUB_SUFFIXES = frozenset({"fc", "cf", "sc", "ac", "afc", "fk", "sk", "sv"})
-+WOMEN_MARKER = r"\b(?:women(?:'?s)?|ladies|feminin[aeo]?s?|femenin[ao]s?|femminil[ei]|frauen|fem|dames)\b|\(\s*[wf]\s*\)|\[\s*[wf]\s*\]"
-+MEN_MARKER = r"\b(?:men(?:'?s)?|herren|masculin[aeo]?s?|hommes)\b|\(\s*m\s*\)|\[\s*m\s*\]"
-+SEX_MARKERS = re.compile(f"(?P<women>{WOMEN_MARKER})|(?P<men>{MEN_MARKER})")
-+AMBIGUOUS_WFC = re.compile(r"\bw\.?f\.?c\b", re.IGNORECASE)
-+
-+
-+def _ascii(name):
-+    return unicodedata.normalize("NFKD", name or "").encode("ascii", "ignore").decode().lower()
-+
-+
-+def _gender_text(name):
-+    words = re.sub(r"(?<=[a-z])(?=(?:Women|Men|Ladies)\b)", " ", name or "")
-+    return _ascii(re.sub(r"\bmänner\b", " men ", words, flags=re.IGNORECASE))
-+
-+
-+def _gender(name):
-+    markers = {token.lastgroup for token in SEX_MARKERS.finditer(_gender_text(name))}
-+    if markers:
-+        return markers.pop() if len(markers) == 1 else "ambiguous"
-+
-+
-+def _squad(name):
-+    # Classify affirmative squad markers. An initial letter or a club's founding year is
-+    # part of its name, while a separate final B/II or an age group identifies a side.
-+    separate = re.sub(r"(?<=[a-z])(?=(?:III?|U-?\d+|[BC])\b)", " ", name)
-+    plain = SEX_MARKERS.sub(" ", _gender_text(separate))
-+    branded = BRANDED_RESERVES.get(normalize(name))
-+    if branded:
-+        return branded
-+    age = AGE_GROUP.search(plain)
-+    if age:
-+        return "u" + age[1]
-+    plain = re.sub(r"\b(?:[a-z]\.)+[a-z]\.?", lambda form: form[0].replace(".", ""), plain)
-+    words = re.findall(r"[a-z0-9]+", plain)
-+    while len(words) > 1 and words[-1] in CLUB_SUFFIXES:
-+        words.pop()
-+    if len(words) > 1:
-+        if words[0] == "jong":
-+            return "reserve-b"
-+        return SIDE_SUFFIXES.get(words[-1])
-+
-+
-+def _spellings(conn, query, args, gender):
-+    names, spelled, squads, rejected = {}, {}, {}, set()
-+    for team, canonical, short, alias, provider_key in conn.execute(query, args).fetchall():
-+        if _gender(canonical) not in (None, gender):
-+            rejected.update(normalize(s) for s in (canonical, short, alias) if s)
-+            continue
-+        squad = squads.setdefault(team, _squad(canonical))
-+        reviewed = REVIEWED_SPELLINGS.get((provider_key, normalize(canonical)), ())
-+        reviewed_keys = {normalize(name) for name in reviewed}
-+        official = {normalize(canonical), normalize(short)} | reviewed_keys
-+        for spelling in (canonical, short, alias, *reviewed):
-+            if not spelling:
-+                continue
-+            key = normalize(spelling)
-+            # WFC may be a club's initials or a women's section. In a men's edition an
-+            # occurrence must already be evidenced by the canonical name or a reviewed spelling.
-+            ambiguous = gender == "men" and AMBIGUOUS_WFC.search(spelling) and key not in official
-+            if not ambiguous and _gender(spelling) in (None, gender) and (_squad(spelling) == squad or key in reviewed_keys):
-+                names.setdefault(team, set()).add(key)
-+                spelled.setdefault(team, set()).add(spelling)
-+            else:
-+                rejected.add(key)
-+    return names, spelled, squads, rejected
-+
-+
-+def _edition_teams(conn, edition, gender="men"):
-+    return _spellings(conn, """SELECT t.id, t.name, t.short_name, n.name, p.provider_key
-+           FROM core.team_seasons ts JOIN core.teams t ON t.id = ts.team_id
-            LEFT JOIN core.entity_names n ON n.entity_type = 'team' AND n.entity_id = t.id
--           WHERE ts.competition_season_id = %s""",
--        (edition,),
--    ).fetchall():
--        names.setdefault(team, set()).update(normalize(s) for s in spellings if s)
--        spelled.setdefault(team, set()).update(s for s in spellings if s)
--    return names, spelled
-+           LEFT JOIN core.provider_ids p ON p.entity_type='team' AND p.provider='pitchapi' AND p.entity_id=t.id AND p.is_current
-+           WHERE ts.competition_season_id = %s""", (edition,), gender)
-+
-+
-+def _neighbour_teams(conn, edition, gender):
-+    """The teams of the competition's previous and next editions that this edition does not hold:
-+    a row naming one of them is another season's table."""
-+    names, _, _, _ = _spellings(conn, """SELECT t.id, t.name, t.short_name, n.name, p.provider_key
-+           FROM core.competition_seasons e
-+           JOIN core.competition_seasons o ON o.competition_id = e.competition_id AND o.season_id IN (e.season_id - 1, e.season_id + 1)
-+           JOIN core.team_seasons ts ON ts.competition_season_id = o.id
-+           JOIN core.teams t ON t.id = ts.team_id
-+           LEFT JOIN core.entity_names n ON n.entity_type = 'team' AND n.entity_id = t.id
-+           LEFT JOIN core.provider_ids p ON p.entity_type='team' AND p.provider='pitchapi' AND p.entity_id=t.id AND p.is_current
-+           WHERE e.id = %s AND NOT EXISTS (SELECT 1 FROM core.team_seasons x WHERE x.competition_season_id = e.id AND x.team_id = t.id)""",
-+                          (edition,), gender)
-+    return names
+ def season_label(code):
+@@ -89,11 +103,123 @@ def rows(text):
+     return list(csv.DictReader(io.StringIO(text.lstrip("﻿"), newline="")))
  
  
- # Words of a club's official name that say what it is, not which one ("Stade Rennais FC").
-@@ -149,8 +383,8 @@ FORM_WORDS = {"fc", "cf", "sc", "ac", "as", "af", "afc", "ssc", "ss", "us", "rc"
- 
- 
- def _tokens(name):
--    plain = unicodedata.normalize("NFKD", name or "").encode("ascii", "ignore").decode().lower()
--    return {t for t in re.split(r"[^a-z0-9]+", plain) if t and t not in FORM_WORDS}
-+    plain = AGE_GROUP.sub(" ", SEX_MARKERS.sub(" ", _gender_text(name)))
-+    return {t for t in re.split(r"[^a-z0-9]+", plain) if t and t not in FORM_WORDS and t not in SIDE_SUFFIXES and t != "jong"}
- 
- 
- def _closeness(source_tokens, team_tokens):
-@@ -166,94 +400,446 @@ def _closeness(source_tokens, team_tokens):
-     return best
- 
- 
--def link(conn, edition, tables):
--    """{row name: team id} when every row designates one team, else None (and the count).
--    A row is its team by a known spelling; else by its distinctive words ("LOSC Lille" is
--    Lille, "Stade Rennais FC" is Rennes), when one team of the edition is clearly closest."""
--    teams, spelled = _edition_teams(conn, edition)
--    return pair({row["name"] for _, rows in tables for row in rows}, teams, spelled)
--
--
--def pair(wanted, teams, spelled):
--    """link() without the database: teams {id: normalized spellings}, spelled {id: spellings}."""
-+def _exact(wanted, teams):
-+    """{name: team} of the names one team's known spellings hold (normalized), and no other's."""
-     found = {}
-     for name in wanted:
-         hits = [team for team, keys in teams.items() if normalize(name) in keys]
-         if len(hits) == 1:
-             found[name] = hits[0]
--    # Distinctive words, over the rows and teams still unpaired: a row takes the team it is
--    # closest to only when that team is not as close to another row, and no other team ties.
-+    return found
-+
-+
-+def _closest(rows, spelled, squads=None):
-+    """Distinctive words, over the rows and teams still unpaired: a row takes the team it is
-+    closest to only when that team is not as close to another row, and no other team ties."""
-+    words = {name: _tokens(name) for name in rows}
-+    team_words = {team: [_tokens(name) for name in names] for team, names in spelled.items()}
-+    source_squads = {name: _squad(name) for name in rows} if squads is not None else {}
-+    scores = {(name, team): max((_closeness(tokens, variant) for variant in variants), default=0)
-+              for name, tokens in words.items() for team, variants in team_words.items()
-+              if squads is None or source_squads[name] == squads[team]}
-+    found = {}
-     while True:
--        rows = [n for n in wanted if n not in found]
--        free = [t for t in teams if t not in found.values()]
--        scores = {(n, t): max((_closeness(_tokens(n), _tokens(s)) for s in spelled[t]), default=0) for n in rows for t in free}
-+        left = [n for n in rows if n not in found]
-+        free = [t for t in spelled if t not in found.values()]
-         paired = False
--        for n in rows:
--            ranked = sorted(((scores[(n, t)], t) for t in free), reverse=True)
-+        for n in left:
-+            ranked = sorted(((scores.get((n, t), 0), t) for t in free), reverse=True)
-             if not ranked or ranked[0][0] == 0 or (len(ranked) > 1 and ranked[1][0] == ranked[0][0]):
-                 continue
-             team = ranked[0][1]
--            if any(scores[(other, team)] >= ranked[0][0] for other in rows if other != n):
-+            if any(scores.get((other, team), 0) >= ranked[0][0] for other in left if other != n):
-                 continue
-             found[n] = team
-             paired = True
-             break
-         if not paired:
--            break
--    left_rows = wanted - set(found)
--    left_teams = set(teams) - set(found.values())
--    if len(left_rows) == 1 and len(left_teams) == 1:
--        found[left_rows.pop()] = left_teams.pop()
-+            return found
-+
-+
-+def pair(wanted, teams, spelled):
-+    """{row name: team id} when every name designates one team, else None; and the names left.
-+    teams {id: normalized spellings}, spelled {id: spellings}: a known spelling, else the
-+    distinctive words. A name left over is never given to the team left over."""
-+    found = _exact(wanted, teams)
-+    found.update(_closest(set(wanted) - set(found), {t: s for t, s in spelled.items() if t not in found.values()}))
-     if len(set(found.values())) != len(found):
-         return None, len(wanted)
-     missing = len(wanted) - len(found)
-     return (found if not missing else None), missing
- 
- 
--def run(conn, get, scope, now):
--    key = scope.split(":", 1)[1]
--    slug = LEAGUES[key]
--    edition = conn.execute(
--        """SELECT cs.id FROM core.provider_ids p JOIN core.competition_seasons cs ON cs.competition_id = p.entity_id
-+def link(conn, edition, tables, gender="men"):
-+    """{row name: team id} of a response, every name designating one team of the edition;
-+    SourceError WRONG_EDITION, UNMATCHED_TEAMS or DUPLICATE_ROW otherwise."""
-+    wanted = {row["name"] for _, rows in tables for row in rows}
-+    wrong = sorted(name for name in wanted if _gender(name) not in (None, gender))
-+    if wrong:
-+        raise SourceError("UNMATCHED_TEAMS", f"edition {edition} ({gender}): incompatible team names: {', '.join(wrong)}")
-+    teams, spelled, squads, rejected = _edition_teams(conn, edition, gender)
-+    found = _exact(wanted, teams)
-+    others = _neighbour_teams(conn, edition, gender)
-+    foreign = sorted(name for name in wanted - set(found) if any(normalize(name) in keys for keys in others.values()))
-+    if foreign:
-+        raise SourceError("WRONG_EDITION", f"edition {edition}: {', '.join(foreign)}: clubs of the previous or next edition only")
-+    # A known but contradictory spelling, or an exact homonym, cannot become a match by prefix.
-+    known = rejected.union(*teams.values())
-+    unmatched = {name for name in wanted - set(found) if normalize(name) not in known
-+                 and (gender != "men" or not AMBIGUOUS_WFC.search(name))}
-+    found.update(_closest(unmatched, {t: s for t, s in spelled.items() if t not in found.values()}, squads))
-+    unmatched = sorted(wanted - set(found))
-+    if unmatched:
-+        raise SourceError("UNMATCHED_TEAMS", f"edition {edition}: not linked: {', '.join(unmatched)}")
-+    for group, rows in tables:
-+        designated = [found[row["name"]] for row in rows]
-+        if len(set(designated)) != len(designated):
-+            twice = next(row["name"] for row in rows if designated.count(found[row["name"]]) > 1)
-+            raise SourceError("DUPLICATE_ROW", f"edition {edition}: {twice} and another row of {group or 'the table'} are one team")
-+    return found
-+
-+
-+def _team_names(conn, teams):
-+    return dict(conn.execute("SELECT id, name FROM core.teams WHERE id = ANY(%s)", (sorted(teams),)).fetchall())
-+
-+
-+def _allsvenskan_rows(payload, year):
-+    """A full season-labelled organiser table, in the fields needed for corroboration."""
-+    if payload.get("errors"):
-+        raise ValueError("GraphQL reported an error")
-+    rows = payload["data"]["standingsForLeague"]["standings"]
-+    if not isinstance(rows, list) or not 0 < len(rows) <= MAX_ROWS:
-+        raise ValueError("missing or oversized organiser table")
-+    teams, totals = set(), {}
-+    for row in rows:
-+        name, team, form = row["teamName"], row["teamId"], row["form"]
-+        if (team, name) == (ALLSVENSKAN_BP, "BP"):
-+            name = "Brommapojkarna"
-+        if not isinstance(name, str) or not normalize(name) or name in totals or type(team) is not int or team in teams:
-+            raise ValueError("missing or repeated organiser identity")
-+        if not isinstance(form, list) or not form or any(
-+            (match["configLeagueName"], match["configSeasonStartYear"]) != ("allsvenskan", year) for match in form
-+        ):
-+            raise ValueError("organiser match form does not prove the requested season")
-+        stats = {item["name"]: item["value"] for item in row["stats"]}
-+        parts = [stats[field] for field in ALLSVENSKAN_FIELDS]
-+        if len(stats) != len(row["stats"]) or not all(isinstance(p, str) and p.isdecimal() for p in parts):
-+            raise ValueError("invalid organiser sporting fields")
-+        teams.add(team)
-+        totals[name] = tuple(int(p) for p in parts)
-+    return totals
-+
-+
-+def _prove_allsvenskan(conn, get, edition, year, fresh, now, *, require_fresh=False):
-+    """Corroborate the edition and all sporting totals. Return whether this run fetched the proof."""
-+    global _allsvenskan_proof
-+    target = {team: tuple(row[field] for field in RESULTS) for (group, team), row in fresh.items() if group is None}
-+    if len(target) != len(fresh):
-+        raise SourceError("UNVERIFIED_EDITION", f"edition {edition}: no organiser proof for grouped tables")
-+
-+    def matches(totals):
-+        if len(totals) != len(target):
-+            return False
-+        teams = link(conn, edition, [(None, [{"name": name} for name in totals])])
-+        return {teams[name]: numbers for name, numbers in totals.items()} == target
-+
-+    cached = _allsvenskan_proof
-+    if not require_fresh and cached and cached[:2] == (edition, year) and cached[2] <= now < cached[2] + PROOF_TTL:
-+        # A new result cannot reuse the previous organiser table, even inside the TTL.
-+        try:
-+            if matches(cached[3]):
-+                return False
-+        except SourceError:
-+            pass
-+    query = urlencode({"query": ALLSVENSKAN_QUERY, "variables": json.dumps({"year": year})})
-+    try:
-+        payload = get(f"{ALLSVENSKAN_URL}?{query}")
-+    except SourceError as error:
-+        raise SourceError("ORGANISER_UNAVAILABLE", f"edition {edition}: Allsvenskan {year}: {error.code}") from None
-+    try:
-+        if not isinstance(payload, dict):
-+            raise ValueError("invalid organiser response")
-+        totals = _allsvenskan_rows(payload, year)
-+        if not matches(totals):
-+            raise ValueError("organiser and widget sporting rows differ")
-+    except (SourceError, KeyError, TypeError, ValueError) as error:
-+        detail = error.code if isinstance(error, SourceError) else str(error) if isinstance(error, ValueError) else "invalid organiser response"
-+        raise SourceError("UNVERIFIED_EDITION", f"edition {edition}: Allsvenskan {year}: {detail}") from None
-+    _allsvenskan_proof = (edition, year, now, totals)
-+    return True
-+
-+
-+def qualify(conn, edition, fresh, counted, now, verify):
-+    """The edition's own results against the response (§2.1, rules 11-12); SourceError otherwise.
-+    fresh is {(group, team): row}, counted {team: core.table_results' results}."""
-+    played = {}
-+    for (_, team), row in fresh.items():
-+        played[team] = max(played.get(team, 0), row["played"])
-+    kicked = dict(conn.execute(KICKED_OFF, (edition, now)).fetchall())
-+    ahead = {team: p for team, p in played.items() if p > kicked.get(team, 0) + SLACK}
-+    fetched_proof = False
-+    if len(ahead) == len(played):
-+        if verify is not None:
-+            fetched_proof = verify()
-+        else:
-+            names = _team_names(conn, ahead)
-+            raise SourceError("WRONG_EDITION", f"edition {edition}: every club ahead of the matches kicked off: "
-+                              + ", ".join(f"{names[t]} {p} played, {kicked.get(t, 0)} kicked off" for t, p in sorted(ahead.items())))
-+    absent = sorted(team for team, results in counted.items() if results[0] > 0 and team not in played)
-+    if absent:
-+        names = _team_names(conn, absent)
-+        raise SourceError("INCOMPLETE_TABLE", f"edition {edition}: clubs of Vega's table missing: "
-+                          + ", ".join(f"{names[t]} ({counted[t][0]} counted)" for t in absent))
-+    return fetched_proof
-+
-+
-+def _clubs_by_table(rows):
-+    """{table name: {team ids}} of {(group, team): row}."""
+-def save(conn, folder, name, season, results, fixtures, now):
+-    """Replace one competition's edition; returns the matches written."""
++def read_files(get, league, code, folder):
++    """A competition's (results, fixtures) rows, as the summary describes them: integer counts and
++    no reported error, each declared file read with its columns and exactly its declared rows.
++    SourceError with a detail when they are not that complete snapshot; an unreadable file raises
++    the reader's own SourceError (no detail)."""
++    declared = {part: _count(league.get(part)) for part in HEADERS}
++    errors = league.get("errors", [])
++    if None in declared.values() or not isinstance(errors, list):
++        raise SourceError("MANIFEST_INVALID", f"results={league.get('results')!r} fixtures={league.get('fixtures')!r} errors={errors!r}")
++    if errors:
++        raise SourceError("SOURCE_REPORTED_ERRORS", "; ".join(map(str, errors)))
 +    out = {}
-+    for group, team in rows:
-+        out.setdefault(group, set()).add(team)
++    for part, count in declared.items():
++        if not count:
++            out[part] = []
++            continue
++        text = get(f"{RAW}data/{folder}/{part}_{code}.csv", as_text=True)
++        reader = csv.DictReader(io.StringIO(text.lstrip("﻿"), newline=""))
++        if not HEADERS[part] <= set(reader.fieldnames or ()):
++            raise SourceError("INVALID_HEADER", f"{part}: {reader.fieldnames}")
++        out[part] = list(reader)
++        if len(out[part]) != count:
++            raise SourceError("ROW_COUNT_MISMATCH", f"{part}: {len(out[part])} rows, {count} declared")
++    return out["results"], out["fixtures"]
++
++
++def candidate(folder, season, results, fixtures, label):
++    """{provider key: row} of the snapshot, results first then fixtures, in source order.
++
++    A result row names both sides, its day and its two goals (INVALID_RESULT_ROW otherwise); a
++    fixture row without them names no match and is skipped. A fixture with the key of a result is
++    that result. Rows of one key otherwise make one match, from the last of them (as before)."""
++    out = {}
++    attestations = open_matchday_history.for_edition(folder, season)
++    for status, items in (("finished", results), ("not_started", fixtures)):
++        for item in items:
++            home, away, day = (item.get("home") or "").strip(), (item.get("away") or "").strip(), (item.get("date") or "").strip()
++            home, away = SPELLINGS.get(home, home), SPELLINGS.get(away, away)
++            goals = (_int(item.get("ft_home")), _int(item.get("ft_away"))) if status == "finished" else (None, None)
++            if not home or not away or not DAY.fullmatch(day):
++                if status == "finished":
++                    raise SourceError("INVALID_RESULT_ROW", f"{label}: a result without its sides or day: {dict(item)}")
++                continue
++            if status == "finished" and None in goals:
++                raise SourceError("INVALID_RESULT_ROW", f"{label}: {day} {home}–{away} without its goals: {item.get('ft_home')!r}–{item.get('ft_away')!r}")
++            half = (_int(item.get("ht_home")), _int(item.get("ht_away")))
++            row = {
++                "status": status, "home": home, "away": away, "date": day, "round": (item.get("gw") or "").strip() or None,
++                "home_score": goals[0], "away_score": goals[1],
++                "home_score_ht": half[0] if None not in half else None, "away_score_ht": half[1] if None not in half else None,
++                "stats": _row_stats(item),
++            }
++            key = f"{folder}:{season}:{day}|{home}|{away}"
++            if status == "finished" and key in attestations:
++                open_matchday_history.final_score(key, goals, attestations[key]["score"])
++            if key in out and out[key]["status"] == "finished" and status != "finished":
++                continue  # a fixture still listed after its result: the result is the match
++            out.pop(key, None)
++            out[key] = row
 +    return out
 +
 +
-+def _group_key(name):
-+    return normalize(re.sub(r"^(?:group|groupe)\s+", "", (name or "").strip(), flags=re.IGNORECASE))
++def _row_stats(item):
++    """{(side, period): {column: value}} of the statistics a CSV row gives (corners alone per half)."""
++    out = {}
++    for side in ("home", "away"):
++        for period, suffix in PERIODS:
++            stats = {}
++            for name, column in STATS.items():
++                value = _int(item.get(f"{side}_{name}{suffix}")) if suffix == "" or name == "corners" else None
++                if value is not None:
++                    stats[column] = value
++            out[(side, period)] = stats
++    return out
 +
 +
-+def _first_observation(conn, key, edition, season, native_label, kind, name, country, tables, linked, members):
-+    """Admit only a full roster of a supported, independently evidenced first phase."""
-+    proposed = {_group_key(label): {linked[row["name"]] for row in rows} for label, rows in tables}
-+    present = set().union(*proposed.values())
-+    if len(proposed) != len(tables):
-+        raise SourceError("UNVERIFIED_TABLE", f"edition {edition}: ambiguous group names")
-+
-+    phases = defaultdict(set)
-+    groups = defaultdict(set)
-+    scheduled = Counter()
-+    for stage, group, team in conn.execute(
-+        """SELECT coalesce(r.stage, 'regular'), nullif(btrim(m.group_name), ''), x.team_id
-+           FROM core.matches m LEFT JOIN core.rounds r ON r.id = m.round_id
-+           CROSS JOIN LATERAL (VALUES (m.home_team_id), (m.away_team_id)) x(team_id)
-+           WHERE m.competition_season_id = %s AND m.status <> 'canceled' AND x.team_id IS NOT NULL""", (edition,)
-+    ):
-+        phases[stage].add(team)
-+        if stage in ("regular", "group"):
-+            scheduled[team] += 1
-+            if group is not None:
-+                groups[_group_key(group)].add(team)
-+
-+    # A registered club is exempt only when independent phase data places it solely in qualifying.
-+    qualifying_only = phases["qualifying"] - set().union(*(clubs for stage, clubs in phases.items() if stage != "qualifying"))
-+    expected = members - qualifying_only
-+    if groups:
-+        known = set().union(*groups.values())
-+        if sum(map(len, groups.values())) != len(known) or known != expected or known != set(scheduled):
-+            raise SourceError("UNVERIFIED_TABLE", f"edition {edition}: incomplete or overlapping native groups")
-+        claimed = set()
-+        for label, clubs in sorted(groups.items()):
-+            matches = [label] if label in proposed else [p for p, roster in proposed.items() if p not in groups and roster == clubs]
-+            if len(matches) != 1 or proposed[matches[0]] != clubs:
-+                raise SourceError("INCOMPLETE_TABLE", f"edition {edition}: group {label!r} does not cover its native roster")
-+            claimed.add(matches[0])
-+        # An additional ranking may only reuse clubs already assigned to the evidenced phase.
-+        if present != known or any(sum(bool(roster & group) for group in groups.values()) < 2
-+                                   for label, roster in proposed.items() if label not in claimed):
-+            raise SourceError("UNVERIFIED_TABLE", f"edition {edition}: another table has no supported native phase")
-+        return
-+
-+    uefa_phase = (
-+        country == "INT-2" and key in UEFA_LEAGUE_PHASES and season == native_label == UEFA_LEAGUE_SEASON
-+        and len(scheduled) == 36 and set(scheduled.values()) == {UEFA_LEAGUE_PHASES[key]} and not phases["group"]
-+    )
-+    domestic_league = _is_league(kind, name, country) and not phases["group"]
-+    if len(proposed) != 1 or not (domestic_league or uefa_phase):
-+        raise SourceError("UNVERIFIED_TABLE", f"edition {edition}: the table's phase or format is unverified")
-+    absent = expected - present
-+    if absent:
-+        names = _team_names(conn, absent)
-+        raise SourceError("INCOMPLETE_TABLE", f"edition {edition}: clubs of the native roster missing: "
-+                          + ", ".join(names[team] for team in sorted(absent)))
-+    no_fixtures = not any(phases.values())
-+    all_zero = all(row[field] in (None, 0) for _, rows in tables for row in rows for field in (*RESULTS, "points"))
-+    if present != expected or (set(scheduled) != expected and not (no_fixtures and all_zero)):
-+        raise SourceError("UNVERIFIED_TABLE", f"edition {edition}: the scheduled phase does not attest the proposed roster")
++def _write_stats(conn, season, match, row, home, away):
++    """Merge the cells present in this source, including zero, at the team and period key."""
++    teams = {"home": home, "away": away}
++    reported = {}
++    for (side, period), columns in row["stats"].items():
++        if columns:
++            reported.setdefault((teams[side], period), {}).update(columns)
++    changed = 0
++    for (team, period), columns in sorted(reported.items()):
++        keys = ("season_id", "match_id", "team_id", "period")
++        names = (*keys, *columns)
++        values = ", ".join(["%s"] * len(names))
++        assignments = ", ".join(f"{name}=EXCLUDED.{name}" for name in columns)
++        differs = " OR ".join(f"stored.{name} IS DISTINCT FROM EXCLUDED.{name}" for name in columns)
++        changed += conn.execute(
++            f"""INSERT INTO core.team_match_stats AS stored ({', '.join(names)}) VALUES ({values})
++                ON CONFLICT ({', '.join(keys)}) DO UPDATE
++                SET {assignments}, updated_at=now() WHERE {differs}""",
++            [season, match, team, period, *columns.values()],
++        ).rowcount
++    return bool(changed)
 +
 +
-+def _public_ids(conn, teams):
-+    """The clubs' public ids (api.public_id's rule), the keys of RETIRED_ROWS."""
-+    found = dict(conn.execute("""SELECT entity_id, provider_key FROM core.provider_ids
-+                                 WHERE entity_type = 'team' AND provider = 'pitchapi' AND is_current AND entity_id = ANY(%s)""",
-+                              (sorted(teams),)).fetchall())
-+    return {team: found.get(team, f"t_v{team:07d}") for team in teams}
++def save(conn, folder, name, season, results, fixtures, now, *, declared_results=None):
++    """Write one competition's complete reported window; return the matches the edition holds.
 +
-+
-+def compare(conn, edition, retired, fresh, stored, members, names, counted):
-+    """The accepted table's knowledge the response keeps (§2.1, rules 13-15); SourceError otherwise.
-+    retired is the edition's (LEAGUES key, season label); fresh and stored are {(group, team): row}
-+    (a stored row with its basis), members the edition's teams, names {team: a row name}, counted
-+    {team: core.table_results' results}."""
-+    accepted, now = _clubs_by_table(stored), _clubs_by_table(fresh)
-+    keys = _public_ids(conn, {team for _, team in stored})
-+
-+    def may_leave(table, team):
-+        """A club that may leave a table: no longer a team of the edition, or its row reviewed out."""
-+        return team not in members or (*retired, table, keys[team]) in RETIRED_ROWS
-+
-+    def listed(teams, table=None):
-+        shown = _team_names(conn, teams)
-+        return ", ".join(f"{shown[t]} ({keys[t]})" if table is None else f"{shown[t]} (RETIRED_ROWS key {(*retired, table, keys[t])!r})"
-+                         for t in sorted(teams))
-+
-+    # Rule 13: every club of the accepted observation is still somewhere.
-+    present = {team for _, team in fresh}
-+    dropped = {team for _, team in stored if team not in present
-+               and not all(may_leave(table, team) for table, clubs in accepted.items() if team in clubs)}
-+    if dropped:
-+        raise SourceError("INCOMPLETE_TABLE", f"edition {edition}: clubs of the accepted table missing: {listed(dropped)}")
-+    # Rule 13b: every accepted table stays, under its name or as the one new table with its clubs.
-+    kept = {}
-+    for table, clubs in accepted.items():
-+        if table in now:
-+            kept[table] = table
++    Refused (SourceError with a detail, nothing written): a result row without its sides, day or
++    goals, and a snapshot that drops or unplays a result the base holds (snapshot.guard). Matches
++    and statistics are written only where they changed."""
+     label = sporting_season(season)
+     if label is None:
+         raise SourceError("INVALID_SEASON")
++    cup_key = f"open-matchday:{folder}:{season}"
++    snap = candidate(folder, season, results, fixtures, cup_key)
++    stored = conn.execute("SELECT id FROM core.competition_seasons WHERE cup_key = %s", (cup_key,)).fetchone()
++    before = snapshot.stored(conn, "open_matchday", stored and stored[0])
++    preserved = open_matchday_history.retained(conn, stored and stored[0], before, snap,
++                                                  open_matchday_history.for_edition(folder, season), declared_results)
++    status = {key: row["status"] for key, row in snap.items()}
++    status.update(dict.fromkeys(preserved, "finished"))
++    snapshot.guard("open_matchday", before, status, cup_key)
+     season_id = Store(conn).season(label)
+     country = country_of(folder)
+     family = f"cup:open-matchday:{folder}"
+@@ -116,58 +242,53 @@ def save(conn, folder, name, season, results, fixtures, now):
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+            ON CONFLICT (cup_key) DO UPDATE SET cup_name=EXCLUDED.cup_name, cup_checked_at=EXCLUDED.cup_checked_at, updated_at=now()
+            RETURNING id""",
+-        (comp, season_id, season, f"open-matchday:{folder}:{season}", name, SOURCE, now, now),
++        (comp, season_id, season, cup_key, name, SOURCE, now, now),
+     ).fetchone()[0]
+-    keep = []
++    elsewhere = snapshot.elsewhere(conn, "open_matchday", edition, [key for key in snap if key not in before])
++    snapshot.guard("open_matchday", elsewhere, status, cup_key)
++    before.update(elsewhere)
++    changes = 0
++    reserved = {before[key]["archive_position"] for key in preserved}
+     position = 0
+-    for status, items in (("finished", results), ("not_started", fixtures)):
+-        for item in items:
+-            home_name, away_name, day = (item.get("home") or "").strip(), (item.get("away") or "").strip(), (item.get("date") or "").strip()
+-            home_name, away_name = SPELLINGS.get(home_name, home_name), SPELLINGS.get(away_name, away_name)
+-            if not home_name or not away_name or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", day):
+-                continue
+-            key = f"{folder}:{season}:{day}|{home_name}|{away_name}"
+-            home = _team(conn, "open_matchday", f"name:{home_name}", home_name)
+-            away = _team(conn, "open_matchday", f"name:{away_name}", away_name)
+-            round_id = None
+-            if (item.get("gw") or "").strip():
+-                round_id = conn.execute(
+-                    """INSERT INTO core.rounds(competition_season_id, name) VALUES (%s,%s)
+-                       ON CONFLICT (competition_season_id, name) DO UPDATE SET name=EXCLUDED.name RETURNING id""",
+-                    (edition, item["gw"].strip()),
+-                ).fetchone()[0]
+-            hs, as_ = (_int(item.get("ft_home")), _int(item.get("ft_away"))) if status == "finished" else (None, None)
++    for key, row in snap.items():
++        found = before.get(key)
++        if key in preserved:
++            home, away = found["home_team_id"], found["away_team_id"]
++            # A previously attested result can gain optional data without moving
++            # its row or replacing the facts that established its identity.
++            values = {"archive_position": found["archive_position"]}
 +        else:
-+            same = [t for t, c in now.items() if t not in accepted and c == clubs]
-+            if len(same) == 1:
-+                kept[table] = same[0]
-+    # A single table may split without losing a club or changing its sporting history. Disjoint
-+    # names or changed memberships alone cannot retire existing groups or a cross-group table.
-+    if not kept and set(accepted) == {None} and len(now) > 1:
-+        clubs = accepted[None]
-+        if (set().union(*now.values()) == clubs and sum(map(len, now.values())) == len(clubs)
-+                and all(all(stored[(None, team)][field] in (None, row[field]) for field in RESULTS)
-+                        for (_, team), row in fresh.items())):
-+            return _compare_rows(edition, fresh, stored, names, counted)
-+    lost = sorted((t for t in accepted if t not in kept and (*retired, t) not in RETIRED_TABLES), key=lambda g: g or "")
-+    if lost:
-+        raise SourceError("INCOMPLETE_TABLE", f"edition {edition}: tables of the accepted observation missing: " + ", ".join(
-+            f"{t or 'the table'} ({len(accepted[t])} rows, RETIRED_TABLES key {(*retired, t)!r})" for t in lost))
-+    # Rule 13c: within a table that stays. A partition table (it owns a club no other accepted table
-+    # holds: a league table, a group) keeps each of its clubs. A cross table (only clubs another
-+    # accepted table holds: a ranking across groups) may change members as the competition advances,
-+    # each club that leaves replaced by one that joins: it never shrinks.
-+    for table, target in kept.items():
-+        clubs = accepted[table]
-+        left = {team for team in clubs - now[target] if not may_leave(table, team)}
-+        if not left:
-+            continue
-+        cross = all(any(team in other for t, other in accepted.items() if t != table) for team in clubs)
-+        joined = now[target] - clubs
-+        if not cross or len(left) > len(joined):
-+            raise SourceError("INCOMPLETE_TABLE", f"edition {edition}: table {table or 'the table'} "
-+                              f"({'cross' if cross else 'partition'}, {len(clubs)} rows accepted, {len(now[target])} now): "
-+                              f"{listed(left, table)} left, {len(joined)} joined")
-+    _compare_rows(edition, fresh, stored, names, counted)
-+
-+
-+def _compare_rows(edition, fresh, stored, names, counted):
-+    """Rules 14-15: each club's row keeps what was known of it, and its played count, unless attested."""
-+    by_team = {}
-+    for (group, team), row in stored.items():
-+        by_team.setdefault(team, row)
-+    for (group, team), row in fresh.items():
-+        before = stored.get((group, team)) or by_team.get(team)
-+        if before is None:
-+            continue
-+        lost = [FIELDS[f] for f in FIELDS if before[f] is not None and row[f] is None]
-+        if lost:
-+            raise SourceError("MISSING_FIELD", f"edition {edition}: {names[team]}: {', '.join(lost)} no longer given")
-+        if (group, team) in stored and row["played"] < before["played"]:
-+            # A lower count stands when the edition's results attest it: the club's counted matches
-+            # now (a correction), or at most those since the observation (a phase counted from it).
-+            counted_now = counted.get(team, NO_RESULT)[0]
-+            since = counted_now - before["basis"][0] if before["basis"] is not None else None
-+            if row["played"] != counted_now and (since is None or row["played"] > since):
-+                raise SourceError("PLAYED_DECREASED", f"edition {edition}: {names[team]}: played {before['played']} -> {row['played']}, "
-+                                  f"{counted_now} counted" + (f", {since} since the observation" if since is not None else ""))
-+
-+
-+def _publish(conn, edition):
-+    conn.execute(
-+        """INSERT INTO ops.resource_versions(resource_kind, resource_id) VALUES ('competition_season', %s)
-+           ON CONFLICT (resource_kind, resource_id) DO UPDATE SET version = ops.resource_versions.version + 1, updated_at = now()""",
-+        (edition,),
-+    )
-+
-+
-+def repeat(conn, edition, stored, observed, counted, now, verify=None, fetched_proof=False):
-+    """The same table seen again (§2.2): nothing written unless the observation time may move."""
-+    def renew(teams):
-+        conn.execute(f"UPDATE core.standings_official SET as_of = %s WHERE {OWN}", (now, edition))
-+        for team in sorted(teams):
-+            conn.execute(f"UPDATE core.standings_official SET basis = %s::smallint[] WHERE {OWN} AND team_id = %s",
-+                         (list(counted.get(team, NO_RESULT)), edition, team))
-+        if teams:
-+            _publish(conn, edition)  # api.standings may serve the official table again
-+
-+    if any(row["basis"] is None for row in stored.values()):
-+        # Rows written before 138 have no basis. A later result requires positive proof.
-+        moved = {team for _, team in stored}
-+        caught_up = observed is None or not conn.execute(FINISHED_SINCE, (edition, observed)).fetchone()[0]
-+    else:
-+        moved = {team for (_, team), row in stored.items() if row["basis"] != counted.get(team, NO_RESULT)}
-+        caught_up = all(
-+            any(all(row[f] is None or row[f] == v for f, v in zip(RESULTS, counted.get(team, NO_RESULT)))
-+                for (_, t), row in stored.items() if t == team)
-+            for team in moved)
-+    if not caught_up:
-+        shortfall = {row["played"] - counted.get(team, NO_RESULT)[0] for (_, team), row in stored.items()}
-+        if verify is None or min(shortfall) < 0 or max(shortfall) == 0:
-+            return
-+        if not fetched_proof:
-+            verify(require_fresh=True)
-+    renew(moved)
-+
-+
-+def _current_edition(conn, key):
-+    return conn.execute(
-+        """SELECT cs.id, se.label, cs.native_label, se.id, c.kind::text, c.name, c.country_code
-+           FROM core.provider_ids p JOIN core.competition_seasons cs ON cs.competition_id = p.entity_id
-+           JOIN core.seasons se ON se.id = cs.season_id
-+           JOIN core.competitions c ON c.id = cs.competition_id
-            WHERE p.entity_type = 'competition' AND p.provider = 'pitchapi' AND p.provider_key = %s AND p.is_current AND cs.is_current""",
-         (key,),
-     ).fetchone()
--    if edition is None:  # not collected (yet): no call
-+
-+
-+def run(conn, get, scope, now):
-+    key = scope.split(":", 1)[1]
-+    slug = LEAGUES[key]
-+    current = _current_edition(conn, key)
-+    if current is None:  # not collected (yet): no call
-         return 0, 0
--    edition = edition[0]
-+    edition, season, native_label, year, kind, name, country = current
-     tables = parse(get(URL + "?" + urlencode({"sport": "football", "slug": slug})), slug)
--    teams, unmatched = link(conn, edition, tables) if tables else (None, 0)
--    fresh = sorted(
--        (group if len(tables) > 1 else None, teams[row["name"]], row["position"], row["played"], row["won"], row["drawn"],
--         row["lost"], row["goals_for"], row["goals_against"], row["points"])
--        for group, rows in tables for row in rows
--    ) if teams else []
--    columns = "group_name, team_id, position, played, won, drawn, lost, goals_for, goals_against, points"
--    stored = sorted(conn.execute(
--        f"SELECT {columns} FROM core.standings_official WHERE competition_season_id = %s AND source = 'sportscore'", (edition,)
--    ).fetchall(), key=lambda r: tuple((x is None, x) for x in r))
--    fresh = sorted(set(fresh), key=lambda r: tuple((x is None, x) for x in r))
--    if fresh == [tuple(r) for r in stored]:
--        # Same table: only the observation time moves; no new publication.
--        conn.execute("UPDATE core.standings_official SET as_of = %s WHERE competition_season_id = %s AND source = 'sportscore'", (now, edition))
--        return 0, unmatched
--    conn.execute("DELETE FROM core.standings_official WHERE competition_season_id = %s AND source = 'sportscore'", (edition,))
--    for row in fresh:
-+    check(tables)
-+    teams = link(conn, edition, tables, _gender(name) or "men")
-+    keep_groups = len(tables) > 1  # one table is stored without its name, as before
-+    fresh = {(group if keep_groups else None, teams[row["name"]]): row for group, rows in tables for row in rows}
-+    counted = {team: tuple(results) for team, results in conn.execute(
-+        "SELECT team_id, results FROM core.table_results(%s)", (edition,)).fetchall()}
-+    verify = None
-+    if key == ALLSVENSKAN and native_label == str(year):
-+        verify = partial(_prove_allsvenskan, conn, get, edition, year, fresh, now)
-+    fetched_proof = qualify(conn, edition, fresh, counted, now, verify)
-+    # The upstream request is outside the publication lock. READ COMMITTED then sees the
-+    # latest publication, including the first insert into an otherwise empty edition.
-+    lock_scope(conn, "sportscore", scope)
-+    last_run = conn.execute("""SELECT greatest(last_attempt_at,last_success_at) FROM ops.source_runs
-+                              WHERE source='sportscore' AND scope=%s""", (scope,)).fetchone()
-+    if last_run and last_run[0] is not None and last_run[0] >= now:
-+        raise SourceError("STALE_OBSERVATION", f"edition {edition}: scope already attempted at {last_run[0]}")
-+    if _current_edition(conn, key) != current:
-+        raise SourceError("EDITION_CHANGED", f"edition {edition}: the competition changed during the request")
-+    stored = {}
-+    observed = None
-+    for group, team, *values, basis, as_of in conn.execute(
-+        f"SELECT {', '.join(COLUMNS)}, basis, as_of FROM core.standings_official WHERE {OWN}", (edition,)
-+    ).fetchall():
-+        if as_of is not None and as_of > now:
-+            raise SourceError("STALE_OBSERVATION", f"edition {edition}: table already observed at {as_of}")
-+        stored[(group, team)] = dict(zip(FIELDS, values), basis=tuple(basis) if basis is not None else None)
-+        observed = as_of if observed is None or (as_of is not None and as_of < observed) else observed
-+    members = {team for (team,) in conn.execute("SELECT team_id FROM core.team_seasons WHERE competition_season_id = %s", (edition,))}
-+    if not stored:
-+        _first_observation(conn, key, edition, season, native_label, kind, name, country, tables, teams, members)
-+    compare(conn, edition, (key, season), fresh, stored, members, {team: row["name"] for (_, team), row in fresh.items()}, counted)
-+    if {k: {f: r[f] for f in FIELDS} for k, r in fresh.items()} == {k: {f: r[f] for f in FIELDS} for k, r in stored.items()}:
-+        repeat(conn, edition, stored, observed, counted, now, verify, fetched_proof)
-+        return 0, 0
-+    conn.execute(f"DELETE FROM core.standings_official WHERE {OWN}", (edition,))
-+    for (group, team), row in sorted(fresh.items(), key=lambda item: (item[0][0] or "", item[1]["position"], item[0][1])):
-         conn.execute(
--            f"""INSERT INTO core.standings_official(competition_season_id, stage, {columns}, source, as_of)
--                VALUES (%s, NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'sportscore', %s) ON CONFLICT DO NOTHING""",
--            (edition, *row, now),
-+            f"""INSERT INTO core.standings_official(competition_season_id, stage, {', '.join(COLUMNS)}, basis, source, as_of)
-+                VALUES (%s, NULL, %s, %s, {', '.join(['%s'] * len(FIELDS))}, %s::smallint[], 'sportscore', %s)""",
-+            (edition, group, team, *(row[f] for f in FIELDS), list(counted.get(team, NO_RESULT)), now),
-         )
--    for group, rows in tables if teams else []:
-+    for group, rows in tables:
-         for row in rows:
-             conn.execute(
-                 """INSERT INTO core.entity_names(entity_type, entity_id, name, normalized, kind, source)
-                    VALUES ('team', %s, %s, %s, 'source_spelling', 'sportscore') ON CONFLICT DO NOTHING""",
-                 (teams[row["name"]], row["name"], normalize(row["name"]) or row["name"].lower()),
-             )
++            while position in reserved:
++                position += 1
++            home = _team(conn, "open_matchday", f"name:{row['home']}", row["home"])
++            away = _team(conn, "open_matchday", f"name:{row['away']}", row["away"])
+             values = {
+-                "competition_season_id": edition, "season_id": season_id, "source": "open_matchday", "status": status if hs is not None or status == "not_started" else "not_started",
+-                "match_date": day, "home_team_id": home, "away_team_id": away, "home_team_name": home_name, "away_team_name": away_name,
+-                "round_id": round_id, "home_score": hs, "away_score": as_, "home_score_ht": _int(item.get("ht_home")), "away_score_ht": _int(item.get("ht_away")),
++                "competition_season_id": edition, "season_id": season_id, "source": "open_matchday", "status": row["status"],
++                "match_date": row["date"], "home_team_id": home, "away_team_id": away, "home_team_name": row["home"], "away_team_name": row["away"],
++                "home_score": row["home_score"], "away_score": row["away_score"],
+                 "archive_position": position,
+             }
+             position += 1
+-            mid = conn.execute("SELECT entity_id FROM core.provider_ids WHERE entity_type='match' AND provider='open_matchday' AND provider_key=%s", (key,)).fetchone()
+-            columns = list(values)
+-            if mid:
+-                mid = mid[0]
+-                conn.execute(f"UPDATE core.matches SET {', '.join(f'{c}=%s' for c in columns)}, updated_at=now() WHERE id=%s", [values[c] for c in columns] + [mid])
+-            else:
+-                mid = conn.execute(f"INSERT INTO core.matches({', '.join(columns)}) VALUES ({', '.join(['%s'] * len(columns))}) RETURNING id",
+-                                   [values[c] for c in columns]).fetchone()[0]
+-                conn.execute("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('match','open_matchday',%s,%s)", (key, mid))
+-            keep.append(mid)
+-            conn.execute("DELETE FROM core.team_match_stats WHERE season_id=%s AND match_id=%s", (season_id, mid))
+-            for side, team in (("home", home), ("away", away)):
+-                for period, suffix in (("all", ""), ("first_half", "_1h"), ("second_half", "_2h")):
+-                    stats = {column: _int(item.get(f"{side}_{name}{suffix}")) for name, column in STATS.items() if suffix == "" or name == "corners"}
+-                    stats = {k: v for k, v in stats.items() if v is not None}
+-                    if stats:
+-                        cols = ["season_id", "match_id", "team_id", "period", *stats]
+-                        conn.execute(f"INSERT INTO core.team_match_stats({', '.join(cols)}) VALUES ({', '.join(['%s'] * len(cols))})",
+-                                     [season_id, mid, team, period, *stats.values()])
+-    conn.execute("DELETE FROM core.matches WHERE competition_season_id=%s AND NOT id = ANY(%s)", (edition, keep))
 -    conn.execute(
--        """INSERT INTO ops.resource_versions(resource_kind, resource_id) VALUES ('competition_season', %s)
--           ON CONFLICT (resource_kind, resource_id) DO UPDATE SET version = ops.resource_versions.version + 1, updated_at = now()""",
--        (edition,),
+-        "DELETE FROM core.provider_ids p WHERE p.entity_type='match' AND p.provider='open_matchday' AND NOT EXISTS (SELECT 1 FROM core.matches m WHERE m.id=p.entity_id)"
 -    )
--    return len(fresh), unmatched
-+    _publish(conn, edition)
-+    return len(fresh), 0
-diff --git a/backend/vega/sources/uefa.py b/backend/vega/sources/uefa.py
-index e0c45ba80c..cab178be25 100644
---- a/backend/vega/sources/uefa.py
-+++ b/backend/vega/sources/uefa.py
-@@ -139,6 +139,25 @@ def link_team(conn, row):
-     return team, linked
+-    return len(keep)
++        if row["round"]:
++            values["round_id"] = _round(conn, edition, row["round"])
++        elif found is not None and found["competition_season_id"] != edition:
++            values["round_id"] = None  # a round belongs to its former edition
++        if row["home_score_ht"] is not None and row["away_score_ht"] is not None:
++            values.update(home_score_ht=row["home_score_ht"], away_score_ht=row["away_score_ht"])
++        mid, outcome = snapshot.write(conn, "open_matchday", key, values, found)
++        match_changed = outcome in ("inserted", "updated")
++        stats_changed = _write_stats(conn, season_id, mid, row, home, away)
++        if stats_changed and outcome is None:
++            snapshot.write(conn, "open_matchday", key, values, found, changed=True)
++        elif stats_changed and outcome == "moved":
++            # snapshot.write already checked and updated the same match in this transaction.
++            conn.execute("""UPDATE core.matches SET revision=revision+1, updated_at=now()
++                            WHERE id=%s AND season_id=%s""", (mid, season_id))
++        changes += match_changed or stats_changed
++    changes += snapshot.remove(conn, "open_matchday", before, status, list(STATS.values()))
++    if changes:
++        conn.execute("UPDATE core.competition_seasons SET cup_updated_at=%s WHERE id=%s", (now, edition))
++    return len(status)
  
  
-+# A club's logo as UEFA publishes it for its own id (media.ALLOWED copies exactly this form).
-+CLUB_LOGO = "https://img.uefa.com/imgml/TP/teams/logos/70x70/{}.png"
-+
-+
-+def crest_club(conn, team):
-+    """The club a UEFA id's crest belongs to: the bound team, or the canonical club it is merged into (one existing
-+    pointer, followed, never set). None, and nothing written, for a national team or a chain merged again (§22)."""
-+    row = conn.execute("SELECT merged_into, is_national FROM core.teams WHERE id = %s", (team,)).fetchone()
-+    if row is None:
-+        return None
-+    merged, national = row
-+    if merged is None:
-+        return None if national else team
-+    canonical = conn.execute("SELECT merged_into, is_national FROM core.teams WHERE id = %s", (merged,)).fetchone()
-+    if canonical is None or canonical[0] is not None or canonical[1]:
-+        return None
-+    return merged
-+
-+
- def save(conn, kind, year, rows, updated, now):
-     """Replace one edition's rows; returns (rows written, clubs not linked to a team)."""
-     label = f"{year - 1}/{year}"
-@@ -177,6 +196,20 @@ def save(conn, kind, year, rows, updated, now):
-                    ON CONFLICT (source_url) DO UPDATE SET source_url = EXCLUDED.source_url RETURNING id""",
-                 (row["logo"],),
-             ).fetchone()[0]
-+        club = crest_club(conn, team) if kind == "uefa_clubs" and logo is not None and row["logo"] == CLUB_LOGO.format(row["id"]) else None
-+        if club is not None:
-+            # The club's own UEFA logo (its id in the path) is its crest when it has none: an existing
-+            # crest, PitchAPI's first, is kept (VI-27, FAILURE_MODES.md §21); a merged alias's goes to its club (§22).
-+            if conn.execute(
-+                "UPDATE core.teams SET crest_asset_id = %s, updated_at = now() WHERE id = %s AND crest_asset_id IS NULL AND is_national IS NOT TRUE",
-+                (logo, club),
-+            ).rowcount:
-+                for resource in (("team", club), ("home", 1)):
-+                    conn.execute(
-+                        """INSERT INTO ops.resource_versions(resource_kind, resource_id) VALUES (%s, %s)
-+                           ON CONFLICT (resource_kind, resource_id) DO UPDATE SET version = ops.resource_versions.version + 1, updated_at = now()""",
-+                        resource,
-+                    )
-         conn.execute(
-             """INSERT INTO core.ranking_rows(edition_id, row_no, team_id, country_code, position, points, provider_key, entity_name,
-                  earned_points, teams_still_playing, image_asset_id) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
-diff --git a/backend/vega/transfermarkt.py b/backend/vega/transfermarkt.py
-index d0090480ce..730f9c9e01 100644
---- a/backend/vega/transfermarkt.py
-+++ b/backend/vega/transfermarkt.py
-@@ -6,9 +6,14 @@ What it keeps, as typed rows (a response is never stored):
- - the players it reads (core.provider_players) and the clubs' squads (core.provider_squads)
-   and names (core.provider_clubs);
- - for a player linked to one of ours: his market values (core.player_market_values, with the
--  club of each valuation), transfers (core.player_transfers) and injuries
--  (core.player_injuries), replaced whole at each read, and his contract with one of our clubs
--  (core.player_contracts) when its start is known.
-+  club of each valuation) and injuries (core.player_injuries), replaced whole at each read;
-+- his transfers (core.player_transfers), each kept by its key and never deleted: a move the
-+  provider no longer lists keeps its facts and the first day it was missed (absent_since). A
-+  response that cannot be a whole history (a 404 after one, no history, empty lists after a
-+  completed move, an unusable element, one key with two facts) writes nothing;
-+- his contracts with our clubs (core.player_contracts), each a dated fact kept; the one the
-+  provider no longer names is set aside from the day of the change (superseded_on), its observed
-+  expiry kept (FAILURE_MODES.md §20).
- 
- Links (core.provider_ids, how each was made in ops.provider_links):
- - the snapshot of 6 July 2026 (player_fact_snapshot.py), as it stands;
-@@ -81,6 +86,11 @@ PERIODS = {
-     "search": (30, 90, 365, 365),  # a club not found yet is searched again
- }
- NOT_FOUND_AGAIN = timedelta(days=90)
-+# A failed unit waits 2 ** attempts hours, at most a week; the exponent stops at 8 (256 h) before
-+# the timedelta is built, which overflows from 35 attempts.
-+RETRY_MAX, RETRY_EXPONENT_MAX = timedelta(days=7), 8
-+# The transfers route answered 404: no history known to the provider (FAILURE_MODES.md §20).
-+HTTP_404 = object()
- # Names that are no club: a player without one, retired, unknown or on a break.
- NO_CLUB = {"withoutclub", "retired", "unknown", "careerbreak", "vereinslos", "karriereende", "unbekannt", "pause"}
- RESERVE = re.compile(r"(?:\b(?:b|c|ii|iii)\b|\bu\s?-?(?:1[5-9]|2[0-3])\b|reserv|youth|juvenil|primavera|jong\b|academy)", re.I)
-@@ -177,6 +187,16 @@ def _day(value):
-         return None
- 
- 
-+def _contract_day(value):
-+    """A calendar date or ISO timestamp in a contract claim, validated in full."""
-+    if not isinstance(value, str) or not re.match(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}(?:$|T| )", value):
-+        return None
-+    try:
-+        return date.fromisoformat(value) if len(value) == 10 else datetime.fromisoformat(value).date()
-+    except ValueError:
-+        return None
-+
-+
- def _key(value):
-     text = str(value) if value is not None and not isinstance(value, bool) else ""
-     return text if re.fullmatch(r"[0-9]{1,10}", text) else None
-@@ -203,27 +223,53 @@ def _container(data, key, kind=list):
-     return value
- 
- 
-+def _obj(value):
-+    return value if isinstance(value, dict) else {}
-+
-+
- def parse_player(record):
--    """A player record of /players: the facts kept, or None when it has no id."""
-+    """The facts of a /players record, or None without an id.
-+
-+    Having both blocks supports the ordinary profile facts. A dated contract additionally
-+    requires an unambiguous current club, start and expiry. Explicit null supplies no date.
-+    """
-     if not isinstance(record, dict) or not _key(record.get("id")):
-         return None
--    life = record.get("lifeDates") or {}
--    attributes = record.get("attributes") or {}
--    foot = str((attributes.get("preferredFoot") or {}).get("name") or "").strip().lower()
-+    life = _obj(record.get("lifeDates"))
-+    attributes = _obj(record.get("attributes"))
-+    foot = str(_obj(attributes.get("preferredFoot")).get("name") or "").strip().lower()
-     height = attributes.get("height")
-     height = round(height * 100) if isinstance(height, (int, float)) and not isinstance(height, bool) else None
--    current = next((a for a in record.get("clubAssignments") or [] if isinstance(a, dict) and a.get("type") == "current"), None)
--    value = (record.get("marketValueDetails") or {}).get("current")
-+    assignments = record.get("clubAssignments")
-+    current = [a for a in assignments if isinstance(a, dict) and a.get("type") == "current"] if isinstance(assignments, list) else []
-+    spell = current[0] if len(current) == 1 else {}
-+    club, joined = _key(spell.get("clubId")), _contract_day(spell.get("start"))
-+    raw_expiry = attributes.get("contractUntil")
-+    expiry = _contract_day(raw_expiry)
-+    complete = isinstance(record.get("attributes"), dict) and isinstance(assignments, list)
-+    dated_contract = complete and club is not None and joined is not None and expiry is not None and joined <= expiry
-+    undated_assignment = complete and (not current or club is not None) and "contractUntil" in attributes and raw_expiry is None
-+    contract_issue = None
-+    if complete and current:
-+        if "contractUntil" not in attributes:
-+            contract_issue = "CONTRACT_MISSING"
-+        elif raw_expiry is not None and not dated_contract:
-+            contract_issue = "CONTRACT_INVALID"
-+    value = _obj(record.get("marketValueDetails")).get("current")
-     return {
-+        "complete": complete,
-+        "dated_contract": dated_contract,
-+        "undated_assignment": undated_assignment,
-+        "contract_issue": contract_issue,
-         "key": _key(record["id"]),
-         "name": record.get("name") if isinstance(record.get("name"), str) else None,
-         "birth_date": None if life.get("isDateOfBirthUnknown") else _day(life.get("dateOfBirth")),
--        "position": (attributes.get("position") or {}).get("name") or None,
-+        "position": _obj(attributes.get("position")).get("name") or None,
-         "height_cm": height if height and 140 <= height <= 220 else None,
-         "foot": foot if foot in ("left", "right", "both") else None,
--        "contract_until": _day(attributes.get("contractUntil")),
--        "club": _key((current or {}).get("clubId")),
--        "joined_on": _day((current or {}).get("start")),
-+        "contract_until": expiry,
-+        "club": club,
-+        "joined_on": joined,
-         "value": _money(value),
-         "value_on": _day((value or {}).get("determined")) if isinstance(value, dict) else None,
-     }
-@@ -268,33 +314,80 @@ def parse_values(data):
-     return sorted(out.values())
- 
- 
-+def _free(record):
-+    """A free transfer: its fee's label says so."""
-+    fee = _obj(_obj(record.get("details")).get("fee"))
-+    return str(_obj(fee.get("compact")).get("content") or "").strip().lower() == "free transfer"
-+
-+
- def transfer_kind(record):
--    kind = (record.get("typeDetails") or {}).get("type") or ""
-+    kind = _obj(record.get("typeDetails")).get("type") or ""
-     if kind == "STANDARD":
--        fee = (record.get("details") or {}).get("fee") or {}
--        label = str(((fee.get("compact") or {}) if isinstance(fee, dict) else {}).get("content") or "").strip().lower()
--        return "free" if label == "free transfer" else "transfer"
-+        return "free" if _free(record) else "transfer"
-     return TRANSFER_KINDS.get(kind)
- 
- 
-+# The facts a move's record can state; a field it omits or gives as null states nothing. The
-+# clubs ("from", "to") are written with their canonical club (Reader.move_changes).
-+MOVE_FACTS = ("date", "season", "from", "to", "kind", "fee", "value", "contract_until")
-+MOVE_COLUMNS = {"date": "transfer_date", "season": "season_label", "kind": "kind", "fee": "fee_eur",
-+                "value": "market_value_eur", "contract_until": "contract_until"}
-+
-+
-+def _move(record, announced):
-+    """A move's facts as its record states them. The fee is a positive amount, or 0 for a free
-+    transfer (its label attests it; another 0 is no amount, as for the values). A move of the
-+    pending list, or marked pending, is announced."""
-+    details = _obj(record.get("details"))
-+    display = _obj(details.get("season")).get("display")
-+    fee = _money(details.get("fee"))
-+    move = {
-+        "key": _key(record["id"]), "date": _day(details.get("date")),
-+        "season": display.strip() if isinstance(display, str) and display.strip() else None,
-+        "from": _key(_obj(record.get("transferSource")).get("clubId")), "to": _key(_obj(record.get("transferDestination")).get("clubId")),
-+        "kind": transfer_kind(record), "fee": fee if fee is not None else (0 if _free(record) else None),
-+        "value": _money(details.get("marketValue")), "contract_until": _day(details.get("contractUntilDate")),
-+        "pending": announced or bool(details.get("isPending")),
-+    }
-+    move["stated"] = frozenset(f for f in MOVE_FACTS if move[f] is not None) | {"pending"}
-+    return move
-+
-+
-+def transfer_history(data):
-+    """The moves of a /transfer/history/player response, one per key, checked whole before
-+    anything is written; Failed when the response cannot be a whole history: no history object
-+    or none of its two lists (HISTORY_MISSING), a list or the history of another type
-+    (SCHEMA_CHANGED), an element without an object or a numeric id (HISTORY_INVALID), one key
-+    with two different stated facts (HISTORY_CONFLICT). The same move twice is one."""
-+    if not isinstance(data, dict):
-+        raise Failed("HISTORY_MISSING" if data is None else "SCHEMA_CHANGED")
-+    history = data.get("history")
-+    if history is None:
-+        raise Failed("HISTORY_MISSING")
-+    if not isinstance(history, dict):
-+        raise Failed("SCHEMA_CHANGED")
-+    lists = {name: history.get(name) for name in ("pending", "terminated")}
-+    if any(records is not None and not isinstance(records, list) for records in lists.values()):
-+        raise Failed("SCHEMA_CHANGED")
-+    if all(records is None for records in lists.values()):
-+        raise Failed("HISTORY_MISSING")
-+    moves = {}
-+    for name, records in lists.items():
-+        for record in records or []:
-+            if not isinstance(record, dict) or not _key(record.get("id")):
-+                raise Failed("HISTORY_INVALID")
-+            move, seen = _move(record, name == "pending"), moves.get(_key(record["id"]))
-+            if seen is not None:
-+                if any(seen[f] != move[f] for f in seen["stated"] & move["stated"]):
-+                    raise Failed("HISTORY_CONFLICT")
-+                move = {**seen, **{f: move[f] for f in move["stated"]}, "stated": seen["stated"] | move["stated"]}
-+            moves[move["key"]] = move
-+    return list(moves.values())
-+
-+
- def parse_transfers(data):
--    """The transfers of a history, pending ones included (marked)."""
--    if data is None:
--        return []
--    history = _container(data, "history", dict)
--    out = []
--    for record in (history.get("pending") or []) + (history.get("terminated") or []):
--        if not isinstance(record, dict) or not _key(record.get("id")):
+ def held(conn, folder, season):
+@@ -222,13 +343,17 @@ def run(conn, get, scope, now):
+                 drop_copy(conn, folder, season)
+             continue
+         try:
+-            results = rows(get(f"{RAW}data/{folder}/results_{code}.csv", as_text=True)) if league.get("results") else []
+-            fixtures = rows(get(f"{RAW}data/{folder}/fixtures_{code}.csv", as_text=True)) if league.get("fixtures") else []
+-        except SourceError:
+-            unmatched += 1  # this competition's files are unreadable now; the others go on
 -            continue
--        details = record.get("details") or {}
--        source, target = record.get("transferSource") or {}, record.get("transferDestination") or {}
--        out.append({
--            "key": _key(record["id"]), "date": _day(details.get("date")), "season": (details.get("season") or {}).get("display"),
--            "from": _key(source.get("clubId")), "to": _key(target.get("clubId")), "kind": transfer_kind(record),
--            "fee": _money(details.get("fee")), "value": _money(details.get("marketValue")),
--            "contract_until": _day(details.get("contractUntilDate")), "pending": bool(details.get("isPending")),
--        })
--    return out
-+    """The transfers of a history, pending ones included (marked); none for no response."""
-+    return [] if data is None else transfer_history(data)
- 
- 
- def injury_kind(label):
-@@ -504,7 +597,7 @@ class Reader:
- 
-     def plan(self, *, link=False):
-         """Links from the snapshot, clubs and squads (daily, `link`), quarantines, and the units
--        of every link and every club met; each insert skips what is already queued."""
-+        of every link and every club met. Pending squad profiles can gain priority in place."""
-         now = self.now()
-         with self.conn.transaction():
-             self.conn.execute("SET LOCAL lock_timeout = '5s'")
-@@ -700,15 +793,17 @@ class Reader:
-                  UNION SELECT provider_club FROM core.provider_players WHERE provider = 'transfermarkt' AND provider_club IS NOT NULL) k
-                WHERE NOT EXISTS (SELECT 1 FROM core.provider_clubs c WHERE c.provider = 'transfermarkt' AND c.provider_key = k.club)
-                ON CONFLICT DO NOTHING""", (now,)).rowcount
--        # Every squad member never read: his profile (to link him), at his squad's priority.
-+        # Every unread squad profile, at its best squad priority. Keep its original due time
-+        # and retry state. A completed read (including a recorded 404) keeps its own schedule.
-         queued += self.conn.execute(
--            """INSERT INTO ops.transfermarkt_reads(kind, provider_key, priority, next_due_at)
-+            """INSERT INTO ops.transfermarkt_reads AS queued(kind, provider_key, priority, next_due_at)
-                SELECT 'profile', q.player_key, min(least(9, greatest(1, %s - q.season_year + 1)))::smallint, %s::timestamptz
-                FROM core.provider_squads q
-                WHERE q.provider = 'transfermarkt'
-                  AND NOT EXISTS (SELECT 1 FROM core.provider_players pp WHERE pp.provider = 'transfermarkt' AND pp.provider_key = q.player_key)
-                GROUP BY q.player_key
--               ON CONFLICT DO NOTHING""", (current, now)).rowcount
-+               ON CONFLICT (kind, provider_key) DO UPDATE SET priority = EXCLUDED.priority
-+               WHERE queued.read_at IS NULL AND queued.priority > EXCLUDED.priority""", (current, now)).rowcount
-         return queued
- 
-     # Units --------------------------------------------------------------------
-@@ -741,7 +836,7 @@ class Reader:
-     def failed(self, kind, units, error):
-         for key, _ in units:
-             attempts = self.conn.execute("SELECT attempts FROM ops.transfermarkt_reads WHERE kind = %s AND provider_key = %s", (kind, key)).fetchone()
--            wait = min(timedelta(hours=2 ** (attempts[0] if attempts else 0)), timedelta(days=7))
-+            wait = min(timedelta(hours=2 ** min(attempts[0] if attempts else 0, RETRY_EXPONENT_MAX)), RETRY_MAX)
-             self.conn.execute(
-                 """UPDATE ops.transfermarkt_reads SET next_due_at = now() + %s, attempts = attempts + 1, last_http_status = %s, error_code = %s
-                    WHERE kind = %s AND provider_key = %s""", (wait, error.status, error.code, kind, key))
-@@ -776,7 +871,7 @@ class Reader:
-                 try:
-                     data = self.get(f"/transfer/history/player/{keys[0]}")
-                 except Missing:
--                    data = None
-+                    data = HTTP_404  # write_transfers decides: an ordinary answer, or a refusal after a history
-             elif kind == "injuries":
-                 data = self.get(f"/player/{keys[0]}/injury")
-             else:
-@@ -856,8 +951,9 @@ class Reader:
-             return 0
-         today = self.now().date()
-         written = 0
-+        # The same /players records as a profile read's: the same step for each.
-         for p in data["players"].values():
--            written += self.provider_player(p, today)
-+            written += self.observe(p, today, search_priority=priority)
-         for club, year, members in data["squads"]:
-             self.conn.execute("DELETE FROM core.provider_squads WHERE provider = 'transfermarkt' AND club_key = %s AND season_year = %s", (club, year))
-             for player, shirt in members:
-@@ -883,18 +979,67 @@ class Reader:
-         return written
- 
-     def provider_player(self, p, today):
-+        """Write ordinary profile facts and keep the provenance of the last dated contract."""
-+        if p["complete"]:
-+            update = """name = EXCLUDED.name, birth_date = EXCLUDED.birth_date,
-+                 position = EXCLUDED.position, height_cm = EXCLUDED.height_cm, preferred_foot = EXCLUDED.preferred_foot,
-+                 market_value_eur = EXCLUDED.market_value_eur, market_value_on = EXCLUDED.market_value_on"""
-+        else:
-+            update = ", ".join(f"{c} = coalesce(core.provider_players.{c}, EXCLUDED.{c})" for c in (
-+                "name", "birth_date", "position", "height_cm", "preferred_foot", "market_value_eur", "market_value_on"))
-+        values = {**p, "today": today}
-+        if p["dated_contract"]:
-+            update += """, contract_until = EXCLUDED.contract_until, provider_club = EXCLUDED.provider_club,
-+                         joined_on = EXCLUDED.joined_on, read_on = EXCLUDED.read_on"""
-+        elif p["undated_assignment"]:
-+            # Club identity can be observed without a measured expiry. Keep an accepted dated
-+            # tuple together, including the provenance used by the read API.
-+            update += ", " + ", ".join(
-+                f"{field} = CASE WHEN core.provider_players.contract_until IS NULL THEN EXCLUDED.{field} ELSE core.provider_players.{field} END"
-+                for field in ("provider_club", "joined_on", "read_on")
-+            )
-+        else:
-+            values.update(contract_until=None, club=None, joined_on=None)
-         self.conn.execute(
--            """INSERT INTO core.provider_players(provider, provider_key, name, birth_date, position, height_cm, preferred_foot, contract_until,
-+            f"""INSERT INTO core.provider_players(provider, provider_key, name, birth_date, position, height_cm, preferred_foot, contract_until,
-                  provider_club, joined_on, market_value_eur, market_value_on, read_on)
-                VALUES ('transfermarkt', %(key)s, %(name)s, %(birth_date)s, %(position)s, %(height_cm)s, %(foot)s, %(contract_until)s,
-                  %(club)s, %(joined_on)s, %(value)s, %(value_on)s, %(today)s)
--               ON CONFLICT (provider, provider_key) DO UPDATE SET name = EXCLUDED.name, birth_date = EXCLUDED.birth_date,
--                 position = EXCLUDED.position, height_cm = EXCLUDED.height_cm, preferred_foot = EXCLUDED.preferred_foot,
--                 contract_until = EXCLUDED.contract_until, provider_club = EXCLUDED.provider_club, joined_on = EXCLUDED.joined_on,
--                 market_value_eur = EXCLUDED.market_value_eur, market_value_on = EXCLUDED.market_value_on, read_on = EXCLUDED.read_on""",
--            {**p, "today": today})
-+               ON CONFLICT (provider, provider_key) DO UPDATE SET {update}""",
-+            values)
-         return 1
- 
-+    def observe(self, p, today, *, search_priority=None):
-+        """One /players record, from a profile read or a club search (search_priority, the search
-+        unit's): what changed since the provider's row is compared first (club, start or expiry:
-+        the transfers are due now; value: the values), then the row is written, then, for a player
-+        linked to one of ours, his contracts. A fragment or contract issue from a search makes
-+        the player's profile due now. Only a dated claim changes contract facts."""
-+        key = p["key"]
-+        before = self.conn.execute(
-+            """SELECT market_value_eur, market_value_on, provider_club, joined_on, contract_until FROM core.provider_players
-+               WHERE provider = 'transfermarkt' AND provider_key = %s""", (key,)).fetchone()
-+        written = self.provider_player(p, today)
-+        if not p["complete"] or p["contract_issue"]:
-+            if search_priority is not None:
-+                self.conn.execute(
-+                    """INSERT INTO ops.transfermarkt_reads(kind, provider_key, priority, next_due_at) VALUES ('profile', %s, %s, now())
-+                       ON CONFLICT (kind, provider_key) DO UPDATE SET next_due_at = least(ops.transfermarkt_reads.next_due_at, EXCLUDED.next_due_at)""",
-+                    (key, search_priority))
-+            if not p["complete"]:
-+                return written
-+        player = self.player_of(key)
-+        if player is None:
-+            return written
-+        if before is not None and (before[0], before[1]) != (p["value"], p["value_on"]):
-+            self.conn.execute("UPDATE ops.transfermarkt_reads SET next_due_at = now() WHERE kind = 'values' AND provider_key = %s", (key,))
-+        if p["dated_contract"]:
-+            written += self.contract(player, p, today)
-+        if (before is not None and (p["dated_contract"] or (p["undated_assignment"] and before[4] is None))
-+                and tuple(before[2:]) != (p["club"], p["joined_on"], p["contract_until"])):
-+            self.conn.execute("UPDATE ops.transfermarkt_reads SET next_due_at = now() WHERE kind = 'transfers' AND provider_key = %s", (key,))
-+        return written
+-        with conn.transaction():
+-            written += save(conn, folder, league.get("league") or folder, season, results, fixtures, now)
++            results, fixtures = read_files(get, league, code, folder)
++            with conn.transaction():
++                written += save(conn, folder, league.get("league") or folder, season, results, fixtures, now, declared_results=len(results))
++        except SourceError as error:
++            # This competition is not written now (its files unreadable, or not the complete snapshot that
++            # keeps its results): its edition stays as it was; the others go on.
++            unmatched += 1
++            if error.detail is not None:
++                cup_key = f"open-matchday:{folder}:{season}"
++                edition = conn.execute("SELECT id FROM core.competition_seasons WHERE cup_key = %s", (cup_key,)).fetchone()
++                failure(conn, error.code, f"{cup_key}: {error.detail}", edition and edition[0])
+     conn.execute(
+         """INSERT INTO core.source_revisions(source, name, url, license, revision, retrieved_at) VALUES ('open-matchday', 'open-matchday', %s, %s, %s, %s)
+            ON CONFLICT (source) DO UPDATE SET revision=EXCLUDED.revision, retrieved_at=EXCLUDED.retrieved_at""",
+diff --git a/backend/vega/sources/open_matchday_history.py b/backend/vega/sources/open_matchday_history.py
+new file mode 100644
+index 0000000000..0769a5c7bc
+--- /dev/null
++++ b/backend/vega/sources/open_matchday_history.py
+@@ -0,0 +1,122 @@
++"""Evidence and retention checks for completed Open Matchday results."""
++from datetime import date
++from hashlib import sha256
++import json
++from pathlib import Path
 +
-     def write_profile(self, units, data):
-         if not isinstance(data, list):
-             raise Failed("SCHEMA_CHANGED")
-@@ -907,35 +1052,56 @@ class Reader:
-             if p is None:
-                 self.done("profile", key, priority, 0, status=404, error="NOT_FOUND", again=NOT_FOUND_AGAIN)
-                 continue
--            before = self.conn.execute(
--                "SELECT market_value_eur, market_value_on, provider_club, contract_until FROM core.provider_players WHERE provider = 'transfermarkt' AND provider_key = %s",
--                (key,)).fetchone()
--            written += self.provider_player(p, today)
--            player = self.player_of(key)
--            if player is not None:
--                written += self.contract(player, p, today)
--                # What changed since the last profile: the values or the transfers are due now.
--                if before is not None and (before[0], before[1]) != (p["value"], p["value_on"]):
--                    self.conn.execute("UPDATE ops.transfermarkt_reads SET next_due_at = now() WHERE kind = 'values' AND provider_key = %s", (key,))
--                if before is not None and (before[2], before[3]) != (p["club"], p["contract_until"]):
--                    self.conn.execute("UPDATE ops.transfermarkt_reads SET next_due_at = now() WHERE kind = 'transfers' AND provider_key = %s", (key,))
--            self.done("profile", key, priorities[key], 1)
-+            written += self.observe(p, today)
-+            if p["contract_issue"]:
-+                self.failed("profile", [(key, priority)], Failed(p["contract_issue"], 200))
-+            else:
-+                self.done("profile", key, priorities[key], 1)
-         return written
- 
-     def contract(self, player, p, today):
--        """The player's contract with his club, when the club is ours and its start known; an
--        older contract the provider gave him is closed by the newer one (removed)."""
-+        """The player's contracts after a dated record naming his club, start and expiry.
++from . import SourceError
 +
-+        Nothing is deleted (FAILURE_MODES.md §20):
-+        - the record's spell, at one of our clubs with its expiry, is written at (club, start), or
-+          updated in place when it is the provider's own row; another source's row at that key
-+          stays as it is;
-+        - every other contract of the provider not yet set aside is superseded from the record's
-+          start when that start is later than its own (a move, a renewal; a start to come keeps
-+          today's contract until then), from today when the record's expiry is still to come
-+          (back from a loan, a correction); an older record without a current expiry is stale
-+          and sets nothing aside. A superseded contract keeps its observed end date."""
-+        joined, until = p["joined_on"], p["contract_until"]
-         team = self.team_of(p["club"])
--        if team is None or p["joined_on"] is None or p["contract_until"] is None or p["contract_until"] < p["joined_on"]:
--            return 0
--        self.conn.execute(
--            "DELETE FROM core.player_contracts WHERE player_id = %s AND source = 'transfermarkt' AND (team_id, start_date) <> (%s, %s)",
--            (player, team, p["joined_on"]))
--        return self.conn.execute(
--            """INSERT INTO core.player_contracts(player_id, team_id, start_date, end_date, source, as_of)
--               VALUES (%s, %s, %s, %s, 'transfermarkt', %s)
--               ON CONFLICT (player_id, team_id, start_date) DO UPDATE SET end_date = EXCLUDED.end_date, as_of = EXCLUDED.as_of, updated_at = now()
--               WHERE core.player_contracts.source = 'transfermarkt'""", (player, team, p["joined_on"], p["contract_until"], today)).rowcount
-+        current = until >= today
-+        self.conn.execute("SELECT pg_advisory_xact_lock(hashtext('transfermarkt.contracts'), %s)", (player,))
-+        held = {(team_id, start): (source, superseded) for team_id, start, source, superseded in self.conn.execute(
-+            "SELECT team_id, start_date, source::text, superseded_on FROM core.player_contracts WHERE player_id = %s", (player,)).fetchall()}
-+        observed = (team, joined) if team is not None else None
-+        written = 0
-+        if observed is not None:
-+            if observed not in held:
-+                written += self.conn.execute(
-+                    """INSERT INTO core.player_contracts(player_id, team_id, start_date, end_date, source, as_of)
-+                       VALUES (%s, %s, %s, %s, 'transfermarkt', %s)""", (player, team, joined, until, today)).rowcount
-+            elif held[observed][0] == PROVIDER:
-+                # The provider's own fact: its expiry corrected in place; a current claim again.
-+                written += self.conn.execute(
-+                    """UPDATE core.player_contracts SET end_date = %s, as_of = %s, updated_at = now(),
-+                         superseded_on = CASE WHEN %s THEN NULL ELSE superseded_on END
-+                       WHERE player_id = %s AND team_id = %s AND start_date = %s
-+                         AND (end_date, as_of, superseded_on) IS DISTINCT FROM (%s, %s, CASE WHEN %s THEN NULL ELSE superseded_on END)""",
-+                    (until, today, current, player, team, joined, until, today, current)).rowcount
-+        for (team_id, start), (source, superseded) in held.items():
-+            if source != PROVIDER or (team_id, start) == observed or (superseded is not None and superseded <= today):
-+                continue
-+            day = joined if joined > start else today if current else None
-+            if day is None or (superseded is not None and superseded <= day):
-+                continue
-+            written += self.conn.execute(
-+                "UPDATE core.player_contracts SET superseded_on = %s, updated_at = now() WHERE player_id = %s AND team_id = %s AND start_date = %s",
-+                (day, player, team_id, start)).rowcount
-+        return written
- 
-     def write_club(self, units, data):
-         if not isinstance(data, list):
-@@ -979,22 +1145,83 @@ class Reader:
-         return written
- 
-     def write_transfers(self, units, data):
-+        """A player's transfers after a read (FAILURE_MODES.md §20). Each move the response lists
-+        is written by its key, in place; a move it no longer lists keeps its facts and the first day
-+        it was missed (absent_since); nothing is deleted. A response that cannot be a whole history
-+        raises Failed with its true HTTP status: nothing is written, the unit is tried again later,
-+        and its read_at and rows_written stay those of the last accepted read. Refused: a 404 when
-+        the player holds a Transfermarkt move (a first 404 is an ordinary answer), empty lists when
-+        he holds a completed one, and whatever transfer_history refuses."""
-         (key, priority), = units
--        rows = parse_transfers(data)
-+        try:
-+            moves = None if data is HTTP_404 else transfer_history(data)
-+        except Failed as error:
-+            raise Failed(error.code, error.status or 200) from None
-         player = self.player_of(key)
-+        if player is None:
-+            self.done("transfers", key, priority, 0, status=404 if moves is None else 200)
-+            return 0
-+        # One writer per player at a time: a second reader of the same player waits, then merges.
-+        self.conn.execute("SELECT pg_advisory_xact_lock(hashtext('transfermarkt.transfers'), %s)", (player,))
-+        cursor = self.conn.execute(
-+            """SELECT id, source_key, transfer_date, season_label, from_provider_club, from_team_id, to_provider_club, to_team_id,
-+                      kind::text AS kind, fee_eur, market_value_eur, contract_until, pending, absent_since, as_of
-+               FROM core.player_transfers WHERE player_id = %s AND source = 'transfermarkt'""", (player,))
-+        names = [c.name for c in cursor.description]
-+        held = [dict(zip(names, row)) for row in cursor.fetchall()]
-+        if moves is None:
-+            if held:
-+                raise Failed("HISTORY_MISSING", 404)
-+            self.done("transfers", key, priority, 0, status=404)
-+            return 0
-+        if not moves and any(not row["pending"] for row in held):
-+            raise Failed("HISTORY_EMPTY", 200)
-         today = self.now().date()
--        written = 0
--        if player is not None:
--            self.conn.execute("DELETE FROM core.player_transfers WHERE player_id = %s AND source = 'transfermarkt'", (player,))
--            for t in rows:
--                written += self.conn.execute(
-+        stored = {row["source_key"]: row for row in held if row["source_key"] is not None}
-+        for move in moves:
-+            row = stored.get(move["key"])
-+            if row is None:
-+                self.conn.execute(
-                     """INSERT INTO core.player_transfers(player_id, transfer_date, from_team_id, to_team_id, kind, fee_eur, source, as_of, source_key,
-                          season_label, from_provider_club, to_provider_club, market_value_eur, contract_until, pending)
-                        VALUES (%s, %s, %s, %s, %s, %s, 'transfermarkt', %s, %s, %s, %s, %s, %s, %s, %s)""",
--                    (player, t["date"], self.team_of(t["from"]), self.team_of(t["to"]), t["kind"], t["fee"], today, t["key"], t["season"],
--                     t["from"], t["to"], t["value"], t["contract_until"], t["pending"])).rowcount
--        self.done("transfers", key, priority, written)
--        return written
-+                    (player, move["date"], self.team_of(move["from"]), self.team_of(move["to"]), move["kind"], move["fee"], today, move["key"],
-+                     move["season"], move["from"], move["to"], move["value"], move["contract_until"], move["pending"]))
-+                continue
-+            changes = self.move_changes(row, move, today)
-+            if changes:
-+                self.conn.execute(
-+                    f"UPDATE core.player_transfers SET {', '.join(f'{c} = %s' for c in changes)}, updated_at = now() WHERE id = %s",
-+                    (*changes.values(), row["id"]))
-+        self.conn.execute(
-+            """UPDATE core.player_transfers SET absent_since = %s, updated_at = now()
-+               WHERE player_id = %s AND source = 'transfermarkt' AND source_key IS NOT NULL AND absent_since IS NULL
-+                 AND NOT (source_key = ANY(%s))""", (today, player, [move["key"] for move in moves]))
-+        self.done("transfers", key, priority, len(moves))
-+        return len(moves)
++EVIDENCE_SHA256 = "2b92073f69f52809b618e2b94c86ca6f50f0e9721f12fe056b6e00cedc1c1377"
++raw = (Path(__file__).parent / "data" / "open_matchday_history.json").read_bytes()
++if sha256(raw).hexdigest() != EVIDENCE_SHA256:
++    raise ValueError("Open Matchday historical results evidence changed")
++RESULTS = {row["provider_key"]: row for row in json.loads(raw)["results"]}
 +
-+    def move_changes(self, row, move, today):
-+        """The columns of the stored move `row` that the record `move` changes. A field the record
-+        states replaces the stored one, one it omits or gives as null stays. A new club key takes
-+        its own canonical club or none, never the old key's; the same key keeps the club resolved
-+        now, else the one attached since. When the kind changes and no fee is stated, the old fee
-+        goes: it was the fee of another kind of move. A completed move listed as announced is an
-+        older snapshot: its completed facts stay; it is only no longer absent."""
-+        if not row["pending"] and move["pending"]:
-+            new = {"absent_since": None}
-+        else:
-+            new = {column: move[field] for field, column in MOVE_COLUMNS.items() if move[field] is not None}
-+            if move["fee"] is None and move["kind"] is not None and move["kind"] != row["kind"]:
-+                new["fee_eur"] = None
-+            for side in ("from", "to"):
-+                club = move[side]
-+                if club is None:
-+                    continue
-+                team = self.team_of(club)
-+                new[f"{side}_provider_club"] = club
-+                new[f"{side}_team_id"] = team if team is not None or club != row[f"{side}_provider_club"] else row[f"{side}_team_id"]
-+            new.update(pending=move["pending"], absent_since=None, as_of=today)
-+        return {column: value for column, value in new.items() if row[column] != value}
- 
-     def write_injuries(self, units, data):
-         (key, priority), = units
-diff --git a/dashboard/frontend/src/competition-selector.css b/dashboard/frontend/src/competition-selector.css
-index 051cf6bce0..c4990e192e 100644
---- a/dashboard/frontend/src/competition-selector.css
-+++ b/dashboard/frontend/src/competition-selector.css
-@@ -626,8 +626,6 @@
-   flex: 2 1 260px;
- }
- /* Cups sit in the competition directory, with their logos. */
--.competition-card-fallback { display: grid; place-items: center; color: var(--muted); background: var(--surface-subtle); }
--.competition-card-fallback .icon { width: 18px; height: 18px; }
- .cup-directory-heading { display: flex; align-items: end; justify-content: space-between; flex-wrap: wrap; gap: 14px; margin: 0 0 22px; }
- .cup-directory-heading h2 { margin: 0; color: var(--ink-strong); font-size: var(--text-xl); }
- .cup-directory-heading p { margin: 5px 0 0; color: var(--muted); font-size: var(--text-sm); }
-diff --git a/dashboard/frontend/src/components/ClubScoutUI.jsx b/dashboard/frontend/src/components/ClubScoutUI.jsx
-index 53f53c25c5..38861e218a 100644
---- a/dashboard/frontend/src/components/ClubScoutUI.jsx
-+++ b/dashboard/frontend/src/components/ClubScoutUI.jsx
-@@ -21,6 +21,7 @@ import {
-   partOf,
-   sumKnown,
- } from "../services/club-supported.js";
-+import { safeImageUrl } from "../services/format.js";
- import s from "./ClubScout.module.css";
- 
- export const clubStyles = s;
-@@ -88,16 +89,23 @@ export function ClubEmptySeason({ dossier, played = 0 }) {
- 
- /**
-  * Plain images: the site's reveal deadline would freeze Media elements that
-- * mount after a long read into their initials.
-+ * mount after a long read into their initials. The source goes through the
-+ * site's checked resolver, as Media's does: a Vega reference is read through
-+ * /api/assets, never from its reserved host; a refused one shows the initials.
-+ * A failure belongs to its source: a new url is a new attempt, as Media's (VI-30).
-  */
--export function Picture({
-+export function Picture(props) {
-+  return <PictureAttempt key={props.url || ""} {...props} />;
++
++def for_edition(folder, season):
++    prefix = f"{folder}:{season}:"
++    return {key: row for key, row in RESULTS.items() if key.startswith(prefix)}
++
++
++def final_score(key, incoming, score):
++    if incoming != tuple(score):
++        raise SourceError("ATTESTED_HISTORY_CONFLICT", f"{key}: a reported score contradicts the attested final")
++
++
++
++def rolling_prefix(before, incoming, declared_results):
++    """At a proved moving left boundary, the older results remain in the edition."""
++    # This is a local minimum of corroborating observations, not the provider's
++    # retention rule. It applies only to the three 2026/27 folders attested here.
++    played = {key: row for key, row in incoming.items() if row["status"] == "finished"}
++    if not played or len(played) != declared_results:
++        return set()
++    try:
++        days = {date.fromisoformat(row["date"]) for row in played.values()}
++    except ValueError:
++        return set()
++    if min(days) < date(2026, 7, 1) or max(days) >= date(2027, 7, 1):
++        return set()
++    start = min(days).isoformat()
++    gone, overlapping_dates = set(), []
++    for key, former in before.items():
++        if former["status"] != "finished":
++            continue
++        if former["match_date"] is None:
++            return set()
++        if key not in incoming and former["match_date"] < start:
++            gone.add(key)
++            continue
++        if former["match_date"] < start:
++            continue
++        actual = played.get(key)
++        if actual is None or (actual["date"], actual["home"], actual["away"], actual["home_score"], actual["away_score"]) != (
++                former["match_date"], former["home_team_name"], former["away_team_name"], former["home_score"], former["away_score"]):
++            return set()
++        overlapping_dates.append(former["match_date"])
++    if len(overlapping_dates) >= max(50, (declared_results + 1) // 2) and len(set(overlapping_dates)) >= 4:
++        return gone
++    return set()
++
++
++def retained(conn, edition, before, incoming, attested, declared_results):
++    """Keep only exact, already-stored sporting observations. The manifest never creates one."""
++    if not attested:
++        return set()
++    prefix = rolling_prefix(before, incoming, declared_results)
++    anchor_keys = sorted(set(attested) | prefix)
++    linked = dict((key, (current, match, scope)) for key, current, match, scope in conn.execute("""
++        SELECT p.provider_key,p.is_current,m.id,m.competition_season_id
++          FROM core.provider_ids p LEFT JOIN core.matches m ON m.id=p.entity_id
++         WHERE p.entity_type='match' AND p.provider='open_matchday' AND p.provider_key=ANY(%s)
++         FOR SHARE OF p
++    """, (anchor_keys,)))
++    names = {row[side] for row in incoming.values() for side in ("home", "away")}
++    for key in anchor_keys:
++        names.update(key.split(":", 2)[2].split("|")[1:])
++    teams = dict(conn.execute("""
++        SELECT provider_key,entity_id FROM core.provider_ids
++         WHERE entity_type='team' AND provider='open_matchday' AND provider_key=ANY(%s)
++         FOR SHARE
++    """, (["name:" + name for name in sorted(names)],)))
++    preserved = set()
++    pairs = {}
++    for key in anchor_keys:
++        proof = attested.get(key)
++        item = incoming.get(key)
++        if item is not None and proof:
++            if item["status"] != "finished":
++                raise SourceError("ATTESTED_HISTORY_CONFLICT", f"{key}: an attested final is listed as unplayed")
++            final_score(key, (item["home_score"], item["away_score"]), proof["score"])
++        if key not in linked:
++            if key in prefix or (edition is not None and item is not None):
++                raise SourceError("ATTESTED_HISTORY_RESTORE_REQUIRED", f"{key}: published physical identity missing")
++            continue
++        current, ident, scope = linked[key]
++        old = before.get(key)
++        if not current or old is None or scope != edition or ident != old["id"]:
++            raise SourceError("ATTESTED_HISTORY_CONFLICT", f"{key}: existing provider link is inconsistent")
++        day, home, away = key.split(":", 2)[2].split("|")
++        clubs = (teams.get("name:" + home), teams.get("name:" + away))
++        score = proof["score"] if proof else (old["home_score"], old["away_score"])
++        live = conn.execute("""
++            SELECT status::text,source::text,season_id,competition_season_id,match_date::text,home_team_id,away_team_id,
++                   home_team_name,away_team_name,home_score,away_score,archive_position
++              FROM core.matches WHERE id=%s FOR SHARE
++        """, (ident,)).fetchone()
++        if (None in clubs or clubs[0] == clubs[1] or live is None or
++                live != ("finished", "open_matchday", 2026, edition, day, *clubs, home, away, *score, old["archive_position"])):
++            raise SourceError("ATTESTED_HISTORY_CONFLICT", f"{key}: stored edition, sides, score or position disagree")
++        if key in prefix or item is not None:
++            preserved.add(key)
++        pair = (day, frozenset(clubs))
++        if pair in pairs:
++            raise SourceError("ATTESTED_HISTORY_CONFLICT", f"{key}: two attested keys identify the same match")
++        pairs[pair] = key
++    for key, item in incoming.items():
++        if key not in preserved and (item["date"], frozenset(teams.get("name:" + item[s]) for s in ("home", "away"))) in pairs:
++            raise SourceError("ATTESTED_HISTORY_CONFLICT", f"{key}: another key names a retained match")
++    positions = [before[key]["archive_position"] for key in preserved]
++    if len(set(positions)) != len(positions):
++        raise SourceError("ATTESTED_HISTORY_CONFLICT", "retained match positions disagree")
++    return preserved
+diff --git a/backend/vega/sources/snapshot.py b/backend/vega/sources/snapshot.py
+new file mode 100644
+index 0000000000..08ac7b3805
+--- /dev/null
++++ b/backend/vega/sources/snapshot.py
+@@ -0,0 +1,198 @@
++"""A source edition replaced by a later snapshot of it (VI-27, FAILURE_MODES.md §19).
++
++The cup sources (cups.py) and open-matchday (open_matchday.py) publish each edition whole: the
++snapshot read now replaces the one read before. A snapshot can be partial (an empty or truncated
++file served with a 200, a fixture list still naming a match since played) while looking valid, so:
++
++- a match the base holds finished must still be in the snapshot, finished (`guard`): otherwise
++  the edition is kept as it was and the snapshot refused, unless the match is in RETRACTIONS; in
++  the World Cup's archive, a match OpenFootball only numbers later is the same parent under its new
++  key (`rekey`, cups._numbered);
++- a match whose values have not changed is not written again (`write`): no revision, no
++  `updated_at`; one that changed gets `revision + 1`; a new place in the source's order alone
++  moves `archive_position` only;
++- a writer can only change or remove the row it observed. If another transaction changed it,
++  the snapshot transaction must roll back. A later read can use the new state for its guard.
++
++The removal of an open-matchday copy of a league PitchAPI holds (open_matchday.drop_copy) is a
++reviewed decision of its own (VI-21) and does not pass through here.
++"""
++
++from psycopg.errors import LockNotAvailable
++
++from . import SourceError
++
++# Results a later, complete snapshot of their source really withdrew or left unplayed, written here
++# once reviewed: {(provider, match provider key): "reviewer, date: reason"}. The next read of the
++# edition may then remove or downgrade that match, and that match only.
++RETRACTIONS = {}
++
++# The columns of core.matches a cup source writes, read back as the writers compare them.
++COLUMNS = {
++    "status": "m.status::text", "match_date": "m.match_date::text", "source": "m.source::text",
++    **{c: f"m.{c}" for c in (
++        "competition_season_id", "season_id", "home_team_id", "away_team_id", "home_team_name", "away_team_name", "round_id",
++        "group_name", "match_number", "archive_position", "is_neutral", "home_score", "away_score", "home_score_90",
++        "away_score_90", "home_score_ht", "away_score_ht", "home_score_et", "away_score_et", "home_penalty_score",
++        "away_penalty_score")},
 +}
 +
-+function PictureAttempt({
-   name = "",
-   url,
-   className = "crest",
-   round = false,
- }) {
-   const [failed, setFailed] = useState(false);
--  const src = failed ? null : url;
-+  const src = failed ? null : safeImageUrl(url) || null;
-   const initials = name
-     .split(/\s+/)
-     .filter(Boolean)
-diff --git a/dashboard/frontend/src/components/CupCompetition.jsx b/dashboard/frontend/src/components/CupCompetition.jsx
-index 72c2718aab..a4187ca1b0 100644
---- a/dashboard/frontend/src/components/CupCompetition.jsx
-+++ b/dashboard/frontend/src/components/CupCompetition.jsx
-@@ -4,10 +4,11 @@ import { Card, Media, Pager, Segments, AsyncState, Empty } from "./UI.jsx";
- import { date, seasonLabel } from "../services/format.js";
- import { parisDay } from "../services/fixtures.js";
- import KnockoutBracket from "./KnockoutBracket.jsx";
-+import { cupEditionTable, cupTable } from "../services/catalog-client.js";
- import { useResource } from "../services/resources.js";
--import { cupTable } from "../services/catalog-client.js";
-+import { editionArtworkUrl } from "../services/competition-artwork.js";
- import { competitionCountryLabel } from "../services/competition-selector.js";
--import { normalizeOpenCup, normalizeSupplementalCup, filterCupMatches, resultsAsOpenCup, leagueTable, numberedCupRounds, groupTables } from "../services/cup-matches.js";
-+import { normalizeOpenCup, normalizeRoundSides, normalizeSupplementalCup, filterCupMatches, resultsAsOpenCup, leagueTable, numberedCupRounds, groupTables } from "../services/cup-matches.js";
- import { combineCupLegs, knockoutStage } from "../services/knockout-bracket.js";
- import { cupWorkerSnapshot } from "../services/cup-worker-client.js";
- import { NATIONAL_CUP_ARCHIVES, GERMAN_CUP_FOLDER, isGermanCupSeason } from "../services/cup-archives.js";
-@@ -38,43 +39,47 @@ function LeagueStandings({ name, matches }) {
-   </>;
- }
- /** A tournament's groups (the archives' World Cups and Euros): one table a group, computed from its results. */
--function GroupTables({ matches, season, highlight, win }) {
--  const tables = useMemo(() => groupTables(matches, { win }), [matches, win]);
-+function GroupTables({ matches, competition, season, highlight }) {
-+  const today = parisDay(Date.now());
-+  const tables = useMemo(() => groupTables(matches, { competition, season, today }), [matches, competition, season, today]);
-   if (!tables.length) return <Empty>Cette édition ne s’est pas jouée en groupes.</Empty>;
-   return (
-     <>
--    <div className="edition-groups">
--      {tables.map((table) => (
--        <section className="edition-group" key={table.name}>
--          <h3>{table.name}</h3>
--          <table className="data-table" aria-label={table.name}>
--            <thead><tr><th scope="col">#</th><th scope="col">Équipe</th><th scope="col" title="Matchs joués">J</th><th scope="col" title="Différence de buts">Diff.</th><th scope="col" title="Points">Pts</th></tr></thead>
--            <tbody>{table.rows.map((row) => (
--              <tr key={row.name} className={highlight && sameNationalTeam(row.name, highlight) ? "edition-own" : undefined}>
--                <td>{row.position}</td>
--                <th scope="row"><span className="cup-match-team"><NationalFlag name={row.name} season={season} /><span title={nationalTeamLabel(row.name)}>{nationalTeamLabel(row.name)}</span></span></th>
--                <td>{row.played}</td><td>{row.difference > 0 ? "+" : ""}{row.difference}</td><td><strong>{row.points}</strong></td>
--              </tr>
--            ))}</tbody>
--          </table>
--        </section>
--      ))}
--    </div>
--    <p className="nations-note">Classements calculés à partir des résultats disponibles.</p>
-+      <div className="edition-groups">
-+        {tables.map((table) => (
-+          <section className="edition-group" key={table.name}>
-+            <h3>{table.name}</h3>
-+            <table className="data-table" aria-label={table.name}>
-+              <thead><tr><th scope="col">#</th><th scope="col">Équipe</th><th scope="col" title="Matchs joués">J</th><th scope="col" title="Différence de buts">Diff.</th><th scope="col" title="Points">Pts</th></tr></thead>
-+              <tbody>{table.rows.map((row) => (
-+                <tr key={row.name} className={highlight && sameNationalTeam(row.name, highlight) ? "edition-own" : undefined}>
-+                  <td title={row.tied ? "Départage indisponible" : undefined}>{row.position == null ? "—" : row.position + (row.tied ? "=" : "")}</td>
-+                  <th scope="row"><span className="cup-match-team"><NationalFlag name={row.name} season={season} /><span title={nationalTeamLabel(row.name)}>{nationalTeamLabel(row.name)}</span></span></th>
-+                  <td>{row.played}</td><td>{row.difference == null ? "—" : (row.difference > 0 ? "+" : "") + row.difference}</td><td><strong>{row.points ?? "—"}</strong></td>
-+                </tr>
-+              ))}</tbody>
-+            </table>
-+          </section>
-+        ))}
-+      </div>
-+      <p className="nations-note">Classements calculés à partir des résultats disponibles.</p>
-     </>
-   );
- }
--/** A cup's match, in the main lists' design (date, teams around the score, round), and its forecast before kick-off. */
-+/**
-+ * A cup's match, in the main lists' design (date, teams around the score, round), and its forecast before kick-off.
-+ * A club's badge is the crest of its own side (homeImage, awayImage: the row's foreign key, VI-30), else its initials.
-+ */
- function CupMatch({ match, nationalTeams, season, highlight }) {
--  const badge = (name) => (nationalTeams ? <NationalFlag name={name} season={season || match.date} /> : <Media name={name} />);
-+  const badge = (name, image) => (nationalTeams ? <NationalFlag name={name} season={season || match.date} /> : <Media name={name} url={image} />);
-   const label = (name) => (nationalTeams ? nationalTeamLabel(name) : name);
-   return (
-     <div className={"match-row cup-match" + (highlight && nationalTeams && [match.home, match.away].some((name) => sameNationalTeam(name, highlight)) ? " cup-match-own" : "")}>
-       <span className="match-date">{match.date ? date(match.date) : "Date à préciser"}</span>
-       <span className="match-teams">
--        <span className="team-name home-team"><span>{label(match.home)}</span>{badge(match.home)}</span>
--        <strong className="score">{match.score ? match.score[0] + " – " + match.score[1] : "À venir"}</strong>
--        <span className="team-name">{badge(match.away)}<span>{label(match.away)}</span></span>
-+        <span className="team-name home-team"><span>{label(match.home)}</span>{badge(match.home, match.homeImage)}</span>
-+        <strong className="score">{match.status === "canceled" ? "Annulé" : match.score ? match.score[0] + " – " + match.score[1] : "À venir"}</strong>
-+        <span className="team-name">{badge(match.away, match.awayImage)}<span>{label(match.away)}</span></span>
-         {match.notes?.length > 0 && <span className="cup-match-notes">{match.notes.join(" · ")}</span>}
-         {match.status === "scheduled" && <MatchForecastBar home={match.home} away={match.away} forecast={match.forecast} />}
-       </span>
-@@ -102,8 +107,13 @@ export default function CupCompetition({ competition, initialSeason, name = comp
-   const nationalTeams = ["euro", "world-cup-history", "afcon", "copa-america", "asian-cup", "gold-cup"].includes(competition.sourceKey);
-   // A national teams' tournament with rounds (the World Cup's archive, the Euro) opens on its bracket and has its groups.
-   const tournament = nationalTeams && supportsBracket;
--  const views = tournament ? ["bracket", "groups", "matches"] : league ? ["standings", "matches", "projection"] : supportsBracket ? ["matches", "bracket", "projection"] : ["matches"];
--  const [view, setViewState] = useState(views.includes(initialView) && initialView !== "projection" ? initialView : views[0]);
-+  const finalPool = competition.sourceKey === "world-cup-history" && season === "1950";
-+  const tournamentViews = finalPool
-+    ? [["groups", "Groupes"], ["bracket", "Tableau"], ["matches", "Matchs"]]
-+    : [["bracket", "Tableau"], ["groups", "Groupes"], ["matches", "Matchs"]];
-+  const views = tournament ? tournamentViews.map(([value]) => value) : league ? ["standings", "matches", "projection"] : supportsBracket ? ["matches", "bracket", "projection"] : ["matches"];
-+  const [preferredView, setViewState] = useState(initialView === "projection" ? "" : initialView);
-+  const view = views.includes(preferredView) ? preferredView : views[0];
-   const setView = (next) => { setViewState(next); onView?.(next); };
-   const archive = NATIONAL_CUP_ARCHIVES[competition.folder];
-   const germany = competition.folder === GERMAN_CUP_FOLDER;
-@@ -111,7 +121,10 @@ export default function CupCompetition({ competition, initialSeason, name = comp
-   const projection = useCupProjection(competition, typeof season === "string" ? season : String(season));
-   const projected = projection?.format === "knockout" || (!projection?.format && projection?.teams?.length > 0);
-   const showProjection = view === "projection" && projected;
--  const [status, setStatus] = useState(competition.source === "open-matchday" && !Number(competition.tables?.results?.rows) ? "scheduled" : "finished");
-+  const [status, setStatus] = useState(
-+    (competition.source === "open-matchday" && !Number(competition.tables?.results?.rows)) ||
-+    (competition.sourceKey === "euro" && season === "2028") ? "scheduled" : "finished",
-+  );
-   const [query, setQuery] = useState("");
-   const [page, setPage] = useState(1);
-   const tables = competition.editions?.[season] || (season === competition.defaultSeason ? competition.tables : null);
-@@ -124,29 +137,43 @@ export default function CupCompetition({ competition, initialSeason, name = comp
-     : germany && isGermanCupSeason(season) ? "openligadb"
-     : archive && season === archive.season ? "archive"
-     : "unavailable";
--  const resource = useResource("cup:" + competition.id + ":" + mode + ":" + view + ":" + season + ":" + version, async () => {
-+  const resource = useResource("cup:" + competition.id + ":" + mode + ":" + view + ":" + season + ":" + version, async ({ signal }) => {
-     if (mode === "supplemental") {
--      const [results, fixtures] = await Promise.all(["results", "fixtures"].map(kind => tables?.[kind] && Number(tables[kind].rows) !== 0 ? cupTable(competition.folder,season,kind) : []));
-+      const payload = competition.canonicalId
-+        ? await cupEditionTable(competition.canonicalId, season, { signal }).catch(() => {
-+            signal.throwIfAborted();
-+            return null;
-+          })
-+        : null;
-+      const validTable = Array.isArray(payload?.results) && Array.isArray(payload?.fixtures);
-+      const [results, fixtures] = validTable ? [payload.results, payload.fixtures] : await Promise.all(["results", "fixtures"].map(kind => tables?.[kind] && Number(tables[kind].rows) !== 0 ? cupTable(competition.folder, season, kind, { signal }) : []));
-       // A cup's numbered rounds named by their ties (its bracket, VI-19); a league's matches as they are.
-       const normalized = normalizeSupplementalCup(results, fixtures);
-       const matches = league ? normalized : numberedCupRounds(normalized);
--      if (view !== "bracket") return { matches };
--      return matches.some((match) => knockoutStage(match.roundName)) ? { matches: combineCupLegs(matches) } : { matches, unavailable: true };
-+      const editionArtwork = validTable ? payload.editionArtwork : undefined;
-+      if (view !== "bracket") return { matches, editionArtwork };
-+      return matches.some((match) => knockoutStage(match.roundName))
-+        ? { matches: combineCupLegs(matches), editionArtwork }
-+        : { matches, unavailable: true, editionArtwork };
-     }
-     if (mode === "unavailable") return { matches: [], unavailable: true };
--    if (mode === "openligadb") return cupWorkerSnapshot("openligadb", "germany-cup", season, "/api/openligadb?competition=germany-cup&season=" + encodeURIComponent(season));
-+    if (mode === "openligadb") {
-+      const payload = await cupWorkerSnapshot("openligadb", "germany-cup", season, "/api/openligadb?competition=germany-cup&season=" + encodeURIComponent(season), { signal });
-+      return { ...payload, matches: normalizeRoundSides(payload.matches) };
-+    }
-     if (mode === "results") {
-       // International Results: played matches only, without rounds (results-v1).
--      const payload = await cupWorkerSnapshot("nations-results", competition.sourceKey, season, null);
--      return { matches: normalizeOpenCup(resultsAsOpenCup(payload.matches)), source: payload.source };
-+      const payload = await cupWorkerSnapshot("nations-results", competition.sourceKey, season, null, { signal });
-+      return { matches: normalizeOpenCup(resultsAsOpenCup(payload.matches)), source: payload.source, editionArtwork: payload.editionArtwork };
-     }
-     const key = mode === "archive" ? archive.key : competition.sourceKey;
--    const payload = await cupWorkerSnapshot("open-cups", key, season, "/api/open-cups?competition=" + encodeURIComponent(key) + "&season=" + encodeURIComponent(season));
-+    const payload = await cupWorkerSnapshot("open-cups", key, season, "/api/open-cups?competition=" + encodeURIComponent(key) + "&season=" + encodeURIComponent(season), { signal });
-     const matches = normalizeOpenCup(payload.matches);
--    return { matches: mode === "archive" && archive.twoLegged && view === "bracket" ? combineCupLegs(matches) : matches, source: payload.source };
-+    return { matches: mode === "archive" && archive.twoLegged && view === "bracket" ? combineCupLegs(matches) : matches, source: payload.source, editionArtwork: payload.editionArtwork };
-   });
--  // A win was worth two points in the World Cups before 1994.
--  const win = competition.sourceKey === "world-cup-history" && Number(season) < 1994 ? 2 : 3;
-+  // The edition's own emblem when the API attests it, else the competition's logo where it is no edition's (VI-30).
-+  const artwork = resource.error || resource.refreshError ? null : resource.value?.editionArtwork;
-+  const imageUrl = editionArtworkUrl(competition.id, competition.imageUrl, artwork);
-   function pickSeason(next) {
-     const other = (editions || []).find((edition) => edition.season === next && edition.id !== competition.id);
-     if (other) return onEdition?.(other);
-@@ -157,10 +184,10 @@ export default function CupCompetition({ competition, initialSeason, name = comp
-   }
-   return (
-     <Card className="cup-detail edition-card">
--      <EditionHeader competition={competition} name={name} heading={heading} season={season} onSeason={pickSeason} label="Édition de la coupe"
-+      <EditionHeader imageUrl={imageUrl} name={name} heading={heading} season={season} onSeason={pickSeason} label="Édition de la coupe"
-         editions={(editions || competition.seasons.map((value) => ({ season: value, id: competition.id }))).map((edition) => ({ ...edition, label: editionLabel(competition, edition.season) }))}>
-         {highlight && nationalTeams && <FollowedTeam label={nationalTeamLabel(highlight)} flag={<NationalFlag name={highlight} season={season} />} onClear={() => onHighlight?.("")} />}
--        {tournament && <Segments label="Vue de la compétition" value={view} onChange={setView} items={[["bracket", "Tableau"], ["groups", "Groupes"], ["matches", "Matchs"]]} />}
-+        {tournament && <Segments label="Vue de la compétition" value={view} onChange={setView} items={tournamentViews} />}
-         {supportsBracket && !tournament && <Segments label="Vue de la compétition" value={view} onChange={setView} items={[["matches", "Matchs"], ["bracket", "Tableau"], ...(projected ? [["projection", "Projection"]] : [])]} />}
-         {league && <Segments label="Vue de la compétition" value={view} onChange={setView} items={[["standings", "Classement"], ["matches", "Matchs"], ...(projected ? [["projection", "Projection"]] : [])]} />}
-       </EditionHeader>
-@@ -174,7 +201,7 @@ export default function CupCompetition({ competition, initialSeason, name = comp
-       <AsyncState resource={resource}>
-         {(value) => value.unavailable ? <div className="cup-bracket-unavailable"><Empty>Les tours de cette édition ne sont pas disponibles.</Empty>{archive && season !== archive.season && <button className="button button-secondary" onClick={() => setSeason(archive.season)}>Voir le tableau {archive.season}</button>}</div> : <>
-           {value.matches.some((match) => match.status === "scheduled" && match.date && match.date < parisDay(Date.now())) && <p className="cup-source">Certains scores de cette édition ne sont pas encore renseignés.</p>}
--          {view === "bracket" ? <KnockoutBracket matches={value.matches} nationalTeams={nationalTeams} season={season} highlight={highlight} win={win} trophy={trophyArt({ title: name, trophyYear: Number(String(season).slice(0, 4)) })} /> : view === "groups" ? <GroupTables matches={value.matches} season={season} highlight={highlight} win={win} /> : view === "standings" ? <LeagueStandings name={competition.name} matches={value.matches} /> : <CupMatchList matches={value.matches} status={status} query={query} page={page} onPage={setPage} nationalTeams={nationalTeams} season={season} highlight={highlight} />}
-+          {view === "bracket" ? <KnockoutBracket matches={value.matches} nationalTeams={nationalTeams} competition={competition.sourceKey} season={season} highlight={highlight} trophy={trophyArt({ title: name, trophyYear: Number(String(season).slice(0, 4)) })} /> : view === "groups" ? <GroupTables matches={value.matches} competition={competition.sourceKey} season={season} highlight={highlight} /> : view === "standings" ? <LeagueStandings name={competition.name} matches={value.matches} /> : <CupMatchList matches={value.matches} status={status} query={query} page={page} onPage={setPage} nationalTeams={nationalTeams} season={season} highlight={highlight} />}
-         </>}
-       </AsyncState>
-       </>}
-@@ -182,7 +209,7 @@ export default function CupCompetition({ competition, initialSeason, name = comp
-   );
- }
- export function CupMatchList({ matches, status, query, page, onPage, nationalTeams = false, season, highlight = "" }) {
--  const rows = useMemo(() => filterCupMatches(matches, status, query), [matches, status, query]);
-+  const rows = useMemo(() => filterCupMatches(matches, status, query, Date.now(), nationalTeams ? nationalTeamLabel : undefined), [matches, status, query, nationalTeams]);
-   const pages = Math.max(1, Math.ceil(rows.length / 30)), current = Math.min(page, pages);
-   return <>
-     <div className="cup-match-list">{rows.slice((current - 1) * 30, current * 30).map((match) => <CupMatch key={match.key} match={match} nationalTeams={nationalTeams} season={season} highlight={highlight} />)}</div>
-diff --git a/dashboard/frontend/src/components/EditionHeader.jsx b/dashboard/frontend/src/components/EditionHeader.jsx
-index 6584e5d250..ee3876633c 100644
---- a/dashboard/frontend/src/components/EditionHeader.jsx
-+++ b/dashboard/frontend/src/components/EditionHeader.jsx
-@@ -1,16 +1,17 @@
- "use client";
- /* The head of a cup edition's page (mock-up validated 18 Nov 2026), on one row: the competition, its edition between
-  * two arrows (the editions latest first: « ‹ » is the one before, « › » the one after), then what the page adds (the
-- * team followed, the views). */
-+ * team followed, the views). `imageUrl` is the page's resolved image (competition-artwork.js editionArtworkUrl: the
-+ * edition's attested emblem, else a logo that is no edition's); without one the slot stays empty, never initials. */
- import React from "react";
- import { Media } from "./UI.jsx";
- 
--export default function EditionHeader({ competition, name, editions, season, onSeason, label = "Édition", heading = false, children }) {
-+export default function EditionHeader({ imageUrl, name, editions, season, onSeason, label = "Édition", heading = false, children }) {
-   const index = editions.findIndex((edition) => edition.season === season);
-   const Name = heading ? "h1" : "h2";
-   return (
-     <header className="edition-head">
--      <Media name={name} url={competition.imageUrl} className="crest edition-logo" />
-+      <Media url={imageUrl} className="crest edition-logo" initials={false} />
-       <Name className="edition-name">{name}</Name>
-       <div className="edition-stepper">
-         <button type="button" aria-label="Édition précédente" disabled={index < 0 || index >= editions.length - 1} onClick={() => onSeason(editions[index + 1].season)}>
-diff --git a/dashboard/frontend/src/components/GlobalSearch.jsx b/dashboard/frontend/src/components/GlobalSearch.jsx
-index 4569d97312..8ef9ed68f2 100644
---- a/dashboard/frontend/src/components/GlobalSearch.jsx
-+++ b/dashboard/frontend/src/components/GlobalSearch.jsx
-@@ -22,7 +22,7 @@ import {
- } from "../services/global-search.js";
- import { cachedResource, useResource } from "../services/resources.js";
- import { nationName, useNations } from "../services/nations.js";
--import { cupIndex } from "../services/catalog-client.js";
-+import { cupIndex, servesCupWorkerIndex } from "../services/catalog-client.js";
- import {
-   hasBoundedSearch,
-   searchIdentities,
-@@ -87,6 +87,7 @@ export default function GlobalSearch({ sheet = false, onClose }) {
-   const season = f?.season;
-   const remote = hasBoundedSearch(f?.manifest);
-   const needle = query.trim();
-+  const searchCompetitions = armed && needle.length >= 2;
-   const searchKey = JSON.stringify([
-     season,
-     needle.toLocaleLowerCase("fr"),
-@@ -95,12 +96,12 @@ export default function GlobalSearch({ sheet = false, onClose }) {
-   const legacyCups = useResource(
-     "supplemental-cup-index",
-     () => cupIndex("supplemental"),
--    !remote && armed && needle.length >= 2,
-+    searchCompetitions,
-   );
-   const workerCups = useResource(
-     "cup-worker-index",
-     () => cupIndex("worker"),
--    !remote && armed && needle.length >= 2,
-+    searchCompetitions && (!remote || servesCupWorkerIndex(f?.manifest)),
-   );
-   // Compatibility with a backend deployed before the discovery endpoint. The
-   // complete legacy index is requested only after typing, never on hover/focus.
-@@ -161,7 +162,7 @@ export default function GlobalSearch({ sheet = false, onClose }) {
-   const loading =
-     open &&
-     needle.length >= 2 &&
--    (remote ? !ready || remoteResult.loading : legacySearch.loading);
-+    (legacyCups.loading || (remote ? !ready || remoteResult.loading : legacySearch.loading));
-   const searchError = remote ? currentRemote?.error : legacySearch.error;
-   // The national teams, read once the search is in use.
-   const nationList = useNations(armed ? f?.season : null);
-@@ -404,6 +405,7 @@ export default function GlobalSearch({ sheet = false, onClose }) {
-                           <Media
-                             name={item.name}
-                             url={item.imageUrl}
-+                            initials={kind !== "competitions"}
-                             className={
-                               kind === "players" ? "player-avatar" : "crest"
-                             }
++
++def _read(conn, provider, where, args):
++    names = list(COLUMNS)
++    rows = conn.execute(
++        f"""SELECT p.provider_key, p.is_current, m.id, m.revision, m.xmin::text,
++             (SELECT jsonb_agg(jsonb_build_array(k.provider,k.provider_key,k.is_current))
++              FROM core.provider_ids k WHERE k.entity_type='match' AND k.entity_id=m.id),
++             {', '.join(COLUMNS.values())}
++            FROM core.matches m JOIN core.provider_ids p ON p.entity_type = 'match' AND p.provider = %s AND p.entity_id = m.id
++            WHERE {where}""",
++        (provider, *args),
++    ).fetchall()
++    return {key: {"id": match, "revision": revision, "row_version": version, "is_current": current, "keys": keys,
++                  **dict(zip(names, columns))}
++            for key, current, match, revision, version, keys, *columns in rows}
++
++
++def stored(conn, provider, edition):
++    """{current provider key: {"id", "revision", column: value}} of the edition's matches."""
++    return {} if edition is None else _read(conn, provider, "m.competition_season_id = %s AND p.is_current", (edition,))
++
++
++def elsewhere(conn, provider, edition, keys):
++    """Resolve current keys of another edition and refuse incoming keys retired in any edition."""
++    if not keys:
++        return {}
++    matches = _read(conn, provider, "p.provider_key = ANY(%s) AND (NOT p.is_current OR m.competition_season_id IS DISTINCT FROM %s)",
++                    (list(keys), edition))
++    retired = sorted(key for key, match in matches.items() if not match["is_current"])
++    if retired:
++        raise SourceError("INACTIVE_MATCH_KEY", f"{provider}: retired match keys in the snapshot: {', '.join(retired[:5])}")
++    return matches
++
++
++def guard(provider, before, after, label):
++    """Refuse the snapshot when it would drop or downgrade a finished match of the edition.
++
++    `before`: stored(); `after`: {provider key: status} of the snapshot; `label`: the edition, for the detail."""
++    def reviewed(key):
++        return (provider, key) in RETRACTIONS
++
++    dropped = sorted(k for k, m in before.items() if m["status"] == "finished" and k not in after and not reviewed(k))
++    downgraded = sorted(k for k, m in before.items()
++                        if m["status"] == "finished" and k in after and after[k] != "finished" and not reviewed(k))
++    for code, keys in (("SNAPSHOT_DROPS_RESULT", dropped), ("RESULT_DOWNGRADED", downgraded)):
++        if keys:
++            shown = ", ".join(keys[:5]) + (f" and {len(keys) - 5} more" if len(keys) > 5 else "")
++            raise SourceError(code, f"{label}: {len(keys)} finished match(es) of {len(before)} kept, as the snapshot "
++                                    f"{'lacks' if code == 'SNAPSHOT_DROPS_RESULT' else 'leaves unplayed'}: {shown}")
++
++
++def _claim(conn, provider, expected):
++    """Lock the affected parents, then check their current keys in a fresh statement."""
++    ids = sorted(expected)
++    parents = {match: (version, source) for match, version, source in conn.execute(
++        """SELECT id,xmin::text,source::text FROM core.matches WHERE id=ANY(%s)
++           ORDER BY id FOR UPDATE""", (ids,))}
++    try:
++        keys = conn.execute(
++            """SELECT entity_id,provider::text,provider_key,is_current FROM core.provider_ids
++                WHERE entity_type='match' AND entity_id=ANY(%s)
++                ORDER BY entity_id,provider,provider_key FOR UPDATE NOWAIT""", (ids,)).fetchall()
++    except LockNotAvailable as error:
++        # A concurrent key UPDATE already past its row lock can be waiting on our parent.
++        # Refuse this snapshot and let the key writer finish, rather than waiting on it.
++        raise SourceError("SNAPSHOT_CHANGED", f"{provider}: match keys are being changed") from error
++    ownership = {}
++    for match, owner, key, active in keys:
++        ownership.setdefault(match, set()).add((owner, key, active))
++    for match, (old, key) in expected.items():
++        parent = parents.get(match)
++        if parent is None or parent[0] != old["row_version"] or ownership.get(match) != set(map(tuple, old["keys"])):
++            raise SourceError("SNAPSHOT_CHANGED", f"{provider}: {key} or its keys changed after the snapshot read")
++        if parent[1] != provider or any(owner != provider for owner, _, _ in old["keys"]):
++            raise SourceError("SHARED_MATCH", f"{provider}: {key} is held by another source")
++
++
++def _guard_dependents(conn, provider, ids, stat_columns):
++    owned = ["core.provider_ids.entity_id"]
++    if stat_columns:
++        # The match lock excludes late FK inserts. Existing statistic rows can be
++        # enriched without taking that lock, so lock them before checking their fields.
++        try:
++            stats = conn.execute(
++                """SELECT s.match_id,jsonb_strip_nulls(to_jsonb(s)) -
++                          (ARRAY['season_id','match_id','team_id','period','updated_at']::text[] ||
++                           CASE WHEN s.period='all' THEN %s::text[] ELSE ARRAY['corners']::text[] END)
++                   FROM core.team_match_stats s WHERE s.match_id=ANY(%s)
++                   ORDER BY season_id,match_id,team_id,period FOR UPDATE NOWAIT""", (stat_columns, ids)).fetchall()
++        except LockNotAvailable as error:
++            raise SourceError("SNAPSHOT_CHANGED", f"{provider}: match statistics are being enriched") from error
++        for match, fields in stats:
++            if fields:
++                raise SourceError("MATCH_HAS_DEPENDENTS", f"{provider}: match {match} has other team statistics: "
++                                  + ", ".join(sorted(fields)))
++        owned.append("core.team_match_stats.match_id")
++    for start in range(0, len(ids), 5000):
++        batch = ids[start:start + 5000]
++        found = conn.execute(
++            """SELECT d.match_id,d.dependency FROM ops.archive_match_dependents(%s::integer[]) d
++                 WHERE d.dependency <> ALL(%s)
++               UNION ALL SELECT e.match_id,'core.match_events' FROM core.match_events e WHERE e.match_id=ANY(%s)
++               LIMIT 1""", (batch, owned, batch)).fetchone()
++        if found:
++            raise SourceError("MATCH_HAS_DEPENDENTS", f"{provider}: match {found[0]} is held by {found[1]}")
++
++
++def rekey(conn, provider, found, old, new):
++    """Give a stored match the key its source now writes for it: its one current key `old`, renamed `new` in place.
++    The parent, its id and every row naming it stay. Claimed as a change: SNAPSHOT_CHANGED when the parent or its
++    keys changed since the read. Returns its stored() entry under `new`."""
++    _claim(conn, provider, {found["id"]: (found, old)})
++    renamed = conn.execute(
++        """UPDATE core.provider_ids SET provider_key=%s, updated_at=now()
++           WHERE entity_type='match' AND provider=%s AND provider_key=%s AND entity_id=%s AND is_current""",
++        (new, provider, old, found["id"])).rowcount
++    if renamed != 1:
++        raise SourceError("SNAPSHOT_CHANGED", f"{provider}: {old} changed after the snapshot read")
++    return dict(found, keys=[[provider, new, True]])
++
++
++def write(conn, provider, key, values, found, changed=False):
++    """Insert, update or leave one match: "inserted", "updated", "moved" (its place alone) or None.
++
++    `values`: {column: value} of COLUMNS; `found`: its stored() entry or None; `changed`: a change
++    the columns do not show (its statistics)."""
++    columns = list(values)
++    if found is None:
++        mid = conn.execute(f"INSERT INTO core.matches({', '.join(columns)}) VALUES ({', '.join(['%s'] * len(columns))}) RETURNING id",
++                           [values[c] for c in columns]).fetchone()[0]
++        conn.execute("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('match',%s,%s,%s)",
++                     (provider, key, mid))
++        return mid, "inserted"
++    differs = [c for c in columns if c != "archive_position" and values[c] != found[c]]
++    if differs or changed:
++        assignments = ", ".join(f"{c}=%s" for c in columns) + ", revision=revision+1, updated_at=now()"
++        args, outcome = [values[c] for c in columns], "updated"
++    elif "archive_position" in values and values["archive_position"] != found["archive_position"]:
++        assignments = "archive_position=%s"
++        args, outcome = [values["archive_position"]], "moved"
++    else:
++        return found["id"], None
++    # The physical version includes changes of archive_position and corrections that
++    # do not bump the public revision. The parent and key locks survive until commit.
++    _claim(conn, provider, {found["id"]: (found, key)})
++    conn.execute(f"UPDATE core.matches SET {assignments} WHERE id=%s", (*args, found["id"]))
++    return found["id"], outcome
++
++
++def remove(conn, provider, before, keep, stat_columns=None):
++    """Delete matches whose current keys the snapshot withdrew, including their former aliases."""
++    gone = {m["id"]: (m, key) for key, m in before.items() if key not in keep}
++    if gone:
++        _claim(conn, provider, gone)
++        _guard_dependents(conn, provider, list(gone), stat_columns)
++        conn.execute("DELETE FROM core.provider_ids WHERE entity_type='match' AND provider=%s AND entity_id = ANY(%s)",
++                     (provider, list(gone)))
++        conn.execute("DELETE FROM core.matches WHERE id=ANY(%s)", (list(gone),))
++    return len(gone)

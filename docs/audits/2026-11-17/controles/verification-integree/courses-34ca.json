@@ -1,0 +1,289 @@
+{
+  "commit": "34ca3b5b382d7a6a06da9d051170096ba1d700e8",
+  "database": "vega_v2_astra_34ca_2ba97b6d38c3",
+  "roles": [
+    "vega_collect",
+    "PostgreSQL 18.6 (Debian 18.6-1.pgdg12+2) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 12.2.0-14+deb12u1) 12.2.0, 64-bit"
+  ],
+  "parent_only": {
+    "seed": [
+      "ok",
+      2,
+      0
+    ],
+    "enriched_before": [
+      [
+        2,
+        "2026-11-29 18:45:00+00:00",
+        null
+      ]
+    ],
+    "withdraw": [
+      "ok",
+      1,
+      0
+    ],
+    "after": []
+  },
+  "late_nonfk_reference": {
+    "seed": [
+      "ok",
+      2,
+      0
+    ],
+    "withdraw": [
+      "ok",
+      1,
+      0
+    ],
+    "after": [
+      [
+        3,
+        42,
+        null
+      ]
+    ]
+  },
+  "cup_digest_race": {
+    "seed": [
+      "ok",
+      2,
+      0
+    ],
+    "baseline": [
+      [
+        "Alpha United",
+        2,
+        1,
+        1,
+        0,
+        1,
+        "6b65978dbdaa3c53f3034d8d107ef7d8359d006d859d62fb7a51eccaf8dd65df"
+      ],
+      [
+        "Cedar United",
+        0,
+        1,
+        0,
+        0,
+        1,
+        "6b65978dbdaa3c53f3034d8d107ef7d8359d006d859d62fb7a51eccaf8dd65df"
+      ]
+    ],
+    "expected_scores_latest": [
+      [
+        2,
+        1
+      ],
+      [
+        1,
+        1
+      ]
+    ],
+    "other_commit": [
+      "ok",
+      1,
+      0
+    ],
+    "after_other": [
+      [
+        "Alpha United",
+        3,
+        1,
+        1,
+        0,
+        2,
+        "6ae60e18098f08217421fe72d548dc288baab9df14a090d649c47ea07aa9629f"
+      ],
+      [
+        "Cedar United",
+        0,
+        1,
+        0,
+        0,
+        1,
+        "6ae60e18098f08217421fe72d548dc288baab9df14a090d649c47ea07aa9629f"
+      ]
+    ],
+    "latest_commit": [
+      "ok",
+      1,
+      0
+    ],
+    "physical_after_latest": [
+      [
+        "Alpha United",
+        3,
+        1,
+        1,
+        0,
+        2,
+        "010399f9659d3162ee7802113e1c5160ad5c29db6fdefaa2756444e7feb2cf6c"
+      ],
+      [
+        "Cedar United",
+        1,
+        1,
+        0,
+        0,
+        2,
+        "010399f9659d3162ee7802113e1c5160ad5c29db6fdefaa2756444e7feb2cf6c"
+      ]
+    ],
+    "replay": [
+      "ok",
+      0,
+      0
+    ],
+    "after_replay": [
+      [
+        "Alpha United",
+        3,
+        1,
+        1,
+        0,
+        2,
+        "010399f9659d3162ee7802113e1c5160ad5c29db6fdefaa2756444e7feb2cf6c"
+      ],
+      [
+        "Cedar United",
+        1,
+        1,
+        0,
+        0,
+        2,
+        "010399f9659d3162ee7802113e1c5160ad5c29db6fdefaa2756444e7feb2cf6c"
+      ]
+    ]
+  },
+  "euro_partial_ht": {
+    "before": [
+      [
+        "Alpha United",
+        3,
+        1,
+        1,
+        0,
+        2,
+        "010399f9659d3162ee7802113e1c5160ad5c29db6fdefaa2756444e7feb2cf6c"
+      ],
+      [
+        "Cedar United",
+        1,
+        1,
+        0,
+        0,
+        2,
+        "010399f9659d3162ee7802113e1c5160ad5c29db6fdefaa2756444e7feb2cf6c"
+      ]
+    ],
+    "outcome": [
+      "ok",
+      1,
+      0
+    ],
+    "after": [
+      [
+        "Alpha United",
+        2,
+        1,
+        null,
+        null,
+        3,
+        "30af0ef2bd319be1bad118ec8144f5c9933ba5ae19c44b37772adb0b402bf6df"
+      ],
+      [
+        "Cedar United",
+        1,
+        1,
+        0,
+        0,
+        2,
+        "30af0ef2bd319be1bad118ec8144f5c9933ba5ae19c44b37772adb0b402bf6df"
+      ]
+    ]
+  },
+  "native_qualification_race": {
+    "seed": "ok",
+    "outside_team": 104,
+    "update": "ok",
+    "official": [
+      [
+        101,
+        9
+      ],
+      [
+        102,
+        7
+      ],
+      [
+        103,
+        1
+      ]
+    ],
+    "counted": [
+      [
+        101,
+        [
+          1,
+          0,
+          0,
+          1,
+          0,
+          2
+        ]
+      ],
+      [
+        104,
+        [
+          1,
+          1,
+          0,
+          0,
+          2,
+          0
+        ]
+      ]
+    ],
+    "http_before_retry": {
+      "status": 200,
+      "etag": "W/\"support-v1-b9a85478cada4b72fae28c3cb9ee0886f5d392c7b76aa8dfc11ead33eb75bc16\"",
+      "conditional_status": 304,
+      "fetched_at": "2026-11-17T12:00:00.000Z",
+      "first_row": {
+        "id": "t_000101",
+        "uefaId": null,
+        "imageUrl": null,
+        "name": "Aster City",
+        "wins": 3,
+        "draws": 1,
+        "losses": 0,
+        "played": 4,
+        "points": 9,
+        "goalsFor": 8,
+        "goalsAgainst": 1,
+        "difference": 7,
+        "position": 1
+      },
+      "source": "SportScore"
+    },
+    "retry": "INCOMPLETE_TABLE",
+    "api": [
+      [
+        101,
+        9,
+        "sportscore"
+      ],
+      [
+        102,
+        7,
+        "sportscore"
+      ],
+      [
+        103,
+        1,
+        "sportscore"
+      ]
+    ]
+  }
+}

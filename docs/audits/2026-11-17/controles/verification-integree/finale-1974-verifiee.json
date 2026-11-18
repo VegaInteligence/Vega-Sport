@@ -1,0 +1,228 @@
+{
+  "revision": "4c413029c173e96704f4752f843f186526e114cf",
+  "verified": true,
+  "expected_refusal": false,
+  "transition": "ok",
+  "repeat": "ok",
+  "before": {
+    "source_tables": {
+      "worldcup_appearances": [
+        6,
+        "fda7b26411b0156c0ce429de4b38c9ecedc641c2a60ff7b25e04ba5a0b352376"
+      ],
+      "worldcup_awards": [
+        1,
+        "71b39ef2cc83b339490df84fea58777c49978556a7d93f4c9cc1591578c366f0"
+      ],
+      "worldcup_bookings": [
+        2,
+        "6a74447c124626d8175efbac1a61c3629036d6eb1ba551232fc95af09f64b5e8"
+      ],
+      "worldcup_goals": [
+        3,
+        "67e5cff4a2efaf6acb90bfcbba1071bc4305dafeb8e8b5a4d50260a41ee61817"
+      ],
+      "worldcup_matches": [
+        3,
+        "7662b0143132d5ecf93e51f3cd93ad6f2eb4eb5b6fd3500ee5de1c94ee9d3a2b"
+      ],
+      "worldcup_people": [
+        7,
+        "0b5d32bbc37cdadff22e599422d1d5d8141c6436678a4d991d95f2cb9634970b"
+      ],
+      "worldcup_shootout_kicks": [
+        2,
+        "aab5b3ebaa3f7e802781128024d800a3e957fa79cb9594c5d29c035e2f71b498"
+      ],
+      "worldcup_squads": [
+        4,
+        "73e90c5f35c782bb87f299689308ae0cf373db0456a14963e565cbb3683cc078"
+      ],
+      "worldcup_stadiums": [
+        2,
+        "cfe5612a5b382667b48d4141fa8778541e3925b8de6676074fa8fffc7408e8d3"
+      ],
+      "worldcup_substitutions": [
+        2,
+        "5323fbbc2961c37a83dd14cccd7ee2aa8d8aea1c1ac47bdb21a681459fdff80e"
+      ],
+      "worldcup_teams": [
+        4,
+        "feacb19d37666c351ac46bec853c323e5cd3d89ce119aed9d16fbfbbc9e1b475"
+      ],
+      "worldcup_tournaments": [
+        2,
+        "764e0cd04fefdb6d47ffa562109efce65a3ec3be7ddf5fe6380b38a3ca773f30"
+      ]
+    },
+    "canonical_id": 1,
+    "finals": [
+      [
+        1,
+        2,
+        1,
+        null
+      ]
+    ],
+    "provider_keys": [
+      [
+        "world-cup-history:1974:1974-07-07|West Germany|Netherlands|",
+        true
+      ]
+    ],
+    "http": {
+      "status": 200,
+      "conditional": 304,
+      "etag": "W/\"worldcup-v1-5db876b2dddc805ecb2bfa66027d72f2f7043a4b89588ea0828d39395f501881\"",
+      "body_sha256": "1791737e7597b69c0df32fe52d76372e81523fa2ea5e78b006bdc7d7ad065c75"
+    }
+  },
+  "after": {
+    "source_tables": {
+      "worldcup_appearances": [
+        6,
+        "fda7b26411b0156c0ce429de4b38c9ecedc641c2a60ff7b25e04ba5a0b352376"
+      ],
+      "worldcup_awards": [
+        1,
+        "71b39ef2cc83b339490df84fea58777c49978556a7d93f4c9cc1591578c366f0"
+      ],
+      "worldcup_bookings": [
+        2,
+        "6a74447c124626d8175efbac1a61c3629036d6eb1ba551232fc95af09f64b5e8"
+      ],
+      "worldcup_goals": [
+        3,
+        "67e5cff4a2efaf6acb90bfcbba1071bc4305dafeb8e8b5a4d50260a41ee61817"
+      ],
+      "worldcup_matches": [
+        3,
+        "7662b0143132d5ecf93e51f3cd93ad6f2eb4eb5b6fd3500ee5de1c94ee9d3a2b"
+      ],
+      "worldcup_people": [
+        7,
+        "0b5d32bbc37cdadff22e599422d1d5d8141c6436678a4d991d95f2cb9634970b"
+      ],
+      "worldcup_shootout_kicks": [
+        2,
+        "aab5b3ebaa3f7e802781128024d800a3e957fa79cb9594c5d29c035e2f71b498"
+      ],
+      "worldcup_squads": [
+        4,
+        "73e90c5f35c782bb87f299689308ae0cf373db0456a14963e565cbb3683cc078"
+      ],
+      "worldcup_stadiums": [
+        2,
+        "cfe5612a5b382667b48d4141fa8778541e3925b8de6676074fa8fffc7408e8d3"
+      ],
+      "worldcup_substitutions": [
+        2,
+        "5323fbbc2961c37a83dd14cccd7ee2aa8d8aea1c1ac47bdb21a681459fdff80e"
+      ],
+      "worldcup_teams": [
+        4,
+        "feacb19d37666c351ac46bec853c323e5cd3d89ce119aed9d16fbfbbc9e1b475"
+      ],
+      "worldcup_tournaments": [
+        2,
+        "764e0cd04fefdb6d47ffa562109efce65a3ec3be7ddf5fe6380b38a3ca773f30"
+      ]
+    },
+    "canonical_id": 1,
+    "finals": [
+      [
+        1,
+        2,
+        1,
+        38
+      ]
+    ],
+    "provider_keys": [
+      [
+        "world-cup-history:1974:1974-07-07|West Germany|Netherlands|38",
+        true
+      ]
+    ],
+    "http": {
+      "status": 200,
+      "conditional": 304,
+      "etag": "W/\"worldcup-v1-5db876b2dddc805ecb2bfa66027d72f2f7043a4b89588ea0828d39395f501881\"",
+      "body_sha256": "1791737e7597b69c0df32fe52d76372e81523fa2ea5e78b006bdc7d7ad065c75"
+    }
+  },
+  "replay": {
+    "source_tables": {
+      "worldcup_appearances": [
+        6,
+        "fda7b26411b0156c0ce429de4b38c9ecedc641c2a60ff7b25e04ba5a0b352376"
+      ],
+      "worldcup_awards": [
+        1,
+        "71b39ef2cc83b339490df84fea58777c49978556a7d93f4c9cc1591578c366f0"
+      ],
+      "worldcup_bookings": [
+        2,
+        "6a74447c124626d8175efbac1a61c3629036d6eb1ba551232fc95af09f64b5e8"
+      ],
+      "worldcup_goals": [
+        3,
+        "67e5cff4a2efaf6acb90bfcbba1071bc4305dafeb8e8b5a4d50260a41ee61817"
+      ],
+      "worldcup_matches": [
+        3,
+        "7662b0143132d5ecf93e51f3cd93ad6f2eb4eb5b6fd3500ee5de1c94ee9d3a2b"
+      ],
+      "worldcup_people": [
+        7,
+        "0b5d32bbc37cdadff22e599422d1d5d8141c6436678a4d991d95f2cb9634970b"
+      ],
+      "worldcup_shootout_kicks": [
+        2,
+        "aab5b3ebaa3f7e802781128024d800a3e957fa79cb9594c5d29c035e2f71b498"
+      ],
+      "worldcup_squads": [
+        4,
+        "73e90c5f35c782bb87f299689308ae0cf373db0456a14963e565cbb3683cc078"
+      ],
+      "worldcup_stadiums": [
+        2,
+        "cfe5612a5b382667b48d4141fa8778541e3925b8de6676074fa8fffc7408e8d3"
+      ],
+      "worldcup_substitutions": [
+        2,
+        "5323fbbc2961c37a83dd14cccd7ee2aa8d8aea1c1ac47bdb21a681459fdff80e"
+      ],
+      "worldcup_teams": [
+        4,
+        "feacb19d37666c351ac46bec853c323e5cd3d89ce119aed9d16fbfbbc9e1b475"
+      ],
+      "worldcup_tournaments": [
+        2,
+        "764e0cd04fefdb6d47ffa562109efce65a3ec3be7ddf5fe6380b38a3ca773f30"
+      ]
+    },
+    "canonical_id": 1,
+    "finals": [
+      [
+        1,
+        2,
+        1,
+        38
+      ]
+    ],
+    "provider_keys": [
+      [
+        "world-cup-history:1974:1974-07-07|West Germany|Netherlands|38",
+        true
+      ]
+    ],
+    "http": {
+      "status": 200,
+      "conditional": 304,
+      "etag": "W/\"worldcup-v1-5db876b2dddc805ecb2bfa66027d72f2f7043a4b89588ea0828d39395f501881\"",
+      "body_sha256": "1791737e7597b69c0df32fe52d76372e81523fa2ea5e78b006bdc7d7ad065c75"
+    }
+  },
+  "setup": "PostgreSQL 18, tables initialisées depuis le SHA, exemples OpenFootball 1974 et Fjelstul du dépôt via run_due et vega_collect, API avec vega_read",
+  "rerun": "python -I -B verifier-finale-1974.py CHEMIN_DEPOT 4c413029c173e96704f4752f843f186526e114cf resultat.json --port PORT_PG18_LOCAL"
+}

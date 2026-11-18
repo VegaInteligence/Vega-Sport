@@ -1395,7 +1395,7 @@ index 0000000000..c6f76d92f8
 +if __name__ == "__main__":
 +    unittest.main()
 diff --git a/backend/tests/test_archives.py b/backend/tests/test_archives.py
-index 9f3d09130d..d69f97f26d 100644
+index 424311e9db..454d44fc0e 100644
 --- a/backend/tests/test_archives.py
 +++ b/backend/tests/test_archives.py
 @@ -104,13 +104,19 @@ class ImportTest(unittest.TestCase):
@@ -1421,7 +1421,7 @@ index 9f3d09130d..d69f97f26d 100644
          self.assertEqual(x("SELECT count(*) FROM core.teams").fetchone()[0], 7)  # Leicester plays twice
          # A calendar-year edition spans two sporting seasons under one key: each season has
          # its own edition row, and its matches point at it.
-@@ -156,15 +162,17 @@ class ImportTest(unittest.TestCase):
+@@ -191,15 +197,17 @@ class ImportTest(unittest.TestCase):
              match = x("INSERT INTO core.matches(competition_season_id, season_id, status, source) VALUES (%s, 2021, 'finished', 'pitchapi') RETURNING id",
                        (edition,)).fetchone()[0]
              x("INSERT INTO core.match_events(season_id, match_id, seq, event_type, minute) VALUES (2021, %s, 0, 'goal', 10)", (match,))

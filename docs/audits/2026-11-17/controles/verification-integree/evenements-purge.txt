@@ -1,0 +1,30 @@
+{
+  "since": "2026-11-18T22:02:00Z",
+  "observed": "2026-11-18T22:12:18.199471+00:00",
+  "lines": [
+    {
+      "time": "2026-11-18T22:07:43.337000+00:00",
+      "message": "daily step=scope error=DATABASE_42501 retry_at=2026-11-18T23:07:43+00:00"
+    },
+    {
+      "time": "2026-11-18T22:08:41.583000+00:00",
+      "message": "source=wikidata scope=clubs outcome=ok"
+    },
+    {
+      "time": "2026-11-18T22:08:41.583000+00:00",
+      "message": "source=wikidata scope=stadiums outcome=ok"
+    },
+    {
+      "time": "2026-11-18T22:08:41.583000+00:00",
+      "message": "source=wikidata scope=portraits outcome=ok"
+    },
+    {
+      "time": "2026-11-18T22:08:41.583000+00:00",
+      "message": "source=wikidata scope=players outcome=ok"
+    },
+    {
+      "time": "2026-11-18T22:08:41.583000+00:00",
+      "message": "source=wikimedia scope=players outcome=ok"
+    }
+  ]
+}

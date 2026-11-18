@@ -1,0 +1,87 @@
+VERDICT: CHANGES_REQUESTED
+
+One candidate-introduced defect blocks safe use of the snapshot path on production-shaped data, and the report does not yet measure it. I ran nothing; everything below is from reading the worktree against the inlined evidence.
+
+## Findings
+
+**1. Major — a withdrawn fixture is refused whenever a derived row names it, which freezes the whole edition.**
+- **Mechanism:** `backend/vega/sources/snapshot.py:134-142` refuses a withdrawal for any dependency other than the provider keys (and Open Matchday's own statistics). The catalogue it reuses, `backend/sql/134_archive_repair_boundary.sql:21-33`, scans every `match_id` column in `core`, `agg` and `ops`.
+- **Production shape:** `agg.match_forecasts.match_id` (`backend/sql/076_forecasts.sql:18-19`) holds a row for every unplayed fixture between two rated teams, whatever its source (`backend/vega/forecast.py:971-985`, `:1100-1101`). The repo README counts 1,984 forecasts on complementary editions.
+- **Trigger:** the Open Matchday key contains the date (`backend/vega/sources/open_matchday.py:157`), so a postponement withdraws the old key. `remove` at `:287` then raises `MATCH_HAS_DEPENDENTS` and the folder's snapshot is rolled back.
+- **Effect:** no new results for that competition until the old date plus three days (`forecast.py:988`) and a forecast refresh. The scope still records `ok` with `unmatched` > 0. The three English leagues this batch protects postpone most often.
+- **Same class:** a reviewed `RETRACTIONS` entry for a finished match can never apply, because `agg.team_elo.match_id` (`backend/sql/032_power_rankings.sql:40`) blocks it.
+- **Why tests pass:** `backend/tests/test_source_snapshots.py:515-517` and `:602-607` withdraw matches that have no forecast or Elo row. `:662-688` covers odds, events and statistics only.
+- **Report gap:** `controles/verification-integree/dependances-1917.sql:7-11` checks five core families for the 2,249 scheduled fixtures, not the `agg` tables the guard reads. `FAILURE_MODES.md:1634` still says an unplayed match may leave.
+- **Fix:**
+  - Keep a reviewed allow-list of recomputable relations (`agg.match_forecasts`, `agg.match_lineup_forecasts`, and `agg.team_elo` for retractions only).
+  - Remove their rows in the withdrawal transaction through a definer function; do not exempt `agg.*` wholesale.
+  - Add a withdrawal test with a forecast row and a retraction test with Elo rows.
+  - Count on RDS the scheduled complementary fixtures that have a forecast.
+
+**2. Major, pre-existing and unchanged — `drop_copy` deletes a whole Open Matchday edition on catalogue presence alone.**
+- **Witness:** `open_matchday.py:293-302` only checks that PitchAPI has an edition row for the season; `:305-321` then deletes every match, round, the edition and possibly the competition, outside all snapshot guards.
+- **Exposure:** none today (zero copies measured for the 35 folders). It reopens at each season rollover if the copy is read before the native edition is registered, even an empty one.
+- **Report gap:** this is the same failure class the branch fixed for archives (`primary_overlap`), but the plan does not list it as open.
+- **Fix:** record it under VI-21 in `PLAN-VALIDATION.md`; require native fixture coverage, or hold, before any removal.
+
+**3. Minor — preserved Transfermarkt history is hidden by the production reader.**
+- **Refusal hides the list:** a refused refresh sets `error_code` (`backend/vega/transfermarkt.py:836-842`, `:1172-1178`). `api.player_transfer_reads` requires it NULL (`backend/sql/135_player_transfers.sql:44`), so the route returns 404 (`backend/api/src/routes/profiles.mjs:425-428`). The 55 keys survive in storage but not on the page.
+- **Retracted moves stay published:** `api.player_transfers` (`135_player_transfers.sql:35`) ignores `absent_since`, so a move the provider dropped or re-keyed is served as fact.
+- **Fix:** serve the last accepted read when `read_at` is set; expose or filter `absent_since`; add an HTTP test after a `HISTORY_*` refusal.
+
+**4. Minor — three Transfermarkt writers still replace whole lists.**
+- Market values (`transfermarkt.py:1133-1136`) lose rows on a truncated non-empty history, and they now feed the public value curve.
+- Injuries (`:1233`) and squads (`:958`, `:1247`) are emptied by an empty answer.
+- Documented as outside VI-31; the report should carry them as open with an owner.
+
+**5. Minor — cost of the new guards is unmeasured at production size.**
+- `ops.archive_match_dependents` scans every match-naming table without partition keys on each withdrawal.
+- Migration 141 adds a row trigger on every `match_id` column without a foreign key (`backend/sql/141_archive_removal_guards.sql:50-87`), including the 2.3M-row grade publications.
+- Fix: time one withdrawal and one grade publication on a production-size copy.
+
+**6. Minor — operations.**
+- **Rollback:** the worker does not pin its schema, so an ECS rollback to a pre-candidate image restores the destructive writers. Make "disable circuit-breaker rollback or raise the floor image" an explicit gate in `PLAN-VALIDATION.md`.
+- **Restore:** `backend/vega/open_matchday_restore.py:308-310` takes about 40 table locks with NOWAIT; state that worker and backfill must be stopped.
+- **Shoot-outs:** `backend/vega/sources/cup_periods.py:71-75` subtracts extra time from any unattested DFB shoot-out. That is an inference from 13 cases; record it per match.
+
+**7. Nit.**
+- E03a reads as enforced; it is measured only. Storage did not prevent the 70 orphaned Elo rows.
+- The README's "État vérifié en un coup d'œil" table shows superseded totals.
+- Migration 146 blanks both World Cup family logos until VI-30 publishes edition emblems; say so in the handoff.
+
+## Decision 1 — is a supported operation still unsafe?
+
+- **Data loss:** I found no data-destroying path in the changed writers by reading.
+- **Not safe to ship as is:** finding 1 turns a routine postponement into a silent stall.
+- **Unsafe paths outside the change:** finding 2 and finding 4 remain.
+- **Earlier defects that read as fixed:**
+  - **Open Matchday:** column-level statistics merge (`open_matchday.py:181-201`), half-time written only as a complete pair, optional round kept.
+  - **Snapshot concurrency:** row-version and key-set claim (`snapshot.py:89-112`), migration 151 key lock.
+  - **SportScore:** the kind gate now uses `_is_league`, J1 is keyed on the edition in migration 150, stale observations are refused, and content refusals retry at the scope period.
+  - **Transfermarkt:** contract completeness and transfer upsert by key.
+  - **Archives:** `--fresh` on the ECS task, installed-path code hashes, `primary_overlap` hold.
+
+## Decision 2 — does the report place things correctly?
+
+Largely yes. The register sums to 91 in both columns (29/0/50/2/10 and 29/7/52/2/1). It keeps E02c, E02d, E03h and E04g incomplete on the branch despite the fixes, and it does not claim production completeness. Required corrections: findings 1, 2 and 4, and the reader gap in 3.
+
+Checks requested by the brief:
+- **Denominator:** the eight providers sum to 2,149 editions, 588,794 matches, 577,188 finished and 576,668 scored; the 520 unscored are all OpenFootball. 161,934 + 3,252 = 165,186 = 2 × 82,593.
+- **Identity counterexample:** `barcelone-15.csv` has nine archive rows with no Elo and six Copa del Rey rows with two sides each, so 12 Elo rows sit on the wrong club. Full Elo row coverage coexists with wrong identity.
+- **Field authority:** per-column Open Matchday writes, `PERIODS_CONFLICT` in `cups.py:203-223`, and SportScore touching only its own stage-less rows.
+- **External gap:** 2,489 UEFA qualifiers (543 + 1,600 + 346), 1,755 FIFA qualifiers, and 236 English results (71 + 76 + 89).
+- **No fake logo:** migration 146 plus `competition-artwork.js:16-21` leave the slot empty instead of reusing the 2026 mark. The Churchill and Cymru North renders stay open under VI-30.
+- **Three populations:**
+  - Stored: 2,282,608 grades.
+  - Selected by the algorithm: 2,297,026, so 14,418 missing (all award year 2020), plus 615 without a role.
+  - Absent upstream: 76,589 UEFA and 54,062 FIFA attested appearances with no proven grading inputs.
+
+**Production completeness: not certified.** Calendars, identities (VI-21), the Elo trigger for complementary-only changes, and the 2020 grades all remain open.
+
+## Not verified
+
+- **Execution:** any test, CI run, patch hash or RDS read.
+- **Head commit:** that `34ca3b5b` differs from the CI-tested `51acd93a52` by documentation only.
+- **Code not read:** `artwork.py`, `media.py`, `uefa.py`, `curated.py`, most API routes and frontend rendering.
+- **Archives:** only the removal and apply paths of `archives.py` were read.
+- **Finding 1 incidence:** the live count of forecast rows on the 2,249 scheduled fixtures.

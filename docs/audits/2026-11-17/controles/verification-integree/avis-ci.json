@@ -1,13 +1,13 @@
 {
-  "started": "2026-11-18T19:38:16.546160+00:00",
-  "finished": "2026-11-18T19:45:17.131885+00:00",
+  "started": "2026-11-18T23:42:25.112943+00:00",
+  "finished": "2026-11-18T23:50:37.720845+00:00",
   "source_before": {
-    "commit": "51acd93a52ca41a59bc9e1663c67ba3fa3b858f2",
+    "commit": "4c413029c173e96704f4752f843f186526e114cf",
     "status": "",
     "diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
   },
   "source_after": {
-    "commit": "51acd93a52ca41a59bc9e1663c67ba3fa3b858f2",
+    "commit": "4c413029c173e96704f4752f843f186526e114cf",
     "status": "",
     "diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
   },
@@ -41,7 +41,7 @@
   "rerun": [
     "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/ci-clean/bin/python",
     "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/delivery/verification-integree/run-ci.py",
-    "integral-51acd93a-again",
+    "integral-4c413029-again",
     "/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-20261117"
   ],
   "pg": "postgres (PostgreSQL) 18.6 (Debian 18.6-1.pgdg12+2)",

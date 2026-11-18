@@ -1,80 +1,2227 @@
-diff --git a/dashboard/shared/legacy-8018e08/openfootball-history.js b/dashboard/shared/legacy-8018e08/openfootball-history.js
-new file mode 100644
-index 0000000000..0b4e1cc801
---- /dev/null
-+++ b/dashboard/shared/legacy-8018e08/openfootball-history.js
-@@ -0,0 +1,116 @@
-+import { normalizeText } from "./archive-text.js";
+diff --git a/dashboard/frontend/src/components/KnockoutBracket.jsx b/dashboard/frontend/src/components/KnockoutBracket.jsx
+index 3d26d90597..c35464520c 100644
+--- a/dashboard/frontend/src/components/KnockoutBracket.jsx
++++ b/dashboard/frontend/src/components/KnockoutBracket.jsx
+@@ -25,13 +25,14 @@ function MatchCard({ match, view }) {
+     { name: match.away, image: match.awayImage },
+   ];
+   const label = (name) => bracketTeamLabel(nationalTeams ? nationalTeamLabel(name) : name);
+-  const tag = match.penalties ? "t.a.b." : match.notes?.includes("après prolongation") ? "a.p." : null;
++  const canceled = match.status === "canceled";
++  const tag = canceled ? "Annulé" : match.penalties ? "t.a.b." : match.notes?.includes("après prolongation") ? "a.p." : null;
+   const followed = teams.some((team) => follows(team.name));
+   const dimmed = hover && !teams.some((team) => teamKey(team.name) === hover);
+   return (
+     <Tag
+       className={"knockout-match" + (href ? " knockout-match-link" : "") + (followed ? " knockout-followed" : "") + (dimmed ? " knockout-dimmed" : "")}
+-      title={[match.date ? date(match.date) : "", match.penalties ? "tirs au but" : tag ? "après prolongation" : "", ...(match.notes?.includes("match rejoué") ? ["match rejoué"] : [])].filter(Boolean).join(" · ") || undefined}
++      title={[match.date ? date(match.date) : "", canceled ? "Annulé" : match.penalties ? "tirs au but" : tag ? "après prolongation" : "", ...(match.notes?.includes("match rejoué") ? ["match rejoué"] : [])].filter(Boolean).join(" · ") || undefined}
+       {...(href ? { href, prefetch: false } : {})}
+     >
+       {tag && <span className="knockout-tag">{tag}</span>}
+@@ -53,7 +54,7 @@ function MatchCard({ match, view }) {
+             <span className="knockout-team-name" title={label(team.name)}>{label(team.name)}</span>
+             {match.score ? (
+               <strong>{match.score[index]}</strong>
+-            ) : index === 0 && match.date ? (
++            ) : index === 0 && match.date && !canceled ? (
+               <span className="knockout-when">{date(match.date)}</span>
+             ) : (
+               <strong>–</strong>
+@@ -95,20 +96,21 @@ function Champion({ sides, view, trophy }) {
+ }
+ 
+ /* A group the bracket starts from (1974's and 1978's second round, 1982's, 1930's groups) or ends with (1950's final
+- * round): its table, the winner first. */
++ * round): its table, with the established winner highlighted. */
+ function GroupCard({ table, view }) {
+   const { nationalTeams, season, follows } = view;
++  const leader = table.rows.find((row) => row.position === 1 && !row.tied);
+   return (
+     <div className={"knockout-match knockout-group" + (table.rows.some((row) => follows(row.name)) ? " knockout-followed" : "")}>
+       <div className="knockout-group-name">
+         <span>{table.name}</span>
+         <span>Pts</span>
+       </div>
+-      {table.rows.map((row, index) => (
+-        <div key={row.name} className={"knockout-team" + (index === 0 ? " knockout-winner" : " knockout-loser") + (follows(row.name) ? " knockout-own" : "")}>
++      {table.rows.map((row) => (
++        <div key={row.name} className={"knockout-team" + (leader ? (row === leader ? " knockout-winner" : " knockout-loser") : "") + (follows(row.name) ? " knockout-own" : "")}>
+           {nationalTeams && nationalFlagCode(row.name, season) ? <NationalFlag name={row.name} season={season} /> : null}
+           <span className="knockout-team-name" title={nationalTeams ? nationalTeamLabel(row.name) : row.name}>{nationalTeams ? nationalTeamLabel(row.name) : row.name}</span>
+-          <strong>{row.points}</strong>
++          <strong>{row.points ?? "—"}</strong>
+         </div>
+       ))}
+     </div>
+@@ -125,19 +127,17 @@ const ThirdPlace = ({ match, view }) =>
+ 
+ /** The round a phone opens on: the first one still to be played, else the final. */
+ function openRound(rounds) {
+-  const pending = rounds.findIndex((round) => round.matches.some((match) => match.status !== "finished"));
++  const pending = rounds.findIndex((round) => round.matches.some((match) => !["finished", "canceled"].includes(match.status)));
+   return pending === -1 ? rounds.length - 1 : pending;
+ }
+ 
+-export default function KnockoutBracket({ matches, hrefForMatch, nationalTeams = false, season, highlight = "", trophy = null, win = 3 }) {
++export default function KnockoutBracket({ matches, hrefForMatch, nationalTeams = false, competition, season, highlight = "", trophy = null }) {
+   const bracket = useMemo(() => buildKnockoutBracket(matches), [matches]);
+   const early = bracket.rounds.length > 1 && bracket.rounds[0].key === "round64" ? bracket.rounds[0] : null;
+   const rounds = early ? bracket.rounds.slice(1) : bracket.rounds;
+   const sides = useMemo(() => bracketSides({ ...bracket, rounds }), [bracket, early]);
+-  // The groups the bracket starts from (a second round of groups, 1930's groups), and the group that ends an
+-  // edition without a final (1950); `win`: the points of a win in the edition.
+-  const groups = useMemo(() => bracketGroups(sides, matches, { win }), [sides, matches, win]);
+-  const last = useMemo(() => finalGroup(matches, { win }), [matches, win]);
++  const groups = useMemo(() => bracketGroups(sides, matches, { competition, season }), [sides, matches, competition, season]);
++  const last = useMemo(() => finalGroup(matches, { competition, season }), [matches, competition, season]);
+   const [hover, setHover] = useState("");
+   const [phoneRound, setPhoneRound] = useState(null);
+   // The bracket takes the height the screen leaves under its own top edge.
+@@ -171,7 +171,7 @@ export default function KnockoutBracket({ matches, hrefForMatch, nationalTeams =
+   const legs = rounds.some((round) => round.matches.some((match) => match.legs?.length));
+   // A phone's tabs: the groups the bracket starts from, then its rounds.
+   const tabs = [...(groups ? [{ key: "groups", label: groups.label === "Second tour" ? "2e tour" : "Groupes", tables: [...groups.left, ...groups.right] }] : []), ...rounds];
+-  const current = phoneRound ?? openRound(rounds) + (groups ? 1 : 0);
++  const activeTab = tabs.find((tab) => tab.key === phoneRound) ?? tabs[openRound(rounds) + (groups ? 1 : 0)];
+   // With groups before it, a round's ties are twice as tall: two groups lead to each tie of the first round.
+   const depth = groups ? 1 : 0;
+   const column = (round, index, side) => (
+@@ -230,21 +230,21 @@ export default function KnockoutBracket({ matches, hrefForMatch, nationalTeams =
+           </div>
+           <div className="knockout-phone">
+             <div className="segmented-control knockout-rounds" aria-label="Tour du tableau">
+-              {tabs.map((tab, index) => (
+-                <button key={tab.key} type="button" aria-pressed={index === current} onClick={() => setPhoneRound(index)}>
++              {tabs.map((tab) => (
++                <button key={tab.key} type="button" aria-pressed={tab === activeTab} onClick={() => setPhoneRound(tab.key)}>
+                   {SHORT[tab.key] || tab.label}
+                 </button>
+               ))}
+             </div>
+-            {tabs[current].key === "final" && <Champion sides={sides} view={view} trophy={trophy} />}
+-            {tabs[current].tables ? (
+-              <div className="knockout-list">{tabs[current].tables.map((table) => <GroupCard key={table.name} table={table} view={view} />)}</div>
++            {activeTab.key === "final" && <Champion sides={sides} view={view} trophy={trophy} />}
++            {activeTab.tables ? (
++              <div className="knockout-list">{activeTab.tables.map((table) => <GroupCard key={table.name} table={table} view={view} />)}</div>
+             ) : (
+-              <div className={"knockout-list" + (tabs[current].matches.length < 3 ? " knockout-list-single" : "")}>
+-                {tabs[current].matches.map((match) => <MatchCard key={match.key} match={match} view={view} />)}
++              <div className={"knockout-list" + (activeTab.matches.length < 3 ? " knockout-list-single" : "")}>
++                {activeTab.matches.map((match) => <MatchCard key={match.key} match={match} view={view} />)}
+               </div>
+             )}
+-            {tabs[current].key === "final" && <ThirdPlace match={sides.third} view={view} />}
++            {activeTab.key === "final" && <ThirdPlace match={sides.third} view={view} />}
+           </div>
+         </>
+       ) : (
+diff --git a/dashboard/frontend/src/components/MatchDetail.jsx b/dashboard/frontend/src/components/MatchDetail.jsx
+index 7576d5ecb7..6342f18308 100644
+--- a/dashboard/frontend/src/components/MatchDetail.jsx
++++ b/dashboard/frontend/src/components/MatchDetail.jsx
+@@ -1,4 +1,5 @@
+ import { nationalFlagCode } from "../services/national-flags.js";
++import { editionArtworkUrl } from "../services/competition-artwork.js";
+ import React, {
+   lazy,
+   Suspense,
+@@ -515,8 +516,11 @@ export default function MatchDetail({ match }) {
+       <section className="match-scoreboard" aria-label="Résumé du match">
+         <div className="scoreboard-meta">
+           <div>
+-            {competition && (
+-              <Media name={competition.name} url={competition.imageUrl} />
++            {(competition || match.editionArtwork) && (
++              <Media
++                url={editionArtworkUrl(match.leagueId, competition?.imageUrl, match.editionArtwork)}
++                initials={false}
++              />
+             )}
+             <span>{match.league || competition?.name}</span>
+           </div>
+diff --git a/dashboard/frontend/src/components/Media.module.css b/dashboard/frontend/src/components/Media.module.css
+index 40d9ae4985..28627932f0 100644
+--- a/dashboard/frontend/src/components/Media.module.css
++++ b/dashboard/frontend/src/components/Media.module.css
+@@ -14,3 +14,9 @@
+ .imageReady {
+   opacity: 1;
+ }
 +
-+/** OpenFootball stays separate from PitchAPI; no player or xG fields are inferred. */
-+export function historicalRows(season, competition = "all", query = "") {
-+  const needle = normalizeText(query).trim();
-+  const rows = [];
-+  for (const league of season?.competitions || []) {
-+    if (competition !== "all" && league.id !== competition) continue;
-+    for (let i = 0; i < league.matches.length; i++) {
-+      const match = league.matches[i];
-+      if (
-+        needle &&
-+        !normalizeText(`${match.team1 || ""} ${match.team2 || ""}`).includes(
-+          needle,
-+        )
-+      )
-+        continue;
-+      rows.push({
-+        key: `${league.id}:${i}`,
-+        competition: league.name,
-+        country: league.country,
-+        match,
-+      });
++.empty.empty {
++  background: transparent;
++  border-color: transparent;
++  box-shadow: none;
++}
+diff --git a/dashboard/frontend/src/components/NationPages.jsx b/dashboard/frontend/src/components/NationPages.jsx
+index 348fc23459..de99e8ee48 100644
+--- a/dashboard/frontend/src/components/NationPages.jsx
++++ b/dashboard/frontend/src/components/NationPages.jsx
+@@ -25,8 +25,8 @@ import {
+   useNation,
+   useNations,
+ } from "../services/nations.js";
+-import { tournamentEdition } from "../services/cup-catalog.js";
+-import { RUN_STEPS, runDepth, runsByTournament } from "../services/tournament-runs.js";
++import { editionView, tournamentEdition } from "../services/cup-catalog.js";
++import { RUN_STEPS, runDepth, runStage, runTone, runsByTournament } from "../services/tournament-runs.js";
+ import { trophyArt } from "../services/trophy-art.js";
+ import rail from "./ClubScoutTabs.module.css";
+ import s from "./Nations.module.css";
+@@ -290,7 +290,7 @@ const MEDALS = [
+ ];
+ 
+ /* The nation's runs (mock-up validated 18 Nov 2026, proposal A): a row per competition with its own medals, a tile per
+- * edition with the depth of the run as a gauge; a tile opens the edition's page on its bracket, the nation followed. */
++ * edition with a gauge when its stage is known. A tile opens the edition's available view, with the nation followed. */
+ function Tournaments({ runs, nation }) {
+   const f = useFootball();
+   return (
+@@ -315,31 +315,34 @@ function Tournaments({ runs, nation }) {
+             <div className={s.runs}>
+               {group.runs.map((run) => {
+                 const page = tournamentEdition(run.tournament, run.year);
+-                const title = `${run.label} · ${run.stage} · ${run.matches} match${run.matches > 1 ? "s" : ""}`;
++                const stage = runStage(run);
++                const depth = runDepth(run);
++                const tone = runTone(run);
++                const title = `${run.label} · ${stage} · ${run.matches} match${run.matches > 1 ? "s" : ""}`;
+                 const body = (
+                   <>
+                     <span className={s.runYear}>{run.year}</span>
+-                    <span className={s.gauge} aria-hidden="true">
++                    {depth > 0 && <span className={s.gauge} aria-hidden="true">
+                       {Array.from({ length: RUN_STEPS }, (_, step) => (
+-                        <i key={step} data-on={step < runDepth(run) ? "" : undefined} />
++                        <i key={step} data-on={step < depth ? "" : undefined} />
+                       ))}
+-                    </span>
+-                    <span className={s.runStage}>{run.stage}</span>
++                    </span>}
++                    <span className={s.runStage} data-unknown={depth === 0 ? "" : undefined}>{stage}</span>
+                   </>
+                 );
+                 return page ? (
+                   <Link
+                     key={run.year}
+                     className={s.run}
+-                    data-tone={run.tone}
++                    data-tone={tone}
+                     title={title}
+                     prefetch={false}
+-                    href={f.href("/competitions/", { id: page.id, edition: page.edition, view: "tableau", team: nation.name })}
++                    href={f.href("/competitions/", { id: page.id, edition: page.edition, view: editionView(page), team: nation.name })}
+                   >
+                     {body}
+                   </Link>
+                 ) : (
+-                  <div key={run.year} className={s.run} data-tone={run.tone} title={title}>
++                  <div key={run.year} className={s.run} data-tone={tone} title={title}>
+                     {body}
+                   </div>
+                 );
+diff --git a/dashboard/frontend/src/components/Nations.module.css b/dashboard/frontend/src/components/Nations.module.css
+index 23ab879b4a..fc246bf880 100644
+--- a/dashboard/frontend/src/components/Nations.module.css
++++ b/dashboard/frontend/src/components/Nations.module.css
+@@ -373,6 +373,10 @@ a.run:focus-visible {
+   text-overflow: ellipsis;
+   white-space: nowrap;
+ }
++.runStage[data-unknown] {
++  white-space: normal;
++  overflow-wrap: anywhere;
++}
+ .run {
+   min-width: 0;
+ }
+diff --git a/dashboard/frontend/src/components/UI.jsx b/dashboard/frontend/src/components/UI.jsx
+index 9e30d810e7..cd502947db 100644
+--- a/dashboard/frontend/src/components/UI.jsx
++++ b/dashboard/frontend/src/components/UI.jsx
+@@ -12,7 +12,7 @@ import {
+   mediaImageSource,
+   title,
+ } from "../services/format.js";
+-export function Media({ name = "", url, fallbackUrl, className = "crest" }) {
++export function Media({ name = "", url, fallbackUrl, className = "crest", initials = true }) {
+   // Source changes remount the attempt state, including a deferred first reveal.
+   return (
+     <MediaSource
+@@ -21,10 +21,11 @@ export function Media({ name = "", url, fallbackUrl, className = "crest" }) {
+       url={url}
+       fallbackUrl={fallbackUrl}
+       className={className}
++      initials={initials}
+     />
+   );
+ }
+-function MediaSource({ name, url, fallbackUrl, className }) {
++function MediaSource({ name, url, fallbackUrl, className, initials }) {
+   const [failed, setFailed] = useState(false);
+   const [directFailed, setDirectFailed] = useState(false);
+   const [fallbackFailed, setFallbackFailed] = useState(false);
+@@ -48,14 +49,14 @@ function MediaSource({ name, url, fallbackUrl, className }) {
+   return (
+     <span
+       ref={element}
+-      className={`${className} ${mediaStyles.media}`}
++      className={`${className} ${mediaStyles.media}${!initials && (!src || loaded !== src) ? " " + mediaStyles.empty : ""}`}
+       aria-hidden="true"
+       data-page-media=""
+       data-media-state={
+         !src ? "fallback" : loaded === src ? "ready" : "loading"
+       }
+     >
+-      {loaded !== src || !src ? (
++      {initials && (loaded !== src || !src) ? (
+         <span className={`image-fallback ${mediaStyles.fallback}`}>
+           {(typeof name === "string" ? name : "")
+             .split(/\s+/)
+diff --git a/dashboard/frontend/src/components/UpcomingMatches.jsx b/dashboard/frontend/src/components/UpcomingMatches.jsx
+index 9be67383ba..9a82394bd5 100644
+--- a/dashboard/frontend/src/components/UpcomingMatches.jsx
++++ b/dashboard/frontend/src/components/UpcomingMatches.jsx
+@@ -55,6 +55,7 @@ function Fixture({ entry, week, compact, competitions }) {
+           name={competition.name}
+           url={competition.imageUrl}
+           className="crest fixture-competition-crest"
++          initials={false}
+         />
+         <span className="fixture-competition-copy">
+           <span className="fixture-competition-name">{competition.name}</span>
+diff --git a/dashboard/frontend/src/server/report-data.js b/dashboard/frontend/src/server/report-data.js
+index f712c5315f..bef842d3ec 100644
+--- a/dashboard/frontend/src/server/report-data.js
++++ b/dashboard/frontend/src/server/report-data.js
+@@ -188,8 +188,15 @@ export function buildMatchReport({ id, match, stats, grades, live, forecast }, t
+     const item = items.get(key);
+     return { key, label, format, home: statValue(item.home), away: statValue(item.away), homeText: item.home, awayText: item.away };
+   });
+-  const rows = (grades?.grades || []).map((g) => ({ id: g.playerId, teamId: g.teamId, name: g.name, imageUrl: g.imageUrl || null, team: g.team,
+-    position: g.position, minutes: g.minutes, goals: g.goals ?? 0, assists: g.assists ?? 0, grade: num(g.grade), rank: g.rank }));
++  const rows = (grades?.grades || []).map((g) => {
++    const grade = num(g.grade), exact = num(g.gradeExact);
++    const row = { id: g.playerId, teamId: g.teamId, name: g.name, imageUrl: g.imageUrl || null, team: g.team,
++      position: g.position, minutes: g.minutes, goals: g.goals ?? 0, assists: g.assists ?? 0, grade, rank: g.rank };
++    if (Object.hasOwn(g, "gradeExact")) {
++      row.gradeExact = grade != null && exact != null && exact >= 0 && exact <= 100 && round(exact) === grade ? exact : null;
++    }
++    return row;
++  });
+   const best = (teamId) => rows.filter((r) => r.teamId === teamId && r.grade != null).sort((a, b) => b.grade - a.grade).slice(0, 3);
+   const points = (live?.points || []).map((p) => ({ minute: p.minute, home: num(p.home), draw: num(p.draw), away: num(p.away) }));
+   const before = points[0] || (forecast?.forecast ? { minute: 0, ...forecast.forecast } : null);
+diff --git a/dashboard/frontend/src/services/catalog-client.js b/dashboard/frontend/src/services/catalog-client.js
+index 4776f4fc5c..45b2b76c08 100644
+--- a/dashboard/frontend/src/services/catalog-client.js
++++ b/dashboard/frontend/src/services/catalog-client.js
+@@ -57,8 +57,10 @@ export const cupIndex = (kind) => load("/api/cup-index", { kind });
+  */
+ export const servesCupWorkerIndex = (manifest) =>
+   manifest?.capabilities?.cupWorkerIndex === true;
+-export const cupTable = (competition, season, kind) =>
+-  load("/api/cup-table", { competition, season, kind });
++export const cupTable = (competition, season, kind, options) =>
++  load("/api/cup-table", { competition, season, kind }, options);
++export const cupEditionTable = (competition, season, options) =>
++  load("/api/cups/edition", { competition, season }, options);
+ export const associationRanking = (year) =>
+   load("/api/rankings/associations", { year });
+ export async function clubRanking(club) {
+diff --git a/dashboard/frontend/src/services/competition-artwork.js b/dashboard/frontend/src/services/competition-artwork.js
+new file mode 100644
+index 0000000000..1ee20b86ac
+--- /dev/null
++++ b/dashboard/frontend/src/services/competition-artwork.js
+@@ -0,0 +1,21 @@
++export const WORLD_CUP_ID = "l_1XLtP0";
++// The World Cup's archive (OpenFootball), the same competition on the site as the collected World Cup.
++export const WORLD_CUP_ARCHIVE_ID = "open-cup:world-cup-history";
++
++// Both catalogues carried the same 2026 edition mark as a family logo.
++const misattributedWorldCupLogo = "https://img.thesports.com/football/competition/da617cd58cd9cffaae0daec865457fb5.png";
++
++function worldCupFamily(id) {
++  return id === WORLD_CUP_ID || id === WORLD_CUP_ARCHIVE_ID || id === "l_v0000064";
++}
++
++export function familyArtworkUrl(id, imageUrl) {
++  return worldCupFamily(id) && imageUrl === misattributedWorldCupLogo ? undefined : imageUrl;
++}
++
++export function editionArtworkUrl(id, imageUrl, artwork) {
++  if (artwork?.role === "edition_emblem" && artwork.imageUrl) return artwork.imageUrl;
++  // A logo attributed to either World Cup family needs edition-specific evidence
++  // before it can fill a season's slot. Other competitions keep their own logo.
++  return worldCupFamily(id) ? undefined : imageUrl;
++}
+diff --git a/dashboard/frontend/src/services/competition-identity.js b/dashboard/frontend/src/services/competition-identity.js
+index d5328809a4..c49e1709da 100644
+--- a/dashboard/frontend/src/services/competition-identity.js
++++ b/dashboard/frontend/src/services/competition-identity.js
+@@ -1,3 +1,4 @@
++import { editionArtworkUrl } from "./competition-artwork.js";
+ import { countryLabel } from "./competition-selector.js";
+ 
+ /** Fill missing season metadata from the provider catalogue using stable IDs. */
+@@ -49,16 +50,17 @@ export function competitionIndex(...collections) {
+ export function fixtureCompetition(fixture, index) {
+   const league =
+     fixture?.league && typeof fixture.league === "object" ? fixture.league : {};
+-  const info = index.get(league.id || fixture?.leagueId) || {};
++  const id = league.id || fixture?.leagueId || "";
++  const info = index.get(id) || {};
+   const country = info.country || league.country || league.country_code || "";
+   return {
+-    id: league.id || fixture?.leagueId || "",
++    id,
+     name:
+       league.name ||
+       info.name ||
+       (typeof fixture?.league === "string" ? fixture.league : "") ||
+       "Compétition",
+     country: country ? countryLabel(country) : "",
+-    imageUrl: league.image_url || league.imageUrl || info.imageUrl || "",
++    imageUrl: editionArtworkUrl(id, league.image_url || league.imageUrl || info.imageUrl || "", fixture?.editionArtwork),
+   };
+ }
+diff --git a/dashboard/frontend/src/services/cup-catalog.js b/dashboard/frontend/src/services/cup-catalog.js
+index 5f46ec0c70..3237faea93 100644
+--- a/dashboard/frontend/src/services/cup-catalog.js
++++ b/dashboard/frontend/src/services/cup-catalog.js
+@@ -1,15 +1,20 @@
+ import { normalizeText } from "../model.js";
+ import { NATIONAL_CUP_ARCHIVES, GERMAN_CUP_FOLDER, GERMAN_CUP_SEASONS } from "./cup-archives.js";
+ import cupLogos from "../../../shared/cup-logos.json" with { type: "json" };
++import { familyArtworkUrl, WORLD_CUP_ARCHIVE_ID, WORLD_CUP_ID } from "./competition-artwork.js";
++
++export { WORLD_CUP_ARCHIVE_ID, WORLD_CUP_ID } from "./competition-artwork.js";
+ 
+ /** Cup logos refreshed by the previous pipeline's refresh_cup_logos.mjs. */
+ const CUP_LOGOS = cupLogos.logos || {};
+-const withLogo = (competition) => competition.imageUrl || !CUP_LOGOS[competition.id]?.imageUrl ? competition : { ...competition, imageUrl: CUP_LOGOS[competition.id].imageUrl };
++function withLogo(competition) {
++  const imageUrl = familyArtworkUrl(competition.id, competition.imageUrl || CUP_LOGOS[competition.id]?.imageUrl);
++  return imageUrl === competition.imageUrl ? competition : { ...competition, imageUrl };
++}
+ 
+-export const WORLD_CUP_ID = "l_1XLtP0";
+ export const WORLD_CUP_FALLBACK = { id: WORLD_CUP_ID, name: "Coupe du monde", country: "INT", seasons: ["2026", "2022"] };
+-// The World Cup's editions before the collected ones (1930–2018): the same competition on the site, one selector.
+-export const WORLD_CUP_ARCHIVE_ID = "open-cup:world-cup-history";
++// The World Cup's archive (WORLD_CUP_ARCHIVE_ID) is the same competition on the site, one selector: it also reads the
++// collected editions (2026, 2022), whose page stays the collected World Cup's.
+ export const OPEN_CUP_CATALOG = [
+   { id: "open-cup:france-cup", name: "Coupe de France", country: "FRA", source: "openfootball", sourceKey: "france-cup", seasons: ["2024/2025"], defaultSeason: "2024/2025", aliases: ["French Cup"], coverage: "Archive 2024/2025" },
+   { id: "openligadb:nations-league", name: "Ligue des Nations", country: "UEFA", source: "openligadb", sourceKey: "nations-league", seasons: ["2026/2027"], defaultSeason: "2026/2027", aliases: ["UEFA Nations League", "Nations League"], coverage: "Ligues A à D · 2026/2027" },
+@@ -24,7 +29,7 @@ export const OPEN_CUP_CATALOG = [
+   { id: "nations-results:copa-america", name: "Copa América", country: "CONMEBOL", source: "nations-results", sourceKey: "copa-america", seasons: ["2024"], defaultSeason: "2024", aliases: ["Copa America"], coverage: "Résultats" },
+   { id: "nations-results:asian-cup", name: "Coupe d’Asie des nations", country: "AFC", source: "nations-results", sourceKey: "asian-cup", seasons: ["2023"], defaultSeason: "2023", aliases: ["AFC Asian Cup", "Asian Cup"], coverage: "Résultats" },
+   { id: "nations-results:gold-cup", name: "Gold Cup", country: "CONCACAF", source: "nations-results", sourceKey: "gold-cup", seasons: ["2025", "2023"], defaultSeason: "2025", aliases: ["CONCACAF Gold Cup"], coverage: "Résultats" },
+-  { id: WORLD_CUP_ARCHIVE_ID, name: "Coupe du monde — archives", country: "INT", source: "openfootball", sourceKey: "world-cup-history", seasons: ["2018", "2014", "2010", "2006", "2002", "1998", "1994", "1990", "1986", "1982", "1978", "1974", "1970", "1966", "1962", "1958", "1954", "1950", "1938", "1934", "1930"], defaultSeason: "2018", aliases: ["World Cup", "Mondial"] },
++  { id: WORLD_CUP_ARCHIVE_ID, name: "Coupe du monde — archives", country: "INT", source: "openfootball", sourceKey: "world-cup-history", seasons: ["2026", "2022", "2018", "2014", "2010", "2006", "2002", "1998", "1994", "1990", "1986", "1982", "1978", "1974", "1970", "1966", "1962", "1958", "1954", "1950", "1938", "1934", "1930"], defaultSeason: "2018", aliases: ["World Cup", "Mondial"] },
+ ];
+ const CUP_LABELS = {
+   "ESP_CUP_copa-del-rey": ["Coupe du Roi", "Copa del Rey"],
+@@ -40,6 +45,22 @@ const CUP_LABELS = {
+   "SUI_CUP_swiss-cup": ["Coupe de Suisse", "Swiss Cup"],
+ };
+ 
++/** The verified logo the API gives for the edition's own competition (its FK), never another's (FAILURE_MODES.md §22). */
++const ownLogo = (item) => (typeof item.image_url === "string" && item.image_url ? { imageUrl: item.image_url } : {});
++/** A Vega competition id (PitchAPI's key, else l_v and seven digits), as /api/cups/index publishes it. */
++const COMPETITION_ID = /^l_(?:[A-Za-z0-9]{6}|v\d{7})$/;
++/** The edition's competition by its canonical id (the API's `competition_id`, the edition's FK), never by a name (VI-30). */
++const ownIdentity = (item) => (typeof item.competition_id === "string" && COMPETITION_ID.test(item.competition_id) ? { canonicalId: item.competition_id } : {});
++
++/** The entry a page asks for: by its own id, else by the canonical id it answers to (FAILURE_MODES_VI30.md V12). */
++export function findCompetition(catalog, id) {
++  if (!id) return undefined;
++  return catalog.find((c) => c.id === id) || catalog.find((c) => c.canonicalId === id);
++}
++
++/** Whether an id not found yet may still come with the supplemental index (its source key or a canonical l_v id). */
++export const awaitsCupIndex = (id) => typeof id === "string" && (id.startsWith("open-matchday:") || /^l_v\d{7}$/.test(id));
++
+ /** Only promote actual cup datasets with at least one collected match. */
+ export function supplementalCupCatalog(index) {
+   if (!Array.isArray(index?.competitions)) return [];
+@@ -51,7 +72,7 @@ export function supplementalCupCatalog(index) {
+     const labels = CUP_LABELS[item.folder] || [item.name || item.folder];
+     const archive = NATIONAL_CUP_ARCHIVES[item.folder];
+     const editions = [season, ...Object.keys(item.editions || {}).filter((value) => /^\d{4}\/\d{4}$/.test(value)), ...(archive ? [archive.season] : []), ...(item.folder === GERMAN_CUP_FOLDER ? GERMAN_CUP_SEASONS : [])];
+-    return [{ id: "open-matchday:" + item.folder, name: labels[0], country: item.country_code || "", source: "open-matchday", folder: item.folder, seasons: [...new Set(editions)].sort().reverse(), defaultSeason: season, aliases: [...labels.slice(1), item.name || ""], tables: item.tables, editions: item.editions || null, sourceDate: index.meta?.source_generated_at_utc || index.meta?.retrieved_at_utc || null }];
++    return [{ id: "open-matchday:" + item.folder, name: labels[0], country: item.country_code || "", source: "open-matchday", folder: item.folder, seasons: [...new Set(editions)].sort().reverse(), defaultSeason: season, aliases: [...labels.slice(1), item.name || ""], tables: item.tables, editions: item.editions || null, sourceDate: index.meta?.source_generated_at_utc || index.meta?.retrieved_at_utc || null, ...ownLogo(item), ...ownIdentity(item) }];
+   });
+ }
+ 
+@@ -95,11 +116,14 @@ const COUNTRY_CODES = { IRE: "IRL" };
+ export function supplementalLeagueCatalog(index, native = []) {
+   if (!Array.isArray(index?.competitions)) return [];
+   const held = new Set((native || []).map((c) => normalizeText(c.name || "") + "|" + (c.country || "")));
++  const heldIds = new Set((native || []).map((c) => c.id));
+   return index.competitions.flatMap((item) => {
+     if (!/^[A-Z]{3}_[A-Z0-9]+_[a-z0-9-]+$/i.test(item.folder || "") || /_CUP_/i.test(item.folder)) return [];
+     if (!(Number(item.tables?.results?.rows) > 0 || Number(item.tables?.fixtures?.rows) > 0)) return [];
+     const season = /^\d{4}\/\d{4}$/.test(item.season || "") ? item.season : "";
+     if (!season) return [];
++    // The main source's own competition (the same canonical id, VI-30), then a copy by its name and country.
++    if (ownIdentity(item).canonicalId && heldIds.has(item.competition_id)) return [];
+     const code = item.country_code || item.folder.split("_")[0];
+     const country = COUNTRY_CODES[code] || code;
+     if (held.has(normalizeText(item.name || "") + "|" + country) || held.has(normalizeText(item.name || "") + "|" + code)) return [];
+@@ -107,7 +131,7 @@ export function supplementalLeagueCatalog(index, native = []) {
+     const editions = [season, ...Object.keys(item.editions || {}).filter((value) => /^\d{4}\/\d{4}$/.test(value))];
+     return [{ id: "open-matchday:" + item.folder, name: labels[0], country, source: "open-matchday", kind: "league", folder: item.folder,
+       seasons: [...new Set(editions)].sort().reverse(), defaultSeason: season, aliases: [...new Set([...labels.slice(1), item.name || ""])].filter(Boolean),
+-      tables: item.tables, editions: item.editions || null, sourceDate: index.meta?.source_generated_at_utc || index.meta?.retrieved_at_utc || null }];
++      tables: item.tables, editions: item.editions || null, sourceDate: index.meta?.source_generated_at_utc || index.meta?.retrieved_at_utc || null, ...ownLogo(item), ...ownIdentity(item) }];
+   });
+ }
+ 
+@@ -123,7 +147,8 @@ export function mergeCupCatalog(nativeCompetitions, supplementalIndex, workerNat
+   const ids = new Set(native.map((competition) => competition.id));
+   const world = ids.has(WORLD_CUP_ID) ? [] : [WORLD_CUP_FALLBACK];
+   const extras = [...supplementalCupCatalog(supplementalIndex), ...supplementalLeagueCatalog(supplementalIndex, nativeCompetitions)];
+-  return [...native, ...world, ...OPEN_CUP_CATALOG, ...extras.filter((cup) => !ids.has(cup.id))].map(withLogo);
++  // An entry whose canonical id is a native competition's is that competition: listed once, as the native one.
++  return [...native, ...world, ...OPEN_CUP_CATALOG, ...extras.filter((cup) => !ids.has(cup.id) && !ids.has(cup.canonicalId))].map(withLogo);
+ }
+ 
+ // The cup key the nations' API gives a major tournament, when the catalogue names it otherwise.
+@@ -138,8 +163,18 @@ export function tournamentEdition(tournament, year) {
+   const edition = /^\d{4}$/.test(String(year ?? "")) ? String(year) : "";
+   const cup = OPEN_CUP_CATALOG.find((item) => item.sourceKey === (TOURNAMENT_KEYS[tournament] || tournament));
+   if (!edition || !cup) return null;
+-  if (cup.seasons.includes(edition)) return { id: cup.id, edition };
+-  return tournament === "world-cup" && edition > cup.seasons[0] ? { id: WORLD_CUP_ID, edition } : null;
++  // The archive's own editions: not the collected World Cup's, which the archive also reads.
++  const seasons = cup.id === WORLD_CUP_ARCHIVE_ID ? cup.seasons.filter((season) => !WORLD_CUP_FALLBACK.seasons.includes(season)) : cup.seasons;
++  if (seasons.includes(edition)) return { id: cup.id, edition };
++  return tournament === "world-cup" && WORLD_CUP_FALLBACK.seasons.includes(edition) ? { id: WORLD_CUP_ID, edition } : null;
++}
++
++/** The public view of a nation's edition link. */
++export function editionView(page) {
++  if (!page) return null;
++  if (page.id.startsWith("nations-results:")) return "matchs";
++  if (page.id === WORLD_CUP_ARCHIVE_ID && page.edition === "1950") return "groupes";
++  return "tableau";
+ }
+ 
+ /**
+diff --git a/dashboard/frontend/src/services/cup-matches.js b/dashboard/frontend/src/services/cup-matches.js
+index 24be827b20..9df36aab5f 100644
+--- a/dashboard/frontend/src/services/cup-matches.js
++++ b/dashboard/frontend/src/services/cup-matches.js
+@@ -1,4 +1,5 @@
+ import { normalizeText } from "../model.js";
++import { isFinalPool1950 } from "../../../shared/world-cup-1950.js";
+ import { parisDay, validDay } from "./fixtures.js";
+ import { knockoutStage } from "./knockout-bracket.js";
+ 
+@@ -21,6 +22,8 @@ function readableRound(round, group) {
+     .replace(/^Finals,\s*/i, "")
+     .replace(/^(?:Qualifying,|Qual\.)\s*Round\s+(\d+)$/i, "Tour préliminaire $1")
+     .replace(/^Preliminary round$/i, "Tour préliminaire")
++    .replace(/^Final Round$/i, "Poule finale")
++    .replace(/^Group ([A-Z]|\d+) Play-off$/i, "Groupe $1 · Barrage")
+     .replace(/^Group,\s*Matchday\s+(\d+)$/i, "Phase de groupes · Journée $1")
+     .replace(/^Playoffs$/i, "Barrages")
+     .replace(/^Gruppe\s+([A-Z0-9]+)$/i, "Groupe $1")
+@@ -37,12 +40,7 @@ function readableRound(round, group) {
+   return [first, second && second !== first ? second : ""].filter(Boolean).join(" · ");
+ }
+ 
+-/**
+- * A league's standings from its matches (a complementary league, VI-19): points, goal difference, goals scored, then
+- * the name; a team with no match played yet is in the table all the same. Computed from the results the source gives:
+- * no deduction or head-to-head rule can be read from them.
+- */
+-export function leagueTable(matches, { win = 3 } = {}) {
++function tally(matches, winPoints) {
+   const rows = new Map();
+   const row = (name) => rows.get(name) || rows.set(name, { name, played: 0, wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0, points: 0 }).get(name);
+   for (const match of matches || []) {
+@@ -51,13 +49,19 @@ export function leagueTable(matches, { win = 3 } = {}) {
+     const [hs, as] = match.score;
+     home.played++; away.played++;
+     home.goalsFor += hs; home.goalsAgainst += as; away.goalsFor += as; away.goalsAgainst += hs;
+-    if (hs > as) { home.wins++; away.losses++; home.points += win; }
+-    else if (hs < as) { away.wins++; home.losses++; away.points += win; }
++    if (hs > as) { home.wins++; away.losses++; home.points += winPoints; }
++    else if (hs < as) { away.wins++; home.losses++; away.points += winPoints; }
+     else { home.draws++; away.draws++; home.points++; away.points++; }
+   }
+-  return [...rows.values()]
+-    .map((r) => ({ ...r, difference: r.goalsFor - r.goalsAgainst }))
+-    .sort((a, b) => b.points - a.points || b.difference - a.difference || b.goalsFor - a.goalsFor || a.name.localeCompare(b.name, "fr"))
++  return [...rows.values()].map((r) => ({ ...r, difference: r.goalsFor - r.goalsAgainst }));
++}
++
++const displayOrder = (a, b) => b.difference - a.difference || b.goalsFor - a.goalsFor || a.name.localeCompare(b.name, "fr");
++
++/** Standings of a complementary league (VI-19), as before: points, goal difference, goals and name. */
++export function leagueTable(matches, { win = 3 } = {}) {
++  return tally(matches, win)
++    .sort((a, b) => b.points - a.points || displayOrder(a, b))
+     .map((r, i) => ({ position: i + 1, ...r }));
+ }
+ 
+@@ -108,6 +112,22 @@ export function matchForecast(value) {
+   return total > 0.98 && total < 1.02 ? { home: value.home, draw: value.draw, away: value.away } : null;
+ }
+ 
++/**
++ * A row's own sides (the API's `sides`, VI-30): each side's team id and crest reference, under the names the bracket
++ * reads (homeImage, awayImage). A side comes only from its row's foreign key, never from a name; a malformed one is
++ * left out.
++ */
++function ownSides(row) {
++  const out = {};
++  for (const [side, id, image] of [["home", "homeTeamId", "homeImage"], ["away", "awayTeamId", "awayImage"]]) {
++    const value = row?.sides?.[side];
++    if (typeof value?.id !== "string" || !value.id) continue;
++    out[id] = value.id;
++    if (typeof value.image_url === "string" && value.image_url) out[image] = value.image_url;
++  }
++  return out;
++}
++
+ export function normalizeSupplementalCup(results, fixtures) {
+   const completed = [], keys = new Set();
+   for (const [index, row] of (results || []).entries()) {
+@@ -117,7 +137,7 @@ export function normalizeSupplementalCup(results, fixtures) {
+     const day = validDay(row.date) ? row.date : "";
+     keys.add(identity(day, home, away));
+     const roundName = String(row.round_name || row.round || row.stage || "").trim();
+-    completed.push({ key: "result:" + index, date: day, home, away, score, roundName, round: readableRound(roundName), status: "finished", gw: String(row.gw ?? "").trim() });
++    completed.push({ key: "result:" + index, date: day, home, away, score, roundName, round: readableRound(roundName), status: "finished", gw: String(row.gw ?? "").trim(), ...ownSides(row) });
+   }
+   const scheduled = [];
+   for (const [index, row] of (fixtures || []).entries()) {
+@@ -127,7 +147,7 @@ export function normalizeSupplementalCup(results, fixtures) {
+     if (keys.has(identity(day, home, away))) continue;
+     const roundName = String(row.round_name || row.round || row.stage || "").trim();
+     const forecast = matchForecast(row.forecast);
+-    scheduled.push({ key: "fixture:" + index, date: day, home, away, score: null, roundName, round: readableRound(roundName), status: "scheduled", gw: String(row.gw ?? "").trim(), ...(forecast && { forecast }) });
++    scheduled.push({ key: "fixture:" + index, date: day, home, away, score: null, roundName, round: readableRound(roundName), status: "scheduled", gw: String(row.gw ?? "").trim(), ...(forecast && { forecast }), ...ownSides(row) });
+   }
+   return [...completed, ...scheduled];
+ }
+@@ -137,94 +157,196 @@ export function resultsAsOpenCup(matches) {
+   return (matches || []).map((match) => ({ date: match.date, team1: match.home, team2: match.away, round: match.round || "", score: Array.isArray(match.score) ? { ft: match.score } : undefined }));
+ }
+ 
++export function normalizeRoundSides(matches) {
++  return (matches || []).map((match) => ({ ...match, ...ownSides(match) }));
++}
++
+ export function normalizeOpenCup(matches) {
+   return (matches || []).flatMap((match, index) => {
+     const home = String(match.team1 || "").trim(), away = String(match.team2 || "").trim();
+     if (!home || !away) return [];
+     const regulation = pair(match.score?.ft), extra = pair(match.score?.et), penalties = pair(match.score?.p);
+-    const score = extra || regulation;
++    const canceled = match.status === "canceled";
++    const score = canceled ? null : extra || regulation;
+     const notes = [];
+     if (extra) notes.push("après prolongation");
+     if (penalties) notes.push("tirs au but " + penalties[0] + " – " + penalties[1]);
+     const forecast = score ? null : matchForecast(match.forecast);
+-    return [{ key: "open:" + index, date: validDay(match.date) ? match.date : "", home, away, score, penalties, notes, roundName: String(match.round || ""), group: String(match.group || ""), number: Number.isInteger(match.num) ? match.num : null, round: readableRound(match.round, match.group), status: score ? "finished" : "scheduled", ...(forecast && { forecast }) }];
++    return [{ key: "open:" + index, ...(match.id && { id: match.id }), date: validDay(match.date) ? match.date : "", home, away, score, penalties: canceled ? null : penalties, notes, roundName: String(match.round || ""), group: String(match.group || ""), number: Number.isInteger(match.num) ? match.num : null, round: readableRound(match.round, match.group), status: canceled ? "canceled" : score ? "finished" : "scheduled", ...(forecast && !canceled && { forecast }), ...ownSides(match) }];
+   });
+ }
+ 
+-/**
+- * An edition's groups (a tournament of the archives): one table per group the source names, in the groups' order, each
+- * computed as a league's (leagueTable). 1950's final round, a group the source names by its round alone, is the
+- * « Poule finale ». An edition without groups has no table. `win`: the points of a win in that edition (two in the
+- * World Cups before 1994).
+- */
+-export function groupTables(matches, { win = 3 } = {}) {
++const worldCupYear = (year) => [1930, 1934, 1938].includes(year) || (year >= 1950 && year <= 2026 && (year - 1950) % 4 === 0);
++const euroYear = (year) => year >= 1980 && year <= 2028 && year % 4 === 0;
++
++function groupRules(competition, season) {
++  const year = /^\d{4}$/.test(String(season)) ? Number(season) : 0;
++  if (competition === "world-cup-history" && worldCupYear(year)) {
++    const tieBreak = [1954, 1958].includes(year) ? "playoff"
++      : year >= 1994 && year <= 2022 ? "fifa"
++      : year >= 1974 && year <= 1990 ? "overall" : null;
++    return { win: year < 1994 ? 2 : 3, tieBreak, finalPool: year === 1950 };
++  }
++  if (competition === "euro" && euroYear(year)) {
++    return { win: year < 1996 ? 2 : 3, tieBreak: [2020, 2024].includes(year) ? "uefa" : null };
++  }
++  return { win: null, tieBreak: null };
++}
++
++const compare = (a, b) => {
++  for (let i = 0; i < a.length; i++) {
++    if (a[i] !== b[i]) return b[i] - a[i];
++  }
++  return 0;
++};
++
++/** Each block is ranked ahead of the next one. Teams within a block share the place. */
++function rankBlocks(rows, metrics) {
++  const sorted = rows.map((row) => ({ row, values: metrics(row) })).sort((a, b) => compare(a.values, b.values));
++  const blocks = [];
++  let previous;
++  for (const { row, values } of sorted) {
++    if (!previous || compare(previous, values)) blocks.push([]);
++    blocks.at(-1).push(row);
++    previous = values;
++  }
++  return blocks;
++}
++
++const overall = (row) => [row.difference, row.goalsFor];
++const played = (match) => match.status === "finished" && Array.isArray(match.score);
++
++function headToHead(rows, matches, win, reapply) {
++  if (rows.length < 2) return [rows];
++  const teams = new Set(rows.map((row) => row.name));
++  const games = matches.filter((m) => played(m) && m.home !== m.away && teams.has(m.home) && teams.has(m.away));
++  const pairs = new Set(games.map((m) => JSON.stringify([m.home, m.away].sort())));
++  const expected = rows.length * (rows.length - 1) / 2;
++  if (games.length !== expected || pairs.size !== expected) return null;
++  const miniTable = new Map(tally(games, win).map((row) => [row.name, row]));
++  const blocks = rankBlocks(rows, ({ name }) => [miniTable.get(name).points, ...overall(miniTable.get(name))]);
++  if (reapply && blocks.length > 1) return blocks.flatMap((block) => headToHead(block, games, win, true) ?? [block]);
++  return blocks;
++}
++
++function breakTie(rows, { matches, playoffs }, { win, tieBreak }) {
++  if (rows.length < 2) return [rows];
++  if (tieBreak === "playoff" && rows.length === 2) {
++    const teams = new Set(rows.map((row) => row.name));
++    const games = playoffs.filter((m) => played(m) && m.home !== m.away && teams.has(m.home) && teams.has(m.away));
++    if (games.length === 1 && games[0].score[0] !== games[0].score[1]) {
++      const game = games[0], winner = game.score[0] > game.score[1] ? game.home : game.away;
++      return rankBlocks(rows, (row) => [Number(row.name === winner)]);
 +    }
 +  }
++  if (tieBreak === "overall") return rankBlocks(rows, overall);
++  if (tieBreak === "fifa") return rankBlocks(rows, overall).flatMap((block) => headToHead(block, matches, win, false) ?? [block]);
++  if (tieBreak === "uefa") {
++    const direct = headToHead(rows, matches, win, true);
++    return direct ? direct.flatMap((block) => rankBlocks(block, overall)) : [rows];
++  }
++  return [rows];
++}
++
++function standings(group, rules, today) {
++  const { name, matches } = group;
++  const pool = name === "Poule finale";
++  const missing = matches.filter((m) => !played(m) && m.status !== "canceled" && (!m.date || m.date < today));
++  const affected = new Set(missing.flatMap((m) => [m.home, m.away]));
++  const table = tally(matches, rules.win);
++  const ranked = rules.win !== null && !missing.length && table.some((row) => row.played) &&
++    (!pool || (rules.finalPool && matches.every(played) && isFinalPool1950(matches)));
++  const blocks = ranked
++    ? rankBlocks(table, (row) => [row.points]).flatMap((block) => breakTie(block, group, rules))
++    : [table];
++  let position = 1;
++  const rows = blocks.flatMap((block) => {
++    const current = position;
++    position += block.length;
++    return block.sort(displayOrder).map((row) => {
++      const hasPoints = rules.win !== null && !affected.has(row.name) && (row.played > 0 || ranked);
++      return { ...row, position: ranked ? current : null, tied: ranked && block.length > 1,
++        points: hasPoints ? row.points : null, difference: hasPoints ? row.difference : null };
++    });
++  });
++  const allGames = [...matches, ...group.playoffs];
++  const days = allGames.map((match) => match.date).filter(Boolean).sort();
++  const pairs = new Set(matches.filter((match) => match.home !== match.away)
++    .map((match) => JSON.stringify([match.home, match.away].sort())));
++  const complete = pairs.size === matches.length && pairs.size === rows.length * (rows.length - 1) / 2 &&
++    days.length === allGames.length && allGames.every((match) => played(match) || match.status === "canceled");
++  return { name, rows, unresolved: rows.some((row) => row.tied), from: days[0], to: days.at(-1), complete };
++}
++
++/** Archive groups: explicit group, round-only group, separating play-off, or 1950 final pool. */
++export function groupTables(matches, { competition, season, today = parisDay(Date.now()) } = {}) {
+   const groups = new Map();
+   for (const match of matches || []) {
+-    const name = match.group ? readableRound(match.group) : /^final round$/i.test(String(match.roundName || "").trim()) ? "Poule finale" : "";
++    const round = String(match.roundName ?? "").trim();
++    const playoff = /^(Group (?:[a-z]|\d+)) Play-?off$/i.exec(round)?.[1];
++    const namedGroup = match.group || (/^Group (?:[a-z]|\d+)$/i.test(round) ? round : "");
++    const name = playoff ? readableRound(playoff) : namedGroup ? readableRound(namedGroup) : /^final round$/i.test(round) ? "Poule finale" : "";
+     if (!name) continue;
+-    (groups.get(name) || groups.set(name, []).get(name)).push(match);
++    if (!groups.has(name)) groups.set(name, { name, matches: [], playoffs: [] });
++    groups.get(name)[playoff ? "playoffs" : "matches"].push(match);
+   }
+-  return [...groups.entries()]
+-    .sort((a, b) => (a[0] === "Poule finale") - (b[0] === "Poule finale") || a[0].localeCompare(b[0], "fr", { numeric: true }))
+-    .map(([name, rows]) => {
+-      const days = rows.map((match) => match.date).filter(Boolean).sort();
+-      return { name, rows: leagueTable(rows, { win }), from: days[0] || "", to: days.at(-1) || "" };
+-    });
++  const rules = groupRules(competition, season);
++  return [...groups.values()]
++    .filter((group) => group.matches.length)
++    .sort((a, b) => (a.name === "Poule finale") - (b.name === "Poule finale") || a.name.localeCompare(b.name, "fr", { numeric: true }))
++    .map((group) => standings(group, rules, today));
+ }
+ 
+-const sameTeam = (a, b) => normalizeText(a).trim() === normalizeText(b).trim();
++const groupLeader = (table) => table.rows.find((row) => row.position === 1 && !row.tied);
+ 
+-/**
+- * The groups a bracket starts from (`sides`: bracketSides), when its first round is played between group winners
+- * alone: 1930's semi-finals, the second round of 1974 and 1978 (its winners in the final) and of 1982 (in the
+- * semi-finals). Per side, the table of the group each team of the first round won, in the ties' team order; a team
+- * that won two groups comes from the later. « Second tour » when other groups were played before these, « Groupes »
+- * otherwise. Null when a team of the first round is not the winner of a group of its own that ended before the round
+- * (a round of 16 also holds runners-up; a cup has no group): the bracket then starts at that round.
+- */
++/** Precede a bracket with its latest complete groups, when each opening team won one of its own. */
+ export function bracketGroups(sides, matches, options) {
+   if (!sides?.final) return null;
+   const first = sides.rounds[0];
+-  const ties = first
+-    ? { left: first.left, right: first.right }
+-    : { left: [{ home: sides.final.home, date: sides.final.date }], right: [{ home: sides.final.away, date: sides.final.date }] };
+-  const opening = [...ties.left, ...ties.right].map((match) => match.date).filter(Boolean).sort()[0];
+-  if (!opening) return null;
+-  const tables = groupTables(matches, options).filter((table) => table.to && table.to < opening);
+-  const used = new Set();
+-  const won = (team) => {
+-    const table = tables.filter((t) => t.rows[0] && sameTeam(t.rows[0].name, team)).sort((a, b) => b.to.localeCompare(a.to))[0];
+-    if (!table || used.has(table.name)) return null;
+-    used.add(table.name);
+-    return table;
++  const openingMatches = first ? [...first.left, ...first.right] : [sides.final];
++  const days = openingMatches.map((match) => match.date).filter(Boolean).sort();
++  if (days.length !== openingMatches.length) return null;
++  const tables = groupTables(matches, options).filter((table) => table.complete && table.to < days[0]);
++  const groupOf = (team) => {
++    const name = normalizeText(team).trim();
++    if (!name) return null;
++    const winners = tables.filter((table) => normalizeText(groupLeader(table)?.name).trim() === name)
++      .sort((a, b) => b.to.localeCompare(a.to));
++    if (winners.length > 1 && winners[0].to === winners[1].to) return null;
++    return winners[0] ?? null;
+   };
+-  const side = (list) => list.flatMap((match) => [match.home, match.away].filter(Boolean).map(won));
+-  const left = side(ties.left), right = side(ties.right);
+-  if (!left.length || !right.length || [...left, ...right].includes(null)) return null;
+-  const start = [...left, ...right].map((table) => table.from).sort()[0];
+-  return { label: tables.some((table) => !used.has(table.name) && table.to < start) ? "Second tour" : "Groupes", left, right };
++  const side = (ties) => ties.flatMap((match) => [match.home, match.away].map(groupOf));
++  const left = first ? side(first.left) : [groupOf(sides.final.home)];
++  const right = first ? side(first.right) : [groupOf(sides.final.away)];
++  const opening = [...left, ...right];
++  const used = new Set(opening);
++  if (!left.length || !right.length || used.has(null) || opening.length !== used.size) return null;
++  // Those archives name the first round with numbers and the second with letters.
++  // An earlier group cannot replace one that has no established winner in the second round.
++  if (["1974", "1978", "1982"].includes(String(options?.season)) &&
++      options?.competition === "world-cup-history" && opening.some((table) => !/^Groupe [A-Z]$/.test(table.name))) return null;
++  const start = opening.map((table) => table.from).sort()[0];
++  const label = tables.some((table) => !used.has(table) && table.to < start) ? "Second tour" : "Groupes";
++  return { label, left, right };
+ }
+ 
+-/**
+- * The group that ends an edition without a final (1950's « Poule finale »): its table, and its leader as champion when
+- * it leads on points alone. Null when the edition has a knockout match, or no such group.
+- */
++/** The 1950 bracket view is its final pool. Only the corroborated standings name its champion. */
+ export function finalGroup(matches, options) {
+-  const rows = matches || [];
+-  if (rows.some((match) => knockoutStage(match.roundName))) return null;
+-  const table = groupTables(rows, options).find((t) => t.name === "Poule finale");
+-  if (!table) return null;
+-  const [first, second] = table.rows;
+-  return { table, champion: first && (!second || first.points > second.points) ? first.name : null };
++  if (!groupRules(options?.competition, options?.season).finalPool ||
++      (matches || []).some((match) => knockoutStage(match.roundName))) return null;
++  const table = groupTables(matches, options).find((row) => row.name === "Poule finale");
++  return table ? { table, champion: groupLeader(table)?.name ?? null } : null;
+ }
+ 
+ /** Keep past unscored matches out of the upcoming list. */
+-export function filterCupMatches(matches, status, query = "", now = Date.now()) {
++export function filterCupMatches(matches, status, query = "", now = Date.now(), teamLabel) {
+   const needle = normalizeText(query).trim(), today = parisDay(now);
+   const rows = (matches || []).filter((match) => {
+     if (status === "finished" && match.status !== "finished") return false;
+     if (status === "scheduled" && (match.status !== "scheduled" || (match.date && match.date < today))) return false;
+-    return !needle || normalizeText(match.home + " " + match.away + " " + (match.round || "")).includes(needle);
++    const sourceNames = [match.home, match.away, match.round].join(" ");
++    const names = teamLabel ? [sourceNames, teamLabel(match.home), teamLabel(match.away)].join(" ") : sourceNames;
++    return !needle || normalizeText(names).includes(needle);
+   });
+   return rows.sort((a, b) => {
+     if (!a.date || !b.date) return a.date ? -1 : b.date ? 1 : a.key.localeCompare(b.key);
+diff --git a/dashboard/frontend/src/services/cup-worker-client.js b/dashboard/frontend/src/services/cup-worker-client.js
+index ca72a97064..8a5d46a9a4 100644
+--- a/dashboard/frontend/src/services/cup-worker-client.js
++++ b/dashboard/frontend/src/services/cup-worker-client.js
+@@ -15,10 +15,11 @@ export async function cupWorkerSnapshot(
+     throw new Error("Route de données invalide.");
+   // A cup of the complementary sources is read by its Vega id (api-routes.js).
+   const cup = await cupId(kind, competition, async (url) => {
+-    const response = await publicApiFetch(apiUrl(url), { signal });
++    const response = await publicApiFetch(apiUrl(url));
+     if (!response.ok) throw new Error(`HTTP ${response.status}`);
+     return response.json();
+   });
++  signal?.throwIfAborted();
+   const paths = cup ? cupPaths(cup, season) : null;
+   if (paths) fallbackUrl = paths.edition;
+   const path = apiUrl(
+@@ -69,7 +70,8 @@ export async function cupWorkerSnapshot(
+           name: String(match.round_name),
+           playoff: match.has_playoff === true,
+         };
+-    return { ...saved, matches, rounds };
++    const editionArtwork = saved?.editionArtwork ?? matches.find((row) => row.season === String(season))?.editionArtwork;
++    return { ...saved, matches, rounds, editionArtwork };
+   }
+   const value = fresh || saved;
+   if (
+diff --git a/dashboard/frontend/src/services/football-client.js b/dashboard/frontend/src/services/football-client.js
+index 34438017c2..3bcc12f7cd 100644
+--- a/dashboard/frontend/src/services/football-client.js
++++ b/dashboard/frontend/src/services/football-client.js
+@@ -146,6 +146,7 @@ export class FootballDataClient {
+           matches: saved.matches,
+           rounds: saved.rounds || {},
+           source: "snapshot",
++          editionArtwork: saved.editionArtwork,
+         };
+       } catch (error) {
+         if (error.name === "AbortError") {
+@@ -176,6 +177,7 @@ export class FootballDataClient {
+                   season: match.season ?? season,
+                 })),
+           source: "api",
++          editionArtwork: matches.find((match) => match.season === String(season))?.editionArtwork,
+         };
+       } catch (error) {
+         if (error.name === "AbortError") {
+@@ -334,6 +336,7 @@ export class FootballDataClient {
+       league:
+         typeof match.league === "string" ? match.league : match.league?.name,
+       season: match.season,
++      ...(match.editionArtwork && { editionArtwork: match.editionArtwork }),
+       home: {
+         ...match.home_team,
+         imageUrl: match.home_team?.image_url,
+diff --git a/dashboard/frontend/src/services/format.js b/dashboard/frontend/src/services/format.js
+index 5b1056c306..10cd6d7f39 100644
+--- a/dashboard/frontend/src/services/format.js
++++ b/dashboard/frontend/src/services/format.js
+@@ -1,3 +1,4 @@
++import { acceptedImageSource } from "./image-source.js";
+ import { apiUrl } from "../data-url.js";
+ export {
+   formatNumber as number,
+@@ -18,23 +19,9 @@ export const date = (value) =>
+       )
+     : "—";
+ export function safeImageUrl(value) {
+-  try {
+-    const u = new URL(value);
+-    return u.protocol === "https:" &&
+-      (u.hostname === "cdn.pitchapi.dev" ||
+-        (u.hostname === "upload.wikimedia.org" &&
+-          /^\/wikipedia\/commons\//.test(u.pathname)) ||
+-        (u.hostname === "img.thesports.com" &&
+-          /^\/football\/(?:team|competition)\/[a-z0-9]+\.(?:png|webp|jpe?g)$/i.test(
+-            u.pathname,
+-          ))) &&
+-      !u.username &&
+-      !u.password
+-      ? apiUrl(`/api/assets?url=${encodeURIComponent(u.href)}`)
+-      : "";
+-  } catch {
+-    return "";
+-  }
++  return acceptedImageSource(value)
++    ? apiUrl(`/api/assets?url=${encodeURIComponent(new URL(value).href)}`)
++    : "";
+ }
+ export function mediaImageSource(
+   url,
+diff --git a/dashboard/frontend/src/services/image-source.js b/dashboard/frontend/src/services/image-source.js
+new file mode 100644
+index 0000000000..0d8d7acf17
+--- /dev/null
++++ b/dashboard/frontend/src/services/image-source.js
+@@ -0,0 +1,31 @@
++/**
++ * The one image gate of the site (FAILURE_MODES.md §21): an image is asked of the API only when its
++ * URL is a known provider's, Vega's reference to a reviewed packed image, or UEFA's logo of a club.
++ * The API (/api/assets, media=1) then answers with the base's copy: no address is built from a URL.
++ */
++const VEGA_REFERENCE = /^\/sha256\/[a-f0-9]{64}\.(?:png|jpg|webp)$/;
++const UEFA_CLUB_LOGO = /^\/imgml\/TP\/teams\/logos\/70x70\/\d+\.png$/;
++
++export function acceptedImageSource(value) {
++  if (typeof value !== "string" || !value || value.length > 2048) return false;
++  let url;
++  try {
++    url = new URL(value);
++  } catch {
++    return false;
++  }
++  if (url.protocol !== "https:" || url.username || url.password || url.port) return false;
++  switch (url.hostname) {
++    case "cdn.pitchapi.dev":
++      return true;
++    case "upload.wikimedia.org":
++      return /^\/wikipedia\/commons\//.test(url.pathname);
++    case "img.thesports.com":
++      return /^\/football\/(?:team|competition)\/[a-z0-9]+\.(?:png|webp|jpe?g)$/i.test(url.pathname);
++  }
++  // The two exact forms: no query, no fragment.
++  if (url.search || url.hash || /[?#]/.test(value)) return false;
++  if (url.hostname === "media.vega.invalid") return VEGA_REFERENCE.test(url.pathname);
++  if (url.hostname === "img.uefa.com") return UEFA_CLUB_LOGO.test(url.pathname);
++  return false;
++}
+diff --git a/dashboard/frontend/src/services/knockout-bracket.js b/dashboard/frontend/src/services/knockout-bracket.js
+index d78b671f7b..91c0c6dffe 100644
+--- a/dashboard/frontend/src/services/knockout-bracket.js
++++ b/dashboard/frontend/src/services/knockout-bracket.js
+@@ -1,3 +1,4 @@
++import { stageKind } from "../../../shared/tournament-stages.js";
+ import { normalizeText } from "../model.js";
+ 
+ const STAGES = [
+@@ -29,27 +30,42 @@ const dateOrder = (a, b) => (a.date || "9999").localeCompare(b.date || "9999") |
+ 
+ const DAY = 86400000;
+ const noon = (day) => Date.parse(String(day).slice(0, 10) + "T12:00:00Z");
++const fixtureStage = (round) => knockoutStage(round) ?? (stageKind(round) === "group" ? "group" : null);
+ 
+ /**
+- * Give a tie its collected match (its page on the site: line-ups, statistics) and crests: the collected match of the
+- * same two teams, in either order, played within a day of it (a source gives the local day, the other the UTC day),
+- * when there is exactly one. `sameTeam` says two spellings are one team (the national teams' names differ between
+- * sources); by default the same name.
++ * Attach the unique collected match in the same edition and day window. Keep the
++ * archive's round, period scores and side order, including when native sides are reversed.
+  */
+ export function attachNativeMatches(matches, nativeMatches, sameTeam = (a, b) => teamName(a) === teamName(b)) {
+   const collected = (nativeMatches || []).flatMap((match) => {
+     const home = match.home_team || match.home, away = match.away_team || match.away;
+-    return match.id && match.date && home?.name && away?.name ? [{ match, home, away, at: noon(match.date) }] : [];
++    if (!match.id || !match.date || !home?.name || !away?.name || match.status === "canceled") return [];
++    return [{ match, home, away, at: noon(match.date), stage: fixtureStage(match.round_name || match.roundName) }];
+   });
+-  return (matches || []).map((match) => {
+-    if (!match.date) return match;
+-    const at = noon(match.date);
+-    const found = collected.filter((c) => Math.abs(c.at - at) <= DAY
+-      && ((sameTeam(c.home.name, match.home) && sameTeam(c.away.name, match.away)) || (sameTeam(c.home.name, match.away) && sameTeam(c.away.name, match.home))));
+-    if (found.length !== 1) return match;
+-    const { match: native, home, away } = found[0];
++  const owners = new Map();
++  const candidates = (matches || []).map((match) => {
++    if (!match.date || match.status === "canceled") return null;
++    const at = noon(match.date), stage = fixtureStage(match.roundName);
++    const found = collected.filter((row) => Math.abs(row.at - at) <= DAY
++      && (!stage || !row.stage || stage === row.stage)
++      && ((sameTeam(row.home.name, match.home) && sameTeam(row.away.name, match.away)) ||
++          (sameTeam(row.home.name, match.away) && sameTeam(row.away.name, match.home))));
++    if (found.length !== 1) return null;
++    const [candidate] = found;
++    const id = candidate.match.id;
++    owners.set(id, (owners.get(id) || 0) + 1);
++    return candidate;
++  });
++  return (matches || []).map((match, index) => {
++    const candidate = candidates[index];
++    if (!candidate || owners.get(candidate.match.id) !== 1) return match;
++    const { match: native, home, away } = candidate;
+     const [first, second] = sameTeam(home.name, match.home) ? [home, away] : [away, home];
+-    return { ...match, id: native.id, homeImage: first.image_url || first.imageUrl, awayImage: second.image_url || second.imageUrl };
++    return {
++      ...match, id: native.id,
++      homeImage: first.image_url || first.imageUrl || match.homeImage,
++      awayImage: second.image_url || second.imageUrl || match.awayImage,
++    };
+   });
+ }
+ 
+@@ -122,7 +138,12 @@ export function mergeCupReplays(matches) {
+     if (!first) continue;
+     const swapped = teamName(first.home) !== teamName(match.home);
+     const turn = (pair) => (pair && swapped ? [pair[1], pair[0]] : pair);
+-    replays.set(first.key, { ...first, date: match.date || first.date, score: turn(match.score), penalties: turn(match.penalties), status: match.status, notes: [...new Set([...(match.notes || []), "match rejoué"])] });
++    replays.set(first.key, {
++      ...first, key: match.key, id: match.id, number: match.number,
++      date: match.date, score: turn(match.score), penalties: turn(match.penalties), status: match.status,
++      notes: [...new Set([...(match.notes || []), "match rejoué"])],
++      replayOf: { id: first.id, date: first.date, score: first.score },
++    });
+     dropped.add(match.key);
+   }
+   return replays.size ? rows.flatMap((match) => (dropped.has(match.key) ? [] : [replays.get(match.key) || match])) : rows;
+diff --git a/dashboard/frontend/src/services/media-registry.js b/dashboard/frontend/src/services/media-registry.js
+index bd1cd43d22..faa8594329 100644
+--- a/dashboard/frontend/src/services/media-registry.js
++++ b/dashboard/frontend/src/services/media-registry.js
+@@ -1,28 +1,10 @@
++import { acceptedImageSource } from "./image-source.js";
+ import { safeResolvedMedia } from "./resolved-media.js";
+ let enabled = false;
+ let snapshot = Object.freeze(Object.create(null));
+ const listeners = new Set();
+ const limit = 2048;
+-const sourceAllowed = (value) => {
+-  try {
+-    const u = new URL(value);
+-    return (
+-      value.length <= 2048 &&
+-      u.protocol === "https:" &&
+-      !u.username &&
+-      !u.password &&
+-      (u.hostname === "cdn.pitchapi.dev" ||
+-        (u.hostname === "upload.wikimedia.org" &&
+-          /^\/wikipedia\/commons\//.test(u.pathname)) ||
+-        (u.hostname === "img.thesports.com" &&
+-          /^\/football\/(?:team|competition)\/[a-z0-9]+\.(?:png|webp|jpe?g)$/i.test(
+-            u.pathname,
+-          )))
+-    );
+-  } catch {
+-    return false;
+-  }
+-};
++const sourceAllowed = acceptedImageSource;
+ export function mediaRepresentationEnabled() {
+   return typeof window !== "undefined" && enabled;
+ }
+diff --git a/dashboard/frontend/src/services/national-flags.js b/dashboard/frontend/src/services/national-flags.js
+index fa9fb25f23..984958e384 100644
+--- a/dashboard/frontend/src/services/national-flags.js
++++ b/dashboard/frontend/src/services/national-flags.js
+@@ -118,7 +118,7 @@ const PAST_TEAMS = Object.fromEntries(
+ );
+ 
+ /**
+- * A national team's name in French whatever the edition's year (a flag is withheld before 1994, a name is not): the
++ * A national team's name in French whatever the edition's year, including the
+  * home nations and the teams of the past included. A name no country answers to (a fixture's « Winner Match 45 ») is
+  * left as it is.
+  */
+diff --git a/dashboard/frontend/src/services/openfootball-cups.js b/dashboard/frontend/src/services/openfootball-cups.js
+index 02e2f9f62a..54efc73210 100644
+--- a/dashboard/frontend/src/services/openfootball-cups.js
++++ b/dashboard/frontend/src/services/openfootball-cups.js
+@@ -7,7 +7,7 @@ const PAIR = /(\d+)\s*[-–]\s*(\d+)/;
+ // `calendar`: the competition is played within one calendar year (the South and North
+ // American club cups): a date without its year is in `startYear`, not in the season's
+ // second year from January to June.
+-export function parseOpenCupText(text, startYear, roundNames = {}, { calendar = false } = {}) {
++export function parseOpenCupText(text, startYear, roundNames = {}, { calendar = false, halfTime = false } = {}) {
+   if (typeof text !== "string" || !Number.isInteger(startYear)) throw new Error("Invalid cup archive");
+   let day = "", round = "", candidates = 0;
+   const matches = [];
+@@ -33,19 +33,37 @@ export function parseOpenCupText(text, startYear, roundNames = {}, { calendar =
+       continue;
+     }
+     const first = [Number(row[4]), Number(row[5])], tail = row[6] || "";
++    // After « a.e.t. », the brackets give the 90 minutes then the half time: « 2-1 a.e.t. (1-1, 0-0) ».
++    // The score after extra time is never the 90 minutes' too; without brackets they stay unknown.
++    const bracketed = (text) => text.match(/\(([^)]*)\)/)?.[1].match(PAIR);
++    const pairOf = (found) => [Number(found[1]), Number(found[2])];
+     let score;
+     if (/^\s*pen\./i.test(tail)) {
+       const afterPen = tail.replace(/^\s*pen\.\s*/i, "");
+       const explicit = afterPen.match(/^\s*(\d+)\s*[-–]\s*(\d+)/);
+-      const inside = afterPen.match(/\(([^)]*)\)/)?.[1].match(PAIR);
++      const inside = bracketed(afterPen);
+       const actual = explicit || inside;
+       if (!actual) throw new Error("Missing score before penalties");
+-      const goals = [Number(actual[1]), Number(actual[2])];
+-      score = { ft: goals, p: first };
+-      if (/a\.e\.t\./i.test(afterPen)) score.et = goals;
++      if (/a\.e\.t\./i.test(afterPen)) {
++        score = { et: pairOf(actual), p: first };
++        if (explicit && inside) score.ft = pairOf(inside);
++      } else score = { ft: pairOf(actual), p: first };
++    } else if (/a\.e\.t\./i.test(tail)) {
++      score = { et: first };
++      const inside = bracketed(tail);
++      if (inside) score.ft = pairOf(inside);
+     } else {
+       score = { ft: first };
+-      if (/a\.e\.t\./i.test(tail)) score.et = first;
++    }
++    if (halfTime) {
++      const brackets = tail.match(/\(([^)]*)\)/)?.[1] || "";
++      const list = brackets.split(",").map((s) => s.trim().match(/^(\d+)\s*[-–]\s*(\d+)$/));
++      const expected = (score.et || score.p) ? 2 : 1;
++      if (list.length === expected && list.every(Boolean)) {
++        const ht = pairOf(list.at(-1));
++        const comparison = score.ft ?? score.et;
++        if (comparison && ht.every((n, i) => n <= comparison[i])) score.ht = ht;
++      }
+     }
+     matches.push({ round, date: day, team1: row[2].trim(), team2: row[3].trim(), score });
+   }
+diff --git a/dashboard/frontend/src/services/openfootball-france-cup.js b/dashboard/frontend/src/services/openfootball-france-cup.js
+index 0d6e2db348..8b3243cc37 100644
+--- a/dashboard/frontend/src/services/openfootball-france-cup.js
++++ b/dashboard/frontend/src/services/openfootball-france-cup.js
+@@ -29,7 +29,9 @@ export function parseFranceCup(text) {
+     const otherScores = [...String(row[7] || "").matchAll(PAIR)].map((value) => [Number(value[1]), Number(value[2])]);
+     const score = row[6] ? { ft: otherScores[0], p: sourceScore } : { ft: sourceScore };
+     if (!score.ft) throw new Error("Missing match score before penalties");
+-    matches.push({ round, date: currentDate, team1: row[2].trim(), team2: row[3].trim(), score });
++    const awarded = /\s+\[awarded\]\s*$/.test(line);
++    matches.push({ round, date: currentDate, team1: row[2].trim(), team2: row[3].trim(), score,
++      ...(awarded && { status: "awarded" }) });
+   }
+   const declared = text.match(/#\s*Matches\s+(\d+)/i);
+   if (!declared || matches.length !== candidates || matches.length !== Number(declared[1])) throw new Error("Incomplete source parsing");
+diff --git a/dashboard/frontend/src/services/tournament-runs.js b/dashboard/frontend/src/services/tournament-runs.js
+index 105a9206c1..f7165b28cb 100644
+--- a/dashboard/frontend/src/services/tournament-runs.js
++++ b/dashboard/frontend/src/services/tournament-runs.js
+@@ -1,3 +1,5 @@
++import { stageKind, UNKNOWN_STAGE_LABEL } from "../../../shared/tournament-stages.js";
++
+ /**
+  * A nation's runs in the major tournaments (/api/nations/{id}: `tournaments`) as the nation's page shows them: by
+  * competition, each run with the depth its gauge fills and the competition's own medals. A medal is counted in the
+@@ -9,10 +11,24 @@
+ export const RUN_STEPS = 6;
+ 
+ // The stages the API names (backend/api/src/routes/nations.mjs: STAGES).
+-const DEPTH = { "1er tour": 1, "16es": 2, "8es": 2, Quarts: 3, Demi: 4, "3e": 4, "4e": 4, "Match 3e place": 4, Finale: 5, Finaliste: 5, Vainqueur: 6 };
++const DEPTH = { "1er tour": 1, "16es": 2, "8es": 2, Quarts: 3, Demi: 4, "3e": 4, "Poule finale": 4, "2e": 5, "4e": 4, "Match 3e place": 4, Finale: 5, Finaliste: 5, Vainqueur: 6 };
++
++/** Older API responses called unclassified rounds the first round. */
++export function runStage(run) {
++  const games = run?.games;
++  if (Array.isArray(games)) {
++    const latest = games.findLast((game) => game.status !== "canceled");
++    const stage = stageKind(latest?.round);
++    // The API's dated history is sorted chronologically. An undated summary can only corroborate that a round exists.
++    const hasRound = latest?.date ? stage !== "unknown" : games.some((game) => game.status !== "canceled" && stageKind(game.round) !== "unknown");
++    if (!hasRound) return UNKNOWN_STAGE_LABEL;
++    if (stage === "final-pool" && run.stage === "1er tour") return "Poule finale";
++  }
++  return Object.hasOwn(DEPTH, run?.stage) ? run.stage : UNKNOWN_STAGE_LABEL;
++}
+ 
+-/** How far a run went, 1 to RUN_STEPS; a stage the page does not know counts as the first round, never as a title. */
+-export const runDepth = (run) => DEPTH[run?.stage] || 1;
++export const runDepth = (run) => DEPTH[runStage(run)] || 0;
++export const runTone = (run) => runDepth(run) > 0 ? run.tone : undefined;
+ 
+ // The World Cup first, the Euro second, the other tournaments in the order they come.
+ const ORDER = ["world-cup", "euro"];
+@@ -25,7 +41,8 @@ export function runsByTournament(runs) {
+       groups.set(run.tournament, { tournament: run.tournament, label: String(run.label || "").replace(/\s+\d{4}$/, ""), runs: [], medals: { gold: 0, silver: 0, bronze: 0 } });
+     const group = groups.get(run.tournament);
+     group.runs.push(run);
+-    if (run.tone in group.medals) group.medals[run.tone]++;
++    const tone = runTone(run);
++    if (Object.hasOwn(group.medals, tone)) group.medals[tone]++;
+   }
+   const rank = (key) => (ORDER.includes(key) ? ORDER.indexOf(key) : ORDER.length);
+   return [...groups.values()]
+diff --git a/dashboard/frontend/src/views/CompetitionsPage.jsx b/dashboard/frontend/src/views/CompetitionsPage.jsx
+index 46e3bac2f9..bcfb06a280 100644
+--- a/dashboard/frontend/src/views/CompetitionsPage.jsx
++++ b/dashboard/frontend/src/views/CompetitionsPage.jsx
+@@ -28,6 +28,7 @@ import {
+   defaultCompetitionMatchStatus,
+   orderCompetitionMatches,
+ } from "../services/competition-matches.js";
++import { editionArtworkUrl } from "../services/competition-artwork.js";
+ import { normalizeText, seasonLabel } from "../services/format.js";
+ import { useResource } from "../services/resources.js";
+ import { competitionFixturePreview } from "../services/fixture-pages.js";
+@@ -53,8 +54,11 @@ import { useSeasonProjection } from "../services/forecasts.js";
+ import {
+   WORLD_CUP_ID,
+   WORLD_CUP_ARCHIVE_ID,
++  awaitsCupIndex,
++  findCompetition,
+   mergeCupCatalog,
+   competitionEditions,
++  editionView,
+   competitionSearchText,
+   normalizeCompetitionQuery,
+ } from "../services/cup-catalog.js";
+@@ -154,9 +158,9 @@ export function SupplementalPanel({
+  * A collected competition's page. A cup's (`hasKnockout`) has the edition's head: the page that holds it may offer a
+  * sister competition's editions in the same selector (`editions`, `onEdition`: the World Cup's archive), open a view
+  * (`initialView`), follow a team through the bracket (`highlight`, `onHighlight`) and be told of the view chosen
+- * (`onView`: its address follows).
++ * (`onView`, `onSeason`: its address follows).
+  */
+-function Fixtures({ competition, day, initialSeason, initialView, editions, onEdition, onView, highlight = "", onHighlight, heading = false }) {
++function Fixtures({ competition, day, initialSeason, initialView, editions, onEdition, onView, onSeason, highlight = "", onHighlight, heading = false }) {
+   const f = useFootball();
+   const [season, setSeason] = useState(
+     (initialSeason &&
+@@ -192,6 +196,7 @@ function Fixtures({ competition, day, initialSeason, initialView, editions, onEd
+     const other = (editions || []).find((edition) => edition.season === String(value) && edition.id !== competition.id);
+     if (other) return onEdition?.(other);
+     setSeason(value);
++    onSeason?.(String(value));
+     const next = seasonLabel(value);
+     if (f.manifest.seasons.some((s) => s.id === next)) f.changeSeason(next);
+     setPage(1);
+@@ -293,6 +298,8 @@ function Fixtures({ competition, day, initialSeason, initialView, editions, onEd
+   // A cup's page has the edition's head on one row; a league's keeps its title and its season.
+   const cupHead = !day && hasKnockout;
+   const overviewFixtures = resource.value || preview.value;
++  const artwork = resource.error || resource.refreshError ? null : overviewFixtures?.editionArtwork;
++  const imageUrl = editionArtworkUrl(competition?.id, competition?.imageUrl, artwork);
+   return (
+     <div
+       className={
+@@ -304,7 +311,7 @@ function Fixtures({ competition, day, initialSeason, initialView, editions, onEd
+         title={
+           cupHead ? null : competition ? (
+             <span className="competition-detail-title">
+-              <Media name={competition.name} url={competition.imageUrl} />
++              <Media url={imageUrl} initials={false} />
+               <span>
+                 <strong>{competition.name}</strong>
+                 <small>{competitionCountryLabel(competition)}</small>
+@@ -318,7 +325,7 @@ function Fixtures({ competition, day, initialSeason, initialView, editions, onEd
+       >
+         {cupHead && (
+           <EditionHeader
+-            competition={competition}
++            imageUrl={imageUrl}
+             name={competition.name}
+             heading={heading}
+             label="Saison de compétition"
+@@ -470,13 +477,20 @@ function Fixtures({ competition, day, initialSeason, initialView, editions, onEd
+ const VIEW_OF_PARAM = { tableau: "bracket", groupes: "groups", classement: "standings", matchs: "matches" };
+ const PARAM_OF_VIEW = { bracket: "tableau", groups: "groupes", standings: "classement", matches: "matchs" };
+ 
++function availableView(id, edition, view) {
++  if (!view) return "";
++  const firstView = editionView({ id, edition });
++  if (firstView === "matchs" || (firstView === "groupes" && view !== "matchs" && view !== "tableau")) return firstView;
++  return view;
++}
++
+ export default function CompetitionsPage() {
+   const f = useFootball();
+   const params = useSearchParams();
+   const id = params.get("id");
+   const requestedEdition = params.get("edition") || "";
+   // A cup edition's view and the team followed through it (a nation's tile leads here) are in the address.
+-  const requestedView = VIEW_OF_PARAM[params.get("view") || ""] || "";
++  const viewParam = params.get("view") || "";
+   const followed = params.get("team") || "";
+   const [query, setQuery] = useState("");
+   const [country, setCountry] = useState("all");
+@@ -593,9 +607,8 @@ export default function CompetitionsPage() {
+     (choice.ready
+       ? preferredCompetition(catalog, choice.saved, choice.country)
+       : null);
+-  const selected = (id ? expandedCatalog : catalog).find(
+-    (c) => c.id === chosenId,
+-  );
++  // By its own id or the canonical id it answers to (l_v…, VI-30): the URL keeps the id it was asked with.
++  const selected = findCompetition(id ? expandedCatalog : catalog, chosenId);
+   const directoryCatalog = europeOnly
+     ? expandedCatalog.filter(inEuropeFocus)
+     : expandedCatalog;
+@@ -623,7 +636,7 @@ export default function CompetitionsPage() {
+     if (
+       !id ||
+       f.focus !== "europe" ||
+-      inEuropeFocus(expandedCatalog.find((c) => c.id === id) || { id })
++      inEuropeFocus(findCompetition(expandedCatalog, id) || { id })
+     )
+       return;
+     const url = new URL(window.location.href);
+@@ -669,23 +682,37 @@ export default function CompetitionsPage() {
+     );
+   // A cup outside the featured row has a page of its own: no row of leagues above it, its name as the page's title.
+   const standalone = !directory && isCup(selected) && !FEATURED_EUROPE_IDS.includes(selected.id);
++  const currentView = selected ? availableView(selected.id, requestedEdition || openSeason, viewParam) : viewParam;
++  useEffect(() => {
++    if (currentView === viewParam) return;
++    const url = new URL(window.location.href);
++    if (url.searchParams.get("id") !== id || url.searchParams.get("view") !== viewParam) return;
++    url.searchParams.set("view", currentView);
++    window.history.replaceState(null, "", url.pathname + url.search);
++  }, [id, viewParam, currentView]);
+   // The edition's address: what it holds, and what changes.
+-  const editionAddress = (next) =>
+-    f.href("/competitions/", {
+-      id: selected.id,
++  const editionAddress = (next) => {
++    const address = {
++      // Preserve canonical IDs when changing the current page's controls (VI-30).
++      id: id || selected.id,
+       edition: requestedEdition,
+-      view: params.get("view") || "",
++      view: currentView,
+       team: followed,
+       ...next,
+-    });
++    };
++    address.view = availableView(next.id || selected.id, address.edition || openSeason, address.view);
++    return f.href("/competitions/", address);
++  };
++  const replaceEditionAddress = (next) => window.history.replaceState(null, "", editionAddress(next));
+   const edition = selected && {
+-    initialView: requestedView,
++    initialView: VIEW_OF_PARAM[currentView] || "",
+     highlight: followed,
+     heading: standalone,
+     editions: competitionEditions(selected, expandedCatalog),
+     onEdition: (entry) => window.history.pushState(null, "", editionAddress({ id: entry.id, edition: entry.season })),
+-    onView: (view) => window.history.replaceState(null, "", editionAddress({ view: PARAM_OF_VIEW[view] || "" })),
+-    onHighlight: (team) => window.history.replaceState(null, "", editionAddress({ team })),
++    onSeason: (season) => replaceEditionAddress({ edition: season }),
++    onView: (view) => replaceEditionAddress({ view: view === "standings" && selected.id === WORLD_CUP_ID ? "groupes" : PARAM_OF_VIEW[view] || "" }),
++    onHighlight: (team) => replaceEditionAddress({ team }),
+   };
+   return (
+     <Layout
+@@ -733,6 +760,7 @@ export default function CompetitionsPage() {
+                     name={c.name}
+                     url={c.imageUrl}
+                     className="crest league-spotlight-logo"
++                    initials={false}
+                   />
+                   <span>
+                     <strong>{c.name}</strong>
+@@ -760,7 +788,6 @@ export default function CompetitionsPage() {
+                 competition={selected}
+                 name={selected.id === WORLD_CUP_ARCHIVE_ID ? "Coupe du monde" : selected.name}
+                 initialSeason={requestedEdition || openSeason}
+-                onSeason={(season) => window.history.replaceState(null, "", editionAddress({ edition: season }))}
+                 {...edition}
+               />
+             ) : (
+@@ -772,9 +799,9 @@ export default function CompetitionsPage() {
+               />
+             )
+           ) : (!id && !choice.ready) ||
+-            (id?.startsWith("open-matchday:") && cupIndex.loading) ? (
++            (awaitsCupIndex(id) && cupIndex.loading) ? (
+             <Skeleton data-page-loading="" label="Chargement de la compétition…" />
+-          ) : id?.startsWith("open-matchday:") && cupIndex.error ? (
++          ) : awaitsCupIndex(id) && cupIndex.error ? (
+             <div className="notice" role="alert">
+               Les coupes nationales sont indisponibles.{" "}
+               <button
+@@ -873,16 +900,7 @@ export default function CompetitionsPage() {
+                       onClick={() => chooseCompetition(c.id)}
+                     >
+                       <div className="competition-card-header">
+-                        {c.imageUrl ? (
+-                          <Media name={c.name} url={c.imageUrl} />
+-                        ) : (
+-                          <span
+-                            className="crest competition-card-fallback"
+-                            aria-hidden="true"
+-                          >
+-                            <Icon name="trophy" />
+-                          </span>
+-                        )}
++                        <Media url={c.imageUrl} initials={false} />
+                         <div>
+                           <h3>{c.name}</h3>
+                           <p>
+diff --git a/dashboard/shared/archive.js b/dashboard/shared/archive.js
+index 55c44c8dc2..b32edc1dfc 100644
+--- a/dashboard/shared/archive.js
++++ b/dashboard/shared/archive.js
+@@ -4,6 +4,11 @@ import {
+   historicalScore,
+   historicalScoreNotes,
+ } from "./openfootball-history.js";
++// The published reading: the baseline's own files (8018e0836c), byte for byte (FAILURE_MODES.md §22).
++import {
++  buildArchiveSeason as legacyBuildArchiveSeason,
++  teamSimilarity as legacyTeamSimilarity,
++} from "./legacy-8018e08/archive.js";
+ 
+ /**
+  * One archive per season: the results archive gives the match list, the goals
+@@ -77,8 +82,8 @@ export function teamSimilarity(left, right) {
+ 
+ const MATCH_LABEL = /^(.*?) vs\. (.*?) (\d+):(\d+)(?: (.*))?$/;
+ 
+-export function parseGoalMatch(label) {
+-  const found = MATCH_LABEL.exec(String(label || "").trim());
++function readLabel(text) {
++  const found = MATCH_LABEL.exec(text);
+   if (!found) return null;
+   return {
+     team1: found[1],
+@@ -88,6 +93,19 @@ export function parseGoalMatch(label) {
+   };
+ }
+ 
++/** A goal label's sides, score and suffix, whatever its layout whitespace (tabs, line breaks, NBSP). */
++export function parseGoalMatch(label) {
++  return readLabel(String(label || "").replace(/\s+/g, " ").trim());
++}
++
++/**
++ * The reading the published goal-only keys were numbered with (whitespace kept): it numbers
++ * groups forever, so a key never moves (FAILURE_MODES.md §20).
++ */
++export function legacyParseGoalMatch(label) {
++  return readLabel(String(label || "").trim());
++}
++
+ function shiftDay(day, delta) {
+   const value = new Date(`${day}T12:00:00Z`);
+   if (Number.isNaN(value.getTime())) return null;
+@@ -115,12 +133,12 @@ export function orderedGoals(events) {
+   );
+ }
+ 
+-function goalGroups(goals) {
++function goalGroups(goals, read = (event) => legacyParseGoalMatch(event.match)) {
+   const groups = [];
+   for (const league of goals?.competitions || []) {
+     const byMatch = new Map();
+     for (const event of league.events || []) {
+-      const parsed = parseGoalMatch(event.match);
++      const parsed = read(event);
+       // A match captured twice (e.g. mid-game then final) shares its teams.
+       const id = parsed
+         ? `${event.date}|${parsed.team1}|${parsed.team2}`
+@@ -135,6 +153,7 @@ function goalGroups(goals) {
+           team2: parsed?.team2 || "",
+           parsed,
+           events: [],
++          sources: [],
+           seen: new Set(),
+         };
+         byMatch.set(id, group);
+@@ -148,6 +167,7 @@ function goalGroups(goals) {
+         group.parsed = parsed;
+         group.label = event.match;
+       }
++      group.sources.push(event);
+       const goal = `${event.minute}|${event.player}|${event.team}|${event.score?.join(":")}`;
+       if (group.seen.has(goal)) continue;
+       group.seen.add(goal);
+@@ -161,23 +181,72 @@ function goalGroups(goals) {
+   return groups;
+ }
+ 
++// The German suffixes « n.V. » (after extra time) and « i.E. » (on penalties), as words: read
++// case-insensitively without their dots they also matched the « ie » of « (Hinspiel 0:3) ».
++const EXTRA_TIME = /(?<![A-Za-z])n\.\s?V\./;
++const SHOOT_OUT = /(?<![A-Za-z])i\.\s?E\./;
++
+ function groupScore(group) {
+   const last = group.events[group.events.length - 1]?.score;
+   const suffix = group.parsed?.suffix || "";
+   // "i.E." scores include the shoot-out: the last goal event is the match score.
+-  if (/i\.?\s*E\.?/i.test(suffix) && Array.isArray(last)) return last;
++  if (SHOOT_OUT.test(suffix) && Array.isArray(last)) return last;
+   return group.parsed?.score || (Array.isArray(last) ? last : [null, null]);
+ }
+ 
+ function groupNotes(group) {
+   const suffix = group.parsed?.suffix || "";
+   const notes = [];
+-  if (/n\.?\s*V\.?/i.test(suffix)) notes.push("après prolongation");
+-  if (/i\.?\s*E\.?/i.test(suffix)) notes.push("tirs au but");
++  if (EXTRA_TIME.test(suffix)) notes.push("après prolongation");
++  if (SHOOT_OUT.test(suffix)) notes.push("tirs au but");
+   return notes;
+ }
+ 
+-export function buildArchiveSeason(results, goals) {
++const folded = (name) =>
++  normalizeText(name)
++    .replace(/[^a-z0-9]+/g, " ")
++    .trim();
++
++/**
++ * The side a goal's team designates: the side named exactly (case, accents and punctuation folded),
++ * else the closer by similarity; null when they tie (FAILURE_MODES.md §22).
++ */
++// OpenFootball's UEFA club competitions name each club with its association, « Real Madrid (ESP) » (FAILURE_MODES.md
++// §23): in those rows only, a goal's team is compared with each name without that suffix, after the exact names.
++const UEFA_RESULTS = /^\d{4}-\d{2}\/uefa\./;
++const ASSOCIATION = /^(.*\S)\s+\(([A-Z]{3})\)$/;
++const withoutAssociation = (name) => {
++  const found = ASSOCIATION.exec(String(name || ""));
++  return found ? folded(found[1]) : null;
++};
++
++export function goalSide(goal, match) {
++  const team = folded(goal.team);
++  if (team) {
++    const home = team === folded(match.team1),
++      away = team === folded(match.team2);
++    if (home !== away) return home ? "home" : "away";
++    if (!home && UEFA_RESULTS.test(match.competitionId || "")) {
++      const h = withoutAssociation(match.team1) === team,
++        a = withoutAssociation(match.team2) === team;
++      if (h !== a) return h ? "home" : "away";
++      if (h) return null; // one base name on both sides: unknown
++    }
++  }
++  const h = teamSimilarity(goal.team, match.team1),
++    a = teamSimilarity(goal.team, match.team2);
++  return h > a ? "home" : a > h ? "away" : null;
++}
++
++/** The side the baseline's edition.mjs gave a goal: similarity alone. */
++function legacySide(goal, match) {
++  const h = legacyTeamSimilarity(goal.team, match.team1),
++    a = legacyTeamSimilarity(goal.team, match.team2);
++  return h > a ? "home" : a > h ? "away" : null;
++}
++
++/** The season as the corrected reading builds it, its goal-only keys numbered by the legacy groups. */
++function correctedSeason(results, goals) {
+   const competitions = new Map();
+   const matches = [];
+   for (const league of results?.competitions || []) {
+@@ -206,52 +275,33 @@ export function buildArchiveSeason(results, goals) {
+       });
+     });
+   }
+-
+-  const groups = goalGroups(goals);
+-  const byDate = new Map();
+-  for (const group of groups) {
+-    if (!byDate.has(group.date)) byDate.set(group.date, []);
+-    byDate.get(group.date).push(group);
+-  }
+-  const used = new Set();
++  // The legacy reading's groups number the keys; the corrected one reads a label laid out on several lines.
++  const legacy = goalGroups(goals, (event) => legacyParseGoalMatch(event.match));
++  const legacyOf = new Map();
++  legacy.forEach((group, index) => {
++    for (const event of group.sources) legacyOf.set(event, index);
++  });
++  const groups = goalGroups(goals, (event) => legacyParseGoalMatch(event.match) || parseGoalMatch(event.match));
++  const used = attachGroups(matches, groups);
+   const leagueVotes = new Map();
+-  for (const match of matches) {
+-    if (!match.date) continue;
+-    let best = null,
+-      bestScore = 0;
+-    for (const delta of [0, -1, 1]) {
+-      const day = delta ? shiftDay(match.date, delta) : match.date;
+-      for (const group of byDate.get(day) || []) {
+-        if (used.has(group)) continue;
+-        const home = teamSimilarity(match.team1, group.team1);
+-        const away = teamSimilarity(match.team2, group.team2);
+-        if (!home || !away) continue;
+-        const [h, a] = groupScore(group);
+-        const sameScore = h === match.score[0] && a === match.score[1];
+-        // Partial name overlaps ("Wiener" / "Wien") need the score to agree.
+-        if (!sameScore && (home < 2 || away < 2)) continue;
+-        let score = home + away + (delta ? 0 : 1) + (sameScore ? 3 : 0);
+-        if (score > bestScore) {
+-          best = group;
+-          bestScore = score;
+-        }
+-      }
+-    }
+-    if (!best) continue;
+-    used.add(best);
+-    match.goals = best.events;
+-    const votes = leagueVotes.get(best.league.id) || new Map();
++  for (const [group, match] of used) {
++    match.goals = group.events;
++    const votes = leagueVotes.get(group.league.id) || new Map();
+     votes.set(match.competitionId, (votes.get(match.competitionId) || 0) + 1);
+-    leagueVotes.set(best.league.id, votes);
++    leagueVotes.set(group.league.id, votes);
+   }
+-
+-  // Goal leagues already covered by a results competition stay under it.
++  // A group's key: the legacy index of the constituent the legacy reading understood, else of its earliest.
++  const keyOf = (group) => {
++    const parts = [...new Set(group.sources.map((event) => legacyOf.get(event)))].sort((x, y) => x - y);
++    const understood = parts.filter((index) => legacy[index].parsed);
++    return `g:${group.league.id}:${group.date}:${(understood.length ? understood : parts)[0]}`;
++  };
+   const leagueTarget = new Map();
+   for (const [leagueId, votes] of leagueVotes) {
+     const [target] = [...votes].sort((a, b) => b[1] - a[1])[0] || [];
+     if (target) leagueTarget.set(leagueId, target);
+   }
+-  groups.forEach((group, index) => {
++  groups.forEach((group) => {
+     if (used.has(group)) return;
+     const target = leagueTarget.get(group.league.id);
+     const id = target || `g:${group.league.id}`;
+@@ -265,15 +315,17 @@ export function buildArchiveSeason(results, goals) {
+       });
+     const competition = competitions.get(id);
+     matches.push({
+-      key: `g:${group.league.id}:${group.date}:${index}`,
++      key: keyOf(group),
+       competitionId: id,
+       competition: competition.name,
+       country: competition.country,
+       date: group.date || "",
+       dateNote: false,
+       round: "",
+-      team1: group.team1,
+-      team2: group.team2,
++      // A label no reading understands names no team: its raw text is shown instead.
++      team1: group.parsed ? group.team1 : "",
++      team2: group.parsed ? group.team2 : "",
++      ...(!group.parsed && { unparsedLabel: group.label }),
+       score: groupScore(group).map((value) =>
+         Number.isInteger(value) ? value : null,
+       ),
+@@ -282,19 +334,156 @@ export function buildArchiveSeason(results, goals) {
+       raw: null,
+     });
+   });
++  return { competitions: [...competitions.values()], matches };
++}
++
++const sameScore = (a, b) => (a?.[0] ?? null) === (b?.[0] ?? null) && (a?.[1] ?? null) === (b?.[1] ?? null);
++
++/** Why the corrected rows of a unit whose keys did not move cannot replace the legacy ones; null when they can. */
++function unitConflict(pairs) {
++  for (const [old, now] of pairs) {
++    const goalOnly = old.key.startsWith("g:");
++    if (goalOnly && !sameScore(old.score, now.score)) return "score_change";
++    if (goalOnly && old.notes.some((note) => !now.notes.includes(note))) return "note_removed";
++    if ((now.goals?.length ?? 0) < (old.goals?.length ?? 0)) return "goals_lost";
++    const sides = new Map((now.goals || []).map((goal) => [goal, goalSide(goal, now)]));
++    for (const goal of old.goals || []) {
++      const before = legacySide(goal, old);
++      if (!before) continue;
++      if (!sides.has(goal) || !sides.get(goal)) return "goal_side_lost";
++      // A side read against a whole unread label is no established team: only a readable label's side is kept.
++      if (old.team2 && sides.get(goal) !== before) return "goal_side_changed";
++    }
++  }
++  return null;
++}
++
++/**
++ * The season: the corrected rows where they keep the published keys, scores, notes and goal sides; otherwise
++ * the unit's published rows, held with the reason (FAILURE_MODES.md §22). A unit is the rows of both readings
++ * that share a goal event or a key. Nothing is absorbed: a merge the legacy reading did not make is held.
++ */
++export function buildArchiveSeason(results, goals) {
++  const legacy = legacyBuildArchiveSeason(results, goals);
++  const candidate = correctedSeason(results, goals);
++  const parent = new Map();
++  const find = (x) => {
++    while (parent.get(x) !== x) x = parent.get(x);
++    return x;
++  };
++  const join = (a, b) => {
++    for (const x of [a, b]) if (!parent.has(x)) parent.set(x, x);
++    const [ra, rb] = [find(a), find(b)];
++    if (ra !== rb) parent.set(ra, rb);
++  };
++  const legacyRow = new Map();
++  for (const m of legacy.matches) {
++    join(m.key, m.key);
++    for (const goal of m.goals || []) legacyRow.set(goal, m.key);
++  }
++  for (const m of candidate.matches) {
++    join(m.key, m.key);
++    for (const goal of m.goals || []) if (legacyRow.has(goal)) join(legacyRow.get(goal), m.key);
++  }
++  const units = new Map();
++  const unit = (key) => {
++    const root = find(key);
++    if (!units.has(root)) units.set(root, { legacy: [], candidate: [] });
++    return units.get(root);
++  };
++  for (const m of legacy.matches) unit(m.key).legacy.push(m);
++  for (const m of candidate.matches) unit(m.key).candidate.push(m);
+ 
+-  matches.sort(
++  const rows = [];
++  const held = [];
++  const withSides = (row, side) => ({ ...row, goals: row.goals && row.goals.map((goal) => ({ ...goal, side: side(goal, row) })) });
++  for (const { legacy: old, candidate: now } of units.values()) {
++    const oldKeys = old.map((m) => m.key).sort(),
++      nowKeys = now.map((m) => m.key).sort();
++    const byKey = new Map(now.map((m) => [m.key, m]));
++    const reason = oldKeys.join("\n") !== nowKeys.join("\n")
++      ? "absorption"
++      : unitConflict(old.map((m) => [m, byKey.get(m.key)]));
++    if (!reason) {
++      for (const m of now) rows.push(withSides(m, goalSide));
++      continue;
++    }
++    // The published rows stay. A results row keeps its own (results file) values and its published goals.
++    for (const m of old) {
++      if (m.key.startsWith("r:")) {
++        rows.push({ ...withSides({ ...byKey.get(m.key), goals: m.goals }, legacySide), heldGoals: reason });
++        continue;
++      }
++      const corrected = byKey.get(m.key);
++      rows.push({
++        ...withSides(m, legacySide),
++        held: reason,
++        ...(corrected && { candidate: { team1: corrected.team1, team2: corrected.team2, score: corrected.score, notes: corrected.notes } }),
++      });
++    }
++    const events = [...old, ...now].flatMap((m) => m.goals || []);
++    held.push({
++      reason,
++      legacy: oldKeys,
++      candidate: nowKeys,
++      labels: [...new Set(events.map((event) => event.match))].sort(),
++      sources: [...new Set(events.filter((event) => event.sourceRow != null).map((event) => `${event.sourceFile}:${event.sourceRow}`))].sort(),
++    });
++  }
++  // The published editions first, in their order, then any the corrected rows add.
++  const competitions = new Map(legacy.competitions.map((c) => [c.id, c]));
++  for (const c of candidate.competitions) if (!competitions.has(c.id)) competitions.set(c.id, c);
++  const usedCompetitions = new Set(rows.map((m) => m.competitionId));
 +  rows.sort(
-+    (a, b) =>
-+      String(b.match.date || "").localeCompare(String(a.match.date || "")) ||
-+      a.key.localeCompare(b.key),
-+  );
-+  return rows;
+     (a, b) =>
+       String(b.date).localeCompare(String(a.date)) ||
+       a.key.localeCompare(b.key),
+   );
++  held.sort((a, b) => a.legacy[0].localeCompare(b.legacy[0]));
+   return {
+     season: results?.season || goals?.season || "",
+-    competitions: [...competitions.values()],
+-    matches,
++    competitions: [...competitions.values()].filter((c) => usedCompetitions.has(c.id) || (results?.competitions || []).some((l) => l.id === c.id)),
++    matches: rows,
++    absorbed: [],
++    held,
+   };
+ }
+ 
++/** {group: results match} of the goal groups each results match takes (same day or the next, teams and score). */
++function attachGroups(matches, groups) {
++  const byDate = new Map();
++  for (const group of groups) {
++    if (!byDate.has(group.date)) byDate.set(group.date, []);
++    byDate.get(group.date).push(group);
++  }
++  const used = new Map();
++  for (const match of matches) {
++    if (!match.date) continue;
++    let best = null,
++      bestScore = 0;
++    for (const delta of [0, -1, 1]) {
++      const day = delta ? shiftDay(match.date, delta) : match.date;
++      for (const group of byDate.get(day) || []) {
++        if (used.has(group)) continue;
++        const home = teamSimilarity(match.team1, group.team1);
++        const away = teamSimilarity(match.team2, group.team2);
++        if (!home || !away) continue;
++        const [h, a] = groupScore(group);
++        const sameScore = h === match.score[0] && a === match.score[1];
++        // Partial name overlaps ("Wiener" / "Wien") need the score to agree.
++        if (!sameScore && (home < 2 || away < 2)) continue;
++        let score = home + away + (delta ? 0 : 1) + (sameScore ? 3 : 0);
++        if (score > bestScore) {
++          best = group;
++          bestScore = score;
++        }
++      }
++    }
++    if (best) used.set(best, match);
++  }
++  return used;
 +}
 +
-+export function historicalPair(value) {
-+  if (!Array.isArray(value) || value.length !== 2) return [null, null];
-+  return value.map((item) =>
-+    Number.isInteger(item) && item >= 0 ? item : null,
-+  );
-+}
+ export function archiveRows(season, competition = "all", query = "") {
+   const needle = normalizeText(query).trim();
+   return (season?.matches || []).filter((match) => {
+diff --git a/dashboard/shared/cup-logos.json b/dashboard/shared/cup-logos.json
+index b8a5c8eb95..29a9d3070c 100644
+--- a/dashboard/shared/cup-logos.json
++++ b/dashboard/shared/cup-logos.json
+@@ -1,18 +1,6 @@
+ {
+   "retrievedAt": "2026-11-03T08:18:40.373Z",
+   "logos": {
+-    "l_1XLtP0": {
+-      "imageUrl": "https://img.thesports.com/football/competition/da617cd58cd9cffaae0daec865457fb5.png",
+-      "source": "SportScore",
+-      "slug": "fifa-world-cup",
+-      "name": "FIFA World Cup"
+-    },
+-    "open-cup:world-cup-history": {
+-      "imageUrl": "https://img.thesports.com/football/competition/da617cd58cd9cffaae0daec865457fb5.png",
+-      "source": "SportScore",
+-      "slug": "fifa-world-cup",
+-      "name": "FIFA World Cup"
+-    },
+     "open-cup:club-world-cup": {
+       "imageUrl": "https://img.thesports.com/football/competition/ceac41ef85151074cdbfc87f09e1b8a9.png",
+       "source": "SportScore",
+diff --git a/dashboard/shared/legacy-8018e08/archive-text.js b/dashboard/shared/legacy-8018e08/archive-text.js
+new file mode 100644
+index 0000000000..91942cd9ac
+--- /dev/null
++++ b/dashboard/shared/legacy-8018e08/archive-text.js
+@@ -0,0 +1,6 @@
++/** Accent-insensitive archive matching, identical in browser and API. */
++export const normalizeText = (value) =>
++  String(value ?? "")
++    .normalize("NFD")
++    .replace(/[\u0300-\u036f]/g, "")
++    .toLocaleLowerCase("fr");
+diff --git a/dashboard/shared/legacy-8018e08/archive.js b/dashboard/shared/legacy-8018e08/archive.js
+new file mode 100644
+index 0000000000..55c44c8dc2
+--- /dev/null
++++ b/dashboard/shared/legacy-8018e08/archive.js
+@@ -0,0 +1,356 @@
++import { normalizeText } from "./archive-text.js";
++import {
++  historicalPair,
++  historicalScore,
++  historicalScoreNotes,
++} from "./openfootball-history.js";
 +
-+/** Show the final match score, with extra time distinguished from penalties. */
-+export function historicalScore(match) {
-+  const final = historicalPair(match?.score?.final);
-+  if (final.every((value) => value !== null)) return final;
-+  const extra = historicalPair(match?.score?.et);
-+  return extra.every((value) => value !== null)
-+    ? extra
-+    : historicalPair(match?.score?.ft);
-+}
++/**
++ * One archive per season: the results archive gives the match list, the goals
++ * archive is attached to each match it can be matched to (same day ±1, both
++ * team names compatible). Goal-only matches (seasons or competitions absent
++ * from the results archive) are kept as their own rows.
++ */
 +
-+export function historicalScoreNotes(match) {
-+  const notes = [];
-+  const extra = historicalPair(match?.score?.et);
-+  const penalties = historicalPair(match?.score?.p);
-+  if (extra.every((value) => value !== null)) notes.push("après prolongation");
-+  if (penalties.every((value) => value !== null))
-+    notes.push(`tirs au but ${penalties[0]} – ${penalties[1]}`);
-+  const fields = match?.sourceFields || {};
-+  if (match?.status === "not_played")
-+    notes.push(
-+      `Rencontre non disputée${fields.nonmatch ? ` : ${fields.nonmatch}` : ""}`,
++const STOPWORDS = new Set(
++  "fc sc sv ac as afc cf cd ud sd rc rcd ss us ssc vfb vfl vfr tsg bsc fk sk nk if bk ff club de la le les el du der des di do da real sporting athletic atletico calcio united city town".split(
++    " ",
++  ),
++);
++
++const tokenCache = new Map();
++function teamTokens(name) {
++  const key = String(name || "");
++  let tokens = tokenCache.get(key);
++  if (tokens) return tokens;
++  if (tokenCache.size > 50000) tokenCache.clear();
++  tokens = normalizeText(key)
++    .replace(/[^a-z0-9]+/g, " ")
++    .split(" ")
++    .filter(
++      (token) =>
++        token.length > 1 && !/^\d+$/.test(token) && !STOPWORDS.has(token),
 +    );
-+  if ((fields.neutral || "").toLowerCase() === "yes")
-+    notes.push("terrain neutre");
-+  const comment = (fields.Comments || fields.notes || "").trim();
-+  if (comment && comment.toLowerCase() !== "na")
-+    notes.push(`Source : ${comment}`);
++  tokenCache.set(key, tokens);
++  return tokens;
++}
++
++function tokenMatch(a, b) {
++  if (a === b) return 2;
++  const short = a.length < b.length ? a : b,
++    long = a.length < b.length ? b : a;
++  return short.length >= 3 && long.startsWith(short) ? 1 : 0;
++}
++
++/** 0 when the two team names cannot be the same club, higher when closer. */
++function rawTokens(name) {
++  return normalizeText(name)
++    .replace(/[^a-z0-9]+/g, " ")
++    .split(" ")
++    .filter((token) => token.length > 1 && !/^\d+$/.test(token));
++}
++
++export function teamSimilarity(left, right) {
++  let a = teamTokens(left),
++    b = teamTokens(right);
++  // "Athletic Club" only has generic words: compare them as written.
++  if (!a.length || !b.length) {
++    a = rawTokens(left);
++    b = rawTokens(right);
++  }
++  if (!a.length || !b.length) {
++    const x = normalizeText(left).replace(/[^a-z0-9]/g, ""),
++      y = normalizeText(right).replace(/[^a-z0-9]/g, "");
++    return x && x === y ? 2 : 0;
++  }
++  if (a.join(" ") === b.join(" ")) return 3;
++  let best = 0;
++  for (const x of a) for (const y of b) best = Math.max(best, tokenMatch(x, y));
++  if (!best) {
++    const x = a.join(""),
++      y = b.join("");
++    if (x.length >= 4 && y.length >= 4 && (x.includes(y) || y.includes(x)))
++      best = 1;
++  }
++  return best;
++}
++
++const MATCH_LABEL = /^(.*?) vs\. (.*?) (\d+):(\d+)(?: (.*))?$/;
++
++export function parseGoalMatch(label) {
++  const found = MATCH_LABEL.exec(String(label || "").trim());
++  if (!found) return null;
++  return {
++    team1: found[1],
++    team2: found[2],
++    score: [Number(found[3]), Number(found[4])],
++    suffix: (found[5] || "").trim(),
++  };
++}
++
++function shiftDay(day, delta) {
++  const value = new Date(`${day}T12:00:00Z`);
++  if (Number.isNaN(value.getTime())) return null;
++  value.setUTCDate(value.getUTCDate() + delta);
++  return value.toISOString().slice(0, 10);
++}
++
++function minuteValue(minute) {
++  const [base, extra] = String(minute || "")
++    .split("+")
++    .map(Number);
++  return (
++    (Number.isFinite(base) ? base : 999) +
++    (Number.isFinite(extra) ? extra / 100 : 0)
++  );
++}
++
++export function orderedGoals(events) {
++  return [...events].sort(
++    (a, b) =>
++      minuteValue(a.minute) - minuteValue(b.minute) ||
++      (a.score?.[0] ?? 0) +
++        (a.score?.[1] ?? 0) -
++        ((b.score?.[0] ?? 0) + (b.score?.[1] ?? 0)),
++  );
++}
++
++function goalGroups(goals) {
++  const groups = [];
++  for (const league of goals?.competitions || []) {
++    const byMatch = new Map();
++    for (const event of league.events || []) {
++      const parsed = parseGoalMatch(event.match);
++      // A match captured twice (e.g. mid-game then final) shares its teams.
++      const id = parsed
++        ? `${event.date}|${parsed.team1}|${parsed.team2}`
++        : `${event.date}|${event.match}`;
++      let group = byMatch.get(id);
++      if (!group) {
++        group = {
++          league,
++          date: event.date,
++          label: event.match,
++          team1: parsed?.team1 || event.match,
++          team2: parsed?.team2 || "",
++          parsed,
++          events: [],
++          seen: new Set(),
++        };
++        byMatch.set(id, group);
++        groups.push(group);
++      } else if (
++        parsed &&
++        group.parsed &&
++        parsed.score[0] + parsed.score[1] >
++          group.parsed.score[0] + group.parsed.score[1]
++      ) {
++        group.parsed = parsed;
++        group.label = event.match;
++      }
++      const goal = `${event.minute}|${event.player}|${event.team}|${event.score?.join(":")}`;
++      if (group.seen.has(goal)) continue;
++      group.seen.add(goal);
++      group.events.push(event);
++    }
++  }
++  for (const group of groups) {
++    group.events = orderedGoals(group.events);
++    delete group.seen;
++  }
++  return groups;
++}
++
++function groupScore(group) {
++  const last = group.events[group.events.length - 1]?.score;
++  const suffix = group.parsed?.suffix || "";
++  // "i.E." scores include the shoot-out: the last goal event is the match score.
++  if (/i\.?\s*E\.?/i.test(suffix) && Array.isArray(last)) return last;
++  return group.parsed?.score || (Array.isArray(last) ? last : [null, null]);
++}
++
++function groupNotes(group) {
++  const suffix = group.parsed?.suffix || "";
++  const notes = [];
++  if (/n\.?\s*V\.?/i.test(suffix)) notes.push("après prolongation");
++  if (/i\.?\s*E\.?/i.test(suffix)) notes.push("tirs au but");
 +  return notes;
 +}
 +
-+export const HISTORICAL_CSV_FIELDS = [
++export function buildArchiveSeason(results, goals) {
++  const competitions = new Map();
++  const matches = [];
++  for (const league of results?.competitions || []) {
++    competitions.set(league.id, {
++      id: league.id,
++      name: league.name,
++      country: league.country,
++    });
++    (league.matches || []).forEach((match, index) => {
++      matches.push({
++        key: `r:${league.id}:${index}`,
++        competitionId: league.id,
++        competition: league.name,
++        country: league.country,
++        date: match.date || "",
++        dateNote: Boolean(match.dateNote),
++        round: match.round || "",
++        team1: match.team1 || "",
++        team2: match.team2 || "",
++        score: historicalScore(match),
++        notes: historicalScoreNotes(match).filter(
++          (note) => !note.startsWith("Source"),
++        ),
++        goals: null,
++        raw: match,
++      });
++    });
++  }
++
++  const groups = goalGroups(goals);
++  const byDate = new Map();
++  for (const group of groups) {
++    if (!byDate.has(group.date)) byDate.set(group.date, []);
++    byDate.get(group.date).push(group);
++  }
++  const used = new Set();
++  const leagueVotes = new Map();
++  for (const match of matches) {
++    if (!match.date) continue;
++    let best = null,
++      bestScore = 0;
++    for (const delta of [0, -1, 1]) {
++      const day = delta ? shiftDay(match.date, delta) : match.date;
++      for (const group of byDate.get(day) || []) {
++        if (used.has(group)) continue;
++        const home = teamSimilarity(match.team1, group.team1);
++        const away = teamSimilarity(match.team2, group.team2);
++        if (!home || !away) continue;
++        const [h, a] = groupScore(group);
++        const sameScore = h === match.score[0] && a === match.score[1];
++        // Partial name overlaps ("Wiener" / "Wien") need the score to agree.
++        if (!sameScore && (home < 2 || away < 2)) continue;
++        let score = home + away + (delta ? 0 : 1) + (sameScore ? 3 : 0);
++        if (score > bestScore) {
++          best = group;
++          bestScore = score;
++        }
++      }
++    }
++    if (!best) continue;
++    used.add(best);
++    match.goals = best.events;
++    const votes = leagueVotes.get(best.league.id) || new Map();
++    votes.set(match.competitionId, (votes.get(match.competitionId) || 0) + 1);
++    leagueVotes.set(best.league.id, votes);
++  }
++
++  // Goal leagues already covered by a results competition stay under it.
++  const leagueTarget = new Map();
++  for (const [leagueId, votes] of leagueVotes) {
++    const [target] = [...votes].sort((a, b) => b[1] - a[1])[0] || [];
++    if (target) leagueTarget.set(leagueId, target);
++  }
++  groups.forEach((group, index) => {
++    if (used.has(group)) return;
++    const target = leagueTarget.get(group.league.id);
++    const id = target || `g:${group.league.id}`;
++    if (!competitions.has(id))
++      competitions.set(id, {
++        id,
++        name: group.league.calendarYear
++          ? `${group.league.name} ${group.league.calendarYear}`
++          : group.league.name,
++        country: group.league.country,
++      });
++    const competition = competitions.get(id);
++    matches.push({
++      key: `g:${group.league.id}:${group.date}:${index}`,
++      competitionId: id,
++      competition: competition.name,
++      country: competition.country,
++      date: group.date || "",
++      dateNote: false,
++      round: "",
++      team1: group.team1,
++      team2: group.team2,
++      score: groupScore(group).map((value) =>
++        Number.isInteger(value) ? value : null,
++      ),
++      notes: groupNotes(group),
++      goals: group.events,
++      raw: null,
++    });
++  });
++
++  matches.sort(
++    (a, b) =>
++      String(b.date).localeCompare(String(a.date)) ||
++      a.key.localeCompare(b.key),
++  );
++  return {
++    season: results?.season || goals?.season || "",
++    competitions: [...competitions.values()],
++    matches,
++  };
++}
++
++export function archiveRows(season, competition = "all", query = "") {
++  const needle = normalizeText(query).trim();
++  return (season?.matches || []).filter((match) => {
++    if (competition !== "all" && match.competitionId !== competition)
++      return false;
++    if (!needle) return true;
++    if (normalizeText(`${match.team1} ${match.team2}`).includes(needle))
++      return true;
++    return Boolean(
++      match.goals?.some((goal) => normalizeText(goal.player).includes(needle)),
++    );
++  });
++}
++
++/** Seasons from both archives, newest first, with the files each one needs. */
++export function archiveSeasons(resultsIndex, goalsIndex) {
++  const seasons = new Map();
++  for (const entry of resultsIndex?.seasons || [])
++    seasons.set(entry.id, { id: entry.id, results: entry, goals: null });
++  for (const entry of goalsIndex?.seasons || []) {
++    const current = seasons.get(entry.id) || {
++      id: entry.id,
++      results: null,
++      goals: null,
++    };
++    current.goals = entry;
++    seasons.set(entry.id, current);
++  }
++  return [...seasons.values()].sort((a, b) => b.id.localeCompare(a.id));
++}
++
++export const ARCHIVE_CSV_FIELDS = [
 +  "date",
 +  "competition",
 +  "round",
@@ -82,510 +2229,23 @@ index 0000000000..0b4e1cc801
 +  "home_goals",
 +  "away_goals",
 +  "away",
-+  "home_goals_90",
-+  "away_goals_90",
-+  "penalties_home",
-+  "penalties_away",
 +  "notes",
-+  "source_date",
-+  "source_venue",
-+  "source_attendance",
-+  "source_neutral",
-+  "status",
-+  "date_note",
++  "goal_events",
 +];
 +
-+export function historicalCsvRow({ competition, match }) {
-+  const [home90, away90] = historicalPair(match.score?.ft);
-+  const [home, away] = historicalScore(match);
-+  const [penaltiesHome, penaltiesAway] = historicalPair(match.score?.p);
++export function archiveCsvRow(match) {
++  const [home, away] = match.score;
 +  return [
 +    match.date,
-+    competition,
++    match.competition,
 +    match.round,
 +    match.team1,
 +    home,
 +    away,
 +    match.team2,
-+    home90,
-+    away90,
-+    penaltiesHome,
-+    penaltiesAway,
-+    historicalScoreNotes(match).join(" · "),
-+    match.sourceFields?.Date,
-+    match.sourceFields?.Venue,
-+    match.sourceFields?.attendance,
-+    match.sourceFields?.neutral,
-+    match.status,
-+    match.dateNote,
++    match.notes.join(" · "),
++    match.goals?.length ?? "",
 +  ];
 +}
-diff --git a/dashboard/shared/openfootball-history.js b/dashboard/shared/openfootball-history.js
-index 0b4e1cc801..2ef05dcd19 100644
---- a/dashboard/shared/openfootball-history.js
-+++ b/dashboard/shared/openfootball-history.js
-@@ -31,32 +31,63 @@ export function historicalRows(season, competition = "all", query = "") {
-   return rows;
- }
- 
-+const isPair = (value) => Array.isArray(value) && value.length === 2 && value.every((item) => Number.isInteger(item) && item >= 0);
 +
-+/** Two non-negative integer goals, or [null, null]: half a pair is no score. */
- export function historicalPair(value) {
--  if (!Array.isArray(value) || value.length !== 2) return [null, null];
--  return value.map((item) =>
--    Number.isInteger(item) && item >= 0 ? item : null,
--  );
-+  return isPair(value) ? [...value] : [null, null];
-+}
-+
-+// worldcup.json writes a full-time result as {ft: [2, 1], ht: […]} or, in most editions from 1950
-+// to 2014 and seven matches of 2022, as [2, 1]: the same full-time result.
-+const scoreObject = (score) => (Array.isArray(score) ? { ft: score } : score);
-+const SCORE_PARTS = ["ft", "ht", "et", "p"];
-+
-+/**
-+ * An OpenFootball score as the cup sources store it (open-cups.mjs, vega/sources/cups.py
-+ * score_parts): {ft, ht, et, p}, each a [home, away] pair, or null without a result. Throws on
-+ * anything else (an INVALID_SCORE: the edition is not written).
-+ */
-+export function openFootballScore(score) {
-+  if (score === undefined || score === null) return null;
-+  const parts = scoreObject(score);
-+  if (!parts || typeof parts !== "object" || Array.isArray(parts)) throw invalidScore();
-+  const keys = Object.keys(parts);
-+  if (keys.some((key) => !SCORE_PARTS.includes(key) || !isPair(parts[key]))) throw invalidScore();
-+  if (!keys.length) return null;
-+  // A half time or a shoot-out without the match's score is incomplete.
-+  if (!keys.includes("ft") && !keys.includes("et")) throw invalidScore();
-+  return Object.fromEntries(keys.map((key) => [key, [...parts[key]]]));
-+}
-+
-+function invalidScore() {
-+  return Object.assign(new Error("Invalid OpenFootball score"), { code: "INVALID_SCORE" });
- }
- 
- /** Show the final match score, with extra time distinguished from penalties. */
- export function historicalScore(match) {
--  const final = historicalPair(match?.score?.final);
-+  const score = scoreObject(match?.score);
-+  const final = historicalPair(score?.final);
-   if (final.every((value) => value !== null)) return final;
--  const extra = historicalPair(match?.score?.et);
-+  const extra = historicalPair(score?.et);
-   return extra.every((value) => value !== null)
-     ? extra
--    : historicalPair(match?.score?.ft);
-+    : historicalPair(score?.ft);
- }
- 
-+// A match the source says was never played (football.json: "cancelled"; the archive builders: "not_played").
-+const CANCELED = new Set(["not_played", "cancelled", "canceled"]);
-+
- export function historicalScoreNotes(match) {
-   const notes = [];
--  const extra = historicalPair(match?.score?.et);
--  const penalties = historicalPair(match?.score?.p);
-+  const score = scoreObject(match?.score);
-+  const extra = historicalPair(score?.et);
-+  const penalties = historicalPair(score?.p);
-   if (extra.every((value) => value !== null)) notes.push("après prolongation");
-   if (penalties.every((value) => value !== null))
-     notes.push(`tirs au but ${penalties[0]} – ${penalties[1]}`);
-   const fields = match?.sourceFields || {};
--  if (match?.status === "not_played")
-+  if (CANCELED.has(match?.status))
-     notes.push(
-       `Rencontre non disputée${fields.nonmatch ? ` : ${fields.nonmatch}` : ""}`,
-     );
-@@ -90,9 +121,10 @@ export const HISTORICAL_CSV_FIELDS = [
- ];
- 
- export function historicalCsvRow({ competition, match }) {
--  const [home90, away90] = historicalPair(match.score?.ft);
-+  const score = scoreObject(match.score);
-+  const [home90, away90] = historicalPair(score?.ft);
-   const [home, away] = historicalScore(match);
--  const [penaltiesHome, penaltiesAway] = historicalPair(match.score?.p);
-+  const [penaltiesHome, penaltiesAway] = historicalPair(score?.p);
-   return [
-     match.date,
-     competition,
-diff --git a/dashboard/shared/tournament-stages.js b/dashboard/shared/tournament-stages.js
-new file mode 100644
-index 0000000000..bc0975947b
---- /dev/null
-+++ b/dashboard/shared/tournament-stages.js
-@@ -0,0 +1,16 @@
-+export const UNKNOWN_STAGE_LABEL = "Phase non renseignée";
-+
-+/** Read only round labels that identify a stage in the competition sources. */
-+export function stageKind(round) {
-+  const name = String(round ?? "").trim().toLowerCase()
-+    .replace(/^finals,\s*|,\s*replays?$/g, "");
-+  if (/^(?:(?:match for )?third[ -]place(?: match| play[ -]?off)?|3rd place|bronze|match pour la troisi[eè]me place)$/.test(name)) return "third";
-+  if (/^(?:the )?finale?s?$/.test(name)) return "final";
-+  if (name === "final round") return "final-pool";
-+  if (/^(?:semi[ -]?finals?|1\/2|demi(?:[ -]?finales?)?)$/.test(name)) return "semi";
-+  if (/^(?:quarter[ -]?finals?|1\/4|quarts?(?: de finale)?)$/.test(name)) return "quarter";
-+  if (/^(?:round of 16|1\/8|huiti[eè]mes?(?: de finale)?)$/.test(name)) return "r16";
-+  if (/^(?:round of 32|1\/16|seizi[eè]mes?(?: de finale)?)$/.test(name)) return "r32";
-+  if (/^(?:\d+|(?:matchday|journ[eé]e) \d+|(?:group|groupe|gruppe) [a-z0-9]+(?: play[ -]?off)?|(?:first|preliminary|1st) round|phase de groupes)$/.test(name)) return "group";
-+  return "unknown";
-+}
-diff --git a/dashboard/shared/world-cup-1950.js b/dashboard/shared/world-cup-1950.js
-new file mode 100644
-index 0000000000..97bfd3a82c
---- /dev/null
-+++ b/dashboard/shared/world-cup-1950.js
-@@ -0,0 +1,30 @@
-+// FIFA's 1950 final pool and the six dated OpenFootball results checked against it (VI-27 B).
-+// https://www.fifa.com/es/articles/cuantas-finales-mundial-participo-uruguay-historial
-+export const WORLD_CUP_1950_EDITION = "open-cups:world-cup-history:1950";
-+const PLACES = ["Uruguay", "Brazil", "Sweden", "Spain"];
-+const GAMES = [
-+  { date: "1950-07-09", home: "Uruguay", away: "Spain", score: [2, 2] },
-+  { date: "1950-07-09", home: "Brazil", away: "Sweden", score: [7, 1] },
-+  { date: "1950-07-13", home: "Brazil", away: "Spain", score: [6, 1] },
-+  { date: "1950-07-13", home: "Uruguay", away: "Sweden", score: [3, 2] },
-+  { date: "1950-07-16", home: "Sweden", away: "Spain", score: [3, 1] },
-+  { date: "1950-07-16", home: "Uruguay", away: "Brazil", score: [2, 1] },
-+];
-+
-+const signature = ({ date, home, away, score }) =>
-+  JSON.stringify([date, ...(home < away ? [home, away, score?.[0], score?.[1]] : [away, home, score?.[1], score?.[0]])]);
-+
-+function corroborates(matches, expected) {
-+  if (matches.length !== expected.length) return false;
-+  const observed = new Set(matches.map(signature));
-+  return expected.every((match) => observed.has(signature(match)));
-+}
-+
-+export const isFinalPool1950 = (matches) => corroborates(matches, GAMES);
-+
-+export function finalPoolPosition1950(matches, team) {
-+  const index = PLACES.indexOf(team);
-+  if (index < 0) return null;
-+  const expected = GAMES.filter(({ home, away }) => team === home || team === away);
-+  return corroborates(matches, expected) ? index + 1 : null;
-+}
-diff --git a/docs/calculs/01-sources-et-conventions/01-provenance-des-donnees.md b/docs/calculs/01-sources-et-conventions/01-provenance-des-donnees.md
-index 3a9ef64c25..df1e6499d2 100644
---- a/docs/calculs/01-sources-et-conventions/01-provenance-des-donnees.md
-+++ b/docs/calculs/01-sources-et-conventions/01-provenance-des-donnees.md
-@@ -45,10 +45,11 @@ Clés utilisées par les calculs du profil club ([club-scout.js](../../../dashbo
- 
- ## Niveau joueur dans un match
- 
-+Vega calcule la note du joueur sur 100 à partir de sa contribution dans la rencontre. Le champ `rating_title` des anciennes archives PitchAPI a été retiré des tables de lecture par la migration 108. [Note du match](../02-metriques-attendues/04-note-du-match.md)
-+
- | Champ Vega | Champ PitchAPI |
- | --- | --- |
- | `minutes` | `minutes_played` |
--| `rating` | `rating_title` (note /10) |
- | `goals`, `assists` | `goals`, `assists` |
- | `xg` | `expected_goals` |
- | `npxg` | `expected_goals_non_penalty` |
-@@ -83,7 +84,13 @@ Code : [transfermarkt.py](../../../backend/vega/transfermarkt.py). Un processus
- - ses blessures (dates, jours, matchs manqués) ;
- - son contrat avec un de nos clubs.
- 
--Les transferts et les blessures sont remplacés en entier à chaque lecture, parce que Transfermarkt corrige ses noms et ses dates.
-+Les blessures sont remplacées en entier à chaque lecture, parce qu’une blessure n’a pas de clé chez Transfermarkt.
-+
-+**Les transferts et les contrats ne sont jamais effacés** (migration 139, [modes d’échec §20](../09-audit-2026-11/FAILURE_MODES.md)) :
-+- un transfert est mis à jour par sa clé Transfermarkt et garde sa ligne. Un champ donné remplace l’ancien, un champ absent ou vide le laisse. Un transfert libre a un montant de 0 ;
-+- un transfert que Transfermarkt ne liste plus garde ses faits et la date du premier jour où il manquait (`absent_since`). Une liste plus courte ne prouve aucune annulation ;
-+- une réponse qui ne peut pas être un historique complet n’écrit rien : un 404 après un historique, l’absence d’historique, deux listes vides après un transfert terminé, un élément illisible, une même clé avec deux faits. La file garde le vrai statut HTTP et un code (`HISTORY_MISSING`, `HISTORY_EMPTY`, `HISTORY_INVALID`, `HISTORY_CONFLICT`), puis relit plus tard. Un premier 404 est une réponse ordinaire ;
-+- un contrat est un fait daté. Quand Transfermarkt nomme un autre contrat (transfert, renouvellement, retour de prêt, club hors de notre base), l’ancien est écarté à la date du changement (`superseded_on`). Sa date de fin reste celle observée. Un départ futur laisse le contrat d’aujourd’hui en place jusqu’à ce jour.
- 
- **Comment un joueur est relié.** Jamais par le nom seul.
- - **Le jeu du 6 juillet 2026** : ses liens sont repris tels quels.
-@@ -95,7 +102,7 @@ Les transferts et les blessures sont remplacés en entier à chaque lecture, par
-   - sans date de naissance chez nous (91 % de nos joueurs le 16 novembre 2026) : le même nom exact, le seul des deux côtés dans le club, que Transfermarkt place dans une saison où il a joué pour nous dans ce club (ou l’année d’avant). Quand Transfermarkt donne sa date de naissance, il doit avoir de 15 à 45 ans lors de ses matchs pour nous. C’est la règle du lecteur Wikidata.
- - Transfermarkt ne remplit jamais nos dates de naissance : elles restent celles de nos sources.
- 
--**Quarantaine.** Si Transfermarkt donne une autre date de naissance que la nôtre, le lien est mis en doute. Rien de ce joueur n’est alors montré, ni valeur ni contrat, jusqu’à ce qu’une personne regarde.
-+**Quarantaine.** Si Transfermarkt donne une autre date de naissance que la nôtre, le lien est mis en doute. Rien de ce joueur n’est alors montré, ni valeur ni contrat, jusqu’à ce qu’une personne regarde. Cela vaut aussi pour un contrat écrit avant le doute, et quand la quarantaine désigne l’ancien joueur d’une clé que nous avons fusionnée.
- 
- **Ordre de lecture.** Les joueurs de la saison en cours d’abord, puis les saisons précédentes. Ensuite, chaque élément est relu à son rythme :
- - un joueur de la saison en cours : profil et blessures chaque semaine, valeurs et transferts quand le profil dit qu’ils ont changé, au plus tard tous les mois ;
-diff --git a/docs/calculs/02-metriques-attendues/02-xa.md b/docs/calculs/02-metriques-attendues/02-xa.md
-index 1f7a001284..4a9098119c 100644
---- a/docs/calculs/02-metriques-attendues/02-xa.md
-+++ b/docs/calculs/02-metriques-attendues/02-xa.md
-@@ -11,11 +11,10 @@ Le **xA** d'une passe est le xG du tir qu'elle a permis. Le xA d'un joueur dans
- - **Accueil** : le xA d'un joueur n'est donné que s'il est renseigné sur tous ses matchs joués ; il sert de départage dans la liste des passeurs (`assists` décroissant, puis `xa`).
- - **Effectif d'un club** : colonne « xG + xA » = somme saison du xG + somme saison du xA du joueur (un des deux absent compte pour 0, les deux absents → « — ») ([ClubScoutUI.jsx](../../../dashboard/frontend/src/components/ClubScoutUI.jsx#L1302)).
- 
--## Pourquoi le xA n'a jamais de centile
-+## Classement du xA en saison et en match
- 
--PitchAPI **ne publie pas les xA nuls** : un joueur qui n'a créé aucun tir n'a pas `xa = 0`, il n'a pas de valeur. La distribution des xA ne contient donc que les joueurs qui ont déjà créé quelque chose ; un centile la comparerait à un groupe trié d'avance.
-+En saison, le xA par 90 minutes peut recevoir un centile dans la cohorte du poste. Le joueur doit atteindre le seuil de minutes choisi (450 par défaut). Son xA doit couvrir tous ses matchs joués et toutes ses minutes. Il faut au moins 30 valeurs de joueurs comparables satisfaisant ces mêmes conditions. Un zéro omis est restitué lorsque la ligne et la couverture de la source l’autorisent. [Cohortes et centiles](../05-joueurs/02-centiles-et-cohortes.md) · [Couverture des zéros](../01-sources-et-conventions/02-valeurs-absentes-et-fiabilite.md)
- 
--Le xA est donc :
--- affiché comme chiffre ;
--- **exclu de tout centile, rang, indice Vega ou similarité** (`UNRANKED` dans [season-player.js](../../../dashboard/frontend/src/services/season-player.js#L80), `rankable: key !== "xa"` dans [scouting.js](../../../dashboard/frontend/src/services/scouting.js#L47), absent de `RANKED` dans [shared/player-profile.js](../../../dashboard/shared/player-profile.js#L104)) ;
--- refusé dans un indice personnalisé : choisir le xA avec un poids > 0 renvoie « Un indicateur choisi ne permet pas un classement fiable. »
-+L’indice personnalisé de saison accepte le xA avec un poids positif. Si un indicateur pondéré manque de centile, l’indice reste indisponible. Les voisins de style utilisent leur propre liste d’axes, qui exclut le xA. [Indice et similarité](../../../dashboard/frontend/src/services/scouting.js)
-+
-+Sur le profil d’une performance individuelle, le xA reste une valeur affichable sans centile de match. [Mesures classées en match](../../../dashboard/shared/player-profile.js)
-diff --git a/docs/calculs/05-joueurs/02-centiles-et-cohortes.md b/docs/calculs/05-joueurs/02-centiles-et-cohortes.md
-index 712abe8225..55503464a5 100644
---- a/docs/calculs/05-joueurs/02-centiles-et-cohortes.md
-+++ b/docs/calculs/05-joueurs/02-centiles-et-cohortes.md
-@@ -51,7 +51,7 @@ Code : `buildCohorts`, `rankMetric` dans [scouting.js](../../../dashboard/fronte
- | Taille minimum | **30** joueurs ayant une valeur (`MIN_SEASON_PEERS`) |
- | Valeurs comparées | **par 90 minutes** (taux en %) |
- | Couverture exigée | la mesure doit être observée sur **tous les matchs joués** (`count = matches` et `minutes = minutes totales`), pour le joueur comme pour chaque pair |
--| Zéros omis | un vide vaut zéro là où le fournisseur publie la mesure pour le match (voir [Valeurs absentes](../01-sources-et-conventions/02-valeurs-absentes-et-fiabilite.md)) ; le xA est classé comme les autres depuis |
-+| Zéros omis | un vide vaut zéro là où le fournisseur publie la mesure pour le match (voir [Valeurs absentes](../01-sources-et-conventions/02-valeurs-absentes-et-fiabilite.md)) ; le xA suit les mêmes règles de couverture et de classement que les autres mesures de saison |
- | Option « niveau comparable » | la cohorte est réduite aux joueurs des 30 clubs de niveau le plus proche (voir [Référentiels](../04-clubs/03-referentiels-et-niveau-europeen.md)) |
- 
- La règle de couverture évite de comparer un par 90 calculé sur 3 matchs avec un par 90 calculé sur 30.
-diff --git a/docs/calculs/05-joueurs/03-indices-vega-et-roles.md b/docs/calculs/05-joueurs/03-indices-vega-et-roles.md
-index 53fb748b70..c991f90757 100644
---- a/docs/calculs/05-joueurs/03-indices-vega-et-roles.md
-+++ b/docs/calculs/05-joueurs/03-indices-vega-et-roles.md
-@@ -15,7 +15,7 @@ s_k = \begin{cases} \text{centile}_k & \text{sens « max »} \\ 100 - \text{cent
- $$
- 
- - **Tous** les centiles doivent exister ; s'il en manque un, l'indice est `null` (pas de moyenne partielle).
--- Un indicateur non classable (xA) avec un poids > 0 rend l'indice impossible.
-+- Le xA de saison peut recevoir un poids positif lorsque son centile est disponible.
- - Chaque composante affiche sa part (`w_k / Σ w`) et sa contribution (`s_k × w_k / Σ w`).
- - Indice par défaut « Mon indice » : passes réussies, occasions créées, récupérations, poids 1 chacun, sens « max », 450 minutes minimum.
- 
-@@ -44,9 +44,9 @@ Les rôles sont triés du plus haut au plus bas.
- 2. **Rang** = son rang parmi les joueurs classés de son rôle (`roleRank`) ;
- 3. **Sur** = nombre de joueurs classés de ce rôle (`roleCount`).
- 
--Un joueur qui a un score sans être classé (championnat au niveau provisoire, erreur-type au-dessus de 45 points ; ou championnat féminin, noté entre joueuses) a son niveau, pas de rang.
-+Avec un indice calculé, le joueur reçoit un rang dans son univers et un rang à son poste. Les classements masculin et féminin commencent chacun à 1. Sur la fiche, le rang est provisoire sous le seuil de minutes. Chez les hommes, une sélection seule, un club sans championnat dans la base ou un championnat de niveau provisoire peuvent également le rendre provisoire. [Lecture de la fiche et de l’univers](../../../backend/api/src/routes/rankings.mjs)
- 
--Pour une saison sans classement de puissance, ou un joueur qui n'y a pas de score (trop peu de minutes), la colonne garde l'ancien calcul :
-+Quand l’API ne fournit aucun score de puissance pour ce joueur et cette saison, la fiche utilise le calcul descriptif ci-dessous si les comparaisons et les matchs nécessaires sont disponibles :
- 1. **Niveau actuel** = valeur arrondie du **meilleur rôle** du joueur (le premier rôle dont l'indice existe) ;
- 2. **Rang** = `1 + nombre de joueurs de la cohorte dont l'indice sur ce même rôle est strictement supérieur` ;
- 3. **Sur** = nombre de joueurs de la cohorte ayant un indice sur ce rôle, plus le joueur.
-diff --git a/docs/calculs/05-joueurs/05-classements-joueurs.md b/docs/calculs/05-joueurs/05-classements-joueurs.md
-index 929eba69f3..56bd48230c 100644
---- a/docs/calculs/05-joueurs/05-classements-joueurs.md
-+++ b/docs/calculs/05-joueurs/05-classements-joueurs.md
-@@ -18,7 +18,7 @@
- 
- `seasonTotals` et `seasonLeaders` dans [home-insights.js](../../../dashboard/frontend/src/services/home-insights.js#L564), même calcul en SQL dans [home.mjs](../../../backend/api/src/routes/home.mjs).
- 
--Totaux saison par joueur (matchs avec minutes > 0) : matchs, minutes, buts, passes décisives, xG et xA (**seulement s'ils couvrent tous les matchs**, sinon `null`), note pondérée par les minutes. Le club affiché est le dernier club national : un match européen ne change pas de club. Un but ou une passe décisive absents y comptent pour 0 (convention de l'accueil, antérieure à l'audit) : un xG complet ne prouve pas des buts complets, et l'écart « Efficaces » / « Maladroits » de l'accueil, faute de profil apparié, se lit sur ces totaux tels quels.
-+Totaux saison par joueur (matchs avec minutes > 0) : matchs, minutes, buts, passes décisives, xG et xA (**seulement s'ils couvrent tous les matchs**, sinon `null`), note Vega du z moyen pondéré par les minutes des matchs d’au moins 20 minutes dont le z est connu. Le club affiché est le dernier club national : un match européen ne change pas de club. Un but ou une passe décisive absents y comptent pour 0 (convention de l'accueil, antérieure à l'audit) : un xG complet ne prouve pas des buts complets, et l'écart « Efficaces » / « Maladroits » de l'accueil, faute de profil apparié, se lit sur ces totaux tels quels.
- 
- | Liste | Taille | Règle |
- | --- | --- | --- |
-@@ -26,7 +26,7 @@ Totaux saison par joueur (matchs avec minutes > 0) : matchs, minutes, buts, pass
- | Passeurs | 10 | comme l'annuaire |
- | Efficaces | 8 | comme l'annuaire |
- | Maladroits | 8 | comme l'annuaire |
--| Notes | 10 | note pondérée, minutes ≥ `max(450, arrondi(0,4 × minutes max))` |
-+| Notes | 10 | note Vega de saison, minutes notées ≥ `max(450, arrondi(0,4 × minutes max))` |
- 
- ## Joueur de la semaine
- 
-diff --git a/docs/calculs/05-joueurs/07-lecture-du-scout.md b/docs/calculs/05-joueurs/07-lecture-du-scout.md
-index fbf1ed13de..eb828ad725 100644
---- a/docs/calculs/05-joueurs/07-lecture-du-scout.md
-+++ b/docs/calculs/05-joueurs/07-lecture-du-scout.md
-@@ -53,7 +53,7 @@ Toutes les phrases portent sur le même joueur et la même cohorte que le reste
- 
- ## Exemple
- 
--Un milieu joue 1 800 minutes sur la période, avec 2 buts, 3 passes décisives et une note moyenne de 7,05. Dans sa cohorte :
-+Un milieu joue 1 800 minutes sur la période, marque 2 buts et donne 3 passes décisives. Dans cet exemple, le z moyen pondéré par les minutes des matchs admissibles vaut 0,5, ce qui donne une note Vega arrondie de 57 sur 100. Dans sa cohorte :
- 
- - Construction : passes réussies P84, précision des passes P78, ballons touchés P81 → `(84 + 78 + 81) / 3 = 81` ; Récupération : récupérations P88, interceptions P70, tacles P62 → 73 ; Création et Percussion plus bas ;
- - parmi les axes de style, les plus hauts sont récupérations P88 et passes réussies P84, le plus bas dribbles réussis P12.
-@@ -62,7 +62,7 @@ La carte affiche :
- 
- - Meilleur rôle : construction, indice 81 sur 100 face aux milieux.
- - Points forts : récupérations (P88) et passes réussies (P84).
--- Production : 0,10 but et 0,15 passe décisive par 90 min, note moyenne 7,05.
-+- Production : 0,10 but et 0,15 passe décisive par 90 min, note Vega 57 sur 100.
- - Point de vigilance : dribbles réussis (P12).
- 
- `90 × 2 / 1 800 = 0,10` et `90 × 3 / 1 800 = 0,15`.
-diff --git a/docs/calculs/05-joueurs/08-audit-classement-puissance.md b/docs/calculs/05-joueurs/08-audit-classement-puissance.md
-index 9b60693c04..91e433e270 100644
---- a/docs/calculs/05-joueurs/08-audit-classement-puissance.md
-+++ b/docs/calculs/05-joueurs/08-audit-classement-puissance.md
-@@ -183,18 +183,18 @@ Tous les championnats, clubs et joueurs ont désormais une note sur la même éc
- - cette retenue n'est pas un a priori cohérent : à l'équilibre, elle revient à un a priori dont la force baisse quand les liens augmentent, et 1500 est arbitraire ;
- - compter les matchs ne dit pas si le niveau est mesuré. Un groupe de championnats qui ne jouent qu'entre eux (l'Amérique du Sud avec ses coupes, l'Arabie saoudite et sa deuxième division) paraît bien mesuré alors que sa place par rapport aux autres ne l'est pas. C'est ce qui faisait bondir l'Argentine de 98 points avec les coupes continentales, et ce qui laissait 31 championnats sans niveau.
- 
--**Le modèle** ([`power.py`](../../../backend/vega/power.py), « League levels (version 4) »). Le niveau ℓ de chaque championnat est le maximum a posteriori d'un seul modèle, qui réunit trois preuves :
--- **Les matchs entre championnats.** Avec l'Elo relancé depuis les niveaux, un match apporte le score I_m (r − E)·c et l'information I_m E(1 − E)·c² sur les deux championnats (c = ln 10 / 400), divisés par la dispersion des résultats (φ = 0,73 ; les nuls la font passer sous 1).
-+**Calcul des niveaux dans la version 4.** Le lecteur relance l’Elo depuis les niveaux et combine trois sources d’information. Pour les matchs, il emploie une sensibilité fixe de +1 et −1 sans propager les variations des Elo intermédiaires. La qualification initiale de maximum a posteriori a été réfutée pour la vraisemblance séquentielle annoncée. [Implémentation](../../../backend/vega/power.py) · [Contre-exemple du §3](../09-audit-2026-11/SOURCE_AUDIT.md)
-+- **Les matchs entre championnats.** Avec l'Elo relancé depuis les niveaux, un match apporte le résidu pondéré I_m (r − E)·c et la courbure locale I_m E(1 − E)·c² sur les deux championnats (c = ln 10 / 400), divisés par la dispersion des résultats (φ = 0,73 ; les nuls la font passer sous 1).
- - **Les joueurs qui changent de championnat.** On ne lit que ses matchs de championnat : un séjour en coupe d'Europe ou en sélection ne s'intercale jamais entre deux années. Son rendement par 90 minutes est pris par rapport à la moyenne de son championnat cette saison-là. On en retire ce qu'en garde n'importe quel joueur d'une année sur l'autre, mesuré sur ceux qui sont restés (c' = α + 0,63 c sur 9 599 joueurs restés des années 2024 et 2025). Ce qui reste vaut −κ\* (ℓ_b − ℓ_a) / 400 par passage (3 120 passages), avec la variance d'un passage et l'écart propre à une paire (τ_u = 0,09).
- - **Un a priori, sous forme d'écarts plutôt que d'un retour à 1500.** Une deuxième division se tient sous la première de son pays d'un écart de division b (162 points, écart-type 49, mesuré sur 11 paires). Une première division se tient à la moyenne de sa confédération si au moins trois de ses championnats sont mesurés : UEFA 1492, CONMEBOL 1499, CONCACAF 1482, AFC 1439 ; la CAF prend la moyenne d'ensemble. L'écart-type entre championnats européens est de 111.
- 
--Tous ces réglages sont mesurés à chaque calcul sur les championnats que les seuls matchs et passages mesurent, à l'exception de κ\*. Les divisions de chaque championnat ont été relues une par une (`TIERS`) ; le Paulista A1, championnat d'État joué par des clubs de Serie A et de Serie B, est classé en deuxième division. Un championnat sans aucune preuve reçoit son a priori, et son erreur-type le dit. Un calcul qui ne converge pas en 40 pas échoue et laisse les niveaux d'avant.
-+Tous ces réglages sont mesurés à chaque calcul sur les championnats que les seuls matchs et passages mesurent, à l'exception de κ\*. Les divisions de chaque championnat ont été relues une par une (`TIERS`) ; le Paulista A1, championnat d'État joué par des clubs de Serie A et de Serie B, est classé en deuxième division. Les championnats peu documentés dépendent davantage de l’a priori. La marge issue de la matrice du calcul sert au classement de leur statut. Un calcul qui ne converge pas en 40 pas échoue et laisse les niveaux d'avant.
- 
--**Mesuré.** Un championnat est **mesuré** (`linked`, ses joueurs classés) quand son erreur-type est d'au plus 45 points ; il le reste jusqu'à 52, pour qu'aucun championnat n'entre et ne sorte du classement à chaque calcul.
-+**Statut utilisé par cette version.** `linked` vaut vrai lorsque la marge interne est au plus de 45 points, ou au plus de 52 si le championnat était déjà mesuré. Ces valeurs servent de seuils opérationnels. Leur interprétation comme erreurs-types statistiques reste à valider.
- 
- Pourquoi 45 : à ce seuil, une erreur sur le niveau déplace l'indice d'un joueur d'au plus un quart d'écart-type de son rôle. Le calcul est e / (√2 σ), σ = 132 étant l'écart-type des forces des clubs sur les matchs de championnat de 2026/2027 ; à 60 points, ce serait 0,32.
- 
--Les autres championnats ont un niveau marqué « provisoire » sur le site, avec sa marge, et leurs joueurs un score sans rang.
-+La version 4 gardait un niveau et une marge pour les championnats masculins provisoires. Elle donnait à leurs joueurs un score sans rang. Les versions 5 et 6, décrites plus bas, ont modifié l’attribution du rang.
- 
- **Les coupes des autres confédérations** entrent dans l'Elo (`ELO_APART` supprimé). Les clubs de ces coupes sont reliés à ceux de PitchAPI par la passe d'identité, qui tourne avant l'Elo dans le même passage quotidien.
- 
-@@ -256,7 +256,7 @@ Demande du propriétaire : un joueur doit avoir un rang dès son premier match,
-   - **En production** (relu le 15 novembre à 16 h 25 UTC, les 157 saisons recalculées en version 5) : 29 365 joueurs classés sur 29 692 en 2026/2027, 36 690 sur 37 361 en 2025/2026, 31 950 sur 32 627 en 2024/2025. Le chiffre mesuré avant comptait chaque joueur qui avait un indice ; le rang, lui, ne va qu'aux joueurs d'un club dont le championnat est dans la base.
-   - **Restent sans rang**, avec un score : en 2026/2027, les 327 joueurs de 17 clubs vus seulement en Ligue des champions, Ligue Europa ou Ligue Conférence, sans leur championnat ; en 2025/2026, 412 joueurs de tels clubs, 167 de championnats féminins (notées entre elles, sans rang dans le classement des hommes) et 92 connus seulement par leur sélection.
-   - **Écartée, la mesure au-dessus d'un niveau de remplacement** : ce niveau variait de plus de 25 % d'une année à l'autre pour trois rôles, et devenait positif en début de saison.
--- **Note de match.** La contribution du match seule, ramenée à la dispersion de son rôle (et de sa compétition) dans la dernière année terminée, en score normal, sur la courbe 0–100. Elle est montrée sur la fiche du match à côté de la note PitchAPI, avec le rang du joueur dans le match.
-+- **Note de match.** La contribution du match seule, ramenée à la dispersion de son rôle (et de sa compétition) dans la dernière année terminée, en score normal, sur la courbe 0–100. Dans cette version 5, la fiche affichait aussi la note PitchAPI. Depuis la version 7, la note Vega est la seule note de match affichée. [Note du match](../02-metriques-attendues/04-note-du-match.md)
-   - **En production** : chaque match joué des trois dernières saisons a sa note (651 805 en 2025/2026) ; un match complet moyen vaut 0,000 en écart standardisé, soit 50. Seules 2024/2025 et 2025/2026, terminées, sont gardées comme références.
-   - **Sans note du fournisseur** (certains championnats n'en ont pas), la carte « Meilleures notes » liste les meilleures notes Vega du match.
-   - **Sans minutes jouées** dans la source, un match n'a pas de note : le classement ne lit que les matchs où le joueur a des minutes.
-diff --git a/docs/calculs/05-joueurs/10-revelations.md b/docs/calculs/05-joueurs/10-revelations.md
-index 8aeaba369f..7a08587ddd 100644
---- a/docs/calculs/05-joueurs/10-revelations.md
-+++ b/docs/calculs/05-joueurs/10-revelations.md
-@@ -1,15 +1,15 @@
- # Révélations
- 
--Des joueurs que le classement de puissance ne classe pas encore, faute de minutes, et qui jouent déjà comme ses titulaires ([breakout.py](../../../backend/vega/breakout.py), `/api/rankings/breakouts`).
-+Le signal « Révélation » repère des joueurs sous le seuil de minutes des titulaires de référence, dont le rendement est déjà comparable à celui de ces titulaires. Leur classement de puissance peut déjà comporter un rang provisoire. [Règle](../../../backend/vega/breakout.py) · [API](../../../backend/api/src/routes/rankings.mjs)
- 
- ## La règle
- 
- Un joueur est signalé sur une saison quand :
- 
- 1. il a joué **au moins 270 minutes** mais reste **sous le seuil de minutes du classement** (900 minutes sur une saison entière, la moitié des minutes du joueur le plus utilisé tant que la saison n'en est pas là) ;
--2. son championnat est **mesuré** (erreur-type de son niveau d'au plus 45 points, version 4) ;
--3. son **rendement par 90 minutes régularisé** (celui du classement, § 8 de la méthode : il ramène vers la moyenne un joueur qui a peu joué) est **au niveau du meilleur cinquième des titulaires de son rôle** (les joueurs classés du même rôle, au moins 30) ;
--4. il n'a **jamais été titulaire** (classé) lors d'une saison antérieure de la base ;
-+2. sa ligne de puissance porte `linked = true`. Pour les championnats masculins, la marge interne donne ce statut jusqu’à 45 points à l’entrée et 52 points pour un championnat déjà mesuré ;
-+3. son **rendement par 90 minutes régularisé** (celui du classement, § 8 de la méthode : il ramène vers la moyenne un joueur qui a peu joué) est **au niveau du meilleur cinquième des titulaires de son rôle** (les joueurs du même rôle admissibles en minutes, avec `linked = true` et un rendement renseigné, au moins 30) ;
-+4. aucune saison antérieure de la base ne le marque admissible en minutes (`eligible`) ;
- 5. sa date de naissance est **connue** et il a **moins de 23 ans** au 1ᵉʳ août de la saison. Elle n'est connue que pour une minorité de joueurs (Wikidata, club par club) : un joueur dont l'âge est inconnu n'est pas signalé.
- 
- Les règles 4 et 5 écartent les joueurs établis qui ont peu joué (un titulaire blessé a le rendement d'un titulaire). La première liste, calculée sans exiger l'âge, s'ouvrait sur un international de retour de blessure et deux joueurs de 35 ans et plus : la base ne détient ni leurs saisons d'avant 2025/2026 ni leur âge. La liste est donc courte aujourd'hui (les 119 joueurs que la règle 3 retient en 2026/2027 n'ont pas tous un âge connu) et s'allonge à mesure que les dates de naissance arrivent. Le « centile » affiché est la part des titulaires de son rôle que le joueur dépasse ; les signalés sont rangés par ce centile.
-@@ -33,6 +33,6 @@ Ce que la vérification ne couvre pas : les règles 4 et 5 (2025/2026 est la pre
- ## Où il se lit
- 
- - Page « Classement des joueurs » : la liste « Révélations » de la saison, les vingt premiers, avec la part des titulaires de leur poste qu'ils dépassent.
--- Fiche d'un joueur signalé : une phrase sous l'Indice Vega (« Révélation : en 610 minutes, son rendement par 90 minutes le place devant 93 % des titulaires à son poste »). Un joueur sous le seuil de minutes n'a pas de score au classement ; cette phrase est tout ce que le classement dit de lui.
-+- Fiche d'un joueur signalé : une phrase sous l'Indice Vega (« Révélation : en 610 minutes, son rendement par 90 minutes le place devant 93 % des titulaires à son poste »). La fiche peut présenter à la fois ce signal, le score de puissance et son rang provisoire.
- 
- Recalculé avec les modèles de la saison, après le classement (`agg.player_breakouts`, `agg.breakout_runs`). L'API ne sert une liste que si la règle en vigueur l'a calculée ; une saison terminée est recalculée une fois quand la règle change. Au 13 novembre 2026, dix joueurs de 2026/2027 sont signalés.
-diff --git a/docs/calculs/07-limites/01-non-calcule-fictif-demo.md b/docs/calculs/07-limites/01-non-calcule-fictif-demo.md
-index ecda6df939..fca2c5dd7f 100644
---- a/docs/calculs/07-limites/01-non-calcule-fictif-demo.md
-+++ b/docs/calculs/07-limites/01-non-calcule-fictif-demo.md
-@@ -7,12 +7,13 @@ Tout chiffre du site n'est pas un calcul de Vega. Cette page liste ce qui est fo
- | Valeur | Source | Note |
- | --- | --- | --- |
- | xG, npxG, xG en jeu / CPA, xGOT, xA, buts évités | PitchAPI | aucun modèle Vega |
--| Note du match | PitchAPI | pas une note Vega validée |
- | Classement FIFA, coefficients UEFA clubs et associations | FIFA, UEFA, SportsAPI | collectés par le worker (`backend/vega/sources/fifa.py`, `uefa.py`) |
- | Classements officiels (fournisseur, UEFA) | fournisseurs | contrôlés, jamais recalculés |
- | Palmarès | Wikipédia / Wikidata | voir [PLAYER_HONOURS.md](../../PLAYER_HONOURS.md) |
- | Archives de buts historiques | schochastics/football-data | voir [HISTORICAL_GOALS.md](../../HISTORICAL_GOALS.md) |
- 
-+La note de match du joueur est calculée par Vega sur 100. [Formule et provenance](../02-metriques-attendues/04-note-du-match.md)
-+
- ## Pas encore calculé
- 
- - **Victoires attendues** : le modèle les produit (`outcomeChances`), mais elles ne sont ni conservées ni affichées (voir [xPts](../03-resultats-et-points-attendus/01-points-attendus-xpts.md)).
-diff --git a/docs/calculs/07-limites/02-points-d-attention.md b/docs/calculs/07-limites/02-points-d-attention.md
-index 1d0bb859f1..05dddcae92 100644
---- a/docs/calculs/07-limites/02-points-d-attention.md
-+++ b/docs/calculs/07-limites/02-points-d-attention.md
-@@ -35,7 +35,7 @@ Au niveau d'un match, `xg` et `shotsOnTarget` valent 0 quand le joueur n'a pas t
- → [shared/player-profile.js](../../../dashboard/shared/player-profile.js#L57) vs [season-player.js](../../../dashboard/frontend/src/services/season-player.js#L203)
- 
- **9. Les grosses occasions créées sont classées au niveau saison malgré leurs zéros omis.** *(levé le 12 novembre 2026 : un vide vaut zéro là où le fournisseur publie la mesure, voir [Valeurs absentes](../01-sources-et-conventions/02-valeurs-absentes-et-fiabilite.md) ; le xA est classé à la même condition)*
--Le code indique que le fournisseur ne publie jamais 0 pour le xA ni pour les grosses occasions. Le xA est exclu des classements, mais `bigChancesCreated` reste classable (`rankable: key !== "xa"`) et figure dans la pizza des milieux offensifs et attaquants. Avec la règle de couverture complète, seuls les joueurs ayant une valeur à **chaque** match entrent dans la distribution : le centile compare un groupe très sélectionné, et la plupart des joueurs n'en ont pas.
-+Les centiles saison du xA et des grosses occasions créées exigent une observation sur tous les matchs et toutes les minutes du joueur, ainsi qu’une cohorte suffisante. Le lecteur restitue certains zéros omis lorsque la couverture est établie. Sur la fiche d’une performance individuelle, le xA reste sans centile.
- → [scouting.js](../../../dashboard/frontend/src/services/scouting.js#L47), [PlayerScoutOverview.jsx](../../../dashboard/frontend/src/components/PlayerScoutOverview.jsx#L146)
- 
- **10. Deux définitions de la note saison (résolu le 15 novembre 2026).**
-diff --git a/docs/calculs/08-notes-vega/01-formules-et-raisons.md b/docs/calculs/08-notes-vega/01-formules-et-raisons.md
-index 29f7b4c2e1..2476ff0efc 100644
---- a/docs/calculs/08-notes-vega/01-formules-et-raisons.md
-+++ b/docs/calculs/08-notes-vega/01-formules-et-raisons.md
-@@ -12,7 +12,7 @@ Tout est sur une seule échelle, en **points Elo**. 400 points d'écart entre de
- 
- | Objet | Sa note | En une phrase |
- | --- | --- | --- |
--| Championnat | son niveau ℓ, avec une erreur-type | la force moyenne de ses clubs, tirée des matchs entre championnats, des joueurs qui changent de championnat et de sa division |
-+| Championnat | son niveau ℓ et une marge interne en points Elo | la force moyenne de ses clubs, tirée des matchs entre championnats, des joueurs qui changent de championnat et de sa division |
- | Club | sa force Elo R | il entre au niveau de son championnat, puis chaque résultat la corrige, selon ce que les deux forces prévoyaient |
- | Joueur | son score de 0 à 100 | ce qu'il fait au-dessus de l'attendu de son rôle, match par match, plus le niveau du club où il le fait, comparé aux joueurs de son rôle |
- 
-@@ -96,7 +96,7 @@ $$
- 
- ### 4.1 Ce qu'on cherche
- 
--ℓ_j, le niveau du championnat j : la force à laquelle ses clubs entrent dans l'Elo. Trois preuves le disent, avec des précisions différentes. Le niveau retenu est le **maximum a posteriori** d'un seul modèle qui les réunit, chacune comptée selon sa précision : plus une preuve est précise, plus elle pèse.
-+Le niveau initial ℓ_j détermine la force d’entrée des clubs du championnat j. Le calcul combine les résultats entre championnats, les passages de joueurs et les hypothèses de division et de confédération. Il résout un système itératif approché. La dérivée des mises à jour Elo successives manque dans le terme des matchs, ce qui invalide son interprétation comme maximum a posteriori de la vraisemblance séquentielle annoncée. [Calcul](../../../backend/vega/power.py) · [Contre-exemple du §3](../09-audit-2026-11/SOURCE_AUDIT.md)
- 
- **Pourquoi un seul modèle.** La version 3 retenait le niveau vers 1500 dans la proportion liens / (liens + 30). Elle avait deux défauts :
- - **Ce n'était pas un a priori cohérent.** À l'équilibre, sa force baissait quand les liens augmentaient, et 1500 est arbitraire.
-@@ -116,8 +116,8 @@ $$
- \Lambda_{aa} \mathrel{+}= I_m E(1-E)c^2, \quad \Lambda_{bb} \mathrel{+}= I_m E(1-E)c^2, \quad \Lambda_{ab} = \Lambda_{ba} \mathrel{-}= I_m E(1-E)c^2
- $$
- 
--- $g$ est la **pente** de la vraisemblance des résultats, $\Lambda$ son **information**. Les matchs à l'intérieur d'un championnat s'annulent : seul compte ce que ses clubs font contre les autres.
--- Les deux sont divisés par la **dispersion** $\varphi = \sum (r - E)^2 / \sum E(1-E)$, sur ces mêmes matchs (0,73). Les nuls rendent les résultats moins dispersés qu'un pile ou face, et l'information est d'autant plus grande.
-+- Pour un match entre deux championnats ajustés distincts, le code utilise +1 et −1 comme sensibilités de l’écart Elo aux deux niveaux initiaux. Il ajoute le résidu pondéré à $g$ et sa courbure locale à $\Lambda$. Tous les matchs font évoluer les Elo suivants, y compris les matchs internes. Le calcul de $g$ et de $\Lambda$ omet la propagation de ces dépendances.
-+- Les deux sont divisés par la **dispersion** $\varphi = \sum (r - E)^2 / \sum E(1-E)$, sur ces mêmes matchs (0,73). Les nuls rendent les résultats moins dispersés qu'un pile ou face, ce qui augmente le poids numérique du terme des matchs lorsque la dispersion est inférieure à 1.
- - Matchs lus : coupes d'Europe, coupes nationales entre divisions, Coupe du monde des clubs, Copa Libertadores et Sudamericana, Coupes des champions CONCACAF et CAF.
- 
- ### 4.3 Les joueurs qui changent de championnat
-@@ -204,15 +204,15 @@ Les divisions sont relues une par une (`TIERS`). Le Paulista A1, championnat d'
- ### 4.5 Le calcul
- 
- 1. **Matchs et passages seuls**, avec un a priori très large (1500 ± 400) qui ne fixe que l'origine de l'échelle. On en tire $\tau_u$, puis $b$, $\tau_b$, $\tau_c$ et les moyennes de confédération.
--2. **Les trois preuves ensemble.** Pas de Newton :
-+2. **Les trois sources réunies.** Le calcul résout le système linéaire suivant à chaque itération.
- 
- $$
- \ell \leftarrow \ell + (\Lambda_\text{matchs} + \Lambda_\text{passages} + \Lambda_\text{a priori})^{-1}\,(g_\text{matchs} + g_\text{passages} + g_\text{a priori})
- $$
- 
-    L'Elo est redéroulé à chaque pas, depuis les nouveaux niveaux. Le calcul s'arrête quand plus aucun niveau ne bouge de 0,25 point (7 pas en service). Au-delà de 40 pas, il échoue et les niveaux d'avant restent.
--3. **L'origine de l'échelle.** Matchs et passages ne disent que des écarts. On décale tous les niveaux d'une même constante, pour que les championnats qui tiennent l'échelle gardent leur niveau d'avant. Ces championnats sont ceux mesurés à 25 points près contre le mieux mesuré : les cinq grands championnats, les championnats anglais, la 2. Bundesliga, les Pays-Bas, le Portugal.
--4. **L'erreur-type** d'un niveau, contre la moyenne de ces championnats :
-+3. **L’origine de l’échelle.** Le code décale ensemble les niveaux ajustés pour conserver, en moyenne, les valeurs antérieures des références disponibles. Les groupes hors ajustement gardent l’initialisation du lecteur. Ce décalage peut donc modifier l’espérance d’une rencontre entre groupes ajustés et groupes laissés à leur valeur initiale. Les références sont les championnats ordinaires à moins de 25 points de marge relative à la meilleure référence, avec repli sur celle-ci. Les cinq grands championnats, les divisions anglaises, la 2. Bundesliga, les Pays-Bas et le Portugal sont des exemples de la mesure historique.
-+4. **Marge interne d’un niveau.** Le code inverse la matrice approchée et mesure l’écart à la moyenne des références selon la formule ci-dessous. La calibration de cette marge comme erreur-type d’un estimateur séquentiel reste à établir.
- 
- $$
- \text{se}_j = \sqrt{v^\top \Lambda^{-1} v}, \qquad v = e_j - \tfrac{1}{|\text{réf}|}\mathbf{1}_\text{réf}
-@@ -220,7 +220,7 @@ $$
- 
- ### 4.6 Mesuré ou provisoire
- 
--Un championnat est **mesuré** quand se ≤ **45 points**. Il le reste jusqu'à **52**, pour qu'aucun championnat n'entre et ne sorte du classement à chaque calcul. Ses joueurs reçoivent un rang. Un championnat au-dessus est **provisoire** : il garde son niveau, affiché avec sa marge, et ses joueurs un score sans rang.
-+Pour les championnats masculins ajustés, le statut **mesuré** s’ouvre lorsque la marge interne vaut au plus **45 points** et se conserve jusqu’à **52 points** inclus. Au-delà, le championnat garde son niveau et sa marge avec le statut **provisoire**. Dans le classement de puissance des joueurs, un indice publié donne toujours un rang dans son univers. Le statut provisoire du championnat masculin peut rendre ce rang provisoire.
- 
- Pourquoi 45 : une erreur e sur le niveau déplace l'indice d'un joueur d'environ $e/(\sqrt{2}\,\sigma)$ écart-type de son rôle, σ = 132 étant l'écart-type des forces des clubs sur les matchs de championnat de 2026/2027. On veut au plus un quart d'écart-type : e ≤ 0,25 × √2 × 132 ≈ 47, arrondi à 45. À 60 points, ce serait 0,32.
- 
-@@ -398,11 +398,11 @@ $$
- 
- **Rangs.**
- - Le **rang** est l'ordre de Z parmi tous les joueurs de son univers (hommes, femmes), puis T, puis les minutes, à égalité le même rang. Chaque univers est numéroté à partir de 1. Le **rang dans le rôle** suit le même ordre dans le rôle principal, et « sur N au poste » compte l'univers du joueur.
--- Un rang est **provisoire** sous le seuil de minutes (`eligible` faux), dans un championnat provisoire (`linked` faux), dans un club qu'aucun championnat de la base ne connaît (vu seulement en coupe d'Europe, `in_league` faux), ou pour un joueur connu seulement par sa sélection. Le site en donne la raison. Le site le dit sur la fiche du joueur. L'incertitude d'un championnat provisoire est commune à tous ses joueurs : l'ordre entre eux est exact. Face aux autres, elle vaut environ ± 200 à 300 places dans les 500 premiers, et beaucoup plus au milieu du classement, où les joueurs sont serrés.
-+- Sur la fiche et dans le classement complet, le rang est **provisoire** si le seuil de minutes n’est pas atteint. Ensuite, le lecteur donne aux hommes d’une sélection seule, d’un club sans championnat dans la base ou d’un championnat de niveau provisoire le motif correspondant. Une joueuse admissible en minutes a un rang dans l’univers féminin sans motif de ligue provisoire. Le statut renseigne sur la fiabilité des entrées. La marge interne de la ligue ne fournit pas un intervalle statistique validé pour le rang du joueur.
- - **Centiles** des blocs et de T, R\* : rang moyen dans le rôle, (nombre en dessous + ½ égaux) / n.
- - **Course au Ballon d'Or** : les trente premiers classés d'un club de première division.
- 
--Depuis la version 6 (15 novembre 2026), **tout joueur qui a joué a un rang**. Un joueur connu seulement par sa sélection, ou d'un club vu seulement en coupe d'Europe, est classé parmi les hommes, provisoirement : sa part de niveau vient de l'Elo de son équipe, mesurée contre les équipes de même nature (la moyenne des sélections pour une sélection), et son championnat n'est pas mesuré. Les joueuses d'un championnat féminin sont notées entre elles (leur propre κ, leurs propres moyennes et écarts-types) et ont leur propre classement. Un poste qui n'a encore aucun joueur éligible dans son univers (premiers jours d'une année, petit championnat féminin) est placé face aux joueurs éligibles de tous les postes de l'univers : C est déjà relatif à l'attendu du rôle, son centre est commun.
-+Depuis la version 6 (15 novembre 2026), **tout joueur doté d’un indice a un rang dans son univers**. Un joueur connu seulement par sa sélection, ou d'un club vu seulement en coupe d'Europe, est classé parmi les hommes, provisoirement : sa part de niveau vient de l'Elo de son équipe, mesurée contre les équipes de même nature (la moyenne des sélections pour une sélection), et son championnat n'est pas mesuré. Les joueuses d'un championnat féminin sont notées entre elles (leur propre κ, leurs propres moyennes et écarts-types) et ont leur propre classement. Un poste qui n'a encore aucun joueur éligible dans son univers (premiers jours d'une année, petit championnat féminin) est placé face aux joueurs éligibles de tous les postes de l'univers : C est déjà relatif à l'attendu du rôle, son centre est commun.
- 
- **L'a priori de la saison passée (version 8, 15 novembre 2026).** En début de saison, quelques matchs ne disent pas grand-chose ; la saison passée du joueur en dit davantage. L'indice affiché les mêle :
- 
++export { historicalPair };

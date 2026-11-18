@@ -1,0 +1,38 @@
+# Transfermarkt · limites des trois flux hors VI-31
+
+**Les trois pertes signalées dans la revue Fable sont reproductibles** sur 202f24c09eb4c8fb87d7190939bafbf09cb00393 et 34ca3b5b382d7a6a06da9d051170096ba1d700e8. Chaque révision a exécuté 18 scénarios et 216 assertions sur PostgreSQL 18.6, avec les migrations officielles de son SHA, les writers sous `vega_collect` et les routes publiques à travers le handler réel sous `vega_read`. Les réponses fournisseur et les personnes sont synthétiques. Le rejeu établit le comportement des deux révisions. La fréquence des réponses partielles et toute perte historique en production restent inconnues. [Attendus](ATTENDUS.md) · [Résultats de 202f](202f24c0-resultats.json) · [Résultats de 34ca](34ca3b5b-resultats.json)
+
+| Flux | Liste vide ou clé absente | Liste valide tronquée | Mauvais type ou JSON illisible |
+| --- | --- | --- | --- |
+| Valeurs de marché | 2 → 2 points. La collecte acquitte 200, zéro écriture, aucune erreur. Le lecteur répond 304 à l’ancien ETag. | 2 → 1. Le lecteur répond 200 à l’ancien ETag et publie un nouvel ETag et une courbe amputée. | 2 → 2. La collecte enregistre `SCHEMA_CHANGED`. Le lecteur répond encore 304 à l’ancien ETag. |
+| Blessures | 2 → 0 épisodes. La collecte acquitte 200 et le lecteur publie HTTP 200 avec liste vide et nouvel ETag. | 2 → 1. La route publie l’épisode restant sous un nouvel ETag. | 2 → 2 en stockage. La collecte enregistre `SCHEMA_CHANGED`. Le lecteur répond 404 sans ETag, avec ou sans l’ancien ETag. |
+| Effectifs | 2 → 0 membres pour le club et la saison. La collecte acquitte 200, zéro écriture, aucune erreur. | 2 → 1. Le planning perd la candidature omise pour une lecture ultérieure du profil. | 2 → 2. La collecte enregistre `SCHEMA_CHANGED`. Les deux candidats restent disponibles. |
+
+Un tableau qui contient un élément valide et un autre ignoré a le même effet que le tableau tronqué dans les trois flux. Les valeurs ou blessures PitchAPI ajoutées comme témoins restent en base. Pour les effectifs, l’autre saison du même club et les unités de profil déjà inscrites dans la file restent présentes. [Toutes les entrées et assertions de chaque scénario](34ca3b5b-resultats.json)
+
+## Lecteurs et propriété
+
+- **Valeurs de marché.** `write_values` supprime les dates Transfermarkt absentes de la liste dès qu’il existe au moins un point valide. La route `/api/player-market-values?id=…` lit `api.player_market_values`, puis la courbe consomme ces points. Le test envoie le validateur de la réponse complète après chaque rafraîchissement. Il établit la disparition publique du point par HTTP 200 et la rotation du validateur.
+- **Blessures.** `write_injuries` remplace les épisodes du joueur. Pour servir `/api/players/{id}/injuries`, `api.player_injury_reads` exige une lecture sans `error_code`. Un échec de schéma masque donc des épisodes valides encore persistés. Le client affiche cette route dans l’historique et la disponibilité. Les tests établissent la différence entre HTTP 200 avec liste vide et HTTP 404. Ils ne mesurent pas le rendu du navigateur.
+- **Effectifs.** `write_squad` remplace le couple club/saison. Le planning `enqueue` lit directement la table des effectifs pour découvrir les nouveaux profils. Le rejeu vérifie le nouveau planning et le maintien d’une unité déjà inscrite. Le rapprochement `link_players` utilise aussi les appartenances par saison selon l’inspection du code. Aucune route HTTP ne lit `core.provider_squads` sur ces deux SHA. La recherche de clubs `fetch_search → write_search` constitue un second point d’écriture de cette table. Elle passe une liste non vide sans test de complétude et peut donc remplacer un effectif par un sous-ensemble. Cette portée est établie par lecture du code. Le rejeu dynamique emprunte le trajet normal de rafraîchissement `squad`.
+
+**Propriété historique.** Git attribue les trois remplacements à Hugo Lemonnier dans le premier writer Transfermarkt du 16 novembre, `2899dd3061f365b0b1b585944ed5d947cfcbdd07`. La recherche de clubs et l’exposition publique des blessures apparaissent respectivement dans `df0c168a6c8108f63a363abe8c717855b87fea50` et `3669eb1640cb15ddfc75eb8e2d33f13566697228`, également attribués à Hugo Lemonnier. Romain Bastiani a ajouté le lecteur qui nomme le club de chaque valeur dans `14ce42f31ba4aacd024fe1b37fe3a90182f52ba5`. La coordination d’ensemble relève de VI-21. VI-31 porte sur les contrats, les transferts et la mise en priorité des lectures de profils, avec ses propres preuves. La disparition de membres de `core.provider_squads`, de valeurs ou d’épisodes reste une limite ouverte hors de ce lot. [Note Fable](../../../reviews/integrated-34ca3b5b/delegate/7d719ca2ba9dddd2/runs/20261118T220637Z-review-f098ef31/result.md) · [Périmètres historiques](../../../reviews/current-execution-summary/fresh-second/controles/sources-et-identites-18nov/linear-actif.json) · [Revue des profils en file](../../../reviews/integrated-34ca3b5b/independent-track-reviews.md)
+
+## Rejouer
+
+Le poste de vérification a utilisé Python 3.12, psycopg 3.2.12, Node.js 26.4.0 et PostgreSQL 18.6. Les scripts exigent des noms de bases de test sur l’interface locale et créent une base neuve distincte par exécution. Démarrer PostgreSQL 18 sur `127.0.0.1` avec un répertoire temporaire, et utiliser les dépendances Node déjà installées pour le lecteur API. Exécuter depuis le dossier de cette preuve avec les variables `VEGA_TM_REPO`, `VEGA_TM_NODE_MODULES`, `VEGA_TM_LOCAL_PORT` et `VEGA_TM_LOCAL_USER` propres à cet environnement.
+
+```sh
+tm_scratch=$(mktemp -d)
+for tm_sha in 34ca3b5b382d7a6a06da9d051170096ba1d700e8 202f24c09eb4c8fb87d7190939bafbf09cb00393; do
+  mkdir -p "$tm_scratch/$tm_sha"
+  git -C "$VEGA_TM_REPO" archive "$tm_sha" backend/vega backend/sql backend/api/src dashboard/shared |
+    tar -x -C "$tm_scratch/$tm_sha"
+  ln -s "$VEGA_TM_NODE_MODULES" "$tm_scratch/$tm_sha/backend/api/node_modules"
+  python3 -B rejouer.py "$tm_scratch/$tm_sha/backend" "$tm_sha" \
+    "postgresql://$VEGA_TM_LOCAL_USER@127.0.0.1:$VEGA_TM_LOCAL_PORT/vega_v2_tm_$tm_sha" \
+    "$tm_scratch/$tm_sha-resultats.json"
+done
+```
+
+Le résultat attendu est 18 scénarios et 216 assertions par version. Les deux sorties enregistrées ont les mêmes observations fonctionnelles. Les versions et empreintes des fichiers de code identifient chaque exécution. [Script PostgreSQL](rejouer.py) · [Lecteur HTTP](HTTP.mjs) · [Reçu des preuves](recu.json)

@@ -1,0 +1,106 @@
+scope_domain,provider_key,scope_label,scope_status,entity_type,editions,competitions,matches,finished,expected_algorithm,actual_valid,missing_from_storage,role_unavailable
+archive,archive:engsoccerdata/scotland/2,"Scotland, second tier (Scottish Championship)",retire_declare_presents,player,27,1,4772,4772,0,0,0,0
+archive,archive:engsoccerdata/scotland/2,"Scotland, second tier (Scottish Championship)",retire_declare_presents,club,27,1,4772,4772,0,0,0,
+archive,archive:engsoccerdata/scotland/2,"Scotland, second tier (Scottish Championship)",retire_declare_presents,national team,27,1,4772,4772,0,0,0,
+archive,archive:engsoccerdata/scotland/3,"Scotland, third tier (Scottish League One)",retire_declare_presents,player,24,1,4209,4209,0,0,0,0
+archive,archive:engsoccerdata/scotland/3,"Scotland, third tier (Scottish League One)",retire_declare_presents,club,24,1,4209,4209,0,0,0,
+archive,archive:engsoccerdata/scotland/3,"Scotland, third tier (Scottish League One)",retire_declare_presents,national team,24,1,4209,4209,0,0,0,
+archive,archive:engsoccerdata/scotland/4,"Scotland, fourth tier (Scottish League Two)",retire_declare_presents,player,24,1,4207,4207,0,0,0,0
+archive,archive:engsoccerdata/scotland/4,"Scotland, fourth tier (Scottish League Two)",retire_declare_presents,club,24,1,4207,4207,0,0,0,
+archive,archive:engsoccerdata/scotland/4,"Scotland, fourth tier (Scottish League Two)",retire_declare_presents,national team,24,1,4207,4207,0,0,0,
+dossier,cup:open-matchday:CYP_1_first-division,Cyprus League,retire_declare_presents,player,1,1,175,63,0,0,0,0
+dossier,cup:open-matchday:CYP_1_first-division,Cyprus League,retire_declare_presents,club,1,1,175,63,126,126,0,
+dossier,cup:open-matchday:CYP_1_first-division,Cyprus League,retire_declare_presents,national team,1,1,175,63,0,0,0,
+dossier,cup:open-matchday:IRE_2_first-division,League of Ireland First Division,retire_declare_presents,player,1,1,106,106,0,0,0,0
+dossier,cup:open-matchday:IRE_2_first-division,League of Ireland First Division,retire_declare_presents,club,1,1,106,106,212,212,0,
+dossier,cup:open-matchday:IRE_2_first-division,League of Ireland First Division,retire_declare_presents,national team,1,1,106,106,0,0,0,
+dossier,cup:open-matchday:IRE_3_national-league,League of Ireland National League,retire_declare_presents,player,1,1,62,60,0,0,0,0
+dossier,cup:open-matchday:IRE_3_national-league,League of Ireland National League,retire_declare_presents,club,1,1,62,60,120,120,0,
+dossier,cup:open-matchday:IRE_3_national-league,League of Ireland National League,retire_declare_presents,national team,1,1,62,60,0,0,0,
+dossier,cup:open-matchday:KAZ_1_premier-league,Kazakhstan Premier League,retire_declare_presents,player,1,1,107,107,0,0,0,0
+dossier,cup:open-matchday:KAZ_1_premier-league,Kazakhstan Premier League,retire_declare_presents,club,1,1,107,107,214,214,0,
+dossier,cup:open-matchday:KAZ_1_premier-league,Kazakhstan Premier League,retire_declare_presents,national team,1,1,107,107,0,0,0,
+dossier,cup:open-matchday:SCO_2_championship,Scottish Championship,retire_declare_presents,player,1,1,180,73,0,0,0,0
+dossier,cup:open-matchday:SCO_2_championship,Scottish Championship,retire_declare_presents,club,1,1,180,73,146,146,0,
+dossier,cup:open-matchday:SCO_2_championship,Scottish Championship,retire_declare_presents,national team,1,1,180,73,0,0,0,
+dossier,cup:open-matchday:SCO_3_league-one,Scottish League One,retire_declare_presents,player,1,1,180,74,0,0,0,0
+dossier,cup:open-matchday:SCO_3_league-one,Scottish League One,retire_declare_presents,club,1,1,180,74,148,148,0,
+dossier,cup:open-matchday:SCO_3_league-one,Scottish League One,retire_declare_presents,national team,1,1,180,74,0,0,0,
+dossier,cup:open-matchday:SCO_4_league-two,Scottish League Two,retire_declare_presents,player,1,1,180,70,0,0,0,0
+dossier,cup:open-matchday:SCO_4_league-two,Scottish League Two,retire_declare_presents,club,1,1,180,70,140,140,0,
+dossier,cup:open-matchday:SCO_4_league-two,Scottish League Two,retire_declare_presents,national team,1,1,180,70,0,0,0,
+dossier,cup:open-matchday:SVN_1_prva-liga,Prva Liga (SVN),retire_declare_presents,player,1,1,180,74,0,0,0,0
+dossier,cup:open-matchday:SVN_1_prva-liga,Prva Liga (SVN),retire_declare_presents,club,1,1,180,74,148,148,0,
+dossier,cup:open-matchday:SVN_1_prva-liga,Prva Liga (SVN),retire_declare_presents,national team,1,1,180,74,0,0,0,
+dossier,cup:open-matchday:SWE_1_allsvenskan,Allsvenskan (SWE),sans_edition_liee,player,0,0,0,0,0,0,0,0
+dossier,cup:open-matchday:SWE_1_allsvenskan,Allsvenskan (SWE),sans_edition_liee,club,0,0,0,0,0,0,0,
+dossier,cup:open-matchday:SWE_1_allsvenskan,Allsvenskan (SWE),sans_edition_liee,national team,0,0,0,0,0,0,0,
+dossier,cup:open-matchday:WAL_2_cymru-north,Cymru North,retire_declare_presents,player,1,1,213,106,0,0,0,0
+dossier,cup:open-matchday:WAL_2_cymru-north,Cymru North,retire_declare_presents,club,1,1,213,106,212,212,0,
+dossier,cup:open-matchday:WAL_2_cymru-north,Cymru North,retire_declare_presents,national team,1,1,213,106,0,0,0,
+dossier,cup:open-matchday:WAL_3_cymru-south,Cymru South,retire_declare_presents,player,1,1,207,99,0,0,0,0
+dossier,cup:open-matchday:WAL_3_cymru-south,Cymru South,retire_declare_presents,club,1,1,207,99,198,198,0,
+dossier,cup:open-matchday:WAL_3_cymru-south,Cymru South,retire_declare_presents,national team,1,1,207,99,0,0,0,
+native,l_1Kknkl,Premier Soccer League (RSA),retire_declare_presents,player,2,1,420,253,7669,7669,0,14
+native,l_1Kknkl,Premier Soccer League (RSA),retire_declare_presents,club,2,1,420,253,506,506,0,
+native,l_1Kknkl,Premier Soccer League (RSA),retire_declare_presents,national team,2,1,420,253,0,0,0,
+native,l_1SGwQT,Women's Premier League (KSA),retire_declare_presents,player,3,1,202,154,4118,4118,0,0
+native,l_1SGwQT,Women's Premier League (KSA),retire_declare_presents,club,3,1,202,154,308,308,0,
+native,l_1SGwQT,Women's Premier League (KSA),retire_declare_presents,national team,3,1,202,154,0,0,0,
+native,l_1TVRZW,Primera Division (VEN),retire_declare_presents,player,3,1,700,694,21646,21646,0,0
+native,l_1TVRZW,Primera Division (VEN),retire_declare_presents,club,3,1,700,694,1388,1388,0,
+native,l_1TVRZW,Primera Division (VEN),retire_declare_presents,national team,3,1,700,694,0,0,0,
+native,l_1XsMdH,Allsvenskan (SWE),retire_declare_presents,player,6,1,1396,1380,41562,38706,2856,28
+native,l_1XsMdH,Allsvenskan (SWE),retire_declare_presents,club,6,1,1396,1380,2760,2760,0,
+native,l_1XsMdH,Allsvenskan (SWE),retire_declare_presents,national team,6,1,1396,1380,0,0,0,
+native,l_1qpFVw,Indian Super League (IND),retire_declare_presents,player,6,1,698,647,19630,19630,0,3
+native,l_1qpFVw,Indian Super League (IND),retire_declare_presents,club,6,1,698,647,1294,1294,0,
+native,l_1qpFVw,Indian Super League (IND),retire_declare_presents,national team,6,1,698,647,0,0,0,
+native,l_1rPvVD,1. Division (DEN),retire_declare_presents,player,3,1,516,468,14539,14539,0,0
+native,l_1rPvVD,1. Division (DEN),retire_declare_presents,club,3,1,516,468,936,936,0,
+native,l_1rPvVD,1. Division (DEN),retire_declare_presents,national team,3,1,516,468,0,0,0,
+native,l_20pNSc,Super League (CHN),retire_declare_presents,player,3,1,720,720,22132,22132,0,0
+native,l_20pNSc,Super League (CHN),retire_declare_presents,club,3,1,720,720,1440,1440,0,
+native,l_20pNSc,Super League (CHN),retire_declare_presents,national team,3,1,720,720,0,0,0,
+native,l_271pqa,K League 2 (KOR),retire_declare_presents,player,3,1,783,767,24095,24095,0,0
+native,l_271pqa,K League 2 (KOR),retire_declare_presents,club,3,1,783,767,1534,1534,0,
+native,l_271pqa,K League 2 (KOR),retire_declare_presents,national team,3,1,783,767,0,0,0,
+native,l_2ApGa4,J. League (JPN),retire_declare_presents,player,6,1,1951,1711,53364,53364,0,19
+native,l_2ApGa4,J. League (JPN),retire_declare_presents,club,6,1,1951,1711,3422,3422,0,
+native,l_2ApGa4,J. League (JPN),retire_declare_presents,national team,6,1,1951,1711,0,0,0,
+native,l_2EKrnc,K League 1 (KOR),retire_declare_presents,player,5,1,1132,1113,34406,34406,0,63
+native,l_2EKrnc,K League 1 (KOR),retire_declare_presents,club,5,1,1132,1113,2226,2226,0,
+native,l_2EKrnc,K League 1 (KOR),retire_declare_presents,national team,5,1,1132,1113,0,0,0,
+native,l_3CB6qX,Saudi First Division (KSA),retire_declare_presents,player,3,1,755,677,11438,11438,0,0
+native,l_3CB6qX,Saudi First Division (KSA),retire_declare_presents,club,3,1,755,677,1354,1354,0,
+native,l_3CB6qX,Saudi First Division (KSA),retire_declare_presents,national team,3,1,755,677,0,0,0,
+native,l_3Kf7Ni,USL League One (USA),retire_declare_presents,player,3,1,635,634,19474,19474,0,0
+native,l_3Kf7Ni,USL League One (USA),retire_declare_presents,club,3,1,635,634,1268,1268,0,
+native,l_3Kf7Ni,USL League One (USA),retire_declare_presents,national team,3,1,635,634,0,0,0,
+native,l_3Tn1kG,MLS Next Pro (USA),retire_declare_presents,player,3,1,1279,1279,38825,38825,0,0
+native,l_3Tn1kG,MLS Next Pro (USA),retire_declare_presents,club,3,1,1279,1279,2558,2558,0,
+native,l_3Tn1kG,MLS Next Pro (USA),retire_declare_presents,national team,3,1,1279,1279,0,0,0,
+native,l_3fglZv,J3 League (JPN),retire_declare_presents,player,3,1,1146,936,25943,25943,0,0
+native,l_3fglZv,J3 League (JPN),retire_declare_presents,club,3,1,1146,936,1872,1872,0,
+native,l_3fglZv,J3 League (JPN),retire_declare_presents,national team,3,1,1146,936,0,0,0,
+native,l_3hW1NO,Thai League 1 (THA),retire_declare_presents,player,2,1,480,302,9385,9385,0,0
+native,l_3hW1NO,Thai League 1 (THA),retire_declare_presents,club,2,1,480,302,604,604,0,
+native,l_3hW1NO,Thai League 1 (THA),retire_declare_presents,national team,2,1,480,302,0,0,0,
+native,l_3qNjzC,Liga de Primera (CHI),retire_declare_presents,player,3,1,720,693,21246,21246,0,0
+native,l_3qNjzC,Liga de Primera (CHI),retire_declare_presents,club,3,1,720,693,1386,1386,0,
+native,l_3qNjzC,Liga de Primera (CHI),retire_declare_presents,national team,3,1,720,693,0,0,0,
+native,l_3uNwVX,Liga 1 (PER),retire_declare_presents,player,3,1,947,935,28765,28765,0,0
+native,l_3uNwVX,Liga 1 (PER),retire_declare_presents,club,3,1,947,935,1870,1870,0,
+native,l_3uNwVX,Liga 1 (PER),retire_declare_presents,national team,3,1,947,935,0,0,0,
+native,l_45xKXM,Virsliga (LVA),retire_declare_presents,player,3,1,540,539,15964,15964,0,0
+native,l_45xKXM,Virsliga (LVA),retire_declare_presents,club,3,1,540,539,1078,1078,0,
+native,l_45xKXM,Virsliga (LVA),retire_declare_presents,national team,3,1,540,539,0,0,0,
+native,l_46aZMC,Premier League (EGY),retire_declare_presents,player,2,1,512,402,12594,12594,0,18
+native,l_46aZMC,Premier League (EGY),retire_declare_presents,club,2,1,512,402,804,804,0,
+native,l_46aZMC,Premier League (EGY),retire_declare_presents,national team,2,1,512,402,0,0,0,
+native,l_4FPF2L,Division Profesional (PAR),retire_declare_presents,player,2,1,527,506,16047,16047,0,0
+native,l_4FPF2L,Division Profesional (PAR),retire_declare_presents,club,2,1,527,506,1012,1012,0,
+native,l_4FPF2L,Division Profesional (PAR),retire_declare_presents,national team,2,1,527,506,0,0,0,
+native,l_4dzm4e,Primera Division (BOL),retire_declare_presents,player,3,1,783,759,23377,23377,0,0
+native,l_4dzm4e,Primera Division (BOL),retire_declare_presents,club,3,1,783,759,1518,1518,0,
+native,l_4dzm4e,Primera Division (BOL),retire_declare_presents,national team,3,1,783,759,0,0,0,

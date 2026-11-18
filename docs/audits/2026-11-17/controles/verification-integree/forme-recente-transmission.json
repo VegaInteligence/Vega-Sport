@@ -1,0 +1,5 @@
+{
+  "id": "95f84dd4-5b54-4c22-bf2a-8ed31073a86c",
+  "issue": "VI-32",
+  "body": "Nouvelle observation dans la version de la fiche actuellement déployée (`0e6b2ab353`, modification de la forme récente `f29f32df63`). Le 18 novembre à 22 h 32 UTC, le navigateur public sur [Max Dowman, saison 2026/27](https://vegasport.vercel.app/joueurs/?id=p_0ogEyt&season=2026%2F2027) rend « 0 derniers matchs · moy. 50 ». Le calcul `seasonGrade([])` retourne `null`. Six rendus comparatifs des fonctions Git de fc0deba100 et 0e6b2ab353 vérifient également le cas d’un z extrême sur neuf minutes et la moyenne valide de 76 sur 22 minutes. L’ancien titre n’affichait pas de moyenne sur zéro match. Sur la dernière version, `RecentForm` substitue 50, bien que FormBars accepte un agrégat inconnu. La prochaine correction de la lecture des notes doit omettre cette moyenne en l’absence de minutes admissibles et préserver une vraie moyenne de 50 lorsque z vaut zéro. La note stockée en base reste distincte du texte de la carte. Le lot de correction de la présente session reste borné aux trois writers déjà attribués."
+}

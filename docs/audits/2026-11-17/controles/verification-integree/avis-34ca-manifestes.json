@@ -1,0 +1,29 @@
+{
+  "candidate_commit": "34ca3b5b382d7a6a06da9d051170096ba1d700e8",
+  "scope": "independent reviews of the same frozen application, production evidence and report",
+  "astra": {
+    "model": "gpt-6.2-astra",
+    "effort": "xhigh",
+    "evidence": "explicit native collaborator selection and its independent written report",
+    "sha256_report": "dc6b62755c3aa6940c4168406d164e0c585aa75273aa0c2cfaa834fd07df015a"
+  },
+  "fable": {
+    "model": "claude-fable-5-2",
+    "effort": "xhigh",
+    "observed_models": [
+      "claude-fable-5-2"
+    ],
+    "status": "succeeded",
+    "role": "review",
+    "base_commit": "34ca3b5b382d7a6a06da9d051170096ba1d700e8",
+    "run_id": "20261118T220637Z-review-f098ef31",
+    "started": "2026-11-18T22:06:37.935509+00:00",
+    "finished": "2026-11-18T22:17:06.308443+00:00",
+    "exit_code": 0,
+    "drift": [],
+    "errors": [],
+    "sha256_report": "2f190a08cd6d96dd279a1850aaf2410ddfdb70f6cb03cc61323cff4ed5f6f851",
+    "sha256_manifest": "23188fe83a24fbc5b997c979e495e43f9de9062cf16028c4ffceb7112b31da8f",
+    "native_verdict": "VERDICT: CHANGES_REQUESTED"
+  }
+}

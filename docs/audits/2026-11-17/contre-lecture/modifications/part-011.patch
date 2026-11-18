@@ -1,6 +1,233 @@
-diff --git a/backend/vega/archive_bundesliga.json b/backend/vega/archive_bundesliga.json
+diff --git a/backend/vega/archive_attestations.py b/backend/vega/archive_attestations.py
 new file mode 100644
-index 0000000000..c7ec02253c
+index 0000000000..103d6c73ef
 --- /dev/null
-+++ b/backend/vega/archive_bundesliga.json
-@@ -0,0 +1 @@
++++ b/backend/vega/archive_attestations.py
+@@ -0,0 +1,227 @@
++"""Locked archive amendments for the exact evidence ledgers of VI-27."""
++from collections import defaultdict
++from hashlib import sha256
++import json
++from pathlib import Path
++
++from psycopg.types.json import Jsonb
++
++BUNDESLIGA_PATH = Path(__file__).with_name("archive_bundesliga.json")
++SCOTLAND_PATH = Path(__file__).with_name("archive_scotland.json")
++LEDGER = json.loads(BUNDESLIGA_PATH.read_bytes())
++SCOTLAND = json.loads(SCOTLAND_PATH.read_bytes())
++SEASONS = defaultdict(list)
++for case in LEDGER["cases"]:
++    SEASONS[case["official"]["season"]].append(case)
++
++
++def observed_inputs(inputs):
++    return {
++        "bundesliga": all(inputs.get(path) == digest for path, digest in LEDGER["inputs"].items()),
++        "scotland": all(inputs.get(path) == digest for path, digest in SCOTLAND["input"].items()),
++    }
++
++
++def _digest(case):
++    return sha256(json.dumps(case, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
++
++
++def prepare_scotland(conn, loader, season, matches, input_approved):
++    source = {m["key"]: m for m in matches if m["key"].startswith(f"r:worldclub/scotland/{season}:")}
++    cases = [c for c in SCOTLAND["cases"] if c["match"]["key"] in source]
++    out = []
++    for case in cases:
++        native = case["match"]
++        key, digest = native["key"], _digest(case)
++        old = conn.execute("SELECT id FROM core.matches WHERE season_id=%s AND archive_key=%s", (season,key)).fetchone()
++        r = loader.bind(season, [old[0]])[old[0]] if old else None
++        edition = conn.execute("SELECT to_jsonb(cs) FROM core.competition_seasons cs WHERE id=%s",
++                               (r["row"]["competition_season_id"],)).fetchone()[0] if r else None
++        round_id = r["row"]["round_id"] if r else None
++        stage = conn.execute("SELECT to_jsonb(r) FROM core.rounds r WHERE id=%s", (round_id,)).fetchone() if round_id else None
++        alias = conn.execute("SELECT to_jsonb(a) FROM core.archive_match_attestations a WHERE season_id=%s AND canonical_key=%s",
++                             (season,key)).fetchone()
++        verified_score = {**native, "score":case["new_score"]}
++        reason = case.get("held")
++        if not reason and (not input_approved or source.get(key) != native):
++            reason = "attestation_inputs_changed"
++        if not reason and alias and (not r or alias[0]["proof_sha256"] != digest
++                                    or alias[0]["match_id"] != r["row"]["id"]
++                                    or not _matches_native(r["row"], verified_score, case["new_date"], edition)):
++            reason = "attested_result_changed"
++        if not reason and r and not alias and (r["events"] or r["dependents"]
++                                              or not _matches_native(r["row"], native, case["prior_date"], edition)):
++            reason = "attested_score_preimage_changed"
++        locked = {"proof":case, "sha256":digest, "result":r, "origin":None,
++                  "alias":alias and alias[0], "edition":edition, "round":stage and stage[0],
++                  "class":"held" if reason else "unchanged" if alias else "change" if r else "new"}
++        if reason:
++            locked["reason"] = reason
++        out.append(locked)
++    return out
++
++
++def _event_values(event, columns):
++    return tuple(event[c] for c in columns)
++
++
++def _matches_native(row, source, day, edition):
++    return (row["status"] == "finished" and row["match_date"] == day and edition["archive_key"] == source["competitionId"]
++            and [row["home_score"], row["away_score"]] == source["score"]
++            and [row["home_team_name"], row["away_team_name"]] == [source["team1"], source["team2"]]
++            and row["home_team_id"] is not None and row["away_team_id"] is not None)
++
++
++def prepare_bundesliga(conn, loader, season, matches, input_approved, goal_rows, goal_columns):
++    cases = SEASONS.get(str(season))
++    if not cases:
++        return []
++    source = {m["key"]: m for m in matches}
++    if not any(key.startswith(f"r:deutschland/{season}-") for key in source):
++        return []
++    known = {key: ident for key, ident in conn.execute(
++        "SELECT archive_key,id FROM core.matches WHERE season_id=%s AND archive_key=ANY(%s)",
++        (season, [m["key"] for c in cases for m in (c["match"], c.get("goals_observation")) if m]),
++    ).fetchall()}
++    if not known and not input_approved:
++        return []
++    aliases = dict(conn.execute(
++        "SELECT canonical_key,to_jsonb(a) FROM core.archive_match_attestations a WHERE season_id=%s", (season,),
++    ).fetchall())
++    physical = loader.bind(season, known.values())
++    editions = dict(conn.execute(
++        "SELECT id,to_jsonb(cs) FROM core.competition_seasons cs WHERE id=ANY(%s)",
++        (sorted({p["row"]["competition_season_id"] for p in physical.values() if p["row"]}),),
++    ).fetchall())
++    out = []
++    for case in cases:
++        match, goals = case["match"], case.get("goals_observation")
++        rk, gk = match["key"], goals and goals["key"]
++        if rk not in source and rk not in known:
++            continue
++        r, g, alias = physical.get(known.get(rk)), physical.get(known.get(gk)), aliases.get(rk)
++        digest = _digest(case)
++        bound_edition = editions.get(r["row"]["competition_season_id"]) if r else None
++        round_id = r["row"]["round_id"] if r else None
++        round_row = conn.execute("SELECT to_jsonb(r) FROM core.rounds r WHERE id=%s", (round_id,)).fetchone() if round_id else None
++        item = {"proof": case, "sha256": digest, "result": r, "origin": g, "alias": alias,
++                "edition": bound_edition, "round": round_row[0] if round_row else None}
++        out.append(item)
++        held = None
++        if (not input_approved or source.get(rk) != match or (gk and source.get(gk) != goals)):
++            held = "attestation_inputs_changed"
++        elif alias:
++            if not r or g or alias["proof_sha256"] != digest or alias["former_key"] != gk or alias["match_id"] != r["row"]["id"]:
++                held = "archive_alias_conflict"
++            elif not _matches_native(r["row"], match, case["new_date"], bound_edition):
++                held = "attested_result_changed"
++        elif r:
++            row = r["row"]
++            if r["dependents"] or not _matches_native(row, match, case["prior_date"], bound_edition):
++                held = "attested_result_changed"
++            elif goals:
++                historical = g and g["row"]
++                if (not historical or historical["competition_season_id"] != row["competition_season_id"]
++                        or not _matches_native(historical, goals, goals["date"], bound_edition) or r["events"] or g["dependents"]
++                        or not all(event["event_type"] == "goal" and all(event[c] is None for c in
++                                   ("period", "player_id", "related_player_id", "is_own_goal", "is_penalty")) for event in g["events"])
++                        or [_event_values(event, goal_columns) for event in g["events"]] !=
++                           goal_rows(goals, historical["home_team_id"], historical["away_team_id"])):
++                    held = "attested_goal_transfer_changed"
++            elif [_event_values(event, goal_columns) for event in r["events"]] != goal_rows(
++                    match, row["home_team_id"], row["away_team_id"]):
++                held = "attested_date_events_changed"
++        elif g:
++            held = "attested_result_missing"
++        item["class"] = "held" if held else "unchanged" if alias else "change" if r else "new"
++        if held:
++            item["reason"] = held
++    return out
++
++
++def project(matches, decisions):
++    keep = {}
++    hidden = set()
++    for entry in decisions:
++        case, status = entry["proof"], entry["class"]
++        match, goals = case["match"], case.get("goals_observation")
++        rk, gk = match["key"], goals and goals["key"]
++        if status == "held":
++            continue
++        if gk:
++            hidden.add(gk)
++        keep[rk] = {**match, "date":case["new_date"], "goals":goals["goals"] if goals else match.get("goals")}
++        if "new_score" in case:
++            keep[rk]["score"] = case["new_score"]
++    selected = [keep.get(m["key"], m) for m in matches if m["key"] not in hidden]
++    selected.sort(key=lambda m: m["key"])
++    selected.sort(key=lambda m: m.get("date") or "", reverse=True)
++    return selected
++
++
++def apply_existing(conn, loader, season, decisions, plan_sha256):
++    changed = [e for e in decisions if e["class"] == "change"]
++    if not changed:
++        return False
++    conn.execute("SELECT ops.archive_lock_references()")
++    edition_ids = sorted({e["edition"]["id"] for e in changed})
++    round_ids = sorted({e["round"]["id"] for e in changed if e["round"]})
++    editions = dict(conn.execute("SELECT id,to_jsonb(cs) FROM core.competition_seasons cs WHERE id=ANY(%s) ORDER BY id FOR SHARE", (edition_ids,)).fetchall())
++    rounds = dict(conn.execute("SELECT id,to_jsonb(r) FROM core.rounds r WHERE id=ANY(%s) ORDER BY id FOR SHARE", (round_ids,)).fetchall())
++    for entry in changed:
++        if editions.get(entry["edition"]["id"]) != entry["edition"]:
++            return None
++        if entry["round"] and rounds.get(entry["round"]["id"]) != entry["round"]:
++            return None
++    ids = [p["row"]["id"] for entry in changed for f in ("result", "origin") if (p := entry[f])]
++    found = loader.bind(season, ids)
++    for entry in changed:
++        for kind in ("result", "origin"):
++            bound = entry[kind]
++            if bound and found[bound["row"]["id"]] != bound:
++                return None
++    for entry in changed:
++        case, origin, retained = entry["proof"], entry["origin"], entry["result"]["row"]
++        match_id = retained["id"]
++        if origin:
++            old_id = origin["row"]["id"]
++            conn.execute(
++                """UPDATE core.match_events SET match_id=%s,team_id=CASE WHEN team_id=%s THEN %s ELSE %s END
++                   WHERE season_id=%s AND match_id=%s""",
++                (match_id, origin["row"]["home_team_id"], retained["home_team_id"], retained["away_team_id"], season, old_id),
++            )
++            moved = [event for (event,) in conn.execute(
++                "SELECT to_jsonb(e) FROM core.match_events e WHERE season_id=%s AND match_id=%s ORDER BY seq",
++                (season, match_id),
++            ).fetchall()]
++            expected = [{**event, "match_id":match_id, "team_id":retained[f"{witness['side']}_team_id"]}
++                        for event, witness in zip(origin["events"], case["goal_witnesses"], strict=True)]
++            if moved != expected:
++                return None
++            conn.execute("""INSERT INTO ops.archive_removals(kind,id,season_id,archive_key,plan_sha256)
++                            VALUES ('match',%s,%s,%s,%s)""", (old_id, season, origin["row"]["archive_key"], plan_sha256))
++            conn.execute("DELETE FROM core.matches WHERE id=%s AND season_id=%s", (old_id, season))
++    return True
++
++
++def record(conn, season, decisions):
++    for entry in decisions:
++        if entry["class"] not in ("change", "new"):
++            continue
++        case = entry["proof"]
++        rk, g = case["match"]["key"], case.get("goals_observation")
++        retain, home, away = conn.execute(
++            "SELECT id,home_score,away_score FROM core.matches WHERE season_id=%s AND archive_key=%s AND match_date=%s",
++            (season, rk, case["new_date"]),
++        ).fetchone()
++        if "new_score" in case and [home, away] != case["new_score"]:
++            raise RuntimeError(f"certified outcome {rk} was not written")
++        authority = case.get("authority_key") or "dfb:" + case["official"]["dfb_id"]
++        old_id = entry["origin"] and entry["origin"]["row"]["id"]
++        conn.execute(
++            """INSERT INTO core.archive_match_attestations
++               (season_id,match_id,canonical_key,former_key,former_id,canonical_date,authority_key,proof_sha256,proof)
++               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
++            (season, retain, rk, g and g["key"], old_id, case["new_date"], authority,
++             entry["sha256"], Jsonb(case)),
++        )

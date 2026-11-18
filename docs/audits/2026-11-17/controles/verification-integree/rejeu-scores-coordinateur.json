@@ -1,0 +1,39 @@
+{
+  "sha256": "c41e792cf4a3c256a21e64bff02d24a9f21b9532aa1f2dc59ca714de79e3abec",
+  "archive_members": 368,
+  "runs": [
+    {
+      "command": [
+        "/usr/bin/sandbox-exec",
+        "-p",
+        "(version 1) (allow default) (deny network*)",
+        "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/ci-clean/bin/python",
+        "-I",
+        "-B",
+        "verifier.py"
+      ],
+      "returncode": 0,
+      "expected": 0,
+      "last_lines": [
+        "{\"derived_files\": 9, \"files_checked\": 367, \"rows\": {\"edition\": 6447, \"pending\": 10, \"season\": 471}, \"source_queries_per_snapshot\": [52, 53, 56], \"source_snapshots\": 3}"
+      ]
+    },
+    {
+      "command": [
+        "/usr/bin/sandbox-exec",
+        "-p",
+        "(version 1) (allow default) (deny network*)",
+        "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/ci-clean/bin/python",
+        "-I",
+        "-B",
+        "verifier.py",
+        "--negative"
+      ],
+      "returncode": 1,
+      "expected": 1,
+      "last_lines": [
+        "liaison hors du catalogue exact · -1"
+      ]
+    }
+  ]
+}

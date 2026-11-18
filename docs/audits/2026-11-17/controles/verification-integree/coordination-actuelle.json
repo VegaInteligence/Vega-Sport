@@ -1,207 +1,167 @@
 {
-  "readUtc": "2026-11-18T17:52:45.535Z",
-  "observations": [
-    {
-      "issues": [
-        {
-          "id": "VI-21",
-          "title": "Audit de la plateforme : cohérence, sources de données sans doublon, une note pour chaque club, match et joueur",
-          "status": "In Progress",
-          "statusType": "started",
-          "updatedAt": "2026-11-18T17:23:50.960Z",
-          "completedAt": null,
-          "labels": [
-            "repo:vega-sport"
-          ],
-          "url": "https://linear.app/vegainteligence/issue/VI-21/audit-de-la-plateforme-coherence-sources-de-donnees-sans-doublon-une"
-        },
-        {
-          "id": "VI-29",
-          "title": "Préserver le dernier classement officiel SportScore après un retour incomplet",
-          "status": "In Progress",
-          "statusType": "started",
-          "updatedAt": "2026-11-18T17:05:16.370Z",
-          "completedAt": null,
-          "labels": [
-            "repo:vega-sport"
-          ],
-          "url": "https://linear.app/vegainteligence/issue/VI-29/preserver-le-dernier-classement-officiel-sportscore-apres-un-retour"
-        },
-        {
-          "id": "VI-27",
-          "title": "Vérifier les couvertures en production et protéger les résultats des imports complémentaires",
-          "status": "In Progress",
-          "statusType": "started",
-          "updatedAt": "2026-11-18T16:50:58.807Z",
-          "completedAt": null,
-          "labels": [
-            "repo:vega-sport"
-          ],
-          "url": "https://linear.app/vegainteligence/issue/VI-27/verifier-les-couvertures-en-production-et-proteger-les-resultats-des"
-        },
-        {
-          "id": "VI-31",
-          "title": "Préserver les transferts et les contrats datés lors des relectures Transfermarkt",
-          "status": "In Progress",
-          "statusType": "started",
-          "updatedAt": "2026-11-18T15:55:38.504Z",
-          "completedAt": null,
-          "labels": [
-            "repo:vega-sport"
-          ],
-          "url": "https://linear.app/vegainteligence/issue/VI-31/preserver-les-transferts-et-les-contrats-dates-lors-des-relectures"
-        },
-        {
-          "id": "VI-30",
-          "title": "Rendre les vrais blasons déjà liés sur les fiches et les rencontres de coupe",
-          "status": "In Progress",
-          "statusType": "started",
-          "updatedAt": "2026-11-18T14:43:55.058Z",
-          "completedAt": null,
-          "labels": [
-            "repo:vega-sport"
-          ],
-          "url": "https://linear.app/vegainteligence/issue/VI-30/rendre-les-vrais-blasons-deja-lies-sur-les-fiches-et-les-rencontres-de"
-        },
-        {
-          "id": "VI-32",
-          "title": "Conserver le même entier pour une note Vega avant et après le chargement du classement",
-          "status": "In Progress",
-          "statusType": "started",
-          "updatedAt": "2026-11-18T12:51:51.291Z",
-          "completedAt": null,
-          "labels": [
-            "repo:vega-sport"
-          ],
-          "url": "https://linear.app/vegainteligence/issue/VI-32/conserver-le-meme-entier-pour-une-note-vega-avant-et-apres-le"
-        },
-        {
-          "id": "VI-28",
-          "title": "Publier la couverture des statistiques par mi-temps et préserver les mesures disponibles",
-          "status": "In Progress",
-          "statusType": "started",
-          "updatedAt": "2026-11-18T12:51:50.525Z",
-          "completedAt": null,
-          "labels": [
-            "repo:vega-sport"
-          ],
-          "url": "https://linear.app/vegainteligence/issue/VI-28/publier-la-couverture-des-statistiques-par-mi-temps-et-preserver-les"
-        },
-        {
-          "id": "VI-19",
-          "title": "Prédictions des coupes : phases de ligue européennes et chances par tour",
-          "status": "In Progress",
-          "statusType": "started",
-          "updatedAt": "2026-11-18T12:51:49.504Z",
-          "completedAt": null,
-          "labels": [
-            "repo:vega-sport"
-          ],
-          "url": "https://linear.app/vegainteligence/issue/VI-19/predictions-des-coupes-phases-de-ligue-europeennes-et-chances-par-tour"
-        }
-      ],
-      "hasNextPage": false
-    },
-    {
-      "issues": [
-        {
-          "id": "VI-22",
-          "title": "Page club et compétitions : clubs similaires sur toute la base, liens vers clubs et matchs, classement UEFA absent, bandeau des championnats à la une",
-          "status": "Done",
-          "statusType": "completed",
-          "updatedAt": "2026-11-17T22:05:21.081Z",
-          "completedAt": "2026-11-17T10:16:55.051Z",
-          "labels": [
-            "repo:vega-sport"
-          ],
-          "url": "https://linear.app/vegainteligence/issue/VI-22/page-club-et-competitions-clubs-similaires-sur-toute-la-base-liens"
-        },
-        {
-          "id": "VI-23",
-          "title": "Audit calculs : corriger les agrégats et la couverture hors des chantiers actifs",
-          "status": "Done",
-          "statusType": "completed",
-          "updatedAt": "2026-11-17T22:05:21.081Z",
-          "completedAt": "2026-11-17T18:15:10.548Z",
-          "labels": [
-            "repo:vega-sport"
-          ],
-          "url": "https://linear.app/vegainteligence/issue/VI-23/audit-calculs-corriger-les-agregats-et-la-couverture-hors-des"
-        },
-        {
-          "id": "VI-26",
-          "title": "Cohortes : un délai maximal pour celles qu'on remarque sans cesse",
-          "status": "Done",
-          "statusType": "completed",
-          "updatedAt": "2026-11-17T18:16:43.071Z",
-          "completedAt": "2026-11-17T18:15:07.879Z",
-          "labels": [
-            "repo:vega-sport"
-          ],
-          "url": "https://linear.app/vegainteligence/issue/VI-26/cohortes-un-delai-maximal-pour-celles-quon-remarque-sans-cesse"
-        },
-        {
-          "id": "VI-25",
-          "title": "Worker et CI en Python 3.14",
-          "status": "Done",
-          "statusType": "completed",
-          "updatedAt": "2026-11-17T14:26:56.959Z",
-          "completedAt": "2026-11-17T14:26:56.941Z",
-          "labels": [
-            "repo:vega-sport"
-          ],
-          "url": "https://linear.app/vegainteligence/issue/VI-25/worker-et-ci-en-python-314"
-        },
-        {
-          "id": "VI-24",
-          "title": "Dépendances et outils à jour : site, API, worker et CI",
-          "status": "Done",
-          "statusType": "completed",
-          "updatedAt": "2026-11-17T11:48:03.945Z",
-          "completedAt": "2026-11-17T11:31:13.295Z",
-          "labels": [
-            "repo:vega-sport"
-          ],
-          "url": "https://linear.app/vegainteligence/issue/VI-24/dependances-et-outils-a-jour-site-api-worker-et-ci"
-        },
-        {
-          "id": "VI-17",
-          "title": "Pages joueur et club : barre de filtres unique, profil statistique façon club, palmarès dans la colonne",
-          "status": "Done",
-          "statusType": "completed",
-          "updatedAt": "2026-11-16T22:40:35.580Z",
-          "completedAt": "2026-11-16T20:11:07.509Z",
-          "labels": [
-            "repo:vega-sport"
-          ],
-          "url": "https://linear.app/vegainteligence/issue/VI-17/pages-joueur-et-club-barre-de-filtres-unique-profil-statistique-facon"
-        },
-        {
-          "id": "VI-18",
-          "title": "Pages nations : index des sélections et page par sélection",
-          "status": "Done",
-          "statusType": "completed",
-          "updatedAt": "2026-11-16T22:40:35.580Z",
-          "completedAt": "2026-11-16T21:01:35.607Z",
-          "labels": [
-            "repo:vega-sport"
-          ],
-          "url": "https://linear.app/vegainteligence/issue/VI-18/pages-nations-index-des-selections-et-page-par-selection"
-        },
-        {
-          "id": "VI-20",
-          "title": "Sélections : une équipe par nation et tous leurs matchs dans l'Elo",
-          "status": "Done",
-          "statusType": "completed",
-          "updatedAt": "2026-11-16T22:40:35.578Z",
-          "completedAt": "2026-11-16T21:37:40.515Z",
-          "labels": [
-            "repo:vega-sport"
-          ],
-          "url": "https://linear.app/vegainteligence/issue/VI-20/selections-une-equipe-par-nation-et-tous-leurs-matchs-dans-lelo"
-        }
-      ],
-      "hasNextPage": false
-    }
-  ]
+  "active": {
+    "issues": [
+      {
+        "id": "VI-29",
+        "title": "Préserver le dernier classement officiel SportScore après un retour incomplet",
+        "status": "In Progress",
+        "updatedAt": "2026-11-18T19:15:01.113Z",
+        "labels": [
+          "repo:vega-sport"
+        ]
+      },
+      {
+        "id": "VI-27",
+        "title": "Vérifier les couvertures en production et protéger les résultats des imports complémentaires",
+        "status": "In Progress",
+        "updatedAt": "2026-11-18T19:15:00.143Z",
+        "labels": [
+          "repo:vega-sport"
+        ]
+      },
+      {
+        "id": "VI-21",
+        "title": "Audit de la plateforme : cohérence, sources de données sans doublon, une note pour chaque club, match et joueur",
+        "status": "In Progress",
+        "updatedAt": "2026-11-18T19:01:39.947Z",
+        "labels": [
+          "repo:vega-sport"
+        ]
+      },
+      {
+        "id": "VI-31",
+        "title": "Préserver les transferts et les contrats datés lors des relectures Transfermarkt",
+        "status": "In Progress",
+        "updatedAt": "2026-11-18T15:55:38.504Z",
+        "labels": [
+          "repo:vega-sport"
+        ]
+      },
+      {
+        "id": "VI-30",
+        "title": "Rendre les vrais blasons déjà liés sur les fiches et les rencontres de coupe",
+        "status": "In Progress",
+        "updatedAt": "2026-11-18T14:43:55.058Z",
+        "labels": [
+          "repo:vega-sport"
+        ]
+      },
+      {
+        "id": "VI-32",
+        "title": "Conserver le même entier pour une note Vega avant et après le chargement du classement",
+        "status": "In Progress",
+        "updatedAt": "2026-11-18T12:51:51.291Z",
+        "labels": [
+          "repo:vega-sport"
+        ]
+      },
+      {
+        "id": "VI-28",
+        "title": "Publier la couverture des statistiques par mi-temps et préserver les mesures disponibles",
+        "status": "In Progress",
+        "updatedAt": "2026-11-18T12:51:50.525Z",
+        "labels": [
+          "repo:vega-sport"
+        ]
+      },
+      {
+        "id": "VI-19",
+        "title": "Prédictions des coupes : phases de ligue européennes et chances par tour",
+        "status": "In Progress",
+        "updatedAt": "2026-11-18T12:51:49.504Z",
+        "labels": [
+          "repo:vega-sport"
+        ]
+      }
+    ],
+    "hasNextPage": false
+  },
+  "closed": {
+    "issues": [
+      {
+        "id": "VI-22",
+        "title": "Page club et compétitions : clubs similaires sur toute la base, liens vers clubs et matchs, classement UEFA absent, bandeau des championnats à la une",
+        "status": "Done",
+        "completedAt": "2026-11-17T10:16:55.051Z",
+        "labels": [
+          "repo:vega-sport"
+        ]
+      },
+      {
+        "id": "VI-23",
+        "title": "Audit calculs : corriger les agrégats et la couverture hors des chantiers actifs",
+        "status": "Done",
+        "completedAt": "2026-11-17T18:15:10.548Z",
+        "labels": [
+          "repo:vega-sport"
+        ]
+      },
+      {
+        "id": "VI-26",
+        "title": "Cohortes : un délai maximal pour celles qu'on remarque sans cesse",
+        "status": "Done",
+        "completedAt": "2026-11-17T18:15:07.879Z",
+        "labels": [
+          "repo:vega-sport"
+        ]
+      },
+      {
+        "id": "VI-25",
+        "title": "Worker et CI en Python 3.14",
+        "status": "Done",
+        "completedAt": "2026-11-17T14:26:56.941Z",
+        "labels": [
+          "repo:vega-sport"
+        ]
+      },
+      {
+        "id": "VI-24",
+        "title": "Dépendances et outils à jour : site, API, worker et CI",
+        "status": "Done",
+        "completedAt": "2026-11-17T11:31:13.295Z",
+        "labels": [
+          "repo:vega-sport"
+        ]
+      },
+      {
+        "id": "VI-17",
+        "title": "Pages joueur et club : barre de filtres unique, profil statistique façon club, palmarès dans la colonne",
+        "status": "Done",
+        "completedAt": "2026-11-16T20:11:07.509Z",
+        "labels": [
+          "repo:vega-sport"
+        ]
+      },
+      {
+        "id": "VI-18",
+        "title": "Pages nations : index des sélections et page par sélection",
+        "status": "Done",
+        "completedAt": "2026-11-16T21:01:35.607Z",
+        "labels": [
+          "repo:vega-sport"
+        ]
+      },
+      {
+        "id": "VI-20",
+        "title": "Sélections : une équipe par nation et tous leurs matchs dans l'Elo",
+        "status": "Done",
+        "completedAt": "2026-11-16T21:37:40.515Z",
+        "labels": [
+          "repo:vega-sport"
+        ]
+      }
+    ],
+    "hasNextPage": false
+  },
+  "worldcup": {
+    "issues": [
+      {
+        "id": "VI-21",
+        "title": "Audit de la plateforme : cohérence, sources de données sans doublon, une note pour chaque club, match et joueur",
+        "status": "In Progress",
+        "updatedAt": "2026-11-18T19:01:39.947Z"
+      }
+    ],
+    "hasNextPage": false
+  }
 }

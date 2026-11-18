@@ -1,0 +1,3719 @@
+{
+  "revision": "34ca3b5b382d7a6a06da9d051170096ba1d700e8",
+  "synthetic": true,
+  "database": "PostgreSQL 18.6",
+  "migrations": 153,
+  "clock": "2026-11-18T13:00:00+00:00",
+  "hashes": {
+    "vega/transfermarkt.py": "46ce75a96e4d37f06d47211aa1e1835367198c36bd09375fa8e9e4bd1f67d81d",
+    "api/src/routes/profiles.mjs": "170b5312bdca097c769ea0acc43ee8dd04d598c04a56520fa977250de240ed96",
+    "api/src/http.mjs": "f841943ade4051696abbf60e603f862b8828f52a058acdecf94920dfa7e14cff",
+    "sql/135_player_transfers.sql": "131c37b1f505a7d7377de019e522a880bfad4c25005f6e039c33e308e29a6e94",
+    "sql/116_player_fouls_and_injuries.sql": "2397dfa40676bced187f65d9c9e849043886d4da1e9068bcf8b26a95ee32d9f5"
+  },
+  "observations": [
+    {
+      "scenario": "values_empty",
+      "initial": {
+        "outcome": "ok",
+        "requests": [
+          [
+            "/player/912345/market-value-history",
+            []
+          ]
+        ],
+        "http_status": 200,
+        "data": {
+          "history": [
+            {
+              "marketValue": {
+                "determined": "2025-01-01T00:00:00Z",
+                "value": 1000000
+              },
+              "clubId": "47771"
+            },
+            {
+              "marketValue": {
+                "determined": "2025-02-01T00:00:00Z",
+                "value": 2000000
+              },
+              "clubId": "47771"
+            }
+          ]
+        },
+        "raw_text": null
+      },
+      "before": {
+        "stored": [
+          [
+            "2025-01-01",
+            1000000
+          ],
+          [
+            "2025-02-01",
+            2000000
+          ]
+        ],
+        "queue": {
+          "http": 200,
+          "error": null,
+          "written": 2,
+          "read": true,
+          "attempts": 0
+        },
+        "sentinel_untouched": 1,
+        "http": {
+          "get": {
+            "status": 200,
+            "etag": "W/\"profile-v1-1d6f2a04cfd0a3d7ce9ce5566840fdf731f50b5176d82952474136ab3dd43624\"",
+            "body": {
+              "data": {
+                "currency": "EUR",
+                "source": "Transfermarkt",
+                "history": [
+                  {
+                    "date": "2025-01-01",
+                    "valueEur": 1000000,
+                    "club": {
+                      "id": "t_v0000071",
+                      "name": "Club synthétique un"
+                    }
+                  },
+                  {
+                    "date": "2025-02-01",
+                    "valueEur": 2000000,
+                    "club": {
+                      "id": "t_v0000071",
+                      "name": "Club synthétique un"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "outcome": "ok",
+        "requests": [
+          [
+            "/player/912345/market-value-history",
+            []
+          ]
+        ],
+        "http_status": 200,
+        "data": {
+          "history": []
+        },
+        "raw_text": null
+      },
+      "after": {
+        "stored": [
+          [
+            "2025-01-01",
+            1000000
+          ],
+          [
+            "2025-02-01",
+            2000000
+          ]
+        ],
+        "queue": {
+          "http": 200,
+          "error": null,
+          "written": 0,
+          "read": true,
+          "attempts": 0
+        },
+        "sentinel_untouched": 1,
+        "http": {
+          "get": {
+            "status": 200,
+            "etag": "W/\"profile-v1-1d6f2a04cfd0a3d7ce9ce5566840fdf731f50b5176d82952474136ab3dd43624\"",
+            "body": {
+              "data": {
+                "currency": "EUR",
+                "source": "Transfermarkt",
+                "history": [
+                  {
+                    "date": "2025-01-01",
+                    "valueEur": 1000000,
+                    "club": {
+                      "id": "t_v0000071",
+                      "name": "Club synthétique un"
+                    }
+                  },
+                  {
+                    "date": "2025-02-01",
+                    "valueEur": 2000000,
+                    "club": {
+                      "id": "t_v0000071",
+                      "name": "Club synthétique un"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "conditional": {
+            "status": 304,
+            "etag": "W/\"profile-v1-1d6f2a04cfd0a3d7ce9ce5566840fdf731f50b5176d82952474136ab3dd43624\"",
+            "body": null
+          }
+        }
+      }
+    },
+    {
+      "scenario": "values_missing_key",
+      "initial": {
+        "outcome": "ok",
+        "requests": [
+          [
+            "/player/912345/market-value-history",
+            []
+          ]
+        ],
+        "http_status": 200,
+        "data": {
+          "history": [
+            {
+              "marketValue": {
+                "determined": "2025-01-01T00:00:00Z",
+                "value": 1000000
+              },
+              "clubId": "47771"
+            },
+            {
+              "marketValue": {
+                "determined": "2025-02-01T00:00:00Z",
+                "value": 2000000
+              },
+              "clubId": "47771"
+            }
+          ]
+        },
+        "raw_text": null
+      },
+      "before": {
+        "stored": [
+          [
+            "2025-01-01",
+            1000000
+          ],
+          [
+            "2025-02-01",
+            2000000
+          ]
+        ],
+        "queue": {
+          "http": 200,
+          "error": null,
+          "written": 2,
+          "read": true,
+          "attempts": 0
+        },
+        "sentinel_untouched": 1,
+        "http": {
+          "get": {
+            "status": 200,
+            "etag": "W/\"profile-v1-1d6f2a04cfd0a3d7ce9ce5566840fdf731f50b5176d82952474136ab3dd43624\"",
+            "body": {
+              "data": {
+                "currency": "EUR",
+                "source": "Transfermarkt",
+                "history": [
+                  {
+                    "date": "2025-01-01",
+                    "valueEur": 1000000,
+                    "club": {
+                      "id": "t_v0000071",
+                      "name": "Club synthétique un"
+                    }
+                  },
+                  {
+                    "date": "2025-02-01",
+                    "valueEur": 2000000,
+                    "club": {
+                      "id": "t_v0000071",
+                      "name": "Club synthétique un"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "outcome": "ok",
+        "requests": [
+          [
+            "/player/912345/market-value-history",
+            []
+          ]
+        ],
+        "http_status": 200,
+        "data": {},
+        "raw_text": null
+      },
+      "after": {
+        "stored": [
+          [
+            "2025-01-01",
+            1000000
+          ],
+          [
+            "2025-02-01",
+            2000000
+          ]
+        ],
+        "queue": {
+          "http": 200,
+          "error": null,
+          "written": 0,
+          "read": true,
+          "attempts": 0
+        },
+        "sentinel_untouched": 1,
+        "http": {
+          "get": {
+            "status": 200,
+            "etag": "W/\"profile-v1-1d6f2a04cfd0a3d7ce9ce5566840fdf731f50b5176d82952474136ab3dd43624\"",
+            "body": {
+              "data": {
+                "currency": "EUR",
+                "source": "Transfermarkt",
+                "history": [
+                  {
+                    "date": "2025-01-01",
+                    "valueEur": 1000000,
+                    "club": {
+                      "id": "t_v0000071",
+                      "name": "Club synthétique un"
+                    }
+                  },
+                  {
+                    "date": "2025-02-01",
+                    "valueEur": 2000000,
+                    "club": {
+                      "id": "t_v0000071",
+                      "name": "Club synthétique un"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "conditional": {
+            "status": 304,
+            "etag": "W/\"profile-v1-1d6f2a04cfd0a3d7ce9ce5566840fdf731f50b5176d82952474136ab3dd43624\"",
+            "body": null
+          }
+        }
+      }
+    },
+    {
+      "scenario": "values_truncated",
+      "initial": {
+        "outcome": "ok",
+        "requests": [
+          [
+            "/player/912345/market-value-history",
+            []
+          ]
+        ],
+        "http_status": 200,
+        "data": {
+          "history": [
+            {
+              "marketValue": {
+                "determined": "2025-01-01T00:00:00Z",
+                "value": 1000000
+              },
+              "clubId": "47771"
+            },
+            {
+              "marketValue": {
+                "determined": "2025-02-01T00:00:00Z",
+                "value": 2000000
+              },
+              "clubId": "47771"
+            }
+          ]
+        },
+        "raw_text": null
+      },
+      "before": {
+        "stored": [
+          [
+            "2025-01-01",
+            1000000
+          ],
+          [
+            "2025-02-01",
+            2000000
+          ]
+        ],
+        "queue": {
+          "http": 200,
+          "error": null,
+          "written": 2,
+          "read": true,
+          "attempts": 0
+        },
+        "sentinel_untouched": 1,
+        "http": {
+          "get": {
+            "status": 200,
+            "etag": "W/\"profile-v1-1d6f2a04cfd0a3d7ce9ce5566840fdf731f50b5176d82952474136ab3dd43624\"",
+            "body": {
+              "data": {
+                "currency": "EUR",
+                "source": "Transfermarkt",
+                "history": [
+                  {
+                    "date": "2025-01-01",
+                    "valueEur": 1000000,
+                    "club": {
+                      "id": "t_v0000071",
+                      "name": "Club synthétique un"
+                    }
+                  },
+                  {
+                    "date": "2025-02-01",
+                    "valueEur": 2000000,
+                    "club": {
+                      "id": "t_v0000071",
+                      "name": "Club synthétique un"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "outcome": "ok",
+        "requests": [
+          [
+            "/player/912345/market-value-history",
+            []
+          ]
+        ],
+        "http_status": 200,
+        "data": {
+          "history": [
+            {
+              "marketValue": {
+                "determined": "2025-01-01T00:00:00Z",
+                "value": 1000000
+              },
+              "clubId": "47771"
+            }
+          ]
+        },
+        "raw_text": null
+      },
+      "after": {
+        "stored": [
+          [
+            "2025-01-01",
+            1000000
+          ]
+        ],
+        "queue": {
+          "http": 200,
+          "error": null,
+          "written": 1,
+          "read": true,
+          "attempts": 0
+        },
+        "sentinel_untouched": 1,
+        "http": {
+          "get": {
+            "status": 200,
+            "etag": "W/\"profile-v1-f80446a394d538fd611a06c014b84c39b3c319476a736acca8eecd07fd3efcdf\"",
+            "body": {
+              "data": {
+                "currency": "EUR",
+                "source": "Transfermarkt",
+                "history": [
+                  {
+                    "date": "2025-01-01",
+                    "valueEur": 1000000,
+                    "club": {
+                      "id": "t_v0000071",
+                      "name": "Club synthétique un"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "conditional": {
+            "status": 200,
+            "etag": "W/\"profile-v1-f80446a394d538fd611a06c014b84c39b3c319476a736acca8eecd07fd3efcdf\"",
+            "body": {
+              "data": {
+                "currency": "EUR",
+                "source": "Transfermarkt",
+                "history": [
+                  {
+                    "date": "2025-01-01",
+                    "valueEur": 1000000,
+                    "club": {
+                      "id": "t_v0000071",
+                      "name": "Club synthétique un"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "scenario": "values_invalid_member",
+      "initial": {
+        "outcome": "ok",
+        "requests": [
+          [
+            "/player/912345/market-value-history",
+            []
+          ]
+        ],
+        "http_status": 200,
+        "data": {
+          "history": [
+            {
+              "marketValue": {
+                "determined": "2025-01-01T00:00:00Z",
+                "value": 1000000
+              },
+              "clubId": "47771"
+            },
+            {
+              "marketValue": {
+                "determined": "2025-02-01T00:00:00Z",
+                "value": 2000000
+              },
+              "clubId": "47771"
+            }
+          ]
+        },
+        "raw_text": null
+      },
+      "before": {
+        "stored": [
+          [
+            "2025-01-01",
+            1000000
+          ],
+          [
+            "2025-02-01",
+            2000000
+          ]
+        ],
+        "queue": {
+          "http": 200,
+          "error": null,
+          "written": 2,
+          "read": true,
+          "attempts": 0
+        },
+        "sentinel_untouched": 1,
+        "http": {
+          "get": {
+            "status": 200,
+            "etag": "W/\"profile-v1-1d6f2a04cfd0a3d7ce9ce5566840fdf731f50b5176d82952474136ab3dd43624\"",
+            "body": {
+              "data": {
+                "currency": "EUR",
+                "source": "Transfermarkt",
+                "history": [
+                  {
+                    "date": "2025-01-01",
+                    "valueEur": 1000000,
+                    "club": {
+                      "id": "t_v0000071",
+                      "name": "Club synthétique un"
+                    }
+                  },
+                  {
+                    "date": "2025-02-01",
+                    "valueEur": 2000000,
+                    "club": {
+                      "id": "t_v0000071",
+                      "name": "Club synthétique un"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "outcome": "ok",
+        "requests": [
+          [
+            "/player/912345/market-value-history",
+            []
+          ]
+        ],
+        "http_status": 200,
+        "data": {
+          "history": [
+            {
+              "marketValue": {
+                "determined": "2025-01-01T00:00:00Z",
+                "value": 1000000
+              },
+              "clubId": "47771"
+            },
+            {
+              "unexpected": true
+            }
+          ]
+        },
+        "raw_text": null
+      },
+      "after": {
+        "stored": [
+          [
+            "2025-01-01",
+            1000000
+          ]
+        ],
+        "queue": {
+          "http": 200,
+          "error": null,
+          "written": 1,
+          "read": true,
+          "attempts": 0
+        },
+        "sentinel_untouched": 1,
+        "http": {
+          "get": {
+            "status": 200,
+            "etag": "W/\"profile-v1-f80446a394d538fd611a06c014b84c39b3c319476a736acca8eecd07fd3efcdf\"",
+            "body": {
+              "data": {
+                "currency": "EUR",
+                "source": "Transfermarkt",
+                "history": [
+                  {
+                    "date": "2025-01-01",
+                    "valueEur": 1000000,
+                    "club": {
+                      "id": "t_v0000071",
+                      "name": "Club synthétique un"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "conditional": {
+            "status": 200,
+            "etag": "W/\"profile-v1-f80446a394d538fd611a06c014b84c39b3c319476a736acca8eecd07fd3efcdf\"",
+            "body": {
+              "data": {
+                "currency": "EUR",
+                "source": "Transfermarkt",
+                "history": [
+                  {
+                    "date": "2025-01-01",
+                    "valueEur": 1000000,
+                    "club": {
+                      "id": "t_v0000071",
+                      "name": "Club synthétique un"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "scenario": "values_wrong_type",
+      "initial": {
+        "outcome": "ok",
+        "requests": [
+          [
+            "/player/912345/market-value-history",
+            []
+          ]
+        ],
+        "http_status": 200,
+        "data": {
+          "history": [
+            {
+              "marketValue": {
+                "determined": "2025-01-01T00:00:00Z",
+                "value": 1000000
+              },
+              "clubId": "47771"
+            },
+            {
+              "marketValue": {
+                "determined": "2025-02-01T00:00:00Z",
+                "value": 2000000
+              },
+              "clubId": "47771"
+            }
+          ]
+        },
+        "raw_text": null
+      },
+      "before": {
+        "stored": [
+          [
+            "2025-01-01",
+            1000000
+          ],
+          [
+            "2025-02-01",
+            2000000
+          ]
+        ],
+        "queue": {
+          "http": 200,
+          "error": null,
+          "written": 2,
+          "read": true,
+          "attempts": 0
+        },
+        "sentinel_untouched": 1,
+        "http": {
+          "get": {
+            "status": 200,
+            "etag": "W/\"profile-v1-1d6f2a04cfd0a3d7ce9ce5566840fdf731f50b5176d82952474136ab3dd43624\"",
+            "body": {
+              "data": {
+                "currency": "EUR",
+                "source": "Transfermarkt",
+                "history": [
+                  {
+                    "date": "2025-01-01",
+                    "valueEur": 1000000,
+                    "club": {
+                      "id": "t_v0000071",
+                      "name": "Club synthétique un"
+                    }
+                  },
+                  {
+                    "date": "2025-02-01",
+                    "valueEur": 2000000,
+                    "club": {
+                      "id": "t_v0000071",
+                      "name": "Club synthétique un"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "outcome": "schema",
+        "requests": [
+          [
+            "/player/912345/market-value-history",
+            []
+          ]
+        ],
+        "http_status": 200,
+        "data": {
+          "history": {
+            "unexpected": true
+          }
+        },
+        "raw_text": null
+      },
+      "after": {
+        "stored": [
+          [
+            "2025-01-01",
+            1000000
+          ],
+          [
+            "2025-02-01",
+            2000000
+          ]
+        ],
+        "queue": {
+          "http": null,
+          "error": "SCHEMA_CHANGED",
+          "written": 2,
+          "read": true,
+          "attempts": 1
+        },
+        "sentinel_untouched": 1,
+        "http": {
+          "get": {
+            "status": 200,
+            "etag": "W/\"profile-v1-1d6f2a04cfd0a3d7ce9ce5566840fdf731f50b5176d82952474136ab3dd43624\"",
+            "body": {
+              "data": {
+                "currency": "EUR",
+                "source": "Transfermarkt",
+                "history": [
+                  {
+                    "date": "2025-01-01",
+                    "valueEur": 1000000,
+                    "club": {
+                      "id": "t_v0000071",
+                      "name": "Club synthétique un"
+                    }
+                  },
+                  {
+                    "date": "2025-02-01",
+                    "valueEur": 2000000,
+                    "club": {
+                      "id": "t_v0000071",
+                      "name": "Club synthétique un"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "conditional": {
+            "status": 304,
+            "etag": "W/\"profile-v1-1d6f2a04cfd0a3d7ce9ce5566840fdf731f50b5176d82952474136ab3dd43624\"",
+            "body": null
+          }
+        }
+      }
+    },
+    {
+      "scenario": "values_broken_json",
+      "initial": {
+        "outcome": "ok",
+        "requests": [
+          [
+            "/player/912345/market-value-history",
+            []
+          ]
+        ],
+        "http_status": 200,
+        "data": {
+          "history": [
+            {
+              "marketValue": {
+                "determined": "2025-01-01T00:00:00Z",
+                "value": 1000000
+              },
+              "clubId": "47771"
+            },
+            {
+              "marketValue": {
+                "determined": "2025-02-01T00:00:00Z",
+                "value": 2000000
+              },
+              "clubId": "47771"
+            }
+          ]
+        },
+        "raw_text": null
+      },
+      "before": {
+        "stored": [
+          [
+            "2025-01-01",
+            1000000
+          ],
+          [
+            "2025-02-01",
+            2000000
+          ]
+        ],
+        "queue": {
+          "http": 200,
+          "error": null,
+          "written": 2,
+          "read": true,
+          "attempts": 0
+        },
+        "sentinel_untouched": 1,
+        "http": {
+          "get": {
+            "status": 200,
+            "etag": "W/\"profile-v1-1d6f2a04cfd0a3d7ce9ce5566840fdf731f50b5176d82952474136ab3dd43624\"",
+            "body": {
+              "data": {
+                "currency": "EUR",
+                "source": "Transfermarkt",
+                "history": [
+                  {
+                    "date": "2025-01-01",
+                    "valueEur": 1000000,
+                    "club": {
+                      "id": "t_v0000071",
+                      "name": "Club synthétique un"
+                    }
+                  },
+                  {
+                    "date": "2025-02-01",
+                    "valueEur": 2000000,
+                    "club": {
+                      "id": "t_v0000071",
+                      "name": "Club synthétique un"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "outcome": "schema",
+        "requests": [
+          [
+            "/player/912345/market-value-history",
+            []
+          ]
+        ],
+        "http_status": 200,
+        "data": null,
+        "raw_text": "{\"success\":true,\"data\":{"
+      },
+      "after": {
+        "stored": [
+          [
+            "2025-01-01",
+            1000000
+          ],
+          [
+            "2025-02-01",
+            2000000
+          ]
+        ],
+        "queue": {
+          "http": 200,
+          "error": "SCHEMA_CHANGED",
+          "written": 2,
+          "read": true,
+          "attempts": 1
+        },
+        "sentinel_untouched": 1,
+        "http": {
+          "get": {
+            "status": 200,
+            "etag": "W/\"profile-v1-1d6f2a04cfd0a3d7ce9ce5566840fdf731f50b5176d82952474136ab3dd43624\"",
+            "body": {
+              "data": {
+                "currency": "EUR",
+                "source": "Transfermarkt",
+                "history": [
+                  {
+                    "date": "2025-01-01",
+                    "valueEur": 1000000,
+                    "club": {
+                      "id": "t_v0000071",
+                      "name": "Club synthétique un"
+                    }
+                  },
+                  {
+                    "date": "2025-02-01",
+                    "valueEur": 2000000,
+                    "club": {
+                      "id": "t_v0000071",
+                      "name": "Club synthétique un"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "conditional": {
+            "status": 304,
+            "etag": "W/\"profile-v1-1d6f2a04cfd0a3d7ce9ce5566840fdf731f50b5176d82952474136ab3dd43624\"",
+            "body": null
+          }
+        }
+      }
+    },
+    {
+      "scenario": "injuries_empty",
+      "initial": {
+        "outcome": "ok",
+        "requests": [
+          [
+            "/player/912345/injury",
+            []
+          ]
+        ],
+        "http_status": 200,
+        "data": {
+          "injuries": [
+            {
+              "name": "Knee injury",
+              "start": "2024-08-01",
+              "end": "2024-08-11",
+              "seasonId": 2024
+            },
+            {
+              "name": "Muscle injury",
+              "start": "2025-05-01",
+              "end": "2025-05-14",
+              "seasonId": 2024
+            }
+          ]
+        },
+        "raw_text": null
+      },
+      "before": {
+        "stored": [
+          [
+            "2024-08-01",
+            "Knee injury"
+          ],
+          [
+            "2025-05-01",
+            "Muscle injury"
+          ]
+        ],
+        "queue": {
+          "http": 200,
+          "error": null,
+          "written": 2,
+          "read": true,
+          "attempts": 0
+        },
+        "sentinel_untouched": 1,
+        "http": {
+          "get": {
+            "status": 200,
+            "etag": "W/\"profile-v1-39374b8d02e3e6afd05c520624e248fb00977c911564934fe5e4b2dd1a769245\"",
+            "body": {
+              "data": {
+                "id": "p_v0987654",
+                "injuries": [
+                  {
+                    "kind": "injury",
+                    "label": "Muscle injury",
+                    "start": "2025-05-01",
+                    "end": "2025-05-14",
+                    "days": 14,
+                    "matchesMissed": null,
+                    "season": 2024
+                  },
+                  {
+                    "kind": "injury",
+                    "label": "Knee injury",
+                    "start": "2024-08-01",
+                    "end": "2024-08-11",
+                    "days": 11,
+                    "matchesMissed": null,
+                    "season": 2024
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "outcome": "ok",
+        "requests": [
+          [
+            "/player/912345/injury",
+            []
+          ]
+        ],
+        "http_status": 200,
+        "data": {
+          "injuries": []
+        },
+        "raw_text": null
+      },
+      "after": {
+        "stored": [],
+        "queue": {
+          "http": 200,
+          "error": null,
+          "written": 0,
+          "read": true,
+          "attempts": 0
+        },
+        "sentinel_untouched": 1,
+        "http": {
+          "get": {
+            "status": 200,
+            "etag": "W/\"profile-v1-ef02418bc01655b2d831099e180d4b81bbb22fdeffaf70059532e403cb2ddbc1\"",
+            "body": {
+              "data": {
+                "id": "p_v0987654",
+                "injuries": []
+              }
+            }
+          },
+          "conditional": {
+            "status": 200,
+            "etag": "W/\"profile-v1-ef02418bc01655b2d831099e180d4b81bbb22fdeffaf70059532e403cb2ddbc1\"",
+            "body": {
+              "data": {
+                "id": "p_v0987654",
+                "injuries": []
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "scenario": "injuries_missing_key",
+      "initial": {
+        "outcome": "ok",
+        "requests": [
+          [
+            "/player/912345/injury",
+            []
+          ]
+        ],
+        "http_status": 200,
+        "data": {
+          "injuries": [
+            {
+              "name": "Knee injury",
+              "start": "2024-08-01",
+              "end": "2024-08-11",
+              "seasonId": 2024
+            },
+            {
+              "name": "Muscle injury",
+              "start": "2025-05-01",
+              "end": "2025-05-14",
+              "seasonId": 2024
+            }
+          ]
+        },
+        "raw_text": null
+      },
+      "before": {
+        "stored": [
+          [
+            "2024-08-01",
+            "Knee injury"
+          ],
+          [
+            "2025-05-01",
+            "Muscle injury"
+          ]
+        ],
+        "queue": {
+          "http": 200,
+          "error": null,
+          "written": 2,
+          "read": true,
+          "attempts": 0
+        },
+        "sentinel_untouched": 1,
+        "http": {
+          "get": {
+            "status": 200,
+            "etag": "W/\"profile-v1-39374b8d02e3e6afd05c520624e248fb00977c911564934fe5e4b2dd1a769245\"",
+            "body": {
+              "data": {
+                "id": "p_v0987654",
+                "injuries": [
+                  {
+                    "kind": "injury",
+                    "label": "Muscle injury",
+                    "start": "2025-05-01",
+                    "end": "2025-05-14",
+                    "days": 14,
+                    "matchesMissed": null,
+                    "season": 2024
+                  },
+                  {
+                    "kind": "injury",
+                    "label": "Knee injury",
+                    "start": "2024-08-01",
+                    "end": "2024-08-11",
+                    "days": 11,
+                    "matchesMissed": null,
+                    "season": 2024
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "outcome": "ok",
+        "requests": [
+          [
+            "/player/912345/injury",
+            []
+          ]
+        ],
+        "http_status": 200,
+        "data": {},
+        "raw_text": null
+      },
+      "after": {
+        "stored": [],
+        "queue": {
+          "http": 200,
+          "error": null,
+          "written": 0,
+          "read": true,
+          "attempts": 0
+        },
+        "sentinel_untouched": 1,
+        "http": {
+          "get": {
+            "status": 200,
+            "etag": "W/\"profile-v1-ef02418bc01655b2d831099e180d4b81bbb22fdeffaf70059532e403cb2ddbc1\"",
+            "body": {
+              "data": {
+                "id": "p_v0987654",
+                "injuries": []
+              }
+            }
+          },
+          "conditional": {
+            "status": 200,
+            "etag": "W/\"profile-v1-ef02418bc01655b2d831099e180d4b81bbb22fdeffaf70059532e403cb2ddbc1\"",
+            "body": {
+              "data": {
+                "id": "p_v0987654",
+                "injuries": []
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "scenario": "injuries_truncated",
+      "initial": {
+        "outcome": "ok",
+        "requests": [
+          [
+            "/player/912345/injury",
+            []
+          ]
+        ],
+        "http_status": 200,
+        "data": {
+          "injuries": [
+            {
+              "name": "Knee injury",
+              "start": "2024-08-01",
+              "end": "2024-08-11",
+              "seasonId": 2024
+            },
+            {
+              "name": "Muscle injury",
+              "start": "2025-05-01",
+              "end": "2025-05-14",
+              "seasonId": 2024
+            }
+          ]
+        },
+        "raw_text": null
+      },
+      "before": {
+        "stored": [
+          [
+            "2024-08-01",
+            "Knee injury"
+          ],
+          [
+            "2025-05-01",
+            "Muscle injury"
+          ]
+        ],
+        "queue": {
+          "http": 200,
+          "error": null,
+          "written": 2,
+          "read": true,
+          "attempts": 0
+        },
+        "sentinel_untouched": 1,
+        "http": {
+          "get": {
+            "status": 200,
+            "etag": "W/\"profile-v1-39374b8d02e3e6afd05c520624e248fb00977c911564934fe5e4b2dd1a769245\"",
+            "body": {
+              "data": {
+                "id": "p_v0987654",
+                "injuries": [
+                  {
+                    "kind": "injury",
+                    "label": "Muscle injury",
+                    "start": "2025-05-01",
+                    "end": "2025-05-14",
+                    "days": 14,
+                    "matchesMissed": null,
+                    "season": 2024
+                  },
+                  {
+                    "kind": "injury",
+                    "label": "Knee injury",
+                    "start": "2024-08-01",
+                    "end": "2024-08-11",
+                    "days": 11,
+                    "matchesMissed": null,
+                    "season": 2024
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "outcome": "ok",
+        "requests": [
+          [
+            "/player/912345/injury",
+            []
+          ]
+        ],
+        "http_status": 200,
+        "data": {
+          "injuries": [
+            {
+              "name": "Knee injury",
+              "start": "2024-08-01",
+              "end": "2024-08-11",
+              "seasonId": 2024
+            }
+          ]
+        },
+        "raw_text": null
+      },
+      "after": {
+        "stored": [
+          [
+            "2024-08-01",
+            "Knee injury"
+          ]
+        ],
+        "queue": {
+          "http": 200,
+          "error": null,
+          "written": 1,
+          "read": true,
+          "attempts": 0
+        },
+        "sentinel_untouched": 1,
+        "http": {
+          "get": {
+            "status": 200,
+            "etag": "W/\"profile-v1-c16269cb7a19dbd013c2a4528769746845855b8751cb548ddce6b1279d8069d0\"",
+            "body": {
+              "data": {
+                "id": "p_v0987654",
+                "injuries": [
+                  {
+                    "kind": "injury",
+                    "label": "Knee injury",
+                    "start": "2024-08-01",
+                    "end": "2024-08-11",
+                    "days": 11,
+                    "matchesMissed": null,
+                    "season": 2024
+                  }
+                ]
+              }
+            }
+          },
+          "conditional": {
+            "status": 200,
+            "etag": "W/\"profile-v1-c16269cb7a19dbd013c2a4528769746845855b8751cb548ddce6b1279d8069d0\"",
+            "body": {
+              "data": {
+                "id": "p_v0987654",
+                "injuries": [
+                  {
+                    "kind": "injury",
+                    "label": "Knee injury",
+                    "start": "2024-08-01",
+                    "end": "2024-08-11",
+                    "days": 11,
+                    "matchesMissed": null,
+                    "season": 2024
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "scenario": "injuries_invalid_member",
+      "initial": {
+        "outcome": "ok",
+        "requests": [
+          [
+            "/player/912345/injury",
+            []
+          ]
+        ],
+        "http_status": 200,
+        "data": {
+          "injuries": [
+            {
+              "name": "Knee injury",
+              "start": "2024-08-01",
+              "end": "2024-08-11",
+              "seasonId": 2024
+            },
+            {
+              "name": "Muscle injury",
+              "start": "2025-05-01",
+              "end": "2025-05-14",
+              "seasonId": 2024
+            }
+          ]
+        },
+        "raw_text": null
+      },
+      "before": {
+        "stored": [
+          [
+            "2024-08-01",
+            "Knee injury"
+          ],
+          [
+            "2025-05-01",
+            "Muscle injury"
+          ]
+        ],
+        "queue": {
+          "http": 200,
+          "error": null,
+          "written": 2,
+          "read": true,
+          "attempts": 0
+        },
+        "sentinel_untouched": 1,
+        "http": {
+          "get": {
+            "status": 200,
+            "etag": "W/\"profile-v1-39374b8d02e3e6afd05c520624e248fb00977c911564934fe5e4b2dd1a769245\"",
+            "body": {
+              "data": {
+                "id": "p_v0987654",
+                "injuries": [
+                  {
+                    "kind": "injury",
+                    "label": "Muscle injury",
+                    "start": "2025-05-01",
+                    "end": "2025-05-14",
+                    "days": 14,
+                    "matchesMissed": null,
+                    "season": 2024
+                  },
+                  {
+                    "kind": "injury",
+                    "label": "Knee injury",
+                    "start": "2024-08-01",
+                    "end": "2024-08-11",
+                    "days": 11,
+                    "matchesMissed": null,
+                    "season": 2024
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "outcome": "ok",
+        "requests": [
+          [
+            "/player/912345/injury",
+            []
+          ]
+        ],
+        "http_status": 200,
+        "data": {
+          "injuries": [
+            {
+              "name": "Knee injury",
+              "start": "2024-08-01",
+              "end": "2024-08-11",
+              "seasonId": 2024
+            },
+            {
+              "unexpected": true
+            }
+          ]
+        },
+        "raw_text": null
+      },
+      "after": {
+        "stored": [
+          [
+            "2024-08-01",
+            "Knee injury"
+          ]
+        ],
+        "queue": {
+          "http": 200,
+          "error": null,
+          "written": 1,
+          "read": true,
+          "attempts": 0
+        },
+        "sentinel_untouched": 1,
+        "http": {
+          "get": {
+            "status": 200,
+            "etag": "W/\"profile-v1-c16269cb7a19dbd013c2a4528769746845855b8751cb548ddce6b1279d8069d0\"",
+            "body": {
+              "data": {
+                "id": "p_v0987654",
+                "injuries": [
+                  {
+                    "kind": "injury",
+                    "label": "Knee injury",
+                    "start": "2024-08-01",
+                    "end": "2024-08-11",
+                    "days": 11,
+                    "matchesMissed": null,
+                    "season": 2024
+                  }
+                ]
+              }
+            }
+          },
+          "conditional": {
+            "status": 200,
+            "etag": "W/\"profile-v1-c16269cb7a19dbd013c2a4528769746845855b8751cb548ddce6b1279d8069d0\"",
+            "body": {
+              "data": {
+                "id": "p_v0987654",
+                "injuries": [
+                  {
+                    "kind": "injury",
+                    "label": "Knee injury",
+                    "start": "2024-08-01",
+                    "end": "2024-08-11",
+                    "days": 11,
+                    "matchesMissed": null,
+                    "season": 2024
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "scenario": "injuries_wrong_type",
+      "initial": {
+        "outcome": "ok",
+        "requests": [
+          [
+            "/player/912345/injury",
+            []
+          ]
+        ],
+        "http_status": 200,
+        "data": {
+          "injuries": [
+            {
+              "name": "Knee injury",
+              "start": "2024-08-01",
+              "end": "2024-08-11",
+              "seasonId": 2024
+            },
+            {
+              "name": "Muscle injury",
+              "start": "2025-05-01",
+              "end": "2025-05-14",
+              "seasonId": 2024
+            }
+          ]
+        },
+        "raw_text": null
+      },
+      "before": {
+        "stored": [
+          [
+            "2024-08-01",
+            "Knee injury"
+          ],
+          [
+            "2025-05-01",
+            "Muscle injury"
+          ]
+        ],
+        "queue": {
+          "http": 200,
+          "error": null,
+          "written": 2,
+          "read": true,
+          "attempts": 0
+        },
+        "sentinel_untouched": 1,
+        "http": {
+          "get": {
+            "status": 200,
+            "etag": "W/\"profile-v1-39374b8d02e3e6afd05c520624e248fb00977c911564934fe5e4b2dd1a769245\"",
+            "body": {
+              "data": {
+                "id": "p_v0987654",
+                "injuries": [
+                  {
+                    "kind": "injury",
+                    "label": "Muscle injury",
+                    "start": "2025-05-01",
+                    "end": "2025-05-14",
+                    "days": 14,
+                    "matchesMissed": null,
+                    "season": 2024
+                  },
+                  {
+                    "kind": "injury",
+                    "label": "Knee injury",
+                    "start": "2024-08-01",
+                    "end": "2024-08-11",
+                    "days": 11,
+                    "matchesMissed": null,
+                    "season": 2024
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "outcome": "schema",
+        "requests": [
+          [
+            "/player/912345/injury",
+            []
+          ]
+        ],
+        "http_status": 200,
+        "data": {
+          "injuries": {
+            "unexpected": true
+          }
+        },
+        "raw_text": null
+      },
+      "after": {
+        "stored": [
+          [
+            "2024-08-01",
+            "Knee injury"
+          ],
+          [
+            "2025-05-01",
+            "Muscle injury"
+          ]
+        ],
+        "queue": {
+          "http": null,
+          "error": "SCHEMA_CHANGED",
+          "written": 2,
+          "read": true,
+          "attempts": 1
+        },
+        "sentinel_untouched": 1,
+        "http": {
+          "get": {
+            "status": 404,
+            "etag": null,
+            "body": {
+              "ok": false,
+              "available": false,
+              "error": {
+                "code": "RESOURCE_NOT_FOUND",
+                "message": "Donnée indisponible.",
+                "retry": false
+              }
+            }
+          },
+          "conditional": {
+            "status": 404,
+            "etag": null,
+            "body": {
+              "ok": false,
+              "available": false,
+              "error": {
+                "code": "RESOURCE_NOT_FOUND",
+                "message": "Donnée indisponible.",
+                "retry": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "scenario": "injuries_broken_json",
+      "initial": {
+        "outcome": "ok",
+        "requests": [
+          [
+            "/player/912345/injury",
+            []
+          ]
+        ],
+        "http_status": 200,
+        "data": {
+          "injuries": [
+            {
+              "name": "Knee injury",
+              "start": "2024-08-01",
+              "end": "2024-08-11",
+              "seasonId": 2024
+            },
+            {
+              "name": "Muscle injury",
+              "start": "2025-05-01",
+              "end": "2025-05-14",
+              "seasonId": 2024
+            }
+          ]
+        },
+        "raw_text": null
+      },
+      "before": {
+        "stored": [
+          [
+            "2024-08-01",
+            "Knee injury"
+          ],
+          [
+            "2025-05-01",
+            "Muscle injury"
+          ]
+        ],
+        "queue": {
+          "http": 200,
+          "error": null,
+          "written": 2,
+          "read": true,
+          "attempts": 0
+        },
+        "sentinel_untouched": 1,
+        "http": {
+          "get": {
+            "status": 200,
+            "etag": "W/\"profile-v1-39374b8d02e3e6afd05c520624e248fb00977c911564934fe5e4b2dd1a769245\"",
+            "body": {
+              "data": {
+                "id": "p_v0987654",
+                "injuries": [
+                  {
+                    "kind": "injury",
+                    "label": "Muscle injury",
+                    "start": "2025-05-01",
+                    "end": "2025-05-14",
+                    "days": 14,
+                    "matchesMissed": null,
+                    "season": 2024
+                  },
+                  {
+                    "kind": "injury",
+                    "label": "Knee injury",
+                    "start": "2024-08-01",
+                    "end": "2024-08-11",
+                    "days": 11,
+                    "matchesMissed": null,
+                    "season": 2024
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "outcome": "schema",
+        "requests": [
+          [
+            "/player/912345/injury",
+            []
+          ]
+        ],
+        "http_status": 200,
+        "data": null,
+        "raw_text": "{\"success\":true,\"data\":{"
+      },
+      "after": {
+        "stored": [
+          [
+            "2024-08-01",
+            "Knee injury"
+          ],
+          [
+            "2025-05-01",
+            "Muscle injury"
+          ]
+        ],
+        "queue": {
+          "http": 200,
+          "error": "SCHEMA_CHANGED",
+          "written": 2,
+          "read": true,
+          "attempts": 1
+        },
+        "sentinel_untouched": 1,
+        "http": {
+          "get": {
+            "status": 404,
+            "etag": null,
+            "body": {
+              "ok": false,
+              "available": false,
+              "error": {
+                "code": "RESOURCE_NOT_FOUND",
+                "message": "Donnée indisponible.",
+                "retry": false
+              }
+            }
+          },
+          "conditional": {
+            "status": 404,
+            "etag": null,
+            "body": {
+              "ok": false,
+              "available": false,
+              "error": {
+                "code": "RESOURCE_NOT_FOUND",
+                "message": "Donnée indisponible.",
+                "retry": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "scenario": "squad_empty",
+      "initial": {
+        "outcome": "ok",
+        "requests": [
+          [
+            "/club/47771/squad",
+            [
+              [
+                "season",
+                "2025"
+              ]
+            ]
+          ]
+        ],
+        "http_status": 200,
+        "data": {
+          "squad": [
+            {
+              "playerId": "73451",
+              "shirtNumber": 8
+            },
+            {
+              "playerId": "73452",
+              "shirtNumber": 19
+            }
+          ]
+        },
+        "raw_text": null
+      },
+      "before": {
+        "stored": [
+          [
+            "73451",
+            8
+          ],
+          [
+            "73452",
+            19
+          ]
+        ],
+        "queue": {
+          "http": 200,
+          "error": null,
+          "written": 2,
+          "read": true,
+          "attempts": 0
+        },
+        "sentinel_untouched": 1,
+        "http": null
+      },
+      "response": {
+        "outcome": "ok",
+        "requests": [
+          [
+            "/club/47771/squad",
+            [
+              [
+                "season",
+                "2025"
+              ]
+            ]
+          ]
+        ],
+        "http_status": 200,
+        "data": {
+          "squad": []
+        },
+        "raw_text": null
+      },
+      "after": {
+        "stored": [],
+        "queue": {
+          "http": 200,
+          "error": null,
+          "written": 0,
+          "read": true,
+          "attempts": 0
+        },
+        "sentinel_untouched": 1,
+        "http": null,
+        "fresh_profile_candidates": [
+          "73453"
+        ]
+      }
+    },
+    {
+      "scenario": "squad_missing_key",
+      "initial": {
+        "outcome": "ok",
+        "requests": [
+          [
+            "/club/47771/squad",
+            [
+              [
+                "season",
+                "2025"
+              ]
+            ]
+          ]
+        ],
+        "http_status": 200,
+        "data": {
+          "squad": [
+            {
+              "playerId": "73451",
+              "shirtNumber": 8
+            },
+            {
+              "playerId": "73452",
+              "shirtNumber": 19
+            }
+          ]
+        },
+        "raw_text": null
+      },
+      "before": {
+        "stored": [
+          [
+            "73451",
+            8
+          ],
+          [
+            "73452",
+            19
+          ]
+        ],
+        "queue": {
+          "http": 200,
+          "error": null,
+          "written": 2,
+          "read": true,
+          "attempts": 0
+        },
+        "sentinel_untouched": 1,
+        "http": null
+      },
+      "response": {
+        "outcome": "ok",
+        "requests": [
+          [
+            "/club/47771/squad",
+            [
+              [
+                "season",
+                "2025"
+              ]
+            ]
+          ]
+        ],
+        "http_status": 200,
+        "data": {},
+        "raw_text": null
+      },
+      "after": {
+        "stored": [],
+        "queue": {
+          "http": 200,
+          "error": null,
+          "written": 0,
+          "read": true,
+          "attempts": 0
+        },
+        "sentinel_untouched": 1,
+        "http": null,
+        "fresh_profile_candidates": [
+          "73453"
+        ]
+      }
+    },
+    {
+      "scenario": "squad_truncated",
+      "initial": {
+        "outcome": "ok",
+        "requests": [
+          [
+            "/club/47771/squad",
+            [
+              [
+                "season",
+                "2025"
+              ]
+            ]
+          ]
+        ],
+        "http_status": 200,
+        "data": {
+          "squad": [
+            {
+              "playerId": "73451",
+              "shirtNumber": 8
+            },
+            {
+              "playerId": "73452",
+              "shirtNumber": 19
+            }
+          ]
+        },
+        "raw_text": null
+      },
+      "before": {
+        "stored": [
+          [
+            "73451",
+            8
+          ],
+          [
+            "73452",
+            19
+          ]
+        ],
+        "queue": {
+          "http": 200,
+          "error": null,
+          "written": 2,
+          "read": true,
+          "attempts": 0
+        },
+        "sentinel_untouched": 1,
+        "http": null
+      },
+      "response": {
+        "outcome": "ok",
+        "requests": [
+          [
+            "/club/47771/squad",
+            [
+              [
+                "season",
+                "2025"
+              ]
+            ]
+          ]
+        ],
+        "http_status": 200,
+        "data": {
+          "squad": [
+            {
+              "playerId": "73451",
+              "shirtNumber": 8
+            }
+          ]
+        },
+        "raw_text": null
+      },
+      "after": {
+        "stored": [
+          [
+            "73451",
+            8
+          ]
+        ],
+        "queue": {
+          "http": 200,
+          "error": null,
+          "written": 1,
+          "read": true,
+          "attempts": 0
+        },
+        "sentinel_untouched": 1,
+        "http": null,
+        "fresh_profile_candidates": [
+          "73451",
+          "73453"
+        ]
+      }
+    },
+    {
+      "scenario": "squad_invalid_member",
+      "initial": {
+        "outcome": "ok",
+        "requests": [
+          [
+            "/club/47771/squad",
+            [
+              [
+                "season",
+                "2025"
+              ]
+            ]
+          ]
+        ],
+        "http_status": 200,
+        "data": {
+          "squad": [
+            {
+              "playerId": "73451",
+              "shirtNumber": 8
+            },
+            {
+              "playerId": "73452",
+              "shirtNumber": 19
+            }
+          ]
+        },
+        "raw_text": null
+      },
+      "before": {
+        "stored": [
+          [
+            "73451",
+            8
+          ],
+          [
+            "73452",
+            19
+          ]
+        ],
+        "queue": {
+          "http": 200,
+          "error": null,
+          "written": 2,
+          "read": true,
+          "attempts": 0
+        },
+        "sentinel_untouched": 1,
+        "http": null
+      },
+      "response": {
+        "outcome": "ok",
+        "requests": [
+          [
+            "/club/47771/squad",
+            [
+              [
+                "season",
+                "2025"
+              ]
+            ]
+          ]
+        ],
+        "http_status": 200,
+        "data": {
+          "squad": [
+            {
+              "playerId": "73451",
+              "shirtNumber": 8
+            },
+            {
+              "unexpected": true
+            }
+          ]
+        },
+        "raw_text": null
+      },
+      "after": {
+        "stored": [
+          [
+            "73451",
+            8
+          ]
+        ],
+        "queue": {
+          "http": 200,
+          "error": null,
+          "written": 1,
+          "read": true,
+          "attempts": 0
+        },
+        "sentinel_untouched": 1,
+        "http": null,
+        "fresh_profile_candidates": [
+          "73451",
+          "73453"
+        ]
+      }
+    },
+    {
+      "scenario": "squad_wrong_type",
+      "initial": {
+        "outcome": "ok",
+        "requests": [
+          [
+            "/club/47771/squad",
+            [
+              [
+                "season",
+                "2025"
+              ]
+            ]
+          ]
+        ],
+        "http_status": 200,
+        "data": {
+          "squad": [
+            {
+              "playerId": "73451",
+              "shirtNumber": 8
+            },
+            {
+              "playerId": "73452",
+              "shirtNumber": 19
+            }
+          ]
+        },
+        "raw_text": null
+      },
+      "before": {
+        "stored": [
+          [
+            "73451",
+            8
+          ],
+          [
+            "73452",
+            19
+          ]
+        ],
+        "queue": {
+          "http": 200,
+          "error": null,
+          "written": 2,
+          "read": true,
+          "attempts": 0
+        },
+        "sentinel_untouched": 1,
+        "http": null
+      },
+      "response": {
+        "outcome": "schema",
+        "requests": [
+          [
+            "/club/47771/squad",
+            [
+              [
+                "season",
+                "2025"
+              ]
+            ]
+          ]
+        ],
+        "http_status": 200,
+        "data": {
+          "squad": {
+            "unexpected": true
+          }
+        },
+        "raw_text": null
+      },
+      "after": {
+        "stored": [
+          [
+            "73451",
+            8
+          ],
+          [
+            "73452",
+            19
+          ]
+        ],
+        "queue": {
+          "http": null,
+          "error": "SCHEMA_CHANGED",
+          "written": 2,
+          "read": true,
+          "attempts": 1
+        },
+        "sentinel_untouched": 1,
+        "http": null,
+        "fresh_profile_candidates": [
+          "73451",
+          "73452",
+          "73453"
+        ]
+      }
+    },
+    {
+      "scenario": "squad_broken_json",
+      "initial": {
+        "outcome": "ok",
+        "requests": [
+          [
+            "/club/47771/squad",
+            [
+              [
+                "season",
+                "2025"
+              ]
+            ]
+          ]
+        ],
+        "http_status": 200,
+        "data": {
+          "squad": [
+            {
+              "playerId": "73451",
+              "shirtNumber": 8
+            },
+            {
+              "playerId": "73452",
+              "shirtNumber": 19
+            }
+          ]
+        },
+        "raw_text": null
+      },
+      "before": {
+        "stored": [
+          [
+            "73451",
+            8
+          ],
+          [
+            "73452",
+            19
+          ]
+        ],
+        "queue": {
+          "http": 200,
+          "error": null,
+          "written": 2,
+          "read": true,
+          "attempts": 0
+        },
+        "sentinel_untouched": 1,
+        "http": null
+      },
+      "response": {
+        "outcome": "schema",
+        "requests": [
+          [
+            "/club/47771/squad",
+            [
+              [
+                "season",
+                "2025"
+              ]
+            ]
+          ]
+        ],
+        "http_status": 200,
+        "data": null,
+        "raw_text": "{\"success\":true,\"data\":{"
+      },
+      "after": {
+        "stored": [
+          [
+            "73451",
+            8
+          ],
+          [
+            "73452",
+            19
+          ]
+        ],
+        "queue": {
+          "http": 200,
+          "error": "SCHEMA_CHANGED",
+          "written": 2,
+          "read": true,
+          "attempts": 1
+        },
+        "sentinel_untouched": 1,
+        "http": null,
+        "fresh_profile_candidates": [
+          "73451",
+          "73452",
+          "73453"
+        ]
+      }
+    }
+  ],
+  "assertions": [
+    {
+      "case": "setup",
+      "property": "collector_role",
+      "actual": "vega_collect",
+      "expected": "vega_collect"
+    },
+    {
+      "case": "cold_injuries",
+      "property": "status",
+      "actual": 404,
+      "expected": 404
+    },
+    {
+      "case": "values",
+      "property": "provider_calls",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "values_empty",
+      "property": "baseline_outcome",
+      "actual": "ok",
+      "expected": "ok"
+    },
+    {
+      "case": "values_empty",
+      "property": "initial_rows",
+      "actual": 2,
+      "expected": 2
+    },
+    {
+      "case": "values_empty",
+      "property": "baseline_revalidation",
+      "actual": 304,
+      "expected": 304
+    },
+    {
+      "case": "values",
+      "property": "provider_calls",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "values_empty",
+      "property": "outcome",
+      "actual": "ok",
+      "expected": "ok"
+    },
+    {
+      "case": "values_empty",
+      "property": "remaining_rows",
+      "actual": 2,
+      "expected": 2
+    },
+    {
+      "case": "values_empty",
+      "property": "reported_writes",
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "case": "values_empty",
+      "property": "reported_error",
+      "actual": null,
+      "expected": null
+    },
+    {
+      "case": "values_empty",
+      "property": "sentinel_untouched",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "values_empty",
+      "property": "response_after_prior_etag",
+      "actual": 304,
+      "expected": 304
+    },
+    {
+      "case": "values_empty",
+      "property": "public_rows",
+      "actual": 2,
+      "expected": 2
+    },
+    {
+      "case": "values_empty",
+      "property": "etag_rotated",
+      "actual": false,
+      "expected": false
+    },
+    {
+      "case": "values",
+      "property": "provider_calls",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "values_missing_key",
+      "property": "baseline_outcome",
+      "actual": "ok",
+      "expected": "ok"
+    },
+    {
+      "case": "values_missing_key",
+      "property": "initial_rows",
+      "actual": 2,
+      "expected": 2
+    },
+    {
+      "case": "values_missing_key",
+      "property": "baseline_revalidation",
+      "actual": 304,
+      "expected": 304
+    },
+    {
+      "case": "values",
+      "property": "provider_calls",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "values_missing_key",
+      "property": "outcome",
+      "actual": "ok",
+      "expected": "ok"
+    },
+    {
+      "case": "values_missing_key",
+      "property": "remaining_rows",
+      "actual": 2,
+      "expected": 2
+    },
+    {
+      "case": "values_missing_key",
+      "property": "reported_writes",
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "case": "values_missing_key",
+      "property": "reported_error",
+      "actual": null,
+      "expected": null
+    },
+    {
+      "case": "values_missing_key",
+      "property": "sentinel_untouched",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "values_missing_key",
+      "property": "response_after_prior_etag",
+      "actual": 304,
+      "expected": 304
+    },
+    {
+      "case": "values_missing_key",
+      "property": "public_rows",
+      "actual": 2,
+      "expected": 2
+    },
+    {
+      "case": "values_missing_key",
+      "property": "etag_rotated",
+      "actual": false,
+      "expected": false
+    },
+    {
+      "case": "values",
+      "property": "provider_calls",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "values_truncated",
+      "property": "baseline_outcome",
+      "actual": "ok",
+      "expected": "ok"
+    },
+    {
+      "case": "values_truncated",
+      "property": "initial_rows",
+      "actual": 2,
+      "expected": 2
+    },
+    {
+      "case": "values_truncated",
+      "property": "baseline_revalidation",
+      "actual": 304,
+      "expected": 304
+    },
+    {
+      "case": "values",
+      "property": "provider_calls",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "values_truncated",
+      "property": "outcome",
+      "actual": "ok",
+      "expected": "ok"
+    },
+    {
+      "case": "values_truncated",
+      "property": "remaining_rows",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "values_truncated",
+      "property": "reported_writes",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "values_truncated",
+      "property": "reported_error",
+      "actual": null,
+      "expected": null
+    },
+    {
+      "case": "values_truncated",
+      "property": "sentinel_untouched",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "values_truncated",
+      "property": "response_after_prior_etag",
+      "actual": 200,
+      "expected": 200
+    },
+    {
+      "case": "values_truncated",
+      "property": "public_rows",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "values_truncated",
+      "property": "etag_rotated",
+      "actual": true,
+      "expected": true
+    },
+    {
+      "case": "values",
+      "property": "provider_calls",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "values_invalid_member",
+      "property": "baseline_outcome",
+      "actual": "ok",
+      "expected": "ok"
+    },
+    {
+      "case": "values_invalid_member",
+      "property": "initial_rows",
+      "actual": 2,
+      "expected": 2
+    },
+    {
+      "case": "values_invalid_member",
+      "property": "baseline_revalidation",
+      "actual": 304,
+      "expected": 304
+    },
+    {
+      "case": "values",
+      "property": "provider_calls",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "values_invalid_member",
+      "property": "outcome",
+      "actual": "ok",
+      "expected": "ok"
+    },
+    {
+      "case": "values_invalid_member",
+      "property": "remaining_rows",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "values_invalid_member",
+      "property": "reported_writes",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "values_invalid_member",
+      "property": "reported_error",
+      "actual": null,
+      "expected": null
+    },
+    {
+      "case": "values_invalid_member",
+      "property": "sentinel_untouched",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "values_invalid_member",
+      "property": "response_after_prior_etag",
+      "actual": 200,
+      "expected": 200
+    },
+    {
+      "case": "values_invalid_member",
+      "property": "public_rows",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "values_invalid_member",
+      "property": "etag_rotated",
+      "actual": true,
+      "expected": true
+    },
+    {
+      "case": "values",
+      "property": "provider_calls",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "values_wrong_type",
+      "property": "baseline_outcome",
+      "actual": "ok",
+      "expected": "ok"
+    },
+    {
+      "case": "values_wrong_type",
+      "property": "initial_rows",
+      "actual": 2,
+      "expected": 2
+    },
+    {
+      "case": "values_wrong_type",
+      "property": "baseline_revalidation",
+      "actual": 304,
+      "expected": 304
+    },
+    {
+      "case": "values",
+      "property": "provider_calls",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "values_wrong_type",
+      "property": "outcome",
+      "actual": "schema",
+      "expected": "schema"
+    },
+    {
+      "case": "values_wrong_type",
+      "property": "remaining_rows",
+      "actual": 2,
+      "expected": 2
+    },
+    {
+      "case": "values_wrong_type",
+      "property": "reported_writes",
+      "actual": 2,
+      "expected": 2
+    },
+    {
+      "case": "values_wrong_type",
+      "property": "reported_error",
+      "actual": "SCHEMA_CHANGED",
+      "expected": "SCHEMA_CHANGED"
+    },
+    {
+      "case": "values_wrong_type",
+      "property": "sentinel_untouched",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "values_wrong_type",
+      "property": "response_after_prior_etag",
+      "actual": 304,
+      "expected": 304
+    },
+    {
+      "case": "values_wrong_type",
+      "property": "public_rows",
+      "actual": 2,
+      "expected": 2
+    },
+    {
+      "case": "values_wrong_type",
+      "property": "etag_rotated",
+      "actual": false,
+      "expected": false
+    },
+    {
+      "case": "values",
+      "property": "provider_calls",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "values_broken_json",
+      "property": "baseline_outcome",
+      "actual": "ok",
+      "expected": "ok"
+    },
+    {
+      "case": "values_broken_json",
+      "property": "initial_rows",
+      "actual": 2,
+      "expected": 2
+    },
+    {
+      "case": "values_broken_json",
+      "property": "baseline_revalidation",
+      "actual": 304,
+      "expected": 304
+    },
+    {
+      "case": "values",
+      "property": "provider_calls",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "values_broken_json",
+      "property": "outcome",
+      "actual": "schema",
+      "expected": "schema"
+    },
+    {
+      "case": "values_broken_json",
+      "property": "remaining_rows",
+      "actual": 2,
+      "expected": 2
+    },
+    {
+      "case": "values_broken_json",
+      "property": "reported_writes",
+      "actual": 2,
+      "expected": 2
+    },
+    {
+      "case": "values_broken_json",
+      "property": "reported_error",
+      "actual": "SCHEMA_CHANGED",
+      "expected": "SCHEMA_CHANGED"
+    },
+    {
+      "case": "values_broken_json",
+      "property": "sentinel_untouched",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "values_broken_json",
+      "property": "response_after_prior_etag",
+      "actual": 304,
+      "expected": 304
+    },
+    {
+      "case": "values_broken_json",
+      "property": "public_rows",
+      "actual": 2,
+      "expected": 2
+    },
+    {
+      "case": "values_broken_json",
+      "property": "etag_rotated",
+      "actual": false,
+      "expected": false
+    },
+    {
+      "case": "injuries",
+      "property": "provider_calls",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "injuries_empty",
+      "property": "baseline_outcome",
+      "actual": "ok",
+      "expected": "ok"
+    },
+    {
+      "case": "injuries_empty",
+      "property": "initial_rows",
+      "actual": 2,
+      "expected": 2
+    },
+    {
+      "case": "injuries_empty",
+      "property": "baseline_revalidation",
+      "actual": 304,
+      "expected": 304
+    },
+    {
+      "case": "injuries",
+      "property": "provider_calls",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "injuries_empty",
+      "property": "outcome",
+      "actual": "ok",
+      "expected": "ok"
+    },
+    {
+      "case": "injuries_empty",
+      "property": "remaining_rows",
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "case": "injuries_empty",
+      "property": "reported_writes",
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "case": "injuries_empty",
+      "property": "reported_error",
+      "actual": null,
+      "expected": null
+    },
+    {
+      "case": "injuries_empty",
+      "property": "sentinel_untouched",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "injuries_empty",
+      "property": "response_after_prior_etag",
+      "actual": 200,
+      "expected": 200
+    },
+    {
+      "case": "injuries_empty",
+      "property": "public_rows",
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "case": "injuries_empty",
+      "property": "etag_rotated",
+      "actual": true,
+      "expected": true
+    },
+    {
+      "case": "injuries",
+      "property": "provider_calls",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "injuries_missing_key",
+      "property": "baseline_outcome",
+      "actual": "ok",
+      "expected": "ok"
+    },
+    {
+      "case": "injuries_missing_key",
+      "property": "initial_rows",
+      "actual": 2,
+      "expected": 2
+    },
+    {
+      "case": "injuries_missing_key",
+      "property": "baseline_revalidation",
+      "actual": 304,
+      "expected": 304
+    },
+    {
+      "case": "injuries",
+      "property": "provider_calls",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "injuries_missing_key",
+      "property": "outcome",
+      "actual": "ok",
+      "expected": "ok"
+    },
+    {
+      "case": "injuries_missing_key",
+      "property": "remaining_rows",
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "case": "injuries_missing_key",
+      "property": "reported_writes",
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "case": "injuries_missing_key",
+      "property": "reported_error",
+      "actual": null,
+      "expected": null
+    },
+    {
+      "case": "injuries_missing_key",
+      "property": "sentinel_untouched",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "injuries_missing_key",
+      "property": "response_after_prior_etag",
+      "actual": 200,
+      "expected": 200
+    },
+    {
+      "case": "injuries_missing_key",
+      "property": "public_rows",
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "case": "injuries_missing_key",
+      "property": "etag_rotated",
+      "actual": true,
+      "expected": true
+    },
+    {
+      "case": "injuries",
+      "property": "provider_calls",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "injuries_truncated",
+      "property": "baseline_outcome",
+      "actual": "ok",
+      "expected": "ok"
+    },
+    {
+      "case": "injuries_truncated",
+      "property": "initial_rows",
+      "actual": 2,
+      "expected": 2
+    },
+    {
+      "case": "injuries_truncated",
+      "property": "baseline_revalidation",
+      "actual": 304,
+      "expected": 304
+    },
+    {
+      "case": "injuries",
+      "property": "provider_calls",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "injuries_truncated",
+      "property": "outcome",
+      "actual": "ok",
+      "expected": "ok"
+    },
+    {
+      "case": "injuries_truncated",
+      "property": "remaining_rows",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "injuries_truncated",
+      "property": "reported_writes",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "injuries_truncated",
+      "property": "reported_error",
+      "actual": null,
+      "expected": null
+    },
+    {
+      "case": "injuries_truncated",
+      "property": "sentinel_untouched",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "injuries_truncated",
+      "property": "response_after_prior_etag",
+      "actual": 200,
+      "expected": 200
+    },
+    {
+      "case": "injuries_truncated",
+      "property": "public_rows",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "injuries_truncated",
+      "property": "etag_rotated",
+      "actual": true,
+      "expected": true
+    },
+    {
+      "case": "injuries",
+      "property": "provider_calls",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "injuries_invalid_member",
+      "property": "baseline_outcome",
+      "actual": "ok",
+      "expected": "ok"
+    },
+    {
+      "case": "injuries_invalid_member",
+      "property": "initial_rows",
+      "actual": 2,
+      "expected": 2
+    },
+    {
+      "case": "injuries_invalid_member",
+      "property": "baseline_revalidation",
+      "actual": 304,
+      "expected": 304
+    },
+    {
+      "case": "injuries",
+      "property": "provider_calls",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "injuries_invalid_member",
+      "property": "outcome",
+      "actual": "ok",
+      "expected": "ok"
+    },
+    {
+      "case": "injuries_invalid_member",
+      "property": "remaining_rows",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "injuries_invalid_member",
+      "property": "reported_writes",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "injuries_invalid_member",
+      "property": "reported_error",
+      "actual": null,
+      "expected": null
+    },
+    {
+      "case": "injuries_invalid_member",
+      "property": "sentinel_untouched",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "injuries_invalid_member",
+      "property": "response_after_prior_etag",
+      "actual": 200,
+      "expected": 200
+    },
+    {
+      "case": "injuries_invalid_member",
+      "property": "public_rows",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "injuries_invalid_member",
+      "property": "etag_rotated",
+      "actual": true,
+      "expected": true
+    },
+    {
+      "case": "injuries",
+      "property": "provider_calls",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "injuries_wrong_type",
+      "property": "baseline_outcome",
+      "actual": "ok",
+      "expected": "ok"
+    },
+    {
+      "case": "injuries_wrong_type",
+      "property": "initial_rows",
+      "actual": 2,
+      "expected": 2
+    },
+    {
+      "case": "injuries_wrong_type",
+      "property": "baseline_revalidation",
+      "actual": 304,
+      "expected": 304
+    },
+    {
+      "case": "injuries",
+      "property": "provider_calls",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "injuries_wrong_type",
+      "property": "outcome",
+      "actual": "schema",
+      "expected": "schema"
+    },
+    {
+      "case": "injuries_wrong_type",
+      "property": "remaining_rows",
+      "actual": 2,
+      "expected": 2
+    },
+    {
+      "case": "injuries_wrong_type",
+      "property": "reported_writes",
+      "actual": 2,
+      "expected": 2
+    },
+    {
+      "case": "injuries_wrong_type",
+      "property": "reported_error",
+      "actual": "SCHEMA_CHANGED",
+      "expected": "SCHEMA_CHANGED"
+    },
+    {
+      "case": "injuries_wrong_type",
+      "property": "sentinel_untouched",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "injuries_wrong_type",
+      "property": "response_after_prior_etag",
+      "actual": 404,
+      "expected": 404
+    },
+    {
+      "case": "injuries",
+      "property": "provider_calls",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "injuries_broken_json",
+      "property": "baseline_outcome",
+      "actual": "ok",
+      "expected": "ok"
+    },
+    {
+      "case": "injuries_broken_json",
+      "property": "initial_rows",
+      "actual": 2,
+      "expected": 2
+    },
+    {
+      "case": "injuries_broken_json",
+      "property": "baseline_revalidation",
+      "actual": 304,
+      "expected": 304
+    },
+    {
+      "case": "injuries",
+      "property": "provider_calls",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "injuries_broken_json",
+      "property": "outcome",
+      "actual": "schema",
+      "expected": "schema"
+    },
+    {
+      "case": "injuries_broken_json",
+      "property": "remaining_rows",
+      "actual": 2,
+      "expected": 2
+    },
+    {
+      "case": "injuries_broken_json",
+      "property": "reported_writes",
+      "actual": 2,
+      "expected": 2
+    },
+    {
+      "case": "injuries_broken_json",
+      "property": "reported_error",
+      "actual": "SCHEMA_CHANGED",
+      "expected": "SCHEMA_CHANGED"
+    },
+    {
+      "case": "injuries_broken_json",
+      "property": "sentinel_untouched",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "injuries_broken_json",
+      "property": "response_after_prior_etag",
+      "actual": 404,
+      "expected": 404
+    },
+    {
+      "case": "squad",
+      "property": "provider_calls",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "squad_empty",
+      "property": "baseline_outcome",
+      "actual": "ok",
+      "expected": "ok"
+    },
+    {
+      "case": "squad_empty",
+      "property": "initial_rows",
+      "actual": 2,
+      "expected": 2
+    },
+    {
+      "case": "squad",
+      "property": "provider_calls",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "squad_empty",
+      "property": "outcome",
+      "actual": "ok",
+      "expected": "ok"
+    },
+    {
+      "case": "squad_empty",
+      "property": "remaining_rows",
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "case": "squad_empty",
+      "property": "reported_writes",
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "case": "squad_empty",
+      "property": "reported_error",
+      "actual": null,
+      "expected": null
+    },
+    {
+      "case": "squad_empty",
+      "property": "sentinel_untouched",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "squad_empty",
+      "property": "fresh_profile_candidates",
+      "actual": [
+        "73453"
+      ],
+      "expected": [
+        "73453"
+      ]
+    },
+    {
+      "case": "squad",
+      "property": "provider_calls",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "squad_missing_key",
+      "property": "baseline_outcome",
+      "actual": "ok",
+      "expected": "ok"
+    },
+    {
+      "case": "squad_missing_key",
+      "property": "initial_rows",
+      "actual": 2,
+      "expected": 2
+    },
+    {
+      "case": "squad",
+      "property": "provider_calls",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "squad_missing_key",
+      "property": "outcome",
+      "actual": "ok",
+      "expected": "ok"
+    },
+    {
+      "case": "squad_missing_key",
+      "property": "remaining_rows",
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "case": "squad_missing_key",
+      "property": "reported_writes",
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "case": "squad_missing_key",
+      "property": "reported_error",
+      "actual": null,
+      "expected": null
+    },
+    {
+      "case": "squad_missing_key",
+      "property": "sentinel_untouched",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "squad_missing_key",
+      "property": "fresh_profile_candidates",
+      "actual": [
+        "73453"
+      ],
+      "expected": [
+        "73453"
+      ]
+    },
+    {
+      "case": "squad",
+      "property": "provider_calls",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "squad_truncated",
+      "property": "baseline_outcome",
+      "actual": "ok",
+      "expected": "ok"
+    },
+    {
+      "case": "squad_truncated",
+      "property": "initial_rows",
+      "actual": 2,
+      "expected": 2
+    },
+    {
+      "case": "squad_truncated",
+      "property": "prior_queue_candidates",
+      "actual": [
+        "73451",
+        "73452",
+        "73453"
+      ],
+      "expected": [
+        "73451",
+        "73452",
+        "73453"
+      ]
+    },
+    {
+      "case": "squad",
+      "property": "provider_calls",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "squad_truncated",
+      "property": "outcome",
+      "actual": "ok",
+      "expected": "ok"
+    },
+    {
+      "case": "squad_truncated",
+      "property": "remaining_rows",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "squad_truncated",
+      "property": "reported_writes",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "squad_truncated",
+      "property": "reported_error",
+      "actual": null,
+      "expected": null
+    },
+    {
+      "case": "squad_truncated",
+      "property": "sentinel_untouched",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "squad_truncated",
+      "property": "preexisting_removed_member_queue",
+      "actual": [
+        "73451",
+        "73452",
+        "73453"
+      ],
+      "expected": [
+        "73451",
+        "73452",
+        "73453"
+      ]
+    },
+    {
+      "case": "squad_truncated",
+      "property": "fresh_profile_candidates",
+      "actual": [
+        "73451",
+        "73453"
+      ],
+      "expected": [
+        "73451",
+        "73453"
+      ]
+    },
+    {
+      "case": "squad",
+      "property": "provider_calls",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "squad_invalid_member",
+      "property": "baseline_outcome",
+      "actual": "ok",
+      "expected": "ok"
+    },
+    {
+      "case": "squad_invalid_member",
+      "property": "initial_rows",
+      "actual": 2,
+      "expected": 2
+    },
+    {
+      "case": "squad",
+      "property": "provider_calls",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "squad_invalid_member",
+      "property": "outcome",
+      "actual": "ok",
+      "expected": "ok"
+    },
+    {
+      "case": "squad_invalid_member",
+      "property": "remaining_rows",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "squad_invalid_member",
+      "property": "reported_writes",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "squad_invalid_member",
+      "property": "reported_error",
+      "actual": null,
+      "expected": null
+    },
+    {
+      "case": "squad_invalid_member",
+      "property": "sentinel_untouched",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "squad_invalid_member",
+      "property": "fresh_profile_candidates",
+      "actual": [
+        "73451",
+        "73453"
+      ],
+      "expected": [
+        "73451",
+        "73453"
+      ]
+    },
+    {
+      "case": "squad",
+      "property": "provider_calls",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "squad_wrong_type",
+      "property": "baseline_outcome",
+      "actual": "ok",
+      "expected": "ok"
+    },
+    {
+      "case": "squad_wrong_type",
+      "property": "initial_rows",
+      "actual": 2,
+      "expected": 2
+    },
+    {
+      "case": "squad",
+      "property": "provider_calls",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "squad_wrong_type",
+      "property": "outcome",
+      "actual": "schema",
+      "expected": "schema"
+    },
+    {
+      "case": "squad_wrong_type",
+      "property": "remaining_rows",
+      "actual": 2,
+      "expected": 2
+    },
+    {
+      "case": "squad_wrong_type",
+      "property": "reported_writes",
+      "actual": 2,
+      "expected": 2
+    },
+    {
+      "case": "squad_wrong_type",
+      "property": "reported_error",
+      "actual": "SCHEMA_CHANGED",
+      "expected": "SCHEMA_CHANGED"
+    },
+    {
+      "case": "squad_wrong_type",
+      "property": "sentinel_untouched",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "squad_wrong_type",
+      "property": "fresh_profile_candidates",
+      "actual": [
+        "73451",
+        "73452",
+        "73453"
+      ],
+      "expected": [
+        "73451",
+        "73452",
+        "73453"
+      ]
+    },
+    {
+      "case": "squad",
+      "property": "provider_calls",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "squad_broken_json",
+      "property": "baseline_outcome",
+      "actual": "ok",
+      "expected": "ok"
+    },
+    {
+      "case": "squad_broken_json",
+      "property": "initial_rows",
+      "actual": 2,
+      "expected": 2
+    },
+    {
+      "case": "squad",
+      "property": "provider_calls",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "squad_broken_json",
+      "property": "outcome",
+      "actual": "schema",
+      "expected": "schema"
+    },
+    {
+      "case": "squad_broken_json",
+      "property": "remaining_rows",
+      "actual": 2,
+      "expected": 2
+    },
+    {
+      "case": "squad_broken_json",
+      "property": "reported_writes",
+      "actual": 2,
+      "expected": 2
+    },
+    {
+      "case": "squad_broken_json",
+      "property": "reported_error",
+      "actual": "SCHEMA_CHANGED",
+      "expected": "SCHEMA_CHANGED"
+    },
+    {
+      "case": "squad_broken_json",
+      "property": "sentinel_untouched",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "case": "squad_broken_json",
+      "property": "fresh_profile_candidates",
+      "actual": [
+        "73451",
+        "73452",
+        "73453"
+      ],
+      "expected": [
+        "73451",
+        "73452",
+        "73453"
+      ]
+    }
+  ]
+}

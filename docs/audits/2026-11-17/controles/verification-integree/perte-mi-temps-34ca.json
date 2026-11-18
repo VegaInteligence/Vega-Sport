@@ -1,0 +1,102 @@
+{
+  "source": "backend/tests/fixtures/openfootball/editions.json",
+  "changed": "remove only Germany–Scotland score.ht from the full returned Euro 2024 file",
+  "initial_import": "ok",
+  "before": {
+    "status": 200,
+    "conditional": 304,
+    "etag": "W/\"support-v1-1a332f6f65d60ead3d5b42289ca80339b1665e4da2f79d6f0debb0d755af39fb\"",
+    "count": 51,
+    "row": {
+      "round": "Matchday 1",
+      "group": "Group A",
+      "date": "2024-06-14",
+      "team1": "Germany",
+      "team2": "Scotland",
+      "sides": {
+        "home": {
+          "id": "t_v0000001",
+          "image_url": null
+        },
+        "away": {
+          "id": "t_v0000002",
+          "image_url": null
+        }
+      },
+      "score": {
+        "ft": [
+          5,
+          1
+        ],
+        "ht": [
+          3,
+          0
+        ]
+      }
+    }
+  },
+  "missing_field": [
+    3,
+    0
+  ],
+  "incoming": "ok",
+  "after": {
+    "status": 200,
+    "conditional": 200,
+    "etag": "W/\"support-v1-2e33137b27612ded8d0a3f46bef67f7c2b34344af59d506c98df3920e8798a96\"",
+    "count": 51,
+    "row": {
+      "round": "Matchday 1",
+      "group": "Group A",
+      "date": "2024-06-14",
+      "team1": "Germany",
+      "team2": "Scotland",
+      "sides": {
+        "home": {
+          "id": "t_v0000001",
+          "image_url": null
+        },
+        "away": {
+          "id": "t_v0000002",
+          "image_url": null
+        }
+      },
+      "score": {
+        "ft": [
+          5,
+          1
+        ]
+      }
+    }
+  },
+  "repeated": "ok",
+  "after_repeat": {
+    "status": 200,
+    "conditional": 304,
+    "etag": "W/\"support-v1-2e33137b27612ded8d0a3f46bef67f7c2b34344af59d506c98df3920e8798a96\"",
+    "count": 51,
+    "row": {
+      "round": "Matchday 1",
+      "group": "Group A",
+      "date": "2024-06-14",
+      "team1": "Germany",
+      "team2": "Scotland",
+      "sides": {
+        "home": {
+          "id": "t_v0000001",
+          "image_url": null
+        },
+        "away": {
+          "id": "t_v0000002",
+          "image_url": null
+        }
+      },
+      "score": {
+        "ft": [
+          5,
+          1
+        ]
+      }
+    }
+  }
+}

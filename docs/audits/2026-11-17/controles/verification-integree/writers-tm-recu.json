@@ -1,0 +1,45 @@
+{
+  "at": "2026-11-18T22:35:06.597025+00:00",
+  "scenarios_per_revision": 18,
+  "assertions_per_revision": 216,
+  "observations_equal": true,
+  "postgres": "18.6",
+  "node": "26.4.0",
+  "python": "3.12",
+  "psycopg": "3.2.12",
+  "source_requests": "synthetic only",
+  "database": "distinct temporary PostgreSQL databases, loopback only",
+  "collector_role": "vega_collect",
+  "reader_role": "vega_read",
+  "historical_production_losses": "unmeasured",
+  "tested_revisions": [
+    "202f24c09eb4c8fb87d7190939bafbf09cb00393",
+    "34ca3b5b382d7a6a06da9d051170096ba1d700e8"
+  ],
+  "files": {
+    "ATTENDUS.md": {
+      "sha256": "927c34714e82c161d27746a3c4c0252eab246ba535a9adba65964d3436b4e392",
+      "bytes": 2149
+    },
+    "RAPPORT.md": {
+      "sha256": "4a52c243c7fa712f8f2ad49977efe63c7f2ca31960791070aeb7556692ebc5b8",
+      "bytes": 6594
+    },
+    "HTTP.mjs": {
+      "sha256": "c1c98a0312e5ac42292efd005bf3327a1765906ae90748105fff32112caf18ad",
+      "bytes": 1134
+    },
+    "rejouer.py": {
+      "sha256": "688d180974695a46467db0132df35dea12b3b1554d9c317aa86030c2ef730dbe",
+      "bytes": 12361
+    },
+    "202f24c0-resultats.json": {
+      "sha256": "22471eabcaff5a416606de13e343ac9b11d8ff2ed2c599dc31b9f2b9e580e100",
+      "bytes": 84912
+    },
+    "34ca3b5b-resultats.json": {
+      "sha256": "3141d19f002a7e8d0e6afdff83ac609274fb23be83b62f08293a530cbccaf6f8",
+      "bytes": 84912
+    }
+  }
+}

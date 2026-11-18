@@ -1,0 +1,43 @@
+{
+  "application": "4c413029c173e96704f4752f843f186526e114cf",
+  "runs": [
+    {
+      "run_id": "20261118T222003Z-code-fff92097",
+      "status": "succeeded",
+      "role": "code",
+      "observed_models": [
+        "claude-opus-5-5"
+      ],
+      "effort": "max",
+      "finished": "2026-11-18T23:06:36.729856+00:00",
+      "manifest_sha256": "96238beeb67f2a3b7fd553d65f9aba333bc941c572ad80123fc8def4ea917420",
+      "result_sha256": "e11ec197b88b2d0a00cb836461570ace3a5b2a562295cd122c252836cc6ee6fb"
+    },
+    {
+      "run_id": "20261118T230922Z-code-ece405ef",
+      "status": "succeeded",
+      "role": "code",
+      "observed_models": [
+        "claude-opus-5-5"
+      ],
+      "effort": "max",
+      "finished": "2026-11-18T23:28:41.684531+00:00",
+      "manifest_sha256": "59f7b6061fc214740defe4c4408bd424e8ea669c69506e69b40395bea96a7069",
+      "result_sha256": "77d9c33801509331d5ff0f2cd58db739b4bb70b1ca44d9328f24012cbf690fe1"
+    },
+    {
+      "run_id": "20261118T232842Z-code-494101de",
+      "status": "succeeded",
+      "role": "code",
+      "observed_models": [
+        "claude-opus-5-5"
+      ],
+      "effort": "max",
+      "finished": "2026-11-18T23:42:17.727621+00:00",
+      "manifest_sha256": "093fe712845d85d5318ec2365c67507c522884cfe3210872f7d8db48ff30cd32",
+      "result_sha256": "72c23bfb91b5d027ef80d711c990ca41cad6982227f1b27716efa1c613a46a2e"
+    }
+  ],
+  "reviewed_predecessor": "34ca3b5b382d7a6a06da9d051170096ba1d700e8",
+  "final_review_pending": true
+}

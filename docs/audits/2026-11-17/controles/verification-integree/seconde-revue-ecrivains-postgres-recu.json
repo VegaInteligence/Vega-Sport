@@ -1,0 +1,59 @@
+{
+  "archive": "seconde-revue-ecrivains-postgres.zip",
+  "size_bytes": 7162206,
+  "sha256": "bffb7246dc3a7e3c48ce3b178df51c41321ff606115626daac7f73b634e81149",
+  "manifest_sha256": "b2647b01512d1d472b2c11d35e55db8fc2d39e035f178bee5072e5c6d06e5516",
+  "candidate": "51acd93a52ca41a59bc9e1663c67ba3fa3b858f2",
+  "baseline": "14068dfc943cddb3b31f8250e120e00c0fb8c7db",
+  "verified_at_utc": "2026-11-18T22:12:02+00:00",
+  "files": 505,
+  "relative_readme_links": 15,
+  "zip_crc": "valid",
+  "private_path_or_credential_patterns": 0,
+  "offline_verification": {
+    "stored_proofs": {
+      "status": 0,
+      "message": "VÉRIFIÉ · 505 fichiers. Fraîcheur, clés, données tierces, sections, migration 151 et témoins de régression."
+    },
+    "historical_regression_rejected": {
+      "status": 1,
+      "message": "REFUSÉ · un ancien classement est encore accepté"
+    },
+    "tampered_proof_rejected": {
+      "status": 1,
+      "message": "REFUSÉ · fichier altéré · proof/fraicheur.json"
+    },
+    "fresh_replays": {
+      "status": 0,
+      "message": "VÉRIFIÉ · 505 fichiers. Fraîcheur, clés, données tierces, sections, migration 151 et témoins de régression."
+    }
+  },
+  "local_replay": {
+    "replayed_files": [
+      "alias.json",
+      "cotes-apres.json",
+      "cotes-avant.json",
+      "fraicheur.json",
+      "probes-apres.json",
+      "probes-avant.json",
+      "publication.json",
+      "restauration.json",
+      "saudi.json"
+    ],
+    "network": "loopback only",
+    "postgresql": "18.6",
+    "node_dependency_source": "npm cache offline"
+  },
+  "coverage": {
+    "saudi_pairs": 7,
+    "saudi_ids": 14,
+    "real_aliases": 838,
+    "alias_checks": 872,
+    "t2_archived_observations": 28,
+    "ci_archived": {
+      "python": 588,
+      "api": 215,
+      "site": 768
+    }
+  }
+}

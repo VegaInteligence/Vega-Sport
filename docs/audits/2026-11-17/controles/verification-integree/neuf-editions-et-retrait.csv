@@ -1,0 +1,11 @@
+season_id,season,competition_id,competition,edition_id,country_code,competition_kind,entity_type,known_participations_minimum,recorded_matches,finished,expected_algorithm,actual_valid,missing_from_storage,role_unavailable,known_without_stats,known_without_measured_minutes,archive_policy_excluded,matched_copies_excluded,eligibility_basis,scope_status,scope_keys,match_sources,cup_key,archive_key,award_years
+2021,2021/2022,35,2. Bundesliga,714,GER,,player,9386,306,306,9380,8921,459,0,6,0,,,"position and positive minutes, current or same award role",hors_liste_retraits,,pitchapi,,,2020
+2021,2021/2022,15,Allsvenskan,729,SWE,,player,7066,240,240,7027,4171,2856,10,16,13,,,"position and positive minutes, current or same award role",retire_declare_presents,l_1XsMdH,pitchapi,,,2020
+2021,2021/2022,44,Bundesliga,744,AUT,,player,5861,195,195,5861,5593,268,0,0,0,,,"position and positive minutes, current or same award role",hors_liste_retraits,,pitchapi,,,2020
+2021,2021/2022,9,Eliteserien,780,NOR,,player,7074,240,240,7069,3891,3178,1,1,3,,,"position and positive minutes, current or same award role",hors_liste_retraits,,pitchapi,,,2020
+2021,2021/2022,24,First Division A,798,BEL,,player,9656,329,328,9632,9228,404,1,23,0,,,"position and positive minutes, current or same award role",hors_liste_retraits,,pitchapi,,,2020
+2021,2021/2022,40,Liga MX,853,MEX,,player,5220,171,171,5204,4839,365,8,6,2,,,"position and positive minutes, current or same award role",hors_liste_retraits,,pitchapi,,,2020
+2021,2021/2022,6,MLS,883,USA,,player,14068,468,468,14061,7899,6162,2,1,4,,,"position and positive minutes, current or same award role",hors_liste_retraits,,pitchapi,,,2020
+2021,2021/2022,13,Premiership,913,SCO,,player,6438,228,228,6435,6325,110,1,1,1,,,"position and positive minutes, current or same award role",hors_liste_retraits,,pitchapi,,,2020
+2021,2021/2022,57,Super League,963,SUI,,player,5540,180,180,5522,5308,214,0,18,0,,,"position and positive minutes, current or same award role",hors_liste_retraits,,pitchapi,,,2020
+2021,2021/2022,49,Superligaen,980,DEN,,player,5942,193,193,5941,5539,402,0,0,1,,,"position and positive minutes, current or same award role",hors_liste_retraits,,pitchapi,,,2020
