@@ -69,12 +69,27 @@ def _pair(value):
     return value if isinstance(value, list) and len(value) == 2 and all(isinstance(v, int) and not isinstance(v, bool) and v >= 0 for v in value) else None
 
 
+# The reader's version by kind, part of an edition's digest (save): raised when the reader learns to read what
+# the source already gave, so the editions written before are read again once though their content has not
+# changed. 2 (18 November 2026): a score written as a bare pair.
+READER = {"open-cups": 2}
+
+
+def _score(value):
+    """OpenFootball's score as its parts: {"ft": …, "ht": …, "et": …, "p": …}, or a bare [a, b] for a match
+    decided in ninety minutes (its World Cup files of 1950 to 2014 write most scores so)."""
+    if isinstance(value, dict):
+        return value
+    pair = _pair(value)
+    return {"ft": pair} if pair else {}
+
+
 def match_rows(kind, competition, season, body):
     """(provider key, row) per source match, in source order."""
     out = []
     for position, m in enumerate(body.get("matches") or []):
         if kind == "open-cups":
-            score = m.get("score") if isinstance(m.get("score"), dict) else {}
+            score = _score(m.get("score"))
             ft, ht, et, p = (_pair(score.get(k)) for k in ("ft", "ht", "et", "p"))
             final = et or ft
             key = f"{competition}:{season}:{m.get('date') or ''}|{m.get('team1') or ''}|{m.get('team2') or ''}|{m.get('num') or ''}"
@@ -141,7 +156,8 @@ def save(conn, kind, competition, season, body, now):
     comp = row[0] if row else conn.execute("INSERT INTO core.competitions(name) VALUES (%s) RETURNING id", (name,)).fetchone()[0]
     if not row:
         conn.execute("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('competition','vega',%s,%s)", (family, comp))
-    digest = hashlib.sha256(json.dumps([body.get("name"), body.get("matches")], sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+    content = [body.get("name"), body.get("matches")] + ([READER[kind]] if kind in READER else [])
+    digest = hashlib.sha256(json.dumps(content, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
     source = body.get("source") or {}
     edition, changed = conn.execute(
         """INSERT INTO core.competition_seasons(competition_id, season_id, native_label, cup_key, cup_name, cup_source_url, cup_data_url,
