@@ -86,3 +86,41 @@ export function nationalTeamName(name, season) {
     ? displays[1]?.of(code.toUpperCase()) || name
     : name;
 }
+
+// The home nations have no country code of their own; two countries the browser names by their capital.
+const LABELS = { "gb-eng": "Angleterre", "gb-sct": "Écosse", "gb-wls": "Pays de Galles", "gb-nir": "Irlande du Nord", cd: "RD Congo", cg: "Congo" };
+// The teams of the past (the World Cup's archives): a name, no flag.
+const PAST_TEAMS = Object.fromEntries(
+  Object.entries({
+    "West Germany": "Allemagne de l’Ouest",
+    "East Germany": "Allemagne de l’Est",
+    "Soviet Union": "URSS",
+    Czechoslovakia: "Tchécoslovaquie",
+    Yugoslavia: "Yougoslavie",
+    "Serbia and Montenegro": "Serbie-et-Monténégro",
+    Zaire: "Zaïre",
+    "Dutch East Indies": "Indes néerlandaises",
+  }).map(([name, label]) => [key(name), label]),
+);
+
+/**
+ * A national team's name in French whatever the edition's year (a flag is withheld before 1994, a name is not): the
+ * home nations and the teams of the past included. A name no country answers to (a fixture's « Winner Match 45 ») is
+ * left as it is.
+ */
+export function nationalTeamLabel(name) {
+  const normalized = key(name);
+  if (PAST_TEAMS[normalized]) return PAST_TEAMS[normalized];
+  const code = names.get(normalized);
+  if (!code) return name;
+  return LABELS[code] || (code.length === 2 ? displays[1]?.of(code.toUpperCase()) : null) || name;
+}
+
+/** The same national team under two spellings (« Italy », « Italie »); two names no country answers to, as text. */
+export function sameNationalTeam(a, b) {
+  const first = key(a), second = key(b);
+  if (!first || !second) return false;
+  if (first === second) return true;
+  const code = names.get(first);
+  return Boolean(code) && !PAST_TEAMS[first] && !PAST_TEAMS[second] && code === names.get(second);
+}

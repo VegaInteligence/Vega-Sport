@@ -457,77 +457,136 @@
 .cup-catalog-error { margin-top: 10px; color: var(--muted); font-size: var(--text-sm); }
 .cup-catalog-error button { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
 
-/* Knockout rounds share a scrollable, connected tournament tree. */
-.knockout-section { margin-top: 16px; }
-.knockout-section h3 {
-  margin: 0 0 12px;
-  color: var(--ink-strong);
-  font-size: var(--text-sm);
-  font-weight: 650;
+/* A cup edition's page: the competition, its edition between two arrows, the team followed and the views, on one row. */
+.edition-card > .card-body:first-child { padding-top: 12px; }
+.edition-head { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; margin: 0 -16px 12px; padding: 0 16px 12px; border-bottom: 1px solid var(--border); }
+.edition-logo { width: 34px; height: 34px; flex: 0 0 34px; }
+.edition-name { margin: 0; color: var(--ink-strong); font-size: var(--text-xl); font-weight: 700; letter-spacing: -0.01em; white-space: nowrap; }
+.edition-stepper { display: inline-flex; align-items: center; background: var(--surface-subtle); border: 1px solid var(--border); border-radius: var(--radius); }
+.edition-stepper button { width: 30px; height: 32px; padding: 0; color: var(--muted); background: none; border: 0; font-size: 16px; line-height: 1; cursor: pointer; }
+.edition-stepper button:disabled { opacity: 0.3; cursor: default; }
+.edition-stepper button:not(:disabled):hover { color: var(--ink-strong); }
+.edition-stepper button:focus-visible, .edition-stepper select:focus-visible, .edition-followed:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.edition-stepper select { height: 32px; padding: 0 6px; color: var(--ink-strong); background: var(--surface-subtle); border: 0; border-inline: 1px solid var(--border); border-radius: 0; font-size: var(--text-lg); font-weight: 700; font-variant-numeric: tabular-nums; cursor: pointer; }
+.edition-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-left: auto; }
+.edition-followed { display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 10px; color: var(--ink-strong); background: var(--accent-soft); border: 1px solid var(--accent-line); border-radius: 999px; font-size: var(--text-sm); font-weight: 600; cursor: pointer; }
+.edition-followed span:last-child { color: var(--muted); font-weight: 400; }
+.edition-card .knockout-section { margin-top: 0; }
+.cup-match-own .score { color: var(--accent); background: var(--accent-soft); }
+.edition-groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.edition-group { min-width: 0; padding: 10px 12px; background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius); }
+.edition-group h3 { margin: 0 0 6px; color: var(--ink-strong); font-size: var(--text-sm); }
+.edition-group .data-table { width: 100%; }
+.edition-group .edition-own > * { background: var(--accent-soft); }
+@media (max-width: 860px) {
+  .edition-name { font-size: 18px; }
+  .edition-tools { width: 100%; margin-left: 0; }
+  .edition-tools .segmented-control { display: flex; flex: 1; }
+  .edition-tools .segmented-control button { flex: 1; }
 }
-.knockout-note {
-  margin: 0 0 12px;
-  color: var(--muted);
-  font-size: var(--text-xs);
-  line-height: 1.5;
+
+/* A cup's bracket on one screen: both halves towards the final in the middle, as tall as the screen leaves. */
+.knockout-section { --knockout-line: var(--border-strong); --knockout-gap: clamp(12px, 1.25vw, 22px); --knockout-slot: 60px; margin-top: 14px; }
+.knockout-two-legged { --knockout-slot: 80px; }
+.knockout-bracket { max-width: calc(var(--knockout-columns) * 250px + (var(--knockout-columns) - 1) * var(--knockout-gap)); margin-inline: auto; }
+.knockout-labels, .knockout-grid { display: grid; grid-template-columns: repeat(var(--knockout-columns), minmax(0, 1fr)); column-gap: var(--knockout-gap); }
+.knockout-labels { margin-bottom: 4px; color: var(--muted); font-size: var(--text-xs); font-weight: 600; text-align: center; }
+.knockout-labels span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.knockout-labels .knockout-label-final { color: var(--ink-strong); }
+.knockout-grid {
+  height: clamp(
+    max(400px, calc(var(--knockout-half) * var(--knockout-slot))),
+    calc(100dvh - var(--knockout-top, 240px) - 48px),
+    max(460px, calc(var(--knockout-half) * (var(--knockout-slot) + 24px)))
+  );
 }
-.knockout-note a { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
-.knockout-scroll-hint { display: none; margin: 0 0 8px; color: var(--muted); font-size: var(--text-xs); }
-.knockout-scroll { overflow-x: auto; padding: 3px 2px 16px; overscroll-behavior-x: contain; }
-.knockout-scroll:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.knockout-columns { display: flex; align-items: stretch; gap: 36px; width: max-content; }
-.knockout-column { flex: 0 0 230px; width: 230px; min-width: 0; }
-.knockout-column > h3 { height: 18px; }
-.knockout-track { display: flex; flex-direction: column; gap: 10px; }
-.knockout-columns-linked .knockout-track {
-  display: grid;
-  grid-template-rows: repeat(var(--knockout-slots), 110px);
-  gap: 10px;
-}
-.knockout-slot { position: relative; display: flex; align-items: center; min-width: 0; }
-.knockout-columns-linked .knockout-column:not(:last-child) .knockout-slot::after {
-  content: ""; position: absolute; top: 50%; right: -18px; width: 18px; border-top: 1px solid var(--border-strong);
-}
-.knockout-columns-linked .knockout-column:not(:last-child) .knockout-slot::before {
-  content: ""; position: absolute; right: -18px; border-right: 1px solid var(--border-strong);
-}
-.knockout-columns-linked .knockout-column:not(:last-child) .knockout-slot:nth-child(odd)::before { top: 50%; bottom: -5px; }
-.knockout-columns-linked .knockout-column:not(:last-child) .knockout-slot:nth-child(even)::before { top: -5px; bottom: 50%; }
-.knockout-columns-linked .knockout-column:not(:first-child) .knockout-match::before {
-  content: ""; position: absolute; left: -19px; top: 50%; width: 18px; border-top: 1px solid var(--border-strong);
-}
+.knockout-column { display: grid; grid-template-rows: repeat(var(--knockout-half), minmax(0, 1fr)); min-width: 0; container-type: inline-size; }
+.knockout-slot { position: relative; display: flex; align-items: center; min-width: 0; min-height: 0; }
+/* A tie's line to the middle of the gap, the upright joining two ties, and the line into the next round's tie. */
+.knockout-column:not(.knockout-last) .knockout-slot::after { content: ""; position: absolute; top: 50%; width: calc(var(--knockout-gap) / 2); border-top: 1px solid var(--knockout-line); }
+.knockout-left .knockout-slot::after { left: 100%; }
+.knockout-right .knockout-slot::after { right: 100%; }
+.knockout-column:not(.knockout-last) .knockout-slot::before { content: ""; position: absolute; border-left: 1px solid var(--knockout-line); }
+.knockout-left .knockout-slot::before { left: calc(100% + var(--knockout-gap) / 2); }
+.knockout-right .knockout-slot::before { right: calc(100% + var(--knockout-gap) / 2); }
+.knockout-column .knockout-slot:nth-child(odd)::before { top: 50%; bottom: 0; }
+.knockout-column .knockout-slot:nth-child(even)::before { top: 0; bottom: 50%; }
+.knockout-column:not(.knockout-first) .knockout-match::before { content: ""; position: absolute; top: 50%; width: calc(var(--knockout-gap) / 2); border-top: 1px solid var(--knockout-line); }
+.knockout-left .knockout-match::before { right: calc(100% + 1px); }
+.knockout-right .knockout-match::before { left: calc(100% + 1px); }
+.knockout-column.knockout-last .knockout-slot::after { content: ""; position: absolute; top: 50%; width: var(--knockout-gap); border-top: 1px solid var(--knockout-line); }
+.knockout-centre { position: relative; min-width: 0; }
+.knockout-final { position: absolute; top: 50%; right: 0; left: 0; transform: translateY(-50%); }
+.knockout-final .knockout-match { background: var(--surface-subtle); border-color: var(--border-strong); }
+.knockout-grid .knockout-champion { position: absolute; right: 0; bottom: calc(50% + var(--knockout-slot) / 2 + 12px); left: 0; }
+.knockout-champion { display: grid; justify-items: center; gap: 6px; text-align: center; }
+.knockout-champion img { height: clamp(54px, 9dvh, 96px); object-fit: contain; }
+.knockout-champion b { display: inline-flex; align-items: center; gap: 8px; color: var(--ink-strong); font-size: var(--text-lg); font-weight: 700; }
+.knockout-grid .knockout-third { position: absolute; top: calc(50% + var(--knockout-slot) / 2 + 14px); right: 0; left: 0; }
+.knockout-third small { display: block; margin-bottom: 4px; color: var(--muted); font-size: var(--text-xs); font-weight: 600; text-align: center; }
+
 .knockout-match {
   position: relative;
   display: block;
-  flex: 1;
-  min-width: 0;
   width: 100%;
-  padding: 8px 10px;
+  min-width: 0;
+  padding: 4px 8px;
   color: var(--ink);
   background: var(--surface-raised);
   border: 1px solid var(--border);
   border-radius: var(--radius);
+  font-size: var(--text-sm);
+  transition: opacity 0.12s, border-color 0.12s, background 0.12s;
 }
 .knockout-match-link:hover { background: var(--surface-hover); border-color: var(--border-strong); }
 .knockout-match-link:focus-visible, .knockout-legs a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.knockout-match-meta { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 4px; color: var(--muted); font-size: var(--text-2xs); }
-.knockout-team { display: flex; align-items: center; gap: 6px; min-height: 22px; min-width: 0; font-size: var(--text-xs); }
+.knockout-team { display: flex; align-items: center; gap: 7px; height: 22px; min-width: 0; }
 .knockout-team-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.knockout-team strong { min-width: 12px; text-align: right; font-weight: 500; font-variant-numeric: tabular-nums; }
-.knockout-team small { min-width: 18px; color: var(--muted); text-align: right; font-size: var(--text-2xs); font-variant-numeric: tabular-nums; }
+.knockout-team strong { min-width: 9px; text-align: right; font-weight: 500; font-variant-numeric: tabular-nums; }
+.knockout-team small { color: var(--muted); font-size: var(--text-2xs); font-variant-numeric: tabular-nums; }
+.knockout-when { color: var(--muted); font-size: var(--text-2xs); white-space: nowrap; }
 .knockout-winner { color: var(--ink-strong); font-weight: 650; }
-.knockout-winner strong { color: var(--ink-strong); font-weight: 700; }
+.knockout-winner strong { font-weight: 700; }
+.knockout-loser { color: var(--muted); }
+.knockout-tag { position: absolute; top: -7px; right: 7px; padding: 0 5px; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 6px; font-size: 9px; line-height: 12px; }
 .knockout-crest { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; flex: 0 0 18px; }
 .knockout-crest img { width: 100%; height: 100%; object-fit: contain; }
-.knockout-legs { display: flex; gap: 10px; margin-top: 5px; color: var(--muted); font-size: var(--text-2xs); }
+.knockout-legs { display: flex; gap: 10px; margin-top: 2px; color: var(--muted); font-size: var(--text-2xs); line-height: 16px; }
 .knockout-legs a { color: var(--muted); text-decoration: underline; text-underline-offset: 2px; }
-.knockout-preliminary { margin-bottom: 22px; }
-.knockout-third { margin-top: 18px; }
-.knockout-preliminary-grid, .knockout-third-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 230px)); gap: 10px; }
-@media (max-width: 1100px) { .knockout-scroll-hint { display: block; } }
+/* The team followed from its page, and the one the pointer is on: their run stands out. */
+.knockout-followed { background: var(--accent-soft); border-color: var(--accent-line); }
+.knockout-own .knockout-team-name { color: var(--accent); }
+.knockout-dimmed { opacity: 0.4; }
+/* A narrow column keeps the names: the shoot-out's figures stay in the tie's tag and its tooltip. */
+@container (max-width: 150px) {
+  .knockout-match { padding: 4px 6px; }
+  .knockout-team { gap: 5px; }
+  .knockout-team small { display: none; }
+  .knockout-team .fi.national-flag { flex-basis: 18px; width: 18px; height: 13.5px; }
+}
+
+/* Rounds outside the tree, and a bracket whose crossings the source does not give: listed. */
+.knockout-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px 8px; }
+.knockout-rows { display: grid; gap: 14px; }
+.knockout-rows h3 { margin: 0 0 6px; color: var(--muted); font-size: var(--text-xs); font-weight: 600; }
+.knockout-early { margin-bottom: 14px; }
+.knockout-early summary { cursor: pointer; color: var(--ink); font-size: var(--text-sm); font-weight: 600; }
+.knockout-early[open] summary { margin-bottom: 12px; }
+
+/* Phones and narrow windows: one round a screen. */
+.knockout-phone { display: none; }
+.knockout-phone .knockout-rounds { display: flex; margin-bottom: 14px; }
+.knockout-phone .knockout-rounds button { flex: 1; padding-inline: 6px; }
+.knockout-phone .knockout-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.knockout-phone .knockout-list-single { grid-template-columns: minmax(0, 320px); justify-content: center; }
+.knockout-phone .knockout-champion { margin-bottom: 14px; }
+.knockout-phone .knockout-third { max-width: 320px; margin: 18px auto 0; }
+@media (max-width: 1080px) {
+  .knockout-bracket { display: none; }
+  .knockout-phone { display: block; }
+}
 @media (max-width: 640px) {
-  .knockout-column { flex-basis: 210px; width: 210px; }
-  .knockout-preliminary-grid, .knockout-third-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); }
+  .knockout-team { height: 26px; }
 }
 
 /* Directory filters share the site's field styling and stay on the page. */
@@ -563,9 +622,6 @@
 .cup-country .cup-directory-grid { grid-template-columns: minmax(0, 1fr); }
 .cup-bracket-unavailable .chart-empty { padding-bottom: 16px; }
 .cup-bracket-unavailable > button { display: block; margin: 0 auto 20px; }
-.knockout-early { margin-bottom: 20px; }
-.knockout-early summary { cursor: pointer; color: var(--ink); font-size: var(--text-sm); font-weight: 600; }
-.knockout-early[open] summary { margin-bottom: 12px; }
 .nations-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .nations-group { min-width: 0; padding: 14px; background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-lg); }
 .nations-group h3 { margin: 0 0 10px; color: var(--ink-strong); font-size: var(--text-sm); }
