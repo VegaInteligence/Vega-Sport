@@ -131,11 +131,12 @@ Chaque route liste en tête de fichier ses écarts voulus avec l'API précédent
 
 - Le [jeu Transfermarkt de dcaribou](https://github.com/dcaribou/transfermarkt-datasets), arrêté au 6 juillet 2026, est relu par le collecteur sur l’ensemble de la base. La [projection reproductible](tools/build_player_fact_snapshot.py) conserve les identifiants source et les preuves de rapprochement. L’import complète les dates de naissance et pieds forts manquants. Les échéances et leurs clubs sont conservés dans `core.player_fact_observations` avec la date du jeu. Les contrats confirmés gardent la priorité dans les fiches. La route `/api/players/facts-coverage` donne les comptes de couverture.
 - Les [estimations Transfermarkt datées](tools/build_market_value_snapshot.py) réutilisent ces correspondances. Leur date d’évaluation reste distincte de la date du jeu. La fiche donne la dernière estimation connue et `/api/player-market-values?id=` en donne l’historique.
-- **Lecteur Transfermarkt** ([transfermarkt.py](vega/transfermarkt.py), migrations 113 et 114) : un processus enfant du worker (`--transfermarkt process`) lit l’API JSON de Transfermarkt, celle que documente le projet MIT felipeall/transfermarkt-api (v5), avec un client à lui (six routes, bibliothèque standard).
+- **Lecteur Transfermarkt** ([transfermarkt.py](vega/transfermarkt.py), migrations 113, 114 et 139) : un processus enfant du worker (`--transfermarkt process`) lit l’API JSON de Transfermarkt, celle que documente le projet MIT felipeall/transfermarkt-api (v5), avec un client à lui (six routes, bibliothèque standard).
   - **Ce qu’il garde, en lignes typées :**
     - les joueurs lus (`core.provider_players`), les effectifs (`core.provider_squads`) et les noms de clubs (`core.provider_clubs`) ;
-    - pour un joueur relié : ses valeurs avec le club de chaque estimation, ses transferts et ses blessures, remplacés en entier à chaque lecture ;
-    - son contrat avec un de nos clubs, quand le début est connu.
+    - pour un joueur relié : ses valeurs avec le club de chaque estimation et ses blessures, remplacées en entier à chaque lecture ;
+    - ses transferts, chacun mis à jour par sa clé et jamais effacé : un transfert que Transfermarkt ne liste plus garde ses faits et le premier jour où il manquait (`absent_since`). Une réponse qui ne peut pas être un historique complet n’écrit rien ; la file garde son vrai statut HTTP et un code `HISTORY_*` ([modes d’échec §20](../docs/calculs/09-audit-2026-11/FAILURE_MODES.md)) ;
+    - ses contrats avec nos clubs, chacun un fait daté gardé ; celui que Transfermarkt ne nomme plus est écarté à la date du changement (`superseded_on`), sa date de fin observée gardée.
   - **Liens** (règle de chacun dans `ops.provider_links`) :
     - le jeu du 6 juillet tel quel ;
     - un club par les votes des valeurs de nos joueurs : au moins 3 joueurs et 60 % de chaque côté, jamais une équipe réserve vers l’équipe première ; un conflit va dans `ops.provider_link_conflicts` ;
@@ -146,6 +147,7 @@ Chaque route liste en tête de fichier ses écarts voulus avec l'API précédent
   - **Le relancer** après lecture des refus (`ops.transfermarkt_blocks`) :
     `UPDATE ops.transfermarkt_state SET gave_up_at = NULL, paused_until = NULL, blocks_in_row = 0, blocked_since = NULL WHERE id = 1;`
   - **Avancement :** la vue `api.provider_reader_progress`.
+  - **Revenir à une image d’avant la migration 139** : arrêter d’abord le lecteur, `UPDATE ops.transfermarkt_state SET gave_up_at = now() WHERE id = 1;`, et le laisser arrêté jusqu’au retour d’une version qui conserve l’historique. L’ancien lecteur efface à chaque lecture ; s’il tourne quand même, la migration 139 refuse ses suppressions (`TRANSFERMARKT_HISTORY_KEPT`) et son processus redémarre toutes les 5 minutes sans rien perdre. Une suppression voulue par une personne pose `SET LOCAL vega.allow_history_delete = 'on'` dans sa transaction.
 - coefficients UEFA, avec les points par saison et les clubs encore en lice ;
 - classement FIFA, toutes les éditions depuis 2021 ;
 - classements officiels SportScore, écrits seulement si chaque ligne désigne un club de l'édition ;
