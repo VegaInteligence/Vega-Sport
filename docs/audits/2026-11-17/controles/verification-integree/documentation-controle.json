@@ -1,0 +1,9 @@
+{
+  "avant": "8bab7d71b6857380503dfd152999d2c30b465fb7",
+  "apres": "396379a61699bf642a13295b206ebdd348336947",
+  "pages": 11,
+  "remplacements_exacts": 35,
+  "document_original_sha256": "fdf03a62f1980fc74efe2be98d87119084802c9881a4cef93a4ae7267192baeb",
+  "fichiers_executables_modifies": 0,
+  "rejeu": "python3 verifier.py <chemin-du-depot-avec-les-deux-commits>"
+}

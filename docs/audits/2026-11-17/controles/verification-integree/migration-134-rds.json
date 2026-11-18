@@ -1,0 +1,73 @@
+{
+  "at": "2026-11-18 16:44:16.606815+00:00",
+  "snapshot": "4446359:4446359:",
+  "readonly": "on",
+  "sha256_sql": "7c6a094eaa020a0f3e2fbd89c740688c1830f4e27ae416b5953edf3ed1d32094",
+  "result": {
+    "migration": {
+      "columns": [
+        "clock_timestamp",
+        "current_setting",
+        "latest",
+        "score_migration"
+      ],
+      "rows": [
+        [
+          "2026-11-18 16:44:16.616575+00:00",
+          "on",
+          "133_cohort_max_wait.sql",
+          null
+        ]
+      ]
+    },
+    "finals": {
+      "columns": [
+        "scope",
+        "status",
+        "error_code",
+        "last_success_at",
+        "last_attempt_at",
+        "rows_written",
+        "id",
+        "match_status",
+        "home_score",
+        "away_score",
+        "revision",
+        "cup_checked_at",
+        "cup_updated_at"
+      ],
+      "rows": [
+        [
+          "open-cups:world-cup-history:1982",
+          "ok",
+          null,
+          "2026-11-16 13:42:07.950589+00:00",
+          "2026-11-16 13:42:07.950589+00:00",
+          0,
+          836,
+          "not_started",
+          null,
+          null,
+          1,
+          "2026-11-16 13:42:07.950589+00:00",
+          "2026-11-09 13:41:23.510544+00:00"
+        ],
+        [
+          "open-cups:world-cup-history:1998",
+          "ok",
+          null,
+          "2026-11-16 13:42:07.950589+00:00",
+          "2026-11-16 13:42:07.950589+00:00",
+          0,
+          1056,
+          "not_started",
+          null,
+          null,
+          1,
+          "2026-11-16 13:42:07.950589+00:00",
+          "2026-11-09 13:41:23.510544+00:00"
+        ]
+      ]
+    }
+  }
+}

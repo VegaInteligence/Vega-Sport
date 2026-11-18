@@ -1,0 +1,209 @@
+{
+  "probe_sha256": "49c6d507a15d507c07a5104bc3f7449ffb65a13f79cbce8abe771e6f5e004ec2",
+  "transport_sha256": "bf53f703938914eb226099afa130e3cc6454178a8b98eb5eeaf7c7dc9beff8fc",
+  "commit_of_observed_worker": "8018e0836ca0f32e8b2eb51fc2847154abff7f13",
+  "capture": {
+    "at": "2026-11-18 16:21:06.154817+00:00",
+    "isolation": "repeatable read",
+    "snapshot": "4445199:4445199:",
+    "read_only": "on",
+    "matches": {
+      "sql": "SELECT count(*) matches, count(*) FILTER (WHERE status='finished') finished,\n       count(*) FILTER(WHERE home_score_ht IS NOT NULL AND away_score_ht IS NOT NULL) known_ht,\n       count(*) FILTER(WHERE (home_score_ht IS NULL)<>(away_score_ht IS NULL)) half_known,\n       count(*) FILTER(WHERE status='finished' AND (home_score_ht>home_score OR away_score_ht>away_score)) impossible_ht,\n       count(*) FILTER(WHERE round_id IS NOT NULL) round_known FROM core.matches WHERE source='open_matchday'",
+      "columns": [
+        "matches",
+        "finished",
+        "known_ht",
+        "half_known",
+        "impossible_ht",
+        "round_known"
+      ],
+      "rows": [
+        [
+          4682,
+          2576,
+          417,
+          0,
+          0,
+          4682
+        ]
+      ]
+    },
+    "cells": {
+      "sql": "WITH v AS MATERIALIZED (\n        SELECT s.match_id,jsonb_strip_nulls(to_jsonb(s) - ARRAY['season_id','team_id','match_id','period','updated_at',\n          'total_shots','shots_on_target','fouls','corners','yellow_cards','red_cards']) unrelated\n        FROM core.matches m JOIN core.team_match_stats s ON (s.match_id,s.season_id)=(m.id,m.season_id) WHERE m.source='open_matchday')\n        SELECT count(*) team_periods,count(DISTINCT match_id) matches_with_stats,count(*) FILTER(WHERE unrelated <> '{}'::jsonb) rows_with_other_values,\n        count(DISTINCT match_id) FILTER(WHERE unrelated<>'{}'::jsonb) matches_with_other_values\n        FROM v",
+      "columns": [
+        "team_periods",
+        "matches_with_stats",
+        "rows_with_other_values",
+        "matches_with_other_values"
+      ],
+      "rows": [
+        [
+          834,
+          417,
+          0,
+          0
+        ]
+      ]
+    },
+    "ht_groups": {
+      "sql": "SELECT cs.cup_key,count(*) finished,count(*) FILTER(WHERE m.home_score_ht IS NOT NULL AND m.away_score_ht IS NOT NULL) known_ht\n        FROM core.matches m JOIN core.competition_seasons cs ON cs.id=m.competition_season_id WHERE m.source='open_matchday' AND m.status='finished'\n        GROUP BY cs.cup_key ORDER BY cs.cup_key",
+      "columns": [
+        "cup_key",
+        "finished",
+        "known_ht"
+      ],
+      "rows": [
+        [
+          "open-matchday:AUT_CUP_ofb-cup:2026/2027",
+          56,
+          0
+        ],
+        [
+          "open-matchday:BEL_U21_pro-league:2026/2027",
+          43,
+          0
+        ],
+        [
+          "open-matchday:CYP_1_first-division:2026/2027",
+          63,
+          0
+        ],
+        [
+          "open-matchday:ENG_5_national-league:2026/2027",
+          200,
+          200
+        ],
+        [
+          "open-matchday:ENG_6_national-league-north:2026/2027",
+          116,
+          0
+        ],
+        [
+          "open-matchday:ENG_6_national-league-south:2026/2027",
+          112,
+          0
+        ],
+        [
+          "open-matchday:ENG_7_northern-premier-league:2026/2027",
+          111,
+          0
+        ],
+        [
+          "open-matchday:ENG_CUP_efl-cup:2026/2027",
+          84,
+          0
+        ],
+        [
+          "open-matchday:ENG_CUP_fa-cup:2026/2027",
+          142,
+          0
+        ],
+        [
+          "open-matchday:ESP_CUP_copa-del-rey:2026/2027",
+          75,
+          0
+        ],
+        [
+          "open-matchday:GER_CUP_dfb-pokal:2026/2027",
+          51,
+          0
+        ],
+        [
+          "open-matchday:IRE_2_first-division:2026/2027",
+          106,
+          0
+        ],
+        [
+          "open-matchday:IRE_3_national-league:2026/2027",
+          60,
+          0
+        ],
+        [
+          "open-matchday:ITA_CUP_coppa-italia:2026/2027",
+          28,
+          0
+        ],
+        [
+          "open-matchday:KAZ_1_premier-league:2026/2027",
+          107,
+          0
+        ],
+        [
+          "open-matchday:NED_CUP_knvb-beker:2026/2027",
+          95,
+          0
+        ],
+        [
+          "open-matchday:POL_2_division-1:2026/2027",
+          106,
+          0
+        ],
+        [
+          "open-matchday:POL_3_division-2:2026/2027",
+          105,
+          0
+        ],
+        [
+          "open-matchday:POR_CUP_taca-de-portugal:2026/2027",
+          113,
+          0
+        ],
+        [
+          "open-matchday:SCO_2_championship:2026/2027",
+          73,
+          73
+        ],
+        [
+          "open-matchday:SCO_3_league-one:2026/2027",
+          74,
+          74
+        ],
+        [
+          "open-matchday:SCO_4_league-two:2026/2027",
+          70,
+          70
+        ],
+        [
+          "open-matchday:SCO_CUP_league-cup:2026/2027",
+          14,
+          0
+        ],
+        [
+          "open-matchday:SCO_CUP_scottish-cup:2026/2027",
+          50,
+          0
+        ],
+        [
+          "open-matchday:SUI_CUP_swiss-cup:2026/2027",
+          48,
+          0
+        ],
+        [
+          "open-matchday:SVN_1_prva-liga:2026/2027",
+          74,
+          0
+        ],
+        [
+          "open-matchday:UKR_1_premier-league:2026/2027",
+          90,
+          0
+        ],
+        [
+          "open-matchday:WAL_1_cymru-premier:2026/2027",
+          105,
+          0
+        ],
+        [
+          "open-matchday:WAL_2_cymru-north:2026/2027",
+          106,
+          0
+        ],
+        [
+          "open-matchday:WAL_3_cymru-south:2026/2027",
+          99,
+          0
+        ]
+      ]
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "classeur_sha256": "73a5daa71f85550368910c209ffaf7b1a90e05ad261a655a0c6bd3c58bf65a82",
+  "recensement_sha256": "375e0f6d1b4a1c547069d7544536d0f12c14ea5de9fded3eb0e9ec12eee49406",
+  "revision_classeur": "Vega-Sport main revision  17ca0f76175301e77ae43fe137467222f594b40a",
+  "instant_rds": "2026-11-18T15:59:30Z",
+  "lignes": 2149,
+  "editions_rds_distinctes_rapprochees": 2149,
+  "feuilles": 22,
+  "comparaison": {
+    "PitchAPI": {
+      "identique": 304
+    },
+    "OpenFootball": {
+      "identique": 241
+    },
+    "Open Matchday": {
+      "identique": 30
+    },
+    "OpenLigaDB": {
+      "identique": 2,
+      "écart de comptage à qualifier": 1
+    },
+    "International Results": {
+      "identique": 8
+    },
+    "footballcsv": {
+      "identique": 467
+    },
+    "engsoccerdata": {
+      "identique": 736
+    },
+    "World Club Ratings": {
+      "identique": 360
+    }
+  }
+}

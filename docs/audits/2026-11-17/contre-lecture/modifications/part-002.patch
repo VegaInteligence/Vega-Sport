@@ -1,3 +1,201 @@
+diff --git a/backend/archives/edition.mjs b/backend/archives/edition.mjs
+index 06cd63e015..8233942dab 100644
+--- a/backend/archives/edition.mjs
++++ b/backend/archives/edition.mjs
+@@ -9,20 +9,18 @@
+  */
+ import { readFileSync } from "node:fs";
+ import { gunzipSync } from "node:zlib";
+-import { buildArchiveSeason, teamSimilarity } from "../../dashboard/shared/archive.js";
++import { buildArchiveSeason } from "../../dashboard/shared/archive.js";
+ 
+ const read = (path) => (path && path !== "-" ? JSON.parse(gunzipSync(readFileSync(path)).toString("utf8")) : null);
+ const [resultsPath, goalsPath] = process.argv.slice(2);
+ const edition = buildArchiveSeason(read(resultsPath), read(goalsPath));
+-// The side a goal's team designates, compared as the archive page compares it.
+-const side = (goal, match) => {
+-  const home = teamSimilarity(goal.team, match.team1),
+-    away = teamSimilarity(goal.team, match.team2);
+-  return home > away ? "home" : away > home ? "away" : null;
+-};
++// Each goal carries the side shared/archive.js gave it (goalSide: the side named exactly first; a held row's
++// published side), FAILURE_MODES.md §22.
+ const matches = edition.matches.map(({ raw, ...match }) => ({
+   ...match,
+-  goals: match.goals ? match.goals.map((goal) => ({ ...goal, side: side(goal, match) })) : null,
++  goals: match.goals ? match.goals.map((goal) => ({ ...goal, side: goal.side ?? null })) : null,
++  // A side of the appearance-ordinal feed (build_footballcsv_history.py): never a team of its own.
++  ...(raw?.sides && { sides: raw.sides }),
+   // The typed facts of the results record that the edition's notes come from.
+   source: raw
+     ? {
+@@ -35,4 +33,4 @@ const matches = edition.matches.map(({ raw, ...match }) => ({
+       }
+     : null,
+ }));
+-process.stdout.write(JSON.stringify({ season: edition.season, competitions: edition.competitions, matches }));
++process.stdout.write(JSON.stringify({ season: edition.season, competitions: edition.competitions, matches, absorbed: edition.absorbed, held: edition.held }));
+diff --git a/backend/ci/test_databases.py b/backend/ci/test_databases.py
+index 4858f02a20..d14b47bb23 100644
+--- a/backend/ci/test_databases.py
++++ b/backend/ci/test_databases.py
+@@ -26,6 +26,13 @@ SUITES = {
+     "VEGA_V2_MODELS_TEST_DSN": "vega_v2_models_test",
+     "VEGA_V2_ROLES_TEST_DSN": "vega_v2_roles_test",
+     "VEGA_V2_SOURCES_TEST_DSN": "vega_v2_sources_test",
++    "VEGA_V2_SNAPSHOTS_TEST_DSN": "vega_v2_snapshots_test",
++    "VEGA_V2_DFB_PERIODS_TEST_DSN": "vega_v2_dfb_periods_test",
++    "VEGA_V2_ARCHIVE_REPAIR_TEST_DSN": "vega_v2_archive_repair_test",
++    "VEGA_V2_ARTWORK_TEST_DSN": "vega_v2_artwork_test",
++    "VEGA_V2_ARCHIVE_CORRECTIONS_TEST_DSN": "vega_v2_archive_corrections_test",
++    "VEGA_V2_ARCHIVE_DELETIONS_TEST_DSN": "vega_v2_archive_deletions_test",
++    "VEGA_V2_ARCHIVE_GUARDS_TEST_DSN": "vega_v2_archive_guards_test",
+     "VEGA_V2_MEDIA_TEST_DSN": "vega_v2_media_test",
+     "VEGA_V2_ARCHIVES_TEST_DSN": "vega_v2_archives_test",
+     "VEGA_V2_LIVE_TEST_DSN": "vega_v2_live_test",
+diff --git a/backend/sources/projections/open-cups.mjs b/backend/sources/projections/open-cups.mjs
+index 47c77065af..ea103513f1 100644
+--- a/backend/sources/projections/open-cups.mjs
++++ b/backend/sources/projections/open-cups.mjs
+@@ -1,6 +1,8 @@
+ import { parseFranceCup } from "../../../dashboard/frontend/src/services/openfootball-france-cup.js";
+ import { parseOpenCupText } from "../../../dashboard/frontend/src/services/openfootball-cups.js";
+ import { NATIONAL_CUP_ARCHIVES } from "../../../dashboard/frontend/src/services/cup-archives.js";
++import { openFootballScore } from "../../../dashboard/shared/openfootball-history.js";
++import { worldCupHalf } from "./world-cup-halves.mjs";
+ 
+ const WORLD_CUP_YEARS = new Set([
+   "1930",
+@@ -117,7 +119,7 @@ export async function GET(request) {
+         : source.format === "year-text"
+           ? {
+               name: "Club World Cup " + season,
+-              matches: parseOpenCupText(await response.text(), Number(season)),
++              matches: parseOpenCupText(await response.text(), Number(season), {}, { halfTime: true }),
+             }
+           : source.format === "continental-text"
+           ? {
+@@ -136,15 +138,30 @@ export async function GET(request) {
+           : await response.json();
+     if (!Array.isArray(data.matches) || data.matches.length > 1000)
+       throw new Error("Invalid source data");
+-    const matches = data.matches.map((match) => ({
+-      round: match.round,
+-      group: match.group,
+-      num: match.num,
+-      date: match.date,
+-      team1: match.team1 === UNDECIDED ? null : match.team1,
+-      team2: match.team2 === UNDECIDED ? null : match.team2,
+-      score: match.score,
+-    }));
++    const matches = data.matches.map((match) => {
++      // One score form, whatever the edition writes ([2, 1] or {ft: [2, 1]}); the source's own
++      // status (1938 Sweden–Austria: "canceled") is the cups adapter's to read (FAILURE_MODES.md §19).
++      let score = openFootballScore(match.score);
++      const half = competition === "world-cup-history" ? worldCupHalf(season, match, score) : null;
++      if (half) score = { ...score, ht: half.official_ht };
++      // This FFF decision is reviewed. Preserve the other native markers as observations
++      // without changing their published treatment while their decisions are unverified.
++      const nativeAward = competition === "france-cup" && match.status === "awarded";
++      const status = nativeAward && (match.date !== "2024-12-21" || match.team1 !== "Tours FC" || match.team2 !== "FC Lorient")
++        ? undefined : match.status;
++      return {
++        round: match.round,
++        group: match.group,
++        num: match.num,
++        date: match.date,
++        team1: match.team1 === UNDECIDED ? null : match.team1,
++        team2: match.team2 === UNDECIDED ? null : match.team2,
++        ...(score && { score }),
++        ...(typeof status === "string" && status && { status }),
++        ...(nativeAward && { sourceStatus: "[awarded]" }),
++        ...(half && { attestedHalf: { before: half.native_ht, fifaMatchId: half.fifa_match_id } }),
++      };
++    });
+     return Response.json(
+       {
+         name: data.name,
+@@ -163,11 +180,13 @@ export async function GET(request) {
+         },
+       },
+     );
+-  } catch {
++  } catch (error) {
+     return Response.json(
+       {
+         error:
+           "Les données de cette édition sont temporairement indisponibles.",
++        // A body that cannot be read names why (the cups adapter records it).
++        ...(error?.code === "INVALID_SCORE" && { code: error.code }),
+       },
+       { status: 502 },
+     );
+diff --git a/backend/sources/projections/openligadb.mjs b/backend/sources/projections/openligadb.mjs
+index f35043f686..ee45bb2561 100644
+--- a/backend/sources/projections/openligadb.mjs
++++ b/backend/sources/projections/openligadb.mjs
+@@ -1,3 +1,4 @@
++import { createHash } from "node:crypto";
+ import { normalizeOpenLigaMatches } from "../../../dashboard/frontend/src/services/openligadb.js";
+ 
+ const SOURCES = {
+@@ -29,6 +30,8 @@ export async function GET(request) {
+       { error: "Compétition ou édition indisponible." },
+       { status: 400 },
+     );
++  const typedDfb = competition === "germany-cup" && ["2025/2026", "2026/2027"].includes(season);
++  let phaseObservation;
+   try {
+     const response = await fetch(
+       "https://api.openligadb.de/getmatchdata/" + source.join("/"),
+@@ -42,8 +45,29 @@ export async function GET(request) {
+       },
+     );
+     if (!response.ok) throw new Error("Source unavailable");
+-    const rows = await response.json(),
+-      matches = normalizeOpenLigaMatches(rows, competition);
++    let rows;
++    if (typedDfb) {
++      const raw = Buffer.from(await response.arrayBuffer());
++      phaseObservation = { sourceSha256: createHash("sha256").update(raw).digest("hex") };
++      rows = JSON.parse(raw.toString("utf8"));
++      if (!Array.isArray(rows) || rows.length > 300) throw new Error("Invalid phase observation");
++      phaseObservation.matches = rows.map((row) => ({
++        matchID: row?.matchID, date: row?.matchDateTime || row?.matchDateTimeUTC,
++        matchIsFinished: row?.matchIsFinished, homeId: row?.team1?.teamId, awayId: row?.team2?.teamId,
++        matchResults: row?.matchResults,
++      }));
++    } else {
++      rows = await response.json();
++    }
++    const matches = normalizeOpenLigaMatches(rows, competition);
++    if (typedDfb) {
++      const byKey = new Map(phaseObservation.matches.map((row) => [`openliga:${row.matchID}`, row]));
++      for (const match of matches) match.results = byKey.get(match.key)?.matchResults;
++      const duplicates = matches.filter((match, index) => matches.findIndex((m) => m.key === match.key) !== index);
++      if (duplicates.length) {
++        return Response.json({ code: "INVALID_PERIODS", detail: "Duplicate match IDs: " + duplicates.map((m) => m.key).join(", "), phaseObservation }, { status: 422 });
++      }
++    }
+     if (!matches.length || matches.length !== rows.length)
+       throw new Error("Incomplete source data");
+     return Response.json(
+@@ -51,6 +75,7 @@ export async function GET(request) {
+         competition,
+         season,
+         matches,
++        ...(phaseObservation && { phaseObservation }),
+         source: {
+           name: "OpenLigaDB",
+           url: "https://www.openligadb.de/",
+@@ -66,6 +91,7 @@ export async function GET(request) {
+       },
+     );
+   } catch {
++    if (phaseObservation) return Response.json({ code: "INVALID_PERIODS", detail: "Unreadable OpenLigaDB phase observation", phaseObservation }, { status: 422 });
+     return Response.json(
+       {
+         error:
 diff --git a/backend/sources/projections/world-cup-halves.json b/backend/sources/projections/world-cup-halves.json
 new file mode 100644
 index 0000000000..b62f20d265
@@ -2160,135 +2358,3 @@ index 0000000000..a57978224c
 +REVOKE ALL ON FUNCTION core.enforce_archive_attestation_rows() FROM PUBLIC;
 +CREATE TRIGGER enforce_archive_attestation_rows BEFORE INSERT OR UPDATE ON core.archive_match_attestations
 +FOR EACH ROW EXECUTE FUNCTION core.enforce_archive_attestation_rows();
-diff --git a/backend/tests/cup_samples.py b/backend/tests/cup_samples.py
-index 71df2e7c46..457bdf9dc1 100644
---- a/backend/tests/cup_samples.py
-+++ b/backend/tests/cup_samples.py
-@@ -1,5 +1,10 @@
--"""Bodies of main's cup source projections (open-cups, openligadb, nations-results), as
--they answer: the cups adapter writes them, the read API must give them back."""
-+"""Bodies of the cup source projections, seeded through the writer before API checks."""
-+
-+import json
-+from pathlib import Path
-+
-+_DFB_RESULTS = {r["matchID"]: r["matchResults"]
-+                for r in json.loads((Path(__file__).parent / "fixtures/openligadb/dfb-2025.json").read_text())}
- 
- EURO_2024 = {"name": "Euro 2024", "season": "2024", "source": {"name": "OpenFootball", "url": "https://github.com/openfootball/euro.json", "license": "CC0-1.0"}, "matches": [
-     {"round": "Matchday 1", "group": "Group A", "date": "2024-06-14", "team1": "Germany", "team2": "Scotland", "score": {"ft": [5, 1], "ht": [3, 0]}},
-@@ -11,10 +16,13 @@ EURO_2028 = {"name": "Euro 2028", "season": "2028", "source": EURO_2024["source"
- ]}
- GERMANY_CUP = {"competition": "germany-cup", "season": "2025/2026", "source": {
-     "name": "OpenLigaDB", "url": "https://www.openligadb.de/", "dataUrl": "https://api.openligadb.de/getmatchdata/dfb/2025", "license": "ODbL-1.0"}, "matches": [
--    {"key": "openliga:81500", "date": "2025-08-16", "home": "SC Verl", "away": "FC Kiel", "homeId": "1", "awayId": "2", "score": [1, 1],
--     "penalties": [4, 3], "notes": ["après prolongation", "tirs au but 4 – 3"], "status": "finished", "roundName": "Round of 64", "round": "Premier tour", "group": None},
-+    {"key": "openliga:80173", "date": "2026-02-10", "home": "Hertha BSC", "away": "SC Freiburg", "homeId": "54", "awayId": "112",
-+     "score": [1, 1], "penalties": [5, 6], "notes": ["après prolongation", "tirs au but 5 – 6"], "status": "finished",
-+     "roundName": "Quarter-finals", "round": "Quarts de finale", "group": None,
-+     "results": _DFB_RESULTS[80173]},
-     {"key": "openliga:81581", "date": "2026-05-23", "home": "FC Bayern München", "away": "VfB Stuttgart", "homeId": "40", "awayId": "16",
--     "score": [3, 0], "penalties": None, "notes": [], "status": "finished", "roundName": "Final", "round": "Finale", "group": None},
-+     "score": [3, 0], "penalties": None, "notes": [], "status": "finished", "roundName": "Final", "round": "Finale", "group": None,
-+     "results": _DFB_RESULTS[81581]},
- ]}
- NATIONS = {"season": "2026/2027", "source": {"name": "International Results", "url": "https://github.com/martj42/international_results", "license": "CC0-1.0"}, "matches": [
-     {"key": "nations:2026-09-04|Scotland|Switzerland", "date": "2026-09-04", "home": "Écosse", "away": "Suisse", "homeId": "Scotland",
-@@ -28,6 +36,13 @@ AFCON_2023 = {"name": "Coupe d’Afrique des nations 2023", "season": "2023", "s
-     {"key": "afcon:2024-01-14|Nigeria|Equatorial Guinea", "date": "2024-01-14", "home": "Nigeria", "away": "Equatorial Guinea", "homeId": "Nigeria",
-      "awayId": "Equatorial Guinea", "score": [1, 1], "status": "finished", "neutral": True},
- ]}
-+# Two of the 19 matches of the 1938 World Cup (openfootball/worldcup.json at 516d3825, CC0): the
-+# source cancels Sweden–Austria (FAILURE_MODES.md §19, 19f); Cuba–Romania went to extra time.
-+WORLD_CUP_1938 = {"name": "World Cup 1938", "season": "1938", "source": {"name": "OpenFootball", "url": "https://github.com/openfootball/worldcup.json", "license": "CC0-1.0"}, "matches": [
-+    {"round": "First round", "date": "1938-06-05", "team1": "Sweden", "team2": "Austria", "status": "canceled"},
-+    {"round": "First round", "date": "1938-06-05", "team1": "Cuba", "team2": "Romania", "score": {"ft": [2, 2], "ht": [1, 1], "et": [3, 3]}},
-+]}
- SAMPLES = (("open-cups", "euro", "2024", EURO_2024), ("open-cups", "euro", "2028", EURO_2028),
-+           ("open-cups", "world-cup-history", "1938", WORLD_CUP_1938),
-            ("openligadb", "germany-cup", "2025/2026", GERMANY_CUP), ("nations-results", "nations-league", "2026/2027", NATIONS),
-            ("nations-results", "afcon", "2023", AFCON_2023))
-diff --git a/backend/tests/fake_openfootball_fetch.mjs b/backend/tests/fake_openfootball_fetch.mjs
-new file mode 100644
-index 0000000000..73f69cc5c3
---- /dev/null
-+++ b/backend/tests/fake_openfootball_fetch.mjs
-@@ -0,0 +1,19 @@
-+// Test preload (node --import): the OpenFootball files of $VEGA_TEST_OPENFOOTBALL in place of
-+// the network, for the real bridge and projection (test_source_snapshots.py, FAILURE_MODES.md §19).
-+// The file is {"editions": {"<competition>:<season>": <worldcup.json or euro.json body>}}. Any other
-+// URL answers 404, as an absent upstream file does.
-+import { readFileSync } from "node:fs";
-+
-+const { editions } = JSON.parse(readFileSync(process.env.VEGA_TEST_OPENFOOTBALL, "utf8"));
-+const FILE = /^https:\/\/raw\.githubusercontent\.com\/openfootball\/(worldcup|euro)\.json\/master\/(\d{4})\/(?:worldcup|euro)\.json$/;
-+
-+globalThis.fetch = async (url) => {
-+  const text = {
-+    "https://raw.githubusercontent.com/openfootball/europe/master/france/2024-25_frcup.txt": "france-cup:2024/2025",
-+    ...Object.fromEntries([2021, 2022, 2023].map(y => [`https://raw.githubusercontent.com/openfootball/club-worldcup/master/${y}/clubworldcup.txt`, `club-world-cup:${y}`])),
-+  }[String(url)];
-+  if (text && typeof editions[text] === "string") return new Response(editions[text]);
-+  const found = FILE.exec(String(url));
-+  const body = found && editions[`${found[1] === "euro" ? "euro" : "world-cup-history"}:${found[2]}`];
-+  return body === undefined || body === null ? new Response("Not Found", { status: 404 }) : Response.json(body);
-+};
-diff --git a/backend/tests/fake_openligadb_fetch.mjs b/backend/tests/fake_openligadb_fetch.mjs
-new file mode 100644
-index 0000000000..57c90021c9
---- /dev/null
-+++ b/backend/tests/fake_openligadb_fetch.mjs
-@@ -0,0 +1,7 @@
-+// Supply a frozen provider response to the real Node bridge and fail on any stray URL.
-+import { readFileSync } from "node:fs";
-+
-+globalThis.fetch = async (url) => {
-+  if (String(url) !== process.env.VEGA_TEST_OPENLIGA_URL) throw new Error(`Unexpected OpenLigaDB URL: ${url}`);
-+  return new Response(readFileSync(process.env.VEGA_TEST_OPENLIGA), { headers: { "Content-Type": "application/json" } });
-+};
-diff --git a/backend/tests/fixtures/open_matchday/build_summary.json b/backend/tests/fixtures/open_matchday/build_summary.json
-index 668027c00a..3fab0a3174 100644
---- a/backend/tests/fixtures/open_matchday/build_summary.json
-+++ b/backend/tests/fixtures/open_matchday/build_summary.json
-@@ -10,8 +10,8 @@
-    "dropped_reversed_dupes": 0,
-    "dropped_stale_postponed": 0,
-    "corners": 100,
--   "results": 100,
--   "fixtures": 280,
-+   "results": 5,
-+   "fixtures": 3,
-    "errors": [],
-    "latest": "2026-11-08"
-   },
-@@ -23,7 +23,7 @@
-    "dropped_reversed_dupes": 0,
-    "dropped_stale_postponed": 0,
-    "corners": 0,
--   "results": 56,
-+   "results": 7,
-    "fixtures": 4,
-    "errors": [],
-    "latest": "2026-10-29"
-diff --git a/backend/tests/fixtures/openfootball/README.md b/backend/tests/fixtures/openfootball/README.md
-new file mode 100644
-index 0000000000..dca18f55d0
---- /dev/null
-+++ b/backend/tests/fixtures/openfootball/README.md
-@@ -0,0 +1,16 @@
-+# OpenFootball editions (frozen)
-+
-+`editions.json` holds the 23 men's World Cups and the three EUROs the cups adapter reads
-+(`vega/sources/cups.py` `EDITIONS`), as `open-cups.mjs` fetches them:
-+
-+- World Cups: [openfootball/worldcup.json](https://github.com/openfootball/worldcup.json) at
-+  `516d3825c3bd23fdc298c4014e84bde78f2d4965`, `<year>/worldcup.json`;
-+- EUROs: [openfootball/euro.json](https://github.com/openfootball/euro.json) at
-+  `7bbf6309bdda6896d6bb9ca218c1e15eaf418ce3`, `<year>/euro.json`.
-+
-+Retrieved on 17 Nov 2026 for VI-27. `sources` gives each file's immutable URL and the SHA-256 of
-+its original bytes. Each match keeps only the fields the projection reads (`round`, `group`, `num`,
-+`date`, `team1`, `team2`, `score`, `status`), in source order. Scorers, grounds and kick-off
-+times are left out. License: CC0-1.0 (public domain dedication), © the OpenFootball authors.
-+
-+Read by `backend/tests/test_source_snapshots.py` (FAILURE_MODES.md §19).

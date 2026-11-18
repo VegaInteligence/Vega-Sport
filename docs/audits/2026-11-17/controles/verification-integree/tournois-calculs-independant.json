@@ -1,0 +1,9 @@
+{
+  "zip": "capsule-calculs-ui.zip",
+  "bytes": 319533,
+  "sha256": "69d98e1a44e01c8b7f6c9c1e8c6b0d2c4072cda36634a8783ad8e39a7ed6e4eb",
+  "network_and_workspaces_denied": true,
+  "cmd": "python3 -B inspecter.py",
+  "returncode": 0,
+  "result": "OK 26 éditions de preuve, 34 rubriques Excel, 0 formules Excel"
+}

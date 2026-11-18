@@ -1,0 +1,242 @@
+{
+  "status": "passed",
+  "prototype": false,
+  "tested_revision": "4303a1255d288f8d0ee3a5c7964ebb5a4434f824",
+  "runtime_mode": "read-only Git archive",
+  "base": "8018e0836ca0f32e8b2eb51fc2847154abff7f13",
+  "main": "08fa22e7875dd971e4e2ea415d6d5be13eb72347",
+  "expected_last": "149_validate_archive_attestation.sql",
+  "inputs": {
+    "rds/avant.zlib": "ed7496ec232d3ef8c93b70439e3ccaa9ae56c0708c4c11cbedb4872012a1f74c",
+    "rds/apres.zlib": "e850dd9ebc33dfad5c71b93090fb2d4b3c9c4dfea73296e2278fa13f29f3d71d",
+    "rencontres/nouveau.csv": "1f5a545bb3d9f849c6dee8c402545ce07838a8737242985f8c012636bd96dc06",
+    "main_mailbox_migration_sha256": "89dcafc08b55b2f6b6bb8cbf22f485452de419e9d8b7f0bebb8b8585bfacd5f6",
+    "nation_identity_projection": "e678e4d96fec398f40ec6510f1d00323d3219680834197a0b5b99eb5d7cd07fa",
+    "world_cup_1982": "09e239bbe5878cfdcf41e64f1925e73d90cce13426f87ca8a8c6a3fb309be134",
+    "world_cup_1998": "6f3c10cf74f0cc5d7e9d37defc4e2841672b525b02f7416524772af0e5403acc"
+  },
+  "cases": {
+    "a": {
+      "case": "a",
+      "initial_schema": "133_cohort_max_wait.sql",
+      "restoration_cli": {
+        "would_restore": 35,
+        "restored": 35,
+        "preserved_elo": 70,
+        "elo_pending_sides": 0,
+        "elo_run": 2097,
+        "edition_versions": {
+          "332": 1,
+          "333": 1,
+          "334": 1
+        }
+      },
+      "restoration_repeat": {
+        "would_restore": 0,
+        "restored": 0,
+        "preserved_elo": 70,
+        "elo_pending_sides": 0,
+        "elo_run": 2097,
+        "edition_versions": {}
+      },
+      "physical_matches_exact": 35,
+      "physical_keys_exact": 35,
+      "public_archived_ids": 35,
+      "elo_rows_and_float_bits_unchanged": 70,
+      "migration_134_execution_order": [
+        "134_archive_repair_boundary.sql",
+        "134_archive_scores_due.sql"
+      ],
+      "schema_pin_refuses_missing_134": true,
+      "destination_last_migration": "149_validate_archive_attestation.sql",
+      "destination_exact_checksums": 150,
+      "source_exact_checksums": 133,
+      "destination_refusals": [
+        "refuse-missing-134_archive_repair_boundary",
+        "refuse-checksum-134_archive_repair_boundary",
+        "refuse-missing-134_archive_scores_due",
+        "refuse-checksum-134_archive_scores_due",
+        "refuse-missing-149_validate_archive_attestation",
+        "refuse-checksum-149_validate_archive_attestation"
+      ],
+      "preimage_and_postimage_wrong_133_checksum_refused": true,
+      "archive_http_repeat": [
+        304,
+        304,
+        304
+      ],
+      "finals_before": [
+        [
+          20052,
+          "not_started",
+          null,
+          null,
+          1,
+          "428399"
+        ],
+        [
+          20116,
+          "not_started",
+          null,
+          null,
+          1,
+          "428401"
+        ]
+      ],
+      "finals_after": [
+        [
+          20052,
+          "finished",
+          3,
+          1,
+          2,
+          "428434"
+        ],
+        [
+          20116,
+          "finished",
+          0,
+          3,
+          2,
+          "428436"
+        ]
+      ],
+      "finals_second_zero_writes": true,
+      "nations_http": {
+        "1982": {
+          "score": [
+            3,
+            1
+          ],
+          "status": "finished",
+          "stage": "Vainqueur",
+          "games": 7,
+          "etag": "W/\"nations-v1-309ef0d4fcc1f1f45815caeb6b0dd6598f19e4794f8f6df2d18f5a4e4e7a926d\""
+        },
+        "1998": {
+          "score": [
+            0,
+            3
+          ],
+          "status": "finished",
+          "stage": "Vainqueur",
+          "games": 7,
+          "etag": "W/\"nations-v1-98e627cca6d6537c3af0865a812d27b1df0f4334622c576f1768ce56e14ff4ba\""
+        }
+      },
+      "schema_reapply_idempotent": true,
+      "source_success_clocks_stable_on_reapply": true
+    },
+    "b": {
+      "case": "b",
+      "initial_schema": "134_archive_scores_due.sql",
+      "restoration_cli": {
+        "would_restore": 35,
+        "restored": 35,
+        "preserved_elo": 70,
+        "elo_pending_sides": 0,
+        "elo_run": 2097,
+        "edition_versions": {
+          "332": 1,
+          "333": 1,
+          "334": 1
+        }
+      },
+      "restoration_repeat": {
+        "would_restore": 0,
+        "restored": 0,
+        "preserved_elo": 70,
+        "elo_pending_sides": 0,
+        "elo_run": 2097,
+        "edition_versions": {}
+      },
+      "physical_matches_exact": 35,
+      "physical_keys_exact": 35,
+      "public_archived_ids": 35,
+      "elo_rows_and_float_bits_unchanged": 70,
+      "migration_134_execution_order": [
+        "134_archive_scores_due.sql",
+        "134_archive_repair_boundary.sql"
+      ],
+      "schema_pin_refuses_missing_134": true,
+      "destination_last_migration": "149_validate_archive_attestation.sql",
+      "destination_exact_checksums": 150,
+      "source_exact_checksums": 133,
+      "destination_refusals": [
+        "refuse-missing-134_archive_repair_boundary",
+        "refuse-checksum-134_archive_repair_boundary",
+        "refuse-missing-134_archive_scores_due",
+        "refuse-checksum-134_archive_scores_due",
+        "refuse-missing-149_validate_archive_attestation",
+        "refuse-checksum-149_validate_archive_attestation"
+      ],
+      "preimage_and_postimage_wrong_133_checksum_refused": true,
+      "archive_http_repeat": [
+        304,
+        304,
+        304
+      ],
+      "finals_before": [
+        [
+          20052,
+          "finished",
+          3,
+          1,
+          2,
+          "428583"
+        ],
+        [
+          20116,
+          "finished",
+          0,
+          3,
+          2,
+          "428585"
+        ]
+      ],
+      "finals_after": [
+        [
+          20052,
+          "finished",
+          3,
+          1,
+          2,
+          "428583"
+        ],
+        [
+          20116,
+          "finished",
+          0,
+          3,
+          2,
+          "428585"
+        ]
+      ],
+      "finals_second_zero_writes": true,
+      "nations_http": {
+        "1982": {
+          "score": [
+            3,
+            1
+          ],
+          "status": "finished",
+          "stage": "Vainqueur",
+          "games": 7,
+          "etag": "W/\"nations-v1-309ef0d4fcc1f1f45815caeb6b0dd6598f19e4794f8f6df2d18f5a4e4e7a926d\""
+        },
+        "1998": {
+          "score": [
+            0,
+            3
+          ],
+          "status": "finished",
+          "stage": "Vainqueur",
+          "games": 7,
+          "etag": "W/\"nations-v1-98e627cca6d6537c3af0865a812d27b1df0f4334622c576f1768ce56e14ff4ba\""
+        }
+      },
+      "schema_reapply_idempotent": true,
+      "source_success_clocks_stable_on_reapply": true
+    }
+  }
+}

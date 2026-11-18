@@ -1,0 +1,124 @@
+{
+  "milestone": "VI-27 A: merge only",
+  "implementer": "claude-opus-5-5 (max), delegated worker",
+  "written_at": "2026-11-18T17:16:11+00:00",
+  "worktree": "/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-20261117",
+  "branch": "codex/production-architecture-audit",
+  "head": "0580dfd4ba645461d6c372fbd7b1d73eaaa779a0",
+  "merge_head": "b2e6dd82d36a2ca0f439ec84bf2e5dbbcd3013d9",
+  "merge_base": "8018e0836ca0f32e8b2eb51fc2847154abff7f13",
+  "git_actions": "none (no add, commit, stash, reset, push); index still in the merge",
+  "unmerged_paths_in_index": [
+    "WORKLOG.md",
+    "backend/vega/sources/cups.py",
+    "dashboard/frontend/src/components/CupCompetition.jsx",
+    "dashboard/frontend/src/services/cup-catalog.js",
+    "dashboard/frontend/src/services/cup-matches.js",
+    "dashboard/frontend/src/views/CompetitionsPage.jsx"
+  ],
+  "migrations_134": {
+    "134_archive_repair_boundary.sql": "aa4b0f920b200335ba3ac63f95a750538f14e53f6d63b40b27b54e57ab75c167",
+    "134_archive_scores_due.sql": "89dcafc08b55b2f6b6bb8cbf22f485452de419e9d8b7f0bebb8b8585bfacd5f6",
+    "main_blob_134_archive_scores_due.sql": "89dcafc08b55b2f6b6bb8cbf22f485452de419e9d8b7f0bebb8b8585bfacd5f6",
+    "head_blob_134_archive_repair_boundary.sql": "aa4b0f920b200335ba3ac63f95a750538f14e53f6d63b40b27b54e57ab75c167"
+  },
+  "results": {
+    "python_full": {
+      "command": "python3 -B -m unittest discover -s backend/tests -v (env: logs/test-databases.env, PYTHONPATH=backend)",
+      "ran": 565,
+      "outcome": "OK",
+      "skipped": 0,
+      "log": "logs/03-python-full.log"
+    },
+    "site_tests": {
+      "command": "node --test tests/*.test.mjs",
+      "tests": 738,
+      "pass": 738,
+      "fail": 0,
+      "log": "logs/04b-site-tests.log",
+      "before_harness_fix": {
+        "pass": 736,
+        "fail": 2,
+        "log": "logs/04a-site-tests-before-cup-sides-harness.log"
+      }
+    },
+    "api_tests": {
+      "command": "npm test --prefix backend/api (env: logs/test-databases.env)",
+      "tests": 208,
+      "pass": 208,
+      "fail": 0,
+      "log": "logs/08-api-tests.log"
+    },
+    "site_build": {
+      "command": "cd dashboard && NEXT_PUBLIC_API_ORIGIN=https://dngp6kh9jx2bl.cloudfront.net bun run build",
+      "exit": 0,
+      "log": "logs/06-site-build.log"
+    },
+    "smoke_desktop": {
+      "checks": 25,
+      "passed": 25,
+      "failed": 0
+    },
+    "smoke_iphone": {
+      "checks": 25,
+      "passed": 25,
+      "failed": 0
+    },
+    "canonical_id": {
+      "checks": 2,
+      "passed": 2,
+      "failed": 0
+    }
+  },
+  "pg18": {
+    "container": "vega-vi27-opus-pg18",
+    "address": "127.0.0.1:55459",
+    "server_version_num": 180006
+  },
+  "files_sha256": {
+    "RECEIPT.md": "a143f44f957679427672dd74b705e535bfdf596bcb07659a05792c6a624c9827",
+    "logs/01-main-bare-pair-test-before-adaptation.log": "78b1f93412775d957526908f107816e18839b8483f7302282e852d5b95dc8c77",
+    "logs/02-bare-pair-and-snapshot-tests-after-adaptation.log": "6d0806ae74f1ce65d0f51494ad55fc623d42db6f75fa9fdb1803e29207aa1965",
+    "logs/03-python-full.log": "75cf43996b55b66f8a78a3ba4d789d8e2fdf5ce1a7394ed75d13530986564293",
+    "logs/04a-site-tests-before-cup-sides-harness.log": "90550e311bcb5c18b2c1da06c896e7da67aa449ae236e80ae1fc19a5b0b75333",
+    "logs/04b-site-tests.log": "b4f82bbfa24ed1f7d94c4930c1bb541f5d78359cfc317fcd8d04a431c927e825",
+    "logs/05-tournament-edition-semantic-conflict.log": "cb0bc91f3270ab267b38004eb1b7a889bba3d8433060ce29b2e1f8de8a0156bb",
+    "logs/06-site-build.log": "f0eb5b890e7493b5f6f73939c2ba0ade2811984fed646c09e82e286fee786f5f",
+    "logs/07-next-start.log": "70e70fbcb357accc2c14874afaf3f68880d67b85fb1cbb2b7d5d5f80f4975502",
+    "logs/08-api-tests.log": "95a5c6f6655268d109e0894553160ceaaeb9bee2025be619bf7fddc97bbf2a74",
+    "logs/test-databases.env": "b5be7997f0a1f8888dcf3cd7c6207990dfea3bb38f6d7902cb9ef30197d6cf0d",
+    "production-observation/cups-edition-1982.headers": "015568c5ca767226e9d491fbb7c41545d04cd32fdaf8af9e6cbe1f560b9c1b0f",
+    "production-observation/cups-edition-1982.json": "b927636a26cb81376a49a9d24afd6a20bffa530902630814edabb19bdb6d75e4",
+    "production-observation/cups-edition-1998.headers": "05487c8d6976650ca8cfaab43843ca93b58484892e74ed1d3c3f8b67df2a35f7",
+    "production-observation/cups-edition-1998.json": "de0ec8df8f0f0ce0c25df366af1d90e0af5216809b1f4bea35e3ecdba2f6480c",
+    "production-observation/observed-at.txt": "bd845c282a179c4960919591b0235f981af58170e599c433f5979b8444fe6647",
+    "production-observation/summary.json": "0efa700ef77fc87ff58f09b049f43f569d3205e4ec731169821e4c400d1134c8",
+    "resolution-vs-audit-head.patch": "dc57b5bb6d0f3ce3b40e185e1b7d35b22fb8794c796afcc31c0c56e657083e4e",
+    "resolution-vs-main.patch": "206d7be340dc5cb4b980aa1bbc835dd31c92c8ba6b58b65f103b342e202fcbbf",
+    "resolved-files.sha256": "8c189793452290ca3084bd85d781dfdc2d752cc47a595f9fb855562e511b060e",
+    "smoke/canonical-id/canonical-matchs.png": "4295efea649f8a2d3fce4d3f894597ed13a85f461d42034794b3f67ac82c61ef",
+    "smoke/canonical-id/result.json": "a7ecff1f4ced07653d81db14b892e262258f6c68fbb0999ff883b1406bafdc50",
+    "smoke/canonical-id-A.mjs": "47d8754f14c27b0d4b59bd770f14d0005bf6c3776c91bd33d1a6b08a409bcfa3",
+    "smoke/canonical-id-run1/result.json": "df36a7651f8be0f24cea49205025b536c72d94cf72eabc5b10d6d13116690cbb",
+    "smoke/desktop/1998-tableau.png": "45d6a5c33073ca7ff813da0c38c49e0d4730d9992a16f577ca6c2ac55078f458",
+    "smoke/desktop/champions-league.png": "d2daa811d03786df62ee27a7c8dca1cf829fae1d6579c5b4a13c2bd9d415b2c1",
+    "smoke/desktop/native-2026.png": "787c9225deacaa5ac304e565aaf670ba81d90dcf0ef899525be2082be31f2ed1",
+    "smoke/desktop/result.json": "2f9e8485ea9a811d60fb11b62d11346be0585a53a4fe089c9117861da4dbc35f",
+    "smoke/desktop-run1/1998-tableau.png": "45d6a5c33073ca7ff813da0c38c49e0d4730d9992a16f577ca6c2ac55078f458",
+    "smoke/desktop-run1/champions-league.png": "d2daa811d03786df62ee27a7c8dca1cf829fae1d6579c5b4a13c2bd9d415b2c1",
+    "smoke/desktop-run1/native-2026.png": "d2daa811d03786df62ee27a7c8dca1cf829fae1d6579c5b4a13c2bd9d415b2c1",
+    "smoke/desktop-run1/result.json": "03e3e03c49a03a2e22bad9e2ffa736660ff58809f4c91bea8a8700abccb130c5",
+    "smoke/desktop-run2/1998-tableau.png": "45d6a5c33073ca7ff813da0c38c49e0d4730d9992a16f577ca6c2ac55078f458",
+    "smoke/desktop-run2/champions-league.png": "d2daa811d03786df62ee27a7c8dca1cf829fae1d6579c5b4a13c2bd9d415b2c1",
+    "smoke/desktop-run2/native-2026.png": "d2daa811d03786df62ee27a7c8dca1cf829fae1d6579c5b4a13c2bd9d415b2c1",
+    "smoke/desktop-run2/result.json": "27c62c4846cd7e3524320c4db83ed41f268ab3de30065c5f6ca7e0ed02ebc963",
+    "smoke/iphone/1998-tableau.png": "f5285b9a1ce0a5144b42f3c6b3fb7691ef1148738418638effc816a158dab72f",
+    "smoke/iphone/champions-league.png": "3b3af20f4d653ba6947e5068614eab7f4d3fb15b7dd415a9e243cf7ce6cbd6cc",
+    "smoke/iphone/native-2026.png": "3b3af20f4d653ba6947e5068614eab7f4d3fb15b7dd415a9e243cf7ce6cbd6cc",
+    "smoke/iphone/result.json": "602a986bae503cac9f674e40aafb81503d399b3460a72dfffb83268c8f7d5d5d",
+    "smoke/iphone-run1/champions-league.png": "3b3af20f4d653ba6947e5068614eab7f4d3fb15b7dd415a9e243cf7ce6cbd6cc",
+    "smoke/iphone-run1/native-2026.png": "3b3af20f4d653ba6947e5068614eab7f4d3fb15b7dd415a9e243cf7ce6cbd6cc",
+    "smoke/iphone-run1/result.json": "639b6fdad56f67e124d46269af23519ceda1fb7f375f7fb6c383d291d21a56dc",
+    "smoke/smoke-A.mjs": "a231bd8817c4c33785521fd1b3bbb3dc578579eb8c497656902e9b7dd56bb2fe"
+  }
+}

@@ -1,0 +1,423 @@
+{
+  "revision": "8bab7d71b6857380503dfd152999d2c30b465fb7",
+  "production_main_compare": "1c5a4340d193d2ffd1406f965e4007fdfb6b97fb",
+  "scope": "A17b et interprétation documentaire de A03 ; propositions non appliquées",
+  "instructions": "Chaque before est littéral et unique dans le blob de départ. Remplacer une seule fois dans l’ordre du tableau. Les SHA-256 portent sur les octets UTF-8 avec LF.",
+  "sources": {
+    "grade": [
+      "backend/vega/power.py:1600",
+      "backend/vega/power.py:1707",
+      "backend/sql/108_drop_source_rating.sql:408",
+      "backend/api/src/routes/home.mjs:239",
+      "backend/api/src/routes/players.mjs:495",
+      "dashboard/frontend/src/services/grades.js:20",
+      "dashboard/frontend/src/services/season-player.js:202",
+      "dashboard/frontend/src/services/home-insights.js:607",
+      "dashboard/frontend/src/components/PlayerScoutOverview.jsx",
+      "dashboard/frontend/src/components/MatchDetail.jsx:254"
+    ],
+    "xa": [
+      "backend/sql/068_blank_zeros.sql:223",
+      "backend/sql/108_drop_source_rating.sql",
+      "backend/vega/models.py:368",
+      "dashboard/shared/player-profile.js:105",
+      "dashboard/frontend/src/services/scouting.js:185",
+      "dashboard/frontend/src/services/scouting.js:216",
+      "dashboard/frontend/src/services/scouting.js:253",
+      "dashboard/frontend/src/services/scouting.js:312",
+      "dashboard/frontend/src/services/season-player.js:9"
+    ],
+    "rank": [
+      "backend/vega/power.py:1324",
+      "backend/vega/power.py:1373",
+      "backend/vega/power.py:1415",
+      "backend/vega/power.py:1590",
+      "backend/api/src/routes/rankings.mjs:193",
+      "backend/api/src/routes/rankings.mjs:222",
+      "backend/api/src/routes/rankings.mjs:623",
+      "backend/api/src/routes/rankings.mjs:735",
+      "dashboard/frontend/src/components/PlayerSeasonProfile.jsx:461",
+      "backend/vega/breakout.py:25"
+    ],
+    "map": [
+      "backend/vega/power.py:250",
+      "backend/vega/power.py:618",
+      "backend/vega/power.py:668",
+      "backend/vega/power.py:787",
+      "backend/vega/power.py:941",
+      "backend/vega/power.py:990",
+      "docs/calculs/09-audit-2026-11/SOURCE_AUDIT.md:403",
+      "docs/audits/2026-11-17/controles/elo-directions.csv",
+      "docs/audits/2026-11-17/controles/elo-recentrage.json"
+    ],
+    "rank_map": [
+      "backend/vega/power.py:1324",
+      "backend/vega/power.py:1373",
+      "backend/vega/power.py:1415",
+      "backend/vega/power.py:1590",
+      "backend/api/src/routes/rankings.mjs:193",
+      "backend/api/src/routes/rankings.mjs:222",
+      "backend/api/src/routes/rankings.mjs:623",
+      "backend/api/src/routes/rankings.mjs:735",
+      "dashboard/frontend/src/components/PlayerSeasonProfile.jsx:461",
+      "backend/vega/breakout.py:25",
+      "backend/vega/power.py:250",
+      "backend/vega/power.py:618",
+      "backend/vega/power.py:668",
+      "backend/vega/power.py:787",
+      "backend/vega/power.py:941",
+      "backend/vega/power.py:990",
+      "docs/calculs/09-audit-2026-11/SOURCE_AUDIT.md:403",
+      "docs/audits/2026-11-17/controles/elo-directions.csv",
+      "docs/audits/2026-11-17/controles/elo-recentrage.json"
+    ]
+  },
+  "evidence": {
+    "python": {
+      "gradient": -0.00980178865359002,
+      "difference_finie": 0.002977603983822519,
+      "ratio": 2.367670933232829,
+      "joueurs": {
+        "1": [
+          "men",
+          true,
+          true,
+          3,
+          3
+        ],
+        "2": [
+          "men",
+          false,
+          false,
+          2,
+          2
+        ],
+        "3": [
+          "women",
+          true,
+          false,
+          1,
+          1
+        ],
+        "4": [
+          "men",
+          true,
+          false,
+          1,
+          1
+        ]
+      }
+    },
+    "node": {
+      "gradeSeason": {
+        "grade": 57.146311740838144,
+        "count": 2,
+        "minutes": 120
+      },
+      "simpleDisplayed": 62.98734633239789,
+      "xa30": 32,
+      "xa29": null,
+      "xaPartial": null,
+      "customXA": 32,
+      "matchXA": false,
+      "reasons": [
+        null,
+        "minutes",
+        "league"
+      ]
+    }
+  },
+  "documents": {
+    "docs/calculs/01-sources-et-conventions/01-provenance-des-donnees.md": {
+      "before_sha256": "ecdd919243e2f746ca961db69ffe6784c546c64f96a76b35e63107a80ce8539d",
+      "after_sha256": "5ce364a0080d961227109643e8e05000b101a6990fa8e189cd2737f633920708"
+    },
+    "docs/calculs/07-limites/01-non-calcule-fictif-demo.md": {
+      "before_sha256": "0b1168e85bf18127eb729acafeedb4ee889d020bf29d1c75b3288718a86b4217",
+      "after_sha256": "f34bc7305c01be9c771bb5fe8f4369cab4a927c93a9eb8ef7c20f9cc6a9f309c"
+    },
+    "docs/calculs/05-joueurs/07-lecture-du-scout.md": {
+      "before_sha256": "c1c7e5a9c7854ea36f89f51e4505eacd637b833b9b17e66998e2327ab488a8af",
+      "after_sha256": "2b947753a473a4084c05609efef6fba72acf31757dd50fbf6a13c908a59b6db2"
+    },
+    "docs/calculs/05-joueurs/05-classements-joueurs.md": {
+      "before_sha256": "73add308581d97728c53a95982b2232b7232731f71230dfa6fe7b00e66dac83e",
+      "after_sha256": "c7c2e98b599f5c1f31a61da1da4f7a91e4aef904e06fa416f5c71f08b13483c5"
+    },
+    "docs/calculs/02-metriques-attendues/02-xa.md": {
+      "before_sha256": "f3d1e331100772fd831bdc5001d59e19fc9b992b813da4f20f8201d24f216467",
+      "after_sha256": "695f008d6d9da2e70b272ade3445f70ef8a651333bf7e830e7a757e8fa6ff819"
+    },
+    "docs/calculs/05-joueurs/03-indices-vega-et-roles.md": {
+      "before_sha256": "a506e4aa471acd307f84a235505d73a9fb3061dc668f5599fde414717849f785",
+      "after_sha256": "be505481c71a0d36bd4a94aebaaff7d2b38198228d61fb013ac528898b5e3285"
+    },
+    "docs/calculs/05-joueurs/02-centiles-et-cohortes.md": {
+      "before_sha256": "5d32b4f5bfc0d0e616f7d1b5ed3dd91d179e1b4a50de9c3876ed737f74867735",
+      "after_sha256": "8be0206bb9d4b4a41837fcd694ce6b15be57647842d022275c1b8e78cf3d3bb0"
+    },
+    "docs/calculs/07-limites/02-points-d-attention.md": {
+      "before_sha256": "9e10f084b5852a55ca5ee7be7c5539de3f7d877674745644256a40e14cb5dacd",
+      "after_sha256": "234d18709b4ae5d7c2c1fdb41a99c1003bc3188a84ce25fef831305f46086451"
+    },
+    "docs/calculs/05-joueurs/10-revelations.md": {
+      "before_sha256": "2ca30021ecd4598bc6478d1fde4921bf893fb50bdc2d4cf624a74cfa3de14a86",
+      "after_sha256": "e2faf1886ea8ad273abda673e4f11dfca34570857d25f3576646bc97492be307"
+    },
+    "docs/calculs/05-joueurs/08-audit-classement-puissance.md": {
+      "before_sha256": "00efa6e6d1b6c53eb9ec18fcfa069014583dfeb99196363ecb745ea83e237248",
+      "after_sha256": "cc5fac5ae0d47199e6ce47d59fd655003d503fdda933e0d98613933d13d0f874"
+    },
+    "docs/calculs/08-notes-vega/01-formules-et-raisons.md": {
+      "before_sha256": "bc20bfdbcf40cbba1251a727a894acacfccb115f37ec0d58e9a5df0ccc95bb7e",
+      "after_sha256": "10fc27dcc6a017b82dfe9ce2b1f504c44e77be5c5f6cb30c3d1ce282cd6170fd"
+    }
+  },
+  "edits": [
+    {
+      "path": "docs/calculs/01-sources-et-conventions/01-provenance-des-donnees.md",
+      "line_at_sha": 46,
+      "topic": "grade",
+      "before": "## Niveau joueur dans un match\n",
+      "after": "## Niveau joueur dans un match\n\nVega calcule la note du joueur sur 100 à partir de sa contribution dans la rencontre. Le champ `rating_title` des anciennes archives PitchAPI a été retiré des tables de lecture par la migration 108. [Note du match](../02-metriques-attendues/04-note-du-match.md)\n"
+    },
+    {
+      "path": "docs/calculs/01-sources-et-conventions/01-provenance-des-donnees.md",
+      "line_at_sha": 51,
+      "topic": "grade",
+      "before": "| `rating` | `rating_title` (note /10) |\n",
+      "after": ""
+    },
+    {
+      "path": "docs/calculs/07-limites/01-non-calcule-fictif-demo.md",
+      "line_at_sha": 10,
+      "topic": "grade",
+      "before": "| Note du match | PitchAPI | pas une note Vega validée |\n",
+      "after": ""
+    },
+    {
+      "path": "docs/calculs/07-limites/01-non-calcule-fictif-demo.md",
+      "line_at_sha": 16,
+      "topic": "grade",
+      "before": "## Pas encore calculé\n",
+      "after": "La note de match du joueur est calculée par Vega sur 100. [Formule et provenance](../02-metriques-attendues/04-note-du-match.md)\n\n## Pas encore calculé\n"
+    },
+    {
+      "path": "docs/calculs/05-joueurs/07-lecture-du-scout.md",
+      "line_at_sha": 56,
+      "topic": "grade",
+      "before": "Un milieu joue 1 800 minutes sur la période, avec 2 buts, 3 passes décisives et une note moyenne de 7,05. Dans sa cohorte :\n",
+      "after": "Un milieu joue 1 800 minutes sur la période, marque 2 buts et donne 3 passes décisives. Dans cet exemple, le z moyen pondéré par les minutes des matchs admissibles vaut 0,5, ce qui donne une note Vega arrondie de 57 sur 100. Dans sa cohorte :\n"
+    },
+    {
+      "path": "docs/calculs/05-joueurs/07-lecture-du-scout.md",
+      "line_at_sha": 65,
+      "topic": "grade",
+      "before": "- Production : 0,10 but et 0,15 passe décisive par 90 min, note moyenne 7,05.\n",
+      "after": "- Production : 0,10 but et 0,15 passe décisive par 90 min, note Vega 57 sur 100.\n"
+    },
+    {
+      "path": "docs/calculs/05-joueurs/05-classements-joueurs.md",
+      "line_at_sha": 21,
+      "topic": "grade",
+      "before": "note pondérée par les minutes",
+      "after": "note Vega du z moyen pondéré par les minutes des matchs d’au moins 20 minutes dont le z est connu"
+    },
+    {
+      "path": "docs/calculs/05-joueurs/05-classements-joueurs.md",
+      "line_at_sha": 29,
+      "topic": "grade",
+      "before": "note pondérée, minutes",
+      "after": "note Vega de saison, minutes notées"
+    },
+    {
+      "path": "docs/calculs/02-metriques-attendues/02-xa.md",
+      "line_at_sha": 14,
+      "topic": "xa",
+      "before": "## Pourquoi le xA n'a jamais de centile\n\nPitchAPI **ne publie pas les xA nuls** : un joueur qui n'a créé aucun tir n'a pas `xa = 0`, il n'a pas de valeur. La distribution des xA ne contient donc que les joueurs qui ont déjà créé quelque chose ; un centile la comparerait à un groupe trié d'avance.\n\nLe xA est donc :\n- affiché comme chiffre ;\n- **exclu de tout centile, rang, indice Vega ou similarité** (`UNRANKED` dans [season-player.js](../../../dashboard/frontend/src/services/season-player.js#L80), `rankable: key !== \"xa\"` dans [scouting.js](../../../dashboard/frontend/src/services/scouting.js#L47), absent de `RANKED` dans [shared/player-profile.js](../../../dashboard/shared/player-profile.js#L104)) ;\n- refusé dans un indice personnalisé : choisir le xA avec un poids > 0 renvoie « Un indicateur choisi ne permet pas un classement fiable. »\n",
+      "after": "## Classement du xA en saison et en match\n\nEn saison, le xA par 90 minutes peut recevoir un centile dans la cohorte du poste. Le joueur doit atteindre le seuil de minutes choisi (450 par défaut). Son xA doit couvrir tous ses matchs joués et toutes ses minutes. Il faut au moins 30 valeurs de joueurs comparables satisfaisant ces mêmes conditions. Un zéro omis est restitué lorsque la ligne et la couverture de la source l’autorisent. [Cohortes et centiles](../05-joueurs/02-centiles-et-cohortes.md) · [Couverture des zéros](../01-sources-et-conventions/02-valeurs-absentes-et-fiabilite.md)\n\nL’indice personnalisé de saison accepte le xA avec un poids positif. Si un indicateur pondéré manque de centile, l’indice reste indisponible. Les voisins de style utilisent leur propre liste d’axes, qui exclut le xA. [Indice et similarité](../../../dashboard/frontend/src/services/scouting.js)\n\nSur le profil d’une performance individuelle, le xA reste une valeur affichable sans centile de match. [Mesures classées en match](../../../dashboard/shared/player-profile.js)\n"
+    },
+    {
+      "path": "docs/calculs/05-joueurs/03-indices-vega-et-roles.md",
+      "line_at_sha": 18,
+      "topic": "xa",
+      "before": "- Un indicateur non classable (xA) avec un poids > 0 rend l'indice impossible.\n",
+      "after": "- Le xA de saison peut recevoir un poids positif lorsque son centile est disponible.\n"
+    },
+    {
+      "path": "docs/calculs/05-joueurs/02-centiles-et-cohortes.md",
+      "line_at_sha": 54,
+      "topic": "xa",
+      "before": "le xA est classé comme les autres depuis",
+      "after": "le xA suit les mêmes règles de couverture et de classement que les autres mesures de saison"
+    },
+    {
+      "path": "docs/calculs/07-limites/02-points-d-attention.md",
+      "line_at_sha": 38,
+      "topic": "xa",
+      "before": "Le code indique que le fournisseur ne publie jamais 0 pour le xA ni pour les grosses occasions. Le xA est exclu des classements, mais `bigChancesCreated` reste classable (`rankable: key !== \"xa\"`) et figure dans la pizza des milieux offensifs et attaquants. Avec la règle de couverture complète, seuls les joueurs ayant une valeur à **chaque** match entrent dans la distribution : le centile compare un groupe très sélectionné, et la plupart des joueurs n'en ont pas.\n",
+      "after": "Les centiles saison du xA et des grosses occasions créées exigent une observation sur tous les matchs et toutes les minutes du joueur, ainsi qu’une cohorte suffisante. Le lecteur restitue certains zéros omis lorsque la couverture est établie. Sur la fiche d’une performance individuelle, le xA reste sans centile.\n"
+    },
+    {
+      "path": "docs/calculs/05-joueurs/03-indices-vega-et-roles.md",
+      "line_at_sha": 47,
+      "topic": "rank",
+      "before": "Un joueur qui a un score sans être classé (championnat au niveau provisoire, erreur-type au-dessus de 45 points ; ou championnat féminin, noté entre joueuses) a son niveau, pas de rang.\n",
+      "after": "Avec un indice calculé, le joueur reçoit un rang dans son univers et un rang à son poste. Les classements masculin et féminin commencent chacun à 1. Sur la fiche, le rang est provisoire sous le seuil de minutes. Chez les hommes, une sélection seule, un club sans championnat dans la base ou un championnat de niveau provisoire peuvent également le rendre provisoire. [Lecture de la fiche et de l’univers](../../../backend/api/src/routes/rankings.mjs)\n"
+    },
+    {
+      "path": "docs/calculs/05-joueurs/03-indices-vega-et-roles.md",
+      "line_at_sha": 49,
+      "topic": "rank",
+      "before": "Pour une saison sans classement de puissance, ou un joueur qui n'y a pas de score (trop peu de minutes), la colonne garde l'ancien calcul :\n",
+      "after": "Quand l’API ne fournit aucun score de puissance pour ce joueur et cette saison, la fiche utilise le calcul descriptif ci-dessous si les comparaisons et les matchs nécessaires sont disponibles :\n"
+    },
+    {
+      "path": "docs/calculs/05-joueurs/10-revelations.md",
+      "line_at_sha": 3,
+      "topic": "rank",
+      "before": "Des joueurs que le classement de puissance ne classe pas encore, faute de minutes, et qui jouent déjà comme ses titulaires ([breakout.py](../../../backend/vega/breakout.py), `/api/rankings/breakouts`).\n",
+      "after": "Le signal « Révélation » repère des joueurs sous le seuil de minutes des titulaires de référence, dont le rendement est déjà comparable à celui de ces titulaires. Leur classement de puissance peut déjà comporter un rang provisoire. [Règle](../../../backend/vega/breakout.py) · [API](../../../backend/api/src/routes/rankings.mjs)\n"
+    },
+    {
+      "path": "docs/calculs/05-joueurs/10-revelations.md",
+      "line_at_sha": 10,
+      "topic": "rank",
+      "before": "2. son championnat est **mesuré** (erreur-type de son niveau d'au plus 45 points, version 4) ;\n",
+      "after": "2. sa ligne de puissance porte `linked = true`. Pour les championnats masculins, la marge interne donne ce statut jusqu’à 45 points à l’entrée et 52 points pour un championnat déjà mesuré ;\n"
+    },
+    {
+      "path": "docs/calculs/05-joueurs/10-revelations.md",
+      "line_at_sha": 11,
+      "topic": "rank",
+      "before": "les joueurs classés du même rôle, au moins 30",
+      "after": "les joueurs du même rôle admissibles en minutes, avec `linked = true` et un rendement renseigné, au moins 30"
+    },
+    {
+      "path": "docs/calculs/05-joueurs/10-revelations.md",
+      "line_at_sha": 12,
+      "topic": "rank",
+      "before": "4. il n'a **jamais été titulaire** (classé) lors d'une saison antérieure de la base ;\n",
+      "after": "4. aucune saison antérieure de la base ne le marque admissible en minutes (`eligible`) ;\n"
+    },
+    {
+      "path": "docs/calculs/05-joueurs/10-revelations.md",
+      "line_at_sha": 36,
+      "topic": "rank",
+      "before": "Un joueur sous le seuil de minutes n'a pas de score au classement ; cette phrase est tout ce que le classement dit de lui.",
+      "after": "La fiche peut présenter à la fois ce signal, le score de puissance et son rang provisoire."
+    },
+    {
+      "path": "docs/calculs/05-joueurs/08-audit-classement-puissance.md",
+      "line_at_sha": 186,
+      "topic": "map",
+      "before": "**Le modèle** ([`power.py`](../../../backend/vega/power.py), « League levels (version 4) »). Le niveau ℓ de chaque championnat est le maximum a posteriori d'un seul modèle, qui réunit trois preuves :\n",
+      "after": "**Calcul des niveaux dans la version 4.** Le lecteur relance l’Elo depuis les niveaux et combine trois sources d’information. Pour les matchs, il emploie une sensibilité fixe de +1 et −1 sans propager les variations des Elo intermédiaires. La qualification initiale de maximum a posteriori a été réfutée pour la vraisemblance séquentielle annoncée. [Implémentation](../../../backend/vega/power.py) · [Contre-exemple du §3](../09-audit-2026-11/SOURCE_AUDIT.md)\n"
+    },
+    {
+      "path": "docs/calculs/05-joueurs/08-audit-classement-puissance.md",
+      "line_at_sha": 193,
+      "topic": "rank_map",
+      "before": "**Mesuré.** Un championnat est **mesuré** (`linked`, ses joueurs classés) quand son erreur-type est d'au plus 45 points ; il le reste jusqu'à 52, pour qu'aucun championnat n'entre et ne sorte du classement à chaque calcul.\n",
+      "after": "**Statut utilisé par cette version.** `linked` vaut vrai lorsque la marge interne est au plus de 45 points, ou au plus de 52 si le championnat était déjà mesuré. Ces valeurs servent de seuils opérationnels. Leur interprétation comme erreurs-types statistiques reste à valider.\n"
+    },
+    {
+      "path": "docs/calculs/05-joueurs/08-audit-classement-puissance.md",
+      "line_at_sha": 197,
+      "topic": "rank",
+      "before": "Les autres championnats ont un niveau marqué « provisoire » sur le site, avec sa marge, et leurs joueurs un score sans rang.\n",
+      "after": "La version 4 gardait un niveau et une marge pour les championnats masculins provisoires. Elle donnait à leurs joueurs un score sans rang. Les versions 5 et 6, décrites plus bas, ont modifié l’attribution du rang.\n"
+    },
+    {
+      "path": "docs/calculs/05-joueurs/08-audit-classement-puissance.md",
+      "line_at_sha": 259,
+      "topic": "grade",
+      "before": "Elle est montrée sur la fiche du match à côté de la note PitchAPI, avec le rang du joueur dans le match.",
+      "after": "Dans cette version 5, la fiche affichait aussi la note PitchAPI. Depuis la version 7, la note Vega est la seule note de match affichée. [Note du match](../02-metriques-attendues/04-note-du-match.md)"
+    },
+    {
+      "path": "docs/calculs/08-notes-vega/01-formules-et-raisons.md",
+      "line_at_sha": 15,
+      "topic": "map",
+      "before": "son niveau ℓ, avec une erreur-type",
+      "after": "son niveau ℓ et une marge interne en points Elo"
+    },
+    {
+      "path": "docs/calculs/08-notes-vega/01-formules-et-raisons.md",
+      "line_at_sha": 99,
+      "topic": "map",
+      "before": "ℓ_j, le niveau du championnat j : la force à laquelle ses clubs entrent dans l'Elo. Trois preuves le disent, avec des précisions différentes. Le niveau retenu est le **maximum a posteriori** d'un seul modèle qui les réunit, chacune comptée selon sa précision : plus une preuve est précise, plus elle pèse.\n",
+      "after": "Le niveau initial ℓ_j détermine la force d’entrée des clubs du championnat j. Le calcul combine les résultats entre championnats, les passages de joueurs et les hypothèses de division et de confédération. Il résout un système itératif approché. La dérivée des mises à jour Elo successives manque dans le terme des matchs, ce qui invalide son interprétation comme maximum a posteriori de la vraisemblance séquentielle annoncée. [Calcul](../../../backend/vega/power.py) · [Contre-exemple du §3](../09-audit-2026-11/SOURCE_AUDIT.md)\n"
+    },
+    {
+      "path": "docs/calculs/08-notes-vega/01-formules-et-raisons.md",
+      "line_at_sha": 119,
+      "topic": "map",
+      "before": "- $g$ est la **pente** de la vraisemblance des résultats, $\\Lambda$ son **information**. Les matchs à l'intérieur d'un championnat s'annulent : seul compte ce que ses clubs font contre les autres.\n",
+      "after": "- Pour un match entre deux championnats ajustés distincts, le code utilise +1 et −1 comme sensibilités de l’écart Elo aux deux niveaux initiaux. Il ajoute le résidu pondéré à $g$ et sa courbure locale à $\\Lambda$. Tous les matchs font évoluer les Elo suivants, y compris les matchs internes. Le calcul de $g$ et de $\\Lambda$ omet la propagation de ces dépendances.\n"
+    },
+    {
+      "path": "docs/calculs/08-notes-vega/01-formules-et-raisons.md",
+      "line_at_sha": 207,
+      "topic": "map",
+      "before": "2. **Les trois preuves ensemble.** Pas de Newton :\n",
+      "after": "2. **Les trois sources réunies.** Le calcul résout le système linéaire suivant à chaque itération.\n"
+    },
+    {
+      "path": "docs/calculs/08-notes-vega/01-formules-et-raisons.md",
+      "line_at_sha": 214,
+      "topic": "map",
+      "before": "3. **L'origine de l'échelle.** Matchs et passages ne disent que des écarts. On décale tous les niveaux d'une même constante, pour que les championnats qui tiennent l'échelle gardent leur niveau d'avant. Ces championnats sont ceux mesurés à 25 points près contre le mieux mesuré : les cinq grands championnats, les championnats anglais, la 2. Bundesliga, les Pays-Bas, le Portugal.\n",
+      "after": "3. **L’origine de l’échelle.** Le code décale ensemble les niveaux ajustés pour conserver, en moyenne, les valeurs antérieures des références disponibles. Les groupes hors ajustement gardent l’initialisation du lecteur. Ce décalage peut donc modifier l’espérance d’une rencontre entre groupes ajustés et groupes laissés à leur valeur initiale. Les références sont les championnats ordinaires à moins de 25 points de marge relative à la meilleure référence, avec repli sur celle-ci. Les cinq grands championnats, les divisions anglaises, la 2. Bundesliga, les Pays-Bas et le Portugal sont des exemples de la mesure historique.\n"
+    },
+    {
+      "path": "docs/calculs/08-notes-vega/01-formules-et-raisons.md",
+      "line_at_sha": 215,
+      "topic": "map",
+      "before": "4. **L'erreur-type** d'un niveau, contre la moyenne de ces championnats :\n",
+      "after": "4. **Marge interne d’un niveau.** Le code inverse la matrice approchée et mesure l’écart à la moyenne des références selon la formule ci-dessous. La calibration de cette marge comme erreur-type d’un estimateur séquentiel reste à établir.\n"
+    },
+    {
+      "path": "docs/calculs/08-notes-vega/01-formules-et-raisons.md",
+      "line_at_sha": 223,
+      "topic": "rank_map",
+      "before": "Un championnat est **mesuré** quand se ≤ **45 points**. Il le reste jusqu'à **52**, pour qu'aucun championnat n'entre et ne sorte du classement à chaque calcul. Ses joueurs reçoivent un rang. Un championnat au-dessus est **provisoire** : il garde son niveau, affiché avec sa marge, et ses joueurs un score sans rang.\n",
+      "after": "Pour les championnats masculins ajustés, le statut **mesuré** s’ouvre lorsque la marge interne vaut au plus **45 points** et se conserve jusqu’à **52 points** inclus. Au-delà, le championnat garde son niveau et sa marge avec le statut **provisoire**. Dans le classement de puissance des joueurs, un indice publié donne toujours un rang dans son univers. Le statut provisoire du championnat masculin peut rendre ce rang provisoire.\n"
+    },
+    {
+      "path": "docs/calculs/08-notes-vega/01-formules-et-raisons.md",
+      "line_at_sha": 401,
+      "topic": "rank",
+      "before": "- Un rang est **provisoire** sous le seuil de minutes (`eligible` faux), dans un championnat provisoire (`linked` faux), dans un club qu'aucun championnat de la base ne connaît (vu seulement en coupe d'Europe, `in_league` faux), ou pour un joueur connu seulement par sa sélection. Le site en donne la raison. Le site le dit sur la fiche du joueur. L'incertitude d'un championnat provisoire est commune à tous ses joueurs : l'ordre entre eux est exact. Face aux autres, elle vaut environ ± 200 à 300 places dans les 500 premiers, et beaucoup plus au milieu du classement, où les joueurs sont serrés.\n",
+      "after": "- Sur la fiche et dans le classement complet, le rang est **provisoire** si le seuil de minutes n’est pas atteint. Ensuite, le lecteur donne aux hommes d’une sélection seule, d’un club sans championnat dans la base ou d’un championnat de niveau provisoire le motif correspondant. Une joueuse admissible en minutes a un rang dans l’univers féminin sans motif de ligue provisoire. Le statut renseigne sur la fiabilité des entrées. La marge interne de la ligue ne fournit pas un intervalle statistique validé pour le rang du joueur.\n"
+    },
+    {
+      "path": "docs/calculs/08-notes-vega/01-formules-et-raisons.md",
+      "line_at_sha": 405,
+      "topic": "rank",
+      "before": "**tout joueur qui a joué a un rang**",
+      "after": "**tout joueur doté d’un indice a un rang dans son univers**"
+    },
+    {
+      "path": "docs/calculs/08-notes-vega/01-formules-et-raisons.md",
+      "line_at_sha": 120,
+      "topic": "map",
+      "before": "et l'information est d'autant plus grande",
+      "after": "ce qui augmente le poids numérique du terme des matchs lorsque la dispersion est inférieure à 1"
+    },
+    {
+      "path": "docs/calculs/05-joueurs/08-audit-classement-puissance.md",
+      "line_at_sha": 187,
+      "topic": "map",
+      "before": "le score I_m (r − E)·c et l'information I_m E(1 − E)·c²",
+      "after": "le résidu pondéré I_m (r − E)·c et la courbure locale I_m E(1 − E)·c²"
+    },
+    {
+      "path": "docs/calculs/05-joueurs/08-audit-classement-puissance.md",
+      "line_at_sha": 191,
+      "topic": "map",
+      "before": "Un championnat sans aucune preuve reçoit son a priori, et son erreur-type le dit.",
+      "after": "Les championnats peu documentés dépendent davantage de l’a priori. La marge issue de la matrice du calcul sert au classement de leur statut."
+    }
+  ]
+}

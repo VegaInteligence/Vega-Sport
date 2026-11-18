@@ -1,0 +1,2501 @@
+{
+  "at": "2026-11-18 17:17:38.599677+00:00",
+  "snapshot": "4448235:4448235:",
+  "total_national_rows": 235,
+  "active_national_rows": 207,
+  "redirected_national_rows": 28,
+  "active_country_null": 207,
+  "canonical_same_normalized_name_groups": 0,
+  "alias_same_normalized_name_groups": 0,
+  "provider_scoped_alias_collision_groups": 0,
+  "current_key_multiple_targets": 0,
+  "key_rows": 463,
+  "alias_rows": 139,
+  "aliases_by_source": {
+    "openfootball": 39,
+    "openligadb": 14,
+    "international_results": 38,
+    "sportscore": 48
+  },
+  "canonical_collisions": [],
+  "alias_collisions": [],
+  "provider_alias_collisions": [],
+  "key_collisions": [],
+  "known_national_scope_flags": [
+    {
+      "is_national": true,
+      "teams": 153,
+      "null_country": 153,
+      "not_flagged_ids": null
+    }
+  ],
+  "names_with_age_gender_historic_hints": [
+    {
+      "id": 1130,
+      "name": "West Germany",
+      "short_name": null,
+      "country_code": null,
+      "is_national": true,
+      "merged_into": null
+    },
+    {
+      "id": 1133,
+      "name": "Soviet Union",
+      "short_name": null,
+      "country_code": null,
+      "is_national": true,
+      "merged_into": null
+    },
+    {
+      "id": 1140,
+      "name": "East Germany",
+      "short_name": null,
+      "country_code": null,
+      "is_national": true,
+      "merged_into": null
+    }
+  ],
+  "limits": [
+    "name normalization removes accents/punctuation; it is a candidate detector, not identity proof",
+    "aliases in different languages with no shared normalized spelling remain undetected",
+    "gender/age/historical continuity is not established by is_national or a federation country key",
+    "NULL country rows are included; unknown is_national teams are only checked in explicitly identified national scopes"
+  ],
+  "draw_placeholders": {
+    "rows": 54,
+    "match_sides": 102,
+    "earliest": "2028-06-09",
+    "latest": "2028-07-09",
+    "entities": [
+      {
+        "id": 1060,
+        "name": "A1",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1061,
+        "name": "A2",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1062,
+        "name": "A3",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1063,
+        "name": "A4",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1064,
+        "name": "B1",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1065,
+        "name": "B2",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1066,
+        "name": "B3",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1067,
+        "name": "B4",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1068,
+        "name": "C1",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1069,
+        "name": "C2",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1070,
+        "name": "C3",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1071,
+        "name": "C4",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1072,
+        "name": "D3",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1073,
+        "name": "D4",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1074,
+        "name": "D1",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1075,
+        "name": "D2",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1076,
+        "name": "E1",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1077,
+        "name": "E2",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1078,
+        "name": "E3",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1079,
+        "name": "E4",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1080,
+        "name": "F1",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1081,
+        "name": "F2",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1082,
+        "name": "F3",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1083,
+        "name": "F4",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1084,
+        "name": "Winner Group A",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1085,
+        "name": "Runner-up Group C",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1086,
+        "name": "Runner-up Group A",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1087,
+        "name": "Runner-up Group B",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1088,
+        "name": "Winner Group B",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1089,
+        "name": "3rd Group A/D/E/F",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1090,
+        "name": "Winner Group C",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1091,
+        "name": "3rd Group D/E/F",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1092,
+        "name": "Winner Group F",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1093,
+        "name": "3rd Group A/B/C",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1094,
+        "name": "Runner-up Group D",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1095,
+        "name": "Runner-up Group E",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1096,
+        "name": "Winner Group D",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1097,
+        "name": "Runner-up Group F",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1098,
+        "name": "Winner Group E",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1099,
+        "name": "3rd Group A/B/C/D",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1100,
+        "name": "Winner Match 39",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1101,
+        "name": "Winner Match 37",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1102,
+        "name": "Winner Match 41",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1103,
+        "name": "Winner Match 42",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1104,
+        "name": "Winner Match 44",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1105,
+        "name": "Winner Match 43",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1106,
+        "name": "Winner Match 40",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1107,
+        "name": "Winner Match 38",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1108,
+        "name": "Winner Match 45",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1109,
+        "name": "Winner Match 46",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1110,
+        "name": "Winner Match 47",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1111,
+        "name": "Winner Match 48",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1112,
+        "name": "Winner Match 49",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      {
+        "id": 1113,
+        "name": "Winner Match 50",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      }
+    ]
+  },
+  "nonredirected_nonplaceholder_rows": 153,
+  "raw_name_collisions_before_resolving_redirects": [
+    {
+      "key": "angola",
+      "entities": [
+        {
+          "id": 1168,
+          "name": "Angola"
+        },
+        {
+          "id": 13477,
+          "name": "Angola"
+        }
+      ]
+    },
+    {
+      "key": "bolivia",
+      "entities": [
+        {
+          "id": 1119,
+          "name": "Bolivia"
+        },
+        {
+          "id": 13495,
+          "name": "Bolivia"
+        }
+      ]
+    },
+    {
+      "key": "chile",
+      "entities": [
+        {
+          "id": 1116,
+          "name": "Chile"
+        },
+        {
+          "id": 13489,
+          "name": "Chile"
+        }
+      ]
+    },
+    {
+      "key": "china",
+      "entities": [
+        {
+          "id": 1163,
+          "name": "China"
+        },
+        {
+          "id": 13504,
+          "name": "China"
+        }
+      ]
+    },
+    {
+      "key": "cuba",
+      "entities": [
+        {
+          "id": 1128,
+          "name": "Cuba"
+        },
+        {
+          "id": 13534,
+          "name": "Cuba"
+        }
+      ]
+    },
+    {
+      "key": "elsalvador",
+      "entities": [
+        {
+          "id": 1137,
+          "name": "El Salvador"
+        },
+        {
+          "id": 13530,
+          "name": "El Salvador"
+        }
+      ]
+    },
+    {
+      "key": "grece",
+      "entities": [
+        {
+          "id": 1156,
+          "name": "Grèce"
+        },
+        {
+          "id": 2124,
+          "name": "Grèce"
+        }
+      ]
+    },
+    {
+      "key": "honduras",
+      "entities": [
+        {
+          "id": 1149,
+          "name": "Honduras"
+        },
+        {
+          "id": 13529,
+          "name": "Honduras"
+        }
+      ]
+    },
+    {
+      "key": "israel",
+      "entities": [
+        {
+          "id": 1138,
+          "name": "Israel"
+        },
+        {
+          "id": 2221,
+          "name": "Israël"
+        }
+      ]
+    },
+    {
+      "key": "italie",
+      "entities": [
+        {
+          "id": 1032,
+          "name": "Italie"
+        },
+        {
+          "id": 2129,
+          "name": "Italie"
+        }
+      ]
+    },
+    {
+      "key": "jamaica",
+      "entities": [
+        {
+          "id": 1160,
+          "name": "Jamaica"
+        },
+        {
+          "id": 13493,
+          "name": "Jamaica"
+        }
+      ]
+    },
+    {
+      "key": "nigeria",
+      "entities": [
+        {
+          "id": 1157,
+          "name": "Nigeria"
+        },
+        {
+          "id": 13464,
+          "name": "Nigeria"
+        }
+      ]
+    },
+    {
+      "key": "peru",
+      "entities": [
+        {
+          "id": 1120,
+          "name": "Peru"
+        },
+        {
+          "id": 13488,
+          "name": "Peru"
+        }
+      ]
+    },
+    {
+      "key": "trinidadandtobago",
+      "entities": [
+        {
+          "id": 1165,
+          "name": "Trinidad and Tobago"
+        },
+        {
+          "id": 13526,
+          "name": "Trinidad and Tobago"
+        }
+      ]
+    },
+    {
+      "key": "ukraine",
+      "entities": [
+        {
+          "id": 1042,
+          "name": "Ukraine"
+        },
+        {
+          "id": 2231,
+          "name": "Ukraine"
+        }
+      ]
+    },
+    {
+      "key": "unitedarabemirates",
+      "entities": [
+        {
+          "id": 1154,
+          "name": "United Arab Emirates"
+        },
+        {
+          "id": 13510,
+          "name": "United Arab Emirates"
+        }
+      ]
+    }
+  ],
+  "multilingual_positive_controls": [
+    {
+      "team": {
+        "id": 1155,
+        "name": "Ireland",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      "keys": [
+        {
+          "entity_id": 1155,
+          "provider": "openfootball",
+          "provider_key": "name:Ireland",
+          "is_current": true
+        },
+        {
+          "entity_id": 1155,
+          "provider": "international_results",
+          "provider_key": "Republic of Ireland",
+          "is_current": true
+        }
+      ],
+      "aliases": [
+        {
+          "entity_id": 1155,
+          "name": "Ireland",
+          "normalized": "ireland",
+          "kind": "source_spelling",
+          "source": "openfootball"
+        },
+        {
+          "entity_id": 1155,
+          "name": "Irlande",
+          "normalized": "irlande",
+          "kind": "source_spelling",
+          "source": "international_results"
+        }
+      ],
+      "usage": {
+        "team_id": 1155,
+        "match_sides": 19,
+        "earliest": "1990-06-11",
+        "latest": "2026-11-17",
+        "sources": [
+          "international_results",
+          "openfootball"
+        ],
+        "competitions": [
+          {
+            "id": 64,
+            "kind": null,
+            "name": "World Cup 1930",
+            "country": null
+          },
+          {
+            "id": 78,
+            "kind": null,
+            "name": "nations-league",
+            "country": null
+          }
+        ]
+      }
+    },
+    {
+      "team": {
+        "id": 5503,
+        "name": "Czechia",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      "keys": [
+        {
+          "entity_id": 5503,
+          "provider": "pitchapi",
+          "provider_key": "t_4335Nu",
+          "is_current": true
+        },
+        {
+          "entity_id": 5503,
+          "provider": "openfootball",
+          "provider_key": "name:Czech Republic",
+          "is_current": true
+        },
+        {
+          "entity_id": 5503,
+          "provider": "fifa",
+          "provider_key": "43995",
+          "is_current": true
+        },
+        {
+          "entity_id": 5503,
+          "provider": "openligadb",
+          "provider_key": "141",
+          "is_current": true
+        }
+      ],
+      "aliases": [
+        {
+          "entity_id": 5503,
+          "name": "Czech Republic",
+          "normalized": "czech republic",
+          "kind": "source_spelling",
+          "source": "openfootball"
+        },
+        {
+          "entity_id": 5503,
+          "name": "Czechia",
+          "normalized": "czechia",
+          "kind": "source_spelling",
+          "source": "sportscore"
+        },
+        {
+          "entity_id": 5503,
+          "name": "Tchéquie",
+          "normalized": "tchéquie",
+          "kind": "source_spelling",
+          "source": "openligadb"
+        }
+      ],
+      "usage": {
+        "team_id": 5503,
+        "match_sides": 23,
+        "earliest": "2006-06-12",
+        "latest": "2026-11-15",
+        "sources": [
+          "openfootball",
+          "openligadb",
+          "pitchapi"
+        ],
+        "competitions": [
+          {
+            "id": 63,
+            "kind": null,
+            "name": "Euro 2021",
+            "country": null
+          },
+          {
+            "id": 64,
+            "kind": null,
+            "name": "World Cup 1930",
+            "country": null
+          },
+          {
+            "id": 76,
+            "kind": null,
+            "name": "nations-league",
+            "country": null
+          },
+          {
+            "id": 198,
+            "kind": "international",
+            "name": "World Cup",
+            "country": "INT"
+          }
+        ]
+      }
+    },
+    {
+      "team": {
+        "id": 5500,
+        "name": "Turkiye",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      "keys": [
+        {
+          "entity_id": 5500,
+          "provider": "pitchapi",
+          "provider_key": "t_3f7BVa",
+          "is_current": true
+        },
+        {
+          "entity_id": 5500,
+          "provider": "openfootball",
+          "provider_key": "name:Turkey",
+          "is_current": true
+        },
+        {
+          "entity_id": 5500,
+          "provider": "fifa",
+          "provider_key": "43972",
+          "is_current": true
+        },
+        {
+          "entity_id": 5500,
+          "provider": "openligadb",
+          "provider_key": "153",
+          "is_current": true
+        }
+      ],
+      "aliases": [
+        {
+          "entity_id": 5500,
+          "name": "Turkey",
+          "normalized": "turkey",
+          "kind": "source_spelling",
+          "source": "openfootball"
+        },
+        {
+          "entity_id": 5500,
+          "name": "Turkiye",
+          "normalized": "turkiye",
+          "kind": "source_spelling",
+          "source": "sportscore"
+        },
+        {
+          "entity_id": 5500,
+          "name": "Turquie",
+          "normalized": "turquie",
+          "kind": "source_spelling",
+          "source": "openligadb"
+        }
+      ],
+      "usage": {
+        "team_id": 5500,
+        "match_sides": 30,
+        "earliest": "1954-06-17",
+        "latest": "2026-11-15",
+        "sources": [
+          "openfootball",
+          "openligadb",
+          "pitchapi"
+        ],
+        "competitions": [
+          {
+            "id": 63,
+            "kind": null,
+            "name": "Euro 2021",
+            "country": null
+          },
+          {
+            "id": 64,
+            "kind": null,
+            "name": "World Cup 1930",
+            "country": null
+          },
+          {
+            "id": 76,
+            "kind": null,
+            "name": "nations-league",
+            "country": null
+          },
+          {
+            "id": 198,
+            "kind": "international",
+            "name": "World Cup",
+            "country": "INT"
+          }
+        ]
+      }
+    },
+    {
+      "team": {
+        "id": 5510,
+        "name": "Ivory Coast",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      "keys": [
+        {
+          "entity_id": 5510,
+          "provider": "pitchapi",
+          "provider_key": "t_4NoJRj",
+          "is_current": true
+        },
+        {
+          "entity_id": 5510,
+          "provider": "openfootball",
+          "provider_key": "name:Côte d'Ivoire",
+          "is_current": false
+        },
+        {
+          "entity_id": 5510,
+          "provider": "openfootball",
+          "provider_key": "name:Ivory Coast",
+          "is_current": true
+        },
+        {
+          "entity_id": 5510,
+          "provider": "international_results",
+          "provider_key": "Ivory Coast",
+          "is_current": true
+        }
+      ],
+      "aliases": [
+        {
+          "entity_id": 5510,
+          "name": "Côte d'Ivoire",
+          "normalized": "côte d'ivoire",
+          "kind": "source_spelling",
+          "source": "openfootball"
+        },
+        {
+          "entity_id": 5510,
+          "name": "Ivory Coast",
+          "normalized": "ivory coast",
+          "kind": "source_spelling",
+          "source": "openfootball"
+        },
+        {
+          "entity_id": 5510,
+          "name": "Cote d'Ivoire",
+          "normalized": "cotedivoire",
+          "kind": "source_spelling",
+          "source": "sportscore"
+        }
+      ],
+      "usage": {
+        "team_id": 5510,
+        "match_sides": 33,
+        "earliest": "2006-06-10",
+        "latest": "2026-06-30",
+        "sources": [
+          "international_results",
+          "openfootball",
+          "pitchapi"
+        ],
+        "competitions": [
+          {
+            "id": 64,
+            "kind": null,
+            "name": "World Cup 1930",
+            "country": null
+          },
+          {
+            "id": 198,
+            "kind": "international",
+            "name": "World Cup",
+            "country": "INT"
+          },
+          {
+            "id": 240,
+            "kind": null,
+            "name": "Coupe d’Afrique des nations 2021",
+            "country": null
+          }
+        ]
+      }
+    },
+    {
+      "team": {
+        "id": 5507,
+        "name": "Curacao",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      "keys": [
+        {
+          "entity_id": 5507,
+          "provider": "pitchapi",
+          "provider_key": "t_4BP0bM",
+          "is_current": true
+        },
+        {
+          "entity_id": 5507,
+          "provider": "openfootball",
+          "provider_key": "name:Curaçao",
+          "is_current": true
+        },
+        {
+          "entity_id": 5507,
+          "provider": "fifa",
+          "provider_key": "1895293",
+          "is_current": true
+        },
+        {
+          "entity_id": 5507,
+          "provider": "international_results",
+          "provider_key": "Curaçao",
+          "is_current": true
+        }
+      ],
+      "aliases": [
+        {
+          "entity_id": 5507,
+          "name": "Curaçao",
+          "normalized": "curaçao",
+          "kind": "source_spelling",
+          "source": "openfootball"
+        },
+        {
+          "entity_id": 5507,
+          "name": "Curacao",
+          "normalized": "curacao",
+          "kind": "source_spelling",
+          "source": "sportscore"
+        }
+      ],
+      "usage": {
+        "team_id": 5507,
+        "match_sides": 9,
+        "earliest": "2025-06-17",
+        "latest": "2026-06-25",
+        "sources": [
+          "international_results",
+          "openfootball",
+          "pitchapi"
+        ],
+        "competitions": [
+          {
+            "id": 64,
+            "kind": null,
+            "name": "World Cup 1930",
+            "country": null
+          },
+          {
+            "id": 198,
+            "kind": "international",
+            "name": "World Cup",
+            "country": "INT"
+          },
+          {
+            "id": 243,
+            "kind": null,
+            "name": "Gold Cup 2023",
+            "country": null
+          }
+        ]
+      }
+    },
+    {
+      "team": {
+        "id": 5485,
+        "name": "DR Congo",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      "keys": [
+        {
+          "entity_id": 5485,
+          "provider": "pitchapi",
+          "provider_key": "t_2IxhHW",
+          "is_current": true
+        },
+        {
+          "entity_id": 5485,
+          "provider": "openfootball",
+          "provider_key": "name:DR Congo",
+          "is_current": true
+        },
+        {
+          "entity_id": 5485,
+          "provider": "international_results",
+          "provider_key": "DR Congo",
+          "is_current": true
+        }
+      ],
+      "aliases": [
+        {
+          "entity_id": 5485,
+          "name": "DR Congo",
+          "normalized": "dr congo",
+          "kind": "source_spelling",
+          "source": "openfootball"
+        },
+        {
+          "entity_id": 5485,
+          "name": "Democratic Republic of the Congo",
+          "normalized": "democraticrepublicofthecongo",
+          "kind": "source_spelling",
+          "source": "sportscore"
+        }
+      ],
+      "usage": {
+        "team_id": 5485,
+        "match_sides": 19,
+        "earliest": "2024-01-17",
+        "latest": "2026-07-01",
+        "sources": [
+          "international_results",
+          "openfootball",
+          "pitchapi"
+        ],
+        "competitions": [
+          {
+            "id": 64,
+            "kind": null,
+            "name": "World Cup 1930",
+            "country": null
+          },
+          {
+            "id": 198,
+            "kind": "international",
+            "name": "World Cup",
+            "country": "INT"
+          },
+          {
+            "id": 240,
+            "kind": null,
+            "name": "Coupe d’Afrique des nations 2021",
+            "country": null
+          }
+        ]
+      }
+    },
+    {
+      "team": {
+        "id": 5508,
+        "name": "Germany",
+        "short_name": null,
+        "country_code": null,
+        "is_national": true,
+        "merged_into": null
+      },
+      "keys": [
+        {
+          "entity_id": 5508,
+          "provider": "pitchapi",
+          "provider_key": "t_4Jybsf",
+          "is_current": true
+        },
+        {
+          "entity_id": 5508,
+          "provider": "openfootball",
+          "provider_key": "name:Germany",
+          "is_current": true
+        },
+        {
+          "entity_id": 5508,
+          "provider": "fifa",
+          "provider_key": "43948",
+          "is_current": true
+        },
+        {
+          "entity_id": 5508,
+          "provider": "openligadb",
+          "provider_key": "725",
+          "is_current": true
+        }
+      ],
+      "aliases": [
+        {
+          "entity_id": 5508,
+          "name": "Germany",
+          "normalized": "germany",
+          "kind": "source_spelling",
+          "source": "sportscore"
+        },
+        {
+          "entity_id": 5508,
+          "name": "Allemagne",
+          "normalized": "allemagne",
+          "kind": "source_spelling",
+          "source": "openligadb"
+        }
+      ],
+      "usage": {
+        "team_id": 5508,
+        "match_sides": 76,
+        "earliest": "1934-05-27",
+        "latest": "2026-11-16",
+        "sources": [
+          "openfootball",
+          "openligadb",
+          "pitchapi"
+        ],
+        "competitions": [
+          {
+            "id": 63,
+            "kind": null,
+            "name": "Euro 2021",
+            "country": null
+          },
+          {
+            "id": 64,
+            "kind": null,
+            "name": "World Cup 1930",
+            "country": null
+          },
+          {
+            "id": 76,
+            "kind": null,
+            "name": "nations-league",
+            "country": null
+          },
+          {
+            "id": 198,
+            "kind": "international",
+            "name": "World Cup",
+            "country": "INT"
+          }
+        ]
+      }
+    }
+  ],
+  "historical_families_require_policy": [
+    {
+      "ids": [
+        1130,
+        1140,
+        5508
+      ],
+      "rows": [
+        {
+          "team": {
+            "id": 1130,
+            "name": "West Germany",
+            "short_name": null,
+            "country_code": null,
+            "is_national": true,
+            "merged_into": null
+          },
+          "keys": [
+            {
+              "entity_id": 1130,
+              "provider": "openfootball",
+              "provider_key": "name:West Germany",
+              "is_current": true
+            }
+          ],
+          "aliases": [],
+          "usage": {
+            "team_id": 1130,
+            "match_sides": 62,
+            "earliest": "1954-06-17",
+            "latest": "1990-07-08",
+            "sources": [
+              "openfootball"
+            ],
+            "competitions": [
+              {
+                "id": 64,
+                "kind": null,
+                "name": "World Cup 1930",
+                "country": null
+              }
+            ]
+          }
+        },
+        {
+          "team": {
+            "id": 1140,
+            "name": "East Germany",
+            "short_name": null,
+            "country_code": null,
+            "is_national": true,
+            "merged_into": null
+          },
+          "keys": [
+            {
+              "entity_id": 1140,
+              "provider": "openfootball",
+              "provider_key": "name:East Germany",
+              "is_current": true
+            }
+          ],
+          "aliases": [],
+          "usage": {
+            "team_id": 1140,
+            "match_sides": 6,
+            "earliest": "1974-06-14",
+            "latest": "1974-07-03",
+            "sources": [
+              "openfootball"
+            ],
+            "competitions": [
+              {
+                "id": 64,
+                "kind": null,
+                "name": "World Cup 1930",
+                "country": null
+              }
+            ]
+          }
+        },
+        {
+          "team": {
+            "id": 5508,
+            "name": "Germany",
+            "short_name": null,
+            "country_code": null,
+            "is_national": true,
+            "merged_into": null
+          },
+          "keys": [
+            {
+              "entity_id": 5508,
+              "provider": "pitchapi",
+              "provider_key": "t_4Jybsf",
+              "is_current": true
+            },
+            {
+              "entity_id": 5508,
+              "provider": "openfootball",
+              "provider_key": "name:Germany",
+              "is_current": true
+            },
+            {
+              "entity_id": 5508,
+              "provider": "fifa",
+              "provider_key": "43948",
+              "is_current": true
+            },
+            {
+              "entity_id": 5508,
+              "provider": "openligadb",
+              "provider_key": "725",
+              "is_current": true
+            }
+          ],
+          "aliases": [
+            {
+              "entity_id": 5508,
+              "name": "Germany",
+              "normalized": "germany",
+              "kind": "source_spelling",
+              "source": "sportscore"
+            },
+            {
+              "entity_id": 5508,
+              "name": "Allemagne",
+              "normalized": "allemagne",
+              "kind": "source_spelling",
+              "source": "openligadb"
+            }
+          ],
+          "usage": {
+            "team_id": 5508,
+            "match_sides": 76,
+            "earliest": "1934-05-27",
+            "latest": "2026-11-16",
+            "sources": [
+              "openfootball",
+              "openligadb",
+              "pitchapi"
+            ],
+            "competitions": [
+              {
+                "id": 63,
+                "kind": null,
+                "name": "Euro 2021",
+                "country": null
+              },
+              {
+                "id": 64,
+                "kind": null,
+                "name": "World Cup 1930",
+                "country": null
+              },
+              {
+                "id": 76,
+                "kind": null,
+                "name": "nations-league",
+                "country": null
+              },
+              {
+                "id": 198,
+                "kind": "international",
+                "name": "World Cup",
+                "country": "INT"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "ids": [
+        1133,
+        1038
+      ],
+      "rows": [
+        {
+          "team": {
+            "id": 1133,
+            "name": "Soviet Union",
+            "short_name": null,
+            "country_code": null,
+            "is_national": true,
+            "merged_into": null
+          },
+          "keys": [
+            {
+              "entity_id": 1133,
+              "provider": "openfootball",
+              "provider_key": "name:Soviet Union",
+              "is_current": true
+            }
+          ],
+          "aliases": [],
+          "usage": {
+            "team_id": 1133,
+            "match_sides": 31,
+            "earliest": "1958-06-08",
+            "latest": "1990-06-18",
+            "sources": [
+              "openfootball"
+            ],
+            "competitions": [
+              {
+                "id": 64,
+                "kind": null,
+                "name": "World Cup 1930",
+                "country": null
+              }
+            ]
+          }
+        },
+        {
+          "team": {
+            "id": 1038,
+            "name": "Russia",
+            "short_name": null,
+            "country_code": null,
+            "is_national": true,
+            "merged_into": null
+          },
+          "keys": [
+            {
+              "entity_id": 1038,
+              "provider": "openfootball",
+              "provider_key": "name:Russia",
+              "is_current": true
+            },
+            {
+              "entity_id": 1038,
+              "provider": "fifa",
+              "provider_key": "43965",
+              "is_current": true
+            }
+          ],
+          "aliases": [
+            {
+              "entity_id": 1038,
+              "name": "Russia",
+              "normalized": "russia",
+              "kind": "source_spelling",
+              "source": "openfootball"
+            }
+          ],
+          "usage": {
+            "team_id": 1038,
+            "match_sides": 17,
+            "earliest": "1994-06-20",
+            "latest": "2021-06-21",
+            "sources": [
+              "openfootball"
+            ],
+            "competitions": [
+              {
+                "id": 63,
+                "kind": null,
+                "name": "Euro 2021",
+                "country": null
+              },
+              {
+                "id": 64,
+                "kind": null,
+                "name": "World Cup 1930",
+                "country": null
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "ids": [
+        1117,
+        1167,
+        6569
+      ],
+      "rows": [
+        {
+          "team": {
+            "id": 1117,
+            "name": "Yugoslavia",
+            "short_name": null,
+            "country_code": null,
+            "is_national": true,
+            "merged_into": null
+          },
+          "keys": [
+            {
+              "entity_id": 1117,
+              "provider": "openfootball",
+              "provider_key": "name:Yugoslavia",
+              "is_current": true
+            }
+          ],
+          "aliases": [],
+          "usage": {
+            "team_id": 1117,
+            "match_sides": 37,
+            "earliest": "1930-07-14",
+            "latest": "1998-06-29",
+            "sources": [
+              "openfootball"
+            ],
+            "competitions": [
+              {
+                "id": 64,
+                "kind": null,
+                "name": "World Cup 1930",
+                "country": null
+              }
+            ]
+          }
+        },
+        {
+          "team": {
+            "id": 1167,
+            "name": "Serbia and Montenegro",
+            "short_name": null,
+            "country_code": null,
+            "is_national": true,
+            "merged_into": null
+          },
+          "keys": [
+            {
+              "entity_id": 1167,
+              "provider": "openfootball",
+              "provider_key": "name:Serbia and Montenegro",
+              "is_current": true
+            }
+          ],
+          "aliases": [],
+          "usage": {
+            "team_id": 1167,
+            "match_sides": 3,
+            "earliest": "2006-06-11",
+            "latest": "2006-06-21",
+            "sources": [
+              "openfootball"
+            ],
+            "competitions": [
+              {
+                "id": 64,
+                "kind": null,
+                "name": "World Cup 1930",
+                "country": null
+              }
+            ]
+          }
+        },
+        {
+          "team": {
+            "id": 6569,
+            "name": "Serbia",
+            "short_name": null,
+            "country_code": null,
+            "is_national": true,
+            "merged_into": null
+          },
+          "keys": [
+            {
+              "entity_id": 6569,
+              "provider": "pitchapi",
+              "provider_key": "t_4by1hl",
+              "is_current": true
+            },
+            {
+              "entity_id": 6569,
+              "provider": "openfootball",
+              "provider_key": "name:Serbia",
+              "is_current": true
+            },
+            {
+              "entity_id": 6569,
+              "provider": "fifa",
+              "provider_key": "1902465",
+              "is_current": true
+            },
+            {
+              "entity_id": 6569,
+              "provider": "openligadb",
+              "provider_key": "5592",
+              "is_current": true
+            }
+          ],
+          "aliases": [
+            {
+              "entity_id": 6569,
+              "name": "Serbia",
+              "normalized": "serbia",
+              "kind": "source_spelling",
+              "source": "openfootball"
+            },
+            {
+              "entity_id": 6569,
+              "name": "Serbie",
+              "normalized": "serbie",
+              "kind": "source_spelling",
+              "source": "openligadb"
+            }
+          ],
+          "usage": {
+            "team_id": 6569,
+            "match_sides": 21,
+            "earliest": "2010-06-13",
+            "latest": "2026-11-16",
+            "sources": [
+              "openfootball",
+              "openligadb",
+              "pitchapi"
+            ],
+            "competitions": [
+              {
+                "id": 63,
+                "kind": null,
+                "name": "Euro 2021",
+                "country": null
+              },
+              {
+                "id": 64,
+                "kind": null,
+                "name": "World Cup 1930",
+                "country": null
+              },
+              {
+                "id": 76,
+                "kind": null,
+                "name": "nations-league",
+                "country": null
+              },
+              {
+                "id": 198,
+                "kind": "international",
+                "name": "World Cup",
+                "country": "INT"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "ids": [
+        1126,
+        5503
+      ],
+      "rows": [
+        {
+          "team": {
+            "id": 1126,
+            "name": "Czechoslovakia",
+            "short_name": null,
+            "country_code": null,
+            "is_national": true,
+            "merged_into": null
+          },
+          "keys": [
+            {
+              "entity_id": 1126,
+              "provider": "openfootball",
+              "provider_key": "name:Czechoslovakia",
+              "is_current": true
+            }
+          ],
+          "aliases": [],
+          "usage": {
+            "team_id": 1126,
+            "match_sides": 30,
+            "earliest": "1934-05-27",
+            "latest": "1990-07-01",
+            "sources": [
+              "openfootball"
+            ],
+            "competitions": [
+              {
+                "id": 64,
+                "kind": null,
+                "name": "World Cup 1930",
+                "country": null
+              }
+            ]
+          }
+        },
+        {
+          "team": {
+            "id": 5503,
+            "name": "Czechia",
+            "short_name": null,
+            "country_code": null,
+            "is_national": true,
+            "merged_into": null
+          },
+          "keys": [
+            {
+              "entity_id": 5503,
+              "provider": "pitchapi",
+              "provider_key": "t_4335Nu",
+              "is_current": true
+            },
+            {
+              "entity_id": 5503,
+              "provider": "openfootball",
+              "provider_key": "name:Czech Republic",
+              "is_current": true
+            },
+            {
+              "entity_id": 5503,
+              "provider": "fifa",
+              "provider_key": "43995",
+              "is_current": true
+            },
+            {
+              "entity_id": 5503,
+              "provider": "openligadb",
+              "provider_key": "141",
+              "is_current": true
+            }
+          ],
+          "aliases": [
+            {
+              "entity_id": 5503,
+              "name": "Czech Republic",
+              "normalized": "czech republic",
+              "kind": "source_spelling",
+              "source": "openfootball"
+            },
+            {
+              "entity_id": 5503,
+              "name": "Czechia",
+              "normalized": "czechia",
+              "kind": "source_spelling",
+              "source": "sportscore"
+            },
+            {
+              "entity_id": 5503,
+              "name": "Tchéquie",
+              "normalized": "tchéquie",
+              "kind": "source_spelling",
+              "source": "openligadb"
+            }
+          ],
+          "usage": {
+            "team_id": 5503,
+            "match_sides": 23,
+            "earliest": "2006-06-12",
+            "latest": "2026-11-15",
+            "sources": [
+              "openfootball",
+              "openligadb",
+              "pitchapi"
+            ],
+            "competitions": [
+              {
+                "id": 63,
+                "kind": null,
+                "name": "Euro 2021",
+                "country": null
+              },
+              {
+                "id": 64,
+                "kind": null,
+                "name": "World Cup 1930",
+                "country": null
+              },
+              {
+                "id": 76,
+                "kind": null,
+                "name": "nations-league",
+                "country": null
+              },
+              {
+                "id": 198,
+                "kind": "international",
+                "name": "World Cup",
+                "country": "INT"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "ids": [
+        1142,
+        5485
+      ],
+      "rows": [
+        {
+          "team": {
+            "id": 1142,
+            "name": "Zaire",
+            "short_name": null,
+            "country_code": null,
+            "is_national": true,
+            "merged_into": null
+          },
+          "keys": [
+            {
+              "entity_id": 1142,
+              "provider": "openfootball",
+              "provider_key": "name:Zaire",
+              "is_current": true
+            }
+          ],
+          "aliases": [],
+          "usage": {
+            "team_id": 1142,
+            "match_sides": 3,
+            "earliest": "1974-06-14",
+            "latest": "1974-06-22",
+            "sources": [
+              "openfootball"
+            ],
+            "competitions": [
+              {
+                "id": 64,
+                "kind": null,
+                "name": "World Cup 1930",
+                "country": null
+              }
+            ]
+          }
+        },
+        {
+          "team": {
+            "id": 5485,
+            "name": "DR Congo",
+            "short_name": null,
+            "country_code": null,
+            "is_national": true,
+            "merged_into": null
+          },
+          "keys": [
+            {
+              "entity_id": 5485,
+              "provider": "pitchapi",
+              "provider_key": "t_2IxhHW",
+              "is_current": true
+            },
+            {
+              "entity_id": 5485,
+              "provider": "openfootball",
+              "provider_key": "name:DR Congo",
+              "is_current": true
+            },
+            {
+              "entity_id": 5485,
+              "provider": "international_results",
+              "provider_key": "DR Congo",
+              "is_current": true
+            }
+          ],
+          "aliases": [
+            {
+              "entity_id": 5485,
+              "name": "DR Congo",
+              "normalized": "dr congo",
+              "kind": "source_spelling",
+              "source": "openfootball"
+            },
+            {
+              "entity_id": 5485,
+              "name": "Democratic Republic of the Congo",
+              "normalized": "democraticrepublicofthecongo",
+              "kind": "source_spelling",
+              "source": "sportscore"
+            }
+          ],
+          "usage": {
+            "team_id": 5485,
+            "match_sides": 19,
+            "earliest": "2024-01-17",
+            "latest": "2026-07-01",
+            "sources": [
+              "international_results",
+              "openfootball",
+              "pitchapi"
+            ],
+            "competitions": [
+              {
+                "id": 64,
+                "kind": null,
+                "name": "World Cup 1930",
+                "country": null
+              },
+              {
+                "id": 198,
+                "kind": "international",
+                "name": "World Cup",
+                "country": "INT"
+              },
+              {
+                "id": 240,
+                "kind": null,
+                "name": "Coupe d’Afrique des nations 2021",
+                "country": null
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "ids": [
+        1127,
+        13516
+      ],
+      "rows": [
+        {
+          "team": {
+            "id": 1127,
+            "name": "Dutch East Indies",
+            "short_name": null,
+            "country_code": null,
+            "is_national": true,
+            "merged_into": null
+          },
+          "keys": [
+            {
+              "entity_id": 1127,
+              "provider": "openfootball",
+              "provider_key": "name:Dutch East Indies",
+              "is_current": true
+            }
+          ],
+          "aliases": [],
+          "usage": {
+            "team_id": 1127,
+            "match_sides": 1,
+            "earliest": "1938-06-05",
+            "latest": "1938-06-05",
+            "sources": [
+              "openfootball"
+            ],
+            "competitions": [
+              {
+                "id": 64,
+                "kind": null,
+                "name": "World Cup 1930",
+                "country": null
+              }
+            ]
+          }
+        },
+        {
+          "team": {
+            "id": 13516,
+            "name": "Indonesia",
+            "short_name": null,
+            "country_code": null,
+            "is_national": true,
+            "merged_into": null
+          },
+          "keys": [
+            {
+              "entity_id": 13516,
+              "provider": "fifa",
+              "provider_key": "43816",
+              "is_current": true
+            },
+            {
+              "entity_id": 13516,
+              "provider": "international_results",
+              "provider_key": "Indonesia",
+              "is_current": true
+            }
+          ],
+          "aliases": [],
+          "usage": {
+            "team_id": 13516,
+            "match_sides": 4,
+            "earliest": "2024-01-15",
+            "latest": "2024-01-28",
+            "sources": [
+              "international_results"
+            ],
+            "competitions": [
+              {
+                "id": 242,
+                "kind": null,
+                "name": "Coupe d’Asie des nations 2023",
+                "country": null
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "distinct_partial_name_controls": [
+    {
+      "ids": [
+        1132,
+        1155
+      ],
+      "rows": [
+        {
+          "team": {
+            "id": 1132,
+            "name": "Northern Ireland",
+            "short_name": null,
+            "country_code": null,
+            "is_national": true,
+            "merged_into": null
+          },
+          "keys": [
+            {
+              "entity_id": 1132,
+              "provider": "openfootball",
+              "provider_key": "name:Northern Ireland",
+              "is_current": true
+            },
+            {
+              "entity_id": 1132,
+              "provider": "fifa",
+              "provider_key": "43952",
+              "is_current": true
+            },
+            {
+              "entity_id": 1132,
+              "provider": "international_results",
+              "provider_key": "Northern Ireland",
+              "is_current": true
+            }
+          ],
+          "aliases": [
+            {
+              "entity_id": 1132,
+              "name": "Northern Ireland",
+              "normalized": "northern ireland",
+              "kind": "source_spelling",
+              "source": "openfootball"
+            },
+            {
+              "entity_id": 1132,
+              "name": "Irlande du Nord",
+              "normalized": "irlande du nord",
+              "kind": "source_spelling",
+              "source": "international_results"
+            }
+          ],
+          "usage": {
+            "team_id": 1132,
+            "match_sides": 19,
+            "earliest": "1958-06-08",
+            "latest": "2026-11-17",
+            "sources": [
+              "international_results",
+              "openfootball"
+            ],
+            "competitions": [
+              {
+                "id": 64,
+                "kind": null,
+                "name": "World Cup 1930",
+                "country": null
+              },
+              {
+                "id": 78,
+                "kind": null,
+                "name": "nations-league",
+                "country": null
+              }
+            ]
+          }
+        },
+        {
+          "team": {
+            "id": 1155,
+            "name": "Ireland",
+            "short_name": null,
+            "country_code": null,
+            "is_national": true,
+            "merged_into": null
+          },
+          "keys": [
+            {
+              "entity_id": 1155,
+              "provider": "openfootball",
+              "provider_key": "name:Ireland",
+              "is_current": true
+            },
+            {
+              "entity_id": 1155,
+              "provider": "international_results",
+              "provider_key": "Republic of Ireland",
+              "is_current": true
+            }
+          ],
+          "aliases": [
+            {
+              "entity_id": 1155,
+              "name": "Ireland",
+              "normalized": "ireland",
+              "kind": "source_spelling",
+              "source": "openfootball"
+            },
+            {
+              "entity_id": 1155,
+              "name": "Irlande",
+              "normalized": "irlande",
+              "kind": "source_spelling",
+              "source": "international_results"
+            }
+          ],
+          "usage": {
+            "team_id": 1155,
+            "match_sides": 19,
+            "earliest": "1990-06-11",
+            "latest": "2026-11-17",
+            "sources": [
+              "international_results",
+              "openfootball"
+            ],
+            "competitions": [
+              {
+                "id": 64,
+                "kind": null,
+                "name": "World Cup 1930",
+                "country": null
+              },
+              {
+                "id": 78,
+                "kind": null,
+                "name": "nations-league",
+                "country": null
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "ids": [
+        1136,
+        5469
+      ],
+      "rows": [
+        {
+          "team": {
+            "id": 1136,
+            "name": "North Korea",
+            "short_name": null,
+            "country_code": null,
+            "is_national": true,
+            "merged_into": null
+          },
+          "keys": [
+            {
+              "entity_id": 1136,
+              "provider": "openfootball",
+              "provider_key": "name:North Korea",
+              "is_current": true
+            }
+          ],
+          "aliases": [],
+          "usage": {
+            "team_id": 1136,
+            "match_sides": 7,
+            "earliest": "1966-07-12",
+            "latest": "2010-06-25",
+            "sources": [
+              "openfootball"
+            ],
+            "competitions": [
+              {
+                "id": 64,
+                "kind": null,
+                "name": "World Cup 1930",
+                "country": null
+              }
+            ]
+          }
+        },
+        {
+          "team": {
+            "id": 5469,
+            "name": "South Korea",
+            "short_name": null,
+            "country_code": null,
+            "is_national": true,
+            "merged_into": null
+          },
+          "keys": [
+            {
+              "entity_id": 5469,
+              "provider": "pitchapi",
+              "provider_key": "t_0dGP0n",
+              "is_current": true
+            },
+            {
+              "entity_id": 5469,
+              "provider": "openfootball",
+              "provider_key": "name:South Korea",
+              "is_current": true
+            },
+            {
+              "entity_id": 5469,
+              "provider": "international_results",
+              "provider_key": "South Korea",
+              "is_current": true
+            }
+          ],
+          "aliases": [
+            {
+              "entity_id": 5469,
+              "name": "South Korea",
+              "normalized": "south korea",
+              "kind": "source_spelling",
+              "source": "openfootball"
+            },
+            {
+              "entity_id": 5469,
+              "name": "South Korea",
+              "normalized": "southkorea",
+              "kind": "source_spelling",
+              "source": "sportscore"
+            }
+          ],
+          "usage": {
+            "team_id": 5469,
+            "match_sides": 54,
+            "earliest": "1954-06-17",
+            "latest": "2026-06-25",
+            "sources": [
+              "international_results",
+              "openfootball",
+              "pitchapi"
+            ],
+            "competitions": [
+              {
+                "id": 64,
+                "kind": null,
+                "name": "World Cup 1930",
+                "country": null
+              },
+              {
+                "id": 198,
+                "kind": "international",
+                "name": "World Cup",
+                "country": "INT"
+              },
+              {
+                "id": 242,
+                "kind": null,
+                "name": "Coupe d’Asie des nations 2023",
+                "country": null
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "ids": [
+        13458,
+        13467,
+        13470
+      ],
+      "rows": [
+        {
+          "team": {
+            "id": 13458,
+            "name": "Guinea",
+            "short_name": null,
+            "country_code": null,
+            "is_national": true,
+            "merged_into": null
+          },
+          "keys": [
+            {
+              "entity_id": 13458,
+              "provider": "fifa",
+              "provider_key": "43861",
+              "is_current": true
+            },
+            {
+              "entity_id": 13458,
+              "provider": "international_results",
+              "provider_key": "Guinea",
+              "is_current": true
+            }
+          ],
+          "aliases": [],
+          "usage": {
+            "team_id": 13458,
+            "match_sides": 9,
+            "earliest": "2022-01-10",
+            "latest": "2024-02-02",
+            "sources": [
+              "international_results"
+            ],
+            "competitions": [
+              {
+                "id": 240,
+                "kind": null,
+                "name": "Coupe d’Afrique des nations 2021",
+                "country": null
+              }
+            ]
+          }
+        },
+        {
+          "team": {
+            "id": 13467,
+            "name": "Guinea-Bissau",
+            "short_name": null,
+            "country_code": null,
+            "is_national": true,
+            "merged_into": null
+          },
+          "keys": [
+            {
+              "entity_id": 13467,
+              "provider": "fifa",
+              "provider_key": "43862",
+              "is_current": true
+            },
+            {
+              "entity_id": 13467,
+              "provider": "international_results",
+              "provider_key": "Guinea-Bissau",
+              "is_current": true
+            }
+          ],
+          "aliases": [],
+          "usage": {
+            "team_id": 13467,
+            "match_sides": 6,
+            "earliest": "2022-01-11",
+            "latest": "2024-01-22",
+            "sources": [
+              "international_results"
+            ],
+            "competitions": [
+              {
+                "id": 240,
+                "kind": null,
+                "name": "Coupe d’Afrique des nations 2021",
+                "country": null
+              }
+            ]
+          }
+        },
+        {
+          "team": {
+            "id": 13470,
+            "name": "Equatorial Guinea",
+            "short_name": null,
+            "country_code": null,
+            "is_national": true,
+            "merged_into": null
+          },
+          "keys": [
+            {
+              "entity_id": 13470,
+              "provider": "fifa",
+              "provider_key": "43856",
+              "is_current": true
+            },
+            {
+              "entity_id": 13470,
+              "provider": "international_results",
+              "provider_key": "Equatorial Guinea",
+              "is_current": true
+            }
+          ],
+          "aliases": [],
+          "usage": {
+            "team_id": 13470,
+            "match_sides": 12,
+            "earliest": "2022-01-12",
+            "latest": "2025-12-31",
+            "sources": [
+              "international_results"
+            ],
+            "competitions": [
+              {
+                "id": 240,
+                "kind": null,
+                "name": "Coupe d’Afrique des nations 2021",
+                "country": null
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

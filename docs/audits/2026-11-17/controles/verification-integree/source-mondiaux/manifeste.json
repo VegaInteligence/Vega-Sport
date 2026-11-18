@@ -1,0 +1,86 @@
+{
+  "commit": "35a8667f518b07469182ae16d35574dd0e7a00fb",
+  "licence": "CC BY-SA 4.0",
+  "copyright": "© 2023 Joshua C. Fjelstul, Ph.D.",
+  "source_manifest": {
+    "data-csv/matches.csv": {
+      "source_url": "https://raw.githubusercontent.com/jfjelstul/worldcup/35a8667f518b07469182ae16d35574dd0e7a00fb/data-csv/matches.csv",
+      "sha256": "037f718764758e7dda3a2918276f85fa8389af1d50999d2a480c8a6a49408875",
+      "bytes": 298930
+    },
+    "data-csv/player_appearances.csv": {
+      "source_url": "https://raw.githubusercontent.com/jfjelstul/worldcup/35a8667f518b07469182ae16d35574dd0e7a00fb/data-csv/player_appearances.csv",
+      "sha256": "edab41b99556cf7494387a5c7d74824c4c69a4474c32d1d4fbf8bab4e61ad483",
+      "bytes": 4676840
+    },
+    "data-csv/substitutions.csv": {
+      "source_url": "https://raw.githubusercontent.com/jfjelstul/worldcup/35a8667f518b07469182ae16d35574dd0e7a00fb/data-csv/substitutions.csv",
+      "sha256": "dd98a991dceaeb966771db3e6f7b28413a76f16be3a1f0c2a99b8c258a3a8e56",
+      "bytes": 1878063
+    },
+    "data-csv/goals.csv": {
+      "source_url": "https://raw.githubusercontent.com/jfjelstul/worldcup/35a8667f518b07469182ae16d35574dd0e7a00fb/data-csv/goals.csv",
+      "sha256": "4fbe990b7f42bb8af00d1587af09359ecfdb4ee4101bb44fda0eb336fc1e5be3",
+      "bytes": 734494
+    },
+    "data-csv/bookings.csv": {
+      "source_url": "https://raw.githubusercontent.com/jfjelstul/worldcup/35a8667f518b07469182ae16d35574dd0e7a00fb/data-csv/bookings.csv",
+      "sha256": "e1c010ce790fc7729392dc51ceafcb75775b4cc2e3ba39b186efbe6ab19f8969",
+      "bytes": 598373
+    },
+    "data-csv/squads.csv": {
+      "source_url": "https://raw.githubusercontent.com/jfjelstul/worldcup/35a8667f518b07469182ae16d35574dd0e7a00fb/data-csv/squads.csv",
+      "sha256": "dafd483504fe26a63ae211e2539462fbbd86c53d5e079fc0a8cf48e8273659bb",
+      "bytes": 1331815
+    },
+    "README.md": {
+      "source_url": "https://raw.githubusercontent.com/jfjelstul/worldcup/35a8667f518b07469182ae16d35574dd0e7a00fb/README.md",
+      "sha256": "34f5dda74637a07668dfeb9c7273beab17287046d867cd9332d62d0237e1808e",
+      "bytes": 27210
+    },
+    "DESCRIPTION": {
+      "source_url": "https://raw.githubusercontent.com/jfjelstul/worldcup/35a8667f518b07469182ae16d35574dd0e7a00fb/DESCRIPTION",
+      "sha256": "e2f9e7eb59269f8c63589f6cf29b76c625373c52d371e6021bfe47bf9997ad9b",
+      "bytes": 815
+    },
+    "codebook/csv/datasets.csv": {
+      "source_url": "https://raw.githubusercontent.com/jfjelstul/worldcup/35a8667f518b07469182ae16d35574dd0e7a00fb/codebook/csv/datasets.csv",
+      "sha256": "2848c8768a1aceee1fe3c2c3345ce32396ea99ca09574748e0eca48f2204636f",
+      "bytes": 10459
+    },
+    "codebook/csv/variables.csv": {
+      "source_url": "https://raw.githubusercontent.com/jfjelstul/worldcup/35a8667f518b07469182ae16d35574dd0e7a00fb/codebook/csv/variables.csv",
+      "sha256": "22244bf73378bc3dd25d666f31615769873fcebf6529cdfa38bbb2c2896cb3d8",
+      "bytes": 46874
+    }
+  },
+  "archive_manifest": {
+    "db/worldcup_editions_nov18_verified/fixtures.json": {
+      "sha256": "c19cc4fe6f918ec6c40c98e83936585e21db78c685cd18d1345e06205d01dfbf",
+      "bytes": 248062
+    },
+    "db/worldcup_editions_nov18_verified/fixtures.sql": {
+      "sha256": "85937d496a9b64aa626afd628da470001640adca8ef5c6e7d6ded49956c9aa00",
+      "bytes": 599
+    },
+    "db/worldcup_editions_nov18_verified/receipt.json": {
+      "sha256": "e81f6be54cc010b0194228666771d7be350ef75f5b7581dcde80c84700f078c1",
+      "bytes": 506
+    },
+    "tracks/2-ingestion/world-cup-calendar/matches.csv": {
+      "sha256": "1617b1d2f54550e17f50480a60f3539d87cb9791ef7cb8d88b77267de48eaa4e",
+      "bytes": 167873
+    },
+    "tracks/2-ingestion/world-cup-calendar/official-participations-by-edition.csv": {
+      "sha256": "a0166eb20aef3ac255f76e9ebe2d9c9794152034c1c919054cf2f63459463cab",
+      "bytes": 1918
+    }
+  },
+  "fifa_sheets": 700,
+  "fifa_sheets_sha256_index": "bc8505aedd2aabb97e5ddb2c35ca2825e76e17279659ba205d213a6d82826ec4",
+  "license_declared_in": [
+    "README.md",
+    "DESCRIPTION"
+  ],
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/legalcode"
+}

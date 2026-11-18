@@ -1,6 +1,6 @@
 # Vega-Sport — intégrité, calculs et couverture en production
 
-**[Situation consolidée, mesures et correctifs du 18 novembre](SITUATION.md)** · [91 exigences](registres/requirements.csv) · [Grille par compétition, saison et entité](controles/verification-integree/scores-par-edition.csv.gz)
+**[Situation consolidée, mesures et correctifs du 18 novembre](SITUATION.md)** · [91 exigences](registres/requirements.csv) · [Grille par compétition, saison et entité](controles/verification-integree/scores-actuels-par-edition.csv.gz)
 
 Les sections ci-dessous conservent la chronologie et les mesures des premiers passages.
 

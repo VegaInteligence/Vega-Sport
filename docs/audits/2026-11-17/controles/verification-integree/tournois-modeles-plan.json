@@ -1,0 +1,17 @@
+{
+  "role": "plan",
+  "model": "claude-fable-5-2",
+  "observed_models": [
+    "claude-fable-5-2"
+  ],
+  "effort": "xhigh",
+  "exit_code": 0,
+  "status": "succeeded",
+  "started": "2026-11-18T16:40:04.436804+00:00",
+  "finished": "2026-11-18T16:49:18.950166+00:00",
+  "run_id": "20261118T164004Z-plan-0b075d72",
+  "errors": [],
+  "plan-fable_sha256": "374f39c12bb4cb3b509e514c25df42ac6e21c5fd244e05a5e7ee1ee9ccb8c0fc",
+  "plan-astra_sha256": "52456505422943212db5acb3b161f9d75792421e9e2f03afc3d41439000f4928",
+  "decision-commune_sha256": "021c5322c62a3aedc0037460c6cdde9ecf1c20df30778be973d0a4922d4fd569"
+}

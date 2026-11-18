@@ -1,0 +1,85 @@
+VERDICT: CHANGES_REQUESTED
+
+The protections for an already-stored table read correctly. Two things block release: the first-observation gate from `c61e87af` cannot pass on production-shaped data, and migration 147 is tied to a table snapshot the live collector will overwrite. I ran nothing; this is a read of the worktree against the inlined evidence.
+
+## Findings
+
+**1. major — the first-observation gate refuses every native table in production.**
+- **Kind gate:** `backend/vega/sources/sportscore.py:505` raises `UNVERIFIED_TABLE` unless `kind == "league"`, and `kind` is `core.competitions.kind` (`:643`). No collector writes that column:
+  - `backend/vega/actions.py:20-21`: "the collected competitions do not carry [kind league]";
+  - `backend/tests/test_models.py:1415`: "Collected competitions carry no kind";
+  - `backend/tests/test_source_identity.py:362`: "as PitchAPI leaves it" (NULL);
+  - `backend/vega/sources/curated.py:164-187` only ever sets `international`, for the World Cup.
+- **Group path:** the only other way through (`sportscore.py:477-498`) needs `core.matches.group_name`. The PitchAPI match normaliser has no group field (`backend/vega/normalize.py:231-249`); only `sources/cups.py:237` and `sources/snapshot.py:29` write it, and those are not the editions SportScore targets.
+- **Why the tests pass:** `backend/tests/sportscore_replay.py:71-72` defaults `kind` to `league`, and `_game` (`:55-61`) puts `group_name` on `pitchapi` matches. S23, S50–S52 and S54 therefore pass on a shape production never holds.
+- **Effect:**
+  - The 60 editions with rows are unaffected today.
+  - The 16 scopes without rows can never get a table, even once their names link.
+  - Every scope loses its official table for good at its next season rollover; the calendar-year leagues roll over from early 2027.
+- **Fix:**
+  - Drop the `kind` gate and decide from the edition's own evidence, or reuse `models._is_league` (`backend/vega/models.py:182-185`).
+  - Decide explicitly how a grouped tournament proves membership without native group names, for example connected components of the group-stage fixtures.
+  - Build the replay with `kind` NULL and no native `group_name`; add a rollover case in that shape.
+  - Confirm on RDS with one grouped count of `c.kind` over the 76 keys.
+
+**2. major — migration 147 excludes one exact table, which the legacy collector replaces at the next J1 matchday.**
+- **Witness:** `backend/sql/147_j1_standings_observation.sql:22-27` matches only the SHA-256 of the 20 rows at 14 played. Those are 140 matches; the native-2026 edition holds 199, so about 59 remain before the 13 February 2027 kickoff. The production collector rewrites the rows on any change.
+- **Effect if 147 lands after that:** the function returns nothing, the version is not bumped, and the 15-played table stays served under 2027/2028. The new collector can never replace it (`sportscore.py:441-448`, `WRONG_EDITION`). Its rows have no basis and no match finishes there until February, so 138 keeps it qualified.
+- **No in-place repair:** an applied file is immutable (`backend/vega/store.py:160-162`). An ECS rollback to `8018e08` reopens the same hole. A team merge that changes a public id also lifts the exclusion.
+- **No repo test:** `j1_standings_exclusion` appears only in 147 and `backend/api/src/routes/reference.mjs:57`.
+- **Fix:** key the exclusion on what makes the observation wrong — that competition and edition, SportScore rows without a stage, `as_of` before the edition's first kickoff, played above zero. Add an API test for the three selectors returning 404 and for a later table staying readable.
+
+**3. minor — the fallback assumes Vega's table is complete and fresh.**
+- **Short calendars:** in `backend/sql/138_sportscore_standings.sql:42-60` (repeated in 147) any basis mismatch serves `agg.standings`. For Sweden, where Vega holds 22–23 of 28 matches, that table is known to be wrong. `repeat`'s caught-up test (`sportscore.py:628-635`) can never succeed there. If Vega counts a result after an observation that already included it, the incomplete table stays served until SportScore's table next changes.
+- **Recalculation lag:** the view reads `core.matches` directly, but `agg.standings` is recalculated later. For a short window after each match the public table is Vega's old one, without deductions.
+- **Closed editions:** the collector reads `cs.is_current` only (`:647`), so a closed edition can never requalify. Any later fixture repair by VI-21 flips its final official table to Vega's permanently.
+- **Fix:** treat a row as current in the view when its own played/W/D/L/goals equal `core.table_results`; mark organiser-proved editions so they never fall back; record the closed-edition limit in §5 and hand it to VI-21.
+
+**4. minor — permanently refused scopes are polled twice as often and log without bound.**
+- **Witness:** a failed scope retries after 1 h against a 2 h period (`backend/vega/sources/__init__.py:37,57`), and each refusal inserts an `ops.parse_failures` row (`:103-112`).
+- **Effect:** the 15 unmatched scopes plus J1 go from `ok` every 2 h to `error` every hour. That is about 192 extra widget calls and 384 rows a day; with finding 1 unfixed it eventually covers all 76 scopes.
+- **Fix:** retry content refusals at the scope's period and keep the 1 h retry for transport errors; deduplicate identical failures.
+
+**5. minor — the Allsvenskan organiser lookup is a new provider outside the accepted brief.**
+- **Witness:** `sportscore.py:149-162, 372-431` calls `gql.sportomedia.se`. The brief said no new network cadence.
+- **Gaps:**
+  - It is absent from the source matrix.
+  - It is invisible in `ops.source_runs`.
+  - Its cache is a per-process global.
+  - It has no repo test; S29 uses the Swedish key but never reaches the path.
+- **Useful life:** two rounds this season (28 of 30 played).
+- **Fix:** record it as a verification-only source, add repo cases for match, mismatch, wrong year and 503, or leave the calendar to VI-21.
+
+**6. nit — documentation drift.**
+- `FAILURE_MODES_SPORTSCORE.md` §5 still says a missing last row of a first table is undetected.
+- The §2.1 rule table has no first-observation rule or `UNVERIFIED_TABLE`.
+- S48 and S49 have no row in §3.
+- `WORKLOG.md` says 47 cases in two bullets and 54 later.
+- `backend/vega/api_schema.py:299-321` shows a view that 147 now defines.
+
+## Verified by reading
+
+- Refusals roll back and keep rows, dates and version (`run_due`, `sources/__init__.py:71-88`).
+- Pairing by elimination is gone.
+- The writer touches only SportScore rows without a stage.
+- `vega_read` can execute the two new functions (`017_roles.sql:81-83`, default PUBLIC execute on `core.table_results`).
+- Deploy applies migrations (step 5) before the read API (step 8), so the route never meets a missing function.
+- The diff stays inside the SportScore files, two migrations, the standings route, tests and docs.
+
+## Not verified
+
+- **CI and the E2E runs:** 54 cases, the World Cup, Swedish, Japanese and 60-edition replays. The CI receipt shows exit codes only; `test_sportscore_standings.py` skips without `VEGA_V2_SOURCES_TEST_DSN`, so its execution is not shown.
+- **First production pass:** the candidate was not run against all 76 live widgets on the RDS copy; only three real bodies were replayed.
+- **138's effect on served tables:** how many of the 60 editions change served source when 138 is applied.
+- **Latency:** `/api/standings` on production-size data after 138 and 147.
+- **J1 fixture dates:** the 59-fixture figure is derived from the inlined counts.
+
+## Live gaps outside this candidate
+
+The track brief covers every source; this branch implements VI-29 only. These remain as measured and are reported, not approved:
+- Eight identical downloads of the international results CSV, 30.1 MB a pass (VI-21).
+- Open Matchday rescans and rewrites every file each run, and skips 35 folders on catalogue presence alone (Bochum–Hertha, six native shortfalls).
+- Five PitchAPI families log about 9,419 requests for about 3,503 successes, unclassified.
+- OpenLigaDB half-time scores and crest references are dropped; 11 of 13 DFB shoot-out scores are wrong.
+- 1,755 World Cup and 2,489 UEFA club qualifiers are absent.
+- Transfermarkt loses rows on empty reads (VI-31).

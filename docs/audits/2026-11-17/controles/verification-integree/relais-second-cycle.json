@@ -1,0 +1,48 @@
+{
+  "tournois": {
+    "role": "code",
+    "status": "failed",
+    "run_id": "20261118T171716Z-code-879a060c",
+    "model": "claude-opus-5-5",
+    "effort": "max",
+    "exit_code": 1,
+    "errors": [
+      {
+        "code": "exit_nonzero",
+        "message": "claude exited with status 1 (see stderr.log)"
+      },
+      {
+        "code": "is_error",
+        "message": "terminal result is_error=true (subtype success)"
+      }
+    ],
+    "terminal": "You've hit your 5-hour limit · resets 10:40pm (Europe/Paris)",
+    "fallback": "/root/sol62_tournois_b",
+    "model_fallback": "gpt-6.2-sol",
+    "effort_fallback": "xhigh",
+    "time_handoff": "2026-11-18T17:37Z"
+  },
+  "classement": {
+    "role": "code",
+    "status": "failed",
+    "run_id": "20261118T170527Z-code-c811de6e",
+    "model": "claude-opus-5-5",
+    "effort": "max",
+    "exit_code": 1,
+    "errors": [
+      {
+        "code": "exit_nonzero",
+        "message": "claude exited with status 1 (see stderr.log)"
+      },
+      {
+        "code": "is_error",
+        "message": "terminal result is_error=true (subtype success)"
+      }
+    ],
+    "terminal": "You've hit your 5-hour limit · resets 10:40pm (Europe/Paris)",
+    "fallback": "/root/sol62_sportscore_correction",
+    "model_fallback": "gpt-6.2-sol",
+    "effort_fallback": "xhigh",
+    "time_handoff": "2026-11-18T17:37Z"
+  }
+}

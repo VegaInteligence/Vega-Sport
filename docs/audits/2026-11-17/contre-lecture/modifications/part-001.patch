@@ -400,6 +400,82 @@ index c8d51a162d..e04cbf545c 100644
        country: f.country,
        date: f.day,
        timeUtc: f.time_utc,
+diff --git a/backend/api/src/routes/nations.mjs b/backend/api/src/routes/nations.mjs
+index ffa761d45c..a0abbe08bb 100644
+--- a/backend/api/src/routes/nations.mjs
++++ b/backend/api/src/routes/nations.mjs
+@@ -12,6 +12,8 @@
+  * played for. A team that is no national team is not served.
+  */
+ import { createHash } from "node:crypto";
++import { stageKind, UNKNOWN_STAGE_LABEL } from "../../../../dashboard/shared/tournament-stages.js";
++import { finalPoolPosition1950, WORLD_CUP_1950_EDITION } from "../../../../dashboard/shared/world-cup-1950.js";
+ import { matchesEtag, reject, send, validateParams } from "../http.mjs";
+ 
+ const NATION = /^\/api\/nations\/(t_(?:[A-Za-z0-9]{6}|v\d{7}))$/;
+@@ -44,20 +46,9 @@ function tournamentOf(match) {
+   return null;
+ }
+ 
+-/** The round of a match as a stage: final, third, semi, quarter, r16, r32 or group. */
+-function stageKind(round) {
+-  const r = String(round || "").trim().toLowerCase();
+-  if (/third|3rd|bronze|troisi[eè]me/.test(r)) return "third";
+-  if (/^(?:the )?finale?s?$/.test(r)) return "final";
+-  if (/semi|^1\/2$|demi/.test(r)) return "semi";
+-  if (/quarter|^1\/4$|quart/.test(r)) return "quarter";
+-  if (/round of 16|^1\/8$|huiti[eè]me/.test(r)) return "r16";
+-  if (/round of 32|^1\/16$|seizi[eè]me/.test(r)) return "r32";
+-  return "group";
+-}
+-
+ /** The match from `teamId`'s side: "won", "lost" or null when the base cannot tell. */
+ function outcome(match, teamId) {
++  if (match.status !== "finished") return null;
+   const home = match.home?.id === teamId;
+   const own = home ? match.homeScore : match.awayScore, other = home ? match.awayScore : match.homeScore;
+   if (own == null || other == null) return null;
+@@ -70,9 +61,22 @@ function outcome(match, teamId) {
+ const STAGES = {
+   final: { won: ["Vainqueur", "gold"], lost: ["Finaliste", "silver"], null: ["Finale", null] },
+   third: { won: ["3e", "bronze"], lost: ["4e", null], null: ["Match 3e place", null] },
+-  semi: "Demi", quarter: "Quarts", r16: "8es", r32: "16es", group: "1er tour",
++  semi: "Demi", quarter: "Quarts", r16: "8es", r32: "16es", group: "1er tour", unknown: UNKNOWN_STAGE_LABEL,
+ };
+-const ORDER = ["group", "r32", "r16", "quarter", "semi", "third", "final"];
++const ORDER = ["unknown", "group", "r32", "r16", "quarter", "semi", "third", "final", "final-pool"];
++const POOL_PLACES = [["Poule finale", null], ["Vainqueur", "gold"], ["2e", "silver"], ["3e", "bronze"], ["4e", null]];
++
++function finalPoolStage(matches, teamId) {
++  const pool = matches.filter((m) => m.edition === WORLD_CUP_1950_EDITION && stageKind(m.round) === "final-pool");
++  const home = pool[0]?.home?.id === teamId;
++  const team = (home ? pool[0]?.home : pool[0]?.away)?.name;
++  if (!team || !pool.every((m) => m.status === "finished" && (m.home?.id === teamId && m.home.name === team ||
++      m.away?.id === teamId && m.away.name === team))) return POOL_PLACES[0];
++  const position = finalPoolPosition1950(pool.map((m) => ({
++    date: m.date, home: m.home?.name, away: m.away?.name, score: [m.homeScore, m.awayScore],
++  })), team);
++  return POOL_PLACES[position ?? 0];
++}
+ 
+ /**
+  * A nation's runs in the major tournaments, oldest first: per edition, the stage its last match
+@@ -97,10 +101,12 @@ export function tournamentRuns(matches, teamId) {
+       const list = [...games.values()].sort(
+         (a, b) => String(a.date || "").localeCompare(String(b.date || "")) || ORDER.indexOf(stageKind(a.round)) - ORDER.indexOf(stageKind(b.round)),
+       );
+-      const last = list.at(-1);
+-      const kind = stageKind(last.round);
++      const last = list.findLast((match) => match.status !== "canceled");
++      const kind = stageKind(last?.round);
+       const stage = STAGES[kind];
+-      const [label, tone] = typeof stage === "string" ? [stage, null] : stage[outcome(last, teamId)];
++      const [label, tone] = kind === "final-pool"
++        ? tournament.key === "world-cup" && year === 1950 ? finalPoolStage(matches, teamId) : [UNKNOWN_STAGE_LABEL, null]
++        : typeof stage === "string" ? [stage, null] : stage[outcome(last, teamId)];
+       const out = { tournament: tournament.key, label: `${tournament.label} ${year}`, year, stage: label, matches: list.length, games: list };
+       if (tone) out.tone = tone;
+       return out;
 diff --git a/backend/api/src/routes/profiles.mjs b/backend/api/src/routes/profiles.mjs
 index 0e8a91aa0b..ee002087c2 100644
 --- a/backend/api/src/routes/profiles.mjs
@@ -993,6 +1069,69 @@ index 0000000000..264e8b80ce
 +  }
 +  assert.deepEqual(result.body.grades.map((g) => integer.format(g.gradeExact)), ["49", "48"]);
 +});
+diff --git a/backend/api/test/nations.test.mjs b/backend/api/test/nations.test.mjs
+index 86c31297a8..a18d6143f4 100644
+--- a/backend/api/test/nations.test.mjs
++++ b/backend/api/test/nations.test.mjs
+@@ -67,6 +67,58 @@ test("a tournament's stage is read from the nation's last match of the edition",
+   assert.equal(runs.find((r) => r.year === 2018).label, "Coupe du monde 2018");
+ });
+ 
++// VI-27 B (docs/calculs/09-audit-2026-11/FAILURE_MODES.md §34, written before the code):
++// - 34q, 34r: a last match without a round (International Results' tournaments) or with a round the reader does not
++//   know is « Phase non renseignée », with no tone: never « 1er tour », never a title from the last win;
++// - the group rounds stay « 1er tour »: the collected source's day numbers, « Matchday N », « Group 2 Play-off »,
++//   « First round » (1950's groups, 1938's first round), « Preliminary round » (1934);
++// - 34s: a 1950 final-pool run takes its placing from the attested table only when the nation's three matches are
++//   the table's (each opponent once, each score as attested): « Vainqueur » gold, « 2e » silver, « 3e » bronze, « 4e »;
++// - 34t–34v: Sweden twice and no Brazil, or other results to the same five points, or a match without its score:
++//   « Poule finale », no tone.
++const pool = (date, home, away, homeScore, awayScore) => m({
++  date, competition: "World Cup 1930", edition: "open-cups:world-cup-history:1950", round: "Final Round", season: "1949/1950",
++  home: { id: `t_${home.slice(0, 2).toLowerCase()}`, name: home }, away: { id: `t_${away.slice(0, 2).toLowerCase()}`, name: away },
++  homeScore, awayScore,
++});
++const POOL = [
++  pool("1950-07-09", "Uruguay", "Spain", 2, 2), pool("1950-07-09", "Brazil", "Sweden", 7, 1), pool("1950-07-13", "Brazil", "Spain", 6, 1),
++  pool("1950-07-13", "Uruguay", "Sweden", 3, 2), pool("1950-07-16", "Sweden", "Spain", 3, 1), pool("1950-07-16", "Uruguay", "Brazil", 2, 1),
++];
++const own = (id) => POOL.filter((x) => x.home.id === id || x.away.id === id);
++const stageOf = (matches, id) => tournamentRuns(matches, id).map((r) => [r.tournament, r.year, r.stage, r.tone ?? null, r.matches]);
++
++test("34q, 34r. a last match without a round, or with one the reader does not know, has no phase", () => {
++  const copa = (date, round) => m({ date, competition: "Copa América 2024", edition: "nations-results:copa-america:2024", round, season: "2023/2024",
++    home: { id: "t_ar", name: "Argentina" }, away: { id: "t_co", name: "Colombia" }, homeScore: 1, awayScore: 0 });
++  assert.deepEqual(stageOf([copa("2024-06-20", null), copa("2024-07-14", null)], "t_ar"), [["copa-america", 2024, "Phase non renseignée", null, 2]]);
++  assert.deepEqual(stageOf([copa("2024-07-14", "")], "t_ar"), [["copa-america", 2024, "Phase non renseignée", null, 1]]);
++  assert.deepEqual(stageOf([copa("2024-07-14", "Knockout stage")], "t_ar"), [["copa-america", 2024, "Phase non renseignée", null, 1]]);
++  const group = (edition, round) => m({ date: "1954-06-23", competition: "World Cup 1930", edition, round, homeScore: 2, awayScore: 7 });
++  for (const [edition, round] of [["open-cups:world-cup-history:1954", "Group 2 Play-off"], ["open-cups:world-cup-history:1950", "First round"],
++    ["open-cups:world-cup-history:1934", "Preliminary round"], ["open-cups:world-cup-history:2010", "Matchday 12"], [null, "2"]])
++    assert.equal(tournamentRuns([group(edition, round)], FR)[0].stage, "1er tour", round);
++});
++
++test("34s–34v. 1950's final pool: the attested placing, only on the nation's three attested matches", () => {
++  assert.deepEqual(stageOf(own("t_ur"), "t_ur"), [["world-cup", 1950, "Vainqueur", "gold", 3]]);
++  assert.deepEqual(stageOf(own("t_br"), "t_br"), [["world-cup", 1950, "2e", "silver", 3]]);
++  assert.deepEqual(stageOf(own("t_sw"), "t_sw"), [["world-cup", 1950, "3e", "bronze", 3]]);
++  assert.deepEqual(stageOf(own("t_sp"), "t_sp"), [["world-cup", 1950, "4e", null, 3]]);
++  // Sweden twice and no Brazil: still five points, not the table's matches.
++  const twice = [pool("1950-07-09", "Uruguay", "Spain", 2, 2), pool("1950-07-13", "Uruguay", "Sweden", 3, 2), pool("1950-07-16", "Uruguay", "Sweden", 3, 2)];
++  assert.deepEqual(stageOf(twice, "t_ur"), [["world-cup", 1950, "Poule finale", null, 3]]);
++  // Other results to the same five points.
++  const other = [pool("1950-07-09", "Uruguay", "Spain", 3, 2), pool("1950-07-13", "Uruguay", "Sweden", 3, 2), pool("1950-07-16", "Uruguay", "Brazil", 1, 1)];
++  assert.deepEqual(stageOf(other, "t_ur"), [["world-cup", 1950, "Poule finale", null, 3]]);
++  // The last day without its score (an older base).
++  const unscored = own("t_ur").map((x) => (x.away.name === "Brazil" ? { ...x, homeScore: null, awayScore: null } : x));
++  assert.deepEqual(stageOf(unscored, "t_ur"), [["world-cup", 1950, "Poule finale", null, 3]]);
++  // A team the table does not name.
++  const renamed = own("t_ur").map((x) => (x.home.id === "t_ur" ? { ...x, home: { id: "t_ur", name: "Uruguay U23" } } : x));
++  assert.deepEqual(stageOf(renamed, "t_ur"), [["world-cup", 1950, "Poule finale", null, 3]]);
++});
++
+ test("a season's record counts the played matches with a score", () => {
+   const record = seasonRecord([
+     m({ season: "2026/2027", date: "2026-11-15", homeScore: 2, awayScore: 1 }),
 diff --git a/backend/api/test/player-contract-history.test.mjs b/backend/api/test/player-contract-history.test.mjs
 new file mode 100644
 index 0000000000..5ad368529b
@@ -1621,201 +1760,3 @@ index 583e053428..48f7a4a8bc 100644
          payload = {'season':label, 'source':source_info, 'competitions':competitions}
          raw = json.dumps(payload, ensure_ascii=False, separators=(',', ':'), allow_nan=False).encode('utf-8')
          compressed = gzip.compress(raw, compresslevel=6, mtime=0)
-diff --git a/backend/archives/edition.mjs b/backend/archives/edition.mjs
-index 06cd63e015..8233942dab 100644
---- a/backend/archives/edition.mjs
-+++ b/backend/archives/edition.mjs
-@@ -9,20 +9,18 @@
-  */
- import { readFileSync } from "node:fs";
- import { gunzipSync } from "node:zlib";
--import { buildArchiveSeason, teamSimilarity } from "../../dashboard/shared/archive.js";
-+import { buildArchiveSeason } from "../../dashboard/shared/archive.js";
- 
- const read = (path) => (path && path !== "-" ? JSON.parse(gunzipSync(readFileSync(path)).toString("utf8")) : null);
- const [resultsPath, goalsPath] = process.argv.slice(2);
- const edition = buildArchiveSeason(read(resultsPath), read(goalsPath));
--// The side a goal's team designates, compared as the archive page compares it.
--const side = (goal, match) => {
--  const home = teamSimilarity(goal.team, match.team1),
--    away = teamSimilarity(goal.team, match.team2);
--  return home > away ? "home" : away > home ? "away" : null;
--};
-+// Each goal carries the side shared/archive.js gave it (goalSide: the side named exactly first; a held row's
-+// published side), FAILURE_MODES.md §22.
- const matches = edition.matches.map(({ raw, ...match }) => ({
-   ...match,
--  goals: match.goals ? match.goals.map((goal) => ({ ...goal, side: side(goal, match) })) : null,
-+  goals: match.goals ? match.goals.map((goal) => ({ ...goal, side: goal.side ?? null })) : null,
-+  // A side of the appearance-ordinal feed (build_footballcsv_history.py): never a team of its own.
-+  ...(raw?.sides && { sides: raw.sides }),
-   // The typed facts of the results record that the edition's notes come from.
-   source: raw
-     ? {
-@@ -35,4 +33,4 @@ const matches = edition.matches.map(({ raw, ...match }) => ({
-       }
-     : null,
- }));
--process.stdout.write(JSON.stringify({ season: edition.season, competitions: edition.competitions, matches }));
-+process.stdout.write(JSON.stringify({ season: edition.season, competitions: edition.competitions, matches, absorbed: edition.absorbed, held: edition.held }));
-diff --git a/backend/ci/test_databases.py b/backend/ci/test_databases.py
-index 4858f02a20..d14b47bb23 100644
---- a/backend/ci/test_databases.py
-+++ b/backend/ci/test_databases.py
-@@ -26,6 +26,13 @@ SUITES = {
-     "VEGA_V2_MODELS_TEST_DSN": "vega_v2_models_test",
-     "VEGA_V2_ROLES_TEST_DSN": "vega_v2_roles_test",
-     "VEGA_V2_SOURCES_TEST_DSN": "vega_v2_sources_test",
-+    "VEGA_V2_SNAPSHOTS_TEST_DSN": "vega_v2_snapshots_test",
-+    "VEGA_V2_DFB_PERIODS_TEST_DSN": "vega_v2_dfb_periods_test",
-+    "VEGA_V2_ARCHIVE_REPAIR_TEST_DSN": "vega_v2_archive_repair_test",
-+    "VEGA_V2_ARTWORK_TEST_DSN": "vega_v2_artwork_test",
-+    "VEGA_V2_ARCHIVE_CORRECTIONS_TEST_DSN": "vega_v2_archive_corrections_test",
-+    "VEGA_V2_ARCHIVE_DELETIONS_TEST_DSN": "vega_v2_archive_deletions_test",
-+    "VEGA_V2_ARCHIVE_GUARDS_TEST_DSN": "vega_v2_archive_guards_test",
-     "VEGA_V2_MEDIA_TEST_DSN": "vega_v2_media_test",
-     "VEGA_V2_ARCHIVES_TEST_DSN": "vega_v2_archives_test",
-     "VEGA_V2_LIVE_TEST_DSN": "vega_v2_live_test",
-diff --git a/backend/sources/projections/open-cups.mjs b/backend/sources/projections/open-cups.mjs
-index 47c77065af..ea103513f1 100644
---- a/backend/sources/projections/open-cups.mjs
-+++ b/backend/sources/projections/open-cups.mjs
-@@ -1,6 +1,8 @@
- import { parseFranceCup } from "../../../dashboard/frontend/src/services/openfootball-france-cup.js";
- import { parseOpenCupText } from "../../../dashboard/frontend/src/services/openfootball-cups.js";
- import { NATIONAL_CUP_ARCHIVES } from "../../../dashboard/frontend/src/services/cup-archives.js";
-+import { openFootballScore } from "../../../dashboard/shared/openfootball-history.js";
-+import { worldCupHalf } from "./world-cup-halves.mjs";
- 
- const WORLD_CUP_YEARS = new Set([
-   "1930",
-@@ -117,7 +119,7 @@ export async function GET(request) {
-         : source.format === "year-text"
-           ? {
-               name: "Club World Cup " + season,
--              matches: parseOpenCupText(await response.text(), Number(season)),
-+              matches: parseOpenCupText(await response.text(), Number(season), {}, { halfTime: true }),
-             }
-           : source.format === "continental-text"
-           ? {
-@@ -136,15 +138,30 @@ export async function GET(request) {
-           : await response.json();
-     if (!Array.isArray(data.matches) || data.matches.length > 1000)
-       throw new Error("Invalid source data");
--    const matches = data.matches.map((match) => ({
--      round: match.round,
--      group: match.group,
--      num: match.num,
--      date: match.date,
--      team1: match.team1 === UNDECIDED ? null : match.team1,
--      team2: match.team2 === UNDECIDED ? null : match.team2,
--      score: match.score,
--    }));
-+    const matches = data.matches.map((match) => {
-+      // One score form, whatever the edition writes ([2, 1] or {ft: [2, 1]}); the source's own
-+      // status (1938 Sweden–Austria: "canceled") is the cups adapter's to read (FAILURE_MODES.md §19).
-+      let score = openFootballScore(match.score);
-+      const half = competition === "world-cup-history" ? worldCupHalf(season, match, score) : null;
-+      if (half) score = { ...score, ht: half.official_ht };
-+      // This FFF decision is reviewed. Preserve the other native markers as observations
-+      // without changing their published treatment while their decisions are unverified.
-+      const nativeAward = competition === "france-cup" && match.status === "awarded";
-+      const status = nativeAward && (match.date !== "2024-12-21" || match.team1 !== "Tours FC" || match.team2 !== "FC Lorient")
-+        ? undefined : match.status;
-+      return {
-+        round: match.round,
-+        group: match.group,
-+        num: match.num,
-+        date: match.date,
-+        team1: match.team1 === UNDECIDED ? null : match.team1,
-+        team2: match.team2 === UNDECIDED ? null : match.team2,
-+        ...(score && { score }),
-+        ...(typeof status === "string" && status && { status }),
-+        ...(nativeAward && { sourceStatus: "[awarded]" }),
-+        ...(half && { attestedHalf: { before: half.native_ht, fifaMatchId: half.fifa_match_id } }),
-+      };
-+    });
-     return Response.json(
-       {
-         name: data.name,
-@@ -163,11 +180,13 @@ export async function GET(request) {
-         },
-       },
-     );
--  } catch {
-+  } catch (error) {
-     return Response.json(
-       {
-         error:
-           "Les données de cette édition sont temporairement indisponibles.",
-+        // A body that cannot be read names why (the cups adapter records it).
-+        ...(error?.code === "INVALID_SCORE" && { code: error.code }),
-       },
-       { status: 502 },
-     );
-diff --git a/backend/sources/projections/openligadb.mjs b/backend/sources/projections/openligadb.mjs
-index f35043f686..ee45bb2561 100644
---- a/backend/sources/projections/openligadb.mjs
-+++ b/backend/sources/projections/openligadb.mjs
-@@ -1,3 +1,4 @@
-+import { createHash } from "node:crypto";
- import { normalizeOpenLigaMatches } from "../../../dashboard/frontend/src/services/openligadb.js";
- 
- const SOURCES = {
-@@ -29,6 +30,8 @@ export async function GET(request) {
-       { error: "Compétition ou édition indisponible." },
-       { status: 400 },
-     );
-+  const typedDfb = competition === "germany-cup" && ["2025/2026", "2026/2027"].includes(season);
-+  let phaseObservation;
-   try {
-     const response = await fetch(
-       "https://api.openligadb.de/getmatchdata/" + source.join("/"),
-@@ -42,8 +45,29 @@ export async function GET(request) {
-       },
-     );
-     if (!response.ok) throw new Error("Source unavailable");
--    const rows = await response.json(),
--      matches = normalizeOpenLigaMatches(rows, competition);
-+    let rows;
-+    if (typedDfb) {
-+      const raw = Buffer.from(await response.arrayBuffer());
-+      phaseObservation = { sourceSha256: createHash("sha256").update(raw).digest("hex") };
-+      rows = JSON.parse(raw.toString("utf8"));
-+      if (!Array.isArray(rows) || rows.length > 300) throw new Error("Invalid phase observation");
-+      phaseObservation.matches = rows.map((row) => ({
-+        matchID: row?.matchID, date: row?.matchDateTime || row?.matchDateTimeUTC,
-+        matchIsFinished: row?.matchIsFinished, homeId: row?.team1?.teamId, awayId: row?.team2?.teamId,
-+        matchResults: row?.matchResults,
-+      }));
-+    } else {
-+      rows = await response.json();
-+    }
-+    const matches = normalizeOpenLigaMatches(rows, competition);
-+    if (typedDfb) {
-+      const byKey = new Map(phaseObservation.matches.map((row) => [`openliga:${row.matchID}`, row]));
-+      for (const match of matches) match.results = byKey.get(match.key)?.matchResults;
-+      const duplicates = matches.filter((match, index) => matches.findIndex((m) => m.key === match.key) !== index);
-+      if (duplicates.length) {
-+        return Response.json({ code: "INVALID_PERIODS", detail: "Duplicate match IDs: " + duplicates.map((m) => m.key).join(", "), phaseObservation }, { status: 422 });
-+      }
-+    }
-     if (!matches.length || matches.length !== rows.length)
-       throw new Error("Incomplete source data");
-     return Response.json(
-@@ -51,6 +75,7 @@ export async function GET(request) {
-         competition,
-         season,
-         matches,
-+        ...(phaseObservation && { phaseObservation }),
-         source: {
-           name: "OpenLigaDB",
-           url: "https://www.openligadb.de/",
-@@ -66,6 +91,7 @@ export async function GET(request) {
-       },
-     );
-   } catch {
-+    if (phaseObservation) return Response.json({ code: "INVALID_PERIODS", detail: "Unreadable OpenLigaDB phase observation", phaseObservation }, { status: 422 });
-     return Response.json(
-       {
-         error:

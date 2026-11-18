@@ -1,0 +1,1219 @@
+{
+  "lambda": {
+    "sha": "rrXidCMW2nHD70WCaIyXWq11mYRQqTjaQufyhcsrcUE=",
+    "modified": "2026-11-17T16:02:15.000+0000",
+    "revision": "c2102b49-0393-475a-b4a2-e467539bf5ba"
+  },
+  "requests": [
+    {
+      "surface": "signed-origin",
+      "witness": "france",
+      "kind": "nation",
+      "full": {
+        "at": "2026-11-18T17:08:26.808347+00:00",
+        "surface": "signed-origin",
+        "path": "/api/nations/t_2ysHaw?season=2026%2F2027",
+        "if_none_match": null,
+        "status": 200,
+        "body_sha256": "4442e18998680d9ae1a80055cfe2cb50d9f675cae0143a958fa25c5065836b87",
+        "headers": {
+          "date": "Wed, 18 Nov 2026 17:08:28 GMT",
+          "content-type": "application/json; charset=utf-8",
+          "cache-control": "public, max-age=0, s-maxage=300, must-revalidate, stale-if-error=0",
+          "etag": "W/\"nations-v1-9729c516d6cf276382435d583b501eb4b7f48fe0277bbf1cc5a35d14d6a4a6ad\""
+        },
+        "projection": {
+          "id": "t_2ysHaw",
+          "name": "France",
+          "final": [
+            {
+              "date": "1998-07-12",
+              "season": "1997/1998",
+              "competition": "World Cup 1930",
+              "edition": "open-cups:world-cup-history:1998",
+              "round": "Final",
+              "status": "finished",
+              "home": {
+                "id": "t_3PHH2o",
+                "name": "Brazil",
+                "imageUrl": "https://cdn.pitchapi.dev/images/teams/065535f56b3f38630c386ecb6f1fad2ea7d28958fe36445e58c81cd819821d40.webp"
+              },
+              "away": {
+                "id": "t_2ysHaw",
+                "name": "France",
+                "imageUrl": "https://cdn.pitchapi.dev/images/teams/44df2bebc120ffada8322fe68e7403acc7280d22e8bece65c71f2d6afa20b616.webp"
+              },
+              "homeScore": 0,
+              "awayScore": 3,
+              "homePenalties": null,
+              "awayPenalties": null
+            }
+          ],
+          "palmares": [
+            {
+              "year": 1998,
+              "stage": "Vainqueur",
+              "matches": 7,
+              "last_game": {
+                "date": "1998-07-12",
+                "season": "1997/1998",
+                "competition": "World Cup 1930",
+                "edition": "open-cups:world-cup-history:1998",
+                "round": "Final",
+                "status": "finished",
+                "home": {
+                  "id": "t_3PHH2o",
+                  "name": "Brazil",
+                  "imageUrl": "https://cdn.pitchapi.dev/images/teams/065535f56b3f38630c386ecb6f1fad2ea7d28958fe36445e58c81cd819821d40.webp"
+                },
+                "away": {
+                  "id": "t_2ysHaw",
+                  "name": "France",
+                  "imageUrl": "https://cdn.pitchapi.dev/images/teams/44df2bebc120ffada8322fe68e7403acc7280d22e8bece65c71f2d6afa20b616.webp"
+                },
+                "homeScore": 0,
+                "awayScore": 3,
+                "homePenalties": null,
+                "awayPenalties": null
+              }
+            }
+          ],
+          "top_keys": [
+            "elo",
+            "id",
+            "imageUrl",
+            "lastMatch",
+            "matches",
+            "name",
+            "players",
+            "ranked",
+            "ranking",
+            "record",
+            "season",
+            "tournaments"
+          ],
+          "record_keys": [
+            "draws",
+            "goalsAgainst",
+            "goalsFor",
+            "losses",
+            "played",
+            "wins"
+          ]
+        }
+      },
+      "same_etag": {
+        "at": "2026-11-18T17:08:28.695052+00:00",
+        "surface": "signed-origin",
+        "path": "/api/nations/t_2ysHaw?season=2026%2F2027",
+        "if_none_match": "W/\"nations-v1-9729c516d6cf276382435d583b501eb4b7f48fe0277bbf1cc5a35d14d6a4a6ad\"",
+        "status": 304,
+        "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "headers": {
+          "date": "Wed, 18 Nov 2026 17:08:29 GMT",
+          "content-type": "application/json; charset=utf-8",
+          "cache-control": "public, max-age=0, s-maxage=300, must-revalidate, stale-if-error=0",
+          "etag": "W/\"nations-v1-9729c516d6cf276382435d583b501eb4b7f48fe0277bbf1cc5a35d14d6a4a6ad\""
+        },
+        "projection": null
+      },
+      "old_etag": null
+    },
+    {
+      "surface": "signed-origin",
+      "witness": "france",
+      "kind": "cup",
+      "full": {
+        "at": "2026-11-18T17:08:26.810233+00:00",
+        "surface": "signed-origin",
+        "path": "/api/cups/edition?competition=l_v0000064&season=1998",
+        "if_none_match": null,
+        "status": 200,
+        "body_sha256": "de0ec8df8f0f0ce0c25df366af1d90e0af5216809b1f4bea35e3ecdba2f6480c",
+        "headers": {
+          "date": "Wed, 18 Nov 2026 17:08:27 GMT",
+          "content-type": "application/json; charset=utf-8",
+          "cache-control": "public, max-age=0, s-maxage=60, must-revalidate, stale-if-error=0",
+          "etag": "W/\"support-v1-de0ec8df8f0f0ce0c25df366af1d90e0af5216809b1f4bea35e3ecdba2f6480c\""
+        },
+        "projection": {
+          "season": "1998",
+          "matches": 64,
+          "final": [
+            {
+              "round": "Final",
+              "date": "1998-07-12",
+              "team1": "Brazil",
+              "team2": "France",
+              "score": {
+                "ft": [
+                  0,
+                  3
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "same_etag": {
+        "at": "2026-11-18T17:08:27.640830+00:00",
+        "surface": "signed-origin",
+        "path": "/api/cups/edition?competition=l_v0000064&season=1998",
+        "if_none_match": "W/\"support-v1-de0ec8df8f0f0ce0c25df366af1d90e0af5216809b1f4bea35e3ecdba2f6480c\"",
+        "status": 304,
+        "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "headers": {
+          "date": "Wed, 18 Nov 2026 17:08:27 GMT",
+          "content-type": "application/json; charset=utf-8",
+          "cache-control": "public, max-age=0, s-maxage=60, must-revalidate, stale-if-error=0",
+          "etag": "W/\"support-v1-de0ec8df8f0f0ce0c25df366af1d90e0af5216809b1f4bea35e3ecdba2f6480c\""
+        },
+        "projection": null
+      },
+      "old_etag": null
+    },
+    {
+      "surface": "signed-origin",
+      "witness": "italie",
+      "kind": "nation",
+      "full": {
+        "at": "2026-11-18T17:08:26.810551+00:00",
+        "surface": "signed-origin",
+        "path": "/api/nations/t_v0001032?season=2026%2F2027",
+        "if_none_match": null,
+        "status": 200,
+        "body_sha256": "477cdc27dcd677c1365bc9b1512ef1b5a83a923a8f0caa0046e952be4f5cc99a",
+        "headers": {
+          "date": "Wed, 18 Nov 2026 17:08:27 GMT",
+          "content-type": "application/json; charset=utf-8",
+          "cache-control": "public, max-age=0, s-maxage=300, must-revalidate, stale-if-error=0",
+          "etag": "W/\"nations-v1-0920bddef279f7c3d1c0ccd805cd4b6df8e8470294d40d80c87d00b9e2774685\""
+        },
+        "projection": {
+          "id": "t_v0001032",
+          "name": "Italie",
+          "final": [
+            {
+              "date": "1982-07-11",
+              "season": "1981/1982",
+              "competition": "World Cup 1930",
+              "edition": "open-cups:world-cup-history:1982",
+              "round": "Final",
+              "status": "finished",
+              "home": {
+                "id": "t_v0001032",
+                "name": "Italie",
+                "imageUrl": null
+              },
+              "away": {
+                "id": "t_v0001130",
+                "name": "West Germany",
+                "imageUrl": null
+              },
+              "homeScore": 3,
+              "awayScore": 1,
+              "homePenalties": null,
+              "awayPenalties": null
+            }
+          ],
+          "palmares": [
+            {
+              "year": 1982,
+              "stage": "Vainqueur",
+              "matches": 7,
+              "last_game": {
+                "date": "1982-07-11",
+                "season": "1981/1982",
+                "competition": "World Cup 1930",
+                "edition": "open-cups:world-cup-history:1982",
+                "round": "Final",
+                "status": "finished",
+                "home": {
+                  "id": "t_v0001032",
+                  "name": "Italie",
+                  "imageUrl": null
+                },
+                "away": {
+                  "id": "t_v0001130",
+                  "name": "West Germany",
+                  "imageUrl": null
+                },
+                "homeScore": 3,
+                "awayScore": 1,
+                "homePenalties": null,
+                "awayPenalties": null
+              }
+            }
+          ],
+          "top_keys": [
+            "elo",
+            "id",
+            "imageUrl",
+            "lastMatch",
+            "matches",
+            "name",
+            "ranked",
+            "ranking",
+            "record",
+            "season",
+            "tournaments"
+          ],
+          "record_keys": [
+            "draws",
+            "goalsAgainst",
+            "goalsFor",
+            "losses",
+            "played",
+            "wins"
+          ]
+        }
+      },
+      "same_etag": {
+        "at": "2026-11-18T17:08:27.631397+00:00",
+        "surface": "signed-origin",
+        "path": "/api/nations/t_v0001032?season=2026%2F2027",
+        "if_none_match": "W/\"nations-v1-0920bddef279f7c3d1c0ccd805cd4b6df8e8470294d40d80c87d00b9e2774685\"",
+        "status": 304,
+        "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "headers": {
+          "date": "Wed, 18 Nov 2026 17:08:28 GMT",
+          "content-type": "application/json; charset=utf-8",
+          "cache-control": "public, max-age=0, s-maxage=300, must-revalidate, stale-if-error=0",
+          "etag": "W/\"nations-v1-0920bddef279f7c3d1c0ccd805cd4b6df8e8470294d40d80c87d00b9e2774685\""
+        },
+        "projection": null
+      },
+      "old_etag": null
+    },
+    {
+      "surface": "signed-origin",
+      "witness": "italie",
+      "kind": "cup",
+      "full": {
+        "at": "2026-11-18T17:08:27.995678+00:00",
+        "surface": "signed-origin",
+        "path": "/api/cups/edition?competition=l_v0000064&season=1982",
+        "if_none_match": null,
+        "status": 200,
+        "body_sha256": "b927636a26cb81376a49a9d24afd6a20bffa530902630814edabb19bdb6d75e4",
+        "headers": {
+          "date": "Wed, 18 Nov 2026 17:08:28 GMT",
+          "content-type": "application/json; charset=utf-8",
+          "cache-control": "public, max-age=0, s-maxage=60, must-revalidate, stale-if-error=0",
+          "etag": "W/\"support-v1-b927636a26cb81376a49a9d24afd6a20bffa530902630814edabb19bdb6d75e4\""
+        },
+        "projection": {
+          "season": "1982",
+          "matches": 52,
+          "final": [
+            {
+              "round": "Final",
+              "date": "1982-07-11",
+              "team1": "Italy",
+              "team2": "West Germany",
+              "score": {
+                "ft": [
+                  3,
+                  1
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "same_etag": {
+        "at": "2026-11-18T17:08:28.598190+00:00",
+        "surface": "signed-origin",
+        "path": "/api/cups/edition?competition=l_v0000064&season=1982",
+        "if_none_match": "W/\"support-v1-b927636a26cb81376a49a9d24afd6a20bffa530902630814edabb19bdb6d75e4\"",
+        "status": 304,
+        "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "headers": {
+          "date": "Wed, 18 Nov 2026 17:08:28 GMT",
+          "content-type": "application/json; charset=utf-8",
+          "cache-control": "public, max-age=0, s-maxage=60, must-revalidate, stale-if-error=0",
+          "etag": "W/\"support-v1-b927636a26cb81376a49a9d24afd6a20bffa530902630814edabb19bdb6d75e4\""
+        },
+        "projection": null
+      },
+      "old_etag": null
+    },
+    {
+      "surface": "cloudfront",
+      "witness": "france",
+      "kind": "nation",
+      "full": {
+        "at": "2026-11-18T17:08:28.427991+00:00",
+        "surface": "cloudfront",
+        "path": "/api/nations/t_2ysHaw?season=2026%2F2027",
+        "if_none_match": null,
+        "status": 200,
+        "body_sha256": "4442e18998680d9ae1a80055cfe2cb50d9f675cae0143a958fa25c5065836b87",
+        "headers": {
+          "content-type": "application/json; charset=utf-8",
+          "date": "Wed, 18 Nov 2026 17:07:51 GMT",
+          "cache-control": "public, max-age=0, s-maxage=300, must-revalidate, stale-if-error=0",
+          "etag": "W/\"nations-v1-9729c516d6cf276382435d583b501eb4b7f48fe0277bbf1cc5a35d14d6a4a6ad\"",
+          "x-cache": "Hit from cloudfront",
+          "age": "37"
+        },
+        "projection": {
+          "id": "t_2ysHaw",
+          "name": "France",
+          "final": [
+            {
+              "date": "1998-07-12",
+              "season": "1997/1998",
+              "competition": "World Cup 1930",
+              "edition": "open-cups:world-cup-history:1998",
+              "round": "Final",
+              "status": "finished",
+              "home": {
+                "id": "t_3PHH2o",
+                "name": "Brazil",
+                "imageUrl": "https://cdn.pitchapi.dev/images/teams/065535f56b3f38630c386ecb6f1fad2ea7d28958fe36445e58c81cd819821d40.webp"
+              },
+              "away": {
+                "id": "t_2ysHaw",
+                "name": "France",
+                "imageUrl": "https://cdn.pitchapi.dev/images/teams/44df2bebc120ffada8322fe68e7403acc7280d22e8bece65c71f2d6afa20b616.webp"
+              },
+              "homeScore": 0,
+              "awayScore": 3,
+              "homePenalties": null,
+              "awayPenalties": null
+            }
+          ],
+          "palmares": [
+            {
+              "year": 1998,
+              "stage": "Vainqueur",
+              "matches": 7,
+              "last_game": {
+                "date": "1998-07-12",
+                "season": "1997/1998",
+                "competition": "World Cup 1930",
+                "edition": "open-cups:world-cup-history:1998",
+                "round": "Final",
+                "status": "finished",
+                "home": {
+                  "id": "t_3PHH2o",
+                  "name": "Brazil",
+                  "imageUrl": "https://cdn.pitchapi.dev/images/teams/065535f56b3f38630c386ecb6f1fad2ea7d28958fe36445e58c81cd819821d40.webp"
+                },
+                "away": {
+                  "id": "t_2ysHaw",
+                  "name": "France",
+                  "imageUrl": "https://cdn.pitchapi.dev/images/teams/44df2bebc120ffada8322fe68e7403acc7280d22e8bece65c71f2d6afa20b616.webp"
+                },
+                "homeScore": 0,
+                "awayScore": 3,
+                "homePenalties": null,
+                "awayPenalties": null
+              }
+            }
+          ],
+          "top_keys": [
+            "elo",
+            "id",
+            "imageUrl",
+            "lastMatch",
+            "matches",
+            "name",
+            "players",
+            "ranked",
+            "ranking",
+            "record",
+            "season",
+            "tournaments"
+          ],
+          "record_keys": [
+            "draws",
+            "goalsAgainst",
+            "goalsFor",
+            "losses",
+            "played",
+            "wins"
+          ]
+        }
+      },
+      "same_etag": {
+        "at": "2026-11-18T17:08:28.476803+00:00",
+        "surface": "cloudfront",
+        "path": "/api/nations/t_2ysHaw?season=2026%2F2027",
+        "if_none_match": "W/\"nations-v1-9729c516d6cf276382435d583b501eb4b7f48fe0277bbf1cc5a35d14d6a4a6ad\"",
+        "status": 304,
+        "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "headers": {
+          "date": "Wed, 18 Nov 2026 17:08:28 GMT",
+          "cache-control": "public, max-age=0, s-maxage=300, must-revalidate, stale-if-error=0",
+          "etag": "W/\"nations-v1-9729c516d6cf276382435d583b501eb4b7f48fe0277bbf1cc5a35d14d6a4a6ad\"",
+          "x-cache": "Hit from cloudfront",
+          "age": "37"
+        },
+        "projection": null
+      },
+      "old_etag": null
+    },
+    {
+      "surface": "cloudfront",
+      "witness": "france",
+      "kind": "cup",
+      "full": {
+        "at": "2026-11-18T17:08:28.520356+00:00",
+        "surface": "cloudfront",
+        "path": "/api/cups/edition?competition=l_v0000064&season=1998",
+        "if_none_match": null,
+        "status": 200,
+        "body_sha256": "de0ec8df8f0f0ce0c25df366af1d90e0af5216809b1f4bea35e3ecdba2f6480c",
+        "headers": {
+          "content-type": "application/json; charset=utf-8",
+          "date": "Wed, 18 Nov 2026 17:07:51 GMT",
+          "cache-control": "public, max-age=0, s-maxage=60, must-revalidate, stale-if-error=0",
+          "etag": "W/\"support-v1-de0ec8df8f0f0ce0c25df366af1d90e0af5216809b1f4bea35e3ecdba2f6480c\"",
+          "x-cache": "Hit from cloudfront",
+          "age": "37"
+        },
+        "projection": {
+          "season": "1998",
+          "matches": 64,
+          "final": [
+            {
+              "round": "Final",
+              "date": "1998-07-12",
+              "team1": "Brazil",
+              "team2": "France",
+              "score": {
+                "ft": [
+                  0,
+                  3
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "same_etag": {
+        "at": "2026-11-18T17:08:28.559189+00:00",
+        "surface": "cloudfront",
+        "path": "/api/cups/edition?competition=l_v0000064&season=1998",
+        "if_none_match": "W/\"support-v1-de0ec8df8f0f0ce0c25df366af1d90e0af5216809b1f4bea35e3ecdba2f6480c\"",
+        "status": 304,
+        "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "headers": {
+          "date": "Wed, 18 Nov 2026 17:07:51 GMT",
+          "cache-control": "public, max-age=0, s-maxage=60, must-revalidate, stale-if-error=0",
+          "etag": "W/\"support-v1-de0ec8df8f0f0ce0c25df366af1d90e0af5216809b1f4bea35e3ecdba2f6480c\"",
+          "x-cache": "Hit from cloudfront",
+          "age": "37"
+        },
+        "projection": null
+      },
+      "old_etag": null
+    },
+    {
+      "surface": "cloudfront",
+      "witness": "italie",
+      "kind": "nation",
+      "full": {
+        "at": "2026-11-18T17:08:28.607100+00:00",
+        "surface": "cloudfront",
+        "path": "/api/nations/t_v0001032?season=2026%2F2027",
+        "if_none_match": null,
+        "status": 200,
+        "body_sha256": "477cdc27dcd677c1365bc9b1512ef1b5a83a923a8f0caa0046e952be4f5cc99a",
+        "headers": {
+          "content-type": "application/json; charset=utf-8",
+          "date": "Wed, 18 Nov 2026 17:07:51 GMT",
+          "cache-control": "public, max-age=0, s-maxage=300, must-revalidate, stale-if-error=0",
+          "etag": "W/\"nations-v1-0920bddef279f7c3d1c0ccd805cd4b6df8e8470294d40d80c87d00b9e2774685\"",
+          "x-cache": "Hit from cloudfront",
+          "age": "37"
+        },
+        "projection": {
+          "id": "t_v0001032",
+          "name": "Italie",
+          "final": [
+            {
+              "date": "1982-07-11",
+              "season": "1981/1982",
+              "competition": "World Cup 1930",
+              "edition": "open-cups:world-cup-history:1982",
+              "round": "Final",
+              "status": "finished",
+              "home": {
+                "id": "t_v0001032",
+                "name": "Italie",
+                "imageUrl": null
+              },
+              "away": {
+                "id": "t_v0001130",
+                "name": "West Germany",
+                "imageUrl": null
+              },
+              "homeScore": 3,
+              "awayScore": 1,
+              "homePenalties": null,
+              "awayPenalties": null
+            }
+          ],
+          "palmares": [
+            {
+              "year": 1982,
+              "stage": "Vainqueur",
+              "matches": 7,
+              "last_game": {
+                "date": "1982-07-11",
+                "season": "1981/1982",
+                "competition": "World Cup 1930",
+                "edition": "open-cups:world-cup-history:1982",
+                "round": "Final",
+                "status": "finished",
+                "home": {
+                  "id": "t_v0001032",
+                  "name": "Italie",
+                  "imageUrl": null
+                },
+                "away": {
+                  "id": "t_v0001130",
+                  "name": "West Germany",
+                  "imageUrl": null
+                },
+                "homeScore": 3,
+                "awayScore": 1,
+                "homePenalties": null,
+                "awayPenalties": null
+              }
+            }
+          ],
+          "top_keys": [
+            "elo",
+            "id",
+            "imageUrl",
+            "lastMatch",
+            "matches",
+            "name",
+            "ranked",
+            "ranking",
+            "record",
+            "season",
+            "tournaments"
+          ],
+          "record_keys": [
+            "draws",
+            "goalsAgainst",
+            "goalsFor",
+            "losses",
+            "played",
+            "wins"
+          ]
+        }
+      },
+      "same_etag": {
+        "at": "2026-11-18T17:08:28.654211+00:00",
+        "surface": "cloudfront",
+        "path": "/api/nations/t_v0001032?season=2026%2F2027",
+        "if_none_match": "W/\"nations-v1-0920bddef279f7c3d1c0ccd805cd4b6df8e8470294d40d80c87d00b9e2774685\"",
+        "status": 304,
+        "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "headers": {
+          "date": "Wed, 18 Nov 2026 17:08:28 GMT",
+          "cache-control": "public, max-age=0, s-maxage=300, must-revalidate, stale-if-error=0",
+          "etag": "W/\"nations-v1-0920bddef279f7c3d1c0ccd805cd4b6df8e8470294d40d80c87d00b9e2774685\"",
+          "x-cache": "Hit from cloudfront",
+          "age": "37"
+        },
+        "projection": null
+      },
+      "old_etag": null
+    },
+    {
+      "surface": "cloudfront",
+      "witness": "italie",
+      "kind": "cup",
+      "full": {
+        "at": "2026-11-18T17:08:28.702645+00:00",
+        "surface": "cloudfront",
+        "path": "/api/cups/edition?competition=l_v0000064&season=1982",
+        "if_none_match": null,
+        "status": 200,
+        "body_sha256": "b927636a26cb81376a49a9d24afd6a20bffa530902630814edabb19bdb6d75e4",
+        "headers": {
+          "content-type": "application/json; charset=utf-8",
+          "date": "Wed, 18 Nov 2026 17:07:52 GMT",
+          "cache-control": "public, max-age=0, s-maxage=60, must-revalidate, stale-if-error=0",
+          "etag": "W/\"support-v1-b927636a26cb81376a49a9d24afd6a20bffa530902630814edabb19bdb6d75e4\"",
+          "x-cache": "Hit from cloudfront",
+          "age": "36"
+        },
+        "projection": {
+          "season": "1982",
+          "matches": 52,
+          "final": [
+            {
+              "round": "Final",
+              "date": "1982-07-11",
+              "team1": "Italy",
+              "team2": "West Germany",
+              "score": {
+                "ft": [
+                  3,
+                  1
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "same_etag": {
+        "at": "2026-11-18T17:08:28.751824+00:00",
+        "surface": "cloudfront",
+        "path": "/api/cups/edition?competition=l_v0000064&season=1982",
+        "if_none_match": "W/\"support-v1-b927636a26cb81376a49a9d24afd6a20bffa530902630814edabb19bdb6d75e4\"",
+        "status": 304,
+        "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "headers": {
+          "date": "Wed, 18 Nov 2026 17:08:28 GMT",
+          "cache-control": "public, max-age=0, s-maxage=60, must-revalidate, stale-if-error=0",
+          "etag": "W/\"support-v1-b927636a26cb81376a49a9d24afd6a20bffa530902630814edabb19bdb6d75e4\"",
+          "x-cache": "Hit from cloudfront",
+          "age": "36"
+        },
+        "projection": null
+      },
+      "old_etag": null
+    },
+    {
+      "surface": "vercel",
+      "witness": "france",
+      "kind": "nation",
+      "full": {
+        "at": "2026-11-18T17:08:28.851013+00:00",
+        "surface": "vercel",
+        "path": "/api/nations/t_2ysHaw?season=2026%2F2027",
+        "if_none_match": null,
+        "status": 200,
+        "body_sha256": "4442e18998680d9ae1a80055cfe2cb50d9f675cae0143a958fa25c5065836b87",
+        "headers": {
+          "content-type": "application/json; charset=utf-8",
+          "date": "Wed, 18 Nov 2026 17:07:51 GMT",
+          "cache-control": "public, max-age=0, s-maxage=300, must-revalidate, stale-if-error=0",
+          "etag": "W/\"nations-v1-9729c516d6cf276382435d583b501eb4b7f48fe0277bbf1cc5a35d14d6a4a6ad\"",
+          "x-cache": "Hit from cloudfront",
+          "age": "38"
+        },
+        "projection": {
+          "id": "t_2ysHaw",
+          "name": "France",
+          "final": [
+            {
+              "date": "1998-07-12",
+              "season": "1997/1998",
+              "competition": "World Cup 1930",
+              "edition": "open-cups:world-cup-history:1998",
+              "round": "Final",
+              "status": "finished",
+              "home": {
+                "id": "t_3PHH2o",
+                "name": "Brazil",
+                "imageUrl": "https://cdn.pitchapi.dev/images/teams/065535f56b3f38630c386ecb6f1fad2ea7d28958fe36445e58c81cd819821d40.webp"
+              },
+              "away": {
+                "id": "t_2ysHaw",
+                "name": "France",
+                "imageUrl": "https://cdn.pitchapi.dev/images/teams/44df2bebc120ffada8322fe68e7403acc7280d22e8bece65c71f2d6afa20b616.webp"
+              },
+              "homeScore": 0,
+              "awayScore": 3,
+              "homePenalties": null,
+              "awayPenalties": null
+            }
+          ],
+          "palmares": [
+            {
+              "year": 1998,
+              "stage": "Vainqueur",
+              "matches": 7,
+              "last_game": {
+                "date": "1998-07-12",
+                "season": "1997/1998",
+                "competition": "World Cup 1930",
+                "edition": "open-cups:world-cup-history:1998",
+                "round": "Final",
+                "status": "finished",
+                "home": {
+                  "id": "t_3PHH2o",
+                  "name": "Brazil",
+                  "imageUrl": "https://cdn.pitchapi.dev/images/teams/065535f56b3f38630c386ecb6f1fad2ea7d28958fe36445e58c81cd819821d40.webp"
+                },
+                "away": {
+                  "id": "t_2ysHaw",
+                  "name": "France",
+                  "imageUrl": "https://cdn.pitchapi.dev/images/teams/44df2bebc120ffada8322fe68e7403acc7280d22e8bece65c71f2d6afa20b616.webp"
+                },
+                "homeScore": 0,
+                "awayScore": 3,
+                "homePenalties": null,
+                "awayPenalties": null
+              }
+            }
+          ],
+          "top_keys": [
+            "elo",
+            "id",
+            "imageUrl",
+            "lastMatch",
+            "matches",
+            "name",
+            "players",
+            "ranked",
+            "ranking",
+            "record",
+            "season",
+            "tournaments"
+          ],
+          "record_keys": [
+            "draws",
+            "goalsAgainst",
+            "goalsFor",
+            "losses",
+            "played",
+            "wins"
+          ]
+        }
+      },
+      "same_etag": {
+        "at": "2026-11-18T17:08:29.097065+00:00",
+        "surface": "vercel",
+        "path": "/api/nations/t_2ysHaw?season=2026%2F2027",
+        "if_none_match": "W/\"nations-v1-9729c516d6cf276382435d583b501eb4b7f48fe0277bbf1cc5a35d14d6a4a6ad\"",
+        "status": 304,
+        "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "headers": {
+          "date": "Wed, 18 Nov 2026 17:08:29 GMT",
+          "cache-control": "public, max-age=0, s-maxage=300, must-revalidate, stale-if-error=0",
+          "etag": "W/\"nations-v1-9729c516d6cf276382435d583b501eb4b7f48fe0277bbf1cc5a35d14d6a4a6ad\"",
+          "x-cache": "Hit from cloudfront",
+          "age": "38"
+        },
+        "projection": null
+      },
+      "old_etag": {
+        "at": "2026-11-18T17:08:29.332164+00:00",
+        "surface": "vercel",
+        "path": "/api/nations/t_2ysHaw?season=2026%2F2027",
+        "if_none_match": "W/\"nations-v1-3ed98040a4f7ba84ca9e9900c2da1a2914c2f9338d2145a0d41b16d81c259f96\"",
+        "status": 200,
+        "body_sha256": "4442e18998680d9ae1a80055cfe2cb50d9f675cae0143a958fa25c5065836b87",
+        "headers": {
+          "content-type": "application/json; charset=utf-8",
+          "date": "Wed, 18 Nov 2026 17:07:51 GMT",
+          "cache-control": "public, max-age=0, s-maxage=300, must-revalidate, stale-if-error=0",
+          "etag": "W/\"nations-v1-9729c516d6cf276382435d583b501eb4b7f48fe0277bbf1cc5a35d14d6a4a6ad\"",
+          "x-cache": "Hit from cloudfront",
+          "age": "38"
+        },
+        "projection": {
+          "id": "t_2ysHaw",
+          "name": "France",
+          "final": [
+            {
+              "date": "1998-07-12",
+              "season": "1997/1998",
+              "competition": "World Cup 1930",
+              "edition": "open-cups:world-cup-history:1998",
+              "round": "Final",
+              "status": "finished",
+              "home": {
+                "id": "t_3PHH2o",
+                "name": "Brazil",
+                "imageUrl": "https://cdn.pitchapi.dev/images/teams/065535f56b3f38630c386ecb6f1fad2ea7d28958fe36445e58c81cd819821d40.webp"
+              },
+              "away": {
+                "id": "t_2ysHaw",
+                "name": "France",
+                "imageUrl": "https://cdn.pitchapi.dev/images/teams/44df2bebc120ffada8322fe68e7403acc7280d22e8bece65c71f2d6afa20b616.webp"
+              },
+              "homeScore": 0,
+              "awayScore": 3,
+              "homePenalties": null,
+              "awayPenalties": null
+            }
+          ],
+          "palmares": [
+            {
+              "year": 1998,
+              "stage": "Vainqueur",
+              "matches": 7,
+              "last_game": {
+                "date": "1998-07-12",
+                "season": "1997/1998",
+                "competition": "World Cup 1930",
+                "edition": "open-cups:world-cup-history:1998",
+                "round": "Final",
+                "status": "finished",
+                "home": {
+                  "id": "t_3PHH2o",
+                  "name": "Brazil",
+                  "imageUrl": "https://cdn.pitchapi.dev/images/teams/065535f56b3f38630c386ecb6f1fad2ea7d28958fe36445e58c81cd819821d40.webp"
+                },
+                "away": {
+                  "id": "t_2ysHaw",
+                  "name": "France",
+                  "imageUrl": "https://cdn.pitchapi.dev/images/teams/44df2bebc120ffada8322fe68e7403acc7280d22e8bece65c71f2d6afa20b616.webp"
+                },
+                "homeScore": 0,
+                "awayScore": 3,
+                "homePenalties": null,
+                "awayPenalties": null
+              }
+            }
+          ],
+          "top_keys": [
+            "elo",
+            "id",
+            "imageUrl",
+            "lastMatch",
+            "matches",
+            "name",
+            "players",
+            "ranked",
+            "ranking",
+            "record",
+            "season",
+            "tournaments"
+          ],
+          "record_keys": [
+            "draws",
+            "goalsAgainst",
+            "goalsFor",
+            "losses",
+            "played",
+            "wins"
+          ]
+        }
+      }
+    },
+    {
+      "surface": "vercel",
+      "witness": "france",
+      "kind": "cup",
+      "full": {
+        "at": "2026-11-18T17:08:28.942488+00:00",
+        "surface": "vercel",
+        "path": "/api/cups/edition?competition=l_v0000064&season=1998",
+        "if_none_match": null,
+        "status": 200,
+        "body_sha256": "de0ec8df8f0f0ce0c25df366af1d90e0af5216809b1f4bea35e3ecdba2f6480c",
+        "headers": {
+          "content-type": "application/json; charset=utf-8",
+          "date": "Wed, 18 Nov 2026 17:07:51 GMT",
+          "cache-control": "public, max-age=0, s-maxage=60, must-revalidate, stale-if-error=0",
+          "etag": "W/\"support-v1-de0ec8df8f0f0ce0c25df366af1d90e0af5216809b1f4bea35e3ecdba2f6480c\"",
+          "x-cache": "Hit from cloudfront",
+          "age": "38"
+        },
+        "projection": {
+          "season": "1998",
+          "matches": 64,
+          "final": [
+            {
+              "round": "Final",
+              "date": "1998-07-12",
+              "team1": "Brazil",
+              "team2": "France",
+              "score": {
+                "ft": [
+                  0,
+                  3
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "same_etag": {
+        "at": "2026-11-18T17:08:29.199507+00:00",
+        "surface": "vercel",
+        "path": "/api/cups/edition?competition=l_v0000064&season=1998",
+        "if_none_match": "W/\"support-v1-de0ec8df8f0f0ce0c25df366af1d90e0af5216809b1f4bea35e3ecdba2f6480c\"",
+        "status": 304,
+        "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "headers": {
+          "date": "Wed, 18 Nov 2026 17:08:29 GMT",
+          "cache-control": "public, max-age=0, s-maxage=60, must-revalidate, stale-if-error=0",
+          "etag": "W/\"support-v1-de0ec8df8f0f0ce0c25df366af1d90e0af5216809b1f4bea35e3ecdba2f6480c\"",
+          "x-cache": "Hit from cloudfront",
+          "age": "38"
+        },
+        "projection": null
+      },
+      "old_etag": null
+    },
+    {
+      "surface": "vercel",
+      "witness": "italie",
+      "kind": "nation",
+      "full": {
+        "at": "2026-11-18T17:08:29.476500+00:00",
+        "surface": "vercel",
+        "path": "/api/nations/t_v0001032?season=2026%2F2027",
+        "if_none_match": null,
+        "status": 200,
+        "body_sha256": "477cdc27dcd677c1365bc9b1512ef1b5a83a923a8f0caa0046e952be4f5cc99a",
+        "headers": {
+          "content-type": "application/json; charset=utf-8",
+          "date": "Wed, 18 Nov 2026 17:07:51 GMT",
+          "cache-control": "public, max-age=0, s-maxage=300, must-revalidate, stale-if-error=0",
+          "etag": "W/\"nations-v1-0920bddef279f7c3d1c0ccd805cd4b6df8e8470294d40d80c87d00b9e2774685\"",
+          "x-cache": "Hit from cloudfront",
+          "age": "38"
+        },
+        "projection": {
+          "id": "t_v0001032",
+          "name": "Italie",
+          "final": [
+            {
+              "date": "1982-07-11",
+              "season": "1981/1982",
+              "competition": "World Cup 1930",
+              "edition": "open-cups:world-cup-history:1982",
+              "round": "Final",
+              "status": "finished",
+              "home": {
+                "id": "t_v0001032",
+                "name": "Italie",
+                "imageUrl": null
+              },
+              "away": {
+                "id": "t_v0001130",
+                "name": "West Germany",
+                "imageUrl": null
+              },
+              "homeScore": 3,
+              "awayScore": 1,
+              "homePenalties": null,
+              "awayPenalties": null
+            }
+          ],
+          "palmares": [
+            {
+              "year": 1982,
+              "stage": "Vainqueur",
+              "matches": 7,
+              "last_game": {
+                "date": "1982-07-11",
+                "season": "1981/1982",
+                "competition": "World Cup 1930",
+                "edition": "open-cups:world-cup-history:1982",
+                "round": "Final",
+                "status": "finished",
+                "home": {
+                  "id": "t_v0001032",
+                  "name": "Italie",
+                  "imageUrl": null
+                },
+                "away": {
+                  "id": "t_v0001130",
+                  "name": "West Germany",
+                  "imageUrl": null
+                },
+                "homeScore": 3,
+                "awayScore": 1,
+                "homePenalties": null,
+                "awayPenalties": null
+              }
+            }
+          ],
+          "top_keys": [
+            "elo",
+            "id",
+            "imageUrl",
+            "lastMatch",
+            "matches",
+            "name",
+            "ranked",
+            "ranking",
+            "record",
+            "season",
+            "tournaments"
+          ],
+          "record_keys": [
+            "draws",
+            "goalsAgainst",
+            "goalsFor",
+            "losses",
+            "played",
+            "wins"
+          ]
+        }
+      },
+      "same_etag": {
+        "at": "2026-11-18T17:08:29.764931+00:00",
+        "surface": "vercel",
+        "path": "/api/nations/t_v0001032?season=2026%2F2027",
+        "if_none_match": "W/\"nations-v1-0920bddef279f7c3d1c0ccd805cd4b6df8e8470294d40d80c87d00b9e2774685\"",
+        "status": 304,
+        "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "headers": {
+          "date": "Wed, 18 Nov 2026 17:08:29 GMT",
+          "cache-control": "public, max-age=0, s-maxage=300, must-revalidate, stale-if-error=0",
+          "etag": "W/\"nations-v1-0920bddef279f7c3d1c0ccd805cd4b6df8e8470294d40d80c87d00b9e2774685\"",
+          "x-cache": "Hit from cloudfront",
+          "age": "38"
+        },
+        "projection": null
+      },
+      "old_etag": {
+        "at": "2026-11-18T17:08:29.977037+00:00",
+        "surface": "vercel",
+        "path": "/api/nations/t_v0001032?season=2026%2F2027",
+        "if_none_match": "W/\"nations-v1-d8dac7459d783bdd6f1ee3174cd7c8bde0545e1dbb68c9e660b3c9ff70825217\"",
+        "status": 200,
+        "body_sha256": "477cdc27dcd677c1365bc9b1512ef1b5a83a923a8f0caa0046e952be4f5cc99a",
+        "headers": {
+          "content-type": "application/json; charset=utf-8",
+          "date": "Wed, 18 Nov 2026 17:07:51 GMT",
+          "cache-control": "public, max-age=0, s-maxage=300, must-revalidate, stale-if-error=0",
+          "etag": "W/\"nations-v1-0920bddef279f7c3d1c0ccd805cd4b6df8e8470294d40d80c87d00b9e2774685\"",
+          "x-cache": "Hit from cloudfront",
+          "age": "39"
+        },
+        "projection": {
+          "id": "t_v0001032",
+          "name": "Italie",
+          "final": [
+            {
+              "date": "1982-07-11",
+              "season": "1981/1982",
+              "competition": "World Cup 1930",
+              "edition": "open-cups:world-cup-history:1982",
+              "round": "Final",
+              "status": "finished",
+              "home": {
+                "id": "t_v0001032",
+                "name": "Italie",
+                "imageUrl": null
+              },
+              "away": {
+                "id": "t_v0001130",
+                "name": "West Germany",
+                "imageUrl": null
+              },
+              "homeScore": 3,
+              "awayScore": 1,
+              "homePenalties": null,
+              "awayPenalties": null
+            }
+          ],
+          "palmares": [
+            {
+              "year": 1982,
+              "stage": "Vainqueur",
+              "matches": 7,
+              "last_game": {
+                "date": "1982-07-11",
+                "season": "1981/1982",
+                "competition": "World Cup 1930",
+                "edition": "open-cups:world-cup-history:1982",
+                "round": "Final",
+                "status": "finished",
+                "home": {
+                  "id": "t_v0001032",
+                  "name": "Italie",
+                  "imageUrl": null
+                },
+                "away": {
+                  "id": "t_v0001130",
+                  "name": "West Germany",
+                  "imageUrl": null
+                },
+                "homeScore": 3,
+                "awayScore": 1,
+                "homePenalties": null,
+                "awayPenalties": null
+              }
+            }
+          ],
+          "top_keys": [
+            "elo",
+            "id",
+            "imageUrl",
+            "lastMatch",
+            "matches",
+            "name",
+            "ranked",
+            "ranking",
+            "record",
+            "season",
+            "tournaments"
+          ],
+          "record_keys": [
+            "draws",
+            "goalsAgainst",
+            "goalsFor",
+            "losses",
+            "played",
+            "wins"
+          ]
+        }
+      }
+    },
+    {
+      "surface": "vercel",
+      "witness": "italie",
+      "kind": "cup",
+      "full": {
+        "at": "2026-11-18T17:08:29.641518+00:00",
+        "surface": "vercel",
+        "path": "/api/cups/edition?competition=l_v0000064&season=1982",
+        "if_none_match": null,
+        "status": 200,
+        "body_sha256": "b927636a26cb81376a49a9d24afd6a20bffa530902630814edabb19bdb6d75e4",
+        "headers": {
+          "content-type": "application/json; charset=utf-8",
+          "date": "Wed, 18 Nov 2026 17:07:52 GMT",
+          "cache-control": "public, max-age=0, s-maxage=60, must-revalidate, stale-if-error=0",
+          "etag": "W/\"support-v1-b927636a26cb81376a49a9d24afd6a20bffa530902630814edabb19bdb6d75e4\"",
+          "x-cache": "Hit from cloudfront",
+          "age": "37"
+        },
+        "projection": {
+          "season": "1982",
+          "matches": 52,
+          "final": [
+            {
+              "round": "Final",
+              "date": "1982-07-11",
+              "team1": "Italy",
+              "team2": "West Germany",
+              "score": {
+                "ft": [
+                  3,
+                  1
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "same_etag": {
+        "at": "2026-11-18T17:08:29.867655+00:00",
+        "surface": "vercel",
+        "path": "/api/cups/edition?competition=l_v0000064&season=1982",
+        "if_none_match": "W/\"support-v1-b927636a26cb81376a49a9d24afd6a20bffa530902630814edabb19bdb6d75e4\"",
+        "status": 304,
+        "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "headers": {
+          "date": "Wed, 18 Nov 2026 17:08:30 GMT",
+          "cache-control": "public, max-age=0, s-maxage=60, must-revalidate, stale-if-error=0",
+          "etag": "W/\"support-v1-b927636a26cb81376a49a9d24afd6a20bffa530902630814edabb19bdb6d75e4\"",
+          "x-cache": "Hit from cloudfront",
+          "age": "38"
+        },
+        "projection": null
+      },
+      "old_etag": null
+    }
+  ]
+}

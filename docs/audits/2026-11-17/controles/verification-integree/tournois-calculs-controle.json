@@ -1,0 +1,11 @@
+{
+  "archive": "capsule-calculs-ui.zip",
+  "sha256": "69d98e1a44e01c8b7f6c9c1e8c6b0d2c4072cda36634a8783ad8e39a7ed6e4eb",
+  "inputs": 31,
+  "bytes": 319533,
+  "command": "python3 -B inspecter.py",
+  "checkout_required": false,
+  "json_identical": true,
+  "stdout": "OK 26 \u00e9ditions de preuve, 34 rubriques Excel, 0 formules Excel\n",
+  "returncode": 0
+}

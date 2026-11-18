@@ -1,0 +1,86 @@
+{
+  "worksheet": "OpenFootball",
+  "row": 163,
+  "workbook_bytes_sha256": "73a5daa71f85550368910c209ffaf7b1a90e05ad261a655a0c6bd3c58bf65a82",
+  "workbook_provenance": "Vega-Sport main revision  17ca0f76175301e77ae43fe137467222f594b40a",
+  "cells": {
+    "A163": {
+      "heading": "Competition",
+      "type": "s",
+      "value": "Ligue 1"
+    },
+    "B163": {
+      "heading": "Country / region",
+      "type": "s",
+      "value": "FRA"
+    },
+    "C163": {
+      "heading": "Source edition",
+      "type": "s",
+      "value": "2019/2020"
+    },
+    "D163": {
+      "heading": "Scope",
+      "type": "s",
+      "value": "Historical archive"
+    },
+    "E163": {
+      "heading": "Source key",
+      "type": "s",
+      "value": "2019-20/fr.1"
+    },
+    "F163": {
+      "heading": "Evidence",
+      "type": "s",
+      "value": "17 Nov RDS audit"
+    },
+    "G163": {
+      "heading": "Match rows",
+      "type": "n",
+      "value": 380
+    },
+    "H163": {
+      "heading": "Finished / collected",
+      "type": "n",
+      "value": 380
+    },
+    "I163": {
+      "heading": "Coverage notes",
+      "type": "s",
+      "value": "Archived results. See the provider source for original fields."
+    },
+    "J163": {
+      "heading": "Source",
+      "type": "s",
+      "value": "https://github.com/openfootball/football.json"
+    }
+  },
+  "original_RDS_edition_id": 393,
+  "source_projection": {
+    "competition": "2019-20/fr.1",
+    "url": "https://raw.githubusercontent.com/openfootball/football.json/e6744429ee395bc86f247348c6184bb08d4eb361/2019-20/fr.1.json",
+    "sha256": "0c42a7b9ab70c7bd7003bcc7085f3896c95e19965941be2d04976e7bba440205",
+    "retrieved_at": "2026-11-17T18:27:27.895023+00:00",
+    "rds_finished_unknown": 101,
+    "source_rows": 380,
+    "source_no_score": 101,
+    "explicit_status_on_unknown": {
+      "cancelled": 101
+    },
+    "example": [
+      {
+        "round": "Matchday 28",
+        "date": "2020-03-07",
+        "team1": "RC Strasbourg",
+        "team2": "Paris Saint-Germain",
+        "score": {},
+        "status": "cancelled"
+      }
+    ]
+  },
+  "scope": {
+    "archived_calendar_rows": 380,
+    "explicit_cancellations": 101,
+    "rows_with_two_scores": 279
+  }
+}

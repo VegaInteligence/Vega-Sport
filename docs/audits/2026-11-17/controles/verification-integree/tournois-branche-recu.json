@@ -1,0 +1,109 @@
+{
+  "issue": "VI-27",
+  "milestone": "B",
+  "implementation": {
+    "preferred": "claude-opus-5-5/max",
+    "native_run": "20261118T171716Z-code-879a060c",
+    "terminal": "quota",
+    "fallback": "gpt-6.2-sol/xhigh"
+  },
+  "sha": "193866c359b826ef5307b0af4a368e5355ef021f",
+  "parents": [
+    "3c95a2dfc5532881d32e3387dd87cc24f8c80eda",
+    "e60e80860e6ad1cfa9f330a4b2c2ce66eb9ef35a"
+  ],
+  "tests": {
+    "against_A": {
+      "node_failed": 14,
+      "browser_iphone_failed": 21,
+      "browser_iphone_total": 31
+    },
+    "site_scope": {
+      "passed": 97,
+      "failed": 0,
+      "included_in_PG_run": 1,
+      "log": "merged-node-scope.log"
+    },
+    "pg18_api_contracts": {
+      "passed": 12,
+      "failed": 0,
+      "skipped": 0,
+      "log": "merged-pg-contract.log"
+    },
+    "browser": [
+      {
+        "viewport": [
+          1440,
+          900
+        ],
+        "passed": 50,
+        "total": 50,
+        "page_errors": 0,
+        "result": "final-verified-desktop/result.json",
+        "sha256": "4f57c3453b72f4a78b87c036eac8ff67b88e2f0b1e69f048b5eaad44276d8150"
+      },
+      {
+        "viewport": [
+          393,
+          852
+        ],
+        "passed": 50,
+        "total": 50,
+        "page_errors": 0,
+        "result": "final-verified-iphone/result.json",
+        "sha256": "f5ab697b65019de6e9d024d3fc0d6595028e6ae21a7b1843e26362ba48ed12d8"
+      }
+    ]
+  },
+  "coverage": {
+    "input_archive_editions": 26,
+    "continental_results_with_round_missing": 166,
+    "world_cup_1950": {
+      "view": "groupes",
+      "points": {
+        "Uruguay": 5,
+        "Brazil": 4,
+        "Sweden": 2,
+        "Spain": 1
+      }
+    },
+    "world_cup_1954": {
+      "group_2_second": "West Germany",
+      "playoff": "7–2",
+      "group_points_second": 2
+    },
+    "world_cup_1974": {
+      "group_1_East_Germany_points": 5,
+      "historical_flag_rendered": true
+    },
+    "euro_2028": {
+      "group_tables": 6,
+      "matches": 36,
+      "slots_per_table": 4,
+      "ranks": 0
+    },
+    "qualifying_views": {
+      "world_cup_1950": "groupes",
+      "continental_without_round": "matchs",
+      "world_cup_1998": "tableau",
+      "native_2022_2026": "tableau"
+    },
+    "old_api": "captured incomplete 1998 group scores and a replayed old continental stage",
+    "verified_artwork": "FIFA 1954 pinned PNG",
+    "banner_destinations": [
+      "l_0bfbkO",
+      "l_38d9HA",
+      "l_2WZ2tt"
+    ]
+  },
+  "limitations": [
+    "PG18 and local Next development mode",
+    "Native path seeded with frozen archive fixtures",
+    "Banner catalogue uses real IDs and synthetic fixture anchors",
+    "Current flags or simplified historical drawings inherited from main",
+    "No deployment and no claim of artwork publication by this work",
+    "Cases with unavailable regulation or tie-break evidence remain unranked or shared"
+  ],
+  "receipt": "RECEIPT.md",
+  "replay": "REPLAY.md"
+}

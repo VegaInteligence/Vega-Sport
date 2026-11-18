@@ -1,0 +1,523 @@
+{
+  "source": "08fa22e7875dd971e4e2ea415d6d5be13eb72347",
+  "product_change_commit": "2f25e3e58fa752d34ab0dcc494ff87d6d99fac22",
+  "remote_followup": {
+    "sha": "b2e6dd82d36a2ca0f439ec84bf2e5dbbcd3013d9",
+    "files": [
+      "WORKLOG.md"
+    ],
+    "identical_served_france_document_sha256": "d478460058002a946428f44d509a229fe204c8fd1f0529e868f42473959f679e"
+  },
+  "outcome": "Comparison reproduced, with the historical data and language findings recorded",
+  "finals": {
+    "France": {
+      "id": "t_2ysHaw",
+      "year": 1998,
+      "date": "1998-07-12",
+      "history": {
+        "previous": "Finale",
+        "current": "Finale",
+        "games": {
+          "not_started": 5,
+          "finished": 2
+        }
+      },
+      "nation_api": {
+        "status": "not_started",
+        "home": {
+          "id": "t_3PHH2o",
+          "name": "Brazil",
+          "imageUrl": "https://cdn.pitchapi.dev/images/teams/065535f56b3f38630c386ecb6f1fad2ea7d28958fe36445e58c81cd819821d40.webp"
+        },
+        "away": {
+          "id": "t_2ysHaw",
+          "name": "France",
+          "imageUrl": "https://cdn.pitchapi.dev/images/teams/44df2bebc120ffada8322fe68e7403acc7280d22e8bece65c71f2d6afa20b616.webp"
+        },
+        "score": [
+          null,
+          null
+        ]
+      },
+      "tournament_api": {
+        "score": null,
+        "record": {
+          "round": "Final",
+          "date": "1998-07-12",
+          "team1": "Brazil",
+          "team2": "France"
+        },
+        "scored": 4,
+        "total": 64,
+        "worker": {
+          "checkedAt": "2026-11-16T13:42:07.950Z",
+          "updatedAt": "2026-11-09T13:41:23.510Z"
+        }
+      },
+      "historical_score": [
+        0,
+        3
+      ]
+    },
+    "Italie": {
+      "id": "t_v0001032",
+      "year": 1982,
+      "date": "1982-07-11",
+      "history": {
+        "previous": "Finale",
+        "current": "Finale",
+        "games": {
+          "not_started": 7
+        }
+      },
+      "nation_api": {
+        "status": "not_started",
+        "home": {
+          "id": "t_v0001032",
+          "name": "Italie",
+          "imageUrl": null
+        },
+        "away": {
+          "id": "t_v0001130",
+          "name": "West Germany",
+          "imageUrl": null
+        },
+        "score": [
+          null,
+          null
+        ]
+      },
+      "tournament_api": {
+        "score": null,
+        "record": {
+          "round": "Final",
+          "date": "1982-07-11",
+          "team1": "Italy",
+          "team2": "West Germany"
+        },
+        "scored": 1,
+        "total": 52,
+        "worker": {
+          "checkedAt": "2026-11-16T13:42:07.950Z",
+          "updatedAt": "2026-11-09T13:41:23.510Z"
+        }
+      },
+      "historical_score": [
+        3,
+        1
+      ]
+    }
+  },
+  "devices": {
+    "desktop": {
+      "observations": 29,
+      "started": "2026-11-18T16:44:02.563Z",
+      "ended": "2026-11-18T16:44:15.310Z",
+      "spotlight": [
+        {
+          "step": "featured-cup",
+          "name": "Champions League",
+          "id": "l_0bfbkO",
+          "buttonNames": [
+            "Bundesliga",
+            "Premier League",
+            "LaLiga",
+            "Ligue 1",
+            "Serie A",
+            "Eredivisie",
+            "Liga Portugal",
+            "Champions League",
+            "Europa League",
+            "Conference League"
+          ],
+          "url": "https://vegasport.vercel.app/competitions/?season=2026%2F2027&focus=europe&id=l_0bfbkO",
+          "pressed": "true",
+          "regionWidth": 1392,
+          "layout": {
+            "viewport": 1440,
+            "documentWidth": 1440
+          },
+          "accessible": "- region \"Choisir une compétition\":\n  - button \"Bundesliga Allemagne\":\n    - strong: Bundesliga\n    - text: Allemagne\n  - button \"Premier League Angleterre\":\n    - strong: Premier League\n    - text: Angleterre\n  - button \"LaLiga Espagne\":\n    - strong: LaLiga\n    - text: Espagne\n  - button \"Ligue 1 France\":\n    - strong: Ligue 1\n    - text: France\n  - button \"Serie A Italie\":\n    - strong: Serie A\n    - text: Italie\n  - button \"Eredivisie Pays-Bas\":\n    - strong: Eredivisie\n    - text: Pays-Bas\n  - button \"Liga Portugal Portugal\":\n    - strong: Liga Portugal\n    - text: Portugal\n  - button \"Champions League Europe\" [pressed]:\n    - strong: Champions League\n    - text: Europe\n  - button \"Europa League Europe\":\n    - strong: Europa League\n    - text: Europe\n  - button \"Conference League Europe\":\n    - strong: Conference League\n    - text: Europe"
+        },
+        {
+          "step": "featured-cup",
+          "name": "Europa League",
+          "id": "l_38d9HA",
+          "buttonNames": [
+            "Bundesliga",
+            "Premier League",
+            "LaLiga",
+            "Ligue 1",
+            "Serie A",
+            "Eredivisie",
+            "Liga Portugal",
+            "Champions League",
+            "Europa League",
+            "Conference League"
+          ],
+          "url": "https://vegasport.vercel.app/competitions/?season=2026%2F2027&focus=europe&id=l_38d9HA",
+          "pressed": "true",
+          "regionWidth": 1392,
+          "layout": {
+            "viewport": 1440,
+            "documentWidth": 1440
+          },
+          "accessible": "- region \"Choisir une compétition\":\n  - button \"Bundesliga Allemagne\":\n    - strong: Bundesliga\n    - text: Allemagne\n  - button \"Premier League Angleterre\":\n    - strong: Premier League\n    - text: Angleterre\n  - button \"LaLiga Espagne\":\n    - strong: LaLiga\n    - text: Espagne\n  - button \"Ligue 1 France\":\n    - strong: Ligue 1\n    - text: France\n  - button \"Serie A Italie\":\n    - strong: Serie A\n    - text: Italie\n  - button \"Eredivisie Pays-Bas\":\n    - strong: Eredivisie\n    - text: Pays-Bas\n  - button \"Liga Portugal Portugal\":\n    - strong: Liga Portugal\n    - text: Portugal\n  - button \"Champions League Europe\":\n    - strong: Champions League\n    - text: Europe\n  - button \"Europa League Europe\" [pressed]:\n    - strong: Europa League\n    - text: Europe\n  - button \"Conference League Europe\":\n    - strong: Conference League\n    - text: Europe"
+        },
+        {
+          "step": "featured-cup",
+          "name": "Conference League",
+          "id": "l_2WZ2tt",
+          "buttonNames": [
+            "Bundesliga",
+            "Premier League",
+            "LaLiga",
+            "Ligue 1",
+            "Serie A",
+            "Eredivisie",
+            "Liga Portugal",
+            "Champions League",
+            "Europa League",
+            "Conference League"
+          ],
+          "url": "https://vegasport.vercel.app/competitions/?season=2026%2F2027&focus=europe&id=l_2WZ2tt",
+          "pressed": "true",
+          "regionWidth": 1392,
+          "layout": {
+            "viewport": 1440,
+            "documentWidth": 1440
+          },
+          "accessible": "- region \"Choisir une compétition\":\n  - button \"Bundesliga Allemagne\":\n    - strong: Bundesliga\n    - text: Allemagne\n  - button \"Premier League Angleterre\":\n    - strong: Premier League\n    - text: Angleterre\n  - button \"LaLiga Espagne\":\n    - strong: LaLiga\n    - text: Espagne\n  - button \"Ligue 1 France\":\n    - strong: Ligue 1\n    - text: France\n  - button \"Serie A Italie\":\n    - strong: Serie A\n    - text: Italie\n  - button \"Eredivisie Pays-Bas\":\n    - strong: Eredivisie\n    - text: Pays-Bas\n  - button \"Liga Portugal Portugal\":\n    - strong: Liga Portugal\n    - text: Portugal\n  - button \"Champions League Europe\":\n    - strong: Champions League\n    - text: Europe\n  - button \"Europa League Europe\":\n    - strong: Europa League\n    - text: Europe\n  - button \"Conference League Europe\" [pressed]:\n    - strong: Conference League\n    - text: Europe"
+        }
+      ],
+      "geometry": {
+        "France": {
+          "layout": {
+            "viewPort": {
+              "width": 1440,
+              "height": 900,
+              "bodyScrollWidth": 1440,
+              "scrollY": 0
+            },
+            "grid": {
+              "top": 224.5,
+              "left": 41,
+              "right": 1399,
+              "bottom": 705,
+              "width": 1358,
+              "height": 480.5,
+              "scrollWidth": 1358,
+              "clientWidth": 1358,
+              "scrollHeight": 481,
+              "clientHeight": 481
+            },
+            "visibleMatch": {
+              "top": 448,
+              "left": 630.703125,
+              "right": 809.28125,
+              "bottom": 502,
+              "width": 178.578125,
+              "height": 54,
+              "scrollWidth": 177,
+              "clientWidth": 177,
+              "scrollHeight": 52,
+              "clientHeight": 52
+            },
+            "visibleThird": {
+              "top": 519,
+              "left": 630.703125,
+              "right": 809.28125,
+              "bottom": 593.5,
+              "width": 178.578125,
+              "height": 74.5,
+              "scrollWidth": 179,
+              "clientWidth": 179,
+              "scrollHeight": 75,
+              "clientHeight": 75
+            }
+          },
+          "phone_initial": null,
+          "final_round_in_accessibility_snapshot": false,
+          "cards": 16
+        },
+        "Italie": {
+          "layout": {
+            "viewPort": {
+              "width": 1440,
+              "height": 900,
+              "bodyScrollWidth": 1440,
+              "scrollY": 0
+            },
+            "grid": {
+              "top": 224.5,
+              "left": 327,
+              "right": 1113,
+              "bottom": 705,
+              "width": 786,
+              "height": 480.5,
+              "scrollWidth": 786,
+              "clientWidth": 786,
+              "scrollHeight": 481,
+              "clientHeight": 481
+            },
+            "visibleMatch": {
+              "top": 448,
+              "left": 595,
+              "right": 845,
+              "bottom": 502,
+              "width": 250,
+              "height": 54,
+              "scrollWidth": 248,
+              "clientWidth": 248,
+              "scrollHeight": 52,
+              "clientHeight": 52
+            },
+            "visibleThird": {
+              "top": 519,
+              "left": 595,
+              "right": 845,
+              "bottom": 593.5,
+              "width": 250,
+              "height": 74.5,
+              "scrollWidth": 250,
+              "clientWidth": 250,
+              "scrollHeight": 75,
+              "clientHeight": 75
+            }
+          },
+          "phone_initial": null,
+          "final_round_in_accessibility_snapshot": false,
+          "cards": 4
+        }
+      }
+    },
+    "iphone": {
+      "observations": 29,
+      "started": "2026-11-18T16:44:02.668Z",
+      "ended": "2026-11-18T16:44:15.333Z",
+      "spotlight": [
+        {
+          "step": "featured-cup",
+          "name": "Champions League",
+          "id": "l_0bfbkO",
+          "buttonNames": [
+            "Bundesliga",
+            "Premier League",
+            "LaLiga",
+            "Ligue 1",
+            "Serie A",
+            "Eredivisie",
+            "Liga Portugal",
+            "Champions League",
+            "Europa League",
+            "Conference League"
+          ],
+          "url": "https://vegasport.vercel.app/competitions/?season=2026%2F2027&focus=europe&id=l_0bfbkO",
+          "pressed": "true",
+          "regionWidth": 365,
+          "layout": {
+            "viewport": 393,
+            "documentWidth": 393
+          },
+          "accessible": "- region \"Choisir une compétition\":\n  - button \"Bundesliga Allemagne\":\n    - strong: Bundesliga\n    - text: Allemagne\n  - button \"Premier League Angleterre\":\n    - strong: Premier League\n    - text: Angleterre\n  - button \"LaLiga Espagne\":\n    - strong: LaLiga\n    - text: Espagne\n  - button \"Ligue 1 France\":\n    - strong: Ligue 1\n    - text: France\n  - button \"Serie A Italie\":\n    - strong: Serie A\n    - text: Italie\n  - button \"Eredivisie Pays-Bas\":\n    - strong: Eredivisie\n    - text: Pays-Bas\n  - button \"Liga Portugal Portugal\":\n    - strong: Liga Portugal\n    - text: Portugal\n  - button \"Champions League Europe\" [pressed]:\n    - strong: Champions League\n    - text: Europe\n  - button \"Europa League Europe\":\n    - strong: Europa League\n    - text: Europe\n  - button \"Conference League Europe\":\n    - strong: Conference League\n    - text: Europe"
+        },
+        {
+          "step": "featured-cup",
+          "name": "Europa League",
+          "id": "l_38d9HA",
+          "buttonNames": [
+            "Bundesliga",
+            "Premier League",
+            "LaLiga",
+            "Ligue 1",
+            "Serie A",
+            "Eredivisie",
+            "Liga Portugal",
+            "Champions League",
+            "Europa League",
+            "Conference League"
+          ],
+          "url": "https://vegasport.vercel.app/competitions/?season=2026%2F2027&focus=europe&id=l_38d9HA",
+          "pressed": "true",
+          "regionWidth": 365,
+          "layout": {
+            "viewport": 393,
+            "documentWidth": 393
+          },
+          "accessible": "- region \"Choisir une compétition\":\n  - button \"Bundesliga Allemagne\":\n    - strong: Bundesliga\n    - text: Allemagne\n  - button \"Premier League Angleterre\":\n    - strong: Premier League\n    - text: Angleterre\n  - button \"LaLiga Espagne\":\n    - strong: LaLiga\n    - text: Espagne\n  - button \"Ligue 1 France\":\n    - strong: Ligue 1\n    - text: France\n  - button \"Serie A Italie\":\n    - strong: Serie A\n    - text: Italie\n  - button \"Eredivisie Pays-Bas\":\n    - strong: Eredivisie\n    - text: Pays-Bas\n  - button \"Liga Portugal Portugal\":\n    - strong: Liga Portugal\n    - text: Portugal\n  - button \"Champions League Europe\":\n    - strong: Champions League\n    - text: Europe\n  - button \"Europa League Europe\" [pressed]:\n    - strong: Europa League\n    - text: Europe\n  - button \"Conference League Europe\":\n    - strong: Conference League\n    - text: Europe"
+        },
+        {
+          "step": "featured-cup",
+          "name": "Conference League",
+          "id": "l_2WZ2tt",
+          "buttonNames": [
+            "Bundesliga",
+            "Premier League",
+            "LaLiga",
+            "Ligue 1",
+            "Serie A",
+            "Eredivisie",
+            "Liga Portugal",
+            "Champions League",
+            "Europa League",
+            "Conference League"
+          ],
+          "url": "https://vegasport.vercel.app/competitions/?season=2026%2F2027&focus=europe&id=l_2WZ2tt",
+          "pressed": "true",
+          "regionWidth": 365,
+          "layout": {
+            "viewport": 393,
+            "documentWidth": 393
+          },
+          "accessible": "- region \"Choisir une compétition\":\n  - button \"Bundesliga Allemagne\":\n    - strong: Bundesliga\n    - text: Allemagne\n  - button \"Premier League Angleterre\":\n    - strong: Premier League\n    - text: Angleterre\n  - button \"LaLiga Espagne\":\n    - strong: LaLiga\n    - text: Espagne\n  - button \"Ligue 1 France\":\n    - strong: Ligue 1\n    - text: France\n  - button \"Serie A Italie\":\n    - strong: Serie A\n    - text: Italie\n  - button \"Eredivisie Pays-Bas\":\n    - strong: Eredivisie\n    - text: Pays-Bas\n  - button \"Liga Portugal Portugal\":\n    - strong: Liga Portugal\n    - text: Portugal\n  - button \"Champions League Europe\":\n    - strong: Champions League\n    - text: Europe\n  - button \"Europa League Europe\":\n    - strong: Europa League\n    - text: Europe\n  - button \"Conference League Europe\" [pressed]:\n    - strong: Conference League\n    - text: Europe"
+        }
+      ],
+      "geometry": {
+        "France": {
+          "layout": {
+            "viewPort": {
+              "width": 393,
+              "height": 852,
+              "bodyScrollWidth": 393,
+              "scrollY": 0
+            },
+            "grid": {
+              "top": 348,
+              "left": 29,
+              "right": 364,
+              "bottom": 571.5,
+              "width": 335,
+              "height": 223.5,
+              "scrollWidth": 335,
+              "clientWidth": 335,
+              "scrollHeight": 224,
+              "clientHeight": 224
+            },
+            "visibleMatch": {
+              "top": 406,
+              "left": 36.5,
+              "right": 356.5,
+              "bottom": 468,
+              "width": 320,
+              "height": 62,
+              "scrollWidth": 318,
+              "clientWidth": 318,
+              "scrollHeight": 60,
+              "clientHeight": 60
+            },
+            "visibleThird": {
+              "top": 486,
+              "left": 36.5,
+              "right": 356.5,
+              "bottom": 571.5,
+              "width": 320,
+              "height": 85.5,
+              "scrollWidth": 320,
+              "clientWidth": 320,
+              "scrollHeight": 86,
+              "clientHeight": 86
+            }
+          },
+          "phone_initial": {
+            "top": 348,
+            "left": 29,
+            "right": 364,
+            "bottom": 684,
+            "width": 335,
+            "height": 336,
+            "scrollWidth": 335,
+            "clientWidth": 335,
+            "scrollHeight": 336,
+            "clientHeight": 336
+          },
+          "final_round_in_accessibility_snapshot": true,
+          "cards": 2
+        },
+        "Italie": {
+          "layout": {
+            "viewPort": {
+              "width": 393,
+              "height": 852,
+              "bodyScrollWidth": 393,
+              "scrollY": 0
+            },
+            "grid": {
+              "top": 348,
+              "left": 29,
+              "right": 364,
+              "bottom": 571.5,
+              "width": 335,
+              "height": 223.5,
+              "scrollWidth": 335,
+              "clientWidth": 335,
+              "scrollHeight": 224,
+              "clientHeight": 224
+            },
+            "visibleMatch": {
+              "top": 406,
+              "left": 36.5,
+              "right": 356.5,
+              "bottom": 468,
+              "width": 320,
+              "height": 62,
+              "scrollWidth": 318,
+              "clientWidth": 318,
+              "scrollHeight": 60,
+              "clientHeight": 60
+            },
+            "visibleThird": {
+              "top": 486,
+              "left": 36.5,
+              "right": 356.5,
+              "bottom": 571.5,
+              "width": 320,
+              "height": 85.5,
+              "scrollWidth": 320,
+              "clientWidth": 320,
+              "scrollHeight": 86,
+              "clientHeight": 86
+            }
+          },
+          "phone_initial": {
+            "top": 348,
+            "left": 29,
+            "right": 364,
+            "bottom": 540,
+            "width": 335,
+            "height": 192,
+            "scrollWidth": 335,
+            "clientWidth": 335,
+            "scrollHeight": 192,
+            "clientHeight": 192
+          },
+          "final_round_in_accessibility_snapshot": true,
+          "cards": 2
+        }
+      }
+    }
+  },
+  "localization_witness": {
+    "translated_search": "Italie",
+    "working_archive_alias": "Italy",
+    "observed_devices": 2
+  },
+  "iphone_clear_follow": {
+    "earlier_runner_error": {
+      "step": "views-france",
+      "url": "https://vegasport.vercel.app/competitions/?season=2026%2F2027&focus=all&id=open-cup%3Aworld-cup-history&edition=1998&view=tableau",
+      "error": "Error: clear following state"
+    },
+    "final_observation": {
+      "step": "clear-following",
+      "nation": "France",
+      "url": "https://vegasport.vercel.app/competitions/?season=2026%2F2027&focus=all&id=open-cup%3Aworld-cup-history&edition=1998&view=tableau"
+    },
+    "interpretation": "Immediate DOM assertion preceded the committed URL render; a clean replay after detachment passed."
+  },
+  "scores_historically_correct": false,
+  "historical_points_proved": false,
+  "source_verified": {
+    "national_matches": "Vercel and actual CloudFront browser endpoint",
+    "tournaments": "CloudFront /api/cup-snapshot and public edition mirror"
+  }
+}

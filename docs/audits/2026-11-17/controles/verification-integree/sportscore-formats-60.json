@@ -1,0 +1,691 @@
+{
+  "source_at": "2026-11-18 12:07:24.667750+00:00",
+  "observed_tables": [
+    {
+      "edition": 1,
+      "name": "Serie A",
+      "groups": {
+        "null": 20
+      },
+      "clubs": 20,
+      "rows": 20,
+      "partition": true
+    },
+    {
+      "edition": 13,
+      "name": "Premiership",
+      "groups": {
+        "null": 12
+      },
+      "clubs": 12,
+      "rows": 12,
+      "partition": true
+    },
+    {
+      "edition": 55,
+      "name": "Premier League",
+      "groups": {
+        "null": 20
+      },
+      "clubs": 20,
+      "rows": 20,
+      "partition": true
+    },
+    {
+      "edition": 882,
+      "name": "Ligue 2",
+      "groups": {
+        "null": 18
+      },
+      "clubs": 18,
+      "rows": 18,
+      "partition": true
+    },
+    {
+      "edition": 5,
+      "name": "Pro League",
+      "groups": {
+        "null": 14
+      },
+      "clubs": 14,
+      "rows": 14,
+      "partition": true
+    },
+    {
+      "edition": 760,
+      "name": "Champions League",
+      "groups": {
+        "null": 36
+      },
+      "clubs": 36,
+      "rows": 36,
+      "partition": true
+    },
+    {
+      "edition": 2,
+      "name": "LaLiga",
+      "groups": {
+        "null": 20
+      },
+      "clubs": 20,
+      "rows": 20,
+      "partition": true
+    },
+    {
+      "edition": 3,
+      "name": "1. Liga",
+      "groups": {
+        "null": 16
+      },
+      "clubs": 16,
+      "rows": 16,
+      "partition": true
+    },
+    {
+      "edition": 941,
+      "name": "Saudi Pro League",
+      "groups": {
+        "null": 18
+      },
+      "clubs": 18,
+      "rows": 18,
+      "partition": true
+    },
+    {
+      "edition": 4,
+      "name": "Super Lig",
+      "groups": {
+        "null": 18
+      },
+      "clubs": 18,
+      "rows": 18,
+      "partition": true
+    },
+    {
+      "edition": 10,
+      "name": "Ligat ha'Al",
+      "groups": {
+        "null": 14
+      },
+      "clubs": 14,
+      "rows": 14,
+      "partition": true
+    },
+    {
+      "edition": 16,
+      "name": "Serie A",
+      "groups": {
+        "null": 16
+      },
+      "clubs": 16,
+      "rows": 16,
+      "partition": true
+    },
+    {
+      "edition": 897,
+      "name": "Premier Division",
+      "groups": {
+        "null": 10
+      },
+      "clubs": 10,
+      "rows": 10,
+      "partition": true
+    },
+    {
+      "edition": 12,
+      "name": "Bundesliga",
+      "groups": {
+        "null": 18
+      },
+      "clubs": 18,
+      "rows": 18,
+      "partition": true
+    },
+    {
+      "edition": 912,
+      "name": "Premier Soccer League",
+      "groups": {
+        "null": 16
+      },
+      "clubs": 16,
+      "rows": 16,
+      "partition": true
+    },
+    {
+      "edition": 17,
+      "name": "Challenger Pro League",
+      "groups": {
+        "null": 15
+      },
+      "clubs": 15,
+      "rows": 15,
+      "partition": true
+    },
+    {
+      "edition": 812,
+      "name": "Indian Super League",
+      "groups": {
+        "null": 13
+      },
+      "clubs": 13,
+      "rows": 13,
+      "partition": true
+    },
+    {
+      "edition": 15,
+      "name": "Allsvenskan",
+      "groups": {
+        "null": 16
+      },
+      "clubs": 16,
+      "rows": 16,
+      "partition": true
+    },
+    {
+      "edition": 19,
+      "name": "Super League",
+      "groups": {
+        "null": 16
+      },
+      "clubs": 16,
+      "rows": 16,
+      "partition": true
+    },
+    {
+      "edition": 20,
+      "name": "Ekstraklasa",
+      "groups": {
+        "null": 18
+      },
+      "clubs": 18,
+      "rows": 18,
+      "partition": true
+    },
+    {
+      "edition": 21,
+      "name": "K League 2",
+      "groups": {
+        "null": 17
+      },
+      "clubs": 17,
+      "rows": 17,
+      "partition": true
+    },
+    {
+      "edition": 22,
+      "name": "J. League",
+      "groups": {
+        "null": 20
+      },
+      "clubs": 20,
+      "rows": 20,
+      "partition": true
+    },
+    {
+      "edition": 24,
+      "name": "First Division A",
+      "groups": {
+        "null": 18
+      },
+      "clubs": 18,
+      "rows": 18,
+      "partition": true
+    },
+    {
+      "edition": 25,
+      "name": "Premier League",
+      "groups": {
+        "null": 16
+      },
+      "clubs": 16,
+      "rows": 16,
+      "partition": true
+    },
+    {
+      "edition": 26,
+      "name": "HNL",
+      "groups": {
+        "null": 10
+      },
+      "clubs": 10,
+      "rows": 10,
+      "partition": true
+    },
+    {
+      "edition": 27,
+      "name": "Super Liga",
+      "groups": {
+        "null": 14
+      },
+      "clubs": 14,
+      "rows": 14,
+      "partition": true
+    },
+    {
+      "edition": 797,
+      "name": "Europa League",
+      "groups": {
+        "null": 36
+      },
+      "clubs": 36,
+      "rows": 36,
+      "partition": true
+    },
+    {
+      "edition": 30,
+      "name": "Ligue 1",
+      "groups": {
+        "null": 18
+      },
+      "clubs": 18,
+      "rows": 18,
+      "partition": true
+    },
+    {
+      "edition": 35,
+      "name": "2. Bundesliga",
+      "groups": {
+        "null": 18
+      },
+      "clubs": 18,
+      "rows": 18,
+      "partition": true
+    },
+    {
+      "edition": 34,
+      "name": "Thai League 1",
+      "groups": {
+        "null": 16
+      },
+      "clubs": 16,
+      "rows": 16,
+      "partition": true
+    },
+    {
+      "edition": 908,
+      "name": "Premier League",
+      "groups": {
+        "null": 8
+      },
+      "clubs": 8,
+      "rows": 8,
+      "partition": true
+    },
+    {
+      "edition": 42,
+      "name": "Super League 1",
+      "groups": {
+        "null": 14
+      },
+      "clubs": 14,
+      "rows": 14,
+      "partition": true
+    },
+    {
+      "edition": 43,
+      "name": "USL Championship",
+      "groups": {
+        "Group 1": 13,
+        "Group 2": 12
+      },
+      "clubs": 25,
+      "rows": 25,
+      "partition": true
+    },
+    {
+      "edition": 44,
+      "name": "Bundesliga",
+      "groups": {
+        "null": 12
+      },
+      "clubs": 12,
+      "rows": 12,
+      "partition": true
+    },
+    {
+      "edition": 46,
+      "name": "Virsliga",
+      "groups": {
+        "null": 10
+      },
+      "clubs": 10,
+      "rows": 10,
+      "partition": true
+    },
+    {
+      "edition": 47,
+      "name": "3. Liga",
+      "groups": {
+        "null": 20
+      },
+      "clubs": 20,
+      "rows": 20,
+      "partition": true
+    },
+    {
+      "edition": 56,
+      "name": "Challenge League",
+      "groups": {
+        "null": 10
+      },
+      "clubs": 10,
+      "rows": 10,
+      "partition": true
+    },
+    {
+      "edition": 57,
+      "name": "Super League",
+      "groups": {
+        "null": 12
+      },
+      "clubs": 12,
+      "rows": 12,
+      "partition": true
+    },
+    {
+      "edition": 766,
+      "name": "Championship",
+      "groups": {
+        "null": 24
+      },
+      "clubs": 24,
+      "rows": 24,
+      "partition": true
+    },
+    {
+      "edition": 51,
+      "name": "Eredivisie",
+      "groups": {
+        "null": 18
+      },
+      "clubs": 18,
+      "rows": 18,
+      "partition": true
+    },
+    {
+      "edition": 52,
+      "name": "A-League",
+      "groups": {
+        "null": 12
+      },
+      "clubs": 12,
+      "rows": 12,
+      "partition": true
+    },
+    {
+      "edition": 53,
+      "name": "1. liga",
+      "groups": {
+        "null": 12
+      },
+      "clubs": 12,
+      "rows": 12,
+      "partition": true
+    },
+    {
+      "edition": 54,
+      "name": "Liga Portugal",
+      "groups": {
+        "null": 18
+      },
+      "clubs": 18,
+      "rows": 18,
+      "partition": true
+    },
+    {
+      "edition": 894,
+      "name": "Paulista A1",
+      "groups": {
+        "null": 16
+      },
+      "clubs": 16,
+      "rows": 16,
+      "partition": true
+    },
+    {
+      "edition": 9,
+      "name": "Eliteserien",
+      "groups": {
+        "null": 16
+      },
+      "clubs": 16,
+      "rows": 16,
+      "partition": true
+    },
+    {
+      "edition": 58,
+      "name": "Primera Division",
+      "groups": {
+        "null": 16
+      },
+      "clubs": 16,
+      "rows": 16,
+      "partition": true
+    },
+    {
+      "edition": 14,
+      "name": "Primera Division",
+      "groups": {
+        "null": 14
+      },
+      "clubs": 14,
+      "rows": 14,
+      "partition": true
+    },
+    {
+      "edition": 1004,
+      "name": "World Cup",
+      "groups": {
+        "Group 1": 4,
+        "Group 10": 4,
+        "Group 11": 4,
+        "Group 12": 4,
+        "Group 2": 4,
+        "Group 3": 4,
+        "Group 4": 4,
+        "Group 5": 4,
+        "Group 6": 4,
+        "Group 7": 4,
+        "Group 8": 4,
+        "Group 9": 4,
+        "Ranking of third placed teams": 12
+      },
+      "clubs": 48,
+      "rows": 60,
+      "partition": false
+    },
+    {
+      "edition": 11,
+      "name": "1. Lig",
+      "groups": {
+        "null": 20
+      },
+      "clubs": 20,
+      "rows": 20,
+      "partition": true
+    },
+    {
+      "edition": 265,
+      "name": "League One",
+      "groups": {
+        "null": 24
+      },
+      "clubs": 24,
+      "rows": 24,
+      "partition": true
+    },
+    {
+      "edition": 267,
+      "name": "League Two",
+      "groups": {
+        "null": 24
+      },
+      "clubs": 24,
+      "rows": 24,
+      "partition": true
+    },
+    {
+      "edition": 266,
+      "name": "Serie A",
+      "groups": {
+        "null": 20
+      },
+      "clubs": 20,
+      "rows": 20,
+      "partition": true
+    },
+    {
+      "edition": 40,
+      "name": "Liga MX",
+      "groups": {
+        "null": 18
+      },
+      "clubs": 18,
+      "rows": 18,
+      "partition": true
+    },
+    {
+      "edition": 33,
+      "name": "J3 League",
+      "groups": {
+        "null": 20
+      },
+      "clubs": 20,
+      "rows": 20,
+      "partition": true
+    },
+    {
+      "edition": 772,
+      "name": "Conference League",
+      "groups": {
+        "null": 36
+      },
+      "clubs": 36,
+      "rows": 36,
+      "partition": true
+    },
+    {
+      "edition": 8,
+      "name": "Liga I",
+      "groups": {
+        "null": 16
+      },
+      "clubs": 16,
+      "rows": 16,
+      "partition": true
+    },
+    {
+      "edition": 36,
+      "name": "LaLiga2",
+      "groups": {
+        "null": 22
+      },
+      "clubs": 22,
+      "rows": 22,
+      "partition": true
+    },
+    {
+      "edition": 23,
+      "name": "K League 1",
+      "groups": {
+        "null": 12
+      },
+      "clubs": 12,
+      "rows": 12,
+      "partition": true
+    },
+    {
+      "edition": 29,
+      "name": "Veikkausliiga",
+      "groups": {
+        "null": 12
+      },
+      "clubs": 12,
+      "rows": 12,
+      "partition": true
+    },
+    {
+      "edition": 39,
+      "name": "Liga 1",
+      "groups": {
+        "null": 18
+      },
+      "clubs": 18,
+      "rows": 18,
+      "partition": true
+    }
+  ],
+  "worldcup_components": [
+    [
+      5477,
+      5478,
+      5482,
+      5486,
+      5488,
+      5490,
+      5504,
+      5509
+    ],
+    [
+      5466,
+      5479,
+      5499,
+      5505
+    ],
+    [
+      5471,
+      5474,
+      5498,
+      5506
+    ],
+    [
+      5493,
+      5507,
+      5508,
+      5510
+    ],
+    [
+      5470,
+      5485,
+      5491,
+      5511
+    ],
+    [
+      5472,
+      5492,
+      5494,
+      5512
+    ],
+    [
+      5465,
+      5468,
+      5469,
+      5503
+    ],
+    [
+      5467,
+      5481,
+      5487,
+      5489
+    ],
+    [
+      5473,
+      5483,
+      5484,
+      5500
+    ],
+    [
+      5475,
+      5476,
+      5480,
+      5502
+    ],
+    [
+      5495,
+      5496,
+      5497,
+      5501
+    ]
+  ],
+  "worldcup_counted_fixtures": 73
+}

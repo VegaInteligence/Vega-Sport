@@ -1,0 +1,339 @@
+{
+  "revision": "39e6272bd0deb948ec944384fdecea07c5f41280",
+  "postgres": 18,
+  "tested_paths": {
+    "a": {
+      "case": "a",
+      "initial_schema": "133_cohort_max_wait.sql",
+      "restoration_cli": {
+        "would_restore": 35,
+        "restored": 35,
+        "preserved_elo": 70,
+        "elo_pending_sides": 0,
+        "elo_run": 2097,
+        "edition_versions": {
+          "332": 1,
+          "333": 1,
+          "334": 1
+        }
+      },
+      "restoration_repeat": {
+        "would_restore": 0,
+        "restored": 0,
+        "preserved_elo": 70,
+        "elo_pending_sides": 0,
+        "elo_run": 2097,
+        "edition_versions": {}
+      },
+      "physical_matches_exact": 35,
+      "physical_keys_exact": 35,
+      "public_archived_ids": 35,
+      "elo_rows_and_float_bits_unchanged": 70,
+      "migration_134_execution_order": [
+        "134_archive_repair_boundary.sql",
+        "134_archive_scores_due.sql"
+      ],
+      "schema_pin_refuses_missing_134": true,
+      "destination_last_migration": "150_sportscore_standings_quarantine.sql",
+      "destination_exact_checksums": 151,
+      "source_exact_checksums": 133,
+      "destination_refusals": [
+        "refuse-missing-134_archive_repair_boundary",
+        "refuse-checksum-134_archive_repair_boundary",
+        "refuse-missing-134_archive_scores_due",
+        "refuse-checksum-134_archive_scores_due",
+        "refuse-missing-150_sportscore_standings_quarantine",
+        "refuse-checksum-150_sportscore_standings_quarantine"
+      ],
+      "preimage_and_postimage_wrong_133_checksum_refused": true,
+      "archive_http_repeat": [
+        304,
+        304,
+        304
+      ],
+      "finals_before": [
+        [
+          20052,
+          "not_started",
+          null,
+          null,
+          1,
+          "297808"
+        ],
+        [
+          20116,
+          "not_started",
+          null,
+          null,
+          1,
+          "297810"
+        ]
+      ],
+      "finals_after": [
+        [
+          20052,
+          "finished",
+          3,
+          1,
+          2,
+          "297844"
+        ],
+        [
+          20116,
+          "finished",
+          0,
+          3,
+          2,
+          "297846"
+        ]
+      ],
+      "finals_second_zero_writes": true,
+      "nations_http": {
+        "1982": {
+          "score": [
+            3,
+            1
+          ],
+          "status": "finished",
+          "stage": "Vainqueur",
+          "games": 7,
+          "etag": "W/\"nations-v1-309ef0d4fcc1f1f45815caeb6b0dd6598f19e4794f8f6df2d18f5a4e4e7a926d\""
+        },
+        "1998": {
+          "score": [
+            0,
+            3
+          ],
+          "status": "finished",
+          "stage": "Vainqueur",
+          "games": 7,
+          "etag": "W/\"nations-v1-98e627cca6d6537c3af0865a812d27b1df0f4334622c576f1768ce56e14ff4ba\""
+        }
+      },
+      "schema_reapply_idempotent": true,
+      "source_success_clocks_stable_on_reapply": true
+    },
+    "b": {
+      "case": "b",
+      "initial_schema": "134_archive_scores_due.sql",
+      "restoration_cli": {
+        "would_restore": 35,
+        "restored": 35,
+        "preserved_elo": 70,
+        "elo_pending_sides": 0,
+        "elo_run": 2097,
+        "edition_versions": {
+          "332": 1,
+          "333": 1,
+          "334": 1
+        }
+      },
+      "restoration_repeat": {
+        "would_restore": 0,
+        "restored": 0,
+        "preserved_elo": 70,
+        "elo_pending_sides": 0,
+        "elo_run": 2097,
+        "edition_versions": {}
+      },
+      "physical_matches_exact": 35,
+      "physical_keys_exact": 35,
+      "public_archived_ids": 35,
+      "elo_rows_and_float_bits_unchanged": 70,
+      "migration_134_execution_order": [
+        "134_archive_scores_due.sql",
+        "134_archive_repair_boundary.sql"
+      ],
+      "schema_pin_refuses_missing_134": true,
+      "destination_last_migration": "150_sportscore_standings_quarantine.sql",
+      "destination_exact_checksums": 151,
+      "source_exact_checksums": 133,
+      "destination_refusals": [
+        "refuse-missing-134_archive_repair_boundary",
+        "refuse-checksum-134_archive_repair_boundary",
+        "refuse-missing-134_archive_scores_due",
+        "refuse-checksum-134_archive_scores_due",
+        "refuse-missing-150_sportscore_standings_quarantine",
+        "refuse-checksum-150_sportscore_standings_quarantine"
+      ],
+      "preimage_and_postimage_wrong_133_checksum_refused": true,
+      "archive_http_repeat": [
+        304,
+        304,
+        304
+      ],
+      "finals_before": [
+        [
+          20052,
+          "finished",
+          3,
+          1,
+          2,
+          "297994"
+        ],
+        [
+          20116,
+          "finished",
+          0,
+          3,
+          2,
+          "297996"
+        ]
+      ],
+      "finals_after": [
+        [
+          20052,
+          "finished",
+          3,
+          1,
+          2,
+          "297994"
+        ],
+        [
+          20116,
+          "finished",
+          0,
+          3,
+          2,
+          "297996"
+        ]
+      ],
+      "finals_second_zero_writes": true,
+      "nations_http": {
+        "1982": {
+          "score": [
+            3,
+            1
+          ],
+          "status": "finished",
+          "stage": "Vainqueur",
+          "games": 7,
+          "etag": "W/\"nations-v1-309ef0d4fcc1f1f45815caeb6b0dd6598f19e4794f8f6df2d18f5a4e4e7a926d\""
+        },
+        "1998": {
+          "score": [
+            0,
+            3
+          ],
+          "status": "finished",
+          "stage": "Vainqueur",
+          "games": 7,
+          "etag": "W/\"nations-v1-98e627cca6d6537c3af0865a812d27b1df0f4334622c576f1768ce56e14ff4ba\""
+        }
+      },
+      "schema_reapply_idempotent": true,
+      "source_success_clocks_stable_on_reapply": true
+    }
+  },
+  "newer_run_local": {
+    "status": "passed",
+    "local_database": "vega_v2_open_matchday_restore_newer2099",
+    "cases": {
+      "missing-config": {
+        "returncode": 1,
+        "mode": "dry-run",
+        "operator_configured": false
+      },
+      "owner-path-dry-run": {
+        "returncode": 0,
+        "mode": "dry-run",
+        "operator_configured": true,
+        "report": {
+          "would_restore": 35,
+          "restored": 0,
+          "preserved_elo": 70,
+          "elo_pending_sides": 0,
+          "elo_run": 2097,
+          "edition_versions": {}
+        }
+      },
+      "mixed-floats": {
+        "returncode": 1,
+        "mode": "apply",
+        "operator_configured": true
+      },
+      "incomplete-published-run": {
+        "returncode": 1,
+        "mode": "apply",
+        "operator_configured": true
+      },
+      "latest-dry": {
+        "returncode": 0,
+        "mode": "dry-run",
+        "operator_configured": true,
+        "report": {
+          "would_restore": 35,
+          "restored": 0,
+          "preserved_elo": 0,
+          "elo_pending_sides": 70,
+          "elo_run": 2099,
+          "edition_versions": {}
+        }
+      },
+      "latest-apply": {
+        "returncode": 0,
+        "mode": "apply",
+        "operator_configured": true,
+        "report": {
+          "would_restore": 35,
+          "restored": 35,
+          "preserved_elo": 0,
+          "elo_pending_sides": 70,
+          "elo_run": 2099,
+          "edition_versions": {
+            "332": 2,
+            "333": 2,
+            "334": 2
+          }
+        }
+      },
+      "latest-repeat": {
+        "returncode": 0,
+        "mode": "apply",
+        "operator_configured": true,
+        "report": {
+          "would_restore": 0,
+          "restored": 0,
+          "preserved_elo": 0,
+          "elo_pending_sides": 70,
+          "elo_run": 2099,
+          "edition_versions": {}
+        }
+      }
+    }
+  },
+  "current_production": {
+    "schema": "134_archive_scores_due.sql",
+    "matchday": {
+      "physical_matches": 0,
+      "physical_keys": 0,
+      "elo_sides": 0,
+      "physical_keys_exact": 0
+    },
+    "latest_elo_run": {
+      "id": 2099,
+      "kind": "elo",
+      "status": "published",
+      "started_at": "2026-11-18 17:15:34.917412+00:00",
+      "finished_at": "2026-11-18 17:16:04.503585+00:00",
+      "matches": 82593,
+      "method_version": "power-ranking-v8"
+    },
+    "complete_population": {
+      "run_id": 2099,
+      "all_sides": 165186,
+      "matches": 82593,
+      "sides_off_pair": 0
+    },
+    "old_run_identical_except_superseded": true,
+    "observed_physical_or_key_collision": 0,
+    "elo_sides_pending_after_local_restoration": 70,
+    "operator_cli_executed_in_production": false
+  },
+  "evidence": {
+    "schema_paths": "real150b/receipt.json",
+    "newer_run_local": "newer2099/receipt.json",
+    "published_run_evidence": "../production/observation.json",
+    "current_candidates": "../production/matchday-current/observations.json"
+  }
+}

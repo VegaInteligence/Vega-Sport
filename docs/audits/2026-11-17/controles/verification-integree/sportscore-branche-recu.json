@@ -1,0 +1,20 @@
+{
+  "integrated_commit": "39e6272bd0deb948ec944384fdecea07c5f41280",
+  "w2_commit": "1c6affd523be9baa9c055ea088db4f723c736f95",
+  "exact_runtime_hashes": {
+    "backend/vega/sources/sportscore.py": "1b46c717f9a055e14beef22c731c7ad0c16a0c2b3851f11f8f050eb7488fa972",
+    "backend/vega/sources/__init__.py": "6a0993cdd18230e10ffbb92b2be9c42ee742147ea2afb5c3089f5d43a3739734",
+    "backend/api/src/routes/reference.mjs": "d7ec2dbf2f3675986233db8d2fe48d9a741858302847e89cc943368e547a39ff",
+    "backend/sql/150_sportscore_standings_quarantine.sql": "e26613fe9765c845c90c91b0804ec4a26347633e0ed5052421783726dee49836"
+  },
+  "integration_files_differing_from_w2": [
+    "backend/vega/sources/__init__.py"
+  ],
+  "statuses_requests_and_representations_match_w2": true,
+  "focused_records": 28,
+  "j1_other_unchanged_etags": 59,
+  "complete_candidate_result_sha256": "39c0ec6be445e2bfc43ed5c66ae9328c4958cb74006863acbec6ee2eac5c2e79",
+  "w2_reference_result_sha256": "c047846b0132a0804e8776b3c3adf33cd541a3cf48b983ed47e31ee06c31bef5",
+  "disposable_connection": "postgresql://postgres@127.0.0.1:55469",
+  "test_code": "livraison/rejouer/prod-shape.py"
+}

@@ -1,0 +1,6 @@
+{
+  "issue": "VI-21",
+  "comment": "3a9a3bd2-4fa8-4ee1-9238-1b2173e14521",
+  "at": "2026-11-18T17:13:47.807Z",
+  "body": "Après le déploiement de main `b2e6dd82d3`, migration 134 appliquée et réhydratation OpenFootball réussie. Les 665 scores de Coupe du monde sont rétablis. La même grille RDS à 17:05:26 puis à 17:11:17 UTC compte 3 252 côtés nationaux admissibles : 1 864 publiés, **1 388 Elo manquants**. Sur les 665 rencontres historiques, 658 sont retenues après exclusion de sept copies (1 316 côtés). 36 résultats supplémentaires de Ligue des nations apportent 72 côtés. Les 19 éditions ne portent aucun marquage de recalcul. Dernier Elo #2097 terminé à 01:49:24 UTC, aucun recalcul en cours. Ce chemin d’ingestion par `cup_key` ne suffit pas à déclencher le worker Elo. Le propriétaire VI-21 garde l’implémentation : déclencher et rejouer l’Elo Vega après une évolution réelle du calendrier, préserver les identités et témoins de non-régression, recontrôler les mêmes 3 252 côtés. Joueurs inchangés (14 418 manquants), clubs inchangés (20 manquants). [Déploiement](https://github.com/VegaInteligence/Vega-Sport/actions/runs/44351541140)."
+}

@@ -1,0 +1,71 @@
+{
+  "candidate": "0580dfd4ba645461d6c372fbd7b1d73eaaa779a0",
+  "original_failing_case_sha256": "493f3897890ea077f19c9afce0edb9dee5ee5e362f284e87b780911f82c2cfed",
+  "original_source_change": "local disposable DB name only",
+  "inputs": "Arsenal-Coventry source fixture and controlled xG, passes and possession preimage from the independent review",
+  "expected": "Identical ID/full-time/half-time/complementary fields; corrected corner; exactly one revision; replay makes no further changes",
+  "outcome": {
+    "pg": "PostgreSQL 18.6 (Debian 18.6-1.pgdg12+2) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 12.2.0-14+deb12u1) 12.2.0, 64-bit",
+    "input": "repository fixture, Arsenal vs Coventry, 2026-08-21; snapshots two and three blank both HT cells and correct corners 8 to 9",
+    "run1": [
+      19,
+      0
+    ],
+    "before": {
+      "match_id": 1,
+      "home_score": 3,
+      "away_score": 0,
+      "home_score_ht": 2,
+      "away_score_ht": 0,
+      "home_corners": 8,
+      "xg": 1.25,
+      "passes": 455,
+      "possession_pct": 59.0,
+      "revision": 1
+    },
+    "run2": [
+      19,
+      0
+    ],
+    "after": {
+      "match_id": 1,
+      "home_score": 3,
+      "away_score": 0,
+      "home_score_ht": 2,
+      "away_score_ht": 0,
+      "home_corners": 9,
+      "xg": 1.25,
+      "passes": 455,
+      "possession_pct": 59.0,
+      "revision": 2
+    },
+    "run3": [
+      19,
+      0
+    ],
+    "repeat": {
+      "match_id": 1,
+      "home_score": 3,
+      "away_score": 0,
+      "home_score_ht": 2,
+      "away_score_ht": 0,
+      "home_corners": 9,
+      "xg": 1.25,
+      "passes": 455,
+      "possession_pct": 59.0,
+      "revision": 2
+    },
+    "expected": {
+      "home_score_ht": 2,
+      "away_score_ht": 0,
+      "xg": 1.25,
+      "passes": 455,
+      "possession_pct": 59,
+      "home_corners": 9
+    },
+    "lost_fields": [],
+    "second_identical": true
+  },
+  "database_local": "vega_v2_omd_independent_corr0580",
+  "postgres_endpoint": "127.0.0.1:55439"
+}

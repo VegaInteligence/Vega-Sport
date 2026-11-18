@@ -1,0 +1,67 @@
+{
+  "time_utc": "2026-11-18T16:34:46.357477+00:00",
+  "remote_main": "08fa22e7875dd971e4e2ea415d6d5be13eb72347",
+  "compared_release": "8018e0836ca0f32e8b2eb51fc2847154abff7f13",
+  "ecs": [
+    {
+      "name": "vega-v2-worker",
+      "definition": "arn:aws:ecs:us-east-2:361769570630:task-definition/vega-v2-worker:142",
+      "running": 1,
+      "pending": 0,
+      "state": "COMPLETED"
+    },
+    {
+      "name": "vega-v2-backfill",
+      "definition": "arn:aws:ecs:us-east-2:361769570630:task-definition/vega-v2-backfill:142",
+      "running": 1,
+      "pending": 0,
+      "state": "COMPLETED"
+    }
+  ],
+  "api": {
+    "name": "vega-v2-api",
+    "sha": "rrXidCMW2nHD70WCaIyXWq11mYRQqTjaQufyhcsrcUE=",
+    "updated": "2026-11-17T16:02:15.000+0000"
+  },
+  "live": {
+    "name": "vega-v2-live-read",
+    "sha": "jDiA+lBgjfBQ9lIfHG0VUdpOKx4ZUdzxY2FSTauCNyQ=",
+    "updated": "2026-11-17T11:45:48.000+0000"
+  },
+  "main_file_delta": [
+    "WORKLOG.md",
+    "backend/sql/134_archive_scores_due.sql",
+    "backend/tests/test_sources.py",
+    "backend/vega/sources/cups.py",
+    "dashboard/frontend/src/competition-selector.css",
+    "dashboard/frontend/src/components/CupCompetition.jsx",
+    "dashboard/frontend/src/components/EditionHeader.jsx",
+    "dashboard/frontend/src/components/KnockoutBracket.jsx",
+    "dashboard/frontend/src/components/NationPages.jsx",
+    "dashboard/frontend/src/components/Nations.module.css",
+    "dashboard/frontend/src/components/NativeKnockoutBracket.jsx",
+    "dashboard/frontend/src/services/cup-catalog.js",
+    "dashboard/frontend/src/services/cup-matches.js",
+    "dashboard/frontend/src/services/knockout-bracket.js",
+    "dashboard/frontend/src/services/national-flags.js",
+    "dashboard/frontend/src/services/nations.js",
+    "dashboard/frontend/src/services/tournament-runs.js",
+    "dashboard/frontend/src/views/CompetitionsPage.jsx",
+    "docs/vega-sport-data-coverage.xlsx",
+    "tests/competition-render.test.mjs",
+    "tests/complementary-leagues.test.mjs",
+    "tests/cup-forecast.test.mjs",
+    "tests/cup-render.test.mjs",
+    "tests/edition-stubs.mjs",
+    "tests/euro-search-flags.test.mjs",
+    "tests/tournament-editions.test.mjs"
+  ],
+  "current_task_definitions_equal_initial": {
+    "vega-v2-worker": true,
+    "vega-v2-backfill": true
+  },
+  "lambda_checksums_equal_local_zip": {
+    "api": true,
+    "live": true
+  }
+}

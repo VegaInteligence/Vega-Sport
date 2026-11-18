@@ -1,0 +1,589 @@
+{
+  "at": "2026-11-18 17:01:24.626930+00:00",
+  "read_only": "on",
+  "scopes": 76,
+  "kind": {
+    "None": 75,
+    "international": 1
+  },
+  "scopes_with_rows": 60,
+  "without_rows": [
+    {
+      "provider_key": "l_0eg6C9",
+      "id": 6,
+      "name": "MLS",
+      "kind": null,
+      "country_code": "USA",
+      "edition": 6,
+      "native_label": "2026",
+      "label": "2026/2027",
+      "is_current": true,
+      "members": 32,
+      "official_rows": 0,
+      "matches": 526,
+      "named_group_matches": 0,
+      "stages": {
+        "NULL": 526
+      },
+      "status": "ok",
+      "error_code": null,
+      "last_attempt_at": "2026-11-18 16:57:48.805995+00:00",
+      "last_success_at": "2026-11-18 16:57:48.805995+00:00",
+      "unmatched": 3
+    },
+    {
+      "provider_key": "l_0jy5yE",
+      "id": 7,
+      "name": "Serie B",
+      "kind": null,
+      "country_code": "ITA",
+      "edition": 7,
+      "native_label": "2026/2027",
+      "label": "2026/2027",
+      "is_current": true,
+      "members": 21,
+      "official_rows": 0,
+      "matches": 382,
+      "named_group_matches": 0,
+      "stages": {
+        "NULL": 272,
+        "regular": 110
+      },
+      "status": "ok",
+      "error_code": null,
+      "last_attempt_at": "2026-11-18 16:57:48.805995+00:00",
+      "last_success_at": "2026-11-18 16:57:48.805995+00:00",
+      "unmatched": 1
+    },
+    {
+      "provider_key": "l_1rPvVD",
+      "id": 59,
+      "name": "1. Division",
+      "kind": null,
+      "country_code": "DEN",
+      "edition": 259,
+      "native_label": "2026/2027",
+      "label": "2026/2027",
+      "is_current": true,
+      "members": 12,
+      "official_rows": 0,
+      "matches": 132,
+      "named_group_matches": 0,
+      "stages": {
+        "NULL": 48,
+        "regular": 84
+      },
+      "status": "ok",
+      "error_code": null,
+      "last_attempt_at": "2026-11-18 16:57:48.805995+00:00",
+      "last_success_at": "2026-11-18 16:57:48.805995+00:00",
+      "unmatched": 3
+    },
+    {
+      "provider_key": "l_1TTHxD",
+      "id": 184,
+      "name": "Besta deild",
+      "kind": null,
+      "country_code": "ISL",
+      "edition": 737,
+      "native_label": "2026",
+      "label": "2026/2027",
+      "is_current": true,
+      "members": 12,
+      "official_rows": 0,
+      "matches": 162,
+      "named_group_matches": 0,
+      "stages": {
+        "NULL": 3,
+        "regular": 159
+      },
+      "status": "ok",
+      "error_code": null,
+      "last_attempt_at": "2026-11-18 16:57:48.805995+00:00",
+      "last_success_at": "2026-11-18 16:57:48.805995+00:00",
+      "unmatched": 3
+    },
+    {
+      "provider_key": "l_1xXulJ",
+      "id": 18,
+      "name": "Primera A",
+      "kind": null,
+      "country_code": "COL",
+      "edition": 18,
+      "native_label": "2026",
+      "label": "2026/2027",
+      "is_current": true,
+      "members": 20,
+      "official_rows": 0,
+      "matches": 401,
+      "named_group_matches": 0,
+      "stages": {
+        "NULL": 21,
+        "regular": 380
+      },
+      "status": "ok",
+      "error_code": null,
+      "last_attempt_at": "2026-11-18 16:57:48.805995+00:00",
+      "last_success_at": "2026-11-18 16:57:48.805995+00:00",
+      "unmatched": 2
+    },
+    {
+      "provider_key": "l_3CB6qX",
+      "id": 28,
+      "name": "Saudi First Division",
+      "kind": null,
+      "country_code": "KSA",
+      "edition": 28,
+      "native_label": "2026/2027",
+      "label": "2026/2027",
+      "is_current": true,
+      "members": 18,
+      "official_rows": 0,
+      "matches": 171,
+      "named_group_matches": 0,
+      "stages": {
+        "NULL": 72,
+        "regular": 99
+      },
+      "status": "ok",
+      "error_code": null,
+      "last_attempt_at": "2026-11-18 16:57:48.805995+00:00",
+      "last_success_at": "2026-11-18 16:57:48.805995+00:00",
+      "unmatched": 2
+    },
+    {
+      "provider_key": "l_3Kf7Ni",
+      "id": 31,
+      "name": "USL League One",
+      "kind": null,
+      "country_code": "USA",
+      "edition": 31,
+      "native_label": "2026",
+      "label": "2026/2027",
+      "is_current": true,
+      "members": 17,
+      "official_rows": 0,
+      "matches": 279,
+      "named_group_matches": 0,
+      "stages": {
+        "NULL": 7,
+        "regular": 272
+      },
+      "status": "ok",
+      "error_code": null,
+      "last_attempt_at": "2026-11-18 16:57:48.805995+00:00",
+      "last_success_at": "2026-11-18 16:57:48.805995+00:00",
+      "unmatched": 1
+    },
+    {
+      "provider_key": "l_3qNjzC",
+      "id": 37,
+      "name": "Liga de Primera",
+      "kind": null,
+      "country_code": "CHI",
+      "edition": 37,
+      "native_label": "2026",
+      "label": "2026/2027",
+      "is_current": true,
+      "members": 16,
+      "official_rows": 0,
+      "matches": 240,
+      "named_group_matches": 0,
+      "stages": {
+        "NULL": 26,
+        "regular": 214
+      },
+      "status": "ok",
+      "error_code": null,
+      "last_attempt_at": "2026-11-18 16:57:48.805995+00:00",
+      "last_success_at": "2026-11-18 16:57:48.805995+00:00",
+      "unmatched": 4
+    },
+    {
+      "provider_key": "l_3qUkB8",
+      "id": 38,
+      "name": "Serie B",
+      "kind": null,
+      "country_code": "BRA",
+      "edition": 38,
+      "native_label": "2026",
+      "label": "2026/2027",
+      "is_current": true,
+      "members": 20,
+      "official_rows": 0,
+      "matches": 384,
+      "named_group_matches": 0,
+      "stages": {
+        "NULL": 4,
+        "regular": 380
+      },
+      "status": "ok",
+      "error_code": null,
+      "last_attempt_at": "2026-11-18 16:57:48.805995+00:00",
+      "last_success_at": "2026-11-18 16:57:48.805995+00:00",
+      "unmatched": 2
+    },
+    {
+      "provider_key": "l_3Tn1kG",
+      "id": 32,
+      "name": "MLS Next Pro",
+      "kind": null,
+      "country_code": "USA",
+      "edition": 32,
+      "native_label": "2026",
+      "label": "2026/2027",
+      "is_current": true,
+      "members": 30,
+      "official_rows": 0,
+      "matches": 437,
+      "named_group_matches": 0,
+      "stages": {
+        "NULL": 17,
+        "regular": 420
+      },
+      "status": "ok",
+      "error_code": null,
+      "last_attempt_at": "2026-11-18 16:57:48.805995+00:00",
+      "last_success_at": "2026-11-18 16:57:48.805995+00:00",
+      "unmatched": 3
+    },
+    {
+      "provider_key": "l_3wr44B",
+      "id": 41,
+      "name": "Qatar Stars League",
+      "kind": null,
+      "country_code": "QAT",
+      "edition": 41,
+      "native_label": "2026/2027",
+      "label": "2026/2027",
+      "is_current": true,
+      "members": 12,
+      "official_rows": 0,
+      "matches": 132,
+      "named_group_matches": 0,
+      "stages": {
+        "NULL": 78,
+        "regular": 54
+      },
+      "status": "ok",
+      "error_code": null,
+      "last_attempt_at": "2026-11-18 16:57:48.805995+00:00",
+      "last_success_at": "2026-11-18 16:57:48.805995+00:00",
+      "unmatched": 2
+    },
+    {
+      "provider_key": "l_45VZuL",
+      "id": 45,
+      "name": "Liga Profesional",
+      "kind": null,
+      "country_code": "ARG",
+      "edition": 45,
+      "native_label": "2026",
+      "label": "2026/2027",
+      "is_current": true,
+      "members": 30,
+      "official_rows": 0,
+      "matches": 609,
+      "named_group_matches": 0,
+      "stages": {
+        "NULL": 112,
+        "final": 1,
+        "regular": 482,
+        "knockout": 14
+      },
+      "status": "ok",
+      "error_code": null,
+      "last_attempt_at": "2026-11-18 16:57:48.805995+00:00",
+      "last_success_at": "2026-11-18 16:57:48.805995+00:00",
+      "unmatched": 11
+    },
+    {
+      "provider_key": "l_46aZMC",
+      "id": 193,
+      "name": "Premier League",
+      "kind": null,
+      "country_code": "EGY",
+      "edition": 899,
+      "native_label": "2026/2027",
+      "label": "2026/2027",
+      "is_current": true,
+      "members": 20,
+      "official_rows": 0,
+      "matches": 190,
+      "named_group_matches": 0,
+      "stages": {
+        "NULL": 110,
+        "regular": 80
+      },
+      "status": "ok",
+      "error_code": null,
+      "last_attempt_at": "2026-11-18 16:57:48.805995+00:00",
+      "last_success_at": "2026-11-18 16:57:48.805995+00:00",
+      "unmatched": 3
+    },
+    {
+      "provider_key": "l_49KZaB",
+      "id": 48,
+      "name": "Eerste Divisie",
+      "kind": null,
+      "country_code": "NED",
+      "edition": 48,
+      "native_label": "2026/2027",
+      "label": "2026/2027",
+      "is_current": true,
+      "members": 20,
+      "official_rows": 0,
+      "matches": 380,
+      "named_group_matches": 0,
+      "stages": {
+        "NULL": 233,
+        "regular": 147
+      },
+      "status": "ok",
+      "error_code": null,
+      "last_attempt_at": "2026-11-18 16:57:48.805995+00:00",
+      "last_success_at": "2026-11-18 16:57:48.805995+00:00",
+      "unmatched": 4
+    },
+    {
+      "provider_key": "l_49Zmno",
+      "id": 49,
+      "name": "Superligaen",
+      "kind": null,
+      "country_code": "DEN",
+      "edition": 49,
+      "native_label": "2026/2027",
+      "label": "2026/2027",
+      "is_current": true,
+      "members": 12,
+      "official_rows": 0,
+      "matches": 132,
+      "named_group_matches": 0,
+      "stages": {
+        "NULL": 48,
+        "regular": 84
+      },
+      "status": "ok",
+      "error_code": null,
+      "last_attempt_at": "2026-11-18 16:57:48.805995+00:00",
+      "last_success_at": "2026-11-18 16:57:48.805995+00:00",
+      "unmatched": 3
+    },
+    {
+      "provider_key": "l_4FPF2L",
+      "id": 50,
+      "name": "Division Profesional",
+      "kind": null,
+      "country_code": "PAR",
+      "edition": 50,
+      "native_label": "2026",
+      "label": "2026/2027",
+      "is_current": true,
+      "members": 12,
+      "official_rows": 0,
+      "matches": 264,
+      "named_group_matches": 0,
+      "stages": {
+        "NULL": 21,
+        "regular": 243
+      },
+      "status": "ok",
+      "error_code": null,
+      "last_attempt_at": "2026-11-18 16:57:48.805995+00:00",
+      "last_success_at": "2026-11-18 16:57:48.805995+00:00",
+      "unmatched": 3
+    }
+  ],
+  "native_named_groups": [],
+  "j1_calendar": [
+    {
+      "id": 22,
+      "label": "2027/2028",
+      "native_label": "2027",
+      "status": "not_started",
+      "stage": null,
+      "matches": 181,
+      "first_kickoff": "2027-02-13 11:00:00+00:00",
+      "last_kickoff": "2027-06-06 10:00:00+00:00",
+      "future": 181,
+      "next_kickoff": "2027-02-13 11:00:00+00:00"
+    },
+    {
+      "id": 140,
+      "label": "2026/2027",
+      "native_label": "2026",
+      "status": "finished",
+      "stage": "final",
+      "matches": 2,
+      "first_kickoff": "2026-05-30 05:00:00+00:00",
+      "last_kickoff": "2026-06-06 05:00:00+00:00",
+      "future": 0,
+      "next_kickoff": null
+    },
+    {
+      "id": 140,
+      "label": "2026/2027",
+      "native_label": "2026",
+      "status": "finished",
+      "stage": "regular",
+      "matches": 337,
+      "first_kickoff": "2026-02-06 10:03:00+00:00",
+      "last_kickoff": "2026-11-08 08:00:00+00:00",
+      "future": 0,
+      "next_kickoff": null
+    },
+    {
+      "id": 140,
+      "label": "2026/2027",
+      "native_label": "2026",
+      "status": "not_started",
+      "stage": null,
+      "matches": 59,
+      "first_kickoff": "2026-11-20 10:00:00+00:00",
+      "last_kickoff": "2026-12-19 07:00:00+00:00",
+      "future": 59,
+      "next_kickoff": "2026-11-20 10:00:00+00:00"
+    }
+  ],
+  "migrations": [
+    {
+      "version": "134_archive_scores_due.sql",
+      "checksum": "89dcafc08b55b2f6b6bb8cbf22f485452de419e9d8b7f0bebb8b8585bfacd5f6",
+      "applied_at": "2026-11-18 16:52:50.615988+00:00"
+    },
+    {
+      "version": "133_cohort_max_wait.sql",
+      "checksum": "4f08e25c4a3f694f8642911199948389b4feebe1ef644b1ece41be255e477609",
+      "applied_at": "2026-11-17 17:01:35.402304+00:00"
+    },
+    {
+      "version": "132_match_scoring.sql",
+      "checksum": "0b6e273d6a5da3fb39da81b0493d2acb305bf4447627eaaf2dcb5bb21fa821fe",
+      "applied_at": "2026-11-17 14:12:20.973604+00:00"
+    },
+    {
+      "version": "131_paired_club_indicators.sql",
+      "checksum": "8a3c25b8e6d45488c1cd04f2c47c489d35a9cab29f5cd85a4c1f7a79d43cb01d",
+      "applied_at": "2026-11-17 14:12:20.776167+00:00"
+    },
+    {
+      "version": "130_expected_points_law.sql",
+      "checksum": "153a0073ed2efc022ea9b2b3fc30554b41a9839da1ee7e9f7404dfef3e5bacaf",
+      "applied_at": "2026-11-17 14:12:20.744862+00:00"
+    },
+    {
+      "version": "129_complete_half_totals.sql",
+      "checksum": "db05685e542e14930c8b2de08c55a3978a4693a092a70071fdb2174f3359e01d",
+      "applied_at": "2026-11-17 14:12:20.704911+00:00"
+    },
+    {
+      "version": "128_finished_player_seasons.sql",
+      "checksum": "c07856181c2e053ecc54e01faa807a501ef20ea7e3f12b8a22150467116a27f4",
+      "applied_at": "2026-11-17 14:11:53.048375+00:00"
+    },
+    {
+      "version": "127_cup_table_match_ids.sql",
+      "checksum": "99583bf3ecfb91e4f292746e95e91aaad56c2f2f74a28fed711e95abdffcc0ac",
+      "applied_at": "2026-11-17 13:38:09.214213+00:00"
+    }
+  ],
+  "phase_teams": [
+    {
+      "provider_key": "l_0bfbkO",
+      "id": 185,
+      "name": "Champions League",
+      "kind": null,
+      "country_code": "INT-2",
+      "edition": 760,
+      "native_label": "2026/2027",
+      "label": "2026/2027",
+      "is_current": true,
+      "members": 36,
+      "official_rows": 36,
+      "matches": 144,
+      "named_group_matches": 0,
+      "stages": {
+        "NULL": 72,
+        "regular": 72
+      },
+      "status": "ok",
+      "error_code": null,
+      "last_attempt_at": "2026-11-18 16:57:48.805995+00:00",
+      "last_success_at": "2026-11-18 16:57:48.805995+00:00",
+      "unmatched": 0
+    },
+    {
+      "provider_key": "l_1XLtP0",
+      "id": 198,
+      "name": "World Cup",
+      "kind": "international",
+      "country_code": "INT",
+      "edition": 1004,
+      "native_label": "2026",
+      "label": "2025/2026",
+      "is_current": true,
+      "members": 48,
+      "official_rows": 60,
+      "matches": 104,
+      "named_group_matches": 0,
+      "stages": {
+        "final": 1,
+        "regular": 73,
+        "knockout": 30
+      },
+      "status": "ok",
+      "error_code": null,
+      "last_attempt_at": "2026-11-18 16:57:48.805995+00:00",
+      "last_success_at": "2026-11-18 16:57:48.805995+00:00",
+      "unmatched": 0
+    },
+    {
+      "provider_key": "l_2WZ2tt",
+      "id": 187,
+      "name": "Conference League",
+      "kind": null,
+      "country_code": "INT-2",
+      "edition": 772,
+      "native_label": "2026/2027",
+      "label": "2026/2027",
+      "is_current": true,
+      "members": 36,
+      "official_rows": 36,
+      "matches": 108,
+      "named_group_matches": 0,
+      "stages": {
+        "NULL": 54,
+        "regular": 54
+      },
+      "status": "ok",
+      "error_code": null,
+      "last_attempt_at": "2026-11-18 16:57:48.805995+00:00",
+      "last_success_at": "2026-11-18 16:57:48.805995+00:00",
+      "unmatched": 0
+    },
+    {
+      "provider_key": "l_38d9HA",
+      "id": 188,
+      "name": "Europa League",
+      "kind": null,
+      "country_code": "INT-2",
+      "edition": 797,
+      "native_label": "2026/2027",
+      "label": "2026/2027",
+      "is_current": true,
+      "members": 36,
+      "official_rows": 36,
+      "matches": 144,
+      "named_group_matches": 0,
+      "stages": {
+        "NULL": 72,
+        "regular": 72
+      },
+      "status": "ok",
+      "error_code": null,
+      "last_attempt_at": "2026-11-18 16:57:48.805995+00:00",
+      "last_success_at": "2026-11-18 16:57:48.805995+00:00",
+      "unmatched": 0
+    }
+  ]
+}

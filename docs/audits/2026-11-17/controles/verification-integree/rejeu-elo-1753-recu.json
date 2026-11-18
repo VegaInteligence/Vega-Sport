@@ -1,0 +1,108 @@
+{
+  "name": "rejeu-couverture-elo-1750.zip",
+  "members": 388,
+  "size": 1226341,
+  "raw_size": 9520450,
+  "sha256": "0b111788b6e131d816f24105fcedeea5d5e67da4e10d08f6c963103a6fe2f57c",
+  "built_at": "2026-11-18T18:10:26.526002+00:00",
+  "artifact_relative_to_audit": "delivery/actualisation-main-1750/rejeu-couverture-elo-1750.zip",
+  "entrypoint": "python3 -B verifier.py",
+  "stdlib_only": true,
+  "symlinks": 0,
+  "isolation": "Each run extracted to a separate macOS temporary directory; sandbox-exec denied network*.",
+  "python_versions": {
+    "3.9.6": {
+      "log": "rejeu-couverture-elo-1750.python39.log",
+      "sha256": "14a0e11e1ff9b4dabeedbfc22434fb84d4419e295a15ffc5cc5fc10f35d0329f",
+      "status": "pass",
+      "summary": {
+        "status": "pass",
+        "covered_files": 387,
+        "current": {
+          "rds_at": "2026-11-18 17:53:27.125902+00:00",
+          "elo": 2099,
+          "elo_sides": 165186,
+          "editions": 19,
+          "newly_valid_national_sides": 1388,
+          "matchday_ids_absent": 35,
+          "old_elo_sides_absent": 70,
+          "verified_local_paths": 2
+        },
+        "rosters": {
+          "nations_at": "2026-11-18 17:17:38.599677+00:00",
+          "named": 153,
+          "redirects": 28,
+          "draw_placeholders": 54,
+          "cup_at": "2026-11-18 17:14:47.048600+00:00",
+          "split": [
+            {
+              "editions": [
+                305,
+                308
+              ],
+              "fixtures": [
+                48,
+                108
+              ],
+              "teams": [
+                16,
+                38
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "3.14.6": {
+      "log": "rejeu-couverture-elo-1750.python314.log",
+      "sha256": "14a0e11e1ff9b4dabeedbfc22434fb84d4419e295a15ffc5cc5fc10f35d0329f",
+      "status": "pass",
+      "summary": {
+        "status": "pass",
+        "covered_files": 387,
+        "current": {
+          "rds_at": "2026-11-18 17:53:27.125902+00:00",
+          "elo": 2099,
+          "elo_sides": 165186,
+          "editions": 19,
+          "newly_valid_national_sides": 1388,
+          "matchday_ids_absent": 35,
+          "old_elo_sides_absent": 70,
+          "verified_local_paths": 2
+        },
+        "rosters": {
+          "nations_at": "2026-11-18 17:17:38.599677+00:00",
+          "named": 153,
+          "redirects": 28,
+          "draw_placeholders": 54,
+          "cup_at": "2026-11-18 17:14:47.048600+00:00",
+          "split": [
+            {
+              "editions": [
+                305,
+                308
+              ],
+              "fixtures": [
+                48,
+                108
+              ],
+              "teams": [
+                16,
+                38
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
+  "checks": [
+    "44 unchanged SQL checksums",
+    "6,447 recomputed coverage rows",
+    "19 editions and 1,388 covered national sides",
+    "full Elo run #2099: 82,593 matches, 165,186 sides",
+    "national and Nations League rosters",
+    "35 original keys and 70 previous Elo sides, current absence and two exact local schema-150 rehearsal receipts"
+  ],
+  "production_cloud_operations_for_packaging": 0
+}

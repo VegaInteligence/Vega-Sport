@@ -1,0 +1,251 @@
+{
+  "reference_A": "4303a1255d288f8d0ee3a5c7964ebb5a4434f824",
+  "provenance_registre": "git show 4303a1255d288f8d0ee3a5c7964ebb5a4434f824:docs/audits/2026-11-17/registres/requirements.csv",
+  "sha256_registre": "69ec9f3126d7f7dd6f374dfcf4483561f08953862c84f45b967722d97223f7f7",
+  "comptages_avant": {
+    "A": {
+      "production_state": {
+        "incomplete": 24,
+        "missing": 2,
+        "implemented_production": 12
+      },
+      "branch_state": {
+        "incomplete": 24,
+        "missing": 2,
+        "implemented_production": 12
+      }
+    },
+    "E": {
+      "production_state": {
+        "not_applicable": 10,
+        "incomplete": 24,
+        "implemented_production": 2
+      },
+      "branch_state": {
+        "implemented_branch": 7,
+        "incomplete": 26,
+        "implemented_production": 2,
+        "not_applicable": 1
+      }
+    },
+    "L": {
+      "production_state": {
+        "implemented_production": 6,
+        "incomplete": 2
+      },
+      "branch_state": {
+        "implemented_production": 6,
+        "incomplete": 2
+      }
+    },
+    "N": {
+      "production_state": {
+        "implemented_production": 8,
+        "incomplete": 1
+      },
+      "branch_state": {
+        "implemented_production": 8,
+        "incomplete": 1
+      }
+    }
+  },
+  "comptages_proposes": {
+    "A": {
+      "production_state": {
+        "incomplete": 24,
+        "missing": 2,
+        "implemented_production": 12
+      },
+      "branch_state": {
+        "incomplete": 24,
+        "missing": 2,
+        "implemented_production": 12
+      }
+    },
+    "E": {
+      "production_state": {
+        "not_applicable": 10,
+        "incomplete": 23,
+        "implemented_production": 3
+      },
+      "branch_state": {
+        "implemented_branch": 6,
+        "incomplete": 26,
+        "implemented_production": 3,
+        "not_applicable": 1
+      }
+    },
+    "L": {
+      "production_state": {
+        "implemented_production": 6,
+        "incomplete": 2
+      },
+      "branch_state": {
+        "implemented_production": 6,
+        "incomplete": 2
+      }
+    },
+    "N": {
+      "production_state": {
+        "implemented_production": 8,
+        "incomplete": 1
+      },
+      "branch_state": {
+        "implemented_production": 8,
+        "incomplete": 1
+      }
+    }
+  },
+  "disposition_modifiee": "E04n",
+  "identifiants_A_relus": [
+    "A01",
+    "A02",
+    "A03",
+    "A04",
+    "A05a",
+    "A05b",
+    "A06",
+    "A07",
+    "A08",
+    "A09a",
+    "A09b",
+    "A10",
+    "A11a",
+    "A11b",
+    "A11c",
+    "A12",
+    "A13a",
+    "A13b",
+    "A13c",
+    "A13d",
+    "A14a",
+    "A14b",
+    "A15a",
+    "A15b",
+    "A15c",
+    "A15d",
+    "A15e",
+    "A15f",
+    "A15g",
+    "A16a",
+    "A16b",
+    "A16c",
+    "A17a",
+    "A17b",
+    "A18a",
+    "A18b",
+    "A18c",
+    "A18d"
+  ],
+  "calculs_existants": [
+    "C01",
+    "C02",
+    "C03",
+    "C04",
+    "C05",
+    "C06",
+    "C07",
+    "C08",
+    "C09",
+    "C10",
+    "C11",
+    "C12",
+    "C13",
+    "C14",
+    "C15",
+    "C16",
+    "C17",
+    "C18",
+    "C19",
+    "C20",
+    "C21",
+    "C22",
+    "C23",
+    "C24",
+    "C25",
+    "C26"
+  ],
+  "produit_new_calc_sha": "de5e7ef95a4b90d074b2fb1946a98d49187fc20ec33f784663ef273b450f5abf",
+  "dernier_Elo_attendu_stocke_absent": {
+    "actual_valid": 1864,
+    "expected_algorithm": 3252,
+    "missing_from_storage": 1388
+  },
+  "production_avant": {
+    "club": {
+      "actual_valid": 161912,
+      "expected_algorithm": 161932,
+      "missing_from_storage": 20
+    },
+    "national team": {
+      "actual_valid": 1864,
+      "expected_algorithm": 1864,
+      "missing_from_storage": 0
+    },
+    "player": {
+      "actual_valid": 2282580,
+      "expected_algorithm": 2296998,
+      "missing_from_storage": 14418,
+      "role_unavailable": 615
+    }
+  },
+  "production_apres": {
+    "club": {
+      "actual_valid": 161912,
+      "expected_algorithm": 161932,
+      "missing_from_storage": 20
+    },
+    "national team": {
+      "actual_valid": 1864,
+      "expected_algorithm": 3252,
+      "missing_from_storage": 1388
+    },
+    "player": {
+      "actual_valid": 2282580,
+      "expected_algorithm": 2296998,
+      "missing_from_storage": 14418,
+      "role_unavailable": 615
+    }
+  },
+  "scores": {
+    "structured_final_preserved": 403,
+    "annulation_source_toujours_non_commencee": 1,
+    "bare_repaired": 665
+  },
+  "paires_phase": {
+    "score_ht": {
+      "before_complete_pairs": 360,
+      "after_complete_pairs": 360,
+      "changed_pairs": []
+    },
+    "score_90": {
+      "before_complete_pairs": 82,
+      "after_complete_pairs": 82,
+      "changed_pairs": []
+    },
+    "score_et": {
+      "before_complete_pairs": 82,
+      "after_complete_pairs": 82,
+      "changed_pairs": []
+    },
+    "penalty_score": {
+      "before_complete_pairs": 39,
+      "after_complete_pairs": 39,
+      "changed_pairs": []
+    }
+  },
+  "red_tete": "4303a1255d288f8d0ee3a5c7964ebb5a4434f824",
+  "pieces_sha256_relatives_au_dossier_parent": {
+    "production-worker-b2e6/comparison.json": "900ba54ae48db7780cc3aa94c3e5d34217a9c0411fbe129618b368bd78fa2a0e",
+    "production-worker-b2e6/http-receipt.json": "ac5571ad6fdbacfd5b9b26c85d4cd89582719c95e7dccf8000f7ebd6bfb04b86",
+    "parcours-apres-worker/verification.json": "18cbb889b4bcde9d684647df69fb496d2843e45a0e47d095cd99b868a0306931",
+    "parcours-apres-worker/ticket-original.json": "3a1656a84003ef070b01cb99e5f139c369ebfd824df02634b738360ef211c582",
+    "notes-apres-deploiement/comparaison/comparaison.json": "caf2cc8bc0771c4dc7fb7369eb69ce1e1a4a71db14d136129ddcbdc356cc9c84",
+    "integrite-apres-deploiement/result.json": "f7733e92efc6ab57dc866707b440b078482a23fd3376212edc71f05a7f3b356d",
+    "phases-manquantes/capture/result.json": "1d2492d22c8cfbfa9b9197bc2c29cb38cb0b5dcfccab1becc4415c262de81d80",
+    "opus/integration-A/receipt.json": "19ab9c26de8265ad17b38ea4468b8bd513a24ca5c45d5e058c0d5b172204cd74",
+    "opus/integration-B/logs/red-head.txt": "f228510f04959e3be7374854c5cbdb09ac36e94f6b94ce60a2407b32d9ea8c5e",
+    "../../linear.json": "50846e72348e58f289d5b5a122dfa3fdb22a50c69a7e90ab63bca73cf6273d50",
+    "../navigation-vi22/recu.json": "e1e68ce096aa191b2156edc73d4840d864c631fa674322314b38d13f842ab3a2"
+  }
+}

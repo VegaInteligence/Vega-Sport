@@ -1,0 +1,2322 @@
+competition_id,competition,season_id,season,source,status,fixtures,scored
+1,Serie A,2021,2021/2022,pitchapi,finished,380,380
+1,Serie A,2022,2022/2023,pitchapi,finished,381,381
+1,Serie A,2023,2023/2024,pitchapi,finished,380,380
+1,Serie A,2024,2024/2025,pitchapi,finished,380,380
+1,Serie A,2025,2025/2026,pitchapi,finished,380,380
+1,Serie A,2026,2026/2027,pitchapi,finished,110,110
+1,Serie A,2026,2026/2027,pitchapi,not_started,270,0
+2,LaLiga,2021,2021/2022,pitchapi,finished,380,380
+2,LaLiga,2022,2022/2023,pitchapi,finished,380,380
+2,LaLiga,2023,2023/2024,pitchapi,finished,379,379
+2,LaLiga,2024,2024/2025,pitchapi,finished,380,380
+2,LaLiga,2025,2025/2026,pitchapi,finished,380,380
+2,LaLiga,2026,2026/2027,pitchapi,finished,119,119
+2,LaLiga,2026,2026/2027,pitchapi,not_started,261,0
+3,1. Liga,2024,2024/2025,pitchapi,finished,276,276
+3,1. Liga,2025,2025/2026,pitchapi,awarded,1,1
+3,1. Liga,2025,2025/2026,pitchapi,finished,275,275
+3,1. Liga,2026,2026/2027,pitchapi,finished,111,111
+3,1. Liga,2026,2026/2027,pitchapi,not_started,129,0
+4,Super Lig,2022,2022/2023,pitchapi,finished,313,313
+4,Super Lig,2023,2023/2024,pitchapi,awarded,1,1
+4,Super Lig,2023,2023/2024,pitchapi,finished,379,379
+4,Super Lig,2024,2024/2025,pitchapi,awarded,1,1
+4,Super Lig,2024,2024/2025,pitchapi,finished,341,341
+4,Super Lig,2025,2025/2026,pitchapi,finished,306,306
+4,Super Lig,2026,2026/2027,pitchapi,finished,99,99
+4,Super Lig,2026,2026/2027,pitchapi,not_started,369,0
+5,Pro League,2024,2024/2025,pitchapi,finished,182,182
+5,Pro League,2025,2025/2026,pitchapi,finished,182,182
+5,Pro League,2026,2026/2027,pitchapi,finished,49,49
+5,Pro League,2026,2026/2027,pitchapi,not_started,70,0
+6,MLS,2021,2021/2022,pitchapi,finished,468,468
+6,MLS,2022,2022/2023,pitchapi,finished,486,486
+6,MLS,2023,2023/2024,pitchapi,finished,521,521
+6,MLS,2024,2024/2025,pitchapi,finished,522,522
+6,MLS,2025,2025/2026,pitchapi,finished,540,540
+6,MLS,2026,2026/2027,pitchapi,finished,510,510
+6,MLS,2026,2026/2027,pitchapi,not_started,16,0
+7,Serie B,2025,2025/2026,pitchapi,finished,390,390
+7,Serie B,2026,2026/2027,pitchapi,finished,110,110
+7,Serie B,2026,2026/2027,pitchapi,not_started,272,0
+8,Liga I,2024,2024/2025,pitchapi,finished,315,315
+8,Liga I,2025,2025/2026,pitchapi,finished,317,317
+8,Liga I,2026,2026/2027,pitchapi,finished,120,120
+8,Liga I,2026,2026/2027,pitchapi,not_started,120,0
+9,Eliteserien,2021,2021/2022,pitchapi,finished,240,240
+9,Eliteserien,2022,2022/2023,pitchapi,finished,240,240
+9,Eliteserien,2023,2023/2024,pitchapi,finished,240,240
+9,Eliteserien,2024,2024/2025,pitchapi,finished,240,240
+9,Eliteserien,2025,2025/2026,pitchapi,awarded,1,1
+9,Eliteserien,2025,2025/2026,pitchapi,finished,239,239
+9,Eliteserien,2026,2026/2027,pitchapi,finished,168,168
+9,Eliteserien,2026,2026/2027,pitchapi,not_started,32,0
+10,Ligat ha'Al,2024,2024/2025,pitchapi,awarded,3,3
+10,Ligat ha'Al,2024,2024/2025,pitchapi,finished,237,237
+10,Ligat ha'Al,2025,2025/2026,pitchapi,awarded,1,1
+10,Ligat ha'Al,2025,2025/2026,pitchapi,finished,239,239
+10,Ligat ha'Al,2026,2026/2027,pitchapi,finished,70,70
+10,Ligat ha'Al,2026,2026/2027,pitchapi,not_started,112,0
+11,1. Lig,2024,2024/2025,pitchapi,awarded,1,1
+11,1. Lig,2024,2024/2025,pitchapi,finished,384,384
+11,1. Lig,2025,2025/2026,pitchapi,awarded,1,1
+11,1. Lig,2025,2025/2026,pitchapi,finished,384,384
+11,1. Lig,2026,2026/2027,pitchapi,finished,139,139
+11,1. Lig,2026,2026/2027,pitchapi,not_started,241,1
+12,Bundesliga,2021,2021/2022,pitchapi,finished,306,306
+12,Bundesliga,2022,2022/2023,pitchapi,finished,306,306
+12,Bundesliga,2023,2023/2024,pitchapi,finished,306,306
+12,Bundesliga,2024,2024/2025,pitchapi,awarded,1,1
+12,Bundesliga,2024,2024/2025,pitchapi,finished,305,305
+12,Bundesliga,2025,2025/2026,pitchapi,finished,306,306
+12,Bundesliga,2026,2026/2027,pitchapi,finished,81,81
+12,Bundesliga,2026,2026/2027,pitchapi,not_started,225,0
+13,Premiership,2021,2021/2022,pitchapi,finished,228,228
+13,Premiership,2022,2022/2023,pitchapi,finished,228,228
+13,Premiership,2023,2023/2024,pitchapi,finished,228,228
+13,Premiership,2024,2024/2025,pitchapi,finished,228,228
+13,Premiership,2025,2025/2026,pitchapi,finished,228,228
+13,Premiership,2026,2026/2027,pitchapi,finished,74,74
+13,Premiership,2026,2026/2027,pitchapi,not_started,123,0
+14,Primera Division,2024,2024/2025,pitchapi,finished,234,234
+14,Primera Division,2025,2025/2026,pitchapi,canceled,1,1
+14,Primera Division,2025,2025/2026,pitchapi,finished,233,233
+14,Primera Division,2026,2026/2027,pitchapi,awarded,1,1
+14,Primera Division,2026,2026/2027,pitchapi,finished,227,227
+14,Primera Division,2026,2026/2027,pitchapi,not_started,4,0
+15,Allsvenskan,2021,2021/2022,pitchapi,finished,240,240
+15,Allsvenskan,2022,2022/2023,pitchapi,finished,240,240
+15,Allsvenskan,2023,2023/2024,pitchapi,finished,240,240
+15,Allsvenskan,2024,2024/2025,pitchapi,finished,240,240
+15,Allsvenskan,2025,2025/2026,pitchapi,finished,240,240
+15,Allsvenskan,2026,2026/2027,pitchapi,finished,180,180
+15,Allsvenskan,2026,2026/2027,pitchapi,not_started,16,0
+16,Serie A,2024,2024/2025,pitchapi,finished,242,242
+16,Serie A,2025,2025/2026,pitchapi,awarded,1,1
+16,Serie A,2025,2025/2026,pitchapi,finished,311,311
+16,Serie A,2026,2026/2027,pitchapi,finished,287,287
+16,Serie A,2026,2026/2027,pitchapi,not_started,25,0
+17,Challenger Pro League,2025,2025/2026,pitchapi,finished,277,277
+17,Challenger Pro League,2026,2026/2027,pitchapi,finished,70,70
+17,Challenger Pro League,2026,2026/2027,pitchapi,not_started,140,0
+18,Primera A,2024,2024/2025,pitchapi,awarded,3,3
+18,Primera A,2024,2024/2025,pitchapi,finished,429,429
+18,Primera A,2025,2025/2026,pitchapi,awarded,2,2
+18,Primera A,2025,2025/2026,pitchapi,finished,450,450
+18,Primera A,2026,2026/2027,pitchapi,finished,394,394
+18,Primera A,2026,2026/2027,pitchapi,not_started,7,0
+19,Super League,2024,2024/2025,pitchapi,finished,240,240
+19,Super League,2025,2025/2026,pitchapi,finished,240,240
+19,Super League,2026,2026/2027,pitchapi,finished,240,240
+20,Ekstraklasa,2025,2025/2026,pitchapi,finished,306,306
+20,Ekstraklasa,2026,2026/2027,pitchapi,finished,124,124
+20,Ekstraklasa,2026,2026/2027,pitchapi,not_started,182,0
+21,K League 2,2024,2024/2025,pitchapi,finished,236,236
+21,K League 2,2025,2025/2026,pitchapi,finished,275,275
+21,K League 2,2026,2026/2027,pitchapi,finished,256,256
+21,K League 2,2026,2026/2027,pitchapi,not_started,16,0
+22,J. League,2022,2022/2023,pitchapi,finished,306,306
+22,J. League,2023,2023/2024,pitchapi,finished,306,306
+22,J. League,2024,2024/2025,pitchapi,finished,380,380
+22,J. League,2025,2025/2026,pitchapi,finished,380,380
+22,J. League,2026,2026/2027,pitchapi,finished,339,339
+22,J. League,2026,2026/2027,pitchapi,not_started,59,0
+22,J. League,2027,2027/2028,pitchapi,not_started,181,0
+23,K League 1,2022,2022/2023,pitchapi,finished,228,228
+23,K League 1,2023,2023/2024,pitchapi,finished,228,228
+23,K League 1,2024,2024/2025,pitchapi,finished,227,227
+23,K League 1,2025,2025/2026,pitchapi,finished,228,228
+23,K League 1,2026,2026/2027,pitchapi,finished,202,202
+23,K League 1,2026,2026/2027,pitchapi,not_started,19,0
+24,First Division A,2021,2021/2022,pitchapi,awarded,1,1
+24,First Division A,2021,2021/2022,pitchapi,finished,328,328
+24,First Division A,2022,2022/2023,pitchapi,awarded,2,2
+24,First Division A,2022,2022/2023,pitchapi,finished,328,328
+24,First Division A,2023,2023/2024,pitchapi,finished,311,311
+24,First Division A,2024,2024/2025,pitchapi,awarded,1,1
+24,First Division A,2024,2024/2025,pitchapi,finished,312,312
+24,First Division A,2025,2025/2026,pitchapi,finished,313,313
+24,First Division A,2026,2026/2027,pitchapi,finished,99,99
+24,First Division A,2026,2026/2027,pitchapi,not_started,207,0
+25,Premier League,2025,2025/2026,pitchapi,finished,240,240
+25,Premier League,2026,2026/2027,pitchapi,finished,89,89
+25,Premier League,2026,2026/2027,pitchapi,not_started,128,0
+26,HNL,2024,2024/2025,pitchapi,finished,180,180
+26,HNL,2025,2025/2026,pitchapi,finished,180,180
+26,HNL,2026,2026/2027,pitchapi,finished,64,64
+26,HNL,2026,2026/2027,pitchapi,not_started,116,0
+27,Super Liga,2024,2024/2025,pitchapi,finished,296,296
+27,Super Liga,2025,2025/2026,pitchapi,finished,296,296
+27,Super Liga,2026,2026/2027,pitchapi,finished,104,104
+27,Super Liga,2026,2026/2027,pitchapi,not_started,78,0
+28,Saudi First Division,2024,2024/2025,pitchapi,finished,275,275
+28,Saudi First Division,2025,2025/2026,pitchapi,awarded,2,2
+28,Saudi First Division,2025,2025/2026,pitchapi,finished,307,307
+28,Saudi First Division,2026,2026/2027,pitchapi,canceled,3,3
+28,Saudi First Division,2026,2026/2027,pitchapi,finished,95,95
+28,Saudi First Division,2026,2026/2027,pitchapi,not_started,73,73
+29,Veikkausliiga,2024,2024/2025,pitchapi,finished,167,167
+29,Veikkausliiga,2025,2025/2026,pitchapi,finished,177,177
+29,Veikkausliiga,2026,2026/2027,pitchapi,finished,177,177
+30,Ligue 1,2021,2021/2022,pitchapi,finished,380,380
+30,Ligue 1,2022,2022/2023,pitchapi,finished,380,380
+30,Ligue 1,2023,2023/2024,pitchapi,canceled,1,1
+30,Ligue 1,2023,2023/2024,pitchapi,finished,306,306
+30,Ligue 1,2024,2024/2025,pitchapi,finished,306,306
+30,Ligue 1,2025,2025/2026,pitchapi,finished,306,306
+30,Ligue 1,2026,2026/2027,pitchapi,finished,90,90
+30,Ligue 1,2026,2026/2027,pitchapi,not_started,216,0
+31,USL League One,2024,2024/2025,pitchapi,finished,139,139
+31,USL League One,2025,2025/2026,pitchapi,awarded,1,1
+31,USL League One,2025,2025/2026,pitchapi,finished,216,216
+31,USL League One,2026,2026/2027,pitchapi,finished,279,279
+32,MLS Next Pro,2024,2024/2025,pitchapi,finished,421,421
+32,MLS Next Pro,2025,2025/2026,pitchapi,finished,421,421
+32,MLS Next Pro,2026,2026/2027,pitchapi,finished,437,437
+33,J3 League,2024,2024/2025,pitchapi,finished,383,383
+33,J3 League,2025,2025/2026,pitchapi,finished,383,383
+33,J3 League,2026,2026/2027,pitchapi,finished,170,170
+33,J3 League,2026,2026/2027,pitchapi,not_started,210,0
+34,Thai League 1,2025,2025/2026,pitchapi,finished,240,240
+34,Thai League 1,2026,2026/2027,pitchapi,finished,62,62
+34,Thai League 1,2026,2026/2027,pitchapi,not_started,178,0
+35,2. Bundesliga,2021,2021/2022,pitchapi,finished,306,306
+35,2. Bundesliga,2022,2022/2023,pitchapi,finished,306,306
+35,2. Bundesliga,2023,2023/2024,pitchapi,finished,306,306
+35,2. Bundesliga,2024,2024/2025,pitchapi,finished,306,306
+35,2. Bundesliga,2025,2025/2026,pitchapi,finished,306,306
+35,2. Bundesliga,2026,2026/2027,pitchapi,finished,90,90
+35,2. Bundesliga,2026,2026/2027,pitchapi,not_started,207,0
+36,LaLiga2,2025,2025/2026,pitchapi,finished,466,466
+36,LaLiga2,2026,2026/2027,pitchapi,finished,150,150
+36,LaLiga2,2026,2026/2027,pitchapi,not_started,312,0
+37,Liga de Primera,2024,2024/2025,pitchapi,awarded,1,1
+37,Liga de Primera,2024,2024/2025,pitchapi,finished,239,239
+37,Liga de Primera,2025,2025/2026,pitchapi,finished,240,240
+37,Liga de Primera,2026,2026/2027,pitchapi,awarded,2,2
+37,Liga de Primera,2026,2026/2027,pitchapi,finished,214,214
+37,Liga de Primera,2026,2026/2027,pitchapi,not_started,24,0
+38,Serie B,2024,2024/2025,pitchapi,finished,380,380
+38,Serie B,2025,2025/2026,pitchapi,finished,380,380
+38,Serie B,2026,2026/2027,pitchapi,finished,380,380
+38,Serie B,2026,2026/2027,pitchapi,not_started,4,0
+39,Liga 1,2024,2024/2025,pitchapi,finished,306,306
+39,Liga 1,2025,2025/2026,pitchapi,awarded,1,1
+39,Liga 1,2025,2025/2026,pitchapi,canceled,7,5
+39,Liga 1,2025,2025/2026,pitchapi,finished,327,327
+39,Liga 1,2026,2026/2027,pitchapi,finished,302,302
+39,Liga 1,2026,2026/2027,pitchapi,not_started,4,0
+40,Liga MX,2021,2021/2022,pitchapi,finished,171,171
+40,Liga MX,2022,2022/2023,pitchapi,finished,171,171
+40,Liga MX,2023,2023/2024,pitchapi,finished,166,166
+40,Liga MX,2024,2024/2025,pitchapi,finished,167,167
+40,Liga MX,2025,2025/2026,pitchapi,finished,334,334
+40,Liga MX,2026,2026/2027,pitchapi,finished,117,117
+40,Liga MX,2026,2026/2027,pitchapi,not_started,21,0
+41,Qatar Stars League,2024,2024/2025,pitchapi,finished,132,132
+41,Qatar Stars League,2025,2025/2026,pitchapi,awarded,2,2
+41,Qatar Stars League,2025,2025/2026,pitchapi,finished,130,130
+41,Qatar Stars League,2026,2026/2027,pitchapi,finished,54,54
+41,Qatar Stars League,2026,2026/2027,pitchapi,not_started,78,0
+42,Super League 1,2024,2024/2025,pitchapi,finished,1,1
+42,Super League 1,2025,2025/2026,pitchapi,finished,236,236
+42,Super League 1,2026,2026/2027,pitchapi,finished,69,69
+42,Super League 1,2026,2026/2027,pitchapi,not_started,113,0
+43,USL Championship,2024,2024/2025,pitchapi,finished,423,423
+43,USL Championship,2025,2025/2026,pitchapi,awarded,1,1
+43,USL Championship,2025,2025/2026,pitchapi,finished,374,374
+43,USL Championship,2026,2026/2027,pitchapi,finished,389,389
+44,Bundesliga,2021,2021/2022,pitchapi,finished,195,195
+44,Bundesliga,2022,2022/2023,pitchapi,finished,195,195
+44,Bundesliga,2023,2023/2024,pitchapi,finished,195,195
+44,Bundesliga,2024,2024/2025,pitchapi,finished,195,195
+44,Bundesliga,2025,2025/2026,pitchapi,finished,195,195
+44,Bundesliga,2026,2026/2027,pitchapi,finished,72,72
+44,Bundesliga,2026,2026/2027,pitchapi,not_started,60,0
+45,Liga Profesional,2023,2023/2024,pitchapi,finished,378,378
+45,Liga Profesional,2024,2024/2025,pitchapi,finished,377,377
+45,Liga Profesional,2025,2025/2026,pitchapi,finished,510,510
+45,Liga Profesional,2026,2026/2027,pitchapi,finished,497,497
+45,Liga Profesional,2026,2026/2027,pitchapi,not_started,8,0
+45,Liga Profesional,2026,2026/2027,pitchapi,postponed,104,0
+46,Virsliga,2024,2024/2025,pitchapi,finished,180,180
+46,Virsliga,2025,2025/2026,pitchapi,finished,180,180
+46,Virsliga,2026,2026/2027,pitchapi,finished,179,179
+46,Virsliga,2026,2026/2027,pitchapi,postponed,1,0
+47,3. Liga,2024,2024/2025,pitchapi,finished,380,380
+47,3. Liga,2025,2025/2026,pitchapi,finished,380,380
+47,3. Liga,2026,2026/2027,pitchapi,finished,130,130
+47,3. Liga,2026,2026/2027,pitchapi,not_started,250,0
+48,Eerste Divisie,2024,2024/2025,pitchapi,finished,380,380
+48,Eerste Divisie,2025,2025/2026,pitchapi,finished,380,380
+48,Eerste Divisie,2026,2026/2027,pitchapi,finished,147,147
+48,Eerste Divisie,2026,2026/2027,pitchapi,not_started,233,0
+49,Superligaen,2021,2021/2022,pitchapi,finished,193,193
+49,Superligaen,2022,2022/2023,pitchapi,finished,193,193
+49,Superligaen,2023,2023/2024,pitchapi,finished,193,193
+49,Superligaen,2024,2024/2025,pitchapi,finished,193,193
+49,Superligaen,2025,2025/2026,pitchapi,finished,191,191
+49,Superligaen,2026,2026/2027,pitchapi,finished,84,84
+49,Superligaen,2026,2026/2027,pitchapi,not_started,48,0
+50,Division Profesional,2025,2025/2026,pitchapi,finished,263,263
+50,Division Profesional,2026,2026/2027,pitchapi,awarded,1,1
+50,Division Profesional,2026,2026/2027,pitchapi,finished,243,243
+50,Division Profesional,2026,2026/2027,pitchapi,not_started,20,0
+51,Eredivisie,2021,2021/2022,pitchapi,finished,312,312
+51,Eredivisie,2022,2022/2023,pitchapi,finished,312,312
+51,Eredivisie,2023,2023/2024,pitchapi,finished,309,309
+51,Eredivisie,2024,2024/2025,pitchapi,finished,309,309
+51,Eredivisie,2025,2025/2026,pitchapi,finished,309,309
+51,Eredivisie,2026,2026/2027,pitchapi,finished,108,108
+51,Eredivisie,2026,2026/2027,pitchapi,not_started,198,0
+52,A-League,2021,2021/2022,pitchapi,awarded,2,2
+52,A-League,2021,2021/2022,pitchapi,finished,161,161
+52,A-League,2022,2022/2023,pitchapi,finished,163,163
+52,A-League,2023,2023/2024,pitchapi,finished,169,169
+52,A-League,2024,2024/2025,pitchapi,finished,176,176
+52,A-League,2025,2025/2026,pitchapi,finished,163,163
+52,A-League,2026,2026/2027,pitchapi,finished,23,23
+52,A-League,2026,2026/2027,pitchapi,not_started,133,0
+53,1. liga,2024,2024/2025,pitchapi,finished,195,195
+53,1. liga,2025,2025/2026,pitchapi,finished,192,192
+53,1. liga,2026,2026/2027,pitchapi,finished,84,84
+53,1. liga,2026,2026/2027,pitchapi,not_started,48,0
+54,Liga Portugal,2021,2021/2022,pitchapi,finished,272,272
+54,Liga Portugal,2022,2022/2023,pitchapi,finished,306,306
+54,Liga Portugal,2023,2023/2024,pitchapi,finished,306,306
+54,Liga Portugal,2024,2024/2025,pitchapi,finished,306,306
+54,Liga Portugal,2025,2025/2026,pitchapi,finished,306,306
+54,Liga Portugal,2026,2026/2027,pitchapi,finished,90,90
+54,Liga Portugal,2026,2026/2027,pitchapi,not_started,208,0
+55,Premier League,2021,2021/2022,pitchapi,finished,380,380
+55,Premier League,2022,2022/2023,pitchapi,finished,380,380
+55,Premier League,2023,2023/2024,pitchapi,finished,380,380
+55,Premier League,2024,2024/2025,pitchapi,finished,380,380
+55,Premier League,2025,2025/2026,pitchapi,finished,380,380
+55,Premier League,2026,2026/2027,pitchapi,finished,100,100
+55,Premier League,2026,2026/2027,pitchapi,not_started,280,0
+56,Challenge League,2024,2024/2025,pitchapi,awarded,1,1
+56,Challenge League,2024,2024/2025,pitchapi,finished,179,179
+56,Challenge League,2025,2025/2026,pitchapi,finished,180,180
+56,Challenge League,2026,2026/2027,pitchapi,finished,65,65
+56,Challenge League,2026,2026/2027,pitchapi,not_started,25,0
+57,Super League,2021,2021/2022,pitchapi,finished,180,180
+57,Super League,2022,2022/2023,pitchapi,awarded,1,1
+57,Super League,2022,2022/2023,pitchapi,finished,179,179
+57,Super League,2023,2023/2024,pitchapi,finished,227,227
+57,Super League,2024,2024/2025,pitchapi,finished,228,228
+57,Super League,2025,2025/2026,pitchapi,canceled,1,1
+57,Super League,2025,2025/2026,pitchapi,finished,228,228
+57,Super League,2026,2026/2027,pitchapi,finished,78,78
+57,Super League,2026,2026/2027,pitchapi,not_started,54,0
+58,Primera Division,2024,2024/2025,pitchapi,finished,319,319
+58,Primera Division,2025,2025/2026,pitchapi,finished,240,240
+58,Primera Division,2026,2026/2027,pitchapi,finished,200,200
+58,Primera Division,2026,2026/2027,pitchapi,not_started,24,0
+59,1. Division,2024,2024/2025,pitchapi,finished,192,192
+59,1. Division,2025,2025/2026,pitchapi,finished,192,192
+59,1. Division,2026,2026/2027,pitchapi,finished,84,84
+59,1. Division,2026,2026/2027,pitchapi,not_started,48,0
+60,League One,2022,2022/2023,pitchapi,finished,557,557
+60,League One,2023,2023/2024,pitchapi,canceled,2,2
+60,League One,2023,2023/2024,pitchapi,finished,557,557
+60,League One,2024,2024/2025,pitchapi,finished,557,557
+60,League One,2025,2025/2026,pitchapi,finished,557,557
+60,League One,2026,2026/2027,pitchapi,finished,163,163
+60,League One,2026,2026/2027,pitchapi,not_started,389,0
+61,Serie A,2023,2023/2024,pitchapi,finished,379,379
+61,Serie A,2024,2024/2025,pitchapi,finished,378,378
+61,Serie A,2025,2025/2026,pitchapi,finished,377,377
+61,Serie A,2026,2026/2027,pitchapi,finished,303,303
+61,Serie A,2026,2026/2027,pitchapi,not_started,39,0
+62,League Two,2022,2022/2023,pitchapi,finished,557,557
+62,League Two,2023,2023/2024,pitchapi,finished,557,557
+62,League Two,2024,2024/2025,pitchapi,finished,557,557
+62,League Two,2025,2025/2026,pitchapi,finished,557,557
+62,League Two,2026,2026/2027,pitchapi,finished,174,174
+62,League Two,2026,2026/2027,pitchapi,not_started,378,0
+63,Euro 2021,2020,2020/2021,openfootball,finished,51,51
+63,Euro 2021,2023,2023/2024,openfootball,finished,51,51
+63,Euro 2021,2027,2027/2028,openfootball,not_started,51,0
+64,World Cup 1930,1929,1929/1930,openfootball,finished,18,18
+64,World Cup 1930,1933,1933/1934,openfootball,finished,17,17
+64,World Cup 1930,1937,1937/1938,openfootball,finished,18,18
+64,World Cup 1930,1937,1937/1938,openfootball,not_started,1,0
+64,World Cup 1930,1949,1949/1950,openfootball,finished,22,22
+64,World Cup 1930,1953,1953/1954,openfootball,finished,26,26
+64,World Cup 1930,1957,1957/1958,openfootball,finished,35,35
+64,World Cup 1930,1961,1961/1962,openfootball,finished,32,32
+64,World Cup 1930,1965,1965/1966,openfootball,finished,32,32
+64,World Cup 1930,1969,1969/1970,openfootball,finished,32,32
+64,World Cup 1930,1973,1973/1974,openfootball,finished,38,38
+64,World Cup 1930,1977,1977/1978,openfootball,finished,38,38
+64,World Cup 1930,1981,1981/1982,openfootball,finished,52,52
+64,World Cup 1930,1985,1985/1986,openfootball,finished,52,52
+64,World Cup 1930,1989,1989/1990,openfootball,finished,52,52
+64,World Cup 1930,1993,1993/1994,openfootball,finished,52,52
+64,World Cup 1930,1997,1997/1998,openfootball,finished,64,64
+64,World Cup 1930,2001,2001/2002,openfootball,finished,64,64
+64,World Cup 1930,2005,2005/2006,openfootball,finished,64,64
+64,World Cup 1930,2009,2009/2010,openfootball,finished,64,64
+64,World Cup 1930,2013,2013/2014,openfootball,finished,64,64
+64,World Cup 1930,2017,2017/2018,openfootball,finished,64,64
+64,World Cup 1930,2022,2022/2023,openfootball,finished,64,64
+64,World Cup 1930,2025,2025/2026,openfootball,finished,104,104
+65,Club World Cup 2025,2021,2021/2022,openfootball,finished,8,8
+65,Club World Cup 2025,2022,2022/2023,openfootball,finished,7,7
+65,Club World Cup 2025,2023,2023/2024,openfootball,finished,7,7
+65,Club World Cup 2025,2024,2024/2025,openfootball,finished,64,64
+66,Coupe de France 2024/2025,2024,2024/2025,openfootball,finished,200,200
+67,austria-cup-archive,2024,2024/2025,openfootball,finished,63,63
+68,germany-cup-archive,2024,2024/2025,openfootball,finished,63,63
+69,fa-cup-archive,2024,2024/2025,openfootball,finished,123,123
+70,efl-cup-archive,2024,2024/2025,openfootball,finished,93,93
+71,copa-del-rey-archive,2024,2024/2025,openfootball,finished,126,126
+72,coppa-italia-archive,2024,2024/2025,openfootball,finished,45,45
+73,knvb-beker-archive,2024,2024/2025,openfootball,finished,109,109
+74,portugal-cup-archive,2024,2024/2025,openfootball,finished,110,110
+74,portugal-cup-archive,2024,2024/2025,openfootball,not_started,1,0
+75,swiss-cup-archive,2024,2024/2025,openfootball,finished,62,62
+75,swiss-cup-archive,2024,2024/2025,openfootball,not_started,1,0
+76,nations-league,2026,2026/2027,openligadb,finished,48,48
+77,germany-cup,2025,2025/2026,openligadb,finished,63,63
+77,germany-cup,2026,2026/2027,openligadb,finished,48,48
+77,germany-cup,2026,2026/2027,openligadb,not_started,8,0
+78,nations-league,2026,2026/2027,international_results,finished,108,108
+87,EFL Cup (Carabao Cup),2026,2026/2027,open_matchday,finished,84,84
+87,EFL Cup (Carabao Cup),2026,2026/2027,open_matchday,not_started,4,0
+88,FA Cup,2026,2026/2027,open_matchday,finished,142,142
+88,FA Cup,2026,2026/2027,open_matchday,not_started,20,0
+89,Copa del Rey,2026,2026/2027,open_matchday,finished,75,75
+89,Copa del Rey,2026,2026/2027,open_matchday,not_started,6,0
+90,Coppa Italia,2026,2026/2027,open_matchday,finished,28,28
+90,Coppa Italia,2026,2026/2027,open_matchday,not_started,8,0
+91,DFB-Pokal,2026,2026/2027,open_matchday,finished,51,51
+91,DFB-Pokal,2026,2026/2027,open_matchday,not_started,8,0
+92,KNVB Beker,2026,2026/2027,open_matchday,finished,95,95
+92,KNVB Beker,2026,2026/2027,open_matchday,not_started,17,0
+93,Taça de Portugal,2026,2026/2027,open_matchday,finished,113,113
+93,Taça de Portugal,2026,2026/2027,open_matchday,not_started,16,0
+94,Scottish Cup,2026,2026/2027,open_matchday,finished,50,50
+94,Scottish Cup,2026,2026/2027,open_matchday,not_started,20,0
+95,Scottish League Cup,2026,2026/2027,open_matchday,finished,14,14
+95,Scottish League Cup,2026,2026/2027,open_matchday,not_started,1,0
+96,OFB Cup,2026,2026/2027,open_matchday,finished,56,56
+96,OFB Cup,2026,2026/2027,open_matchday,not_started,4,0
+97,Swiss Cup,2026,2026/2027,open_matchday,finished,48,48
+97,Swiss Cup,2026,2026/2027,open_matchday,not_started,8,0
+101,National League,2026,2026/2027,open_matchday,finished,200,200
+101,National League,2026,2026/2027,open_matchday,not_started,352,0
+102,National League North,2026,2026/2027,open_matchday,finished,116,116
+102,National League North,2026,2026/2027,open_matchday,not_started,124,0
+103,National League South,2026,2026/2027,open_matchday,finished,112,112
+103,National League South,2026,2026/2027,open_matchday,not_started,121,0
+104,Northern Premier League,2026,2026/2027,open_matchday,finished,111,111
+104,Northern Premier League,2026,2026/2027,open_matchday,not_started,116,0
+106,Scottish Championship,2026,2026/2027,open_matchday,finished,73,73
+106,Scottish Championship,2026,2026/2027,open_matchday,not_started,107,0
+107,Scottish League One,2026,2026/2027,open_matchday,finished,74,74
+107,Scottish League One,2026,2026/2027,open_matchday,not_started,106,0
+108,Scottish League Two,2026,2026/2027,open_matchday,finished,70,70
+108,Scottish League Two,2026,2026/2027,open_matchday,not_started,110,0
+123,League of Ireland First Division,2026,2026/2027,open_matchday,finished,106,106
+124,League of Ireland National League,2026,2026/2027,open_matchday,finished,60,60
+124,League of Ireland National League,2026,2026/2027,open_matchday,not_started,2,0
+126,I Liga,2026,2026/2027,open_matchday,finished,106,106
+126,I Liga,2026,2026/2027,open_matchday,not_started,117,0
+127,II Liga,2026,2026/2027,open_matchday,finished,105,105
+127,II Liga,2026,2026/2027,open_matchday,not_started,111,0
+128,Pro League U21,2026,2026/2027,open_matchday,finished,43,43
+128,Pro League U21,2026,2026/2027,open_matchday,not_started,67,0
+129,Cymru Premier,2026,2026/2027,open_matchday,finished,105,105
+129,Cymru Premier,2026,2026/2027,open_matchday,not_started,113,0
+130,Cymru North,2026,2026/2027,open_matchday,finished,106,106
+130,Cymru North,2026,2026/2027,open_matchday,not_started,107,0
+131,Cymru South,2026,2026/2027,open_matchday,finished,99,99
+131,Cymru South,2026,2026/2027,open_matchday,not_started,108,0
+134,Ukrainian Premier League,2026,2026/2027,open_matchday,finished,90,90
+134,Ukrainian Premier League,2026,2026/2027,open_matchday,not_started,115,0
+135,Cyprus League,2026,2026/2027,open_matchday,finished,63,63
+135,Cyprus League,2026,2026/2027,open_matchday,not_started,112,0
+137,Prva Liga,2026,2026/2027,open_matchday,finished,74,74
+137,Prva Liga,2026,2026/2027,open_matchday,not_started,106,0
+139,Kazakhstan Premier League,2026,2026/2027,open_matchday,finished,107,107
+144,DFB Pokal 2019/20,2018,2018/2019,openfootball,finished,63,63
+144,DFB Pokal 2019/20,2019,2019/2020,openfootball,finished,63,63
+144,DFB Pokal 2019/20,2020,2020/2021,openfootball,finished,63,63
+145,Deutsche 2. Bundesliga 2019/20,2012,2012/2013,openfootball,finished,306,306
+145,Deutsche 2. Bundesliga 2019/20,2013,2013/2014,openfootball,finished,306,306
+145,Deutsche 2. Bundesliga 2019/20,2014,2014/2015,openfootball,finished,306,306
+145,Deutsche 2. Bundesliga 2019/20,2015,2015/2016,openfootball,finished,306,306
+145,Deutsche 2. Bundesliga 2019/20,2016,2016/2017,openfootball,finished,306,306
+145,Deutsche 2. Bundesliga 2019/20,2017,2017/2018,openfootball,finished,306,306
+145,Deutsche 2. Bundesliga 2019/20,2018,2018/2019,openfootball,finished,306,306
+145,Deutsche 2. Bundesliga 2019/20,2019,2019/2020,openfootball,finished,306,306
+145,Deutsche 2. Bundesliga 2019/20,2020,2020/2021,openfootball,finished,306,306
+146,Deutsche 3. Liga 2019/20,2014,2014/2015,openfootball,finished,380,380
+146,Deutsche 3. Liga 2019/20,2015,2015/2016,openfootball,finished,380,380
+146,Deutsche 3. Liga 2019/20,2016,2016/2017,openfootball,finished,380,380
+146,Deutsche 3. Liga 2019/20,2017,2017/2018,openfootball,finished,380,380
+146,Deutsche 3. Liga 2019/20,2018,2018/2019,openfootball,finished,380,380
+146,Deutsche 3. Liga 2019/20,2019,2019/2020,openfootball,finished,380,380
+146,Deutsche 3. Liga 2019/20,2020,2020/2021,openfootball,finished,380,380
+147,Deutsche Bundesliga 2019/20,2010,2010/2011,openfootball,finished,306,306
+147,Deutsche Bundesliga 2019/20,2011,2011/2012,openfootball,finished,306,306
+147,Deutsche Bundesliga 2019/20,2012,2012/2013,openfootball,finished,306,306
+147,Deutsche Bundesliga 2019/20,2013,2013/2014,openfootball,finished,306,306
+147,Deutsche Bundesliga 2019/20,2014,2014/2015,openfootball,finished,306,306
+147,Deutsche Bundesliga 2019/20,2015,2015/2016,openfootball,finished,306,306
+147,Deutsche Bundesliga 2019/20,2016,2016/2017,openfootball,finished,306,306
+147,Deutsche Bundesliga 2019/20,2017,2017/2018,openfootball,finished,306,306
+147,Deutsche Bundesliga 2019/20,2018,2018/2019,openfootball,finished,306,306
+147,Deutsche Bundesliga 2019/20,2019,2019/2020,openfootball,finished,306,306
+147,Deutsche Bundesliga 2019/20,2020,2020/2021,openfootball,finished,306,306
+148,English Championship 2019/20,2010,2010/2011,openfootball,finished,552,552
+148,English Championship 2019/20,2011,2011/2012,openfootball,finished,552,552
+148,English Championship 2019/20,2012,2012/2013,openfootball,finished,552,552
+148,English Championship 2019/20,2013,2013/2014,openfootball,finished,552,552
+148,English Championship 2019/20,2014,2014/2015,openfootball,finished,552,552
+148,English Championship 2019/20,2015,2015/2016,openfootball,finished,552,552
+148,English Championship 2019/20,2018,2018/2019,openfootball,finished,552,552
+148,English Championship 2019/20,2019,2019/2020,openfootball,finished,552,552
+148,English Championship 2019/20,2020,2020/2021,openfootball,finished,552,552
+149,English League One 2019/20,2010,2010/2011,openfootball,finished,552,552
+149,English League One 2019/20,2011,2011/2012,openfootball,finished,552,552
+149,English League One 2019/20,2012,2012/2013,openfootball,finished,552,552
+149,English League One 2019/20,2013,2013/2014,openfootball,finished,552,552
+149,English League One 2019/20,2014,2014/2015,openfootball,finished,552,552
+149,English League One 2019/20,2015,2015/2016,openfootball,finished,552,552
+149,English League One 2019/20,2018,2018/2019,openfootball,finished,552,552
+149,English League One 2019/20,2019,2019/2020,openfootball,finished,506,400
+149,English League One 2019/20,2020,2020/2021,openfootball,finished,552,552
+150,English League Two 2019/20,2010,2010/2011,openfootball,finished,552,552
+150,English League Two 2019/20,2011,2011/2012,openfootball,finished,552,552
+150,English League Two 2019/20,2012,2012/2013,openfootball,finished,552,552
+150,English League Two 2019/20,2013,2013/2014,openfootball,finished,552,552
+150,English League Two 2019/20,2014,2014/2015,openfootball,finished,552,552
+150,English League Two 2019/20,2015,2015/2016,openfootball,finished,552,552
+150,English League Two 2019/20,2018,2018/2019,openfootball,finished,552,552
+150,English League Two 2019/20,2019,2019/2020,openfootball,finished,552,440
+150,English League Two 2019/20,2020,2020/2021,openfootball,finished,552,552
+151,English Premier League 2019/20,2010,2010/2011,openfootball,finished,380,380
+151,English Premier League 2019/20,2011,2011/2012,openfootball,finished,380,380
+151,English Premier League 2019/20,2012,2012/2013,openfootball,finished,380,380
+151,English Premier League 2019/20,2013,2013/2014,openfootball,finished,380,380
+151,English Premier League 2019/20,2014,2014/2015,openfootball,finished,380,380
+151,English Premier League 2019/20,2015,2015/2016,openfootball,finished,380,380
+151,English Premier League 2019/20,2016,2016/2017,openfootball,finished,380,380
+151,English Premier League 2019/20,2017,2017/2018,openfootball,finished,380,380
+151,English Premier League 2019/20,2018,2018/2019,openfootball,finished,380,380
+151,English Premier League 2019/20,2019,2019/2020,openfootball,finished,444,444
+151,English Premier League 2019/20,2020,2020/2021,openfootball,finished,380,380
+152,ÖFB Cup 2019/20,2018,2018/2019,openfootball,finished,63,63
+152,ÖFB Cup 2019/20,2019,2019/2020,openfootball,finished,63,63
+152,ÖFB Cup 2019/20,2020,2020/2021,openfootball,finished,62,62
+153,Österr. 2. Liga 2019/20,2010,2010/2011,openfootball,finished,180,180
+153,Österr. 2. Liga 2019/20,2011,2011/2012,openfootball,finished,180,180
+153,Österr. 2. Liga 2019/20,2012,2012/2013,openfootball,finished,180,180
+153,Österr. 2. Liga 2019/20,2013,2013/2014,openfootball,finished,180,180
+153,Österr. 2. Liga 2019/20,2014,2014/2015,openfootball,finished,180,180
+153,Österr. 2. Liga 2019/20,2015,2015/2016,openfootball,finished,180,180
+153,Österr. 2. Liga 2019/20,2016,2016/2017,openfootball,finished,180,180
+153,Österr. 2. Liga 2019/20,2017,2017/2018,openfootball,finished,180,180
+153,Österr. 2. Liga 2019/20,2018,2018/2019,openfootball,finished,240,240
+153,Österr. 2. Liga 2019/20,2019,2019/2020,openfootball,finished,240,240
+153,Österr. 2. Liga 2019/20,2020,2020/2021,openfootball,finished,240,240
+154,Österr. Bundesliga 2019/20,2010,2010/2011,openfootball,finished,180,180
+154,Österr. Bundesliga 2019/20,2011,2011/2012,openfootball,finished,180,180
+154,Österr. Bundesliga 2019/20,2012,2012/2013,openfootball,finished,180,180
+154,Österr. Bundesliga 2019/20,2013,2013/2014,openfootball,finished,180,180
+154,Österr. Bundesliga 2019/20,2014,2014/2015,openfootball,finished,180,180
+154,Österr. Bundesliga 2019/20,2015,2015/2016,openfootball,finished,180,180
+154,Österr. Bundesliga 2019/20,2016,2016/2017,openfootball,finished,180,180
+154,Österr. Bundesliga 2019/20,2017,2017/2018,openfootball,finished,180,180
+154,Österr. Bundesliga 2019/20,2018,2018/2019,openfootball,finished,196,196
+154,Österr. Bundesliga 2019/20,2019,2019/2020,openfootball,finished,205,205
+154,Österr. Bundesliga 2019/20,2020,2020/2021,openfootball,finished,196,196
+155,Belgium First Division A 2019/20,2018,2018/2019,openfootball,finished,270,270
+155,Belgium First Division A 2019/20,2019,2019/2020,openfootball,finished,240,232
+155,Belgium First Division A 2019/20,2020,2020/2021,openfootball,finished,330,330
+156,Primera División de España 2019/20,2012,2012/2013,openfootball,finished,380,380
+156,Primera División de España 2019/20,2013,2013/2014,openfootball,finished,380,380
+156,Primera División de España 2019/20,2014,2014/2015,openfootball,finished,380,380
+156,Primera División de España 2019/20,2015,2015/2016,openfootball,finished,380,380
+156,Primera División de España 2019/20,2016,2016/2017,openfootball,finished,380,380
+156,Primera División de España 2019/20,2017,2017/2018,openfootball,finished,380,380
+156,Primera División de España 2019/20,2018,2018/2019,openfootball,finished,380,380
+156,Primera División de España 2019/20,2019,2019/2020,openfootball,finished,380,380
+156,Primera División de España 2019/20,2020,2020/2021,openfootball,finished,380,380
+157,Segunda División de España 2019/20,2012,2012/2013,openfootball,finished,462,462
+157,Segunda División de España 2019/20,2013,2013/2014,openfootball,finished,462,462
+157,Segunda División de España 2019/20,2014,2014/2015,openfootball,finished,462,462
+157,Segunda División de España 2019/20,2015,2015/2016,openfootball,finished,462,462
+157,Segunda División de España 2019/20,2016,2016/2017,openfootball,finished,462,462
+157,Segunda División de España 2019/20,2017,2017/2018,openfootball,finished,462,462
+157,Segunda División de España 2019/20,2018,2018/2019,openfootball,finished,462,462
+157,Segunda División de España 2019/20,2019,2019/2020,openfootball,finished,462,462
+157,Segunda División de España 2019/20,2020,2020/2021,openfootball,finished,462,462
+158,UEFA Champions League 2019/20,2011,2011/2012,openfootball,finished,139,139
+158,UEFA Champions League 2019/20,2012,2012/2013,openfootball,finished,139,139
+158,UEFA Champions League 2019/20,2013,2013/2014,openfootball,finished,139,139
+158,UEFA Champions League 2019/20,2014,2014/2015,openfootball,finished,143,143
+158,UEFA Champions League 2019/20,2015,2015/2016,openfootball,finished,137,137
+158,UEFA Champions League 2019/20,2016,2016/2017,openfootball,finished,137,137
+158,UEFA Champions League 2019/20,2017,2017/2018,openfootball,finished,137,137
+158,UEFA Champions League 2019/20,2018,2018/2019,openfootball,finished,139,139
+158,UEFA Champions League 2019/20,2019,2019/2020,openfootball,finished,127,127
+159,French Ligue 1 2019/20,2014,2014/2015,openfootball,finished,380,380
+159,French Ligue 1 2019/20,2015,2015/2016,openfootball,finished,380,380
+159,French Ligue 1 2019/20,2016,2016/2017,openfootball,finished,380,380
+159,French Ligue 1 2019/20,2017,2017/2018,openfootball,finished,380,380
+159,French Ligue 1 2019/20,2018,2018/2019,openfootball,finished,380,380
+159,French Ligue 1 2019/20,2019,2019/2020,openfootball,finished,380,279
+159,French Ligue 1 2019/20,2020,2020/2021,openfootball,finished,380,380
+160,French Ligue 2 2019/20,2014,2014/2015,openfootball,finished,380,380
+160,French Ligue 2 2019/20,2015,2015/2016,openfootball,finished,380,380
+160,French Ligue 2 2019/20,2016,2016/2017,openfootball,finished,380,380
+160,French Ligue 2 2019/20,2017,2017/2018,openfootball,finished,380,380
+160,French Ligue 2 2019/20,2018,2018/2019,openfootball,finished,380,380
+160,French Ligue 2 2019/20,2019,2019/2020,openfootball,finished,380,280
+160,French Ligue 2 2019/20,2020,2020/2021,openfootball,finished,380,380
+161,Greek Super League 2019/20,2018,2018/2019,openfootball,finished,240,240
+161,Greek Super League 2019/20,2019,2019/2020,openfootball,finished,240,240
+161,Greek Super League 2019/20,2020,2020/2021,openfootball,finished,240,240
+162,Italian Serie A 2019/20,2013,2013/2014,openfootball,finished,380,380
+162,Italian Serie A 2019/20,2014,2014/2015,openfootball,finished,380,380
+162,Italian Serie A 2019/20,2015,2015/2016,openfootball,finished,380,380
+162,Italian Serie A 2019/20,2016,2016/2017,openfootball,finished,380,380
+162,Italian Serie A 2019/20,2017,2017/2018,openfootball,finished,380,380
+162,Italian Serie A 2019/20,2018,2018/2019,openfootball,finished,380,380
+162,Italian Serie A 2019/20,2019,2019/2020,openfootball,finished,380,380
+162,Italian Serie A 2019/20,2020,2020/2021,openfootball,finished,380,380
+163,Italian Serie B 2019/20,2013,2013/2014,openfootball,finished,472,472
+163,Italian Serie B 2019/20,2014,2014/2015,openfootball,finished,472,472
+163,Italian Serie B 2019/20,2015,2015/2016,openfootball,finished,472,472
+163,Italian Serie B 2019/20,2016,2016/2017,openfootball,finished,470,470
+163,Italian Serie B 2019/20,2017,2017/2018,openfootball,finished,472,472
+163,Italian Serie B 2019/20,2018,2018/2019,openfootball,finished,352,352
+163,Italian Serie B 2019/20,2019,2019/2020,openfootball,finished,390,390
+163,Italian Serie B 2019/20,2020,2020/2021,openfootball,finished,388,388
+164,Netherlands Eredivisie 2019/20,2018,2018/2019,openfootball,finished,306,306
+164,Netherlands Eredivisie 2019/20,2019,2019/2020,openfootball,finished,306,232
+164,Netherlands Eredivisie 2019/20,2020,2020/2021,openfootball,finished,306,306
+165,Portuguese Primeira Liga 2019/20,2018,2018/2019,openfootball,finished,306,306
+165,Portuguese Primeira Liga 2019/20,2019,2019/2020,openfootball,finished,306,306
+165,Portuguese Primeira Liga 2019/20,2020,2020/2021,openfootball,finished,306,306
+166,Russia 1. Division 2019/20,2019,2019/2020,openfootball,finished,240,240
+167,Russia Premier League 2019/20,2018,2018/2019,openfootball,finished,240,240
+167,Russia Premier League 2019/20,2019,2019/2020,openfootball,finished,240,240
+167,Russia Premier League 2019/20,2020,2020/2021,openfootball,finished,240,240
+168,Swiss Challenge League 2019/20,2019,2019/2020,openfootball,finished,180,180
+168,Swiss Challenge League 2019/20,2020,2020/2021,openfootball,finished,180,180
+169,Swiss Super League 2019/20,2014,2014/2015,openfootball,finished,180,180
+169,Swiss Super League 2019/20,2018,2018/2019,openfootball,finished,180,180
+169,Swiss Super League 2019/20,2019,2019/2020,openfootball,finished,180,180
+169,Swiss Super League 2019/20,2020,2020/2021,openfootball,finished,180,180
+170,Turkish 1. Lig 2019/20,2019,2019/2020,openfootball,finished,311,311
+171,Turkish Süper Lig 2019/20,2018,2018/2019,openfootball,finished,306,306
+171,Turkish Süper Lig 2019/20,2019,2019/2020,openfootball,finished,306,306
+171,Turkish Süper Lig 2019/20,2020,2020/2021,openfootball,finished,420,420
+172,Scottish Premiership 2019/20,2018,2018/2019,openfootball,finished,198,198
+172,Scottish Premiership 2019/20,2019,2019/2020,openfootball,finished,198,179
+172,Scottish Premiership 2019/20,2020,2020/2021,openfootball,finished,198,198
+173,Écosse · Division 2,1994,1994/1995,engsoccerdata,finished,180,180
+173,Écosse · Division 2,1995,1995/1996,engsoccerdata,finished,180,180
+173,Écosse · Division 2,1996,1996/1997,engsoccerdata,finished,180,180
+173,Écosse · Division 2,1997,1997/1998,engsoccerdata,finished,180,180
+173,Écosse · Division 2,1998,1998/1999,engsoccerdata,finished,180,180
+173,Écosse · Division 2,1999,1999/2000,engsoccerdata,finished,180,180
+173,Écosse · Division 2,2000,2000/2001,engsoccerdata,finished,180,180
+173,Écosse · Division 2,2001,2001/2002,engsoccerdata,finished,180,180
+173,Écosse · Division 2,2002,2002/2003,engsoccerdata,finished,180,180
+173,Écosse · Division 2,2003,2003/2004,engsoccerdata,finished,180,180
+173,Écosse · Division 2,2004,2004/2005,engsoccerdata,finished,180,180
+173,Écosse · Division 2,2005,2005/2006,engsoccerdata,finished,180,180
+173,Écosse · Division 2,2006,2006/2007,engsoccerdata,finished,180,180
+173,Écosse · Division 2,2007,2007/2008,engsoccerdata,finished,180,180
+173,Écosse · Division 2,2008,2008/2009,engsoccerdata,finished,180,180
+173,Écosse · Division 2,2009,2009/2010,engsoccerdata,finished,180,180
+173,Écosse · Division 2,2010,2010/2011,engsoccerdata,finished,180,180
+173,Écosse · Division 2,2011,2011/2012,engsoccerdata,finished,180,180
+173,Écosse · Division 2,2012,2012/2013,engsoccerdata,finished,180,180
+173,Écosse · Division 2,2013,2013/2014,engsoccerdata,finished,180,180
+173,Écosse · Division 2,2014,2014/2015,engsoccerdata,finished,180,180
+173,Écosse · Division 2,2015,2015/2016,engsoccerdata,finished,180,180
+173,Écosse · Division 2,2016,2016/2017,engsoccerdata,finished,180,180
+173,Écosse · Division 2,2017,2017/2018,engsoccerdata,finished,180,180
+173,Écosse · Division 2,2018,2018/2019,engsoccerdata,finished,180,180
+173,Écosse · Division 2,2019,2019/2020,engsoccerdata,finished,137,137
+173,Écosse · Division 2,2020,2020/2021,engsoccerdata,finished,135,135
+174,Écosse · Division 3,1997,1997/1998,engsoccerdata,finished,180,180
+174,Écosse · Division 3,1998,1998/1999,engsoccerdata,finished,180,180
+174,Écosse · Division 3,1999,1999/2000,engsoccerdata,finished,180,180
+174,Écosse · Division 3,2000,2000/2001,engsoccerdata,finished,180,180
+174,Écosse · Division 3,2001,2001/2002,engsoccerdata,finished,180,180
+174,Écosse · Division 3,2002,2002/2003,engsoccerdata,finished,180,180
+174,Écosse · Division 3,2003,2003/2004,engsoccerdata,finished,180,180
+174,Écosse · Division 3,2004,2004/2005,engsoccerdata,finished,180,180
+174,Écosse · Division 3,2005,2005/2006,engsoccerdata,finished,180,180
+174,Écosse · Division 3,2006,2006/2007,engsoccerdata,finished,180,180
+174,Écosse · Division 3,2007,2007/2008,engsoccerdata,finished,180,180
+174,Écosse · Division 3,2008,2008/2009,engsoccerdata,finished,180,180
+174,Écosse · Division 3,2009,2009/2010,engsoccerdata,finished,180,180
+174,Écosse · Division 3,2010,2010/2011,engsoccerdata,finished,180,180
+174,Écosse · Division 3,2011,2011/2012,engsoccerdata,finished,180,180
+174,Écosse · Division 3,2012,2012/2013,engsoccerdata,finished,180,180
+174,Écosse · Division 3,2013,2013/2014,engsoccerdata,finished,180,180
+174,Écosse · Division 3,2014,2014/2015,engsoccerdata,finished,180,180
+174,Écosse · Division 3,2015,2015/2016,engsoccerdata,finished,180,180
+174,Écosse · Division 3,2016,2016/2017,engsoccerdata,finished,180,180
+174,Écosse · Division 3,2017,2017/2018,engsoccerdata,finished,180,180
+174,Écosse · Division 3,2018,2018/2019,engsoccerdata,finished,180,180
+174,Écosse · Division 3,2019,2019/2020,engsoccerdata,finished,139,139
+174,Écosse · Division 3,2020,2020/2021,engsoccerdata,finished,110,110
+175,Écosse · Division 4,1997,1997/1998,engsoccerdata,finished,180,180
+175,Écosse · Division 4,1998,1998/1999,engsoccerdata,finished,180,180
+175,Écosse · Division 4,1999,1999/2000,engsoccerdata,finished,180,180
+175,Écosse · Division 4,2000,2000/2001,engsoccerdata,finished,180,180
+175,Écosse · Division 4,2001,2001/2002,engsoccerdata,finished,180,180
+175,Écosse · Division 4,2002,2002/2003,engsoccerdata,finished,180,180
+175,Écosse · Division 4,2003,2003/2004,engsoccerdata,finished,180,180
+175,Écosse · Division 4,2004,2004/2005,engsoccerdata,finished,180,180
+175,Écosse · Division 4,2005,2005/2006,engsoccerdata,finished,180,180
+175,Écosse · Division 4,2006,2006/2007,engsoccerdata,finished,180,180
+175,Écosse · Division 4,2007,2007/2008,engsoccerdata,finished,180,180
+175,Écosse · Division 4,2008,2008/2009,engsoccerdata,finished,180,180
+175,Écosse · Division 4,2009,2009/2010,engsoccerdata,finished,180,180
+175,Écosse · Division 4,2010,2010/2011,engsoccerdata,finished,180,180
+175,Écosse · Division 4,2011,2011/2012,engsoccerdata,finished,180,180
+175,Écosse · Division 4,2012,2012/2013,engsoccerdata,finished,180,180
+175,Écosse · Division 4,2013,2013/2014,engsoccerdata,finished,180,180
+175,Écosse · Division 4,2014,2014/2015,engsoccerdata,finished,180,180
+175,Écosse · Division 4,2015,2015/2016,engsoccerdata,finished,180,180
+175,Écosse · Division 4,2016,2016/2017,engsoccerdata,finished,180,180
+175,Écosse · Division 4,2017,2017/2018,engsoccerdata,finished,180,180
+175,Écosse · Division 4,2018,2018/2019,engsoccerdata,finished,180,180
+175,Écosse · Division 4,2019,2019/2020,engsoccerdata,finished,137,137
+175,Écosse · Division 4,2020,2020/2021,engsoccerdata,finished,110,110
+176,Coupe de la Ligue,2019,2019/2020,worldclub,finished,87,87
+176,Coupe de la Ligue,2020,2020/2021,worldclub,finished,84,84
+176,Coupe de la Ligue,2021,2021/2022,worldclub,finished,79,79
+176,Coupe de la Ligue,2022,2022/2023,worldclub,finished,86,86
+176,Coupe de la Ligue,2023,2023/2024,worldclub,finished,91,91
+176,Coupe de la Ligue,2024,2024/2025,worldclub,finished,82,82
+177,FA Cup,2019,2019/2020,worldclub,finished,150,150
+177,FA Cup,2020,2020/2021,worldclub,finished,121,121
+177,FA Cup,2021,2021/2022,worldclub,finished,132,132
+177,FA Cup,2022,2022/2023,worldclub,finished,139,139
+177,FA Cup,2023,2023/2024,worldclub,finished,142,142
+177,FA Cup,2024,2024/2025,worldclub,finished,39,39
+178,Coupe du Roi,2000,2000/2001,worldclub,finished,72,72
+178,Coupe du Roi,2001,2001/2002,worldclub,finished,67,67
+178,Coupe du Roi,2002,2002/2003,worldclub,finished,71,71
+178,Coupe du Roi,2003,2003/2004,worldclub,finished,72,72
+178,Coupe du Roi,2004,2004/2005,worldclub,finished,65,65
+178,Coupe du Roi,2005,2005/2006,worldclub,finished,47,47
+178,Coupe du Roi,2006,2006/2007,worldclub,finished,63,63
+178,Coupe du Roi,2007,2007/2008,worldclub,finished,57,57
+178,Coupe du Roi,2008,2008/2009,worldclub,finished,56,56
+178,Coupe du Roi,2009,2009/2010,worldclub,finished,58,58
+178,Coupe du Roi,2010,2010/2011,worldclub,finished,56,56
+178,Coupe du Roi,2011,2011/2012,worldclub,finished,58,58
+178,Coupe du Roi,2012,2012/2013,worldclub,finished,55,55
+178,Coupe du Roi,2013,2013/2014,worldclub,finished,103,103
+178,Coupe du Roi,2014,2014/2015,worldclub,finished,103,103
+178,Coupe du Roi,2015,2015/2016,worldclub,finished,109,109
+178,Coupe du Roi,2016,2016/2017,worldclub,finished,104,104
+178,Coupe du Roi,2017,2017/2018,worldclub,finished,109,109
+178,Coupe du Roi,2018,2018/2019,worldclub,finished,91,91
+178,Coupe du Roi,2019,2019/2020,worldclub,finished,112,112
+178,Coupe du Roi,2020,2020/2021,worldclub,finished,114,114
+178,Coupe du Roi,2021,2021/2022,worldclub,finished,122,122
+178,Coupe du Roi,2022,2022/2023,worldclub,finished,120,120
+178,Coupe du Roi,2023,2023/2024,worldclub,finished,118,118
+178,Coupe du Roi,2024,2024/2025,worldclub,finished,57,57
+179,Ligue Europa,2006,2006/2007,worldclub,finished,196,196
+179,Ligue Europa,2009,2009/2010,worldclub,finished,191,191
+179,Ligue Europa,2011,2011/2012,worldclub,finished,194,194
+179,Ligue Europa,2012,2012/2013,worldclub,finished,189,189
+179,Ligue Europa,2013,2013/2014,worldclub,finished,182,182
+179,Ligue Europa,2014,2014/2015,worldclub,finished,189,189
+179,Ligue Europa,2015,2015/2016,worldclub,finished,192,192
+179,Ligue Europa,2016,2016/2017,worldclub,finished,194,194
+179,Ligue Europa,2017,2017/2018,worldclub,finished,188,188
+179,Ligue Europa,2018,2018/2019,worldclub,finished,189,189
+179,Ligue Europa,2019,2019/2020,worldclub,finished,190,190
+179,Ligue Europa,2020,2020/2021,worldclub,finished,191,191
+180,Coupe de France,1995,1995/1996,worldclub,finished,60,60
+180,Coupe de France,1996,1996/1997,worldclub,finished,58,58
+180,Coupe de France,1997,1997/1998,worldclub,finished,59,59
+180,Coupe de France,1998,1998/1999,worldclub,finished,61,61
+180,Coupe de France,1999,1999/2000,worldclub,finished,60,60
+180,Coupe de France,2000,2000/2001,worldclub,finished,56,56
+180,Coupe de France,2001,2001/2002,worldclub,finished,58,58
+180,Coupe de France,2002,2002/2003,worldclub,finished,58,58
+180,Coupe de France,2003,2003/2004,worldclub,finished,55,55
+180,Coupe de France,2004,2004/2005,worldclub,finished,62,62
+180,Coupe de France,2005,2005/2006,worldclub,finished,60,60
+180,Coupe de France,2006,2006/2007,worldclub,finished,83,83
+180,Coupe de France,2007,2007/2008,worldclub,finished,56,56
+180,Coupe de France,2008,2008/2009,worldclub,finished,58,58
+180,Coupe de France,2009,2009/2010,worldclub,finished,60,60
+180,Coupe de France,2010,2010/2011,worldclub,finished,61,61
+180,Coupe de France,2011,2011/2012,worldclub,finished,59,59
+180,Coupe de France,2012,2012/2013,worldclub,finished,61,61
+180,Coupe de France,2013,2013/2014,worldclub,finished,61,61
+180,Coupe de France,2014,2014/2015,worldclub,finished,59,59
+180,Coupe de France,2015,2015/2016,worldclub,finished,62,62
+180,Coupe de France,2016,2016/2017,worldclub,finished,62,62
+180,Coupe de France,2017,2017/2018,worldclub,finished,61,61
+180,Coupe de France,2018,2018/2019,worldclub,finished,61,61
+180,Coupe de France,2019,2019/2020,worldclub,finished,61,61
+180,Coupe de France,2020,2020/2021,worldclub,finished,97,97
+180,Coupe de France,2021,2021/2022,worldclub,finished,177,177
+180,Coupe de France,2022,2022/2023,worldclub,finished,176,176
+180,Coupe de France,2023,2023/2024,worldclub,finished,192,192
+181,Eliteserien 2019,2000,2000/2001,worldclub,finished,173,173
+181,Eliteserien 2019,2001,2001/2002,worldclub,finished,177,177
+181,Eliteserien 2019,2002,2002/2003,worldclub,finished,170,170
+181,Eliteserien 2019,2003,2003/2004,worldclub,finished,175,175
+181,Eliteserien 2019,2004,2004/2005,worldclub,finished,170,170
+181,Eliteserien 2019,2005,2005/2006,worldclub,finished,170,170
+181,Eliteserien 2019,2006,2006/2007,worldclub,finished,170,170
+181,Eliteserien 2019,2007,2007/2008,worldclub,finished,175,175
+181,Eliteserien 2019,2008,2008/2009,worldclub,finished,165,165
+181,Eliteserien 2019,2009,2009/2010,worldclub,finished,234,234
+181,Eliteserien 2019,2010,2010/2011,worldclub,finished,219,219
+181,Eliteserien 2019,2011,2011/2012,worldclub,finished,229,229
+181,Eliteserien 2019,2012,2012/2013,worldclub,finished,220,220
+181,Eliteserien 2019,2013,2013/2014,worldclub,finished,227,227
+181,Eliteserien 2019,2014,2014/2015,worldclub,finished,229,229
+181,Eliteserien 2019,2015,2015/2016,worldclub,finished,232,232
+181,Eliteserien 2019,2016,2016/2017,worldclub,finished,225,225
+181,Eliteserien 2019,2017,2017/2018,worldclub,finished,225,225
+181,Eliteserien 2019,2018,2018/2019,worldclub,finished,229,229
+181,Eliteserien 2019,2019,2019/2020,worldclub,finished,220,220
+181,Eliteserien 2019,2020,2020/2021,worldclub,finished,227,227
+182,Ekstraklasa,1994,1994/1995,worldclub,finished,271,271
+182,Ekstraklasa,1995,1995/1996,worldclub,finished,270,270
+182,Ekstraklasa,1996,1996/1997,worldclub,finished,269,269
+182,Ekstraklasa,1997,1997/1998,worldclub,finished,282,282
+182,Ekstraklasa,1998,1998/1999,worldclub,finished,220,220
+182,Ekstraklasa,1999,1999/2000,worldclub,finished,226,226
+182,Ekstraklasa,2000,2000/2001,worldclub,finished,221,221
+182,Ekstraklasa,2001,2001/2002,worldclub,finished,103,103
+182,Ekstraklasa,2002,2002/2003,worldclub,finished,217,217
+182,Ekstraklasa,2003,2003/2004,worldclub,finished,166,166
+182,Ekstraklasa,2004,2004/2005,worldclub,finished,170,170
+182,Ekstraklasa,2005,2005/2006,worldclub,finished,212,212
+182,Ekstraklasa,2006,2006/2007,worldclub,finished,207,207
+182,Ekstraklasa,2007,2007/2008,worldclub,finished,214,214
+182,Ekstraklasa,2008,2008/2009,worldclub,finished,214,214
+182,Ekstraklasa,2009,2009/2010,worldclub,finished,216,216
+182,Ekstraklasa,2010,2010/2011,worldclub,finished,215,215
+182,Ekstraklasa,2011,2011/2012,worldclub,finished,213,213
+182,Ekstraklasa,2012,2012/2013,worldclub,finished,223,223
+182,Ekstraklasa,2013,2013/2014,worldclub,finished,267,267
+182,Ekstraklasa,2014,2014/2015,worldclub,finished,223,223
+182,Ekstraklasa,2015,2015/2016,worldclub,finished,269,269
+182,Ekstraklasa,2016,2016/2017,worldclub,finished,268,268
+182,Ekstraklasa,2017,2017/2018,worldclub,finished,269,269
+182,Ekstraklasa,2018,2018/2019,worldclub,finished,277,277
+182,Ekstraklasa,2019,2019/2020,worldclub,finished,274,274
+182,Ekstraklasa,2020,2020/2021,worldclub,finished,216,216
+182,Ekstraklasa,2021,2021/2022,worldclub,finished,287,287
+182,Ekstraklasa,2022,2022/2023,worldclub,finished,283,283
+182,Ekstraklasa,2023,2023/2024,worldclub,finished,281,281
+182,Ekstraklasa,2024,2024/2025,worldclub,finished,119,119
+183,Première division,2000,2000/2001,worldclub,finished,215,215
+183,Première division,2001,2001/2002,worldclub,finished,219,219
+183,Première division,2002,2002/2003,worldclub,finished,213,213
+183,Première division,2003,2003/2004,worldclub,finished,211,211
+183,Première division,2004,2004/2005,worldclub,finished,214,214
+183,Première division,2005,2005/2006,worldclub,finished,211,211
+183,Première division,2006,2006/2007,worldclub,finished,209,209
+183,Première division,2007,2007/2008,worldclub,finished,219,219
+183,Première division,2008,2008/2009,worldclub,finished,216,216
+183,Première division,2009,2009/2010,worldclub,finished,215,215
+183,Première division,2010,2010/2011,worldclub,finished,221,221
+183,Première division,2011,2011/2012,worldclub,finished,213,213
+183,Première division,2012,2012/2013,worldclub,finished,225,225
+183,Première division,2013,2013/2014,worldclub,finished,221,221
+183,Première division,2014,2014/2015,worldclub,finished,219,219
+183,Première division,2015,2015/2016,worldclub,finished,228,228
+183,Première division,2016,2016/2017,worldclub,finished,216,216
+183,Première division,2017,2017/2018,worldclub,finished,214,214
+183,Première division,2019,2019/2020,worldclub,finished,245,245
+183,Première division,2021,2021/2022,worldclub,finished,262,262
+183,Première division,2022,2022/2023,worldclub,finished,262,262
+183,Première division,2023,2023/2024,worldclub,finished,259,259
+184,Besta deild,2024,2024/2025,pitchapi,finished,160,160
+184,Besta deild,2025,2025/2026,pitchapi,finished,159,159
+184,Besta deild,2026,2026/2027,pitchapi,finished,159,159
+184,Besta deild,2026,2026/2027,pitchapi,not_started,3,0
+185,Champions League,2021,2021/2022,pitchapi,finished,125,125
+185,Champions League,2022,2022/2023,pitchapi,finished,125,125
+185,Champions League,2023,2023/2024,pitchapi,finished,125,125
+185,Champions League,2024,2024/2025,pitchapi,finished,189,189
+185,Champions League,2025,2025/2026,pitchapi,finished,189,189
+185,Champions League,2026,2026/2027,pitchapi,finished,72,72
+185,Champions League,2026,2026/2027,pitchapi,not_started,72,0
+186,Championship,2021,2021/2022,pitchapi,finished,557,557
+186,Championship,2022,2022/2023,pitchapi,finished,557,557
+186,Championship,2023,2023/2024,pitchapi,finished,557,557
+186,Championship,2024,2024/2025,pitchapi,finished,557,557
+186,Championship,2025,2025/2026,pitchapi,canceled,5,5
+186,Championship,2025,2025/2026,pitchapi,finished,555,555
+186,Championship,2026,2026/2027,pitchapi,finished,180,180
+186,Championship,2026,2026/2027,pitchapi,not_started,372,0
+187,Conference League,2021,2021/2022,pitchapi,finished,138,138
+187,Conference League,2022,2022/2023,pitchapi,finished,140,140
+187,Conference League,2023,2023/2024,pitchapi,finished,141,141
+187,Conference League,2024,2024/2025,pitchapi,finished,153,153
+187,Conference League,2025,2025/2026,pitchapi,finished,153,153
+187,Conference League,2026,2026/2027,pitchapi,finished,54,54
+187,Conference League,2026,2026/2027,pitchapi,not_started,54,0
+188,Europa League,2021,2021/2022,pitchapi,finished,139,139
+188,Europa League,2022,2022/2023,pitchapi,finished,141,141
+188,Europa League,2023,2023/2024,pitchapi,finished,141,141
+188,Europa League,2024,2024/2025,pitchapi,finished,189,189
+188,Europa League,2025,2025/2026,pitchapi,finished,189,189
+188,Europa League,2026,2026/2027,pitchapi,finished,72,72
+188,Europa League,2026,2026/2027,pitchapi,not_started,72,0
+189,Indian Super League,2021,2021/2022,pitchapi,finished,115,115
+189,Indian Super League,2022,2022/2023,pitchapi,finished,117,117
+189,Indian Super League,2023,2023/2024,pitchapi,awarded,1,1
+189,Indian Super League,2023,2023/2024,pitchapi,finished,138,138
+189,Indian Super League,2024,2024/2025,pitchapi,finished,163,163
+189,Indian Super League,2025,2025/2026,pitchapi,finished,86,86
+189,Indian Super League,2026,2026/2027,pitchapi,finished,28,28
+189,Indian Super League,2026,2026/2027,pitchapi,not_started,50,0
+190,Ligue 2,2025,2025/2026,pitchapi,awarded,2,2
+190,Ligue 2,2025,2025/2026,pitchapi,finished,304,304
+190,Ligue 2,2026,2026/2027,pitchapi,finished,98,98
+190,Ligue 2,2026,2026/2027,pitchapi,not_started,199,0
+191,Paulista A1,2024,2024/2025,pitchapi,finished,104,104
+191,Paulista A1,2025,2025/2026,pitchapi,finished,104,104
+191,Paulista A1,2026,2026/2027,pitchapi,finished,72,72
+192,Premier Division,2024,2024/2025,pitchapi,finished,180,180
+192,Premier Division,2025,2025/2026,pitchapi,finished,179,179
+192,Premier Division,2026,2026/2027,pitchapi,finished,180,180
+193,Premier League,2025,2025/2026,pitchapi,finished,322,322
+193,Premier League,2026,2026/2027,pitchapi,finished,80,80
+193,Premier League,2026,2026/2027,pitchapi,not_started,110,0
+194,Premier League,2024,2024/2025,pitchapi,finished,117,117
+194,Premier League,2025,2025/2026,pitchapi,finished,117,117
+194,Premier League,2026,2026/2027,pitchapi,finished,116,116
+194,Premier League,2026,2026/2027,pitchapi,not_started,1,0
+195,Premier Soccer League,2025,2025/2026,pitchapi,finished,182,182
+195,Premier Soccer League,2026,2026/2027,pitchapi,finished,71,71
+195,Premier Soccer League,2026,2026/2027,pitchapi,not_started,167,0
+196,Saudi Pro League,2022,2022/2023,pitchapi,finished,1,1
+196,Saudi Pro League,2023,2023/2024,pitchapi,finished,306,306
+196,Saudi Pro League,2024,2024/2025,pitchapi,awarded,1,1
+196,Saudi Pro League,2024,2024/2025,pitchapi,finished,304,304
+196,Saudi Pro League,2025,2025/2026,pitchapi,finished,305,305
+196,Saudi Pro League,2026,2026/2027,pitchapi,finished,104,104
+196,Saudi Pro League,2026,2026/2027,pitchapi,not_started,391,0
+196,Saudi Pro League,2026,2026/2027,pitchapi,postponed,9,0
+197,Women's Premier League,2024,2024/2025,pitchapi,finished,90,90
+197,Women's Premier League,2025,2025/2026,pitchapi,finished,56,56
+197,Women's Premier League,2026,2026/2027,pitchapi,finished,8,8
+197,Women's Premier League,2026,2026/2027,pitchapi,not_started,28,0
+197,Women's Premier League,2026,2026/2027,pitchapi,postponed,20,0
+198,World Cup,2022,2022/2023,pitchapi,finished,64,64
+198,World Cup,2025,2025/2026,pitchapi,finished,104,104
+199,FA Cup,1871,1871/1872,engsoccerdata,canceled,7,0
+199,FA Cup,1871,1871/1872,engsoccerdata,finished,15,15
+199,FA Cup,1872,1872/1873,engsoccerdata,canceled,8,0
+199,FA Cup,1872,1872/1873,engsoccerdata,finished,13,13
+199,FA Cup,1873,1873/1874,engsoccerdata,canceled,7,0
+199,FA Cup,1873,1873/1874,engsoccerdata,finished,26,26
+199,FA Cup,1874,1874/1875,engsoccerdata,canceled,6,0
+199,FA Cup,1874,1874/1875,engsoccerdata,finished,31,31
+199,FA Cup,1875,1875/1876,engsoccerdata,canceled,7,0
+199,FA Cup,1875,1875/1876,engsoccerdata,finished,26,26
+199,FA Cup,1876,1876/1877,engsoccerdata,canceled,12,0
+199,FA Cup,1876,1876/1877,engsoccerdata,finished,30,30
+199,FA Cup,1877,1877/1878,engsoccerdata,canceled,7,0
+199,FA Cup,1877,1877/1878,engsoccerdata,finished,45,45
+199,FA Cup,1878,1878/1879,engsoccerdata,canceled,9,0
+199,FA Cup,1878,1878/1879,engsoccerdata,finished,41,41
+199,FA Cup,1879,1879/1880,engsoccerdata,canceled,19,0
+199,FA Cup,1879,1879/1880,engsoccerdata,finished,53,53
+199,FA Cup,1880,1880/1881,engsoccerdata,canceled,16,0
+199,FA Cup,1880,1880/1881,engsoccerdata,finished,64,64
+199,FA Cup,1881,1881/1882,engsoccerdata,canceled,19,0
+199,FA Cup,1881,1881/1882,engsoccerdata,finished,80,80
+199,FA Cup,1882,1882/1883,engsoccerdata,canceled,23,0
+199,FA Cup,1882,1882/1883,engsoccerdata,finished,87,87
+199,FA Cup,1883,1883/1884,engsoccerdata,canceled,21,0
+199,FA Cup,1883,1883/1884,engsoccerdata,finished,100,100
+199,FA Cup,1884,1884/1885,engsoccerdata,canceled,28,0
+199,FA Cup,1884,1884/1885,engsoccerdata,finished,117,117
+199,FA Cup,1885,1885/1886,engsoccerdata,canceled,48,0
+199,FA Cup,1885,1885/1886,engsoccerdata,finished,119,119
+199,FA Cup,1886,1886/1887,engsoccerdata,canceled,32,0
+199,FA Cup,1886,1886/1887,engsoccerdata,finished,136,136
+199,FA Cup,1887,1887/1888,engsoccerdata,canceled,49,0
+199,FA Cup,1887,1887/1888,engsoccerdata,finished,144,144
+199,FA Cup,1888,1888/1889,engsoccerdata,canceled,2,0
+199,FA Cup,1888,1888/1889,engsoccerdata,finished,36,36
+199,FA Cup,1889,1889/1890,engsoccerdata,canceled,5,0
+199,FA Cup,1889,1889/1890,engsoccerdata,finished,31,31
+199,FA Cup,1890,1890/1891,engsoccerdata,canceled,3,0
+199,FA Cup,1890,1890/1891,engsoccerdata,finished,34,34
+199,FA Cup,1891,1891/1892,engsoccerdata,canceled,6,0
+199,FA Cup,1891,1891/1892,engsoccerdata,finished,35,35
+199,FA Cup,1892,1892/1893,engsoccerdata,canceled,2,0
+199,FA Cup,1892,1892/1893,engsoccerdata,finished,35,35
+199,FA Cup,1893,1893/1894,engsoccerdata,finished,35,35
+199,FA Cup,1894,1894/1895,engsoccerdata,canceled,1,0
+199,FA Cup,1894,1894/1895,engsoccerdata,finished,34,34
+199,FA Cup,1895,1895/1896,engsoccerdata,finished,37,37
+199,FA Cup,1896,1896/1897,engsoccerdata,finished,39,39
+199,FA Cup,1897,1897/1898,engsoccerdata,finished,37,37
+199,FA Cup,1898,1898/1899,engsoccerdata,finished,39,39
+199,FA Cup,1899,1899/1900,engsoccerdata,finished,47,47
+199,FA Cup,1900,1900/1901,engsoccerdata,finished,40,40
+199,FA Cup,1901,1901/1902,engsoccerdata,finished,45,45
+199,FA Cup,1902,1902/1903,engsoccerdata,finished,37,37
+199,FA Cup,1903,1903/1904,engsoccerdata,finished,39,39
+199,FA Cup,1904,1904/1905,engsoccerdata,finished,44,44
+199,FA Cup,1905,1905/1906,engsoccerdata,finished,79,79
+199,FA Cup,1906,1906/1907,engsoccerdata,finished,90,90
+199,FA Cup,1907,1907/1908,engsoccerdata,finished,81,81
+199,FA Cup,1908,1908/1909,engsoccerdata,finished,85,85
+199,FA Cup,1909,1909/1910,engsoccerdata,finished,80,80
+199,FA Cup,1910,1910/1911,engsoccerdata,canceled,1,0
+199,FA Cup,1910,1910/1911,engsoccerdata,finished,71,71
+199,FA Cup,1911,1911/1912,engsoccerdata,finished,86,86
+199,FA Cup,1912,1912/1913,engsoccerdata,finished,83,83
+199,FA Cup,1913,1913/1914,engsoccerdata,finished,76,76
+199,FA Cup,1914,1914/1915,engsoccerdata,finished,78,78
+199,FA Cup,1919,1919/1920,engsoccerdata,finished,72,72
+199,FA Cup,1920,1920/1921,engsoccerdata,finished,79,79
+199,FA Cup,1921,1921/1922,engsoccerdata,finished,88,88
+199,FA Cup,1922,1922/1923,engsoccerdata,finished,88,88
+199,FA Cup,1923,1923/1924,engsoccerdata,finished,89,89
+199,FA Cup,1924,1924/1925,engsoccerdata,finished,81,81
+199,FA Cup,1925,1925/1926,engsoccerdata,finished,153,153
+199,FA Cup,1926,1926/1927,engsoccerdata,finished,150,150
+199,FA Cup,1927,1927/1928,engsoccerdata,finished,131,131
+199,FA Cup,1928,1928/1929,engsoccerdata,finished,136,136
+199,FA Cup,1929,1929/1930,engsoccerdata,finished,145,145
+199,FA Cup,1930,1930/1931,engsoccerdata,finished,139,139
+199,FA Cup,1931,1931/1932,engsoccerdata,canceled,1,0
+199,FA Cup,1931,1931/1932,engsoccerdata,finished,143,143
+199,FA Cup,1932,1932/1933,engsoccerdata,finished,142,142
+199,FA Cup,1933,1933/1934,engsoccerdata,finished,139,139
+199,FA Cup,1934,1934/1935,engsoccerdata,finished,141,141
+199,FA Cup,1935,1935/1936,engsoccerdata,finished,147,147
+199,FA Cup,1936,1936/1937,engsoccerdata,finished,133,133
+199,FA Cup,1937,1937/1938,engsoccerdata,finished,144,144
+199,FA Cup,1938,1938/1939,engsoccerdata,finished,151,151
+199,FA Cup,1945,1945/1946,engsoccerdata,finished,229,229
+199,FA Cup,1946,1946/1947,engsoccerdata,finished,145,145
+199,FA Cup,1947,1947/1948,engsoccerdata,finished,133,133
+199,FA Cup,1948,1948/1949,engsoccerdata,finished,132,132
+199,FA Cup,1949,1949/1950,engsoccerdata,finished,144,144
+199,FA Cup,1950,1950/1951,engsoccerdata,finished,137,137
+199,FA Cup,1951,1951/1952,engsoccerdata,finished,163,163
+199,FA Cup,1952,1952/1953,engsoccerdata,finished,163,163
+199,FA Cup,1953,1953/1954,engsoccerdata,finished,170,170
+199,FA Cup,1954,1954/1955,engsoccerdata,finished,162,162
+199,FA Cup,1955,1955/1956,engsoccerdata,finished,155,155
+199,FA Cup,1956,1956/1957,engsoccerdata,finished,153,153
+199,FA Cup,1957,1957/1958,engsoccerdata,finished,152,152
+199,FA Cup,1958,1958/1959,engsoccerdata,finished,163,163
+199,FA Cup,1959,1959/1960,engsoccerdata,finished,156,156
+199,FA Cup,1960,1960/1961,engsoccerdata,finished,168,168
+199,FA Cup,1961,1961/1962,engsoccerdata,finished,160,160
+199,FA Cup,1962,1962/1963,engsoccerdata,finished,150,150
+199,FA Cup,1963,1963/1964,engsoccerdata,finished,154,154
+199,FA Cup,1964,1964/1965,engsoccerdata,finished,159,159
+199,FA Cup,1965,1965/1966,engsoccerdata,finished,152,152
+199,FA Cup,1966,1966/1967,engsoccerdata,finished,169,169
+199,FA Cup,1967,1967/1968,engsoccerdata,finished,159,159
+199,FA Cup,1968,1968/1969,engsoccerdata,finished,157,157
+199,FA Cup,1969,1969/1970,engsoccerdata,finished,170,170
+199,FA Cup,1970,1970/1971,engsoccerdata,finished,162,162
+199,FA Cup,1971,1971/1972,engsoccerdata,finished,161,161
+199,FA Cup,1972,1972/1973,engsoccerdata,finished,161,161
+199,FA Cup,1973,1973/1974,engsoccerdata,canceled,1,0
+199,FA Cup,1973,1973/1974,engsoccerdata,finished,166,166
+199,FA Cup,1974,1974/1975,engsoccerdata,finished,168,168
+199,FA Cup,1975,1975/1976,engsoccerdata,finished,160,160
+199,FA Cup,1976,1976/1977,engsoccerdata,finished,173,173
+199,FA Cup,1977,1977/1978,engsoccerdata,finished,161,161
+199,FA Cup,1978,1978/1979,engsoccerdata,finished,164,164
+199,FA Cup,1979,1979/1980,engsoccerdata,finished,162,162
+199,FA Cup,1980,1980/1981,engsoccerdata,finished,169,169
+199,FA Cup,1981,1981/1982,engsoccerdata,finished,160,160
+199,FA Cup,1982,1982/1983,engsoccerdata,finished,157,157
+199,FA Cup,1983,1983/1984,engsoccerdata,finished,166,166
+199,FA Cup,1984,1984/1985,engsoccerdata,finished,158,158
+199,FA Cup,1985,1985/1986,engsoccerdata,finished,168,168
+199,FA Cup,1986,1986/1987,engsoccerdata,finished,165,165
+199,FA Cup,1987,1987/1988,engsoccerdata,finished,155,155
+199,FA Cup,1988,1988/1989,engsoccerdata,finished,164,164
+199,FA Cup,1989,1989/1990,engsoccerdata,finished,171,171
+199,FA Cup,1990,1990/1991,engsoccerdata,finished,162,162
+199,FA Cup,1991,1991/1992,engsoccerdata,finished,161,161
+199,FA Cup,1992,1992/1993,engsoccerdata,canceled,1,0
+199,FA Cup,1992,1992/1993,engsoccerdata,finished,157,157
+199,FA Cup,1993,1993/1994,engsoccerdata,finished,158,158
+199,FA Cup,1994,1994/1995,engsoccerdata,finished,162,162
+199,FA Cup,1995,1995/1996,engsoccerdata,finished,167,167
+199,FA Cup,1996,1996/1997,engsoccerdata,finished,155,155
+199,FA Cup,1997,1997/1998,engsoccerdata,finished,167,167
+199,FA Cup,1998,1998/1999,engsoccerdata,finished,156,156
+199,FA Cup,1999,1999/2000,engsoccerdata,finished,160,160
+199,FA Cup,2000,2000/2001,engsoccerdata,finished,153,153
+199,FA Cup,2001,2001/2002,engsoccerdata,finished,150,150
+199,FA Cup,2002,2002/2003,engsoccerdata,finished,142,142
+199,FA Cup,2003,2003/2004,engsoccerdata,finished,151,151
+199,FA Cup,2004,2004/2005,engsoccerdata,finished,147,147
+199,FA Cup,2005,2005/2006,engsoccerdata,finished,161,161
+199,FA Cup,2006,2006/2007,engsoccerdata,finished,160,160
+199,FA Cup,2007,2007/2008,engsoccerdata,finished,154,154
+199,FA Cup,2008,2008/2009,engsoccerdata,finished,164,164
+199,FA Cup,2009,2009/2010,engsoccerdata,finished,154,154
+199,FA Cup,2010,2010/2011,engsoccerdata,finished,151,151
+199,FA Cup,2011,2011/2012,engsoccerdata,finished,152,152
+199,FA Cup,2012,2012/2013,engsoccerdata,finished,159,159
+199,FA Cup,2013,2013/2014,engsoccerdata,finished,150,150
+199,FA Cup,2014,2014/2015,engsoccerdata,finished,153,153
+199,FA Cup,2015,2015/2016,engsoccerdata,finished,150,150
+199,FA Cup,2016,2016/2017,engsoccerdata,finished,156,156
+199,FA Cup,2017,2017/2018,engsoccerdata,finished,149,149
+199,FA Cup,2018,2018/2019,engsoccerdata,finished,150,150
+200,Angleterre · Division 1,1888,1888/1889,footballcsv,finished,132,132
+200,Angleterre · Division 1,1889,1889/1890,footballcsv,finished,132,132
+200,Angleterre · Division 1,1890,1890/1891,footballcsv,finished,132,132
+200,Angleterre · Division 1,1891,1891/1892,footballcsv,finished,182,182
+200,Angleterre · Division 1,1892,1892/1893,footballcsv,finished,240,240
+200,Angleterre · Division 1,1893,1893/1894,footballcsv,finished,240,240
+200,Angleterre · Division 1,1894,1894/1895,footballcsv,finished,240,240
+200,Angleterre · Division 1,1895,1895/1896,footballcsv,finished,240,240
+200,Angleterre · Division 1,1896,1896/1897,footballcsv,finished,240,240
+200,Angleterre · Division 1,1897,1897/1898,footballcsv,finished,240,240
+200,Angleterre · Division 1,1898,1898/1899,footballcsv,finished,306,306
+200,Angleterre · Division 1,1899,1899/1900,footballcsv,finished,306,306
+200,Angleterre · Division 1,1900,1900/1901,footballcsv,finished,306,306
+200,Angleterre · Division 1,1901,1901/1902,footballcsv,finished,306,306
+200,Angleterre · Division 1,1902,1902/1903,footballcsv,finished,306,306
+200,Angleterre · Division 1,1903,1903/1904,footballcsv,finished,306,306
+200,Angleterre · Division 1,1904,1904/1905,footballcsv,finished,306,306
+200,Angleterre · Division 1,1905,1905/1906,footballcsv,finished,380,380
+200,Angleterre · Division 1,1906,1906/1907,footballcsv,finished,380,380
+200,Angleterre · Division 1,1907,1907/1908,footballcsv,finished,380,380
+200,Angleterre · Division 1,1908,1908/1909,footballcsv,finished,380,380
+200,Angleterre · Division 1,1909,1909/1910,footballcsv,finished,380,380
+200,Angleterre · Division 1,1910,1910/1911,footballcsv,finished,380,380
+200,Angleterre · Division 1,1911,1911/1912,footballcsv,finished,380,380
+200,Angleterre · Division 1,1912,1912/1913,footballcsv,finished,380,380
+200,Angleterre · Division 1,1913,1913/1914,footballcsv,finished,380,380
+200,Angleterre · Division 1,1914,1914/1915,footballcsv,finished,380,380
+200,Angleterre · Division 1,1919,1919/1920,footballcsv,finished,462,462
+200,Angleterre · Division 1,1920,1920/1921,footballcsv,finished,462,462
+200,Angleterre · Division 1,1921,1921/1922,footballcsv,finished,462,462
+200,Angleterre · Division 1,1922,1922/1923,footballcsv,finished,462,462
+200,Angleterre · Division 1,1923,1923/1924,footballcsv,finished,462,462
+200,Angleterre · Division 1,1924,1924/1925,footballcsv,finished,462,462
+200,Angleterre · Division 1,1925,1925/1926,footballcsv,finished,462,462
+200,Angleterre · Division 1,1926,1926/1927,footballcsv,finished,462,462
+200,Angleterre · Division 1,1927,1927/1928,footballcsv,finished,462,462
+200,Angleterre · Division 1,1928,1928/1929,footballcsv,finished,462,462
+200,Angleterre · Division 1,1929,1929/1930,footballcsv,finished,462,462
+200,Angleterre · Division 1,1930,1930/1931,footballcsv,finished,462,462
+200,Angleterre · Division 1,1931,1931/1932,footballcsv,finished,462,462
+200,Angleterre · Division 1,1932,1932/1933,footballcsv,finished,462,462
+200,Angleterre · Division 1,1933,1933/1934,footballcsv,finished,462,462
+200,Angleterre · Division 1,1934,1934/1935,footballcsv,finished,462,462
+200,Angleterre · Division 1,1935,1935/1936,footballcsv,finished,462,462
+200,Angleterre · Division 1,1936,1936/1937,footballcsv,finished,462,462
+200,Angleterre · Division 1,1937,1937/1938,footballcsv,finished,462,462
+200,Angleterre · Division 1,1938,1938/1939,footballcsv,finished,462,462
+200,Angleterre · Division 1,1946,1946/1947,footballcsv,finished,462,462
+200,Angleterre · Division 1,1947,1947/1948,footballcsv,finished,462,462
+200,Angleterre · Division 1,1948,1948/1949,footballcsv,finished,462,462
+200,Angleterre · Division 1,1949,1949/1950,footballcsv,finished,462,462
+200,Angleterre · Division 1,1950,1950/1951,footballcsv,finished,462,462
+200,Angleterre · Division 1,1951,1951/1952,footballcsv,finished,462,462
+200,Angleterre · Division 1,1952,1952/1953,footballcsv,finished,462,462
+200,Angleterre · Division 1,1953,1953/1954,footballcsv,finished,462,462
+200,Angleterre · Division 1,1954,1954/1955,footballcsv,finished,462,462
+200,Angleterre · Division 1,1955,1955/1956,footballcsv,finished,462,462
+200,Angleterre · Division 1,1956,1956/1957,footballcsv,finished,462,462
+200,Angleterre · Division 1,1957,1957/1958,footballcsv,finished,462,462
+200,Angleterre · Division 1,1958,1958/1959,footballcsv,finished,462,462
+200,Angleterre · Division 1,1959,1959/1960,footballcsv,finished,462,462
+200,Angleterre · Division 1,1960,1960/1961,footballcsv,finished,462,462
+200,Angleterre · Division 1,1961,1961/1962,footballcsv,finished,462,462
+200,Angleterre · Division 1,1962,1962/1963,footballcsv,finished,462,462
+200,Angleterre · Division 1,1963,1963/1964,footballcsv,finished,462,462
+200,Angleterre · Division 1,1964,1964/1965,footballcsv,finished,462,462
+200,Angleterre · Division 1,1965,1965/1966,footballcsv,finished,462,462
+200,Angleterre · Division 1,1966,1966/1967,footballcsv,finished,462,462
+200,Angleterre · Division 1,1967,1967/1968,footballcsv,finished,462,462
+200,Angleterre · Division 1,1968,1968/1969,footballcsv,finished,462,462
+200,Angleterre · Division 1,1969,1969/1970,footballcsv,finished,462,462
+200,Angleterre · Division 1,1970,1970/1971,footballcsv,finished,462,462
+200,Angleterre · Division 1,1971,1971/1972,footballcsv,finished,462,462
+200,Angleterre · Division 1,1972,1972/1973,footballcsv,finished,462,462
+200,Angleterre · Division 1,1973,1973/1974,footballcsv,finished,462,462
+200,Angleterre · Division 1,1974,1974/1975,footballcsv,finished,462,462
+200,Angleterre · Division 1,1975,1975/1976,footballcsv,finished,462,462
+200,Angleterre · Division 1,1976,1976/1977,footballcsv,finished,462,462
+200,Angleterre · Division 1,1977,1977/1978,footballcsv,finished,462,462
+200,Angleterre · Division 1,1978,1978/1979,footballcsv,finished,462,462
+200,Angleterre · Division 1,1979,1979/1980,footballcsv,finished,462,462
+200,Angleterre · Division 1,1980,1980/1981,footballcsv,finished,462,462
+200,Angleterre · Division 1,1981,1981/1982,footballcsv,finished,462,462
+200,Angleterre · Division 1,1982,1982/1983,footballcsv,finished,462,462
+200,Angleterre · Division 1,1983,1983/1984,footballcsv,finished,462,462
+200,Angleterre · Division 1,1984,1984/1985,footballcsv,finished,462,462
+200,Angleterre · Division 1,1985,1985/1986,footballcsv,finished,462,462
+200,Angleterre · Division 1,1986,1986/1987,footballcsv,finished,462,462
+200,Angleterre · Division 1,1987,1987/1988,footballcsv,finished,420,420
+200,Angleterre · Division 1,1988,1988/1989,footballcsv,finished,380,380
+200,Angleterre · Division 1,1989,1989/1990,footballcsv,finished,380,380
+200,Angleterre · Division 1,1990,1990/1991,footballcsv,finished,380,380
+200,Angleterre · Division 1,1991,1991/1992,footballcsv,finished,462,462
+201,Championnat d’Écosse · Division 1,1890,1890/1891,worldclub,finished,91,91
+201,Championnat d’Écosse · Division 1,1891,1891/1892,worldclub,finished,132,132
+201,Championnat d’Écosse · Division 1,1892,1892/1893,worldclub,finished,90,90
+201,Championnat d’Écosse · Division 1,1893,1893/1894,worldclub,finished,90,90
+201,Championnat d’Écosse · Division 1,1894,1894/1895,worldclub,finished,90,90
+201,Championnat d’Écosse · Division 1,1895,1895/1896,worldclub,finished,90,90
+201,Championnat d’Écosse · Division 1,1896,1896/1897,worldclub,finished,90,90
+201,Championnat d’Écosse · Division 1,1897,1897/1898,worldclub,finished,90,90
+201,Championnat d’Écosse · Division 1,1898,1898/1899,worldclub,finished,90,90
+201,Championnat d’Écosse · Division 1,1899,1899/1900,worldclub,finished,90,90
+201,Championnat d’Écosse · Division 1,1900,1900/1901,worldclub,finished,110,110
+201,Championnat d’Écosse · Division 1,1901,1901/1902,worldclub,finished,90,90
+201,Championnat d’Écosse · Division 1,1902,1902/1903,worldclub,finished,132,132
+201,Championnat d’Écosse · Division 1,1903,1903/1904,worldclub,finished,182,182
+201,Championnat d’Écosse · Division 1,1904,1904/1905,worldclub,finished,183,183
+201,Championnat d’Écosse · Division 1,1905,1905/1906,worldclub,finished,240,240
+201,Championnat d’Écosse · Division 1,1906,1906/1907,worldclub,finished,306,306
+201,Championnat d’Écosse · Division 1,1907,1907/1908,worldclub,finished,306,306
+201,Championnat d’Écosse · Division 1,1908,1908/1909,worldclub,finished,306,306
+201,Championnat d’Écosse · Division 1,1909,1909/1910,worldclub,finished,306,306
+201,Championnat d’Écosse · Division 1,1910,1910/1911,worldclub,finished,306,306
+201,Championnat d’Écosse · Division 1,1911,1911/1912,worldclub,finished,306,306
+201,Championnat d’Écosse · Division 1,1912,1912/1913,worldclub,finished,306,306
+201,Championnat d’Écosse · Division 1,1913,1913/1914,worldclub,finished,380,380
+201,Championnat d’Écosse · Division 1,1914,1914/1915,worldclub,finished,380,380
+201,Championnat d’Écosse · Division 1,1915,1915/1916,worldclub,finished,379,379
+201,Championnat d’Écosse · Division 1,1916,1916/1917,worldclub,finished,380,380
+201,Championnat d’Écosse · Division 1,1917,1917/1918,worldclub,finished,306,306
+201,Championnat d’Écosse · Division 1,1918,1918/1919,worldclub,finished,306,306
+201,Championnat d’Écosse · Division 1,1919,1919/1920,worldclub,finished,462,462
+201,Championnat d’Écosse · Division 1,1920,1920/1921,worldclub,finished,462,462
+201,Championnat d’Écosse · Division 1,1921,1921/1922,worldclub,finished,462,462
+201,Championnat d’Écosse · Division 1,1922,1922/1923,worldclub,finished,380,380
+201,Championnat d’Écosse · Division 1,1923,1923/1924,worldclub,finished,380,380
+201,Championnat d’Écosse · Division 1,1924,1924/1925,worldclub,finished,380,380
+201,Championnat d’Écosse · Division 1,1925,1925/1926,worldclub,finished,380,380
+201,Championnat d’Écosse · Division 1,1926,1926/1927,worldclub,finished,380,380
+201,Championnat d’Écosse · Division 1,1927,1927/1928,worldclub,finished,380,380
+201,Championnat d’Écosse · Division 1,1928,1928/1929,worldclub,finished,380,380
+201,Championnat d’Écosse · Division 1,1929,1929/1930,worldclub,finished,380,380
+201,Championnat d’Écosse · Division 1,1930,1930/1931,worldclub,finished,380,380
+201,Championnat d’Écosse · Division 1,1931,1931/1932,worldclub,finished,380,380
+201,Championnat d’Écosse · Division 1,1932,1932/1933,worldclub,finished,380,380
+201,Championnat d’Écosse · Division 1,1933,1933/1934,worldclub,finished,380,380
+201,Championnat d’Écosse · Division 1,1934,1934/1935,worldclub,finished,380,380
+201,Championnat d’Écosse · Division 1,1935,1935/1936,worldclub,finished,380,380
+201,Championnat d’Écosse · Division 1,1936,1936/1937,worldclub,finished,380,380
+201,Championnat d’Écosse · Division 1,1937,1937/1938,worldclub,finished,380,380
+201,Championnat d’Écosse · Division 1,1938,1938/1939,worldclub,finished,380,380
+201,Championnat d’Écosse · Division 1,1946,1946/1947,worldclub,finished,240,240
+201,Championnat d’Écosse · Division 1,1947,1947/1948,worldclub,finished,240,240
+201,Championnat d’Écosse · Division 1,1948,1948/1949,worldclub,finished,240,240
+201,Championnat d’Écosse · Division 1,1949,1949/1950,worldclub,finished,240,240
+201,Championnat d’Écosse · Division 1,1950,1950/1951,worldclub,finished,240,240
+201,Championnat d’Écosse · Division 1,1951,1951/1952,worldclub,finished,240,240
+201,Championnat d’Écosse · Division 1,1952,1952/1953,worldclub,finished,240,240
+201,Championnat d’Écosse · Division 1,1953,1953/1954,worldclub,finished,240,240
+201,Championnat d’Écosse · Division 1,1954,1954/1955,worldclub,finished,240,240
+201,Championnat d’Écosse · Division 1,1955,1955/1956,worldclub,finished,306,306
+201,Championnat d’Écosse · Division 1,1956,1956/1957,worldclub,finished,306,306
+201,Championnat d’Écosse · Division 1,1957,1957/1958,worldclub,finished,306,306
+201,Championnat d’Écosse · Division 1,1958,1958/1959,worldclub,finished,306,306
+201,Championnat d’Écosse · Division 1,1959,1959/1960,worldclub,finished,306,306
+201,Championnat d’Écosse · Division 1,1960,1960/1961,worldclub,finished,306,306
+201,Championnat d’Écosse · Division 1,1961,1961/1962,worldclub,finished,306,306
+201,Championnat d’Écosse · Division 1,1962,1962/1963,worldclub,finished,306,306
+201,Championnat d’Écosse · Division 1,1963,1963/1964,worldclub,finished,306,306
+201,Championnat d’Écosse · Division 1,1964,1964/1965,worldclub,finished,306,306
+201,Championnat d’Écosse · Division 1,1965,1965/1966,worldclub,finished,306,306
+201,Championnat d’Écosse · Division 1,1966,1966/1967,worldclub,finished,306,306
+201,Championnat d’Écosse · Division 1,1967,1967/1968,worldclub,finished,306,306
+201,Championnat d’Écosse · Division 1,1968,1968/1969,worldclub,finished,306,306
+201,Championnat d’Écosse · Division 1,1969,1969/1970,worldclub,finished,306,306
+201,Championnat d’Écosse · Division 1,1970,1970/1971,worldclub,finished,306,306
+201,Championnat d’Écosse · Division 1,1971,1971/1972,worldclub,finished,306,306
+201,Championnat d’Écosse · Division 1,1972,1972/1973,worldclub,finished,306,306
+201,Championnat d’Écosse · Division 1,1973,1973/1974,worldclub,finished,306,306
+201,Championnat d’Écosse · Division 1,1974,1974/1975,worldclub,finished,306,306
+201,Championnat d’Écosse · Division 1,1975,1975/1976,worldclub,finished,180,180
+201,Championnat d’Écosse · Division 1,1976,1976/1977,worldclub,finished,180,180
+201,Championnat d’Écosse · Division 1,1977,1977/1978,worldclub,finished,180,180
+201,Championnat d’Écosse · Division 1,1978,1978/1979,worldclub,finished,180,180
+201,Championnat d’Écosse · Division 1,1979,1979/1980,worldclub,finished,180,180
+201,Championnat d’Écosse · Division 1,1980,1980/1981,worldclub,finished,180,180
+201,Championnat d’Écosse · Division 1,1981,1981/1982,worldclub,finished,180,180
+201,Championnat d’Écosse · Division 1,1982,1982/1983,worldclub,finished,180,180
+201,Championnat d’Écosse · Division 1,1983,1983/1984,worldclub,finished,180,180
+201,Championnat d’Écosse · Division 1,1984,1984/1985,worldclub,finished,180,180
+201,Championnat d’Écosse · Division 1,1985,1985/1986,worldclub,finished,180,180
+201,Championnat d’Écosse · Division 1,1986,1986/1987,worldclub,finished,264,264
+201,Championnat d’Écosse · Division 1,1987,1987/1988,worldclub,finished,264,264
+201,Championnat d’Écosse · Division 1,1988,1988/1989,worldclub,finished,180,180
+201,Championnat d’Écosse · Division 1,1989,1989/1990,worldclub,finished,180,180
+201,Championnat d’Écosse · Division 1,1990,1990/1991,worldclub,finished,180,180
+201,Championnat d’Écosse · Division 1,1991,1991/1992,worldclub,finished,264,264
+201,Championnat d’Écosse · Division 1,1992,1992/1993,worldclub,finished,264,264
+201,Championnat d’Écosse · Division 1,1993,1993/1994,worldclub,finished,264,264
+202,Angleterre · Division 2,1892,1892/1893,footballcsv,finished,132,132
+202,Angleterre · Division 2,1893,1893/1894,footballcsv,finished,210,210
+202,Angleterre · Division 2,1894,1894/1895,footballcsv,finished,240,240
+202,Angleterre · Division 2,1895,1895/1896,footballcsv,finished,240,240
+202,Angleterre · Division 2,1896,1896/1897,footballcsv,finished,240,240
+202,Angleterre · Division 2,1897,1897/1898,footballcsv,finished,240,240
+202,Angleterre · Division 2,1898,1898/1899,footballcsv,finished,306,306
+202,Angleterre · Division 2,1899,1899/1900,footballcsv,finished,306,306
+202,Angleterre · Division 2,1900,1900/1901,footballcsv,finished,306,306
+202,Angleterre · Division 2,1901,1901/1902,footballcsv,finished,306,306
+202,Angleterre · Division 2,1902,1902/1903,footballcsv,finished,306,306
+202,Angleterre · Division 2,1903,1903/1904,footballcsv,finished,306,306
+202,Angleterre · Division 2,1904,1904/1905,footballcsv,finished,306,306
+202,Angleterre · Division 2,1905,1905/1906,footballcsv,finished,380,380
+202,Angleterre · Division 2,1906,1906/1907,footballcsv,finished,380,380
+202,Angleterre · Division 2,1907,1907/1908,footballcsv,finished,380,380
+202,Angleterre · Division 2,1908,1908/1909,footballcsv,finished,380,380
+202,Angleterre · Division 2,1909,1909/1910,footballcsv,finished,380,380
+202,Angleterre · Division 2,1910,1910/1911,footballcsv,finished,380,380
+202,Angleterre · Division 2,1911,1911/1912,footballcsv,finished,380,380
+202,Angleterre · Division 2,1912,1912/1913,footballcsv,finished,380,380
+202,Angleterre · Division 2,1913,1913/1914,footballcsv,finished,380,380
+202,Angleterre · Division 2,1914,1914/1915,footballcsv,finished,380,380
+202,Angleterre · Division 2,1919,1919/1920,footballcsv,finished,462,462
+202,Angleterre · Division 2,1920,1920/1921,footballcsv,finished,462,462
+202,Angleterre · Division 2,1921,1921/1922,footballcsv,finished,462,462
+202,Angleterre · Division 2,1922,1922/1923,footballcsv,finished,462,462
+202,Angleterre · Division 2,1923,1923/1924,footballcsv,finished,462,462
+202,Angleterre · Division 2,1924,1924/1925,footballcsv,finished,462,462
+202,Angleterre · Division 2,1925,1925/1926,footballcsv,finished,462,462
+202,Angleterre · Division 2,1926,1926/1927,footballcsv,finished,462,462
+202,Angleterre · Division 2,1927,1927/1928,footballcsv,finished,462,462
+202,Angleterre · Division 2,1928,1928/1929,footballcsv,finished,462,462
+202,Angleterre · Division 2,1929,1929/1930,footballcsv,finished,462,462
+202,Angleterre · Division 2,1930,1930/1931,footballcsv,finished,462,462
+202,Angleterre · Division 2,1931,1931/1932,footballcsv,finished,462,462
+202,Angleterre · Division 2,1932,1932/1933,footballcsv,finished,462,462
+202,Angleterre · Division 2,1933,1933/1934,footballcsv,finished,462,462
+202,Angleterre · Division 2,1934,1934/1935,footballcsv,finished,462,462
+202,Angleterre · Division 2,1935,1935/1936,footballcsv,finished,462,462
+202,Angleterre · Division 2,1936,1936/1937,footballcsv,finished,462,462
+202,Angleterre · Division 2,1937,1937/1938,footballcsv,finished,462,462
+202,Angleterre · Division 2,1938,1938/1939,footballcsv,finished,462,462
+202,Angleterre · Division 2,1946,1946/1947,footballcsv,finished,462,462
+202,Angleterre · Division 2,1947,1947/1948,footballcsv,finished,462,462
+202,Angleterre · Division 2,1948,1948/1949,footballcsv,finished,462,462
+202,Angleterre · Division 2,1949,1949/1950,footballcsv,finished,462,462
+202,Angleterre · Division 2,1950,1950/1951,footballcsv,finished,462,462
+202,Angleterre · Division 2,1951,1951/1952,footballcsv,finished,462,462
+202,Angleterre · Division 2,1952,1952/1953,footballcsv,finished,462,462
+202,Angleterre · Division 2,1953,1953/1954,footballcsv,finished,462,462
+202,Angleterre · Division 2,1954,1954/1955,footballcsv,finished,462,462
+202,Angleterre · Division 2,1955,1955/1956,footballcsv,finished,462,462
+202,Angleterre · Division 2,1956,1956/1957,footballcsv,finished,462,462
+202,Angleterre · Division 2,1957,1957/1958,footballcsv,finished,462,462
+202,Angleterre · Division 2,1958,1958/1959,footballcsv,finished,462,462
+202,Angleterre · Division 2,1959,1959/1960,footballcsv,finished,462,462
+202,Angleterre · Division 2,1960,1960/1961,footballcsv,finished,462,462
+202,Angleterre · Division 2,1961,1961/1962,footballcsv,finished,462,462
+202,Angleterre · Division 2,1962,1962/1963,footballcsv,finished,462,462
+202,Angleterre · Division 2,1963,1963/1964,footballcsv,finished,462,462
+202,Angleterre · Division 2,1964,1964/1965,footballcsv,finished,462,462
+202,Angleterre · Division 2,1965,1965/1966,footballcsv,finished,462,462
+202,Angleterre · Division 2,1966,1966/1967,footballcsv,finished,462,462
+202,Angleterre · Division 2,1967,1967/1968,footballcsv,finished,462,462
+202,Angleterre · Division 2,1968,1968/1969,footballcsv,finished,462,462
+202,Angleterre · Division 2,1969,1969/1970,footballcsv,finished,462,462
+202,Angleterre · Division 2,1970,1970/1971,footballcsv,finished,462,462
+202,Angleterre · Division 2,1971,1971/1972,footballcsv,finished,462,462
+202,Angleterre · Division 2,1972,1972/1973,footballcsv,finished,462,462
+202,Angleterre · Division 2,1973,1973/1974,footballcsv,finished,462,462
+202,Angleterre · Division 2,1974,1974/1975,footballcsv,finished,462,462
+202,Angleterre · Division 2,1975,1975/1976,footballcsv,finished,462,462
+202,Angleterre · Division 2,1976,1976/1977,footballcsv,finished,462,462
+202,Angleterre · Division 2,1977,1977/1978,footballcsv,finished,462,462
+202,Angleterre · Division 2,1978,1978/1979,footballcsv,finished,462,462
+202,Angleterre · Division 2,1979,1979/1980,footballcsv,finished,462,462
+202,Angleterre · Division 2,1980,1980/1981,footballcsv,finished,462,462
+202,Angleterre · Division 2,1981,1981/1982,footballcsv,finished,462,462
+202,Angleterre · Division 2,1982,1982/1983,footballcsv,finished,462,462
+202,Angleterre · Division 2,1983,1983/1984,footballcsv,finished,462,462
+202,Angleterre · Division 2,1984,1984/1985,footballcsv,finished,462,462
+202,Angleterre · Division 2,1985,1985/1986,footballcsv,finished,462,462
+202,Angleterre · Division 2,1986,1986/1987,footballcsv,finished,462,462
+202,Angleterre · Division 2,1987,1987/1988,footballcsv,finished,506,506
+202,Angleterre · Division 2,1988,1988/1989,footballcsv,finished,552,552
+202,Angleterre · Division 2,1989,1989/1990,footballcsv,finished,552,552
+202,Angleterre · Division 2,1990,1990/1991,footballcsv,finished,552,552
+202,Angleterre · Division 2,1991,1991/1992,footballcsv,finished,552,552
+203,Angleterre · Division 3,1920,1920/1921,footballcsv,finished,462,462
+203,Angleterre · Division 3,1958,1958/1959,footballcsv,finished,552,552
+203,Angleterre · Division 3,1959,1959/1960,footballcsv,finished,552,552
+203,Angleterre · Division 3,1960,1960/1961,footballcsv,finished,552,552
+203,Angleterre · Division 3,1961,1961/1962,footballcsv,finished,552,552
+203,Angleterre · Division 3,1962,1962/1963,footballcsv,finished,552,552
+203,Angleterre · Division 3,1963,1963/1964,footballcsv,finished,552,552
+203,Angleterre · Division 3,1964,1964/1965,footballcsv,finished,552,552
+203,Angleterre · Division 3,1965,1965/1966,footballcsv,finished,552,552
+203,Angleterre · Division 3,1966,1966/1967,footballcsv,finished,552,552
+203,Angleterre · Division 3,1967,1967/1968,footballcsv,finished,552,552
+203,Angleterre · Division 3,1968,1968/1969,footballcsv,finished,552,552
+203,Angleterre · Division 3,1969,1969/1970,footballcsv,finished,552,552
+203,Angleterre · Division 3,1970,1970/1971,footballcsv,finished,552,552
+203,Angleterre · Division 3,1971,1971/1972,footballcsv,finished,552,552
+203,Angleterre · Division 3,1972,1972/1973,footballcsv,finished,552,552
+203,Angleterre · Division 3,1973,1973/1974,footballcsv,finished,552,552
+203,Angleterre · Division 3,1974,1974/1975,footballcsv,finished,552,552
+203,Angleterre · Division 3,1975,1975/1976,footballcsv,finished,552,552
+203,Angleterre · Division 3,1976,1976/1977,footballcsv,finished,552,552
+203,Angleterre · Division 3,1977,1977/1978,footballcsv,finished,552,552
+203,Angleterre · Division 3,1978,1978/1979,footballcsv,finished,552,552
+203,Angleterre · Division 3,1979,1979/1980,footballcsv,finished,552,552
+203,Angleterre · Division 3,1980,1980/1981,footballcsv,finished,552,552
+203,Angleterre · Division 3,1981,1981/1982,footballcsv,finished,552,552
+203,Angleterre · Division 3,1982,1982/1983,footballcsv,finished,552,552
+203,Angleterre · Division 3,1983,1983/1984,footballcsv,finished,552,552
+203,Angleterre · Division 3,1984,1984/1985,footballcsv,finished,552,552
+203,Angleterre · Division 3,1985,1985/1986,footballcsv,finished,552,552
+203,Angleterre · Division 3,1986,1986/1987,footballcsv,finished,552,552
+203,Angleterre · Division 3,1987,1987/1988,footballcsv,finished,552,552
+203,Angleterre · Division 3,1988,1988/1989,footballcsv,finished,552,552
+203,Angleterre · Division 3,1989,1989/1990,footballcsv,finished,552,552
+203,Angleterre · Division 3,1990,1990/1991,footballcsv,finished,552,552
+203,Angleterre · Division 3,1991,1991/1992,footballcsv,finished,552,552
+204,Angleterre · Division 3 Nord,1921,1921/1922,footballcsv,finished,380,380
+204,Angleterre · Division 3 Nord,1922,1922/1923,footballcsv,finished,380,380
+204,Angleterre · Division 3 Nord,1923,1923/1924,footballcsv,finished,462,462
+204,Angleterre · Division 3 Nord,1924,1924/1925,footballcsv,finished,462,462
+204,Angleterre · Division 3 Nord,1925,1925/1926,footballcsv,finished,462,462
+204,Angleterre · Division 3 Nord,1926,1926/1927,footballcsv,finished,462,462
+204,Angleterre · Division 3 Nord,1927,1927/1928,footballcsv,finished,462,462
+204,Angleterre · Division 3 Nord,1928,1928/1929,footballcsv,finished,462,462
+204,Angleterre · Division 3 Nord,1929,1929/1930,footballcsv,finished,462,462
+204,Angleterre · Division 3 Nord,1930,1930/1931,footballcsv,finished,462,462
+204,Angleterre · Division 3 Nord,1931,1931/1932,footballcsv,finished,432,432
+204,Angleterre · Division 3 Nord,1932,1932/1933,footballcsv,finished,462,462
+204,Angleterre · Division 3 Nord,1933,1933/1934,footballcsv,finished,462,462
+204,Angleterre · Division 3 Nord,1934,1934/1935,footballcsv,finished,462,462
+204,Angleterre · Division 3 Nord,1935,1935/1936,footballcsv,finished,462,462
+204,Angleterre · Division 3 Nord,1936,1936/1937,footballcsv,finished,462,462
+204,Angleterre · Division 3 Nord,1937,1937/1938,footballcsv,finished,462,462
+204,Angleterre · Division 3 Nord,1938,1938/1939,footballcsv,finished,462,462
+204,Angleterre · Division 3 Nord,1946,1946/1947,footballcsv,finished,462,462
+204,Angleterre · Division 3 Nord,1947,1947/1948,footballcsv,finished,462,462
+204,Angleterre · Division 3 Nord,1948,1948/1949,footballcsv,finished,462,462
+204,Angleterre · Division 3 Nord,1949,1949/1950,footballcsv,finished,462,462
+204,Angleterre · Division 3 Nord,1950,1950/1951,footballcsv,finished,552,552
+204,Angleterre · Division 3 Nord,1951,1951/1952,footballcsv,finished,552,552
+204,Angleterre · Division 3 Nord,1952,1952/1953,footballcsv,finished,552,552
+204,Angleterre · Division 3 Nord,1953,1953/1954,footballcsv,finished,552,552
+204,Angleterre · Division 3 Nord,1954,1954/1955,footballcsv,finished,552,552
+204,Angleterre · Division 3 Nord,1955,1955/1956,footballcsv,finished,552,552
+204,Angleterre · Division 3 Nord,1956,1956/1957,footballcsv,finished,552,552
+204,Angleterre · Division 3 Nord,1957,1957/1958,footballcsv,finished,552,552
+205,Angleterre · Division 3 Sud,1921,1921/1922,footballcsv,finished,462,462
+205,Angleterre · Division 3 Sud,1922,1922/1923,footballcsv,finished,462,462
+205,Angleterre · Division 3 Sud,1923,1923/1924,footballcsv,finished,462,462
+205,Angleterre · Division 3 Sud,1924,1924/1925,footballcsv,finished,462,462
+205,Angleterre · Division 3 Sud,1925,1925/1926,footballcsv,finished,462,462
+205,Angleterre · Division 3 Sud,1926,1926/1927,footballcsv,finished,462,462
+205,Angleterre · Division 3 Sud,1927,1927/1928,footballcsv,finished,462,462
+205,Angleterre · Division 3 Sud,1928,1928/1929,footballcsv,finished,462,462
+205,Angleterre · Division 3 Sud,1929,1929/1930,footballcsv,finished,462,462
+205,Angleterre · Division 3 Sud,1930,1930/1931,footballcsv,finished,462,462
+205,Angleterre · Division 3 Sud,1931,1931/1932,footballcsv,finished,462,462
+205,Angleterre · Division 3 Sud,1932,1932/1933,footballcsv,finished,462,462
+205,Angleterre · Division 3 Sud,1933,1933/1934,footballcsv,finished,462,462
+205,Angleterre · Division 3 Sud,1934,1934/1935,footballcsv,finished,462,462
+205,Angleterre · Division 3 Sud,1935,1935/1936,footballcsv,finished,462,462
+205,Angleterre · Division 3 Sud,1936,1936/1937,footballcsv,finished,462,462
+205,Angleterre · Division 3 Sud,1937,1937/1938,footballcsv,finished,462,462
+205,Angleterre · Division 3 Sud,1938,1938/1939,footballcsv,finished,462,462
+205,Angleterre · Division 3 Sud,1946,1946/1947,footballcsv,finished,462,462
+205,Angleterre · Division 3 Sud,1947,1947/1948,footballcsv,finished,462,462
+205,Angleterre · Division 3 Sud,1948,1948/1949,footballcsv,finished,462,462
+205,Angleterre · Division 3 Sud,1949,1949/1950,footballcsv,finished,462,462
+205,Angleterre · Division 3 Sud,1950,1950/1951,footballcsv,finished,552,552
+205,Angleterre · Division 3 Sud,1951,1951/1952,footballcsv,finished,552,552
+205,Angleterre · Division 3 Sud,1952,1952/1953,footballcsv,finished,552,552
+205,Angleterre · Division 3 Sud,1953,1953/1954,footballcsv,finished,552,552
+205,Angleterre · Division 3 Sud,1954,1954/1955,footballcsv,finished,552,552
+205,Angleterre · Division 3 Sud,1955,1955/1956,footballcsv,finished,552,552
+205,Angleterre · Division 3 Sud,1956,1956/1957,footballcsv,finished,552,552
+205,Angleterre · Division 3 Sud,1957,1957/1958,footballcsv,finished,552,552
+206,Championnat d’Espagne · Division 1,1928,1928/1929,engsoccerdata,finished,90,90
+206,Championnat d’Espagne · Division 1,1929,1929/1930,engsoccerdata,finished,90,90
+206,Championnat d’Espagne · Division 1,1930,1930/1931,engsoccerdata,finished,90,90
+206,Championnat d’Espagne · Division 1,1931,1931/1932,engsoccerdata,finished,90,90
+206,Championnat d’Espagne · Division 1,1932,1932/1933,engsoccerdata,finished,90,90
+206,Championnat d’Espagne · Division 1,1933,1933/1934,engsoccerdata,finished,90,90
+206,Championnat d’Espagne · Division 1,1934,1934/1935,engsoccerdata,finished,132,132
+206,Championnat d’Espagne · Division 1,1935,1935/1936,engsoccerdata,finished,132,132
+206,Championnat d’Espagne · Division 1,1939,1939/1940,engsoccerdata,finished,132,132
+206,Championnat d’Espagne · Division 1,1940,1940/1941,engsoccerdata,finished,132,132
+206,Championnat d’Espagne · Division 1,1941,1941/1942,engsoccerdata,finished,182,182
+206,Championnat d’Espagne · Division 1,1942,1942/1943,engsoccerdata,finished,182,182
+206,Championnat d’Espagne · Division 1,1943,1943/1944,engsoccerdata,finished,182,182
+206,Championnat d’Espagne · Division 1,1944,1944/1945,engsoccerdata,finished,182,182
+206,Championnat d’Espagne · Division 1,1945,1945/1946,engsoccerdata,finished,182,182
+206,Championnat d’Espagne · Division 1,1946,1946/1947,engsoccerdata,finished,182,182
+206,Championnat d’Espagne · Division 1,1947,1947/1948,engsoccerdata,finished,182,182
+206,Championnat d’Espagne · Division 1,1948,1948/1949,engsoccerdata,finished,182,182
+206,Championnat d’Espagne · Division 1,1949,1949/1950,engsoccerdata,finished,182,182
+206,Championnat d’Espagne · Division 1,1950,1950/1951,engsoccerdata,finished,240,240
+206,Championnat d’Espagne · Division 1,1951,1951/1952,engsoccerdata,finished,240,240
+206,Championnat d’Espagne · Division 1,1952,1952/1953,engsoccerdata,finished,240,240
+206,Championnat d’Espagne · Division 1,1953,1953/1954,engsoccerdata,finished,240,240
+206,Championnat d’Espagne · Division 1,1954,1954/1955,engsoccerdata,finished,240,240
+206,Championnat d’Espagne · Division 1,1955,1955/1956,engsoccerdata,finished,240,240
+206,Championnat d’Espagne · Division 1,1956,1956/1957,engsoccerdata,finished,240,240
+206,Championnat d’Espagne · Division 1,1957,1957/1958,engsoccerdata,finished,240,240
+206,Championnat d’Espagne · Division 1,1958,1958/1959,engsoccerdata,finished,240,240
+206,Championnat d’Espagne · Division 1,1959,1959/1960,engsoccerdata,finished,240,240
+206,Championnat d’Espagne · Division 1,1960,1960/1961,engsoccerdata,finished,240,240
+206,Championnat d’Espagne · Division 1,1961,1961/1962,engsoccerdata,finished,240,240
+206,Championnat d’Espagne · Division 1,1962,1962/1963,engsoccerdata,finished,240,240
+206,Championnat d’Espagne · Division 1,1963,1963/1964,engsoccerdata,finished,240,240
+206,Championnat d’Espagne · Division 1,1964,1964/1965,engsoccerdata,finished,240,240
+206,Championnat d’Espagne · Division 1,1965,1965/1966,engsoccerdata,finished,240,240
+206,Championnat d’Espagne · Division 1,1966,1966/1967,engsoccerdata,finished,240,240
+206,Championnat d’Espagne · Division 1,1967,1967/1968,engsoccerdata,finished,240,240
+206,Championnat d’Espagne · Division 1,1968,1968/1969,engsoccerdata,finished,240,240
+206,Championnat d’Espagne · Division 1,1969,1969/1970,engsoccerdata,finished,240,240
+206,Championnat d’Espagne · Division 1,1970,1970/1971,engsoccerdata,finished,240,240
+206,Championnat d’Espagne · Division 1,1971,1971/1972,engsoccerdata,finished,306,306
+206,Championnat d’Espagne · Division 1,1972,1972/1973,engsoccerdata,finished,306,306
+206,Championnat d’Espagne · Division 1,1973,1973/1974,engsoccerdata,finished,306,306
+206,Championnat d’Espagne · Division 1,1974,1974/1975,engsoccerdata,finished,306,306
+206,Championnat d’Espagne · Division 1,1975,1975/1976,engsoccerdata,finished,306,306
+206,Championnat d’Espagne · Division 1,1976,1976/1977,engsoccerdata,finished,306,306
+206,Championnat d’Espagne · Division 1,1977,1977/1978,engsoccerdata,finished,306,306
+206,Championnat d’Espagne · Division 1,1978,1978/1979,engsoccerdata,finished,306,306
+206,Championnat d’Espagne · Division 1,1979,1979/1980,engsoccerdata,finished,305,305
+206,Championnat d’Espagne · Division 1,1980,1980/1981,engsoccerdata,finished,306,306
+206,Championnat d’Espagne · Division 1,1981,1981/1982,engsoccerdata,finished,306,306
+206,Championnat d’Espagne · Division 1,1982,1982/1983,engsoccerdata,finished,306,306
+206,Championnat d’Espagne · Division 1,1983,1983/1984,engsoccerdata,finished,306,306
+206,Championnat d’Espagne · Division 1,1984,1984/1985,engsoccerdata,finished,306,306
+206,Championnat d’Espagne · Division 1,1985,1985/1986,engsoccerdata,finished,306,306
+206,Championnat d’Espagne · Division 1,1986,1986/1987,engsoccerdata,finished,396,396
+206,Championnat d’Espagne · Division 1,1987,1987/1988,engsoccerdata,finished,380,380
+206,Championnat d’Espagne · Division 1,1988,1988/1989,engsoccerdata,finished,380,380
+206,Championnat d’Espagne · Division 1,1989,1989/1990,engsoccerdata,finished,380,380
+206,Championnat d’Espagne · Division 1,1990,1990/1991,engsoccerdata,finished,380,380
+206,Championnat d’Espagne · Division 1,1991,1991/1992,engsoccerdata,finished,380,380
+206,Championnat d’Espagne · Division 1,1992,1992/1993,engsoccerdata,finished,380,380
+206,Championnat d’Espagne · Division 1,1993,1993/1994,engsoccerdata,finished,380,380
+206,Championnat d’Espagne · Division 1,1994,1994/1995,engsoccerdata,finished,380,380
+206,Championnat d’Espagne · Division 1,1995,1995/1996,engsoccerdata,finished,462,462
+206,Championnat d’Espagne · Division 1,1996,1996/1997,engsoccerdata,finished,462,462
+206,Championnat d’Espagne · Division 1,1997,1997/1998,engsoccerdata,finished,380,380
+206,Championnat d’Espagne · Division 1,1998,1998/1999,engsoccerdata,finished,380,380
+206,Championnat d’Espagne · Division 1,1999,1999/2000,engsoccerdata,finished,380,380
+206,Championnat d’Espagne · Division 1,2000,2000/2001,engsoccerdata,finished,380,380
+206,Championnat d’Espagne · Division 1,2001,2001/2002,engsoccerdata,finished,380,380
+206,Championnat d’Espagne · Division 1,2002,2002/2003,engsoccerdata,finished,380,380
+206,Championnat d’Espagne · Division 1,2003,2003/2004,engsoccerdata,finished,380,380
+206,Championnat d’Espagne · Division 1,2004,2004/2005,engsoccerdata,finished,380,380
+206,Championnat d’Espagne · Division 1,2005,2005/2006,engsoccerdata,finished,380,380
+206,Championnat d’Espagne · Division 1,2006,2006/2007,engsoccerdata,finished,380,380
+206,Championnat d’Espagne · Division 1,2007,2007/2008,engsoccerdata,finished,380,380
+206,Championnat d’Espagne · Division 1,2008,2008/2009,engsoccerdata,finished,380,380
+206,Championnat d’Espagne · Division 1,2009,2009/2010,engsoccerdata,finished,380,380
+206,Championnat d’Espagne · Division 1,2010,2010/2011,engsoccerdata,finished,380,380
+206,Championnat d’Espagne · Division 1,2011,2011/2012,engsoccerdata,finished,380,380
+207,Championnat d’Italie · Division 1,1929,1929/1930,engsoccerdata,finished,306,306
+207,Championnat d’Italie · Division 1,1930,1930/1931,engsoccerdata,finished,306,306
+207,Championnat d’Italie · Division 1,1931,1931/1932,engsoccerdata,finished,306,306
+207,Championnat d’Italie · Division 1,1932,1932/1933,engsoccerdata,finished,306,306
+207,Championnat d’Italie · Division 1,1933,1933/1934,engsoccerdata,finished,306,306
+207,Championnat d’Italie · Division 1,1934,1934/1935,engsoccerdata,finished,240,240
+207,Championnat d’Italie · Division 1,1935,1935/1936,engsoccerdata,finished,240,240
+207,Championnat d’Italie · Division 1,1936,1936/1937,engsoccerdata,finished,240,240
+207,Championnat d’Italie · Division 1,1937,1937/1938,engsoccerdata,finished,240,240
+207,Championnat d’Italie · Division 1,1938,1938/1939,engsoccerdata,finished,240,240
+207,Championnat d’Italie · Division 1,1939,1939/1940,engsoccerdata,finished,240,240
+207,Championnat d’Italie · Division 1,1940,1940/1941,engsoccerdata,finished,240,240
+207,Championnat d’Italie · Division 1,1941,1941/1942,engsoccerdata,finished,240,240
+207,Championnat d’Italie · Division 1,1942,1942/1943,engsoccerdata,finished,240,240
+207,Championnat d’Italie · Division 1,1945,1945/1946,engsoccerdata,finished,348,348
+207,Championnat d’Italie · Division 1,1946,1946/1947,engsoccerdata,finished,370,370
+207,Championnat d’Italie · Division 1,1947,1947/1948,engsoccerdata,finished,390,390
+207,Championnat d’Italie · Division 1,1948,1948/1949,engsoccerdata,finished,380,380
+207,Championnat d’Italie · Division 1,1949,1949/1950,engsoccerdata,finished,380,380
+207,Championnat d’Italie · Division 1,1950,1950/1951,engsoccerdata,finished,380,380
+207,Championnat d’Italie · Division 1,1951,1951/1952,engsoccerdata,finished,380,380
+207,Championnat d’Italie · Division 1,1952,1952/1953,engsoccerdata,finished,306,306
+207,Championnat d’Italie · Division 1,1953,1953/1954,engsoccerdata,finished,306,306
+207,Championnat d’Italie · Division 1,1954,1954/1955,engsoccerdata,finished,306,306
+207,Championnat d’Italie · Division 1,1955,1955/1956,engsoccerdata,finished,306,306
+207,Championnat d’Italie · Division 1,1956,1956/1957,engsoccerdata,finished,306,306
+207,Championnat d’Italie · Division 1,1957,1957/1958,engsoccerdata,finished,306,306
+207,Championnat d’Italie · Division 1,1958,1958/1959,engsoccerdata,finished,306,306
+207,Championnat d’Italie · Division 1,1959,1959/1960,engsoccerdata,finished,306,306
+207,Championnat d’Italie · Division 1,1960,1960/1961,engsoccerdata,finished,306,306
+207,Championnat d’Italie · Division 1,1961,1961/1962,engsoccerdata,finished,306,306
+207,Championnat d’Italie · Division 1,1962,1962/1963,engsoccerdata,finished,306,306
+207,Championnat d’Italie · Division 1,1963,1963/1964,engsoccerdata,finished,306,306
+207,Championnat d’Italie · Division 1,1964,1964/1965,engsoccerdata,finished,306,306
+207,Championnat d’Italie · Division 1,1965,1965/1966,engsoccerdata,finished,306,306
+207,Championnat d’Italie · Division 1,1966,1966/1967,engsoccerdata,finished,306,306
+207,Championnat d’Italie · Division 1,1967,1967/1968,engsoccerdata,finished,240,240
+207,Championnat d’Italie · Division 1,1968,1968/1969,engsoccerdata,finished,240,240
+207,Championnat d’Italie · Division 1,1969,1969/1970,engsoccerdata,finished,240,240
+207,Championnat d’Italie · Division 1,1970,1970/1971,engsoccerdata,finished,240,240
+207,Championnat d’Italie · Division 1,1971,1971/1972,engsoccerdata,finished,240,240
+207,Championnat d’Italie · Division 1,1972,1972/1973,engsoccerdata,finished,240,240
+207,Championnat d’Italie · Division 1,1973,1973/1974,engsoccerdata,finished,240,240
+207,Championnat d’Italie · Division 1,1974,1974/1975,engsoccerdata,finished,240,240
+207,Championnat d’Italie · Division 1,1975,1975/1976,engsoccerdata,finished,240,240
+207,Championnat d’Italie · Division 1,1976,1976/1977,engsoccerdata,finished,240,240
+207,Championnat d’Italie · Division 1,1977,1977/1978,engsoccerdata,finished,240,240
+207,Championnat d’Italie · Division 1,1978,1978/1979,engsoccerdata,finished,240,240
+207,Championnat d’Italie · Division 1,1979,1979/1980,engsoccerdata,finished,240,240
+207,Championnat d’Italie · Division 1,1980,1980/1981,engsoccerdata,finished,240,240
+207,Championnat d’Italie · Division 1,1981,1981/1982,engsoccerdata,finished,240,240
+207,Championnat d’Italie · Division 1,1982,1982/1983,engsoccerdata,finished,240,240
+207,Championnat d’Italie · Division 1,1983,1983/1984,engsoccerdata,finished,240,240
+207,Championnat d’Italie · Division 1,1984,1984/1985,engsoccerdata,finished,240,240
+207,Championnat d’Italie · Division 1,1985,1985/1986,engsoccerdata,finished,240,240
+207,Championnat d’Italie · Division 1,1986,1986/1987,engsoccerdata,finished,240,240
+207,Championnat d’Italie · Division 1,1987,1987/1988,engsoccerdata,finished,240,240
+207,Championnat d’Italie · Division 1,1988,1988/1989,engsoccerdata,finished,306,306
+207,Championnat d’Italie · Division 1,1989,1989/1990,engsoccerdata,finished,306,306
+207,Championnat d’Italie · Division 1,1990,1990/1991,engsoccerdata,finished,306,306
+207,Championnat d’Italie · Division 1,1991,1991/1992,engsoccerdata,finished,306,306
+207,Championnat d’Italie · Division 1,1992,1992/1993,engsoccerdata,finished,306,306
+207,Championnat d’Italie · Division 1,1993,1993/1994,engsoccerdata,finished,317,317
+207,Championnat d’Italie · Division 1,1994,1994/1995,engsoccerdata,finished,307,307
+207,Championnat d’Italie · Division 1,1995,1995/1996,engsoccerdata,finished,306,306
+207,Championnat d’Italie · Division 1,1996,1996/1997,engsoccerdata,finished,306,306
+207,Championnat d’Italie · Division 1,1997,1997/1998,engsoccerdata,finished,306,306
+207,Championnat d’Italie · Division 1,1998,1998/1999,engsoccerdata,finished,306,306
+207,Championnat d’Italie · Division 1,1999,1999/2000,engsoccerdata,finished,306,306
+207,Championnat d’Italie · Division 1,2000,2000/2001,engsoccerdata,finished,311,311
+207,Championnat d’Italie · Division 1,2001,2001/2002,engsoccerdata,finished,306,306
+207,Championnat d’Italie · Division 1,2002,2002/2003,engsoccerdata,finished,306,306
+207,Championnat d’Italie · Division 1,2003,2003/2004,engsoccerdata,finished,306,306
+207,Championnat d’Italie · Division 1,2004,2004/2005,engsoccerdata,finished,380,380
+207,Championnat d’Italie · Division 1,2005,2005/2006,engsoccerdata,finished,380,380
+207,Championnat d’Italie · Division 1,2006,2006/2007,engsoccerdata,finished,380,380
+207,Championnat d’Italie · Division 1,2007,2007/2008,engsoccerdata,finished,380,380
+207,Championnat d’Italie · Division 1,2008,2008/2009,engsoccerdata,finished,380,380
+207,Championnat d’Italie · Division 1,2009,2009/2010,engsoccerdata,finished,380,380
+207,Championnat d’Italie · Division 1,2010,2010/2011,engsoccerdata,finished,380,380
+207,Championnat d’Italie · Division 1,2011,2011/2012,engsoccerdata,finished,380,380
+207,Championnat d’Italie · Division 1,2012,2012/2013,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,1932,1932/1933,engsoccerdata,finished,182,182
+208,Championnat de France · Division 1,1933,1933/1934,engsoccerdata,finished,240,240
+208,Championnat de France · Division 1,1934,1934/1935,engsoccerdata,finished,240,240
+208,Championnat de France · Division 1,1935,1935/1936,engsoccerdata,finished,240,240
+208,Championnat de France · Division 1,1936,1936/1937,engsoccerdata,finished,240,240
+208,Championnat de France · Division 1,1938,1938/1939,engsoccerdata,finished,240,240
+208,Championnat de France · Division 1,1945,1945/1946,engsoccerdata,finished,306,306
+208,Championnat de France · Division 1,1946,1946/1947,engsoccerdata,finished,340,340
+208,Championnat de France · Division 1,1947,1947/1948,engsoccerdata,finished,306,306
+208,Championnat de France · Division 1,1948,1948/1949,engsoccerdata,finished,306,306
+208,Championnat de France · Division 1,1949,1949/1950,engsoccerdata,finished,306,306
+208,Championnat de France · Division 1,1950,1950/1951,engsoccerdata,finished,306,306
+208,Championnat de France · Division 1,1951,1951/1952,engsoccerdata,finished,306,306
+208,Championnat de France · Division 1,1952,1952/1953,engsoccerdata,finished,306,306
+208,Championnat de France · Division 1,1953,1953/1954,engsoccerdata,finished,306,306
+208,Championnat de France · Division 1,1954,1954/1955,engsoccerdata,finished,306,306
+208,Championnat de France · Division 1,1955,1955/1956,engsoccerdata,finished,306,306
+208,Championnat de France · Division 1,1956,1956/1957,engsoccerdata,finished,306,306
+208,Championnat de France · Division 1,1957,1957/1958,engsoccerdata,finished,306,306
+208,Championnat de France · Division 1,1958,1958/1959,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,1959,1959/1960,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,1960,1960/1961,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,1961,1961/1962,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,1962,1962/1963,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,1963,1963/1964,engsoccerdata,finished,306,306
+208,Championnat de France · Division 1,1964,1964/1965,engsoccerdata,finished,306,306
+208,Championnat de France · Division 1,1965,1965/1966,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,1966,1966/1967,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,1967,1967/1968,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,1968,1968/1969,engsoccerdata,finished,306,306
+208,Championnat de France · Division 1,1969,1969/1970,engsoccerdata,finished,306,306
+208,Championnat de France · Division 1,1970,1970/1971,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,1971,1971/1972,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,1972,1972/1973,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,1973,1973/1974,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,1974,1974/1975,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,1975,1975/1976,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,1976,1976/1977,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,1977,1977/1978,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,1978,1978/1979,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,1979,1979/1980,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,1980,1980/1981,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,1981,1981/1982,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,1982,1982/1983,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,1983,1983/1984,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,1984,1984/1985,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,1985,1985/1986,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,1986,1986/1987,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,1987,1987/1988,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,1988,1988/1989,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,1989,1989/1990,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,1990,1990/1991,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,1991,1991/1992,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,1992,1992/1993,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,1993,1993/1994,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,1995,1995/1996,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,1996,1996/1997,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,1997,1997/1998,engsoccerdata,finished,306,306
+208,Championnat de France · Division 1,1998,1998/1999,engsoccerdata,finished,306,306
+208,Championnat de France · Division 1,1999,1999/2000,engsoccerdata,finished,306,306
+208,Championnat de France · Division 1,2000,2000/2001,engsoccerdata,finished,306,306
+208,Championnat de France · Division 1,2001,2001/2002,engsoccerdata,finished,306,306
+208,Championnat de France · Division 1,2002,2002/2003,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,2003,2003/2004,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,2004,2004/2005,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,2005,2005/2006,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,2006,2006/2007,engsoccerdata,finished,379,379
+208,Championnat de France · Division 1,2007,2007/2008,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,2008,2008/2009,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,2009,2009/2010,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,2010,2010/2011,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,2011,2011/2012,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,2012,2012/2013,engsoccerdata,finished,380,380
+208,Championnat de France · Division 1,2013,2013/2014,engsoccerdata,finished,380,380
+209,Coupe d’Europe des clubs champions,1955,1955/1956,footballcsv,finished,29,29
+209,Coupe d’Europe des clubs champions,1956,1956/1957,footballcsv,finished,44,44
+209,Coupe d’Europe des clubs champions,1957,1957/1958,footballcsv,finished,48,48
+209,Coupe d’Europe des clubs champions,1958,1958/1959,footballcsv,finished,55,55
+209,Coupe d’Europe des clubs champions,1959,1959/1960,footballcsv,finished,52,52
+209,Coupe d’Europe des clubs champions,1960,1960/1961,footballcsv,finished,51,51
+209,Coupe d’Europe des clubs champions,1961,1961/1962,footballcsv,finished,55,55
+209,Coupe d’Europe des clubs champions,1962,1962/1963,footballcsv,finished,59,59
+209,Coupe d’Europe des clubs champions,1963,1963/1964,footballcsv,finished,61,61
+209,Coupe d’Europe des clubs champions,1964,1964/1965,footballcsv,finished,63,63
+209,Coupe d’Europe des clubs champions,1965,1965/1966,footballcsv,finished,59,59
+209,Coupe d’Europe des clubs champions,1966,1966/1967,footballcsv,finished,65,65
+209,Coupe d’Europe des clubs champions,1967,1967/1968,footballcsv,finished,60,60
+209,Coupe d’Europe des clubs champions,1968,1968/1969,footballcsv,finished,52,52
+209,Coupe d’Europe des clubs champions,1969,1969/1970,footballcsv,finished,63,63
+209,Coupe d’Europe des clubs champions,1970,1970/1971,footballcsv,finished,63,63
+209,Coupe d’Europe des clubs champions,1971,1971/1972,footballcsv,finished,63,63
+209,Coupe d’Europe des clubs champions,1972,1972/1973,footballcsv,finished,57,57
+209,Coupe d’Europe des clubs champions,1973,1973/1974,footballcsv,finished,60,60
+209,Coupe d’Europe des clubs champions,1974,1974/1975,footballcsv,finished,55,55
+209,Coupe d’Europe des clubs champions,1975,1975/1976,footballcsv,finished,61,61
+209,Coupe d’Europe des clubs champions,1976,1976/1977,footballcsv,finished,61,61
+209,Coupe d’Europe des clubs champions,1977,1977/1978,footballcsv,finished,59,59
+209,Coupe d’Europe des clubs champions,1978,1978/1979,footballcsv,finished,63,63
+209,Coupe d’Europe des clubs champions,1979,1979/1980,footballcsv,finished,63,63
+209,Coupe d’Europe des clubs champions,1980,1980/1981,footballcsv,finished,63,63
+209,Coupe d’Europe des clubs champions,1981,1981/1982,footballcsv,finished,63,63
+209,Coupe d’Europe des clubs champions,1982,1982/1983,footballcsv,finished,59,59
+209,Coupe d’Europe des clubs champions,1983,1983/1984,footballcsv,finished,59,59
+209,Coupe d’Europe des clubs champions,1984,1984/1985,footballcsv,finished,61,61
+209,Coupe d’Europe des clubs champions,1985,1985/1986,footballcsv,finished,59,59
+209,Coupe d’Europe des clubs champions,1986,1986/1987,footballcsv,finished,57,57
+209,Coupe d’Europe des clubs champions,1987,1987/1988,footballcsv,finished,61,61
+209,Coupe d’Europe des clubs champions,1988,1988/1989,footballcsv,finished,59,59
+209,Coupe d’Europe des clubs champions,1989,1989/1990,footballcsv,finished,61,61
+209,Coupe d’Europe des clubs champions,1990,1990/1991,footballcsv,finished,86,86
+209,Coupe d’Europe des clubs champions,1991,1991/1992,footballcsv,finished,98,98
+209,Coupe d’Europe des clubs champions,1992,1992/1993,footballcsv,finished,103,103
+209,Coupe d’Europe des clubs champions,1993,1993/1994,footballcsv,finished,115,115
+209,Coupe d’Europe des clubs champions,1994,1994/1995,footballcsv,finished,82,82
+209,Coupe d’Europe des clubs champions,1995,1995/1996,footballcsv,finished,84,84
+209,Coupe d’Europe des clubs champions,1996,1996/1997,footballcsv,finished,82,82
+209,Coupe d’Europe des clubs champions,1997,1997/1998,footballcsv,finished,157,157
+209,Coupe d’Europe des clubs champions,1998,1998/1999,footballcsv,finished,168,168
+209,Coupe d’Europe des clubs champions,1999,1999/2000,footballcsv,finished,247,247
+209,Coupe d’Europe des clubs champions,2000,2000/2001,footballcsv,finished,249,249
+209,Coupe d’Europe des clubs champions,2001,2001/2002,footballcsv,finished,250,250
+209,Coupe d’Europe des clubs champions,2002,2002/2003,footballcsv,finished,249,249
+209,Coupe d’Europe des clubs champions,2003,2003/2004,footballcsv,finished,225,225
+209,Coupe d’Europe des clubs champions,2004,2004/2005,footballcsv,finished,223,223
+209,Coupe d’Europe des clubs champions,2005,2005/2006,footballcsv,finished,229,229
+209,Coupe d’Europe des clubs champions,2006,2006/2007,footballcsv,finished,226,226
+209,Coupe d’Europe des clubs champions,2007,2007/2008,footballcsv,finished,232,232
+209,Coupe d’Europe des clubs champions,2008,2008/2009,footballcsv,finished,213,213
+209,Coupe d’Europe des clubs champions,2009,2009/2010,footballcsv,finished,234,234
+210,Eredivisie,1956,1956/1957,engsoccerdata,finished,306,306
+210,Eredivisie,1957,1957/1958,engsoccerdata,finished,306,306
+210,Eredivisie,1958,1958/1959,engsoccerdata,finished,306,306
+210,Eredivisie,1959,1959/1960,engsoccerdata,finished,306,306
+210,Eredivisie,1960,1960/1961,engsoccerdata,finished,306,306
+210,Eredivisie,1961,1961/1962,engsoccerdata,finished,306,306
+210,Eredivisie,1962,1962/1963,engsoccerdata,finished,240,240
+210,Eredivisie,1963,1963/1964,engsoccerdata,finished,240,240
+210,Eredivisie,1964,1964/1965,engsoccerdata,finished,240,240
+210,Eredivisie,1965,1965/1966,engsoccerdata,finished,240,240
+210,Eredivisie,1966,1966/1967,engsoccerdata,finished,306,306
+210,Eredivisie,1967,1967/1968,engsoccerdata,finished,306,306
+210,Eredivisie,1968,1968/1969,engsoccerdata,finished,306,306
+210,Eredivisie,1969,1969/1970,engsoccerdata,finished,306,306
+210,Eredivisie,1970,1970/1971,engsoccerdata,finished,306,306
+210,Eredivisie,1971,1971/1972,engsoccerdata,finished,306,306
+210,Eredivisie,1972,1972/1973,engsoccerdata,finished,306,306
+210,Eredivisie,1973,1973/1974,engsoccerdata,finished,306,306
+210,Eredivisie,1974,1974/1975,engsoccerdata,finished,306,306
+210,Eredivisie,1975,1975/1976,engsoccerdata,finished,306,306
+210,Eredivisie,1976,1976/1977,engsoccerdata,finished,306,306
+210,Eredivisie,1977,1977/1978,engsoccerdata,finished,306,306
+210,Eredivisie,1978,1978/1979,engsoccerdata,finished,306,306
+210,Eredivisie,1979,1979/1980,engsoccerdata,finished,306,306
+210,Eredivisie,1980,1980/1981,engsoccerdata,finished,306,306
+210,Eredivisie,1981,1981/1982,engsoccerdata,finished,306,306
+210,Eredivisie,1982,1982/1983,engsoccerdata,finished,306,306
+210,Eredivisie,1983,1983/1984,engsoccerdata,finished,306,306
+210,Eredivisie,1984,1984/1985,engsoccerdata,finished,306,306
+210,Eredivisie,1985,1985/1986,engsoccerdata,finished,306,306
+210,Eredivisie,1986,1986/1987,engsoccerdata,finished,306,306
+210,Eredivisie,1987,1987/1988,engsoccerdata,finished,306,306
+210,Eredivisie,1988,1988/1989,engsoccerdata,finished,306,306
+210,Eredivisie,1989,1989/1990,engsoccerdata,finished,306,306
+210,Eredivisie,1990,1990/1991,engsoccerdata,finished,306,306
+210,Eredivisie,1991,1991/1992,engsoccerdata,finished,306,306
+210,Eredivisie,1992,1992/1993,engsoccerdata,finished,306,306
+210,Eredivisie,1993,1993/1994,engsoccerdata,finished,306,306
+210,Eredivisie,1994,1994/1995,engsoccerdata,finished,306,306
+210,Eredivisie,1995,1995/1996,engsoccerdata,finished,306,306
+210,Eredivisie,1996,1996/1997,engsoccerdata,finished,306,306
+210,Eredivisie,1997,1997/1998,engsoccerdata,finished,306,306
+210,Eredivisie,1998,1998/1999,engsoccerdata,finished,306,306
+210,Eredivisie,1999,1999/2000,engsoccerdata,finished,306,306
+210,Eredivisie,2000,2000/2001,engsoccerdata,finished,306,306
+210,Eredivisie,2001,2001/2002,engsoccerdata,finished,306,306
+210,Eredivisie,2002,2002/2003,engsoccerdata,finished,306,306
+210,Eredivisie,2003,2003/2004,engsoccerdata,finished,306,306
+210,Eredivisie,2004,2004/2005,engsoccerdata,finished,306,306
+210,Eredivisie,2005,2005/2006,engsoccerdata,finished,306,306
+210,Eredivisie,2006,2006/2007,engsoccerdata,finished,306,306
+210,Eredivisie,2007,2007/2008,engsoccerdata,finished,306,306
+210,Eredivisie,2008,2008/2009,engsoccerdata,finished,306,306
+210,Eredivisie,2009,2009/2010,engsoccerdata,finished,306,306
+210,Eredivisie,2010,2010/2011,engsoccerdata,finished,306,306
+210,Eredivisie,2011,2011/2012,engsoccerdata,finished,306,306
+210,Eredivisie,2012,2012/2013,engsoccerdata,finished,306,306
+210,Eredivisie,2013,2013/2014,engsoccerdata,finished,306,306
+210,Eredivisie,2014,2014/2015,engsoccerdata,finished,306,306
+210,Eredivisie,2015,2015/2016,engsoccerdata,finished,306,306
+210,Eredivisie,2016,2016/2017,engsoccerdata,finished,306,306
+210,Eredivisie,2017,2017/2018,engsoccerdata,finished,306,306
+211,Angleterre · Division 4,1958,1958/1959,footballcsv,finished,552,552
+211,Angleterre · Division 4,1959,1959/1960,footballcsv,finished,552,552
+211,Angleterre · Division 4,1960,1960/1961,footballcsv,finished,552,552
+211,Angleterre · Division 4,1961,1961/1962,footballcsv,finished,539,539
+211,Angleterre · Division 4,1962,1962/1963,footballcsv,finished,552,552
+211,Angleterre · Division 4,1963,1963/1964,footballcsv,finished,552,552
+211,Angleterre · Division 4,1964,1964/1965,footballcsv,finished,552,552
+211,Angleterre · Division 4,1965,1965/1966,footballcsv,finished,552,552
+211,Angleterre · Division 4,1966,1966/1967,footballcsv,finished,552,552
+211,Angleterre · Division 4,1967,1967/1968,footballcsv,finished,552,552
+211,Angleterre · Division 4,1968,1968/1969,footballcsv,finished,552,552
+211,Angleterre · Division 4,1969,1969/1970,footballcsv,finished,552,552
+211,Angleterre · Division 4,1970,1970/1971,footballcsv,finished,552,552
+211,Angleterre · Division 4,1971,1971/1972,footballcsv,finished,552,552
+211,Angleterre · Division 4,1972,1972/1973,footballcsv,finished,552,552
+211,Angleterre · Division 4,1973,1973/1974,footballcsv,finished,551,551
+211,Angleterre · Division 4,1974,1974/1975,footballcsv,finished,552,552
+211,Angleterre · Division 4,1975,1975/1976,footballcsv,finished,552,552
+211,Angleterre · Division 4,1976,1976/1977,footballcsv,finished,552,552
+211,Angleterre · Division 4,1977,1977/1978,footballcsv,finished,552,552
+211,Angleterre · Division 4,1978,1978/1979,footballcsv,finished,552,552
+211,Angleterre · Division 4,1979,1979/1980,footballcsv,finished,552,552
+211,Angleterre · Division 4,1980,1980/1981,footballcsv,finished,552,552
+211,Angleterre · Division 4,1981,1981/1982,footballcsv,finished,552,552
+211,Angleterre · Division 4,1982,1982/1983,footballcsv,finished,552,552
+211,Angleterre · Division 4,1983,1983/1984,footballcsv,finished,552,552
+211,Angleterre · Division 4,1984,1984/1985,footballcsv,finished,552,552
+211,Angleterre · Division 4,1985,1985/1986,footballcsv,finished,552,552
+211,Angleterre · Division 4,1986,1986/1987,footballcsv,finished,552,552
+211,Angleterre · Division 4,1987,1987/1988,footballcsv,finished,552,552
+211,Angleterre · Division 4,1988,1988/1989,footballcsv,finished,552,552
+211,Angleterre · Division 4,1989,1989/1990,footballcsv,finished,552,552
+211,Angleterre · Division 4,1990,1990/1991,footballcsv,finished,552,552
+211,Angleterre · Division 4,1991,1991/1992,footballcsv,finished,462,462
+212,Coupe de la Ligue anglaise,1960,1960/1961,engsoccerdata,finished,113,113
+212,Coupe de la Ligue anglaise,1961,1961/1962,engsoccerdata,finished,104,104
+212,Coupe de la Ligue anglaise,1962,1962/1963,engsoccerdata,finished,102,102
+212,Coupe de la Ligue anglaise,1963,1963/1964,engsoccerdata,finished,104,104
+212,Coupe de la Ligue anglaise,1964,1964/1965,engsoccerdata,finished,98,98
+212,Coupe de la Ligue anglaise,1965,1965/1966,engsoccerdata,finished,106,106
+212,Coupe de la Ligue anglaise,1966,1966/1967,engsoccerdata,finished,118,118
+212,Coupe de la Ligue anglaise,1967,1967/1968,engsoccerdata,finished,110,110
+212,Coupe de la Ligue anglaise,1968,1968/1969,engsoccerdata,finished,117,117
+212,Coupe de la Ligue anglaise,1969,1969/1970,engsoccerdata,finished,122,122
+212,Coupe de la Ligue anglaise,1970,1970/1971,engsoccerdata,finished,116,116
+212,Coupe de la Ligue anglaise,1971,1971/1972,engsoccerdata,finished,123,123
+212,Coupe de la Ligue anglaise,1972,1972/1973,engsoccerdata,finished,120,120
+212,Coupe de la Ligue anglaise,1973,1973/1974,engsoccerdata,finished,131,131
+212,Coupe de la Ligue anglaise,1974,1974/1975,engsoccerdata,finished,127,127
+212,Coupe de la Ligue anglaise,1975,1975/1976,engsoccerdata,finished,140,140
+212,Coupe de la Ligue anglaise,1976,1976/1977,engsoccerdata,finished,147,147
+212,Coupe de la Ligue anglaise,1977,1977/1978,engsoccerdata,finished,148,148
+212,Coupe de la Ligue anglaise,1978,1978/1979,engsoccerdata,finished,139,139
+212,Coupe de la Ligue anglaise,1979,1979/1980,engsoccerdata,finished,169,169
+212,Coupe de la Ligue anglaise,1980,1980/1981,engsoccerdata,finished,161,161
+212,Coupe de la Ligue anglaise,1981,1981/1982,engsoccerdata,finished,161,161
+212,Coupe de la Ligue anglaise,1982,1982/1983,engsoccerdata,finished,160,160
+212,Coupe de la Ligue anglaise,1983,1983/1984,engsoccerdata,finished,168,168
+212,Coupe de la Ligue anglaise,1984,1984/1985,engsoccerdata,finished,167,167
+212,Coupe de la Ligue anglaise,1985,1985/1986,engsoccerdata,finished,163,163
+212,Coupe de la Ligue anglaise,1986,1986/1987,engsoccerdata,finished,157,157
+212,Coupe de la Ligue anglaise,1987,1987/1988,engsoccerdata,finished,158,158
+212,Coupe de la Ligue anglaise,1988,1988/1989,engsoccerdata,finished,162,162
+212,Coupe de la Ligue anglaise,1989,1989/1990,engsoccerdata,finished,168,168
+212,Coupe de la Ligue anglaise,1990,1990/1991,engsoccerdata,finished,191,191
+212,Coupe de la Ligue anglaise,1991,1991/1992,engsoccerdata,finished,197,197
+212,Coupe de la Ligue anglaise,1992,1992/1993,engsoccerdata,finished,194,194
+212,Coupe de la Ligue anglaise,1993,1993/1994,engsoccerdata,finished,196,196
+212,Coupe de la Ligue anglaise,1994,1994/1995,engsoccerdata,finished,188,188
+212,Coupe de la Ligue anglaise,1995,1995/1996,engsoccerdata,finished,194,194
+212,Coupe de la Ligue anglaise,1996,1996/1997,engsoccerdata,finished,226,226
+212,Coupe de la Ligue anglaise,1997,1997/1998,engsoccerdata,finished,221,221
+212,Coupe de la Ligue anglaise,1998,1998/1999,engsoccerdata,finished,213,213
+212,Coupe de la Ligue anglaise,1999,1999/2000,engsoccerdata,finished,212,212
+212,Coupe de la Ligue anglaise,2000,2000/2001,engsoccerdata,finished,213,213
+212,Coupe de la Ligue anglaise,2001,2001/2002,engsoccerdata,finished,95,95
+212,Coupe de la Ligue anglaise,2002,2002/2003,engsoccerdata,finished,98,98
+212,Coupe de la Ligue anglaise,2003,2003/2004,engsoccerdata,finished,103,103
+212,Coupe de la Ligue anglaise,2004,2004/2005,engsoccerdata,finished,95,95
+212,Coupe de la Ligue anglaise,2005,2005/2006,engsoccerdata,finished,95,95
+212,Coupe de la Ligue anglaise,2006,2006/2007,engsoccerdata,finished,97,97
+212,Coupe de la Ligue anglaise,2007,2007/2008,engsoccerdata,finished,96,96
+212,Coupe de la Ligue anglaise,2008,2008/2009,engsoccerdata,finished,95,95
+212,Coupe de la Ligue anglaise,2009,2009/2010,engsoccerdata,finished,95,95
+212,Coupe de la Ligue anglaise,2010,2010/2011,engsoccerdata,finished,99,99
+212,Coupe de la Ligue anglaise,2011,2011/2012,engsoccerdata,finished,95,95
+212,Coupe de la Ligue anglaise,2012,2012/2013,engsoccerdata,finished,94,94
+212,Coupe de la Ligue anglaise,2013,2013/2014,engsoccerdata,finished,95,95
+212,Coupe de la Ligue anglaise,2014,2014/2015,engsoccerdata,finished,95,95
+212,Coupe de la Ligue anglaise,2015,2015/2016,engsoccerdata,finished,95,95
+212,Coupe de la Ligue anglaise,2016,2016/2017,engsoccerdata,finished,95,95
+212,Coupe de la Ligue anglaise,2017,2017/2018,engsoccerdata,finished,96,96
+212,Coupe de la Ligue anglaise,2018,2018/2019,engsoccerdata,finished,95,95
+213,Bundesliga,1963,1963/1964,footballcsv,finished,265,265
+213,Bundesliga,1964,1964/1965,footballcsv,finished,269,269
+213,Bundesliga,1965,1965/1966,footballcsv,finished,338,338
+213,Bundesliga,1966,1966/1967,footballcsv,finished,320,320
+213,Bundesliga,1967,1967/1968,footballcsv,finished,306,306
+213,Bundesliga,1968,1968/1969,footballcsv,finished,306,306
+213,Bundesliga,1969,1969/1970,footballcsv,finished,306,306
+213,Bundesliga,1970,1970/1971,footballcsv,finished,306,306
+213,Bundesliga,1971,1971/1972,footballcsv,finished,306,306
+213,Bundesliga,1972,1972/1973,footballcsv,finished,306,306
+213,Bundesliga,1973,1973/1974,footballcsv,finished,306,306
+213,Bundesliga,1974,1974/1975,footballcsv,finished,313,313
+213,Bundesliga,1975,1975/1976,footballcsv,finished,306,306
+213,Bundesliga,1976,1976/1977,footballcsv,finished,306,306
+213,Bundesliga,1977,1977/1978,footballcsv,finished,306,306
+213,Bundesliga,1978,1978/1979,footballcsv,finished,306,306
+213,Bundesliga,1979,1979/1980,footballcsv,finished,306,306
+213,Bundesliga,1980,1980/1981,footballcsv,finished,306,306
+213,Bundesliga,1981,1981/1982,footballcsv,finished,306,306
+213,Bundesliga,1982,1982/1983,footballcsv,finished,309,309
+213,Bundesliga,1983,1983/1984,footballcsv,finished,306,306
+213,Bundesliga,1984,1984/1985,footballcsv,finished,306,306
+213,Bundesliga,1985,1985/1986,footballcsv,finished,306,306
+213,Bundesliga,1986,1986/1987,footballcsv,finished,307,307
+213,Bundesliga,1987,1987/1988,footballcsv,finished,306,306
+213,Bundesliga,1988,1988/1989,footballcsv,finished,306,306
+213,Bundesliga,1989,1989/1990,footballcsv,finished,306,306
+213,Bundesliga,1990,1990/1991,footballcsv,finished,306,306
+213,Bundesliga,1991,1991/1992,footballcsv,finished,380,380
+213,Bundesliga,1992,1992/1993,footballcsv,finished,306,306
+213,Bundesliga,1993,1993/1994,footballcsv,finished,318,318
+213,Bundesliga,1994,1994/1995,footballcsv,finished,306,306
+213,Bundesliga,1995,1995/1996,footballcsv,finished,306,306
+213,Bundesliga,1996,1996/1997,footballcsv,finished,306,306
+213,Bundesliga,1997,1997/1998,footballcsv,finished,306,306
+213,Bundesliga,1998,1998/1999,footballcsv,finished,306,306
+213,Bundesliga,1999,1999/2000,footballcsv,finished,306,306
+213,Bundesliga,2000,2000/2001,footballcsv,finished,306,306
+213,Bundesliga,2001,2001/2002,footballcsv,finished,306,306
+213,Bundesliga,2002,2002/2003,footballcsv,finished,306,306
+213,Bundesliga,2003,2003/2004,footballcsv,finished,306,306
+213,Bundesliga,2004,2004/2005,footballcsv,finished,306,306
+213,Bundesliga,2005,2005/2006,footballcsv,finished,306,306
+213,Bundesliga,2006,2006/2007,footballcsv,finished,306,306
+213,Bundesliga,2007,2007/2008,footballcsv,finished,306,306
+213,Bundesliga,2008,2008/2009,footballcsv,finished,306,306
+213,Bundesliga,2009,2009/2010,footballcsv,finished,306,306
+214,Coupe d’Allemagne,1963,1963/1964,worldclub,finished,34,34
+214,Coupe d’Allemagne,1964,1964/1965,worldclub,finished,32,32
+214,Coupe d’Allemagne,1965,1965/1966,worldclub,finished,34,34
+214,Coupe d’Allemagne,1966,1966/1967,worldclub,finished,39,39
+214,Coupe d’Allemagne,1967,1967/1968,worldclub,finished,33,33
+214,Coupe d’Allemagne,1968,1968/1969,worldclub,finished,33,33
+214,Coupe d’Allemagne,1969,1969/1970,worldclub,finished,33,33
+214,Coupe d’Allemagne,1970,1970/1971,worldclub,finished,36,36
+214,Coupe d’Allemagne,1971,1971/1972,worldclub,finished,57,57
+214,Coupe d’Allemagne,1972,1972/1973,worldclub,finished,61,61
+214,Coupe d’Allemagne,1973,1973/1974,worldclub,finished,37,37
+214,Coupe d’Allemagne,1974,1974/1975,worldclub,finished,128,128
+214,Coupe d’Allemagne,1975,1975/1976,worldclub,finished,129,129
+214,Coupe d’Allemagne,1976,1976/1977,worldclub,finished,132,132
+214,Coupe d’Allemagne,1977,1977/1978,worldclub,finished,132,132
+214,Coupe d’Allemagne,1978,1978/1979,worldclub,finished,130,130
+214,Coupe d’Allemagne,1979,1979/1980,worldclub,finished,127,127
+214,Coupe d’Allemagne,1980,1980/1981,worldclub,finished,136,136
+214,Coupe d’Allemagne,1981,1981/1982,worldclub,finished,134,134
+214,Coupe d’Allemagne,1982,1982/1983,worldclub,finished,69,69
+214,Coupe d’Allemagne,1983,1983/1984,worldclub,finished,67,67
+214,Coupe d’Allemagne,1984,1984/1985,worldclub,finished,66,66
+214,Coupe d’Allemagne,1985,1985/1986,worldclub,finished,65,65
+214,Coupe d’Allemagne,1986,1986/1987,worldclub,finished,68,68
+214,Coupe d’Allemagne,1987,1987/1988,worldclub,finished,71,71
+214,Coupe d’Allemagne,1988,1988/1989,worldclub,finished,70,70
+214,Coupe d’Allemagne,1989,1989/1990,worldclub,finished,66,66
+214,Coupe d’Allemagne,1990,1990/1991,worldclub,finished,64,64
+214,Coupe d’Allemagne,1991,1991/1992,worldclub,finished,84,84
+214,Coupe d’Allemagne,1992,1992/1993,worldclub,finished,79,79
+214,Coupe d’Allemagne,1993,1993/1994,worldclub,finished,71,71
+214,Coupe d’Allemagne,1994,1994/1995,worldclub,finished,61,61
+214,Coupe d’Allemagne,1995,1995/1996,worldclub,finished,60,60
+214,Coupe d’Allemagne,1996,1996/1997,worldclub,finished,60,60
+214,Coupe d’Allemagne,1997,1997/1998,worldclub,finished,62,62
+214,Coupe d’Allemagne,1998,1998/1999,worldclub,finished,62,62
+214,Coupe d’Allemagne,1999,1999/2000,worldclub,finished,62,62
+214,Coupe d’Allemagne,2000,2000/2001,worldclub,finished,63,63
+214,Coupe d’Allemagne,2001,2001/2002,worldclub,finished,61,61
+214,Coupe d’Allemagne,2002,2002/2003,worldclub,finished,62,62
+214,Coupe d’Allemagne,2003,2003/2004,worldclub,finished,59,59
+214,Coupe d’Allemagne,2004,2004/2005,worldclub,finished,62,62
+214,Coupe d’Allemagne,2005,2005/2006,worldclub,finished,63,63
+214,Coupe d’Allemagne,2006,2006/2007,worldclub,finished,60,60
+214,Coupe d’Allemagne,2007,2007/2008,worldclub,finished,63,63
+214,Coupe d’Allemagne,2008,2008/2009,worldclub,finished,59,59
+214,Coupe d’Allemagne,2009,2009/2010,worldclub,finished,63,63
+214,Coupe d’Allemagne,2010,2010/2011,worldclub,finished,61,61
+214,Coupe d’Allemagne,2011,2011/2012,worldclub,finished,60,60
+214,Coupe d’Allemagne,2012,2012/2013,worldclub,finished,62,62
+214,Coupe d’Allemagne,2013,2013/2014,worldclub,finished,62,62
+214,Coupe d’Allemagne,2014,2014/2015,worldclub,finished,57,57
+214,Coupe d’Allemagne,2015,2015/2016,worldclub,finished,57,57
+214,Coupe d’Allemagne,2016,2016/2017,worldclub,finished,60,60
+214,Coupe d’Allemagne,2017,2017/2018,worldclub,finished,63,63
+214,Coupe d’Allemagne,2021,2021/2022,worldclub,finished,63,63
+214,Coupe d’Allemagne,2022,2022/2023,worldclub,finished,62,62
+214,Coupe d’Allemagne,2023,2023/2024,worldclub,finished,63,63
+214,Coupe d’Allemagne,2024,2024/2025,worldclub,finished,48,48
+215,Allemagne · Division 2 · 2North,1974,1974/1975,engsoccerdata,finished,380,380
+215,Allemagne · Division 2 · 2North,1975,1975/1976,engsoccerdata,finished,380,380
+215,Allemagne · Division 2 · 2North,1976,1976/1977,engsoccerdata,finished,380,380
+215,Allemagne · Division 2 · 2North,1977,1977/1978,engsoccerdata,finished,380,380
+215,Allemagne · Division 2 · 2North,1978,1978/1979,engsoccerdata,finished,380,380
+215,Allemagne · Division 2 · 2North,1979,1979/1980,engsoccerdata,finished,380,380
+215,Allemagne · Division 2 · 2North,1980,1980/1981,engsoccerdata,finished,462,462
+215,Allemagne · Division 2 · 2North,1991,1991/1992,engsoccerdata,finished,192,192
+216,Allemagne · Division 2 · 2South,1974,1974/1975,engsoccerdata,finished,380,380
+216,Allemagne · Division 2 · 2South,1975,1975/1976,engsoccerdata,finished,380,380
+216,Allemagne · Division 2 · 2South,1976,1976/1977,engsoccerdata,finished,380,380
+216,Allemagne · Division 2 · 2South,1977,1977/1978,engsoccerdata,finished,380,380
+216,Allemagne · Division 2 · 2South,1978,1978/1979,engsoccerdata,finished,380,380
+216,Allemagne · Division 2 · 2South,1979,1979/1980,engsoccerdata,finished,420,420
+216,Allemagne · Division 2 · 2South,1980,1980/1981,engsoccerdata,finished,380,380
+216,Allemagne · Division 2 · 2South,1991,1991/1992,engsoccerdata,finished,192,192
+217,Allemagne · Division 2 · 2,1981,1981/1982,engsoccerdata,finished,380,380
+217,Allemagne · Division 2 · 2,1982,1982/1983,engsoccerdata,finished,380,380
+217,Allemagne · Division 2 · 2,1983,1983/1984,engsoccerdata,finished,380,380
+217,Allemagne · Division 2 · 2,1984,1984/1985,engsoccerdata,finished,380,380
+217,Allemagne · Division 2 · 2,1985,1985/1986,engsoccerdata,finished,380,380
+217,Allemagne · Division 2 · 2,1986,1986/1987,engsoccerdata,finished,380,380
+217,Allemagne · Division 2 · 2,1987,1987/1988,engsoccerdata,finished,380,380
+217,Allemagne · Division 2 · 2,1988,1988/1989,engsoccerdata,finished,380,380
+217,Allemagne · Division 2 · 2,1989,1989/1990,engsoccerdata,finished,380,380
+217,Allemagne · Division 2 · 2,1990,1990/1991,engsoccerdata,finished,380,380
+217,Allemagne · Division 2 · 2,1992,1992/1993,engsoccerdata,finished,552,552
+217,Allemagne · Division 2 · 2,1993,1993/1994,engsoccerdata,finished,380,380
+217,Allemagne · Division 2 · 2,1994,1994/1995,engsoccerdata,finished,306,306
+217,Allemagne · Division 2 · 2,1995,1995/1996,engsoccerdata,finished,306,306
+217,Allemagne · Division 2 · 2,1996,1996/1997,engsoccerdata,finished,306,306
+217,Allemagne · Division 2 · 2,1997,1997/1998,engsoccerdata,finished,306,306
+217,Allemagne · Division 2 · 2,1998,1998/1999,engsoccerdata,finished,306,306
+217,Allemagne · Division 2 · 2,1999,1999/2000,engsoccerdata,finished,306,306
+217,Allemagne · Division 2 · 2,2000,2000/2001,engsoccerdata,finished,306,306
+217,Allemagne · Division 2 · 2,2001,2001/2002,engsoccerdata,finished,306,306
+217,Allemagne · Division 2 · 2,2002,2002/2003,engsoccerdata,finished,306,306
+217,Allemagne · Division 2 · 2,2003,2003/2004,engsoccerdata,finished,468,468
+217,Allemagne · Division 2 · 2,2004,2004/2005,engsoccerdata,finished,306,306
+217,Allemagne · Division 2 · 2,2005,2005/2006,engsoccerdata,finished,306,306
+217,Allemagne · Division 2 · 2,2006,2006/2007,engsoccerdata,finished,306,306
+217,Allemagne · Division 2 · 2,2007,2007/2008,engsoccerdata,finished,306,306
+217,Allemagne · Division 2 · 2,2008,2008/2009,engsoccerdata,finished,306,306
+217,Allemagne · Division 2 · 2,2009,2009/2010,engsoccerdata,finished,306,306
+217,Allemagne · Division 2 · 2,2010,2010/2011,engsoccerdata,finished,306,306
+217,Allemagne · Division 2 · 2,2011,2011/2012,engsoccerdata,finished,306,306
+218,Primeira Liga,1990,1990/1991,worldclub,finished,338,338
+218,Primeira Liga,1991,1991/1992,worldclub,finished,275,275
+218,Primeira Liga,1992,1992/1993,worldclub,finished,268,268
+218,Primeira Liga,1993,1993/1994,worldclub,finished,274,274
+219,Super League,1991,1991/1992,worldclub,finished,118,118
+219,Super League,1992,1992/1993,worldclub,finished,117,117
+219,Super League,1993,1993/1994,worldclub,finished,113,113
+219,Super League,1994,1994/1995,worldclub,finished,115,115
+219,Super League,1995,1995/1996,worldclub,finished,122,122
+219,Super League,1996,1996/1997,worldclub,finished,118,118
+219,Super League,1997,1997/1998,worldclub,finished,121,121
+219,Super League,1998,1998/1999,worldclub,finished,120,120
+219,Super League,1999,1999/2000,worldclub,finished,136,136
+219,Super League,2000,2000/2001,worldclub,finished,134,134
+219,Super League,2001,2001/2002,worldclub,finished,130,130
+219,Super League,2002,2002/2003,worldclub,finished,130,130
+219,Super League,2003,2003/2004,worldclub,finished,172,172
+219,Super League,2004,2004/2005,worldclub,finished,152,152
+219,Super League,2005,2005/2006,worldclub,finished,170,170
+219,Super League,2006,2006/2007,worldclub,finished,162,162
+219,Super League,2007,2007/2008,worldclub,finished,170,170
+219,Super League,2008,2008/2009,worldclub,finished,167,167
+219,Super League,2009,2009/2010,worldclub,finished,175,175
+219,Super League,2010,2010/2011,worldclub,finished,172,172
+219,Super League,2011,2011/2012,worldclub,finished,148,148
+219,Super League,2012,2012/2013,worldclub,finished,166,166
+219,Super League,2013,2013/2014,worldclub,finished,168,168
+219,Super League,2015,2015/2016,worldclub,finished,173,173
+219,Super League,2016,2016/2017,worldclub,finished,169,169
+219,Super League,2017,2017/2018,worldclub,finished,174,174
+220,Premier League,1992,1992/1993,footballcsv,finished,462,462
+220,Premier League,1993,1993/1994,footballcsv,finished,463,463
+220,Premier League,1994,1994/1995,footballcsv,finished,463,463
+220,Premier League,1995,1995/1996,footballcsv,finished,380,380
+220,Premier League,1996,1996/1997,footballcsv,finished,381,381
+220,Premier League,1997,1997/1998,footballcsv,finished,380,380
+220,Premier League,1998,1998/1999,footballcsv,finished,381,381
+220,Premier League,1999,1999/2000,footballcsv,finished,380,380
+220,Premier League,2000,2000/2001,footballcsv,finished,381,381
+220,Premier League,2001,2001/2002,footballcsv,finished,383,383
+220,Premier League,2002,2002/2003,footballcsv,finished,380,380
+220,Premier League,2003,2003/2004,footballcsv,finished,380,380
+220,Premier League,2004,2004/2005,footballcsv,finished,380,380
+220,Premier League,2005,2005/2006,footballcsv,finished,380,380
+220,Premier League,2006,2006/2007,footballcsv,finished,380,380
+220,Premier League,2007,2007/2008,footballcsv,finished,380,380
+220,Premier League,2008,2008/2009,footballcsv,finished,380,380
+220,Premier League,2009,2009/2010,footballcsv,finished,380,380
+221,Championnat de Grèce · Division 1,1994,1994/1995,engsoccerdata,finished,306,306
+221,Championnat de Grèce · Division 1,1995,1995/1996,engsoccerdata,finished,306,306
+221,Championnat de Grèce · Division 1,1996,1996/1997,engsoccerdata,finished,306,306
+221,Championnat de Grèce · Division 1,1997,1997/1998,engsoccerdata,finished,306,306
+221,Championnat de Grèce · Division 1,1998,1998/1999,engsoccerdata,finished,306,306
+221,Championnat de Grèce · Division 1,1999,1999/2000,engsoccerdata,finished,306,306
+221,Championnat de Grèce · Division 1,2000,2000/2001,engsoccerdata,finished,297,297
+221,Championnat de Grèce · Division 1,2001,2001/2002,engsoccerdata,finished,206,206
+221,Championnat de Grèce · Division 1,2002,2002/2003,engsoccerdata,finished,296,296
+221,Championnat de Grèce · Division 1,2003,2003/2004,engsoccerdata,finished,293,293
+221,Championnat de Grèce · Division 1,2004,2004/2005,engsoccerdata,finished,292,292
+221,Championnat de Grèce · Division 1,2005,2005/2006,engsoccerdata,finished,292,292
+221,Championnat de Grèce · Division 1,2006,2006/2007,engsoccerdata,finished,267,267
+221,Championnat de Grèce · Division 1,2007,2007/2008,engsoccerdata,finished,293,293
+221,Championnat de Grèce · Division 1,2008,2008/2009,engsoccerdata,finished,290,290
+221,Championnat de Grèce · Division 1,2009,2009/2010,engsoccerdata,finished,294,294
+221,Championnat de Grèce · Division 1,2010,2010/2011,engsoccerdata,finished,269,269
+221,Championnat de Grèce · Division 1,2011,2011/2012,engsoccerdata,finished,269,269
+221,Championnat de Grèce · Division 1,2012,2012/2013,engsoccerdata,finished,265,265
+221,Championnat de Grèce · Division 1,2013,2013/2014,engsoccerdata,finished,340,340
+221,Championnat de Grèce · Division 1,2014,2014/2015,engsoccerdata,finished,332,332
+221,Championnat de Grèce · Division 1,2015,2015/2016,engsoccerdata,finished,267,267
+221,Championnat de Grèce · Division 1,2016,2016/2017,engsoccerdata,finished,293,293
+221,Championnat de Grèce · Division 1,2017,2017/2018,engsoccerdata,finished,289,289
+222,Championnat du Portugal · Division 1,1994,1994/1995,engsoccerdata,finished,345,345
+222,Championnat du Portugal · Division 1,1995,1995/1996,engsoccerdata,finished,337,337
+222,Championnat du Portugal · Division 1,1996,1996/1997,engsoccerdata,finished,339,339
+222,Championnat du Portugal · Division 1,1997,1997/1998,engsoccerdata,finished,338,338
+222,Championnat du Portugal · Division 1,1998,1998/1999,engsoccerdata,finished,337,337
+222,Championnat du Portugal · Division 1,1999,1999/2000,engsoccerdata,finished,343,343
+222,Championnat du Portugal · Division 1,2000,2000/2001,engsoccerdata,finished,338,338
+222,Championnat du Portugal · Division 1,2001,2001/2002,engsoccerdata,finished,338,338
+222,Championnat du Portugal · Division 1,2002,2002/2003,engsoccerdata,finished,339,339
+222,Championnat du Portugal · Division 1,2003,2003/2004,engsoccerdata,finished,340,340
+222,Championnat du Portugal · Division 1,2004,2004/2005,engsoccerdata,finished,336,336
+222,Championnat du Portugal · Division 1,2005,2005/2006,engsoccerdata,finished,338,338
+222,Championnat du Portugal · Division 1,2006,2006/2007,engsoccerdata,finished,267,267
+222,Championnat du Portugal · Division 1,2007,2007/2008,engsoccerdata,finished,269,269
+222,Championnat du Portugal · Division 1,2008,2008/2009,engsoccerdata,finished,265,265
+222,Championnat du Portugal · Division 1,2009,2009/2010,engsoccerdata,finished,266,266
+222,Championnat du Portugal · Division 1,2010,2010/2011,engsoccerdata,finished,267,267
+222,Championnat du Portugal · Division 1,2011,2011/2012,engsoccerdata,finished,267,267
+222,Championnat du Portugal · Division 1,2012,2012/2013,engsoccerdata,finished,267,267
+222,Championnat du Portugal · Division 1,2013,2013/2014,engsoccerdata,finished,267,267
+222,Championnat du Portugal · Division 1,2014,2014/2015,engsoccerdata,finished,340,340
+222,Championnat du Portugal · Division 1,2015,2015/2016,engsoccerdata,finished,337,337
+222,Championnat du Portugal · Division 1,2016,2016/2017,engsoccerdata,finished,339,339
+222,Championnat du Portugal · Division 1,2017,2017/2018,engsoccerdata,finished,338,338
+223,Championnat de Turquie · Division 1,1994,1994/1995,engsoccerdata,finished,309,309
+223,Championnat de Turquie · Division 1,1995,1995/1996,engsoccerdata,finished,314,314
+223,Championnat de Turquie · Division 1,1996,1996/1997,engsoccerdata,finished,340,340
+223,Championnat de Turquie · Division 1,1997,1997/1998,engsoccerdata,finished,329,329
+223,Championnat de Turquie · Division 1,1998,1998/1999,engsoccerdata,finished,313,313
+223,Championnat de Turquie · Division 1,1999,1999/2000,engsoccerdata,finished,306,306
+223,Championnat de Turquie · Division 1,2000,2000/2001,engsoccerdata,finished,306,306
+223,Championnat de Turquie · Division 1,2001,2001/2002,engsoccerdata,finished,308,308
+223,Championnat de Turquie · Division 1,2002,2002/2003,engsoccerdata,finished,307,307
+223,Championnat de Turquie · Division 1,2003,2003/2004,engsoccerdata,finished,306,306
+223,Championnat de Turquie · Division 1,2004,2004/2005,engsoccerdata,finished,307,307
+223,Championnat de Turquie · Division 1,2005,2005/2006,engsoccerdata,finished,306,306
+223,Championnat de Turquie · Division 1,2006,2006/2007,engsoccerdata,finished,443,443
+223,Championnat de Turquie · Division 1,2007,2007/2008,engsoccerdata,finished,338,338
+223,Championnat de Turquie · Division 1,2008,2008/2009,engsoccerdata,finished,336,336
+223,Championnat de Turquie · Division 1,2009,2009/2010,engsoccerdata,finished,306,306
+223,Championnat de Turquie · Division 1,2010,2010/2011,engsoccerdata,finished,337,337
+223,Championnat de Turquie · Division 1,2011,2011/2012,engsoccerdata,finished,338,338
+223,Championnat de Turquie · Division 1,2012,2012/2013,engsoccerdata,finished,338,338
+223,Championnat de Turquie · Division 1,2013,2013/2014,engsoccerdata,finished,306,306
+223,Championnat de Turquie · Division 1,2014,2014/2015,engsoccerdata,finished,334,334
+223,Championnat de Turquie · Division 1,2015,2015/2016,engsoccerdata,finished,338,338
+223,Championnat de Turquie · Division 1,2016,2016/2017,engsoccerdata,finished,338,338
+223,Championnat de Turquie · Division 1,2017,2017/2018,engsoccerdata,finished,340,340
+224,Écosse · Division 1,1994,1994/1995,engsoccerdata,finished,180,180
+224,Écosse · Division 1,1995,1995/1996,engsoccerdata,finished,180,180
+224,Écosse · Division 1,1996,1996/1997,engsoccerdata,finished,180,180
+224,Écosse · Division 1,1997,1997/1998,engsoccerdata,finished,181,181
+224,Écosse · Division 1,1998,1998/1999,engsoccerdata,finished,180,180
+224,Écosse · Division 1,1999,1999/2000,engsoccerdata,finished,180,180
+224,Écosse · Division 1,2000,2000/2001,engsoccerdata,finished,228,228
+224,Écosse · Division 1,2001,2001/2002,engsoccerdata,finished,228,228
+224,Écosse · Division 1,2002,2002/2003,engsoccerdata,finished,228,228
+224,Écosse · Division 1,2003,2003/2004,engsoccerdata,finished,228,228
+224,Écosse · Division 1,2004,2004/2005,engsoccerdata,finished,228,228
+224,Écosse · Division 1,2005,2005/2006,engsoccerdata,finished,228,228
+224,Écosse · Division 1,2006,2006/2007,engsoccerdata,finished,228,228
+224,Écosse · Division 1,2007,2007/2008,engsoccerdata,finished,228,228
+224,Écosse · Division 1,2008,2008/2009,engsoccerdata,finished,228,228
+224,Écosse · Division 1,2009,2009/2010,engsoccerdata,finished,228,228
+224,Écosse · Division 1,2010,2010/2011,engsoccerdata,finished,228,228
+224,Écosse · Division 1,2011,2011/2012,engsoccerdata,finished,228,228
+224,Écosse · Division 1,2012,2012/2013,engsoccerdata,finished,228,228
+224,Écosse · Division 1,2013,2013/2014,engsoccerdata,finished,228,228
+224,Écosse · Division 1,2014,2014/2015,engsoccerdata,finished,228,228
+224,Écosse · Division 1,2015,2015/2016,engsoccerdata,finished,228,228
+224,Écosse · Division 1,2016,2016/2017,engsoccerdata,finished,228,228
+224,Écosse · Division 1,2017,2017/2018,engsoccerdata,finished,228,228
+225,Bundesliga,1994,1994/1995,worldclub,finished,164,164
+225,Bundesliga,1995,1995/1996,worldclub,finished,164,164
+225,Bundesliga,1996,1996/1997,worldclub,finished,159,159
+225,Bundesliga,1997,1997/1998,worldclub,finished,166,166
+225,Bundesliga,1998,1998/1999,worldclub,finished,161,161
+225,Bundesliga,1999,1999/2000,worldclub,finished,169,169
+225,Bundesliga,2000,2000/2001,worldclub,finished,168,168
+225,Bundesliga,2001,2001/2002,worldclub,finished,168,168
+225,Bundesliga,2002,2002/2003,worldclub,finished,164,164
+225,Bundesliga,2004,2004/2005,worldclub,finished,165,165
+225,Bundesliga,2005,2005/2006,worldclub,finished,158,158
+225,Bundesliga,2006,2006/2007,worldclub,finished,168,168
+225,Bundesliga,2007,2007/2008,worldclub,finished,161,161
+225,Bundesliga,2008,2008/2009,worldclub,finished,168,168
+225,Bundesliga,2009,2009/2010,worldclub,finished,166,166
+226,Ligue 1,1994,1994/1995,worldclub,finished,346,346
+227,Championnat de Belgique · Division 1,1995,1995/1996,engsoccerdata,finished,306,306
+227,Championnat de Belgique · Division 1,1996,1996/1997,engsoccerdata,finished,306,306
+227,Championnat de Belgique · Division 1,1997,1997/1998,engsoccerdata,finished,306,306
+227,Championnat de Belgique · Division 1,1998,1998/1999,engsoccerdata,finished,306,306
+227,Championnat de Belgique · Division 1,1999,1999/2000,engsoccerdata,finished,306,306
+227,Championnat de Belgique · Division 1,2000,2000/2001,engsoccerdata,finished,306,306
+227,Championnat de Belgique · Division 1,2001,2001/2002,engsoccerdata,finished,306,306
+227,Championnat de Belgique · Division 1,2002,2002/2003,engsoccerdata,finished,272,272
+227,Championnat de Belgique · Division 1,2003,2003/2004,engsoccerdata,finished,306,306
+227,Championnat de Belgique · Division 1,2004,2004/2005,engsoccerdata,finished,306,306
+227,Championnat de Belgique · Division 1,2005,2005/2006,engsoccerdata,finished,333,333
+227,Championnat de Belgique · Division 1,2006,2006/2007,engsoccerdata,finished,336,336
+227,Championnat de Belgique · Division 1,2007,2007/2008,engsoccerdata,finished,335,335
+227,Championnat de Belgique · Division 1,2008,2008/2009,engsoccerdata,finished,335,335
+227,Championnat de Belgique · Division 1,2009,2009/2010,engsoccerdata,finished,280,280
+227,Championnat de Belgique · Division 1,2010,2010/2011,engsoccerdata,finished,240,240
+227,Championnat de Belgique · Division 1,2011,2011/2012,engsoccerdata,finished,296,296
+227,Championnat de Belgique · Division 1,2012,2012/2013,engsoccerdata,finished,296,296
+227,Championnat de Belgique · Division 1,2013,2013/2014,engsoccerdata,finished,270,270
+227,Championnat de Belgique · Division 1,2014,2014/2015,engsoccerdata,finished,240,240
+227,Championnat de Belgique · Division 1,2015,2015/2016,engsoccerdata,finished,240,240
+227,Championnat de Belgique · Division 1,2016,2016/2017,engsoccerdata,finished,240,240
+227,Championnat de Belgique · Division 1,2017,2017/2018,engsoccerdata,finished,268,268
+228,Angleterre · Division 2,1998,1998/1999,footballcsv,finished,552,552
+228,Angleterre · Division 2,1999,1999/2000,footballcsv,finished,552,552
+228,Angleterre · Division 2,2000,2000/2001,footballcsv,finished,552,552
+228,Angleterre · Division 2,2001,2001/2002,footballcsv,finished,552,552
+228,Angleterre · Division 2,2002,2002/2003,footballcsv,finished,552,552
+228,Angleterre · Division 2,2003,2003/2004,footballcsv,finished,552,552
+228,Angleterre · Division 2,2004,2004/2005,footballcsv,finished,552,552
+228,Angleterre · Division 2,2005,2005/2006,footballcsv,finished,552,552
+228,Angleterre · Division 2,2006,2006/2007,footballcsv,finished,552,552
+228,Angleterre · Division 2,2007,2007/2008,footballcsv,finished,552,552
+228,Angleterre · Division 2,2008,2008/2009,footballcsv,finished,552,552
+228,Angleterre · Division 2,2009,2009/2010,footballcsv,finished,552,552
+229,Angleterre · Division 3,1998,1998/1999,footballcsv,finished,552,552
+229,Angleterre · Division 3,1999,1999/2000,footballcsv,finished,552,552
+229,Angleterre · Division 3,2000,2000/2001,footballcsv,finished,552,552
+229,Angleterre · Division 3,2001,2001/2002,footballcsv,finished,552,552
+229,Angleterre · Division 3,2002,2002/2003,footballcsv,finished,552,552
+229,Angleterre · Division 3,2003,2003/2004,footballcsv,finished,552,552
+229,Angleterre · Division 3,2004,2004/2005,footballcsv,finished,552,552
+229,Angleterre · Division 3,2005,2005/2006,footballcsv,finished,552,552
+229,Angleterre · Division 3,2006,2006/2007,footballcsv,finished,552,552
+229,Angleterre · Division 3,2007,2007/2008,footballcsv,finished,552,552
+229,Angleterre · Division 3,2008,2008/2009,footballcsv,finished,552,552
+229,Angleterre · Division 3,2009,2009/2010,footballcsv,finished,552,552
+230,Angleterre · Division 4,1998,1998/1999,footballcsv,finished,552,552
+230,Angleterre · Division 4,1999,1999/2000,footballcsv,finished,552,552
+230,Angleterre · Division 4,2000,2000/2001,footballcsv,finished,552,552
+230,Angleterre · Division 4,2001,2001/2002,footballcsv,finished,552,552
+230,Angleterre · Division 4,2002,2002/2003,footballcsv,finished,552,552
+230,Angleterre · Division 4,2003,2003/2004,footballcsv,finished,552,552
+230,Angleterre · Division 4,2004,2004/2005,footballcsv,finished,552,552
+230,Angleterre · Division 4,2005,2005/2006,footballcsv,finished,552,552
+230,Angleterre · Division 4,2006,2006/2007,footballcsv,finished,552,552
+230,Angleterre · Division 4,2007,2007/2008,footballcsv,finished,552,552
+230,Angleterre · Division 4,2008,2008/2009,footballcsv,finished,552,552
+230,Angleterre · Division 4,2009,2009/2010,footballcsv,finished,552,552
+231,Ligue des champions,2008,2008/2009,worldclub,finished,33,33
+231,Ligue des champions,2020,2020/2021,worldclub,finished,119,119
+232,Hungarian Nemzeti Bajnokság I 2018/19,2018,2018/2019,openfootball,finished,198,198
+232,Hungarian Nemzeti Bajnokság I 2018/19,2020,2020/2021,openfootball,finished,198,198
+233,Czech Republic First League 2018/19,2018,2018/2019,openfootball,finished,280,280
+233,Czech Republic First League 2018/19,2020,2020/2021,openfootball,finished,306,306
+234,Super League,2021,2021/2022,worldclub,finished,210,210
+234,Super League,2022,2022/2023,worldclub,finished,213,213
+234,Super League,2023,2023/2024,worldclub,finished,229,229
+235,Süper Lig,2021,2021/2022,worldclub,finished,357,357
+236,Copa Libertadores 2021,2021,2021/2022,openfootball,finished,155,155
+236,Copa Libertadores 2021,2022,2022/2023,openfootball,finished,155,155
+236,Copa Libertadores 2021,2023,2023/2024,openfootball,finished,155,155
+236,Copa Libertadores 2021,2024,2024/2025,openfootball,finished,155,155
+236,Copa Libertadores 2021,2025,2025/2026,openfootball,finished,155,155
+236,Copa Libertadores 2021,2026,2026/2027,openfootball,finished,126,126
+236,Copa Libertadores 2021,2026,2026/2027,openfootball,not_started,21,0
+237,Copa Sudamericana 2021,2021,2021/2022,openfootball,finished,157,157
+237,Copa Sudamericana 2021,2022,2022/2023,openfootball,finished,157,157
+237,Copa Sudamericana 2021,2023,2023/2024,openfootball,finished,157,157
+237,Copa Sudamericana 2021,2024,2024/2025,openfootball,finished,157,157
+237,Copa Sudamericana 2021,2025,2025/2026,openfootball,finished,64,64
+237,Copa Sudamericana 2021,2025,2025/2026,openfootball,not_started,57,0
+238,Coupe des champions de la CONCACAF 2021,2021,2021/2022,openfootball,finished,29,29
+238,Coupe des champions de la CONCACAF 2021,2022,2022/2023,openfootball,finished,30,30
+238,Coupe des champions de la CONCACAF 2021,2023,2023/2024,openfootball,finished,30,30
+238,Coupe des champions de la CONCACAF 2021,2024,2024/2025,openfootball,finished,51,51
+238,Coupe des champions de la CONCACAF 2021,2025,2025/2026,openfootball,finished,50,50
+238,Coupe des champions de la CONCACAF 2021,2025,2025/2026,openfootball,not_started,1,0
+239,Ligue des champions de la CAF 2023/2024,2023,2023/2024,openfootball,finished,138,138
+239,Ligue des champions de la CAF 2023/2024,2024,2024/2025,openfootball,finished,146,146
+239,Ligue des champions de la CAF 2023/2024,2024,2024/2025,openfootball,not_started,2,0
+240,Coupe d’Afrique des nations 2021,2021,2021/2022,international_results,finished,52,52
+240,Coupe d’Afrique des nations 2021,2023,2023/2024,international_results,finished,52,52
+240,Coupe d’Afrique des nations 2021,2025,2025/2026,international_results,finished,52,52
+241,Copa América 2024,2023,2023/2024,international_results,finished,32,32
+242,Coupe d’Asie des nations 2023,2023,2023/2024,international_results,finished,51,51
+243,Gold Cup 2023,2022,2022/2023,international_results,finished,31,31
+243,Gold Cup 2023,2024,2024/2025,international_results,finished,31,31

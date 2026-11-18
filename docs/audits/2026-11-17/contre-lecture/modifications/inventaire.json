@@ -1,5 +1,5 @@
 {
-  "base": "8018e0836ca0f32e8b2eb51fc2847154abff7f13",
+  "base": "1c5a4340d193d2ffd1406f965e4007fdfb6b97fb",
   "application_paths": [
     "backend/Dockerfile",
     "backend/Dockerfile.dockerignore",
@@ -8,6 +8,7 @@
     "backend/api/src/routes/archives.mjs",
     "backend/api/src/routes/cups.mjs",
     "backend/api/src/routes/matches.mjs",
+    "backend/api/src/routes/nations.mjs",
     "backend/api/src/routes/profiles.mjs",
     "backend/api/src/routes/rankings.mjs",
     "backend/api/src/routes/reference.mjs",
@@ -15,6 +16,7 @@
     "backend/api/test/cups.test.mjs",
     "backend/api/test/half-fixture.mjs",
     "backend/api/test/match-grade-precision.test.mjs",
+    "backend/api/test/nations.test.mjs",
     "backend/api/test/player-contract-history.test.mjs",
     "backend/api/test/player-halves-real.test.mjs",
     "backend/api/test/player-halves.test.mjs",
@@ -45,6 +47,7 @@
     "backend/sql/147_j1_standings_observation.sql",
     "backend/sql/148_attested_archive_scores.sql",
     "backend/sql/149_validate_archive_attestation.sql",
+    "backend/sql/150_sportscore_standings_quarantine.sql",
     "backend/tests/cup_samples.py",
     "backend/tests/fake_openfootball_fetch.mjs",
     "backend/tests/fake_openligadb_fetch.mjs",
@@ -99,9 +102,13 @@
     "dashboard/frontend/src/competition-selector.css",
     "dashboard/frontend/src/components/ClubScoutUI.jsx",
     "dashboard/frontend/src/components/CupCompetition.jsx",
+    "dashboard/frontend/src/components/EditionHeader.jsx",
     "dashboard/frontend/src/components/GlobalSearch.jsx",
+    "dashboard/frontend/src/components/KnockoutBracket.jsx",
     "dashboard/frontend/src/components/MatchDetail.jsx",
     "dashboard/frontend/src/components/Media.module.css",
+    "dashboard/frontend/src/components/NationPages.jsx",
+    "dashboard/frontend/src/components/Nations.module.css",
     "dashboard/frontend/src/components/UI.jsx",
     "dashboard/frontend/src/components/UpcomingMatches.jsx",
     "dashboard/frontend/src/server/report-data.js",
@@ -114,9 +121,12 @@
     "dashboard/frontend/src/services/football-client.js",
     "dashboard/frontend/src/services/format.js",
     "dashboard/frontend/src/services/image-source.js",
+    "dashboard/frontend/src/services/knockout-bracket.js",
     "dashboard/frontend/src/services/media-registry.js",
+    "dashboard/frontend/src/services/national-flags.js",
     "dashboard/frontend/src/services/openfootball-cups.js",
     "dashboard/frontend/src/services/openfootball-france-cup.js",
+    "dashboard/frontend/src/services/tournament-runs.js",
     "dashboard/frontend/src/views/CompetitionsPage.jsx",
     "dashboard/shared/archive.js",
     "dashboard/shared/cup-logos.json",
@@ -124,10 +134,26 @@
     "dashboard/shared/legacy-8018e08/archive.js",
     "dashboard/shared/legacy-8018e08/openfootball-history.js",
     "dashboard/shared/openfootball-history.js",
+    "dashboard/shared/tournament-stages.js",
+    "dashboard/shared/world-cup-1950.js",
     "docs/calculs/01-sources-et-conventions/01-provenance-des-donnees.md",
+    "docs/calculs/02-metriques-attendues/02-xa.md",
+    "docs/calculs/05-joueurs/02-centiles-et-cohortes.md",
+    "docs/calculs/05-joueurs/03-indices-vega-et-roles.md",
+    "docs/calculs/05-joueurs/05-classements-joueurs.md",
+    "docs/calculs/05-joueurs/07-lecture-du-scout.md",
+    "docs/calculs/05-joueurs/08-audit-classement-puissance.md",
+    "docs/calculs/05-joueurs/10-revelations.md",
+    "docs/calculs/07-limites/01-non-calcule-fictif-demo.md",
+    "docs/calculs/07-limites/02-points-d-attention.md",
+    "docs/calculs/08-notes-vega/01-formules-et-raisons.md",
     "docs/calculs/09-audit-2026-11/FAILURE_MODES.md",
     "docs/calculs/09-audit-2026-11/FAILURE_MODES_SPORTSCORE.md",
     "docs/calculs/09-audit-2026-11/FAILURE_MODES_VI30.md",
+    "docs/calculs/09-audit-2026-11/REVIEW.md",
+    "docs/calculs/09-audit-2026-11/REVIEW_STATUS.md",
+    "docs/calculs/09-audit-2026-11/TRACEABILITY.md",
+    "docs/calculs/README.md",
     "infra/aws/import-test.sh",
     "infra/aws/worker.yaml",
     "tests/archive-association-sides.test.mjs",
@@ -147,14 +173,16 @@
     "tests/cup-sources.test.mjs",
     "tests/euro-search-flags.test.mjs",
     "tests/image-source.test.mjs",
-    "tests/openfootball_history.test.mjs"
+    "tests/openfootball_history.test.mjs",
+    "tests/tournament-editions.test.mjs",
+    "tests/tournament-rules.test.mjs"
   ],
-  "application_diff_sha256": "6cce5e7dd1517702c050d5e25c4430b4e1779d7277a9a07c6dc246953090058f",
+  "application_diff_sha256": "8ad8a0334cb87919e736b2bb0af7c54365cbf1d9adf71fa2693d9551d89705b7",
   "parts": [
     {
       "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-001.patch",
-      "sha256": "d38193a8b6f308c261d25ca93b3a2d525a5276b404cf0069717b927bc13bc18d",
-      "bytes": 114429,
+      "sha256": "520b99bee5b8715700fa26a51419d3a3b4477b039c572b69fb454b0754dc5661",
+      "bytes": 114297,
       "paths": [
         "backend/Dockerfile",
         "backend/Dockerfile.dockerignore",
@@ -163,6 +191,7 @@
         "backend/api/src/routes/archives.mjs",
         "backend/api/src/routes/cups.mjs",
         "backend/api/src/routes/matches.mjs",
+        "backend/api/src/routes/nations.mjs",
         "backend/api/src/routes/profiles.mjs",
         "backend/api/src/routes/rankings.mjs",
         "backend/api/src/routes/reference.mjs",
@@ -170,6 +199,7 @@
         "backend/api/test/cups.test.mjs",
         "backend/api/test/half-fixture.mjs",
         "backend/api/test/match-grade-precision.test.mjs",
+        "backend/api/test/nations.test.mjs",
         "backend/api/test/player-contract-history.test.mjs",
         "backend/api/test/player-halves-real.test.mjs",
         "backend/api/test/player-halves.test.mjs",
@@ -177,18 +207,18 @@
         "backend/api/test/seed.py",
         "backend/archives/builders/build_footballcsv_history.py",
         "backend/archives/builders/build_historical_goals.py",
-        "backend/archives/builders/build_openfootball_history.py",
-        "backend/archives/edition.mjs",
-        "backend/ci/test_databases.py",
-        "backend/sources/projections/open-cups.mjs",
-        "backend/sources/projections/openligadb.mjs"
+        "backend/archives/builders/build_openfootball_history.py"
       ]
     },
     {
       "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-002.patch",
-      "sha256": "87a330392a62b2c50356f3ac1efe8c59044dd2591573ce4c7e3e6b9cd03daae7",
-      "bytes": 111985,
+      "sha256": "ef86f386ae15774719a8f9a7b14e569536a7817227fb82018f537e81752f1f44",
+      "bytes": 113437,
       "paths": [
+        "backend/archives/edition.mjs",
+        "backend/ci/test_databases.py",
+        "backend/sources/projections/open-cups.mjs",
+        "backend/sources/projections/openligadb.mjs",
         "backend/sources/projections/world-cup-halves.json",
         "backend/sources/projections/world-cup-halves.mjs",
         "backend/sql/134_archive_repair_boundary.sql",
@@ -206,7 +236,15 @@
         "backend/sql/146_world_cup_family_artwork.sql",
         "backend/sql/147_j1_standings_observation.sql",
         "backend/sql/148_attested_archive_scores.sql",
-        "backend/sql/149_validate_archive_attestation.sql",
+        "backend/sql/149_validate_archive_attestation.sql"
+      ]
+    },
+    {
+      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-003.patch",
+      "sha256": "a43eca01f876bc6a015a7451694b19107fa646e03eada2b69d53d23bc00a03b9",
+      "bytes": 14723,
+      "paths": [
+        "backend/sql/150_sportscore_standings_quarantine.sql",
         "backend/tests/cup_samples.py",
         "backend/tests/fake_openfootball_fetch.mjs",
         "backend/tests/fake_openligadb_fetch.mjs",
@@ -215,7 +253,7 @@
       ]
     },
     {
-      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-003.patch",
+      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-004.patch",
       "sha256": "980904575865ef534a4a65a749e1199a638ad22989711ddd8a69e7be13c5fef9",
       "bytes": 114948,
       "paths": [
@@ -223,7 +261,7 @@
       ]
     },
     {
-      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-004.patch",
+      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-005.patch",
       "sha256": "0b5a7c632a88f5fdf7a0b3663281e55382bfc6f8fadd2c76f7f66ba93b4c306c",
       "bytes": 80614,
       "paths": [
@@ -235,7 +273,7 @@
       ]
     },
     {
-      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-005.patch",
+      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-006.patch",
       "sha256": "08e8b853e7e5f536bf676a0412e30a64c6e7a9948a517450031b1e4baa021737",
       "bytes": 93599,
       "paths": [
@@ -244,9 +282,9 @@
       ]
     },
     {
-      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-006.patch",
-      "sha256": "dd9595744e835acaafff467936f0ee289f7f158c62c55c13249dc7055fa01dda",
-      "bytes": 101338,
+      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-007.patch",
+      "sha256": "c01875ca21b1785a9d48c35a799cb6aae598f9d085dc1371ede64c748af295e4",
+      "bytes": 102176,
       "paths": [
         "backend/tests/fixtures/openligadb/dfb-oracle.csv",
         "backend/tests/fixtures/openligadb/manifest.json",
@@ -257,7 +295,7 @@
       ]
     },
     {
-      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-007.patch",
+      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-008.patch",
       "sha256": "dc76747371a6bcefb155d4ce72839f46bc06fdb6cc4c1827204d9c0d356cce0d",
       "bytes": 112097,
       "paths": [
@@ -270,9 +308,9 @@
       ]
     },
     {
-      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-008.patch",
-      "sha256": "15ef7a16dec600bba11fa2ba073c6966997e6906d83ee5db8dc9cc1a523e9908",
-      "bytes": 80346,
+      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-009.patch",
+      "sha256": "7434c245b957266157aa9d96dcb56acb8507b8f1bb4d3a14beca9417d41caf15",
+      "bytes": 85095,
       "paths": [
         "backend/tests/test_calculator.py",
         "backend/tests/test_dfb_periods.py",
@@ -284,7 +322,7 @@
       ]
     },
     {
-      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-009.patch",
+      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-010.patch",
       "sha256": "432b19f1f331b3d49aa3a64ef00df05412500b78ba7b1dcb5aab07fd82844680",
       "bytes": 74927,
       "paths": [
@@ -293,7 +331,7 @@
       ]
     },
     {
-      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-010.patch",
+      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-011.patch",
       "sha256": "7e5c10130b0d535e073cb4416e554a77ed946e6f9e088f06c6ae970b4c788fee",
       "bytes": 210,
       "paths": [
@@ -301,7 +339,7 @@
       ]
     },
     {
-      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-011.patch",
+      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-012.patch",
       "sha256": "149ecf7f5f6ce97832b1d52144f163097d56b9b102a3b70834dcda74b1f3d0bb",
       "bytes": 351051,
       "paths": [
@@ -309,7 +347,7 @@
       ]
     },
     {
-      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-012.patch",
+      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-013.patch",
       "sha256": "19e27ad968615f9d9826fd790deeddcc84c7ed36c0a1ece9635c9687e3176437",
       "bytes": 114073,
       "paths": [
@@ -320,9 +358,9 @@
       ]
     },
     {
-      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-013.patch",
-      "sha256": "c5a10ca7a914e32c30e4f1fa94281027657ee8338f5b18c07abe1db526745b78",
-      "bytes": 70860,
+      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-014.patch",
+      "sha256": "a2ffc1597960f1ed7430b24ecf0c67ebf56ad7b2476d21a1395ee139eb4e0794",
+      "bytes": 74046,
       "paths": [
         "backend/vega/open_matchday_restore.py",
         "backend/vega/sources/__init__.py",
@@ -333,9 +371,9 @@
       ]
     },
     {
-      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-014.patch",
-      "sha256": "f3e3ba88202d5c42da80eb912dbbbe5a30073e9d3e21fee53ca7d66668c78abd",
-      "bytes": 75734,
+      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-015.patch",
+      "sha256": "cfc833c7b3a7d9f8cb6d313d2288566788fa3bd968a1af3f5fd332e3f01eaecf",
+      "bytes": 75175,
       "paths": [
         "backend/vega/sources/dfb_pokal_periods.json",
         "backend/vega/sources/open_matchday.py",
@@ -344,9 +382,9 @@
       ]
     },
     {
-      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-015.patch",
-      "sha256": "e41a4bcbc9e3710a7876a3b26fac6cdd5d72bd7a5b7469f61f233466c266157c",
-      "bytes": 114172,
+      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-016.patch",
+      "sha256": "771e0a8a88c57d5271fab48c5fc410ed3ec2ae89905ac21a85cf4f6f7d30b6a0",
+      "bytes": 113749,
       "paths": [
         "backend/vega/sources/sportscore.py",
         "backend/vega/sources/uefa.py",
@@ -354,9 +392,20 @@
         "dashboard/frontend/src/competition-selector.css",
         "dashboard/frontend/src/components/ClubScoutUI.jsx",
         "dashboard/frontend/src/components/CupCompetition.jsx",
+        "dashboard/frontend/src/components/EditionHeader.jsx",
         "dashboard/frontend/src/components/GlobalSearch.jsx",
+        "dashboard/frontend/src/components/KnockoutBracket.jsx",
         "dashboard/frontend/src/components/MatchDetail.jsx",
-        "dashboard/frontend/src/components/Media.module.css",
+        "dashboard/frontend/src/components/Media.module.css"
+      ]
+    },
+    {
+      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-017.patch",
+      "sha256": "d69873afef6b64cfb78a4437dd1d8b5d82507eafa5a927bf8680b2a1ebbb634e",
+      "bytes": 114153,
+      "paths": [
+        "dashboard/frontend/src/components/NationPages.jsx",
+        "dashboard/frontend/src/components/Nations.module.css",
         "dashboard/frontend/src/components/UI.jsx",
         "dashboard/frontend/src/components/UpcomingMatches.jsx",
         "dashboard/frontend/src/server/report-data.js",
@@ -366,19 +415,15 @@
         "dashboard/frontend/src/services/cup-catalog.js",
         "dashboard/frontend/src/services/cup-matches.js",
         "dashboard/frontend/src/services/cup-worker-client.js",
-        "dashboard/frontend/src/services/football-client.js"
-      ]
-    },
-    {
-      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-016.patch",
-      "sha256": "a7e418733978876830a83e7345d38ba27f58dec505f1e61f209d9cf9e2dc97e3",
-      "bytes": 54936,
-      "paths": [
+        "dashboard/frontend/src/services/football-client.js",
         "dashboard/frontend/src/services/format.js",
         "dashboard/frontend/src/services/image-source.js",
+        "dashboard/frontend/src/services/knockout-bracket.js",
         "dashboard/frontend/src/services/media-registry.js",
+        "dashboard/frontend/src/services/national-flags.js",
         "dashboard/frontend/src/services/openfootball-cups.js",
         "dashboard/frontend/src/services/openfootball-france-cup.js",
+        "dashboard/frontend/src/services/tournament-runs.js",
         "dashboard/frontend/src/views/CompetitionsPage.jsx",
         "dashboard/shared/archive.js",
         "dashboard/shared/cup-logos.json",
@@ -386,24 +431,47 @@
         "dashboard/shared/legacy-8018e08/archive.js",
         "dashboard/shared/legacy-8018e08/openfootball-history.js",
         "dashboard/shared/openfootball-history.js",
-        "docs/calculs/01-sources-et-conventions/01-provenance-des-donnees.md"
-      ]
-    },
-    {
-      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-017.patch",
-      "sha256": "2d17a2d4de9362314b239c0ed48d212ba83a0c320756285e1b2743666f2330df",
-      "bytes": 112887,
-      "paths": [
-        "docs/calculs/09-audit-2026-11/FAILURE_MODES.md",
-        "docs/calculs/09-audit-2026-11/FAILURE_MODES_SPORTSCORE.md"
+        "dashboard/shared/tournament-stages.js",
+        "dashboard/shared/world-cup-1950.js"
       ]
     },
     {
       "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-018.patch",
-      "sha256": "4d85e444dea8a25c0c97c4824b5956ba16c4d8aba7685c642bb474f9b2b5bb8c",
-      "bytes": 65611,
+      "sha256": "8ad55df0a8864c16efc761a1a2283dd4a797b2f9c077929518e04a239e38583f",
+      "bytes": 41215,
       "paths": [
+        "docs/calculs/01-sources-et-conventions/01-provenance-des-donnees.md",
+        "docs/calculs/02-metriques-attendues/02-xa.md",
+        "docs/calculs/05-joueurs/02-centiles-et-cohortes.md",
+        "docs/calculs/05-joueurs/03-indices-vega-et-roles.md",
+        "docs/calculs/05-joueurs/05-classements-joueurs.md",
+        "docs/calculs/05-joueurs/07-lecture-du-scout.md",
+        "docs/calculs/05-joueurs/08-audit-classement-puissance.md",
+        "docs/calculs/05-joueurs/10-revelations.md",
+        "docs/calculs/07-limites/01-non-calcule-fictif-demo.md",
+        "docs/calculs/07-limites/02-points-d-attention.md",
+        "docs/calculs/08-notes-vega/01-formules-et-raisons.md"
+      ]
+    },
+    {
+      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-019.patch",
+      "sha256": "586db59742fc961a1348a63c01228a4b50ca1587a76cc8c4e10b0890a77ddacf",
+      "bytes": 90746,
+      "paths": [
+        "docs/calculs/09-audit-2026-11/FAILURE_MODES.md"
+      ]
+    },
+    {
+      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-020.patch",
+      "sha256": "f1c60cb0761dd3c33606f6a49ced030c00f3cb8add5a404870ae83a54fafbf79",
+      "bytes": 112319,
+      "paths": [
+        "docs/calculs/09-audit-2026-11/FAILURE_MODES_SPORTSCORE.md",
         "docs/calculs/09-audit-2026-11/FAILURE_MODES_VI30.md",
+        "docs/calculs/09-audit-2026-11/REVIEW.md",
+        "docs/calculs/09-audit-2026-11/REVIEW_STATUS.md",
+        "docs/calculs/09-audit-2026-11/TRACEABILITY.md",
+        "docs/calculs/README.md",
         "infra/aws/import-test.sh",
         "infra/aws/worker.yaml",
         "tests/archive-association-sides.test.mjs",
@@ -424,6 +492,15 @@
         "tests/euro-search-flags.test.mjs",
         "tests/image-source.test.mjs",
         "tests/openfootball_history.test.mjs"
+      ]
+    },
+    {
+      "file": "docs/audits/2026-11-17/contre-lecture/modifications/part-021.patch",
+      "sha256": "91f47f121d280f2ae3e8beab735967e901a7da7229ab730b54582b026ef4c0d8",
+      "bytes": 30222,
+      "paths": [
+        "tests/tournament-editions.test.mjs",
+        "tests/tournament-rules.test.mjs"
       ]
     }
   ]

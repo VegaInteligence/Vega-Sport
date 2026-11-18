@@ -1,0 +1,36 @@
+{
+  "revision_front": "e60e80860e6ad1cfa9f330a4b2c2ce66eb9ef35a",
+  "controles": [
+    {
+      "device": "desktop",
+      "finished": "2026-11-18T17:56:03.072Z",
+      "obs": 10,
+      "satisfaits": 5,
+      "ecarts": [
+        "1954 barragiste qualifié deuxième",
+        "EURO 2020 Allemagne devant Portugal",
+        "2028 groupes",
+        "recherche libellé français",
+        "Uruguay champion 1950"
+      ]
+    },
+    {
+      "device": "iphone",
+      "finished": "2026-11-18T17:56:03.338Z",
+      "obs": 10,
+      "satisfaits": 5,
+      "ecarts": [
+        "1954 barragiste qualifié deuxième",
+        "EURO 2020 Allemagne devant Portugal",
+        "2028 groupes",
+        "recherche libellé français",
+        "Uruguay champion 1950"
+      ]
+    }
+  ],
+  "fichiers": 21,
+  "archive": "tournois-production-1756.zip",
+  "sha256": "285dde4fb370f921f652f5705021fd5200705144ab4878eea77a3c9adb1304f5",
+  "bytes": 875758,
+  "extraction_neuve_hors_reseau": true
+}

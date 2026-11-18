@@ -1,0 +1,217 @@
+{
+  "front": {
+    "at": "2026-11-18T17:53:24.722Z",
+    "id": "dpl_Bk8YQVmy9GVUnAhm98ae7wa5MHrN",
+    "url": "vega-mm08tsnx2-vegainteligence.vercel.app",
+    "alias": [
+      "vegasport.vercel.app",
+      "vega-vegainteligence.vercel.app",
+      "vega-git-main-vegainteligence.vercel.app"
+    ],
+    "readyState": "READY",
+    "target": "production",
+    "createdAt": 1795023163533,
+    "metadata": {
+      "sha": "e60e80860e6ad1cfa9f330a4b2c2ce66eb9ef35a",
+      "ref": "main"
+    },
+    "keys": [
+      "id",
+      "name",
+      "url",
+      "type",
+      "state",
+      "createdAt",
+      "creator",
+      "project",
+      "meta",
+      "alias",
+      "target",
+      "regions",
+      "buildingAt",
+      "ready",
+      "readyState",
+      "source",
+      "aliasError"
+    ]
+  },
+  "main": {
+    "sha": "e60e80860e6ad1cfa9f330a4b2c2ce66eb9ef35a"
+  },
+  "worker": [
+    {
+      "task": "arn:aws:ecs:us-east-2:361769570630:task/vega-v2/f6d2dc4d40bc46229bc222750051ddad",
+      "definition": "arn:aws:ecs:us-east-2:361769570630:task-definition/vega-v2-worker:143",
+      "status": "RUNNING",
+      "started": "2026-11-18T17:54:07.682000+01:00",
+      "containers": [
+        {
+          "name": "worker",
+          "image": "361769570630.dkr.ecr.us-east-2.amazonaws.com/vega-v2-worker:b2e6dd82d36a2ca0f439ec84bf2e5dbbcd3013d9",
+          "digest": "sha256:8ecb6624e75135f2e741146fd160fe756e7478a2d18fd1139c16b28c817c67e5",
+          "status": "RUNNING"
+        }
+      ]
+    }
+  ],
+  "lambda": {
+    "sha": "rrXidCMW2nHD70WCaIyXWq11mYRQqTjaQufyhcsrcUE=",
+    "modified": "2026-11-17T16:02:15.000+0000",
+    "version": "$LATEST",
+    "revision": "c2102b49-0393-475a-b4a2-e467539bf5ba",
+    "runtime": "nodejs24.x",
+    "state": "Active",
+    "lastUpdate": "Successful"
+  },
+  "http": [
+    {
+      "surface": "lambda",
+      "path": "/api/nations?season=2026%2F2027",
+      "premier": 200,
+      "validation_cache": 304,
+      "ancien_etag": null
+    },
+    {
+      "surface": "lambda",
+      "path": "/api/nations/t_2ysHaw?season=2026%2F2027",
+      "premier": 200,
+      "validation_cache": 304,
+      "ancien_etag": 200
+    },
+    {
+      "surface": "lambda",
+      "path": "/api/rankings/power?kind=nations&limit=6&season=2026%2F2027",
+      "premier": 200,
+      "validation_cache": 304,
+      "ancien_etag": null
+    },
+    {
+      "surface": "cloudfront",
+      "path": "/api/nations?season=2026%2F2027",
+      "premier": 200,
+      "validation_cache": 304,
+      "ancien_etag": null
+    },
+    {
+      "surface": "cloudfront",
+      "path": "/api/nations/t_2ysHaw?season=2026%2F2027",
+      "premier": 200,
+      "validation_cache": 304,
+      "ancien_etag": 200
+    },
+    {
+      "surface": "cloudfront",
+      "path": "/api/rankings/power?kind=nations&limit=6&season=2026%2F2027",
+      "premier": 200,
+      "validation_cache": 304,
+      "ancien_etag": null
+    },
+    {
+      "surface": "vercel",
+      "path": "/api/nations?season=2026%2F2027",
+      "premier": 200,
+      "validation_cache": 304,
+      "ancien_etag": null
+    },
+    {
+      "surface": "vercel",
+      "path": "/api/nations/t_2ysHaw?season=2026%2F2027",
+      "premier": 200,
+      "validation_cache": 304,
+      "ancien_etag": 200
+    },
+    {
+      "surface": "vercel",
+      "path": "/api/rankings/power?kind=nations&limit=6&season=2026%2F2027",
+      "premier": 200,
+      "validation_cache": 304,
+      "ancien_etag": null
+    }
+  ],
+  "web": {
+    "revision_front": "e60e80860e6ad1cfa9f330a4b2c2ce66eb9ef35a",
+    "controles": [
+      {
+        "device": "desktop",
+        "finished": "2026-11-18T17:56:03.072Z",
+        "obs": 10,
+        "satisfaits": 5,
+        "ecarts": [
+          "1954 barragiste qualifié deuxième",
+          "EURO 2020 Allemagne devant Portugal",
+          "2028 groupes",
+          "recherche libellé français",
+          "Uruguay champion 1950"
+        ]
+      },
+      {
+        "device": "iphone",
+        "finished": "2026-11-18T17:56:03.338Z",
+        "obs": 10,
+        "satisfaits": 5,
+        "ecarts": [
+          "1954 barragiste qualifié deuxième",
+          "EURO 2020 Allemagne devant Portugal",
+          "2028 groupes",
+          "recherche libellé français",
+          "Uruguay champion 1950"
+        ]
+      }
+    ],
+    "fichiers": 21,
+    "archive": "tournois-production-1756.zip",
+    "sha256": "285dde4fb370f921f652f5705021fd5200705144ab4878eea77a3c9adb1304f5",
+    "bytes": 875758,
+    "extraction_neuve_hors_reseau": true
+  },
+  "main_1803": {
+    "sha": "1c5a4340d193d2ffd1406f965e4007fdfb6b97fb"
+  },
+  "vercel_1803": {
+    "at": "2026-11-18T18:03:13.754Z",
+    "id": "dpl_FH3S2zbdZivSAo9vCXkoaKZqp3RH",
+    "readyState": "READY",
+    "alias": [
+      "vegasport.vercel.app",
+      "vega-vegainteligence.vercel.app",
+      "vega-git-main-vegainteligence.vercel.app"
+    ],
+    "target": "production",
+    "sha": "1c5a4340d193d2ffd1406f965e4007fdfb6b97fb",
+    "ref": "main",
+    "url": "vega-7j4zofj5k-vegainteligence.vercel.app"
+  },
+  "parcours_1809": {
+    "commit": "1c5a4340d193d2ffd1406f965e4007fdfb6b97fb",
+    "navigations": [
+      {
+        "format": "desktop",
+        "at": "2026-11-18T18:09:01.056Z",
+        "pages": 13,
+        "satisfaits": 11,
+        "observes": 16
+      },
+      {
+        "format": "iphone",
+        "at": "2026-11-18T18:09:01.435Z",
+        "pages": 13,
+        "satisfaits": 11,
+        "observes": 16
+      }
+    ],
+    "fiches": 48,
+    "tours_scores_equipes_concordants": 48,
+    "ecarts_un_jour": 8,
+    "ecarts_produit": [
+      "1954 barragiste qualifié deuxième",
+      "2028 groupes",
+      "EURO 2020 Allemagne devant Portugal",
+      "Uruguay champion 1950",
+      "recherche libellé français"
+    ],
+    "archive": "tournois-production-1809.zip",
+    "sha256": "0fcd8c912012451470694c064f4e91c10c75be031c1da0598894f8718f8ccca0",
+    "bytes": 1633486,
+    "extraction_neuve_hors_reseau": true
+  }
+}

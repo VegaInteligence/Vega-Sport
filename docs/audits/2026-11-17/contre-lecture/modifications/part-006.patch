@@ -1,960 +1,131 @@
-diff --git a/backend/tests/fixtures/openligadb/dfb-oracle.csv b/backend/tests/fixtures/openligadb/dfb-oracle.csv
+diff --git a/backend/tests/fixtures/openligadb/dfb-2025.json b/backend/tests/fixtures/openligadb/dfb-2025.json
 new file mode 100644
-index 0000000000..d3eab8479c
+index 0000000000..b58c2ce842
 --- /dev/null
-+++ b/backend/tests/fixtures/openligadb/dfb-oracle.csv
-@@ -0,0 +1,120 @@
-+season,provider_key,dfb_id,db_match,day,home,away,state,phase,dfb_half,provider_half,db_half,dfb_90,provider_90,db_90,dfb_before_kicks,db_before_kicks,dfb_kicks,db_kicks,official_url
-+2025,77192,2397662,2653,2025-08-15,FC Gütersloh,1. FC Union Berlin,finished,FT,0/3,0/3,,0/5,0/5,,0/5,0/5,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/fc-guetersloh-1-fc-union-berlin-2397662
-+2025,77202,2397652,2654,2025-08-15,1. FC Saarbrücken,1. FC Magdeburg,finished,FT,0/2,0/2,,1/3,1/3,,1/3,1/3,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/1-fc-saarbruecken-1-fc-magdeburg-2397652
-+2025,77203,2397651,2655,2025-08-15,SG Sonnenhof Großaspach,Bayer 04 Leverkusen,finished,FT,0/1,0/1,,0/4,0/4,,0/4,0/4,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/sg-sonnenhof-grossaspach-bayer-leverkusen-2397651
-+2025,77206,2397648,2656,2025-08-15,DSC Arminia Bielefeld,Werder Bremen,finished,FT,0/0,0/0,,1/0,1/0,,1/0,1/0,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/arminia-bielefeld-werder-bremen-2397648
-+2025,77179,2397676,2657,2025-08-16,FK Pirmasens,Hamburger SV,finished,ET,0/0,0/0,,1/1,1/2,,1/2,1/2,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/fk-pirmasens-hamburger-sv-2397676
-+2025,77190,2397664,2658,2025-08-16,BFC Dynamo,VfL Bochum,finished,ET,0/0,0/0,,1/1,1/3,,1/3,1/3,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/bfc-dynamo-vfl-bochum-2397664
-+2025,77175,2397677,2659,2025-08-16,SV Hemelingen,VfL Wolfsburg,finished,FT,0/3,0/3,,0/9,0/9,,0/9,0/9,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/sv-hemelingen-vfl-wolfsburg-2397677
-+2025,77186,2397668,2660,2025-08-16,FV Illertissen,1. FC Nürnberg,finished,PEN,2/0,2/0,,3/3,3/3,,3/3,3/3,6/5,9/8,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/fv-illertissen-1-fc-nuernberg-2397668
-+2025,77189,2397665,2661,2025-08-16,Eintracht Norderstedt,FC St. Pauli,finished,PEN,0/0,0/0,,0/0,0/0,,0/0,0/0,2/3,2/3,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/eintracht-norderstedt-fc-st-pauli-2397665
-+2025,77197,2397657,2662,2025-08-16,SV Sandhausen,RB Leipzig,finished,FT,2/2,2/2,,2/4,2/4,,2/4,2/4,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/sv-sandhausen-rb-leipzig-2397657
-+2025,77199,2397655,2663,2025-08-16,Hansa Rostock,TSG Hoffenheim,finished,FT,0/1,0/1,,0/4,0/4,,0/4,0/4,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/hansa-rostock-tsg-hoffenheim-2397655
-+2025,77200,2397654,2664,2025-08-16,Bahlinger SC,1. FC Heidenheim 1846,finished,FT,0/2,0/2,,0/5,0/5,,0/5,0/5,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/bahlinger-sc-1-fc-heidenheim-2397654
-+2025,77178,2397663,2665,2025-08-16,Sportfreunde Lotte,SC Freiburg,finished,FT,0/1,0/1,,0/2,0/2,,0/2,0/2,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/sportfreunde-lotte-sc-freiburg-2397663
-+2025,77188,2397666,2666,2025-08-16,VfB Lübeck,SV Darmstadt 98,finished,FT,0/1,0/1,,1/2,1/2,,1/2,1/2,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/vfb-luebeck-sv-darmstadt-98-2397666
-+2025,77196,2397658,2667,2025-08-16,Energie Cottbus,Hannover 96,finished,FT,1/0,1/0,,1/0,1/0,,1/0,1/0,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/energie-cottbus-hannover-96-2397658
-+2025,77182,2397673,2668,2025-08-17,Viktoria Köln,SC Paderborn 07,finished,FT,0/3,0/3,,1/3,1/3,,1/3,1/3,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/fc-viktoria-koeln-sc-paderborn-07-2397673
-+2025,77187,2397667,2669,2025-08-17,FV Engers 07,Eintracht Frankfurt,finished,FT,0/2,0/2,,0/5,0/5,,0/5,0/5,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/fv-engers-07-eintracht-frankfurt-2397667
-+2025,77181,2397674,2670,2025-08-17,Atlas Delmenhorst,Borussia Mönchengladbach,finished,FT,2/2,2/2,,2/3,2/3,,2/3,2/3,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/atlas-delmenhorst-borussia-moenchengladbach-2397674
-+2025,77183,2397672,2671,2025-08-17,RSV Eintracht 1949,1. FC Kaiserslautern,finished,FT,0/4,0/4,,0/7,0/7,,0/7,0/7,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/rsv-eintracht-1949-1-fc-kaiserslautern-2397672
-+2025,77185,2397669,2672,2025-08-17,ZFC Meuselwitz,Karlsruher SC,finished,FT,0/3,0/3,,0/5,0/5,,0/5,0/5,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/zfc-meuselwitz-karlsruher-sc-2397669
-+2025,77194,2397660,2673,2025-08-17,Jahn Regensburg,1. FC Köln,finished,FT,0/0,0/0,,1/2,1/2,,1/2,1/2,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/jahn-regensburg-1-fc-koeln-2397660
-+2025,77198,2397656,2674,2025-08-17,Blau-Weiß Lohne,SpVgg Greuther Fürth,finished,FT,0/0,0/0,,0/2,0/2,,0/2,0/2,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/blau-weiss-lohne-spvgg-greuther-fuerth-2397656
-+2025,77201,2397653,2675,2025-08-17,1. FC Lok Leipzig,FC Schalke 04,finished,ET,0/0,0/0,,0/0,0/1,,0/1,0/1,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/1-fc-lok-leipzig-fc-schalke-04-2397653
-+2025,77176,2397678,2676,2025-08-17,SSV Ulm 1846,SV 07 Elversberg,finished,FT,0/0,0/0,,0/1,0/1,,0/1,0/1,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/ssv-ulm-1846-fussball-sv-elversberg-2397678
-+2025,77180,2397675,2677,2025-08-17,Hallescher FC,FC Augsburg,finished,FT,0/0,0/0,,0/2,0/2,,0/2,0/2,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/hallescher-fc-fc-augsburg-2397675
-+2025,77195,2397659,2678,2025-08-17,FC 08 Homburg,Holstein Kiel,finished,FT,0/1,0/1,,0/2,0/2,,0/2,0/2,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/fc-08-homburg-holstein-kiel-2397659
-+2025,77191,2397647,2679,2025-08-18,Dynamo Dresden,1. FSV Mainz 05,finished,FT,0/1,0/1,,0/1,0/1,,0/1,0/1,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/dynamo-dresden-1-fsv-mainz-05-2397647
-+2025,77193,2397661,2680,2025-08-18,Preußen Münster,Hertha BSC,finished,PEN,0/0,0/0,,0/0,0/0,,0/0,0/0,3/5,3/5,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/preussen-muenster-hertha-bsc-2397661
-+2025,77205,2397649,2681,2025-08-18,1. FC Schweinfurt 05,Fortuna Düsseldorf,finished,FT,1/0,1/0,,2/4,2/4,,2/4,2/4,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/1-fc-schweinfurt-05-fortuna-duesseldorf-2397649
-+2025,77177,2397671,2682,2025-08-18,Rot-Weiss Essen,Borussia Dortmund,finished,FT,0/0,0/0,,0/1,0/1,,0/1,0/1,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/rot-weiss-essen-borussia-dortmund-2397671
-+2025,77184,2397670,2683,2025-08-26,Eintracht Braunschweig,VfB Stuttgart,finished,PEN,1/1,1/1,,3/3,3/4,,4/4,4/4,7/8,11/12,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/eintracht-braunschweig-vfb-stuttgart-2397670
-+2025,77204,2397650,2684,2025-08-27,SV Wehen Wiesbaden,FC Bayern München,finished,FT,0/1,0/1,,2/3,2/3,,2/3,2/3,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/sv-wehen-wiesbaden-bayern-muenchen-2397650
-+2025,79585,2411110,2685,2025-10-28,1. FC Heidenheim 1846,Hamburger SV,finished,FT,0/0,0/0,,0/1,0/1,,0/1,0/1,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/2-runde/1-fc-heidenheim-hamburger-sv-2411110
-+2025,79587,2411112,2686,2025-10-28,Hertha BSC,SV 07 Elversberg,finished,FT,1/0,1/0,,3/0,3/0,,3/0,3/0,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/2-runde/hertha-bsc-sv-elversberg-2411112
-+2025,79589,2411114,2687,2025-10-28,Eintracht Frankfurt,Borussia Dortmund,finished,PEN,1/0,1/0,,1/1,1/1,,1/1,1/1,2/4,3/5,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/2-runde/eintracht-frankfurt-borussia-dortmund-2411114
-+2025,79595,2411120,2688,2025-10-28,VfL Wolfsburg,Holstein Kiel,finished,FT,0/1,0/1,,0/1,0/1,,0/1,0/1,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/2-runde/vfl-wolfsburg-holstein-kiel-2411120
-+2025,79583,2411108,2689,2025-10-28,Energie Cottbus,RB Leipzig,finished,FT,0/3,0/3,,1/4,1/4,,1/4,1/4,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/2-runde/energie-cottbus-rb-leipzig-2411108
-+2025,79586,2411111,2690,2025-10-28,Borussia Mönchengladbach,Karlsruher SC,finished,FT,1/0,1/0,,3/1,3/1,,3/1,3/1,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/2-runde/borussia-moenchengladbach-karlsruher-sc-2411111
-+2025,79591,2411116,2691,2025-10-28,FC Augsburg,VfL Bochum,finished,FT,0/1,0/1,,0/1,0/1,,0/1,0/1,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/2-runde/fc-augsburg-vfl-bochum-2411116
-+2025,79597,2411122,2692,2025-10-28,FC St. Pauli,TSG Hoffenheim,finished,PEN,1/0,1/0,,1/1,1/1,,2/2,2/2,8/7,10/9,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/2-runde/fc-st-pauli-tsg-hoffenheim-2411122
-+2025,79582,2411107,2693,2025-10-29,FV Illertissen,1. FC Magdeburg,finished,FT,0/2,0/2,,0/3,0/3,,0/3,0/3,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/2-runde/fv-illertissen-1-fc-magdeburg-2411107
-+2025,79588,2411113,2694,2025-10-29,SpVgg Greuther Fürth,1. FC Kaiserslautern,finished,FT,0/1,0/1,,0/1,0/1,,0/1,0/1,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/2-runde/spvgg-greuther-fuerth-1-fc-kaiserslautern-2411113
-+2025,79593,2411118,2695,2025-10-29,SC Paderborn 07,Bayer 04 Leverkusen,finished,ET,0/0,0/0,,1/1,2/2,,2/4,2/4,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/2-runde/sc-paderborn-07-bayer-leverkusen-2411118
-+2025,79594,2411119,2696,2025-10-29,1. FSV Mainz 05,VfB Stuttgart,finished,FT,0/1,0/1,,0/2,0/2,,0/2,0/2,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/2-runde/1-fsv-mainz-05-vfb-stuttgart-2411119
-+2025,79584,2411109,2697,2025-10-29,1. FC Union Berlin,DSC Arminia Bielefeld,finished,ET,1/1,1/1,,1/1,2/1,,2/1,2/1,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/2-runde/1-fc-union-berlin-arminia-bielefeld-2411109
-+2025,79590,2411115,2698,2025-10-29,SV Darmstadt 98,FC Schalke 04,finished,FT,2/0,2/0,,4/0,4/0,,4/0,4/0,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/2-runde/sv-darmstadt-98-fc-schalke-04-2411115
-+2025,79592,2411117,2699,2025-10-29,Fortuna Düsseldorf,SC Freiburg,finished,FT,1/2,1/2,,1/3,1/3,,1/3,1/3,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/2-runde/fortuna-duesseldorf-sc-freiburg-2411117
-+2025,79596,2411121,2700,2025-10-29,1. FC Köln,FC Bayern München,finished,FT,1/2,1/2,,1/4,1/4,,1/4,1/4,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/2-runde/1-fc-koeln-bayern-muenchen-2411121
-+2025,79780,2412767,2701,2025-12-02,Borussia Mönchengladbach,FC St. Pauli,finished,FT,0/1,0/1,,1/2,1/2,,1/2,1/2,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/achtelfinale/borussia-moenchengladbach-fc-st-pauli-2412767
-+2025,79782,2412765,2702,2025-12-02,Hertha BSC,1. FC Kaiserslautern,finished,FT,3/1,3/1,,6/1,6/1,,6/1,6/1,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/achtelfinale/hertha-bsc-1-fc-kaiserslautern-2412765
-+2025,79778,2412761,2703,2025-12-02,Borussia Dortmund,Bayer 04 Leverkusen,finished,FT,0/1,0/1,,0/1,0/1,,0/1,0/1,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/achtelfinale/borussia-dortmund-bayer-leverkusen-2412761
-+2025,79783,2412768,2704,2025-12-02,RB Leipzig,1. FC Magdeburg,finished,FT,2/1,2/1,,3/1,3/1,,3/1,3/1,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/achtelfinale/rb-leipzig-1-fc-magdeburg-2412768
-+2025,79779,2412764,2705,2025-12-03,VfL Bochum,VfB Stuttgart,finished,FT,0/1,0/1,,0/2,0/2,,0/2,0/2,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/achtelfinale/vfl-bochum-vfb-stuttgart-2412764
-+2025,79786,2412766,2706,2025-12-03,SC Freiburg,SV Darmstadt 98,finished,FT,1/0,1/0,,2/0,2/0,,2/0,2/0,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/achtelfinale/sc-freiburg-sv-darmstadt-98-2412766
-+2025,79781,2412762,2707,2025-12-03,Hamburger SV,Holstein Kiel,finished,PEN,0/0,0/0,,0/0,1/1,,1/1,1/1,2/4,3/5,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/achtelfinale/hamburger-sv-holstein-kiel-2412762
-+2025,79784,2412763,2708,2025-12-03,1. FC Union Berlin,FC Bayern München,finished,FT,1/3,1/3,,2/3,2/3,,2/3,2/3,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/achtelfinale/1-fc-union-berlin-bayern-muenchen-2412763
-+2025,80175,2413235,2709,2026-02-03,Bayer 04 Leverkusen,FC St. Pauli,finished,FT,1/0,1/0,,3/0,3/0,,3/0,3/0,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/viertelfinale/bayer-leverkusen-fc-st-pauli-2413235
-+2025,80174,2413234,2710,2026-02-04,Holstein Kiel,VfB Stuttgart,finished,FT,0/0,0/0,,0/3,0/3,,0/3,0/3,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/viertelfinale/holstein-kiel-vfb-stuttgart-2413234
-+2025,80173,2413233,2711,2026-02-10,Hertha BSC,SC Freiburg,finished,PEN,0/0,,,0/0,0/1,,1/1,1/1,4/5,5/6,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/viertelfinale/hertha-bsc-sc-freiburg-2413233
-+2025,80172,2413232,2712,2026-02-11,FC Bayern München,RB Leipzig,finished,FT,0/0,0/0,,2/0,2/0,,2/0,2/0,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/viertelfinale/bayern-muenchen-rb-leipzig-2413232
-+2025,81113,2416404,2713,2026-04-22,Bayer 04 Leverkusen,FC Bayern München,finished,FT,0/1,0/1,,0/2,0/2,,0/2,0/2,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/halbfinale/bayer-leverkusen-bayern-muenchen-2416404
-+2025,81114,2416405,2714,2026-04-23,VfB Stuttgart,SC Freiburg,finished,ET,0/1,0/1,,1/1,1/1,,2/1,2/1,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/halbfinale/vfb-stuttgart-sc-freiburg-2416405
-+2025,81581,2416557,2715,2026-05-23,FC Bayern München,VfB Stuttgart,finished,FT,0/0,0/0,,3/0,3/0,,3/0,3/0,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/finale/bayern-muenchen-vfb-stuttgart-2416557
-+2026,81832,2418307,2716,2026-08-21,SC St. Tönis,Eintracht Frankfurt,finished,FT,0/10,0/10,,0/11,0/11,,0/11,0/11,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/sc-st-toenis-11-20-eintracht-frankfurt-2418307
-+2026,81848,2418323,2717,2026-08-21,Preußen Münster,Karlsruher SC,finished,FT,1/0,1/0,,1/2,1/2,,1/2,1/2,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/preussen-muenster-karlsruher-sc-2418323
-+2026,81859,2418334,2718,2026-08-21,SV Waldhof Mannheim,1. FC Kaiserslautern,finished,ET,0/0,0/0,,0/0,0/0,,0/1,0/1,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/sv-waldhof-mannheim-1-fc-kaiserslautern-2418334
-+2026,81855,2418330,2719,2026-08-21,Hansa Rostock,VfB Stuttgart,finished,FT,0/2,0/2,,0/4,0/4,,0/4,0/4,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/hansa-rostock-vfb-stuttgart-2418330
-+2026,81842,2418317,2720,2026-08-22,SV Wehen Wiesbaden,Bayer 04 Leverkusen,finished,FT,0/1,0/1,,0/4,0/4,,0/4,0/4,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/sv-wehen-wiesbaden-bayer-leverkusen-2418317
-+2026,81844,2418319,2721,2026-08-22,Energie Cottbus,FC Augsburg,finished,FT,0/0,0/0,,0/2,0/2,,0/2,0/2,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/energie-cottbus-fc-augsburg-2418319
-+2026,81833,2418308,2722,2026-08-22,Erzgebirge Aue,TSG Hoffenheim,finished,FT,0/3,0/3,,0/4,0/4,,0/4,0/4,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/erzgebirge-aue-tsg-hoffenheim-2418308
-+2026,81847,2418322,2723,2026-08-22,SV Hemelingen,Hannover 96,finished,FT,0/6,0/6,,1/9,1/9,,1/9,1/9,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/sv-hemelingen-hannover-96-2418322
-+2026,81849,2418324,2724,2026-08-22,1. FC Saarbrücken,Hertha BSC,finished,PEN,0/0,0/0,,1/1,1/1,,1/1,1/1,2/4,3/5,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/1-fc-saarbruecken-hertha-bsc-2418324
-+2026,81850,2418325,2725,2026-08-22,Viktoria Köln,1. FC Nürnberg,finished,PEN,0/0,0/0,,1/1,1/1,,1/1,1/1,4/5,5/6,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/fc-viktoria-koeln-1-fc-nuernberg-2418325
-+2026,81851,2418326,2726,2026-08-22,MSV Duisburg,SV 07 Elversberg,finished,FT,0/1,0/1,,1/3,1/3,,1/3,1/3,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/msv-duisburg-sv-elversberg-2418326
-+2026,81853,2418328,2727,2026-08-22,Lüneburger SK Hansa,SV Werder Bremen,finished,FT,0/1,0/1,,0/3,0/3,,0/3,0/3,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/lueneburger-sk-hansa-werder-bremen-2418328
-+2026,81835,2418310,2728,2026-08-22,Eintracht Trier,RB Leipzig,finished,FT,0/3,0/3,,0/6,0/6,,0/6,0/6,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/eintracht-trier-rb-leipzig-2418310
-+2026,81840,2418315,2729,2026-08-22,SG Sonnenhof Großaspach,DSC Arminia Bielefeld,finished,PEN,1/2,1/2,,2/2,2/2,,2/2,2/2,3/0,5/2,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/sg-sonnenhof-grossaspach-arminia-bielefeld-2418315
-+2026,81858,2418333,2730,2026-08-22,TSV 1860 München,Holstein Kiel,finished,FT,0/1,0/1,,0/2,0/2,,0/2,0/2,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/tsv-muenchen-von-1860-holstein-kiel-2418333
-+2026,81841,2418316,2731,2026-08-23,SSV Jeddeloh II,1. FC Heidenheim 1846,finished,FT,3/1,3/1,,5/2,5/2,,5/2,5/2,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/ssv-jeddeloh-1-fc-heidenheim-2418316
-+2026,81846,2418321,2732,2026-08-23,SpVgg Greuther Fürth,VfL Bochum,finished,FT,0/1,0/1,,1/2,1/2,,1/2,1/2,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/spvgg-greuther-fuerth-vfl-bochum-2418321
-+2026,81834,2418309,2733,2026-08-23,Eintracht Braunschweig,1. FC Union Berlin,finished,FT,1/1,1/1,,2/4,2/4,,2/4,2/4,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/eintracht-braunschweig-1-fc-union-berlin-2418309
-+2026,81837,2418312,2734,2026-08-23,TSV Schott Mainz,Borussia Mönchengladbach,finished,FT,0/2,0/2,,0/5,0/5,,0/5,0/5,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/tsv-schott-mainz-borussia-moenchengladbach-2418312
-+2026,81845,2418320,2735,2026-08-23,VfB 1921 Krieschow ,1. FSV Mainz 05,finished,FT,0/5,0/5,,0/9,0/9,,0/9,0/9,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/vfb-krieschow-1-fsv-mainz-05-2418320
-+2026,81856,2418331,2736,2026-08-23,FC Carl Zeiss Jena,SV Darmstadt 98,finished,FT,1/2,1/2,,1/2,1/2,,1/2,1/2,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/fc-carl-zeiss-jena-sv-darmstadt-98-2418331
-+2026,81857,2418332,2737,2026-08-23,Bahlinger SC,1. FC Magdeburg,finished,FT,0/3,0/3,,0/4,0/4,,0/4,0/4,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/bahlinger-sc-1-fc-magdeburg-2418332
-+2026,81860,2418335,2738,2026-08-23,SV Westfalia Rhynern,Dynamo Dresden,finished,FT,0/5,0/5,,0/6,0/6,,0/6,0/6,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/sv-westfalia-rhynern-dynamo-dresden-2418335
-+2026,81838,2418313,2739,2026-08-23,Fortuna Düsseldorf,SC Freiburg,finished,FT,0/1,0/1,,1/5,1/5,,1/5,1/5,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/fortuna-duesseldorf-sc-freiburg-2418313
-+2026,81839,2418314,2740,2026-08-23,Rot-Weiss Essen,FC St. Pauli,finished,FT,1/0,1/0,,2/0,2/0,,2/0,2/0,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/rot-weiss-essen-fc-st-pauli-2418314
-+2026,81861,2418336,2741,2026-08-23,1. FC Phönix Lübeck,SC Paderborn 07,finished,FT,1/2,1/2,,2/4,2/4,,2/4,2/4,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/1-fc-phoenix-luebeck-sc-paderborn-07-2418336
-+2026,81854,2418329,2742,2026-08-24,SC Verl,Hamburger SV,finished,FT,0/1,0/1,,0/3,0/3,,0/3,0/3,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/sc-verl-hamburger-sv-2418329
-+2026,81862,2418337,2743,2026-08-24,VSG Altglienicke Berlin,VfL Wolfsburg,finished,PEN,1/0,1/0,,2/2,2/2,,3/3,3/3,5/6,8/9,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/vsg-altglienicke-vfl-wolfsburg-2418337
-+2026,81863,2418338,2744,2026-08-24,Würzburger Kickers,1. FC Köln,finished,FT,1/0,1/0,,1/2,1/2,,1/2,1/2,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/fc-wuerzburger-kickers-1-fc-koeln-2418338
-+2026,81843,2418318,2745,2026-08-24,Hallescher FC,FC Schalke 04,finished,ET,1/0,1/0,,2/2,2/2,,2/5,2/5,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/hallescher-fc-fc-schalke-04-2418318
-+2026,81836,2418311,2746,2026-09-01,Hamburg Eimsbütteler BC,Borussia Dortmund,finished,FT,0/4,0/4,,0/5,0/5,,0/5,0/5,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/hamburg-eimsbuetteler-ballspiel-club-borussia-dortmund-2418311
-+2026,81852,2418327,2747,2026-09-02,VfL Osnabrück,FC Bayern München,finished,FT,1/2,1/2,,1/4,1/4,,1/4,1/4,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/vfl-osnabrueck-fc-bayern-muenchen-2418327
-+2026,87618,2430543,2748,2026-10-27,SG Sonnenhof Großaspach,FC Augsburg,finished,FT,1/2,1/2,,2/4,2/4,,2/4,2/4,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/2-runde/sg-sonnenhof-grossaspach-fc-augsburg-2430543
-+2026,87620,2430545,2749,2026-10-27,Rot-Weiss Essen,RB Leipzig,finished,FT,1/0,1/0,,1/2,1/2,,1/2,1/2,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/2-runde/rot-weiss-essen-rb-leipzig-2430545
-+2026,87624,2430549,2750,2026-10-27,VfL Bochum,1. FSV Mainz 05,finished,FT,0/0,0/0,,2/0,2/0,,2/0,2/0,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/2-runde/vfl-bochum-1-fsv-mainz-05-2430549
-+2026,87625,2430550,2751,2026-10-27,Hamburger SV,Eintracht Frankfurt,finished,FT,0/0,0/0,,1/3,1/3,,1/3,1/3,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/2-runde/hamburger-sv-eintracht-frankfurt-2430550
-+2026,87621,2430546,2752,2026-10-27,1. FC Köln,1. FC Union Berlin,finished,FT,1/0,1/0,,5/0,5/0,,5/0,5/0,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/2-runde/1-fc-koeln-1-fc-union-berlin-2430546
-+2026,87623,2430548,2753,2026-10-27,Borussia Dortmund,SV Werder Bremen,finished,FT,2/0,2/0,,3/2,3/2,,3/2,3/2,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/2-runde/borussia-dortmund-werder-bremen-2430548
-+2026,87626,2430551,2754,2026-10-27,Borussia Mönchengladbach,Karlsruher SC,finished,FT,1/0,1/0,,2/0,2/0,,2/0,2/0,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/2-runde/borussia-moenchengladbach-karlsruher-sc-2430551
-+2026,87632,2430557,2755,2026-10-27,SV 07 Elversberg,SV Darmstadt 98,finished,FT,0/1,0/1,,0/2,0/2,,0/2,0/2,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/2-runde/sv-elversberg-sv-darmstadt-98-2430557
-+2026,87619,2430544,2756,2026-10-28,SSV Jeddeloh II,Hertha BSC,finished,FT,0/0,0/0,,0/2,0/2,,0/2,0/2,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/2-runde/ssv-jeddeloh-hertha-bsc-2430544
-+2026,87622,2430547,2757,2026-10-28,Dynamo Dresden,FC Schalke 04,finished,FT,0/0,0/0,,2/0,2/0,,2/0,2/0,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/2-runde/dynamo-dresden-fc-schalke-04-2430547
-+2026,87630,2430555,2758,2026-10-28,SC Paderborn 07,VfB Stuttgart,finished,FT,0/0,0/0,,0/1,0/1,,0/1,0/1,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/2-runde/sc-paderborn-07-vfb-stuttgart-2430555
-+2026,87631,2430556,2759,2026-10-28,SC Freiburg,VfL Wolfsburg,finished,FT,1/2,1/2,,3/2,3/2,,3/2,3/2,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/2-runde/sc-freiburg-vfl-wolfsburg-2430556
-+2026,87627,2430552,2760,2026-10-28,Holstein Kiel,TSG Hoffenheim,finished,PEN,1/1,1/1,,1/1,1/1,,1/1,1/1,4/3,5/4,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/2-runde/holstein-kiel-tsg-hoffenheim-2430552
-+2026,87628,2430553,2761,2026-10-28,Bayer 04 Leverkusen,1. FC Nürnberg,finished,FT,1/2,1/2,,5/2,5/2,,5/2,5/2,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/2-runde/bayer-leverkusen-1-fc-nuernberg-2430553
-+2026,87629,2430554,2762,2026-10-28,Hannover 96,1. FC Kaiserslautern,finished,FT,0/1,0/1,,0/2,0/2,,0/2,0/2,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/2-runde/hannover-96-1-fc-kaiserslautern-2430554
-+2026,87633,2430558,2763,2026-10-28,FC Bayern München,1. FC Magdeburg,finished,FT,2/1,2/1,,6/1,6/1,,6/1,6/1,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/2-runde/fc-bayern-muenchen-1-fc-magdeburg-2430558
-+2026,88750,2431931,2764,2026-12-01,VfB Stuttgart,Dynamo Dresden,not_started,FT,,,,,,,,,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/achtelfinale/vfb-stuttgart-dynamo-dresden-2431931
-+2026,88755,2431936,2765,2026-12-01,Holstein Kiel,1. FC Köln,not_started,FT,,,,,,,,,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/achtelfinale/holstein-kiel-1-fc-koeln-2431936
-+2026,88752,2431933,2766,2026-12-01,FC Bayern München,Hertha BSC,not_started,FT,,,,,,,,,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/achtelfinale/fc-bayern-muenchen-hertha-bsc-2431933
-+2026,88753,2431934,2767,2026-12-01,Borussia Mönchengladbach,SV Darmstadt 98,not_started,FT,,,,,,,,,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/achtelfinale/borussia-moenchengladbach-sv-darmstadt-98-2431934
-+2026,88751,2431932,2768,2026-12-02,Bayer 04 Leverkusen,RB Leipzig,not_started,FT,,,,,,,,,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/achtelfinale/bayer-leverkusen-rb-leipzig-2431932
-+2026,88754,2431935,2769,2026-12-02,1. FC Kaiserslautern,SC Freiburg,not_started,FT,,,,,,,,,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/achtelfinale/1-fc-kaiserslautern-sc-freiburg-2431935
-+2026,88749,2431930,2770,2026-12-02,Eintracht Frankfurt,Borussia Dortmund,not_started,FT,,,,,,,,,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/achtelfinale/eintracht-frankfurt-borussia-dortmund-2431930
-+2026,88756,2431937,2771,2026-12-02,VfL Bochum,FC Augsburg,not_started,FT,,,,,,,,,,,https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/achtelfinale/vfl-bochum-fc-augsburg-2431937
-diff --git a/backend/tests/fixtures/openligadb/manifest.json b/backend/tests/fixtures/openligadb/manifest.json
++++ b/backend/tests/fixtures/openligadb/dfb-2025.json
+@@ -0,0 +1,63 @@
++[{"matchID":77192,"matchDateTime":"2025-08-15T18:00:00","matchDateTimeUTC":"2025-08-15T16:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":118405,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":3,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":118406,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":5,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":5818,"teamName":"FC Gütersloh","shortName":"FC Gütersloh"},"team2":{"teamId":80,"teamName":"1. FC Union Berlin","shortName":"Union Berlin"}},
++{"matchID":77202,"matchDateTime":"2025-08-15T18:00:00","matchDateTimeUTC":"2025-08-15T16:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":118407,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":2,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":118408,"resultName":"Endergebnis","pointsTeam1":1,"pointsTeam2":3,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":417,"teamName":"1. FC Saarbrücken","shortName":"Saarbrücken"},"team2":{"teamId":78,"teamName":"1. FC Magdeburg","shortName":"Magdeburg"}},
++{"matchID":77203,"matchDateTime":"2025-08-15T18:00:00","matchDateTimeUTC":"2025-08-15T16:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":118409,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":1,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":118410,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":4,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":529,"teamName":"SG Sonnenhof Großaspach","shortName":"Sonnenhof Großaspach"},"team2":{"teamId":6,"teamName":"Bayer 04 Leverkusen","shortName":"Leverkusen"}},
++{"matchID":77206,"matchDateTime":"2025-08-15T20:45:00","matchDateTimeUTC":"2025-08-15T18:45:00Z","matchIsFinished":true,"matchResults":[{"resultID":118411,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":118412,"resultName":"Endergebnis","pointsTeam1":1,"pointsTeam2":0,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":83,"teamName":"DSC Arminia Bielefeld","shortName":"Bielefeld"},"team2":{"teamId":134,"teamName":"Werder Bremen","shortName":"Bremen"}},
++{"matchID":77179,"matchDateTime":"2025-08-16T13:00:00","matchDateTimeUTC":"2025-08-16T11:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":118420,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":118421,"resultName":"Endergebnis","pointsTeam1":1,"pointsTeam2":2,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"},{"resultID":118424,"resultName":"Nachspielzeit","pointsTeam1":1,"pointsTeam2":2,"resultOrderID":3,"resultTypeID":3,"resultTypeKind":"Unknown","resultDescription":"Ergebnis nach Nachspielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":1058,"teamName":"FK Pirmasens","shortName":""},"team2":{"teamId":100,"teamName":"Hamburger SV","shortName":"HSV"}},
++{"matchID":77190,"matchDateTime":"2025-08-16T13:00:00","matchDateTimeUTC":"2025-08-16T11:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":118422,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":118423,"resultName":"Endergebnis","pointsTeam1":1,"pointsTeam2":3,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"},{"resultID":118437,"resultName":"Nachspielzeit","pointsTeam1":1,"pointsTeam2":3,"resultOrderID":3,"resultTypeID":3,"resultTypeKind":"Unknown","resultDescription":"Ergebnis nach Nachspielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":1634,"teamName":"BFC Dynamo","shortName":"BFC Dynamo"},"team2":{"teamId":129,"teamName":"VfL Bochum","shortName":"Bochum"}},
++{"matchID":77175,"matchDateTime":"2025-08-16T15:30:00","matchDateTimeUTC":"2025-08-16T13:30:00Z","matchIsFinished":true,"matchResults":[{"resultID":118425,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":3,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":118426,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":9,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":6905,"teamName":"SV Hemelingen","shortName":"Hemelingen"},"team2":{"teamId":131,"teamName":"VfL Wolfsburg","shortName":"Wolfsburg"}},
++{"matchID":77186,"matchDateTime":"2025-08-16T15:30:00","matchDateTimeUTC":"2025-08-16T13:30:00Z","matchIsFinished":true,"matchResults":[{"resultID":118427,"resultName":"Halbzeit","pointsTeam1":2,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":118428,"resultName":"Endergebnis","pointsTeam1":3,"pointsTeam2":3,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"},{"resultID":118444,"resultName":"Nachspielzeit","pointsTeam1":3,"pointsTeam2":3,"resultOrderID":3,"resultTypeID":3,"resultTypeKind":"Unknown","resultDescription":"Ergebnis nach Nachspielzeit"},{"resultID":118445,"resultName":"Elfmeterschießen","pointsTeam1":9,"pointsTeam2":8,"resultOrderID":4,"resultTypeID":5,"resultTypeKind":"AfterPenalties","resultDescription":"Ergebnis nach Elfmeterschießen"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":2410,"teamName":"FV Illertissen","shortName":""},"team2":{"teamId":79,"teamName":"1. FC Nürnberg","shortName":"Nürnberg"}},
++{"matchID":77189,"matchDateTime":"2025-08-16T15:30:00","matchDateTimeUTC":"2025-08-16T13:30:00Z","matchIsFinished":true,"matchResults":[{"resultID":118429,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":118430,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":0,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"},{"resultID":118447,"resultName":"Nachspielzeit","pointsTeam1":0,"pointsTeam2":0,"resultOrderID":3,"resultTypeID":3,"resultTypeKind":"Unknown","resultDescription":"Ergebnis nach Nachspielzeit"},{"resultID":118446,"resultName":"Elfmeterschießen","pointsTeam1":2,"pointsTeam2":3,"resultOrderID":4,"resultTypeID":5,"resultTypeKind":"AfterPenalties","resultDescription":"Ergebnis nach Elfmeterschießen"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":4342,"teamName":"Eintracht Norderstedt","shortName":""},"team2":{"teamId":98,"teamName":"FC St. Pauli","shortName":"St. Pauli"}},
++{"matchID":77197,"matchDateTime":"2025-08-16T15:30:00","matchDateTimeUTC":"2025-08-16T13:30:00Z","matchIsFinished":true,"matchResults":[{"resultID":118431,"resultName":"Halbzeit","pointsTeam1":2,"pointsTeam2":2,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":118432,"resultName":"Endergebnis","pointsTeam1":2,"pointsTeam2":4,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":119,"teamName":"SV Sandhausen","shortName":"Sandhausen"},"team2":{"teamId":1635,"teamName":"RB Leipzig","shortName":"Leipzig"}},
++{"matchID":77199,"matchDateTime":"2025-08-16T15:30:00","matchDateTimeUTC":"2025-08-16T13:30:00Z","matchIsFinished":true,"matchResults":[{"resultID":118433,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":1,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":118434,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":4,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":102,"teamName":"Hansa Rostock","shortName":"Rostock"},"team2":{"teamId":175,"teamName":"TSG Hoffenheim","shortName":"Hoffenheim"}},
++{"matchID":77200,"matchDateTime":"2025-08-16T15:30:00","matchDateTimeUTC":"2025-08-16T13:30:00Z","matchIsFinished":true,"matchResults":[{"resultID":118435,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":2,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":118436,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":5,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":2499,"teamName":"Bahlinger SC","shortName":"Bahlinger SC"},"team2":{"teamId":199,"teamName":"1. FC Heidenheim 1846","shortName":"Heidenheim"}},
++{"matchID":77178,"matchDateTime":"2025-08-16T18:00:00","matchDateTimeUTC":"2025-08-16T16:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":118438,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":1,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":118439,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":2,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":191,"teamName":"Sportfreunde Lotte","shortName":"Lotte"},"team2":{"teamId":112,"teamName":"SC Freiburg","shortName":"Freiburg"}},
++{"matchID":77188,"matchDateTime":"2025-08-16T18:00:00","matchDateTimeUTC":"2025-08-16T16:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":118440,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":1,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":118441,"resultName":"Endergebnis","pointsTeam1":1,"pointsTeam2":2,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":532,"teamName":"VfB Lübeck","shortName":"VfB Lübeck"},"team2":{"teamId":118,"teamName":"SV Darmstadt 98","shortName":"Darmstadt"}},
++{"matchID":77196,"matchDateTime":"2025-08-16T18:00:00","matchDateTimeUTC":"2025-08-16T16:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":118442,"resultName":"Halbzeit","pointsTeam1":1,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":118443,"resultName":"Endergebnis","pointsTeam1":1,"pointsTeam2":0,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":93,"teamName":"Energie Cottbus","shortName":"Cottbus"},"team2":{"teamId":55,"teamName":"Hannover 96","shortName":"Hannover"}},
++{"matchID":77182,"matchDateTime":"2025-08-17T13:00:00","matchDateTimeUTC":"2025-08-17T11:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":118448,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":3,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":118449,"resultName":"Endergebnis","pointsTeam1":1,"pointsTeam2":3,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":2199,"teamName":"Viktoria Köln","shortName":"Viktoria Köln"},"team2":{"teamId":31,"teamName":"SC Paderborn 07","shortName":"Paderborn"}},
++{"matchID":77187,"matchDateTime":"2025-08-17T13:00:00","matchDateTimeUTC":"2025-08-17T11:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":118450,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":2,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":118451,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":5,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":5212,"teamName":"FV Engers 07","shortName":"Engers"},"team2":{"teamId":91,"teamName":"Eintracht Frankfurt","shortName":"Frankfurt"}},
++{"matchID":77181,"matchDateTime":"2025-08-17T15:30:00","matchDateTimeUTC":"2025-08-17T13:30:00Z","matchIsFinished":true,"matchResults":[{"resultID":118452,"resultName":"Halbzeit","pointsTeam1":2,"pointsTeam2":2,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":118453,"resultName":"Endergebnis","pointsTeam1":2,"pointsTeam2":3,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":5024,"teamName":"Atlas Delmenhorst","shortName":"SV Atlas Delmenhorst"},"team2":{"teamId":87,"teamName":"Borussia Mönchengladbach","shortName":"Gladbach"}},
++{"matchID":77183,"matchDateTime":"2025-08-17T15:30:00","matchDateTimeUTC":"2025-08-17T13:30:00Z","matchIsFinished":true,"matchResults":[{"resultID":118454,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":4,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":118455,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":7,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":6904,"teamName":"RSV Eintracht 1949","shortName":"Eintracht"},"team2":{"teamId":76,"teamName":"1. FC Kaiserslautern","shortName":"Kaiserslautern"}},
++{"matchID":77185,"matchDateTime":"2025-08-17T15:30:00","matchDateTimeUTC":"2025-08-17T13:30:00Z","matchIsFinished":true,"matchResults":[{"resultID":118456,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":3,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":118457,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":5,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":1069,"teamName":"ZFC Meuselwitz","shortName":"Meuselwitz"},"team2":{"teamId":105,"teamName":"Karlsruher SC","shortName":"Karlsruhe"}},
++{"matchID":77194,"matchDateTime":"2025-08-17T15:30:00","matchDateTimeUTC":"2025-08-17T13:30:00Z","matchIsFinished":true,"matchResults":[{"resultID":118458,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":118459,"resultName":"Endergebnis","pointsTeam1":1,"pointsTeam2":2,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":181,"teamName":"Jahn Regensburg","shortName":"Regensburg"},"team2":{"teamId":65,"teamName":"1. FC Köln","shortName":"Köln"}},
++{"matchID":77198,"matchDateTime":"2025-08-17T15:30:00","matchDateTimeUTC":"2025-08-17T13:30:00Z","matchIsFinished":true,"matchResults":[{"resultID":118460,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":118461,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":2,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":5660,"teamName":"Blau-Weiß Lohne","shortName":""},"team2":{"teamId":115,"teamName":"SpVgg Greuther Fürth","shortName":"Fürth"}},
++{"matchID":77201,"matchDateTime":"2025-08-17T15:30:00","matchDateTimeUTC":"2025-08-17T13:30:00Z","matchIsFinished":true,"matchResults":[{"resultID":118462,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":118463,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":1,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"},{"resultID":118464,"resultName":"Nachspielzeit","pointsTeam1":0,"pointsTeam2":1,"resultOrderID":3,"resultTypeID":3,"resultTypeKind":"Unknown","resultDescription":"Ergebnis nach Nachspielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":1584,"teamName":"1. FC Lok Leipzig","shortName":"Lok Leipzig"},"team2":{"teamId":9,"teamName":"FC Schalke 04","shortName":"S04"}},
++{"matchID":77176,"matchDateTime":"2025-08-17T18:00:00","matchDateTimeUTC":"2025-08-17T16:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":118465,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":118466,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":1,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":564,"teamName":"SSV Ulm 1846","shortName":"SSV Ulm 1846"},"team2":{"teamId":198,"teamName":"SV 07 Elversberg","shortName":"Elversberg"}},
++{"matchID":77180,"matchDateTime":"2025-08-17T18:00:00","matchDateTimeUTC":"2025-08-17T16:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":118467,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":118468,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":2,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":208,"teamName":"Hallescher FC","shortName":"Halle"},"team2":{"teamId":95,"teamName":"FC Augsburg","shortName":"Augsburg"}},
++{"matchID":77195,"matchDateTime":"2025-08-17T18:00:00","matchDateTimeUTC":"2025-08-17T16:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":118469,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":1,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":118470,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":2,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":204,"teamName":"FC 08 Homburg","shortName":""},"team2":{"teamId":104,"teamName":"Holstein Kiel","shortName":"Kiel"}},
++{"matchID":77191,"matchDateTime":"2025-08-18T18:00:00","matchDateTimeUTC":"2025-08-18T16:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":118473,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":1,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":118474,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":1,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":177,"teamName":"Dynamo Dresden","shortName":"Dresden"},"team2":{"teamId":81,"teamName":"1. FSV Mainz 05","shortName":"Mainz"}},
++{"matchID":77193,"matchDateTime":"2025-08-18T18:00:00","matchDateTimeUTC":"2025-08-18T16:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":118475,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":118476,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":0,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"},{"resultID":127391,"resultName":"Nachspielzeit","pointsTeam1":0,"pointsTeam2":0,"resultOrderID":3,"resultTypeID":3,"resultTypeKind":"Unknown","resultDescription":"Ergebnis nach Nachspielzeit"},{"resultID":118479,"resultName":"Elfmeterschießen","pointsTeam1":3,"pointsTeam2":5,"resultOrderID":4,"resultTypeID":5,"resultTypeKind":"AfterPenalties","resultDescription":"Ergebnis nach Elfmeterschießen"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":188,"teamName":"Preußen Münster","shortName":"Münster"},"team2":{"teamId":54,"teamName":"Hertha BSC","shortName":"Hertha"}},
++{"matchID":77205,"matchDateTime":"2025-08-18T18:00:00","matchDateTimeUTC":"2025-08-18T16:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":118477,"resultName":"Halbzeit","pointsTeam1":1,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":118478,"resultName":"Endergebnis","pointsTeam1":2,"pointsTeam2":4,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":2952,"teamName":"1. FC Schweinfurt 05","shortName":"1. FC Schweinfurt 05"},"team2":{"teamId":185,"teamName":"Fortuna Düsseldorf","shortName":"Düsseldorf"}},
++{"matchID":77177,"matchDateTime":"2025-08-18T20:45:00","matchDateTimeUTC":"2025-08-18T18:45:00Z","matchIsFinished":true,"matchResults":[{"resultID":118480,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":118481,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":1,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":109,"teamName":"Rot-Weiss Essen","shortName":"Rot-Weiss Essen"},"team2":{"teamId":7,"teamName":"Borussia Dortmund","shortName":"Dortmund"}},
++{"matchID":77184,"matchDateTime":"2025-08-26T20:45:00","matchDateTimeUTC":"2025-08-26T18:45:00Z","matchIsFinished":true,"matchResults":[{"resultID":118568,"resultName":"Halbzeit","pointsTeam1":1,"pointsTeam2":1,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":118569,"resultName":"Endergebnis","pointsTeam1":3,"pointsTeam2":4,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"},{"resultID":118570,"resultName":"Nachspielzeit","pointsTeam1":4,"pointsTeam2":4,"resultOrderID":3,"resultTypeID":3,"resultTypeKind":"Unknown","resultDescription":"Ergebnis nach Nachspielzeit"},{"resultID":118571,"resultName":"Elfmeterschießen","pointsTeam1":11,"pointsTeam2":12,"resultOrderID":4,"resultTypeID":5,"resultTypeKind":"AfterPenalties","resultDescription":"Ergebnis nach Elfmeterschießen"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":74,"teamName":"Eintracht Braunschweig","shortName":"Braunschweig"},"team2":{"teamId":16,"teamName":"VfB Stuttgart","shortName":"Stuttgart"}},
++{"matchID":77204,"matchDateTime":"2025-08-27T20:45:00","matchDateTimeUTC":"2025-08-27T18:45:00Z","matchIsFinished":true,"matchResults":[{"resultID":118573,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":1,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":118574,"resultName":"Endergebnis","pointsTeam1":2,"pointsTeam2":3,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":174,"teamName":"SV Wehen Wiesbaden","shortName":"Wiesbaden"},"team2":{"teamId":40,"teamName":"FC Bayern München","shortName":"Bayern"}},
++{"matchID":79585,"matchDateTime":"2025-10-28T18:30:00","matchDateTimeUTC":"2025-10-28T17:30:00Z","matchIsFinished":true,"matchResults":[{"resultID":119892,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":119893,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":1,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"2. Runde","groupOrderID":2},"team1":{"teamId":199,"teamName":"1. FC Heidenheim 1846","shortName":"Heidenheim"},"team2":{"teamId":100,"teamName":"Hamburger SV","shortName":"HSV"}},
++{"matchID":79587,"matchDateTime":"2025-10-28T18:30:00","matchDateTimeUTC":"2025-10-28T17:30:00Z","matchIsFinished":true,"matchResults":[{"resultID":119894,"resultName":"Halbzeit","pointsTeam1":1,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":119895,"resultName":"Endergebnis","pointsTeam1":3,"pointsTeam2":0,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"2. Runde","groupOrderID":2},"team1":{"teamId":54,"teamName":"Hertha BSC","shortName":"Hertha"},"team2":{"teamId":198,"teamName":"SV 07 Elversberg","shortName":"Elversberg"}},
++{"matchID":79589,"matchDateTime":"2025-10-28T18:30:00","matchDateTimeUTC":"2025-10-28T17:30:00Z","matchIsFinished":true,"matchResults":[{"resultID":119896,"resultName":"Halbzeit","pointsTeam1":1,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":119897,"resultName":"Endergebnis","pointsTeam1":1,"pointsTeam2":1,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"},{"resultID":127392,"resultName":"Nachspielzeit","pointsTeam1":1,"pointsTeam2":1,"resultOrderID":3,"resultTypeID":3,"resultTypeKind":"Unknown","resultDescription":"Ergebnis nach Nachspielzeit"},{"resultID":120732,"resultName":"Elfmeterschießen","pointsTeam1":3,"pointsTeam2":5,"resultOrderID":4,"resultTypeID":5,"resultTypeKind":"AfterPenalties","resultDescription":"Ergebnis nach Elfmeterschießen"}],"group":{"groupName":"2. Runde","groupOrderID":2},"team1":{"teamId":91,"teamName":"Eintracht Frankfurt","shortName":"Frankfurt"},"team2":{"teamId":7,"teamName":"Borussia Dortmund","shortName":"Dortmund"}},
++{"matchID":79595,"matchDateTime":"2025-10-28T18:30:00","matchDateTimeUTC":"2025-10-28T17:30:00Z","matchIsFinished":true,"matchResults":[{"resultID":119898,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":1,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":119899,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":1,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"2. Runde","groupOrderID":2},"team1":{"teamId":131,"teamName":"VfL Wolfsburg","shortName":"Wolfsburg"},"team2":{"teamId":104,"teamName":"Holstein Kiel","shortName":"Kiel"}},
++{"matchID":79583,"matchDateTime":"2025-10-28T20:45:00","matchDateTimeUTC":"2025-10-28T19:45:00Z","matchIsFinished":true,"matchResults":[{"resultID":119900,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":3,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":119901,"resultName":"Endergebnis","pointsTeam1":1,"pointsTeam2":4,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"2. Runde","groupOrderID":2},"team1":{"teamId":93,"teamName":"Energie Cottbus","shortName":"Cottbus"},"team2":{"teamId":1635,"teamName":"RB Leipzig","shortName":"Leipzig"}},
++{"matchID":79586,"matchDateTime":"2025-10-28T20:45:00","matchDateTimeUTC":"2025-10-28T19:45:00Z","matchIsFinished":true,"matchResults":[{"resultID":119902,"resultName":"Halbzeit","pointsTeam1":1,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":119903,"resultName":"Endergebnis","pointsTeam1":3,"pointsTeam2":1,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"2. Runde","groupOrderID":2},"team1":{"teamId":87,"teamName":"Borussia Mönchengladbach","shortName":"Gladbach"},"team2":{"teamId":105,"teamName":"Karlsruher SC","shortName":"Karlsruhe"}},
++{"matchID":79591,"matchDateTime":"2025-10-28T20:45:00","matchDateTimeUTC":"2025-10-28T19:45:00Z","matchIsFinished":true,"matchResults":[{"resultID":119904,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":1,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":119905,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":1,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"2. Runde","groupOrderID":2},"team1":{"teamId":95,"teamName":"FC Augsburg","shortName":"Augsburg"},"team2":{"teamId":129,"teamName":"VfL Bochum","shortName":"Bochum"}},
++{"matchID":79597,"matchDateTime":"2025-10-28T20:45:00","matchDateTimeUTC":"2025-10-28T19:45:00Z","matchIsFinished":true,"matchResults":[{"resultID":119906,"resultName":"Halbzeit","pointsTeam1":1,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":119907,"resultName":"Endergebnis","pointsTeam1":1,"pointsTeam2":1,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"},{"resultID":127393,"resultName":"Nachspielzeit","pointsTeam1":2,"pointsTeam2":2,"resultOrderID":3,"resultTypeID":3,"resultTypeKind":"Unknown","resultDescription":"Ergebnis nach Nachspielzeit"},{"resultID":120733,"resultName":"Elfmeterschießen","pointsTeam1":10,"pointsTeam2":9,"resultOrderID":4,"resultTypeID":5,"resultTypeKind":"AfterPenalties","resultDescription":"Ergebnis nach Elfmeterschießen"}],"group":{"groupName":"2. Runde","groupOrderID":2},"team1":{"teamId":98,"teamName":"FC St. Pauli","shortName":"St. Pauli"},"team2":{"teamId":175,"teamName":"TSG Hoffenheim","shortName":"Hoffenheim"}},
++{"matchID":79582,"matchDateTime":"2025-10-29T18:00:00","matchDateTimeUTC":"2025-10-29T17:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":119921,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":2,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":119922,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":3,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"2. Runde","groupOrderID":2},"team1":{"teamId":2410,"teamName":"FV Illertissen","shortName":""},"team2":{"teamId":78,"teamName":"1. FC Magdeburg","shortName":"Magdeburg"}},
++{"matchID":79588,"matchDateTime":"2025-10-29T18:00:00","matchDateTimeUTC":"2025-10-29T17:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":119923,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":1,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":119924,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":1,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"2. Runde","groupOrderID":2},"team1":{"teamId":115,"teamName":"SpVgg Greuther Fürth","shortName":"Fürth"},"team2":{"teamId":76,"teamName":"1. FC Kaiserslautern","shortName":"Kaiserslautern"}},
++{"matchID":79593,"matchDateTime":"2025-10-29T18:00:00","matchDateTimeUTC":"2025-10-29T17:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":119919,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":119920,"resultName":"Endergebnis","pointsTeam1":2,"pointsTeam2":2,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"},{"resultID":119937,"resultName":"Nachspielzeit","pointsTeam1":2,"pointsTeam2":4,"resultOrderID":3,"resultTypeID":3,"resultTypeKind":"Unknown","resultDescription":"Ergebnis nach Nachspielzeit"}],"group":{"groupName":"2. Runde","groupOrderID":2},"team1":{"teamId":31,"teamName":"SC Paderborn 07","shortName":"Paderborn"},"team2":{"teamId":6,"teamName":"Bayer 04 Leverkusen","shortName":"Leverkusen"}},
++{"matchID":79594,"matchDateTime":"2025-10-29T18:00:00","matchDateTimeUTC":"2025-10-29T17:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":119917,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":1,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":119918,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":2,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"2. Runde","groupOrderID":2},"team1":{"teamId":81,"teamName":"1. FSV Mainz 05","shortName":"Mainz"},"team2":{"teamId":16,"teamName":"VfB Stuttgart","shortName":"Stuttgart"}},
++{"matchID":79584,"matchDateTime":"2025-10-29T20:45:00","matchDateTimeUTC":"2025-10-29T19:45:00Z","matchIsFinished":true,"matchResults":[{"resultID":119938,"resultName":"Halbzeit","pointsTeam1":1,"pointsTeam2":1,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":119939,"resultName":"Endergebnis","pointsTeam1":2,"pointsTeam2":1,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"2. Runde","groupOrderID":2},"team1":{"teamId":80,"teamName":"1. FC Union Berlin","shortName":"Union Berlin"},"team2":{"teamId":83,"teamName":"DSC Arminia Bielefeld","shortName":"Bielefeld"}},
++{"matchID":79590,"matchDateTime":"2025-10-29T20:45:00","matchDateTimeUTC":"2025-10-29T19:45:00Z","matchIsFinished":true,"matchResults":[{"resultID":119940,"resultName":"Halbzeit","pointsTeam1":2,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":119941,"resultName":"Endergebnis","pointsTeam1":4,"pointsTeam2":0,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"2. Runde","groupOrderID":2},"team1":{"teamId":118,"teamName":"SV Darmstadt 98","shortName":"Darmstadt"},"team2":{"teamId":9,"teamName":"FC Schalke 04","shortName":"S04"}},
++{"matchID":79592,"matchDateTime":"2025-10-29T20:45:00","matchDateTimeUTC":"2025-10-29T19:45:00Z","matchIsFinished":true,"matchResults":[{"resultID":119942,"resultName":"Halbzeit","pointsTeam1":1,"pointsTeam2":2,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":119943,"resultName":"Endergebnis","pointsTeam1":1,"pointsTeam2":3,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"2. Runde","groupOrderID":2},"team1":{"teamId":185,"teamName":"Fortuna Düsseldorf","shortName":"Düsseldorf"},"team2":{"teamId":112,"teamName":"SC Freiburg","shortName":"Freiburg"}},
++{"matchID":79596,"matchDateTime":"2025-10-29T20:45:00","matchDateTimeUTC":"2025-10-29T19:45:00Z","matchIsFinished":true,"matchResults":[{"resultID":119944,"resultName":"Halbzeit","pointsTeam1":1,"pointsTeam2":2,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":119945,"resultName":"Endergebnis","pointsTeam1":1,"pointsTeam2":4,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"2. Runde","groupOrderID":2},"team1":{"teamId":65,"teamName":"1. FC Köln","shortName":"Köln"},"team2":{"teamId":40,"teamName":"FC Bayern München","shortName":"Bayern"}},
++{"matchID":79780,"matchDateTime":"2025-12-02T18:00:00","matchDateTimeUTC":"2025-12-02T17:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":120786,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":1,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":120787,"resultName":"Endergebnis","pointsTeam1":1,"pointsTeam2":2,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"Achtelfinale","groupOrderID":3},"team1":{"teamId":87,"teamName":"Borussia Mönchengladbach","shortName":"Gladbach"},"team2":{"teamId":98,"teamName":"FC St. Pauli","shortName":"St. Pauli"}},
++{"matchID":79782,"matchDateTime":"2025-12-02T18:00:00","matchDateTimeUTC":"2025-12-02T17:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":120784,"resultName":"Halbzeit","pointsTeam1":3,"pointsTeam2":1,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":120785,"resultName":"Endergebnis","pointsTeam1":6,"pointsTeam2":1,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"Achtelfinale","groupOrderID":3},"team1":{"teamId":54,"teamName":"Hertha BSC","shortName":"Hertha"},"team2":{"teamId":76,"teamName":"1. FC Kaiserslautern","shortName":"Kaiserslautern"}},
++{"matchID":79778,"matchDateTime":"2025-12-02T21:00:00","matchDateTimeUTC":"2025-12-02T20:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":120788,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":1,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":120789,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":1,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"Achtelfinale","groupOrderID":3},"team1":{"teamId":7,"teamName":"Borussia Dortmund","shortName":"Dortmund"},"team2":{"teamId":6,"teamName":"Bayer 04 Leverkusen","shortName":"Leverkusen"}},
++{"matchID":79783,"matchDateTime":"2025-12-02T21:00:00","matchDateTimeUTC":"2025-12-02T20:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":120790,"resultName":"Halbzeit","pointsTeam1":2,"pointsTeam2":1,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":120791,"resultName":"Endergebnis","pointsTeam1":3,"pointsTeam2":1,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"Achtelfinale","groupOrderID":3},"team1":{"teamId":1635,"teamName":"RB Leipzig","shortName":"Leipzig"},"team2":{"teamId":78,"teamName":"1. FC Magdeburg","shortName":"Magdeburg"}},
++{"matchID":79779,"matchDateTime":"2025-12-03T18:00:00","matchDateTimeUTC":"2025-12-03T17:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":120792,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":1,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":120793,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":2,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"Achtelfinale","groupOrderID":3},"team1":{"teamId":129,"teamName":"VfL Bochum","shortName":"Bochum"},"team2":{"teamId":16,"teamName":"VfB Stuttgart","shortName":"Stuttgart"}},
++{"matchID":79786,"matchDateTime":"2025-12-03T18:00:00","matchDateTimeUTC":"2025-12-03T17:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":120794,"resultName":"Halbzeit","pointsTeam1":1,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":120795,"resultName":"Endergebnis","pointsTeam1":2,"pointsTeam2":0,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"Achtelfinale","groupOrderID":3},"team1":{"teamId":112,"teamName":"SC Freiburg","shortName":"Freiburg"},"team2":{"teamId":118,"teamName":"SV Darmstadt 98","shortName":"Darmstadt"}},
++{"matchID":79781,"matchDateTime":"2025-12-03T20:45:00","matchDateTimeUTC":"2025-12-03T19:45:00Z","matchIsFinished":true,"matchResults":[{"resultID":120796,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":120797,"resultName":"Endergebnis","pointsTeam1":1,"pointsTeam2":1,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"},{"resultID":127394,"resultName":"Nachspielzeit","pointsTeam1":1,"pointsTeam2":1,"resultOrderID":3,"resultTypeID":3,"resultTypeKind":"Unknown","resultDescription":"Ergebnis nach Nachspielzeit"},{"resultID":120800,"resultName":"Elfmeterschießen","pointsTeam1":3,"pointsTeam2":5,"resultOrderID":4,"resultTypeID":5,"resultTypeKind":"AfterPenalties","resultDescription":"Ergebnis nach Elfmeterschießen"}],"group":{"groupName":"Achtelfinale","groupOrderID":3},"team1":{"teamId":100,"teamName":"Hamburger SV","shortName":"HSV"},"team2":{"teamId":104,"teamName":"Holstein Kiel","shortName":"Kiel"}},
++{"matchID":79784,"matchDateTime":"2025-12-03T20:45:00","matchDateTimeUTC":"2025-12-03T19:45:00Z","matchIsFinished":true,"matchResults":[{"resultID":120798,"resultName":"Halbzeit","pointsTeam1":1,"pointsTeam2":3,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":120799,"resultName":"Endergebnis","pointsTeam1":2,"pointsTeam2":3,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"Achtelfinale","groupOrderID":3},"team1":{"teamId":80,"teamName":"1. FC Union Berlin","shortName":"Union Berlin"},"team2":{"teamId":40,"teamName":"FC Bayern München","shortName":"Bayern"}},
++{"matchID":80175,"matchDateTime":"2026-02-03T20:45:00","matchDateTimeUTC":"2026-02-03T19:45:00Z","matchIsFinished":true,"matchResults":[{"resultID":122992,"resultName":"Halbzeit","pointsTeam1":1,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":122993,"resultName":"Endergebnis","pointsTeam1":3,"pointsTeam2":0,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"Viertelfinale","groupOrderID":4},"team1":{"teamId":6,"teamName":"Bayer 04 Leverkusen","shortName":"Leverkusen"},"team2":{"teamId":98,"teamName":"FC St. Pauli","shortName":"St. Pauli"}},
++{"matchID":80174,"matchDateTime":"2026-02-04T20:45:00","matchDateTimeUTC":"2026-02-04T19:45:00Z","matchIsFinished":true,"matchResults":[{"resultID":122994,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":122995,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":3,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"Viertelfinale","groupOrderID":4},"team1":{"teamId":104,"teamName":"Holstein Kiel","shortName":"Kiel"},"team2":{"teamId":16,"teamName":"VfB Stuttgart","shortName":"Stuttgart"}},
++{"matchID":80173,"matchDateTime":"2026-02-10T20:45:00","matchDateTimeUTC":"2026-02-10T19:45:00Z","matchIsFinished":true,"matchResults":[{"resultID":123093,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":1,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"},{"resultID":123107,"resultName":"Nachspielzeit","pointsTeam1":1,"pointsTeam2":1,"resultOrderID":3,"resultTypeID":3,"resultTypeKind":"Unknown","resultDescription":"Ergebnis nach Nachspielzeit"},{"resultID":123108,"resultName":"Elfmeterschießen","pointsTeam1":5,"pointsTeam2":6,"resultOrderID":4,"resultTypeID":5,"resultTypeKind":"AfterPenalties","resultDescription":"Ergebnis nach Elfmeterschießen"}],"group":{"groupName":"Viertelfinale","groupOrderID":4},"team1":{"teamId":54,"teamName":"Hertha BSC","shortName":"Hertha"},"team2":{"teamId":112,"teamName":"SC Freiburg","shortName":"Freiburg"}},
++{"matchID":80172,"matchDateTime":"2026-02-11T20:45:00","matchDateTimeUTC":"2026-02-11T19:45:00Z","matchIsFinished":true,"matchResults":[{"resultID":123105,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":123106,"resultName":"Endergebnis","pointsTeam1":2,"pointsTeam2":0,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"Viertelfinale","groupOrderID":4},"team1":{"teamId":40,"teamName":"FC Bayern München","shortName":"Bayern"},"team2":{"teamId":1635,"teamName":"RB Leipzig","shortName":"Leipzig"}},
++{"matchID":81113,"matchDateTime":"2026-04-22T20:45:00","matchDateTimeUTC":"2026-04-22T18:45:00Z","matchIsFinished":true,"matchResults":[{"resultID":124698,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":1,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":124699,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":2,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"Halbfinale","groupOrderID":5},"team1":{"teamId":6,"teamName":"Bayer 04 Leverkusen","shortName":"Leverkusen"},"team2":{"teamId":40,"teamName":"FC Bayern München","shortName":"Bayern"}},
++{"matchID":81114,"matchDateTime":"2026-04-23T20:45:00","matchDateTimeUTC":"2026-04-23T18:45:00Z","matchIsFinished":true,"matchResults":[{"resultID":124700,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":1,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":124701,"resultName":"Endergebnis","pointsTeam1":1,"pointsTeam2":1,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"},{"resultID":124702,"resultName":"Nachspielzeit","pointsTeam1":2,"pointsTeam2":1,"resultOrderID":3,"resultTypeID":3,"resultTypeKind":"Unknown","resultDescription":"Ergebnis nach Nachspielzeit"}],"group":{"groupName":"Halbfinale","groupOrderID":5},"team1":{"teamId":16,"teamName":"VfB Stuttgart","shortName":"Stuttgart"},"team2":{"teamId":112,"teamName":"SC Freiburg","shortName":"Freiburg"}},
++{"matchID":81581,"matchDateTime":"2026-05-23T20:00:00","matchDateTimeUTC":"2026-05-23T18:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":125225,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":125226,"resultName":"Endergebnis","pointsTeam1":3,"pointsTeam2":0,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"Endspiel","groupOrderID":6},"team1":{"teamId":40,"teamName":"FC Bayern München","shortName":"Bayern"},"team2":{"teamId":16,"teamName":"VfB Stuttgart","shortName":"Stuttgart"}}]
+diff --git a/backend/tests/fixtures/openligadb/dfb-2026.json b/backend/tests/fixtures/openligadb/dfb-2026.json
 new file mode 100644
-index 0000000000..1d3af15d03
+index 0000000000..d62917a9ef
 --- /dev/null
-+++ b/backend/tests/fixtures/openligadb/manifest.json
-@@ -0,0 +1,26 @@
-+{
-+  "2025": {
-+    "url": "https://api.openligadb.de/getmatchdata/dfb/2025",
-+    "license": "ODbL-1.0",
-+    "publisher": "OpenLigaDB",
-+    "original_sha256": "b72e3d698a5262a130c6d77a505497ab9d08b0f1c31aaa1765e4f7039843b6e3",
-+    "reduced_sha256": "32478df8ee637b14512481cbff86bea3bce40413713313e7f7afc6f634743f0c",
-+    "equivalent_projection_sha256": "b0f07c92449ddcbfc9607f3a70955c91e787f4ec40f85ec98bd7adff90c82288"
-+  },
-+  "2026": {
-+    "url": "https://api.openligadb.de/getmatchdata/dfb/2026",
-+    "license": "ODbL-1.0",
-+    "publisher": "OpenLigaDB",
-+    "original_sha256": "85220cbd34ffa016837098f4e11e4b9532e57d0da431dbf8aa0f250a82cd23c9",
-+    "reduced_sha256": "d07e58c85ddba349f138d4c18cdcbefd1513448a2d016e4df1fbbe0629d275a4",
-+    "equivalent_projection_sha256": "bbaad0417eb5cefe61bea3f08a31c7f85bdaed239586e4b5b1afb2b9d729e44d"
-+  },
-+  "dfb_oracle": {
-+    "sha256": "1f2b7c5267d0ec2d85d15e3307432aba2dff160f2debeb8e6e7fcc40a3fc5455",
-+    "official_report_index_sha256": "c0194eb08a2a2fd0ba434f2c83cd718bde476708d4b7df0b9b55476bde576b42"
-+  },
-+  "rds_preimage": {
-+    "sha256": "8b7c665791a607633b3f05b5776e3b26948feee36c35348d665a013228805978",
-+    "as_of": "2026-11-18 05:41:15.047150+00:00"
-+  }
-+}
-diff --git a/backend/tests/fixtures/openligadb/rds-preimage.json b/backend/tests/fixtures/openligadb/rds-preimage.json
-new file mode 100644
-index 0000000000..62342c9ea3
---- /dev/null
-+++ b/backend/tests/fixtures/openligadb/rds-preimage.json
-@@ -0,0 +1 @@
-+{"as_of":"2026-11-18 05:41:15.047150+00:00","columns":["edition","id","season_id","competition_season_id","provider_key","match_date","status","home_team_id","away_team_id","home_score","away_score","home_score_90","away_score_90","home_score_ht","away_score_ht","home_score_et","away_score_et","home_penalty_score","away_penalty_score"],"rows":[["openligadb:germany-cup:2025/2026",2653,2025,306,"77192","2025-08-15","finished",2137,590,0,5,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2654,2025,306,"77202","2025-08-15","finished",5063,565,1,3,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2655,2025,306,"77203","2025-08-15","finished",5065,714,0,4,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2656,2025,306,"77206","2025-08-15","finished",4991,4810,1,0,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2657,2025,306,"77179","2025-08-16","finished",2145,4808,1,2,null,null,null,null,1,2,null,null],["openligadb:germany-cup:2025/2026",2658,2025,306,"77190","2025-08-16","finished",2147,784,1,3,null,null,null,null,1,3,null,null],["openligadb:germany-cup:2025/2026",2659,2025,306,"77175","2025-08-16","finished",2149,4993,0,9,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2660,2025,306,"77186","2025-08-16","finished",2151,4999,3,3,null,null,null,null,3,3,9,8],["openligadb:germany-cup:2025/2026",2661,2025,306,"77189","2025-08-16","finished",2153,495,0,0,null,null,null,null,0,0,2,3],["openligadb:germany-cup:2025/2026",2662,2025,306,"77197","2025-08-16","finished",5522,4804,2,4,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2663,2025,306,"77199","2025-08-16","finished",5053,816,0,4,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2664,2025,306,"77200","2025-08-16","finished",2159,717,0,5,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2665,2025,306,"77178","2025-08-16","finished",2161,821,0,2,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2666,2025,306,"77188","2025-08-16","finished",2163,4989,1,2,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2667,2025,306,"77196","2025-08-16","finished",4995,744,1,0,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2668,2025,306,"77182","2025-08-17","finished",5057,4812,1,3,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2669,2025,306,"77187","2025-08-17","finished",2169,4802,0,5,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2670,2025,306,"77181","2025-08-17","finished",2171,4809,2,3,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2671,2025,306,"77183","2025-08-17","finished",2173,4998,0,7,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2672,2025,306,"77185","2025-08-17","finished",2175,449,0,5,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2673,2025,306,"77194","2025-08-17","finished",479,545,1,2,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2674,2025,306,"77198","2025-08-17","finished",2179,4996,0,2,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2675,2025,306,"77201","2025-08-17","finished",2181,735,0,1,null,null,null,null,0,1,null,null],["openligadb:germany-cup:2025/2026",2676,2025,306,"77176","2025-08-17","finished",5347,4805,0,1,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2677,2025,306,"77180","2025-08-17","finished",2185,4806,0,2,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2678,2025,306,"77195","2025-08-17","finished",2187,4997,0,2,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2679,2025,306,"77191","2025-08-18","finished",4992,4813,0,1,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2680,2025,306,"77193","2025-08-18","finished",5059,4988,0,0,null,null,null,null,0,0,3,5],["openligadb:germany-cup:2025/2026",2681,2025,306,"77205","2025-08-18","finished",2193,5058,2,4,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2682,2025,306,"77177","2025-08-18","finished",5055,4811,0,1,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2683,2025,306,"77184","2025-08-26","finished",4990,4803,4,4,null,null,null,null,4,4,11,12],["openligadb:germany-cup:2025/2026",2684,2025,306,"77204","2025-08-27","finished",5066,4807,2,3,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2685,2025,306,"79585","2025-10-28","finished",717,4808,0,1,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2686,2025,306,"79587","2025-10-28","finished",4988,4805,3,0,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2687,2025,306,"79589","2025-10-28","finished",4802,4811,1,1,null,null,null,null,1,1,3,5],["openligadb:germany-cup:2025/2026",2688,2025,306,"79595","2025-10-28","finished",4993,4997,0,1,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2689,2025,306,"79583","2025-10-28","finished",4995,4804,1,4,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2690,2025,306,"79586","2025-10-28","finished",4809,449,3,1,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2691,2025,306,"79591","2025-10-28","finished",4806,784,0,1,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2692,2025,306,"79597","2025-10-28","finished",495,816,2,2,null,null,null,null,2,2,10,9],["openligadb:germany-cup:2025/2026",2693,2025,306,"79582","2025-10-29","finished",2151,565,0,3,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2694,2025,306,"79588","2025-10-29","finished",4996,4998,0,1,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2695,2025,306,"79593","2025-10-29","finished",4812,714,2,4,null,null,null,null,2,4,null,null],["openligadb:germany-cup:2025/2026",2696,2025,306,"79594","2025-10-29","finished",4813,4803,0,2,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2697,2025,306,"79584","2025-10-29","finished",590,4991,2,1,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2698,2025,306,"79590","2025-10-29","finished",4989,735,4,0,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2699,2025,306,"79592","2025-10-29","finished",5058,821,1,3,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2700,2025,306,"79596","2025-10-29","finished",545,4807,1,4,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2701,2025,306,"79780","2025-12-02","finished",4809,495,1,2,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2702,2025,306,"79782","2025-12-02","finished",4988,4998,6,1,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2703,2025,306,"79778","2025-12-02","finished",4811,714,0,1,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2704,2025,306,"79783","2025-12-02","finished",4804,565,3,1,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2705,2025,306,"79779","2025-12-03","finished",784,4803,0,2,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2706,2025,306,"79786","2025-12-03","finished",821,4989,2,0,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2707,2025,306,"79781","2025-12-03","finished",4808,4997,1,1,null,null,null,null,1,1,3,5],["openligadb:germany-cup:2025/2026",2708,2025,306,"79784","2025-12-03","finished",590,4807,2,3,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2709,2025,306,"80175","2026-02-03","finished",714,495,3,0,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2710,2025,306,"80174","2026-02-04","finished",4997,4803,0,3,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2711,2025,306,"80173","2026-02-10","finished",4988,821,1,1,null,null,null,null,1,1,5,6],["openligadb:germany-cup:2025/2026",2712,2025,306,"80172","2026-02-11","finished",4807,4804,2,0,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2713,2025,306,"81113","2026-04-22","finished",714,4807,0,2,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2025/2026",2714,2025,306,"81114","2026-04-23","finished",4803,821,2,1,null,null,null,null,2,1,null,null],["openligadb:germany-cup:2025/2026",2715,2025,306,"81581","2026-05-23","finished",4807,4803,3,0,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2716,2026,307,"81832","2026-08-21","finished",2201,4802,0,11,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2717,2026,307,"81848","2026-08-21","finished",5059,449,1,2,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2718,2026,307,"81859","2026-08-21","finished",5060,4998,0,1,null,null,null,null,0,1,null,null],["openligadb:germany-cup:2026/2027",2719,2026,307,"81855","2026-08-21","finished",5053,4803,0,4,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2720,2026,307,"81842","2026-08-22","finished",5066,714,0,4,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2721,2026,307,"81844","2026-08-22","finished",4995,4806,0,2,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2722,2026,307,"81833","2026-08-22","finished",5344,816,0,4,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2723,2026,307,"81847","2026-08-22","finished",2149,744,1,9,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2724,2026,307,"81849","2026-08-22","finished",5063,4988,1,1,null,null,null,null,1,1,3,5],["openligadb:germany-cup:2026/2027",2725,2026,307,"81850","2026-08-22","finished",5057,4999,1,1,null,null,null,null,1,1,5,6],["openligadb:germany-cup:2026/2027",2726,2026,307,"81851","2026-08-22","finished",5064,4805,1,3,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2727,2026,307,"81853","2026-08-22","finished",2206,4810,0,3,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2728,2026,307,"81835","2026-08-22","finished",2207,4804,0,6,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2729,2026,307,"81840","2026-08-22","finished",5065,4991,2,2,null,null,null,null,2,2,5,2],["openligadb:germany-cup:2026/2027",2730,2026,307,"81858","2026-08-22","finished",5346,4997,0,2,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2731,2026,307,"81841","2026-08-23","finished",2209,717,5,2,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2732,2026,307,"81846","2026-08-23","finished",4996,784,1,2,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2733,2026,307,"81834","2026-08-23","finished",4990,590,2,4,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2734,2026,307,"81837","2026-08-23","finished",2210,4809,0,5,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2735,2026,307,"81845","2026-08-23","finished",2211,4813,0,9,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2736,2026,307,"81856","2026-08-23","finished",2212,4989,1,2,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2737,2026,307,"81857","2026-08-23","finished",2159,565,0,4,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2738,2026,307,"81860","2026-08-23","finished",2213,4992,0,6,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2739,2026,307,"81838","2026-08-23","finished",5058,821,1,5,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2740,2026,307,"81839","2026-08-23","finished",5055,495,2,0,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2741,2026,307,"81861","2026-08-23","finished",2214,4812,2,4,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2742,2026,307,"81854","2026-08-24","finished",618,4808,0,3,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2743,2026,307,"81862","2026-08-24","finished",2216,4993,3,3,null,null,null,null,3,3,8,9],["openligadb:germany-cup:2026/2027",2744,2026,307,"81863","2026-08-24","finished",518,545,1,2,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2745,2026,307,"81843","2026-08-24","finished",2185,735,2,5,null,null,null,null,2,5,null,null],["openligadb:germany-cup:2026/2027",2746,2026,307,"81836","2026-09-01","finished",2218,4811,0,5,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2747,2026,307,"81852","2026-09-02","finished",4994,4807,1,4,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2748,2026,307,"87618","2026-10-27","finished",5065,4806,2,4,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2749,2026,307,"87620","2026-10-27","finished",5055,4804,1,2,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2750,2026,307,"87624","2026-10-27","finished",784,4813,2,0,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2751,2026,307,"87625","2026-10-27","finished",4808,4802,1,3,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2752,2026,307,"87621","2026-10-27","finished",545,590,5,0,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2753,2026,307,"87623","2026-10-27","finished",4811,4810,3,2,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2754,2026,307,"87626","2026-10-27","finished",4809,449,2,0,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2755,2026,307,"87632","2026-10-27","finished",4805,4989,0,2,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2756,2026,307,"87619","2026-10-28","finished",2209,4988,0,2,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2757,2026,307,"87622","2026-10-28","finished",4992,735,2,0,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2758,2026,307,"87630","2026-10-28","finished",4812,4803,0,1,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2759,2026,307,"87631","2026-10-28","finished",821,4993,3,2,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2760,2026,307,"87627","2026-10-28","finished",4997,816,1,1,null,null,null,null,1,1,5,4],["openligadb:germany-cup:2026/2027",2761,2026,307,"87628","2026-10-28","finished",714,4999,5,2,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2762,2026,307,"87629","2026-10-28","finished",744,4998,0,2,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2763,2026,307,"87633","2026-10-28","finished",4807,565,6,1,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2764,2026,307,"88750","2026-12-01","not_started",4803,4992,null,null,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2765,2026,307,"88755","2026-12-01","not_started",4997,545,null,null,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2766,2026,307,"88752","2026-12-01","not_started",4807,4988,null,null,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2767,2026,307,"88753","2026-12-01","not_started",4809,4989,null,null,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2768,2026,307,"88751","2026-12-02","not_started",714,4804,null,null,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2769,2026,307,"88754","2026-12-02","not_started",4998,821,null,null,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2770,2026,307,"88749","2026-12-02","not_started",4802,4811,null,null,null,null,null,null,null,null,null,null],["openligadb:germany-cup:2026/2027",2771,2026,307,"88756","2026-12-02","not_started",784,4806,null,null,null,null,null,null,null,null,null,null]]}
-diff --git a/backend/tests/profile_http.mjs b/backend/tests/profile_http.mjs
-new file mode 100644
-index 0000000000..1a675f4ded
---- /dev/null
-+++ b/backend/tests/profile_http.mjs
-@@ -0,0 +1,24 @@
-+// The read API's profile route on a local test base, as the site reads it (the production read
-+// role, the real handler): node backend/tests/profile_http.mjs <dsn> <public player id>...
-+// prints {"<id>": {"status": <HTTP status>, "data": <the response's data or null>}}.
-+// Used by test_transfermarkt_history.py (FAILURE_MODES.md §20); needs npm ci --prefix backend/api.
-+import { createReader } from "../api/src/db.mjs";
-+import { createHandler } from "../api/src/handler.mjs";
-+
-+const [dsn, ...ids] = process.argv.slice(2);
-+const target = new URL(dsn);
-+if (!["localhost", "127.0.0.1", "[::1]"].includes(target.hostname) || !/^\/vega_v2_[a-z0-9_]+$/.test(target.pathname))
-+  throw new Error("a local vega_v2_* test base only");
-+const reader = createReader(dsn, { role: "vega_read" });
-+const handle = createHandler({ read: reader.read, mediaBase: "https://media.test/", clock: () => Date.now() });
-+const out = {};
-+try {
-+  for (const id of ids) {
-+    const response = await handle(new Request(`https://api.test/api/players/${encodeURIComponent(id)}`));
-+    const text = await response.text();
-+    out[id] = { status: response.status, data: response.status === 200 ? JSON.parse(text).data : null };
-+  }
-+} finally {
-+  await reader.end();
-+}
-+console.log(JSON.stringify(out));
-diff --git a/backend/tests/sportscore_cases.py b/backend/tests/sportscore_cases.py
-new file mode 100644
-index 0000000000..9052c1228d
---- /dev/null
-+++ b/backend/tests/sportscore_cases.py
-@@ -0,0 +1,490 @@
-+"""SportScore standings cases: docs/calculs/09-audit-2026-11/FAILURE_MODES_SPORTSCORE.md §3.
-+
-+Data only, one competition each. test_sportscore_standings.py replays them in process; the VI-27
-+track's end-to-end script replays them over HTTPS and the read API. The code under test is the
-+tree that runs them.
-+
-+Each case has a current edition (2026/2027) holding Aster City, Birch Town and Cedar Athletic (and
-+the clubs of its `extra`), a previous one (2025/2026) holding Fjord Rovers only, and a next one
-+(2027/2028, not current until a "flip") holding Aster City, Birch Town and Dune Town. Vega's own
-+table of the current edition is written at VEGA_AT: VEGA, the case's own `vega` rows, or none
-+(`vega=False`). `matches` are the edition's stored matches; `legacy` rows are official rows stored
-+before migration 138, without a basis.
-+
-+A step is one `sources.run_due` pass at `at`, the widget answering `body` (a dict) or an HTTP
-+status (an int). `before` lists the events applied to the base first. `expect` is the state after
-+the pass:
-+- code: None (accepted), a SourceError code, or "NOT_DUE" (the pass did not run the scope);
-+- official: the edition's SportScore rows, (team, group, pos, p, w, d, l, gf, ga, pts) sorted;
-+- as_of, version, success: their `as_of`, the edition's resource version, the scope's last success;
-+- served: (source, fetchedAt, [(group, team, position, points)]) of the current edition, or None
-+  when it has no standing rows;
-+- closed: official, as_of, version and served of the 2026/2027 edition once it is closed;
-+- absent_spellings: (spelling, team) pairs that must not be stored;
-+- basis (when given): {team: the stored basis, or None};
-+- every 200 is asked again with its own ETag, and 304 is expected.
-+"""
-+
-+from datetime import datetime, timedelta, timezone
-+
-+T0 = datetime(2026, 11, 17, 8, tzinfo=timezone.utc)
-+H = timedelta(hours=1)
-+VEGA_AT = T0 - timedelta(minutes=10)
-+CURRENT, PREVIOUS, NEXT = "2026/2027", "2025/2026", "2027/2028"
-+TEAMS = {CURRENT: ("Aster City", "Birch Town", "Cedar Athletic"), PREVIOUS: ("Fjord Rovers",),
-+         NEXT: ("Aster City", "Birch Town", "Dune Town")}
-+
-+
-+def row(team, pos, w, d, l, gf, ga, pts):
-+    return {"team": team, "pos": pos, "p": w + d + l, "w": w, "d": d, "l": l, "gf": gf, "ga": ga, "pts": pts}
-+
-+
-+def tables(*groups):
-+    """A widget body without its envelope (the replay adds sport and slug): (group, rows) tables."""
-+    return {"tables": [{"group": group, "rows": rows} for group, rows in groups]}
-+
-+
-+def stored(*groups):
-+    """The rows a body stores: one table is kept without its name."""
-+    keep = len(groups) > 1
-+    out = [(r["team"], (g or None) if keep else None, r["pos"], r["p"], r["w"], r["d"], r["l"], r["gf"], r["ga"], r["pts"])
-+           for g, rows in groups for r in rows]
-+    return sorted(out, key=lambda t: (t[1] or "", t[2], t[0]))
-+
-+
-+def served(source, at, *groups, keep=None):
-+    keep = len(groups) > 1 if keep is None else keep
-+    out = [((g or None) if keep else None, r["team"], r["pos"], r["pts"]) for g, rows in groups for r in rows]
-+    return (source, at, sorted(out, key=lambda t: (t[0] or "", t[2], t[1])))
-+
-+
-+def vega_rows(points):
-+    """Vega's table: [(team, pos, w, d, l, gf, ga)] as rows with their computed points."""
-+    return [row(t, pos, w, d, l, gf, ga, 3 * w + d) for t, pos, w, d, l, gf, ga in points]
-+
-+
-+# Aster City has 10 points by its results; the official table deducts 2.
-+START = [row("Aster City", 1, 3, 1, 0, 8, 1, 8), row("Birch Town", 2, 2, 1, 1, 5, 4, 7),
-+         row("Cedar Athletic", 3, 0, 1, 3, 2, 7, 1)]
-+VEGA = vega_rows([("Aster City", 1, 3, 1, 0, 8, 1), ("Birch Town", 2, 2, 1, 1, 5, 4), ("Cedar Athletic", 3, 0, 1, 3, 2, 7)])
-+# Aster City 1-0 Birch Town, then Vega's table counting it.
-+VEGA_AFTER = vega_rows([("Aster City", 1, 4, 1, 0, 9, 1), ("Birch Town", 2, 2, 1, 2, 5, 5), ("Cedar Athletic", 3, 0, 1, 3, 2, 7)])
-+AFTER = [row("Aster City", 1, 4, 1, 0, 9, 1, 11), row("Birch Town", 2, 2, 1, 2, 5, 5, 7),
-+         row("Cedar Athletic", 3, 0, 1, 3, 2, 7, 1)]
-+# 2027/2028, first matchday.
-+NEXT_TABLE = [row("Aster City", 1, 1, 0, 0, 2, 0, 3), row("Dune Town", 2, 0, 1, 0, 1, 1, 1),
-+              row("Birch Town", 3, 0, 1, 0, 0, 0, 1)]
-+NEXT_VEGA = vega_rows([("Aster City", 1, 1, 0, 0, 2, 0), ("Dune Town", 2, 0, 1, 0, 1, 1), ("Birch Town", 3, 0, 1, 0, 0, 0)])
-+
-+
-+def replace(rows, index, **values):
-+    out = [dict(r) for r in rows]
-+    out[index].update(values)
-+    return out
-+
-+
-+def without(rows, index, field):
-+    out = [dict(r) for r in rows]
-+    del out[index][field]
-+    return out
-+
-+
-+ACCEPTED = dict(code=None, official=stored((None, START)), as_of=T0, version=1, success=T0,
-+                served=served("SportScore", T0, (None, START)))
-+UNCHANGED = dict(ACCEPTED, code=None)
-+VEGA_SERVED = served("Vega", VEGA_AT, (None, VEGA))
-+TWO_UNKNOWN = replace(replace(START, 1, team="Ghost Wanderers"), 2, team="Harbour United")
-+LATER = T0 + 3 * H
-+
-+
-+def refused(code, **changes):
-+    return dict(UNCHANGED, code=code, **changes)
-+
-+
-+def game(label, home, away, score, kickoff, status="finished", stage="regular", group=None, finished=None):
-+    """A stored match: `score` (home, away) or None; first finished `finished` (kickoff + 1 h 50 by default)."""
-+    if status == "finished" and finished is None:
-+        finished = kickoff + timedelta(minutes=110)
-+    return dict(label=label, home=home, away=away, score=score, kickoff=kickoff, status=status, stage=stage, group=group,
-+                finished=finished if status == "finished" else None)
-+
-+
-+def match(kickoff, stage="regular", vega=None, vega_at=None, label=None, home="Aster City", away="Birch Town", score=(1, 0)):
-+    """A match written by the store (the edition's version moves): finished, in a round of `stage`;
-+    Vega's table rewritten if given. Aster City 1-0 Birch Town by default."""
-+    return ("match", dict(game(label or "event " + kickoff.isoformat(), home, away, score, kickoff, stage=stage), vega=vega, vega_at=vega_at))
-+
-+
-+def result(label, score, at, status="finished", vega=None, vega_at=None):
-+    """A stored match's result written again at `at` (finished, corrected, or annulled with status canceled)."""
-+    return ("result", dict(label=label, score=score, status=status, at=at, vega=vega, vega_at=vega_at))
-+
-+
-+def flip(vega=None, vega_at=None, matches=()):
-+    """2026/2027 closes and 2027/2028 becomes the current edition, with its `matches`."""
-+    return ("flip", dict(vega=vega, vega_at=vega_at, matches=list(matches)))
-+
-+
-+def official(source, base, points, basis, as_of, stage=None, group=None):
-+    """An official row stored by another writer (a schema-valid canary): `base`'s numbers, `points`."""
-+    return ("official", dict(source=source, row=dict(base, pts=points), basis=basis, as_of=as_of, stage=stage, group=group))
-+
-+
-+# The edition's double round-robin: Vega counts Aster 10, Birch 4, Cedar 3; the table deducts 2 from Aster.
-+DAY = timedelta(days=1)
-+REAL_GAMES = [game("m1", "Aster City", "Birch Town", (2, 0), T0 - 6 * DAY), game("m2", "Birch Town", "Aster City", (1, 1), T0 - 5 * DAY),
-+              game("m3", "Aster City", "Cedar Athletic", (3, 0), T0 - 4 * DAY), game("m4", "Cedar Athletic", "Aster City", (0, 2), T0 - 3 * DAY),
-+              game("m5", "Birch Town", "Cedar Athletic", (2, 1), T0 - 2 * DAY), game("m6", "Cedar Athletic", "Birch Town", (1, 0), T0 - DAY)]
-+REAL = [row("Aster City", 1, 3, 1, 0, 8, 1, 8), row("Birch Town", 2, 1, 1, 2, 3, 5, 4), row("Cedar Athletic", 3, 1, 0, 3, 2, 7, 3)]
-+REAL_VEGA = vega_rows([("Aster City", 1, 3, 1, 0, 8, 1), ("Birch Town", 2, 1, 1, 2, 3, 5), ("Cedar Athletic", 3, 1, 0, 3, 2, 7)])
-+REAL_BASIS = {"Aster City": (4, 3, 1, 0, 8, 1), "Birch Town": (4, 1, 1, 2, 3, 5), "Cedar Athletic": (4, 1, 0, 3, 2, 7)}
-+# Cedar 1-0 Birch corrected to 0-0.
-+CORRECTED = [row("Aster City", 1, 3, 1, 0, 8, 1, 8), row("Birch Town", 2, 1, 2, 1, 3, 4, 5), row("Cedar Athletic", 3, 0, 1, 3, 1, 7, 1)]
-+CORRECTED_VEGA = vega_rows([("Aster City", 1, 3, 1, 0, 8, 1), ("Birch Town", 2, 1, 2, 1, 3, 4), ("Cedar Athletic", 3, 0, 1, 3, 1, 7)])
-+# Cedar 1-0 Birch annulled.
-+ANNULLED = [row("Aster City", 1, 3, 1, 0, 8, 1, 8), row("Birch Town", 2, 1, 1, 1, 3, 4, 4), row("Cedar Athletic", 3, 0, 0, 3, 1, 7, 0)]
-+ANNULLED_VEGA = vega_rows([("Aster City", 1, 3, 1, 0, 8, 1), ("Birch Town", 2, 1, 1, 1, 3, 4), ("Cedar Athletic", 3, 0, 0, 3, 1, 7)])
-+# A new phase from Aster 1-0 Cedar, counted alone by the official table.
-+PHASE = [row("Aster City", 1, 1, 0, 0, 1, 0, 3), row("Birch Town", 2, 0, 0, 0, 0, 0, 0), row("Cedar Athletic", 3, 0, 0, 1, 0, 1, 0)]
-+PHASE_VEGA = vega_rows([("Aster City", 1, 4, 1, 0, 9, 1), ("Birch Town", 2, 1, 1, 2, 3, 5), ("Cedar Athletic", 3, 1, 0, 4, 2, 8)])
-+# A group stage: A (Aster 1-0 Birch), B (Cedar 2-2 Elm Park).
-+GROUP_GAMES = [game("g1", "Aster City", "Birch Town", (1, 0), T0 - DAY, stage="group", group="A"),
-+               game("g2", "Cedar Athletic", "Elm Park", (2, 2), T0 - DAY, stage="group", group="B")]
-+GROUP_A = [row("Aster City", 1, 1, 0, 0, 1, 0, 3), row("Birch Town", 2, 0, 0, 1, 0, 1, 0)]
-+GROUP_B = [row("Cedar Athletic", 1, 0, 1, 0, 2, 2, 1), row("Elm Park", 2, 0, 1, 0, 2, 2, 1)]
-+GROUP_VEGA = [dict(r, group="A") for r in vega_rows([("Aster City", 1, 1, 0, 0, 1, 0), ("Birch Town", 2, 0, 0, 1, 0, 1)])] + \
-+             [dict(r, group="B") for r in vega_rows([("Cedar Athletic", 1, 0, 1, 0, 2, 2), ("Elm Park", 2, 0, 1, 0, 2, 2)])]
-+# 2027/2028 under way (closed league: the same clubs), and a table of ten matches each.
-+NEXT_GAMES = [game("n1", "Aster City", "Birch Town", (1, 0), T0 - DAY), game("n2", "Dune Town", "Aster City", (0, 0), T0 - 2 * DAY)]
-+NEXT_GAMES_VEGA = vega_rows([("Aster City", 1, 1, 1, 0, 1, 0), ("Dune Town", 2, 0, 1, 0, 0, 0), ("Birch Town", 3, 0, 0, 1, 0, 1)])
-+TEN = [row("Aster City", 1, 7, 2, 1, 20, 8, 23), row("Dune Town", 2, 5, 3, 2, 15, 10, 18), row("Birch Town", 3, 2, 2, 6, 9, 18, 8)]
-+# Birch and Cedar level on points only.
-+TIED = [row("Aster City", 1, 3, 1, 0, 8, 1, 8), row("Birch Town", 2, 1, 1, 2, 3, 5, 4), row("Cedar Athletic", 2, 1, 1, 2, 2, 7, 4)]
-+MINUTE = timedelta(minutes=1)
-+TEN_MIN = 10 * MINUTE
-+REAL_ACCEPTED = dict(code=None, official=stored((None, REAL)), as_of=T0, version=1, success=T0, served=served("SportScore", T0, (None, REAL)))
-+CORRECTED_BASIS = dict(REAL_BASIS, **{"Birch Town": (4, 1, 2, 1, 3, 4), "Cedar Athletic": (4, 0, 1, 3, 1, 7)})
-+ANNULLED_BASIS = dict(REAL_BASIS, **{"Birch Town": (3, 1, 1, 1, 3, 4), "Cedar Athletic": (3, 0, 0, 3, 1, 7)})
-+PHASE_BASIS = dict(REAL_BASIS, **{"Aster City": (5, 4, 1, 0, 9, 1), "Cedar Athletic": (5, 1, 0, 4, 2, 8)})
-+NO_BASIS = {"Aster City": None, "Birch Town": None, "Cedar Athletic": None}
-+AFTER_BASIS = {"Aster City": (1, 1, 0, 0, 1, 0), "Birch Town": (1, 0, 0, 1, 0, 1), "Cedar Athletic": (0, 0, 0, 0, 0, 0)}
-+# A ranking across groups, as the World Cup's of third-placed teams: its clubs are also in their group.
-+SECOND_NAME = "Ranking of second placed teams"
-+SECOND = [row("Elm Park", 1, 0, 1, 0, 2, 2, 1), row("Birch Town", 2, 0, 0, 1, 0, 1, 0)]
-+GROUPS = (("Group A", GROUP_A), ("Group B", GROUP_B))
-+GROUPS_AND_SECOND = GROUPS + ((SECOND_NAME, SECOND),)
-+EARLY_GAMES = [game("ab", "Aster City", "Birch Town", (1, 0), T0 - DAY),
-+               game("ca", "Cedar Athletic", "Aster City", None, T0 + DAY, status="not_started")]
-+EARLY = GROUP_A + [row("Cedar Athletic", 3, 0, 0, 0, 0, 0, 0)]
-+ZERO = [row(team, position, 0, 0, 0, 0, 0, 0) for position, team in enumerate(TEAMS[CURRENT], 1)]
-+# Stage 4: the group stage accepted whole, then Birch 2-0 Aster moving Aster to group A's 2nd place.
-+THREE_ACCEPTED = dict(code=None, official=stored(*GROUPS_AND_SECOND), as_of=T0, version=1, success=T0,
-+                      served=served("SportScore", T0, *GROUPS_AND_SECOND))
-+GROUP_A2 = [row("Birch Town", 1, 1, 0, 1, 2, 1, 3), row("Aster City", 2, 1, 0, 1, 1, 2, 3)]
-+SECOND2 = [row("Aster City", 1, 1, 0, 1, 1, 2, 3), row("Elm Park", 2, 0, 1, 0, 2, 2, 1)]
-+MOVED = (("Group A", GROUP_A2), ("Group B", GROUP_B), (SECOND_NAME, SECOND2))
-+GROUP_VEGA2 = [dict(r, group="A") for r in vega_rows([("Birch Town", 1, 1, 0, 1, 2, 1), ("Aster City", 2, 1, 0, 1, 1, 2)])] + \
-+              GROUP_VEGA[2:]
-+MOVED_BASIS = {"Aster City": (2, 1, 0, 1, 1, 2), "Birch Town": (2, 1, 0, 1, 2, 1), "Cedar Athletic": (1, 0, 1, 0, 2, 2),
-+               "Elm Park": (1, 0, 1, 0, 2, 2)}
-+# Elm Park loses its point (a deduction), in its group and in the ranking.
-+DEDUCTED = (("Group A", GROUP_A), ("Group B", [GROUP_B[0], dict(GROUP_B[1], pts=0)]),
-+            (SECOND_NAME, [dict(SECOND[0], pts=0), SECOND[1]]))
-+RENAMED = (("Round 1 / Group A", GROUP_A), ("Round 1 / Group B", GROUP_B))
-+# The rows other writers left (source, stage, group, team, position, points), and a stale basis.
-+ZERO_BASIS = (0, 0, 0, 0, 0, 0)
-+OTHER_ASTER = ("other", None, None, "Aster City", 1, 777)
-+STAGED_ASTER = ("sportscore", "old-playoff", None, "Aster City", 1, 777)
-+
-+
-+CASES = [
-+    dict(id="S1", key="l_0275VP", note="first observation, complete, with a deduction", steps=[]),
-+    dict(id="S2", key="l_0aEfof", note="HTTP 200 without a table",
-+         steps=[dict(at=LATER, body=tables(), expect=refused("EMPTY_TABLE"))]),
-+    dict(id="S3", key="l_0ahLw8", note="3 -> 2 rows, both linkable",
-+         steps=[dict(at=LATER, body=tables(("", START[:2])), expect=refused("INCOMPLETE_TABLE"))]),
-+    dict(id="S4", key="l_0ALvwF", note="two names the base does not know",
-+         steps=[dict(at=LATER, body=tables(("", TWO_UNKNOWN)), expect=refused("UNMATCHED_TEAMS"))]),
-+    dict(id="S5", key="l_0bfbkO", note="third row: a club of the previous edition",
-+         steps=[dict(at=LATER, body=tables(("", replace(START, 2, team="Fjord Rovers", d=2, l=3, p=5, pts=2))),
-+                     expect=refused("WRONG_EDITION", absent_spellings=[("Fjord Rovers", "Cedar Athletic")]))]),
-+    dict(id="S6", key="l_0eg6C9", note="a reviewed alias, corrected to 2 points", alias=("Bluebirds", "Cedar Athletic"),
-+         steps=[dict(at=LATER, body=tables(("", replace(START, 2, team="Bluebirds", d=2, l=3, p=5, pts=2))),
-+                     expect=dict(code=None, as_of=LATER, version=2, success=LATER,
-+                                 official=stored((None, replace(START, 2, team="Cedar Athletic", d=2, l=3, p=5, pts=2))),
-+                                 served=served("SportScore", LATER, (None, replace(START, 2, team="Cedar Athletic", pts=2)))))]),
-+    dict(id="S7", key="l_0ErfuF", note="goals scored missing for a club, known before",
-+         steps=[dict(at=LATER, body=tables(("", without(START, 0, "gf"))), expect=refused("MISSING_FIELD"))]),
-+    dict(id="S8", key="l_0F4I4F", note="points given as a string",
-+         steps=[dict(at=LATER, body=tables(("", replace(START, 1, pts="7"))), expect=refused("INVALID_ROW"))]),
-+    dict(id="S9", key="l_0jy5yE", note="a club listed twice",
-+         steps=[dict(at=LATER, body=tables(("", START + [row("Birch Town", 4, 0, 0, 4, 0, 6, 0)])), expect=refused("DUPLICATE_ROW"))]),
-+    dict(id="S10", key="l_0kSJLz", note="two clubs 2nd, not level",
-+         steps=[dict(at=LATER, body=tables(("", replace(START, 2, pos=2))), expect=refused("DUPLICATE_POSITION"))]),
-+    dict(id="S11", key="l_0Lpz1f", note="first observation: two level clubs share 2nd", accepted=False,
-+         steps=[dict(at=T0, body=tables(("", replace(START, 2, pos=2, w=2, d=1, l=1, p=4, gf=5, ga=4, pts=7))),
-+                     expect=dict(code=None, as_of=T0, version=1, success=T0,
-+                                 official=stored((None, replace(START, 2, pos=2, w=2, d=1, l=1, p=4, gf=5, ga=4, pts=7))),
-+                                 served=served("SportScore", T0, (None, replace(START, 2, pos=2, pts=7)))))]),
-+    dict(id="S12", key="l_0S1uaf", note="first observation: two groups, a 1st in each", accepted=False,
-+         steps=[dict(at=T0, body=tables(("Group A", START[:2]), ("Group B", [dict(START[2], pos=1)])),
-+                     expect=dict(code=None, as_of=T0, version=1, success=T0,
-+                                 official=stored(("Group A", START[:2]), ("Group B", [dict(START[2], pos=1)])),
-+                                 served=served("SportScore", T0, ("Group A", START[:2]), ("Group B", [dict(START[2], pos=1)]))))]),
-+    dict(id="S13", key="l_0uqFK8", note="the table splits into two named tables",
-+         steps=[dict(at=LATER, body=tables(("Top", START[:2]), ("Bottom", START[2:])),
-+                     expect=dict(code=None, as_of=LATER, version=2, success=LATER,
-+                                 official=stored(("Top", START[:2]), ("Bottom", START[2:])),
-+                                 served=served("SportScore", LATER, ("Top", START[:2]), ("Bottom", START[2:]))))]),
-+    dict(id="S14", key="l_16Sq13", note="complete correction: 3 points deducted from Birch Town",
-+         steps=[dict(at=LATER, body=tables(("", replace(START, 1, pts=4))),
-+                     expect=dict(code=None, as_of=LATER, version=2, success=LATER, official=stored((None, replace(START, 1, pts=4))),
-+                                 served=served("SportScore", LATER, (None, replace(START, 1, pts=4)))))]),
-+    dict(id="S15", key="l_1BFfna", note="identical table: a valid repeat",
-+         steps=[dict(at=LATER, body=tables(("", START)),
-+                     expect=dict(UNCHANGED, as_of=LATER, success=LATER, served=served("SportScore", LATER, (None, START))))]),
-+    dict(id="S16", key="l_1D8Xrl", note="identical table after a counted match",
-+         steps=[dict(at=LATER, before=[match(T0 + H, vega=VEGA_AFTER, vega_at=T0 + 2 * H)], body=tables(("", START)),
-+                     expect=dict(UNCHANGED, version=2, success=LATER, served=served("Vega", T0 + 2 * H, (None, VEGA_AFTER))))]),
-+    dict(id="S17", key="l_1dmt9H", note="the same refusal again, and the bounded retry",
-+         steps=[dict(at=LATER, body=tables(), expect=refused("EMPTY_TABLE")),
-+                dict(at=LATER + H / 2, body=tables(), expect=refused("NOT_DUE")),
-+                dict(at=LATER + H, body=tables(), expect=refused("EMPTY_TABLE"))]),
-+    dict(id="S18", key="l_1eJSA7", note="HTTP 503",
-+         steps=[dict(at=LATER, body=503, expect=refused("HTTP_503"))]),
-+    dict(id="S19", key="l_1Isor4", note="no accepted table, the first response refused", accepted=False,
-+         steps=[dict(at=T0, body=tables(("", TWO_UNKNOWN)),
-+                     expect=dict(code="UNMATCHED_TEAMS", official=[], as_of=None, version=None, success=None, served=VEGA_SERVED))]),
-+    dict(id="S20", key="l_1Kknkl", note="no accepted table, no Vega table, the first response refused", accepted=False, vega=False,
-+         steps=[dict(at=T0, body=tables(("", TWO_UNKNOWN)),
-+                     expect=dict(code="UNMATCHED_TEAMS", official=[], as_of=None, version=None, success=None, served=None))]),
-+    dict(id="S21", key="l_1LMdEO", note="behind after a counted match, refused, then a new complete table",
-+         steps=[dict(at=LATER, before=[match(T0 + H, vega=VEGA_AFTER, vega_at=T0 + 2 * H)], body=tables(),
-+                     expect=refused("EMPTY_TABLE", version=2, served=served("Vega", T0 + 2 * H, (None, VEGA_AFTER)))),
-+                dict(at=T0 + 6 * H, body=tables(("", AFTER)),
-+                     expect=dict(code=None, official=stored((None, AFTER)), as_of=T0 + 6 * H, version=3, success=T0 + 6 * H,
-+                                 served=served("SportScore", T0 + 6 * H, (None, AFTER))))]),
-+    dict(id="S22", key="l_1pQOHK", note="a finished play-off match does not age the table",
-+         steps=[dict(at=LATER, before=[match(T0 + H, stage="playoff")], body=503, expect=refused("HTTP_503", version=2))]),
-+    dict(id="S23", key="l_1qpFVw", note="next season: a new current edition and SportScore's new table",
-+         steps=[dict(at=LATER, before=[flip()], body=tables(("", NEXT_TABLE)),
-+                     expect=dict(code=None, official=stored((None, NEXT_TABLE)), as_of=LATER, version=1, success=LATER,
-+                                 served=served("SportScore", LATER, (None, NEXT_TABLE)),
-+                                 closed=dict(official=stored((None, START)), as_of=T0, version=1,
-+                                             served=served("SportScore", T0, (None, START)))))]),
-+    dict(id="S24", key="l_1rPvVD", note="a new current edition while SportScore still shows last season",
-+         steps=[dict(at=LATER, before=[flip(vega=NEXT_VEGA, vega_at=T0 + 2 * H)], body=tables(("", START)),
-+                     expect=dict(code="WRONG_EDITION", official=[], as_of=None, version=None, success=T0,
-+                                 served=served("Vega", T0 + 2 * H, (None, NEXT_VEGA)),
-+                                 absent_spellings=[("Cedar Athletic", "Dune Town")],
-+                                 closed=dict(official=stored((None, START)), as_of=T0, version=1,
-+                                             served=served("SportScore", T0, (None, START)))))]),
-+    dict(id="S25", key="l_1TTHxD", note="a table that is not an object",
-+         steps=[dict(at=LATER, body={"tables": ["oops"]}, expect=refused("INVALID_ROW"))]),
-+    dict(id="S26", key="l_1TVRZW", note="the same clubs, every club's played count lower (a fresh start)",
-+         steps=[dict(at=LATER, body=tables(("", [row("Aster City", 1, 1, 0, 0, 2, 0, 3), row("Birch Town", 2, 0, 1, 0, 1, 1, 1),
-+                                                  row("Cedar Athletic", 3, 0, 0, 1, 0, 2, 0)])),
-+                     expect=refused("PLAYED_DECREASED"))]),
-+    # Stage 2 (FAILURE_MODES_SPORTSCORE.md §3, S27-S35): the edition's matches are stored.
-+    dict(id="S27", key="l_1W6idJ", note="first observation: rows 1-2 of 3, the third club has counted results", accepted=False,
-+         matches=REAL_GAMES, vega=REAL_VEGA,
-+         steps=[dict(at=T0, body=tables(("", REAL[:2])),
-+                     expect=dict(code="INCOMPLETE_TABLE", official=[], as_of=None, version=None, success=None,
-+                                 served=served("Vega", VEGA_AT, (None, REAL_VEGA))))]),
-+    dict(id="S28", key="l_1XLtP0", note="first observation without a whole group, then both groups", accepted=False,
-+         extra=("Elm Park",), matches=GROUP_GAMES, vega=GROUP_VEGA,
-+         steps=[dict(at=T0, body=tables(("Group A", GROUP_A)),
-+                     expect=dict(code="INCOMPLETE_TABLE", official=[], as_of=None, version=None, success=None,
-+                                 served=served("Vega", VEGA_AT, ("A", GROUP_VEGA[:2]), ("B", GROUP_VEGA[2:])))),
-+                dict(at=LATER, body=tables(("Group A", GROUP_A), ("Group B", GROUP_B)),
-+                     expect=dict(code=None, official=stored(("Group A", GROUP_A), ("Group B", GROUP_B)), as_of=LATER, version=1,
-+                                 success=LATER, served=served("SportScore", LATER, ("Group A", GROUP_A), ("Group B", GROUP_B))))]),
-+    dict(id="S29", key="l_1XsMdH", note="a match in play at the observation finishes after it",
-+         matches=[game("ip", "Aster City", "Birch Town", (1, 0), T0 - H, status="in_play")],
-+         steps=[dict(at=LATER, before=[result("ip", (1, 0), T0 + timedelta(minutes=50), vega=VEGA_AFTER, vega_at=T0 + H)],
-+                     body=tables(("", START)), expect=dict(UNCHANGED, version=2, success=LATER, served=served("Vega", T0 + H, (None, VEGA_AFTER)))),
-+                dict(at=T0 + 6 * H, body=tables(("", AFTER)),
-+                     expect=dict(code=None, official=stored((None, AFTER)), as_of=T0 + 6 * H, version=3, success=T0 + 6 * H,
-+                                 served=served("SportScore", T0 + 6 * H, (None, AFTER))))]),
-+    dict(id="S30", key="l_1xXulJ", note="a stored result corrected after the observation", accepted=False,
-+         matches=REAL_GAMES, vega=REAL_VEGA,
-+         steps=[dict(at=T0, body=tables(("", REAL)), expect=dict(REAL_ACCEPTED, basis=REAL_BASIS)),
-+                dict(at=LATER, before=[result("m6", (0, 0), T0 + H, vega=CORRECTED_VEGA, vega_at=T0 + H + TEN_MIN)], body=tables(("", REAL)),
-+                     expect=dict(REAL_ACCEPTED, version=2, success=LATER, basis=REAL_BASIS,
-+                                 served=served("Vega", T0 + H + TEN_MIN, (None, CORRECTED_VEGA)))),
-+                dict(at=T0 + 6 * H, body=tables(("", CORRECTED)),
-+                     expect=dict(code=None, official=stored((None, CORRECTED)), as_of=T0 + 6 * H, version=3, success=T0 + 6 * H,
-+                                 served=served("SportScore", T0 + 6 * H, (None, CORRECTED)), basis=CORRECTED_BASIS))]),
-+    dict(id="S31", key="l_20pNSc", note="an annulled result: a lower played count the results attest", accepted=False,
-+         matches=REAL_GAMES, vega=REAL_VEGA,
-+         steps=[dict(at=T0, body=tables(("", REAL)), expect=REAL_ACCEPTED),
-+                dict(at=LATER, before=[result("m6", None, T0 + H, status="canceled", vega=ANNULLED_VEGA, vega_at=T0 + H + TEN_MIN)],
-+                     body=tables(("", ANNULLED)),
-+                     expect=dict(code=None, official=stored((None, ANNULLED)), as_of=LATER, version=3, success=LATER,
-+                                 served=served("SportScore", LATER, (None, ANNULLED)), basis=ANNULLED_BASIS))]),
-+    dict(id="S32", key="l_214sqK", note="a new phase counted from the observation", accepted=False,
-+         matches=REAL_GAMES, vega=REAL_VEGA,
-+         steps=[dict(at=T0, body=tables(("", REAL)), expect=REAL_ACCEPTED),
-+                dict(at=LATER, before=[match(T0 + H, label="p1", away="Cedar Athletic", vega=PHASE_VEGA, vega_at=T0 + 2 * H + 55 * MINUTE)],
-+                     body=tables(("", PHASE)),
-+                     expect=dict(code=None, official=stored((None, PHASE)), as_of=LATER, version=3, success=LATER,
-+                                 served=served("SportScore", LATER, (None, PHASE)), basis=PHASE_BASIS))]),
-+    dict(id="S33", key="l_271pqa", note="a closed league: ten matches a club while the next edition has kicked off one or two",
-+         steps=[dict(at=LATER, before=[flip(vega=NEXT_GAMES_VEGA, vega_at=T0 + 2 * H, matches=NEXT_GAMES)], body=tables(("", TEN)),
-+                     expect=dict(code="WRONG_EDITION", official=[], as_of=None, version=None, success=T0,
-+                                 served=served("Vega", T0 + 2 * H, (None, NEXT_GAMES_VEGA)),
-+                                 closed=dict(official=stored((None, START)), as_of=T0, version=1,
-+                                             served=served("SportScore", T0, (None, START)))))]),
-+    dict(id="S34", key="l_2ApGa4", note="first observation: equal points share 2nd, different goal difference", accepted=False,
-+         steps=[dict(at=T0, body=tables(("", TIED)),
-+                     expect=dict(code=None, official=stored((None, TIED)), as_of=T0, version=1, success=T0,
-+                                 served=served("SportScore", T0, (None, TIED))))]),
-+    dict(id="S35", key="l_2EKrnc", note="rows stored before migration 138, without a basis", accepted=False, legacy=START,
-+         steps=[dict(at=T0 + H / 2, body=503,
-+                     expect=dict(code="HTTP_503", official=stored((None, START)), as_of=T0, version=1, success=None,
-+                                 served=served("SportScore", T0, (None, START)), basis=NO_BASIS)),
-+                dict(at=LATER, before=[match(T0 + H, vega=VEGA_AFTER, vega_at=T0 + 2 * H + 55 * MINUTE)], body=tables(("", START)),
-+                     expect=dict(code=None, official=stored((None, START)), as_of=T0, version=2, success=LATER,
-+                                 served=served("Vega", T0 + 2 * H + 55 * MINUTE, (None, VEGA_AFTER)), basis=NO_BASIS)),
-+                dict(at=T0 + 6 * H, body=tables(("", AFTER)),
-+                     expect=dict(code=None, official=stored((None, AFTER)), as_of=T0 + 6 * H, version=3, success=T0 + 6 * H,
-+                                 served=served("SportScore", T0 + 6 * H, (None, AFTER)), basis=AFTER_BASIS))]),
-+    # Stage 3 (FAILURE_MODES_SPORTSCORE.md §3, S36-S40): table identity and one authority.
-+    dict(id="S36", key="l_2L6d1F", note="a ranking across groups added, then dropped while its clubs stay in their groups",
-+         accepted=False, extra=("Elm Park",), matches=GROUP_GAMES, vega=GROUP_VEGA,
-+         steps=[dict(at=T0, body=tables(*GROUPS),
-+                     expect=dict(code=None, official=stored(*GROUPS), as_of=T0, version=1, success=T0, served=served("SportScore", T0, *GROUPS))),
-+                dict(at=LATER, body=tables(*GROUPS_AND_SECOND),
-+                     expect=dict(code=None, official=stored(*GROUPS_AND_SECOND), as_of=LATER, version=2, success=LATER,
-+                                 served=served("SportScore", LATER, *GROUPS_AND_SECOND))),
-+                dict(at=T0 + 6 * H, body=tables(*GROUPS),
-+                     expect=dict(code="INCOMPLETE_TABLE", official=stored(*GROUPS_AND_SECOND), as_of=LATER, version=2, success=LATER,
-+                                 served=served("SportScore", LATER, *GROUPS_AND_SECOND))),
-+                dict(at=T0 + 9 * H, body=tables(*GROUPS_AND_SECOND),
-+                     expect=dict(code=None, official=stored(*GROUPS_AND_SECOND), as_of=T0 + 9 * H, version=2, success=T0 + 9 * H,
-+                                 served=served("SportScore", T0 + 9 * H, *GROUPS_AND_SECOND)))]),
-+    dict(id="S37", key="l_2Mh0jT", note="a ranking across groups retired by review", accepted=False, extra=("Elm Park",),
-+         matches=GROUP_GAMES, vega=GROUP_VEGA, retired=[(SECOND_NAME, "audit, 18 Nov 2026: synthetic case S37")],
-+         steps=[dict(at=T0, body=tables(*GROUPS_AND_SECOND),
-+                     expect=dict(code=None, official=stored(*GROUPS_AND_SECOND), as_of=T0, version=1, success=T0,
-+                                 served=served("SportScore", T0, *GROUPS_AND_SECOND))),
-+                dict(at=LATER, body=tables(*GROUPS),
-+                     expect=dict(code=None, official=stored(*GROUPS), as_of=LATER, version=2, success=LATER,
-+                                 served=served("SportScore", LATER, *GROUPS)))]),
-+    dict(id="S38", key="l_2tFk9k", note="a stale row of another provider", accepted=False, matches=REAL_GAMES, vega=REAL_VEGA,
-+         steps=[dict(at=T0, body=tables(("", REAL)), expect=REAL_ACCEPTED),
-+                dict(at=LATER, before=[official("other", REAL[0], 777, ZERO_BASIS, T0 - DAY)], body=503,
-+                     expect=dict(REAL_ACCEPTED, code="HTTP_503", others=[OTHER_ASTER])),
-+                dict(at=T0 + 6 * H, body=tables(("", REAL)),
-+                     expect=dict(REAL_ACCEPTED, as_of=T0 + 6 * H, success=T0 + 6 * H, others=[OTHER_ASTER],
-+                                 served=served("SportScore", T0 + 6 * H, (None, REAL))))]),
-+    dict(id="S39", key="l_2WZ2tt", note="a later row of another provider for one club", accepted=False, matches=REAL_GAMES,
-+         vega=REAL_VEGA,
-+         steps=[dict(at=T0, body=tables(("", REAL)), expect=REAL_ACCEPTED),
-+                dict(at=LATER, before=[official("other", REAL[0], 777, REAL_BASIS["Aster City"], T0 + DAY)], body=503,
-+                     expect=dict(REAL_ACCEPTED, code="HTTP_503", others=[OTHER_ASTER]))]),
-+    dict(id="S40", key="l_2xBPKk", note="a stale stage of the same provider", accepted=False, matches=REAL_GAMES, vega=REAL_VEGA,
-+         steps=[dict(at=T0, body=tables(("", REAL)), expect=REAL_ACCEPTED),
-+                dict(at=LATER, before=[official("sportscore", REAL[0], 777, ZERO_BASIS, T0 - DAY, stage="old-playoff")], body=503,
-+                     expect=dict(REAL_ACCEPTED, code="HTTP_503", others=[STAGED_ASTER])),
-+                dict(at=T0 + 6 * H, body=tables(("", REAL)),
-+                     expect=dict(REAL_ACCEPTED, as_of=T0 + 6 * H, success=T0 + 6 * H, others=[STAGED_ASTER],
-+                                 served=served("SportScore", T0 + 6 * H, (None, REAL))))]),
-+    # Stage 4 (FAILURE_MODES_SPORTSCORE.md §3, S41-S47): completeness within a table, partition and cross tables.
-+    dict(id="S41", key="l_38d9HA", note="the cross table loses a row while its club stays in its group", accepted=False,
-+         extra=("Elm Park",), matches=GROUP_GAMES, vega=GROUP_VEGA,
-+         steps=[dict(at=T0, body=tables(*GROUPS_AND_SECOND), expect=THREE_ACCEPTED),
-+                dict(at=LATER, body=tables(*GROUPS, (SECOND_NAME, SECOND[:1])), expect=dict(THREE_ACCEPTED, code="INCOMPLETE_TABLE")),
-+                dict(at=T0 + 6 * H, body=tables(*GROUPS_AND_SECOND),
-+                     expect=dict(THREE_ACCEPTED, as_of=T0 + 6 * H, success=T0 + 6 * H,
-+                                 served=served("SportScore", T0 + 6 * H, *GROUPS_AND_SECOND)))]),
-+    dict(id="S42", key="l_3CB6qX", note="the cross table's members change as the stage advances, same count", accepted=False,
-+         extra=("Elm Park",), matches=GROUP_GAMES, vega=GROUP_VEGA,
-+         steps=[dict(at=T0, body=tables(*GROUPS_AND_SECOND), expect=THREE_ACCEPTED),
-+                dict(at=LATER, before=[match(T0 + H, stage="group", label="g3", home="Birch Town", away="Aster City", score=(2, 0),
-+                                             vega=GROUP_VEGA2, vega_at=T0 + 2 * H)],
-+                     body=tables(*MOVED),
-+                     expect=dict(code=None, official=stored(*MOVED), as_of=LATER, version=3, success=LATER,
-+                                 served=served("SportScore", LATER, *MOVED), basis=MOVED_BASIS))]),
-+    dict(id="S43", key="l_3Ci5Cg", note="a complete correction across a group and the cross table", accepted=False,
-+         extra=("Elm Park",), matches=GROUP_GAMES, vega=GROUP_VEGA,
-+         steps=[dict(at=T0, body=tables(*GROUPS_AND_SECOND), expect=THREE_ACCEPTED),
-+                dict(at=LATER, body=tables(*DEDUCTED),
-+                     expect=dict(code=None, official=stored(*DEDUCTED), as_of=LATER, version=2, success=LATER,
-+                                 served=served("SportScore", LATER, *DEDUCTED)))]),
-+    dict(id="S44", key="l_3fglZv", note="the groups renamed, the cross table left out: no new phase", accepted=False,
-+         extra=("Elm Park",), matches=GROUP_GAMES, vega=GROUP_VEGA,
-+         steps=[dict(at=T0, body=tables(*GROUPS_AND_SECOND), expect=THREE_ACCEPTED),
-+                dict(at=LATER, body=tables(*RENAMED), expect=dict(THREE_ACCEPTED, code="INCOMPLETE_TABLE"))]),
-+    dict(id="S45", key="l_3hW1NO", note="a group loses a club that stays in the cross table", accepted=False,
-+         extra=("Elm Park",), matches=GROUP_GAMES, vega=GROUP_VEGA,
-+         steps=[dict(at=T0, body=tables(*GROUPS_AND_SECOND), expect=THREE_ACCEPTED),
-+                dict(at=LATER, body=tables(("Group A", GROUP_A[:1]), ("Group B", GROUP_B), (SECOND_NAME, SECOND)),
-+                     expect=dict(THREE_ACCEPTED, code="INCOMPLETE_TABLE"))]),
-+    dict(id="S46", key="l_3Kf7Ni", note="a reviewed retirement lets one row leave the cross table", accepted=False,
-+         extra=("Elm Park",), matches=GROUP_GAMES, vega=GROUP_VEGA,
-+         retired_rows=[(SECOND_NAME, "Birch Town", "audit, 18 Nov 2026: synthetic case S46")],
-+         steps=[dict(at=T0, body=tables(*GROUPS_AND_SECOND), expect=THREE_ACCEPTED),
-+                dict(at=LATER, body=tables(*GROUPS, (SECOND_NAME, SECOND[:1])),
-+                     expect=dict(code=None, official=stored(*GROUPS, (SECOND_NAME, SECOND[:1])), as_of=LATER, version=2,
-+                                 success=LATER, served=served("SportScore", LATER, *GROUPS, (SECOND_NAME, SECOND[:1]))))]),
-+    dict(id="S47", key="l_3kyHLd", note="the same retirement does not let another row leave", accepted=False,
-+         extra=("Elm Park",), matches=GROUP_GAMES, vega=GROUP_VEGA,
-+         retired_rows=[(SECOND_NAME, "Birch Town", "audit, 18 Nov 2026: synthetic case S47")],
-+         steps=[dict(at=T0, body=tables(*GROUPS_AND_SECOND), expect=THREE_ACCEPTED),
-+                dict(at=LATER, body=tables(*GROUPS, (SECOND_NAME, SECOND[1:])), expect=dict(THREE_ACCEPTED, code="INCOMPLETE_TABLE"))]),
-+    dict(id="S48", key="l_3xwVF2", note="renamed and reshuffled groups do not prove retirement of the cross table",
-+         accepted=False, extra=("Elm Park",), matches=GROUP_GAMES, vega=GROUP_VEGA,
-+         steps=[dict(at=T0, body=tables(*GROUPS_AND_SECOND), expect=THREE_ACCEPTED),
-+                dict(at=LATER, body=tables(("Round 1 / Group A", [GROUP_A[0], dict(GROUP_B[1], pos=2)]),
-+                                           ("Round 1 / Group B", [GROUP_B[0], GROUP_A[1]])),
-+                     expect=dict(THREE_ACCEPTED, code="INCOMPLETE_TABLE"))]),
-+    dict(id="S49", key="l_4MU9Yh", note="a complete group rename retains all memberships and the cross table",
-+         accepted=False, extra=("Elm Park",), matches=GROUP_GAMES, vega=GROUP_VEGA,
-+         steps=[dict(at=T0, body=tables(*GROUPS_AND_SECOND), expect=THREE_ACCEPTED),
-+                dict(at=LATER, body=tables(*RENAMED, (SECOND_NAME, SECOND)),
-+                     expect=dict(code=None, official=stored(*RENAMED, (SECOND_NAME, SECOND)), as_of=LATER, version=2,
-+                                 success=LATER, served=served("SportScore", LATER, *RENAMED, (SECOND_NAME, SECOND))))]),
-+    dict(id="S50", key="l_49KZaB", note="first league response omits a member without a played result",
-+         accepted=False, vega=False, matches=EARLY_GAMES,
-+         steps=[dict(at=T0, body=tables(("", EARLY[:2])),
-+                     expect=dict(code="INCOMPLETE_TABLE", official=[], as_of=None, version=None, success=None, served=None)),
-+                dict(at=LATER, body=tables(("", EARLY)),
-+                     expect=dict(code=None, official=stored((None, EARLY)), as_of=LATER, version=1, success=LATER,
-+                                 served=served("SportScore", LATER, (None, EARLY))))]),
-+    dict(id="S51", key="l_49Zmno", note="full roster accepted at zero before a calendar is reported",
-+         accepted=False, vega=False,
-+         steps=[dict(at=T0, body=tables(("", ZERO)),
-+                     expect=dict(code=None, official=stored((None, ZERO)), as_of=T0, version=1, success=T0,
-+                                 served=served("SportScore", T0, (None, ZERO))))]),
-+    dict(id="S52", key="l_4auCPk", kind="cup", note="known initial group phase excludes a qualifying-only club",
-+         accepted=False, extra=("Elm Park", "Fjord Rovers"), vega=GROUP_VEGA,
-+         matches=GROUP_GAMES + [game("q1", "Fjord Rovers", "Aster City", None, T0 + DAY, status="not_started", stage="qualifying")],
-+         steps=[dict(at=T0, body=tables(*GROUPS),
-+                     expect=dict(code=None, official=stored(*GROUPS), as_of=T0, version=1, success=T0,
-+                                 served=served("SportScore", T0, *GROUPS)))]),
-+    dict(id="S53", key="l_4d6Bwl", kind="cup", note="first observed cup table with no independently known phase",
-+         accepted=False, vega=False,
-+         steps=[dict(at=T0, body=tables(("Group A", ZERO)),
-+                     expect=dict(code="UNVERIFIED_TABLE", official=[], as_of=None, version=None, success=None, served=None))]),
-+    dict(id="S54", key="l_4DWyTT", kind="cup", note="the first table swaps two known groups without a phase change",
-+         accepted=False, extra=("Elm Park",), matches=GROUP_GAMES, vega=GROUP_VEGA,
-+         steps=[dict(at=T0, body=tables(("Group A", GROUP_B), ("Group B", GROUP_A)),
-+                     expect=dict(code="INCOMPLETE_TABLE", official=[], as_of=None, version=None, success=None,
-+                                 served=served("Vega", VEGA_AT, ("A", GROUP_VEGA[:2]), ("B", GROUP_VEGA[2:]))))]),
-+]
-+
-+for _case in CASES:
-+    # The accepted observation every case starts from, unless it starts from none.
-+    if _case.setdefault("accepted", True):
-+        _case["steps"] = [dict(at=T0, body=tables(("", START)), expect=ACCEPTED)] + _case["steps"]
-+    _case.setdefault("vega", True)
-+    _case.setdefault("alias", None)
-+    _case.setdefault("extra", ())
-+    _case.setdefault("matches", [])
-+    _case.setdefault("legacy", None)
-+    _case.setdefault("retired", [])
-+    _case.setdefault("retired_rows", [])
-+    for _step in _case["steps"]:
-+        _step.setdefault("before", [])
-+        _step["expect"] = dict({"absent_spellings": [], "closed": None, "basis": None, "others": None}, **_step["expect"])
-diff --git a/backend/tests/sportscore_replay.py b/backend/tests/sportscore_replay.py
-new file mode 100644
-index 0000000000..631d24e292
---- /dev/null
-+++ b/backend/tests/sportscore_replay.py
-@@ -0,0 +1,263 @@
-+"""Replay of the SportScore standings cases (sportscore_cases.py) on a migrated local base.
-+
-+`build` writes every case's competition, `play` runs one step through `sources.run_due`, and
-+`observe` reads back what a step's `expect` describes. The modules of the tree under test are
-+passed in, so the in-process test and the track's end-to-end script share this replay. It also
-+runs on a tree without migration 138: the basis then reads "no column".
-+"""
-+
-+import copy
-+from urllib.parse import parse_qs, urlsplit
-+
-+from sportscore_cases import CASES, CURRENT, NEXT, PREVIOUS, T0, TEAMS, VEGA, VEGA_AT
-+
-+NAMES = ("Aster City", "Birch Town", "Cedar Athletic", "Fjord Rovers", "Dune Town", "Elm Park")
-+SOURCE_NAMES = {"sportscore": "SportScore", "vega": "Vega"}
-+FIELDS = ("pos", "p", "w", "d", "l", "gf", "ga", "pts")
-+MATCHES = {}  # (case index, label) -> match id
-+
-+
-+def ids(index):
-+    """The competition, editions and teams of the index-th case (1-based)."""
-+    return dict(competition=400 + index, editions={CURRENT: 5000 + index, PREVIOUS: 6000 + index, NEXT: 7000 + index},
-+                teams={name: 100 * index + n for n, name in enumerate(NAMES, 1)})
-+
-+
-+def _vega(db, edition, rows, at):
-+    """Vega's own table of an edition, as the calculator writes it (a group stage per group)."""
-+    db.execute("DELETE FROM agg.standings WHERE competition_season_id=%s", (edition,))
-+    for r in rows:
-+        db.execute(
-+            """INSERT INTO agg.standings(competition_season_id, stage, group_name, team_id, position, played, won, drawn, lost,
-+                 goals_for, goals_against, points, updated_at)
-+               SELECT %s, %s, %s, t.id, %s, %s, %s, %s, %s, %s, %s, %s, %s FROM core.teams t
-+               JOIN core.team_seasons ts ON ts.team_id = t.id AND ts.competition_season_id = %s WHERE t.name = %s""",
-+            (edition, "group" if r.get("group") else None, r.get("group"), r["pos"], r["p"], r["w"], r["d"], r["l"], r["gf"],
-+             r["ga"], r["pts"], at, edition, r["team"]),
-+        )
-+
-+
-+def _bump(db, edition):
-+    # As the store does for a written match: the edition's version moves.
-+    db.execute(
-+        """INSERT INTO ops.resource_versions(resource_kind, resource_id) VALUES ('competition_season', %s)
-+           ON CONFLICT (resource_kind, resource_id) DO UPDATE SET version = ops.resource_versions.version + 1""",
-+        (edition,),
-+    )
-+
-+
-+def _game(db, index, label, g):
-+    """One stored match of the case's `label` edition (sportscore_cases.game)."""
-+    k = ids(index)
-+    edition = k["editions"][label]
-+    round_id = db.execute("INSERT INTO core.rounds(competition_season_id, name, stage) VALUES (%s, %s, %s::core.stage_kind) RETURNING id",
-+                          (edition, g["label"], g["stage"])).fetchone()[0]
-+    home, away = g["score"] or (None, None)
-+    MATCHES[(index, g["label"])] = db.execute(
-+        """INSERT INTO core.matches(competition_season_id, season_id, round_id, group_name, kickoff_at, match_date, status,
-+             home_team_id, away_team_id, home_score, away_score, source, first_finished_at, updated_at)
-+           VALUES (%s, %s, %s, %s, %s, %s, %s::core.match_status, %s, %s, %s, %s, 'pitchapi', %s, %s) RETURNING id""",
-+        (edition, int(label[:4]), round_id, g["group"], g["kickoff"], g["kickoff"].date(), g["status"], k["teams"][g["home"]],
-+         k["teams"][g["away"]], home, away, g["finished"], g["finished"] or g["kickoff"]),
-+    ).fetchone()[0]
-+
-+
-+def build(db, store):
-+    for label in (PREVIOUS, CURRENT, NEXT):
-+        store.season(label)
-+    x = db.execute
-+    for index, case in enumerate(CASES, 1):
-+        k = ids(index)
-+        x("INSERT INTO core.competitions(id, name, kind) VALUES (%s, %s, %s::core.competition_kind)",
-+          (k["competition"], "Demo " + case["id"], case.get("kind", "league")))
-+        x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('competition','pitchapi',%s,%s)",
-+          (case["key"], k["competition"]))
-+        for label, edition in k["editions"].items():
-+            x("""INSERT INTO core.competition_seasons(id, competition_id, season_id, native_label, is_current)
-+                 VALUES (%s, %s, %s, %s, %s)""", (edition, k["competition"], int(label[:4]), label, label == CURRENT))
-+        members = dict(TEAMS, **{CURRENT: TEAMS[CURRENT] + tuple(case["extra"])})
-+        for name, team in k["teams"].items():
-+            x("INSERT INTO core.teams(id, name) VALUES (%s, %s)", (team, name))
-+            x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('team','pitchapi',%s,%s)",
-+              ("t_" + str(team).zfill(6), team))
-+            for label, clubs in members.items():
-+                if name in clubs:
-+                    x("INSERT INTO core.team_seasons(team_id, competition_season_id) VALUES (%s, %s)", (team, k["editions"][label]))
-+        for g in case["matches"]:
-+            _game(db, index, CURRENT, g)
-+        if case["vega"]:
-+            _vega(db, k["editions"][CURRENT], VEGA if case["vega"] is True else case["vega"], VEGA_AT)
-+        if case["alias"]:
-+            spelling, name = case["alias"]
-+            x("""INSERT INTO core.entity_names(entity_type, entity_id, name, normalized, kind, source)
-+                 VALUES ('team', %s, %s, %s, 'alias', 'vega')""", (k["teams"][name], spelling, spelling.lower()))
-+        if case["legacy"]:
-+            # Rows the writer stored before migration 138: no basis; published once.
-+            for r in case["legacy"]:
-+                x("""INSERT INTO core.standings_official(competition_season_id, team_id, position, played, won, drawn, lost,
-+                       goals_for, goals_against, points, source, as_of)
-+                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'sportscore', %s)""",
-+                  (k["editions"][CURRENT], k["teams"][r["team"]], *(r[f] for f in FIELDS), T0))
-+            _bump(db, k["editions"][CURRENT])
-+
-+
-+def apply(db, index, event):
-+    """One event of a step's `before`: a match written, a result written again, or the season flip."""
-+    kind, e = event
-+    k = ids(index)
-+    current = k["editions"][CURRENT]
-+    if kind == "match":
-+        _game(db, index, CURRENT, e)
-+        _bump(db, current)
-+        if e["vega"]:
-+            _vega(db, current, e["vega"], e["vega_at"])
-+    elif kind == "result":
-+        home, away = e["score"] or (None, None)
-+        db.execute(
-+            """UPDATE core.matches SET status = %s::core.match_status, home_score = %s, away_score = %s, revision = revision + 1,
-+                 updated_at = %s, first_finished_at = CASE WHEN %s = 'finished' THEN coalesce(first_finished_at, %s) ELSE first_finished_at END
-+               WHERE id = %s""",
-+            (e["status"], home, away, e["at"], e["status"], e["at"], MATCHES[(index, e["label"])]),
-+        )
-+        _bump(db, current)
-+        if e["vega"]:
-+            _vega(db, current, e["vega"], e["vega_at"])
-+    elif kind == "flip":
-+        db.execute("UPDATE core.competition_seasons SET is_current = (id = %s) WHERE competition_id = %s",
-+                   (k["editions"][NEXT], k["competition"]))
-+        for g in e["matches"]:
-+            _game(db, index, NEXT, g)
-+        if e["vega"]:
-+            _vega(db, k["editions"][NEXT], e["vega"], e["vega_at"])
-+    elif kind == "official":
-+        # A row another writer stored; its basis only where the column exists (138).
-+        r = e["row"]
-+        columns = "competition_season_id, stage, group_name, team_id, position, played, won, drawn, lost, goals_for, goals_against, points, source, as_of"
-+        values = [current, e["stage"], e["group"], k["teams"][r["team"]], *(r[f] for f in FIELDS), e["source"], e["as_of"]]
-+        if _has_basis(db):
-+            columns, values = columns + ", basis", values + [list(e["basis"])]
-+        db.execute(f"INSERT INTO core.standings_official({columns}) VALUES ({', '.join(['%s'] * len(values))})", values)
-+    else:
-+        raise ValueError(kind)
-+
-+
-+def _plain(values):
-+    """A sort key for rows holding NULLs."""
-+    return tuple("" if v is None else str(v) for v in values)
-+
-+
-+def _has_basis(db):
-+    return db.execute("""SELECT 1 FROM information_schema.columns
-+                         WHERE table_schema = 'core' AND table_name = 'standings_official' AND column_name = 'basis'""").fetchone() is not None
-+
-+
-+def widget(body, slug):
-+    """The widget's answer to a step: its body with the envelope, or an HTTP status."""
-+    if isinstance(body, int):
-+        return body
-+    return {"sport": "football", "competition_slug": slug, **copy.deepcopy(body)}
-+
-+
-+def play(sources, sportscore, db, case, step, get):
-+    """One sources.run_due pass on the case's scope only (the adapter's other scopes are not due
-+    for this case). Returns the step's code: None, a SourceError code, "NOT_DUE", or the class
-+    name of an exception that escaped run_due."""
-+    scope = "standings:" + case["key"]
-+    period = sportscore.PERIOD
-+    original = sportscore.scopes
-+    retired, retired_rows = getattr(sportscore, "RETIRED_TABLES", {}), getattr(sportscore, "RETIRED_ROWS", {})
-+    sportscore.scopes = lambda now: {scope: period}
-+    # The case's reviewed retirements, as entries of sportscore.RETIRED_TABLES (S37) and RETIRED_ROWS
-+    # (S46, S47, by the club's public id) would read. Other callers (the track's World Cup replays)
-+    # pass a case with its key only.
-+    sportscore.RETIRED_TABLES = {**retired, **{(case["key"], CURRENT, name): why for name, why in case.get("retired", ())}}
-+    teams = ids(next(i for i, c in enumerate(CASES, 1) if c["key"] == case["key"]))["teams"] if case.get("retired_rows") else {}
-+    sportscore.RETIRED_ROWS = {**retired_rows, **{(case["key"], CURRENT, table, "t_" + str(teams[team]).zfill(6)): why
-+                                                  for table, team, why in case.get("retired_rows", ())}}
-+    try:
-+        results = sources.run_due(db, get, step["at"], names={"sportscore"})
-+    except Exception as error:  # the baseline lets some bodies escape run_due (S25)
-+        return "ESCAPED:" + type(error).__name__
-+    finally:
-+        sportscore.scopes, sportscore.RETIRED_TABLES, sportscore.RETIRED_ROWS = original, retired, retired_rows
-+    outcome = results.get(("sportscore", scope))
-+    return "NOT_DUE" if outcome is None else (None if outcome == "ok" else outcome)
-+
-+
-+def slug_of(url):
-+    return parse_qs(urlsplit(url).query)["slug"][0]
-+
-+
-+def _edition_state(db, edition):
-+    # The writer's own rows: SportScore's, without a stage. Every other official row is `others`.
-+    official = db.execute(
-+        """SELECT t.name, o.group_name, o.position, o.played, o.won, o.drawn, o.lost, o.goals_for, o.goals_against, o.points
-+           FROM core.standings_official o JOIN core.teams t ON t.id = o.team_id
-+           WHERE o.competition_season_id = %s AND o.source = 'sportscore' AND o.stage IS NULL""",
-+        (edition,),
-+    ).fetchall()
-+    others = sorted((tuple(r) for r in db.execute(
-+        """SELECT o.source::text, o.stage, o.group_name, t.name, o.position, o.points
-+           FROM core.standings_official o JOIN core.teams t ON t.id = o.team_id
-+           WHERE o.competition_season_id = %s AND (o.source <> 'sportscore' OR o.stage IS NOT NULL)""", (edition,)).fetchall()),
-+                    key=_plain)
-+    stamps = {r[0] for r in db.execute(
-+        "SELECT as_of FROM core.standings_official WHERE competition_season_id = %s AND source = 'sportscore' AND stage IS NULL",
-+        (edition,)).fetchall()}
-+    version = db.execute(
-+        "SELECT version FROM ops.resource_versions WHERE resource_kind = 'competition_season' AND resource_id = %s", (edition,)
-+    ).fetchone()
-+    rows = db.execute(
-+        """SELECT source, as_of, group_name, name, position, points FROM api.standing_rows WHERE competition_season_id = %s
-+           ORDER BY stage NULLS FIRST, group_name NULLS FIRST, position, name""",
-+        (edition,),
-+    ).fetchall()
-+    served = None
-+    if rows:
-+        sources = sorted({SOURCE_NAMES.get(r[0], r[0]) for r in rows})
-+        served = (",".join(sources), max(r[1] for r in rows if r[1] is not None),
-+                  sorted([(r[2], r[3], r[4], r[5]) for r in rows], key=lambda t: (t[0] or "", t[2], t[1])))
-+    if _has_basis(db):
-+        basis = {name: (tuple(b) if b is not None else None) for name, b in db.execute(
-+            """SELECT t.name, o.basis FROM core.standings_official o JOIN core.teams t ON t.id = o.team_id
-+               WHERE o.competition_season_id = %s AND o.source = 'sportscore' AND o.stage IS NULL""", (edition,)).fetchall()}
-+    else:
-+        basis = "no column"
-+    return dict(official=sorted([tuple(r) for r in official], key=lambda t: (t[1] or "", t[2], t[0])),
-+                as_of=(stamps.pop() if len(stamps) == 1 else sorted(stamps) or None),
-+                version=version and version[0], served=served, basis=basis, others=others)
-+
-+
-+def observe(db, index, case, code, flipped):
-+    """The state a step's `expect` describes, read from the base."""
-+    k = ids(index)
-+    edition = k["editions"][NEXT if flipped else CURRENT]
-+    state = _edition_state(db, edition)
-+    success = db.execute("SELECT last_success_at FROM ops.source_runs WHERE source = 'sportscore' AND scope = %s",
-+                         ("standings:" + case["key"],)).fetchone()
-+    spellings = {tuple(r) for r in db.execute(
-+        """SELECT n.name, t.name FROM core.entity_names n JOIN core.teams t ON t.id = n.entity_id
-+           WHERE n.entity_type = 'team' AND t.id = ANY(%s)""", (list(k["teams"].values()),)).fetchall()}
-+    state.update(code=code, success=success and success[0], spellings=spellings,
-+                 closed=_edition_state(db, k["editions"][CURRENT]) if flipped else None)
-+    return state
-+
-+
-+def compare(expect, seen):
-+    """{assertion: (expected, seen)} of every assertion that fails; empty when the step holds."""
-+    failed = {}
-+    for key in ("code", "official", "as_of", "version", "success", "served"):
-+        if expect[key] != seen[key]:
-+            failed[key] = (expect[key], seen[key])
-+    if expect["basis"] is not None and expect["basis"] != seen["basis"]:
-+        failed["basis"] = (expect["basis"], seen["basis"])
-+    if expect["others"] is not None and sorted(map(tuple, expect["others"]), key=_plain) != seen["others"]:
-+        failed["others"] = (expect["others"], seen["others"])
-+    for pair in expect["absent_spellings"]:
-+        if tuple(pair) in seen["spellings"]:
-+            failed["absent_spelling " + " / ".join(pair)] = ("absent", "stored")
-+    if expect["closed"]:
-+        for key in ("official", "as_of", "version", "served"):
-+            if expect["closed"][key] != (seen["closed"] or {}).get(key):
-+                failed["closed " + key] = (expect["closed"][key], (seen["closed"] or {}).get(key))
-+    return failed
++++ b/backend/tests/fixtures/openligadb/dfb-2026.json
+@@ -0,0 +1,56 @@
++[{"matchID":81832,"matchDateTime":"2026-08-21T18:00:00","matchDateTimeUTC":"2026-08-21T16:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":127243,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":10,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":127244,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":11,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":5712,"teamName":"SC St. Tönis","shortName":"scst"},"team2":{"teamId":91,"teamName":"Eintracht Frankfurt","shortName":"Frankfurt"}},
++{"matchID":81848,"matchDateTime":"2026-08-21T18:00:00","matchDateTimeUTC":"2026-08-21T16:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":127247,"resultName":"Halbzeit","pointsTeam1":1,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":127248,"resultName":"Endergebnis","pointsTeam1":1,"pointsTeam2":2,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":188,"teamName":"Preußen Münster","shortName":"Münster"},"team2":{"teamId":105,"teamName":"Karlsruher SC","shortName":"Karlsruhe"}},
++{"matchID":81859,"matchDateTime":"2026-08-21T18:00:00","matchDateTimeUTC":"2026-08-21T16:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":127245,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":127246,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":0,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"},{"resultID":127256,"resultName":"Verlängerung","pointsTeam1":0,"pointsTeam2":1,"resultOrderID":3,"resultTypeID":4,"resultTypeKind":"AfterExtraTime","resultDescription":"Ergebnis nach Verlängerung"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":553,"teamName":"SV Waldhof Mannheim","shortName":"Mannheim"},"team2":{"teamId":76,"teamName":"1. FC Kaiserslautern","shortName":"Kaiserslautern"}},
++{"matchID":81855,"matchDateTime":"2026-08-21T20:45:00","matchDateTimeUTC":"2026-08-21T18:45:00Z","matchIsFinished":true,"matchResults":[{"resultID":127254,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":2,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":127255,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":4,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":102,"teamName":"Hansa Rostock","shortName":"Rostock"},"team2":{"teamId":16,"teamName":"VfB Stuttgart","shortName":"Stuttgart"}},
++{"matchID":81842,"matchDateTime":"2026-08-22T13:00:00","matchDateTimeUTC":"2026-08-22T11:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":127263,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":1,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":127264,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":4,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":174,"teamName":"SV Wehen Wiesbaden","shortName":"Wiesbaden"},"team2":{"teamId":6,"teamName":"Bayer 04 Leverkusen","shortName":"Leverkusen"}},
++{"matchID":81844,"matchDateTime":"2026-08-22T13:00:00","matchDateTimeUTC":"2026-08-22T11:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":127261,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":127262,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":2,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":93,"teamName":"Energie Cottbus","shortName":"Cottbus"},"team2":{"teamId":95,"teamName":"FC Augsburg","shortName":"Augsburg"}},
++{"matchID":81833,"matchDateTime":"2026-08-22T15:30:00","matchDateTimeUTC":"2026-08-22T13:30:00Z","matchIsFinished":true,"matchResults":[{"resultID":127267,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":3,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":127268,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":4,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":66,"teamName":"Erzgebirge Aue","shortName":"Aue"},"team2":{"teamId":175,"teamName":"TSG Hoffenheim","shortName":"Hoffenheim"}},
++{"matchID":81847,"matchDateTime":"2026-08-22T15:30:00","matchDateTimeUTC":"2026-08-22T13:30:00Z","matchIsFinished":true,"matchResults":[{"resultID":127269,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":6,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":127270,"resultName":"Endergebnis","pointsTeam1":1,"pointsTeam2":9,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":6905,"teamName":"SV Hemelingen","shortName":"Hemelingen"},"team2":{"teamId":55,"teamName":"Hannover 96","shortName":"Hannover"}},
++{"matchID":81849,"matchDateTime":"2026-08-22T15:30:00","matchDateTimeUTC":"2026-08-22T13:30:00Z","matchIsFinished":true,"matchResults":[{"resultID":127271,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":127272,"resultName":"Endergebnis","pointsTeam1":1,"pointsTeam2":1,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"},{"resultID":127294,"resultName":"Verlängerung","pointsTeam1":1,"pointsTeam2":1,"resultOrderID":3,"resultTypeID":4,"resultTypeKind":"AfterExtraTime","resultDescription":"Ergebnis nach Verlängerung"},{"resultID":127289,"resultName":"Elfmeterschießen","pointsTeam1":3,"pointsTeam2":5,"resultOrderID":4,"resultTypeID":5,"resultTypeKind":"AfterPenalties","resultDescription":"Ergebnis nach Elfmeterschießen"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":3078,"teamName":"1. FC Saarbrücken","shortName":"1.FC Saarbrücken"},"team2":{"teamId":54,"teamName":"Hertha BSC","shortName":"Hertha"}},
++{"matchID":81850,"matchDateTime":"2026-08-22T15:30:00","matchDateTimeUTC":"2026-08-22T13:30:00Z","matchIsFinished":true,"matchResults":[{"resultID":127273,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":127274,"resultName":"Endergebnis","pointsTeam1":1,"pointsTeam2":1,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"},{"resultID":127295,"resultName":"Verlängerung","pointsTeam1":1,"pointsTeam2":1,"resultOrderID":3,"resultTypeID":4,"resultTypeKind":"AfterExtraTime","resultDescription":"Ergebnis nach Verlängerung"},{"resultID":127293,"resultName":"Elfmeterschießen","pointsTeam1":5,"pointsTeam2":6,"resultOrderID":4,"resultTypeID":5,"resultTypeKind":"AfterPenalties","resultDescription":"Ergebnis nach Elfmeterschießen"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":2199,"teamName":"Viktoria Köln","shortName":"Viktoria Köln"},"team2":{"teamId":79,"teamName":"1. FC Nürnberg","shortName":"Nürnberg"}},
++{"matchID":81851,"matchDateTime":"2026-08-22T15:30:00","matchDateTimeUTC":"2026-08-22T13:30:00Z","matchIsFinished":true,"matchResults":[{"resultID":127275,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":1,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":127276,"resultName":"Endergebnis","pointsTeam1":1,"pointsTeam2":3,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":107,"teamName":"MSV Duisburg","shortName":"Duisburg"},"team2":{"teamId":198,"teamName":"SV 07 Elversberg","shortName":"Elversberg"}},
++{"matchID":81853,"matchDateTime":"2026-08-22T15:30:00","matchDateTimeUTC":"2026-08-22T13:30:00Z","matchIsFinished":true,"matchResults":[{"resultID":127277,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":1,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":127278,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":3,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":4550,"teamName":"Lüneburger SK Hansa","shortName":"LSK"},"team2":{"teamId":134,"teamName":"SV Werder Bremen","shortName":"Bremen"}},
++{"matchID":81835,"matchDateTime":"2026-08-22T18:00:00","matchDateTimeUTC":"2026-08-22T16:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":127283,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":3,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":127284,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":6,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":1071,"teamName":"Eintracht Trier","shortName":""},"team2":{"teamId":1635,"teamName":"RB Leipzig","shortName":"Leipzig"}},
++{"matchID":81840,"matchDateTime":"2026-08-22T18:00:00","matchDateTimeUTC":"2026-08-22T16:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":127285,"resultName":"Halbzeit","pointsTeam1":1,"pointsTeam2":2,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":127286,"resultName":"Endergebnis","pointsTeam1":2,"pointsTeam2":2,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"},{"resultID":127298,"resultName":"Verlängerung","pointsTeam1":2,"pointsTeam2":2,"resultOrderID":3,"resultTypeID":4,"resultTypeKind":"AfterExtraTime","resultDescription":"Ergebnis nach Verlängerung"},{"resultID":127301,"resultName":"Elfmeterschießen","pointsTeam1":5,"pointsTeam2":2,"resultOrderID":4,"resultTypeID":5,"resultTypeKind":"AfterPenalties","resultDescription":"Ergebnis nach Elfmeterschießen"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":529,"teamName":"SG Sonnenhof Großaspach","shortName":"Sonnenhof Großaspach"},"team2":{"teamId":83,"teamName":"DSC Arminia Bielefeld","shortName":"Bielefeld"}},
++{"matchID":81858,"matchDateTime":"2026-08-22T18:00:00","matchDateTimeUTC":"2026-08-22T16:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":127287,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":1,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":127288,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":2,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":125,"teamName":"TSV 1860 München","shortName":"1860 München"},"team2":{"teamId":104,"teamName":"Holstein Kiel","shortName":"Kiel"}},
++{"matchID":81841,"matchDateTime":"2026-08-23T13:00:00","matchDateTimeUTC":"2026-08-23T11:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":127318,"resultName":"Halbzeit","pointsTeam1":3,"pointsTeam2":1,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":127319,"resultName":"Endergebnis","pointsTeam1":5,"pointsTeam2":2,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":4762,"teamName":"SSV Jeddeloh II","shortName":"SSV Jeddeloh"},"team2":{"teamId":199,"teamName":"1. FC Heidenheim 1846","shortName":"Heidenheim"}},
++{"matchID":81846,"matchDateTime":"2026-08-23T13:00:00","matchDateTimeUTC":"2026-08-23T11:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":127320,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":1,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":127321,"resultName":"Endergebnis","pointsTeam1":1,"pointsTeam2":2,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":115,"teamName":"SpVgg Greuther Fürth","shortName":"Fürth"},"team2":{"teamId":129,"teamName":"VfL Bochum","shortName":"Bochum"}},
++{"matchID":81834,"matchDateTime":"2026-08-23T15:30:00","matchDateTimeUTC":"2026-08-23T13:30:00Z","matchIsFinished":true,"matchResults":[{"resultID":127326,"resultName":"Halbzeit","pointsTeam1":1,"pointsTeam2":1,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":127327,"resultName":"Endergebnis","pointsTeam1":2,"pointsTeam2":4,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":74,"teamName":"Eintracht Braunschweig","shortName":"Braunschweig"},"team2":{"teamId":80,"teamName":"1. FC Union Berlin","shortName":"Union Berlin"}},
++{"matchID":81837,"matchDateTime":"2026-08-23T15:30:00","matchDateTimeUTC":"2026-08-23T13:30:00Z","matchIsFinished":true,"matchResults":[{"resultID":127328,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":2,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":127329,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":5,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":4555,"teamName":"TSV Schott Mainz","shortName":"SCHOTT"},"team2":{"teamId":87,"teamName":"Borussia Mönchengladbach","shortName":"Gladbach"}},
++{"matchID":81845,"matchDateTime":"2026-08-23T15:30:00","matchDateTimeUTC":"2026-08-23T13:30:00Z","matchIsFinished":true,"matchResults":[{"resultID":127330,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":5,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":127331,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":9,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":7594,"teamName":"VfB 1921 Krieschow ","shortName":"VfB Krieschow "},"team2":{"teamId":81,"teamName":"1. FSV Mainz 05","shortName":"Mainz"}},
++{"matchID":81856,"matchDateTime":"2026-08-23T15:30:00","matchDateTimeUTC":"2026-08-23T13:30:00Z","matchIsFinished":true,"matchResults":[{"resultID":127332,"resultName":"Halbzeit","pointsTeam1":1,"pointsTeam2":2,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":127333,"resultName":"Endergebnis","pointsTeam1":1,"pointsTeam2":2,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":69,"teamName":"FC Carl Zeiss Jena","shortName":"Jena"},"team2":{"teamId":118,"teamName":"SV Darmstadt 98","shortName":"Darmstadt"}},
++{"matchID":81857,"matchDateTime":"2026-08-23T15:30:00","matchDateTimeUTC":"2026-08-23T13:30:00Z","matchIsFinished":true,"matchResults":[{"resultID":127334,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":3,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":127335,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":4,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":2499,"teamName":"Bahlinger SC","shortName":"Bahlinger SC"},"team2":{"teamId":78,"teamName":"1. FC Magdeburg","shortName":"Magdeburg"}},
++{"matchID":81860,"matchDateTime":"2026-08-23T15:30:00","matchDateTimeUTC":"2026-08-23T13:30:00Z","matchIsFinished":true,"matchResults":[{"resultID":127336,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":5,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":127337,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":6,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":4568,"teamName":"SV Westfalia Rhynern","shortName":"Rhynern"},"team2":{"teamId":177,"teamName":"Dynamo Dresden","shortName":"Dresden"}},
++{"matchID":81838,"matchDateTime":"2026-08-23T18:00:00","matchDateTimeUTC":"2026-08-23T16:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":127342,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":1,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":127343,"resultName":"Endergebnis","pointsTeam1":1,"pointsTeam2":5,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":185,"teamName":"Fortuna Düsseldorf","shortName":"Düsseldorf"},"team2":{"teamId":112,"teamName":"SC Freiburg","shortName":"Freiburg"}},
++{"matchID":81839,"matchDateTime":"2026-08-23T18:00:00","matchDateTimeUTC":"2026-08-23T16:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":127340,"resultName":"Halbzeit","pointsTeam1":1,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":127341,"resultName":"Endergebnis","pointsTeam1":2,"pointsTeam2":0,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":109,"teamName":"Rot-Weiss Essen","shortName":"Rot-Weiss Essen"},"team2":{"teamId":98,"teamName":"FC St. Pauli","shortName":"St. Pauli"}},
++{"matchID":81861,"matchDateTime":"2026-08-23T18:00:00","matchDateTimeUTC":"2026-08-23T16:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":127338,"resultName":"Halbzeit","pointsTeam1":1,"pointsTeam2":2,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":127339,"resultName":"Endergebnis","pointsTeam1":2,"pointsTeam2":4,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":6326,"teamName":"1. FC Phönix Lübeck","shortName":"Phönix Lübeck"},"team2":{"teamId":31,"teamName":"SC Paderborn 07","shortName":"Paderborn"}},
++{"matchID":81854,"matchDateTime":"2026-08-24T18:00:00","matchDateTimeUTC":"2026-08-24T16:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":127374,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":1,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":127375,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":3,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":114,"teamName":"SC Verl","shortName":"Verl"},"team2":{"teamId":100,"teamName":"Hamburger SV","shortName":"HSV"}},
++{"matchID":81862,"matchDateTime":"2026-08-24T18:00:00","matchDateTimeUTC":"2026-08-24T16:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":127376,"resultName":"Halbzeit","pointsTeam1":1,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":127377,"resultName":"Endergebnis","pointsTeam1":2,"pointsTeam2":2,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"},{"resultID":127382,"resultName":"Verlängerung","pointsTeam1":3,"pointsTeam2":3,"resultOrderID":3,"resultTypeID":4,"resultTypeKind":"AfterExtraTime","resultDescription":"Ergebnis nach Verlängerung"},{"resultID":127383,"resultName":"Elfmeterschießen","pointsTeam1":8,"pointsTeam2":9,"resultOrderID":4,"resultTypeID":5,"resultTypeKind":"AfterPenalties","resultDescription":"Ergebnis nach Elfmeterschießen"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":4600,"teamName":"VSG Altglienicke Berlin","shortName":"Altglienicke"},"team2":{"teamId":131,"teamName":"VfL Wolfsburg","shortName":"Wolfsburg"}},
++{"matchID":81863,"matchDateTime":"2026-08-24T18:00:00","matchDateTimeUTC":"2026-08-24T16:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":127378,"resultName":"Halbzeit","pointsTeam1":1,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":127379,"resultName":"Endergebnis","pointsTeam1":1,"pointsTeam2":2,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":5276,"teamName":"Würzburger Kickers","shortName":"Würzburg"},"team2":{"teamId":65,"teamName":"1. FC Köln","shortName":"Köln"}},
++{"matchID":81843,"matchDateTime":"2026-08-24T20:45:00","matchDateTimeUTC":"2026-08-24T18:45:00Z","matchIsFinished":true,"matchResults":[{"resultID":127384,"resultName":"Halbzeit","pointsTeam1":1,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":127385,"resultName":"Endergebnis","pointsTeam1":2,"pointsTeam2":2,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"},{"resultID":127386,"resultName":"Verlängerung","pointsTeam1":2,"pointsTeam2":5,"resultOrderID":3,"resultTypeID":4,"resultTypeKind":"AfterExtraTime","resultDescription":"Ergebnis nach Verlängerung"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":208,"teamName":"Hallescher FC","shortName":"Halle"},"team2":{"teamId":9,"teamName":"FC Schalke 04","shortName":"S04"}},
++{"matchID":81836,"matchDateTime":"2026-09-01T20:45:00","matchDateTimeUTC":"2026-09-01T18:45:00Z","matchIsFinished":true,"matchResults":[{"resultID":127745,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":4,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":127746,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":5,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":7595,"teamName":"Hamburg Eimsbütteler BC","shortName":"Hamburg Eimsbütteler BC"},"team2":{"teamId":7,"teamName":"Borussia Dortmund","shortName":"Dortmund"}},
++{"matchID":81852,"matchDateTime":"2026-09-02T20:45:00","matchDateTimeUTC":"2026-09-02T18:45:00Z","matchIsFinished":true,"matchResults":[{"resultID":127747,"resultName":"Halbzeit","pointsTeam1":1,"pointsTeam2":2,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":127748,"resultName":"Endergebnis","pointsTeam1":1,"pointsTeam2":4,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"1. Runde","groupOrderID":1},"team1":{"teamId":36,"teamName":"VfL Osnabrück","shortName":"Osnabrück"},"team2":{"teamId":40,"teamName":"FC Bayern München","shortName":"Bayern"}},
++{"matchID":87618,"matchDateTime":"2026-10-27T18:00:00","matchDateTimeUTC":"2026-10-27T17:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":130409,"resultName":"Halbzeit","pointsTeam1":1,"pointsTeam2":2,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":130410,"resultName":"Endergebnis","pointsTeam1":2,"pointsTeam2":4,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"2. Runde","groupOrderID":2},"team1":{"teamId":529,"teamName":"SG Sonnenhof Großaspach","shortName":"Sonnenhof Großaspach"},"team2":{"teamId":95,"teamName":"FC Augsburg","shortName":"Augsburg"}},
++{"matchID":87620,"matchDateTime":"2026-10-27T18:00:00","matchDateTimeUTC":"2026-10-27T17:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":130411,"resultName":"Halbzeit","pointsTeam1":1,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":130412,"resultName":"Endergebnis","pointsTeam1":1,"pointsTeam2":2,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"2. Runde","groupOrderID":2},"team1":{"teamId":109,"teamName":"Rot-Weiss Essen","shortName":"Rot-Weiss Essen"},"team2":{"teamId":1635,"teamName":"RB Leipzig","shortName":"Leipzig"}},
++{"matchID":87624,"matchDateTime":"2026-10-27T18:00:00","matchDateTimeUTC":"2026-10-27T17:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":130413,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":130414,"resultName":"Endergebnis","pointsTeam1":2,"pointsTeam2":0,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"2. Runde","groupOrderID":2},"team1":{"teamId":129,"teamName":"VfL Bochum","shortName":"Bochum"},"team2":{"teamId":81,"teamName":"1. FSV Mainz 05","shortName":"Mainz"}},
++{"matchID":87625,"matchDateTime":"2026-10-27T18:00:00","matchDateTimeUTC":"2026-10-27T17:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":130415,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":130416,"resultName":"Endergebnis","pointsTeam1":1,"pointsTeam2":3,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"2. Runde","groupOrderID":2},"team1":{"teamId":100,"teamName":"Hamburger SV","shortName":"HSV"},"team2":{"teamId":91,"teamName":"Eintracht Frankfurt","shortName":"Frankfurt"}},
++{"matchID":87621,"matchDateTime":"2026-10-27T20:45:00","matchDateTimeUTC":"2026-10-27T19:45:00Z","matchIsFinished":true,"matchResults":[{"resultID":130420,"resultName":"Halbzeit","pointsTeam1":1,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":130421,"resultName":"Endergebnis","pointsTeam1":5,"pointsTeam2":0,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"2. Runde","groupOrderID":2},"team1":{"teamId":65,"teamName":"1. FC Köln","shortName":"Köln"},"team2":{"teamId":80,"teamName":"1. FC Union Berlin","shortName":"Union Berlin"}},
++{"matchID":87623,"matchDateTime":"2026-10-27T20:45:00","matchDateTimeUTC":"2026-10-27T19:45:00Z","matchIsFinished":true,"matchResults":[{"resultID":130426,"resultName":"Halbzeit","pointsTeam1":2,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":130427,"resultName":"Endergebnis","pointsTeam1":3,"pointsTeam2":2,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"2. Runde","groupOrderID":2},"team1":{"teamId":7,"teamName":"Borussia Dortmund","shortName":"Dortmund"},"team2":{"teamId":134,"teamName":"SV Werder Bremen","shortName":"Bremen"}},
++{"matchID":87626,"matchDateTime":"2026-10-27T20:45:00","matchDateTimeUTC":"2026-10-27T19:45:00Z","matchIsFinished":true,"matchResults":[{"resultID":130422,"resultName":"Halbzeit","pointsTeam1":1,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":130423,"resultName":"Endergebnis","pointsTeam1":2,"pointsTeam2":0,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"2. Runde","groupOrderID":2},"team1":{"teamId":87,"teamName":"Borussia Mönchengladbach","shortName":"Gladbach"},"team2":{"teamId":105,"teamName":"Karlsruher SC","shortName":"Karlsruhe"}},
++{"matchID":87632,"matchDateTime":"2026-10-27T20:45:00","matchDateTimeUTC":"2026-10-27T19:45:00Z","matchIsFinished":true,"matchResults":[{"resultID":130424,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":1,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":130425,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":2,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"2. Runde","groupOrderID":2},"team1":{"teamId":198,"teamName":"SV 07 Elversberg","shortName":"Elversberg"},"team2":{"teamId":118,"teamName":"SV Darmstadt 98","shortName":"Darmstadt"}},
++{"matchID":87619,"matchDateTime":"2026-10-28T18:00:00","matchDateTimeUTC":"2026-10-28T17:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":130465,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":130468,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":2,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"2. Runde","groupOrderID":2},"team1":{"teamId":4762,"teamName":"SSV Jeddeloh II","shortName":"SSV Jeddeloh"},"team2":{"teamId":54,"teamName":"Hertha BSC","shortName":"Hertha"}},
++{"matchID":87622,"matchDateTime":"2026-10-28T18:00:00","matchDateTimeUTC":"2026-10-28T17:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":130461,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":130462,"resultName":"Endergebnis","pointsTeam1":2,"pointsTeam2":0,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"2. Runde","groupOrderID":2},"team1":{"teamId":177,"teamName":"Dynamo Dresden","shortName":"Dresden"},"team2":{"teamId":9,"teamName":"FC Schalke 04","shortName":"S04"}},
++{"matchID":87630,"matchDateTime":"2026-10-28T18:00:00","matchDateTimeUTC":"2026-10-28T17:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":130464,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":0,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":130466,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":1,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"2. Runde","groupOrderID":2},"team1":{"teamId":31,"teamName":"SC Paderborn 07","shortName":"Paderborn"},"team2":{"teamId":16,"teamName":"VfB Stuttgart","shortName":"Stuttgart"}},
++{"matchID":87631,"matchDateTime":"2026-10-28T18:00:00","matchDateTimeUTC":"2026-10-28T17:00:00Z","matchIsFinished":true,"matchResults":[{"resultID":130463,"resultName":"Halbzeit","pointsTeam1":1,"pointsTeam2":2,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":130467,"resultName":"Endergebnis","pointsTeam1":3,"pointsTeam2":2,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"2. Runde","groupOrderID":2},"team1":{"teamId":112,"teamName":"SC Freiburg","shortName":"Freiburg"},"team2":{"teamId":131,"teamName":"VfL Wolfsburg","shortName":"Wolfsburg"}},
++{"matchID":87627,"matchDateTime":"2026-10-28T20:45:00","matchDateTimeUTC":"2026-10-28T19:45:00Z","matchIsFinished":true,"matchResults":[{"resultID":130476,"resultName":"Halbzeit","pointsTeam1":1,"pointsTeam2":1,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":130477,"resultName":"Endergebnis","pointsTeam1":1,"pointsTeam2":1,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"},{"resultID":130480,"resultName":"Verlängerung","pointsTeam1":1,"pointsTeam2":1,"resultOrderID":3,"resultTypeID":4,"resultTypeKind":"AfterExtraTime","resultDescription":"Ergebnis nach Verlängerung"},{"resultID":130481,"resultName":"Elfmeterschießen","pointsTeam1":5,"pointsTeam2":4,"resultOrderID":4,"resultTypeID":5,"resultTypeKind":"AfterPenalties","resultDescription":"Ergebnis nach Elfmeterschießen"}],"group":{"groupName":"2. Runde","groupOrderID":2},"team1":{"teamId":104,"teamName":"Holstein Kiel","shortName":"Kiel"},"team2":{"teamId":175,"teamName":"TSG Hoffenheim","shortName":"Hoffenheim"}},
++{"matchID":87628,"matchDateTime":"2026-10-28T20:45:00","matchDateTimeUTC":"2026-10-28T19:45:00Z","matchIsFinished":true,"matchResults":[{"resultID":130474,"resultName":"Halbzeit","pointsTeam1":1,"pointsTeam2":2,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":130475,"resultName":"Endergebnis","pointsTeam1":5,"pointsTeam2":2,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"2. Runde","groupOrderID":2},"team1":{"teamId":6,"teamName":"Bayer 04 Leverkusen","shortName":"Leverkusen"},"team2":{"teamId":79,"teamName":"1. FC Nürnberg","shortName":"Nürnberg"}},
++{"matchID":87629,"matchDateTime":"2026-10-28T20:45:00","matchDateTimeUTC":"2026-10-28T19:45:00Z","matchIsFinished":true,"matchResults":[{"resultID":130478,"resultName":"Halbzeit","pointsTeam1":0,"pointsTeam2":1,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":130479,"resultName":"Endergebnis","pointsTeam1":0,"pointsTeam2":2,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"2. Runde","groupOrderID":2},"team1":{"teamId":55,"teamName":"Hannover 96","shortName":"Hannover"},"team2":{"teamId":76,"teamName":"1. FC Kaiserslautern","shortName":"Kaiserslautern"}},
++{"matchID":87633,"matchDateTime":"2026-10-28T20:45:00","matchDateTimeUTC":"2026-10-28T19:45:00Z","matchIsFinished":true,"matchResults":[{"resultID":130472,"resultName":"Halbzeit","pointsTeam1":2,"pointsTeam2":1,"resultOrderID":1,"resultTypeID":1,"resultTypeKind":"HalfTime","resultDescription":"Ergebnis nach Ende der ersten Halbzeit"},{"resultID":130473,"resultName":"Endergebnis","pointsTeam1":6,"pointsTeam2":1,"resultOrderID":2,"resultTypeID":2,"resultTypeKind":"After90Minutes","resultDescription":"Ergebnis nach Ende der offiziellen Spielzeit"}],"group":{"groupName":"2. Runde","groupOrderID":2},"team1":{"teamId":40,"teamName":"FC Bayern München","shortName":"Bayern"},"team2":{"teamId":78,"teamName":"1. FC Magdeburg","shortName":"Magdeburg"}},
++{"matchID":88750,"matchDateTime":"2026-12-01T18:00:00","matchDateTimeUTC":"2026-12-01T17:00:00Z","matchIsFinished":false,"matchResults":[],"group":{"groupName":"Achtelfinale","groupOrderID":3},"team1":{"teamId":16,"teamName":"VfB Stuttgart","shortName":"Stuttgart"},"team2":{"teamId":177,"teamName":"Dynamo Dresden","shortName":"Dresden"}},
++{"matchID":88755,"matchDateTime":"2026-12-01T18:00:00","matchDateTimeUTC":"2026-12-01T17:00:00Z","matchIsFinished":false,"matchResults":[],"group":{"groupName":"Achtelfinale","groupOrderID":3},"team1":{"teamId":104,"teamName":"Holstein Kiel","shortName":"Kiel"},"team2":{"teamId":65,"teamName":"1. FC Köln","shortName":"Köln"}},
++{"matchID":88752,"matchDateTime":"2026-12-01T20:45:00","matchDateTimeUTC":"2026-12-01T19:45:00Z","matchIsFinished":false,"matchResults":[],"group":{"groupName":"Achtelfinale","groupOrderID":3},"team1":{"teamId":40,"teamName":"FC Bayern München","shortName":"Bayern"},"team2":{"teamId":54,"teamName":"Hertha BSC","shortName":"Hertha"}},
++{"matchID":88753,"matchDateTime":"2026-12-01T20:45:00","matchDateTimeUTC":"2026-12-01T19:45:00Z","matchIsFinished":false,"matchResults":[],"group":{"groupName":"Achtelfinale","groupOrderID":3},"team1":{"teamId":87,"teamName":"Borussia Mönchengladbach","shortName":"Gladbach"},"team2":{"teamId":118,"teamName":"SV Darmstadt 98","shortName":"Darmstadt"}},
++{"matchID":88751,"matchDateTime":"2026-12-02T18:00:00","matchDateTimeUTC":"2026-12-02T17:00:00Z","matchIsFinished":false,"matchResults":[],"group":{"groupName":"Achtelfinale","groupOrderID":3},"team1":{"teamId":6,"teamName":"Bayer 04 Leverkusen","shortName":"Leverkusen"},"team2":{"teamId":1635,"teamName":"RB Leipzig","shortName":"Leipzig"}},
++{"matchID":88754,"matchDateTime":"2026-12-02T18:00:00","matchDateTimeUTC":"2026-12-02T17:00:00Z","matchIsFinished":false,"matchResults":[],"group":{"groupName":"Achtelfinale","groupOrderID":3},"team1":{"teamId":76,"teamName":"1. FC Kaiserslautern","shortName":"Kaiserslautern"},"team2":{"teamId":112,"teamName":"SC Freiburg","shortName":"Freiburg"}},
++{"matchID":88749,"matchDateTime":"2026-12-02T20:45:00","matchDateTimeUTC":"2026-12-02T19:45:00Z","matchIsFinished":false,"matchResults":[],"group":{"groupName":"Achtelfinale","groupOrderID":3},"team1":{"teamId":91,"teamName":"Eintracht Frankfurt","shortName":"Frankfurt"},"team2":{"teamId":7,"teamName":"Borussia Dortmund","shortName":"Dortmund"}},
++{"matchID":88756,"matchDateTime":"2026-12-02T20:45:00","matchDateTimeUTC":"2026-12-02T19:45:00Z","matchIsFinished":false,"matchResults":[],"group":{"groupName":"Achtelfinale","groupOrderID":3},"team1":{"teamId":129,"teamName":"VfL Bochum","shortName":"Bochum"},"team2":{"teamId":95,"teamName":"FC Augsburg","shortName":"Augsburg"}}]

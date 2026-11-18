@@ -1,0 +1,1346 @@
+[
+  {
+    "year": "2022",
+    "id": "m_03Leph",
+    "teams": [
+      "England",
+      "France"
+    ],
+    "nativeRound": "1/4",
+    "nativeDate": "2022-12-10",
+    "storedSeason": "2022/2023",
+    "archiveCandidates": 1,
+    "archiveRound": "Quarter-finals",
+    "archiveTeams": [
+      "England",
+      "France"
+    ],
+    "archiveDate": "2022-12-10",
+    "scoreArchive": [
+      1,
+      2
+    ],
+    "scoreNative": [
+      1,
+      2
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2022",
+    "id": "m_09Rwuw",
+    "teams": [
+      "Netherlands",
+      "Argentina"
+    ],
+    "nativeRound": "1/4",
+    "nativeDate": "2022-12-09",
+    "storedSeason": "2022/2023",
+    "archiveCandidates": 1,
+    "archiveRound": "Quarter-finals",
+    "archiveTeams": [
+      "Netherlands",
+      "Argentina"
+    ],
+    "archiveDate": "2022-12-09",
+    "scoreArchive": [
+      2,
+      2
+    ],
+    "scoreNative": [
+      2,
+      2
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2022",
+    "id": "m_0VgOy6",
+    "teams": [
+      "France",
+      "Poland"
+    ],
+    "nativeRound": "1/8",
+    "nativeDate": "2022-12-04",
+    "storedSeason": "2022/2023",
+    "archiveCandidates": 1,
+    "archiveRound": "Round of 16",
+    "archiveTeams": [
+      "France",
+      "Poland"
+    ],
+    "archiveDate": "2022-12-04",
+    "scoreArchive": [
+      3,
+      1
+    ],
+    "scoreNative": [
+      3,
+      1
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2022",
+    "id": "m_186Vmp",
+    "teams": [
+      "Argentina",
+      "Australia"
+    ],
+    "nativeRound": "1/8",
+    "nativeDate": "2022-12-03",
+    "storedSeason": "2022/2023",
+    "archiveCandidates": 1,
+    "archiveRound": "Round of 16",
+    "archiveTeams": [
+      "Argentina",
+      "Australia"
+    ],
+    "archiveDate": "2022-12-03",
+    "scoreArchive": [
+      2,
+      1
+    ],
+    "scoreNative": [
+      2,
+      1
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2022",
+    "id": "m_1FJw7o",
+    "teams": [
+      "Croatia",
+      "Morocco"
+    ],
+    "nativeRound": "bronze",
+    "nativeDate": "2022-12-17",
+    "storedSeason": "2022/2023",
+    "archiveCandidates": 1,
+    "archiveRound": "Match for third place",
+    "archiveTeams": [
+      "Croatia",
+      "Morocco"
+    ],
+    "archiveDate": "2022-12-17",
+    "scoreArchive": [
+      2,
+      1
+    ],
+    "scoreNative": [
+      2,
+      1
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2022",
+    "id": "m_1YHoM6",
+    "teams": [
+      "Japan",
+      "Croatia"
+    ],
+    "nativeRound": "1/8",
+    "nativeDate": "2022-12-05",
+    "storedSeason": "2022/2023",
+    "archiveCandidates": 1,
+    "archiveRound": "Round of 16",
+    "archiveTeams": [
+      "Japan",
+      "Croatia"
+    ],
+    "archiveDate": "2022-12-05",
+    "scoreArchive": [
+      1,
+      1
+    ],
+    "scoreNative": [
+      1,
+      1
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2022",
+    "id": "m_1ZwI2d",
+    "teams": [
+      "Morocco",
+      "Portugal"
+    ],
+    "nativeRound": "1/4",
+    "nativeDate": "2022-12-10",
+    "storedSeason": "2022/2023",
+    "archiveCandidates": 1,
+    "archiveRound": "Quarter-finals",
+    "archiveTeams": [
+      "Morocco",
+      "Portugal"
+    ],
+    "archiveDate": "2022-12-10",
+    "scoreArchive": [
+      1,
+      0
+    ],
+    "scoreNative": [
+      1,
+      0
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2022",
+    "id": "m_1aB0YO",
+    "teams": [
+      "Croatia",
+      "Brazil"
+    ],
+    "nativeRound": "1/4",
+    "nativeDate": "2022-12-09",
+    "storedSeason": "2022/2023",
+    "archiveCandidates": 1,
+    "archiveRound": "Quarter-finals",
+    "archiveTeams": [
+      "Croatia",
+      "Brazil"
+    ],
+    "archiveDate": "2022-12-09",
+    "scoreArchive": [
+      1,
+      1
+    ],
+    "scoreNative": [
+      1,
+      1
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2022",
+    "id": "m_2HELPt",
+    "teams": [
+      "Portugal",
+      "Switzerland"
+    ],
+    "nativeRound": "1/8",
+    "nativeDate": "2022-12-06",
+    "storedSeason": "2022/2023",
+    "archiveCandidates": 1,
+    "archiveRound": "Round of 16",
+    "archiveTeams": [
+      "Portugal",
+      "Switzerland"
+    ],
+    "archiveDate": "2022-12-06",
+    "scoreArchive": [
+      6,
+      1
+    ],
+    "scoreNative": [
+      6,
+      1
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2022",
+    "id": "m_2tfkDS",
+    "teams": [
+      "England",
+      "Senegal"
+    ],
+    "nativeRound": "1/8",
+    "nativeDate": "2022-12-04",
+    "storedSeason": "2022/2023",
+    "archiveCandidates": 1,
+    "archiveRound": "Round of 16",
+    "archiveTeams": [
+      "England",
+      "Senegal"
+    ],
+    "archiveDate": "2022-12-04",
+    "scoreArchive": [
+      3,
+      0
+    ],
+    "scoreNative": [
+      3,
+      0
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2022",
+    "id": "m_36Wxbh",
+    "teams": [
+      "Morocco",
+      "Spain"
+    ],
+    "nativeRound": "1/8",
+    "nativeDate": "2022-12-06",
+    "storedSeason": "2022/2023",
+    "archiveCandidates": 1,
+    "archiveRound": "Round of 16",
+    "archiveTeams": [
+      "Morocco",
+      "Spain"
+    ],
+    "archiveDate": "2022-12-06",
+    "scoreArchive": [
+      0,
+      0
+    ],
+    "scoreNative": [
+      0,
+      0
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2022",
+    "id": "m_3A74LG",
+    "teams": [
+      "France",
+      "Morocco"
+    ],
+    "nativeRound": "1/2",
+    "nativeDate": "2022-12-14",
+    "storedSeason": "2022/2023",
+    "archiveCandidates": 1,
+    "archiveRound": "Semi-finals",
+    "archiveTeams": [
+      "France",
+      "Morocco"
+    ],
+    "archiveDate": "2022-12-14",
+    "scoreArchive": [
+      2,
+      0
+    ],
+    "scoreNative": [
+      2,
+      0
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2022",
+    "id": "m_3F1Z9S",
+    "teams": [
+      "Argentina",
+      "Croatia"
+    ],
+    "nativeRound": "1/2",
+    "nativeDate": "2022-12-13",
+    "storedSeason": "2022/2023",
+    "archiveCandidates": 1,
+    "archiveRound": "Semi-finals",
+    "archiveTeams": [
+      "Argentina",
+      "Croatia"
+    ],
+    "archiveDate": "2022-12-13",
+    "scoreArchive": [
+      3,
+      0
+    ],
+    "scoreNative": [
+      3,
+      0
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2022",
+    "id": "m_3Qo3A4",
+    "teams": [
+      "Netherlands",
+      "USA"
+    ],
+    "nativeRound": "1/8",
+    "nativeDate": "2022-12-03",
+    "storedSeason": "2022/2023",
+    "archiveCandidates": 1,
+    "archiveRound": "Round of 16",
+    "archiveTeams": [
+      "Netherlands",
+      "USA"
+    ],
+    "archiveDate": "2022-12-03",
+    "scoreArchive": [
+      3,
+      1
+    ],
+    "scoreNative": [
+      3,
+      1
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2022",
+    "id": "m_3Zw3cP",
+    "teams": [
+      "Argentina",
+      "France"
+    ],
+    "nativeRound": "final",
+    "nativeDate": "2022-12-18",
+    "storedSeason": "2022/2023",
+    "archiveCandidates": 1,
+    "archiveRound": "Final",
+    "archiveTeams": [
+      "Argentina",
+      "France"
+    ],
+    "archiveDate": "2022-12-18",
+    "scoreArchive": [
+      3,
+      3
+    ],
+    "scoreNative": [
+      3,
+      3
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2022",
+    "id": "m_3qGBcU",
+    "teams": [
+      "Brazil",
+      "South Korea"
+    ],
+    "nativeRound": "1/8",
+    "nativeDate": "2022-12-05",
+    "storedSeason": "2022/2023",
+    "archiveCandidates": 1,
+    "archiveRound": "Round of 16",
+    "archiveTeams": [
+      "Brazil",
+      "South Korea"
+    ],
+    "archiveDate": "2022-12-05",
+    "scoreArchive": [
+      4,
+      1
+    ],
+    "scoreNative": [
+      4,
+      1
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2026",
+    "id": "m_0DBg6Y",
+    "teams": [
+      "Spain",
+      "Belgium"
+    ],
+    "nativeRound": "1/4",
+    "nativeDate": "2026-07-10",
+    "storedSeason": "2025/2026",
+    "archiveCandidates": 1,
+    "archiveRound": "Quarter-final",
+    "archiveTeams": [
+      "Spain",
+      "Belgium"
+    ],
+    "archiveDate": "2026-07-10",
+    "scoreArchive": [
+      2,
+      1
+    ],
+    "scoreNative": [
+      2,
+      1
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2026",
+    "id": "m_0Dthfd",
+    "teams": [
+      "Portugal",
+      "Spain"
+    ],
+    "nativeRound": "1/8",
+    "nativeDate": "2026-07-06",
+    "storedSeason": "2025/2026",
+    "archiveCandidates": 1,
+    "archiveRound": "Round of 16",
+    "archiveTeams": [
+      "Portugal",
+      "Spain"
+    ],
+    "archiveDate": "2026-07-06",
+    "scoreArchive": [
+      0,
+      1
+    ],
+    "scoreNative": [
+      0,
+      1
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2026",
+    "id": "m_0J13jm",
+    "teams": [
+      "Belgium",
+      "Senegal"
+    ],
+    "nativeRound": "1/16",
+    "nativeDate": "2026-07-01",
+    "storedSeason": "2025/2026",
+    "archiveCandidates": 1,
+    "archiveRound": "Round of 32",
+    "archiveTeams": [
+      "Belgium",
+      "Senegal"
+    ],
+    "archiveDate": "2026-07-01",
+    "scoreArchive": [
+      3,
+      2
+    ],
+    "scoreNative": [
+      3,
+      2
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2026",
+    "id": "m_0PEIWr",
+    "teams": [
+      "USA",
+      "Belgium"
+    ],
+    "nativeRound": "1/8",
+    "nativeDate": "2026-07-07",
+    "storedSeason": "2025/2026",
+    "archiveCandidates": 1,
+    "archiveRound": "Round of 16",
+    "archiveTeams": [
+      "USA",
+      "Belgium"
+    ],
+    "archiveDate": "2026-07-06",
+    "scoreArchive": [
+      1,
+      4
+    ],
+    "scoreNative": [
+      1,
+      4
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2026",
+    "id": "m_0RTpjv",
+    "teams": [
+      "Brazil",
+      "Norway"
+    ],
+    "nativeRound": "1/8",
+    "nativeDate": "2026-07-05",
+    "storedSeason": "2025/2026",
+    "archiveCandidates": 1,
+    "archiveRound": "Round of 16",
+    "archiveTeams": [
+      "Brazil",
+      "Norway"
+    ],
+    "archiveDate": "2026-07-05",
+    "scoreArchive": [
+      1,
+      2
+    ],
+    "scoreNative": [
+      1,
+      2
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2026",
+    "id": "m_0f5pg5",
+    "teams": [
+      "Australia",
+      "Egypt"
+    ],
+    "nativeRound": "1/16",
+    "nativeDate": "2026-07-03",
+    "storedSeason": "2025/2026",
+    "archiveCandidates": 1,
+    "archiveRound": "Round of 32",
+    "archiveTeams": [
+      "Australia",
+      "Egypt"
+    ],
+    "archiveDate": "2026-07-03",
+    "scoreArchive": [
+      1,
+      1
+    ],
+    "scoreNative": [
+      1,
+      1
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2026",
+    "id": "m_0fciVz",
+    "teams": [
+      "Netherlands",
+      "Morocco"
+    ],
+    "nativeRound": "1/16",
+    "nativeDate": "2026-06-30",
+    "storedSeason": "2025/2026",
+    "archiveCandidates": 1,
+    "archiveRound": "Round of 32",
+    "archiveTeams": [
+      "Netherlands",
+      "Morocco"
+    ],
+    "archiveDate": "2026-06-29",
+    "scoreArchive": [
+      1,
+      1
+    ],
+    "scoreNative": [
+      1,
+      1
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2026",
+    "id": "m_0m2DGk",
+    "teams": [
+      "Argentina",
+      "Switzerland"
+    ],
+    "nativeRound": "1/4",
+    "nativeDate": "2026-07-12",
+    "storedSeason": "2025/2026",
+    "archiveCandidates": 1,
+    "archiveRound": "Quarter-final",
+    "archiveTeams": [
+      "Argentina",
+      "Switzerland"
+    ],
+    "archiveDate": "2026-07-11",
+    "scoreArchive": [
+      3,
+      1
+    ],
+    "scoreNative": [
+      3,
+      1
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2026",
+    "id": "m_0oQfLU",
+    "teams": [
+      "Mexico",
+      "Ecuador"
+    ],
+    "nativeRound": "1/16",
+    "nativeDate": "2026-07-01",
+    "storedSeason": "2025/2026",
+    "archiveCandidates": 1,
+    "archiveRound": "Round of 32",
+    "archiveTeams": [
+      "Mexico",
+      "Ecuador"
+    ],
+    "archiveDate": "2026-06-30",
+    "scoreArchive": [
+      2,
+      0
+    ],
+    "scoreNative": [
+      2,
+      0
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2026",
+    "id": "m_1HdHEO",
+    "teams": [
+      "France",
+      "England"
+    ],
+    "nativeRound": "bronze",
+    "nativeDate": "2026-07-18",
+    "storedSeason": "2025/2026",
+    "archiveCandidates": 1,
+    "archiveRound": "Match for third place",
+    "archiveTeams": [
+      "France",
+      "England"
+    ],
+    "archiveDate": "2026-07-18",
+    "scoreArchive": [
+      4,
+      6
+    ],
+    "scoreNative": [
+      4,
+      6
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2026",
+    "id": "m_1lt1aI",
+    "teams": [
+      "Portugal",
+      "Croatia"
+    ],
+    "nativeRound": "1/16",
+    "nativeDate": "2026-07-02",
+    "storedSeason": "2025/2026",
+    "archiveCandidates": 1,
+    "archiveRound": "Round of 32",
+    "archiveTeams": [
+      "Portugal",
+      "Croatia"
+    ],
+    "archiveDate": "2026-07-02",
+    "scoreArchive": [
+      2,
+      1
+    ],
+    "scoreNative": [
+      2,
+      1
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2026",
+    "id": "m_1qNuxA",
+    "teams": [
+      "Brazil",
+      "Japan"
+    ],
+    "nativeRound": "1/16",
+    "nativeDate": "2026-06-29",
+    "storedSeason": "2025/2026",
+    "archiveCandidates": 1,
+    "archiveRound": "Round of 32",
+    "archiveTeams": [
+      "Brazil",
+      "Japan"
+    ],
+    "archiveDate": "2026-06-29",
+    "scoreArchive": [
+      2,
+      1
+    ],
+    "scoreNative": [
+      2,
+      1
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2026",
+    "id": "m_1rSmsZ",
+    "teams": [
+      "USA",
+      "Bosnia and Herzegovina"
+    ],
+    "nativeRound": "1/16",
+    "nativeDate": "2026-07-02",
+    "storedSeason": "2025/2026",
+    "archiveCandidates": 1,
+    "archiveRound": "Round of 32",
+    "archiveTeams": [
+      "USA",
+      "Bosnia & Herzegovina"
+    ],
+    "archiveDate": "2026-07-01",
+    "scoreArchive": [
+      2,
+      0
+    ],
+    "scoreNative": [
+      2,
+      0
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2026",
+    "id": "m_1xtPOF",
+    "teams": [
+      "Ivory Coast",
+      "Norway"
+    ],
+    "nativeRound": "1/16",
+    "nativeDate": "2026-06-30",
+    "storedSeason": "2025/2026",
+    "archiveCandidates": 1,
+    "archiveRound": "Round of 32",
+    "archiveTeams": [
+      "Ivory Coast",
+      "Norway"
+    ],
+    "archiveDate": "2026-06-30",
+    "scoreArchive": [
+      1,
+      2
+    ],
+    "scoreNative": [
+      1,
+      2
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2026",
+    "id": "m_1xxsQV",
+    "teams": [
+      "England",
+      "DR Congo"
+    ],
+    "nativeRound": "1/16",
+    "nativeDate": "2026-07-01",
+    "storedSeason": "2025/2026",
+    "archiveCandidates": 1,
+    "archiveRound": "Round of 32",
+    "archiveTeams": [
+      "England",
+      "DR Congo"
+    ],
+    "archiveDate": "2026-07-01",
+    "scoreArchive": [
+      2,
+      1
+    ],
+    "scoreNative": [
+      2,
+      1
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2026",
+    "id": "m_2VuZCM",
+    "teams": [
+      "Switzerland",
+      "Algeria"
+    ],
+    "nativeRound": "1/16",
+    "nativeDate": "2026-07-03",
+    "storedSeason": "2025/2026",
+    "archiveCandidates": 1,
+    "archiveRound": "Round of 32",
+    "archiveTeams": [
+      "Switzerland",
+      "Algeria"
+    ],
+    "archiveDate": "2026-07-02",
+    "scoreArchive": [
+      2,
+      0
+    ],
+    "scoreNative": [
+      2,
+      0
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2026",
+    "id": "m_2czpX5",
+    "teams": [
+      "Argentina",
+      "Cape Verde"
+    ],
+    "nativeRound": "1/16",
+    "nativeDate": "2026-07-03",
+    "storedSeason": "2025/2026",
+    "archiveCandidates": 1,
+    "archiveRound": "Round of 32",
+    "archiveTeams": [
+      "Argentina",
+      "Cape Verde"
+    ],
+    "archiveDate": "2026-07-03",
+    "scoreArchive": [
+      3,
+      2
+    ],
+    "scoreNative": [
+      3,
+      2
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2026",
+    "id": "m_2mrXnW",
+    "teams": [
+      "South Africa",
+      "Canada"
+    ],
+    "nativeRound": "1/16",
+    "nativeDate": "2026-06-28",
+    "storedSeason": "2025/2026",
+    "archiveCandidates": 1,
+    "archiveRound": "Round of 32",
+    "archiveTeams": [
+      "South Africa",
+      "Canada"
+    ],
+    "archiveDate": "2026-06-28",
+    "scoreArchive": [
+      0,
+      1
+    ],
+    "scoreNative": [
+      0,
+      1
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2026",
+    "id": "m_3GzuWx",
+    "teams": [
+      "Paraguay",
+      "France"
+    ],
+    "nativeRound": "1/8",
+    "nativeDate": "2026-07-04",
+    "storedSeason": "2025/2026",
+    "archiveCandidates": 1,
+    "archiveRound": "Round of 16",
+    "archiveTeams": [
+      "Paraguay",
+      "France"
+    ],
+    "archiveDate": "2026-07-04",
+    "scoreArchive": [
+      0,
+      1
+    ],
+    "scoreNative": [
+      0,
+      1
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2026",
+    "id": "m_3XzXJy",
+    "teams": [
+      "Mexico",
+      "England"
+    ],
+    "nativeRound": "1/8",
+    "nativeDate": "2026-07-06",
+    "storedSeason": "2025/2026",
+    "archiveCandidates": 1,
+    "archiveRound": "Round of 16",
+    "archiveTeams": [
+      "Mexico",
+      "England"
+    ],
+    "archiveDate": "2026-07-05",
+    "scoreArchive": [
+      2,
+      3
+    ],
+    "scoreNative": [
+      2,
+      3
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2026",
+    "id": "m_3aJ50c",
+    "teams": [
+      "France",
+      "Morocco"
+    ],
+    "nativeRound": "1/4",
+    "nativeDate": "2026-07-09",
+    "storedSeason": "2025/2026",
+    "archiveCandidates": 1,
+    "archiveRound": "Quarter-final",
+    "archiveTeams": [
+      "France",
+      "Morocco"
+    ],
+    "archiveDate": "2026-07-09",
+    "scoreArchive": [
+      2,
+      0
+    ],
+    "scoreNative": [
+      2,
+      0
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2026",
+    "id": "m_3c4ocm",
+    "teams": [
+      "Argentina",
+      "Egypt"
+    ],
+    "nativeRound": "1/8",
+    "nativeDate": "2026-07-07",
+    "storedSeason": "2025/2026",
+    "archiveCandidates": 1,
+    "archiveRound": "Round of 16",
+    "archiveTeams": [
+      "Argentina",
+      "Egypt"
+    ],
+    "archiveDate": "2026-07-07",
+    "scoreArchive": [
+      3,
+      2
+    ],
+    "scoreNative": [
+      3,
+      2
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2026",
+    "id": "m_3thNDD",
+    "teams": [
+      "Germany",
+      "Paraguay"
+    ],
+    "nativeRound": "1/16",
+    "nativeDate": "2026-06-29",
+    "storedSeason": "2025/2026",
+    "archiveCandidates": 1,
+    "archiveRound": "Round of 32",
+    "archiveTeams": [
+      "Germany",
+      "Paraguay"
+    ],
+    "archiveDate": "2026-06-29",
+    "scoreArchive": [
+      1,
+      1
+    ],
+    "scoreNative": [
+      1,
+      1
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2026",
+    "id": "m_3uGyGd",
+    "teams": [
+      "Spain",
+      "Argentina"
+    ],
+    "nativeRound": "final",
+    "nativeDate": "2026-07-19",
+    "storedSeason": "2025/2026",
+    "archiveCandidates": 1,
+    "archiveRound": "Final",
+    "archiveTeams": [
+      "Spain",
+      "Argentina"
+    ],
+    "archiveDate": "2026-07-19",
+    "scoreArchive": [
+      1,
+      0
+    ],
+    "scoreNative": [
+      1,
+      0
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2026",
+    "id": "m_3vZOaK",
+    "teams": [
+      "France",
+      "Sweden"
+    ],
+    "nativeRound": "1/16",
+    "nativeDate": "2026-06-30",
+    "storedSeason": "2025/2026",
+    "archiveCandidates": 1,
+    "archiveRound": "Round of 32",
+    "archiveTeams": [
+      "France",
+      "Sweden"
+    ],
+    "archiveDate": "2026-06-30",
+    "scoreArchive": [
+      3,
+      0
+    ],
+    "scoreNative": [
+      3,
+      0
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2026",
+    "id": "m_45LlfC",
+    "teams": [
+      "Norway",
+      "England"
+    ],
+    "nativeRound": "1/4",
+    "nativeDate": "2026-07-11",
+    "storedSeason": "2025/2026",
+    "archiveCandidates": 1,
+    "archiveRound": "Quarter-final",
+    "archiveTeams": [
+      "Norway",
+      "England"
+    ],
+    "archiveDate": "2026-07-11",
+    "scoreArchive": [
+      1,
+      2
+    ],
+    "scoreNative": [
+      1,
+      2
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2026",
+    "id": "m_47SyVJ",
+    "teams": [
+      "England",
+      "Argentina"
+    ],
+    "nativeRound": "1/2",
+    "nativeDate": "2026-07-15",
+    "storedSeason": "2025/2026",
+    "archiveCandidates": 1,
+    "archiveRound": "Semi-final",
+    "archiveTeams": [
+      "England",
+      "Argentina"
+    ],
+    "archiveDate": "2026-07-15",
+    "scoreArchive": [
+      1,
+      2
+    ],
+    "scoreNative": [
+      1,
+      2
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2026",
+    "id": "m_4AUNaL",
+    "teams": [
+      "Colombia",
+      "Ghana"
+    ],
+    "nativeRound": "1/16",
+    "nativeDate": "2026-07-04",
+    "storedSeason": "2025/2026",
+    "archiveCandidates": 1,
+    "archiveRound": "Round of 32",
+    "archiveTeams": [
+      "Colombia",
+      "Ghana"
+    ],
+    "archiveDate": "2026-07-03",
+    "scoreArchive": [
+      1,
+      0
+    ],
+    "scoreNative": [
+      1,
+      0
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2026",
+    "id": "m_4CkSCY",
+    "teams": [
+      "Switzerland",
+      "Colombia"
+    ],
+    "nativeRound": "1/8",
+    "nativeDate": "2026-07-07",
+    "storedSeason": "2025/2026",
+    "archiveCandidates": 1,
+    "archiveRound": "Round of 16",
+    "archiveTeams": [
+      "Switzerland",
+      "Colombia"
+    ],
+    "archiveDate": "2026-07-07",
+    "scoreArchive": [
+      0,
+      0
+    ],
+    "scoreNative": [
+      0,
+      0
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2026",
+    "id": "m_4GJI8b",
+    "teams": [
+      "Spain",
+      "Austria"
+    ],
+    "nativeRound": "1/16",
+    "nativeDate": "2026-07-02",
+    "storedSeason": "2025/2026",
+    "archiveCandidates": 1,
+    "archiveRound": "Round of 32",
+    "archiveTeams": [
+      "Spain",
+      "Austria"
+    ],
+    "archiveDate": "2026-07-02",
+    "scoreArchive": [
+      3,
+      0
+    ],
+    "scoreNative": [
+      3,
+      0
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2026",
+    "id": "m_4PzyUM",
+    "teams": [
+      "Canada",
+      "Morocco"
+    ],
+    "nativeRound": "1/8",
+    "nativeDate": "2026-07-04",
+    "storedSeason": "2025/2026",
+    "archiveCandidates": 1,
+    "archiveRound": "Round of 16",
+    "archiveTeams": [
+      "Canada",
+      "Morocco"
+    ],
+    "archiveDate": "2026-07-04",
+    "scoreArchive": [
+      0,
+      3
+    ],
+    "scoreNative": [
+      0,
+      3
+    ],
+    "scoresMatch": true,
+    "identity": true
+  },
+  {
+    "year": "2026",
+    "id": "m_4bTSL9",
+    "teams": [
+      "France",
+      "Spain"
+    ],
+    "nativeRound": "1/2",
+    "nativeDate": "2026-07-14",
+    "storedSeason": "2025/2026",
+    "archiveCandidates": 1,
+    "archiveRound": "Semi-final",
+    "archiveTeams": [
+      "France",
+      "Spain"
+    ],
+    "archiveDate": "2026-07-14",
+    "scoreArchive": [
+      0,
+      2
+    ],
+    "scoreNative": [
+      0,
+      2
+    ],
+    "scoresMatch": true,
+    "identity": true
+  }
+]

@@ -1,0 +1,58 @@
+{
+  "at": "2026-11-18T18:17:37.749022+00:00",
+  "region": "us-east-2",
+  "services": [
+    {
+      "service": "vega-v2-worker",
+      "definition": "vega-v2-worker:143",
+      "desired": 1,
+      "running": 1,
+      "containers": [
+        {
+          "name": "worker",
+          "secretRef": false,
+          "env": false,
+          "envFileCount": 0
+        }
+      ],
+      "runningOverrides": [
+        {
+          "status": "RUNNING",
+          "override": [
+            {
+              "name": "worker",
+              "keyName": false,
+              "overrideEnvFileCount": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "service": "vega-v2-backfill",
+      "definition": "vega-v2-backfill:143",
+      "desired": 1,
+      "running": 1,
+      "containers": [
+        {
+          "name": "backfill",
+          "secretRef": false,
+          "env": false,
+          "envFileCount": 0
+        }
+      ],
+      "runningOverrides": [
+        {
+          "status": "RUNNING",
+          "override": [
+            {
+              "name": "backfill",
+              "keyName": false,
+              "overrideEnvFileCount": 0
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

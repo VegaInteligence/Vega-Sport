@@ -1,0 +1,9 @@
+{
+  "zip": "rejeu-omd-preservation-champs.zip",
+  "bytes": 24636,
+  "sha256": "a1d9c304f229edf4b493b6ee00673f6993117c1f7cefb8786dd4dbac71500796",
+  "network_and_workspaces_denied": true,
+  "cmd": "python3 -B verifier.py",
+  "returncode": 0,
+  "result": "{\"status\": \"PASS\", \"files_checked\": 17, \"red_green_cases\": 7, \"concurrency_cases\": 2, \"restored_ids\": 35, \"elo_sides\": 70}"
+}

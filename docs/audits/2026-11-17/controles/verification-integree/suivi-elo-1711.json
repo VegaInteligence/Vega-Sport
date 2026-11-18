@@ -1,0 +1,453 @@
+{
+  "deltas": {
+    "ligue-nations": {
+      "editions": 1,
+      "expected_sides": 72,
+      "finished_delta": 36,
+      "invalid": 0,
+      "matched_copy": 0,
+      "missing": 72,
+      "recorded_delta": 36,
+      "stored_valid": 0,
+      "structurally_admissible": 72
+    },
+    "mondial-openfootball": {
+      "editions": 18,
+      "expected_sides": 1316,
+      "finished_delta": 665,
+      "invalid": 0,
+      "matched_copy": 14,
+      "missing": 1316,
+      "recorded_delta": 0,
+      "stored_valid": 0,
+      "structurally_admissible": 1330
+    }
+  },
+  "dirty_marks": [],
+  "elo_model_inputs_identical_through_followup": true,
+  "elo_runs_running_rows": [],
+  "latest_elo_publication": {
+    "finished_at": "2026-11-18 01:49:24.867474+00:00",
+    "id": 2097,
+    "kind": "elo",
+    "matches": 81923,
+    "method_version": "power-ranking-v8",
+    "started_at": "2026-11-18 01:48:53.370889+00:00",
+    "status": "published"
+  },
+  "nations": [
+    {
+      "expected_sides": 1864,
+      "invalid": 0,
+      "matched_copy": 324,
+      "missing": 0,
+      "stored_valid": 1864,
+      "structurally_admissible": 2188
+    },
+    {
+      "expected_sides": 3252,
+      "invalid": 0,
+      "matched_copy": 338,
+      "missing": 1388,
+      "stored_valid": 1864,
+      "structurally_admissible": 3590
+    },
+    {
+      "expected_sides": 3252,
+      "invalid": 0,
+      "matched_copy": 338,
+      "missing": 1388,
+      "stored_valid": 1864,
+      "structurally_admissible": 3590
+    }
+  ],
+  "native_trigger": [
+    {
+      "last_native_finished_change": null,
+      "native_finished": 0,
+      "native_last_levels_start": "2026-11-09 18:42:33.599889+00:00",
+      "native_recent": null,
+      "season_id": 1949
+    },
+    {
+      "last_native_finished_change": null,
+      "native_finished": 0,
+      "native_last_levels_start": "2026-11-09 18:43:03.611022+00:00",
+      "native_recent": null,
+      "season_id": 1953
+    },
+    {
+      "last_native_finished_change": null,
+      "native_finished": 0,
+      "native_last_levels_start": "2026-11-09 18:43:32.985327+00:00",
+      "native_recent": null,
+      "season_id": 1957
+    },
+    {
+      "last_native_finished_change": null,
+      "native_finished": 0,
+      "native_last_levels_start": "2026-11-09 18:44:01.984706+00:00",
+      "native_recent": null,
+      "season_id": 1961
+    },
+    {
+      "last_native_finished_change": null,
+      "native_finished": 0,
+      "native_last_levels_start": "2026-11-09 16:41:51.420665+00:00",
+      "native_recent": null,
+      "season_id": 1965
+    },
+    {
+      "last_native_finished_change": null,
+      "native_finished": 0,
+      "native_last_levels_start": "2026-11-09 16:43:02.897676+00:00",
+      "native_recent": null,
+      "season_id": 1969
+    },
+    {
+      "last_native_finished_change": null,
+      "native_finished": 0,
+      "native_last_levels_start": "2026-11-09 16:47:41.693651+00:00",
+      "native_recent": null,
+      "season_id": 1973
+    },
+    {
+      "last_native_finished_change": null,
+      "native_finished": 0,
+      "native_last_levels_start": "2026-11-09 16:48:54.306561+00:00",
+      "native_recent": null,
+      "season_id": 1977
+    },
+    {
+      "last_native_finished_change": null,
+      "native_finished": 0,
+      "native_last_levels_start": "2026-11-09 16:50:04.217082+00:00",
+      "native_recent": null,
+      "season_id": 1981
+    },
+    {
+      "last_native_finished_change": null,
+      "native_finished": 0,
+      "native_last_levels_start": "2026-11-09 16:51:56.368025+00:00",
+      "native_recent": null,
+      "season_id": 1985
+    },
+    {
+      "last_native_finished_change": null,
+      "native_finished": 0,
+      "native_last_levels_start": "2026-11-09 16:53:11.100250+00:00",
+      "native_recent": null,
+      "season_id": 1989
+    },
+    {
+      "last_native_finished_change": null,
+      "native_finished": 0,
+      "native_last_levels_start": "2026-11-09 16:56:19.735399+00:00",
+      "native_recent": null,
+      "season_id": 1993
+    },
+    {
+      "last_native_finished_change": null,
+      "native_finished": 0,
+      "native_last_levels_start": "2026-11-09 16:58:56.434397+00:00",
+      "native_recent": null,
+      "season_id": 1997
+    },
+    {
+      "last_native_finished_change": null,
+      "native_finished": 0,
+      "native_last_levels_start": "2026-11-09 17:02:26.404496+00:00",
+      "native_recent": null,
+      "season_id": 2001
+    },
+    {
+      "last_native_finished_change": null,
+      "native_finished": 0,
+      "native_last_levels_start": "2026-11-09 17:09:21.482189+00:00",
+      "native_recent": null,
+      "season_id": 2005
+    },
+    {
+      "last_native_finished_change": null,
+      "native_finished": 0,
+      "native_last_levels_start": "2026-11-09 19:48:50.726549+00:00",
+      "native_recent": null,
+      "season_id": 2009
+    },
+    {
+      "last_native_finished_change": null,
+      "native_finished": 0,
+      "native_last_levels_start": "2026-11-09 19:52:40.972627+00:00",
+      "native_recent": null,
+      "season_id": 2013
+    },
+    {
+      "last_native_finished_change": "2026-11-17 13:14:50.263670+00:00",
+      "native_finished": 8280,
+      "native_last_levels_start": "2026-11-17 17:06:41.201974+00:00",
+      "native_recent": false,
+      "season_id": 2022
+    },
+    {
+      "last_native_finished_change": "2026-11-18 00:37:51.842157+00:00",
+      "native_finished": 11627,
+      "native_last_levels_start": "2026-11-18 01:15:36.751135+00:00",
+      "native_recent": true,
+      "season_id": 2026
+    }
+  ],
+  "snapshots": [
+    {
+      "at": "2026-11-18 15:55:42.264282+00:00",
+      "database": "vega_v2",
+      "isolation": "repeatable read",
+      "read_only": "on",
+      "snapshot": "4443977:4443977:"
+    },
+    {
+      "at": "2026-11-18 17:05:26.592852+00:00",
+      "database": "vega_v2",
+      "isolation": "repeatable read",
+      "read_only": "on",
+      "snapshot": "4447537:4447537:"
+    },
+    {
+      "at": "2026-11-18 17:11:17.692724+00:00",
+      "database": "vega_v2",
+      "isolation": "repeatable read",
+      "read_only": "on",
+      "snapshot": "4447887:4447887:"
+    }
+  ],
+  "source_ingestion": [
+    {
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00",
+      "edition_id": 274,
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 22,
+      "scope": "open-cups:world-cup-history:1950",
+      "source": "openfootball",
+      "status": "ok"
+    },
+    {
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00",
+      "edition_id": 275,
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 26,
+      "scope": "open-cups:world-cup-history:1954",
+      "source": "openfootball",
+      "status": "ok"
+    },
+    {
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00",
+      "edition_id": 276,
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 35,
+      "scope": "open-cups:world-cup-history:1958",
+      "source": "openfootball",
+      "status": "ok"
+    },
+    {
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00",
+      "edition_id": 277,
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 32,
+      "scope": "open-cups:world-cup-history:1962",
+      "source": "openfootball",
+      "status": "ok"
+    },
+    {
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00",
+      "edition_id": 278,
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 32,
+      "scope": "open-cups:world-cup-history:1966",
+      "source": "openfootball",
+      "status": "ok"
+    },
+    {
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00",
+      "edition_id": 279,
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 32,
+      "scope": "open-cups:world-cup-history:1970",
+      "source": "openfootball",
+      "status": "ok"
+    },
+    {
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00",
+      "edition_id": 280,
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 38,
+      "scope": "open-cups:world-cup-history:1974",
+      "source": "openfootball",
+      "status": "ok"
+    },
+    {
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00",
+      "edition_id": 281,
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 38,
+      "scope": "open-cups:world-cup-history:1978",
+      "source": "openfootball",
+      "status": "ok"
+    },
+    {
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00",
+      "edition_id": 282,
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 52,
+      "scope": "open-cups:world-cup-history:1982",
+      "source": "openfootball",
+      "status": "ok"
+    },
+    {
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00",
+      "edition_id": 283,
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 52,
+      "scope": "open-cups:world-cup-history:1986",
+      "source": "openfootball",
+      "status": "ok"
+    },
+    {
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00",
+      "edition_id": 284,
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 52,
+      "scope": "open-cups:world-cup-history:1990",
+      "source": "openfootball",
+      "status": "ok"
+    },
+    {
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00",
+      "edition_id": 285,
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 52,
+      "scope": "open-cups:world-cup-history:1994",
+      "source": "openfootball",
+      "status": "ok"
+    },
+    {
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00",
+      "edition_id": 286,
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 64,
+      "scope": "open-cups:world-cup-history:1998",
+      "source": "openfootball",
+      "status": "ok"
+    },
+    {
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00",
+      "edition_id": 287,
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 64,
+      "scope": "open-cups:world-cup-history:2002",
+      "source": "openfootball",
+      "status": "ok"
+    },
+    {
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00",
+      "edition_id": 288,
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 64,
+      "scope": "open-cups:world-cup-history:2006",
+      "source": "openfootball",
+      "status": "ok"
+    },
+    {
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00",
+      "edition_id": 289,
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 64,
+      "scope": "open-cups:world-cup-history:2010",
+      "source": "openfootball",
+      "status": "ok"
+    },
+    {
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00",
+      "edition_id": 290,
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 64,
+      "scope": "open-cups:world-cup-history:2014",
+      "source": "openfootball",
+      "status": "ok"
+    },
+    {
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00",
+      "edition_id": 292,
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 64,
+      "scope": "open-cups:world-cup-history:2022",
+      "source": "openfootball",
+      "status": "ok"
+    },
+    {
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:57:48.805995+00:00",
+      "cup_updated_at": "2026-11-18 16:57:48.805995+00:00",
+      "edition_id": 308,
+      "last_attempt_at": "2026-11-18 16:57:48.805995+00:00",
+      "last_success_at": "2026-11-18 16:57:48.805995+00:00",
+      "rows_written": 108,
+      "scope": "nations-results:nations-league:2026/2027",
+      "source": "international_results",
+      "status": "ok"
+    }
+  ],
+  "visible_database_activity": []
+}

@@ -1,0 +1,9 @@
+{
+  "zip": "phases-manquantes.zip",
+  "bytes": 495671,
+  "sha256": "38e71160f80cd23e3a719d5aa2460f8c558f73690dca0435a17692807bc354c2",
+  "network_and_workspaces_denied": true,
+  "cmd": "python3 -B verifier.py",
+  "returncode": 0,
+  "result": "PASS — 4 scores officiels, 4 phases absentes, 4 tuiles fausses et 4 liens résultats"
+}

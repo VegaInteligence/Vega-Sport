@@ -1,0 +1,625 @@
+competition_id,entity_type,competition,editions,recorded_matches,finished,expected_algorithm,actual_valid,missing_from_storage,role_unavailable
+1,club,Serie A,6,2281,2011,4022,4022,0,
+1,national team,Serie A,6,2281,2011,0,0,0,
+1,player,Serie A,6,2281,2011,62849,62849,0,0
+10,club,Ligat ha'Al,3,662,546,1092,1092,0,
+10,national team,Ligat ha'Al,3,662,546,0,0,0,
+10,player,Ligat ha'Al,3,662,546,16902,16902,0,0
+101,club,National League,1,552,200,400,400,0,
+101,national team,National League,1,552,200,0,0,0,
+101,player,National League,1,552,200,0,0,0,0
+102,club,National League North,1,240,116,232,232,0,
+102,national team,National League North,1,240,116,0,0,0,
+102,player,National League North,1,240,116,0,0,0,0
+103,club,National League South,1,233,112,224,224,0,
+103,national team,National League South,1,233,112,0,0,0,
+103,player,National League South,1,233,112,0,0,0,0
+104,club,Northern Premier League,1,227,111,222,222,0,
+104,national team,Northern Premier League,1,227,111,0,0,0,
+104,player,Northern Premier League,1,227,111,0,0,0,0
+106,club,Scottish Championship,1,180,73,146,146,0,
+106,national team,Scottish Championship,1,180,73,0,0,0,
+106,player,Scottish Championship,1,180,73,0,0,0,0
+107,club,Scottish League One,1,180,74,148,148,0,
+107,national team,Scottish League One,1,180,74,0,0,0,
+107,player,Scottish League One,1,180,74,0,0,0,0
+108,club,Scottish League Two,1,180,70,140,140,0,
+108,national team,Scottish League Two,1,180,70,0,0,0,
+108,player,Scottish League Two,1,180,70,0,0,0,0
+11,club,1. Lig,3,1150,907,1814,1814,0,
+11,national team,1. Lig,3,1150,907,0,0,0,
+11,player,1. Lig,3,1150,907,27929,27929,0,0
+12,club,Bundesliga,6,1836,1610,3220,3220,0,
+12,national team,Bundesliga,6,1836,1610,0,0,0,
+12,player,Bundesliga,6,1836,1610,49988,49988,0,0
+123,club,League of Ireland First Division,1,106,106,212,212,0,
+123,national team,League of Ireland First Division,1,106,106,0,0,0,
+123,player,League of Ireland First Division,1,106,106,0,0,0,0
+124,club,League of Ireland National League,1,62,60,120,120,0,
+124,national team,League of Ireland National League,1,62,60,0,0,0,
+124,player,League of Ireland National League,1,62,60,0,0,0,0
+126,club,I Liga,1,223,106,212,212,0,
+126,national team,I Liga,1,223,106,0,0,0,
+126,player,I Liga,1,223,106,0,0,0,0
+127,club,II Liga,1,216,105,210,210,0,
+127,national team,II Liga,1,216,105,0,0,0,
+127,player,II Liga,1,216,105,0,0,0,0
+128,club,Pro League U21,1,110,43,86,86,0,
+128,national team,Pro League U21,1,110,43,0,0,0,
+128,player,Pro League U21,1,110,43,0,0,0,0
+129,club,Cymru Premier,1,218,105,210,210,0,
+129,national team,Cymru Premier,1,218,105,0,0,0,
+129,player,Cymru Premier,1,218,105,0,0,0,0
+13,club,Premiership,6,1337,1214,2428,2428,0,
+13,national team,Premiership,6,1337,1214,0,0,0,
+13,player,Premiership,6,1337,1214,36323,36213,110,28
+130,club,Cymru North,1,213,106,212,212,0,
+130,national team,Cymru North,1,213,106,0,0,0,
+130,player,Cymru North,1,213,106,0,0,0,0
+131,club,Cymru South,1,207,99,198,198,0,
+131,national team,Cymru South,1,207,99,0,0,0,
+131,player,Cymru South,1,207,99,0,0,0,0
+134,club,Ukrainian Premier League,1,205,90,180,180,0,
+134,national team,Ukrainian Premier League,1,205,90,0,0,0,
+134,player,Ukrainian Premier League,1,205,90,0,0,0,0
+135,club,Cyprus League,1,175,63,126,126,0,
+135,national team,Cyprus League,1,175,63,0,0,0,
+135,player,Cyprus League,1,175,63,0,0,0,0
+137,club,Prva Liga,1,180,74,148,148,0,
+137,national team,Prva Liga,1,180,74,0,0,0,
+137,player,Prva Liga,1,180,74,0,0,0,0
+139,club,Kazakhstan Premier League,1,107,107,214,214,0,
+139,national team,Kazakhstan Premier League,1,107,107,0,0,0,
+139,player,Kazakhstan Premier League,1,107,107,0,0,0,0
+14,club,Primera Division,3,700,694,1388,1388,0,
+14,national team,Primera Division,3,700,694,0,0,0,
+14,player,Primera Division,3,700,694,21646,21646,0,0
+144,club,DFB Pokal 2019/20,3,189,189,0,0,0,
+144,national team,DFB Pokal 2019/20,3,189,189,0,0,0,
+144,player,DFB Pokal 2019/20,3,189,189,0,0,0,0
+145,club,Deutsche 2. Bundesliga 2019/20,9,2754,2754,0,0,0,
+145,national team,Deutsche 2. Bundesliga 2019/20,9,2754,2754,0,0,0,
+145,player,Deutsche 2. Bundesliga 2019/20,9,2754,2754,0,0,0,0
+146,club,Deutsche 3. Liga 2019/20,7,2660,2660,0,0,0,
+146,national team,Deutsche 3. Liga 2019/20,7,2660,2660,0,0,0,
+146,player,Deutsche 3. Liga 2019/20,7,2660,2660,0,0,0,0
+147,club,Deutsche Bundesliga 2019/20,11,3366,3366,0,0,0,
+147,national team,Deutsche Bundesliga 2019/20,11,3366,3366,0,0,0,
+147,player,Deutsche Bundesliga 2019/20,11,3366,3366,0,0,0,0
+148,club,English Championship 2019/20,9,4968,4968,0,0,0,
+148,national team,English Championship 2019/20,9,4968,4968,0,0,0,
+148,player,English Championship 2019/20,9,4968,4968,0,0,0,0
+149,club,English League One 2019/20,9,4922,4922,0,0,0,
+149,national team,English League One 2019/20,9,4922,4922,0,0,0,
+149,player,English League One 2019/20,9,4922,4922,0,0,0,0
+15,club,Allsvenskan,6,1396,1380,2760,2760,0,
+15,national team,Allsvenskan,6,1396,1380,0,0,0,
+15,player,Allsvenskan,6,1396,1380,41562,38706,2856,28
+150,club,English League Two 2019/20,9,4968,4968,0,0,0,
+150,national team,English League Two 2019/20,9,4968,4968,0,0,0,
+150,player,English League Two 2019/20,9,4968,4968,0,0,0,0
+151,club,English Premier League 2019/20,11,4244,4244,0,0,0,
+151,national team,English Premier League 2019/20,11,4244,4244,0,0,0,
+151,player,English Premier League 2019/20,11,4244,4244,0,0,0,0
+152,club,ÖFB Cup 2019/20,3,188,188,0,0,0,
+152,national team,ÖFB Cup 2019/20,3,188,188,0,0,0,
+152,player,ÖFB Cup 2019/20,3,188,188,0,0,0,0
+153,club,Österr. 2. Liga 2019/20,11,2160,2160,0,0,0,
+153,national team,Österr. 2. Liga 2019/20,11,2160,2160,0,0,0,
+153,player,Österr. 2. Liga 2019/20,11,2160,2160,0,0,0,0
+154,club,Österr. Bundesliga 2019/20,11,2037,2037,0,0,0,
+154,national team,Österr. Bundesliga 2019/20,11,2037,2037,0,0,0,
+154,player,Österr. Bundesliga 2019/20,11,2037,2037,0,0,0,0
+155,club,Belgium First Division A 2019/20,3,840,840,0,0,0,
+155,national team,Belgium First Division A 2019/20,3,840,840,0,0,0,
+155,player,Belgium First Division A 2019/20,3,840,840,0,0,0,0
+156,club,Primera División de España 2019/20,9,3420,3420,0,0,0,
+156,national team,Primera División de España 2019/20,9,3420,3420,0,0,0,
+156,player,Primera División de España 2019/20,9,3420,3420,0,0,0,0
+157,club,Segunda División de España 2019/20,9,4158,4158,0,0,0,
+157,national team,Segunda División de España 2019/20,9,4158,4158,0,0,0,
+157,player,Segunda División de España 2019/20,9,4158,4158,0,0,0,0
+158,club,UEFA Champions League 2019/20,9,1237,1237,0,0,0,
+158,national team,UEFA Champions League 2019/20,9,1237,1237,0,0,0,
+158,player,UEFA Champions League 2019/20,9,1237,1237,0,0,0,0
+159,club,French Ligue 1 2019/20,7,2660,2660,0,0,0,
+159,national team,French Ligue 1 2019/20,7,2660,2660,0,0,0,
+159,player,French Ligue 1 2019/20,7,2660,2660,0,0,0,0
+16,club,Serie A,3,866,840,1680,1680,0,
+16,national team,Serie A,3,866,840,0,0,0,
+16,player,Serie A,3,866,840,26074,26074,0,0
+160,club,French Ligue 2 2019/20,7,2660,2660,0,0,0,
+160,national team,French Ligue 2 2019/20,7,2660,2660,0,0,0,
+160,player,French Ligue 2 2019/20,7,2660,2660,0,0,0,0
+161,club,Greek Super League 2019/20,3,720,720,0,0,0,
+161,national team,Greek Super League 2019/20,3,720,720,0,0,0,
+161,player,Greek Super League 2019/20,3,720,720,0,0,0,0
+162,club,Italian Serie A 2019/20,8,3040,3040,0,0,0,
+162,national team,Italian Serie A 2019/20,8,3040,3040,0,0,0,
+162,player,Italian Serie A 2019/20,8,3040,3040,0,0,0,0
+163,club,Italian Serie B 2019/20,8,3488,3488,0,0,0,
+163,national team,Italian Serie B 2019/20,8,3488,3488,0,0,0,
+163,player,Italian Serie B 2019/20,8,3488,3488,0,0,0,0
+164,club,Netherlands Eredivisie 2019/20,3,918,918,0,0,0,
+164,national team,Netherlands Eredivisie 2019/20,3,918,918,0,0,0,
+164,player,Netherlands Eredivisie 2019/20,3,918,918,0,0,0,0
+165,club,Portuguese Primeira Liga 2019/20,3,918,918,0,0,0,
+165,national team,Portuguese Primeira Liga 2019/20,3,918,918,0,0,0,
+165,player,Portuguese Primeira Liga 2019/20,3,918,918,0,0,0,0
+166,club,Russia 1. Division 2019/20,1,240,240,0,0,0,
+166,national team,Russia 1. Division 2019/20,1,240,240,0,0,0,
+166,player,Russia 1. Division 2019/20,1,240,240,0,0,0,0
+167,club,Russia Premier League 2019/20,3,720,720,0,0,0,
+167,national team,Russia Premier League 2019/20,3,720,720,0,0,0,
+167,player,Russia Premier League 2019/20,3,720,720,0,0,0,0
+168,club,Swiss Challenge League 2019/20,2,360,360,0,0,0,
+168,national team,Swiss Challenge League 2019/20,2,360,360,0,0,0,
+168,player,Swiss Challenge League 2019/20,2,360,360,0,0,0,0
+169,club,Swiss Super League 2019/20,4,720,720,0,0,0,
+169,national team,Swiss Super League 2019/20,4,720,720,0,0,0,
+169,player,Swiss Super League 2019/20,4,720,720,0,0,0,0
+17,club,Challenger Pro League,2,487,347,694,694,0,
+17,national team,Challenger Pro League,2,487,347,0,0,0,
+17,player,Challenger Pro League,2,487,347,10479,10479,0,0
+170,club,Turkish 1. Lig 2019/20,1,311,311,0,0,0,
+170,national team,Turkish 1. Lig 2019/20,1,311,311,0,0,0,
+170,player,Turkish 1. Lig 2019/20,1,311,311,0,0,0,0
+171,club,Turkish Süper Lig 2019/20,3,1032,1032,0,0,0,
+171,national team,Turkish Süper Lig 2019/20,3,1032,1032,0,0,0,
+171,player,Turkish Süper Lig 2019/20,3,1032,1032,0,0,0,0
+172,club,Scottish Premiership 2019/20,3,594,594,0,0,0,
+172,national team,Scottish Premiership 2019/20,3,594,594,0,0,0,
+172,player,Scottish Premiership 2019/20,3,594,594,0,0,0,0
+173,club,Écosse · Division 2,27,4772,4772,0,0,0,
+173,national team,Écosse · Division 2,27,4772,4772,0,0,0,
+173,player,Écosse · Division 2,27,4772,4772,0,0,0,0
+174,club,Écosse · Division 3,24,4209,4209,0,0,0,
+174,national team,Écosse · Division 3,24,4209,4209,0,0,0,
+174,player,Écosse · Division 3,24,4209,4209,0,0,0,0
+175,club,Écosse · Division 4,24,4207,4207,0,0,0,
+175,national team,Écosse · Division 4,24,4207,4207,0,0,0,
+175,player,Écosse · Division 4,24,4207,4207,0,0,0,0
+176,club,Coupe de la Ligue,6,509,509,0,0,0,
+176,national team,Coupe de la Ligue,6,509,509,0,0,0,
+176,player,Coupe de la Ligue,6,509,509,0,0,0,0
+177,club,FA Cup,6,723,723,0,0,0,
+177,national team,FA Cup,6,723,723,0,0,0,
+177,player,FA Cup,6,723,723,0,0,0,0
+178,club,Coupe du Roi,25,2059,2059,0,0,0,
+178,national team,Coupe du Roi,25,2059,2059,0,0,0,
+178,player,Coupe du Roi,25,2059,2059,0,0,0,0
+179,club,Ligue Europa,12,2285,2285,0,0,0,
+179,national team,Ligue Europa,12,2285,2285,0,0,0,
+179,player,Ligue Europa,12,2285,2285,0,0,0,0
+18,club,Primera A,3,1285,1273,2546,2546,0,
+18,national team,Primera A,3,1285,1273,0,0,0,
+18,player,Primera A,3,1285,1273,39521,39521,0,0
+180,club,Coupe de France,29,2154,2154,0,0,0,
+180,national team,Coupe de France,29,2154,2154,0,0,0,
+180,player,Coupe de France,29,2154,2154,0,0,0,0
+181,club,Eliteserien 2019,21,4261,4261,0,0,0,
+181,national team,Eliteserien 2019,21,4261,4261,0,0,0,
+181,player,Eliteserien 2019,21,4261,4261,0,0,0,0
+182,club,Ekstraklasa,31,7162,7162,0,0,0,
+182,national team,Ekstraklasa,31,7162,7162,0,0,0,
+182,player,Ekstraklasa,31,7162,7162,0,0,0,0
+183,club,Première division,22,4927,4927,0,0,0,
+183,national team,Première division,22,4927,4927,0,0,0,
+183,player,Première division,22,4927,4927,0,0,0,0
+184,club,Besta deild,3,481,478,956,956,0,
+184,national team,Besta deild,3,481,478,0,0,0,
+184,player,Besta deild,3,481,478,14284,14284,0,0
+185,club,Champions League,6,897,825,1650,1650,0,
+185,national team,Champions League,6,897,825,0,0,0,
+185,player,Champions League,6,897,825,25379,25379,0,0
+186,club,Championship,6,3340,2963,5926,5926,0,
+186,national team,Championship,6,3340,2963,0,0,0,
+186,player,Championship,6,3340,2963,88260,88260,0,3
+187,club,Conference League,6,833,779,1558,1558,0,
+187,national team,Conference League,6,833,779,0,0,0,
+187,player,Conference League,6,833,779,23896,23896,0,3
+188,club,Europa League,6,943,871,1742,1742,0,
+188,national team,Europa League,6,943,871,0,0,0,
+188,player,Europa League,6,943,871,26943,26943,0,3
+189,club,Indian Super League,6,698,647,1294,1294,0,
+189,national team,Indian Super League,6,698,647,0,0,0,
+189,player,Indian Super League,6,698,647,19630,19630,0,3
+19,club,Super League,3,720,720,1440,1440,0,
+19,national team,Super League,3,720,720,0,0,0,
+19,player,Super League,3,720,720,22132,22132,0,0
+190,club,Ligue 2,2,603,402,804,804,0,
+190,national team,Ligue 2,2,603,402,0,0,0,
+190,player,Ligue 2,2,603,402,12441,12441,0,1
+191,club,Paulista A1,3,280,280,560,560,0,
+191,national team,Paulista A1,3,280,280,0,0,0,
+191,player,Paulista A1,3,280,280,8872,8872,0,0
+192,club,Premier Division,3,539,539,1078,1078,0,
+192,national team,Premier Division,3,539,539,0,0,0,
+192,player,Premier Division,3,539,539,16211,16211,0,0
+193,club,Premier League,2,512,402,804,804,0,
+193,national team,Premier League,2,512,402,0,0,0,
+193,player,Premier League,2,512,402,12594,12594,0,18
+194,club,Premier League,3,351,350,700,700,0,
+194,national team,Premier League,3,351,350,0,0,0,
+194,player,Premier League,3,351,350,10829,10829,0,0
+195,club,Premier Soccer League,2,420,253,506,506,0,
+195,national team,Premier Soccer League,2,420,253,0,0,0,
+195,player,Premier Soccer League,2,420,253,7669,7669,0,14
+196,club,Saudi Pro League,5,1421,1020,2040,2040,0,
+196,national team,Saudi Pro League,5,1421,1020,0,0,0,
+196,player,Saudi Pro League,5,1421,1020,30455,30455,0,159
+197,club,Women's Premier League,3,202,154,308,308,0,
+197,national team,Women's Premier League,3,202,154,0,0,0,
+197,player,Women's Premier League,3,202,154,4118,4118,0,0
+198,club,World Cup,2,168,168,0,0,0,
+198,national team,World Cup,2,168,168,336,336,0,
+198,player,World Cup,2,168,168,5283,5283,0,0
+199,club,FA Cup,138,17149,16808,0,0,0,
+199,national team,FA Cup,138,17149,16808,0,0,0,
+199,player,FA Cup,138,17149,16808,0,0,0,0
+2,club,LaLiga,6,2279,2018,4036,4036,0,
+2,national team,LaLiga,6,2279,2018,0,0,0,
+2,player,LaLiga,6,2279,2018,63024,63024,0,0
+20,club,Ekstraklasa,2,612,430,860,860,0,
+20,national team,Ekstraklasa,2,612,430,0,0,0,
+20,player,Ekstraklasa,2,612,430,13350,13350,0,0
+200,club,Angleterre · Division 1,93,38164,38164,0,0,0,
+200,national team,Angleterre · Division 1,93,38164,38164,0,0,0,
+200,player,Angleterre · Division 1,93,38164,38164,0,0,0,0
+201,club,Championnat d’Écosse · Division 1,97,26119,26119,0,0,0,
+201,national team,Championnat d’Écosse · Division 1,97,26119,26119,0,0,0,
+201,player,Championnat d’Écosse · Division 1,97,26119,26119,0,0,0,0
+202,club,Angleterre · Division 2,89,38140,38140,0,0,0,
+202,national team,Angleterre · Division 2,89,38140,38140,0,0,0,
+202,player,Angleterre · Division 2,89,38140,38140,0,0,0,0
+203,club,Angleterre · Division 3,35,19230,19230,0,0,0,
+203,national team,Angleterre · Division 3,35,19230,19230,0,0,0,
+203,player,Angleterre · Division 3,35,19230,19230,0,0,0,0
+204,club,Angleterre · Division 3 Nord,30,14386,14386,0,0,0,
+204,national team,Angleterre · Division 3 Nord,30,14386,14386,0,0,0,
+204,player,Angleterre · Division 3 Nord,30,14386,14386,0,0,0,0
+205,club,Angleterre · Division 3 Sud,30,14580,14580,0,0,0,
+205,national team,Angleterre · Division 3 Sud,30,14580,14580,0,0,0,
+205,player,Angleterre · Division 3 Sud,30,14580,14580,0,0,0,0
+206,club,Championnat d’Espagne · Division 1,81,22395,22395,0,0,0,
+206,national team,Championnat d’Espagne · Division 1,81,22395,22395,0,0,0,
+206,player,Championnat d’Espagne · Division 1,81,22395,22395,0,0,0,0
+207,club,Championnat d’Italie · Division 1,82,24281,24281,0,0,0,
+207,national team,Championnat d’Italie · Division 1,82,24281,24281,0,0,0,
+207,player,Championnat d’Italie · Division 1,82,24281,24281,0,0,0,0
+208,club,Championnat de France · Division 1,74,25627,25627,0,0,0,
+208,national team,Championnat de France · Division 1,74,25627,25627,0,0,0,
+208,player,Championnat de France · Division 1,74,25627,25627,0,0,0,0
+209,club,Coupe d’Europe des clubs champions,55,5575,5575,0,0,0,
+209,national team,Coupe d’Europe des clubs champions,55,5575,5575,0,0,0,
+209,player,Coupe d’Europe des clubs champions,55,5575,5575,0,0,0,0
+21,club,K League 2,3,783,767,1534,1534,0,
+21,national team,K League 2,3,783,767,0,0,0,
+21,player,K League 2,3,783,767,24095,24095,0,0
+210,club,Eredivisie,62,18708,18708,0,0,0,
+210,national team,Eredivisie,62,18708,18708,0,0,0,
+210,player,Eredivisie,62,18708,18708,0,0,0,0
+211,club,Angleterre · Division 4,34,18664,18664,0,0,0,
+211,national team,Angleterre · Division 4,34,18664,18664,0,0,0,
+211,player,Angleterre · Division 4,34,18664,18664,0,0,0,0
+212,club,Coupe de la Ligue anglaise,59,8052,8052,0,0,0,
+212,national team,Coupe de la Ligue anglaise,59,8052,8052,0,0,0,
+212,player,Coupe de la Ligue anglaise,59,8052,8052,0,0,0,0
+213,club,Bundesliga,47,14447,14447,0,0,0,
+213,national team,Bundesliga,47,14447,14447,0,0,0,
+213,player,Bundesliga,47,14447,14447,0,0,0,0
+214,club,Coupe d’Allemagne,59,4017,4017,0,0,0,
+214,national team,Coupe d’Allemagne,59,4017,4017,0,0,0,
+214,player,Coupe d’Allemagne,59,4017,4017,0,0,0,0
+215,club,Allemagne · Division 2 · 2North,8,2934,2934,0,0,0,
+215,national team,Allemagne · Division 2 · 2North,8,2934,2934,0,0,0,
+215,player,Allemagne · Division 2 · 2North,8,2934,2934,0,0,0,0
+216,club,Allemagne · Division 2 · 2South,8,2892,2892,0,0,0,
+216,national team,Allemagne · Division 2 · 2South,8,2892,2892,0,0,0,
+216,player,Allemagne · Division 2 · 2South,8,2892,2892,0,0,0,0
+217,club,Allemagne · Division 2 · 2,30,10402,10402,0,0,0,
+217,national team,Allemagne · Division 2 · 2,30,10402,10402,0,0,0,
+217,player,Allemagne · Division 2 · 2,30,10402,10402,0,0,0,0
+218,club,Primeira Liga,4,1155,1155,0,0,0,
+218,national team,Primeira Liga,4,1155,1155,0,0,0,
+218,player,Primeira Liga,4,1155,1155,0,0,0,0
+219,club,Super League,26,3812,3812,0,0,0,
+219,national team,Super League,26,3812,3812,0,0,0,
+219,player,Super League,26,3812,3812,0,0,0,0
+22,club,J. League,6,1951,1711,3422,3422,0,
+22,national team,J. League,6,1951,1711,0,0,0,
+22,player,J. League,6,1951,1711,53364,53364,0,19
+220,club,Premier League,18,7094,7094,0,0,0,
+220,national team,Premier League,18,7094,7094,0,0,0,
+220,player,Premier League,18,7094,7094,0,0,0,0
+221,club,Championnat de Grèce · Division 1,24,6980,6980,0,0,0,
+221,national team,Championnat de Grèce · Division 1,24,6980,6980,0,0,0,
+221,player,Championnat de Grèce · Division 1,24,6980,6980,0,0,0,0
+222,club,Championnat du Portugal · Division 1,24,7557,7557,0,0,0,
+222,national team,Championnat du Portugal · Division 1,24,7557,7557,0,0,0,
+222,player,Championnat du Portugal · Division 1,24,7557,7557,0,0,0,0
+223,club,Championnat de Turquie · Division 1,24,7843,7843,0,0,0,
+223,national team,Championnat de Turquie · Division 1,24,7843,7843,0,0,0,
+223,player,Championnat de Turquie · Division 1,24,7843,7843,0,0,0,0
+224,club,Écosse · Division 1,24,5185,5185,0,0,0,
+224,national team,Écosse · Division 1,24,5185,5185,0,0,0,
+224,player,Écosse · Division 1,24,5185,5185,0,0,0,0
+225,club,Bundesliga,15,2469,2469,0,0,0,
+225,national team,Bundesliga,15,2469,2469,0,0,0,
+225,player,Bundesliga,15,2469,2469,0,0,0,0
+226,club,Ligue 1,1,346,346,0,0,0,
+226,national team,Ligue 1,1,346,346,0,0,0,
+226,player,Ligue 1,1,346,346,0,0,0,0
+227,club,Championnat de Belgique · Division 1,23,6735,6735,0,0,0,
+227,national team,Championnat de Belgique · Division 1,23,6735,6735,0,0,0,
+227,player,Championnat de Belgique · Division 1,23,6735,6735,0,0,0,0
+228,club,Angleterre · Division 2,12,6624,6624,0,0,0,
+228,national team,Angleterre · Division 2,12,6624,6624,0,0,0,
+228,player,Angleterre · Division 2,12,6624,6624,0,0,0,0
+229,club,Angleterre · Division 3,12,6624,6624,0,0,0,
+229,national team,Angleterre · Division 3,12,6624,6624,0,0,0,
+229,player,Angleterre · Division 3,12,6624,6624,0,0,0,0
+23,club,K League 1,5,1132,1113,2226,2226,0,
+23,national team,K League 1,5,1132,1113,0,0,0,
+23,player,K League 1,5,1132,1113,34406,34406,0,63
+230,club,Angleterre · Division 4,12,6624,6624,0,0,0,
+230,national team,Angleterre · Division 4,12,6624,6624,0,0,0,
+230,player,Angleterre · Division 4,12,6624,6624,0,0,0,0
+231,club,Ligue des champions,2,152,152,0,0,0,
+231,national team,Ligue des champions,2,152,152,0,0,0,
+231,player,Ligue des champions,2,152,152,0,0,0,0
+232,club,Hungarian Nemzeti Bajnokság I 2018/19,2,396,396,0,0,0,
+232,national team,Hungarian Nemzeti Bajnokság I 2018/19,2,396,396,0,0,0,
+232,player,Hungarian Nemzeti Bajnokság I 2018/19,2,396,396,0,0,0,0
+233,club,Czech Republic First League 2018/19,2,586,586,0,0,0,
+233,national team,Czech Republic First League 2018/19,2,586,586,0,0,0,
+233,player,Czech Republic First League 2018/19,2,586,586,0,0,0,0
+234,club,Super League,3,652,652,0,0,0,
+234,national team,Super League,3,652,652,0,0,0,
+234,player,Super League,3,652,652,0,0,0,0
+235,club,Süper Lig,1,357,357,0,0,0,
+235,national team,Süper Lig,1,357,357,0,0,0,
+235,player,Süper Lig,1,357,357,0,0,0,0
+236,club,Copa Libertadores 2021,6,922,901,1800,1800,0,
+236,national team,Copa Libertadores 2021,6,922,901,0,0,0,
+236,player,Copa Libertadores 2021,6,922,901,0,0,0,0
+237,club,Copa Sudamericana 2021,5,749,692,1384,1384,0,
+237,national team,Copa Sudamericana 2021,5,749,692,0,0,0,
+237,player,Copa Sudamericana 2021,5,749,692,0,0,0,0
+238,club,Coupe des champions de la CONCACAF 2021,5,191,190,380,380,0,
+238,national team,Coupe des champions de la CONCACAF 2021,5,191,190,0,0,0,
+238,player,Coupe des champions de la CONCACAF 2021,5,191,190,0,0,0,0
+239,club,Ligue des champions de la CAF 2023/2024,2,286,284,568,568,0,
+239,national team,Ligue des champions de la CAF 2023/2024,2,286,284,0,0,0,
+239,player,Ligue des champions de la CAF 2023/2024,2,286,284,0,0,0,0
+24,club,First Division A,6,1902,1691,3382,3382,0,
+24,national team,First Division A,6,1902,1691,0,0,0,
+24,player,First Division A,6,1902,1691,51152,50748,404,2
+240,club,Coupe d’Afrique des nations 2021,3,156,156,0,0,0,
+240,national team,Coupe d’Afrique des nations 2021,3,156,156,312,312,0,
+240,player,Coupe d’Afrique des nations 2021,3,156,156,0,0,0,0
+241,club,Copa América 2024,1,32,32,0,0,0,
+241,national team,Copa América 2024,1,32,32,64,64,0,
+241,player,Copa América 2024,1,32,32,0,0,0,0
+242,club,Coupe d’Asie des nations 2023,1,51,51,0,0,0,
+242,national team,Coupe d’Asie des nations 2023,1,51,51,102,102,0,
+242,player,Coupe d’Asie des nations 2023,1,51,51,0,0,0,0
+243,club,Gold Cup 2023,2,62,62,0,0,0,
+243,national team,Gold Cup 2023,2,62,62,124,124,0,
+243,player,Gold Cup 2023,2,62,62,0,0,0,0
+25,club,Premier League,2,457,329,658,658,0,
+25,national team,Premier League,2,457,329,0,0,0,
+25,player,Premier League,2,457,329,10065,10065,0,0
+26,club,HNL,3,540,424,848,848,0,
+26,national team,HNL,3,540,424,0,0,0,
+26,player,HNL,3,540,424,13085,13085,0,0
+27,club,Super Liga,3,774,696,1392,1392,0,
+27,national team,Super Liga,3,774,696,0,0,0,
+27,player,Super Liga,3,774,696,21505,21505,0,0
+28,club,Saudi First Division,3,755,677,1354,1354,0,
+28,national team,Saudi First Division,3,755,677,0,0,0,
+28,player,Saudi First Division,3,755,677,11438,11438,0,0
+29,club,Veikkausliiga,3,521,521,1042,1042,0,
+29,national team,Veikkausliiga,3,521,521,0,0,0,
+29,player,Veikkausliiga,3,521,521,15881,15881,0,0
+3,club,1. Liga,3,792,662,1324,1324,0,
+3,national team,1. Liga,3,792,662,0,0,0,
+3,player,1. Liga,3,792,662,20752,20752,0,0
+30,club,Ligue 1,6,1985,1768,3536,3536,0,
+30,national team,Ligue 1,6,1985,1768,0,0,0,
+30,player,Ligue 1,6,1985,1768,54075,54075,0,17
+31,club,USL League One,3,635,634,1268,1268,0,
+31,national team,USL League One,3,635,634,0,0,0,
+31,player,USL League One,3,635,634,19474,19474,0,0
+32,club,MLS Next Pro,3,1279,1279,2558,2558,0,
+32,national team,MLS Next Pro,3,1279,1279,0,0,0,
+32,player,MLS Next Pro,3,1279,1279,38825,38825,0,0
+33,club,J3 League,3,1146,936,1872,1872,0,
+33,national team,J3 League,3,1146,936,0,0,0,
+33,player,J3 League,3,1146,936,25943,25943,0,0
+34,club,Thai League 1,2,480,302,604,604,0,
+34,national team,Thai League 1,2,480,302,0,0,0,
+34,player,Thai League 1,2,480,302,9385,9385,0,0
+35,club,2. Bundesliga,6,1827,1620,3240,3240,0,
+35,national team,2. Bundesliga,6,1827,1620,0,0,0,
+35,player,2. Bundesliga,6,1827,1620,50116,49657,459,3
+36,club,LaLiga2,2,928,616,1232,1232,0,
+36,national team,LaLiga2,2,928,616,0,0,0,
+36,player,LaLiga2,2,928,616,19363,19363,0,2
+37,club,Liga de Primera,3,720,693,1386,1386,0,
+37,national team,Liga de Primera,3,720,693,0,0,0,
+37,player,Liga de Primera,3,720,693,21246,21246,0,0
+38,club,Serie B,3,1144,1140,2280,2280,0,
+38,national team,Serie B,3,1144,1140,0,0,0,
+38,player,Serie B,3,1144,1140,35696,35696,0,0
+39,club,Liga 1,3,947,935,1870,1870,0,
+39,national team,Liga 1,3,947,935,0,0,0,
+39,player,Liga 1,3,947,935,28765,28765,0,0
+4,club,Super Lig,5,1809,1438,2876,2876,0,
+4,national team,Super Lig,5,1809,1438,0,0,0,
+4,player,Super Lig,5,1809,1438,44367,44367,0,9
+40,club,Liga MX,6,1147,1126,2252,2252,0,
+40,national team,Liga MX,6,1147,1126,0,0,0,
+40,player,Liga MX,6,1147,1126,34728,34363,365,21
+41,club,Qatar Stars League,3,396,316,632,632,0,
+41,national team,Qatar Stars League,3,396,316,0,0,0,
+41,player,Qatar Stars League,3,396,316,9482,9482,0,0
+42,club,Super League 1,3,419,306,612,612,0,
+42,national team,Super League 1,3,419,306,0,0,0,
+42,player,Super League 1,3,419,306,9517,9517,0,0
+43,club,USL Championship,3,1187,1186,2372,2372,0,
+43,national team,USL Championship,3,1187,1186,0,0,0,
+43,player,USL Championship,3,1187,1186,36105,36105,0,0
+44,club,Bundesliga,6,1107,1047,2094,2094,0,
+44,national team,Bundesliga,6,1107,1047,0,0,0,
+44,player,Bundesliga,6,1107,1047,31884,31616,268,0
+45,club,Liga Profesional,4,1874,1762,3524,3524,0,
+45,national team,Liga Profesional,4,1874,1762,0,0,0,
+45,player,Liga Profesional,4,1874,1762,54287,54287,0,47
+46,club,Virsliga,3,540,539,1078,1078,0,
+46,national team,Virsliga,3,540,539,0,0,0,
+46,player,Virsliga,3,540,539,15964,15964,0,0
+47,club,3. Liga,3,1140,890,1780,1780,0,
+47,national team,3. Liga,3,1140,890,0,0,0,
+47,player,3. Liga,3,1140,890,27758,27758,0,0
+48,club,Eerste Divisie,3,1140,907,1814,1814,0,
+48,national team,Eerste Divisie,3,1140,907,0,0,0,
+48,player,Eerste Divisie,3,1140,907,28070,28070,0,0
+49,club,Superligaen,6,1095,1047,2094,2094,0,
+49,national team,Superligaen,6,1095,1047,0,0,0,
+49,player,Superligaen,6,1095,1047,32474,32072,402,7
+5,club,Pro League,3,483,413,826,826,0,
+5,national team,Pro League,3,483,413,0,0,0,
+5,player,Pro League,3,483,413,12649,12649,0,0
+50,club,Division Profesional,2,527,506,1012,1012,0,
+50,national team,Division Profesional,2,527,506,0,0,0,
+50,player,Division Profesional,2,527,506,16047,16047,0,0
+51,club,Eredivisie,6,1857,1659,3318,3318,0,
+51,national team,Eredivisie,6,1857,1659,0,0,0,
+51,player,Eredivisie,6,1857,1659,50714,50714,0,29
+52,club,A-League,6,990,855,1710,1710,0,
+52,national team,A-League,6,990,855,0,0,0,
+52,player,A-League,6,990,855,26160,26160,0,1
+53,club,1. liga,3,519,471,942,942,0,
+53,national team,1. liga,3,519,471,0,0,0,
+53,player,1. liga,3,519,471,14619,14619,0,0
+54,club,Liga Portugal,6,1794,1586,3172,3172,0,
+54,national team,Liga Portugal,6,1794,1586,0,0,0,
+54,player,Liga Portugal,6,1794,1586,49497,49497,0,2
+55,club,Premier League,6,2280,2000,4000,4000,0,
+55,national team,Premier League,6,2280,2000,0,0,0,
+55,player,Premier League,6,2280,2000,59353,59353,0,0
+56,club,Challenge League,3,450,424,848,848,0,
+56,national team,Challenge League,3,450,424,0,0,0,
+56,player,Challenge League,3,450,424,13180,13180,0,0
+57,club,Super League,6,1176,1120,2240,2240,0,
+57,national team,Super League,6,1176,1120,0,0,0,
+57,player,Super League,6,1176,1120,34715,34501,214,7
+58,club,Primera Division,3,783,759,1518,1518,0,
+58,national team,Primera Division,3,783,759,0,0,0,
+58,player,Primera Division,3,783,759,23377,23377,0,0
+59,club,1. Division,3,516,468,936,936,0,
+59,national team,1. Division,3,516,468,0,0,0,
+59,player,1. Division,3,516,468,14539,14539,0,0
+6,club,MLS,6,3063,3047,6094,6094,0,
+6,national team,MLS,6,3063,3047,0,0,0,
+6,player,MLS,6,3063,3047,92806,86644,6162,10
+60,club,League One,5,2782,2391,4782,4782,0,
+60,national team,League One,5,2782,2391,0,0,0,
+60,player,League One,5,2782,2391,71641,71641,0,68
+61,club,Serie A,4,1476,1437,2874,2874,0,
+61,national team,Serie A,4,1476,1437,0,0,0,
+61,player,Serie A,4,1476,1437,44782,44782,0,27
+62,club,League Two,5,2780,2402,4804,4804,0,
+62,national team,League Two,5,2780,2402,0,0,0,
+62,player,League Two,5,2780,2402,70904,70904,0,16
+63,club,Euro 2021,3,153,102,0,0,0,
+63,national team,Euro 2021,3,153,102,204,204,0,
+63,player,Euro 2021,3,153,102,0,0,0,0
+64,club,World Cup 1930,23,1069,1068,0,0,0,
+64,national team,World Cup 1930,23,1069,1068,1798,1798,0,
+64,player,World Cup 1930,23,1069,1068,0,0,0,0
+65,club,Club World Cup 2025,4,86,86,172,172,0,
+65,national team,Club World Cup 2025,4,86,86,0,0,0,
+65,player,Club World Cup 2025,4,86,86,0,0,0,0
+66,club,Coupe de France 2024/2025,1,200,200,400,400,0,
+66,national team,Coupe de France 2024/2025,1,200,200,0,0,0,
+66,player,Coupe de France 2024/2025,1,200,200,0,0,0,0
+67,club,austria-cup-archive,1,63,63,126,126,0,
+67,national team,austria-cup-archive,1,63,63,0,0,0,
+67,player,austria-cup-archive,1,63,63,0,0,0,0
+68,club,germany-cup-archive,1,63,63,126,126,0,
+68,national team,germany-cup-archive,1,63,63,0,0,0,
+68,player,germany-cup-archive,1,63,63,0,0,0,0
+69,club,fa-cup-archive,1,123,123,246,246,0,
+69,national team,fa-cup-archive,1,123,123,0,0,0,
+69,player,fa-cup-archive,1,123,123,0,0,0,0
+7,club,Serie B,2,772,500,1000,1000,0,
+7,national team,Serie B,2,772,500,0,0,0,
+7,player,Serie B,2,772,500,15723,15723,0,1
+70,club,efl-cup-archive,1,93,93,186,186,0,
+70,national team,efl-cup-archive,1,93,93,0,0,0,
+70,player,efl-cup-archive,1,93,93,0,0,0,0
+71,club,copa-del-rey-archive,1,126,126,252,252,0,
+71,national team,copa-del-rey-archive,1,126,126,0,0,0,
+71,player,copa-del-rey-archive,1,126,126,0,0,0,0
+72,club,coppa-italia-archive,1,45,45,90,90,0,
+72,national team,coppa-italia-archive,1,45,45,0,0,0,
+72,player,coppa-italia-archive,1,45,45,0,0,0,0
+73,club,knvb-beker-archive,1,109,109,218,218,0,
+73,national team,knvb-beker-archive,1,109,109,0,0,0,
+73,player,knvb-beker-archive,1,109,109,0,0,0,0
+74,club,portugal-cup-archive,1,111,110,220,220,0,
+74,national team,portugal-cup-archive,1,111,110,0,0,0,
+74,player,portugal-cup-archive,1,111,110,0,0,0,0
+75,club,swiss-cup-archive,1,63,62,124,124,0,
+75,national team,swiss-cup-archive,1,63,62,0,0,0,
+75,player,swiss-cup-archive,1,63,62,0,0,0,0
+76,club,nations-league,1,48,48,0,0,0,
+76,national team,nations-league,1,48,48,96,96,0,
+76,player,nations-league,1,48,48,0,0,0,0
+77,club,germany-cup,2,119,111,222,222,0,
+77,national team,germany-cup,2,119,111,0,0,0,
+77,player,germany-cup,2,119,111,0,0,0,0
+78,club,nations-league,1,108,108,0,0,0,
+78,national team,nations-league,1,108,108,216,216,0,
+78,player,nations-league,1,108,108,0,0,0,0
+8,club,Liga I,3,872,752,1504,1504,0,
+8,national team,Liga I,3,872,752,0,0,0,
+8,player,Liga I,3,872,752,23093,23093,0,0
+87,club,EFL Cup (Carabao Cup),1,88,84,164,164,0,
+87,national team,EFL Cup (Carabao Cup),1,88,84,0,0,0,
+87,player,EFL Cup (Carabao Cup),1,88,84,0,0,0,0
+88,club,FA Cup,1,162,142,284,284,0,
+88,national team,FA Cup,1,162,142,0,0,0,
+88,player,FA Cup,1,162,142,0,0,0,0
+89,club,Copa del Rey,1,81,75,150,150,0,
+89,national team,Copa del Rey,1,81,75,0,0,0,
+89,player,Copa del Rey,1,81,75,0,0,0,0
+9,club,Eliteserien,6,1400,1367,2734,2734,0,
+9,national team,Eliteserien,6,1400,1367,0,0,0,
+9,player,Eliteserien,6,1400,1367,41317,38139,3178,4
+90,club,Coppa Italia,1,36,28,56,56,0,
+90,national team,Coppa Italia,1,36,28,0,0,0,
+90,player,Coppa Italia,1,36,28,0,0,0,0
+91,club,DFB-Pokal,1,59,51,0,0,0,
+91,national team,DFB-Pokal,1,59,51,0,0,0,
+91,player,DFB-Pokal,1,59,51,0,0,0,0
+92,club,KNVB Beker,1,112,95,188,188,0,
+92,national team,KNVB Beker,1,112,95,0,0,0,
+92,player,KNVB Beker,1,112,95,0,0,0,0
+93,club,Taça de Portugal,1,129,113,226,226,0,
+93,national team,Taça de Portugal,1,129,113,0,0,0,
+93,player,Taça de Portugal,1,129,113,0,0,0,0
+94,club,Scottish Cup,1,70,50,100,100,0,
+94,national team,Scottish Cup,1,70,50,0,0,0,
+94,player,Scottish Cup,1,70,50,0,0,0,0
+95,club,Scottish League Cup,1,15,14,28,28,0,
+95,national team,Scottish League Cup,1,15,14,0,0,0,
+95,player,Scottish League Cup,1,15,14,0,0,0,0
+96,club,OFB Cup,1,60,56,112,112,0,
+96,national team,OFB Cup,1,60,56,0,0,0,
+96,player,OFB Cup,1,60,56,0,0,0,0
+97,club,Swiss Cup,1,56,48,96,96,0,
+97,national team,Swiss Cup,1,56,48,0,0,0,
+97,player,Swiss Cup,1,56,48,0,0,0,0

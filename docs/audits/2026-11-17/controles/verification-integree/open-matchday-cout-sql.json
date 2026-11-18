@@ -1,0 +1,45 @@
+{
+  "before": {
+    "application": "599b80497ca7b49d65714f3d54e709c97c0cbe7f",
+    "source_return": [
+      19,
+      0
+    ],
+    "source_reads": [
+      "build_summary.json",
+      "data/ENG_1_premier-league/results_2627.csv",
+      "data/ENG_1_premier-league/fixtures_2627.csv",
+      "data/AUT_CUP_ofb-cup/results_2627.csv",
+      "data/AUT_CUP_ofb-cup/fixtures_2627.csv"
+    ],
+    "physical_matches": 19,
+    "team_period_rows": 30,
+    "same_match_and_stats_xmin": true,
+    "counts": {
+      "sql_calls": 157,
+      "team_stats_select": 2
+    }
+  },
+  "after": {
+    "application": "0580dfd4ba645461d6c372fbd7b1d73eaaa779a0",
+    "source_return": [
+      19,
+      0
+    ],
+    "source_reads": [
+      "build_summary.json",
+      "data/ENG_1_premier-league/results_2627.csv",
+      "data/ENG_1_premier-league/fixtures_2627.csv",
+      "data/AUT_CUP_ofb-cup/results_2627.csv",
+      "data/AUT_CUP_ofb-cup/fixtures_2627.csv"
+    ],
+    "physical_matches": 19,
+    "team_period_rows": 30,
+    "same_match_and_stats_xmin": true,
+    "counts": {
+      "sql_calls": 185,
+      "team_stats_insert": 30,
+      "team_stats_rows_written": 0
+    }
+  }
+}

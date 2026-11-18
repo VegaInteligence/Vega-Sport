@@ -1,12 +1,11 @@
 {
-  "observed": "2026-11-18 15:54:55 UTC",
-  "id": "dpl_7W4Qeu12ZmCaPdFHb1XvgUPEp2U8",
-  "sha": "17ca0f76175301e77ae43fe137467222f594b40a",
-  "url": "vega-rgh447644-vegainteligence.vercel.app",
+  "time": "2026-11-18 16:45:17 UTC",
+  "id": "dpl_8rtWrLzQT81b71HYrLBHLX4EtRts",
+  "sha": "b2e6dd82d36a2ca0f439ec84bf2e5dbbcd3013d9",
   "alias": [
     "vegasport.vercel.app",
     "vega-vegainteligence.vercel.app",
     "vega-git-main-vegainteligence.vercel.app"
   ],
-  "readyState": "READY"
+  "ready": "READY"
 }

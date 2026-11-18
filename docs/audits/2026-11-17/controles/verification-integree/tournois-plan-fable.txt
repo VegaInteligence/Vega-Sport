@@ -1,0 +1,197 @@
+PLAN: READY
+
+Nothing was executed or edited; every statement below comes from reading the worktree and the supplied patch. Linear was not reachable from this session.
+
+## 1. Where I disagree with the suggested approach
+
+1. **Do not take main's `_score` / `READER`.** The branch already reads bare pairs (`score_parts`, `backend/vega/sources/cups.py:84`) and already rewrites each edition once, because its digest is of the stored rows (`rows_digest`, `cups.py:193`). Main's reader turns a malformed score into `not_started`, with no snapshot guard. That is the defect class §19.2 forbids (`FAILURE_MODES.md:1574`).
+2. **The four findings understate the problem.**
+   - Three points per win is wrong for every World Cup group from 1930 to 1990, not only 1950.
+   - `leagueTable` ends its tie-break on the team name, so an alphabetical rank is presented as real.
+   - The 1950 omission also drops Brazil (2nd) and Sweden (3rd).
+   - The 1950 page opens on an empty bracket saying the bracket "will appear".
+3. **Do not compute the 1950 placing in the API.** `tournamentRuns` sees one nation's matches only (`nations.mjs:82`). Use an attested official table, cross-checked against the nation's own points.
+4. **No new migration.** `guard_schema` pins the last applied file to `149_validate_archive_attestation.sql` and requires `applied == known` (`open_matchday_restore.py:160-168`). Everything here is code-only.
+5. **Two commits, not one.** (A) the merge with both behaviours kept; (B) the tournament corrections, red tests first. Reviewers can then separate conflict resolution from new rules.
+
+## 2. Observed facts
+
+| Fact | Where |
+|---|---|
+| Migrations are tracked by whole filename and applied in sorted order, each once; a changed file raises `MIGRATION_CHECKSUM_CHANGED`. | `store.py:120-168` |
+| The pre-incident capture must hold exactly the files ≤ `133_cohort_max_wait.sql`; both 134 files sort after it. | `open_matchday_restore.py:165` |
+| The restore operator has no test file; it was validated by rehearsal only, and the private copy was deleted. | `restauration.md`, WORKLOG |
+| 1950: first round has `group`; the six "Final Round" rows have none, and no final exists. | `editions.json:222-244` |
+| Euro 2020 group F: Germany and Portugal on 4 points, Portugal 2–4 Germany. | `editions.json:34-39` |
+| Euro 2028: groups are named in `round` ("Group A"), no `group`, placeholder teams. | `editions.json:110-145` |
+| The branch API omits `ft` when extra time has no 90-minute score, and emits `status: "canceled"` and `sides` ids. | `cups.mjs:100-134` |
+| The branch never shows a family logo or initials in a World Cup edition slot. | `competition-artwork.js:15`, `CupCompetition.jsx:127` |
+| The branch archive catalogue lists 2026 and 2022; main's `tournamentEdition` would then send 2026 to the archive, against its own test 8. | `cup-catalog.js:30` |
+| A head-to-head ranking that leaves unresolved ties tied already exists. | `nations-standings.js:15-54` |
+| `stageKind` returns "group" for any unrecognised or null round, so the label is "1er tour". | `nations.mjs:48-57` |
+| `api.nation_matches` exposes `round` but no group name. | `120_nation_match_copies.sql:41` |
+
+**Assumptions to check read-only before relying on them:**
+- Round-less tournaments (AFCON, Asian Cup, Gold Cup, Copa América from International Results) label every run "1er tour", champions included.
+- A nation's runs may include editions where the archive spells it differently (West Germany), which would break following by name.
+- A disposable PostgreSQL 18 database is available locally; main's worklog says the local server is 16.
+
+## 3. Precedence
+
+1. The user's instructions and boundaries: no production writes, no placeholder art, owners kept.
+2. The audit's written-first rules (§19, §22) over main's later reader.
+3. Main's public behaviour wherever it does not contradict 2: the mock-up validated on 18 Nov, the `id / edition / view / team` addresses, its native tests.
+4. The partner's artwork decisions (VI-30) over main's logo usage.
+5. VI-19 forecasts and VI-21 identity, calendars and Elo recalculation: audited, never re-implemented.
+
+## 4. Scope
+
+**In:**
+- the six conflicts;
+- semantic conflicts in auto-merged files;
+- one shared rules module;
+- group tables, the 1950 placing, 1950 views, the header logo slot, `tournamentEdition`;
+- two test adaptations;
+- the evidence artifact.
+
+**Out:**
+- any migration or production action;
+- Elo recalculation and identity merges (VI-21), forecast models (VI-19);
+- new artwork, E06c/E06d (partner);
+- the "2e tour" label for 1974/1978/1982 second-round groups, which needs the group name in SQL: document it as unresolved;
+- awarded-match display, which predates this delta.
+
+## 5. Commit A: merge resolution
+
+| File | Resolution |
+|---|---|
+| `WORKLOG.md` | Keep the branch's; add one bullet for this integration with the evidence link. |
+| `cups.py` | Branch side whole. No `_score`, no `READER`. |
+| `134_archive_scores_due.sql` | Take from main byte-for-byte; never rename or renumber either 134 file. It is redundant here but must stay, or the restore guard fails once main's deploy has applied it. |
+| `cup-matches.js` | Union: branch `ownSides` plus main's `group` field and `Group 1` label. `groupTables` is replaced in commit B. |
+| `cup-catalog.js` | Branch imports, `withLogo` and archive seasons; add main's helpers. Export the archive id once from `competition-artwork.js`. |
+| `CupCompetition.jsx` | Main's structure with the branch's data paths (`cupEditionTable`, `editionArtwork`, `normalizeRoundSides`, crest per side). |
+| `CompetitionsPage.jsx` | Main's edition address and header; the branch's `editionArtworkUrl` result passed down. |
+| `EditionHeader.jsx` (auto-merged) | Take a resolved `imageUrl` prop and `initials={false}`; never `competition.imageUrl`. |
+| `test_sources.py` (auto-merged) | Keep main's "read again once" test unchanged; it should pass through the rows digest. Rewrite the bare-pair test: valid cases kept, the five malformed pairs each raise `INVALID_SCORE`, the `READER` assertion removed. Record this as the one deliberate change to a main test. |
+
+## 6. Commit B: rules
+
+New `dashboard/shared/tournament-rules.js`, imported by the site and by `nations.mjs` (the API already imports from `dashboard/shared`).
+
+**Group tables**
+- **Points for a win:** World Cup up to 1990 two, everything else three.
+- **Separating level teams**, declared per family, each with its regulation cited in a comment:
+
+  | Family | Criteria |
+  |---|---|
+  | Euro 2020/2024/2028 | head-to-head (points, difference, goals, reapplied to a remaining subset), then overall difference and goals |
+  | World Cup 1994–2022 | overall difference and goals, then head-to-head |
+  | World Cup 1970–1990 | overall difference and goals |
+  | anything else (World Cup to 1966, 2026, other tournaments) | none |
+
+- **Still level:** the same position, `tied: true`. Row order inside a tie is difference, goals, name, as display order only.
+- **A group with no finished match** has no positions.
+- **Group identity:** the `group` field, else a round named `Group X`, else a declared final group.
+- **Counted matches:** finished with a field score only; canceled, awarded and unscored never count.
+- `groupTables(matches)` without rules keeps main's default, so main's test 12 stays green.
+
+**1950 placing**
+- Constant `FINAL_GROUPS["world-cup:1950"]`: round "Final Round", attested table Uruguay 5, Brazil 4, Sweden 2, Spain 1, source cited.
+- The API claims a placing only when all the nation's final-round matches are scored and its two-point total equals the attested one.
+- Stages: "Vainqueur" gold, "2e" silver, "3e" bronze, "4e". Otherwise "Poule finale" with no tone.
+- `tournament-runs.js` adds depths "2e": 5 and "Poule finale": 4.
+
+**Views**
+- A declared final-group edition has no "Tableau" and opens on "Groupes".
+- `view=tableau` falls back; recompute the effective view when the season changes inside the page.
+- "Cette édition ne s'est pas jouée en groupes" appears only when no group exists.
+
+**Editions**
+- `tournamentEdition("world-cup", y)`: the collected competition for its own seasons (2026, 2022) and later years, the archive otherwise.
+- A direct address to archive 2022 or 2026 keeps working.
+
+**Conditional, only if the read-only check reproduces it**
+- A run whose matches name no round gets no stage, and the tile shows no gauge.
+- Following a team by its side id, with the name as fallback.
+
+## 7. Red tests first
+
+Document these as a new section of `FAILURE_MODES.md` before the tests, then write the tests, then the code. Each must fail on the plain merge.
+
+| # | Case | Expected |
+|---|---|---|
+| R1 | Frozen 1950 through projection and `normalizeOpenCup` | Poule finale: Uruguay 5, Brazil 4, Sweden 2, Spain 1 |
+| R2 | Euro 2020 group F | France, Germany, Portugal, Hungary; none tied |
+| R3 | Euro 2028 | six groups, four slots each, no positions, no "pas jouée en groupes" |
+| R4 | 1958 group 1 | the two teams level on points share a position |
+| R5 | 2018 group H | Japan and Senegal share position 2 |
+| R6 | 1994 group E | Mexico, Ireland, Italy, Norway |
+| R7 | `tournamentRuns`, 1950 | Uruguay gold, Brazil "2e" silver, Sweden "3e" bronze, Spain "4e"; unscored or mismatched points give "Poule finale", no tone |
+| R8 | `tournamentEdition` with the branch catalogue | 2026 and 2022 collected, 2018 archive |
+| R9 | Header render, World Cup archive | no initials, no family logo; an edition emblem when the API gives one |
+| R10 | 1950 page | opens on Groupes, no Tableau segment |
+| R11 | `match_rows` | each malformed pair raises `INVALID_SCORE`; absent stays `not_started` |
+
+Then run the full existing suites; the counts must not fall below 563 Python, 208 API, 729 site.
+
+## 8. Failure modes to cover
+
+- A malformed score un-plays a held result.
+- The 134 file is altered or renamed after main's deploy applied it.
+- A declared tie rule is misremembered: leave anything unverified undeclared, so those ties are shared.
+- The attested 1950 names do not match the base's team name: fail closed to "Poule finale".
+- The site runs against the old API (no `sides`, no edition artwork, 1950 unscored): tables without positions, no claim.
+- The view state goes stale when the season changes from 1954 to 1950.
+- A canceled 1938 tie still links in the bracket.
+
+## 9. E2E and evidence
+
+1. **Local chain:** the frozen editions through the real bridge and worker into a disposable database, the local API, the built site. If no PostgreSQL 18 is available, say so and mark those checks CI-only.
+2. **Browser checks**, desktop and phone:
+   - 1950 groups;
+   - Euro 2020 group F;
+   - Euro 2028 groups;
+   - 1998 bracket with France champion;
+   - Uruguay's 1950 tile;
+   - the header without a placeholder;
+   - archive 2022 by direct address;
+   - a league page and a domestic cup page unchanged.
+3. **Split state:** the same site against the production API, read-only.
+4. **Artifact** under `docs/audits/2026-11-17/controles/actualisation-main-1633/`:
+   - the three commit hashes and inputs;
+   - exact rerun commands;
+   - expected versus actual;
+   - logs and screenshots;
+   - suite counts;
+   - SHA-256 of both 134 files against main's blob;
+   - the migration list of the disposable database.
+5. **Restore rehearsal:** it predates the extra migration. State that plainly; the new file only resets `ops.source_runs.last_success_at`, outside the operator's dependency inventory. Do not describe the rehearsal as rerun.
+
+## 10. Deployment split
+
+| Part | Path | Note |
+|---|---|---|
+| Site | Vercel on merge to main | Must hold against the old API. |
+| API | AWS | `nations.mjs` stage rule. |
+| Worker and migrations | one Deploy run by the user, after the merge | Do not run Deploy from current main first: its reader is lenient and unguarded. If it already ran, the strict reader corrects on its next pass. |
+
+After the deploy, the deployment owner checks:
+- 1,170 finished, 1 canceled and 51 unplayed of 1,222;
+- the 1998 final at 0–3;
+- France and Uruguay tiles.
+
+VI-21 then re-runs the national Elo census against main's pre-measured changes (about 658 newly rated results).
+
+## 11. Trade-offs
+
+- **UX:** shared positions and position-less tables are less tidy than a full ranking, but nothing false is shown.
+- **DX:** one rules module replaces two divergent computations; the cost is a declared table per edition family to maintain.
+- **AX:** the rules and the attested constant are data with cited sources, inspectable in one file.
+- **Compromise:** the "2e tour" label for 1974/1978/1982 stays wrong until a later SQL change.
+
+## 12. Open questions (none blocks implementation on the branch)
+
+1. Do the new visible states (shared positions, 1950 without "Tableau", the "2e" stage) need the user's validation before the site ships? I recommend showing the screenshots first; the layout itself is the approved one.
+2. Should the medal count's hover text say "fois 2e" instead of "fois finaliste" for a nation whose silver is 1950? I recommend yes.
+3. The coordinator must recheck Linear In Progress, record this under VI-27, and inform the session that authored main's tournament pages, which has no issue.

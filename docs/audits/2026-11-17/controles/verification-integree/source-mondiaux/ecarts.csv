@@ -1,0 +1,39 @@
+year,match_id,fifa_match,vega_match,kind,team,shirt,fjel,fifa,detail
+1970,M-1970-17,1823,m_v0000681,fjel_playing_fifa_bench,Soviet Union,17,P-72049,181439,"nom_exact=0,entrée_événement=1"
+1970,M-1970-22,1877,m_v0000688,fjel_playing_fifa_bench,Italy,14,P-62214,44571,"nom_exact=1,entrée_événement=1"
+1970,M-1970-23,1813,m_v0000694,different_playing_role,Czechoslovakia,11,P-31552,51615,"nom_exact=1,titulaire_fjel=1,titulaire_fifa=0"
+1970,M-1970-23,1813,m_v0000694,different_playing_role,Czechoslovakia,21,P-90487,47274,"nom_exact=0,titulaire_fjel=0,titulaire_fifa=1"
+1974,M-1974-14,2097,m_v0000723,fifa_playing_not_in_fjel,Sweden,13,,50253,
+1974,M-1974-14,2097,m_v0000723,fjel_substitution_without_entrant_flag,Sweden,,P-82719,,sans ligne apparition
+1974,M-1974-22,2181,m_v0000726,fifa_playing_not_in_fjel,Sweden,22,,45093,
+1974,M-1974-22,2181,m_v0000726,fifa_playing_not_in_fjel,Sweden,8,,59079,
+1974,M-1974-22,2181,m_v0000726,fjel_substitution_without_entrant_flag,Sweden,,P-30429,,sans ligne apparition
+1974,M-1974-22,2181,m_v0000726,fjel_substitution_without_entrant_flag,Sweden,,P-52989,,sans ligne apparition
+1974,M-1974-23,1947,m_v0000731,fifa_playing_not_in_fjel,Haiti,16,,52840,
+1974,M-1974-23,1947,m_v0000731,fifa_playing_not_in_fjel,Haiti,17,,52841,
+1974,M-1974-23,1947,m_v0000731,fifa_playing_not_in_fjel,Haiti,21,,53212,
+1974,M-1974-23,1947,m_v0000731,fifa_playing_not_in_fjel,Argentina,4,,46121,
+1974,M-1974-23,1947,m_v0000731,fifa_playing_not_in_fjel,Argentina,6,,46956,
+1974,M-1974-23,1947,m_v0000731,fjel_playing_fifa_bench,Haiti,2,P-93412,56316,"nom_exact=0,entrée_événement=0"
+1974,M-1974-23,1947,m_v0000731,fjel_substitution_without_entrant_flag,Argentina,,P-26050,,sans ligne apparition
+1974,M-1974-23,1947,m_v0000731,fjel_substitution_without_entrant_flag,Argentina,,P-79103,,sans ligne apparition
+1974,M-1974-23,1947,m_v0000731,fjel_substitution_without_entrant_flag,Haiti,,P-16092,,sans ligne apparition
+1974,M-1974-23,1947,m_v0000731,fjel_substitution_without_entrant_flag,Haiti,,P-52149,,sans ligne apparition
+1974,M-1974-27,1948,m_v0000734,fjel_playing_fifa_bench,Argentina,9,P-64046,49989,"nom_exact=1,entrée_événement=1"
+1978,M-1978-15,2394,m_v0000768,fjel_playing_fifa_bench,Netherlands,16,P-89554,44560,"nom_exact=1,entrée_événement=1"
+1978,M-1978-34,2391,m_v0000775,substitution_minute_group_imbalance,Italy,,1 on / 0 off,,"72+0, second half"
+1978,M-1978-34,2391,m_v0000775,substitution_minute_group_imbalance,Italy,,0 on / 1 off,,"77+0, second half"
+1982,M-1982-10,764,m_v0000792,fifa_playing_not_in_fjel,Austria,14,,160339,
+1982,M-1982-10,764,m_v0000792,fifa_playing_not_in_fjel,Austria,18,,51717,
+1982,M-1982-10,764,m_v0000792,fjel_substitution_without_entrant_flag,Austria,,P-64028,,sans ligne apparition
+1982,M-1982-10,764,m_v0000792,fjel_substitution_without_entrant_flag,Austria,,P-82507,,sans ligne apparition
+1982,M-1982-17,774,m_v0000800,fjel_playing_fifa_bench,Belgium,13,P-43941,69418,"nom_exact=1,entrée_événement=1"
+1982,M-1982-44,900,m_v0000825,fjel_playing_fifa_bench,Germany FR,13,P-40743,56785,"nom_exact=1,entrée_événement=1"
+1986,M-1986-15,460,m_v0000840,fifa_playing_not_in_fjel,Korea Republic,14,,43998,
+1986,M-1986-15,460,m_v0000840,fjel_playing_fifa_bench,Korea Republic,20,P-53955,52213,"nom_exact=0,entrée_événement=1"
+1986,M-1986-30,429,m_v0000848,fifa_playing_not_in_fjel,Belgium,3,,44715,
+1986,M-1986-30,429,m_v0000848,fjel_playing_fifa_bench,Belgium,15,P-43888,59398,"nom_exact=1,entrée_événement=1"
+1990,M-1990-27,114,m_v0000911,fjel_playing_fifa_bench,Germany FR,7,P-89975,174711,"nom_exact=1,entrée_événement=1"
+1990,M-1990-48,103,m_v0000936,fjel_playing_fifa_bench,Cameroon,9,P-58080,79318,"nom_exact=1,entrée_événement=1"
+2010,M-2010-56,300061498,m_v0001240,fifa_playing_not_in_fjel,Spain,18,,318601,
+2010,M-2010-56,300061498,m_v0001240,fjel_playing_fifa_bench,Spain,17,P-94275,297330,"nom_exact=1,entrée_événement=1"

@@ -1,974 +1,320 @@
-diff --git a/docs/calculs/09-audit-2026-11/FAILURE_MODES_VI30.md b/docs/calculs/09-audit-2026-11/FAILURE_MODES_VI30.md
-new file mode 100644
-index 0000000000..173987a691
---- /dev/null
-+++ b/docs/calculs/09-audit-2026-11/FAILURE_MODES_VI30.md
-@@ -0,0 +1,126 @@
-+# VI-30 — authentic artwork in the existing slots (written before the tests)
-+
-+Track 7 of [VI-27](https://linear.app/vegainteligence/issue/VI-27), issue
-+[VI-30](https://linear.app/vegainteligence/issue/VI-30), 18 Nov 2026, base `d4d3fbc542`. A
-+track-specific file, so that it does not collide with the shared `FAILURE_MODES.md` (§20–§22 are
-+other tracks'); the coordinator may fold it in as a section at integration.
-+
-+Read paths only. No ingestion, asset import, URL gate, identity merge, forecast, extra-time or
-+scoring change: the primary worker owns the importer, `/api/assets`, `image-source.js`, the cup
-+extra-time serializer (`openCupMatch`, `openLigaMatch`, `notes`) and migration 134; VI-19 owns
-+forecasts; VI-21 owns identities and `drop_copy`.
-+
-+## 1. What the branch does (measured in the rehearsal, 18 Nov 2026)
-+
-+Commit `d4d3fbc542` already resolves the club hero's crest through the checked resolver (`Picture`)
-+and publishes a competition's own logo in the cup catalogue (migration 135). Measured on the root
-+harness (`root-checks/role-ui/partial-739c98`), both viewports:
-+
-+- `/competitions?id=l_v0000130`, the id `/api/cups/index` publishes for Cymru North, shows
-+  « Compétition inconnue ou indisponible ». `CompetitionsPage` looks an id up by `c.id` only, and the
-+  catalogue entry is `open-matchday:WAL_2_cymru-north`; its loading guard covers `open-matchday:`
-+  ids only. The supplemental index (`/api/cup-index?kind=supplemental`), from which the entry is
-+  built, does not carry the edition's competition id.
-+- The 29 Cymru North results show initials in all 58 side slots, though each side's team has a
-+  stored crest in the base. `api.cup_table_rows` (127) joins both teams but selects neither id nor
-+  crest; `tableRow` emits names only; `CupMatch` renders `<Media name={name} />`.
-+- `Picture` keeps its failure across a change of `url` (`useState` without a key), unlike `Media`,
-+  which remounts its attempt on a new source.
-+
-+## 2. The rules
-+
-+**A side is its row's own foreign key.** A table row (`/api/cup-table`, the `table-v1` body of
-+`/api/cups/edition` and `/api/cup-snapshot?kind=edition`) gains an additive `sides` object:
-+
-+```json
-+{ "home": "Brickfield", "away": "Llanuwchllyn", "…": "the CSV fields, unchanged",
-+  "sides": { "home": { "id": "t_v0003688", "image_url": "https://media.vega.invalid/sha256/….jpg" },
-+             "away": { "id": "t_v0003689", "image_url": "https://media.vega.invalid/sha256/….png" } } }
-+```
-+
-+- `sides.home` (`sides.away`) is present only when the row's `home_team_id` (`away_team_id`) is set.
-+  `sides` is omitted when neither is.
-+- `id` is the public id of the team the FK names, after one `merged_into` hop: merges move every
-+  match and leave the merged row as a pointer to the kept team, never to another pointer
-+  (`identity.py merge_teams`, 094). The API already resolves a merged team's public id the same way
-+  (`api.internal_id`, 096).
-+- `image_url` is that team's crest asset reference as stored (`core.assets.source_url`), else `null`.
-+  The site resolves it through its one gate (`safeImageUrl`, `/api/assets`), as every other crest.
-+- `home` and `away` keep the source's spelling. Names never choose a crest: two clubs spelled alike
-+  each keep their own row's FK.
-+- The provider keys `homeId`/`awayId` of the other cup bodies are unchanged and unrelated.
-+
-+**A competition answers to its canonical id.** The supplemental index's items gain
-+`competition_id`, the public id of the edition's competition (`api.cup_editions.competition_id`,
-+the edition's FK). The site's entry keeps its id `open-matchday:<folder>` and carries the canonical
-+id as `canonicalId`. A page asked for `l_v…` opens the entry whose id or `canonicalId` it is; the
-+URL is not rewritten; the directory and the search list the entry once. An item whose canonical id
-+is a native competition's id is that competition: it is not listed a second time (exact identity,
-+before the existing name-and-country rule).
-+
-+**Lookups wait for the catalogue that can answer them.** An `l_v…` id not found yet waits for the
-+supplemental index like an `open-matchday:` id: the loading state while it loads, the retry notice
-+when it fails, « Compétition inconnue ou indisponible » only once it answered without the id. Neither
-+route depends on `/api/cups/index`.
-+
-+**The site carries the sides to the existing slots.** `normalizeSupplementalCup` copies a side's
-+`id` and `image_url` to `homeTeamId`/`awayTeamId` and `homeImage`/`awayImage` (the names the bracket
-+already reads). `CupMatch` passes the image to its two `Media` slots; the national-team branch keeps
-+its flags. Two legs combined keep the first leg's sides in the displayed order.
-+
-+**`Picture` restarts on a new source.** Its attempt is keyed by its `url`, as `Media`'s is. Markup,
-+classes and the plain (non-deferred) image stay as they are.
-+
-+## 3. Failure modes and expected outcomes
-+
-+| # | Situation | Expected | Covered by |
-+|---|---|---|---|
-+| V1 | both FKs set, both teams with a stored crest (Cymru North, 29 rows) | `sides` from each row's FK; both slots decode that crest's bytes | API contract; E2E 58/58 under both URLs and viewports |
-+| V2 | FK set, team without a crest | `{ id, image_url: null }`; initials | API contract |
-+| V3 | one FK null; both null | the side omitted; `sides` omitted; the source name and initials | API contract |
-+| V4 | two clubs spelled alike, in different rows | each row its own id and crest; a name never borrows one | API contract |
-+| V5 | an FK naming a merged team | the kept team's id and crest; the source spelling kept | API contract |
-+| V6 | a stored reference the gate refuses (other host, query) | passed as stored; the site requests nothing and shows initials | site render test |
-+| V7 | the crest's object answers 404 | initials, no other image (directory and hero) | E2E (Churchill control) |
-+| V8 | a national-team cup | flags as today; images ignored | site render test |
-+| V9 | a fixture | `sides` beside its forecast | API contract |
-+| V10 | the CSV part of every row | byte for byte as before (`sides` aside) | API contract (adjusted, see §4) |
-+| V11 | two legs, the second reversed | the combined tie keeps the first leg's images, in displayed order | site unit test |
-+| V12 | `/competitions?id=l_v0000130` | the same entry, edition and header as `open-matchday:WAL_2_cymru-north`; URL kept; one directory card | E2E; site unit test |
-+| V13 | an `l_v…` id while the supplemental index loads | the loading state, never « inconnue » | E2E (delayed index) |
-+| V14 | an `l_v…` id when the supplemental index fails | the retry notice; « Réessayer » opens the entry | E2E (failed index) |
-+| V15 | an `l_v…` id no catalogue holds | « Compétition inconnue ou indisponible » | E2E |
-+| V16 | an item without `competition_id` (an older API) | no alias, as today | site unit test |
-+| V17 | `/api/cups/index` unavailable | both URLs still open, sides still shown | E2E |
-+| V18 | an item whose canonical id is a native competition's | listed once, as the native one | site unit test |
-+| V19 | `Picture` given a new `url` after a failure | a new attempt with the new source | site unit test |
-+| V20 | `RankingDialog`'s raw `imageUrl` | changed only if a club row is observed broken | E2E observation |
-+
-+## 4. Existing expectations adjusted
-+
-+`backend/api/test/cups.test.mjs` « open-matchday catalogue and tables, as main's » compares each
-+`/api/cup-table` row to the CSV line with `deepEqual`. Under V1 a row also has `sides`. The CSV part
-+stays compared byte for byte; `sides` is asserted on its own (V10).
-+
-+## 5. Not changed (recorded)
-+
-+- The other cup formats (`matches-v1`, `rounds-v1`, `results-v1`: national archives, OpenLigaDB,
-+  International Results) serialize their sides in `openCupMatch` and `openLigaMatch`, owned by the
-+  primary worker's extra-time change. Their list slots still show initials; extending them waits for
-+  that change (`api.cup_matches` already joins both teams).
-+- An open-matchday folder holding two editions would give two entries with the same id
-+  (`supplementalCupCatalog` makes one per item). Production holds one edition per folder (30, all
-+  2026/2027, registry of 17 Nov 2026): not observed, not changed.
-+- `Archive.jsx` and the complementary leagues' standings have no badge slot; no slot is added.
-+
-+## Emblèmes d'édition et emplacements sans visuel
-+
-+- **E1 — famille et édition.** L'emblème exact provient du pointeur qualifié de l'édition. Les coupes, snapshots natifs, rencontres natives et archives à saison explicite exposent `editionArtwork: { imageUrl, role: "edition_emblem" }` lorsque le pointeur existe. L'index des familles, les anciens champs familiaux et les octets des assets restent stables. Aucun repli depuis une saison voisine, une affiche ou un logo d'organisateur.
-+- **E2 — sélection.** Sur les deux familles Mondial, le logo daté 2026 ne remplit ni l'annuaire familial ni une édition sans image. Les saisons 1930/1958 restent sans emblème. La sélection 2026 native garde son libellé malgré la saison SQL 2025. CAN 2021, 2023, 2025, Asie 2023 et les éditions FIFA attestées chargent chacune les bytes du manifeste dans le slot existant. Vérifier l'accès direct, un retour, un changement rapide et une erreur réseau sans retour d'image de l'ancienne saison.
-+- **E3 — placement.** L'annuaire et le titre conservent le nom et le slot de compétition quand l'image manque ou échoue. Trophées et initiales n'y représentent aucune compétition. Les icônes fonctionnelles, noms, dimensions, images des équipes et drapeaux nationaux gardent leur rôle.
-+- **E4 — compatibilité.** La réponse historique pour une entrée sans emblème omet l'extension. Le repli de snapshot lit la même édition via le corps de coupe ou ses fixtures natives. Les archives exposent l'emblème de la clé et de la saison demandées, y compris si deux associations authentiques partagent un fichier. Le sélecteur d'archives sans slot reste utilisable.
-+- **E5 — revalidation.** Une liaison change l'ETag des lectures affectées et la répétition conserve la nouvelle valeur. Les pages d'archives suivent la version `archive_season`, les fixtures la génération publiée, et les corps de coupe leur propre représentation. Vérifier le sidecar archive et la route d'asset des coupes sans sidecar. Tester sur PostgreSQL et HTTP locaux sans modifier la production.
-+
-+- **E6 — coupe de clubs non tabulaire.** La projection des côtés `table-v1` laisse au lecteur `matches-v1` les initiales quand bien même son FK a un vrai écusson. Témoin : les 48 rencontres de groupe CAF 2024/25 puis les 96 emplacements observables. Utiliser les mêmes identités et références sur les deux voies de lecture, en gardant la représentation des drapeaux nationaux, le nom de source et le score par période. Les écussons illustrent le profil, leur dessin historique à la date du match reste à documenter.
-+
-+- **E7 — recherche bornée.** Quand le manifeste active la recherche bornée des joueurs et clubs, le client continue à chercher les compétitions dans son catalogue. En désactivant l'index complémentaire dans ce mode, « Cymru North » disparaît aussi bien sur ordinateur que téléphone. La recherche doit charger ce catalogue après saisie, donner une seule entrée Cymru North, montrer son logo propre et ouvrir sa fiche. Une panne du catalogue ne doit pas cacher les résultats natifs ni déclencher le chargement général des joueurs et des clubs.
-diff --git a/infra/aws/import-test.sh b/infra/aws/import-test.sh
-index b8c356fb27..2c46eb1cc3 100755
---- a/infra/aws/import-test.sh
-+++ b/infra/aws/import-test.sh
-@@ -42,7 +42,8 @@ run vega-v2-backfill backfill "[\"--lanes\",\"backfill\",\"--until-idle\",\"--ba
+diff --git a/docs/calculs/01-sources-et-conventions/01-provenance-des-donnees.md b/docs/calculs/01-sources-et-conventions/01-provenance-des-donnees.md
+index 3a9ef64c25..df1e6499d2 100644
+--- a/docs/calculs/01-sources-et-conventions/01-provenance-des-donnees.md
++++ b/docs/calculs/01-sources-et-conventions/01-provenance-des-donnees.md
+@@ -45,10 +45,11 @@ Clés utilisées par les calculs du profil club ([club-scout.js](../../../dashbo
  
- if [ -n "$ARCHIVES" ]; then
-   echo "== 3. Archive season $ARCHIVE_SEASON"
--  run vega-v2-archives archives "[\"--sources\",\"s3://$ARCHIVES/data/sources\",\"--seasons\",\"$ARCHIVE_SEASON\"]"
-+  # --fresh: a season already holding archive matches is refused (a repair needs a reviewed plan, FAILURE_MODES.md §22).
-+  run vega-v2-archives archives "[\"--sources\",\"s3://$ARCHIVES/data/sources\",\"--seasons\",\"$ARCHIVE_SEASON\",\"--fresh\"]"
- else
-   echo "== 3. Archive season skipped (ARCHIVE_SOURCES_BUCKET not set)"
- fi
-diff --git a/infra/aws/worker.yaml b/infra/aws/worker.yaml
-index 374874f08c..73ddcb82d9 100644
---- a/infra/aws/worker.yaml
-+++ b/infra/aws/worker.yaml
-@@ -251,7 +251,9 @@ Resources:
-           Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/vega-v2-worker:${ImageTag}'
-           Essential: true
-           EntryPoint: [python, -m, vega.archives]
--          Command: [--sources, !Sub 's3://${ArchiveSourcesBucket}/data/sources']
-+          # --fresh: seasons holding no archive match only; a repair of stored archives goes through a reviewed
-+          # plan (--plan-store, then --apply-stored <sha256>), FAILURE_MODES.md §22.
-+          Command: [--sources, !Sub 's3://${ArchiveSourcesBucket}/data/sources', --fresh]
-           Secrets:
-             - {Name: V2_DATABASE_URL, ValueFrom: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${CollectUrlParameter}'}
-           LogConfiguration:
-diff --git a/tests/archive-association-sides.test.mjs b/tests/archive-association-sides.test.mjs
-new file mode 100644
-index 0000000000..50ee11cf96
---- /dev/null
-+++ b/tests/archive-association-sides.test.mjs
-@@ -0,0 +1,24 @@
-+// FAILURE_MODES.md §23 (23n), written before the code: in an OpenFootball UEFA results row, whose team names carry their
-+// association (« Real Madrid (ESP) »), a goal's team is compared, after exact names, with each name without its suffix.
-+// One side only may match; the stored names keep their suffix; no other feed is read this way.
-+import test from "node:test";
-+import assert from "node:assert/strict";
-+import { goalSide } from "../dashboard/shared/archive.js";
+ ## Niveau joueur dans un match
+ 
++Vega calcule la note du joueur sur 100 à partir de sa contribution dans la rencontre. Le champ `rating_title` des anciennes archives PitchAPI a été retiré des tables de lecture par la migration 108. [Note du match](../02-metriques-attendues/04-note-du-match.md)
 +
-+const uefa = (team1, team2, competitionId = "2013-14/uefa.cl") => ({ competitionId, team1, team2 });
+ | Champ Vega | Champ PitchAPI |
+ | --- | --- |
+ | `minutes` | `minutes_played` |
+-| `rating` | `rating_title` (note /10) |
+ | `goals`, `assists` | `goals`, `assists` |
+ | `xg` | `expected_goals` |
+ | `npxg` | `expected_goals_non_penalty` |
+@@ -83,7 +84,13 @@ Code : [transfermarkt.py](../../../backend/vega/transfermarkt.py). Un processus
+ - ses blessures (dates, jours, matchs manqués) ;
+ - son contrat avec un de nos clubs.
+ 
+-Les transferts et les blessures sont remplacés en entier à chaque lecture, parce que Transfermarkt corrige ses noms et ses dates.
++Les blessures sont remplacées en entier à chaque lecture, parce qu’une blessure n’a pas de clé chez Transfermarkt.
 +
-+test("23n: the association suffix of an OpenFootball UEFA row is read for the goal's side", () => {
-+  assert.equal(goalSide({ team: "Real Madrid" }, uefa("Real Madrid (ESP)", "Atlético Madrid (ESP)")), "home");
-+  assert.equal(goalSide({ team: "Atlético Madrid" }, uefa("Real Madrid (ESP)", "Atlético Madrid (ESP)")), "away");
-+  assert.equal(goalSide({ team: "Dinamo Zagreb" }, uefa("Dinamo Zagreb (CRO)", "Dinamo Kiev (UKR)", "2012-13/uefa.cl")), "home");
-+  assert.equal(goalSide({ team: "Dinamo Kiev" }, uefa("Dinamo Zagreb (CRO)", "Dinamo Kiev (UKR)", "2012-13/uefa.cl")), "away");
-+});
++**Les transferts et les contrats ne sont jamais effacés** (migration 139, [modes d’échec §20](../09-audit-2026-11/FAILURE_MODES.md)) :
++- un transfert est mis à jour par sa clé Transfermarkt et garde sa ligne. Un champ donné remplace l’ancien, un champ absent ou vide le laisse. Un transfert libre a un montant de 0 ;
++- un transfert que Transfermarkt ne liste plus garde ses faits et la date du premier jour où il manquait (`absent_since`). Une liste plus courte ne prouve aucune annulation ;
++- une réponse qui ne peut pas être un historique complet n’écrit rien : un 404 après un historique, l’absence d’historique, deux listes vides après un transfert terminé, un élément illisible, une même clé avec deux faits. La file garde le vrai statut HTTP et un code (`HISTORY_MISSING`, `HISTORY_EMPTY`, `HISTORY_INVALID`, `HISTORY_CONFLICT`), puis relit plus tard. Un premier 404 est une réponse ordinaire ;
++- un contrat est un fait daté. Quand Transfermarkt nomme un autre contrat (transfert, renouvellement, retour de prêt, club hors de notre base), l’ancien est écarté à la date du changement (`superseded_on`). Sa date de fin reste celle observée. Un départ futur laisse le contrat d’aujourd’hui en place jusqu’à ce jour.
+ 
+ **Comment un joueur est relié.** Jamais par le nom seul.
+ - **Le jeu du 6 juillet 2026** : ses liens sont repris tels quels.
+@@ -95,7 +102,7 @@ Les transferts et les blessures sont remplacés en entier à chaque lecture, par
+   - sans date de naissance chez nous (91 % de nos joueurs le 16 novembre 2026) : le même nom exact, le seul des deux côtés dans le club, que Transfermarkt place dans une saison où il a joué pour nous dans ce club (ou l’année d’avant). Quand Transfermarkt donne sa date de naissance, il doit avoir de 15 à 45 ans lors de ses matchs pour nous. C’est la règle du lecteur Wikidata.
+ - Transfermarkt ne remplit jamais nos dates de naissance : elles restent celles de nos sources.
+ 
+-**Quarantaine.** Si Transfermarkt donne une autre date de naissance que la nôtre, le lien est mis en doute. Rien de ce joueur n’est alors montré, ni valeur ni contrat, jusqu’à ce qu’une personne regarde.
++**Quarantaine.** Si Transfermarkt donne une autre date de naissance que la nôtre, le lien est mis en doute. Rien de ce joueur n’est alors montré, ni valeur ni contrat, jusqu’à ce qu’une personne regarde. Cela vaut aussi pour un contrat écrit avant le doute, et quand la quarantaine désigne l’ancien joueur d’une clé que nous avons fusionnée.
+ 
+ **Ordre de lecture.** Les joueurs de la saison en cours d’abord, puis les saisons précédentes. Ensuite, chaque élément est relu à son rythme :
+ - un joueur de la saison en cours : profil et blessures chaque semaine, valeurs et transferts quand le profil dit qu’ils ont changé, au plus tard tous les mois ;
+diff --git a/docs/calculs/02-metriques-attendues/02-xa.md b/docs/calculs/02-metriques-attendues/02-xa.md
+index 1f7a001284..4a9098119c 100644
+--- a/docs/calculs/02-metriques-attendues/02-xa.md
++++ b/docs/calculs/02-metriques-attendues/02-xa.md
+@@ -11,11 +11,10 @@ Le **xA** d'une passe est le xG du tir qu'elle a permis. Le xA d'un joueur dans
+ - **Accueil** : le xA d'un joueur n'est donné que s'il est renseigné sur tous ses matchs joués ; il sert de départage dans la liste des passeurs (`assists` décroissant, puis `xa`).
+ - **Effectif d'un club** : colonne « xG + xA » = somme saison du xG + somme saison du xA du joueur (un des deux absent compte pour 0, les deux absents → « — ») ([ClubScoutUI.jsx](../../../dashboard/frontend/src/components/ClubScoutUI.jsx#L1302)).
+ 
+-## Pourquoi le xA n'a jamais de centile
++## Classement du xA en saison et en match
+ 
+-PitchAPI **ne publie pas les xA nuls** : un joueur qui n'a créé aucun tir n'a pas `xa = 0`, il n'a pas de valeur. La distribution des xA ne contient donc que les joueurs qui ont déjà créé quelque chose ; un centile la comparerait à un groupe trié d'avance.
++En saison, le xA par 90 minutes peut recevoir un centile dans la cohorte du poste. Le joueur doit atteindre le seuil de minutes choisi (450 par défaut). Son xA doit couvrir tous ses matchs joués et toutes ses minutes. Il faut au moins 30 valeurs de joueurs comparables satisfaisant ces mêmes conditions. Un zéro omis est restitué lorsque la ligne et la couverture de la source l’autorisent. [Cohortes et centiles](../05-joueurs/02-centiles-et-cohortes.md) · [Couverture des zéros](../01-sources-et-conventions/02-valeurs-absentes-et-fiabilite.md)
+ 
+-Le xA est donc :
+-- affiché comme chiffre ;
+-- **exclu de tout centile, rang, indice Vega ou similarité** (`UNRANKED` dans [season-player.js](../../../dashboard/frontend/src/services/season-player.js#L80), `rankable: key !== "xa"` dans [scouting.js](../../../dashboard/frontend/src/services/scouting.js#L47), absent de `RANKED` dans [shared/player-profile.js](../../../dashboard/shared/player-profile.js#L104)) ;
+-- refusé dans un indice personnalisé : choisir le xA avec un poids > 0 renvoie « Un indicateur choisi ne permet pas un classement fiable. »
++L’indice personnalisé de saison accepte le xA avec un poids positif. Si un indicateur pondéré manque de centile, l’indice reste indisponible. Les voisins de style utilisent leur propre liste d’axes, qui exclut le xA. [Indice et similarité](../../../dashboard/frontend/src/services/scouting.js)
 +
-+test("23n: ambiguous or other feeds stay as they were", () => {
-+  // Both sides with one base name: unknown.
-+  assert.equal(goalSide({ team: "Dinamo" }, uefa("Dinamo (CRO)", "Dinamo (UKR)")), null);
-+  // Not an OpenFootball UEFA row: the suffix is a name, read by similarity as before (a tie stays unknown).
-+  assert.equal(goalSide({ team: "Real Madrid" }, uefa("Real Madrid (ESP)", "Atlético Madrid (ESP)", "england/2013-14/eng.1")), null);
-+  // Lower-case or longer codes are not an association.
-+  assert.equal(goalSide({ team: "Real Madrid" }, uefa("Real Madrid (esp)", "Atlético Madrid (esp)")), null);
-+});
-diff --git a/tests/archive-corrections.test.mjs b/tests/archive-corrections.test.mjs
-new file mode 100644
-index 0000000000..00176457f9
---- /dev/null
-+++ b/tests/archive-corrections.test.mjs
-@@ -0,0 +1,84 @@
-+// FAILURE_MODES.md §22 (22d, 22e, 22f, legacy pin), written before the code: the published rows are rebuilt by
-+// the baseline code itself, a unit whose keys or scores the corrected reading would change keeps its legacy rows,
-+// and a goal's side is first the side named exactly.
-+import test from "node:test";
-+import assert from "node:assert/strict";
-+import { createHash } from "node:crypto";
-+import { readFileSync } from "node:fs";
-+import { buildArchiveSeason, goalSide } from "../dashboard/shared/archive.js";
++Sur le profil d’une performance individuelle, le xA reste une valeur affichable sans centile de match. [Mesures classées en match](../../../dashboard/shared/player-profile.js)
+diff --git a/docs/calculs/05-joueurs/02-centiles-et-cohortes.md b/docs/calculs/05-joueurs/02-centiles-et-cohortes.md
+index 712abe8225..55503464a5 100644
+--- a/docs/calculs/05-joueurs/02-centiles-et-cohortes.md
++++ b/docs/calculs/05-joueurs/02-centiles-et-cohortes.md
+@@ -51,7 +51,7 @@ Code : `buildCohorts`, `rankMetric` dans [scouting.js](../../../dashboard/fronte
+ | Taille minimum | **30** joueurs ayant une valeur (`MIN_SEASON_PEERS`) |
+ | Valeurs comparées | **par 90 minutes** (taux en %) |
+ | Couverture exigée | la mesure doit être observée sur **tous les matchs joués** (`count = matches` et `minutes = minutes totales`), pour le joueur comme pour chaque pair |
+-| Zéros omis | un vide vaut zéro là où le fournisseur publie la mesure pour le match (voir [Valeurs absentes](../01-sources-et-conventions/02-valeurs-absentes-et-fiabilite.md)) ; le xA est classé comme les autres depuis |
++| Zéros omis | un vide vaut zéro là où le fournisseur publie la mesure pour le match (voir [Valeurs absentes](../01-sources-et-conventions/02-valeurs-absentes-et-fiabilite.md)) ; le xA suit les mêmes règles de couverture et de classement que les autres mesures de saison |
+ | Option « niveau comparable » | la cohorte est réduite aux joueurs des 30 clubs de niveau le plus proche (voir [Référentiels](../04-clubs/03-referentiels-et-niveau-europeen.md)) |
+ 
+ La règle de couverture évite de comparer un par 90 calculé sur 3 matchs avec un par 90 calculé sur 30.
+diff --git a/docs/calculs/05-joueurs/03-indices-vega-et-roles.md b/docs/calculs/05-joueurs/03-indices-vega-et-roles.md
+index 53fb748b70..c991f90757 100644
+--- a/docs/calculs/05-joueurs/03-indices-vega-et-roles.md
++++ b/docs/calculs/05-joueurs/03-indices-vega-et-roles.md
+@@ -15,7 +15,7 @@ s_k = \begin{cases} \text{centile}_k & \text{sens « max »} \\ 100 - \text{cent
+ $$
+ 
+ - **Tous** les centiles doivent exister ; s'il en manque un, l'indice est `null` (pas de moyenne partielle).
+-- Un indicateur non classable (xA) avec un poids > 0 rend l'indice impossible.
++- Le xA de saison peut recevoir un poids positif lorsque son centile est disponible.
+ - Chaque composante affiche sa part (`w_k / Σ w`) et sa contribution (`s_k × w_k / Σ w`).
+ - Indice par défaut « Mon indice » : passes réussies, occasions créées, récupérations, poids 1 chacun, sens « max », 450 minutes minimum.
+ 
+@@ -44,9 +44,9 @@ Les rôles sont triés du plus haut au plus bas.
+ 2. **Rang** = son rang parmi les joueurs classés de son rôle (`roleRank`) ;
+ 3. **Sur** = nombre de joueurs classés de ce rôle (`roleCount`).
+ 
+-Un joueur qui a un score sans être classé (championnat au niveau provisoire, erreur-type au-dessus de 45 points ; ou championnat féminin, noté entre joueuses) a son niveau, pas de rang.
++Avec un indice calculé, le joueur reçoit un rang dans son univers et un rang à son poste. Les classements masculin et féminin commencent chacun à 1. Sur la fiche, le rang est provisoire sous le seuil de minutes. Chez les hommes, une sélection seule, un club sans championnat dans la base ou un championnat de niveau provisoire peuvent également le rendre provisoire. [Lecture de la fiche et de l’univers](../../../backend/api/src/routes/rankings.mjs)
+ 
+-Pour une saison sans classement de puissance, ou un joueur qui n'y a pas de score (trop peu de minutes), la colonne garde l'ancien calcul :
++Quand l’API ne fournit aucun score de puissance pour ce joueur et cette saison, la fiche utilise le calcul descriptif ci-dessous si les comparaisons et les matchs nécessaires sont disponibles :
+ 1. **Niveau actuel** = valeur arrondie du **meilleur rôle** du joueur (le premier rôle dont l'indice existe) ;
+ 2. **Rang** = `1 + nombre de joueurs de la cohorte dont l'indice sur ce même rôle est strictement supérieur` ;
+ 3. **Sur** = nombre de joueurs de la cohorte ayant un indice sur ce rôle, plus le joueur.
+diff --git a/docs/calculs/05-joueurs/05-classements-joueurs.md b/docs/calculs/05-joueurs/05-classements-joueurs.md
+index 929eba69f3..56bd48230c 100644
+--- a/docs/calculs/05-joueurs/05-classements-joueurs.md
++++ b/docs/calculs/05-joueurs/05-classements-joueurs.md
+@@ -18,7 +18,7 @@
+ 
+ `seasonTotals` et `seasonLeaders` dans [home-insights.js](../../../dashboard/frontend/src/services/home-insights.js#L564), même calcul en SQL dans [home.mjs](../../../backend/api/src/routes/home.mjs).
+ 
+-Totaux saison par joueur (matchs avec minutes > 0) : matchs, minutes, buts, passes décisives, xG et xA (**seulement s'ils couvrent tous les matchs**, sinon `null`), note pondérée par les minutes. Le club affiché est le dernier club national : un match européen ne change pas de club. Un but ou une passe décisive absents y comptent pour 0 (convention de l'accueil, antérieure à l'audit) : un xG complet ne prouve pas des buts complets, et l'écart « Efficaces » / « Maladroits » de l'accueil, faute de profil apparié, se lit sur ces totaux tels quels.
++Totaux saison par joueur (matchs avec minutes > 0) : matchs, minutes, buts, passes décisives, xG et xA (**seulement s'ils couvrent tous les matchs**, sinon `null`), note Vega du z moyen pondéré par les minutes des matchs d’au moins 20 minutes dont le z est connu. Le club affiché est le dernier club national : un match européen ne change pas de club. Un but ou une passe décisive absents y comptent pour 0 (convention de l'accueil, antérieure à l'audit) : un xG complet ne prouve pas des buts complets, et l'écart « Efficaces » / « Maladroits » de l'accueil, faute de profil apparié, se lit sur ces totaux tels quels.
+ 
+ | Liste | Taille | Règle |
+ | --- | --- | --- |
+@@ -26,7 +26,7 @@ Totaux saison par joueur (matchs avec minutes > 0) : matchs, minutes, buts, pass
+ | Passeurs | 10 | comme l'annuaire |
+ | Efficaces | 8 | comme l'annuaire |
+ | Maladroits | 8 | comme l'annuaire |
+-| Notes | 10 | note pondérée, minutes ≥ `max(450, arrondi(0,4 × minutes max))` |
++| Notes | 10 | note Vega de saison, minutes notées ≥ `max(450, arrondi(0,4 × minutes max))` |
+ 
+ ## Joueur de la semaine
+ 
+diff --git a/docs/calculs/05-joueurs/07-lecture-du-scout.md b/docs/calculs/05-joueurs/07-lecture-du-scout.md
+index fbf1ed13de..eb828ad725 100644
+--- a/docs/calculs/05-joueurs/07-lecture-du-scout.md
++++ b/docs/calculs/05-joueurs/07-lecture-du-scout.md
+@@ -53,7 +53,7 @@ Toutes les phrases portent sur le même joueur et la même cohorte que le reste
+ 
+ ## Exemple
+ 
+-Un milieu joue 1 800 minutes sur la période, avec 2 buts, 3 passes décisives et une note moyenne de 7,05. Dans sa cohorte :
++Un milieu joue 1 800 minutes sur la période, marque 2 buts et donne 3 passes décisives. Dans cet exemple, le z moyen pondéré par les minutes des matchs admissibles vaut 0,5, ce qui donne une note Vega arrondie de 57 sur 100. Dans sa cohorte :
+ 
+ - Construction : passes réussies P84, précision des passes P78, ballons touchés P81 → `(84 + 78 + 81) / 3 = 81` ; Récupération : récupérations P88, interceptions P70, tacles P62 → 73 ; Création et Percussion plus bas ;
+ - parmi les axes de style, les plus hauts sont récupérations P88 et passes réussies P84, le plus bas dribbles réussis P12.
+@@ -62,7 +62,7 @@ La carte affiche :
+ 
+ - Meilleur rôle : construction, indice 81 sur 100 face aux milieux.
+ - Points forts : récupérations (P88) et passes réussies (P84).
+-- Production : 0,10 but et 0,15 passe décisive par 90 min, note moyenne 7,05.
++- Production : 0,10 but et 0,15 passe décisive par 90 min, note Vega 57 sur 100.
+ - Point de vigilance : dribbles réussis (P12).
+ 
+ `90 × 2 / 1 800 = 0,10` et `90 × 3 / 1 800 = 0,15`.
+diff --git a/docs/calculs/05-joueurs/08-audit-classement-puissance.md b/docs/calculs/05-joueurs/08-audit-classement-puissance.md
+index 9b60693c04..91e433e270 100644
+--- a/docs/calculs/05-joueurs/08-audit-classement-puissance.md
++++ b/docs/calculs/05-joueurs/08-audit-classement-puissance.md
+@@ -183,18 +183,18 @@ Tous les championnats, clubs et joueurs ont désormais une note sur la même éc
+ - cette retenue n'est pas un a priori cohérent : à l'équilibre, elle revient à un a priori dont la force baisse quand les liens augmentent, et 1500 est arbitraire ;
+ - compter les matchs ne dit pas si le niveau est mesuré. Un groupe de championnats qui ne jouent qu'entre eux (l'Amérique du Sud avec ses coupes, l'Arabie saoudite et sa deuxième division) paraît bien mesuré alors que sa place par rapport aux autres ne l'est pas. C'est ce qui faisait bondir l'Argentine de 98 points avec les coupes continentales, et ce qui laissait 31 championnats sans niveau.
+ 
+-**Le modèle** ([`power.py`](../../../backend/vega/power.py), « League levels (version 4) »). Le niveau ℓ de chaque championnat est le maximum a posteriori d'un seul modèle, qui réunit trois preuves :
+-- **Les matchs entre championnats.** Avec l'Elo relancé depuis les niveaux, un match apporte le score I_m (r − E)·c et l'information I_m E(1 − E)·c² sur les deux championnats (c = ln 10 / 400), divisés par la dispersion des résultats (φ = 0,73 ; les nuls la font passer sous 1).
++**Calcul des niveaux dans la version 4.** Le lecteur relance l’Elo depuis les niveaux et combine trois sources d’information. Pour les matchs, il emploie une sensibilité fixe de +1 et −1 sans propager les variations des Elo intermédiaires. La qualification initiale de maximum a posteriori a été réfutée pour la vraisemblance séquentielle annoncée. [Implémentation](../../../backend/vega/power.py) · [Contre-exemple du §3](../09-audit-2026-11/SOURCE_AUDIT.md)
++- **Les matchs entre championnats.** Avec l'Elo relancé depuis les niveaux, un match apporte le résidu pondéré I_m (r − E)·c et la courbure locale I_m E(1 − E)·c² sur les deux championnats (c = ln 10 / 400), divisés par la dispersion des résultats (φ = 0,73 ; les nuls la font passer sous 1).
+ - **Les joueurs qui changent de championnat.** On ne lit que ses matchs de championnat : un séjour en coupe d'Europe ou en sélection ne s'intercale jamais entre deux années. Son rendement par 90 minutes est pris par rapport à la moyenne de son championnat cette saison-là. On en retire ce qu'en garde n'importe quel joueur d'une année sur l'autre, mesuré sur ceux qui sont restés (c' = α + 0,63 c sur 9 599 joueurs restés des années 2024 et 2025). Ce qui reste vaut −κ\* (ℓ_b − ℓ_a) / 400 par passage (3 120 passages), avec la variance d'un passage et l'écart propre à une paire (τ_u = 0,09).
+ - **Un a priori, sous forme d'écarts plutôt que d'un retour à 1500.** Une deuxième division se tient sous la première de son pays d'un écart de division b (162 points, écart-type 49, mesuré sur 11 paires). Une première division se tient à la moyenne de sa confédération si au moins trois de ses championnats sont mesurés : UEFA 1492, CONMEBOL 1499, CONCACAF 1482, AFC 1439 ; la CAF prend la moyenne d'ensemble. L'écart-type entre championnats européens est de 111.
+ 
+-Tous ces réglages sont mesurés à chaque calcul sur les championnats que les seuls matchs et passages mesurent, à l'exception de κ\*. Les divisions de chaque championnat ont été relues une par une (`TIERS`) ; le Paulista A1, championnat d'État joué par des clubs de Serie A et de Serie B, est classé en deuxième division. Un championnat sans aucune preuve reçoit son a priori, et son erreur-type le dit. Un calcul qui ne converge pas en 40 pas échoue et laisse les niveaux d'avant.
++Tous ces réglages sont mesurés à chaque calcul sur les championnats que les seuls matchs et passages mesurent, à l'exception de κ\*. Les divisions de chaque championnat ont été relues une par une (`TIERS`) ; le Paulista A1, championnat d'État joué par des clubs de Serie A et de Serie B, est classé en deuxième division. Les championnats peu documentés dépendent davantage de l’a priori. La marge issue de la matrice du calcul sert au classement de leur statut. Un calcul qui ne converge pas en 40 pas échoue et laisse les niveaux d'avant.
+ 
+-**Mesuré.** Un championnat est **mesuré** (`linked`, ses joueurs classés) quand son erreur-type est d'au plus 45 points ; il le reste jusqu'à 52, pour qu'aucun championnat n'entre et ne sorte du classement à chaque calcul.
++**Statut utilisé par cette version.** `linked` vaut vrai lorsque la marge interne est au plus de 45 points, ou au plus de 52 si le championnat était déjà mesuré. Ces valeurs servent de seuils opérationnels. Leur interprétation comme erreurs-types statistiques reste à valider.
+ 
+ Pourquoi 45 : à ce seuil, une erreur sur le niveau déplace l'indice d'un joueur d'au plus un quart d'écart-type de son rôle. Le calcul est e / (√2 σ), σ = 132 étant l'écart-type des forces des clubs sur les matchs de championnat de 2026/2027 ; à 60 points, ce serait 0,32.
+ 
+-Les autres championnats ont un niveau marqué « provisoire » sur le site, avec sa marge, et leurs joueurs un score sans rang.
++La version 4 gardait un niveau et une marge pour les championnats masculins provisoires. Elle donnait à leurs joueurs un score sans rang. Les versions 5 et 6, décrites plus bas, ont modifié l’attribution du rang.
+ 
+ **Les coupes des autres confédérations** entrent dans l'Elo (`ELO_APART` supprimé). Les clubs de ces coupes sont reliés à ceux de PitchAPI par la passe d'identité, qui tourne avant l'Elo dans le même passage quotidien.
+ 
+@@ -256,7 +256,7 @@ Demande du propriétaire : un joueur doit avoir un rang dès son premier match,
+   - **En production** (relu le 15 novembre à 16 h 25 UTC, les 157 saisons recalculées en version 5) : 29 365 joueurs classés sur 29 692 en 2026/2027, 36 690 sur 37 361 en 2025/2026, 31 950 sur 32 627 en 2024/2025. Le chiffre mesuré avant comptait chaque joueur qui avait un indice ; le rang, lui, ne va qu'aux joueurs d'un club dont le championnat est dans la base.
+   - **Restent sans rang**, avec un score : en 2026/2027, les 327 joueurs de 17 clubs vus seulement en Ligue des champions, Ligue Europa ou Ligue Conférence, sans leur championnat ; en 2025/2026, 412 joueurs de tels clubs, 167 de championnats féminins (notées entre elles, sans rang dans le classement des hommes) et 92 connus seulement par leur sélection.
+   - **Écartée, la mesure au-dessus d'un niveau de remplacement** : ce niveau variait de plus de 25 % d'une année à l'autre pour trois rôles, et devenait positif en début de saison.
+-- **Note de match.** La contribution du match seule, ramenée à la dispersion de son rôle (et de sa compétition) dans la dernière année terminée, en score normal, sur la courbe 0–100. Elle est montrée sur la fiche du match à côté de la note PitchAPI, avec le rang du joueur dans le match.
++- **Note de match.** La contribution du match seule, ramenée à la dispersion de son rôle (et de sa compétition) dans la dernière année terminée, en score normal, sur la courbe 0–100. Dans cette version 5, la fiche affichait aussi la note PitchAPI. Depuis la version 7, la note Vega est la seule note de match affichée. [Note du match](../02-metriques-attendues/04-note-du-match.md)
+   - **En production** : chaque match joué des trois dernières saisons a sa note (651 805 en 2025/2026) ; un match complet moyen vaut 0,000 en écart standardisé, soit 50. Seules 2024/2025 et 2025/2026, terminées, sont gardées comme références.
+   - **Sans note du fournisseur** (certains championnats n'en ont pas), la carte « Meilleures notes » liste les meilleures notes Vega du match.
+   - **Sans minutes jouées** dans la source, un match n'a pas de note : le classement ne lit que les matchs où le joueur a des minutes.
+diff --git a/docs/calculs/05-joueurs/10-revelations.md b/docs/calculs/05-joueurs/10-revelations.md
+index 8aeaba369f..7a08587ddd 100644
+--- a/docs/calculs/05-joueurs/10-revelations.md
++++ b/docs/calculs/05-joueurs/10-revelations.md
+@@ -1,15 +1,15 @@
+ # Révélations
+ 
+-Des joueurs que le classement de puissance ne classe pas encore, faute de minutes, et qui jouent déjà comme ses titulaires ([breakout.py](../../../backend/vega/breakout.py), `/api/rankings/breakouts`).
++Le signal « Révélation » repère des joueurs sous le seuil de minutes des titulaires de référence, dont le rendement est déjà comparable à celui de ces titulaires. Leur classement de puissance peut déjà comporter un rang provisoire. [Règle](../../../backend/vega/breakout.py) · [API](../../../backend/api/src/routes/rankings.mjs)
+ 
+ ## La règle
+ 
+ Un joueur est signalé sur une saison quand :
+ 
+ 1. il a joué **au moins 270 minutes** mais reste **sous le seuil de minutes du classement** (900 minutes sur une saison entière, la moitié des minutes du joueur le plus utilisé tant que la saison n'en est pas là) ;
+-2. son championnat est **mesuré** (erreur-type de son niveau d'au plus 45 points, version 4) ;
+-3. son **rendement par 90 minutes régularisé** (celui du classement, § 8 de la méthode : il ramène vers la moyenne un joueur qui a peu joué) est **au niveau du meilleur cinquième des titulaires de son rôle** (les joueurs classés du même rôle, au moins 30) ;
+-4. il n'a **jamais été titulaire** (classé) lors d'une saison antérieure de la base ;
++2. sa ligne de puissance porte `linked = true`. Pour les championnats masculins, la marge interne donne ce statut jusqu’à 45 points à l’entrée et 52 points pour un championnat déjà mesuré ;
++3. son **rendement par 90 minutes régularisé** (celui du classement, § 8 de la méthode : il ramène vers la moyenne un joueur qui a peu joué) est **au niveau du meilleur cinquième des titulaires de son rôle** (les joueurs du même rôle admissibles en minutes, avec `linked = true` et un rendement renseigné, au moins 30) ;
++4. aucune saison antérieure de la base ne le marque admissible en minutes (`eligible`) ;
+ 5. sa date de naissance est **connue** et il a **moins de 23 ans** au 1ᵉʳ août de la saison. Elle n'est connue que pour une minorité de joueurs (Wikidata, club par club) : un joueur dont l'âge est inconnu n'est pas signalé.
+ 
+ Les règles 4 et 5 écartent les joueurs établis qui ont peu joué (un titulaire blessé a le rendement d'un titulaire). La première liste, calculée sans exiger l'âge, s'ouvrait sur un international de retour de blessure et deux joueurs de 35 ans et plus : la base ne détient ni leurs saisons d'avant 2025/2026 ni leur âge. La liste est donc courte aujourd'hui (les 119 joueurs que la règle 3 retient en 2026/2027 n'ont pas tous un âge connu) et s'allonge à mesure que les dates de naissance arrivent. Le « centile » affiché est la part des titulaires de son rôle que le joueur dépasse ; les signalés sont rangés par ce centile.
+@@ -33,6 +33,6 @@ Ce que la vérification ne couvre pas : les règles 4 et 5 (2025/2026 est la pre
+ ## Où il se lit
+ 
+ - Page « Classement des joueurs » : la liste « Révélations » de la saison, les vingt premiers, avec la part des titulaires de leur poste qu'ils dépassent.
+-- Fiche d'un joueur signalé : une phrase sous l'Indice Vega (« Révélation : en 610 minutes, son rendement par 90 minutes le place devant 93 % des titulaires à son poste »). Un joueur sous le seuil de minutes n'a pas de score au classement ; cette phrase est tout ce que le classement dit de lui.
++- Fiche d'un joueur signalé : une phrase sous l'Indice Vega (« Révélation : en 610 minutes, son rendement par 90 minutes le place devant 93 % des titulaires à son poste »). La fiche peut présenter à la fois ce signal, le score de puissance et son rang provisoire.
+ 
+ Recalculé avec les modèles de la saison, après le classement (`agg.player_breakouts`, `agg.breakout_runs`). L'API ne sert une liste que si la règle en vigueur l'a calculée ; une saison terminée est recalculée une fois quand la règle change. Au 13 novembre 2026, dix joueurs de 2026/2027 sont signalés.
+diff --git a/docs/calculs/07-limites/01-non-calcule-fictif-demo.md b/docs/calculs/07-limites/01-non-calcule-fictif-demo.md
+index ecda6df939..fca2c5dd7f 100644
+--- a/docs/calculs/07-limites/01-non-calcule-fictif-demo.md
++++ b/docs/calculs/07-limites/01-non-calcule-fictif-demo.md
+@@ -7,12 +7,13 @@ Tout chiffre du site n'est pas un calcul de Vega. Cette page liste ce qui est fo
+ | Valeur | Source | Note |
+ | --- | --- | --- |
+ | xG, npxG, xG en jeu / CPA, xGOT, xA, buts évités | PitchAPI | aucun modèle Vega |
+-| Note du match | PitchAPI | pas une note Vega validée |
+ | Classement FIFA, coefficients UEFA clubs et associations | FIFA, UEFA, SportsAPI | collectés par le worker (`backend/vega/sources/fifa.py`, `uefa.py`) |
+ | Classements officiels (fournisseur, UEFA) | fournisseurs | contrôlés, jamais recalculés |
+ | Palmarès | Wikipédia / Wikidata | voir [PLAYER_HONOURS.md](../../PLAYER_HONOURS.md) |
+ | Archives de buts historiques | schochastics/football-data | voir [HISTORICAL_GOALS.md](../../HISTORICAL_GOALS.md) |
+ 
++La note de match du joueur est calculée par Vega sur 100. [Formule et provenance](../02-metriques-attendues/04-note-du-match.md)
 +
-+const event = (date, match, minute, player, team, score) => ({ date, match, minute, player, team, score });
-+const goals = (id, events) => ({ season: "2000/2001", competitions: [{ id, name: id, country: "Österreich", events }] });
-+const byKey = (edition) => Object.fromEntries(edition.matches.map((m) => [m.key, m]));
-+
-+test("the legacy reading is the baseline's own files, byte for byte", () => {
-+  // git show 8018e0836c:dashboard/shared/<file> | shasum -a 256
-+  const pinned = {
-+    "archive.js": "296e7abe672b5617e49eb05c5fb9253ea713a924237a8db8697b064f2db4df44",
-+    "openfootball-history.js": "a03306601834994bc081ee6e94e46a60f6e8aca9f86797679dc1b1fcb9973e31",
-+    "archive-text.js": "9fd698d0a2a8b401ec97b6c63d1cc5e8d773c75e04d6cb11206bd8e3970cec22",
-+  };
-+  for (const [name, digest] of Object.entries(pinned)) {
-+    const body = readFileSync(new URL(`../dashboard/shared/legacy-8018e08/${name}`, import.meta.url));
-+    assert.equal(createHash("sha256").update(body).digest("hex"), digest, name);
-+  }
-+});
-+
-+test("22d: a legacy-readable label whose corrected score differs keeps its legacy row, held", () => {
-+  // Astra's literal: one observed goal at 50' ending 2–1 under « M vs. N 3:1 (Hinspiel 0:0) ».
-+  const edition = buildArchiveSeason(null, goals("x", [event("2000-09-01", "M vs. N 3:1 (Hinspiel 0:0)", "50", "P", "M", [2, 1])]));
-+  const [row] = edition.matches;
-+  assert.equal(row.key, "g:x:2000-09-01:0");
-+  assert.deepEqual(row.score, [2, 1]); // the published (legacy) score
-+  assert.deepEqual(row.notes, ["tirs au but"]); // the published notes
-+  assert.equal(row.held, "score_change");
-+  assert.deepEqual(row.candidate?.score, [3, 1]); // the corrected reading, reported only
-+});
-+
-+test("22e: an absorption the legacy reading did not make keeps both legacy keys, the result without these goals", () => {
-+  const results = {
-+    season: "2000/2001",
-+    competitions: [{ id: "at.1", name: "Bundesliga", country: "Österreich", matches: [
-+      { date: "2000-09-02", team1: "Wiener", team2: "Rapid", score: { ft: [3, 1] } },
-+    ] }],
-+  };
-+  const edition = buildArchiveSeason(results, goals("aut", [event("2000-09-02", "Wien vs. Rapid 3:1 (Hinspiel 0:0)", "50", "P", "Wien", [2, 1])]));
-+  const rows = byKey(edition);
-+  assert.deepEqual(Object.keys(rows).sort(), ["g:aut:2000-09-02:0", "r:at.1:0"]);
-+  assert.equal(rows["r:at.1:0"].goals, null);
-+  assert.equal(rows["g:aut:2000-09-02:0"].held, "absorption");
-+  assert.deepEqual(rows["g:aut:2000-09-02:0"].score, [2, 1]);
-+  assert.deepEqual(edition.absorbed, []); // nothing is absorbed
-+  assert.deepEqual(edition.held.map((h) => [h.reason, h.legacy, h.candidate]), [
-+    ["absorption", ["g:aut:2000-09-02:0", "r:at.1:0"], ["r:at.1:0"]],
-+  ]);
-+});
-+
-+test("22f: a goal's side is first the side named exactly", () => {
-+  assert.equal(goalSide({ team: "Manchester United" }, { team1: "Manchester United", team2: "Manchester City" }), "home");
-+  assert.equal(goalSide({ team: "Manchester City" }, { team1: "Manchester United", team2: "Manchester City" }), "away");
-+  assert.equal(goalSide({ team: "Real Madrid" }, { team1: "Atlético Madrid", team2: "Real Madrid" }), "away");
-+  assert.equal(goalSide({ team: "real  madrid." }, { team1: "Atlético Madrid", team2: "Real Madrid" }), "away"); // case, spaces, dots
-+  assert.equal(goalSide({ team: "West Ham United" }, { team1: "Arsenal FC", team2: "West Ham United FC" }), "away"); // similarity
-+  assert.equal(goalSide({ team: "Manchester" }, { team1: "Manchester United", team2: "Manchester City" }), null); // still a tie
-+});
-+
-+test("22g (edition): a legacy side the corrected reading would lose holds the unit", () => {
-+  // A parsed legacy label: the legacy side of each goal is established; the corrected rows must keep it.
-+  const edition = buildArchiveSeason(null, goals("eng", [
-+    event("2000-09-03", "Manchester United vs. Manchester City 1:0", "10", "P", "Manchester United", [1, 0]),
-+  ]));
-+  const [row] = edition.matches;
-+  assert.equal(row.held, undefined);
-+  assert.equal(row.goals[0].side, "home");
-+});
-+
-+test("an unchanged unit is the corrected row; a malformed legacy label is repaired in place with its key", () => {
-+  const edition = buildArchiveSeason(null, goals("dfb", [
-+    event("1972-04-12", "1. FC Köln vs. Bayern München 5:1 \t\t\n\t(Hinspiel 0:3)", "80", "P2", "Bayern München", [5, 1]),
-+  ]));
-+  const [row] = edition.matches;
-+  assert.equal(row.key, "g:dfb:1972-04-12:0");
-+  assert.deepEqual([row.team1, row.team2, row.score, row.held], ["1. FC Köln", "Bayern München", [5, 1], undefined]);
-+  assert.equal(row.goals[0].side, "away");
-+});
-diff --git a/tests/archive-goal-keys.test.mjs b/tests/archive-goal-keys.test.mjs
-new file mode 100644
-index 0000000000..e70e1a5f51
---- /dev/null
-+++ b/tests/archive-goal-keys.test.mjs
-@@ -0,0 +1,83 @@
-+// FAILURE_MODES.md §20 (20f, 20h, 20i and the score-conflict hold), written before the code: a goal
-+// label laid out on several lines is read, keys keep their legacy numbering, and label parsing never
-+// chooses a score nor names an invented team.
-+import test from "node:test";
-+import assert from "node:assert/strict";
-+import { buildArchiveSeason, parseGoalMatch } from "../dashboard/shared/archive.js";
-+
-+const event = (date, match, minute, player, team, score) => ({ date, match, minute, player, team, score });
-+const season = (events, results = null) => buildArchiveSeason(results, {
-+  season: "1971/1972", competitions: [{ id: "dfb-pokal", name: "DFB-Pokal", country: "Deutschland", events }],
-+});
-+const byKey = (edition) => Object.fromEntries(edition.matches.map((m) => [m.key, m]));
-+
-+test("a goal label laid out on several lines is read; the raw label is kept", () => {
-+  // Production labels (17 Nov 2026, worldclub DFB-Pokal 1971/72).
-+  assert.deepEqual(parseGoalMatch("1. FC Köln vs. Bayern München 5:1 \t\t\t\n\t\t\t\t\t\n\t\t\t(Hinspiel 0:3)"),
-+    { team1: "1. FC Köln", team2: "Bayern München", score: [5, 1], suffix: "(Hinspiel 0:3)" });
-+  assert.equal(parseGoalMatch("1. FC Kaiserslautern vs. Rot-Weiß Oberhausen 5:0 n.V.\t\t\n\t\t(Hinspiel 1:3)").suffix, "n.V. (Hinspiel 1:3)");
-+  assert.deepEqual(parseGoalMatch("A vs. B 2:1"), { team1: "A", team2: "B", score: [2, 1], suffix: "" });
-+  assert.deepEqual(parseGoalMatch("Werder Bremen vs. Hannover 96 2:1 i.E."), { team1: "Werder Bremen", team2: "Hannover 96", score: [2, 1], suffix: "i.E." });
-+  assert.equal(parseGoalMatch("no label here"), null);
-+});
-+
-+test("goal-only keys keep their legacy numbering; a merge the legacy reading did not make is held (§22)", () => {
-+  const edition = season([
-+    event("1972-04-05", "Clean A vs. Clean B 1:0", "10", "P1", "Clean A", [1, 0]),
-+    // One match, captured once with layout whitespace (legacy: unread) and once clean (legacy: read).
-+    // (The unread capture holds the final goal: its legacy score is the label's, so nothing is held.)
-+    event("1972-04-12", "1. FC Köln vs. Bayern München 5:1 \t\t\n\t(Hinspiel 0:3)", "80", "P2", "1. FC Köln", [5, 1]),
-+    event("1972-04-12", "1. FC Köln vs. Bayern München 5:1 (Hinspiel 0:3)", "5", "P3", "1. FC Köln", [1, 0]),
-+    event("1972-04-19", "X vs. Y 2:2\n\t(Hinspiel 1:1)", "30", "P4", "X", [1, 0]),
-+    event("1972-04-19", "X vs. Y 2:2\n\t(Hinspiel 1:1)", "60", "P5", "Y", [2, 2]),
-+    event("1972-05-01", "garbage without a score", "1", "P6", "Somebody", [1, 0]),
-+  ]);
-+  const matches = byKey(edition);
-+  assert.deepEqual(Object.keys(matches).sort(), [
-+    "g:dfb-pokal:1972-04-05:0", "g:dfb-pokal:1972-04-12:1", "g:dfb-pokal:1972-04-12:2", "g:dfb-pokal:1972-04-19:3", "g:dfb-pokal:1972-05-01:4",
-+  ]);
-+  // §22: the two captures stay the two published rows, each with its own goal; nothing is absorbed.
-+  assert.deepEqual([1, 2].map((i) => [matches[`g:dfb-pokal:1972-04-12:${i}`].held, matches[`g:dfb-pokal:1972-04-12:${i}`].goals.length]),
-+    [["absorption", 1], ["absorption", 1]]);
-+  assert.deepEqual(edition.absorbed, []);
-+  assert.deepEqual(edition.held.map((h) => [h.reason, h.legacy, h.candidate]),
-+    [["absorption", ["g:dfb-pokal:1972-04-12:1", "g:dfb-pokal:1972-04-12:2"], ["g:dfb-pokal:1972-04-12:2"]]]);
-+  // Read now, same score as the legacy one: repaired in place, under its legacy key.
-+  const xy = matches["g:dfb-pokal:1972-04-19:3"];
-+  assert.deepEqual([xy.team1, xy.team2, xy.score, xy.held ?? null], ["X", "Y", [2, 2], null]);
-+  // Never read: no team, the raw label shown.
-+  const garbage = matches["g:dfb-pokal:1972-05-01:4"];
-+  assert.deepEqual([garbage.team1, garbage.team2, garbage.unparsedLabel], ["", "", "garbage without a score"]);
-+});
-+
-+test("a newly read label whose score differs from the legacy one keeps its legacy values", () => {
-+  const edition = season([
-+    event("1972-04-12", "M vs. N 3:1\n\t(Hinspiel 0:0)", "5", "P1", "M", [1, 0]),
-+    event("1972-04-12", "M vs. N 3:1\n\t(Hinspiel 0:0)", "50", "P2", "M", [2, 1]),
-+  ]);
-+  const [match] = edition.matches;
-+  assert.equal(match.key, "g:dfb-pokal:1972-04-12:0");
-+  assert.equal(match.held, "score_change");
-+  assert.deepEqual([match.team1, match.team2, match.score], ["M vs. N 3:1\n\t(Hinspiel 0:0)", "", [2, 1]]);
-+});
-+
-+test("a legacy goal-only key whose goals would now join a results match is held, both rows kept (§22)", () => {
-+  const results = { season: "1971/1972", competitions: [{ id: "de.cup", name: "DFB-Pokal", country: "Deutschland", matches: [
-+    { date: "1972-04-12", team1: "1. FC Köln", team2: "Bayern München", score: { ft: [5, 1] } },
-+  ] }] };
-+  const edition = season([
-+    event("1972-04-12", "1. FC Köln vs. Bayern München 5:1 \t\t\n\t(Hinspiel 0:3)", "80", "P2", "1. FC Köln", [5, 1]),
-+  ], results);
-+  assert.deepEqual(edition.matches.map((m) => [m.key, m.goals?.length ?? 0, m.held ?? m.heldGoals ?? null]).sort(),
-+    [["g:dfb-pokal:1972-04-12:0", 1, "absorption"], ["r:de.cup:0", 0, "absorption"]]);
-+  assert.deepEqual(edition.absorbed, []);
-+});
-+
-+test("A–B and B–A the same day, and one pair in two competitions, stay distinct", () => {
-+  const edition = buildArchiveSeason(null, { season: "1971/1972", competitions: [
-+    { id: "a", name: "A", country: "X", events: [event("1972-04-12", "A vs. B 1:0", "5", "P1", "A", [1, 0]), event("1972-04-12", "B vs. A 0:2", "9", "P2", "A", [0, 1])] },
-+    { id: "b", name: "B", country: "X", events: [event("1972-04-12", "A vs. B 1:0", "5", "P1", "A", [1, 0])] },
-+  ] });
-+  assert.equal(edition.matches.length, 3);
-+  assert.deepEqual(edition.absorbed, []);
-+});
-diff --git a/tests/bounded-reads.test.mjs b/tests/bounded-reads.test.mjs
-index 300a6cbbab..680361ad10 100644
---- a/tests/bounded-reads.test.mjs
-+++ b/tests/bounded-reads.test.mjs
-@@ -409,10 +409,10 @@ test("navbar focus/typing selects the advertised read path and cancels its debou
-       calls = [],
-       pending = [],
-       controllers = [],
-+      cupKinds = new Set(),
-       state = [scenario.query, true, true, 0, ""];
-     let stateIndex = 0,
--      legacyLoads = 0,
--      cupLoads = 0;
-+      legacyLoads = 0;
-     const context = {
-       manifest: {
-         ...manifest,
-@@ -477,8 +477,9 @@ test("navbar focus/typing selects the advertised read path and cancels its debou
-         },
-       },
-       "../services/catalog-client.js": {
--        cupIndex: async () => {
--          cupLoads++;
-+        servesCupWorkerIndex: () => false,
-+        cupIndex: async (kind) => {
-+          cupKinds.add(kind);
-           return { competitions: [] };
-         },
-       },
-@@ -523,10 +524,10 @@ test("navbar focus/typing selects the advertised read path and cancels its debou
-     const hasQuery = scenario.query.length >= 2;
-     assert.equal(calls.length, scenario.advertised && hasQuery ? 1 : 0);
-     assert.equal(legacyLoads, !scenario.advertised && hasQuery ? 1 : 0);
--    assert.equal(
--      cupLoads,
--      !scenario.advertised && hasQuery ? 2 : 0,
--      "bounded search never downloads the auxiliary cup catalogues",
-+    assert.deepEqual(
-+      [...cupKinds],
-+      hasQuery ? (scenario.advertised ? ["supplemental"] : ["supplemental", "worker"]) : [],
-+      "typing reads the supplementary competition catalogue without the retired worker index on the bounded backend",
-     );
-     for (const cleanup of cleanups)
-       if (typeof cleanup === "function") cleanup();
-diff --git a/tests/club-empty-season.test.mjs b/tests/club-empty-season.test.mjs
-index 211233cf5d..dacbed58e9 100644
---- a/tests/club-empty-season.test.mjs
-+++ b/tests/club-empty-season.test.mjs
-@@ -53,6 +53,8 @@ async function loadUI() {
-     "../services/club-scout.js": { METRICS: {}, SITUATION_LABELS: {}, STYLE_AXES: [], formatMetric: String, rolling: () => [] },
-     // What the tables show side by side, on the same matches (pure; the real module).
-     "../services/club-supported.js": supported,
-+    // The checked image resolver (the real module).
-+    "../services/format.js": await import("../dashboard/frontend/src/services/format.js"),
-     // A CSS module: every class reads as its own name.
-     "./ClubScout.module.css": { __esModule: true, default: new Proxy({}, { get: (_, name) => String(name) }) },
-   };
-diff --git a/tests/club-missing-render.test.mjs b/tests/club-missing-render.test.mjs
-index 106a11711d..fe21a3ea0b 100644
---- a/tests/club-missing-render.test.mjs
-+++ b/tests/club-missing-render.test.mjs
-@@ -66,6 +66,8 @@ const common = {
-   "../hooks/FootballContext.jsx": { useFootball: () => ({ href: (url, params) => `${url}?${new URLSearchParams(params)}` }) },
-   "./Hint.jsx": { Hint: () => null, Term: ({ children }) => children },
-   "../services/club-supported.js": supported,
-+  // The checked image resolver (the real module): Picture goes through it (FAILURE_MODES.md §22).
-+  "../services/format.js": await import("../dashboard/frontend/src/services/format.js"),
- };
- const ui = await load("ClubScoutUI.jsx", {
-   ...common,
-diff --git a/tests/club-picture-media.test.mjs b/tests/club-picture-media.test.mjs
-new file mode 100644
-index 0000000000..ac1b44e835
---- /dev/null
-+++ b/tests/club-picture-media.test.mjs
-@@ -0,0 +1,91 @@
-+// FAILURE_MODES.md §22 (C6), written before the code: the club hero's plain image (ClubScoutUI.jsx Picture, Crest)
-+// goes through the site's checked resolver like Media: a Vega reference is never fetched from its reserved host, an
-+// image the gate refuses shows the initials.
-+import test from "node:test";
-+import assert from "node:assert/strict";
-+import fs from "node:fs/promises";
-+import path from "node:path";
-+import vm from "node:vm";
-+import { createRequire } from "node:module";
-+import { fileURLToPath } from "node:url";
-+import * as format from "../dashboard/frontend/src/services/format.js";
-+
-+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-+const requireLocal = createRequire(path.join(root, "dashboard/package.json"));
-+const React = requireLocal("react");
-+const { renderToStaticMarkup } = requireLocal("react-dom/server");
-+const babel = requireLocal("next/dist/compiled/babel/core");
-+const preset = requireLocal("next/dist/compiled/babel/preset-react");
-+const commonjs = requireLocal("next/dist/compiled/babel/plugin-transform-modules-commonjs");
-+const h = React.createElement;
-+
-+async function loadUI() {
-+  const filename = path.join(root, "dashboard/frontend/src/components/ClubScoutUI.jsx");
-+  const code = babel.transformSync(await fs.readFile(filename, "utf8"), {
-+    presets: [[preset, { runtime: "classic" }]], plugins: [commonjs], babelrc: false, configFile: false, filename,
-+  }).code;
-+  const stubs = {
-+    "./Hint.jsx": { Hint: () => null, Term: ({ children }) => children },
-+    "../services/glossary.js": { explain: () => null },
-+    react: React,
-+    "next/link": { __esModule: true, default: ({ children, ...props }) => h("a", props, children) },
-+    "./Icon.jsx": { __esModule: true, default: () => null },
-+    "./PhoneFold.jsx": { useCardFold: () => ({ section: {}, head: {}, part: "", button: null, wrap: (c) => c }) },
-+    "../hooks/FootballContext.jsx": { useFootball: () => null },
-+    "./PlayerScoutCharts.jsx": { PercentileBar: () => null, toneVar: () => "" },
-+    "./RankingDialog.jsx": { RankingTrigger: () => null },
-+    "../services/club-scout.js": { METRICS: {}, SITUATION_LABELS: {}, STYLE_AXES: [], formatMetric: String, rolling: () => [] },
-+    "../services/club-supported.js": {},
-+    "../services/format.js": format,
-+    "./ClubScout.module.css": { __esModule: true, default: new Proxy({}, { get: (_, name) => String(name) }) },
-+  };
-+  const mod = { exports: {} };
-+  vm.runInThisContext("(function(require,module,exports){" + code + "\n})", { filename })(
-+    (name) => {
-+      if (!(name in stubs)) throw new Error("Unexpected import: " + name);
-+      return stubs[name];
-+    },
-+    mod,
-+    mod.exports,
-+  );
-+  return mod.exports;
-+}
-+
-+const REFERENCE = `https://media.vega.invalid/sha256/${"a".repeat(64)}.png`;
-+
-+test("the club hero's crest resolves a Vega reference through /api/assets, never its reserved host", async () => {
-+  const { Crest } = await loadUI();
-+  const html = renderToStaticMarkup(h(Crest, { club: { name: "Churchill Brothers", imageUrl: REFERENCE } }));
-+  assert.match(html, /<img/);
-+  assert.ok(html.includes(`/api/assets?url=${encodeURIComponent(REFERENCE).replaceAll("%", "%")}`.replace(/&/g, "&amp;")), html);
-+  assert.ok(!html.includes('src="https://media.vega.invalid'), html);
-+});
-+
-+// VI-30 V19 (FAILURE_MODES_VI30.md, written before the code): a failure belongs to one source. Picture is keyed by its
-+// url, as Media is, so a new url starts a new attempt instead of keeping the previous one's initials.
-+test("a new url is a new attempt: Picture's attempt is keyed by its source", async () => {
-+  const { Picture } = await loadUI();
-+  const other = `https://media.vega.invalid/sha256/${"b".repeat(64)}.png`;
-+  let first, second;
-+  assert.doesNotThrow(() => {
-+    first = Picture({ name: "Churchill Brothers", url: REFERENCE });
-+    second = Picture({ name: "Churchill Brothers", url: other });
-+  }, "Picture must only wrap its keyed attempt (no hook of its own)");
-+  assert.equal(first.type, second.type);
-+  assert.deepEqual([first.key, second.key], [REFERENCE, other]);
-+  assert.equal(Picture({ name: "Churchill Brothers" }).key, "");
-+  // The markup is the same as before.
-+  assert.equal(renderToStaticMarkup(h(Picture, { name: "Churchill Brothers", url: REFERENCE })),
-+    renderToStaticMarkup(h(Picture, { name: "Churchill Brothers", url: REFERENCE, className: "crest" })));
-+});
-+
-+test("a provider image goes the same way; a refused source shows the initials", async () => {
-+  const { Crest, Picture } = await loadUI();
-+  const pitch = renderToStaticMarkup(h(Crest, { club: { name: "Arsenal", imageUrl: "https://cdn.pitchapi.dev/images/teams/a.png" } }));
-+  assert.ok(pitch.includes("/api/assets?url=https%3A%2F%2Fcdn.pitchapi.dev%2Fimages%2Fteams%2Fa.png"), pitch);
-+  for (const url of ["https://evil.example/x.png", "javascript:alert(1)", `${REFERENCE}?x=1`, undefined]) {
-+    const html = renderToStaticMarkup(h(Picture, { name: "Churchill Brothers", url }));
-+    assert.doesNotMatch(html, /<img/, String(url));
-+    assert.match(html, /CB/);
-+  }
-+});
-diff --git a/tests/competition-render.test.mjs b/tests/competition-render.test.mjs
-index 84300d3d8a..a4eaaf19eb 100644
---- a/tests/competition-render.test.mjs
-+++ b/tests/competition-render.test.mjs
-@@ -67,6 +67,7 @@ test("competition page renders a result-derived league table and its limits", as
-     "../services/compact-reads.js": await import("../dashboard/frontend/src/services/compact-reads.js"),
-     "../services/fixtures.js": await import("../dashboard/frontend/src/services/fixtures.js"),
-     "../model.js": { csvString: () => "" },
-+    "../services/competition-artwork.js": await import("../dashboard/frontend/src/services/competition-artwork.js"),
-     "../services/catalog-client.js": await import("../dashboard/frontend/src/services/catalog-client.js"),
-     "../components/SeasonSelect.jsx": { __esModule: true, default: ({ label, allLabel, seasons }) => elem("select", { "aria-label": label }, allLabel && elem("option", { value: "all" }, allLabel), seasons.map((value) => elem("option", { key: value, value }, value))) },
-     "../../../shared/competition-scope.js": { EUROPE_FOCUS_IDS: new Set(), inEuropeFocus: () => false },
-diff --git a/tests/complementary-leagues.test.mjs b/tests/complementary-leagues.test.mjs
-index 4ed564162b..b749c93cd0 100644
---- a/tests/complementary-leagues.test.mjs
-+++ b/tests/complementary-leagues.test.mjs
-@@ -74,6 +74,7 @@ test("a league's page: its standings, its matches, its projection, no bracket",
-     "../services/format.js": { date: String, seasonLabel: String },
-     "../services/fixtures.js": { parisDay: () => "2026-11-17" },
-     "../services/resources.js": { useResource: () => ({ value: { matches } }) },
-+    "../services/competition-artwork.js": await import("../dashboard/frontend/src/services/competition-artwork.js"),
-     "../services/catalog-client.js": { cupTable: async () => [] },
-     "../services/competition-selector.js": { competitionCountryLabel: () => "Angleterre" },
-     "../services/cup-matches.js": cupMatches,
-diff --git a/tests/cup-catalog-alias.test.mjs b/tests/cup-catalog-alias.test.mjs
-new file mode 100644
-index 0000000000..439380ec80
---- /dev/null
-+++ b/tests/cup-catalog-alias.test.mjs
-@@ -0,0 +1,58 @@
-+// VI-30 (docs/calculs/09-audit-2026-11/FAILURE_MODES_VI30.md V12–V18, written before the code): a supplemental entry
-+// answers to its edition's canonical competition id (the API's `competition_id`), never by a name; one entry per
-+// competition in the directory and the search; a lookup waits for the catalogue that can answer it.
-+import test from "node:test";
-+import assert from "node:assert/strict";
-+import { awaitsCupIndex, findCompetition, mergeCupCatalog, supplementalCupCatalog, supplementalLeagueCatalog } from "../dashboard/frontend/src/services/cup-catalog.js";
-+import { globalCompetitionCatalog } from "../dashboard/frontend/src/services/global-search.js";
-+
-+const FAW = `https://media.vega.invalid/sha256/${"0b2958916b260998034409a86e6ede3879dd706020e0371df9b9e03ddb826022"}.png`;
-+const index = {
-+  meta: { source_generated_at_utc: "2026-11-17T07:19:26Z" },
-+  competitions: [
-+    { name: "Cymru North", folder: "WAL_2_cymru-north", season: "2026/2027", tables: { results: { rows: 29 }, fixtures: { rows: 0 } }, country_code: "WAL", image_url: FAW, competition_id: "l_v0000130" },
-+    { name: "OFB Cup", folder: "AUT_CUP_ofb-cup", season: "2026/2027", tables: { results: { rows: 7 }, fixtures: { rows: 4 } }, country_code: "AUT", competition_id: "l_v0000087" },
-+    // An older API (no canonical id), and a malformed one.
-+    { name: "Cymru South", folder: "WAL_3_cymru-south", season: "2026/2027", tables: { results: { rows: 29 } }, country_code: "WAL" },
-+    { name: "National League", folder: "ENG_5_national-league", season: "2026/2027", tables: { results: { rows: 36 } }, country_code: "ENG", competition_id: "open-matchday:x" },
-+  ],
-+};
-+
-+test("V12/V16: an entry carries its edition's canonical id, only a well-formed one", () => {
-+  const leagues = supplementalLeagueCatalog(index);
-+  const north = leagues.find((c) => c.folder === "WAL_2_cymru-north");
-+  assert.deepEqual([north.id, north.canonicalId, north.imageUrl], ["open-matchday:WAL_2_cymru-north", "l_v0000130", FAW]);
-+  assert.equal("canonicalId" in leagues.find((c) => c.folder === "WAL_3_cymru-south"), false);
-+  assert.equal("canonicalId" in leagues.find((c) => c.folder === "ENG_5_national-league"), false);
-+  assert.equal(supplementalCupCatalog(index)[0].canonicalId, "l_v0000087");
-+});
-+
-+test("V12/V15: a lookup by the source key or the canonical id finds the same entry; an unknown id none", () => {
-+  const catalog = mergeCupCatalog([{ id: "l_3FJFUl", name: "Ligue 1", country: "FRA", seasons: ["2026/2027"] }], index);
-+  const bySource = findCompetition(catalog, "open-matchday:WAL_2_cymru-north");
-+  assert.ok(bySource);
-+  assert.equal(findCompetition(catalog, "l_v0000130"), bySource);
-+  assert.equal(findCompetition(catalog, "l_v0000087").id, "open-matchday:AUT_CUP_ofb-cup");
-+  assert.equal(findCompetition(catalog, "l_v9999999"), undefined);
-+  assert.equal(findCompetition(catalog, ""), undefined);
-+  assert.equal(findCompetition(catalog, "l_3FJFUl").name, "Ligue 1");
-+  // One entry for the competition, in the directory and in the search.
-+  assert.equal(catalog.filter((c) => c.name === "Cymru North").length, 1);
-+  assert.equal(globalCompetitionCatalog([], index).filter((c) => c.name === "Cymru North").length, 1);
-+});
-+
-+test("V18: an item whose canonical id is a native competition's is that competition, listed once", () => {
-+  const native = [{ id: "l_0ALvwF", name: "Serie A", country: "ITA", seasons: ["2026/2027"] }];
-+  const copy = { competitions: [{ name: "Italian top flight", folder: "ITA_1_serie-a", season: "2026/2027", tables: { results: { rows: 8 } }, country_code: "ITA", competition_id: "l_0ALvwF" }] };
-+  assert.deepEqual(supplementalLeagueCatalog(copy, native), []);
-+  const catalog = mergeCupCatalog(native, copy);
-+  assert.equal(catalog.filter((c) => c.country === "ITA").length, 1);
-+  // The native entry answers its own id, never the copy.
-+  assert.equal(findCompetition(catalog, "l_0ALvwF").name, "Serie A");
-+});
-+
-+test("V13/V14: the ids a supplemental index can answer wait for it", () => {
-+  assert.equal(awaitsCupIndex("open-matchday:WAL_2_cymru-north"), true);
-+  assert.equal(awaitsCupIndex("l_v0000130"), true);
-+  for (const id of ["l_3FJFUl", "open-cup:euro", "", null, undefined]) assert.equal(awaitsCupIndex(id), false, String(id));
-+});
-diff --git a/tests/cup-catalog-logo.test.mjs b/tests/cup-catalog-logo.test.mjs
-new file mode 100644
-index 0000000000..2ec6bf02e3
---- /dev/null
-+++ b/tests/cup-catalog-logo.test.mjs
-@@ -0,0 +1,24 @@
-+// C6 (FAILURE_MODES.md §22), written before the code: the competition header's Media gets the verified logo the API
-+// gives for the edition's own competition; a cup without one keeps the existing fallback, never another's logo.
-+import test from "node:test";
-+import assert from "node:assert/strict";
-+import { mergeCupCatalog, supplementalCupCatalog, supplementalLeagueCatalog } from "../dashboard/frontend/src/services/cup-catalog.js";
-+
-+const REFERENCE = `https://media.vega.invalid/sha256/${"0b2958916b260998034409a86e6ede3879dd706020e0371df9b9e03ddb826022"}.png`;
-+const index = {
-+  meta: { source_generated_at_utc: "2026-11-17T07:19:26Z" },
-+  competitions: [
-+    { name: "Cymru North", folder: "WAL_2_cymru-north", season: "2026/2027", tables: { results: { rows: 29 }, fixtures: { rows: 0 } }, country_code: "WAL", image_url: REFERENCE },
-+    { name: "OFB Cup", folder: "AUT_CUP_ofb-cup", season: "2026/2027", tables: { results: { rows: 7 }, fixtures: { rows: 4 } }, country_code: "AUT" },
-+  ],
-+};
-+
-+test("a supplemental league or cup carries the logo of its own competition", () => {
-+  const [league] = supplementalLeagueCatalog(index);
-+  assert.deepEqual([league.id, league.imageUrl], ["open-matchday:WAL_2_cymru-north", REFERENCE]);
-+  const [cup] = supplementalCupCatalog(index);
-+  assert.equal(cup.id, "open-matchday:AUT_CUP_ofb-cup");
-+  assert.equal(cup.imageUrl, undefined);
-+  const merged = mergeCupCatalog([], index);
-+  assert.equal(merged.find((c) => c.id === "open-matchday:WAL_2_cymru-north").imageUrl, REFERENCE);
-+});
-diff --git a/tests/cup-forecast.test.mjs b/tests/cup-forecast.test.mjs
-index 9782fbdb1f..291ac96246 100644
---- a/tests/cup-forecast.test.mjs
-+++ b/tests/cup-forecast.test.mjs
-@@ -70,6 +70,7 @@ test("an upcoming match shows its forecast in the list, a played one its score",
-     "../services/format.js": { date: String, seasonLabel: String },
-     "../services/fixtures.js": { parisDay: () => "2026-11-17" },
-     "../services/resources.js": { useResource: () => ({}) },
-+    "../services/competition-artwork.js": await import("../dashboard/frontend/src/services/competition-artwork.js"),
-     "../services/catalog-client.js": { cupTable: async () => [] },
-     "../services/competition-selector.js": { competitionCountryLabel: () => "" },
-     "../services/cup-matches.js": cupMatches,
-@@ -114,6 +115,7 @@ test("a complementary league's projection has its tab, as a league's", async ()
-     "../services/format.js": { date: String, seasonLabel: String },
-     "../services/fixtures.js": { parisDay: () => "2026-11-17" },
-     "../services/resources.js": { useResource: () => ({}) },
-+    "../services/competition-artwork.js": await import("../dashboard/frontend/src/services/competition-artwork.js"),
-     "../services/catalog-client.js": { cupTable: async () => [] },
-     "../services/competition-selector.js": { competitionCountryLabel: () => "" },
-     "../services/cup-matches.js": cupMatches,
-diff --git a/tests/cup-render.test.mjs b/tests/cup-render.test.mjs
-index 11a0f62ebf..72771440d1 100644
---- a/tests/cup-render.test.mjs
-+++ b/tests/cup-render.test.mjs
-@@ -28,6 +28,7 @@ test("cup view identifies the edition and preserves penalty shootouts", async ()
-     "../services/format.js": { date: String, seasonLabel: (value) => /^\d{4}$/.test(value) ? `${value}/${Number(value) + 1}` : value },
-     "../services/fixtures.js": { parisDay: () => "2026-11-02" },
-     "../services/resources.js": { useResource: () => ({ value: { matches: rows } }), json: () => {} },
-+    "../services/competition-artwork.js": await import("../dashboard/frontend/src/services/competition-artwork.js"),
-     "../services/catalog-client.js": { cupTable: async () => ({ matches: [] }) },
-     "../data-url.js": { dataUrl: (path) => path },
-     "../services/competition-selector.js": { competitionCountryLabel: () => "France" },
-diff --git a/tests/cup-sides.test.mjs b/tests/cup-sides.test.mjs
-new file mode 100644
-index 0000000000..3e4178cfcc
---- /dev/null
-+++ b/tests/cup-sides.test.mjs
-@@ -0,0 +1,117 @@
-+// VI-30 (docs/calculs/09-audit-2026-11/FAILURE_MODES_VI30.md, written before the code): a table row's `sides` (each
-+// side's own FK: the team's public id and its crest reference, or null) reach the list's two existing Media slots and
-+// the bracket; names never choose an image; a national-team cup keeps its flags.
-+import test from "node:test";
-+import assert from "node:assert/strict";
-+import path from "node:path";
-+import fs from "node:fs/promises";
-+import vm from "node:vm";
-+import { createRequire } from "node:module";
-+import { fileURLToPath } from "node:url";
-+import { normalizeSupplementalCup, numberedCupRounds } from "../dashboard/frontend/src/services/cup-matches.js";
-+import { combineCupLegs } from "../dashboard/frontend/src/services/knockout-bracket.js";
-+
-+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-+const require = createRequire(path.join(root, "dashboard/package.json"));
-+const React = require("react");
-+const { renderToStaticMarkup } = require("react-dom/server");
-+const babel = require("next/dist/compiled/babel/core");
-+const preset = require("next/dist/compiled/babel/preset-react");
-+const commonjs = require("next/dist/compiled/babel/plugin-transform-modules-commonjs");
-+const elem = React.createElement;
-+
-+const ref = (byte) => `https://media.vega.invalid/sha256/${byte.repeat(32)}.png`;
-+const side = (id, byte) => ({ id, image_url: byte ? ref(byte) : null });
-+const result = (home, away, score, sides, extra = {}) => ({ gw: "1", date: "2026-08-01", home, away, ft_home: String(score[0]), ft_away: String(score[1]), ...(sides && { sides }), ...extra });
-+
-+test("V1/V2/V3: a side's id and crest are copied from its own row, and only when given", () => {
-+  const [both, partial, none, noCrest] = normalizeSupplementalCup([
-+    result("Brickfield", "Llanuwchllyn", [5, 1], { home: side("t_v0003688", "16"), away: side("t_v0003689", "6b") }),
-+    result("Atus Velden", "A. Klagenfurt", [1, 2], { away: side("t_v0000002", "aa") }),
-+    result("Deutschlandsberger", "Amstetten", [1, 1], undefined),
-+    result("Hull", "Coventry", [2, 0], { home: side("t_v0000003", null), away: side("t_v0000004", null) }),
-+  ], []);
-+  assert.deepEqual([both.homeTeamId, both.homeImage, both.awayTeamId, both.awayImage], ["t_v0003688", ref("16"), "t_v0003689", ref("6b")]);
-+  assert.deepEqual([partial.home, partial.homeTeamId, partial.homeImage, partial.awayTeamId, partial.awayImage], ["Atus Velden", undefined, undefined, "t_v0000002", ref("aa")]);
-+  for (const key of ["homeTeamId", "awayTeamId", "homeImage", "awayImage"]) assert.equal(key in none, false, key);
-+  assert.deepEqual([noCrest.homeTeamId, noCrest.homeImage, noCrest.awayImage], ["t_v0000003", undefined, undefined]);
-+});
-+
-+test("V4: two clubs spelled alike keep their own rows' images; a malformed side is ignored", () => {
-+  const rows = normalizeSupplementalCup(
-+    [result("Ipswich", "Sunderland", [2, 1], { home: side("t_v1", null), away: side("t_v0000010", null) })],
-+    [{ gw: "2", date: "2026-11-21", home: "Aston Villa", away: "Sunderland", sides: { home: side("t_v2", null), away: side("t_v0009402", "2b") } },
-+     { gw: "2", date: "2026-11-22", home: "X", away: "Y", sides: { home: { id: 7, image_url: ref("cc") }, away: { id: "t_v3", image_url: 42 } } }],
-+  );
-+  const [first, twin, odd] = rows;
-+  assert.equal(first.awayImage, undefined);
-+  assert.deepEqual([twin.awayTeamId, twin.awayImage], ["t_v0009402", ref("2b")]);
-+  assert.deepEqual([odd.homeTeamId, odd.homeImage, odd.awayTeamId, odd.awayImage], [undefined, undefined, "t_v3", undefined]);
-+  assert.equal(twin.status, "scheduled");
-+});
-+
-+test("V11: two legs combined keep the first leg's sides, in the displayed order", () => {
-+  // A two-legged semi-final (the round's name as the source gives it), the second leg reversed.
-+  const legs = normalizeSupplementalCup([
-+    result("A", "B", [1, 0], { home: side("t_a", "0a"), away: side("t_b", "0b") }, { gw: "5", date: "2027-01-10", round_name: "Semi-finals" }),
-+    result("B", "A", [2, 2], { home: side("t_b", "0b"), away: side("t_a", "0a") }, { gw: "6", date: "2027-01-17", round_name: "Semi-finals" }),
-+  ], []);
-+  const [tie] = combineCupLegs(numberedCupRounds(legs));
-+  assert.deepEqual([tie.home, tie.homeImage, tie.away, tie.awayImage], ["A", ref("0a"), "B", ref("0b")]);
-+  assert.deepEqual(tie.legs.map((l) => l.score), [[1, 0], [2, 2]]);
-+});
-+
-+async function cupComponent(flags) {
-+  const cupMatches = await import("../dashboard/frontend/src/services/cup-matches.js");
-+  // A Media that shows what it was given; a flag that names its team.
-+  const Media = ({ name, url }) => elem("i", { "data-media": name, "data-url": url ?? "" });
-+  const NationalFlag = ({ name }) => { flags.push(name); return elem("b", { "data-flag": name }); };
-+  const stubs = {
-+    react: React,
-+    "./UI.jsx": { Card: ({ children }) => elem("section", null, children), Media, Pager: () => null, Segments: () => null, AsyncState: () => null, Empty: ({ children }) => elem("p", null, children) },
-+    "./KnockoutBracket.jsx": { __esModule: true, default: () => null },
-+    "./NationalFlag.jsx": { __esModule: true, default: NationalFlag },
-+    "../services/format.js": { date: String, seasonLabel: String },
-+    "../services/fixtures.js": { parisDay: () => "2026-11-18" },
-+    "../services/resources.js": { useResource: () => ({}) },
-+    "../services/competition-artwork.js": await import("../dashboard/frontend/src/services/competition-artwork.js"),
-+    "../services/catalog-client.js": { cupTable: async () => [] },
-+    "../services/competition-selector.js": { competitionCountryLabel: () => "" },
-+    "../services/cup-matches.js": cupMatches,
-+    "../services/knockout-bracket.js": { combineCupLegs: (m) => m, knockoutStage: () => null },
-+    "../services/cup-worker-client.js": { cupWorkerSnapshot: async () => ({ matches: [] }) },
-+    "../services/cup-archives.js": { NATIONAL_CUP_ARCHIVES: {}, GERMAN_CUP_FOLDER: "GER_CUP_dfb-pokal", isGermanCupSeason: () => false },
-+    "./SeasonProjection.jsx": { __esModule: true, default: () => null },
-+    "../services/cup-projection.js": { useCupProjection: () => null },
-+    "./Hint.jsx": { Term: ({ children }) => children },
-+    "../services/forecasts.js": { share: String },
-+    "./MatchForecastBar.jsx": { __esModule: true, default: () => null },
-+  };
-+  const filename = path.join(root, "dashboard/frontend/src/components/CupCompetition.jsx");
-+  const compiled = babel.transformSync(await fs.readFile(filename, "utf8"), { presets: [[preset, { runtime: "classic" }]], plugins: [commonjs], babelrc: false, configFile: false, filename }).code;
-+  const mod = { exports: {} };
-+  vm.runInThisContext("(function(require,module,exports){" + compiled + "\n})", { filename })((name) => { if (!(name in stubs)) throw Error("Unexpected import " + name); return stubs[name]; }, mod, mod.exports);
-+  return mod.exports;
-+}
-+
-+test("V1/V3: the list's two existing Media slots receive each side's own crest, in order; none without one", async () => {
-+  const { CupMatchList } = await cupComponent([]);
-+  const matches = normalizeSupplementalCup([
-+    result("Brickfield", "Llanuwchllyn", [5, 1], { home: side("t_v0003688", "16"), away: side("t_v0003689", "6b") }),
-+    result("Atus Velden", "A. Klagenfurt", [1, 2], { away: side("t_v0000002", "aa") }, { date: "2026-07-24" }),
-+  ], []);
-+  const html = renderToStaticMarkup(elem(CupMatchList, { matches, status: "finished", query: "", page: 1, onPage: () => {} }));
-+  const slots = [...html.matchAll(/<i data-media="([^"]*)" data-url="([^"]*)"><\/i>/g)].map((m) => [m[1], m[2]]);
-+  assert.deepEqual(slots, [["Brickfield", ref("16")], ["Llanuwchllyn", ref("6b")], ["Atus Velden", ""], ["A. Klagenfurt", ref("aa")]]);
-+  // The row keeps the main lists' design: the name beside its badge, the score between.
-+  assert.match(html, /<span class="team-name home-team"><span>Brickfield<\/span><i data-media="Brickfield"/);
-+});
-+
-+test("V8: a national-team cup keeps its flags and ignores any image", async () => {
-+  const flags = [];
-+  const { CupMatchList } = await cupComponent(flags);
-+  const matches = [{ key: "n", date: "2024-06-14", home: "Germany", away: "Scotland", score: [5, 1], status: "finished", round: "", homeImage: ref("de"), awayImage: ref("5c") }];
-+  const html = renderToStaticMarkup(elem(CupMatchList, { matches, status: "finished", query: "", page: 1, onPage: () => {}, nationalTeams: true, season: "2024" }));
-+  assert.deepEqual(flags, ["Germany", "Scotland"]);
-+  assert.doesNotMatch(html, /data-media=/);
-+});
-diff --git a/tests/cup-sources.test.mjs b/tests/cup-sources.test.mjs
-index cd247525db..b020c98e12 100644
---- a/tests/cup-sources.test.mjs
-+++ b/tests/cup-sources.test.mjs
-@@ -13,7 +13,8 @@ test("archive parser preserves shootouts, extra time and an unscored final", ()
-   const text = "# Matches 3\n▪ Round of 16\nFri Jan 10 2025\n  20:00  A   v B   5-4 pen. 1-1 a.e.t. (1-1, 0-0)\n▪ Semifinals\nSat Feb 1\n  20:00  A   v C   2-1 a.e.t. (1-1)\n▪ Final\nSun May 4\n  15:00  A   v D\n";
-   const rows = parseOpenCupText(text, 2024);
-   assert.deepEqual(rows[0].score, { ft: [1, 1], p: [5, 4], et: [1, 1] });
--  assert.deepEqual(rows[1].score, { ft: [2, 1], et: [2, 1] });
-+  // After extra time 2–1; the brackets give the 90 minutes, 1–1 (FAILURE_MODES.md §19, 19z).
-+  assert.deepEqual(rows[1].score, { ft: [1, 1], et: [2, 1] });
-   assert.equal(rows[2].score, undefined);
-   assert.throws(() => parseOpenCupText(text.replace("# Matches 3", "# Matches 4"), 2024), /Incomplete/);
- });
-@@ -75,8 +76,9 @@ test("the yearly Club World Cups are read from their text files, in the season o
-     assert.equal(status, 200);
-     assert.deepEqual(asked, ["https://raw.githubusercontent.com/openfootball/club-worldcup/master/2021/clubworldcup.txt"]);
-     assert.deepEqual([body.name, body.season, body.matches.length, body.source.url], ["Club World Cup 2021", "2021", 8, "https://github.com/openfootball/club-worldcup"]);
--    assert.deepEqual(body.matches[0], { round: "Round 1", date: "2022-02-03", team1: "Al Jazira Club (UAE)", team2: "AS Pirae (TAH)", score: { ft: [4, 1] } });
--    assert.deepEqual(body.matches.at(-1), { round: "Final", date: "2022-02-12", team1: "Chelsea FC (ENG)", team2: "Palmeiras (BRA)", score: { ft: [2, 1], et: [2, 1] } });
-+    assert.deepEqual(body.matches[0], { round: "Round 1", date: "2022-02-03", team1: "Al Jazira Club (UAE)", team2: "AS Pirae (TAH)", score: { ft: [4, 1], ht: [3, 0] } });
-+    // Chelsea–Palmeiras, 1–1 after 90 minutes (FAILURE_MODES.md §19, 19z).
-+    assert.deepEqual(body.matches.at(-1), { round: "Final", date: "2022-02-12", team1: "Chelsea FC (ENG)", team2: "Palmeiras (BRA)", score: { ft: [1, 1], et: [2, 1], ht: [0, 0] } });
-     // An edition before the base's first season is not read.
-     assert.equal((await read("2019"))[0], 400);
-     assert.equal(asked.length, 1);
-@@ -154,3 +156,49 @@ test("the confederations' cups' rounds read in French", () => {
-   assert.deepEqual(rows.map((r) => r.round), ["Finale", "Demi-finales", "Huitièmes de finale", "Tour préliminaire 2", "Tour préliminaire 1", "Tour préliminaire",
-     "Phase de groupes · Journée 3", "Groupe G", "Barrages"]);
- });
-+
-+// FAILURE_MODES.md §19 (19a, 19f, 19g): openfootball/worldcup.json at 516d3825 (CC0) writes most of
-+// 1950–2014 and seven 2022 results as arrays, and cancels 1938 Sweden–Austria.
-+test("the World Cup projection writes array results as objects and keeps the source's status", async () => {
-+  const { GET } = await import("../backend/sources/projections/open-cups.mjs");
-+  const original = globalThis.fetch;
-+  const read = async (season, matches) => {
-+    globalThis.fetch = async () => Response.json({ name: "World Cup " + season, matches });
-+    const response = await GET(new Request("http://bridge/api/open-cups?competition=world-cup-history&season=" + season));
-+    return [response.status, await response.json()];
-+  };
-+  try {
-+    const [status, body] = await read("1938", [
-+      { round: "First round", date: "1938-06-05", team1: "Sweden", team2: "Austria", status: "canceled" },
-+      { round: "First round", date: "1938-06-05", team1: "France", team2: "Belgium", score: { ft: [3, 1], ht: [2, 1] } },
-+    ]);
-+    assert.equal(status, 200);
-+    assert.deepEqual(body.matches, [
-+      { round: "First round", date: "1938-06-05", team1: "Sweden", team2: "Austria", status: "canceled" },
-+      { round: "First round", date: "1938-06-05", team1: "France", team2: "Belgium", score: { ft: [3, 1], ht: [2, 1] } },
-+    ]);
-+    const [, wc1962] = await read("1962", [{ round: "Matchday 1", group: "Group 1", date: "1962-05-30", team1: "Uruguay", team2: "Colombia", score: [2, 1] }]);
-+    assert.deepEqual(wc1962.matches[0].score, { ft: [2, 1] });
-+    const [, wc2022] = await read("2022", [{ round: "Matchday 6", group: "Group B", date: "2022-11-25", team1: "England", team2: "USA", score: [0, 0] }]);
-+    assert.deepEqual(wc2022.matches[0].score, { ft: [0, 0] });
-+    // A malformed score makes the edition unreadable, with its code: the last valid one stays.
-+    for (const score of [[2], [2, -1], [2, 1.5], [true, 0], "2-1", { ft: [1, null] }, { ht: [1, 0] }, { p: [4, 3] }, { ft: [1, 0], x: [0, 0] }]) {
-+      const [code, failed] = await read("1962", [{ date: "1962-05-30", team1: "Uruguay", team2: "Colombia", score }]);
-+      assert.equal(code, 502, JSON.stringify(score));
-+      assert.equal(failed.code, "INVALID_SCORE");
-+    }
-+  } finally {
-+    globalThis.fetch = original;
-+  }
-+});
-+
-+// FAILURE_MODES.md §19 (19z′, 19z″): a score after extra time is never the 90 minutes' too.
-+test("Football.TXT keeps the 90 minutes apart from extra time", () => {
-+  const text = "# Matches 4\n▪ Final\nSat May 3 2025\n  20:00  A   v B   2-1 a.e.t.\n  20:00  C   v D   5-4 pen. 1-1 a.e.t. (1-1, 0-0)\nSun May 4\n  20:00  E   v F   4-3 pen. (2-1, 0-1)\n  20:00  G   v H   4-1 (3-0)\n";
-+  assert.deepEqual(parseOpenCupText(text, 2024).map((row) => row.score), [
-+    { et: [2, 1] },
-+    { ft: [1, 1], et: [1, 1], p: [5, 4] },
-+    { ft: [2, 1], p: [4, 3] },
-+    { ft: [4, 1] },
-+  ]);
-+});
-diff --git a/tests/euro-search-flags.test.mjs b/tests/euro-search-flags.test.mjs
-index 3eed16fa34..279c1b1a6f 100644
---- a/tests/euro-search-flags.test.mjs
-+++ b/tests/euro-search-flags.test.mjs
-@@ -198,6 +198,7 @@ test("the Euro results list also displays flags for both national teams", async
-       "./KnockoutBracket.jsx": { __esModule: true, default: () => null },
-       "./NationalFlag.jsx": { __esModule: true, default: flag.default },
-       "../services/resources.js": { useResource: () => ({}), json: () => {} },
-+      "../services/competition-artwork.js": await import("../dashboard/frontend/src/services/competition-artwork.js"),
-       "../services/catalog-client.js": { cupTable: () => {} },
-       "../services/competition-selector.js": {
-         competitionCountryLabel: String,
-diff --git a/tests/image-source.test.mjs b/tests/image-source.test.mjs
-new file mode 100644
-index 0000000000..34cde6bd65
---- /dev/null
-+++ b/tests/image-source.test.mjs
-@@ -0,0 +1,47 @@
-+// FAILURE_MODES.md §21 (21l), written before the code: one image gate for the site, accepting the
-+// three provider shapes, Vega's reference to a reviewed packed image and the exact UEFA club logo.
-+import test from "node:test";
-+import assert from "node:assert/strict";
-+import { acceptedImageSource } from "../dashboard/frontend/src/services/image-source.js";
-+import { safeImageUrl } from "../dashboard/frontend/src/services/format.js";
-+
-+const HASH = "54bb97457ba1934e9c87d71fb5e1cf9a9068f151df4f7d671691f7097fc8a6db";
-+const accepted = [
-+  "https://cdn.pitchapi.dev/images/teams/0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef.png",
-+  "https://upload.wikimedia.org/wikipedia/commons/a/ab/Logo.png",
-+  "https://img.thesports.com/football/competition/6f803b0ca5b52b392cb3fb4225ad7186.png",
-+  `https://media.vega.invalid/sha256/${HASH}.png`,
-+  `https://media.vega.invalid/sha256/${HASH}.jpg`,
-+  `https://media.vega.invalid/sha256/${HASH}.webp`,
-+  "https://img.uefa.com/imgml/TP/teams/logos/70x70/64125.png",
-+];
-+const refused = [
-+  "https://evil.example/logo.png",
-+  "http://img.uefa.com/imgml/TP/teams/logos/70x70/64125.png",
-+  "https://user:pass@img.uefa.com/imgml/TP/teams/logos/70x70/64125.png",
-+  "https://img.uefa.com:8443/imgml/TP/teams/logos/70x70/64125.png",
-+  "https://img.uefa.com/imgml/TP/teams/logos/70x70/64125.png?w=1",
-+  "https://img.uefa.com/imgml/TP/teams/logos/70x70/64125.png#x",
-+  "https://img.uefa.com/imgml/TP/teams/logos/140x140/64125.png",
-+  "https://img.uefa.com/imgml/TP/teams/logos/70x70/64125.svg",
-+  "https://img.uefa.com/imgml/TP/teams/logos/70x70/abc.png",
-+  `https://media.vega.invalid/sha256/${HASH}.svg`,
-+  `https://media.vega.invalid/sha256/${HASH.slice(1)}.png`,
-+  `https://media.vega.invalid/sha256/${HASH.toUpperCase()}.png`,
-+  `https://media.vega.invalid/sha256/${HASH}.png?x=1`,
-+  `https://media.vega.invalid/other/${HASH}.png`,
-+  `https://media.vega.invalid:444/sha256/${HASH}.png`,
-+  "https://cdn.pitchapi.dev:8443/images/teams/a.png",
-+  "not a url",
-+  "",
-+];
-+
-+test("the image gate accepts the provider shapes, the packed-image reference and the UEFA club logo", () => {
-+  for (const url of accepted) assert.equal(acceptedImageSource(url), true, url);
-+  for (const url of refused) assert.equal(acceptedImageSource(url), false, url);
-+});
-+
-+test("the site asks the API for an accepted image, and for nothing else", () => {
-+  for (const url of accepted) assert.equal(safeImageUrl(url).includes("/api/assets?url=" + encodeURIComponent(url)), true, url);
-+  for (const url of refused) assert.equal(safeImageUrl(url), "", url);
-+});
-diff --git a/tests/openfootball_history.test.mjs b/tests/openfootball_history.test.mjs
-index 23250d930e..5467cfa53f 100644
---- a/tests/openfootball_history.test.mjs
-+++ b/tests/openfootball_history.test.mjs
-@@ -135,3 +135,18 @@ test("source-only final scores, unplayed ties and neutral venues remain explicit
-     /Rencontre non disputée/,
-   );
- });
-+
-+// FAILURE_MODES.md §19 (19y): worldcup.json writes a full-time result as an array too
-+// (1962 Uruguay–Colombia, 2022 England–USA); the display and the CSV read it as the score.
-+test("an OpenFootball full-time array is the match's score", () => {
-+  const match = { date: "1962-05-30", team1: "Uruguay", team2: "Colombia", score: [2, 1] };
-+  assert.deepEqual(historicalScore(match), [2, 1]);
-+  assert.deepEqual(historicalScore({ ...match, score: [0, 0] }), [0, 0]);
-+  const row = Object.fromEntries(
-+    HISTORICAL_CSV_FIELDS.map((key, index) => [key, historicalCsvRow({ competition: "World Cup 1962", match })[index]]),
-+  );
-+  assert.deepEqual([row.home_goals, row.away_goals, row.home_goals_90, row.away_goals_90], [2, 1, 2, 1]);
-+  assert.deepEqual([row.penalties_home, row.penalties_away], [null, null]);
-+  assert.deepEqual(historicalScoreNotes(match), []);
-+  for (const score of [[2], [2, -1], [2, 1.5], [2, "1"]]) assert.deepEqual(historicalScore({ ...match, score }), [null, null]);
-+});
+ ## Pas encore calculé
+ 
+ - **Victoires attendues** : le modèle les produit (`outcomeChances`), mais elles ne sont ni conservées ni affichées (voir [xPts](../03-resultats-et-points-attendus/01-points-attendus-xpts.md)).
+diff --git a/docs/calculs/07-limites/02-points-d-attention.md b/docs/calculs/07-limites/02-points-d-attention.md
+index 1d0bb859f1..05dddcae92 100644
+--- a/docs/calculs/07-limites/02-points-d-attention.md
++++ b/docs/calculs/07-limites/02-points-d-attention.md
+@@ -35,7 +35,7 @@ Au niveau d'un match, `xg` et `shotsOnTarget` valent 0 quand le joueur n'a pas t
+ → [shared/player-profile.js](../../../dashboard/shared/player-profile.js#L57) vs [season-player.js](../../../dashboard/frontend/src/services/season-player.js#L203)
+ 
+ **9. Les grosses occasions créées sont classées au niveau saison malgré leurs zéros omis.** *(levé le 12 novembre 2026 : un vide vaut zéro là où le fournisseur publie la mesure, voir [Valeurs absentes](../01-sources-et-conventions/02-valeurs-absentes-et-fiabilite.md) ; le xA est classé à la même condition)*
+-Le code indique que le fournisseur ne publie jamais 0 pour le xA ni pour les grosses occasions. Le xA est exclu des classements, mais `bigChancesCreated` reste classable (`rankable: key !== "xa"`) et figure dans la pizza des milieux offensifs et attaquants. Avec la règle de couverture complète, seuls les joueurs ayant une valeur à **chaque** match entrent dans la distribution : le centile compare un groupe très sélectionné, et la plupart des joueurs n'en ont pas.
++Les centiles saison du xA et des grosses occasions créées exigent une observation sur tous les matchs et toutes les minutes du joueur, ainsi qu’une cohorte suffisante. Le lecteur restitue certains zéros omis lorsque la couverture est établie. Sur la fiche d’une performance individuelle, le xA reste sans centile.
+ → [scouting.js](../../../dashboard/frontend/src/services/scouting.js#L47), [PlayerScoutOverview.jsx](../../../dashboard/frontend/src/components/PlayerScoutOverview.jsx#L146)
+ 
+ **10. Deux définitions de la note saison (résolu le 15 novembre 2026).**
+diff --git a/docs/calculs/08-notes-vega/01-formules-et-raisons.md b/docs/calculs/08-notes-vega/01-formules-et-raisons.md
+index 29f7b4c2e1..2476ff0efc 100644
+--- a/docs/calculs/08-notes-vega/01-formules-et-raisons.md
++++ b/docs/calculs/08-notes-vega/01-formules-et-raisons.md
+@@ -12,7 +12,7 @@ Tout est sur une seule échelle, en **points Elo**. 400 points d'écart entre de
+ 
+ | Objet | Sa note | En une phrase |
+ | --- | --- | --- |
+-| Championnat | son niveau ℓ, avec une erreur-type | la force moyenne de ses clubs, tirée des matchs entre championnats, des joueurs qui changent de championnat et de sa division |
++| Championnat | son niveau ℓ et une marge interne en points Elo | la force moyenne de ses clubs, tirée des matchs entre championnats, des joueurs qui changent de championnat et de sa division |
+ | Club | sa force Elo R | il entre au niveau de son championnat, puis chaque résultat la corrige, selon ce que les deux forces prévoyaient |
+ | Joueur | son score de 0 à 100 | ce qu'il fait au-dessus de l'attendu de son rôle, match par match, plus le niveau du club où il le fait, comparé aux joueurs de son rôle |
+ 
+@@ -96,7 +96,7 @@ $$
+ 
+ ### 4.1 Ce qu'on cherche
+ 
+-ℓ_j, le niveau du championnat j : la force à laquelle ses clubs entrent dans l'Elo. Trois preuves le disent, avec des précisions différentes. Le niveau retenu est le **maximum a posteriori** d'un seul modèle qui les réunit, chacune comptée selon sa précision : plus une preuve est précise, plus elle pèse.
++Le niveau initial ℓ_j détermine la force d’entrée des clubs du championnat j. Le calcul combine les résultats entre championnats, les passages de joueurs et les hypothèses de division et de confédération. Il résout un système itératif approché. La dérivée des mises à jour Elo successives manque dans le terme des matchs, ce qui invalide son interprétation comme maximum a posteriori de la vraisemblance séquentielle annoncée. [Calcul](../../../backend/vega/power.py) · [Contre-exemple du §3](../09-audit-2026-11/SOURCE_AUDIT.md)
+ 
+ **Pourquoi un seul modèle.** La version 3 retenait le niveau vers 1500 dans la proportion liens / (liens + 30). Elle avait deux défauts :
+ - **Ce n'était pas un a priori cohérent.** À l'équilibre, sa force baissait quand les liens augmentaient, et 1500 est arbitraire.
+@@ -116,8 +116,8 @@ $$
+ \Lambda_{aa} \mathrel{+}= I_m E(1-E)c^2, \quad \Lambda_{bb} \mathrel{+}= I_m E(1-E)c^2, \quad \Lambda_{ab} = \Lambda_{ba} \mathrel{-}= I_m E(1-E)c^2
+ $$
+ 
+-- $g$ est la **pente** de la vraisemblance des résultats, $\Lambda$ son **information**. Les matchs à l'intérieur d'un championnat s'annulent : seul compte ce que ses clubs font contre les autres.
+-- Les deux sont divisés par la **dispersion** $\varphi = \sum (r - E)^2 / \sum E(1-E)$, sur ces mêmes matchs (0,73). Les nuls rendent les résultats moins dispersés qu'un pile ou face, et l'information est d'autant plus grande.
++- Pour un match entre deux championnats ajustés distincts, le code utilise +1 et −1 comme sensibilités de l’écart Elo aux deux niveaux initiaux. Il ajoute le résidu pondéré à $g$ et sa courbure locale à $\Lambda$. Tous les matchs font évoluer les Elo suivants, y compris les matchs internes. Le calcul de $g$ et de $\Lambda$ omet la propagation de ces dépendances.
++- Les deux sont divisés par la **dispersion** $\varphi = \sum (r - E)^2 / \sum E(1-E)$, sur ces mêmes matchs (0,73). Les nuls rendent les résultats moins dispersés qu'un pile ou face, ce qui augmente le poids numérique du terme des matchs lorsque la dispersion est inférieure à 1.
+ - Matchs lus : coupes d'Europe, coupes nationales entre divisions, Coupe du monde des clubs, Copa Libertadores et Sudamericana, Coupes des champions CONCACAF et CAF.
+ 
+ ### 4.3 Les joueurs qui changent de championnat
+@@ -204,15 +204,15 @@ Les divisions sont relues une par une (`TIERS`). Le Paulista A1, championnat d'
+ ### 4.5 Le calcul
+ 
+ 1. **Matchs et passages seuls**, avec un a priori très large (1500 ± 400) qui ne fixe que l'origine de l'échelle. On en tire $\tau_u$, puis $b$, $\tau_b$, $\tau_c$ et les moyennes de confédération.
+-2. **Les trois preuves ensemble.** Pas de Newton :
++2. **Les trois sources réunies.** Le calcul résout le système linéaire suivant à chaque itération.
+ 
+ $$
+ \ell \leftarrow \ell + (\Lambda_\text{matchs} + \Lambda_\text{passages} + \Lambda_\text{a priori})^{-1}\,(g_\text{matchs} + g_\text{passages} + g_\text{a priori})
+ $$
+ 
+    L'Elo est redéroulé à chaque pas, depuis les nouveaux niveaux. Le calcul s'arrête quand plus aucun niveau ne bouge de 0,25 point (7 pas en service). Au-delà de 40 pas, il échoue et les niveaux d'avant restent.
+-3. **L'origine de l'échelle.** Matchs et passages ne disent que des écarts. On décale tous les niveaux d'une même constante, pour que les championnats qui tiennent l'échelle gardent leur niveau d'avant. Ces championnats sont ceux mesurés à 25 points près contre le mieux mesuré : les cinq grands championnats, les championnats anglais, la 2. Bundesliga, les Pays-Bas, le Portugal.
+-4. **L'erreur-type** d'un niveau, contre la moyenne de ces championnats :
++3. **L’origine de l’échelle.** Le code décale ensemble les niveaux ajustés pour conserver, en moyenne, les valeurs antérieures des références disponibles. Les groupes hors ajustement gardent l’initialisation du lecteur. Ce décalage peut donc modifier l’espérance d’une rencontre entre groupes ajustés et groupes laissés à leur valeur initiale. Les références sont les championnats ordinaires à moins de 25 points de marge relative à la meilleure référence, avec repli sur celle-ci. Les cinq grands championnats, les divisions anglaises, la 2. Bundesliga, les Pays-Bas et le Portugal sont des exemples de la mesure historique.
++4. **Marge interne d’un niveau.** Le code inverse la matrice approchée et mesure l’écart à la moyenne des références selon la formule ci-dessous. La calibration de cette marge comme erreur-type d’un estimateur séquentiel reste à établir.
+ 
+ $$
+ \text{se}_j = \sqrt{v^\top \Lambda^{-1} v}, \qquad v = e_j - \tfrac{1}{|\text{réf}|}\mathbf{1}_\text{réf}
+@@ -220,7 +220,7 @@ $$
+ 
+ ### 4.6 Mesuré ou provisoire
+ 
+-Un championnat est **mesuré** quand se ≤ **45 points**. Il le reste jusqu'à **52**, pour qu'aucun championnat n'entre et ne sorte du classement à chaque calcul. Ses joueurs reçoivent un rang. Un championnat au-dessus est **provisoire** : il garde son niveau, affiché avec sa marge, et ses joueurs un score sans rang.
++Pour les championnats masculins ajustés, le statut **mesuré** s’ouvre lorsque la marge interne vaut au plus **45 points** et se conserve jusqu’à **52 points** inclus. Au-delà, le championnat garde son niveau et sa marge avec le statut **provisoire**. Dans le classement de puissance des joueurs, un indice publié donne toujours un rang dans son univers. Le statut provisoire du championnat masculin peut rendre ce rang provisoire.
+ 
+ Pourquoi 45 : une erreur e sur le niveau déplace l'indice d'un joueur d'environ $e/(\sqrt{2}\,\sigma)$ écart-type de son rôle, σ = 132 étant l'écart-type des forces des clubs sur les matchs de championnat de 2026/2027. On veut au plus un quart d'écart-type : e ≤ 0,25 × √2 × 132 ≈ 47, arrondi à 45. À 60 points, ce serait 0,32.
+ 
+@@ -398,11 +398,11 @@ $$
+ 
+ **Rangs.**
+ - Le **rang** est l'ordre de Z parmi tous les joueurs de son univers (hommes, femmes), puis T, puis les minutes, à égalité le même rang. Chaque univers est numéroté à partir de 1. Le **rang dans le rôle** suit le même ordre dans le rôle principal, et « sur N au poste » compte l'univers du joueur.
+-- Un rang est **provisoire** sous le seuil de minutes (`eligible` faux), dans un championnat provisoire (`linked` faux), dans un club qu'aucun championnat de la base ne connaît (vu seulement en coupe d'Europe, `in_league` faux), ou pour un joueur connu seulement par sa sélection. Le site en donne la raison. Le site le dit sur la fiche du joueur. L'incertitude d'un championnat provisoire est commune à tous ses joueurs : l'ordre entre eux est exact. Face aux autres, elle vaut environ ± 200 à 300 places dans les 500 premiers, et beaucoup plus au milieu du classement, où les joueurs sont serrés.
++- Sur la fiche et dans le classement complet, le rang est **provisoire** si le seuil de minutes n’est pas atteint. Ensuite, le lecteur donne aux hommes d’une sélection seule, d’un club sans championnat dans la base ou d’un championnat de niveau provisoire le motif correspondant. Une joueuse admissible en minutes a un rang dans l’univers féminin sans motif de ligue provisoire. Le statut renseigne sur la fiabilité des entrées. La marge interne de la ligue ne fournit pas un intervalle statistique validé pour le rang du joueur.
+ - **Centiles** des blocs et de T, R\* : rang moyen dans le rôle, (nombre en dessous + ½ égaux) / n.
+ - **Course au Ballon d'Or** : les trente premiers classés d'un club de première division.
+ 
+-Depuis la version 6 (15 novembre 2026), **tout joueur qui a joué a un rang**. Un joueur connu seulement par sa sélection, ou d'un club vu seulement en coupe d'Europe, est classé parmi les hommes, provisoirement : sa part de niveau vient de l'Elo de son équipe, mesurée contre les équipes de même nature (la moyenne des sélections pour une sélection), et son championnat n'est pas mesuré. Les joueuses d'un championnat féminin sont notées entre elles (leur propre κ, leurs propres moyennes et écarts-types) et ont leur propre classement. Un poste qui n'a encore aucun joueur éligible dans son univers (premiers jours d'une année, petit championnat féminin) est placé face aux joueurs éligibles de tous les postes de l'univers : C est déjà relatif à l'attendu du rôle, son centre est commun.
++Depuis la version 6 (15 novembre 2026), **tout joueur doté d’un indice a un rang dans son univers**. Un joueur connu seulement par sa sélection, ou d'un club vu seulement en coupe d'Europe, est classé parmi les hommes, provisoirement : sa part de niveau vient de l'Elo de son équipe, mesurée contre les équipes de même nature (la moyenne des sélections pour une sélection), et son championnat n'est pas mesuré. Les joueuses d'un championnat féminin sont notées entre elles (leur propre κ, leurs propres moyennes et écarts-types) et ont leur propre classement. Un poste qui n'a encore aucun joueur éligible dans son univers (premiers jours d'une année, petit championnat féminin) est placé face aux joueurs éligibles de tous les postes de l'univers : C est déjà relatif à l'attendu du rôle, son centre est commun.
+ 
+ **L'a priori de la saison passée (version 8, 15 novembre 2026).** En début de saison, quelques matchs ne disent pas grand-chose ; la saison passée du joueur en dit davantage. L'indice affiché les mêle :
+ 

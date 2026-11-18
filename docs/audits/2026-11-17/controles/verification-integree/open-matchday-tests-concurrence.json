@@ -1,0 +1,44 @@
+{
+  "candidate": "0580dfd4ba645461d6c372fbd7b1d73eaaa779a0",
+  "baseline": "599b80497ca7b49d65714f3d54e709c97c0cbe7f",
+  "cases_red": {
+    "outside_fields": false,
+    "outside_only_row": false,
+    "ht_db_and_http": false,
+    "sparse_noop": false,
+    "restored_nonowned": false,
+    "concurrent_enrichment": false,
+    "concurrent_insert": false
+  },
+  "cases_green": {
+    "outside_fields": true,
+    "outside_only_row": true,
+    "ht_db_and_http": true,
+    "sparse_noop": true,
+    "restored_nonowned": true,
+    "concurrent_enrichment": true,
+    "concurrent_insert": true
+  },
+  "historical_matches_preserved": 35,
+  "original_provider_keys_preserved": 35,
+  "elo_sides_preserved": 70,
+  "ordinary_source_tests_passed": 30,
+  "rolling_regression": "passed",
+  "restoration_continuity_regression": "passed",
+  "rds_exposure_readonly": {
+    "captured_at": "2026-11-18 16:21:06.154817+00:00",
+    "sha256": "bc5bdb62b7a42343b1dc284c1e7bd72f5c74e3eb8f284e5ccba611b8a65ae2a8",
+    "known_halftime": 417,
+    "stat_rows": 834,
+    "rows_with_any_field_outside_OMD_six": 0
+  },
+  "database_scope": "local disposable PostgreSQL 18, no production execution",
+  "logs": [
+    "02-full-red.log",
+    "02-test-red.log",
+    "03-source-suite.log",
+    "04-committed-green.log",
+    "04-continuity-regression.log",
+    "04-rolling-regression.log"
+  ]
+}

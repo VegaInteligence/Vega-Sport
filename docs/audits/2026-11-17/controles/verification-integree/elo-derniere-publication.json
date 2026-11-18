@@ -1,0 +1,1297 @@
+{
+  "before": {
+    "at": "2026-11-18 17:11:17.692724+00:00",
+    "snapshot": "4447887:4447887:",
+    "database": "vega_v2",
+    "isolation": "repeatable read",
+    "read_only": "on"
+  },
+  "after": {
+    "at": "2026-11-18 17:53:27.125902+00:00",
+    "snapshot": "4450752:4450752:",
+    "database": "vega_v2",
+    "isolation": "repeatable read",
+    "read_only": "on"
+  },
+  "elo_runs_before": [
+    {
+      "id": 2097,
+      "kind": "elo",
+      "status": "published",
+      "started_at": "2026-11-18 01:48:53.370889+00:00",
+      "finished_at": "2026-11-18 01:49:24.867474+00:00",
+      "matches": 81923,
+      "method_version": "power-ranking-v8"
+    },
+    {
+      "id": 2094,
+      "kind": "elo",
+      "status": "superseded",
+      "started_at": "2026-11-18 01:04:20.230488+00:00",
+      "finished_at": "2026-11-18 01:04:51.345874+00:00",
+      "matches": 81923,
+      "method_version": "power-ranking-v8"
+    },
+    {
+      "id": 2092,
+      "kind": "elo",
+      "status": "superseded",
+      "started_at": "2026-11-18 00:36:14.284909+00:00",
+      "finished_at": "2026-11-18 00:36:41.533271+00:00",
+      "matches": 81923,
+      "method_version": "power-ranking-v8"
+    },
+    {
+      "id": 2090,
+      "kind": "elo",
+      "status": "superseded",
+      "started_at": "2026-11-18 00:00:38.421426+00:00",
+      "finished_at": "2026-11-18 00:01:09.442764+00:00",
+      "matches": 81923,
+      "method_version": "power-ranking-v8"
+    },
+    {
+      "id": 2088,
+      "kind": "elo",
+      "status": "superseded",
+      "started_at": "2026-11-17 19:46:44.410848+00:00",
+      "finished_at": "2026-11-17 19:47:16.608543+00:00",
+      "matches": 81921,
+      "method_version": "power-ranking-v8"
+    },
+    {
+      "id": 2086,
+      "kind": "elo",
+      "status": "superseded",
+      "started_at": "2026-11-17 17:03:29.919695+00:00",
+      "finished_at": "2026-11-17 17:03:59.419386+00:00",
+      "matches": 81921,
+      "method_version": "power-ranking-v8"
+    },
+    {
+      "id": 2083,
+      "kind": "elo",
+      "status": "superseded",
+      "started_at": "2026-11-17 14:14:15.832440+00:00",
+      "finished_at": "2026-11-17 14:14:44.539382+00:00",
+      "matches": 81921,
+      "method_version": "power-ranking-v8"
+    },
+    {
+      "id": 2081,
+      "kind": "elo",
+      "status": "superseded",
+      "started_at": "2026-11-17 13:44:18.308397+00:00",
+      "finished_at": "2026-11-17 13:44:44.972858+00:00",
+      "matches": 81921,
+      "method_version": "power-ranking-v8"
+    },
+    {
+      "id": 2078,
+      "kind": "elo",
+      "status": "superseded",
+      "started_at": "2026-11-17 10:57:12.256834+00:00",
+      "finished_at": "2026-11-17 10:57:36.438206+00:00",
+      "matches": 81645,
+      "method_version": "power-ranking-v8"
+    },
+    {
+      "id": 2076,
+      "kind": "elo",
+      "status": "superseded",
+      "started_at": "2026-11-17 07:42:48.560023+00:00",
+      "finished_at": "2026-11-17 07:43:08.147002+00:00",
+      "matches": 80437,
+      "method_version": "power-ranking-v8"
+    },
+    {
+      "id": 2074,
+      "kind": "elo",
+      "status": "superseded",
+      "started_at": "2026-11-17 05:01:25.997769+00:00",
+      "finished_at": "2026-11-17 05:01:54.510898+00:00",
+      "matches": 80437,
+      "method_version": "power-ranking-v8"
+    },
+    {
+      "id": 2072,
+      "kind": "elo",
+      "status": "superseded",
+      "started_at": "2026-11-17 04:51:26.802293+00:00",
+      "finished_at": "2026-11-17 04:51:55.130979+00:00",
+      "matches": 80436,
+      "method_version": "power-ranking-v8"
+    }
+  ],
+  "elo_runs_after": [
+    {
+      "id": 2099,
+      "kind": "elo",
+      "status": "published",
+      "started_at": "2026-11-18 17:15:34.917412+00:00",
+      "finished_at": "2026-11-18 17:16:04.503585+00:00",
+      "matches": 82593,
+      "method_version": "power-ranking-v8"
+    },
+    {
+      "id": 2097,
+      "kind": "elo",
+      "status": "superseded",
+      "started_at": "2026-11-18 01:48:53.370889+00:00",
+      "finished_at": "2026-11-18 01:49:24.867474+00:00",
+      "matches": 81923,
+      "method_version": "power-ranking-v8"
+    },
+    {
+      "id": 2094,
+      "kind": "elo",
+      "status": "superseded",
+      "started_at": "2026-11-18 01:04:20.230488+00:00",
+      "finished_at": "2026-11-18 01:04:51.345874+00:00",
+      "matches": 81923,
+      "method_version": "power-ranking-v8"
+    },
+    {
+      "id": 2092,
+      "kind": "elo",
+      "status": "superseded",
+      "started_at": "2026-11-18 00:36:14.284909+00:00",
+      "finished_at": "2026-11-18 00:36:41.533271+00:00",
+      "matches": 81923,
+      "method_version": "power-ranking-v8"
+    },
+    {
+      "id": 2090,
+      "kind": "elo",
+      "status": "superseded",
+      "started_at": "2026-11-18 00:00:38.421426+00:00",
+      "finished_at": "2026-11-18 00:01:09.442764+00:00",
+      "matches": 81923,
+      "method_version": "power-ranking-v8"
+    },
+    {
+      "id": 2088,
+      "kind": "elo",
+      "status": "superseded",
+      "started_at": "2026-11-17 19:46:44.410848+00:00",
+      "finished_at": "2026-11-17 19:47:16.608543+00:00",
+      "matches": 81921,
+      "method_version": "power-ranking-v8"
+    },
+    {
+      "id": 2086,
+      "kind": "elo",
+      "status": "superseded",
+      "started_at": "2026-11-17 17:03:29.919695+00:00",
+      "finished_at": "2026-11-17 17:03:59.419386+00:00",
+      "matches": 81921,
+      "method_version": "power-ranking-v8"
+    },
+    {
+      "id": 2083,
+      "kind": "elo",
+      "status": "superseded",
+      "started_at": "2026-11-17 14:14:15.832440+00:00",
+      "finished_at": "2026-11-17 14:14:44.539382+00:00",
+      "matches": 81921,
+      "method_version": "power-ranking-v8"
+    },
+    {
+      "id": 2081,
+      "kind": "elo",
+      "status": "superseded",
+      "started_at": "2026-11-17 13:44:18.308397+00:00",
+      "finished_at": "2026-11-17 13:44:44.972858+00:00",
+      "matches": 81921,
+      "method_version": "power-ranking-v8"
+    },
+    {
+      "id": 2078,
+      "kind": "elo",
+      "status": "superseded",
+      "started_at": "2026-11-17 10:57:12.256834+00:00",
+      "finished_at": "2026-11-17 10:57:36.438206+00:00",
+      "matches": 81645,
+      "method_version": "power-ranking-v8"
+    },
+    {
+      "id": 2076,
+      "kind": "elo",
+      "status": "superseded",
+      "started_at": "2026-11-17 07:42:48.560023+00:00",
+      "finished_at": "2026-11-17 07:43:08.147002+00:00",
+      "matches": 80437,
+      "method_version": "power-ranking-v8"
+    },
+    {
+      "id": 2074,
+      "kind": "elo",
+      "status": "superseded",
+      "started_at": "2026-11-17 05:01:25.997769+00:00",
+      "finished_at": "2026-11-17 05:01:54.510898+00:00",
+      "matches": 80437,
+      "method_version": "power-ranking-v8"
+    }
+  ],
+  "dirty_before": [],
+  "dirty_after": [],
+  "source_ingestion_before": [
+    {
+      "source": "openfootball",
+      "scope": "open-cups:world-cup-history:1950",
+      "status": "ok",
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 22,
+      "edition_id": 274,
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00"
+    },
+    {
+      "source": "openfootball",
+      "scope": "open-cups:world-cup-history:1954",
+      "status": "ok",
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 26,
+      "edition_id": 275,
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00"
+    },
+    {
+      "source": "openfootball",
+      "scope": "open-cups:world-cup-history:1958",
+      "status": "ok",
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 35,
+      "edition_id": 276,
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00"
+    },
+    {
+      "source": "openfootball",
+      "scope": "open-cups:world-cup-history:1962",
+      "status": "ok",
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 32,
+      "edition_id": 277,
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00"
+    },
+    {
+      "source": "openfootball",
+      "scope": "open-cups:world-cup-history:1966",
+      "status": "ok",
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 32,
+      "edition_id": 278,
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00"
+    },
+    {
+      "source": "openfootball",
+      "scope": "open-cups:world-cup-history:1970",
+      "status": "ok",
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 32,
+      "edition_id": 279,
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00"
+    },
+    {
+      "source": "openfootball",
+      "scope": "open-cups:world-cup-history:1974",
+      "status": "ok",
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 38,
+      "edition_id": 280,
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00"
+    },
+    {
+      "source": "openfootball",
+      "scope": "open-cups:world-cup-history:1978",
+      "status": "ok",
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 38,
+      "edition_id": 281,
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00"
+    },
+    {
+      "source": "openfootball",
+      "scope": "open-cups:world-cup-history:1982",
+      "status": "ok",
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 52,
+      "edition_id": 282,
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00"
+    },
+    {
+      "source": "openfootball",
+      "scope": "open-cups:world-cup-history:1986",
+      "status": "ok",
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 52,
+      "edition_id": 283,
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00"
+    },
+    {
+      "source": "openfootball",
+      "scope": "open-cups:world-cup-history:1990",
+      "status": "ok",
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 52,
+      "edition_id": 284,
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00"
+    },
+    {
+      "source": "openfootball",
+      "scope": "open-cups:world-cup-history:1994",
+      "status": "ok",
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 52,
+      "edition_id": 285,
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00"
+    },
+    {
+      "source": "openfootball",
+      "scope": "open-cups:world-cup-history:1998",
+      "status": "ok",
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 64,
+      "edition_id": 286,
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00"
+    },
+    {
+      "source": "openfootball",
+      "scope": "open-cups:world-cup-history:2002",
+      "status": "ok",
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 64,
+      "edition_id": 287,
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00"
+    },
+    {
+      "source": "openfootball",
+      "scope": "open-cups:world-cup-history:2006",
+      "status": "ok",
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 64,
+      "edition_id": 288,
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00"
+    },
+    {
+      "source": "openfootball",
+      "scope": "open-cups:world-cup-history:2010",
+      "status": "ok",
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 64,
+      "edition_id": 289,
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00"
+    },
+    {
+      "source": "openfootball",
+      "scope": "open-cups:world-cup-history:2014",
+      "status": "ok",
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 64,
+      "edition_id": 290,
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00"
+    },
+    {
+      "source": "openfootball",
+      "scope": "open-cups:world-cup-history:2022",
+      "status": "ok",
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 64,
+      "edition_id": 292,
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00"
+    },
+    {
+      "source": "international_results",
+      "scope": "nations-results:nations-league:2026/2027",
+      "status": "ok",
+      "last_attempt_at": "2026-11-18 16:57:48.805995+00:00",
+      "last_success_at": "2026-11-18 16:57:48.805995+00:00",
+      "rows_written": 108,
+      "edition_id": 308,
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:57:48.805995+00:00",
+      "cup_updated_at": "2026-11-18 16:57:48.805995+00:00"
+    }
+  ],
+  "source_ingestion_after": [
+    {
+      "source": "openfootball",
+      "scope": "open-cups:world-cup-history:1950",
+      "status": "ok",
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 22,
+      "edition_id": 274,
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00"
+    },
+    {
+      "source": "openfootball",
+      "scope": "open-cups:world-cup-history:1954",
+      "status": "ok",
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 26,
+      "edition_id": 275,
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00"
+    },
+    {
+      "source": "openfootball",
+      "scope": "open-cups:world-cup-history:1958",
+      "status": "ok",
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 35,
+      "edition_id": 276,
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00"
+    },
+    {
+      "source": "openfootball",
+      "scope": "open-cups:world-cup-history:1962",
+      "status": "ok",
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 32,
+      "edition_id": 277,
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00"
+    },
+    {
+      "source": "openfootball",
+      "scope": "open-cups:world-cup-history:1966",
+      "status": "ok",
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 32,
+      "edition_id": 278,
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00"
+    },
+    {
+      "source": "openfootball",
+      "scope": "open-cups:world-cup-history:1970",
+      "status": "ok",
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 32,
+      "edition_id": 279,
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00"
+    },
+    {
+      "source": "openfootball",
+      "scope": "open-cups:world-cup-history:1974",
+      "status": "ok",
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 38,
+      "edition_id": 280,
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00"
+    },
+    {
+      "source": "openfootball",
+      "scope": "open-cups:world-cup-history:1978",
+      "status": "ok",
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 38,
+      "edition_id": 281,
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00"
+    },
+    {
+      "source": "openfootball",
+      "scope": "open-cups:world-cup-history:1982",
+      "status": "ok",
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 52,
+      "edition_id": 282,
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00"
+    },
+    {
+      "source": "openfootball",
+      "scope": "open-cups:world-cup-history:1986",
+      "status": "ok",
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 52,
+      "edition_id": 283,
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00"
+    },
+    {
+      "source": "openfootball",
+      "scope": "open-cups:world-cup-history:1990",
+      "status": "ok",
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 52,
+      "edition_id": 284,
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00"
+    },
+    {
+      "source": "openfootball",
+      "scope": "open-cups:world-cup-history:1994",
+      "status": "ok",
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 52,
+      "edition_id": 285,
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00"
+    },
+    {
+      "source": "openfootball",
+      "scope": "open-cups:world-cup-history:1998",
+      "status": "ok",
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 64,
+      "edition_id": 286,
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00"
+    },
+    {
+      "source": "openfootball",
+      "scope": "open-cups:world-cup-history:2002",
+      "status": "ok",
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 64,
+      "edition_id": 287,
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00"
+    },
+    {
+      "source": "openfootball",
+      "scope": "open-cups:world-cup-history:2006",
+      "status": "ok",
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 64,
+      "edition_id": 288,
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00"
+    },
+    {
+      "source": "openfootball",
+      "scope": "open-cups:world-cup-history:2010",
+      "status": "ok",
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 64,
+      "edition_id": 289,
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00"
+    },
+    {
+      "source": "openfootball",
+      "scope": "open-cups:world-cup-history:2014",
+      "status": "ok",
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 64,
+      "edition_id": 290,
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00"
+    },
+    {
+      "source": "openfootball",
+      "scope": "open-cups:world-cup-history:2022",
+      "status": "ok",
+      "last_attempt_at": "2026-11-18 16:54:15.874407+00:00",
+      "last_success_at": "2026-11-18 16:54:15.874407+00:00",
+      "rows_written": 64,
+      "edition_id": 292,
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:54:15.874407+00:00",
+      "cup_updated_at": "2026-11-18 16:54:15.874407+00:00"
+    },
+    {
+      "source": "international_results",
+      "scope": "nations-results:nations-league:2026/2027",
+      "status": "ok",
+      "last_attempt_at": "2026-11-18 16:57:48.805995+00:00",
+      "last_success_at": "2026-11-18 16:57:48.805995+00:00",
+      "rows_written": 108,
+      "edition_id": 308,
+      "archive_key": null,
+      "cup_checked_at": "2026-11-18 16:57:48.805995+00:00",
+      "cup_updated_at": "2026-11-18 16:57:48.805995+00:00"
+    }
+  ],
+  "recent_activity": [],
+  "current_migrations": [
+    {
+      "version": "133_cohort_max_wait.sql",
+      "sha256": "4f08e25c4a3f694f8642911199948389b4feebe1ef644b1ece41be255e477609",
+      "applied_at": "2026-11-17 17:01:35.402304+00:00"
+    },
+    {
+      "version": "134_archive_scores_due.sql",
+      "sha256": "89dcafc08b55b2f6b6bb8cbf22f485452de419e9d8b7f0bebb8b8585bfacd5f6",
+      "applied_at": "2026-11-18 16:52:50.615988+00:00"
+    }
+  ],
+  "affected_edition_counts": {
+    "structurally_admissible": 0,
+    "refused_self": 0,
+    "refused_folder": 0,
+    "matched_copy": 0,
+    "expected_sides": 0,
+    "stored_valid": 1388,
+    "missing": -1388,
+    "invalid": 0,
+    "stored_on_excluded_side": 0,
+    "wrong_result": 0,
+    "invalid_strength_or_probability": 0
+  },
+  "other_national_missing_after": [],
+  "scope_count": 19,
+  "incident": {
+    "counts": {
+      "physical_matches": 0,
+      "physical_keys": 0,
+      "elo_sides": 0,
+      "physical_keys_exact": 0
+    },
+    "details": [
+      {
+        "id": 8049,
+        "expected_key": "ENG_6_national-league-north:2026/2027:2026-08-31|AFC Telford|Bedford",
+        "expected_signed_sporting_fields": [
+          8049,
+          2552,
+          2558,
+          "2026-08-31",
+          0,
+          1,
+          332
+        ],
+        "matches": [],
+        "provider_ids": [],
+        "elo": []
+      },
+      {
+        "id": 8050,
+        "expected_key": "ENG_6_national-league-north:2026/2027:2026-08-31|Buxton|Merthyr Town",
+        "expected_signed_sporting_fields": [
+          8050,
+          2566,
+          2546,
+          "2026-08-31",
+          2,
+          1,
+          332
+        ],
+        "matches": [],
+        "provider_ids": [],
+        "elo": []
+      },
+      {
+        "id": 8051,
+        "expected_key": "ENG_6_national-league-north:2026/2027:2026-08-31|Chester|Morecambe",
+        "expected_signed_sporting_fields": [
+          8051,
+          2607,
+          5548,
+          "2026-08-31",
+          0,
+          1,
+          332
+        ],
+        "matches": [],
+        "provider_ids": [],
+        "elo": []
+      },
+      {
+        "id": 8052,
+        "expected_key": "ENG_6_national-league-north:2026/2027:2026-08-31|Chorley|Brackley Town",
+        "expected_signed_sporting_fields": [
+          8052,
+          2557,
+          2559,
+          "2026-08-31",
+          2,
+          2,
+          332
+        ],
+        "matches": [],
+        "provider_ids": [],
+        "elo": []
+      },
+      {
+        "id": 8053,
+        "expected_key": "ENG_6_national-league-north:2026/2027:2026-08-31|Harborough|Marine",
+        "expected_signed_sporting_fields": [
+          8053,
+          2580,
+          2590,
+          "2026-08-31",
+          2,
+          1,
+          332
+        ],
+        "matches": [],
+        "provider_ids": [],
+        "elo": []
+      },
+      {
+        "id": 8054,
+        "expected_key": "ENG_6_national-league-north:2026/2027:2026-08-31|King’s Lynn|Scarborough",
+        "expected_signed_sporting_fields": [
+          8054,
+          3386,
+          2589,
+          "2026-08-31",
+          3,
+          1,
+          332
+        ],
+        "matches": [],
+        "provider_ids": [],
+        "elo": []
+      },
+      {
+        "id": 8055,
+        "expected_key": "ENG_6_national-league-north:2026/2027:2026-08-31|Macclesfield|Hebburn Town",
+        "expected_signed_sporting_fields": [
+          8055,
+          2588,
+          3387,
+          "2026-08-31",
+          3,
+          0,
+          332
+        ],
+        "matches": [],
+        "provider_ids": [],
+        "elo": []
+      },
+      {
+        "id": 8056,
+        "expected_key": "ENG_6_national-league-north:2026/2027:2026-08-31|Radcliffe|Darlington",
+        "expected_signed_sporting_fields": [
+          8056,
+          3388,
+          2593,
+          "2026-08-31",
+          0,
+          1,
+          332
+        ],
+        "matches": [],
+        "provider_ids": [],
+        "elo": []
+      },
+      {
+        "id": 8057,
+        "expected_key": "ENG_6_national-league-north:2026/2027:2026-08-31|South Shields|Spalding United",
+        "expected_signed_sporting_fields": [
+          8057,
+          2567,
+          2565,
+          "2026-08-31",
+          1,
+          1,
+          332
+        ],
+        "matches": [],
+        "provider_ids": [],
+        "elo": []
+      },
+      {
+        "id": 8058,
+        "expected_key": "ENG_6_national-league-north:2026/2027:2026-08-31|Southport|Hereford",
+        "expected_signed_sporting_fields": [
+          8058,
+          3389,
+          3390,
+          "2026-08-31",
+          0,
+          1,
+          332
+        ],
+        "matches": [],
+        "provider_ids": [],
+        "elo": []
+      },
+      {
+        "id": 8059,
+        "expected_key": "ENG_6_national-league-north:2026/2027:2026-08-31|Spennymoor|Hednesford",
+        "expected_signed_sporting_fields": [
+          8059,
+          2606,
+          3391,
+          "2026-08-31",
+          1,
+          1,
+          332
+        ],
+        "matches": [],
+        "provider_ids": [],
+        "elo": []
+      },
+      {
+        "id": 8060,
+        "expected_key": "ENG_6_national-league-north:2026/2027:2026-08-31|Worksop|Oxford City",
+        "expected_signed_sporting_fields": [
+          8060,
+          2551,
+          2596,
+          "2026-08-31",
+          0,
+          1,
+          332
+        ],
+        "matches": [],
+        "provider_ids": [],
+        "elo": []
+      },
+      {
+        "id": 8290,
+        "expected_key": "ENG_6_national-league-south:2026/2027:2026-09-05|AFC Totton|Hampton & Richmond",
+        "expected_signed_sporting_fields": [
+          8290,
+          3392,
+          2532,
+          "2026-09-05",
+          4,
+          1,
+          333
+        ],
+        "matches": [],
+        "provider_ids": [],
+        "elo": []
+      },
+      {
+        "id": 8291,
+        "expected_key": "ENG_6_national-league-south:2026/2027:2026-09-05|Billericay|Dorking",
+        "expected_signed_sporting_fields": [
+          8291,
+          3393,
+          2535,
+          "2026-09-05",
+          3,
+          3,
+          333
+        ],
+        "matches": [],
+        "provider_ids": [],
+        "elo": []
+      },
+      {
+        "id": 8292,
+        "expected_key": "ENG_6_national-league-south:2026/2027:2026-09-05|Chelmsford|Salisbury",
+        "expected_signed_sporting_fields": [
+          8292,
+          2560,
+          2602,
+          "2026-09-05",
+          1,
+          1,
+          333
+        ],
+        "matches": [],
+        "provider_ids": [],
+        "elo": []
+      },
+      {
+        "id": 8293,
+        "expected_key": "ENG_6_national-league-south:2026/2027:2026-09-05|Dover|Maidenhead",
+        "expected_signed_sporting_fields": [
+          8293,
+          2579,
+          3394,
+          "2026-09-05",
+          0,
+          3,
+          333
+        ],
+        "matches": [],
+        "provider_ids": [],
+        "elo": []
+      },
+      {
+        "id": 8294,
+        "expected_key": "ENG_6_national-league-south:2026/2027:2026-09-05|Farnborough|Tonbridge",
+        "expected_signed_sporting_fields": [
+          8294,
+          2537,
+          2613,
+          "2026-09-05",
+          0,
+          4,
+          333
+        ],
+        "matches": [],
+        "provider_ids": [],
+        "elo": []
+      },
+      {
+        "id": 8295,
+        "expected_key": "ENG_6_national-league-south:2026/2027:2026-09-05|Hemel Hempstead|Farnham",
+        "expected_signed_sporting_fields": [
+          8295,
+          2550,
+          2539,
+          "2026-09-05",
+          1,
+          1,
+          333
+        ],
+        "matches": [],
+        "provider_ids": [],
+        "elo": []
+      },
+      {
+        "id": 8296,
+        "expected_key": "ENG_6_national-league-south:2026/2027:2026-09-05|Horsham FC|Dag & Red",
+        "expected_signed_sporting_fields": [
+          8296,
+          2599,
+          2533,
+          "2026-09-05",
+          1,
+          1,
+          333
+        ],
+        "matches": [],
+        "provider_ids": [],
+        "elo": []
+      },
+      {
+        "id": 8297,
+        "expected_key": "ENG_6_national-league-south:2026/2027:2026-09-05|Maidstone|Weston-super-Mare",
+        "expected_signed_sporting_fields": [
+          8297,
+          2543,
+          2548,
+          "2026-09-05",
+          1,
+          0,
+          333
+        ],
+        "matches": [],
+        "provider_ids": [],
+        "elo": []
+      },
+      {
+        "id": 8298,
+        "expected_key": "ENG_6_national-league-south:2026/2027:2026-09-05|Slough|Braintree",
+        "expected_signed_sporting_fields": [
+          8298,
+          3395,
+          2527,
+          "2026-09-05",
+          1,
+          2,
+          333
+        ],
+        "matches": [],
+        "provider_ids": [],
+        "elo": []
+      },
+      {
+        "id": 8299,
+        "expected_key": "ENG_6_national-league-south:2026/2027:2026-09-05|Torquay|Folkestone",
+        "expected_signed_sporting_fields": [
+          8299,
+          2614,
+          3396,
+          "2026-09-05",
+          3,
+          2,
+          333
+        ],
+        "matches": [],
+        "provider_ids": [],
+        "elo": []
+      },
+      {
+        "id": 8300,
+        "expected_key": "ENG_6_national-league-south:2026/2027:2026-09-05|Truro|Chesham",
+        "expected_signed_sporting_fields": [
+          8300,
+          2545,
+          2570,
+          "2026-09-05",
+          3,
+          1,
+          333
+        ],
+        "matches": [],
+        "provider_ids": [],
+        "elo": []
+      },
+      {
+        "id": 8301,
+        "expected_key": "ENG_6_national-league-south:2026/2027:2026-09-05|Walton & Hersham|Ebbsfleet",
+        "expected_signed_sporting_fields": [
+          8301,
+          3397,
+          2573,
+          "2026-09-05",
+          0,
+          2,
+          333
+        ],
+        "matches": [],
+        "provider_ids": [],
+        "elo": []
+      },
+      {
+        "id": 8534,
+        "expected_key": "ENG_7_northern-premier-league:2026/2027:2026-08-31|Curzon Ashton|Ashton Utd",
+        "expected_signed_sporting_fields": [
+          8534,
+          3411,
+          3412,
+          "2026-08-31",
+          2,
+          0,
+          334
+        ],
+        "matches": [],
+        "provider_ids": [],
+        "elo": []
+      },
+      {
+        "id": 8535,
+        "expected_key": "ENG_7_northern-premier-league:2026/2027:2026-08-31|Emley|Guiseley",
+        "expected_signed_sporting_fields": [
+          8535,
+          3408,
+          2576,
+          "2026-08-31",
+          0,
+          4,
+          334
+        ],
+        "matches": [],
+        "provider_ids": [],
+        "elo": []
+      },
+      {
+        "id": 8536,
+        "expected_key": "ENG_7_northern-premier-league:2026/2027:2026-08-31|FC United|Avro",
+        "expected_signed_sporting_fields": [
+          8536,
+          2620,
+          3400,
+          "2026-08-31",
+          3,
+          4,
+          334
+        ],
+        "matches": [],
+        "provider_ids": [],
+        "elo": []
+      },
+      {
+        "id": 8537,
+        "expected_key": "ENG_7_northern-premier-league:2026/2027:2026-08-31|Gainsborough|Cleethorpes",
+        "expected_signed_sporting_fields": [
+          8537,
+          2541,
+          3413,
+          "2026-08-31",
+          0,
+          3,
+          334
+        ],
+        "matches": [],
+        "provider_ids": [],
+        "elo": []
+      },
+      {
+        "id": 8538,
+        "expected_key": "ENG_7_northern-premier-league:2026/2027:2026-08-31|Hyde|Bury",
+        "expected_signed_sporting_fields": [
+          8538,
+          3403,
+          2562,
+          "2026-08-31",
+          2,
+          1,
+          334
+        ],
+        "matches": [],
+        "provider_ids": [],
+        "elo": []
+      },
+      {
+        "id": 8539,
+        "expected_key": "ENG_7_northern-premier-league:2026/2027:2026-08-31|Ilkeston|Quorn",
+        "expected_signed_sporting_fields": [
+          8539,
+          3404,
+          3405,
+          "2026-08-31",
+          0,
+          2,
+          334
+        ],
+        "matches": [],
+        "provider_ids": [],
+        "elo": []
+      },
+      {
+        "id": 8540,
+        "expected_key": "ENG_7_northern-premier-league:2026/2027:2026-08-31|Lancaster|Workington",
+        "expected_signed_sporting_fields": [
+          8540,
+          3414,
+          3409,
+          "2026-08-31",
+          0,
+          3,
+          334
+        ],
+        "matches": [],
+        "provider_ids": [],
+        "elo": []
+      },
+      {
+        "id": 8541,
+        "expected_key": "ENG_7_northern-premier-league:2026/2027:2026-08-31|Stockton|Redcar Athletic",
+        "expected_signed_sporting_fields": [
+          8541,
+          3401,
+          3407,
+          "2026-08-31",
+          0,
+          2,
+          334
+        ],
+        "matches": [],
+        "provider_ids": [],
+        "elo": []
+      },
+      {
+        "id": 8542,
+        "expected_key": "ENG_7_northern-premier-league:2026/2027:2026-08-31|Warrington Rylands|Bamber Bridge",
+        "expected_signed_sporting_fields": [
+          8542,
+          3399,
+          3402,
+          "2026-08-31",
+          3,
+          1,
+          334
+        ],
+        "matches": [],
+        "provider_ids": [],
+        "elo": []
+      },
+      {
+        "id": 8543,
+        "expected_key": "ENG_7_northern-premier-league:2026/2027:2026-08-31|Whitby|Alfreton",
+        "expected_signed_sporting_fields": [
+          8543,
+          3406,
+          3398,
+          "2026-08-31",
+          1,
+          4,
+          334
+        ],
+        "matches": [],
+        "provider_ids": [],
+        "elo": []
+      },
+      {
+        "id": 8544,
+        "expected_key": "ENG_7_northern-premier-league:2026/2027:2026-09-01|Leek|Warrington",
+        "expected_signed_sporting_fields": [
+          8544,
+          3410,
+          2591,
+          "2026-09-01",
+          1,
+          2,
+          334
+        ],
+        "matches": [],
+        "provider_ids": [],
+        "elo": []
+      }
+    ],
+    "signed_postimage_sha256": "e850dd9ebc33dfad5c71b93090fb2d4b3c9c4dfea73296e2278fa13f29f3d71d"
+  }
+}

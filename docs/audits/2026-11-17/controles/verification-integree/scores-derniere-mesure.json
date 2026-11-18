@@ -1,0 +1,1304 @@
+{
+  "elo_proof": {
+    "after": {
+      "deployed_code_sha256": {
+        "identity": "d671e7e90601326420ffe9faf1f70cbdc3e1db4dc9539274b43f99ffa9e2209d",
+        "power": "75d3b2a829b585d8dbadb60d1fb2a6b4233e7f74d220a0f76bab0ebb6fdb93ff"
+      },
+      "identity_teams_examined": 9226,
+      "method": "power-ranking-v8",
+      "projected_aliases": 1,
+      "published_policy_matches": 82593,
+      "raw_candidates": 82817
+    },
+    "before": {
+      "deployed_code_sha256": {
+        "identity": "d671e7e90601326420ffe9faf1f70cbdc3e1db4dc9539274b43f99ffa9e2209d",
+        "power": "75d3b2a829b585d8dbadb60d1fb2a6b4233e7f74d220a0f76bab0ebb6fdb93ff"
+      },
+      "identity_teams_examined": 9226,
+      "method": "power-ranking-v8",
+      "projected_aliases": 1,
+      "published_policy_matches": 82592,
+      "raw_candidates": 82816
+    }
+  },
+  "fixtures": {
+    "by_source_after": [
+      {
+        "archive_finished_scored_both_teams": 179055,
+        "archive_recorded": 179928,
+        "edition_id": null,
+        "finished": 179587,
+        "finished_scored": 179587,
+        "finished_scored_both_teams": 179055,
+        "recorded": 179928,
+        "source": "engsoccerdata"
+      },
+      {
+        "archive_finished_scored_both_teams": 189933,
+        "archive_recorded": 190152,
+        "edition_id": null,
+        "finished": 190152,
+        "finished_scored": 190152,
+        "finished_scored_both_teams": 189933,
+        "recorded": 190152,
+        "source": "footballcsv"
+      },
+      {
+        "archive_finished_scored_both_teams": 0,
+        "archive_recorded": 0,
+        "edition_id": null,
+        "finished": 409,
+        "finished_scored": 409,
+        "finished_scored_both_teams": 409,
+        "recorded": 409,
+        "source": "international_results"
+      },
+      {
+        "archive_finished_scored_both_teams": 60836,
+        "archive_recorded": 61474,
+        "edition_id": null,
+        "finished": 65791,
+        "finished_scored": 65271,
+        "finished_scored_both_teams": 65153,
+        "recorded": 65926,
+        "source": "openfootball"
+      },
+      {
+        "archive_finished_scored_both_teams": 0,
+        "archive_recorded": 0,
+        "edition_id": null,
+        "finished": 159,
+        "finished_scored": 159,
+        "finished_scored_both_teams": 159,
+        "recorded": 167,
+        "source": "openligadb"
+      },
+      {
+        "archive_finished_scored_both_teams": 0,
+        "archive_recorded": 0,
+        "edition_id": null,
+        "finished": 2576,
+        "finished_scored": 2576,
+        "finished_scored_both_teams": 2576,
+        "recorded": 4682,
+        "source": "open_matchday"
+      },
+      {
+        "archive_finished_scored_both_teams": 0,
+        "archive_recorded": 0,
+        "edition_id": null,
+        "finished": 75356,
+        "finished_scored": 75356,
+        "finished_scored_both_teams": 75356,
+        "recorded": 84371,
+        "source": "pitchapi"
+      },
+      {
+        "archive_finished_scored_both_teams": 62245,
+        "archive_recorded": 63159,
+        "edition_id": null,
+        "finished": 63159,
+        "finished_scored": 63159,
+        "finished_scored_both_teams": 62245,
+        "recorded": 63159,
+        "source": "worldclub"
+      }
+    ],
+    "edition_rows_changed": [
+      {
+        "archive_key": null,
+        "competition": "Saudi First Division",
+        "cup_key": null,
+        "edition_id": 28,
+        "finished_after": 95,
+        "finished_before": 94,
+        "finished_delta": 1,
+        "finished_unknown_score_after": 0,
+        "finished_unknown_score_before": 0,
+        "finished_unknown_score_delta": 0,
+        "finished_unknown_team_after": 0,
+        "finished_unknown_team_before": 0,
+        "finished_unknown_team_delta": 0,
+        "recorded_matches_after": 171,
+        "recorded_matches_before": 171,
+        "recorded_matches_delta": 0,
+        "season": "2026/2027"
+      }
+    ],
+    "matches_net_changed": {
+      "archives": {
+        "editions_changed": 0,
+        "finished": 0,
+        "finished_unknown_score": 0,
+        "finished_unknown_team": 0,
+        "recorded_matches": 0
+      },
+      "tous": {
+        "editions_changed": 1,
+        "finished": 1,
+        "finished_unknown_score": 0,
+        "finished_unknown_team": 0,
+        "recorded_matches": 0
+      }
+    },
+    "source_basis": "core.matches.source; parts on a single snapshot; no source history or dedup cross-source"
+  },
+  "grids": {
+    "competition": {
+      "added_rows": [],
+      "after_content_sha256": "ea8259e6037868fbfbc509e761da00f212db7c9a96e583cd57896d762bce17db",
+      "before_content_sha256": "4432bc26ce03a55041b0c0d3e128544f47de729ae6c9eadda0cff959e926140b",
+      "by_entity": {
+        "club": 9,
+        "national team": 5,
+        "player": 3
+      },
+      "by_field": {
+        "actual_valid": 7,
+        "expected_algorithm": 2,
+        "finished": 3,
+        "missing_from_storage": 5
+      },
+      "by_kind": {
+        "notation": 12,
+        "regle_eligibilite": 2,
+        "rencontre": 3
+      },
+      "cells_changed": 17,
+      "changed_keys": [
+        {
+          "competition_id": "102",
+          "entity_type": "club"
+        },
+        {
+          "competition_id": "103",
+          "entity_type": "club"
+        },
+        {
+          "competition_id": "104",
+          "entity_type": "club"
+        },
+        {
+          "competition_id": "28",
+          "entity_type": "club"
+        },
+        {
+          "competition_id": "28",
+          "entity_type": "national team"
+        },
+        {
+          "competition_id": "28",
+          "entity_type": "player"
+        },
+        {
+          "competition_id": "64",
+          "entity_type": "national team"
+        },
+        {
+          "competition_id": "78",
+          "entity_type": "national team"
+        }
+      ],
+      "comparable_cells": 6240,
+      "removed_rows": [],
+      "rows_after": 624,
+      "rows_before": 624,
+      "rows_changed": 8
+    },
+    "edition-brute": {
+      "added_rows": [],
+      "after_content_sha256": "c26c420f9726f38fc5d3c18ccd51c6919ef136a3fa20c1f4910e9c89f807dd6b",
+      "before_content_sha256": "73ec8cbe9e27667cf0c269d92fd2cbf58423ca52fac3e7f83218ef29f02113e2",
+      "by_entity": {
+        "club": 18,
+        "national team": 56,
+        "player": 194
+      },
+      "by_field": {
+        "absolute_z_at_least_three": 1,
+        "actual_valid": 23,
+        "algorithm_inputs_before_coverage": 1,
+        "candidate_sides_before_copy_rules": 1,
+        "displayed_under_current_rule": 2,
+        "expected_proven": 2,
+        "finished": 3,
+        "finished_sides": 1,
+        "genuine_missing_after_computation": 21,
+        "grades": 1,
+        "intentionally_hidden_cameo": 2,
+        "known_participants_without_stats": 1,
+        "known_participations_minimum": 2,
+        "lineup_presence_unconfirmed_before_event_enrichment": 1,
+        "max_z": 50,
+        "mean_z": 20,
+        "min_z": 47,
+        "minutes_unknown": 1,
+        "positive_minutes": 1,
+        "pre_post_unchanged": 3,
+        "sd_z": 60,
+        "stats_records": 1,
+        "stored_matched_sides": 22,
+        "stored_on_stats": 1
+      },
+      "by_kind": {
+        "diagnostic": 8,
+        "intrants_participation": 7,
+        "notation": 245,
+        "regle_eligibilite": 4,
+        "rencontre": 4
+      },
+      "cells_changed": 268,
+      "changed_keys": [
+        {
+          "edition_id": "1",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "10",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "11",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "12",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "13",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "14",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "140",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "15",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "16",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "17",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "18",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "19",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "2",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "20",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "21",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "23",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "24",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "25",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "26",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "265",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "267",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "27",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "274",
+          "entity_type": "national team"
+        },
+        {
+          "edition_id": "275",
+          "entity_type": "national team"
+        },
+        {
+          "edition_id": "276",
+          "entity_type": "national team"
+        },
+        {
+          "edition_id": "277",
+          "entity_type": "national team"
+        },
+        {
+          "edition_id": "278",
+          "entity_type": "national team"
+        },
+        {
+          "edition_id": "279",
+          "entity_type": "national team"
+        },
+        {
+          "edition_id": "28",
+          "entity_type": "club"
+        },
+        {
+          "edition_id": "28",
+          "entity_type": "national team"
+        },
+        {
+          "edition_id": "28",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "280",
+          "entity_type": "national team"
+        },
+        {
+          "edition_id": "281",
+          "entity_type": "national team"
+        },
+        {
+          "edition_id": "282",
+          "entity_type": "national team"
+        },
+        {
+          "edition_id": "283",
+          "entity_type": "national team"
+        },
+        {
+          "edition_id": "284",
+          "entity_type": "national team"
+        },
+        {
+          "edition_id": "285",
+          "entity_type": "national team"
+        },
+        {
+          "edition_id": "286",
+          "entity_type": "national team"
+        },
+        {
+          "edition_id": "287",
+          "entity_type": "national team"
+        },
+        {
+          "edition_id": "288",
+          "entity_type": "national team"
+        },
+        {
+          "edition_id": "289",
+          "entity_type": "national team"
+        },
+        {
+          "edition_id": "29",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "290",
+          "entity_type": "national team"
+        },
+        {
+          "edition_id": "3",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "30",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "308",
+          "entity_type": "national team"
+        },
+        {
+          "edition_id": "31",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "33",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "332",
+          "entity_type": "club"
+        },
+        {
+          "edition_id": "333",
+          "entity_type": "club"
+        },
+        {
+          "edition_id": "334",
+          "entity_type": "club"
+        },
+        {
+          "edition_id": "34",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "35",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "36",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "37",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "38",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "39",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "4",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "40",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "41",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "42",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "43",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "44",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "46",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "47",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "48",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "49",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "5",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "50",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "51",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "52",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "53",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "53166",
+          "entity_type": "national team"
+        },
+        {
+          "edition_id": "54",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "55",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "56",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "57",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "58",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "6",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "7",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "737",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "760",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "766",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "772",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "776",
+          "entity_type": "club"
+        },
+        {
+          "edition_id": "797",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "8",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "812",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "882",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "899",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "9",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "908",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "912",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "920",
+          "entity_type": "club"
+        },
+        {
+          "edition_id": "941",
+          "entity_type": "player"
+        }
+      ],
+      "comparable_cells": 477078,
+      "removed_rows": [],
+      "rows_after": 6447,
+      "rows_before": 6447,
+      "rows_changed": 95
+    },
+    "edition-publiee": {
+      "added_rows": [],
+      "after_content_sha256": "3ebc204f0cb8f67928d8af455536695839e09428fb7f0b9704f12e3dd7867ce7",
+      "before_content_sha256": "c2231a7ad715de3438c502b26139e3601f6492e61ff06383f91afd9e12a47b1c",
+      "by_entity": {
+        "club": 10,
+        "national team": 37,
+        "player": 5
+      },
+      "by_field": {
+        "actual_valid": 23,
+        "expected_algorithm": 2,
+        "finished": 3,
+        "known_participations_minimum": 2,
+        "known_without_stats": 1,
+        "missing_from_storage": 21
+      },
+      "by_kind": {
+        "intrants_participation": 3,
+        "notation": 44,
+        "regle_eligibilite": 2,
+        "rencontre": 3
+      },
+      "cells_changed": 52,
+      "changed_keys": [
+        {
+          "edition_id": "274",
+          "entity_type": "national team"
+        },
+        {
+          "edition_id": "275",
+          "entity_type": "national team"
+        },
+        {
+          "edition_id": "276",
+          "entity_type": "national team"
+        },
+        {
+          "edition_id": "277",
+          "entity_type": "national team"
+        },
+        {
+          "edition_id": "278",
+          "entity_type": "national team"
+        },
+        {
+          "edition_id": "279",
+          "entity_type": "national team"
+        },
+        {
+          "edition_id": "28",
+          "entity_type": "club"
+        },
+        {
+          "edition_id": "28",
+          "entity_type": "national team"
+        },
+        {
+          "edition_id": "28",
+          "entity_type": "player"
+        },
+        {
+          "edition_id": "280",
+          "entity_type": "national team"
+        },
+        {
+          "edition_id": "281",
+          "entity_type": "national team"
+        },
+        {
+          "edition_id": "282",
+          "entity_type": "national team"
+        },
+        {
+          "edition_id": "283",
+          "entity_type": "national team"
+        },
+        {
+          "edition_id": "284",
+          "entity_type": "national team"
+        },
+        {
+          "edition_id": "285",
+          "entity_type": "national team"
+        },
+        {
+          "edition_id": "286",
+          "entity_type": "national team"
+        },
+        {
+          "edition_id": "287",
+          "entity_type": "national team"
+        },
+        {
+          "edition_id": "288",
+          "entity_type": "national team"
+        },
+        {
+          "edition_id": "289",
+          "entity_type": "national team"
+        },
+        {
+          "edition_id": "290",
+          "entity_type": "national team"
+        },
+        {
+          "edition_id": "308",
+          "entity_type": "national team"
+        },
+        {
+          "edition_id": "332",
+          "entity_type": "club"
+        },
+        {
+          "edition_id": "333",
+          "entity_type": "club"
+        },
+        {
+          "edition_id": "334",
+          "entity_type": "club"
+        }
+      ],
+      "comparable_cells": 128940,
+      "removed_rows": [],
+      "rows_after": 6447,
+      "rows_before": 6447,
+      "rows_changed": 24
+    },
+    "saison-brute": {
+      "added_rows": [],
+      "after_content_sha256": "b61fbcd4e983f6a3acaec6b9af7f9f8654b9019719cbd7eb411bd52282394124",
+      "before_content_sha256": "49e5273e117caa1e4a63adbb50a0ff31b0056f34fb502d5dddeb78670b1750ad",
+      "by_entity": {
+        "club": 5,
+        "national team": 37,
+        "player": 6
+      },
+      "by_field": {
+        "actual_valid": 20,
+        "algorithm_inputs_before_coverage": 1,
+        "expected_proven": 2,
+        "finished": 3,
+        "genuine_missing_after_computation": 19,
+        "known_participants_without_stats": 1,
+        "known_participations_minimum": 2
+      },
+      "by_kind": {
+        "intrants_participation": 3,
+        "notation": 39,
+        "regle_eligibilite": 3,
+        "rencontre": 3
+      },
+      "cells_changed": 48,
+      "changed_keys": [
+        {
+          "entity_type": "national team",
+          "season_id": "1949"
+        },
+        {
+          "entity_type": "national team",
+          "season_id": "1953"
+        },
+        {
+          "entity_type": "national team",
+          "season_id": "1957"
+        },
+        {
+          "entity_type": "national team",
+          "season_id": "1961"
+        },
+        {
+          "entity_type": "national team",
+          "season_id": "1965"
+        },
+        {
+          "entity_type": "national team",
+          "season_id": "1969"
+        },
+        {
+          "entity_type": "national team",
+          "season_id": "1973"
+        },
+        {
+          "entity_type": "national team",
+          "season_id": "1977"
+        },
+        {
+          "entity_type": "national team",
+          "season_id": "1981"
+        },
+        {
+          "entity_type": "national team",
+          "season_id": "1985"
+        },
+        {
+          "entity_type": "national team",
+          "season_id": "1989"
+        },
+        {
+          "entity_type": "national team",
+          "season_id": "1993"
+        },
+        {
+          "entity_type": "national team",
+          "season_id": "1997"
+        },
+        {
+          "entity_type": "national team",
+          "season_id": "2001"
+        },
+        {
+          "entity_type": "national team",
+          "season_id": "2005"
+        },
+        {
+          "entity_type": "national team",
+          "season_id": "2009"
+        },
+        {
+          "entity_type": "national team",
+          "season_id": "2013"
+        },
+        {
+          "entity_type": "club",
+          "season_id": "2026"
+        },
+        {
+          "entity_type": "national team",
+          "season_id": "2026"
+        },
+        {
+          "entity_type": "player",
+          "season_id": "2026"
+        }
+      ],
+      "comparable_cells": 14130,
+      "removed_rows": [],
+      "rows_after": 471,
+      "rows_before": 471,
+      "rows_changed": 20
+    },
+    "saison-publiee": {
+      "added_rows": [],
+      "after_content_sha256": "e88ee20e1c5d8615f9e7c0a9b0414d39a47a7cd09e5100056471fe95c3887c56",
+      "before_content_sha256": "6f1349dd3847128a70c707262fb3071e3e448929e94ee77717971133757d824f",
+      "by_entity": {
+        "club": 3,
+        "national team": 36,
+        "player": 2
+      },
+      "by_field": {
+        "actual_valid": 20,
+        "expected_algorithm": 2,
+        "missing_from_storage": 19
+      },
+      "by_kind": {
+        "notation": 39,
+        "regle_eligibilite": 2
+      },
+      "cells_changed": 41,
+      "changed_keys": [
+        {
+          "entity_type": "national team",
+          "season_id": "1949"
+        },
+        {
+          "entity_type": "national team",
+          "season_id": "1953"
+        },
+        {
+          "entity_type": "national team",
+          "season_id": "1957"
+        },
+        {
+          "entity_type": "national team",
+          "season_id": "1961"
+        },
+        {
+          "entity_type": "national team",
+          "season_id": "1965"
+        },
+        {
+          "entity_type": "national team",
+          "season_id": "1969"
+        },
+        {
+          "entity_type": "national team",
+          "season_id": "1973"
+        },
+        {
+          "entity_type": "national team",
+          "season_id": "1977"
+        },
+        {
+          "entity_type": "national team",
+          "season_id": "1981"
+        },
+        {
+          "entity_type": "national team",
+          "season_id": "1985"
+        },
+        {
+          "entity_type": "national team",
+          "season_id": "1989"
+        },
+        {
+          "entity_type": "national team",
+          "season_id": "1993"
+        },
+        {
+          "entity_type": "national team",
+          "season_id": "1997"
+        },
+        {
+          "entity_type": "national team",
+          "season_id": "2001"
+        },
+        {
+          "entity_type": "national team",
+          "season_id": "2005"
+        },
+        {
+          "entity_type": "national team",
+          "season_id": "2009"
+        },
+        {
+          "entity_type": "national team",
+          "season_id": "2013"
+        },
+        {
+          "entity_type": "club",
+          "season_id": "2026"
+        },
+        {
+          "entity_type": "national team",
+          "season_id": "2026"
+        },
+        {
+          "entity_type": "player",
+          "season_id": "2026"
+        }
+      ],
+      "comparable_cells": 3297,
+      "removed_rows": [],
+      "rows_after": 471,
+      "rows_before": 471,
+      "rows_changed": 20
+    }
+  },
+  "snapshots": [
+    {
+      "at": "2026-11-18 17:05:26.592852+00:00",
+      "database": "vega_v2",
+      "isolation": "repeatable read",
+      "read_only": "on",
+      "snapshot": "4447537:4447537:"
+    },
+    {
+      "at": "2026-11-18 17:53:27.125902+00:00",
+      "database": "vega_v2",
+      "isolation": "repeatable read",
+      "read_only": "on",
+      "snapshot": "4450752:4450752:"
+    }
+  ],
+  "source_queries_shared": 45,
+  "sql_tables": {
+    "award-role-2021": {
+      "rows_after": 21,
+      "rows_before": 21,
+      "same_rows_including_order": true
+    },
+    "award-role-2022": {
+      "rows_after": 17,
+      "rows_before": 17,
+      "same_rows_including_order": true
+    },
+    "award-role-2023": {
+      "rows_after": 21,
+      "rows_before": 21,
+      "same_rows_including_order": true
+    },
+    "award-role-2024": {
+      "rows_after": 12,
+      "rows_before": 12,
+      "same_rows_including_order": true
+    },
+    "award-role-2025": {
+      "rows_after": 11,
+      "rows_before": 11,
+      "same_rows_including_order": true
+    },
+    "award-role-2026": {
+      "rows_after": 8,
+      "rows_before": 8,
+      "same_rows_including_order": false
+    },
+    "editions": {
+      "rows_after": 2149,
+      "rows_before": 2149,
+      "same_rows_including_order": false
+    },
+    "fixture-universe": {
+      "rows_after": 2157,
+      "rows_before": 2157,
+      "same_rows_including_order": false
+    },
+    "player-distributions": {
+      "rows_after": 301,
+      "rows_before": 301,
+      "same_rows_including_order": false
+    },
+    "player-event-cues-2021": {
+      "rows_after": 5,
+      "rows_before": 5,
+      "same_rows_including_order": true
+    },
+    "player-event-cues-2022": {
+      "rows_after": 12,
+      "rows_before": 12,
+      "same_rows_including_order": true
+    },
+    "player-event-cues-2023": {
+      "rows_after": 24,
+      "rows_before": 24,
+      "same_rows_including_order": true
+    },
+    "player-event-cues-2024": {
+      "rows_after": 29,
+      "rows_before": 29,
+      "same_rows_including_order": true
+    },
+    "player-event-cues-2025": {
+      "rows_after": 18,
+      "rows_before": 18,
+      "same_rows_including_order": true
+    },
+    "player-event-cues-2026": {
+      "rows_after": 25,
+      "rows_before": 25,
+      "same_rows_including_order": true
+    },
+    "player-grade-integrity-2021": {
+      "rows_after": 1,
+      "rows_before": 1,
+      "same_rows_including_order": true
+    },
+    "player-grade-integrity-2022": {
+      "rows_after": 1,
+      "rows_before": 1,
+      "same_rows_including_order": true
+    },
+    "player-grade-integrity-2023": {
+      "rows_after": 1,
+      "rows_before": 1,
+      "same_rows_including_order": true
+    },
+    "player-grade-integrity-2024": {
+      "rows_after": 1,
+      "rows_before": 1,
+      "same_rows_including_order": true
+    },
+    "player-grade-integrity-2025": {
+      "rows_after": 1,
+      "rows_before": 1,
+      "same_rows_including_order": true
+    },
+    "player-grade-integrity-2026": {
+      "rows_after": 1,
+      "rows_before": 1,
+      "same_rows_including_order": false
+    },
+    "player-participations-2021": {
+      "rows_after": 37,
+      "rows_before": 37,
+      "same_rows_including_order": true
+    },
+    "player-participations-2022": {
+      "rows_after": 44,
+      "rows_before": 44,
+      "same_rows_including_order": true
+    },
+    "player-participations-2023": {
+      "rows_after": 48,
+      "rows_before": 48,
+      "same_rows_including_order": true
+    },
+    "player-participations-2024": {
+      "rows_after": 87,
+      "rows_before": 87,
+      "same_rows_including_order": true
+    },
+    "player-participations-2025": {
+      "rows_after": 83,
+      "rows_before": 83,
+      "same_rows_including_order": true
+    },
+    "player-participations-2026": {
+      "rows_after": 110,
+      "rows_before": 110,
+      "same_rows_including_order": false
+    },
+    "player-pending-2021": {
+      "rows_after": 21,
+      "rows_before": 21,
+      "same_rows_including_order": true
+    },
+    "player-pending-2022": {
+      "rows_after": 17,
+      "rows_before": 17,
+      "same_rows_including_order": true
+    },
+    "player-pending-2023": {
+      "rows_after": 21,
+      "rows_before": 21,
+      "same_rows_including_order": true
+    },
+    "player-pending-2024": {
+      "rows_after": 12,
+      "rows_before": 12,
+      "same_rows_including_order": true
+    },
+    "player-pending-2025": {
+      "rows_after": 11,
+      "rows_before": 11,
+      "same_rows_including_order": true
+    },
+    "player-pending-2026": {
+      "rows_after": 8,
+      "rows_before": 8,
+      "same_rows_including_order": false
+    },
+    "player-scores-2021": {
+      "rows_after": 23,
+      "rows_before": 23,
+      "same_rows_including_order": true
+    },
+    "player-scores-2022": {
+      "rows_after": 30,
+      "rows_before": 30,
+      "same_rows_including_order": true
+    },
+    "player-scores-2023": {
+      "rows_after": 31,
+      "rows_before": 31,
+      "same_rows_including_order": true
+    },
+    "player-scores-2024": {
+      "rows_after": 65,
+      "rows_before": 65,
+      "same_rows_including_order": true
+    },
+    "player-scores-2025": {
+      "rows_after": 77,
+      "rows_before": 77,
+      "same_rows_including_order": true
+    },
+    "player-scores-2026": {
+      "rows_after": 75,
+      "rows_before": 75,
+      "same_rows_including_order": false
+    },
+    "player-shot-actor-seasons": {
+      "rows_after": 6,
+      "rows_before": 6,
+      "same_rows_including_order": false
+    },
+    "run-times": {
+      "rows_after": 7,
+      "rows_before": 6,
+      "same_rows_including_order": false
+    },
+    "sample-keys": {
+      "rows_after": 23,
+      "rows_before": 23,
+      "same_rows_including_order": true
+    },
+    "season-universe": {
+      "rows_after": 52,
+      "rows_before": 50,
+      "same_rows_including_order": false
+    },
+    "team-exact": {
+      "rows_after": 401,
+      "rows_before": 401,
+      "same_rows_including_order": false
+    },
+    "team-grade-integrity": {
+      "rows_after": 28,
+      "rows_before": 26,
+      "same_rows_including_order": false
+    },
+    "team-sides-all": {
+      "rows_after": 2256,
+      "rows_before": 2256,
+      "same_rows_including_order": false
+    }
+  },
+  "supplementary_queries": [
+    "pulse-activite",
+    "pulse-ingestion",
+    "pulse-marquages",
+    "pulse-matchday",
+    "pulse-migrations",
+    "pulse-native",
+    "pulse-publication"
+  ],
+  "total_after": {
+    "club": {
+      "actual_valid": 161934,
+      "expected_algorithm": 161934,
+      "missing_from_storage": 0
+    },
+    "national team": {
+      "actual_valid": 3252,
+      "expected_algorithm": 3252,
+      "missing_from_storage": 0
+    },
+    "player": {
+      "actual_valid": 2282608,
+      "expected_algorithm": 2297026,
+      "missing_from_storage": 14418,
+      "role_unavailable": 615
+    }
+  },
+  "total_before": {
+    "club": {
+      "actual_valid": 161912,
+      "expected_algorithm": 161932,
+      "missing_from_storage": 20
+    },
+    "national team": {
+      "actual_valid": 1864,
+      "expected_algorithm": 3252,
+      "missing_from_storage": 1388
+    },
+    "player": {
+      "actual_valid": 2282580,
+      "expected_algorithm": 2296998,
+      "missing_from_storage": 14418,
+      "role_unavailable": 615
+    }
+  },
+  "total_delta": {
+    "club": {
+      "actual_valid": 22,
+      "expected_algorithm": 2,
+      "missing_from_storage": -20
+    },
+    "national team": {
+      "actual_valid": 1388,
+      "expected_algorithm": 0,
+      "missing_from_storage": -1388
+    },
+    "player": {
+      "actual_valid": 28,
+      "expected_algorithm": 28,
+      "missing_from_storage": 0,
+      "role_unavailable": 0
+    }
+  },
+  "worker_digest": "sha256:8ecb6624e75135f2e741146fd160fe756e7478a2d18fd1139c16b28c817c67e5",
+  "worker_image": "361769570630.dkr.ecr.us-east-2.amazonaws.com/vega-v2-worker:b2e6dd82d36a2ca0f439ec84bf2e5dbbcd3013d9"
+}

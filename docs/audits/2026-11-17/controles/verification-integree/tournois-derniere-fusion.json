@@ -1,0 +1,86 @@
+{
+  "issue": "VI-27",
+  "control": "C28",
+  "merge": "0a7c62d220497856b459239a869955c6e2f5707b",
+  "parents": [
+    "39e6272bd0deb948ec944384fdecea07c5f41280",
+    "1c5a4340d193d2ffd1406f965e4007fdfb6b97fb"
+  ],
+  "native_model": "gpt-6.2-sol/xhigh, authorized fallback",
+  "tests": {
+    "before_desktop": {
+      "passed": 17,
+      "total": 27,
+      "js_errors": 0,
+      "result": "red-desktop/result.json"
+    },
+    "before_harness_races": 2,
+    "after_desktop": {
+      "passed": 35,
+      "total": 35,
+      "js_errors": 0,
+      "result": "final-desktop/result.json"
+    },
+    "after_simulated_iphone": {
+      "passed": 39,
+      "total": 39,
+      "js_errors": 0,
+      "result": "final-iphone/result.json"
+    },
+    "site_scope": {
+      "passed": 105,
+      "failed": 0,
+      "skipped_api_test": 1
+    }
+  },
+  "outcomes": {
+    "opening_groups": {
+      "1930": 4,
+      "1974": 2,
+      "1978": 2,
+      "1982": 4,
+      "1954": 0,
+      "1958": 0
+    },
+    "1950_default": "groupes",
+    "1950_explicit": "tableau",
+    "1950_points": [
+      5,
+      4,
+      2,
+      1
+    ],
+    "1950_missing_score_champion": null,
+    "native_2026_links": [
+      31,
+      32
+    ],
+    "native_2022_links": [
+      16,
+      16
+    ],
+    "native_alias_witness": {
+      "id": "m_AA1533",
+      "status": "local copy",
+      "archive": [
+        "2026-07-01",
+        "USA",
+        "Bosnia & Herzegovina",
+        "Round of 32"
+      ],
+      "native": [
+        "2026-07-02",
+        "USA",
+        "Bosnia and Herzegovina",
+        "Round of 32"
+      ]
+    }
+  },
+  "limits": [
+    "PG18 local on B schema 149",
+    "Frozen archive used to construct the native fixtures",
+    "One intentional local UTC-day and alias discrepancy",
+    "Missing 1950 score is a perturbation of the local API payload",
+    "No deployment by this track"
+  ]
+}

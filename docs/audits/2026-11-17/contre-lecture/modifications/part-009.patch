@@ -1,145 +1,494 @@
-diff --git a/backend/tests/test_transfermarkt_history.py b/backend/tests/test_transfermarkt_history.py
+diff --git a/backend/tests/test_calculator.py b/backend/tests/test_calculator.py
+index 88de63d314..61e0b65930 100644
+--- a/backend/tests/test_calculator.py
++++ b/backend/tests/test_calculator.py
+@@ -275,7 +275,7 @@ class ApiViewTest(CalculatorTest):
+         views = [r[0] for r in self.db.execute(
+             "SELECT table_schema||'.'||table_name FROM information_schema.views WHERE table_schema IN ('api','ops') ORDER BY 1"
+         )]
+-        self.assertEqual(len([v for v in views if v.startswith("api.")]), 156)  # 21 + 5 read API (016) + 3 players (019) + media (020) + 4 matches (021) + 2 (022) + cards (023) + 3 search (024) + 4 archives (025) + 4 rankings (026) + 4 Wikidata (027) + 2 cups (028) + honours (029) + 19 match details and profiles (031) + 2 power rankings (032) + cup tables (035) + power roles (037) + season keys (039) + 12 status page (043) + 2 home settings (044) + home leaders (046) + edition keys (047) + home player rows (048) + presence (053) + 2 performance peers (055) + player match keys (057) + 2 archive seasons (058) + 3 player list (060) + match keys (066) + power role counts (069) + 2 league strength (073) + 3 forecasts (076) + schedule forecasts (078) + pass partners (079) + 3 profile vectors (081) + 2 substitutions (082) + halves and pass edges (083) + 5 in-play (086) + 2 returns (087) + 2 breakouts (088) + action values (089) + 3 line-ups (090) + line-up forecasts (091) + pressing rows and keepers' shots (092) + match grades (099) + team age minutes (100) + player fact coverage (104) + confirmed contracts and market values (106) + grade editions (107) + 3 league rounds (109) + match odds (111) + league fates (112) + provider reader progress (114) + player injuries and injury reads (116) + cup stage odds (122) + team style centiles (123) + cup round opponents (124) + cup team groups (125) + match scoring (132)
++        self.assertEqual(len([v for v in views if v.startswith("api.")]), 158)  # 21 + 5 read API (016) + 3 players (019) + media (020) + 4 matches (021) + 2 (022) + cards (023) + 3 search (024) + 4 archives (025) + 4 rankings (026) + 4 Wikidata (027) + 2 cups (028) + honours (029) + 19 match details and profiles (031) + 2 power rankings (032) + cup tables (035) + power roles (037) + season keys (039) + 12 status page (043) + 2 home settings (044) + home leaders (046) + edition keys (047) + home player rows (048) + presence (053) + 2 performance peers (055) + player match keys (057) + 2 archive seasons (058) + 3 player list (060) + match keys (066) + power role counts (069) + 2 league strength (073) + 3 forecasts (076) + schedule forecasts (078) + pass partners (079) + 3 profile vectors (081) + 2 substitutions (082) + halves and pass edges (083) + 5 in-play (086) + 2 returns (087) + 2 breakouts (088) + action values (089) + 3 line-ups (090) + line-up forecasts (091) + pressing rows and keepers' shots (092) + match grades (099) + team age minutes (100) + player fact coverage (104) + confirmed contracts and market values (106) + grade editions (107) + 3 league rounds (109) + match odds (111) + league fates (112) + provider reader progress (114) + player injuries and injury reads (116) + cup stage odds (122) + team style centiles (123) + cup round opponents (124) + cup team groups (125) + match scoring (132) + half coverage (137) + archive match aliases (143)
+         self.assertEqual(len([v for v in views if v.startswith("ops.")]), 4)  # + live reliability (042)
+         for view in views:
+             self.db.execute(f"SELECT * FROM {view} LIMIT 5").fetchall()
+@@ -311,12 +311,20 @@ class ApiViewTest(CalculatorTest):
+         ).fetchall()
+         self.assertEqual([r[0] for r in rows], [1, 2, 3])
+         self.assertEqual({r[2] for r in rows}, {"vega"})
+-        # An official table, once observed, replaces the computed one.
++        # An official table replaces the computed one only when it holds every club of it (VI-29,
++        # FAILURE_MODES_SPORTSCORE.md §2.3 and §4: one official row used to hide the whole table).
+         self.db.execute(
+             "INSERT INTO core.standings_official(competition_season_id,team_id,position,points,source,as_of) VALUES(1,3,1,9,'sportscore',now())"
+         )
+         self.assertEqual(
+-            self.db.execute("SELECT team_id, source FROM api.standings WHERE competition_season_id=1").fetchall(),
+-            [(3, "sportscore")],
++            {r[1] for r in self.db.execute("SELECT team_id, source FROM api.standings WHERE competition_season_id=1").fetchall()},
++            {"vega"},
++        )
++        self.db.execute(
++            "INSERT INTO core.standings_official(competition_season_id,team_id,position,points,source,as_of) VALUES(1,1,2,6,'sportscore',now()),(1,2,3,1,'sportscore',now())"
++        )
++        self.assertEqual(
++            self.db.execute("SELECT team_id, source FROM api.standings WHERE competition_season_id=1 ORDER BY position").fetchall(),
++            [(3, "sportscore"), (1, "sportscore"), (2, "sportscore")],
+         )
+         self.db.execute("DELETE FROM core.standings_official")
+diff --git a/backend/tests/test_dfb_periods.py b/backend/tests/test_dfb_periods.py
 new file mode 100644
-index 0000000000..4b47d41abe
+index 0000000000..7eb0d61979
 --- /dev/null
-+++ b/backend/tests/test_transfermarkt_history.py
-@@ -0,0 +1,898 @@
-+"""Transfermarkt refreshes keep what was accepted (VI-31, FAILURE_MODES §20), end to end: the real
-+reader (its requests, its checks, its writes and its queue row in one transaction), every migration,
-+the views and the read API's profile route, against controlled answers of the provider. Contract
-+dates are relative to the base's current_date.
++++ b/backend/tests/test_dfb_periods.py
+@@ -0,0 +1,231 @@
++"""Frozen OpenLigaDB -> Node bridge -> scheduled collect -> PG18 -> actual cup handler."""
++from contextlib import contextmanager
++from copy import deepcopy
++import csv
++from datetime import timedelta
++from hashlib import sha256
++import json
++import os
++from pathlib import Path
++import subprocess
++import unittest
++from unittest.mock import patch
 +
-+VEGA_TM_HISTORY_REPORT names a JSON file this module writes: the base's version, the hashes of the
-+reader and of migration 139, then for each case the requests and answers in order, the state after
-+each read and every check with its expected and actual value."""
-+from datetime import datetime, time as clock_time, timedelta, timezone
++import test_source_snapshots as snapshots
++from vega import sources
++from vega.sources import cups
++
++DSN = os.environ.get("VEGA_V2_DFB_PERIODS_TEST_DSN")
++FIXTURES = snapshots.ROOT / "tests/fixtures/openligadb"
++RAW = {year: json.loads((FIXTURES / f"dfb-{year}.json").read_text()) for year in (2025, 2026)}
++with (FIXTURES / "dfb-oracle.csv").open() as handle:
++    ORACLE = {r["provider_key"]: r for r in csv.DictReader(handle)}
++RDS = json.loads((FIXTURES / "rds-preimage.json").read_text())
++PREIMAGE = {r["provider_key"]: r for values in RDS["rows"] if (r := dict(zip(RDS["columns"], values)))}
++NOW = snapshots.NOW
++SCORES = snapshots.SCORES
++URL = "https://api.openligadb.de/getmatchdata/"
++
++
++def edition(year):
++    return f"{year}/{year + 1}"
++
++
++def pair(value):
++    return tuple(map(int, value.split("/"))) if value else (None, None)
++
++
++def row_for(rows, key):
++    return next(m for m in rows if str(m["matchID"]) == str(key))
++
++
++def period(kind, pair_value):
++    kinds = {1: ("HalfTime", "Halbzeit"), 2: ("After90Minutes", "Endergebnis"),
++             3: ("Unknown", "Nachspielzeit"), 5: ("AfterPenalties", "Elfmeterschießen")}
++    return dict(resultID=90000 + kind, resultTypeID=kind, resultTypeKind=kinds[kind][0], resultName=kinds[kind][1],
++                resultOrderID=kind, pointsTeam1=pair_value[0], pointsTeam2=pair_value[1])
++
++
++@unittest.skipUnless(DSN and snapshots.psycopg and snapshots.NODE, "requires PG18 DFB periods test DB, psycopg and Node")
++class DfbPeriodsReplay(snapshots.SnapshotDatabase):
++    __unittest_skip__ = False
++    __unittest_skip_why__ = ""
++
++    @classmethod
++    def setUpClass(cls):
++        from vega.store import connect_local, migrate
++        from urllib.parse import urlparse
++
++        target = urlparse(DSN)
++        if target.hostname not in ("localhost", "127.0.0.1", "::1") or target.path != "/vega_v2_dfb_periods_test":
++            raise RuntimeError("dedicated local DFB periods test database required")
++        cls.db = connect_local(DSN)
++        cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
++        migrate(cls.db)
++
++    def setUp(self):
++        super().setUp()
++        self.x("TRUNCATE ops.dfb_period_observations") if self.x("SELECT to_regclass('ops.dfb_period_observations')").fetchone()[0] else None
++
++    @contextmanager
++    def serving_raw(self, year, rows, series="dfb"):
++        path = self.tmp / "openliga.json"
++        path.write_text(json.dumps(rows, ensure_ascii=False))
++        preload = snapshots.ROOT / "tests/fake_openligadb_fetch.mjs"
++        with patch.dict(os.environ, {"NODE_OPTIONS": f"--import={preload.as_uri()}",
++                                    "VEGA_TEST_OPENLIGA_URL": f"{URL}{series}/{year}", "VEGA_TEST_OPENLIGA": str(path)}):
++            yield
++
++    def refresh(self, year, rows, day=0, *, series="dfb"):
++        label = "germany-cup" if series == "dfb" else "nations-league"
++        scope = f"openligadb:{label}:{edition(year)}"
++        with self.serving_raw(year, rows, series), patch.object(cups, "scopes", lambda now: {scope: timedelta(seconds=1)}):
++            self.x("SET ROLE vega_collect")
++            try:
++                return sources.run_due(self.db, None, NOW + timedelta(days=day), names={"openligadb"})[("openligadb", scope)]
++            finally:
++                self.x("RESET ROLE")
++
++    def stamps(self, year):
++        return self.x("SELECT cup_digest, cup_checked_at, cup_updated_at FROM core.competition_seasons WHERE cup_key=%s",
++                      (f"openligadb:germany-cup:{edition(year)}",)).fetchone()
++
++    def state(self, year):
++        return {str(r[0]): r[1:] for r in self.x(
++            f"""SELECT p.provider_key, m.id, m.archive_position, {', '.join('m.' + c + ('::text' if c == 'status' else '') for c in SCORES)},
++                       m.revision, m.updated_at, m.xmin::text, m.home_team_id, m.away_team_id, m.match_date::text
++                FROM core.matches m JOIN core.competition_seasons cs ON cs.id = m.competition_season_id
++                JOIN core.provider_ids p ON p.entity_type = 'match' AND p.provider = 'openligadb' AND p.entity_id = m.id
++                WHERE cs.cup_key = %s ORDER BY m.archive_position""", (f"openligadb:germany-cup:{edition(year)}",)).fetchall()}
++
++    def api(self, year):
++        [competition] = self.x("SELECT competition_id FROM api.cup_editions WHERE competition='germany-cup' AND season=%s", (edition(year),)).fetchone()
++        js = """import {createReader} from './src/db.mjs'; import {createHandler} from './src/handler.mjs';
++const [dsn,id,season]=process.argv.slice(1);const r=createReader(dsn,{role:'vega_read'});const h=createHandler({read:r.read});
++const res=await h(new Request('https://local/api/cups/edition?'+new URLSearchParams({competition:id,season})));
++console.log(JSON.stringify({status:res.status, etag:res.headers.get('etag'), body:await res.json()}));await r.end();"""
++        call = subprocess.run([snapshots.NODE, "--input-type=module", "-e", js, DSN, str(competition), edition(year)],
++                              cwd=snapshots.ROOT / "api", check=True, capture_output=True, text=True, timeout=120)
++        result = json.loads(call.stdout.strip().splitlines()[-1])
++        self.assertEqual(result["status"], 200)
++        return result
++
++    def stage_rds_facts(self, year):
++        # Materialize identities/rounds by the normal writer, then restore the sealed RDS score
++        # pre-image onto these local keys. IDs and positions below are owned by the disposable DB.
++        self.assertEqual(self.refresh(year, RAW[year]), "ok")
++        for key, r in PREIMAGE.items():
++            if r["edition"].endswith(edition(year)):
++                self.x(f"""UPDATE core.matches SET {', '.join(c+'=%s' for c in SCORES)}, revision=9
++                           WHERE id = (SELECT entity_id FROM core.provider_ids
++                                       WHERE entity_type='match' AND provider='openligadb' AND provider_key=%s)""",
++                       tuple(r[c] for c in SCORES) + (key,))
++        self.x("UPDATE core.competition_seasons SET cup_digest=%s WHERE cup_key=%s",
++               ("staged-rds-preimage", f"openligadb:germany-cup:{edition(year)}"))
++
++    def test_every_key_from_clean_and_rds_preimage_through_repeat_and_read_api(self):
++        evidence = {}
++        for year, finished in ((2025, 63), (2026, 48)):
++            evidence[year] = {"source_sha256": sha256((FIXTURES / f"dfb-{year}.json").read_bytes()).hexdigest(), "rows": {}}
++            self.stage_rds_facts(year)
++            before, before_api = self.state(year), self.api(year)
++            self.assertEqual(self.refresh(year, RAW[year], 1), "ok")
++            after, after_api = self.state(year), self.api(year)
++            self.assertEqual(list(after), list(before))
++            self.assertEqual(len(after), len(RAW[year]))
++            count = [0, 0, 0, 0, 0]
++            for key, stored in after.items():
++                oracle, published = ORACLE[key], PREIMAGE[key]
++                self.assertEqual((stored[:2], stored[16:]), (before[key][:2], before[key][16:]), key)
++                self.assertEqual(stored[2:5], tuple(published[c] for c in SCORES[:3]), key)
++                extra = oracle["phase"] in ("ET", "PEN")
++                expected = (*pair(oracle["dfb_90"] if extra else ""), *pair(oracle["dfb_half"]),
++                            *pair(oracle["dfb_before_kicks"] if extra else ""), *pair(oracle["dfb_kicks"])) if stored[2] == "finished" else (None,) * 8
++                self.assertEqual(stored[5:13], expected, key)
++                self.assertEqual(stored[13] - before[key][13], int(stored[2] == "finished"), key)
++                if stored[2] != "finished":
++                    self.assertEqual(stored, before[key], key)
++                count = [a + int(b) for a, b in zip(count, (stored[7] is not None, extra, bool(oracle["dfb_kicks"]),
++                         stored[11:13] != before[key][11:13], stored[2] == "not_started"))]
++                evidence[year]["rows"][key] = {"rds": published, "local_before": before[key], "actual": stored, "expected_phases": expected}
++            self.assertEqual(count, [63, 14, 8, 6, 0] if year == 2025 else [48, 7, 5, 5, 8])
++            self.assertEqual(self.run_record("openligadb", f"openligadb:germany-cup:{edition(year)}"), ("ok", None, finished, 0))
++            self.assertEqual([m for m in after_api["body"]["matches"] if m["status"] == "scheduled"],
++                             [m for m in before_api["body"]["matches"] if m["status"] == "scheduled"])
++            stamps = self.stamps(year)
++            for day in (2, 3):
++                self.assertEqual(self.refresh(year, RAW[year], day), "ok")
++                self.assertEqual(self.state(year), after)
++                self.assertEqual(self.run_record("openligadb", f"openligadb:germany-cup:{edition(year)}"), ("ok", None, 0, 0))
++                self.assertEqual(self.stamps(year)[::2], stamps[::2])
++                self.assertGreater(self.stamps(year)[1], stamps[1])
++            self.assertEqual(self.api(year), after_api)
++            evidence[year].update(before_api=before_api, after_api=after_api, counts=count)
++        by_key = {m["key"]: m for m in evidence[2025]["after_api"]["body"]["matches"]}
++        self.assertEqual(by_key["openliga:80173"]["periods"], {"ht": [0, 0], "ft": [0, 0], "et": [1, 1], "p": [4, 5]})
++        self.assertEqual(by_key["openliga:79584"]["periods"], {"ht": [1, 1], "ft": [1, 1], "et": [2, 1]})
++        self.assertIn("après prolongation", by_key["openliga:79584"]["notes"])
++        if path := os.environ.get("VEGA_E2E_EVIDENCE"):
++            (Path(path) / "dfb-replay.json").write_text(json.dumps(evidence, ensure_ascii=False, default=str, indent=2) + "\n")
++
++    def test_attested_partial_convergence_and_third_state_use_separate_receipts(self):
++        rows = deepcopy(RAW[2025])
++        self.assertEqual(self.refresh(2025, rows), "ok")
++        old = self.state(2025)
++        match = row_for(rows, 79584)
++        match["matchResults"][1]["pointsTeam1"] = 1
++        a = row_for(rows, 80173)
++        a["matchResults"].append(period(1, (0, 0)))
++        a["matchResults"][2].update(pointsTeam1=4, pointsTeam2=5)
++        self.assertEqual(self.refresh(2025, rows, 1), "ok")
++        self.assertEqual(self.state(2025), old)
++        stable = self.stamps(2025)
++        for i, change in enumerate(("points", "date", "swap", "duplicate"), 2):
++            fresh = deepcopy(rows)
++            m = row_for(fresh, 79584)
++            if change == "points":
++                m["matchResults"][1]["pointsTeam1"] = 3
++            elif change == "date":
++                m["matchDateTime"] = "2025-10-28T20:45:00"
++            elif change == "swap":
++                m["team1"], m["team2"] = m["team2"], m["team1"]
++            else:
++                m["matchResults"].append(period(2, (4, 0)))
++            code = "INVALID_PERIODS" if change == "duplicate" else "PERIODS_CONFLICT"
++            self.assertEqual(self.refresh(2025, fresh, i), code)
++            self.assertEqual(self.stamps(2025), stable)
++            self.assertEqual(self.state(2025), old)
++            self.assertIn("79584", self.x("SELECT message FROM ops.parse_failures ORDER BY at DESC LIMIT 1").fetchone()[0])
++        seen = self.x("SELECT status, count(*) FROM ops.dfb_period_observations GROUP BY status ORDER BY status").fetchall()
++        self.assertEqual(seen, [("accepted", 2), ("refused", 4)])
++
++    def test_unattested_extra_time_and_incomplete_updates(self):
++        played = {**deepcopy(RAW[2025][0]), "matchID": 999999,
++                  "matchResults": [period(1, (0, 0)), period(2, (0, 0)), period(3, (1, 1)), period(5, (5, 6))]}
++        fixture = {**deepcopy(played), "matchID": 999998, "matchIsFinished": False}
++        self.assertEqual(self.refresh(2025, [played, fixture]), "ok")
++        [game, future] = self.api(2025)["body"]["matches"]
++        self.assertEqual(game["periods"], {"ht": [0, 0], "et": [1, 1], "p": [4, 5]})
++        self.assertEqual((future["status"], future["score"], future["notes"]), ("scheduled", None, []))
++        self.assertNotIn("periods", future)
++        before, stamps = self.state(2025), self.stamps(2025)
++        cases = [
++            ("ht gone", lambda m: m["matchResults"].pop(0), "PERIODS_CONFLICT"),
++            ("et gone", lambda m: (m["matchResults"].pop(), m["matchResults"].pop()), "PERIODS_CONFLICT"),
++            ("down", lambda m: m.update(matchIsFinished=False), "RESULT_DOWNGRADED"),
++            ("direct unknown", lambda m: m["matchResults"][-1].update(pointsTeam1=4, pointsTeam2=5), "PERIODS_CONFLICT"),
++            ("no projection", lambda m: m.pop("matchResults"), "INVALID_PERIODS"),
++            ("p without ET", lambda m: m["matchResults"].pop(2), "PERIODS_UNREVIEWED"),
++            ("p below ET", lambda m: m["matchResults"][-1].update(pointsTeam1=0), "PERIODS_UNREVIEWED"),
++            ("p tied", lambda m: m["matchResults"][-1].update(pointsTeam1=6), "PERIODS_UNREVIEWED"),
++            ("et not level", lambda m: m["matchResults"][2].update(pointsTeam1=2), "PERIODS_UNREVIEWED"),
++            ("unknown kind", lambda m: m["matchResults"][0].update(resultTypeKind="What"), "INVALID_PERIODS"),
++            ("bad points", lambda m: m["matchResults"][0].update(pointsTeam1=-1), "INVALID_PERIODS"),
++        ]
++        for day, (label, mutate, code) in enumerate(cases, 1):
++            with self.subTest(label):
++                changed = deepcopy(played)
++                mutate(changed)
++                self.assertEqual(self.refresh(2025, [changed, fixture], day), code)
++                self.assertEqual(self.state(2025), before)
++                self.assertEqual(self.stamps(2025), stamps)
+diff --git a/backend/tests/test_source_identity.py b/backend/tests/test_source_identity.py
+index 8d43894232..60ec88ad10 100644
+--- a/backend/tests/test_source_identity.py
++++ b/backend/tests/test_source_identity.py
+@@ -245,8 +245,8 @@ class SourceIdentityTest(unittest.TestCase):
+             curated.sportscore_ids(self.db)
+         zones = self.db.execute("SELECT zone::text, position_from, position_to FROM core.competition_zones WHERE competition_season_id=1 ORDER BY 2").fetchall()
+         self.assertEqual(zones, [("relegation", 18, 20)])  # Serie A: 20 teams, 3 relegated
+-        logo = self.db.execute("SELECT a.source_url FROM core.competitions c JOIN core.assets a ON a.id = c.logo_asset_id WHERE c.id = 2").fetchone()[0]
+-        self.assertTrue(logo.startswith("https://img.thesports.com/"))
++        # The shared historical fallback is edition art and must not populate the native World Cup family.
++        self.assertEqual(self.db.execute("SELECT logo_asset_id FROM core.competitions WHERE id=2").fetchone(), (None,))
+         slugs = dict(self.db.execute("SELECT entity_id, provider_key FROM core.provider_ids WHERE provider='sportscore'").fetchall())
+         self.assertEqual(slugs, {1: "italian-serie-a", 2: "fifa-world-cup"})
+ 
+diff --git a/backend/tests/test_source_snapshots.py b/backend/tests/test_source_snapshots.py
+new file mode 100644
+index 0000000000..3cd1578849
+--- /dev/null
++++ b/backend/tests/test_source_snapshots.py
+@@ -0,0 +1,803 @@
++"""Cup and open-matchday snapshots (VI-27), written before the code: FAILURE_MODES.md §19.
++
++The OpenFootball bodies are the frozen upstream files of fixtures/openfootball (CC0). The real
++bridge (backend/sources/bridge.mjs) runs the real projection, with fake_openfootball_fetch.mjs in
++place of the network; the real writers store them in a disposable local PostgreSQL
++(VEGA_V2_SNAPSHOTS_TEST_DSN, database vega_v2_snapshots_test), through sources.run_due's own
++transaction and status record. Every step commits, as in production: a write is told from a
++re-read by its revision, updated_at and row version.
++"""
++
++from contextlib import contextmanager
++import copy
++from datetime import datetime, timedelta, timezone
 +import hashlib
 +import json
 +import os
 +from pathlib import Path
++import re
 +import shutil
 +import subprocess
 +import sys
-+import threading
++import tempfile
 +import unittest
++from unittest.mock import patch
 +from urllib.parse import urlparse
 +
 +ROOT = Path(__file__).resolve().parents[1]
++REPO = ROOT.parent
 +sys.path.insert(0, str(ROOT))
-+
-+from vega import transfermarkt as tm
++from vega import sources
++from vega.sources import SourceError, cups, curated, open_matchday
 +
 +try:
 +    import psycopg
 +except ImportError:
 +    psycopg = None
 +
-+DSN = os.environ.get("VEGA_V2_SOURCES_TEST_DSN")
-+REPORT = os.environ.get("VEGA_TM_HISTORY_REPORT")
-+MIGRATION = ROOT / "sql" / "139_transfermarkt_history.sql"
++DSN = os.environ.get("VEGA_V2_SNAPSHOTS_TEST_DSN")
 +NODE = shutil.which("node")
-+HTTP_READY = bool(NODE) and (ROOT / "api" / "node_modules" / "pg").is_dir()
-+CASES, ENVIRONMENT = [], {}
++FIXTURE = ROOT / "tests/fixtures/openfootball/editions.json"
++PRELOAD = ROOT / "tests/fake_openfootball_fetch.mjs"
++EDITIONS = json.loads(FIXTURE.read_text())["editions"]
++NOW = datetime(2026, 11, 17, 19, tzinfo=timezone.utc)
++SCORES = ("status", "home_score", "away_score", "home_score_90", "away_score_90", "home_score_ht", "away_score_ht",
++          "home_score_et", "away_score_et", "home_penalty_score", "away_penalty_score")
++# Played matches of each frozen edition (sources/upstream/reconciliation.csv, upstream_finished).
++UPSTREAM_FINISHED = {
++    "world-cup-history:1930": 18, "world-cup-history:1934": 17, "world-cup-history:1938": 18, "world-cup-history:1950": 22,
++    "world-cup-history:1954": 26, "world-cup-history:1958": 35, "world-cup-history:1962": 32, "world-cup-history:1966": 32,
++    "world-cup-history:1970": 32, "world-cup-history:1974": 38, "world-cup-history:1978": 38, "world-cup-history:1982": 52,
++    "world-cup-history:1986": 52, "world-cup-history:1990": 52, "world-cup-history:1994": 52, "world-cup-history:1998": 64,
++    "world-cup-history:2002": 64, "world-cup-history:2006": 64, "world-cup-history:2010": 64, "world-cup-history:2014": 64,
++    "world-cup-history:2018": 64, "world-cup-history:2022": 64, "world-cup-history:2026": 104,
++    "euro:2020": 51, "euro:2024": 51, "euro:2028": 0,
++}
++
++# Every frozen edition through the real projection in one node process, with the display helper's
++# final score of each source match (shared/openfootball-history.js historicalScore).
++CENSUS = r"""
++import { readFileSync } from "node:fs";
++const [fixture, projection, history] = process.argv.slice(1);
++const { editions } = JSON.parse(readFileSync(fixture, "utf8"));
++const { historicalScore } = await import(history);
++const { GET } = await import(projection);
++const out = {};
++for (const [key, body] of Object.entries(editions)) {
++  globalThis.fetch = async () => Response.json(body);
++  const [competition, season] = key.split(":");
++  const r = await GET(new Request(`http://bridge/api/open-cups?competition=${competition}&season=${season}`));
++  out[key] = { status: r.status, body: await r.json(), display: body.matches.map((m) => historicalScore(m)) };
++}
++process.stdout.write(JSON.stringify(out));
++"""
 +
 +
-+def tearDownModule():
-+    if not REPORT or not CASES:
-+        return
-+    def sha(path):
-+        return hashlib.sha256(path.read_bytes()).hexdigest() if path.exists() else None
-+    try:
-+        head = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"], capture_output=True, text=True, timeout=10).stdout.strip()
-+        changed = subprocess.run(["git", "-C", str(ROOT), "status", "--porcelain", "--", "vega/transfermarkt.py", "sql", "tests", "api/test"],
-+                                 capture_output=True, text=True, timeout=10).stdout.splitlines()
-+    except (OSError, subprocess.SubprocessError):
-+        head, changed = None, None
-+    Path(REPORT).write_text(json.dumps({
-+        "at": datetime.now(timezone.utc), **ENVIRONMENT, "head": head, "uncommitted": changed,
-+        "reader_sha256": sha(ROOT / "vega" / "transfermarkt.py"), "migration_139_sha256": sha(MIGRATION),
-+        "http_route": "read API /api/players/{id} through tests/profile_http.mjs" if HTTP_READY else "unavailable (node or backend/api/node_modules missing)",
-+        "cases": CASES}, default=str, indent=1, ensure_ascii=False) + "\n")
++def rows_of(*matches, season="1954"):
++    return cups.match_rows("open-cups", "world-cup-history", season, {"name": f"World Cup {season}", "matches": list(matches)})
 +
 +
-+class Provider:
-+    """The provider's API as the reader calls it: an answer per path (status, data), the player
-+    records /players gives by key, and every request with what was answered."""
-+
-+    def __init__(self):
-+        self.answers, self.records, self.log = {}, {}, []
-+
-+    def answer(self, path, status=200, data=None):
-+        self.answers[path] = (status, data)
-+
-+    def __call__(self, path, params=()):
-+        if path == "/players":
-+            status, data = 200, [self.records[v] for _, v in params if v in self.records]
-+        else:
-+            status, data = self.answers.get(path, (404, None))
-+        self.log.append({"path": path, "params": [list(p) for p in params], "status": status, "data": data})
-+        return status, {}, (json.dumps({"success": True, "data": data}, default=str).encode() if status == 200 else b"")
++def scores_of(row):
++    return tuple(row[k] for k in SCORES)
 +
 +
-+def move(key, day, origin, target, *, kind="STANDARD", fee=None, free=False, value=None, until=None, season=None, pending=None):
-+    """A move as /transfer/history/player/{key} lists it."""
-+    details = {"date": f"{day.isoformat()}T00:00:00+01:00" if day else None}
-+    if season is not None:
-+        details["season"] = {"display": season}
-+    if free:
-+        details["fee"] = {"value": 0, "currency": "EUR", "compact": {"content": "free transfer"}}
-+    elif fee is not None:
-+        details["fee"] = {"value": fee, "currency": "EUR"}
-+    if value is not None:
-+        details["marketValue"] = {"value": value, "currency": "EUR"}
-+    if until is not None:
-+        details["contractUntilDate"] = f"{until.isoformat()}T00:00:00+02:00"
-+    if pending is not None:
-+        details["isPending"] = pending
-+    return {"id": key, "transferSource": {"clubId": origin}, "transferDestination": {"clubId": target},
-+            "typeDetails": {"type": kind}, "details": details}
++def expected_row(m):
++    """A source match's stored score columns, read from the table of §19.2 (independent of the writer)."""
++    score, status = m.get("score"), m.get("status")
++    if status in ("canceled", "cancelled"):
++        return ("canceled",) + (None,) * 10
++    if not score:
++        return ("not_started",) + (None,) * 10
++    parts = {"ft": score} if isinstance(score, list) else score
++    ft, ht, et, p = (tuple(parts[k]) if k in parts else (None, None) for k in ("ft", "ht", "et", "p"))
++    final = et if "et" in parts else ft
++    return ("finished", *final, *(ft if "et" in parts else (None, None)), *ht, *et, *p)
 +
 +
-+def history(*terminated, pending=()):
-+    return {"history": {"terminated": list(terminated), "pending": list(pending)}}
++class ScoreRulesTest(unittest.TestCase):
++    """19a–19i: one rule for every OpenFootball score encoding (no database)."""
++
++    def test_19a_to_19f_each_encoding_is_stored_as_the_source_says(self):
++        none = (None,) * 10
++        cases = {
++            # 19a: worldcup.json's full-time array (England–USA 2022, Uruguay–Colombia 1962).
++            "array 0-0": ({"score": [0, 0]}, ("finished", 0, 0) + (None,) * 8),
++            "array 2-1": ({"score": [2, 1]}, ("finished", 2, 1) + (None,) * 8),
++            # 19b: England–Belgium 1954, decided after extra time.
++            "after extra time": ({"score": {"ft": [3, 3], "et": [4, 4]}}, ("finished", 4, 4, 3, 3, None, None, 4, 4, None, None)),
++            # 19c: extra time without the 90-minute score: never inferred.
++            "extra time only": ({"score": {"et": [2, 1]}}, ("finished", 2, 1, None, None, None, None, 2, 1, None, None)),
++            # 19d: a shoot-out beside the score after extra time.
++            "shoot-out": ({"score": {"ft": [1, 1], "et": [1, 1], "p": [4, 3]}}, ("finished", 1, 1, 1, 1, None, None, 1, 1, 4, 3)),
++            "full time and half time": ({"score": {"ft": [3, 1], "ht": [2, 1]}}, ("finished", 3, 1, None, None, 2, 1, None, None, None, None)),
++            # 19e: no result yet.
++            "no score": ({}, ("not_started",) + none),
++            "empty score": ({"score": {}}, ("not_started",) + none),
++            "null score": ({"score": None}, ("not_started",) + none),
++            # 19f: Sweden–Austria 1938, canceled by the source.
++            "canceled": ({"status": "canceled"}, ("canceled",) + none),
++            "cancelled": ({"status": "cancelled"}, ("canceled",) + none),
++        }
++        for name, (extra, expected) in cases.items():
++            with self.subTest(name):
++                [(_, row)] = rows_of({"round": "Matchday 1", "date": "1954-06-16", "team1": "A", "team2": "B", **extra})
++                self.assertEqual(scores_of(row), expected)
++
++    def test_19g_19h_a_malformed_score_or_status_makes_the_edition_invalid(self):
++        for score in ([2], [2, -1], [2, 1.5], [True, 0], [2, "1"], "2-1", 3, {"ft": [1, None]}, {"ht": [1, 0]}, {"p": [4, 3]},
++                      {"ft": [1, 0], "x": [0, 0]}, {"ft": [1, 0, 0]}):
++            with self.subTest(score=score):
++                with self.assertRaises(SourceError) as caught:
++                    rows_of({"date": "1954-06-16", "team1": "A", "team2": "B", "score": score})
++                self.assertEqual(caught.exception.code, "INVALID_SCORE")
++        for extra in ({"status": "canceled", "score": [1, 0]}, {"status": "postponed"}, {"status": 3}):
++            with self.subTest(extra=extra):
++                with self.assertRaises(SourceError) as caught:
++                    rows_of({"date": "1954-06-16", "team1": "A", "team2": "B", **extra})
++                self.assertEqual(caught.exception.code, "INVALID_STATUS")
++
++    @unittest.skipUnless(NODE, "requires node")
++    def test_19i_the_frozen_editions_through_the_projection(self):
++        done = subprocess.run(
++            [NODE, "--input-type=module", "-e", CENSUS, str(FIXTURE), (REPO / "backend/sources/projections/open-cups.mjs").as_uri(),
++             (REPO / "dashboard/shared/openfootball-history.js").as_uri()],
++            capture_output=True, text=True, timeout=120,
++        )
++        self.assertEqual(done.returncode, 0, done.stderr)
++        projected = json.loads(done.stdout)
++        finished, arrays, array_editions, canceled, unplayed = 0, 0, set(), 0, 0
++        for key, body in EDITIONS.items():
++            answer = projected[key]
++            self.assertEqual(answer["status"], 200, key)
++            competition, season = key.split(":")
++            rows = cups.match_rows("open-cups", competition, season, answer["body"])
++            self.assertEqual(len(rows), len(body["matches"]), key)
++            played = 0
++            for (_, row), source, display in zip(rows, body["matches"], answer["display"]):
++                self.assertEqual(scores_of(row), expected_row(source), (key, source))
++                if row["status"] == "finished":
++                    played += 1
++                    if isinstance(source.get("score"), list):
++                        arrays += 1
++                        array_editions.add(key)
++                elif row["status"] == "canceled":
++                    canceled += 1
++                else:
++                    unplayed += 1
++                # The site's display helper and the stored row give the match the same score.
++                final = [row["home_score"], row["away_score"]] if row["status"] == "finished" else [None, None]
++                self.assertEqual(display, final, (key, source))
++            self.assertEqual(played, UPSTREAM_FINISHED[key], key)
++            finished += played
++        self.assertEqual((finished, arrays, len(array_editions), canceled, unplayed), (1170, 665, 18, 1, 51))
 +
 +
-+def record(key, club, joined, until, *, attributes=True, assignments=True, value=None):
-+    """A player record of /players (a profile read or a search's squad member)."""
-+    r = {"id": int(key), "name": f"Joueur {key}", "lifeDates": {"dateOfBirth": "1997-01-01"}}
-+    if attributes:
-+        r["attributes"] = {"position": {"name": "Centre-Forward"}, "contractUntil": until.isoformat() if until else None}
-+    if assignments:
-+        r["clubAssignments"] = [{"type": "current", "clubId": int(club), "start": joined.isoformat() if joined else None}] if club else []
-+    if value:
-+        r["marketValueDetails"] = {"current": {"value": value, "currency": "EUR", "determined": "2026-10-01"}}
-+    return r
++def pair(m, home, away):
++    return (m.get("team1"), m.get("team2")) == (home, away)
 +
 +
-+class Base(unittest.TestCase):
-+    """A fresh schema per class: every migration, our clubs 11, 22 and 33 linked to the provider's
-+    keys 11, 22 and 33, and the provider's club 9999 that is not ours."""
++def baseline_digest(body):
++    """The digest the baseline writer stored: its projection's raw body (array scores kept, status dropped)."""
++    matches = [{k: m[k] for k in ("round", "group", "num", "date", "team1", "team2", "score") if k in m} for m in body["matches"]]
++    return hashlib.sha256(json.dumps([body["name"], matches], sort_keys=True, ensure_ascii=False).encode()).hexdigest()
 +
++
++@unittest.skipUnless(DSN and psycopg and NODE, "requires a disposable local snapshots DB (VEGA_V2_SNAPSHOTS_TEST_DSN), psycopg and node")
++class SnapshotDatabase(unittest.TestCase):
 +    @classmethod
 +    def setUpClass(cls):
 +        from vega.store import connect_local, migrate
 +
 +        target = urlparse(DSN)
-+        if target.hostname not in ("localhost", "127.0.0.1", "::1") or target.path != "/vega_v2_sources_test":
-+            raise RuntimeError("dedicated local sources DB required")
++        if target.hostname not in ("localhost", "127.0.0.1", "::1") or target.path != "/vega_v2_snapshots_test":
++            raise RuntimeError("dedicated local snapshots DB required")
 +        cls.db = connect_local(DSN)
 +        cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
 +        migrate(cls.db)
-+        x = cls.db.execute
-+        ENVIRONMENT.setdefault("postgres", x("SELECT version()").fetchone()[0])
-+        cls.T = x("SELECT current_date").fetchone()[0]
-+        ENVIRONMENT.setdefault("base_date", cls.T)
-+        x("INSERT INTO core.countries(code) VALUES ('FRA')")
-+        for team, name in ((11, "Club Onze"), (22, "Club Vingt-Deux"), (33, "Club Trente-Trois"), (55, "Club Cherché"), (77, "Club Soixante-Dix-Sept")):
-+            x("INSERT INTO core.teams(id, name, country_code) VALUES (%s, %s, 'FRA')", (team, name))
-+        for team in (11, 22, 33):
-+            x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('team', 'transfermarkt', %s, %s)", (str(team), team))
-+        x("INSERT INTO core.provider_clubs(provider, provider_key, name, read_on) VALUES ('transfermarkt', '9999', 'Club Extérieur', current_date)")
-+        cls.columns = {r[0] for r in x("""SELECT table_name || '.' || column_name FROM information_schema.columns
-+                                           WHERE table_schema = 'core' AND table_name IN ('player_transfers', 'player_contracts')""")}
 +
 +    @classmethod
 +    def tearDownClass(cls):
@@ -147,991 +496,846 @@ index 0000000000..4b47d41abe
 +        cls.db.close()
 +
 +    def setUp(self):
-+        self.api, self.shift = Provider(), 0
-+        self.reader = self.make_reader(self.db)
-+        self.entry = {"case": None, "test": self.id().rsplit(".", 1)[-1], "requests": self.api.log, "states": [], "checks": []}
-+        CASES.append(self.entry)
-+
-+    def make_reader(self, conn, cls=tm.Reader):
-+        return cls(conn, self.api, interval=0, jitter=0, sleep=lambda _: None, log=lambda *a, **k: None,
-+                   clock=lambda: datetime.combine(self.T + timedelta(days=self.shift), clock_time(12), tzinfo=timezone.utc))
-+
-+    def d(self, days):
-+        return self.T + timedelta(days=days)
-+
-+    def db_clock(self):
-+        """The base's clock. The reader schedules with SQL now(), so a due time is compared with
-+        it, not with this machine's clock (a container's clock may run some milliseconds ahead)."""
-+        return self.db.execute("SELECT clock_timestamp()").fetchone()[0]
-+
-+    def case(self, ident, note):
-+        self.entry.update(case=ident, note=note)
-+
-+    # The base --------------------------------------------------------------------
-+
-+    def player(self, pid, *, linked=True):
-+        key = str(pid)
-+        x = self.db.execute
-+        x("INSERT INTO core.players(id, name, birth_date) VALUES (%s, %s, '1997-01-01')", (pid, f"Joueur {pid}"))
-+        if linked:
-+            x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('player', 'transfermarkt', %s, %s)", (key, pid))
-+        for kind in ("profile", "transfers", "values"):
-+            x("INSERT INTO ops.transfermarkt_reads(kind, provider_key, priority, next_due_at) VALUES (%s, %s, 1, now() + interval '1 day')", (kind, key))
-+        return key
-+
-+    def transfers(self, pid):
-+        extra = ", absent_since" if "player_transfers.absent_since" in self.columns else ""
-+        rows = self.db.execute(
-+            f"""SELECT id, source::text, source_key, transfer_date, from_provider_club, from_team_id, to_provider_club, to_team_id,
-+                       kind::text, fee_eur, market_value_eur, contract_until, season_label, pending, as_of{extra}
-+                FROM core.player_transfers WHERE player_id = %s ORDER BY source, source_key NULLS FIRST, id""", (pid,))
-+        names = [c.name for c in rows.description]
-+        return [dict(zip(names, r)) for r in rows.fetchall()]
-+
-+    def tm_keys(self, pid):
-+        return sorted(r["source_key"] for r in self.transfers(pid) if r["source"] == "transfermarkt" and r["source_key"])
-+
-+    def ids(self, pid):
-+        return {r["source_key"]: r["id"] for r in self.transfers(pid) if r["source"] == "transfermarkt"}
-+
-+    def facts(self, pid):
-+        """A player's Transfermarkt moves by key: what the provider stated, without the day of the read."""
-+        keep = ("id", "transfer_date", "from_provider_club", "from_team_id", "to_provider_club", "to_team_id", "kind", "fee_eur",
-+                "market_value_eur", "contract_until", "season_label", "pending")
-+        return {r["source_key"]: {k: r[k] for k in keep} for r in self.transfers(pid) if r["source"] == "transfermarkt"}
-+
-+    def absent(self, pid):
-+        if "player_transfers.absent_since" not in self.columns:
-+            return "no absent_since column"
-+        return {r["source_key"]: r["absent_since"] for r in self.transfers(pid) if r["source"] == "transfermarkt"}
-+
-+    def contracts(self, pid):
-+        extra = ", superseded_on" if "player_contracts.superseded_on" in self.columns else ""
-+        rows = self.db.execute(f"""SELECT team_id, start_date, end_date, source::text, as_of{extra} FROM core.player_contracts
-+                                   WHERE player_id = %s ORDER BY start_date, team_id""", (pid,))
-+        names = [c.name for c in rows.description]
-+        return [dict(zip(names, r)) for r in rows.fetchall()]
-+
-+    def spells(self, pid):
-+        """(club, start) -> end of the player's Transfermarkt contracts."""
-+        return {(r["team_id"], r["start_date"]): r["end_date"] for r in self.contracts(pid) if r["source"] == "transfermarkt"}
-+
-+    def superseded(self, pid):
-+        if "player_contracts.superseded_on" not in self.columns:
-+            return "no superseded_on column"
-+        return {(r["team_id"], r["start_date"]): r["superseded_on"] for r in self.contracts(pid) if r["source"] == "transfermarkt"}
-+
-+    def queue(self, kind, key):
-+        row = self.db.execute("""SELECT last_http_status, error_code, attempts, rows_written, read_at, next_due_at FROM ops.transfermarkt_reads
-+                                 WHERE kind = %s AND provider_key = %s""", (kind, key)).fetchone()
-+        return dict(zip(("status", "code", "attempts", "rows", "read_at", "next_due_at"), row)) if row else None
-+
-+    def public(self, pid):
-+        row = self.db.execute("""SELECT contract_until, contract_team, observed_contract_until, observed_contract_team
-+                                 FROM api.player_profiles WHERE player_id = %s""", (pid,)).fetchone()
-+        return dict(zip(("contract_until", "contract_team", "observed_contract_until", "observed_contract_team"), row)) if row else None
-+
-+    def snapshot(self, label, pid, key, outcome):
-+        self.entry["states"].append({"after": label, "outcome": outcome, "transfers": self.transfers(pid), "contracts": self.contracts(pid),
-+                                     "queue": {k: self.queue(k, key) for k in ("profile", "transfers", "values")}, "public": self.public(pid)})
-+
-+    # Reads ---------------------------------------------------------------------------
-+
-+    def read(self, label, pid, kind="transfers", status=200, data=None, *, key=None, reader=None):
-+        """One unit read by the reader as the queue would give it; the outcome and the state after
-+        it go to the report. An exception is recorded, then raised."""
-+        key = key or str(pid)
-+        if kind == "transfers":
-+            self.api.answer(f"/transfer/history/player/{key}", status, data)
-+        try:
-+            outcome = (reader or self.reader).read(kind, [(key, 1)])
-+        except Exception as error:
-+            self.snapshot(label, pid, key, f"exception {type(error).__name__}: {error}")
-+            raise
-+        self.snapshot(label, pid, key, outcome)
-+        return outcome
-+
-+    def profile(self, label, pid, club, joined, until, **shape):
-+        self.api.records[str(pid)] = record(pid, club, joined, until, **shape)
-+        return self.read(label, pid, "profile")
-+
-+    def expect(self, label, actual, expected):
-+        def plain(value):  # a (club, start) key written as a JSON object key
-+            if isinstance(value, dict):
-+                return {k if isinstance(k, str) else " ".join(map(str, k)) if isinstance(k, tuple) else str(k): plain(v) for k, v in value.items()}
-+            return [plain(v) for v in value] if isinstance(value, (list, tuple, set)) else value
-+
-+        ok = actual == expected
-+        self.entry["checks"].append({"check": label, "expected": plain(expected), "actual": plain(actual), "ok": ok})
-+        with self.subTest(check=label):
-+            self.assertEqual(actual, expected)
-+
-+
-+@unittest.skipUnless(DSN and psycopg, "requires disposable local sources DB and psycopg")
-+class TransferHistoryTest(Base):
-+    """A transfers response is checked whole; a listed move updates its own row; a missing one
-+    keeps its facts (§20.2)."""
-+
-+    def accepted(self, pid):
-+        """A player with three completed moves read once, beside another source's transfer and a
-+        Transfermarkt row without key: the accepted history every refusal starts from."""
-+        key = self.player(pid)
-+        self.db.execute("INSERT INTO core.player_transfers(player_id, transfer_date, source, as_of) VALUES (%s, %s, 'other', %s)", (pid, self.d(-4000), self.d(-4000)))
-+        self.db.execute("INSERT INTO core.player_transfers(player_id, transfer_date, source, as_of) VALUES (%s, %s, 'transfermarkt', %s)", (pid, self.d(-3900), self.d(-3900)))
-+        self.seeded = self.transfers(pid)
-+        self.full = history(move(81, self.d(-3000), 33, 11, fee=2500000, season="18/19"), move(82, self.d(-1500), 11, 22, free=True, until=self.d(400)),
-+                            move(83, self.d(-700), 22, 9999, kind="ACTIVE_LOAN_TRANSFER", value=1500000))
-+        self.read("accepted", pid, data=self.full)
-+        self.before = {"rows": self.transfers(pid), "facts": self.facts(pid), "queue": self.queue("transfers", key)}
-+        return key
-+
-+    def refused(self, label, pid, key, status, data, code):
-+        self.read(label, pid, status=status, data=data)
-+        after = self.queue("transfers", key)
-+        self.expect(f"{label}: every row unchanged (ids, keys, facts, as_of, other sources)", self.transfers(pid), self.before["rows"])
-+        self.expect(f"{label}: queue keeps the true status and a code", (after["status"], after["code"], after["attempts"]), (status, code, 1))
-+        self.expect(f"{label}: last accepted read and its count kept", (after["read_at"], after["rows"]), (self.before["queue"]["read_at"], self.before["queue"]["rows"]))
-+        self.expect(f"{label}: next try after a bounded wait", timedelta(minutes=50) < after["next_due_at"] - self.db_clock() <= timedelta(hours=1, minutes=5), True)
-+        # The same history again: the same moves, the same row ids.
-+        self.read(f"{label} then the history again", pid, data=self.full)
-+        again = self.queue("transfers", key)
-+        self.expect(f"{label}: recovery keeps row ids and facts", self.facts(pid), self.before["facts"])
-+        self.expect(f"{label}: recovery clears the code", (again["status"], again["code"], again["attempts"], again["rows"]), (200, None, 0, 3))
-+
-+    def test_20a_a_first_404_is_an_ordinary_outcome(self):
-+        self.case("20a", "404 on a first read")
-+        key = self.player(1001)
-+        self.read("404", 1001, status=404)
-+        q = self.queue("transfers", key)
-+        self.expect("no fact", self.transfers(1001), [])
-+        self.expect("queue: 404, no code, no attempt, 0 rows", (q["status"], q["code"], q["attempts"], q["rows"]), (404, None, 0, 0))
-+        self.expect("read and due again after the normal period (30 days)", (q["read_at"] is not None, q["next_due_at"] - q["read_at"]), (True, timedelta(days=30)))
-+
-+    def test_20b_a_404_after_a_history_keeps_it(self):
-+        self.case("20b", "404 after an accepted history")
-+        key = self.accepted(1002)
-+        self.refused("404", 1002, key, 404, None, "HISTORY_MISSING")
-+
-+    def test_20c_a_response_without_history_keeps_it(self):
-+        self.case("20c", "200 without history, data null, history null, no list")
-+        key = self.accepted(1003)
-+        for n, data in enumerate(({}, None, {"history": None}, {"history": {}}, {"history": {"terminated": None, "pending": None}})):
-+            self.db.execute("UPDATE ops.transfermarkt_reads SET attempts = 0 WHERE kind = 'transfers' AND provider_key = %s", (key,))
-+            self.refused(f"envelope {n} {json.dumps(data)}", 1003, key, 200, data, "HISTORY_MISSING")
-+
-+    def test_20c_an_invalid_envelope_is_refused_on_a_first_read(self):
-+        self.case("20c", "200 without history on a first read")
-+        key = self.player(1004)
-+        self.read("no history", 1004, data={})
-+        q = self.queue("transfers", key)
-+        self.expect("no fact", self.transfers(1004), [])
-+        self.expect("refused, never read", (q["status"], q["code"], q["attempts"], q["read_at"]), (200, "HISTORY_MISSING", 1, None))
-+
-+    def test_20d_empty_lists_after_a_completed_move_keep_it(self):
-+        self.case("20d", "200 with both lists empty after a completed move")
-+        key = self.accepted(1005)
-+        self.refused("empty", 1005, key, 200, history(), "HISTORY_EMPTY")
-+
-+    def test_20e_an_empty_first_history_is_accepted(self):
-+        self.case("20e", "200 with both lists empty on a first read")
-+        key = self.player(1006)
-+        self.read("empty", 1006, data=history())
-+        q = self.queue("transfers", key)
-+        self.expect("no fact", self.transfers(1006), [])
-+        self.expect("accepted", (q["status"], q["code"], q["attempts"], q["rows"], q["read_at"] is not None), (200, None, 0, 0, True))
-+
-+    def test_20f_withdrawn_announcements_are_marked_absent_not_removed(self):
-+        self.case("20f", "empty lists when only announcements are known; then the move completed")
-+        key = self.player(1007)
-+        announced = move(90, self.d(40), 11, 22, pending=True)
-+        self.read("announced", 1007, data=history(pending=[announced]))
-+        first = self.ids(1007)
-+        self.read("empty", 1007, data=history())
-+        q = self.queue("transfers", key)
-+        self.expect("the announcement kept", self.ids(1007), first)
-+        self.expect("absent since today", self.absent(1007), {"90": self.T})
-+        self.expect("accepted, no code", (q["status"], q["code"], q["rows"]), (200, None, 0))
-+        self.read("announced again", 1007, data=history(pending=[announced]))
-+        self.expect("listed again: absent_since cleared, same id", (self.absent(1007), self.ids(1007)), ({"90": None}, first))
-+        self.read("completed", 1007, data=history(move(90, self.d(-1), 11, 22)))
-+        f = self.facts(1007)["90"]
-+        self.expect("completed in place", (f["id"], f["pending"], f["transfer_date"]), (first["90"], False, self.d(-1)))
-+
-+    def test_20g_lists_of_another_type_are_refused_without_an_exception(self):
-+        self.case("20g", "terminated an object, a string; history a list")
-+        key = self.accepted(1008)
-+        for n, data in enumerate(({"history": {"terminated": {"81": {}}, "pending": []}}, {"history": {"terminated": "81", "pending": []}}, {"history": [1]})):
-+            self.db.execute("UPDATE ops.transfermarkt_reads SET attempts = 0 WHERE kind = 'transfers' AND provider_key = %s", (key,))
-+            self.refused(f"type {n}", 1008, key, 200, data, "SCHEMA_CHANGED")
-+
-+    def test_20h_an_unusable_element_writes_nothing(self):
-+        self.case("20h", "an element not an object; an id empty or not numeric")
-+        key = self.accepted(1009)
-+        valid = self.full["history"]["terminated"]
-+        for n, bad in enumerate(("81", {**valid[0], "id": None}, {**valid[0], "id": ""}, {**valid[0], "id": "8x1"})):
-+            self.db.execute("UPDATE ops.transfermarkt_reads SET attempts = 0 WHERE kind = 'transfers' AND provider_key = %s", (key,))
-+            self.refused(f"element {n}", 1009, key, 200, history(*valid[1:], bad), "HISTORY_INVALID")
-+
-+    def test_20i_a_conflicting_duplicate_writes_nothing(self):
-+        self.case("20i", "one id twice with another date; the same record twice")
-+        key = self.accepted(1010)
-+        valid = self.full["history"]["terminated"]
-+        self.refused("conflict", 1010, key, 200, history(*valid, move(81, self.d(-2999), 33, 11)), "HISTORY_CONFLICT")
-+        self.read("identical duplicate", 1010, data=history(*valid, valid[0]))
-+        self.expect("the same record twice is one move", (self.tm_keys(1010), self.facts(1010)), (["81", "82", "83"], self.before["facts"]))
-+
-+    def test_20j_a_partial_history_keeps_the_missing_move(self):
-+        self.case("20j", "a valid history without one completed move, twice, then with it again")
-+        key = self.accepted(1011)
-+        rest = history(*self.full["history"]["terminated"][1:])
-+        self.read("without 81", 1011, data=rest)
-+        self.expect("every move kept with its facts", self.facts(1011), self.before["facts"])
-+        self.expect("81 absent since today; the keyless row never marked", self.absent(1011), {None: None, "81": self.T, "82": None, "83": None})
-+        self.expect("accepted: rows listed", self.queue("transfers", key)["rows"], 2)
-+        self.shift = 1
-+        self.read("without 81, next day", 1011, data=rest)
-+        self.expect("the first day of absence kept", self.absent(1011), {None: None, "81": self.T, "82": None, "83": None})
-+        self.read("with 81 again", 1011, data=self.full)
-+        self.expect("listed again: same ids, absence cleared", (self.facts(1011), self.absent(1011)),
-+                    (self.before["facts"], {None: None, "81": None, "82": None, "83": None}))
-+
-+    def test_20k_the_same_history_twice_changes_nothing(self):
-+        self.case("20k", "the same history twice")
-+        self.accepted(1012)
-+        self.read("again", 1012, data=self.full)
-+        self.expect("same rows, ids and facts", self.facts(1012), self.before["facts"])
-+        self.expect("no new row", len(self.transfers(1012)), len(self.before["rows"]))
-+
-+    def test_20l_stated_fields_correct_in_place_and_omitted_ones_stay(self):
-+        self.case("20l", "corrections, a free transfer, a kind change, omitted and null fields")
-+        key = self.player(1013)
-+        self.read("first", 1013, data=history(move(81, self.d(-900), 11, 22, fee=5000000, value=1000000, until=self.d(300), season="23/24")))
-+        first = self.facts(1013)["81"]
-+        corrected = move(81, self.d(-901), 11, 22)  # the date corrected; fee, value, expiry and season omitted
-+        corrected["details"]["marketValue"] = None  # value given as null
-+        self.read("date corrected", 1013, data=history(corrected))
-+        f = self.facts(1013)["81"]
-+        self.expect("date replaced, omitted and null fields kept, same id",
-+                    (f["id"], f["transfer_date"], f["fee_eur"], f["market_value_eur"], f["contract_until"], f["season_label"], f["kind"]),
-+                    (first["id"], self.d(-901), 5000000, 1000000, self.d(300), "23/24", "transfer"))
-+        self.read("free transfer", 1013, data=history(move(81, self.d(-901), 11, 22, free=True)))
-+        f = self.facts(1013)["81"]
-+        self.expect("a free transfer states a fee of 0", (f["id"], f["kind"], f["fee_eur"]), (first["id"], "free", 0))
-+        self.read("loan without fee", 1013, data=history(move(81, self.d(-901), 11, 22, kind="ACTIVE_LOAN_TRANSFER")))
-+        f = self.facts(1013)["81"]
-+        self.expect("another kind without fee clears the old fee", (f["kind"], f["fee_eur"]), ("loan", None))
-+        self.read("loan fee", 1013, data=history(move(81, self.d(-901), 11, 22, kind="ACTIVE_LOAN_TRANSFER", fee=2000000)))
-+        self.read("zero without label", 1013, data=history(move(81, self.d(-901), 11, 22, kind="ACTIVE_LOAN_TRANSFER", fee=0)))
-+        f = self.facts(1013)["81"]
-+        self.expect("a 0 without the free label is no amount", (f["id"], f["kind"], f["fee_eur"]), (first["id"], "loan", 2000000))
-+        self.expect("one row", self.tm_keys(1013), ["81"])
-+
-+    def test_20m_a_changed_club_key_never_keeps_the_old_canonical_club(self):
-+        self.case("20m", "club keys changed; a club linked between two reads")
-+        key = self.player(1014)
-+        self.read("first", 1014, data=history(move(81, self.d(-900), 11, 22), move(82, self.d(-300), 22, 7777)))
-+        first = self.ids(1014)
-+        self.read("destination not ours", 1014, data=history(move(81, self.d(-900), 11, 9999), move(82, self.d(-300), 22, 7777)))
-+        f = self.facts(1014)["81"]
-+        self.expect("new key, no canonical club", (f["id"], f["to_provider_club"], f["to_team_id"]), (first["81"], "9999", None))
-+        self.read("destination ours", 1014, data=history(move(81, self.d(-900), 11, 33), move(82, self.d(-300), 22, 7777)))
-+        f = self.facts(1014)["81"]
-+        self.expect("new key, its canonical club", (f["to_provider_club"], f["to_team_id"]), ("33", 33))
-+        # Club 7777 linked to our team 77 between two reads, its moves attached (as link_clubs does).
-+        self.db.execute("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('team', 'transfermarkt', '7777', 77)")
-+        self.reader.attach_teams()
-+        self.read("re-read after the link", 1014, data=history(move(81, self.d(-900), 11, 33), move(82, self.d(-300), 22, 7777)))
-+        self.expect("the re-resolved club kept", self.facts(1014)["82"]["to_team_id"], 77)
-+        self.db.execute("UPDATE core.provider_ids SET is_current = false WHERE entity_type = 'team' AND provider_key = '7777'")
-+        self.read("re-read after the link is gone", 1014, data=history(move(81, self.d(-900), 11, 33), move(82, self.d(-300), 22, 7777)))
-+        self.expect("the same key keeps the club stored", (self.facts(1014)["82"]["to_team_id"], self.ids(1014)), (77, first))
-+
-+    def test_20n_a_completed_move_never_becomes_announced_again(self):
-+        self.case("20n", "announced, completed, then announced in a later response")
-+        self.player(1015)
-+        self.read("announced", 1015, data=history(pending=[move(91, self.d(30), 11, 22, pending=True, fee=9000000)]))
-+        first = self.ids(1015)
-+        self.read("completed", 1015, data=history(move(91, self.d(-2), 11, 22, fee=8000000)))
-+        done = self.facts(1015)["91"]
-+        self.expect("completed in place", (done["id"], done["pending"], done["transfer_date"], done["fee_eur"]), (first["91"], False, self.d(-2), 8000000))
-+        self.read("announced again", 1015, data=history(pending=[move(91, self.d(30), 11, 22, pending=True, fee=9000000)]))
-+        self.expect("the completed facts kept", self.facts(1015)["91"], done)
-+
-+    def test_20o_other_sources_and_keyless_rows_are_never_touched(self):
-+        self.case("20o", "another source's transfer and a keyless Transfermarkt row through every read")
-+        self.accepted(1016)
-+        kept = [r for r in self.seeded if r["source_key"] is None]
-+        self.expect("accepted: keyless rows unchanged", [r for r in self.transfers(1016) if r["source_key"] is None], kept)
-+        for label, status, data in (("404", 404, None), ("empty", 200, history()), ("partial", 200, history(self.full["history"]["terminated"][0])), ("again", 200, self.full)):
-+            self.read(label, 1016, status=status, data=data)
-+            self.expect(f"{label}: keyless rows unchanged", [r for r in self.transfers(1016) if r["source_key"] is None], kept)
-+
-+    def test_20p_two_readers_at_once_keep_one_row_per_key(self):
-+        self.case("20p", "two readers on one player at once")
-+        from vega.store import connect_local
-+
-+        key = self.player(1017)
-+        waiting, release = threading.Event(), threading.Event()
-+
-+        class Holding(tm.Reader):
-+            def done(self, *args, **kwargs):
-+                # Reader A holds its transaction open after its writes, before its queue row.
-+                waiting.set()
-+                release.wait(10)
-+                return super().done(*args, **kwargs)
-+
-+        first, second = history(move(81, self.d(-900), 11, 22), move(82, self.d(-300), 22, 33)), history(move(81, self.d(-899), 11, 22), move(82, self.d(-300), 22, 33))
-+        a_conn, b_conn = connect_local(DSN), connect_local(DSN)
-+        try:
-+            a_api, b_api = Provider(), Provider()
-+            a_api.answer(f"/transfer/history/player/{key}", 200, first)
-+            b_api.answer(f"/transfer/history/player/{key}", 200, second)
-+            a = Holding(a_conn, a_api, interval=0, jitter=0, sleep=lambda _: None, log=lambda *a, **k: None)
-+            b = tm.Reader(b_conn, b_api, interval=0, jitter=0, sleep=lambda _: None, log=lambda *a, **k: None)
-+            results = {}
-+            ta = threading.Thread(target=lambda: results.setdefault("a", a.read("transfers", [(key, 1)])))
-+            ta.start()
-+            self.assertTrue(waiting.wait(10), "reader A never reached its queue row")
-+            tb = threading.Thread(target=lambda: results.setdefault("b", b.read("transfers", [(key, 1)])))
-+            tb.start()
-+            tb.join(1.5)
-+            b_waited = tb.is_alive()
-+            release.set()
-+            ta.join(15)
-+            tb.join(15)
-+            self.api.log.extend(a_api.log + b_api.log)
-+            self.snapshot("both readers done", 1017, key, results)
-+            self.expect("reader B waited for reader A", b_waited, True)
-+            self.expect("one row per key", self.tm_keys(1017), ["81", "82"])
-+            self.expect("the second reader's facts on the first's row", self.facts(1017)["81"]["transfer_date"], self.d(-899))
-+        finally:
-+            release.set()
-+            a_conn.close()
-+            b_conn.close()
-+
-+    def test_20q_a_unit_failing_for_the_41st_time_waits_a_week(self):
-+        self.case("20q", "a unit at 40 attempts fails again")
-+        key = self.player(1018)
-+        self.db.execute("UPDATE ops.transfermarkt_reads SET attempts = 40 WHERE kind = 'transfers' AND provider_key = %s", (key,))
-+        self.read("HTTP 500", 1018, status=500)
-+        q = self.queue("transfers", key)
-+        wait = q["next_due_at"] - self.db_clock()
-+        self.expect("attempts 41, HTTP 500", (q["attempts"], q["status"], q["code"]), (41, 500, "HTTP_500"))
-+        self.expect("due again in 7 days", timedelta(days=6, hours=23) < wait <= timedelta(days=7), True)
-+
-+
-+@unittest.skipUnless(DSN and psycopg, "requires disposable local sources DB and psycopg")
-+class ReaderHealthTest(Base):
-+    """The reader's normal entry (step), as the worker's process runs it."""
-+
-+    def test_20r_one_players_refusal_lets_the_reader_read_on(self):
-+        self.case("20r", "normal entry: one player's history refused, another's valid")
-+        x = self.db.execute
-+        refused, valid = self.player(1101), self.player(1102)
-+        x("UPDATE ops.transfermarkt_state SET planned_at = now() WHERE id = 1")  # planned: step reads
-+        x("UPDATE ops.transfermarkt_reads SET next_due_at = now() + interval '1 day'")
-+        self.read("accepted", 1101, data=history(move(81, self.d(-900), 11, 22)))
-+        known = self.facts(1101)
-+        x("UPDATE ops.transfermarkt_reads SET next_due_at = now() - interval '2 minutes' WHERE kind = 'transfers' AND provider_key = %s", (refused,))
-+        x("UPDATE ops.transfermarkt_reads SET next_due_at = now() - interval '1 minute' WHERE kind = 'transfers' AND provider_key = %s", (valid,))
-+        self.api.answer(f"/transfer/history/player/{refused}", 404)
-+        self.api.answer(f"/transfer/history/player/{valid}", 200, history(move(85, self.d(-100), 22, 33)))
-+        reader = tm.Reader(self.db, self.api, interval=0, jitter=0, sleep=lambda _: None, log=lambda *a, **k: None)
-+        outcomes = []
-+        for _ in range(5):
-+            try:
-+                outcomes.append(reader.step())
-+            except Exception as error:
-+                outcomes.append(f"exception {type(error).__name__}: {error}")
-+                break
-+            if outcomes[-1] == "idle":
-+                break
-+        state = x("SELECT paused_until, gave_up_at, blocks_in_row FROM ops.transfermarkt_state").fetchone()
-+        progress = x("SELECT units, due, failing FROM api.provider_reader_progress WHERE kind = 'transfers'").fetchone()
-+        self.snapshot("steps", 1101, refused, outcomes)
-+        self.entry["states"].append({"after": "steps", "state": state, "progress": progress, "valid": self.facts(1102)})
-+        self.expect("outcomes", outcomes, ["failed", "ok", "idle"])
-+        self.expect("the reader is not paused", state, (None, None, 0))
-+        self.expect("the refused history kept", self.facts(1101), known)
-+        self.expect("the valid one written", self.tm_keys(1102), ["85"])
-+        self.expect("progress: two units, none due, one failing", progress, (2, 0, 1))
-+        self.expect("the refused unit's queue row", (self.queue("transfers", refused)["status"], self.queue("transfers", refused)["code"]), (404, "HISTORY_MISSING"))
-+
-+
-+@unittest.skipUnless(DSN and psycopg, "requires disposable local sources DB and psycopg")
-+class ContractTest(Base):
-+    """A contract is a dated fact; the current one is a dated choice (§20.2)."""
-+
-+    def test_20s_20t_20v_20aa_20ab_moves_renewals_and_a_collision_keep_every_spell(self):
-+        self.case("20s 20t 20v 20aa 20ab", "a past spell, a move, the same profile twice, an expiry corrected, a renewal, another source's key")
-+        pid = 1201
-+        self.player(pid)
-+        self.profile("past", pid, 11, self.d(-2000), self.d(-1000))
-+        past = self.spells(pid)
-+        self.profile("move", pid, 22, self.d(-700), self.d(400))
-+        self.expect("move: the past spell kept", set(past) <= set(self.spells(pid)), True)
-+        self.expect("move: profile shows the new club", self.public(pid)["contract_team"], "Club Vingt-Deux")
-+        self.expect("move: the past spell superseded from the move", self.superseded(pid), {(11, self.d(-2000)): self.d(-700), (22, self.d(-700)): None})
-+        rows = len(self.contracts(pid))
-+        self.profile("same profile", pid, 22, self.d(-700), self.d(400))
-+        self.expect("same profile: no new row", len(self.contracts(pid)), rows)
-+        self.profile("expiry corrected", pid, 22, self.d(-700), self.d(500))
-+        self.expect("expiry corrected in place", self.spells(pid)[(22, self.d(-700))], self.d(500))
-+        self.expect("expiry corrected: published", self.public(pid)["contract_until"], self.d(500).isoformat())
-+        self.profile("renewal", pid, 22, self.d(-100), self.d(1200))
-+        self.expect("renewal: every spell kept, end dates as observed", self.spells(pid),
-+                    {(11, self.d(-2000)): self.d(-1000), (22, self.d(-700)): self.d(500), (22, self.d(-100)): self.d(1200)})
-+        self.expect("renewal: the old spell superseded from the renewal", self.superseded(pid).get((22, self.d(-700))) if isinstance(self.superseded(pid), dict) else self.superseded(pid), self.d(-100))
-+        self.expect("renewal: profile shows the new expiry", (self.public(pid)["contract_team"], self.public(pid)["contract_until"]), ("Club Vingt-Deux", self.d(1200).isoformat()))
-+        self.db.execute("""INSERT INTO core.player_contracts(player_id, team_id, start_date, end_date, source, as_of, source_url)
-+                           VALUES (%s, 33, %s, %s, 'other', %s, 'https://club.example/contract')""", (pid, self.d(-30), self.d(900), self.d(-30)))
-+        before = self.spells(pid)
-+        self.profile("another source's key", pid, 33, self.d(-30), self.d(1000))
-+        other = [c for c in self.contracts(pid) if c["source"] == "other"]
-+        self.expect("collision: the other source's row unchanged", [(c["team_id"], c["start_date"], c["end_date"], c["as_of"]) for c in other],
-+                    [(33, self.d(-30), self.d(900), self.d(-30))])
-+        self.expect("collision: every Transfermarkt spell kept", self.spells(pid), before)
-+        self.expect("collision: the renewal superseded from the move", self.superseded(pid).get((22, self.d(-100))) if isinstance(self.superseded(pid), dict) else self.superseded(pid), self.d(-30))
-+        self.expect("collision: the club's expiry confirmed, the provider's observed beside it", self.public(pid),
-+                    {"contract_until": self.d(900).isoformat(), "contract_team": "Club Trente-Trois",
-+                     "observed_contract_until": self.d(1000).isoformat(), "observed_contract_team": "Club Trente-Trois"})
-+
-+    def test_20u_a_future_start_keeps_todays_contract(self):
-+        self.case("20u", "a move starting tomorrow; the same move started yesterday")
-+        for pid, start in ((1202, 1), (1203, -1)):
-+            self.player(pid)
-+            self.profile("current", pid, 11, self.d(-500), self.d(300))
-+            self.profile(f"move starting {start:+d}", pid, 22, self.d(start), self.d(1000))
-+            self.expect(f"{pid}: both spells kept", sorted(self.spells(pid)), [(11, self.d(-500)), (22, self.d(start))])
-+        self.expect("before the start: today's contract confirmed", (self.public(1202)["contract_team"], self.public(1202)["contract_until"]), ("Club Onze", self.d(300).isoformat()))
-+        self.expect("after the start: the new contract", (self.public(1203)["contract_team"], self.public(1203)["contract_until"]), ("Club Vingt-Deux", self.d(1000).isoformat()))
-+
-+    def test_20w_a_move_to_a_club_not_ours_sets_the_old_claim_aside(self):
-+        self.case("20w", "a move to the provider's club 9999, not ours")
-+        pid = 1204
-+        self.player(pid)
-+        self.profile("current", pid, 11, self.d(-500), self.d(300))
-+        self.profile("move abroad", pid, 9999, self.d(-10), self.d(700))
-+        self.expect("no row for the club not ours; the old spell kept", self.spells(pid), {(11, self.d(-500)): self.d(300)})
-+        self.expect("the old spell superseded from the move", self.superseded(pid), {(11, self.d(-500)): self.d(-10)})
-+        self.expect("no confirmed contract; the observed one of that club", self.public(pid),
-+                    {"contract_until": None, "contract_team": None, "observed_contract_until": self.d(700).isoformat(), "observed_contract_team": "Club Extérieur"})
-+
-+    def test_20x_a_profile_without_key_dates_or_blocks_changes_no_contract(self):
-+        self.case("20x", "no club, no start, expiry before start, a record without its blocks")
-+        pid = 1205
-+        self.player(pid)
-+        self.profile("current", pid, 11, self.d(-500), self.d(300))
-+        kept = self.contracts(pid)
-+        for label, club, joined, until, shape in (("no club", None, self.d(-5), self.d(800), {}), ("no start", 22, None, self.d(800), {}),
-+                                                  ("expiry before start", 22, self.d(-5), self.d(-6), {}),
-+                                                  ("no attributes", 22, self.d(-5), self.d(800), {"attributes": False}),
-+                                                  ("no club assignments", 22, self.d(-5), self.d(800), {"assignments": False})):
-+            self.profile(label, pid, club, joined, until, **shape)
-+            self.expect(f"{label}: contracts unchanged", self.contracts(pid), kept)
-+        self.expect("still confirmed", self.public(pid)["contract_team"], "Club Onze")
-+
-+    def test_20y_an_older_profile_with_a_past_or_missing_expiry_supersedes_nothing(self):
-+        self.case("20y", "a stale profile naming an older spell")
-+        pid = 1206
-+        self.player(pid)
-+        self.profile("past", pid, 11, self.d(-2000), self.d(-1000))
-+        self.profile("current", pid, 22, self.d(-700), self.d(400))
-+        self.profile("the past again", pid, 11, self.d(-2000), self.d(-1000))
-+        self.profile("the past without expiry", pid, 11, self.d(-2000), None)
-+        self.expect("every spell kept", sorted(self.spells(pid)), [(11, self.d(-2000)), (22, self.d(-700))])
-+        self.expect("the current spell not superseded", self.superseded(pid).get((22, self.d(-700)), "absent") if isinstance(self.superseded(pid), dict) else self.superseded(pid), None)
-+        self.expect("still confirmed", (self.public(pid)["contract_team"], self.public(pid)["contract_until"]), ("Club Vingt-Deux", self.d(400).isoformat()))
-+
-+    def test_20z_back_from_a_loan_the_parent_spell_is_revived(self):
-+        self.case("20z", "a loan, then the parent club's superseded key again with a current expiry")
-+        pid = 1207
-+        self.player(pid)
-+        self.profile("parent", pid, 11, self.d(-1500), self.d(600))
-+        self.profile("loan", pid, 22, self.d(-200), self.d(100))
-+        self.expect("on loan: the loan confirmed", self.public(pid)["contract_team"], "Club Vingt-Deux")
-+        self.profile("back", pid, 11, self.d(-1500), self.d(600))
-+        self.expect("both spells kept, end dates as observed", self.spells(pid), {(11, self.d(-1500)): self.d(600), (22, self.d(-200)): self.d(100)})
-+        self.expect("parent revived, loan superseded from the read day", self.superseded(pid), {(11, self.d(-1500)): None, (22, self.d(-200)): self.T})
-+        self.expect("one confirmed contract: the parent's", (self.public(pid)["contract_team"], self.public(pid)["contract_until"]), ("Club Onze", self.d(600).isoformat()))
-+
-+    def test_20ac_a_quarantine_after_publication_hides_the_contract(self):
-+        self.case("20ac", "the link quarantined after the contract; entity_id naming the player, then an older one")
-+        for pid, entity in ((1208, 1208), (1209, 99999)):
-+            key = self.player(pid)
-+            self.profile("current", pid, 11, self.d(-300), self.d(500))
-+            self.expect(f"{pid}: published before the doubt", self.public(pid)["contract_team"], "Club Onze")
-+            self.db.execute("""INSERT INTO ops.provider_links(entity_type, provider, provider_key, entity_id, rule, quarantined_at, quarantine_reason)
-+                               VALUES ('player', 'transfermarkt', %s, %s, 'snapshot', now(), 'birth_date_differs')""", (key, entity))
-+            self.snapshot("quarantined", pid, key, None)
-+            self.expect(f"{pid}: nothing of the provider shown", self.public(pid),
-+                        {"contract_until": None, "contract_team": None, "observed_contract_until": None, "observed_contract_team": None})
-+            self.expect(f"{pid}: the contract kept", self.spells(pid), {(11, self.d(-300)): self.d(500)})
-+
-+    def search(self, team, members):
-+        """Our club `team` searched: the provider finds its club 5555 whose squad lists `members`."""
-+        x = self.db.execute
-+        x("INSERT INTO core.seasons(id, label) VALUES (2026, '2026/2027') ON CONFLICT DO NOTHING")
-+        x("INSERT INTO core.competitions(id, name, country_code, kind) VALUES (30, 'Ligue', 'FRA', 'league') ON CONFLICT DO NOTHING")
-+        x("INSERT INTO core.competition_seasons(id, competition_id, season_id, native_label) VALUES (30, 30, 2026, '2026/2027') ON CONFLICT DO NOTHING")
-+        x("SELECT core.ensure_season_partitions(2026)")
-+        x("""INSERT INTO core.matches(id, competition_season_id, season_id, source, status, home_team_id, away_team_id, kickoff_at, match_date)
-+             VALUES (%s, 30, 2026, 'pitchapi', 'finished', %s, 11, now() - interval '3 days', current_date - 3) ON CONFLICT DO NOTHING""", (9000 + team, team))
-+        x("INSERT INTO ops.transfermarkt_reads(kind, provider_key, priority, next_due_at) VALUES ('search', %s, 1, now()) ON CONFLICT DO NOTHING", (str(team),))
-+        self.api.answer("/quick-search", 200, {"result": {"clubIds": [5555]}})
-+        self.api.answer("/club/5555/squad", 200, {"squad": [{"playerId": int(k)} for k in members]})
-+        outcome = self.reader.read("search", [(str(team), 1)])
-+        return outcome
-+
-+    def test_20ad_a_search_applies_the_contract_step_of_a_profile(self):
-+        self.case("20ad", "a club search reads a linked player whose club changed")
-+        pid = 1210
-+        key = self.player(pid)
-+        self.profile("current", pid, 11, self.d(-500), self.d(300))
-+        self.api.records[key] = record(pid, 22, self.d(-20), self.d(900))
-+        outcome = self.search(55, [key])
-+        self.snapshot("search", pid, key, outcome)
-+        self.expect("the new spell written, the old one kept", sorted(self.spells(pid)), [(11, self.d(-500)), (22, self.d(-20))])
-+        self.expect("profile shows the new club", self.public(pid)["contract_team"], "Club Vingt-Deux")
-+        q = self.queue("transfers", key)
-+        self.expect("transfers due now", q["next_due_at"] <= self.db_clock(), True)
-+        self.expect("provider row written after the comparison", self.db.execute(
-+            "SELECT provider_club, joined_on, contract_until FROM core.provider_players WHERE provider = 'transfermarkt' AND provider_key = %s", (key,)).fetchone(),
-+            ("22", self.d(-20), self.d(900)))
-+
-+    def test_20ae_a_record_without_its_blocks_keeps_the_provider_row(self):
-+        self.case("20ae", "a record without its blocks, from a search and from a profile")
-+        for pid, path in ((1211, "search"), (1212, "profile")):
-+            key = self.player(pid)
-+            self.profile("current", pid, 11, self.d(-500), self.d(300))
-+            row = lambda: self.db.execute("SELECT provider_club, joined_on, contract_until FROM core.provider_players WHERE provider = 'transfermarkt' AND provider_key = %s", (key,)).fetchone()
-+            known, contracts = row(), self.contracts(pid)
-+            self.db.execute("UPDATE ops.transfermarkt_reads SET next_due_at = now() + interval '7 days' WHERE kind = 'profile' AND provider_key = %s", (key,))
-+            if path == "search":
-+                self.api.records[key] = record(pid, 22, self.d(-20), self.d(900), assignments=False)
-+                self.snapshot("search", pid, key, self.search(55, [key]))
-+                self.expect(f"{path}: the profile due now", self.queue("profile", key)["next_due_at"] <= self.db_clock(), True)
-+            else:
-+                self.profile("no attributes", pid, 22, self.d(-20), self.d(900), attributes=False)
-+            self.expect(f"{path}: provider row keeps its fields", row(), known)
-+            self.expect(f"{path}: no contract change", self.contracts(pid), contracts)
-+
-+    def test_20af_an_unlinked_or_doubted_player_gets_no_contract(self):
-+        self.case("20af", "an unlinked squad member, a doubted player's profile")
-+        loose = self.player(1213, linked=False)
-+        doubted = self.player(1214)
-+        self.db.execute("""INSERT INTO ops.provider_links(entity_type, provider, provider_key, entity_id, rule, quarantined_at, quarantine_reason)
-+                           VALUES ('player', 'transfermarkt', %s, 1214, 'snapshot', now(), 'birth_date_differs')""", (doubted,))
-+        self.api.records[loose] = record(1213, 22, self.d(-20), self.d(900))
-+        self.search(55, [loose])
-+        self.profile("doubted", 1214, 22, self.d(-20), self.d(900))
-+        self.expect("no contract for either", (self.contracts(1213), self.contracts(1214)), ([], []))
-+        self.expect("their provider rows written", self.db.execute(
-+            "SELECT count(*) FROM core.provider_players WHERE provider = 'transfermarkt' AND provider_key IN (%s, %s)", (loose, doubted)).fetchone()[0], 2)
-+
-+    @unittest.skipUnless(HTTP_READY, "requires node and backend/api/node_modules (npm ci --prefix backend/api)")
-+    def test_20aj_missing_invalid_and_undated_club_changes_keep_dated_contracts(self):
-+        self.case("20aj", "omitted, malformed and explicitly null expiry during profile and search, confirmed by the HTTP profile")
-+        cases = ((1401, "profile", "omitted"), (1402, "profile", "malformed"), (1403, "search", "omitted"),
-+                 (1404, "search", "malformed"), (1405, "profile", "null"), (1406, "profile", "trailing junk"))
-+        public_ids = []
-+        expected = (self.d(300).isoformat(), "Club Onze", self.d(300).isoformat(), "Club Onze")
-+        for pid, source, expiry in cases:
-+            with self.subTest(source=source, expiry=expiry):
-+                self.shift = 0
-+                key = self.player(pid)
-+                self.profile("accepted dated claim", pid, 11, self.d(-500), self.d(300))
-+                expected_contracts = self.contracts(pid)
-+                staging = """SELECT provider_club,joined_on,contract_until,read_on FROM core.provider_players
-+                             WHERE provider='transfermarkt' AND provider_key=%s"""
-+                expected_staging = self.db.execute(staging, (key,)).fetchone()
-+                self.shift = 1
-+                candidate = record(pid, 22, self.d(-15), None)
-+                if expiry == "omitted":
-+                    del candidate["attributes"]["contractUntil"]
-+                elif expiry == "malformed":
-+                    candidate["attributes"]["contractUntil"] = "definitely-not-a-date"
-+                elif expiry == "trailing junk":
-+                    candidate["attributes"]["contractUntil"] = self.d(600).isoformat() + "not-a-timestamp"
-+                self.api.records[key] = candidate
-+                if source == "search":
-+                    self.snapshot(expiry, pid, key, self.search(55, [key]))
-+                    self.expect("normal profile now due", self.queue("profile", key)["next_due_at"] <= self.db_clock(), True)
-+                else:
-+                    self.read(expiry, pid, "profile")
-+                    queue = self.queue("profile", key)
-+                    error = None if expiry == "null" else "CONTRACT_MISSING" if expiry == "omitted" else "CONTRACT_INVALID"
-+                    self.expect("specific HTTP 200 outcome", (queue["status"], queue["code"]), (200, error))
-+                self.expect("prior staging and provenance unchanged", self.db.execute(staging, (key,)).fetchone(), expected_staging)
-+                self.expect("dated facts and supersession unchanged", self.contracts(pid), expected_contracts)
-+                self.expect("ordinary view keeps both claims", tuple(self.public(pid).values()), expected)
-+                public_ids.append(self.db.execute("SELECT api.public_id('player', %s)", (pid,)).fetchone()[0])
-+
-+        out = subprocess.run([NODE, str(ROOT / "tests" / "profile_http.mjs"), DSN, *public_ids], capture_output=True, text=True, timeout=120)
-+        self.assertEqual(out.returncode, 0, out.stderr)
-+        http = json.loads(out.stdout)
-+        self.entry["states"].append({"after": "GET /api/players/{id}", "http": http})
-+        fields = ("contract_until", "contract_team", "observed_contract_until", "observed_contract_team")
-+        for public_id in public_ids:
-+            answer = http[public_id]
-+            self.expect("profile API forwards the entire previous observation",
-+                        (answer["status"], tuple(answer["data"].get(key) for key in fields)), (200, expected))
-+
-+        first = self.player(1408)
-+        self.profile("explicit null on first observation", 1408, 22, self.d(-15), None)
-+        seen = self.db.execute("""SELECT provider_club,joined_on,contract_until FROM core.provider_players
-+                                 WHERE provider='transfermarkt' AND provider_key=%s""", (first,)).fetchone()
-+        self.expect("an unmeasured expiry retains a first valid club association", seen, ("22", self.d(-15), None))
-+        self.expect("the undated observation produces no confirmed contract", self.contracts(1408), [])
-+
-+    def test_20ak_a_dated_end_correction_is_still_an_observed_expiration(self):
-+        self.case("20ak", "a dated expiry correction for the exact existing spell is still accepted")
-+        pid = 1407
-+        key = self.player(pid)
-+        self.profile("current", pid, 11, self.d(-500), self.d(300))
-+        self.profile("stated effective end", pid, 11, self.d(-500), self.d(-5))
-+        self.expect("same fact, corrected end", self.spells(pid), {(11, self.d(-500)): self.d(-5)})
-+        self.expect("expired contract no longer confirmed", self.public(pid)["contract_until"], None)
-+        self.expect("profile accepted", self.queue("profile", key)["code"], None)
-+
-+    @unittest.skipUnless(HTTP_READY, "requires node and backend/api/node_modules (npm ci --prefix backend/api)")
-+    def test_the_profile_route_publishes_what_the_view_holds(self):
-+        self.case("20s 20w 20z 20ac", "the read API's /api/players/{id} after a move, a move abroad, a loan return and a quarantine")
-+        pids = (1301, 1302, 1303, 1304)
-+        for pid in pids:
-+            self.player(pid)
-+        self.profile("past", 1301, 11, self.d(-2000), self.d(-1000))
-+        self.profile("move", 1301, 22, self.d(-700), self.d(400))
-+        self.profile("current", 1302, 11, self.d(-500), self.d(300))
-+        self.profile("move abroad", 1302, 9999, self.d(-10), self.d(700))
-+        self.profile("parent", 1303, 11, self.d(-1500), self.d(600))
-+        self.profile("loan", 1303, 22, self.d(-200), self.d(100))
-+        self.profile("back", 1303, 11, self.d(-1500), self.d(600))
-+        self.profile("current", 1304, 11, self.d(-300), self.d(500))
-+        self.db.execute("""INSERT INTO ops.provider_links(entity_type, provider, provider_key, entity_id, rule, quarantined_at, quarantine_reason)
-+                           VALUES ('player', 'transfermarkt', '1304', 99999, 'snapshot', now(), 'birth_date_differs')""")
-+        public = {pid: self.db.execute("SELECT api.public_id('player', %s)", (pid,)).fetchone()[0] for pid in pids}
-+        out = subprocess.run([NODE, str(ROOT / "tests" / "profile_http.mjs"), DSN, *public.values()], capture_output=True, text=True, timeout=120)
-+        self.assertEqual(out.returncode, 0, out.stderr)
-+        http = json.loads(out.stdout)
-+        self.entry["states"].append({"after": "GET /api/players/{id}", "http": http})
-+        fields = ("contract_until", "contract_team", "observed_contract_until", "observed_contract_team")
-+        expected = {1301: (self.d(400).isoformat(), "Club Vingt-Deux", self.d(400).isoformat(), "Club Vingt-Deux"),
-+                    1302: (None, None, self.d(700).isoformat(), "Club Extérieur"),
-+                    1303: (self.d(600).isoformat(), "Club Onze", self.d(600).isoformat(), "Club Onze"),
-+                    1304: (None, None, None, None)}
-+        for pid, want in expected.items():
-+            answer = http[public[pid]]
-+            self.expect(f"{pid}: HTTP 200", answer["status"], 200)
-+            self.expect(f"{pid}: the route's contract fields", tuple(answer["data"].get(k) for k in fields), want)
-+            self.expect(f"{pid}: the route publishes the view", tuple(answer["data"].get(k) for k in fields), tuple(self.public(pid)[k] for k in fields))
-+
-+
-+@unittest.skipUnless(DSN and psycopg, "requires disposable local sources DB and psycopg")
-+class MigrationTest(Base):
-+    """Migration 139 over the rows a base may hold, and the deletions it refuses (§20.2)."""
-+
-+    def pre_139(self):
-+        """The base as it stood before 139: no index, no guard, 139 not recorded."""
-+        x = self.db.execute
-+        x("DROP INDEX IF EXISTS core.player_transfers_transfermarkt_key")
-+        x("DROP TRIGGER IF EXISTS keep_transfermarkt_history ON core.player_transfers")
-+        x("DROP TRIGGER IF EXISTS keep_transfermarkt_history ON core.player_contracts")
-+        x("DELETE FROM ops.schema_migrations WHERE version = %s", (MIGRATION.name,))
-+
-+    def test_20ag_20ah_139_over_null_foreign_and_repeated_keys(self):
-+        from vega.store import migrate
-+
-+        self.case("20ag 20ah", "migration 139 over NULL keys, another source's repeated keys, then a repeated Transfermarkt key")
-+        self.assertTrue(MIGRATION.exists(), f"{MIGRATION.name} missing")
-+        x = self.db.execute
-+        for pid in (1401, 1402):
-+            self.player(pid)
-+        self.pre_139()
-+        rows = [(1401, "transfermarkt", None), (1401, "transfermarkt", None), (1401, "other", "7"), (1401, "other", "7"), (1401, "transfermarkt", "81"), (1402, "transfermarkt", "81")]
-+        for pid, source, key in rows:
-+            x("INSERT INTO core.player_transfers(player_id, source, source_key, as_of) VALUES (%s, %s, %s, current_date)", (pid, source, key))
-+        migrate(self.db)
-+        index = x("SELECT indexdef FROM pg_indexes WHERE schemaname = 'core' AND indexname = 'player_transfers_transfermarkt_key'").fetchone()
-+        self.expect("applied over NULL keys and another source's repeats", (index is not None, x("SELECT count(*) FROM core.player_transfers").fetchone()[0]), (True, 6))
-+        self.expect("the index covers Transfermarkt's non-null keys only", bool(index) and "source_key IS NOT NULL" in index[0] and "'transfermarkt'" in index[0], True)
-+        self.pre_139()
-+        x("INSERT INTO core.player_transfers(player_id, source, source_key, as_of) VALUES (1402, 'transfermarkt', '81', current_date)")
-+        before = x("SELECT id, player_id, source::text, source_key FROM core.player_transfers ORDER BY id").fetchall()
-+        with self.assertRaises(psycopg.Error) as stopped:
-+            migrate(self.db)
-+        message = str(stopped.exception)
-+        self.entry["states"].append({"after": "139 over a repeated key", "error": message})
-+        self.expect("stops with its code and the first pair", ("TRANSFER_KEYS_NOT_UNIQUE" in message, "player 1402" in message and "key 81" in message), (True, True))
-+        self.expect("nothing changed", x("SELECT id, player_id, source::text, source_key FROM core.player_transfers ORDER BY id").fetchall(), before)
-+        self.expect("139 not recorded", x("SELECT count(*) FROM ops.schema_migrations WHERE version = %s", (MIGRATION.name,)).fetchone()[0], 0)
-+        with self.db.transaction():  # a person removes the repeat, then 139 applies
-+            x("DELETE FROM core.player_transfers WHERE id = %s", (before[-1][0],))
-+        migrate(self.db)
-+        self.expect("then applied", x("SELECT count(*) FROM ops.schema_migrations WHERE version = %s", (MIGRATION.name,)).fetchone()[0], 1)
-+
-+    def test_20ai_the_deployed_writers_deletions_are_refused(self):
-+        self.case("20ai", "the statements of the reader before VI-31 after 139; an authorized deletion")
-+        x = self.db.execute
-+        self.player(1403)
-+        x("INSERT INTO core.player_transfers(player_id, source, source_key, as_of) VALUES (1403, 'transfermarkt', '81', current_date), (1403, 'other', NULL, current_date)")
-+        x("""INSERT INTO core.player_contracts(player_id, team_id, start_date, end_date, source, as_of) VALUES
-+             (1403, 11, current_date - 900, current_date - 100, 'transfermarkt', current_date), (1403, 22, current_date - 99, current_date + 300, 'transfermarkt', current_date)""")
-+        before = (self.transfers(1403), self.contracts(1403))
-+        # The deployed writer's two deletions (8018e0836c, transfermarkt.py:932 and :988).
-+        for sql, params in (("DELETE FROM core.player_transfers WHERE player_id = %s AND source = 'transfermarkt'", (1403,)),
-+                            ("DELETE FROM core.player_contracts WHERE player_id = %s AND source = 'transfermarkt' AND (team_id, start_date) <> (%s, %s)",
-+                             (1403, 22, self.d(-99)))):
-+            try:
-+                with self.db.transaction():
-+                    x(sql, params)
-+                refused = None
-+            except psycopg.Error as error:
-+                refused = str(error)
-+            self.entry["states"].append({"after": sql, "error": refused})
-+            self.expect(f"refused: {sql[:40]}", refused is not None and "TRANSFERMARKT_HISTORY_KEPT" in refused, True)
-+        self.expect("every row kept", (self.transfers(1403), self.contracts(1403)), before)
++        self.x = self.db.execute
++        self.x("""TRUNCATE core.matches, core.rounds, core.competition_seasons, core.competitions, core.provider_ids,
++                  core.entity_names, core.teams, core.source_revisions, core.assets, ops.source_runs, ops.parse_failures
++                  RESTART IDENTITY CASCADE""")
++        self.tmp = Path(tempfile.mkdtemp())
++        self.addCleanup(shutil.rmtree, self.tmp, True)
++
++    # -- cups: the real bridge and projection, run_due's own transaction and status --
++    @contextmanager
++    def serving(self, editions):
++        path = self.tmp / f"editions-{len(list(self.tmp.iterdir()))}.json"
++        path.write_text(json.dumps({"editions": editions}))
++        with patch.dict(os.environ, {"NODE_OPTIONS": f"--import={PRELOAD.as_uri()}", "VEGA_TEST_OPENFOOTBALL": str(path)}):
++            yield
++
++    def read_cup(self, key, body, at):
++        """One due read of the edition `key` ("world-cup-history:1962") answering `body`: its outcome."""
++        scope = f"open-cups:{key}"
++        with self.serving({key: body}), patch.object(cups, "scopes", lambda now: {scope: timedelta(seconds=1)}):
++            return sources.run_due(self.db, None, at, names={"openfootball"})[("openfootball", scope)]
++
++    def edition(self, key):
++        return self.x("""SELECT id, cup_digest, cup_checked_at, cup_updated_at, cup_name FROM core.competition_seasons
++                         WHERE cup_key = %s""", (f"open-cups:{key}",)).fetchone()
++
++    def matches(self, key):
++        """Per provider key: id, position, the score columns, revision, updated_at and row version."""
++        return {r[0]: r[1:] for r in self.x(
++            f"""SELECT p.provider_key, m.id, m.archive_position, {', '.join('m.' + c + ('::text' if c == 'status' else '') for c in SCORES)},
++                       m.revision, m.updated_at, m.xmin::text
++                FROM core.matches m JOIN core.competition_seasons cs ON cs.id = m.competition_season_id
++                JOIN core.provider_ids p ON p.entity_type = 'match' AND p.entity_id = m.id
++                WHERE cs.cup_key = %s ORDER BY m.archive_position""", (f"open-cups:{key}",)).fetchall()}
++
++    def run_record(self, provider, scope):
++        return self.x("SELECT status, error_code, rows_written, unmatched FROM ops.source_runs WHERE source = %s AND scope = %s",
++                      (provider, scope)).fetchone()
++
++
++class CupReplayTest(SnapshotDatabase):
++    def store_as_baseline(self, key, body):
++        """The edition as the baseline writer left it: array scores and canceled matches not started, its raw digest."""
++        edition = self.edition(key)[0]
++        for position, m in enumerate(body["matches"]):
++            if isinstance(m.get("score"), list) or m.get("status"):
++                self.x(f"""UPDATE core.matches SET status = 'not_started', {', '.join(c + ' = NULL' for c in SCORES[1:])}
++                           WHERE competition_season_id = %s AND archive_position = %s""", (edition, position))
++        self.x("UPDATE core.competition_seasons SET cup_digest = %s WHERE id = %s", (baseline_digest(body), edition))
++
++    def test_19j_a_stored_edition_is_corrected_once_after_the_parser_upgrade(self):
++        for key, corrected in (("world-cup-history:1962", 32), ("world-cup-history:2022", 7), ("world-cup-history:1938", 1)):
++            with self.subTest(key):
++                body = EDITIONS[key]
++                self.assertEqual(self.read_cup(key, body, NOW), "ok")
++                self.store_as_baseline(key, body)
++                before, edition = self.matches(key), self.edition(key)
++                # The same upstream body, read by the new code.
++                self.assertEqual(self.read_cup(key, body, NOW + timedelta(days=8)), "ok")
++                after = self.matches(key)
++                self.assertEqual(self.run_record("openfootball", f"open-cups:{key}")[2], corrected)
++                self.assertEqual({k: v[0] for k, v in after.items()}, {k: v[0] for k, v in before.items()})  # same match ids
++                self.assertEqual([v[2:13] for v in after.values()], [expected_row(m) for m in body["matches"]])
++                changed = [k for k in after if before[k][2:13] != after[k][2:13]]
++                self.assertEqual(len(changed), corrected)
++                for k in after:
++                    self.assertEqual(after[k][13], before[k][13] + (1 if k in changed else 0), k)  # revision
++                    if k not in changed:
++                        self.assertEqual(after[k][14:], before[k][14:], k)  # untouched: updated_at and row version
++                now_edition = self.edition(key)
++                self.assertNotEqual(now_edition[1], edition[1])
++                self.assertGreater(now_edition[3], edition[3])
++                # A third read of the same body changes nothing; only the read time moves.
++                self.assertEqual(self.read_cup(key, body, NOW + timedelta(days=16)), "ok")
++                self.assertEqual(self.matches(key), after)
++                self.assertEqual(self.run_record("openfootball", f"open-cups:{key}")[2], 0)
++                last = self.edition(key)
++                self.assertEqual((last[1], last[3]), (now_edition[1], now_edition[3]))
++                self.assertGreater(last[2], now_edition[2])
++        canceled = self.x("""SELECT m.status::text, m.home_score, m.away_score FROM core.matches m
++                             WHERE m.home_team_name = 'Sweden' AND m.away_team_name = 'Austria'""").fetchone()
++        self.assertEqual(canceled, ("canceled", None, None))
++        england = self.x("""SELECT m.status::text, m.home_score, m.away_score FROM core.matches m
++                            WHERE m.home_team_name = 'England' AND m.away_team_name = 'USA'""").fetchone()
++        self.assertEqual(england, ("finished", 0, 0))
++
++    def test_19k_another_order_moves_positions_only(self):
++        key, body = "world-cup-history:1962", EDITIONS["world-cup-history:1962"]
++        self.assertEqual(self.read_cup(key, body, NOW), "ok")
++        before, edition = self.matches(key), self.edition(key)
++        reordered = dict(body, matches=list(reversed(body["matches"])))
++        self.assertEqual(self.read_cup(key, reordered, NOW + timedelta(days=8)), "ok")
++        after = self.matches(key)
++        self.assertEqual(list(after), list(reversed(list(before))))  # positions follow the source
++        for k in before:
++            self.assertEqual(after[k][0], before[k][0])
++            self.assertEqual(after[k][2:15], before[k][2:15], k)  # scores, revision and updated_at
++        self.assertEqual(self.edition(key)[3], edition[3])  # cup_updated_at
++        self.assertEqual(self.run_record("openfootball", f"open-cups:{key}")[2], 0)
++
++
++class CupGuardTest(SnapshotDatabase):
++    KEY = "world-cup-history:1938"
++
++    def setUp(self):
++        super().setUp()
++        self.body = copy.deepcopy(EDITIONS[self.KEY])
++        self.assertEqual(self.read_cup(self.KEY, self.body, NOW), "ok")
++        self.before, self.stored = self.matches(self.KEY), self.edition(self.KEY)
++
++    def assertKept(self, outcome, code):
++        self.assertEqual(outcome, code)
++        self.assertEqual(self.matches(self.KEY), self.before)  # ids, scores, revisions, row versions
++        self.assertEqual(self.edition(self.KEY), self.stored)  # digest, cup_checked_at, cup_updated_at
++        record = self.run_record("openfootball", f"open-cups:{self.KEY}")
++        self.assertEqual(record[:2], ("error", code))
++
++    def test_19l_a_200_without_matches_keeps_the_edition(self):
++        self.assertKept(self.read_cup(self.KEY, dict(self.body, matches=[]), NOW + timedelta(days=8)), "SNAPSHOT_DROPS_RESULT")
++        detail = self.x("SELECT error_code, message FROM ops.parse_failures").fetchall()
++        self.assertEqual([d[0] for d in detail], ["SNAPSHOT_DROPS_RESULT"])
++        self.assertIn("open-cups:world-cup-history:1938", detail[0][1])
++
++    def test_19m_a_result_dropped_or_unplayed_keeps_the_edition(self):
++        dropped = dict(self.body, matches=[m for m in self.body["matches"] if not pair(m, "France", "Belgium")])
++        self.assertKept(self.read_cup(self.KEY, dropped, NOW + timedelta(days=8)), "SNAPSHOT_DROPS_RESULT")
++        unplayed = copy.deepcopy(self.body)
++        for m in unplayed["matches"]:
++            if pair(m, "France", "Belgium"):
++                del m["score"]
++        self.assertKept(self.read_cup(self.KEY, unplayed, NOW + timedelta(days=16)), "RESULT_DOWNGRADED")
++
++    def test_19g_a_malformed_score_keeps_the_edition(self):
++        broken = copy.deepcopy(self.body)
++        broken["matches"][1]["score"] = {"ft": [6, None]}
++        self.assertKept(self.read_cup(self.KEY, broken, NOW + timedelta(days=8)), "INVALID_SCORE")
++
++    def test_19n_a_complete_correction_is_accepted(self):
++        # Synthetic changes of the 1938 body: Hungary–Dutch East Indies corrected from 6–0 to 6–1, a
++        # match of two synthetic teams added, the canceled (never played) Sweden–Austria withdrawn.
++        corrected = copy.deepcopy(self.body)
++        for m in corrected["matches"]:
++            if pair(m, "Hungary", "Dutch East Indies"):
++                m["score"] = {"ft": [6, 1], "ht": [4, 0]}
++        corrected["matches"] = [m for m in corrected["matches"] if m.get("status") != "canceled"]
++        corrected["matches"].append({"round": "Synthetic", "date": "1938-06-20", "team1": "Synthetic A", "team2": "Synthetic B", "score": {"ft": [1, 0]}})
++        self.assertEqual(self.read_cup(self.KEY, corrected, NOW + timedelta(days=8)), "ok")
++        after = self.matches(self.KEY)
++        hungary = next(k for k in after if "|Hungary|Dutch East Indies|" in k)
++        self.assertEqual((after[hungary][3], after[hungary][4], after[hungary][13]), (6, 1, self.before[hungary][13] + 1))
++        self.assertFalse([k for k in after if "|Sweden|Austria|" in k])
++        self.assertTrue([k for k in after if "|Synthetic A|Synthetic B|" in k])
++        unchanged = [k for k in self.before if k in after and k != hungary]
++        self.assertEqual(len(unchanged), len(self.before) - 2)
++        for k in unchanged:
++            self.assertEqual(after[k][2:15], self.before[k][2:15], k)  # scores, revision, updated_at (positions may move)
++        self.assertEqual(self.run_record("openfootball", f"open-cups:{self.KEY}")[:3], ("ok", None, 3))
++
++    def test_19o_a_reviewed_retraction_alone_may_go(self):
++        from vega.sources import snapshot
++
++        france = next(k for k in self.before if "|France|Belgium|" in k)
++        without = dict(self.body, matches=[m for m in self.body["matches"] if not pair(m, "France", "Belgium") and not pair(m, "Sweden", "Cuba")])
++        with patch.dict(snapshot.RETRACTIONS, {("openfootball", france): "test: reviewed retraction"}):
++            # The unreviewed Sweden–Cuba keeps the edition whole.
++            self.assertKept(self.read_cup(self.KEY, without, NOW + timedelta(days=8)), "SNAPSHOT_DROPS_RESULT")
++            alone = dict(self.body, matches=[m for m in self.body["matches"] if not pair(m, "France", "Belgium")])
++            self.assertEqual(self.read_cup(self.KEY, alone, NOW + timedelta(days=16)), "ok")
++        after = self.matches(self.KEY)
++        self.assertNotIn(france, after)
++        self.assertEqual(set(after), set(self.before) - {france})
++
++
++# -- open-matchday --
++FOLDER, OTHER = "ENG_5_national-league", "SCO_3_league-one"
++RESULTS = ("date,home,away,ft_home,ft_away,ht_home,ht_away,home_shots,away_shots,home_corners,away_corners\n"
++           "2026-11-01,North FC,South FC,2,1,1,0,11,7,6,3\n")
++FIXTURES = "date,home,away,gw\n2026-11-29,South FC,North FC,16\n"
++
++
++def league(folder=FOLDER, **over):
++    return {"league": "National League", "folder": "data/" + folder, "results": 1, "fixtures": 1, "errors": [], **over}
++
++
++class OpenMatchdayGuardTest(SnapshotDatabase):
++    def read(self, leagues, files, at):
++        """One due read of the europe scope: its outcome, rows written and unmatched."""
++        def get(url, *, as_text=False):
++            if url.endswith("build_summary.json"):
++                return {"season": "2627", "generated_utc": "2026-11-17T07:19:26Z", "leagues": leagues}
++            name = url.removeprefix(open_matchday.RAW + "data/")
++            if name not in files:
++                raise SourceError("HTTP_404")
++            return files[name]
++
++        outcome = sources.run_due(self.db, get, at, names={"open_matchday"})[("open_matchday", "europe")]
++        return (outcome, *self.run_record("open_matchday", "europe")[2:])
++
++    @staticmethod
++    def files(folder=FOLDER, results=RESULTS, fixtures=FIXTURES):
++        out = {}
++        if results is not None:
++            out[f"{folder}/results_2627.csv"] = results
++        if fixtures is not None:
++            out[f"{folder}/fixtures_2627.csv"] = fixtures
++        return out
++
++    def state(self, folder=FOLDER):
++        return self.x(
++            """SELECT p.provider_key, m.id, m.status::text, m.home_score, m.away_score, m.home_score_ht, m.away_score_ht,
++                      m.revision, m.updated_at, m.xmin::text,
++                      (SELECT json_agg(json_build_array(s.team_id, s.period::text, s.total_shots, s.corners, s.xmin::text)
++                                       ORDER BY s.team_id, s.period) FROM core.team_match_stats s
++                       WHERE s.season_id = m.season_id AND s.match_id = m.id)
++               FROM core.matches m JOIN core.competition_seasons cs ON cs.id = m.competition_season_id
++               JOIN core.provider_ids p ON p.entity_type = 'match' AND p.entity_id = m.id
++               WHERE cs.cup_key = %s ORDER BY 1""", (f"open-matchday:{folder}:2026/2027",)).fetchall()
++
++    def stamps(self, folder=FOLDER):
++        return self.x("SELECT cup_checked_at, cup_updated_at FROM core.competition_seasons WHERE cup_key = %s",
++                      (f"open-matchday:{folder}:2026/2027",)).fetchone()
++
++    def failures(self):
++        return self.x("SELECT error_code, message FROM ops.parse_failures ORDER BY id").fetchall()
++
++    def setUp(self):
++        super().setUp()
++        self.assertEqual(self.read([league()], self.files(), NOW), ("ok", 2, 0))
++        self.before = self.state()
++        self.assertEqual([r[2:7] for r in self.before], [
++            ("finished", 2, 1, 1, 0),  # North FC–South FC, 1 November
++            ("not_started", None, None, None, None),  # South FC–North FC, 29 November
++        ])
++        self.assertEqual(len(self.before[0][10]), 2)  # the result's statistics, one row per side
++
++    def assertKept(self, outcome, code, folder=FOLDER):
++        self.assertEqual(outcome[0], "ok")
++        self.assertGreaterEqual(outcome[2], 1)  # unmatched
++        self.assertEqual(self.state(folder), self.before)
++        found = [f for f in self.failures() if f[0] == code]
++        self.assertTrue(found, self.failures())
++        self.assertIn(f"open-matchday:{folder}:2026/2027", found[-1][1])
++
++    def test_19p_a_fixture_with_the_key_of_a_result_is_that_result(self):
++        stale = FIXTURES + "2026-11-01,North FC,South FC,15\n"
++        outcome = self.read([league(fixtures=2)], self.files(fixtures=stale), NOW + timedelta(days=1))
++        self.assertEqual(outcome, ("ok", 2, 0))
++        self.assertEqual(self.state(), self.before)
++
++    def test_19q_an_incomplete_folder_keeps_its_edition(self):
++        header = RESULTS.splitlines()[0] + "\n"
++        cases = (
++            ("other headers", "INVALID_HEADER", [league()],
++             self.files(results="kickoff,home_team,away_team,home_score,away_score\n2026-11-01,North FC,South FC,2,1\n")),
++            ("a header-only file", "ROW_COUNT_MISMATCH", [league()], self.files(results=header)),
++            ("fewer rows than declared", "ROW_COUNT_MISMATCH", [league(results=2)], self.files()),
++            ("errors reported", "SOURCE_REPORTED_ERRORS", [league(errors=["football-data: timeout"])], self.files()),
++            ("boolean counts", "MANIFEST_INVALID", [league(results=True, fixtures=True)], self.files()),
++            # sources/repro/probe.py missing_manifest_parts: a manifest describing neither file.
++            ("neither file", "MANIFEST_INVALID", [league(results=False, fixtures=False)], self.files()),
++        )
++        for days, (name, code, leagues, files) in enumerate(cases, 1):
++            with self.subTest(name):
++                self.assertKept(self.read(leagues, files, NOW + timedelta(days=days)), code)
++
++    def test_19r_a_result_row_without_its_goals_keeps_the_edition(self):
++        for days, goals in enumerate((",", "2,", "2,x", "2,-1"), 1):
++            with self.subTest(goals=goals):
++                row = f"2026-11-01,North FC,South FC,{goals},1,0,11,7,6,3\n"
++                self.assertKept(self.read([league()], self.files(results=RESULTS.splitlines()[0] + "\n" + row), NOW + timedelta(days=days)),
++                                "INVALID_RESULT_ROW")
++
++    def test_19s_a_result_dropped_or_listed_as_a_fixture_keeps_the_edition(self):
++        other = RESULTS.splitlines()[0] + "\n2026-11-08,North FC,East FC,0,0,0,0,5,5,2,2\n"
++        self.assertKept(self.read([league()], self.files(results=other), NOW + timedelta(days=1)), "SNAPSHOT_DROPS_RESULT")
++        as_fixture = "date,home,away,gw\n2026-11-01,North FC,South FC,15\n2026-11-29,South FC,North FC,16\n"
++        self.assertKept(self.read([league(results=0, fixtures=2)], self.files(results=None, fixtures=as_fixture), NOW + timedelta(days=2)),
++                        "RESULT_DOWNGRADED")
++
++    def test_19t_one_rejected_folder_does_not_hold_back_another(self):
++        files = {**self.files(results="kickoff,home_team\n2026-11-01,North FC\n"), **self.files(OTHER, results=RESULTS.replace("North FC", "Elgin"))}
++        outcome = self.read([league(), league(OTHER, league="Scottish League One", fixtures=0)], files, NOW + timedelta(days=1))
++        self.assertEqual(outcome, ("ok", 1, 1))
++        self.assertEqual(self.state(), self.before)
++        self.assertEqual([r[2:5] for r in self.state(OTHER)], [("finished", 2, 1)])
++
++    def test_19u_the_same_files_read_again_change_nothing(self):
++        checked, updated = self.stamps()
++        self.assertEqual(self.read([league()], self.files(), NOW + timedelta(days=1)), ("ok", 2, 0))
++        self.assertEqual(self.state(), self.before)  # no update: revision, updated_at, row versions, statistics
++        self.assertEqual(self.failures(), [])
++        stamps = self.stamps()
++        self.assertGreater(stamps[0], checked)
++        self.assertEqual(stamps[1], updated)
++
++    def test_19v_a_corrected_score_or_statistic_is_a_change_of_its_match(self):
++        _, updated = self.stamps()
++        corrected = RESULTS.replace(",2,1,1,0,11,", ",2,2,1,0,11,")
++        self.assertEqual(self.read([league()], self.files(results=corrected), NOW + timedelta(days=1)), ("ok", 2, 0))
++        result, fixture = self.state()
++        self.assertEqual((result[2:5], result[7]), (("finished", 2, 2), self.before[0][7] + 1))
++        self.assertEqual(fixture, self.before[1])
++        self.assertGreater(self.stamps()[1], updated)
++        shots = corrected.replace(",11,7,", ",12,7,")
++        self.assertEqual(self.read([league()], self.files(results=shots), NOW + timedelta(days=2)), ("ok", 2, 0))
++        again = self.state()[0]
++        home = again[10][0]  # North FC (the first team written), the whole match
++        self.assertEqual((again[7], home[1], home[2]), (result[7] + 1, "all", 12))
++
++    def test_19w_a_fixture_no_longer_listed_is_removed(self):
++        self.assertEqual(self.read([league(fixtures=0)], self.files(fixtures=None), NOW + timedelta(days=1)), ("ok", 1, 0))
++        self.assertEqual(self.state(), self.before[:1])
++
++
++    # 22a, 22b (FAILURE_MODES.md §22, written before the code): a later file without a statistic keeps it; a
++    # stated value, 0 included, replaces it once.
++    def test_22a_missing_statistic_columns_or_cells_keep_the_stored_values(self):
++        _, updated = self.stamps()
++        without_columns = "date,home,away,ft_home,ft_away,ht_home,ht_away\n2026-11-01,North FC,South FC,2,1,1,0\n"
++        empty_cells = RESULTS.splitlines()[0] + "\n2026-11-01,North FC,South FC,2,1,1,0,,,,\n"
++        for days, (name, results) in enumerate((("no statistic columns", without_columns), ("empty cells", empty_cells)), 1):
++            with self.subTest(name):
++                self.assertEqual(self.read([league()], self.files(results=results), NOW + timedelta(days=days)), ("ok", 2, 0))
++                self.assertEqual(self.state(), self.before)  # ids, revision, updated_at, statistics and their row versions
++                self.assertEqual(self.stamps()[1], updated)
++                self.assertEqual(self.failures(), [])
++
++    def test_22b_a_stated_zero_replaces_the_stored_value_once(self):
++        zero = RESULTS.replace(",11,7,", ",0,7,")
++        self.assertEqual(self.read([league()], self.files(results=zero), NOW + timedelta(days=1)), ("ok", 2, 0))
++        result = self.state()[0]
++        self.assertEqual((result[7], result[10][0][1], result[10][0][2]), (self.before[0][7] + 1, "all", 0))
++        self.assertEqual(result[10][1][2], 7)  # the other side's stated value
++        self.assertEqual(self.read([league()], self.files(results=zero), NOW + timedelta(days=2)), ("ok", 2, 0))
++        self.assertEqual(self.state()[0], result)
++
++
++    def test_sparse_open_matchday_correction_keeps_other_fields_and_the_halftime_pair(self):
++        original = self.before[0]
++        match = original[1]
++        home, away = self.x("SELECT home_team_id, away_team_id FROM core.matches WHERE id=%s", (match,)).fetchone()
++        self.x("""UPDATE core.team_match_stats SET xg=1.25,passes=455
++                   WHERE season_id=2026 AND match_id=%s AND team_id=%s AND period='all'""", (match, home))
++
++        def extra_row():
++            self.x("""INSERT INTO core.team_match_stats(season_id,match_id,team_id,period,blocked_shots)
++                       VALUES (2026,%s,%s,'second_half',4) ON CONFLICT DO NOTHING""", (match, away))
++
++        def stats():
++            return self.x("""SELECT team_id,period::text,corners,blocked_shots,xg,passes,xmin::text
++                              FROM core.team_match_stats WHERE season_id=2026 AND match_id=%s ORDER BY team_id,period""",
++                          (match,)).fetchall()
++
++        extra_row()
++        before = stats()
++        source = "date,home,away,ft_home,ft_away,home_corners\n2026-11-01,North FC,South FC,2,1,0\n"
++        self.assertEqual(self.read([league()], self.files(results=source), NOW + timedelta(days=1)), ("ok", 2, 0))
++        state = self.state()[0]
++        self.assertEqual(state[:5], original[:5])
++        self.assertEqual(state[7], original[7] + 1)
++        with self.subTest("score at halftime"):
++            self.assertEqual(state[5:7], (1, 0))
++        with self.subTest("same key outside columns"):
++            self.assertEqual(stats()[0][:6], (home, "all", 0, None, 1.25, 455))
++        with self.subTest("independent period"):
++            self.assertEqual(stats()[-1], before[-1])
++        extra_row()
++        before, stamps = stats(), self.stamps()
++        no_halftime_or_stats = "date,home,away,ft_home,ft_away,ht_home\n2026-11-01,North FC,South FC,2,1,1\n"
++        self.assertEqual(self.read([league()], self.files(results=no_halftime_or_stats), NOW + timedelta(days=2)), ("ok", 2, 0))
++        self.assertEqual((self.state()[0], stats(), self.stamps()[1]), (state, before, stamps[1]))
++
++    def test_attested_final_accepts_late_stats_without_moving_the_match(self):
++        folder = "ENG_6_national-league-north"
++        header = "date,home,away,ft_home,ft_away"
++        row = "2026-08-31,AFC Telford,Bedford,0,1"
++        plain = f"{header}\n{row}\n"
++        enriched = f"{header},ht_home,ht_away,home_corners\n{row},0,1,4\n"
++        scope = [league(folder, results=1, fixtures=0)]
++        def read_result(day, body):
++            self.assertEqual(self.read(scope, self.files(folder, results=body, fixtures=None), NOW + timedelta(days=day)),
++                             ("ok", 1, 0))
++            state = self.state(folder)[0]
++            position = self.x("SELECT archive_position FROM core.matches WHERE id=%s", (state[1],)).fetchone()[0]
++            return state, position
++
++        original, before_position = read_result(1, plain)
++        state, position = read_result(2, enriched)
++        self.assertEqual((state[0:5], position), (original[0:5], before_position))
++        self.assertEqual(state[5:8], (0, 1, original[7] + 1))
++        self.assertEqual(state[10][0][1:4], ["all", None, 4])
++        self.assertEqual(read_result(3, plain), (state, position))
++
++    def test_a_qualified_league_keeps_only_the_proven_rolling_prefix(self):
++        folder = "ENG_6_national-league-north"
++        first_day = datetime(2026, 9, 5, tzinfo=timezone.utc)
++        past = "2026-08-31,First Home,First Away,1,0"
++        overlap = [
++            f"{(first_day + timedelta(days=i // 10)).date()},Home {i},Away {i},1,0"
++            for i in range(60)
++        ]
++        new = "2026-11-18,New Home,New Away,0,1"
++
++        def read_day(rows, step):
++            body = "date,home,away,ft_home,ft_away\n" + "\n".join(rows) + "\n"
++            return self.read([league(folder, results=len(rows), fixtures=0)],
++                             self.files(folder, results=body, fixtures=None), NOW + timedelta(days=step))
++
++        self.assertEqual(read_day([past, *overlap], 1), ("ok", 61, 0))
++        first = self.state(folder)[0]
++        self.assertIn("2026-08-31", first[0])
++        self.assertEqual(read_day([*overlap, new], 2), ("ok", 62, 0))
++        accepted = self.state(folder)
++        self.assertEqual(accepted[0], first)
++        self.assertEqual(len(accepted), 62)
++        self.assertEqual(read_day([*overlap, new], 3), ("ok", 62, 0))
++        self.assertEqual(self.state(folder), accepted)
++        # Missing the first of several matches on the boundary day is an interior omission.
++        for step, invalid in ((4, [*overlap[1:], new]), (5, [*overlap[-3:], new])):
++            with self.subTest(step=step):
++                self.assertEqual(read_day(invalid, step), ("ok", 0, 1))
++                self.assertEqual(self.failures()[-1][0], "SNAPSHOT_DROPS_RESULT")
++                self.assertEqual(self.state(folder), accepted)
++
++
++class CupApiScoreTest(SnapshotDatabase):
++    """22c: the 90-minute score is never invented: source -> cups.save -> PostgreSQL -> the real /api/cups/edition."""
++
++    def edition_scores(self, matches):
 +        with self.db.transaction():
-+            x("DELETE FROM core.player_transfers WHERE player_id = 1403 AND source = 'other'")
-+        self.expect("another source's row deletes as before", [r["source"] for r in self.transfers(1403)], ["transfermarkt"])
++            cups.save(self.db, "open-cups", "euro", "2024", {"name": "Scores", "matches": matches}, NOW)
++        competition = self.x("SELECT competition_id FROM api.cup_editions WHERE competition = 'euro' AND season = '2024'").fetchone()[0]
++        js = """import {createReader} from './src/db.mjs';import {createHandler} from './src/handler.mjs';
++const [dsn,id]=process.argv.slice(1);const r=createReader(dsn,{role:'vega_read'});const h=createHandler({read:r.read});
++const res=await h(new Request('https://local/api/cups/edition?competition='+id+'&season=2024'));
++console.log(JSON.stringify({status:res.status,body:await res.json()}));await r.end();"""
++        done = subprocess.run([NODE, "--input-type=module", "-e", js, DSN, str(competition)], cwd=ROOT / "api", capture_output=True, text=True, timeout=120)
++        self.assertEqual(done.returncode, 0, done.stderr)
++        out = json.loads(done.stdout.strip().splitlines()[-1])
++        self.assertEqual(out["status"], 200)
++        return {(m["team1"], m["team2"]): m.get("score") for m in out["body"]["matches"]}
++
++    def test_22c_extra_time_without_regulation_has_no_ft(self):
++        scores = self.edition_scores([
++            {"date": "2024-07-01", "team1": "One", "team2": "Two", "score": {"et": [2, 1]}},
++            {"date": "2024-07-02", "team1": "Three", "team2": "Four", "score": {"ft": [1, 1], "et": [2, 1]}},
++            {"date": "2024-07-03", "team1": "Five", "team2": "Six", "score": {"ft": [0, 0], "et": [0, 0], "p": [4, 3]}},
++            {"date": "2024-07-04", "team1": "Seven", "team2": "Eight", "score": {"ft": [3, 0]}},
++        ])
++        self.assertEqual(scores[("One", "Two")], {"et": [2, 1]})
++        self.assertEqual(scores[("Three", "Four")], {"ft": [1, 1], "et": [2, 1]})
++        self.assertEqual(scores[("Five", "Six")], {"ft": [0, 0], "et": [0, 0], "p": [4, 3]})
++        self.assertEqual(scores[("Seven", "Eight")], {"ft": [3, 0]})
++
++
++class CupCatalogueLogoTest(SnapshotDatabase):
++    """C6 (FAILURE_MODES.md §22, written before the code): a cup-only competition's verified logo reaches the catalogue
++    by the edition's own competition (its FK), additively: source -> open_matchday.save -> PostgreSQL -> the real API."""
++
++    def api(self, path):
++        js = """import {createReader} from './src/db.mjs';import {createHandler} from './src/handler.mjs';
++const [dsn,path]=process.argv.slice(1);const r=createReader(dsn,{role:'vega_read'});const h=createHandler({read:r.read});
++const res=await h(new Request('https://local'+path));console.log(JSON.stringify({status:res.status,body:await res.json()}));await r.end();"""
++        done = subprocess.run([NODE, "--input-type=module", "-e", js, DSN, path], cwd=ROOT / "api", capture_output=True, text=True, timeout=120)
++        self.assertEqual(done.returncode, 0, done.stderr)
++        return json.loads(done.stdout.strip().splitlines()[-1])
++
++    def test_the_catalogue_carries_the_competition_logo(self):
++        results = open_matchday.rows("date,home,away,ft_home,ft_away\n2026-08-01,Brickfield,Llanuwchllyn,5,1\n")
 +        with self.db.transaction():
-+            x("SET LOCAL vega.allow_history_delete = 'on'")
-+            x("DELETE FROM core.player_contracts WHERE player_id = 1403 AND team_id = 11")
-+        self.expect("an authorized deletion goes through", [c["team_id"] for c in self.contracts(1403)], [22])
++            open_matchday.save(self.db, "WAL_2_cymru-north", "Cymru North", "2026/2027", results, [], NOW)
++        reference = "https://media.vega.invalid/sha256/" + "0b2958916b260998034409a86e6ede3879dd706020e0371df9b9e03ddb826022" + ".png"
++        logo = self.x("INSERT INTO core.assets(kind, source_url, s3_key) VALUES ('logo', %s, 'sources/v2/images/x.png') RETURNING id", (reference,)).fetchone()[0]
++        competition = self.x("SELECT competition_id FROM core.competition_seasons WHERE cup_key LIKE 'open-matchday:WAL_2_cymru-north:%'").fetchone()[0]
++        self.x("UPDATE core.competitions SET logo_asset_id = %s WHERE id = %s", (logo, competition))
++        index = self.api("/api/cup-index?kind=supplemental")
++        self.assertEqual(index["status"], 200)
++        [entry] = index["body"]["competitions"]
++        self.assertEqual((entry["folder"], entry["image_url"]), ("WAL_2_cymru-north", reference))
++        cups = self.api("/api/cups/index")["body"]["cups"]
++        self.assertEqual([c.get("imageUrl") for c in cups if c["key"] == "WAL_2_cymru-north"], [reference])
++        # No logo: the field is absent, the body otherwise as before.
++        self.x("UPDATE core.competitions SET logo_asset_id = NULL WHERE id = %s", (competition,))
++        self.assertNotIn("image_url", self.api("/api/cup-index?kind=supplemental")["body"]["competitions"][0])
++
++
++class CupLogosTest(SnapshotDatabase):
++    """19.4 L1–L6: reviewed competition logos through curated.cup_logos."""
++
++    LOGOS = json.loads((REPO / "dashboard/shared/cup-logos.json").read_text())["logos"]
++
++    def competition(self, provider, key, name, logo=None):
++        comp = self.x("INSERT INTO core.competitions(name, logo_asset_id) VALUES (%s, %s) RETURNING id", (name, logo)).fetchone()[0]
++        self.x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('competition', %s, %s, %s)",
++               (provider, key, comp))
++        return comp
++
++    def logo(self, comp):
++        return self.x("""SELECT a.id, a.kind::text, a.source_url, a.author FROM core.competitions c
++                         LEFT JOIN core.assets a ON a.id = c.logo_asset_id WHERE c.id = %s""", (comp,)).fetchone()
++
++    def test_L1_to_L6(self):
++        own = self.x("INSERT INTO core.assets(kind, source_url) VALUES ('logo', 'https://cdn.pitchapi.dev/l/world-cup.png') RETURNING id").fetchone()[0]
++        ids = {
++            "aut": self.competition("vega", "cup:open-matchday:AUT_CUP_ofb-cup", "OFB Cup"),
++            "aut_archive": self.competition("vega", "cup:open-cups:austria-cup-archive", "austria-cup-archive"),
++            "dfb": self.competition("vega", "cup:open-matchday:GER_CUP_dfb-pokal", "DFB-Pokal"),
++            "dfb_archive": self.competition("vega", "cup:open-cups:germany-cup-archive", "germany-cup-archive"),
++            "dfb_openligadb": self.competition("vega", "cup:openligadb:germany-cup", "germany-cup"),
++            "unl": self.competition("vega", "cup:openligadb:nations-league", "nations-league"),
++            "unl_results": self.competition("vega", "cup:nations-results:nations-league", "nations-league"),
++            "world_cup": self.competition("pitchapi", "l_1XLtP0", "World Cup"),
++        }
++        self.x("""INSERT INTO core.family_artwork_qualifications(competition_id,asset_id,certificate,manifest_sha256)
++                  VALUES (%s,%s,'{"asset_role":"competition_logo","competition_identity_only":true}',repeat('a',64))""",
++               (ids["world_cup"], own))
++        self.x("UPDATE core.competitions SET logo_asset_id=%s WHERE id=%s", (own, ids["world_cup"]))
++        with self.db.transaction():
++            curated.cup_logos(self.db)
++        aut = self.logo(ids["aut"])
++        self.assertEqual(aut[1:], ("logo", self.LOGOS["open-matchday:AUT_CUP_ofb-cup"]["imageUrl"], "SportScore"))
++        self.assertEqual(self.logo(ids["aut_archive"])[0], aut[0])
++        self.assertEqual(self.logo(ids["dfb"])[2], self.LOGOS["open-matchday:GER_CUP_dfb-pokal"]["imageUrl"])
++        self.assertEqual({self.logo(ids[k])[0] for k in ("dfb", "dfb_archive", "dfb_openligadb")}, {self.logo(ids["dfb"])[0]})
++        self.assertEqual(self.logo(ids["unl_results"])[0], self.logo(ids["unl"])[0])
++        self.assertEqual(self.logo(ids["unl"])[2], self.LOGOS["openligadb:nations-league"]["imageUrl"])
++        self.assertEqual(self.logo(ids["world_cup"])[0], own)  # L4
++        # L3: the competitions of the other keys are not in this base: nothing created for them.
++        self.assertEqual(self.x("SELECT count(*) FROM core.competitions").fetchone()[0], len(ids))
++        # L6: a second pass writes nothing.
++        assets = self.x("SELECT count(*) FROM core.assets").fetchone()[0]
++        rows = self.x("SELECT id, logo_asset_id, updated_at, xmin::text FROM core.competitions ORDER BY id").fetchall()
++        with self.db.transaction():
++            curated.cup_logos(self.db)
++        self.assertEqual(self.x("SELECT count(*) FROM core.assets").fetchone()[0], assets)
++        self.assertEqual(self.x("SELECT id, logo_asset_id, updated_at, xmin::text FROM core.competitions ORDER BY id").fetchall(), rows)
++
++
++class CupLogoKeysTest(unittest.TestCase):
++    def test_L5_every_logo_key_and_alias_is_named_by_a_source_family_or_the_site(self):
++        logos = json.loads((REPO / "dashboard/shared/cup-logos.json").read_text())["logos"]
++        for key in logos:
++            self.assertTrue(key.startswith("l_") or key.split(":", 1)[0] in curated.CUP_FAMILY, key)
++        archives = dict(re.findall(r'"([A-Z]{3}_CUP_[a-z0-9-]+)": \{ key: "([a-z-]+)"',
++                                   (REPO / "dashboard/frontend/src/services/cup-archives.js").read_text()))
++        self.assertEqual(sorted(archives.values()), sorted(cups.NATIONAL_CUP_ARCHIVES))
++        site = {(f"open-matchday:{folder}", f"cup:open-cups:{key}") for folder, key in archives.items()}
++        site |= {("open-matchday:GER_CUP_dfb-pokal", "cup:openligadb:germany-cup"),
++                 ("openligadb:nations-league", "cup:nations-results:nations-league")}
++        aliases = {(key, also) for key, targets in curated.CUP_LOGO_ALSO.items() for also in targets}
++        self.assertEqual(aliases, site)
++        self.assertTrue(all(key in logos for key, _ in aliases))
 +
 +
 +if __name__ == "__main__":
 +    unittest.main()
-diff --git a/backend/vega/archive_attestations.py b/backend/vega/archive_attestations.py
++
++
++class CupPublishedPhasesTest(CupCatalogueLogoTest):
++    def edition_response(self, competition, season):
++        [public] = self.x("SELECT competition_id FROM api.cup_editions WHERE competition=%s AND season=%s",
++                          (competition, season)).fetchone()
++        return self.api(f"/api/cups/edition?competition={public}&season={season}")["body"]
++
++    def test_verified_award_and_source_loss(self):
++        text = (ROOT / "tests/fixtures/openfootball/france-2024.txt").read_text()
++        key = "france-cup:2024/2025"
++        self.assertEqual(self.read_cup(key, text.replace("[awarded]", ""), NOW), "ok")
++        match = lambda: next(m for m in self.edition_response("france-cup", "2024/2025")["matches"]
++                             if m["team1"] == "Tours FC" and m["team2"] == "FC Lorient")
++        self.assertEqual(match()["score"], {"ft": [0, 3]})
++        self.assertEqual(self.read_cup(key, text, NOW + timedelta(days=1)), "ok")
++        approved = match()
++        self.assertEqual((approved["status"], approved["awardScore"]), ("awarded", [0, 3]))
++        self.assertIn("fff.fr", approved["awardReason"]["source"])
++        self.assertNotIn("score", approved)
++        before = self.matches(key)
++        self.assertEqual(self.read_cup(key, text.replace("[awarded]", ""), NOW + timedelta(days=2)), "PERIODS_CONFLICT")
++        self.assertEqual(self.matches(key), before)
++        self.assertEqual(match(), approved)
++
++    def test_club_world_cup_22_halves_and_edition_notification(self):
++        from vega.worker import publish
++
++        count = 0
++        for year in (2021, 2022, 2023):
++            key = f"club-world-cup:{year}"
++            text = (ROOT / f"tests/fixtures/openfootball/openfootball-{year}.txt").read_text()
++            self.assertEqual(self.read_cup(key, text, NOW), "ok")
++            matches = self.edition_response("club-world-cup", str(year))["matches"]
++            count += len(matches)
++            self.assertTrue(all(m["score"].get("ht") is not None for m in matches))
++            if year == 2021:
++                self.assertEqual(matches[-1]["score"], {"ft": [1, 1], "ht": [0, 0], "et": [2, 1]})
++            generation = publish(self.db, NOW, force=True)
++            self.assertIsNotNone(generation)
++            old = self.matches(key)
++            self.assertEqual(self.read_cup(key, text, NOW + timedelta(days=1)), "ok")
++            self.assertIsNone(publish(self.db, NOW + timedelta(days=1), force=True))
++            self.assertEqual(self.matches(key), old)
++        self.assertEqual(count, 22)
+diff --git a/backend/tests/test_sources.py b/backend/tests/test_sources.py
+index 584a53b962..4769290563 100644
+--- a/backend/tests/test_sources.py
++++ b/backend/tests/test_sources.py
+@@ -97,20 +97,19 @@ class PureTest(unittest.TestCase):
+             {"round": "Semi-finals", "date": "1998-07-07", "team1": "Brazil", "team2": "Netherlands", "score": {"p": [4, 2], "et": [1, 1], "ft": [1, 1]}},
+             {"round": "Matchday 1", "date": "1998-06-10", "team1": "Brazil", "team2": "Scotland", "score": {"ft": [2, 1]}},
+             {"round": "Matchday 1", "date": "2028-06-09", "team1": "England", "team2": "A2"},
+-            # A pair that is no score: one number, a string, a negative, a boolean, three numbers.
+-            {"round": "Matchday 1", "date": "1998-06-11", "team1": "A", "team2": "B", "score": [1]},
+-            {"round": "Matchday 1", "date": "1998-06-11", "team1": "C", "team2": "D", "score": ["1", 2]},
+-            {"round": "Matchday 1", "date": "1998-06-11", "team1": "E", "team2": "F", "score": [-1, 2]},
+-            {"round": "Matchday 1", "date": "1998-06-11", "team1": "G", "team2": "H", "score": [True, 2]},
+-            {"round": "Matchday 1", "date": "1998-06-11", "team1": "I", "team2": "J", "score": [1, 2, 3]},
+         ]}
+         rows = [row for _, row in cups.match_rows("open-cups", "world-cup-history", "1998", body)]
+         read = [(r["status"], r["home_score"], r["away_score"], r["home_score_90"], r["home_score_et"], r["home_penalty_score"]) for r in rows]
+         self.assertEqual(read[:4], [("finished", 0, 3, None, None, None), ("finished", 1, 1, 1, 1, 4),
+                                     ("finished", 2, 1, None, None, None), ("not_started", None, None, None, None, None)])
+-        self.assertEqual(set(read[4:]), {("not_started", None, None, None, None, None)})
+-        # The other cup sources' readers have not changed: their editions are not read again.
+-        self.assertEqual(set(cups.READER), {"open-cups"})
++        # A pair that is no score (one number, a string, a negative, a boolean, three numbers) is no unplayed match:
++        # the edition is not written (FAILURE_MODES.md §19, 19g).
++        for score in ([1], ["1", 2], [-1, 2], [True, 2], [1, 2, 3]):
++            with self.subTest(score=score):
++                with self.assertRaises(SourceError) as caught:
++                    cups.match_rows("open-cups", "world-cup-history", "1998", {"matches": [
++                        {"round": "Matchday 1", "date": "1998-06-11", "team1": "A", "team2": "B", "score": score}]})
++                self.assertEqual(caught.exception.code, "INVALID_SCORE")
+ 
+     def test_curated_aliases_match_the_site(self):
+         # dashboard/shared/player-aliases.js: `const ALIASES = Object.freeze({ key: Object.freeze([...]) })`.
+@@ -424,6 +423,13 @@ class UefaTest(unittest.TestCase):
+         x("""INSERT INTO core.teams(id, name, short_name, country_code) VALUES (30, 'Paris Saint-Germain', 'PSG', 'FRA'),
+              (31, 'Olympique de Marseille', 'Marseille', 'FRA'), (32, 'AS Monaco', NULL, 'FRA')""")
+         x("INSERT INTO core.team_seasons(team_id, competition_season_id) SELECT id, 70 FROM core.teams WHERE id IN (30, 31, 32)")
++        # The edition's own matches (FAILURE_MODES_SPORTSCORE.md §4): a table of 12 played a club is
++        # this edition's only if it has kicked off at least 8 a club (rule 11); here 8 each.
++        for n in range(12):
++            home, away = [(30, 31), (31, 32), (32, 30)][n % 3]
++            x("""INSERT INTO core.matches(competition_season_id, season_id, source, status, kickoff_at, home_team_id, away_team_id,
++                   home_score, away_score) VALUES (70, 2025, 'pitchapi', 'finished', %s, %s, %s, 1, 0)""",
++              (NOW - timedelta(days=n + 1), home, away))
+         table = [{"team": "Paris Saint Germain", "pos": 1, "p": 12, "w": 9, "d": 2, "l": 1, "gf": 30, "ga": 8, "gd": 22, "pts": 29},
+                  {"team": "Marseille", "pos": 2, "p": 12, "w": 8, "d": 2, "l": 2, "gf": 25, "ga": 12, "gd": 13, "pts": 26},
+                  {"team": "Monaco FC", "pos": 3, "p": 12, "w": 7, "d": 3, "l": 2, "gf": 20, "ga": 11, "gd": 9, "pts": 24}]
+@@ -455,12 +461,15 @@ class UefaTest(unittest.TestCase):
+         with self.db.transaction():
+             self.assertEqual(sportscore.run(self.db, get, "standings:l_4WFCIZ", NOW), (0, 0))
+         self.assertEqual(len(calls), 2)
+-        # A table naming clubs of another season: nothing official is kept.
++        # A table naming clubs the edition does not hold is refused and the accepted table stays
++        # (VI-29, FAILURE_MODES_SPORTSCORE.md §4: it used to be deleted, the version raised, "ok").
+         table[1]["team"], table[2]["team"] = "Paris FC", "Le Havre"
+-        with self.db.transaction():
+-            self.assertEqual(sportscore.run(self.db, get, "standings:l_3FJFUl", NOW), (0, 2))
+-        self.assertEqual(standings(), [])
+-        self.assertGreater(version(), published)
++        with self.assertRaises(SourceError) as refused:
++            with self.db.transaction():
++                sportscore.run(self.db, get, "standings:l_3FJFUl", NOW)
++        self.assertEqual(refused.exception.code, "UNMATCHED_TEAMS")
++        self.assertEqual(standings(), [(30, 1, 29), (31, 2, 26), (32, 3, 24)])
++        self.assertEqual(version(), published)
+         payload["competition_slug"] = "other"
+         with self.assertRaises(SourceError):
+             sportscore.run(self.db, get, "standings:l_3FJFUl", NOW)
+diff --git a/backend/tests/test_sportscore_standings.py b/backend/tests/test_sportscore_standings.py
 new file mode 100644
-index 0000000000..103d6c73ef
+index 0000000000..1362229499
 --- /dev/null
-+++ b/backend/vega/archive_attestations.py
-@@ -0,0 +1,227 @@
-+"""Locked archive amendments for the exact evidence ledgers of VI-27."""
-+from collections import defaultdict
-+from hashlib import sha256
-+import json
++++ b/backend/tests/test_sportscore_standings.py
+@@ -0,0 +1,75 @@
++"""SportScore official standings through sources.run_due, PostgreSQL and api.standing_rows:
++the cases of docs/calculs/09-audit-2026-11/FAILURE_MODES_SPORTSCORE.md §3 (sportscore_cases.py).
++The widget answers from memory; the end-to-end replay of the same cases over HTTPS and the read
++API is the VI-27 track's script."""
++
++import os
 +from pathlib import Path
++import sys
++import unittest
++from urllib.parse import urlparse
 +
-+from psycopg.types.json import Jsonb
++ROOT = Path(__file__).resolve().parents[1]
++sys.path.insert(0, str(ROOT))
++sys.path.insert(0, str(ROOT / "tests"))
++from vega import sources
++from vega.sources import SourceError, sportscore
++from sportscore_cases import CASES
++import sportscore_replay as replay
 +
-+BUNDESLIGA_PATH = Path(__file__).with_name("archive_bundesliga.json")
-+SCOTLAND_PATH = Path(__file__).with_name("archive_scotland.json")
-+LEDGER = json.loads(BUNDESLIGA_PATH.read_bytes())
-+SCOTLAND = json.loads(SCOTLAND_PATH.read_bytes())
-+SEASONS = defaultdict(list)
-+for case in LEDGER["cases"]:
-+    SEASONS[case["official"]["season"]].append(case)
-+
-+
-+def observed_inputs(inputs):
-+    return {
-+        "bundesliga": all(inputs.get(path) == digest for path, digest in LEDGER["inputs"].items()),
-+        "scotland": all(inputs.get(path) == digest for path, digest in SCOTLAND["input"].items()),
-+    }
-+
-+
-+def _digest(case):
-+    return sha256(json.dumps(case, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
++try:
++    import psycopg
++except ImportError:
++    psycopg = None
++DSN = os.environ.get("VEGA_V2_SOURCES_TEST_DSN")
 +
 +
-+def prepare_scotland(conn, loader, season, matches, input_approved):
-+    source = {m["key"]: m for m in matches if m["key"].startswith(f"r:worldclub/scotland/{season}:")}
-+    cases = [c for c in SCOTLAND["cases"] if c["match"]["key"] in source]
-+    out = []
-+    for case in cases:
-+        native = case["match"]
-+        key, digest = native["key"], _digest(case)
-+        old = conn.execute("SELECT id FROM core.matches WHERE season_id=%s AND archive_key=%s", (season,key)).fetchone()
-+        r = loader.bind(season, [old[0]])[old[0]] if old else None
-+        edition = conn.execute("SELECT to_jsonb(cs) FROM core.competition_seasons cs WHERE id=%s",
-+                               (r["row"]["competition_season_id"],)).fetchone()[0] if r else None
-+        round_id = r["row"]["round_id"] if r else None
-+        stage = conn.execute("SELECT to_jsonb(r) FROM core.rounds r WHERE id=%s", (round_id,)).fetchone() if round_id else None
-+        alias = conn.execute("SELECT to_jsonb(a) FROM core.archive_match_attestations a WHERE season_id=%s AND canonical_key=%s",
-+                             (season,key)).fetchone()
-+        verified_score = {**native, "score":case["new_score"]}
-+        reason = case.get("held")
-+        if not reason and (not input_approved or source.get(key) != native):
-+            reason = "attestation_inputs_changed"
-+        if not reason and alias and (not r or alias[0]["proof_sha256"] != digest
-+                                    or alias[0]["match_id"] != r["row"]["id"]
-+                                    or not _matches_native(r["row"], verified_score, case["new_date"], edition)):
-+            reason = "attested_result_changed"
-+        if not reason and r and not alias and (r["events"] or r["dependents"]
-+                                              or not _matches_native(r["row"], native, case["prior_date"], edition)):
-+            reason = "attested_score_preimage_changed"
-+        locked = {"proof":case, "sha256":digest, "result":r, "origin":None,
-+                  "alias":alias and alias[0], "edition":edition, "round":stage and stage[0],
-+                  "class":"held" if reason else "unchanged" if alias else "change" if r else "new"}
-+        if reason:
-+            locked["reason"] = reason
-+        out.append(locked)
-+    return out
++@unittest.skipUnless(DSN and psycopg, "requires disposable local sources DB and psycopg")
++class SportScoreStandingsTest(unittest.TestCase):
++    @classmethod
++    def setUpClass(cls):
++        from vega.store import Store, connect_local, migrate
++
++        target = urlparse(DSN)
++        if target.hostname not in ("localhost", "127.0.0.1", "::1") or target.path != "/vega_v2_sources_test":
++            raise RuntimeError("dedicated local sources DB required")
++        cls.db = connect_local(DSN)
++        cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
++        migrate(cls.db)
++        with cls.db.transaction():
++            replay.build(cls.db, Store(cls.db))
++
++    @classmethod
++    def tearDownClass(cls):
++        cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
++        cls.db.close()
++
++    def test_every_case(self):
++        for index, case in enumerate(CASES, 1):
++            flipped = False
++            for number, step in enumerate(case["steps"]):
++                with self.subTest(case=case["id"], step=number, note=case["note"]):
++                    for event in step["before"]:
++                        replay.apply(self.db, index, event)
++                        flipped |= event[0] == "flip"
++
++                    def get(url, body=step["body"]):
++                        answer = replay.widget(body, replay.slug_of(url))
++                        if isinstance(answer, int):
++                            raise SourceError(f"HTTP_{answer}")
++                        return answer
++
++                    code = replay.play(sources, sportscore, self.db, case, step, get)
++                    seen = replay.observe(self.db, index, case, code, flipped)
++                    self.assertEqual(replay.compare(step["expect"], seen), {})
++        # A refusal names what it refused, for whoever reads ops.parse_failures (S4).
++        rows = self.db.execute(
++            "SELECT error_code, message FROM ops.parse_failures WHERE message LIKE %s", ("sportscore:standings:l_0ALvwF:%",)
++        ).fetchall()
++        self.assertEqual([r[0] for r in rows], ["UNMATCHED_TEAMS"])
++        self.assertIn("Ghost Wanderers", rows[0][1])
++        self.assertIn("Harbour United", rows[0][1])
 +
 +
-+def _event_values(event, columns):
-+    return tuple(event[c] for c in columns)
++if __name__ == "__main__":
++    unittest.main()
+diff --git a/backend/tests/test_transfermarkt.py b/backend/tests/test_transfermarkt.py
+index 9cfb552490..db2334275a 100644
+--- a/backend/tests/test_transfermarkt.py
++++ b/backend/tests/test_transfermarkt.py
+@@ -70,8 +70,10 @@ class PureTest(unittest.TestCase):
+             {"id": 3, "transferSource": {"clubId": 1}, "transferDestination": {"clubId": 2}, "typeDetails": {"type": "ACTIVE_LOAN_TRANSFER"},
+              "details": {"date": "2015-01-01", "isPending": True}},
+         ]}})
++        # A free transfer states a fee of 0, an observed zero; it read None before VI-31, which kept a
++        # correction to a free transfer from applying (FAILURE_MODES.md §20, case 20l).
+         self.assertEqual([(t["key"], t["kind"], t["fee"], t["from"], t["to"], t["pending"]) for t in transfers],
+-                         [("1", "transfer", 180000000, "3524", "583", False), ("2", "free", None, "583", "418", False), ("3", "loan", None, "1", "2", True)])
++                         [("1", "transfer", 180000000, "3524", "583", False), ("2", "free", 0, "583", "418", False), ("3", "loan", None, "1", "2", True)])
+         self.assertEqual(tm.parse_transfers(None), [])
+         injuries = tm.parse_injuries({"injuries": [
+             {"seasonId": 2025, "name": "Hamstring injury", "start": "2026-03-01", "end": "2026-03-20", "missedGamesCount": 4},
+@@ -281,6 +283,77 @@ class ReaderTest(unittest.TestCase):
+         finally:
+             self.db.execute("DELETE FROM ops.transfermarkt_reads WHERE provider_key LIKE '7700%'")
+ 
++    def test_due_squad_profiles_gain_priority_without_resetting_the_queue(self):
++        x = self.db.execute
++        with self.db.transaction(force_rollback=True):
++            now = x("SELECT now()").fetchone()[0]
++            due, later = now - timedelta(hours=1), now + timedelta(hours=6)
++            calls = []
 +
++            def fetch(path, params):
++                keys = [value for name, value in params if name == "ids[]"]
++                calls.append((path, keys))
++                return 200, {}, body([player(key, f"Profile {key}", None) for key in keys])
 +
-+def _matches_native(row, source, day, edition):
-+    return (row["status"] == "finished" and row["match_date"] == day and edition["archive_key"] == source["competitionId"]
-+            and [row["home_score"], row["away_score"]] == source["score"]
-+            and [row["home_team_name"], row["away_team_name"]] == [source["team1"], source["team2"]]
-+            and row["home_team_id"] is not None and row["away_team_id"] is not None)
++            reader = tm.Reader(self.db, fetch, interval=0, jitter=0, clock=lambda: now, log=lambda *a, **k: None)
++            reader.plan()
++            x("UPDATE ops.transfermarkt_reads SET next_due_at=%s", (later,))
++            x("""INSERT INTO core.provider_clubs(provider,provider_key,name,read_on)
++                 VALUES ('transfermarkt','35123','Squad contrôle',current_date)""")
++            for key, years in {
++                "35101": (2026, 2025), "35102": (2026,), "35103": (2025,), "35104": (2026,),
++                "35105": (2026,), "35106": (2026,), "35107": (2026,), "35108": (2024,),
++            }.items():
++                for year in years:
++                    x("""INSERT INTO core.provider_squads(provider,club_key,season_year,player_key,read_on)
++                         VALUES ('transfermarkt','35123',%s,%s,current_date)""", (year, key))
++            x("""INSERT INTO core.provider_players(provider,provider_key,name,read_on)
++                 VALUES ('transfermarkt','35107','Fiche existante',current_date)""")
++            for row in (
++                ("profile", "35101", 3, due, None, 0, None, None, 0),
++                ("profile", "35103", 1, due, None, 0, None, None, 0),
++                ("profile", "35104", 6, later, None, 3, 500, "HTTP_500", 0),
++                ("profile", "35105", 9, later, due, 0, 200, None, 1),
++                ("profile", "35106", 9, later, due, 1, 404, "NOT_FOUND", 0),
++                ("profile", "35107", 9, later, None, 0, None, None, 0),
++                ("profile", "35108", 9, later, None, 0, None, None, 0),
++                ("transfers", "35101", 1, due, None, 0, None, None, 0),
++                ("values", "35101", 4, later, None, 1, 503, "HTTP_503", 0),
++                ("injuries", "35101", 8, later, None, 0, None, None, 0),
++            ):
++                x("INSERT INTO ops.transfermarkt_reads VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)", row)
 +
++            def rows():
++                return {(kind, key): (data, version) for kind, key, data, version in x(
++                    "SELECT kind,provider_key,to_jsonb(r),xmin::text FROM ops.transfermarkt_reads r"
++                    " WHERE provider_key LIKE '3510%' ORDER BY kind,provider_key")}
 +
-+def prepare_bundesliga(conn, loader, season, matches, input_approved, goal_rows, goal_columns):
-+    cases = SEASONS.get(str(season))
-+    if not cases:
-+        return []
-+    source = {m["key"]: m for m in matches}
-+    if not any(key.startswith(f"r:deutschland/{season}-") for key in source):
-+        return []
-+    known = {key: ident for key, ident in conn.execute(
-+        "SELECT archive_key,id FROM core.matches WHERE season_id=%s AND archive_key=ANY(%s)",
-+        (season, [m["key"] for c in cases for m in (c["match"], c.get("goals_observation")) if m]),
-+    ).fetchall()}
-+    if not known and not input_approved:
-+        return []
-+    aliases = dict(conn.execute(
-+        "SELECT canonical_key,to_jsonb(a) FROM core.archive_match_attestations a WHERE season_id=%s", (season,),
-+    ).fetchall())
-+    physical = loader.bind(season, known.values())
-+    editions = dict(conn.execute(
-+        "SELECT id,to_jsonb(cs) FROM core.competition_seasons cs WHERE id=ANY(%s)",
-+        (sorted({p["row"]["competition_season_id"] for p in physical.values() if p["row"]}),),
-+    ).fetchall())
-+    out = []
-+    for case in cases:
-+        match, goals = case["match"], case.get("goals_observation")
-+        rk, gk = match["key"], goals and goals["key"]
-+        if rk not in source and rk not in known:
-+            continue
-+        r, g, alias = physical.get(known.get(rk)), physical.get(known.get(gk)), aliases.get(rk)
-+        digest = _digest(case)
-+        bound_edition = editions.get(r["row"]["competition_season_id"]) if r else None
-+        round_id = r["row"]["round_id"] if r else None
-+        round_row = conn.execute("SELECT to_jsonb(r) FROM core.rounds r WHERE id=%s", (round_id,)).fetchone() if round_id else None
-+        item = {"proof": case, "sha256": digest, "result": r, "origin": g, "alias": alias,
-+                "edition": bound_edition, "round": round_row[0] if round_row else None}
-+        out.append(item)
-+        held = None
-+        if (not input_approved or source.get(rk) != match or (gk and source.get(gk) != goals)):
-+            held = "attestation_inputs_changed"
-+        elif alias:
-+            if not r or g or alias["proof_sha256"] != digest or alias["former_key"] != gk or alias["match_id"] != r["row"]["id"]:
-+                held = "archive_alias_conflict"
-+            elif not _matches_native(r["row"], match, case["new_date"], bound_edition):
-+                held = "attested_result_changed"
-+        elif r:
-+            row = r["row"]
-+            if r["dependents"] or not _matches_native(row, match, case["prior_date"], bound_edition):
-+                held = "attested_result_changed"
-+            elif goals:
-+                historical = g and g["row"]
-+                if (not historical or historical["competition_season_id"] != row["competition_season_id"]
-+                        or not _matches_native(historical, goals, goals["date"], bound_edition) or r["events"] or g["dependents"]
-+                        or not all(event["event_type"] == "goal" and all(event[c] is None for c in
-+                                   ("period", "player_id", "related_player_id", "is_own_goal", "is_penalty")) for event in g["events"])
-+                        or [_event_values(event, goal_columns) for event in g["events"]] !=
-+                           goal_rows(goals, historical["home_team_id"], historical["away_team_id"])):
-+                    held = "attested_goal_transfer_changed"
-+            elif [_event_values(event, goal_columns) for event in r["events"]] != goal_rows(
-+                    match, row["home_team_id"], row["away_team_id"]):
-+                held = "attested_date_events_changed"
-+        elif g:
-+            held = "attested_result_missing"
-+        item["class"] = "held" if held else "unchanged" if alias else "change" if r else "new"
-+        if held:
-+            item["reason"] = held
-+    return out
++            def links():
++                return x("SELECT to_jsonb(i) FROM core.provider_ids i ORDER BY entity_type,provider,provider_key").fetchall()
 +
++            before = rows()
++            identities = links()
++            x("SET LOCAL ROLE vega_collect")
++            self.assertEqual(reader.plan(), 4)
++            after = rows()
++            expected = {("profile", "35101"): 1, ("profile", "35104"): 1, ("profile", "35108"): 3}
++            for unit, (data, version) in before.items():
++                if unit in expected:
++                    self.assertEqual(after[unit][0], dict(data, priority=expected[unit]))
++                else:
++                    self.assertEqual(after[unit], (data, version))
++            new = after[("profile", "35102")][0]
++            self.assertEqual(new["priority"], 1)
++            self.assertEqual(datetime.fromisoformat(new["next_due_at"]), now)
++            self.assertEqual(reader.plan(), 0)
++            self.assertEqual(rows(), after)
++            self.assertEqual(reader.step(), "ok")
++            self.assertEqual(calls[0][0], "/players")
++            self.assertEqual(set(calls[0][1]), {"35101", "35102", "35103"})
++            self.assertEqual(rows()[("profile", "35104")], after[("profile", "35104")])
++            self.assertEqual(rows()[("transfers", "35101")], after[("transfers", "35101")])
++            self.assertEqual(links(), identities)
 +
-+def project(matches, decisions):
-+    keep = {}
-+    hidden = set()
-+    for entry in decisions:
-+        case, status = entry["proof"], entry["class"]
-+        match, goals = case["match"], case.get("goals_observation")
-+        rk, gk = match["key"], goals and goals["key"]
-+        if status == "held":
-+            continue
-+        if gk:
-+            hidden.add(gk)
-+        keep[rk] = {**match, "date":case["new_date"], "goals":goals["goals"] if goals else match.get("goals")}
-+        if "new_score" in case:
-+            keep[rk]["score"] = case["new_score"]
-+    selected = [keep.get(m["key"], m) for m in matches if m["key"] not in hidden]
-+    selected.sort(key=lambda m: m["key"])
-+    selected.sort(key=lambda m: m.get("date") or "", reverse=True)
-+    return selected
-+
-+
-+def apply_existing(conn, loader, season, decisions, plan_sha256):
-+    changed = [e for e in decisions if e["class"] == "change"]
-+    if not changed:
-+        return False
-+    conn.execute("SELECT ops.archive_lock_references()")
-+    edition_ids = sorted({e["edition"]["id"] for e in changed})
-+    round_ids = sorted({e["round"]["id"] for e in changed if e["round"]})
-+    editions = dict(conn.execute("SELECT id,to_jsonb(cs) FROM core.competition_seasons cs WHERE id=ANY(%s) ORDER BY id FOR SHARE", (edition_ids,)).fetchall())
-+    rounds = dict(conn.execute("SELECT id,to_jsonb(r) FROM core.rounds r WHERE id=ANY(%s) ORDER BY id FOR SHARE", (round_ids,)).fetchall())
-+    for entry in changed:
-+        if editions.get(entry["edition"]["id"]) != entry["edition"]:
-+            return None
-+        if entry["round"] and rounds.get(entry["round"]["id"]) != entry["round"]:
-+            return None
-+    ids = [p["row"]["id"] for entry in changed for f in ("result", "origin") if (p := entry[f])]
-+    found = loader.bind(season, ids)
-+    for entry in changed:
-+        for kind in ("result", "origin"):
-+            bound = entry[kind]
-+            if bound and found[bound["row"]["id"]] != bound:
-+                return None
-+    for entry in changed:
-+        case, origin, retained = entry["proof"], entry["origin"], entry["result"]["row"]
-+        match_id = retained["id"]
-+        if origin:
-+            old_id = origin["row"]["id"]
-+            conn.execute(
-+                """UPDATE core.match_events SET match_id=%s,team_id=CASE WHEN team_id=%s THEN %s ELSE %s END
-+                   WHERE season_id=%s AND match_id=%s""",
-+                (match_id, origin["row"]["home_team_id"], retained["home_team_id"], retained["away_team_id"], season, old_id),
-+            )
-+            moved = [event for (event,) in conn.execute(
-+                "SELECT to_jsonb(e) FROM core.match_events e WHERE season_id=%s AND match_id=%s ORDER BY seq",
-+                (season, match_id),
-+            ).fetchall()]
-+            expected = [{**event, "match_id":match_id, "team_id":retained[f"{witness['side']}_team_id"]}
-+                        for event, witness in zip(origin["events"], case["goal_witnesses"], strict=True)]
-+            if moved != expected:
-+                return None
-+            conn.execute("""INSERT INTO ops.archive_removals(kind,id,season_id,archive_key,plan_sha256)
-+                            VALUES ('match',%s,%s,%s,%s)""", (old_id, season, origin["row"]["archive_key"], plan_sha256))
-+            conn.execute("DELETE FROM core.matches WHERE id=%s AND season_id=%s", (old_id, season))
-+    return True
-+
-+
-+def record(conn, season, decisions):
-+    for entry in decisions:
-+        if entry["class"] not in ("change", "new"):
-+            continue
-+        case = entry["proof"]
-+        rk, g = case["match"]["key"], case.get("goals_observation")
-+        retain, home, away = conn.execute(
-+            "SELECT id,home_score,away_score FROM core.matches WHERE season_id=%s AND archive_key=%s AND match_date=%s",
-+            (season, rk, case["new_date"]),
-+        ).fetchone()
-+        if "new_score" in case and [home, away] != case["new_score"]:
-+            raise RuntimeError(f"certified outcome {rk} was not written")
-+        authority = case.get("authority_key") or "dfb:" + case["official"]["dfb_id"]
-+        old_id = entry["origin"] and entry["origin"]["row"]["id"]
-+        conn.execute(
-+            """INSERT INTO core.archive_match_attestations
-+               (season_id,match_id,canonical_key,former_key,former_id,canonical_date,authority_key,proof_sha256,proof)
-+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
-+            (season, retain, rk, g and g["key"], old_id, case["new_date"], authority,
-+             entry["sha256"], Jsonb(case)),
-+        )
+     def test_the_reader_links_reads_and_pauses(self):
+         api = FakeApi()
+         now = datetime.now(timezone.utc)

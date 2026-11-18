@@ -1,0 +1,62 @@
+{
+  "candidate_code": "0580dfd4ba645461d6c372fbd7b1d73eaaa779a0",
+  "main": "08fa22e7875dd971e4e2ea415d6d5be13eb72347",
+  "existing_schema_max": "133_cohort_max_wait.sql",
+  "destination_schema_max": "149_validate_archive_attestation.sql",
+  "migration_134_order": [
+    "134_archive_repair_boundary.sql",
+    "134_archive_scores_due.sql"
+  ],
+  "main_migration_sha256": "89dcafc08b55b2f6b6bb8cbf22f485452de419e9d8b7f0bebb8b8585bfacd5f6",
+  "source_fixture_sha256": "52c75b78f76f67408e29b9177dd0ee6ac6a5639de9a811dcf80ab7f726682e6c",
+  "observations": {
+    "pending": {
+      "strict_schema_accepted": true,
+      "missing_main_migration_refused": true,
+      "initial": [
+        1,
+        "not_started",
+        null,
+        null,
+        1,
+        "425708"
+      ],
+      "first": [
+        1,
+        "finished",
+        0,
+        3,
+        2,
+        "425728"
+      ],
+      "second_zero_writes": true,
+      "outside_scope_unchanged": true,
+      "main_134_reset_executed_on_full_upgrade": true,
+      "schema_rerun_idempotent": true
+    },
+    "applied": {
+      "strict_schema_accepted": true,
+      "missing_main_migration_refused": true,
+      "initial": [
+        1,
+        "finished",
+        0,
+        3,
+        1,
+        "425865"
+      ],
+      "first": [
+        1,
+        "finished",
+        0,
+        3,
+        1,
+        "425865"
+      ],
+      "second_zero_writes": true,
+      "outside_scope_unchanged": true,
+      "main_134_reset_executed_on_full_upgrade": false,
+      "schema_rerun_idempotent": true
+    }
+  }
+}
