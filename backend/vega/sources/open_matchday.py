@@ -254,28 +254,33 @@ def save(conn, folder, name, season, results, fixtures, now, *, declared_results
     reserved = {before[key]["archive_position"] for key in preserved}
     position = 0
     for key, row in snap.items():
-        if key in preserved:
-            continue
-        while position in reserved:
-            position += 1
-        home = _team(conn, "open_matchday", f"name:{row['home']}", row["home"])
-        away = _team(conn, "open_matchday", f"name:{row['away']}", row["away"])
-        round_id = None
-        if row["round"]:
-            found_round = conn.execute("SELECT id FROM core.rounds WHERE competition_season_id=%s AND name=%s", (edition, row["round"])).fetchone()
-            round_id = found_round[0] if found_round else conn.execute(
-                "INSERT INTO core.rounds(competition_season_id, name) VALUES (%s,%s) RETURNING id", (edition, row["round"])).fetchone()[0]
-        values = {
-            "competition_season_id": edition, "season_id": season_id, "source": "open_matchday", "status": row["status"],
-            "match_date": row["date"], "home_team_id": home, "away_team_id": away, "home_team_name": row["home"], "away_team_name": row["away"],
-            "round_id": round_id, "home_score": row["home_score"], "away_score": row["away_score"],
-            "home_score_ht": row["home_score_ht"], "away_score_ht": row["away_score_ht"], "archive_position": position,
-        }
         found = before.get(key)
+        if key in preserved:
+            home, away = found["home_team_id"], found["away_team_id"]
+            # A previously attested result can gain optional data without moving
+            # its row or replacing the facts that established its identity.
+            values = {"archive_position": found["archive_position"]}
+            values.update({name: row[name] for name in ("home_score_ht", "away_score_ht") if row[name] is not None})
+        else:
+            while position in reserved:
+                position += 1
+            home = _team(conn, "open_matchday", f"name:{row['home']}", row["home"])
+            away = _team(conn, "open_matchday", f"name:{row['away']}", row["away"])
+            round_id = None
+            if row["round"]:
+                found_round = conn.execute("SELECT id FROM core.rounds WHERE competition_season_id=%s AND name=%s", (edition, row["round"])).fetchone()
+                round_id = found_round[0] if found_round else conn.execute(
+                    "INSERT INTO core.rounds(competition_season_id, name) VALUES (%s,%s) RETURNING id", (edition, row["round"])).fetchone()[0]
+            values = {
+                "competition_season_id": edition, "season_id": season_id, "source": "open_matchday", "status": row["status"],
+                "match_date": row["date"], "home_team_id": home, "away_team_id": away, "home_team_name": row["home"], "away_team_name": row["away"],
+                "round_id": round_id, "home_score": row["home_score"], "away_score": row["away_score"],
+                "home_score_ht": row["home_score_ht"], "away_score_ht": row["away_score_ht"], "archive_position": position,
+            }
+            position += 1
         stats = _stats_rows(row, home, away, stats_before.get(found["id"], []) if found is not None else ())
         restated = found is not None and stats_before.get(found["id"], []) != stats
         mid, outcome = snapshot.write(conn, "open_matchday", key, values, found, changed=restated)
-        position += 1
         changes += outcome in ("inserted", "updated")
         if outcome == "inserted" or restated:
             conn.execute("DELETE FROM core.team_match_stats WHERE season_id=%s AND match_id=%s", (season_id, mid))
