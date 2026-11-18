@@ -1,0 +1,33 @@
+{
+  "engine": "PostgreSQL 18.3 (PGlite 0.5.8) on wasm32-unknown-emscripten, compiled by emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 3.1.74 (1092ec30a3fb1d46b1782ff1b4db5094d3d06ae5), 32-bit",
+  "query_sha256": "36bf86c51dd1953780a83f9a723eb1b6de87d3f0f53962f6e7a0cc67e6174c9f",
+  "read_only": true,
+  "empty": {
+    "stored_rows": 0,
+    "distinct_match_player_pairs": 0,
+    "admitted_source_rows": 0,
+    "missing_source_rows": 0,
+    "ineligible_source_rows": 0,
+    "wrong_award_rows": 0,
+    "multiple_award_pairs": 0,
+    "excess_award_rows": 0,
+    "example_missing": null,
+    "example_ineligible": null,
+    "example_wrong_award": null,
+    "example_multiple_awards": null
+  },
+  "populated": {
+    "stored_rows": 7,
+    "distinct_match_player_pairs": 6,
+    "admitted_source_rows": 2,
+    "missing_source_rows": 2,
+    "ineligible_source_rows": 2,
+    "wrong_award_rows": 1,
+    "multiple_award_pairs": 1,
+    "excess_award_rows": 1,
+    "example_missing": "13/30",
+    "example_ineligible": "14/40",
+    "example_wrong_award": "11/10",
+    "example_multiple_awards": "11/10 [2021,2022]"
+  }
+}

@@ -7,7 +7,7 @@
 ## Versions et statuts
 
 - Le document initial cite le code `36049afb498b177cc6d92ebd1b7b2346a81b7639`. L’ancienne branche de l’audit se termine à `7239f67f9c`. Elle diverge de la production à partir de `a912ed319e` (5 commits propres contre 45).
-- R est la production vérifiée `8018e0836ca0f32e8b2eb51fc2847154abff7f13`. Les dates UTC restent celles de chaque preuve. W est le dernier commit applicatif de la branche examiné pour ce registre, `739c98b70a`. Les relevés FIFA, UEFA et Transfermarkt des 17–18 novembre actualisent ses preuves documentaires. Une version privée, des fichiers non commis ou un modèle de sensibilité hors ligne ne constituent pas une livraison sur W.
+- R désigne la production contrôlée `8018e0836ca0f32e8b2eb51fc2847154abff7f13`. W désigne ici la branche d’intégration dont le dernier changement applicatif commis est `739c98b70a`. La migration 137 et la projection des mi-temps ont été examinées sur la branche indépendante VI-28 au commit fonctionnel `c3c8232747`, puis figées en `590b65390d`. Les mentions du candidat VI-28 sont explicites dans A15c et C19. Les autres branches en cours ont leur propre référence dans BRANCHE.md.
 - `implemented_production` vaut pour le périmètre nommé et les chemins mesurés. Dans la colonne branche, le même statut désigne le comportement hérité de R. `implemented_branch` signifie qu’un correctif ou un livrable borné est présent sur W avec sa preuve. `incomplete` inclut les écarts reproduits, validations insuffisantes et décisions de méthode en attente. `missing` désigne l’absence établie du mécanisme demandé, distincte d’une donnée inconnue. `not_applicable` désigne une action d’audit ou de coordination, hors contrat d’exécution du produit; l’observation correspondante indique son état.
 - `source_paths` et `callsite_path` sont relatifs au dépôt Git de Vega-Sport. `evidence_paths` est relatif à la racine de l’archive de preuves. Le point-virgule sépare les chemins et les commits, sans chemin absolu ni authentification nécessaire pour la lecture hors ligne. Les lignes procédurales renvoient aussi aux instructions du dépôt.
 - Dans le registre des calculs, les deux colonnes `marker_at_*` indiquent seulement la présence d’un repère textuel dans le fichier nommé à la révision indiquée. Un même nom de fonction peut changer de sens entre révisions. Pour C18–C21, `historic_migration_equivalent` indique les migrations 124–127 de l’ancienne branche, renumérotées 128–131 en production; égalité d’intention ne signifie pas égalité d’octets.
@@ -15,7 +15,7 @@
 
 ## Vérification reproductible
 
-Depuis le dossier contenant les deux CSV, désigner le dépôt et l’archive de preuves dans les deux variables d’environnement. Les fichiers cités ont été contrôlés au moment de la remise sur disque et dans l’archive. Un repaquetage est nécessaire si le rapport évolue. Les deux CSV contiennent 87 chemins de preuve distincts. Ce contrôle relit les artefacts; il ne relance aucun modèle ni aucune collecte.
+Depuis le dossier contenant les deux CSV, désigner le dépôt et l’archive de preuves dans les variables ci-dessous. Les chemins sont recalculés à partir des deux registres à chaque vérification. L’archive de vérification doit être reconstruite après chaque modification des registres.
 
 ```sh
 export VEGA_REVIEW_REPO='/chemin/vers/Vega-Sport'

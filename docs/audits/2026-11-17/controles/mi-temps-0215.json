@@ -1,0 +1,96 @@
+{
+  "checked_statements": 13,
+  "dates": [
+    "2026-11-18 02:15:27.559105+00:00",
+    "2026-11-18 02:15:39.577980+00:00"
+  ],
+  "admissible": {
+    "groups": 192842,
+    "groups_without_complete": 15413,
+    "hidden_groups_with_passing": 15391,
+    "eligible_rows": 2757335,
+    "eligible_minutes": 106127304,
+    "excluded_rows": 218177,
+    "excluded_minutes": 9759659,
+    "passes_rows": 2757335,
+    "passes_minutes": 106127304,
+    "touches_rows": 2541441,
+    "touches_minutes": 96455033,
+    "xg_rows": 2755050,
+    "xg_minutes": 106039826
+  },
+  "ineligible": {
+    "minutes <= 0 / rows": 22304,
+    "minutes <= 0 / rows_with_a_statistic": 22304,
+    "minutes <= 0 / passes": 25172,
+    "minutes <= 0 / touches": 64389
+  },
+  "witnesses": [
+    {
+      "public_player": "p_1FntG3",
+      "season_id": 2026,
+      "period": "first_half",
+      "matches": 5,
+      "minutes": 225,
+      "excluded_matches": 5,
+      "excluded_minutes": 225,
+      "passes_sum": 83,
+      "passes_minutes": 225,
+      "touches_sum": null,
+      "touches_minutes": 0
+    },
+    {
+      "public_player": "p_1FntG3",
+      "season_id": 2026,
+      "period": "second_half",
+      "matches": 6,
+      "minutes": 270,
+      "excluded_matches": 6,
+      "excluded_minutes": 270,
+      "passes_sum": 82,
+      "passes_minutes": 270,
+      "touches_sum": null,
+      "touches_minutes": 0
+    },
+    {
+      "public_player": "p_2WXYqD",
+      "season_id": 2026,
+      "period": "first_half",
+      "matches": 10,
+      "minutes": 450,
+      "excluded_matches": 1,
+      "excluded_minutes": 45,
+      "passes_sum": 209,
+      "passes_minutes": 450,
+      "touches_sum": 295,
+      "touches_minutes": 405
+    },
+    {
+      "public_player": "p_2WXYqD",
+      "season_id": 2026,
+      "period": "second_half",
+      "matches": 11,
+      "minutes": 433,
+      "excluded_matches": 1,
+      "excluded_minutes": 45,
+      "passes_sum": 125,
+      "passes_minutes": 433,
+      "touches_sum": 237,
+      "touches_minutes": 388
+    }
+  ],
+  "public_routes": [
+    {
+      "player": "p_1FntG3",
+      "status": 404,
+      "has_coverage": false,
+      "time_utc": "2026-11-18T02:22:10.693854+00:00"
+    },
+    {
+      "player": "p_2WXYqD",
+      "status": 200,
+      "has_coverage": false,
+      "time_utc": "2026-11-18T02:22:12.064438+00:00"
+    }
+  ]
+}

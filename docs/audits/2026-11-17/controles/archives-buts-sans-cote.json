@@ -1,0 +1,47 @@
+{
+ "counts": {
+  "all_events": 461696,
+  "side_null": 313,
+  "side_null_with_unique_exact_native_team": 14
+ },
+ "affected_match_count": 5,
+ "affected_rows": [
+  [
+   "2012/2013",
+   "r:2012-13/uefa.cl:11"
+  ],
+  [
+   "2012/2013",
+   "r:2012-13/uefa.cl:3"
+  ],
+  [
+   "2013/2014",
+   "r:2013-14/uefa.cl:124"
+  ],
+  [
+   "2015/2016",
+   "r:2015-16/uefa.cl:124"
+  ],
+  [
+   "2016/2017",
+   "r:2016-17/uefa.cl:120"
+  ]
+ ],
+ "competition_pair_examples": [
+  [
+   "Real Madrid (ESP)",
+   "Atlético Madrid (ESP)",
+   10
+  ],
+  [
+   "Dinamo Zagreb (CRO)",
+   "Dinamo Kiev (UKR)",
+   2
+  ],
+  [
+   "Dinamo Kiev (UKR)",
+   "Dinamo Zagreb (CRO)",
+   2
+  ]
+ ]
+}

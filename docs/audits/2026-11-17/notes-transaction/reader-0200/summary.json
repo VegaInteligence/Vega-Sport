@@ -1,0 +1,12 @@
+{
+  "transport": "aws lambda invoke with constructed GET events",
+  "status_source": "Lambda envelope statusCode",
+  "observations": 27,
+  "distinct_lambda_envelopes": 46,
+  "match_only": [
+    "m_21vqiJ:p_1FvzRt",
+    "m_0mceOR:p_2jnb4H"
+  ],
+  "null_on_both": 2,
+  "agree_numeric": 23
+}

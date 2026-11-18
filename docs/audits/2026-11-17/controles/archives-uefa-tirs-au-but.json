@@ -1,0 +1,229 @@
+[
+  {
+    "id": 659061,
+    "key": "g:europa-league:2013-04-11:1920",
+    "date": "2013-04-11",
+    "participants": [
+      "FC Basel 1893",
+      "Tottenham Hotspur"
+    ],
+    "observed_sporting_score": [
+      2,
+      2
+    ],
+    "verified_penalties_home_away": [
+      4,
+      1
+    ],
+    "winner": "FC Basel 1893",
+    "official_source": {
+      "url": "https://editorial.uefa.com/resources/0282-18289b11a060-72b9e0a04e06-1000/uel_202223_facts_md15.pdf",
+      "sha256": "b8af4423a998ac041f90c09a8b5e6f0aaa23c65f53571b45afbfcca22f7c94a2",
+      "bytes": 541523
+    },
+    "report_text_line": 1550,
+    "report_file_sha256": "b8af4423a998ac041f90c09a8b5e6f0aaa23c65f53571b45afbfcca22f7c94a2",
+    "raw": "sources/worldclub/goals/europa-league.csv.gz",
+    "raw_csv_record_numbers_including_header": [
+      2197,
+      2198,
+      2199,
+      2200
+    ],
+    "candidate_penalty_home": "4",
+    "candidate_penalty_away": "1"
+  },
+  {
+    "id": 660501,
+    "key": "g:europa-league:2013-02-21:1889",
+    "date": "2013-02-21",
+    "participants": [
+      "FC Steaua Bucureşti",
+      "AFC Ajax"
+    ],
+    "observed_sporting_score": [
+      2,
+      0
+    ],
+    "verified_penalties_home_away": [
+      4,
+      2
+    ],
+    "winner": "FC Steaua Bucureşti",
+    "official_source": {
+      "url": "https://editorial.uefa.com/resources/0282-18289b11a060-72b9e0a04e06-1000/uel_202223_facts_md15.pdf",
+      "sha256": "b8af4423a998ac041f90c09a8b5e6f0aaa23c65f53571b45afbfcca22f7c94a2",
+      "bytes": 541523
+    },
+    "report_text_line": 1549,
+    "report_file_sha256": "b8af4423a998ac041f90c09a8b5e6f0aaa23c65f53571b45afbfcca22f7c94a2",
+    "raw": "sources/worldclub/goals/europa-league.csv.gz",
+    "raw_csv_record_numbers_including_header": [
+      2136,
+      2137
+    ],
+    "candidate_penalty_home": "4",
+    "candidate_penalty_away": "2"
+  },
+  {
+    "id": 668262,
+    "key": "g:europa-league:2014-03-20:1955",
+    "date": "2014-03-20",
+    "participants": [
+      "Real Betis",
+      "Sevilla FC"
+    ],
+    "observed_sporting_score": [
+      0,
+      2
+    ],
+    "verified_penalties_home_away": [
+      3,
+      4
+    ],
+    "winner": "Sevilla FC",
+    "official_source": {
+      "url": "https://editorial.uefa.com/resources/0282-18289b11a060-72b9e0a04e06-1000/uel_202223_facts_md15.pdf",
+      "sha256": "b8af4423a998ac041f90c09a8b5e6f0aaa23c65f53571b45afbfcca22f7c94a2",
+      "bytes": 541523
+    },
+    "report_text_line": 1551,
+    "report_file_sha256": "b8af4423a998ac041f90c09a8b5e6f0aaa23c65f53571b45afbfcca22f7c94a2",
+    "raw": "sources/worldclub/goals/europa-league.csv.gz",
+    "raw_csv_record_numbers_including_header": [
+      2660,
+      2661
+    ],
+    "candidate_penalty_home": "3",
+    "candidate_penalty_away": "4"
+  },
+  {
+    "id": 678350,
+    "key": "g:europa-league:2015-02-26:1909",
+    "date": "2015-02-26",
+    "participants": [
+      "Beşiktaş",
+      "Liverpool FC"
+    ],
+    "observed_sporting_score": [
+      1,
+      0
+    ],
+    "verified_penalties_home_away": [
+      5,
+      4
+    ],
+    "winner": "Beşiktaş JK",
+    "official_source": {
+      "url": "https://editorial.uefa.com/resources/0282-18289b11a060-72b9e0a04e06-1000/uel_202223_facts_md15.pdf",
+      "sha256": "b8af4423a998ac041f90c09a8b5e6f0aaa23c65f53571b45afbfcca22f7c94a2",
+      "bytes": 541523
+    },
+    "report_text_line": 1554,
+    "report_file_sha256": "b8af4423a998ac041f90c09a8b5e6f0aaa23c65f53571b45afbfcca22f7c94a2",
+    "raw": "sources/worldclub/goals/europa-league.csv.gz",
+    "raw_csv_record_numbers_including_header": [
+      3138
+    ],
+    "candidate_penalty_home": "5",
+    "candidate_penalty_away": "4"
+  },
+  {
+    "id": 686386,
+    "key": "g:europa-league:2016-04-14:1961",
+    "date": "2016-04-14",
+    "participants": [
+      "Sevilla FC",
+      "Athletic Bilbao"
+    ],
+    "observed_sporting_score": [
+      1,
+      2
+    ],
+    "verified_penalties_home_away": [
+      5,
+      4
+    ],
+    "winner": "Sevilla FC",
+    "official_source": {
+      "url": "https://editorial.uefa.com/resources/0282-18289b11a060-72b9e0a04e06-1000/uel_202223_facts_md15.pdf",
+      "sha256": "b8af4423a998ac041f90c09a8b5e6f0aaa23c65f53571b45afbfcca22f7c94a2",
+      "bytes": 541523
+    },
+    "report_text_line": 1556,
+    "report_file_sha256": "b8af4423a998ac041f90c09a8b5e6f0aaa23c65f53571b45afbfcca22f7c94a2",
+    "raw": "sources/worldclub/goals/europa-league.csv.gz",
+    "raw_csv_record_numbers_including_header": [
+      3753,
+      3754,
+      3755
+    ],
+    "candidate_penalty_home": "5",
+    "candidate_penalty_away": "4"
+  },
+  {
+    "id": 695997,
+    "key": "g:europa-league:2017-04-20:1619",
+    "date": "2017-04-20",
+    "participants": [
+      "Beşiktaş",
+      "Olympique Lyonnais"
+    ],
+    "observed_sporting_score": [
+      2,
+      1
+    ],
+    "verified_penalties_home_away": [
+      6,
+      7
+    ],
+    "winner": "Olympique Lyonnais",
+    "official_source": {
+      "url": "https://editorial.uefa.com/resources/0282-18289b11a060-72b9e0a04e06-1000/uel_202223_facts_md15.pdf",
+      "sha256": "b8af4423a998ac041f90c09a8b5e6f0aaa23c65f53571b45afbfcca22f7c94a2",
+      "bytes": 541523
+    },
+    "report_text_line": 1558,
+    "report_file_sha256": "b8af4423a998ac041f90c09a8b5e6f0aaa23c65f53571b45afbfcca22f7c94a2",
+    "raw": "sources/worldclub/goals/europa-league.csv.gz",
+    "raw_csv_record_numbers_including_header": [
+      4327,
+      4328,
+      4329
+    ],
+    "candidate_penalty_home": "6",
+    "candidate_penalty_away": "7"
+  },
+  {
+    "id": 711760,
+    "key": "g:europa-league:2019-05-09:1999",
+    "date": "2019-05-09",
+    "participants": [
+      "Chelsea FC",
+      "Eintracht Frankfurt"
+    ],
+    "observed_sporting_score": [
+      1,
+      1
+    ],
+    "verified_penalties_home_away": [
+      4,
+      3
+    ],
+    "winner": "Chelsea FC",
+    "official_source": {
+      "url": "https://editorial.uefa.com/resources/0282-18289b11a060-72b9e0a04e06-1000/uel_202223_facts_md15.pdf",
+      "sha256": "b8af4423a998ac041f90c09a8b5e6f0aaa23c65f53571b45afbfcca22f7c94a2",
+      "bytes": 541523
+    },
+    "report_text_line": 1560,
+    "report_file_sha256": "b8af4423a998ac041f90c09a8b5e6f0aaa23c65f53571b45afbfcca22f7c94a2",
+    "raw": "sources/worldclub/goals/europa-league.csv.gz",
+    "raw_csv_record_numbers_including_header": [
+      5458,
+      5459
+    ],
+    "candidate_penalty_home": "4",
+    "candidate_penalty_away": "3"
+  }
+]

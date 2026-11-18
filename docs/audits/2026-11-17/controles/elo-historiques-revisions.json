@@ -1,0 +1,262 @@
+{
+  "2088": {
+    "admitted_editions": 396,
+    "aliases": 0,
+    "exact": {
+      "club": 159827,
+      "national team": 1860
+    },
+    "matches": 81921,
+    "max_steps_before_after_expected_result_stakes": {
+      "club": [
+        1,
+        1,
+        1,
+        0,
+        0
+      ],
+      "national team": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "moveset": [
+      31,
+      2087
+    ],
+    "sha256": "c005acbe1e65cce18b13b915b432854c672a717a748615358429219153ca270c",
+    "sides": {
+      "club": 161982,
+      "national team": 1860
+    },
+    "snapshot": "4330423:4330423:",
+    "time": "2026-11-17 21:58:21.697558+00:00",
+    "unique_teams_at_first_update": {
+      "club:default": 25,
+      "club:refit": 2961,
+      "national:default": 149
+    }
+  },
+  "2097": {
+    "admitted_editions": 396,
+    "aliases": 1,
+    "exact": {
+      "club": 156263,
+      "national team": 1864
+    },
+    "matches": 81923,
+    "max_steps_before_after_expected_result_stakes": {
+      "club": [
+        1,
+        1,
+        1,
+        0,
+        0
+      ],
+      "national team": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "moveset": [
+      34,
+      2096
+    ],
+    "sha256": "9cc510d9a53a7ee0baa18f83603342460eb0a6e8f07435edea78bbc5601eb834",
+    "sides": {
+      "club": 161982,
+      "national team": 1864
+    },
+    "snapshot": "4403658:4403658:",
+    "time": "2026-11-18 02:16:34.234527+00:00",
+    "unique_teams_at_first_update": {
+      "club:default": 25,
+      "club:refit": 2961,
+      "national:default": 149
+    }
+  },
+  "argentina_duplicate_Elo_2097": [
+    {
+      "away": 690,
+      "edition_a": 45,
+      "edition_b": 45,
+      "home": 723,
+      "id_a": 39986,
+      "id_b": 39987,
+      "score": [
+        2,
+        1
+      ]
+    },
+    {
+      "away": 538,
+      "edition_a": 45,
+      "edition_b": 45,
+      "home": 779,
+      "id_a": 39988,
+      "id_b": 39990,
+      "score": [
+        0,
+        3
+      ]
+    },
+    {
+      "away": 763,
+      "edition_a": 45,
+      "edition_b": 45,
+      "home": 505,
+      "id_a": 39989,
+      "id_b": 39991,
+      "score": [
+        1,
+        1
+      ]
+    },
+    {
+      "away": 604,
+      "edition_a": 45,
+      "edition_b": 45,
+      "home": 725,
+      "id_a": 39992,
+      "id_b": 39993,
+      "score": [
+        2,
+        1
+      ]
+    },
+    {
+      "away": 575,
+      "edition_a": 45,
+      "edition_b": 45,
+      "home": 538,
+      "id_a": 40022,
+      "id_b": 40023,
+      "score": [
+        2,
+        1
+      ]
+    }
+  ],
+  "between_publications": {
+    "added_matches": [
+      2651,
+      2652
+    ],
+    "max_abs_difference_in_shared_stored_after": 62.0167236328125,
+    "published_historical_values": {
+      "club": {
+        "after_abs_gt_one": 99863,
+        "after_abs_gt_ten": 6777,
+        "changed_after": 161674,
+        "changed_any_of_before_after_expected": 161674,
+        "largest_after": {
+          "kickoff": "2022-03-20 14:00:00+00:00",
+          "match": 249658,
+          "new": 1226.239013671875,
+          "old": 1288.2557373046875,
+          "team": 5229
+        },
+        "sides": 161982
+      },
+      "national": {
+        "after_abs_gt_one": 0,
+        "after_abs_gt_ten": 0,
+        "changed_after": 0,
+        "changed_any_of_before_after_expected": 0,
+        "largest_after": {
+          "kickoff": "2025-07-06 00:00:00+00:00",
+          "match": 739227,
+          "new": 1492.85546875,
+          "old": 1492.85546875,
+          "team": 5484
+        },
+        "sides": 1860
+      }
+    },
+    "shared_ordered_match_records_unchanged": 81921,
+    "shared_sides_changed_in_stored_before_after_or_expected": 161674
+  },
+  "edition_grid_verify": {
+    "archive_side_slots": {
+      "club": 986961,
+      "national team": 0,
+      "unknown side": 1783
+    },
+    "at": {
+      "at": "2026-11-18 02:02:22.142267+00:00",
+      "database": "vega_v2",
+      "isolation": "repeatable read",
+      "read_only": "on",
+      "snapshot": "4403005:4403005:"
+    },
+    "catalog_editions": 2149,
+    "cells": 4298,
+    "gate": {
+      "canonical_id_differed": 0,
+      "expected_sides": 163846,
+      "invalid": 0,
+      "invalid_strength_or_probability": 0,
+      "matched_copy": 332,
+      "missing": 0,
+      "movement_exceeds_100": 0,
+      "pre_post_unchanged": 8,
+      "refused_folder": 102,
+      "refused_self": 0,
+      "stored_on_excluded_side": 0,
+      "stored_valid": 163846,
+      "structurally_admissible": 164280,
+      "wrong_result": 0
+    },
+    "positive_editions": 396
+  },
+  "external_counts": {
+    "fifa": {
+      "0": 1755,
+      "8": 7,
+      "9": 10
+    },
+    "uefa": {
+      "QUALIFYING:False": 2489,
+      "TOURNAMENT:False": 3,
+      "TOURNAMENT:True": 2475
+    }
+  },
+  "fixed_seed_identity_sensitivity": {
+    "14670": {
+      "changed_other_sides": 28,
+      "distinct_teams": 10,
+      "largest_absolute_after": 8.027774213337125,
+      "retained_sides": 163840
+    },
+    "40022": {
+      "changed_other_sides": 50,
+      "distinct_teams": 12,
+      "largest_absolute_after": 8.01392952652418,
+      "retained_sides": 163840
+    },
+    "40023": {
+      "changed_other_sides": 48,
+      "distinct_teams": 12,
+      "largest_absolute_after": 7.796238988997857,
+      "retained_sides": 163840
+    },
+    "espn": {
+      "changed_other_sides": 14,
+      "distinct_teams": 7,
+      "largest_absolute_after": 19.076378707685535,
+      "retained_sides": 163832
+    },
+    "soccerway": {
+      "changed_other_sides": 19,
+      "distinct_teams": 11,
+      "largest_absolute_after": 14.275490426042552,
+      "retained_sides": 163832
+    }
+  }
+}

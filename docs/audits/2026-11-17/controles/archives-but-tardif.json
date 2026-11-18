@@ -1,0 +1,36 @@
+{
+  "clone": "vega_v2_track4_partial_0243_ru2_goal_64f14",
+  "role": "vega_collect",
+  "digest": "f378ced180a47849e343cf11c4cace6b03d1be4d0df0248d7a7e563e326f6720",
+  "scope": {
+    "2019/2020": {
+      "matched": 10196,
+      "removed": 240,
+      "counts": {
+        "changed": 552,
+        "goals": 0,
+        "held": 8,
+        "new": 0,
+        "position": 9636
+      },
+      "refused": null
+    }
+  },
+  "new_dependent": {
+    "key": "r:2019-20/ru.2:0",
+    "private_id": 479379,
+    "before_apply": 1,
+    "after_apply": 1
+  },
+  "pre_delete_dep_function": [],
+  "expected": "refused when a removed match has a new unmatched goal observation",
+  "receipt": {
+    "status": "refused",
+    "seasons": {
+      "2019/2020": "drift"
+    },
+    "resumed": [],
+    "pending": []
+  },
+  "second_apply": "plan f378ced180a47849e343cf11c4cace6b03d1be4d0df0248d7a7e563e326f6720 was applied at 2026-11-18T02:49:25.435443+00:00"
+}

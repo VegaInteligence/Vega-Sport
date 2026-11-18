@@ -1,0 +1,52 @@
+{
+  "started": "2026-11-18T02:38:54.312214+00:00",
+  "ended": "2026-11-18T02:44:34.215512+00:00",
+  "source_before": {
+    "commit": "590b65390da1d8c75922d27149fa75513a202322",
+    "branch": "codex/audit-1-linear",
+    "diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "diff_bytes": 0,
+    "untracked": {}
+  },
+  "source_after": {
+    "commit": "590b65390da1d8c75922d27149fa75513a202322",
+    "branch": "codex/audit-1-linear",
+    "diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "diff_bytes": 0,
+    "untracked": {}
+  },
+  "unmodified": true,
+  "expected": "all repository CI jobs exit zero, source unchanged throughout",
+  "environment": "local Docker PostgreSQL 18, Python ci-clean, repository dependencies, public origin only set in the build",
+  "rerun_command": [
+    "/Library/Frameworks/Python.framework/Versions/3.14/bin/python3",
+    "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/verify_ci.py",
+    "/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-tracks-20261117/1-linear",
+    "tracks/1-linear/ci-frozen-590b65",
+    "1-linear"
+  ],
+  "jobs": {
+    "python": {
+      "status": 0,
+      "tests": 448,
+      "log_sha256": "a107b473bcdb614e21ad8d48dae4aabf01377b623234b304ef69668af3a3ce0a"
+    },
+    "api": {
+      "status": 0,
+      "tests": 193,
+      "log_sha256": "c8d8573bda1cdc729831ddfcf1613e3cfea9136fd9947dbf4614ff0c91c61b12"
+    },
+    "site": {
+      "status": 0,
+      "tests": 701,
+      "log_sha256": "bc88b310318f6d1c21cde09089c538ce93919a86bb809eb1e6f5d5e818f84d21"
+    },
+    "site-build": {
+      "status": 0,
+      "tests": null,
+      "log_sha256": "4ce249daa01458511a4d546d5ece44616cf6cae45df73e7ca38bc45eeaddd679"
+    }
+  },
+  "exit_code": 0,
+  "passed": true
+}

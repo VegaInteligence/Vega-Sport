@@ -1,28 +1,28 @@
 {
-  "records": 1232,
+  "records": 1466,
   "by_type": {
     "competition": 104,
-    "team": 1128
+    "team": 1362
   },
-  "distinct_images": 1195,
-  "converted": 128,
-  "manifest_sha256": "955daa5119c98decd12360553add3add5a656a1aae36a7ae9159127117c8dff8",
-  "zip_sha256": "34c452fdbfc68fa364eb2ac7859279c84ba4eaf138fdbf22577c9a467a0d34eb",
-  "zip_bytes": 97459952,
+  "distinct_images": 1429,
+  "converted": 159,
+  "manifest_sha256": "0006fcb54dcbc7d9c7de8eaadd63d3c362b3666d20166d2e34abe6ad24dfa110",
+  "zip_sha256": "79370102ac4dc580affdc6dfce364736ba06e9edc0402c9e98050916801a16c8",
+  "zip_bytes": 124772022,
   "inputs": [
     {
-      "source_pack": "artwork-expanded-1186",
-      "manifest_sha256": "65ce8b3af81e88bc0b5cbdeebb88956f07b77dcb7da524c861f76e9bf60c9550",
+      "source_pack": "artwork-expanded-1465",
+      "manifest_sha256": "60481a7cf9dd2c327cfcd1f2f5e788b5c66ad1d7434bfa0f6c457402083d5968",
       "by_type": {
         "competition": 104,
-        "team": 1082
+        "team": 1361
       }
     },
     {
-      "source_pack": "tracks/7-artwork/austrian-federation/profile",
-      "manifest_sha256": "e41d9326fa1e916ab8dd3a329d7d832bf57bc4792b9571254edd4b01a5cbeb7b",
+      "source_pack": "tracks/7-artwork/uruguay-vicenza/profile",
+      "manifest_sha256": "37114baf972d65ae117e6d5883329852d0e6809bb5393def88400847bbe0ace0",
       "by_type": {
-        "team": 46
+        "team": 1
       }
     }
   ]

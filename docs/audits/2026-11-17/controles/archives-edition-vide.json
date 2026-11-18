@@ -1,0 +1,30 @@
+{
+  "private_clone": "vega_v2_track4_partial_0243_primary_1918a",
+  "native_competition": "l_214sqK",
+  "new_pitchapi_edition": 2051,
+  "pitchapi_fixture_count": 0,
+  "archive_matches_and_events_before": [
+    119,
+    339
+  ],
+  "expectation": "preserve existing results/events when new primary edition has no fixtures",
+  "plan": {
+    "removed_matches": 0,
+    "removed_editions": [],
+    "refused": null,
+    "dependency_report": []
+  },
+  "digest": "554c1f4c305e12557f3b2700faa6732b471e69a760a4379625a38682b58d0e76",
+  "receipt": {
+    "status": "partial",
+    "seasons": {
+      "2024/2025": "partial"
+    },
+    "resumed": [],
+    "pending": []
+  },
+  "archive_matches_and_events_after": [
+    119,
+    339
+  ]
+}

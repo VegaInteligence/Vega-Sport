@@ -1,0 +1,49 @@
+[
+  {
+    "source": "laval",
+    "url": "https://www.asse.fr/fr/lives/laval-asse-l8856/",
+    "utc": "2026-11-17T23:37:40.527053+00:00",
+    "status": 200,
+    "effective_url": "https://www.asse.fr/fr/lives/laval-asse-l8856/",
+    "sha256": "8a1191d68e58467828b8300302feca9274190dcc250bbe13a164614562f008a0",
+    "terms_present": {
+      "Old": true,
+      "51e": true,
+      "Laval": true,
+      "Boakye": true
+    }
+  },
+  {
+    "source": "uefa",
+    "url": "https://match.uefa.com/v5/matches/2033414/lineups?language=EN",
+    "utc": "2026-11-17T23:37:40.845886+00:00",
+    "status": 200,
+    "effective_url": "https://match.uefa.com/v5/matches/2033414/lineups?language=EN",
+    "sha256": "a2b1b7c689dc783c04164f861b603ecb37103ef06ac55120b3db9aed7ebf3a82",
+    "terms_present": {},
+    "away_starting_count": 11,
+    "away_bench_count": 9,
+    "hojlund": [
+      {
+        "group": "bench",
+        "jersey": 45,
+        "name": "Emil Højlund",
+        "player_id": "250166947",
+        "birth_date": "2005-01-04"
+      }
+    ]
+  },
+  {
+    "source": "copenhagen",
+    "url": "https://fck.dk/nyhed/kampreferat-en-af-vores-mest-forrygende-kampe-nogensinde",
+    "utc": "2026-11-17T23:37:40.850003+00:00",
+    "status": 200,
+    "effective_url": "https://fck.dk/nyhed/kampreferat-en-af-vores-mest-forrygende-kampe-nogensinde",
+    "sha256": "b8f7ee45d7bd53ced9c861f3b2ad6185a918697c0be53d11d1d51872a5ed4b7e",
+    "terms_present": {
+      "Emil Højlund": true,
+      "sidste spark": true,
+      "4-4": true
+    }
+  }
+]

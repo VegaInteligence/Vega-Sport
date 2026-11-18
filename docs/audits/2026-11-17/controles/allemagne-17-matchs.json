@@ -1,0 +1,1494 @@
+[
+  {
+    "alias_root": 2828,
+    "native_root": 2201,
+    "official_id": "2418307",
+    "official_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/sc-st-toenis-11-20-eintracht-frankfurt-2418307",
+    "official_home": "dfb:sc-st-toenis-11-20",
+    "official_away": "dfb:eintracht-frankfurt",
+    "official_score": [
+      0,
+      11
+    ],
+    "official_penalties": null,
+    "day": "2026-08-21",
+    "openligadb_match": 81832,
+    "openligadb_home": {
+      "teamId": 5712,
+      "teamName": "SC St. Tönis",
+      "shortName": "scst",
+      "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/8/8c/SC_Tönisvorst_logo.svg",
+      "teamGroupName": null,
+      "tla": null,
+      "wikidataId": null
+    },
+    "openligadb_away": {
+      "teamId": 91,
+      "teamName": "Eintracht Frankfurt",
+      "shortName": "Frankfurt",
+      "teamIconUrl": "https://i.imgur.com/X8NFkOb.png",
+      "teamGroupName": null,
+      "tla": null,
+      "wikidataId": "Q38245"
+    },
+    "openligadb_results": [
+      {
+        "resultID": 127243,
+        "resultName": "Halbzeit",
+        "pointsTeam1": 0,
+        "pointsTeam2": 10,
+        "resultOrderID": 1,
+        "resultTypeID": 1,
+        "resultTypeKind": "HalfTime",
+        "resultDescription": "Ergebnis nach Ende der ersten Halbzeit"
+      },
+      {
+        "resultID": 127244,
+        "resultName": "Endergebnis",
+        "pointsTeam1": 0,
+        "pointsTeam2": 11,
+        "resultOrderID": 2,
+        "resultTypeID": 2,
+        "resultTypeKind": "After90Minutes",
+        "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit"
+      }
+    ],
+    "rds_matches": [
+      {
+        "id": 2716,
+        "source": "openligadb",
+        "edition": 307,
+        "keys": [
+          "openligadb:81832"
+        ],
+        "root": 2201,
+        "opponent_root": 4802,
+        "score": [
+          0,
+          11
+        ]
+      },
+      {
+        "id": 5341,
+        "source": "open_matchday",
+        "edition": 321,
+        "keys": [
+          "open_matchday:GER_CUP_dfb-pokal:2026/2027:2026-08-21|SC St. Tönis|Eintracht Frankfurt"
+        ],
+        "root": 2828,
+        "opponent_root": 4802,
+        "score": [
+          0,
+          11
+        ]
+      }
+    ]
+  },
+  {
+    "alias_root": 2832,
+    "native_root": 5344,
+    "official_id": "2418308",
+    "official_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/erzgebirge-aue-tsg-hoffenheim-2418308",
+    "official_home": "dfb:erzgebirge-aue",
+    "official_away": "dfb:tsg-hoffenheim",
+    "official_score": [
+      0,
+      4
+    ],
+    "official_penalties": null,
+    "day": "2026-08-22",
+    "openligadb_match": 81833,
+    "openligadb_home": {
+      "teamId": 66,
+      "teamName": "Erzgebirge Aue",
+      "shortName": "Aue",
+      "teamIconUrl": "https://upload.wikimedia.org/wikipedia/de/thumb/1/13/Fc_erzgebirge_aue.svg/960px-Fc_erzgebirge_aue.svg.png",
+      "teamGroupName": null,
+      "tla": null,
+      "wikidataId": null
+    },
+    "openligadb_away": {
+      "teamId": 175,
+      "teamName": "TSG Hoffenheim",
+      "shortName": "Hoffenheim",
+      "teamIconUrl": "https://i.imgur.com/gF0PfEl.png",
+      "teamGroupName": null,
+      "tla": null,
+      "wikidataId": null
+    },
+    "openligadb_results": [
+      {
+        "resultID": 127267,
+        "resultName": "Halbzeit",
+        "pointsTeam1": 0,
+        "pointsTeam2": 3,
+        "resultOrderID": 1,
+        "resultTypeID": 1,
+        "resultTypeKind": "HalfTime",
+        "resultDescription": "Ergebnis nach Ende der ersten Halbzeit"
+      },
+      {
+        "resultID": 127268,
+        "resultName": "Endergebnis",
+        "pointsTeam1": 0,
+        "pointsTeam2": 4,
+        "resultOrderID": 2,
+        "resultTypeID": 2,
+        "resultTypeKind": "After90Minutes",
+        "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit"
+      }
+    ],
+    "rds_matches": [
+      {
+        "id": 2722,
+        "source": "openligadb",
+        "edition": 307,
+        "keys": [
+          "openligadb:81833"
+        ],
+        "root": 5344,
+        "opponent_root": 816,
+        "score": [
+          0,
+          4
+        ]
+      },
+      {
+        "id": 5344,
+        "source": "open_matchday",
+        "edition": 321,
+        "keys": [
+          "open_matchday:GER_CUP_dfb-pokal:2026/2027:2026-08-22|Aue|Hoffenheim"
+        ],
+        "root": 2832,
+        "opponent_root": 816,
+        "score": [
+          0,
+          4
+        ]
+      },
+      {
+        "id": 5348,
+        "source": "open_matchday",
+        "edition": 321,
+        "keys": [
+          "open_matchday:GER_CUP_dfb-pokal:2026/2027:2026-08-22|FC Erzgebirge Aue|TSG Hoffenheim"
+        ],
+        "root": 5344,
+        "opponent_root": 816,
+        "score": [
+          0,
+          4
+        ]
+      }
+    ]
+  },
+  {
+    "alias_root": 2839,
+    "native_root": 2149,
+    "official_id": "2418322",
+    "official_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/sv-hemelingen-hannover-96-2418322",
+    "official_home": "dfb:sv-hemelingen",
+    "official_away": "dfb:hannover-96",
+    "official_score": [
+      1,
+      9
+    ],
+    "official_penalties": null,
+    "day": "2026-08-22",
+    "openligadb_match": 81847,
+    "openligadb_home": {
+      "teamId": 6905,
+      "teamName": "SV Hemelingen",
+      "shortName": "Hemelingen",
+      "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/d/d3/SV_Hemelingen.gif",
+      "teamGroupName": null,
+      "tla": null,
+      "wikidataId": null
+    },
+    "openligadb_away": {
+      "teamId": 55,
+      "teamName": "Hannover 96",
+      "shortName": "Hannover",
+      "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/c/cd/Hannover_96_Logo.svg",
+      "teamGroupName": null,
+      "tla": null,
+      "wikidataId": "Q33748"
+    },
+    "openligadb_results": [
+      {
+        "resultID": 127269,
+        "resultName": "Halbzeit",
+        "pointsTeam1": 0,
+        "pointsTeam2": 6,
+        "resultOrderID": 1,
+        "resultTypeID": 1,
+        "resultTypeKind": "HalfTime",
+        "resultDescription": "Ergebnis nach Ende der ersten Halbzeit"
+      },
+      {
+        "resultID": 127270,
+        "resultName": "Endergebnis",
+        "pointsTeam1": 1,
+        "pointsTeam2": 9,
+        "resultOrderID": 2,
+        "resultTypeID": 2,
+        "resultTypeKind": "After90Minutes",
+        "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit"
+      }
+    ],
+    "rds_matches": [
+      {
+        "id": 2723,
+        "source": "openligadb",
+        "edition": 307,
+        "keys": [
+          "openligadb:81847"
+        ],
+        "root": 2149,
+        "opponent_root": 744,
+        "score": [
+          1,
+          9
+        ]
+      },
+      {
+        "id": 5349,
+        "source": "open_matchday",
+        "edition": 321,
+        "keys": [
+          "open_matchday:GER_CUP_dfb-pokal:2026/2027:2026-08-22|Hemelingen|Hannover 96"
+        ],
+        "root": 2839,
+        "opponent_root": 744,
+        "score": [
+          1,
+          9
+        ]
+      }
+    ]
+  },
+  {
+    "alias_root": 2841,
+    "native_root": 2206,
+    "official_id": "2418328",
+    "official_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/lueneburger-sk-hansa-werder-bremen-2418328",
+    "official_home": "dfb:lueneburger-sk-hansa",
+    "official_away": "dfb:werder-bremen",
+    "official_score": [
+      0,
+      3
+    ],
+    "official_penalties": null,
+    "day": "2026-08-22",
+    "openligadb_match": 81853,
+    "openligadb_home": {
+      "teamId": 4550,
+      "teamName": "Lüneburger SK Hansa",
+      "shortName": "LSK",
+      "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/0/0b/L%C3%BCneburger_SK_Hansa_Logo.svg",
+      "teamGroupName": null,
+      "tla": null,
+      "wikidataId": null
+    },
+    "openligadb_away": {
+      "teamId": 134,
+      "teamName": "SV Werder Bremen",
+      "shortName": "Bremen",
+      "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/b/be/SV-Werder-Bremen-Logo.svg",
+      "teamGroupName": null,
+      "tla": null,
+      "wikidataId": null
+    },
+    "openligadb_results": [
+      {
+        "resultID": 127277,
+        "resultName": "Halbzeit",
+        "pointsTeam1": 0,
+        "pointsTeam2": 1,
+        "resultOrderID": 1,
+        "resultTypeID": 1,
+        "resultTypeKind": "HalfTime",
+        "resultDescription": "Ergebnis nach Ende der ersten Halbzeit"
+      },
+      {
+        "resultID": 127278,
+        "resultName": "Endergebnis",
+        "pointsTeam1": 0,
+        "pointsTeam2": 3,
+        "resultOrderID": 2,
+        "resultTypeID": 2,
+        "resultTypeKind": "After90Minutes",
+        "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit"
+      }
+    ],
+    "rds_matches": [
+      {
+        "id": 2727,
+        "source": "openligadb",
+        "edition": 307,
+        "keys": [
+          "openligadb:81853"
+        ],
+        "root": 2206,
+        "opponent_root": 4810,
+        "score": [
+          0,
+          3
+        ]
+      },
+      {
+        "id": 5350,
+        "source": "open_matchday",
+        "edition": 321,
+        "keys": [
+          "open_matchday:GER_CUP_dfb-pokal:2026/2027:2026-08-22|Lüneburger SK Hansa|Werder Bremen"
+        ],
+        "root": 2841,
+        "opponent_root": 4810,
+        "score": [
+          0,
+          3
+        ]
+      }
+    ]
+  },
+  {
+    "alias_root": 2849,
+    "native_root": 2207,
+    "official_id": "2418310",
+    "official_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/eintracht-trier-rb-leipzig-2418310",
+    "official_home": "dfb:eintracht-trier",
+    "official_away": "dfb:rb-leipzig",
+    "official_score": [
+      0,
+      6
+    ],
+    "official_penalties": null,
+    "day": "2026-08-22",
+    "openligadb_match": 81835,
+    "openligadb_home": {
+      "teamId": 1071,
+      "teamName": "Eintracht Trier",
+      "shortName": "",
+      "teamIconUrl": "http://upload.wikimedia.org/wikipedia/de/thumb/7/7a/Eintracht_Trier.svg/20px-Eintracht_Trier.svg.png",
+      "teamGroupName": null,
+      "tla": null,
+      "wikidataId": null
+    },
+    "openligadb_away": {
+      "teamId": 1635,
+      "teamName": "RB Leipzig",
+      "shortName": "Leipzig",
+      "teamIconUrl": "https://i.imgur.com/Rpwsjz1.png",
+      "teamGroupName": null,
+      "tla": null,
+      "wikidataId": null
+    },
+    "openligadb_results": [
+      {
+        "resultID": 127283,
+        "resultName": "Halbzeit",
+        "pointsTeam1": 0,
+        "pointsTeam2": 3,
+        "resultOrderID": 1,
+        "resultTypeID": 1,
+        "resultTypeKind": "HalfTime",
+        "resultDescription": "Ergebnis nach Ende der ersten Halbzeit"
+      },
+      {
+        "resultID": 127284,
+        "resultName": "Endergebnis",
+        "pointsTeam1": 0,
+        "pointsTeam2": 6,
+        "resultOrderID": 2,
+        "resultTypeID": 2,
+        "resultTypeKind": "After90Minutes",
+        "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit"
+      }
+    ],
+    "rds_matches": [
+      {
+        "id": 2728,
+        "source": "openligadb",
+        "edition": 307,
+        "keys": [
+          "openligadb:81835"
+        ],
+        "root": 2207,
+        "opponent_root": 4804,
+        "score": [
+          0,
+          6
+        ]
+      },
+      {
+        "id": 5354,
+        "source": "open_matchday",
+        "edition": 321,
+        "keys": [
+          "open_matchday:GER_CUP_dfb-pokal:2026/2027:2026-08-22|Eintracht Trier|RB Leipzig"
+        ],
+        "root": 2849,
+        "opponent_root": 4804,
+        "score": [
+          0,
+          6
+        ]
+      }
+    ]
+  },
+  {
+    "alias_root": 2851,
+    "native_root": 5346,
+    "official_id": "2418333",
+    "official_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/tsv-muenchen-von-1860-holstein-kiel-2418333",
+    "official_home": "dfb:tsv-1860-muenchen",
+    "official_away": "dfb:holstein-kiel",
+    "official_score": [
+      0,
+      2
+    ],
+    "official_penalties": null,
+    "day": "2026-08-22",
+    "openligadb_match": 81858,
+    "openligadb_home": {
+      "teamId": 125,
+      "teamName": "TSV 1860 München",
+      "shortName": "1860 München",
+      "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/48/TSV_1860_M%C3%BCnchen.svg/960px-TSV_1860_M%C3%BCnchen.svg.png",
+      "teamGroupName": null,
+      "tla": null,
+      "wikidataId": null
+    },
+    "openligadb_away": {
+      "teamId": 104,
+      "teamName": "Holstein Kiel",
+      "shortName": "Kiel",
+      "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Holstein_Kiel_Logo.svg/330px-Holstein_Kiel_Logo.svg.png",
+      "teamGroupName": null,
+      "tla": null,
+      "wikidataId": null
+    },
+    "openligadb_results": [
+      {
+        "resultID": 127287,
+        "resultName": "Halbzeit",
+        "pointsTeam1": 0,
+        "pointsTeam2": 1,
+        "resultOrderID": 1,
+        "resultTypeID": 1,
+        "resultTypeKind": "HalfTime",
+        "resultDescription": "Ergebnis nach Ende der ersten Halbzeit"
+      },
+      {
+        "resultID": 127288,
+        "resultName": "Endergebnis",
+        "pointsTeam1": 0,
+        "pointsTeam2": 2,
+        "resultOrderID": 2,
+        "resultTypeID": 2,
+        "resultTypeKind": "After90Minutes",
+        "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit"
+      }
+    ],
+    "rds_matches": [
+      {
+        "id": 2730,
+        "source": "openligadb",
+        "edition": 307,
+        "keys": [
+          "openligadb:81858"
+        ],
+        "root": 5346,
+        "opponent_root": 4997,
+        "score": [
+          0,
+          2
+        ]
+      },
+      {
+        "id": 5356,
+        "source": "open_matchday",
+        "edition": 321,
+        "keys": [
+          "open_matchday:GER_CUP_dfb-pokal:2026/2027:2026-08-22|TSV 1860 Munich|Holstein Kiel"
+        ],
+        "root": 2851,
+        "opponent_root": 4997,
+        "score": [
+          0,
+          2
+        ]
+      }
+    ]
+  },
+  {
+    "alias_root": 2853,
+    "native_root": 2209,
+    "official_id": "2418316",
+    "official_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/ssv-jeddeloh-1-fc-heidenheim-2418316",
+    "official_home": "dfb:ssv-jeddeloh",
+    "official_away": "dfb:1-fc-heidenheim",
+    "official_score": [
+      5,
+      2
+    ],
+    "official_penalties": null,
+    "day": "2026-08-23",
+    "openligadb_match": 81841,
+    "openligadb_home": {
+      "teamId": 4762,
+      "teamName": "SSV Jeddeloh II",
+      "shortName": "SSV Jeddeloh",
+      "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/4/4f/Logo_SSV_Jeddeloh.svg",
+      "teamGroupName": null,
+      "tla": null,
+      "wikidataId": null
+    },
+    "openligadb_away": {
+      "teamId": 199,
+      "teamName": "1. FC Heidenheim 1846",
+      "shortName": "Heidenheim",
+      "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/9/9d/1._FC_Heidenheim_1846.svg",
+      "teamGroupName": null,
+      "tla": null,
+      "wikidataId": "Q162251"
+    },
+    "openligadb_results": [
+      {
+        "resultID": 127318,
+        "resultName": "Halbzeit",
+        "pointsTeam1": 3,
+        "pointsTeam2": 1,
+        "resultOrderID": 1,
+        "resultTypeID": 1,
+        "resultTypeKind": "HalfTime",
+        "resultDescription": "Ergebnis nach Ende der ersten Halbzeit"
+      },
+      {
+        "resultID": 127319,
+        "resultName": "Endergebnis",
+        "pointsTeam1": 5,
+        "pointsTeam2": 2,
+        "resultOrderID": 2,
+        "resultTypeID": 2,
+        "resultTypeKind": "After90Minutes",
+        "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit"
+      }
+    ],
+    "rds_matches": [
+      {
+        "id": 2731,
+        "source": "openligadb",
+        "edition": 307,
+        "keys": [
+          "openligadb:81841"
+        ],
+        "root": 2209,
+        "opponent_root": 717,
+        "score": [
+          5,
+          2
+        ]
+      },
+      {
+        "id": 5357,
+        "source": "open_matchday",
+        "edition": 321,
+        "keys": [
+          "open_matchday:GER_CUP_dfb-pokal:2026/2027:2026-08-23|SSV Jeddeloh II|1. FC Heidenheim 1846"
+        ],
+        "root": 2853,
+        "opponent_root": 717,
+        "score": [
+          5,
+          2
+        ]
+      }
+    ]
+  },
+  {
+    "alias_root": 2853,
+    "native_root": 2209,
+    "official_id": "2430544",
+    "official_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/2-runde/ssv-jeddeloh-hertha-bsc-2430544",
+    "official_home": "dfb:ssv-jeddeloh",
+    "official_away": "dfb:hertha-bsc",
+    "official_score": [
+      0,
+      2
+    ],
+    "official_penalties": null,
+    "day": "2026-10-28",
+    "openligadb_match": 87619,
+    "openligadb_home": {
+      "teamId": 4762,
+      "teamName": "SSV Jeddeloh II",
+      "shortName": "SSV Jeddeloh",
+      "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/4/4f/Logo_SSV_Jeddeloh.svg",
+      "teamGroupName": null,
+      "tla": null,
+      "wikidataId": null
+    },
+    "openligadb_away": {
+      "teamId": 54,
+      "teamName": "Hertha BSC",
+      "shortName": "Hertha",
+      "teamIconUrl": "https://i.imgur.com/apFwbYZ.png",
+      "teamGroupName": null,
+      "tla": null,
+      "wikidataId": "Q102720"
+    },
+    "openligadb_results": [
+      {
+        "resultID": 130465,
+        "resultName": "Halbzeit",
+        "pointsTeam1": 0,
+        "pointsTeam2": 0,
+        "resultOrderID": 1,
+        "resultTypeID": 1,
+        "resultTypeKind": "HalfTime",
+        "resultDescription": "Ergebnis nach Ende der ersten Halbzeit"
+      },
+      {
+        "resultID": 130468,
+        "resultName": "Endergebnis",
+        "pointsTeam1": 0,
+        "pointsTeam2": 2,
+        "resultOrderID": 2,
+        "resultTypeID": 2,
+        "resultTypeKind": "After90Minutes",
+        "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit"
+      }
+    ],
+    "rds_matches": [
+      {
+        "id": 2756,
+        "source": "openligadb",
+        "edition": 307,
+        "keys": [
+          "openligadb:87619"
+        ],
+        "root": 2209,
+        "opponent_root": 4988,
+        "score": [
+          0,
+          2
+        ]
+      },
+      {
+        "id": 5386,
+        "source": "open_matchday",
+        "edition": 321,
+        "keys": [
+          "open_matchday:GER_CUP_dfb-pokal:2026/2027:2026-10-28|SSV Jeddeloh II|Hertha Berlin"
+        ],
+        "root": 2853,
+        "opponent_root": 4988,
+        "score": [
+          0,
+          2
+        ]
+      }
+    ]
+  },
+  {
+    "alias_root": 2857,
+    "native_root": 2159,
+    "official_id": "2418332",
+    "official_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/bahlinger-sc-1-fc-magdeburg-2418332",
+    "official_home": "dfb:bahlinger-sc",
+    "official_away": "dfb:1-fc-magdeburg",
+    "official_score": [
+      0,
+      4
+    ],
+    "official_penalties": null,
+    "day": "2026-08-23",
+    "openligadb_match": 81857,
+    "openligadb_home": {
+      "teamId": 2499,
+      "teamName": "Bahlinger SC",
+      "shortName": "Bahlinger SC",
+      "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/b/bf/BSC_Logo_rot_wei%E2%94%9C%C6%92.jpg",
+      "teamGroupName": null,
+      "tla": null,
+      "wikidataId": null
+    },
+    "openligadb_away": {
+      "teamId": 78,
+      "teamName": "1. FC Magdeburg",
+      "shortName": "Magdeburg",
+      "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/8/84/1._FC_Magdeburg.svg",
+      "teamGroupName": null,
+      "tla": null,
+      "wikidataId": "Q155730"
+    },
+    "openligadb_results": [
+      {
+        "resultID": 127334,
+        "resultName": "Halbzeit",
+        "pointsTeam1": 0,
+        "pointsTeam2": 3,
+        "resultOrderID": 1,
+        "resultTypeID": 1,
+        "resultTypeKind": "HalfTime",
+        "resultDescription": "Ergebnis nach Ende der ersten Halbzeit"
+      },
+      {
+        "resultID": 127335,
+        "resultName": "Endergebnis",
+        "pointsTeam1": 0,
+        "pointsTeam2": 4,
+        "resultOrderID": 2,
+        "resultTypeID": 2,
+        "resultTypeKind": "After90Minutes",
+        "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit"
+      }
+    ],
+    "rds_matches": [
+      {
+        "id": 2737,
+        "source": "openligadb",
+        "edition": 307,
+        "keys": [
+          "openligadb:81857"
+        ],
+        "root": 2159,
+        "opponent_root": 565,
+        "score": [
+          0,
+          4
+        ]
+      },
+      {
+        "id": 5359,
+        "source": "open_matchday",
+        "edition": 321,
+        "keys": [
+          "open_matchday:GER_CUP_dfb-pokal:2026/2027:2026-08-23|Bahlinger SC 1929|1. FC Magdeburg"
+        ],
+        "root": 2857,
+        "opponent_root": 565,
+        "score": [
+          0,
+          4
+        ]
+      }
+    ]
+  },
+  {
+    "alias_root": 2859,
+    "native_root": 2212,
+    "official_id": "2418331",
+    "official_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/fc-carl-zeiss-jena-sv-darmstadt-98-2418331",
+    "official_home": "dfb:fc-carl-zeiss-jena",
+    "official_away": "dfb:sv-darmstadt-98",
+    "official_score": [
+      1,
+      2
+    ],
+    "official_penalties": null,
+    "day": "2026-08-23",
+    "openligadb_match": 81856,
+    "openligadb_home": {
+      "teamId": 69,
+      "teamName": "FC Carl Zeiss Jena",
+      "shortName": "Jena",
+      "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/e/e4/Logo_FC_Carl_Zeiss_Jena.svg",
+      "teamGroupName": null,
+      "tla": null,
+      "wikidataId": null
+    },
+    "openligadb_away": {
+      "teamId": 118,
+      "teamName": "SV Darmstadt 98",
+      "shortName": "Darmstadt",
+      "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/e/e5/SV_Darmstadt_98_Logo.svg",
+      "teamGroupName": null,
+      "tla": null,
+      "wikidataId": "Q479351"
+    },
+    "openligadb_results": [
+      {
+        "resultID": 127332,
+        "resultName": "Halbzeit",
+        "pointsTeam1": 1,
+        "pointsTeam2": 2,
+        "resultOrderID": 1,
+        "resultTypeID": 1,
+        "resultTypeKind": "HalfTime",
+        "resultDescription": "Ergebnis nach Ende der ersten Halbzeit"
+      },
+      {
+        "resultID": 127333,
+        "resultName": "Endergebnis",
+        "pointsTeam1": 1,
+        "pointsTeam2": 2,
+        "resultOrderID": 2,
+        "resultTypeID": 2,
+        "resultTypeKind": "After90Minutes",
+        "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit"
+      }
+    ],
+    "rds_matches": [
+      {
+        "id": 2736,
+        "source": "openligadb",
+        "edition": 307,
+        "keys": [
+          "openligadb:81856"
+        ],
+        "root": 2212,
+        "opponent_root": 4989,
+        "score": [
+          1,
+          2
+        ]
+      },
+      {
+        "id": 5360,
+        "source": "open_matchday",
+        "edition": 321,
+        "keys": [
+          "open_matchday:GER_CUP_dfb-pokal:2026/2027:2026-08-23|FC Carl Zeiss Jena|SV Darmstadt 98"
+        ],
+        "root": 2859,
+        "opponent_root": 4989,
+        "score": [
+          1,
+          2
+        ]
+      }
+    ]
+  },
+  {
+    "alias_root": 2861,
+    "native_root": 2210,
+    "official_id": "2418312",
+    "official_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/tsv-schott-mainz-borussia-moenchengladbach-2418312",
+    "official_home": "dfb:tsv-schott-mainz",
+    "official_away": "dfb:borussia-moenchengladbach",
+    "official_score": [
+      0,
+      5
+    ],
+    "official_penalties": null,
+    "day": "2026-08-23",
+    "openligadb_match": 81837,
+    "openligadb_home": {
+      "teamId": 4555,
+      "teamName": "TSV Schott Mainz",
+      "shortName": "SCHOTT",
+      "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/48/TSV_Schott_Mainz.png/120px-TSV_Schott_Mainz.png",
+      "teamGroupName": null,
+      "tla": null,
+      "wikidataId": null
+    },
+    "openligadb_away": {
+      "teamId": 87,
+      "teamName": "Borussia Mönchengladbach",
+      "shortName": "Gladbach",
+      "teamIconUrl": "https://i.imgur.com/KSIk0Eu.png",
+      "teamGroupName": null,
+      "tla": null,
+      "wikidataId": null
+    },
+    "openligadb_results": [
+      {
+        "resultID": 127328,
+        "resultName": "Halbzeit",
+        "pointsTeam1": 0,
+        "pointsTeam2": 2,
+        "resultOrderID": 1,
+        "resultTypeID": 1,
+        "resultTypeKind": "HalfTime",
+        "resultDescription": "Ergebnis nach Ende der ersten Halbzeit"
+      },
+      {
+        "resultID": 127329,
+        "resultName": "Endergebnis",
+        "pointsTeam1": 0,
+        "pointsTeam2": 5,
+        "resultOrderID": 2,
+        "resultTypeID": 2,
+        "resultTypeKind": "After90Minutes",
+        "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit"
+      }
+    ],
+    "rds_matches": [
+      {
+        "id": 2734,
+        "source": "openligadb",
+        "edition": 307,
+        "keys": [
+          "openligadb:81837"
+        ],
+        "root": 2210,
+        "opponent_root": 4809,
+        "score": [
+          0,
+          5
+        ]
+      },
+      {
+        "id": 5361,
+        "source": "open_matchday",
+        "edition": 321,
+        "keys": [
+          "open_matchday:GER_CUP_dfb-pokal:2026/2027:2026-08-23|Schott|Borussia Mönchengladbach"
+        ],
+        "root": 2861,
+        "opponent_root": 4809,
+        "score": [
+          0,
+          5
+        ]
+      }
+    ]
+  },
+  {
+    "alias_root": 2863,
+    "native_root": 2211,
+    "official_id": "2418320",
+    "official_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/vfb-krieschow-1-fsv-mainz-05-2418320",
+    "official_home": "dfb:vfb-krieschow",
+    "official_away": "dfb:1-fsv-mainz-05",
+    "official_score": [
+      0,
+      9
+    ],
+    "official_penalties": null,
+    "day": "2026-08-23",
+    "openligadb_match": 81845,
+    "openligadb_home": {
+      "teamId": 7594,
+      "teamName": "VfB 1921 Krieschow ",
+      "shortName": "VfB Krieschow ",
+      "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/9/9a/VfB_Krieschow_Logo_2020.png",
+      "teamGroupName": null,
+      "tla": null,
+      "wikidataId": null
+    },
+    "openligadb_away": {
+      "teamId": 81,
+      "teamName": "1. FSV Mainz 05",
+      "shortName": "Mainz",
+      "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/9/9e/Logo_Mainz_05.svg",
+      "teamGroupName": null,
+      "tla": null,
+      "wikidataId": "Q105254"
+    },
+    "openligadb_results": [
+      {
+        "resultID": 127330,
+        "resultName": "Halbzeit",
+        "pointsTeam1": 0,
+        "pointsTeam2": 5,
+        "resultOrderID": 1,
+        "resultTypeID": 1,
+        "resultTypeKind": "HalfTime",
+        "resultDescription": "Ergebnis nach Ende der ersten Halbzeit"
+      },
+      {
+        "resultID": 127331,
+        "resultName": "Endergebnis",
+        "pointsTeam1": 0,
+        "pointsTeam2": 9,
+        "resultOrderID": 2,
+        "resultTypeID": 2,
+        "resultTypeKind": "After90Minutes",
+        "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit"
+      }
+    ],
+    "rds_matches": [
+      {
+        "id": 2735,
+        "source": "openligadb",
+        "edition": 307,
+        "keys": [
+          "openligadb:81845"
+        ],
+        "root": 2211,
+        "opponent_root": 4813,
+        "score": [
+          0,
+          9
+        ]
+      },
+      {
+        "id": 5363,
+        "source": "open_matchday",
+        "edition": 321,
+        "keys": [
+          "open_matchday:GER_CUP_dfb-pokal:2026/2027:2026-08-23|VFB Krieschow|Mainz"
+        ],
+        "root": 2863,
+        "opponent_root": 4813,
+        "score": [
+          0,
+          9
+        ]
+      }
+    ]
+  },
+  {
+    "alias_root": 2865,
+    "native_root": 2213,
+    "official_id": "2418335",
+    "official_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/sv-westfalia-rhynern-dynamo-dresden-2418335",
+    "official_home": "dfb:sv-westfalia-rhynern",
+    "official_away": "dfb:dynamo-dresden",
+    "official_score": [
+      0,
+      6
+    ],
+    "official_penalties": null,
+    "day": "2026-08-23",
+    "openligadb_match": 81860,
+    "openligadb_home": {
+      "teamId": 4568,
+      "teamName": "SV Westfalia Rhynern",
+      "shortName": "Rhynern",
+      "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/0/07/SV_Westfalia_Rhynern_Logo.svg",
+      "teamGroupName": null,
+      "tla": null,
+      "wikidataId": null
+    },
+    "openligadb_away": {
+      "teamId": 177,
+      "teamName": "Dynamo Dresden",
+      "shortName": "Dresden",
+      "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/Logo_SG_Dynamo_Dresden_neu.svg/960px-Logo_SG_Dynamo_Dresden_neu.svg.png",
+      "teamGroupName": null,
+      "tla": null,
+      "wikidataId": "Q141931"
+    },
+    "openligadb_results": [
+      {
+        "resultID": 127336,
+        "resultName": "Halbzeit",
+        "pointsTeam1": 0,
+        "pointsTeam2": 5,
+        "resultOrderID": 1,
+        "resultTypeID": 1,
+        "resultTypeKind": "HalfTime",
+        "resultDescription": "Ergebnis nach Ende der ersten Halbzeit"
+      },
+      {
+        "resultID": 127337,
+        "resultName": "Endergebnis",
+        "pointsTeam1": 0,
+        "pointsTeam2": 6,
+        "resultOrderID": 2,
+        "resultTypeID": 2,
+        "resultTypeKind": "After90Minutes",
+        "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit"
+      }
+    ],
+    "rds_matches": [
+      {
+        "id": 2738,
+        "source": "openligadb",
+        "edition": 307,
+        "keys": [
+          "openligadb:81860"
+        ],
+        "root": 2213,
+        "opponent_root": 4992,
+        "score": [
+          0,
+          6
+        ]
+      },
+      {
+        "id": 5364,
+        "source": "open_matchday",
+        "edition": 321,
+        "keys": [
+          "open_matchday:GER_CUP_dfb-pokal:2026/2027:2026-08-23|Westfalia Rhynern|Dynamo Dresden"
+        ],
+        "root": 2865,
+        "opponent_root": 4992,
+        "score": [
+          0,
+          6
+        ]
+      }
+    ]
+  },
+  {
+    "alias_root": 2867,
+    "native_root": 2214,
+    "official_id": "2418336",
+    "official_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/1-fc-phoenix-luebeck-sc-paderborn-07-2418336",
+    "official_home": "dfb:1-fc-phoenix-luebeck",
+    "official_away": "dfb:sc-paderborn-07",
+    "official_score": [
+      2,
+      4
+    ],
+    "official_penalties": null,
+    "day": "2026-08-23",
+    "openligadb_match": 81861,
+    "openligadb_home": {
+      "teamId": 6326,
+      "teamName": "1. FC Phönix Lübeck",
+      "shortName": "Phönix Lübeck",
+      "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/9/9b/1._FC_Phoenix_Luebeck_Logo.svg",
+      "teamGroupName": null,
+      "tla": null,
+      "wikidataId": null
+    },
+    "openligadb_away": {
+      "teamId": 31,
+      "teamName": "SC Paderborn 07",
+      "shortName": "Paderborn",
+      "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/e/e3/SC_Paderborn_07_Logo.svg",
+      "teamGroupName": null,
+      "tla": null,
+      "wikidataId": "Q160532"
+    },
+    "openligadb_results": [
+      {
+        "resultID": 127338,
+        "resultName": "Halbzeit",
+        "pointsTeam1": 1,
+        "pointsTeam2": 2,
+        "resultOrderID": 1,
+        "resultTypeID": 1,
+        "resultTypeKind": "HalfTime",
+        "resultDescription": "Ergebnis nach Ende der ersten Halbzeit"
+      },
+      {
+        "resultID": 127339,
+        "resultName": "Endergebnis",
+        "pointsTeam1": 2,
+        "pointsTeam2": 4,
+        "resultOrderID": 2,
+        "resultTypeID": 2,
+        "resultTypeKind": "After90Minutes",
+        "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit"
+      }
+    ],
+    "rds_matches": [
+      {
+        "id": 2741,
+        "source": "openligadb",
+        "edition": 307,
+        "keys": [
+          "openligadb:81861"
+        ],
+        "root": 2214,
+        "opponent_root": 4812,
+        "score": [
+          2,
+          4
+        ]
+      },
+      {
+        "id": 5365,
+        "source": "open_matchday",
+        "edition": 321,
+        "keys": [
+          "open_matchday:GER_CUP_dfb-pokal:2026/2027:2026-08-23|1. FC Phönix Lübeck|SC Paderborn 07"
+        ],
+        "root": 2867,
+        "opponent_root": 4812,
+        "score": [
+          2,
+          4
+        ]
+      }
+    ]
+  },
+  {
+    "alias_root": 2873,
+    "native_root": 2216,
+    "official_id": "2418337",
+    "official_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/vsg-altglienicke-vfl-wolfsburg-2418337",
+    "official_home": "dfb:vsg-altglienicke",
+    "official_away": "dfb:vfl-wolfsburg",
+    "official_score": [
+      3,
+      3
+    ],
+    "official_penalties": [
+      5,
+      6
+    ],
+    "day": "2026-08-24",
+    "openligadb_match": 81862,
+    "openligadb_home": {
+      "teamId": 4600,
+      "teamName": "VSG Altglienicke Berlin",
+      "shortName": "Altglienicke",
+      "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/e/e8/VSG_Altglienicke.svg",
+      "teamGroupName": null,
+      "tla": null,
+      "wikidataId": null
+    },
+    "openligadb_away": {
+      "teamId": 131,
+      "teamName": "VfL Wolfsburg",
+      "shortName": "Wolfsburg",
+      "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/VfL_Wolfsburg_logo_2026.svg/960px-VfL_Wolfsburg_logo_2026.svg.png",
+      "teamGroupName": null,
+      "tla": null,
+      "wikidataId": "Q101859"
+    },
+    "openligadb_results": [
+      {
+        "resultID": 127376,
+        "resultName": "Halbzeit",
+        "pointsTeam1": 1,
+        "pointsTeam2": 0,
+        "resultOrderID": 1,
+        "resultTypeID": 1,
+        "resultTypeKind": "HalfTime",
+        "resultDescription": "Ergebnis nach Ende der ersten Halbzeit"
+      },
+      {
+        "resultID": 127377,
+        "resultName": "Endergebnis",
+        "pointsTeam1": 2,
+        "pointsTeam2": 2,
+        "resultOrderID": 2,
+        "resultTypeID": 2,
+        "resultTypeKind": "After90Minutes",
+        "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit"
+      },
+      {
+        "resultID": 127382,
+        "resultName": "Verlängerung",
+        "pointsTeam1": 3,
+        "pointsTeam2": 3,
+        "resultOrderID": 3,
+        "resultTypeID": 4,
+        "resultTypeKind": "AfterExtraTime",
+        "resultDescription": "Ergebnis nach Verlängerung"
+      },
+      {
+        "resultID": 127383,
+        "resultName": "Elfmeterschießen",
+        "pointsTeam1": 8,
+        "pointsTeam2": 9,
+        "resultOrderID": 4,
+        "resultTypeID": 5,
+        "resultTypeKind": "AfterPenalties",
+        "resultDescription": "Ergebnis nach Elfmeterschießen"
+      }
+    ],
+    "rds_matches": [
+      {
+        "id": 2743,
+        "source": "openligadb",
+        "edition": 307,
+        "keys": [
+          "openligadb:81862"
+        ],
+        "root": 2216,
+        "opponent_root": 4993,
+        "score": [
+          3,
+          3
+        ]
+      },
+      {
+        "id": 5369,
+        "source": "open_matchday",
+        "edition": 321,
+        "keys": [
+          "open_matchday:GER_CUP_dfb-pokal:2026/2027:2026-08-24|VSG Altglienicke|VfL Wolfsburg"
+        ],
+        "root": 2873,
+        "opponent_root": 4993,
+        "score": [
+          3,
+          3
+        ]
+      }
+    ]
+  },
+  {
+    "alias_root": 2877,
+    "native_root": 2185,
+    "official_id": "2418318",
+    "official_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/hallescher-fc-fc-schalke-04-2418318",
+    "official_home": "dfb:hallescher-fc",
+    "official_away": "dfb:fc-schalke-04",
+    "official_score": [
+      2,
+      5
+    ],
+    "official_penalties": null,
+    "day": "2026-08-24",
+    "openligadb_match": 81843,
+    "openligadb_home": {
+      "teamId": 208,
+      "teamName": "Hallescher FC",
+      "shortName": "Halle",
+      "teamIconUrl": "https://derivates.kicker.de/image/fetch/f_webp/w_120%2Ch_120%2Cc_fit%2Cq_auto:best/https://mediadb.kicker.de/2018/fussball/vereine/xxl/4440_20170721710.png",
+      "teamGroupName": null,
+      "tla": null,
+      "wikidataId": null
+    },
+    "openligadb_away": {
+      "teamId": 9,
+      "teamName": "FC Schalke 04",
+      "shortName": "S04",
+      "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/9/97/FC_Schalke_04_Logo.png",
+      "teamGroupName": null,
+      "tla": null,
+      "wikidataId": "Q32494"
+    },
+    "openligadb_results": [
+      {
+        "resultID": 127384,
+        "resultName": "Halbzeit",
+        "pointsTeam1": 1,
+        "pointsTeam2": 0,
+        "resultOrderID": 1,
+        "resultTypeID": 1,
+        "resultTypeKind": "HalfTime",
+        "resultDescription": "Ergebnis nach Ende der ersten Halbzeit"
+      },
+      {
+        "resultID": 127385,
+        "resultName": "Endergebnis",
+        "pointsTeam1": 2,
+        "pointsTeam2": 2,
+        "resultOrderID": 2,
+        "resultTypeID": 2,
+        "resultTypeKind": "After90Minutes",
+        "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit"
+      },
+      {
+        "resultID": 127386,
+        "resultName": "Verlängerung",
+        "pointsTeam1": 2,
+        "pointsTeam2": 5,
+        "resultOrderID": 3,
+        "resultTypeID": 4,
+        "resultTypeKind": "AfterExtraTime",
+        "resultDescription": "Ergebnis nach Verlängerung"
+      }
+    ],
+    "rds_matches": [
+      {
+        "id": 2745,
+        "source": "openligadb",
+        "edition": 307,
+        "keys": [
+          "openligadb:81843"
+        ],
+        "root": 2185,
+        "opponent_root": 735,
+        "score": [
+          2,
+          5
+        ]
+      },
+      {
+        "id": 5371,
+        "source": "open_matchday",
+        "edition": 321,
+        "keys": [
+          "open_matchday:GER_CUP_dfb-pokal:2026/2027:2026-08-24|Hallescher FC|Schalke 04"
+        ],
+        "root": 2877,
+        "opponent_root": 735,
+        "score": [
+          2,
+          5
+        ]
+      }
+    ]
+  },
+  {
+    "alias_root": 2879,
+    "native_root": 2218,
+    "official_id": "2418311",
+    "official_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/hamburg-eimsbuetteler-ballspiel-club-borussia-dortmund-2418311",
+    "official_home": "dfb:hebc-hamburg",
+    "official_away": "dfb:borussia-dortmund",
+    "official_score": [
+      0,
+      5
+    ],
+    "official_penalties": null,
+    "day": "2026-09-01",
+    "openligadb_match": 81836,
+    "openligadb_home": {
+      "teamId": 7595,
+      "teamName": "Hamburg Eimsbütteler BC",
+      "shortName": "Hamburg Eimsbütteler BC",
+      "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/9/98/HEBC_Logo.png",
+      "teamGroupName": null,
+      "tla": null,
+      "wikidataId": null
+    },
+    "openligadb_away": {
+      "teamId": 7,
+      "teamName": "Borussia Dortmund",
+      "shortName": "Dortmund",
+      "teamIconUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Borussia_Dortmund_logo.svg/960px-Borussia_Dortmund_logo.svg.png",
+      "teamGroupName": null,
+      "tla": null,
+      "wikidataId": "Q41420"
+    },
+    "openligadb_results": [
+      {
+        "resultID": 127745,
+        "resultName": "Halbzeit",
+        "pointsTeam1": 0,
+        "pointsTeam2": 4,
+        "resultOrderID": 1,
+        "resultTypeID": 1,
+        "resultTypeKind": "HalfTime",
+        "resultDescription": "Ergebnis nach Ende der ersten Halbzeit"
+      },
+      {
+        "resultID": 127746,
+        "resultName": "Endergebnis",
+        "pointsTeam1": 0,
+        "pointsTeam2": 5,
+        "resultOrderID": 2,
+        "resultTypeID": 2,
+        "resultTypeKind": "After90Minutes",
+        "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit"
+      }
+    ],
+    "rds_matches": [
+      {
+        "id": 2746,
+        "source": "openligadb",
+        "edition": 307,
+        "keys": [
+          "openligadb:81836"
+        ],
+        "root": 2218,
+        "opponent_root": 4811,
+        "score": [
+          0,
+          5
+        ]
+      },
+      {
+        "id": 5372,
+        "source": "open_matchday",
+        "edition": 321,
+        "keys": [
+          "open_matchday:GER_CUP_dfb-pokal:2026/2027:2026-09-01|HEBC Hamburg|Borussia Dortmund"
+        ],
+        "root": 2879,
+        "opponent_root": 4811,
+        "score": [
+          0,
+          5
+        ]
+      }
+    ]
+  }
+]

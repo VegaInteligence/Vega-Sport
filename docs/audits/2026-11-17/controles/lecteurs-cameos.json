@@ -1,0 +1,646 @@
+[
+  {
+    "case": {
+      "tag": "matan",
+      "id": "m_21vqiJ",
+      "pid": "p_1FvzRt",
+      "league": "l_0eg6C9",
+      "name": "Alexandru Mățan",
+      "minutes": 7,
+      "grade": 54
+    },
+    "at": "2026-11-18T02:51:02.206Z",
+    "match": {
+      "url": "https://vegasport.vercel.app/matchs?season=2021%2F2022&league=l_0eg6C9&id=m_21vqiJ&view=players",
+      "status": 200,
+      "title": "Columbus Crew — CF Montréal",
+      "headings": [
+        "Joueur",
+        "Mini",
+        "Note Vega ↓i",
+        "Bi"
+      ],
+      "row": "Alexandru Mățan\nColumbus Crew ▲ 83′\n\t7\t54\t0\t0\t—\t—\t—\t0\t6 / 8\t—\t—\t0\t0\t—",
+      "firstCells": [
+        "7",
+        "54",
+        "0",
+        "0"
+      ],
+      "gradeConfirmed": true,
+      "minutesConfirmed": true,
+      "routes": {
+        "players": {
+          "at": "2026-11-18T02:51:03.307Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/matches/m_21vqiJ/players",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        "ranking": {
+          "at": "2026-11-18T02:51:04.384Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/rankings/match?match=m_21vqiJ",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        }
+      },
+      "requests": [
+        {
+          "at": "2026-11-18T02:51:02.234Z",
+          "url": "https://vegasport.vercel.app/matchs/?season=2021%2F2022&league=l_0eg6C9&id=m_21vqiJ&view=players",
+          "status": 308,
+          "resource": "document",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:02.249Z",
+          "url": "https://vegasport.vercel.app/matchs?season=2021%2F2022&league=l_0eg6C9&id=m_21vqiJ&view=players",
+          "status": 200,
+          "resource": "document",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:02.367Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/status",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:02.621Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/dashboard/manifest",
+          "status": 200,
+          "resource": "other",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:02.950Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/matches/m_21vqiJ/summary",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:03.306Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/matches/m_21vqiJ/stats",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:03.307Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/matches/m_21vqiJ/players",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:03.307Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/matches/m_21vqiJ/events",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:04.384Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/rankings/match?match=m_21vqiJ",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        }
+      ]
+    },
+    "profile": {
+      "url": "https://vegasport.vercel.app/joueurs?season=2021%2F2022&focus=europe&league=l_0eg6C9&id=p_1FvzRt",
+      "status": 200,
+      "age": [],
+      "excerpt": "← Tous les joueurs\nAlexandru Mățan\n\nMilieu\n\nComparé aux milieux\n\nColumbus Crew\nMLS\nFin de contrati\n30/06/2029\nTemps de jeui\n—\nCouverture partielle · 29/34\n\nVALEUR\nMARCHANDEi\n\n—\n\nDonnées indisponibles\n\nINDICE VEGAi\nsur 100\n\n40\nNiveau actueli\n991e\nsur 2 019 au poste\n\nCe qu’il produit : 0,5 · niveau de son club : -0,2 (points du classement de la saison).\n\nRang provisoire : il a moins de minutes que le seuil de la saison ; son indice part du bas de son poste et rejoint le sien à mesure qu’il joue.\n\nPOSTES OCCUPÉSi\n2021/2022\n\nSens du jeu →\nMIL\nMO\n\nDISPONIBILITÉi\n12 derniers mois\n\n0\nabsences\n0 sem.",
+      "requests": [
+        {
+          "at": "2026-11-18T02:51:04.631Z",
+          "url": "https://vegasport.vercel.app/joueurs?season=2021%2F2022&focus=europe&league=l_0eg6C9&id=p_1FvzRt",
+          "status": 200,
+          "resource": "document",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:04.659Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/dashboard/manifest",
+          "status": 200,
+          "resource": "other",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:04.673Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/status",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:04.816Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/read/player?detail=summary&leagues=all&limit=100&page=1&player=p_1FvzRt&season=2021%2F2022",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:05.172Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/read/club?leagues=all&limit=100&page=1&season=2021%2F2022&team=t_1avIKi",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:05.173Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/clubs/europe?season=2021%2F2022&generation=25555190",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:05.173Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/scouting/routes?player=p_1FvzRt",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:05.182Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/players/p_1FvzRt",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:05.187Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/players/p_1FvzRt/injuries",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:05.191Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/player-honours?id=p_1FvzRt",
+          "status": 404,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:05.227Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/rankings/power/player?season=2021%2F2022&player=p_1FvzRt",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:05.296Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/read/players?basis=total&detail=profile&direction=asc&group=M&leagues=none&limit=100&minutes=0&page=1&season=2021%2F2022&sort=name&whole=1",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:05.349Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/player-market-values?id=p_1FvzRt",
+          "status": 404,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:05.501Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/players/p_1FvzRt/style?season=2021%2F2022",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:05.504Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/matches/m_3UVXX5/players/halves",
+          "status": 404,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:05.509Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/matches/m_3uCRui/players/halves",
+          "status": 404,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:05.512Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/read/player?detail=summary&leagues=l_0eg6C9&limit=100&page=1&player=p_1FvzRt&season=2026%2F2027",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:05.529Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/matches/m_416xQd/players/halves",
+          "status": 404,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:05.542Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/read/player?detail=summary&leagues=l_3xwVF2&limit=100&page=1&player=p_1FvzRt&season=2025%2F2026",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:05.616Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/read/player?detail=summary&leagues=l_0aEfof%2Cl_0eg6C9&limit=100&page=1&player=p_1FvzRt&season=2024%2F2025",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:05.866Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/archive/matches/m_3UVXX5",
+          "status": 404,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:05.866Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/archive/matches/m_3uCRui",
+          "status": 404,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:05.866Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/archive/matches/m_416xQd",
+          "status": 404,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:05.867Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/read/player?detail=summary&leagues=l_0eg6C9&limit=100&page=1&player=p_1FvzRt&season=2023%2F2024",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:05.906Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/read/player?detail=summary&leagues=l_0eg6C9&limit=100&page=1&player=p_1FvzRt&season=2022%2F2023",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        }
+      ]
+    },
+    "performance": {
+      "url": "https://dngp6kh9jx2bl.cloudfront.net/api/read/performance?season=2021%2F2022&league=l_0eg6C9&appearance=m_21vqiJ%3Ap_1FvzRt",
+      "status": 200,
+      "bytes": 10109,
+      "bodySha256": "e0768aedba0e6bf80e3a03aee21677a058477ef457673aaa586220ef118bd7bb",
+      "keys": {
+        "id": "m_21vqiJ:p_1FvzRt",
+        "playerId": "p_1FvzRt",
+        "name": "Alexandru Mățan",
+        "matchId": "m_21vqiJ",
+        "minutes": 7,
+        "grade": null,
+        "gradeZ": 0.25769954919815063,
+        "date": "2021-09-25"
+      },
+      "contentType": "application/json; charset=utf-8"
+    }
+  },
+  {
+    "case": {
+      "tag": "moutoussamy",
+      "id": "m_0mceOR",
+      "pid": "p_2jnb4H",
+      "league": "l_3FJFUl",
+      "name": "Samuel Moutoussamy",
+      "minutes": 1,
+      "grade": 55
+    },
+    "at": "2026-11-18T02:51:06.384Z",
+    "match": {
+      "url": "https://vegasport.vercel.app/matchs?season=2021%2F2022&league=l_3FJFUl&id=m_0mceOR&view=players",
+      "status": 200,
+      "title": "Nantes — Clermont Foot",
+      "headings": [
+        "Joueur",
+        "Mini",
+        "Note Vega ↓i",
+        "Bi"
+      ],
+      "row": "Samuel Moutoussamy\nNantes ▲ 90′\n\t1\t55\t0\t0\t—\t—\t—\t0\t1 / 1\t—\t—\t0\t1\t—",
+      "firstCells": [
+        "1",
+        "55",
+        "0",
+        "0"
+      ],
+      "gradeConfirmed": true,
+      "minutesConfirmed": true,
+      "routes": {
+        "players": {
+          "at": "2026-11-18T02:51:07.219Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/matches/m_0mceOR/players",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        }
+      },
+      "requests": [
+        {
+          "at": "2026-11-18T02:51:06.395Z",
+          "url": "https://vegasport.vercel.app/matchs/?season=2021%2F2022&league=l_3FJFUl&id=m_0mceOR&view=players",
+          "status": 308,
+          "resource": "document",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:06.407Z",
+          "url": "https://vegasport.vercel.app/matchs?season=2021%2F2022&league=l_3FJFUl&id=m_0mceOR&view=players",
+          "status": 200,
+          "resource": "document",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:06.444Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/dashboard/manifest",
+          "status": 200,
+          "resource": "other",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:06.512Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/status",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:06.853Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/matches/m_0mceOR/summary",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:07.209Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/matches/m_0mceOR/stats",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:07.214Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/matches/m_0mceOR/events",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:07.219Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/matches/m_0mceOR/players",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        }
+      ]
+    },
+    "profile": {
+      "url": "https://vegasport.vercel.app/joueurs?season=2021%2F2022&focus=europe&league=l_3FJFUl&id=p_2jnb4H",
+      "status": 200,
+      "age": [
+        "Âgei",
+        "30 ans",
+        "12/08/1996"
+      ],
+      "excerpt": "← Tous les joueurs\nSamuel Moutoussamy\n\nMilieu\n\nComparé aux milieux\n\nCongo-Kinshasa\nNantes\nLigue 1\nÂgei\n30 ans\n12/08/1996\nTaillei\n1,74 m\nPied forti\nGauche\nFin de contrati\n30/06/2027\nSélectioni\n4 sél.\n0 but · Congo-Kinshasa\nTemps de jeui\n—\nCouverture partielle · 34/38\n\nVALEUR\nMARCHANDEi\n\n1,2 M€\n\nEstimation au 04/06/2026\n\nINDICE VEGAi\nsur 100\n\n45\nNiveau actueli\n660e\nsur 2 415 au poste\n\nCe qu’il produit : -4,3 · niveau de son club : 3,0 (points du classement de la saison).\n\nPOSTES OCCUPÉSi\n2021/2022\n\nSens du jeu →",
+      "requests": [
+        {
+          "at": "2026-11-18T02:51:08.249Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/rankings/match?match=m_0mceOR",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:08.292Z",
+          "url": "https://vegasport.vercel.app/joueurs?season=2021%2F2022&focus=europe&league=l_3FJFUl&id=p_2jnb4H",
+          "status": 200,
+          "resource": "document",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:08.313Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/dashboard/manifest",
+          "status": 200,
+          "resource": "other",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:08.326Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/status",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:08.480Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/read/player?detail=summary&leagues=all&limit=100&page=1&player=p_2jnb4H&season=2021%2F2022",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:08.524Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/clubs/europe?season=2021%2F2022&generation=25555190",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:08.635Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/scouting/routes?player=p_2jnb4H",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:08.655Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/players/p_2jnb4H/injuries",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:08.668Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/player-honours?id=p_2jnb4H",
+          "status": 404,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:08.779Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/read/players?basis=total&detail=profile&direction=asc&group=M&leagues=l_3FJFUl&limit=100&minutes=0&page=1&season=2021%2F2022&sort=name&whole=1",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:08.789Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/read/player?detail=summary&leagues=l_3xwVF2&limit=100&page=1&player=p_2jnb4H&season=2026%2F2027",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:08.840Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/player-market-values?id=p_2jnb4H",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:08.844Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/players/p_2jnb4H",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:08.852Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/players/p_2jnb4H/style?season=2021%2F2022",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:08.852Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/read/club?leagues=all&limit=100&page=1&season=2021%2F2022&team=t_0JtwBe",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:08.857Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/rankings/power/player?season=2021%2F2022&player=p_2jnb4H",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:08.918Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/read/player?detail=summary&leagues=l_0S1uaf&limit=100&page=1&player=p_2jnb4H&season=2024%2F2025",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:08.928Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/read/player?detail=summary&leagues=l_3FJFUl&limit=100&page=1&player=p_2jnb4H&season=2023%2F2024",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:09.005Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/matches/m_1TZX6r/players/halves",
+          "status": 404,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:09.005Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/read/player?detail=summary&leagues=l_1BFfna%2Cl_1XLtP0%2Cl_3xwVF2&limit=100&page=1&player=p_2jnb4H&season=2025%2F2026",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:09.008Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/matches/m_00Kn7q/players/halves",
+          "status": 404,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:09.124Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/archive/matches/m_1TZX6r",
+          "status": 404,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:09.135Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/matches/m_1qkqK6/players/halves",
+          "status": 404,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:09.252Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/archive/matches/m_1qkqK6",
+          "status": 404,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:09.252Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/read/player?detail=summary&leagues=l_38d9HA%2Cl_3FJFUl&limit=100&page=1&player=p_2jnb4H&season=2022%2F2023",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:09.252Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/read/player?detail=summary&leagues=l_3FJFUl&limit=100&page=1&player=p_2jnb4H&season=2021%2F2022",
+          "status": 200,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:09.254Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/matches/m_4TAC6x/players/halves",
+          "status": 404,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:09.319Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/archive/matches/m_00Kn7q",
+          "status": 404,
+          "resource": "fetch",
+          "request": "GET"
+        },
+        {
+          "at": "2026-11-18T02:51:09.561Z",
+          "url": "https://dngp6kh9jx2bl.cloudfront.net/api/archive/matches/m_4TAC6x",
+          "status": 404,
+          "resource": "fetch",
+          "request": "GET"
+        }
+      ]
+    },
+    "performance": {
+      "url": "https://dngp6kh9jx2bl.cloudfront.net/api/read/performance?season=2021%2F2022&league=l_3FJFUl&appearance=m_0mceOR%3Ap_2jnb4H",
+      "status": 200,
+      "bytes": 10309,
+      "bodySha256": "e32d55671135e89ffd70171eade25cf9e3365d29864cb72f3b4dc273d739583e",
+      "keys": {
+        "id": "m_0mceOR:p_2jnb4H",
+        "playerId": "p_2jnb4H",
+        "name": "Samuel Moutoussamy",
+        "matchId": "m_0mceOR",
+        "minutes": 1,
+        "grade": null,
+        "gradeZ": 0.35236406326293945,
+        "date": "2021-10-23"
+      },
+      "contentType": "application/json; charset=utf-8"
+    }
+  }
+]

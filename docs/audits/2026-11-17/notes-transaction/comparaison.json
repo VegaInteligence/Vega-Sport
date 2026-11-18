@@ -1,0 +1,140 @@
+{
+  "new_catalog_editions": [],
+  "participation_unit": "Recorded match/player-id pairs with a playing cue. Actual people, appearances and owed grades are unknown.",
+  "partitions_with_grade_integrity_issues": {},
+  "prior": {
+    "grid": "final-scores/scores/coverage-by-edition-and-entity.csv",
+    "interval_receipts": "final-scores/scores/score-query-snapshots.csv"
+  },
+  "removed_catalog_editions": [],
+  "same_23_keys": {
+    "atomic": {
+      "cases": 23,
+      "latest_runs": [
+        2098
+      ],
+      "public_display_numeric": 20,
+      "stored_numeric": 21,
+      "with_intermediate": 21
+    },
+    "midnight": {
+      "cases": 23,
+      "latest_runs": [
+        2089
+      ],
+      "public_display_numeric": 0,
+      "stored_numeric": 0,
+      "with_intermediate": 0
+    }
+  },
+  "snapshot": {
+    "at": "2026-11-18 02:02:22.142267+00:00",
+    "database": "vega_v2",
+    "isolation": "repeatable read",
+    "read_only": "on",
+    "snapshot": "4403005:4403005:"
+  },
+  "support": "The player scorable denominator requires the internally computed intermediate. Rows admitted with no intermediate are stated separately. Official qualifiers missing from RDS cannot be counted by this query; source calendars measure them separately.",
+  "total_rows": 6447,
+  "values_by_entity": {
+    "club": {
+      "atomic": {
+        "actual_valid": 161982,
+        "archive_policy_excluded": 986961,
+        "expected_proven": 161982,
+        "genuine_missing_after_computation": 0,
+        "invalid_or_mismatched": 0,
+        "matched_copy": 8,
+        "recorded_finished_team_sides": 1149053
+      },
+      "changed_comparable_editions": 0,
+      "delta": {
+        "actual_valid": 0,
+        "archive_policy_excluded": 0,
+        "expected_proven": 0,
+        "genuine_missing_after_computation": 0,
+        "invalid_or_mismatched": 0,
+        "matched_copy": 0,
+        "recorded_finished_team_sides": 0
+      },
+      "earlier": {
+        "actual_valid": 161982,
+        "archive_policy_excluded": 986961,
+        "expected_proven": 161982,
+        "genuine_missing_after_computation": 0,
+        "invalid_or_mismatched": 0,
+        "matched_copy": 8,
+        "recorded_finished_team_sides": 1149053
+      }
+    },
+    "national team": {
+      "atomic": {
+        "actual_valid": 1864,
+        "archive_policy_excluded": 0,
+        "expected_proven": 1864,
+        "genuine_missing_after_computation": 0,
+        "invalid_or_mismatched": 0,
+        "matched_copy": 324,
+        "recorded_finished_team_sides": 2188
+      },
+      "changed_comparable_editions": 1,
+      "delta": {
+        "actual_valid": 4,
+        "archive_policy_excluded": 0,
+        "expected_proven": 4,
+        "genuine_missing_after_computation": 0,
+        "invalid_or_mismatched": 0,
+        "matched_copy": 0,
+        "recorded_finished_team_sides": 4
+      },
+      "earlier": {
+        "actual_valid": 1860,
+        "archive_policy_excluded": 0,
+        "expected_proven": 1860,
+        "genuine_missing_after_computation": 0,
+        "invalid_or_mismatched": 0,
+        "matched_copy": 324,
+        "recorded_finished_team_sides": 2184
+      }
+    },
+    "player": {
+      "atomic": {
+        "actual_valid": 2282580,
+        "admitted_without_power_match": 15033,
+        "algorithm_inputs_before_coverage": 2297613,
+        "expected_proven": 2282580,
+        "genuine_missing_after_computation": 0,
+        "intentionally_hidden_cameo": 336979,
+        "invalid_or_mismatched": 0,
+        "recorded_cue_pairs_with_stats_without_positive_minutes": 1914,
+        "recorded_cue_pairs_without_stats": 8808,
+        "recorded_match_player_id_pairs_with_participation_cues": 2308335
+      },
+      "changed_comparable_editions": 43,
+      "delta": {
+        "actual_valid": 52750,
+        "admitted_without_power_match": -4716,
+        "algorithm_inputs_before_coverage": 48034,
+        "expected_proven": 52750,
+        "genuine_missing_after_computation": 0,
+        "intentionally_hidden_cameo": 7503,
+        "invalid_or_mismatched": 0,
+        "recorded_cue_pairs_with_stats_without_positive_minutes": 19,
+        "recorded_cue_pairs_without_stats": -12,
+        "recorded_match_player_id_pairs_with_participation_cues": 48310
+      },
+      "earlier": {
+        "actual_valid": 2229830,
+        "admitted_without_power_match": 19749,
+        "algorithm_inputs_before_coverage": 2249579,
+        "expected_proven": 2229830,
+        "genuine_missing_after_computation": 0,
+        "intentionally_hidden_cameo": 329476,
+        "invalid_or_mismatched": 0,
+        "recorded_cue_pairs_with_stats_without_positive_minutes": 1895,
+        "recorded_cue_pairs_without_stats": 8820,
+        "recorded_match_player_id_pairs_with_participation_cues": 2260025
+      }
+    }
+  }
+}

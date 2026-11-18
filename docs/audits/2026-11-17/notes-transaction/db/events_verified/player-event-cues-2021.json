@@ -1,0 +1,52 @@
+{
+  "at": "2026-11-18 02:02:22.142267+00:00",
+  "snapshot": "4403005:4403005:",
+  "database": "vega_v2",
+  "isolation": "repeatable read",
+  "read_only": "on",
+  "statement_at": "2026-11-18 02:03:25.850677+00:00",
+  "columns": [
+    "edition_id",
+    "additional_confirmed_participations",
+    "matches_with_additional_cues",
+    "additional_without_stats",
+    "additional_without_measured_minutes"
+  ],
+  "rows": [
+    [
+      714,
+      1,
+      1,
+      1,
+      0
+    ],
+    [
+      729,
+      5,
+      5,
+      5,
+      0
+    ],
+    [
+      767,
+      4,
+      4,
+      4,
+      0
+    ],
+    [
+      798,
+      12,
+      12,
+      12,
+      0
+    ],
+    [
+      963,
+      7,
+      7,
+      7,
+      0
+    ]
+  ]
+}

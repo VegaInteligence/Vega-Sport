@@ -1,0 +1,7 @@
+{
+  "lambda_envelopes": 46,
+  "signed_https_identical_to_envelope_body": 46,
+  "additional_signed_https": 10,
+  "offline_extractions": 27,
+  "board_rows": 2
+}

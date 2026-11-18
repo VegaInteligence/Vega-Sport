@@ -1,0 +1,2440 @@
+{
+  "rds_at": "2026-11-18 01:34:03.838743+00:00",
+  "rds_rows": 75,
+  "distinct_source_games": 70,
+  "counts": {
+    "final": {
+      "equal": 75
+    },
+    "ht": {
+      "both_absent": 75
+    },
+    "90": {
+      "both_absent": 75
+    },
+    "et": {
+      "both_absent": 75
+    },
+    "pso": {
+      "both_absent": 70,
+      "rds_missing": 5
+    }
+  },
+  "games": [
+    {
+      "rds_id": 5222,
+      "native_match": "235752",
+      "date": "2026-09-26",
+      "home": "Anaitasuna FT",
+      "away": "CD Tedeón",
+      "rds": {
+        "final": [
+          5,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          5,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "5-0",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/widget-preliminary.html"
+    },
+    {
+      "rds_id": 5223,
+      "native_match": "235743",
+      "date": "2026-09-26",
+      "home": "At. Calatayud",
+      "away": "Baztan",
+      "rds": {
+        "final": [
+          2,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          2,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "2-0",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/widget-preliminary.html"
+    },
+    {
+      "rds_id": 5224,
+      "native_match": "235750",
+      "date": "2026-09-26",
+      "home": "Lebrijana",
+      "away": "Ceuta 6 de Junio",
+      "rds": {
+        "final": [
+          5,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          5,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "5-0",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/widget-preliminary.html"
+    },
+    {
+      "rds_id": 5225,
+      "native_match": "235746",
+      "date": "2026-09-26",
+      "home": "Ribadesella",
+      "away": "Noja",
+      "rds": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "1-0",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/widget-preliminary.html"
+    },
+    {
+      "rds_id": 5226,
+      "native_match": "235751",
+      "date": "2026-09-26",
+      "home": "UD Pinatar",
+      "away": "Atletico Melilla",
+      "rds": {
+        "final": [
+          8,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          8,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "8-0",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/widget-preliminary.html"
+    },
+    {
+      "rds_id": 5227,
+      "native_match": "235744",
+      "date": "2026-09-27",
+      "home": "CF Sant Rafel",
+      "away": "AE Prat",
+      "rds": {
+        "final": [
+          1,
+          5
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          5
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "1-5",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/widget-preliminary.html"
+    },
+    {
+      "rds_id": 5228,
+      "native_match": "235745",
+      "date": "2026-09-27",
+      "home": "Auriense CA",
+      "away": "CD San José",
+      "rds": {
+        "final": [
+          2,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          2,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "2-0",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/widget-preliminary.html"
+    },
+    {
+      "rds_id": 5229,
+      "native_match": "235748",
+      "date": "2026-09-27",
+      "home": "Sporting Hortaleza",
+      "away": "AU Güímar",
+      "rds": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "1-0",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/widget-preliminary.html"
+    },
+    {
+      "rds_id": 5230,
+      "native_match": "235744",
+      "date": "2026-09-27",
+      "home": "CF Sant Rafel",
+      "away": "AE Prat",
+      "rds": {
+        "final": [
+          1,
+          5
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          5
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "1-5",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/widget-preliminary.html"
+    },
+    {
+      "rds_id": 5231,
+      "native_match": "235749",
+      "date": "2026-09-27",
+      "home": "Talayuela",
+      "away": "Sporting de Alcázar",
+      "rds": {
+        "final": [
+          1,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "1-2",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/widget-preliminary.html"
+    },
+    {
+      "rds_id": 5232,
+      "native_match": "235747",
+      "date": "2026-09-27",
+      "home": "Maracena",
+      "away": "Tavernes de la Valldigna",
+      "rds": {
+        "final": [
+          1,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "1-1",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/widget-preliminary.html"
+    },
+    {
+      "rds_id": 5233,
+      "native_match": "235997",
+      "date": "2026-10-03",
+      "home": "Baztan",
+      "away": "At. Calatayud",
+      "rds": {
+        "final": [
+          1,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "1-2",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/widget-preliminary.html"
+    },
+    {
+      "rds_id": 5234,
+      "native_match": "235993",
+      "date": "2026-10-03",
+      "home": "CD Tedeón",
+      "away": "Anaitasuna FT",
+      "rds": {
+        "final": [
+          2,
+          5
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          2,
+          5
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "2-5",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/widget-preliminary.html"
+    },
+    {
+      "rds_id": 5235,
+      "native_match": "235998",
+      "date": "2026-10-03",
+      "home": "Ceuta 6 de Junio",
+      "away": "Lebrijana",
+      "rds": {
+        "final": [
+          1,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "1-2",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/widget-preliminary.html"
+    },
+    {
+      "rds_id": 5236,
+      "native_match": "235994",
+      "date": "2026-10-04",
+      "home": "CD San José",
+      "away": "Auriense CA",
+      "rds": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "1-0",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/widget-preliminary.html"
+    },
+    {
+      "rds_id": 5237,
+      "native_match": "235995",
+      "date": "2026-10-04",
+      "home": "Noja",
+      "away": "Ribadesella",
+      "rds": {
+        "final": [
+          1,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "1-1",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/widget-preliminary.html"
+    },
+    {
+      "rds_id": 5238,
+      "native_match": "236001",
+      "date": "2026-10-04",
+      "home": "Sporting de Alcázar",
+      "away": "Talayuela",
+      "rds": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "1-0",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/widget-preliminary.html"
+    },
+    {
+      "rds_id": 5239,
+      "native_match": "235999",
+      "date": "2026-10-04",
+      "home": "Atletico Melilla",
+      "away": "UD Pinatar",
+      "rds": {
+        "final": [
+          0,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "0-3",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/widget-preliminary.html"
+    },
+    {
+      "rds_id": 5240,
+      "native_match": "236000",
+      "date": "2026-10-04",
+      "home": "Tavernes de la Valldigna",
+      "away": "Maracena",
+      "rds": {
+        "final": [
+          0,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": [
+          4,
+          2
+        ]
+      },
+      "details": {
+        "displayed_result": "(4) 0-0 (2)",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/widget-preliminary.html"
+    },
+    {
+      "rds_id": 5241,
+      "native_match": "235996",
+      "date": "2026-10-11",
+      "home": "AE Prat",
+      "away": "CF Sant Rafel",
+      "rds": {
+        "final": [
+          5,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          5,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "5-0",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/widget-preliminary.html"
+    },
+    {
+      "rds_id": 5242,
+      "native_match": "236002",
+      "date": "2026-10-11",
+      "home": "AU Güímar",
+      "away": "Sporting Hortaleza",
+      "rds": {
+        "final": [
+          3,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          3,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "3-3",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/widget-preliminary.html"
+    },
+    {
+      "rds_id": 5243,
+      "native_match": "235996",
+      "date": "2026-10-11",
+      "home": "AE Prat",
+      "away": "CF Sant Rafel",
+      "rds": {
+        "final": [
+          5,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          5,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "5-0",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/widget-preliminary.html"
+    },
+    {
+      "rds_id": 5244,
+      "native_match": "253571",
+      "date": "2026-10-27",
+      "home": "CD Atlético Paso",
+      "away": "Córdoba CF",
+      "rds": {
+        "final": [
+          3,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          3,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "3-1",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5245,
+      "native_match": "253539",
+      "date": "2026-10-27",
+      "home": "CD Cuarte",
+      "away": "Girona FC",
+      "rds": {
+        "final": [
+          0,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "0-2",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5246,
+      "native_match": "253550",
+      "date": "2026-10-27",
+      "home": "UD Pinatar",
+      "away": "Elche CF",
+      "rds": {
+        "final": [
+          1,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "1-3",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5247,
+      "native_match": "253545",
+      "date": "2026-10-27",
+      "home": "Calamocha",
+      "away": "CE Europa",
+      "rds": {
+        "final": [
+          0,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "0-3",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5248,
+      "native_match": "253537",
+      "date": "2026-10-27",
+      "home": "Sestao River Club",
+      "away": "RCD Espanyol de Barcelona",
+      "rds": {
+        "final": [
+          4,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          4,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "4-3",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5249,
+      "native_match": "253554",
+      "date": "2026-10-27",
+      "home": "UD Castellonense",
+      "away": "UD Almería",
+      "rds": {
+        "final": [
+          1,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "1-2",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5250,
+      "native_match": "253568",
+      "date": "2026-10-27",
+      "home": "RSD Alcalá",
+      "away": "UD Las Palmas",
+      "rds": {
+        "final": [
+          1,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "1-3",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5251,
+      "native_match": "253530",
+      "date": "2026-10-27",
+      "home": "Atlético Tordesillas",
+      "away": "CD Mirandés",
+      "rds": {
+        "final": [
+          3,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          3,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": [
+          2,
+          4
+        ]
+      },
+      "details": {
+        "displayed_result": "(2) 3-3 (4)",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5252,
+      "native_match": "253574",
+      "date": "2026-10-27",
+      "home": "Ciudad de Lucena",
+      "away": "CF Rayo Majadahonda",
+      "rds": {
+        "final": [
+          0,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "0-1",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5253,
+      "native_match": "253531",
+      "date": "2026-10-27",
+      "home": "Gimnástica Segoviana CF",
+      "away": "CyD Leonesa",
+      "rds": {
+        "final": [
+          0,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "0-1",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5254,
+      "native_match": "253528",
+      "date": "2026-10-27",
+      "home": "UD Llanera",
+      "away": "SD Ponferradina",
+      "rds": {
+        "final": [
+          1,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": [
+          3,
+          5
+        ]
+      },
+      "details": {
+        "displayed_result": "(3) 1-1 (5)",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5255,
+      "native_match": "253573",
+      "date": "2026-10-27",
+      "home": "CD Don Benito",
+      "away": "CD Extremadura",
+      "rds": {
+        "final": [
+          2,
+          4
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          2,
+          4
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "2-4",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5256,
+      "native_match": "253544",
+      "date": "2026-10-27",
+      "home": "CE Manresa",
+      "away": "UE Sant Andreu",
+      "rds": {
+        "final": [
+          2,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          2,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": [
+          1,
+          4
+        ]
+      },
+      "details": {
+        "displayed_result": "(1) 2-2 (4)",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5257,
+      "native_match": "253529",
+      "date": "2026-10-27",
+      "home": "Arosa SC",
+      "away": "Pontevedra CF",
+      "rds": {
+        "final": [
+          2,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          2,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "2-0",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5258,
+      "native_match": "253571",
+      "date": "2026-10-27",
+      "home": "CD Atlético Paso",
+      "away": "Córdoba CF",
+      "rds": {
+        "final": [
+          3,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          3,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "3-1",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5259,
+      "native_match": "253543",
+      "date": "2026-10-27",
+      "home": "CD Tudelano",
+      "away": "Real Zaragoza",
+      "rds": {
+        "final": [
+          0,
+          4
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          4
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "0-4",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5260,
+      "native_match": "253553",
+      "date": "2026-10-27",
+      "home": "Manacor",
+      "away": "Villarreal CF",
+      "rds": {
+        "final": [
+          0,
+          5
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          5
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "0-5",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5261,
+      "native_match": "253565",
+      "date": "2026-10-27",
+      "home": "Recreativo",
+      "away": "Rayo Vallecano de Madrid",
+      "rds": {
+        "final": [
+          2,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          2,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "2-3",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5262,
+      "native_match": "253551",
+      "date": "2026-10-27",
+      "home": "Sporting de Alcázar",
+      "away": "Málaga CF",
+      "rds": {
+        "final": [
+          0,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "0-3",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5263,
+      "native_match": "253522",
+      "date": "2026-10-29",
+      "home": "Auriense CA",
+      "away": "RC Deportivo",
+      "rds": {
+        "final": [
+          0,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "0-3",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5264,
+      "native_match": "253542",
+      "date": "2026-10-29",
+      "home": "Peña Sport FC",
+      "away": "SD Huesca",
+      "rds": {
+        "final": [
+          1,
+          5
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          5
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "1-5",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5265,
+      "native_match": "253527",
+      "date": "2026-10-29",
+      "home": "CD Numancia de Soria",
+      "away": "Real Oviedo",
+      "rds": {
+        "final": [
+          3,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          3,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": [
+          4,
+          2
+        ]
+      },
+      "details": {
+        "displayed_result": "(4) 3-3 (2)",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5266,
+      "native_match": "253542",
+      "date": "2026-10-29",
+      "home": "Peña Sport FC",
+      "away": "SD Huesca",
+      "rds": {
+        "final": [
+          1,
+          5
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          5
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "1-5",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5267,
+      "native_match": "253560",
+      "date": "2026-10-29",
+      "home": "CD Atlético Baleares",
+      "away": "CD Eldense",
+      "rds": {
+        "final": [
+          0,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "0-1",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5268,
+      "native_match": "253535",
+      "date": "2026-10-29",
+      "home": "At. Calatayud",
+      "away": "CA Osasuna",
+      "rds": {
+        "final": [
+          0,
+          6
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          6
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "0-6",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5269,
+      "native_match": "253532",
+      "date": "2026-10-29",
+      "home": "Coruxo FC",
+      "away": "Zamora CF",
+      "rds": {
+        "final": [
+          0,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "0-2",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5270,
+      "native_match": "253557",
+      "date": "2026-10-29",
+      "home": "Poblense",
+      "away": "AD Ceuta FC",
+      "rds": {
+        "final": [
+          1,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "1-2",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5271,
+      "native_match": "253572",
+      "date": "2026-10-29",
+      "home": "UD San Sebastián de los Reyes",
+      "away": "CD Coria",
+      "rds": {
+        "final": [
+          1,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "1-2",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5272,
+      "native_match": "253564",
+      "date": "2026-10-29",
+      "home": "Lebrijana",
+      "away": "Getafe CF",
+      "rds": {
+        "final": [
+          2,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          2,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "2-3",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5273,
+      "native_match": "253559",
+      "date": "2026-10-29",
+      "home": "CD Cieza",
+      "away": "Granada CF",
+      "rds": {
+        "final": [
+          0,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "0-3",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5274,
+      "native_match": "253563",
+      "date": "2026-10-29",
+      "home": "Antequera CF",
+      "away": "Águilas FC",
+      "rds": {
+        "final": [
+          2,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          2,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "2-0",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5275,
+      "native_match": "253526",
+      "date": "2026-10-29",
+      "home": "CD Laredo",
+      "away": "Burgos CF",
+      "rds": {
+        "final": [
+          2,
+          4
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          2,
+          4
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "2-4",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5276,
+      "native_match": "253538",
+      "date": "2026-10-29",
+      "home": "CD Varea",
+      "away": "FC Andorra",
+      "rds": {
+        "final": [
+          0,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "0-3",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5277,
+      "native_match": "253556",
+      "date": "2026-10-29",
+      "home": "UB Conquense",
+      "away": "CD Castellón",
+      "rds": {
+        "final": [
+          0,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "0-3",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5278,
+      "native_match": "253524",
+      "date": "2026-10-29",
+      "home": "CD Covadonga",
+      "away": "Real Valladolid CF",
+      "rds": {
+        "final": [
+          0,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "0-1",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5279,
+      "native_match": "253525",
+      "date": "2026-10-29",
+      "home": "Guijuelo",
+      "away": "Real Sporting de Gijón",
+      "rds": {
+        "final": [
+          1,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "1-3",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5280,
+      "native_match": "253533",
+      "date": "2026-10-29",
+      "home": "Real Ávila",
+      "away": "Unionistas de Salamanca CF",
+      "rds": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "1-0",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5281,
+      "native_match": "253534",
+      "date": "2026-10-29",
+      "home": "Gimnástica Torrelavega",
+      "away": "UD Ourense",
+      "rds": {
+        "final": [
+          3,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          3,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "3-1",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5282,
+      "native_match": "255150",
+      "date": "2026-10-29",
+      "home": "AE Prat",
+      "away": "Athletic Club",
+      "rds": {
+        "final": [
+          1,
+          6
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          6
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "1-6",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5283,
+      "native_match": "253522",
+      "date": "2026-10-29",
+      "home": "Auriense CA",
+      "away": "RC Deportivo",
+      "rds": {
+        "final": [
+          0,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "0-3",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5284,
+      "native_match": "253521",
+      "date": "2026-10-29",
+      "home": "Ribadesella",
+      "away": "Real Racing Club de Santander",
+      "rds": {
+        "final": [
+          0,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "0-2",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5285,
+      "native_match": "255149",
+      "date": "2026-10-29",
+      "home": "Sporting Hortaleza",
+      "away": "Sevilla FC",
+      "rds": {
+        "final": [
+          0,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "0-3",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5286,
+      "native_match": "253570",
+      "date": "2026-10-29",
+      "home": "Xerez CD",
+      "away": "Cádiz CF",
+      "rds": {
+        "final": [
+          1,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "1-3",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5287,
+      "native_match": "253536",
+      "date": "2026-11-10",
+      "home": "Anaitasuna FT",
+      "away": "Deportivo Alavés",
+      "rds": {
+        "final": [
+          1,
+          6
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          6
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "1-6",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5288,
+      "native_match": "253540",
+      "date": "2026-11-10",
+      "home": "CD Pamplona",
+      "away": "SD Eibar",
+      "rds": {
+        "final": [
+          0,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "0-3",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5289,
+      "native_match": "253547",
+      "date": "2026-11-10",
+      "home": "SD Amorebieta",
+      "away": "UD Logroñés",
+      "rds": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "1-0",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5290,
+      "native_match": "253562",
+      "date": "2026-11-10",
+      "home": "CP Mijas Las Lagunas",
+      "away": "Real Jaén",
+      "rds": {
+        "final": [
+          1,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "1-2",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5291,
+      "native_match": "253567",
+      "date": "2026-11-10",
+      "home": "Trival Valderas",
+      "away": "CD Leganés",
+      "rds": {
+        "final": [
+          0,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "0-1",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5292,
+      "native_match": "253549",
+      "date": "2026-11-10",
+      "home": "Tavernes de la Valldigna",
+      "away": "Valencia CF",
+      "rds": {
+        "final": [
+          0,
+          6
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          6
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "0-6",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5295,
+      "native_match": "253566",
+      "date": "2026-11-12",
+      "home": "CDA Navalcarnero",
+      "away": "Real Betis Balompié",
+      "rds": {
+        "final": [
+          2,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          2,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "2-3",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5296,
+      "native_match": "253552",
+      "date": "2026-11-12",
+      "home": "CD Tarancón",
+      "away": "Levante UD",
+      "rds": {
+        "final": [
+          1,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "1-2",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 736684,
+      "native_match": "253558",
+      "date": "2026-11-12",
+      "home": "Calvo Sotelo Puertollano CF",
+      "away": "Albacete Balompié",
+      "rds": {
+        "final": [
+          0,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "0-3",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    },
+    {
+      "rds_id": 5297,
+      "native_match": "253523",
+      "date": "2026-11-13",
+      "home": "Salamanca CF UDS",
+      "away": "RC Celta de Vigo",
+      "rds": {
+        "final": [
+          0,
+          5
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          5
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "displayed_result": "0-5",
+        "phase_of_ordinary_score_unspecified": true
+      },
+      "source": "sources/rfef-licensed-cup-widget.html"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "read_at": "2026-11-18 02:38:15.966540+00:00",
+  "database": "vega_v2",
+  "checked_fifa_matches": 64,
+  "rds_records": 128,
+  "source_elo_sides_original_neutral": {
+    "openfootball/0/None": 64,
+    "pitchapi/2/None": 64
+  },
+  "result": "All 128 records have SQL NULL in core.matches.is_neutral. All admitted PitchAPI copies own exactly two published sides."
+}

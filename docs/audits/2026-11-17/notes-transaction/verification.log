@@ -1,0 +1,4 @@
+editions 2149 entity cells 6447 team policy replay True season universe True player score partitions [2021, 2022, 2023, 2024, 2025, 2026] event enrichment partitions [2021, 2022, 2023, 2024, 2025, 2026]
+6447 [('club', 161982, 161982), ('national team', 1864, 1864), ('player', 2282580, 2282580)]
+Publication vérifiée 2149 éditions, 90 groupes en attente, 44 SELECT, cinq compteurs [0, 0, 0, 0, 0]
+Initial delivery replayed. Source groups 2307397 938 transport {'lambda_envelopes': 46, 'signed_https_identical_to_envelope_body': 46, 'additional_signed_https': 10, 'offline_extractions': 27, 'board_rows': 2}

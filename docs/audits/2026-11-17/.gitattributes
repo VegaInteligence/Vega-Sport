@@ -1,0 +1,6 @@
+# The replay verifies SHA-256 on the original capture bytes on every platform.
+notes-transaction/** -text
+notes-transaction/origin-https/actor_ranking.py whitespace=-blank-at-eof
+notes-transaction/origin-https/board-portable.mjs whitespace=-blank-at-eof
+notes-transaction/origin-https/board.mjs whitespace=-blank-at-eof
+notes-transaction/origin-https/origin.py whitespace=-blank-at-eol

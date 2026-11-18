@@ -1,0 +1,47 @@
+{
+ "seasons": 154,
+ "refusals": 0,
+ "source_hashes": 52,
+ "code_hashes": 15,
+ "classes": {
+  "changed": 1479,
+  "held": 892,
+  "goals": 92,
+  "position": 9636
+ },
+ "holds": {
+  "score_change": 1,
+  "absorption": 856,
+  "absorption_score_conflict": 1,
+  "wrong_competition_edition": 33,
+  "abandoned_status_unrepresented": 1
+ },
+ "origin_actions": {
+  "changed": 918,
+  "held": 865
+ },
+ "origin_hold_reasons": {
+  "score_change": 1,
+  "absorption": 856,
+  "absorption_score_conflict": 1,
+  "wrong_competition_edition": 6,
+  "abandoned_status_unrepresented": 1
+ },
+ "ordinal_gate_priors_held": 210,
+ "exception_actions": {
+  "changed": 17,
+  "held": 30
+ },
+ "derby_event_outcomes": {
+  "held; prior event/team retained": 8,
+  "repaired to verified club": 8
+ },
+ "wrong_edition_held": 33,
+ "canceled_with_null_scores": 520,
+ "awarded_ru1": 4,
+ "removed_matches": 240,
+ "removed_editions": [
+  "2019-20/ru.2"
+ ],
+ "private_canonical_bytes_sha256": "b4eaac139ee48a70679aafcbe1b7bd403d296b08a9936ad88c4beeb2f9b97f8d"
+}

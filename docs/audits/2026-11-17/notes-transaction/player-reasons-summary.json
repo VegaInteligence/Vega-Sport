@@ -1,0 +1,100 @@
+{
+  "snapshot": {
+    "at": "2026-11-18 02:02:22.142267+00:00",
+    "snapshot": "4403005:4403005:",
+    "database": "vega_v2",
+    "isolation": "repeatable read",
+    "read_only": "on"
+  },
+  "deployed_sha": "8018e0836ca0f32e8b2eb51fc2847154abff7f13",
+  "observed_method_versions": [
+    "power-ranking-v8"
+  ],
+  "edition_count": 2149,
+  "sql_count": 44,
+  "source_partitions": [
+    2021,
+    2022,
+    2023,
+    2024,
+    2025,
+    2026
+  ],
+  "pending_edition_award_groups": 90,
+  "editions_with_pending": 73,
+  "editions_by_domain": {
+    "native": 304,
+    "complementary_cup": 99,
+    "archive": 1746
+  },
+  "editions_with_observed_stats_by_domain": {
+    "native": 301,
+    "complementary_cup": 0,
+    "archive": 0
+  },
+  "latest_published_player_run_among_pending_awards": {
+    "2020": [
+      1886,
+      "2026-11-15 19:47:38.650998+00:00"
+    ],
+    "2021": [
+      2098,
+      "2026-11-18 01:49:24.929991+00:00"
+    ],
+    "2022": [
+      2087,
+      "2026-11-17 17:03:59.468652+00:00"
+    ],
+    "2023": [
+      2071,
+      "2026-11-17 00:32:44.535354+00:00"
+    ],
+    "2024": [
+      2045,
+      "2026-11-16 00:52:29.704288+00:00"
+    ],
+    "2025": [
+      2096,
+      "2026-11-18 01:07:37.063008+00:00"
+    ],
+    "2026": [
+      2095,
+      "2026-11-18 01:04:51.398291+00:00"
+    ]
+  },
+  "five_requested_fields": {
+    "unknown_or_wrong_team": 0,
+    "positive_minutes_outside_award_window": 0,
+    "no_published_award": 0,
+    "insufficient_contribution": 0,
+    "insufficient_role_reference": 0
+  },
+  "totals": {
+    "unknown_or_wrong_team": 0,
+    "positive_minutes_outside_award_window": 0,
+    "no_published_award": 0,
+    "insufficient_contribution": 0,
+    "insufficient_role_reference": 0,
+    "stats_records": 2810237,
+    "positive_minutes": 2297613,
+    "minutes_unknown": 512624,
+    "zero_or_negative_minutes": 0,
+    "positive_minutes_in_excluded_domain": 0,
+    "algorithm_inputs_before_coverage": 2297613,
+    "admitted_without_power_match": 15033,
+    "proven_scorable": 2282580,
+    "scorable_valid_persisted": 2282580,
+    "missing_grade_for_computed_index": 0,
+    "stale_grade_metadata": 0,
+    "displayed_under_current_rule": 1945601,
+    "intentionally_hidden_cameo": 336979,
+    "stats_newer_than_run": 14427,
+    "role_before_published_run": 0,
+    "current_assignable": 14411,
+    "current_assignable_touches": 14411,
+    "recovered_by_award_history": 7,
+    "no_model_role_after_award_history": 615,
+    "valid_stats_slot_shadowed_by_lineup": 0,
+    "assignable_stats_older_than_latest_player_start": 0
+  }
+}

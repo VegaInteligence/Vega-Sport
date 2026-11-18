@@ -1,0 +1,11 @@
+{
+  "task": "arn:aws:ecs:us-east-2:361769570630:task/vega-v2/4a351394bfbe4487a7bf5be585156b31",
+  "definition": "arn:aws:ecs:us-east-2:361769570630:task-definition/vega-audit-readonly-vi27:97",
+  "image": "361769570630.dkr.ecr.us-east-2.amazonaws.com/vega-v2-worker:8018e0836ca0f32e8b2eb51fc2847154abff7f13",
+  "query_sha256": {
+    "reverse-intermediate": "be107d0c2ef45da0343d11612c374bf368464a2b976ba9a608d056b764d216e4"
+  },
+  "exit_code": 0,
+  "sql_errors": {},
+  "stoppedAt": "2026-11-18T03:11:53.583000+01:00"
+}

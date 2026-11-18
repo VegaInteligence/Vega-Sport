@@ -1,0 +1,6624 @@
+{
+  "rds_at": "2026-11-18 01:34:03.838743+00:00",
+  "rds_rows": 113,
+  "distinct_source_games": 113,
+  "counts": {
+    "final": {
+      "equal": 113
+    },
+    "ht": {
+      "rds_missing": 112,
+      "both_absent": 1
+    },
+    "90": {
+      "rds_missing": 112,
+      "both_absent": 1
+    },
+    "et": {
+      "both_absent": 92,
+      "rds_missing": 21
+    },
+    "pso": {
+      "both_absent": 103,
+      "rds_missing": 10
+    }
+  },
+  "games": [
+    {
+      "rds_id": 5511,
+      "native_match": "2580792",
+      "date": "2026-08-29",
+      "home": "Cd Fátima",
+      "away": "S. Benfica Castelo Branco",
+      "rds": {
+        "final": [
+          3,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          3,
+          1
+        ],
+        "ht": [
+          1,
+          0
+        ],
+        "90": [
+          3,
+          1
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              1,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              3,
+              1
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2580792.html"
+    },
+    {
+      "rds_id": 5512,
+      "native_match": "2580800",
+      "date": "2026-08-29",
+      "home": "Ac Malveira",
+      "away": "Cd Mafra Sad",
+      "rds": {
+        "final": [
+          2,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          2,
+          3
+        ],
+        "ht": [
+          1,
+          1
+        ],
+        "90": [
+          2,
+          2
+        ],
+        "et": [
+          2,
+          3
+        ],
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              1,
+              1
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              2,
+              2
+            ]
+          ],
+          [
+            "1ª parte prolongamento",
+            [
+              2,
+              2
+            ]
+          ],
+          [
+            "2ª parte prolongamento",
+            [
+              2,
+              3
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2580800.html"
+    },
+    {
+      "rds_id": 5513,
+      "native_match": "2580807",
+      "date": "2026-08-29",
+      "home": "Olímpico Montijo Sad",
+      "away": "Atlético Cp Sad",
+      "rds": {
+        "final": [
+          0,
+          4
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          4
+        ],
+        "ht": [
+          0,
+          4
+        ],
+        "90": [
+          0,
+          4
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              4
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              0,
+              4
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2580807.html"
+    },
+    {
+      "rds_id": 5514,
+      "native_match": "2580785",
+      "date": "2026-08-29",
+      "home": "Ud Oliveirense Sad",
+      "away": "Sc Penalva Castelo",
+      "rds": {
+        "final": [
+          4,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          4,
+          0
+        ],
+        "ht": [
+          3,
+          0
+        ],
+        "90": [
+          4,
+          0
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              3,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              4,
+              0
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2580785.html"
+    },
+    {
+      "rds_id": 5515,
+      "native_match": "2580775",
+      "date": "2026-08-29",
+      "home": "Fc Paços Ferreira Sduq",
+      "away": "Ad Fafe Sad",
+      "rds": {
+        "final": [
+          0,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          1
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "90": [
+          0,
+          0
+        ],
+        "et": [
+          0,
+          1
+        ],
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "1ª parte prolongamento",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte prolongamento",
+            [
+              0,
+              1
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2580775.html"
+    },
+    {
+      "rds_id": 5516,
+      "native_match": "2580810",
+      "date": "2026-08-29",
+      "home": "Fc Serpa",
+      "away": "Cr O Grandolense",
+      "rds": {
+        "final": [
+          2,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          2,
+          0
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "90": [
+          2,
+          0
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              2,
+              0
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2580810.html"
+    },
+    {
+      "rds_id": 5517,
+      "native_match": "2580772",
+      "date": "2026-08-29",
+      "home": "Varzim Sc Sduq",
+      "away": "Cd Trofense Sad",
+      "rds": {
+        "final": [
+          5,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          5,
+          1
+        ],
+        "ht": [
+          1,
+          1
+        ],
+        "90": [
+          5,
+          1
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              1,
+              1
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              5,
+              1
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2580772.html"
+    },
+    {
+      "rds_id": 5518,
+      "native_match": "2580804",
+      "date": "2026-08-30",
+      "home": "Su 1.º Dezembro",
+      "away": "Real Sc Sad",
+      "rds": {
+        "final": [
+          0,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          1
+        ],
+        "ht": [
+          0,
+          1
+        ],
+        "90": [
+          0,
+          1
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              1
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              0,
+              1
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2580804.html"
+    },
+    {
+      "rds_id": 5519,
+      "native_match": "2580787",
+      "date": "2026-08-30",
+      "home": "C. Académico Fundão",
+      "away": "Guarda Fc Sad ",
+      "rds": {
+        "final": [
+          0,
+          6
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          6
+        ],
+        "ht": [
+          0,
+          4
+        ],
+        "90": [
+          0,
+          6
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              4
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              0,
+              6
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2580787.html"
+    },
+    {
+      "rds_id": 5520,
+      "native_match": "2580794",
+      "date": "2026-08-30",
+      "home": "Cd Alcains",
+      "away": "Sertanense Fc",
+      "rds": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": [
+          1,
+          0
+        ],
+        "90": [
+          1,
+          0
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              1,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              1,
+              0
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2580794.html"
+    },
+    {
+      "rds_id": 5521,
+      "native_match": "2580806",
+      "date": "2026-08-30",
+      "home": "C. Futebol Benfica",
+      "away": "Sc Viana Alentejo",
+      "rds": {
+        "final": [
+          3,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          3,
+          0
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "90": [
+          3,
+          0
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              3,
+              0
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2580806.html"
+    },
+    {
+      "rds_id": 5522,
+      "native_match": "2580771",
+      "date": "2026-08-30",
+      "home": "Cdc Montalegre",
+      "away": "Ad Ponte Da Barca",
+      "rds": {
+        "final": [
+          0,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          0
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "90": [
+          0,
+          0
+        ],
+        "et": [
+          0,
+          0
+        ],
+        "pso": [
+          4,
+          5
+        ]
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "1ª parte prolongamento",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte prolongamento",
+            [
+              0,
+              0
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": "verified in both the competition card’s bracketed shootout numerals and the separate Penaltis list of scorers on the match sheet"
+      },
+      "source": "sources/match-2580771.html"
+    },
+    {
+      "rds_id": 5523,
+      "native_match": "2580797",
+      "date": "2026-08-30",
+      "home": "Caldas Sc",
+      "away": "Su Sintrense Sad",
+      "rds": {
+        "final": [
+          1,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          3
+        ],
+        "ht": [
+          1,
+          1
+        ],
+        "90": [
+          1,
+          3
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              1,
+              1
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              1,
+              3
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2580797.html"
+    },
+    {
+      "rds_id": 5524,
+      "native_match": "2580813",
+      "date": "2026-08-30",
+      "home": "Fc Castrense",
+      "away": "Louletano Dc",
+      "rds": {
+        "final": [
+          0,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          1
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "90": [
+          0,
+          1
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              0,
+              1
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2580813.html"
+    },
+    {
+      "rds_id": 5525,
+      "native_match": "2580774",
+      "date": "2026-08-30",
+      "home": "Cd Celoricense",
+      "away": "Pevidém Sc Sad",
+      "rds": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": [
+          1,
+          0
+        ],
+        "90": [
+          1,
+          0
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              1,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              1,
+              0
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2580774.html"
+    },
+    {
+      "rds_id": 5526,
+      "native_match": "2580782",
+      "date": "2026-08-30",
+      "home": "Cd Cinfães",
+      "away": "Sporting C. Espinho Sduq",
+      "rds": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": [
+          1,
+          0
+        ],
+        "90": [
+          1,
+          0
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              1,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              1,
+              0
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2580782.html"
+    },
+    {
+      "rds_id": 5527,
+      "native_match": "2580770",
+      "date": "2026-08-30",
+      "home": "Adc Correlhã",
+      "away": "Ad Os Limianos",
+      "rds": {
+        "final": [
+          1,
+          4
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          4
+        ],
+        "ht": [
+          1,
+          1
+        ],
+        "90": [
+          1,
+          4
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              1,
+              1
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              1,
+              4
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2580770.html"
+    },
+    {
+      "rds_id": 5528,
+      "native_match": "2580791",
+      "date": "2026-08-30",
+      "home": "Sc Covilhã Sduq",
+      "away": "Mortágua Fc",
+      "rds": {
+        "final": [
+          0,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          0
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "90": [
+          0,
+          0
+        ],
+        "et": [
+          0,
+          0
+        ],
+        "pso": [
+          2,
+          4
+        ]
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "1ª parte prolongamento",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte prolongamento",
+            [
+              0,
+              0
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": "verified in both the competition card’s bracketed shootout numerals and the separate Penaltis list of scorers on the match sheet"
+      },
+      "source": "sources/match-2580791.html"
+    },
+    {
+      "rds_id": 5529,
+      "native_match": "2580781",
+      "date": "2026-08-30",
+      "home": "Ermesinde Sc 1936",
+      "away": "Usc Paredes",
+      "rds": {
+        "final": [
+          1,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          3
+        ],
+        "ht": [
+          1,
+          1
+        ],
+        "90": [
+          1,
+          3
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              1,
+              1
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              1,
+              3
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2580781.html"
+    },
+    {
+      "rds_id": 5530,
+      "native_match": "2580799",
+      "date": "2026-08-30",
+      "home": "Ad Fazendense",
+      "away": "Ccrd Moçarriense",
+      "rds": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "90": [
+          1,
+          0
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              1,
+              0
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2580799.html"
+    },
+    {
+      "rds_id": 5531,
+      "native_match": "2580811",
+      "date": "2026-08-30",
+      "home": "Fc Ferreiras",
+      "away": "Scm Aljustrelense",
+      "rds": {
+        "final": [
+          0,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          3
+        ],
+        "ht": [
+          0,
+          1
+        ],
+        "90": [
+          0,
+          3
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              1
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              0,
+              3
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2580811.html"
+    },
+    {
+      "rds_id": 5532,
+      "native_match": "2580786",
+      "date": "2026-08-30",
+      "home": "Florgrade Fc",
+      "away": "Sc São João Ver Sad",
+      "rds": {
+        "final": [
+          0,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          0
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "90": [
+          0,
+          0
+        ],
+        "et": [
+          0,
+          0
+        ],
+        "pso": [
+          13,
+          12
+        ]
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "1ª parte prolongamento",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte prolongamento",
+            [
+              0,
+              0
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": "verified in both the competition card’s bracketed shootout numerals and the separate Penaltis list of scorers on the match sheet"
+      },
+      "source": "sources/match-2580786.html"
+    },
+    {
+      "rds_id": 5533,
+      "native_match": "2580789",
+      "date": "2026-08-30",
+      "home": "Ad Fornos Algodres",
+      "away": "\"Os Marialvas\" Sad",
+      "rds": {
+        "final": [
+          0,
+          4
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          4
+        ],
+        "ht": [
+          0,
+          2
+        ],
+        "90": [
+          0,
+          4
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              2
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              0,
+              4
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2580789.html"
+    },
+    {
+      "rds_id": 5534,
+      "native_match": "2580809",
+      "date": "2026-08-30",
+      "home": "Lgc Sad",
+      "away": "Belenenses Sduq",
+      "rds": {
+        "final": [
+          1,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          2
+        ],
+        "ht": [
+          0,
+          1
+        ],
+        "90": [
+          1,
+          2
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              1
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              1,
+              2
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2580809.html"
+    },
+    {
+      "rds_id": 5535,
+      "native_match": "2580796",
+      "date": "2026-08-30",
+      "home": "Ad Mação",
+      "away": "Cf Os Gavionenses",
+      "rds": {
+        "final": [
+          5,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          5,
+          0
+        ],
+        "ht": [
+          2,
+          0
+        ],
+        "90": [
+          5,
+          0
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              2,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              5,
+              0
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2580796.html"
+    },
+    {
+      "rds_id": 5536,
+      "native_match": "2580777",
+      "date": "2026-08-30",
+      "home": "Ad Machico",
+      "away": "Ad Camacha",
+      "rds": {
+        "final": [
+          2,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          2,
+          2
+        ],
+        "ht": [
+          0,
+          1
+        ],
+        "90": [
+          2,
+          2
+        ],
+        "et": [
+          2,
+          2
+        ],
+        "pso": [
+          2,
+          4
+        ]
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              1
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              2,
+              2
+            ]
+          ],
+          [
+            "1ª parte prolongamento",
+            [
+              2,
+              2
+            ]
+          ],
+          [
+            "2ª parte prolongamento",
+            [
+              2,
+              2
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": "verified in both the competition card’s bracketed shootout numerals and the separate Penaltis list of scorers on the match sheet"
+      },
+      "source": "sources/match-2580777.html"
+    },
+    {
+      "rds_id": 5537,
+      "native_match": "2580773",
+      "date": "2026-08-30",
+      "home": "Fc Maia Lidador",
+      "away": "Ac Vila Meã",
+      "rds": {
+        "final": [
+          0,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          0
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "90": [
+          0,
+          0
+        ],
+        "et": [
+          0,
+          0
+        ],
+        "pso": [
+          4,
+          3
+        ]
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "1ª parte prolongamento",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte prolongamento",
+            [
+              0,
+              0
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": "verified in both the competition card’s bracketed shootout numerals and the separate Penaltis list of scorers on the match sheet"
+      },
+      "source": "sources/match-2580773.html"
+    },
+    {
+      "rds_id": 5538,
+      "native_match": "2580776",
+      "date": "2026-08-30",
+      "home": "Sc Maria Fonte",
+      "away": "União Nogueirense Fc",
+      "rds": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": false,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              0,
+              0
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2580776.html"
+    },
+    {
+      "rds_id": 5539,
+      "native_match": "2580768",
+      "date": "2026-08-30",
+      "home": "Merelinense Fc",
+      "away": "Atlético Dos Arcos Ad",
+      "rds": {
+        "final": [
+          2,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          2,
+          0
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "90": [
+          2,
+          0
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              2,
+              0
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2580768.html"
+    },
+    {
+      "rds_id": 5540,
+      "native_match": "2580812",
+      "date": "2026-08-30",
+      "home": "Gd Messejanense",
+      "away": "Gd Portel",
+      "rds": {
+        "final": [
+          0,
+          8
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          8
+        ],
+        "ht": [
+          0,
+          5
+        ],
+        "90": [
+          0,
+          8
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              5
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              0,
+              8
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2580812.html"
+    },
+    {
+      "rds_id": 5541,
+      "native_match": "2580795",
+      "date": "2026-08-30",
+      "home": "Gd Nazarenos",
+      "away": "Gd Vitória Sernache",
+      "rds": {
+        "final": [
+          0,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          3
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "90": [
+          0,
+          3
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              0,
+              3
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2580795.html"
+    },
+    {
+      "rds_id": 5542,
+      "native_match": "2580788",
+      "date": "2026-08-30",
+      "home": "Ad Nogueirense",
+      "away": "A. Naval 1893 Sduq",
+      "rds": {
+        "final": [
+          1,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          3
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "90": [
+          1,
+          1
+        ],
+        "et": [
+          1,
+          3
+        ],
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              1,
+              1
+            ]
+          ],
+          [
+            "1ª parte prolongamento",
+            [
+              1,
+              2
+            ]
+          ],
+          [
+            "2ª parte prolongamento",
+            [
+              1,
+              3
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2580788.html"
+    },
+    {
+      "rds_id": 5543,
+      "native_match": "2580790",
+      "date": "2026-08-30",
+      "home": "Fc Oliveira Hospital Sad",
+      "away": "Gd Sourense",
+      "rds": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "90": [
+          0,
+          0
+        ],
+        "et": [
+          1,
+          0
+        ],
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "1ª parte prolongamento",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte prolongamento",
+            [
+              1,
+              0
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2580790.html"
+    },
+    {
+      "rds_id": 5544,
+      "native_match": "2580801",
+      "date": "2026-08-30",
+      "home": "Cd Portalegrense Sad",
+      "away": "Cd Santo António",
+      "rds": {
+        "final": [
+          0,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          3
+        ],
+        "ht": [
+          0,
+          1
+        ],
+        "90": [
+          0,
+          3
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              1
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              0,
+              3
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2580801.html"
+    },
+    {
+      "rds_id": 5545,
+      "native_match": "2580767",
+      "date": "2026-08-30",
+      "home": "Adc Rebordelo",
+      "away": "Gd Bragança",
+      "rds": {
+        "final": [
+          0,
+          4
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          4
+        ],
+        "ht": [
+          0,
+          2
+        ],
+        "90": [
+          0,
+          4
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              2
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              0,
+              4
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2580767.html"
+    },
+    {
+      "rds_id": 5546,
+      "native_match": "2580778",
+      "date": "2026-08-30",
+      "home": "Rebordosa Ac",
+      "away": "Fc Alpendorada",
+      "rds": {
+        "final": [
+          2,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          2,
+          2
+        ],
+        "ht": [
+          1,
+          1
+        ],
+        "90": [
+          1,
+          1
+        ],
+        "et": [
+          2,
+          2
+        ],
+        "pso": [
+          4,
+          5
+        ]
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              1,
+              1
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              1,
+              1
+            ]
+          ],
+          [
+            "1ª parte prolongamento",
+            [
+              2,
+              2
+            ]
+          ],
+          [
+            "2ª parte prolongamento",
+            [
+              2,
+              2
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": "verified in both the competition card’s bracketed shootout numerals and the separate Penaltis list of scorers on the match sheet"
+      },
+      "source": "sources/match-2580778.html"
+    },
+    {
+      "rds_id": 5547,
+      "native_match": "2580779",
+      "date": "2026-08-30",
+      "home": "Sc Régua",
+      "away": "Ad Marco 09 Sad",
+      "rds": {
+        "final": [
+          0,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          1
+        ],
+        "ht": [
+          0,
+          1
+        ],
+        "90": [
+          0,
+          1
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              1
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              0,
+              1
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2580779.html"
+    },
+    {
+      "rds_id": 5548,
+      "native_match": "2580802",
+      "date": "2026-08-30",
+      "home": "Sc Barreiro",
+      "away": "Fc Madalena",
+      "rds": {
+        "final": [
+          2,
+          5
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          2,
+          5
+        ],
+        "ht": [
+          1,
+          2
+        ],
+        "90": [
+          2,
+          5
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              1,
+              2
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              2,
+              5
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2580802.html"
+    },
+    {
+      "rds_id": 5549,
+      "native_match": "2580769",
+      "date": "2026-08-30",
+      "home": "Sc Vianense Sad",
+      "away": "Ccd Minas De Argozelo",
+      "rds": {
+        "final": [
+          8,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          8,
+          0
+        ],
+        "ht": [
+          2,
+          0
+        ],
+        "90": [
+          8,
+          0
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              2,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              8,
+              0
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2580769.html"
+    },
+    {
+      "rds_id": 5550,
+      "native_match": "2580803",
+      "date": "2026-08-30",
+      "home": "Sg Sacavenense",
+      "away": "Sc Angrense",
+      "rds": {
+        "final": [
+          5,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          5,
+          0
+        ],
+        "ht": [
+          1,
+          0
+        ],
+        "90": [
+          5,
+          0
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              1,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              5,
+              0
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2580803.html"
+    },
+    {
+      "rds_id": 5551,
+      "native_match": "2580780",
+      "date": "2026-08-30",
+      "home": "Sc Salgueiros Sad",
+      "away": "Ud Sousense",
+      "rds": {
+        "final": [
+          2,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          2,
+          1
+        ],
+        "ht": [
+          0,
+          1
+        ],
+        "90": [
+          2,
+          1
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              1
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              2,
+              1
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2580780.html"
+    },
+    {
+      "rds_id": 5552,
+      "native_match": "2580784",
+      "date": "2026-08-30",
+      "home": "Ad Sanjoanense Sad ",
+      "away": "Cd Paços Brandão",
+      "rds": {
+        "final": [
+          3,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          3,
+          0
+        ],
+        "ht": [
+          3,
+          0
+        ],
+        "90": [
+          3,
+          0
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              3,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              3,
+              0
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2580784.html"
+    },
+    {
+      "rds_id": 5553,
+      "native_match": "2580793",
+      "date": "2026-08-30",
+      "home": "União D. Serra",
+      "away": "União Pombal",
+      "rds": {
+        "final": [
+          5,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          5,
+          0
+        ],
+        "ht": [
+          1,
+          0
+        ],
+        "90": [
+          5,
+          0
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              1,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              5,
+              0
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2580793.html"
+    },
+    {
+      "rds_id": 5554,
+      "native_match": "2580808",
+      "date": "2026-08-30",
+      "home": "G. União Sport",
+      "away": "Juventude Sc",
+      "rds": {
+        "final": [
+          1,
+          4
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          4
+        ],
+        "ht": [
+          1,
+          1
+        ],
+        "90": [
+          1,
+          4
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              1,
+              1
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              1,
+              4
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2580808.html"
+    },
+    {
+      "rds_id": 5555,
+      "native_match": "2580805",
+      "date": "2026-09-06",
+      "home": "Gd Alcochetense Sad",
+      "away": "Fayal Sc",
+      "rds": {
+        "final": [
+          8,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          8,
+          0
+        ],
+        "ht": [
+          4,
+          0
+        ],
+        "90": [
+          8,
+          0
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              4,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              8,
+              0
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2580805.html"
+    },
+    {
+      "rds_id": 5556,
+      "native_match": "2580798",
+      "date": "2026-09-06",
+      "home": "O Elvas Cad Sad",
+      "away": "Gd São Roque",
+      "rds": {
+        "final": [
+          9,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          9,
+          0
+        ],
+        "ht": [
+          5,
+          0
+        ],
+        "90": [
+          9,
+          0
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              5,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              9,
+              0
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2580798.html"
+    },
+    {
+      "rds_id": 5557,
+      "native_match": "2581357",
+      "date": "2026-09-18",
+      "home": "Real Sc Sad",
+      "away": "Académica Coimbra/Oaf Sduq",
+      "rds": {
+        "final": [
+          1,
+          4
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          4
+        ],
+        "ht": [
+          0,
+          2
+        ],
+        "90": [
+          1,
+          4
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              2
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              1,
+              4
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2581357.html"
+    },
+    {
+      "rds_id": 5558,
+      "native_match": "2581379",
+      "date": "2026-09-19",
+      "home": "Acdr Lamelas",
+      "away": "Cd Santo António",
+      "rds": {
+        "final": [
+          4,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          4,
+          1
+        ],
+        "ht": [
+          1,
+          1
+        ],
+        "90": [
+          4,
+          1
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              1,
+              1
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              4,
+              1
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2581379.html"
+    },
+    {
+      "rds_id": 5559,
+      "native_match": "2581371",
+      "date": "2026-09-19",
+      "home": "Atlético Cp Sad",
+      "away": "Gd Lagoa",
+      "rds": {
+        "final": [
+          4,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          4,
+          1
+        ],
+        "ht": [
+          2,
+          0
+        ],
+        "90": [
+          4,
+          1
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              2,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              4,
+              1
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2581371.html"
+    },
+    {
+      "rds_id": 5560,
+      "native_match": "2581381",
+      "date": "2026-09-19",
+      "home": "Sc Beira-Mar",
+      "away": "Belenenses Sduq",
+      "rds": {
+        "final": [
+          0,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          2
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "90": [
+          0,
+          2
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              0,
+              2
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2581381.html"
+    },
+    {
+      "rds_id": 5561,
+      "native_match": "2581351",
+      "date": "2026-09-19",
+      "home": "Ad Castro Daire",
+      "away": "Portimonense Sad",
+      "rds": {
+        "final": [
+          0,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          1
+        ],
+        "ht": [
+          0,
+          1
+        ],
+        "90": [
+          0,
+          1
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              1
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              0,
+              1
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2581351.html"
+    },
+    {
+      "rds_id": 5562,
+      "native_match": "2581361",
+      "date": "2026-09-19",
+      "home": "Imortal Dc",
+      "away": "Cd Tondela Sad",
+      "rds": {
+        "final": [
+          1,
+          5
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          5
+        ],
+        "ht": [
+          1,
+          3
+        ],
+        "90": [
+          1,
+          5
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              1,
+              3
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              1,
+              5
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2581361.html"
+    },
+    {
+      "rds_id": 5563,
+      "native_match": "2581377",
+      "date": "2026-09-19",
+      "home": "Cd Mafra Sad",
+      "away": "Fc Tirsense",
+      "rds": {
+        "final": [
+          2,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          2,
+          2
+        ],
+        "ht": [
+          1,
+          1
+        ],
+        "90": [
+          1,
+          1
+        ],
+        "et": [
+          2,
+          2
+        ],
+        "pso": [
+          4,
+          3
+        ]
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              1,
+              1
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              1,
+              1
+            ]
+          ],
+          [
+            "1ª parte prolongamento",
+            [
+              2,
+              2
+            ]
+          ],
+          [
+            "2ª parte prolongamento",
+            [
+              2,
+              2
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": "verified in both the competition card’s bracketed shootout numerals and the separate Penaltis list of scorers on the match sheet"
+      },
+      "source": "sources/match-2581377.html"
+    },
+    {
+      "rds_id": 5564,
+      "native_match": "2581352",
+      "date": "2026-09-19",
+      "home": "A. Naval 1893 Sduq",
+      "away": "Fc Felgueiras Sad",
+      "rds": {
+        "final": [
+          0,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          2
+        ],
+        "ht": [
+          0,
+          1
+        ],
+        "90": [
+          0,
+          2
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              1
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              0,
+              2
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2581352.html"
+    },
+    {
+      "rds_id": 5565,
+      "native_match": "2581355",
+      "date": "2026-09-19",
+      "home": "O Elvas Cad Sad",
+      "away": "Ud Leiria Sad",
+      "rds": {
+        "final": [
+          0,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          2
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "90": [
+          0,
+          2
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              0,
+              2
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2581355.html"
+    },
+    {
+      "rds_id": 5566,
+      "native_match": "2581360",
+      "date": "2026-09-19",
+      "home": "Ud Oliveirense Sad",
+      "away": "Fc Penafiel Sad",
+      "rds": {
+        "final": [
+          1,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          2
+        ],
+        "ht": [
+          1,
+          0
+        ],
+        "90": [
+          1,
+          2
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              1,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              1,
+              2
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2581360.html"
+    },
+    {
+      "rds_id": 5567,
+      "native_match": "2581350",
+      "date": "2026-09-19",
+      "home": "Sc Salgueiros Sad",
+      "away": "Cd Feirense Sad",
+      "rds": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "90": [
+          1,
+          0
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              1,
+              0
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2581350.html"
+    },
+    {
+      "rds_id": 5568,
+      "native_match": "2581370",
+      "date": "2026-09-19",
+      "home": "Gd Vitória Sernache",
+      "away": "Varzim Sc Sduq",
+      "rds": {
+        "final": [
+          2,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          2,
+          1
+        ],
+        "ht": [
+          1,
+          0
+        ],
+        "90": [
+          2,
+          1
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              1,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              2,
+              1
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2581370.html"
+    },
+    {
+      "rds_id": 5569,
+      "native_match": "2581387",
+      "date": "2026-09-20",
+      "home": "Ad Fafe Sad",
+      "away": "Juventude D. Lajense",
+      "rds": {
+        "final": [
+          4,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          4,
+          0
+        ],
+        "ht": [
+          2,
+          0
+        ],
+        "90": [
+          4,
+          0
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              2,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              4,
+              0
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2581387.html"
+    },
+    {
+      "rds_id": 5570,
+      "native_match": "2581388",
+      "date": "2026-09-20",
+      "home": "Ad Os Limianos",
+      "away": "Scm Aljustrelense",
+      "rds": {
+        "final": [
+          3,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          3,
+          0
+        ],
+        "ht": [
+          2,
+          0
+        ],
+        "90": [
+          3,
+          0
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              2,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              3,
+              0
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2581388.html"
+    },
+    {
+      "rds_id": 5571,
+      "native_match": "2581369",
+      "date": "2026-09-20",
+      "home": "Ad Marco 09 Sad",
+      "away": "Fc Maia Lidador",
+      "rds": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": [
+          1,
+          0
+        ],
+        "90": [
+          1,
+          0
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              1,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              1,
+              0
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2581369.html"
+    },
+    {
+      "rds_id": 5572,
+      "native_match": "2581366",
+      "date": "2026-09-20",
+      "home": "Cd Alcains",
+      "away": "Vitória Fc",
+      "rds": {
+        "final": [
+          0,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          2
+        ],
+        "ht": [
+          0,
+          2
+        ],
+        "90": [
+          0,
+          2
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              2
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              0,
+              2
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2581366.html"
+    },
+    {
+      "rds_id": 5573,
+      "native_match": "2581368",
+      "date": "2026-09-20",
+      "home": "Amora Fc Sad",
+      "away": "União D. Serra",
+      "rds": {
+        "final": [
+          3,
+          4
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          3,
+          4
+        ],
+        "ht": [
+          2,
+          1
+        ],
+        "90": [
+          3,
+          4
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              2,
+              1
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              3,
+              4
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2581368.html"
+    },
+    {
+      "rds_id": 5574,
+      "native_match": "2581383",
+      "date": "2026-09-20",
+      "home": "Ançã Fc",
+      "away": "Ad Sanjoanense Sad ",
+      "rds": {
+        "final": [
+          1,
+          4
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          4
+        ],
+        "ht": [
+          0,
+          2
+        ],
+        "90": [
+          1,
+          4
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              2
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              1,
+              4
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2581383.html"
+    },
+    {
+      "rds_id": 5575,
+      "native_match": "2581359",
+      "date": "2026-09-20",
+      "home": "Sce Bombarralense",
+      "away": "Fc Vizela Sad",
+      "rds": {
+        "final": [
+          0,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          1
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "90": [
+          0,
+          1
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              0,
+              1
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2581359.html"
+    },
+    {
+      "rds_id": 5576,
+      "native_match": "2581354",
+      "date": "2026-09-20",
+      "home": "Cd Cinfães",
+      "away": "Leixões Sc Sad",
+      "rds": {
+        "final": [
+          0,
+          4
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          4
+        ],
+        "ht": [
+          0,
+          4
+        ],
+        "90": [
+          0,
+          4
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              4
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              0,
+              4
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2581354.html"
+    },
+    {
+      "rds_id": 5577,
+      "native_match": "2581364",
+      "date": "2026-09-20",
+      "home": "Estrela Da Calheta Fc",
+      "away": "Sc Vianense Sad",
+      "rds": {
+        "final": [
+          1,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          3
+        ],
+        "ht": [
+          0,
+          1
+        ],
+        "90": [
+          1,
+          3
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              1
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              1,
+              3
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2581364.html"
+    },
+    {
+      "rds_id": 5578,
+      "native_match": "2581375",
+      "date": "2026-09-20",
+      "home": "Fc Alpendorada",
+      "away": "Ad Mação",
+      "rds": {
+        "final": [
+          3,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          3,
+          0
+        ],
+        "ht": [
+          2,
+          0
+        ],
+        "90": [
+          3,
+          0
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              2,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              3,
+              0
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2581375.html"
+    },
+    {
+      "rds_id": 5579,
+      "native_match": "2581356",
+      "date": "2026-09-20",
+      "home": "Fc Madalena",
+      "away": "Lusitânia Lourosa Fc Sad",
+      "rds": {
+        "final": [
+          1,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          3
+        ],
+        "ht": [
+          0,
+          2
+        ],
+        "90": [
+          1,
+          3
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              2
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              1,
+              3
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2581356.html"
+    },
+    {
+      "rds_id": 5580,
+      "native_match": "2581384",
+      "date": "2026-09-20",
+      "home": "Cd Fátima",
+      "away": "Fc Vinhais",
+      "rds": {
+        "final": [
+          4,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          4,
+          1
+        ],
+        "ht": [
+          3,
+          1
+        ],
+        "90": [
+          4,
+          1
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              3,
+              1
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              4,
+              1
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2581384.html"
+    },
+    {
+      "rds_id": 5581,
+      "native_match": "2581363",
+      "date": "2026-09-20",
+      "home": "Ad Fazendense",
+      "away": "Gc Figueirense",
+      "rds": {
+        "final": [
+          6,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          6,
+          1
+        ],
+        "ht": [
+          2,
+          1
+        ],
+        "90": [
+          6,
+          1
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              2,
+              1
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              6,
+              1
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2581363.html"
+    },
+    {
+      "rds_id": 5582,
+      "native_match": "2581386",
+      "date": "2026-09-20",
+      "home": "Gd Alcochetense Sad",
+      "away": "C. Futebol Benfica",
+      "rds": {
+        "final": [
+          2,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          2,
+          0
+        ],
+        "ht": [
+          2,
+          0
+        ],
+        "90": [
+          2,
+          0
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              2,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              2,
+              0
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2581386.html"
+    },
+    {
+      "rds_id": 5583,
+      "native_match": "2581376",
+      "date": "2026-09-20",
+      "home": "Gd Bragança",
+      "away": "Cd Celoricense",
+      "rds": {
+        "final": [
+          6,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          6,
+          1
+        ],
+        "ht": [
+          3,
+          1
+        ],
+        "90": [
+          6,
+          1
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              3,
+              1
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              6,
+              1
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2581376.html"
+    },
+    {
+      "rds_id": 5584,
+      "native_match": "2581362",
+      "date": "2026-09-20",
+      "home": "Guarda Fc Sad ",
+      "away": "Gd Chaves Sad",
+      "rds": {
+        "final": [
+          2,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          2,
+          3
+        ],
+        "ht": [
+          0,
+          3
+        ],
+        "90": [
+          2,
+          3
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              3
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              2,
+              3
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2581362.html"
+    },
+    {
+      "rds_id": 5585,
+      "native_match": "2581385",
+      "date": "2026-09-20",
+      "home": "Mortágua Fc",
+      "away": "Leça Fc Sad",
+      "rds": {
+        "final": [
+          0,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          2
+        ],
+        "ht": [
+          0,
+          1
+        ],
+        "90": [
+          0,
+          2
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              1
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              0,
+              2
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2581385.html"
+    },
+    {
+      "rds_id": 5586,
+      "native_match": "2581365",
+      "date": "2026-09-20",
+      "home": "Sc Olhanense",
+      "away": "Gd Portel",
+      "rds": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "90": [
+          0,
+          0
+        ],
+        "et": [
+          1,
+          0
+        ],
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "1ª parte prolongamento",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte prolongamento",
+            [
+              1,
+              0
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2581365.html"
+    },
+    {
+      "rds_id": 5587,
+      "native_match": "2581367",
+      "date": "2026-09-20",
+      "home": "Fc Oliveira Hospital Sad",
+      "away": "Juventude Sc",
+      "rds": {
+        "final": [
+          3,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          3,
+          2
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "90": [
+          1,
+          1
+        ],
+        "et": [
+          3,
+          2
+        ],
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              1,
+              1
+            ]
+          ],
+          [
+            "1ª parte prolongamento",
+            [
+              2,
+              1
+            ]
+          ],
+          [
+            "2ª parte prolongamento",
+            [
+              3,
+              2
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2581367.html"
+    },
+    {
+      "rds_id": 5588,
+      "native_match": "2581380",
+      "date": "2026-09-20",
+      "home": "Ad Ovarense Sad",
+      "away": "\"Os Marialvas\" Sad",
+      "rds": {
+        "final": [
+          0,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          1
+        ],
+        "ht": [
+          0,
+          1
+        ],
+        "90": [
+          0,
+          1
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              1
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              0,
+              1
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2581380.html"
+    },
+    {
+      "rds_id": 5589,
+      "native_match": "2581373",
+      "date": "2026-09-20",
+      "home": "Usc Paredes",
+      "away": "Sc Maria Fonte",
+      "rds": {
+        "final": [
+          5,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          5,
+          1
+        ],
+        "ht": [
+          3,
+          1
+        ],
+        "90": [
+          5,
+          1
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              3,
+              1
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              5,
+              1
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2581373.html"
+    },
+    {
+      "rds_id": 5590,
+      "native_match": "2581353",
+      "date": "2026-09-20",
+      "home": "Ad Ponte Da Barca",
+      "away": "Amarante Fc Sduq",
+      "rds": {
+        "final": [
+          0,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          2
+        ],
+        "ht": [
+          0,
+          1
+        ],
+        "90": [
+          0,
+          2
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              1
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              0,
+              2
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2581353.html"
+    },
+    {
+      "rds_id": 5591,
+      "native_match": "2581358",
+      "date": "2026-09-20",
+      "home": "Sg Sacavenense",
+      "away": "Sc Farense Sad",
+      "rds": {
+        "final": [
+          0,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          1
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "90": [
+          0,
+          1
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              0,
+              1
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2581358.html"
+    },
+    {
+      "rds_id": 5592,
+      "native_match": "2581372",
+      "date": "2026-09-20",
+      "home": "Ud Santarém Sad",
+      "away": "Merelinense Fc",
+      "rds": {
+        "final": [
+          5,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          5,
+          0
+        ],
+        "ht": [
+          1,
+          0
+        ],
+        "90": [
+          5,
+          0
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              1,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              5,
+              0
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2581372.html"
+    },
+    {
+      "rds_id": 5593,
+      "native_match": "2581382",
+      "date": "2026-09-20",
+      "home": "Fc Serpa",
+      "away": "Louletano Dc",
+      "rds": {
+        "final": [
+          1,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          2
+        ],
+        "ht": [
+          0,
+          1
+        ],
+        "90": [
+          1,
+          1
+        ],
+        "et": [
+          1,
+          2
+        ],
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              1
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              1,
+              1
+            ]
+          ],
+          [
+            "1ª parte prolongamento",
+            [
+              1,
+              1
+            ]
+          ],
+          [
+            "2ª parte prolongamento",
+            [
+              1,
+              2
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2581382.html"
+    },
+    {
+      "rds_id": 5594,
+      "native_match": "2581349",
+      "date": "2026-09-20",
+      "home": "Su Sintrense Sad",
+      "away": "Avs Sad",
+      "rds": {
+        "final": [
+          0,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          2
+        ],
+        "ht": [
+          0,
+          1
+        ],
+        "90": [
+          0,
+          2
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              1
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              0,
+              2
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2581349.html"
+    },
+    {
+      "rds_id": 5595,
+      "native_match": "2581378",
+      "date": "2026-09-20",
+      "home": "Sc Vila Pouca Aguiar Sad",
+      "away": "Brito Sc Sad",
+      "rds": {
+        "final": [
+          0,
+          5
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          5
+        ],
+        "ht": [
+          0,
+          2
+        ],
+        "90": [
+          0,
+          5
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              2
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              0,
+              5
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2581378.html"
+    },
+    {
+      "rds_id": 5596,
+      "native_match": "2581374",
+      "date": "2026-09-27",
+      "home": "Ad Camacha",
+      "away": "Florgrade Fc",
+      "rds": {
+        "final": [
+          0,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          1
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "90": [
+          0,
+          1
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              0,
+              1
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2581374.html"
+    },
+    {
+      "rds_id": 5597,
+      "native_match": "2687275",
+      "date": "2026-10-14",
+      "home": "Ud Santarém Sad",
+      "away": "Gil Vicente Fc Sduq",
+      "rds": {
+        "final": [
+          2,
+          3
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          2,
+          3
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "90": [
+          2,
+          2
+        ],
+        "et": [
+          2,
+          3
+        ],
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              2,
+              2
+            ]
+          ],
+          [
+            "1ª parte prolongamento",
+            [
+              2,
+              2
+            ]
+          ],
+          [
+            "2ª parte prolongamento",
+            [
+              2,
+              3
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2687275.html"
+    },
+    {
+      "rds_id": 5598,
+      "native_match": "2687286",
+      "date": "2026-10-16",
+      "home": "Gd Chaves Sad",
+      "away": "\"Os Marialvas\" Sad",
+      "rds": {
+        "final": [
+          2,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          2,
+          1
+        ],
+        "ht": [
+          1,
+          0
+        ],
+        "90": [
+          2,
+          1
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              1,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              2,
+              1
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2687286.html"
+    },
+    {
+      "rds_id": 5599,
+      "native_match": "2687277",
+      "date": "2026-10-17",
+      "home": "Acdr Lamelas",
+      "away": "Vitória Sc Sad",
+      "rds": {
+        "final": [
+          0,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          1
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "90": [
+          0,
+          1
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              0,
+              1
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2687277.html"
+    },
+    {
+      "rds_id": 5600,
+      "native_match": "2687276",
+      "date": "2026-10-17",
+      "home": "Avs Sad",
+      "away": "Moreirense Fc Sad",
+      "rds": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": [
+          1,
+          0
+        ],
+        "90": [
+          1,
+          0
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              1,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              1,
+              0
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2687276.html"
+    },
+    {
+      "rds_id": 5601,
+      "native_match": "2687283",
+      "date": "2026-10-17",
+      "home": "Académica Coimbra/Oaf Sduq",
+      "away": "Amarante Fc Sduq",
+      "rds": {
+        "final": [
+          3,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          3,
+          2
+        ],
+        "ht": [
+          1,
+          1
+        ],
+        "90": [
+          3,
+          2
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              1,
+              1
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              3,
+              2
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2687283.html"
+    },
+    {
+      "rds_id": 5602,
+      "native_match": "2687285",
+      "date": "2026-10-17",
+      "home": "Atlético Cp Sad",
+      "away": "Fc Vizela Sad",
+      "rds": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "90": [
+          1,
+          0
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              1,
+              0
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2687285.html"
+    },
+    {
+      "rds_id": 5603,
+      "native_match": "2687273",
+      "date": "2026-10-17",
+      "home": "Ad Fazendense",
+      "away": "Cf Estrela Sad",
+      "rds": {
+        "final": [
+          1,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          2
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "90": [
+          1,
+          2
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              1,
+              2
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2687273.html"
+    },
+    {
+      "rds_id": 5604,
+      "native_match": "2687293",
+      "date": "2026-10-17",
+      "home": "Florgrade Fc",
+      "away": "Portimonense Sad",
+      "rds": {
+        "final": [
+          1,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          2
+        ],
+        "ht": [
+          1,
+          1
+        ],
+        "90": [
+          1,
+          2
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              1,
+              1
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              1,
+              2
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2687293.html"
+    },
+    {
+      "rds_id": 5605,
+      "native_match": "2687284",
+      "date": "2026-10-17",
+      "home": "Ud Leiria Sad",
+      "away": "Gd Bragança",
+      "rds": {
+        "final": [
+          2,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          2,
+          1
+        ],
+        "ht": [
+          0,
+          1
+        ],
+        "90": [
+          2,
+          1
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              1
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              2,
+              1
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2687284.html"
+    },
+    {
+      "rds_id": 5606,
+      "native_match": "2687280",
+      "date": "2026-10-17",
+      "home": "Louletano Dc",
+      "away": "Rio Ave Fc Sad",
+      "rds": {
+        "final": [
+          0,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          1
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "90": [
+          0,
+          1
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              0,
+              1
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2687280.html"
+    },
+    {
+      "rds_id": 5607,
+      "native_match": "2687288",
+      "date": "2026-10-17",
+      "home": "Fc Penafiel Sad",
+      "away": "Leça Fc Sad",
+      "rds": {
+        "final": [
+          0,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          1
+        ],
+        "ht": [
+          0,
+          1
+        ],
+        "90": [
+          0,
+          1
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              1
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              0,
+              1
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2687288.html"
+    },
+    {
+      "rds_id": 5608,
+      "native_match": "2687282",
+      "date": "2026-10-17",
+      "home": "Sc Farense Sad",
+      "away": "Ad Marco 09 Sad",
+      "rds": {
+        "final": [
+          3,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          3,
+          0
+        ],
+        "ht": [
+          2,
+          0
+        ],
+        "90": [
+          3,
+          0
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              2,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              3,
+              0
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2687282.html"
+    },
+    {
+      "rds_id": 5609,
+      "native_match": "2687287",
+      "date": "2026-10-17",
+      "home": "Sc Vianense Sad",
+      "away": "Leixões Sc Sad",
+      "rds": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "90": [
+          1,
+          0
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              1,
+              0
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2687287.html"
+    },
+    {
+      "rds_id": 5610,
+      "native_match": "2687278",
+      "date": "2026-10-17",
+      "home": "Ad Sanjoanense Sad ",
+      "away": "Cd Nacional Sad",
+      "rds": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "90": [
+          1,
+          0
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              1,
+              0
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2687278.html"
+    },
+    {
+      "rds_id": 5611,
+      "native_match": "2687294",
+      "date": "2026-10-18",
+      "home": "Brito Sc Sad",
+      "away": "Gd Vitória Sernache",
+      "rds": {
+        "final": [
+          0,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          1
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "90": [
+          0,
+          1
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              0,
+              1
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2687294.html"
+    },
+    {
+      "rds_id": 5612,
+      "native_match": "2687279",
+      "date": "2026-10-18",
+      "home": "Fc Alpendorada",
+      "away": "Casa Pia Ac Sduq",
+      "rds": {
+        "final": [
+          0,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          0,
+          1
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "90": [
+          0,
+          1
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              0,
+              1
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2687279.html"
+    },
+    {
+      "rds_id": 5613,
+      "native_match": "2687281",
+      "date": "2026-10-18",
+      "home": "Cd Fátima",
+      "away": "Académico Viseu Fc Sad",
+      "rds": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "90": [
+          1,
+          0
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              1,
+              0
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2687281.html"
+    },
+    {
+      "rds_id": 5614,
+      "native_match": "2687289",
+      "date": "2026-10-18",
+      "home": "Fc Felgueiras Sad",
+      "away": "Ad Fafe Sad",
+      "rds": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "90": [
+          1,
+          0
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              1,
+              0
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2687289.html"
+    },
+    {
+      "rds_id": 5615,
+      "native_match": "2687269",
+      "date": "2026-10-18",
+      "home": "Gd Alcochetense Sad",
+      "away": "Marítimo Da Madeira Sad",
+      "rds": {
+        "final": [
+          1,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          2
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "90": [
+          1,
+          2
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              1,
+              2
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2687269.html"
+    },
+    {
+      "rds_id": 5616,
+      "native_match": "2687291",
+      "date": "2026-10-18",
+      "home": "Lusitânia Lourosa Fc Sad",
+      "away": "Ad Os Limianos",
+      "rds": {
+        "final": [
+          2,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          2,
+          1
+        ],
+        "ht": [
+          1,
+          0
+        ],
+        "90": [
+          2,
+          1
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              1,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              2,
+              1
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2687291.html"
+    },
+    {
+      "rds_id": 5617,
+      "native_match": "2687274",
+      "date": "2026-10-18",
+      "home": "Cd Mafra Sad",
+      "away": "Santa Clara Açores Sad",
+      "rds": {
+        "final": [
+          3,
+          2
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          3,
+          2
+        ],
+        "ht": [
+          1,
+          1
+        ],
+        "90": [
+          2,
+          2
+        ],
+        "et": [
+          3,
+          2
+        ],
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              1,
+              1
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              2,
+              2
+            ]
+          ],
+          [
+            "1ª parte prolongamento",
+            [
+              3,
+              2
+            ]
+          ],
+          [
+            "2ª parte prolongamento",
+            [
+              3,
+              2
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2687274.html"
+    },
+    {
+      "rds_id": 5618,
+      "native_match": "2687290",
+      "date": "2026-10-18",
+      "home": "Sc Olhanense",
+      "away": "Fc Oliveira Hospital Sad",
+      "rds": {
+        "final": [
+          1,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          1
+        ],
+        "ht": [
+          0,
+          1
+        ],
+        "90": [
+          1,
+          1
+        ],
+        "et": [
+          1,
+          1
+        ],
+        "pso": [
+          6,
+          5
+        ]
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              1
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              1,
+              1
+            ]
+          ],
+          [
+            "1ª parte prolongamento",
+            [
+              1,
+              1
+            ]
+          ],
+          [
+            "2ª parte prolongamento",
+            [
+              1,
+              1
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": "verified in both the competition card’s bracketed shootout numerals and the separate Penaltis list of scorers on the match sheet"
+      },
+      "source": "sources/match-2687290.html"
+    },
+    {
+      "rds_id": 5619,
+      "native_match": "2687272",
+      "date": "2026-10-18",
+      "home": "Belenenses Sduq",
+      "away": "Fc Arouca Sduq",
+      "rds": {
+        "final": [
+          3,
+          4
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          3,
+          4
+        ],
+        "ht": [
+          0,
+          1
+        ],
+        "90": [
+          3,
+          3
+        ],
+        "et": [
+          3,
+          4
+        ],
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              1
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              3,
+              3
+            ]
+          ],
+          [
+            "1ª parte prolongamento",
+            [
+              3,
+              4
+            ]
+          ],
+          [
+            "2ª parte prolongamento",
+            [
+              3,
+              4
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2687272.html"
+    },
+    {
+      "rds_id": 5620,
+      "native_match": "2687271",
+      "date": "2026-10-18",
+      "home": "Usc Paredes",
+      "away": "Fc Famalicão Sad",
+      "rds": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          0
+        ],
+        "ht": [
+          1,
+          0
+        ],
+        "90": [
+          1,
+          0
+        ],
+        "et": null,
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              1,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              1,
+              0
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2687271.html"
+    },
+    {
+      "rds_id": 5621,
+      "native_match": "2687268",
+      "date": "2026-10-18",
+      "home": "Sc Salgueiros Sad",
+      "away": "Estoril Praia Sad",
+      "rds": {
+        "final": [
+          1,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          1
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "90": [
+          1,
+          1
+        ],
+        "et": [
+          1,
+          1
+        ],
+        "pso": [
+          1,
+          3
+        ]
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              1,
+              1
+            ]
+          ],
+          [
+            "1ª parte prolongamento",
+            [
+              1,
+              1
+            ]
+          ],
+          [
+            "2ª parte prolongamento",
+            [
+              1,
+              1
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": "verified in both the competition card’s bracketed shootout numerals and the separate Penaltis list of scorers on the match sheet"
+      },
+      "source": "sources/match-2687268.html"
+    },
+    {
+      "rds_id": 5622,
+      "native_match": "2687270",
+      "date": "2026-10-18",
+      "home": "Cd Tondela Sad",
+      "away": "Alverca Sad",
+      "rds": {
+        "final": [
+          2,
+          0
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          2,
+          0
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "90": [
+          0,
+          0
+        ],
+        "et": [
+          2,
+          0
+        ],
+        "pso": null
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              0,
+              0
+            ]
+          ],
+          [
+            "1ª parte prolongamento",
+            [
+              2,
+              0
+            ]
+          ],
+          [
+            "2ª parte prolongamento",
+            [
+              2,
+              0
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": null
+      },
+      "source": "sources/match-2687270.html"
+    },
+    {
+      "rds_id": 5623,
+      "native_match": "2687292",
+      "date": "2026-10-18",
+      "home": "Vitória Fc",
+      "away": "União D. Serra",
+      "rds": {
+        "final": [
+          1,
+          1
+        ],
+        "ht": null,
+        "90": null,
+        "et": null,
+        "pso": null
+      },
+      "federation": {
+        "final": [
+          1,
+          1
+        ],
+        "ht": [
+          0,
+          1
+        ],
+        "90": [
+          1,
+          1
+        ],
+        "et": [
+          1,
+          1
+        ],
+        "pso": [
+          2,
+          4
+        ]
+      },
+      "details": {
+        "validated_full_sequence": true,
+        "phases": [
+          [
+            "1ª parte",
+            [
+              0,
+              1
+            ]
+          ],
+          [
+            "2ª parte",
+            [
+              1,
+              1
+            ]
+          ],
+          [
+            "1ª parte prolongamento",
+            [
+              1,
+              1
+            ]
+          ],
+          [
+            "2ª parte prolongamento",
+            [
+              1,
+              1
+            ]
+          ]
+        ],
+        "discontinuities": [],
+        "shootout_basis": "verified in both the competition card’s bracketed shootout numerals and the separate Penaltis list of scorers on the match sheet"
+      },
+      "source": "sources/match-2687292.html"
+    }
+  ]
+}

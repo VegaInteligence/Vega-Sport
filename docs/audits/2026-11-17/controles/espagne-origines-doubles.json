@@ -1,0 +1,112 @@
+{
+  "235744": [
+    {
+      "rds_id": 5227,
+      "actual_upstream": "soccerway",
+      "rds_home": "El Espinar Sant Rafel",
+      "rds_away": "Prat",
+      "rds_home_id": 2685,
+      "rds_away_id": 2686,
+      "date": "2026-09-27",
+      "score": "1-5"
+    },
+    {
+      "rds_id": 5230,
+      "actual_upstream": "espn",
+      "rds_home": "CF San Rafael",
+      "rds_away": "AE Prat",
+      "rds_home_id": 2691,
+      "rds_away_id": 2692,
+      "date": "2026-09-27",
+      "score": "1-5"
+    }
+  ],
+  "235996": [
+    {
+      "rds_id": 5241,
+      "actual_upstream": "soccerway",
+      "rds_home": "Prat",
+      "rds_away": "El Espinar Sant Rafel",
+      "rds_home_id": 2686,
+      "rds_away_id": 2685,
+      "date": "2026-10-11",
+      "score": "5-0"
+    },
+    {
+      "rds_id": 5243,
+      "actual_upstream": "espn",
+      "rds_home": "AE Prat",
+      "rds_away": "CF San Rafael",
+      "rds_home_id": 2692,
+      "rds_away_id": 2691,
+      "date": "2026-10-11",
+      "score": "5-0"
+    }
+  ],
+  "253571": [
+    {
+      "rds_id": 5244,
+      "actual_upstream": "soccerway",
+      "rds_home": "Atl. Paso",
+      "rds_away": "Cordoba",
+      "rds_home_id": 2697,
+      "rds_away_id": 1000,
+      "date": "2026-10-27",
+      "score": "3-1"
+    },
+    {
+      "rds_id": 5258,
+      "actual_upstream": "espn",
+      "rds_home": "Atlético Paso",
+      "rds_away": "Córdoba",
+      "rds_home_id": 2724,
+      "rds_away_id": 1000,
+      "date": "2026-10-27",
+      "score": "3-1"
+    }
+  ],
+  "253522": [
+    {
+      "rds_id": 5263,
+      "actual_upstream": "soccerway",
+      "rds_home": "Auriense",
+      "rds_away": "Dep. A Coruna",
+      "rds_home_id": 2731,
+      "rds_away_id": 4705,
+      "date": "2026-10-29",
+      "score": "0-3"
+    },
+    {
+      "rds_id": 5283,
+      "actual_upstream": "espn",
+      "rds_home": "Auriense Cented Academy",
+      "rds_away": "Deportivo",
+      "rds_home_id": 2687,
+      "rds_away_id": 2765,
+      "date": "2026-10-29",
+      "score": "0-3"
+    }
+  ],
+  "253542": [
+    {
+      "rds_id": 5264,
+      "actual_upstream": "soccerway",
+      "rds_home": "Pena",
+      "rds_away": "Huesca",
+      "rds_home_id": 2733,
+      "rds_away_id": 5392,
+      "date": "2026-10-29",
+      "score": "1-5"
+    },
+    {
+      "rds_id": 5266,
+      "actual_upstream": "espn",
+      "rds_home": "Peña Sport",
+      "rds_away": "Huesca",
+      "rds_home_id": 2737,
+      "rds_away_id": 5392,
+      "date": "2026-10-29",
+      "score": "1-5"
+    }
+  ]
+}

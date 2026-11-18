@@ -1,0 +1,192 @@
+{
+  "actor_observations": [
+    {
+      "match": "m_4GBxjP",
+      "player": "p_3g5SiT",
+      "in_lineup": false,
+      "in_players": false,
+      "events": [
+        [
+          51,
+          "goal",
+          "p_3g5SiT",
+          null
+        ]
+      ],
+      "shots": []
+    },
+    {
+      "match": "m_4GBxjP",
+      "player": "p_49Ge47",
+      "in_lineup": true,
+      "in_players": true,
+      "events": [
+        [
+          62,
+          "substitution",
+          "p_49Ge47",
+          "p_1iL8Za"
+        ]
+      ],
+      "shots": [
+        [
+          11,
+          null,
+          "AttemptSaved"
+        ],
+        [
+          51,
+          null,
+          "Goal"
+        ]
+      ]
+    },
+    {
+      "match": "m_21GTbJ",
+      "player": "p_3QGh4v",
+      "in_lineup": false,
+      "in_players": false,
+      "events": [],
+      "shots": [
+        [
+          90,
+          5,
+          "Miss"
+        ]
+      ]
+    },
+    {
+      "match": "m_21GTbJ",
+      "player": "p_4PIWyK",
+      "in_lineup": true,
+      "in_players": true,
+      "events": [
+        [
+          86,
+          "substitution",
+          "p_32ob0P",
+          "p_4PIWyK"
+        ],
+        [
+          87,
+          "yellowcard",
+          "p_4PIWyK",
+          null
+        ]
+      ],
+      "shots": []
+    }
+  ],
+  "ranking_rows": [
+    {
+      "playerId": "p_1FvzRt",
+      "teamId": "t_1avIKi",
+      "name": "Alexandru M\u0103\u021ban",
+      "imageUrl": "https://cdn.pitchapi.dev/images/players/9d9271687f7167c913cc54fce7b053d048a6b4ef887f3f6b204d09b216ca6801.webp",
+      "team": "Columbus Crew",
+      "role": "winger",
+      "position": "Ailier / milieu offensif",
+      "minutes": 7,
+      "goals": 0,
+      "assists": 0,
+      "grade": null,
+      "rank": null
+    },
+    {
+      "playerId": "p_2jnb4H",
+      "teamId": "t_0JtwBe",
+      "name": "Samuel Moutoussamy",
+      "imageUrl": "https://cdn.pitchapi.dev/images/players/1cf0e77dab078a2a4fd7f8ffb62b5a2fb51210e4fc27a16e637e59205d50f063.webp",
+      "team": "Nantes",
+      "role": "central_midfielder",
+      "position": "Milieu central",
+      "minutes": 1,
+      "goals": 0,
+      "assists": 0,
+      "grade": null,
+      "rank": null
+    }
+  ],
+  "receipts": [
+    {
+      "status": 200,
+      "date": "Wed, 18 Nov 2026 02:24:56 GMT",
+      "at": "2026-11-18T02:24:56.401652+00:00",
+      "path": "api/matches/m_4GBxjP/events",
+      "body_sha256": "0b18dbb2155f7823000caf5b171f1da705b9b031b83812b26266eb1b4f882120",
+      "content_type": "application/json; charset=utf-8"
+    },
+    {
+      "status": 200,
+      "date": "Wed, 18 Nov 2026 02:24:56 GMT",
+      "at": "2026-11-18T02:24:56.533580+00:00",
+      "path": "api/matches/m_4GBxjP/shots",
+      "body_sha256": "18462d885bd5f8f3e5ef0523df9866b98fa50ab16bfd719ad410056adbc09fa8",
+      "content_type": "application/json; charset=utf-8"
+    },
+    {
+      "status": 200,
+      "date": "Wed, 18 Nov 2026 02:24:56 GMT",
+      "at": "2026-11-18T02:24:56.654755+00:00",
+      "path": "api/matches/m_4GBxjP/players",
+      "body_sha256": "fe86040825086ef03ce57f25a5aa4bda2b6ee00b58ea5c130382301c7f2f896c",
+      "content_type": "application/json; charset=utf-8"
+    },
+    {
+      "status": 200,
+      "date": "Wed, 18 Nov 2026 02:24:56 GMT",
+      "at": "2026-11-18T02:24:56.763059+00:00",
+      "path": "api/matches/m_4GBxjP/lineups",
+      "body_sha256": "2143ce30707dbea0bb24dd703ff206da35d3ae518d16843689caba4ea520b08c",
+      "content_type": "application/json; charset=utf-8"
+    },
+    {
+      "status": 200,
+      "date": "Wed, 18 Nov 2026 02:24:56 GMT",
+      "at": "2026-11-18T02:24:56.913566+00:00",
+      "path": "api/matches/m_21GTbJ/events",
+      "body_sha256": "15a889acba5c740e305a35d61661718da192a0ed8d16a1776565c3c6ad0f02bf",
+      "content_type": "application/json; charset=utf-8"
+    },
+    {
+      "status": 200,
+      "date": "Wed, 18 Nov 2026 02:24:56 GMT",
+      "at": "2026-11-18T02:24:57.120669+00:00",
+      "path": "api/matches/m_21GTbJ/shots",
+      "body_sha256": "8289980fa69b7a888138d74cec7d1aa55f16b6f83b73203d311b5a0562e590d7",
+      "content_type": "application/json; charset=utf-8"
+    },
+    {
+      "status": 200,
+      "date": "Wed, 18 Nov 2026 02:24:57 GMT",
+      "at": "2026-11-18T02:24:57.361964+00:00",
+      "path": "api/matches/m_21GTbJ/players",
+      "body_sha256": "ef0a1d4e01e671e4c2bc7b8127902cc25d2f4e7bdca2d2dc2e7544c82271c40d",
+      "content_type": "application/json; charset=utf-8"
+    },
+    {
+      "status": 200,
+      "date": "Wed, 18 Nov 2026 02:24:57 GMT",
+      "at": "2026-11-18T02:24:57.259831+00:00",
+      "path": "api/matches/m_21GTbJ/lineups",
+      "body_sha256": "3bfc37948bbda6381a05a61649b95ab9fc6111b31a49ccae652809ed949b5a7f",
+      "content_type": "application/json; charset=utf-8"
+    },
+    {
+      "status": 200,
+      "date": "Wed, 18 Nov 2026 02:24:58 GMT",
+      "at": "2026-11-18T02:24:58.800986+00:00",
+      "path": "api/rankings/match?match=m_21vqiJ",
+      "body_sha256": "cc455b92319294e8371e58839324b3cfa9aa17c22d51cc84948c9331b5bbf678",
+      "content_type": "application/json; charset=utf-8"
+    },
+    {
+      "status": 200,
+      "date": "Wed, 18 Nov 2026 02:24:58 GMT",
+      "at": "2026-11-18T02:24:58.870182+00:00",
+      "path": "api/rankings/match?match=m_0mceOR",
+      "body_sha256": "0a59004a2b272cdf6b0d912bf3ca2a17b05ea7d55d6cb8def251048d68c9ecce",
+      "content_type": "application/json; charset=utf-8"
+    }
+  ]
+}

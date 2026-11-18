@@ -1,0 +1,7 @@
+{
+  "at": "2026-11-18 02:02:22.142267+00:00",
+  "snapshot": "4403005:4403005:",
+  "database": "vega_v2",
+  "isolation": "repeatable read",
+  "read_only": "on"
+}

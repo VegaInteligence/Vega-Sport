@@ -1,0 +1,77 @@
+{
+  "publication": 2097,
+  "snapshot": "2026-11-18 02:16:34.234527+00:00",
+  "joined_all_fifa_matches": 64,
+  "fixtures_with_two_RDS_records_and_one_admitted": 64,
+  "stadium_countries": {
+    "QAT": 64
+  },
+  "host_status": {
+    "nominal_home_hosts": 2,
+    "neither_hosts": 61,
+    "nominal_away_hosts": 1
+  },
+  "neutral_false_all_64": true,
+  "corroborating_alternate_neutral_true_on_61": true,
+  "same_before_home_expected_overstatement_on_neutral": {
+    "min": 0.0634145020847634,
+    "median": 0.08442540776324692,
+    "max": 0.08613255874891795
+  },
+  "conditional_replay": {
+    "description": "Only the 61 neutral flags changed; frozen fitted seeds, fixture set/order and other inputs. Host-away fixture excluded from intervention.",
+    "baseline_largest_abs_after_vs_RDS": 0.00011758819391616271,
+    "changed_sides_gt_001": 935,
+    "other_fixture_sides_gt_001": 813,
+    "other_fixtures_teams": 106,
+    "max_abs_other_fixture_after": 6.036388104140087,
+    "national_teams_only": true,
+    "peak_other_fixture": [
+      739083,
+      5467,
+      6.036388104140087
+    ]
+  },
+  "example": {
+    "fifa": "400235458",
+    "vega": 230388,
+    "day": "2022-11-21",
+    "home": "England",
+    "away": "Iran",
+    "home_team": 5504,
+    "away_team": 5494,
+    "home_goals": 6,
+    "away_goals": 2,
+    "stadium": "Khalifa International Stadium",
+    "stadium_country": "QAT",
+    "host_status": "neither_hosts",
+    "worker_neutral": false,
+    "csv_neutral": "TRUE",
+    "csv_home": "England",
+    "stored_home_expected": 0.7380481958389282,
+    "reconstructed_home_expected": 0.7380481963247185,
+    "neutral_expected_with_same_before": 0.666069433681282,
+    "home_expectation_difference_same_before": 0.0719787626434365
+  },
+  "away_host": {
+    "fifa": "400235450",
+    "vega": 230419,
+    "day": "2022-11-29",
+    "home": "Netherlands",
+    "away": "Qatar",
+    "home_team": 5480,
+    "away_team": 5499,
+    "home_goals": 2,
+    "away_goals": 0,
+    "stadium": "Al Bayt Stadium",
+    "stadium_country": "QAT",
+    "host_status": "nominal_away_hosts",
+    "worker_neutral": false,
+    "csv_neutral": "FALSE",
+    "csv_home": "Qatar",
+    "stored_home_expected": 0.6765817999839783,
+    "reconstructed_home_expected": 0.6765818222838307,
+    "neutral_expected_with_same_before": 0.5969371850578252,
+    "home_expectation_difference_same_before": 0.07964463722600545
+  }
+}

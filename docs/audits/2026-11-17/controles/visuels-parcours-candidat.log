@@ -1,0 +1,4 @@
+{"route_pass": 26, "route_checks": 26, "cup_side_slots": {"desktop": {"slots": 58, "distinct_clubs": 16, "verified_sha_and_image": 58}, "mobile": {"slots": 58, "distinct_clubs": 16, "verified_sha_and_image": 58}}, "passed": true, "extended_passed": false}
+extended 16 / 16 extra 14 / 16
+FAIL desktop extra search gives one Cymru North result, which opens its source-key entry
+FAIL mobile extra search gives one Cymru North result, which opens its source-key entry

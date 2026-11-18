@@ -1,0 +1,11 @@
+{
+  "base_cue_pairs": 2307397,
+  "additional_event_cue_pairs": 938,
+  "recorded_match_player_id_pairs_with_participation_cues": 2308335,
+  "base_cue_pairs_without_stats": 7878,
+  "additional_event_cue_pairs_without_stats": 930,
+  "recorded_cue_pairs_without_stats": 8808,
+  "base_cue_pairs_with_stats_without_positive_minutes": 1906,
+  "additional_event_cue_pairs_with_stats_without_positive_minutes": 8,
+  "recorded_cue_pairs_with_stats_without_positive_minutes": 1914
+}
