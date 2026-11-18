@@ -172,6 +172,43 @@ class OpenMatchdayTest(unittest.TestCase):
         except psycopg.Rollback:
             pass
 
+    def test_a_removed_league_is_not_read_and_what_was_written_goes(self):
+        # The user removed some leagues (18 Nov 2026, scope.REMOVED_FOLDERS). One read before the
+        # removal (here the fixture's Premier League stands in for one): the next read does not
+        # fetch its files, the purge removes its edition, matches and ids, the cup stays.
+        from vega import scope
+
+        calls = []
+
+        def get(url, as_text=False):
+            calls.append(url)
+            return fake_get(url, as_text)
+
+        before = dict(scope.REMOVED_FOLDERS)
+        try:
+            with self.db.transaction():
+                self.db.execute("DELETE FROM core.matches; DELETE FROM core.provider_ids; DELETE FROM core.rounds; DELETE FROM core.competition_seasons; DELETE FROM core.competitions")
+                open_matchday.run(self.db, get, "europe", NOW)
+                scope.REMOVED_FOLDERS["ENG_1_premier-league"] = "Premier League (stand-in)"
+                calls.clear()
+                written, unmatched = open_matchday.run(self.db, get, "europe", NOW)
+                self.assertEqual((written, unmatched), (7 + 4, 0))
+                self.assertFalse([url for url in calls if "/ENG_1_premier-league/" in url])
+                self.assertEqual(scope.purge(self.db), {"competitions": 1, "editions": 1, "matches": 5 + 3})
+                left = self.db.execute("SELECT split_part(cup_key, ':', 2) FROM core.competition_seasons WHERE cup_key IS NOT NULL").fetchall()
+                self.assertEqual(left, [("AUT_CUP_ofb-cup",)])
+                self.assertEqual(self.db.execute("SELECT count(*) FROM core.matches WHERE source = 'open_matchday'").fetchone()[0], 7 + 4)
+                self.assertEqual(self.db.execute(
+                    "SELECT count(*) FROM core.provider_ids WHERE provider_key LIKE 'ENG_1_premier-league:%%' OR provider_key = 'cup:open-matchday:ENG_1_premier-league'"
+                ).fetchone()[0], 0)
+                self.assertEqual(scope.purge(self.db), {})
+                raise psycopg.Rollback()
+        except psycopg.Rollback:
+            pass
+        finally:
+            scope.REMOVED_FOLDERS.clear()
+            scope.REMOVED_FOLDERS.update(before)
+
     def test_a_league_pitchapi_holds_this_season_is_not_read(self):
         # PitchAPI holds the Premier League in 2026/2027: open-matchday's copy is skipped, its cup still read.
         # Without that edition (an earlier season only), the copy is read: PitchAPI's coverage decides, not the list alone.
