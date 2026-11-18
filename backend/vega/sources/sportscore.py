@@ -445,7 +445,7 @@ def pair(wanted, teams, spelled):
     return (found if not missing else None), missing
 
 
-def link(conn, edition, tables, gender):
+def link(conn, edition, tables, gender="men"):
     """{row name: team id} of a response, every name designating one team of the edition;
     SourceError WRONG_EDITION, UNMATCHED_TEAMS or DUPLICATE_ROW otherwise."""
     wanted = {row["name"] for _, rows in tables for row in rows}
