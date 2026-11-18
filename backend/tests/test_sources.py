@@ -279,6 +279,32 @@ class PureTest(unittest.TestCase):
             uefa.fetch(get, "uefa_clubs", 2027)
 
 
+class FjelstulFiles:
+    """The Fjelstul World Cup Database's files as a run fetches them (worldcup_samples), and the URLs it asked for."""
+
+    def __init__(self, files):
+        self.files, self.calls = files, []
+
+    def __call__(self, url, *, as_text=False):
+        self.calls.append(url)
+        return self.files[url.rsplit("/", 1)[1].removesuffix(".csv")]
+
+
+def world_cup_1974(final_number=None):
+    """OpenFootball's 1974 World Cup, three matches: the final (the archive lists West Germany first), numbered when given."""
+    final = {"round": "Final", "date": "1974-07-07", "team1": "West Germany", "team2": "Netherlands", "score": [2, 1]}
+    return {"name": "World Cup 1974", "season": "1974", "source": {"name": "OpenFootball", "url": "https://github.com/openfootball/worldcup.json"}, "matches": [
+        dict(final, num=final_number) if final_number else final,
+        {"round": "Matchday 1", "group": "Group 1", "date": "1974-06-14", "team1": "USA", "team2": "Sweden", "score": {"ft": [1, 1], "et": [1, 1], "p": [4, 5]}},
+        {"round": "Matchday 1", "group": "Group 2", "date": "1974-06-13", "team1": "Brazil", "team2": "Yugoslavia", "score": [0, 0]}]}
+
+
+# The twelve tables of the Fjelstul World Cup Database (137_worldcup_database.sql), as one comparable sheet.
+WORLDCUP_TABLES = ("worldcup_tournaments", "worldcup_teams", "worldcup_stadiums", "worldcup_people", "worldcup_matches", "worldcup_squads",
+                   "worldcup_appearances", "worldcup_goals", "worldcup_bookings", "worldcup_substitutions", "worldcup_shootout_kicks",
+                   "worldcup_awards")
+
+
 @unittest.skipUnless(DSN and psycopg, "requires disposable local sources DB and psycopg")
 class UefaTest(unittest.TestCase):
     @classmethod
@@ -814,35 +840,61 @@ class UefaTest(unittest.TestCase):
         # - a match pairs with the archived match of the same edition, day and teams (in the other order, under the
         #   archive's spelling); the women's match pairs with none;
         # - the collect role alone does it all (the rows, the pair, the credit);
-        # - a later run reads no file; an archive that replaces a match clears its pair, and the next run pairs the
-        #   new match;
+        # - a later run reads no file; an archive that numbers a match later keeps that match, its pair and its sheet
+        #   (a match truly replaced is paired again: test_worldcup_pairs_again_an_archived_match_truly_replaced);
         # - a file that is not the pinned one changes nothing (SOURCE_CHANGED): the rows read before stay;
         # - a new commit replaces every row and the pairs are made again.
         x = self.db.execute
-
-        class Files:
-            def __init__(self, files):
-                self.files, self.calls = files, []
-
-            def __call__(self, url, *, as_text=False):
-                self.calls.append(url)
-                return self.files[url.rsplit("/", 1)[1].removesuffix(".csv")]
-
-        def archive(final_number=None):
-            final = {"round": "Final", "date": "1974-07-07", "team1": "West Germany", "team2": "Netherlands", "score": [2, 1]}
-            return {"name": "World Cup 1974", "season": "1974", "source": {"name": "OpenFootball", "url": "https://github.com/openfootball/worldcup.json"}, "matches": [
-                dict(final, num=final_number) if final_number else final,
-                {"round": "Matchday 1", "group": "Group 1", "date": "1974-06-14", "team1": "USA", "team2": "Sweden", "score": {"ft": [1, 1], "et": [1, 1], "p": [4, 5]}},
-                {"round": "Matchday 1", "group": "Group 2", "date": "1974-06-13", "team1": "Brazil", "team2": "Yugoslavia", "score": [0, 0]}]}
-
+        Files, archive = FjelstulFiles, world_cup_1974
         pairs = """SELECT w.match_key, b.home_team_name, b.away_team_name FROM core.worldcup_matches w
                    LEFT JOIN core.matches b ON b.id = w.match_id ORDER BY 1"""
         run = "SELECT rows_written, unmatched, status, error_code FROM ops.source_runs WHERE source='fjelstul' AND scope='worldcup'"
         files = worldcup_samples.texts()
         pins, commit = worldcup.FILES, worldcup.COMMIT
+        keyed = "world-cup-history:1974:1974-07-07|West Germany|Netherlands|"
+        sheet = lambda: {t: [r[0] for r in x(f"SELECT to_jsonb(r)::text FROM core.{t} r ORDER BY 1")] for t in WORLDCUP_TABLES}
+        parent = lambda: x("""SELECT m.id, m.competition_season_id, m.season_id, m.match_date::text, m.home_team_id, m.away_team_id,
+                                     m.home_team_name, m.away_team_name, m.status::text, m.home_score, m.away_score, m.source::text,
+                                     m.match_number, array_agg(ARRAY[p.provider::text, p.provider_key, p.is_current::text] ORDER BY p.provider_key)
+                              FROM core.matches m JOIN core.provider_ids p ON p.entity_type = 'match' AND p.entity_id = m.id
+                              WHERE m.match_date = '1974-07-07' GROUP BY m.id""").fetchall()
+        edition = lambda: x("""SELECT cup_digest, cup_checked_at, cup_updated_at FROM core.competition_seasons
+                               WHERE cup_key = 'open-cups:world-cup-history:1974'""").fetchone()
+        listed = lambda: x("""SELECT m.id, p.provider_key, m.match_number, m.status::text, m.home_score, m.away_score, m.revision
+                              FROM core.matches m JOIN core.competition_seasons cs ON cs.id = m.competition_season_id
+                              JOIN core.provider_ids p ON p.entity_type = 'match' AND p.entity_id = m.id
+                              WHERE cs.cup_key = 'open-cups:world-cup-history:1974' ORDER BY m.id, p.provider_key""").fetchall()
+
+        def mixed(*numbers, reverse=False):
+            """The 1974 file listing the final without a number and, beside it, as each of `numbers` (its sides the other
+            way round with `reverse`)."""
+            body = archive()
+            final = body["matches"][0]
+            turned = {"team1": final["team2"], "team2": final["team1"], "score": final["score"][::-1]} if reverse else {}
+            body["matches"][1:1] = [dict(final, num=number, **turned) for number in numbers]
+            return body
+
+        def refused(name, body, code, prepare=None):
+            """`body` read under the collect role is refused with `code`, and nothing is written: the edition's row, its
+            matches and their keys, the final and the Fjelstul sheet stay as they were."""
+            with self.subTest(refused=name), self.db.transaction(force_rollback=True):
+                if prepare:
+                    x(*prepare)
+                state = (edition(), listed(), parent(), sheet())
+                x("SET LOCAL ROLE vega_collect")
+                try:
+                    with self.assertRaises(SourceError) as error:
+                        cups.save(self.db, "open-cups", "world-cup-history", "1974", body, NOW + timedelta(days=9))
+                finally:
+                    x("RESET ROLE")
+                self.assertEqual((error.exception.code, edition(), listed(), parent(), sheet()), (code, *state))
+
         with self.db.transaction(force_rollback=True):
             try:
                 worldcup.FILES, worldcup.COMMIT = worldcup_samples.digests(files), "a" * 40
+                # The final listed both without a number and with one (the same day, the same two teams): two candidates for
+                # one match, never a number added to it. Refused whole (AMBIGUOUS_MATCH_NUMBER), from a first import on.
+                refused("first import: unnumbered and 38", mixed(38), "AMBIGUOUS_MATCH_NUMBER")
                 cups.save(self.db, "open-cups", "world-cup-history", "1974", archive(), NOW)
                 before = x("SELECT (SELECT count(*) FROM core.players), (SELECT count(*) FROM core.teams)").fetchone()
                 get = Files(files)
@@ -885,17 +937,78 @@ class UefaTest(unittest.TestCase):
                 get = Files({})
                 self.assertEqual(sources.run_due(self.db, get, NOW + timedelta(days=8), names={"fjelstul"}), {("fjelstul", "worldcup"): "ok"})
                 self.assertEqual((get.calls, x(run).fetchone()), ([], (0, 0, "ok", None)))
-                # The archive replaces the final (its key changes): the pair is cleared, the next run pairs the new match.
+                # OpenFootball numbers the final later (« num »: 38): its key changes, its edition, day, sides and result do not.
+                # Failure modes and expected outcomes, written before the writer handled it (VI-27, merging 202f24c09e):
+                # - the unnumbered key leaves the file: the guard must not read a result dropped (SNAPSHOT_DROPS_RESULT),
+                #   and the final must not be deleted and written again (its pair, its sheet, every row naming it);
+                # - the same parent keeps its id, edition, day, sides, result and provenance, its pair and the 38 Fjelstul
+                #   rows, under its one new key; vega_read reads one final; the same file again writes nothing, no new id;
+                # - a result changed with the number, the final listed twice, a new key a match already held: not the same
+                #   match for certain, the unnumbered key stays, the file is refused, nothing is written;
+                # - the final listed without a number beside one or more numbered versions of it (the same day, the same two
+                #   teams, in either order), before or after the transition: refused whole (AMBIGUOUS_MATCH_NUMBER), the one
+                #   parent, its result and the 38 rows kept; the admissible file is accepted after it;
+                # - matches each given their own number keep each their own parent.
                 old = x("SELECT match_id FROM core.worldcup_matches WHERE match_key='M-1974-38'").fetchone()[0]
-                # As in production, the cup reader deletes the replaced match under the collect role: the pair must not stop it.
+                held, fjelstul = parent(), sheet()
+                self.assertEqual([r[0] for r in held], [old])
+                self.assertEqual(held[0][6:], ("West Germany", "Netherlands", "finished", 2, 1, "openfootball", None, [["openfootball", keyed, "true"]]))
+                rescored = archive(final_number=38)
+                rescored["matches"][0]["score"] = [3, 1]
+                refused("the result changed with the number", rescored, "SNAPSHOT_DROPS_RESULT")
+                twice = archive(final_number=38)
+                twice["matches"].insert(1, dict(twice["matches"][0], num=39))
+                refused("two numbers for the unnumbered final", twice, "SNAPSHOT_DROPS_RESULT")
+                refused("the new key a former key of another match", archive(final_number=38), "SNAPSHOT_DROPS_RESULT",
+                        ("""INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id, is_current)
+                            SELECT 'match', 'openfootball', %s, id, false FROM core.matches WHERE match_date = '1974-06-14'""", (keyed + "38",)))
+                refused("held: unnumbered and 38", mixed(38), "AMBIGUOUS_MATCH_NUMBER")
+                refused("held: unnumbered, 38 and 39", mixed(38, 39), "AMBIGUOUS_MATCH_NUMBER")
+                refused("held: unnumbered and 38, the sides the other way", mixed(38, reverse=True), "AMBIGUOUS_MATCH_NUMBER")
+                # The normal transition, under the collect role: one match updated, in place.
                 x("SET LOCAL ROLE vega_collect")
-                cups.save(self.db, "open-cups", "world-cup-history", "1974", archive(final_number=38), NOW + timedelta(days=9))
+                self.assertEqual(cups.save(self.db, "open-cups", "world-cup-history", "1974", archive(final_number=38), NOW + timedelta(days=9)), 1)
                 x("RESET ROLE")
-                self.assertEqual(x("SELECT match_id FROM core.worldcup_matches WHERE match_key='M-1974-38'").fetchone(), (None,))
+                numbered = parent()
+                self.assertEqual(numbered, [(*held[0][:12], 38, [["openfootball", keyed + "38", "true"]])])
+                self.assertEqual(sheet(), fjelstul)
+                self.assertEqual(x("""SELECT count(*) FROM core.matches m JOIN core.competition_seasons cs ON cs.id = m.competition_season_id
+                                      WHERE cs.cup_key = 'open-cups:world-cup-history:1974'""").fetchone(), (3,))
+                # What the read role serves: the pair, the base's score on the archive's sides, one final under its new key.
+                x("SET LOCAL ROLE vega_read")
+                self.assertEqual(x("SELECT key, date::text, home, away FROM api.worldcup_match_index WHERE edition = 1974 ORDER BY key").fetchall(),
+                                 [("M-1974-01", "1974-06-14", "USA", "Sweden"), ("M-1974-38", "1974-07-07", "West Germany", "Netherlands")])
+                self.assertEqual(x("SELECT home, away, home_score, away_score, home_team_key FROM api.worldcup_match_heads WHERE key = 'M-1974-38'").fetchone(),
+                                 ("West Germany", "Netherlands", 2, 1, "T-02"))
+                self.assertEqual(x("SELECT key, match_number, status, home_score, away_score FROM api.cup_matches WHERE date = '1974-07-07'").fetchall(),
+                                 [(keyed + "38", 38, "finished", 2, 1)])
+                x("RESET ROLE")
+                # After the transition, the final listed again without its number beside 38: refused whole, nothing written.
+                refused("numbered: unnumbered and 38", mixed(38), "AMBIGUOUS_MATCH_NUMBER")
+                # The same file again: nothing written, no new id; the next Fjelstul run has nothing to pair.
+                x("SET LOCAL ROLE vega_collect")
+                self.assertEqual(cups.save(self.db, "open-cups", "world-cup-history", "1974", archive(final_number=38), NOW + timedelta(days=10)), 0)
+                x("RESET ROLE")
+                self.assertEqual(parent(), numbered)
                 self.assertEqual(sources.run_due(self.db, get, NOW + timedelta(days=16), names={"fjelstul"}), {("fjelstul", "worldcup"): "ok"})
-                new = x("SELECT match_id FROM core.worldcup_matches WHERE match_key='M-1974-38'").fetchone()[0]
-                self.assertTrue(new is not None and new != old)
-                self.assertEqual((get.calls, x(run).fetchone()), ([], (0, 0, "ok", None)))
+                self.assertEqual(x("SELECT match_id FROM core.worldcup_matches WHERE match_key='M-1974-38'").fetchone(), (old,))
+                self.assertEqual((get.calls, x(run).fetchone(), sheet()), ([], (0, 0, "ok", None), fjelstul))
+                # Every match given its own number: each keeps its parent and its result under its own key, the final its 38.
+                numbers = {"1974-07-07": 38, "1974-06-14": 2, "1974-06-13": 1}
+                distinct = archive(final_number=38)
+                for match in distinct["matches"]:
+                    match["num"] = numbers[match["date"]]
+                ids = {day: ident for ident, day in x("""SELECT m.id, m.match_date::text FROM core.matches m
+                                                        JOIN core.competition_seasons cs ON cs.id = m.competition_season_id
+                                                        WHERE cs.cup_key = 'open-cups:world-cup-history:1974'""").fetchall()}
+                x("SET LOCAL ROLE vega_collect")
+                self.assertEqual(cups.save(self.db, "open-cups", "world-cup-history", "1974", distinct, NOW + timedelta(days=11)), 2)
+                self.assertEqual(cups.save(self.db, "open-cups", "world-cup-history", "1974", distinct, NOW + timedelta(days=12)), 0)
+                x("RESET ROLE")
+                self.assertEqual(sorted((ident, key.rsplit("|", 1)[1], number, status, home, away) for ident, key, number, status, home, away, _ in listed()),
+                                 sorted([(ids["1974-07-07"], "38", 38, "finished", 2, 1), (ids["1974-06-14"], "2", 2, "finished", 1, 1),
+                                         (ids["1974-06-13"], "1", 1, "finished", 0, 0)]))
+                self.assertEqual((parent(), sheet()), (numbered, fjelstul))
                 # A file that is not the pinned one: nothing changes.
                 worldcup.COMMIT = "b" * 40
                 changed = Files(dict(files, goals=files["goals"].replace("P-00002", "P-00001")))
@@ -911,6 +1024,51 @@ class UefaTest(unittest.TestCase):
                 self.assertEqual(x(run).fetchone(), (39, 0, "ok", None))
                 self.assertEqual(x("SELECT (SELECT count(*) FROM core.worldcup_goals), (SELECT revision FROM core.source_revisions WHERE source='fjelstul-worldcup')").fetchone(), (4, "c" * 40))
                 self.assertEqual(x(pairs).fetchall(), [("M-1974-01", "USA", "Sweden"), ("M-1974-38", "West Germany", "Netherlands"), ("M-1991-01", None, None)])
+            finally:
+                worldcup.FILES, worldcup.COMMIT = pins, commit
+
+    def test_worldcup_pairs_again_an_archived_match_truly_replaced(self):
+        # The path that does replace a parent: an authorized removal outside the cup writer (the schema owner here) deletes
+        # the archived final and its keys; its foreign key clears the pair, the sheet stays. The archive read again under the
+        # collect role writes a new parent, and the next Fjelstul run pairs it, every other row of the sheet unchanged.
+        x = self.db.execute
+        files = worldcup_samples.texts()
+        run = "SELECT rows_written, unmatched, status, error_code FROM ops.source_runs WHERE source='fjelstul' AND scope='worldcup'"
+        final = "SELECT match_id, swapped FROM core.worldcup_matches WHERE match_key='M-1974-38'"
+        # The sheet but the final's link: what the replacement may not change.
+        sheet = lambda: {t: [r[0] for r in x(f"""SELECT (to_jsonb(r) - CASE WHEN '{t}' = 'worldcup_matches' AND to_jsonb(r)->>'match_key' = 'M-1974-38'
+                                                                             THEN 'match_id' ELSE '' END)::text FROM core.{t} r ORDER BY 1""")]
+                         for t in WORLDCUP_TABLES}
+        pins, commit = worldcup.FILES, worldcup.COMMIT
+        with self.db.transaction(force_rollback=True):
+            try:
+                worldcup.FILES, worldcup.COMMIT = worldcup_samples.digests(files), "a" * 40
+                cups.save(self.db, "open-cups", "world-cup-history", "1974", world_cup_1974(), NOW)
+                x("SET LOCAL ROLE vega_collect")
+                self.assertEqual(sources.run_due(self.db, FjelstulFiles(files), NOW, names={"fjelstul"}), {("fjelstul", "worldcup"): "ok"})
+                x("RESET ROLE")
+                old, swapped = x(final).fetchone()
+                self.assertTrue(old is not None and swapped)
+                kept = sheet()
+                x("DELETE FROM core.provider_ids WHERE entity_type = 'match' AND entity_id = %s", (old,))
+                x("DELETE FROM core.matches WHERE id = %s", (old,))
+                self.assertEqual((x(final).fetchone(), sheet()), ((None, True), kept))
+                x("SET LOCAL ROLE vega_collect")
+                self.assertEqual(cups.save(self.db, "open-cups", "world-cup-history", "1974", world_cup_1974(final_number=38), NOW + timedelta(days=9)), 1)
+                get = FjelstulFiles({})
+                self.assertEqual(sources.run_due(self.db, get, NOW + timedelta(days=16), names={"fjelstul"}), {("fjelstul", "worldcup"): "ok"})
+                x("RESET ROLE")
+                new, swapped = x(final).fetchone()
+                self.assertTrue(new is not None and new != old and swapped)
+                self.assertEqual(x("""SELECT p.provider_key, m.home_team_name, m.away_team_name, m.status::text, m.home_score, m.away_score
+                                      FROM core.matches m JOIN core.provider_ids p ON p.entity_type = 'match' AND p.entity_id = m.id
+                                      WHERE m.id = %s""", (new,)).fetchall(),
+                                 [("world-cup-history:1974:1974-07-07|West Germany|Netherlands|38", "West Germany", "Netherlands", "finished", 2, 1)])
+                self.assertEqual((get.calls, x(run).fetchone(), sheet()), ([], (0, 0, "ok", None), kept))
+                x("SET LOCAL ROLE vega_read")
+                self.assertEqual(x("SELECT key, date::text, home, away FROM api.worldcup_match_index WHERE edition = 1974 ORDER BY key").fetchall(),
+                                 [("M-1974-01", "1974-06-14", "USA", "Sweden"), ("M-1974-38", "1974-07-07", "West Germany", "Netherlands")])
+                x("RESET ROLE")
             finally:
                 worldcup.FILES, worldcup.COMMIT = pins, commit
 

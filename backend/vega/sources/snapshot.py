@@ -5,7 +5,9 @@ snapshot read now replaces the one read before. A snapshot can be partial (an em
 file served with a 200, a fixture list still naming a match since played) while looking valid, so:
 
 - a match the base holds finished must still be in the snapshot, finished (`guard`): otherwise
-  the edition is kept as it was and the snapshot refused, unless the match is in RETRACTIONS;
+  the edition is kept as it was and the snapshot refused, unless the match is in RETRACTIONS; in
+  the World Cup's archive, a match OpenFootball only numbers later is the same parent under its new
+  key (`rekey`, cups._numbered);
 - a match whose values have not changed is not written again (`write`): no revision, no
   `updated_at`; one that changed gets `revision + 1`; a new place in the source's order alone
   moves `archive_position` only;
@@ -140,6 +142,20 @@ def _guard_dependents(conn, provider, ids, stat_columns):
                LIMIT 1""", (batch, owned, batch)).fetchone()
         if found:
             raise SourceError("MATCH_HAS_DEPENDENTS", f"{provider}: match {found[0]} is held by {found[1]}")
+
+
+def rekey(conn, provider, found, old, new):
+    """Give a stored match the key its source now writes for it: its one current key `old`, renamed `new` in place.
+    The parent, its id and every row naming it stay. Claimed as a change: SNAPSHOT_CHANGED when the parent or its
+    keys changed since the read. Returns its stored() entry under `new`."""
+    _claim(conn, provider, {found["id"]: (found, old)})
+    renamed = conn.execute(
+        """UPDATE core.provider_ids SET provider_key=%s, updated_at=now()
+           WHERE entity_type='match' AND provider=%s AND provider_key=%s AND entity_id=%s AND is_current""",
+        (new, provider, old, found["id"])).rowcount
+    if renamed != 1:
+        raise SourceError("SNAPSHOT_CHANGED", f"{provider}: {old} changed after the snapshot read")
+    return dict(found, keys=[[provider, new, True]])
 
 
 def write(conn, provider, key, values, found, changed=False):
