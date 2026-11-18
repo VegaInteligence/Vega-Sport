@@ -1,0 +1,32 @@
+{
+  "status": "passed",
+  "archive": "l18-nations-navigateur-original.zip",
+  "sha256": "cd3a162180dce3094a0c1826a140fe09ccf5b8f2c7bbf2860105cee78cc31fa5",
+  "bytes": 1475611,
+  "verification": {
+    "status": "PASS",
+    "files_checked": 44,
+    "sessions": [
+      {
+        "width": 393,
+        "height": 852,
+        "checks": 12,
+        "screenshots": 10,
+        "international_return": true
+      },
+      {
+        "width": 1440,
+        "height": 900,
+        "checks": 12,
+        "screenshots": 10,
+        "international_return": true
+      }
+    ],
+    "rds_duplicate_groups": 132,
+    "currently_masked_scores": 0,
+    "visible_unscored_finals": 2
+  },
+  "offline_network_denied": true,
+  "tampered_png_rejected": true,
+  "original_entries": 45
+}

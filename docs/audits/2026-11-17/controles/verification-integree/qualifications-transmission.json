@@ -1,0 +1,10 @@
+{
+  "issue": "VI-21",
+  "comment": "ad5dbc91-f476-46b6-8dfd-387474b3ab0b",
+  "body": "Le recensement UEFA des 18 éditions de qualifications (Ligue des champions, Europa et Conférence, saisons 2021/22 à 2026/27) est terminé. Les deux comparaisons RDS renvoient zéro rapprochement sur 2 489 rencontres officielles, dans les deux sens à un jour près. Les témoins du tableau principal donnent 2 475 correspondances sur 2 478. Les 2 489 feuilles et 2 507 pages de journal attestent 54 758 titulaires et 21 831 entrées, soit au moins 76 589 participations de 13 101 identifiants joueur. Parmi les inscrits au banc, 30 847 sont confirmés sans entrée et 525 restent indéterminés. Vérifier d’abord les calendriers et les mappings, puis les entrées de statistiques et leur suffisance pour le calcul Vega. Les 76 589 ne peuvent pas être ajoutées mécaniquement aux 14 418 notes déjà calculables qui manquent en base. La pièce « Qualifications UEFA et participations observées dans les 18 éditions » donne les dénominateurs par compétition et saison. Le ZIP complet rejoué hors réseau porte le SHA-256 `176715d23cf83872ebfe1e9472cedd0b23d6db854c45bdf0fb7db62c13ec81da`. VI-21 conserve le calendrier primaire, les identités et le déclenchement des calculs.",
+  "attachment": {
+    "id": "a397a10d-6cff-4552-9191-74fcaac5b9bf",
+    "hash": "bce8d2d181416ea513406ce092e666aa090f64ad7693324b46ce1729941871e9",
+    "size": 2328
+  }
+}

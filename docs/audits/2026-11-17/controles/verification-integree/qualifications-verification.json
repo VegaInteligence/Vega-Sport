@@ -1,0 +1,9 @@
+{
+  "zip": "UEFA-qualifications-participations-20261118.zip",
+  "bytes": 15028073,
+  "sha256": "176715d23cf83872ebfe1e9472cedd0b23d6db854c45bdf0fb7db62c13ec81da",
+  "network_and_workspaces_denied": true,
+  "cmd": "python3 -B verifier.py",
+  "returncode": 0,
+  "result": "{\n  \"result\": \"PASS\",\n  \"editions\": 18,\n  \"fixtures\": 2489,\n  \"lineup_receipts\": 2489,\n  \"event_pages\": 2507,\n  \"raw_lineups_checked\": 27,\n  \"raw_event_pages_checked\": 31,\n  \"proven_player_matches\": 76589,\n  \"matching_vega_qualifications\": 0\n}"
+}

@@ -1,0 +1,81 @@
+{
+  "at": "2026-11-18 16:12:14 UTC",
+  "team": "VI",
+  "completedAt_or_after": "2026-10-18",
+  "labels_filter": null,
+  "hasNextPage": false,
+  "issues": [
+    {
+      "id": "VI-22",
+      "title": "Page club et compétitions : clubs similaires sur toute la base, liens vers clubs et matchs, classement UEFA absent, bandeau des championnats à la une",
+      "completedAt": "2026-11-17T10:16:55.051Z",
+      "labels": [
+        "repo:vega-sport"
+      ],
+      "status": "Done"
+    },
+    {
+      "id": "VI-23",
+      "title": "Audit calculs : corriger les agrégats et la couverture hors des chantiers actifs",
+      "completedAt": "2026-11-17T18:15:10.548Z",
+      "labels": [
+        "repo:vega-sport"
+      ],
+      "status": "Done"
+    },
+    {
+      "id": "VI-26",
+      "title": "Cohortes : un délai maximal pour celles qu'on remarque sans cesse",
+      "completedAt": "2026-11-17T18:15:07.879Z",
+      "labels": [
+        "repo:vega-sport"
+      ],
+      "status": "Done"
+    },
+    {
+      "id": "VI-25",
+      "title": "Worker et CI en Python 3.14",
+      "completedAt": "2026-11-17T14:26:56.941Z",
+      "labels": [
+        "repo:vega-sport"
+      ],
+      "status": "Done"
+    },
+    {
+      "id": "VI-24",
+      "title": "Dépendances et outils à jour : site, API, worker et CI",
+      "completedAt": "2026-11-17T11:31:13.295Z",
+      "labels": [
+        "repo:vega-sport"
+      ],
+      "status": "Done"
+    },
+    {
+      "id": "VI-17",
+      "title": "Pages joueur et club : barre de filtres unique, profil statistique façon club, palmarès dans la colonne",
+      "completedAt": "2026-11-16T20:11:07.509Z",
+      "labels": [
+        "repo:vega-sport"
+      ],
+      "status": "Done"
+    },
+    {
+      "id": "VI-18",
+      "title": "Pages nations : index des sélections et page par sélection",
+      "completedAt": "2026-11-16T21:01:35.607Z",
+      "labels": [
+        "repo:vega-sport"
+      ],
+      "status": "Done"
+    },
+    {
+      "id": "VI-20",
+      "title": "Sélections : une équipe par nation et tous leurs matchs dans l'Elo",
+      "completedAt": "2026-11-16T21:37:40.515Z",
+      "labels": [
+        "repo:vega-sport"
+      ],
+      "status": "Done"
+    }
+  ]
+}

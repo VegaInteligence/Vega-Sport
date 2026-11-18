@@ -342,5 +342,13 @@
       "known_participants_without_measured_minutes": 1914,
       "intentionally_hidden_cameo": 336979
     }
-  }
+  },
+  "season_universe_changed_rows": [
+    {
+      "domain": "lineup",
+      "season_id": 2026,
+      "before": 480529,
+      "after": 480530
+    }
+  ]
 }

@@ -1,0 +1,5 @@
+{
+  "issue": "VI-27",
+  "comment": "e94fee2a-0fa9-46e6-9ca6-ae90d17633e6",
+  "body": "Point de la branche `codex/production-architecture-audit`. Le code intégré `d29eac65d75ca4eb038a2fc5b24e1bb93d1ae2ab` passe la CI de bout en bout sur arbre propre avec 562 tests Python, 208 API et 729 site, plus les cinq groupes d’intégration. La restauration des 35 matchs anglais a été rejouée avec conservation des identifiants, de la mi-temps arrivée ensuite et des 70 valeurs Elo. La grille RDS de 15 h 55 UTC confirme 14 418 notes joueur calculables et 20 Elo de club manquants. La branche corrige la priorité des 106 profils restés derrière les transferts. Pour les finales historiques, les deux fiches de production montrent encore « Finale » et « à venir » aux deux formats. La copie intégrée rétablit Brésil 0–3 France en 1998 et Italie 3–1 RFA en 1982 sur les mêmes identifiants, la seconde collecte écrit zéro. Les 2 489 qualifications UEFA et les 237 lignes de calendrier anglais sont transmises au propriétaire VI-21. AWS et Vercel restent sur les versions précédentes. VI-27 reste en cours pendant la double revue du candidat et le suivi des défauts documentés."
+}
