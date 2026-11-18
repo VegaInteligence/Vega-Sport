@@ -1,0 +1,84 @@
+{
+  "identifiants_saff_distincts_ayant_joue": 135,
+  "identifiants_saff_distincts_inscrits": 165,
+  "editions": [
+    {
+      "edition": 1000,
+      "saison": "2024/2025",
+      "clubs": 10,
+      "calendrier": 90,
+      "joues_saff": 90,
+      "a_venir_saff": 0,
+      "termines_vega": 90,
+      "scores_confirmes": 90,
+      "resultats_manquants": 0,
+      "discordance_date": 0,
+      "discordance_heure_locale": 0,
+      "participations_min_grille": 2552,
+      "entrees_moteur_grille": 2547,
+      "notes_grille": 2547,
+      "notes_affichables_grille": 2232,
+      "elo_cotes_vega": 180
+    },
+    {
+      "edition": 1001,
+      "saison": "2025/2026",
+      "clubs": 8,
+      "calendrier": 56,
+      "joues_saff": 56,
+      "a_venir_saff": 0,
+      "termines_vega": 56,
+      "scores_confirmes": 56,
+      "resultats_manquants": 0,
+      "discordance_date": 0,
+      "discordance_heure_locale": 0,
+      "participations_min_grille": 1589,
+      "entrees_moteur_grille": 1571,
+      "notes_grille": 1571,
+      "notes_affichables_grille": 1362,
+      "elo_cotes_vega": 112
+    },
+    {
+      "edition": 1002,
+      "saison": "2026/2027",
+      "clubs": 8,
+      "calendrier": 56,
+      "joues_saff": 28,
+      "a_venir_saff": 28,
+      "termines_vega": 8,
+      "scores_confirmes": 8,
+      "resultats_manquants": 20,
+      "discordance_date": 2,
+      "discordance_heure_locale": 5,
+      "participations_min_grille": 0,
+      "entrees_moteur_grille": 0,
+      "notes_grille": 0,
+      "notes_affichables_grille": 0,
+      "elo_cotes_vega": 16
+    }
+  ],
+  "courante_huit_matchs": {
+    "titulaires": 176,
+    "banc_inscrites": 139,
+    "entrees": 64,
+    "participations": 240,
+    "banc_sans_entree": 75,
+    "lignes_bepro": 117,
+    "bepro_minutes_positives": 114,
+    "bepro_zero_avec_entree": 3,
+    "elo_vega": 16,
+    "notes_vega": 0
+  },
+  "resultats_manquants_par_statut": {
+    "postponed": 19,
+    "not_started": 1
+  },
+  "huit_matchs_preuves_minutes": 4,
+  "negatifs": {
+    "banc_non_entre": 75,
+    "minutes_arrondies_zero_avec_entree_et_passes": 3,
+    "retours_intervertis": 2,
+    "scores_futurs_absents": 28,
+    "niveaux_match_competition_distincts": true
+  }
+}

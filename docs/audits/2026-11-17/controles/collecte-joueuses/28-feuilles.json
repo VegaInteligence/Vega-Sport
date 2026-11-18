@@ -1,0 +1,78 @@
+{
+  "saison": {
+    "matchs": 28,
+    "tit": 616,
+    "banc": 475,
+    "remplacements_lignes": 215,
+    "entrees_sures": 215,
+    "participations_attestees": 831,
+    "banc_sans_entree": 260,
+    "mesures": 413,
+    "minutes_positives": 406,
+    "zero": 7,
+    "zeros_avec_actions": 7,
+    "part_sans_minute_positive": 425,
+    "cotes_avec_onze_titulaires": 56,
+    "cotes_feuille_et_journal": 56,
+    "cotes_avec_anomalie": 1,
+    "nombre_matchs_mesures": 14,
+    "ids_saff_participants": 155
+  },
+  "huit_termines": {
+    "matchs": 8,
+    "tit": 176,
+    "banc": 139,
+    "remplacements_lignes": 64,
+    "entrees_sures": 64,
+    "participations_attestees": 240,
+    "banc_sans_entree": 75,
+    "mesures": 117,
+    "minutes_positives": 114,
+    "zero": 3,
+    "zeros_avec_actions": 3,
+    "part_sans_minute_positive": 126,
+    "cotes_avec_onze_titulaires": 16,
+    "cotes_feuille_et_journal": 16,
+    "cotes_avec_anomalie": 0,
+    "nombre_matchs_mesures": 4,
+    "identifiants_distincts_ayant_joue": 135,
+    "disponibilite_minutes_par_match": {
+      "BEPRO": 4,
+      "HTTP_502": 4
+    }
+  },
+  "vingt_autres_resultats": {
+    "matchs": 20,
+    "tit": 440,
+    "banc": 336,
+    "remplacements_lignes": 151,
+    "entrees_sures": 151,
+    "participations_attestees": 591,
+    "banc_sans_entree": 185,
+    "mesures": 296,
+    "minutes_positives": 292,
+    "zero": 4,
+    "zeros_avec_actions": 4,
+    "part_sans_minute_positive": 299,
+    "cotes_avec_onze_titulaires": 40,
+    "cotes_feuille_et_journal": 40,
+    "cotes_avec_anomalie": 1,
+    "nombre_matchs_mesures": 10,
+    "identifiants_distincts_ayant_joue": 153,
+    "disponibilite_minutes_par_match": {
+      "HTTP_502": 9,
+      "BEPRO": 10,
+      "analyse_BEPRO_en_attente": 1
+    }
+  },
+  "discordances": [
+    {
+      "edition": 1002,
+      "wpl": 48617,
+      "cote": "home",
+      "probleme": "couverture_BEPRO",
+      "maillots_BEPRO_seuls": "",
+      "maillots_SAFF_seuls": "14"
+    }
+  ]
+}

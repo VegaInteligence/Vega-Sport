@@ -302,6 +302,21 @@
       "sha256": "5bbab90bd091872dfe946ba31b6bbfb15e2df91d561e21531c9976e70a9a7bfd"
     },
     {
+      "source": "delivery/linear-1123.json",
+      "published": "controles/etat-execution/linear-1123.json",
+      "sha256": "b75f268e069acddc3bf79a1a1c70b2baacdd7822dad32a71f22fe60557052dfd"
+    },
+    {
+      "source": "delivery/production-1127.json",
+      "published": "controles/etat-execution/deploiement-1126.json",
+      "sha256": "94d3b317a995a1fbb3d280d6d98650c293a7c59ee252e5f2c87eb3f691414ef9"
+    },
+    {
+      "source": "delivery/vercel-1125.json",
+      "published": "controles/etat-execution/vercel-1126.json",
+      "sha256": "34c37b7ddd0e8c9bfac60ccac90799a377fafc0d772f295177821446d65c5a74"
+    },
+    {
       "source": "reviews/pinned-astra-corrected-science-0742/5-players/REVIEW.md",
       "published": "controles/etat-execution/t5-astra-0742.txt",
       "sha256": "9bed6c9ea80b41a29e348845247bd1245be471756da7b591ba49a23f45075385"

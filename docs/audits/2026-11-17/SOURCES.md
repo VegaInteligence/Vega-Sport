@@ -117,3 +117,7 @@ Sur la copie, les 8 034 fiches de type club encore sans visuel se répartissen
 ## Écussons des 16 clubs de la Ligue des champions de la CAF 2024/25
 
 Les 48 matchs de groupe de l’édition Vega 53151 ont été rapprochés par date, clubs et sens de la rencontre. Le calendrier prévisionnel indiquait deux fois le CR Bélouizdad dans une affiche. Le compte rendu CAF identifie Orlando Pirates comme adversaire. La CAF confirme aussi le report d’Al Ahly–CR Bélouizdad au 22 décembre. Les profils des clubs et les fiches de leurs adversaires ont fourni onze blasons individuels. Les cinq liens existants sont conservés. Le lot couvre les seize participants. Les preuves établissent l’identité du club, la période exacte de chaque dessin reste à dater. [Registre des 16 clubs et sources des images](controles/caf-2024-25-blasons/registry-16.csv) · [48 rencontres](controles/caf-2024-25-blasons/fixture-reconciliation.json) · [11 fichiers visuels authentifiés](controles/caf-2024-25-blasons/caf-2024-25-group-all-profiles-v1.zip)
+
+## Résultats officiels et statistiques des joueuses saoudiennes
+
+Les calendriers PitchAPI concordent avec les 146 résultats des deux saisons passées. Pour l’édition 2026/27, les résultats de la SAFF et ses listes d’entrantes comblent des absences confirmées par 40 appels au fournisseur primaire. Les durées BEPRO ont une couverture partielle. Les règles de priorité doivent donc porter sur le résultat, l’identité de la rencontre et la métrique individuelle séparément. [Comptes, autorités et tests](PREMIERE-DIVISION-FEMININE-SAOUDIENNE.md)

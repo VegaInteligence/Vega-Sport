@@ -1,0 +1,135 @@
+{
+  "operations_rds": [
+    "vega_v2",
+    "2026-11-18 10:48:34.983280+00:00",
+    "4428658:4428658:",
+    "on"
+  ],
+  "mesures_par_edition_rds": [
+    "vega_v2",
+    "2026-11-18 10:58:58.441434+00:00",
+    "4429346:4429346:",
+    "on"
+  ],
+  "contre_comptage_rds": [
+    "vega_v2",
+    "2026-11-18 11:00:58.895649+00:00",
+    "4429421:4429447:4429421",
+    "on"
+  ],
+  "edition_native": 1002,
+  "competition_native": {
+    "id": "l_1SGwQT",
+    "name": "Women's Premier League",
+    "season": "2026/2027"
+  },
+  "classes_natives": {
+    "finished": 8,
+    "postponed": 20,
+    "not_started": 28
+  },
+  "anciens_calendriers": [
+    [
+      "2024/2025",
+      90,
+      90
+    ],
+    [
+      "2025/2026",
+      56,
+      56
+    ]
+  ],
+  "lectures_pitchapi_200_distinctes": 40,
+  "resumes_reportes_sans_score_qui_concordent": 20,
+  "retour_inverse_encore_futur": [
+    "m_2N1YBP",
+    "t_3X9iOH",
+    "t_1gIF83",
+    "2027-05-06",
+    "2027-05-06 17:45:00+00:00",
+    "not_started",
+    null,
+    null
+  ],
+  "listes_joueurs_vides": 8,
+  "compositions_vides": 8,
+  "veilles": {
+    "columns": [
+      "status",
+      "past",
+      "watch",
+      "matches",
+      "first_watch_kickoff",
+      "last_watch_kickoff",
+      "matches_matching_weekly_scope",
+      "matches_matching_overdue_scope"
+    ],
+    "rows": [
+      [
+        "finished",
+        true,
+        "absent",
+        8,
+        null,
+        null,
+        0,
+        0
+      ],
+      [
+        "not_started",
+        false,
+        "absent",
+        28,
+        null,
+        null,
+        0,
+        0
+      ],
+      [
+        "postponed",
+        true,
+        "absent",
+        20,
+        null,
+        null,
+        0,
+        0
+      ]
+    ]
+  },
+  "editions": 304,
+  "totaux_nat_if": {
+    "matches": 84371,
+    "finished": 75355,
+    "elapsed_postponed": 134,
+    "family_ok": 75355,
+    "ok_no_player_rows": 440,
+    "ok_rows_without_positive_minutes": 47,
+    "ok_with_positive_minutes": 74868,
+    "other_state_with_positive_minutes": 0,
+    "no_positive_minutes": 487
+  },
+  "sous_populations": {
+    "sans_ligne": {
+      "matchs": 440,
+      "matchs_avec_titulaires": 156,
+      "editions": 23,
+      "starter_rows": 3432,
+      "stats_rows": 0,
+      "player_grades": 0,
+      "intermediate_rows": 0,
+      "team_elo_sides": 880
+    },
+    "sans_minute_positive": {
+      "matchs": 47,
+      "matchs_avec_titulaires": 47,
+      "editions": 18,
+      "starter_rows": 1030,
+      "stats_rows": 2061,
+      "player_grades": 0,
+      "intermediate_rows": 0,
+      "team_elo_sides": 94
+    }
+  }
+}

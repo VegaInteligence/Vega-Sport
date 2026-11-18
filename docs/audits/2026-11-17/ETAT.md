@@ -1,6 +1,6 @@
 # État au 18 novembre 2026
 
-**Les correctifs restent candidats : la livraison globale n’est pas validée ni déployée.** Le dernier contrôle publié à 07 h 45 UTC identifie AWS `8018e0836c` et Vercel `17ca0f7617`. Les huit tickets clos ont été revérifiés ; les huit tickets de suivi restent actifs. [Versions et tickets](CLASSEMENTS-ET-IDENTITES.md#versions-contrôlées) · [Reçus de cet état](controles/etat-execution/faits.json)
+**La branche contient des corrections candidates. La livraison globale reste ouverte.** À 11 h 26 UTC, le worker et le rattrapage AWS exécutent le déploiement `8018e0836c`. Les deux empreintes Lambda concordent. Vercel et la branche principale pointent vers `17ca0f7617`. À 11 h 23 UTC, Linear compte huit tickets récemment clos et huit tickets actifs. [AWS et Git](controles/etat-execution/deploiement-1126.json) · [Vercel](controles/etat-execution/vercel-1126.json) · [Linear](controles/etat-execution/linear-1123.json)
 
 ## Exigences et production
 
@@ -51,3 +51,7 @@ Sur le relevé des transferts à 09 h 41 UTC, une répétition sur copie conserv
 ## Quatre éditions du Mondial des clubs
 
 Sur les 86 matchs contrôlés, les organisateurs attestent 2 707 participations de joueurs. Vega conserve 172 valeurs Elo de côté et aucune note de joueur pour ces matchs. La finale Chelsea–Palmeiras a aussi un score à 90 minutes erroné en production. [Résultats par édition et filtre de calcul](MONDIAL-DES-CLUBS-2021-23.md)
+
+## Résultats féminins saoudiens et succès de collecte vides
+
+La fédération publie 28 résultats cette saison contre huit dans Vega. Les 28 feuilles attestent 831 participations et la base ne contient aucune note de joueuse pour ces matchs. Sur 304 éditions natives de PitchAPI, 487 matchs terminés ont une collecte de statistiques réussie sur le plan technique et aucune minute positive. Ces matchs ont 974 Elo et aucune note individuelle. [Sources par saison, requêtes et reproduction](PREMIERE-DIVISION-FEMININE-SAOUDIENNE.md)

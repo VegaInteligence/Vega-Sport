@@ -1,0 +1,30 @@
+[
+  {
+    "match": 69327,
+    "id_vega": 2258,
+    "maillot_domicile_dans_vega": 20,
+    "presence_saff_maillot_domicile": "banc",
+    "saff_domicile": "87c275a448276b5cfb363377944492e71bcd50cea56cf23f8c839a96eb1cc666",
+    "note_vega": false,
+    "remplacement_vega_equipe": "away",
+    "maillot_coacteur": 7,
+    "entrant_saff": 99,
+    "sortant_saff": 7,
+    "minute_saff": "46",
+    "saff_adverse": "ff122a52e458d136436c5274519df18fbe21cd90134ecd184dd8c7701adcccf9"
+  },
+  {
+    "match": 69353,
+    "id_vega": 2258,
+    "maillot_domicile_dans_vega": 99,
+    "presence_saff_maillot_domicile": "titulaire",
+    "saff_domicile": "ff122a52e458d136436c5274519df18fbe21cd90134ecd184dd8c7701adcccf9",
+    "note_vega": false,
+    "remplacement_vega_equipe": "away",
+    "maillot_coacteur": 11,
+    "entrant_saff": 20,
+    "sortant_saff": 11,
+    "minute_saff": "71",
+    "saff_adverse": "87c275a448276b5cfb363377944492e71bcd50cea56cf23f8c839a96eb1cc666"
+  }
+]
