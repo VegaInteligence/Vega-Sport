@@ -5,6 +5,9 @@ import fs from "node:fs/promises";
 import vm from "node:vm";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
+import { editionHeaderStub } from "./edition-stubs.mjs";
+import * as nationalFlags from "../dashboard/frontend/src/services/national-flags.js";
+import * as trophies from "../dashboard/frontend/src/services/trophy-art.js";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const require = createRequire(path.join(root, "dashboard/package.json"));
 const React = require("react");
@@ -25,6 +28,9 @@ test("cup view identifies the edition and preserves penalty shootouts", async ()
     "./UI.jsx": { Card, Media: () => null, Pager: () => null, Segments: ({ items }) => elem("div", null, items.map(([id, text]) => elem("button", { key: id }, text))), AsyncState: ({ resource, children }) => children(resource.value), Empty: ({ children }) => elem("p", null, children) },
     "./KnockoutBracket.jsx": { __esModule: true, default: () => elem("div", null, "Tableau éliminatoire") },
     "./NationalFlag.jsx": { __esModule: true, default: () => null },
+    "./EditionHeader.jsx": editionHeaderStub(React),
+    "../services/national-flags.js": nationalFlags,
+    "../services/trophy-art.js": trophies,
     "../services/format.js": { date: String, seasonLabel: (value) => /^\d{4}$/.test(value) ? `${value}/${Number(value) + 1}` : value },
     "../services/fixtures.js": { parisDay: () => "2026-11-02" },
     "../services/resources.js": { useResource: () => ({ value: { matches: rows } }), json: () => {} },

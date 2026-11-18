@@ -11,6 +11,9 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { mergeCupCatalog, supplementalLeagueCatalog } from "../dashboard/frontend/src/services/cup-catalog.js";
 import { leagueTable } from "../dashboard/frontend/src/services/cup-matches.js";
+import { editionHeaderStub } from "./edition-stubs.mjs";
+import * as nationalFlags from "../dashboard/frontend/src/services/national-flags.js";
+import * as trophies from "../dashboard/frontend/src/services/trophy-art.js";
 
 const index = { meta: { source_generated_at_utc: "2026-11-17T00:00:00Z" }, competitions: [
   { folder: "ENG_5_national-league", name: "National League", country_code: "ENG", season: "2026/2027", tables: { results: { rows: 200 }, fixtures: { rows: 352 } } },
@@ -70,6 +73,9 @@ test("a league's page: its standings, its matches, its projection, no bracket", 
       AsyncState: ({ resource, children }) => children(resource.value), Empty: ({ children }) => elem("p", null, children) },
     "./KnockoutBracket.jsx": { __esModule: true, default: () => elem("div", null, "Tableau éliminatoire") },
     "./NationalFlag.jsx": { __esModule: true, default: () => null },
+    "./EditionHeader.jsx": editionHeaderStub(React),
+    "../services/national-flags.js": nationalFlags,
+    "../services/trophy-art.js": trophies,
     "./Hint.jsx": { Term: ({ children }) => children },
     "../services/format.js": { date: String, seasonLabel: String },
     "../services/fixtures.js": { parisDay: () => "2026-11-17" },

@@ -10,7 +10,7 @@ import { normalizeOpenCup } from "../services/cup-matches.js";
 import { attachNativeMatches, nativeKnockoutMatches, nativeSingleKnockoutMatches } from "../services/knockout-bracket.js";
 import { FEATURED_EUROPE_IDS } from "../services/competition-selector.js";
 
-export default function NativeKnockoutBracket({ competition, season, matches, rounds }) {
+export default function NativeKnockoutBracket({ competition, season, matches, rounds, highlight = "", trophy = null }) {
   const f = useFootball();
   const worldCup = competition.id === WORLD_CUP_ID;
   const resource = useResource("knockout:" + competition.id + ":" + season, async () => {
@@ -38,6 +38,6 @@ export default function NativeKnockoutBracket({ competition, season, matches, ro
     sourceSeason: season,
   });
   return <AsyncState resource={resource}>{() => <>
-    <KnockoutBracket matches={bracketMatches} hrefForMatch={hrefForMatch} nationalTeams={worldCup} season={season} />
+    <KnockoutBracket matches={bracketMatches} hrefForMatch={hrefForMatch} nationalTeams={worldCup} season={season} highlight={highlight} trophy={trophy} />
   </>}</AsyncState>;
 }

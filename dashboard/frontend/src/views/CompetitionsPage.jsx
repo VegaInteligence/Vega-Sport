@@ -52,10 +52,16 @@ import SeasonProjection from "../components/SeasonProjection.jsx";
 import { useSeasonProjection } from "../services/forecasts.js";
 import {
   WORLD_CUP_ID,
+  WORLD_CUP_ARCHIVE_ID,
   mergeCupCatalog,
+  competitionEditions,
   competitionSearchText,
   normalizeCompetitionQuery,
 } from "../services/cup-catalog.js";
+import EditionHeader, { FollowedTeam } from "../components/EditionHeader.jsx";
+import NationalFlag from "../components/NationalFlag.jsx";
+import { nationalTeamLabel } from "../services/national-flags.js";
+import { trophyArt } from "../services/trophy-art.js";
 import {
   FEATURED_EUROPE_IDS,
   FEATURED_LEAGUE_IDS,
@@ -144,11 +150,17 @@ export function SupplementalPanel({
     </Card>
   );
 }
-function Fixtures({ competition, day, initialSeason }) {
+/**
+ * A collected competition's page. A cup's (`hasKnockout`) has the edition's head: the page that holds it may offer a
+ * sister competition's editions in the same selector (`editions`, `onEdition`: the World Cup's archive), open a view
+ * (`initialView`), follow a team through the bracket (`highlight`, `onHighlight`) and be told of the view chosen
+ * (`onView`: its address follows).
+ */
+function Fixtures({ competition, day, initialSeason, initialView, editions, onEdition, onView, highlight = "", onHighlight, heading = false }) {
   const f = useFootball();
   const [season, setSeason] = useState(
     (initialSeason &&
-      competition?.seasons?.find((s) => seasonLabel(s) === initialSeason)) ||
+      competition?.seasons?.find((s) => String(s) === initialSeason || seasonLabel(s) === initialSeason)) ||
       competition?.seasons?.find((s) => seasonLabel(s) === f.season) ||
       competition?.seasons?.[0] ||
       f.season,
@@ -160,7 +172,37 @@ function Fixtures({ competition, day, initialSeason }) {
       FEATURED_EUROPE_IDS.includes(competition.id) ||
       competition.cupWorker),
   );
-  const [view, setView] = useState(supported ? "standings" : "matches");
+  // The World Cup opens on its bracket (mock-up of 18 Nov 2026), any other competition on its table.
+  const worldCup = competition?.id === WORLD_CUP_ID;
+  const asked = initialView === "groups" ? "standings" : initialView;
+  const [view, setViewState] = useState(
+    !supported
+      ? "matches"
+      : asked === "standings" || asked === "matches" || (asked === "bracket" && hasKnockout)
+        ? asked
+        : worldCup
+          ? "bracket"
+          : "standings",
+  );
+  const setView = (next) => {
+    setViewState(next);
+    onView?.(next);
+  };
+  function pickSeason(value) {
+    const other = (editions || []).find((edition) => edition.season === String(value) && edition.id !== competition.id);
+    if (other) return onEdition?.(other);
+    setSeason(value);
+    const next = seasonLabel(value);
+    if (f.manifest.seasons.some((s) => s.id === next)) f.changeSeason(next);
+    setPage(1);
+  }
+  const changeView = (next) => {
+    if (next === "matches" && view !== "matches") {
+      setStatus("finished");
+      setPage(1);
+    }
+    setView(next);
+  };
   useEffect(() => {
     if (competition?.seasons?.includes(season)) return;
     const equivalent = competition?.seasons?.find(
@@ -240,6 +282,16 @@ function Fixtures({ competition, day, initialSeason }) {
   const showHighlights = supported && view === "standings";
   // The league replayed to its end, where the base projects it (a domestic league in progress).
   const projection = useSeasonProjection(supported ? competition?.id : null, seasonLabel(season));
+  const views = worldCup
+    ? [["bracket", "Tableau"], ["standings", "Groupes"], ["matches", "Matchs"]]
+    : [
+        ["standings", "Classement"],
+        ["matches", "Matchs"],
+        ...(hasKnockout ? [["bracket", "Tableau"]] : []),
+        ...(projection ? [["projection", "Projection"]] : []),
+      ];
+  // A cup's page has the edition's head on one row; a league's keeps its title and its season.
+  const cupHead = !day && hasKnockout;
   const overviewFixtures = resource.value || preview.value;
   return (
     <div
@@ -250,7 +302,7 @@ function Fixtures({ competition, day, initialSeason }) {
     >
       <Card
         title={
-          competition ? (
+          cupHead ? null : competition ? (
             <span className="competition-detail-title">
               <Media name={competition.name} url={competition.imageUrl} />
               <span>
@@ -262,22 +314,36 @@ function Fixtures({ competition, day, initialSeason }) {
             "Calendrier par date"
           )
         }
-        className="competition-detail"
+        className={"competition-detail" + (cupHead ? " edition-card" : "")}
       >
-        {!day && (
+        {cupHead && (
+          <EditionHeader
+            competition={competition}
+            name={competition.name}
+            heading={heading}
+            label="Saison de compétition"
+            season={String(season)}
+            onSeason={pickSeason}
+            editions={editions || (competition.seasons || []).map((value) => ({ season: String(value), id: competition.id }))}
+          >
+            {highlight && worldCup && (
+              <FollowedTeam
+                label={nationalTeamLabel(highlight)}
+                flag={<NationalFlag name={highlight} season={season} />}
+                onClear={() => onHighlight?.("")}
+              />
+            )}
+            <Segments value={view} onChange={changeView} label="Vue de la compétition" items={views} />
+          </EditionHeader>
+        )}
+        {!day && !cupHead && (
           <div className="competition-detail-controls">
             <label>
               Saison de compétition
               <select
                 aria-label="Saison de compétition"
                 value={season}
-                onChange={(e) => {
-                  setSeason(e.target.value);
-                  const next = seasonLabel(e.target.value);
-                  if (f.manifest.seasons.some((s) => s.id === next))
-                    f.changeSeason(next);
-                  setPage(1);
-                }}
+                onChange={(e) => pickSeason(e.target.value)}
               >
                 {competition.seasons?.map((s) => (
                   <option key={s} value={s}>
@@ -286,25 +352,7 @@ function Fixtures({ competition, day, initialSeason }) {
                 ))}
               </select>
             </label>
-            {supported && (
-              <Segments
-                value={view}
-                onChange={(next) => {
-                  if (next === "matches" && view !== "matches") {
-                    setStatus("finished");
-                    setPage(1);
-                  }
-                  setView(next);
-                }}
-                label="Vue de la compétition"
-                items={[
-                  ["standings", "Classement"],
-                  ["matches", "Matchs"],
-                  ...(hasKnockout ? [["bracket", "Tableau"]] : []),
-                  ...(projection ? [["projection", "Projection"]] : []),
-                ]}
-              />
-            )}
+            {supported && <Segments value={view} onChange={changeView} label="Vue de la compétition" items={views} />}
           </div>
         )}
         {supported && view === "standings" ? (
@@ -343,6 +391,8 @@ function Fixtures({ competition, day, initialSeason }) {
                       season={season}
                       matches={value.matches || []}
                       rounds={value.rounds}
+                      highlight={highlight}
+                      trophy={trophyArt({ title: competition.name, trophyYear: Number(String(season).slice(0, 4)) })}
                     />
                   ) : supported ? (
                     <MatchdaySchedule
@@ -416,11 +466,18 @@ function Fixtures({ competition, day, initialSeason }) {
     </div>
   );
 }
+// A cup edition's views in its address, in the site's words.
+const VIEW_OF_PARAM = { tableau: "bracket", groupes: "groups", classement: "standings", matchs: "matches" };
+const PARAM_OF_VIEW = { bracket: "tableau", groups: "groupes", standings: "classement", matches: "matchs" };
+
 export default function CompetitionsPage() {
   const f = useFootball();
   const params = useSearchParams();
   const id = params.get("id");
   const requestedEdition = params.get("edition") || "";
+  // A cup edition's view and the team followed through it (a nation's tile leads here) are in the address.
+  const requestedView = VIEW_OF_PARAM[params.get("view") || ""] || "";
+  const followed = params.get("team") || "";
   const [query, setQuery] = useState("");
   const [country, setCountry] = useState("all");
   const [directory, setDirectory] = useState(false);
@@ -610,9 +667,30 @@ export default function CompetitionsPage() {
         FEATURED_EUROPE_IDS.includes(competition.id) ||
         competition.cupWorker),
     );
+  // A cup outside the featured row has a page of its own: no row of leagues above it, its name as the page's title.
+  const standalone = !directory && isCup(selected) && !FEATURED_EUROPE_IDS.includes(selected.id);
+  // The edition's address: what it holds, and what changes.
+  const editionAddress = (next) =>
+    f.href("/competitions/", {
+      id: selected.id,
+      edition: requestedEdition,
+      view: params.get("view") || "",
+      team: followed,
+      ...next,
+    });
+  const edition = selected && {
+    initialView: requestedView,
+    highlight: followed,
+    heading: standalone,
+    editions: competitionEditions(selected, expandedCatalog),
+    onEdition: (entry) => window.history.pushState(null, "", editionAddress({ id: entry.id, edition: entry.season })),
+    onView: (view) => window.history.replaceState(null, "", editionAddress({ view: PARAM_OF_VIEW[view] || "" })),
+    onHighlight: (team) => window.history.replaceState(null, "", editionAddress({ team })),
+  };
   return (
     <Layout
       path="/competitions/"
+      hideHeading={standalone}
       title={directory ? "Toutes les compétitions" : "Championnats à la une"}
       actions={
         directory ? null : (
@@ -632,7 +710,7 @@ export default function CompetitionsPage() {
     >
       {!directory ? (
         <>
-          <section
+          {!standalone && <section
             className="league-spotlight"
             aria-label="Choisir une compétition"
           >
@@ -663,7 +741,7 @@ export default function CompetitionsPage() {
                 </button>
               ))}
             </div>
-          </section>
+          </section>}
           {isCup(selected) && (
             <button
               type="button"
@@ -680,13 +758,17 @@ export default function CompetitionsPage() {
               <CupCompetition
                 key={`${selected.id}:${requestedEdition}`}
                 competition={selected}
+                name={selected.id === WORLD_CUP_ARCHIVE_ID ? "Coupe du monde" : selected.name}
                 initialSeason={requestedEdition || openSeason}
+                onSeason={(season) => window.history.replaceState(null, "", editionAddress({ edition: season }))}
+                {...edition}
               />
             ) : (
               <Fixtures
-                key={selected.id}
+                key={`${selected.id}:${requestedEdition}`}
                 competition={selected}
-                initialSeason={openSeason}
+                initialSeason={requestedEdition || openSeason}
+                {...(isCup(selected) ? edition : null)}
               />
             )
           ) : (!id && !choice.ready) ||
