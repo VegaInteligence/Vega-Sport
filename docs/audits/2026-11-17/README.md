@@ -223,3 +223,7 @@ Seraing–Beerschot, le 18 septembre, reçoit le statut fédéral de forfait et 
 La Pro League U21 utilise le logo de la fédération dans la rubrique « Georganiseerd door ». La Jupiler Pro League, la Croky Cup et une autre série de jeunes affichent exactement le même fichier à cet emplacement. L’édition 358 et la fiche de compétition 128 attendent un emblème qui leur soit attribué. [Comparaison des logos par champ](controles/belgique-u21-logos-organisateurs.csv)
 
 [Classements, postes de joueurs et profils de clubs français et allemands](CLASSEMENTS-ET-IDENTITES.md)
+
+## Classements et validation des scores d’équipe
+
+[J1 2026/27, Allsvenskan, Mondiaux 1934 et 2022, terrains internationaux et scores de 26 clubs–saisons féminins](CLASSEMENTS-ET-ELO.md)
