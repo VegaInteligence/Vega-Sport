@@ -223,12 +223,61 @@ def _guard_open_cup(before, rows, cup_key, reviewed_halves):
             raise SourceError("PERIODS_CONFLICT", f"{key}: the known {part} would change")
 
 
+def _listed_twice(rows):
+    """[(day, the two teams, numbers)] of the matches a file lists both without a number and with one or more: the same
+    day and the same two teams, in either order. Two candidates for one match, never a number added to it (VI-27)."""
+    seen = {}
+    for key, m in rows:
+        if m["date"] and m["home"] and m["away"]:
+            seen.setdefault((m["date"], tuple(sorted((m["home"], m["away"])))), []).append(key.rsplit("|", 1)[1])
+    return sorted((day, teams, sorted(n for n in numbers if n)) for (day, teams), numbers in seen.items()
+                  if "" in numbers and any(numbers))
+
+
+# What stays the same when OpenFootball numbers a match it already listed (« num »): the row but its number and place.
+NUMBERED_SAME = ("status", "match_date", "home_team_name", "away_team_name", "group_name", "source", "home_score", "away_score",
+                 "home_score_90", "away_score_90", "home_score_ht", "away_score_ht", "home_score_et", "away_score_et",
+                 "home_penalty_score", "away_penalty_score", "is_neutral")
+
+
+def _numbered(conn, provider, before, rows):
+    """{stored key: source key} of the finished matches the source now numbers (VI-27): the key gains the number alone
+    (…|West Germany|Netherlands| becomes …|38), the edition, day, sides, round, group and every score stay. Kept only
+    when certain: one source row for the stored key, a parent holding that one key, a new key no match holds or held.
+    Anything else is left to the guard, which refuses the result the file no longer lists."""
+    incoming = {key for key, _ in rows}
+    numbered = {}
+    for key, m in rows:
+        number = m["number"]
+        if number is not None and key not in before and key.endswith("|" + str(number)):
+            numbered.setdefault(key[: -len(str(number))], []).append((key, m))
+    out = {}
+    for former, found in numbered.items():
+        stored = before.get(former)
+        if stored is None or former in incoming or len(found) != 1 or stored["status"] != "finished" or stored["match_number"] is not None:
+            continue
+        if stored["keys"] != [[provider, former, True]]:
+            continue  # another source's key or a former one: an identity to review
+        key, m = found[0]
+        source = {"status": m["status"], "match_date": m["date"], "home_team_name": m["home"] or None, "away_team_name": m["away"] or None,
+                  "group_name": m["group"], "source": provider, **{c: m[c] for c in NUMBERED_SAME[6:]}}
+        stage = conn.execute("SELECT name FROM core.rounds WHERE id=%s", (stored["round_id"],)).fetchone() if stored["round_id"] else None
+        if any(stored[c] != source[c] for c in NUMBERED_SAME) or (stage and stage[0]) != m["round"]:
+            continue
+        if conn.execute("SELECT 1 FROM core.provider_ids WHERE entity_type='match' AND provider=%s AND provider_key=%s",
+                        (provider, key)).fetchone():
+            continue  # the new key is, or was, a match's
+        out[former] = key
+    return out
+
 
 def save(conn, kind, competition, season, body, now):
     """Write one edition from its source body; returns the matches added, changed or removed.
 
     Refused (SourceError, nothing written): unreadable scores or statuses, and a body that would
-    drop or unplay a result the base holds (snapshot.guard)."""
+    drop or unplay a result the base holds (snapshot.guard). In the World Cup's archive, a finished
+    match the source only numbers later keeps its parent, under its new key (_numbered), and a body
+    listing a match both without and with a number is refused whole (_listed_twice)."""
     provider = PROVIDER[kind]
     name = body.get("name") or competition
     cup_key = f"{kind}:{competition}:{season}"
@@ -242,11 +291,21 @@ def save(conn, kind, competition, season, body, now):
     rows = unique_rows(source_rows)
     if typed_dfb and len(source_rows) != len(rows):
         raise SourceError("INVALID_PERIODS", f"{cup_key}: duplicate match keys")
+    renumbering = kind == "open-cups" and competition == "world-cup-history"
+    twice = _listed_twice(rows) if renumbering else []
+    if twice:
+        day, teams, numbers = twice[0]
+        raise SourceError("AMBIGUOUS_MATCH_NUMBER", f"{cup_key}: {day} {' – '.join(teams)} listed without a number and as "
+                                                    f"{', '.join(numbers)}" + (f" (and {len(twice) - 1} more)" if len(twice) > 1 else ""))
     digest = rows_digest(body.get("name"), rows)
     stored = conn.execute("SELECT id, cup_digest, cup_name FROM core.competition_seasons WHERE cup_key=%s", (cup_key,)).fetchone()
-    before = {}
+    before, renumbered = {}, {}
     if stored is None or stored[1] != digest:
         before = snapshot.stored(conn, provider, stored and stored[0])
+        if renumbering:
+            # The guards read a match the source only numbered under its new key: no result is dropped.
+            renumbered = _numbered(conn, provider, before, rows)
+            before = {renumbered.get(key, key): match for key, match in before.items()}
         if kind == "open-cups" and competition in CUP_PUBLICATION:
             reviewed_halves = {
                 f"{competition}:{season}:{m.get('date') or ''}|{m.get('team1') or ''}|{m.get('team2') or ''}|{m.get('num') or ''}":
@@ -281,6 +340,8 @@ def save(conn, kind, competition, season, body, now):
         raise SourceError("PERIODS_CONFLICT", f"match keys already bound to another edition: {', '.join(sorted(elsewhere))}")
     snapshot.guard(provider, elsewhere, {key: m["status"] for key, m in rows}, cup_key)
     before.update(elsewhere)
+    for former, key in renumbered.items():
+        before[key] = snapshot.rekey(conn, provider, before[key], former, key)
     changes, keep = 0, set()
     for key, m in rows:
         home = m.get("home_existing_id") or (_team(conn, provider, m["home_key"], m["home"]) if m["home"] else None)
