@@ -1,0 +1,36 @@
+{
+  "snapshot": "2026-11-17 UTC",
+  "completed_by_league": {
+    "ITA": 110,
+    "ESP": 119,
+    "GER": 81,
+    "FRA": 90,
+    "ENG": 100
+  },
+  "top_five_total_fixtures": 1752,
+  "top_five_native_complementary_equal_results": 500,
+  "top_five_organizer_checked_scores": 94,
+  "france_organizer_clubs": 18,
+  "france_source_spellings": 19,
+  "france_played": 90,
+  "france_future": 216,
+  "france_future_organizer_midnight_local": 144,
+  "france_team_stats_comparable": 1440,
+  "france_native_external_equal_stats": 1420,
+  "france_differing_stats": 20,
+  "france_differing_stat_match_count": 18,
+  "france_resolution_counts": {
+    "native": 5,
+    "football-data/OpenMatchday": 14,
+    "neither": 1
+  },
+  "turkiye_organizer_ids": 162,
+  "turkiye_native_candidate_ids": 324,
+  "public_responses_hashed": 79,
+  "public_responses_rejected_body": [
+    "tff",
+    "tff-sample-a",
+    "tff-sample-b"
+  ],
+  "replay": "passed"
+}

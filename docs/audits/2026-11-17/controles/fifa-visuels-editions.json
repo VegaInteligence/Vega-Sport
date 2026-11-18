@@ -1,0 +1,14 @@
+{
+  "zip_file": "world-cup-edition-artwork.zip",
+  "zip_sha256": "cf228fa76980855f8bdaeb79133ab9ce1ecc9f45d424bc69441c50f44150d90f",
+  "bytes": 3148167,
+  "members": 114,
+  "standalone_rebuild": "passed after removing all generated records/media before rebuilding",
+  "rebuild_output": "23/23 edition bindings verified \u00b7 18 emblems \u00b7 5 posters \u00b7 1,068 FIFA match IDs \u00b7 1,069 branch/RDS fixture rows \u00b7 117 cross-scope/slot rejections",
+  "manifest_sha256": {
+    "edition-emblems.json": "6a418218b72aaa5cc8c5af63eb84bb97b6058a80f1ffb32af4f4aae550c64f47",
+    "edition-posters.json": "d2f1710e485f877d3fba2e150f3d19318f29b1005aff66b9ca117c151bd37e64"
+  },
+  "binding_ledger_sha256": "8b61ce748272ca99dadd7f8dd66876af2c3fca3622313411181e33d67573da56",
+  "documentary_japan_post_pdf_sha256": "9e984d7f30c07588524452035d1bdd7dc9de69162dd5ea6d4fb8f7da4ab710af"
+}

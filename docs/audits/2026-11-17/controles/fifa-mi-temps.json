@@ -1,0 +1,141 @@
+{
+  "counts": {
+    "matches": 1068,
+    "explicit": 360,
+    "complete_timed": 355,
+    "derived_comparable": 354,
+    "derived_matches_official": 354,
+    "absent_ht_recoverable": 61,
+    "explicit_conflicts_derived": 6,
+    "verified_conflicts": 6
+  },
+  "both_timelines_agree_against_provider_ht": [
+    {
+      "year": 2026,
+      "fixture": "400021520",
+      "vega": "1519",
+      "home": "Mexico",
+      "away": "Ecuador",
+      "day": "2026-06-30",
+      "provider_ht": [
+        1,
+        0
+      ],
+      "completely_timed_goals_ht": [
+        2,
+        0
+      ],
+      "official_events_ht": [
+        2,
+        0
+      ],
+      "eligibility": "complete source timeline"
+    },
+    {
+      "year": 2022,
+      "fixture": "400235475",
+      "vega": "1405",
+      "home": "Japan",
+      "away": "Spain",
+      "day": "2022-12-01",
+      "provider_ht": [
+        0,
+        0
+      ],
+      "completely_timed_goals_ht": [
+        0,
+        1
+      ],
+      "official_events_ht": [
+        0,
+        1
+      ],
+      "eligibility": "complete source timeline"
+    },
+    {
+      "year": 2022,
+      "fixture": "400235486",
+      "vega": "1417",
+      "home": "Serbia",
+      "away": "Switzerland",
+      "day": "2022-12-02",
+      "provider_ht": [
+        2,
+        1
+      ],
+      "completely_timed_goals_ht": [
+        2,
+        2
+      ],
+      "official_events_ht": [
+        2,
+        2
+      ],
+      "eligibility": "complete source timeline"
+    },
+    {
+      "year": 2022,
+      "fixture": "400128139",
+      "vega": "1434",
+      "home": "Netherlands",
+      "away": "Argentina",
+      "day": "2022-12-09",
+      "provider_ht": [
+        1,
+        0
+      ],
+      "completely_timed_goals_ht": [
+        0,
+        1
+      ],
+      "official_events_ht": [
+        0,
+        1
+      ],
+      "eligibility": "complete source timeline"
+    },
+    {
+      "year": 2018,
+      "fixture": "300331507",
+      "vega": "1359",
+      "home": "Japan",
+      "away": "Poland",
+      "day": "2018-06-28",
+      "provider_ht": [
+        0,
+        1
+      ],
+      "completely_timed_goals_ht": [
+        0,
+        0
+      ],
+      "official_events_ht": [
+        0,
+        0
+      ],
+      "eligibility": "complete source timeline"
+    },
+    {
+      "year": 2018,
+      "fixture": "300331553",
+      "vega": "1360",
+      "home": "Senegal",
+      "away": "Colombia",
+      "day": "2018-06-28",
+      "provider_ht": [
+        0,
+        1
+      ],
+      "completely_timed_goals_ht": [
+        0,
+        0
+      ],
+      "official_events_ht": [
+        0,
+        0
+      ],
+      "eligibility": "complete source timeline"
+    }
+  ],
+  "derived_disagrees_with_official": []
+}

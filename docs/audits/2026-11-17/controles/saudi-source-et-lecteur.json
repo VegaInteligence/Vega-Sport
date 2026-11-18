@@ -1,0 +1,90 @@
+{
+  "source": "PitchAPI via deployed immutable PitchClient and normalizer; only selected observation facts were retained",
+  "requests_in_successful_run": 8,
+  "scope": "4 fixtures, 2 endpoints, 10 documented players",
+  "outcomes": [
+    {
+      "match": 83757,
+      "class": "mens",
+      "native_key": "m_2E5NMH",
+      "target_players": 4,
+      "present_in_provider_players_before_normalization": 4,
+      "target_present_in_provider_lineup_after_normalization": 0
+    },
+    {
+      "match": 87575,
+      "class": "womens",
+      "native_key": "m_0catUR",
+      "target_players": 4,
+      "present_in_provider_players_before_normalization": 4,
+      "target_present_in_provider_lineup_after_normalization": 4
+    },
+    {
+      "match": 83769,
+      "class": "mens",
+      "native_key": "m_0QHXxf",
+      "target_players": 6,
+      "present_in_provider_players_before_normalization": 6,
+      "target_present_in_provider_lineup_after_normalization": 0
+    },
+    {
+      "match": 87580,
+      "class": "womens",
+      "native_key": "m_3QQAvc",
+      "target_players": 6,
+      "present_in_provider_players_before_normalization": 6,
+      "target_present_in_provider_lineup_after_normalization": 6
+    }
+  ],
+  "public_true_and_false_appearance": [
+    {
+      "url": "https://vegasport.vercel.app/api/read/performance?season=2024%2F2025&league=l_0Lpz1f&appearance=m_2E5NMH%3Ap_3ONbKV",
+      "status": 200,
+      "at": "2026-11-17T23:47:35.298231+00:00",
+      "body_sha256": "1fcd25d7fedaf69c8804e7ce94a11b1ab4bad01e718904b1a8a8e66fd43ea633",
+      "content_type": "application/json; charset=utf-8",
+      "performance": {
+        "id": "m_2E5NMH:p_3ONbKV",
+        "playerId": "p_3ONbKV",
+        "teamId": "t_11bUft",
+        "matchId": "m_2E5NMH",
+        "league": "Saudi Pro League",
+        "minutes": 90,
+        "goals": 4,
+        "assists": 1,
+        "shots": 9,
+        "grade": 81.66961993682914,
+        "gradeZ": 2.5955562591552734
+      },
+      "error": null
+    },
+    {
+      "url": "https://vegasport.vercel.app/api/read/performance?season=2024%2F2025&league=l_1SGwQT&appearance=m_0catUR%3Ap_3ONbKV",
+      "status": 200,
+      "at": "2026-11-17T23:47:36.291123+00:00",
+      "body_sha256": "d0d8b14fcf0810600772f7f4a2496e91b126fd0ed204f714092d032ec83f9c3b",
+      "content_type": "application/json; charset=utf-8",
+      "performance": {
+        "id": "m_0catUR:p_3ONbKV",
+        "playerId": "p_3ONbKV",
+        "teamId": "t_0VRYI4",
+        "matchId": "m_0catUR",
+        "league": "Women's Premier League",
+        "minutes": 90,
+        "goals": 4,
+        "assists": 1,
+        "shots": 9,
+        "grade": 82.12034439524997,
+        "gradeZ": 2.6483664512634277
+      },
+      "error": null
+    }
+  ],
+  "safety": {
+    "production_database_credentials": false,
+    "database_writes": 0,
+    "provider_response_bodies_persisted": false,
+    "diagnostic_task_definition_state": "INACTIVE"
+  },
+  "earlier_attempt": "The first diagnostic read the first player response then failed while formatting a normalized string key. Its task definition was retired and the unsuccessful run produced no accepted sports evidence."
+}

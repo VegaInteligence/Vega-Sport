@@ -1,0 +1,222 @@
+{
+  "totals": {
+    "fixtures": 1068,
+    "scoring_events_during_play": 3028,
+    "reported_shootout_events": 77,
+    "events_with_named_scorer": 3105,
+    "score_reproduced": 1068,
+    "event_totals_equal_calendar": 1068,
+    "single_uncertain_phase": 1,
+    "named_scorers_on_shootout": 77,
+    "shootout_events_with_assist": 52,
+    "in_play_events_with_assist": 340,
+    "stored_90_comparable": 82,
+    "stored_90_equal": 82,
+    "stored_et_comparable": 82,
+    "stored_et_equal": 82,
+    "candidate_90_comparable": 82,
+    "candidate_90_equal": 82,
+    "candidate_et_comparable": 82,
+    "candidate_et_equal": 82,
+    "stored_half_comparable": 359,
+    "stored_half_equal": 353,
+    "candidate_half_comparable": 359,
+    "candidate_half_equal": 353,
+    "event_team_differs_from_score_side_type_3": 52,
+    "shootouts": 39,
+    "shootouts_full_score_reconstructed_from_events": 13,
+    "shootouts_with_no_listed_events": 26,
+    "shootouts_with_any_listed_events": 13
+  },
+  "exceptions": [
+    {
+      "year": "2018",
+      "fixture": "300331507",
+      "reason": "stored_half",
+      "goal_events": [
+        0,
+        0
+      ],
+      "source": [
+        0,
+        1
+      ]
+    },
+    {
+      "year": "2018",
+      "fixture": "300331507",
+      "reason": "candidate_half",
+      "goal_events": [
+        0,
+        0
+      ],
+      "source": [
+        0,
+        1
+      ]
+    },
+    {
+      "year": "2018",
+      "fixture": "300331553",
+      "reason": "stored_half",
+      "goal_events": [
+        0,
+        0
+      ],
+      "source": [
+        0,
+        1
+      ]
+    },
+    {
+      "year": "2018",
+      "fixture": "300331553",
+      "reason": "candidate_half",
+      "goal_events": [
+        0,
+        0
+      ],
+      "source": [
+        0,
+        1
+      ]
+    },
+    {
+      "year": "2026",
+      "fixture": "400021520",
+      "reason": "stored_half",
+      "goal_events": [
+        2,
+        0
+      ],
+      "source": [
+        1,
+        0
+      ]
+    },
+    {
+      "year": "2026",
+      "fixture": "400021520",
+      "reason": "candidate_half",
+      "goal_events": [
+        2,
+        0
+      ],
+      "source": [
+        1,
+        0
+      ]
+    },
+    {
+      "year": "2026",
+      "fixture": "400021534",
+      "reason": "uncertain first-half period",
+      "receipt": "https://api.fifa.com/api/v3/live/football/17/285023/289288/400021534?language=en",
+      "events": [
+        {
+          "Type": 2,
+          "IdPlayer": "448362",
+          "Minute": "0'",
+          "IdAssistPlayer": null,
+          "Period": 2,
+          "IdGoal": null,
+          "IdTeam": "43935"
+        }
+      ]
+    },
+    {
+      "year": "2022",
+      "fixture": "400128139",
+      "reason": "stored_half",
+      "goal_events": [
+        0,
+        1
+      ],
+      "source": [
+        1,
+        0
+      ]
+    },
+    {
+      "year": "2022",
+      "fixture": "400128139",
+      "reason": "candidate_half",
+      "goal_events": [
+        0,
+        1
+      ],
+      "source": [
+        1,
+        0
+      ]
+    },
+    {
+      "year": "2022",
+      "fixture": "400235475",
+      "reason": "stored_half",
+      "goal_events": [
+        0,
+        1
+      ],
+      "source": [
+        0,
+        0
+      ]
+    },
+    {
+      "year": "2022",
+      "fixture": "400235475",
+      "reason": "candidate_half",
+      "goal_events": [
+        0,
+        1
+      ],
+      "source": [
+        0,
+        0
+      ]
+    },
+    {
+      "year": "2022",
+      "fixture": "400235486",
+      "reason": "stored_half",
+      "goal_events": [
+        2,
+        2
+      ],
+      "source": [
+        2,
+        1
+      ]
+    },
+    {
+      "year": "2022",
+      "fixture": "400235486",
+      "reason": "candidate_half",
+      "goal_events": [
+        2,
+        2
+      ],
+      "source": [
+        2,
+        1
+      ]
+    }
+  ],
+  "nonempty_player_fields_all_returned_team_sheets": {
+    "Captain": 48142,
+    "FieldStatus": 48142,
+    "IdPlayer": 48142,
+    "IdTeam": 48142,
+    "LineupX": 2816,
+    "LineupY": 2816,
+    "PlayerName": 48142,
+    "PlayerPicture": 13113,
+    "Position": 48142,
+    "ShirtNumber": 45075,
+    "ShortName": 48142,
+    "SpecialStatus": 2878,
+    "Status": 48142
+  },
+  "rule": "Compare totals before period 11, independent from scoring-player identity, assists or minutes. Period 2 is held when checking splits."
+}
