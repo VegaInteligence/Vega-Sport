@@ -181,4 +181,6 @@
 - Not done: nothing is served yet (no route, no page); the site's « Licences » text must name this source as soon as a page shows its rows.
 - Deploy: migrations 136 and 137 and the reader reach the base only with a Deploy run (135, the other session's, is deployed since 18:18 UTC: nothing else rides along).
 - Linear: overlap check not done (the connector opens another workspace; nothing is written there).
-- Next action: CI on the branch, main, then the Deploy run on the user's word; after it, the counts in production (75,669 rows, 964 pairs).
+- Shipped to main 18 Nov: `be54fcf8ff` and `4c02046447`; CI green on the branch before and after the rebase (runs 44372498360, 44373983731).
+- Not deployed: starting the Deploy workflow was refused by the permission classifier (the user had asked for the data in the base, not named a deploy). Until a Deploy run, the base on AWS holds none of these rows.
+- Next action: the Deploy run on the user's explicit word or by his hand (`gh workflow run deploy.yml --ref main`); after it, the counts in production (75,669 rows, 964 pairs, the credit row), then the route and the match page (mock-up first).
