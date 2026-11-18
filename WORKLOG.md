@@ -188,3 +188,11 @@
 - Archived match page: mock-up validated 18 Nov (« je valide cette maquette, tu peux la déployer »). Shipped `8b75b639c9` (route, migration 138: read views and `swapped`), `94f10abd7f` (page `/matchs/?cdm=M-YYYY-NN`, links from the archived editions' brackets and lists, the credit on « Données & méthode »), `8d34f457b8` (view count). CI green (run 44398331443); Deploy run 44399311535 green 21:22 UTC.
 - Verified in production: the route serves 964 paired men's matches (1930–2022); the 1998 final as in the base; 14 E2E checks pass on vegasport.vercel.app (evidence `evidence/worldcup-page/production`). This also confirms the load of the database in the base on AWS.
 - Next action: none for this; the user's next ask is the win-probability chart of a match page (mock-up first).
+
+## Match page — the win-probability chart (18 Nov 2026, evening)
+
+- Ask (user, 18 Nov, on the 2022 final): the chart's goal labels overlap, the scorers are not named, the end (3–3) is cut off; « plus propre … une espèce d'histogramme ».
+- Found: the in-play model stops at minute 90 (`dashboard/shared/inplay.js`; `/api/forecasts/live` ends a finished match at 90): goals of extra time are drawn at the 90th minute (overlap, cut-off label); the end point is forced to « draw » at 3–3 though the match went to penalties; the collected 2022 final has no shoot-out score (the archive has 4–2); the chart never reads the scorers (`/api/matches/{id}/events` has them).
+- Mock-up sent, awaiting validation: scratchpad `e6ee2704…/mock-wp` (`maquette-probabilite.html`, `shots/`): one stacked column per minute, home team's goals above (chips with minute, scorer, score), away team's below, two close goals on two rows; a « Prolongation » zone and a final « t.a.b. » column; the list of what each goal changed, with names.
+- Open decision for the user: extending the model to extra time (proposed in the mock-up: the same rates over the 30 minutes left, a level score going to the shoot-out at 50/50) is a method change: measure, then ask, before applying.
+- Next action: the user's validation and decision; then tests first, implementation, E2E, deploy.
