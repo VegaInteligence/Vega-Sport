@@ -192,6 +192,10 @@ def main(dsn):
     with db.transaction():
         for kind, competition, season, body in SAMPLES:
             cups.save(db, kind, competition, season, body, datetime(2025, 9, 20, 8, tzinfo=timezone.utc))
+        # Supplemental cup reads live alongside this suite's fixed native publication (generation 7).
+        # Their own notification and replay are exercised separately in the PostgreSQL snapshot suites.
+        db.execute("""DELETE FROM ops.resource_versions v USING core.competition_seasons cs
+                      WHERE v.resource_kind='competition_season' AND v.resource_id=cs.id AND cs.cup_key IS NOT NULL""")
     # open-matchday competitions, from the real (trimmed) files of backend/tests/fixtures/open_matchday.
     from test_open_matchday import fake_get
     from vega.sources import open_matchday

@@ -2,6 +2,7 @@ import { parseFranceCup } from "../../../dashboard/frontend/src/services/openfoo
 import { parseOpenCupText } from "../../../dashboard/frontend/src/services/openfootball-cups.js";
 import { NATIONAL_CUP_ARCHIVES } from "../../../dashboard/frontend/src/services/cup-archives.js";
 import { openFootballScore } from "../../../dashboard/shared/openfootball-history.js";
+import { worldCupHalf } from "./world-cup-halves.mjs";
 
 const WORLD_CUP_YEARS = new Set([
   "1930",
@@ -118,7 +119,7 @@ export async function GET(request) {
         : source.format === "year-text"
           ? {
               name: "Club World Cup " + season,
-              matches: parseOpenCupText(await response.text(), Number(season)),
+              matches: parseOpenCupText(await response.text(), Number(season), {}, { halfTime: true }),
             }
           : source.format === "continental-text"
           ? {
@@ -140,7 +141,14 @@ export async function GET(request) {
     const matches = data.matches.map((match) => {
       // One score form, whatever the edition writes ([2, 1] or {ft: [2, 1]}); the source's own
       // status (1938 Sweden–Austria: "canceled") is the cups adapter's to read (FAILURE_MODES.md §19).
-      const score = openFootballScore(match.score);
+      let score = openFootballScore(match.score);
+      const half = competition === "world-cup-history" ? worldCupHalf(season, match, score) : null;
+      if (half) score = { ...score, ht: half.official_ht };
+      // This FFF decision is reviewed. Preserve the other native markers as observations
+      // without changing their published treatment while their decisions are unverified.
+      const nativeAward = competition === "france-cup" && match.status === "awarded";
+      const status = nativeAward && (match.date !== "2024-12-21" || match.team1 !== "Tours FC" || match.team2 !== "FC Lorient")
+        ? undefined : match.status;
       return {
         round: match.round,
         group: match.group,
@@ -149,7 +157,9 @@ export async function GET(request) {
         team1: match.team1 === UNDECIDED ? null : match.team1,
         team2: match.team2 === UNDECIDED ? null : match.team2,
         ...(score && { score }),
-        ...(typeof match.status === "string" && match.status && { status: match.status }),
+        ...(typeof status === "string" && status && { status }),
+        ...(nativeAward && { sourceStatus: "[awarded]" }),
+        ...(half && { attestedHalf: { before: half.native_ht, fifaMatchId: half.fifa_match_id } }),
       };
     });
     return Response.json(

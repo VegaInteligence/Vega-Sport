@@ -48,7 +48,7 @@ export { forecastOf };
 
 /** A cup source's match with its forecast while it is still to play (every competition has its predictions, VI-19). */
 export function withForecast(match, f) {
-  const played = match.status === "finished" || Array.isArray(match.score) || match.score?.ft;
+  const played = ["finished", "awarded", "canceled"].includes(match.status) || Array.isArray(match.score) || match.score?.ft;
   return f && !played ? { ...match, forecast: forecastOf(f) } : match;
 }
 
@@ -84,13 +84,22 @@ function respond(req, body, family) {
   return send(req, body, 200, { etag, ttl: 60 });
 }
 
-const openCupMatch = (m) => {
+const periodsOf = (m) => {
   const score = {};
-  const ft = m.home_score_90 != null ? pair(m.home_score_90, m.away_score_90) : pair(m.home_score, m.away_score);
+  // The 90-minute score: its own columns, else the final score when the match had no extra time. With extra
+  // time and no 90-minute score, regulation is unknown and `ft` is omitted (FAILURE_MODES.md §22).
+  const extra = pair(m.home_score_et, m.away_score_et);
+  const ft = m.home_score_90 != null ? pair(m.home_score_90, m.away_score_90) : extra ? null : pair(m.home_score, m.away_score);
   if (ft) score.ft = ft;
   if (pair(m.home_score_ht, m.away_score_ht)) score.ht = [m.home_score_ht, m.away_score_ht];
-  if (pair(m.home_score_et, m.away_score_et)) score.et = [m.home_score_et, m.away_score_et];
+  if (extra) score.et = extra;
   if (pair(m.home_penalty_score, m.away_penalty_score)) score.p = [m.home_penalty_score, m.away_penalty_score];
+  return score;
+};
+
+const openCupMatch = (m) => {
+  const awarded = m.status === "awarded";
+  const score = awarded ? {} : periodsOf(m);
   return {
     ...(m.round != null && { round: m.round }),
     ...(m.group_name != null && { group: m.group_name }),
@@ -101,6 +110,12 @@ const openCupMatch = (m) => {
     ...(Object.keys(score).length && { score }),
     // The source's own word for a match never played (1938 Sweden–Austria).
     ...(m.status === "canceled" && { status: "canceled" }),
+    ...(awarded && {
+      status: "awarded", awardScore: pair(m.home_score, m.away_score),
+      ...(m.key === "france-cup:2024/2025:2024-12-21|Tours FC|FC Lorient|" && {
+        awardReason: { code: "federation_decision", source: "https://www.fff.fr/article/13900-lorient-qualifie-pour-les-16es-de-finale.html" },
+      }),
+    }),
   };
 };
 
@@ -109,12 +124,14 @@ const notes = (m) => [
   ...(pair(m.home_penalty_score, m.away_penalty_score) ? [`tirs au but ${m.home_penalty_score} – ${m.away_penalty_score}`] : []),
 ];
 
-const openLigaMatch = (competition) => (m) => {
+const openLigaMatch = (competition, season) => (m) => {
   const finished = m.status === "finished";
+  const periods = finished && competition === "germany-cup" && ["2025/2026", "2026/2027"].includes(season) ? periodsOf(m) : {};
   return {
     key: `openliga:${m.key}`, date: m.date ?? "", home: m.home, away: m.away, homeId: m.home_key, awayId: m.away_key,
     score: finished ? pair(m.home_score, m.away_score) : null,
     penalties: finished ? pair(m.home_penalty_score, m.away_penalty_score) : null,
+    ...(Object.keys(periods).length && { periods }),
     notes: notes(m), status: finished ? "finished" : "scheduled",
     roundName: competition === "germany-cup" ? GERMAN_ROUND_NAMES[m.round] ?? "" : "",
     round: m.round ?? "",
@@ -156,7 +173,7 @@ export async function cupBody(read, competitionId, season) {
     e.format === "matches-v1"
       ? { name: e.name, season, matches: rows.map(each(openCupMatch)), source }
       : e.format === "rounds-v1"
-        ? { competition: e.competition, season, matches: rows.map(each(openLigaMatch(e.competition))), source }
+        ? { competition: e.competition, season, matches: rows.map(each(openLigaMatch(e.competition, season))), source }
         : e.competition === "nations-league"
           ? { season, matches: rows.map(each(nationsMatch)), source }
           : { name: e.name, season, matches: rows.map(each(tournamentMatch(e.competition))), source };

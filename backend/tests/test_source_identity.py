@@ -245,8 +245,8 @@ class SourceIdentityTest(unittest.TestCase):
             curated.sportscore_ids(self.db)
         zones = self.db.execute("SELECT zone::text, position_from, position_to FROM core.competition_zones WHERE competition_season_id=1 ORDER BY 2").fetchall()
         self.assertEqual(zones, [("relegation", 18, 20)])  # Serie A: 20 teams, 3 relegated
-        logo = self.db.execute("SELECT a.source_url FROM core.competitions c JOIN core.assets a ON a.id = c.logo_asset_id WHERE c.id = 2").fetchone()[0]
-        self.assertTrue(logo.startswith("https://img.thesports.com/"))
+        # The shared historical fallback is edition art and must not populate the native World Cup family.
+        self.assertEqual(self.db.execute("SELECT logo_asset_id FROM core.competitions WHERE id=2").fetchone(), (None,))
         slugs = dict(self.db.execute("SELECT entity_id, provider_key FROM core.provider_ids WHERE provider='sportscore'").fetchall())
         self.assertEqual(slugs, {1: "italian-serie-a", 2: "fifa-world-cup"})
 

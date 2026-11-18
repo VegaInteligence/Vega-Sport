@@ -1,0 +1,26 @@
+{
+  "2025": {
+    "url": "https://api.openligadb.de/getmatchdata/dfb/2025",
+    "license": "ODbL-1.0",
+    "publisher": "OpenLigaDB",
+    "original_sha256": "b72e3d698a5262a130c6d77a505497ab9d08b0f1c31aaa1765e4f7039843b6e3",
+    "reduced_sha256": "32478df8ee637b14512481cbff86bea3bce40413713313e7f7afc6f634743f0c",
+    "equivalent_projection_sha256": "b0f07c92449ddcbfc9607f3a70955c91e787f4ec40f85ec98bd7adff90c82288"
+  },
+  "2026": {
+    "url": "https://api.openligadb.de/getmatchdata/dfb/2026",
+    "license": "ODbL-1.0",
+    "publisher": "OpenLigaDB",
+    "original_sha256": "85220cbd34ffa016837098f4e11e4b9532e57d0da431dbf8aa0f250a82cd23c9",
+    "reduced_sha256": "d07e58c85ddba349f138d4c18cdcbefd1513448a2d016e4df1fbbe0629d275a4",
+    "equivalent_projection_sha256": "bbaad0417eb5cefe61bea3f08a31c7f85bdaed239586e4b5b1afb2b9d729e44d"
+  },
+  "dfb_oracle": {
+    "sha256": "1f2b7c5267d0ec2d85d15e3307432aba2dff160f2debeb8e6e7fcc40a3fc5455",
+    "official_report_index_sha256": "c0194eb08a2a2fd0ba434f2c83cd718bde476708d4b7df0b9b55476bde576b42"
+  },
+  "rds_preimage": {
+    "sha256": "8b7c665791a607633b3f05b5776e3b26948feee36c35348d665a013228805978",
+    "as_of": "2026-11-18 05:41:15.047150+00:00"
+  }
+}

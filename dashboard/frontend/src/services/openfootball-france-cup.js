@@ -29,7 +29,9 @@ export function parseFranceCup(text) {
     const otherScores = [...String(row[7] || "").matchAll(PAIR)].map((value) => [Number(value[1]), Number(value[2])]);
     const score = row[6] ? { ft: otherScores[0], p: sourceScore } : { ft: sourceScore };
     if (!score.ft) throw new Error("Missing match score before penalties");
-    matches.push({ round, date: currentDate, team1: row[2].trim(), team2: row[3].trim(), score });
+    const awarded = /\s+\[awarded\]\s*$/.test(line);
+    matches.push({ round, date: currentDate, team1: row[2].trim(), team2: row[3].trim(), score,
+      ...(awarded && { status: "awarded" }) });
   }
   const declared = text.match(/#\s*Matches\s+(\d+)/i);
   if (!declared || matches.length !== candidates || matches.length !== Number(declared[1])) throw new Error("Incomplete source parsing");

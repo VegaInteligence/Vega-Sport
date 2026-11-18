@@ -41,7 +41,20 @@ test("cup editions round-trip main's source projections", { skip }, async () => 
   const edition = (id, season) => get(`/api/cups/edition?competition=${id}&season=${encodeURIComponent(season)}`);
   assert.deepEqual((await edition(euro, "2024")).body, sample("open-cups", "euro", "2024"));
   assert.deepEqual((await edition(euro, "2028")).body, sample("open-cups", "euro", "2028")); // no score yet
-  assert.deepEqual((await edition(germany, "2025/2026")).body, sample("openligadb", "germany-cup", "2025/2026"));
+  const germanySource = sample("openligadb", "germany-cup", "2025/2026").source;
+  assert.deepEqual((await edition(germany, "2025/2026")).body, {
+    competition: "germany-cup", season: "2025/2026", source: germanySource,
+    matches: [{
+      key: "openliga:80173", date: "2026-02-10", home: "Hertha BSC", away: "SC Freiburg", homeId: "54", awayId: "112",
+      score: [1, 1], penalties: [4, 5], periods: { ft: [0, 0], ht: [0, 0], et: [1, 1], p: [4, 5] },
+      notes: ["après prolongation", "tirs au but 4 – 5"], status: "finished",
+      roundName: "Quarter-finals", round: "Quarts de finale", group: null,
+    }, {
+      key: "openliga:81581", date: "2026-05-23", home: "FC Bayern München", away: "VfB Stuttgart", homeId: "40", awayId: "16",
+      score: [3, 0], penalties: null, periods: { ft: [3, 0], ht: [0, 0] }, notes: [], status: "finished",
+      roundName: "Final", round: "Finale", group: null,
+    }],
+  });
   assert.deepEqual((await edition(nations, "2026/2027")).body, sample("nations-results", "nations-league", "2026/2027"));
   const afcon = await cupId("afcon", "results-v1");
   assert.deepEqual((await edition(afcon, "2023")).body, sample("nations-results", "afcon", "2023"));

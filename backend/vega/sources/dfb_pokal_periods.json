@@ -1,0 +1,1735 @@
+{
+  "calendar_sha256": "f5d836bcf2d817dc3b82c0a2bff3d09fba94d6a59e0f8304995e1766c30884e7",
+  "decisions": {
+    "77179": {
+      "date": "2025-08-16",
+      "dfb_id": "2397676",
+      "dfb_sha256": "e1f23a976c1013521ab3e2a2a9519a350c051d95c2f0249e2e81a7943e48241a",
+      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/fk-pirmasens-hamburger-sv-2397676",
+      "edition": "2025/2026",
+      "native_results": [
+        {
+          "pointsTeam1": 0,
+          "pointsTeam2": 0,
+          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
+          "resultID": 118420,
+          "resultName": "Halbzeit",
+          "resultOrderID": 1,
+          "resultTypeID": 1,
+          "resultTypeKind": "HalfTime"
+        },
+        {
+          "pointsTeam1": 1,
+          "pointsTeam2": 2,
+          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
+          "resultID": 118421,
+          "resultName": "Endergebnis",
+          "resultOrderID": 2,
+          "resultTypeID": 2,
+          "resultTypeKind": "After90Minutes"
+        },
+        {
+          "pointsTeam1": 1,
+          "pointsTeam2": 2,
+          "resultDescription": "Ergebnis nach Nachspielzeit",
+          "resultID": 118424,
+          "resultName": "Nachspielzeit",
+          "resultOrderID": 3,
+          "resultTypeID": 3,
+          "resultTypeKind": "Unknown"
+        }
+      ],
+      "observed": {
+        "et": [
+          1,
+          2
+        ],
+        "ft": [
+          1,
+          2
+        ],
+        "ht": [
+          0,
+          0
+        ]
+      },
+      "official": {
+        "et": [
+          1,
+          2
+        ],
+        "ft": [
+          1,
+          1
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "p": null
+      },
+      "provider": "openligadb",
+      "sides": [
+        "1058",
+        "100"
+      ]
+    },
+    "77184": {
+      "date": "2025-08-26",
+      "dfb_id": "2397670",
+      "dfb_sha256": "01b1138349552d90f324ed7edb9959c7694d5142330376c59b04b783d23775bf",
+      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/eintracht-braunschweig-vfb-stuttgart-2397670",
+      "edition": "2025/2026",
+      "native_results": [
+        {
+          "pointsTeam1": 1,
+          "pointsTeam2": 1,
+          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
+          "resultID": 118568,
+          "resultName": "Halbzeit",
+          "resultOrderID": 1,
+          "resultTypeID": 1,
+          "resultTypeKind": "HalfTime"
+        },
+        {
+          "pointsTeam1": 3,
+          "pointsTeam2": 4,
+          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
+          "resultID": 118569,
+          "resultName": "Endergebnis",
+          "resultOrderID": 2,
+          "resultTypeID": 2,
+          "resultTypeKind": "After90Minutes"
+        },
+        {
+          "pointsTeam1": 4,
+          "pointsTeam2": 4,
+          "resultDescription": "Ergebnis nach Nachspielzeit",
+          "resultID": 118570,
+          "resultName": "Nachspielzeit",
+          "resultOrderID": 3,
+          "resultTypeID": 3,
+          "resultTypeKind": "Unknown"
+        },
+        {
+          "pointsTeam1": 11,
+          "pointsTeam2": 12,
+          "resultDescription": "Ergebnis nach Elfmeterschießen",
+          "resultID": 118571,
+          "resultName": "Elfmeterschießen",
+          "resultOrderID": 4,
+          "resultTypeID": 5,
+          "resultTypeKind": "AfterPenalties"
+        }
+      ],
+      "observed": {
+        "et": [
+          4,
+          4
+        ],
+        "ft": [
+          3,
+          4
+        ],
+        "ht": [
+          1,
+          1
+        ],
+        "p": [
+          11,
+          12
+        ]
+      },
+      "official": {
+        "et": [
+          4,
+          4
+        ],
+        "ft": [
+          3,
+          3
+        ],
+        "ht": [
+          1,
+          1
+        ],
+        "p": [
+          7,
+          8
+        ]
+      },
+      "provider": "openligadb",
+      "sides": [
+        "74",
+        "16"
+      ]
+    },
+    "77186": {
+      "date": "2025-08-16",
+      "dfb_id": "2397668",
+      "dfb_sha256": "77198d5f142763599eaf502152287521d6db1303fa5d27f50d0187e23e8880af",
+      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/fv-illertissen-1-fc-nuernberg-2397668",
+      "edition": "2025/2026",
+      "native_results": [
+        {
+          "pointsTeam1": 2,
+          "pointsTeam2": 0,
+          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
+          "resultID": 118427,
+          "resultName": "Halbzeit",
+          "resultOrderID": 1,
+          "resultTypeID": 1,
+          "resultTypeKind": "HalfTime"
+        },
+        {
+          "pointsTeam1": 3,
+          "pointsTeam2": 3,
+          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
+          "resultID": 118428,
+          "resultName": "Endergebnis",
+          "resultOrderID": 2,
+          "resultTypeID": 2,
+          "resultTypeKind": "After90Minutes"
+        },
+        {
+          "pointsTeam1": 3,
+          "pointsTeam2": 3,
+          "resultDescription": "Ergebnis nach Nachspielzeit",
+          "resultID": 118444,
+          "resultName": "Nachspielzeit",
+          "resultOrderID": 3,
+          "resultTypeID": 3,
+          "resultTypeKind": "Unknown"
+        },
+        {
+          "pointsTeam1": 9,
+          "pointsTeam2": 8,
+          "resultDescription": "Ergebnis nach Elfmeterschießen",
+          "resultID": 118445,
+          "resultName": "Elfmeterschießen",
+          "resultOrderID": 4,
+          "resultTypeID": 5,
+          "resultTypeKind": "AfterPenalties"
+        }
+      ],
+      "observed": {
+        "et": [
+          3,
+          3
+        ],
+        "ft": [
+          3,
+          3
+        ],
+        "ht": [
+          2,
+          0
+        ],
+        "p": [
+          9,
+          8
+        ]
+      },
+      "official": {
+        "et": [
+          3,
+          3
+        ],
+        "ft": [
+          3,
+          3
+        ],
+        "ht": [
+          2,
+          0
+        ],
+        "p": [
+          6,
+          5
+        ]
+      },
+      "provider": "openligadb",
+      "sides": [
+        "2410",
+        "79"
+      ]
+    },
+    "77189": {
+      "date": "2025-08-16",
+      "dfb_id": "2397665",
+      "dfb_sha256": "96a576d52449b869733ce79ce4d927055b58a89b49c024b985bbd3bccffa3676",
+      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/eintracht-norderstedt-fc-st-pauli-2397665",
+      "edition": "2025/2026",
+      "native_results": [
+        {
+          "pointsTeam1": 0,
+          "pointsTeam2": 0,
+          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
+          "resultID": 118429,
+          "resultName": "Halbzeit",
+          "resultOrderID": 1,
+          "resultTypeID": 1,
+          "resultTypeKind": "HalfTime"
+        },
+        {
+          "pointsTeam1": 0,
+          "pointsTeam2": 0,
+          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
+          "resultID": 118430,
+          "resultName": "Endergebnis",
+          "resultOrderID": 2,
+          "resultTypeID": 2,
+          "resultTypeKind": "After90Minutes"
+        },
+        {
+          "pointsTeam1": 0,
+          "pointsTeam2": 0,
+          "resultDescription": "Ergebnis nach Nachspielzeit",
+          "resultID": 118447,
+          "resultName": "Nachspielzeit",
+          "resultOrderID": 3,
+          "resultTypeID": 3,
+          "resultTypeKind": "Unknown"
+        },
+        {
+          "pointsTeam1": 2,
+          "pointsTeam2": 3,
+          "resultDescription": "Ergebnis nach Elfmeterschießen",
+          "resultID": 118446,
+          "resultName": "Elfmeterschießen",
+          "resultOrderID": 4,
+          "resultTypeID": 5,
+          "resultTypeKind": "AfterPenalties"
+        }
+      ],
+      "observed": {
+        "et": [
+          0,
+          0
+        ],
+        "ft": [
+          0,
+          0
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "p": [
+          2,
+          3
+        ]
+      },
+      "official": {
+        "et": [
+          0,
+          0
+        ],
+        "ft": [
+          0,
+          0
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "p": [
+          2,
+          3
+        ]
+      },
+      "provider": "openligadb",
+      "sides": [
+        "4342",
+        "98"
+      ]
+    },
+    "77190": {
+      "date": "2025-08-16",
+      "dfb_id": "2397664",
+      "dfb_sha256": "5867727076bb332667500b81624b25df60ad2edb8f83eee01f29f643f3357e4d",
+      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/bfc-dynamo-vfl-bochum-2397664",
+      "edition": "2025/2026",
+      "native_results": [
+        {
+          "pointsTeam1": 0,
+          "pointsTeam2": 0,
+          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
+          "resultID": 118422,
+          "resultName": "Halbzeit",
+          "resultOrderID": 1,
+          "resultTypeID": 1,
+          "resultTypeKind": "HalfTime"
+        },
+        {
+          "pointsTeam1": 1,
+          "pointsTeam2": 3,
+          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
+          "resultID": 118423,
+          "resultName": "Endergebnis",
+          "resultOrderID": 2,
+          "resultTypeID": 2,
+          "resultTypeKind": "After90Minutes"
+        },
+        {
+          "pointsTeam1": 1,
+          "pointsTeam2": 3,
+          "resultDescription": "Ergebnis nach Nachspielzeit",
+          "resultID": 118437,
+          "resultName": "Nachspielzeit",
+          "resultOrderID": 3,
+          "resultTypeID": 3,
+          "resultTypeKind": "Unknown"
+        }
+      ],
+      "observed": {
+        "et": [
+          1,
+          3
+        ],
+        "ft": [
+          1,
+          3
+        ],
+        "ht": [
+          0,
+          0
+        ]
+      },
+      "official": {
+        "et": [
+          1,
+          3
+        ],
+        "ft": [
+          1,
+          1
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "p": null
+      },
+      "provider": "openligadb",
+      "sides": [
+        "1634",
+        "129"
+      ]
+    },
+    "77193": {
+      "date": "2025-08-18",
+      "dfb_id": "2397661",
+      "dfb_sha256": "dfe67f839b628c67e3858101b94ac2d215c16b0a84bb820786603c6ee0c1bbc4",
+      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/preussen-muenster-hertha-bsc-2397661",
+      "edition": "2025/2026",
+      "native_results": [
+        {
+          "pointsTeam1": 0,
+          "pointsTeam2": 0,
+          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
+          "resultID": 118475,
+          "resultName": "Halbzeit",
+          "resultOrderID": 1,
+          "resultTypeID": 1,
+          "resultTypeKind": "HalfTime"
+        },
+        {
+          "pointsTeam1": 0,
+          "pointsTeam2": 0,
+          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
+          "resultID": 118476,
+          "resultName": "Endergebnis",
+          "resultOrderID": 2,
+          "resultTypeID": 2,
+          "resultTypeKind": "After90Minutes"
+        },
+        {
+          "pointsTeam1": 0,
+          "pointsTeam2": 0,
+          "resultDescription": "Ergebnis nach Nachspielzeit",
+          "resultID": 127391,
+          "resultName": "Nachspielzeit",
+          "resultOrderID": 3,
+          "resultTypeID": 3,
+          "resultTypeKind": "Unknown"
+        },
+        {
+          "pointsTeam1": 3,
+          "pointsTeam2": 5,
+          "resultDescription": "Ergebnis nach Elfmeterschießen",
+          "resultID": 118479,
+          "resultName": "Elfmeterschießen",
+          "resultOrderID": 4,
+          "resultTypeID": 5,
+          "resultTypeKind": "AfterPenalties"
+        }
+      ],
+      "observed": {
+        "et": [
+          0,
+          0
+        ],
+        "ft": [
+          0,
+          0
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "p": [
+          3,
+          5
+        ]
+      },
+      "official": {
+        "et": [
+          0,
+          0
+        ],
+        "ft": [
+          0,
+          0
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "p": [
+          3,
+          5
+        ]
+      },
+      "provider": "openligadb",
+      "sides": [
+        "188",
+        "54"
+      ]
+    },
+    "77201": {
+      "date": "2025-08-17",
+      "dfb_id": "2397653",
+      "dfb_sha256": "a7711d7e3f370f8351ee16cff4470d8296328198db8bb851a0b5dde0229d7208",
+      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/1-runde/1-fc-lok-leipzig-fc-schalke-04-2397653",
+      "edition": "2025/2026",
+      "native_results": [
+        {
+          "pointsTeam1": 0,
+          "pointsTeam2": 0,
+          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
+          "resultID": 118462,
+          "resultName": "Halbzeit",
+          "resultOrderID": 1,
+          "resultTypeID": 1,
+          "resultTypeKind": "HalfTime"
+        },
+        {
+          "pointsTeam1": 0,
+          "pointsTeam2": 1,
+          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
+          "resultID": 118463,
+          "resultName": "Endergebnis",
+          "resultOrderID": 2,
+          "resultTypeID": 2,
+          "resultTypeKind": "After90Minutes"
+        },
+        {
+          "pointsTeam1": 0,
+          "pointsTeam2": 1,
+          "resultDescription": "Ergebnis nach Nachspielzeit",
+          "resultID": 118464,
+          "resultName": "Nachspielzeit",
+          "resultOrderID": 3,
+          "resultTypeID": 3,
+          "resultTypeKind": "Unknown"
+        }
+      ],
+      "observed": {
+        "et": [
+          0,
+          1
+        ],
+        "ft": [
+          0,
+          1
+        ],
+        "ht": [
+          0,
+          0
+        ]
+      },
+      "official": {
+        "et": [
+          0,
+          1
+        ],
+        "ft": [
+          0,
+          0
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "p": null
+      },
+      "provider": "openligadb",
+      "sides": [
+        "1584",
+        "9"
+      ]
+    },
+    "79584": {
+      "date": "2025-10-29",
+      "dfb_id": "2411109",
+      "dfb_sha256": "d7817324d6b3540403e5346767289464f38def462bef571bd4b4926114b130e4",
+      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/2-runde/1-fc-union-berlin-arminia-bielefeld-2411109",
+      "edition": "2025/2026",
+      "native_results": [
+        {
+          "pointsTeam1": 1,
+          "pointsTeam2": 1,
+          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
+          "resultID": 119938,
+          "resultName": "Halbzeit",
+          "resultOrderID": 1,
+          "resultTypeID": 1,
+          "resultTypeKind": "HalfTime"
+        },
+        {
+          "pointsTeam1": 2,
+          "pointsTeam2": 1,
+          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
+          "resultID": 119939,
+          "resultName": "Endergebnis",
+          "resultOrderID": 2,
+          "resultTypeID": 2,
+          "resultTypeKind": "After90Minutes"
+        }
+      ],
+      "observed": {
+        "ft": [
+          2,
+          1
+        ],
+        "ht": [
+          1,
+          1
+        ]
+      },
+      "official": {
+        "et": [
+          2,
+          1
+        ],
+        "ft": [
+          1,
+          1
+        ],
+        "ht": [
+          1,
+          1
+        ],
+        "p": null
+      },
+      "provider": "openligadb",
+      "sides": [
+        "80",
+        "83"
+      ]
+    },
+    "79589": {
+      "date": "2025-10-28",
+      "dfb_id": "2411114",
+      "dfb_sha256": "3d80db111abc71cf016550f4e4cad6b529008a32b11da209c76378eca4736b15",
+      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/2-runde/eintracht-frankfurt-borussia-dortmund-2411114",
+      "edition": "2025/2026",
+      "native_results": [
+        {
+          "pointsTeam1": 1,
+          "pointsTeam2": 0,
+          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
+          "resultID": 119896,
+          "resultName": "Halbzeit",
+          "resultOrderID": 1,
+          "resultTypeID": 1,
+          "resultTypeKind": "HalfTime"
+        },
+        {
+          "pointsTeam1": 1,
+          "pointsTeam2": 1,
+          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
+          "resultID": 119897,
+          "resultName": "Endergebnis",
+          "resultOrderID": 2,
+          "resultTypeID": 2,
+          "resultTypeKind": "After90Minutes"
+        },
+        {
+          "pointsTeam1": 1,
+          "pointsTeam2": 1,
+          "resultDescription": "Ergebnis nach Nachspielzeit",
+          "resultID": 127392,
+          "resultName": "Nachspielzeit",
+          "resultOrderID": 3,
+          "resultTypeID": 3,
+          "resultTypeKind": "Unknown"
+        },
+        {
+          "pointsTeam1": 3,
+          "pointsTeam2": 5,
+          "resultDescription": "Ergebnis nach Elfmeterschießen",
+          "resultID": 120732,
+          "resultName": "Elfmeterschießen",
+          "resultOrderID": 4,
+          "resultTypeID": 5,
+          "resultTypeKind": "AfterPenalties"
+        }
+      ],
+      "observed": {
+        "et": [
+          1,
+          1
+        ],
+        "ft": [
+          1,
+          1
+        ],
+        "ht": [
+          1,
+          0
+        ],
+        "p": [
+          3,
+          5
+        ]
+      },
+      "official": {
+        "et": [
+          1,
+          1
+        ],
+        "ft": [
+          1,
+          1
+        ],
+        "ht": [
+          1,
+          0
+        ],
+        "p": [
+          2,
+          4
+        ]
+      },
+      "provider": "openligadb",
+      "sides": [
+        "91",
+        "7"
+      ]
+    },
+    "79593": {
+      "date": "2025-10-29",
+      "dfb_id": "2411118",
+      "dfb_sha256": "2d258b6e874b54d1d5aa21e0f6eff54f59219fd2fb00b36d146f59fcd1a0a200",
+      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/2-runde/sc-paderborn-07-bayer-leverkusen-2411118",
+      "edition": "2025/2026",
+      "native_results": [
+        {
+          "pointsTeam1": 0,
+          "pointsTeam2": 0,
+          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
+          "resultID": 119919,
+          "resultName": "Halbzeit",
+          "resultOrderID": 1,
+          "resultTypeID": 1,
+          "resultTypeKind": "HalfTime"
+        },
+        {
+          "pointsTeam1": 2,
+          "pointsTeam2": 2,
+          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
+          "resultID": 119920,
+          "resultName": "Endergebnis",
+          "resultOrderID": 2,
+          "resultTypeID": 2,
+          "resultTypeKind": "After90Minutes"
+        },
+        {
+          "pointsTeam1": 2,
+          "pointsTeam2": 4,
+          "resultDescription": "Ergebnis nach Nachspielzeit",
+          "resultID": 119937,
+          "resultName": "Nachspielzeit",
+          "resultOrderID": 3,
+          "resultTypeID": 3,
+          "resultTypeKind": "Unknown"
+        }
+      ],
+      "observed": {
+        "et": [
+          2,
+          4
+        ],
+        "ft": [
+          2,
+          2
+        ],
+        "ht": [
+          0,
+          0
+        ]
+      },
+      "official": {
+        "et": [
+          2,
+          4
+        ],
+        "ft": [
+          1,
+          1
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "p": null
+      },
+      "provider": "openligadb",
+      "sides": [
+        "31",
+        "6"
+      ]
+    },
+    "79597": {
+      "date": "2025-10-28",
+      "dfb_id": "2411122",
+      "dfb_sha256": "057825a2b6f191683faaa560349c7b137760c8672d2f6cae0842468fa4e10df8",
+      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/2-runde/fc-st-pauli-tsg-hoffenheim-2411122",
+      "edition": "2025/2026",
+      "native_results": [
+        {
+          "pointsTeam1": 1,
+          "pointsTeam2": 0,
+          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
+          "resultID": 119906,
+          "resultName": "Halbzeit",
+          "resultOrderID": 1,
+          "resultTypeID": 1,
+          "resultTypeKind": "HalfTime"
+        },
+        {
+          "pointsTeam1": 1,
+          "pointsTeam2": 1,
+          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
+          "resultID": 119907,
+          "resultName": "Endergebnis",
+          "resultOrderID": 2,
+          "resultTypeID": 2,
+          "resultTypeKind": "After90Minutes"
+        },
+        {
+          "pointsTeam1": 2,
+          "pointsTeam2": 2,
+          "resultDescription": "Ergebnis nach Nachspielzeit",
+          "resultID": 127393,
+          "resultName": "Nachspielzeit",
+          "resultOrderID": 3,
+          "resultTypeID": 3,
+          "resultTypeKind": "Unknown"
+        },
+        {
+          "pointsTeam1": 10,
+          "pointsTeam2": 9,
+          "resultDescription": "Ergebnis nach Elfmeterschießen",
+          "resultID": 120733,
+          "resultName": "Elfmeterschießen",
+          "resultOrderID": 4,
+          "resultTypeID": 5,
+          "resultTypeKind": "AfterPenalties"
+        }
+      ],
+      "observed": {
+        "et": [
+          2,
+          2
+        ],
+        "ft": [
+          1,
+          1
+        ],
+        "ht": [
+          1,
+          0
+        ],
+        "p": [
+          10,
+          9
+        ]
+      },
+      "official": {
+        "et": [
+          2,
+          2
+        ],
+        "ft": [
+          1,
+          1
+        ],
+        "ht": [
+          1,
+          0
+        ],
+        "p": [
+          8,
+          7
+        ]
+      },
+      "provider": "openligadb",
+      "sides": [
+        "98",
+        "175"
+      ]
+    },
+    "79781": {
+      "date": "2025-12-03",
+      "dfb_id": "2412762",
+      "dfb_sha256": "58973ef43b3f954597780a2f470049ba4e1c4625f8c5d81f7bfd2110799d6687",
+      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/achtelfinale/hamburger-sv-holstein-kiel-2412762",
+      "edition": "2025/2026",
+      "native_results": [
+        {
+          "pointsTeam1": 0,
+          "pointsTeam2": 0,
+          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
+          "resultID": 120796,
+          "resultName": "Halbzeit",
+          "resultOrderID": 1,
+          "resultTypeID": 1,
+          "resultTypeKind": "HalfTime"
+        },
+        {
+          "pointsTeam1": 1,
+          "pointsTeam2": 1,
+          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
+          "resultID": 120797,
+          "resultName": "Endergebnis",
+          "resultOrderID": 2,
+          "resultTypeID": 2,
+          "resultTypeKind": "After90Minutes"
+        },
+        {
+          "pointsTeam1": 1,
+          "pointsTeam2": 1,
+          "resultDescription": "Ergebnis nach Nachspielzeit",
+          "resultID": 127394,
+          "resultName": "Nachspielzeit",
+          "resultOrderID": 3,
+          "resultTypeID": 3,
+          "resultTypeKind": "Unknown"
+        },
+        {
+          "pointsTeam1": 3,
+          "pointsTeam2": 5,
+          "resultDescription": "Ergebnis nach Elfmeterschießen",
+          "resultID": 120800,
+          "resultName": "Elfmeterschießen",
+          "resultOrderID": 4,
+          "resultTypeID": 5,
+          "resultTypeKind": "AfterPenalties"
+        }
+      ],
+      "observed": {
+        "et": [
+          1,
+          1
+        ],
+        "ft": [
+          1,
+          1
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "p": [
+          3,
+          5
+        ]
+      },
+      "official": {
+        "et": [
+          1,
+          1
+        ],
+        "ft": [
+          0,
+          0
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "p": [
+          2,
+          4
+        ]
+      },
+      "provider": "openligadb",
+      "sides": [
+        "100",
+        "104"
+      ]
+    },
+    "80173": {
+      "date": "2026-02-10",
+      "dfb_id": "2413233",
+      "dfb_sha256": "70b67b4712f27e63168ef2cd62cb1255419a3dea69dc1dce8a35bc095f3640d6",
+      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/viertelfinale/hertha-bsc-sc-freiburg-2413233",
+      "edition": "2025/2026",
+      "native_results": [
+        {
+          "pointsTeam1": 0,
+          "pointsTeam2": 1,
+          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
+          "resultID": 123093,
+          "resultName": "Endergebnis",
+          "resultOrderID": 2,
+          "resultTypeID": 2,
+          "resultTypeKind": "After90Minutes"
+        },
+        {
+          "pointsTeam1": 1,
+          "pointsTeam2": 1,
+          "resultDescription": "Ergebnis nach Nachspielzeit",
+          "resultID": 123107,
+          "resultName": "Nachspielzeit",
+          "resultOrderID": 3,
+          "resultTypeID": 3,
+          "resultTypeKind": "Unknown"
+        },
+        {
+          "pointsTeam1": 5,
+          "pointsTeam2": 6,
+          "resultDescription": "Ergebnis nach Elfmeterschießen",
+          "resultID": 123108,
+          "resultName": "Elfmeterschießen",
+          "resultOrderID": 4,
+          "resultTypeID": 5,
+          "resultTypeKind": "AfterPenalties"
+        }
+      ],
+      "observed": {
+        "et": [
+          1,
+          1
+        ],
+        "ft": [
+          0,
+          1
+        ],
+        "p": [
+          5,
+          6
+        ]
+      },
+      "official": {
+        "et": [
+          1,
+          1
+        ],
+        "ft": [
+          0,
+          0
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "p": [
+          4,
+          5
+        ]
+      },
+      "provider": "openligadb",
+      "sides": [
+        "54",
+        "112"
+      ]
+    },
+    "81114": {
+      "date": "2026-04-23",
+      "dfb_id": "2416405",
+      "dfb_sha256": "7c7644913900262e2673acaae385cff126b4408a4bb6dcaa6b4503b619425ea5",
+      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2025-26/halbfinale/vfb-stuttgart-sc-freiburg-2416405",
+      "edition": "2025/2026",
+      "native_results": [
+        {
+          "pointsTeam1": 0,
+          "pointsTeam2": 1,
+          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
+          "resultID": 124700,
+          "resultName": "Halbzeit",
+          "resultOrderID": 1,
+          "resultTypeID": 1,
+          "resultTypeKind": "HalfTime"
+        },
+        {
+          "pointsTeam1": 1,
+          "pointsTeam2": 1,
+          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
+          "resultID": 124701,
+          "resultName": "Endergebnis",
+          "resultOrderID": 2,
+          "resultTypeID": 2,
+          "resultTypeKind": "After90Minutes"
+        },
+        {
+          "pointsTeam1": 2,
+          "pointsTeam2": 1,
+          "resultDescription": "Ergebnis nach Nachspielzeit",
+          "resultID": 124702,
+          "resultName": "Nachspielzeit",
+          "resultOrderID": 3,
+          "resultTypeID": 3,
+          "resultTypeKind": "Unknown"
+        }
+      ],
+      "observed": {
+        "et": [
+          2,
+          1
+        ],
+        "ft": [
+          1,
+          1
+        ],
+        "ht": [
+          0,
+          1
+        ]
+      },
+      "official": {
+        "et": [
+          2,
+          1
+        ],
+        "ft": [
+          1,
+          1
+        ],
+        "ht": [
+          0,
+          1
+        ],
+        "p": null
+      },
+      "provider": "openligadb",
+      "sides": [
+        "16",
+        "112"
+      ]
+    },
+    "81840": {
+      "date": "2026-08-22",
+      "dfb_id": "2418315",
+      "dfb_sha256": "4d32e5fdbac41983f9d538db4c5403c3bed4bbf5f322dc45f1c585e4f6f981bc",
+      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/sg-sonnenhof-grossaspach-arminia-bielefeld-2418315",
+      "edition": "2026/2027",
+      "native_results": [
+        {
+          "pointsTeam1": 1,
+          "pointsTeam2": 2,
+          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
+          "resultID": 127285,
+          "resultName": "Halbzeit",
+          "resultOrderID": 1,
+          "resultTypeID": 1,
+          "resultTypeKind": "HalfTime"
+        },
+        {
+          "pointsTeam1": 2,
+          "pointsTeam2": 2,
+          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
+          "resultID": 127286,
+          "resultName": "Endergebnis",
+          "resultOrderID": 2,
+          "resultTypeID": 2,
+          "resultTypeKind": "After90Minutes"
+        },
+        {
+          "pointsTeam1": 2,
+          "pointsTeam2": 2,
+          "resultDescription": "Ergebnis nach Verlängerung",
+          "resultID": 127298,
+          "resultName": "Verlängerung",
+          "resultOrderID": 3,
+          "resultTypeID": 4,
+          "resultTypeKind": "AfterExtraTime"
+        },
+        {
+          "pointsTeam1": 5,
+          "pointsTeam2": 2,
+          "resultDescription": "Ergebnis nach Elfmeterschießen",
+          "resultID": 127301,
+          "resultName": "Elfmeterschießen",
+          "resultOrderID": 4,
+          "resultTypeID": 5,
+          "resultTypeKind": "AfterPenalties"
+        }
+      ],
+      "observed": {
+        "et": [
+          2,
+          2
+        ],
+        "ft": [
+          2,
+          2
+        ],
+        "ht": [
+          1,
+          2
+        ],
+        "p": [
+          5,
+          2
+        ]
+      },
+      "official": {
+        "et": [
+          2,
+          2
+        ],
+        "ft": [
+          2,
+          2
+        ],
+        "ht": [
+          1,
+          2
+        ],
+        "p": [
+          3,
+          0
+        ]
+      },
+      "provider": "openligadb",
+      "sides": [
+        "529",
+        "83"
+      ]
+    },
+    "81843": {
+      "date": "2026-08-24",
+      "dfb_id": "2418318",
+      "dfb_sha256": "c98eee1a81ed761ab8868d592d1f471560c74c16d17dc22b5ed91908dd6c7010",
+      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/hallescher-fc-fc-schalke-04-2418318",
+      "edition": "2026/2027",
+      "native_results": [
+        {
+          "pointsTeam1": 1,
+          "pointsTeam2": 0,
+          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
+          "resultID": 127384,
+          "resultName": "Halbzeit",
+          "resultOrderID": 1,
+          "resultTypeID": 1,
+          "resultTypeKind": "HalfTime"
+        },
+        {
+          "pointsTeam1": 2,
+          "pointsTeam2": 2,
+          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
+          "resultID": 127385,
+          "resultName": "Endergebnis",
+          "resultOrderID": 2,
+          "resultTypeID": 2,
+          "resultTypeKind": "After90Minutes"
+        },
+        {
+          "pointsTeam1": 2,
+          "pointsTeam2": 5,
+          "resultDescription": "Ergebnis nach Verlängerung",
+          "resultID": 127386,
+          "resultName": "Verlängerung",
+          "resultOrderID": 3,
+          "resultTypeID": 4,
+          "resultTypeKind": "AfterExtraTime"
+        }
+      ],
+      "observed": {
+        "et": [
+          2,
+          5
+        ],
+        "ft": [
+          2,
+          2
+        ],
+        "ht": [
+          1,
+          0
+        ]
+      },
+      "official": {
+        "et": [
+          2,
+          5
+        ],
+        "ft": [
+          2,
+          2
+        ],
+        "ht": [
+          1,
+          0
+        ],
+        "p": null
+      },
+      "provider": "openligadb",
+      "sides": [
+        "208",
+        "9"
+      ]
+    },
+    "81849": {
+      "date": "2026-08-22",
+      "dfb_id": "2418324",
+      "dfb_sha256": "d97b278e3a0b66c0e523a4fa5b6826662c1f9ad812293597ab28ed38a5627d72",
+      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/1-fc-saarbruecken-hertha-bsc-2418324",
+      "edition": "2026/2027",
+      "native_results": [
+        {
+          "pointsTeam1": 0,
+          "pointsTeam2": 0,
+          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
+          "resultID": 127271,
+          "resultName": "Halbzeit",
+          "resultOrderID": 1,
+          "resultTypeID": 1,
+          "resultTypeKind": "HalfTime"
+        },
+        {
+          "pointsTeam1": 1,
+          "pointsTeam2": 1,
+          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
+          "resultID": 127272,
+          "resultName": "Endergebnis",
+          "resultOrderID": 2,
+          "resultTypeID": 2,
+          "resultTypeKind": "After90Minutes"
+        },
+        {
+          "pointsTeam1": 1,
+          "pointsTeam2": 1,
+          "resultDescription": "Ergebnis nach Verlängerung",
+          "resultID": 127294,
+          "resultName": "Verlängerung",
+          "resultOrderID": 3,
+          "resultTypeID": 4,
+          "resultTypeKind": "AfterExtraTime"
+        },
+        {
+          "pointsTeam1": 3,
+          "pointsTeam2": 5,
+          "resultDescription": "Ergebnis nach Elfmeterschießen",
+          "resultID": 127289,
+          "resultName": "Elfmeterschießen",
+          "resultOrderID": 4,
+          "resultTypeID": 5,
+          "resultTypeKind": "AfterPenalties"
+        }
+      ],
+      "observed": {
+        "et": [
+          1,
+          1
+        ],
+        "ft": [
+          1,
+          1
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "p": [
+          3,
+          5
+        ]
+      },
+      "official": {
+        "et": [
+          1,
+          1
+        ],
+        "ft": [
+          1,
+          1
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "p": [
+          2,
+          4
+        ]
+      },
+      "provider": "openligadb",
+      "sides": [
+        "3078",
+        "54"
+      ]
+    },
+    "81850": {
+      "date": "2026-08-22",
+      "dfb_id": "2418325",
+      "dfb_sha256": "2f4fd8f7c7d0f987caaae3114cb9e3d4a4a9224d9fba49541ea795ed0d23101a",
+      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/fc-viktoria-koeln-1-fc-nuernberg-2418325",
+      "edition": "2026/2027",
+      "native_results": [
+        {
+          "pointsTeam1": 0,
+          "pointsTeam2": 0,
+          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
+          "resultID": 127273,
+          "resultName": "Halbzeit",
+          "resultOrderID": 1,
+          "resultTypeID": 1,
+          "resultTypeKind": "HalfTime"
+        },
+        {
+          "pointsTeam1": 1,
+          "pointsTeam2": 1,
+          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
+          "resultID": 127274,
+          "resultName": "Endergebnis",
+          "resultOrderID": 2,
+          "resultTypeID": 2,
+          "resultTypeKind": "After90Minutes"
+        },
+        {
+          "pointsTeam1": 1,
+          "pointsTeam2": 1,
+          "resultDescription": "Ergebnis nach Verlängerung",
+          "resultID": 127295,
+          "resultName": "Verlängerung",
+          "resultOrderID": 3,
+          "resultTypeID": 4,
+          "resultTypeKind": "AfterExtraTime"
+        },
+        {
+          "pointsTeam1": 5,
+          "pointsTeam2": 6,
+          "resultDescription": "Ergebnis nach Elfmeterschießen",
+          "resultID": 127293,
+          "resultName": "Elfmeterschießen",
+          "resultOrderID": 4,
+          "resultTypeID": 5,
+          "resultTypeKind": "AfterPenalties"
+        }
+      ],
+      "observed": {
+        "et": [
+          1,
+          1
+        ],
+        "ft": [
+          1,
+          1
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "p": [
+          5,
+          6
+        ]
+      },
+      "official": {
+        "et": [
+          1,
+          1
+        ],
+        "ft": [
+          1,
+          1
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "p": [
+          4,
+          5
+        ]
+      },
+      "provider": "openligadb",
+      "sides": [
+        "2199",
+        "79"
+      ]
+    },
+    "81859": {
+      "date": "2026-08-21",
+      "dfb_id": "2418334",
+      "dfb_sha256": "ce1a0bd60394fb956a1db22e8f0b25beeaebdc2c46da595d6493157f9732e515",
+      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/sv-waldhof-mannheim-1-fc-kaiserslautern-2418334",
+      "edition": "2026/2027",
+      "native_results": [
+        {
+          "pointsTeam1": 0,
+          "pointsTeam2": 0,
+          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
+          "resultID": 127245,
+          "resultName": "Halbzeit",
+          "resultOrderID": 1,
+          "resultTypeID": 1,
+          "resultTypeKind": "HalfTime"
+        },
+        {
+          "pointsTeam1": 0,
+          "pointsTeam2": 0,
+          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
+          "resultID": 127246,
+          "resultName": "Endergebnis",
+          "resultOrderID": 2,
+          "resultTypeID": 2,
+          "resultTypeKind": "After90Minutes"
+        },
+        {
+          "pointsTeam1": 0,
+          "pointsTeam2": 1,
+          "resultDescription": "Ergebnis nach Verlängerung",
+          "resultID": 127256,
+          "resultName": "Verlängerung",
+          "resultOrderID": 3,
+          "resultTypeID": 4,
+          "resultTypeKind": "AfterExtraTime"
+        }
+      ],
+      "observed": {
+        "et": [
+          0,
+          1
+        ],
+        "ft": [
+          0,
+          0
+        ],
+        "ht": [
+          0,
+          0
+        ]
+      },
+      "official": {
+        "et": [
+          0,
+          1
+        ],
+        "ft": [
+          0,
+          0
+        ],
+        "ht": [
+          0,
+          0
+        ],
+        "p": null
+      },
+      "provider": "openligadb",
+      "sides": [
+        "553",
+        "76"
+      ]
+    },
+    "81862": {
+      "date": "2026-08-24",
+      "dfb_id": "2418337",
+      "dfb_sha256": "75477ff29a460b89381dd03203ca3385af1fcfc991b968307578d9d026969382",
+      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/1-runde/vsg-altglienicke-vfl-wolfsburg-2418337",
+      "edition": "2026/2027",
+      "native_results": [
+        {
+          "pointsTeam1": 1,
+          "pointsTeam2": 0,
+          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
+          "resultID": 127376,
+          "resultName": "Halbzeit",
+          "resultOrderID": 1,
+          "resultTypeID": 1,
+          "resultTypeKind": "HalfTime"
+        },
+        {
+          "pointsTeam1": 2,
+          "pointsTeam2": 2,
+          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
+          "resultID": 127377,
+          "resultName": "Endergebnis",
+          "resultOrderID": 2,
+          "resultTypeID": 2,
+          "resultTypeKind": "After90Minutes"
+        },
+        {
+          "pointsTeam1": 3,
+          "pointsTeam2": 3,
+          "resultDescription": "Ergebnis nach Verlängerung",
+          "resultID": 127382,
+          "resultName": "Verlängerung",
+          "resultOrderID": 3,
+          "resultTypeID": 4,
+          "resultTypeKind": "AfterExtraTime"
+        },
+        {
+          "pointsTeam1": 8,
+          "pointsTeam2": 9,
+          "resultDescription": "Ergebnis nach Elfmeterschießen",
+          "resultID": 127383,
+          "resultName": "Elfmeterschießen",
+          "resultOrderID": 4,
+          "resultTypeID": 5,
+          "resultTypeKind": "AfterPenalties"
+        }
+      ],
+      "observed": {
+        "et": [
+          3,
+          3
+        ],
+        "ft": [
+          2,
+          2
+        ],
+        "ht": [
+          1,
+          0
+        ],
+        "p": [
+          8,
+          9
+        ]
+      },
+      "official": {
+        "et": [
+          3,
+          3
+        ],
+        "ft": [
+          2,
+          2
+        ],
+        "ht": [
+          1,
+          0
+        ],
+        "p": [
+          5,
+          6
+        ]
+      },
+      "provider": "openligadb",
+      "sides": [
+        "4600",
+        "131"
+      ]
+    },
+    "87627": {
+      "date": "2026-10-28",
+      "dfb_id": "2430552",
+      "dfb_sha256": "9b3a705a3ac964592a42f01604acacd11f9a81ec979f3f43c871076fa0f31905",
+      "dfb_url": "https://datencenter.dfb.de/datencenter/dfb-pokal/2026-27/2-runde/holstein-kiel-tsg-hoffenheim-2430552",
+      "edition": "2026/2027",
+      "native_results": [
+        {
+          "pointsTeam1": 1,
+          "pointsTeam2": 1,
+          "resultDescription": "Ergebnis nach Ende der ersten Halbzeit",
+          "resultID": 130476,
+          "resultName": "Halbzeit",
+          "resultOrderID": 1,
+          "resultTypeID": 1,
+          "resultTypeKind": "HalfTime"
+        },
+        {
+          "pointsTeam1": 1,
+          "pointsTeam2": 1,
+          "resultDescription": "Ergebnis nach Ende der offiziellen Spielzeit",
+          "resultID": 130477,
+          "resultName": "Endergebnis",
+          "resultOrderID": 2,
+          "resultTypeID": 2,
+          "resultTypeKind": "After90Minutes"
+        },
+        {
+          "pointsTeam1": 1,
+          "pointsTeam2": 1,
+          "resultDescription": "Ergebnis nach Verlängerung",
+          "resultID": 130480,
+          "resultName": "Verlängerung",
+          "resultOrderID": 3,
+          "resultTypeID": 4,
+          "resultTypeKind": "AfterExtraTime"
+        },
+        {
+          "pointsTeam1": 5,
+          "pointsTeam2": 4,
+          "resultDescription": "Ergebnis nach Elfmeterschießen",
+          "resultID": 130481,
+          "resultName": "Elfmeterschießen",
+          "resultOrderID": 4,
+          "resultTypeID": 5,
+          "resultTypeKind": "AfterPenalties"
+        }
+      ],
+      "observed": {
+        "et": [
+          1,
+          1
+        ],
+        "ft": [
+          1,
+          1
+        ],
+        "ht": [
+          1,
+          1
+        ],
+        "p": [
+          5,
+          4
+        ]
+      },
+      "official": {
+        "et": [
+          1,
+          1
+        ],
+        "ft": [
+          1,
+          1
+        ],
+        "ht": [
+          1,
+          1
+        ],
+        "p": [
+          4,
+          3
+        ]
+      },
+      "provider": "openligadb",
+      "sides": [
+        "104",
+        "175"
+      ]
+    }
+  },
+  "source_body_sha256": {
+    "2025/2026": "b72e3d698a5262a130c6d77a505497ab9d08b0f1c31aaa1765e4f7039843b6e3",
+    "2026/2027": "85220cbd34ffa016837098f4e11e4b9532e57d0da431dbf8aa0f250a82cd23c9"
+  }
+}

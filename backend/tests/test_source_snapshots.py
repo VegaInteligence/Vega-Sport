@@ -514,6 +514,90 @@ class OpenMatchdayGuardTest(SnapshotDatabase):
         self.assertEqual(self.state(), self.before[:1])
 
 
+    # 22a, 22b (FAILURE_MODES.md §22, written before the code): a later file without a statistic keeps it; a
+    # stated value, 0 included, replaces it once.
+    def test_22a_missing_statistic_columns_or_cells_keep_the_stored_values(self):
+        _, updated = self.stamps()
+        without_columns = "date,home,away,ft_home,ft_away,ht_home,ht_away\n2026-11-01,North FC,South FC,2,1,1,0\n"
+        empty_cells = RESULTS.splitlines()[0] + "\n2026-11-01,North FC,South FC,2,1,1,0,,,,\n"
+        for days, (name, results) in enumerate((("no statistic columns", without_columns), ("empty cells", empty_cells)), 1):
+            with self.subTest(name):
+                self.assertEqual(self.read([league()], self.files(results=results), NOW + timedelta(days=days)), ("ok", 2, 0))
+                self.assertEqual(self.state(), self.before)  # ids, revision, updated_at, statistics and their row versions
+                self.assertEqual(self.stamps()[1], updated)
+                self.assertEqual(self.failures(), [])
+
+    def test_22b_a_stated_zero_replaces_the_stored_value_once(self):
+        zero = RESULTS.replace(",11,7,", ",0,7,")
+        self.assertEqual(self.read([league()], self.files(results=zero), NOW + timedelta(days=1)), ("ok", 2, 0))
+        result = self.state()[0]
+        self.assertEqual((result[7], result[10][0][1], result[10][0][2]), (self.before[0][7] + 1, "all", 0))
+        self.assertEqual(result[10][1][2], 7)  # the other side's stated value
+        self.assertEqual(self.read([league()], self.files(results=zero), NOW + timedelta(days=2)), ("ok", 2, 0))
+        self.assertEqual(self.state()[0], result)
+
+
+class CupApiScoreTest(SnapshotDatabase):
+    """22c: the 90-minute score is never invented: source -> cups.save -> PostgreSQL -> the real /api/cups/edition."""
+
+    def edition_scores(self, matches):
+        with self.db.transaction():
+            cups.save(self.db, "open-cups", "euro", "2024", {"name": "Scores", "matches": matches}, NOW)
+        competition = self.x("SELECT competition_id FROM api.cup_editions WHERE competition = 'euro' AND season = '2024'").fetchone()[0]
+        js = """import {createReader} from './src/db.mjs';import {createHandler} from './src/handler.mjs';
+const [dsn,id]=process.argv.slice(1);const r=createReader(dsn,{role:'vega_read'});const h=createHandler({read:r.read});
+const res=await h(new Request('https://local/api/cups/edition?competition='+id+'&season=2024'));
+console.log(JSON.stringify({status:res.status,body:await res.json()}));await r.end();"""
+        done = subprocess.run([NODE, "--input-type=module", "-e", js, DSN, str(competition)], cwd=ROOT / "api", capture_output=True, text=True, timeout=120)
+        self.assertEqual(done.returncode, 0, done.stderr)
+        out = json.loads(done.stdout.strip().splitlines()[-1])
+        self.assertEqual(out["status"], 200)
+        return {(m["team1"], m["team2"]): m.get("score") for m in out["body"]["matches"]}
+
+    def test_22c_extra_time_without_regulation_has_no_ft(self):
+        scores = self.edition_scores([
+            {"date": "2024-07-01", "team1": "One", "team2": "Two", "score": {"et": [2, 1]}},
+            {"date": "2024-07-02", "team1": "Three", "team2": "Four", "score": {"ft": [1, 1], "et": [2, 1]}},
+            {"date": "2024-07-03", "team1": "Five", "team2": "Six", "score": {"ft": [0, 0], "et": [0, 0], "p": [4, 3]}},
+            {"date": "2024-07-04", "team1": "Seven", "team2": "Eight", "score": {"ft": [3, 0]}},
+        ])
+        self.assertEqual(scores[("One", "Two")], {"et": [2, 1]})
+        self.assertEqual(scores[("Three", "Four")], {"ft": [1, 1], "et": [2, 1]})
+        self.assertEqual(scores[("Five", "Six")], {"ft": [0, 0], "et": [0, 0], "p": [4, 3]})
+        self.assertEqual(scores[("Seven", "Eight")], {"ft": [3, 0]})
+
+
+class CupCatalogueLogoTest(SnapshotDatabase):
+    """C6 (FAILURE_MODES.md §22, written before the code): a cup-only competition's verified logo reaches the catalogue
+    by the edition's own competition (its FK), additively: source -> open_matchday.save -> PostgreSQL -> the real API."""
+
+    def api(self, path):
+        js = """import {createReader} from './src/db.mjs';import {createHandler} from './src/handler.mjs';
+const [dsn,path]=process.argv.slice(1);const r=createReader(dsn,{role:'vega_read'});const h=createHandler({read:r.read});
+const res=await h(new Request('https://local'+path));console.log(JSON.stringify({status:res.status,body:await res.json()}));await r.end();"""
+        done = subprocess.run([NODE, "--input-type=module", "-e", js, DSN, path], cwd=ROOT / "api", capture_output=True, text=True, timeout=120)
+        self.assertEqual(done.returncode, 0, done.stderr)
+        return json.loads(done.stdout.strip().splitlines()[-1])
+
+    def test_the_catalogue_carries_the_competition_logo(self):
+        results = open_matchday.rows("date,home,away,ft_home,ft_away\n2026-08-01,Brickfield,Llanuwchllyn,5,1\n")
+        with self.db.transaction():
+            open_matchday.save(self.db, "WAL_2_cymru-north", "Cymru North", "2026/2027", results, [], NOW)
+        reference = "https://media.vega.invalid/sha256/" + "0b2958916b260998034409a86e6ede3879dd706020e0371df9b9e03ddb826022" + ".png"
+        logo = self.x("INSERT INTO core.assets(kind, source_url, s3_key) VALUES ('logo', %s, 'sources/v2/images/x.png') RETURNING id", (reference,)).fetchone()[0]
+        competition = self.x("SELECT competition_id FROM core.competition_seasons WHERE cup_key LIKE 'open-matchday:WAL_2_cymru-north:%'").fetchone()[0]
+        self.x("UPDATE core.competitions SET logo_asset_id = %s WHERE id = %s", (logo, competition))
+        index = self.api("/api/cup-index?kind=supplemental")
+        self.assertEqual(index["status"], 200)
+        [entry] = index["body"]["competitions"]
+        self.assertEqual((entry["folder"], entry["image_url"]), ("WAL_2_cymru-north", reference))
+        cups = self.api("/api/cups/index")["body"]["cups"]
+        self.assertEqual([c.get("imageUrl") for c in cups if c["key"] == "WAL_2_cymru-north"], [reference])
+        # No logo: the field is absent, the body otherwise as before.
+        self.x("UPDATE core.competitions SET logo_asset_id = NULL WHERE id = %s", (competition,))
+        self.assertNotIn("image_url", self.api("/api/cup-index?kind=supplemental")["body"]["competitions"][0])
+
+
 class CupLogosTest(SnapshotDatabase):
     """19.4 L1–L6: reviewed competition logos through curated.cup_logos."""
 
@@ -539,8 +623,12 @@ class CupLogosTest(SnapshotDatabase):
             "dfb_openligadb": self.competition("vega", "cup:openligadb:germany-cup", "germany-cup"),
             "unl": self.competition("vega", "cup:openligadb:nations-league", "nations-league"),
             "unl_results": self.competition("vega", "cup:nations-results:nations-league", "nations-league"),
-            "world_cup": self.competition("pitchapi", "l_1XLtP0", "World Cup", own),
+            "world_cup": self.competition("pitchapi", "l_1XLtP0", "World Cup"),
         }
+        self.x("""INSERT INTO core.family_artwork_qualifications(competition_id,asset_id,certificate,manifest_sha256)
+                  VALUES (%s,%s,'{"asset_role":"competition_logo","competition_identity_only":true}',repeat('a',64))""",
+               (ids["world_cup"], own))
+        self.x("UPDATE core.competitions SET logo_asset_id=%s WHERE id=%s", (own, ids["world_cup"]))
         with self.db.transaction():
             curated.cup_logos(self.db)
         aut = self.logo(ids["aut"])
@@ -580,3 +668,48 @@ class CupLogoKeysTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CupPublishedPhasesTest(CupCatalogueLogoTest):
+    def edition_response(self, competition, season):
+        [public] = self.x("SELECT competition_id FROM api.cup_editions WHERE competition=%s AND season=%s",
+                          (competition, season)).fetchone()
+        return self.api(f"/api/cups/edition?competition={public}&season={season}")["body"]
+
+    def test_verified_award_and_source_loss(self):
+        text = (ROOT / "tests/fixtures/openfootball/france-2024.txt").read_text()
+        key = "france-cup:2024/2025"
+        self.assertEqual(self.read_cup(key, text.replace("[awarded]", ""), NOW), "ok")
+        match = lambda: next(m for m in self.edition_response("france-cup", "2024/2025")["matches"]
+                             if m["team1"] == "Tours FC" and m["team2"] == "FC Lorient")
+        self.assertEqual(match()["score"], {"ft": [0, 3]})
+        self.assertEqual(self.read_cup(key, text, NOW + timedelta(days=1)), "ok")
+        approved = match()
+        self.assertEqual((approved["status"], approved["awardScore"]), ("awarded", [0, 3]))
+        self.assertIn("fff.fr", approved["awardReason"]["source"])
+        self.assertNotIn("score", approved)
+        before = self.matches(key)
+        self.assertEqual(self.read_cup(key, text.replace("[awarded]", ""), NOW + timedelta(days=2)), "PERIODS_CONFLICT")
+        self.assertEqual(self.matches(key), before)
+        self.assertEqual(match(), approved)
+
+    def test_club_world_cup_22_halves_and_edition_notification(self):
+        from vega.worker import publish
+
+        count = 0
+        for year in (2021, 2022, 2023):
+            key = f"club-world-cup:{year}"
+            text = (ROOT / f"tests/fixtures/openfootball/openfootball-{year}.txt").read_text()
+            self.assertEqual(self.read_cup(key, text, NOW), "ok")
+            matches = self.edition_response("club-world-cup", str(year))["matches"]
+            count += len(matches)
+            self.assertTrue(all(m["score"].get("ht") is not None for m in matches))
+            if year == 2021:
+                self.assertEqual(matches[-1]["score"], {"ft": [1, 1], "ht": [0, 0], "et": [2, 1]})
+            generation = publish(self.db, NOW, force=True)
+            self.assertIsNotNone(generation)
+            old = self.matches(key)
+            self.assertEqual(self.read_cup(key, text, NOW + timedelta(days=1)), "ok")
+            self.assertIsNone(publish(self.db, NOW + timedelta(days=1), force=True))
+            self.assertEqual(self.matches(key), old)
+        self.assertEqual(count, 22)

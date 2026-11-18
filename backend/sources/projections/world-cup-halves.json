@@ -1,0 +1,1025 @@
+{
+  "1950|1950-06-25|England|Chile": {
+    "fifa_match_id": "1192",
+    "fifa_report_sha256": "ec18ae1d7cee894f0a89a3d1ae4e7930c1541d517c2baa02da5c1f1664a9cc5a",
+    "native_body_sha256": "145c6be968653d5e826601f7b83d65427be8db73c136811db2384de8fcc84dc4",
+    "native_ht": null,
+    "native_timeline_sha256": "c9fca5bc8fa1f8d5bcb3f3f79799ca640192d5c7fe1d031ff385ddba34575d3e",
+    "official_ht": [
+      1,
+      0
+    ],
+    "source_final": [
+      2,
+      0
+    ]
+  },
+  "1950|1950-06-25|Spain|United States": {
+    "fifa_match_id": "1208",
+    "fifa_report_sha256": "4a626b1bf81665e2b13587de56a69f85f3fdaa616316ea316e68a40f38f656d1",
+    "native_body_sha256": "145c6be968653d5e826601f7b83d65427be8db73c136811db2384de8fcc84dc4",
+    "native_ht": null,
+    "native_timeline_sha256": "b13b31e03b66aeb52028577ee89994823fefcc4a44d3ca5fffe3ae13ef0a4597",
+    "official_ht": [
+      0,
+      1
+    ],
+    "source_final": [
+      3,
+      1
+    ]
+  },
+  "1950|1950-06-25|Sweden|Italy": {
+    "fifa_match_id": "1219",
+    "fifa_report_sha256": "ab93f0dc11826140c53d04519c9ccf4a29cdcb4e1a9c21930f0f818f03d9b15e",
+    "native_body_sha256": "145c6be968653d5e826601f7b83d65427be8db73c136811db2384de8fcc84dc4",
+    "native_ht": null,
+    "native_timeline_sha256": "1deff9c9772d3a3c4cf4ccfd7e201ae93aa0a04b619c38d69a5ce8238813f6a2",
+    "official_ht": [
+      2,
+      1
+    ],
+    "source_final": [
+      3,
+      2
+    ]
+  },
+  "1950|1950-06-29|Spain|Chile": {
+    "fifa_match_id": "1193",
+    "fifa_report_sha256": "1ff22f1a01a381a6e8268a759065b55f28aa3243e8728defe3817b21a0e81bca",
+    "native_body_sha256": "145c6be968653d5e826601f7b83d65427be8db73c136811db2384de8fcc84dc4",
+    "native_ht": null,
+    "native_timeline_sha256": "eff611be429724eb1dd2d1cb23d6e3bf924b2cdf429684d18bba884608dc4c1e",
+    "official_ht": [
+      2,
+      0
+    ],
+    "source_final": [
+      2,
+      0
+    ]
+  },
+  "1950|1950-06-29|Sweden|Paraguay": {
+    "fifa_match_id": "1228",
+    "fifa_report_sha256": "3a4820050066d85550bae5ad87b673f57d120a58fece2ab20a3614ce0be74926",
+    "native_body_sha256": "145c6be968653d5e826601f7b83d65427be8db73c136811db2384de8fcc84dc4",
+    "native_ht": null,
+    "native_timeline_sha256": "d8063033d5e3dfa0eaf2c5f827ec2cf3bffe002e2285686a128059f4a6baf6a8",
+    "official_ht": [
+      2,
+      1
+    ],
+    "source_final": [
+      2,
+      2
+    ]
+  },
+  "1950|1950-06-29|United States|England": {
+    "fifa_match_id": "1202",
+    "fifa_report_sha256": "32ba75579c60fea42482c9085e0fda8bc799b09de5a6db7b558a0554f36cfbd2",
+    "native_body_sha256": "145c6be968653d5e826601f7b83d65427be8db73c136811db2384de8fcc84dc4",
+    "native_ht": null,
+    "native_timeline_sha256": "91771516b0c58eeb7071f432d047bb6940caaf3922ec0cdbf0752749884b8fc3",
+    "official_ht": [
+      1,
+      0
+    ],
+    "source_final": [
+      1,
+      0
+    ]
+  },
+  "1950|1950-07-02|Chile|United States": {
+    "fifa_match_id": "1194",
+    "fifa_report_sha256": "6ddfe4052026a6e82b41999998d0e1f151c3fe82d24d9964701216b0ef9548d1",
+    "native_body_sha256": "145c6be968653d5e826601f7b83d65427be8db73c136811db2384de8fcc84dc4",
+    "native_ht": null,
+    "native_timeline_sha256": "cb589dfcd4663e61ccd30db6b02ec8117f94b925b6a0f4f9363530ac7090df99",
+    "official_ht": [
+      2,
+      0
+    ],
+    "source_final": [
+      5,
+      2
+    ]
+  },
+  "1950|1950-07-02|Italy|Paraguay": {
+    "fifa_match_id": "1218",
+    "fifa_report_sha256": "69ad7cc608d5dadea07b4e4166e0c3b4b2482ff4caaa0bd9d1354a82d0c30cb7",
+    "native_body_sha256": "145c6be968653d5e826601f7b83d65427be8db73c136811db2384de8fcc84dc4",
+    "native_ht": null,
+    "native_timeline_sha256": "f11e0327f8d70d4f65291ea853c00c5429d74433f0c3b1faddae3af4815519e0",
+    "official_ht": [
+      1,
+      0
+    ],
+    "source_final": [
+      2,
+      0
+    ]
+  },
+  "1950|1950-07-02|Spain|England": {
+    "fifa_match_id": "1199",
+    "fifa_report_sha256": "dbb0b2748452c141bfa98707275b75fb2b4c6f1f40e343d76de7f1bebbb12fcb",
+    "native_body_sha256": "145c6be968653d5e826601f7b83d65427be8db73c136811db2384de8fcc84dc4",
+    "native_ht": null,
+    "native_timeline_sha256": "5a23ecb64ce2170542064dce53d7bafa4114f9155b3a4cd3cd0188986413c448",
+    "official_ht": [
+      0,
+      0
+    ],
+    "source_final": [
+      1,
+      0
+    ]
+  },
+  "1950|1950-07-02|Uruguay|Bolivia": {
+    "fifa_match_id": "1185",
+    "fifa_report_sha256": "04c286ba6bb7b12d8cbdcb24e7e8051b70ac2b4d08dc78d61b6a080aa7b53f4b",
+    "native_body_sha256": "145c6be968653d5e826601f7b83d65427be8db73c136811db2384de8fcc84dc4",
+    "native_ht": null,
+    "native_timeline_sha256": "1b56205cb5e702278b973a26b782c80e1c993c5d6c70547bed79c44942afea3e",
+    "official_ht": [
+      4,
+      0
+    ],
+    "source_final": [
+      8,
+      0
+    ]
+  },
+  "1950|1950-07-09|Brazil|Sweden": {
+    "fifa_match_id": "1189",
+    "fifa_report_sha256": "4b24ffa0efeaf5a2207f2bc609f1bf23f3cbb32c1a03033b3975d38ca911401a",
+    "native_body_sha256": "145c6be968653d5e826601f7b83d65427be8db73c136811db2384de8fcc84dc4",
+    "native_ht": null,
+    "native_timeline_sha256": "7ced22d0ced17c54af5b539c724b900d1ca9a24edf5f47d06ecd035e4d5c8b1f",
+    "official_ht": [
+      3,
+      0
+    ],
+    "source_final": [
+      7,
+      1
+    ]
+  },
+  "1950|1950-07-09|Uruguay|Spain": {
+    "fifa_match_id": "1207",
+    "fifa_report_sha256": "33f74604ccc2f416360ed32f0e0e935763903d0fde89bc7057934f269ddb7062",
+    "native_body_sha256": "145c6be968653d5e826601f7b83d65427be8db73c136811db2384de8fcc84dc4",
+    "native_ht": null,
+    "native_timeline_sha256": "2da757424c964febd70c037d84b7774c74b64d77a44ae9fccad4ad6498d0fc4c",
+    "official_ht": [
+      1,
+      2
+    ],
+    "source_final": [
+      2,
+      2
+    ]
+  },
+  "1950|1950-07-13|Brazil|Spain": {
+    "fifa_match_id": "1186",
+    "fifa_report_sha256": "9130b089d2cc90ebbb2bcdf3ba10afe10145fed2a48e06dcf34933d6721baa34",
+    "native_body_sha256": "145c6be968653d5e826601f7b83d65427be8db73c136811db2384de8fcc84dc4",
+    "native_ht": null,
+    "native_timeline_sha256": "2299ec626935f589437a44c9c2434104d3b7c6ca63498c3af310973fc51db898",
+    "official_ht": [
+      3,
+      0
+    ],
+    "source_final": [
+      6,
+      1
+    ]
+  },
+  "1950|1950-07-13|Uruguay|Sweden": {
+    "fifa_match_id": "1231",
+    "fifa_report_sha256": "a7532be84013f2ad03510d942a724b212ee871539baa9a2621bc5578d5a23588",
+    "native_body_sha256": "145c6be968653d5e826601f7b83d65427be8db73c136811db2384de8fcc84dc4",
+    "native_ht": null,
+    "native_timeline_sha256": "6073db6a77a0017a341ff40474379f66340bc79b26a716dffeaf681620a8ae34",
+    "official_ht": [
+      1,
+      2
+    ],
+    "source_final": [
+      3,
+      2
+    ]
+  },
+  "1950|1950-07-16|Sweden|Spain": {
+    "fifa_match_id": "1206",
+    "fifa_report_sha256": "0162913eda662d9dff7983a3508704963013547a970a3866652bbaed4c35c036",
+    "native_body_sha256": "145c6be968653d5e826601f7b83d65427be8db73c136811db2384de8fcc84dc4",
+    "native_ht": null,
+    "native_timeline_sha256": "ec0592d60f21143d57294761b98b319e5477271ab13f5377aff72da57b65b239",
+    "official_ht": [
+      2,
+      0
+    ],
+    "source_final": [
+      3,
+      1
+    ]
+  },
+  "1950|1950-07-16|Uruguay|Brazil": {
+    "fifa_match_id": "1190",
+    "fifa_report_sha256": "3990c069cba7a3cd7f2cf3624ed24a75675983d998e375cca2f022dfe2b15f6d",
+    "native_body_sha256": "145c6be968653d5e826601f7b83d65427be8db73c136811db2384de8fcc84dc4",
+    "native_ht": null,
+    "native_timeline_sha256": "799e5aa4daab567cb5fa5a5c427b149aadc1b6caaf48041055564dfc8b7b7ee8",
+    "official_ht": [
+      0,
+      0
+    ],
+    "source_final": [
+      2,
+      1
+    ]
+  },
+  "1990|1990-07-03|Italy|Argentina": {
+    "fifa_match_id": "28",
+    "fifa_report_sha256": "9f9f0b3c101c6d79af34c87fb8da78e993845be217ecf4de6d774b37c2635326",
+    "native_body_sha256": "72178e69a54155b2793f60f93a46e5f596045cca041d04646ca0f15edaee5828",
+    "native_ht": null,
+    "native_timeline_sha256": "a6a40b56f9cb9e893a8a98a20708a0f78c3a3abdf4969e4e1d8c26c53e1ab1e6",
+    "official_ht": [
+      1,
+      0
+    ],
+    "source_final": [
+      1,
+      1
+    ]
+  },
+  "1990|1990-07-04|West Germany|England": {
+    "fifa_match_id": "159",
+    "fifa_report_sha256": "af4121cfb26535224a4842651deaf90853145463130bc2d9f559f7ccad781fd2",
+    "native_body_sha256": "72178e69a54155b2793f60f93a46e5f596045cca041d04646ca0f15edaee5828",
+    "native_ht": null,
+    "native_timeline_sha256": "57574dc20eb6ef8765a825f789d850395b27739bdb90c4e7a3f37172fe488383",
+    "official_ht": [
+      0,
+      0
+    ],
+    "source_final": [
+      1,
+      1
+    ]
+  },
+  "1990|1990-07-07|Italy|England": {
+    "fifa_match_id": "162",
+    "fifa_report_sha256": "5b2b64fb59cbbb6c57d5a4ee189664fa66223f85ea4d565f085785691b2c20d4",
+    "native_body_sha256": "72178e69a54155b2793f60f93a46e5f596045cca041d04646ca0f15edaee5828",
+    "native_ht": null,
+    "native_timeline_sha256": "5032ab4990f0ea815992c015d47bfe28a6108485465ac97ab311ea60a95d0156",
+    "official_ht": [
+      0,
+      0
+    ],
+    "source_final": [
+      2,
+      1
+    ]
+  },
+  "1990|1990-07-08|West Germany|Argentina": {
+    "fifa_match_id": "27",
+    "fifa_report_sha256": "839ca3e427206fd34b3dfb03c219da4d53bdd4046cc6b343bace4c95e5448642",
+    "native_body_sha256": "72178e69a54155b2793f60f93a46e5f596045cca041d04646ca0f15edaee5828",
+    "native_ht": null,
+    "native_timeline_sha256": "98f16e49436f3d9680e604d5b5b4c53194e1f41b1c9dfaee2fbc55de9644d2c0",
+    "official_ht": [
+      0,
+      0
+    ],
+    "source_final": [
+      1,
+      0
+    ]
+  },
+  "2006|2006-07-04|Germany|Italy": {
+    "fifa_match_id": "97410061",
+    "fifa_report_sha256": "9aff497b30f42597478bf9c0f085d3740e5d5484b6e7e5c92b1ffae0596d77c6",
+    "native_body_sha256": "5fbf1b945c34e5ec796161b9d62cea288a99e9132612bb028c731bf2a88550cc",
+    "native_ht": null,
+    "native_timeline_sha256": "fb6520578bf98a3f4feb9bc80340877967e964556444f3cee52c0b491b2bd3ef",
+    "official_ht": [
+      0,
+      0
+    ],
+    "source_final": [
+      0,
+      2
+    ]
+  },
+  "2014|2014-06-14|Colombia|Greece": {
+    "fifa_match_id": "300186471",
+    "fifa_report_sha256": "096907a3caeba84bd2d3caab53628abb192603ad8bfa693044a56cd31a58f9d6",
+    "native_body_sha256": "a68c6150fca6e37b5e9ff2eba3100ad47241a5c1f6d518a8fabb555260c371a0",
+    "native_ht": null,
+    "native_timeline_sha256": "d6743e8b622de158d8f89453d9fbe353d5c347fe7126d56168bbbd46934925d6",
+    "official_ht": [
+      1,
+      0
+    ],
+    "source_final": [
+      3,
+      0
+    ]
+  },
+  "2014|2014-06-14|Côte d'Ivoire|Japan": {
+    "fifa_match_id": "300186507",
+    "fifa_report_sha256": "3bb63f391c60b9efa1be34c64178c5107009465c40b083de1b354b6fd9609272",
+    "native_body_sha256": "a68c6150fca6e37b5e9ff2eba3100ad47241a5c1f6d518a8fabb555260c371a0",
+    "native_ht": null,
+    "native_timeline_sha256": "80358d22b922e8bf54a1f009ce450f04193ba2e9b441373b64fac104115c4940",
+    "official_ht": [
+      0,
+      1
+    ],
+    "source_final": [
+      2,
+      1
+    ]
+  },
+  "2014|2014-06-14|England|Italy": {
+    "fifa_match_id": "300186513",
+    "fifa_report_sha256": "b636fa5b1298e5e841656141e2d6c301ef889279c61cd4393d3ec1dc9eba2136",
+    "native_body_sha256": "a68c6150fca6e37b5e9ff2eba3100ad47241a5c1f6d518a8fabb555260c371a0",
+    "native_ht": null,
+    "native_timeline_sha256": "118108c1a0e2917ba408c30fc1d9fe2e06c683d6a1d46c17c61b0cbc7ca34318",
+    "official_ht": [
+      1,
+      1
+    ],
+    "source_final": [
+      1,
+      2
+    ]
+  },
+  "2014|2014-06-14|Uruguay|Costa Rica": {
+    "fifa_match_id": "300186489",
+    "fifa_report_sha256": "07df6961f49650a619837cab503c7fd7ef1e93c73951f7edd064dba6b1d5013d",
+    "native_body_sha256": "a68c6150fca6e37b5e9ff2eba3100ad47241a5c1f6d518a8fabb555260c371a0",
+    "native_ht": null,
+    "native_timeline_sha256": "faec89e1dbeda2632fc378295f014e28f2ce8370de8b8297a113d1995f09353b",
+    "official_ht": [
+      1,
+      0
+    ],
+    "source_final": [
+      1,
+      3
+    ]
+  },
+  "2014|2014-06-15|Argentina|Bosnia-Herzegovina": {
+    "fifa_match_id": "300186477",
+    "fifa_report_sha256": "b2f3f57ce1d87fd988f3dd5f29fe139858644fb2ab1c01b3fe7170bdd95eba49",
+    "native_body_sha256": "a68c6150fca6e37b5e9ff2eba3100ad47241a5c1f6d518a8fabb555260c371a0",
+    "native_ht": null,
+    "native_timeline_sha256": "c886093ab367b948a9a79572c8008c0e391b0c46427e62a444cbcc099168918d",
+    "official_ht": [
+      1,
+      0
+    ],
+    "source_final": [
+      2,
+      1
+    ]
+  },
+  "2014|2014-06-15|France|Honduras": {
+    "fifa_match_id": "300186496",
+    "fifa_report_sha256": "64cef2930d7cf30bf55f479767fefcdb698552e89fb09804716c674e0807524d",
+    "native_body_sha256": "a68c6150fca6e37b5e9ff2eba3100ad47241a5c1f6d518a8fabb555260c371a0",
+    "native_ht": null,
+    "native_timeline_sha256": "1d341e5de207fd0a501efd7d4c19a197d8507e292e58e6070c75a6e32255fefe",
+    "official_ht": [
+      1,
+      0
+    ],
+    "source_final": [
+      3,
+      0
+    ]
+  },
+  "2014|2014-06-15|Switzerland|Ecuador": {
+    "fifa_match_id": "300186494",
+    "fifa_report_sha256": "e26eb855a1365a18cc2f5583242b6191082127807420e3fe2891eb566e20a1b1",
+    "native_body_sha256": "a68c6150fca6e37b5e9ff2eba3100ad47241a5c1f6d518a8fabb555260c371a0",
+    "native_ht": null,
+    "native_timeline_sha256": "257b4b81ff2dc3dc26ea1ee43a6e6707d31b521aeb706ba694cb551125695632",
+    "official_ht": [
+      0,
+      1
+    ],
+    "source_final": [
+      2,
+      1
+    ]
+  },
+  "2014|2014-06-16|Germany|Portugal": {
+    "fifa_match_id": "300186475",
+    "fifa_report_sha256": "90a56d7bc9b6b762d3d3662c00045bd45e3c8902fcb92ffc204a6667272e2960",
+    "native_body_sha256": "a68c6150fca6e37b5e9ff2eba3100ad47241a5c1f6d518a8fabb555260c371a0",
+    "native_ht": null,
+    "native_timeline_sha256": "26d47ef1fd27748cfcf304b9fd8a55c2d2cc8510da9ca1b050604ea5b6087f41",
+    "official_ht": [
+      3,
+      0
+    ],
+    "source_final": [
+      4,
+      0
+    ]
+  },
+  "2014|2014-06-16|Ghana|USA": {
+    "fifa_match_id": "300186512",
+    "fifa_report_sha256": "a0f5cae39fc5782fdd459204159ccffc62dae123341d4f8d69cdbd636066688a",
+    "native_body_sha256": "a68c6150fca6e37b5e9ff2eba3100ad47241a5c1f6d518a8fabb555260c371a0",
+    "native_ht": null,
+    "native_timeline_sha256": "bb63be2926c26e863db5a9309e216e3506e2587293301c8d85a7dc3d7cd9b7e3",
+    "official_ht": [
+      0,
+      1
+    ],
+    "source_final": [
+      1,
+      2
+    ]
+  },
+  "2014|2014-06-17|Belgium|Algeria": {
+    "fifa_match_id": "300186479",
+    "fifa_report_sha256": "beea3501d2ffe3d16320317617ac2d9408c251deffc48c587a157372d58112e2",
+    "native_body_sha256": "a68c6150fca6e37b5e9ff2eba3100ad47241a5c1f6d518a8fabb555260c371a0",
+    "native_ht": null,
+    "native_timeline_sha256": "de857cc05e77824b900603c3556aaefd630033f38849a0ffc9004827c76d8f51",
+    "official_ht": [
+      0,
+      1
+    ],
+    "source_final": [
+      2,
+      1
+    ]
+  },
+  "2014|2014-06-17|Russia|South Korea": {
+    "fifa_match_id": "300186499",
+    "fifa_report_sha256": "f5528be55e1ad002a1b9034e07b5427cd7d5d733b7c8612f45807c35d5667df0",
+    "native_body_sha256": "a68c6150fca6e37b5e9ff2eba3100ad47241a5c1f6d518a8fabb555260c371a0",
+    "native_ht": null,
+    "native_timeline_sha256": "a8a983f64f7b0a8c20d9337298957b38abaf02a172bd1e63f196742f5a26ea4d",
+    "official_ht": [
+      0,
+      0
+    ],
+    "source_final": [
+      1,
+      1
+    ]
+  },
+  "2014|2014-06-18|Australia|Netherlands": {
+    "fifa_match_id": "300186478",
+    "fifa_report_sha256": "d6adaad10ba2fa6ce412aa8db2e8aad87b43f6ba95934772167cf416f3cdc6f4",
+    "native_body_sha256": "a68c6150fca6e37b5e9ff2eba3100ad47241a5c1f6d518a8fabb555260c371a0",
+    "native_ht": null,
+    "native_timeline_sha256": "5dd579b49f4e763f8da67810afa805149512eb95fb7bf226af08f9dd9c35b797",
+    "official_ht": [
+      1,
+      1
+    ],
+    "source_final": [
+      2,
+      3
+    ]
+  },
+  "2014|2014-06-18|Cameroon|Croatia": {
+    "fifa_match_id": "300186453",
+    "fifa_report_sha256": "d633ce1ec1907744f216f2a889f64dc5379f83931aee8e901c44cf07d4aba8b9",
+    "native_body_sha256": "a68c6150fca6e37b5e9ff2eba3100ad47241a5c1f6d518a8fabb555260c371a0",
+    "native_ht": null,
+    "native_timeline_sha256": "538100ac9adcf22e088c397a653e68361ebaae5ac4582452ff09721fd9b38ee2",
+    "official_ht": [
+      0,
+      1
+    ],
+    "source_final": [
+      0,
+      4
+    ]
+  },
+  "2014|2014-06-18|Spain|Chile": {
+    "fifa_match_id": "300186498",
+    "fifa_report_sha256": "d63922fae29fe1eb65f7ec1983442fb763c3f877b251f87cb19b20d9a63f29e5",
+    "native_body_sha256": "a68c6150fca6e37b5e9ff2eba3100ad47241a5c1f6d518a8fabb555260c371a0",
+    "native_ht": null,
+    "native_timeline_sha256": "b4730bbe7b26d2ea85c3ac4b7620b732eef13ecbaa7eb36c40534f1bc87595a1",
+    "official_ht": [
+      0,
+      2
+    ],
+    "source_final": [
+      0,
+      2
+    ]
+  },
+  "2014|2014-06-19|Colombia|Côte d'Ivoire": {
+    "fifa_match_id": "300186468",
+    "fifa_report_sha256": "6ecde12190a98a23589a22190d7fd8a35394d611857a1ef9f18aaa64d62eac75",
+    "native_body_sha256": "a68c6150fca6e37b5e9ff2eba3100ad47241a5c1f6d518a8fabb555260c371a0",
+    "native_ht": null,
+    "native_timeline_sha256": "2ff20f68a48391653bf0f35816a6f22e9b248e78b6903e227e867b945c345dac",
+    "official_ht": [
+      0,
+      0
+    ],
+    "source_final": [
+      2,
+      1
+    ]
+  },
+  "2014|2014-06-19|Uruguay|England": {
+    "fifa_match_id": "300186486",
+    "fifa_report_sha256": "acd5c4185a7fe473e20950899a678ae5e4f320ca4ae5a787665a5c89ad157e4a",
+    "native_body_sha256": "a68c6150fca6e37b5e9ff2eba3100ad47241a5c1f6d518a8fabb555260c371a0",
+    "native_ht": null,
+    "native_timeline_sha256": "9b1e6584fdca8392e025956a52eb2cacfa09ffd278df53991310487a95f36190",
+    "official_ht": [
+      1,
+      0
+    ],
+    "source_final": [
+      2,
+      1
+    ]
+  },
+  "2014|2014-06-20|Honduras|Ecuador": {
+    "fifa_match_id": "300186463",
+    "fifa_report_sha256": "5fefc995a874058021fde80db33f5f43c417a6527173466e4868d853cfa0b1a9",
+    "native_body_sha256": "a68c6150fca6e37b5e9ff2eba3100ad47241a5c1f6d518a8fabb555260c371a0",
+    "native_ht": null,
+    "native_timeline_sha256": "ec502ad6f25986e70d3b3ab5d2d0d0b34262272ebb0e04c5032b2c9dac86784e",
+    "official_ht": [
+      1,
+      1
+    ],
+    "source_final": [
+      1,
+      2
+    ]
+  },
+  "2014|2014-06-20|Italy|Costa Rica": {
+    "fifa_match_id": "300186500",
+    "fifa_report_sha256": "6511b2883636d4901a1818f81e27ded253db0ad75b4e168445bd1a70f4a56b14",
+    "native_body_sha256": "a68c6150fca6e37b5e9ff2eba3100ad47241a5c1f6d518a8fabb555260c371a0",
+    "native_ht": null,
+    "native_timeline_sha256": "bea99ac50ba14375d3f32fd4e90577218160867053a879f0482438ab9f69839c",
+    "official_ht": [
+      0,
+      1
+    ],
+    "source_final": [
+      0,
+      1
+    ]
+  },
+  "2014|2014-06-20|Switzerland|France": {
+    "fifa_match_id": "300186514",
+    "fifa_report_sha256": "22d3376049696834f9c21ed7853fd5b29ee14a9248b4cc542f38067d390e644b",
+    "native_body_sha256": "a68c6150fca6e37b5e9ff2eba3100ad47241a5c1f6d518a8fabb555260c371a0",
+    "native_ht": null,
+    "native_timeline_sha256": "a378fd59601180c029b961aae4823855e482389b71c061deddcece9cf750cf1c",
+    "official_ht": [
+      0,
+      3
+    ],
+    "source_final": [
+      2,
+      5
+    ]
+  },
+  "2014|2014-06-21|Argentina|Iran": {
+    "fifa_match_id": "300186466",
+    "fifa_report_sha256": "1b486ff4a75cb10cb6498a6b2575e5db867284a79723d514bc272ff8903a5558",
+    "native_body_sha256": "a68c6150fca6e37b5e9ff2eba3100ad47241a5c1f6d518a8fabb555260c371a0",
+    "native_ht": null,
+    "native_timeline_sha256": "b96e6ce8a56272e8d08a56be9e2e105db3808dd2a4bdf9a3e73cecf553caff4e",
+    "official_ht": [
+      0,
+      0
+    ],
+    "source_final": [
+      1,
+      0
+    ]
+  },
+  "2014|2014-06-21|Germany|Ghana": {
+    "fifa_match_id": "300186493",
+    "fifa_report_sha256": "c9fcd5b388b9ed1b7d631beeff44ec0fad96e8c8a909a07cec19e78bbc4e890c",
+    "native_body_sha256": "a68c6150fca6e37b5e9ff2eba3100ad47241a5c1f6d518a8fabb555260c371a0",
+    "native_ht": null,
+    "native_timeline_sha256": "0dcd3149516ed81f82032f1fe1e17751efa064d3b6afaa84395d2c6004c83897",
+    "official_ht": [
+      0,
+      0
+    ],
+    "source_final": [
+      2,
+      2
+    ]
+  },
+  "2014|2014-06-21|Nigeria|Bosnia-Herzegovina": {
+    "fifa_match_id": "300186511",
+    "fifa_report_sha256": "4cadb6c1555b1c6abae87fcd8cfcf5307d01802a7fc734a3f66613bb0defc909",
+    "native_body_sha256": "a68c6150fca6e37b5e9ff2eba3100ad47241a5c1f6d518a8fabb555260c371a0",
+    "native_ht": null,
+    "native_timeline_sha256": "3119b11d2a70a2b25c43c3815ea7a637710b5fc20a0f726ab9cf75af9487348e",
+    "official_ht": [
+      1,
+      0
+    ],
+    "source_final": [
+      1,
+      0
+    ]
+  },
+  "2014|2014-06-22|Belgium|Russia": {
+    "fifa_match_id": "300186481",
+    "fifa_report_sha256": "7238f40e44d7e4c6c4ef1c6146f9b67890bfd9acfcb713591d2a5c475e57f0b9",
+    "native_body_sha256": "a68c6150fca6e37b5e9ff2eba3100ad47241a5c1f6d518a8fabb555260c371a0",
+    "native_ht": null,
+    "native_timeline_sha256": "f60a1e399245181609c8d12e24e7cd5e7b648e892049a5088e54241ff1e85eee",
+    "official_ht": [
+      0,
+      0
+    ],
+    "source_final": [
+      1,
+      0
+    ]
+  },
+  "2014|2014-06-22|South Korea|Algeria": {
+    "fifa_match_id": "300186495",
+    "fifa_report_sha256": "b0896458da13d247163283ca7d7e8f4b6eaa7100e25a0e6c3866475064752714",
+    "native_body_sha256": "a68c6150fca6e37b5e9ff2eba3100ad47241a5c1f6d518a8fabb555260c371a0",
+    "native_ht": null,
+    "native_timeline_sha256": "158922ba76e884ec176d59c0d6e677bce148eef108a0e4b05ea22fb5a3b56791",
+    "official_ht": [
+      0,
+      3
+    ],
+    "source_final": [
+      2,
+      4
+    ]
+  },
+  "2014|2014-06-22|USA|Portugal": {
+    "fifa_match_id": "300186483",
+    "fifa_report_sha256": "7f6c107a1faa18fb52b2cfcc3d5daaa47fad8c43349864583c7536b60a9f92d9",
+    "native_body_sha256": "a68c6150fca6e37b5e9ff2eba3100ad47241a5c1f6d518a8fabb555260c371a0",
+    "native_ht": null,
+    "native_timeline_sha256": "f8c43777dbf3dc7ea95730db8ce77059d9092b0234166556f9d020a8c98f84d9",
+    "official_ht": [
+      0,
+      1
+    ],
+    "source_final": [
+      2,
+      2
+    ]
+  },
+  "2014|2014-06-23|Australia|Spain": {
+    "fifa_match_id": "300186467",
+    "fifa_report_sha256": "638f0c1e20fb06c2ddc380a04c0d3eb427628ebb2daa62e2df6610c9351cecad",
+    "native_body_sha256": "a68c6150fca6e37b5e9ff2eba3100ad47241a5c1f6d518a8fabb555260c371a0",
+    "native_ht": null,
+    "native_timeline_sha256": "948ce085e0a513adf0d42fb8e81e172005dcd2bad933d3a657b4ce6c2b323d55",
+    "official_ht": [
+      0,
+      1
+    ],
+    "source_final": [
+      0,
+      3
+    ]
+  },
+  "2014|2014-06-23|Cameroon|Brazil": {
+    "fifa_match_id": "300186472",
+    "fifa_report_sha256": "1c0d37ce5b7e1a5d003aa73f9269cf64d638e1c3b1de1920188391d3e712b903",
+    "native_body_sha256": "a68c6150fca6e37b5e9ff2eba3100ad47241a5c1f6d518a8fabb555260c371a0",
+    "native_ht": null,
+    "native_timeline_sha256": "2f29b381b69f2c4ca0bd508bbe42ec52a6b90263b50db7aa3b8d6b60d694454a",
+    "official_ht": [
+      1,
+      2
+    ],
+    "source_final": [
+      1,
+      4
+    ]
+  },
+  "2014|2014-06-23|Croatia|Mexico": {
+    "fifa_match_id": "300186452",
+    "fifa_report_sha256": "ef83228807d83fc6971b5acf51754e0d9139f55169a95be7d232257aa988d160",
+    "native_body_sha256": "a68c6150fca6e37b5e9ff2eba3100ad47241a5c1f6d518a8fabb555260c371a0",
+    "native_ht": null,
+    "native_timeline_sha256": "d0bc9d9e45eecd15ca5006ad2b7d189a8f8d9d53b3150063a407a9830f3e823e",
+    "official_ht": [
+      0,
+      0
+    ],
+    "source_final": [
+      1,
+      3
+    ]
+  },
+  "2014|2014-06-23|Netherlands|Chile": {
+    "fifa_match_id": "300186470",
+    "fifa_report_sha256": "2e69168466bf0490af0f649adf10fc2f4177e61c75ed1a1567edc8264c264c1f",
+    "native_body_sha256": "a68c6150fca6e37b5e9ff2eba3100ad47241a5c1f6d518a8fabb555260c371a0",
+    "native_ht": null,
+    "native_timeline_sha256": "61480dc73da110e7c7e837aabfe20307a336493e51fe5f45ed194ef4ddbf46c3",
+    "official_ht": [
+      0,
+      0
+    ],
+    "source_final": [
+      2,
+      0
+    ]
+  },
+  "2014|2014-06-24|Greece|Côte d'Ivoire": {
+    "fifa_match_id": "300186455",
+    "fifa_report_sha256": "6985ee5d5087d0579deced60032ac1bae14f02ea86a1036b714e82d8c72b6dac",
+    "native_body_sha256": "a68c6150fca6e37b5e9ff2eba3100ad47241a5c1f6d518a8fabb555260c371a0",
+    "native_ht": null,
+    "native_timeline_sha256": "70288bc92868fd34a66276f20107ef1be59685c2bf6c77157a7a2f80ef16d166",
+    "official_ht": [
+      1,
+      0
+    ],
+    "source_final": [
+      2,
+      1
+    ]
+  },
+  "2014|2014-06-24|Italy|Uruguay": {
+    "fifa_match_id": "300186465",
+    "fifa_report_sha256": "44e0498786b6d7595c4a19b7a16ed86549c2c3bef120e8d85a0aefa357a1733c",
+    "native_body_sha256": "a68c6150fca6e37b5e9ff2eba3100ad47241a5c1f6d518a8fabb555260c371a0",
+    "native_ht": null,
+    "native_timeline_sha256": "f819086dfc71aa08820b8305e8e248c16794df39aced2be55dccfdc71574e722",
+    "official_ht": [
+      0,
+      0
+    ],
+    "source_final": [
+      0,
+      1
+    ]
+  },
+  "2014|2014-06-24|Japan|Colombia": {
+    "fifa_match_id": "300186457",
+    "fifa_report_sha256": "7543fce2ecb1142f6b8db9cf0c7e84528972ae4c7d6ee9697078a7002e85de26",
+    "native_body_sha256": "a68c6150fca6e37b5e9ff2eba3100ad47241a5c1f6d518a8fabb555260c371a0",
+    "native_ht": null,
+    "native_timeline_sha256": "238cf3e45e3ab7bd22674516674086097ac9f2b4209d02c5429cf0ec4813dffc",
+    "official_ht": [
+      1,
+      1
+    ],
+    "source_final": [
+      1,
+      4
+    ]
+  },
+  "2014|2014-06-25|Bosnia-Herzegovina|Iran": {
+    "fifa_match_id": "300186464",
+    "fifa_report_sha256": "f3a55b659d9ebb59c67f46e314835aa13f058e54bf0148019c17ee660520ab56",
+    "native_body_sha256": "a68c6150fca6e37b5e9ff2eba3100ad47241a5c1f6d518a8fabb555260c371a0",
+    "native_ht": null,
+    "native_timeline_sha256": "c0a5778a48a6bbc245d721a535d85e7237c6e44ee652e19e5a38ae3357d4cae0",
+    "official_ht": [
+      1,
+      0
+    ],
+    "source_final": [
+      3,
+      1
+    ]
+  },
+  "2014|2014-06-25|Honduras|Switzerland": {
+    "fifa_match_id": "300186482",
+    "fifa_report_sha256": "4996bd0f4d94d1acb831c9f5e93bbac3323d18b6b9d81f46384cfd1e6c73212f",
+    "native_body_sha256": "a68c6150fca6e37b5e9ff2eba3100ad47241a5c1f6d518a8fabb555260c371a0",
+    "native_ht": null,
+    "native_timeline_sha256": "2b220f136d43f998a5bceccbcc2fe1e5490d690212f34423bf9e636ae6d3169b",
+    "official_ht": [
+      0,
+      2
+    ],
+    "source_final": [
+      0,
+      3
+    ]
+  },
+  "2014|2014-06-25|Nigeria|Argentina": {
+    "fifa_match_id": "300186458",
+    "fifa_report_sha256": "d4d2fdd885541c15e3c0b881e751e42b29ef22a3e6d437c56f8f1b69c91ae1ec",
+    "native_body_sha256": "a68c6150fca6e37b5e9ff2eba3100ad47241a5c1f6d518a8fabb555260c371a0",
+    "native_ht": null,
+    "native_timeline_sha256": "865581e2523ab81178310ddc36f586eac60252642929c82500fea68a7c4d6001",
+    "official_ht": [
+      1,
+      2
+    ],
+    "source_final": [
+      2,
+      3
+    ]
+  },
+  "2014|2014-06-26|Algeria|Russia": {
+    "fifa_match_id": "300186506",
+    "fifa_report_sha256": "225a80ab5c68e9df5ab37cba7914d5c809adbf076ea134e95de4b8c39ca72054",
+    "native_body_sha256": "a68c6150fca6e37b5e9ff2eba3100ad47241a5c1f6d518a8fabb555260c371a0",
+    "native_ht": null,
+    "native_timeline_sha256": "85ec8fdadc57051f75371bb968e6e21c3b2956092b0d0af5c622e416e55b747a",
+    "official_ht": [
+      0,
+      1
+    ],
+    "source_final": [
+      1,
+      1
+    ]
+  },
+  "2014|2014-06-26|Portugal|Ghana": {
+    "fifa_match_id": "300186476",
+    "fifa_report_sha256": "15546ad0b45e32aa29bbfbfc8981700de21b9f2873f23ad8c85aa261a320a0ca",
+    "native_body_sha256": "a68c6150fca6e37b5e9ff2eba3100ad47241a5c1f6d518a8fabb555260c371a0",
+    "native_ht": null,
+    "native_timeline_sha256": "4084ae76493d3874071b203737dc15a60291719d437a5149720b732d28d9e0dd",
+    "official_ht": [
+      1,
+      0
+    ],
+    "source_final": [
+      2,
+      1
+    ]
+  },
+  "2014|2014-06-26|South Korea|Belgium": {
+    "fifa_match_id": "300186480",
+    "fifa_report_sha256": "4d0f404fe1fee2bfb4de81307d7a439c3626c730ec3c4ca517e05d558fa98674",
+    "native_body_sha256": "a68c6150fca6e37b5e9ff2eba3100ad47241a5c1f6d518a8fabb555260c371a0",
+    "native_ht": null,
+    "native_timeline_sha256": "ad3eb90087ca3cd1d772c77b035ba456205a07e12dcdca8378fa3d41b08be3da",
+    "official_ht": [
+      0,
+      0
+    ],
+    "source_final": [
+      0,
+      1
+    ]
+  },
+  "2014|2014-06-26|USA|Germany": {
+    "fifa_match_id": "300186469",
+    "fifa_report_sha256": "b8cce0d3c342fb66b059acd4d48870ed213cd1e4920e89536ad8ce5740408f70",
+    "native_body_sha256": "a68c6150fca6e37b5e9ff2eba3100ad47241a5c1f6d518a8fabb555260c371a0",
+    "native_ht": null,
+    "native_timeline_sha256": "462bfedfce3d84a412309ce1bc9c8747391e851794ce313680012fa545a78744",
+    "official_ht": [
+      0,
+      0
+    ],
+    "source_final": [
+      0,
+      1
+    ]
+  },
+  "2018|2018-06-28|Japan|Poland": {
+    "fifa_match_id": "300331507",
+    "fifa_report_sha256": "7c3d80b8362452fbdaef942026052c21982644245b03a33d72da9d2ff7c3f9da",
+    "native_body_sha256": "6af380e875cc52fe12073ab7862fbe8d3e5505ee029cb84d8b5480bf6d603d11",
+    "native_ht": [
+      0,
+      1
+    ],
+    "native_timeline_sha256": "fe1b37245364b79d51ee110d8d35a995e315f1ae998d39745c69b1e6e62cb065",
+    "official_ht": [
+      0,
+      0
+    ],
+    "source_final": [
+      0,
+      1
+    ]
+  },
+  "2018|2018-06-28|Senegal|Colombia": {
+    "fifa_match_id": "300331553",
+    "fifa_report_sha256": "85049ec4145419aa8f397b55ea6867bf67aa7dd1bd5c2a0f9a19b6a0fb55bffa",
+    "native_body_sha256": "6af380e875cc52fe12073ab7862fbe8d3e5505ee029cb84d8b5480bf6d603d11",
+    "native_ht": [
+      0,
+      1
+    ],
+    "native_timeline_sha256": "35dc4f581e85057784670fa073cfd85217557fce5371c4289c005352e322e54e",
+    "official_ht": [
+      0,
+      0
+    ],
+    "source_final": [
+      0,
+      1
+    ]
+  },
+  "2022|2022-12-01|Japan|Spain": {
+    "fifa_match_id": "400235475",
+    "fifa_report_sha256": "e2aa545235e2b79b31e004b518e80cc217a156fcc786da7330eb2078409368e8",
+    "native_body_sha256": "f4f0499c30076bc8e3702f400765900797fb22212a32aaa8137e1dfc49449a68",
+    "native_ht": [
+      0,
+      0
+    ],
+    "native_timeline_sha256": "021b723e1ff6c4d7c14c807c3f69b77598ead65e4176380416cd9426dee982e8",
+    "official_ht": [
+      0,
+      1
+    ],
+    "source_final": [
+      2,
+      1
+    ]
+  },
+  "2022|2022-12-02|Ghana|Uruguay": {
+    "fifa_match_id": "400235494",
+    "fifa_report_sha256": "ec367250447019827c56d3ad501b91400c655df831af760edef635cb6fbef244",
+    "native_body_sha256": "f4f0499c30076bc8e3702f400765900797fb22212a32aaa8137e1dfc49449a68",
+    "native_ht": null,
+    "native_timeline_sha256": "98f20479202e72a69a24bfdf21829491b6fc56b845e62325d7f6a4e1fe1688ad",
+    "official_ht": [
+      0,
+      2
+    ],
+    "source_final": [
+      0,
+      2
+    ]
+  },
+  "2022|2022-12-02|Serbia|Switzerland": {
+    "fifa_match_id": "400235486",
+    "fifa_report_sha256": "edb3bc1a10137ed0674a1ed129d86e739629de96fd5358a3683dccc9bdd48279",
+    "native_body_sha256": "f4f0499c30076bc8e3702f400765900797fb22212a32aaa8137e1dfc49449a68",
+    "native_ht": [
+      2,
+      1
+    ],
+    "native_timeline_sha256": "162576cfaee38d264ef54e17c4665d7d3377cafac11f516d1828d540a9869267",
+    "official_ht": [
+      2,
+      2
+    ],
+    "source_final": [
+      2,
+      3
+    ]
+  },
+  "2022|2022-12-09|Netherlands|Argentina": {
+    "fifa_match_id": "400128139",
+    "fifa_report_sha256": "6244196abd176b47a01b25575fc4eb0cb82b56170d5335cef48972e33da552dc",
+    "native_body_sha256": "f4f0499c30076bc8e3702f400765900797fb22212a32aaa8137e1dfc49449a68",
+    "native_ht": [
+      1,
+      0
+    ],
+    "native_timeline_sha256": "54cd2fec9c6a4f4aeb636cc14f21db25dfac2f4d05273a54d3171f82b0d308f3",
+    "official_ht": [
+      0,
+      1
+    ],
+    "source_final": [
+      2,
+      2
+    ]
+  },
+  "2026|2026-06-30|Mexico|Ecuador": {
+    "fifa_match_id": "400021520",
+    "fifa_report_sha256": "6299b5c175ef067c0d25efa5bde94efef493403f6b2ac9ac914ea1c05435419c",
+    "native_body_sha256": "0ae2c18109b5aa86bc11928b43586ca430c234804d5bbf808d2c3bf2051ecfca",
+    "native_ht": [
+      1,
+      0
+    ],
+    "native_timeline_sha256": "731daf2616ed1707a7c13445b82c56a6948b450ae60e1e8e78d9247074e37b82",
+    "official_ht": [
+      2,
+      0
+    ],
+    "source_final": [
+      2,
+      0
+    ]
+  }
+}
