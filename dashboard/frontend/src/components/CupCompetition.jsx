@@ -38,20 +38,21 @@ function LeagueStandings({ name, matches }) {
   </>;
 }
 /** A tournament's groups (the archives' World Cups and Euros): one table a group, computed from its results. */
-function GroupTables({ matches, season, highlight }) {
-  const tables = useMemo(() => groupTables(matches), [matches]);
+function GroupTables({ matches, season, highlight, win }) {
+  const tables = useMemo(() => groupTables(matches, { win }), [matches, win]);
   if (!tables.length) return <Empty>Cette édition ne s’est pas jouée en groupes.</Empty>;
   return (
+    <>
     <div className="edition-groups">
       {tables.map((table) => (
         <section className="edition-group" key={table.name}>
           <h3>{table.name}</h3>
           <table className="data-table" aria-label={table.name}>
-            <thead><tr><th scope="col">#</th><th scope="col">Équipe</th><th scope="col"><Term>J</Term></th><th scope="col"><Term>Diff.</Term></th><th scope="col"><Term>Pts</Term></th></tr></thead>
+            <thead><tr><th scope="col">#</th><th scope="col">Équipe</th><th scope="col" title="Matchs joués">J</th><th scope="col" title="Différence de buts">Diff.</th><th scope="col" title="Points">Pts</th></tr></thead>
             <tbody>{table.rows.map((row) => (
               <tr key={row.name} className={highlight && sameNationalTeam(row.name, highlight) ? "edition-own" : undefined}>
                 <td>{row.position}</td>
-                <th scope="row"><span className="cup-match-team"><NationalFlag name={row.name} season={season} />{nationalTeamLabel(row.name)}</span></th>
+                <th scope="row"><span className="cup-match-team"><NationalFlag name={row.name} season={season} /><span title={nationalTeamLabel(row.name)}>{nationalTeamLabel(row.name)}</span></span></th>
                 <td>{row.played}</td><td>{row.difference > 0 ? "+" : ""}{row.difference}</td><td><strong>{row.points}</strong></td>
               </tr>
             ))}</tbody>
@@ -59,6 +60,8 @@ function GroupTables({ matches, season, highlight }) {
         </section>
       ))}
     </div>
+    <p className="nations-note">Classements calculés à partir des résultats disponibles.</p>
+    </>
   );
 }
 /** A cup's match, in the main lists' design (date, teams around the score, round), and its forecast before kick-off. */
@@ -169,7 +172,7 @@ export default function CupCompetition({ competition, initialSeason, name = comp
       <AsyncState resource={resource}>
         {(value) => value.unavailable ? <div className="cup-bracket-unavailable"><Empty>Les tours de cette édition ne sont pas disponibles.</Empty>{archive && season !== archive.season && <button className="button button-secondary" onClick={() => setSeason(archive.season)}>Voir le tableau {archive.season}</button>}</div> : <>
           {value.matches.some((match) => match.status === "scheduled" && match.date && match.date < parisDay(Date.now())) && <p className="cup-source">Certains scores de cette édition ne sont pas encore renseignés.</p>}
-          {view === "bracket" ? <KnockoutBracket matches={value.matches} nationalTeams={nationalTeams} season={season} highlight={highlight} trophy={trophyArt({ title: name, trophyYear: Number(String(season).slice(0, 4)) })} /> : view === "groups" ? <GroupTables matches={value.matches} season={season} highlight={highlight} /> : view === "standings" ? <LeagueStandings name={competition.name} matches={value.matches} /> : <CupMatchList matches={value.matches} status={status} query={query} page={page} onPage={setPage} nationalTeams={nationalTeams} season={season} highlight={highlight} />}
+          {view === "bracket" ? <KnockoutBracket matches={value.matches} nationalTeams={nationalTeams} season={season} highlight={highlight} trophy={trophyArt({ title: name, trophyYear: Number(String(season).slice(0, 4)) })} /> : view === "groups" ? <GroupTables matches={value.matches} season={season} highlight={highlight} win={competition.sourceKey === "world-cup-history" && Number(season) < 1994 ? 2 : 3} /> : view === "standings" ? <LeagueStandings name={competition.name} matches={value.matches} /> : <CupMatchList matches={value.matches} status={status} query={query} page={page} onPage={setPage} nationalTeams={nationalTeams} season={season} highlight={highlight} />}
         </>}
       </AsyncState>
       </>}

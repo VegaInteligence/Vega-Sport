@@ -490,7 +490,15 @@
 .edition-groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
 .edition-group { min-width: 0; padding: 10px 12px; background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius); }
 .edition-group h3 { margin: 0 0 6px; color: var(--ink-strong); font-size: var(--text-sm); }
-.edition-group .data-table { width: 100%; }
+/* A group's table is as wide as its card: the shared tables' 800 px floor is not for it. */
+.edition-group .data-table { width: 100%; min-width: 0; font-size: var(--text-sm); }
+.edition-group .data-table :is(th, td) { padding: 6px 4px; }
+.edition-group .data-table thead th { background: none; }
+.edition-group .data-table :is(th, td):not(:nth-child(2)) { width: 1%; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.edition-group .data-table tbody th { width: 100%; max-width: 0; overflow: hidden; color: var(--ink); background: none; font-size: var(--text-sm); text-overflow: ellipsis; }
+.edition-group .cup-match-team { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.edition-group .cup-match-team > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.edition-groups + .nations-note { margin: 12px 0 0; }
 .edition-group .edition-own > * { background: var(--accent-soft); }
 @media (max-width: 860px) {
   .edition-name { font-size: 18px; }

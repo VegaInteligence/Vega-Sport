@@ -41,7 +41,7 @@ function readableRound(round, group) {
  * the name; a team with no match played yet is in the table all the same. Computed from the results the source gives:
  * no deduction or head-to-head rule can be read from them.
  */
-export function leagueTable(matches) {
+export function leagueTable(matches, { win = 3 } = {}) {
   const rows = new Map();
   const row = (name) => rows.get(name) || rows.set(name, { name, played: 0, wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0, points: 0 }).get(name);
   for (const match of matches || []) {
@@ -50,8 +50,8 @@ export function leagueTable(matches) {
     const [hs, as] = match.score;
     home.played++; away.played++;
     home.goalsFor += hs; home.goalsAgainst += as; away.goalsFor += as; away.goalsAgainst += hs;
-    if (hs > as) { home.wins++; away.losses++; home.points += 3; }
-    else if (hs < as) { away.wins++; home.losses++; away.points += 3; }
+    if (hs > as) { home.wins++; away.losses++; home.points += win; }
+    else if (hs < as) { away.wins++; home.losses++; away.points += win; }
     else { home.draws++; away.draws++; home.points++; away.points++; }
   }
   return [...rows.values()]
@@ -153,9 +153,10 @@ export function normalizeOpenCup(matches) {
 /**
  * An edition's groups (a tournament of the archives): one table per group the source names, in the groups' order, each
  * computed as a league's (leagueTable). 1950's final round, a group the source names by its round alone, is the
- * « Poule finale ». An edition without groups has no table.
+ * « Poule finale ». An edition without groups has no table. `win`: the points of a win in that edition (two in the
+ * World Cups before 1994).
  */
-export function groupTables(matches) {
+export function groupTables(matches, { win = 3 } = {}) {
   const groups = new Map();
   for (const match of matches || []) {
     const name = match.group ? readableRound(match.group) : /^final round$/i.test(String(match.roundName || "").trim()) ? "Poule finale" : "";
@@ -164,7 +165,7 @@ export function groupTables(matches) {
   }
   return [...groups.entries()]
     .sort((a, b) => (a[0] === "Poule finale") - (b[0] === "Poule finale") || a[0].localeCompare(b[0], "fr", { numeric: true }))
-    .map(([name, rows]) => ({ name, rows: leagueTable(rows) }));
+    .map(([name, rows]) => ({ name, rows: leagueTable(rows, { win }) }));
 }
 
 /** Keep past unscored matches out of the upcoming list. */
