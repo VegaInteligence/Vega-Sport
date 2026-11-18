@@ -1603,6 +1603,11 @@ changed it, `SNAPSHOT_CHANGED` rolls back the edition before removing its provid
 The result guard also applies to an existing key read in another edition. Identical match
 rows still require no write.
 
+Only a match's current provider key participates in comparing membership. Historical keys
+remain attached to a retained match. An incoming historical key refuses the changed snapshot
+with `INACTIVE_MATCH_KEY`. A permitted withdrawal of the current key removes the match and
+the provider's keys for it, including historical keys.
+
 **A snapshot replaces an edition only when it is complete and keeps its results.** Before any write:
 - open-matchday: the folder's manifest declares integer counts (not booleans) and no `errors`. Each
   declared file is read. A results file has `date, home, away, ft_home, ft_away`; a fixtures file has
