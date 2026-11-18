@@ -1,5 +1,6 @@
 "use client";
 import React, { useMemo, useState } from "react";
+import Link from "next/link";
 import { Card, Media, Pager, Segments, AsyncState, Empty } from "./UI.jsx";
 import { date, seasonLabel } from "../services/format.js";
 import { parisDay } from "../services/fixtures.js";
@@ -17,6 +18,8 @@ import { useCupProjection } from "../services/cup-projection.js";
 import MatchForecastBar from "./MatchForecastBar.jsx";
 import { Term } from "./Hint.jsx";
 import EditionHeader, { FollowedTeam } from "./EditionHeader.jsx";
+import { useFootball } from "../hooks/FootballContext.jsx";
+import { useWorldCupIndex, withWorldCupKeys } from "../services/worldcup-matches.js";
 import { nationalTeamLabel, sameNationalTeam } from "../services/national-flags.js";
 import { trophyArt } from "../services/trophy-art.js";
 
@@ -65,11 +68,14 @@ function GroupTables({ matches, season, highlight, win }) {
   );
 }
 /** A cup's match, in the main lists' design (date, teams around the score, round), and its forecast before kick-off. */
-function CupMatch({ match, nationalTeams, season, highlight }) {
+function CupMatch({ match, nationalTeams, season, highlight, hrefForMatch }) {
   const badge = (name) => (nationalTeams ? <NationalFlag name={name} season={season || match.date} /> : <Media name={name} />);
   const label = (name) => (nationalTeams ? nationalTeamLabel(name) : name);
+  // A match with a page of its own (an archived World Cup match) opens it.
+  const href = match.id && hrefForMatch ? hrefForMatch(match.id) : null;
+  const Row = href ? Link : "div";
   return (
-    <div className={"match-row cup-match" + (highlight && nationalTeams && [match.home, match.away].some((name) => sameNationalTeam(name, highlight)) ? " cup-match-own" : "")}>
+    <Row {...(href ? { href, prefetch: false } : {})} className={"match-row cup-match" + (highlight && nationalTeams && [match.home, match.away].some((name) => sameNationalTeam(name, highlight)) ? " cup-match-own" : "")}>
       <span className="match-date">{match.date ? date(match.date) : "Date à préciser"}</span>
       <span className="match-teams">
         <span className="team-name home-team"><span>{label(match.home)}</span>{badge(match.home)}</span>
@@ -79,7 +85,7 @@ function CupMatch({ match, nationalTeams, season, highlight }) {
         {match.status === "scheduled" && <MatchForecastBar home={match.home} away={match.away} forecast={match.forecast} />}
       </span>
       <span className="match-league">{match.round || ""}</span>
-    </div>
+    </Row>
   );
 }
 
@@ -145,6 +151,13 @@ export default function CupCompetition({ competition, initialSeason, name = comp
     const matches = normalizeOpenCup(payload.matches);
     return { matches: mode === "archive" && archive.twoLegged && view === "bracket" ? combineCupLegs(matches) : matches, source: payload.source };
   });
+  // An archived World Cup's matches open their page (the Fjelstul World Cup Database): the edition's index gives each
+  // its key; without it (a failed read, an edition it does not hold) the matches stay as they are.
+  const f = useFootball();
+  const archivedWorldCup = competition.sourceKey === "world-cup-history";
+  const pages = useWorldCupIndex(String(season), archivedWorldCup);
+  const hrefForMatch = archivedWorldCup ? (key) => f.href("/matchs/", { cdm: key }) : undefined;
+  const withPages = (matches) => (archivedWorldCup && pages.value?.length ? withWorldCupKeys(matches, pages.value) : matches);
   // A win was worth two points in the World Cups before 1994.
   const win = competition.sourceKey === "world-cup-history" && Number(season) < 1994 ? 2 : 3;
   function pickSeason(next) {
@@ -174,18 +187,18 @@ export default function CupCompetition({ competition, initialSeason, name = comp
       <AsyncState resource={resource}>
         {(value) => value.unavailable ? <div className="cup-bracket-unavailable"><Empty>Les tours de cette édition ne sont pas disponibles.</Empty>{archive && season !== archive.season && <button className="button button-secondary" onClick={() => setSeason(archive.season)}>Voir le tableau {archive.season}</button>}</div> : <>
           {value.matches.some((match) => match.status === "scheduled" && match.date && match.date < parisDay(Date.now())) && <p className="cup-source">Certains scores de cette édition ne sont pas encore renseignés.</p>}
-          {view === "bracket" ? <KnockoutBracket matches={value.matches} nationalTeams={nationalTeams} season={season} highlight={highlight} win={win} trophy={trophyArt({ title: name, trophyYear: Number(String(season).slice(0, 4)) })} /> : view === "groups" ? <GroupTables matches={value.matches} season={season} highlight={highlight} win={win} /> : view === "standings" ? <LeagueStandings name={competition.name} matches={value.matches} /> : <CupMatchList matches={value.matches} status={status} query={query} page={page} onPage={setPage} nationalTeams={nationalTeams} season={season} highlight={highlight} />}
+          {view === "bracket" ? <KnockoutBracket matches={withPages(value.matches)} hrefForMatch={hrefForMatch} nationalTeams={nationalTeams} season={season} highlight={highlight} win={win} trophy={trophyArt({ title: name, trophyYear: Number(String(season).slice(0, 4)) })} /> : view === "groups" ? <GroupTables matches={value.matches} season={season} highlight={highlight} win={win} /> : view === "standings" ? <LeagueStandings name={competition.name} matches={value.matches} /> : <CupMatchList matches={withPages(value.matches)} hrefForMatch={hrefForMatch} status={status} query={query} page={page} onPage={setPage} nationalTeams={nationalTeams} season={season} highlight={highlight} />}
         </>}
       </AsyncState>
       </>}
     </Card>
   );
 }
-export function CupMatchList({ matches, status, query, page, onPage, nationalTeams = false, season, highlight = "" }) {
+export function CupMatchList({ matches, status, query, page, onPage, nationalTeams = false, season, highlight = "", hrefForMatch }) {
   const rows = useMemo(() => filterCupMatches(matches, status, query), [matches, status, query]);
   const pages = Math.max(1, Math.ceil(rows.length / 30)), current = Math.min(page, pages);
   return <>
-    <div className="cup-match-list">{rows.slice((current - 1) * 30, current * 30).map((match) => <CupMatch key={match.key} match={match} nationalTeams={nationalTeams} season={season} highlight={highlight} />)}</div>
+    <div className="cup-match-list">{rows.slice((current - 1) * 30, current * 30).map((match) => <CupMatch key={match.key} match={match} nationalTeams={nationalTeams} season={season} highlight={highlight} hrefForMatch={hrefForMatch} />)}</div>
     {!rows.length && <Empty>{status === "scheduled" ? "Aucune rencontre à venir disponible." : "Aucun résultat disponible pour cette sélection."}</Empty>}
     <Pager page={current} total={pages} onChange={onPage} />
   </>;
