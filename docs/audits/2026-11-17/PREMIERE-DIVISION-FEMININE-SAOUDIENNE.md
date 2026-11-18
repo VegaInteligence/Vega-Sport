@@ -1,5 +1,7 @@
 # Première division féminine saoudienne
 
+Le 18 novembre au soir, cette compétition est sortie du périmètre produit. Les observations fédérales et les liens historiques ci-dessous documentent la période de couverture. Les 20 écarts correspondent à l’édition 1002, qui contenait encore huit résultats terminés sur 56 fixtures à 22 h 09 UTC. [Relevé des 20 résultats](controles/verification-integree/saudi-20-apres-retrait.csv) · [Ventilation des périmètres](controles/verification-integree/comptes-par-perimetre.csv)
+
 **En 2026/27, la SAFF a publié 28 résultats et Vega en a enregistré huit.** PitchAPI conserve 20 rencontres disputées des journées 3 à 7 sous le statut reporté. Pour l’affiche opposant Al Taraji à Al Nassr le 31 octobre, la SAFF donne 2–3. Le fournisseur rattache le 31 octobre à l’opposition inverse et le 6 mai 2027 au match dans le sens effectivement joué. Un rapprochement par paire et saison doit donc contrôler les deux manches et leurs dates. [202 rencontres par jour et côté](controles/collecte-joueuses/202-rencontres.csv) · [Calendrier officiel 2026/27](https://www.saff.com.sa/en/championship.php?id=428&type=all)
 
 | Édition | Résultats officiels | Résultats concordants dans Vega | Notes joueuse enregistrées | Notes affichables selon la règle du lecteur | Côtés avec Elo dans Vega |

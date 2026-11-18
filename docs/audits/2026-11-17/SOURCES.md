@@ -6,6 +6,22 @@ Le rapport date ses observations. Ses chemins de preuve sont relatifs au sous-do
 
 Baseline `8018e0836ca0f32e8b2eb51fc2847154abff7f13`. Production measurements come from the read-only `vega_v2` snapshots of 17 November at 18:12–18:13 UTC. Paths below refer to this checkout. An edition present in the database can have zero collected fixtures. Player participation cannot be deduced from the scoreline or a list of scorers.
 
+## Mise à jour du 18 novembre à 22 h 09 UTC
+
+| Domaine | Source et consommateur | Décision et limite vérifiée |
+| --- | --- | --- |
+| Identité et score des matchs masculins du Mondial | OpenFootball fournit les rencontres canoniques de l’archive historique. L’API du tournoi lit leurs identités et résultats. | Maintenir les identités Vega et n’ordonner les buts prolongation comprise qu’après rapprochement de la date et des deux côtés. Les 964 matchs masculins des éditions terminées concordent sur ces critères avec Fjelstul. |
+| Feuilles historiques des Mondiaux | Les 17 fichiers Fjelstul alimentent 12 tables dédiées. Cinq vues fournissent les compositions, les événements, le stade, les officiels et les tirs au but au lecteur des rencontres. | Conserver ce complément. Les identifiants de personnes et d’équipes y sont propres à la source. La liaison du match ne crée aucune statistique joueur admissible au calcul Vega. Les 284 matchs féminins de cette capture sont sans parent canonique. |
+| Calendriers des compétitions retirées | Le code filtre 35 clés de collecte. La capture retrouve 34 liaisons et 155 éditions dont des données PitchAPI, Open Matchday et d’archive. | Le classeur passe de 130 à 99 compétitions. La purge physique a échoué avec 42501. Conserver les comptes mesurés dans les deux périmètres et vérifier les droits, la provenance et le recalcul avant la prochaine opération du propriétaire. |
+| Résultats nationaux et coupes complémentaires | PitchAPI, Open Matchday, OpenLigaDB et OpenFootball ont des couvertures distinctes par édition. Un calendrier peut porter des résultats, des cotes, des prévisions et des liens d’une autre origine. | Comparer les clés par édition. La présence de 2 099 prévisions pour 2 106 fixtures Open Matchday programmées expose le flux de report au défaut décrit dans VI-27. La cohérence du dernier résultat certifié reste à vérifier après correction. |
+| Notes de performance et classements | Le moteur joueur utilise les faits admissibles et les minutes mesurées. Le moteur Elo publie les valeurs pré/post par côté éligible. Les classements fournisseurs et les feuilles historiques ont leurs propres lecteurs. | Comptabiliser séparément les notes joueur, les Elo par côté et les participations connues sans données suffisantes. Le relevé identifie 14 418 notes joueur calculables absentes, dont 2 856 dans les éditions ciblées par le retrait. |
+
+[Répartition actuelle des rencontres par source](controles/verification-integree/rencontres-par-source-2209.csv) · [Clés par édition et périmètre](controles/verification-integree/scores-actuels-par-edition.csv.gz) · [Contrat Fjelstul et vérifications](controles/verification-integree/nouveau-mondial-et-perimetre.txt) · [Propriétaires et corrections](PLAN-VALIDATION.md)
+
+Le déploiement suivant, à 23 h 11 UTC, modifie la purge et ajoute un rapprochement des doublons d’archive. Son effet en base reste à mesurer. [Dernier déploiement](controles/verification-integree/release-passation.txt)
+
+La matrice suivante conserve les nombres observés lors du premier passage, les domaines uniques de chaque fournisseur, les consommateurs et les recouvrements connus.
+
 ## Source matrix
 
 | Source and runtime evidence | Competition and season coverage | Fields, storage and consumers | Ownership, overlaps and decision |
