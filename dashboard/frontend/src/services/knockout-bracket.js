@@ -27,23 +27,29 @@ const teamKey = (team) => team?.id ? "id:" + team.id : "name:" + teamName(team?.
 const scorePair = (a, b) => Number.isInteger(a) && a >= 0 && Number.isInteger(b) && b >= 0 ? [a, b] : null;
 const dateOrder = (a, b) => (a.date || "9999").localeCompare(b.date || "9999") || (a.number || 0) - (b.number || 0) || String(a.key).localeCompare(String(b.key));
 
-/** Add match links and crests only for a unique exact date/team match. */
-export function attachNativeMatches(matches, nativeMatches) {
-  const byFixture = new Map();
-  for (const match of nativeMatches || []) {
+const DAY = 86400000;
+const noon = (day) => Date.parse(String(day).slice(0, 10) + "T12:00:00Z");
+
+/**
+ * Give a tie its collected match (its page on the site: line-ups, statistics) and crests: the collected match of the
+ * same two teams, in either order, played within a day of it (a source gives the local day, the other the UTC day),
+ * when there is exactly one. `sameTeam` says two spellings are one team (the national teams' names differ between
+ * sources); by default the same name.
+ */
+export function attachNativeMatches(matches, nativeMatches, sameTeam = (a, b) => teamName(a) === teamName(b)) {
+  const collected = (nativeMatches || []).flatMap((match) => {
     const home = match.home_team || match.home, away = match.away_team || match.away;
-    if (!match.id || !match.date || !home?.name || !away?.name) continue;
-    const key = [match.date, teamName(home.name), teamName(away.name)].join("|");
-    const values = byFixture.get(key) || [];
-    values.push(match);
-    byFixture.set(key, values);
-  }
+    return match.id && match.date && home?.name && away?.name ? [{ match, home, away, at: noon(match.date) }] : [];
+  });
   return (matches || []).map((match) => {
-    const key = [match.date, teamName(match.home), teamName(match.away)].join("|");
-    const found = byFixture.get(key);
-    if (!match.date || found?.length !== 1) return match;
-    const native = found[0], home = native.home_team || native.home, away = native.away_team || native.away;
-    return { ...match, id: native.id, homeImage: home.image_url || home.imageUrl, awayImage: away.image_url || away.imageUrl };
+    if (!match.date) return match;
+    const at = noon(match.date);
+    const found = collected.filter((c) => Math.abs(c.at - at) <= DAY
+      && ((sameTeam(c.home.name, match.home) && sameTeam(c.away.name, match.away)) || (sameTeam(c.home.name, match.away) && sameTeam(c.away.name, match.home))));
+    if (found.length !== 1) return match;
+    const { match: native, home, away } = found[0];
+    const [first, second] = sameTeam(home.name, match.home) ? [home, away] : [away, home];
+    return { ...match, id: native.id, homeImage: first.image_url || first.imageUrl, awayImage: second.image_url || second.imageUrl };
   });
 }
 
