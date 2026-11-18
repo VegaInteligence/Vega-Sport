@@ -1,15 +1,31 @@
 """Official league tables of SportScore (sportscore.com widget), as main's
 /api/standings source (frontend/src/services/sportscore-standings.js).
 
-SportScore gives the current table of a competition, without a season, and names
-without ids. A table is written for the competition's current edition only when every
-row designates exactly one team of that edition (normalized name, short name, a
-known spelling, or the last team left); otherwise nothing official is kept and the
-API serves Vega's own table. A table that names other clubs (a new season on one side
-only) therefore never lands on the wrong edition.
+SportScore gives the current table of a competition, without a season, and names without ids.
+A response replaces the current edition's official table only when it is a whole table of that
+edition (docs/calculs/09-audit-2026-11/FAILURE_MODES_SPORTSCORE.md §2): every row valid, every name
+designating one team of the edition, no club repeated, no position shared between clubs of
+different points, the edition's own results consistent with it (every club with a counted result
+there, and organiser corroboration if every club is ahead of the matches kicked off), every club
+and every table of the accepted observation still there with what was known of it (a single table
+may split exhaustively, and explicit retirement is reviewed in RETIRED_TABLES), every table's
+clubs too (a group keeps its clubs; a ranking across groups may change members but never shrinks,
+unless a row is reviewed out in RETIRED_ROWS), and no club's played count going down unless the
+results attest it. Anything else is refused with its code: the scope fails (sources.run_due), the accepted
+table keeps its rows and its date, and the scope is tried again after RETRY_AFTER. A name of a club
+of the previous or next edition is wrong-season evidence (WRONG_EDITION); a name nothing
+designates is missing evidence (UNMATCHED_TEAMS). No row is ever given to a team by elimination.
+The writer reads and replaces SportScore's rows without a stage only (OWN).
+
+Each accepted row keeps its basis: the club's results Vega counted when it was observed
+(core.table_results, migration 138). api.standings serves SportScore's table, and no other
+provider's, while it holds every club of Vega's own table and every basis is still the club's
+counted results; otherwise Vega's own table. A valid repeat moves the observation time only while
+the table is not behind those results.
 """
 
 from datetime import timedelta
+import json
 import re
 import unicodedata
 from urllib.parse import urlencode
@@ -99,47 +115,162 @@ LEAGUES = {
     "l_4WFCIZ": "english-premier-league",
 }
 
+# Tables of an accepted observation that a later response may leave out (§2.1, rule 13b), written
+# here once reviewed: {(LEAGUES key, season label, table name): "reviewer, date: reason"}. Without an
+# entry, a table that disappears while the edition's other tables remain refuses the response, even
+# when its clubs all appear elsewhere (the World Cup's ranking of third-placed teams). The pattern of
+# snapshot.RETRACTIONS.
+RETIRED_TABLES = {}
+# Rows a later response may leave out of a table that stays (§2.1, rule 13c), once reviewed:
+# {(LEAGUES key, season label, table name, the club's public id): "reviewer, date: reason"}. An
+# entry lets that club leave that table of that edition, and nothing else. A refusal's detail names
+# the key to review.
+RETIRED_ROWS = {}
+# A widget answer larger than this is not a league table (it was cut silently before).
+MAX_TABLES, MAX_ROWS = 30, 100
+# Stored column -> widget key. A row without its rank, matches or points is no standings row;
+# the other numbers may be unknown, until they have been known once (MISSING_FIELD).
+FIELDS = {"position": "pos", "played": "p", "won": "w", "drawn": "d", "lost": "l",
+          "goals_for": "gf", "goals_against": "ga", "points": "pts"}
+REQUIRED = ("position", "played", "points")
+COLUMNS = ("group_name", "team_id", *FIELDS)
+# The writer's own rows of an edition: SportScore's, without a stage (it writes none). Rows of
+# another provider or of a stage are neither read, replaced nor dated here (§2.2).
+OWN = "competition_season_id = %s AND source = 'sportscore' AND stage IS NULL"
+# The counts of a row, never negative; in core.table_results' order, the basis: what Vega counted
+# of a club when its row was observed.
+RESULTS = ("played", "won", "drawn", "lost", "goals_for", "goals_against")
+NO_RESULT = (0,) * len(RESULTS)
+# Not every club can be this far ahead of the matches the edition has kicked off for it: last
+# season's final table seen at the next season's start is about thirty ahead, and four leaves
+# room for fixtures our calendar lacks (§2.1, rule 11).
+SLACK = 4
+# The Allsvenskan site uses this season-specific table. Its recent form identifies the
+# competition and edition. Read it only when the Swedish primary calendar is too short.
+ALLSVENSKAN = "l_1XsMdH"
+ALLSVENSKAN_URL = "https://gql.sportomedia.se/graphql"
+ALLSVENSKAN_QUERY = """query VerifySeason($year: Int!) {
+  standingsForLeague(configLeagueName: "allsvenskan", configSeasonStartYear: $year, type: "total") {
+    standings { teamName teamId stats { name value } form { configLeagueName configSeasonStartYear } }
+  }
+}"""
+ALLSVENSKAN_FIELDS = ("gp", "w", "t", "l", "gf", "ga")
+# The organiser calls IF Brommapojkarna "BP". Bind that abbreviation to its organiser ID.
+ALLSVENSKAN_BP = 25591
+PROOF_TTL = PERIOD + timedelta(minutes=5)
+_allsvenskan_proof = None
+# The matches of rounds Vega's table counts that the edition has kicked off by an instant, per club.
+KICKED_OFF = """SELECT x.team_id, count(*) FROM core.matches m LEFT JOIN core.rounds r ON r.id = m.round_id
+  CROSS JOIN LATERAL (VALUES (m.home_team_id), (m.away_team_id)) AS x(team_id)
+  WHERE m.competition_season_id = %s AND m.kickoff_at <= %s AND x.team_id IS NOT NULL
+    AND coalesce(r.stage, 'regular') IN ('regular', 'group')
+  GROUP BY x.team_id"""
+# A row stored before 138 has no basis: it is behind once a counted match finished after it.
+# api.standings applies the same rule to such rows.
+FINISHED_SINCE = """SELECT EXISTS (
+  SELECT 1 FROM core.matches m LEFT JOIN core.rounds r ON r.id = m.round_id
+  WHERE m.competition_season_id = %s AND m.first_finished_at > %s AND m.status = 'finished'
+    AND m.home_score IS NOT NULL AND m.away_score IS NOT NULL AND coalesce(r.stage, 'regular') IN ('regular', 'group'))"""
+
 
 def scopes(now):
     return {f"standings:{key}": PERIOD for key in LEAGUES}
 
 
-def _number(value):
-    return value if isinstance(value, int) and not isinstance(value, bool) else (
-        int(value) if isinstance(value, float) and value.is_integer() else None)
+def _number(row, key, where):
+    """A widget number: None when absent, an int when it is one (an integral float too)."""
+    value = row.get(key)
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or (isinstance(value, float) and not value.is_integer()):
+        raise SourceError("INVALID_ROW", f"{where}: {key}={value!r}")
+    return int(value)
 
 
 def parse(payload, slug):
-    """[(group name or None, [row dict])] of a widget response; SourceError if it is not one."""
+    """[(group name or None, [row dict])] of a widget response, its empty tables left out;
+    SourceError when it is not one: every row named, ranked, with its matches and points."""
     if not isinstance(payload, dict) or payload.get("sport") != "football" or payload.get("competition_slug") != slug \
             or not isinstance(payload.get("tables"), list):
         raise SourceError("UNEXPECTED_RESPONSE")
+    if len(payload["tables"]) > MAX_TABLES:
+        raise SourceError("INVALID_ROW", f"{len(payload['tables'])} tables")
     tables = []
-    for table in payload["tables"][:30]:
-        rows = [
-            {"name": row["team"].strip(), "position": _number(row.get("pos")), "played": _number(row.get("p")),
-             "won": _number(row.get("w")), "drawn": _number(row.get("d")), "lost": _number(row.get("l")),
-             "goals_for": _number(row.get("gf")), "goals_against": _number(row.get("ga")), "points": _number(row.get("pts"))}
-            for row in (table.get("rows") or [])[:100]
-            if isinstance(row, dict) and isinstance(row.get("team"), str) and row["team"].strip()
-        ]
+    for number, table in enumerate(payload["tables"], 1):
+        raw = table.get("rows") if isinstance(table, dict) else None
+        if not isinstance(table, dict) or not isinstance(raw if raw is not None else [], list):
+            raise SourceError("INVALID_ROW", f"table {number} is not a table")
+        if len(raw or []) > MAX_ROWS:
+            raise SourceError("INVALID_ROW", f"table {number}: {len(raw)} rows")
+        rows = []
+        for place, row in enumerate(raw or [], 1):
+            where = f"table {number} row {place}"
+            if not isinstance(row, dict) or not isinstance(row.get("team"), str) or not normalize(row["team"]):
+                raise SourceError("INVALID_ROW", f"{where}: no team")
+            parsed = {"name": row["team"].strip(), **{field: _number(row, key, where) for field, key in FIELDS.items()}}
+            unknown = [FIELDS[f] for f in REQUIRED if parsed[f] is None]
+            if unknown or parsed["position"] < 1 or any(parsed[f] is not None and parsed[f] < 0 for f in RESULTS):
+                raise SourceError("INVALID_ROW", f"{where} ({parsed['name']}): " + (f"no {', '.join(unknown)}" if unknown else "negative value"))
+            rows.append(parsed)
         if rows:
             group = table.get("group").strip() if isinstance(table.get("group"), str) else ""
             tables.append((group or None, rows))
     return tables
 
 
-def _edition_teams(conn, edition):
+def check(tables):
+    """The response's own coherence, before any name is read (§2.1); SourceError otherwise."""
+    if not tables:
+        raise SourceError("EMPTY_TABLE", "no row")
+    groups = [group for group, _ in tables]
+    if len(tables) > 1 and len(set(groups)) != len(groups):
+        raise SourceError("DUPLICATE_GROUP", "two tables named " + repr(next(g for g in groups if groups.count(g) > 1)))
+    for group, rows in tables:
+        label = group or "the table"
+        seen, ranks = set(), {}
+        for row in rows:
+            key = normalize(row["name"])
+            if key in seen:
+                raise SourceError("DUPLICATE_ROW", f"{row['name']} twice in {label}")
+            seen.add(key)
+            ranks.setdefault(row["position"], []).append(row)
+        # Clubs sharing a rank have equal points: the one invariant of every ranking; no
+        # tie-break order (difference, goals, head to head) is assumed.
+        for position, tied in ranks.items():
+            if len({r["points"] for r in tied}) > 1:
+                raise SourceError("DUPLICATE_POSITION",
+                                  f"position {position} of {label}: {', '.join(r['name'] for r in tied)}, with different points")
+        # Tables of a split may continue one numbering (7-12): a single table holds all its ranks.
+        if len(tables) == 1 and max(ranks) > len(rows):
+            raise SourceError("INCOMPLETE_TABLE", f"position {max(ranks)} in a table of {len(rows)} rows")
+
+
+def _spellings(conn, query, args):
     names, spelled = {}, {}
-    for team, *spellings in conn.execute(
-        """SELECT t.id, t.name, t.short_name, n.name FROM core.team_seasons ts JOIN core.teams t ON t.id = ts.team_id
-           LEFT JOIN core.entity_names n ON n.entity_type = 'team' AND n.entity_id = t.id
-           WHERE ts.competition_season_id = %s""",
-        (edition,),
-    ).fetchall():
+    for team, *spellings in conn.execute(query, args).fetchall():
         names.setdefault(team, set()).update(normalize(s) for s in spellings if s)
         spelled.setdefault(team, set()).update(s for s in spellings if s)
     return names, spelled
+
+
+def _edition_teams(conn, edition):
+    return _spellings(conn, """SELECT t.id, t.name, t.short_name, n.name FROM core.team_seasons ts JOIN core.teams t ON t.id = ts.team_id
+           LEFT JOIN core.entity_names n ON n.entity_type = 'team' AND n.entity_id = t.id
+           WHERE ts.competition_season_id = %s""", (edition,))
+
+
+def _neighbour_teams(conn, edition):
+    """The teams of the competition's previous and next editions that this edition does not hold:
+    a row naming one of them is another season's table."""
+    names, _ = _spellings(conn, """SELECT t.id, t.name, t.short_name, n.name
+           FROM core.competition_seasons e
+           JOIN core.competition_seasons o ON o.competition_id = e.competition_id AND o.season_id IN (e.season_id - 1, e.season_id + 1)
+           JOIN core.team_seasons ts ON ts.competition_season_id = o.id
+           JOIN core.teams t ON t.id = ts.team_id
+           LEFT JOIN core.entity_names n ON n.entity_type = 'team' AND n.entity_id = t.id
+           WHERE e.id = %s AND NOT EXISTS (SELECT 1 FROM core.team_seasons x WHERE x.competition_season_id = e.id AND x.team_id = t.id)""",
+                          (edition,))
+    return names
 
 
 # Words of a club's official name that say what it is, not which one ("Stade Rennais FC").
@@ -166,94 +297,340 @@ def _closeness(source_tokens, team_tokens):
     return best
 
 
-def link(conn, edition, tables):
-    """{row name: team id} when every row designates one team, else None (and the count).
-    A row is its team by a known spelling; else by its distinctive words ("LOSC Lille" is
-    Lille, "Stade Rennais FC" is Rennes), when one team of the edition is clearly closest."""
-    teams, spelled = _edition_teams(conn, edition)
-    return pair({row["name"] for _, rows in tables for row in rows}, teams, spelled)
-
-
-def pair(wanted, teams, spelled):
-    """link() without the database: teams {id: normalized spellings}, spelled {id: spellings}."""
+def _exact(wanted, teams):
+    """{name: team} of the names one team's known spellings hold (normalized), and no other's."""
     found = {}
     for name in wanted:
         hits = [team for team, keys in teams.items() if normalize(name) in keys]
         if len(hits) == 1:
             found[name] = hits[0]
-    # Distinctive words, over the rows and teams still unpaired: a row takes the team it is
-    # closest to only when that team is not as close to another row, and no other team ties.
+    return found
+
+
+def _closest(rows, spelled):
+    """Distinctive words, over the rows and teams still unpaired: a row takes the team it is
+    closest to only when that team is not as close to another row, and no other team ties."""
+    found = {}
     while True:
-        rows = [n for n in wanted if n not in found]
-        free = [t for t in teams if t not in found.values()]
-        scores = {(n, t): max((_closeness(_tokens(n), _tokens(s)) for s in spelled[t]), default=0) for n in rows for t in free}
+        left = [n for n in rows if n not in found]
+        free = [t for t in spelled if t not in found.values()]
+        scores = {(n, t): max((_closeness(_tokens(n), _tokens(s)) for s in spelled[t]), default=0) for n in left for t in free}
         paired = False
-        for n in rows:
+        for n in left:
             ranked = sorted(((scores[(n, t)], t) for t in free), reverse=True)
             if not ranked or ranked[0][0] == 0 or (len(ranked) > 1 and ranked[1][0] == ranked[0][0]):
                 continue
             team = ranked[0][1]
-            if any(scores[(other, team)] >= ranked[0][0] for other in rows if other != n):
+            if any(scores[(other, team)] >= ranked[0][0] for other in left if other != n):
                 continue
             found[n] = team
             paired = True
             break
         if not paired:
-            break
-    left_rows = wanted - set(found)
-    left_teams = set(teams) - set(found.values())
-    if len(left_rows) == 1 and len(left_teams) == 1:
-        found[left_rows.pop()] = left_teams.pop()
+            return found
+
+
+def pair(wanted, teams, spelled):
+    """{row name: team id} when every name designates one team, else None; and the names left.
+    teams {id: normalized spellings}, spelled {id: spellings}: a known spelling, else the
+    distinctive words. A name left over is never given to the team left over."""
+    found = _exact(wanted, teams)
+    found.update(_closest(set(wanted) - set(found), {t: s for t, s in spelled.items() if t not in found.values()}))
     if len(set(found.values())) != len(found):
         return None, len(wanted)
     missing = len(wanted) - len(found)
     return (found if not missing else None), missing
 
 
+def link(conn, edition, tables):
+    """{row name: team id} of a response, every name designating one team of the edition;
+    SourceError WRONG_EDITION, UNMATCHED_TEAMS or DUPLICATE_ROW otherwise."""
+    wanted = {row["name"] for _, rows in tables for row in rows}
+    teams, spelled = _edition_teams(conn, edition)
+    found = _exact(wanted, teams)
+    others = _neighbour_teams(conn, edition)
+    foreign = sorted(name for name in wanted - set(found) if any(normalize(name) in keys for keys in others.values()))
+    if foreign:
+        raise SourceError("WRONG_EDITION", f"edition {edition}: {', '.join(foreign)}: clubs of the previous or next edition only")
+    found.update(_closest(wanted - set(found), {t: s for t, s in spelled.items() if t not in found.values()}))
+    unmatched = sorted(wanted - set(found))
+    if unmatched:
+        raise SourceError("UNMATCHED_TEAMS", f"edition {edition}: not linked: {', '.join(unmatched)}")
+    for group, rows in tables:
+        designated = [found[row["name"]] for row in rows]
+        if len(set(designated)) != len(designated):
+            twice = next(row["name"] for row in rows if designated.count(found[row["name"]]) > 1)
+            raise SourceError("DUPLICATE_ROW", f"edition {edition}: {twice} and another row of {group or 'the table'} are one team")
+    return found
+
+
+def _team_names(conn, teams):
+    return dict(conn.execute("SELECT id, name FROM core.teams WHERE id = ANY(%s)", (sorted(teams),)).fetchall())
+
+
+def _allsvenskan_rows(payload, year):
+    """A full season-labelled organiser table, in the fields needed for corroboration."""
+    if payload.get("errors"):
+        raise ValueError("GraphQL reported an error")
+    rows = payload["data"]["standingsForLeague"]["standings"]
+    if not isinstance(rows, list) or not 0 < len(rows) <= MAX_ROWS:
+        raise ValueError("missing or oversized organiser table")
+    teams, totals = set(), {}
+    for row in rows:
+        name, team, form = row["teamName"], row["teamId"], row["form"]
+        if (team, name) == (ALLSVENSKAN_BP, "BP"):
+            name = "Brommapojkarna"
+        if not isinstance(name, str) or not normalize(name) or name in totals or type(team) is not int or team in teams:
+            raise ValueError("missing or repeated organiser identity")
+        if not isinstance(form, list) or not form or any(
+            (match["configLeagueName"], match["configSeasonStartYear"]) != ("allsvenskan", year) for match in form
+        ):
+            raise ValueError("organiser match form does not prove the requested season")
+        stats = {item["name"]: item["value"] for item in row["stats"]}
+        parts = [stats[field] for field in ALLSVENSKAN_FIELDS]
+        if len(stats) != len(row["stats"]) or not all(isinstance(p, str) and p.isdecimal() for p in parts):
+            raise ValueError("invalid organiser sporting fields")
+        teams.add(team)
+        totals[name] = tuple(int(p) for p in parts)
+    return totals
+
+
+def _prove_allsvenskan(conn, get, edition, year, fresh, now):
+    """Link the organiser's clubs to the same edition and compare all sporting totals."""
+    global _allsvenskan_proof
+    target = {team: tuple(row[field] for field in RESULTS) for (group, team), row in fresh.items() if group is None}
+    if len(target) != len(fresh):
+        raise SourceError("UNVERIFIED_EDITION", f"edition {edition}: no organiser proof for grouped tables")
+
+    def matches(totals):
+        if len(totals) != len(target):
+            return False
+        teams = link(conn, edition, [(None, [{"name": name} for name in totals])])
+        return {teams[name]: numbers for name, numbers in totals.items()} == target
+
+    cached = _allsvenskan_proof
+    if cached and cached[0] == year and cached[1] <= now < cached[1] + PROOF_TTL:
+        # A new result cannot reuse the previous organiser table, even inside the TTL.
+        try:
+            if matches(cached[2]):
+                return
+        except SourceError:
+            pass
+    query = urlencode({"query": ALLSVENSKAN_QUERY, "variables": json.dumps({"year": year})})
+    try:
+        payload = get(f"{ALLSVENSKAN_URL}?{query}")
+        if not isinstance(payload, dict):
+            raise ValueError("invalid organiser response")
+        totals = _allsvenskan_rows(payload, year)
+        if not matches(totals):
+            raise ValueError("organiser and widget sporting rows differ")
+    except (SourceError, KeyError, TypeError, ValueError) as error:
+        detail = error.code if isinstance(error, SourceError) else str(error) if isinstance(error, ValueError) else "invalid organiser response"
+        raise SourceError("UNVERIFIED_EDITION", f"edition {edition}: Allsvenskan {year}: {detail}") from None
+    _allsvenskan_proof = (year, now, totals)
+
+
+def qualify(conn, get, key, edition, native_label, year, fresh, counted, now):
+    """The edition's own results against the response (§2.1, rules 11-12); SourceError otherwise.
+    fresh is {(group, team): row}, counted {team: core.table_results' results}."""
+    played = {}
+    for (_, team), row in fresh.items():
+        played[team] = max(played.get(team, 0), row["played"])
+    kicked = dict(conn.execute(KICKED_OFF, (edition, now)).fetchall())
+    ahead = {team: p for team, p in played.items() if p > kicked.get(team, 0) + SLACK}
+    if len(ahead) == len(played):
+        if key == ALLSVENSKAN and native_label == str(year):
+            _prove_allsvenskan(conn, get, edition, year, fresh, now)
+        else:
+            names = _team_names(conn, ahead)
+            raise SourceError("WRONG_EDITION", f"edition {edition}: every club ahead of the matches kicked off: "
+                              + ", ".join(f"{names[t]} {p} played, {kicked.get(t, 0)} kicked off" for t, p in sorted(ahead.items())))
+    absent = sorted(team for team, results in counted.items() if results[0] > 0 and team not in played)
+    if absent:
+        names = _team_names(conn, absent)
+        raise SourceError("INCOMPLETE_TABLE", f"edition {edition}: clubs of Vega's table missing: "
+                          + ", ".join(f"{names[t]} ({counted[t][0]} counted)" for t in absent))
+
+
+def _clubs_by_table(rows):
+    """{table name: {team ids}} of {(group, team): row}."""
+    out = {}
+    for group, team in rows:
+        out.setdefault(group, set()).add(team)
+    return out
+
+
+def _public_ids(conn, teams):
+    """The clubs' public ids (api.public_id's rule), the keys of RETIRED_ROWS."""
+    found = dict(conn.execute("""SELECT entity_id, provider_key FROM core.provider_ids
+                                 WHERE entity_type = 'team' AND provider = 'pitchapi' AND is_current AND entity_id = ANY(%s)""",
+                              (sorted(teams),)).fetchall())
+    return {team: found.get(team, f"t_v{team:07d}") for team in teams}
+
+
+def compare(conn, edition, retired, fresh, stored, members, names, counted):
+    """The accepted table's knowledge the response keeps (§2.1, rules 13-15); SourceError otherwise.
+    retired is the edition's (LEAGUES key, season label); fresh and stored are {(group, team): row}
+    (a stored row with its basis), members the edition's teams, names {team: a row name}, counted
+    {team: core.table_results' results}."""
+    accepted, now = _clubs_by_table(stored), _clubs_by_table(fresh)
+    keys = _public_ids(conn, {team for _, team in stored})
+
+    def may_leave(table, team):
+        """A club that may leave a table: no longer a team of the edition, or its row reviewed out."""
+        return team not in members or (*retired, table, keys[team]) in RETIRED_ROWS
+
+    def listed(teams, table=None):
+        shown = _team_names(conn, teams)
+        return ", ".join(f"{shown[t]} ({keys[t]})" if table is None else f"{shown[t]} (RETIRED_ROWS key {(*retired, table, keys[t])!r})"
+                         for t in sorted(teams))
+
+    # Rule 13: every club of the accepted observation is still somewhere.
+    present = {team for _, team in fresh}
+    dropped = {team for _, team in stored if team not in present
+               and not all(may_leave(table, team) for table, clubs in accepted.items() if team in clubs)}
+    if dropped:
+        raise SourceError("INCOMPLETE_TABLE", f"edition {edition}: clubs of the accepted table missing: {listed(dropped)}")
+    # Rule 13b: every accepted table stays, under its name or as the one new table with its clubs.
+    kept = {}
+    for table, clubs in accepted.items():
+        if table in now:
+            kept[table] = table
+        else:
+            same = [t for t, c in now.items() if t not in accepted and c == clubs]
+            if len(same) == 1:
+                kept[table] = same[0]
+    # A single table may split without losing a club or changing its sporting history. Disjoint
+    # names or changed memberships alone cannot retire existing groups or a cross-group table.
+    if not kept and set(accepted) == {None} and len(now) > 1:
+        clubs = accepted[None]
+        if (set().union(*now.values()) == clubs and sum(map(len, now.values())) == len(clubs)
+                and all(all(stored[(None, team)][field] in (None, row[field]) for field in RESULTS)
+                        for (_, team), row in fresh.items())):
+            return _compare_rows(edition, fresh, stored, names, counted)
+    lost = sorted((t for t in accepted if t not in kept and (*retired, t) not in RETIRED_TABLES), key=lambda g: g or "")
+    if lost:
+        raise SourceError("INCOMPLETE_TABLE", f"edition {edition}: tables of the accepted observation missing: " + ", ".join(
+            f"{t or 'the table'} ({len(accepted[t])} rows, RETIRED_TABLES key {(*retired, t)!r})" for t in lost))
+    # Rule 13c: within a table that stays. A partition table (it owns a club no other accepted table
+    # holds: a league table, a group) keeps each of its clubs. A cross table (only clubs another
+    # accepted table holds: a ranking across groups) may change members as the competition advances,
+    # each club that leaves replaced by one that joins: it never shrinks.
+    for table, target in kept.items():
+        clubs = accepted[table]
+        left = {team for team in clubs - now[target] if not may_leave(table, team)}
+        if not left:
+            continue
+        cross = all(any(team in other for t, other in accepted.items() if t != table) for team in clubs)
+        joined = now[target] - clubs
+        if not cross or len(left) > len(joined):
+            raise SourceError("INCOMPLETE_TABLE", f"edition {edition}: table {table or 'the table'} "
+                              f"({'cross' if cross else 'partition'}, {len(clubs)} rows accepted, {len(now[target])} now): "
+                              f"{listed(left, table)} left, {len(joined)} joined")
+    _compare_rows(edition, fresh, stored, names, counted)
+
+
+def _compare_rows(edition, fresh, stored, names, counted):
+    """Rules 14-15: each club's row keeps what was known of it, and its played count, unless attested."""
+    by_team = {}
+    for (group, team), row in stored.items():
+        by_team.setdefault(team, row)
+    for (group, team), row in fresh.items():
+        before = stored.get((group, team)) or by_team.get(team)
+        if before is None:
+            continue
+        lost = [FIELDS[f] for f in FIELDS if before[f] is not None and row[f] is None]
+        if lost:
+            raise SourceError("MISSING_FIELD", f"edition {edition}: {names[team]}: {', '.join(lost)} no longer given")
+        if (group, team) in stored and row["played"] < before["played"]:
+            # A lower count stands when the edition's results attest it: the club's counted matches
+            # now (a correction), or at most those since the observation (a phase counted from it).
+            counted_now = counted.get(team, NO_RESULT)[0]
+            since = counted_now - before["basis"][0] if before["basis"] is not None else None
+            if row["played"] != counted_now and (since is None or row["played"] > since):
+                raise SourceError("PLAYED_DECREASED", f"edition {edition}: {names[team]}: played {before['played']} -> {row['played']}, "
+                                  f"{counted_now} counted" + (f", {since} since the observation" if since is not None else ""))
+
+
+def _publish(conn, edition):
+    conn.execute(
+        """INSERT INTO ops.resource_versions(resource_kind, resource_id) VALUES ('competition_season', %s)
+           ON CONFLICT (resource_kind, resource_id) DO UPDATE SET version = ops.resource_versions.version + 1, updated_at = now()""",
+        (edition,),
+    )
+
+
+def repeat(conn, edition, stored, observed, counted, now):
+    """The same table seen again (§2.2): nothing written unless the observation time may move."""
+    def renew(teams):
+        conn.execute(f"UPDATE core.standings_official SET as_of = %s WHERE {OWN}", (now, edition))
+        for team in sorted(teams):
+            conn.execute(f"UPDATE core.standings_official SET basis = %s::smallint[] WHERE {OWN} AND team_id = %s",
+                         (list(counted.get(team, NO_RESULT)), edition, team))
+        if teams:
+            _publish(conn, edition)  # api.standings may serve the official table again
+
+    if any(row["basis"] is None for row in stored.values()):
+        # Stored before 138: it gets its basis unless a counted match finished after it.
+        if observed is None or not conn.execute(FINISHED_SINCE, (edition, observed)).fetchone()[0]:
+            renew({team for _, team in stored})
+        return
+    moved = {team for (_, team), row in stored.items() if row["basis"] != counted.get(team, NO_RESULT)}
+    caught_up = all(
+        any(all(row[f] is None or row[f] == v for f, v in zip(RESULTS, counted.get(team, NO_RESULT)))
+            for (_, t), row in stored.items() if t == team)
+        for team in moved)
+    if caught_up:
+        # Nothing counted since, or our results caught up with the table: it is current now.
+        renew(moved)
+    # Otherwise SportScore is behind the results: its observation time and basis stay.
+
+
 def run(conn, get, scope, now):
     key = scope.split(":", 1)[1]
     slug = LEAGUES[key]
     edition = conn.execute(
-        """SELECT cs.id FROM core.provider_ids p JOIN core.competition_seasons cs ON cs.competition_id = p.entity_id
+        """SELECT cs.id, se.label, cs.native_label, se.id FROM core.provider_ids p JOIN core.competition_seasons cs ON cs.competition_id = p.entity_id
+           JOIN core.seasons se ON se.id = cs.season_id
            WHERE p.entity_type = 'competition' AND p.provider = 'pitchapi' AND p.provider_key = %s AND p.is_current AND cs.is_current""",
         (key,),
     ).fetchone()
     if edition is None:  # not collected (yet): no call
         return 0, 0
-    edition = edition[0]
+    edition, season, native_label, year = edition
     tables = parse(get(URL + "?" + urlencode({"sport": "football", "slug": slug})), slug)
-    teams, unmatched = link(conn, edition, tables) if tables else (None, 0)
-    fresh = sorted(
-        (group if len(tables) > 1 else None, teams[row["name"]], row["position"], row["played"], row["won"], row["drawn"],
-         row["lost"], row["goals_for"], row["goals_against"], row["points"])
-        for group, rows in tables for row in rows
-    ) if teams else []
-    columns = "group_name, team_id, position, played, won, drawn, lost, goals_for, goals_against, points"
-    stored = sorted(conn.execute(
-        f"SELECT {columns} FROM core.standings_official WHERE competition_season_id = %s AND source = 'sportscore'", (edition,)
-    ).fetchall(), key=lambda r: tuple((x is None, x) for x in r))
-    fresh = sorted(set(fresh), key=lambda r: tuple((x is None, x) for x in r))
-    if fresh == [tuple(r) for r in stored]:
-        # Same table: only the observation time moves; no new publication.
-        conn.execute("UPDATE core.standings_official SET as_of = %s WHERE competition_season_id = %s AND source = 'sportscore'", (now, edition))
-        return 0, unmatched
-    conn.execute("DELETE FROM core.standings_official WHERE competition_season_id = %s AND source = 'sportscore'", (edition,))
-    for row in fresh:
+    check(tables)
+    teams = link(conn, edition, tables)
+    keep_groups = len(tables) > 1  # one table is stored without its name, as before
+    fresh = {(group if keep_groups else None, teams[row["name"]]): row for group, rows in tables for row in rows}
+    counted = {team: tuple(results) for team, results in conn.execute(
+        "SELECT team_id, results FROM core.table_results(%s)", (edition,)).fetchall()}
+    qualify(conn, get, key, edition, native_label, year, fresh, counted, now)
+    stored = {}
+    observed = None
+    for group, team, *values, basis, as_of in conn.execute(
+        f"SELECT {', '.join(COLUMNS)}, basis, as_of FROM core.standings_official WHERE {OWN}", (edition,)
+    ).fetchall():
+        stored[(group, team)] = dict(zip(FIELDS, values), basis=tuple(basis) if basis is not None else None)
+        observed = as_of if observed is None or (as_of is not None and as_of < observed) else observed
+    members = {team for (team,) in conn.execute("SELECT team_id FROM core.team_seasons WHERE competition_season_id = %s", (edition,))}
+    compare(conn, edition, (key, season), fresh, stored, members, {team: row["name"] for (_, team), row in fresh.items()}, counted)
+    if {k: {f: r[f] for f in FIELDS} for k, r in fresh.items()} == {k: {f: r[f] for f in FIELDS} for k, r in stored.items()}:
+        repeat(conn, edition, stored, observed, counted, now)
+        return 0, 0
+    conn.execute(f"DELETE FROM core.standings_official WHERE {OWN}", (edition,))
+    for (group, team), row in sorted(fresh.items(), key=lambda item: (item[0][0] or "", item[1]["position"], item[0][1])):
         conn.execute(
-            f"""INSERT INTO core.standings_official(competition_season_id, stage, {columns}, source, as_of)
-                VALUES (%s, NULL, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'sportscore', %s) ON CONFLICT DO NOTHING""",
-            (edition, *row, now),
+            f"""INSERT INTO core.standings_official(competition_season_id, stage, {', '.join(COLUMNS)}, basis, source, as_of)
+                VALUES (%s, NULL, %s, %s, {', '.join(['%s'] * len(FIELDS))}, %s::smallint[], 'sportscore', %s)""",
+            (edition, group, team, *(row[f] for f in FIELDS), list(counted.get(team, NO_RESULT)), now),
         )
-    for group, rows in tables if teams else []:
+    for group, rows in tables:
         for row in rows:
             conn.execute(
                 """INSERT INTO core.entity_names(entity_type, entity_id, name, normalized, kind, source)
                    VALUES ('team', %s, %s, %s, 'source_spelling', 'sportscore') ON CONFLICT DO NOTHING""",
                 (teams[row["name"]], row["name"], normalize(row["name"]) or row["name"].lower()),
             )
-    conn.execute(
-        """INSERT INTO ops.resource_versions(resource_kind, resource_id) VALUES ('competition_season', %s)
-           ON CONFLICT (resource_kind, resource_id) DO UPDATE SET version = ops.resource_versions.version + 1, updated_at = now()""",
-        (edition,),
-    )
-    return len(fresh), unmatched
+    _publish(conn, edition)
+    return len(fresh), 0

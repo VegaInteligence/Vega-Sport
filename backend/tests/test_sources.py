@@ -399,6 +399,13 @@ class UefaTest(unittest.TestCase):
         x("""INSERT INTO core.teams(id, name, short_name, country_code) VALUES (30, 'Paris Saint-Germain', 'PSG', 'FRA'),
              (31, 'Olympique de Marseille', 'Marseille', 'FRA'), (32, 'AS Monaco', NULL, 'FRA')""")
         x("INSERT INTO core.team_seasons(team_id, competition_season_id) SELECT id, 70 FROM core.teams WHERE id IN (30, 31, 32)")
+        # The edition's own matches (FAILURE_MODES_SPORTSCORE.md §4): a table of 12 played a club is
+        # this edition's only if it has kicked off at least 8 a club (rule 11); here 8 each.
+        for n in range(12):
+            home, away = [(30, 31), (31, 32), (32, 30)][n % 3]
+            x("""INSERT INTO core.matches(competition_season_id, season_id, source, status, kickoff_at, home_team_id, away_team_id,
+                   home_score, away_score) VALUES (70, 2025, 'pitchapi', 'finished', %s, %s, %s, 1, 0)""",
+              (NOW - timedelta(days=n + 1), home, away))
         table = [{"team": "Paris Saint Germain", "pos": 1, "p": 12, "w": 9, "d": 2, "l": 1, "gf": 30, "ga": 8, "gd": 22, "pts": 29},
                  {"team": "Marseille", "pos": 2, "p": 12, "w": 8, "d": 2, "l": 2, "gf": 25, "ga": 12, "gd": 13, "pts": 26},
                  {"team": "Monaco FC", "pos": 3, "p": 12, "w": 7, "d": 3, "l": 2, "gf": 20, "ga": 11, "gd": 9, "pts": 24}]
@@ -430,12 +437,15 @@ class UefaTest(unittest.TestCase):
         with self.db.transaction():
             self.assertEqual(sportscore.run(self.db, get, "standings:l_4WFCIZ", NOW), (0, 0))
         self.assertEqual(len(calls), 2)
-        # A table naming clubs of another season: nothing official is kept.
+        # A table naming clubs the edition does not hold is refused and the accepted table stays
+        # (VI-29, FAILURE_MODES_SPORTSCORE.md §4: it used to be deleted, the version raised, "ok").
         table[1]["team"], table[2]["team"] = "Paris FC", "Le Havre"
-        with self.db.transaction():
-            self.assertEqual(sportscore.run(self.db, get, "standings:l_3FJFUl", NOW), (0, 2))
-        self.assertEqual(standings(), [])
-        self.assertGreater(version(), published)
+        with self.assertRaises(SourceError) as refused:
+            with self.db.transaction():
+                sportscore.run(self.db, get, "standings:l_3FJFUl", NOW)
+        self.assertEqual(refused.exception.code, "UNMATCHED_TEAMS")
+        self.assertEqual(standings(), [(30, 1, 29), (31, 2, 26), (32, 3, 24)])
+        self.assertEqual(version(), published)
         payload["competition_slug"] = "other"
         with self.assertRaises(SourceError):
             sportscore.run(self.db, get, "standings:l_3FJFUl", NOW)
