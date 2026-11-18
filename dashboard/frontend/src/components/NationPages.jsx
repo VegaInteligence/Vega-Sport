@@ -25,6 +25,9 @@ import {
   useNation,
   useNations,
 } from "../services/nations.js";
+import { tournamentEdition } from "../services/cup-catalog.js";
+import { RUN_STEPS, runDepth, runsByTournament } from "../services/tournament-runs.js";
+import { trophyArt } from "../services/trophy-art.js";
 import rail from "./ClubScoutTabs.module.css";
 import s from "./Nations.module.css";
 
@@ -280,15 +283,71 @@ function PlayersTable({ players, limit }) {
   );
 }
 
-function Tournaments({ runs }) {
+const MEDALS = [
+  ["gold", (n) => `${n} titre${n > 1 ? "s" : ""}`],
+  ["silver", (n) => `${n} fois finaliste`],
+  ["bronze", (n) => `${n} fois 3e`],
+];
+
+/* The nation's runs (mock-up validated 18 Nov 2026, proposal A): a row per competition with its own medals, a tile per
+ * edition with the depth of the run as a gauge; a tile opens the edition's page on its bracket, the nation followed. */
+function Tournaments({ runs, nation }) {
+  const f = useFootball();
   return (
-    <div className={s.runs}>
-      {runs.map((run) => (
-        <div key={`${run.tournament}:${run.year}`} className={s.run} data-tone={run.tone}>
-          <small>{run.tournament === "world-cup" ? run.year : run.label}</small>
-          <b>{run.stage}</b>
-        </div>
-      ))}
+    <div className={s.tournaments}>
+      {runsByTournament(runs).map((group) => {
+        const art = trophyArt({ title: group.label, trophyYear: group.runs.at(-1).year });
+        return (
+          <div key={group.tournament} className={s.tournament}>
+            <div className={s.tournamentName}>
+              {art && <img src={art} alt="" />}
+              <div>
+                {group.label}
+                <span className={s.medals}>
+                  {MEDALS.filter(([tone]) => group.medals[tone]).map(([tone, words]) => (
+                    <span key={tone} data-tone={tone} title={words(group.medals[tone])} aria-label={words(group.medals[tone])}>
+                      {group.medals[tone]}
+                    </span>
+                  ))}
+                </span>
+              </div>
+            </div>
+            <div className={s.runs}>
+              {group.runs.map((run) => {
+                const page = tournamentEdition(run.tournament, run.year);
+                const title = `${run.label} · ${run.stage} · ${run.matches} match${run.matches > 1 ? "s" : ""}`;
+                const body = (
+                  <>
+                    <span className={s.runYear}>{run.year}</span>
+                    <span className={s.gauge} aria-hidden="true">
+                      {Array.from({ length: RUN_STEPS }, (_, step) => (
+                        <i key={step} data-on={step < runDepth(run) ? "" : undefined} />
+                      ))}
+                    </span>
+                    <span className={s.runStage}>{run.stage}</span>
+                  </>
+                );
+                return page ? (
+                  <Link
+                    key={run.year}
+                    className={s.run}
+                    data-tone={run.tone}
+                    title={title}
+                    prefetch={false}
+                    href={f.href("/competitions/", { id: page.id, edition: page.edition, view: "tableau", team: nation.name })}
+                  >
+                    {body}
+                  </Link>
+                ) : (
+                  <div key={run.year} className={s.run} data-tone={run.tone} title={title}>
+                    {body}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -466,14 +525,13 @@ function Overview({ nation, last, onTab }) {
       {nation.tournaments.length > 0 && (
         <Card
           title="Grands tournois"
-          text="Coupes du monde et Euros collectés"
           action={
             <button type="button" className={s.link} onClick={() => onTab("history")}>
               Historique →
             </button>
           }
         >
-          <Tournaments runs={nation.tournaments} />
+          <Tournaments runs={nation.tournaments} nation={nation} />
         </Card>
       )}
     </div>
@@ -508,8 +566,8 @@ function Matches({ nation }) {
 function History({ nation }) {
   return (
     <div className={s.stack}>
-      <Card title="Grands tournois" text="Le stade atteint à chaque édition collectée ; une finale sans score connu n’en dit pas l’issue">
-        {nation.tournaments.length ? <Tournaments runs={nation.tournaments} /> : <p className={s.muted}>Aucun grand tournoi collecté.</p>}
+      <Card title="Grands tournois">
+        {nation.tournaments.length ? <Tournaments runs={nation.tournaments} nation={nation} /> : <p className={s.muted}>Aucun grand tournoi collecté.</p>}
       </Card>
       <Card title="Elo Vega" text="Après chaque match classé, depuis le premier">
         <EloChart points={nation.elo} height={260} wide />

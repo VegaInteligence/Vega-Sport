@@ -9,6 +9,9 @@ import vm from "node:vm";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { matchForecast, normalizeOpenCup, normalizeSupplementalCup } from "../dashboard/frontend/src/services/cup-matches.js";
+import { editionHeaderStub } from "./edition-stubs.mjs";
+import * as nationalFlags from "../dashboard/frontend/src/services/national-flags.js";
+import * as trophies from "../dashboard/frontend/src/services/trophy-art.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const require = createRequire(path.join(root, "dashboard/package.json"));
@@ -67,6 +70,9 @@ test("an upcoming match shows its forecast in the list, a played one its score",
     "./UI.jsx": { Card: ({ children }) => elem("section", null, children), Media: () => null, Pager: () => null, Segments: () => null, AsyncState: () => null, Empty: ({ children }) => elem("p", null, children) },
     "./KnockoutBracket.jsx": { __esModule: true, default: () => null },
     "./NationalFlag.jsx": { __esModule: true, default: () => null },
+    "./EditionHeader.jsx": editionHeaderStub(React),
+    "../services/national-flags.js": nationalFlags,
+    "../services/trophy-art.js": trophies,
     "../services/format.js": { date: String, seasonLabel: String },
     "../services/fixtures.js": { parisDay: () => "2026-11-17" },
     "../services/resources.js": { useResource: () => ({}) },
@@ -112,6 +118,9 @@ test("a complementary league's projection has its tab, as a league's", async () 
       Segments: ({ items }) => elem("div", null, items.map(([id, text]) => elem("button", { key: id }, text))), AsyncState: () => null, Empty: () => null },
     "./KnockoutBracket.jsx": { __esModule: true, default: () => null },
     "./NationalFlag.jsx": { __esModule: true, default: () => null },
+    "./EditionHeader.jsx": editionHeaderStub(React),
+    "../services/national-flags.js": nationalFlags,
+    "../services/trophy-art.js": trophies,
     "../services/format.js": { date: String, seasonLabel: String },
     "../services/fixtures.js": { parisDay: () => "2026-11-17" },
     "../services/resources.js": { useResource: () => ({}) },

@@ -5,7 +5,7 @@
  * the French name (nationalTeamName).
  */
 import { useResource, json } from "./resources.js";
-import { nationalTeamName } from "./national-flags.js";
+import { nationalTeamLabel } from "./national-flags.js";
 
 const missing = (error) => (/\bHTTP 404\b/.test(error?.message || "") ? null : Promise.reject(error));
 
@@ -25,11 +25,8 @@ export function useNation(id, season) {
   );
 }
 
-// The home nations have no country code of their own: their French names.
-const HOME_NATIONS = { England: "Angleterre", Scotland: "Écosse", Wales: "Pays de Galles", "Northern Ireland": "Irlande du Nord" };
-
-/** A national team's name in French. */
-export const nationName = (name) => HOME_NATIONS[name] || nationalTeamName(name) || name;
+/** A national team's name in French (the home nations and the teams of the past included). */
+export const nationName = (name) => nationalTeamLabel(name) || name;
 
 /** A competition's name on the page, from its edition key or its name. */
 export function competitionLabel(match) {

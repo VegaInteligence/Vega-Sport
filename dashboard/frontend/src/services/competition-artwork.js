@@ -1,11 +1,12 @@
 export const WORLD_CUP_ID = "l_1XLtP0";
-const WORLD_CUP_HISTORY_ID = "open-cup:world-cup-history";
+// The World Cup's archive (OpenFootball), the same competition on the site as the collected World Cup.
+export const WORLD_CUP_ARCHIVE_ID = "open-cup:world-cup-history";
 
 // Both catalogues carried the same 2026 edition mark as a family logo.
 const misattributedWorldCupLogo = "https://img.thesports.com/football/competition/da617cd58cd9cffaae0daec865457fb5.png";
 
 function worldCupFamily(id) {
-  return id === WORLD_CUP_ID || id === WORLD_CUP_HISTORY_ID || id === "l_v0000064";
+  return id === WORLD_CUP_ID || id === WORLD_CUP_ARCHIVE_ID || id === "l_v0000064";
 }
 
 export function familyArtworkUrl(id, imageUrl) {

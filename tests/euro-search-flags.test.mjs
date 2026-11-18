@@ -17,6 +17,9 @@ import * as cupArchives from "../dashboard/frontend/src/services/cup-archives.js
 const { normalizeOpenCup } = cupMatches;
 import * as bracket from "../dashboard/frontend/src/services/knockout-bracket.js";
 import { normalizeText } from "../dashboard/frontend/src/model.js";
+import { editionHeaderStub } from "./edition-stubs.mjs";
+import * as nationalFlags from "../dashboard/frontend/src/services/national-flags.js";
+import * as trophies from "../dashboard/frontend/src/services/trophy-art.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const requireLocal = createRequire(path.join(root, "dashboard/package.json"));
@@ -148,7 +151,7 @@ test("Spain–Georgia displays both flags in the national bracket, never in a cl
       "../services/format.js": { date: String },
       "../model.js": { normalizeText },
       "../services/knockout-bracket.js": bracket,
-      "../services/national-flags.js": { nationalFlagCode },
+      "../services/national-flags.js": nationalFlags,
       "./NationalFlag.jsx": { __esModule: true, default: flag.default },
     },
   );
@@ -166,8 +169,9 @@ test("Spain–Georgia displays both flags in the national bracket, never in a cl
   );
   assert.match(national, /fi-es/);
   assert.match(national, /fi-ge/);
-  assert.match(national, /Spain/);
-  assert.match(national, /Georgia/);
+  // A national team is named in French, as on its own page (mock-up of 18 Nov 2026).
+  assert.match(national, /Espagne/);
+  assert.match(national, /Géorgie/);
   const club = renderToStaticMarkup(h(mod.default, { matches }));
   assert.doesNotMatch(club, /fi-es|fi-ge/);
 });
@@ -197,6 +201,9 @@ test("the Euro results list also displays flags for both national teams", async 
       "../services/fixtures.js": { parisDay: () => "2026-01-01" },
       "./KnockoutBracket.jsx": { __esModule: true, default: () => null },
       "./NationalFlag.jsx": { __esModule: true, default: flag.default },
+      "./EditionHeader.jsx": editionHeaderStub(React),
+      "../services/national-flags.js": nationalFlags,
+      "../services/trophy-art.js": trophies,
       "../services/resources.js": { useResource: () => ({}), json: () => {} },
       "../services/competition-artwork.js": await import("../dashboard/frontend/src/services/competition-artwork.js"),
       "../services/catalog-client.js": { cupTable: () => {} },

@@ -1,9 +1,9 @@
 import { normalizeText } from "../model.js";
 import { NATIONAL_CUP_ARCHIVES, GERMAN_CUP_FOLDER, GERMAN_CUP_SEASONS } from "./cup-archives.js";
 import cupLogos from "../../../shared/cup-logos.json" with { type: "json" };
-import { familyArtworkUrl, WORLD_CUP_ID } from "./competition-artwork.js";
+import { familyArtworkUrl, WORLD_CUP_ARCHIVE_ID, WORLD_CUP_ID } from "./competition-artwork.js";
 
-export { WORLD_CUP_ID } from "./competition-artwork.js";
+export { WORLD_CUP_ARCHIVE_ID, WORLD_CUP_ID } from "./competition-artwork.js";
 
 /** Cup logos refreshed by the previous pipeline's refresh_cup_logos.mjs. */
 const CUP_LOGOS = cupLogos.logos || {};
@@ -13,6 +13,8 @@ function withLogo(competition) {
 }
 
 export const WORLD_CUP_FALLBACK = { id: WORLD_CUP_ID, name: "Coupe du monde", country: "INT", seasons: ["2026", "2022"] };
+// The World Cup's archive (WORLD_CUP_ARCHIVE_ID) is the same competition on the site, one selector: it also reads the
+// collected editions (2026, 2022), whose page stays the collected World Cup's.
 export const OPEN_CUP_CATALOG = [
   { id: "open-cup:france-cup", name: "Coupe de France", country: "FRA", source: "openfootball", sourceKey: "france-cup", seasons: ["2024/2025"], defaultSeason: "2024/2025", aliases: ["French Cup"], coverage: "Archive 2024/2025" },
   { id: "openligadb:nations-league", name: "Ligue des Nations", country: "UEFA", source: "openligadb", sourceKey: "nations-league", seasons: ["2026/2027"], defaultSeason: "2026/2027", aliases: ["UEFA Nations League", "Nations League"], coverage: "Ligues A à D · 2026/2027" },
@@ -27,7 +29,7 @@ export const OPEN_CUP_CATALOG = [
   { id: "nations-results:copa-america", name: "Copa América", country: "CONMEBOL", source: "nations-results", sourceKey: "copa-america", seasons: ["2024"], defaultSeason: "2024", aliases: ["Copa America"], coverage: "Résultats" },
   { id: "nations-results:asian-cup", name: "Coupe d’Asie des nations", country: "AFC", source: "nations-results", sourceKey: "asian-cup", seasons: ["2023"], defaultSeason: "2023", aliases: ["AFC Asian Cup", "Asian Cup"], coverage: "Résultats" },
   { id: "nations-results:gold-cup", name: "Gold Cup", country: "CONCACAF", source: "nations-results", sourceKey: "gold-cup", seasons: ["2025", "2023"], defaultSeason: "2025", aliases: ["CONCACAF Gold Cup"], coverage: "Résultats" },
-  { id: "open-cup:world-cup-history", name: "Coupe du monde — archives", country: "INT", source: "openfootball", sourceKey: "world-cup-history", seasons: ["2026", "2022", "2018", "2014", "2010", "2006", "2002", "1998", "1994", "1990", "1986", "1982", "1978", "1974", "1970", "1966", "1962", "1958", "1954", "1950", "1938", "1934", "1930"], defaultSeason: "2018", aliases: ["World Cup", "Mondial"] },
+  { id: WORLD_CUP_ARCHIVE_ID, name: "Coupe du monde — archives", country: "INT", source: "openfootball", sourceKey: "world-cup-history", seasons: ["2026", "2022", "2018", "2014", "2010", "2006", "2002", "1998", "1994", "1990", "1986", "1982", "1978", "1974", "1970", "1966", "1962", "1958", "1954", "1950", "1938", "1934", "1930"], defaultSeason: "2018", aliases: ["World Cup", "Mondial"] },
 ];
 const CUP_LABELS = {
   "ESP_CUP_copa-del-rey": ["Coupe du Roi", "Copa del Rey"],
@@ -147,4 +149,37 @@ export function mergeCupCatalog(nativeCompetitions, supplementalIndex, workerNat
   const extras = [...supplementalCupCatalog(supplementalIndex), ...supplementalLeagueCatalog(supplementalIndex, nativeCompetitions)];
   // An entry whose canonical id is a native competition's is that competition: listed once, as the native one.
   return [...native, ...world, ...OPEN_CUP_CATALOG, ...extras.filter((cup) => !ids.has(cup.id) && !ids.has(cup.canonicalId))].map(withLogo);
+}
+
+// The cup key the nations' API gives a major tournament, when the catalogue names it otherwise.
+const TOURNAMENT_KEYS = { "world-cup": "world-cup-history" };
+
+/**
+ * The page of a major tournament's edition ({ id, edition }), for a nation's run (/api/nations: its tournament key and
+ * year): the World Cup's archive up to its last edition, the collected World Cup after it, the Euro and the other
+ * confederations' tournaments by their editions. Null when the site has no page for that year.
+ */
+export function tournamentEdition(tournament, year) {
+  const edition = /^\d{4}$/.test(String(year ?? "")) ? String(year) : "";
+  const cup = OPEN_CUP_CATALOG.find((item) => item.sourceKey === (TOURNAMENT_KEYS[tournament] || tournament));
+  if (!edition || !cup) return null;
+  // The archive's own editions: not the collected World Cup's, which the archive also reads.
+  const seasons = cup.id === WORLD_CUP_ARCHIVE_ID ? cup.seasons.filter((season) => !WORLD_CUP_FALLBACK.seasons.includes(season)) : cup.seasons;
+  if (seasons.includes(edition)) return { id: cup.id, edition };
+  return tournament === "world-cup" && edition > seasons[0] ? { id: WORLD_CUP_ID, edition } : null;
+}
+
+/**
+ * The editions a competition's page offers, latest first, each with the competition that holds it: the World Cup's
+ * collected editions and its archive under one selector, any other competition's own seasons.
+ */
+export function competitionEditions(competition, catalog = []) {
+  if (!competition) return [];
+  const own = (item) => (item?.seasons || []).map((season) => ({ season: String(season), id: item.id }));
+  if (competition.id !== WORLD_CUP_ID && competition.id !== WORLD_CUP_ARCHIVE_ID) return own(competition);
+  const of = (id) => (competition.id === id ? competition : catalog.find((item) => item.id === id));
+  const seen = new Set();
+  return [...own(of(WORLD_CUP_ID)), ...own(of(WORLD_CUP_ARCHIVE_ID))]
+    .filter((edition) => !seen.has(edition.season) && seen.add(edition.season))
+    .sort((a, b) => b.season.localeCompare(a.season));
 }

@@ -23,7 +23,7 @@ function readableRound(round, group) {
     .replace(/^Group,\s*Matchday\s+(\d+)$/i, "Phase de groupes · Journée $1")
     .replace(/^Playoffs$/i, "Barrages")
     .replace(/^Gruppe\s+([A-Z0-9]+)$/i, "Groupe $1")
-    .replace(/^Group\s+([A-Z])$/i, "Groupe $1")
+    .replace(/^Group\s+([A-Z]|\d+)$/i, "Groupe $1")
     .replace(/^Matchday\s+(\d+)$/i, "Journée $1")
     .replace(/^Round\s+(\d+)$/i, "Tour $1")
     .replace(/^Round of 32$/i, "Seizièmes de finale")
@@ -166,8 +166,25 @@ export function normalizeOpenCup(matches) {
     if (extra) notes.push("après prolongation");
     if (penalties) notes.push("tirs au but " + penalties[0] + " – " + penalties[1]);
     const forecast = score ? null : matchForecast(match.forecast);
-    return [{ key: "open:" + index, date: validDay(match.date) ? match.date : "", home, away, score, penalties, notes, roundName: String(match.round || ""), number: Number.isInteger(match.num) ? match.num : null, round: readableRound(match.round, match.group), status: score ? "finished" : "scheduled", ...(forecast && { forecast }), ...ownSides(match) }];
+    return [{ key: "open:" + index, date: validDay(match.date) ? match.date : "", home, away, score, penalties, notes, roundName: String(match.round || ""), group: String(match.group || ""), number: Number.isInteger(match.num) ? match.num : null, round: readableRound(match.round, match.group), status: score ? "finished" : "scheduled", ...(forecast && { forecast }), ...ownSides(match) }];
   });
+}
+
+/**
+ * An edition's groups (a tournament of the archives): one table per group the source names, in the groups' order, each
+ * computed as a league's (leagueTable). 1950's final round, a group the source names by its round alone, is the
+ * « Poule finale ». An edition without groups has no table.
+ */
+export function groupTables(matches) {
+  const groups = new Map();
+  for (const match of matches || []) {
+    const name = match.group ? readableRound(match.group) : /^final round$/i.test(String(match.roundName || "").trim()) ? "Poule finale" : "";
+    if (!name) continue;
+    (groups.get(name) || groups.set(name, []).get(name)).push(match);
+  }
+  return [...groups.entries()]
+    .sort((a, b) => (a[0] === "Poule finale") - (b[0] === "Poule finale") || a[0].localeCompare(b[0], "fr", { numeric: true }))
+    .map(([name, rows]) => ({ name, rows: leagueTable(rows) }));
 }
 
 /** Keep past unscored matches out of the upcoming list. */

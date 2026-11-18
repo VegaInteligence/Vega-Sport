@@ -1,5 +1,6 @@
 """Source adapters other than PitchAPI, against small synthetic response samples."""
 
+import hashlib
 import json
 import os
 import re
@@ -86,6 +87,29 @@ class PureTest(unittest.TestCase):
         # Two rows equally close to one club stay unpaired: no table rather than a wrong one.
         found, missing = sportscore.pair({"Racing Club", "Racing Genk"}, {0: {"racing"}, 1: {"genk"}}, {0: {"Racing"}, 1: {"Genk"}})
         self.assertEqual(found, None)
+
+    def test_archive_scores_written_as_a_bare_pair(self):
+        # OpenFootball writes a match decided in ninety minutes as "score": [a, b] in its older World Cup files
+        # (1950–2014) and as {"ft": [a, b]} elsewhere: both are the final score. Read as an object only, 666 of the
+        # 1,069 archived World Cup matches had no score (18 November 2026: the 1998 final among them).
+        body = {"matches": [
+            {"round": "Final", "date": "1998-07-12", "team1": "Brazil", "team2": "France", "score": [0, 3]},
+            {"round": "Semi-finals", "date": "1998-07-07", "team1": "Brazil", "team2": "Netherlands", "score": {"p": [4, 2], "et": [1, 1], "ft": [1, 1]}},
+            {"round": "Matchday 1", "date": "1998-06-10", "team1": "Brazil", "team2": "Scotland", "score": {"ft": [2, 1]}},
+            {"round": "Matchday 1", "date": "2028-06-09", "team1": "England", "team2": "A2"},
+        ]}
+        rows = [row for _, row in cups.match_rows("open-cups", "world-cup-history", "1998", body)]
+        read = [(r["status"], r["home_score"], r["away_score"], r["home_score_90"], r["home_score_et"], r["home_penalty_score"]) for r in rows]
+        self.assertEqual(read[:4], [("finished", 0, 3, None, None, None), ("finished", 1, 1, 1, 1, 4),
+                                    ("finished", 2, 1, None, None, None), ("not_started", None, None, None, None, None)])
+        # A pair that is no score (one number, a string, a negative, a boolean, three numbers) is no unplayed match:
+        # the edition is not written (FAILURE_MODES.md §19, 19g).
+        for score in ([1], ["1", 2], [-1, 2], [True, 2], [1, 2, 3]):
+            with self.subTest(score=score):
+                with self.assertRaises(SourceError) as caught:
+                    cups.match_rows("open-cups", "world-cup-history", "1998", {"matches": [
+                        {"round": "Matchday 1", "date": "1998-06-11", "team1": "A", "team2": "B", "score": score}]})
+                self.assertEqual(caught.exception.code, "INVALID_SCORE")
 
     def test_curated_aliases_match_the_site(self):
         # dashboard/shared/player-aliases.js: `const ALIASES = Object.freeze({ key: Object.freeze([...]) })`.
@@ -642,6 +666,29 @@ class UefaTest(unittest.TestCase):
             self.assertEqual(x("SELECT is_neutral FROM core.matches m JOIN core.competition_seasons cs ON cs.id=m.competition_season_id WHERE cs.cup_key='open-cups:euro:2024' LIMIT 1").fetchone(), (None,))
         finally:
             cups.bridge = original
+
+    def test_an_edition_read_before_the_bare_scores_is_read_again_once(self):
+        # The source's content has not changed, so its digest alone would leave the edition as the former reader
+        # wrote it, the scores missing. The reader's version is part of the digest: each open-cups edition is read
+        # again once, then left alone as before.
+        x = self.db.execute
+        body = {"name": "World Cup 1998", "season": "1998", "source": {"name": "OpenFootball", "url": "https://github.com/openfootball/worldcup.json"},
+                "matches": [{"round": "Final", "date": "1998-07-12", "team1": "Ruritania", "team2": "Freedonia", "score": [0, 3]}]}
+        key = "open-cups:world-cup-history:1998"
+        final = "SELECT m.status::text, m.home_score, m.away_score FROM core.matches m JOIN core.competition_seasons cs ON cs.id=m.competition_season_id WHERE cs.cup_key=%s"
+        with self.db.transaction():
+            self.assertEqual(cups.save(self.db, "open-cups", "world-cup-history", "1998", body, NOW), 1)
+        self.assertEqual(x(final, (key,)).fetchone(), ("finished", 0, 3))
+        # As the base held the edition before the correction: the former reader's digest, the final without its score.
+        former = hashlib.sha256(json.dumps([body.get("name"), body.get("matches")], sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+        x("UPDATE core.competition_seasons SET cup_digest=%s WHERE cup_key=%s", (former, key))
+        x("""UPDATE core.matches SET status='not_started', home_score=NULL, away_score=NULL
+             WHERE competition_season_id=(SELECT id FROM core.competition_seasons WHERE cup_key=%s)""", (key,))
+        with self.db.transaction():
+            self.assertEqual(cups.save(self.db, "open-cups", "world-cup-history", "1998", body, NOW + timedelta(days=8)), 1)
+        self.assertEqual(x(final, (key,)).fetchone(), ("finished", 0, 3))
+        with self.db.transaction():
+            self.assertEqual(cups.save(self.db, "open-cups", "world-cup-history", "1998", body, NOW + timedelta(days=16)), 0)
 
     def test_player_honours(self):
         from vega.store import Store
