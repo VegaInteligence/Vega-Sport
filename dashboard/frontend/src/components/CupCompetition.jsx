@@ -108,7 +108,9 @@ export default function CupCompetition({ competition, initialSeason, name = comp
   // A national teams' tournament with rounds (the World Cup's archive, the Euro) opens on its bracket and has its groups.
   const tournament = nationalTeams && supportsBracket;
   const finalPool = competition.sourceKey === "world-cup-history" && season === "1950";
-  const tournamentViews = [...(finalPool ? [] : [["bracket", "Tableau"]]), ["groups", "Groupes"], ["matches", "Matchs"]];
+  const tournamentViews = finalPool
+    ? [["groups", "Groupes"], ["bracket", "Tableau"], ["matches", "Matchs"]]
+    : [["bracket", "Tableau"], ["groups", "Groupes"], ["matches", "Matchs"]];
   const views = tournament ? tournamentViews.map(([value]) => value) : league ? ["standings", "matches", "projection"] : supportsBracket ? ["matches", "bracket", "projection"] : ["matches"];
   const [preferredView, setViewState] = useState(initialView === "projection" ? "" : initialView);
   const view = views.includes(preferredView) ? preferredView : views[0];
@@ -199,7 +201,7 @@ export default function CupCompetition({ competition, initialSeason, name = comp
       <AsyncState resource={resource}>
         {(value) => value.unavailable ? <div className="cup-bracket-unavailable"><Empty>Les tours de cette édition ne sont pas disponibles.</Empty>{archive && season !== archive.season && <button className="button button-secondary" onClick={() => setSeason(archive.season)}>Voir le tableau {archive.season}</button>}</div> : <>
           {value.matches.some((match) => match.status === "scheduled" && match.date && match.date < parisDay(Date.now())) && <p className="cup-source">Certains scores de cette édition ne sont pas encore renseignés.</p>}
-          {view === "bracket" ? <KnockoutBracket matches={value.matches} nationalTeams={nationalTeams} season={season} highlight={highlight} trophy={trophyArt({ title: name, trophyYear: Number(String(season).slice(0, 4)) })} /> : view === "groups" ? <GroupTables matches={value.matches} competition={competition.sourceKey} season={season} highlight={highlight} /> : view === "standings" ? <LeagueStandings name={competition.name} matches={value.matches} /> : <CupMatchList matches={value.matches} status={status} query={query} page={page} onPage={setPage} nationalTeams={nationalTeams} season={season} highlight={highlight} />}
+          {view === "bracket" ? <KnockoutBracket matches={value.matches} nationalTeams={nationalTeams} competition={competition.sourceKey} season={season} highlight={highlight} trophy={trophyArt({ title: name, trophyYear: Number(String(season).slice(0, 4)) })} /> : view === "groups" ? <GroupTables matches={value.matches} competition={competition.sourceKey} season={season} highlight={highlight} /> : view === "standings" ? <LeagueStandings name={competition.name} matches={value.matches} /> : <CupMatchList matches={value.matches} status={status} query={query} page={page} onPage={setPage} nationalTeams={nationalTeams} season={season} highlight={highlight} />}
         </>}
       </AsyncState>
       </>}

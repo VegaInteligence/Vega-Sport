@@ -480,7 +480,7 @@ const PARAM_OF_VIEW = { bracket: "tableau", groups: "groupes", standings: "class
 function availableView(id, edition, view) {
   if (!view) return "";
   const firstView = editionView({ id, edition });
-  if (firstView === "matchs" || (firstView === "groupes" && view !== "matchs")) return firstView;
+  if (firstView === "matchs" || (firstView === "groupes" && view !== "matchs" && view !== "tableau")) return firstView;
   return view;
 }
 

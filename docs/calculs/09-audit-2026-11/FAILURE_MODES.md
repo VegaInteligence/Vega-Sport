@@ -2474,7 +2474,8 @@ The site shows « Phase non renseignée » for a run whose matches carry no roun
 
 **Navigation.** A run links only to an edition the site holds (the collected World Cup's 2022 and 2026, the
 archive's own editions, the other tournaments' seasons), on a view that edition has: the matches for International
-Results' tournaments, the groups for 1950, the bracket otherwise. 1950 has no « Tableau ». The collected World Cup's
+Results' tournaments, the groups for 1950, the bracket otherwise. Since the C28 refresh, an explicit « Tableau »
+for 1950 shows its final pool and only names its champion when the six results match the attested table. The collected World Cup's
 edition is in the address when it changes, so a reload keeps it. A national team's French name finds its matches
 (« Italie », 1982) as its source name does (« Italy »). A match the source canceled (Sweden–Austria 1938) reads
 « Annulé », never « À venir » or a missing score. A replayed tie shows its replay and carries the replay's identity,
@@ -2511,7 +2512,7 @@ the first match kept apart. A phone's chosen round stays within the bracket it i
 | 34y | Site: gauge of « Poule finale », « 2e », an unknown stage | 4, 5, none | red |
 | 34z | Run links: World Cup 2021, 2030 | none | red (collected World Cup) |
 | 34aa | Run links: Copa América 2024, CAN 2023; World Cup 1950; 1998 | `view=matchs`; `view=groupes`; `view=tableau` | red |
-| 34ab | 1950's page | opens on « Groupes », no « Tableau »; `view=tableau` falls back | red |
+| 34ab | 1950's page | opens on « Groupes »; explicit `view=tableau` shows the final pool | red |
 | 34ac | Collected World Cup, 2026 then 2022 in the head, then reload | `edition=2022`, 2022 after reload | red |
 | 34ad | Phone: « Finale » chosen in 2026, then a bracket with one round fewer | the last round shown, no error | red |
 | 34ae | 1982 matches, search « Italie », then « Italy » | the final found both times | red |

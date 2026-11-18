@@ -1,3 +1,4 @@
+import { stageKind } from "../../../shared/tournament-stages.js";
 import { normalizeText } from "../model.js";
 
 const STAGES = [
@@ -27,23 +28,44 @@ const teamKey = (team) => team?.id ? "id:" + team.id : "name:" + teamName(team?.
 const scorePair = (a, b) => Number.isInteger(a) && a >= 0 && Number.isInteger(b) && b >= 0 ? [a, b] : null;
 const dateOrder = (a, b) => (a.date || "9999").localeCompare(b.date || "9999") || (a.number || 0) - (b.number || 0) || String(a.key).localeCompare(String(b.key));
 
-/** Add match links and crests only for a unique exact date/team match. */
-export function attachNativeMatches(matches, nativeMatches) {
-  const byFixture = new Map();
-  for (const match of nativeMatches || []) {
+const DAY = 86400000;
+const noon = (day) => Date.parse(String(day).slice(0, 10) + "T12:00:00Z");
+const fixtureStage = (round) => knockoutStage(round) ?? (stageKind(round) === "group" ? "group" : null);
+
+/**
+ * Attach the unique collected match in the same edition and day window. Keep the
+ * archive's round, period scores and side order, including when native sides are reversed.
+ */
+export function attachNativeMatches(matches, nativeMatches, sameTeam = (a, b) => teamName(a) === teamName(b)) {
+  const collected = (nativeMatches || []).flatMap((match) => {
     const home = match.home_team || match.home, away = match.away_team || match.away;
-    if (!match.id || !match.date || !home?.name || !away?.name) continue;
-    const key = [match.date, teamName(home.name), teamName(away.name)].join("|");
-    const values = byFixture.get(key) || [];
-    values.push(match);
-    byFixture.set(key, values);
-  }
-  return (matches || []).map((match) => {
-    const key = [match.date, teamName(match.home), teamName(match.away)].join("|");
-    const found = byFixture.get(key);
-    if (!match.date || found?.length !== 1) return match;
-    const native = found[0], home = native.home_team || native.home, away = native.away_team || native.away;
-    return { ...match, id: native.id, homeImage: home.image_url || home.imageUrl, awayImage: away.image_url || away.imageUrl };
+    if (!match.id || !match.date || !home?.name || !away?.name || match.status === "canceled") return [];
+    return [{ match, home, away, at: noon(match.date), stage: fixtureStage(match.round_name || match.roundName) }];
+  });
+  const owners = new Map();
+  const candidates = (matches || []).map((match) => {
+    if (!match.date || match.status === "canceled") return null;
+    const at = noon(match.date), stage = fixtureStage(match.roundName);
+    const found = collected.filter((row) => Math.abs(row.at - at) <= DAY
+      && (!stage || !row.stage || stage === row.stage)
+      && ((sameTeam(row.home.name, match.home) && sameTeam(row.away.name, match.away)) ||
+          (sameTeam(row.home.name, match.away) && sameTeam(row.away.name, match.home))));
+    if (found.length !== 1) return null;
+    const [candidate] = found;
+    const id = candidate.match.id;
+    owners.set(id, (owners.get(id) || 0) + 1);
+    return candidate;
+  });
+  return (matches || []).map((match, index) => {
+    const candidate = candidates[index];
+    if (!candidate || owners.get(candidate.match.id) !== 1) return match;
+    const { match: native, home, away } = candidate;
+    const [first, second] = sameTeam(home.name, match.home) ? [home, away] : [away, home];
+    return {
+      ...match, id: native.id,
+      homeImage: first.image_url || first.imageUrl || match.homeImage,
+      awayImage: second.image_url || second.imageUrl || match.awayImage,
+    };
   });
 }
 

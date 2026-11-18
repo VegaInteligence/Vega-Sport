@@ -1,6 +1,7 @@
 import { normalizeText } from "../model.js";
 import { isFinalPool1950 } from "../../../shared/world-cup-1950.js";
 import { parisDay, validDay } from "./fixtures.js";
+import { knockoutStage } from "./knockout-bracket.js";
 
 function scoreNumber(value) {
   if (Number.isInteger(value) && value >= 0) return value;
@@ -268,7 +269,13 @@ function standings(group, rules, today) {
         points: hasPoints ? row.points : null, difference: hasPoints ? row.difference : null };
     });
   });
-  return { name, rows, unresolved: rows.some((row) => row.tied) };
+  const allGames = [...matches, ...group.playoffs];
+  const days = allGames.map((match) => match.date).filter(Boolean).sort();
+  const pairs = new Set(matches.filter((match) => match.home !== match.away)
+    .map((match) => JSON.stringify([match.home, match.away].sort())));
+  const complete = pairs.size === matches.length && pairs.size === rows.length * (rows.length - 1) / 2 &&
+    days.length === allGames.length && allGames.every((match) => played(match) || match.status === "canceled");
+  return { name, rows, unresolved: rows.some((row) => row.tied), from: days[0], to: days.at(-1), complete };
 }
 
 /** Archive groups: explicit group, round-only group, separating play-off, or 1950 final pool. */
@@ -288,6 +295,47 @@ export function groupTables(matches, { competition, season, today = parisDay(Dat
     .filter((group) => group.matches.length)
     .sort((a, b) => (a.name === "Poule finale") - (b.name === "Poule finale") || a.name.localeCompare(b.name, "fr", { numeric: true }))
     .map((group) => standings(group, rules, today));
+}
+
+const groupLeader = (table) => table.rows.find((row) => row.position === 1 && !row.tied);
+
+/** Precede a bracket with its latest complete groups, when each opening team won one of its own. */
+export function bracketGroups(sides, matches, options) {
+  if (!sides?.final) return null;
+  const first = sides.rounds[0];
+  const openingMatches = first ? [...first.left, ...first.right] : [sides.final];
+  const days = openingMatches.map((match) => match.date).filter(Boolean).sort();
+  if (days.length !== openingMatches.length) return null;
+  const tables = groupTables(matches, options).filter((table) => table.complete && table.to < days[0]);
+  const groupOf = (team) => {
+    const name = normalizeText(team).trim();
+    if (!name) return null;
+    const winners = tables.filter((table) => normalizeText(groupLeader(table)?.name).trim() === name)
+      .sort((a, b) => b.to.localeCompare(a.to));
+    if (winners.length > 1 && winners[0].to === winners[1].to) return null;
+    return winners[0] ?? null;
+  };
+  const side = (ties) => ties.flatMap((match) => [match.home, match.away].map(groupOf));
+  const left = first ? side(first.left) : [groupOf(sides.final.home)];
+  const right = first ? side(first.right) : [groupOf(sides.final.away)];
+  const opening = [...left, ...right];
+  const used = new Set(opening);
+  if (!left.length || !right.length || used.has(null) || opening.length !== used.size) return null;
+  // Those archives name the first round with numbers and the second with letters.
+  // An earlier group cannot replace one that has no established winner in the second round.
+  if (["1974", "1978", "1982"].includes(String(options?.season)) &&
+      options?.competition === "world-cup-history" && opening.some((table) => !/^Groupe [A-Z]$/.test(table.name))) return null;
+  const start = opening.map((table) => table.from).sort()[0];
+  const label = tables.some((table) => !used.has(table) && table.to < start) ? "Second tour" : "Groupes";
+  return { label, left, right };
+}
+
+/** The 1950 bracket view is its final pool. Only the corroborated standings name its champion. */
+export function finalGroup(matches, options) {
+  if (!groupRules(options?.competition, options?.season).finalPool ||
+      (matches || []).some((match) => knockoutStage(match.roundName))) return null;
+  const table = groupTables(matches, options).find((row) => row.name === "Poule finale");
+  return table ? { table, champion: groupLeader(table)?.name ?? null } : null;
 }
 
 /** Keep past unscored matches out of the upcoming list. */

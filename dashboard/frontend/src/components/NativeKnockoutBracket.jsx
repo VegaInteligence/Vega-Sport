@@ -9,6 +9,7 @@ import { WORLD_CUP_ID } from "../services/cup-catalog.js";
 import { normalizeOpenCup } from "../services/cup-matches.js";
 import { attachNativeMatches, nativeKnockoutMatches, nativeSingleKnockoutMatches } from "../services/knockout-bracket.js";
 import { FEATURED_EUROPE_IDS } from "../services/competition-selector.js";
+import { sameNationalTeam } from "../services/national-flags.js";
 
 export default function NativeKnockoutBracket({ competition, season, matches, rounds, highlight = "", trophy = null }) {
   const f = useFootball();
@@ -29,7 +30,7 @@ export default function NativeKnockoutBracket({ competition, season, matches, ro
   });
   const bracketMatches = useMemo(() => {
     if (!resource.value) return [];
-    return worldCup && resource.value.matches ? attachNativeMatches(resource.value.matches, matches) : FEATURED_EUROPE_IDS.includes(competition.id) ? nativeKnockoutMatches(matches, resource.value.rounds) : nativeSingleKnockoutMatches(matches, resource.value.rounds);
+    return worldCup && resource.value.matches ? attachNativeMatches(resource.value.matches, matches, sameNationalTeam) : FEATURED_EUROPE_IDS.includes(competition.id) ? nativeKnockoutMatches(matches, resource.value.rounds) : nativeSingleKnockoutMatches(matches, resource.value.rounds);
   }, [worldCup, competition.id, matches, resource.value]);
   const hrefForMatch = (id, status) => f.href("/matchs/", {
     tab: status === "scheduled" ? "upcoming" : "results",
