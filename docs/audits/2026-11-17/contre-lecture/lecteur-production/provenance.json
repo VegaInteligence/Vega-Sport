@@ -1,0 +1,10 @@
+{
+  "git_commit": "8018e0836ca0f32e8b2eb51fc2847154abff7f13",
+  "sha256": {
+    "backend/api/src/http.mjs": "f841943ade4051696abbf60e603f862b8828f52a058acdecf94920dfa7e14cff",
+    "backend/api/src/lineup.mjs": "62338fa9d627b7f639e1d4f7a1a376f9921cfc0e3b90a82de24f597256a9ec90",
+    "backend/api/src/routes/rankings.mjs": "fe84548cf0f03337b38d966ff6a4192bb240563ea2c8fa1bfea822ef1f111be9",
+    "dashboard/package.json": "d3a565fe815f94979027fa4b5cab75c55b25bdc95565c352937953bd4d1b1d90",
+    "dashboard/shared/inplay.js": "d496369221cb8ec9ef506584daac1de9826826d8851a0f0309563d60b5ac6043"
+  }
+}

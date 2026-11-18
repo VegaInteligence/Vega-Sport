@@ -1,0 +1,28 @@
+{
+  "name": "statarena",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "frontend"
+  ],
+  "type": "module",
+  "description": "Vega Sport: the site (Next.js) and the modules it shares with the backend",
+  "scripts": {
+    "dev": "node node_modules/next/dist/bin/next dev frontend --hostname 127.0.0.1 --port 3000",
+    "build": "NEXT_TELEMETRY_DISABLED=1 node node_modules/next/dist/bin/next build frontend",
+    "start": "node node_modules/next/dist/bin/next start frontend",
+    "format": "prettier --write frontend/src frontend/app frontend/next.config.mjs shared package.json",
+    "format:check": "prettier --check frontend/src frontend/app frontend/next.config.mjs shared package.json"
+  },
+  "dependencies": {
+    "flag-icons": "7.6.0",
+    "lucide-react": "^1.74.0",
+    "next": "^16.4.6",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "prettier": "^3.10.1"
+  },
+  "packageManager": "bun@1.4.4"
+}

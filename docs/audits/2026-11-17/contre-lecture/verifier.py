@@ -61,12 +61,16 @@ with tempfile.TemporaryDirectory(prefix="vega-contre-lecture-") as temp:
                for s in ("fixture-lineage-182.csv", "pending-current-14.csv", "findings.json")])
     route = tmp / "score-witness.mjs"
     shutil.copyfile(T / route.name, route)
-    if digest(repo / "backend/api/src/routes/rankings.mjs") != "fe84548cf0f03337b38d966ff6a4192bb240563ea2c8fa1bfea822ef1f111be9":
-        raise ValueError("Le lecteur doit correspondre au blob de production documenté.")
-    subprocess.run(["node", str(route), str(repo)], cwd=tmp, capture_output=True, text=True, check=True)
-    replay = data(tmp / "score-witness.json")
+    production = root / "lecteur-production"
+    for name, expected in data(production / "provenance.json")["sha256"].items():
+        assert digest(production / name) == expected, name
+    if digest(repo / "backend/api/src/routes/rankings.mjs") != "91936356af3edbcd541d608158c5a8cf525ad41aaae4c12c04bd9a9b2c4b847b":
+        raise ValueError("Le lecteur de branche a changé depuis son contrôle intégré.")
     retained = data(T / "score-witness.json")
-    assert {k: v for k, v in replay.items() if k != "node"} == {k: v for k, v in retained.items() if k != "node"}
+    for source in (production, repo):
+        subprocess.run(["node", str(route), str(source)], cwd=tmp, capture_output=True, text=True, check=True)
+        replay = data(tmp / "score-witness.json")
+        assert {k: v for k, v in replay.items() if k != "node"} == {k: v for k, v in retained.items() if k != "node"}
 
 keepers = data(P / "support-editions/summary.json")
 assert [keepers[k] for k in ("lines", "distinct_editions", "mismatched_to_cent")] == [699, 301, 3364]

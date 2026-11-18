@@ -1,6 +1,6 @@
 # Rejouer les contrôles publiés
 
-Depuis la racine du dépôt, utiliser Python 3.11 ou ultérieur et Node.js avec le module de classement dont l’empreinte SHA-256 est `fe84548cf0f03337b38d966ff6a4192bb240563ea2c8fa1bfea822ef1f111be9`. Ce module est identique entre le commit de branche contrôlé `1b28961a88e968d5602f9fb278fc3c471ebb7467` et l’image de production `8018e0836ca0f32e8b2eb51fc2847154abff7f13`. Le vérificateur travaille en répertoire temporaire et relit le dossier frère [notes-transaction](../notes-transaction/README.md).
+Depuis la racine du dépôt, utiliser Python 3.11 ou ultérieur et Node.js. Le témoin des classements exécute ses 17 contrôles sur le module de production 8018e0836c et sur celui de la branche intégrée 13f7be9f35. Les deux lecteurs produisent les mêmes réponses pour les cas documentés. Les dépendances exactes du lecteur déployé sont jointes. [Révision et empreintes de production](lecteur-production/provenance.json)
 
 ```sh
 python3 docs/audits/2026-11-17/contre-lecture/verifier.py

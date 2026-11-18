@@ -1,0 +1,52 @@
+{
+  "status": "passed",
+  "observed_at": "2026-11-18T14:41:16.554686+00:00",
+  "publication_scope": "local evidence candidate; 1605 was the input",
+  "cumulative_manifest_sha256": "8f50533de53eec90b4e510e45a4608ccdc610cbf77dbe53551aadcb69f5c2feb",
+  "zip_sha256": "0547bdfae5c34c924e1c47a27ad3c68f2ef3a4b9915265974378f209b4422476",
+  "archives_uefa_club_ids": 143,
+  "historical_c1_seasons": 64,
+  "original_pointer_baseline_records": 1605,
+  "new_bindings": {
+    "profile": 81,
+    "occurrence": 246
+  },
+  "unchanged_backing_data": "Existing profile and competition pointers plus edition and ranking references, source keys, identities and merge edges in the two capture copies.",
+  "production_writes": 0,
+  "rehearsals": {
+    "17": {
+      "profile_records": 81,
+      "occurrence_records": 246,
+      "cumulative_repeat": {
+        "already_linked": 1931,
+        "entity_not_found": 1
+      }
+    },
+    "18": {
+      "profile_records": 81,
+      "occurrence_records": 246,
+      "cumulative_repeat": {
+        "already_linked": 1932
+      }
+    }
+  },
+  "evidence_sha256": {
+    "README.md": "03eb01659e0c44c4ba1e4e41a411ce1e8aeb7042466c2ea4b0940b7d5297b640",
+    "REPLAY.md": "054d382041f210dc0ae6c14edfea2ef4b6817886b9b0a9792908fac331063433",
+    "inventory.json": "e2f434434739e9e49161077cf72790f185e9b8e7330bbdfba3bc8fac1b7f88e6",
+    "match-evidence.json": "31b9df2580fec07f1f42fb3b32726821c0c3134f850eb4af1bacd884a7760076",
+    "visual-decisions.json": "9731bfc19a80ebefba6b07e242ca9a33157ba422764d2d9af72783ca4f679ded",
+    "supplement-summary.json": "93e56887bf7403df3d9f260175d165c824546815dfbcde9ec9cfc78883c33264",
+    "profiles/manifest.json": "4d78a5a32d949d8acfb228ac6e25381d3b3fcee4a2e3cb896f3cf8a310764bf0",
+    "occurrences/manifest.json": "3c3b15ce39ae8275833d9185edd8aa9b6e0561d31ba129d0d79828efc9e38617",
+    "all-3466-archive-roots-dispositions.csv.gz": "e327bd8aa76dd0bc72030a8309602edfa60840d99680f58f4cfab4fb3e66cfea",
+    "vi21-alias-evidence.json.gz": "5a2707dd0341ee80e3f1012209675d4b4861005e1898f57b7f9028d7145d8d9e",
+    "comparative-census.json": "2c1fc500065ebae8d67fc6989caf22f4badfa3c9b19a1df3b169f6a41b199d35",
+    "candidate-expanded-1932/release.json": "1eb010edcf8c066c0834435602620300fbd34e127373d7503dbc813b242f6d13",
+    "verify-1932-zip.json": "255495f94522050a37e467e2ee0240cf5da08759e636f9773dad85e6602691a6",
+    "postgres-17-uefa_archive/verification.json": "5b44717b9c55a3446d921b5b3020addc947f8dc7cc769cc8782b85a80dfe0c18",
+    "postgres-18-uefa_archive/verification.json": "0b5ed069eb180d7c970722dba9e069d11a9e3bc77e84278057745c6c43c12d09",
+    "postgres-17-uefa_archive/cumulative-repeat.json": "63006466a7d2ba9eda491995dbe9e1146c832bf88194f47553d23aa83b74de23",
+    "postgres-18-uefa_archive/cumulative-repeat.json": "92cf9b9c5cb366a7a57aeef900907f6e11ba9bbe5e0532b3ab2f5da39ac15212"
+  }
+}
