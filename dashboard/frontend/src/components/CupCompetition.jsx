@@ -44,23 +44,26 @@ function GroupTables({ matches, competition, season, highlight }) {
   const tables = useMemo(() => groupTables(matches, { competition, season, today }), [matches, competition, season, today]);
   if (!tables.length) return <Empty>Cette édition ne s’est pas jouée en groupes.</Empty>;
   return (
-    <div className="edition-groups">
-      {tables.map((table) => (
-        <section className="edition-group" key={table.name}>
-          <h3>{table.name}</h3>
-          <table className="data-table" aria-label={table.name}>
-            <thead><tr><th scope="col">#</th><th scope="col">Équipe</th><th scope="col"><Term>J</Term></th><th scope="col"><Term>Diff.</Term></th><th scope="col"><Term>Pts</Term></th></tr></thead>
-            <tbody>{table.rows.map((row) => (
-              <tr key={row.name} className={highlight && sameNationalTeam(row.name, highlight) ? "edition-own" : undefined}>
-                <td title={row.tied ? "Départage indisponible" : undefined}>{row.position == null ? "—" : row.position + (row.tied ? "=" : "")}</td>
-                <th scope="row"><span className="cup-match-team"><NationalFlag name={row.name} season={season} />{nationalTeamLabel(row.name)}</span></th>
-                <td>{row.played}</td><td>{row.difference == null ? "—" : (row.difference > 0 ? "+" : "") + row.difference}</td><td><strong>{row.points ?? "—"}</strong></td>
-              </tr>
-            ))}</tbody>
-          </table>
-        </section>
-      ))}
-    </div>
+    <>
+      <div className="edition-groups">
+        {tables.map((table) => (
+          <section className="edition-group" key={table.name}>
+            <h3>{table.name}</h3>
+            <table className="data-table" aria-label={table.name}>
+              <thead><tr><th scope="col">#</th><th scope="col">Équipe</th><th scope="col" title="Matchs joués">J</th><th scope="col" title="Différence de buts">Diff.</th><th scope="col" title="Points">Pts</th></tr></thead>
+              <tbody>{table.rows.map((row) => (
+                <tr key={row.name} className={highlight && sameNationalTeam(row.name, highlight) ? "edition-own" : undefined}>
+                  <td title={row.tied ? "Départage indisponible" : undefined}>{row.position == null ? "—" : row.position + (row.tied ? "=" : "")}</td>
+                  <th scope="row"><span className="cup-match-team"><NationalFlag name={row.name} season={season} /><span title={nationalTeamLabel(row.name)}>{nationalTeamLabel(row.name)}</span></span></th>
+                  <td>{row.played}</td><td>{row.difference == null ? "—" : (row.difference > 0 ? "+" : "") + row.difference}</td><td><strong>{row.points ?? "—"}</strong></td>
+                </tr>
+              ))}</tbody>
+            </table>
+          </section>
+        ))}
+      </div>
+      <p className="nations-note">Classements calculés à partir des résultats disponibles.</p>
+    </>
   );
 }
 /**

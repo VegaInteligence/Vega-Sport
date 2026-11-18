@@ -58,8 +58,8 @@ function tally(matches, winPoints) {
 const displayOrder = (a, b) => b.difference - a.difference || b.goalsFor - a.goalsFor || a.name.localeCompare(b.name, "fr");
 
 /** Standings of a complementary league (VI-19), as before: points, goal difference, goals and name. */
-export function leagueTable(matches) {
-  return tally(matches, 3)
+export function leagueTable(matches, { win = 3 } = {}) {
+  return tally(matches, win)
     .sort((a, b) => b.points - a.points || displayOrder(a, b))
     .map((r, i) => ({ position: i + 1, ...r }));
 }

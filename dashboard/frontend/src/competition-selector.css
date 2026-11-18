@@ -435,8 +435,22 @@
   vertical-align: middle;
 }
 .fi.national-flag::before { content: none; }
+/* The flags the library has not: Yugoslavia's plain tricolour (the kingdom, then 1992–2006) and its star (1946–1991),
+   the Soviet Union, East Germany and Zaire, drawn for the size of an icon. */
 .fi.national-flag.fi-yu-1992 {
   background-image: linear-gradient(to bottom, #003893 33.333%, #fff 33.333%, #fff 66.667%, #de0000 66.667%);
+}
+.fi.national-flag.fi-yu-1946 {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 640 480%22%3E%3Cpath fill=%22%23003893%22 d=%22M0 0h640v160H0z%22/%3E%3Cpath fill=%22%23fff%22 d=%22M0 160h640v160H0z%22/%3E%3Cpath fill=%22%23de0000%22 d=%22M0 320h640v160H0z%22/%3E%3Cpath fill=%22%23de0000%22 stroke=%22%23fcd115%22 stroke-width=%2213%22 stroke-linejoin=%22miter%22 d=%22M320.0 90.0L353.7 193.6L462.7 193.6L374.5 257.7L408.2 361.4L320.0 297.3L231.8 361.4L265.5 257.7L177.3 193.6L286.3 193.6z%22/%3E%3C/svg%3E");
+}
+.fi.national-flag.fi-su {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 640 480%22%3E%3Cpath fill=%22%23cd0000%22 d=%22M0 0h640v480H0z%22/%3E%3Cpath fill=%22%23cd0000%22 stroke=%22%23ffd700%22 stroke-width=%227%22 d=%22M120.0 32.0L126.7 52.7L148.5 52.7L130.9 65.5L137.6 86.3L120.0 73.5L102.4 86.3L109.1 65.5L91.5 52.7L113.3 52.7z%22/%3E%3Cg fill=%22none%22 stroke=%22%23ffd700%22 stroke-linecap=%22round%22%3E%3Cpath stroke-width=%2215%22 d=%22M92 208a60 60 0 1 0 58-100%22/%3E%3Cpath stroke-width=%2212%22 d=%22M92 208l-16 16%22/%3E%3Cpath stroke-width=%2213%22 d=%22M162 214l-58-74%22/%3E%3C/g%3E%3Cpath fill=%22none%22 stroke=%22%23ffd700%22 stroke-width=%2224%22 d=%22M88 152l30-26%22/%3E%3C/svg%3E");
+}
+.fi.national-flag.fi-dd {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 640 480%22%3E%3Cpath d=%22M0 0h640v160H0z%22/%3E%3Cpath fill=%22%23dd0000%22 d=%22M0 160h640v160H0z%22/%3E%3Cpath fill=%22%23ffce00%22 d=%22M0 320h640v160H0z%22/%3E%3Ccircle cx=%22320%22 cy=%22240%22 r=%2280%22 fill=%22%23dd0000%22 stroke=%22%23ffce00%22 stroke-width=%2222%22/%3E%3Cg fill=%22none%22 stroke=%22%23ffce00%22 stroke-linecap=%22round%22%3E%3Cpath stroke-width=%229%22 d=%22M336 196l-22 88M336 196l26 84%22/%3E%3Cpath stroke-width=%2211%22 d=%22M290 286l26-70%22/%3E%3Cpath stroke-width=%2220%22 stroke-linecap=%22butt%22 d=%22M296 222l42-14%22/%3E%3C/g%3E%3C/svg%3E");
+}
+.fi.national-flag.fi-zr {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 640 480%22%3E%3Cpath fill=%22%23009a49%22 d=%22M0 0h640v480H0z%22/%3E%3Ccircle cx=%22320%22 cy=%22240%22 r=%22140%22 fill=%22%23fad201%22/%3E%3Cpath fill=%22none%22 stroke=%22%237b3f00%22 stroke-width=%2240%22 stroke-linecap=%22round%22 d=%22M250 340l66-74%22/%3E%3Cpath fill=%22none%22 stroke=%22%234a2500%22 stroke-width=%2216%22 d=%22M312 290l40-96%22/%3E%3Cpath fill=%22%23ce1021%22 d=%22M350 200c-34-20-30-62 2-88c-2 22 34 34 26 66c-4 14-14 22-28 22z%22/%3E%3C/svg%3E");
 }
 .cup-match-teams > strong {
   min-width: 48px;
@@ -476,7 +490,15 @@
 .edition-groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
 .edition-group { min-width: 0; padding: 10px 12px; background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius); }
 .edition-group h3 { margin: 0 0 6px; color: var(--ink-strong); font-size: var(--text-sm); }
-.edition-group .data-table { width: 100%; }
+/* A group's table is as wide as its card: the shared tables' 800 px floor is not for it. */
+.edition-group .data-table { width: 100%; min-width: 0; font-size: var(--text-sm); }
+.edition-group .data-table :is(th, td) { padding: 6px 4px; }
+.edition-group .data-table thead th { background: none; }
+.edition-group .data-table :is(th, td):not(:nth-child(2)) { width: 1%; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.edition-group .data-table tbody th { width: 100%; max-width: 0; overflow: hidden; color: var(--ink); background: none; font-size: var(--text-sm); text-overflow: ellipsis; }
+.edition-group .cup-match-team { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.edition-group .cup-match-team > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.edition-groups + .nations-note { margin: 12px 0 0; }
 .edition-group .edition-own > * { background: var(--accent-soft); }
 @media (max-width: 860px) {
   .edition-name { font-size: 18px; }
