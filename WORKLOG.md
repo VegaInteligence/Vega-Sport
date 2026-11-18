@@ -112,3 +112,16 @@
 - Decision: due at the earlier of `queued_at + 10 min` and `first_queued_at + 60 min` (migration `133_cohort_max_wait.sql`, a column a re-mark leaves unchanged); claim order by due time; re-marked during its refresh → the wait restarts from the claim. FAILURE_MODES §18; French note in `05-joueurs/02-centiles-et-cohortes.md`.
 - Validated locally: Python 428 OK (3.14), API 182/182; a 70-minute simulated scenario with the real refresh (refreshed at minute 60, once).
 - Shipped 17 Nov (« Yes, push and deploy »): `8018e0836c`, Deploy run 44131657417; migration 133 applied 17:01:35 UTC; `team:2021:europe` (re-marked 180 more times meanwhile) republished at 18:01:40 UTC, at the maximum wait. Closed.
+
+## VI-30 — logos, complément (branche `claude/vi30-logos-complement`, 18 Nov 2026)
+
+- Goal ([VI-30](https://linear.app/vegainteligence/issue/VI-30)): complete the real logos of clubs, competitions and editions after Hugo's lot (`codex/vi30-logos-partenaire`, `0d5cadea35`: 1,932 profile links, 47 edition emblems), then check their display.
+- Constraints: production read only; real logos only; reuse the verified files and mappings; no production write without Hugo's yes; match ingestion, identity merges and Vega calculations stay with the main workstream.
+- Done, in `handoff/vi30-logos/complement/` (reference lot untouched):
+  - production read through the public API (574 GET, revision 25555684): 2,501 cup-source teams, 1,949 without an image, 858 of them in the lot, 1,091 outside it (996 clubs, 95 national teams);
+  - 545 club links in three stage manifests: 315 twins of PitchAPI clubs (the repository's reviewed identity rule; crests already in the media bucket), 152 twins of clubs the lot verified, 78 from FIFA's registry;
+  - 451 clubs, 95 national teams and 3 competitions left as open cases, each with its reason (`cas-ouverts.json`);
+  - offline checks green: 3,371 + 704 checksums, `verifier.py` (0 error on 545 entries), deterministic second assembly.
+- Not done: the import on a PostgreSQL 18 copy (first and second pass) and the desktop and mobile display check. The loader and the display fix are in the audit revision `a6b4a31374`, which is not on GitHub; this workstation has PostgreSQL 16 only and no Docker.
+- Linear: not checked. This session's connector opens another workspace, so overlap with issues In Progress could not be verified.
+- Next action: Hugo provides the audit revision and decides the scope (the 315 PitchAPI twins are pending identity merges); then the import test on a PostgreSQL 18 copy, the display check, and the AWS steps of `complement/PUBLICATION_AWS.md`, each write after his yes.
