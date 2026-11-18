@@ -1,0 +1,241 @@
+{
+  "input": {
+    "worldclub/scotland-1890-1994.csv.gz": "ccff24d65f009488fc9b7a44c6e29d097898c374b463c5e077d6260d9a1a70bb"
+  },
+  "cases": [
+    {
+      "match": {
+        "key": "r:worldclub/scotland/1918:179",
+        "competitionId": "worldclub/scotland/1918",
+        "competition": "Championnat d’Écosse · Division 1",
+        "country": "Écosse",
+        "date": "1919-01-04",
+        "dateNote": false,
+        "round": "",
+        "team1": "Airdrieonians",
+        "team2": "Greenock Morton FC",
+        "score": [
+          0,
+          3
+        ],
+        "notes": [],
+        "goals": null,
+        "source": {
+          "status": null,
+          "ft": [
+            0,
+            3
+          ],
+          "et": null,
+          "p": null,
+          "neutral": false,
+          "nonmatch": null
+        }
+      },
+      "prior_date": "1919-01-04",
+      "new_date": "1919-01-04",
+      "new_score": [
+        0,
+        3
+      ],
+      "authority_key": "scotland:contemporary:1919010401",
+      "official": {
+        "season": "1918",
+        "source": "https://londonhearts.com/scores/images/1919/1919010401.htm",
+        "case": "Morton1918",
+        "published_proof": {
+          "case": "Morton1918",
+          "season": "1918",
+          "date": "1919-01-04",
+          "match_id": "120265",
+          "edition_id": "1492",
+          "archive_key": "r:worldclub/scotland/1918:179",
+          "public_home": "Airdrieonians",
+          "public_away": "Greenock Morton FC",
+          "public_score": "0–3",
+          "public_goals": "0",
+          "version": "0a03542a122fc7f9fe899e23a6e1bc3ca4ec627ecac743326b7871193ef186ba",
+          "decision": "Preserve 0–3. Correct the participant that day to Clydebank after binding its dated Scottish club identity. Do not relabel the entire Airdrieonians club."
+        },
+        "raw_provider_observation": {
+          "case": "Morton1918",
+          "line": "6028",
+          "season": "1918",
+          "date": "1919-01-04",
+          "source_home": "Airdrieonians",
+          "source_away": "Greenock Morton FC",
+          "h": "clydebank",
+          "a": "morton",
+          "gh": "0",
+          "ga": "3",
+          "role": "date singled out by both SPFL rows",
+          "match_id": "120265",
+          "edition_id": "1492",
+          "rds_home_id": "5953",
+          "rds_home": "Airdrieonians",
+          "rds_away_id": "5916",
+          "rds_away": "Greenock Morton FC",
+          "rds_snapshot": "4408172:4408172:"
+        },
+        "compare_sha256": "12608d71ae6f2deab93e45c7afb68e28d435579942f2b588af5c7c92b08f1c18"
+      },
+      "held": "dated_clydebank_binding_missing",
+      "reviewed_home_label": "Clydebank",
+      "score_changes": false
+    },
+    {
+      "match": {
+        "key": "r:worldclub/scotland/1924:36",
+        "competitionId": "worldclub/scotland/1924",
+        "competition": "Championnat d’Écosse · Division 1",
+        "country": "Écosse",
+        "date": "1924-08-30",
+        "dateNote": false,
+        "round": "",
+        "team1": "Queens Park FC",
+        "team2": "St. Mirren",
+        "score": [
+          2,
+          2
+        ],
+        "notes": [],
+        "goals": null,
+        "source": {
+          "status": null,
+          "ft": [
+            2,
+            2
+          ],
+          "et": null,
+          "p": null,
+          "neutral": false,
+          "nonmatch": null
+        }
+      },
+      "prior_date": "1924-08-30",
+      "new_date": "1924-08-30",
+      "new_score": [
+        2,
+        1
+      ],
+      "authority_key": "scotland:contemporary:1924083001",
+      "official": {
+        "season": "1924",
+        "source": "https://londonhearts.com/scores/images/1924/1924083001.htm",
+        "case": "QP1924",
+        "published_proof": {
+          "case": "QP1924",
+          "season": "1924",
+          "date": "1924-08-30",
+          "match_id": "135113",
+          "edition_id": "1532",
+          "archive_key": "r:worldclub/scotland/1924:36",
+          "public_home": "Queens Park FC",
+          "public_away": "St. Mirren",
+          "public_score": "2–2",
+          "public_goals": "0",
+          "version": "9644b42449f34cbfef8fd60b59655cb4d7b6476840679edb8d3a658a1cce50f9",
+          "decision": "Correct final score to 2–1; preserve physical match ID, raw source observation and provenance."
+        },
+        "raw_provider_observation": {
+          "case": "QP1924",
+          "line": "8337",
+          "season": "1924",
+          "date": "1924-08-30",
+          "source_home": "Queens Park FC",
+          "source_away": "St. Mirren",
+          "h": "queenspark",
+          "a": "stmirren",
+          "gh": "2",
+          "ga": "2",
+          "role": "date singled out by both SPFL rows",
+          "match_id": "135113",
+          "edition_id": "1532",
+          "rds_home_id": "5915",
+          "rds_home": "Queens Park FC",
+          "rds_away_id": "4815",
+          "rds_away": "St. Mirren",
+          "rds_snapshot": "4408172:4408172:"
+        },
+        "compare_sha256": "12608d71ae6f2deab93e45c7afb68e28d435579942f2b588af5c7c92b08f1c18"
+      }
+    },
+    {
+      "match": {
+        "key": "r:worldclub/scotland/1946:108",
+        "competitionId": "worldclub/scotland/1946",
+        "competition": "Championnat d’Écosse · Division 1",
+        "country": "Écosse",
+        "date": "1946-11-23",
+        "dateNote": false,
+        "round": "",
+        "team1": "Queens Park FC",
+        "team2": "Hamilton Academical",
+        "score": [
+          3,
+          1
+        ],
+        "notes": [],
+        "goals": null,
+        "source": {
+          "status": null,
+          "ft": [
+            3,
+            1
+          ],
+          "et": null,
+          "p": null,
+          "neutral": false,
+          "nonmatch": null
+        }
+      },
+      "prior_date": "1946-11-23",
+      "new_date": "1946-11-23",
+      "new_score": [
+        2,
+        1
+      ],
+      "authority_key": "scotland:contemporary:1946112301",
+      "official": {
+        "season": "1946",
+        "source": "https://londonhearts.com/scores/images/1946/1946112301.htm",
+        "case": "QP1946",
+        "published_proof": {
+          "case": "QP1946",
+          "season": "1946",
+          "date": "1946-11-23",
+          "match_id": "181972",
+          "edition_id": "1677",
+          "archive_key": "r:worldclub/scotland/1946:108",
+          "public_home": "Queens Park FC",
+          "public_away": "Hamilton Academical",
+          "public_score": "3–1",
+          "public_goals": "0",
+          "version": "0b198f8c0e0b7e0b88bc8c71428d5afcaa33b68b5cce01210eeaba2f46e094d8",
+          "decision": "Correct final score to 2–1; preserve physical match ID, raw source observation and provenance."
+        },
+        "raw_provider_observation": {
+          "case": "QP1946",
+          "line": "14109",
+          "season": "1946",
+          "date": "1946-11-23",
+          "source_home": "Queens Park FC",
+          "source_away": "Hamilton Academical",
+          "h": "queenspark",
+          "a": "hamilton",
+          "gh": "3",
+          "ga": "1",
+          "role": "date singled out by both SPFL rows",
+          "match_id": "181972",
+          "edition_id": "1677",
+          "rds_home_id": "5915",
+          "rds_home": "Queens Park FC",
+          "rds_away_id": "4337",
+          "rds_away": "Hamilton Academical",
+          "rds_snapshot": "4408172:4408172:"
+        },
+        "compare_sha256": "12608d71ae6f2deab93e45c7afb68e28d435579942f2b588af5c7c92b08f1c18"
+      }
+    }
+  ]
+}

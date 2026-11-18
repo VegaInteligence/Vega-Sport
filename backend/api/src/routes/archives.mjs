@@ -97,6 +97,10 @@ export async function archiveRead(req, params, read) {
   const paging = readPageArgs(params, 50);
   const meta = await archiveMeta(read, season);
   if (params.has("version") && params.get("version") !== meta.version) reject(409, "Les archives ont été actualisées. Rechargez la première page.");
+  const requireSameVersion = async () => {
+    if ((await archiveMeta(read, season)).version !== meta.version)
+      reject(409, "Les archives ont été actualisées. Rechargez la première page.");
+  };
   const etag = `W/"archive-v2-${hash([meta.version, [...params].sort(([a], [b]) => a.localeCompare(b))])}"`;
   if (!matchKey && (req.method === "HEAD" || matchesEtag(req.headers.get("if-none-match"), etag))) return send(req, null, 200, { etag, ttl: 30 });
   const [overview] = await read(
@@ -117,9 +121,12 @@ export async function archiveRead(req, params, read) {
     const [row] = await read(
       `SELECT to_json(m) AS match,(SELECT coalesce(json_agg(g ORDER BY g.seq),'[]'::json) FROM api.archive_goals g
          WHERE g.season_id=m.season_id AND g.match_id=m.match_id) AS goals
-       FROM api.archive_matches m WHERE m.season=$1 AND m.key=$2`,
+       FROM api.archive_matches m WHERE m.season=$1 AND
+         (m.key=$2 OR EXISTS(SELECT 1 FROM api.archive_match_aliases a WHERE a.season_id=m.season_id
+           AND a.match_id=m.match_id AND ($2=a.former_key OR $2=a.former_public_id)))`,
       [season, matchKey],
     );
+    await requireSameVersion();
     if (!row?.goals?.length) reject(404, "Aucun but archivé pour ce match.");
     const { hasGoals, goalCount, ...listing } = archiveListing(row.match);
     data.match = { ...listing, goals: row.goals.map((g) => goal(g, row.match)) };
@@ -128,7 +135,9 @@ export async function archiveRead(req, params, read) {
   }
   const needle = normalizeText(q).trim();
   const filter = `m.season=$1 AND ($2='all' OR m.competition_id=$2) AND ($3='' OR position($3 IN ${norm("m.team1||' '||m.team2")})>0
-     OR EXISTS(SELECT 1 FROM api.archive_goals g WHERE g.season_id=m.season_id AND g.match_id=m.match_id AND position($3 IN ${norm("g.player")})>0))`;
+     OR EXISTS(SELECT 1 FROM api.archive_goals g WHERE g.season_id=m.season_id AND g.match_id=m.match_id AND position($3 IN ${norm("g.player")})>0)
+     OR EXISTS(SELECT 1 FROM api.archive_match_aliases a WHERE a.season_id=m.season_id AND a.match_id=m.match_id
+          AND position($3 IN ${norm("a.former_home||' '||a.former_away")})>0))`;
   const [counted] = await read(`SELECT count(*)::int AS total FROM api.archive_matches m WHERE ${filter}`, [season, competition, needle]);
   const total = counted.total,
     pages = Math.max(1, Math.ceil(total / paging.limit)),
@@ -136,6 +145,7 @@ export async function archiveRead(req, params, read) {
   const rows = await read(`SELECT m.* FROM api.archive_matches m WHERE ${filter} ORDER BY m.position LIMIT $4 OFFSET $5`, [
     season, competition, needle, paging.limit, (page - 1) * paging.limit,
   ]);
+  await requireSameVersion();
   data.matches = rows.map(archiveListing);
   const pagination = { total, pages, page, limit: paging.limit, hasMore: page < pages, version: meta.version };
   return send(req, { data, meta, pagination }, 200, { etag, ttl: 30, maxBytes: 512 * 1024 });

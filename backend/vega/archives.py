@@ -42,6 +42,8 @@ import unicodedata
 
 from .store import Store
 
+from . import archive_attestations
+
 LAST_ARCHIVE_SEASON = 2020
 # After LAST_ARCHIVE_SEASON, each archive competition names the PitchAPI competition that
 # is the same one (None: PitchAPI never has it). A season of it is imported only when
@@ -90,6 +92,8 @@ def code_manifest():
     shared = EDITION.resolve().parents[2] / "dashboard/shared"
     files = {"vega/archives.py": HERE / "archives.py", "vega/store.py": HERE / "store.py", "archives/edition.mjs": EDITION}
     files.update({f"shared/{name}": shared / name for name in SHARED_FILES})
+    for attachment in (HERE / "archive_attestations.py", archive_attestations.BUNDESLIGA_PATH, archive_attestations.SCOTLAND_PATH):
+        files[f"vega/{attachment.name}"] = attachment
     builders = sorted(SCRIPTS.glob("*.py"))
     files.update({f"archives/builders/{path.name}": path for path in builders})
     missing = sorted(name for name, path in files.items() if not path.is_file())
@@ -593,12 +597,17 @@ def _season(conn, label, data, provider_of, excluded, created, write, digest=Non
     excluded = _copies(excluded)
     loader = Loader(conn, created)
     competitions, matches, overlap = loader.selection(label, data)
+    observed = data.get("attested_inputs", {})
+    historic = archive_attestations.prepare_bundesliga(conn, loader, start, matches, observed.get("bundesliga"), goal_rows, GOAL_COLUMNS)
+    historic += archive_attestations.prepare_scotland(conn, loader, start, matches, observed.get("scotland"))
     selected = {m["key"] for m in matches}
     out = {"refused": None, "matches": [], "removed": [], "editions": [], "editions_removed": [], "teams_to_create": [],
            "competitions_to_create": [],
            "held_units": [u for u in data.get("held") or [] if selected & set(u["legacy"])]}
     try:
         removed, held_rows, editions_out = loader.removals(label, competitions, matches, excluded, overlap)
+        if historic:
+            matches = archive_attestations.project(matches, historic)
         rows = [match_row(m) for m in matches]
     except ArchiveError as error:
         out["refused"] = str(error)
@@ -606,6 +615,13 @@ def _season(conn, label, data, provider_of, excluded, created, write, digest=Non
     wrote = False
     if write:
         Store(conn).season(label)
+    if historic:
+        out["historic"] = historic
+        if write:
+            outcome = archive_attestations.apply_existing(conn, loader, start, historic, digest)
+            if outcome is None:
+                raise ArchiveDrift(f"{label}: attested archive observations changed before transfer")
+            wrote = bool(outcome)
     out["removed"] = removed
     out["editions_removed"] = [edition for edition, _ in editions_out]
     # What an edition's removal or keeping is decided on: its row and its rounds, or why it stays (FAILURE_MODES.md §24).
@@ -650,6 +666,10 @@ def _season(conn, label, data, provider_of, excluded, created, write, digest=Non
             wrote = True
         else:
             editions[comp["id"]] = f"new:{comp['id']}"
+    historical = {item["proof"]["match"]["key"]: item for item in historic if item["class"] != "held"}
+    held_matches = {part["key"]: item["reason"]
+                    for item in historic if item["class"] == "held"
+                    for part in (item["proof"]["match"], item["proof"].get("goals_observation")) if part}
     known_ids = [v for v in editions.values() if isinstance(v, int)]
     rounds = {(e, n): i for e, n, i in conn.execute(
         "SELECT competition_season_id, name, id FROM core.rounds WHERE competition_season_id = ANY(%s)", (known_ids,)).fetchall()}
@@ -685,7 +705,7 @@ def _season(conn, label, data, provider_of, excluded, created, write, digest=Non
         known = stored.get(key)
         before = None if known is None else {"row": dict(zip(columns, known[1])), "goals": [list(g) for g in goals_stored.get(known[0], [])],
                                               "events": events_stored.get(known[0], [])}
-        reason = (QUARANTINE.get(key) or {}).get("reason") or (match.get("held") if known is not None else None)
+        reason = held_matches.get(key) or (QUARANTINE.get(key) or {}).get("reason") or (match.get("held") if known is not None else None)
         if reason:
             entry = {"key": key, "class": "held", "held": reason}
             if known is not None:
@@ -695,16 +715,26 @@ def _season(conn, label, data, provider_of, excluded, created, write, digest=Non
             out["matches"].append(entry)
             continue
         bindings = {}
-        home = loader.side(match, "team1", bindings, known and known[3], write)
-        away = loader.side(match, "team2", bindings, known and known[4], write)
-        values = candidate_values(match, row, edition_id, start, round_id, home, away, position, provider_of)
+        attested = historical.get(key)
+        reviewed = attested and attested["result"] and attested["result"]["row"]
+        reviewed_score = reviewed and attested["proof"].get("new_score")
+        if reviewed:
+            home, away = reviewed["home_team_id"], reviewed["away_team_id"]
+            values = {c: reviewed[c] for c in columns}
+            values.update(match_date=match["date"], archive_position=position)
+            if reviewed_score:
+                values.update(home_score=reviewed_score[0], away_score=reviewed_score[1])
+        else:
+            home = loader.side(match, "team1", bindings, known and known[3], write)
+            away = loader.side(match, "team2", bindings, known and known[4], write)
+            values = candidate_values(match, row, edition_id, start, round_id, home, away, position, provider_of)
         goals = goal_rows(match, home, away)
         goals_text = [tuple(_pg_text(v) for v in g) for g in goals]
         kind = compare(known and (known[0], known[1]), values, columns)
         goals_changed = known is None or goals_stored.get(known[0], []) != goals_text
         if known is not None:
             problem = _hold(before["row"], values, goals_stored.get(known[0], []), goals_text, before["events"], goals_changed)
-            if problem:
+            if problem and (problem != "score_change" or not reviewed_score):
                 out["matches"].append({"key": key, "class": "held", "held": problem, "id": known[0], "revision": known[2], "before": before,
                                        "after": {"row": {c: _pg_text(values[c]) for c in columns}, "goals": [list(g) for g in goals_text]}})
                 continue
@@ -748,6 +778,8 @@ def _season(conn, label, data, provider_of, excluded, created, write, digest=Non
     out["competitions_to_create"] = sorted(loader.new_competitions)
     out["counts"] = {kind: sum(1 for m in out["matches"] if m["class"] == kind) for kind in ("new", "changed", "position", "goals", "held")}
     if write:
+        if historic:
+            archive_attestations.record(conn, start, historic)
         if wrote:
             conn.execute(
                 """INSERT INTO ops.resource_versions(resource_kind, resource_id) VALUES ('archive_season', %s)
@@ -944,8 +976,10 @@ def editions(sources, seasons=None):
         }
         provider_of = provider_for(results_index)
         listed = [label for label in sorted(files) if not seasons or label in seasons]
+        approved = archive_attestations.observed_inputs(inputs["sources"])
         yield inputs, results_index, goals_index, listed, (
-            (label, edition(files[label].get("results"), files[label].get("goals")), provider_of, excluded) for label in listed)
+            (label, dict(edition(files[label].get("results"), files[label].get("goals")), attested_inputs=approved),
+             provider_of, excluded) for label in listed)
 
 
 def run(conn, sources, seasons=None):
@@ -1030,7 +1064,8 @@ def apply_season(conn, label, data, provider_of, excluded, expected, created, *,
             conn.execute("SET LOCAL lock_timeout = '30s'")
             conn.execute("SELECT pg_advisory_xact_lock(hashtext('vega.archives.apply'))")
             conn.execute("SELECT id FROM core.matches WHERE season_id=%s AND archive_key IS NOT NULL ORDER BY id FOR UPDATE", (start,))
-            bound = sorted({m["id"] for m in expected["matches"] if m.get("id")} | {r["id"] for r in expected["removed"]})
+            historical = {e[k]["row"]["id"] for e in expected.get("historic", []) for k in ("result", "origin") if e[k]}
+            bound = sorted({m["id"] for m in expected["matches"] if m.get("id")} | {r["id"] for r in expected["removed"]} | historical)
             if bound:
                 conn.execute("SELECT 1 FROM core.match_events WHERE season_id=%s AND match_id = ANY(%s) ORDER BY match_id, seq FOR UPDATE",
                              (start, bound))
@@ -1041,8 +1076,16 @@ def apply_season(conn, label, data, provider_of, excluded, expected, created, *,
                 publish()
             outcome = "partial" if done["counts"]["held"] else "applied"
             if digest:
+                historical = [
+                    {"key": entry["proof"]["match"]["key"], "sha256": entry["sha256"], "outcome": entry["class"],
+                     **({"reason": entry["reason"]} if entry.get("reason") else {}),
+                     **({"former_id": entry["origin"]["row"]["id"], "events": len(entry["origin"]["events"])}
+                        if entry["origin"] and entry["class"] == "change" else {})}
+                    for entry in done.get("historic", []) if entry["class"] != "unchanged"
+                ]
                 _decision(conn, digest, label, outcome, {
-                    "counts": done["counts"], "removed": [r["id"] for r in done["removed"]], "wrote": done["wrote"],
+                    "counts": done["counts"], "removed": [r["id"] for r in done["removed"]],
+                    "wrote": done["wrote"], **({"attested": historical} if historical else {}),
                     "created": sorted([entity, key, ident] for (entity, key), ident in mine.items() if (entity, key) not in created)})
     except ArchiveDrift as error:
         outcome = "drift"

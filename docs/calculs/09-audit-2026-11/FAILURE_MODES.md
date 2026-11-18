@@ -1611,3 +1611,542 @@ Rules:
 | L4 | a PitchAPI competition with its own logo | unchanged | BC |
 | L5 | a key or an alias that no source family or site mapping names | the drift test fails | NC |
 | L6 | the same pass twice | no new asset, no competition update | BC |
+
+## 20. Archive producer: statuses, labels, stable keys, safe replay (VI-27 lot 2, written before the tests)
+
+### 20.1 What production holds (read-only, 17 Nov 2026)
+
+- `football.json` at `e6744429`, 2019/20. Seven files mark 520 matches `"status": "cancelled"` with
+  `"score": {}`: be.1 8, en.3 106, en.4 112, fr.1 101, fr.2 100, nl.1 74, sco.1 19. `archives.match_row`
+  knows only `not_played`, so all 520 are stored `finished` without a score. ru.1 holds 236 results and
+  4 `"status": "awarded"` (0–3), all stored `finished`.
+- `2019-20/ru.2.json` (SHA-256 `7eda7c91…6597`) has exactly ru.1's match array (SHA-256 `66b0f56e…ef22`).
+  Both are published: 240 Russian results appear twice, under two divisions.
+- 1,783 goal-only archive matches (`g:` keys, worldclub) have no away team. Their label carries tabs and
+  line breaks (`1. FC Köln vs. Bayern München 5:1 \t…\n…(Hinspiel 0:3)`), which `parseGoalMatch` does
+  not read. The whole label became an invented home team: 1,781 team rows. Normalized, 1,782 labels give
+  two sides; 1,735 of their scores equal the stored score, 47 differ, 1 label does not parse.
+- A goal-only key is `g:<league>:<date>:<index>`, the index being the group's place in the season's
+  group list. Grouping events differently renumbers every later group of the season.
+- `Loader.season` deletes every stored archive match of the season absent from the edition, so a
+  missing source family or a partial input prunes. A moved `archive_position` bumps the revision.
+
+### 20.2 The rules
+
+**Statuses** (shared/openfootball-history.js notes, edition.mjs, `archives.match_row`):
+
+| Source | Stored | Notes |
+|---|---|---|
+| no status, a score | `finished`, as today | as today |
+| `not_played`, `cancelled`, `canceled`, no score | `canceled`, NULL scores | « Rencontre non disputée » (with the source's reason) |
+| `awarded`, a score | `awarded`, its score | none added |
+| `cancelled` with a score; `awarded` without one; any other status | the season is refused (`ArchiveError`) before any write | |
+
+A status-less row without a score keeps today's storage and is counted, never reclassified here.
+
+**Reviewed copy.** `build_openfootball_history.py` holds the reviewed exclusion of `2019-20/ru.2.json` at
+its SHA-256, a copy of `2019-20/ru.1.json`. At that hash ru.2 is left out of the season and listed
+under `excluded` in the index. Other bytes fail the build until re-reviewed. Two other competitions of
+one season with identical non-empty match arrays fail the build: no winner is chosen.
+
+**Labels and stable keys** (`dashboard/shared/archive.js`):
+- `parseGoalMatch` reads a label with its whitespace collapsed (tabs, line breaks, NBSP). The raw label
+  stays as it is.
+- Keys keep their legacy numbering. A group's index is the legacy index of the constituent the legacy
+  parser understood, else of its earliest constituent. Every other legacy key it now contains, and every
+  legacy goal-only key whose goals now belong to a results match, is listed in `absorbed` with the key
+  that holds those goals.
+- A label that still does not parse names no team: no team entity is created, and the raw label is the
+  displayed home name.
+- A label the legacy parser did not read whose parsed score differs from the legacy score keeps its
+  legacy values (`held: score_conflict`): label parsing never chooses a score.
+
+**Suffixes.** « n.V. » and « i.E. » are read as words with their dots. The former case-insensitive pattern
+also matched the « ie » of « (Hinspiel 0:3) ». It turned 1,741 of the 1,782 parsed census labels into
+penalty shoot-outs, with their score taken from the last goal. A published goal-only match with such a
+suffix therefore shows in the plan as a corrected note or score, to review like any change.
+
+**Replay guard** (`Loader.season`). A stored archive match or edition the candidate no longer holds is
+removed only when explained:
+- the edition is not imported because PitchAPI holds it (existing rule after 2020/21);
+- its edition is a reviewed exclusion;
+- its key is `absorbed`.
+The last two also need the match to have no dependent row besides its own goal events. Any other removal
+(a missing source family, a partial input, an unexplained key) refuses the season with `ArchiveError`, and
+nothing of it is written. A change of `archive_position` alone updates that column only.
+
+**Plan and apply.** `python -m vega.archives --sources … --plan out.json` reads only: no insert, no
+sequence, no rollback. It lists, sorted, every season's matches by class: new, changed (before and
+after values), position only, absorbed, removed (with the rule) or refused. It also gives the stored id
+and revision, the teams to create (by key, no id), and the source and parser hashes. Two plans of the
+same inputs and base are byte-identical. `--apply out.json --plan-sha256 <digest>` recomputes the plan
+under an advisory lock and refuses on any difference (drift). Otherwise it writes the seasons through the
+normal loader.
+
+### 20.3 Failure modes and expected outcomes
+
+| # | Situation | Expected | Class |
+|---|---|---|---|
+| 20a | The seven pinned 2019/20 files | 520 `canceled`, NULL scores, the note; no `finished` row without a score among them | CR |
+| 20b | ru.1 | 240 results: 236 `finished`, 4 `awarded` 0–3, keys and ids unchanged | CR |
+| 20c | ru.2 at its reviewed hash | not imported, listed `excluded` | CR |
+| 20d | ru.2 with other bytes; another identical pair | the build fails | NC |
+| 20e | `cancelled` with a score; `awarded` without one; `postponed` | the season is refused, base unchanged | NC |
+| 20f | The twelve witness labels | two sides, score and suffix | CR |
+| 20g | The full census (1,783 production rows) | per-row disposition summing to 1,783: 1,735 repairable, 47 held, 1 unparsed | CR |
+| 20h | An unparsed label | match kept, no team created, the raw label as home name | NC |
+| 20i | Legacy keys against new keys | every legacy key kept, or listed `absorbed` | CR |
+| 20j | A stored season replayed after the change | repaired rows keep their id with `revision + 1`; a second run writes nothing | CR |
+| 20k | A replay without one source family; an unexplained removal | refused; the other family, its goals and editions intact | CR |
+| 20l | A removal before later matches | they move position only | NC |
+| 20m | A–B and B–A the same day; one pair in two competitions | distinct | BC |
+| 20n | The plan twice on the same inputs; with the files in another order | identical bytes; identical season plans (the archive's own hash differs) | NC |
+| 20o | An excluded or absorbed match with a dependent row | refused, nothing deleted | NC |
+
+**Not changed (recorded):** the 1,781 invented team rows stay; their ids, keys and dependents are listed
+for VI-21. No team is deleted or merged. The 47 score conflicts and the unparsed label wait for an
+authoritative source. Status-less rows without a score are counted, not reclassified.
+
+## 21. Authentic artwork: pack import, UEFA crests, the image gate (VI-27 lot 2, written before the tests)
+
+### 21.1 What production holds
+
+- 9,854 of 11,329 clubs and 126 of 208 competitions have no image link. `uefa.save` stores each club's
+  `img.uefa.com` logo on its ranking row and never on the club. The site's image gate (`format.js`
+  `safeImageUrl`, repeated in `media-registry.js`) accepts PitchAPI, Commons and TheSports only. `Media`
+  needs it even when a mirrored copy exists, so any other image renders as initials.
+- The reviewed pack (`artwork-release/manifest.json`, SHA-256 `385e97b4…cf4d`) has 613 records (516 teams,
+  97 competitions) and 576 display files. Each record binds an entity (`resolve_using` provider and key)
+  to an original file (`origin_sha256`) and a display raster (`display_sha256`, `display_format`), with
+  its publisher URL, page and evidence. The pack's directories are `originals/<sha256>` and
+  `images/<sha256>`. 41 vector or AVIF/GIF originals were converted offline to PNG.
+
+### 21.2 The rules
+
+**One reference per packed image.** A pack asset without an accepted provider URL is stored as
+`https://media.vega.invalid/sha256/<display sha256>.<png|jpg|webp>`. That is a reference the base
+resolves, never fetched and never a provider's URL. Its S3 key is the existing content address of the
+display bytes. The publisher's URL, page, author and licence stay in the asset (`source_page_url`,
+`author`, `license`, as stated) and in the import receipt, with both hashes.
+
+**The importer** (`python -m vega.artwork --manifest M --pack D --expected-manifest-sha256 H --plan R`,
+`--apply` to write):
+- before any write it checks the manifest's digest against H, its schema and counts, and that every path
+  stays in D. Each original and display file must have its byte count and hash; each display must be a
+  PNG, JPEG or WebP of at most 4 MB, read by its bytes. One entity bound to two different displays is a
+  manifest conflict. Any failure stops everything;
+- per record it resolves `(entity_type, provider, key)`, following a merged team to the club it is. The
+  entity's kind, name and country must match the record (national team against club, ranking row for a
+  UEFA key). Otherwise the record is coded and nothing is written for it;
+- it writes the display bytes, checks them, then links the asset only where the entity has none
+  (`… WHERE crest_asset_id IS NULL`). It never overwrites an image, an asset or its provenance. It bumps
+  the team (or each edition of the competition) and `home`, only on a new link;
+- every record has one outcome: `linked`, `already_linked`, `kept_existing`, `entity_not_found`,
+  `identity_drift`, `proof_missing`, `asset_conflict`, `manifest_conflict`, `storage_failed`. The outcomes
+  sum to the manifest's count. A second apply writes nothing.
+
+**UEFA crests in the ongoing source.** `uefa.save` fills an empty club crest from that row's exact
+`https://img.uefa.com/imgml/TP/teams/logos/70x70/<its id>.png`, for a club linked by that UEFA id. It
+keeps an existing crest and writes nothing on a second run. The mirror accepts this exact form; a
+redirect must stay in it.
+
+**One image gate in the site** (`services/image-source.js`, used by `format.js` and `media-registry.js`).
+It accepts the three existing shapes, the Vega reference and the UEFA form, with no credentials and no
+port. The two new forms take no query or fragment and need the exact path, hash and extension. The
+API's `/api/assets` and `media=1` lookups stay the only way to a copy: no address is built from a
+reference.
+
+### 21.3 Failure modes and expected outcomes
+
+| # | Situation | Expected | Class |
+|---|---|---|---|
+| 21a | A UEFA record: key, ranking row, crest NULL | linked; `/api/assets` 307 to its copy; the gate accepts | CR |
+| 21b | An official club or league page's image, a vector rendition | linked by its Vega reference, both hashes kept, rendered | CR |
+| 21c | An entity with an image (PitchAPI's, lot 1's cup logos) | `kept_existing` or `already_linked`, unchanged | BC |
+| 21d | The same pack twice | no new asset, link or version | NC |
+| 21e | Key absent; national team for a club record; name or country drift; UEFA key without its ranking row | coded, nothing written | NC |
+| 21f | A wrong hash, a short file, SVG or GIF bytes as display, over 4 MB, a path leaving the pack, another manifest digest | refused before any write | NC |
+| 21g | An entity bound to two displays | `manifest_conflict` | NC |
+| 21h | An existing asset with the reference but other bytes | `asset_conflict`, nothing overwritten | NC |
+| 21i | The storage write fails | `storage_failed`, no link | NC |
+| 21j | A crest written by PitchAPI between check and link | the importer's link does not land; `kept_existing` | NC |
+| 21k | `uefa.save` on a club without a crest, with one, then again | filled once; kept; no second write | CR |
+| 21l | The gate: the three shapes; the reference; UEFA; credentials, port, query, other host or path | accepted; accepted; accepted; refused | CR |
+| 21m | The real pack (613 records) on a seeded base | outcomes sum to 613; API and browser show the images | CR |
+
+## 22. Corrections after the Astra and Fable reviews (VI-27, 17 Nov 2026, written before the tests)
+
+The reviews (`reviews/corrections.md` C1–C6, `reviews/astra-review.md` F1–F9) showed that the first lot 2
+candidate was unsafe. These are the rules of the correction. Where safety cannot be proved, the stored
+fact is kept and the record is listed as held. A hold is never counted as a repair and never changes a
+stored row, so it cannot change what is scored.
+
+### 22.1 Rules
+
+**Source measurements (C1).**
+- In open-matchday, a statistic cell missing from a later file, as an absent column or an empty cell, is
+  not an instruction to clear it: the stored value is kept. A cell that states a number, `0` included,
+  replaces the stored value, once. Score and result guards (§19) are unchanged.
+- In `/api/cups/edition`, a match with an extra-time score and no known 90-minute score has no `ft`. The
+  final score stands in for `ft` only when there is no extra time. 0–0 and penalties are kept.
+
+**Archive producer: one legacy reading, units and holds (C2).**
+- The published rows are rebuilt by the baseline code itself (`dashboard/shared/archive-legacy.js`, a
+  frozen copy of `8018e0836c`'s `buildArchiveSeason`, with its label reading, score selection, notes and
+  attachment). The corrected reading is compared with it unit by unit. A unit is the set of legacy and
+  corrected rows sharing a source goal event, plus each results row.
+- When a unit's corrected keys equal its legacy keys, the corrected rows are the candidate, unless one
+  of them changes a legacy score, drops a legacy note or loses goals. When the keys differ (an
+  absorption, a merge, a split), the whole unit keeps its legacy rows, flagged `held`. A results row of
+  such a unit keeps its results-file values and its published goals (`heldGoals`). Nothing is
+  absorbed or deleted in this lot: an absorption needs a reviewed transfer of its dependents (VI-21).
+- Exact names first: a goal's side is the side whose name equals the goal's team (case, accents and
+  punctuation folded). Similarity decides only when neither side is exact.
+- In footballcsv europe `champs.csv` only, each side must read `Name › ASSOCIATION (N)`, with `(N)` an
+  appearance ordinal. Any other form stops the build. Such a side is never a new team: its existing
+  binding is used, otherwise it names no team (`provisional`). The raw label stays the stored name.
+- Reviewed quarantines (`QUARANTINE` in `vega/archives.py`, exact keys, source file and SHA-256):
+  - the 33 CONCACAF matches filed under `g:champions-league` 2008/09;
+  - Paris FC–Lyon `g:fra-coupe-de-france:2021-12-17:2247` (abandoned; no stored status represents
+    "both lost");
+  - Bradford–Luton `g:eng-league-cup:1990-10-10:389` (its candidate target's 1–1 contradicts its 0–2).
+
+  They are held as stored. On an empty base they are not written.
+- Loader holds, per stored match, all reported with their reason. The match is kept as stored when the
+  candidate:
+  - changes its score pair or its status (other than finished → canceled without a score, or
+    finished → awarded with the same score);
+  - clears a team id of the match or of a goal;
+  - drops a note, or loses goals;
+  - would rewrite goals beside goal facts the archive does not write (player ids, own goal, penalty,
+    period).
+- Only `event_type = 'goal'` rows are ever deleted or rewritten. Cards and other events stay.
+- A source family recorded in `core.source_revisions` (results, goals) that is missing from the inputs
+  refuses the run before any write. A season the goals index lists without its file refuses the run.
+- A held malformed label never creates a team. It uses the team its exact label is already bound to,
+  if any.
+
+**Plan and apply (C3).**
+- `season_plan` is the only decision. `Loader.season` executes a plan's entries and nothing else.
+- Each entry carries the exact stored and candidate columns, the exact stored and candidate goal rows,
+  every stored event of the match, the team bindings it reads and its revision.
+- Apply re-plans each season under its lock and writes it only if that plan equals the approved one.
+  Teams created by this apply are the only `new:` identities accepted later.
+- The team cache lives one season.
+- `core.source_revisions` and `ops.resource_versions` change only with a season that writes, and only
+  when their values differ. A refused, drifted or no-op apply changes neither, so the archive API's
+  ETag stays.
+- Outcomes are `complete`, `partial` (a season held or drifted) or `refused`. The exit codes are 0, 3
+  and 1.
+- A run with no mode refuses (exit 2). `--fresh` imports only into seasons that hold no archive match.
+
+**Role, package and transport (C4).**
+- Dependencies are read through `ops.archive_match_dependents(bigint[])`, a fixed-search-path
+  `SECURITY DEFINER` function (migration 134) executable by `vega_collect` only. It reports:
+  - every `match_id` or `*_match_id` column of core, agg and ops;
+  - every `(entity_type, entity_id)` reference to a match;
+  - events the archive does not own.
+
+  `vega_collect` gains no table privilege.
+- The parser fingerprint names its files logically: `vega/archives.py`, `vega/store.py`,
+  `archives/edition.mjs`, `archives/builders/*.py`, `shared/*.js` (the shared files the edition
+  imports), each resolved from the running module, `VEGA_ARCHIVE_EDITION` and `VEGA_ARCHIVE_SCRIPTS`.
+  A missing file is an error. The checkout and the image give the same manifest for the same bytes.
+- Plan transport: `--plan-store` writes the plan into `ops.archive_plans` under its SHA-256. `--show-plan`
+  reads it. `--apply-stored SHA` applies it and stores the receipt in the same row. A second apply of
+  the same plan writes nothing.
+
+**Artwork (C5).**
+- Records are grouped by resolved canonical entity as well as by binding. Two displays for one
+  entity are a `manifest_conflict` for every record involved. Identical duplicates are one link plus
+  `duplicate`.
+- The upload happens outside any transaction and lock. The link transaction then re-reads, under
+  `lock_timeout`:
+  - the binding, the merge chain and the entity's image (`identity_drift` or `kept_existing` on a
+    change);
+  - the asset's key, hash and URL (`asset_conflict` on a change).
+- Any exception of `put` is `storage_failed`. The run stops there. The receipt, rewritten after every
+  record, lists the done, failed and unattempted records. The exit is non-zero.
+- `uefa.save` follows the existing merge pointer to its canonical club (one level, the canonical not
+  merged, not national). It fills that club's empty crest and holds an inconsistent chain. It never
+  writes the alias.
+
+### 22.2 Failure modes and expected outcomes
+
+| # | Situation | Expected | Class |
+|---|---|---|---|
+| 22a | Open-matchday: same result, later file without the statistic columns, or with empty cells | stats, ids, revision, `cup_updated_at` kept | NC |
+| 22b | Open-matchday: a stated `0` replaces a stored 11; replayed | one update; replay writes nothing | CR |
+| 22c | Cups: source `{et:[2,1]}`; `{ft:[1,1],et:[2,1]}`; `{ft:[0,0],et:[0,0],p:[4,3]}` through `cups.save`, PostgreSQL and `/api/cups/edition` | `{et:[2,1]}`; both kept; all three kept | CR |
+| 22d | Legacy-readable `M vs. N 3:1 (Hinspiel 0:0)`, last goal 2–1 | the legacy 2–1 row kept, held `score_change` | NC |
+| 22e | Goal-only `Wien vs. Rapid 3:1 (Hinspiel 0:0)` and result Wiener–Rapid 3–1 | both legacy keys kept, the result without these goals, held `absorption` | NC |
+| 22f | Goal teams Manchester United / Real Madrid against a City / Atlético opponent | home / away | CR |
+| 22g | A stored goal with a team, a candidate goal without | the match held, its goals kept | NC |
+| 22h | A corrected scorer on a match with a card | goals rewritten, the card kept | CR |
+| 22i | The goals family missing; a listed goals season without its file | run refused, nothing written | NC |
+| 22j | Fewer goals for a stored match | held `goals_lost`, goals kept | NC |
+| 22k | `champs.csv` sides with ordinals, fresh and stored; another feed's `Club (2)` | no team minted; stored ids kept; other feed unchanged | NC |
+| 22l | A `champs.csv` side not of the exact form | build fails | NC |
+| 22m | Quarantined keys (CONCACAF, Paris–Lyon, Bradford) stored, and on an empty base | kept as stored; not written | NC |
+| 22n | Two seasons sharing a new team, plan then apply | both applied, one team; repeat apply writes nothing | CR |
+| 22o | Between plan and apply: a card added, a binding moved, a team created by someone else | that season `drift`, nothing written | NC |
+| 22p | Refused, drifted and no-op applies | source revisions, versions and the real `/api/read/archive` ETag unchanged | NC |
+| 22q | No mode; `--fresh` on a season with archive rows | exit 2; refused | NC |
+| 22r | A season with a held record and a repair | the repair applied, the hold listed, outcome `partial`, exit 3 | CR |
+| 22s | Plan and apply under `SET ROLE vega_collect`; agg read directly | works; denied | CR |
+| 22t | The image layout; a parser file missing | same manifest as the checkout; error | NC |
+| 22u | Plan stored, applied by digest from another process, applied again | receipt stored; second apply writes nothing | CR |
+| 22v | Two aliases of one canonical club with two displays; with one display | `manifest_conflict` ×2; one link + `duplicate` | NC |
+| 22w | During the upload: the binding moves; the asset's hash changes; a crest lands | `identity_drift`; `asset_conflict`; `kept_existing`; no wrong link | NC |
+| 22x | `put` raises a non-`MediaError` (botocore `ClientError`) | `storage_failed`, receipt with done and unattempted records, exit 1 | NC |
+| 22y | `uefa.save` with the UEFA id bound to a merged alias, twice | the canonical club gets the crest once; the alias untouched | CR |
+| 22z | 613 pack applied, then the 958 pack, then again | 613 `already_linked` + 345 new, counted apart; repeat writes nothing | CR |
+
+## 23. Archive deletions, primary overlaps, durable applies and typed facts (VI-27, 18 Nov 2026, written before the tests)
+
+Two controlled local data losses were reproduced under `vega_collect` on clones of the 494,713-row reconstruction
+(`full-archive-verification/stored-ru2-goal-repair-2251-v2.json`, `empty-primary-repair-2251-v2.json`):
+- a goal recorded on a reviewed ru.2 copy after its removal was planned was deleted with it (1 → 0), the stored
+  plan reporting `partial`;
+- registering an empty 2024/25 PitchAPI Ekstraklasa edition made the stored Polish archive edition "covered": its
+  119 matches and 339 goals were deleted, the plan reporting `complete`.
+
+The accepted plan (`tracks/4-history/accepted-plan.md`) fixes these rules.
+
+### 23.1 Rules
+
+**A deletion binds everything it would delete.**
+- Each planned removal carries:
+  - the match's full stored row and its revision;
+  - every event row of the match, goals included;
+  - its round and edition;
+  - the dependency inventory (`ops.archive_match_dependents`, which now also counts every event);
+  - for a reviewed copy, the retained twin: key, date, sides, score and provenance.
+- A match with any event or dependency is held, never deleted (`removal_has_dependents`).
+- Apply locks the season's archive matches and the removed matches' events. It then re-plans, and any difference
+  in what a removal binds is a refusal of the season before any write.
+- Just before the deletion, the apply takes SHARE locks on every relation naming a match without a foreign key
+  (`ops.archive_lock_match_references()`, migration 140, bounded by `lock_timeout`). It re-reads the inventory and
+  deletes only if it is still empty. Writers with a foreign key wait on the match lock and then fail on the deleted
+  match, so their conflict is exposed. Writers without one wait for the commit. That residual race is reported (the
+  receipt's post-commit reference check). The rollout requires writers drained (C4).
+- An edition is removed only with no match, round or other fact left on it.
+
+**A primary edition is routing, not proof of coverage.**
+- After 2020, a competition PitchAPI holds that season is not imported when the base has no archive edition of it
+  (the existing route).
+- An archive edition already stored for it keeps its matches, goals, ids and provenance: every match is held
+  (`primary_overlap`) and the edition is kept. This holds with an empty, partial or complete primary edition.
+  Reconciling the two is VI-21's.
+
+**Durable, owned applies.**
+- `ops.archive_plan_seasons(sha256, label)` records each season's decision in the transaction that writes it (outcome,
+  counts, created identities).
+- A stored plan is applied by one session at a time (`pg_try_advisory_lock` on its digest): a second gets
+  `ArchiveError`, writing nothing.
+- A season already decided is not attempted again. The identities it created are restored for the following
+  seasons, so a run can resume after a crash.
+- `applied_at` and the receipt are stamped only when every planned season has a decision. A subset run stamps
+  nothing beyond its own seasons.
+- `--show-plan SHA` writes the stored bytes, whose SHA-256 is the digest.
+
+**Published observations change only when reviewed** (per field, on a stored match):
+- The score pair: held `score_change`.
+- The status: only finished → canceled (no score, source `cancelled`) and finished → awarded (same score, source
+  `awarded`). Any other change is held `status_change`.
+- Extra-time, penalty and shoot-out columns: a value may be added where none was stored. A stored value never
+  changes or goes (`phase_change`).
+- Goals: never fewer (`goals_lost`); never a cleared team (`team_cleared`).
+
+**Typed facts from reviewed sources.**
+- `VERIFIED_SHOOTOUTS` (`vega/archives.py`) lists the seven UEFA shoot-outs of
+  `verified-seven-shootouts-repair-2251-v2.json`. Each has its goal-only key, date, both sides as the label names
+  them, the sporting tally, the home/away kicks and the UEFA document's SHA-256. Kicks are written only when the key,
+  date, sides and tally all match. Otherwise they stay unknown.
+- A goal's side in an OpenFootball UEFA results row (`YYYY-YY/uefa.*`), whose team names carry their association
+  (`Real Madrid (ESP)`): after exact names fail, the name without its ` (ABC)` suffix is compared exactly. Only one
+  side may match; otherwise the side stays unknown. The stored names and suffixes are kept.
+
+### 23.2 Failure modes and expected outcomes
+
+| # | Situation | Expected | Class |
+|---|---|---|---|
+| 23a | A reviewed copy planned for removal gets a goal before the apply | season refused (`drift`), the goal and the match kept | NC |
+| 23b | A second connection inserts a goal on it while the apply holds its locks | the apply deletes; the late insert fails on its foreign key and is retried by its writer; no orphan | NC |
+| 23c | A second connection's uncommitted goal before the apply takes its locks | the apply waits, sees it, refuses the season | NC |
+| 23d | A clean reviewed copy (no event, no dependency) | removed, with its binding in the receipt | CR |
+| 23e | A provider binding of a removed match planned or added before the apply | held, or refused; nothing deleted | NC |
+| 23f | A stored archive edition, then an empty, partial or complete PitchAPI edition of it | every match, goal and id kept, held `primary_overlap`; repeat writes nothing | NC |
+| 23g | No archive edition stored and a PitchAPI edition | not imported (unchanged route) | BC |
+| 23h | Two processes apply one stored plan | one applies, the other is refused | NC |
+| 23i | A crash after the first of two seasons | per-season decision kept; restart applies the second with the first's created teams; plan stamped once | CR |
+| 23j | A subset of a stored plan's seasons | only those decided; the plan not stamped applied | NC |
+| 23k | `--show-plan` output | byte-identical to the stored plan, SHA-256 = digest | CR |
+| 23l | A stored score, status or phase value differing from the candidate | held with its field; a reviewed cancellation or award applies | NC |
+| 23m | The seven verified shoot-outs; one with another tally | kicks typed; the other left unknown | CR |
+| 23n | `Real Madrid` scoring in `Real Madrid (ESP)`–`Atlético Madrid (ESP)`; two sides with one base name | home; unknown | CR |
+
+## 24. Removal guards that hold after the commit (VI-27, 18 Nov 2026, written before the tests)
+
+The pinned Astra review of §23 (18 Nov) found that §23's SHARE locks close the window before the commit only. A
+writer without a foreign key that is blocked by them resumes after the commit with the removed match's id. So does a
+writer starting later. The review also found four other faults:
+- rounds and editions were deleted without an inventory of what references them (FKs with CASCADE or SET NULL from
+  agg, ops and core);
+- the twin of a reviewed copy was compared with the compiler's candidate, not with the stored row;
+- `apply_stored` read `applied_at` before taking the plan's lock;
+- an edition's name, country or order changed without a new publication.
+
+### 24.1 Rules
+
+- **Tombstones** (`ops.archive_removals`, migration 141). The transaction that deletes an archive match, edition or
+  round records its kind, id, season, key and plan digest. A tombstone is never removed.
+- **The guard.** Every relation of core, agg and ops that names a match or an edition without a foreign key carries
+  the `archive_removed_reference` trigger. It covers:
+  - `match_id` and `*_match_id` columns without a foreign key to `core.matches`;
+  - `competition_season_id` columns without a foreign key to `core.competition_seasons`;
+  - polymorphic `(entity_type, entity_id)` references to a match;
+  - `ops.resource_versions` of kind `match` or `competition_season`.
+
+  An insert or update naming a tombstoned id fails with `foreign_key_violation`, so a writer that resumes after the
+  commit, or starts later, is refused and can retry.
+  - Writers with a foreign key wait on the row lock, then fail on the missing row.
+  - A test lists every such relation and fails if one has no guard.
+- **Editions and rounds.** One goes only when `ops.archive_edition_dependents` reports nothing, at the plan and again
+  under its locks. That function covers every column naming it, with or without a foreign key, its versions and its
+  emblem. Otherwise the edition is kept and its plan entry says why (`edition_has_dependents`). Edition and round rows
+  are locked `FOR UPDATE` for the deletion.
+- **The twin is the stored row.** A copy goes only beside its twin's stored match: same date, team ids, names, score
+  and status. The plan binds that row in full, so a change to the twin refuses the season.
+- **Ownership.** `apply_stored` takes the plan's lock, then reads its state.
+- **Publication.** An edition whose stored name, country or position changes is a write: the season's version moves.
+- **Conflicts.** A deadlock or a serialization failure in an apply is `lock_timeout`, never `applied`. Nothing is
+  decided, so a later run retries.
+- **Edition emblem storage.** Migration 141 also adds `core.competition_seasons.emblem_asset_id`: nullable, FK to
+  `core.assets`, distinct from the family logo (the joint edition-emblem arbitration of 18 Nov). An edition with an
+  emblem has a dependency and is never removed.
+
+### 24.2 Failure modes and expected outcomes
+
+| # | Situation | Expected | Class |
+|---|---|---|---|
+| 24a | A writer without a foreign key (provider binding, match version) blocked by the deletion's locks, released by its commit | its insert fails (`foreign_key_violation`); no orphan | NC |
+| 24b | The same writer starting after the removal | refused the same way | NC |
+| 24c | A removed copy's edition with a version, a scope or an emblem | the matches go, the edition stays (`edition_has_dependents`) | NC |
+| 24d | The twin's stored row differs from the copy (name, team, score) | the copy held `twin_mismatch` | NC |
+| 24e | A plan stamped applied while its applier read it unstamped | refused after the lock | NC |
+| 24f | A stored edition's name changed | the season's version moves | CR |
+| 24g | A deadlock between the apply and another writer, both under their real roles | `lock_timeout`, nothing written, the other writer goes on | NC |
+| 24h | Every relation naming a match or an edition without a foreign key | carries the guard | NC |
+
+## 25. OpenLigaDB DFB-Pokal match phases (VI-27, specified before tests)
+
+The typed reader applies to the 2025/26 and 2026/27 DFB-Pokal editions. The two sealed OpenLigaDB
+responses have 119 unique matches, eight fixtures and 111 finished matches. The DFB sheets attest
+110 native half-times, a missing native 0–0 for 80173, 21 regulation and extra-time pairs for
+matches going to extra time, and 13 shoot-outs. Eight native type-2 pairs are wrong; 11 shoot-out
+tallies differ from actual kicks. Match 79584 lacks an extra-time row. The 111 playing finals
+remain as published.
+
+| Input or replay | Expected |
+| --- | --- |
+| Exact frozen editions | Keep keys, sides, dates, order and finals. Add phases by native match ID; preserve 0–0. |
+| 79584, provider type 2 changes to 1–1 and ET is still missing | Keep official final 2–1, 90 1–1 and ET 2–1. |
+| 80173, provider adds half-time 0–0 or publishes direct 4–5 | Accept convergence with zero sporting writes. |
+| Attested third result, swapped sides, changed date or contradictory tuple | Refuse with match key and retain edition. |
+| Completed match loses a known HT, ET, regulation or penalty phase, or is downgraded | Refuse refresh, retain known observations, edition and digest. |
+| Unattested ET previously unseen | Preserve actual final/ET; keep regulation unknown even with a type-2 pair. |
+| Unattested P 5–6 after level ET 1–1 | Store 4–5; a subsequent unverified 4–5 raw tally conflicts with the accepted kicks. |
+| P without ET, P below ET, non-level ET for a shoot-out, or tied P | Refuse as unreviewed. |
+| Missing or unordered/contradictory observation | Missing or malformed data and contradictory duplicates are invalid; source tuple order alone has no sporting effect. |
+| Future fixture carrying known result tuples | Remain scheduled, with no score or published phases. |
+| Other OpenLigaDB editions, Nations League and direct penalties from OpenFootball | Published behavior and digest remain stable. |
+| Two more reads of each frozen edition | Zero match writes; keep revisions, row versions, match timestamps, digest and edition publication timestamp. |
+| Accepted or refused new native observation | Keep its immutable, independently inspectable phase evidence with decision and ledger digest; keep raw evidence away from the public response. |
+
+Read contract uses optional `periods`. A 90-minute score is omitted when the match reached
+extra time and regulation is unknown. Separate the official kicks from the raw native tally.
+
+## 26. Verified emblems for individual competition editions (VI-27, specified before tests)
+
+The loader verifies all input byte hashes before upload and accepts only records explicitly
+typed as `competition_edition` with role `edition_emblem`. Exact source identity is required
+through the family binding, the edition key plus season (for archives), or the certified
+family/season pair (for native editions). Its pointer is separate from the family logo.
+
+| Input or concurrent change | Expected |
+| --- | --- |
+| 18 FIFA, four continental cup, 23 archive and two native attestations in their respective sealed packs | 47 edition links to 41 display images, including two native and their correct internal season IDs. |
+| Same display shared by several editions | Reuse the verified asset; distinct edition links retain their own provenance. |
+| Old envelope without a role, documentary poster, bad key, wrong family or year | Reject input or hold the binding clearly. No link. |
+| Two aliases to one exact edition, two different displays | Both held as manifest conflicts. |
+| New edition pointer, changed identity or asset during upload | Keep the winning state; no stale attachment. |
+| Destination upload or checksum failure | No link; receipt retains prior committed results and next unattempted records. |
+| Apply repeated or ordinary cup refresh after apply | Preserve links, provenance and publication versions. |
+| Family contains a wrongly used edition logo | Clear only the sealed family/URL/hash association and retain the asset. Reject unqualified reimport for that family. |
+| Explicitly scoped archive/native link | Invalidate the corresponding archive resource or native publication path without reusing an emblem in the family catalogue. |
+
+## 27. Apply reviewed deletions and updates in the same archive season (VI-27, specified before test)
+
+A reviewed ru.2 copy can have an exact stored ru.1 twin whose order or other permitted field
+will be updated by the very same approved plan. Guard and delete the copy against the twin's
+locked pre-image before updating the twin. Both changes commit together. A late external
+change or a new dependent still aborts the whole season. The frozen 52-object replay observed
+the self-conflict at `r:2019-20/ru.2:237` and rolled back every one of the 240 approved removals.
+
+## 28. Attested scores and publication for OpenFootball cups (VI-27, specified before replay)
+
+For Tours–Lorient, the exact [awarded] marker, score, edition, oriented sides and date
+identify the attested FFF decision. Preserve the administrative 0–3 and qualification as
+awarded and keep all playing phases absent. A later snapshot that omits the marker or
+match cannot undo an accepted award. Other markers do not authorize a status change.
+
+The national World Cup has 67 exact reviewed halftime repairs (six corrections and 61 fills).
+The native final, raw halftime and both explicitly timed goal arms must agree with the reviewed
+case, or the candidate contributes no correction. Source-earned goals stay on the recorded
+beneficiary's side, including own goals, and 45+ stays in the first half. Missing arms, implausible
+or out-of-order clocks, wrong totals and the official minute-0 anomaly provide no new halftime.
+Those 67 decisions keep the original keys, all playing finals, ET, penalties and cancellation.
+
+The 2021–23 Club World Cup text has 22 explicit halftimes; apply the bracket syntax only for the
+three scoped texts. Keep the first pair after extra time distinct from the 90-minute and
+halftime pairs. Preserve known phases when a later response loses the supporting observations.
+Only an accepted change bumps the cup's edition publication resource. Repeated identical inputs
+and refused updates leave sporting versions and API bodies intact.
+
+## 29. Scoped World Cup family-logo cleanup (VI-27, specified before replay)
+
+The two verified wrong logos are detached only by exact provider binding, family identity,
+source URL and content digest. Existing different logos survive migration. Refreshes and
+an older writer retain their unrelated competition updates while the scoped attachment is
+suppressed. A verified family-specific pack may supply a new logo with explicit provenance.
+Edition-specific links and the old source asset remain available independently.
+
+## 30. Attested Bundesliga pair and date decisions, 1963–1967 (VI-27, specified before tests)
+
+The 100 published pairs and 17 dates come from exact adjudicated source observations. Use
+the surviving result key, keep every old goal's non-identity columns and rebind by its
+reviewed side. A fresh import constructs the canonical shape and text alias. A reviewed
+upgrade retains the target's ID and the old numeric link. Timestamps, scores, event order,
+sequence IDs and all other annotations in stored transfers stay intact.
+
+An occupied target, enriched or incomplete event family, source key or member drift,
+non-foreign-key dependent, mismatching date, or contrary alias holds the whole affected
+case. One late competing write aborts the signed season. Add the former match tombstone
+before exposing the commit. A stale worker cannot recreate an alias key, remove the
+canonical goals, or restore the pre-correction date. The archive read checks its edition
+version after fetching the data, including through the commit.
+
+## 31. Three reviewed Scottish archive observations (VI-27, documented before replay)
+
+Queen's Park–St Mirren on 30 August 1924 and Queen's Park–Hamilton on 23 November 1946
+are independently attested 2–1 results. Edit only the scoped final, with exact native input
+hash, key, date and oriented participants, the known old score, no attached events or other
+dependent, and an atomic amendment receipt. Preserve the raw score and public key. Repeated
+inputs produce no new writes. An old worker cannot reinstate the erroneous result.
+
+The 4 January 1919 Clydebank–Morton winner and score remain as observed. Neither archive
+binding labelled Clydebank has an appearance around this date in the measured clone. Keep
+the existing match and identify the missing dated participant binding in the plan; adding
+a name-only team or merging the Airdrieonians root would not repair that missing proof.
+The return ties and verified shared grounds in 1903 remain exactly as previously published.
