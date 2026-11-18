@@ -232,3 +232,34 @@
 - Built as `FormBars.jsx` (shared `LineChart` untouched); a bar's tone follows the rounded figure.
 - Shipped `f29f32df63` on main (« tu peux pousser sur main et mettre en ligne sur Vercel »): tests first (`tests/player-recent-form.test.mjs`), site suite 737/737, Vercel success, production E2E 23/23 (Martínez, Haaland; desktop, phone, light). Evidence: scratchpad `45f7e519…/form/e2e`.
 - Linear overlap check not done (the connector opens another workspace).
+
+## National-team match source — research (18 Nov 2026)
+
+- Ask: a free API for national-team matches (Nations League, World Cup, Euro, AFCON…), refreshed at least daily, hourly if possible. Research only; nothing implemented.
+- Measured live on 18 Nov, about 15:40 UTC (scripts and responses: scratchpad `55c31d95…/apis`):
+  - International Results (today's source for Leagues B–D and the tournaments): no update between 31 Oct and 18 Nov 15:00 UTC; results only, no fixtures.
+  - ESPN site API (no key, unofficial): Sep–Nov 2026 Nations League 156/156, AFCON qualifying 96/96, Concacaf Nations League 106, friendlies 122; AFCON 2025 52, World Cup 2026 104; the March 2027 AFCON qualifiers are scheduled. By day, month or year only (a date range answers 400).
+  - api.fifa.com calendar (no key, CDN cache one hour): Nations League 156, Concacaf 106, friendlies 117, AFCON 2025, World Cup 2026; FIFA codes and French names. No AFCON qualifiers; SAFF and Gulf Cup matches left unplayed.
+  - match.uefa.com (no key): Nations League complete with its groups; UEFA only.
+  - Ruled out as free sources: football-data.org (World Cup and Euro only on the free tier), TheSportsDB (15 events per season on the free key), PitchAPI (the World Cup is its only national-team competition here).
+- Recommendation given: ESPN as the one reader for every national-team competition, api.fifa.com as the cross-check.
+- Read afterwards (18 Nov): Disney's terms of use cover ESPN, grant « personal, noncommercial use only » and forbid access by « robot, spider, script, or other automated means ». No key means no bill, not permission; the user was told. FIFA's and UEFA's terms were not read.
+- Next action: the user's choice (ESPN knowing this, or a free API-Football key to test the current season); then the Linear check and tests first.
+
+## Nation page — the tournament run's design (18 Nov 2026, session 3fecd4bb)
+
+- Ask: the « Coupe du monde 2026 » run card (`TournamentPath`, NationPages.jsx) looks bad (green/red edge tabs); keep the title.
+- Mockup v1 (`3fecd4bb…/mock/mock-parcours-*.png`): user prefers the list (B) but finds it « trop AI slop ».
+- Mockup v2 sent, awaiting validation: `3fecd4bb…/mock/mock-liste-v2-{desktop,phone}.png` — a plain results table: stage once per round, date, flag + opponent, score from the nation's side; « Finaliste » as plain text; no chips, caps or tiles.
+- Found: `/api/nations/{id}` lists 3 World Cup 2026 matches twice for Argentina (11 instead of 8): « World Cup 1930 » copies dated one day earlier escape `api.nation_matches`' same-date dedupe. Also Copa América 2024 shows « 1er tour » for Argentina (winner). Fix proposed, not started.
+- Linear: never touched in this folder (user, 18 Nov; rule in ~/.claude/CLAUDE.md).
+
+## Player page « Minutes par match » redesign (18 Nov 2026)
+
+- Ask: the « Charge de matchs » minutes chart (`MatchLoad`, `dashboard/frontend/src/components/PlayerPhysical.jsx`) looks poor.
+- User decision (18 Nov): A, thin columns on the real calendar, but square: « arrête de mettre des arrondis partout ».
+- Built in scratchpad worktree `ccf62180…/wt`, branch `claude/minutes-columns` (from origin/main 202f24c09e), uncommitted: `CalendarColumns` in `PlayerScoutCharts.jsx` (measured width, text at real size; starter filled, substitute outlined; ≤ 3 days rest dot; gaps ≥ 12 days named; last 28 days shaded; tooltip and keyboard focus), used by `MatchLoad`; shared `LineChart` untouched.
+- Validated: E2E written first, 78/78 (Yamal, Ferrán Torres, Güler; desktop and phone), light theme by eye, site tests 729/729, build OK. Evidence: scratchpad `ccf62180…/e2e/EVIDENCE.md`.
+- Site-wide follow-up asked by the user: no rounded corners anywhere, and question the cards. Mockup sent (scratchpad `ccf62180…/minutes/flat-*.png`): no card boxes, sections split by hairlines, square everywhere. Awaiting validation. Other sessions have frontend worktrees open (recent-form, match KPIs, transfers, World Cup): do it through tokens and shared classes to limit conflicts.
+- Linear: not touched in this folder (rule in ~/.claude/CLAUDE.md).
+- Next action: the user's go to commit/push the chart; their verdict on the flat mockup, then the site-wide pass.
