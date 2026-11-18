@@ -846,6 +846,9 @@ class UefaTest(unittest.TestCase):
                 self.assertEqual(x(run).fetchone(), (38, 0, "ok", None))
                 self.assertEqual(x(pairs).fetchall(), [("M-1974-01", "USA", "Sweden"), ("M-1974-38", "West Germany", "Netherlands"), ("M-1991-01", None, None)])
                 self.assertEqual(x("SELECT (SELECT count(*) FROM core.players), (SELECT count(*) FROM core.teams)").fetchone(), before)
+                # The archive lists the final the other way: the pair says so, for the reads (138).
+                self.assertEqual(x("SELECT match_key, swapped FROM core.worldcup_matches WHERE match_id IS NOT NULL ORDER BY 1").fetchall(),
+                                 [("M-1974-01", False), ("M-1974-38", True)])
                 # The credit the licence asks for, with the commit read.
                 name, url, licence, revision, coverage = x("SELECT name, url, license, revision, coverage FROM core.source_revisions WHERE source='fjelstul-worldcup'").fetchone()
                 self.assertIn("Joshua C. Fjelstul", name)

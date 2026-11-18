@@ -337,8 +337,12 @@ def _link(conn):
            WHERE cs.cup_key LIKE %s AND m.match_date IS NOT NULL AND m.home_team_name IS NOT NULL AND m.away_team_name IS NOT NULL
              AND NOT EXISTS (SELECT 1 FROM core.worldcup_matches w WHERE w.match_id = m.id)""", (ARCHIVE + "%",)).fetchall()
     pairs = pair(source, base)
+    homes = {key: home for key, _, _, _, home, _ in source}
+    base_homes = {match_id: home for match_id, _, _, home, _ in base}
     for key, match_id in pairs.items():
-        conn.execute("UPDATE core.worldcup_matches SET match_id = %s WHERE match_key = %s", (match_id, key))
+        # The archive may list the two teams the other way: the site shows the match as the archive does.
+        swapped = _spelling(homes[key]) != _spelling(base_homes[match_id])
+        conn.execute("UPDATE core.worldcup_matches SET match_id = %s, swapped = %s WHERE match_key = %s", (match_id, swapped, key))
     return len(source) - len(pairs)
 
 
