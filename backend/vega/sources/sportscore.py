@@ -286,9 +286,10 @@ SIDE_SUFFIXES = {"b": "reserve-b", "ii": "reserve-b", "c": "reserve-c", "iii": "
                  "reserves": "reserve-b", "reserve": "reserve-b", "reserva": "reserve-b", "amateure": "reserve-b",
                  "youth": "youth", "academy": "academy", "juvenil": "youth", "primavera": "primavera"}
 CLUB_SUFFIXES = frozenset({"fc", "cf", "sc", "ac", "afc", "fk", "sk", "sv"})
-WOMEN_MARKER = r"\b(?:women(?:'?s)?|ladies|feminin[aeo]?|femenin[ao]|frauen|fem|dames)\b|\(\s*[wf]\s*\)|\[\s*[wf]\s*\]"
-MEN_MARKER = r"\b(?:men(?:'?s)?|herren|masculin[ao]?|hommes)\b|\(\s*m\s*\)|\[\s*m\s*\]"
+WOMEN_MARKER = r"\b(?:women(?:'?s)?|ladies|feminin[aeo]?s?|femenin[ao]s?|femminil[ei]|frauen|fem|dames)\b|\(\s*[wf]\s*\)|\[\s*[wf]\s*\]"
+MEN_MARKER = r"\b(?:men(?:'?s)?|herren|masculin[aeo]?s?|hommes)\b|\(\s*m\s*\)|\[\s*m\s*\]"
 SEX_MARKERS = re.compile(f"(?P<women>{WOMEN_MARKER})|(?P<men>{MEN_MARKER})")
+AMBIGUOUS_WFC = re.compile(r"\bw\.?f\.?c\b", re.IGNORECASE)
 
 
 def _ascii(name):
@@ -297,7 +298,7 @@ def _ascii(name):
 
 def _gender_text(name):
     words = re.sub(r"(?<=[a-z])(?=(?:Women|Men|Ladies)\b)", " ", name or "")
-    return _ascii(words)
+    return _ascii(re.sub(r"\bmänner\b", " men ", words, flags=re.IGNORECASE))
 
 
 def _gender(name):
@@ -336,11 +337,15 @@ def _spellings(conn, query, args, gender):
         squad = squads.setdefault(team, _squad(canonical))
         reviewed = REVIEWED_SPELLINGS.get((provider_key, normalize(canonical)), ())
         reviewed_keys = {normalize(name) for name in reviewed}
+        official = {normalize(canonical), normalize(short)} | reviewed_keys
         for spelling in (canonical, short, alias, *reviewed):
             if not spelling:
                 continue
             key = normalize(spelling)
-            if _gender(spelling) in (None, gender) and (_squad(spelling) == squad or key in reviewed_keys):
+            # WFC may be a club's initials or a women's section. In a men's edition an
+            # occurrence must already be evidenced by the canonical name or a reviewed spelling.
+            ambiguous = gender == "men" and AMBIGUOUS_WFC.search(spelling) and key not in official
+            if not ambiguous and _gender(spelling) in (None, gender) and (_squad(spelling) == squad or key in reviewed_keys):
                 names.setdefault(team, set()).add(key)
                 spelled.setdefault(team, set()).add(spelling)
             else:
@@ -460,7 +465,8 @@ def link(conn, edition, tables, gender="men"):
         raise SourceError("WRONG_EDITION", f"edition {edition}: {', '.join(foreign)}: clubs of the previous or next edition only")
     # A known but contradictory spelling, or an exact homonym, cannot become a match by prefix.
     known = rejected.union(*teams.values())
-    unmatched = {name for name in wanted - set(found) if normalize(name) not in known}
+    unmatched = {name for name in wanted - set(found) if normalize(name) not in known
+                 and (gender != "men" or not AMBIGUOUS_WFC.search(name))}
     found.update(_closest(unmatched, {t: s for t, s in spelled.items() if t not in found.values()}, squads))
     unmatched = sorted(wanted - set(found))
     if unmatched:
