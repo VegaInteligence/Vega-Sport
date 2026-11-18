@@ -1,0 +1,20 @@
+{
+  "command": [
+    "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/ci-clean/bin/python",
+    "-B",
+    "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/reviews/pinned-astra-planning-nov18/opus-interruption-0713/t2/authority/e2e/run.py",
+    "--tree",
+    "/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-tracks-20261117/2-ingestion",
+    "--label",
+    "astra-interruption",
+    "--pg",
+    "postgresql://postgres@127.0.0.1:32774"
+  ],
+  "cwd": "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/reviews/pinned-astra-planning-nov18/opus-interruption-0713",
+  "started": "2026-11-18 07:22:41.851695+00:00",
+  "finished": "2026-11-18 07:22:48.139242+00:00",
+  "exit_code": 0,
+  "environment": {
+    "PYTHONDONTWRITEBYTECODE": "1"
+  }
+}

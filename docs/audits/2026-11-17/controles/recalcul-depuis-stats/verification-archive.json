@@ -1,6 +1,6 @@
 {
   "archive": "recalcul-joueurs-20261118.zip",
-  "bytes": 648857,
+  "bytes": 676972,
   "changed_publication_refused": true,
   "clean_extraction_check": {
     "admitted": 2297613,
@@ -8,14 +8,17 @@
     "award_edition_rows": 448,
     "complete_2020_replay": 14418,
     "computed": 2296998,
+    "gaps_before_replacing_elo": 509906,
     "greater_than_one": 2713,
+    "largest_residual": 0.0014389189801562452,
     "public_responses": 6,
     "published": 2282580,
     "reconstructed_pairs_2022": 265572,
-    "verified_files": 61
+    "reconstructed_pairs_2022_2024": 1197312,
+    "verified_files": 70
   },
-  "manifest": "6c37b0680f978e7b18bb6ccf87b4a9b5a9870a1d80ad31ca3389aa10c0b4452b",
-  "members": 62,
+  "manifest": "5b6de6948a2b80f13b8b7f1b9a45aa7fe4a9989ae3d68fde5aa3f4bcf991e269",
+  "members": 71,
   "second_build_equal": true,
-  "sha256": "71be4bfa46cb2ddbdee537eb67cf9722ea0f1d040b667295e04d9f853d310376"
+  "sha256": "6f68e9c3142295b8a0c5ec2e03b0fd21f7be9794d03359b617b2bcc693be0763"
 }

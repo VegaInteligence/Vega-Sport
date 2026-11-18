@@ -1,0 +1,34 @@
+Revue d’avancement Astra — interruptions Opus du 18 novembre 2026, 06:41–07:13 UTC
+
+Contribution indépendante du collaborateur épinglé gpt-6-astra/xhigh. Ceci est un checkpoint de reprise, pas une revue finale, une approbation de déploiement ou une clôture de volet. Les quatre manifestes confirment `claude-opus-5-5`, effort `max`, et un résultat en échec lié au quota annoncé jusqu’à 12:40 Paris. Aucun Claude n’a été lancé pour ce contrôle.
+
+| Volet | Nouveauté réelle dans la reprise | Vérification indépendante | Prochaine action |
+| --- | --- | --- | --- |
+| T1 | Aucune : 0 appel outil, 0 fichier changé. HEAD propre `590b65390d`. | 16 contrôles existants grade/match/report passent ; 14 tests API mi-temps passent sur PostgreSQL 18 jetable. | Reprendre la correction de précision des mi-temps puis le complément `gradeExact`, avec nouveaux RED avant produit. |
+| T2 | 7 fichiers changés : validation d’édition/table, base de résultats observée et fraîcheur conditionnelle, 9 scénarios supplémentaires. | 35 scénarios / 69 étapes E2E passent sur le code actuel, fournisseur contrôlé via HTTPS local, vrai lecteur/writer/SQL/API. | Préserver le candidat ; finir compte rendu et revue fraîche. Ne pas reconstruire l’implémentation. |
+| T3 | 6 fichiers changés : tests RED, migration 139, parsing et contrats partiels. Le writer transferts reste destructif. | Suite originale : 32 tests, 8 failures et 14 errors. Diagnostic à horloge unique : 5 failures et 14 errors. API contrats : 2 passent. | Terminer le writer en place, branche 404, statut HTTP des refus et concurrence ; conserver la protection SQL. |
+| T7 | Aucune : 0 appel outil, 0 fichier changé. Les modifications existantes précèdent cette reprise. | 12 tests frontend et 12 tests API ciblés passent. Les preuves navigateur antérieures sont identifiées séparément. | Reprendre l’édition après contrat writer T4 ; ne pas refaire les côtés de coupe déjà présents. |
+
+`resumption-ledger.json` conserve les heures, modèles observés, nombres d’appels, chemins réellement modifiés et rapports de quota. `tN/snapshot/` conserve HEAD, diff réel, statut et copies SHA-256 des fichiers modifiés/non suivis. Les seuls nouveaux travaux applicatifs de cette fenêtre sont T2 et T3. Les paquets d’emblèmes préparés séparément ne sont pas du code produit livré par la reprise T7.
+
+Les fiches `t1.md`, `t2.md`, `t3.md`, `t7.md` séparent les preuves précédentes, les changements de la reprise, les résultats observés maintenant et les limites. Elles contiennent les commandes de reprise. Aucun changement de checkout, de propriété VI19/VI21, de numéro de migration ou de marqueur de dispatch n’a été effectué.
+
+Vérification effectuée :
+
+```sh
+E='/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review'
+P="$E/reviews/pinned-astra-planning-nov18/opus-interruption-0713"
+"$E/ci-clean/bin/python" -B "$P/verify_progress.py"
+"$E/ci-clean/bin/python" -B "$P/rerun.py" --track 3 --label t3-clock-control --clock-control
+"$E/ci-clean/bin/python" -B "$P/rerun.py" --track 1 --label t1-existing-api
+```
+
+Le premier orchestrateur finit avec code 0 parce qu’il enregistre chaque sous-processus ; **ce code n’est pas un verdict de succès des tests**. Chaque `receipt.json` contient la commande exacte, l’environnement pertinent, les heures et le code du sous-processus. Le wrapper `rerun.py` retourne, lui, 1 si un contrôle sélectionné échoue. Les ports dans les reçus sont historiques : les conteneurs sont arrêtés. Le wrapper recrée son propre PostgreSQL 18 sur un nouveau port loopback et ne touche aucun cluster existant.
+
+Les contrôles utilisent les dépendances déjà installées, Python 3.14.6 et `docker --context colima`, image `pgvector/pgvector:pg18`. Ils ne font aucun appel au fournisseur réel, ne modifient aucun secret et n’établissent pas la validité d’un payload live. Le fournisseur contrôlé, les entrées attendues, les états SQL, HTTP et les sorties sont inspectables dans les rapports E2E. Les tests sont exécutés avec `PYTHONDONTWRITEBYTECODE=1` depuis le dossier d’évidence.
+
+Pour rejouer sans écraser ce checkpoint, utiliser `rerun.py --track N --label NOUVEAU_LABEL`, une commande à la fois. Les sorties vont dans `reruns/NOUVEAU_LABEL`, dont l’existence préalable est refusée. Les contrôles non sélectionnés sont non exécutés, jamais comptés comme passants. La commande sélectionnée ne remplace pas les nouveaux E2E de `gradeExact` ou d’illustration d’édition : ces compléments ne sont pas encore implémentés.
+
+Tous les conteneurs créés par ces contrôles ont été arrêtés et supprimés. Les quatre `checkout-unchanged.json` initiaux et ceux des répétitions confirment statut Git identique et SHA-256 inchangés des fichiers modifiés/non suivis capturés. Cette preuve porte sur le périmètre Git capturé, pas sur tous les fichiers ignorés du disque.
+
+Priorité proposée : finir T3 sans affaiblir ses garde-fous ; soumettre T2 au cycle de revue prévu ; reprendre T1 avec le complément de précision ; coordonner T7 avec le writer d’édition T4. Réservations à recontrôler au dispatch : 141 édition/T4, 142 projection/T7, 143 alias si nécessaire/T4. Aucune de ces réservations ne transfère la propriété de VI19/VI21.

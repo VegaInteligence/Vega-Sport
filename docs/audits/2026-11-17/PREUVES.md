@@ -45,3 +45,7 @@ La [publication transactionnelle](notes-transaction/README.md) contient les SQL 
 [Classements, postes de joueurs et profils de clubs français et allemands](CLASSEMENTS-ET-IDENTITES.md)
 
 [Recalcul de sept millésimes depuis les statistiques et comparaison aux six lecteurs publics](RECALCUL-JOUEURS.md)
+
+## Contrôles de dépendance et de collecte du 18 novembre
+
+[Trois essais de remplacement des deux Elo et rattrapage 2025–2026](RECALCUL-JOUEURS.md) · [Tentatives de collecte PitchAPI par famille et statut](SOURCES.md#appels-pitchapi-sur-24-heures-complètes)

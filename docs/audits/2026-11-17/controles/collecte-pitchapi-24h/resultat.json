@@ -1,0 +1,93 @@
+{
+  "window": [
+    "2026-11-17T08:00:00Z",
+    "2026-11-18T08:00:00Z"
+  ],
+  "snapshot": [
+    "vega_v2",
+    "2026-11-18 08:56:54.853026+00",
+    "4423126:4423126:",
+    "on",
+    "repeatable read"
+  ],
+  "rows": 88275,
+  "families": 16,
+  "counts": {
+    "attempts": 88275,
+    "identified": 88275,
+    "unidentified": 0,
+    "targets": 88271,
+    "targets_with_success": 65494,
+    "http_2xx": 65494,
+    "success": 65494,
+    "unavailable": 22759,
+    "retryable": 4,
+    "other_error": 18,
+    "repeated_targets": 2,
+    "repeated_success_targets": 0,
+    "repeat_success_intervals": 0,
+    "lt1s": 0,
+    "1s_10s": 0,
+    "10s_60s": 0,
+    "1m_10m": 0,
+    "10m_1h": 0,
+    "1h_6h": 0,
+    "6h_24h": 0,
+    "job_present": 0,
+    "request_present": 88275,
+    "sha_present": 0,
+    "parser_present": 0,
+    "rows_written_present": 0,
+    "empty_present": 0
+  },
+  "distinct_targets_across_families": 8675,
+  "targets_by_type": {
+    "date": 9,
+    "match": 6972,
+    "player": 1691,
+    "team": 3
+  },
+  "present_trace_fields": {
+    "job": 0,
+    "request": 88275,
+    "sha": 0,
+    "parser": 0,
+    "rows_written": 0,
+    "empty": 0
+  },
+  "requests_with_reused_request_id": 0,
+  "distinct_request_ids": 88275,
+  "retryable_followed_same_target": 4,
+  "later_outcome_after_retryable": {
+    "retryable": 2,
+    "success": 2
+  },
+  "earliest": "2026-11-17T08:00:00.264353+00:00",
+  "latest": "2026-11-18T05:00:25.935884+00:00",
+  "observed_optional_match_targets": 6675,
+  "distinct_with_optional_unavailable": 4546,
+  "all_five_optional_unavailable": 4545,
+  "mixed_optional": {
+    "248802": {
+      "advanced": [
+        "unavailable"
+      ],
+      "advanced_players": [
+        "unavailable"
+      ],
+      "heatmaps": [
+        "unavailable"
+      ],
+      "network": [
+        "unavailable"
+      ],
+      "player_halves": [
+        "success"
+      ]
+    }
+  },
+  "repeated_success_intervals_with_resolvable_route": 0,
+  "repeated_success_intervals_with_both_response_hashes": 0,
+  "identical_response_immediate_success_pairs": 0,
+  "identical_response_any_success_pairs": 0
+}

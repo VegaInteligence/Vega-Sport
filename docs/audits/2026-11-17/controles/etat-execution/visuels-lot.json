@@ -1,0 +1,29 @@
+{
+  "records": 1584,
+  "by_type": {
+    "competition": 104,
+    "team": 1480
+  },
+  "distinct_images": 1503,
+  "converted": 164,
+  "manifest_sha256": "e97263f32d2f68ca5fcec05cad71a85f719dc76e35798c60fa6311e2e365124a",
+  "zip_sha256": "558214e7c86bdc516320e02095194b86f0febc17cf9502cb89a268bf0243bccb",
+  "zip_bytes": 131707553,
+  "inputs": [
+    {
+      "source_pack": "artwork-expanded-1577",
+      "manifest_sha256": "e75cd1af492442a401bbefc1422e6c5f67848a9ce92e66a8aab1cbc0c4090baa",
+      "by_type": {
+        "competition": 104,
+        "team": 1473
+      }
+    },
+    {
+      "source_pack": "tracks/7-artwork/dfb-historic-profiles/profile",
+      "manifest_sha256": "f715495e91fb4add12d8a0c8eab2fe4bbc595bdcd15f2a75e8c020fad7e1da37",
+      "by_type": {
+        "team": 7
+      }
+    }
+  ]
+}

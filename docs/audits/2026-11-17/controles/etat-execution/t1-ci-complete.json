@@ -1,0 +1,60 @@
+{
+  "started": "2026-11-18T02:13:49.127254+00:00",
+  "ended": "2026-11-18T02:21:52.091422+00:00",
+  "source_before": {
+    "commit": "1b28961a88e968d5602f9fb278fc3c471ebb7467",
+    "branch": "codex/audit-1-linear",
+    "diff_sha256": "9c080ee40b5e06857ad6e0cfeed6df2786143e7fcf9a443df60ae8e78d0b18b9",
+    "diff_bytes": 32917,
+    "untracked": {
+      "backend/api/test/half-fixture.mjs": "acbdedffb33a6931946adc61c0bef95ee8a2e55731dcf51073ba15b8aaf441d8",
+      "backend/api/test/player-halves-real.test.mjs": "d011e2c480def8fa01f3c7536cecaf8e93015912dd9f5256ad24994c9a3bd4ab",
+      "backend/sql/137_half_metric_coverage.sql": "c6916fd715d6f5bb3c20f4220fc7f92d67439d5b98bd164e14834122ef48cab0"
+    }
+  },
+  "source_after": {
+    "commit": "1b28961a88e968d5602f9fb278fc3c471ebb7467",
+    "branch": "codex/audit-1-linear",
+    "diff_sha256": "9c080ee40b5e06857ad6e0cfeed6df2786143e7fcf9a443df60ae8e78d0b18b9",
+    "diff_bytes": 32917,
+    "untracked": {
+      "backend/api/test/half-fixture.mjs": "acbdedffb33a6931946adc61c0bef95ee8a2e55731dcf51073ba15b8aaf441d8",
+      "backend/api/test/player-halves-real.test.mjs": "d011e2c480def8fa01f3c7536cecaf8e93015912dd9f5256ad24994c9a3bd4ab",
+      "backend/sql/137_half_metric_coverage.sql": "c6916fd715d6f5bb3c20f4220fc7f92d67439d5b98bd164e14834122ef48cab0"
+    }
+  },
+  "unmodified": true,
+  "expected": "all repository CI jobs exit zero, source unchanged throughout",
+  "environment": "local Docker PostgreSQL 18, Python ci-clean, repository dependencies, public origin only set in the build",
+  "rerun_command": [
+    "/Library/Frameworks/Python.framework/Versions/3.14/bin/python3",
+    "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/verify_ci.py",
+    "/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-tracks-20261117/1-linear",
+    "tracks/1-linear/after-quota-ci",
+    "1-linear"
+  ],
+  "jobs": {
+    "python": {
+      "status": 0,
+      "tests": 448,
+      "log_sha256": "6b462199004d2e0b04f4134f3c0d378975b669b25199c5a3ff86f5380eeddcca"
+    },
+    "api": {
+      "status": 0,
+      "tests": 193,
+      "log_sha256": "acd80dd119f6bf149eb2ae06bfb35472d8016d4df9e2b12322ab29917daf55bd"
+    },
+    "site": {
+      "status": 0,
+      "tests": 701,
+      "log_sha256": "38cabb845d022a0ba33070ae2c179768f83f5ddb423c41622627340d245828e6"
+    },
+    "site-build": {
+      "status": 0,
+      "tests": null,
+      "log_sha256": "748c72ea59603fc85c9a7a919ca473bf4e3dfe5b383da30b03a228838a124008"
+    }
+  },
+  "exit_code": 0,
+  "passed": true
+}

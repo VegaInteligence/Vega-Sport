@@ -1,0 +1,64 @@
+{
+  "started": "2026-11-18T02:13:49.127680+00:00",
+  "ended": "2026-11-18T02:21:50.475052+00:00",
+  "source_before": {
+    "commit": "d4d3fbc542686cc41fcf74bd96f204607bc068d2",
+    "branch": "codex/audit-7-artwork",
+    "diff_sha256": "1fe332b3ba113a9fe692d98593d85600e824012847f39826ce9168883c6c5961",
+    "diff_bytes": 20861,
+    "untracked": {
+      "backend/api/test/cup-sides.test.mjs": "0bab194b3b14b7ebffb5518cd621f3aab5e11943baef0b998eff735a0e169a0b",
+      "backend/sql/136_cup_table_sides.sql": "54542482c50b17715acb997c0b6533a2c8b5c330bedc0abcc7438e728e9be1c5",
+      "docs/calculs/09-audit-2026-11/FAILURE_MODES_VI30.md": "d3fe145a212e08b44eefe57502f99fbf32457f670531dc2a774e2f45c9e6b7fa",
+      "tests/cup-catalog-alias.test.mjs": "25cd3275d546ae2e8612557fee5a9af24526b75fdd4a41fe569d3c3213f89a30",
+      "tests/cup-sides.test.mjs": "2e0fb57dff676c8c47fcdcc0fc084b4843b1849717712653b62013830507ccf3"
+    }
+  },
+  "source_after": {
+    "commit": "d4d3fbc542686cc41fcf74bd96f204607bc068d2",
+    "branch": "codex/audit-7-artwork",
+    "diff_sha256": "1fe332b3ba113a9fe692d98593d85600e824012847f39826ce9168883c6c5961",
+    "diff_bytes": 20861,
+    "untracked": {
+      "backend/api/test/cup-sides.test.mjs": "0bab194b3b14b7ebffb5518cd621f3aab5e11943baef0b998eff735a0e169a0b",
+      "backend/sql/136_cup_table_sides.sql": "54542482c50b17715acb997c0b6533a2c8b5c330bedc0abcc7438e728e9be1c5",
+      "docs/calculs/09-audit-2026-11/FAILURE_MODES_VI30.md": "d3fe145a212e08b44eefe57502f99fbf32457f670531dc2a774e2f45c9e6b7fa",
+      "tests/cup-catalog-alias.test.mjs": "25cd3275d546ae2e8612557fee5a9af24526b75fdd4a41fe569d3c3213f89a30",
+      "tests/cup-sides.test.mjs": "2e0fb57dff676c8c47fcdcc0fc084b4843b1849717712653b62013830507ccf3"
+    }
+  },
+  "unmodified": true,
+  "expected": "all repository CI jobs exit zero, source unchanged throughout",
+  "environment": "local Docker PostgreSQL 18, Python ci-clean, repository dependencies, public origin only set in the build",
+  "rerun_command": [
+    "/Library/Frameworks/Python.framework/Versions/3.14/bin/python3",
+    "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/verify_ci.py",
+    "/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-tracks-20261117/7-artwork",
+    "tracks/7-artwork/after-quota-ci",
+    "7-artwork"
+  ],
+  "jobs": {
+    "python": {
+      "status": 0,
+      "tests": 448,
+      "log_sha256": "203a8640d03f0f1752f7852c8edbbcde7a6cd2062450fbcc995f9cf3afc45d62"
+    },
+    "api": {
+      "status": 0,
+      "tests": 188,
+      "log_sha256": "3c8a6759f6d011a3f137a02fdde22e4d61cfdc3acaf7fc4a82a795f5813a0b41"
+    },
+    "site": {
+      "status": 0,
+      "tests": 716,
+      "log_sha256": "2d22011f6e7c82f5a53d521b955fec0850cd090e226df4679d75cfa1a785af54"
+    },
+    "site-build": {
+      "status": 0,
+      "tests": null,
+      "log_sha256": "b77d432b719c3868bdd6bdfb4bdd3929f14e11b731552d2e754f0e93044642f7"
+    }
+  },
+  "exit_code": 0,
+  "passed": true
+}

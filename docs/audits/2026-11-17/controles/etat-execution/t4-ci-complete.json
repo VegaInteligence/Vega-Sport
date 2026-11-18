@@ -1,0 +1,79 @@
+{
+  "started": "2026-11-18T02:20:25.865188+00:00",
+  "ended": "2026-11-18T02:27:15.514629+00:00",
+  "source_before": {
+    "commit": "984af52554f22583db2db3e0ac4b36156852d8e9",
+    "branch": "codex/production-architecture-audit",
+    "diff_sha256": "8787cb3e5f5be564237e756b59c32db04c9b571beef66286a4f132d3e3b841b6",
+    "diff_bytes": 145751,
+    "untracked": {
+      "backend/sql/134_archive_repair_boundary.sql": "aa4b0f920b200335ba3ac63f95a750538f14e53f6d63b40b27b54e57ab75c167",
+      "backend/sql/140_archive_apply_decisions.sql": "b7aa3c965b8bdb4901f389cbc4121d138b273873d9e1801a264d02227c4185ec",
+      "backend/tests/test_archive_corrections.py": "b0386f441c1011cef284e73568f41a0299cdc4a5f2b51b0baf7ebac94d83810c",
+      "backend/tests/test_archive_deletions.py": "53ebc6669fda1cd8921354ba77013b64e43fadc9e0a6ef5f5493d6137cd51431",
+      "backend/tests/test_archive_repair.py": "d8c3860f2abba731092290364ac798c950fbde88b8690769444163eb0ba8824f",
+      "backend/tests/test_artwork.py": "b7d116e1412429a10b3b536704789a610bef09322313ea322c6dd8cf32635343",
+      "backend/vega/artwork.py": "e53dd0f791456eb419df6ffc7a87cfc1e67d0a73f0d123ad7b07b145e81f400a",
+      "dashboard/shared/legacy-8018e08/archive-text.js": "9fd698d0a2a8b401ec97b6c63d1cc5e8d773c75e04d6cb11206bd8e3970cec22",
+      "dashboard/shared/legacy-8018e08/archive.js": "296e7abe672b5617e49eb05c5fb9253ea713a924237a8db8697b064f2db4df44",
+      "dashboard/shared/legacy-8018e08/openfootball-history.js": "a03306601834994bc081ee6e94e46a60f6e8aca9f86797679dc1b1fcb9973e31",
+      "tests/archive-association-sides.test.mjs": "ff9deba8e09e383981dc298e9e8fb5c75177cc7fa8a07f3aa83ae6a2ccda65ec",
+      "tests/archive-corrections.test.mjs": "3766408f853991be34912ec98564707e35982ef30c46f0044c0f4a46057f9e65",
+      "tests/archive-goal-keys.test.mjs": "2a8bcff74bd765ee5e54e3d156de331a54b90fdf5d7f319a7331fee0d6a285a1"
+    }
+  },
+  "source_after": {
+    "commit": "984af52554f22583db2db3e0ac4b36156852d8e9",
+    "branch": "codex/production-architecture-audit",
+    "diff_sha256": "8787cb3e5f5be564237e756b59c32db04c9b571beef66286a4f132d3e3b841b6",
+    "diff_bytes": 145751,
+    "untracked": {
+      "backend/sql/134_archive_repair_boundary.sql": "aa4b0f920b200335ba3ac63f95a750538f14e53f6d63b40b27b54e57ab75c167",
+      "backend/sql/140_archive_apply_decisions.sql": "b7aa3c965b8bdb4901f389cbc4121d138b273873d9e1801a264d02227c4185ec",
+      "backend/tests/test_archive_corrections.py": "b0386f441c1011cef284e73568f41a0299cdc4a5f2b51b0baf7ebac94d83810c",
+      "backend/tests/test_archive_deletions.py": "53ebc6669fda1cd8921354ba77013b64e43fadc9e0a6ef5f5493d6137cd51431",
+      "backend/tests/test_archive_repair.py": "d8c3860f2abba731092290364ac798c950fbde88b8690769444163eb0ba8824f",
+      "backend/tests/test_artwork.py": "b7d116e1412429a10b3b536704789a610bef09322313ea322c6dd8cf32635343",
+      "backend/vega/artwork.py": "e53dd0f791456eb419df6ffc7a87cfc1e67d0a73f0d123ad7b07b145e81f400a",
+      "dashboard/shared/legacy-8018e08/archive-text.js": "9fd698d0a2a8b401ec97b6c63d1cc5e8d773c75e04d6cb11206bd8e3970cec22",
+      "dashboard/shared/legacy-8018e08/archive.js": "296e7abe672b5617e49eb05c5fb9253ea713a924237a8db8697b064f2db4df44",
+      "dashboard/shared/legacy-8018e08/openfootball-history.js": "a03306601834994bc081ee6e94e46a60f6e8aca9f86797679dc1b1fcb9973e31",
+      "tests/archive-association-sides.test.mjs": "ff9deba8e09e383981dc298e9e8fb5c75177cc7fa8a07f3aa83ae6a2ccda65ec",
+      "tests/archive-corrections.test.mjs": "3766408f853991be34912ec98564707e35982ef30c46f0044c0f4a46057f9e65",
+      "tests/archive-goal-keys.test.mjs": "2a8bcff74bd765ee5e54e3d156de331a54b90fdf5d7f319a7331fee0d6a285a1"
+    }
+  },
+  "unmodified": true,
+  "expected": "all repository CI jobs exit zero, source unchanged throughout",
+  "environment": "local Docker PostgreSQL 18, Python ci-clean, repository dependencies, public origin only set in the build",
+  "rerun_command": [
+    "/Library/Frameworks/Python.framework/Versions/3.14/bin/python3",
+    "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/verify_ci.py",
+    "/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-20261117",
+    "tracks/4-history/after-quota-ci"
+  ],
+  "jobs": {
+    "python": {
+      "status": 1,
+      "tests": 509,
+      "log_sha256": "40335dfbda9b4ada2cc112a0f274b41325b97be10cda4667bfb3dc7dc5219955"
+    },
+    "api": {
+      "status": 0,
+      "tests": 182,
+      "log_sha256": "7870ef876bdbd7ecb0b478d1af85aeadee0f057d7945e69111e153f6997f632c"
+    },
+    "site": {
+      "status": 1,
+      "tests": 719,
+      "log_sha256": "930a05d19b80decfc6a8022b35bfaef254ef5280bfa6beed0a5fcb83b43fc12c"
+    },
+    "site-build": {
+      "status": 0,
+      "tests": null,
+      "log_sha256": "dc30a472d6ac8a06673abd003406fb90ffd5cacc68f5e56d9727ced9a0258bc8"
+    }
+  },
+  "exit_code": 1,
+  "passed": false
+}

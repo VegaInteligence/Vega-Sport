@@ -1,0 +1,62 @@
+{
+  "started": "2026-11-18T02:13:49.127496+00:00",
+  "ended": "2026-11-18T02:21:46.342678+00:00",
+  "source_before": {
+    "commit": "1b28961a88e968d5602f9fb278fc3c471ebb7467",
+    "branch": "codex/audit-2-ingestion",
+    "diff_sha256": "795bb8b2646b37a91d8b1d2fbabc52f4dbeb7d67f3fbe892269c0be3242af401",
+    "diff_bytes": 22003,
+    "untracked": {
+      "backend/tests/sportscore_cases.py": "ea61d3a1d76f955996b556349426ab6f7426bb056d9867b7ff24fa21d6bcd91c",
+      "backend/tests/sportscore_replay.py": "334a4fd9482c05f2bb25432e8b89b086f1af848b6b4eb04bbc84128a1da25b54",
+      "backend/tests/test_sportscore_standings.py": "00a1c0cd8dc196a36402ba82aa70e2916c9740fac49ab2f0daddf64d239f4920",
+      "docs/calculs/09-audit-2026-11/FAILURE_MODES_SPORTSCORE.md": "d1526e6a6470f53b5d75c31ebe8f836f97084aa7066d24def4efc614792a8062"
+    }
+  },
+  "source_after": {
+    "commit": "1b28961a88e968d5602f9fb278fc3c471ebb7467",
+    "branch": "codex/audit-2-ingestion",
+    "diff_sha256": "795bb8b2646b37a91d8b1d2fbabc52f4dbeb7d67f3fbe892269c0be3242af401",
+    "diff_bytes": 22003,
+    "untracked": {
+      "backend/tests/sportscore_cases.py": "ea61d3a1d76f955996b556349426ab6f7426bb056d9867b7ff24fa21d6bcd91c",
+      "backend/tests/sportscore_replay.py": "334a4fd9482c05f2bb25432e8b89b086f1af848b6b4eb04bbc84128a1da25b54",
+      "backend/tests/test_sportscore_standings.py": "00a1c0cd8dc196a36402ba82aa70e2916c9740fac49ab2f0daddf64d239f4920",
+      "docs/calculs/09-audit-2026-11/FAILURE_MODES_SPORTSCORE.md": "d1526e6a6470f53b5d75c31ebe8f836f97084aa7066d24def4efc614792a8062"
+    }
+  },
+  "unmodified": true,
+  "expected": "all repository CI jobs exit zero, source unchanged throughout",
+  "environment": "local Docker PostgreSQL 18, Python ci-clean, repository dependencies, public origin only set in the build",
+  "rerun_command": [
+    "/Library/Frameworks/Python.framework/Versions/3.14/bin/python3",
+    "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/verify_ci.py",
+    "/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-tracks-20261117/2-ingestion",
+    "tracks/2-ingestion/after-quota-ci",
+    "2-ingestion"
+  ],
+  "jobs": {
+    "python": {
+      "status": 1,
+      "tests": 449,
+      "log_sha256": "dab3db28689c9d9ec41d379dc35788eaeb212dc5eed59266395f35c5b2a02345"
+    },
+    "api": {
+      "status": 0,
+      "tests": 182,
+      "log_sha256": "5a6a6c0cd6f082829273bc1c3b12353cd2c749a11a04d3b7c40b511d1610b911"
+    },
+    "site": {
+      "status": 0,
+      "tests": 701,
+      "log_sha256": "3600bcd544760671b7177ae191662dc9bfdbfd0e5a156ea4fd6a4b06a358ae3e"
+    },
+    "site-build": {
+      "status": 0,
+      "tests": null,
+      "log_sha256": "f5113f37387e33611e800c2b97b81158c43b1f7406a91b291e1aa7a0296c9150"
+    }
+  },
+  "exit_code": 1,
+  "passed": false
+}

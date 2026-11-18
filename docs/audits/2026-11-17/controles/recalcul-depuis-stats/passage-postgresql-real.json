@@ -1,0 +1,21 @@
+{
+  "at": "2026-11-18T09:01:16.275610+00:00",
+  "input_sha256": "e719f4d12b9e84b38765f2fe3e4b48c2b085d99bb5be336c85b9e25a1d967fc4",
+  "local_postgres": "PostgreSQL 18.6 (Debian 18.6-1.pgdg12+2) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 12.2.0-14+deb12u1) 12.2.0, 64-bit",
+  "extra_float_digits": "1",
+  "transaction_read_only": "on",
+  "psycopg_version": "3.3.9",
+  "published_reference_idempotent": true,
+  "all_remote_binary32_values_equal_actual_pg_storage": true,
+  "cells": {
+    "published_2025": 14560,
+    "refit_2025_double": 14560
+  },
+  "readback_double_differs_from_promoted_binary32": 14560,
+  "max_readback_difference": 4.5843505880327484e-07,
+  "roundtrip_cells_sha256": "ec61d51da8f53e65f3849117c185c67a500df859a9611778941f243d07895fe4",
+  "actual_reference_sha256": "c4de4566711c2a6ae8456acc957e4f9a00742f6d7f5cbed2f45f59729336e151",
+  "database_writes": 0,
+  "production_writes": 0,
+  "scope": "Real storage and text-reader serialization only. No table INSERT, COPY, UPDATE, DELETE or schema mutation; no RDS connection."
+}

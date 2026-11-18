@@ -1,0 +1,27 @@
+{
+  "worker_commit": "8018e0836ca0f32e8b2eb51fc2847154abff7f13",
+  "actual_image_digest": "sha256:8184f72a335b9b4c126e77ead0e71771b6a4a146ee1b7a026ed2c2c1a6aba352",
+  "metadata": [
+    "vega_v2",
+    "2026-11-18 08:56:54.853026+00",
+    "4423126:4423126:",
+    "on",
+    "repeatable read"
+  ],
+  "sql_sha256": "a641ef0579fcd7ad121dd8ce67d8b0785f520af05df34b2b4c3fb2594f10ffab",
+  "probe_sha256": "7c3ae00b5a9ec8914e42e53bf7cc762c78efc619dee60d170a67b18346ac00b3",
+  "data_statements_on_fetch_log": 1,
+  "read_only": true,
+  "index": "fetch_log_202611_pkey",
+  "first_start": "TaskFailedToStart / CannotPullContainerError before connection",
+  "completed_diagnostic_exit": 0,
+  "completed_at": "2026-11-18T09:57:19.345000+01:00",
+  "diagnostic_definition_end_state": "INACTIVE",
+  "transport": {
+    "bytes": 1427719,
+    "sha256": "2061113d0b6053779dd319981a991a2bc722178363ccca3b4778bb1437288235",
+    "chunk_count": 60,
+    "terminal_audit_end": true,
+    "recovery": "get-log-events, same task and stream"
+  }
+}

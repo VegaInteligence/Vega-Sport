@@ -1,0 +1,33 @@
+T7 — médias et projection des éditions
+
+Worktree : `/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-tracks-20261117/7-artwork`. HEAD `d4d3fbc542686cc41fcf74bd96f204607bc068d2`. Reprise `20261118T070637Z-code-7f293883`, 07:06:37–07:06:39 UTC : aucun appel outil, aucun fichier changé. Huit fichiers suivis modifiés et cinq non suivis appartiennent au travail antérieur. Leur diff et leurs hashes sont dans `t7/snapshot/`; aucune nouveauté produit ne doit être attribuée à cette reprise.
+
+Le candidat antérieur comprend migration `136_cup_table_sides.sql`, côtés des matchs avec club/crest et identifiant canonique dans `backend/api/src/routes/cups.mjs`, normalisation `ownSides`, média de compétition, remise à zéro du chargement d’image par sa source, catalogue canonique/alias et comportement de chargement. Les modifications de `ClubScoutUI.jsx` et `CupCompetition.jsx` sont déjà présentes dans ce candidat ; ce checkpoint n’ouvre pas de nouvelle propriété sur des fichiers détenus ailleurs.
+
+L’invariant inspecté est l’identité club→côté→blason : le logo de la compétition ne devient pas un blason de club, et l’alias de coupe mène au même identifiant canonique/ensemble de rencontres. Les tests actuels couvrent les chemins publiés et les données sans côtés ; les événements/couvertures et modèles appartenant à VI19/VI21 ne sont pas modifiés.
+
+Preuves antérieures identifiées : `E/tracks/7-artwork/after-quota-ci/source-and-results.json`, 02:13–02:21 UTC, 448 Python, 188 API, 716 site et build passent, hashes du candidat constants. `E/tracks/7-artwork/routes-e2e/runs/green-vi30-1/cup-sides-summary.json` et `.../afterquota/cup-sides-summary.json` documentent source/canonique × desktop/mobile : 29 rencontres et 58 emplacements de blason par vue, 16 clubs distincts. Ne pas transformer 232 emplacements inspectés sur quatre vues en 232 clubs différents.
+
+Contrôle indépendant de ce checkpoint : `t7/focused-site/` — 12 tests passent ; `t7/focused-api/` — 12 tests passent, PostgreSQL 18 dédié, zéro skip. Les suites exécutées sont `club-picture-media`, `cup-catalog-alias`, `cup-sides` côté site, et `cup-sides`/`cups` côté API. Aucun nouveau parcours navigateur n’a été exécuté ici ; les preuves navigateur ci-dessus sont antérieures et restent attribuées à leur run.
+
+Le complément d’illustration d’édition n’est pas implémenté dans cette reprise vide : pas de stockage/projection 141/142 livré, pas de nouveaux tests d’aller-retour writer→API→UI pour les emblèmes d’édition. Les paquets réémis et leur qualification de rôle ont été préparés hors produit par le coordinateur/autres travaux ; ce sont des entrées vérifiables pour la prochaine répétition du writer, pas une livraison T7.
+
+Le brief `E/reviews/pinned-astra-planning-nov18/late/edition-reconciliation.md` reste la référence : T4 possède writer/stockage d’édition, T7 possède lecture/projection et consommation ; contrôler les numéros effectivement disponibles (réservations 141 T4, 142 T7, 143 alias éventuel T4). Les hunks phases/status de T4 et projections de T7 dans `cups.mjs` doivent rester séparés. La base T7 contient déjà le catalogue initial T4 : ne pas le réappliquer.
+
+Le logo d’organisateur belge U21 ne doit pas être promu comme logo propre aux compétitions 128/358 : le même SVG officiel est explicitement « Georganiseerd door » sur quatre séries. Le travail sur les vrais emblèmes antérieurs, notamment les Coupes du Monde, demeure pertinent. Le comportement attendu utilise l’édition qualifiée et son rôle ; ni substitution de l’organisateur, ni image de famille de l’édition courante pour toute l’archive. Préserver l’attribution locale existante.
+
+Prochaine commande immédiatement exécutable de non-régression sur environnement jetable :
+
+```sh
+"$E/ci-clean/bin/python" -B "$P/rerun.py" --track 7 --label t7-after-resume
+```
+
+Le parcours navigateur existant se relance avec le runner ci-dessous **après** préparation de sa base/local UI dédiée et choix d’un label neuf ; il utilise son environnement `root-checks/role-ui` et ne doit pas être lancé aveuglément contre un environnement partagé occupé :
+
+```sh
+"$E/ci-clean/bin/python" -B "$E/root-checks/role-ui/run-branch.py" \
+  '/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-tracks-20261117/7-artwork' \
+  t7-post-edition-resume
+```
+
+Ce runner existant vérifie les réparations/côtés/alias, pas encore l’intégralité du nouveau complément. Avant son implémentation, ajouter les RED du vrai writer et de la lecture pour édition qualifiée, édition sans emblème, alias, retour à une édition précédente, changement de source avec erreur de chargement et fallback autorisé. Puis extension du navigateur desktop/mobile avec preuve de l’asset réellement chargé. Les emplacements existants sont réutilisés ; aucune nouvelle validation de maquette n’est alléguée par ce checkpoint.

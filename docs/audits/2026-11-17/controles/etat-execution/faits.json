@@ -1,0 +1,445 @@
+{
+  "scope": "Dated reported observations; successful replay is not product acceptance or deployment.",
+  "original_criteria": {
+    "production_state": {
+      "incomplete": 24,
+      "missing": 2,
+      "implemented_production": 12
+    },
+    "branch_state": {
+      "incomplete": 24,
+      "missing": 2,
+      "implemented_production": 12
+    }
+  },
+  "all_criteria": {
+    "production_state": {
+      "incomplete": 50,
+      "missing": 2,
+      "implemented_production": 29,
+      "not_applicable": 10
+    },
+    "branch_state": {
+      "incomplete": 53,
+      "missing": 2,
+      "implemented_production": 29,
+      "implemented_branch": 4,
+      "not_applicable": 3
+    }
+  },
+  "criteria_count": 91,
+  "original_count": 38,
+  "additional_calculations": 26,
+  "players": {
+    "admitted": 2297613,
+    "assigned": 2296998,
+    "contribution": 2296998,
+    "no_power": 14418,
+    "computable_index": 2296998,
+    "computable_unpublished": 14418,
+    "no_role": 615,
+    "has_power": 2282580,
+    "equal_contribution_f32": 303374,
+    "contribution_abs_gt_1e-4": 651031,
+    "computable_published": 2282580,
+    "grade_index_eq_f32": 227748,
+    "grade_index_abs_gt_1e-4": 1148686,
+    "score_gap_gt_001": 517588,
+    "score_gap_gt_01": 122268,
+    "score_gap_gt_1": 2713,
+    "changed_rounded_score": 50139,
+    "opponent_elo_changed": 2065561,
+    "power_index_diff_f32": 2033441
+  },
+  "annual": [
+    {
+      "award": 2020,
+      "snapshot": "2026-11-18 08:21:50.093404+00",
+      "counts": {
+        "admitted": 14427,
+        "assigned": 14418,
+        "contribution": 14418,
+        "no_power": 14418,
+        "computable_index": 14418,
+        "computable_unpublished": 14418,
+        "no_role": 9
+      },
+      "reference_year": 2020,
+      "saved_reference": false
+    },
+    {
+      "award": 2021,
+      "snapshot": "2026-11-18 08:32:22.641821+00",
+      "counts": {
+        "admitted": 202979,
+        "assigned": 202911,
+        "contribution": 202911,
+        "has_power": 202911,
+        "equal_contribution_f32": 202911,
+        "contribution_abs_gt_1e-4": 0,
+        "computable_index": 202911,
+        "computable_published": 202911,
+        "grade_index_eq_f32": 201946,
+        "grade_index_abs_gt_1e-4": 0,
+        "score_gap_gt_001": 0,
+        "score_gap_gt_01": 0,
+        "score_gap_gt_1": 0,
+        "changed_rounded_score": 0,
+        "no_role": 68
+      },
+      "reference_year": 2021,
+      "saved_reference": false
+    },
+    {
+      "award": 2022,
+      "snapshot": "2026-11-18 08:33:56.101704+00",
+      "counts": {
+        "admitted": 265707,
+        "no_role": 135,
+        "assigned": 265572,
+        "contribution": 265572,
+        "has_power": 265572,
+        "opponent_elo_changed": 263529,
+        "equal_contribution_f32": 165,
+        "contribution_abs_gt_1e-4": 48202,
+        "computable_index": 265572,
+        "computable_published": 265572,
+        "power_index_diff_f32": 261241,
+        "grade_index_eq_f32": 4072,
+        "grade_index_abs_gt_1e-4": 159596,
+        "score_gap_gt_001": 20943,
+        "score_gap_gt_01": 908,
+        "score_gap_gt_1": 0,
+        "changed_rounded_score": 1166
+      },
+      "reference_year": 2022,
+      "saved_reference": false
+    },
+    {
+      "award": 2023,
+      "snapshot": "2026-11-18 08:35:53.389061+00",
+      "counts": {
+        "admitted": 370490,
+        "assigned": 370276,
+        "contribution": 370276,
+        "has_power": 370276,
+        "opponent_elo_changed": 370231,
+        "equal_contribution_f32": 6025,
+        "contribution_abs_gt_1e-4": 198174,
+        "computable_index": 370276,
+        "computable_published": 370276,
+        "power_index_diff_f32": 369030,
+        "grade_index_eq_f32": 1301,
+        "grade_index_abs_gt_1e-4": 323020,
+        "score_gap_gt_001": 143708,
+        "score_gap_gt_01": 20375,
+        "score_gap_gt_1": 122,
+        "changed_rounded_score": 9288,
+        "no_role": 214
+      },
+      "reference_year": 2023,
+      "saved_reference": false
+    },
+    {
+      "award": 2024,
+      "snapshot": "2026-11-18 08:38:01.665696+00",
+      "counts": {
+        "admitted": 561558,
+        "assigned": 561464,
+        "contribution": 561464,
+        "has_power": 561464,
+        "opponent_elo_changed": 558853,
+        "equal_contribution_f32": 17108,
+        "contribution_abs_gt_1e-4": 404537,
+        "computable_index": 561464,
+        "computable_published": 561464,
+        "power_index_diff_f32": 560740,
+        "grade_index_eq_f32": 714,
+        "grade_index_abs_gt_1e-4": 519625,
+        "score_gap_gt_001": 345255,
+        "score_gap_gt_01": 100435,
+        "score_gap_gt_1": 2591,
+        "changed_rounded_score": 38768,
+        "no_role": 94
+      },
+      "reference_year": 2024,
+      "saved_reference": false
+    },
+    {
+      "award": 2025,
+      "snapshot": "2026-11-18 08:40:52.105981+00",
+      "counts": {
+        "admitted": 652977,
+        "assigned": 652902,
+        "contribution": 652902,
+        "has_power": 652902,
+        "opponent_elo_changed": 644549,
+        "equal_contribution_f32": 55985,
+        "contribution_abs_gt_1e-4": 115,
+        "computable_index": 652902,
+        "computable_published": 652902,
+        "grade_index_eq_f32": 19689,
+        "grade_index_abs_gt_1e-4": 3200,
+        "score_gap_gt_001": 1,
+        "score_gap_gt_01": 0,
+        "score_gap_gt_1": 0,
+        "changed_rounded_score": 135,
+        "power_index_diff_f32": 613003,
+        "no_role": 75
+      },
+      "reference_year": 2025,
+      "saved_reference": false
+    },
+    {
+      "award": 2026,
+      "snapshot": "2026-11-18 08:44:06.832518+00",
+      "counts": {
+        "admitted": 229475,
+        "assigned": 229455,
+        "contribution": 229455,
+        "has_power": 229455,
+        "opponent_elo_changed": 228399,
+        "equal_contribution_f32": 21180,
+        "contribution_abs_gt_1e-4": 3,
+        "computable_index": 229455,
+        "computable_published": 229455,
+        "power_index_diff_f32": 229427,
+        "grade_index_eq_f32": 26,
+        "grade_index_abs_gt_1e-4": 143245,
+        "score_gap_gt_001": 7681,
+        "score_gap_gt_01": 550,
+        "score_gap_gt_1": 0,
+        "changed_rounded_score": 782,
+        "no_role": 20
+      },
+      "reference_year": 2025,
+      "saved_reference": true
+    }
+  ],
+  "artwork": {
+    "records": 1584,
+    "images": 1503,
+    "production_linked": {
+      "club_roots": 1475,
+      "competitions": 82
+    },
+    "local_linked_after": {
+      "club_roots": 2955,
+      "competitions": 186
+    },
+    "denominators": {
+      "club_roots": 11003,
+      "competitions": 208
+    }
+  },
+  "issues": [
+    {
+      "id": "VI-28",
+      "title": "Publier la couverture des statistiques par mi-temps et préserver les mesures disponibles",
+      "status": "In Progress",
+      "gitBranchName": "hugolemonnier01/vi-28-publier-la-couverture-des-statistiques",
+      "updatedAt": "2026-11-18T04:40:18.441Z"
+    },
+    {
+      "id": "VI-29",
+      "title": "Préserver le dernier classement officiel SportScore après un retour incomplet",
+      "status": "In Progress",
+      "gitBranchName": "hugolemonnier01/vi-29-preserver-le-dernier-classement",
+      "updatedAt": "2026-11-18T08:11:09.277Z"
+    },
+    {
+      "id": "VI-30",
+      "title": "Rendre les vrais blasons déjà liés sur les fiches et les rencontres de coupe",
+      "status": "In Progress",
+      "gitBranchName": "hugolemonnier01/vi-30-rendre-les-vrais-blasons-deja-lies-sur",
+      "updatedAt": "2026-11-18T06:11:40.834Z"
+    },
+    {
+      "id": "VI-31",
+      "title": "Préserver les transferts et les contrats datés lors des relectures Transfermarkt",
+      "status": "In Progress",
+      "gitBranchName": "hugolemonnier01/vi-31-preserver-les-transferts-et-les",
+      "updatedAt": "2026-11-18T05:17:38.145Z"
+    },
+    {
+      "id": "VI-19",
+      "title": "Prédictions des coupes : phases de ligue européennes et chances par tour",
+      "status": "In Progress",
+      "gitBranchName": "hugolemonnier01/vi-19-predictions-des-coupes-phases-de-ligue",
+      "updatedAt": "2026-11-18T07:21:30.442Z"
+    },
+    {
+      "id": "VI-21",
+      "title": "Audit de la plateforme : cohérence, sources de données sans doublon, une note pour chaque club, match et joueur",
+      "status": "In Progress",
+      "gitBranchName": "hugolemonnier01/vi-21-audit-de-la-plateforme-coherence",
+      "updatedAt": "2026-11-18T08:52:35.812Z"
+    },
+    {
+      "id": "VI-27",
+      "title": "Vérifier les couvertures en production et protéger les résultats des imports complémentaires",
+      "status": "In Progress",
+      "gitBranchName": "hugolemonnier01/vi-27-verifier-les-couvertures-en-production",
+      "updatedAt": "2026-11-18T08:17:39.907Z"
+    },
+    {
+      "id": "VI-32",
+      "title": "Conserver le même entier pour une note Vega avant et après le chargement du classement",
+      "status": "In Progress",
+      "gitBranchName": "hugolemonnier01/vi-32-conserver-le-meme-entier-pour-une-note",
+      "updatedAt": "2026-11-18T05:01:48.482Z"
+    }
+  ],
+  "sources": [
+    {
+      "source": "artwork-expanded-1584/release.json",
+      "published": "controles/etat-execution/visuels-lot.json",
+      "sha256": "866017a7d0698dadd38512540c1e58120c4b9cbacbb9d032c720e860b67ce1fe"
+    },
+    {
+      "source": "current-artwork.json",
+      "published": "controles/etat-execution/visuels-selection.json",
+      "sha256": "55a1cb074f78d35eeca984d2873dd4e3cdb7223dae9695e662ffc97269f1f1a5"
+    },
+    {
+      "source": "reviews/pinned-astra-corrected-science-0742/5-players/REVIEW.md",
+      "published": "controles/etat-execution/t5-astra-0742.txt",
+      "sha256": "9bed6c9ea80b41a29e348845247bd1245be471756da7b591ba49a23f45075385"
+    },
+    {
+      "source": "reviews/pinned-astra-corrected-science-0742/6-teams/REVIEW.md",
+      "published": "controles/etat-execution/t6-astra-0742.txt",
+      "sha256": "8b969d9053148d0bfc4c2b051b07e6a13b5e6dcc2209bd09e4f294db1521a999"
+    },
+    {
+      "source": "reviews/pinned-astra-planning-nov18/opus-interruption-0713/README.md",
+      "published": "controles/etat-execution/checkpoint-0713.txt",
+      "sha256": "588b2b041b97f3e59bf444cff6d4bebcd8d3bcfd22719281e6d53a30f5ae96e3"
+    },
+    {
+      "source": "reviews/pinned-astra-planning-nov18/opus-interruption-0713/t1.md",
+      "published": "controles/etat-execution/mi-temps-0713.txt",
+      "sha256": "36fe2224c2f856c23b5492ccc8c8113b1ae8cd3dd51225b4036dc0de46316673"
+    },
+    {
+      "source": "reviews/pinned-astra-planning-nov18/opus-interruption-0713/t2.md",
+      "published": "controles/etat-execution/sportscore-0713.txt",
+      "sha256": "fb7994a03ab5e7962eb2eba7925b6008f1d12f25450db29635f67fcb85de8cf0"
+    },
+    {
+      "source": "reviews/pinned-astra-planning-nov18/opus-interruption-0713/t2/e2e-independent/receipt.json",
+      "published": "controles/etat-execution/sportscore-35-recu.json",
+      "sha256": "fa5bc966e63ff54903e06098db3bfccfb3ea0cf1962aab831d88392bdc345316"
+    },
+    {
+      "source": "reviews/pinned-astra-planning-nov18/opus-interruption-0713/t3.md",
+      "published": "controles/etat-execution/transfermarkt-0713.txt",
+      "sha256": "eb4ac90e2301eb9e79eab224f3336571ca7615b21c08c48748a2bbe5baa95eb8"
+    },
+    {
+      "source": "reviews/pinned-astra-planning-nov18/opus-interruption-0713/t7.md",
+      "published": "controles/etat-execution/visuels-0713.txt",
+      "sha256": "e52af35c600871347b1f45491b7107e8890483389baef1175a5578ed79abed78"
+    },
+    {
+      "source": "root-checks/artwork-checked1584fresh/verification.json",
+      "published": "controles/etat-execution/visuels-repetition.json",
+      "sha256": "0b266bd482d338d2bae25ae1fa39e2478c50aafe4a9f7be2d38dc2c58bf76739"
+    },
+    {
+      "source": "tracks/1-linear/after-quota-ci/source-and-results.json",
+      "published": "controles/etat-execution/t1-ci-complete.json",
+      "sha256": "e26d836c547902b2e6394a74de2ab1e26f4d0d208bd3bdfd5519d6414d02f77a"
+    },
+    {
+      "source": "tracks/2-ingestion/after-quota-ci/source-and-results.json",
+      "published": "controles/etat-execution/t2-ci-complete.json",
+      "sha256": "78c7650ad06d75bc8700e1210255366e52c22f20034cf277e280207732027ab1"
+    },
+    {
+      "source": "tracks/2-ingestion/secondary-source-qualification/portable-replay/verification.json",
+      "published": "controles/etat-execution/sportscore-nouveaux-criteres.json",
+      "sha256": "cf7401abc1bf3e946677c4c7938d1ecd763d5ae11f9d074ee36c10677af35a40"
+    },
+    {
+      "source": "tracks/4-history/after-quota-ci/source-and-results.json",
+      "published": "controles/etat-execution/t4-ci-complete.json",
+      "sha256": "26e96da7585b2334b39b822284e8692439d7a56909580dbbbe5f1da37fb781c4"
+    },
+    {
+      "source": "tracks/5-players/delegate/8bee13446a8e25b9/runs/20261118T064911Z-review-7e357dda/result.md",
+      "published": "controles/etat-execution/t5-fable-premier-avis.txt",
+      "sha256": "dbeb6854e3770c1117f24733ad7e62af50249b64425fc5272cc2fcb5a247b2f7"
+    },
+    {
+      "source": "tracks/5-players/fable-corrections-nov18/review-responses.md",
+      "published": "controles/etat-execution/t5-reponses-fable.txt",
+      "sha256": "e800dff4cf963d170381fcfab7705d5027b0899a8400147ea9ff8e9a37684ca5"
+    },
+    {
+      "source": "tracks/5-players/frozen-science-0742/receipt.json",
+      "published": "controles/etat-execution/t5-gel-0742.json",
+      "sha256": "5a9b208fbbc5c3e74db36ec48de1e1f2db0fb5b38b19bd31d04a8160cbd88e14"
+    },
+    {
+      "source": "tracks/5-players/raw-refit/2020/rds/receipt.json",
+      "published": "controles/etat-execution/notes-2020-recu.json",
+      "sha256": "bdc57c62cc83c71d75e733ec239e04e7aa1d319dd68b29186c467466e1c658c1"
+    },
+    {
+      "source": "tracks/5-players/raw-refit/2021/rds/receipt.json",
+      "published": "controles/etat-execution/notes-2021-recu.json",
+      "sha256": "9b44b747791a087df133f94748943b9520401de4c3d50e1e7bac361a7237f68e"
+    },
+    {
+      "source": "tracks/5-players/raw-refit/2022/rds/receipt.json",
+      "published": "controles/etat-execution/notes-2022-recu.json",
+      "sha256": "94d1d9fcddf6cde8979e5e1a4439e02f36eb05f7dc52c95b799ec1468bcbec77"
+    },
+    {
+      "source": "tracks/5-players/raw-refit/2023/rds/receipt.json",
+      "published": "controles/etat-execution/notes-2023-recu.json",
+      "sha256": "d370ba14d94501d5e8b5cf398d0ce36339719cd35ee40db6ad0cd972777756a4"
+    },
+    {
+      "source": "tracks/5-players/raw-refit/2024/rds/receipt.json",
+      "published": "controles/etat-execution/notes-2024-recu.json",
+      "sha256": "0dec3841b7fa9ac365589da4057000e1290eb44bc2b687308f49fb6a75089c4b"
+    },
+    {
+      "source": "tracks/5-players/raw-refit/2025/rds/receipt.json",
+      "published": "controles/etat-execution/notes-2025-recu.json",
+      "sha256": "1fe41ad127f7189d09fc52278706a7fdca11951d2b5d5c5cfe0c6eb8377ce72e"
+    },
+    {
+      "source": "tracks/5-players/raw-refit/2026/rds/receipt.json",
+      "published": "controles/etat-execution/notes-2026-recu.json",
+      "sha256": "4489d895b46f259c814c66603250d555725d1ad5ecaaf77289382e786b64ec68"
+    },
+    {
+      "source": "tracks/5-players/remaining-role-evidence/portable-delivery/repetition.json",
+      "published": "controles/etat-execution/postes-615-recu.json",
+      "sha256": "e75b5c02db65b7237882f408314faf8c757db8f742f06f9a768906441aa6b22f"
+    },
+    {
+      "source": "tracks/6-teams/delegate/05721c1967121e76/runs/20261118T064100Z-review-e8639b82/result.md",
+      "published": "controles/etat-execution/t6-fable-premier-avis.txt",
+      "sha256": "bdabe05dc13e6f845d7ad25d77852e6006e0512eed928a0dc7b6d1533e096d01"
+    },
+    {
+      "source": "tracks/6-teams/fable-corrections-nov18/evidence-pour-revue.md",
+      "published": "controles/etat-execution/t6-reponses-fable.txt",
+      "sha256": "7d61769e7aa675795ca5bac72e8f2ab846209f8bf3dd4654008ad1876948e0f6"
+    },
+    {
+      "source": "tracks/6-teams/frozen-science-0742/receipt.json",
+      "published": "controles/etat-execution/t6-gel-0742.json",
+      "sha256": "1e92cdde38b60791da36a2a6d3df8b15a9ef09bf49724afc15f21b2e9508ad92"
+    },
+    {
+      "source": "tracks/7-artwork/after-quota-ci/source-and-results.json",
+      "published": "controles/etat-execution/t7-ci-complete.json",
+      "sha256": "2343e1f917da6945a8812803795f7d2e3b53da9d1a263edae285ece139864aaf"
+    }
+  ]
+}

@@ -1,0 +1,111 @@
+VERDICT: CHANGES_REQUESTED
+
+Scope: report-only batch. The application diff against `1b28961a88` is empty, as expected. The changes requested are to the report and its evidence, not to code. The code paths the report cites exist as described, and every total I re-added closes. Three points block acceptance against the brief ("sufficient stats and role", "separate measurement/policy from scheduling").
+
+## Findings
+
+### Major
+
+**1. The 15,033 "pending" inputs are mostly award-year-2020 rows that the normal schedule cannot reach, not a backlog in cooldown.** This is my inference from the inlined tables plus the code; the award column in the existing receipts will confirm or refute it.
+- **Arithmetic:** the ten 2021/22 editions in the 02:02 table sum to 14,441 pending. Role-assignable pending is 14,411 + 7 = 14,418, and 14,441 − 23 = 14,418 if 23 no-role rows sit in those editions (the 22:07 reading had 23 history-recovered and 15 no-role rows in partition 2021). That closes to the unit only if those ten editions hold every role-assignable pending row.
+- **Pattern:** all ten kicked off before 1 Aug 2021 (kick-off dates are from my own recall, not the evidence), and the pending shares match the pre-August fraction:
+
+  | Edition | Pending / admitted | Share |
+  | --- | --- | --- |
+  | MLS (883) | 6,164 / 14,063 | 43.8 % |
+  | Eliteserien (780) | 3,179 / 7,070 | 45.0 % |
+  | Allsvenskan (729) | 2,866 / 7,037 | 40.7 % |
+  | 2. Bundesliga (714) | 459 / 9,380 | 4.9 % (≈ 15 of 306 matches) |
+  | Premiership (913) | 111 / 6,436 | 1.7 % (≈ the 4 matches of 31 July) |
+
+- **Not arrivals:** partition 2021 grew by 14,090 rows between 21:06 and 22:07, so the 13 minutes from run 2098's read (01:49:24) to the snapshot (02:02:22) would yield about 3,000 rows, not 14,411. The 04:22 grid is byte-identical.
+- **No award-2020 grades:** `by-award.csv` has rows for 2021–2026 only, summing to 2,282,580.
+- **Code:**
+  - `refresh_players(2021)` only reads `match_date >= 2021-08-01` (`backend/vega/power.py:1074-1077`, `1500`).
+  - Award N−1 is refreshed only through `previous_year_changed`, which returns false when partition N−1 has no player statistics (`backend/vega/power.py:1468-1483`). That is the asserted design in `backend/tests/test_models.py:200-201`.
+  - `due_seasons` keys on the partition's own matches (`backend/vega/worker.py:136-145`).
+  - The only other caller is the method-version loop (`backend/vega/worker.py:512-514`).
+- **Consequence:** these rows are either excluded by policy or stranded. "En attente", "délai de six heures" and the closing condition "démontrer le rattrapage des entrées éligibles" mislabel them. The reported `no_published_award = 0` then implies a published, presumably empty, 2020 run that the report never names.
+- **Fix:**
+  - Regroup the existing `player-pending-*` receipts by award year (they already group by `edition_id, award`).
+  - Publish the 2020 run's id, start time and counts, plus `count(*)` of statistics in partition 2020.
+  - State that award ≥ 2021 has zero role-assignable pending, if confirmed.
+  - Move the award-2020 rows out of "pending" into a policy/scheduling line for VI-21.
+  - Note that a future method bump would grade them against a reference fitted on half-seasons only.
+
+**2. "Sufficient stats" is not quantified for the 2,282,580 persisted grades.** "Valid" means finite and metadata-concordant.
+- `match_contribution` returns C as soon as one indicator of one block is measurable and renormalises the weights (`backend/vega/power.py:1233-1251`).
+- Rows with `touches` NULL skip zero restoration but are still graded (`backend/vega/power.py:1059`).
+- So `insufficient_contribution = 0` only shows that no row had zero indicators.
+- `docs/calculs/09-audit-2026-11/SOURCE_AUDIT.md` §16 asks for this coverage to be qualified.
+- **Fix:** one read-only `GROUP BY` on `agg.player_power_matches`: role × number of non-null block columns, goalkeepers without `shot_stopping` (weight 0.60), and grades whose statistics row has `touches IS NULL`. Report these as "graded on partial support", separate from "valid".
+
+**3. The 1,110 South African PSL rows (edition 911) left the no-role class without explanation.**
+- They were the headline example of "poste introuvable dans l'année" at 22:07.
+- By 02:02 the no-role class had dropped from 1,734 to 615, edition 911 was absent from a top-pending table whose twelfth row is 38, and partition 2025 had gained 1,097 valid grades (671,351 → 672,448).
+- So "no role after award history" is time-dependent, not a stable "insufficient source" class.
+- Dating by the statistics row's `updated_at` cannot date role availability, since the position comes from `core.lineup_players` (`backend/vega/power.py:1016`, `1032`).
+- This is also a likely driver of the largest 2026 reference gap: Raymond Daniels plays in the PSL, and run 2096 refitted the 2025 reference after those rows entered it. That link is my reading, not established.
+- **Fix:** identify what wrote the positions for edition 911 between 22:08 and 01:07, list the residual rows, and mark the 615 as heterogeneous. The six Ligue 1 rows show the class also contains misattributed statistics (Doucouré/Henri).
+
+### Minor
+
+**4. "Attendu selon la règle déployée = 2 282 580" is circular.** Expected is defined as rows that already have an index, so 100 % is a persistence identity, not coverage. Present it as 2,297,613 admitted → 2,282,580 graded, with the remainder split per finding 1 and the 615.
+
+**5. The 2026 reference lag is established by the code, not only by timing.** `refresh_daily` grades season N against the kept N−1 reference, then refits and overwrites N−1 in the same pass (`backend/vega/models.py:795-799`; `backend/vega/power.py:1516`, `1550-1553`, `1598-1599`, `1756-1767`). State it as the mechanism and give VI-21 a check: after a 2026 pass with no intervening 2025 refit, gaps should fall to the write tolerance.
+
+**6. `unknown_or_wrong_team = 0` guards a whole-year failure, not a row-level risk.** A statistics row whose team is outside the fixture matches both Elo sides (`backend/vega/power.py:1036`; key at `backend/sql/032_power_rankings.sql:49`). The duplicate then violates the key at `backend/sql/032_power_rankings.sql:80` during the copy at `backend/vega/power.py:1576-1580`, so the year never publishes and is retried hourly. Hand this to VI-21 as an untested unsafe path.
+
+**7. Stale "au moins" wording survives.** `accepted-plan.md`, `track-results.md` and `grid-validation.json` (`known_participations_minimum`) still read 2,308,335 / 2,260,025 as a floor. The corrected delivery says it "ne fournit aucune borne physique". Align them before consolidation.
+
+**8. `WORKLOG.md` has no entry for this track.** No goal, VI-27 link, evidence location or next action, which `AGENTS.md` requires. It may live on the coordinator branch; I could not check.
+
+### Nit
+
+**9. Moutoussamy's index is 0.35036 in `track-results.md` and 0.35236406 in the later readers.** Probably run 2098's republication (a change above 1e-4 is rewritten); annotate it.
+
+## Separate verdicts requested
+
+- **23-key verification: accepted.**
+  - Counts close: 6 keepers + 15 outfield + 2 unresolved, and editions 8/7/7/1.
+  - Grades reproduce from `score_of` (17.39, 78.45, 53.64, 72.60); 20 are displayable.
+  - Run 2098's 01:49:24 start fits the six-hour rule.
+  - Public values match their indices (53.7018 from 0.2577; 55.0536 from 0.3524).
+  - It is a targeted sample, as the report says.
+- **2,282,580 contribution-stage replay: accepted as a contribution-to-grade check, not a raw refit.**
+  - By-award sums close at 2,282,580 and the rounding changes at 1,083.
+  - The completed-year maximum of 0.001439 equals the write tolerance: 14.39 points per unit of index × 1e-4 (`backend/vega/power.py:1724`).
+  - The unarchived reference version is a real limit.
+- **Copa América 1,010: accepted as attested participation with no grading inputs.** 704 + 306, 269/70 and 838/172 close. Not scoreable today.
+- **Seven fixtures / 219 appearances and six Ligue 1 linkages: accepted.** 3,204/3,197, 98,359/98,353 and 154 + 65 close.
+- **Belgium U21 (my scope only): accepted.** 1,288 = 924 + 364 is a floor on attested entries; it has no stable person key and zero inputs.
+
+## Live gaps this batch does not resolve
+
+The report is truthful about the owners; none of this behaviour is approved.
+
+- Award-2020 rows (about 14.4k) and the 615 no-role rows.
+- Four scheduler windows, plus the reference lag.
+- Duel denominator and non-penalty-goal restoration still in `backend/vega/power.py:1024`, `1041-1043`.
+- False zero minutes served with `statsReliable: true` (`backend/sql/108_drop_source_rating.sql:656-660`).
+- Cameo grades leaking through the match family (`backend/api/src/routes/match-details.mjs:67-69`, `dashboard/frontend/src/services/match-tabs.js:136`, `192`): 336,979 servable.
+- Double rounding (`backend/api/src/routes/rankings.mjs:668`): 97,029.
+- Participation-cue candidates: 8,808 and 1,914.
+- Uningested or unscoreable appearances: AFCON 4,786, Copa 1,010, qualifiers 54,062, Belgium 1,288, domestic 219.
+- Identity: 25 World Cup grades open, and ten Saudi women graded on men's fixtures.
+
+## Verified and not verified
+
+**Verified by reading the worktree:**
+- `PLAYER_MATCHES`, `assign_roles`, and that the `direct_role` SQL predicate matches `role_of` / `LINE_DEFAULT`.
+- `due_seasons`, the `refresh_daily` order, and the `now()` stamp in `backend/vega/store.py:793-796`.
+- The grade views and the three readers' thresholds.
+- `IGNORED_PLAYER_KEYS` drops the provider rating, and nothing under `backend/api/src` mentions a rating.
+- `TRACEABILITY.md:27` records the duel defect as handed to VI-21.
+- `SOURCE_AUDIT.md` §§1–18; the annex scripts after line 594 were not read.
+
+**Not verified:**
+- Every production figure. I had only the inlined text and could not open the receipts or CSVs.
+- The offline replays and hashes (no shell).
+- Linear states, deployed SHAs, browser captures and external sources.
+- That the deployed frontend at `17ca0f7617` equals the worktree copy.

@@ -1,0 +1,41 @@
+{
+  "track": "5-players",
+  "worktree": "/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-tracks-20261117/5-players",
+  "base": "1b28961a88e968d5602f9fb278fc3c471ebb7467",
+  "head": "1b28961a88e968d5602f9fb278fc3c471ebb7467",
+  "source_snapshot_sha256": "c58a938744d0aff54d752d722d443381388099dad929e33d2c8ce315fa74fb6d",
+  "file_count": 1113,
+  "prior_review": "20261118T064911Z-review-7e357dda",
+  "original_frozen_inputs": "0a597c897e53cef7bb833ef1c04007d5a7eaef3daca7cc7c96c23e53583ab639",
+  "source_files": {
+    "tracks/5-players/delegate/8bee13446a8e25b9/runs/20261118T064911Z-review-7e357dda/result.md": "dbeb6854e3770c1117f24733ad7e62af50249b64425fc5272cc2fcb5a247b2f7",
+    "tracks/5-players/track-results.md": "424eba7f14d35e02c9143d9003085a6f207c932a7f319f7c04f5d002b110aba4",
+    "tracks/5-players/requirements.md": "9a8194b9625a37bd1d2c974a23b38799176e53af04846a8c6f261934c8bc8cfb",
+    "WORKTREE/WORKLOG.md": "6c451aa848a7fda9201390aaf4c00d82969a96704b8beb876272562a5159f181",
+    "tracks/6-teams/awarded-belgium/independent-review-evidence.md": "21287f7ad40a62db482a0efac7de42fd0c7219065a6b2b881a14e4ddeb241d98",
+    "tracks/5-players/fable-corrections-nov18/README.md": "a05aea84085a3cb6a8ea91e9fb7931b556ef38bfccab417851d72e58fe78a73e",
+    "tracks/5-players/fable-corrections-nov18/review-responses.md": "e800dff4cf963d170381fcfab7705d5027b0899a8400147ea9ff8e9a37684ca5",
+    "tracks/5-players/fable-corrections-nov18/probe.py": "f7fc35ef81db3751be14ccf4641003bd2f4693a7575c5dd9f6184cd65004d63b",
+    "tracks/5-players/fable-corrections-nov18/support-results.json": "9ac8977b31023a181deb97f82854f4c9d3c324cd8c2af4bb69781bacfda22b71",
+    "tracks/5-players/fable-corrections-nov18/pending-by-award-edition.csv": "f3ea25ef669dcab2b1f4643c601db646d444e9f4c06f36e3c1869ea2ece56847",
+    "tracks/5-players/fable-corrections-nov18/support-by-partition-award-role.csv": "17aa0825c0a933b3ed3f0c9a7a7be8c8006b26adcf85184b7d0757e1de0064e4",
+    "tracks/5-players/fable-corrections-nov18/first-award/run.py": "58e810948c4000507001399a4c8b9096ae6f1b77e1d4fa481aa1e5cb477ffce2",
+    "tracks/5-players/fable-corrections-nov18/first-award/result.json": "2b7c149ec4ea38d52832989de0e8b5ccef7307b0fef8e8ff6a8f2c45b6d00e6c",
+    "tracks/5-players/fable-corrections-nov18/support-editions/summary.json": "dedf9388a27f24e11c3f1fcc1826e9f9f61008af8bef09406363deb7b5d70c8d",
+    "tracks/5-players/fable-corrections-nov18/support-editions/probe.py": "57b9cfd138f36cd37a9ff16f5f52a03aaa684636b994e8252c03ea3e36e0d2eb",
+    "tracks/5-players/fable-corrections-nov18/psl-lineage/README.md": "670b9b22c6992f414c2d51df598a596382d448d788a926a4d55ae065207bd408",
+    "tracks/5-players/fable-corrections-nov18/psl-lineage/findings.json": "f9ecf7a584278a7a498d17025d39d700df31c9d5cea26b9779ffd1ddc3b1236a",
+    "tracks/5-players/fable-corrections-nov18/psl-lineage/pending-current-14.csv": "79e41399a456f7a72d262eefe917de0a6698ec3cd1013e21b355eb225a863ac6",
+    "tracks/5-players/fable-corrections-nov18/psl-lineage/double-side-final/result.json": "f12aba52e3b8b5b63aac774a93777d999638dfada8bfd41b406bf1edefa4384c",
+    "tracks/5-players/fable-corrections-nov18/rds/receipt.json": "f9545c323c303b53335da5035a068d49daaabaed501e15aec17859e30d9d4a6f",
+    "tracks/5-players/fable-corrections-nov18/support-editions/rds/receipt.json": "c1da2faeb06006828e5f3218dc896df57a9ec03331a09335f7dd9255f201e418",
+    "tracks/5-players/reference-vintages/releve-apres-cycle/comparison.json": "0f1df9a9f115c8619f54e4df62ff92f14c3a4ae7456cfd305d54b66be5f3a838",
+    "tracks/5-players/reference-replay/by-award.csv": "83dde25d52961d769c0d6b1795529a9a31a30ab96fa93117a80fa16da2b5edd1",
+    "tracks/5-players/reference-replay/README.md": "e3f47cb92a4c57a6f9f98df62b100f029a963073ab1c6e7409ba57a12e387757"
+  },
+  "frozen_files": {
+    "brief.md": "1cd2c43b865aa94931792a2671ec9f2a37d4b6709030a50ccbfbde9c0001d68f",
+    "review-evidence.md": "0dea7a17a390ba10cfff8f11de56b5ce98cb60124fac77bdd355c86932db3627",
+    "original-plan.md": "b41fe5ed91699cc8850b8afa410f316f13b3bba86c0b2d2d06fb981eabac5cab"
+  }
+}

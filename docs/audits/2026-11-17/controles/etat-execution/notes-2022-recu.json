@@ -1,0 +1,14 @@
+{
+  "worker_definition": "arn:aws:ecs:us-east-2:361769570630:task-definition/vega-v2-worker:142",
+  "definition": "arn:aws:ecs:us-east-2:361769570630:task-definition/vega-audit-readonly-vi27:152",
+  "image": "361769570630.dkr.ecr.us-east-2.amazonaws.com/vega-v2-worker:8018e0836ca0f32e8b2eb51fc2847154abff7f13",
+  "probe_sha256": "dad54b56454c6a35be2597a9a21c9fd374fee9c83b026088155ea3b7b9585841",
+  "task": "arn:aws:ecs:us-east-2:361769570630:task/vega-v2/e19ace8ff57949d99afd426613deb1b6",
+  "exit_code": 0,
+  "actual_image_digest": "sha256:8184f72a335b9b4c126e77ead0e71771b6a4a146ee1b7a026ed2c2c1a6aba352",
+  "finished": "2026-11-18T09:35:18.636000+01:00",
+  "bytes": 5411,
+  "sha256": "36c8a4bd4a13167b29bfb1ab68b43439bab5bf95154e84a5ae08328823210a03",
+  "chunk_count": 1,
+  "definition_end_state": "INACTIVE"
+}

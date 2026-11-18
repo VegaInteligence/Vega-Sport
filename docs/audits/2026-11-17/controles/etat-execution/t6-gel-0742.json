@@ -1,0 +1,42 @@
+{
+  "track": "6-teams",
+  "worktree": "/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-tracks-20261117/6-teams",
+  "base": "1b28961a88e968d5602f9fb278fc3c471ebb7467",
+  "head": "1b28961a88e968d5602f9fb278fc3c471ebb7467",
+  "source_snapshot_sha256": "3559d31c53c1528f9aa7bbb60ae834bb95254d07d303c78833ed6a2c7b31f37e",
+  "file_count": 1113,
+  "prior_review": "20261118T064100Z-review-e8639b82",
+  "original_frozen_inputs": "f4f18d1de1ec0f2b4d4d8c2963c4f1def9c2e01af065d4b38f449a1486a944b2",
+  "source_files": {
+    "tracks/6-teams/delegate/05721c1967121e76/runs/20261118T064100Z-review-e8639b82/result.md": "bdabe05dc13e6f845d7ad25d77852e6006e0512eed928a0dc7b6d1533e096d01",
+    "tracks/6-teams/track-results.md": "b03d0eda8799572dfe53de5407030d5ab8e87dcb7379a89b9a3432ecca5eafbf",
+    "tracks/6-teams/requirements.md": "7fb918ecbedbb3add8fdb517d2b6d6ee2ddd725e27cb38b41f7df26de3bfdd55",
+    "WORKTREE/WORKLOG.md": "d0b3e43b2d74bcdfa3722106862a976a7f71a3d3bbb881b49c94e20a065c2b86",
+    "tracks/6-teams/awarded-belgium/independent-review-evidence.md": "21287f7ad40a62db482a0efac7de42fd0c7219065a6b2b881a14e4ddeb241d98",
+    "tracks/6-teams/team-score-contract.md": "17c25315cea67c8474d9d92bb124459cfcd621eed64f7127803535a18a0ea190",
+    "tracks/6-teams/fable-corrections-nov18/evidence-pour-revue.md": "7d61769e7aa675795ca5bac72e8f2ab846209f8bf3dd4654008ad1876948e0f6",
+    "tracks/6-teams/fable-corrections-nov18/registre-t6.csv": "7ea2fe8e941c9e8b5aca2cc365166095e8c81e2245e59ba17747d895157cdadc",
+    "tracks/6-teams/fable-corrections-nov18/verification-editoriale.json": "6cb1c6ad26518167f4a688de9ff62c39afba1e8be4b76fce18fabdef7a014146",
+    "tracks/6-teams/fable-corrections-nov18/scope-check/receipt.json": "80bf2d30bf8fb5efc99a8d409625974f2e9e06614ff3ff0cae03db7f22e25720",
+    "tracks/6-teams/fable-corrections-nov18/scope-check/archive-summary.json": "b97f2779d7710e85fb230688382304df3fc7736db7872513888c484155dbab6f",
+    "tracks/6-teams/fable-corrections-nov18/scope-check/worldcup-summary.json": "b6464eb9e258205c1e6537b0df75826ead3f433129a005c67c4dc52a56cf3779",
+    "tracks/6-teams/fable-corrections-nov18/scope-check/score-witness.json": "1f845b1f7870e3e7c31460e0af984b3d59bc072a6ecb362787731c033a221257",
+    "tracks/6-teams/fable-corrections-nov18/scope-check/duplicate-candidates.json": "52c45591f69d9f08cda24fe3c671ee7a02b750ce85587a586e17dc7a27e73264",
+    "tracks/6-teams/fable-corrections-nov18/scope-check/spanish-outside-id-census.json": "a1a69ba4fa2125f88020af41aff9861873378622b3be53bc9f8d259256cf8785",
+    "tracks/6-teams/fable-corrections-nov18/scope-check/afcon-final.json": "eb35305d273a5c01f6c6c554d5819123513f04051c0ca6a79d632aab4252f22d",
+    "tracks/6-teams/fable-corrections-nov18/scope-check/counter-116.json": "ba36efbc4d077a69465f8b46f4f7ab3d810eb07d5a2c76c6bda138be657f2683",
+    "tracks/6-teams/fable-corrections-nov18/source-facts/replacement.fr.md": "618411346ad4e344d16ee9d47723f8e55df1ae8f09e2ae835bf8c52e676546ac",
+    "tracks/6-teams/fable-corrections-nov18/source-facts/README.md": "133c937147468f0d4fa044652d78e5b8f1fc6aa9f004d8d22cfe301480ffddc0",
+    "tracks/6-teams/fable-corrections-nov18/source-facts/probe.py": "07dbe3ef9e40f5bca8d630b828326dd874a4cb3c5bb5d1483ba99d09b58e4d44",
+    "tracks/6-teams/fable-corrections-nov18/source-facts/neutral-by-source.csv": "0696b2e8b8d581c73efe0b7a7a32df32a6802ab7076a217ce8e78b73c049cb84",
+    "tracks/6-teams/fable-corrections-nov18/source-facts/stakes-by-edition-round.csv": "ef79402b96832dd64e4489da27d48d5f9938eea57918068763624f56e6eec1b1",
+    "tracks/6-teams/fable-corrections-nov18/source-facts/venues-by-edition.csv": "a22de765aa8641d78e58a4bfdae5c2121fc2910f66dfffcf554584beac42637d",
+    "tracks/6-teams/fable-corrections-nov18/source-facts/copa-final.json": "28ad4ad6236570a03f7a89627fb1ff7d55bd147654b38579439bee701d489b10",
+    "tracks/6-teams/fable-corrections-nov18/source-facts/db/receipt.json": "e6fbebcb83c9057bda0aa9fac0902e55ca17f7c91300092cdb84fc78fef544b7"
+  },
+  "frozen_files": {
+    "brief.md": "1cd2c43b865aa94931792a2671ec9f2a37d4b6709030a50ccbfbde9c0001d68f",
+    "review-evidence.md": "c3c08cd1723b32caee337df8a19d9c25c5ddd0245271ed941dd7a1bbba51875d",
+    "original-plan.md": "18c520157ca90ca3655eec157527b5fbbc0627f93255018de3904d5208824ed8"
+  }
+}

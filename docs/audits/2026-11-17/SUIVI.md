@@ -1,5 +1,7 @@
 # Publication et suivis
 
+[État des décisions et des validations](ETAT.md)
+
 Le 18 novembre, le code AWS est `8018e0836c` et l’alias Vercel est sur `17ca0f7617`. Seul le journal de travail diffère. [Vérification ECS et Lambda](controles/production-aws-0317.json) · [Alias Vercel](controles/production-vercel-0318.json) Les mesures du 17 novembre ont été faites sur RDS dans des transactions en lecture seule. Le travail de correction se déroule sur `codex/production-architecture-audit`. Le projet demande que les décisions de changement des modèles et de réparation de la base partagée restent coordonnées dans les tickets actifs.
 
 | Responsable | Écart établi | Condition de clôture |
@@ -9,18 +11,25 @@ Le 18 novembre, le code AWS est `8018e0836c` et l’alias Vercel est sur `17ca0f
 | VI-21 | 189 résultats officiels absents au Kazakhstan et en Pologne, 24 au pays de Galles, et Bochum–Hertha absent. Une rencontre ukrainienne interrompue affecte les forces des deux clubs. | Réconcilier les calendriers et décisions officielles au niveau de chaque rencontre, rattacher le fournisseur à l’identifiant canonique, puis rejouer toute la chaîne Elo concernée. |
 | VI-21 | Les entrées positives sans résultat intermédiaire, les participants connus sans données suffisantes et les archives exclues de la politique ont des causes différentes. | Ventiler les raisons par édition et rôle, démontrer le rattrapage des entrées éligibles, conserver les cas insuffisants explicitement indisponibles. |
 | VI-21 | La dernière mise à jour d’un vieux match peut tomber entre la lecture des statistiques joueurs et le début du calcul des niveaux servant de marqueur. | Lier le réveil au dernier état des entrées effectivement publié pour chaque millésime joueur. Rejouer une correction reçue exactement entre les deux lectures. |
-| VI-21 | Les seuls indices synthétiques d’équipe recalculés pour chaque match sont les Elo avant et après. L’indice club 0–100 est calculé par cohorte. | Si le besoin porte sur une note de prestation propre au seul match, définir la méthode, les entrées requises et les exclusions, puis vérifier la persistance pour les clubs et sélections. |
+| VI-19 / VI-21 | Le contrat conserve un Elo commun équipe × match ; le score club-saison sur 100 est une transformation distincte, les sélections exposent l’Elo. | Valider les entrées, la convergence et les exclusions du contrat existant. Aucune nouvelle note de prestation ponctuelle sur 100 n’est imposée par cet audit. [Contrat](controles/contrat-score-equipe.md) |
 | VI-21 | Huit projections du même CSV étaient dues simultanément en rejeu. Le pont Node a transféré 30 114 776 octets décompressés, y compris lors du passage identique à zéro modification sportive. | Partager un même téléchargement lorsque plusieurs périmètres arrivent à échéance, préserver la validation par édition et vérifier le nombre réel de requêtes par passage. |
 | VI-27 | Les sources et les corrections de cette branche doivent être publiées et rejouées de manière vérifiable. | Refaire les vérifications du rapport sur le commit déployé, comparer les requêtes de couverture et confirmer les écritures, images servies, identifiants et anomalies retenues. |
 | VI-21 / VI-27 | Des visuels authentiques ne se rattachent pas encore à un seul club. Certains homonymes et des éditions historiques n’ont pas d’emblème vérifiable. | Résoudre les identités avec preuves multiples, conserver les marques d’époque à leur édition, puis relancer l’import vérifié uniquement sur les associations établies. |
 
 ### Chantiers de code indépendants
 
-- [VI-28](https://linear.app/vegainteligence/issue/VI-28) conserve les mesures de mi-temps et leurs supports dans le lecteur joueur.
-- [VI-29](https://linear.app/vegainteligence/issue/VI-29) protège la dernière publication des classements officiels SportScore.
-- [VI-30](https://linear.app/vegainteligence/issue/VI-30) relie les vrais visuels déjà présents aux fiches et aux compositions des rencontres de coupe.
-- [VI-31](https://linear.app/vegainteligence/issue/VI-31) protège les transferts et les anciens contrats pendant les relectures du fournisseur. Le rapprochement global des personnes, clubs et compétitions garde son propriétaire initial.
+Les propriétaires et sessions sont conservés ; les tickets restent actifs au dernier relevé. Les résultats suivants portent sur des périmètres datés, pas sur une validation intégrée.
 
+| Propriétaire | État et condition restante |
+| --- | --- |
+| VI-28 / VI-32 — T1 | API des mi-temps vérifiée ; les mesures partielles sont dans `coverage`, pas automatiquement dans les champs hérités du client. Terminer précision xG et `gradeExact`, puis vérifier les consommateurs et la direction de maquette déjà soumise. |
+| VI-29 — T2 | 35 scénarios / 69 étapes réussis ; trois nouveaux critères Mondial/multi-source restent rouges. Qualifier une autorité unique et conserver le tableau transversal. La classification des tours reste à VI-21. |
+| VI-31 — T3 | 32 tests : 8 échecs + 14 erreurs bruts, 5 + 14 avec horloge DB. Deux tests API passent. Terminer le writer conservateur, le 404, les statuts HTTP et la concurrence ; préserver les gardes SQL et le rollback sûr. |
+| VI-27 — T4 | Reprises d’archives et import locaux seulement ; six échecs Python et un frontend à la dernière CI complète. Garder séparés résultats FIFA réparés, copie sportive réelle et politiques d’admission aux notes. |
+| VI-30 — T7, T4 pour le stockage | Parcours historiques validés ; recherche générale encore 14/16. Le complément d’édition attend writer/stockage puis projection/consommation, revue fraîche et navigateur. Garder les 45 historiques et deux natifs distincts ; exclure affiches, organisateur U21 et identités tenues en réserve. |
+| VI-19 / VI-21 — T5/T6 | Rapports corrigés au gel 07 h 42 approuvés par Astra ; nouvelle décision Fable non acquise. Les défauts de modèle, d’identité, de support statistique, de convergence et les décisions d’archives restent ouverts. |
+
+Les interruptions Opus de quota sont documentées ; les préparations de reprise ne sont ni des nouveaux succès ni une clôture. [État court](ETAT.md) · [Checkpoint des sessions](controles/etat-execution/checkpoint-0713.txt) · [Propriétaires et reçus](controles/etat-execution/faits.json)
 
 ### Versions de repli du worker
 

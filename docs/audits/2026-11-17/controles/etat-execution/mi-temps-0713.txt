@@ -1,0 +1,21 @@
+T1 — mi-temps et précision des notes
+
+Worktree : `/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-tracks-20261117/1-linear`. HEAD `590b65390da1d8c75922d27149fa75513a202322`, propre. Reprise `20261118T071246Z-code-0d0f5188`, 07:12:46–07:12:49 UTC : aucun appel outil, aucun changement. Le contenu actuel est le lot antérieur, dont le commit de mi-temps `c3c8232747` et son checkpoint documentaire.
+
+L’API expose déjà la couverture par métrique via `backend/sql/137_half_metric_coverage.sql` et la route des profils. Cette API conserve les champs historiques `first`/`second` ; elle ne prouve pas que toutes les interfaces consomment les couvertures partielles. La répétition antérieure de 32 lignes réelles (11 pour `p_1FntG3`, 21 pour `p_2WXYqD`) compare quatre périodes par métrique, obtient deux HTTP 200 et un inconnu 404. Les `halfRows` du premier joueur restent nuls lorsque seules des métriques partielles sont disponibles : c’est une limite de visibilité distincte de l’exactitude du nouveau payload.
+
+Défaut restant confirmé avant la reprise : ligne 24 de la migration 137, `h.xg::numeric` réduit la représentation du `real` à environ six chiffres significatifs. Le reçu `E/tracks/1-linear/reviews/astra62-final-current/precision.json` donne `real::text = 0.12345679`, conversion double `0.12345679104328156`, mais `real::numeric = 0.123457` et `coverage.xg.sum = 0.123457`, count 1, minutes 45 ; le champ historique est 0.12. Ne pas prétendre que les tests actuels garantissent la précision transportée. Définir la conversion conforme au contrat, conserver les anciens champs et exécuter le probe de précision en RED puis GREEN. Toute modification d’une migration déjà appliquée doit suivre l’état réel du journal et une migration additive si nécessaire ; ne pas éditer silencieusement 137 déployée.
+
+Le complément `gradeExact` n’existe pas encore. `backend/api/src/routes/rankings.mjs:668` arrondit toujours `grade` à une décimale ; les autres producteurs à 809/811 arrondissent également. Aucun `gradeExact` n’a été trouvé dans les sources API/frontend inspectées. Le brief arbitré `E/reviews/pinned-astra-planning-nov18/late/grade-reconciliation.md` reste applicable : champ précis additif, ancien `grade` conservé, même politique de masquage, sélecteur unique partagé, nombre fini entre 0 et 100 et cohérence avec la décimale historique. Ne pas accepter 48.55 comme précision compatible de 48.5 par simple tolérance absolue de 0.05. Ne pas fusionner des producteurs ou leurs règles de visibilité sans vérifier leur contrat.
+
+Preuves antérieures : `E/tracks/1-linear/ci-frozen-590b65/source-and-results.json`, 02:38–02:44 UTC, 448 Python, 193 API, 701 site et build passent, source inchangée. Elles précèdent cette reprise vide et ne couvrent pas le nouveau complément. Un ancien `implementation-results.md` parlant de travail non committé ne décrit plus le HEAD actuel.
+
+Contrôles exécutés ici : `t1/grade-baseline/` — 16 tests existants passent, zéro skip. `reruns/t1-existing-api/t1/half-api/` — 14 tests API `player-halves.test.mjs` et `player-halves-real.test.mjs` passent, zéro skip, vrai PostgreSQL 18 jetable. L’oracle de précision connu reste à corriger ; aucun test `gradeExact` n’a été ajouté durant cette interruption.
+
+Prochaine commande existante, après modification autorisée, depuis n’importe quel répertoire et avec les variables E/P du README :
+
+```sh
+"$E/ci-clean/bin/python" -B "$P/rerun.py" --track 1 --label t1-after-resume
+```
+
+Elle rejoue les 16 contrôles de compatibilité et les 14 tests API. Avant le code du complément, Opus doit ajouter le parcours RED absent : base contenant une note précise → vrai JSON HTTP → consommation initiale et rechargée du classement/rapport → rendu desktop/mobile, incluant note masquée, valeur absente/non finie/hors plage, payload ancien et incohérence avec `grade`. L’exécution de cette nouvelle couverture doit avoir son propre reçu et ne peut être remplacée par les 30 tests existants. La maquette retenue et les règles de présentation restent celles de l’arbitrage ; ce checkpoint n’invente aucune validation visuelle supplémentaire.

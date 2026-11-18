@@ -1,0 +1,29 @@
+T2 — qualification et fraîcheur SportScore
+
+Worktree : `/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-tracks-20261117/2-ingestion`. HEAD `1b28961a88e968d5602f9fb278fc3c471ebb7467`, modifications non committées. Reprise `20261118T064100Z-code-14bf972e`, 06:41:00–07:11:56 UTC, 63 appels outil. Le rapport de quota terminal ne signifie pas absence de travail : sept fichiers ont changé, exactement listés dans `resumption-ledger.json`.
+
+Les changements de cette reprise concernent `backend/vega/sources/sportscore.py`, migration 138, cas et harness SportScore, les fixtures existantes de `test_sources.py` et `test_calculator.py`, et le registre de modes d’échec. Le fichier non suivi `test_sportscore_standings.py` existait déjà ; il n’est pas une nouveauté de cette fenêtre.
+
+Le candidat actuel valide la réponse complète avant remplacement : types numériques, champs obligatoires, doublons, clubs absents et champs antérieurement connus devenus manquants. Il ne rattache plus automatiquement le dernier nom non reconnu au dernier club restant. Le rattachement est contraint à l’édition, avec refus des clubs propres à une édition voisine. Un rang partagé reste recevable pour des points égaux même si la différence de buts diffère ; le code ne prétend pas connaître une règle universelle de départage.
+
+La nouveauté principale est la base de comparaison `basis`, six nombres `{played,won,drawn,lost,gf,ga}` observés au moment d’accepter la ligne. `core.table_results(edition)` reprend les matchs terminés avec deux scores, rounds regular/group ou sans round, du calculateur. La fonction possède un `search_path` fixe et les vues conservent leurs colonnes publiques. L’API peut revenir au classement calculé quand les résultats propres ont changé, tout en conservant la dernière table officielle et sa date en stockage.
+
+`qualify`, lignes 337–355 du lecteur, refuse une première table qui omet un club possédant des résultats comptés. Le contrôle d’édition sans clubs distinctifs reste **une heuristique documentée**, pas une preuve de saison : refus lorsque chaque club a plus de `kicked_off + 4` matchs joués. `KICKED_OFF` compte les coups d’envoi passés des rounds regular/group. Des calendriers incomplets restent donc une limite explicite. Une correction de résultat ou une annulation n’est pas assimilée à une table fraîche par simple HTTP 200.
+
+L’invariant examiné est le suivant : une réponse identique peut actualiser l’observation lorsqu’elle correspond toujours à la base connue ; lorsque Vega vient de compter/modifier un résultat non encore reflété, la répétition ne rafraîchit pas artificiellement la donnée officielle servie. Les anciennes lignes sans `basis` suivent le garde-fou `first_finished_at > as_of`. Les scénarios S29/S30/S31/S32/S35 exercent ces transitions, leur date et la projection HTTP.
+
+Preuves produites pendant la reprise : `E/tracks/2-ingestion/sportscore-authority/e2e/runs/20261118070501861769-green-candidate/`, 35 cas et 69 étapes GREEN. S27–S35 sont les neuf ajouts de la reprise : premier tableau incomplet, groupe entier absent, match en cours qui se termine, score corrigé, résultat annulé, nouvelle phase, mauvaise saison avec mêmes clubs, rang égal/différence de buts différente, données héritées sans base. Le harness original de quatre cas a aussi été rejoué dans `sportscore-authority/replay-original/runs/20261118070531626421/` : quatre GREEN, contre trois RED et un GREEN dans le contrôle initial.
+
+Les reçus `E/tracks/2-ingestion/green-ci/` attestent 449 Python, 182 API, 701 site, zéro skip, et build, tous avec code 0 entre 07:06 et 07:11 UTC. Ces reçus sont ceux de la reprise, distincts de mon contrôle. Le dernier regroupement de constantes a été contrôlé par la répétition indépendante sur le snapshot courant.
+
+Mon E2E indépendant : `t2/authority/e2e/runs/20261118072242016066-astra-interruption/`. Copie byte-identique du harness existant, base PostgreSQL 18 dédiée, HTTPS local contrôlé, vrai getter/reader, file de travail, writer, migrations et route HTTP en rôle lecture. **35 cas, 69 étapes GREEN, code 0**. Commande, horaires et environnement : `t2/e2e-independent/receipt.json`; entrées/attendus/états/HTTP dans le sous-répertoire de run. Ce résultat ne prouve pas que le fournisseur live ne changera pas de schéma ou que toute table mondiale est qualifiable.
+
+Point à porter à la revue fraîche, sans le présenter comme défaut reproduit : le CTE `unqualified` de 138 examine toutes les sources présentes dans `core.standings_official`, alors que le présent writer est SportScore. Seul ce writer a été trouvé dans les sources inspectées. Pour une table multi-source ou multi-phase, une ligne ancienne peut rendre toute l’édition non qualifiée ; vérifier l’invariant voulu et un cas négatif avant d’affirmer la préservation de tous les fournisseurs possibles. Ne pas élargir automatiquement le correctif sans source et test.
+
+Prochaine commande E2E existante, lorsque le code change ou pendant la revue fraîche :
+
+```sh
+"$E/ci-clean/bin/python" -B "$P/rerun.py" --track 2 --label t2-after-resume
+```
+
+Elle crée son environnement jetable et conserve une nouvelle preuve. Aucun besoin de réécrire les 35 cas ni de répéter toute la CI tant qu’aucun nouveau changement ou risque ne l’exige. Il reste à finaliser le compte rendu applicatif, la revue fraîche prévue, l’intégration et la vérification du candidat effectivement retenu. Aucun verdict final n’est donné ici.

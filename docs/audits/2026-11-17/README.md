@@ -1,5 +1,7 @@
 # Vega-Sport — intégrité, calculs et couverture en production
 
+[État des exigences, corrections sur branche et validations encore ouvertes](ETAT.md)
+
 La contre-lecture distingue la couverture technique et sportive des notes de joueurs, le score club-saison sur 100 et les terrains et tours réellement fournis au calcul Elo. [Contre-lecture du 18 novembre](CONTRE-LECTURE.md)
 
 **État observé les 17 et 18 novembre 2026. La couverture historique demandée est incomplète.** Les lectures ont porté sur la base active `vega_v2` et sur l’application publique. La comparaison externe met en évidence des matchs absents, mal classés et dupliqués. Une note Vega calculée avec les données disponibles et une participation dont on ignore encore les entrées restent deux situations distinctes.

@@ -1,0 +1,94 @@
+VERDICT: CHANGES_REQUESTED
+
+Scope: track 6 is report-only and the application diff is clean, as expected. The changes I'm asking for are to the report and the owner hand-offs, not to product code. The replay figures are consistent with the code and with each other, but two stored-value defects are missing or under-scoped, and the inventory of team outputs is incomplete. I could not run anything (read-only), so every reproduction claim is checked by reading code and recomputing from the supplied numbers.
+
+## Findings
+
+**1. Major — the neutral-ground defect is structural, but the report scopes it to 61 Qatar matches.**
+- `backend/vega/power.py:287` reads `coalesce(m.is_neutral, false)`, so an unknown venue gets the 60-point home term.
+- No reader writes the flag for native rows: `backend/vega/normalize.py` has zero occurrences of "neutral", and the column arrived with the archives (`backend/sql/015a_archive_facts.sql:25`).
+- OpenFootball rows hard-code `None` (`backend/vega/sources/cups.py:129`); `backend/tests/test_sources.py:632` pins `None` for Euro 2024.
+- Only International Results tournament rows carry a real flag (`cups.py:146`).
+- By code, the affected set therefore includes all 168 native World Cup matches (2022 and 2026), both Euros, every admitted OpenFootball World Cup match, the Club World Cups and neutral club finals.
+- The same coalesce feeds `forecast.py:957,976`, `lineup.py:166,255`, `inplay.py:214` and `backend/sql/086_inplay.sql:36`.
+- Fix: state the root cause (no writer), keep 61 as the verified witness, add a read-only count of Elo-admitted matches with a NULL flag by source and competition, and hand the root cause to VI-19/21.
+
+**2. Major — round coefficients never reach the International Results tournaments; "stakes exact" proves only reproduction.**
+- `dashboard/frontend/src/services/nations-results.js:79-80` emits no round, so `cups.py:237` stores a NULL `round_id` and `power.py:212-217` returns the prestige alone.
+- Witness from the packet: the Copa América 2024 final (match 739114) moved Argentina 1605.5748 to 1615.7904 (+10.2156).
+- The neutral expectation for that 52.05-point gap is 0.5744, and 10.2156 / 0.4256 = 24.0, which is K 20 × 1.20.
+- The documented final stake is 1.20 × 1.15 = 1.38 (`docs/calculs/08-notes-vega/01-formules-et-raisons.md:50-59`), which would have moved 11.75.
+- This affects the knockout rounds of AFCON 2021/2023/2025, Copa América 2024, Asian Cup 2023 and Gold Cup 2023/2025: about 81 matches by tournament format (my estimate, not measured in the database).
+- Fix: add it to the track 6 ledger with a measured count, and hand it to VI-19/21 as a defect or a documented limit.
+
+**3. Major — the list of derived team outputs omits the served 0–100 club score.**
+- `backend/api/src/routes/rankings.mjs:206,221,719` (`outOf100`), documented in §4.8 of the same doc (lines 241-260), serves a 0–100 score for clubs.
+- It is a read-time transform of season-end Elo against a moving reference, per club and season; line 260 says national teams get none.
+- The contract's "no additional scale for teams" is therefore too broad.
+- Fix: name this score in `team-score-contract.md` and `score-pipeline.md`, state that it is Elo-derived and not per match, and say plainly that national teams have Elo only.
+
+**4. Major — the archive exclusion is attributed to a decision narrower than the code.**
+- The recorded decision (WORKLOG, 17 Nov) is "no strength for the 7,520 clubs found only in the historic archives".
+- The code excludes every `archive_key` edition (`power.py:291`, comment at 281-282).
+- `score-and-icons.md` says the decision "excludes editions with `archive_key`", which over-reads it; the accepted plan (§5) asks to keep the distinction.
+- `requirements.md` was not in my packet, so I could not check the final wording.
+- Fix: label the 986,961 excluded club sides as an implementation choice, and put archive matches between two rated clubs to the user as an open question.
+
+**5. Minor — duplicate fixtures are witnessed, not counted.**
+- The packet shows five Spanish Cup pairs and five Argentine pairs ("examinées"); 40022/40023 are identical native rows.
+- `power.py:329-341` only dedupes complementary rows, on the ordered pair; it never compares native with native or a reversed orientation.
+- `backend/tests/test_power.py:224-265` pins only the positive cases.
+- Fix: run an offline census on the frozen inputs (same unordered pair, same day ±1), classify legs versus copies, and publish the count or say "unquantified".
+
+**6. Minor — administrative results enter the Elo as sporting results, and the ledger is incomplete.**
+- `open_matchday.py:138-147` and `cups.py:140` know only finished or not started.
+- The Belgian forfeit arithmetic checks out (expectation 0.6154 with the home term, ∓12.31).
+- Track 5's packet reports the AFCON 2025 final stored as an administrative 3–0 with all 312 sides rated; that match is not in the track 6 ledger.
+- SOURCE_AUDIT §5 covers awarded results for projections only, so no Elo policy is recorded.
+- Fix: add the match and put the policy question to the owner.
+
+**7. Minor — the review base carries an undeployed reader change.**
+- HEAD `1b28961a88` reads list-form scores (`cups.py:82-96`); the packet says the branch restores 665 World Cup results, and every figure describes image `8018e0836c`.
+- Each restored row will have a NULL neutral flag, and the ordered-pair dedupe is untested against reversed copies.
+- Fix: state that the national figures must be re-captured after that deploy. I agree with not publishing the "658 / +70 %" extrapolation.
+
+**8. Nit — housekeeping.**
+- `WORKLOG.md` has no entry for this track or VI-27.
+- The top table of `score-and-icons.md` still shows 116 missing club sides; later reads show none, so mark it superseded.
+- `verification.json` and the pinned-Astra links point at checkout `Vega-Sport-audit-20261117`; the module-hash assertion in `replay.py` mitigates this.
+
+## Answers to the brief
+
+- **Per-match 0–100 team grade:** not implemented. The only team-by-match store is `agg.team_elo` (`backend/sql/032_power_rankings.sql:39-50`, stakes added in `072_power_stakes.sql:4`): strength before and after, expectation, result. I found no table, route or frontend computation of a team match grade.
+- **E04h:** I agree with the reclassification; no decision supports a mandatory second scale.
+  - SOURCE_AUDIT.md never asks for one; it treats the Elo and the cohort club index as separate engines.
+  - The formulas doc names the Elo as the club's note (line 16) and quotes the user calling it « les scores des équipes » (line 37).
+  - "One club Elo, no separate cup Elo" shows a single Elo across competitions. It is not a rejection of a performance grade; only the user can settle that.
+  - The E04 labels are not in the repository, so I could not check their text.
+
+## Live gaps, separate from the verdict
+
+- **Absent fixtures:**
+  - 1,755 FIFA qualifiers (3,510 sides). The scope lists exclude qualifiers (`cups.py:27-48`), although the user's request names them.
+  - 2,489 UEFA club qualifiers (4,978 sides).
+  - 189 domestic results, 7 top-flight matches and 3 Partizan fixtures.
+- **League-level estimator:** the gradient uses constant sensitivities (`power.py:631-636`), unresolved per `TRACEABILITY.md:29`. Fitted levels are shifted after the fit while unfitted teams stay at 1,500 (`power.py:794-796` against 259-260).
+- **Stability:** 161,674 of 161,982 club values changed between runs 2088 and 2097 with identical match inputs. Each run deletes and rewrites the table (`power.py:950-956`), with no versioning.
+- **Scheduler:** the Elo reruns only when a native season is due (`worker.py:486-491`, gate at 137). `agg.team_elo.match_id` has no foreign key, so rows of deleted matches persist until the next run.
+- **Latent:** the covered-folder skip ignores the season (`power.py:326-327` against `open_matchday.py:272-281`).
+
+## Verified and not verified
+
+Verified by reading and recomputation:
+- Schema keys, the selection and archive gate, the scheduler gate, and the re-anchoring code.
+- 163,842 = 161,982 + 1,860, and 163,846 for run 2097.
+- 1,149,053 = 161,982 + 986,961 + 110, and 2,184 = 1,860 + 324.
+- The re-anchoring populations sum to 81,921 and 555.
+- The FIFA table totals.
+- The Elo arithmetic for the Belgian forfeit, Obolon and the Copa final.
+
+Not verified:
+- Any script run, SHA-256 or RDS read.
+- `requirements.md`, the edition grid, `astra-review.md` and the E04 registry (not in the packet).
+- Linear state.
+- The counts I estimate in findings 1 and 2.

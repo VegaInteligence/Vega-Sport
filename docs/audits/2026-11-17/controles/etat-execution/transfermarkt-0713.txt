@@ -1,0 +1,42 @@
+T3 — historique Transfermarkt interrompu au milieu du writer
+
+Worktree : `/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-tracks-20261117/3-identities`. HEAD `1b28961a88e968d5602f9fb278fc3c471ebb7467`, modifications non committées. Reprise `20261118T064100Z-code-d814dbcb`, 06:41:00–07:06:37 UTC, 50 appels outil, six fichiers changés : lecteur, migration 139, suite Python E2E, petit serveur de profil, test API de contrat et registre des modes d’échec. Le snapshot courant complet des fichiers non suivis est conservé ici.
+
+Le travail tests-first existe réellement. `E/tracks/3-identities/vi31/red/python-history.log` conclut à 32 tests, **121 failures** de sous-assertions et deux errors avant l’implémentation, pas 120. Le contrôle de perte original dans `vi31/replay/base-control/` est également conservé : neuf vérifications sur onze sont fausses. Aucun reçu GREEN complet du nouveau writer n’a été produit avant le quota.
+
+Ce qui est effectivement écrit :
+
+- `139_transfermarkt_history.sql` ajoute `absent_since` aux transferts, `superseded_on` aux contrats, refuse les doublons préexistants avant l’index unique `(player_id, source_key)` Transfermarkt, protège les DELETE d’historiques par trigger et masque les contrats superseded/quarantinés des projections publiques.
+- `transfer_history` valide l’enveloppe et les listes entièrement avant écriture, détecte les clés inutilisables ou contradictoires, préserve la notion de champs déclarés. Le parsing partiel de profil ne remplace pas les blocs absents par des faits connus.
+- Le chemin de profil/recherche partage `observe`; le contrat connu est conservé et la nouvelle période est écrite/supersédée en place. Un verrou transactionnel protège les contrats.
+- Le lecteur introduit une sentinelle `HTTP_404` et borne l’exposant de retry à 8 avant calcul de durée.
+
+**L’interruption laisse une incohérence fonctionnelle reproduite.** `backend/vega/transfermarkt.py:1099–1115` conserve l’ancien `write_transfers`; sa ligne 1106 supprime tous les transferts Transfermarkt du joueur, puis insère. Les nouveaux triggers de 139 refusent cette suppression. Une première histoire peut être créée, mais sa répétition ou correction déclenche `RestrictViolation`. Il ne faut surtout pas activer `vega.allow_history_delete` pour faire passer ce writer : cela annulerait le contrat de préservation et recréerait la perte initiale.
+
+Cas précis restant à terminer :
+
+| Déclencheur | Résultat actuel observé | Contrat attendu |
+| --- | --- | --- |
+| Deuxième lecture d’un historique accepté | DELETE bloqué, exception SQL | Merge/upsert dans la même transaction, identités des lignes stables, faits omis conservés, absence datée sans suppression. |
+| Premier HTTP 404 | `(status=None, code=SCHEMA_CHANGED, attempts=1)` ; `read_at=None`, puis erreur dans le test de délai | Réponse ordinaire 404, sans tentative d’échec ni fausse modification de schéma, délai prévu par le contrat. |
+| HTTP 404 après une histoire | Le refus n’atteint pas le comportement final attendu | Histoire gardée, 404/HISTORY_MISSING observable et retry ; le processus poursuit les autres unités. |
+| HTTP 200 sans enveloppe d’historique | HISTORY_MISSING mais statut HTTP perdu (`None`) | Refus atomique avec `last_http_status=200`, aucune donnée publiée ou effacée. |
+| Deux lecteurs concurrents d’une première histoire | `UniqueViolation` dans un thread ; la correction du deuxième n’est pas écrite | Sérialisation/merge transactionnel, une ligne par clé et faits du deuxième lecteur préservés. |
+
+La sentinelle ajoutée à la lecture vers la ligne 841 est encore transmise au parser comme un objet inconnu : sa branche doit être traitée dans le writer avant le parser, avec connaissance de l’historique déjà accepté. Les refus métier doivent préserver le statut HTTP d’origine. La règle d’absence des annonces, les corrections de champs, le passage pending→completed et les lignes d’autres sources ont déjà des cas RED : les compléter, ne pas les réécrire en diminuant l’oracle.
+
+Résultat indépendant **sans aucune adaptation** : `t3/python-history/` et `t3/history-report.json`, 32 tests, 8 failures et 14 errors, code 1 ; aucune indication de skip. Le rapport conserve requêtes/réponses, états DB, projection HTTP, attendus/réels, hashes du lecteur et de 139. Les deux tests API de contrat passent dans `t3/api-history/`. Ces deux succès prouvent une projection, pas l’intégrité du rafraîchissement.
+
+Trois des huit failures sont des problèmes de comparaison d’horloges dans le harness, pas des régressions métier démontrées. Les cas 20ad/20ae comparent un `next_due_at=now()` PostgreSQL à `datetime.now()` du Mac ; 20q vérifie une borne supérieure de sept jours de la même manière. `t3/clock-probe.json` mesure une avance du serveur de 23.95 à 24.92 ms même après le retour de la requête. Les trois échéances sont correctement situées dans le rapport ; le délai retry vaut bien sept jours côté DB.
+
+Pour isoler cela, une seconde exécution **explicitement diagnostique** remplace seulement la classe `datetime` du module de tests par une horloge lue avec `SELECT clock_timestamp()` ; production et assertions inchangées. Code inspectable `database_clock_suite.py`, reçu `reruns/t3-clock-control/`. Résultat : **32 tests, 5 failures et 14 errors** ; les trois assertions temporelles passent, les erreurs métier demeurent. Ne pas substituer ce résultat au reçu brut. Pour la reprise, comparer ces échéances à l’horloge DB dans le harness avant le correctif produit, sans changer le produit pour compenser une différence d’horloge du poste.
+
+Reprise minimale : garder migration et garde-fous, terminer `write_transfers` avec verrou/merge par clé et politique des champs déclarés, gérer le 404 selon historique antérieur, conserver les statuts HTTP, puis refaire le flux lecteur→DB→API, notamment la concurrence et la progression de la file. Vérifier que l’ancien binaire est bloqué sans perdre l’histoire ; une migration qui empêche sa destruction ne suffit pas à rendre un ancien worker opérationnel. Un rollback d’application doit conserver les protections et expliciter cette compatibilité.
+
+Commande E2E exacte, environnement jetable et nouveaux reçus :
+
+```sh
+"$E/ci-clean/bin/python" -B "$P/rerun.py" --track 3 --label t3-after-resume
+```
+
+Elle exécute la suite réelle non adaptée, puis la route API. Le diagnostic d’horloge peut être rejoué séparément avec un autre label et `--clock-control`. Les fonctions globales de rapprochement/attribution appartenant à VI19/VI21 restent hors prise de contrôle ; ce lot ne donne aucune autorisation de contourner une identité quarantinée. Le candidat actuel est un travail inachevé et ne doit pas être présenté comme prêt à intégrer/déployer.

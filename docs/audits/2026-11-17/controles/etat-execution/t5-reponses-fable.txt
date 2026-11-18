@@ -1,0 +1,15 @@
+# Réponse aux neuf demandes de la première revue
+
+| Demande | Correction et contrôle |
+| --- | --- |
+| 1. Année de notation sans réveil | 14 427 lignes dans l’année 2020 dont 14 418 avec poste et neuf sans poste. Après 2020, 606 sans poste et zéro avec poste parmi les lignes sans indice. La publication 1886 compte zéro joueur et match. Quatre tables vides sont relevées pour la partition ou l’année concernée. Le chemin PG18 quotidien laisse 50 des 100 témoins sans note. Le chemin d’une version obsolète les calcule puis étalonne sur ces 50 participations. |
+| 2. Support statistique | Le SQL RDS compte les neuf colonnes utilisées par rôle. 104 792 notes à support partiel, dont 104 716 gardiens sans le bloc des arrêts. Les 52 665 gardiens à un seul bloc sont tous notés sur la distribution. Aucun témoin sans ligne ou sans touches. Deuxième requête sur 301 éditions et comparaison des trois primitives. |
+| 3. Premier Soccer League | 1 110 sans poste le 17 à 22 h 07, 14 dès le 18 à 02 h 02 et toujours 14 à 07 h 12. Deux séries de 132 cibles et erreurs de parsing. Pas de préimage nominative de l’agrégat d’origine. Le déclencheur humain ou automatique et l’effet propre sur la référence de Daniels sont inconnus. |
+| 4. Dénominateur | La mesure de couverture publiée part désormais des 2 297 613 entrées admises pour parvenir à 2 282 580 notes. La concordance des indices disponibles et des notes est une mesure de persistance. |
+| 5. Référentiel | Le chemin journalier calcule N puis réécrit N−1 sous condition. Les runs 2095 et 2096 sont datés. Les cinq empreintes et les 37 témoins sont stables sur les contrôles de 02 h 59, 05 h 54 et 07 h 14. La convergence attend une nouvelle publication de 2026 à références inchangées. |
+| 6. Troisième équipe | Le chemin annuel déployé sur PG18 transforme une seule statistique d’une équipe tierce en deux côtés et échoue deux fois en 23505 au COPY. Les données de l’ancienne publication restent intactes, puis la correction de l’équipe permet une nouvelle publication. Aucun cas sur les 5 537 de la PSL. |
+| 7. Signal et participation réelle | Les documents de travail et le dictionnaire de la grille diffusée décrivent des clés joueur–match avec signaux. Le libellé `known_participations_minimum` subsiste uniquement dans les reçus historiques gelés et leur dictionnaire explicatif. Erreurs et absences interdisent une borne physique. |
+| 8. Journal | Le WORKLOG du checkout de piste précise le périmètre, VI-27, les propriétaires et le contrôle suivant. |
+| 9. Deux indices de Moutoussamy | L’ancien indice 0,35036 est daté. La performance à 02 h 00 donne 0,3523640633, la note de la famille match vaut 55,05361169 et la performance masque cette note. |
+
+Les neuf réponses décrivent la justesse ou les limites du rapport révisé. Les décisions et les changements de production restent attribués aux propriétaires. [Données, requêtes et reproduction](README.md) · [Traces PSL, transactions et conflit de troisième équipe](psl-lineage/README.md)
