@@ -20,8 +20,9 @@ export function loadPlayerTransfers(id, { signal } = {}) {
 }
 
 const time = (date) => Date.parse(`${date}T00:00:00Z`);
-const KINDS = { transfer: "Transfert", free: "Transfert libre", loan: "Prêt", loan_return: "Retour de prêt", estimate: "Estimation" };
-const NOTES = { free: "Libre", loan: "Prêt", loan_return: "Retour de prêt" };
+// A move inside a club is kept only as the promotion to its first team (career-moves.js).
+const KINDS = { transfer: "Transfert", free: "Transfert libre", loan: "Prêt", loan_return: "Retour de prêt", internal: "Équipe première", estimate: "Estimation" };
+const NOTES = { free: "Libre", loan: "Prêt", loan_return: "Retour de prêt", internal: "Équipe première" };
 const monthYear = new Intl.DateTimeFormat("fr-FR", { month: "short", year: "numeric", timeZone: "UTC" });
 
 /** The tip of an item: where he came from and went, the kind of move and its date, its fee. */
