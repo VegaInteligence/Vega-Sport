@@ -1,51 +1,39 @@
 // /api/players/{id}/halves: a player's season by half on complete halves only (calculation
-// audit of 16 Nov 2026, VI-23 B3). Written before the correction:
-// docs/calculs/09-audit-2026-11/FAILURE_MODES.md §4.
+// audit of 16 Nov 2026, VI-23 B3), and each metric's own coverage (audit 15c, 137). Written
+// before the corrections: docs/calculs/09-audit-2026-11/FAILURE_MODES.md §4 and §4.1.
 //
-// A half counts when its match is finished and the route's every statistic is known (xG: or
-// no shot). Rows written after the seed and before the tests (the next test file seeds again):
-// Moitiés Test (p_aaab30) in m1 (two complete halves, the second without a shot and so without
-// xG), m3 (a first half without tackles, a second whose shot has no xG), m5 (a first half
-// without touches, a complete second half of 40 minutes) and the canceled m_aaad01 (complete,
-// not a match of the season). Demi Inconnu (p_aaab31) has incomplete halves only.
+// A half is eligible when its match is finished and its minutes are positive; it is complete
+// when the route's every statistic is known (xG: or no shot). The rows (test/half-fixture.mjs)
+// are written after the seed and before the tests; the next test file seeds again.
 import { before, after, test } from "node:test";
 import assert from "node:assert/strict";
 import pg from "pg";
-import { get, skip } from "./context.mjs";
+import { createReader } from "../src/db.mjs";
+import { createHandler } from "../src/handler.mjs";
+import { context, get, skip } from "./context.mjs";
+import { writeHalves } from "./half-fixture.mjs";
 
-const COLUMNS = ["minutes_played", "goals", "total_shots", "xg", "accurate_passes", "touches", "duels_won", "recoveries", "touches_opp_box", "dribbles_succeeded", "tackles"];
-// (player, match, period, minutes, goals, shots, xg, passes, touches, duels won, recoveries, touches in the box, dribbles, tackles)
-const HALVES = [
-  [130, 1, "first_half", 45, 1, 2, 0.6, 10, 30, 2, 3, 4, 1, 1],
-  [130, 1, "second_half", 45, 0, 0, null, 12, 25, 1, 2, 0, 0, 2],
-  [130, 3, "first_half", 45, 0, 1, 0.1, 8, 20, 1, 1, 1, 0, null],
-  [130, 3, "second_half", 45, 1, 1, null, 9, 22, 2, 1, 2, 1, 0],
-  [130, 5, "first_half", 45, 0, 0, null, 5, null, 0, 1, 0, 0, 0],
-  [130, 5, "second_half", 40, 0, 1, 0.2, 7, 18, 0, 2, 1, 2, 1],
-  [130, 9301, "first_half", 45, 2, 3, 1.5, 10, 30, 3, 3, 5, 2, 2],
-  [131, 1, "first_half", 45, 0, 1, null, 4, 12, 0, 1, 0, 0, 1],
-  [131, 3, "second_half", 45, 0, 0, null, 6, 15, 1, null, 0, 0, 0],
-];
+// The route's metrics, in the order of the coverage rows below.
+const METRICS = ["goals", "shots", "xg", "touches_box", "dribbles", "passes", "touches", "duels_won", "tackles", "recoveries"];
+const NONE = [null, 0, 0];
+/** One half's coverage: its eligible halves, those left out of the totals, and [sum, count, minutes] per metric. */
+const covered = ([matches, minutes], [excludedMatches, excludedMinutes], values) => ({
+  matches, minutes, excluded: { matches: excludedMatches, minutes: excludedMinutes },
+  stats: Object.fromEntries(METRICS.map((key, i) => [key, { sum: values[i][0], count: values[i][1], minutes: values[i][2] }])),
+});
+const halves = async (key) => {
+  const { response, body } = await get(`/api/players/${key}/halves?season=2025/2026`);
+  assert.equal(response.status, 200, key);
+  return body.data;
+};
+const per90 = (stat) => (stat.minutes > 0 ? Math.round((900 * stat.sum) / stat.minutes) / 10 : null);
 
 let owner;
 before(async () => {
   if (skip) return;
   owner = new pg.Client({ connectionString: process.env.VEGA_V2_API_NODE_TEST_DSN });
   await owner.connect();
-  const x = (sql, values) => owner.query(sql, values);
-  await x(`INSERT INTO core.matches(id,competition_season_id,season_id,source,status,home_team_id,away_team_id,match_date,kickoff_at)
-           VALUES (9301,1,2025,'pitchapi','canceled',1,4,'2025-09-12','2025-09-12T19:00:00Z')`);
-  await x("INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id) VALUES ('match','pitchapi','m_aaad01',9301)");
-  for (const [id, key, name] of [[130, "p_aaab30", "Moitiés Test"], [131, "p_aaab31", "Demi Inconnu"]]) {
-    await x("INSERT INTO core.players(id,name) VALUES ($1,$2)", [id, name]);
-    await x("INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id) VALUES ('player','pitchapi',$1,$2)", [key, id]);
-  }
-  for (const [player, match, period, ...values] of HALVES)
-    await x(
-      `INSERT INTO core.player_match_half_stats(season_id,match_id,team_id,player_id,period,${COLUMNS.join(",")})
-       VALUES (2025,$1,1,$2,$3,${COLUMNS.map((_, i) => `$${i + 4}`).join(",")})`,
-      [match, player, period, ...values],
-    );
+  await writeHalves(owner);
 });
 after(() => owner?.end());
 
@@ -73,6 +61,175 @@ test("the view counts what it left out and keeps an unknown unknown", { skip }, 
   ]);
 });
 
-test("a player without a complete half has no season by half", { skip }, async () => {
-  assert.equal((await get("/api/players/p_aaab31/halves?season=2025/2026")).response.status, 404);
+test("each metric is summed on the halves that publish it, with their own minutes (FM-HC.1, FM-HC.4)", { skip }, async () => {
+  const data = await halves("p_aaab30");
+  // First half: m1, m3 and m5 (m_aaad01 canceled); m3 publishes no tackles, m5 no touches.
+  assert.deepEqual(data.coverage.first, covered([3, 135], [2, 90], [
+    [1, 3, 135], [3, 3, 135], [0.7, 3, 135], [5, 3, 135], [1, 3, 135], [23, 3, 135], [50, 2, 90], [3, 3, 135], [1, 2, 90], [5, 3, 135],
+  ]));
+  // Second half: m3's shot has no xG; m1's half without a shot is a zero xG.
+  assert.deepEqual(data.coverage.second, covered([3, 130], [1, 45], [
+    [1, 3, 130], [2, 3, 130], [0.2, 2, 85], [3, 3, 130], [3, 3, 130], [28, 3, 130], [65, 3, 130], [3, 3, 130], [3, 3, 130], [5, 3, 130],
+  ]));
+  // Rates on each metric's own minutes: 50 touches in 90 minutes is 50 per 90 (not 33.3 on 135),
+  // 23 passes in 135 minutes 15.3 per 90.
+  assert.deepEqual([per90(data.coverage.first.stats.touches), per90(data.coverage.first.stats.passes), per90(data.coverage.first.stats.tackles)], [50, 15.3, 1]);
+  // The totals keep their complete halves: what they left out is the coverage's exclusion.
+  for (const side of ["first", "second"]) {
+    assert.equal(data[side].matches, data.coverage[side].matches - data.coverage[side].excluded.matches);
+    assert.equal(data[side].minutes, data.coverage[side].minutes - data.coverage[side].excluded.minutes);
+  }
+});
+
+test("a player without a complete half has his observed statistics and no totals (FM-HC.2)", { skip }, async () => {
+  // Prior contract (VI-23 B3, 129): 404, the route publishing complete halves only. The audit's
+  // requirement (15c: coverage and observed minutes per metric) supersedes it for a player who
+  // played: what was observed is served, the totals stay null.
+  const data = await halves("p_aaab31");
+  assert.deepEqual([data.first, data.second], [null, null]);
+  // First half: a shot without xG, so the xG alone is unmeasured.
+  assert.deepEqual(data.coverage.first, covered([1, 45], [1, 45], [
+    [0, 1, 45], [1, 1, 45], NONE, [0, 1, 45], [0, 1, 45], [4, 1, 45], [12, 1, 45], [0, 1, 45], [1, 1, 45], [1, 1, 45],
+  ]));
+  // Second half: no shot (xG 0), recoveries unpublished.
+  assert.deepEqual(data.coverage.second, covered([1, 45], [1, 45], [
+    [0, 1, 45], [0, 1, 45], [0, 1, 45], [0, 1, 45], [0, 1, 45], [6, 1, 45], [15, 1, 45], [1, 1, 45], [0, 1, 45], NONE,
+  ]));
+});
+
+test("a published metric is served alone, the unpublished ones stay unknown (FM-HC.1, FM-HC.3)", { skip }, async () => {
+  const data = await halves("p_aaab32");
+  assert.deepEqual([data.first, data.second], [null, null]);
+  // Its only played half: 14 passes in 45 minutes, nothing else published (no shot count: no xG).
+  assert.deepEqual(data.coverage.first, covered([1, 45], [1, 45], [NONE, NONE, NONE, NONE, NONE, [14, 1, 45], NONE, NONE, NONE, NONE]));
+  // Its second halves have 0 and unknown minutes: not played.
+  assert.equal(data.coverage.second, null);
+});
+
+test("an xG is known when finite, or blank on a half without a shot (FM-HC.5)", { skip }, async () => {
+  const data = await halves("p_aaab33");
+  // First half: NaN without a shot, +∞ and −∞ with shots: three unknown xG, never 0 or NaN.
+  assert.equal(data.first, null);
+  assert.deepEqual(data.coverage.first, covered([3, 135], [3, 135], [
+    [1, 3, 135], [3, 3, 135], NONE, [3, 3, 135], [1, 3, 135], [18, 3, 135], [33, 3, 135], [2, 3, 135], [1, 3, 135], [4, 3, 135],
+  ]));
+  // Second half: m3's shots are unknown, so its blank xG is unknown too; m1 is complete.
+  assert.deepEqual(data.second, {
+    matches: 1, minutes: 45, goals: 0, shots: 1, xg: 0.4, touches_box: 1, dribbles: 0, passes: 8, touches: 13, duels_won: 1, tackles: 0, recoveries: 1,
+  });
+  assert.deepEqual(data.coverage.second, covered([2, 90], [1, 45], [
+    [0, 2, 90], [1, 1, 45], [0.4, 1, 45], [1, 2, 90], [1, 2, 90], [17, 2, 90], [27, 2, 90], [1, 2, 90], [1, 2, 90], [3, 2, 90],
+  ]));
+});
+
+test("a measured zero is a zero, an unmeasured half is unknown (FM-HC.3)", { skip }, async () => {
+  const zero = await halves("p_aaab36");
+  assert.deepEqual(zero.first, {
+    matches: 1, minutes: 45, goals: 0, shots: 0, xg: 0, touches_box: 0, dribbles: 0, passes: 0, touches: 0, duels_won: 0, tackles: 0, recoveries: 0,
+  });
+  assert.deepEqual(zero.coverage, { first: covered([1, 45], [0, 0], METRICS.map(() => [0, 1, 45])), second: null });
+  // Played halves with no statistic: served as played, every metric unknown.
+  const blank = await halves("p_aaab34");
+  assert.deepEqual([blank.first, blank.second], [null, null]);
+  assert.deepEqual(blank.coverage, {
+    first: covered([1, 45], [1, 45], METRICS.map(() => NONE)),
+    second: covered([1, 30], [1, 30], METRICS.map(() => NONE)),
+  });
+});
+
+test("a player without a played half of a finished match has no season by half (FM-HC.6)", { skip }, async () => {
+  // A canceled match, a match not started and a 0-minute half: no half of the season.
+  assert.equal((await get("/api/players/p_aaab35/halves?season=2025/2026")).response.status, 404);
+  assert.equal((await get("/api/players/p_aaab30/halves?season=2024/2025")).response.status, 404);
+  assert.equal((await get("/api/players/p_aaab30/halves")).response.status, 400);
+});
+
+test("the coverage's exclusions are those of the complete halves' view (FM-HC.9)", { skip }, async () => {
+  const { rows } = await owner.query(
+    `SELECT c.season_id, c.player_key, c.period, c.matches, c.minutes, c.excluded_matches, c.excluded_minutes,
+            t.matches AS kept, t.minutes AS kept_minutes, t.excluded_matches AS t_excluded, t.excluded_minutes AS t_excluded_minutes
+     FROM api.player_half_coverage c FULL JOIN api.player_half_totals t USING (season_id, player_key, period)
+     ORDER BY 1, 2, 3`,
+  );
+  // Every group of the totals has its coverage; a group without a complete half has a coverage
+  // only (the seed's p_aaaab1 included: players.test.mjs).
+  assert.deepEqual(rows.map((r) => [r.player_key, r.period, r.kept]), [
+    [101, "first_half", null], [101, "second_half", null], [130, "first_half", 1], [130, "second_half", 2], [131, "first_half", null], [131, "second_half", null], [132, "first_half", null],
+    [133, "first_half", null], [133, "second_half", 1], [134, "first_half", null], [134, "second_half", null], [136, "first_half", 1],
+    [137, "first_half", 3], [137, "second_half", 1],
+  ]);
+  for (const r of rows) {
+    assert.equal(r.matches - r.excluded_matches, r.kept ?? 0, `${r.player_key} ${r.period}`);
+    assert.equal(r.minutes - r.excluded_minutes, r.kept_minutes ?? 0, `${r.player_key} ${r.period}`);
+    if (r.kept !== null) assert.deepEqual([r.excluded_matches, r.excluded_minutes], [r.t_excluded, r.t_excluded_minutes]);
+  }
+  // The read role reads it.
+  assert.equal((await context.reader.read("SELECT count(*)::int AS n FROM api.player_half_coverage"))[0].n, rows.length);
+});
+
+test("the route reads the asked player's season only, in one statement (FM-HC.8)", { skip }, async () => {
+  const statements = [];
+  const handle = createHandler({
+    read: (sql, values, options) => (statements.push({ sql, values }), context.reader.read(sql, values, options)),
+    mediaBase: "https://media.test/", clock: () => context.now,
+  });
+  const response = await handle(new Request("https://api.test/api/players/p_aaab30/halves?season=2025/2026"));
+  assert.equal(response.status, 200);
+  assert.equal(statements.length, 1);
+  const [{ "QUERY PLAN": [plan] }] = (await owner.query(`EXPLAIN (FORMAT JSON) ${statements[0].sql}`, statements[0].values)).rows;
+  // Every scan of the half statistics is filtered by the player below the views' aggregates.
+  const scans = [];
+  (function walk(node) {
+    if (/^player_match_half_stats/.test(node["Relation Name"] || "")) scans.push(node);
+    for (const child of node.Plans || []) walk(child);
+  })(plan.Plan);
+  assert.ok(scans.length > 0);
+  for (const scan of scans) assert.match([scan["Index Cond"], scan["Recheck Cond"], scan.Filter].join(" "), /\bplayer_id = /, JSON.stringify(scan));
+});
+
+test("a stored xG is summed at its own digits and converted once (FM-HC.10, FM-HC.12)", { skip }, async () => {
+  const data = await halves("p_aaab37");
+  // The totals keep 129's float sums rounded to 2 decimals.
+  assert.deepEqual([data.first.matches, data.first.xg, data.second.matches, data.second.xg], [3, 1.36, 1, 0.12]);
+  // Three values: 0.12345679 + 1.2345678 + a half without a shot. Not 1.358027 (each value read at
+  // 6 significant digits) nor 1.3580245524644852 (the stored binary values summed).
+  assert.deepEqual(data.coverage.first, covered([3, 135], [0, 0], [
+    [1, 3, 135], [3, 3, 135], [1.35802459, 3, 135], [2, 3, 135], [1, 3, 135], [18, 3, 135], [33, 3, 135], [2, 3, 135], [1, 3, 135], [4, 3, 135],
+  ]));
+  // One value beside a shot without xG and a NaN: 0.12345679 (not 0.123457) on its own half.
+  assert.deepEqual(data.coverage.second, covered([3, 135], [2, 90], [
+    [0, 3, 135], [3, 3, 135], [0.12345679, 1, 45], [2, 3, 135], [1, 3, 135], [21, 3, 135], [36, 3, 135], [2, 3, 135], [1, 3, 135], [3, 3, 135],
+  ]));
+  for (const side of ["first", "second"]) assert.equal(typeof data.coverage[side].stats.xg.sum, "number");
+});
+
+test("the answer and its ETag do not depend on the session's extra_float_digits (FM-HC.11)", { skip }, async () => {
+  // The same reader as production's (vega_read, createReader), each session set to 0, 1 or 3.
+  const answers = {};
+  for (const digits of [0, 1, 3]) {
+    const Pool = class extends pg.Pool {
+      constructor(config) { super({ ...config, options: `${config.options} -c extra_float_digits=${digits}` }); }
+    };
+    const reader = createReader(process.env.VEGA_V2_API_NODE_TEST_DSN, { role: "vega_read", Pool });
+    try {
+      const handle = createHandler({ read: reader.read, mediaBase: "https://media.test/", clock: () => context.now });
+      const [setting] = await reader.read("SELECT current_setting('extra_float_digits') AS digits");
+      assert.equal(setting.digits, String(digits));
+      for (const key of ["p_aaab37", "p_aaab30"]) {
+        const response = await handle(new Request(`https://api.test/api/players/${key}/halves?season=2025/2026`));
+        assert.equal(response.status, 200);
+        (answers[key] ??= []).push({ digits, etag: response.headers.get("etag"), body: await response.text() });
+      }
+    } finally {
+      await reader.end();
+    }
+  }
+  for (const [key, runs] of Object.entries(answers)) {
+    for (const run of runs.slice(1)) {
+      assert.equal(run.body, runs[0].body, `${key} at extra_float_digits ${run.digits}`);
+      assert.equal(run.etag, runs[0].etag, `${key} at extra_float_digits ${run.digits}`);
+    }
+  }
+  const coverage = JSON.parse(answers.p_aaab37[0].body).data.coverage;
+  assert.deepEqual([coverage.first.stats.xg.sum, coverage.second.stats.xg.sum], [1.35802459, 0.12345679]);
 });

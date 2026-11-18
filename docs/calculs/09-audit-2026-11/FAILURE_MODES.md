@@ -245,6 +245,100 @@ integer` are appended at the end.
 - `backend/tests/test_audit_player_aggregates.py::HalvesRealFixtureTest`
 - adjusted expectation in `backend/api/test/players.test.mjs` (§12).
 
+### 4.1 Each metric's own coverage (137, audit 15c; written before the tests)
+
+The audit asked for each half metric's coverage and observed minutes, as the season aggregates
+give them (SOURCE_AUDIT §15, « Mi-temps »). §4 kept complete halves only, and the route published
+nothing else. A half missing one metric lost all of its others, and a player without a complete
+half answered 404 as if he had not played. In the production census (17 Nov 2026, read-only, six
+seasons):
+- 216,659 of 2,738,261 eligible half rows were left out (9,691,563 of 105,381,499 minutes);
+- 214,383 of them for missing touches alone;
+- 15,342 player-season-period groups were hidden entirely although they had positive passing.
+
+The real fixture shows the same pattern: both goalkeepers publish passes, recoveries and duels
+per half, but no touches.
+
+**Failure modes:**
+
+| ID | Failure |
+|---|---|
+| FM-HC.1 | A published metric of an eligible half is dropped because another metric of the same half is unknown. |
+| FM-HC.2 | A player whose eligible halves all miss one metric answers 404, as if he had not played. |
+| FM-HC.3 | An unknown metric is served as 0 (a NULL summed, or `Math.round(null)`). |
+| FM-HC.4 | A metric's rate is divided by minutes in which that metric was not observed. |
+| FM-HC.5 | xG's structural zero is applied without an observed zero shots (shots unknown), or over a published NaN or ±∞. |
+| FM-HC.6 | Halves of a canceled or unfinished match, or with 0 or unknown minutes, are counted. |
+| FM-HC.7 | `first` or `second` changes (values, nulls or shape) for an existing client. |
+| FM-HC.8 | The read scans more than the asked player's season. |
+| FM-HC.9 | The coverage's exclusions drift from 129's complete-half rule. |
+| FM-HC.10 | A stored single-precision xG is read at 6 significant digits (`real::numeric`): 0.12345679 is summed as 0.123457 (Astra review, 18 Nov). |
+| FM-HC.11 | The decimal a stored xG is read as depends on the reading session's `extra_float_digits` (`real::text` gives 6 digits at 0, the shortest exact digits at 1 or 3), so one base gives two bodies and two ETags. |
+| FM-HC.12 | The sum is converted to binary before the HTTP answer (a `float8` sum, or the binary value of each input): 0.12345679 + 1.2345678 becomes 1.3580245524644852. |
+
+**Contract:**
+- **Eligible half:** finished match and minutes > 0, as in 129. A 0-minute half is not played, even when the source credits it a touch.
+- **View `api.player_half_coverage` (137):**
+  - one row per (season, player, period) with at least one eligible half, complete or not;
+  - `matches` and `minutes`: the eligible halves;
+  - `excluded_matches` and `excluded_minutes`: the eligible halves outside 129's complete sample. The rule is the same, so they equal 129's columns wherever 129 has a row.
+- **Each route metric m:**
+  - `m_count`: the eligible halves where m is known;
+  - `m_minutes`: their minutes, 0 without any;
+  - `m_sum`: its sum on them, NULL without any.
+- **Known:**
+  - for every metric but xG, not NULL;
+  - for xG, a finite value, or a blank with an observed 0 shots.
+  - These xG values stay unknown: a blank with unknown shots, a blank with a shot, NaN, +∞ and −∞.
+- **Route:**
+  - `first` and `second` are unchanged: 129's complete halves, or null without one.
+  - `coverage.first` and `coverage.second` are each `{matches, minutes, excluded: {matches, minutes}, stats}`, where `stats` maps every route metric to `{sum, count, minutes}`.
+  - An unmeasured metric is `{sum: null, count: 0, minutes: 0}`, never 0. A period without an eligible half is null.
+  - **xG precision:**
+    - each stored single-precision xG is read as its shortest decimal that reads back as the same stored value, PostgreSQL's own shortest output forced whatever the session's `extra_float_digits` (`core.real_decimal`);
+    - these decimals are summed exactly (`xg_sum numeric`);
+    - the route converts the sum to a JSON number once, at the end. The binary input (0.12345679104328156 for 0.12345679) is never what is summed.
+  - The route reads both views in one statement, each filtered by the season and player asked.
+  - **Types:** every `sum`, `count` and `minutes` is a JSON number (or `sum: null`). The legacy `first.xg` stays 129's float sum rounded to 2 decimals, so it is not the coverage's exact sum.
+  - **Journal:** 137 was corrected in place before any release. It is only on `codex/audit-1-linear` (`c3c8232747`): not on `main`, and production runs `8018e0836c`. Disposable test bases re-create their schema. An environment that applied the first 137 must recreate the view (`MIGRATION_CHECKSUM_CHANGED` otherwise).
+- **Rate:** 90 × `sum` / `minutes` of the same metric.
+- **404:** only for a player without an eligible half in the season. A player with eligible but no complete halves answers 200, with `first` and `second` null. This replaces §4's 404 for such players, whose prior assertions were `player-halves.test.mjs` (Demi Inconnu) and `players.test.mjs` (p_aaaab1).
+- **Site:** unchanged. `halfRows` reads `first` and `second` only. It shows the same tables and still hides a player without complete halves. Showing `coverage` is a frontend change, and needs a design the user approves.
+
+**Expected outcomes** (synthetic seed of `player-halves.test.mjs`, season 2025/2026):
+
+| Player | Status | `first` / `second` | Coverage |
+|---|---|---|---|
+| Moitiés Test (p_aaab30) | 200 | unchanged (§4) | First half: 3 halves, 135 min, excluded 2 / 90. Touches 50 on 2 halves / 90 min (50 per 90, not 33.3), tackles 1 / 90 min, passes 23 / 135 min, xG 0.7. Second half: 3 / 130, excluded 1 / 45, xG 0.2 on 2 halves / 85 min. |
+| Demi Inconnu (p_aaab31) | 200 (was 404) | null, null | First-half xG unmeasured (a shot without xG), passes 4. Second-half recoveries unmeasured, structural xG 0 on 1 half. |
+| Passe Seule (p_aaab32) | 200 | null, null | First half: passes 14 on 1 half / 45 min, every other metric unmeasured. Second half: null (0 and unknown minutes). |
+| Non Fini (p_aaab33) | 200 | null, second half m1 | First-half xG unmeasured (NaN, +∞, −∞), shots 3. Second half: xG 0.4 and shots 1 on 1 half (m3's shots are unknown, so its blank xG stays unknown). |
+| Rien Mesuré (p_aaab34) | 200 | null, null | 1 half (45 min and 30 min), excluded entirely, every metric unmeasured. |
+| Hors Saison (p_aaab35) | 404 | — | Only a canceled match, a match not started and a 0-minute half. |
+| Zéro Observé (p_aaab36) | 200 | first: all 0 | Every metric 0 on 1 half / 45 min (a measured zero, unlike Rien Mesuré). |
+| Précision Fine (p_aaab37) | 200 | first xG 1.36, second xG 0.12 (129, unchanged) | First half, three values: xG 1.35802459 on 3 halves / 135 min (0.12345679 + 1.2345678 + a structural 0). It is not 1.358027 (6 digits) and not 1.3580245524644852 (binary). Second half, one value among mixed rows (supported 0.12345679, a blank with 2 shots, NaN): 0.12345679 on 1 half / 45 min. The same body and ETag at `extra_float_digits` 0, 1 and 3. |
+
+Expected decimals:
+- The stored values are exact in `half-fixture.mjs`.
+- They were computed by an oracle independent of PostgreSQL (Python `struct` and `decimal`): `tracks/1-linear/half-coverage/precision/binary32_oracle.py` in the track evidence.
+
+**Real fixture `match_m_08LEIz`** (FC Orenburg–CSKA Moscow, 1 Nov 2026):
+- The goalkeepers Bogdan Ovsyannikov (`p_4McHHL`) and Maksim Borisko (`p_3yNPPF`) answer 200 (were 404), with `first` and `second` null:
+  - Ovsyannikov: passes 2 and 7, recoveries 6 and 6, duels won 0 and 2;
+  - Borisko: passes 6 and 5, recoveries 9 and 5, duels won 2 and 1;
+  - for both: touches unmeasured, structural xG 0, 1 half / 45 min each.
+- Damián Puebla (`p_02x0dj`) is unchanged: first half xG 0.28 and shots 3. His coverage equals his totals.
+- Egor Nazarenko (`p_3o0rP8`) stays 404: his only row is a 0-minute second half (1 touch, 1 pass).
+- Astra's probe, with Puebla's first-half xG set to the stored value of 0.12345679: `coverage.first.stats.xg` is `{sum: 0.12345679, count: 1, minutes: 45}`. It was 0.123457, an error of +0.00000021, while the legacy `first.xg` stays 0.12.
+- Over the 28 players:
+  - first half: 22 halves / 990 min, excluded 2 / 90, passes 226 / 990 min, touches 460 / 900 min;
+  - second half: 28 halves / 990 min, excluded 2 / 90, passes 185 / 990 min, touches 452 / 900 min.
+
+**Tests:**
+- `backend/api/test/player-halves.test.mjs` (synthetic, through the route; bounded statement; view identity);
+- `backend/api/test/player-halves-real.test.mjs` (the real match, written by the collector's path);
+- adjusted expectation in `backend/api/test/players.test.mjs`.
+
 ## 5. B4 — Returns from absence on the club stream (audit 15g)
 
 **Failure modes:**
@@ -2150,3 +2244,27 @@ binding labelled Clydebank has an appearance around this date in the measured cl
 the existing match and identify the missing dated participant binding in the plan; adding
 a name-only team or merging the Airdrieonians root would not repair that missing proof.
 The return ties and verified shared grounds in 1903 remain exactly as previously published.
+
+## 32. Match grade precision in ranking and report JSON (VI-32)
+
+The ranking exposes the grade rounded to a tenth. Reusing that value for a whole-number
+display can round twice. In Orenburg–CSKA, Tataev's recorded grade was 48.4903434662912
+and the ranking's 48.5 displays as 49 with the site's French integer formatter. The
+rankings API keeps the tenth and exposes the precise value of the same SQL row as
+`gradeExact` for an already visible grade. The report propagates it beside the tenth in
+`grades`, `best` and `playerOfMatch`, leaving all existing picks and ordering intact.
+
+| Situation | Expected |
+|---|---|
+| Two source grades on opposite sides of 48.5 both publish the tenth 48.5 | Each exact value survives JSON; the grade's integer can be formatted directly and the original ranking order survives |
+| SQL stores a new index that takes the same visible row from 48.49 to 48.51 | Legacy response fields remain identical; exact value, report JSON and ranking ETag change with the revision |
+| Grade is exactly 0 or 100 | Both representations retain the measured number |
+| Grade is hidden by the existing minutes and index rules, or the source value is non-finite | Precise field is null and legacy visibility, ordering and rank remain as before |
+| Older ranking result lacks the precise field | The report keeps its historical row shape and grade |
+| Incoming precise field is invalid, out of range, disagrees with the historical tenth, or accompanies a hidden legacy grade | The report keeps the legacy grade and discards the invalid precision |
+| Unknown match or invalid query | Ranking retains its 404 or 400 response |
+
+The PostgreSQL-to-ranking-to-report check uses the normal read role, HTTP responses and
+the public report handler. The recorded football witness is replayed with the captured
+grades as inputs. The database fixture also models a new publication within the same
+tenth. Changes to the match tabs, images and share text are outside this transport step.

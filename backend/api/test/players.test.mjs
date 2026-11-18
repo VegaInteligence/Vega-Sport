@@ -265,9 +265,22 @@ test("points before and after the changes, by the state of the score", async () 
 
 test("a player's season by half", { skip }, async () => {
   // The seed's two halves of p_aaaab1 are incomplete (VI-23 B3: the first has no tackles and
-  // no recoveries, the second no duels won, dribbles or recoveries): no half to show, never a
-  // 0. Complete halves are read in player-halves.test.mjs.
-  assert.equal((await get("/api/players/p_aaaab1/halves?season=2025/2026")).response.status, 404);
+  // no recoveries, the second no duels won, dribbles or recoveries): no totals, never a 0.
+  // Prior contract (129): 404. Each metric's own coverage (audit 15c, 137; FAILURE_MODES §4.1)
+  // serves what was observed, an unpublished metric unknown. Complete halves are read in
+  // player-halves.test.mjs.
+  const { response, body } = await get("/api/players/p_aaaab1/halves?season=2025/2026");
+  assert.equal(response.status, 200);
+  const stat = (sum) => ({ sum, count: 1, minutes: 45 }), none = { sum: null, count: 0, minutes: 0 };
+  const half = (stats) => ({ matches: 1, minutes: 45, excluded: { matches: 1, minutes: 45 }, stats });
+  assert.deepEqual(body.data, {
+    id: "p_aaaab1", season: "2025/2026", first: null, second: null,
+    coverage: {
+      first: half({ goals: stat(2), shots: stat(3), xg: stat(0.9), touches_box: stat(4), dribbles: stat(1), passes: stat(8), touches: stat(20), duels_won: stat(3), tackles: none, recoveries: none }),
+      second: half({ goals: stat(0), shots: stat(1), xg: stat(0.3), touches_box: stat(2), dribbles: none, passes: stat(12), touches: stat(25), duels_won: none, tackles: stat(1), recoveries: none }),
+    },
+  });
+  // A player without any half of the season.
   assert.equal((await get("/api/players/p_aaaab3/halves?season=2025/2026")).response.status, 404);
   assert.equal((await get("/api/players/p_aaaab1/halves")).response.status, 400);
 });

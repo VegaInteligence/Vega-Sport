@@ -29,7 +29,10 @@
  * the middle of a return (vega/returns.py, 087): its length, his minutes since against his
  * usual ones, and the base's curve for an absence of that length.
  * GET /api/players/{id}/halves?season= — the player's season by half (083): his minutes
- * and totals in first halves and in second halves.
+ * and totals in first halves and in second halves, on his complete halves (129; null without
+ * one), and `coverage`: each metric on the halves of finished matches he played that publish
+ * it, `{sum, count, minutes}` (sum null when none does), with the halves the totals leave out
+ * (137). 404 only without a played half of a finished match in the season.
  * GET /api/teams/{id}/age-profile?season= — minutes played by age on the match date.
  * GET /api/teams/{id}/passing?season= — the club's most used passing triangle and its most
  * linked pair, from the season's pass networks (083).
@@ -121,6 +124,8 @@ export function keeperStanding(rows, min = FACED_MIN_SHOTS) {
 const ACTION_VALUES = [["vaep", true], ["pv", true], ["xt", false]];
 // Only what the source publishes per half: it gives no chances created or expected assists there.
 const HALF_FIELDS = ["matches", "minutes", "goals", "shots", "xg", "touches_box", "dribbles", "passes", "touches", "duels_won", "tackles", "recoveries"];
+// The metrics among them, each with its own coverage (api.player_half_coverage, 137).
+const HALF_METRICS = HALF_FIELDS.slice(2);
 
 /**
  * The three players of a club who exchange the most passes: among the trios whose three
@@ -426,18 +431,31 @@ export function createProfileRoute(read) {
       validateParams(params, ["season"]);
       const season = params.get("season");
       if (!/^\d{4}\/\d{4}$/.test(season || "")) reject(400, "Paramètre invalide.");
+      // One statement (one snapshot): each period's coverage (137) and its complete halves (129),
+      // each view filtered by the season and the player, so that each reads his rows alone.
+      const scope = "season_id=(SELECT k.season_id FROM api.season_keys k WHERE k.season=$2) AND player_key=api.internal_id('player',$1)";
       const rows = await read(
-        `SELECT * FROM api.player_half_totals
-         WHERE season_id=(SELECT k.season_id FROM api.season_keys k WHERE k.season=$2) AND player_key=api.internal_id('player',$1)`,
+        `SELECT c.*, to_jsonb(t) AS complete
+         FROM (SELECT * FROM api.player_half_coverage WHERE ${scope}) c
+         LEFT JOIN (SELECT * FROM api.player_half_totals WHERE ${scope}) t USING (period)`,
         [halves[1], season],
       );
-      const half = (name) => {
-        const r = rows.find((row) => row.period === name);
-        return r ? Object.fromEntries(HALF_FIELDS.map((k) => [k, k === "xg" ? Math.round(r[k] * 100) / 100 : r[k]])) : null;
-      };
-      const first = half("first_half"), second = half("second_half");
-      if (!first && !second) reject(404, "Donnée indisponible.");
-      return respond(req, { id: halves[1], season, first, second });
+      // No played half of a finished match in the season: nothing to show.
+      if (!rows.length) reject(404, "Donnée indisponible.");
+      const of = (name) => rows.find((row) => row.period === name);
+      // The complete halves' totals, as before 137: null without a complete half.
+      const half = (r) => (r?.complete ? Object.fromEntries(HALF_FIELDS.map((k) => [k, k === "xg" ? Math.round(r.complete[k] * 100) / 100 : r.complete[k]])) : null);
+      // Every eligible half: each metric on the halves that publish it (its sum, null without
+      // any, never 0), and the halves the totals leave out. The xG sum comes as the exact decimal
+      // of its stored values (numeric, a string here): converted to a number once, here.
+      const sum = (k, v) => (k === "xg" && v !== null ? Number(v) : v);
+      const coverage = (r) => r ? {
+        matches: r.matches, minutes: r.minutes,
+        excluded: { matches: r.excluded_matches, minutes: r.excluded_minutes },
+        stats: Object.fromEntries(HALF_METRICS.map((k) => [k, { sum: sum(k, r[`${k}_sum`]), count: r[`${k}_count`], minutes: r[`${k}_minutes`] }])),
+      } : null;
+      const first = of("first_half"), second = of("second_half");
+      return respond(req, { id: halves[1], season, first: half(first), second: half(second), coverage: { first: coverage(first), second: coverage(second) } });
     }
     const faced = path.match(FACED);
     if (faced) {
