@@ -537,6 +537,38 @@ class OpenMatchdayGuardTest(SnapshotDatabase):
         self.assertEqual(self.state()[0], result)
 
 
+    def test_a_qualified_league_keeps_only_the_proven_rolling_prefix(self):
+        folder = "ENG_6_national-league-north"
+        first_day = datetime(2026, 9, 5, tzinfo=timezone.utc)
+        past = "2026-08-31,First Home,First Away,1,0"
+        overlap = [
+            f"{(first_day + timedelta(days=i // 10)).date()},Home {i},Away {i},1,0"
+            for i in range(60)
+        ]
+        new = "2026-11-18,New Home,New Away,0,1"
+
+        def read_day(rows, step):
+            body = "date,home,away,ft_home,ft_away\n" + "\n".join(rows) + "\n"
+            return self.read([league(folder, results=len(rows), fixtures=0)],
+                             self.files(folder, results=body, fixtures=None), NOW + timedelta(days=step))
+
+        self.assertEqual(read_day([past, *overlap], 1), ("ok", 61, 0))
+        first = self.state(folder)[0]
+        self.assertIn("2026-08-31", first[0])
+        self.assertEqual(read_day([*overlap, new], 2), ("ok", 62, 0))
+        accepted = self.state(folder)
+        self.assertEqual(accepted[0], first)
+        self.assertEqual(len(accepted), 62)
+        self.assertEqual(read_day([*overlap, new], 3), ("ok", 62, 0))
+        self.assertEqual(self.state(folder), accepted)
+        # Missing the first of several matches on the boundary day is an interior omission.
+        for step, invalid in ((4, [*overlap[1:], new]), (5, [*overlap[-3:], new])):
+            with self.subTest(step=step):
+                self.assertEqual(read_day(invalid, step), ("ok", 0, 1))
+                self.assertEqual(self.failures()[-1][0], "SNAPSHOT_DROPS_RESULT")
+                self.assertEqual(self.state(folder), accepted)
+
+
 class CupApiScoreTest(SnapshotDatabase):
     """22c: the 90-minute score is never invented: source -> cups.save -> PostgreSQL -> the real /api/cups/edition."""
 

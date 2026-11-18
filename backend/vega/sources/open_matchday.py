@@ -26,7 +26,7 @@ from datetime import timedelta
 import io
 import re
 
-from . import SourceError, failure, snapshot
+from . import SourceError, failure, open_matchday_history, snapshot
 from .cups import _team
 from ..seasons import sporting_season
 from ..store import Store
@@ -135,6 +135,7 @@ def candidate(folder, season, results, fixtures, label):
     fixture row without them names no match and is skipped. A fixture with the key of a result is
     that result. Rows of one key otherwise make one match, from the last of them (as before)."""
     out = {}
+    attestations = open_matchday_history.for_edition(folder, season)
     for status, items in (("finished", results), ("not_started", fixtures)):
         for item in items:
             home, away, day = (item.get("home") or "").strip(), (item.get("away") or "").strip(), (item.get("date") or "").strip()
@@ -154,6 +155,8 @@ def candidate(folder, season, results, fixtures, label):
                 "stats": _row_stats(item),
             }
             key = f"{folder}:{season}:{day}|{home}|{away}"
+            if status == "finished" and key in attestations:
+                open_matchday_history.final_score(key, goals, attestations[key]["score"])
             if key in out and out[key]["status"] == "finished" and status != "finished":
                 continue  # a fixture still listed after its result: the result is the match
             out.pop(key, None)
@@ -203,8 +206,8 @@ def _stored_stats(conn, season_id, ids):
     return {match: _by_team_period(rows) for match, rows in out.items()}
 
 
-def save(conn, folder, name, season, results, fixtures, now):
-    """Replace one competition's edition by a complete snapshot; returns the matches it holds.
+def save(conn, folder, name, season, results, fixtures, now, *, declared_results=None):
+    """Write one competition's complete reported window; return the matches the edition holds.
 
     Refused (SourceError with a detail, nothing written): a result row without its sides, day or
     goals, and a snapshot that drops or unplays a result the base holds (snapshot.guard). Matches
@@ -216,7 +219,11 @@ def save(conn, folder, name, season, results, fixtures, now):
     snap = candidate(folder, season, results, fixtures, cup_key)
     stored = conn.execute("SELECT id FROM core.competition_seasons WHERE cup_key = %s", (cup_key,)).fetchone()
     before = snapshot.stored(conn, "open_matchday", stored and stored[0])
-    snapshot.guard("open_matchday", before, {key: row["status"] for key, row in snap.items()}, cup_key)
+    preserved = open_matchday_history.retained(conn, stored and stored[0], before, snap,
+                                                  open_matchday_history.for_edition(folder, season), declared_results)
+    status = {key: row["status"] for key, row in snap.items()}
+    status.update(dict.fromkeys(preserved, "finished"))
+    snapshot.guard("open_matchday", before, status, cup_key)
     season_id = Store(conn).season(label)
     country = country_of(folder)
     family = f"cup:open-matchday:{folder}"
@@ -244,7 +251,13 @@ def save(conn, folder, name, season, results, fixtures, now):
     before.update(snapshot.elsewhere(conn, "open_matchday", edition, [key for key in snap if key not in before]))
     stats_before = _stored_stats(conn, season_id, [m["id"] for m in before.values()])
     changes = 0
-    for position, (key, row) in enumerate(snap.items()):
+    reserved = {before[key]["archive_position"] for key in preserved}
+    position = 0
+    for key, row in snap.items():
+        if key in preserved:
+            continue
+        while position in reserved:
+            position += 1
         home = _team(conn, "open_matchday", f"name:{row['home']}", row["home"])
         away = _team(conn, "open_matchday", f"name:{row['away']}", row["away"])
         round_id = None
@@ -262,6 +275,7 @@ def save(conn, folder, name, season, results, fixtures, now):
         stats = _stats_rows(row, home, away, stats_before.get(found["id"], []) if found is not None else ())
         restated = found is not None and stats_before.get(found["id"], []) != stats
         mid, outcome = snapshot.write(conn, "open_matchday", key, values, found, changed=restated)
+        position += 1
         changes += outcome in ("inserted", "updated")
         if outcome == "inserted" or restated:
             conn.execute("DELETE FROM core.team_match_stats WHERE season_id=%s AND match_id=%s", (season_id, mid))
@@ -269,10 +283,10 @@ def save(conn, folder, name, season, results, fixtures, now):
                 cols = ["season_id", "match_id", "team_id", "period", *columns]
                 conn.execute(f"INSERT INTO core.team_match_stats({', '.join(cols)}) VALUES ({', '.join(['%s'] * len(cols))})",
                              [season_id, mid, team, period, *columns.values()])
-    changes += snapshot.remove(conn, "open_matchday", before, set(snap))
+    changes += snapshot.remove(conn, "open_matchday", before, status)
     if changes:
         conn.execute("UPDATE core.competition_seasons SET cup_updated_at=%s WHERE id=%s", (now, edition))
-    return len(snap)
+    return len(status)
 
 
 def held(conn, folder, season):
@@ -327,7 +341,7 @@ def run(conn, get, scope, now):
         try:
             results, fixtures = read_files(get, league, code, folder)
             with conn.transaction():
-                written += save(conn, folder, league.get("league") or folder, season, results, fixtures, now)
+                written += save(conn, folder, league.get("league") or folder, season, results, fixtures, now, declared_results=len(results))
         except SourceError as error:
             # This competition is not written now (its files unreadable, or not the complete snapshot that
             # keeps its results): its edition stays as it was; the others go on.

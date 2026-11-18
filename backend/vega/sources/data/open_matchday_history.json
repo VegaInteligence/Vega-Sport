@@ -1,0 +1,358 @@
+{
+  "schema": 1,
+  "scope": "open-matchday 2026/2027, 18 November 2026, 35 published finals",
+  "organizer_evidence_sha256": "bb7417660207c57b9e40631a657ded705d32d7ebc80cf3d8de2f1f7c56211fe5",
+  "verified_preimage_sha256": "ed7496ec232d3ef8c93b70439e3ccaa9ae56c0708c4c11cbedb4872012a1f74c",
+  "results": [
+    {
+      "id_at_incident": 8049,
+      "provider_key": "ENG_6_national-league-north:2026/2027:2026-08-31|AFC Telford|Bedford",
+      "score": [
+        0,
+        1
+      ],
+      "official_match_id": "g2661210",
+      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=373&page.size=600&page.number=1"
+    },
+    {
+      "id_at_incident": 8050,
+      "provider_key": "ENG_6_national-league-north:2026/2027:2026-08-31|Buxton|Merthyr Town",
+      "score": [
+        2,
+        1
+      ],
+      "official_match_id": "g2661211",
+      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=373&page.size=600&page.number=1"
+    },
+    {
+      "id_at_incident": 8051,
+      "provider_key": "ENG_6_national-league-north:2026/2027:2026-08-31|Chester|Morecambe",
+      "score": [
+        0,
+        1
+      ],
+      "official_match_id": "g2661212",
+      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=373&page.size=600&page.number=1"
+    },
+    {
+      "id_at_incident": 8052,
+      "provider_key": "ENG_6_national-league-north:2026/2027:2026-08-31|Chorley|Brackley Town",
+      "score": [
+        2,
+        2
+      ],
+      "official_match_id": "g2661213",
+      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=373&page.size=600&page.number=1"
+    },
+    {
+      "id_at_incident": 8053,
+      "provider_key": "ENG_6_national-league-north:2026/2027:2026-08-31|Harborough|Marine",
+      "score": [
+        2,
+        1
+      ],
+      "official_match_id": "g2661214",
+      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=373&page.size=600&page.number=1"
+    },
+    {
+      "id_at_incident": 8054,
+      "provider_key": "ENG_6_national-league-north:2026/2027:2026-08-31|King’s Lynn|Scarborough",
+      "score": [
+        3,
+        1
+      ],
+      "official_match_id": "g2661215",
+      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=373&page.size=600&page.number=1"
+    },
+    {
+      "id_at_incident": 8055,
+      "provider_key": "ENG_6_national-league-north:2026/2027:2026-08-31|Macclesfield|Hebburn Town",
+      "score": [
+        3,
+        0
+      ],
+      "official_match_id": "g2661216",
+      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=373&page.size=600&page.number=1"
+    },
+    {
+      "id_at_incident": 8056,
+      "provider_key": "ENG_6_national-league-north:2026/2027:2026-08-31|Radcliffe|Darlington",
+      "score": [
+        0,
+        1
+      ],
+      "official_match_id": "g2661217",
+      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=373&page.size=600&page.number=1"
+    },
+    {
+      "id_at_incident": 8057,
+      "provider_key": "ENG_6_national-league-north:2026/2027:2026-08-31|South Shields|Spalding United",
+      "score": [
+        1,
+        1
+      ],
+      "official_match_id": "g2661218",
+      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=373&page.size=600&page.number=1"
+    },
+    {
+      "id_at_incident": 8058,
+      "provider_key": "ENG_6_national-league-north:2026/2027:2026-08-31|Southport|Hereford",
+      "score": [
+        0,
+        1
+      ],
+      "official_match_id": "g2661219",
+      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=373&page.size=600&page.number=1"
+    },
+    {
+      "id_at_incident": 8059,
+      "provider_key": "ENG_6_national-league-north:2026/2027:2026-08-31|Spennymoor|Hednesford",
+      "score": [
+        1,
+        1
+      ],
+      "official_match_id": "g2661220",
+      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=373&page.size=600&page.number=1"
+    },
+    {
+      "id_at_incident": 8060,
+      "provider_key": "ENG_6_national-league-north:2026/2027:2026-08-31|Worksop|Oxford City",
+      "score": [
+        0,
+        1
+      ],
+      "official_match_id": "g2661221",
+      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=373&page.size=600&page.number=1"
+    },
+    {
+      "id_at_incident": 8290,
+      "provider_key": "ENG_6_national-league-south:2026/2027:2026-09-05|AFC Totton|Hampton & Richmond",
+      "score": [
+        4,
+        1
+      ],
+      "official_match_id": "g2660668",
+      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=372&page.size=600&page.number=1"
+    },
+    {
+      "id_at_incident": 8291,
+      "provider_key": "ENG_6_national-league-south:2026/2027:2026-09-05|Billericay|Dorking",
+      "score": [
+        3,
+        3
+      ],
+      "official_match_id": "g2660669",
+      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=372&page.size=600&page.number=1"
+    },
+    {
+      "id_at_incident": 8292,
+      "provider_key": "ENG_6_national-league-south:2026/2027:2026-09-05|Chelmsford|Salisbury",
+      "score": [
+        1,
+        1
+      ],
+      "official_match_id": "g2660670",
+      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=372&page.size=600&page.number=1"
+    },
+    {
+      "id_at_incident": 8293,
+      "provider_key": "ENG_6_national-league-south:2026/2027:2026-09-05|Dover|Maidenhead",
+      "score": [
+        0,
+        3
+      ],
+      "official_match_id": "g2660671",
+      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=372&page.size=600&page.number=1"
+    },
+    {
+      "id_at_incident": 8294,
+      "provider_key": "ENG_6_national-league-south:2026/2027:2026-09-05|Farnborough|Tonbridge",
+      "score": [
+        0,
+        4
+      ],
+      "official_match_id": "g2660672",
+      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=372&page.size=600&page.number=1"
+    },
+    {
+      "id_at_incident": 8295,
+      "provider_key": "ENG_6_national-league-south:2026/2027:2026-09-05|Hemel Hempstead|Farnham",
+      "score": [
+        1,
+        1
+      ],
+      "official_match_id": "g2660673",
+      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=372&page.size=600&page.number=1"
+    },
+    {
+      "id_at_incident": 8296,
+      "provider_key": "ENG_6_national-league-south:2026/2027:2026-09-05|Horsham FC|Dag & Red",
+      "score": [
+        1,
+        1
+      ],
+      "official_match_id": "g2660674",
+      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=372&page.size=600&page.number=1"
+    },
+    {
+      "id_at_incident": 8297,
+      "provider_key": "ENG_6_national-league-south:2026/2027:2026-09-05|Maidstone|Weston-super-Mare",
+      "score": [
+        1,
+        0
+      ],
+      "official_match_id": "g2660675",
+      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=372&page.size=600&page.number=1"
+    },
+    {
+      "id_at_incident": 8298,
+      "provider_key": "ENG_6_national-league-south:2026/2027:2026-09-05|Slough|Braintree",
+      "score": [
+        1,
+        2
+      ],
+      "official_match_id": "g2660676",
+      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=372&page.size=600&page.number=1"
+    },
+    {
+      "id_at_incident": 8299,
+      "provider_key": "ENG_6_national-league-south:2026/2027:2026-09-05|Torquay|Folkestone",
+      "score": [
+        3,
+        2
+      ],
+      "official_match_id": "g2660677",
+      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=372&page.size=600&page.number=1"
+    },
+    {
+      "id_at_incident": 8300,
+      "provider_key": "ENG_6_national-league-south:2026/2027:2026-09-05|Truro|Chesham",
+      "score": [
+        3,
+        1
+      ],
+      "official_match_id": "g2660678",
+      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=372&page.size=600&page.number=1"
+    },
+    {
+      "id_at_incident": 8301,
+      "provider_key": "ENG_6_national-league-south:2026/2027:2026-09-05|Walton & Hersham|Ebbsfleet",
+      "score": [
+        0,
+        2
+      ],
+      "official_match_id": "g2660679",
+      "official_calendar": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=372&page.size=600&page.number=1"
+    },
+    {
+      "id_at_incident": 8534,
+      "provider_key": "ENG_7_northern-premier-league:2026/2027:2026-08-31|Curzon Ashton|Ashton Utd",
+      "score": [
+        2,
+        0
+      ],
+      "official_match_id": "6a5a0776ce9ef452b61f4173",
+      "official_calendar": "https://www.thenpl.co.uk/match/6a5a0776ce9ef452b61f4173"
+    },
+    {
+      "id_at_incident": 8535,
+      "provider_key": "ENG_7_northern-premier-league:2026/2027:2026-08-31|Emley|Guiseley",
+      "score": [
+        0,
+        4
+      ],
+      "official_match_id": "6a5a0776ce9ef452b61f4174",
+      "official_calendar": "https://www.thenpl.co.uk/match/6a5a0776ce9ef452b61f4174"
+    },
+    {
+      "id_at_incident": 8536,
+      "provider_key": "ENG_7_northern-premier-league:2026/2027:2026-08-31|FC United|Avro",
+      "score": [
+        3,
+        4
+      ],
+      "official_match_id": "6a5a0776ce9ef452b61f4175",
+      "official_calendar": "https://www.thenpl.co.uk/match/6a5a0776ce9ef452b61f4175"
+    },
+    {
+      "id_at_incident": 8537,
+      "provider_key": "ENG_7_northern-premier-league:2026/2027:2026-08-31|Gainsborough|Cleethorpes",
+      "score": [
+        0,
+        3
+      ],
+      "official_match_id": "6a5a0776ce9ef452b61f4176",
+      "official_calendar": "https://www.thenpl.co.uk/match/6a5a0776ce9ef452b61f4176"
+    },
+    {
+      "id_at_incident": 8538,
+      "provider_key": "ENG_7_northern-premier-league:2026/2027:2026-08-31|Hyde|Bury",
+      "score": [
+        2,
+        1
+      ],
+      "official_match_id": "6a5a0776ce9ef452b61f4177",
+      "official_calendar": "https://www.thenpl.co.uk/match/6a5a0776ce9ef452b61f4177"
+    },
+    {
+      "id_at_incident": 8539,
+      "provider_key": "ENG_7_northern-premier-league:2026/2027:2026-08-31|Ilkeston|Quorn",
+      "score": [
+        0,
+        2
+      ],
+      "official_match_id": "6a5a0776ce9ef452b61f4178",
+      "official_calendar": "https://www.thenpl.co.uk/match/6a5a0776ce9ef452b61f4178"
+    },
+    {
+      "id_at_incident": 8540,
+      "provider_key": "ENG_7_northern-premier-league:2026/2027:2026-08-31|Lancaster|Workington",
+      "score": [
+        0,
+        3
+      ],
+      "official_match_id": "6a5a0776ce9ef452b61f4179",
+      "official_calendar": "https://www.thenpl.co.uk/match/6a5a0776ce9ef452b61f4179"
+    },
+    {
+      "id_at_incident": 8541,
+      "provider_key": "ENG_7_northern-premier-league:2026/2027:2026-08-31|Stockton|Redcar Athletic",
+      "score": [
+        0,
+        2
+      ],
+      "official_match_id": "6a5a0776ce9ef452b61f417b",
+      "official_calendar": "https://www.thenpl.co.uk/match/6a5a0776ce9ef452b61f417b"
+    },
+    {
+      "id_at_incident": 8542,
+      "provider_key": "ENG_7_northern-premier-league:2026/2027:2026-08-31|Warrington Rylands|Bamber Bridge",
+      "score": [
+        3,
+        1
+      ],
+      "official_match_id": "6a5a0776ce9ef452b61f417c",
+      "official_calendar": "https://www.thenpl.co.uk/match/6a5a0776ce9ef452b61f417c"
+    },
+    {
+      "id_at_incident": 8543,
+      "provider_key": "ENG_7_northern-premier-league:2026/2027:2026-08-31|Whitby|Alfreton",
+      "score": [
+        1,
+        4
+      ],
+      "official_match_id": "6a5a0776ce9ef452b61f417d",
+      "official_calendar": "https://www.thenpl.co.uk/match/6a5a0776ce9ef452b61f417d"
+    },
+    {
+      "id_at_incident": 8544,
+      "provider_key": "ENG_7_northern-premier-league:2026/2027:2026-09-01|Leek|Warrington",
+      "score": [
+        1,
+        2
+      ],
+      "official_match_id": "6a5a0776ce9ef452b61f417a",
+      "official_calendar": "https://www.thenpl.co.uk/match/6a5a0776ce9ef452b61f417a"
+    }
+  ]
+}
