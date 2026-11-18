@@ -175,7 +175,9 @@ class GuardTest(unittest.TestCase):
 
     def test_24g_a_deadlock_is_never_applied(self):
         plan = self.plan()
-        writer = self.other()
+        writer = self.other("postgres")
+        writer.execute("SET deadlock_timeout = '12s'")
+        writer.execute("SET ROLE vega_collect")
         team = self.x("SELECT home_team_id FROM core.matches WHERE id = %s", (self.copy,)).fetchone()[0]
         done = {}
 
@@ -191,11 +193,14 @@ class GuardTest(unittest.TestCase):
         writer.execute("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('team', 'uefa', 'test:deadlock', %s)",
                        (team,))
 
-        applier = self.other()
+        applier = self.other("postgres")
+        applier.execute("SET deadlock_timeout = '4s'")
+        applier.execute("SET ROLE vega_collect")
         watcher = self.other("postgres")
 
         def waiting(pid):
-            # The apply must wait first (for the writer's lock on core.provider_ids): its deadlock check then fires first.
+            # Put the apply in its wait before creating the cycle. The unequal detector delays keep
+            # the chosen victim observable even when the two connections are scheduled together.
             for _ in range(100):
                 if watcher.execute("SELECT 1 FROM pg_locks WHERE pid = %s AND NOT granted", (pid,)).fetchone():
                     return
