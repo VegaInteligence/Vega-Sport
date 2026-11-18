@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Segments, Skeleton } from "./UI.jsx";
 import { useCardFold } from "./PhoneFold.jsx";
 import {
@@ -39,6 +39,7 @@ import { seasonShort } from "../services/previous-season.js";
 import usePreviousSeason from "../hooks/usePreviousSeason.js";
 import { RankingTrigger } from "./RankingDialog.jsx";
 import PlayerSwap from "./PlayerSwap.jsx";
+import FormBars from "./FormBars.jsx";
 import s from "./PlayerScout.module.css";
 
 /** Metric families of mock-up C, filled with the PitchAPI indicators. */
@@ -439,22 +440,38 @@ function ScoutReading({ profile, best, traits }) {
   );
 }
 
-/** Phones draw the narrow frame; a wider screen gives the chart its whole row. */
-function useNarrow(query = "(max-width: 640px)") {
-  const [narrow, setNarrow] = useState(false);
-  useEffect(() => {
-    const media = window.matchMedia(query);
-    const update = () => setNarrow(media.matches);
-    update();
-    media.addEventListener("change", update);
-    return () => media.removeEventListener("change", update);
-  }, [query]);
-  return narrow;
+/** A rated match as the form chart draws it, read from the player's side; a match the
+ *  page has no details for keeps its grade but no invented opponent, score or result. */
+function formItem(row, match) {
+  const sides = match?.home && match?.away ? [match.home, match.away] : null;
+  const own = sides?.find((side) => side.id === row.teamId);
+  const other = own && sides.find((side) => side !== own);
+  const score =
+    other && [own.score, other.score].every(Number.isFinite)
+      ? { for: own.score, against: other.score }
+      : null;
+  return {
+    key: row.id || row.matchId,
+    matchId: row.matchId,
+    grade: row.grade,
+    date: row.date,
+    home: other ? own === match.home : null,
+    opponent: other ? { name: other.name, imageUrl: other.imageUrl ?? null } : null,
+    score,
+    result: score
+      ? score.for > score.against
+        ? "V"
+        : score.for < score.against
+          ? "D"
+          : "N"
+      : null,
+    competition: row.league || "",
+    minutes: row.minutes,
+    goalsAssists: goalsAndAssists(row),
+  };
 }
 
-function RecentForm({ profile, matches, onTab, wide = false }) {
-  const narrow = useNarrow();
-  const frame = wide && !narrow ? { width: 1000, height: 230 } : { width: 380, height: 210 };
+function RecentForm({ profile, matches, onTab }) {
   const index = useMemo(
     () => new Map((matches || []).map((match) => [match.id, match])),
     [matches],
@@ -465,20 +482,10 @@ function RecentForm({ profile, matches, onTab, wide = false }) {
     .slice(-10);
   // The period's grade: the grade of its minutes-weighted mean z (grades.js).
   const average = seasonGrade(recent).grade ?? 50;
-  const opponent = (row) => {
-    const match = index.get(row.matchId);
-    if (!match?.home || !match?.away) return row.league || "";
-    const home = match.home.id === row.teamId;
-    const other = home ? match.away : match.home;
-    const score = [match.home.score, match.away.score].every(Number.isFinite)
-      ? ` · ${match.home.score}-${match.away.score}`
-      : "";
-    return `${home ? "vs" : "à"} ${other.name}${score}`;
-  };
   return (
     <Card
       title="Forme récente"
-      text={`Note des ${recent.length} derniers matchs notés`}
+      text={`${recent.length} derniers matchs · moy.\u00a0${fmt(average, 0)}`}
       actions={
         onTab && (
           <button
@@ -492,31 +499,10 @@ function RecentForm({ profile, matches, onTab, wide = false }) {
       }
     >
       {recent.length >= 2 ? (
-        <LineChart
-          width={frame.width}
-          height={frame.height}
-          points={recent.map((row) => ({
-            x: shortDate(row.date),
-            y: row.grade,
-            row,
-          }))}
-          domain={[0, 100]}
-          ticks={[25, 50, 75, 100]}
-          labelEvery={2}
-          format={(value) => fmt(value, 0)}
-          reference={{ y: average, label: `Moy. ${fmt(average, 0)}` }}
+        <FormBars
+          items={recent.map((row) => formItem(row, index.get(row.matchId)))}
+          average={average}
           ariaLabel="Note des derniers matchs"
-          tip={(point) => (
-            <TipBody
-              title={opponent(point.row) || shortDate(point.row.date)}
-              rows={[
-                ["Date", shortDate(point.row.date)],
-                ["Note Vega", fmt(point.row.grade, 0)],
-                ["Buts / PD", goalsAndAssists(point.row)],
-                ["Minutes", point.row.minutes],
-              ]}
-            />
-          )}
         />
       ) : (
         <p className={s.note}>Pas assez de matchs notés sur la période.</p>
@@ -689,7 +675,7 @@ export default function PlayerScoutOverview({
         <PlayStyleCard id={profile.id} season={season} />
       </div>
       <div className={s.block}>
-        <RecentForm profile={profile} matches={matches} onTab={onTab} wide />
+        <RecentForm profile={profile} matches={matches} onTab={onTab} />
       </div>
     </div>
   );
