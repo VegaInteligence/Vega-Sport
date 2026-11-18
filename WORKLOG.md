@@ -154,8 +154,15 @@
   - the list of moves under the chart; the same clubs on the report's value image.
 - Decided while building (not in the mockup): badges close in time are raised and the chart grows by what the stack needs (the E2E found three moves of one winter covering each other when held inside the drawing); the dashed extension.
 - Rules: `services/career-moves.js`; badge placement: `services/curve-badges.js`; tests written first (`tests/player-transfer-curve.test.mjs`, `tests/report-data.test.mjs`, `backend/api/test/player-transfers.test.mjs`).
-- Validated locally: API 187/187 and Python 430 OK on a local PostgreSQL 18; site tests 720/720; build; 111 E2E checks on the built site (nine scenarios, the routes stubbed as 135 answers). Evidence: scratchpad `ab654013…/evidence/transfers-ui/EVIDENCE.md` and `evidence/api-transfers/EVIDENCE.md`.
-- Shipped 18 Nov on the user's word (« tu peux push sur Vega »): `14ce42f31b`…`21282e1a86` on main (`32808b2a0a`); CI green on the branch (run 44364988672) and on main (run 44366451074). Vercel production serves the new page: it asks for the transfers, the API answers 404, and the card is as before, without error (8 live checks, `evidence/transfers-ui/live`).
-- Not verified: real transfers. 135 is not deployed: nothing shows until the Deploy run (`gh workflow run deploy.yml --ref main`, on the user's explicit word or by his hand). How many players have their transfers read is not known before that.
+- Validated locally: API 187/187 and Python 430 OK on a local PostgreSQL 18; site tests 725/725; build; 120 E2E checks on the built site (nine scenarios on Giroud's real rows, a route stubbed only to reach a state production does not offer). Evidence: scratchpad `ab654013…/evidence/transfers-ui/EVIDENCE.md` and `evidence/api-transfers/EVIDENCE.md`.
+- Shipped 18 Nov on the user's word (« tu peux push sur Vega »): `14ce42f31b`…`21282e1a86` on main; CI green on the branch (run 44364988672) and on main (run 44366451074).
+- Deployed 18 Nov on the user's word (« Autorise à déployer également, tu peux déployer. »): Deploy run 44368285359 green on `5956a83cd7`; migration 135 applied, the route answers.
+- The first real rows showed three defects, fixed tests first (`df44c16350`, `fc0deba100`; CI on main run 44372136386):
+  - the provider lists youth and reserve sides as clubs (« FC Barcelona U19 », « AS Monaco Youth »): one we do not hold is no club joined;
+  - a move inside a club was dropped, so Yamal's curve started at « FC Barcelona Youth »: the promotion to the first team is an arrival, a move inside the club he is shown at is nothing;
+  - « Tours FC (- 2025) » is shown « Tours FC ».
+- Verified in production, nothing stubbed: 36 of 36 checks on Giroud (computer and phone); Mbappé, Yamal, Kane, Ødegaard and André Silva looked at, no error (`evidence/transfers-ui/live`).
+- Coverage, read-only sample of 176 players (`evidence/transfers-ui/coverage/sample.txt`): 102 have a value curve; 96 of them now show clubs; 6 (met in 2022/2023, not yet read again) show none, as before. Transfers are read for 29 of the 30 best of 2026/2027 and for 81 of the 176.
+- Left as they are: a club we do not hold shows its initials (« Tours FC », « Real Madrid Castilla »); a youth side named outside the reader's pattern (« Boavista FC CJ », « SC Salgueiros Y15 ») is still listed; touch was run in Chromium's emulation only.
 - Linear: overlap check not done (the connector opens another workspace; nothing is written there).
-- Next action: after the Deploy run, the same E2E against production with nothing stubbed (`LIVE=1`), and a look at real rows (provider names, coverage).
+- Next action: none; the reader reaches the remaining players on its own schedule.
