@@ -1,0 +1,839 @@
+team_id,graphie_SportScore,canonique,pays,editions_classees,marqueurs_source,marqueurs_canoniques,appui_exact_sur_meme_ID,autres_ID_exacts_non_rediriges_vers_cible,voisins_famille_non_rediriges_vers_cible,disposition
+446,AC Nagano Parceiro,Nagano Parceiro,JPN,33,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+447,Mito Hollyhock,Mito Hollyhock,JPN,22,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+449,Karlsruher SC,Karlsruher SC,GER,35,,,nom canonique ou court exact,,8473,aucune contradiction démontrée par ce contrôle
+450,Cremonese,Cremonese,ITA,,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+452,Beijing Guoan,Beijing Guoan,CHN,19,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+453,Ulsan HD FC,Ulsan HD FC,KOR,23,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+454,Qingdao West Coast,Qingdao West Coast,CHN,19,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+456,Krylya Sovetov,Krylya Sovetov Samara,RUS,25,,,SportScore est la seule preuve exacte sur cet ID,3575,3575,aucune contradiction démontrée par ce contrôle
+457,RCD Mallorca,Mallorca,ESP,36,,,"autre fournisseur, graphie acquise exacte",4058,4058,aucune contradiction démontrée par ce contrôle
+458,Ajman,Ajman,UAE,5,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+460,Pumas U.N.A.M.,Pumas,MEX,40,,,SportScore est la seule preuve exacte sur cet ID,11200,11200,aucune contradiction démontrée par ce contrôle
+461,Real Valladolid CF,Real Valladolid,ESP,36,,,"autre fournisseur, graphie acquise exacte",,,aucune contradiction démontrée par ce contrôle
+462,Adelaide United,Adelaide United,AUS,52,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+465,Bucheon FC 1995,Bucheon FC 1995,KOR,23,,,nom canonique ou court exact,,5389,aucune contradiction démontrée par ce contrôle
+466,TSG Hoffenheim II,Hoffenheim II,GER,47,second,second,SportScore est la seule preuve exacte sur cet ID,,816|2158|2301|10389,marqueurs compatibles
+470,FK Rostov,FC Rostov,RUS,25,,,"autre fournisseur, graphie acquise exacte",3567,3567,aucune contradiction démontrée par ce contrôle
+472,Le Mans,Le Mans,FRA,30,,,nom canonique ou court exact,2342,2342,aucune contradiction démontrée par ce contrôle
+473,Comerciantes Unidos,Comerciantes Unidos,PER,39,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+474,El Paso Locomotive FC,El Paso Locomotive,USA,43,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+476,Louisville City FC,Louisville City,USA,43,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+477,Sociedad Deportiva Aucas,Aucas,ECU,16,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+479,Jahn Regensburg,Jahn Regensburg,GER,47,,,nom canonique ou court exact,,10632,aucune contradiction démontrée par ce contrôle
+480,Vissel Kobe,Vissel Kobe,JPN,22,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+481,Dubai United,Dubai United,UAE,5,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+483,Levante,Levante,ESP,2,,,nom canonique ou court exact,2285,,aucune contradiction démontrée par ce contrôle
+485,Halmstads,Halmstads BK,SWE,15,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+487,Karagumruk,Fatih Karagümrük,TUR,11,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+488,FC Twente Enschede,FC Twente,NED,51|772,,,SportScore est la seule preuve exacte sur cet ID,,2442,aucune contradiction démontrée par ce contrôle
+491,Al-Nasr Dubai,Al Nasr,UAE,5,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+493,FK Bodo/Glimt,Bodø/Glimt,NOR,9|760,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+495,FC St. Pauli,St. Pauli,GER,35,,,"autre fournisseur, graphie acquise exacte",3435,3435|9512,aucune contradiction démontrée par ce contrôle
+497,Ponte Preta,Ponte Preta,BRA,894,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+498,Estoril,Estoril,POR,54,,,nom canonique ou court exact,8350|11919,,aucune contradiction démontrée par ce contrôle
+500,Alianza Lima,Alianza Lima,PER,39,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+501,Groningen,FC Groningen,NED,51,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+502,Brisbane Roar,Brisbane Roar FC,AUS,52,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+503,Angers SCO,Angers,FRA,30,,,"autre fournisseur, graphie acquise exacte",2348|4227,2348|4227,aucune contradiction démontrée par ce contrôle
+506,Colorado Springs,Colorado Springs,USA,43,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+507,Cruz Azul,Cruz Azul,MEX,40,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+509,KuPs,KuPS,FIN,29|772,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+510,Rayong FC,Rayong FC,THA,34,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+512,Renofa Yamaguchi,Renofa Yamaguchi,JPN,33,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+513,Baltika Kaliningrad,Baltika,RUS,25,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+515,Eldense,Eldense,ESP,36,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+516,Gainare Tottori,Gainare Tottori,JPN,33,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+518,Würzburger Kickers,Würzburger Kickers,GER,47,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+519,Sarpsborg 08,Sarpsborg 08,NOR,9,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+523,Zulte-Waregem,Zulte Waregem,BEL,24,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+524,Umraniyespor,Ümraniyespor,TUR,11,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+533,VfB Stuttgart II,Stuttgart II,GER,47,second,second,SportScore est la seule preuve exacte sur cet ID,3439|7415,2365|3439|4803|7415,marqueurs compatibles
+536,Sandefjord,Sandefjord,NOR,9,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+537,Aarhus AGF,AGF,DEN,772,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+542,FC Voluntari,Voluntari,ROU,8,,,SportScore est la seule preuve exacte sur cet ID,3552,3552,aucune contradiction démontrée par ce contrôle
+544,Sport Podbrezova,Podbrezová,SVK,53,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+545,FC Köln,1. FC Köln,GER,12,,,SportScore est la seule preuve exacte sur cet ID,,7573,aucune contradiction démontrée par ce contrôle
+547,SC Cambuur Leeuwarden,Cambuur,NED,51,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+548,Zenit St. Petersburg,Zenit St. Petersburg,RUS,25,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+550,Sint-Truidense,St.Truiden,BEL,24|772,,,SportScore est la seule preuve exacte sur cet ID,2440,2440,aucune contradiction démontrée par ce contrôle
+551,Kayserispor,Kayserispor,TUR,11,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+557,SC Sagamihara,Sagamihara,JPN,33,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+558,Maritimo,Marítimo,POR,54,,,nom canonique ou court exact,3968|11788,,aucune contradiction démontrée par ce contrôle
+559,Jelgava,Jelgava,LVA,46,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+560,AC Sparta Praha,Sparta Prague,CZE,3|797,,,SportScore est la seule preuve exacte sur cet ID,4111|10896,2382|4111|10896,aucune contradiction démontrée par ce contrôle
+561,Genclerbirligi,Gençlerbirliği,TUR,4,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+562,Austria Vienna,Austria Wien,AUT,44,,,"autre fournisseur, graphie acquise exacte",,4189|10460,aucune contradiction démontrée par ce contrôle
+563,Caykur Rizespor,Rizespor,TUR,4,,,SportScore est la seule preuve exacte sur cet ID,3484|3979,3484|3979,aucune contradiction démontrée par ce contrôle
+564,Sisaket United,Sisaket United,THA,34,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+565,1. FC Magdeburg,Magdeburg,GER,35,,,"autre fournisseur, graphie acquise exacte",,,aucune contradiction démontrée par ce contrôle
+568,Gangwon FC,Gangwon FC,KOR,23,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+569,Real Potosi,Real Potosí,BOL,58,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+576,OFK Beograd,OFK Beograd,SRB,27,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+578,Boluspor,Boluspor,TUR,11,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+579,KAS Eupen,Eupen,BEL,17,,,SportScore est la seule preuve exacte sur cet ID,4342,4342,aucune contradiction démontrée par ce contrôle
+581,FK Teplice,Teplice,CZE,3,,,"autre fournisseur, graphie acquise exacte",,,aucune contradiction démontrée par ce contrôle
+582,Sport Huancayo,Sport Huancayo,PER,39,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+584,Qingdao Hainiu,Qingdao Hainiu,CHN,19,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+585,SK Artis Brno,Artis Brno,CZE,3,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+588,Al-Jazira(UAE),Al Jazira,UAE,5,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+589,Buriram United,Buriram United,THA,34,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+592,AC Oulu,Oulu,FIN,29,,,SportScore est la seule preuve exacte sur cet ID,3799,3799,aucune contradiction démontrée par ce contrôle
+593,Sampdoria,Sampdoria,ITA,,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+595,FCV Dender EH,FCV Dender EH,BEL,17,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+599,Al-Ain FC,Al Ain,UAE,5,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+603,Yverdon,Yverdon,SUI,56,,,nom canonique ou court exact,8645,,aucune contradiction démontrée par ce contrôle
+605,Batman Petrolspor,Batman Petrolspor,TUR,11,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+606,Chongqing Tonglianglong,Chongqing Tonglianglong,CHN,19,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+608,Grobina,Grobiņa,LVA,46,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+611,Bournemouth AFC,AFC Bournemouth,ENG,55|797,,,SportScore est la seule preuve exacte sur cet ID,,2273,aucune contradiction démontrée par ce contrôle
+613,Bolivar,Bolívar,BOL,58,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+614,Mardin 1969 Spor,Mardin 1969,TUR,11,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+615,Orense SC,Orense,ECU,16,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+616,Macarthur FC,Macarthur FC,AUS,52,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+618,SC Verl,Verl,GER,47,,,"autre fournisseur, graphie acquise exacte",3446,3446,aucune contradiction démontrée par ce contrôle
+619,Dinamo Zagreb,Dinamo Zagreb,CRO,26|797,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+621,Wuhan Three Towns,Wuhan Three Towns,CHN,19,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+624,Sepsi OSK Sfantul Gheorghe,Sepsi,ROU,8,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+626,Monza,Monza,ITA,1,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+627,Gamba Osaka,Gamba Osaka,JPN,22,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+631,Busan I Park,Busan IPark,KOR,21,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+633,Vaasa VPS,VPS,FIN,29,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+635,True Bangkok United,Bangkok United,THA,34,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+636,Lillestrom,Lillestrøm,NOR,9|797,,,SportScore est la seule preuve exacte sur cet ID,3538,3538,aucune contradiction démontrée par ce contrôle
+637,Rayados de Monterrey,Monterrey,MEX,40,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+638,Tigres UANL,Tigres,MEX,40,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+640,Modena,Modena,ITA,,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+644,Shenzhen Peng City,Shenzhen Peng City,CHN,19,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+647,Pohang Steelers,Pohang Steelers,KOR,23,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+648,Oriente Petrolero,Oriente Petrolero,BOL,58,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+650,Genoa,Genoa,ITA,1,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+651,JEF United Ichihara Chiba,JEF United Chiba,JPN,22,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+652,Partizan Belgrade,Partizan Beograd,SRB,27,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+653,Koninklijke Lierse Sportkring,K. Lierse SK,BEL,17,,,SportScore est la seule preuve exacte sur cet ID,,3660,aucune contradiction démontrée par ce contrôle
+654,Machida Zelvia,Machida Zelvia,JPN,22,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+655,Yongin FC,Yongin,KOR,21,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+656,Los Chankas,Los Chankas,PER,39,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+657,Atromitos Athens,Atromitos,GRE,42,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+658,Cheonan City,Cheonan City,KOR,21,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+659,Akron Togliatti,Akron Togliatti,RUS,25,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+661,Ratchaburi FC,Ratchaburi FC,THA,34,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+664,Ipswich Town,Ipswich Town,ENG,55,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+665,Spartak Moscow,Spartak Moscow,RUS,25,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+666,Asteras Aktor,Asteras Tripolis,GRE,42,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+668,PT Prachuap FC,Prachuap FC,THA,34,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+669,Henan FC,Henan,CHN,19,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+670,Liga Dep Universitaria Quito,LDU Quito,ECU,16,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+672,Manchester United,Manchester United,ENG,55|760,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+674,Chungnam Asan,Chungnam Asan,KOR,21,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+677,Nacional da Madeira,Nacional,POR,54,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+678,Tromso IL,Tromsø,NOR,9,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+679,Deportivo La Guaira,Deportivo La Guaira,VEN,14,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+681,PAOK Saloniki,PAOK Thessaloniki,GRE,42,,,SportScore est la seule preuve exacte sur cet ID,4065|11677,4065|11677,aucune contradiction démontrée par ce contrôle
+682,KFC Komarno,Komárno,SVK,53,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+684,Bodrum FK,Bodrum FK,TUR,11,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+685,Red Bull Salzburg,Salzburg,AUT,44|797,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+686,FC Orenburg,FC Orenburg,RUS,25,,,nom canonique ou court exact,,3566,aucune contradiction démontrée par ce contrôle
+687,Roasso Kumamoto,Roasso Kumamoto,JPN,33,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+689,Elche CF,Elche,ESP,2,,,"autre fournisseur, graphie acquise exacte",2287,2287,aucune contradiction démontrée par ce contrôle
+691,Vitoria Guimaraes,Vitória de Guimarães,POR,54,,,"autre fournisseur, graphie acquise exacte",3993|4548,3993|4548,aucune contradiction démontrée par ce contrôle
+692,Corum Belediyespor,Çorum FK,TUR,4,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+693,CS Universitatea Craiova,Universitatea Craiova,ROU,8|772,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+695,Urawa Red Diamonds,Urawa Red Diamonds,JPN,22,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+697,Heart of Midlothian F.C.,Heart of Midlothian,SCO,13|772,,,SportScore est la seule preuve exacte sur cet ID,,5805,abréviation FC
+698,IK Sirius FK,Sirius,SWE,15,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+699,Liaoning Tieren,Liaoning Tieren,CHN,19,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+701,Baniyas Club,Bani Yas,UAE,5,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+702,Hapoel Tel Aviv,Hapoel Tel Aviv,ISR,10,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+704,Ogre United,Ogre United,LVA,46,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+705,NK Varteks Varazdin,Varaždin,CRO,26,,,SportScore est la seule preuve exacte sur cet ID,,,collision globale NK Varteks / NK Varaždin
+707,Barcelona SC(ECU),Barcelona,ECU,16,,,"autre fournisseur, graphie acquise exacte",,2296|2363|11701,"alias équatorien correct, calendrier européen rattaché à tort à la même clé"
+709,Zaglebie Lubin,Zagłębie Lubin,POL,20,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+711,Brentford,Brentford,ENG,55,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+713,Sporting Braga,Braga,POR,54|772,,,"autre fournisseur, graphie acquise exacte",3974|4428,3458|3974|4428,aucune contradiction démontrée par ce contrôle
+714,Bayer 04 Leverkusen,Bayer Leverkusen,GER,12|797,,,"autre fournisseur, graphie acquise exacte",2309|7790,2309|7021|7790|7984,aucune contradiction démontrée par ce contrôle
+715,Lorient,Lorient,FRA,30,,,nom canonique ou court exact,2345,2345,aucune contradiction démontrée par ce contrôle
+717,1. FC Heidenheim 1846,FC Heidenheim,GER,35,,,"autre fournisseur, graphie acquise exacte",4163,4163,aucune contradiction démontrée par ce contrôle
+718,Macara,Macará,ECU,16,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+719,Tochigi SC,Tochigi,JPN,33,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+721,Ham-Kam,Hamarkameratene,NOR,9,,,SportScore est la seule preuve exacte sur cet ID,3534,3534,aucune contradiction démontrée par ce contrôle
+722,Shanghai Shenhua,Shanghai Shenhua,CHN,19,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+726,Shanghai Port,Shanghai Port,CHN,19,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+729,Cienciano,Cienciano,PER,39,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+734,Erzurumspor FK,Erzurumspor FK,TUR,4,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+735,Schalke 04,Schalke 04,GER,12,,,nom canonique ou court exact,2315,2315|8873,aucune contradiction démontrée par ce contrôle
+736,BG Pathum United,BG Pathum United,THA,34,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+737,Suwon Samsung Bluewings,Suwon Bluewings,KOR,21,,,SportScore est la seule preuve exacte sur cet ID,5607,5607,aucune contradiction démontrée par ce contrôle
+739,KSC Lokeren,KSC Lokeren,BEL,17,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+742,Falkirk,Falkirk,SCO,13,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+743,Toluca,Toluca,MEX,40,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+744,Hannover 96,Hannover 96,GER,35,,,nom canonique ou court exact,,5519,aucune contradiction démontrée par ce contrôle
+746,ACD Virtus Entella,Virtus Entella,ITA,,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+748,Dalian Yingbo,Dalian Yingbo,CHN,19,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+750,UD Las Palmas,Las Palmas,ESP,36,,,"autre fournisseur, graphie acquise exacte",,,aucune contradiction démontrée par ce contrôle
+751,Hapoel Beer Sheva,Hapoel Beer Sheva,ISR,10|797,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+753,Sacramento Republic FC,Sacramento Republic,USA,43,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+754,Inter Milan,Inter,ITA,1|760,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+756,UTC Cajamarca,UTC Cajamarca,PER,39,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+758,Almeria,Almería,ESP,36,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+759,Jeonbuk Hyundai Motors,Jeonbuk Hyundai Motors FC,KOR,23,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+760,Djurgardens,Djurgården,SWE,15,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+761,KV Kortrijk,Kortrijk,BEL,24,,,SportScore est la seule preuve exacte sur cet ID,3466|4349,3466|3667|4349,aucune contradiction démontrée par ce contrôle
+762,Hartford Athletic,Hartford Athletic,USA,43,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+764,Deportivo Metropolitano,Metropolitanos,VEN,14,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+766,Rheindorf Altach,Altach,AUT,44,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+767,Deportivo Cuenca,Deportivo Cuenca,ECU,16,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+768,Dynamo Makhachkala,Dynamo Makhachkala,RUS,25,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+770,Sport Boys,Sport Boys,PER,39,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+773,CD Universidad Católica,Universidad Católica,ECU,16,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+774,Atletico Madrid,Atlético Madrid,ESP,2|760,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+777,Aalesund FK,Aalesund,NOR,9,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+783,Tukums-2000,Tukums,LVA,46,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+784,VfL Bochum 1848,Bochum,GER,35,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+785,Brighton Hove Albion,Brighton & Hove Albion,ENG,55|772,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+786,Gnistan Helsinki,Gnistan,FIN,29,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+787,Levadiakos,Levadiakos,GRE,42,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+789,Chengdu Rongcheng,Chengdu Rongcheng,CHN,19,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+793,Yunnan Yukun,Yunnan Yukun,CHN,19,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+794,The Strongest,The Strongest,BOL,58,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+796,Racing Genk,Genk,BEL,24,,,SportScore est la seule preuve exacte sur cet ID,3477,3477|4852,aucune contradiction démontrée par ce contrôle
+797,Iraklis,Iraklis,GRE,42,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+798,Union Saint-Gilloise,Union St.Gilloise,BEL,24|797,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+799,Portuguesa FC,Portuguesa,VEN,14,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+800,Melbourne Victory,Melbourne Victory,AUS,52,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+801,Zhejiang Professional FC,Zhejiang,CHN,19,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+802,Brommapojkarna,Brommapojkarna,SWE,15,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+806,KFUM Oslo,KFUM,NOR,9,,,SportScore est la seule preuve exacte sur cet ID,3539,3539,aucune contradiction démontrée par ce contrôle
+808,Olympiacos Piraeus,Olympiacos,GRE,42|797,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+809,Michalovce,Zemplín Michalovce,SVK,53,,,SportScore est la seule preuve exacte sur cet ID,3768,3768,aucune contradiction démontrée par ce contrôle
+811,Incheon United Club,Incheon United,KOR,23,,,SportScore est la seule preuve exacte sur cet ID,,5390,aucune contradiction démontrée par ce contrôle
+812,Sporting Gijon,Sporting Gijón,ESP,36,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+813,Vicenza,LR Vicenza,ITA,,,,SportScore est la seule preuve exacte sur cet ID,13539,13539,aucune contradiction démontrée par ce contrôle
+814,Carrarese,Carrarese,ITA,,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+815,Radnik Surdulica,Radnik Surdulica,SRB,27,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+816,TSG Hoffenheim,Hoffenheim,GER,12|797,,,"autre fournisseur, graphie acquise exacte",10389,466|10389,aucune contradiction démontrée par ce contrôle
+818,Tianjin Jinmen Tiger,Tianjin Jinmen Tiger,CHN,19,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+819,Charleston Battery,Charleston Battery,USA,43,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+820,Al Wahda(UAE),Al Wahda,UAE,5,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+822,SK Slavia Praha,Slavia Prague,CZE,3|760,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+824,Daejeon Hana Citizen,Daejeon Hana Citizen,KOR,23,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+826,FK Pardubice,Pardubice,CZE,3,,,"autre fournisseur, graphie acquise exacte",3738,3738,aucune contradiction démontrée par ce contrôle
+828,Independiente del Valle,Independiente Valle,ECU,16,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+830,Paju Frontier FC,Paju Frontier,KOR,21,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+832,Deportivo Garcilaso,Deportivo Garcilaso,PER,39,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+833,Shandong Taishan,Shandong Taishan,CHN,19,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+834,Mladost Lucani,Mladost Lučani,SRB,27,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+835,Havre Athletic Club,Le Havre,FRA,30,,,SportScore est la seule preuve exacte sur cet ID,2350,2350,aucune contradiction démontrée par ce contrôle
+836,WSG Tirol,WSG Tirol,AUT,44,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+837,Super Nova,Super Nova,LVA,46,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+838,Kagoshima United,Kagoshima United,JPN,33,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+839,Jagiellonia Bialystok,Jagiellonia Białystok,POL,20|797,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+841,Kamatamare Sanuki,Kamatamare Sanuki,JPN,33,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+842,Rigas Futbola Skola,RFS,LVA,46,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+843,Nacional Potosi,Nacional Potosí,BOL,58,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+845,Andorra CF,FC Andorra,ESP,36,,,SportScore est la seule preuve exacte sur cet ID,12300,12300,collision globale Andorra CF / FC Andorra
+846,Bandirmaspor,Bandırmaspor,TUR,11,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+847,CF Estrela Amadora SAD,Estrela da Amadora,POR,54,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+848,Vojvodina Novi Sad,Vojvodina,SRB,27,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+849,Macva Sabac,Mačva Šabac,SRB,27,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+851,Nordsjaelland,Nordsjælland,DEN,772,,,SportScore est la seule preuve exacte sur cet ID,3512,3512,aucune contradiction démontrée par ce contrôle
+852,New Mexico United,New Mexico United,USA,43,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+853,Neuchatel Xamax,Xamax,SUI,56,,,SportScore est la seule preuve exacte sur cet ID,,8375,aucune contradiction démontrée par ce contrôle
+855,SC Heerenveen,SC Heerenveen,NED,51,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+857,Sanfrecce Hiroshima,Sanfrecce Hiroshima,JPN,22,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+862,SV Meppen,Meppen,GER,47,,,"autre fournisseur, graphie acquise exacte",3437,3437,aucune contradiction démontrée par ce contrôle
+867,Al-Wasl SC,Al Wasl,UAE,5,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+868,Blooming,Blooming,BOL,58,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+869,FK Auda Riga,Auda,LVA,46,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+870,Kalamata F.C,Kalamata,GRE,42,,,SportScore est la seule preuve exacte sur cet ID,,,abréviation FC
+873,Carabobo,Carabobo,VEN,14,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+876,RC Celta,Celta Vigo,ESP,2|797,,,"autre fournisseur, graphie acquise exacte",4050|10826,4050|10826,aucune contradiction démontrée par ce contrôle
+882,FC Seoul,FC Seoul,KOR,23,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+883,Club America,CF América,MEX,40,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+884,Miami FC,Miami,USA,43,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+885,Rasisalai United,Rasisalai United,THA,34,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+886,FC Copenhagen,FC København,DEN,772,,,SportScore est la seule preuve exacte sur cet ID,3509,2434|3509,aucune contradiction démontrée par ce contrôle
+887,Viseu,Académico Viseu,POR,54,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+888,Cerezo Osaka,Cerezo Osaka,JPN,22,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+890,FC Otelul Galati,Oţelul Galați,ROU,8,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+891,Moquegua,Deportivo Moquegua,PER,39,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+892,Sabadell,Sabadell,ESP,36,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+893,Puebla,Puebla,MEX,40,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+895,Universitario De Deportes,Universitario,PER,39,,,SportScore est la seule preuve exacte sur cet ID,,12940,aucune contradiction démontrée par ce contrôle
+897,Queretaro FC,Querétaro FC,MEX,40,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+898,Vålerenga Fotball Elite,Vålerenga,NOR,9,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+902,Mushuc Runa,Mushuc Runa,ECU,16,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+905,Real Sociedad B,Real Sociedad B,ESP,36,second,second,nom canonique ou court exact,,609|3816,marqueurs compatibles
+907,Delfin SC,Delfín,ECU,16,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+908,Club Leon,León,MEX,40,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+911,Tecnico Universitario,Técnico Universitario,ECU,16,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+912,Club Deportivo Guadalajara,Chivas,MEX,40,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+913,Kristiansund BK,Kristiansund,NOR,9,,,"autre fournisseur, graphie acquise exacte",,,aucune contradiction démontrée par ce contrôle
+914,Manta FC,Manta,ECU,16,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+917,Universitario De Vinto,Universitario de Vinto,BOL,58,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+918,Aurora,Aurora,BOL,58,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+928,CD Leganes,Leganés,ESP,36,,,"autre fournisseur, graphie acquise exacte",,,aucune contradiction démontrée par ce contrôle
+929,Burgos CF,Burgos CF,ESP,36,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+930,Shrewsbury Town,Shrewsbury Town,ENG,267,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+932,Port Vale,Port Vale,ENG,267,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+933,Tranmere Rovers,Tranmere Rovers,ENG,267,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+934,Leyton Orient,Leyton Orient,ENG,265,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+935,Huddersfield Town,Huddersfield Town,ENG,265,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+936,Accrington Stanley,Accrington Stanley,ENG,267,,,nom canonique ou court exact,5702,,aucune contradiction démontrée par ce contrôle
+937,Bristol Rovers,Bristol Rovers,ENG,267,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+938,Luton Town,Luton Town,ENG,265,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+939,Blackpool,Blackpool,ENG,265,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+940,Fukushima United FC,Fukushima United,JPN,33,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+942,Northampton Town,Northampton Town,ENG,267,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+943,Sao Bernardo,São Bernardo,BRA,894,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+944,Wycombe Wanderers,Wycombe Wanderers,ENG,265,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+946,Plymouth Argyle,Plymouth Argyle,ENG,265,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+947,Milton Keynes Dons,Milton Keynes Dons,ENG,265,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+948,Peterborough United,Peterborough United,ENG,265,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+949,Chesterfield,Chesterfield,ENG,267,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+952,Stockport County,Stockport County,ENG,265,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+954,Cambridge United,Cambridge United,ENG,265,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+955,Vasco da Gama Saf - RJ,Vasco da Gama,BRA,266,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+958,Newport County,Newport County,ENG,267,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+959,Rochdale,Rochdale,ENG,267,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+960,Thespa Kusatsu Gunma,Thespa Gunma,JPN,33,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+961,Gremio Novorizontino,Novorizontino,BRA,894,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+962,Doncaster Rovers,Doncaster Rovers,ENG,265,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+963,Crawley Town,Crawley Town,ENG,267,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+964,Crewe Alexandra,Crewe Alexandra,ENG,267,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+966,Notts County,Notts County,ENG,265,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+967,Walsall,Walsall,ENG,267,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+969,Chapecoense - SC,Chapecoense,BRA,266,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+971,Giravanz Kitakyushu,Giravanz Kitakyushu,JPN,33,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+972,Mansfield Town,Mansfield Town,ENG,265,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+973,Cheltenham Town,Cheltenham Town,ENG,267,,,nom canonique ou court exact,6081,,aucune contradiction démontrée par ce contrôle
+975,Matsumoto Yamaga FC,Matsumoto Yamaga,JPN,33,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+976,Grimsby Town,Grimsby Town,ENG,267,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+978,Oxford United,Oxford United,ENG,265,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+980,FC Gifu,Gifu,JPN,33,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+981,Barnet,Barnet,ENG,267,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+983,Barnsley,Barnsley,ENG,265,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+984,York City,York City,ENG,267,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+985,Exeter City,Exeter City,ENG,267,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+986,Rotherham United,Rotherham United,ENG,267,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+987,Oldham Athletic,Oldham Athletic,ENG,267,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+988,Mirassol - SP,Mirassol,BRA,266|894,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+989,Salford City,Salford City,ENG,267,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+990,Atlético Mineiro - MG,Atlético-MG,BRA,266,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+992,Castellon,Castellón,ESP,36,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+993,Wigan Athletic,Wigan Athletic,ENG,265,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+995,Reading,Reading,ENG,265,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+996,Swindon Town,Swindon Town,ENG,267,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+997,Stevenage Borough,Stevenage,ENG,265,,,SportScore est la seule preuve exacte sur cet ID,8975,8975|9082,aucune contradiction démontrée par ce contrôle
+998,Burton,Burton Albion,ENG,265,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+999,Bradford City,Bradford City,ENG,265,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+1000,Cordoba,Córdoba,ESP,36,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+1001,Real Oviedo,Real Oviedo,ESP,36,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+1002,Colchester United,Colchester United,ENG,267,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+1004,AFC Wimbledon,AFC Wimbledon,ENG,265,,,nom canonique ou court exact,,6042|8498,aucune contradiction démontrée par ce contrôle
+1005,Leicester City,Leicester City,ENG,265,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+1006,Sheffield Wednesday,Sheffield Wednesday,ENG,265,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+1008,Bromley,Bromley,ENG,265,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+1009,Botafogo SP,Botafogo SP,BRA,894,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+1010,Fleetwood Town,Fleetwood Town,ENG,267,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+1011,Gillingham,Gillingham,ENG,267,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+1013,FC Osaka,Osaka,JPN,33,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+1014,Tenerife,Tenerife,ESP,36,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+1015,Juan Pablo II,Juan Pablo II College,PER,39,,,SportScore est la seule preuve exacte sur cet ID,,,nom propre du club péruvien confirmé par la FPF
+1016,FC Ryukyu Okinawa,Ryūkyū,JPN,33,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+1017,Zweigen Kanazawa FC,Zweigen Kanazawa,JPN,33,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+1018,Nara Club,Nara Club,JPN,33,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+1019,AD Ceuta,AD Ceuta FC,ESP,36,,,SportScore est la seule preuve exacte sur cet ID,9952,9952,aucune contradiction démontrée par ce contrôle
+1020,Cadiz CF,Cádiz,ESP,36,,,"autre fournisseur, graphie acquise exacte",,,aucune contradiction démontrée par ce contrôle
+1021,Kochi United,Kochi United,JPN,33,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+1022,Eibar,Eibar,ESP,36,,,nom canonique ou court exact,4045,,aucune contradiction démontrée par ce contrôle
+1024,Ehime FC,Ehime,JPN,33,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+1025,Reilac Shiga FC,Reilac Shiga,JPN,33,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+1026,Atletico Grau,Atlético Grau,PER,39,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+1027,AD Tarma,ADT,PER,39,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+1028,Albacete Balompié SAD,Albacete,ESP,36,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+1029,Cusco FC,Cusco,PER,39,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+1030,Celta Vigo B,Celta Fortuna,ESP,36,second,,SportScore est la seule preuve exacte sur cet ID,,876,nouveau nom du Celta B établi par le club
+4686,Paris FC,Paris FC,FRA,30,,,nom canonique ou court exact,,2368,aucune contradiction démontrée par ce contrôle
+4687,Metz,Metz,FRA,882,,,nom canonique ou court exact,3820,3820,aucune contradiction démontrée par ce contrôle
+4688,RC Strasbourg Alsace,Strasbourg,FRA,30,,,SportScore est la seule preuve exacte sur cet ID,2337,2337,aucune contradiction démontrée par ce contrôle
+4689,AJ Auxerre,Auxerre,FRA,30,,,"autre fournisseur, graphie acquise exacte",2339|4245|10886,2339|4245|10886,aucune contradiction démontrée par ce contrôle
+4693,Frosinone,Frosinone,ITA,1,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4694,Torino,Torino,ITA,1,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4695,Sassuolo,Sassuolo,ITA,1,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4697,Parma,Parma,ITA,1,,,nom canonique ou court exact,3909,8260|10560|10857,aucune contradiction démontrée par ce contrôle
+4698,Udinese,Udinese,ITA,1,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4699,Lecce,Lecce,ITA,1,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4700,Venezia,Venezia,ITA,1,,,nom canonique ou court exact,3934,3934|6124,aucune contradiction démontrée par ce contrôle
+4701,Cagliari,Cagliari,ITA,1,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4703,Deportivo Alavés,Deportivo Alavés,ESP,2,,,nom canonique ou court exact,4042,,aucune contradiction démontrée par ce contrôle
+4704,Malaga,Málaga,ESP,2,,,nom canonique ou court exact,2289|4019,2289|4019,aucune contradiction démontrée par ce contrôle
+4705,RC Deportivo,Deportivo A Coruña,ESP,2,,,SportScore est la seule preuve exacte sur cet ID,2286,2286,aucune contradiction démontrée par ce contrôle
+4707,RCD Espanyol de Barcelona,Espanyol,ESP,2,,,SportScore est la seule preuve exacte sur cet ID,2284,2284,aucune contradiction démontrée par ce contrôle
+4708,Racing Santander,Racing Santander,ESP,2,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4713,FC Zlín,Zlín,CZE,3,,,"autre fournisseur, graphie acquise exacte",,,aucune contradiction démontrée par ce contrôle
+4715,FC Slovan Liberec,Slovan Liberec,CZE,3,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4716,FC Zbrojovka Brno,Zbrojovka Brno,CZE,3,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4717,Bohemians Praha 1905,Bohemians 1905,CZE,3,,,SportScore est la seule preuve exacte sur cet ID,4115,4115,aucune contradiction démontrée par ce contrôle
+4720,Kasimpasa,Kasımpaşa,TUR,4,,,SportScore est la seule preuve exacte sur cet ID,3482|11053,3482|11053,aucune contradiction démontrée par ce contrôle
+4721,Başakşehir Futbol Kulübü,Başakşehir,TUR,4,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4722,Gaziantep Futbol Kulübü,Gaziantep FK,TUR,4,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4725,Kocaelispor,Kocaelispor,TUR,4,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4726,Eyupspor,Eyüpspor,TUR,4,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4727,Amedspor,Amed Sportif,TUR,4,,,SportScore est la seule preuve exacte sur cet ID,3490,3490,aucune contradiction démontrée par ce contrôle
+4728,Goztepe,Göztepe,TUR,4,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4730,Hatta,Hatta,UAE,5,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4731,Shabab Al Ahli,Shabab Al Ahli,UAE,5,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4732,Al-Sharjah,Sharjah,UAE,5,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4733,Al Dhafra FC,Al Dhafra,UAE,5,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4734,Ittihad Kalba FC,Kalba,UAE,5,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4735,Khor Fakkan SSC,Khorfakkan,UAE,5,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4752,Avellino,Avellino,ITA,,,,nom canonique ou court exact,7718,,aucune contradiction démontrée par ce contrôle
+4753,Hellas Verona,Hellas Verona,ITA,,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4754,Ascoli,Ascoli,ITA,,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4755,Catanzaro,Catanzaro,ITA,,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4756,Juve Stabia,Juve Stabia,ITA,,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4757,Mantova,Mantova,ITA,,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4758,Cesena,Cesena,ITA,,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4759,Empoli,Empoli,ITA,,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4760,Padova,Padova,ITA,,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4761,Palermo,Palermo,ITA,,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4762,Benevento,Benevento,ITA,,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4763,Arezzo,Arezzo,ITA,,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4764,SudTirol,Südtirol,ITA,,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4765,Pisa,Pisa,ITA,,,,nom canonique ou court exact,7066,3935|7066,aucune contradiction démontrée par ce contrôle
+4768,FC Dinamo 1948,Dinamo Bucureşti,ROU,8,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4769,Arges,Argeș,ROU,8,,,nom canonique ou court exact,,3548,aucune contradiction démontrée par ce contrôle
+4770,FC Rapid 1923,Rapid Bucureşti,ROU,8,,,SportScore est la seule preuve exacte sur cet ID,,3558,aucune contradiction démontrée par ce contrôle
+4771,Petrolul Ploiesti,Petrolul 52,ROU,8,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4772,FC Universitatea Cluj,Universitatea Cluj,ROU,8,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4773,FK Csikszereda Miercurea Ciuc,Csikszereda,ROU,8,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4774,FC UT Arad,UTA Arad,ROU,8,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4775,Corvinul Hunedoara,Corvinul Hunedoara,ROU,8,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4777,Start Kristiansand,Start,NOR,9,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4778,Hapoel Jerusalem,Hapoel Jerusalem,ISR,10,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4779,Hapoel Petah Tikva,Hapoel Petah Tikva,ISR,10,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4780,Maccabi Petah Tikva FC,Maccabi Petah Tikva,ISR,10,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4781,Bnei Sakhnin,Bnei Sakhnin,ISR,10,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4782,Hapoel Kiryat Shmona,Ironi Kiryat Shmona,ISR,10,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4783,Beitar Jerusalem,Beitar Jerusalem,ISR,10,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4784,Hapoel Ramat Gan,Hapoel Ramat Gan,ISR,10,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4785,Maccabi Netanya,Maccabi Netanya,ISR,10,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4786,Maccabi Tel Aviv,Maccabi Tel Aviv,ISR,10,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4787,Hapoel Haifa,Hapoel Haifa,ISR,10,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4788,Ironi Tiberias,Ironi Tiberias,ISR,10,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4790,Erokspor,Esenler Erokspor,TUR,11,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4791,Istanbulspor,İstanbulspor,TUR,11,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4793,Belediye Vanspor,Vanspor,TUR,11,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4794,Bursaspor,Bursaspor,TUR,11,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4795,Iğdır FK,Iğdır,TUR,11,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4796,Manisa Futbol Kulübü,Manisa,TUR,11,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4797,Antalyaspor,Antalyaspor,TUR,11,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4798,Ankara Keciorengucu,Ankara Keçiörengücü,TUR,11,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4799,Pendikspor,Pendikspor,TUR,11,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4800,Muglaspor,Muğlaspor,TUR,11,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4801,Sariyer,Sarıyer,TUR,11,,,SportScore est la seule preuve exacte sur cet ID,9039,9039,aucune contradiction démontrée par ce contrôle
+4805,SV 07 Elversberg,Elversberg,GER,12,,,"autre fournisseur, graphie acquise exacte",2308|7827,2308|7827,aucune contradiction démontrée par ce contrôle
+4806,FC Augsburg,Augsburg,GER,12,,,"autre fournisseur, graphie acquise exacte",,7668,aucune contradiction démontrée par ce contrôle
+4807,FC Bayern Munich,Bayern München,GER,12|760,,,SportScore est la seule preuve exacte sur cet ID,,2298|4129,aucune contradiction démontrée par ce contrôle
+4808,Hamburger SV,Hamburger SV,GER,12,,,nom canonique ou court exact,,7500,aucune contradiction démontrée par ce contrôle
+4810,SV Werder Bremen,Werder Bremen,GER,12,,,"autre fournisseur, graphie acquise exacte",2313,2313|7648,aucune contradiction démontrée par ce contrôle
+4812,SC Paderborn 07,Paderborn,GER,12,,,"autre fournisseur, graphie acquise exacte",4209,4209,aucune contradiction démontrée par ce contrôle
+4813,1. FSV Mainz 05,Mainz 05,GER,12,,,"autre fournisseur, graphie acquise exacte",2304|4203|12281,2304|4203|10408|12281,aucune contradiction démontrée par ce contrôle
+4820,Dundee F.C.,Dundee FC,SCO,13,,,nom canonique ou court exact,,3419,abréviation FC
+4822,Zamora Barinas,Zamora,VEN,14,,,SportScore est la seule preuve exacte sur cet ID,,1735|2742|4476,aucune contradiction démontrée par ce contrôle
+4823,Estudiantes Merida FC,Estudiantes de Mérida,VEN,14,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4824,Academia Anzoategui,Anzoátegui,VEN,14,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4825,Deportivo Tachira,Deportivo Táchira,VEN,14,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4826,Academia Puerto Cabello,Academia Puerto Cabello,VEN,14,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4827,Monagas SC,Monagas,VEN,14,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4828,Rayo Zuliano,Rayo Zuliano,VEN,14,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4829,Caracas FC,Caracas,VEN,14,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4830,Trujillanos,Trujillanos,VEN,14,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4831,Universidad Central de Venezuela,UCV,VEN,14,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4833,Degerfors IF,Degerfors,SWE,15,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4835,Vasteras SK FK,Västerås SK,SWE,15,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4836,Orgryte,Örgryte,SWE,15,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4838,Guayaquil City,Guayaquil City,ECU,16,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4839,Libertad FC,Libertad,ECU,16,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4840,Club Sport Emelec,Emelec,ECU,16,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4841,Club Leones del Norte,Leones,ECU,16,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4842,Sporting Hasselt,Sporting Hasselt,BEL,17,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4843,RFC de Liege,FC Liège,BEL,17,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4844,RSCA Futures,Anderlecht Futures,BEL,17,development,development,SportScore est la seule preuve exacte sur cet ID,,675|4355|11348,marqueurs compatibles
+4845,Gent B,Gent U23,BEL,17,second,U23,SportScore est la seule preuve exacte sur cet ID,,755|3472|4353|4418,réserve établie par la Pro League
+4846,Francs Borains,Francs Borains,BEL,17,,,nom canonique ou court exact,,3659,aucune contradiction démontrée par ce contrôle
+4847,Beerschot Wilrijk,Beerschot,BEL,17,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4848,RFC Seraing,RFC Seraing,BEL,17,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4849,Club Nxt,Club Brugge NXT,BEL,17,development,development,SportScore est la seule preuve exacte sur cet ID,,,marqueurs compatibles
+4850,Patro Eisden,Patro Eisden,BEL,17,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4851,Excelsior Virton,Virton,BEL,17,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4852,Jong Genk,Genk U23,BEL,17,development,U23,SportScore est la seule preuve exacte sur cet ID,,796,réserve établie par la Pro League
+4853,Slask Wroclaw,Śląsk Wrocław,POL,20,,,SportScore est la seule preuve exacte sur cet ID,3613,3613|3643,aucune contradiction démontrée par ce contrôle
+4854,Pogon Szczecin,Pogoń Szczecin,POL,20,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4855,Wisla Krakow,Wisła Kraków,POL,20,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4856,KS Wieczysta Krakow,Wieczysta Kraków,POL,20,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4858,Cracovia Krakow,Cracovia,POL,20,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4859,Motor Lublin,Motor Lublin,POL,20,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4861,Radomiak Radom,Radomiak Radom,POL,20,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4862,Korona Kielce,Korona Kielce,POL,20,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4863,Widzew lodz,Widzew Łódź,POL,20,,,SportScore est la seule preuve exacte sur cet ID,3611,3611,aucune contradiction démontrée par ce contrôle
+4864,Wisla Plock,Wisła Płock,POL,20,,,SportScore est la seule preuve exacte sur cet ID,3620,3620,aucune contradiction démontrée par ce contrôle
+4865,Ansan Greeners FC,Ansan Greeners,KOR,21,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4866,Seongnam FC,Seongnam,KOR,21,,,SportScore est la seule preuve exacte sur cet ID,6116,6116,aucune contradiction démontrée par ce contrôle
+4867,Seoul E-Land FC,Seoul E-Land,KOR,21,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4868,Gyeongnam FC,Gyeongnam,KOR,21,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4869,Jeonnam Dragons,Jeonnam Dragons,KOR,21,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4870,Suwon Football Club,Suwon,KOR,21,,,SportScore est la seule preuve exacte sur cet ID,,5387,aucune contradiction démontrée par ce contrôle
+4871,Daegu Football Club,Daegu,KOR,21,,,SportScore est la seule preuve exacte sur cet ID,,5388,aucune contradiction démontrée par ce contrôle
+4872,Gimpo FC,Gimpo Citizen,KOR,21,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4873,Hwaseong FC,Hwaseong,KOR,21,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4874,Chungbuk Cheongju FC,Chungbuk Cheongju,KOR,21,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4875,Gimhae City,Gimhae City,KOR,21,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4876,FC Tokyo,FC Tokyo,JPN,22,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4877,Shimizu S-Pulse,Shimizu S-Pulse,JPN,22,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4878,V-Varen Nagasaki,V-Varen Nagasaki,JPN,22,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4879,Yokohama F. Marinos,Yokohama F.Marinos,JPN,22,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4880,Nagoya Grampus,Nagoya Grampus,JPN,22,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4881,Tokyo Verdy,Tokyo Verdy,JPN,22,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4882,Fagiano Okayama,Fagiano Okayama FC,JPN,22,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4883,Avispa Fukuoka,Avispa Fukuoka,JPN,22,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4884,Kawasaki Frontale,Kawasaki Frontale,JPN,22,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4885,Kashima Antlers,Kashima Antlers,JPN,22,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4886,Kyoto Sanga,Kyoto Sanga FC,JPN,22,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4887,Kashiwa Reysol,Kashiwa Reysol,JPN,22,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4888,Jeju SK FC,Jeju SK,KOR,23,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4889,Gwangju Football Club,Gwangju FC,KOR,23,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4890,Gimcheon Sangmu Football Club,Gimcheon Sangmu,KOR,23,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4891,FC Anyang,FC Anyang,KOR,23,,,nom canonique ou court exact,,5546,aucune contradiction démontrée par ce contrôle
+4892,SK Beveren,SK Beveren,BEL,24,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4893,Royal Antwerp,Royal Antwerp,BEL,24,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4894,KVC Westerlo,Westerlo,BEL,24,,,SportScore est la seule preuve exacte sur cet ID,3469|10663,3469|3666|10663,aucune contradiction démontrée par ce contrôle
+4896,RAAL La Louvière,RAAL La Louvière,BEL,24,,,nom canonique ou court exact,,3661,aucune contradiction démontrée par ce contrôle
+4897,KVSK Lommel,Lommel,BEL,24,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4898,KV Mechelen,KV Mechelen,BEL,24,,,nom canonique ou court exact,,8895,aucune contradiction démontrée par ce contrôle
+4899,RC Sporting Charleroi,Sporting Charleroi,BEL,24,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4900,Oud-Heverlee Leuven,OH Leuven,BEL,24,,,SportScore est la seule preuve exacte sur cet ID,11598,11598,aucune contradiction démontrée par ce contrôle
+4902,Rubin Kazan,Rubin Kazan,RUS,25,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4903,CSKA Moscow,CSKA Moscow,RUS,25,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4904,Rodina Moscow,Rodina,RUS,25,,,SportScore est la seule preuve exacte sur cet ID,3570,3570,aucune contradiction démontrée par ce contrôle
+4906,FK Krasnodar,FC Krasnodar,RUS,25,,,"autre fournisseur, graphie acquise exacte",,3569,aucune contradiction démontrée par ce contrôle
+4907,Akhmat Grozny,FK Akhmat,RUS,25,,,SportScore est la seule preuve exacte sur cet ID,3565|4001,3565|4001,aucune contradiction démontrée par ce contrôle
+4908,Lokomotiv Moscow,Lokomotiv Moscow,RUS,25,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4909,Fakel Voronezh,Fakel,RUS,25,,,SportScore est la seule preuve exacte sur cet ID,3578,3578,aucune contradiction démontrée par ce contrôle
+4910,Rudes,Rudeš,CRO,26,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4911,Slaven Belupo,Slaven Koprivnica,CRO,26,,,SportScore est la seule preuve exacte sur cet ID,3717,3717,aucune contradiction démontrée par ce contrôle
+4913,NK Istra 1961,Istra 1961,CRO,26,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4915,HNK Gorica,HNK Gorica,CRO,26,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4916,Zemun,Zemun,SRB,27,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4917,FK Zeleznicar Pancevo,Železničar Pančevo,SRB,27,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4919,Radnicki 1923 Kragujevac,Radnički 1923,SRB,27,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4921,FK IMT Belgrad,IMT,SRB,27,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4932,TPS Turku,TPS,FIN,29,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4933,Jaro,Jaro,FIN,29,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4934,SJK Seinajoen,SJK,FIN,29,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4935,Lahti,Lahti,FIN,29,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4937,IFK Mariehamn,Mariehamn,FIN,29,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4938,Troyes,Troyes,FRA,30,,,nom canonique ou court exact,4247,,aucune contradiction démontrée par ce contrôle
+4980,Sukhothai,Sukhothai FC,THA,34,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4981,Lamphun Warriors,Lamphun Warrior,THA,34,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4982,Chiangrai United,Chiangrai United,THA,34,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4983,Pattani,Pattani FC,THA,34,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4984,Uthai Thani Forest,Uthai Thani FC,THA,34,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4985,Port FC,Port FC,THA,34,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4986,Ayutthaya United,Ayutthaya United FC,THA,34,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+4987,Chonburi FC,Chonburi FC,THA,34,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4988,Hertha Berlin,Hertha BSC,GER,35,,,"autre fournisseur, graphie acquise exacte",,7635,aucune contradiction démontrée par ce contrôle
+4989,SV Darmstadt 98,Darmstadt,GER,35,,,"autre fournisseur, graphie acquise exacte",4167,4167,aucune contradiction démontrée par ce contrôle
+4990,Eintracht Braunschweig,Eintracht Braunschweig,GER,35,,,nom canonique ou court exact,,7846,aucune contradiction démontrée par ce contrôle
+4991,Arminia Bielefeld,Arminia Bielefeld,GER,35,,,nom canonique ou court exact,3433,,aucune contradiction démontrée par ce contrôle
+4992,Dynamo Dresden,Dynamo Dresden,GER,35,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4994,VfL Osnabrück,VfL Osnabrück,GER,35,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4995,Energie Cottbus,Energie Cottbus,GER,35,,,nom canonique ou court exact,,9506,aucune contradiction démontrée par ce contrôle
+4996,SpVgg Greuther Fürth,Greuther Fürth,GER,35,,,"autre fournisseur, graphie acquise exacte",4176,4176,aucune contradiction démontrée par ce contrôle
+4997,Holstein Kiel,Holstein Kiel,GER,35,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+4998,1. FC Kaiserslautern,Kaiserslautern,GER,35,,,"autre fournisseur, graphie acquise exacte",3434,3434|7823,aucune contradiction démontrée par ce contrôle
+4999,1. FC Nürnberg,1. FC Nürnberg,GER,35,,,nom canonique ou court exact,,7862,aucune contradiction démontrée par ce contrôle
+5004,Alianza Atletico Sullana,Alianza Atlético,PER,39,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5005,Sporting Cristal,Sporting Cristal,PER,39,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5006,FC Cajamarca,FC Cajamarca,PER,39,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5007,FBC Melgar,Melgar,PER,39,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5008,Atlas,Atlas,MEX,40,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5009,Necaxa,Necaxa,MEX,40,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5010,Atletico San Luis,Atlético de San Luis,MEX,40,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5011,FC Juarez,FC Juárez,MEX,40,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5013,Pachuca,Pachuca,MEX,40,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5014,Santos Laguna,Santos Laguna,MEX,40,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5015,Atlante FC,Atlante,MEX,40,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5016,Club Tijuana,Tijuana,MEX,40,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5026,Panetolikos Agrinio,Panetolikos,GRE,42,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5027,AE Kifisias,Kifisia FC,GRE,42,,,SportScore est la seule preuve exacte sur cet ID,12954,3504|12954,aucune contradiction démontrée par ce contrôle
+5028,Volos NPS,NFC Volos,GRE,42,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5029,Aris Thessaloniki,Aris Thessaloniki,GRE,42,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5030,Brooklyn FC,Brooklyn,USA,43,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5031,Rhode Island,Rhode Island,USA,43,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5032,Birmingham Legion,Birmingham Legion,USA,43,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5033,Tulsa Roughneck,FC Tulsa,USA,43,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5034,Las Vegas Lights,Las Vegas Lights,USA,43,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5035,Indy Eleven,Indy Eleven,USA,43,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5036,Sporting Jax,Sporting JAX,USA,43,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5037,San Antonio,San Antonio,USA,43,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5038,Pittsburgh Riverhounds,Pittsburgh Riverhounds,USA,43,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5039,Orange County SC,Orange County SC,USA,43,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5040,Monterey Bay FC,Monterey Bay,USA,43,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5041,Lexington,Lexington,USA,43,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5042,Tampa Bay Rowdies,Tampa Bay Rowdies,USA,43,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5043,Phoenix Rising FC,Phoenix Rising,USA,43,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5044,Oakland Roots,Oakland Roots,USA,43,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5045,Detroit City,Detroit City,USA,43,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5046,Loudoun United,Loudoun United,USA,43,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5047,Grazer AK,Grazer AK,AUT,44,,,nom canonique ou court exact,10469,10469,aucune contradiction démontrée par ce contrôle
+5048,LASK Linz,LASK,AUT,44|760,,,SportScore est la seule preuve exacte sur cet ID,9168,9168,aucune contradiction démontrée par ce contrôle
+5050,SV Ried,Ried,AUT,44,,,"autre fournisseur, graphie acquise exacte",,,aucune contradiction démontrée par ce contrôle
+5051,SK Rapid Wien,Rapid Wien,AUT,44,,,SportScore est la seule preuve exacte sur cet ID,,10465|12563,aucune contradiction démontrée par ce contrôle
+5052,SC Austria Lustenau,Austria Lustenau,AUT,44,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5053,Hansa Rostock,Hansa Rostock,GER,47,,,nom canonique ou court exact,,9513,aucune contradiction démontrée par ce contrôle
+5054,Alemannia Aachen,Alemannia Aachen,GER,47,,,nom canonique ou court exact,,10409,aucune contradiction démontrée par ce contrôle
+5055,Rot-Weiss Essen,Rot-Weiss Essen,GER,47,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5056,Havelse,Havelse,GER,47,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5057,FC Viktoria Köln,Viktoria Köln,GER,47,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5058,Fortuna Dusseldorf,Fortuna Düsseldorf,GER,47,,,nom canonique ou court exact,,7753,aucune contradiction démontrée par ce contrôle
+5059,Preußen Münster,Preussen Münster,GER,47,,,"autre fournisseur, graphie acquise exacte",4121,4121,aucune contradiction démontrée par ce contrôle
+5060,Waldhof Mannheim,Waldhof Mannheim,GER,47,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5061,FC Ingolstadt,FC Ingolstadt,GER,47,,,nom canonique ou court exact,3436|4123,,aucune contradiction démontrée par ce contrôle
+5062,Fortuna Köln,Fortuna Köln,GER,47,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5063,1. FC Saarbrücken,Saarbrücken,GER,47,,,"autre fournisseur, graphie acquise exacte",3444,3444|10407,aucune contradiction démontrée par ce contrôle
+5064,MSV Duisburg,MSV Duisburg,GER,47,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5065,SG Sonnenhof Grossaspach,Sonnenhof Großaspach,GER,47,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5066,SV Wehen Wiesbaden,Wehen Wiesbaden,GER,47,,,"autre fournisseur, graphie acquise exacte",,,aucune contradiction démontrée par ce contrôle
+5079,PEC Zwolle,PEC Zwolle,NED,51,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5080,SC Telstar,Telstar,NED,51,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5082,Excelsior SBV,Excelsior,NED,51,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5083,ADO Den Haag,ADO Den Haag,NED,51,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5085,Sparta Rotterdam,Sparta Rotterdam,NED,51,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5086,Fortuna Sittard,Fortuna Sittard,NED,51,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5087,Melbourne City,Melbourne City FC,AUS,52,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5088,Western Sydney Wanderers FC,Western Sydney Wanderers FC,AUS,52,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5089,Sydney FC,Sydney FC,AUS,52,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5090,Perth Glory,Perth Glory,AUS,52,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5091,Wellington Phoenix,Wellington Phoenix,AUS,52,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5092,Auckland FC,Auckland FC,AUS,52,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5093,Central Coast Mariners,Central Coast Mariners,AUS,52,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5094,Newcastle Jets,Newcastle Jets,AUS,52,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5095,Trencin,Trenčín,SVK,53,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5096,Dunajska Streda,DAC 1904,SVK,53,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5097,MFK Skalica,Skalica,SVK,53,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5098,FK Kosice,Košice,SVK,53,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5099,Dukla Banska Bystrica,Dukla Banská Bystrica,SVK,53,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5100,Slovan Bratislava,Slovan Bratislava,SVK,53|760,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5104,Moreirense,Moreirense,POR,54,,,nom canonique ou court exact,3457,3457,aucune contradiction démontrée par ce contrôle
+5106,Alverca,Alverca,POR,54,,,nom canonique ou court exact,3454,3454,aucune contradiction démontrée par ce contrôle
+5107,FC Famalicao,Famalicão,POR,54,,,"autre fournisseur, graphie acquise exacte",3448,3448,aucune contradiction démontrée par ce contrôle
+5108,Casa Pia AC,Casa Pia AC,POR,54,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5109,Coventry City,Coventry City,ENG,55,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5110,Hull City,Hull City,ENG,55,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5111,Manchester City,Manchester City,ENG,55|760,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5112,Nottingham Forest,Nottingham Forest,ENG,55,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5113,Leeds United,Leeds United,ENG,55,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5114,Fulham,Fulham,ENG,55,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5116,Everton,Everton,ENG,55,,,nom canonique ou court exact,1626|5001|11373,1626|11373,homonyme chilien distinct dans une autre compétition
+5117,Newcastle United,Newcastle United,ENG,55,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5118,Tottenham Hotspur,Tottenham Hotspur,ENG,55,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5119,Kriens,Kriens,SUI,56,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5120,Stade Nyonnais,Stade Nyonnais,SUI,56,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5121,Aarau,Aarau,SUI,56,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5122,FC Wil 1900,Wil,SUI,56,,,"autre fournisseur, graphie acquise exacte",3901,3901,aucune contradiction démontrée par ce contrôle
+5123,Winterthur,Winterthur,SUI,56,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5124,Stade Ouchy,Stade-Lausanne-Ouchy,SUI,56,,,SportScore est la seule preuve exacte sur cet ID,,5954,aucune contradiction démontrée par ce contrôle
+5125,FC Rapperswil-Jona,Rapperswil-Jona,SUI,56,,,"autre fournisseur, graphie acquise exacte",,,aucune contradiction démontrée par ce contrôle
+5126,Etoile Carouge,Etoile Carouge,SUI,56,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5127,Vaduz,FC Vaduz,SUI,57,,,SportScore est la seule preuve exacte sur cet ID,194|3505,3505,aucune contradiction démontrée par ce contrôle
+5129,Lausanne Sports,Lausanne,SUI,57,,,SportScore est la seule preuve exacte sur cet ID,8374,8374,aucune contradiction démontrée par ce contrôle
+5132,Grasshopper,Grasshopper,SUI,57,,,nom canonique ou court exact,3896|10887,,aucune contradiction démontrée par ce contrôle
+5133,Always Ready,Always Ready,BOL,58,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5134,Real Oruro,Real Oruro,BOL,58,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5135,Independiente Petrolero,Independiente,BOL,58,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5136,San Antonio Bulo Bulo,San Antonio Bulo Bulo,BOL,58,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5137,Club Guabira,Guabirá,BOL,58,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5138,Academia del Balompié Boliviano,ABB,BOL,58,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5139,Real Tomayapo,Real Tomayapo,BOL,58,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5140,Gualberto Villarroel Deportivo San José,Gualberto Villarroel SJ,BOL,58,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5151,Corinthians - SP,Corinthians,BRA,266|894,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5152,Remo - PA,Remo,BRA,266,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5153,Flamengo - RJ,Flamengo,BRA,266,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5154,Grêmio - RS,Grêmio,BRA,266,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5155,Palmeiras - SP,Palmeiras,BRA,266|894,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5156,Botafogo - RJ,Botafogo,BRA,266,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5157,Coritiba SAF - PR,Coritiba,BRA,266,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5158,Red Bull Bragantino,RB Bragantino,BRA,266|894,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5159,São Paulo - SP,São Paulo,BRA,266|894,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5160,Athletico Paranaense - PR,Athletico Paranaense,BRA,266,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5161,Santos FC - SP,Santos,BRA,266|894,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5162,Fluminense - RJ,Fluminense,BRA,266,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5163,Bahia - BA,Bahia,BRA,266,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5164,Internacional - RS,Internacional,BRA,266,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5165,Cruzeiro - MG,Cruzeiro,BRA,266,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5166,Vitória - BA,Vitória,BRA,266,,,SportScore est la seule preuve exacte sur cet ID,,3451,aucune contradiction démontrée par ce contrôle
+5179,Sabah Baku,Sabah FK,AZE,760,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5180,FC Shakhtar Donetsk,Shakhtar Donetsk,UKR,760,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5181,Derby County,Derby County,ENG,766,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5182,Burnley,Burnley,ENG,766,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5183,Portsmouth,Portsmouth,ENG,766,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5184,Sheffield United,Sheffield United,ENG,766,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5185,Wolverhampton Wanderers,Wolverhampton Wanderers,ENG,766,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5186,Queens Park Rangers,Queens Park Rangers,ENG,766,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5187,Stoke City,Stoke City,ENG,766,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5188,Cardiff City,Cardiff City,ENG,766,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5189,Wrexham,Wrexham,ENG,766,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5190,Blackburn Rovers,Blackburn Rovers,ENG,766,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5191,Lincoln City,Lincoln City,ENG,766,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5192,West Bromwich Albion,West Bromwich Albion,ENG,766,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5193,Charlton Athletic,Charlton Athletic,ENG,766,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5194,Middlesbrough,Middlesbrough,ENG,766,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5195,Swansea City,Swansea City,ENG,766,,,nom canonique ou court exact,,9394|12592,aucune contradiction démontrée par ce contrôle
+5196,Watford,Watford,ENG,766,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5197,Preston North End,Preston North End,ENG,766,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5198,Birmingham City,Birmingham City,ENG,766,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5199,Bolton Wanderers,Bolton Wanderers,ENG,766,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5200,Norwich City,Norwich City,ENG,766,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5201,Bristol City,Bristol City,ENG,766,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5202,Millwall,Millwall,ENG,766,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5203,West Ham United,West Ham United,ENG,766,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5204,Southampton,Southampton,ENG,766,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5207,FC Iberia 1999 Tbilisi,Iberia 1999,,772,,,SportScore est la seule preuve exacte sur cet ID,244,,aucune contradiction démontrée par ce contrôle
+5212,Borac Banja Luka,Borac Banja Luka,,772,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5214,Ferencvarosi TC,Ferencváros,HUN,797,,,SportScore est la seule preuve exacte sur cet ID,4554|12426,4554|12426,aucune contradiction démontrée par ce contrôle
+5215,Omonia Nicosia FC,Omonia Nicosia,,797,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5216,SCU Torreense,Torreense,POR,797,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5217,Levski Sofia,Levski Sofia,BUL,797,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5218,NK Publikum Celje,NK Celje,SVN,797,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5219,Ararat-Armenia FC,Ararat Armenia,ARM,797,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5220,Bengaluru,Bengaluru FC,IND,812,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5221,Northeast United,Northeast United FC,IND,812,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5222,Chennaiyin FC,Chennaiyin FC,IND,812,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5223,Mumbai City FC,Mumbai City FC,IND,812,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5224,Minerva Punjab,Punjab FC,IND,812,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5225,East Bengal FC,East Bengal FC,IND,812,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5226,Inter Kashi,Inter Kashi,IND,812,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5227,Kerala Blasters FC,Kerala Blasters FC,IND,812,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5228,FC Goa,FC Goa,IND,812,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5229,SC Delhi,SC Delhi,IND,812,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5230,Odisha FC,Odisha FC,IND,812,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5231,Churchill Brothers,Churchill Brothers,IND,812,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5232,Mohun Bagan Super Giant,Mohun Bagan SG,IND,812,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5233,Grenoble,Grenoble,FRA,882,,,nom canonique ou court exact,3835|4253,,aucune contradiction démontrée par ce contrôle
+5234,Clermont,Clermont Foot,FRA,882,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5235,Boulogne,Boulogne,FRA,882,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5236,Montpellier Hérault SC,Montpellier,FRA,882,,,SportScore est la seule preuve exacte sur cet ID,3826,3826,aucune contradiction démontrée par ce contrôle
+5237,Rodez Aveyron,Rodez,FRA,882,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5238,Dijon,Dijon,FRA,882,,,nom canonique ou court exact,3827|4225,,aucune contradiction démontrée par ce contrôle
+5239,USL Dunkerque,Dunkerque,FRA,882,,,"autre fournisseur, graphie acquise exacte",3834|8960,3834|8960,aucune contradiction démontrée par ce contrôle
+5240,Red Star FC 93,Red Star,FRA,882,,,SportScore est la seule preuve exacte sur cet ID,11657,3823|11657,aucune contradiction démontrée par ce contrôle
+5241,Nancy,Nancy,FRA,882,,,nom canonique ou court exact,3833|4262|10864,,aucune contradiction démontrée par ce contrôle
+5242,Guingamp,Guingamp,FRA,882,,,nom canonique ou court exact,4254|12010,,aucune contradiction démontrée par ce contrôle
+5243,FC Annecy,Annecy FC,FRA,882,,,"autre fournisseur, graphie acquise exacte",3829,3829,aucune contradiction démontrée par ce contrôle
+5244,Pau FC,Pau,FRA,882,,,"autre fournisseur, graphie acquise exacte",3828,3828,aucune contradiction démontrée par ce contrôle
+5246,AS Saint-Étienne,Saint-Étienne,FRA,882,,,"autre fournisseur, graphie acquise exacte",3825,3825,aucune contradiction démontrée par ce contrôle
+5247,Stade Lavallois MFC,Laval,FRA,882,,,SportScore est la seule preuve exacte sur cet ID,3831,3831,aucune contradiction démontrée par ce contrôle
+5248,Sochaux,Sochaux,FRA,882,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5249,Noroeste,Noroeste,BRA,894,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5250,Capivariano,Capivariano,BRA,894,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5251,Portuguesa Desportos,Portuguesa,BRA,894,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5252,Velo Clube,Velo Clube,BRA,894,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5253,Guarani SP,Guarani SP,BRA,894,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5254,Primavera,Primavera SP,BRA,894,,,SportScore est la seule preuve exacte sur cet ID,,,nom propre du club brésilien confirmé par la FPF
+5255,Galway United FC,Galway United,IRL,897,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5257,Drogheda United,Drogheda United,IRL,897,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5258,Derry City,Derry City,IRL,897,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5262,Sligo Rovers,Sligo Rovers,IRL,897,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5263,Waterford United,Waterford,IRL,897,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5285,Atletico Ottawa,Atlético Ottawa,CAN,908,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5286,Supra Du Quebec,Supra du Québec,CAN,908,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5287,York United FC,Inter Toronto,CAN,908,,,SportScore est la seule preuve exacte sur cet ID,,,changement de nom York United confirmé par la CPL
+5288,Vancouver FC,Vancouver FC,CAN,908,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5289,Cavalry FC,Cavalry,CAN,908,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5290,Pacific FC,Pacific,CAN,908,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5291,Forge FC,Forge,CAN,908,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5292,HFX Wanderers FC,HFX Wanderers,CAN,908,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5293,AmaZulu,AmaZulu FC,RSA,912,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5294,Stellenbosch FC,Stellenbosch FC,RSA,912,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5295,Mamelodi Sundowns,Mamelodi Sundowns FC,RSA,912,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5296,Marumo Gallants FC,Marumo Gallants,RSA,912,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5297,Chippa United,Chippa United,RSA,912,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5298,Orlando Pirates,Orlando Pirates,RSA,912,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5299,TS Galaxy,TS Galaxy,RSA,912,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5300,Polokwane City FC,Polokwane City,RSA,912,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5301,Lamontville Golden Arrows,Lamontville Golden Arrows,RSA,912,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5302,Kruger United,Kruger United,RSA,912,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5303,Sekhukhune United,Sekhukhune United,RSA,912,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5304,Richards Bay,Richards Bay,RSA,912,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5305,Milford,Milford FC,RSA,912,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5306,Siwelele,Siwelele,RSA,912,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5307,Durban City FC,Durban City,RSA,912,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5308,Kaizer Chiefs,Kaizer Chiefs,RSA,912,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5309,Al Ahli SC,Al Ahli,KSA,941,,,SportScore est la seule preuve exacte sur cet ID,,5327,"équipes masculine et féminine portant le même nom de club, échéances distinctes"
+5310,Al Kholood,Al Kholood,KSA,941,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5311,Al Fateh,Al Fateh FC,KSA,941,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5312,Al Riyadh,Al Riyadh,KSA,941,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5313,Al Faisaly,Al-Faisaly,KSA,941,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5314,Al Fayha,Al-Fayha,KSA,941,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5315,Al Shabab,Al Shabab,KSA,941,,,nom canonique ou court exact,5584,5584,"équipes masculine et féminine portant le même nom de club, échéances distinctes"
+5316,NEOM Sports Club,Neom SC,KSA,941,,,SportScore est la seule preuve exacte sur cet ID,,5330,"équipes masculine et féminine portant le même nom de club, échéances distinctes"
+5317,Al Hilal,Al Hilal,KSA,941,,,nom canonique ou court exact,5334,5334,"équipes masculine et féminine portant le même nom de club, échéances distinctes"
+5318,Al Qadsiah,Al Qadsiah,KSA,941,,,nom canonique ou court exact,5328,5328,"équipes masculine et féminine portant le même nom de club, échéances distinctes"
+5319,Al Khaleej,Al Khaleej,KSA,941,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5320,Al Ettifaq,Al-Ettifaq,KSA,941,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5321,Diraiyah,Al Diriyah,KSA,941,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5322,Al Nassr,Al Nassr FC,KSA,941,,,SportScore est la seule preuve exacte sur cet ID,5329,5329,"équipes masculine et féminine portant le même nom de club, échéances distinctes"
+5323,Al Hazem,Al Hazem,KSA,941,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5324,Abha,Abha,KSA,941,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5325,Al Ittihad,Al Ittihad,KSA,941,,,nom canonique ou court exact,5331,5331,"équipes masculine et féminine portant le même nom de club, échéances distinctes"
+5326,Al Taawoun,Al-Taawoun,KSA,941,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5465,Mexico,Mexico,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5466,Bosnia and Herzegovina,Bosnia and Herzegovina,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5467,Argentina,Argentina,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5468,South Africa,South Africa,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5469,South Korea,South Korea,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5470,Uzbekistan,Uzbekistan,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5471,Cabo Verde,Cape Verde,,1004,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5472,Egypt,Egypt,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5473,Paraguay,Paraguay,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5474,Saudi Arabia,Saudi Arabia,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5475,Japan,Japan,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5476,Sweden,Sweden,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5477,Iraq,Iraq,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5478,Ghana,Ghana,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5479,Switzerland,Switzerland,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5480,Netherlands,Netherlands,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5481,Jordan,Jordan,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5482,Croatia,Croatia,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5483,Australia,Australia,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5484,USA,USA,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5485,Democratic Republic of the Congo,DR Congo,,1004,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5486,Panama,Panama,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5487,Algeria,Algeria,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5488,Senegal,Senegal,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5489,Austria,Austria,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5490,France,France,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5491,Colombia,Colombia,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5492,New Zealand,New Zealand,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5493,Ecuador,Ecuador,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5494,IR Iran,Iran,,1004,,,SportScore est la seule preuve exacte sur cet ID,,,aucune contradiction démontrée par ce contrôle
+5495,Haiti,Haiti,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5496,Brazil,Brazil,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5497,Morocco,Morocco,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5498,Uruguay,Uruguay,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5499,Qatar,Qatar,,1004,,,nom canonique ou court exact,,570,aucune contradiction démontrée par ce contrôle
+5500,Turkiye,Turkiye,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5501,Scotland,Scotland,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5502,Tunisia,Tunisia,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5503,Czechia,Czechia,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5504,England,England,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5505,Canada,Canada,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5506,Spain,Spain,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5507,Curacao,Curacao,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5508,Germany,Germany,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5509,Norway,Norway,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5510,Cote d'Ivoire,Ivory Coast,,1004,,,"autre fournisseur, graphie acquise exacte",,,aucune contradiction démontrée par ce contrôle
+5511,Portugal,Portugal,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
+5512,Belgium,Belgium,,1004,,,nom canonique ou court exact,,,aucune contradiction démontrée par ce contrôle
