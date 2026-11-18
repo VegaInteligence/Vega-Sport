@@ -1,0 +1,23 @@
+group,root,name,sides,finished,undated,first_dated,last_dated,source_counts,providers,profile_state,other_roots,selected_fa_exact
+Bury,5861,Bury,4059,4058,1,1894-09-01,2018-12-02,"{'footballcsv': 3622, 'engsoccerdata': 437}",vega=archive:angleterre:bury,unresolved,"9378,2562",20
+Bury,9378,Bury FC,874,874,0,1998-08-07,2019-05-04,"{'footballcsv': 552, 'openfootball': 322}",vega=archive:angleterre:bury fc,unresolved,"5861,2562",0
+Bury,2562,Bury,25,12,0,2026-08-31,2027-01-23,{'open_matchday': 25},open_matchday=name:Bury,verified_candidate,"5861,9378",0
+Darlington,5787,Darlington,3138,3137,1,1885-11-21,2010-11-27,"{'engsoccerdata': 337, 'footballcsv': 2801}",vega=archive:angleterre:darlington,unresolved,"4610,2593",14
+Darlington,4610,Darlington FC,556,556,0,1998-08-07,2020-11-29,"{'footballcsv': 552, 'worldclub': 4}",vega=archive:angleterre:darlington fc,unresolved,"5787,2593",4
+Darlington,2593,Darlington,21,12,0,2026-08-31,2027-01-02,{'open_matchday': 21},open_matchday=name:Darlington,verified_candidate,"5787,4610",0
+Torquay,4625,Torquay United,3117,3117,0,1925-11-28,2022-11-15,"{'engsoccerdata': 325, 'footballcsv': 2604, 'openfootball': 184, 'worldclub': 4}",vega=archive:angleterre:torquay united,unresolved,"9401,2614",22
+Torquay,9401,Torquay United FC,460,460,0,1998-08-07,2010-05-08,{'footballcsv': 460},vega=archive:angleterre:torquay united fc,unresolved,"4625,2614",0
+Torquay,2614,Torquay,22,11,0,2026-09-05,2027-01-09,{'open_matchday': 22},open_matchday=name:Torquay,verified_candidate,"4625,9401",0
+Halifax,5947,Halifax Town,3111,3111,0,1913-01-11,2022-11-05,"{'engsoccerdata': 265, 'footballcsv': 2843, 'worldclub': 3}",vega=archive:angleterre:halifax town,unresolved,"9405,3380,2634",12
+Halifax,9405,FC Halifax Town,184,184,0,1998-08-07,2002-04-20,{'footballcsv': 184},vega=archive:angleterre:fc halifax town,unresolved,"5947,3380,2634",0
+Halifax,3380,FC Halifax Town,46,17,0,2026-08-08,2027-04-24,{'open_matchday': 46},open_matchday=name:FC Halifax Town,verified_candidate,"5947,9405,2634",0
+Halifax,2634,FC Halifax,2,2,0,2026-10-17,2026-11-07,{'open_matchday': 2},open_matchday=name:FC Halifax,unresolved,"5947,9405,3380",0
+Southport,5731,Southport,2394,2394,0,1882-10-21,2018-12-17,"{'engsoccerdata': 194, 'footballcsv': 2200}",vega=archive:angleterre:southport,unresolved,"5780,3389",18
+Southport,5780,Southport Central,1,0,0,1884-10-11,1884-10-11,{'engsoccerdata': 1},vega=archive:angleterre:southport central,unresolved,"5731,3389",0
+Southport,3389,Southport,20,10,0,2026-08-31,2027-01-02,{'open_matchday': 20},open_matchday=name:Southport,verified_candidate,"5731,5780",0
+Bradford PA,5941,Bradford Park Avenue,2343,2343,0,1908-09-01,2012-11-03,"{'footballcsv': 2190, 'engsoccerdata': 153}",vega=archive:angleterre:bradford park avenue,unresolved,2577,12
+Bradford PA,2577,Bradford PA,1,1,0,2026-10-03,2026-10-03,{'open_matchday': 1},open_matchday=name:Bradford PA,verified_candidate,5941,0
+Durham,5963,Durham City,293,293,0,1921-08-27,1957-12-07,"{'footballcsv': 286, 'engsoccerdata': 7}",vega=archive:angleterre:durham city,unresolved,,3
+Nelson,5965,Nelson,426,426,0,1921-08-27,1953-11-21,"{'footballcsv': 412, 'engsoccerdata': 14}",vega=archive:angleterre:nelson,unresolved,,3
+Oxford University,5608,Oxford University,47,41,6,1872-10-26,1880-04-10,{'engsoccerdata': 47},vega=archive:angleterre:oxford university,unresolved,,40
+Royal Engineers,5594,Royal Engineers,64,57,7,1872-01-10,1887-11-05,{'engsoccerdata': 64},vega=archive:angleterre:royal engineers,unresolved,,56

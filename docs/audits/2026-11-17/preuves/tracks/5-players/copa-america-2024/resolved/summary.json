@@ -1,0 +1,59 @@
+{
+  "fixtures": 32,
+  "fixture_sides": 64,
+  "roster_people": 412,
+  "player_match_appearances": 1010,
+  "unique_participants": 339,
+  "roles": {
+    "bench_no_entry": 607,
+    "entrant": 306,
+    "starter": 704,
+    "off_sheet": 34
+  },
+  "positions_among_played": {
+    "defender": 328,
+    "midfielder": 344,
+    "forward": 273,
+    "goalkeeper": 65
+  },
+  "organizer_role_corrections": 39,
+  "changed_role_pairs": {
+    "starter to bench_no_entry": 7,
+    "starter to entrant": 5,
+    "entrant to bench_no_entry": 6,
+    "bench_no_entry to starter": 6,
+    "entrant to starter": 4,
+    "bench_no_entry to entrant": 7,
+    "off_sheet to starter": 2,
+    "entrant to off_sheet": 2
+  },
+  "chile_corrected_role_source_rows": 46,
+  "rds_person_verified": 314,
+  "played_people_rds_verified": 269,
+  "played_rows_rds_identity_verified": 838,
+  "registered_rds_identity_status": {
+    "matched": 314,
+    "unresolved": 98
+  },
+  "independent_match_files": 32,
+  "independent_event_rows_including_administrative_and_shootout": 100324,
+  "played_rows_with_qualifying_action": 1010,
+  "played_rows_with_pass": 999,
+  "played_rows_with_shot": 439,
+  "goal_contributions_checked": 70,
+  "with_existing_provider_assist": 0,
+  "structured_vs_source_minute_differences": 11,
+  "national_elo_values": 64,
+  "rds_native_lineups": 0,
+  "rds_stats": 0,
+  "rds_power": 0,
+  "rds_internal_grades": 0,
+  "sb_vs_organizer_nonparticipating_sheet_disagreements": [
+    {
+      "number": "17",
+      "name": "Andy Polo",
+      "organizer": "off_sheet",
+      "independent": "bench_no_entry"
+    }
+  ]
+}

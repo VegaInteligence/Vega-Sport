@@ -1,0 +1,412 @@
+{
+  "inputs": "Two real frozen HTTP responses, exact PG18 replay at 590b65390d",
+  "rerun": [
+    "python3 build.py",
+    "python3 capture.py"
+  ],
+  "expected": "Correct per-metric rates/counts for both players and modes in desktop and mobile with no horizontal overflow. Unknown and observed zero remain distinct.",
+  "observed": [
+    {
+      "size": "desktop",
+      "player": "p_2WXYqD",
+      "mode": "rate",
+      "button": "true",
+      "cells": {
+        "Buts": [
+          "0,2",
+          "0"
+        ],
+        "Tirs": [
+          "1,6",
+          "0,42"
+        ],
+        "xG": [
+          "0,1",
+          "0,05"
+        ],
+        "Ballons dans la surface": [
+          "1,8",
+          "1,45"
+        ],
+        "Dribbles réussis": [
+          "0,2",
+          "0,83"
+        ],
+        "Passes réussies": [
+          "41,8",
+          "26"
+        ],
+        "Ballons touchés": [
+          "65,6",
+          "55"
+        ],
+        "Duels gagnés": [
+          "2,8",
+          "3,95"
+        ],
+        "Tacles": [
+          "0,6",
+          "1,45"
+        ],
+        "Récupérations": [
+          "4,2",
+          "2,7"
+        ]
+      },
+      "widthOk": true
+    },
+    {
+      "size": "desktop",
+      "player": "p_2WXYqD",
+      "mode": "minutes",
+      "button": "true",
+      "cells": {
+        "Buts": [
+          "450",
+          "433"
+        ],
+        "Tirs": [
+          "450",
+          "433"
+        ],
+        "xG": [
+          "450",
+          "433"
+        ],
+        "Ballons dans la surface": [
+          "450",
+          "433"
+        ],
+        "Dribbles réussis": [
+          "450",
+          "433"
+        ],
+        "Passes réussies": [
+          "450",
+          "433"
+        ],
+        "Ballons touchés": [
+          "405",
+          "388"
+        ],
+        "Duels gagnés": [
+          "450",
+          "433"
+        ],
+        "Tacles": [
+          "450",
+          "433"
+        ],
+        "Récupérations": [
+          "450",
+          "433"
+        ]
+      },
+      "widthOk": true
+    },
+    {
+      "size": "desktop",
+      "player": "p_1FntG3",
+      "mode": "rate",
+      "button": "true",
+      "cells": {
+        "Buts": [
+          "0",
+          "0"
+        ],
+        "Tirs": [
+          "0",
+          "0"
+        ],
+        "xG": [
+          "0",
+          "0"
+        ],
+        "Ballons dans la surface": [
+          "0",
+          "0"
+        ],
+        "Dribbles réussis": [
+          "0",
+          "0"
+        ],
+        "Passes réussies": [
+          "33,2",
+          "27,3"
+        ],
+        "Ballons touchés": [
+          "—",
+          "—"
+        ],
+        "Duels gagnés": [
+          "0,4",
+          "0,33"
+        ],
+        "Tacles": [
+          "0",
+          "0"
+        ],
+        "Récupérations": [
+          "6,8",
+          "8,33"
+        ]
+      },
+      "widthOk": true
+    },
+    {
+      "size": "desktop",
+      "player": "p_1FntG3",
+      "mode": "minutes",
+      "button": "true",
+      "cells": {
+        "Buts": [
+          "225",
+          "270"
+        ],
+        "Tirs": [
+          "225",
+          "270"
+        ],
+        "xG": [
+          "225",
+          "270"
+        ],
+        "Ballons dans la surface": [
+          "225",
+          "270"
+        ],
+        "Dribbles réussis": [
+          "225",
+          "270"
+        ],
+        "Passes réussies": [
+          "225",
+          "270"
+        ],
+        "Ballons touchés": [
+          "0",
+          "0"
+        ],
+        "Duels gagnés": [
+          "225",
+          "270"
+        ],
+        "Tacles": [
+          "225",
+          "270"
+        ],
+        "Récupérations": [
+          "225",
+          "270"
+        ]
+      },
+      "widthOk": true
+    },
+    {
+      "size": "mobile",
+      "player": "p_2WXYqD",
+      "mode": "rate",
+      "button": "true",
+      "cells": {
+        "Buts": [
+          "0,2",
+          "0"
+        ],
+        "Tirs": [
+          "1,6",
+          "0,42"
+        ],
+        "xG": [
+          "0,1",
+          "0,05"
+        ],
+        "Ballons dans la surface": [
+          "1,8",
+          "1,45"
+        ],
+        "Dribbles réussis": [
+          "0,2",
+          "0,83"
+        ],
+        "Passes réussies": [
+          "41,8",
+          "26"
+        ],
+        "Ballons touchés": [
+          "65,6",
+          "55"
+        ],
+        "Duels gagnés": [
+          "2,8",
+          "3,95"
+        ],
+        "Tacles": [
+          "0,6",
+          "1,45"
+        ],
+        "Récupérations": [
+          "4,2",
+          "2,7"
+        ]
+      },
+      "widthOk": true
+    },
+    {
+      "size": "mobile",
+      "player": "p_2WXYqD",
+      "mode": "minutes",
+      "button": "true",
+      "cells": {
+        "Buts": [
+          "450",
+          "433"
+        ],
+        "Tirs": [
+          "450",
+          "433"
+        ],
+        "xG": [
+          "450",
+          "433"
+        ],
+        "Ballons dans la surface": [
+          "450",
+          "433"
+        ],
+        "Dribbles réussis": [
+          "450",
+          "433"
+        ],
+        "Passes réussies": [
+          "450",
+          "433"
+        ],
+        "Ballons touchés": [
+          "405",
+          "388"
+        ],
+        "Duels gagnés": [
+          "450",
+          "433"
+        ],
+        "Tacles": [
+          "450",
+          "433"
+        ],
+        "Récupérations": [
+          "450",
+          "433"
+        ]
+      },
+      "widthOk": true
+    },
+    {
+      "size": "mobile",
+      "player": "p_1FntG3",
+      "mode": "rate",
+      "button": "true",
+      "cells": {
+        "Buts": [
+          "0",
+          "0"
+        ],
+        "Tirs": [
+          "0",
+          "0"
+        ],
+        "xG": [
+          "0",
+          "0"
+        ],
+        "Ballons dans la surface": [
+          "0",
+          "0"
+        ],
+        "Dribbles réussis": [
+          "0",
+          "0"
+        ],
+        "Passes réussies": [
+          "33,2",
+          "27,3"
+        ],
+        "Ballons touchés": [
+          "—",
+          "—"
+        ],
+        "Duels gagnés": [
+          "0,4",
+          "0,33"
+        ],
+        "Tacles": [
+          "0",
+          "0"
+        ],
+        "Récupérations": [
+          "6,8",
+          "8,33"
+        ]
+      },
+      "widthOk": true
+    },
+    {
+      "size": "mobile",
+      "player": "p_1FntG3",
+      "mode": "minutes",
+      "button": "true",
+      "cells": {
+        "Buts": [
+          "225",
+          "270"
+        ],
+        "Tirs": [
+          "225",
+          "270"
+        ],
+        "xG": [
+          "225",
+          "270"
+        ],
+        "Ballons dans la surface": [
+          "225",
+          "270"
+        ],
+        "Dribbles réussis": [
+          "225",
+          "270"
+        ],
+        "Passes réussies": [
+          "225",
+          "270"
+        ],
+        "Ballons touchés": [
+          "0",
+          "0"
+        ],
+        "Duels gagnés": [
+          "225",
+          "270"
+        ],
+        "Tacles": [
+          "225",
+          "270"
+        ],
+        "Récupérations": [
+          "225",
+          "270"
+        ]
+      },
+      "widthOk": true
+    }
+  ],
+  "screenshots": {
+    "desktop-p_1FntG3-minutes.png": "db6827bcc6994a8b597f046790ff6eae284ea36da01aca0c1b2e1b220ec01bd7",
+    "desktop-p_1FntG3-rate.png": "6ed4264c17ad2857b7daac789557ccc19872189c4fc8ed9b82b5d07bf4cf1ecf",
+    "desktop-p_2WXYqD-minutes.png": "8bb589b1904e373dd667c2190d888125e5664ac43f346926eaf997f09d7896ff",
+    "desktop-p_2WXYqD-rate.png": "d214ad038e943e2a17eb3aef2cb98a15bb74b1d5af255f9505d4013005f856f7",
+    "mobile-p_1FntG3-minutes.png": "70b6fb65b7cf04ff77e8802409f4f352e0d9a83ba77ea5e9df4d7cb04abf26b4",
+    "mobile-p_1FntG3-rate.png": "ab9c3c7ca3b1652734accd75236ddc0f47958fb2542d7c91d0d657957b814b4c",
+    "mobile-p_2WXYqD-minutes.png": "0be2cdcfd7a0ad7e8cbf6c4f09babd40e5c1da9dec5001230a80f2ec148003a6",
+    "mobile-p_2WXYqD-rate.png": "2da974a524c80a81619b2ef629509fe6caa04038dcabde0455a12955727ea773"
+  }
+}

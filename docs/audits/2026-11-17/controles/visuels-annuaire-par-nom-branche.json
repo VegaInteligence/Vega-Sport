@@ -1,0 +1,145 @@
+{
+  "sampled_utc": "2026-11-18T03:45:09.304217+00:00",
+  "origin": "http://127.0.0.1:18771",
+  "setup": "Run named competition-card cases on deployed and candidate UIs; use one new folder per run.\n\npython (with Playwright) targeted.py public|candidate OUTPUT_DIRECTORY [--expect-fixed]\nThe candidate uses the existing local afterquota PG18 DB, normal read handler and a byte-checked\ncopy of the selected worktree's UI. The 404 case changes the image response in the browser only.\n",
+  "command": [
+    "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/official-club-art/.venv/bin/python",
+    "tracks/7-artwork/directory-absence/targeted.py",
+    "candidate",
+    "tracks/7-artwork/directory-absence/candidate-named-0345",
+    "--expect-fixed"
+  ],
+  "expected": "Named absent cards expose their correct name and no trophy, shield or fabricated emblem. The positive image must decode. A forced HTTP 404 must preserve the name and produce no fabricated emblem.",
+  "actual": [
+    {
+      "size": "desktop",
+      "kind": "absence",
+      "label": "Copa América",
+      "found": true,
+      "screenshot": "desktop0.png",
+      "name": "Copa América",
+      "card": "Copa América\n\nCoupe · Amérique du Sud\n\n1 saison",
+      "entitySvg": "lucide lucide-trophy icon",
+      "placeholder": null,
+      "img": null,
+      "width": 0,
+      "pass": false
+    },
+    {
+      "size": "desktop",
+      "kind": "absence",
+      "label": "Coupe d’Afrique des nations",
+      "found": true,
+      "screenshot": "desktop1.png",
+      "name": "Coupe d’Afrique des nations",
+      "card": "Coupe d’Afrique des nations\n\nCoupe · Afrique\n\n3 saisons",
+      "entitySvg": "lucide lucide-trophy icon",
+      "placeholder": null,
+      "img": null,
+      "width": 0,
+      "pass": false
+    },
+    {
+      "size": "desktop",
+      "kind": "authentic",
+      "label": "Cymru North",
+      "found": true,
+      "screenshot": "desktop2.png",
+      "name": "Cymru North",
+      "card": "Cymru North\n\nCoupe · Pays de Galles\n\n1 saison",
+      "entitySvg": null,
+      "placeholder": null,
+      "img": "http://127.0.0.1:18770/api/assets?url=https%3A%2F%2Fmedia.vega.invalid%2Fsha256%2F0b2958916b260998034409a86e6ede3879dd706020e0371df9b9e03ddb826022.png",
+      "width": 512,
+      "pass": true
+    },
+    {
+      "size": "desktop",
+      "kind": "404",
+      "label": "Cymru North",
+      "found": true,
+      "screenshot": "desktop-404.png",
+      "intercepted": [
+        "http://127.0.0.1:18770/api/assets?url=https%3A%2F%2Fmedia.vega.invalid%2Fsha256%2F0b2958916b260998034409a86e6ede3879dd706020e0371df9b9e03ddb826022.png"
+      ],
+      "name": "Cymru North",
+      "card": "CN\nCymru North\n\nCoupe · Pays de Galles\n\n1 saison",
+      "entitySvg": null,
+      "placeholder": "CN",
+      "img": null,
+      "width": 0,
+      "pass": true
+    },
+    {
+      "size": "mobile",
+      "kind": "absence",
+      "label": "Copa América",
+      "found": true,
+      "screenshot": "mobile0.png",
+      "name": "Copa América",
+      "card": "Copa América\n\nCoupe · Amérique du Sud\n\n1 saison",
+      "entitySvg": "lucide lucide-trophy icon",
+      "placeholder": null,
+      "img": null,
+      "width": 0,
+      "pass": false
+    },
+    {
+      "size": "mobile",
+      "kind": "absence",
+      "label": "Coupe d’Afrique des nations",
+      "found": true,
+      "screenshot": "mobile1.png",
+      "name": "Coupe d’Afrique des nations",
+      "card": "Coupe d’Afrique des nations\n\nCoupe · Afrique\n\n3 saisons",
+      "entitySvg": "lucide lucide-trophy icon",
+      "placeholder": null,
+      "img": null,
+      "width": 0,
+      "pass": false
+    },
+    {
+      "size": "mobile",
+      "kind": "authentic",
+      "label": "Cymru North",
+      "found": true,
+      "screenshot": "mobile2.png",
+      "name": "Cymru North",
+      "card": "Cymru North\n\nCoupe · Pays de Galles\n\n1 saison",
+      "entitySvg": null,
+      "placeholder": null,
+      "img": "http://127.0.0.1:18770/api/assets?url=https%3A%2F%2Fmedia.vega.invalid%2Fsha256%2F0b2958916b260998034409a86e6ede3879dd706020e0371df9b9e03ddb826022.png",
+      "width": 512,
+      "pass": true
+    },
+    {
+      "size": "mobile",
+      "kind": "404",
+      "label": "Cymru North",
+      "found": true,
+      "screenshot": "mobile-404.png",
+      "intercepted": [
+        "http://127.0.0.1:18770/api/assets?url=https%3A%2F%2Fmedia.vega.invalid%2Fsha256%2F0b2958916b260998034409a86e6ede3879dd706020e0371df9b9e03ddb826022.png"
+      ],
+      "name": "Cymru North",
+      "card": "CN\nCymru North\n\nCoupe · Pays de Galles\n\n1 saison",
+      "entitySvg": null,
+      "placeholder": "CN",
+      "img": null,
+      "width": 0,
+      "pass": true
+    }
+  ],
+  "hashes": {
+    "desktop-404.png": "bba5d9f72adf9a946c0f6ff21ee08aebca836f0bb5325070ca8de8cf3d3c1b39",
+    "desktop0.png": "5fad32861de286581e37269d6547986f1420242a8e7b786e03b998f64b77c1be",
+    "desktop1.png": "e82363365fe18a366ae7142ae42266ae29d3fe41ef03ff82d2e851a83cafe5f8",
+    "desktop2.png": "1bd6c675283654f2292d659d8d68c20d023cfed285639701a3e1eaac44733cd1",
+    "mobile-404.png": "3094596ca125930ba48ec6108719dd8ce424cab867502322297e7a307489cbb8",
+    "mobile0.png": "340b24e758b096eb74eb6adef970767f51b3b8c5133e10b784d68b8f7042942c",
+    "mobile1.png": "d1666af4df9392b6e120b6d5f4349d077a225ea31724d459d77022782c84e8dd",
+    "mobile2.png": "cfd0962d28e8f69b7bb9a54ff79f010645f01f45e618d352d66d10b6d92bfa16"
+  },
+  "source_sha256_candidate": "f3ba0a7ec2f387199953128723aba7f25525410f8c987949dacca708208b3f6a",
+  "application_head": "d4d3fbc542686cc41fcf74bd96f204607bc068d2"
+}

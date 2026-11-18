@@ -1,0 +1,65 @@
+number,official_match,match,public_match,date,team,side,starters,entrants,participants,match_bench_no_entry,off_sheet,rds_roster_count,rds_player_stats_count,persisted_vega_grades,by_identity_verified,url
+1,g2414542,739083,m_v0739083,2024-06-20,Argentina,home,11,5,16,10,0,0,0,0,16,https://copaamerica.com/en/copa-america-2024/matches/match-1-argentina-canada
+1,g2414542,739083,m_v0739083,2024-06-20,Canada,away,11,4,15,11,0,0,0,0,15,https://copaamerica.com/en/copa-america-2024/matches/match-1-argentina-canada
+2,g2414543,739084,m_v0739084,2024-06-21,Peru,home,11,5,16,10,0,0,0,0,13,https://copaamerica.com/en/copa-america-2024/matches/match-2-peru-chile
+2,g2414543,739084,m_v0739084,2024-06-21,Chile,away,11,4,15,11,0,0,0,0,9,https://copaamerica.com/en/copa-america-2024/matches/match-2-peru-chile
+3,g2414548,739086,m_v0739086,2024-06-22,Mexico,home,11,5,16,10,0,0,0,0,15,https://copaamerica.com/en/copa-america-2024/matches/match-3-mexico-jamaica
+3,g2414548,739086,m_v0739086,2024-06-22,Jamaica,away,11,4,15,8,0,0,0,0,7,https://copaamerica.com/en/copa-america-2024/matches/match-3-mexico-jamaica
+4,g2414549,739085,m_v0739085,2024-06-22,Ecuador,home,11,4,15,11,0,0,0,0,15,https://copaamerica.com/en/copa-america-2024/matches/match-4-ecuador-venezuela
+4,g2414549,739085,m_v0739085,2024-06-22,Venezuela,away,11,5,16,10,0,0,0,0,10,https://copaamerica.com/en/copa-america-2024/matches/match-4-ecuador-venezuela
+5,g2414555,739087,m_v0739087,2024-06-23,United States,home,11,5,16,10,0,0,0,0,16,https://copaamerica.com/en/copa-america-2024/matches/match-5-united-states-bolivia
+5,g2414555,739087,m_v0739087,2024-06-23,Bolivia,away,11,5,16,10,0,0,0,0,4,https://copaamerica.com/en/copa-america-2024/matches/match-5-united-states-bolivia
+6,g2414554,739088,m_v0739088,2024-06-23,Uruguay,home,11,4,15,11,0,0,0,0,14,https://copaamerica.com/en/copa-america-2024/matches/match-6-uruguay-panama
+6,g2414554,739088,m_v0739088,2024-06-23,Panama,away,11,5,16,9,0,0,0,0,11,https://copaamerica.com/en/copa-america-2024/matches/match-6-uruguay-panama
+7,g2414561,739090,m_v0739090,2024-06-24,Brazil,home,11,3,14,12,0,0,0,0,14,https://copaamerica.com/en/copa-america-2024/matches/match-7-brazil-costa-rica
+7,g2414561,739090,m_v0739090,2024-06-24,Costa Rica,away,11,5,16,10,0,0,0,0,11,https://copaamerica.com/en/copa-america-2024/matches/match-7-brazil-costa-rica
+8,g2414560,739089,m_v0739089,2024-06-24,Colombia,home,11,5,16,10,0,0,0,0,14,https://copaamerica.com/en/copa-america-2024/matches/match-8-colombia-paraguay
+8,g2414560,739089,m_v0739089,2024-06-24,Paraguay,away,11,5,16,10,0,0,0,0,12,https://copaamerica.com/en/copa-america-2024/matches/match-8-colombia-paraguay
+9,g2414544,739092,m_v0739092,2024-06-25,Chile,home,11,4,15,10,1,0,0,0,8,https://copaamerica.com/en/copa-america-2024/matches/match-9-chile-argentina
+9,g2414544,739092,m_v0739092,2024-06-25,Argentina,away,11,5,16,10,0,0,0,0,16,https://copaamerica.com/en/copa-america-2024/matches/match-9-chile-argentina
+10,g2414545,739091,m_v0739091,2024-06-25,Peru,home,11,5,16,10,0,0,0,0,12,https://copaamerica.com/en/copa-america-2024/matches/match-10-peru-canada
+10,g2414545,739091,m_v0739091,2024-06-25,Canada,away,11,5,16,10,0,0,0,0,16,https://copaamerica.com/en/copa-america-2024/matches/match-10-peru-canada
+11,g2414551,739094,m_v0739094,2024-06-26,Venezuela,home,11,5,16,10,0,0,0,0,12,https://copaamerica.com/en/copa-america-2024/matches/match-11-venezuela-mexico
+11,g2414551,739094,m_v0739094,2024-06-26,Mexico,away,11,5,16,9,1,0,0,0,15,https://copaamerica.com/en/copa-america-2024/matches/match-11-venezuela-mexico
+12,g2414550,739093,m_v0739093,2024-06-26,Ecuador,home,11,4,15,10,1,0,0,0,14,https://copaamerica.com/en/copa-america-2024/matches/match-12-ecuador-jamaica
+12,g2414550,739093,m_v0739093,2024-06-26,Jamaica,away,11,5,16,7,0,0,0,0,8,https://copaamerica.com/en/copa-america-2024/matches/match-12-ecuador-jamaica
+13,g2414557,739095,m_v0739095,2024-06-27,Panama,home,11,3,14,10,1,0,0,0,11,https://copaamerica.com/en/copa-america-2024/matches/match-13-panama-united-states
+13,g2414557,739095,m_v0739095,2024-06-27,United States,away,11,5,16,10,0,0,0,0,16,https://copaamerica.com/en/copa-america-2024/matches/match-13-panama-united-states
+14,g2414556,739096,m_v0739096,2024-06-27,Uruguay,home,11,5,16,10,0,0,0,0,15,https://copaamerica.com/en/copa-america-2024/matches/match-14-uruguay-bolivia
+14,g2414556,739096,m_v0739096,2024-06-27,Bolivia,away,11,5,16,10,0,0,0,0,5,https://copaamerica.com/en/copa-america-2024/matches/match-14-uruguay-bolivia
+15,g2414563,739098,m_v0739098,2024-06-28,Paraguay,home,11,5,16,10,0,0,0,0,12,https://copaamerica.com/en/copa-america-2024/matches/match-15-paraguay-brazil
+15,g2414563,739098,m_v0739098,2024-06-28,Brazil,away,11,5,16,10,0,0,0,0,16,https://copaamerica.com/en/copa-america-2024/matches/match-15-paraguay-brazil
+16,g2414562,739097,m_v0739097,2024-06-28,Colombia,home,11,5,16,9,1,0,0,0,14,https://copaamerica.com/en/copa-america-2024/matches/match-16-colombia-costa-rica
+16,g2414562,739097,m_v0739097,2024-06-28,Costa Rica,away,11,5,16,10,0,0,0,0,12,https://copaamerica.com/en/copa-america-2024/matches/match-16-colombia-costa-rica
+17,g2414546,739099,m_v0739099,2024-06-29,Argentina,home,11,5,16,10,0,0,0,0,16,https://copaamerica.com/en/copa-america-2024/matches/match-17-argentina-peru
+17,g2414546,739099,m_v0739099,2024-06-29,Peru,away,11,5,16,8,2,0,0,0,9,https://copaamerica.com/en/copa-america-2024/matches/match-17-argentina-peru
+18,g2414547,739100,m_v0739100,2024-06-29,Canada,home,11,4,15,11,0,0,0,0,15,https://copaamerica.com/en/copa-america-2024/matches/match-18-canada-chile
+18,g2414547,739100,m_v0739100,2024-06-29,Chile,away,11,5,16,8,2,0,0,0,11,https://copaamerica.com/en/copa-america-2024/matches/match-18-canada-chile
+19,g2414553,739101,m_v0739101,2024-06-30,Mexico,home,11,5,16,9,1,0,0,0,14,https://copaamerica.com/en/copa-america-2024/matches/match-19-mexico-ecuador
+19,g2414553,739101,m_v0739101,2024-06-30,Ecuador,away,11,4,15,11,0,0,0,0,15,https://copaamerica.com/en/copa-america-2024/matches/match-19-mexico-ecuador
+20,g2414552,739102,m_v0739102,2024-06-30,Jamaica,home,11,5,16,6,1,0,0,0,10,https://copaamerica.com/en/copa-america-2024/matches/match-20-jamaica-venezuela
+20,g2414552,739102,m_v0739102,2024-06-30,Venezuela,away,11,5,16,10,0,0,0,0,10,https://copaamerica.com/en/copa-america-2024/matches/match-20-jamaica-venezuela
+21,g2414559,739103,m_v0739103,2024-07-01,United States,home,11,4,15,10,1,0,0,0,15,https://copaamerica.com/en/copa-america-2024/matches/match-21-united-states-uruguay
+21,g2414559,739103,m_v0739103,2024-07-01,Uruguay,away,11,5,16,10,0,0,0,0,15,https://copaamerica.com/en/copa-america-2024/matches/match-21-united-states-uruguay
+22,g2414558,739104,m_v0739104,2024-07-01,Bolivia,home,11,5,16,10,0,0,0,0,4,https://copaamerica.com/en/copa-america-2024/matches/match-22-bolivia-panama
+22,g2414558,739104,m_v0739104,2024-07-01,Panama,away,11,5,16,7,2,0,0,0,11,https://copaamerica.com/en/copa-america-2024/matches/match-22-bolivia-panama
+23,g2414565,739105,m_v0739105,2024-07-02,Brazil,home,11,5,16,10,0,0,0,0,16,https://copaamerica.com/en/copa-america-2024/matches/match-23-brazil-colombia
+23,g2414565,739105,m_v0739105,2024-07-02,Colombia,away,11,5,16,9,1,0,0,0,14,https://copaamerica.com/en/copa-america-2024/matches/match-23-brazil-colombia
+24,g2414564,739106,m_v0739106,2024-07-02,Costa Rica,home,11,5,16,9,1,0,0,0,12,https://copaamerica.com/en/copa-america-2024/matches/match-24-costa-rica-paraguay
+24,g2414564,739106,m_v0739106,2024-07-02,Paraguay,away,11,5,16,5,5,0,0,0,12,https://copaamerica.com/en/copa-america-2024/matches/match-24-costa-rica-paraguay
+25,g2414566,739107,m_v0739107,2024-07-04,Argentina,home,11,4,15,11,0,0,0,0,15,https://copaamerica.com/en/copa-america-2024/matches/match-25-argentina-ecuador
+25,g2414566,739107,m_v0739107,2024-07-04,Ecuador,away,11,5,16,10,0,0,0,0,16,https://copaamerica.com/en/copa-america-2024/matches/match-25-argentina-ecuador
+26,g2414567,739108,m_v0739108,2024-07-05,Venezuela,home,11,5,16,9,1,0,0,0,11,https://copaamerica.com/en/copa-america-2024/matches/match-26-venezuela-canada
+26,g2414567,739108,m_v0739108,2024-07-05,Canada,away,11,4,15,10,1,0,0,0,15,https://copaamerica.com/en/copa-america-2024/matches/match-26-venezuela-canada
+27,g2414569,739109,m_v0739109,2024-07-06,Uruguay,home,11,5,16,10,0,0,0,0,15,https://copaamerica.com/en/copa-america-2024/matches/match-27-uruguay-brazil
+27,g2414569,739109,m_v0739109,2024-07-06,Brazil,away,11,5,16,9,1,0,0,0,16,https://copaamerica.com/en/copa-america-2024/matches/match-27-uruguay-brazil
+28,g2414568,739110,m_v0739110,2024-07-06,Colombia,home,11,5,16,8,2,0,0,0,15,https://copaamerica.com/en/copa-america-2024/matches/match-28-colombia-panama
+28,g2414568,739110,m_v0739110,2024-07-06,Panama,away,11,5,16,7,2,0,0,0,13,https://copaamerica.com/en/copa-america-2024/matches/match-28-colombia-panama
+29,g2414571,739111,m_v0739111,2024-07-09,Argentina,home,11,5,16,10,0,0,0,0,16,https://copaamerica.com/en/copa-america-2024/matches/match-29-argentina-canada
+29,g2414571,739111,m_v0739111,2024-07-09,Canada,away,11,5,16,9,1,0,0,0,16,https://copaamerica.com/en/copa-america-2024/matches/match-29-argentina-canada
+30,g2414572,739112,m_v0739112,2024-07-10,Uruguay,home,11,5,16,9,1,0,0,0,16,https://copaamerica.com/en/copa-america-2024/matches/match-30-uruguay-colombia
+30,g2414572,739112,m_v0739112,2024-07-10,Colombia,away,11,5,16,10,0,0,0,0,15,https://copaamerica.com/en/copa-america-2024/matches/match-30-uruguay-colombia
+31,g2414573,739113,m_v0739113,2024-07-13,Canada,home,11,5,16,9,1,0,0,0,15,https://copaamerica.com/en/copa-america-2024/matches/match-31-canada-uruguay
+31,g2414573,739113,m_v0739113,2024-07-13,Uruguay,away,11,5,16,8,2,0,0,0,15,https://copaamerica.com/en/copa-america-2024/matches/match-31-canada-uruguay
+32,g2414574,739114,m_v0739114,2024-07-14,Argentina,home,11,6,17,9,0,0,0,0,17,https://copaamerica.com/en/copa-america-2024/matches/match-32-argentina-colombia
+32,g2414574,739114,m_v0739114,2024-07-14,Colombia,away,11,6,17,8,1,0,0,0,15,https://copaamerica.com/en/copa-america-2024/matches/match-32-argentina-colombia

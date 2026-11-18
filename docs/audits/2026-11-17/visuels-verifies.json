@@ -1,26 +1,26 @@
 {
-  "records": 1466,
+  "records": 1467,
   "by_type": {
     "competition": 104,
-    "team": 1362
+    "team": 1363
   },
-  "distinct_images": 1429,
+  "distinct_images": 1430,
   "converted": 159,
-  "manifest_sha256": "0006fcb54dcbc7d9c7de8eaadd63d3c362b3666d20166d2e34abe6ad24dfa110",
-  "zip_sha256": "79370102ac4dc580affdc6dfce364736ba06e9edc0402c9e98050916801a16c8",
-  "zip_bytes": 124772022,
+  "manifest_sha256": "7d64edeaee4887e0f81f8ba8900867a1cbd33e45653bb6563fdf2f057b35f769",
+  "zip_sha256": "859f336d90474e471e34298a4ee5d4097cf4f555a1e9de124b06fcca799d60d5",
+  "zip_bytes": 125431227,
   "inputs": [
     {
-      "source_pack": "artwork-expanded-1465",
-      "manifest_sha256": "60481a7cf9dd2c327cfcd1f2f5e788b5c66ad1d7434bfa0f6c457402083d5968",
+      "source_pack": "artwork-expanded-1466",
+      "manifest_sha256": "0006fcb54dcbc7d9c7de8eaadd63d3c362b3666d20166d2e34abe6ad24dfa110",
       "by_type": {
         "competition": 104,
-        "team": 1361
+        "team": 1362
       }
     },
     {
-      "source_pack": "tracks/7-artwork/uruguay-vicenza/profile",
-      "manifest_sha256": "37114baf972d65ae117e6d5883329852d0e6809bb5393def88400847bbe0ace0",
+      "source_pack": "tracks/7-artwork/english-historic-roots/profile",
+      "manifest_sha256": "ffaa69c63e8a5d0106061620aba6a80146a4d8b491976f66d95abbe6f3151876",
       "by_type": {
         "team": 1
       }

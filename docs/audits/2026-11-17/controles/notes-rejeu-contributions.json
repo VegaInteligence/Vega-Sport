@@ -1,0 +1,301 @@
+{
+  "rds_snapshot": [
+    "vega_v2",
+    "2026-11-18 02:59:53.278899+00",
+    "4405852:4405852:",
+    "on",
+    "repeatable read"
+  ],
+  "release_power_sha256": "75d3b2a829b585d8dbadb60d1fb2a6b4233e7f74d220a0f76bab0ebb6fdb93ff",
+  "reference_sha256": {
+    "2021": "29245d637b2a41320ee4b6eeb77c74f1734548dfba872fef3fa95689cccbd4f3",
+    "2022": "28b7ef094175483618dc6a5bb21d40b93419e064409e92591b6ac00c7bc39b00",
+    "2023": "78c2977a5628ad3052a05a21922943543270a97dbf338e82dd2ef608211cd14e",
+    "2024": "ece07856a7c3db7738d8e5b8de3f2f6c0063ed16f60d01c675685d98208ebb10",
+    "2025": "26c8aeef4dd10399621131f6d682a1f29e59b22717336bdd676fe11b1c2be871"
+  },
+  "coverage": {
+    "stored": 2282580,
+    "replayed": 2282580,
+    "same_stored_z_f32": 828405,
+    "same_rounded_visible_value": 2281497,
+    "grade_gap_over_0.001": 286097,
+    "grade_gap_over_0.01": 7681,
+    "grade_gap_over_0.1": 550,
+    "grade_gap_over_1.0": 0,
+    "intermediate_mismatch": 641915
+  },
+  "award_edition_reference_cells": 438,
+  "distinct_editions": 301,
+  "rounded_numbers_differ_before_filter": 1083,
+  "intermediate_retention_at": "2026-11-18 03:11:34.842254+00:00",
+  "retention_sums": {
+    "published": 2282580,
+    "different_role": 0,
+    "missing_power_row": 0,
+    "different_team_minutes": 0,
+    "older_grade_run": 641915,
+    "different_z": 630929,
+    "above_update_threshold": 0,
+    "different_z_in_same_run": 0,
+    "exposed_rounded_differences": 284,
+    "all_rounded_differences": 358
+  },
+  "writer_tolerance_max_abs_z": 9.999983e-05,
+  "maxima_by_award": {
+    "2021": {
+      "grade_gap": 0.0014199723840988554,
+      "match": 248344,
+      "player": 24369,
+      "award": 2021,
+      "season": 2021,
+      "edition": 761,
+      "competition": 186,
+      "reference_year": 2021,
+      "role": "winger",
+      "contribution": -0.17117229104042053,
+      "stored_z": -0.21524359285831451,
+      "reconstructed_z": -0.21534264200579364,
+      "stored_grade": 46.90635255509439,
+      "reconstructed_grade": 46.90493258271029,
+      "run_id": 2089,
+      "conservative_z_interval_with_persistence_tolerance": [
+        -0.21544278412495874,
+        -0.21524250701552872
+      ],
+      "outside_roundoff_and_update_tolerance": false
+    },
+    "2022": {
+      "grade_gap": 0.0014388992675335999,
+      "match": 148034,
+      "player": 21680,
+      "award": 2022,
+      "season": 2022,
+      "edition": 762,
+      "competition": 186,
+      "reference_year": 2022,
+      "role": "centre_forward",
+      "contribution": -0.08844000846147537,
+      "stored_z": 0.046283021569252014,
+      "reconstructed_z": 0.04618301890151192,
+      "stored_grade": 50.666026825298765,
+      "reconstructed_grade": 50.66458792603123,
+      "run_id": 2079,
+      "conservative_z_interval_with_persistence_tolerance": [
+        0.046082972772779916,
+        0.046283074069756486
+      ],
+      "outside_roundoff_and_update_tolerance": false
+    },
+    "2023": {
+      "grade_gap": 0.0014386323430599646,
+      "match": 90188,
+      "player": 22482,
+      "award": 2023,
+      "season": 2023,
+      "edition": 782,
+      "competition": 9,
+      "reference_year": 2023,
+      "role": "centre_back",
+      "contribution": -0.020530596375465393,
+      "stored_z": -0.014631316065788269,
+      "reconstructed_z": -0.014731284264883852,
+      "stored_grade": 49.789439680573864,
+      "reconstructed_grade": 49.788001048230804,
+      "run_id": 2051,
+      "conservative_z_interval_with_persistence_tolerance": [
+        -0.01483130020091332,
+        -0.014631272124191413
+      ],
+      "outside_roundoff_and_update_tolerance": false
+    },
+    "2024": {
+      "grade_gap": 0.001439088984191983,
+      "match": 59545,
+      "player": 5933,
+      "award": 2024,
+      "season": 2025,
+      "edition": 870,
+      "competition": 37,
+      "reference_year": 2024,
+      "role": "full_back",
+      "contribution": -0.06924044340848923,
+      "stored_z": -0.003904719138517976,
+      "reconstructed_z": -0.003804720870650762,
+      "stored_grade": 49.94380659815468,
+      "reconstructed_grade": 49.94524568713887,
+      "run_id": 1875,
+      "conservative_z_interval_with_persistence_tolerance": [
+        -0.0039047814544249694,
+        -0.0037046651707510225
+      ],
+      "outside_roundoff_and_update_tolerance": false
+    },
+    "2025": {
+      "grade_gap": 0.0014390469640588321,
+      "match": 33717,
+      "player": 32406,
+      "award": 2025,
+      "season": 2026,
+      "edition": 21,
+      "competition": 21,
+      "reference_year": 2025,
+      "role": "centre_back",
+      "contribution": -0.010451012291014194,
+      "stored_z": 0.018964212387800217,
+      "reconstructed_z": 0.01906421060768181,
+      "stored_grade": 50.27291424430492,
+      "reconstructed_grade": 50.27435329126898,
+      "run_id": 1717,
+      "conservative_z_interval_with_persistence_tolerance": [
+        0.018964201615254972,
+        0.019164219995048134
+      ],
+      "outside_roundoff_and_update_tolerance": false
+    },
+    "2026": {
+      "grade_gap": 0.456558012687605,
+      "match": 47188,
+      "player": 28945,
+      "award": 2026,
+      "season": 2026,
+      "edition": 912,
+      "competition": 195,
+      "reference_year": 2025,
+      "role": "winger",
+      "contribution": -0.6806385517120361,
+      "stored_z": -1.8506230115890503,
+      "reconstructed_z": -1.892479293124053,
+      "stored_grade": 25.629711312793415,
+      "reconstructed_grade": 25.17315330010581,
+      "run_id": 2095,
+      "conservative_z_interval_with_persistence_tolerance": [
+        -1.8925799456921075,
+        -1.892378745739161
+      ],
+      "outside_roundoff_and_update_tolerance": true
+    }
+  },
+  "largest_cases_outside_binary32_and_persistence_tolerance": 32,
+  "largest_cases_tested": 32,
+  "published_runs": [
+    [
+      2021,
+      2098,
+      "2026-11-18 01:49:24.929991+00",
+      "2026-11-18 01:51:42.489635+00"
+    ],
+    [
+      2022,
+      2087,
+      "2026-11-17 17:03:59.468652+00",
+      "2026-11-17 17:06:39.774194+00"
+    ],
+    [
+      2023,
+      2071,
+      "2026-11-17 00:32:44.535354+00",
+      "2026-11-17 00:36:53.758955+00"
+    ],
+    [
+      2024,
+      2045,
+      "2026-11-16 00:52:29.704288+00",
+      "2026-11-16 00:58:35.436537+00"
+    ],
+    [
+      2025,
+      2096,
+      "2026-11-18 01:07:37.063008+00",
+      "2026-11-18 01:15:32.551924+00"
+    ],
+    [
+      2026,
+      2095,
+      "2026-11-18 01:04:51.398291+00",
+      "2026-11-18 01:07:35.139134+00"
+    ]
+  ],
+  "public": [
+    {
+      "at": "2026-11-18T03:15:51.496202+00:00",
+      "request": "https://vegasport.vercel.app/api/read/performance?season=2021%2F2022&league=l_4DWyTT&appearance=m_32Gy0Y%3Ap_3F0ACq",
+      "destination": "https://dngp6kh9jx2bl.cloudfront.net/api/read/performance?season=2021%2F2022&league=l_4DWyTT&appearance=m_32Gy0Y%3Ap_3F0ACq",
+      "status": 200,
+      "bytes": 10528,
+      "sha256": "14c86037aefb9d7a79da50180bb73add2c3a9ae25413d7450aa1da1c6b2c4b24",
+      "match": 248344,
+      "player": 24369,
+      "name": "Louie Watson",
+      "minutes": 82,
+      "gradeZ": -0.21524359285831451,
+      "grade": 46.90635255509439,
+      "fields": [
+        "id",
+        "playerId",
+        "teamId",
+        "matchId",
+        "leagueId",
+        "team",
+        "league",
+        "country",
+        "season",
+        "rawPitchX",
+        "rawPitchY",
+        "shirtNumber",
+        "minutes",
+        "grade",
+        "gradeZ",
+        "goals",
+        "assists",
+        "xg",
+        "npxg",
+        "xa",
+        "xgot",
+        "shots",
+        "shotsOnTarget",
+        "chancesCreated"
+      ]
+    },
+    {
+      "at": "2026-11-18T03:15:53.050160+00:00",
+      "request": "https://vegasport.vercel.app/api/read/performance?season=2026%2F2027&league=l_1Kknkl&appearance=m_3d8EqN%3Ap_3qX0Ri",
+      "destination": "https://dngp6kh9jx2bl.cloudfront.net/api/read/performance?season=2026%2F2027&league=l_1Kknkl&appearance=m_3d8EqN%3Ap_3qX0Ri",
+      "status": 200,
+      "bytes": 10537,
+      "sha256": "206b9baf013c047e36395978bab74119e06af7dc3e6a9ce130e9f9d103c4a6d1",
+      "match": 47188,
+      "player": 28945,
+      "name": "Raymond Daniels",
+      "minutes": 88,
+      "gradeZ": -1.8506230115890503,
+      "grade": 25.629711312793415,
+      "fields": [
+        "id",
+        "playerId",
+        "teamId",
+        "matchId",
+        "leagueId",
+        "team",
+        "league",
+        "country",
+        "season",
+        "rawPitchX",
+        "rawPitchY",
+        "shirtNumber",
+        "minutes",
+        "grade",
+        "gradeZ",
+        "goals",
+        "assists",
+        "xg",
+        "npxg",
+        "xa",
+        "xgot",
+        "shots",
+        "shotsOnTarget",
+        "chancesCreated"
+      ]
+    }
+  ]
+}

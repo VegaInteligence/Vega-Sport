@@ -1,0 +1,16 @@
+{
+  "checked_at": "2026-11-18T03:18:30.593Z",
+  "id": "dpl_7W4Qeu12ZmCaPdFHb1XvgUPEp2U8",
+  "createdAt": 1794939288689,
+  "ready": 1794939298910,
+  "readyState": "READY",
+  "state": "READY",
+  "url": "vega-rgh447644-vegainteligence.vercel.app",
+  "target": "production",
+  "alias": [
+    "vegasport.vercel.app",
+    "vega-vegainteligence.vercel.app",
+    "vega-git-main-vegainteligence.vercel.app"
+  ],
+  "github_sha": "17ca0f76175301e77ae43fe137467222f594b40a"
+}

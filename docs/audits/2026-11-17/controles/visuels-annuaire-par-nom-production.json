@@ -1,0 +1,147 @@
+{
+  "sampled_utc": "2026-11-18T03:45:06.980807+00:00",
+  "origin": "https://vegasport.vercel.app",
+  "setup": "Run named competition-card cases on deployed and candidate UIs; use one new folder per run.\n\npython (with Playwright) targeted.py public|candidate OUTPUT_DIRECTORY [--expect-fixed]\nThe candidate uses the existing local afterquota PG18 DB, normal read handler and a byte-checked\ncopy of the selected worktree's UI. The 404 case changes the image response in the browser only.\n",
+  "command": [
+    "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/official-club-art/.venv/bin/python",
+    "tracks/7-artwork/directory-absence/targeted.py",
+    "public",
+    "tracks/7-artwork/directory-absence/public-named-0345",
+    "--expect-fixed"
+  ],
+  "expected": "Named absent cards expose their correct name and no trophy, shield or fabricated emblem. The positive image must decode. A forced HTTP 404 must preserve the name and produce no fabricated emblem.",
+  "actual": [
+    {
+      "size": "desktop",
+      "kind": "absence",
+      "label": "Pro League U21",
+      "found": true,
+      "screenshot": "desktop0.png",
+      "name": "Pro League U21",
+      "card": "Pro League U21\n\nCoupe · Belgique\n\n1 saison",
+      "entitySvg": "lucide lucide-trophy icon",
+      "placeholder": null,
+      "img": null,
+      "width": 0,
+      "pass": false
+    },
+    {
+      "size": "desktop",
+      "kind": "absence",
+      "label": "Coupe d’Afrique des nations",
+      "found": true,
+      "screenshot": "desktop1.png",
+      "name": "Coupe d’Afrique des nations",
+      "card": "Coupe d’Afrique des nations\n\nCoupe · Afrique\n\n3 saisons",
+      "entitySvg": "lucide lucide-trophy icon",
+      "placeholder": null,
+      "img": null,
+      "width": 0,
+      "pass": false
+    },
+    {
+      "size": "desktop",
+      "kind": "authentic",
+      "label": "Serie A",
+      "found": true,
+      "screenshot": "desktop2.png",
+      "name": "Serie A",
+      "card": "Serie A\n\nBrésil\n\n4 saisons",
+      "entitySvg": null,
+      "placeholder": null,
+      "img": "https://dngp6kh9jx2bl.cloudfront.net/data/sources/v2/images/630cd646d0abd39143e0eeed3d142dcd58a49c7574517a2d71dce8d3dfe99553.webp",
+      "width": 192,
+      "pass": true
+    },
+    {
+      "size": "desktop",
+      "kind": "404",
+      "label": "Serie A",
+      "found": true,
+      "screenshot": "desktop-404.png",
+      "intercepted": [
+        "https://dngp6kh9jx2bl.cloudfront.net/data/sources/v2/images/630cd646d0abd39143e0eeed3d142dcd58a49c7574517a2d71dce8d3dfe99553.webp",
+        "https://dngp6kh9jx2bl.cloudfront.net/api/assets?url=https%3A%2F%2Fcdn.pitchapi.dev%2Fimages%2Fleagues%2F630cd646d0abd39143e0eeed3d142dcd58a49c7574517a2d71dce8d3dfe99553.webp"
+      ],
+      "name": "Serie A",
+      "card": "SA\nSerie A\n\nBrésil\n\n4 saisons",
+      "entitySvg": null,
+      "placeholder": "SA",
+      "img": null,
+      "width": 0,
+      "pass": true
+    },
+    {
+      "size": "mobile",
+      "kind": "absence",
+      "label": "Pro League U21",
+      "found": true,
+      "screenshot": "mobile0.png",
+      "name": "Pro League U21",
+      "card": "Pro League U21\n\nCoupe · Belgique\n\n1 saison",
+      "entitySvg": "lucide lucide-trophy icon",
+      "placeholder": null,
+      "img": null,
+      "width": 0,
+      "pass": false
+    },
+    {
+      "size": "mobile",
+      "kind": "absence",
+      "label": "Coupe d’Afrique des nations",
+      "found": true,
+      "screenshot": "mobile1.png",
+      "name": "Coupe d’Afrique des nations",
+      "card": "Coupe d’Afrique des nations\n\nCoupe · Afrique\n\n3 saisons",
+      "entitySvg": "lucide lucide-trophy icon",
+      "placeholder": null,
+      "img": null,
+      "width": 0,
+      "pass": false
+    },
+    {
+      "size": "mobile",
+      "kind": "authentic",
+      "label": "Serie A",
+      "found": true,
+      "screenshot": "mobile2.png",
+      "name": "Serie A",
+      "card": "Serie A\n\nBrésil\n\n4 saisons",
+      "entitySvg": null,
+      "placeholder": null,
+      "img": "https://dngp6kh9jx2bl.cloudfront.net/data/sources/v2/images/630cd646d0abd39143e0eeed3d142dcd58a49c7574517a2d71dce8d3dfe99553.webp",
+      "width": 192,
+      "pass": true
+    },
+    {
+      "size": "mobile",
+      "kind": "404",
+      "label": "Serie A",
+      "found": true,
+      "screenshot": "mobile-404.png",
+      "intercepted": [
+        "https://dngp6kh9jx2bl.cloudfront.net/data/sources/v2/images/630cd646d0abd39143e0eeed3d142dcd58a49c7574517a2d71dce8d3dfe99553.webp",
+        "https://dngp6kh9jx2bl.cloudfront.net/api/assets?url=https%3A%2F%2Fcdn.pitchapi.dev%2Fimages%2Fleagues%2F630cd646d0abd39143e0eeed3d142dcd58a49c7574517a2d71dce8d3dfe99553.webp"
+      ],
+      "name": "Serie A",
+      "card": "SA\nSerie A\n\nBrésil\n\n4 saisons",
+      "entitySvg": null,
+      "placeholder": "SA",
+      "img": null,
+      "width": 0,
+      "pass": true
+    }
+  ],
+  "hashes": {
+    "desktop-404.png": "329ddd4a9effe9a5eab29efc6892d3f4474734e49db244d6532129e7ece71621",
+    "desktop0.png": "0bf5e68dec65ea15c32ba4656aafc00ed7342f5acaabceb33d8f37116a8a1728",
+    "desktop1.png": "e82363365fe18a366ae7142ae42266ae29d3fe41ef03ff82d2e851a83cafe5f8",
+    "desktop2.png": "a187b8822535083a98c9144e79ac0a5744dcad23c13123366b2244fabf784ed4",
+    "mobile-404.png": "e76fbf02394fea3387b064357d5f2be5e260c911bc9ef10094e9542d994ef22b",
+    "mobile0.png": "9b6b89dc06cbfa007951477124024cf2b383da410baa714de70b86b7c124d024",
+    "mobile1.png": "d1666af4df9392b6e120b6d5f4349d077a225ea31724d459d77022782c84e8dd",
+    "mobile2.png": "296b5fa543381ec921a49fdd301c04b73f0acd69241dabc5ad873879ec0558d1"
+  },
+  "source_sha256_candidate": null,
+  "application_head": null
+}

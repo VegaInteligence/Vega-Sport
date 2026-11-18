@@ -1,0 +1,1403 @@
+{
+  "setup": "Production directory, read-only browser, no local assets substituted. First viewport of current configured catalog; images may load lazily. A generic SVG in the entity media slot is distinguished from a toolbar icon or unloaded IMG.",
+  "expected": "A genuinely missing image must not be replaced by a fabricated crest or cup icon. The catalog can retain the correct name.",
+  "command": [
+    "python3",
+    "check.py"
+  ],
+  "results": [
+    {
+      "device": "desktop",
+      "at": "2026-11-18T03:33:24.035Z",
+      "url": "https://vegasport.vercel.app/competitions?focus=all&season=2026%2F2027",
+      "census": [
+        {
+          "name": "Coupe d’Afrique des nations",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "Ligue des champions de la CAF",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "Premier Soccer League",
+          "trophy": false,
+          "img": true,
+          "initials": "PS"
+        },
+        {
+          "name": "Bundesliga",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "2. Bundesliga",
+          "trophy": false,
+          "img": true,
+          "initials": "2B"
+        },
+        {
+          "name": "3. Liga",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "Coupe d’Allemagne",
+          "trophy": false,
+          "img": true,
+          "initials": "CD"
+        },
+        {
+          "name": "Coupe des champions de la CONCACAF",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "Gold Cup",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "Copa América",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "Copa Libertadores",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "Copa Sudamericana",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "Premier League",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "Championship",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "League One",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "League Two",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "Coupe de la Ligue anglaise",
+          "trophy": false,
+          "img": true,
+          "initials": "CD"
+        },
+        {
+          "name": "FA Cup",
+          "trophy": false,
+          "img": true,
+          "initials": "FC"
+        },
+        {
+          "name": "National League",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "National League North",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "National League South",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "Northern Premier League",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "Saudi Pro League",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "Saudi First Division",
+          "trophy": false,
+          "img": true,
+          "initials": "SF"
+        },
+        {
+          "name": "Women's Premier League",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "Liga Profesional",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "Coupe d’Asie des nations",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "A-League",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "Bundesliga",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "Coupe d’Autriche",
+          "trophy": false,
+          "img": true,
+          "initials": "CD"
+        },
+        {
+          "name": "First Division A",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "Challenger Pro League",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "Pro League U21",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "Primera Division",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "Serie A",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "Serie B",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "Paulista A1",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "Premier League",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "Liga de Primera",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "Super League",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "Championnat de Chypre",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "Primera A",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "KL"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "KL"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "H"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "S"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "1D"
+        },
+        {
+          "name": "",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "CD"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "CD"
+        },
+        {
+          "name": "",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "P"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "PL"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "PL"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "SA"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "L"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "CD"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "M"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "UC"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "UL"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "MN"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "E"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "LD"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "V"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "L2"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "CD"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "SL"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "IS"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "CD"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "CD"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "CD"
+        },
+        {
+          "name": "",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "PD"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "BD"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "LH"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "SB"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "CD"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "JL"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "JL"
+        },
+        {
+          "name": "",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "V"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "LM"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "E"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "DP"
+        },
+        {
+          "name": "",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "ED"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "CD"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "L1"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "E"
+        },
+        {
+          "name": "",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "CD"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "QS"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "LI"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "PL"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "SL"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "1L"
+        },
+        {
+          "name": "",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "A"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "SL"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "CL"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "CD"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "1L"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "TL"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "SL"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "1L"
+        },
+        {
+          "name": "",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "PD"
+        }
+      ],
+      "cases": [
+        {
+          "title": "Pro League U21",
+          "text": "Pro League U21\n\nCoupe · Belgique\n\n1 saison",
+          "trophy": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-trophy icon\" aria-hidden=\"true\"><path d=\"M10 14.66V17a1 1 0 0 1-1 1 2 2 0 0 0-2 2v2\"></path><path d=\"M14 14.66V17a1 1 0 0 0 1 1 2 2 0 0 1 2 2v2\"></path><path d=\"M17.916 10H19.5A2.5 2.5 0 0 0 22 7.5V5a1 1 0 0 0-1-1h-3\"></path><path d=\"M4 22h16\"></path><path d=\"M6 9a6 6 0 0 0 12 0V3a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1z\"></path><path d=\"M6.084 10H4.5A2.5 2.5 0 0 1 2 7.5V5a1 1 0 0 1 1-1h3\"></path></svg>",
+          "filename": "desktop-0.png"
+        },
+        {
+          "title": "Coupe d’Afrique des nations",
+          "text": "Coupe d’Afrique des nations\n\nCoupe · Afrique\n\n3 saisons",
+          "trophy": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-trophy icon\" aria-hidden=\"true\"><path d=\"M10 14.66V17a1 1 0 0 1-1 1 2 2 0 0 0-2 2v2\"></path><path d=\"M14 14.66V17a1 1 0 0 0 1 1 2 2 0 0 1 2 2v2\"></path><path d=\"M17.916 10H19.5A2.5 2.5 0 0 0 22 7.5V5a1 1 0 0 0-1-1h-3\"></path><path d=\"M4 22h16\"></path><path d=\"M6 9a6 6 0 0 0 12 0V3a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1z\"></path><path d=\"M6.084 10H4.5A2.5 2.5 0 0 1 2 7.5V5a1 1 0 0 1 1-1h3\"></path></svg>",
+          "filename": "desktop-1.png"
+        },
+        {
+          "title": "Serie A",
+          "text": "Serie A\n\nBrésil\n\n4 saisons",
+          "media": "https://dngp6kh9jx2bl.cloudfront.net/data/sources/v2/images/630cd646d0abd39143e0eeed3d142dcd58a49c7574517a2d71dce8d3dfe99553.webp",
+          "filename": "desktop-2.png"
+        }
+      ]
+    },
+    {
+      "device": "mobile",
+      "at": "2026-11-18T03:33:25.640Z",
+      "url": "https://vegasport.vercel.app/competitions?focus=all&season=2026%2F2027",
+      "census": [
+        {
+          "name": "Coupe d’Afrique des nations",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "Ligue des champions de la CAF",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "Premier Soccer League",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "Bundesliga",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "2. Bundesliga",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "3. Liga",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "Coupe d’Allemagne",
+          "trophy": false,
+          "img": true,
+          "initials": "CD"
+        },
+        {
+          "name": "Coupe des champions de la CONCACAF",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "Gold Cup",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "Copa América",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "Copa Libertadores",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "Copa Sudamericana",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "Premier League",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "Championship",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "League One",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "League Two",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "Coupe de la Ligue anglaise",
+          "trophy": false,
+          "img": true,
+          "initials": "CD"
+        },
+        {
+          "name": "FA Cup",
+          "trophy": false,
+          "img": true,
+          "initials": "FC"
+        },
+        {
+          "name": "National League",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "National League North",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "National League South",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "Northern Premier League",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "SP"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "SF"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "WP"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "LP"
+        },
+        {
+          "name": "",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "A"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "CD"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "FD"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "CP"
+        },
+        {
+          "name": "",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "PD"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "SB"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "PA"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "PL"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "LD"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "SL"
+        },
+        {
+          "name": "",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "PA"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "KL"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "KL"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "H"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "S"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "1D"
+        },
+        {
+          "name": "",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "CD"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "CD"
+        },
+        {
+          "name": "",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "P"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "PL"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "PL"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "L"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "CD"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "M"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "UC"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "UL"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "MN"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "E"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "LD"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "V"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "L2"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "CD"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "SL"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "IS"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "CD"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "CD"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "CD"
+        },
+        {
+          "name": "",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "PD"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "BD"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "LH"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "SB"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "CD"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "JL"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "JL"
+        },
+        {
+          "name": "",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "V"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "LM"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "E"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "DP"
+        },
+        {
+          "name": "",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "ED"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "CD"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "L1"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "E"
+        },
+        {
+          "name": "",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "CD"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "QS"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "LI"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "PL"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "SL"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "1L"
+        },
+        {
+          "name": "",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "A"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "SL"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "CL"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "CD"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "1L"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "TL"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "SL"
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "1L"
+        },
+        {
+          "name": "",
+          "trophy": true,
+          "img": false
+        },
+        {
+          "name": "",
+          "trophy": false,
+          "img": true,
+          "initials": "PD"
+        }
+      ],
+      "cases": [
+        {
+          "title": "Coupe d’Afrique des nations",
+          "text": "Coupe d’Afrique des nations\n\nCoupe · Afrique\n\n3 saisons",
+          "trophy": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-trophy icon\" aria-hidden=\"true\"><path d=\"M10 14.66V17a1 1 0 0 1-1 1 2 2 0 0 0-2 2v2\"></path><path d=\"M14 14.66V17a1 1 0 0 0 1 1 2 2 0 0 1 2 2v2\"></path><path d=\"M17.916 10H19.5A2.5 2.5 0 0 0 22 7.5V5a1 1 0 0 0-1-1h-3\"></path><path d=\"M4 22h16\"></path><path d=\"M6 9a6 6 0 0 0 12 0V3a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1z\"></path><path d=\"M6.084 10H4.5A2.5 2.5 0 0 1 2 7.5V5a1 1 0 0 1 1-1h3\"></path></svg>",
+          "filename": "mobile-0.png"
+        },
+        {
+          "title": "Serie A",
+          "text": "Serie A\n\nBrésil\n\n4 saisons",
+          "media": "https://dngp6kh9jx2bl.cloudfront.net/data/sources/v2/images/630cd646d0abd39143e0eeed3d142dcd58a49c7574517a2d71dce8d3dfe99553.webp",
+          "filename": "mobile-1.png"
+        }
+      ]
+    }
+  ],
+  "screenshots": {
+    "desktop-0.png": "747dc49385e17353e1628731101d8e851092af233bb6a357f4c794e7b349861a",
+    "desktop-1.png": "e980ff62a5f81fcda160f5885fd8558028836a24c9cd7b7f796fa494eb69d1bf",
+    "desktop-2.png": "f44b0930f98f79941db5ddac9e15e62d0a1455c7e87a45e40a3f9a07b9409704",
+    "mobile-0.png": "0defb2152a225181a08a09f307c598763f4ae1e2dffa0f4966bfd4e705bcf3a8",
+    "mobile-1.png": "578f9597c7e1184ab2ae1b3dbc4465d5b43ce8e18669807997796e102a8ec090"
+  }
+}

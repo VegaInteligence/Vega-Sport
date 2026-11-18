@@ -1,0 +1,14 @@
+{
+  "expected": "One dry-run plan and first applied link on 5608. No second link on repeat. One team points to the untouched publisher bytes.",
+  "environment": "local PostgreSQL + local object sink",
+  "actual": {
+    "planned": 1,
+    "applied": 1,
+    "replay_already_linked": 1,
+    "other_teams_linked_to_new_digest": 0,
+    "root": 5608,
+    "name": "Oxford University",
+    "local_object_digest": "253d2ac7120eef8e0b3fccd281b883e03f392b41ae1da7f857b6a8f0a62b3ccc"
+  },
+  "production_writes": 0
+}

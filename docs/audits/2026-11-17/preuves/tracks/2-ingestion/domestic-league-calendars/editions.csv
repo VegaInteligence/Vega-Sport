@@ -1,0 +1,10 @@
+competition,season,rds_edition,official_regular,official_barrages,physical_rows,physical_final,physical_abandoned_original,physical_duplicate_finals,wrong_or_reversed_finals,regular_missing,barrages_missing,external_played_sides,recomputed_and_persisted_elo_sides,absent_fixture_sides,positive_minutes,admitted,no_intermediate,finite_player_indices,valid_persisted_player_grades,visible_player_grades,absent_external_appearances,pitchapi_calendar_requests,pitchapi_summary_targets
+ES,2023/2024,831,380,0,379,379,0,0,0,1,0,760,758,2,11854,11854,0,11854,11854,10032,29,1,379
+ES,2024/2025,832,380,0,380,380,0,0,0,0,0,760,760,0,11900,11900,0,11900,11900,10114,0,1,380
+ES,2025/2026,833,380,0,380,380,0,0,0,0,0,760,760,0,11953,11953,0,11953,11953,10201,0,1,380
+FR,2023/2024,420,306,2,307,306,1,0,0,0,2,616,612,4,9392,9392,5,9387,9387,7912,63,1,306
+FR,2024/2025,421,306,2,306,306,0,0,0,0,2,616,612,4,9413,9413,0,9413,9413,7900,64,1,306
+FR,2025/2026,422,306,2,306,306,0,0,0,0,2,616,612,4,9408,9408,1,9407,9407,7901,63,1,306
+PL,2023/2024,902,380,0,380,380,0,0,0,0,0,760,760,0,11380,11380,0,11380,11380,9627,0,1,380
+PL,2024/2025,903,380,0,380,380,0,0,0,0,0,760,760,0,11567,11567,0,11567,11567,9719,0,1,380
+PL,2025/2026,904,380,0,380,380,0,0,0,0,0,760,760,0,11492,11492,0,11492,11492,9683,0,1,380
