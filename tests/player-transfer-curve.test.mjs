@@ -3,7 +3,7 @@
 //
 // Failure modes and expected outcomes, written before the two services:
 //
-// What is drawn and listed (services/player-transfers.js)
+// What is drawn and listed (services/career-moves.js; read and worded by services/player-transfers.js)
 //  1. Transfers not read (the route answers 404): null, not an empty list. Another failure
 //     is an error, never « no transfer ».
 //  2. Transfers not read and no valuation names a club: nothing drawn, nothing listed.
@@ -30,8 +30,8 @@
 // 12. A badge's foot is on the line, and past the line's last point at the last point's height.
 import test from "node:test";
 import assert from "node:assert/strict";
+import { careerMoves } from "../dashboard/frontend/src/services/career-moves.js";
 import {
-  careerMoves,
   loadPlayerTransfers,
   moveNote,
   moveTip,
