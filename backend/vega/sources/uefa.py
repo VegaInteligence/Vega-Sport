@@ -139,6 +139,25 @@ def link_team(conn, row):
     return team, linked
 
 
+# A club's logo as UEFA publishes it for its own id (media.ALLOWED copies exactly this form).
+CLUB_LOGO = "https://img.uefa.com/imgml/TP/teams/logos/70x70/{}.png"
+
+
+def crest_club(conn, team):
+    """The club a UEFA id's crest belongs to: the bound team, or the canonical club it is merged into (one existing
+    pointer, followed, never set). None, and nothing written, for a national team or a chain merged again (§22)."""
+    row = conn.execute("SELECT merged_into, is_national FROM core.teams WHERE id = %s", (team,)).fetchone()
+    if row is None:
+        return None
+    merged, national = row
+    if merged is None:
+        return None if national else team
+    canonical = conn.execute("SELECT merged_into, is_national FROM core.teams WHERE id = %s", (merged,)).fetchone()
+    if canonical is None or canonical[0] is not None or canonical[1]:
+        return None
+    return merged
+
+
 def save(conn, kind, year, rows, updated, now):
     """Replace one edition's rows; returns (rows written, clubs not linked to a team)."""
     label = f"{year - 1}/{year}"
@@ -177,6 +196,20 @@ def save(conn, kind, year, rows, updated, now):
                    ON CONFLICT (source_url) DO UPDATE SET source_url = EXCLUDED.source_url RETURNING id""",
                 (row["logo"],),
             ).fetchone()[0]
+        club = crest_club(conn, team) if kind == "uefa_clubs" and logo is not None and row["logo"] == CLUB_LOGO.format(row["id"]) else None
+        if club is not None:
+            # The club's own UEFA logo (its id in the path) is its crest when it has none: an existing
+            # crest, PitchAPI's first, is kept (VI-27, FAILURE_MODES.md §21); a merged alias's goes to its club (§22).
+            if conn.execute(
+                "UPDATE core.teams SET crest_asset_id = %s, updated_at = now() WHERE id = %s AND crest_asset_id IS NULL AND is_national IS NOT TRUE",
+                (logo, club),
+            ).rowcount:
+                for resource in (("team", club), ("home", 1)):
+                    conn.execute(
+                        """INSERT INTO ops.resource_versions(resource_kind, resource_id) VALUES (%s, %s)
+                           ON CONFLICT (resource_kind, resource_id) DO UPDATE SET version = ops.resource_versions.version + 1, updated_at = now()""",
+                        resource,
+                    )
         conn.execute(
             """INSERT INTO core.ranking_rows(edition_id, row_no, team_id, country_code, position, points, provider_key, entity_name,
                  earned_points, teams_still_playing, image_asset_id) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",

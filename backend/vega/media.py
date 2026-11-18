@@ -16,7 +16,16 @@ from urllib.parse import urlsplit
 import urllib.error
 import urllib.request
 
-ALLOWED = r"^https://(cdn\.pitchapi\.dev/|upload\.wikimedia\.org/wikipedia/commons/|img\.thesports\.com/football/(team|competition)/)"
+# The known providers' paths, and UEFA's club logos in their exact form only (VI-27: a club's crest
+# from its own UEFA id, FAILURE_MODES.md §21). Read by Python and by PostgreSQL (`~`).
+ALLOWED = (r"^https://(cdn\.pitchapi\.dev/|upload\.wikimedia\.org/wikipedia/commons/|img\.thesports\.com/football/(team|competition)/"
+           r"|img\.uefa\.com/imgml/TP/teams/logos/70x70/[0-9]+\.png$)")
+
+
+def allowed(url):
+    """Whether the mirror may fetch this URL (no whitespace anywhere: Python's `$` also matches before a final
+    newline, PostgreSQL's does not; §22)."""
+    return isinstance(url, str) and re.search(r"\s", url) is None and re.match(ALLOWED, url) is not None
 MAX_BYTES = 4 * 1024 * 1024
 PREFIX = "sources/v2/images/"
 OBJECT_PREFIX = "data/"
@@ -76,14 +85,15 @@ def downloader(*, timeout=20, commons_interval=0.3):
 
     class SameHost(urllib.request.HTTPRedirectHandler):
         def redirect_request(self, req, fp, code, msg, headers, newurl):
-            if urlsplit(newurl).scheme != "https" or urlsplit(newurl).hostname != urlsplit(req.full_url).hostname:
+            if (urlsplit(newurl).scheme != "https" or urlsplit(newurl).hostname != urlsplit(req.full_url).hostname
+                    or not allowed(newurl)):
                 raise MediaError("REDIRECT_REFUSED")
             return super().redirect_request(req, fp, code, msg, headers, newurl)
 
     opener = urllib.request.build_opener(SameHost)
 
     def get(url):
-        if not re.match(ALLOWED, url):
+        if not allowed(url):
             raise MediaError("SOURCE_NOT_ALLOWED")
         host = urlsplit(url).hostname
         if host == "upload.wikimedia.org":
@@ -115,6 +125,9 @@ def s3_writer(bucket, client=None):
         name = OBJECT_PREFIX + key
         try:
             s3.head_object(Bucket=bucket, Key=name)
+            # Already there: its bytes are read back, a HEAD does not prove them (FAILURE_MODES.md §22).
+            if hashlib.sha256(s3.get_object(Bucket=bucket, Key=name)["Body"].read()).digest() != hashlib.sha256(body).digest():
+                raise MediaError("STORAGE_CHECKSUM")
             return False
         except ClientError as error:
             if error.response.get("Error", {}).get("Code") not in ("404", "NoSuchKey", "NotFound"):
