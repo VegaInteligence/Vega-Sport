@@ -258,8 +258,9 @@
 
 - Ask: the « Charge de matchs » minutes chart (`MatchLoad`, `dashboard/frontend/src/components/PlayerPhysical.jsx`) looks poor.
 - User decision (18 Nov): A, thin columns on the real calendar, but square: « arrête de mettre des arrondis partout ».
-- Built in scratchpad worktree `ccf62180…/wt`, branch `claude/minutes-columns` (from origin/main 202f24c09e), uncommitted: `CalendarColumns` in `PlayerScoutCharts.jsx` (measured width, text at real size; starter filled, substitute outlined; ≤ 3 days rest dot; gaps ≥ 12 days named; last 28 days shaded; tooltip and keyboard focus), used by `MatchLoad`; shared `LineChart` untouched.
+- Built in scratchpad worktree `ccf62180…/wt`, branch `claude/minutes-columns`: `CalendarColumns` in `PlayerScoutCharts.jsx` (measured width, text at real size; starter filled, substitute outlined; ≤ 3 days rest dot; gaps ≥ 12 days named; last 28 days shaded; tooltip and keyboard focus), used by `MatchLoad`; shared `LineChart` untouched.
 - Validated: E2E written first, 78/78 (Yamal, Ferrán Torres, Güler; desktop and phone), light theme by eye, site tests 729/729, build OK. Evidence: scratchpad `ccf62180…/e2e/EVIDENCE.md`.
 - Site-wide follow-up asked by the user: no rounded corners anywhere, and question the cards. Mockup sent (scratchpad `ccf62180…/minutes/flat-*.png`): no card boxes, sections split by hairlines, square everywhere. Awaiting validation. Other sessions have frontend worktrees open (recent-form, match KPIs, transfers, World Cup): do it through tokens and shared classes to limit conflicts.
 - Linear: not touched in this folder (rule in ~/.claude/CLAUDE.md).
-- Next action: the user's go to commit/push the chart; their verdict on the flat mockup, then the site-wide pass.
+- Shipped 18 Nov (« tu as mon accord pour committer et pousser »): `40f4d051ed` on main; Vercel production success; live E2E 78/78 on vegasport.vercel.app.
+- Next action: the user's verdict on the flat mockup (and whether true circles stay), then the site-wide pass.
