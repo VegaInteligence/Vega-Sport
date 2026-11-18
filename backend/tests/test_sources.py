@@ -4,7 +4,7 @@ import hashlib
 import json
 import os
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 import sys
 import unittest
@@ -13,9 +13,10 @@ from urllib.parse import parse_qs, urlparse
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from vega import sources
-from vega.sources import SourceError, cups, curated, fifa, honours, market_value_snapshot, normalize, player_fact_snapshot, player_facts, sportscore, uefa, wikidata
+from vega.sources import SourceError, cups, curated, fifa, honours, market_value_snapshot, normalize, player_fact_snapshot, player_facts, sportscore, uefa, wikidata, worldcup
 sys.path.insert(0, str(ROOT / "tests"))
 from cup_samples import SAMPLES
+import worldcup_samples
 
 try:
     import psycopg
@@ -110,6 +111,122 @@ class PureTest(unittest.TestCase):
                     cups.match_rows("open-cups", "world-cup-history", "1998", {"matches": [
                         {"round": "Matchday 1", "date": "1998-06-11", "team1": "A", "team2": "B", "score": score}]})
                 self.assertEqual(caught.exception.code, "INVALID_SCORE")
+
+    # The Fjelstul World Cup Database (vega/sources/worldcup.py; the user's decision of 18 November 2026). Failure
+    # modes and expected outcomes, written before the reader:
+    # - the repository changes under the pinned commit, or a file is missing: nothing is read (SOURCE_CHANGED);
+    # - a value the files write as text for « unknown » (a birth date « not available », a given name « not
+    #   applicable », a shirt number 0) is absent in the base, never a fake date, name or number;
+    # - a row that names a match, a team or a person the files do not hold, a key given twice, a date that is no
+    #   date: the files are incoherent, nothing is written (INVALID_SOURCE);
+    # - a match is paired with the base's archived match of the same edition, day and teams, in either order and
+    #   under the spellings the two sources use; two candidates, a women's match (the base holds none), a replay of
+    #   the day after: no pair, never a guess.
+    def test_worldcup_files_are_the_pinned_ones(self):
+        files = worldcup_samples.texts()
+        pins = worldcup_samples.digests(files)
+        digest = worldcup.verify(files, pins)
+        self.assertRegex(digest, "^[0-9a-f]{64}$")
+        self.assertEqual(worldcup.verify(dict(reversed(list(files.items()))), pins), digest)  # the order read does not matter
+        changed = dict(files, goals=files["goals"].replace("P-00002", "P-00001"))
+        with self.assertRaises(SourceError) as error:
+            worldcup.verify(changed, pins)
+        self.assertEqual(error.exception.code, "SOURCE_CHANGED")
+        with self.assertRaises(SourceError) as error:
+            worldcup.verify({name: text for name, text in files.items() if name != "squads"}, pins)
+        self.assertEqual(error.exception.code, "SOURCE_CHANGED")
+        # The real pins: the seventeen files read, each by its SHA-256, at one commit of the repository.
+        self.assertEqual(set(worldcup.FILES), set(worldcup_samples.HEADERS))
+        self.assertTrue(all(re.fullmatch("[0-9a-f]{64}", value) for value in worldcup.FILES.values()))
+        self.assertRegex(worldcup.COMMIT, "^[0-9a-f]{40}$")
+
+    def test_worldcup_rows_are_typed(self):
+        tables = worldcup.typed(worldcup_samples.texts())
+        self.assertEqual({name: len(rows) for name, rows in tables.items()}, {
+            "tournaments": 2, "teams": 4, "stadiums": 2, "people": 7, "matches": 3, "squads": 4, "appearances": 6, "goals": 3,
+            "bookings": 2, "substitutions": 2, "shootout_kicks": 2, "awards": 1})
+        by = lambda table, key: {row[key]: row for row in tables[table]}
+        self.assertEqual(by("tournaments", "tournament_key")["WC-1991"], {
+            "tournament_key": "WC-1991", "name": "1991 FIFA Women's World Cup", "year": 1991, "women": True, "start_date": date(1991, 11, 16),
+            "end_date": date(1991, 11, 30), "host_country": "China", "winner": "United States", "teams": 12})
+        people = by("people", "person_key")
+        self.assertEqual(people["P-00001"], {"person_key": "P-00001", "role": "player", "family_name": "Cruyff", "given_name": "Johan",
+                                              "birth_date": date(1947, 4, 25), "country": None, "female": False, "goalkeeper": False, "defender": False,
+                                              "midfielder": False, "forward": True, "wikipedia_url": "https://en.wikipedia.org/wiki/Johan_Cruyff"})
+        # « not applicable », « not available » and an empty link are no name, no date and no link.
+        self.assertEqual((people["P-00003"]["given_name"], people["P-00003"]["birth_date"], people["P-00003"]["wikipedia_url"]), (None, None, None))
+        self.assertEqual((people["M-001"]["role"], people["M-001"]["country"], people["R-001"]["role"], people["P-00004"]["female"]), ("manager", "Netherlands", "referee", True))
+        final = by("matches", "match_key")["M-1974-38"]
+        self.assertEqual(final, {"match_key": "M-1974-38", "tournament_key": "WC-1974", "stage": "final", "group_name": None, "replayed": False, "replay": False,
+                                 "match_date": date(1974, 7, 7), "match_time": time(16, 0), "stadium_key": "S-001", "home_team_key": "T-01", "away_team_key": "T-02",
+                                 "home_score": 1, "away_score": 2, "extra_time": False, "shootout": False, "home_penalties": None, "away_penalties": None})
+        shootout = by("matches", "match_key")["M-1974-01"]
+        self.assertEqual((shootout["group_name"], shootout["extra_time"], shootout["shootout"], shootout["home_penalties"], shootout["away_penalties"]), ("Group 1", True, True, 4, 5))
+        self.assertEqual(by("stadiums", "stadium_key")["S-001"]["capacity"], 77573)
+        # A shirt number 0 is an unknown number.
+        self.assertEqual([(r["player_key"], r["shirt_number"], r["position"]) for r in tables["squads"] if r["team_key"] == "T-02"], [("P-00002", 13, "FW"), ("P-00003", None, "FW")])
+        seen = {(r["person_key"], r["role"], r["team_key"], r["shirt_number"], r["position"], r["starter"]) for r in tables["appearances"]}
+        self.assertEqual(seen, {("P-00001", "player", "T-01", 14, "FW", True), ("P-00002", "player", "T-02", 13, "CF", True), ("P-00003", "player", "T-02", 20, "FW", False),
+                                ("M-001", "manager", "T-01", None, None, None), ("M-002", "manager", "T-02", None, None, None), ("R-001", "referee", None, None, None, None)})
+        goals = by("goals", "goal_key")
+        # An own goal: credited to the other team, its scorer's team kept.
+        self.assertEqual(goals["G-0003"], {"goal_key": "G-0003", "match_key": "M-1974-38", "team_key": "T-02", "player_key": "P-00001", "player_team_key": "T-01",
+                                           "minute": 60, "stoppage": 0, "period": "second half", "own_goal": True, "penalty": False})
+        self.assertEqual((goals["G-0002"]["minute"], goals["G-0002"]["stoppage"], goals["G-0002"]["period"], goals["G-0001"]["penalty"]), (45, 1, "first half, stoppage time", True))
+        self.assertEqual([(r["booking_key"], r["minute"], r["yellow"], r["red"], r["second_yellow"], r["sending_off"]) for r in tables["bookings"]],
+                         [("B-0001", 23, True, False, False, False), ("B-0002", 80, True, False, True, True)])
+        self.assertEqual([(r["substitution_key"], r["player_key"], r["minute"], r["going_off"]) for r in tables["substitutions"]], [("S-0001", "P-00002", 68, True), ("S-0002", "P-00003", 68, False)])
+        # The kicks of a shoot-out keep their order.
+        self.assertEqual([(r["kick_key"], r["team_key"], r["player_key"], r["converted"], r["position"]) for r in tables["shootout_kicks"]],
+                         [("PK-001", "T-04", "P-00002", True, 1), ("PK-002", "T-03", "P-00003", False, 2)])
+        self.assertEqual(tables["awards"], [{"tournament_key": "WC-1974", "award": "Golden Ball", "player_key": "P-00001", "team_key": "T-01", "shared": True}])
+
+    def test_worldcup_incoherent_files_are_refused(self):
+        import copy
+
+        def refused(change):
+            rows = copy.deepcopy(worldcup_samples.ROWS)
+            change(rows)
+            with self.assertRaises(SourceError) as error:
+                worldcup.typed(worldcup_samples.texts(rows))
+            return error.exception.code
+
+        self.assertEqual(refused(lambda r: r["goals"][0].update(player_id="P-99999")), "INVALID_SOURCE")  # an unknown scorer
+        self.assertEqual(refused(lambda r: r["player_appearances"][0].update(match_id="M-1974-99")), "INVALID_SOURCE")  # an unknown match
+        self.assertEqual(refused(lambda r: r["matches"][0].update(away_team_id="T-77")), "INVALID_SOURCE")  # an unknown team
+        self.assertEqual(refused(lambda r: r["players"].append(dict(r["players"][0])) ), "INVALID_SOURCE")  # a key given twice
+        self.assertEqual(refused(lambda r: r["matches"][0].update(match_date="7 July 1974")), "INVALID_SOURCE")  # no date
+        self.assertEqual(refused(lambda r: r["matches"][0].update(home_team_score="one")), "INVALID_SOURCE")  # no number
+        self.assertEqual(refused(lambda r: r["bookings"][0].update(yellow_card="yes")), "INVALID_SOURCE")  # no flag
+        self.assertEqual(refused(lambda r: r["tournaments"][0].update(tournament_id="1974")), "INVALID_SOURCE")  # no key of the source
+
+    def test_worldcup_matches_pair_with_the_base(self):
+        source = [  # (match key, edition year, women, day, home, away)
+            ("M-1974-38", 1974, False, date(1974, 7, 7), "Netherlands", "West Germany"),
+            ("M-1974-01", 1974, False, date(1974, 6, 14), "United States", "Sweden"),
+            ("M-1990-09", 1990, False, date(1990, 6, 11), "England", "Republic of Ireland"),
+            ("M-2014-40", 2014, False, date(2014, 6, 24), "Greece", "Ivory Coast"),
+            ("M-2014-10", 2014, False, date(2014, 6, 15), "Argentina", "Bosnia and Herzegovina"),
+            ("M-1934-12", 1934, False, date(1934, 5, 31), "Italy", "Spain"),
+            ("M-1934-13", 1934, False, date(1934, 6, 1), "Italy", "Spain"),
+            ("M-1991-01", 1991, True, date(1991, 11, 17), "Sweden", "United States"),
+            ("M-1974-05", 1974, False, date(1974, 6, 15), "Brazil", "Scotland"),
+            ("M-1974-06", 1974, False, date(1974, 6, 18), "Zaire", "Yugoslavia"),
+        ]
+        base = [  # (our match, edition, day, home, away), as the archive spells them
+            (11, "1974", date(1974, 7, 7), "West Germany", "Netherlands"),  # the other order
+            (12, "1974", date(1974, 6, 14), "USA", "Sweden"),
+            (13, "1990", date(1990, 6, 11), "England", "Ireland"),
+            (14, "2014", date(2014, 6, 24), "Greece", "Côte d'Ivoire"),
+            (15, "2014", date(2014, 6, 15), "Argentina", "Bosnia-Herzegovina"),
+            (16, "1934", date(1934, 5, 31), "Italy", "Spain"), (17, "1934", date(1934, 6, 1), "Italy", "Spain"),  # a tie and its replay
+            (18, "1991", date(1991, 11, 17), "Sweden", "USA"),  # another competition's edition of that year would not be read: the women's match pairs with nothing
+            (19, "1974", date(1974, 6, 16), "Brazil", "Scotland"),  # a day apart: not the same match for certain
+            (20, "1974", date(1974, 6, 18), "Zaire", "Yugoslavia"), (21, "1974", date(1974, 6, 18), "Yugoslavia", "Zaire"),  # two candidates
+            (22, "1938", date(1938, 6, 5), "Sweden", "Austria"),  # a walkover the source does not list
+        ]
+        self.assertEqual(worldcup.pair(source, base), {"M-1974-38": 11, "M-1974-01": 12, "M-1990-09": 13, "M-2014-40": 14, "M-2014-10": 15, "M-1934-12": 16, "M-1934-13": 17})
+        self.assertEqual(worldcup.pair(source, []), {})
 
     def test_curated_aliases_match_the_site(self):
         # dashboard/shared/player-aliases.js: `const ALIASES = Object.freeze({ key: Object.freeze([...]) })`.
@@ -689,6 +806,113 @@ class UefaTest(unittest.TestCase):
         self.assertEqual(x(final, (key,)).fetchone(), ("finished", 0, 3))
         with self.db.transaction():
             self.assertEqual(cups.save(self.db, "open-cups", "world-cup-history", "1998", body, NOW + timedelta(days=16)), 0)
+
+    def test_worldcup_database_is_loaded_and_paired_with_the_archive(self):
+        # The Fjelstul World Cup Database in the base (vega/sources/worldcup.py). Failure modes, written before the
+        # reader ever ran on a base:
+        # - the database's people are its own: the base's players and teams must not change;
+        # - a match pairs with the archived match of the same edition, day and teams (in the other order, under the
+        #   archive's spelling); the women's match pairs with none;
+        # - the collect role alone does it all (the rows, the pair, the credit);
+        # - a later run reads no file; an archive that replaces a match clears its pair, and the next run pairs the
+        #   new match;
+        # - a file that is not the pinned one changes nothing (SOURCE_CHANGED): the rows read before stay;
+        # - a new commit replaces every row and the pairs are made again.
+        x = self.db.execute
+
+        class Files:
+            def __init__(self, files):
+                self.files, self.calls = files, []
+
+            def __call__(self, url, *, as_text=False):
+                self.calls.append(url)
+                return self.files[url.rsplit("/", 1)[1].removesuffix(".csv")]
+
+        def archive(final_number=None):
+            final = {"round": "Final", "date": "1974-07-07", "team1": "West Germany", "team2": "Netherlands", "score": [2, 1]}
+            return {"name": "World Cup 1974", "season": "1974", "source": {"name": "OpenFootball", "url": "https://github.com/openfootball/worldcup.json"}, "matches": [
+                dict(final, num=final_number) if final_number else final,
+                {"round": "Matchday 1", "group": "Group 1", "date": "1974-06-14", "team1": "USA", "team2": "Sweden", "score": {"ft": [1, 1], "et": [1, 1], "p": [4, 5]}},
+                {"round": "Matchday 1", "group": "Group 2", "date": "1974-06-13", "team1": "Brazil", "team2": "Yugoslavia", "score": [0, 0]}]}
+
+        pairs = """SELECT w.match_key, b.home_team_name, b.away_team_name FROM core.worldcup_matches w
+                   LEFT JOIN core.matches b ON b.id = w.match_id ORDER BY 1"""
+        run = "SELECT rows_written, unmatched, status, error_code FROM ops.source_runs WHERE source='fjelstul' AND scope='worldcup'"
+        files = worldcup_samples.texts()
+        pins, commit = worldcup.FILES, worldcup.COMMIT
+        with self.db.transaction(force_rollback=True):
+            try:
+                worldcup.FILES, worldcup.COMMIT = worldcup_samples.digests(files), "a" * 40
+                cups.save(self.db, "open-cups", "world-cup-history", "1974", archive(), NOW)
+                before = x("SELECT (SELECT count(*) FROM core.players), (SELECT count(*) FROM core.teams)").fetchone()
+                get = Files(files)
+                x("SET LOCAL ROLE vega_collect")
+                done = sources.run_due(self.db, get, NOW, names={"fjelstul"})
+                x("RESET ROLE")
+                self.assertEqual(done, {("fjelstul", "worldcup"): "ok"})
+                self.assertEqual(len(get.calls), 17)
+                self.assertTrue(all(url.startswith("https://raw.githubusercontent.com/jfjelstul/worldcup/" + "a" * 40 + "/data-csv/") for url in get.calls))
+                self.assertEqual(x(run).fetchone(), (38, 0, "ok", None))
+                self.assertEqual(x(pairs).fetchall(), [("M-1974-01", "USA", "Sweden"), ("M-1974-38", "West Germany", "Netherlands"), ("M-1991-01", None, None)])
+                self.assertEqual(x("SELECT (SELECT count(*) FROM core.players), (SELECT count(*) FROM core.teams)").fetchone(), before)
+                # The archive lists the final the other way: the pair says so, for the reads (138).
+                self.assertEqual(x("SELECT match_key, swapped FROM core.worldcup_matches WHERE match_id IS NOT NULL ORDER BY 1").fetchall(),
+                                 [("M-1974-01", False), ("M-1974-38", True)])
+                # The credit the licence asks for, with the commit read.
+                name, url, licence, revision, coverage = x("SELECT name, url, license, revision, coverage FROM core.source_revisions WHERE source='fjelstul-worldcup'").fetchone()
+                self.assertIn("Joshua C. Fjelstul", name)
+                self.assertIn("©", name)
+                self.assertEqual((url, revision), ("https://github.com/jfjelstul/worldcup", "a" * 40))
+                self.assertIn("CC-BY-SA 4.0", licence)
+                self.assertIn("creativecommons.org/licenses/by-sa/4.0", licence)
+                self.assertIn("Modified", coverage)
+                # What the site will read of the base's own match: its line-up, its goals, who refereed it and where.
+                final = "FROM core.worldcup_matches w JOIN core.matches b ON b.id = w.match_id AND b.match_date = '1974-07-07'"
+                self.assertEqual(x(f"""SELECT p.family_name, p.given_name, a.shirt_number, a.position, a.starter {final}
+                                       JOIN core.worldcup_appearances a USING (match_key) JOIN core.worldcup_people p USING (person_key)
+                                       WHERE a.role = 'player' ORDER BY a.team_key, a.starter DESC, a.shirt_number""").fetchall(),
+                                 [("Cruyff", "Johan", 14, "FW", True), ("Müller", "Gerd", 13, "CF", True), ("Jairzinho", None, 20, "FW", False)])
+                self.assertEqual(x(f"""SELECT p.family_name, g.minute, g.stoppage, g.own_goal, g.penalty, t.name {final}
+                                       JOIN core.worldcup_goals g USING (match_key) JOIN core.worldcup_people p ON p.person_key = g.player_key
+                                       JOIN core.worldcup_teams t ON t.team_key = g.team_key ORDER BY g.minute""").fetchall(),
+                                 [("Cruyff", 2, 0, False, True, "Netherlands"), ("Müller", 45, 1, False, False, "West Germany"), ("Cruyff", 60, 0, True, False, "West Germany")])
+                self.assertEqual(x(f"""SELECT a.role, p.family_name, s.name, s.city, w.match_time::text {final}
+                                       JOIN core.worldcup_stadiums s USING (stadium_key) JOIN core.worldcup_appearances a USING (match_key)
+                                       JOIN core.worldcup_people p USING (person_key) WHERE a.role <> 'player' ORDER BY a.role, p.family_name""").fetchall(),
+                                 [("manager", "Michels", "Olympiastadion", "Munich", "16:00:00"), ("manager", "Schön", "Olympiastadion", "Munich", "16:00:00"),
+                                  ("referee", "Taylor", "Olympiastadion", "Munich", "16:00:00")])
+                # A later run reads no file.
+                get = Files({})
+                self.assertEqual(sources.run_due(self.db, get, NOW + timedelta(days=8), names={"fjelstul"}), {("fjelstul", "worldcup"): "ok"})
+                self.assertEqual((get.calls, x(run).fetchone()), ([], (0, 0, "ok", None)))
+                # The archive replaces the final (its key changes): the pair is cleared, the next run pairs the new match.
+                old = x("SELECT match_id FROM core.worldcup_matches WHERE match_key='M-1974-38'").fetchone()[0]
+                # As in production, the cup reader deletes the replaced match under the collect role: the pair must not stop it.
+                x("SET LOCAL ROLE vega_collect")
+                cups.save(self.db, "open-cups", "world-cup-history", "1974", archive(final_number=38), NOW + timedelta(days=9))
+                x("RESET ROLE")
+                self.assertEqual(x("SELECT match_id FROM core.worldcup_matches WHERE match_key='M-1974-38'").fetchone(), (None,))
+                self.assertEqual(sources.run_due(self.db, get, NOW + timedelta(days=16), names={"fjelstul"}), {("fjelstul", "worldcup"): "ok"})
+                new = x("SELECT match_id FROM core.worldcup_matches WHERE match_key='M-1974-38'").fetchone()[0]
+                self.assertTrue(new is not None and new != old)
+                self.assertEqual((get.calls, x(run).fetchone()), ([], (0, 0, "ok", None)))
+                # A file that is not the pinned one: nothing changes.
+                worldcup.COMMIT = "b" * 40
+                changed = Files(dict(files, goals=files["goals"].replace("P-00002", "P-00001")))
+                self.assertEqual(sources.run_due(self.db, changed, NOW + timedelta(days=24), names={"fjelstul"}), {("fjelstul", "worldcup"): "SOURCE_CHANGED"})
+                self.assertEqual(x(run).fetchone()[2:], ("error", "SOURCE_CHANGED"))
+                self.assertEqual(x("SELECT (SELECT count(*) FROM core.worldcup_goals), (SELECT revision FROM core.source_revisions WHERE source='fjelstul-worldcup')").fetchone(), (3, "a" * 40))
+                self.assertEqual(x("SELECT count(*) FROM core.worldcup_matches WHERE match_id IS NOT NULL").fetchone(), (2,))
+                # A new commit, with one goal more: every row is replaced, the pairs are made again.
+                rows = {**worldcup_samples.ROWS, "goals": [*worldcup_samples.ROWS["goals"], dict(worldcup_samples.ROWS["goals"][1], goal_id="G-0004", minute_label="88'", minute_regulation="88", minute_stoppage="0", match_period="second half")]}
+                newer = worldcup_samples.texts(rows)
+                worldcup.FILES, worldcup.COMMIT = worldcup_samples.digests(newer), "c" * 40
+                self.assertEqual(sources.run_due(self.db, Files(newer), NOW + timedelta(days=32), names={"fjelstul"}), {("fjelstul", "worldcup"): "ok"})
+                self.assertEqual(x(run).fetchone(), (39, 0, "ok", None))
+                self.assertEqual(x("SELECT (SELECT count(*) FROM core.worldcup_goals), (SELECT revision FROM core.source_revisions WHERE source='fjelstul-worldcup')").fetchone(), (4, "c" * 40))
+                self.assertEqual(x(pairs).fetchall(), [("M-1974-01", "USA", "Sweden"), ("M-1974-38", "West Germany", "Netherlands"), ("M-1991-01", None, None)])
+            finally:
+                worldcup.FILES, worldcup.COMMIT = pins, commit
 
     def test_player_honours(self):
         from vega.store import Store

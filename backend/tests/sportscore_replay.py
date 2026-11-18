@@ -166,6 +166,25 @@ def widget(body, slug):
     return {"sport": "football", "competition_slug": slug, **copy.deepcopy(body)}
 
 
+# The leagues the user removed on 18 November 2026 (scope.py, 202f24c09e) left sportscore.LEAGUES. Their cases are the
+# writer's scenarios, not those leagues': each still runs under the slug SportScore served for its league.
+REMOVED_LEAGUES = {
+    "l_1Kknkl": "south-africa-premier-soccer-league",  # S20
+    "l_1TVRZW": "venezuela-primera-division",  # S26
+    "l_1XsMdH": "sweden-allsvenskan",  # S29
+    "l_1qpFVw": "indian-super-league",  # S23
+    "l_1rPvVD": "danish-1st-division",  # S24
+    "l_20pNSc": "chinese-football-super-league",  # S31
+    "l_271pqa": "korean-k-league-2",  # S33
+    "l_2ApGa4": "japanese-j1-league",  # S34
+    "l_2EKrnc": "korean-k-league-1",  # S35
+    "l_3CB6qX": "saudi-arabia-division-1",  # S42
+    "l_3Kf7Ni": "usl-league-one",  # S46
+    "l_3fglZv": "japanese-j3-league",  # S44
+    "l_3hW1NO": "thai-league-1",  # S45
+}
+
+
 def play(sources, sportscore, db, case, step, get):
     """One sources.run_due pass on the case's scope only (the adapter's other scopes are not due
     for this case). Returns the step's code: None, a SourceError code, "NOT_DUE", or the class
@@ -174,6 +193,9 @@ def play(sources, sportscore, db, case, step, get):
     period = sportscore.PERIOD
     original = sportscore.scopes
     retired, retired_rows = getattr(sportscore, "RETIRED_TABLES", {}), getattr(sportscore, "RETIRED_ROWS", {})
+    leagues = sportscore.LEAGUES
+    if case["key"] not in leagues and case["key"] in REMOVED_LEAGUES:
+        sportscore.LEAGUES = {**leagues, case["key"]: REMOVED_LEAGUES[case["key"]]}
     sportscore.scopes = lambda now: {scope: period}
     # The case's reviewed retirements, as entries of sportscore.RETIRED_TABLES (S37) and RETIRED_ROWS
     # (S46, S47, by the club's public id) would read. Other callers (the track's World Cup replays)
@@ -188,6 +210,7 @@ def play(sources, sportscore, db, case, step, get):
         return "ESCAPED:" + type(error).__name__
     finally:
         sportscore.scopes, sportscore.RETIRED_TABLES, sportscore.RETIRED_ROWS = original, retired, retired_rows
+        sportscore.LEAGUES = leagues
     outcome = results.get(("sportscore", scope))
     return "NOT_DUE" if outcome is None else (None if outcome == "ok" else outcome)
 

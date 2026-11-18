@@ -22,7 +22,7 @@ import traceback
 
 import psycopg
 
-from . import calculator, media, models, planner, profiles
+from . import calculator, media, models, planner, profiles, scope
 from .jobs import LeaseLost, ack, claim, fail
 from .normalize import NormalizedFamily, NormalizationError, normalize_family
 from .pilot import DETAILS, safe_code
@@ -78,6 +78,14 @@ SIDE_DAILY_EVERY = 60
 # Seasons ranked again a pass because their ranking is of an older method (Worker.daily).
 STALE_RANKINGS = 20
 SIDE_MEDIA_EVERY = 300
+
+
+def _held(data, field):
+    """A PitchAPI payload without the items (matches, leagues) of a league Vega does not
+    hold (scope.REMOVED): they are neither written nor their teams read."""
+    if isinstance(data, dict) and isinstance(data.get(field), list):
+        return dict(data, **{field: scope.kept(data[field])})
+    return data
 
 
 def error_code(error):
@@ -233,6 +241,7 @@ class Worker:
         self.done = 0  # jobs run since this worker started, across run() calls
         self._analyzed = None  # UTC day of the last ops.analyze_partitioned()
         self._archives = None  # UTC day of the last agg.refresh_archive_seasons()
+        self._scoped = None  # UTC day of the last scope.purge()
         self._lineups = None  # UTC day of the last look at the line-up model (lineup.refresh)
         self._lineup_seen = {}  # matches whose line-ups gave no forecast: lineup.forecast_matches
         self._retry_at = {}  # step of the daily pass that failed -> when it is tried again
@@ -423,6 +432,14 @@ class Worker:
         and waits RETRY_DAILY_AFTER, the others run."""
         now = self.clock()
         scalar = lambda sql: lambda: self.calc_conn.execute(sql).fetchone()[0]
+        if self._scoped != now.date():
+            # The competitions the user removed (scope.py): what was written of them before
+            # goes, before this pass's levels and rankings are computed.
+            ok, removed = self._daily_step(("scope",), now, lambda: scope.purge(self.conn))
+            if ok:
+                self._scoped = now.date()
+                if removed:
+                    print("scope purge " + " ".join(f"{k}={v}" for k, v in sorted(removed.items())), flush=True)
         if self._analyzed != now.date():
             # Autovacuum analyses each partition, never the partitioned table itself (056).
             ok, tables = self._daily_step(("analyze",), now, scalar("SELECT ops.analyze_partitioned()"))
@@ -542,7 +559,7 @@ class Worker:
         except PitchError as error:
             self.results[("league", safe_code(error))] += 1
             return
-        for entry in (data.get("leagues") or []) if isinstance(data, dict) else []:
+        for entry in scope.kept((data.get("leagues") or []) if isinstance(data, dict) else []):
             if not isinstance(entry, dict) or entry.get("id") not in wanted:
                 continue
             try:
@@ -731,7 +748,7 @@ class Worker:
             for row in batch.rows.get("core.matches", [])
             if row.get("provider_competition_id") and not row.get("provider_season")
         }
-        for key in sorted(keys):
+        for key in sorted(keys - set(scope.REMOVED)):
             known = self.conn.execute(
                 """SELECT 1 FROM core.competition_seasons cs JOIN core.provider_ids p
                      ON p.entity_type='competition' AND p.provider='pitchapi' AND p.entity_id=cs.competition_id
@@ -745,7 +762,7 @@ class Worker:
     def calendar(self, job):
         day = job["target_date"]
         result = self.fetch("calendar", "/date/" + day.isoformat(), {"status": "all"}, job=job)
-        batch = normalize_family("date", result.data)
+        batch = normalize_family("date", _held(result.data, "matches"))
         self.hydrate(batch)
         self.ensure_editions(batch)
         self._save_calendar(batch, job, family="calendar")
@@ -782,7 +799,7 @@ class Worker:
     def league(self, job):
         if job["global_key"] == "catalogue":
             data = self.fetch("league", "/leagues", job=job).data
-            entries = data.get("leagues", []) if isinstance(data, dict) else []
+            entries = scope.kept(data.get("leagues", []) if isinstance(data, dict) else [])
         else:
             key = self._provider_key("competition", job["entity_id"])
             entries = [self.fetch("league", "/leagues/" + key, job=job).data]

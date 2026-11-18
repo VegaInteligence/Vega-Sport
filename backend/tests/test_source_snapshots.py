@@ -376,7 +376,8 @@ class CupGuardTest(SnapshotDatabase):
 
 
 # -- open-matchday --
-FOLDER, OTHER = "ENG_5_national-league", "SCO_3_league-one"
+# OTHER: another folder only open-matchday gives and Vega still reads (SCO_3_league-one left the scope on 18 Nov 2026).
+FOLDER, OTHER = "ENG_5_national-league", "WAL_1_cymru-premier"
 RESULTS = ("date,home,away,ft_home,ft_away,ht_home,ht_away,home_shots,away_shots,home_corners,away_corners\n"
            "2026-11-01,North FC,South FC,2,1,1,0,11,7,6,3\n")
 FIXTURES = "date,home,away,gw\n2026-11-29,South FC,North FC,16\n"
@@ -484,7 +485,7 @@ class OpenMatchdayGuardTest(SnapshotDatabase):
 
     def test_19t_one_rejected_folder_does_not_hold_back_another(self):
         files = {**self.files(results="kickoff,home_team\n2026-11-01,North FC\n"), **self.files(OTHER, results=RESULTS.replace("North FC", "Elgin"))}
-        outcome = self.read([league(), league(OTHER, league="Scottish League One", fixtures=0)], files, NOW + timedelta(days=1))
+        outcome = self.read([league(), league(OTHER, league="Cymru Premier", fixtures=0)], files, NOW + timedelta(days=1))
         self.assertEqual(outcome, ("ok", 1, 1))
         self.assertEqual(self.state(), self.before)
         self.assertEqual([r[2:5] for r in self.state(OTHER)], [("finished", 2, 1)])

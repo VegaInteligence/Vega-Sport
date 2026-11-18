@@ -77,6 +77,19 @@ export default function MethodPage() {
               .
             </p>
             <p>
+              Détails des matchs des Coupes du monde 1930–2018 (compositions,
+              buteurs, cartons, arbitres, stades) :{" "}
+              <a href="https://github.com/jfjelstul/worldcup">
+                The Fjelstul World Cup Database
+              </a>
+              , © 2023 Joshua C. Fjelstul, Ph.D. (
+              <a href="https://creativecommons.org/licenses/by-sa/4.0/legalcode">
+                CC-BY-SA 4.0
+              </a>
+              ). Modifications : valeurs typées, chaque match rapproché du
+              match correspondant de nos archives.
+            </p>
+            <p>
               <a href="https://github.com/VegaInteligence/Vega-Sport/blob/main/docs/TROPHY_IMAGE_CREDITS.md">
                 Crédits des images de trophées
               </a>

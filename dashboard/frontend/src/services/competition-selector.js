@@ -137,13 +137,11 @@ const LEAGUE_ORDER = {
   NED: ["Eredivisie", "Eerste Divisie"],
   BEL: ["First Division A", "Challenger Pro League"],
   SUI: ["Super League", "Challenge League"],
-  DEN: ["Superligaen", "1. Division"],
+  DEN: ["Superligaen"],
   TUR: ["Super Lig", "1. Lig"],
   BRA: ["Serie A", "Serie B", "Paulista A1"],
-  JPN: ["J. League", "J3 League"],
-  KOR: ["K League 1", "K League 2"],
-  KSA: ["Saudi Pro League", "Saudi First Division"],
-  USA: ["MLS", "USL Championship", "USL League One", "MLS Next Pro"],
+  KSA: ["Saudi Pro League"],
+  USA: ["MLS", "USL Championship"],
 };
 
 /**

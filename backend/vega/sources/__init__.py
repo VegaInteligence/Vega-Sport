@@ -21,7 +21,7 @@ def normalize(name):
 
 
 def adapters():
-    from . import cups, curated, fifa, honours, odds, open_matchday, sportscore, uefa, wikidata
+    from . import cups, curated, fifa, honours, odds, open_matchday, sportscore, uefa, wikidata, worldcup
 
     # Keys are core.provider values (ops.source_runs.source). Curated names first: the
     # UEFA links read the reviewed aliases.
@@ -30,7 +30,10 @@ def adapters():
             "openfootball": cups.For("open-cups"), "openligadb": cups.For("openligadb"),
             "international_results": cups.For("nations-results"), "open_matchday": open_matchday,
             # Bookmakers' odds of the coming matches (needs V2_ODDS_API_KEY).
-            "oddsapi": odds}
+            "oddsapi": odds,
+            # The World Cups' line-ups, scorers, referees and stadiums (the Fjelstul World Cup Database). After the cup
+            # editions: its matches pair with the archived ones.
+            "fjelstul": worldcup}
 
 
 # A failed scope is tried again after this delay (or its period, if shorter), not at every round.
