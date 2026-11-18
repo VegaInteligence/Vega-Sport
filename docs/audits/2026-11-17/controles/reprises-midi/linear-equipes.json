@@ -1,0 +1,25 @@
+{
+  "at": "2026-11-18 12:51:51 UTC",
+  "entries": [
+    {
+      "issueId": "VI-21",
+      "body": "Transmission du hunk réservé à Store.entity, sur le chemin de réingestion de la Coupe du monde. La migration 146 de VI-27 conserve le champ logo de la famille, mais un refresh avec une URL d’édition non attestée avance toujours updated_at, competition_season et home. La même entrée, traitée avec ce hunk sur PostgreSQL 18 comme vega_collect, préserve les trois. Les chemins des autres entités restent identiques. VI-27 conserve les protections SQL et la qualification des emblèmes d’édition. Le hunk suivant reste à intégrer par le propriétaire du Store et à valider dans son checkout.\n\n```diff\n--- a/backend/vega/store.py\n+++ b/backend/vega/store.py\n@@ -284,7 +284,9 @@\n                 \"INSERT INTO core.countries(code) VALUES(%s) ON CONFLICT DO NOTHING\",\n                 (row[\"country_code\"],),\n             )\n-        if fields.get(\"image_url\") and kind in (\"competition\", \"team\", \"player\"):\n+        # Edition art for the native World Cup is managed by the qualified artwork loader.\n+        accepts_source_image = not (kind == \"competition\" and key == \"l_1XLtP0\")\n+        if accepts_source_image and fields.get(\"image_url\") and kind in (\"competition\", \"team\", \"player\"):\n             asset_kind, col = {\n                 \"competition\": (\"logo\", \"logo_asset_id\"),\n                 \"team\": (\"crest\", \"crest_asset_id\"),\n```",
+      "id": "6103605a-5aff-4dfc-9a48-bc60edbb2b60"
+    },
+    {
+      "issueId": "VI-19",
+      "body": "Le filtre de doublons d’Elo élimine un match officiel réel du Mondial 1934. Les archives et la FIFA donnent 17 matchs. Le rejeu de power.elo_matches au SHA AWS 8018e0836c en retient 16, exactement les 16 identifiants du run RDS 2097. Italie–Espagne (1–1 le 31 mai) est suivi d’un replay (1–0 le 1er juin, Vega 506, FIFA 1123). L’identité des adversaires et l’écart d’un jour suffisent à écarter le replay. À l’inverse, les sept matchs 2022 restaurés sur la branche sont déjà les mêmes sept matchs natifs à date, équipes, score et sens concordants. Conserver cette protection en traitant séparément les vrais replays. Autre contrôle sur les 932 rencontres Elo entre sélections : les lieux officiels justifient 425 terrains hors des deux associations et 24 où l’adversaire reçoit. Le CSV d’International Results apporte sept autres terrains neutres, hors de ces 449. Les 72 valeurs de neutralité de Nations League sont disponibles dans la source (65 FALSE, 7 TRUE), puis perdues par parseNationsResults. Le calcul du terme domicile et la déduplication Elo restent ici, l’ingestion de la neutralité relève de VI-21. [Calendrier FIFA de 1934](https://api.fifa.com/api/v3/calendar/matches?idCompetition=17&idSeason=3&count=200&language=en)",
+      "id": "6711eb72-e589-467b-b43a-c398221c6e09"
+    },
+    {
+      "issueId": "VI-28",
+      "body": "Migration 137 et précision de somme xG validées sur codex/audit-1-linear, commit 9790c7f28b3f7dc2653407ae5c228e4548a76783. Le parcours de couverture passe de 37/40 à 40/40 contrôles. Sur la tête du lot 2813e7c1d6, la CI locale valide 448 tests Python, 200 API et 701 site, plus les builds et contrôles d’infrastructure. La présentation des nouvelles valeurs demeure soumise à la validation de maquette. Lot indépendant prêt à intégrer.",
+      "id": "a20c802c-2d9e-46ae-81a5-87d3be310d9b"
+    },
+    {
+      "issueId": "VI-32",
+      "body": "Le writer de réponse classements et le rapport JSON transportent désormais gradeExact en conservant le champ grade au dixième, au commit local 2813e7c1d606b231c4dc81a255a8124f85eecb3d. Le parcours PG18→HTTP classement→HTTP rapport passe de zéro à quatre scénarios réussis. Pour Tataev et Rybchinskiy, les deux anciennes valeurs valent 48,5, les valeurs précises 48,4903434662912 et 48,5004176439616 donnent les entiers 48 et 49. Un changement au même dixième invalide l’ETag. Le contrôle des vrais lecteurs montre aussi une divergence de rang entre deux états publics. Le rendu utilisateur reste en attente, la branche n’est pas déployée.",
+      "id": "7794d421-3b50-4024-b7fc-c633baca095a"
+    }
+  ]
+}

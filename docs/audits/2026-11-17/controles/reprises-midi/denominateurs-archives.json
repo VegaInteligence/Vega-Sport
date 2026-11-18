@@ -1,0 +1,53 @@
+{
+  "at": "2026-11-18 12:42:41.058845+00:00",
+  "snapshot": "4434294:4434294:",
+  "read_only": "on",
+  "sql": "WITH a AS (SELECT m.id,m.season_id,m.match_date,m.home_score,m.away_score,m.home_team_id,m.away_team_id,h.is_national hn,v.is_national an\n          FROM core.matches m JOIN core.competition_seasons e ON e.id=m.competition_season_id\n          LEFT JOIN core.teams h ON h.id=m.home_team_id LEFT JOIN core.teams v ON v.id=m.away_team_id WHERE m.status='finished' AND e.archive_key IS NOT NULL),\n        flags AS (SELECT *,((home_team_id IS NOT NULL AND hn IS NOT TRUE)::int+(away_team_id IS NOT NULL AND an IS NOT TRUE)::int) AS club_sides,\n          (home_team_id IS NOT NULL AND away_team_id IS NOT NULL AND home_score IS NOT NULL AND away_score IS NOT NULL AND match_date IS NOT NULL) AS complete FROM a)\n        SELECT complete,match_date IS NULL AS missing_date,home_score IS NULL OR away_score IS NULL AS missing_score,home_team_id IS NULL OR away_team_id IS NULL AS missing_team,\n        count(*) AS matches, sum(club_sides) AS club_sides, count(*) FILTER(WHERE hn IS TRUE OR an IS TRUE) AS with_national_team\n        FROM flags GROUP BY 1,2,3,4 ORDER BY 1,2,3,4",
+  "columns": [
+    "complete",
+    "missing_date",
+    "missing_score",
+    "missing_team",
+    "matches",
+    "club_sides",
+    "with_national_team"
+  ],
+  "rows": [
+    [
+      false,
+      false,
+      false,
+      true,
+      1783,
+      1783,
+      0
+    ],
+    [
+      false,
+      false,
+      true,
+      false,
+      520,
+      1040,
+      0
+    ],
+    [
+      false,
+      true,
+      false,
+      false,
+      1142,
+      2284,
+      0
+    ],
+    [
+      true,
+      false,
+      false,
+      false,
+      490927,
+      981854,
+      0
+    ]
+  ]
+}

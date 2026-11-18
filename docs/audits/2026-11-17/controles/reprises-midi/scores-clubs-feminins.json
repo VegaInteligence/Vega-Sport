@@ -1,0 +1,278 @@
+[
+  {
+    "url": "https://dngp6kh9jx2bl.cloudfront.net/api/read/clubs?season=2024%2F2025&league=l_1SGwQT&limit=50",
+    "status": 200,
+    "sha256": "4274fa112965dd2532af766ae329e95cf0413cdfeae3d300e4774b886385cc2d",
+    "at": "2026-11-18T12:39:45.943886+00:00",
+    "rows": [
+      {
+        "team_id": "t_0VRYI4",
+        "name": "Al Ahli",
+        "matches": 18,
+        "elo": 1567.46,
+        "score_public": 59.2,
+        "score_recalcule": 59.2,
+        "same": true
+      },
+      {
+        "team_id": "t_1pu4mT",
+        "name": "Al Amal",
+        "matches": 18,
+        "elo": 1415.79,
+        "score_public": 37.7,
+        "score_recalcule": 37.7,
+        "same": true
+      },
+      {
+        "team_id": "t_49Q543",
+        "name": "Al Hilal",
+        "matches": 18,
+        "elo": 1505.95,
+        "score_public": 50.4,
+        "score_recalcule": 50.4,
+        "same": true
+      },
+      {
+        "team_id": "t_2XE43n",
+        "name": "Al Ittihad",
+        "matches": 18,
+        "elo": 1490.0,
+        "score_public": 48.1,
+        "score_recalcule": 48.1,
+        "same": true
+      },
+      {
+        "team_id": "t_1gIF83",
+        "name": "Al Nassr",
+        "matches": 18,
+        "elo": 1621.79,
+        "score_public": 66.4,
+        "score_recalcule": 66.4,
+        "same": true
+      },
+      {
+        "team_id": "t_1Mdqcc",
+        "name": "Al Qadsiah",
+        "matches": 18,
+        "elo": 1562.42,
+        "score_public": 58.5,
+        "score_recalcule": 58.5,
+        "same": true
+      },
+      {
+        "team_id": "t_0dN31G",
+        "name": "Al Shabab",
+        "matches": 18,
+        "elo": 1529.84,
+        "score_public": 53.8,
+        "score_recalcule": 53.8,
+        "same": true
+      },
+      {
+        "team_id": "t_3X9iOH",
+        "name": "Al Taraji",
+        "matches": 18,
+        "elo": 1358.54,
+        "score_public": 30.3,
+        "score_recalcule": 30.3,
+        "same": true
+      },
+      {
+        "team_id": "t_3xac3u",
+        "name": "Al Ula",
+        "matches": 18,
+        "elo": 1523.65,
+        "score_public": 53,
+        "score_recalcule": 53.0,
+        "same": true
+      },
+      {
+        "team_id": "t_3EivYP",
+        "name": "Eastern Flames",
+        "matches": 18,
+        "elo": 1424.54,
+        "score_public": 38.9,
+        "score_recalcule": 38.9,
+        "same": true
+      }
+    ],
+    "n_in_roster": 10,
+    "response_keys": [
+      "data",
+      "meta",
+      "pagination"
+    ]
+  },
+  {
+    "url": "https://dngp6kh9jx2bl.cloudfront.net/api/read/clubs?season=2025%2F2026&league=l_1SGwQT&limit=50",
+    "status": 200,
+    "sha256": "6830d6b1e6b5a25080ba156b224653362c02757705935ba86ae16c91cc0aba88",
+    "at": "2026-11-18T12:39:46.022506+00:00",
+    "rows": [
+      {
+        "team_id": "t_0VRYI4",
+        "name": "Al Ahli",
+        "matches": 14,
+        "elo": 1599.44,
+        "score_public": 63.5,
+        "score_recalcule": 63.5,
+        "same": true
+      },
+      {
+        "team_id": "t_49Q543",
+        "name": "Al Hilal",
+        "matches": 14,
+        "elo": 1522.97,
+        "score_public": 52.9,
+        "score_recalcule": 52.9,
+        "same": true
+      },
+      {
+        "team_id": "t_2XE43n",
+        "name": "Al Ittihad",
+        "matches": 14,
+        "elo": 1535.31,
+        "score_public": 54.6,
+        "score_recalcule": 54.6,
+        "same": true
+      },
+      {
+        "team_id": "t_1gIF83",
+        "name": "Al Nassr",
+        "matches": 14,
+        "elo": 1686.84,
+        "score_public": 74.2,
+        "score_recalcule": 74.2,
+        "same": true
+      },
+      {
+        "team_id": "t_1Mdqcc",
+        "name": "Al Qadsiah",
+        "matches": 14,
+        "elo": 1566.6,
+        "score_public": 59,
+        "score_recalcule": 59.0,
+        "same": true
+      },
+      {
+        "team_id": "t_3xac3u",
+        "name": "Al Ula",
+        "matches": 14,
+        "elo": 1491.84,
+        "score_public": 48.4,
+        "score_recalcule": 48.4,
+        "same": true
+      },
+      {
+        "team_id": "t_3EivYP",
+        "name": "Eastern Flames",
+        "matches": 14,
+        "elo": 1359.6,
+        "score_public": 30.4,
+        "score_recalcule": 30.4,
+        "same": true
+      },
+      {
+        "team_id": "t_26S1TS",
+        "name": "Neom SC",
+        "matches": 14,
+        "elo": 1433.22,
+        "score_public": 40.1,
+        "score_recalcule": 40.1,
+        "same": true
+      }
+    ],
+    "n_in_roster": 8,
+    "response_keys": [
+      "data",
+      "meta",
+      "pagination"
+    ]
+  },
+  {
+    "url": "https://dngp6kh9jx2bl.cloudfront.net/api/read/clubs?season=2026%2F2027&league=l_1SGwQT&limit=50",
+    "status": 200,
+    "sha256": "3ceaee94a799b8d09c20a7f0c00e707116d97e7f7b921d37c601333eeb644ce9",
+    "at": "2026-11-18T12:39:46.562388+00:00",
+    "rows": [
+      {
+        "team_id": "t_0VRYI4",
+        "name": "Al Ahli",
+        "matches": 2,
+        "elo": 1590.52,
+        "score_public": 62.3,
+        "score_recalcule": 62.3,
+        "same": true
+      },
+      {
+        "team_id": "t_49Q543",
+        "name": "Al Hilal",
+        "matches": 2,
+        "elo": 1525.75,
+        "score_public": 53.3,
+        "score_recalcule": 53.3,
+        "same": true
+      },
+      {
+        "team_id": "t_2XE43n",
+        "name": "Al Ittihad",
+        "matches": 2,
+        "elo": 1559.01,
+        "score_public": 58,
+        "score_recalcule": 58.0,
+        "same": true
+      },
+      {
+        "team_id": "t_1gIF83",
+        "name": "Al Nassr",
+        "matches": 2,
+        "elo": 1677.32,
+        "score_public": 73.2,
+        "score_recalcule": 73.2,
+        "same": true
+      },
+      {
+        "team_id": "t_1Mdqcc",
+        "name": "Al Qadsiah",
+        "matches": 2,
+        "elo": 1579.46,
+        "score_public": 60.8,
+        "score_recalcule": 60.8,
+        "same": true
+      },
+      {
+        "team_id": "t_3X9iOH",
+        "name": "Al Taraji",
+        "matches": 2,
+        "elo": 1350.04,
+        "score_public": 29.3,
+        "score_recalcule": 29.3,
+        "same": true
+      },
+      {
+        "team_id": "t_3xac3u",
+        "name": "Al Ula",
+        "matches": 2,
+        "elo": 1492.5,
+        "score_public": 48.5,
+        "score_recalcule": 48.5,
+        "same": true
+      },
+      {
+        "team_id": "t_26S1TS",
+        "name": "Neom SC",
+        "matches": 2,
+        "elo": 1420.16,
+        "score_public": 38.3,
+        "score_recalcule": 38.3,
+        "same": true
+      }
+    ],
+    "n_in_roster": 8,
+    "response_keys": [
+      "data",
+      "meta",
+      "pagination"
+    ]
+  }
+]

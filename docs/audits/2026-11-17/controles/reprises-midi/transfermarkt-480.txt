@@ -1,0 +1,50 @@
+.season=2015/2016 matches=4
+season=2015/2016 matches=4
+season=2015/2016 matches=4
+.season=2021/2022 matches=2
+season=2021/2022 matches=2
+season=2021/2022 matches=1
+season=2021/2022 matches=1
+..........................................................................................................................................................live provider=none: no live provider is configured (V2_LIVE_PROVIDER)
+....................................................................../Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-tracks-20261117/3-identities/backend/tests/test_open_matchday.py:130: ResourceWarning: unclosed file <_io.TextIOWrapper name='/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-tracks-20261117/3-identities/backend/tests/fixtures/open_matchday/ENG_1_premier-league.results_2627.csv' mode='r' encoding='UTF-8'>
+  source = list(csv.DictReader(open(FIXTURES / f"{folder}.results_2627.csv", newline="")))
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-tracks-20261117/3-identities/backend/tests/test_open_matchday.py:130: ResourceWarning: unclosed file <_io.TextIOWrapper name='/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-tracks-20261117/3-identities/backend/tests/fixtures/open_matchday/AUT_CUP_ofb-cup.results_2627.csv' mode='r' encoding='UTF-8'>
+  source = list(csv.DictReader(open(FIXTURES / f"{folder}.results_2627.csv", newline="")))
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+.....matches=1/1 attempts=15 failures=0
+matches=1/1 attempts=32 failures=0
+.......................................................migrations applied=0 total=134 logins=vega_v2_collect,vega_v2_read
+migrations applied=0 total=134 logins=vega_v2_collect,vega_v2_read
+.................................................................................................................................................................family=lineups job=22 error=RESOURCE_NOT_FOUND
+family=h2h job=23 error=RESOURCE_NOT_FOUND
+family=league_matches job=24 error=RESOURCE_NOT_FOUND
+......analyze partitioned tables=20
+archive seasons changed=1
+lineup model matches=0
+analyze partitioned tables=20
+archive seasons changed=1
+lineup model matches=0
+..publication generation=214
+..publication generation=151
+.family=summary job=22 error=RESOURCE_NOT_FOUND
+family=summary job=23 error=RESOURCE_NOT_FOUND
+family=league_matches job=24 error=RESOURCE_NOT_FOUND
+....family=summary job=13 error=HTTP_SERVER_ERROR
+family=summary job=13 error=RESOURCE_NOT_FOUND
+.family=league_matches job=15 error=RESOURCE_NOT_FOUND
+.family=lineups job=14 error=RESOURCE_NOT_FOUND
+.analyze partitioned tables=20
+archive seasons changed=0
+lineup model matches=0
+analyze partitioned tables=20
+archive seasons changed=0
+lineup model matches=0
+...family=summary job=36 error=RESOURCE_NOT_FOUND
+.....family=league_matches job=15 error=RESOURCE_NOT_FOUND
+.......
+----------------------------------------------------------------------
+Ran 480 tests in 220.658s
+
+OK
+exit=0

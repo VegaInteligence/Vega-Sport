@@ -1,0 +1,46 @@
+{
+  "source": "same real Store.entity path on PG18 with vega_collect",
+  "before": [
+    [
+      null,
+      "2026-11-18 12:44:03.140872+00:00"
+    ],
+    []
+  ],
+  "sql_only": [
+    [
+      null,
+      "2026-11-18 12:50:33.651460+00:00"
+    ],
+    [
+      [
+        "competition_season",
+        1,
+        1
+      ],
+      [
+        "home",
+        1,
+        1
+      ]
+    ]
+  ],
+  "proposed_store_hunk": [
+    [
+      null,
+      "2026-11-18 12:50:33.651460+00:00"
+    ],
+    [
+      [
+        "competition_season",
+        1,
+        1
+      ],
+      [
+        "home",
+        1,
+        1
+      ]
+    ]
+  ]
+}

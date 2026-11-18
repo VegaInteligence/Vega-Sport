@@ -1,0 +1,37 @@
+TAP version 13
+# Subtest: ranking and report publish the precise score without changing old fields, even on a same-tenth revision
+ok 1 - ranking and report publish the precise score without changing old fields, even on a same-tenth revision
+  ---
+  duration_ms: 415.965291
+  type: 'test'
+  ...
+# {"oldPublication":{"sql":48.4900000244873,"ranking":{"playerId":"p_aaaab1","teamId":"t_aaaaa1","name":"Élie Durand","imageUrl":"https://img.example/p1.png","team":"Olympique Été","role":"centre_forward","position":"Avant-centre","minutes":90,"goals":2,"assists":null,"grade":48.5,"rank":2,"gradeExact":48.4900000244873},"report":{"id":"p_aaaab1","teamId":"t_aaaaa1","name":"Élie Durand","imageUrl":"https://img.example/p1.png","team":"Olympique Été","position":"Avant-centre","minutes":90,"goals":2,"assists":0,"grade":48.5,"rank":2,"gradeExact":48.4900000244873},"etag":"W/\\"catalog-v1-e3d99d45ae295683430e1e856aa94aac5ebb5cdcc0d95528a79c7f6eccb09145\\""},"newPublication":{"sql":48.5100000149922,"ranking":{"playerId":"p_aaaab1","teamId":"t_aaaaa1","name":"Élie Durand","imageUrl":"https://img.example/p1.png","team":"Olympique Été","role":"centre_forward","position":"Avant-centre","minutes":90,"goals":2,"assists":null,"grade":48.5,"rank":2,"gradeExact":48.5100000149922},"report":{"id":"p_aaaab1","teamId":"t_aaaaa1","name":"Élie Durand","imageUrl":"https://img.example/p1.png","team":"Olympique Été","position":"Avant-centre","minutes":90,"goals":2,"assists":0,"grade":48.5,"rank":2,"gradeExact":48.5100000149922},"status":200,"etag":"W/\\"catalog-v1-1bd4459faa0e7e56f1cfd3a29d449014b8ea9c8b58c7745af1c1056fb85ac871\\""}}
+# Subtest: ranking protects hidden and non-finite notes and preserves the measured bounds and request errors
+ok 2 - ranking protects hidden and non-finite notes and preserves the measured bounds and request errors
+  ---
+  duration_ms: 72.200292
+  type: 'test'
+  ...
+# {"match":"m_aaaaa1","grades":[{"playerId":"p_aaaab4","teamId":"t_aaaaa2","name":"Cristiano Test","imageUrl":null,"team":"Racing Club","role":"winger","position":"Ailier / milieu offensif","minutes":70,"goals":0,"assists":null,"grade":null,"rank":1,"gradeExact":null},{"playerId":"p_aaaab1","teamId":"t_aaaaa1","name":"Élie Durand","imageUrl":"https://img.example/p1.png","team":"Olympique Été","role":"centre_forward","position":"Avant-centre","minutes":90,"goals":2,"assists":null,"grade":100,"rank":2,"gradeExact":100},{"playerId":"p_aaaab2","teamId":"t_aaaaa1","name":"Marc Petit","imageUrl":null,"team":"Olympique Été","role":"centre_forward","position":"Avant-centre","minutes":90,"goals":0,"assists":null,"grade":0,"rank":3,"gradeExact":0},{"playerId":"p_aaaab3","teamId":"t_aaaaa4","name":null,"imageUrl":null,"team":null,"role":"goalkeeper","position":"Gardien","minutes":10,"goals":null,"assists":null,"grade":null,"rank":null,"gradeExact":null}]}
+# Subtest: report accepts an old ranking response and rejects inconsistent or invalid precision
+ok 3 - report accepts an old ranking response and rejects inconsistent or invalid precision
+  ---
+  duration_ms: 159.165542
+  type: 'test'
+  ...
+# Subtest: the recorded Orenburg–CSKA boundary goes through SQL and both HTTP routes
+ok 4 - the recorded Orenburg–CSKA boundary goes through SQL and both HTTP routes
+  ---
+  duration_ms: 4631.278417
+  type: 'test'
+  ...
+# {"sql":[["p_3jm88H",48.5004176439616],["p_13nLyq",48.4903434662912]],"ranking":{"match":"m_08LEIz","grades":[{"playerId":"p_3jm88H","teamId":"t_2Mlwuk","name":"Dmitri Rybchinskiy","imageUrl":"https://cdn.pitchapi.dev/images/players/e6ff75e14ee3289017b071edc1def87c55ab01070fd4f2a827b71a23cd98b115.webp","team":"FC Orenburg","role":"winger","position":"Ailier / milieu offensif","minutes":82,"goals":0,"assists":0,"grade":48.5,"rank":1,"gradeExact":48.5004176439616},{"playerId":"p_13nLyq","teamId":"t_2Mlwuk","name":"Aleksei Tataev","imageUrl":"https://cdn.pitchapi.dev/images/players/b28f58570fa2b2eb5611e9777a07ba6adb5ecff05a3581b4e83a5405d4b9f00f.webp","team":"FC Orenburg","role":"centre_back","position":"Défenseur central","minutes":90,"goals":0,"assists":0,"grade":48.5,"rank":2,"gradeExact":48.4903434662912}]},"reportGrades":[{"id":"p_3jm88H","teamId":"t_2Mlwuk","name":"Dmitri Rybchinskiy","imageUrl":"https://cdn.pitchapi.dev/images/players/e6ff75e14ee3289017b071edc1def87c55ab01070fd4f2a827b71a23cd98b115.webp","team":"FC Orenburg","position":"Ailier / milieu offensif","minutes":82,"goals":0,"assists":0,"grade":48.5,"rank":1,"gradeExact":48.5004176439616},{"id":"p_13nLyq","teamId":"t_2Mlwuk","name":"Aleksei Tataev","imageUrl":"https://cdn.pitchapi.dev/images/players/b28f58570fa2b2eb5611e9777a07ba6adb5ecff05a3581b4e83a5405d4b9f00f.webp","team":"FC Orenburg","position":"Défenseur central","minutes":90,"goals":0,"assists":0,"grade":48.5,"rank":2,"gradeExact":48.4903434662912}]}
+1..4
+# tests 4
+# suites 0
+# pass 4
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 9024.713375

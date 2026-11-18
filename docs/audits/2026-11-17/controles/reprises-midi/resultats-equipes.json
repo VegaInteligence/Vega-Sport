@@ -1,0 +1,59 @@
+{
+  "national_Elo_matches": 932,
+  "national_home_terms": {
+    "nominal_home_hosts": 62,
+    "neither_home_association": 425,
+    "nominal_away_hosts": 24
+  },
+  "national_by_source": {
+    "openfootball": 343,
+    "international_results": 373,
+    "pitchapi": 168,
+    "openligadb": 48
+  },
+  "national_source_grounds": {
+    "FALSE": 65,
+    "TRUE": 7
+  },
+  "overlap_of_72_with_venues": 0,
+  "wrong_home_term_at_least": 456,
+  "saudi_edition_team_rows": 26,
+  "saudi_with_elo": 26,
+  "http_scores_reproduced": 26,
+  "http_explicit_nulls": 0,
+  "reference": [
+    35,
+    1503.116
+  ],
+  "female_divisions": [
+    [
+      "l_1SGwQT",
+      197,
+      "Women's Premier League",
+      1500.0,
+      "women",
+      false,
+      1
+    ]
+  ],
+  "fifa1934_missing": [
+    {
+      "id": 506,
+      "fifa_id": "1123",
+      "fifa_timestamp": "1934-06-01T14:30:00Z",
+      "home": "Italy",
+      "away": "Spain",
+      "score_vega": "[1, 0]",
+      "fifa_score": "[1, 0]",
+      "elo_replay": false,
+      "elo_rds": false
+    }
+  ],
+  "restored2022_admitted_ids": [],
+  "restored2022_matched_same_order": 7,
+  "restored2022_native_same_score": 7,
+  "results_source_capture_url": "https://raw.githubusercontent.com/martj42/international_results/b0948cb558c927c357db4067eac5b37b96d0e4bb/results.csv",
+  "upstream_used_by_product": "same path on moving master; immutable commit verified for this replay only",
+  "published_elo_run": 2097,
+  "utc_rds_new": "2026-11-18 12:37:34.889448+00:00"
+}

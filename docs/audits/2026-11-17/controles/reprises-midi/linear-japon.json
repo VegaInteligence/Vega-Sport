@@ -1,0 +1,20 @@
+{
+  "at": "2026-11-18 12:34:39 UTC",
+  "entries": [
+    {
+      "id": "9a69f599-fb45-4991-ad30-60878ba8083c",
+      "issueId": "VI-29",
+      "body": "Deux défauts du candidat ont été reproduits en local. Après retrait de l’Uruguay du classement des troisièmes du Mondial 2026, le collecteur publiait 59 lignes sur 60 alors que les 48 équipes étaient toujours présentes dans les groupes. Le second cas concerne les 16 clubs suédois et les 20 japonais. Tous concordent sur le rang et sept statistiques avec les organisateurs. Sous PostgreSQL 18, le collecteur de branche exécuté en rôle vega_collect refuse les deux véritables widgets identiques avec WRONG_EDITION. Deux corrections de points reconstruites donnent le même résultat. La table et la date du dernier succès sont préservées mais les rafraîchissements passent en erreur. La migration seule préserve les 1 086 lignes et les deux vues sur les 60 éditions au passage. La qualification doit utiliser une preuve positive de continuité et garder le refus des mauvaises saisons. Pour le Japon, VI-21 porte la correction du découpage des éditions. Sol 6.2 xhigh a repris le lot dans le worktree de VI-29 après arrêt et libération du verrou d’Opus."
+    },
+    {
+      "id": "2626d456-8d16-486a-a10e-7fc3c8b0003d",
+      "issueId": "VI-21",
+      "body": "Un calendrier complet de J1 2026/27 est réparti entre deux éditions Vega. Le rapprochement du 18 novembre retrouve chacun des 380 matchs officiels des 38 journées une seule fois par date, équipe à domicile et équipe à l’extérieur. L’édition 140 contient 199 matchs des journées 1 à 20. L’édition 22 contient 181 matchs, dont une rencontre de la 16e journée reportée et les journées 21 à 38. Ses champs native_label=2027 et core.seasons.label=2027/2028 décalent le classement officiel 2026/27. La Fédération et le widget s’accordent sur les 20 équipes après 14 matchs. Examiner le découpage également pour les équipes-saisons, les classements et les notes historiques avant toute consolidation. Les mêmes données suédoises révèlent 28 rencontres jouées par équipe, contre 22 ou 23 coups d’envoi de championnat dans Vega. VI-29 conserve le contrat du writer et VI-21 la correction du calendrier. Production mesurée dans deux transactions en lecture seule. [Calendrier officiel japonais](https://www.jleague.jp/en/j1/match/search-list/?category=j1&enddate=2027-06-30&period=custom&startdate=2026-08-01) · [Allsvenskan](https://allsvenskan.se/)"
+    },
+    {
+      "id": "3c3cfcec-e716-47d8-ae5b-c69cf7614ea9",
+      "issueId": "VI-31",
+      "body": "Opus a terminé la conservation des transferts acceptés et des contrats datés au commit local dc33b4fe59f7d01e4e963b7b5d055dd9ca7e9964 de codex/audit-3-identities. Le coordinateur a rejoué indépendamment les deux suites de non-régression sur PostgreSQL 18. La répétition de la migration sur copie couvre 46 362 transferts et 12 570 contrats. Il reste 26 450 transferts sans deux clubs canoniques. La résolution des identités garde son propriétaire. La contre-revue et l’intégration restent ouvertes."
+    }
+  ]
+}

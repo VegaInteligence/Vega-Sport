@@ -1,0 +1,26 @@
+{
+  "at": "2026-11-18 11:58:33.437132+00:00",
+  "snapshot": "4432155:4432155:",
+  "mode": "repeatable read, read only",
+  "editions": 60,
+  "lignes_autorite_stockees": 1086,
+  "autres_lignes_stockees": 0,
+  "lignes_lecture_actuelle": 1086,
+  "lecteur_apres_138_simule_sql": {
+    "SportScore": 59,
+    "SportScore (no Vega table)": 1
+  },
+  "editions_au_dela_regle_11_par_max": [
+    15,
+    22
+  ],
+  "ecarts_de_regle_11_entre_ligne_et_club": [],
+  "editions_sans_classement_vega": [
+    22
+  ],
+  "sha256_capture": "54ff61972794b8fd6163c040f32f6a9d398f43aea6e70404ab692bc367c74032",
+  "sql": {
+    "impact-par-club.sql": "f0424103177e1578880020f13e9696dcde1afdce5197e9f9b1b621dd02c448ab",
+    "lecture-auteur.sql": "02210546b8e7e2f3e0fb69a9de696a13432a764a43cda0d545a960778ae1609a"
+  }
+}

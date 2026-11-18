@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "archive": "addendum-scientifique-notes-20261118-v1.zip",
+  "sha256": "3db1551609f0a7619d61275f350f19e20f194b72a38083f92726e85a2414be2e",
+  "bytes": 1829596,
+  "members": 101,
+  "same_two_builds": true,
+  "fresh_extraction_exit_code": 0,
+  "verification_sha256": "603cf05a4f160747a4e3b82ea458248edf5837763b6a7d0e956da4b610216e61",
+  "addendum_sha256": "e7f45c0e794f1a6c670796f28dd948f369be62b33ffb941f9b5db60e2379f69f",
+  "privacy_scan": {
+    "empreintes_feuilles_belges_exclues": 43,
+    "tables_agregees_distribuees": 0,
+    "contenus_distincts_y_compris_decompresses": 120,
+    "conteneurs_controles": {
+      "zip": 1,
+      "zlib": 8,
+      "gzip": 9
+    }
+  }
+}

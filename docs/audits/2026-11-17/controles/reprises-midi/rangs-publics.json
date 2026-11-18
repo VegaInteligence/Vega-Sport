@@ -1,0 +1,344 @@
+{
+  "node": "v26.4.0",
+  "snapshot": "2026-11-18 04:35:55.256176+00:00",
+  "input": "f68cfb38b40aef1e4048c88c3653b6f6263fb6a59b14e2b8f04f37ff2a1488df",
+  "totals": {
+    "stored": 2282580,
+    "visible": 1945601,
+    "hidden": 336979,
+    "diff": 97029,
+    "up": 97029,
+    "down": 0,
+    "bins": 25369,
+    "lessThan20Visible": 15324,
+    "from20": 1930277
+  },
+  "groupsBySeason": {
+    "2021": {
+      "stored": 170332,
+      "visible": 146105,
+      "hidden": 24227,
+      "diff": 7204,
+      "up": 7204,
+      "down": 0,
+      "bins": 2356,
+      "lessThan20Visible": 1014,
+      "from20": 145091
+    },
+    "2022": {
+      "stored": 250775,
+      "visible": 213858,
+      "hidden": 36917,
+      "diff": 10753,
+      "up": 10753,
+      "down": 0,
+      "bins": 4374,
+      "lessThan20Visible": 1553,
+      "from20": 212305
+    },
+    "2023": {
+      "stored": 285184,
+      "visible": 242156,
+      "hidden": 43028,
+      "diff": 12119,
+      "up": 12119,
+      "down": 0,
+      "bins": 4487,
+      "lessThan20Visible": 1992,
+      "from20": 240164
+    },
+    "2024": {
+      "stored": 548568,
+      "visible": 467296,
+      "hidden": 81272,
+      "diff": 23291,
+      "up": 23291,
+      "down": 0,
+      "bins": 4744,
+      "lessThan20Visible": 3834,
+      "from20": 463462
+    },
+    "2025": {
+      "stored": 672448,
+      "visible": 572167,
+      "hidden": 100281,
+      "diff": 28540,
+      "up": 28540,
+      "down": 0,
+      "bins": 4779,
+      "lessThan20Visible": 4475,
+      "from20": 567692
+    },
+    "2026": {
+      "stored": 355273,
+      "visible": 304019,
+      "hidden": 51254,
+      "diff": 15122,
+      "up": 15122,
+      "down": 0,
+      "bins": 4629,
+      "lessThan20Visible": 2456,
+      "from20": 301563
+    }
+  },
+  "orenburg": {
+    "actors": {
+      "p_13nLyq": {
+        "before": {
+          "name": "Aleksei Tataev",
+          "rankInBoard": 14,
+          "value": 48.4903434662912,
+          "integer": "48",
+          "lineup": "48"
+        },
+        "after": {
+          "name": "Aleksei Tataev",
+          "rankInBoard": 13,
+          "value": 48.5,
+          "integer": "49",
+          "lineup": "49"
+        },
+        "rank": {
+          "playerId": "p_13nLyq",
+          "teamId": "t_2Mlwuk",
+          "name": "Aleksei Tataev",
+          "imageUrl": "https://cdn.pitchapi.dev/images/players/b28f58570fa2b2eb5611e9777a07ba6adb5ecff05a3581b4e83a5405d4b9f00f.webp",
+          "team": "FC Orenburg",
+          "role": "centre_back",
+          "position": "Défenseur central",
+          "minutes": 90,
+          "goals": 0,
+          "assists": 0,
+          "grade": 48.5,
+          "rank": 8
+        },
+        "report": 48.5
+      },
+      "p_3jm88H": {
+        "before": {
+          "name": "Dmitri Rybchinskiy",
+          "rankInBoard": 13,
+          "value": 48.5004176439616,
+          "integer": "49",
+          "lineup": "49"
+        },
+        "after": {
+          "name": "Dmitri Rybchinskiy",
+          "rankInBoard": 14,
+          "value": 48.5,
+          "integer": "49",
+          "lineup": "49"
+        },
+        "rank": {
+          "playerId": "p_3jm88H",
+          "teamId": "t_2Mlwuk",
+          "name": "Dmitri Rybchinskiy",
+          "imageUrl": "https://cdn.pitchapi.dev/images/players/e6ff75e14ee3289017b071edc1def87c55ab01070fd4f2a827b71a23cd98b115.webp",
+          "team": "FC Orenburg",
+          "role": "winger",
+          "position": "Ailier / milieu offensif",
+          "minutes": 82,
+          "goals": 0,
+          "assists": 0,
+          "grade": 48.5,
+          "rank": 7
+        },
+        "report": 48.5
+      },
+      "p_04vc3l": {
+        "before": {
+          "name": "Maxime Sivis",
+          "rankInBoard": 15,
+          "value": 47.4896495575188,
+          "integer": "47",
+          "lineup": "47"
+        },
+        "after": {
+          "name": "Maxime Sivis",
+          "rankInBoard": 15,
+          "value": 47.5,
+          "integer": "48",
+          "lineup": "48"
+        },
+        "rank": {
+          "playerId": "p_04vc3l",
+          "teamId": "t_2Mlwuk",
+          "name": "Maxime Sivis",
+          "imageUrl": "https://cdn.pitchapi.dev/images/players/385c20bc5fb601fc9cdb65068ab2ac1ab51b3988703d87c3145b8bef4f0bf39a.webp",
+          "team": "FC Orenburg",
+          "role": "full_back",
+          "position": "Latéral / piston",
+          "minutes": 90,
+          "goals": 0,
+          "assists": 0,
+          "grade": 47.5,
+          "rank": 9
+        },
+        "report": 47.5
+      },
+      "p_4H4Tfe": {
+        "before": {
+          "name": "Dzhamalutdin Abdulkadyrov",
+          "rankInBoard": 22,
+          "value": 36.4903529035313,
+          "integer": "36",
+          "lineup": "36"
+        },
+        "after": {
+          "name": "Dzhamalutdin Abdulkadyrov",
+          "rankInBoard": 22,
+          "value": 36.5,
+          "integer": "37",
+          "lineup": "37"
+        },
+        "rank": {
+          "playerId": "p_4H4Tfe",
+          "teamId": "t_1LtiUA",
+          "name": "Dzhamalutdin Abdulkadyrov",
+          "imageUrl": "https://cdn.pitchapi.dev/images/players/8c6d57ae37878c18c98b89b8eeb34190db298cf3c58d32ffcbe35a14194652cd.webp",
+          "team": "CSKA Moscow",
+          "role": "centre_back",
+          "position": "Défenseur central",
+          "minutes": 90,
+          "goals": 0,
+          "assists": 0,
+          "grade": 36.5,
+          "rank": 16
+        },
+        "report": 36.5
+      }
+    },
+    "leading": [
+      {
+        "id": "p_3PGFC9",
+        "name": "Evgeny Bolotov",
+        "grade": 63.4,
+        "integer": "63"
+      },
+      {
+        "id": "p_0NoI7u",
+        "name": "Ruslan Kul",
+        "grade": 62.2,
+        "integer": "62"
+      },
+      {
+        "id": "p_3yNPPF",
+        "name": "Maksim Borisko",
+        "grade": 62.2,
+        "integer": "62"
+      },
+      {
+        "id": "p_1FsV4a",
+        "name": "Matvey Kislyak",
+        "grade": 58.9,
+        "integer": "59"
+      },
+      {
+        "id": "p_4McHHL",
+        "name": "Bogdan Ovsyannikov",
+        "grade": 55.3,
+        "integer": "55"
+      }
+    ],
+    "reportShare": "FC Orenburg – CSKA Moscow en six images. Joueur du match : Evgeny Bolotov, 63/100.\nvegasport.vercel.app"
+  },
+  "matan": {
+    "actors": {
+      "p_0ImKAp": {
+        "before": {
+          "name": "Darlington Nagbe",
+          "rankInBoard": 3,
+          "value": 63.4600021554732,
+          "integer": "63",
+          "lineup": "63"
+        },
+        "after": {
+          "name": "Darlington Nagbe",
+          "rankInBoard": 3,
+          "value": 63.5,
+          "integer": "64",
+          "lineup": "64"
+        },
+        "rank": {
+          "playerId": "p_0ImKAp",
+          "teamId": "t_1avIKi",
+          "name": "Darlington Nagbe",
+          "imageUrl": "https://cdn.pitchapi.dev/images/players/09f0edec4659838a2bdfe19346bbf9e14e94d48e30e9467727ed591ea191153e.webp",
+          "team": "Columbus Crew",
+          "role": "winger",
+          "position": "Ailier / milieu offensif",
+          "minutes": 90,
+          "goals": 0,
+          "assists": 1,
+          "grade": 63.5,
+          "rank": 3
+        },
+        "report": 63.5
+      },
+      "p_1FvzRt": {
+        "before": {
+          "name": "Alexandru Mățan",
+          "rankInBoard": 14,
+          "value": 53.7018086536606,
+          "integer": "54",
+          "lineup": "54"
+        },
+        "after": {
+          "name": "Alexandru Mățan",
+          "rankInBoard": 14,
+          "value": 53.7018086536606,
+          "integer": "54",
+          "lineup": "54"
+        },
+        "rank": {
+          "playerId": "p_1FvzRt",
+          "teamId": "t_1avIKi",
+          "name": "Alexandru Mățan",
+          "imageUrl": "https://cdn.pitchapi.dev/images/players/9d9271687f7167c913cc54fce7b053d048a6b4ef887f3f6b204d09b216ca6801.webp",
+          "team": "Columbus Crew",
+          "role": "winger",
+          "position": "Ailier / milieu offensif",
+          "minutes": 7,
+          "goals": 0,
+          "assists": 0,
+          "grade": null,
+          "rank": null
+        },
+        "report": null
+      }
+    },
+    "leading": [
+      {
+        "id": "p_31mmtE",
+        "name": "Joel Waterman",
+        "grade": 72.7,
+        "integer": "73"
+      },
+      {
+        "id": "p_4JGYKi",
+        "name": "Gyasi Zardes",
+        "grade": 69.9,
+        "integer": "70"
+      },
+      {
+        "id": "p_0ImKAp",
+        "name": "Darlington Nagbe",
+        "grade": 63.5,
+        "integer": "64"
+      },
+      {
+        "id": "p_3J50nT",
+        "name": "Derrick Etienne",
+        "grade": 61.9,
+        "integer": "62"
+      },
+      {
+        "id": "p_1Qx0I4",
+        "name": "James Pantemis",
+        "grade": 60.2,
+        "integer": "60"
+      }
+    ],
+    "reportShare": "null – null en six images. Joueur du match : Joel Waterman, 73/100.\nvegasport.vercel.app"
+  }
+}

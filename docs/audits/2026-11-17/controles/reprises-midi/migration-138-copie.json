@@ -1,0 +1,166 @@
+{
+  "completed_at_utc": "2026-11-18T12:13:18.823632+00:00",
+  "status": "DATA_EQUIVALENCE_ESTABLISHED_WITH_LOCAL_COST_RESERVATION",
+  "snapshot": {
+    "at": "2026-11-18 12:07:24.667750+00:00",
+    "snapshot": "4432595:4432595:",
+    "read_only": "on",
+    "server_version": "PostgreSQL 18.3 on aarch64-unknown-linux-gnu, compiled by aarch64-unknown-linux-gnu-gcc (GCC) 12.4.0, 64-bit",
+    "edition_ids": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      29,
+      30,
+      33,
+      34,
+      35,
+      36,
+      39,
+      40,
+      42,
+      43,
+      44,
+      46,
+      47,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      265,
+      266,
+      267,
+      760,
+      766,
+      772,
+      797,
+      812,
+      882,
+      894,
+      897,
+      908,
+      912,
+      941,
+      1004
+    ],
+    "counts": {
+      "official": 1086,
+      "aggregate": 1054,
+      "matches": 15418,
+      "rounds": 894,
+      "editions": 60,
+      "competitions": 60,
+      "seasons": 3,
+      "teams": 983,
+      "assets": 976,
+      "provider_ids": 1281,
+      "zones": 68,
+      "standings": 1086,
+      "standing_rows": 1086,
+      "definitions": 3,
+      "columns": 113,
+      "indexes": 25
+    },
+    "compressed_sha256": "4e4bd563939a2fab02f300e76b38fd654d251cc62739a47570a75252d979a264"
+  },
+  "migration_sha256": "77ae8441d0a8a0a880dfa0c3c6584cfff98a3d94445de22735d7638d72108144",
+  "copied_official_all_columns_equal_production": true,
+  "migration_preserves_all_original_official_columns": true,
+  "basis_all_null": true,
+  "both_views_equal_before_after_all60": true,
+  "rows_before": 1086,
+  "rows_after": 1086,
+  "changed_editions": [],
+  "editions_with_vega_table": 59,
+  "editions_without_vega_table": [
+    {
+      "edition": 22,
+      "competition": "J. League",
+      "season": "2027",
+      "official_rows": 20,
+      "vega_rows": 0,
+      "before_rows": 20,
+      "after_rows": 20,
+      "source_before": "sportscore",
+      "source_after": "sportscore",
+      "as_of": "2026-11-18 10:56:22.667481+00:00",
+      "standings_exact_equal": true,
+      "standing_rows_exact_equal": true
+    }
+  ],
+  "read_role_stamps": {
+    "before": {
+      "columns": [
+        "at",
+        "role",
+        "read_only"
+      ],
+      "rows": [
+        [
+          "2026-11-18 12:11:06.459688+00:00",
+          "vega_read",
+          "on"
+        ]
+      ]
+    },
+    "after": {
+      "columns": [
+        "at",
+        "role",
+        "read_only"
+      ],
+      "rows": [
+        [
+          "2026-11-18 12:11:06.654058+00:00",
+          "vega_read",
+          "on"
+        ]
+      ]
+    }
+  },
+  "application_sql_median_ms": {
+    "1": {
+      "before": 5.269917019177228,
+      "after": 24.921583011746407
+    },
+    "22": {
+      "before": 5.00833400292322,
+      "after": 8.16129200393334
+    }
+  },
+  "exact_application_sql_results_unchanged": true,
+  "source_sql_unchanged": true,
+  "local_containers_stopped": true,
+  "limitations": [
+    "Snapshot equivalence is not certification of sporting accuracy.",
+    "Initial 11:58 transaction had summaries only; unchanged summaries do not establish all underlying data unchanged through 12:07.",
+    "Local PostgreSQL 18.6 versus RDS 18.3; reduced database, local hardware/cache/statistics and no concurrent load.",
+    "Legacy basis NULL only; new writer and future basis transitions owned by separate reviewer.",
+    "No production migration or write; no product source, Git, Linear or WORKLOG change."
+  ]
+}

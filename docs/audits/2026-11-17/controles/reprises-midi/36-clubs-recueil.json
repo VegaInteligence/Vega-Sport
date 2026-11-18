@@ -1,0 +1,31 @@
+{
+  "rds": "2026-11-18 12:07:24.667750+00:00",
+  "snapshot": "4432595:4432595:",
+  "sha256_rds": "4e4bd563939a2fab02f300e76b38fd654d251cc62739a47570a75252d979a264",
+  "mesures": {
+    "15": {
+      "clubs": 16,
+      "rencontres_vega_tous_statuts": 196,
+      "commences_qualifies_min": 22,
+      "commences_qualifies_max": 23,
+      "joues_officiels": [
+        28
+      ],
+      "numerateurs_regle_11": 16,
+      "toutes_statistiques_identiques": 16,
+      "differences": {}
+    },
+    "22": {
+      "clubs": 20,
+      "rencontres_vega_tous_statuts": 181,
+      "commences_qualifies_min": 0,
+      "commences_qualifies_max": 0,
+      "joues_officiels": [
+        14
+      ],
+      "numerateurs_regle_11": 20,
+      "toutes_statistiques_identiques": 20,
+      "differences": {}
+    }
+  }
+}

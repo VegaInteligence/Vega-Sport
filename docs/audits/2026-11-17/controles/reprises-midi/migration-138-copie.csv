@@ -1,0 +1,61 @@
+edition,competition,season,official_rows,vega_rows,before_rows,after_rows,source_before,source_after,as_of,standings_exact_equal,standing_rows_exact_equal
+1,Serie A,2026/2027,20,20,20,20,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+2,LaLiga,2026/2027,20,20,20,20,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+3,1. Liga,2026/2027,16,16,16,16,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+4,Super Lig,2026/2027,18,18,18,18,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+5,Pro League,2026/2027,14,14,14,14,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+8,Liga I,2026/2027,16,16,16,16,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+9,Eliteserien,2026,16,16,16,16,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+10,Ligat ha'Al,2026/2027,14,14,14,14,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+11,1. Lig,2026/2027,20,20,20,20,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+12,Bundesliga,2026/2027,18,18,18,18,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+13,Premiership,2026/2027,12,12,12,12,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+14,Primera Division,2026,14,14,14,14,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+15,Allsvenskan,2026,16,16,16,16,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+16,Serie A,2026,16,16,16,16,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+17,Challenger Pro League,2026/2027,15,15,15,15,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+19,Super League,2026,16,16,16,16,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+20,Ekstraklasa,2026/2027,18,18,18,18,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+21,K League 2,2026,17,17,17,17,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+22,J. League,2027,20,0,20,20,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+23,K League 1,2026,12,12,12,12,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+24,First Division A,2026/2027,18,18,18,18,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+25,Premier League,2026/2027,16,16,16,16,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+26,HNL,2026/2027,10,10,10,10,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+27,Super Liga,2026/2027,14,14,14,14,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+29,Veikkausliiga,2026,12,12,12,12,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+30,Ligue 1,2026/2027,18,18,18,18,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+33,J3 League,2026/2027,20,20,20,20,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+34,Thai League 1,2026/2027,16,16,16,16,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+35,2. Bundesliga,2026/2027,18,18,18,18,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+36,LaLiga2,2026/2027,22,22,22,22,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+39,Liga 1,2026,18,18,18,18,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+40,Liga MX,2026/2027,18,18,18,18,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+42,Super League 1,2026/2027,14,14,14,14,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+43,USL Championship,2026,25,25,25,25,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+44,Bundesliga,2026/2027,12,12,12,12,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+46,Virsliga,2026,10,10,10,10,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+47,3. Liga,2026/2027,20,20,20,20,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+51,Eredivisie,2026/2027,18,18,18,18,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+52,A-League,2026/2027,12,12,12,12,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+53,1. liga,2026/2027,12,12,12,12,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+54,Liga Portugal,2026/2027,18,18,18,18,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+55,Premier League,2026/2027,20,20,20,20,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+56,Challenge League,2026/2027,10,10,10,10,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+57,Super League,2026/2027,12,12,12,12,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+58,Primera Division,2026,16,16,16,16,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+265,League One,2026/2027,24,24,24,24,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+266,Serie A,2026,20,20,20,20,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+267,League Two,2026/2027,24,24,24,24,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+760,Champions League,2026/2027,36,36,36,36,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+766,Championship,2026/2027,24,24,24,24,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+772,Conference League,2026/2027,36,36,36,36,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+797,Europa League,2026/2027,36,36,36,36,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+812,Indian Super League,2026/2027,13,13,13,13,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+882,Ligue 2,2026/2027,18,18,18,18,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+894,Paulista A1,2026,16,16,16,16,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+897,Premier Division,2026,10,10,10,10,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+908,Premier League,2026,8,8,8,8,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+912,Premier Soccer League,2026/2027,16,16,16,16,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+941,Saudi Pro League,2026/2027,18,18,18,18,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True
+1004,World Cup,2026,60,48,60,60,sportscore,sportscore,2026-11-18 10:56:22.667481+00:00,True,True

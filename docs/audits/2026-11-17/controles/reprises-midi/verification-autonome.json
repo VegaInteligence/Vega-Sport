@@ -1,0 +1,36 @@
+{
+  "sha256": "7a86dadb5de81a544a11c4d7fe40b9afab4c1a9e7f064b63963ea205f96c664c",
+  "checks": {
+    "tracks/2-ingestion/impact-138-en-production/renouvellement-reel/calendrier_japon.py": {
+      "command": [
+        "python",
+        "-B",
+        "tracks/2-ingestion/impact-138-en-production/renouvellement-reel/calendrier_japon.py"
+      ],
+      "exit_code": 0,
+      "identical_results": true
+    },
+    "tracks/6-teams/apres-fable-1153/equipes.py": {
+      "command": [
+        "python",
+        "-B",
+        "tracks/6-teams/apres-fable-1153/equipes.py"
+      ],
+      "exit_code": 0,
+      "identical_results": true
+    },
+    "refresh": {
+      "command": [
+        "python",
+        "-B",
+        "tracks/2-ingestion/impact-138-en-production/renouvellement-reel/rejouer.py",
+        "--port",
+        "55470",
+        "--out",
+        "essai-autonome"
+      ],
+      "exit_code": 0,
+      "all_four_scenarios_identical": true
+    }
+  }
+}

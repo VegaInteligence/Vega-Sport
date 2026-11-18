@@ -1,0 +1,18 @@
+id,fifa_id,fifa_timestamp,home,away,score_vega,fifa_score,elo_replay,elo_rds
+494,1102,1934-05-27T14:30:00Z,Sweden,Argentina,"[3, 2]","[3, 2]",True,True
+495,1104,1934-05-27T14:30:00Z,Austria,France,"[3, 2]","[3, 2]",True,True
+496,1108,1934-05-27T14:30:00Z,Germany,Belgium,"[5, 2]","[5, 2]",True,True
+497,1111,1934-05-27T14:30:00Z,Spain,Brazil,"[3, 1]","[3, 1]",True,True
+498,1119,1934-05-27T14:30:00Z,Hungary,Egypt,"[4, 2]","[4, 2]",True,True
+499,1133,1934-05-27T14:30:00Z,Switzerland,Netherlands,"[3, 2]","[3, 2]",True,True
+500,1135,1934-05-27T14:30:00Z,Italy,United States,"[7, 1]","[7, 1]",True,True
+501,1141,1934-05-27T14:30:00Z,Czechoslovakia,Romania,"[2, 1]","[2, 1]",True,True
+502,1143,1934-05-31T14:30:00Z,Czechoslovakia,Switzerland,"[3, 2]","[3, 2]",True,True
+503,1129,1934-05-31T14:30:00Z,Germany,Sweden,"[2, 1]","[2, 1]",True,True
+504,1122,1934-05-31T14:30:00Z,Italy,Spain,"[1, 1]","[1, 1]",True,True
+505,1106,1934-05-31T14:30:00Z,Austria,Hungary,"[2, 1]","[2, 1]",True,True
+506,1123,1934-06-01T14:30:00Z,Italy,Spain,"[1, 0]","[1, 0]",False,False
+507,1107,1934-06-03T14:30:00Z,Italy,Austria,"[1, 0]","[1, 0]",True,True
+508,1130,1934-06-03T14:30:00Z,Czechoslovakia,Germany,"[3, 1]","[3, 1]",True,True
+509,1105,1934-06-07T16:00:00Z,Germany,Austria,"[3, 2]","[3, 2]",True,True
+510,1134,1934-06-10T15:30:00Z,Italy,Czechoslovakia,"[2, 1]","[2, 1]",True,True

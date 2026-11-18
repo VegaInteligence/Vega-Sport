@@ -121,3 +121,11 @@ Les 48 matchs de groupe de l’édition Vega 53151 ont été rapprochés par dat
 ## Résultats officiels et statistiques des joueuses saoudiennes
 
 Les calendriers PitchAPI concordent avec les 146 résultats des deux saisons passées. Pour l’édition 2026/27, les résultats de la SAFF et ses listes d’entrantes comblent des absences confirmées par 40 appels au fournisseur primaire. Les durées BEPRO ont une couverture partielle. Les règles de priorité doivent donc porter sur le résultat, l’identité de la rencontre et la métrique individuelle séparément. [Comptes, autorités et tests](PREMIERE-DIVISION-FEMININE-SAOUDIENNE.md)
+
+## Classements de Suède et du Japon
+
+Sur les sites officiels, les 16 clubs suédois ont joué 28 rencontres et les 20 clubs japonais en ont joué 14. Les huit champs sportifs des 36 lignes concordent avec les lignes SportScore enregistrées sur RDS à 12 h 07 UTC. Les calendriers Vega de ces éditions ne donnent que 22 à 23 coups d’envoi passés par club en Suède et aucun au Japon. L’édition japonaise est libellée 2027, le tableau de la ligue est celui de 2026/27. La relation entre un tableau et un calendrier doit être qualifiée avant leur rapprochement. [36 comparaisons](controles/reprises-midi/36-clubs-autorites.csv) · [Allsvenskan](https://allsvenskan.se/) · [J.League](https://www.jleague.jp/en/j1/standings/)
+
+## Saison sportive et calendrier japonais
+
+Le rapprochement couvre les 380 rencontres du calendrier officiel de J1 2026/27. [Calendrier, source et conséquence sur les classements](CLASSEMENTS-ET-ELO.md)

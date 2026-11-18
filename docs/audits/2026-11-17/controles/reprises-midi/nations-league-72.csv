@@ -1,0 +1,73 @@
+match_id,day,home,away,source_home,source_away,score,ground_country,ground_city,neutral_csv,neutral_projection,neutral_RDS,included_in_organizer_venue_proofs
+2772,2026-09-24,Autriche,Israël,Austria,Israel,"[3, 1]",Austria,Linz,FALSE,,,False
+2773,2026-09-24,Kosovo,Irlande,Kosovo,Republic of Ireland,"[1, 0]",Kosovo,Pristina,FALSE,,,False
+2774,2026-09-24,Andorre,Malte,Andorra,Malta,"[1, 2]",Andorra,Encamp,FALSE,,,False
+2775,2026-09-24,Liechtenstein,Lituanie,Liechtenstein,Lithuania,"[0, 2]",Liechtenstein,Vaduz,FALSE,,,False
+2776,2026-09-25,Géorgie,Irlande du Nord,Georgia,Northern Ireland,"[0, 1]",Georgia,Tbilisi,FALSE,,,False
+2777,2026-09-25,Hongrie,Ukraine,Hungary,Ukraine,"[0, 1]",Hungary,Budapest,FALSE,,,False
+2778,2026-09-25,Pologne,Bosnie-Herzégovine,Poland,Bosnia and Herzegovina,"[0, 0]",Poland,Warsaw,FALSE,,,False
+2779,2026-09-25,Suède,Roumanie,Sweden,Romania,"[2, 1]",Sweden,Solna,FALSE,,,False
+2780,2026-09-25,Arménie,Lettonie,Armenia,Latvia,"[2, 0]",Armenia,Yerevan,FALSE,,,False
+2781,2026-09-25,Monténégro,Chypre,Montenegro,Cyprus,"[2, 1]",Montenegro,Podgorica,FALSE,,,False
+2782,2026-09-26,Slovénie,Écosse,Slovenia,Scotland,"[0, 0]",Slovenia,Ljubljana,FALSE,,,False
+2783,2026-09-26,Macédoine du Nord,Suisse,North Macedonia,Switzerland,"[0, 3]",North Macedonia,Skopje,FALSE,,,False
+2784,2026-09-26,Saint-Marin,Finlande,San Marino,Finland,"[0, 7]",San Marino,Serravalle,FALSE,,,False
+2785,2026-09-26,Albanie,Biélorussie,Albania,Belarus,"[2, 0]",Albania,Tirana,FALSE,,,False
+2786,2026-09-26,Îles Féroé,Kazakhstan,Faroe Islands,Kazakhstan,"[1, 1]",Faroe Islands,Tórshavn,FALSE,,,False
+2787,2026-09-26,Slovaquie,Moldavie,Slovakia,Moldova,"[2, 0]",Slovakia,Prešov,FALSE,,,False
+2788,2026-09-26,Islande,Estonie,Iceland,Estonia,"[1, 1]",Iceland,Reykjavík,FALSE,,,False
+2789,2026-09-26,Bulgarie,Luxembourg,Bulgaria,Luxembourg,"[1, 2]",Bulgaria,Plovdiv,FALSE,,,False
+2790,2026-09-27,Autriche,Kosovo,Austria,Kosovo,"[3, 1]",Austria,Vienna,FALSE,,,False
+2791,2026-09-27,Israël,Irlande,Israel,Republic of Ireland,"[0, 3]",Hungary,Debrecen,TRUE,,,False
+2792,2026-09-27,Gibraltar,Andorre,Gibraltar,Andorra,"[0, 0]",Gibraltar,Gibraltar,FALSE,,,False
+2793,2026-09-27,Lituanie,Azerbaïdjan,Lithuania,Azerbaijan,"[1, 1]",Lithuania,Kaunas,FALSE,,,False
+2794,2026-09-28,Irlande du Nord,Hongrie,Northern Ireland,Hungary,"[0, 0]",Northern Ireland,Belfast,FALSE,,,False
+2795,2026-09-28,Géorgie,Ukraine,Georgia,Ukraine,"[0, 0]",Georgia,Tbilisi,FALSE,,,False
+2796,2026-09-28,Suède,Pologne,Sweden,Poland,"[3, 1]",Sweden,Solna,FALSE,,,False
+2797,2026-09-28,Roumanie,Bosnie-Herzégovine,Romania,Bosnia and Herzegovina,"[2, 4]",Romania,Bucharest,FALSE,,,False
+2798,2026-09-28,Lettonie,Chypre,Latvia,Cyprus,"[0, 0]",Latvia,Riga,FALSE,,,False
+2799,2026-09-28,Arménie,Monténégro,Armenia,Montenegro,"[2, 3]",Armenia,Yerevan,FALSE,,,False
+2800,2026-09-29,Écosse,Suisse,Scotland,Switzerland,"[0, 3]",Scotland,Glasgow,FALSE,,,False
+2801,2026-09-29,Slovénie,Macédoine du Nord,Slovenia,North Macedonia,"[2, 0]",Slovenia,Ljubljana,FALSE,,,False
+2802,2026-09-29,Finlande,Biélorussie,Finland,Belarus,"[0, 0]",Finland,Helsinki,FALSE,,,False
+2803,2026-09-29,Saint-Marin,Albanie,San Marino,Albania,"[0, 3]",San Marino,Serravalle,FALSE,,,False
+2804,2026-09-29,Moldavie,Îles Féroé,Moldova,Faroe Islands,"[1, 1]",Moldova,Chișinău,FALSE,,,False
+2805,2026-09-29,Slovaquie,Kazakhstan,Slovakia,Kazakhstan,"[2, 1]",Slovakia,Košice,FALSE,,,False
+2806,2026-09-29,Luxembourg,Islande,Luxembourg,Iceland,"[0, 3]",Luxembourg,Luxembourg,FALSE,,,False
+2807,2026-09-29,Bulgarie,Estonie,Bulgaria,Estonia,"[0, 0]",Bulgaria,Plovdiv,FALSE,,,False
+2808,2026-10-01,Irlande,Autriche,Republic of Ireland,Austria,"[2, 2]",Republic of Ireland,Dublin,FALSE,,,False
+2809,2026-10-01,Israël,Kosovo,Israel,Kosovo,"[0, 0]",Hungary,Debrecen,TRUE,,,False
+2810,2026-10-01,Malte,Gibraltar,Malta,Gibraltar,"[1, 1]",Malta,Ta' Qali,FALSE,,,False
+2811,2026-10-01,Azerbaïdjan,Liechtenstein,Azerbaijan,Liechtenstein,"[0, 0]",Azerbaijan,Baku,FALSE,,,False
+2812,2026-10-02,Hongrie,Géorgie,Hungary,Georgia,"[1, 0]",Hungary,Budapest,FALSE,,,False
+2813,2026-10-02,Ukraine,Irlande du Nord,Ukraine,Northern Ireland,"[0, 3]",Slovakia,Trnava,TRUE,,,False
+2814,2026-10-02,Bosnie-Herzégovine,Suède,Bosnia and Herzegovina,Sweden,"[1, 1]",Bosnia and Herzegovina,Zenica,FALSE,,,False
+2815,2026-10-02,Pologne,Roumanie,Poland,Romania,"[6, 0]",Poland,Warsaw,FALSE,,,False
+2816,2026-10-02,Chypre,Arménie,Cyprus,Armenia,"[2, 0]",Cyprus,Nicosia,FALSE,,,False
+2817,2026-10-02,Lettonie,Monténégro,Latvia,Montenegro,"[1, 2]",Latvia,Riga,FALSE,,,False
+2818,2026-10-02,Kazakhstan,Moldavie,Kazakhstan,Moldova,"[1, 2]",Kazakhstan,Astana,FALSE,,,False
+2819,2026-10-02,Îles Féroé,Slovaquie,Faroe Islands,Slovakia,"[1, 1]",Faroe Islands,Tórshavn,FALSE,,,False
+2820,2026-10-03,Macédoine du Nord,Écosse,North Macedonia,Scotland,"[0, 2]",North Macedonia,Skopje,FALSE,,,False
+2821,2026-10-03,Suisse,Slovénie,Switzerland,Slovenia,"[2, 1]",Switzerland,Lucerne,FALSE,,,False
+2822,2026-10-03,Finlande,Albanie,Finland,Albania,"[2, 1]",Finland,Helsinki,FALSE,,,False
+2823,2026-10-03,Biélorussie,Saint-Marin,Belarus,San Marino,"[4, 0]",Hungary,Budapest,TRUE,,,False
+2824,2026-10-03,Islande,Bulgarie,Iceland,Bulgaria,"[3, 0]",Iceland,Reykjavík,FALSE,,,False
+2825,2026-10-03,Estonie,Luxembourg,Estonia,Luxembourg,"[1, 0]",Estonia,Tallinn,FALSE,,,False
+2826,2026-10-04,Kosovo,Autriche,Kosovo,Austria,"[1, 1]",Kosovo,Pristina,FALSE,,,False
+2827,2026-10-04,Irlande,Israël,Republic of Ireland,Israel,"[1, 1]",Serbia,Bačka Topola,TRUE,,,False
+2828,2026-10-04,Malte,Andorre,Malta,Andorra,"[1, 0]",Malta,Ta' Qali,FALSE,,,False
+2829,2026-10-04,Azerbaïdjan,Lituanie,Azerbaijan,Lithuania,"[1, 0]",Azerbaijan,Baku,FALSE,,,False
+2830,2026-10-05,Irlande du Nord,Géorgie,Northern Ireland,Georgia,"[0, 0]",Northern Ireland,Belfast,FALSE,,,False
+2831,2026-10-05,Ukraine,Hongrie,Ukraine,Hungary,"[1, 2]",Slovakia,Trnava,TRUE,,,False
+2832,2026-10-05,Bosnie-Herzégovine,Pologne,Bosnia and Herzegovina,Poland,"[1, 0]",Bosnia and Herzegovina,Zenica,FALSE,,,False
+2833,2026-10-05,Roumanie,Suède,Romania,Sweden,"[0, 1]",Romania,Bucharest,FALSE,,,False
+2834,2026-10-05,Chypre,Lettonie,Cyprus,Latvia,"[2, 1]",Cyprus,Nicosia,FALSE,,,False
+2835,2026-10-05,Monténégro,Arménie,Montenegro,Armenia,"[0, 0]",Montenegro,Podgorica,FALSE,,,False
+2836,2026-10-06,Écosse,Slovénie,Scotland,Slovenia,"[1, 2]",Scotland,Glasgow,FALSE,,,False
+2837,2026-10-06,Suisse,Macédoine du Nord,Switzerland,North Macedonia,"[3, 0]",Switzerland,Lucerne,FALSE,,,False
+2838,2026-10-06,Albanie,Saint-Marin,Albania,San Marino,"[2, 1]",Albania,Tirana,FALSE,,,False
+2839,2026-10-06,Biélorussie,Finlande,Belarus,Finland,"[1, 0]",Hungary,Budapest,TRUE,,,False
+2840,2026-10-06,Kazakhstan,Îles Féroé,Kazakhstan,Faroe Islands,"[2, 2]",Kazakhstan,Astana,FALSE,,,False
+2841,2026-10-06,Moldavie,Slovaquie,Moldova,Slovakia,"[0, 4]",Moldova,Chișinău,FALSE,,,False
+2842,2026-10-06,Luxembourg,Bulgarie,Luxembourg,Bulgaria,"[0, 2]",Luxembourg,Luxembourg,FALSE,,,False
+2843,2026-10-06,Estonie,Islande,Estonia,Iceland,"[0, 0]",Estonia,Tallinn,FALSE,,,False
