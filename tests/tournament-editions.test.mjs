@@ -51,11 +51,17 @@
 //     table does not put first, a cup without groups: the bracket starts at its first round, as before.
 // 15. 1950 had no final: its « Poule finale » is the last stage. With no knockout match at all, that group is the
 //     bracket, and its leader the champion when it leads on points alone (level on points names nobody).
+// 16. A tie's match page (the user, 18 Nov 2026: « pouvoir cliquer sur les matchs »). The archive gives a match its
+//     local day and its own spellings, the collected match (the one with a page: line-ups, statistics) its UTC day
+//     and others: 8 of 2026's 32 ties did not open, their collected match being dated the next day, one being
+//     « Bosnia and Herzegovina » against the archive's « Bosnia & Herzegovina ». A tie opens the collected match of
+//     the same two teams, under either spelling and in either order, played within a day of it, when there is
+//     exactly one: two candidates open nothing, and the same teams a week later are another match.
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { bracketGroups, finalGroup, groupTables, normalizeOpenCup } from "../dashboard/frontend/src/services/cup-matches.js";
-import { bracketSides, buildKnockoutBracket, knockoutStage, mergeCupReplays } from "../dashboard/frontend/src/services/knockout-bracket.js";
+import { attachNativeMatches, bracketSides, buildKnockoutBracket, knockoutStage, mergeCupReplays } from "../dashboard/frontend/src/services/knockout-bracket.js";
 import { WORLD_CUP_ARCHIVE_ID, WORLD_CUP_ID, competitionEditions, tournamentEdition } from "../dashboard/frontend/src/services/cup-catalog.js";
 import { runDepth, runsByTournament } from "../dashboard/frontend/src/services/tournament-runs.js";
 import { nationalFlagCode, nationalTeamLabel, nationalTeamName, sameNationalTeam } from "../dashboard/frontend/src/services/national-flags.js";
@@ -333,4 +339,30 @@ test("15. 1950's final round is its bracket", () => {
   assert.equal(finalGroup(normalizeOpenCup([...group("Group 1", ["A", "B"], "1974-06-15"), open("Final", "A", "C", ft(1, 0), { date: "1974-07-07" })])), null);
   assert.equal(finalGroup(normalizeOpenCup(group("Group 1", ["A", "B", "C"], "1974-06-15"))), null);
   assert.equal(finalGroup(undefined), null);
+});
+
+test("16. a tie opens its collected match: a day apart, another spelling", () => {
+  const ties = normalizeOpenCup([
+    open("Round of 32", "Netherlands", "Morocco", { ft: [1, 1], et: [1, 1], p: [2, 3] }, { date: "2026-06-29" }),
+    open("Round of 32", "USA", "Bosnia & Herzegovina", ft(2, 0), { date: "2026-07-01" }),
+    open("Round of 32", "France", "Sweden", ft(3, 0), { date: "2026-06-30" }),
+    open("Final", "Spain", "Argentina", ft(1, 0), { date: "2026-07-19" }),
+  ]);
+  const collected = (id, date, home, away) => ({ id, date, home_team: { name: home, image_url: `https://example.com/${home}.png` }, away_team: { name: away } });
+  const national = (a, b) => sameNationalTeam(a, b);
+  const linked = attachNativeMatches(ties, [
+    collected("m_ned", "2026-06-30", "Netherlands", "Morocco"), // the next day in UTC
+    collected("m_usa", "2026-07-02", "USA", "Bosnia and Herzegovina"), // the next day, another spelling
+    collected("m_fra", "2026-06-30", "Sweden", "France"), // the other order
+    collected("m_group", "2026-06-12", "Spain", "Argentina"), // the same teams five weeks before: another match
+  ], national);
+  assert.deepEqual(linked.map((m) => m.id), ["m_ned", "m_usa", "m_fra", undefined]);
+  assert.equal(linked[0].homeImage, "https://example.com/Netherlands.png");
+  // The crests follow the tie's own order.
+  assert.equal(linked[2].awayImage, "https://example.com/Sweden.png");
+  // Without the national spellings (a club cup), only the same name links.
+  assert.deepEqual(attachNativeMatches(ties, [collected("m_usa", "2026-07-02", "USA", "Bosnia and Herzegovina")]).map((m) => m.id), [undefined, undefined, undefined, undefined]);
+  // Two candidates open nothing.
+  assert.equal(attachNativeMatches(ties, [collected("a", "2026-06-29", "Netherlands", "Morocco"), collected("b", "2026-06-30", "Netherlands", "Morocco")], national)[0].id, undefined);
+  assert.deepEqual(attachNativeMatches(ties, undefined), ties);
 });
