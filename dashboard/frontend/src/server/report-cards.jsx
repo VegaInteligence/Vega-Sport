@@ -5,6 +5,7 @@
  * image that could not be read is drawn as initials).
  */
 import React from "react";
+import { badgeOverflow, placeBadges } from "../services/curve-badges.js";
 import { REPORT_TITLES } from "../services/reports.js";
 
 export const WIDTH = 1080, HEIGHT = 1350;
@@ -206,9 +207,17 @@ function playerCard(r, n, images) {
     const history = r.values.history;
     if (history.length < 2)
       return <Frame report={r} n={n}><Empty text="Aucune estimation disponible." /></Frame>;
-    const w = 936, h = 560, times = history.map((v) => Date.parse(v.date)), max = Math.max(...history.map((v) => v.valueEur));
-    const t0 = Math.min(...times), t1 = Math.max(...times);
-    const x = (t) => ((t - t0) / Math.max(1, t1 - t0)) * (w - 20) + 10, y = (v) => h - 20 - (v / max) * (h - 60);
+    // The clubs he joined float above the curve at the date of each transfer, as on the player
+    // page: a badge of 52 px on a stem; the panel grows by what a stack of badges needs.
+    const clubs = r.values.clubs || [], radius = 26, side = clubs.length ? radius + 6 : 10;
+    const w = 936, plot = 560, times = history.map((v) => Date.parse(v.date)), max = Math.max(...history.map((v) => v.valueEur));
+    const t0 = Math.min(...times), last = Math.max(...times), t1 = Math.max(last, ...clubs.map((c) => Date.parse(c.at)));
+    const x = (t) => ((t - t0) / Math.max(1, t1 - t0)) * (w - 2 * side) + side, rise = (v) => (v / max) * (plot - 60);
+    const loose = placeBadges(history.map((v, i) => ({ x: x(times[i]), y: plot - 20 - rise(v.valueEur) })), clubs.map((c) => ({ x: x(Date.parse(c.at)) })),
+      { radius, gap: 12, margin: 4, spacing: 6 });
+    const lift = Math.min(150, Math.ceil(badgeOverflow(loose, radius, 10))), h = plot + lift;
+    const y = (v) => h - 20 - rise(v);
+    const spots = loose.map((spot) => ({ x: spot.x, y: Math.max(radius + 4, spot.y + lift), footY: spot.footY + lift }));
     const path = history.map((v, i) => `${i ? "L" : "M"} ${x(times[i]).toFixed(1)} ${y(v.valueEur).toFixed(1)}`).join(" ");
     return (
       <Frame report={r} n={n} subtitle={`${history.length} estimations depuis ${history[0].date.slice(0, 4)}`}>
@@ -216,11 +225,23 @@ function playerCard(r, n, images) {
           <div style={{ display: "flex", fontSize: 110, fontWeight: 700, color: ACCENT }}>{money(r.values.current?.valueEur)}</div>
           <div style={{ display: "flex", fontSize: 28, color: MUTED, marginLeft: 20, marginBottom: 22 }}>{`au ${day(r.values.current?.date)}`}</div>
         </div>
-        <div style={{ display: "flex", marginTop: 30, background: PANEL, borderRadius: 24, padding: 0 }}>
+        <div style={{ display: "flex", position: "relative", width: w, height: h, marginTop: 30, background: PANEL, borderRadius: 24 }}>
           <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
-            <path d={`${path} L ${x(t1).toFixed(1)} ${h - 20} L ${x(t0).toFixed(1)} ${h - 20} Z`} fill="rgba(60,150,231,0.18)" />
+            <path d={`${path} L ${x(last).toFixed(1)} ${h - 20} L ${x(t0).toFixed(1)} ${h - 20} Z`} fill="rgba(60,150,231,0.18)" />
             <path d={path} stroke={ACCENT} strokeWidth="6" fill="none" />
+            {t1 > last ? <path d={`M ${x(last).toFixed(1)} ${y(history.at(-1).valueEur).toFixed(1)} L ${x(t1).toFixed(1)} ${y(history.at(-1).valueEur).toFixed(1)}`} stroke={ACCENT} strokeWidth="6" strokeDasharray="4 14" fill="none" /> : null}
+            {spots.map((spot, i) => <path key={`s${i}`} d={`M ${spot.x.toFixed(1)} ${spot.footY.toFixed(1)} L ${spot.x.toFixed(1)} ${(spot.y + radius).toFixed(1)}`} stroke={ACCENT} strokeWidth="2" fill="none" />)}
+            {spots.map((spot, i) => <circle key={`f${i}`} cx={spot.x} cy={spot.footY} r="8" fill={PANEL} stroke={ACCENT} strokeWidth="4" />)}
           </svg>
+          {spots.map((spot, i) => {
+            const data = clubs[i].imageUrl && images?.[clubs[i].imageUrl];
+            return (
+              <div key={`b${i}`} style={{ display: "flex", position: "absolute", left: spot.x - radius, top: spot.y - radius, width: 2 * radius, height: 2 * radius, borderRadius: radius,
+                background: BG, border: `2px solid ${ACCENT}`, alignItems: "center", justifyContent: "center", color: SOFT, fontSize: 18, fontWeight: 700 }}>
+                {data ? <img src={data} width={34} height={34} style={{ width: 34, height: 34, objectFit: "contain" }} /> : initials(clubs[i].name)}
+              </div>
+            );
+          })}
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 24, color: MUTED, marginTop: 14 }}>
           <div style={{ display: "flex" }}>{history[0].date.slice(0, 4)}</div>
@@ -538,7 +559,7 @@ export function card(report, n, images = {}) {
 
 /** The image URLs a card draws (fetched beforehand by the route). */
 export function cardImages(report, n) {
-  if (report.kind === "player") return n === 1 ? [report.player.imageUrl] : [];
+  if (report.kind === "player") return n === 1 ? [report.player.imageUrl] : n === 5 ? (report.values.clubs || []).map((c) => c.imageUrl) : [];
   if (report.kind === "club")
     return n === 1 ? [report.club.imageUrl] : n === 4 ? report.top.map((p) => p.imageUrl) : n === 6 ? report.upcoming.map((m) => m.opponentImageUrl) : [];
   const m = report.match, teams = [m.home.imageUrl, m.away.imageUrl];
