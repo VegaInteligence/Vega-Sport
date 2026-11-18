@@ -8,7 +8,9 @@ file served with a 200, a fixture list still naming a match since played) while 
   the edition is kept as it was and the snapshot refused, unless the match is in RETRACTIONS;
 - a match whose values have not changed is not written again (`write`): no revision, no
   `updated_at`; one that changed gets `revision + 1`; a new place in the source's order alone
-  moves `archive_position` only.
+  moves `archive_position` only;
+- a writer can only change or remove the row it observed. If another transaction changed it,
+  the snapshot transaction must roll back. A later read can use the new state for its guard.
 
 The removal of an open-matchday copy of a league PitchAPI holds (open_matchday.drop_copy) is a
 reviewed decision of its own (VI-21) and does not pass through here.
@@ -35,12 +37,13 @@ COLUMNS = {
 def _read(conn, provider, where, args):
     names = list(COLUMNS)
     rows = conn.execute(
-        f"""SELECT p.provider_key, m.id, m.revision, {', '.join(COLUMNS.values())}
+        f"""SELECT p.provider_key, m.id, m.revision, m.xmin::text, {', '.join(COLUMNS.values())}
             FROM core.matches m JOIN core.provider_ids p ON p.entity_type = 'match' AND p.provider = %s AND p.entity_id = m.id
             WHERE {where}""",
         (provider, *args),
     ).fetchall()
-    return {r[0]: {"id": r[1], "revision": r[2], **dict(zip(names, r[3:]))} for r in rows}
+    return {key: {"id": match, "revision": revision, "row_version": version, **dict(zip(names, columns))}
+            for key, match, revision, version, *columns in rows}
 
 
 def stored(conn, provider, edition):
@@ -85,19 +88,34 @@ def write(conn, provider, key, values, found, changed=False):
         return mid, "inserted"
     differs = [c for c in columns if c != "archive_position" and values[c] != found[c]]
     if differs or changed:
-        conn.execute(f"UPDATE core.matches SET {', '.join(f'{c}=%s' for c in columns)}, revision=revision+1, updated_at=now() WHERE id=%s",
-                     [values[c] for c in columns] + [found["id"]])
-        return found["id"], "updated"
-    if values.get("archive_position") != found["archive_position"]:
-        conn.execute("UPDATE core.matches SET archive_position=%s WHERE id=%s", (values["archive_position"], found["id"]))
-        return found["id"], "moved"
-    return found["id"], None
+        assignments = ", ".join(f"{c}=%s" for c in columns) + ", revision=revision+1, updated_at=now()"
+        args, outcome = [values[c] for c in columns], "updated"
+    elif "archive_position" in values and values["archive_position"] != found["archive_position"]:
+        assignments = "archive_position=%s"
+        args, outcome = [values["archive_position"]], "moved"
+    else:
+        return found["id"], None
+    # PostgreSQL rechecks this row version after waiting on a concurrent update. A user-facing
+    # revision alone misses revisions of archive_position and maintenance changes to a row.
+    updated = conn.execute(f"UPDATE core.matches SET {assignments} WHERE id=%s AND xmin::text=%s",
+                           (*args, found["id"], found["row_version"]))
+    if updated.rowcount != 1:
+        raise SourceError("SNAPSHOT_CHANGED", f"{provider}: {key} changed after the snapshot read")
+    return found["id"], outcome
 
 
 def remove(conn, provider, before, keep):
     """Delete the edition's matches the snapshot no longer holds (guard() allowed it); returns how many."""
-    gone = [m["id"] for k, m in before.items() if k not in keep]
+    gone = {m["id"]: (m["row_version"], key) for key, m in before.items() if key not in keep}
     if gone:
-        conn.execute("DELETE FROM core.matches WHERE id = ANY(%s)", (gone,))
-        conn.execute("DELETE FROM core.provider_ids WHERE entity_type='match' AND provider=%s AND entity_id = ANY(%s)", (provider, gone))
+        deleted = {match for (match,) in conn.execute(
+            """DELETE FROM core.matches m USING unnest(%s::integer[], %s::text[]) observed(id, version)
+                WHERE m.id=observed.id AND m.xmin::text=observed.version RETURNING m.id""",
+            (list(gone), [version for version, _ in gone.values()]),
+        ).fetchall()}
+        if deleted != gone.keys():
+            missed = ", ".join(sorted(gone[match][1] for match in gone.keys() - deleted)[:5])
+            raise SourceError("SNAPSHOT_CHANGED", f"{provider}: cannot remove matches changed after the snapshot read: {missed}")
+        conn.execute("DELETE FROM core.provider_ids WHERE entity_type='match' AND provider=%s AND entity_id = ANY(%s)",
+                     (provider, list(gone)))
     return len(gone)

@@ -28,7 +28,7 @@ ROOT = Path(__file__).resolve().parents[1]
 REPO = ROOT.parent
 sys.path.insert(0, str(ROOT))
 from vega import sources
-from vega.sources import SourceError, cups, curated, open_matchday
+from vega.sources import SourceError, cups, curated, open_matchday, snapshot
 
 try:
     import psycopg
@@ -378,6 +378,7 @@ FOLDER, OTHER = "ENG_5_national-league", "SCO_3_league-one"
 RESULTS = ("date,home,away,ft_home,ft_away,ht_home,ht_away,home_shots,away_shots,home_corners,away_corners\n"
            "2026-11-01,North FC,South FC,2,1,1,0,11,7,6,3\n")
 FIXTURES = "date,home,away,gw\n2026-11-29,South FC,North FC,16\n"
+ROUND_RESULTS = "\n".join((RESULTS.splitlines()[0] + ",gw", RESULTS.splitlines()[1] + ",15", ""))
 
 
 def league(folder=FOLDER, **over):
@@ -385,7 +386,7 @@ def league(folder=FOLDER, **over):
 
 
 class OpenMatchdayGuardTest(SnapshotDatabase):
-    def read(self, leagues, files, at):
+    def read(self, leagues, files, at, db=None):
         """One due read of the europe scope: its outcome, rows written and unmatched."""
         def get(url, *, as_text=False):
             if url.endswith("build_summary.json"):
@@ -395,7 +396,7 @@ class OpenMatchdayGuardTest(SnapshotDatabase):
                 raise SourceError("HTTP_404")
             return files[name]
 
-        outcome = sources.run_due(self.db, get, at, names={"open_matchday"})[("open_matchday", "europe")]
+        outcome = sources.run_due(db or self.db, get, at, names={"open_matchday"})[("open_matchday", "europe")]
         return (outcome, *self.run_record("open_matchday", "europe")[2:])
 
     @staticmethod
@@ -512,6 +513,96 @@ class OpenMatchdayGuardTest(SnapshotDatabase):
     def test_19w_a_fixture_no_longer_listed_is_removed(self):
         self.assertEqual(self.read([league(fixtures=0)], self.files(fixtures=None), NOW + timedelta(days=1)), ("ok", 1, 0))
         self.assertEqual(self.state(), self.before[:1])
+
+    def public_matches(self):
+        return self.x("""SELECT r.match_id, r.gw, r.status, r.home_score, r.away_score, m.revision, m.xmin::text
+                         FROM api.cup_table_rows r JOIN core.matches m ON m.id=r.match_id
+                         WHERE r.competition=%s ORDER BY r.home""", (FOLDER,)).fetchall()
+
+    def test_round_is_an_optional_observation_in_the_same_edition(self):
+        self.read([league()], self.files(results=ROUND_RESULTS), NOW + timedelta(hours=6))
+        original, fixture = self.public_matches()
+        self.assertEqual(original[1], "15")
+        for day, results in enumerate((RESULTS, ROUND_RESULTS.replace(",15\n", ",\n")), 1):
+            with self.subTest(input=results):
+                self.assertEqual(self.read([league()], self.files(results=results), NOW + timedelta(days=day)), ("ok", 2, 0))
+                self.assertEqual(self.public_matches(), [original, fixture])
+
+        changed = self.files(results=ROUND_RESULTS.replace(",15\n", ",17\n"),
+                             fixtures=FIXTURES + "2026-12-06,Third FC,North FC,\n")
+        self.assertEqual(self.read([league(fixtures=2)], changed, NOW + timedelta(days=3)), ("ok", 3, 0))
+        corrected, old_fixture, new_fixture = self.public_matches()
+        self.assertEqual(corrected[:6], (original[0], "17", *original[2:5], original[5] + 1))
+        self.assertEqual(old_fixture, fixture)
+        self.assertIsNone(new_fixture[1])
+        self.assertEqual(self.read([league(fixtures=2)], changed, NOW + timedelta(days=4)), ("ok", 3, 0))
+        self.assertEqual(self.public_matches(), [corrected, old_fixture, new_fixture])
+
+    def test_a_match_moved_from_another_edition_keeps_no_foreign_round(self):
+        _, fixture = self.public_matches()
+        self.read([league(OTHER)], self.files(OTHER), NOW + timedelta(days=1))
+        self.x("""UPDATE core.matches m SET competition_season_id=r.competition_season_id, round_id=r.id
+                  FROM core.rounds r JOIN core.competition_seasons e ON e.id=r.competition_season_id
+                  WHERE e.cup_key=%s AND r.name='16' AND m.id=%s""", (f"open-matchday:{OTHER}:2026/2027", fixture[0]))
+        files = self.files(fixtures=FIXTURES.replace(",16", ","))
+        self.assertEqual(self.read([league()], files, NOW + timedelta(days=2)), ("ok", 2, 0))
+        current = self.public_matches()[1]
+        self.assertEqual(current[:6], (fixture[0], None, *fixture[2:5], fixture[5] + 1))
+
+    def test_a_published_result_in_another_edition_cannot_be_imported_as_a_fixture(self):
+        _, fixture = self.public_matches()
+        self.read([league(OTHER)], self.files(OTHER), NOW + timedelta(days=1))
+        self.x("""UPDATE core.matches m SET competition_season_id=r.competition_season_id, round_id=r.id,
+                    status='finished', home_score=2, away_score=1
+                  FROM core.rounds r JOIN core.competition_seasons e ON e.id=r.competition_season_id
+                  WHERE e.cup_key=%s AND r.name='16' AND m.id=%s""", (f"open-matchday:{OTHER}:2026/2027", fixture[0]))
+        own, other = self.state(), self.state(OTHER)
+        outcome = self.read([league()], self.files(), NOW + timedelta(days=2))
+        self.assertEqual((self.state(), self.state(OTHER)), (own, other))
+        self.assertEqual(outcome, ("ok", 0, 1))
+        self.assertIn("RESULT_DOWNGRADED", {code for code, _ in self.failures()})
+
+    def test_a_snapshot_cannot_remove_or_downgrade_a_result_published_since_its_read(self):
+        from vega.store import connect_local
+
+        for action in ("remove", "downgrade", "change"):
+            with self.subTest(action=action):
+                if action != "remove":
+                    self.setUp()
+                _, fixture = self.public_matches()
+                keep = action != "remove"
+                former = self.files(fixtures=FIXTURES.replace(",16", ",17") if keep else None)
+                if action == "change":
+                    former = self.files(results=ROUND_RESULTS.replace(",2,1,1,0,", ",3,1,1,0,"))
+                finish = ROUND_RESULTS.replace(",15\n", ",18\n") + "2026-11-29,South FC,North FC,2,1,1,1,10,9,3,4,17\n"
+                base_read = snapshot.stored
+                published = []
+                with connect_local(DSN) as writer:
+                    def stored(conn, provider, edition):
+                        before = base_read(conn, provider, edition)
+                        if conn is self.db:
+                            self.assertFalse(published)
+                            self.assertEqual(self.read([league(results=2, fixtures=0)], self.files(results=finish, fixtures=None),
+                                                       NOW + timedelta(days=1, minutes=1), writer), ("ok", 2, 0))
+                            published.extend(self.public_matches())
+                        return before
+
+                    with patch.object(snapshot, "stored", stored):
+                        outcome = self.read([league(fixtures=int(keep))], former, NOW + timedelta(days=1))
+                self.assertEqual(published[1][:6], (fixture[0], "17", "finished", 2, 1, fixture[5] + 1))
+                with self.subTest(check="published state"):
+                    self.assertEqual(self.public_matches(), published)
+                    self.assertEqual(self.state()[1][0:5], (self.before[1][0], fixture[0], "finished", 2, 1))
+                with self.subTest(check="observable refusal"):
+                    self.assertEqual(outcome, ("ok", 0, 1))
+                    self.assertIn("SNAPSHOT_CHANGED", {code for code, _ in self.failures()})
+
+    def test_only_a_reviewed_result_may_be_retracted(self):
+        key = self.before[0][0]
+        with patch.dict(snapshot.RETRACTIONS, {("open_matchday", key): "test review"}):
+            self.assertEqual(self.read([league(results=0)], self.files(results=None), NOW + timedelta(days=1)), ("ok", 1, 0))
+        after, = self.state()
+        self.assertEqual(after[:9], self.before[1][:9])  # the remaining fixture moves to position 0
 
 
     # 22a, 22b (FAILURE_MODES.md §22, written before the code): a later file without a statistic keeps it; a

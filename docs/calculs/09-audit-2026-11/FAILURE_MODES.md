@@ -1593,6 +1593,16 @@ edition's `cup_updated_at` moves only when a match is added, changed or removed,
 renamed. `cup_checked_at` is the last accepted read. Open-matchday statistics are rewritten only when
 they differ, and a statistics change is a change of its match.
 
+For Open Matchday, `gw` is optional. An omitted column or an empty cell keeps the round
+already published in the same edition. A supplied round replaces it. A new match or a match
+moved from another edition without a supplied round has no round.
+
+Concurrent changes are checked when a snapshot updates or removes a match. PostgreSQL
+compares the row version with the version read for the snapshot. If another transaction
+changed it, `SNAPSHOT_CHANGED` rolls back the edition before removing its provider keys.
+The result guard also applies to an existing key read in another edition. Identical match
+rows still require no write.
+
 **A snapshot replaces an edition only when it is complete and keeps its results.** Before any write:
 - open-matchday: the folder's manifest declares integer counts (not booleans) and no `errors`. Each
   declared file is read. A results file has `date, home, away, ft_home, ft_away`; a fixtures file has
