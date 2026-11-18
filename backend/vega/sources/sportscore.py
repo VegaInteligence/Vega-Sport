@@ -34,10 +34,11 @@ from functools import partial
 from urllib.parse import urlencode
 
 from ..models import _is_league
-from . import SourceError, normalize
+from . import SourceError, lock_scope, normalize
 
 URL = "https://sportscore.com/api/widget/standings/"
 PERIOD = timedelta(hours=2)
+ATOMIC_RUN_STATUS = True
 
 # dashboard/frontend/src/services/sportscore-standings.js (main); a drift test compares them.
 LEAGUES = {
@@ -285,17 +286,31 @@ SIDE_SUFFIXES = {"b": "reserve-b", "ii": "reserve-b", "c": "reserve-c", "iii": "
                  "reserves": "reserve-b", "reserve": "reserve-b", "reserva": "reserve-b", "amateure": "reserve-b",
                  "youth": "youth", "academy": "academy", "juvenil": "youth", "primavera": "primavera"}
 CLUB_SUFFIXES = frozenset({"fc", "cf", "sc", "ac", "afc", "fk", "sk", "sv"})
+WOMEN_MARKER = r"\b(?:women(?:'?s)?|ladies|feminin[aeo]?|femenin[ao]|frauen|fem|dames)\b|\(\s*[wf]\s*\)|\[\s*[wf]\s*\]"
+MEN_MARKER = r"\b(?:men(?:'?s)?|herren|masculin[ao]?|hommes)\b|\(\s*m\s*\)|\[\s*m\s*\]"
+SEX_MARKERS = re.compile(f"(?P<women>{WOMEN_MARKER})|(?P<men>{MEN_MARKER})")
 
 
 def _ascii(name):
     return unicodedata.normalize("NFKD", name or "").encode("ascii", "ignore").decode().lower()
 
 
+def _gender_text(name):
+    words = re.sub(r"(?<=[a-z])(?=(?:Women|Men|Ladies)\b)", " ", name or "")
+    return _ascii(words)
+
+
+def _gender(name):
+    markers = {token.lastgroup for token in SEX_MARKERS.finditer(_gender_text(name))}
+    if markers:
+        return markers.pop() if len(markers) == 1 else "ambiguous"
+
+
 def _squad(name):
     # Classify affirmative squad markers. An initial letter or a club's founding year is
     # part of its name, while a separate final B/II or an age group identifies a side.
     separate = re.sub(r"(?<=[a-z])(?=(?:III?|U-?\d+|[BC])\b)", " ", name)
-    plain = _ascii(separate)
+    plain = SEX_MARKERS.sub(" ", _gender_text(separate))
     branded = BRANDED_RESERVES.get(normalize(name))
     if branded:
         return branded
@@ -312,9 +327,12 @@ def _squad(name):
         return SIDE_SUFFIXES.get(words[-1])
 
 
-def _spellings(conn, query, args):
+def _spellings(conn, query, args, gender):
     names, spelled, squads, rejected = {}, {}, {}, set()
     for team, canonical, short, alias, provider_key in conn.execute(query, args).fetchall():
+        if _gender(canonical) not in (None, gender):
+            rejected.update(normalize(s) for s in (canonical, short, alias) if s)
+            continue
         squad = squads.setdefault(team, _squad(canonical))
         reviewed = REVIEWED_SPELLINGS.get((provider_key, normalize(canonical)), ())
         reviewed_keys = {normalize(name) for name in reviewed}
@@ -322,7 +340,7 @@ def _spellings(conn, query, args):
             if not spelling:
                 continue
             key = normalize(spelling)
-            if _squad(spelling) == squad or key in reviewed_keys:
+            if _gender(spelling) in (None, gender) and (_squad(spelling) == squad or key in reviewed_keys):
                 names.setdefault(team, set()).add(key)
                 spelled.setdefault(team, set()).add(spelling)
             else:
@@ -330,15 +348,15 @@ def _spellings(conn, query, args):
     return names, spelled, squads, rejected
 
 
-def _edition_teams(conn, edition):
+def _edition_teams(conn, edition, gender="men"):
     return _spellings(conn, """SELECT t.id, t.name, t.short_name, n.name, p.provider_key
            FROM core.team_seasons ts JOIN core.teams t ON t.id = ts.team_id
            LEFT JOIN core.entity_names n ON n.entity_type = 'team' AND n.entity_id = t.id
            LEFT JOIN core.provider_ids p ON p.entity_type='team' AND p.provider='pitchapi' AND p.entity_id=t.id AND p.is_current
-           WHERE ts.competition_season_id = %s""", (edition,))
+           WHERE ts.competition_season_id = %s""", (edition,), gender)
 
 
-def _neighbour_teams(conn, edition):
+def _neighbour_teams(conn, edition, gender):
     """The teams of the competition's previous and next editions that this edition does not hold:
     a row naming one of them is another season's table."""
     names, _, _, _ = _spellings(conn, """SELECT t.id, t.name, t.short_name, n.name, p.provider_key
@@ -349,7 +367,7 @@ def _neighbour_teams(conn, edition):
            LEFT JOIN core.entity_names n ON n.entity_type = 'team' AND n.entity_id = t.id
            LEFT JOIN core.provider_ids p ON p.entity_type='team' AND p.provider='pitchapi' AND p.entity_id=t.id AND p.is_current
            WHERE e.id = %s AND NOT EXISTS (SELECT 1 FROM core.team_seasons x WHERE x.competition_season_id = e.id AND x.team_id = t.id)""",
-                          (edition,))
+                          (edition,), gender)
     return names
 
 
@@ -360,7 +378,7 @@ FORM_WORDS = {"fc", "cf", "sc", "ac", "as", "af", "afc", "ssc", "ss", "us", "rc"
 
 
 def _tokens(name):
-    plain = AGE_GROUP.sub("", _ascii(name))
+    plain = AGE_GROUP.sub(" ", SEX_MARKERS.sub(" ", _gender_text(name)))
     return {t for t in re.split(r"[^a-z0-9]+", plain) if t and t not in FORM_WORDS and t not in SIDE_SUFFIXES and t != "jong"}
 
 
@@ -427,13 +445,16 @@ def pair(wanted, teams, spelled):
     return (found if not missing else None), missing
 
 
-def link(conn, edition, tables):
+def link(conn, edition, tables, gender):
     """{row name: team id} of a response, every name designating one team of the edition;
     SourceError WRONG_EDITION, UNMATCHED_TEAMS or DUPLICATE_ROW otherwise."""
     wanted = {row["name"] for _, rows in tables for row in rows}
-    teams, spelled, squads, rejected = _edition_teams(conn, edition)
+    wrong = sorted(name for name in wanted if _gender(name) not in (None, gender))
+    if wrong:
+        raise SourceError("UNMATCHED_TEAMS", f"edition {edition} ({gender}): incompatible team names: {', '.join(wrong)}")
+    teams, spelled, squads, rejected = _edition_teams(conn, edition, gender)
     found = _exact(wanted, teams)
-    others = _neighbour_teams(conn, edition)
+    others = _neighbour_teams(conn, edition, gender)
     foreign = sorted(name for name in wanted - set(found) if any(normalize(name) in keys for keys in others.values()))
     if foreign:
         raise SourceError("WRONG_EDITION", f"edition {edition}: {', '.join(foreign)}: clubs of the previous or next edition only")
@@ -746,10 +767,8 @@ def repeat(conn, edition, stored, observed, counted, now, verify=None, fetched_p
     renew(moved)
 
 
-def run(conn, get, scope, now):
-    key = scope.split(":", 1)[1]
-    slug = LEAGUES[key]
-    edition = conn.execute(
+def _current_edition(conn, key):
+    return conn.execute(
         """SELECT cs.id, se.label, cs.native_label, se.id, c.kind::text, c.name, c.country_code
            FROM core.provider_ids p JOIN core.competition_seasons cs ON cs.competition_id = p.entity_id
            JOIN core.seasons se ON se.id = cs.season_id
@@ -757,12 +776,18 @@ def run(conn, get, scope, now):
            WHERE p.entity_type = 'competition' AND p.provider = 'pitchapi' AND p.provider_key = %s AND p.is_current AND cs.is_current""",
         (key,),
     ).fetchone()
-    if edition is None:  # not collected (yet): no call
+
+
+def run(conn, get, scope, now):
+    key = scope.split(":", 1)[1]
+    slug = LEAGUES[key]
+    current = _current_edition(conn, key)
+    if current is None:  # not collected (yet): no call
         return 0, 0
-    edition, season, native_label, year, kind, name, country = edition
+    edition, season, native_label, year, kind, name, country = current
     tables = parse(get(URL + "?" + urlencode({"sport": "football", "slug": slug})), slug)
     check(tables)
-    teams = link(conn, edition, tables)
+    teams = link(conn, edition, tables, _gender(name) or "men")
     keep_groups = len(tables) > 1  # one table is stored without its name, as before
     fresh = {(group if keep_groups else None, teams[row["name"]]): row for group, rows in tables for row in rows}
     counted = {team: tuple(results) for team, results in conn.execute(
@@ -771,11 +796,22 @@ def run(conn, get, scope, now):
     if key == ALLSVENSKAN and native_label == str(year):
         verify = partial(_prove_allsvenskan, conn, get, edition, year, fresh, now)
     fetched_proof = qualify(conn, edition, fresh, counted, now, verify)
+    # The upstream request is outside the publication lock. READ COMMITTED then sees the
+    # latest publication, including the first insert into an otherwise empty edition.
+    lock_scope(conn, "sportscore", scope)
+    last_run = conn.execute("""SELECT greatest(last_attempt_at,last_success_at) FROM ops.source_runs
+                              WHERE source='sportscore' AND scope=%s""", (scope,)).fetchone()
+    if last_run and last_run[0] is not None and last_run[0] >= now:
+        raise SourceError("STALE_OBSERVATION", f"edition {edition}: scope already attempted at {last_run[0]}")
+    if _current_edition(conn, key) != current:
+        raise SourceError("EDITION_CHANGED", f"edition {edition}: the competition changed during the request")
     stored = {}
     observed = None
     for group, team, *values, basis, as_of in conn.execute(
         f"SELECT {', '.join(COLUMNS)}, basis, as_of FROM core.standings_official WHERE {OWN}", (edition,)
     ).fetchall():
+        if as_of is not None and as_of > now:
+            raise SourceError("STALE_OBSERVATION", f"edition {edition}: table already observed at {as_of}")
         stored[(group, team)] = dict(zip(FIELDS, values), basis=tuple(basis) if basis is not None else None)
         observed = as_of if observed is None or (as_of is not None and as_of < observed) else observed
     members = {team for (team,) in conn.execute("SELECT team_id FROM core.team_seasons WHERE competition_season_id = %s", (edition,))}
