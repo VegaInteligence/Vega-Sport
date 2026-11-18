@@ -223,7 +223,7 @@
 - Fix (CSS only): `:global(.match-kpis).fiveKpis`; values never wrap; 5 columns above 900px, 3 + 2 down to 481px, then 2 + 2 + Discipline across. Breakpoints measured: values stop fitting five abreast below ~860px.
 - No mock-up: the user stated the layout. Linear not checked (connector is the employer's workspace).
 - Verified on a local build against production data at 8 widths (one-line values, no overflow, inner borders only); site tests 729/729. Evidence: `~/Agents/claude-runs/match-kpis-one-row-20261118/README.md`.
-- 18 Nov, user (resumed from ~/Perso/Vega after the checkout moved): « balançons tout ça » → rebased on origin/main, pushed to main; production check below.
+- 18 Nov, user (resumed from ~/Perso/Vega after the checkout moved): « balançons tout ça » → pushed to main as `c626e11a6f` (site tests 737/737 on that base), CI 44408648038 green. Verified in production on Argentina–France (`m_3Zw3cP`), 8 widths: 5 on one row above 900px, 3 + 2, then 2 + 2 + Discipline; no wrap or overflow (evidence `prod-check.mjs`, `prod-after.json`). Closed.
 
 ## Player page « Forme récente » as thin bars (18 Nov 2026) — done
 
