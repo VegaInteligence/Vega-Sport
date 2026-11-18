@@ -1,6 +1,6 @@
 # Couverture des exigences au 17 novembre 2026
 
-La version de production comparée est `8018e0836ca0f32e8b2eb51fc2847154abff7f13`. La colonne production qualifie le comportement actuel. Lorsqu’une rubrique regroupe plusieurs calculs, chaque sous-point figure dans [la matrice technique](EXIGENCES.md). Les nouveaux correctifs de la branche figurent dans le [rapport de livraison](README.md).
+AWS sert `8018e0836c` et le site public sert `17ca0f7617`, avec les mêmes fichiers applicatifs aux vérifications du 18 novembre. [Vérification ECS et Lambda](controles/production-aws-0317.json) · [Alias Vercel](controles/production-vercel-0318.json) La colonne production qualifie le comportement actuel. Lorsqu’une rubrique regroupe plusieurs calculs, chaque sous-point figure dans [la matrice technique](EXIGENCES.md). Les nouveaux correctifs de la branche figurent dans le [rapport de livraison](README.md).
 
 | § du document initial | En production | Conclusion de la revue |
 | --- | --- | --- |

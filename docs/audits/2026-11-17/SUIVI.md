@@ -1,6 +1,6 @@
 # Publication et suivis
 
-La production vérifiée a servi le commit `8018e0836ca0f32e8b2eb51fc2847154abff7f13`. Les mesures du 17 novembre ont été faites sur RDS dans des transactions en lecture seule. Le travail de correction se déroule sur `codex/production-architecture-audit`. Le projet demande que les décisions de changement des modèles et de réparation de la base partagée restent coordonnées dans les tickets actifs.
+Le 18 novembre, le code AWS est `8018e0836c` et l’alias Vercel est sur `17ca0f7617`. Seul le journal de travail diffère. [Vérification ECS et Lambda](controles/production-aws-0317.json) · [Alias Vercel](controles/production-vercel-0318.json) Les mesures du 17 novembre ont été faites sur RDS dans des transactions en lecture seule. Le travail de correction se déroule sur `codex/production-architecture-audit`. Le projet demande que les décisions de changement des modèles et de réparation de la base partagée restent coordonnées dans les tickets actifs.
 
 | Responsable | Écart établi | Condition de clôture |
 | --- | --- | --- |
@@ -25,3 +25,19 @@ La production vérifiée a servi le commit `8018e0836ca0f32e8b2eb51fc2847154abff
 ### Versions de repli du worker
 
 Les deux services ECS de production avaient le retour automatique à la version précédente activé. Le relevé de leurs trois déploiements réussis les plus récents a trouvé, pour chacun, les révisions 142, 141 et 140 et les images `8018e0836c`, `3a4234ae64` et `3d4bb282a0`. Aucune de ces images ne contenait le premier correctif d’archives `1b28961a88`. La révision 142 tournait sur les deux services à la vérification. Avant tout rejeu historique en production, il reste à vérifier les cibles de repli au moment du déploiement et à vider les anciens processus capables d’écrire. Reçus dans `deployment-rollback-facts.json` et `deployment-rollback-revisions.json`.
+
+## Constats renvoyés aux responsables le 18 novembre
+
+[VI-21](https://linear.app/vegainteligence/issue/VI-21) conserve la couverture du calendrier, les six attributions de Ligue 1 et les références de notes. Les observations du recalcul et les calendriers ont été communiqués à la session responsable. [Six affectations vérifiées](controles/six-attributions-ligue1.csv) · [Identités des joueurs](controles/six-attributions-personnes.csv)
+
+[VI-30](https://linear.app/vegainteligence/issue/VI-30) conserve le correctif des emplacements de logos et de la recherche Cymru North. [Observation du DOM](controles/visuels-annuaire-observation.json) · [Carte du championnat U21](controles/visuels-annuaire-bureau.png) · [Carte de la CAN](controles/visuels-annuaire-mobile.png)
+
+[VI-28](https://linear.app/vegainteligence/issue/VI-28) conserve la projection API par métrique. Une maquette utilisant les deux réponses de joueurs réelles illustre les taux et minutes observées. Le changement de présentation attend la validation du dessin. [Deux fiches et deux écrans](controles/maquette-mi-temps.json)
+
+## Ordre de correction et critères de vérification
+
+1. **Protéger les écritures.** VI-27, VI-29 et VI-31 ont des témoins où un rejeu, une réponse vide ou une erreur fait perdre un fait établi. Sur les copies, conserver les lignes existantes, conserver la décision de blocage en cas de conflit et passer le deuxième import sans changement sportif. Les modes dégradés et les traitements concurrents font partie du test.
+2. **Rétablir les identités et les calendriers.** VI-21 arbitre chaque cas avec les sources datées puis conserve les identifiants bruts des fournisseurs et les relations historiques. Vérifier un résultat officiel unique, les deux côtés, les titulaires, les entrées et les cas administratifs aux éditions touchées. Répéter sur deux imports, avec comptage des requêtes et des écritures réelles.
+3. **Recalculer les scores depuis les faits corrigés.** VI-21 conserve les contributions, la version des références et la raison d’une absence. VI-19 vérifie ensuite les prévisions sur les données disponibles à leur date de publication. Comparer les valeurs attendues et persistées par compétition, saison et type d’entité, les effets en aval d’une correction, les seuils des lecteurs et les cas sans données suffisantes.
+4. **Vérifier les lecteurs et les visuels.** VI-28 et VI-30 vérifient les taux et minutes par métrique, les routes canoniques et fournisseur, les images décodées et les véritables absences sur les deux écrans. Le rattachement d’une image reprend les décisions d’identité de la deuxième étape.
+5. **Intégrer et contrôler le déploiement.** VI-27 rassemble les lots validés et les revues indépendantes. Rejouer la suite intégrée et les contrôles sur le contenu qui sera déployé. Après mise en production autorisée, relever séparément Vercel, ECS, Lambda et RDS, puis contrôler la première collecte, le rattrapage historique et les routes publiques.
