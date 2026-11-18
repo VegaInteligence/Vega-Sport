@@ -1,0 +1,20 @@
+{
+  "status": "passed",
+  "new_roots": [
+    3286
+  ],
+  "held_roots": [
+    2685,
+    2947
+  ],
+  "manifest_sha256": "157715fe115a067a2cc7b60db286a27ddcb99c6d5db6e54fcde5f83090bc5b11",
+  "image_sha256": "b7b5ff1db2495301552dce6e4d4b2b4a429b1123b2f64adc8b83c8c97c81ffe3",
+  "image_bytes": 21575,
+  "zip_sha256": "8d8a24854247dbb894764458625102b68ff0be4e22d10fc22b6d6f0aeed61759",
+  "zip_bytes": 45825,
+  "zip_members": 3,
+  "independent_builds_identical": true,
+  "unchanged_source_pixels": true,
+  "production_writes": 0,
+  "cumulative_changes": 0
+}

@@ -1,10 +1,10 @@
 {
-  "source_sha256": "0537a06e05d5fce30408f39ac6fd431b357481628f252f7da17f92ce1d138142",
-  "manifest": "032e67a8d995f0f988834800d48f3649fb323af3d0d5f5ad32a4aba33a893037",
-  "clubs_ouverts": 8047,
+  "source_sha256": "bff439f97340648044bed54e3c31c89c687fa39ab2b10f07dd4f1c59ddc21954",
+  "manifest": "98baae6890f649ee1212a755d026baff8b111b969b960204538c653d62730fd7",
+  "clubs_ouverts": 8034,
   "origines": {
-    "openfootball": 683,
-    "open_matchday": 227,
+    "openfootball": 671,
+    "open_matchday": 226,
     "vega": 7133,
     "pitchapi": 4
   },

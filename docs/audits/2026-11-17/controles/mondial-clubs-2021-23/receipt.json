@@ -1,0 +1,82 @@
+{
+  "edition_counts": [
+    {
+      "edition": "2021",
+      "matches": 8,
+      "sides": 16,
+      "starters": 176,
+      "entrants": 67,
+      "appearances": 243,
+      "unused": 103,
+      "distinct_appeared": 130,
+      "gk_appearances": 17,
+      "vega_lineups": 0,
+      "vega_stats": 0,
+      "vega_grades": 0,
+      "swapped_sides": 0
+    },
+    {
+      "edition": "2022",
+      "matches": 7,
+      "sides": 14,
+      "starters": 154,
+      "entrants": 57,
+      "appearances": 211,
+      "unused": 105,
+      "distinct_appeared": 119,
+      "gk_appearances": 14,
+      "vega_lineups": 0,
+      "vega_stats": 0,
+      "vega_grades": 0,
+      "swapped_sides": 2
+    },
+    {
+      "edition": "2023",
+      "matches": 7,
+      "sides": 14,
+      "starters": 154,
+      "entrants": 67,
+      "appearances": 221,
+      "unused": 96,
+      "distinct_appeared": 123,
+      "gk_appearances": 14,
+      "vega_lineups": 0,
+      "vega_stats": 0,
+      "vega_grades": 0,
+      "swapped_sides": 0
+    }
+  ],
+  "official_match_count": 22,
+  "played": 22,
+  "awarded": 0,
+  "official_sources": 25,
+  "rounds_typed_regular": 22,
+  "final_score_by_team_agrees": 22,
+  "correct_final_score_with_changed_order": 2,
+  "regulation_nonnull": 2,
+  "regulation_disagreements": [
+    "736663"
+  ],
+  "full_time_minutes_exposure_not_measured": true,
+  "club_appearances": 44,
+  "stored_team_elo_sides": 44,
+  "known_participations": 675,
+  "unused": 304,
+  "distinct_appeared_overall": 312,
+  "stored_player_sheet_or_stats_or_grades": 0,
+  "openfootball_local_clocks": 22,
+  "fifa_calendar_local_mismatches_uae": 8,
+  "artwork_roots": 17,
+  "empty_artwork_root": 13075,
+  "source_reads": {
+    "utc": "2026-11-18 10:12:07.836802+00:00",
+    "snapshot": "4426880:4426880:",
+    "read_only": "on",
+    "payload_sha256": "72672606ecf9c7e178d82575c844bd3b753cfdef71c5079c7f37248245391566",
+    "image_revision": "8018e0836ca0f32e8b2eb51fc2847154abff7f13",
+    "image_digest": "sha256:8184f72a335b9b4c126e77ead0e71771b6a4a146ee1b7a026ed2c2c1a6aba352",
+    "probe_sha256": "57964b8a3c71c6dc5a16ef452b902ee596b4f6d52d27cb083a2b755c35263906",
+    "exit_code": 0
+  },
+  "rds_grid_timestamp": "2026-11-18 09:59:37.120414+00:00"
+}

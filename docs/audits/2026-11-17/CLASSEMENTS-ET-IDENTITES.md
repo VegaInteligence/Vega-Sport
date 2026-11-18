@@ -47,3 +47,7 @@ Le chargeur a lu sept entrées et sept images distinctes hors ligne. Les décisi
 ## Versions contrôlées
 
 Le 18 novembre à 07 h 45 UTC, le worker AWS servait `8018e0836c` et le domaine public Vercel `17ca0f7617`. Les huit tickets clos et les huit tickets actifs ont été relus. [Reçu AWS](controles/sources-et-identites-18nov/backend-actif.json) · [Alias Vercel](controles/sources-et-identites-18nov/frontend-actif.json) · [État Linear](controles/sources-et-identites-18nov/linear-actif.json)
+
+## Deux identités de coupe à corriger avant de lier un blason
+
+Les matchs rattachés à la fiche 2685 El Espinar–San Rafael concernent le CF Sant Rafel d’Ibiza, déjà représenté sous la racine 2691. Pour les deux matchs de la fiche 2947, la KNVB et l’adversaire SV Lierop identifient le VV Zwaluwen de Vlaardingen. La fiche porte le nom de Zwaluwen ’30 de Hoorn. Les quatre participations doivent être rapprochées dans leur contexte de saison et de fournisseur avant de réaffecter des matchs ou des visuels. Parmi les 840 clubs actifs ou programmés initialement sans blason, il reste ces deux identités et quatre places provisoires de tableau. Les rattachements de Leonfelden et de l’AS Pirae ont passé le contrôle de l’importeur sur copie. [Registre des matchs et références des fédérations](controles/mondial-clubs-2021-23/identites-reservees.json) · [Leonfelden](controles/mondial-clubs-2021-23/leonfelden.json) · [AS Pirae](controles/mondial-clubs-2021-23/pirae.json)

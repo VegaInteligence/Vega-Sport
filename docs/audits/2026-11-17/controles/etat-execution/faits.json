@@ -217,14 +217,14 @@
     }
   ],
   "artwork": {
-    "records": 1585,
-    "images": 1504,
+    "records": 1598,
+    "images": 1517,
     "production_linked": {
       "club_roots": 1475,
       "competitions": 82
     },
     "local_linked_after": {
-      "club_roots": 2956,
+      "club_roots": 2969,
       "competitions": 186
     },
     "denominators": {
@@ -292,14 +292,14 @@
   ],
   "sources": [
     {
-      "source": "artwork-expanded-1585/release.json",
+      "source": "artwork-expanded-1598/release.json",
       "published": "controles/etat-execution/visuels-lot.json",
-      "sha256": "7f5976f895c4a2571e8259009af60be2c886a10c19286eced9e333ea4b59a8bb"
+      "sha256": "0e70530f185bc44ae7f6b0fb5ca9f8fbd9a680e5208ca426af6d507e7d753ad3"
     },
     {
       "source": "current-artwork.json",
       "published": "controles/etat-execution/visuels-selection.json",
-      "sha256": "386517bd5a1319db86fc21f6ed244a616d5c5a262064dfe859b27ad5e4cad1e0"
+      "sha256": "5bbab90bd091872dfe946ba31b6bbfb15e2df91d561e21531c9976e70a9a7bfd"
     },
     {
       "source": "reviews/pinned-astra-corrected-science-0742/5-players/REVIEW.md",
@@ -342,9 +342,9 @@
       "sha256": "e52af35c600871347b1f45491b7107e8890483389baef1175a5578ed79abed78"
     },
     {
-      "source": "root-checks/artwork-checked1585fresh/verification.json",
+      "source": "root-checks/artwork-checked1598nov18/verification.json",
       "published": "controles/etat-execution/visuels-repetition.json",
-      "sha256": "2eb404a3a583e96cc3c208c57a20c9a9a3310f133ab23c27c9a203e0aae72717"
+      "sha256": "838663c464babb6cf1b32480735870c96af852dbd1595ac3642d2c679e11fb19"
     },
     {
       "source": "tracks/1-linear/after-quota-ci/source-and-results.json",

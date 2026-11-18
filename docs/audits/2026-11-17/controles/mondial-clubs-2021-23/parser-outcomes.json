@@ -1,0 +1,444 @@
+[
+  {
+    "year": 2021,
+    "archive_position": 0,
+    "day": "2022-02-03",
+    "home": "Al Jazira Club (UAE)",
+    "away": "AS Pirae (TAH)",
+    "old": {
+      "ft": [
+        4,
+        1
+      ]
+    },
+    "candidate": {
+      "ft": [
+        4,
+        1
+      ]
+    }
+  },
+  {
+    "year": 2021,
+    "archive_position": 1,
+    "day": "2022-02-05",
+    "home": "Al Ahly SC (EGY)",
+    "away": "CF Monterrey (MEX)",
+    "old": {
+      "ft": [
+        1,
+        0
+      ]
+    },
+    "candidate": {
+      "ft": [
+        1,
+        0
+      ]
+    }
+  },
+  {
+    "year": 2021,
+    "archive_position": 2,
+    "day": "2022-02-06",
+    "home": "Al Hilal (KSA)",
+    "away": "Al Jazira Club (UAE)",
+    "old": {
+      "ft": [
+        6,
+        1
+      ]
+    },
+    "candidate": {
+      "ft": [
+        6,
+        1
+      ]
+    }
+  },
+  {
+    "year": 2021,
+    "archive_position": 3,
+    "day": "2022-02-09",
+    "home": "CF Monterrey (MEX)",
+    "away": "Al Jazira Club (UAE)",
+    "old": {
+      "ft": [
+        3,
+        1
+      ]
+    },
+    "candidate": {
+      "ft": [
+        3,
+        1
+      ]
+    }
+  },
+  {
+    "year": 2021,
+    "archive_position": 4,
+    "day": "2022-02-08",
+    "home": "Palmeiras (BRA)",
+    "away": "Al Ahly SC (EGY)",
+    "old": {
+      "ft": [
+        2,
+        0
+      ]
+    },
+    "candidate": {
+      "ft": [
+        2,
+        0
+      ]
+    }
+  },
+  {
+    "year": 2021,
+    "archive_position": 5,
+    "day": "2022-02-09",
+    "home": "Al Hilal (KSA)",
+    "away": "Chelsea FC (ENG)",
+    "old": {
+      "ft": [
+        0,
+        1
+      ]
+    },
+    "candidate": {
+      "ft": [
+        0,
+        1
+      ]
+    }
+  },
+  {
+    "year": 2021,
+    "archive_position": 6,
+    "day": "2022-02-12",
+    "home": "Al Hilal (KSA)",
+    "away": "Al Ahly SC (EGY)",
+    "old": {
+      "ft": [
+        0,
+        4
+      ]
+    },
+    "candidate": {
+      "ft": [
+        0,
+        4
+      ]
+    }
+  },
+  {
+    "year": 2021,
+    "archive_position": 7,
+    "day": "2022-02-12",
+    "home": "Chelsea FC (ENG)",
+    "away": "Palmeiras (BRA)",
+    "old": {
+      "ft": [
+        2,
+        1
+      ],
+      "et": [
+        2,
+        1
+      ]
+    },
+    "candidate": {
+      "et": [
+        2,
+        1
+      ],
+      "ft": [
+        1,
+        1
+      ]
+    }
+  },
+  {
+    "year": 2022,
+    "archive_position": 0,
+    "day": "2023-02-01",
+    "home": "Al Ahly SC (EGY)",
+    "away": "Auckland City FC (NZL)",
+    "old": {
+      "ft": [
+        3,
+        0
+      ]
+    },
+    "candidate": {
+      "ft": [
+        3,
+        0
+      ]
+    }
+  },
+  {
+    "year": 2022,
+    "archive_position": 1,
+    "day": "2023-02-04",
+    "home": "Wydad AC (MAR)",
+    "away": "Al Hilal (KSA)",
+    "old": {
+      "ft": [
+        1,
+        1
+      ],
+      "p": [
+        3,
+        5
+      ],
+      "et": [
+        1,
+        1
+      ]
+    },
+    "candidate": {
+      "et": [
+        1,
+        1
+      ],
+      "p": [
+        3,
+        5
+      ],
+      "ft": [
+        1,
+        1
+      ]
+    }
+  },
+  {
+    "year": 2022,
+    "archive_position": 2,
+    "day": "2023-02-04",
+    "home": "Seattle Sounders (USA)",
+    "away": "Al Ahly SC (EGY)",
+    "old": {
+      "ft": [
+        0,
+        1
+      ]
+    },
+    "candidate": {
+      "ft": [
+        0,
+        1
+      ]
+    }
+  },
+  {
+    "year": 2022,
+    "archive_position": 3,
+    "day": "2023-02-07",
+    "home": "Flamengo RJ (BRA)",
+    "away": "Al Hilal (KSA)",
+    "old": {
+      "ft": [
+        2,
+        3
+      ]
+    },
+    "candidate": {
+      "ft": [
+        2,
+        3
+      ]
+    }
+  },
+  {
+    "year": 2022,
+    "archive_position": 4,
+    "day": "2023-02-08",
+    "home": "Al Ahly SC (EGY)",
+    "away": "Real Madrid (ESP)",
+    "old": {
+      "ft": [
+        1,
+        4
+      ]
+    },
+    "candidate": {
+      "ft": [
+        1,
+        4
+      ]
+    }
+  },
+  {
+    "year": 2022,
+    "archive_position": 5,
+    "day": "2023-02-11",
+    "home": "Flamengo RJ (BRA)",
+    "away": "Al Ahly SC (EGY)",
+    "old": {
+      "ft": [
+        4,
+        2
+      ]
+    },
+    "candidate": {
+      "ft": [
+        4,
+        2
+      ]
+    }
+  },
+  {
+    "year": 2022,
+    "archive_position": 6,
+    "day": "2023-02-11",
+    "home": "Al Hilal (KSA)",
+    "away": "Real Madrid (ESP)",
+    "old": {
+      "ft": [
+        3,
+        5
+      ]
+    },
+    "candidate": {
+      "ft": [
+        3,
+        5
+      ]
+    }
+  },
+  {
+    "year": 2023,
+    "archive_position": 0,
+    "day": "2023-12-12",
+    "home": "Al Ittihad (KSA)",
+    "away": "Auckland City FC (NZL)",
+    "old": {
+      "ft": [
+        3,
+        0
+      ]
+    },
+    "candidate": {
+      "ft": [
+        3,
+        0
+      ]
+    }
+  },
+  {
+    "year": 2023,
+    "archive_position": 1,
+    "day": "2023-12-15",
+    "home": "Club León (MEX)",
+    "away": "Urawa Red Diamonds (JPN)",
+    "old": {
+      "ft": [
+        0,
+        1
+      ]
+    },
+    "candidate": {
+      "ft": [
+        0,
+        1
+      ]
+    }
+  },
+  {
+    "year": 2023,
+    "archive_position": 2,
+    "day": "2023-12-15",
+    "home": "Al Ahly SC (EGY)",
+    "away": "Al Ittihad (KSA)",
+    "old": {
+      "ft": [
+        3,
+        1
+      ]
+    },
+    "candidate": {
+      "ft": [
+        3,
+        1
+      ]
+    }
+  },
+  {
+    "year": 2023,
+    "archive_position": 3,
+    "day": "2023-12-18",
+    "home": "Fluminense RJ (BRA)",
+    "away": "Al Ahly SC (EGY)",
+    "old": {
+      "ft": [
+        2,
+        0
+      ]
+    },
+    "candidate": {
+      "ft": [
+        2,
+        0
+      ]
+    }
+  },
+  {
+    "year": 2023,
+    "archive_position": 4,
+    "day": "2023-12-19",
+    "home": "Urawa Red Diamonds (JPN)",
+    "away": "Manchester City (ENG)",
+    "old": {
+      "ft": [
+        0,
+        3
+      ]
+    },
+    "candidate": {
+      "ft": [
+        0,
+        3
+      ]
+    }
+  },
+  {
+    "year": 2023,
+    "archive_position": 5,
+    "day": "2023-12-22",
+    "home": "Urawa Red Diamonds (JPN)",
+    "away": "Al Ahly SC (EGY)",
+    "old": {
+      "ft": [
+        2,
+        4
+      ]
+    },
+    "candidate": {
+      "ft": [
+        2,
+        4
+      ]
+    }
+  },
+  {
+    "year": 2023,
+    "archive_position": 6,
+    "day": "2023-12-22",
+    "home": "Manchester City (ENG)",
+    "away": "Fluminense RJ (BRA)",
+    "old": {
+      "ft": [
+        4,
+        0
+      ]
+    },
+    "candidate": {
+      "ft": [
+        4,
+        0
+      ]
+    }
+  }
+]

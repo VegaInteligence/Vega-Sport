@@ -1,28 +1,28 @@
 {
-  "records": 1585,
+  "records": 1598,
   "by_type": {
     "competition": 104,
-    "team": 1481
+    "team": 1494
   },
-  "distinct_images": 1504,
+  "distinct_images": 1517,
   "converted": 164,
-  "manifest_sha256": "032e67a8d995f0f988834800d48f3649fb323af3d0d5f5ad32a4aba33a893037",
-  "zip_sha256": "e557b0e2ebf10fdcbbf60df85b73244d03fd1d7b2c1b1e5eb0f9614b026f934d",
-  "zip_bytes": 131720117,
+  "manifest_sha256": "98baae6890f649ee1212a755d026baff8b111b969b960204538c653d62730fd7",
+  "zip_sha256": "def8f9e2762b08628df7f85cddcd73260673d17a024ec5574ad119675dda8038",
+  "zip_bytes": 132449510,
   "inputs": [
     {
-      "source_pack": "artwork-expanded-1584",
-      "manifest_sha256": "e97263f32d2f68ca5fcec05cad71a85f719dc76e35798c60fa6311e2e365124a",
+      "source_pack": "artwork-expanded-1587",
+      "manifest_sha256": "b8af7b962174fa9c0ac79e0dc9e14bafd8746a90c4520dbfa53bc3456759d4a8",
       "by_type": {
         "competition": 104,
-        "team": 1480
+        "team": 1483
       }
     },
     {
-      "source_pack": "tracks/7-artwork/fifa-club-world-cup-2025/profile",
-      "manifest_sha256": "4cc36ec73e51d772837e4b11b0d992a0196025ccb174e22ccc614ad82c025e32",
+      "source_pack": "tracks/7-artwork/caf-group-authentic/profile",
+      "manifest_sha256": "4a7bfa9d59cafd1fefa94622b325a6c8ede86c55d481a457ead612975213d2d8",
       "by_type": {
-        "team": 1
+        "team": 11
       }
     }
   ]

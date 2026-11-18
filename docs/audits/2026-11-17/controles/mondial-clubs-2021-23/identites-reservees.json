@@ -1,0 +1,151 @@
+{
+  "2685": {
+    "status": "hold_source_identity_correction",
+    "existing_key": "open_matchday=name:El Espinar Sant Rafel",
+    "observed_label": "El Espinar Sant Rafel",
+    "football_identity_for_both_matches": "CF Sant Rafel, Ibiza",
+    "native_federation_widget_team": "2242",
+    "already_related_root": 2691,
+    "matches": [
+      {
+        "physical": 5227,
+        "native": "235744",
+        "date": "2026-09-27",
+        "side": "home",
+        "official_name": "CF Sant Rafel",
+        "opponent": "AE Prat",
+        "score": "1-5"
+      },
+      {
+        "physical": 5241,
+        "native": "235996",
+        "date": "2026-10-11",
+        "side": "away",
+        "official_name": "CF Sant Rafel",
+        "opponent": "AE Prat",
+        "score": "5-0"
+      }
+    ],
+    "new_adverse_report": {
+      "id": 3442,
+      "date": "2026-09-27T18:49:15",
+      "url": "https://www.aeprat.com/primer-equip-masculi/lae-prat-fa-un-gran-partit-a-eivissa-1-5-i-sapropa-al-somni-de-la-copa/",
+      "home": "CF Sant Rafel",
+      "away": "AE Prat",
+      "score": [
+        1,
+        5
+      ],
+      "place": "Eivissa"
+    },
+    "new_source_kickoff": {
+      "day": "2026-09-27",
+      "local": "16:00 Europe/Madrid",
+      "utc": "14:00Z",
+      "basis": "https://www.aeprat.com/noticies/el-somni-de-lae-prat-a-la-copa-del-rei-passa-per-eivissa/"
+    },
+    "hold": "Existing name overlaps separately registered CD El Espinar-San Rafael, Segovia. No renamed identity or legal merger established. Correct provenance/side binding with VI-21 before whole-profile artwork. New forecast posts retain original04October return schedule; actual frozen completed return is11October, so previews are not used as proof of final date.",
+    "artwork_added": false
+  },
+  "2947": {
+    "status": "hold_source_identity_correction",
+    "existing_key": "open_matchday=name:Zwaluwen '30",
+    "upstream_espn_team": "11813",
+    "upstream_name": "Zwaluwen '30",
+    "football_identity_for_both_matches": "VV Zwaluwen, Vlaardingen",
+    "knvb_clubcode": "BBFB45Q",
+    "matches": [
+      {
+        "date": "2026-09-02",
+        "role": "away",
+        "rds_match_id": 5431,
+        "knvb_index": 21,
+        "knvb_team": "Zwaluwen",
+        "knvb_opponent": "Lierop 1",
+        "knvb_clubcode": "BBFB45Q",
+        "knvb_opponent_code": "BBHT96A",
+        "knvb_image": "https://logoapi.voetbal.nl/logo.php?clubcode=BBFB45Q",
+        "score_home_away": [
+          0,
+          7
+        ],
+        "shootout_home_away": null,
+        "round": "Eurojackpot KNVB beker kwalificatieronde 1 mannen",
+        "rds_name": "Zwaluwen '30",
+        "rds_opponent": "SV Lierop",
+        "rds_opponent_id": 2946,
+        "upstream": "espn",
+        "upstream_event": "401909233",
+        "upstream_participant": {
+          "id": "11813",
+          "name": "Zwaluwen '30",
+          "score": 7,
+          "club": "https://www.espn.com/soccer/club/_/id/11813/zwaluwen-30"
+        },
+        "upstream_opponent": {
+          "id": "133003",
+          "name": "SV Lierop",
+          "score": 0,
+          "club": "https://www.espn.com/soccer/club/_/id/133003/sv-lierop"
+        },
+        "upstream_file": "espn-sept-2.json"
+      },
+      {
+        "date": "2026-09-23",
+        "role": "home",
+        "rds_match_id": 5463,
+        "knvb_index": 51,
+        "knvb_team": "Zwaluwen",
+        "knvb_opponent": "Purmersteijn",
+        "knvb_clubcode": "BBFB45Q",
+        "knvb_opponent_code": "BBFW89B",
+        "knvb_image": "https://logoapi.voetbal.nl/logo.php?clubcode=BBFB45Q",
+        "score_home_away": [
+          0,
+          1
+        ],
+        "shootout_home_away": null,
+        "round": "Eurojackpot KNVB beker kwalificatieronde 2 mannen",
+        "rds_name": "Zwaluwen '30",
+        "rds_opponent": "Purmersteijn",
+        "rds_opponent_id": 2915,
+        "upstream": "espn",
+        "upstream_event": "401916912",
+        "upstream_participant": {
+          "id": "11813",
+          "name": "Zwaluwen '30",
+          "score": 0,
+          "club": "https://www.espn.com/soccer/club/_/id/11813/zwaluwen-30"
+        },
+        "upstream_opponent": {
+          "id": "132998",
+          "name": "Purmersteijn",
+          "score": 1,
+          "club": "https://www.espn.com/soccer/club/_/id/132998/purmersteijn"
+        },
+        "upstream_file": "bad-homonym-sept-23.json"
+      }
+    ],
+    "new_adverse_source": "https://www.svlierop.nl/sv-lierop-vv-zwaluwen-meer-info/",
+    "new_source_kickoff": {
+      "local": "2026-09-02T20:00:00+02:00",
+      "utc": "2026-09-02T18:00:00Z"
+    },
+    "upstream_clocks": [
+      {
+        "event": "401909233",
+        "date": "2026-09-02T18:00Z"
+      },
+      {
+        "event": "401916912",
+        "date": "2026-09-23T18:00Z"
+      }
+    ],
+    "hold": "Zwaluwen '30 in Hoorn is a different existing club. Native ESPN identity and name are contradictory to both KNVB participants and adverse club; correct mapping/provenance with VI-21, do not apply Vlaardingen's logo to Hoorn or globally rewrite ESPN11813 without a temporal scope audit.",
+    "artwork_added": false
+  },
+  "limitations": [
+    "RDS frozen fixture proofs carry day, sides and score, not precise kickoff timestamps. Source clocks corroborate the event but no new RDS clock validation is claimed.",
+    "No production identity, name, source key, merge or artwork pointer changed."
+  ]
+}

@@ -1,0 +1,75 @@
+{
+  "status": "passed",
+  "loader": "/Users/lemonnierhugo/Developer/Coding Project/Vega-Sport-audit-20261117/backend/vega/artwork.py",
+  "loader_sha256": "e53dd0f791456eb419df6ffc7a87cfc1e67d0a73f0d123ad7b07b145e81f400a",
+  "runtime": "3.12.11 (main, Sep 18 2025, 19:41:45) [Clang 20.1.4 ]",
+  "batches": [
+    {
+      "batch": "all",
+      "records": 11,
+      "rasters": 11,
+      "extracted_transport_verified": true,
+      "repeat_load_identical": true,
+      "wrong_expected_digest_rejected": true,
+      "altered_image_rejected": true,
+      "unchanged_original_display": true,
+      "existing_roots_absent": true
+    },
+    {
+      "batch": "A",
+      "records": 4,
+      "rasters": 4,
+      "extracted_transport_verified": true,
+      "repeat_load_identical": true,
+      "wrong_expected_digest_rejected": true,
+      "altered_image_rejected": true,
+      "unchanged_original_display": true,
+      "existing_roots_absent": true
+    },
+    {
+      "batch": "B",
+      "records": 3,
+      "rasters": 3,
+      "extracted_transport_verified": true,
+      "repeat_load_identical": true,
+      "wrong_expected_digest_rejected": true,
+      "altered_image_rejected": true,
+      "unchanged_original_display": true,
+      "existing_roots_absent": true
+    },
+    {
+      "batch": "C",
+      "records": 2,
+      "rasters": 2,
+      "extracted_transport_verified": true,
+      "repeat_load_identical": true,
+      "wrong_expected_digest_rejected": true,
+      "altered_image_rejected": true,
+      "unchanged_original_display": true,
+      "existing_roots_absent": true
+    },
+    {
+      "batch": "D",
+      "records": 2,
+      "rasters": 2,
+      "extracted_transport_verified": true,
+      "repeat_load_identical": true,
+      "wrong_expected_digest_rejected": true,
+      "altered_image_rejected": true,
+      "unchanged_original_display": true,
+      "existing_roots_absent": true
+    }
+  ],
+  "combined_equals_disjoint_group_union": true,
+  "unique_typed_keys": 11,
+  "source_success_hashes_verified": 46,
+  "source_failures_preserved": 8,
+  "baseline_1587_registry_unchanged": true,
+  "new_candidates": 11,
+  "preserved_existing": 5,
+  "remaining_of_selected16": 0,
+  "scope": "Real unchanged artwork.load schema/bytes/transport workflow. No DB identity resolution or application, no media upload/cache/API/publication test, no production E2E.",
+  "production_writes": 0,
+  "cumulative_changes": 0,
+  "new_RDS_queries": 0
+}

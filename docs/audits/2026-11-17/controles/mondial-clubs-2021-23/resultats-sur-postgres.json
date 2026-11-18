@@ -1,0 +1,53 @@
+{
+  "matchs": 22,
+  "editions": 3,
+  "id_revise": 736663,
+  "cles_match_inchangees": 22,
+  "anciennes_empreintes_RDS": 3,
+  "nouvelles_empreintes": 3,
+  "changements_de_match_par_etape": [
+    [
+      8,
+      7,
+      7
+    ],
+    [
+      0,
+      0,
+      0
+    ],
+    [
+      1,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0
+    ]
+  ],
+  "mi_temps_source_connues": 22,
+  "mi_temps_0_0_sources": 6,
+  "mi_temps_stockees": 0,
+  "editions_http_200": 3,
+  "snapshots_http_200": 3,
+  "matchs_individuels_404": 22,
+  "resume_temoin_http": 404,
+  "rejeu_immediat_scopes": 0,
+  "tuples_editions_ecrits_chaque_relecture": 3,
+  "signal_global_apres_correction": 1,
+  "signal_global_controle_positif": 2,
+  "sha_digest_par_edition_avant_apres": [
+    {
+      "31672": "270a9d0d41cd7210e89a7bd169f8d792112c939a3746e28212ed59d5583c1f04",
+      "31673": "9ded0ca57fc8b1dac447ad5f256b9332ebc5f93fd2e89763a488bde48d9d44ec",
+      "31675": "97802f951d0fd20e9569a7b203f7d77d4feb13ae7803fd23ae5fa10b87f3b6e1"
+    },
+    {
+      "31672": "656cc507fffa64e57641498554fd2caf0eedb78f2c1eb42cb01c8322406d1674",
+      "31673": "b2042453f4a645e1cdbf5f35965488a80fecf4d907f2e67fd1dfbe88999de06f",
+      "31675": "ee0dc0ea0591768485f4585b70153fbdcb807043409d48b17d6a1396cad98ecb"
+    }
+  ]
+}
