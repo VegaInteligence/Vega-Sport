@@ -67,6 +67,58 @@ test("a tournament's stage is read from the nation's last match of the edition",
   assert.equal(runs.find((r) => r.year === 2018).label, "Coupe du monde 2018");
 });
 
+// VI-27 B (docs/calculs/09-audit-2026-11/FAILURE_MODES.md §34, written before the code):
+// - 34q, 34r: a last match without a round (International Results' tournaments) or with a round the reader does not
+//   know is « Phase non renseignée », with no tone: never « 1er tour », never a title from the last win;
+// - the group rounds stay « 1er tour »: the collected source's day numbers, « Matchday N », « Group 2 Play-off »,
+//   « First round » (1950's groups, 1938's first round), « Preliminary round » (1934);
+// - 34s: a 1950 final-pool run takes its placing from the attested table only when the nation's three matches are
+//   the table's (each opponent once, each score as attested): « Vainqueur » gold, « 2e » silver, « 3e » bronze, « 4e »;
+// - 34t–34v: Sweden twice and no Brazil, or other results to the same five points, or a match without its score:
+//   « Poule finale », no tone.
+const pool = (date, home, away, homeScore, awayScore) => m({
+  date, competition: "World Cup 1930", edition: "open-cups:world-cup-history:1950", round: "Final Round", season: "1949/1950",
+  home: { id: `t_${home.slice(0, 2).toLowerCase()}`, name: home }, away: { id: `t_${away.slice(0, 2).toLowerCase()}`, name: away },
+  homeScore, awayScore,
+});
+const POOL = [
+  pool("1950-07-09", "Uruguay", "Spain", 2, 2), pool("1950-07-09", "Brazil", "Sweden", 7, 1), pool("1950-07-13", "Brazil", "Spain", 6, 1),
+  pool("1950-07-13", "Uruguay", "Sweden", 3, 2), pool("1950-07-16", "Sweden", "Spain", 3, 1), pool("1950-07-16", "Uruguay", "Brazil", 2, 1),
+];
+const own = (id) => POOL.filter((x) => x.home.id === id || x.away.id === id);
+const stageOf = (matches, id) => tournamentRuns(matches, id).map((r) => [r.tournament, r.year, r.stage, r.tone ?? null, r.matches]);
+
+test("34q, 34r. a last match without a round, or with one the reader does not know, has no phase", () => {
+  const copa = (date, round) => m({ date, competition: "Copa América 2024", edition: "nations-results:copa-america:2024", round, season: "2023/2024",
+    home: { id: "t_ar", name: "Argentina" }, away: { id: "t_co", name: "Colombia" }, homeScore: 1, awayScore: 0 });
+  assert.deepEqual(stageOf([copa("2024-06-20", null), copa("2024-07-14", null)], "t_ar"), [["copa-america", 2024, "Phase non renseignée", null, 2]]);
+  assert.deepEqual(stageOf([copa("2024-07-14", "")], "t_ar"), [["copa-america", 2024, "Phase non renseignée", null, 1]]);
+  assert.deepEqual(stageOf([copa("2024-07-14", "Knockout stage")], "t_ar"), [["copa-america", 2024, "Phase non renseignée", null, 1]]);
+  const group = (edition, round) => m({ date: "1954-06-23", competition: "World Cup 1930", edition, round, homeScore: 2, awayScore: 7 });
+  for (const [edition, round] of [["open-cups:world-cup-history:1954", "Group 2 Play-off"], ["open-cups:world-cup-history:1950", "First round"],
+    ["open-cups:world-cup-history:1934", "Preliminary round"], ["open-cups:world-cup-history:2010", "Matchday 12"], [null, "2"]])
+    assert.equal(tournamentRuns([group(edition, round)], FR)[0].stage, "1er tour", round);
+});
+
+test("34s–34v. 1950's final pool: the attested placing, only on the nation's three attested matches", () => {
+  assert.deepEqual(stageOf(own("t_ur"), "t_ur"), [["world-cup", 1950, "Vainqueur", "gold", 3]]);
+  assert.deepEqual(stageOf(own("t_br"), "t_br"), [["world-cup", 1950, "2e", "silver", 3]]);
+  assert.deepEqual(stageOf(own("t_sw"), "t_sw"), [["world-cup", 1950, "3e", "bronze", 3]]);
+  assert.deepEqual(stageOf(own("t_sp"), "t_sp"), [["world-cup", 1950, "4e", null, 3]]);
+  // Sweden twice and no Brazil: still five points, not the table's matches.
+  const twice = [pool("1950-07-09", "Uruguay", "Spain", 2, 2), pool("1950-07-13", "Uruguay", "Sweden", 3, 2), pool("1950-07-16", "Uruguay", "Sweden", 3, 2)];
+  assert.deepEqual(stageOf(twice, "t_ur"), [["world-cup", 1950, "Poule finale", null, 3]]);
+  // Other results to the same five points.
+  const other = [pool("1950-07-09", "Uruguay", "Spain", 3, 2), pool("1950-07-13", "Uruguay", "Sweden", 3, 2), pool("1950-07-16", "Uruguay", "Brazil", 1, 1)];
+  assert.deepEqual(stageOf(other, "t_ur"), [["world-cup", 1950, "Poule finale", null, 3]]);
+  // The last day without its score (an older base).
+  const unscored = own("t_ur").map((x) => (x.away.name === "Brazil" ? { ...x, homeScore: null, awayScore: null } : x));
+  assert.deepEqual(stageOf(unscored, "t_ur"), [["world-cup", 1950, "Poule finale", null, 3]]);
+  // A team the table does not name.
+  const renamed = own("t_ur").map((x) => (x.home.id === "t_ur" ? { ...x, home: { id: "t_ur", name: "Uruguay U23" } } : x));
+  assert.deepEqual(stageOf(renamed, "t_ur"), [["world-cup", 1950, "Poule finale", null, 3]]);
+});
+
 test("a season's record counts the played matches with a score", () => {
   const record = seasonRecord([
     m({ season: "2026/2027", date: "2026-11-15", homeScore: 2, awayScore: 1 }),

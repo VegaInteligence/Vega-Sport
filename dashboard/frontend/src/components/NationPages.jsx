@@ -25,8 +25,8 @@ import {
   useNation,
   useNations,
 } from "../services/nations.js";
-import { tournamentEdition } from "../services/cup-catalog.js";
-import { RUN_STEPS, runDepth, runsByTournament } from "../services/tournament-runs.js";
+import { editionView, tournamentEdition } from "../services/cup-catalog.js";
+import { RUN_STEPS, runDepth, runStage, runTone, runsByTournament } from "../services/tournament-runs.js";
 import { trophyArt } from "../services/trophy-art.js";
 import rail from "./ClubScoutTabs.module.css";
 import s from "./Nations.module.css";
@@ -290,7 +290,7 @@ const MEDALS = [
 ];
 
 /* The nation's runs (mock-up validated 18 Nov 2026, proposal A): a row per competition with its own medals, a tile per
- * edition with the depth of the run as a gauge; a tile opens the edition's page on its bracket, the nation followed. */
+ * edition with a gauge when its stage is known. A tile opens the edition's available view, with the nation followed. */
 function Tournaments({ runs, nation }) {
   const f = useFootball();
   return (
@@ -315,31 +315,34 @@ function Tournaments({ runs, nation }) {
             <div className={s.runs}>
               {group.runs.map((run) => {
                 const page = tournamentEdition(run.tournament, run.year);
-                const title = `${run.label} · ${run.stage} · ${run.matches} match${run.matches > 1 ? "s" : ""}`;
+                const stage = runStage(run);
+                const depth = runDepth(run);
+                const tone = runTone(run);
+                const title = `${run.label} · ${stage} · ${run.matches} match${run.matches > 1 ? "s" : ""}`;
                 const body = (
                   <>
                     <span className={s.runYear}>{run.year}</span>
-                    <span className={s.gauge} aria-hidden="true">
+                    {depth > 0 && <span className={s.gauge} aria-hidden="true">
                       {Array.from({ length: RUN_STEPS }, (_, step) => (
-                        <i key={step} data-on={step < runDepth(run) ? "" : undefined} />
+                        <i key={step} data-on={step < depth ? "" : undefined} />
                       ))}
-                    </span>
-                    <span className={s.runStage}>{run.stage}</span>
+                    </span>}
+                    <span className={s.runStage} data-unknown={depth === 0 ? "" : undefined}>{stage}</span>
                   </>
                 );
                 return page ? (
                   <Link
                     key={run.year}
                     className={s.run}
-                    data-tone={run.tone}
+                    data-tone={tone}
                     title={title}
                     prefetch={false}
-                    href={f.href("/competitions/", { id: page.id, edition: page.edition, view: "tableau", team: nation.name })}
+                    href={f.href("/competitions/", { id: page.id, edition: page.edition, view: editionView(page), team: nation.name })}
                   >
                     {body}
                   </Link>
                 ) : (
-                  <div key={run.year} className={s.run} data-tone={run.tone} title={title}>
+                  <div key={run.year} className={s.run} data-tone={tone} title={title}>
                     {body}
                   </div>
                 );

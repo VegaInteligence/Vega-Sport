@@ -373,6 +373,10 @@ a.run:focus-visible {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.runStage[data-unknown] {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 .run {
   min-width: 0;
 }

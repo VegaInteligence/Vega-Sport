@@ -2429,3 +2429,91 @@ authoritative. Missing, invalid and explicit null have distinct meanings:
 
 An empty assignment or an undated profile reply supplies no documented release date. Historical
 transfer events and dated end corrections still retain their existing independent meaning.
+
+## 34. Tournament editions: group tables, placings, phases and navigation (VI-27 B, 18 Nov 2026, written before the tests)
+
+Main's tournament pages (`2f25e3e58f`) ranked every group with three points a win, then goal difference, goals
+and the name; read a round it did not know, or no round, as the first round; and gave 1950's final pool no placing.
+The Astra–Fable decision of 18 Nov (`decision-plan.md`, registry C27–C30) sets the rules below. A rule the site does
+not hold leaves the rank undetermined: no ordinal, medal or filled gauge is ever drawn from it.
+
+### 34.1 Rules
+
+**Points a win.** World Cup groups: 2 to 1990, 3 from 1994. Euro final-tournament groups: 2 to 1992, 3 from 1996
+(Sweden 1992: two wins and a draw, 5 points; UEFA). Any other competition or edition: unknown, so neither points nor
+positions are given.
+
+**Separating teams level on points**, per edition, each step only where the regulation is attested:
+
+| Editions | Steps, in order | Then |
+|---|---|---|
+| World Cup 1954, 1958 | the group's play-off (`Group N Play-off`), the winner ahead; it never counts in the group's totals | level |
+| World Cup 1974–1990 | goal difference, goals scored | level (lots) |
+| World Cup 1994–2014 | goal difference, goals scored, then among the teams level: points, goal difference, goals | level (lots) |
+| World Cup 2018, 2022 | the same | level (fair play: cards the reader does not hold) |
+| Euro 2020, 2024 | among the teams level: points, goal difference, goals, applied again to a remaining subset; then goal difference, goals | level (disciplinary points, qualifying ranking) |
+| World Cup 1930, 1950, 1962–1970, 2026; Euro 2028; the rest | none declared | level |
+
+Teams still level share the position (« 2= » for both, the next one 4th); the cell says « Départage indisponible ».
+Inside such a block the rows are listed by goal difference, goals and name, as display order only.
+
+**Groups.** A group is the match's `group`, else a round named `Group X` (Euro 2028), else 1950's `Final Round`
+(« Poule finale »). A finished match counts with its final score, after extra time (England–Belgium 1954, 4–4). A
+canceled match never counts. A group with a match dated before today and neither scored nor canceled has no
+positions, and its teams with such a match have no points or difference. A group with nothing played yet has no
+positions. 1950's final pool is ranked only when its six matches are scored and its points equal the attested table
+(Uruguay 5, Brazil 4, Sweden 2, Spain 1).
+
+**A nation's run (`/api/nations/{id}`).** The stage is its last match's round. A round the reader does not know,
+or none (International Results' tournaments), is « Phase non renseignée »: no tone and no gauge. Group rounds are
+`Matchday N`, `Group …` (play-offs included), the collected source's day numbers (`1`, `2`, `3`), `First round` and
+`Preliminary round`. A 1950 final-pool run takes its placing from the attested table only when the nation's three
+final-pool matches are those of the table (each opponent once, each score as attested, the nation named as in the
+table): 1st « Vainqueur » gold, 2nd « 2e » silver, 3rd « 3e » bronze, 4th « 4e ». Otherwise « Poule finale », no tone.
+The site shows « Phase non renseignée » for a run whose matches carry no round, whatever the API says (an older API).
+
+**Navigation.** A run links only to an edition the site holds (the collected World Cup's 2022 and 2026, the
+archive's own editions, the other tournaments' seasons), on a view that edition has: the matches for International
+Results' tournaments, the groups for 1950, the bracket otherwise. 1950 has no « Tableau ». The collected World Cup's
+edition is in the address when it changes, so a reload keeps it. A national team's French name finds its matches
+(« Italie », 1982) as its source name does (« Italy »). A match the source canceled (Sweden–Austria 1938) reads
+« Annulé », never « À venir » or a missing score. A replayed tie shows its replay and carries the replay's identity,
+the first match kept apart. A phone's chosen round stays within the bracket it is given.
+
+### 34.2 Failure modes and expected outcomes
+
+| # | Situation | Expected | On A |
+|---|---|---|---|
+| 34a | 1950 final pool, frozen archive through the projection | Uruguay 1st 5, Brazil 2nd 4, Sweden 3rd 2, Spain 4th 1 | red (7, 6, 3, 1 points) |
+| 34b | 1950 final pool with one score missing (older API) | no positions | red |
+| 34c | 1950 final pool whose scores disagree with the attested table | no positions | red |
+| 34d | 1950 group 2: England, Chile, USA on 2 points | Spain 1st; the three share « 2= » | red |
+| 34e | 1954 group 2 and its play-off (West Germany 7–2 Turkey) | Hungary, West Germany, Turkey, South Korea; West Germany and Turkey 2 matches, 2 points | red (Turkey 2nd) |
+| 34f | 1958 group 1 and its play-off (Northern Ireland 2–1 a.e.t., 1–1 at 90) | West Germany, Northern Ireland, Czechoslovakia, Argentina; play-off outside the totals | red |
+| 34g | 1954 group 4: England–Belgium 4–4 a.e.t. (3–3 at 90) | England 3 points, 6 goals for; Belgium 5 for | green on goals, red on points |
+| 34h | Euro 2020 group F | France, Germany, Portugal, Hungary, none level | red (Portugal 2nd) |
+| 34i | Euro 2024 group E, four teams on 4 points | Romania, Belgium, Slovakia, Ukraine | to observe |
+| 34j | World Cup 1994 group E, four teams on 4 points | Mexico, Ireland, Italy, Norway | to observe |
+| 34k | World Cup 2018 group H | Colombia 1st; Japan and Senegal « 2= », « Départage indisponible »; Poland 4th | red |
+| 34l | World Cup 1982 group 1 | Poland, Italy, Cameroon, Peru (goals scored) | red (Poland 5 points) |
+| 34m | Euro 1992 group 1 (UEFA witness, outside the catalogue) | Sweden 5, Denmark 3; France and England 2, « 3= » | red |
+| 34n | Euro 2028: 36 matches, groups named in the round | six groups A–F, four slots each, no positions | red (« pas jouée en groupes ») |
+| 34o | A group without its edition (rule unknown) | no positions, no points | red |
+| 34p | A canceled group match | not counted, not a missing result | to observe |
+| 34q | Nation run, last match without a round (Argentina, Copa América 2024) | « Phase non renseignée », no tone, 6 matches, link kept | red (« 1er tour ») |
+| 34r | Nation run, an unknown round name | « Phase non renseignée » | red |
+| 34s | Uruguay, Brazil, Sweden, Spain 1950 (attested matches) | Vainqueur gold, 2e silver, 3e bronze, 4e | red (1er tour) |
+| 34t | Uruguay 1950 with Sweden twice and no Brazil (still 5 points) | Poule finale, no tone | red |
+| 34u | Uruguay 1950: Spain 3–2, Sweden 3–2, Brazil 1–1 (still 5 points) | Poule finale, no tone | red |
+| 34v | Uruguay 1950, the Brazil match without a score | Poule finale, no tone | red |
+| 34w | Existing stages: final won, lost, unscored; third place; penalties; twice-held edition | unchanged | green |
+| 34x | Site: a run with no round in its matches, older API saying « 1er tour » | « Phase non renseignée », no gauge, no medal | red |
+| 34y | Site: gauge of « Poule finale », « 2e », an unknown stage | 4, 5, none | red |
+| 34z | Run links: World Cup 2021, 2030 | none | red (collected World Cup) |
+| 34aa | Run links: Copa América 2024, CAN 2023; World Cup 1950; 1998 | `view=matchs`; `view=groupes`; `view=tableau` | red |
+| 34ab | 1950's page | opens on « Groupes », no « Tableau »; `view=tableau` falls back | red |
+| 34ac | Collected World Cup, 2026 then 2022 in the head, then reload | `edition=2022`, 2022 after reload | red |
+| 34ad | Phone: « Finale » chosen in 2026, then a bracket with one round fewer | the last round shown, no error | red |
+| 34ae | 1982 matches, search « Italie », then « Italy » | the final found both times | red |
+| 34af | Sweden–Austria 1938 (`status: "canceled"`) | « Annulé » in the list; no missing-score notice for it | red |
+| 34ag | A replayed tie whose two matches have ids | the replay's id and score; the first match under `replayOf` | red |

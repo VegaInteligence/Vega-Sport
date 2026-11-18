@@ -12,6 +12,8 @@
  * played for. A team that is no national team is not served.
  */
 import { createHash } from "node:crypto";
+import { stageKind, UNKNOWN_STAGE_LABEL } from "../../../../dashboard/shared/tournament-stages.js";
+import { finalPoolPosition1950, WORLD_CUP_1950_EDITION } from "../../../../dashboard/shared/world-cup-1950.js";
 import { matchesEtag, reject, send, validateParams } from "../http.mjs";
 
 const NATION = /^\/api\/nations\/(t_(?:[A-Za-z0-9]{6}|v\d{7}))$/;
@@ -44,20 +46,9 @@ function tournamentOf(match) {
   return null;
 }
 
-/** The round of a match as a stage: final, third, semi, quarter, r16, r32 or group. */
-function stageKind(round) {
-  const r = String(round || "").trim().toLowerCase();
-  if (/third|3rd|bronze|troisi[eè]me/.test(r)) return "third";
-  if (/^(?:the )?finale?s?$/.test(r)) return "final";
-  if (/semi|^1\/2$|demi/.test(r)) return "semi";
-  if (/quarter|^1\/4$|quart/.test(r)) return "quarter";
-  if (/round of 16|^1\/8$|huiti[eè]me/.test(r)) return "r16";
-  if (/round of 32|^1\/16$|seizi[eè]me/.test(r)) return "r32";
-  return "group";
-}
-
 /** The match from `teamId`'s side: "won", "lost" or null when the base cannot tell. */
 function outcome(match, teamId) {
+  if (match.status !== "finished") return null;
   const home = match.home?.id === teamId;
   const own = home ? match.homeScore : match.awayScore, other = home ? match.awayScore : match.homeScore;
   if (own == null || other == null) return null;
@@ -70,9 +61,22 @@ function outcome(match, teamId) {
 const STAGES = {
   final: { won: ["Vainqueur", "gold"], lost: ["Finaliste", "silver"], null: ["Finale", null] },
   third: { won: ["3e", "bronze"], lost: ["4e", null], null: ["Match 3e place", null] },
-  semi: "Demi", quarter: "Quarts", r16: "8es", r32: "16es", group: "1er tour",
+  semi: "Demi", quarter: "Quarts", r16: "8es", r32: "16es", group: "1er tour", unknown: UNKNOWN_STAGE_LABEL,
 };
-const ORDER = ["group", "r32", "r16", "quarter", "semi", "third", "final"];
+const ORDER = ["unknown", "group", "r32", "r16", "quarter", "semi", "third", "final", "final-pool"];
+const POOL_PLACES = [["Poule finale", null], ["Vainqueur", "gold"], ["2e", "silver"], ["3e", "bronze"], ["4e", null]];
+
+function finalPoolStage(matches, teamId) {
+  const pool = matches.filter((m) => m.edition === WORLD_CUP_1950_EDITION && stageKind(m.round) === "final-pool");
+  const home = pool[0]?.home?.id === teamId;
+  const team = (home ? pool[0]?.home : pool[0]?.away)?.name;
+  if (!team || !pool.every((m) => m.status === "finished" && (m.home?.id === teamId && m.home.name === team ||
+      m.away?.id === teamId && m.away.name === team))) return POOL_PLACES[0];
+  const position = finalPoolPosition1950(pool.map((m) => ({
+    date: m.date, home: m.home?.name, away: m.away?.name, score: [m.homeScore, m.awayScore],
+  })), team);
+  return POOL_PLACES[position ?? 0];
+}
 
 /**
  * A nation's runs in the major tournaments, oldest first: per edition, the stage its last match
@@ -97,10 +101,12 @@ export function tournamentRuns(matches, teamId) {
       const list = [...games.values()].sort(
         (a, b) => String(a.date || "").localeCompare(String(b.date || "")) || ORDER.indexOf(stageKind(a.round)) - ORDER.indexOf(stageKind(b.round)),
       );
-      const last = list.at(-1);
-      const kind = stageKind(last.round);
+      const last = list.findLast((match) => match.status !== "canceled");
+      const kind = stageKind(last?.round);
       const stage = STAGES[kind];
-      const [label, tone] = typeof stage === "string" ? [stage, null] : stage[outcome(last, teamId)];
+      const [label, tone] = kind === "final-pool"
+        ? tournament.key === "world-cup" && year === 1950 ? finalPoolStage(matches, teamId) : [UNKNOWN_STAGE_LABEL, null]
+        : typeof stage === "string" ? [stage, null] : stage[outcome(last, teamId)];
       const out = { tournament: tournament.key, label: `${tournament.label} ${year}`, year, stage: label, matches: list.length, games: list };
       if (tone) out.tone = tone;
       return out;

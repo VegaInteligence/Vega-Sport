@@ -23,7 +23,7 @@
 //  8. A run's link: the World Cup by its year (archive up to 2018, collected after), the Euro and the other
 //     confederations' tournaments by their edition; a year the site has no page for (Euro 2016) gives no link.
 //  9. A run's depth, for its gauge: first round 1, round of 32 or 16: 2, quarter-finals 3, semi-finals and both
-//     third-place outcomes 4, final 5, title 6; an unknown stage counts as the first round, never as a title.
+//     third-place outcomes 4, final 5, title 6; an unknown stage leaves the gauge empty.
 // 10. The runs by competition, each with its own medals: a nation's titles are counted in the competition they were
 //     won in, so the Euros the base does not hold (before 2020) are never implied by a World Cup's count.
 // 11. A national team's name in French whatever the edition's year (the flag alone is withheld before 1994), the home
@@ -161,8 +161,8 @@ test("8. a run's edition page, or none", () => {
 test("9, 10. a run's depth, and the runs by competition with their own medals", () => {
   const depth = (stage) => runDepth({ stage });
   assert.deepEqual(["1er tour", "16es", "8es", "Quarts", "Demi", "3e", "4e", "Match 3e place", "Finale", "Finaliste", "Vainqueur"].map(depth), [1, 2, 2, 3, 4, 4, 4, 4, 5, 5, 6]);
-  assert.equal(depth("Tour inconnu"), 1);
-  assert.equal(depth(undefined), 1);
+  assert.equal(depth("Tour inconnu"), 0);
+  assert.equal(depth(undefined), 0);
   const run = (tournament, label, year, stage, tone) => ({ tournament, label: `${label} ${year}`, year, stage, ...(tone ? { tone } : {}) });
   const groups = runsByTournament([
     run("world-cup", "Coupe du monde", 1998, "Vainqueur", "gold"), run("world-cup", "Coupe du monde", 2006, "Finaliste", "silver"),
@@ -210,8 +210,8 @@ test("12. the groups of an edition, 1950's final round included", () => {
   assert.equal(rows[0].group, "Group 1");
   const tables = groupTables(rows);
   assert.deepEqual(tables.map((t) => t.name), ["Groupe 1", "Groupe 2", "Poule finale"]);
-  assert.deepEqual(tables[0].rows.map((r) => [r.name, r.points]), [["France", 3], ["Argentina", 3], ["Mexico", 0]]);
-  assert.deepEqual(tables[2].rows.map((r) => r.name), ["Sweden", "Uruguay", "Brazil", "Spain"]);
+  assert.ok(tables[0].rows.every((r) => r.position === null && r.points === null));
+  assert.deepEqual(tables[2].rows.map((r) => r.name).sort(), ["Brazil", "Spain", "Sweden", "Uruguay"]);
   assert.deepEqual(groupTables(normalizeOpenCup([open("Quarter-finals", "Italy", "Spain", ft(1, 0))])), []);
   assert.deepEqual(groupTables(undefined), []);
 });
