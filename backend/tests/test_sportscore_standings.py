@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import sys
 import unittest
+from unittest.mock import patch
 from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -175,11 +176,89 @@ class SportScoreWriterQualificationTest(SportScoreDatabase):
         self.assertIsNone(self.write(replace(START, 0, team="Gent U23")))
         self.assert_refused(replace(START, 0, team="Gent B", pts=9), 3, "UNMATCHED_TEAMS")
 
+    def test_gender_of_a_learned_name_cannot_contradict_the_edition(self):
+        self.assertIsNone(self.write(START))
+        self.assert_refused(replace(START, 0, team="Aster City Women", pts=9), 3, "UNMATCHED_TEAMS")
+        self.alias("Aster City Women")
+        self.assert_refused(replace(START, 0, team="Aster City Women", pts=9), 6, "UNMATCHED_TEAMS")
+        self.assert_refused(replace(START, 0, team="Aster City (W)", pts=9), 9, "UNMATCHED_TEAMS")
+
+    def test_womens_edition_admits_unmarked_and_explicit_womens_names(self):
+        self.db.execute("UPDATE core.competitions SET name='Saudi Women’s Premier League' WHERE id=401")
+        self.assertIsNone(self.write(START))
+        self.assertIsNone(self.write(replace(START, 0, team="Aster City Women", pts=9), 3))
+        self.assertEqual(self.read()[0][:2], (101, "Aster City"))
+        self.assertIn((101, "Aster City Women"), self.aliases())
+        self.assert_refused(replace(START, 0, team="Aster City Men", pts=10), 6, "UNMATCHED_TEAMS")
+
     def test_an_exact_homonym_is_ambiguous(self):
         self.assertIsNone(self.write(START))
         self.db.execute("INSERT INTO core.teams(id,name) VALUES (199,'Aster-City')")
         self.db.execute("INSERT INTO core.team_seasons VALUES (199,5001)")
         self.assert_refused(replace(START, 0, pts=9), 3, "UNMATCHED_TEAMS")
+
+
+class SportScoreFreshnessTest(SportScoreDatabase):
+    def setUp(self):
+        self.db.execute("DELETE FROM core.standings_official WHERE competition_season_id=5001 AND source='sportscore'")
+        self.db.execute("DELETE FROM ops.resource_versions WHERE resource_kind='competition_season' AND resource_id=5001")
+        self.scope = "standings:" + CASES[0]["key"]
+        self.db.execute("DELETE FROM ops.source_runs WHERE source='sportscore' AND scope=%s", (self.scope,))
+
+    def read(self):
+        return self.db.execute("""SELECT team_id,points,as_of,version FROM api.standings s
+                                   JOIN ops.resource_versions v ON v.resource_kind='competition_season'
+                                   AND v.resource_id=s.competition_season_id
+                                   WHERE s.competition_season_id=5001 ORDER BY position""").fetchall()
+
+    def attempt(self):
+        return self.db.execute("""SELECT last_attempt_at,last_success_at,status,error_code,rows_written
+                                  FROM ops.source_runs WHERE source='sportscore' AND scope=%s""", (self.scope,)).fetchone()
+
+    def run_scope(self, conn, get, instant):
+        return sources.run_due(conn, get, instant, names={"sportscore"})[("sportscore", self.scope)]
+
+    def answer(self, rows, url):
+        return replay.widget(tables((None, rows)), replay.slug_of(url))
+
+    def test_first_publisher_remains_current_when_the_older_observation_finishes_last(self):
+        from vega.store import connect_local
+
+        with patch.object(sportscore, "scopes", lambda _: {self.scope: sportscore.PERIOD}), connect_local(DSN) as writer:
+            for delay in (3, 0):
+                with self.subTest(delay=delay):
+                    self.setUp()
+                    later = T0 + delay * H
+                    published = []
+
+                    def delayed(url):
+                        self.assertIsNone(self.attempt())
+                        self.assertEqual(self.run_scope(writer, lambda u: self.answer(replace(START, 0, pts=9), u), later), "ok")
+                        published.extend(self.read())
+                        return self.answer(START, url)
+
+                    self.assertEqual(self.run_scope(self.db, delayed, T0), "STALE_OBSERVATION")
+                    self.assertEqual(self.read(), published)
+                    self.assertEqual(published[0], (101, 9, later, 1))
+                    self.assertEqual(self.attempt(), (later, later, "ok", None, 3))
+
+    def test_an_older_transport_failure_cannot_replace_a_new_success_and_a_fresh_retry_works(self):
+        from vega.store import connect_local
+
+        with patch.object(sportscore, "scopes", lambda _: {self.scope: sportscore.PERIOD}), connect_local(DSN) as writer:
+            def fail(_):
+                raise SourceError("HTTP_503")
+
+            def delayed(url):
+                self.assertEqual(self.run_scope(writer, lambda u: self.answer(replace(START, 0, pts=9), u), T0 + 3 * H), "ok")
+                return fail(url)
+
+            self.assertEqual(self.run_scope(self.db, delayed, T0), "HTTP_503")
+            self.assertEqual(self.attempt(), (T0 + 3 * H, T0 + 3 * H, "ok", None, 3))
+            self.assertEqual(self.run_scope(self.db, fail, T0 + 6 * H), "HTTP_503")
+            self.assertEqual(self.attempt(), (T0 + 6 * H, T0 + 3 * H, "error", "HTTP_503", 0))
+            self.assertEqual(self.run_scope(self.db, lambda u: self.answer(START, u), T0 + 7 * H), "ok")
+            self.assertEqual(self.read()[0], (101, 8, T0 + 7 * H, 2))
 
 
 if __name__ == "__main__":

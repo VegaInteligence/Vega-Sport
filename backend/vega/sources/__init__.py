@@ -70,10 +70,13 @@ def run_due(conn, get, now=None, *, names=None):
             continue
         for scope in due(conn, instant, name, adapter):
             code, detail, refusal, written, unmatched = None, None, None, 0, 0
+            atomic_status = getattr(adapter, "ATOMIC_RUN_STATUS", False)
             try:
                 with conn.transaction():
                     conn.execute(f"SET LOCAL lock_timeout = '{LOCK_WAIT}'")
                     written, unmatched = adapter.run(conn, get, scope, instant)
+                    if atomic_status:
+                        record_run(conn, name, scope, instant, None, written, unmatched)
             except (SourceError, StoreError, ValueError, KeyError, TypeError, psycopg.Error) as error:
                 # The scope's writes are rolled back; the other scopes still run.
                 code = (
@@ -84,19 +87,27 @@ def run_due(conn, get, now=None, *, names=None):
                 if isinstance(error, SourceError):
                     detail = error.detail
                     refusal = getattr(error, "record_refusal", None)
-            try:
-                record_run(conn, name, scope, instant, code, written, unmatched, detail, refusal=refusal)
-            except psycopg.Error:
-                # A status that cannot be written must not stop the other scopes.
-                code = code or "STATUS_NOT_RECORDED"
+            if (not atomic_status or code) and code != "STALE_OBSERVATION":
+                try:
+                    record_run(conn, name, scope, instant, code, written, unmatched, detail, refusal=refusal)
+                except psycopg.Error:
+                    # A status that cannot be written must not stop the other scopes.
+                    code = code or "STATUS_NOT_RECORDED"
             results[(name, scope)] = code or "ok"
     return results
+
+
+def lock_scope(conn, name, scope):
+    conn.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", (f"source-run:{name}:{scope}",))
 
 
 def record_run(conn, name, scope, instant, code, written, unmatched, detail=None, *, refusal=None):
     refusal_detail = detail[:2000] if name == "sportscore" and code and detail else None
     with conn.transaction():
-        repeats, = conn.execute(
+        if name == "sportscore":
+            conn.execute(f"SET LOCAL lock_timeout = '{LOCK_WAIT}'")
+            lock_scope(conn, name, scope)
+        recorded = conn.execute(
             """INSERT INTO ops.source_runs(source, scope, last_attempt_at, last_success_at, status, error_code,
                                             rows_written, unmatched, detail, repeats, updated_at)
                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,now())
@@ -107,11 +118,14 @@ def record_run(conn, name, scope, instant, code, written, unmatched, detail=None
                  repeats=CASE WHEN EXCLUDED.detail IS NOT NULL
                    AND (ops.source_runs.error_code, ops.source_runs.detail) = (EXCLUDED.error_code, EXCLUDED.detail)
                    THEN ops.source_runs.repeats + 1 ELSE EXCLUDED.repeats END
+               WHERE EXCLUDED.source <> 'sportscore'
+                  OR ops.source_runs.last_attempt_at IS NULL OR EXCLUDED.last_attempt_at > ops.source_runs.last_attempt_at
+                  OR (EXCLUDED.last_attempt_at = ops.source_runs.last_attempt_at AND ops.source_runs.status <> 'ok')
                RETURNING repeats""",
             (name, scope, instant, None if code else instant, "error" if code else "ok", code, written, unmatched,
              refusal_detail, int(refusal_detail is not None)),
         ).fetchone()
-        if code and detail and repeats <= 1:
+        if recorded is not None and code and detail and recorded[0] <= 1:
             # What a refused snapshot would have changed (snapshot.py): the scope's status says that it
             # failed, this says which matches.
             failure(conn, code, f"{name}:{scope}: {detail}")
