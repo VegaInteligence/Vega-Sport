@@ -5,7 +5,16 @@
  * role, his top speed match by match and his distance split by pace. */
 import React, { useId, useMemo, useState } from "react";
 import { Segments, Skeleton } from "./UI.jsx";
-import { DistributionStrip, fmt, LineChart, PercentileBadge, SegmentBar, TipBody } from "./PlayerScoutCharts.jsx";
+import {
+  CalendarColumns,
+  DistributionStrip,
+  fmt,
+  Legend,
+  LineChart,
+  PercentileBadge,
+  SegmentBar,
+  TipBody,
+} from "./PlayerScoutCharts.jsx";
 import { number } from "../services/format.js";
 import {
   LOAD_WINDOW_DAYS,
@@ -154,8 +163,6 @@ function MatchLoad({ load }) {
     ["Enchaînements courts", number(load.shortRest), `${SHORT_REST_DAYS} jours ou moins après le précédent`],
     [`${LOAD_WINDOW_DAYS} derniers jours`, `${number(load.recent.minutes)} min`, `${number(load.recent.matches)} match${load.recent.matches > 1 ? "s" : ""} jusqu’au ${dayMonth(load.recent.until)}`],
   ];
-  const points = load.games.map((game) => ({ x: dayMonth(game.date), y: game.minutes, game }));
-  const high = Math.max(100, Math.ceil(Math.max(...load.games.map((g) => g.minutes)) / 10) * 10 + 10);
   return (
     <>
       <div className={`${s.kpiStrip} ${s.loadStrip}`}>
@@ -169,32 +176,34 @@ function MatchLoad({ load }) {
           </div>
         ))}
       </div>
-      {points.length >= 2 && (
+      {load.games.length >= 2 && (
         <section className={s.panel} aria-labelledby={heading}>
           <div className={s.panelTitle}>
             <h3 id={heading}>
-          <Term>Minutes par match</Term>
-        </h3>
-            <p>Dans l’ordre des matchs · au survol, le repos avant chacun</p>
+              <Term>Minutes par match</Term>
+            </h3>
+            <Legend
+              items={[
+                ["swatchColumn", "Titulaire"],
+                ["swatchColumnOff", "Remplaçant"],
+                ["swatchRest", `≤ ${SHORT_REST_DAYS} j de repos`],
+              ]}
+            />
           </div>
           <div className={s.panelBody}>
-            <LineChart
-              width={1040}
-              height={220}
-              points={points}
-              domain={[0, high]}
-              ticks={Array.from({ length: high / 30 + 1 }, (_, i) => i * 30).filter((v) => v <= high)}
-              labelEvery={Math.max(1, Math.ceil(points.length / 12))}
-              reference={{ y: 90, label: "90 min" }}
-              format={(v) => `${number(v)}`}
-              ariaLabel="Minutes jouées par match"
-              tip={(point) => (
+            <CalendarColumns
+              games={load.games.map((game) => ({ ...game, value: game.minutes }))}
+              tickLabel={(v) => (v ? `${v}′` : "0")}
+              shortRest={SHORT_REST_DAYS}
+              windowDays={LOAD_WINDOW_DAYS}
+              ariaLabel="Minutes jouées par match, à leur date"
+              tip={(game) => (
                 <TipBody
-                  title={`${point.game.league || "Match"} · ${dayMonth(point.game.date)}`}
+                  title={`${game.league || "Match"} · ${dayMonth(game.date)}`}
                   rows={[
-                    ["Minutes", number(point.y)],
-                    ["Titulaire", point.game.starter == null ? "—" : point.game.starter ? "oui" : "non"],
-                    ["Repos avant", point.game.rest == null ? "—" : days(point.game.rest)],
+                    ["Minutes", number(game.minutes)],
+                    ["Titulaire", game.starter == null ? "—" : game.starter ? "oui" : "non"],
+                    ["Repos avant", game.rest == null ? "—" : days(game.rest)],
                   ]}
                 />
               )}
