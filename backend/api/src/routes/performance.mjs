@@ -130,8 +130,9 @@ export function createPerformanceRoute(read) {
            'total',(SELECT count(*) FROM api.player_appearances a WHERE a.season_id=${season} AND a.match_id=t.match_id AND ${SHOWN("a")})) END FROM target t) AS rank,
         (SELECT row_to_json(m) FROM (SELECT ${matchRecordColumns({ shots: params.get("include") === "shots" })} FROM f) m) AS match,
         (SELECT row_to_json(c) FROM api.competitions c JOIN target t ON c.id=t.league_id) AS competition,
-        (SELECT gs.grade_status FROM api.player_grade_status gs JOIN target t
-           ON gs.season_id=t.season_id AND gs.match_id=t.match_id AND gs.player_id=t.player_id) AS grade_status
+        (SELECT gs.grade_status FROM api.player_grade_status gs WHERE gs.season_id=${season}
+           AND gs.match_id=api.internal_id('match',${bindValue(values, ids[1])})
+           AND gs.player_id=api.internal_id('player',${bindValue(values, ids[2])})) AS grade_status
       FROM publication`;
     const [snapshot] = await read(sql, values);
     checkReadGeneration(params, snapshot?.generation);
@@ -148,7 +149,9 @@ export function createPerformanceRoute(read) {
         competition: c ? { id: c.id, name: c.name, country: c.country, providerCountry: c.country, imageUrl: c.image_url, seasons: c.seasons || [] } : null,
         profile: performanceProfileFromCounts(row, profileCounts(snapshot.profile_counts)),
         rank: snapshot.rank || null,
-        // Why the grade is shown, hidden or missing (155, FAILURE_MODES §38).
+        // Why the grade is shown, hidden or missing (155, FAILURE_MODES §38). Read by the key's bound values, never by a
+        // join to `target`: the view unions the statistics and the line-ups, and only conditions on its own columns
+        // reach their indexes (§46, 46b: the join built the whole view at each call).
         gradeStatus: snapshot.grade_status ?? null,
       },
       { maxBytes: 256 * 1024 },
