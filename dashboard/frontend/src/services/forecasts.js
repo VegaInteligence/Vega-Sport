@@ -165,58 +165,48 @@ export function useMatchWinProbability(matchId, enabled = true) {
   return on && !resource.error ? (resource.value ?? null) : null;
 }
 
-const CHART = { width: 720, height: 240, left: 30, right: 700, top: 24, bottom: 200 };
-
 /**
- * The drawing of a match's probabilities: three stacked areas (home at the bottom, the
- * draw, away at the top) over the minutes, a marker at each goal with the score it made,
- * and the three shares at kick-off. Null without at least two points.
+ * A match's probabilities as three lines over the minutes: `lines` with each goal a jump (the
+ * minute before stands until the goal), `series` the real minutes the pointer stops at, each goal
+ * with the score it made and the scoring side's chances the minute before and at the goal.
+ * Null without at least two points.
  */
-export function probabilityChart(answer, frame = CHART) {
+export function probabilityLines(answer) {
   const points = answer?.points || [];
   if (points.length < 2) return null;
-  const span = Math.max(90, points.at(-1).minute);
-  const x = (minute) => frame.left + (Math.min(minute, span) / span) * (frame.right - frame.left);
-  const y = (share) => frame.bottom - share * (frame.bottom - frame.top);
-  const fixed = (value) => Math.round(value * 10) / 10;
-  const area = (low, high) => {
-    const up = points.map((p) => `${fixed(x(p.minute))},${fixed(y(high(p)))}`);
-    const down = [...points].reverse().map((p) => `${fixed(x(p.minute))},${fixed(y(low(p)))}`);
-    return `M${up.join("L")}L${down.join("L")}Z`;
-  };
+  const byMinute = new Map(points.map((p) => [p.minute, p]));
   const score = [0, 0];
   const goals = (answer.events || [])
     .filter((event) => event.kind === "goal")
     .map((event) => {
       score[event.side === "home" ? 0 : 1]++;
-      return { x: fixed(x(event.minute)), side: event.side, minute: event.minute, label: `${score[0]}–${score[1]}` };
+      const before = byMinute.get(event.minute - 1), after = byMinute.get(event.minute);
+      return {
+        minute: event.minute,
+        side: event.side,
+        label: `${score[0]}–${score[1]}`,
+        from: before && after ? before[event.side] : null,
+        to: before && after ? after[event.side] : null,
+      };
     });
-  // Each goal with what it did to the scoring side's chances of winning, the minute before and at the goal.
-  const at = (minute) => points[Math.max(0, Math.min(points.length - 1, minute))];
-  const swings = goals.map((goal) => ({
-    minute: goal.minute,
-    label: goal.label,
-    side: goal.side,
-    from: at(goal.minute - 1)[goal.side],
-    to: at(goal.minute)[goal.side],
-  }));
+  const jumps = new Set(goals.filter((goal) => goal.from != null).map((goal) => goal.minute));
+  const pick = (p) => ({ minute: p.minute, home: p.home, draw: p.draw, away: p.away, score: p.score ?? null });
+  const lines = [];
+  points.forEach((p, i) => {
+    if (i && jumps.has(p.minute)) lines.push({ ...pick(points[i - 1]), minute: p.minute });
+    lines.push(pick(p));
+  });
   return {
-    swings,
-    // Each minute where the pointer can stop: its place and its three chances, with the score then.
-    series: points.map((p) => ({ minute: p.minute, x: fixed(x(p.minute)), home: p.home, draw: p.draw, away: p.away, score: p.score ?? null })),
-    paths: {
-      home: area(() => 0, (p) => p.home),
-      draw: area((p) => p.home, (p) => p.home + p.draw),
-      away: area((p) => p.home + p.draw, () => 1),
-    },
+    lines,
+    series: points.map(pick),
     goals,
-    reds: (answer.events || []).filter((event) => event.kind === "red").map((event) => ({ x: fixed(x(event.minute)), side: event.side, minute: event.minute })),
-    ticks: [0, 15, 30, 45, 60, 75, 90].map((minute) => ({ minute, x: fixed(x(minute)) })),
+    reds: (answer.events || []).filter((event) => event.kind === "red").map((event) => ({ minute: event.minute, side: event.side })),
+    span: Math.max(90, points.at(-1).minute),
     start: points[0],
+    end: points.at(-1),
     live: answer.status === "in_play" ? points.at(-1) : null,
     // The kick-off's shares come from the forecast that read the two confirmed line-ups.
     lineups: answer.lineups === true,
-    frame,
   };
 }
 

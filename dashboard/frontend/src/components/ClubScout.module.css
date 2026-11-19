@@ -859,8 +859,108 @@
 /* ----------------------------------------------------------- shot maps */
 .pitchPair {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 600px));
+  gap: 28px 40px;
+}
+/* ------------------------------------------------- xG trend, shot maps */
+/* Both are drawn at their measured width: their text keeps its size on every screen. */
+.xgTrend,
+.shotPlot {
+  width: 100%;
+}
+.xgPlot,
+.shotPlot {
+  position: relative;
+}
+.xgSvg,
+.shotPlot svg {
+  display: block;
+  overflow: visible;
+  font-variant-numeric: tabular-nums;
+  cursor: crosshair;
+  touch-action: pan-y;
+}
+.axisText {
+  fill: var(--muted);
+  font-size: 11px;
+}
+.endValue {
+  fill: var(--ink-strong);
+  font-size: 13px;
+  font-weight: 600;
+}
+/* A card beside its point, not over it: on the right, or on the left past the middle. */
+.plotTip.sideTip {
+  transform: translate(14px, -50%);
+}
+.plotTip.sideTip[data-flip] {
+  transform: translate(calc(-100% - 14px), -50%);
+}
+.plotTip small.tipNote {
+  display: block;
+  margin: 0 0 4px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  letter-spacing: 0;
+  text-transform: none;
+}
+.trendLegend i.legendDot,
+.trendLegend i.legendRing {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+.trendLegend i.legendDot {
+  background: var(--muted);
+}
+.trendLegend i.legendRing {
+  background: none;
+  border: 1.5px solid var(--muted);
+}
+.trendLegend i.legendDash {
+  height: 0;
+  background: none;
+  border-top: 2px dashed var(--muted);
+}
+.shotTitle {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--ink-strong);
+  font-size: var(--text-sm);
+}
+.shotFigures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+  margin: 0 0 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.shotFigures dt {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.shotFigures dd {
+  margin: 2px 0 0;
+  color: var(--ink-strong);
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.shotFigures b {
+  font-weight: 600;
+}
+.shotPair > .trendLegend {
+  margin: 16px 0 0;
+}
+.trendLegend .sizeKey {
+  gap: 10px;
+}
+.trendLegend .sizeKey i {
+  box-sizing: border-box;
+  border: 1px solid var(--muted);
+  border-radius: 50%;
+  background: none;
 }
 .pitchTitle {
   display: flex;
@@ -985,6 +1085,10 @@
   .grid3,
   .pitchPair {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .shotFigures {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
   .mirrorHead,
   .mirrorRow {

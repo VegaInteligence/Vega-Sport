@@ -108,11 +108,18 @@ test("shot maps: an unknown xG makes the total unknown, a known zero stays", () 
       mapAgainst: [{ id: 3, x: 5, y: 30, xg: 0, outcome: "saved", situation: "openPlay", opponent: "Y" }],
     },
   }));
-  assert.match(markup, /2 tirs · — xG · 1/);
-  assert.match(markup, /1 tirs · 0,0 xG · 0/);
-  assert.match(markup, /xG indisponible/);
+  // Each side's key figures: shots, xG (unknown as soon as one shot has none), goals; the
+  // figures that need the xG are unknown with it.
+  const figures = (side) => {
+    const block = markup.slice(markup.indexOf(`data-shotmap="${side}"`));
+    return Object.fromEntries([...block.matchAll(/data-figure="(\w+)"><dt>[^<]*<\/dt><dd><b>([^<]*)<\/b>/g)].slice(0, 6).map((m) => [m[1], m[2]]));
+  };
+  assert.deepEqual(figures("for"), { shots: "2", xg: "—", goals: "1", diff: "—", perShot: "—", distance: figures("for").distance });
+  assert.deepEqual(figures("against"), { shots: "1", xg: "0,0", goals: "0", diff: "0,0", perShot: "0,00", distance: "6,4 m" });
   assert.doesNotMatch(markup, /NaN/);
-  assert.equal((markup.match(/<circle/g) || []).length, 3);
+  // One mark per shot; the one without xG drawn dashed.
+  assert.equal((markup.match(/data-mark=/g) || []).length, 3);
+  assert.equal((markup.match(/stroke-dasharray="2 2"/g) || []).length, 1);
 });
 
 test("game states: an unknown time in each state is not 0 %", () => {

@@ -715,7 +715,7 @@ export function Matches({ dossier }) {
     <div className={c.stack}>
       <Card
         title="Dynamique des xG"
-        text="Moyenne glissante sur cinq matchs, toutes compétitions."
+        text="Toutes compétitions."
       >
         <XgTrend rows={dossier.allRows} />
       </Card>
@@ -737,7 +737,7 @@ export function Matches({ dossier }) {
       <ClubSubstitutions id={dossier.id} season={dossier.season} />
       <Card
         title="Cartes des tirs"
-        text="Toutes compétitions, tirs à moins de 40 m du but · taille selon les xG, plein = but."
+        text="Toutes compétitions."
       >
         <ShotPair profile={dossier.shotsAll} />
       </Card>
