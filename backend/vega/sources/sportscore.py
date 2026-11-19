@@ -222,6 +222,10 @@ def check(tables):
         raise SourceError("EMPTY_TABLE", "no row")
     groups = [group for group, _ in tables]
     if len(tables) > 1 and len(set(groups)) != len(groups):
+        # Tables without a name are phases the source does not tell apart (Veikkausliiga 2026's regular season,
+        # championship and relegation groups, FAILURE_MODES.md §43.1): never named by Vega, never merged.
+        if groups.count(None) > 1:
+            raise SourceError("DUPLICATE_GROUP", f"{groups.count(None)} tables without a name: phases the source does not name")
         raise SourceError("DUPLICATE_GROUP", "two tables named " + repr(next(g for g in groups if groups.count(g) > 1)))
     for group, rows in tables:
         label = group or "the table"
