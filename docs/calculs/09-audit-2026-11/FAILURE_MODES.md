@@ -2931,8 +2931,11 @@ resolves by those keys (`cups._team`, `archives.Loader.team`) and writes 707 aga
 ### 39.1 Rules
 
 - A reviewed club spelling (`curated.CLUB_ALIASES`) whose name several clubs bear goes only to the club of the country
-  reviewed for it (`CLUB_ALIAS_COUNTRIES`: « Barcelona » is Spain's); with no reviewed country, to none of them (counted
-  unmatched). It replaces a `source_spelling` of the same normalized form on that club (the alias is the stronger
+  reviewed for it (`CLUB_ALIAS_COUNTRIES`: « Barcelona » is Spain's); with no reviewed country nothing is written and
+  nothing is removed: each club keeps what it holds, and the name is counted unmatched and logged for review
+  (amended by the coordinator on 19 November, before the test 39l: production's homonyms among the 301 reviewed names
+  are not measured, and taking an alias from a club that resolves by it would make the next cup import create a second
+  club). It replaces a `source_spelling` of the same normalized form on that club (the alias is the stronger
   statement), and it is removed from the other clubs of that name that hold it.
 - A reviewed side correction (`identity.SIDE_CORRECTIONS`) names: the club a side was given to and the club that played,
   each by its PitchAPI key; the provider keys that came with the merge; and each match, by its Vega id or its provider
@@ -2973,6 +2976,7 @@ resolves by those keys (`cups._team`, `archives.Loader.team`) and writes 707 aga
 | 39i | Seraing U21–Beerschot U21 (open-matchday, 0–5, forfeit: voetbalvlaanderen match 7631244), stored `finished` | kept `finished` 0–5 and counted by `core.table_results`; not an Elo match | red: admitted |
 | 39j | A UEFA row « Andorra CF » (ESP) while FC Andorra (845) holds « Andorra CF » as a SportScore spelling | a new UEFA team: 845 is not linked | red: linked to 845 |
 | 39k | SportScore's own linking of a table naming « Andorra CF » in FC Andorra's edition, and the 838 spellings of the 18 November register in their editions | linked as before | green on arrival (no change there) |
+| 39l | `club_aliases` on two clubs named « Inter » (ITA, FIN), a reviewed name with no reviewed country, the Italian one holding the alias « Internazionale Milano » | nothing written, nothing removed: the Italian club keeps its alias, the Finnish one gets none; one name unmatched; the pass again changes nothing | red on the lane's first rule: the alias is removed from the Italian club |
 
 Recorded, not corrected here:
 - 33 CONCACAF Champions League 2008/09 matches stored in edition 3333 (`g:champions-league`, « Ligue des champions »,

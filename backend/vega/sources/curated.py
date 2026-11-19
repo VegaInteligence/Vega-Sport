@@ -413,10 +413,11 @@ CLUB_ALIAS_COUNTRIES = {"Barcelona": "ESP"}
 
 def club_aliases(conn):
     """The reviewed spelling of each club named as a key, written as its alias (FAILURE_MODES.md §39). A name one
-    club bears: that club. A name several bear: the one of the country reviewed for it (CLUB_ALIAS_COUNTRIES), else
-    none, counted unmatched; the other clubs of that name lose the alias if they held it. The alias replaces a source
-    spelling of the same form on the club (UEFA's « FC Barcelona » on FC Barcelona): the identity pass reads aliases,
-    not source spellings."""
+    club bears: that club. A name several bear: the one of the country reviewed for it (CLUB_ALIAS_COUNTRIES), and the
+    other clubs of that name lose the alias if they held it; with no reviewed country, or not exactly one club of that
+    country, nothing is written or removed (each club keeps what it holds), the name is counted unmatched and logged
+    for review. The alias replaces a source spelling of the same form on the club (UEFA's « FC Barcelona » on FC
+    Barcelona): the identity pass reads aliases, not source spellings."""
     from . import normalize
 
     written = unmatched = 0
@@ -428,8 +429,12 @@ def club_aliases(conn):
         if len(clubs) > 1:
             country = CLUB_ALIAS_COUNTRIES.get(name)
             chosen = [team for team, code in clubs if country and code == country]
-            chosen = chosen if len(chosen) == 1 else []
-            unmatched += not chosen
+            if len(chosen) != 1:
+                # Not reviewed for these clubs: what each holds stays (39l); taking the alias from the club that
+                # resolves by it would make the next cup import create a second club.
+                unmatched += 1
+                print(f"club alias {name!r} shared by {len(clubs)} clubs without a reviewed country: unchanged", flush=True)
+                continue
             others = [team for team, _ in clubs if team not in chosen]
             written += conn.execute(
                 """DELETE FROM core.entity_names WHERE entity_type = 'team' AND entity_id = ANY(%s) AND normalized = %s
