@@ -3228,3 +3228,146 @@ lot holds the rest of `uefa.py`).
   as read; a coach leaving without a named successor keeps an open tenure.
 - No history table of absences ended (153 has one for the transfers): the mark is cleared on reappearance and the
   absence is not kept for values, injuries and squads.
+
+## 43. A league table mixed from three phases, a World Cup listed twice on the nation pages, a native match stored twice (audit E02c, E03f, E04d, E04i; 19 Nov 2026, written before the tests)
+
+Lot « classements », branch `claude/audit-classements` from `74970d7fe3` (main `2088d36e60` and six lots). Migration
+159 is additive (functions and views); no published migration changes; no row is deleted or rewritten by it.
+
+### 43.1 Veikkausliiga 2026: three phase tables served as one (E02c)
+
+**What production serves (19 Nov, lot « production »).** `GET /api/standings?competition=l_3Ci5Cg`: one table of 12
+rows, `source` SportScore, `fetchedAt` 2026-11-19T09:01:50.914Z (before the 10:05 UTC deployment), positions
+1,1,1,2,2,3,4,4,4,5,6,6, clubs at 32, 27 or 22 matches; ΣW 123 ≠ ΣL 114.
+
+**Why.** SportScore's widget (`?sport=football&slug=finnish-veikkausliiga`, captured 19 Nov 17:26 UTC) answers three
+tables, each with `"group": ""`: the regular season (12 clubs, 22 matches, ranks 1–12), the championship group (6
+clubs, 32 matches, ranks 1–6) and the relegation group (6 clubs, 27 matches, ranks 1–6). The writer deployed before
+10:05 (main `21b6fa74f2`, `sportscore.py` of `dc65d69`) stored every row under group NULL (`len(tables) > 1` keeps the
+group, but `""` reads None), sorted by (group, team, position, …), and inserted with `ON CONFLICT DO NOTHING`: each
+club kept its row of lowest rank. KuPS (1st of the regular season, 3rd of the championship group) kept its 22-match
+row, Inter Turku (2nd, 1st) its 32-match row, Lahti (7th, 1st) its 27-match row — exactly the 12 rows served. The
+rows have no basis (written before 138's column). Since the deployment the writer refuses the answer
+(`check`: `DUPLICATE_GROUP`, three tables named None) and keeps the stored rows; migration 150's view still serves
+them because nothing in it reads the ranks.
+
+**Rules.**
+- A response's tables are refused when two or more of them carry no name: the source does not tell its phases apart,
+  and Vega does not name them by position or by count. Code `DUPLICATE_GROUP` (unchanged), its detail naming « N
+  tables without a name ». The accepted table keeps its rows, its date and its ETag; the scope is tried again at the
+  content cadence. Distinct named tables are published as today (one table per group).
+- The rank invariant the writer applies (`check`) is now also applied when the table is read: within one stored
+  table of an edition (SportScore's rows, no stage, one `group_name`), two clubs sharing a rank have equal points,
+  and a table that is the edition's only table holds all its ranks (its highest rank is at most its number of rows).
+  Shared ranks of equal points stay admissible: the writer has admitted them since VI-29 (cases S11, S34 of
+  FAILURE_MODES_SPORTSCORE.md; « 1…n without repetition » is read as « no rank shared between clubs of different
+  points »). No played-count rule is added: a split league's official single table (ranks 1–6 at 32 matches, 7–12 at
+  27) is one phase-consistent table.
+- An edition whose stored SportScore rows break it is withheld (`api.standings_rank_conflicts()`): its official rows
+  are not the authority, so `api.standings` serves Vega's own table of the edition when one exists (as for an edition
+  without an official table), and nothing otherwise. The edition stays the one `/api/standings` selects (it is listed
+  by `api.standings_withheld()`, with J1's exclusion of 147/150): a withheld current edition answers 404 « Donnée
+  indisponible. », never the previous season's table. Rows that satisfy the invariant again (a later accepted
+  response replaces them) are served again: the rule reads the content, not an edition.
+- 159 raises the resource version of each edition it withholds, once, as 150 did for J1.
+
+**Failure modes and expected outcomes.**
+
+| # | Situation | Expected | On `74970d7fe3` |
+|---|---|---|---|
+| 43a | The captured widget answer, through `sources.run_due` under `vega_collect`, over the stored rows | refused `DUPLICATE_GROUP`, detail « 3 tables without a name »; stored rows, `as_of` and version unchanged; one `ops.parse_failures` row | refused `DUPLICATE_GROUP` (« two tables named None »): green on arrival but for the detail |
+| 43b | The 12 stored rows of production (no basis, `as_of` 09:01:50.914Z), no Vega table; `GET /api/standings?competition=l_3Ci5Cg` and `&season=2026` under `vega_read`, a 2025 edition with its own table present | 404 both, not the 2025 table | red expected: 200, the mixed table |
+| 43c | The same with Vega's table of the edition (`agg.standings`) | 200, `source` « Vega », Vega's rows | red expected: the SportScore rows |
+| 43d | The same rows re-ranked 1–12 (an admissible table) | 200, SportScore, served as stored | green |
+| 43e | A shared rank of equal points (S34's table), a multi-table edition whose groups each start at 1 (World Cup groups, USL's two conferences) | served | green |
+| 43f | Two clubs at the same rank with different points inside one group of a multi-table edition | withheld | red expected |
+| 43g | The edition's only table ranks 1–11 and 13 (12 rows) | withheld | red expected |
+| 43h | 159 applied over a base holding 43b's rows | the withheld edition's resource version raised once, the previous edition's unchanged | red expected: no 159 |
+| 43i | The 47 SportScore answers of `/api/standings` read in production on 19 Nov (`evidence/prod/raw/standings-*-1.body`), replayed through `check` (as widget tables) and through `api.standings_rank_conflicts()` (as stored rows) | 46 admitted by both; Veikkausliiga refused (`DUPLICATE_POSITION` as one stored table) and withheld | — |
+
+Not covered: whether production's `agg.standings` holds a Vega table for this edition (no public read shows it).
+If it does, the route serves it after deployment; if not, 404 until SportScore answers an admissible table. Naming
+SportScore's unnamed phases (« saison régulière », « groupe championnat ») would need a source that names them.
+
+### 43.2 The World Cup 2026 twice on the nation pages (E03f, E04d)
+
+**What production serves (19 Nov).** `GET /api/nations/t_0WmIZB?season=…` (Argentina): 11 World Cup 2026 matches for
+8: three copies dated the day before (06-16, 06-27, 07-11), `competition` « World Cup 1930 », `edition`
+`open-cups:world-cup-history:2026`. Mexico: 9 for 5. France, Ivory Coast and Qatar: their copies share the native
+day. Every archive match of the family reads « World Cup 1930 » (Argentina: 84, France: 66), the Euro's « Euro
+2021 », International Results' « Copa América 2024 » and « Coupe d'Afrique des nations 2021 ».
+
+**Why.** `api.nation_matches` (120) keeps one copy per (day, pair of teams): OpenFootball dates a match on its local
+day, PitchAPI on the UTC day of its kick-off, and an evening match in the Americas is one day earlier in the archive.
+The label is `core.competitions.name` of the edition's competition; `cups.save` creates the family's competition once,
+named after the body of the first edition it imports (`name = body.get("name")`: « World Cup 1930 »). The edition's
+own name is `core.competition_seasons.cup_name` (« World Cup 2026 »).
+
+**Rules.**
+- Two copies of one match: the same two teams (the merged identities, as the function reads them), the same score
+  by team (two unscored copies agree), days at most one apart, in two different editions. Only one is listed: the
+  native copy first (no cup key, no archive key), then a scored one, then the lowest id. Copies of one day stay
+  merged as before (whatever their edition or score).
+- Kept distinct: the same teams one day apart in the same edition, or with a different score, or two days apart.
+- The kept copy takes the round and the penalties from the copies it absorbs when it has none (as 120 does for a
+  copy of the same day).
+- A match's `competition` is its edition's name when the edition has one (`cup_name`), else its competition's:
+  « World Cup 2026 » for the 2026 archive, « World Cup 1978 » for 1978; a native edition keeps « World Cup ».
+- Nothing changes in the base: the read only.
+
+**Failure modes and expected outcomes** (`GET /api/nations/{id}?season=2025/2026` under `vega_read`).
+
+| # | Situation | Expected | On `74970d7fe3` |
+|---|---|---|---|
+| 43k | A native match and its archive copy dated the day before, same score, other edition | one match, the native one (`id` present, native round) | red expected: both |
+| 43l | The same with another score in the copy | both | green |
+| 43m | Two matches one day apart, same score, same edition | both | green |
+| 43n | Two copies on the same day | one (120 unchanged) | green |
+| 43o | An archive match no native copy holds | listed, `competition` « World Cup 2026 » (its edition's name) | red expected: « World Cup 1930 » |
+| 43p | A copy two days apart | both | green |
+| 43q | The native copy without penalties, the copy of the day before with them | one match, the copy's penalties | red expected |
+| 43r | Argentina's World Cup 2026 as production holds it (8 native, 3 copies J−1, 5 copies the same day) | 8 matches; one run « Coupe du monde 2026 » of 8 games | red expected: 11 |
+
+### 43.3 Lanús–Estudiantes stored twice as a native match (E03f, E04i): specification, not code
+
+**What production serves (19 Nov, 17:30 UTC, `evidence/classements/raw/lanus/`).** Two matches of Liga Profesional
+2026 (`l_45VZuL`), both PitchAPI keys, both finished 2–1 at 2026-09-22T00:15Z, Lanús (`t_0rsFNq`) – Estudiantes
+(`t_1HsET8`): `m_0Feldm` and `m_1bi3Az` (RDS ids 40022 and 40023 per the audit's `sql/controles/lanus.sql`; the
+public reads do not show which id is which). Each serves its line-ups (2 × 11 starters, 2 × 12 substitutes, the same
+players), 17 events, team statistics, player statistics and 32 grades: 64 grades for 32 appearances, and the match
+twice in the lists and in the Elo.
+
+| | `m_0Feldm` | `m_1bi3Az` |
+|---|---|---|
+| round | « Clausura - Round 10 », the name the other 9 round-10 matches carry | « 10 » |
+| referee, stadium | Nicolás Ramírez, Estadio Ciudad de Lanús | no referee, stadium |
+| player statistics | 46 rows (one with `goals_prevented`) | 45 rows |
+| events, line-ups, grades | 17, 46 players, 32 | 17 (one `minute_added` 6 for 5), 46 players (two starters' order swapped), 32 |
+| team statistics | — | some period values differ (0 against 2) |
+
+**Canonical: `m_0Feldm`.** It is the more complete copy (referee, one more player-statistics row), and it carries the
+league's round naming. The organiser publishes one match (« Fecha 10 », 21 Sep 21:15 local: the audit's
+`INTEGRITE.md`). Not verified: which copy PitchAPI serves today (no provider call is permitted to this lot). The other
+round-10 fixtures of the edition have a twin too, `postponed`, without a round and without a score (`m_14LPSW`,
+`m_0jdOYm`, …): the provider's superseded copies, which `m_1bi3Az` resembles by its key, round and missing referee.
+
+**Correction (specified, not written).** A reviewed list, `identity.MATCH_TWINS = {"lanus-estudiantes-2026-09-22":
+{"keep": "m_0Feldm", "drop": "m_1bi3Az", "proof": …}}`, on the model of `SIDE_CORRECTIONS` and
+`core.team_side_corrections` (156):
+- Preimage, both rows `FOR UPDATE`: edition of `l_45VZuL` 2026, `pitchapi` current keys `m_0Feldm` and `m_1bi3Az`,
+  status `finished`, kick-off 2026-09-22 00:15Z, home `t_0rsFNq`, away `t_1HsET8`, score 2–1. Any difference: the pair
+  is held (nothing written, a line printed), as a held side correction.
+- Effect: one row in a new journal `core.match_twin_corrections(match_id, canonical_id, correction, proof_sha256,
+  applied_at)` (additive migration, the collection role may insert, nobody may update or delete), nothing else
+  written. Every reader of a match skips a journaled `match_id`: the Elo (`power.ELO_MATCHES`, next to
+  `ADMINISTRATIVE`), the grades (`agg.player_match_grades` and the board), the lists (`api.fixtures` and the views
+  over `core.matches`: league fixtures, club and player pages, `api.nation_matches`), `core.table_results` and
+  `agg.standings`. Its rows, keys, statistics, events, line-ups and grades stay stored; its public id answers 404
+  (or a redirect to the canonical id, a site decision).
+- Idempotent: a second pass finds the journal row and writes nothing. A PitchAPI refresh of the dropped key writes
+  the row as before; the journal keeps it unread.
+- Why no code here: the readers to change are outside this lot's write scope (`power.py`, the grades, `api.fixtures`
+  and the club and player views); the correction cannot be bounded to the pair and tested end to end from
+  `identity.py` alone. A deletion of the match is excluded (user decision required).
+- The audit counts five finished/finished PitchAPI pairs (`INTEGRITE.md`; another is Estudiantes de Río Cuarto–
+  Instituto, 39992/39993) and 46 finished/postponed pairs: each needs its own reviewed entry, never a rule.
