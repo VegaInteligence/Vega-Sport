@@ -3075,3 +3075,152 @@ history of `oladeeayo/open-matchday`, `evidence/historique/rouge/gel-*.json`):
 name real folders (National League North, Cymru Premier) with built or capsule rows and count the matches written: the
 results attested for those folders would now be created beside them (22 in Cymru Premier, 59 in the North). Both
 classes keep the 35-result ledger alone; no assertion changes. 41o tests the Elo wake after a creation.
+
+## 44. Guarantees of the writers §40 found wanting: an omission is not a deletion (audit E02c, E02d, E03h; 19 Nov 2026, written before the tests)
+
+Lot « garanties », branch `claude/audit-garanties` from `4fb0082d51` (main `2088d36e60` with the « collecte »,
+« notes » and « writers » lots). It corrects the twelve defects §40 proved (40c, 40f, 40g, 40h, 40j, 40k, 40n, 40o,
+40s, 40t, 40w, 40x) and `write_search`, which the matrix names without a replay. The model is VI-31's for the
+transfers (§33, 35w–35z, migration 153): the last accepted read stays served, an element the provider stops listing is
+kept and marked absent from the day of the read instead of being deleted, a refusal is traced and the unit stays due.
+Migration 160 is additive (columns and views); no published migration changes; no row is deleted or rewritten by it.
+
+### 44.1 What the code does on `4fb0082d51` (the §40 replays, red with `WRITER_REPLAY_STRICT=1`)
+
+- `write_values` deletes every Transfermarkt point of the player absent from a non-empty history (40c); an empty
+  history is acquitted without a write (40b holds, but the unit is not refused).
+- `write_injuries` deletes all the player's episodes and inserts the answer: an empty list erases them (40f), a short
+  one drops the omitted episode (40g), every read gives the episodes new ids (40e). A refused read sets `error_code`,
+  and `api.player_injury_reads` (116) requires `error_code IS NULL`: the route answers 404 although the accepted
+  history is stored (40h).
+- `write_squad` and `write_search` delete a club-season's members and insert the answer: empty (40j) or short (40k)
+  answers erase members, acquitted.
+- `uefa.fetch` accepts `totalElements: 0` with no member and `uefa.save` deletes the edition's rows (40n); every read,
+  identical or not, deletes and rewrites the rows and raises the edition's `ranking` resource version (40x).
+- `fifa.run` reads an edition once: one stored short (one row of three) is never read again (40o).
+- `wikidata.save_club` writes `founded_year` as the answer gives it (NULL when absent) and closes the open Wikidata
+  tenure when the answer names no coach (40s); `save_stadium` writes capacity, its date and the coordinates as given,
+  NULL included (40t).
+- `player_facts.save` replaces `core.players.birth_date` whatever its provenance and leaves `birth_date_source_url`:
+  a date the Transfermarkt snapshot attested is served under the snapshot's URL with Wikidata's value (40w).
+
+### 44.2 Rules
+
+**Empty answers (40b, 40f, 40j, 40n).** An answer that is valid in form but holds no element never removes an
+accepted observation. For a Transfermarkt history (values, injuries) or squad, when the player (club-season) holds at
+least one row of the provider, the read is refused: `Failed` with HTTP 200 and a code (`HISTORY_EMPTY` for values and
+injuries, `SQUAD_EMPTY` for a squad), nothing is written, `ops.transfermarkt_reads` keeps `read_at` and
+`rows_written` of the last accepted read and carries the code, the attempts and the bounded backoff (the unit is due
+again within the retry delay). Holding nothing, the empty answer is an ordinary one (a player never injured, a season
+without a squad): acquitted, 0 rows. An empty UEFA edition is refused whatever is stored (`EMPTY_EDITION`): it would
+otherwise delete the rows, or create an empty edition marked current; the scope fails, `ops.source_runs` traces it and
+the next attempt comes after `RETRY_AFTER`.
+
+**Malformed answers (40d, 40h).** Unchanged refusals (`SCHEMA_CHANGED`, schema stop). A refused or failed refresh
+never hides an accepted read: `api.player_injury_reads` names the player once one read was accepted (`read_at IS NOT
+NULL`; the reader sets `read_at` only in `done`, never on a refusal), whatever the last attempt gave, as 153 does for
+the transfers. A first read refused stays unknown (404); a quarantine still hides everything.
+
+**Histories (values 40c, injuries 40g).** An element a valid, non-empty answer omits is not deleted: it keeps its facts
+and is marked `absent_since` = the day of the read (the first day it was missed; a later omission keeps that day).
+Listed again, the mark is cleared. Nothing of the provider's rows is deleted by the reader any more.
+- A value point is keyed by its day (the table's key). A listed point is written only when its value, club, team or
+  mark differ: a second identical pass changes no row and records `rows_written` 0; a real correction (another value
+  on that day) replaces it. A point of the 6 July 2026 snapshot (`market_value_snapshot`, same source) that the
+  reader's history omits is marked like any other: it no longer oscillates (deleted by the reader, re-inserted by the
+  snapshot the next day), since the snapshot only rewrites a point whose `as_of` is not later than its vintage.
+- An injury episode has no provider id. It is keyed by (start date, label). An answered episode matches the stored one
+  of the same key; then, inside one start date, one stored episode left unmatched and one answered episode left
+  unmatched are the same episode whose label the provider corrected. Otherwise the answered episode is new. A matched
+  episode keeps its id and is updated in place when a fact differs (end, days, games, season, kind, label). The same
+  key twice in one answer is one episode when both state the same facts; with different facts the answer is refused
+  (`HISTORY_CONFLICT`), as for the transfers.
+- Served: **with the mark, as 153 serves the transfers**. `api.player_market_values` and `api.player_injuries` gain
+  `absent_since` as their last column; `GET /api/player-market-values` adds `absentSince` to a point and
+  `GET /api/players/{id}/injuries` to an episode only when it is set (additive fields: a body without absence is the
+  same bytes as before). The site reads neither field: an absent point stays on the value curve and can remain the
+  « latest value » of the profile (139), and an absent episode stays in the list. This keeps what the site showed
+  before a truncated answer; the price is that a real removal by the provider (a value or an episode deleted, a start
+  date corrected) stays shown, marked in the API, until a person decides.
+
+**Current state (squads 40j, 40k, `write_search`).** A member may leave for real; a truncated answer cannot be told
+from a departure. The squad response carries no size of its own, and the club record's `squadSize` (`/clubs`) counts
+the current squad, not a season's: it cannot check a past season, and nothing proves it counts the same members as
+`/club/{id}/squad` for the current one. No threshold is invented. The rule: a member omitted by a valid, non-empty
+squad is kept and marked `absent_since` (listed again: the mark goes); the linker (`link_players`) reads the present
+members only, so a departure or a truncation weighs on the links exactly as the deletion did, but the observation and
+its day stay. `read_on` is the day the row last changed: a second identical pass writes nothing. `write_search` writes
+the candidates' squads by the same rule (it never wrote an empty one). What this lets through: a truncated answer
+still removes a member from the link candidates until he is listed again; a real departure is kept marked, never
+removed.
+
+**Fields absent from an answer (40t, 40s).** A field an answer omits does not set a known field to NULL.
+- Stadium: the capacity, its observed date and its day are written together when the answer gives a capacity, else
+  all three kept; the coordinates when both are given, else both kept; the opening date (and its year) and the
+  creation date each when given. A different given value replaces the stored one (a correction).
+- Club: `founded_year` when given (a different year replaces), else kept; the stadium was already kept (coalesce).
+- Coach: a Wikidata tenure is closed only when the answer names another coach; it closes on the day of that read and
+  the new one opens. An answer without a coach changes no tenure. A real departure without a successor named is not
+  seen: the tenure stays open until the next named coach. This is the known limit of the rule.
+
+**Birth dates (40w).** A birth date with a recorded provenance (`core.players.birth_date_source_url` set: the
+Transfermarkt snapshot writes it only with the date it fills) keeps its value and its URL. A different plausible date
+from Wikidata does not replace it and never takes its URL: the conflict is traced once in `ops.parse_failures`
+(`BIRTH_DATE_CONFLICT`, the player, the stored date and URL, Wikidata's date and person). The link and the height are
+still written. A date without provenance (empty, or written by Wikidata, which records none) is replaced as before: a
+Wikidata correction applies. The dates already overwritten in production are not repaired by the code (it would change
+the date the site shows): §44.4 gives the query that lists them.
+
+**FIFA editions (40o).** The source states no edition size (the overview lists rows only), so a completeness check
+would need an invented threshold. The rule is a re-read: the latest stored edition, while it is the latest of the
+catalogue, is read again when its last read (`core.ranking_editions.checked_at`, new) is at least `REREAD` (7 days)
+old. An identical re-read writes no row and raises no version (only `checked_at`); a re-read with at least as many rows
+and other content replaces the rows and raises the version once; a re-read with fewer rows than stored is refused: the
+stored rows stay, `ops.parse_failures` records `EDITION_SHORTER` once for that edition and count, and the next re-read
+comes a week later; an empty re-read (not published) changes nothing. Older editions keep main's rule (never read
+again). What it lets through: an edition read short and superseded before its re-read stays short.
+
+**UEFA editions (40x, 40n).** `uefa.save` builds the edition's rows (links, logos and crests as before) and compares
+them with the stored rows and season points: equal, it deletes and inserts nothing and raises no `ranking` version;
+the edition's own record is updated only when one of its fields differs. Any difference replaces the edition and
+raises its version once. The emptiness refusal is in `fetch` (above). Only `fetch` and `save` change (the « identités »
+lot holds the rest of `uefa.py`).
+
+### 44.3 Failure modes and expected outcomes
+
+| # | Writer | Situation | Expected |
+|---|---|---|---|
+| 44a (40b) | values | `{"history": []}` after two accepted points | both kept; `HISTORY_EMPTY`, 200, due within a day |
+| 44b (40c) | values | a valid history without one of the two points | both kept; the omitted one `absent_since` = read day; read acquitted |
+| 44c | values | then the whole history again | the mark cleared; a third identical pass writes no row (`rows_written` 0) |
+| 44d | values | a point's value corrected at the source | the new value replaces it |
+| 44e | values | the absent point through `GET /api/player-market-values` under `vega_read` | served with `absentSince`; the other points without the field |
+| 44f (40f) | injuries | `{"injuries": []}` after two episodes | both kept; `HISTORY_EMPTY` |
+| 44g (40g) | injuries | a valid list without one episode | both kept, the omitted one marked; listed again: mark cleared, ids unchanged (40e: same ids on a repeat) |
+| 44h | injuries | an ongoing episode's end date and games filled; another's label corrected | updated in place, same ids, no new episode |
+| 44i (40h) | injuries | `injuries: "x"` after an accepted read | `api.player_injury_reads` names the player; `GET /api/players/{id}/injuries` 200 with both episodes |
+| 44j (40j) | squad | `{"squad": []}` after two members | both kept; `SQUAD_EMPTY` |
+| 44k (40k) | squad | a valid squad without one member | both kept, the omitted one marked; not a link candidate; listed again: cleared |
+| 44l | search | a candidate's squad without one stored member | the member kept and marked, not deleted |
+| 44m (40n) | UEFA | `totalElements: 0`, no member | stored rows kept; scope `EMPTY_EDITION` |
+| 44n (40x) | UEFA | the same pages twice | rows and `ranking` version unchanged |
+| 44o | UEFA | one club's points changed | the edition replaced, version raised once |
+| 44p (40o) | FIFA | the latest edition read with one row of three, complete at the source a week later | three rows, version raised once; an identical re-read after another week writes nothing |
+| 44q | FIFA | a re-read shorter than stored | stored rows kept; `EDITION_SHORTER` in `ops.parse_failures` once |
+| 44r (40t) | stadium | an answer without capacity and coordinates | both kept; a later answer with another capacity replaces it |
+| 44s (40s) | club | an answer without `founded` and coach | founded year kept, tenure open; a later answer naming another coach closes it that day and opens his |
+| 44t (40w) | player facts | a snapshot-attested date, Wikidata another | date and URL kept; `BIRTH_DATE_CONFLICT` once; height written; a date without provenance is still corrected |
+
+### 44.4 What stays open or for the operator
+
+- The six birth dates Wikidata overwrote before this change are listed by
+  `SELECT p.id, p.birth_date, o.birth_date, p.birth_date_source_url FROM core.players p JOIN core.player_fact_observations o
+  ON o.player_id = p.id AND o.source = 'transfermarkt_snapshot' AND o.source_url = p.birth_date_source_url
+  WHERE o.birth_date IS NOT NULL AND o.birth_date <> p.birth_date`; restoring them changes what the site shows and is a
+  user decision (closed question: « restore the snapshot's date for these players, yes or no? »).
+- Absent values and episodes stay served; whether the site should hide or mark them is a design decision (mock-up
+  first).
+- A squad departure without a later listing stays marked forever; a FIFA edition superseded before its re-read stays
+  as read; a coach leaving without a named successor keeps an open tenure.
+- No history table of absences ended (153 has one for the transfers): the mark is cleared on reappearance and the
+  absence is not kept for values, injuries and squads.
