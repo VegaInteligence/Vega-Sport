@@ -91,6 +91,8 @@ PERIODS = {
     "search": (30, 90, 365, 365),  # a club not found yet is searched again
 }
 NOT_FOUND_AGAIN = timedelta(days=90)
+# A search whose chosen club has no record yet: again within a day, its record read by then (FAILURE_MODES.md §45).
+SEARCH_UNNAMED_AGAIN = timedelta(days=1)
 # A failed unit waits 2 ** attempts hours, at most a week; the exponent stops at 8 (256 h) before
 # the timedelta is built, which overflows from 35 attempts.
 RETRY_MAX, RETRY_EXPONENT_MAX = timedelta(days=7), 8
@@ -974,8 +976,22 @@ class Reader:
             names = Counter(normalize(data["players"][k]["name"]) for k, _ in members if k in data["players"] and data["players"][k]["name"])
             candidates.append((club, {n for n, c in names.items() if c == 1 and n}))
         chosen = pick_search(ours, candidates)
-        if chosen and self._link("team", chosen[0], data["team"], "club_search_squad", chosen[1]):
-            written += 1 + self.attach_teams()
+        if chosen:
+            # pick_clubs's checks (FAILURE_MODES.md §45): a club the base cannot name yet waits for its record (the squads
+            # written above queue it), a reserve is never a first team's (the votes' conflict row).
+            found = self.conn.execute("SELECT name FROM core.provider_clubs WHERE provider = 'transfermarkt' AND provider_key = %s",
+                                      (chosen[0],)).fetchone()
+            club_name = found and found[0]
+            team_name = self.conn.execute("SELECT name FROM core.teams WHERE id = %s", (data["team"],)).fetchone()[0]
+            if club_name is None or normalize(club_name) in NO_CLUB:
+                self.done("search", key, priority, written, again=SEARCH_UNNAMED_AGAIN)
+                return written
+            if is_reserve(club_name) != is_reserve(team_name):
+                self.conn.execute(
+                    """INSERT INTO ops.provider_link_conflicts(entity_type, provider, provider_key, entity_id, reason) VALUES ('team', %s, %s, %s, %s)
+                       ON CONFLICT DO NOTHING""", (PROVIDER, chosen[0], data["team"], "reserve_side"))
+            elif self._link("team", chosen[0], data["team"], "club_search_squad", chosen[1]):
+                written += 1 + self.attach_teams()
         self.done("search", key, priority, written)
         return written
 
