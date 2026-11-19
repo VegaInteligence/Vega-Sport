@@ -3532,8 +3532,8 @@ there is one: five reproduce, one does not.
   appearance itself is found (`found(values)`): `season_id` the bound edition season, `match_id` and `player_id`
   `api.internal_id(...)` of the bound public ids, and reads `api.player_grade_status` filtered on these three. No join
   of the view to a CTE. The planner then pushes the three conditions into both branches of the key set and into the
-  `NOT EXISTS`: every scan of a statistics or line-up partition is an index scan whose condition names `match_id` and
-  `player_id`, in a custom plan and in a generic one (`plan_cache_mode = force_generic_plan`), with `enable_seqscan`
+  `NOT EXISTS`: every scan of a statistics or line-up partition is an index scan on the participation's key (on the review's
+  base the primary key with `season_id`, `match_id` and `player_id`), in a custom plan and in a generic one (`plan_cache_mode = force_generic_plan`), with `enable_seqscan`
   at its default. `gradeStatus` and its values are unchanged. The fragment is one exported function of the route
   (`gradeStatusSql`), so the plan test reads the SQL the route sends. No other reader of the diff reads the view by
   join (`performance.mjs` is its only reader).
@@ -3572,14 +3572,14 @@ there is one: five reproduce, one does not.
 | # | Situation | Expected | Before the corrections |
 |---|---|---|---|
 | 46a | `GET /api/read/performance` for three keys of the API seed, under `vega_read` | `gradeStatus` `graded`, `below_display_threshold`, `no_minutes` (38f) | green (the values were right) |
-| 46b | The route's grade-status SQL, `EXPLAIN` with the bound values and as a generic plan, `enable_seqscan` off (the seed is tiny) | every scan of a statistics or line-up partition has an index condition on `match_id` and `player_id` | red: no such condition (the view is built whole) |
-| 46c | The same SQL on the review's base (`relecture_a`), `EXPLAIN (ANALYZE)` custom and generic, defaults | no sequential scan of `player_match_stats` or `lineup_players`; milliseconds | 14.1 s, sequential scans of every partition |
+| 46b | The route's grade-status SQL, `EXPLAIN` with the bound values and as a generic plan, `enable_seqscan` off (the seed is tiny) | every scan of a statistics or line-up partition is an index scan on the participation's key (on the seed the planner takes the primary key or the `(player_id, season_id)` index: the condition names `player_id`) | red: index scans of every partition without any condition (the view is built whole) |
+| 46c | The same SQL on the review's base (`relecture_a`), `EXPLAIN (ANALYZE)` custom and generic, defaults | no sequential scan of `player_match_stats` or `lineup_players`; milliseconds | 27.8–31.8 s a call under the read API's settings (no parallel query; 14.1 s in the review with parallel workers), sequential scans of every partition; after: 4.4–6.8 ms a call, 1.1–1.3 ms executed |
 | 46d | A first injuries read answered 404 by the reader, then `GET /api/players/{id}/injuries` | 404 | red: 200 `{"injuries": []}` |
 | 46e | An accepted read with two episodes, then a 404 | 200, both episodes; `read_at` that of the accepted read | served, but `read_at` moved to the 404's time |
 | 46f | An accepted empty read, then a 404 | 200 `{"injuries": []}` | green by accident (`read_at` set by the 404) |
 | 46g | 160 on legacy units: first read 404 (no episode), accepted then refused with episodes, accepted then refused without | unknown; known; unknown | known; known; known |
-| 46h | One of the fifteen held, the pass, a re-read of the Copa edition that puts 2276's side back on 707, two more passes | each pass succeeds; 2276 back on 740; the journal still one row for 2276 (the first move), 14 rows | red: both passes fail on 23505 |
+| 46h | One of the fifteen held, the pass, a re-read of the Copa edition that puts 2276's side back on 707, two more passes | each pass succeeds; the six cup sides the re-read put back (2276 among them) on 740 again; the journal unchanged, 14 rows | red: both passes fail on 23505 |
 | 46i | `failure_once` on 300 000 rows, with and without an edition | index scan, conditions on the three columns; still one row per (edition, code, message) | sequential scan (27 ms) |
 | 46j | A statistics row without a team, the daily path on the candidate and on 2088d36e60 | not graded, no exclusion, the year published, status `team_not_in_match`; the same on both commits | green on arrival (the finding does not reproduce) |
-| 46k | `merge_twins` on a twin pair whose goal-only match a side correction names | held `side_corrected`, nothing changed, the journal row intact; the season does not fail; again the same | red: the season fails on the foreign key at each pass |
+| 46k | `merge_twins` on a twin pair whose goal-only match a side correction names | the goal-only match or the result named: held `side_corrected`, nothing changed, the journal row intact; the season does not fail; again the same | red: the twin named, the season fails on the foreign key at each pass; the result named, the pair is merged unreviewed |
 | 46l | The scope purge of a competition whose match a side correction names; a reviewed removal of such a match | the competition held whole; the match held `removal_has_dependents` naming the journal | green on arrival (the foreign key and the dynamic dependents already hold them) |
