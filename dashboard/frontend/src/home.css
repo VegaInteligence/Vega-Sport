@@ -174,9 +174,17 @@ html[data-theme="light"] {
   font-size: var(--text-2xs);
 }
 .home-tick-top {
+  gap: 8px;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+/* A tournament's long name (« The Kallang Football Series ») stays on one line. */
+.home-tick-top span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .home-tick-team {
   display: flex;
@@ -184,12 +192,17 @@ html[data-theme="light"] {
   gap: 7px;
   font-size: 12.5px;
 }
-.home-tick-team span:not(.crest) {
+.home-tick-team span:not(.crest, .national-flag) {
   flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.home-tick-team .national-flag {
+  flex: none;
+  width: 20px;
+  height: 15px;
 }
 .home-tick-team b {
   color: var(--ink-strong);

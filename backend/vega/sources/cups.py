@@ -45,6 +45,9 @@ EDITIONS = (
     ("nations-results", "copa-america", "2024"),
     ("nations-results", "asian-cup", "2023"),
     *[("nations-results", "gold-cup", s) for s in ("2023", "2025")],
+    # Every other international of the season (friendlies, qualifiers, the other confederations' Nations Leagues):
+    # the home's week strip, outside the Elo (power.ELO_MATCHES).
+    ("nations-results", "internationals", "2026/2027"),
 )
 PROVIDER = {"open-cups": "openfootball", "openligadb": "openligadb", "nations-results": "international_results"}
 # The tournament each summer cup is, for its Vega season (seasons.py: played in June/July,

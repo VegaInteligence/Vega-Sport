@@ -181,6 +181,46 @@ export function matchWeight(match, ranks = new Map()) {
   );
 }
 
+// The national teams' tournaments, as International Results names them, in short French (the week strip's label).
+const INTERNATIONAL_LABELS = {
+  Friendly: "Amical",
+  "UEFA Nations League": "LN UEFA",
+  "CONCACAF Nations League": "LN CONCACAF",
+  "African Cup of Nations qualification": "Qualif. CAN",
+  "FIFA World Cup qualification": "Qualif. CM",
+  "UEFA Euro qualification": "Qualif. Euro",
+  "AFC Asian Cup qualification": "Qualif. Asie",
+  "CONCACAF Gold Cup qualification": "Qualif. Gold Cup",
+};
+/** A national result's tournament in the strip; one without a short name as the source writes it. */
+export const internationalLabel = (tournament) =>
+  INTERNATIONAL_LABELS[tournament] || tournament || "International";
+
+/**
+ * The week strip: each day the national teams' results first, in the API's order (their two sides' Elo; during an
+ * international break they are the week's news), then the clubs' by their weight; eight a day, the four latest days
+ * of both lists.
+ */
+export function weekTicker(results, internationals = [], ranks = new Map()) {
+  const days = new Map();
+  const day = (key) =>
+    days.get(key) ||
+    days.set(key, { day: key, nations: [], clubs: [] }).get(key);
+  for (const m of internationals)
+    day(m.date).nations.push({ ...m, national: true });
+  for (const m of results) day(matchDay(m)).clubs.push(m);
+  return [...days.values()]
+    .sort((a, b) => (a.day < b.day ? 1 : -1))
+    .slice(0, 4)
+    .map(({ day, nations, clubs }) => ({
+      day,
+      matches: [
+        ...nations,
+        ...clubs.sort((a, b) => matchWeight(b, ranks) - matchWeight(a, ranks)),
+      ].slice(0, 8),
+    }));
+}
+
 /** The week's showcase: a meeting of big clubs, ideally near the top of the table. */
 export function selectMatchOfTheWeek(results, ranks = new Map()) {
   let best = null,
