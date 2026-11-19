@@ -349,6 +349,31 @@ class ProductionRepairTest(Base):
         # Edition 300 still holds 707 through the held match.
         self.assertIn((300,), self.x("SELECT competition_season_id FROM core.team_seasons WHERE team_id = 707").fetchall())
 
+    def test_46h_a_side_put_back_by_a_re_read_is_moved_again_without_failing_the_pass(self):
+        # One of the fifteen held (a European archive match whose stored score differs): the keys stay on 707.
+        self.x("UPDATE core.matches SET home_score = 9 WHERE id = 730179")
+        self.run_pass()
+        self.assertEqual(self.owner_of_key("openfootball", "name:FC Barcelona"), 707)
+        journal = lambda: self.x("""SELECT match_id, side, from_team, to_team, from_key, to_key, correction, proof_sha256, applied_at
+                                    FROM core.team_side_corrections ORDER BY match_id, side""").fetchall()
+        first = journal()
+        self.assertEqual(len(first), 14)
+        # A later re-read of the Copa edition (its digest changed) resolves « FC Barcelona » by the key still on 707.
+        body = copa_body()
+        body["matches"].append({"round": "Round", "date": "2025-01-05", "team1": "Real Betis", "team2": "Valencia CF", "score": {"ft": [1, 0]}})
+        self.as_role("vega_collect")
+        with self.db.transaction():
+            cups.save(self.db, "open-cups", "copa-del-rey-archive", "2024/2025", body, NOW)
+        self.x("RESET ROLE")
+        self.assertEqual(self.x("SELECT home_team_id FROM core.matches WHERE id = 2276").fetchone()[0], 707)
+        # Each later pass succeeds: the side is moved again, the journal keeps its first move.
+        for _ in range(2):
+            self.run_pass()
+            sides = self.sides()
+            self.assertEqual(sides.pop(730179), 707)
+            self.assertEqual(set(sides.values()), {740})
+            self.assertEqual(journal(), first)
+
     def test_39g_the_elo_reads_fc_barcelona(self):
         cup = [int(r["match_id"]) for r in fifteen() if r["source"] == "openfootball"]
         before = self.elo_rows()

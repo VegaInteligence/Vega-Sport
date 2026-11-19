@@ -570,7 +570,7 @@ def correct_sides(conn):
                  AND EXISTS (SELECT 1 FROM pg_attribute m WHERE m.attrelid = k.conrelid AND m.attname = 'match_id' AND NOT m.attisdropped)
                ORDER BY 1, 2"""
         ).fetchall()
-        moved = done = held = 0
+        moved = done = held = again = 0
         editions = set()
         for ref, side, day, opponent, home_score, away_score in c["matches"]:
             if isinstance(ref, tuple):
@@ -598,13 +598,17 @@ def correct_sides(conn):
                          (right, values["id"], wrong))
             for table, column in columns:
                 conn.execute(f"UPDATE {table} SET {column} = %s WHERE match_id = %s AND {column} = %s", (right, values["id"], wrong))
-            conn.execute(
+            # A side moved before and put back since (a re-read resolved it by a key a held match kept on the wrong club)
+            # is moved again; the journal, which the collection role may only add to, keeps its first move (§46).
+            again += not conn.execute(
                 """INSERT INTO core.team_side_corrections(match_id, season_id, side, from_team, to_team, from_key, to_key, correction, proof_sha256)
-                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT (match_id, side) DO NOTHING""",
                 (values["id"], values["season"], side, wrong, right, c["from"], c["to"], name, digest),
-            )
+            ).rowcount
             moved += 1
         out[name] = (moved, done, held)
+        if again:
+            print(f"team side correction {name} moved again={again} (journal: first move kept)", flush=True)
         if held:
             # A held match keeps what names it: the keys a later import resolves its side by stay too.
             continue
