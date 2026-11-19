@@ -27,7 +27,7 @@ from datetime import timedelta
 import io
 import re
 
-from . import SourceError, failure, open_matchday_history, snapshot
+from . import SourceError, failure, failure_once, open_matchday_history, snapshot
 from .cups import _round, _team
 from ..scope import REMOVED_FOLDERS
 from ..seasons import sporting_season
@@ -392,7 +392,8 @@ def run(conn, get, scope, now):
                     cup_key = f"open-matchday:{folder}:{season}"
                     edition = conn.execute("SELECT id FROM core.competition_seasons WHERE cup_key = %s", (cup_key,)).fetchone()
                     for error_code, detail in left:
-                        failure(conn, error_code, f"{cup_key}: {detail}", edition and edition[0])
+                        # Once while the state stays the same (§37, §36 m3): the hold is not traced at each read.
+                        failure_once(conn, error_code, f"{cup_key}: {detail}", edition and edition[0])
                     unmatched += 1
         except SourceError as error:
             # This competition is not written now (its files unreadable, or not the complete snapshot that

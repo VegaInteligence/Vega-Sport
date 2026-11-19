@@ -163,6 +163,16 @@ def failure(conn, code, message, edition=None):
                  (edition, code, message[:2000]))
 
 
+def failure_once(conn, code, message, edition=None):
+    """failure(), unless the same row (edition, code, message) is already there: a refusal a source keeps in the same
+    state at each read stays visible once instead of adding a row at each read (FAILURE_MODES.md §37, §36 m3)."""
+    if not conn.execute(
+        """SELECT EXISTS (SELECT 1 FROM ops.parse_failures WHERE competition_season_id IS NOT DISTINCT FROM %s
+             AND error_code = %s AND message = %s)""", (edition, code, message[:2000])
+    ).fetchone()[0]:
+        failure(conn, code, message, edition)
+
+
 class SourceError(RuntimeError):
     """A source answer that is not written; `detail` (optional) names what it would have changed."""
 
