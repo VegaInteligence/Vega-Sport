@@ -1,0 +1,20 @@
+{
+ "season": "2627",
+ "generated_utc": "2026-11-17T07:19:26Z",
+ "leagues": [
+  {
+   "league": "National League North",
+   "folder": "data/ENG_6_national-league-north",
+   "dropped_fd": 0,
+   "dropped_dup_fixtures": 0,
+   "dropped_reversed_dupes": 0,
+   "dropped_stale_postponed": 0,
+   "dropped_cross_source_dupes": 0,
+   "corners": 0,
+   "results": 124,
+   "fixtures": 117,
+   "errors": [],
+   "latest": "2026-11-10"
+  }
+ ]
+}
