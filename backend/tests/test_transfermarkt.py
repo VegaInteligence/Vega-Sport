@@ -432,8 +432,9 @@ class CuartoApi:
     """The provider as it answered for Estudiantes de Río Cuarto (16-18 Nov 2026): the search finds one club, 75142, whose
     squad holds six of our players; its record names it the reserve (« II »)."""
 
-    def __init__(self, club_name=RESERVE_NAME):
-        self.club_name, self.calls = club_name, []
+    def __init__(self, club_name=RESERVE_NAME, record="named"):
+        # record: "named" (the club's record and name), "missing" (/clubs omits it), "unnamed" (a record without a name)
+        self.club_name, self.record, self.calls = club_name, record, []
 
     def __call__(self, path, params=()):
         self.calls.append((path, list(params)))
@@ -443,7 +444,9 @@ class CuartoApi:
         if path == "/players":
             return 200, {}, body([player(k, *CUARTO[k], club=75142, joined="2026-01-01", value=25000) for k in query if k in CUARTO])
         if path == "/clubs":
-            return 200, {}, body([{"id": 75142, "name": self.club_name, "baseDetails": {"countryId": 9},
+            if self.record == "missing":
+                return 200, {}, body([])
+            return 200, {}, body([{"id": 75142, **({"name": self.club_name} if self.record == "named" else {}), "baseDetails": {"countryId": 9},
                                    "squadDetails": {"currentMarketValue": {"value": 125000}, "averageAge": 20.6, "squadSize": 27}}
                                   for k in query if k == "75142"])
         parts = urlparse(path).path.strip("/").split("/")
@@ -562,6 +565,41 @@ class ReserveSearchTest(unittest.TestCase):
         self.assertEqual(reader.read("search", [("604", 1)]), "ok")
         self.assertEqual((self.links(), self.conflicts()), ([("75142", 604)], []))
         self.assertEqual(self.db.execute("SELECT rule, evidence FROM ops.provider_links WHERE entity_type = 'team'").fetchall(), [("club_search_squad", 6)])
+
+
+    def unit(self):
+        return self.db.execute("SELECT error_code, attempts FROM ops.transfermarkt_reads WHERE kind = 'search' AND provider_key = '604'").fetchone()
+
+    def due_now(self):
+        self.db.execute("RESET ROLE")
+        self.db.execute("UPDATE ops.transfermarkt_reads SET next_due_at = now() WHERE kind = 'search' AND provider_key = '604'")
+
+    def test_45k_45l_45m_a_club_never_named_is_searched_at_the_ordinary_period(self):
+        # §45.4: /clubs omits the club (45k) or names it nobody (45l): one close retry, then the search's own period.
+        ordinary = timedelta(days=tm.PERIODS["search"][0])
+        for record in ("missing", "unnamed"):
+            with self.subTest(record=record):
+                self.setUp()
+                reader = self.reader(CuartoApi(record=record))
+                self.assertEqual(reader.read("search", [("604", 1)]), "ok")
+                self.assertLessEqual(self.search_due(), timedelta(days=1))
+                self.assertEqual(reader.read("club", [("75142", 1)]), "ok")
+                stored = self.db.execute("SELECT name FROM core.provider_clubs WHERE provider_key = '75142'").fetchall()
+                self.assertEqual(stored, [] if record == "missing" else [(None,)])
+                for _ in range(2):
+                    self.due_now()
+                    self.assertEqual(self.reader(CuartoApi(record=record)).read("search", [("604", 1)]), "ok")
+                    self.assertGreater(self.search_due(), ordinary - timedelta(hours=1))
+                    self.assertEqual((self.links(), self.conflicts()), ([], []))
+                self.assertEqual(self.unit()[0], "CLUB_UNNAMED")
+                # 45m: the name arrives (the reserve's): the check applies, the mark goes.
+                self.db.execute("RESET ROLE")
+                self.db.execute("""INSERT INTO core.provider_clubs(provider, provider_key, name, read_on) VALUES ('transfermarkt', '75142', %s, current_date)
+                                   ON CONFLICT (provider, provider_key) DO UPDATE SET name = EXCLUDED.name""", (RESERVE_NAME,))
+                self.due_now()
+                self.assertEqual(self.reader(CuartoApi()).read("search", [("604", 1)]), "ok")
+                self.assertEqual((self.links(), self.conflicts()), ([], [("75142", 604, "reserve_side")]))
+                self.assertEqual(self.unit(), (None, 0))
 
 
 if __name__ == "__main__":

@@ -3583,3 +3583,21 @@ there is one: five reproduce, one does not.
 | 46j | A statistics row without a team, the daily path on the candidate and on 2088d36e60 | not graded, no exclusion, the year published, status `team_not_in_match`; the same on both commits | green on arrival (the finding does not reproduce) |
 | 46k | `merge_twins` on a twin pair whose goal-only match a side correction names | the goal-only match or the result named: held `side_corrected`, nothing changed, the journal row intact; the season does not fail; again the same | red: the twin named, the season fails on the foreign key at each pass; the result named, the pair is merged unreviewed |
 | 46l | The scope purge of a competition whose match a side correction names; a reviewed removal of such a match | the competition held whole; the match held `removal_has_dependents` naming the journal | green on arrival (the foreign key and the dynamic dependents already hold them) |
+
+| 45k | 45i's search when `/clubs` omits the club (its unit recorded 404, no `core.provider_clubs` row, due again in 90 days); the search read three times, each when due | the first search due again within a day, the next ones at the search's ordinary period (`PERIODS["search"]`, 30 days at priority 1); no link, no conflict at any of them |
+| 45l | The same when the club's record has no name (`parse_club`'s `name` None, the row stored with a NULL name) | as 45k |
+| 45m | After 45k or 45l, the club's name arrives (the reserve's) and the search is read | the reserve check as in 45h (`reserve_side`, no link); the unit's error mark cleared |
+
+### 45.4 The search waiting for a club's name is bounded (second review, point 4; 19 Nov 2026, written before the tests)
+
+The retry of a day (`SEARCH_UNNAMED_AGAIN`) assumed the club's record arrives: two cases never resolve. `/clubs` may
+omit the club (`write_club` records a 404 with no `core.provider_clubs` row, and the `club` unit, queued
+`ON CONFLICT DO NOTHING`, waits 90 days), or answer it without a name (`parse_club` gives `name` None, the column is
+nullable). The whole search (the quick search, up to three squads, their players: five to eight requests 2.5 s apart)
+was then read again every day for that team, on the budget of a reader that pauses at its first refusal.
+
+Rule: one close retry only. A search whose chosen club has no usable name is recorded with the error mark
+`CLUB_UNNAMED` (`ops.transfermarkt_reads.error_code`, `attempts` counting, as `done` already writes them: no
+migration). Due again within a day when the unit did not carry that mark already; carrying it (the close retry was
+spent), at the search's ordinary period for its priority. No link and no conflict while the name is missing. When the
+name arrives, the reserve check applies as in 45h and the search is recorded as usual (the mark cleared).
