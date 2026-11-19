@@ -279,7 +279,27 @@ def elo_updates(matches, *, initial=ELO_INITIAL, k=ELO_K, home=ELO_HOME, seeds=N
 # spellings are reviewed (curated.CLUB_ALIASES) and applied before the identity pass merges them
 # (merged_rows). Left out: a club against a national team, a cup match without its day, two teams not
 # marked national in a national teams' competition (historic nations, no clubs), the historic archives
-# (archive_key; the user's decision of 17 November), and the copies elo_matches drops.
+# (archive_key; the user's decision of 17 November), the results decided without play (ADMINISTRATIVE), and the copies
+# elo_matches drops.
+#
+# A result a federation decided without the match being played keeps its status and score for the table and the cup's
+# page, and is no match of the Elo, nor so of the forecasts fitted on it (FAILURE_MODES.md §39). A source that says so
+# stores it `awarded` (status <> 'finished'). One that does not is named here by its match key, with the authority:
+# never a rule drawn from a score.
+ADMINISTRATIVE = {
+    # Tours FC–FC Lorient, Coupe de France 2024/25, round 9: Lorient qualified by the FFF without the match played.
+    ("openfootball", "france-cup:2024/2025:2024-12-21|Tours FC|FC Lorient|"):
+        "https://www.fff.fr/article/13900-lorient-qualifie-pour-les-16es-de-finale.html",
+    # Seraing U21–Beerschot VA U21, 18 Sep 2026: forfeit (forfeitByOneTeam), 0–5, no player on the sheet.
+    ("open_matchday", "BEL_U21_pro-league:2026/2027:2026-09-18|Seraing U21|Beerschot VA U21"):
+        "https://www.voetbalvlaanderen.be/wedstrijd/7631244",
+}
+
+
+def _literal(text):
+    return "'" + text.replace("'", "''") + "'"
+
+
 ELO_MATCHES = """
 WITH nations AS (
   SELECT DISTINCT m.competition_season_id FROM core.matches m JOIN core.teams t ON t.id = m.home_team_id AND t.is_national)
@@ -296,6 +316,9 @@ WHERE m.status = 'finished' AND m.home_score IS NOT NULL AND m.away_score IS NOT
   AND m.home_team_id IS NOT NULL AND m.away_team_id IS NOT NULL
   AND (cs.cup_key IS NULL OR (m.match_date IS NOT NULL AND (th.is_national IS TRUE) = (ta.is_national IS TRUE)
        AND (th.is_national OR cs.id NOT IN (SELECT competition_season_id FROM nations))))
+  AND NOT EXISTS (SELECT 1 FROM core.provider_ids k WHERE k.entity_type = 'match' AND k.entity_id = m.id
+                  AND (k.provider::text, k.provider_key) IN (""" + ", ".join(
+    f"({_literal(provider)}, {_literal(key)})" for provider, key in sorted(ADMINISTRATIVE)) + """))
 ORDER BY 3 NULLS LAST, m.match_date NULLS LAST, m.id"""
 
 
