@@ -724,16 +724,8 @@ def _publish(conn, edition):
     )
 
 
-def repeat(conn, edition, stored, observed, counted, now, verify=None, fetched_proof=False):
-    """The same table seen again (§2.2): nothing written unless the observation time may move."""
-    def renew(teams):
-        conn.execute(f"UPDATE core.standings_official SET as_of = %s WHERE {OWN}", (now, edition))
-        for team in sorted(teams):
-            conn.execute(f"UPDATE core.standings_official SET basis = %s::smallint[] WHERE {OWN} AND team_id = %s",
-                         (list(counted.get(team, NO_RESULT)), edition, team))
-        if teams:
-            _publish(conn, edition)  # api.standings may serve the official table again
-
+def _repeat_state(conn, edition, stored, observed, counted):
+    """(clubs whose basis moves, whether the stored rows caught up with the counted results, the shortfall to prove)."""
     if any(row["basis"] is None for row in stored.values()):
         # Rows written before 138 have no basis. A later result requires positive proof.
         moved = {team for _, team in stored}
@@ -744,9 +736,30 @@ def repeat(conn, edition, stored, observed, counted, now, verify=None, fetched_p
             any(all(row[f] is None or row[f] == v for f, v in zip(RESULTS, counted.get(team, NO_RESULT)))
                 for (_, t), row in stored.items() if t == team)
             for team in moved)
+    shortfall = {row["played"] - counted.get(team, NO_RESULT)[0] for (_, team), row in stored.items()}
+    return moved, caught_up, shortfall
+
+
+def _needs_fresh_proof(state):
+    """Whether a repeat moves its observation time only on a fresh organiser proof."""
+    _, caught_up, shortfall = state
+    return not caught_up and bool(shortfall) and min(shortfall) >= 0 and max(shortfall) > 0
+
+
+def repeat(conn, edition, stored, observed, counted, now, verify=None, fetched_proof=False):
+    """The same table seen again (§2.2): nothing written unless the observation time may move."""
+    def renew(teams):
+        conn.execute(f"UPDATE core.standings_official SET as_of = %s WHERE {OWN}", (now, edition))
+        for team in sorted(teams):
+            conn.execute(f"UPDATE core.standings_official SET basis = %s::smallint[] WHERE {OWN} AND team_id = %s",
+                         (list(counted.get(team, NO_RESULT)), edition, team))
+        if teams:
+            _publish(conn, edition)  # api.standings may serve the official table again
+
+    state = _repeat_state(conn, edition, stored, observed, counted)
+    moved, caught_up, _ = state
     if not caught_up:
-        shortfall = {row["played"] - counted.get(team, NO_RESULT)[0] for (_, team), row in stored.items()}
-        if verify is None or min(shortfall) < 0 or max(shortfall) == 0:
+        if verify is None or not _needs_fresh_proof(state):
             return
         if not fetched_proof:
             verify(require_fresh=True)
@@ -764,6 +777,35 @@ def _current_edition(conn, key):
     ).fetchone()
 
 
+def _qualified(conn, edition, tables, gender, now, verify):
+    """(teams, fresh rows, counted results, whether a proof was fetched) of the response against the native base as it
+    is now: the names' teams, the clubs' counted and kicked-off matches (rules 11-12); SourceError otherwise. `verify`:
+    None, or {fresh rows} -> the organiser check."""
+    teams = link(conn, edition, tables, gender)
+    keep_groups = len(tables) > 1  # one table is stored without its name, as before
+    fresh = {(group if keep_groups else None, teams[row["name"]]): row for group, rows in tables for row in rows}
+    counted = {team: tuple(results) for team, results in conn.execute(
+        "SELECT team_id, results FROM core.table_results(%s)", (edition,)).fetchall()}
+    return teams, fresh, counted, qualify(conn, edition, fresh, counted, now, verify and verify(fresh))
+
+
+def _stored_rows(conn, edition, now):
+    """({(group, team): stored row with its basis}, the earliest observation) of the edition's own rows."""
+    stored, observed = {}, None
+    for group, team, *values, basis, as_of in conn.execute(
+        f"SELECT {', '.join(COLUMNS)}, basis, as_of FROM core.standings_official WHERE {OWN}", (edition,)
+    ).fetchall():
+        if as_of is not None and as_of > now:
+            raise SourceError("STALE_OBSERVATION", f"edition {edition}: table already observed at {as_of}")
+        stored[(group, team)] = dict(zip(FIELDS, values), basis=tuple(basis) if basis is not None else None)
+        observed = as_of if observed is None or (as_of is not None and as_of < observed) else observed
+    return stored, observed
+
+
+def _no_provider_call(url):
+    raise SourceError("PROVIDER_CALL_UNDER_LOCK", url.split("?", 1)[0])
+
+
 def run(conn, get, scope, now):
     key = scope.split(":", 1)[1]
     slug = LEAGUES[key]
@@ -773,15 +815,23 @@ def run(conn, get, scope, now):
     edition, season, native_label, year, kind, name, country = current
     tables = parse(get(URL + "?" + urlencode({"sport": "football", "slug": slug})), slug)
     check(tables)
-    teams = link(conn, edition, tables, _gender(name) or "men")
-    keep_groups = len(tables) > 1  # one table is stored without its name, as before
-    fresh = {(group if keep_groups else None, teams[row["name"]]): row for group, rows in tables for row in rows}
-    counted = {team: tuple(results) for team, results in conn.execute(
-        "SELECT team_id, results FROM core.table_results(%s)", (edition,)).fetchall()}
-    verify = None
-    if key == ALLSVENSKAN and native_label == str(year):
-        verify = partial(_prove_allsvenskan, conn, get, edition, year, fresh, now)
-    fetched_proof = qualify(conn, edition, fresh, counted, now, verify)
+    gender = _gender(name) or "men"
+
+    def organiser(fetch):
+        if key != ALLSVENSKAN or native_label != str(year):
+            return None
+        return lambda fresh: partial(_prove_allsvenskan, conn, fetch, edition, year, fresh, now)
+
+    teams, fresh, counted, fetched_proof = _qualified(conn, edition, tables, gender, now, organiser(get))
+    # A repeat that moves its observation time on a fresh organiser proof gets it now, outside the publication lock
+    # (FAILURE_MODES.md §35, 35v): no provider is called under it.
+    online = organiser(get)
+    if online and not fetched_proof:
+        stored, observed = _stored_rows(conn, edition, now)
+        if stored and {k: {f: r[f] for f in FIELDS} for k, r in fresh.items()} == {k: {f: r[f] for f in FIELDS} for k, r in stored.items()} \
+                and _needs_fresh_proof(_repeat_state(conn, edition, stored, observed, counted)):
+            online(fresh)(require_fresh=True)
+            fetched_proof = True
     # The upstream request is outside the publication lock. READ COMMITTED then sees the
     # latest publication, including the first insert into an otherwise empty edition.
     lock_scope(conn, "sportscore", scope)
@@ -791,15 +841,12 @@ def run(conn, get, scope, now):
         raise SourceError("STALE_OBSERVATION", f"edition {edition}: scope already attempted at {last_run[0]}")
     if _current_edition(conn, key) != current:
         raise SourceError("EDITION_CHANGED", f"edition {edition}: the competition changed during the request")
-    stored = {}
-    observed = None
-    for group, team, *values, basis, as_of in conn.execute(
-        f"SELECT {', '.join(COLUMNS)}, basis, as_of FROM core.standings_official WHERE {OWN}", (edition,)
-    ).fetchall():
-        if as_of is not None and as_of > now:
-            raise SourceError("STALE_OBSERVATION", f"edition {edition}: table already observed at {as_of}")
-        stored[(group, team)] = dict(zip(FIELDS, values), basis=tuple(basis) if basis is not None else None)
-        observed = as_of if observed is None or (as_of is not None and as_of < observed) else observed
+    # The native base may have changed since the qualification (a club's result, a member): the response is qualified
+    # again under the lock, as published, with no provider call (FAILURE_MODES.md §35, 35t).
+    offline = organiser(_no_provider_call)
+    teams, fresh, counted, _ = _qualified(conn, edition, tables, gender, now, offline)
+    verify = offline and offline(fresh)
+    stored, observed = _stored_rows(conn, edition, now)
     members = {team for (team,) in conn.execute("SELECT team_id FROM core.team_seasons WHERE competition_season_id = %s", (edition,))}
     if not stored:
         _first_observation(conn, key, edition, season, native_label, kind, name, country, tables, teams, members)

@@ -312,10 +312,11 @@
   flex-wrap: wrap;
   align-items: end;
   gap: 12px 16px;
-  padding: 12px 14px;
-  border: 1px solid var(--border);
+  padding: 0 0 12px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  background: var(--surface);
+  background: none;
 }
 .control {
   display: grid;
@@ -358,7 +359,7 @@
 .scale i {
   width: 120px;
   height: 6px;
-  border-radius: 3px;
+  border-radius: 0;
   background: linear-gradient(
     90deg,
     var(--mq-neg-2),
@@ -396,9 +397,10 @@
 }
 .panel {
   min-width: 0;
-  border: 1px solid var(--border);
+  border: 0;
+  border-top: 1px solid var(--border-strong);
   border-radius: var(--radius-lg);
-  background: var(--surface);
+  background: none;
 }
 .panelTitle {
   display: flex;
@@ -406,7 +408,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px 12px;
-  padding: 12px 16px;
+  padding: 12px 0;
   border-bottom: 1px solid var(--border);
 }
 .panel .panelTitle h3 {
@@ -423,7 +425,7 @@
   font-size: var(--text-xs);
 }
 .panelBody {
-  padding: 16px;
+  padding: 16px 0;
 }
 .cols2 {
   display: grid;
@@ -470,32 +472,6 @@
   grid-column: 1 / -1;
 }
 
-.traits {
-  display: grid;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.traits li {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  gap: 10px;
-  align-items: center;
-  padding: 8px 10px;
-  border-left: 2px solid var(--tone);
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-  background: var(--surface-subtle);
-  font-size: var(--text-sm);
-}
-.traits li > span {
-  color: var(--ink);
-}
-.traits li > small {
-  color: var(--muted);
-  font-size: var(--text-xs);
-  font-variant-numeric: tabular-nums;
-}
 .traitGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -575,9 +551,10 @@
   justify-content: space-between;
   gap: 8px;
   padding: 10px 12px;
-  border: 1px solid var(--border);
+  border: 0;
+  border-top: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface);
+  background: none;
 }
 .pillarHead strong {
   color: var(--ink-strong);
@@ -596,9 +573,10 @@
   gap: 8px;
   min-width: 0;
   padding: 10px;
-  border: 1px solid color-mix(in srgb, var(--tone) 30%, var(--border));
+  border: 0;
+  border-top: 1px solid var(--border);
   border-radius: var(--radius);
-  background: color-mix(in srgb, var(--tone) 9%, var(--surface));
+  background: none;
 }
 .tile > span {
   display: -webkit-box;
@@ -723,7 +701,8 @@
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 1px;
   overflow: hidden;
-  border: 1px solid var(--border);
+  border: 0;
+  border-block: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--border);
 }
@@ -732,7 +711,7 @@
   align-content: start;
   gap: 4px;
   padding: 14px 16px;
-  background: var(--surface);
+  background: var(--bg);
 }
 .kpi span {
   color: var(--muted);
@@ -777,11 +756,12 @@
 }
 .card {
   min-width: 0;
-  padding: 16px;
-  border: 1px solid var(--border);
+  padding: 16px 0;
+  border: 0;
+  border-top: 1px solid var(--border-strong);
   border-radius: var(--radius-lg);
-  background: var(--surface);
-  --mq-gap: var(--surface);
+  background: none;
+  --mq-gap: var(--bg);
 }
 .partners {
   display: grid;
@@ -1021,17 +1001,6 @@
   line-height: 1;
 }
 /* In a quarter of the row, a trait's value goes under its name, the centile beside both. */
-.grid4 .traits li {
-  grid-template-columns: minmax(0, 1fr) auto;
-  row-gap: 2px;
-}
-.grid4 .traits li > small {
-  grid-row: 2;
-}
-.grid4 .traits li > :last-child {
-  grid-column: 2;
-  grid-row: 1 / span 2;
-}
 @media (max-width: 1280px) {
   .kpis {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1064,9 +1033,10 @@
 }
 .tableCard {
   overflow: hidden;
-  border: 1px solid var(--border);
+  border: 0;
+  border-top: 1px solid var(--border-strong);
   border-radius: var(--radius-lg);
-  background: var(--surface);
+  background: none;
 }
 .tableCard :global(.data-table) {
   min-width: 760px;
@@ -1117,11 +1087,12 @@ p.similarIntro {
   display: grid;
   align-content: start;
   gap: 12px;
-  padding: 14px;
-  border: 1px solid var(--border);
+  padding: 14px 0;
+  border: 0;
+  border-top: 1px solid var(--border-strong);
   border-radius: var(--radius-lg);
-  background: var(--surface);
-  --mq-gap: var(--surface);
+  background: none;
+  --mq-gap: var(--bg);
 }
 .similarHead {
   display: grid;
@@ -1211,10 +1182,10 @@ p.similarIntro {
   justify-content: space-between;
   gap: 12px;
   padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--tone);
+  border: 0;
+  border-top: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface);
+  background: none;
 }
 .slot strong {
   display: block;
@@ -1242,7 +1213,7 @@ p.similarIntro {
   min-height: 28px;
   padding: 0 10px;
   border: 1px solid var(--border-strong);
-  border-radius: 999px;
+  border-radius: 0;
   color: var(--ink);
   font-size: var(--text-xs);
 }
@@ -1448,7 +1419,7 @@ p.similarIntro {
 .compareHead i {
   width: 100%;
   height: 2px;
-  border-radius: 1px;
+  border-radius: 0;
   background: var(--tone);
 }
 .compareCell {
@@ -1482,7 +1453,8 @@ p.similarIntro {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1px;
   overflow: hidden;
-  border: 1px solid var(--border);
+  border: 0;
+  border-block: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--border);
 }
@@ -1491,7 +1463,7 @@ p.similarIntro {
   align-content: start;
   gap: 3px;
   padding: 10px 12px;
-  background: var(--surface);
+  background: var(--bg);
 }
 .kpiStrip span {
   display: flex;
@@ -1616,4 +1588,60 @@ p.similarIntro {
     height: max(100%, 44px);
     transform: translate(-50%, -50%);
   }
+}
+
+/* Points forts et faibles: one table, strengths then weaknesses, a centile bar in its tone. */
+.grid4 > .traitCard {
+  grid-column: span 2;
+}
+@media (max-width: 1280px) {
+  .grid4 > .traitCard {
+    grid-column: 1 / -1;
+  }
+}
+.traitTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+.traitTable thead th {
+  padding: 0 0 6px;
+  border-bottom: 1px solid var(--border-strong);
+  color: var(--muted-light);
+  font-size: var(--text-2xs);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-align: right;
+  text-transform: uppercase;
+}
+.traitTable thead th:first-child,
+.traitTable tbody th {
+  text-align: left;
+}
+.traitTable tbody th {
+  color: var(--ink);
+  font-weight: 400;
+}
+.traitTable tbody th,
+.traitTable tbody td {
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border);
+}
+.traitTable tbody td {
+  padding-left: 12px;
+  color: var(--ink-strong);
+  text-align: right;
+  white-space: nowrap;
+}
+.traitTable tbody + tbody tr:first-child > * {
+  border-top: 1px solid var(--border-strong);
+}
+.traitBar {
+  display: inline-block;
+  width: 56px;
+  height: 4px;
+  margin-left: 8px;
+  vertical-align: middle;
+  background: linear-gradient(90deg, var(--tone) var(--w), var(--border) var(--w));
 }

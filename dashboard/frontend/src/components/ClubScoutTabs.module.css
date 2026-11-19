@@ -254,7 +254,7 @@
   display: flex;
   height: 10px;
   overflow: hidden;
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--surface-subtle);
 }
 .contribBar i:first-child {
@@ -280,7 +280,7 @@
 .ages span {
   width: 100%;
   max-width: 34px;
-  border-radius: 4px 4px 0 0;
+  border-radius: 0;
   background: var(--accent);
 }
 .ages b {

@@ -245,6 +245,52 @@ function legacySide(goal, match) {
   return h > a ? "home" : a > h ? "away" : null;
 }
 
+function dayNumber(day) {
+  const time = Date.parse(`${day}T12:00:00Z`);
+  return Number.isNaN(time) ? null : Math.round(time / 86400000);
+}
+
+/**
+ * The goal-only matches that are a results match the first pass missed: the results archive
+ * dated it a few days or a year off (a season's year inferred wrong), or wrote one club
+ * otherwise ("Sp Lisbon" / "Sporting CP"). Same competition, same score, a result without goals,
+ * and one candidate only; then both clubs alike within three days, one club the same within a
+ * day, or both clubs the same a year apart. Returns [{ goal, result, date }] (the goals' date:
+ * that archive is dated by match day). Used by buildArchiveSeason and on stored archive rows
+ * (backend/archives/twins.mjs).
+ */
+export function goalTwins(matches) {
+  const results = new Map();
+  for (const match of matches) {
+    if (!String(match.key).startsWith("r:") || match.goals || dayNumber(match.date) === null) continue;
+    if (!results.has(match.competitionId)) results.set(match.competitionId, []);
+    results.get(match.competitionId).push(match);
+  }
+  const claimed = new Set(),
+    twins = [];
+  for (const goal of matches) {
+    const day = dayNumber(goal.date);
+    if (!String(goal.key).startsWith("g:") || !goal.goals || day === null) continue;
+    const [h, a] = goal.score || [];
+    if (!Number.isInteger(h) || !Number.isInteger(a)) continue;
+    const candidates = (results.get(goal.competitionId) || []).filter((match) => {
+      if (claimed.has(match.key) || match.score?.[0] !== h || match.score?.[1] !== a) return false;
+      const apart = Math.abs(dayNumber(match.date) - day);
+      const home = teamSimilarity(match.team1, goal.team1),
+        away = teamSimilarity(match.team2, goal.team2);
+      return (
+        (apart <= 3 && home > 0 && away > 0) ||
+        (apart <= 1 && (home >= 2 || away >= 2)) ||
+        (apart >= 363 && apart <= 368 && home >= 2 && away >= 2)
+      );
+    });
+    if (candidates.length !== 1) continue;
+    claimed.add(candidates[0].key);
+    twins.push({ goal: goal.key, result: candidates[0].key, date: goal.date });
+  }
+  return twins;
+}
+
 /** The season as the corrected reading builds it, its goal-only keys numbered by the legacy groups. */
 function correctedSeason(results, goals) {
   const competitions = new Map();
@@ -361,9 +407,12 @@ function unitConflict(pairs) {
 /**
  * The season: the corrected rows where they keep the published keys, scores, notes and goal sides; otherwise
  * the unit's published rows, held with the reason (FAILURE_MODES.md §22). A unit is the rows of both readings
- * that share a goal event or a key. Nothing is absorbed: a merge the legacy reading did not make is held.
+ * that share a goal event or a key: a merge the legacy reading did not make is held. Then main's twin pass
+ * (goalTwins) over these rows: a goal-only row that is a result becomes that result (`absorbed`), but never a held
+ * unit's rows or a key `options.keep` names (the importer's quarantine and attestation ledgers): such a pair is
+ * listed in `twinsHeld` with its reason (FAILURE_MODES.md §35).
  */
-export function buildArchiveSeason(results, goals) {
+export function buildArchiveSeason(results, goals, options = {}) {
   const legacy = legacyBuildArchiveSeason(results, goals);
   const candidate = correctedSeason(results, goals);
   const parent = new Map();
@@ -430,11 +479,32 @@ export function buildArchiveSeason(results, goals) {
       sources: [...new Set(events.filter((event) => event.sourceRow != null).map((event) => `${event.sourceFile}:${event.sourceRow}`))].sort(),
     });
   }
+  // The twin pass, over every final row: a held row still counts as a candidate, so it makes a pair ambiguous.
+  const keep = new Set(options.keep || []);
+  const rowOf = new Map(rows.map((m) => [m.key, m]));
+  const absorbed = [],
+    twinsHeld = [],
+    merged = new Set();
+  for (const twin of goalTwins(rows)) {
+    const goalRow = rowOf.get(twin.goal),
+      result = rowOf.get(twin.result);
+    const reason = [goalRow, result].some((m) => m.held || m.heldGoals) ? "held" : keep.has(twin.goal) || keep.has(twin.result) ? "kept" : null;
+    if (reason) {
+      twinsHeld.push({ goal: twin.goal, result: twin.result, reason });
+      continue;
+    }
+    // The goals keep the side read against the goal-only row: a twin has the same home and away.
+    result.goals = goalRow.goals;
+    result.date = twin.date;
+    merged.add(twin.goal);
+    absorbed.push(twin);
+  }
+  const final = merged.size ? rows.filter((m) => !merged.has(m.key)) : rows;
   // The published editions first, in their order, then any the corrected rows add.
   const competitions = new Map(legacy.competitions.map((c) => [c.id, c]));
   for (const c of candidate.competitions) if (!competitions.has(c.id)) competitions.set(c.id, c);
-  const usedCompetitions = new Set(rows.map((m) => m.competitionId));
-  rows.sort(
+  const usedCompetitions = new Set(final.map((m) => m.competitionId));
+  final.sort(
     (a, b) =>
       String(b.date).localeCompare(String(a.date)) ||
       a.key.localeCompare(b.key),
@@ -443,8 +513,9 @@ export function buildArchiveSeason(results, goals) {
   return {
     season: results?.season || goals?.season || "",
     competitions: [...competitions.values()].filter((c) => usedCompetitions.has(c.id) || (results?.competitions || []).some((l) => l.id === c.id)),
-    matches: rows,
-    absorbed: [],
+    matches: final,
+    absorbed,
+    twinsHeld,
     held,
   };
 }

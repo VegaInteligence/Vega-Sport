@@ -169,7 +169,7 @@ def guard_schema(conn, before, after):
     applied = dict(conn.execute("SELECT version, encode(checksum,'hex') FROM ops.schema_migrations"))
     require(applied == {k: h for k, h in known.items() if "vector_optional" not in k or k in applied}, "destination schema mismatch")
     early = {k: h for k, h in known.items() if k <= "133_cohort_max_wait.sql" and ("vector_optional" not in k or k in applied)}
-    require(tuple(sorted(applied))[-1] == "151_snapshot_match_ownership.sql", "unreviewed destination schema version")
+    require(tuple(sorted(applied))[-1] == "153_transfer_history_served.sql", "unreviewed destination schema version")
     for capture in (before, after):
         require({n: h for n, h, _ in plain_rows(capture, "migrations")} == early, "preimage schema mismatch")
 

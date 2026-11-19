@@ -13,7 +13,6 @@ import {
   SITUATION_LABELS,
   STYLE_AXES,
   formatMetric,
-  rolling,
 } from "../services/club-scout.js";
 import {
   pairedPoints,
@@ -241,7 +240,6 @@ function NeutralBar({ value }) {
     <div
       style={{
         height: 6,
-        borderRadius: 999,
         background: "var(--surface-subtle)",
         overflow: "hidden",
       }}
@@ -854,7 +852,7 @@ export function MultiLine({
                   cy={y(serie.values[active])}
                   r="4"
                   fill={serie.color}
-                  stroke="var(--surface)"
+                  stroke="var(--bg)"
                   strokeWidth="2"
                 />
               ),
@@ -892,46 +890,251 @@ export function MultiLine({
   );
 }
 
-export function XgTrend({ rows, window = 5 }) {
-  const usable = rows.filter((row) => row.xpts != null);
-  const labels = usable.map((row) => dateShort(row.match.date));
-  const tips = usable.map(
-    (row) =>
-      `${dateShort(row.match.date)} · ${row.side === "home" ? "vs" : "à"} ${row.opponent.name} ${row.gf}–${row.ga}`,
+/** A box's laid-out width, measured: a chart drawn at it keeps its text at its own size.
+ * `fallback` until measured (the server's rendering, a test). */
+function useBoxWidth(fallback) {
+  // A callback ref: the box may appear after the first rendering (data still loading).
+  const [node, setNode] = useState(null);
+  const [width, setWidth] = useState(fallback);
+  useEffect(() => {
+    if (!node) return undefined;
+    const read = () => node.clientWidth && setWidth(Math.round(node.clientWidth));
+    read();
+    if (typeof ResizeObserver === "undefined") return undefined;
+    const observer = new ResizeObserver(read);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [node]);
+  return [setNode, width];
+}
+
+const DAY_MS = 86_400_000;
+const MONTHS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
+const dayOf = (iso) => Date.parse(`${String(iso).slice(0, 10)}T00:00:00Z`);
+const nextMonth = (time) => {
+  const d = new Date(time);
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1);
+};
+/** A tick label: whole numbers bare, halves with their decimal. */
+const tickText = (v) => fmtNum(v, Number.isInteger(v) ? 0 : 1);
+
+/** Mean of each run of `size` consecutive values, null until `size` matches are known. */
+function fullRolling(values, size) {
+  return values.map((_, i) =>
+    i < size - 1
+      ? null
+      : values.slice(i - size + 1, i + 1).reduce((a, b) => a + b, 0) / size,
   );
+}
+
+/**
+ * The club's xG for and against: each match a dot at its real date, the means over the last
+ * `window` matches as two lines, the space between them coloured by the side ahead. Drawn at its
+ * measured width; the match nearest the pointer gets its card.
+ */
+export function XgTrend({ rows, window = 5 }) {
+  const [ref, width] = useBoxWidth(720);
+  const [active, setActive] = useState(null);
+  const usable = rows.filter((row) => row.own?.xg != null && row.opp?.xg != null);
+  if (!usable.length) return <p className={s.muted}>xG non renseignés.</p>;
+  const FOR = "var(--accent)",
+    AGAINST = "var(--mq-series-2)";
+  const phone = width < 560;
+  const height = phone ? 220 : 260;
+  const m = { t: 12, r: phone ? 8 : 104, b: 26, l: 30 };
+  const iw = width - m.l - m.r,
+    ih = height - m.t - m.b;
+  const days = usable.map((row) => dayOf(row.match.date));
+  const pad = usable.length > 1 ? 4 * DAY_MS : 15 * DAY_MS;
+  const t0 = days[0] - pad,
+    t1 = days[days.length - 1] + pad;
+  const x = (t) => m.l + ((t - t0) / (t1 - t0)) * iw;
+  const xg = usable.map((row) => row.own.xg),
+    xga = usable.map((row) => row.opp.xg);
+  const meanFor = fullRolling(xg, window),
+    meanAgainst = fullRolling(xga, window);
+  const peak = Math.max(0.5, ...xg, ...xga);
+  let step = peak > 2.5 ? 1 : 0.5;
+  if (peak / step > 6) step *= 2;
+  const top = Math.max(Math.ceil(peak / step) * step, peak * 1.04);
+  const ticks = [];
+  for (let v = 0; v <= top + 1e-9; v += step) ticks.push(v);
+  const y = (v) => m.t + (1 - v / top) * ih;
+  const months = [];
+  for (let t = nextMonth(t0); t < t1; t = nextMonth(t)) months.push(t);
+  const known = usable.map((_, i) => i).filter((i) => meanFor[i] != null);
+  const line = (values) =>
+    known.map((i, k) => `${k ? "L" : "M"}${x(days[i])},${y(values[i])}`).join("");
+  // The space between the two means, cut where they cross: blue where the club creates more.
+  const gaps = [];
+  for (let k = 0; k < known.length - 1; k++) {
+    const i = known[k],
+      j = known[k + 1];
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const piece = (ta, tb) => {
+      const [xa, xb] = [lerp(days[i], days[j], ta), lerp(days[i], days[j], tb)];
+      const [fa, fb] = [lerp(meanFor[i], meanFor[j], ta), lerp(meanFor[i], meanFor[j], tb)];
+      const [ga, gb] = [lerp(meanAgainst[i], meanAgainst[j], ta), lerp(meanAgainst[i], meanAgainst[j], tb)];
+      gaps.push({
+        d: `M${x(xa)},${y(fa)}L${x(xb)},${y(fb)}L${x(xb)},${y(gb)}L${x(xa)},${y(ga)}Z`,
+        ahead: fa + fb >= ga + gb,
+      });
+    };
+    const d0 = meanFor[i] - meanAgainst[i],
+      d1 = meanFor[j] - meanAgainst[j];
+    if (d0 * d1 < 0) {
+      const t = d0 / (d0 - d1);
+      piece(0, t);
+      piece(t, 1);
+    } else piece(0, 1);
+  }
+  const last = usable.length - 1;
+  const ends =
+    meanFor[last] == null
+      ? []
+      : [
+          ["for", meanFor[last], FOR, "xG créés"],
+          ["against", meanAgainst[last], AGAINST, "xG concédés"],
+        ];
+  // Labels at the right end, kept apart when the two means meet.
+  let labelY = ends.map(([, v]) => y(v));
+  if (ends.length && Math.abs(labelY[0] - labelY[1]) < 30) {
+    const mid = (labelY[0] + labelY[1]) / 2;
+    labelY = labelY[0] <= labelY[1] ? [mid - 15, mid + 15] : [mid + 15, mid - 15];
+  }
+  const pick = (event) => {
+    const box = event.currentTarget.getBoundingClientRect();
+    const vx = event.clientX - box.left;
+    let best = 0;
+    days.forEach((d, i) => {
+      if (Math.abs(x(d) - vx) < Math.abs(x(days[best]) - vx)) best = i;
+    });
+    setActive(best);
+  };
+  const row = active == null ? null : usable[active];
   return (
-    <MultiLine
-      ariaLabel={`xG pour et contre, moyenne glissante sur ${window} matchs`}
-      labels={labels}
-      step={Math.max(1, Math.ceil(labels.length / 8))}
-      series={[
-        {
-          name: `xG pour (moy. ${window} matchs)`,
-          color: "var(--accent)",
-          values: rolling(
-            usable.map((r) => r.own.xg),
-            window,
-          ),
-          tips,
-          area: true,
-        },
-        {
-          name: `xG contre (moy. ${window} matchs)`,
-          color: "var(--mq-series-2)",
-          values: rolling(
-            usable.map((r) => r.opp.xg),
-            window,
-          ),
-        },
-        {
-          name: "xG du match",
-          color: "var(--muted-light)",
-          values: usable.map((r) => r.own.xg),
-          dashed: true,
-          dots: true,
-        },
-      ]}
-    />
+    <div ref={ref} className={s.xgTrend}>
+      <div className={s.trendLegend} data-legend>
+        <span>
+          <i style={{ background: FOR }} />
+          xG créés, moyenne {window} matchs
+        </span>
+        <span>
+          <i style={{ background: AGAINST }} />
+          xG concédés, moyenne {window} matchs
+        </span>
+        <span>
+          <i className={s.legendDot} />
+          Un match
+        </span>
+      </div>
+      <div className={s.xgPlot}>
+      <svg
+        data-chart="xg-trend"
+        width={width}
+        height={height}
+        viewBox={`0 0 ${width} ${height}`}
+        role="img"
+        aria-label={`xG créés et concédés par match, moyennes sur ${window} matchs`}
+        className={s.xgSvg}
+        onPointerMove={pick}
+        onPointerDown={pick}
+        onPointerLeave={() => setActive(null)}
+      >
+        {ticks.map((v) => (
+          <g key={v}>
+            <line
+              x1={m.l}
+              x2={width - m.r}
+              y1={y(v)}
+              y2={y(v)}
+              stroke={v ? "var(--grid)" : "var(--border-strong)"}
+              strokeDasharray={v ? "2 3" : undefined}
+            />
+            <text data-tick="y" x={m.l - 8} y={y(v) + 4} textAnchor="end" className={s.axisText}>
+              {tickText(v)}
+            </text>
+          </g>
+        ))}
+        {months.map((t) => (
+          <g key={t}>
+            <line x1={x(t)} x2={x(t)} y1={m.t} y2={height - m.b} stroke="var(--grid)" strokeDasharray="2 3" />
+            <text x={x(t) + 4} y={height - 8} className={s.axisText}>
+              {MONTHS[new Date(t).getUTCMonth()]}
+            </text>
+          </g>
+        ))}
+        {(!months.length || x(months[0]) - m.l > 40) && (
+          <text x={m.l + 2} y={height - 8} className={s.axisText}>
+            {MONTHS[new Date(t0).getUTCMonth()]}
+          </text>
+        )}
+        {gaps.map((gap, i) => (
+          <path key={i} d={gap.d} fill={gap.ahead ? FOR : AGAINST} opacity="0.2" />
+        ))}
+        {active != null && (
+          <line x1={x(days[active])} x2={x(days[active])} y1={m.t} y2={height - m.b} stroke="var(--border-strong)" />
+        )}
+        {usable.map((r, i) => (
+          <g key={r.match.id ?? i} opacity={active == null || active === i ? 1 : 0.6}>
+            <circle data-dot="against" data-match={r.match.id} cx={x(days[i])} cy={y(r.opp.xg)} r={active === i ? 4.5 : 3} fill={AGAINST} fillOpacity={active === i ? 1 : 0.55} />
+            <circle data-dot="for" data-match={r.match.id} cx={x(days[i])} cy={y(r.own.xg)} r={active === i ? 4.5 : 3} fill={FOR} fillOpacity={active === i ? 1 : 0.55} />
+          </g>
+        ))}
+        {known.length > 1 && (
+          <>
+            <path d={line(meanAgainst)} fill="none" stroke={AGAINST} strokeWidth="2.25" strokeLinejoin="round" />
+            <path d={line(meanFor)} fill="none" stroke={FOR} strokeWidth="2.25" strokeLinejoin="round" />
+          </>
+        )}
+        {ends.map(([key, v, color, label], k) => (
+          <g key={key}>
+            <circle cx={x(days[last])} cy={y(v)} r="4.5" fill={color} stroke="var(--bg)" strokeWidth="2" />
+            {!phone && (
+              <>
+                <text data-end={key} x={x(days[last]) + 12} y={labelY[k] - 1} className={s.endValue}>
+                  {fmtNum(v, 2)}
+                </text>
+                <text x={x(days[last]) + 12} y={labelY[k] + 13} className={s.axisText}>
+                  {label}
+                </text>
+              </>
+            )}
+          </g>
+        ))}
+      </svg>
+      {row && (
+        <div
+          className={`${s.plotTip} ${s.sideTip}`}
+          data-tip
+          data-flip={x(days[active]) > width / 2 || undefined}
+          style={{ left: x(days[active]), top: height / 2 }}
+        >
+          <strong>
+            {dateShort(row.match.date)} · {row.side === "home" ? "vs" : "à"} {row.opponent.name} {row.gf}–{row.ga}
+          </strong>
+          {row.match.league && <small className={s.tipNote}>{row.match.league}</small>}
+          <span>
+            xG créés <b>{fmtNum(row.own.xg, 2)}</b>
+          </span>
+          <span>
+            xG concédés <b>{fmtNum(row.opp.xg, 2)}</b>
+          </span>
+          {meanFor[active] != null && (
+            <>
+              <small className={s.plotTipRule}>Moyenne {window} matchs</small>
+              <span>
+                Créés <b>{fmtNum(meanFor[active], 2)}</b>
+              </span>
+              <span>
+                Concédés <b>{fmtNum(meanAgainst[active], 2)}</b>
+              </span>
+            </>
+          )}
+        </div>
+      )}
+      </div>
+    </div>
   );
 }
 
@@ -1123,77 +1326,156 @@ const OUTCOME = {
   blocked: "Contré",
 };
 
-/** Half pitch for a whole season of team shots: small marks, goals filled. */
-function TeamShotMap({ shots }) {
-  const line = {
-    fill: "none",
-    stroke: "var(--mq-pitch-line)",
-    strokeWidth: 0.35,
+/** A shot's mark radius in pixels, by its xG: the same on every screen, so the key holds. */
+const shotRadius = (xg) => 2 + Math.sqrt(Math.max(0, xg)) * 17;
+
+/** Half pitch for a whole season of team shots, drawn at its measured width: goals filled in the
+ * side's colour, saved shots filled grey, the others hollow; size by xG; a dashed arc at the
+ * shots' mean distance; the shot nearest the pointer gets its card. */
+function TeamShotMap({ side, title, shots, goalColor, depth }) {
+  const [ref, measured] = useBoxWidth(560);
+  const [active, setActive] = useState(null);
+  const clip = useId();
+  const w = Math.min(measured, 600);
+  const near = shots.filter((shot) => shot.x <= 40);
+  const dist = (shot) => Math.hypot(shot.x, shot.y - 34);
+  const total = sumKnown(shots.map((shot) => shot.xg));
+  const goals = shots.filter((shot) => shot.outcome === "goal").length;
+  const meanDist = shots.length
+    ? shots.reduce((sum, shot) => sum + dist(shot), 0) / shots.length
+    : null;
+  const k = w / 68;
+  const top = 2.6 * k;
+  const h = top + depth * k;
+  const X = (across) => across * k,
+    Y = (out) => top + out * k;
+  const radius = (shot) => (Number.isFinite(shot.xg) ? shotRadius(shot.xg) : 2);
+  const kind = (shot) =>
+    shot.outcome === "goal" ? "goal" : shot.outcome === "saved" ? "saved" : "miss";
+  const order = { miss: 0, saved: 1, goal: 2 };
+  const drawn = [...near].sort(
+    (a, b) =>
+      order[kind(a)] - order[kind(b)] ||
+      (Number.isFinite(b.xg) ? b.xg : -1) - (Number.isFinite(a.xg) ? a.xg : -1),
+  );
+  const pick = (event) => {
+    const box = event.currentTarget.getBoundingClientRect();
+    const px = event.clientX - box.left,
+      py = event.clientY - box.top;
+    let best = null,
+      bestD = Infinity;
+    for (const shot of near) {
+      const d = Math.hypot(X(shot.y) - px, Y(shot.x) - py) - radius(shot);
+      if (d < bestD) [best, bestD] = [shot, d];
+    }
+    setActive(bestD <= 10 ? best : null);
   };
+  const line = { fill: "none", stroke: "var(--mq-pitch-line)", strokeWidth: 1.25 };
+  const figures = [
+    ["shots", "Tirs", String(shots.length)],
+    ["xg", "xG", fmtNum(total, 1)],
+    ["goals", "Buts", String(goals)],
+    ["diff", "Buts − xG", total == null ? "—" : fmtNum(goals - total, 1, true).replace("-", "−")],
+    ["perShot", "xG par tir", total == null || !shots.length ? "—" : fmtNum(total / shots.length, 2)],
+    ["distance", "Distance moy.", meanDist == null ? "—" : `${fmtNum(meanDist, 1)} m`],
+  ];
+  const arcLabel = meanDist != null && meanDist < depth - 1;
   return (
-    <svg
-      viewBox="0 0 68 40"
-      role="img"
-      aria-label="Carte des tirs, taille selon les xG"
-      // A half pitch drawn 68 units wide: it stops growing at 640 px.
-      style={{
-        display: "block",
-        width: "100%",
-        maxWidth: 640,
-        height: "auto",
-        marginInline: "auto",
-      }}
-    >
-      <rect x="0" y="0" width="68" height="40" fill="var(--mq-pitch)" />
-      <rect x="0.5" y="0.5" width="67" height="39" {...line} />
-      <rect x="13.85" y="0.5" width="40.3" height="16" {...line} />
-      <rect x="24.85" y="0.5" width="18.3" height="5" {...line} />
-      <path d="M26.7 16.5A9.15 9.15 0 0 0 41.3 16.5" {...line} />
-      <line
-        x1="30.34"
-        y1="0.5"
-        x2="37.66"
-        y2="0.5"
-        stroke="var(--ink)"
-        strokeWidth="0.9"
-      />
-      {[...shots]
-        // Goals on top; the others from the largest xG, a shot without xG last (the smallest).
-        .sort(
-          (a, b) =>
-            (a.outcome === "goal") - (b.outcome === "goal") ||
-            (Number.isFinite(b.xg) ? b.xg : -1) -
-              (Number.isFinite(a.xg) ? a.xg : -1),
-        )
-        .map((shot) => {
-          const goal = shot.outcome === "goal";
-          const known = Number.isFinite(shot.xg);
-          return (
-            <circle
-              key={shot.id}
-              cx={shot.y}
-              cy={shot.x}
-              r={known ? 0.4 + Math.sqrt(Math.max(0, shot.xg)) * 1.7 : 0.4}
-              strokeDasharray={known ? undefined : "0.4 0.3"}
-              fill={goal ? "var(--accent)" : "transparent"}
-              fillOpacity={goal ? 0.9 : 0}
-              stroke={
-                goal
-                  ? "var(--mq-pitch)"
-                  : shot.outcome === "saved"
-                    ? "var(--ink)"
-                    : "var(--muted-light)"
-              }
-              strokeOpacity={goal ? 1 : shot.outcome === "saved" ? 0.55 : 0.4}
-              strokeWidth={goal ? 0.25 : 0.2}
+    <div data-shotmap={side} className={s.shotMap}>
+      <strong className={s.shotTitle}>{title}</strong>
+      <dl className={s.shotFigures}>
+        {figures.map(([key, label, value]) => (
+          <div key={key} data-figure={key}>
+            <dt>{label}</dt>
+            <dd>
+              <b>{value}</b>
+            </dd>
+          </div>
+        ))}
+      </dl>
+      <div ref={ref} className={s.shotPlot}>
+        <svg
+          width={w}
+          height={h}
+          viewBox={`0 0 ${w} ${h}`}
+          role="img"
+          aria-label={`${title} : ${shots.length} tirs, ${fmtNum(total, 1)} xG, ${goals} buts`}
+          onPointerMove={pick}
+          onPointerDown={pick}
+          onPointerLeave={() => setActive(null)}
+        >
+          <defs>
+            <clipPath id={clip}>
+              <rect x="0" y={top} width={w} height={depth * k} />
+            </clipPath>
+          </defs>
+          <rect x="0" y={top} width={w} height={depth * k} fill="var(--mq-pitch)" />
+          <line x1="0" x2={w} y1={top} y2={top} {...line} />
+          <rect x={X(13.85)} y={top} width={40.3 * k} height={16.5 * k} {...line} />
+          <rect x={X(24.85)} y={top} width={18.3 * k} height={5.5 * k} {...line} />
+          <path d={`M${X(34 - 7.3)} ${Y(16.5)}A${9.15 * k} ${9.15 * k} 0 0 0 ${X(34 + 7.3)} ${Y(16.5)}`} {...line} />
+          <circle cx={X(34)} cy={Y(11)} r="1.6" fill="var(--mq-pitch-line)" />
+          <rect x={X(30.34)} y={top - 2.2 * k} width={7.32 * k} height={2.2 * k} fill="none" stroke="var(--muted)" strokeWidth="1.5" />
+          {meanDist != null && (
+            <g clipPath={`url(#${clip})`}>
+              <circle data-arc cx={X(34)} cy={top} r={meanDist * k} fill="none" stroke="var(--muted)" strokeDasharray="3 4" opacity="0.7" />
+            </g>
+          )}
+          {arcLabel && (
+            <text
+              x={X(34) + meanDist * k * Math.cos(Math.PI * 0.08) + 6}
+              y={top + meanDist * k * Math.sin(Math.PI * 0.08) + 4}
+              className={s.axisText}
             >
-              <title>
-                {`${OUTCOME[shot.outcome]} · ${shot.player || ""} ${shot.minute ?? ""}′ · ${known ? `xG ${fmtNum(shot.xg, 2)}` : "xG indisponible"} · ${shot.situation} · ${shot.opponent}`}
-              </title>
-            </circle>
-          );
-        })}
-    </svg>
+              {fmtNum(meanDist, 1)} m
+            </text>
+          )}
+          {drawn.map((shot) => {
+            const mark = kind(shot);
+            const unknown = !Number.isFinite(shot.xg);
+            const common = { "data-mark": mark, cx: X(shot.y), cy: Y(shot.x), r: radius(shot), strokeDasharray: unknown ? "2 2" : undefined };
+            return mark === "goal" ? (
+              <circle key={shot.id} {...common} fill={goalColor} stroke="var(--mq-pitch)" strokeWidth="1.5" />
+            ) : mark === "saved" ? (
+              <circle key={shot.id} {...common} fill="var(--muted-light)" fillOpacity="0.45" stroke="var(--mq-pitch)" strokeWidth="1" />
+            ) : (
+              <circle key={shot.id} {...common} fill="none" stroke="var(--muted)" strokeOpacity="0.6" strokeWidth="1" />
+            );
+          })}
+          {active && (
+            <circle cx={X(active.y)} cy={Y(active.x)} r={radius(active) + 3} fill="none" stroke="var(--ink-strong)" strokeWidth="1.5" />
+          )}
+        </svg>
+        {active && (
+          <div
+            className={`${s.plotTip} ${s.sideTip}`}
+            data-tip
+            data-flip={X(active.y) > w / 2 || undefined}
+            style={{ left: X(active.y), top: Y(active.x) }}
+          >
+            <strong>
+              {active.player || "—"}
+              {active.minute != null ? ` · ${active.minute}′` : ""}
+            </strong>
+            <small className={s.tipNote}>
+              {[dateShort(active.date), active.opponent].filter(Boolean).join(" · ")}
+            </small>
+            <span>
+              Issue <b>{OUTCOME[active.outcome] || "—"}</b>
+            </span>
+            <span>
+              xG <b>{Number.isFinite(active.xg) ? fmtNum(active.xg, 2) : "indisponible"}</b>
+            </span>
+            <span>
+              Situation <b>{active.situation}</b>
+            </span>
+            <span>
+              Distance <b>{fmtNum(dist(active), 1)} m</b>
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -1202,66 +1484,40 @@ export function ShotPair({
   own = "Tirs du club",
   against = "Tirs concédés",
 }) {
-  const near = (list) => list.filter((shot) => shot.x <= 40);
-  // Unknown as soon as one shot of the list has no xG; a known 0 stays 0.
-  const total = (list) => sumKnown(list.map((shot) => shot.xg));
-  const goals = (list) => list.filter((shot) => shot.outcome === "goal").length;
+  // One depth for both halves, fitted to the farthest shot drawn: the two maps compare.
+  const far = [...profile.mapFor, ...profile.mapAgainst].map((shot) => shot.x).filter((x) => x <= 40);
+  const depth = Math.min(40, Math.max(28, Math.ceil(Math.max(0, ...far) + 2)));
   return (
-    <div className={s.pitchPair}>
-      {[
-        [own, profile.mapFor],
-        [against, profile.mapAgainst],
-      ].map(([title, list]) => (
-        <div key={title}>
-          <div className={s.pitchTitle}>
-            <strong>{title}</strong>
-            <span>
-              {list.length} tirs · {fmtNum(total(list), 1)} xG · {goals(list)}{" "}
-              buts
+    <div className={s.shotPair}>
+      <div className={s.pitchPair}>
+        <TeamShotMap side="for" title={own} shots={profile.mapFor} goalColor="var(--accent)" depth={depth} />
+        <TeamShotMap side="against" title={against} shots={profile.mapAgainst} goalColor="var(--mq-series-2)" depth={depth} />
+      </div>
+      <div className={s.trendLegend}>
+        <span>
+          <i className={s.legendDot} style={{ background: "var(--accent)" }} /> But marqué
+        </span>
+        <span>
+          <i className={s.legendDot} style={{ background: "var(--mq-series-2)" }} /> But concédé
+        </span>
+        <span>
+          <i className={s.legendDot} style={{ background: "color-mix(in srgb, var(--muted-light) 55%, transparent)" }} /> Cadré, arrêté
+        </span>
+        <span>
+          <i className={s.legendRing} /> Non cadré ou contré
+        </span>
+        <span>
+          <i className={s.legendDash} /> Distance moyenne
+        </span>
+        <span className={s.sizeKey}>
+          Taille selon les xG
+          {[0.05, 0.2, 0.5].map((v) => (
+            <span key={v}>
+              <i style={{ width: 2 * shotRadius(v), height: 2 * shotRadius(v) }} />
+              {fmtNum(v, 2)}
             </span>
-          </div>
-          <TeamShotMap shots={near(list)} />
-        </div>
-      ))}
-      <div
-        className={s.trendLegend}
-        style={{ gridColumn: "1 / -1", margin: 0 }}
-      >
-        <span>
-          <i
-            style={{
-              background: "var(--accent)",
-              height: 8,
-              width: 8,
-              borderRadius: "50%",
-            }}
-          />{" "}
-          But
+          ))}
         </span>
-        <span>
-          <i
-            style={{
-              border: "1px solid var(--ink)",
-              height: 8,
-              width: 8,
-              borderRadius: "50%",
-              opacity: 0.6,
-            }}
-          />{" "}
-          Arrêté
-        </span>
-        <span>
-          <i
-            style={{
-              border: "1px solid var(--muted-light)",
-              height: 8,
-              width: 8,
-              borderRadius: "50%",
-            }}
-          />{" "}
-          Non cadré ou contré
-        </span>
-        <span>Survoler un tir pour le détail</span>
       </div>
     </div>
   );

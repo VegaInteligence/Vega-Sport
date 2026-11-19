@@ -89,22 +89,78 @@ def _referrers(conn, table):
     ).fetchall()
 
 
-def _delete(conn, table, where, params, depth=0):
-    """Delete the rows of `table` matching `where`, the rows that block it first."""
+def _deletable(conn, table):
+    return conn.execute("SELECT has_table_privilege(%s, 'DELETE')", (table,)).fetchone()[0]
+
+
+def _delete(conn, table, where, params, skip=(), depth=0):
+    """Delete the rows of `table` matching `where`, the rows that block it first (but in the
+    schemas `skip` names: those are cleared before, by the role that writes them). A table this
+    role may not delete from is left alone: _protected found no row of it (FAILURE_MODES.md §35)."""
     if depth > 5:
         raise RuntimeError("PURGE_TOO_DEEP")
     for child, columns, parents in _referrers(conn, table):
-        _delete(conn, child, f"({', '.join(columns)}) IN (SELECT {', '.join(parents)} FROM {table} WHERE {where})", params, depth + 1)
+        if child.split(".", 1)[0] not in skip and _deletable(conn, child):
+            _delete(conn, child, f"({', '.join(columns)}) IN (SELECT {', '.join(parents)} FROM {table} WHERE {where})", params, skip, depth + 1)
     return conn.execute(f"DELETE FROM {table} WHERE {where}", params).rowcount
 
 
-def purge(conn):
-    """Remove from the base every competition of the lists above, one competition per
-    transaction: its matches (with everything that cascades from them: statistics, events,
-    line-ups, watches…), rounds, editions (standings, aggregates, projections, jobs) and the
-    competition (league levels, player honours, action values), with their provider ids.
-    Teams and players stay: they may play elsewhere. Returns the counts removed ({} when
-    nothing is left to remove)."""
+def _protected(conn, table, where, params, skip=(), depth=0):
+    """The tables holding rows that block deleting the rows of `table` matching `where` and that this role may not
+    delete from: the reviewed proofs (142, 143, 146) give the collection role SELECT and INSERT only."""
+    if depth > 5:
+        raise RuntimeError("PURGE_TOO_DEEP")
+    found = []
+    for child, columns, parents in _referrers(conn, table):
+        if child.split(".", 1)[0] in skip:
+            continue
+        nested = f"({', '.join(columns)}) IN (SELECT {', '.join(parents)} FROM {table} WHERE {where})"
+        if not _deletable(conn, child):
+            if conn.execute(f"SELECT EXISTS (SELECT 1 FROM {child} WHERE {nested})", params).fetchone()[0]:
+                found.append(child)
+            continue
+        found += _protected(conn, child, nested, params, skip, depth + 1)
+    return found
+
+
+def _clear(calc, table, where, params, depth=0):
+    """Delete, in agg, the rows that would block deleting the rows of `table` matching `where`."""
+    if depth > 5:
+        raise RuntimeError("PURGE_TOO_DEEP")
+    for child, columns, parents in _referrers(calc, table):
+        nested = f"({', '.join(columns)}) IN (SELECT {', '.join(parents)} FROM {table} WHERE {where})"
+        if child.startswith("agg."):
+            _delete(calc, child, nested, params, depth=depth + 1)
+        else:
+            _clear(calc, child, nested, params, depth + 1)
+
+
+def _scope(conn, competition):
+    editions = [r[0] for r in conn.execute("SELECT id FROM core.competition_seasons WHERE competition_id = %s", (competition,))]
+    matches = [r[0] for r in conn.execute("SELECT id FROM core.matches WHERE competition_season_id = ANY(%s)", (editions,))]
+    return editions, matches
+
+
+def _lock(conn):
+    return conn.execute("SELECT pg_try_advisory_xact_lock(hashtextextended('vega_scope_purge', 0))").fetchone()[0]
+
+
+def purge(conn, calc):
+    """Remove from the base every competition of the lists above, one competition at a time:
+    its matches (with everything that cascades from them: statistics, events, line-ups,
+    watches…), rounds, editions (standings, aggregates, projections, jobs) and the competition
+    (league levels, player honours, action values), with their provider ids. Teams and players
+    stay: they may play elsewhere. Returns the counts removed ({} when nothing is left).
+
+    Two connections, as the roles are (017_roles.sql): `calc` (vega_calc, writes agg) first
+    clears the calculations' rows and sends the seasons' player rankings to be ranked again;
+    then `conn` (vega_collect, writes core and ops, cannot read agg) removes the rest. A row
+    the calculations write again in between makes the second step fail on its foreign key:
+    nothing of it is written, and the next daily pass tries again.
+
+    A competition a row of a table the collection role may not delete from names (a reviewed
+    proof: 142, 143, 146) is held before either half runs: nothing of it is removed, agg
+    included; it is printed with the tables and counted as `held` (FAILURE_MODES.md §35)."""
     folders = ["cup:open-matchday:" + folder for folder in REMOVED_FOLDERS] + ["archive:" + family for family in REMOVED_ARCHIVES]
     competitions = [
         row[0]
@@ -118,18 +174,36 @@ def purge(conn):
     counts = {}
     for competition in competitions:
         with conn.transaction():
-            if not conn.execute("SELECT pg_try_advisory_xact_lock(hashtextextended('vega_scope_purge', 0))").fetchone()[0]:
+            editions, matches = _scope(conn, competition)
+            protected = sorted(set(
+                _protected(conn, "core.matches", "id = ANY(%s)", (matches,), ("agg",))
+                + _protected(conn, "core.rounds", "competition_season_id = ANY(%s)", (editions,), ("agg",))
+                + _protected(conn, "core.competition_seasons", "id = ANY(%s)", (editions,), ("agg",))
+                + _protected(conn, "core.competitions", "id = %s", (competition,), ("agg",))))
+        if protected:
+            print(f"scope purge held competition={competition} tables={','.join(protected)}", flush=True)
+            counts["held"] = counts.get("held", 0) + 1
+            continue
+        with calc.transaction():
+            if not _lock(calc):
                 break  # another task purges now
-            editions = [r[0] for r in conn.execute("SELECT id FROM core.competition_seasons WHERE competition_id = %s", (competition,))]
-            matches = [r[0] for r in conn.execute("SELECT id FROM core.matches WHERE competition_season_id = ANY(%s)", (editions,))]
+            editions, matches = _scope(calc, competition)
             # Each season these matches were played in is ranked again (power.stale_rankings):
             # a past season's player ranking is otherwise never computed again, and its
             # players from these leagues would stay in it. The club Elo is rebuilt every run.
-            conn.execute(
+            calc.execute(
                 """UPDATE agg.power_runs SET method_version = 'purged' WHERE kind = 'players' AND status = 'published'
                    AND season_id IN (SELECT DISTINCT season_id FROM core.matches WHERE id = ANY(%s))""",
                 (matches,),
             )
+            _clear(calc, "core.matches", "id = ANY(%s)", (matches,))
+            _clear(calc, "core.rounds", "competition_season_id = ANY(%s)", (editions,))
+            _clear(calc, "core.competition_seasons", "id = ANY(%s)", (editions,))
+            _clear(calc, "core.competitions", "id = %s", (competition,))
+        with conn.transaction():
+            if not _lock(conn):
+                break
+            editions, matches = _scope(conn, competition)
             teams = [r[0] for r in conn.execute(
                 "SELECT home_team_id FROM core.matches WHERE id = ANY(%s) UNION SELECT away_team_id FROM core.matches WHERE id = ANY(%s)",
                 (matches, matches),
@@ -150,10 +224,10 @@ def purge(conn):
                    OR (entity_type = 'competition' AND entity_id = %s)""",
                 (matches, competition),
             )
-            removed = {"matches": _delete(conn, "core.matches", "id = ANY(%s)", (matches,))}
-            _delete(conn, "core.rounds", "competition_season_id = ANY(%s)", (editions,))
-            removed["editions"] = _delete(conn, "core.competition_seasons", "id = ANY(%s)", (editions,))
-            removed["competitions"] = _delete(conn, "core.competitions", "id = %s", (competition,))
+            removed = {"matches": _delete(conn, "core.matches", "id = ANY(%s)", (matches,), ("agg",))}
+            _delete(conn, "core.rounds", "competition_season_id = ANY(%s)", (editions,), ("agg",))
+            removed["editions"] = _delete(conn, "core.competition_seasons", "id = ANY(%s)", (editions,), ("agg",))
+            removed["competitions"] = _delete(conn, "core.competitions", "id = %s", (competition,), ("agg",))
             # A team or player seen only there is no longer read every month (profiles.enqueue_due):
             # its profile stays, and a match of ours that names it again queues it again
             # (profiles.queue_first_seen).

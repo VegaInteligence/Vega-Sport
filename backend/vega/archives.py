@@ -83,6 +83,9 @@ ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
 SCRIPTS = Path(os.environ.get("VEGA_ARCHIVE_SCRIPTS", ROOT / "backend/archives/builders"))
 EDITION = Path(os.environ.get("VEGA_ARCHIVE_EDITION", ROOT / "backend/archives/edition.mjs"))
+# merge_twins's script sits beside edition.mjs (both import ../../dashboard/shared/archive.js): the image needs no
+# third variable (FAILURE_MODES.md §35, 35i).
+TWINS = Path(os.environ.get("VEGA_ARCHIVE_TWINS", EDITION.parent / "twins.mjs"))
 # The shared files edition.mjs imports, beside it as in the checkout and the image (../../dashboard/shared).
 SHARED_FILES = ("archive.js", "archive-text.js", "openfootball-history.js",
                 "legacy-8018e08/archive.js", "legacy-8018e08/archive-text.js", "legacy-8018e08/openfootball-history.js")
@@ -93,7 +96,7 @@ def code_manifest():
     shared = EDITION.resolve().parents[2] / "dashboard/shared"
     # scope.py: the archive families the user removed are not selected (Loader.selection).
     files = {"vega/archives.py": HERE / "archives.py", "vega/scope.py": HERE / "scope.py", "vega/store.py": HERE / "store.py",
-             "archives/edition.mjs": EDITION}
+             "archives/edition.mjs": EDITION, "archives/twins.mjs": TWINS}
     files.update({f"shared/{name}": shared / name for name in SHARED_FILES})
     for attachment in (HERE / "archive_attestations.py", archive_attestations.BUNDESLIGA_PATH, archive_attestations.SCOTLAND_PATH):
         files[f"vega/{attachment.name}"] = attachment
@@ -145,6 +148,19 @@ class ArchiveError(RuntimeError):
     pass
 
 
+def twin_keep():
+    """{archive key: why} of the keys main's twin pass never merges, in the edition and in merge_twins: the reviewed
+    quarantine and both attestation ledgers' keys (their own reviewed path), FAILURE_MODES.md §35."""
+    out = {}
+    for ledger in (archive_attestations.LEDGER, archive_attestations.SCOTLAND):
+        for case in ledger["cases"]:
+            for part in (case.get("match"), case.get("goals_observation")):
+                if part and part.get("key"):
+                    out[part["key"]] = "ledger"
+    out.update(dict.fromkeys(QUARANTINE, "quarantine"))
+    return out
+
+
 def _run(args):
     done = subprocess.run(args, capture_output=True, text=True, timeout=3600)
     if done.returncode != 0:
@@ -174,8 +190,8 @@ def build_sources(sources, work):
     return results, goals if (goals / "index.json").is_file() else None
 
 
-def edition(results_file, goals_file):
-    return json.loads(_run(["node", str(EDITION), str(results_file or "-"), str(goals_file or "-")]))
+def edition(results_file, goals_file, keep_file=None):
+    return json.loads(_run(["node", str(EDITION), str(results_file or "-"), str(goals_file or "-"), str(keep_file or "-")]))
 
 
 def normalize(value):
@@ -517,14 +533,15 @@ class Loader:
         found = self.dependents(ids)
         return {mid: {"row": rows.get(mid), "events": events.get(mid, []), "dependents": found.get(mid, [])} for mid in ids}
 
-    def removals(self, label, competitions, matches, excluded, overlap):
+    def removals(self, label, competitions, matches, excluded, overlap, absorbed=None):
         """(removed, held, edition ids) of a season (FAILURE_MODES.md §20, §22, §23); ArchiveError, before any write, for a
         stored row going without a reviewed reason. `excluded`: {reviewed copy: the competition it copies}. A copy is
         removed only with no event and no reference, and its twin (same index in the copied competition) the same
         fixture; otherwise it is held. A quarantined key is never removed; an edition goes only with all its matches."""
         start = int(label[:4])
         keep, kept = {m["key"] for m in matches} | set(QUARANTINE), {c["id"] for c in competitions}
-        candidates, held, refused = [], [], []
+        candidates, held, refused, twins = [], [], [], []
+        absorbed = absorbed or {}
         for key, mid, edition in self.conn.execute(
             """SELECT m.archive_key, m.id, cs.archive_key FROM core.matches m JOIN core.competition_seasons cs ON cs.id = m.competition_season_id
                WHERE m.season_id = %s AND m.archive_key IS NOT NULL ORDER BY 1""",
@@ -532,7 +549,9 @@ class Loader:
         ).fetchall():
             if key in keep:
                 continue
-            if edition in overlap:
+            if key in absorbed:
+                twins.append(f"{key} -> {absorbed[key]}")  # stored apart, one match in the edition (§35)
+            elif edition in overlap:
                 held.append((key, mid, "primary_overlap"))
             elif edition in excluded:
                 candidates.append((key, mid, edition))
@@ -545,6 +564,10 @@ class Loader:
         for ident, edition in stored_editions:
             if edition not in kept and edition not in excluded:
                 refused.append(f"edition {edition}")
+        if twins:
+            shown = ", ".join(twins[:10]) + (f" and {len(twins) - 10} more" if len(twins) > 10 else "")
+            raise ArchiveError(f"{label}: TWIN_NOT_MERGED: {len(twins)} goal-only match(es) the edition merges into their result are "
+                               f"still stored apart (archives.merge_twins first): {shown}")
         if refused:
             shown = ", ".join(refused[:10]) + (f" and {len(refused) - 10} more" if len(refused) > 10 else "")
             raise ArchiveError(f"{label}: the edition would remove {len(refused)} stored archive row(s) without a reviewed reason: {shown}")
@@ -610,8 +633,13 @@ def _season(conn, label, data, provider_of, excluded, created, write, digest=Non
     out = {"refused": None, "matches": [], "removed": [], "editions": [], "editions_removed": [], "teams_to_create": [],
            "competitions_to_create": [],
            "held_units": [u for u in data.get("held") or [] if selected & set(u["legacy"])]}
+    # Main's twin pass in the edition (§35): what it merged, and the pairs it left with their reason.
+    for name, field in (("absorbed", "absorbed"), ("twins_held", "twinsHeld")):
+        if data.get(field):
+            out[name] = data[field]
     try:
-        removed, held_rows, editions_out = loader.removals(label, competitions, matches, excluded, overlap)
+        removed, held_rows, editions_out = loader.removals(label, competitions, matches, excluded, overlap,
+                                                           {a["goal"]: a["result"] for a in data.get("absorbed") or []})
         if historic:
             matches = archive_attestations.project(matches, historic)
         rows = [match_row(m) for m in matches]
@@ -954,6 +982,97 @@ def download(url, target, client=None):
     return Path(target)
 
 
+def merge_twins(conn, held=None):
+    """The archive matches stored twice (a goal-only match « g: » beside its result « r: »,
+    which an earlier edition builder missed: shared/archive.js's goalTwins) become one: the
+    result keeps its row, takes the goals (their clubs made the result's) and the goals' date,
+    and the twin goes. Returns {season: twins merged}; a later import builds the same.
+
+    Under the branch's archive guarantees (FAILURE_MODES.md §35): each season runs in its own transaction, which first
+    tries the archive apply lock (vega.archives.apply): held by an apply, the pass stops there without an error. A pair
+    with a key of the quarantine or of an attestation ledger, or a row core.archive_match_attestations names, is never
+    merged; it is printed and appended to `held` ({season, goal, result, reason}). Each removed goal-only match gets its
+    tombstone (ops.archive_removals, no plan) in the deleting transaction, so that a later reference to it is refused
+    and a reviewed alias may name it. A season that fails in the database is rolled back alone and printed."""
+    import psycopg
+
+    out = {}
+    held = [] if held is None else held
+    keep = twin_keep()
+    seasons = [r[0] for r in conn.execute(
+        "SELECT DISTINCT season_id FROM core.matches WHERE archive_key LIKE 'g:%%' ORDER BY 1"
+    )]
+    for season in seasons:
+        label = f"{season}/{season + 1}"
+        try:
+            with conn.transaction():
+                if not conn.execute("SELECT pg_try_advisory_xact_lock(hashtext('vega.archives.apply'))").fetchone()[0]:
+                    print(f"archive twins skipped season={label}: an archive apply holds vega.archives.apply", flush=True)
+                    return out
+                rows = conn.execute(
+                    """SELECT m.id, m.archive_key, cs.archive_key, m.match_date::text, m.home_team_name, m.away_team_name,
+                              m.home_score, m.away_score, m.home_team_id, m.away_team_id,
+                              EXISTS (SELECT 1 FROM core.match_events e WHERE e.season_id = m.season_id AND e.match_id = m.id AND e.event_type = 'goal')
+                       FROM core.matches m JOIN core.competition_seasons cs ON cs.id = m.competition_season_id
+                       WHERE m.season_id = %s AND m.archive_key IS NOT NULL AND cs.archive_key IS NOT NULL""",
+                    (season,),
+                ).fetchall()
+                if not any(key.startswith("g:") for _, key, *_ in rows):
+                    continue
+                by_key = {row[1]: row for row in rows}
+                payload = {"matches": [
+                    {"key": key, "competitionId": comp, "date": day, "team1": home, "team2": away, "score": [hs, aws],
+                     "goals": [{}] if has_goals else None}
+                    for _, key, comp, day, home, away, hs, aws, _h, _a, has_goals in rows
+                ]}
+                done = subprocess.run(["node", str(TWINS)], input=json.dumps(payload), capture_output=True, text=True, timeout=600)
+                if done.returncode != 0:
+                    raise ArchiveError(f"twins.mjs failed: {done.stderr.strip()[-500:]}")
+                twins = json.loads(done.stdout)
+                if not twins:
+                    continue
+                attested_ids, attested_keys = set(), set()
+                for match_id, former_key, former_id in conn.execute(
+                        "SELECT match_id, former_key, former_id FROM core.archive_match_attestations WHERE season_id = %s", (season,)):
+                    attested_ids.update(i for i in (match_id, former_id) if i is not None)
+                    if former_key:
+                        attested_keys.add(former_key)
+                merged = 0
+                for twin in twins:
+                    goal, result = by_key[twin["goal"]], by_key[twin["result"]]
+                    reason = keep.get(goal[1]) or keep.get(result[1]) or (
+                        "attested" if {goal[0], result[0]} & attested_ids or goal[1] in attested_keys else None)
+                    if reason:
+                        held.append({"season": label, "goal": goal[1], "result": result[1], "reason": reason})
+                        print(f"archive twins held season={label} goal={goal[1]} result={result[1]} reason={reason}", flush=True)
+                        continue
+                    conn.execute(
+                        """UPDATE core.match_events SET match_id = %s,
+                             team_id = CASE team_id WHEN %s THEN %s WHEN %s THEN %s ELSE team_id END
+                           WHERE season_id = %s AND match_id = %s""",
+                        (result[0], goal[8], result[8], goal[9], result[9], season, goal[0]),
+                    )
+                    conn.execute(
+                        "UPDATE core.matches SET match_date = %s, revision = revision + 1, updated_at = now() WHERE id = %s",
+                        (twin["date"], result[0]),
+                    )
+                    conn.execute("INSERT INTO ops.archive_removals(kind, id, season_id, archive_key, plan_sha256) VALUES ('match', %s, %s, %s, NULL)",
+                                 (goal[0], season, goal[1]))
+                    conn.execute("DELETE FROM core.matches WHERE id = %s", (goal[0],))
+                    merged += 1
+                if merged:
+                    conn.execute(
+                        """INSERT INTO ops.resource_versions(resource_kind, resource_id) VALUES ('archive_season', %s)
+                           ON CONFLICT (resource_kind, resource_id) DO UPDATE SET version = ops.resource_versions.version + 1, updated_at = now()""",
+                        (season,),
+                    )
+                    out[label] = merged
+                    print(f"archive twins merged season={label} pairs={merged}", flush=True)
+        except psycopg.Error as error:
+            print(f"archive twins failed season={label} error={type(error).__name__}: {str(error).splitlines()[0][:300]}", flush=True)
+    return out
+
+
 @contextlib.contextmanager
 def editions(sources, seasons=None):
     """(inputs, results index, goals index, labels, [(label, edition data, provider_of, excluded competition ids)])."""
@@ -983,8 +1102,10 @@ def editions(sources, seasons=None):
         provider_of = provider_for(results_index)
         listed = [label for label in sorted(files) if not seasons or label in seasons]
         approved = archive_attestations.observed_inputs(inputs["sources"])
+        keep = Path(work) / "twin-keep.json"
+        keep.write_text(json.dumps({"keep": sorted(twin_keep())}), encoding="utf-8")
         yield inputs, results_index, goals_index, listed, (
-            (label, dict(edition(files[label].get("results"), files[label].get("goals")), attested_inputs=approved),
+            (label, dict(edition(files[label].get("results"), files[label].get("goals"), keep), attested_inputs=approved),
              provider_of, excluded) for label in listed)
 
 

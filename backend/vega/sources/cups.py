@@ -223,6 +223,39 @@ def _guard_open_cup(before, rows, cup_key, reviewed_halves):
             raise SourceError("PERIODS_CONFLICT", f"{key}: the known {part} would change")
 
 
+PHASE_PAIRS = (("home_score_ht", "away_score_ht"), ("home_score_et", "away_score_et"), ("home_penalty_score", "away_penalty_score"))
+
+
+def _full_time(row):
+    return (row["home_score_90"], row["away_score_90"]) if row["home_score_et"] is not None else (row["home_score"], row["away_score"])
+
+
+def known_phases(before, rows):
+    """The rows with the period pairs an OpenFootball body omits kept from the stored match (FAILURE_MODES.md §35): an
+    omitted half time, extra time or shoot-out is unknown, not withdrawn, zeros included; a stated pair replaces it. A
+    body omitting a stored pair while it changes the full time is refused (PERIODS_CONFLICT): it cannot be told from
+    another reading of the score, such as the full time given after extra time."""
+    out = []
+    for key, m in rows:
+        old = before.get(key)
+        omitted = [pair for pair in PHASE_PAIRS if old is not None and old["status"] == "finished" and m["status"] == "finished"
+                   and all(m[c] is None for c in pair) and any(old[c] is not None for c in pair)]
+        if not omitted:
+            out.append((key, m))
+            continue
+        if _full_time(m) != _full_time(old):
+            raise SourceError("PERIODS_CONFLICT", f"{key}: the full time changes while the known "
+                                                  f"{', '.join(pair[0][5:] for pair in omitted)} is omitted")
+        kept = dict(m)
+        for pair in omitted:
+            kept.update({c: old[c] for c in pair})
+        if ("home_score_et", "away_score_et") in omitted:
+            # The match's score is then the one after extra time, and its 90 minutes the full time.
+            kept.update({c: old[c] for c in ("home_score", "away_score", "home_score_90", "away_score_90")})
+        out.append((key, kept))
+    return out
+
+
 def _listed_twice(rows):
     """[(day, the two teams, numbers)] of the matches a file lists both without a number and with one or more: the same
     day and the same two teams, in either order. Two candidates for one match, never a number added to it (VI-27)."""
@@ -285,8 +318,9 @@ def save(conn, kind, competition, season, body, now):
     if label is None:
         raise SourceError("INVALID_SEASON")
     typed_dfb = cup_periods.applies(kind, competition, season)
-    if typed_dfb:
-        conn.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", (cup_key,))
+    # One writer of the edition at a time, before its first read: the stored digest, the baseline and the rows left
+    # unchanged are those this import writes against, for every cup and its first edition (FAILURE_MODES.md §35).
+    conn.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", (cup_key,))
     source_rows = match_rows(kind, competition, season, body)
     rows = unique_rows(source_rows)
     if typed_dfb and len(source_rows) != len(rows):
@@ -306,6 +340,8 @@ def save(conn, kind, competition, season, body, now):
             # The guards read a match the source only numbered under its new key: no result is dropped.
             renumbered = _numbered(conn, provider, before, rows)
             before = {renumbered.get(key, key): match for key, match in before.items()}
+        if kind == "open-cups":
+            rows = known_phases(before, rows)
         if kind == "open-cups" and competition in CUP_PUBLICATION:
             reviewed_halves = {
                 f"{competition}:{season}:{m.get('date') or ''}|{m.get('team1') or ''}|{m.get('team2') or ''}|{m.get('num') or ''}":

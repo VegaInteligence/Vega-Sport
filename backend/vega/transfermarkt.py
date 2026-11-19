@@ -1188,6 +1188,11 @@ class Reader:
                     (player, move["date"], self.team_of(move["from"]), self.team_of(move["to"]), move["kind"], move["fee"], today, move["key"],
                      move["season"], move["from"], move["to"], move["value"], move["contract_until"], move["pending"]))
                 continue
+            if row["absent_since"] is not None:
+                # Listed again: the mark goes, its absence stays (153, FAILURE_MODES.md §35).
+                self.conn.execute(
+                    """INSERT INTO core.player_transfer_absences(transfer_id, source_key, absent_since, seen_again_on)
+                       VALUES (%s, %s, %s, %s) ON CONFLICT DO NOTHING""", (row["id"], row["source_key"], row["absent_since"], today))
             changes = self.move_changes(row, move, today)
             if changes:
                 self.conn.execute(

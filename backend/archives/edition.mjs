@@ -5,15 +5,18 @@
  * Prints {season, competitions, matches} as JSON; the importer (vega/archives.py)
  * reads it from stdout and never stores it.
  *
- *   node backend/archives/edition.mjs <results.json.gz|-> <goals.json.gz|->
+ *   node backend/archives/edition.mjs <results.json.gz|-> <goals.json.gz|-> [<keep.json|->]
+ *
+ * keep.json, {"keep": [archive keys]}: the keys the twin pass never merges (vega/archives.py twin_keep).
  */
 import { readFileSync } from "node:fs";
 import { gunzipSync } from "node:zlib";
 import { buildArchiveSeason } from "../../dashboard/shared/archive.js";
 
 const read = (path) => (path && path !== "-" ? JSON.parse(gunzipSync(readFileSync(path)).toString("utf8")) : null);
-const [resultsPath, goalsPath] = process.argv.slice(2);
-const edition = buildArchiveSeason(read(resultsPath), read(goalsPath));
+const [resultsPath, goalsPath, keepPath] = process.argv.slice(2);
+const options = keepPath && keepPath !== "-" ? JSON.parse(readFileSync(keepPath, "utf8")) : {};
+const edition = buildArchiveSeason(read(resultsPath), read(goalsPath), options);
 // Each goal carries the side shared/archive.js gave it (goalSide: the side named exactly first; a held row's
 // published side), FAILURE_MODES.md §22.
 const matches = edition.matches.map(({ raw, ...match }) => ({
@@ -33,4 +36,5 @@ const matches = edition.matches.map(({ raw, ...match }) => ({
       }
     : null,
 }));
-process.stdout.write(JSON.stringify({ season: edition.season, competitions: edition.competitions, matches, absorbed: edition.absorbed, held: edition.held }));
+process.stdout.write(JSON.stringify({ season: edition.season, competitions: edition.competitions, matches, absorbed: edition.absorbed,
+  twinsHeld: edition.twinsHeld, held: edition.held }));

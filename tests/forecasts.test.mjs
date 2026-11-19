@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { elevenWord, knockoutRows, matchForecastReading, probabilityChart, projectionRows, share } from "../dashboard/frontend/src/services/forecasts.js";
+import { elevenWord, knockoutRows, matchForecastReading, probabilityLines, projectionRows, share } from "../dashboard/frontend/src/services/forecasts.js";
 
 test("shares read as the site writes them", () => {
   assert.deepEqual([0, null, 0.004, 0.005, 0.5, 0.994, 0.999, 1].map(share), ["—", "—", "< 1 %", "1 %", "50 %", "99 %", "> 99 %", "100 %"]);
@@ -50,22 +50,27 @@ test("a projection's rows carry the club's coming matches when the answer has th
   assert.deepEqual(rows.map((row) => row.next), [next, null, null]);
 });
 
-test("a match's probabilities are drawn as three stacked areas with a marker at each goal", () => {
+test("a match's probabilities are three lines that jump at each goal", () => {
   const points = Array.from({ length: 91 }, (_, minute) => ({ minute, home: minute < 30 ? 0.5 : 0.8, draw: minute < 30 ? 0.25 : 0.15, away: minute < 30 ? 0.25 : 0.05, score: [minute < 30 ? 0 : 1, 0] }));
-  const chart = probabilityChart({ status: "finished", points, events: [{ minute: 30, added: 0, kind: "goal", side: "home" }, { minute: 70, added: 0, kind: "red", side: "away" }] });
-  // Kick-off at the left edge, the 90th minute at the right; the home area starts at the bottom.
-  assert.ok(chart.paths.home.startsWith("M30,112L"));
-  assert.ok(chart.paths.home.includes("L700,59.2L700,200"));
-  assert.ok(chart.paths.away.includes("30,24") && chart.paths.away.endsWith("Z"));
-  assert.deepEqual(chart.goals, [{ x: 253.3, side: "home", minute: 30, label: "1–0" }]);
-  // What the goal changed for the side that scored: its chances the minute before, and at the goal.
-  assert.deepEqual(chart.swings, [{ minute: 30, label: "1–0", side: "home", from: 0.5, to: 0.8 }]);
-  assert.deepEqual(chart.reds, [{ x: 551.1, side: "away", minute: 70 }]);
-  assert.deepEqual([chart.start.home, chart.live, chart.ticks.length], [0.5, null, 7]);
+  const chart = probabilityLines({ status: "finished", points, events: [{ minute: 30, added: 0, kind: "goal", side: "home" }, { minute: 70, added: 0, kind: "red", side: "away" }] });
+  // The minute before the goal stands until the goal: two points at the 30th, before and after.
+  assert.deepEqual(chart.lines.filter((p) => p.minute === 30).map((p) => p.home), [0.5, 0.8]);
+  assert.equal(chart.lines.length, 92);
+  // The pointer reads the real minutes only.
+  assert.equal(chart.series.length, 91);
+  // Each goal with the score it made and what it did to the scoring side's chances.
+  assert.deepEqual(chart.goals, [{ minute: 30, side: "home", label: "1–0", from: 0.5, to: 0.8 }]);
+  assert.deepEqual(chart.reds, [{ minute: 70, side: "away" }]);
+  assert.deepEqual([chart.span, chart.start.home, chart.end.minute, chart.live], [90, 0.5, 90, null]);
   // A match in play ends on its present state.
-  assert.equal(probabilityChart({ status: "in_play", points: points.slice(0, 41), events: [] }).live.minute, 40);
-  assert.equal(probabilityChart({ points: points.slice(0, 1) }), null);
-  assert.equal(probabilityChart(null), null);
+  const live = probabilityLines({ status: "in_play", points: points.slice(0, 41), events: [] });
+  assert.deepEqual([live.live.minute, live.end.minute, live.span], [40, 40, 90]);
+  // Added time widens the frame.
+  assert.equal(probabilityLines({ points: [...points, { ...points[90], minute: 94 }], events: [] }).span, 94);
+  // A goal whose minute has no point keeps its marker, without a swing.
+  assert.deepEqual(probabilityLines({ points: points.slice(0, 20), events: [{ minute: 50, kind: "goal", side: "away" }] }).goals, [{ minute: 50, side: "away", label: "0–1", from: null, to: null }]);
+  assert.equal(probabilityLines({ points: points.slice(0, 1) }), null);
+  assert.equal(probabilityLines(null), null);
 });
 
 test("a match's card shows the forecast that read the two confirmed line-ups, when there is one", () => {
@@ -97,8 +102,8 @@ test("an eleven reads as its usual one, stronger or weaker, clearly so beyond a 
 
 test("the chart says when its kick-off comes from the forecast that read the line-ups", () => {
   const points = Array.from({ length: 91 }, (_, minute) => ({ minute, home: 0.5, draw: 0.3, away: 0.2, score: [0, 0] }));
-  assert.equal(probabilityChart({ status: "finished", points, events: [], lineups: true }).lineups, true);
-  assert.equal(probabilityChart({ status: "finished", points, events: [] }).lineups, false);
+  assert.equal(probabilityLines({ status: "finished", points, events: [], lineups: true }).lineups, true);
+  assert.equal(probabilityLines({ status: "finished", points, events: [] }).lineups, false);
 });
 
 test("a match the base has not read yet is drawn from the live feed, by the read API's own calculation", async () => {
@@ -118,8 +123,8 @@ test("a match the base has not read yet is drawn from the live feed, by the read
   const core = [{ minute: 12, added: 0, kind: "goal", side: "home" }, { minute: 55, added: 0, kind: "goal", side: "away" }, { minute: 58, added: 0, kind: "red", side: "home" }];
   assert.deepEqual(drawn.points, timeline(1.6, 1.1, core, inplay, -0.03, 63));
   assert.deepEqual([drawn.status, drawn.live, drawn.points.length, drawn.points.at(-1).score], ["in_play", true, 64, [1, 1]]);
-  assert.equal(probabilityChart(drawn).live.minute, 63);
-  assert.deepEqual(probabilityChart(drawn).reds.map((r) => [r.minute, r.side]), [[58, "home"]]);
+  assert.equal(probabilityLines(drawn).live.minute, 63);
+  assert.deepEqual(probabilityLines(drawn).reds.map((r) => [r.minute, r.side]), [[58, "home"]]);
   // Half-time stops at the 45th minute; a provisional result ends on the result, as a finished match does.
   assert.equal(withLive(answer, { ...live, status: "half_time", minute: 45, score: { home: 1, away: 0 }, events: live.events.slice(0, 1) }, match).points.length, 46);
   const over = withLive(answer, { ...live, status: "finished", minute: 94 }, match).points.at(-1);

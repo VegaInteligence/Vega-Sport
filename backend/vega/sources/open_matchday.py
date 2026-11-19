@@ -21,6 +21,7 @@ unmatched and ops.parse_failures says why (FAILURE_MODES.md §19). A match whose
 statistics are unchanged is not written again.
 """
 
+from collections import defaultdict
 import csv
 from datetime import timedelta
 import io
@@ -202,17 +203,46 @@ def _write_stats(conn, season, match, row, home, away):
     return bool(changed)
 
 
-def save(conn, folder, name, season, results, fixtures, now, *, declared_results=None):
+def reschedules(conn, before, snap, preserved):
+    """({stored key: new key} of the fixtures the files moved to another day, [(teams, stored keys, new keys)] of the
+    pairs that cannot be told apart), FAILURE_MODES.md §35. A stored fixture whose key leaves the files is the same
+    match moved when exactly one new fixture of the edition has its home and away teams, no other leaving fixture has
+    them, and no match holds or held the new key. A pair with several fixtures leaving or arriving is ambiguous."""
+    leaving, arriving = defaultdict(list), defaultdict(list)
+    for key, m in before.items():
+        if key not in snap and key not in preserved and m["status"] == "not_started":
+            leaving[(m["home_team_name"], m["away_team_name"])].append(key)
+    for key, row in snap.items():
+        if key not in before and row["status"] == "not_started":
+            arriving[(row["home"], row["away"])].append(key)
+    moved, ambiguous = {}, []
+    for teams in sorted(set(leaving) & set(arriving)):
+        olds, news = sorted(leaving[teams]), sorted(arriving[teams])
+        if len(olds) != 1 or len(news) != 1:
+            ambiguous.append((teams, olds, news))
+        elif not conn.execute(
+                "SELECT 1 FROM core.provider_ids WHERE entity_type = 'match' AND provider = 'open_matchday' AND provider_key = %s",
+                (news[0],)).fetchone():
+            moved[olds[0]] = news[0]
+        # else: the new key is, or was, another match's (another edition's, or retired): snapshot.elsewhere decides.
+    return moved, ambiguous
+
+
+def save(conn, folder, name, season, results, fixtures, now, *, declared_results=None, report=None):
     """Write one competition's complete reported window; return the matches the edition holds.
 
     Refused (SourceError with a detail, nothing written): a result row without its sides, day or
     goals, and a snapshot that drops or unplays a result the base holds (snapshot.guard). Matches
-    and statistics are written only where they changed."""
+    and statistics are written only where they changed. A fixture moved to another day keeps its
+    match (reschedules, snapshot.rekey); a withdrawn fixture something else holds stays as stored.
+    `report` (a list) gains (code, detail) of each pair or fixture left so (FAILURE_MODES.md §35)."""
     label = sporting_season(season)
     if label is None:
         raise SourceError("INVALID_SEASON")
     cup_key = f"open-matchday:{folder}:{season}"
     snap = candidate(folder, season, results, fixtures, cup_key)
+    # One writer of the edition at a time, from its first read (FAILURE_MODES.md §35).
+    conn.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", (cup_key,))
     stored = conn.execute("SELECT id FROM core.competition_seasons WHERE cup_key = %s", (cup_key,)).fetchone()
     before = snapshot.stored(conn, "open_matchday", stored and stored[0])
     preserved = open_matchday_history.retained(conn, stored and stored[0], before, snap,
@@ -220,6 +250,13 @@ def save(conn, folder, name, season, results, fixtures, now, *, declared_results
     status = {key: row["status"] for key, row in snap.items()}
     status.update(dict.fromkeys(preserved, "finished"))
     snapshot.guard("open_matchday", before, status, cup_key)
+    report = [] if report is None else report
+    moved, ambiguous = reschedules(conn, before, snap, preserved)
+    for old, new in moved.items():
+        before[new] = snapshot.rekey(conn, "open_matchday", before.pop(old), old, new)
+    for (home, away), olds, news in ambiguous:
+        report.append(("AMBIGUOUS_RESCHEDULE", f"{home}–{away}: {len(olds)} fixture(s) leave ({', '.join(olds)}), "
+                                               f"{len(news)} arrive ({', '.join(news)}); no match moved"))
     season_id = Store(conn).season(label)
     country = country_of(folder)
     family = f"cup:open-matchday:{folder}"
@@ -285,7 +322,9 @@ def save(conn, folder, name, season, results, fixtures, now, *, declared_results
             conn.execute("""UPDATE core.matches SET revision=revision+1, updated_at=now()
                             WHERE id=%s AND season_id=%s""", (mid, season_id))
         changes += match_changed or stats_changed
-    changes += snapshot.remove(conn, "open_matchday", before, status, list(STATS.values()))
+    held = {}
+    changes += snapshot.remove(conn, "open_matchday", before, status, list(STATS.values()), held)
+    report.extend(held[key] for key in sorted(held))
     if changes:
         conn.execute("UPDATE core.competition_seasons SET cup_updated_at=%s WHERE id=%s", (now, edition))
     return len(status)
@@ -345,7 +384,16 @@ def run(conn, get, scope, now):
         try:
             results, fixtures = read_files(get, league, code, folder)
             with conn.transaction():
-                written += save(conn, folder, league.get("league") or folder, season, results, fixtures, now, declared_results=len(results))
+                left = []
+                written += save(conn, folder, league.get("league") or folder, season, results, fixtures, now,
+                                declared_results=len(results), report=left)
+                if left:
+                    # Written, but for the pairs and fixtures it left as stored: the scope says which (§35).
+                    cup_key = f"open-matchday:{folder}:{season}"
+                    edition = conn.execute("SELECT id FROM core.competition_seasons WHERE cup_key = %s", (cup_key,)).fetchone()
+                    for error_code, detail in left:
+                        failure(conn, error_code, f"{cup_key}: {detail}", edition and edition[0])
+                    unmatched += 1
         except SourceError as error:
             # This competition is not written now (its files unreadable, or not the complete snapshot that
             # keeps its results): its edition stays as it was; the others go on.

@@ -15,7 +15,7 @@
   --mq-pitch: #12151a;
   --mq-pitch-line: #2a2e35;
   --mq-on-strong: #0b0d12;
-  --mq-gap: var(--surface);
+  --mq-gap: var(--bg);
 }
 :global(html[data-theme="light"]) .root {
   --mq-pos-2: #1c5fa6;
@@ -30,7 +30,7 @@
   --mq-pitch: #f3f6f9;
   --mq-pitch-line: #d5dce5;
   --mq-on-strong: #ffffff;
-  --mq-gap: var(--surface);
+  --mq-gap: var(--bg);
 }
 
 /* A drawing stops growing at --chart-cap, which each chart sets from its own size: it
@@ -190,7 +190,7 @@
 .swatch {
   width: 10px;
   height: 10px;
-  border-radius: 3px;
+  border-radius: 0;
   background: var(--tone, var(--accent));
 }
 .swatchLine {
@@ -238,13 +238,13 @@
 .pbar {
   position: relative;
   height: 6px;
-  border-radius: 3px;
+  border-radius: 0;
   background: var(--mq-track);
 }
 .pbarFill {
   position: absolute;
   inset: 0 auto 0 0;
-  border-radius: 3px;
+  border-radius: 0;
   background: var(--tone);
 }
 .pbarMedian {
@@ -269,14 +269,14 @@
   position: absolute;
   top: 10px;
   height: 2px;
-  border-radius: 1px;
+  border-radius: 0;
   background: var(--border-strong);
 }
 .stripBand {
   position: absolute;
   top: 7px;
   height: 8px;
-  border-radius: 4px;
+  border-radius: 0;
   background: color-mix(in srgb, var(--muted-light) 38%, transparent);
 }
 .stripTick {
@@ -291,7 +291,7 @@
   top: 2px;
   width: 2px;
   height: 18px;
-  border-radius: 1px;
+  border-radius: 0;
   background: var(--ink);
 }
 .stripMarker {
@@ -330,7 +330,7 @@
 }
 .segments > div {
   min-width: 4px;
-  border-radius: 4px;
+  border-radius: 0;
   background: var(--tone);
 }
 
@@ -344,4 +344,54 @@
 .gaugeLabel {
   fill: var(--muted);
   font-size: 11px;
+}
+
+/* Calendar columns: one square column per match at its date (the « Physique » tab). */
+.calendar {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+.calendar svg {
+  display: block;
+  overflow: visible;
+}
+.axisMuted {
+  fill: var(--muted-light);
+  font-size: 11px;
+}
+.calendarWindow {
+  fill: var(--accent);
+  opacity: 0.05;
+}
+.columnOn {
+  fill: var(--accent);
+  outline: none;
+}
+.columnOff {
+  fill: var(--accent);
+  fill-opacity: 0.14;
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  outline: none;
+}
+.shortRest {
+  fill: var(--warning-ink);
+}
+.swatchColumn {
+  width: 8px;
+  height: 10px;
+  background: var(--accent);
+}
+.swatchColumnOff {
+  width: 8px;
+  height: 10px;
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.swatchRest {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--warning-ink);
 }

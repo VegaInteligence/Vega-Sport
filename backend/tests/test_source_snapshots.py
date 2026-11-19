@@ -566,39 +566,58 @@ class OpenMatchdayGuardTest(SnapshotDatabase):
         self.assertIn("RESULT_DOWNGRADED", {code for code, _ in self.failures()})
 
     def test_a_snapshot_cannot_remove_or_downgrade_a_result_published_since_its_read(self):
+        # Since FAILURE_MODES.md §35 an import holds its edition's lock from its first read: a second open-matchday
+        # import of the edition waits for it (checked here) and cannot publish inside its read any more. The result is
+        # published there by a writer that does not take that lock (the match rows themselves, the second import's
+        # values); the snapshot must still refuse to remove, downgrade or change it.
         from vega.store import connect_local
 
         for action in ("remove", "downgrade", "change"):
             with self.subTest(action=action):
                 if action != "remove":
                     self.setUp()
-                _, fixture = self.public_matches()
+                result, fixture = self.public_matches()
                 keep = action != "remove"
                 former = self.files(fixtures=FIXTURES.replace(",16", ",17") if keep else None)
                 if action == "change":
                     former = self.files(results=ROUND_RESULTS.replace(",2,1,1,0,", ",3,1,1,0,"))
                 finish = ROUND_RESULTS.replace(",15\n", ",18\n") + "2026-11-29,South FC,North FC,2,1,1,1,10,9,3,4,17\n"
                 base_read = snapshot.stored
-                published = []
-                with connect_local(DSN) as writer:
+                published, waited, later, workers = [], [], [], []
+                with connect_local(DSN) as writer, connect_local(DSN) as importer:
                     def stored(conn, provider, edition):
                         before = base_read(conn, provider, edition)
-                        if conn is self.db:
-                            self.assertFalse(published)
-                            self.assertEqual(self.read([league(results=2, fixtures=0)], self.files(results=finish, fixtures=None),
-                                                       NOW + timedelta(days=1, minutes=1), writer), ("ok", 2, 0))
+                        if conn is self.db and not published:
+                            worker = Thread(target=lambda: later.append(self.read(
+                                [league(results=2, fixtures=0)], self.files(results=finish, fixtures=None), NOW + timedelta(days=1, minutes=1), importer)))
+                            worker.start()
+                            workers.append(worker)
+                            waited.append(self.blocked(self.db, importer))
+                            with writer.transaction():
+                                rounds = {name: writer.execute(
+                                    """INSERT INTO core.rounds(competition_season_id, name) SELECT competition_season_id, %s FROM core.matches WHERE id=%s
+                                       ON CONFLICT (competition_season_id, name) DO UPDATE SET name=EXCLUDED.name RETURNING id""",
+                                    (name, fixture[0])).fetchone()[0] for name in ("17", "18")}
+                                writer.execute("""UPDATE core.matches SET status='finished', home_score=2, away_score=1, home_score_ht=1, away_score_ht=1,
+                                                  round_id=%s, revision=revision+1, updated_at=now() WHERE id=%s""", (rounds["17"], fixture[0]))
+                                writer.execute("UPDATE core.matches SET round_id=%s, revision=revision+1, updated_at=now() WHERE id=%s",
+                                               (rounds["18"], result[0]))
                             published.extend(self.public_matches())
                         return before
 
                     with patch.object(snapshot, "stored", stored):
                         outcome = self.read([league(fixtures=int(keep))], former, NOW + timedelta(days=1))
+                    workers[0].join(20)
+                    self.assertFalse(workers[0].is_alive())
+                self.assertEqual(waited, [True])
                 self.assertEqual(published[1][:6], (fixture[0], "17", "finished", 2, 1, fixture[5] + 1))
-                with self.subTest(check="published state"):
-                    self.assertEqual(self.public_matches(), published)
-                    self.assertEqual(self.state()[1][0:5], (self.before[1][0], fixture[0], "finished", 2, 1))
                 with self.subTest(check="observable refusal"):
                     self.assertEqual(outcome, ("ok", 0, 1))
                     self.assertIn("SNAPSHOT_CHANGED", {code for code, _ in self.failures()})
+                with self.subTest(check="published state"):
+                    self.assertEqual(later, [("ok", 2, 0)])  # the second import, once the first has finished
+                    self.assertEqual(self.public_matches()[1][:5], published[1][:5])
+                    self.assertEqual(self.state()[1][0:5], (self.before[1][0], fixture[0], "finished", 2, 1))
 
     def test_only_a_reviewed_result_may_be_retracted(self):
         key = self.before[0][0]
@@ -657,7 +676,7 @@ class OpenMatchdayGuardTest(SnapshotDatabase):
         before = self.state()
         outcome = self.read([league(fixtures=0)], self.files(fixtures=None), NOW+timedelta(days=1))
         self.assertEqual(self.state(), before)
-        self.assertEqual(outcome, ("ok", 0, 1))
+        self.assertEqual(outcome, ("ok", 1, 1))  # §35: the edition is written, the shared fixture kept and named
         self.assertIn("SHARED_MATCH", {code for code, _ in self.failures()})
 
     def test_third_party_odds_and_unattributed_events_survive_withdrawal(self):
@@ -683,7 +702,8 @@ class OpenMatchdayGuardTest(SnapshotDatabase):
                 data = self.x(query, (match,)).fetchall()
                 self.assertTrue(data)
                 before = self.public_matches()
-                self.assertEqual(self.read([league(fixtures=0)], self.files(fixtures=None), NOW+timedelta(days=1)), ("ok", 0, 1))
+                # §35: the edition is written, the fixture kept as stored and named.
+                self.assertEqual(self.read([league(fixtures=0)], self.files(fixtures=None), NOW+timedelta(days=1)), ("ok", 1, 1))
                 self.assertEqual(self.public_matches(), before)
                 self.assertEqual(self.x(query, (match,)).fetchall(), data)
                 self.assertIn("MATCH_HAS_DEPENDENTS", {code for code, _ in self.failures()})

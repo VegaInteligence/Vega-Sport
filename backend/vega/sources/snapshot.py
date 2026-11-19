@@ -12,7 +12,11 @@ file served with a 200, a fixture list still naming a match since played) while 
   `updated_at`; one that changed gets `revision + 1`; a new place in the source's order alone
   moves `archive_position` only;
 - a writer can only change or remove the row it observed. If another transaction changed it,
-  the snapshot transaction must roll back. A later read can use the new state for its guard.
+  the snapshot transaction must roll back. A later read can use the new state for its guard;
+- a withdrawn fixture goes when nothing else holds it but an ordinary forecast, which the forecast
+  pass writes again; held by anything else (another source, odds, events, another authority's
+  statistics or parent fields), it is refused, or with `held` kept as stored while the rest of the
+  snapshot is written (FAILURE_MODES.md §35).
 
 The removal of an open-matchday copy of a league PitchAPI holds (open_matchday.drop_copy) is a
 reviewed decision of its own (VI-21) and does not pass through here.
@@ -114,8 +118,18 @@ def _claim(conn, provider, expected):
             raise SourceError("SHARED_MATCH", f"{provider}: {key} is held by another source")
 
 
+# An ordinary forecast: the forecast pass writes a season's forecasts again for the matches still to play
+# (forecast.py), so it never holds a withdrawal, and the collection never writes agg (FAILURE_MODES.md §35).
+LAPSING = ("agg.match_forecasts.match_id",)
+# A match's own fields that no snapshot writes (COLUMNS): another authority's facts on the parent.
+PARENT_FIELDS = ("kickoff_at", "venue_id", "referee_id", "attendance")
+
+
 def _guard_dependents(conn, provider, ids, stat_columns):
-    owned = ["core.provider_ids.entity_id"]
+    """{match id: what holds it} of the withdrawn matches (locked by _claim) that must stay: another authority's
+    statistics, a parent field no snapshot writes, or anything else naming the match but an ordinary forecast."""
+    held = {}
+    owned = ["core.provider_ids.entity_id", *LAPSING]
     if stat_columns:
         # The match lock excludes late FK inserts. Existing statistic rows can be
         # enriched without taking that lock, so lock them before checking their fields.
@@ -130,18 +144,22 @@ def _guard_dependents(conn, provider, ids, stat_columns):
             raise SourceError("SNAPSHOT_CHANGED", f"{provider}: match statistics are being enriched") from error
         for match, fields in stats:
             if fields:
-                raise SourceError("MATCH_HAS_DEPENDENTS", f"{provider}: match {match} has other team statistics: "
-                                  + ", ".join(sorted(fields)))
+                held.setdefault(match, "other team statistics: " + ", ".join(sorted(fields)))
         owned.append("core.team_match_stats.match_id")
+    for match, *values in conn.execute(
+            f"SELECT id, {', '.join(PARENT_FIELDS)} FROM core.matches WHERE id = ANY(%s) ORDER BY id", (ids,)).fetchall():
+        fields = [name for name, value in zip(PARENT_FIELDS, values) if value is not None]
+        if fields:
+            held.setdefault(match, ", ".join(f"core.matches.{name}" for name in fields))
     for start in range(0, len(ids), 5000):
         batch = ids[start:start + 5000]
-        found = conn.execute(
+        for match, dependency in conn.execute(
             """SELECT d.match_id,d.dependency FROM ops.archive_match_dependents(%s::integer[]) d
                  WHERE d.dependency <> ALL(%s)
                UNION ALL SELECT e.match_id,'core.match_events' FROM core.match_events e WHERE e.match_id=ANY(%s)
-               LIMIT 1""", (batch, owned, batch)).fetchone()
-        if found:
-            raise SourceError("MATCH_HAS_DEPENDENTS", f"{provider}: match {found[0]} is held by {found[1]}")
+               ORDER BY 1, 2""", (batch, owned, batch)).fetchall():
+            held.setdefault(match, dependency)
+    return held
 
 
 def rekey(conn, provider, found, old, new):
@@ -186,12 +204,26 @@ def write(conn, provider, key, values, found, changed=False):
     return found["id"], outcome
 
 
-def remove(conn, provider, before, keep, stat_columns=None):
-    """Delete matches whose current keys the snapshot withdrew, including their former aliases."""
+def remove(conn, provider, before, keep, stat_columns=None, held=None):
+    """Delete matches whose current keys the snapshot withdrew, including their former aliases. A match something
+    else holds refuses the snapshot (SourceError MATCH_HAS_DEPENDENTS or SHARED_MATCH); with `held` (a dict), it stays
+    as stored instead and is added to it, {key: (code, detail)}, while the others go (FAILURE_MODES.md §35)."""
     gone = {m["id"]: (m, key) for key, m in before.items() if key not in keep}
+    if held is not None:
+        for match, (m, key) in sorted(gone.items()):
+            if m["source"] != provider or any(owner != provider for owner, _, _ in m["keys"]):
+                held[key] = ("SHARED_MATCH", f"{provider}: {key} (match {match}) is held by another source")
+                del gone[match]
     if gone:
         _claim(conn, provider, gone)
-        _guard_dependents(conn, provider, list(gone), stat_columns)
+        holding = _guard_dependents(conn, provider, sorted(gone), stat_columns)
+        if holding and held is None:
+            match = min(holding)
+            raise SourceError("MATCH_HAS_DEPENDENTS", f"{provider}: match {match} is held by {holding[match]}")
+        for match, what in sorted(holding.items()):
+            held[gone[match][1]] = ("MATCH_HAS_DEPENDENTS", f"{provider}: {gone[match][1]} (match {match}) is held by {what}")
+            del gone[match]
+    if gone:
         conn.execute("DELETE FROM core.provider_ids WHERE entity_type='match' AND provider=%s AND entity_id = ANY(%s)",
                      (provider, list(gone)))
         conn.execute("DELETE FROM core.matches WHERE id=ANY(%s)", (list(gone),))
