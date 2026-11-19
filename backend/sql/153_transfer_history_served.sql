@@ -43,5 +43,7 @@ CREATE TABLE core.player_transfer_absences (
 );
 COMMENT ON TABLE core.player_transfer_absences IS
   'Absences of Transfermarkt moves that a later accepted history listed again (VI-31, FAILURE_MODES.md §35).';
-REVOKE ALL ON core.player_transfer_absences FROM PUBLIC;
+-- A proof, as 142, 143 and 146's: read and added to, never changed or removed but with its move. 017's default
+-- privileges give the collection role UPDATE and DELETE on every new table of core (FAILURE_MODES.md §36, 36d).
+REVOKE ALL ON core.player_transfer_absences FROM PUBLIC, vega_collect, vega_read;
 GRANT SELECT, INSERT ON core.player_transfer_absences TO vega_collect;

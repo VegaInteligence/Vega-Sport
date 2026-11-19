@@ -34,6 +34,7 @@ sys.path.insert(0, str(ROOT / "tests"))
 from vega import sources  # noqa: E402
 from vega.sources import cups, open_matchday, snapshot  # noqa: E402
 from test_source_snapshots import EDITIONS, FIXTURES, FOLDER, NOW, PRELOAD, ROUND_RESULTS, league  # noqa: E402
+from prerequisites import required  # noqa: E402
 
 try:
     import psycopg
@@ -56,8 +57,8 @@ def blocked(observer, waiter_pid, timeout=5.0):
     return False
 
 
-@unittest.skipUnless(DSN and psycopg and NODE and HTTP_READY,
-                     "requires a disposable local snapshot roles DB (VEGA_V2_SNAPSHOT_ROLES_TEST_DSN), psycopg, node and backend/api/node_modules")
+@required(DSN and psycopg and NODE and HTTP_READY,
+          "requires a disposable local snapshot roles DB (VEGA_V2_SNAPSHOT_ROLES_TEST_DSN), psycopg, node and backend/api/node_modules")
 class RolesBase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
