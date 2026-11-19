@@ -17,7 +17,7 @@
   --statarena-border: #dce5ef;
   --statarena-font: "Inter", system-ui, -apple-system, sans-serif;
   --statarena-font-heading: "Inter Display", "Inter", system-ui, sans-serif;
-  --statarena-radius: 14px;
+  --statarena-radius: 0;
 }
 [data-theme="dark"] {
   --statarena-background: #0b0d12;

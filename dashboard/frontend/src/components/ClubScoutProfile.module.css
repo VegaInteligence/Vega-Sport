@@ -148,11 +148,11 @@
   display: grid;
   gap: 8px;
   margin-bottom: 14px;
-  padding: 12px 14px;
-  border: 1px solid var(--border);
+  padding: 12px 0;
+  border: 0;
+  border-bottom: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  background: var(--surface);
-  box-shadow: 0 4px 16px -12px rgb(0 0 0 / 0.35);
+  background: var(--bg);
 }
 .compareBar[data-inactive] .compareRow {
   opacity: 0.5;
@@ -232,10 +232,10 @@
     flex: none;
   }
   .compareRow :global(.segmented-control) {
-    border-radius: 20px;
+    border-radius: 0;
   }
   .compareRow :global(.segmented-control) button {
     min-height: 40px;
-    border-radius: 20px;
+    border-radius: 0;
   }
 }

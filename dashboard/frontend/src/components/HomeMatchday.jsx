@@ -324,7 +324,7 @@ function ShotMap({ match, active, onActive }) {
         onPointerLeave={() => onActive(null)}
       >
         <g className="home-pitch">
-          <rect x="0" y="0" width="105" height="68" rx="1.5" />
+          <rect x="0" y="0" width="105" height="68" />
           <line x1="52.5" y1="0" x2="52.5" y2="68" />
           <circle cx="52.5" cy="34" r="9.15" />
           <rect x="0" y="13.85" width="16.5" height="40.3" />

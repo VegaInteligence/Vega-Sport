@@ -14,7 +14,9 @@
 //  5. Not listed: a pending transfer (agreed, not yet made), a transfer without a date,
 //     another source's rows.
 //  6. A kind or a fee the provider does not give: null, never a guess.
-//  7. A read that failed tells nothing: 404. A doubted link shows nothing of the provider: 404.
+//  7. A read that failed tells nothing: 404. Since 153 (VI-31, FAILURE_MODES.md §35), a refresh that fails after an
+//     accepted read keeps that list, the same body; a read never accepted is still a 404. A doubted link shows nothing
+//     of the provider: 404.
 //  8. Values: a valuation's club is named the same way; a valuation without a known club
 //     keeps its two fields only (the history of a player read before 135 is unchanged).
 //  9. A provider name that is no club (« Without Club », « Retired », a career break, unknown:
@@ -83,10 +85,15 @@ test("once read: his transfers, oldest first, each club named as far as it is kn
     { date: "2024-06-30", kind: null, feeEur: null, from: OURS, to: null },
   ]);
 
-  // A read that failed tells nothing.
+  // A refresh that failed after the accepted read keeps the accepted list (153); a read never accepted tells nothing.
+  const accepted = await get(`/api/players/${id}/transfers`);
   await owner.query("UPDATE ops.transfermarkt_reads SET error_code = 'HTTP_500' WHERE kind = 'transfers' AND provider_key = '987654'");
+  const failed = await get(`/api/players/${id}/transfers`);
+  assert.equal(failed.response.status, 200);
+  assert.deepEqual(failed.body, accepted.body);
+  await owner.query("UPDATE ops.transfermarkt_reads SET read_at = NULL WHERE kind = 'transfers' AND provider_key = '987654'");
   assert.equal((await get(`/api/players/${id}/transfers`)).response.status, 404);
-  await owner.query("UPDATE ops.transfermarkt_reads SET error_code = NULL WHERE kind = 'transfers' AND provider_key = '987654'");
+  await owner.query("UPDATE ops.transfermarkt_reads SET error_code = NULL, read_at = now() WHERE kind = 'transfers' AND provider_key = '987654'");
   assert.equal((await get(`/api/players/${id}/transfers`)).body.data.transfers.length, 8);
 });
 

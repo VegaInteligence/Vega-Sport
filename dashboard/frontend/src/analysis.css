@@ -138,10 +138,11 @@
   gap: 16px;
 }
 .rank-column {
-  padding: 0 16px 4px;
-  border: 1px solid var(--border);
+  padding: 0 0 4px;
+  border: 0;
+  border-top: 1px solid var(--border-strong);
   border-radius: var(--radius-lg);
-  background: var(--surface);
+  background: none;
 }
 .rank-head,
 .rank-row {
@@ -223,7 +224,7 @@ a.rank-player:hover strong {
   display: block;
   flex: 0 1 auto;
   height: 8px;
-  border-radius: 4px;
+  border-radius: 0;
   background: var(--border);
 }
 .rank-score .rank-bar {
@@ -240,14 +241,15 @@ a.rank-player:hover strong {
   margin: 0;
   padding: 0;
   overflow: hidden;
-  border: 1px solid var(--border);
+  border: 0;
+  border-block: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--border);
   list-style: none;
 }
 .award-method li {
   padding: 16px 18px 18px;
-  background: var(--surface);
+  background: var(--bg);
 }
 .award-step {
   display: grid;
@@ -645,7 +647,7 @@ select optgroup {
 .player-performance {
   width: min(880px, calc(100vw - 40px));
   border-color: var(--border-strong);
-  border-radius: 16px;
+  border-radius: 0;
   background: var(--surface-raised);
   box-shadow: var(--shadow-overlay);
 }
@@ -675,7 +677,7 @@ select optgroup {
 .pc-portrait {
   width: 64px;
   height: 64px;
-  border-radius: 14px;
+  border-radius: 0;
   border: 1px solid var(--border-strong);
   background: var(--surface-subtle);
 }
@@ -949,13 +951,13 @@ select optgroup {
 .pc-bar {
   height: 6px;
   overflow: hidden;
-  border-radius: 3px;
+  border-radius: 0;
   background: var(--surface-subtle);
 }
 .pc-bar > i {
   display: block;
   height: 100%;
-  border-radius: 3px;
+  border-radius: 0;
 }
 .pc-bar.is-elite > i {
   background: var(--accent);
@@ -1072,9 +1074,10 @@ select optgroup {
 }
 .match-scoreboard {
   overflow: hidden;
-  border: 1px solid var(--border);
+  border: 0;
+  border-top: 1px solid var(--border-strong);
   border-radius: var(--radius-xl);
-  background: var(--surface);
+  background: none;
 }
 .scoreboard-meta {
   display: flex;
@@ -1121,7 +1124,7 @@ select optgroup {
   height: 64px;
   padding: 8px;
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: 0;
   background: var(--surface-subtle);
 }
 .scoreboard-team > div {
@@ -1166,7 +1169,7 @@ select optgroup {
   gap: 6px;
   padding: 2px 9px;
   border: 1px solid var(--border-strong);
-  border-radius: 20px;
+  border-radius: 0;
   background: var(--surface-subtle);
   color: var(--muted);
   font-size: var(--text-xs);
@@ -1411,18 +1414,18 @@ select optgroup {
 }
 .match-detail .card {
   border-color: var(--border);
-  background: var(--surface);
+  background: none;
   border-radius: var(--radius-lg);
 }
 .match-detail .card-header {
-  padding: 12px 16px;
+  padding: 12px 0;
 }
 .match-detail .card-title {
   color: var(--ink-strong);
   font-size: 14px;
 }
 .match-detail .card-body {
-  padding: 0 16px 16px;
+  padding: 0 0 16px;
 }
 .match-detail .inline-link {
   color: var(--accent-dark);
@@ -1552,7 +1555,7 @@ select optgroup {
   display: flex;
   height: 5px;
   overflow: hidden;
-  border-radius: 3px;
+  border-radius: 0;
   background: var(--surface-subtle);
 }
 .stat-track.home {
@@ -1562,7 +1565,7 @@ select optgroup {
   display: block;
   flex: 0 1 auto;
   height: 100%;
-  border-radius: 3px;
+  border-radius: 0;
   background: var(--home);
 }
 .stat-track.away > i,
@@ -1585,9 +1588,10 @@ select optgroup {
 
 .stats-board {
   overflow: hidden;
-  border: 1px solid var(--border);
+  border: 0;
+  border-top: 1px solid var(--border-strong);
   border-radius: var(--radius-lg);
-  background: var(--surface);
+  background: none;
 }
 .stats-board-head {
   display: grid;
@@ -1660,10 +1664,10 @@ select optgroup {
 }
 .stats-possession .stat-track {
   height: 8px;
-  border-radius: 4px;
+  border-radius: 0;
 }
 .stats-possession .stat-track > i {
-  border-radius: 4px;
+  border-radius: 0;
 }
 .stats-sections {
   columns: 2;
@@ -2034,7 +2038,7 @@ select optgroup {
   .pc-portrait {
     width: 52px;
     height: 52px;
-    border-radius: 12px;
+    border-radius: 0;
   }
   .pc-identity h2 {
     font-size: 20px;
@@ -2159,7 +2163,7 @@ select optgroup {
     width: 44px;
     height: 44px;
     padding: 4px;
-    border-radius: 12px;
+    border-radius: 0;
   }
   .scoreboard-team strong {
     font-size: var(--text-md);
@@ -2334,7 +2338,7 @@ select optgroup {
   min-width: 18px;
   height: 18px;
   padding: 0 5px;
-  border-radius: 9px;
+  border-radius: 0;
   background: var(--accent);
   color: var(--on-accent);
   font-size: var(--text-xs);
@@ -2348,10 +2352,11 @@ select optgroup {
   align-items: flex-start;
   gap: 16px 32px;
   margin-top: 10px;
-  padding: 14px 16px 16px;
-  border: 1px solid var(--border);
+  padding: 14px 0 16px;
+  border: 0;
+  border-top: 1px solid var(--border-strong);
   border-radius: var(--radius-lg);
-  background: var(--surface);
+  background: none;
 }
 .advanced-field {
   display: flex;
@@ -2404,7 +2409,7 @@ select optgroup {
   min-width: 170px;
   padding: 7px 10px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 0;
   background: var(--surface);
   color: var(--ink-strong);
   font: inherit;
@@ -2632,9 +2637,10 @@ select optgroup {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px 12px;
   padding: 12px 14px;
-  border: 1px solid var(--border);
+  border: 0;
+  border-top: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  background: var(--surface);
+  background: none;
 }
 .fixture-tile:hover {
   border-color: var(--border-strong);
@@ -2689,9 +2695,10 @@ select optgroup {
 }
 .fixture-day-list {
   overflow: hidden;
-  border: 1px solid var(--border);
+  border: 0;
+  border-top: 1px solid var(--border-strong);
   border-radius: var(--radius-lg);
-  background: var(--surface);
+  background: none;
 }
 .fixture-day-list .fixture-link + .fixture-link {
   border-top: 1px solid var(--border);
@@ -2793,7 +2800,7 @@ select optgroup {
     min-width: 166px;
     max-width: 166px;
     padding-left: 4px;
-    background: var(--surface);
+    background: var(--bg);
     box-shadow: 1px 0 0 var(--border);
   }
   .player-directory-table thead th:nth-child(2) {

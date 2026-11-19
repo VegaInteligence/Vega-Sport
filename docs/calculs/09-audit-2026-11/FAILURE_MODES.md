@@ -2545,3 +2545,89 @@ the first match kept apart. A phone's chosen round stays within the bracket it i
 | 34ae | 1982 matches, search « Italie », then « Italy » | the final found both times | red |
 | 34af | Sweden–Austria 1938 (`status: "canceled"`) | « Annulé » in the list; no missing-score notice for it | red |
 | 34ag | A replayed tie whose two matches have ids | the replay's id and score; the first match under `replayOf` | red |
+
+## 35. Main's twin merge and purge on the branch, and the VI-27/29/31 corrections (19 Nov 2026, written before the tests)
+
+The branch merges main `840414438c` (`goalTwins`/`merge_twins` of `0f368fd389`, `scope.purge(conn, calc)` of
+`cb32089578`) and corrects what the 34ca reviews reproduced (`delivery/corrections-34ca/brief-corrections.md`, Fable's
+plan of 19 Nov). Every check runs the real writers under `vega_collect`/`vega_calc` on a disposable PostgreSQL 18.6
+and reads back through the real read API under `vega_read` where a route serves the data.
+
+### 35.1 Rules
+
+**Archive twins.** The edition (`buildArchiveSeason`) ends with `goalTwins` over its final rows: a goal-only row
+(« g: ») that is a result (« r: ») becomes that result, which keeps its key and takes the goals (their sides) and the
+goals' date. Rows of a held unit (`held`, `heldGoals`) and the keys the importer names (`options.keep`: `QUARANTINE`
+and both attestation ledgers) are never merged; such a pair is listed in `twinsHeld` with its reason, and every merged
+pair in `absorbed`. The importer refuses a season whose stored rows still hold a `g:` the edition absorbed
+(`TWIN_NOT_MERGED`, named pairs, nothing written); once `merge_twins` has run, the plan holds nothing for the pair.
+`merge_twins` takes the archive apply lock with a try first (`vega.archives.apply`): taken, the pass stops without an
+error. It never merges a pair with a quarantined key, a key of either ledger, or a row named by
+`core.archive_match_attestations` (its match, former key or former id); each such pair is printed with its reason.
+Each merged `g:` gets its tombstone (`ops.archive_removals`, no plan) in the deleting transaction. One season failing
+is rolled back alone and printed; the next seasons still run. `twins.mjs` sits beside `edition.mjs`: `TWINS` defaults
+to that directory (the image sets `VEGA_ARCHIVE_EDITION` only), and `code_manifest()` names `archives/twins.mjs`.
+
+**Purge.** For each competition, before its calculations' half, the purge reads the rows that would block its
+deletion in the tables the collection role may not delete from. One such row holds the competition: nothing of it is
+removed, agg included, and the result names the table (`held`). Otherwise the two halves run as on main, and a DELETE
+is only sent to a table holding matching rows. No privilege is added.
+
+**Cup snapshots.** Every cup edition takes its edition lock before its first read (stored digest, baseline): two
+imports of one edition are applied one after the other, the stored rows are those of the body whose digest is stored,
+and a replay of it writes nothing. A period pair a body omits (half time, extra time, the 90 minutes, the shoot-out)
+keeps the stored pair, zeros included; an explicit different pair replaces it (the publication families' guard still
+refuses a known phase changing). A body omitting a stored pair while it changes the full time is refused
+(`PERIODS_CONFLICT`): it cannot be told from another reading of the score.
+
+**Open Matchday reschedules and withdrawals.** A stored fixture whose key leaves the files is rescheduled when exactly
+one new fixture of the edition has the same home and away teams, no other stored fixture of that pair leaves, and its
+key was never a match's: the match keeps its id and everything naming it (`snapshot.rekey`), and its date and round are
+written. Any other case of a pair is ambiguous: no rekey, and the scope records `AMBIGUOUS_RESCHEDULE` naming it. A
+fixture withdrawn (not finished: a result is guarded) is deleted when nothing holds it but an ordinary forecast
+(`agg.match_forecasts`, which the forecast pass rewrites). Odds, events, another authority's statistics, a line-up
+forecast, another source's key, or a parent field no snapshot writes (`kickoff_at`, `venue_id`, `referee_id`,
+`attendance`) keep it: it stays as stored, the rest of the files is written, and the scope records
+`MATCH_HAS_DEPENDENTS` (or `SHARED_MATCH`) naming it. A resource version naming a match locks that match as a key
+does (migration 152): written after a withdrawal's check, it waits for the deletion and is refused.
+
+**SportScore.** Under the publication lock the run reads again what qualified the response (the edition, its
+members, the names' teams, the counted and kicked-off matches) and qualifies it again with no provider call. A response
+that no longer qualifies is refused with its rule's code (`INCOMPLETE_TABLE` for a club of the table missing): the
+accepted table keeps its rows, its date and its ETag. A fresh organiser proof is fetched before the lock or not at all.
+
+**Transfermarkt transfers.** The list of a player whose transfers were accepted once is served after any later
+refusal or failure: same body, same ETag. Never accepted: 404. Accepted empty: an empty list. Quarantined: 404. A
+move the last accepted history omits stays, served with `absentSince`; listed again, it loses the mark, keeps its row
+and id, and its absence is kept in `core.player_transfer_absences`. A fee of 0 and an unknown fee stay apart.
+
+### 35.2 Failure modes and expected outcomes
+
+| # | Situation | Expected | Before the corrections |
+|---|---|---|---|
+| 35a | Edition of a season with a twin (result 3 days before its goals) | one `r:` row, the goal and the goals' date; the pair in `absorbed` | red: the goal-only row stored beside its result |
+| 35b | Base merged by main's `merge_twins`, then the branch's plan | no entry for the pair; `merge_twins` again: `{}` | red: `goals_lost` on the result, the goal-only row `new` again |
+| 35c | Base still holding both rows, then a plan | refused `TWIN_NOT_MERGED` naming the pair, nothing written; after `merge_twins`, no entry | red: no refusal, both rows kept |
+| 35d | A pair with a quarantined key, or a ledger key, or an attested row | never merged, edition and `merge_twins`; listed with its reason | red: no exclusion in `merge_twins` |
+| 35e | `merge_twins` while an apply holds `vega.archives.apply` | the pass stops, no error, nothing written | red: merged while an apply held the lock |
+| 35f | A season whose merge fails (the attested date trigger) | that season rolled back and printed; later seasons merged | red: the first error stops the pass; the later twin stays |
+| 35g | After `merge_twins` | tombstone of the `g:` id; `r:` key and id 200 with goals and date; an attested alias 200; the `g:` key 404 | red: no tombstone; the alias refused (149) |
+| 35h | A plan stored before `merge_twins`, applied after | `drift` with its reason; nothing written | green (manifest refusal); the stored plan drifts |
+| 35i | The image's file set | `TWINS` exists there; `archives/twins.mjs` in the manifest | red: `TWINS` outside `/app`, not in the manifest |
+| 35j | Purge under both roles, a competition with no protected row | removed whole, as on main | red: 42501 on `core.archive_match_attestations` |
+| 35k | Purge under both roles, a competition an attestation (or an artwork proof) names | held with the table; its agg rows and rankings untouched; the next competition removed | red: 42501 after agg was cleared |
+| 35l | Main's purge on this schema, a competition left to purge | fails (42501) after its calculations' half: a release condition | red (main's code, witness) |
+| 35m | Two imports of one cup edition, disjoint changes, then a replay | the stored rows are the digest's body; the replay writes nothing; cup and match routes agree | red: rows of both bodies under one digest |
+| 35n | Euro 2024 file without Germany–Scotland's half time; then an explicit half time; then 0–0 kept | 3–0 kept, 200/304 unchanged; the explicit one written; a stored 0–0 kept | red: 3–0 and 0–0 erased, new ETag |
+| 35o | Extra time and shoot-out omitted; full time changed while extra time omitted | stored pairs kept; `PERIODS_CONFLICT` | red: extra time and shoot-out erased; the changed full time accepted |
+| 35p | Open Matchday fixture moved 29→30 Nov with an ordinary forecast, another result corrected 2–1→3–1 | same match id, forecast kept, 3–1 written, scope ok, old ETag 200 | red: `MATCH_HAS_DEPENDENTS` by the forecast, 2–1 kept, 304 |
+| 35q | Two fixtures of one pair leave and one arrives, or one leaves and two arrive | no rekey; `AMBIGUOUS_RESCHEDULE`; no fact lost | red: no reason named |
+| 35r | Fixture withdrawn: nothing / an ordinary forecast / odds / events / a line-up forecast / `kickoff_at` / another key | deleted / deleted / held, the rest written, the code named | red: forecast refused, `kickoff_at` deleted, the rest frozen |
+| 35s | A match resource version written after a withdrawal's check | refused; no orphan after the commit | red: the version written, orphaned |
+| 35t | A fourth club's result and membership written between qualification and publication | refused `INCOMPLETE_TABLE`; the accepted table, its date and ETag kept | red: the three-club table published |
+| 35u | An older observation (08 h after 11 h), homonyms and reserve sides | unchanged rules (existing tests) | green |
+| 35v | A repeat needing a fresh organiser proof | no provider call under the lock | green (no case reaches the organiser under the lock) |
+| 35w | Three moves accepted, then 404 / empty / malformed refresh | 200, same body, 304 on the old ETag | red: 404 |
+| 35x | Never read; first read refused; first 404; quarantined | 404; 404; 200 empty list; 404 | green |
+| 35y | Partial history without one move, then the move again | `absentSince` served, old ETag 200; mark cleared, same id, absence kept | red: no mark, 304 |
+| 35z | The 55 keys of the two witness players, fees 0 and unknown, the value curve | served unchanged; fees apart; the curve's club changes unchanged | red: 404 |

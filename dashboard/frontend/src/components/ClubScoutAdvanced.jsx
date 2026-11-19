@@ -380,10 +380,7 @@ export function Finishing({ dossier }) {
             ]}
           />
         </Card>
-        <Card
-          title="Cartes des tirs"
-          text="Toutes compétitions, tirs à moins de 40 m · taille selon les xG, plein = but."
-        >
+        <Card title="Cartes des tirs" text="Toutes compétitions.">
           <ShotPair profile={dossier.shotsAll} />
         </Card>
       </div>

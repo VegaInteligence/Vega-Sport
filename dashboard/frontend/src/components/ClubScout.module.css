@@ -101,7 +101,7 @@
   width: min(320px, 80vw);
   height: 4px;
   overflow: hidden;
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--surface-subtle);
 }
 .progress i {
@@ -114,11 +114,12 @@
 /* ---------------------------------------------------------------- cards */
 .card {
   min-width: 0;
-  padding: 18px;
-  border: 1px solid var(--border);
+  padding: 18px 0;
+  border: 0;
+  border-top: 1px solid var(--border-strong);
   border-radius: var(--radius-lg);
-  background: var(--surface);
-  --mq-gap: var(--surface);
+  background: none;
+  --mq-gap: var(--bg);
 }
 .cardHead {
   display: flex;
@@ -186,7 +187,8 @@
   grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   gap: 1px;
   overflow: hidden;
-  border: 1px solid var(--border);
+  border: 0;
+  border-block: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--border);
 }
@@ -195,7 +197,7 @@
   align-content: start;
   gap: 4px;
   padding: 14px 16px;
-  background: var(--surface);
+  background: var(--bg);
 }
 .kpis span {
   color: var(--muted);
@@ -325,7 +327,7 @@
 .clubLink:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: 0;
 }
 
 /* ---------------------------------------------------------- phase bars */
@@ -392,14 +394,14 @@
 .mirrorTrack {
   position: relative;
   height: 10px;
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--surface-subtle);
 }
 .mirrorTrack i {
   position: absolute;
   top: 0;
   bottom: 0;
-  border-radius: 999px;
+  border-radius: 0;
 }
 .mirrorTrack[data-side="own"] i {
   right: 0;
@@ -620,7 +622,7 @@
   width: 6px;
   height: 10px;
   margin-left: -3px;
-  border-radius: 2px;
+  border-radius: 0;
   background: var(--muted-light);
   opacity: 0.55;
 }
@@ -631,7 +633,7 @@
   height: 28px;
   margin-left: -7px;
   border: 2px solid var(--surface);
-  border-radius: 4px;
+  border-radius: 0;
   background: var(--accent);
   box-shadow: 0 0 0 1px var(--accent);
 }
@@ -653,7 +655,7 @@
   height: 26px;
   padding: 0 10px;
   border: 1px solid var(--accent-line);
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--accent-pale);
   color: var(--accent);
   font-size: var(--text-sm);
@@ -690,7 +692,7 @@
 .trendLegend i {
   width: 14px;
   height: 3px;
-  border-radius: 2px;
+  border-radius: 0;
 }
 
 /* ------------------------------------------------------------ periods */
@@ -715,7 +717,7 @@
 }
 .periodBars i {
   width: 14px;
-  border-radius: 3px 3px 0 0;
+  border-radius: 0;
 }
 .periodBars i:first-child {
   background: var(--accent);
@@ -799,7 +801,7 @@
 .xgBar > span {
   position: relative;
   overflow: hidden;
-  border-radius: 2px;
+  border-radius: 0;
   background: var(--surface-subtle);
 }
 .xgBar > span:first-child i {
@@ -847,7 +849,7 @@
 .difficulty i {
   width: 6px;
   height: 12px;
-  border-radius: 2px;
+  border-radius: 0;
   background: var(--surface-subtle);
 }
 .difficulty i[data-on="true"] {
@@ -857,8 +859,108 @@
 /* ----------------------------------------------------------- shot maps */
 .pitchPair {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 600px));
+  gap: 28px 40px;
+}
+/* ------------------------------------------------- xG trend, shot maps */
+/* Both are drawn at their measured width: their text keeps its size on every screen. */
+.xgTrend,
+.shotPlot {
+  width: 100%;
+}
+.xgPlot,
+.shotPlot {
+  position: relative;
+}
+.xgSvg,
+.shotPlot svg {
+  display: block;
+  overflow: visible;
+  font-variant-numeric: tabular-nums;
+  cursor: crosshair;
+  touch-action: pan-y;
+}
+.axisText {
+  fill: var(--muted);
+  font-size: 11px;
+}
+.endValue {
+  fill: var(--ink-strong);
+  font-size: 13px;
+  font-weight: 600;
+}
+/* A card beside its point, not over it: on the right, or on the left past the middle. */
+.plotTip.sideTip {
+  transform: translate(14px, -50%);
+}
+.plotTip.sideTip[data-flip] {
+  transform: translate(calc(-100% - 14px), -50%);
+}
+.plotTip small.tipNote {
+  display: block;
+  margin: 0 0 4px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  letter-spacing: 0;
+  text-transform: none;
+}
+.trendLegend i.legendDot,
+.trendLegend i.legendRing {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+.trendLegend i.legendDot {
+  background: var(--muted);
+}
+.trendLegend i.legendRing {
+  background: none;
+  border: 1.5px solid var(--muted);
+}
+.trendLegend i.legendDash {
+  height: 0;
+  background: none;
+  border-top: 2px dashed var(--muted);
+}
+.shotTitle {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--ink-strong);
+  font-size: var(--text-sm);
+}
+.shotFigures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+  margin: 0 0 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.shotFigures dt {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.shotFigures dd {
+  margin: 2px 0 0;
+  color: var(--ink-strong);
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.shotFigures b {
+  font-weight: 600;
+}
+.shotPair > .trendLegend {
+  margin: 16px 0 0;
+}
+.trendLegend .sizeKey {
+  gap: 10px;
+}
+.trendLegend .sizeKey i {
+  box-sizing: border-box;
+  border: 1px solid var(--muted);
+  border-radius: 50%;
+  background: none;
 }
 .pitchTitle {
   display: flex;
@@ -878,7 +980,7 @@
   display: flex;
   height: 14px;
   overflow: hidden;
-  border-radius: 999px;
+  border-radius: 0;
 }
 .stateBar i:nth-child(1) {
   background: var(--accent);
@@ -945,7 +1047,7 @@
 .share > span {
   height: 6px;
   overflow: hidden;
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--surface-subtle);
 }
 .share i {
@@ -983,6 +1085,10 @@
   .grid3,
   .pitchPair {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .shotFigures {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
   .mirrorHead,
   .mirrorRow {
@@ -1199,7 +1305,7 @@
     min-width: 0;
     height: 40px;
     padding: 0 12px 0 14px;
-    border-radius: 20px;
+    border-radius: 0;
   }
   .menuPanel {
     position: fixed;
@@ -1211,7 +1317,7 @@
     width: auto;
     max-height: 56dvh;
     overflow-y: auto;
-    border-radius: 20px;
+    border-radius: 0;
     box-shadow: var(--shadow-overlay);
   }
 }

@@ -894,5 +894,176 @@ class MigrationTest(Base):
         self.expect("an authorized deletion goes through", [c["team_id"] for c in self.contracts(1403)], [22])
 
 
+# The 55 transfers of the two witness players (Sam Johnstone, André Geraldes) as production held them, read only from
+# RDS on 18 Nov 2026 at 00:30 UTC (docs/audits/2026-11-17/controles/transferts-rejeu-55.json: input_sha256
+# ea10f1a3591b30cf2c515a649e54505b70b646aa351faa9677447f8dfa7ea73d is this file's SHA-256).
+WITNESSES = ROOT / "tests" / "fixtures" / "transfermarkt" / "witnesses-55.json"
+CURVE = r"""
+import { careerMoves } from "./dashboard/frontend/src/services/career-moves.js";
+const bodies = JSON.parse(process.argv[1]);
+const values = [{ date: "2005-01-01", club: null }, { date: "2026-06-01", club: null }];
+console.log(JSON.stringify(bodies.map((b) => careerMoves(values, b === null ? null : b.data.transfers))));
+"""
+
+
+@unittest.skipUnless(DSN and psycopg and HTTP_READY, "requires disposable local sources DB, psycopg, node and backend/api/node_modules")
+class ServedHistoryTest(Base):
+    """35w–35z (FAILURE_MODES.md §35), written before the code: the list GET /api/players/{id}/transfers serves after
+    refused or failed refreshes, under the collection role, through the real route under vega_read (tests/read_http.mjs)
+    and the value curve's own module (career-moves.js).
+
+    Failure modes: an accepted history hidden (404) as soon as a refresh is refused; a never-read or refused first read
+    shown as an empty history; a move the provider stopped listing served as if confirmed, or erased; its return losing
+    the trace of its absence; a fee of 0 confused with an unknown one; the curve changing with the list's new field."""
+
+    def setUp(self):
+        from vega.store import connect_local
+
+        super().setUp()
+        self.collect = connect_local(DSN)
+        self.addCleanup(self.collect.close)
+        self.collect.execute("SET ROLE vega_collect")
+        self.collector = self.make_reader(self.collect)
+
+    def route(self, pid):
+        return f"/api/players/{self.db.execute('SELECT api.public_id(%s, %s)', ('player', pid)).fetchone()[0]}/transfers"
+
+    def http(self, *requests):
+        done = subprocess.run([NODE, str(ROOT / "tests" / "read_http.mjs"), DSN, json.dumps(list(requests))],
+                              capture_output=True, text=True, timeout=120)
+        self.assertEqual(done.returncode, 0, done.stderr)
+        out = json.loads(done.stdout.strip().splitlines()[-1])
+        self.entry["states"].append({"after": "GET " + ", ".join(r["path"] for r in requests), "http": out})
+        return out
+
+    def curve(self, *bodies):
+        done = subprocess.run([NODE, "--input-type=module", "-e", CURVE, json.dumps(list(bodies))], cwd=ROOT.parent,
+                              capture_output=True, text=True, timeout=60)
+        self.assertEqual(done.returncode, 0, done.stderr)
+        return json.loads(done.stdout)
+
+    def three(self, pid):
+        key = self.player(pid)
+        self.full = history(move(81, self.d(-3000), 33, 11, fee=2500000, season="18/19"),
+                            move(82, self.d(-1500), 11, 22, free=True, until=self.d(400)),
+                            move(83, self.d(-700), 22, 9999, kind="ACTIVE_LOAN_TRANSFER", value=1500000))
+        self.expect("accepted", self.read("accepted", pid, data=self.full, reader=self.collector), "ok")
+        return key
+
+    def test_35w_a_refused_refresh_keeps_the_accepted_list_served(self):
+        self.case("35w", "three moves accepted, then 404, empty lists and a malformed history")
+        self.three(1501)
+        [first] = self.http({"path": self.route(1501)})
+        self.expect("served", (first["status"], len(first["body"]["data"]["transfers"])), (200, 3))
+        fees = {t["date"]: t["feeEur"] for t in first["body"]["data"]["transfers"]}
+        self.expect("a free move's 0 and an unknown fee stay apart", (fees[self.d(-1500).isoformat()], fees[self.d(-700).isoformat()]), (0, None))
+        for label, status, data in (("404", 404, None), ("empty lists", 200, history()), ("malformed", 200, {"history": {"terminated": "x"}})):
+            self.read(label, 1501, status=status, data=data, reader=self.collector)
+            [after] = self.http({"path": self.route(1501), "etag": first["etag"]})
+            self.expect(f"{label}: 200, the same list, 304 on the first ETag", (after["status"], after["body"], after["conditional"]),
+                        (200, first["body"], 304))
+        before, now = self.curve(first["body"], after["body"])
+        self.expect("the curve reads it unchanged", now, before)
+
+    def test_35x_never_read_refused_first_read_empty_history_and_quarantine_stay_apart(self):
+        self.case("35x", "never read; a first read refused; a first 404; a quarantine")
+        for pid in (1511, 1512, 1513, 1514):
+            self.player(pid)
+        self.read("malformed first read", 1512, data={"history": {"terminated": "x"}}, reader=self.collector)
+        self.read("first 404", 1513, status=404, reader=self.collector)
+        self.three(1515)
+        self.db.execute("""INSERT INTO ops.provider_links(entity_type, provider, provider_key, entity_id, rule, quarantined_at, quarantine_reason)
+                           VALUES ('player', 'transfermarkt', '1515', 1515, 'snapshot', now(), 'birth_date_differs')""")
+        never, refused, empty, quarantined = self.http(*({"path": self.route(pid)} for pid in (1511, 1512, 1513, 1515)))
+        self.expect("statuses", [r["status"] for r in (never, refused, empty, quarantined)], [404, 404, 200, 404])
+        self.expect("a first 404 is an empty history", empty["body"]["data"]["transfers"], [])
+
+    def test_35y_an_omitted_move_is_served_as_absent_then_listed_again_with_its_trace(self):
+        self.case("35y", "a partial history without move 83, then the whole history again")
+        self.three(1521)
+        ids = self.ids(1521)
+        [first] = self.http({"path": self.route(1521)})
+        partial = history(*self.full["history"]["terminated"][:2])
+        self.expect("partial accepted", self.read("partial", 1521, data=partial, reader=self.collector), "ok")
+        today = self.d(0).isoformat()
+        [absent] = self.http({"path": self.route(1521), "etag": first["etag"]})
+        self.expect("a new representation", (absent["status"], absent["conditional"]), (200, 200))
+        marks = {t["date"]: t.get("absentSince") for t in absent["body"]["data"]["transfers"]}
+        self.expect("83 served with the day it was missed, the others unmarked",
+                    marks, {self.d(-3000).isoformat(): None, self.d(-1500).isoformat(): None, self.d(-700).isoformat(): today})
+        self.expect("the curve unchanged by the mark", self.curve(absent["body"])[0], self.curve(first["body"])[0])
+        self.shift = 3
+        self.expect("listed again", self.read("again", 1521, data=self.full, reader=self.collector), "ok")
+        [back] = self.http({"path": self.route(1521), "etag": first["etag"]})
+        self.expect("the first representation again", (back["status"], back["body"], back["conditional"]), (200, first["body"], 304))
+        self.expect("same rows", self.ids(1521), ids)
+        trace = self.db.execute("""SELECT a.source_key, a.absent_since, a.seen_again_on FROM core.player_transfer_absences a
+                                   JOIN core.player_transfers x ON x.id = a.transfer_id WHERE x.player_id = 1521 ORDER BY 1""").fetchall()
+        self.expect("the absence kept", trace, [("83", self.d(0), self.d(3))])
+
+    def test_35z_the_55_witness_transfers_are_served_through_refusals_and_a_partial_history(self):
+        self.case("35z", "the 55 transfers of the two witness players, then refusals and a partial history")
+        data = json.loads(WITNESSES.read_bytes())
+        facts = [dict(zip(data["columns"], row, strict=True)) for row in data["rows"]]
+        people = {r["player_id"]: r for r in facts}
+        self.assertEqual((len(people), len(facts), len({r["source_key"] for r in facts})), (2, 55, 55))
+        x = self.db.execute
+        for p in people.values():
+            x("INSERT INTO core.players(id, name, birth_date) VALUES (%s, %s, %s)", (p["player_id"], p["name"], p["birth_date"]))
+            x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('player', 'transfermarkt', %s, %s)",
+              (p["provider_key"], p["player_id"]))
+            x("""INSERT INTO ops.transfermarkt_reads(kind, provider_key, priority, next_due_at, read_at, last_http_status, attempts, rows_written)
+                 VALUES ('transfers', %s, 1, now(), now() - interval '1 day', 200, 0, %s)""",
+              (p["provider_key"], sum(1 for r in facts if r["player_id"] == p["player_id"])))
+        for r in facts:
+            for side in ("from", "to"):
+                if r[side + "_team_id"] is not None:
+                    x("INSERT INTO core.teams(id, name) VALUES (%s, %s) ON CONFLICT DO NOTHING", (r[side + "_team_id"], r[side + "_canonical_name"]))
+                    x("""INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('team', 'transfermarkt', %s, %s)
+                         ON CONFLICT DO NOTHING""", (r[side + "_provider_club"], r[side + "_team_id"]))
+                x("""INSERT INTO core.provider_clubs(provider, provider_key, name, read_on) VALUES ('transfermarkt', %s, %s, current_date)
+                     ON CONFLICT DO NOTHING""", (r[side + "_provider_club"], r[side + "_source_name"]))
+            x("""INSERT INTO core.player_transfers(id, player_id, source, source_key, transfer_date, season_label, kind, pending, from_provider_club,
+                   from_team_id, to_provider_club, to_team_id, fee_eur, market_value_eur, contract_until, as_of)
+                 VALUES (%(row_id)s, %(player_id)s, 'transfermarkt', %(source_key)s, %(transfer_date)s, %(season_label)s, %(kind)s, %(pending)s,
+                   %(from_provider_club)s, %(from_team_id)s, %(to_provider_club)s, %(to_team_id)s, %(fee_eur)s, %(market_value_eur)s,
+                   %(contract_until)s, %(as_of)s)""", r)
+        x("SELECT setval(pg_get_serial_sequence('core.player_transfers', 'id'), (SELECT max(id) FROM core.player_transfers))")
+        keys = sorted((r["player_id"], r["source_key"], r["row_id"]) for r in facts)
+        stored = lambda: sorted(x("SELECT player_id, source_key, id FROM core.player_transfers WHERE source = 'transfermarkt' AND player_id = ANY(%s)",
+                                  (sorted(people),)).fetchall())
+        self.expect("55 keys stored", stored(), keys)
+        routes = [{"path": self.route(pid)} for pid in sorted(people)]
+        first = self.http(*routes)
+        shown = {pid: sum(1 for r in facts if r["player_id"] == pid and not r["pending"] and r["transfer_date"]) for pid in sorted(people)}
+        self.expect("served", [(r["status"], len(r["body"]["data"]["transfers"])) for r in first], [(200, shown[pid]) for pid in sorted(people)])
+        self.expect("fees: five stated, the rest unknown",
+                    sorted(t["feeEur"] for r in first for t in r["body"]["data"]["transfers"] if t["feeEur"] is not None),
+                    sorted(r["fee_eur"] for r in facts if r["fee_eur"] is not None and not r["pending"]))
+        curves = self.curve(*(r["body"] for r in first))
+        for label, status, body in (("404", 404, None), ("empty lists", 200, history())):
+            for p in people.values():
+                self.read(label, p["player_id"], status=status, data=body, key=p["provider_key"], reader=self.collector)
+            after = self.http(*({**route, "etag": r["etag"]} for route, r in zip(routes, first)))
+            self.expect(f"{label}: both lists served unchanged, 304", [(r["status"], r["body"], r["conditional"]) for r in after],
+                        [(200, r["body"], 304) for r in first])
+            self.expect(f"{label}: the 55 rows and ids", stored(), keys)
+            self.expect(f"{label}: the curves", self.curve(*(r["body"] for r in after)), curves)
+        # A partial history of the first witness: its one completed move listed, the others kept and marked.
+        witness = people[min(people)]
+        listed = next(r for r in facts if r["player_id"] == witness["player_id"] and not r["pending"])
+        partial = {"history": {"terminated": [{"id": listed["source_key"], "transferSource": {"clubId": listed["from_provider_club"]},
+                                               "transferDestination": {"clubId": listed["to_provider_club"]},
+                                               "details": {"date": listed["transfer_date"], "season": {"display": listed["season_label"]}}}],
+                               "pending": []}}
+        self.expect("partial accepted", self.read("partial", witness["player_id"], data=partial, key=witness["provider_key"], reader=self.collector), "ok")
+        [marked] = self.http({**routes[0], "etag": first[0]["etag"]})
+        absent = [t for t in marked["body"]["data"]["transfers"] if t.get("absentSince")]
+        self.expect("a new representation with the omitted moves marked", (marked["status"], marked["conditional"], len(absent)),
+                    (200, 200, shown[witness["player_id"]] - 1))
+        self.expect("the 55 rows and ids after the partial history", stored(), keys)
+        self.expect("the curve unchanged by the marks", self.curve(marked["body"])[0], curves[0])
+
+
 if __name__ == "__main__":
     unittest.main()

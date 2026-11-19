@@ -175,7 +175,7 @@
   display: inline-block;
   width: 9px;
   height: 13px;
-  border-radius: 2px;
+  border-radius: 0;
   vertical-align: -1px;
 }
 .yellow {
@@ -232,30 +232,75 @@
   max-width: none;
   margin: 0;
 }
+/* The chart is drawn at its measured width (its text keeps its size); the read-out beside it,
+   under it on a phone. */
+.winBody {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px;
+  gap: 8px 20px;
+  align-items: start;
+}
+.winPlot {
+  min-width: 0;
+}
 .winChart {
   display: block;
-  width: 100%;
-  height: auto;
+  overflow: visible;
   cursor: crosshair;
   touch-action: pan-y;
+  font-variant-numeric: tabular-nums;
 }
-.swings {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 12px 0 0;
-  padding: 0;
-  list-style: none;
+.winTick {
+  fill: var(--muted);
+  font-size: 11px;
 }
-.swings li {
-  padding: 4px 10px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
+.winGoal {
+  fill: var(--ink-strong);
+  font-size: 11px;
+  font-weight: 600;
+}
+.winReadout {
+  padding-top: 22px;
+  font-variant-numeric: tabular-nums;
+}
+.winReadoutHead {
+  margin: 0 0 10px;
   color: var(--muted);
   font-size: var(--text-xs);
 }
-.swings b {
+.winReadout dl {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+.winReadout dt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.winReadout dt i {
+  width: 9px;
+  height: 9px;
+  flex: none;
+}
+.winReadout dd {
+  margin: 2px 0 0 15px;
   color: var(--ink-strong);
+  font-size: 16px;
+  font-weight: 600;
+}
+@media (max-width: 640px) {
+  .winBody {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .winReadout {
+    padding-top: 0;
+  }
+  .winReadout dl {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 /* ---------------------------------------------------------------- line-ups */
@@ -340,7 +385,7 @@
   height: 18px;
   padding: 0 3px;
   border: 1px solid var(--border-strong);
-  border-radius: 9px;
+  border-radius: 0;
   background: var(--surface);
   color: var(--ink);
   font-size: 10px;
@@ -351,7 +396,7 @@
   top: -7px;
   right: -12px;
   padding: 1px 5px;
-  border-radius: 6px;
+  border-radius: 0;
   background: var(--surface-raised);
   color: var(--ink-strong);
   font-size: 11px;
@@ -388,7 +433,7 @@
   display: inline-block;
   min-width: 32px;
   padding: 1px 6px;
-  border-radius: 7px;
+  border-radius: 0;
   background: var(--surface-raised);
   color: var(--ink-strong);
   font-size: var(--text-xs);
@@ -473,7 +518,7 @@
 .benchChips span {
   padding: 3px 9px;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: 0;
   color: var(--muted);
   font-size: var(--text-xs);
 }
@@ -636,7 +681,7 @@
 .teamBar {
   width: 4px;
   height: 28px;
-  border-radius: 2px;
+  border-radius: 0;
 }
 @media (max-width: 1050px) {
   .leaders {
@@ -702,7 +747,7 @@
   display: flex;
   height: 8px;
   overflow: hidden;
-  border-radius: 4px;
+  border-radius: 0;
   background: var(--surface-raised);
 }
 .barLeft {
@@ -711,7 +756,7 @@
 .bar i {
   display: block;
   height: 100%;
-  border-radius: 4px;
+  border-radius: 0;
 }
 .halves {
   width: 100%;
@@ -774,7 +819,7 @@
   outline: none;
 }
 .nodeDisc {
-  fill: var(--surface);
+  fill: var(--bg);
   stroke-width: 2;
 }
 .nodeNumber {

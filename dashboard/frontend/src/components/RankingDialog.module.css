@@ -42,7 +42,7 @@
 }
 .list li[data-self="true"] {
   background: color-mix(in srgb, var(--accent, #2563eb) 12%, transparent);
-  border-radius: 8px;
+  border-radius: 0;
   font-weight: 600;
 }
 .rank {
@@ -84,7 +84,7 @@
   display: inline-flex;
   align-items: baseline;
   gap: 4px;
-  border-radius: 4px;
+  border-radius: 0;
 }
 .trigger:hover {
   color: var(--accent, #2563eb);

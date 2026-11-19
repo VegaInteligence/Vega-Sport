@@ -417,7 +417,8 @@ export function createProfileRoute(read) {
       const [rows, [known]] = await Promise.all([
         // Two moves of one day in the provider's order: its key is a number written as text.
         read(
-          `SELECT transfer_date::text AS date, kind, fee_eur, from_id, from_name, from_image_url, to_id, to_name, to_image_url
+          `SELECT transfer_date::text AS date, kind, fee_eur, from_id, from_name, from_image_url, to_id, to_name, to_image_url,
+             absent_since::text AS absent_since
            FROM api.player_transfers WHERE player_key=api.internal_id('player',$1)
            ORDER BY transfer_date, length(source_key), source_key`,
           [transfers[1]],
@@ -428,8 +429,10 @@ export function createProfileRoute(read) {
       if (!known) reject(404, "Donnée indisponible.");
       return respond(req, {
         id: transfers[1],
+        // absentSince: the first day the provider's accepted history no longer listed the move (153); omitted otherwise.
         transfers: rows.map((r) => ({ date: r.date, kind: r.kind ?? null, feeEur: r.fee_eur ?? null,
-          from: namedClub(r.from_id, r.from_name, r.from_image_url), to: namedClub(r.to_id, r.to_name, r.to_image_url) })),
+          from: namedClub(r.from_id, r.from_name, r.from_image_url), to: namedClub(r.to_id, r.to_name, r.to_image_url),
+          ...(r.absent_since && { absentSince: r.absent_since }) })),
       });
     }
     const partners = path.match(PARTNERS);

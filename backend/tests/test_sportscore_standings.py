@@ -271,5 +271,105 @@ class SportScoreFreshnessTest(SportScoreDatabase):
             self.assertEqual(self.read()[0], (101, 8, T0 + 7 * H, 2))
 
 
+# The publication lock of a scope (sources.lock_scope), held by the backend `pid`.
+LOCK_HELD = """SELECT EXISTS (SELECT 1 FROM pg_locks l, (SELECT hashtextextended(%s, 0) AS k) h
+                WHERE l.locktype = 'advisory' AND l.granted AND l.pid = %s
+                  AND l.classid = ((h.k >> 32) & 4294967295)::bigint::oid AND l.objid = (h.k & 4294967295)::bigint::oid)"""
+
+
+class SportScoreNativeRaceTest(SportScoreDatabase):
+    """35t, 35v (FAILURE_MODES.md §35), written before the code, under the collection role (vega_collect) and through
+    the real route GET /api/standings under vega_read (tests/read_http.mjs).
+
+    Failure modes: a fourth club's result and membership committed between the run's qualification and its publication
+    is published over (a three-club table whose leader has 9 points), the refusal coming only at the next pass; a
+    provider called while the publication lock is held."""
+
+    def setUp(self):
+        from vega.store import connect_local
+
+        self.collect = connect_local(DSN)
+        self.addCleanup(self.collect.close)
+        self.collect.execute("SET ROLE vega_collect")
+        self.scope = "standings:" + CASES[0]["key"]
+
+    def run_scope(self, rows, instant):
+        get = lambda url: replay.widget(tables((None, rows)), replay.slug_of(url))
+        with patch.object(sportscore, "scopes", lambda _: {self.scope: sportscore.PERIOD}):
+            return sources.run_due(self.collect, get, instant, names={"sportscore"})[("sportscore", self.scope)]
+
+    def official(self):
+        return self.db.execute("""SELECT team_id, points, as_of, basis FROM core.standings_official
+                                  WHERE competition_season_id = 5001 AND source = 'sportscore' ORDER BY team_id""").fetchall()
+
+    def http(self, etag=None):
+        import json
+        import shutil
+        import subprocess
+
+        node = shutil.which("node")
+        if not node or not (ROOT / "api" / "node_modules" / "pg").is_dir():
+            self.skipTest("requires node and backend/api/node_modules")
+        done = subprocess.run([node, str(ROOT / "tests" / "read_http.mjs"), DSN,
+                               json.dumps([{"path": f"/api/standings?competition={CASES[0]['key']}", "etag": etag}])],
+                              capture_output=True, text=True, timeout=120)
+        self.assertEqual(done.returncode, 0, done.stderr)
+        return json.loads(done.stdout.strip().splitlines()[-1])[0]
+
+    def test_35t_a_fourth_club_written_after_qualification_refuses_the_publication(self):
+        self.assertEqual(self.run_scope(START, T0), "ok")
+        accepted = self.official()
+        before = self.http()
+        self.assertEqual((before["status"], before["conditional"]), (200, 304))
+        outside = self.db.execute("""SELECT team_id FROM core.team_seasons WHERE competition_season_id = 6001
+                                     EXCEPT SELECT team_id FROM core.team_seasons WHERE competition_season_id = 5001 ORDER BY 1 LIMIT 1""").fetchone()[0]
+        season = self.db.execute("SELECT season_id FROM core.competition_seasons WHERE id = 5001").fetchone()[0]
+        qualify, raced = sportscore.qualify, []
+
+        def native_after(conn, edition, *args):
+            out = qualify(conn, edition, *args)
+            if not raced:
+                raced.append(outside)
+                with self.db.transaction():  # the native writer, committed between qualification and publication
+                    self.db.execute("INSERT INTO core.team_seasons(team_id, competition_season_id) VALUES (%s, 5001)", (outside,))
+                    self.db.execute("""INSERT INTO core.matches(competition_season_id, season_id, match_date, kickoff_at, status, home_team_id,
+                                         away_team_id, home_score, away_score, source, first_finished_at)
+                                       VALUES (5001, %s, '2026-11-04', '2026-11-04 12:00Z', 'finished', %s, 101, 2, 0, 'pitchapi', '2026-11-04 14:00Z')""",
+                                    (season, outside))
+            return out
+
+        with patch.object(sportscore, "qualify", native_after):
+            code = self.run_scope(replace(START, 0, pts=9), T0 + 4 * H)
+        self.assertEqual(raced, [outside])
+        self.assertEqual(code, "INCOMPLETE_TABLE")
+        self.assertEqual(self.official(), accepted)
+        after = self.http(before["etag"])
+        self.assertEqual((after["status"], after["body"], after["conditional"]), (200, before["body"], 304))
+        failure = self.db.execute("SELECT error_code, message FROM ops.parse_failures ORDER BY id DESC LIMIT 1").fetchone()
+        self.assertEqual(failure[0], "INCOMPLETE_TABLE")
+
+    def test_35v_no_provider_is_called_under_the_publication_lock(self):
+        from vega.store import connect_local
+
+        calls = []
+        with connect_local(DSN) as observer:
+            for index, case in enumerate(CASES, 1):
+                for number, step in enumerate(case["steps"]):
+                    for event in step["before"]:
+                        replay.apply(self.db, index, event)
+
+                    def get(url, body=step["body"], scope="standings:" + case["key"]):
+                        held = observer.execute(LOCK_HELD, (f"source-run:sportscore:{scope}", self.db.info.backend_pid)).fetchone()[0]
+                        calls.append((case["id"], number, url.split("?")[0], held))
+                        answer = replay.widget(body, replay.slug_of(url)) if "sportscore.com" in url else body
+                        if isinstance(answer, int):
+                            raise SourceError(f"HTTP_{answer}")
+                        return answer
+
+                    replay.play(sources, sportscore, self.db, case, step, get)
+        self.assertTrue(calls)
+        self.assertEqual([c for c in calls if c[3]], [])
+
+
 if __name__ == "__main__":
     unittest.main()

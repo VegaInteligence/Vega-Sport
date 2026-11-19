@@ -354,7 +354,8 @@ class WorkerTest(unittest.TestCase):
         generation = lambda: x("SELECT generation FROM api.publication").fetchone()[0]
         start = generation()
         self.assertIsNone(publish(self.db, self.now, force=True))  # nothing changed
-        x("INSERT INTO ops.resource_versions(resource_kind, resource_id, version) VALUES ('match', 990, 3)")
+        # A team's version (a match's names its match since 152, FAILURE_MODES.md §35).
+        x("INSERT INTO ops.resource_versions(resource_kind, resource_id, version) VALUES ('team', 990, 3)")
         self.assertEqual(publish(self.db, self.now, force=True), start + 3)
         # A write a minute later waits for the rhythm: reads keep their generation meanwhile.
         x("UPDATE ops.resource_versions SET version = version + 1 WHERE resource_id = 990")
@@ -1220,7 +1221,17 @@ class WorkerTest(unittest.TestCase):
                       ON p.entity_type::text = r.entity_type::text AND p.entity_id = r.entity_id AND p.provider = 'pitchapi' ORDER BY 1"""
         self.assertEqual([r[0] for r in x(followed)], ["p_aaaaaa", "p_jjjjjj", "t_aaaaaa", "t_bbbbbb", "t_jjjjjj", "t_kkkkkk"])
 
-        self.assertEqual(scope.purge(self.db), {"competitions": 1, "editions": 2, "matches": 3})
+        # The calculations wrote rows of their own for the removed editions (agg, no ON DELETE).
+        self.assertTrue(x("SELECT count(*) FROM agg.team_season_stats WHERE competition_season_id = ANY(%s)", (editions,)).fetchone()[0])
+        # As in production: the collection's role and the calculations' role, each on its own
+        # connection (017_roles.sql); the first cannot even read agg, the second cannot write core.
+        collect, calc = connect_local(DSN), connect_local(DSN)
+        self.addCleanup(collect.close)
+        self.addCleanup(calc.close)
+        collect.execute("SET ROLE vega_collect")
+        calc.execute("SET ROLE vega_calc")
+        self.assertEqual(scope.purge(collect, calc), {"competitions": 1, "editions": 2, "matches": 3})
+        self.assertEqual(x("SELECT count(*) FROM agg.team_season_stats WHERE competition_season_id = ANY(%s)", (editions,)).fetchone()[0], 0)
         # A team or player seen only there is no longer read every month (its profile stays);
         # one that also plays elsewhere still is.
         self.assertEqual([r[0] for r in x(followed)], ["p_aaaaaa", "t_aaaaaa", "t_bbbbbb"])
@@ -1240,7 +1251,7 @@ class WorkerTest(unittest.TestCase):
         self.assertEqual(x("SELECT count(*) FROM ops.family_state").fetchone()[0], kept_stats)
         self.assertTrue(self.mid("m_aaaaaa"))
         self.assertEqual(x("SELECT count(*) FROM core.teams WHERE id IN (SELECT entity_id FROM core.provider_ids WHERE provider_key IN ('t_aaaaaa','t_bbbbbb'))").fetchone()[0], 2)
-        self.assertEqual(scope.purge(self.db), {})
+        self.assertEqual(scope.purge(collect, calc), {})
         self.worker.calculate()
         self.at(start)
         self.drain()

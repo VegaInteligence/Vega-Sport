@@ -436,6 +436,21 @@ class PackagedLayoutTest(unittest.TestCase):
         self.assertEqual(json.loads(packaged.stdout), archives.code_manifest())
         self.assertIn("shared/legacy-8018e08/archive.js", archives.code_manifest())
         self.assertIn("vega/archives.py", archives.code_manifest())
+        # 35i (FAILURE_MODES.md §35): merge_twins's script under the Dockerfile's variables alone. Before: TWINS named
+        # <root>/backend/archives/twins.mjs, outside the image's /app, and no manifest entry bound it.
+        self.assertIn("archives/twins.mjs", archives.code_manifest())
+        located = subprocess.run([sys.executable, "-I", "-c", f"import sys; sys.path.insert(0, {str(app)!r}); import vega.archives as a; print(a.TWINS)"],
+                                 capture_output=True, text=True, env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1", **env), cwd=app)
+        self.assertEqual(located.returncode, 0, located.stderr)
+        twins = Path(located.stdout.strip())
+        self.assertTrue(twins.is_file() and twins.is_relative_to(app), twins)
+        pair = {"matches": [
+            {"key": "r:x:1", "competitionId": "x", "date": "2001-05-13", "team1": "Inter", "team2": "AC Milan", "score": [0, 6], "goals": None},
+            {"key": "g:lg:2001-05-11:7", "competitionId": "x", "date": "2001-05-11", "team1": "Internazionale", "team2": "Milan", "score": [0, 6], "goals": [{}]},
+        ]}
+        ran = subprocess.run([NODE, str(twins)], input=json.dumps(pair), capture_output=True, text=True, cwd=app, timeout=60)
+        self.assertEqual(ran.returncode, 0, ran.stderr)
+        self.assertEqual(json.loads(ran.stdout), [{"goal": "g:lg:2001-05-11:7", "result": "r:x:1", "date": "2001-05-11"}])
         (shared / "legacy-8018e08/openfootball-history.js").unlink()
         missing = self.manifest(app, env)
         self.assertNotEqual(missing.returncode, 0)

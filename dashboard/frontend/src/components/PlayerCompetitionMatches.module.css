@@ -87,7 +87,7 @@
   display: inline-block;
   width: 10px;
   height: 14px;
-  border-radius: 2px;
+  border-radius: 0;
   transform: rotate(8deg);
 }
 .yellow {
