@@ -590,3 +590,28 @@ test("the meanest defence concedes the fewest goals per game after five games", 
   assert.equal(defence.cleanSheets, 4);
   assert.equal(defence.goalsAgainst, 2);
 });
+
+// T1–T2 (19 Nov 2026, written before the code): the week strip with the national teams' results. During the
+// international break the national teams go first (the user: « vaut mieux mettre les équipes directement que les
+// clubs »), in the API's order (the two sides' Elo), then the clubs by their weight; 8 a day, the 4 latest days.
+test("the week strip puts the national teams first, then the clubs, 8 a day over the 4 latest days", async () => {
+  const { weekTicker, internationalLabel } = await import("../dashboard/frontend/src/services/home-insights.js");
+  const club = (id, date, league = "l_x") => ({ id, date, leagueId: league, home: { id: `t_${id}h`, score: 1 }, away: { id: `t_${id}a`, score: 0 } });
+  const nation = (id, date, tournament = "Friendly") => ({ id, date, tournament, home: { id: null, name: "Chile", score: 0 }, away: { id: null, name: "Colombia", score: 0 } });
+  const results = [club("c1", "2026-11-17"), club("c2", "2026-11-16"), club("c3", "2026-11-16", "l_3FJFUl"), club("c4", "2026-11-12")];
+  const internationals = [nation("n1", "2026-11-17"), nation("n2", "2026-11-17"), ...Array.from({ length: 7 }, (_, i) => nation(`m${i}`, "2026-11-16")),
+    nation("n3", "2026-11-15"), nation("n4", "2026-11-14")];
+  const days = weekTicker(results, internationals, new Map());
+  // The four latest days of both lists: Tuesday 17, Monday 16, Sunday 15, Saturday 14 (Thursday 12 drops out).
+  assert.deepEqual(days.map((d) => d.day), ["2026-11-17", "2026-11-16", "2026-11-15", "2026-11-14"]);
+  // Tuesday: the two national matches, then the club.
+  assert.deepEqual(days[0].matches.map((m) => m.id), ["n1", "n2", "c1"]);
+  // Monday: seven national matches, then the heavier club (Ligue 1) fills the eighth place.
+  assert.deepEqual(days[1].matches.map((m) => m.id), ["m0", "m1", "m2", "m3", "m4", "m5", "m6", "c3"]);
+  assert.ok(days[1].matches.slice(0, 7).every((m) => m.national) && !days[1].matches[7].national);
+  // T2: the tournaments' short labels in French; an unknown one as the source writes it.
+  assert.deepEqual(
+    ["Friendly", "UEFA Nations League", "CONCACAF Nations League", "African Cup of Nations qualification", "FIFA World Cup qualification", "King's Cup"].map(internationalLabel),
+    ["Amical", "LN UEFA", "LN CONCACAF", "Qualif. CAN", "Qualif. CM", "King's Cup"],
+  );
+});

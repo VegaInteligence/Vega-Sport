@@ -192,6 +192,48 @@ test("the World Cup projection writes array results as objects and keeps the sou
   }
 });
 
+// The national teams' results of the season beyond the competitions read elsewhere (the user, 19 Nov 2026: « on peut
+// s'arrêter à ce qui est gratuit » — the home's week strip shows them during the international break).
+// S1–S4 of the expected behaviour, written before the code.
+test("every international of the season is read from International Results, but what other editions read", async () => {
+  const { parseInternationalResults } = await import("../dashboard/frontend/src/services/nations-results.js");
+  const head = "date,home_team,away_team,home_score,away_score,tournament,city,country,neutral\n";
+  const csv = head + [
+    "2026-06-30,Brazil,Japan,2,0,Friendly,Rio,Brazil,FALSE", // S3: before the season
+    "2026-07-19,France,Brazil,1,0,FIFA World Cup,New York,United States,TRUE", // S2: PitchAPI's World Cup
+    "2026-09-05,Ghana,Chad,3,0,African Cup of Nations qualification,Accra,Ghana,FALSE",
+    "2026-11-16,Germany,Netherlands,5,0,UEFA Nations League,Berlin,Germany,FALSE", // S2: the Nations League's editions
+    "2026-11-16,Canada,Guatemala,4,1,CONCACAF Nations League,Toronto,Canada,FALSE",
+    "2026-11-17,Argentina,Costa Rica,7,0,Friendly,Miami,United States,TRUE",
+    "2026-11-17,Thailand,Vietnam,NA,NA,King's Cup,Bangkok,Thailand,FALSE", // S3: no score
+    "2027-07-01,Spain,Italy,1,1,Friendly,Madrid,Spain,FALSE", // S3: after the season
+  ].join("\n") + "\n";
+  const rows = parseInternationalResults(csv, "2026/2027");
+  assert.deepEqual(rows.map((r) => [r.date, r.home, r.away, r.score, r.round, r.neutral]), [
+    ["2026-09-05", "Ghana", "Chad", [3, 0], "African Cup of Nations qualification", false],
+    ["2026-11-16", "Canada", "Guatemala", [4, 1], "CONCACAF Nations League", false],
+    ["2026-11-17", "Argentina", "Costa Rica", [7, 0], "Friendly", true],
+  ]);
+  assert.deepEqual([rows[2].key, rows[2].homeId, rows[2].awayId, rows[2].status], ["internationals:2026-11-17|Argentina|Costa Rica", "Argentina", "Costa Rica", "finished"]);
+  // S2: a tournament's rows inside one of its editions' windows are that edition's (the AFCON 2025 here).
+  const afcon = head + "2025-12-21,Morocco,Comoros,2,0,African Cup of Nations,Rabat,Morocco,FALSE\n2026-03-27,Morocco,Niger,5,0,Friendly,Rabat,Morocco,FALSE\n";
+  assert.deepEqual(parseInternationalResults(afcon, "2025/2026").map((r) => r.away), ["Niger"]);
+  assert.throws(() => parseInternationalResults(csv, "2019/2020"), /Unknown/);
+  assert.throws(() => parseInternationalResults(csv + "2026-11-17,Argentina,Costa Rica,7,0,Friendly,Miami,United States,TRUE\n", "2026/2027"), /Duplicate/);
+  assert.throws(() => parseInternationalResults("date,home,away\n", "2026/2027"), /header/);
+  // S4: the projection serves the season's edition, and only it.
+  const { GET } = await import("../backend/sources/projections/nations-results.mjs");
+  const original = globalThis.fetch;
+  globalThis.fetch = async () => new Response(csv);
+  try {
+    const body = await (await GET(new Request("http://bridge/api/nations-results?competition=internationals&season=2026%2F2027"))).json();
+    assert.deepEqual([body.name, body.season, body.matches.length, body.source.license], ["Matchs internationaux 2026/2027", "2026/2027", 3, "CC0-1.0"]);
+    assert.equal((await GET(new Request("http://bridge/api/nations-results?competition=internationals&season=2019%2F2020"))).status, 400);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
 // FAILURE_MODES.md §19 (19z′, 19z″): a score after extra time is never the 90 minutes' too.
 test("Football.TXT keeps the 90 minutes apart from extra time", () => {
   const text = "# Matches 4\n▪ Final\nSat May 3 2025\n  20:00  A   v B   2-1 a.e.t.\n  20:00  C   v D   5-4 pen. 1-1 a.e.t. (1-1, 0-0)\nSun May 4\n  20:00  E   v F   4-3 pen. (2-1, 0-1)\n  20:00  G   v H   4-1 (3-0)\n";
