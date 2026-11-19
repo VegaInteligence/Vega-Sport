@@ -36,10 +36,11 @@ ELO = "agg.team_elo"
 MATCH_STATS = "core.team_match_stats"
 ENRICHMENT_COLUMNS = {"home_score_ht", "away_score_ht", "revision", "updated_at"}
 # Relations naming a match created after the reviewed captures: 141, 143, the Fjelstul World Cup Database's pair
-# (137_worldcup_database.sql), football-data.co.uk's (140_football_data.sql) and the reviewed side corrections
-# (156_team_side_corrections.sql). Each is still checked for occupancy.
+# (137_worldcup_database.sql), football-data.co.uk's (140_football_data.sql), the players' run's recorded exclusions
+# (155_player_grade_status.sql) and the reviewed side corrections (156_team_side_corrections.sql). Each is still checked
+# for occupancy.
 ADDED_DEPENDENCIES = {"core.archive_match_attestations", "ops.archive_removals", "core.worldcup_matches", "core.footballdata_matches",
-                      "core.team_side_corrections"}
+                      "agg.player_grade_exclusions", "core.team_side_corrections"}
 # The Fjelstul World Cup Database's own match keys (137_worldcup_database.sql): text keys of core.worldcup_matches, never
 # an id of core.matches.
 FJELSTUL_MATCH_KEYS = frozenset({"core.worldcup_matches", "core.worldcup_appearances", "core.worldcup_goals",
@@ -56,9 +57,11 @@ REFS = {
 }
 
 
-# The latest migrations this path was reviewed against: 153, and 156, which only adds core.team_side_corrections
-# (ADDED_DEPENDENCIES; FAILURE_MODES.md §39). A later one needs its own review here.
-REVIEWED_SCHEMAS = ("153_transfer_history_served.sql", "156_team_side_corrections.sql")
+# The latest migrations this path was reviewed against: 153 (production on 19 Nov 2026), and 160 with 155 and 156
+# before it. 155 adds agg.player_grade_exclusions and 156 core.team_side_corrections, which both name a match
+# (ADDED_DEPENDENCIES; FAILURE_MODES.md §38, §39); 160 adds columns and no relation naming a match (§44). A later one
+# needs its own review here.
+REVIEWED_SCHEMAS = ("153_transfer_history_served.sql", "160_reads_keep_omitted_observations.sql")
 
 
 class Refusal(RuntimeError):
