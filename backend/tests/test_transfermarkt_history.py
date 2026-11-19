@@ -20,8 +20,10 @@ from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "tests"))
 
 from vega import transfermarkt as tm
+from prerequisites import required
 
 try:
     import psycopg
@@ -906,7 +908,7 @@ console.log(JSON.stringify(bodies.map((b) => careerMoves(values, b === null ? nu
 """
 
 
-@unittest.skipUnless(DSN and psycopg and HTTP_READY, "requires disposable local sources DB, psycopg, node and backend/api/node_modules")
+@required(DSN and psycopg and HTTP_READY, "requires disposable local sources DB, psycopg, node and backend/api/node_modules")
 class ServedHistoryTest(Base):
     """35w–35z (FAILURE_MODES.md §35), written before the code: the list GET /api/players/{id}/transfers serves after
     refused or failed refreshes, under the collection role, through the real route under vega_read (tests/read_http.mjs)
@@ -1063,6 +1065,60 @@ class ServedHistoryTest(Base):
                     (200, 200, shown[witness["player_id"]] - 1))
         self.expect("the 55 rows and ids after the partial history", stored(), keys)
         self.expect("the curve unchanged by the marks", self.curve(marked["body"])[0], curves[0])
+
+
+@unittest.skipUnless(DSN and psycopg, "requires disposable local sources DB and psycopg")
+class AbsenceProofRolesTest(Base):
+    """36d (FAILURE_MODES.md §36), written before 153's correction: the absences of 153 under the real roles. 017 gives
+    the collection role SELECT, INSERT, UPDATE and DELETE on every new table of core by default; the absences are a
+    proof, as 142, 143 and 146's: read and added to, never changed nor removed but with their move (139)."""
+
+    def setUp(self):
+        from vega.store import connect_local
+
+        super().setUp()
+        self.collect, self.read_role = connect_local(DSN), connect_local(DSN)
+        self.addCleanup(self.collect.close)
+        self.addCleanup(self.read_role.close)
+        self.collect.execute("SET ROLE vega_collect")
+        self.read_role.execute("SET ROLE vega_read")
+        self.collector = self.make_reader(self.collect)
+
+    def outcome(self, conn, statement, params=()):
+        """42501 when the role may not; else the row count, rolled back."""
+        try:
+            with conn.transaction(force_rollback=True):
+                return conn.execute(statement, params).rowcount
+        except psycopg.errors.InsufficientPrivilege:
+            return "42501"
+
+    def test_36d_the_collection_role_reads_and_adds_absences_never_changes_or_removes_them(self):
+        self.case("36d", "an absence written by the reader under vega_collect, then UPDATE, DELETE and reads under each role")
+        self.player(1601)
+        full = history(move(81, self.d(-3000), 33, 11, fee=2500000, season="18/19"),
+                       move(82, self.d(-1500), 11, 22, free=True, until=self.d(400)),
+                       move(83, self.d(-700), 22, 9999, kind="ACTIVE_LOAN_TRANSFER", value=1500000))
+        self.expect("accepted", self.read("accepted", 1601, data=full, reader=self.collector), "ok")
+        self.expect("partial accepted", self.read("partial", 1601, data=history(*full["history"]["terminated"][:2]), reader=self.collector), "ok")
+        self.shift = 3
+        self.expect("listed again", self.read("again", 1601, data=full, reader=self.collector), "ok")
+        trace = """SELECT a.source_key, a.absent_since, a.seen_again_on FROM core.player_transfer_absences a
+                   JOIN core.player_transfers x ON x.id = a.transfer_id WHERE x.player_id = 1601"""
+        kept = [("83", self.d(0), self.d(3))]
+        self.expect("the reader wrote the absence and vega_collect reads it", self.collect.execute(trace).fetchall(), kept)
+        transfer = self.ids(1601)["83"]
+        self.expect("the reader's INSERT … ON CONFLICT DO NOTHING again: no error, no row",
+                    self.outcome(self.collect, """INSERT INTO core.player_transfer_absences(transfer_id, source_key, absent_since, seen_again_on)
+                                                  VALUES (%s, '83', %s, %s) ON CONFLICT DO NOTHING""", (transfer, self.d(0), self.d(3))), 0)
+        self.expect("vega_collect may not change an absence",
+                    self.outcome(self.collect, "UPDATE core.player_transfer_absences SET seen_again_on = seen_again_on + 1"), "42501")
+        self.expect("vega_collect may not remove an absence", self.outcome(self.collect, "DELETE FROM core.player_transfer_absences"), "42501")
+        self.expect("vega_read has nothing on it", self.outcome(self.read_role, "SELECT count(*) FROM core.player_transfer_absences"), "42501")
+        self.expect("the absence unchanged", self.db.execute(trace).fetchall(), kept)
+        with self.collect.transaction():  # 139's authorized deletion of the move, under the collection role
+            self.collect.execute("SET LOCAL vega.allow_history_delete = 'on'")
+            self.collect.execute("DELETE FROM core.player_transfers WHERE id = %s", (transfer,))
+        self.expect("an authorized deletion of the move takes its absence", self.db.execute(trace).fetchall(), [])
 
 
 if __name__ == "__main__":

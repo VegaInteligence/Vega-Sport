@@ -34,6 +34,7 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tests"))
 from vega import archive_attestations, archives  # noqa: E402
 from archive_fixtures import GOALS, make_sources  # noqa: E402
+from prerequisites import required  # noqa: E402
 
 try:
     import psycopg
@@ -53,7 +54,7 @@ TWIN_GOALS = {"eng-premier-league": [GOALS[0], GOALS[1], LEICESTER, GOALS[3]]}
 APART_GOALS = {"eng-premier-league": [GOALS[0], GOALS[1], LEICESTER[:2] + ("Leicester City vs. Sunderland 4:1",) + LEICESTER[3:], GOALS[3]]}
 
 
-@unittest.skipUnless(DSN and psycopg and NODE, "requires a disposable local archive twins DB (VEGA_V2_ARCHIVE_TWINS_TEST_DSN), psycopg and node")
+@required(DSN and psycopg and NODE, "requires a disposable local archive twins DB (VEGA_V2_ARCHIVE_TWINS_TEST_DSN), psycopg and node")
 class ArchiveTwinsTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -308,7 +309,7 @@ class ArchiveTwinsTest(unittest.TestCase):
         self.assertEqual(self.rows()[RESULT][0], result)
 
     # -- 35g --
-    @unittest.skipUnless(HTTP_READY, "requires backend/api/node_modules")
+    @required(HTTP_READY, "requires backend/api/node_modules")
     def test_35g_links_after_the_merge(self):
         self.seed_apart()
         rows = self.rows()

@@ -2647,3 +2647,45 @@ collection role, read before the transaction (`prepare`). It creates no `core.pr
 | 35ad | An archive copy football-data paired, in a plan | held `removal_has_dependents`, never deleted | green on arrival (no change needed) |
 | 35ae | Migrations from production's set (main dc65d69) to the head | names and checksums equal the head's; the catalogue equals a fresh installation's | green: 20 files after 140_football_data, 7 of them out of order; same catalogue |
 | 35af | football-data.co.uk's row of a stored twin pair, dated as the goals archive dates it; `merge_twins`; the reader's next pairing (`footballdata._link`) under the collection role | before the merge, not the result's (the goal-only twin's, or none: two candidates); the merge clears it; the next pairing gives it the result, whose id is unchanged; another row's pair unchanged | green on arrival (no change needed): before the merge, the twin's (its own clubs in this base) |
+
+## 36. Fable's review of 5a16b1aa: what the CI runs, the absences' privileges, an attested purge (19 Nov 2026, written before the tests)
+
+Fable's first verdict on the merged candidate 5a16b1aa (CHANGES_REQUESTED) found no defect of behaviour in VI-27/29/31
+or in the merge of main dc65d69, and four gaps. The CI's tests job runs the Python suites before
+`npm ci --prefix backend/api`: on a fresh checkout the end-to-end tests that read through the real API skip (M1;
+36a's first run found eight other tests failing there on the missing module). The image job checks `archives.EDITION` but not `archives.TWINS`, the path production's twin errors
+came from (m5, 35i). 153 revokes `core.player_transfer_absences` from PUBLIC only, and 017's default privileges leave
+the collection role UPDATE and DELETE on it (m1). The purge's hold is tested with an artwork proof only, not with a
+match attestation and its composite key (m2, 143).
+
+### 36.1 Rules
+
+- The tests job installs the read API's dependencies before the Python suites, then runs the API suites with them.
+- This lot's end-to-end classes need a disposable database, psycopg, node and `backend/api/node_modules/pg`. They are
+  the snapshot roles (35m–35s), the served transfer history (35w–35z), the archive twins with 35g's HTTP read, and the
+  SportScore race (35t, 35v). Outside CI, a missing prerequisite skips them with its reason, as before. Under CI
+  (`CI=true`, which GitHub Actions sets), it fails them with that reason, which lists their prerequisites.
+- The image job checks that `archives.TWINS` is in the image, with the other files the adapters read.
+- `core.player_transfer_absences`: the collection role reads it and adds to it (the reader's
+  `INSERT … ON CONFLICT DO NOTHING`); it may neither change nor remove a row, as with the proofs of 142, 143 and 146.
+  An authorized deletion of a move (139) still takes its absences (`ON DELETE CASCADE`). The read role has nothing on
+  it. 153 has been neither published nor deployed: it is corrected in place.
+- A removed competition whose match a match attestation names is held whole, as for an artwork proof.
+
+### 36.2 Failure modes and expected outcomes
+
+| # | Situation | Expected | Before the corrections |
+|---|---|---|---|
+| 36a | ci.yml's tests job, its steps in their order, on a fresh checkout (no `backend/api/node_modules`), `CI=true` | the Python suites run every end-to-end class and pass: nothing skipped | red on 5a16b1aa: 15 tests skipped (35m–35s, 35w–35z, 35g, 35t and two §20 HTTP tests), and 8 others fail on `Cannot find package 'pg'` (test_dfb_periods, 22p, five of test_source_snapshots): the step is red, not green |
+| 36b | These classes with `backend/api/node_modules` missing | `CI=true`: they fail, naming it; `CI` unset: skipped with their reason, the suite passes | red on 5a16b1aa: under `CI=true` the 13 selected tests are skipped with their reasons |
+| 36c | The image job's path check in the worker container | `archives.TWINS` among the paths: main dc65d69's image refused (twins.mjs outside /app), the candidate's accepted | red: main's image passes its own check, the check with `archives.TWINS` refuses it (`missing: /backend/archives/twins.mjs`) |
+| 36d | `core.player_transfer_absences` under the real roles, an absence written by the real reader under vega_collect | vega_collect: SELECT and the reader's INSERT work, UPDATE and DELETE refused (42501); vega_read refused; an authorized deletion of the move takes the absence | red: vega_collect updated and deleted the absence (one row each); the rest already held |
+| 36e | The purge of a removed competition whose match a `core.archive_match_attestations` row names | held whole: competition, edition, both matches, agg and the ranking stay, the attestation too; a second purge holds it again; no privilege changes | green on arrival (no change needed) |
+
+Recorded, not corrected by this review (Fable's m3 and m4):
+- A withdrawn fixture that another authority holds stays `not_started`, with a new `ops.parse_failures` row at each
+  read (`snapshot.py:212-225`, `open_matchday.py:390-396`). This conforms to 35r but has no reviewed way out yet: a
+  follow-up of VI-27, this lot's issue.
+- A football-data pair holds an archive copy's removal (`archives.py:586-587`, 35ad), although the link is
+  `ON DELETE SET NULL` and the reader pairs again every week. The arbitration between ignoring `SET NULL` links in
+  reviewed removals and a documented manual release is VI-21's.

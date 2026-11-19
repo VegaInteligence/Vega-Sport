@@ -17,6 +17,7 @@ from vega import sources
 from vega.sources import SourceError, sportscore
 from sportscore_cases import CASES, H, START, T0, replace, tables, without
 import sportscore_replay as replay
+from prerequisites import require, required
 
 try:
     import psycopg
@@ -277,6 +278,7 @@ LOCK_HELD = """SELECT EXISTS (SELECT 1 FROM pg_locks l, (SELECT hashtextextended
                   AND l.classid = ((h.k >> 32) & 4294967295)::bigint::oid AND l.objid = (h.k & 4294967295)::bigint::oid)"""
 
 
+@required(DSN and psycopg, "requires disposable local sources DB and psycopg")
 class SportScoreNativeRaceTest(SportScoreDatabase):
     """35t, 35v (FAILURE_MODES.md §35), written before the code, under the collection role (vega_collect) and through
     the real route GET /api/standings under vega_read (tests/read_http.mjs).
@@ -308,8 +310,7 @@ class SportScoreNativeRaceTest(SportScoreDatabase):
         import subprocess
 
         node = shutil.which("node")
-        if not node or not (ROOT / "api" / "node_modules" / "pg").is_dir():
-            self.skipTest("requires node and backend/api/node_modules")
+        require(self, node and (ROOT / "api" / "node_modules" / "pg").is_dir(), "requires node and backend/api/node_modules")
         done = subprocess.run([node, str(ROOT / "tests" / "read_http.mjs"), DSN,
                                json.dumps([{"path": f"/api/standings?competition={CASES[0]['key']}", "etag": etag}])],
                               capture_output=True, text=True, timeout=120)

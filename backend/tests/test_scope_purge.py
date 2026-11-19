@@ -1,5 +1,5 @@
 """The competition purge under the production roles on this schema, written before the code: FAILURE_MODES.md §35
-(35j–35k). The collection role (vega_collect) and the calculations' role (vega_calc) each on their own connection
+(35j–35k) and §36 (36e). The collection role (vega_collect) and the calculations' role (vega_calc) each on their own connection
 (017_roles.sql), on a disposable local PostgreSQL (VEGA_V2_SCOPE_PURGE_TEST_DSN, database vega_v2_scope_purge_test).
 
 Failure modes: a table the collection role may only read and insert into (the reviewed proofs of 142, 143 and 146)
@@ -135,6 +135,28 @@ class PurgeUnderRolesTest(unittest.TestCase):
         self.assertEqual(self.held_state(*held), before)  # nothing removed, agg and the ranking untouched
         self.assertEqual(self.held_state(*gone), (0, 0, 0, 0, [("purged",)], 0))
         self.assertEqual(self.x("SELECT count(*) FROM core.family_artwork_qualifications").fetchone()[0], 1)
+        self.assertEqual(self.purge()[0], {"held": 1})
+        self.assertEqual(self.privileges(), grants)
+
+    def test_36e_a_competition_a_match_attestation_names_is_held_whole(self):
+        # FAILURE_MODES.md §36 (Fable's m2): 143's attestation names its match by (match_id, season_id).
+        held = self.league(KEPT, "2024/2025")
+        gone = self.league(NAMED, "2025/2026")
+        match, day = self.x("SELECT id, match_date FROM core.matches WHERE competition_season_id = %s ORDER BY id LIMIT 1",
+                            (held[1],)).fetchone()
+        self.x("UPDATE core.matches SET archive_key = 'r:test-purge:1' WHERE id = %s", (match,))
+        self.x("""INSERT INTO core.archive_match_attestations(season_id, match_id, canonical_key, canonical_date, authority_key,
+                                                              proof_sha256, proof)
+                  VALUES (%s, %s, 'r:test-purge:1', %s, 'test:purge-attested', %s, '{}'::jsonb)""", (held[2], match, day, "4" * 64))
+        before, grants = self.held_state(*held), self.privileges()
+        removed, printed = self.purge()
+        self.assertEqual(removed, {"competitions": 1, "editions": 1, "matches": 2, "held": 1})
+        self.assertIn(f"scope purge held competition={held[0]} tables=core.archive_match_attestations", printed)
+        self.assertEqual(self.held_state(*held), before)  # the result, its edition, agg and the ranking stay
+        self.assertEqual(self.x("SELECT archive_key, home_score, away_score FROM core.matches WHERE id = %s", (match,)).fetchone(),
+                         ("r:test-purge:1", 1, 0))
+        self.assertEqual(self.held_state(*gone), (0, 0, 0, 0, [("purged",)], 0))
+        self.assertEqual(self.x("SELECT match_id, canonical_key FROM core.archive_match_attestations").fetchall(), [(match, "r:test-purge:1")])
         self.assertEqual(self.purge()[0], {"held": 1})
         self.assertEqual(self.privileges(), grants)
 

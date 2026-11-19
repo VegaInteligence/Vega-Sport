@@ -38,10 +38,14 @@ jobs:
       - run: pip install -r backend/requirements.txt
       - name: Disposable test databases
         run: python backend/ci/test_databases.py postgresql://postgres:v2-ci-only@127.0.0.1:5432 >> "$GITHUB_ENV"
+      # Before the Python suites: their end-to-end tests read through the real API (pg). Under CI=true a missing
+      # prerequisite fails them instead of skipping them (backend/tests/prerequisites.py).
+      - name: Read API dependencies
+        run: npm ci --prefix backend/api
       - name: Python suites
         run: python -m unittest discover -s backend/tests -v
       - name: Read API suites
-        run: npm ci --prefix backend/api && npm test --prefix backend/api
+        run: npm test --prefix backend/api
   site:
     name: Site tests and build
     runs-on: ubuntu-latest
@@ -88,7 +92,7 @@ jobs:
           docker run --rm --entrypoint node vega-worker:${{ github.sha }} /app/backend/sources/bridge.mjs plans > /dev/null
           docker run --rm --entrypoint node vega-worker:${{ github.sha }} /app/backend/archives/edition.mjs - - > /dev/null
           # Every file a source adapter reads is where it looks for it in the image.
-          docker run --rm --entrypoint python vega-worker:${{ github.sha }} -c "from vega.sources import curated, honours, wikidata; from vega import archives; import sys; missing = [str(p) for p in (curated.SHARED / 'league-rules.json', curated.SHARED / 'cup-logos.json', honours.SCRIPTS / 'player_honours.py', wikidata.BRIDGE, archives.EDITION) if not p.exists()]; sys.exit('missing: ' + ', '.join(missing) if missing else 0)"
+          docker run --rm --entrypoint python vega-worker:${{ github.sha }} -c "from vega.sources import curated, honours, wikidata; from vega import archives; import sys; missing = [str(p) for p in (curated.SHARED / 'league-rules.json', curated.SHARED / 'cup-logos.json', honours.SCRIPTS / 'player_honours.py', wikidata.BRIDGE, archives.EDITION, archives.TWINS) if not p.exists()]; sys.exit('missing: ' + ', '.join(missing) if missing else 0)"
   api-package:
     name: Read API package
     runs-on: ubuntu-latest
