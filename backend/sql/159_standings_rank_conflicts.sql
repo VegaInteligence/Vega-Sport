@@ -3,7 +3,7 @@
 -- merged the widget's three unnamed tables. The writer's rank invariant (sportscore.check) is now read too: within one
 -- stored table, clubs sharing a rank have equal points, and an edition's only table holds all its ranks. An edition
 -- whose stored rows break it is withheld: its official rows are no authority, Vega's own table is served when there is
--- one, and the edition stays the one /api/standings selects (api.standings_withheld), so a withheld current edition
+-- one, and the edition stays the one /api/standings selects (api.standings_withheld(edition)), so a withheld current edition
 -- answers 404 rather than the previous season's table. Rows that satisfy the invariant again are served again.
 -- Nothing is deleted or rewritten. 147's and 150's J1 exclusion is kept as it is.
 SET LOCAL lock_timeout = '3s';
@@ -29,29 +29,48 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog AS $$
 $$;
 
 -- The editions /api/standings keeps in its selection although it serves none of their official rows: J1's (147,
--- 150) and those whose ranks conflict.
-CREATE FUNCTION api.standings_withheld()
-RETURNS TABLE (competition_season_id integer, season text, native_label text, is_current boolean, reason text)
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog AS $$
-  SELECT x.competition_season_id, x.season, x.native_label, x.is_current, 'j1_calendar' FROM api.j1_standings_exclusion() x
+-- 150) and one whose ranks conflict. Read per edition (§43.4, 43t): only that edition's rows are read.
+CREATE FUNCTION api.standings_withheld(edition integer)
+RETURNS TABLE (season text, native_label text, is_current boolean, reason text)
+LANGUAGE sql STABLE STRICT SECURITY DEFINER SET search_path = pg_catalog AS $$
+  SELECT x.season, x.native_label, x.is_current, 'j1_calendar' FROM api.j1_standings_exclusion() x
+  WHERE x.competition_season_id = edition
   UNION ALL
-  SELECT cs.id, se.label, cs.native_label, cs.is_current, 'rank_conflict: ' || k.detail
-  FROM api.standings_rank_conflicts() k
-  JOIN core.competition_seasons cs ON cs.id = k.competition_season_id
-  JOIN core.seasons se ON se.id = cs.season_id
+  SELECT se.label, cs.native_label, cs.is_current, 'rank_conflict'
+  FROM core.competition_seasons cs JOIN core.seasons se ON se.id = cs.season_id
+  WHERE cs.id = edition AND EXISTS (
+    SELECT 1 FROM core.standings_official o
+    WHERE o.competition_season_id = edition AND o.source = 'sportscore' AND o.stage IS NULL
+    GROUP BY o.group_name, o.position HAVING count(DISTINCT o.points) > 1
+    UNION ALL
+    SELECT 1 FROM core.standings_official o
+    WHERE o.competition_season_id = edition AND o.source = 'sportscore' AND o.stage IS NULL
+    HAVING bool_and(o.group_name IS NULL) AND max(o.position) > count(*))
 $$;
 
 CREATE OR REPLACE VIEW api.standings AS
 WITH excluded AS MATERIALIZED (
   SELECT competition_season_id FROM api.j1_standings_exclusion()
-), conflicted AS MATERIALIZED (
-  SELECT competition_season_id FROM api.standings_rank_conflicts()
+), verdict AS NOT MATERIALIZED (
+  -- api.standings_rank_conflicts()'s rule, per edition, by windows partitioned by edition: a condition on the edition
+  -- reaches the scan of core.standings_official (§43.4, 43t), the whole table is read only when the whole view is.
+  SELECT r.competition_season_id, bool_or(r.conflict) AS conflicted
+  FROM (
+    SELECT o.competition_season_id,
+      min(o.points) OVER (PARTITION BY o.competition_season_id, o.group_name, o.position)
+        <> max(o.points) OVER (PARTITION BY o.competition_season_id, o.group_name, o.position)
+      OR (bool_and(o.group_name IS NULL) OVER (PARTITION BY o.competition_season_id)
+          AND max(o.position) OVER (PARTITION BY o.competition_season_id) > count(*) OVER (PARTITION BY o.competition_season_id))
+        AS conflict
+    FROM core.standings_official o WHERE o.source = 'sportscore' AND o.stage IS NULL
+  ) r
+  GROUP BY r.competition_season_id
 ), authority AS NOT MATERIALIZED (
+  -- A table whose ranks contradict themselves is no authority: Vega's own table, if any, is served.
   SELECT o.* FROM core.standings_official o
+  JOIN verdict v ON v.competition_season_id = o.competition_season_id AND NOT v.conflicted
   WHERE o.source = 'sportscore' AND o.stage IS NULL
     AND NOT EXISTS (SELECT 1 FROM excluded x WHERE x.competition_season_id = o.competition_season_id)
-    -- A table whose ranks contradict themselves is no authority: Vega's own table, if any, is served.
-    AND NOT EXISTS (SELECT 1 FROM conflicted k WHERE k.competition_season_id = o.competition_season_id)
 ), unqualified AS NOT MATERIALIZED (
   SELECT e.competition_season_id
   FROM (SELECT DISTINCT o.competition_season_id FROM authority o) e
@@ -65,7 +84,10 @@ WITH excluded AS MATERIALIZED (
         FROM agg.standings a WHERE a.competition_season_id = e.competition_season_id
         GROUP BY a.team_id
       ), officials AS NOT MATERIALIZED (
-        SELECT * FROM authority o WHERE o.competition_season_id = e.competition_season_id
+        -- e is an edition of authority, whose filters hold for a whole edition: its own rows are read directly,
+        -- without the rank check again for each edition (§43.4, 43t).
+        SELECT * FROM core.standings_official o
+        WHERE o.competition_season_id = e.competition_season_id AND o.source = 'sportscore' AND o.stage IS NULL
       )
       SELECT 1
       -- An aggregate built before a finished or corrected result is not a current fallback.
@@ -164,31 +186,36 @@ LANGUAGE sql STABLE STRICT SECURITY DEFINER SET search_path = pg_catalog AS $$
     LEFT JOIN core.rounds r ON r.id = o.round_id
   ), absorbed AS MATERIALIZED (
     -- The copy of the day before or after, in another edition, with the same score: absorbed by the preferred one.
+    -- Equal keys (pair, day + 1 or day - 1, score, a missing score as -1): two hash joins, linear in the copies (43u).
     SELECT c.id, k.id AS by_id FROM copies c JOIN copies k
-      ON k.lo = c.lo AND k.hi = c.hi AND abs(k.d - c.d) = 1 AND k.competition_season_id <> c.competition_season_id
-     AND k.score_lo IS NOT DISTINCT FROM c.score_lo AND k.score_hi IS NOT DISTINCT FROM c.score_hi
+      ON k.lo = c.lo AND k.hi = c.hi AND k.d = c.d + 1 AND k.competition_season_id <> c.competition_season_id
+     AND coalesce(k.score_lo, -1) = coalesce(c.score_lo, -1) AND coalesce(k.score_hi, -1) = coalesce(c.score_hi, -1)
      AND (k.native > c.native OR (k.native = c.native AND k.id < c.id))
+    UNION ALL
+    SELECT c.id, k.id FROM copies c JOIN copies k
+      ON k.lo = c.lo AND k.hi = c.hi AND k.d = c.d - 1 AND k.competition_season_id <> c.competition_season_id
+     AND coalesce(k.score_lo, -1) = coalesce(c.score_lo, -1) AND coalesce(k.score_hi, -1) = coalesce(c.score_hi, -1)
+     AND (k.native > c.native OR (k.native = c.native AND k.id < c.id))
+  ), lent AS (
+    -- What the copies absorbed by a copy of a day hold, by that day: joined once to the kept copy, not per row.
+    SELECT s.lo, s.hi, s.d, max(c.round_name) AS round_name, max(c.pens_lo) AS pens_lo, max(c.pens_hi) AS pens_hi
+    FROM absorbed b JOIN copies c ON c.id = b.id JOIN copies s ON s.id = b.by_id
+    GROUP BY s.lo, s.hi, s.d
   ), picked AS (
     SELECT c.*, row_number() OVER w AS pick,
       max(c.round_name) OVER (PARTITION BY coalesce(c.d::text, 'm' || c.id), c.lo, c.hi) AS any_round,
       max(c.pens_lo) OVER (PARTITION BY coalesce(c.d::text, 'm' || c.id), c.lo, c.hi) AS any_pens_lo,
       max(c.pens_hi) OVER (PARTITION BY coalesce(c.d::text, 'm' || c.id), c.lo, c.hi) AS any_pens_hi
     FROM copies c
-    WHERE NOT EXISTS (SELECT 1 FROM absorbed a WHERE a.id = c.id)
+    WHERE c.id NOT IN (SELECT a.id FROM absorbed a)
     WINDOW w AS (
       PARTITION BY coalesce(c.d::text, 'm' || c.id), c.lo, c.hi
       ORDER BY c.native DESC, (c.home_score IS NOT NULL) DESC, c.id
     )
   ), kept AS (
-    -- What the copies absorbed by a copy of the kept one's day hold that the kept copy lacks.
     SELECT p.*, coalesce(p.round_name, p.any_round, x.round_name) AS round_kept,
       coalesce(p.any_pens_lo, x.pens_lo) AS pens_lo_kept, coalesce(p.any_pens_hi, x.pens_hi) AS pens_hi_kept
-    FROM picked p
-    LEFT JOIN LATERAL (
-      SELECT max(c.round_name) AS round_name, max(c.pens_lo) AS pens_lo, max(c.pens_hi) AS pens_hi
-      FROM absorbed b JOIN copies c ON c.id = b.id JOIN copies s ON s.id = b.by_id
-      WHERE s.lo = p.lo AND s.hi = p.hi AND s.d = p.d
-    ) x ON true
+    FROM picked p LEFT JOIN lent x ON x.lo = p.lo AND x.hi = p.hi AND x.d = p.d
     WHERE p.pick = 1
   )
   SELECT api.public_id('match', p.id), p.d, se.label, p.competition_name, coalesce(p.cup_key, p.archive_key),
@@ -213,26 +240,58 @@ LANGUAGE sql STABLE STRICT SECURITY DEFINER SET search_path = pg_catalog AS $$
   WITH nations AS MATERIALIZED (
     SELECT t.id, t.name, t.crest_asset_id FROM core.teams t WHERE t.is_national AND t.merged_into IS NULL
   ), games AS MATERIALIZED (
-    SELECT g.team, g.d, least(m.home_team_id, m.away_team_id) AS a, greatest(m.home_team_id, m.away_team_id) AS b, m.id AS match,
-      m.competition_season_id AS edition, coalesce(cs.cup_key IS NULL AND cs.archive_key IS NULL, true) AS native,
-      CASE WHEN m.home_team_id <= m.away_team_id THEN m.home_score ELSE m.away_score END AS score_a,
-      CASE WHEN m.home_team_id <= m.away_team_id THEN m.away_score ELSE m.home_score END AS score_b
+    -- Each branch carries what the copy test reads: core.matches is read twice, as in 119 (§43.4, 43s). `single`: the
+    -- one row of the match the copy test reads (its home side's, or its away side's when the home side is no nation).
+    SELECT g.team, g.d, least(g.h, g.v) AS a, greatest(g.h, g.v) AS b, g.match, g.edition, g.single,
+      coalesce(cs.cup_key IS NULL AND cs.archive_key IS NULL, true) AS native,
+      coalesce(CASE WHEN g.h <= g.v THEN g.hs ELSE g.vs END, -1) AS score_a,
+      coalesce(CASE WHEN g.h <= g.v THEN g.vs ELSE g.hs END, -1) AS score_b
     FROM (
-      SELECT n.id AS team, m.id AS match, coalesce(m.match_date, m.kickoff_at::date) AS d FROM nations n JOIN core.matches m ON m.home_team_id = n.id
+      SELECT n.id AS team, m.id AS match, coalesce(m.match_date, m.kickoff_at::date) AS d, m.home_team_id AS h,
+        m.away_team_id AS v, m.home_score AS hs, m.away_score AS vs, m.competition_season_id AS edition, true AS single
+      FROM nations n JOIN core.matches m ON m.home_team_id = n.id
       UNION ALL
-      SELECT n.id, m.id, coalesce(m.match_date, m.kickoff_at::date) FROM nations n JOIN core.matches m ON m.away_team_id = n.id
+      SELECT n.id, m.id, coalesce(m.match_date, m.kickoff_at::date), m.home_team_id, m.away_team_id, m.home_score,
+        m.away_score, m.competition_season_id, m.home_team_id NOT IN (SELECT x.id FROM nations x)
+      FROM nations n JOIN core.matches m ON m.away_team_id = n.id
     ) g
-    JOIN core.matches m ON m.id = g.match
-    LEFT JOIN core.competition_seasons cs ON cs.id = m.competition_season_id
+    LEFT JOIN core.competition_seasons cs ON cs.id = g.edition
+  ), adjacent AS MATERIALIZED (
+    -- Only a meeting held, with one score, on two consecutive days by two editions can hold a copy. Each match is
+    -- keyed by its day and by the day before: a hash aggregate finds the few keys two such matches share, so the copy
+    -- test below joins these matches only, never every meeting of a pair (§43.4, 43s).
+    SELECT x.a, x.b, x.score_a, x.score_b, x.w
+    FROM (
+      SELECT g.a, g.b, g.score_a, g.score_b, g.d AS w, g.d, g.edition FROM games g WHERE g.single AND g.d IS NOT NULL AND g.edition IS NOT NULL
+      UNION ALL
+      SELECT g.a, g.b, g.score_a, g.score_b, g.d - 1, g.d, g.edition FROM games g WHERE g.single AND g.d IS NOT NULL AND g.edition IS NOT NULL
+    ) x
+    GROUP BY x.a, x.b, x.score_a, x.score_b, x.w
+    HAVING min(x.d) <> max(x.d) AND min(x.edition) <> max(x.edition)
+  ), candidates AS MATERIALIZED (
+    SELECT g.* FROM games g WHERE g.single AND EXISTS (
+      SELECT 1 FROM adjacent j WHERE j.a = g.a AND j.b = g.b AND j.score_a = g.score_a AND j.score_b = g.score_b
+        AND (g.d = j.w OR g.d = j.w + 1))
+  ), absorbed AS MATERIALIZED (
+    -- api.nation_matches' copy test, by equal keys (pair, day + 1 or day - 1, score).
+    SELECT g.match FROM candidates g JOIN candidates k
+      ON k.a = g.a AND k.b = g.b AND k.d = g.d + 1 AND k.score_a = g.score_a AND k.score_b = g.score_b
+     AND k.edition <> g.edition AND (k.native > g.native OR (k.native = g.native AND k.match < g.match))
+    UNION
+    SELECT g.match FROM candidates g JOIN candidates k
+      ON k.a = g.a AND k.b = g.b AND k.d = g.d - 1 AND k.score_a = g.score_a AND k.score_b = g.score_b
+     AND k.edition <> g.edition AND (k.native > g.native OR (k.native = g.native AND k.match < g.match))
   ), played AS MATERIALIZED (
-    -- A match without a date is its own match; a copy api.nation_matches absorbs is not counted.
-    SELECT g.team, count(DISTINCT coalesce(g.d::text || ':' || g.a || ':' || g.b, 'm' || g.match))::integer AS matches, max(g.d) AS last_match
-    FROM games g
-    WHERE NOT EXISTS (
-      SELECT 1 FROM games k WHERE k.team = g.team AND k.a = g.a AND k.b = g.b AND abs(k.d - g.d) = 1 AND k.edition <> g.edition
-        AND k.score_a IS NOT DISTINCT FROM g.score_a AND k.score_b IS NOT DISTINCT FROM g.score_b
-        AND (k.native > g.native OR (k.native = g.native AND k.match < g.match)))
-    GROUP BY g.team
+    -- One match per day and pair, as 119 counts them (a match without a date or a team is its own match), by two hash
+    -- aggregates instead of a sort of every key; a copy api.nation_matches absorbs is not counted.
+    SELECT k.team, count(*)::integer AS matches, max(k.d) AS last_match
+    FROM (
+      SELECT g.team, g.d, g.a, g.b, CASE WHEN g.d IS NULL OR g.a IS NULL OR g.b IS NULL THEN g.match END AS solo
+      FROM games g
+      WHERE g.match NOT IN (SELECT x.match FROM absorbed x)
+      GROUP BY 1, 2, 3, 4, 5
+    ) k
+    GROUP BY k.team
   )
   SELECT api.public_id('team', n.id), n.id, n.name, cr.source_url, p.matches, p.last_match,
     e.elo_after::numeric::float8, e.kickoff_at::date,

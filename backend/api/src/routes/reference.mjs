@@ -55,8 +55,7 @@ export async function standingsBody(read, competition, season) {
          SELECT r.season,r.native_label,r.is_current FROM api.standing_rows r
          WHERE r.competition_season_id=k.competition_season_id
          UNION ALL
-         SELECT x.season,x.native_label,x.is_current FROM api.standings_withheld() x
-         WHERE x.competition_season_id=k.competition_season_id
+         SELECT x.season,x.native_label,x.is_current FROM api.standings_withheld(k.competition_season_id) x
          LIMIT 1) s
        WHERE k.league_id=$1 AND ($2::text IS NULL OR s.season=$2 OR s.native_label=$2)
        ORDER BY s.is_current DESC,s.season DESC LIMIT 1)
