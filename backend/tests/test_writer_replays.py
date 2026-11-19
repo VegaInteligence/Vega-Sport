@@ -105,6 +105,9 @@ class WriterReplay(unittest.TestCase):
             for p in (10, 11, 12, 13):
                 x("INSERT INTO core.player_match_stats(season_id, match_id, team_id, player_id, minutes_played) VALUES (2026, %s, 1, %s, 90)", (match, p))
                 x("INSERT INTO core.lineup_players(season_id, match_id, team_id, player_id, is_starter) VALUES (2026, %s, 1, %s, true)", (match, p))
+        # The ids above are given: the writers' own rows take theirs after them.
+        for table in ("teams", "players", "matches", "competitions", "competition_seasons"):
+            x(f"SELECT setval(pg_get_serial_sequence('core.{table}', 'id'), 1000)")
 
     @classmethod
     def tearDownClass(cls):
@@ -575,6 +578,66 @@ class WikidataReplayTest(WriterReplay):
         birth, source = self.x("SELECT birth_date, birth_date_source_url FROM core.players WHERE id = 12").fetchone()
         self.note("40w", birth_date=birth, birth_date_source_url=source)
         self.assertFalse(birth == date(1998, 11, 5) and source == url, "Wikidata's date is served under the snapshot's URL")
+
+
+class NativeReplayTest(WriterReplay):
+    """40y–40z: the native PitchAPI writer (Store) under vega_collect: repetition and explicit correction."""
+
+    def setUp(self):
+        super().setUp()
+        from vega.normalize import normalize_family
+        from vega.store import Store
+
+        self.normalize = normalize_family
+        self.as_collector()
+        self.store = Store(self.db)
+        self.store.save_references(normalize_family("league", {"id": "l_rpl001", "name": "Replay League", "country_code": "FRA", "season": "2026/2027"}))
+        self.edition = self.x("""SELECT cs.id FROM core.competition_seasons cs JOIN core.provider_ids p ON p.entity_type = 'competition'
+                                 AND p.entity_id = cs.competition_id AND p.provider_key = 'l_rpl001'""").fetchone()[0]
+
+    def summary(self, home_goals):
+        return self.normalize("summary", {"id": "m_rpl001", "home_team": {"id": "t_rpl001", "name": "Replay Home"},
+                                          "away_team": {"id": "t_rpl002", "name": "Replay Away"}, "status": "finished",
+                                          "date": "2026-11-01", "score_home": home_goals, "score_away": 0}, match_id="m_rpl001")
+
+    def stats(self, goals):
+        return self.normalize("players", [{"player": {"id": "p_rpl001", "name": "Replay Scorer"}, "team_id": "t_rpl001",
+                                           "stats": [{"stats": {"Goals": {"key": "goals", "stat": {"type": "integer", "value": goals}}}}]}],
+                              match_id="m_rpl001")
+
+    def state(self, mid):
+        return {"match": self.rows("core.matches", "id = %s", (mid,)), "stats": self.rows("core.player_match_stats", "match_id = %s", (mid,)),
+                "teams": self.rows("core.teams", "name LIKE 'Replay %%'"), "players": self.rows("core.players", "name LIKE 'Replay %%'"),
+                "ids": self.rows("core.provider_ids", "provider_key LIKE '%%_rpl%%'")}
+
+    def revision(self, mid):
+        return self.x("SELECT revision FROM core.matches WHERE id = %s", (mid,)).fetchone()[0]
+
+    def test_40y_the_same_native_match_and_statistics_twice_change_nothing(self):
+        mid = self.store.save_matches(self.summary(1), self.edition)[0]
+        self.assertTrue(self.store.save_family(mid, "player_stats", self.stats(1)))
+        first, revision = self.state(mid), self.revision(mid)
+        self.assertEqual(self.store.save_matches(self.summary(1), self.edition), [mid])
+        self.assertFalse(self.store.save_family(mid, "player_stats", self.stats(1)))
+        self.note("40y", first=first, second=self.state(mid), revision=(revision, self.revision(mid)))
+        self.assertEqual((self.state(mid), self.revision(mid)), (first, revision))
+
+    def test_40z_a_native_correction_is_written_once(self):
+        mid = self.store.save_matches(self.summary(1), self.edition)[0]
+        self.assertTrue(self.store.save_family(mid, "player_stats", self.stats(1)))
+        revisions = [self.revision(mid)]
+        self.store.save_matches(self.summary(2), self.edition)
+        revisions.append(self.revision(mid))
+        self.store.save_matches(self.summary(2), self.edition)
+        revisions.append(self.revision(mid))
+        self.assertTrue(self.store.save_family(mid, "player_stats", self.stats(2)))
+        self.assertFalse(self.store.save_family(mid, "player_stats", self.stats(2)))
+        revisions.append(self.revision(mid))
+        score = self.x("SELECT home_score, away_score FROM core.matches WHERE id = %s", (mid,)).fetchone()
+        goals = self.x("SELECT goals FROM core.player_match_stats WHERE match_id = %s", (mid,)).fetchall()
+        self.note("40z", revisions=revisions, score=score, goals=goals)
+        self.assertEqual((score, goals), ((2, 0), [(2,)]))
+        self.assertEqual([b - a for a, b in zip(revisions, revisions[1:])], [1, 0, 1])
 
 
 if __name__ == "__main__":
