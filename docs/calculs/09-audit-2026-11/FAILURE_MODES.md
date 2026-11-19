@@ -3378,3 +3378,116 @@ round-10 fixtures of the edition have a twin too, `postponed`, without a round a
   same two teams, 2–1, rounds « Clausura - Round 10 » and « 10 »; the entry binds the keys, never the ids.
 - The audit counts five finished/finished PitchAPI pairs (`INTEGRITE.md`; another is Estudiantes de Río Cuarto–
   Instituto, 39992/39993) and 46 finished/postponed pairs: each needs its own reviewed entry, never a rule.
+
+## 45. Residuals: an Open Matchday copy kept until its native edition covers it, a football-data pair no longer holds a reviewed copy, the Transfermarkt search refuses a reserve (audit E02b, E03f/E03h, E03c/E03g; 19 Nov 2026, written before the tests)
+
+Lot « résiduels », branch `claude/audit-residuels` from the candidate `8587ab6671` (main `2088d36e60` with six lots).
+No migration. Three defects the earlier lots left open, each reproduced on `8587ab6671` before any change
+(`open_matchday.py`, `archives.py` and `transfermarkt.py` are the same functions there as on `2088d36e60` for the
+lines concerned).
+
+### 45.1 What the code does on `8587ab6671`
+
+- **E02b.** `open_matchday.held(conn, folder, season)` answers true as soon as the copied league
+  (`COVERED[folder]`) has a PitchAPI edition for the season, empty or not, and `run` then calls `drop_copy`, which
+  deletes every match of the copy, its rounds, its edition and competition, with no trace. Replayed by
+  `open_matchday.run` under `vega_collect`: a first pass writes the Premier League copy (5 results, 3 fixtures); the
+  catalogue then creates the native 2026/2027 edition with no match; the second pass deletes the 8 matches, the
+  edition and the competition, and `ops.parse_failures` stays empty. At a season change the catalogue creates the native
+  edition before its matches are collected: the copy's results disappear until PitchAPI writes its own, and for good
+  where PitchAPI never does.
+- **m4 (§36, 35ad).** `Loader.removals` holds a reviewed archive copy (`removal_has_dependents`) when
+  `ops.archive_match_dependents` names any dependency, football-data.co.uk's pair
+  (`core.footballdata_matches.match_id`) included; `_delete` refuses the same at apply (`ArchiveDrift`). That pair is
+  `ON DELETE SET NULL` and the reader pairs every row again each week (`footballdata._link`): it is a derived pointer,
+  not a fact of the copy.
+- **E03c/E03g.** `pick_clubs` (the votes) never links a first team to a reserve (`is_reserve`, conflict
+  `reserve_side`), but `write_search` links the club `pick_search` chose without that check. Production: team 604
+  (Estudiantes de Río Cuarto, Liga Profesional) linked on 16 Nov 2026 21:51:17 UTC by `club_search_squad` (evidence 6)
+  to Transfermarkt's 75142, « AA Estudiantes de Río Cuarto II » (`mainClubId` 14602); the votes noted the conflict on
+  18 Nov 00:31:27 without removing the link; `team_of` and `attach_teams` keep reading it: three values and four
+  transfers carry `team_id`/`to_team_id` 604 for `provider_club` 75142 (`integrite-cas.zip`, `operateur/reserve-*.csv`),
+  and `GET /api/teams/t_1dhmUh/squad?season=2026/2027` serves the reserve's record as the club's squad (value 125 000 €,
+  27 players, average age 20.6, ranked 30th of 30; read 19 Nov 2026).
+
+### 45.2 Rules
+
+**An Open Matchday copy goes only when the native edition covers it, match by match (E02b).**
+- `held` is unchanged: a COVERED folder is not read in a season PitchAPI holds its league. The copy then stays as last
+  read (frozen), so it never doubles what PitchAPI writes for the same days. The Elo already never reads a COVERED
+  folder (`power.elo_matches` skips them whatever their state), so a copy kept beside its native edition counts nothing
+  twice; `identity.duplicates` only notes, in `ops.data_warnings`, a copy match whose clubs are PitchAPI's within a day.
+- `drop_copy` removes the copy (matches, rounds, edition, competition and its id, the match ids), as before, only when
+  every match of the copy, whatever its status, has a match of a PitchAPI edition of the copied league for that season
+  (competition keyed `pitchapi`/`COVERED[folder]`, `cup_key` and `archive_key` NULL, the season's label) with the same
+  two clubs, either side at home, each club resolved through `core.teams.merged_into`, whose `match_date` is at most one
+  day from the copy's. A copy without a match is covered.
+- Otherwise nothing is deleted: the whole copy stays (no partial removal, so a copy match not covered never
+  disappears), the reason is traced once while it stays the same (`failure_once`, code `COPY_NOT_COVERED`, edition of
+  the copy, message `open-matchday:<folder>:<season>: <n> of <total> match(es) without a native match: <first five as
+  day home–away>`), and the next pass (six hours) tries again. A copy covered later goes at that pass.
+- What this lets through: a copy fixture PitchAPI moves by more than a day, or a copy club the identities never link
+  to PitchAPI's, keeps the copy, frozen and traced, until a person decides; the copy edition stays visible as a
+  complementary competition meanwhile, as it was before its league was held.
+
+**A football-data pair alone does not hold a reviewed copy (m4; decision of the owner, taken by the coordinator).**
+- In the removal of a reviewed archive copy (`Loader.removals`) and in its check at apply (`_delete`), the dependency
+  `core.footballdata_matches.match_id` alone no longer holds the copy; every other dependency and every event holds it
+  as before (`removal_has_dependents`). The removed entry of the plan names what its removal releases
+  (`"released": ["core.footballdata_matches.match_id"]`, only when there is one: other plans are unchanged).
+- The deletion clears the pair (`ON DELETE SET NULL`); the football-data row stays, unpaired; the reader's next pairing
+  (`footballdata._link`, under `vega_collect`) gives it the twin that stays when the twin is the one match of its
+  clubs and score; a second pairing changes nothing.
+- 141's guards stay as they are: `ops.archive_match_dependents` still lists the pair (the plan shows it), the
+  `archive_removed_*` triggers fire on a non-null reference only (the `SET NULL` passes) and the tombstone refuses a
+  later pairing to the removed id. Should they refuse the removal, they are not bypassed: the case is described and
+  stops there.
+- Unchanged: `merge_twins` (35ab), the purge (35ac), the restorer's refusal (35aa).
+
+**The Transfermarkt search links no reserve to a first team (E03c, E03g).**
+- `write_search` applies `pick_clubs`'s checks to the chosen club before `_link`: its name is the one
+  `core.provider_clubs` holds. No name known yet, or a name that is no club (`NO_CLUB`): no link, the search is due
+  again in a day (the squads it wrote queue the club's record, read at priority 1 before searches, so the next search
+  knows the name). `is_reserve(club name) != is_reserve(team name)`: no link, the conflict row of the votes
+  (`ops.provider_link_conflicts`, reason `reserve_side`, `ON CONFLICT DO NOTHING`), the search done as usual. The
+  players and squads the search read are written as before.
+- Known limit, not changed here: `RESERVE`'s single letters also match « D.C. United » (`c`) and « B 93 » (`b`). D.C.
+  United is linked already (links never move); a club so spelled that only the search would find is now refused and
+  noted, as the votes do.
+
+**The production link 604 → 75142 (specified, not applied).** The pre-image in the repository is the 18 Nov 15:37
+UTC read of `integrite-cas.zip`; the reader has kept writing since (four or five transfers are named across the
+audit's reads), so the rows to correct are not entirely known here. A reviewed correction, on the model of
+`identity.SIDE_CORRECTIONS` (§39), would be: `TEAM_LINK_CORRECTIONS = {"estudiantes-rio-cuarto-604": {"team": 604
+(by its PitchAPI key t_1dhmUh), "club": "75142", "club_name": "AA Estudiantes de Río Cuarto II", "values": [(player,
+valued_at, value_eur) × 3: (10490, 2026-09-17, 25 000), (10491, 2026-09-17, 25 000), (10496, 2026-05-22, 50 000)],
+"transfers": [(id, player, transfer_date, source_key) × 4: (82621, 10484, 2025-01-01, 6041364), (63313, 10490,
+2026-01-01, 6253703), (77477, 10491, 2026-01-01, 6257185), (86811, 10499, 2026-01-01, 6257187)]}}`. Applied in one
+transaction, it would check the pre-image (the current transfermarkt key of 604 is 75142, its link row
+`club_search_squad`, the provider club's name, exactly these values and transfers carrying 75142 and 604 and no
+other); on any difference it holds the whole correction, writes nothing and traces why once. Otherwise: the key row
+`core.provider_ids(team, transfermarkt, 75142, 604)` becomes `is_current = false` (kept: the key stays taken, so
+neither the search nor the votes give 75142 to 604 again, and 604 may get its real club), its `ops.provider_links`
+row is quarantined (`quarantine_reason = 'reserve_side'`, which `api.club_squad` already excludes), the three values'
+`team_id` and the four transfers' `to_team_id` (and `from_team_id` where 75142 is the origin) become NULL. Nothing is
+deleted: the values and transfers stay, served under the provider club's name (« AA Estudiantes de Río Cuarto II »,
+`coalesce(team, provider club)` in 135/153/160's views) without a canonical club; the squad route answers 404 for 604
+until its real club is linked. A journal row per correction (its digest, as §39) makes a second application a no-op.
+The six players linked through 75142's squads (`link_players`) are persons, linked by name and birth date: not
+touched. To apply it, an operator needs the production rows of the pre-image at that time (a read under `vega_read`
+of the five queries of `integrite-cas.zip/sql/final-probe.py`) to fill the lists, then the code and its test.
+
+### 45.3 Failure modes and expected outcomes
+
+| # | Situation | Expected |
+|---|---|---|
+| 45a | Copy of the Premier League (5 results, 3 fixtures) written by `open_matchday.run` under `vega_collect`; the native edition then created empty; `run` again, twice | the copy keeps its 8 matches, edition and competition; one `COPY_NOT_COVERED` row naming 8 of 8, still one after the third pass |
+| 45b | The native edition then holds the 8 matches (PitchAPI's clubs, the copy's teams merged into them; one a day later, one with sides swapped); `run` | the copy goes as before (matches, rounds, edition, competition, ids); the cup of the same summary stays |
+| 45c | The native edition holds 7 of the 8 | the whole copy stays; the trace names 1 of 8 with its day and clubs |
+| 45d | The missing native match is two days from the copy's | not a cover: the copy stays |
+| 45e | A kept copy beside a covering native edition, `power.elo_matches` | the copy's rows are not among the Elo's matches |
+| 45f | (35ad rewritten) A reviewed archive copy football-data paired, its twin identical; plan, apply, then `footballdata._link` twice under `vega_collect` | the plan removes the copy (`released` names the pair), the apply deletes it, the football-data row is kept unpaired, the first pairing gives it the twin, the second changes nothing, a new plan removes nothing more |
+| 45g | The paired copy also bound by a provider key | held `removal_has_dependents`, never deleted |
+| 45h | `Reader.read` of a search for « Estudiantes de Río Cuarto » whose one candidate, with six of our players, is the club « AA Estudiantes de Río Cuarto II » (name known); then its players' values and transfers | no team link, one `reserve_side` conflict (75142, the team), the squad and the players written; the values and transfers read after keep `provider_club` 75142 and no team |
+| 45i | The same search, the club's name not known yet | no link, no conflict, the search due again within a day; after the club record is read, the next search refuses as in 45h |
+| 45j | The same search whose candidate is the first team « AA Estudiantes de Río Cuarto » | linked as before (`club_search_squad`) |
