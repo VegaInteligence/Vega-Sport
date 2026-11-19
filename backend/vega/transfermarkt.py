@@ -96,6 +96,8 @@ SEARCH_UNNAMED_AGAIN = timedelta(days=1)
 # The kinds whose 404 is a refusal, not an answer: their reads view (api.player_injury_reads, 160) serves the last
 # accepted read, so a 404 keeps that read's read_at, and a first one leaves the player unknown (FAILURE_MODES.md §46).
 NOT_FOUND_REFUSED = frozenset({"injuries"})
+# The search's mark while its club has no name: the close retry spent, it comes back at its period (§45.4).
+SEARCH_UNNAMED = "CLUB_UNNAMED"
 # A failed unit waits 2 ** attempts hours, at most a week; the exponent stops at 8 (256 h) before
 # the timedelta is built, which overflows from 35 attempts.
 RETRY_MAX, RETRY_EXPONENT_MAX = timedelta(days=7), 8
@@ -991,7 +993,12 @@ class Reader:
             club_name = found and found[0]
             team_name = self.conn.execute("SELECT name FROM core.teams WHERE id = %s", (data["team"],)).fetchone()[0]
             if club_name is None or normalize(club_name) in NO_CLUB:
-                self.done("search", key, priority, written, again=SEARCH_UNNAMED_AGAIN)
+                # One close retry (§45.4): the unit's mark says it was spent; then the search's ordinary period, since
+                # /clubs may omit the club or name it nobody for good.
+                marked = self.conn.execute("SELECT error_code FROM ops.transfermarkt_reads WHERE kind = 'search' AND provider_key = %s",
+                                           (key,)).fetchone()
+                spent = marked is not None and marked[0] == SEARCH_UNNAMED
+                self.done("search", key, priority, written, error=SEARCH_UNNAMED, again=None if spent else SEARCH_UNNAMED_AGAIN)
                 return written
             if is_reserve(club_name) != is_reserve(team_name):
                 self.conn.execute(
