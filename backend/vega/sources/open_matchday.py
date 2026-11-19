@@ -19,6 +19,11 @@ A competition's files replace its edition only as the complete snapshot the summ
 base holds (snapshot.py); otherwise the edition stays as it was, the competition counts as
 unmatched and ops.parse_failures says why (FAILURE_MODES.md §19). A match whose values and
 statistics are unchanged is not written again.
+
+The results file is a sliding window: a result it drops by its left edge stays as stored, and the
+results it published then dropped, attested in open_matchday_history (Git history of the source,
+organizer proofs), are created once when the base does not hold them; an organizer's final
+prevails over a contradicting line (FAILURE_MODES.md §41).
 """
 
 from collections import defaultdict
@@ -130,12 +135,14 @@ def read_files(get, league, code, folder):
     return out["results"], out["fixtures"]
 
 
-def candidate(folder, season, results, fixtures, label):
+def candidate(folder, season, results, fixtures, label, report=None):
     """{provider key: row} of the snapshot, results first then fixtures, in source order.
 
     A result row names both sides, its day and its two goals (INVALID_RESULT_ROW otherwise); a
     fixture row without them names no match and is skipped. A fixture with the key of a result is
-    that result. Rows of one key otherwise make one match, from the last of them (as before)."""
+    that result. Rows of one key otherwise make one match, from the last of them (as before). A result
+    contradicting an organizer's attested final takes that final, the contradiction added to `report`
+    (open_matchday_history.final_score, FAILURE_MODES.md §41)."""
     out = {}
     attestations = open_matchday_history.for_edition(folder, season)
     for status, items in (("finished", results), ("not_started", fixtures)):
@@ -149,6 +156,9 @@ def candidate(folder, season, results, fixtures, label):
                 continue
             if status == "finished" and None in goals:
                 raise SourceError("INVALID_RESULT_ROW", f"{label}: {day} {home}–{away} without its goals: {item.get('ft_home')!r}–{item.get('ft_away')!r}")
+            key = f"{folder}:{season}:{day}|{home}|{away}"
+            if status == "finished" and key in attestations:
+                goals = open_matchday_history.final_score(key, goals, attestations[key], report)
             half = (_int(item.get("ht_home")), _int(item.get("ht_away")))
             row = {
                 "status": status, "home": home, "away": away, "date": day, "round": (item.get("gw") or "").strip() or None,
@@ -156,9 +166,6 @@ def candidate(folder, season, results, fixtures, label):
                 "home_score_ht": half[0] if None not in half else None, "away_score_ht": half[1] if None not in half else None,
                 "stats": _row_stats(item),
             }
-            key = f"{folder}:{season}:{day}|{home}|{away}"
-            if status == "finished" and key in attestations:
-                open_matchday_history.final_score(key, goals, attestations[key]["score"])
             if key in out and out[key]["status"] == "finished" and status != "finished":
                 continue  # a fixture still listed after its result: the result is the match
             out.pop(key, None)
@@ -240,17 +247,18 @@ def save(conn, folder, name, season, results, fixtures, now, *, declared_results
     if label is None:
         raise SourceError("INVALID_SEASON")
     cup_key = f"open-matchday:{folder}:{season}"
-    snap = candidate(folder, season, results, fixtures, cup_key)
+    report = [] if report is None else report
+    snap = candidate(folder, season, results, fixtures, cup_key, report)
     # One writer of the edition at a time, from its first read (FAILURE_MODES.md §35).
     conn.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", (cup_key,))
     stored = conn.execute("SELECT id FROM core.competition_seasons WHERE cup_key = %s", (cup_key,)).fetchone()
     before = snapshot.stored(conn, "open_matchday", stored and stored[0])
-    preserved = open_matchday_history.retained(conn, stored and stored[0], before, snap,
-                                                  open_matchday_history.for_edition(folder, season), declared_results)
+    attested = open_matchday_history.for_edition(folder, season)
+    # The results left by the window's left edge and the attested results the base holds stay as stored (§41).
+    preserved = open_matchday_history.retained(conn, stored and stored[0], before, snap, attested, declared_results)
     status = {key: row["status"] for key, row in snap.items()}
     status.update(dict.fromkeys(preserved, "finished"))
     snapshot.guard("open_matchday", before, status, cup_key)
-    report = [] if report is None else report
     moved, ambiguous = reschedules(conn, before, snap, preserved)
     for old, new in moved.items():
         before[new] = snapshot.rekey(conn, "open_matchday", before.pop(old), old, new)
@@ -294,6 +302,9 @@ def save(conn, folder, name, season, results, fixtures, now, *, declared_results
             # A previously attested result can gain optional data without moving
             # its row or replacing the facts that established its identity.
             values = {"archive_position": found["archive_position"]}
+            if (row["home_score"], row["away_score"]) != (found["home_score"], found["away_score"]):
+                # The organizer's final where the base holds the source's contradicting line (§41, 8625).
+                values.update(home_score=row["home_score"], away_score=row["away_score"])
         else:
             while position in reserved:
                 position += 1
@@ -322,12 +333,32 @@ def save(conn, folder, name, season, results, fixtures, now, *, declared_results
             conn.execute("""UPDATE core.matches SET revision=revision+1, updated_at=now()
                             WHERE id=%s AND season_id=%s""", (mid, season_id))
         changes += match_changed or stats_changed
+    # The attested results the source published, then dropped, that the base does not hold: created once (§41).
+    created, skipped = open_matchday_history.missing(conn, before, snap, attested)
+    report.extend(skipped)
+    for key in created:
+        proof = attested[key]
+        day, home_name, away_name = key.split(":", 2)[2].split("|")
+        while position in reserved:
+            position += 1
+        home = _team(conn, "open_matchday", f"name:{home_name}", home_name)
+        away = _team(conn, "open_matchday", f"name:{away_name}", away_name)
+        values = {
+            "competition_season_id": edition, "season_id": season_id, "source": "open_matchday", "status": "finished",
+            "match_date": day, "home_team_id": home, "away_team_id": away, "home_team_name": home_name, "away_team_name": away_name,
+            "home_score": proof["score"][0], "away_score": proof["score"][1], "archive_position": position,
+        }
+        position += 1
+        if proof.get("round"):
+            values["round_id"] = _round(conn, edition, proof["round"])
+        snapshot.write(conn, "open_matchday", key, values, None)
+        changes += 1
     held = {}
     changes += snapshot.remove(conn, "open_matchday", before, status, list(STATS.values()), held)
     report.extend(held[key] for key in sorted(held))
     if changes:
         conn.execute("UPDATE core.competition_seasons SET cup_updated_at=%s WHERE id=%s", (now, edition))
-    return len(status)
+    return len(status) + len(created)
 
 
 def held(conn, folder, season):
