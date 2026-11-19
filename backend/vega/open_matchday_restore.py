@@ -35,9 +35,9 @@ BINDINGS = "core.provider_ids"
 ELO = "agg.team_elo"
 MATCH_STATS = "core.team_match_stats"
 ENRICHMENT_COLUMNS = {"home_score_ht", "away_score_ht", "revision", "updated_at"}
-# Relations naming a match created after the reviewed captures: 141, 143, and the Fjelstul World Cup Database's pair
-# (137_worldcup_database.sql).
-ADDED_DEPENDENCIES = {"core.archive_match_attestations", "ops.archive_removals", "core.worldcup_matches"}
+# Relations naming a match created after the reviewed captures: 141, 143, the Fjelstul World Cup Database's pair
+# (137_worldcup_database.sql) and football-data.co.uk's (140_football_data.sql). Each is still checked for occupancy.
+ADDED_DEPENDENCIES = {"core.archive_match_attestations", "ops.archive_removals", "core.worldcup_matches", "core.footballdata_matches"}
 # The Fjelstul World Cup Database's own match keys (137_worldcup_database.sql): text keys of core.worldcup_matches, never
 # an id of core.matches.
 FJELSTUL_MATCH_KEYS = frozenset({"core.worldcup_matches", "core.worldcup_appearances", "core.worldcup_goals",

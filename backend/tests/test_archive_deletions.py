@@ -224,6 +224,18 @@ class RemovalTest(Base):
         self.assertEqual(self.apply(plan), "drift")
         self.assertIn(f"r:{RU2}:0", [k for k, *_ in self.state()])
 
+    def test_35ad_a_football_data_pair_holds_the_copy(self):
+        # FAILURE_MODES.md §35.3: football-data.co.uk's pair (140) names the archived copy: the plan holds it, never deletes it.
+        self.x("""INSERT INTO core.footballdata_matches(file_key, row_number, division, season_id, match_date, home_name, away_name,
+                                                        home_goals, away_goals, match_id)
+                  SELECT 'E0/2019', 2, 'E0', 2019, coalesce(match_date, '2019-08-01'), 'Witness Home', 'Witness Away',
+                         coalesce(home_score, 0), coalesce(away_score, 0), id FROM core.matches WHERE id = %s""", (self.copy,))
+        plan = self.plan()
+        self.assertNotIn(f"r:{RU2}:0", [r["key"] for r in plan["removed"]])
+        held = {m["key"]: m for m in plan["matches"] if m["class"] == "held"}[f"r:{RU2}:0"]
+        self.assertEqual(held["held"], "removal_has_dependents")
+        self.assertIn("core.footballdata_matches.match_id", held["before"]["dependents"])
+
     def test_23e_a_twin_that_differs_holds_the_copy(self):
         self.x("UPDATE core.matches SET home_score = 3 WHERE archive_key = %s", (f"r:{RU2}:1",))
         plan = self.plan()
