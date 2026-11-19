@@ -2631,3 +2631,19 @@ and id, and its absence is kept in `core.player_transfer_absences`. A fee of 0 a
 | 35x | Never read; first read refused; first 404; quarantined | 404; 404; 200 empty list; 404 | green |
 | 35y | Partial history without one move, then the move again | `absentSince` served, old ETag 200; mark cleared, same id, absence kept | red: no mark, 304 |
 | 35z | The 55 keys of the two witness players, fees 0 and unknown, the value curve | served unchanged; fees apart; the curve's club changes unchanged | red: 404 |
+
+### 35.3 With main dc65d69's football-data.co.uk (19 Nov 2026, written before the tests)
+
+Main added `core.footballdata_matches` (140_football_data.sql, applied in production by the run 44439499486): one row
+per row of a season file, its one link `match_id` (an archived match, unique, `ON DELETE SET NULL`), written by the
+collection role, read before the transaction (`prepare`). It creates no `core.provider_ids` key. Production held, on
+19 Nov at 05:06 UTC (read only), main's migrations up to 138 and 140_football_data.sql and none of this branch's.
+
+| # | Situation | Expected | Before the corrections |
+|---|---|---|---|
+| 35aa | The restorer on the merged schema, the reviewed captures | dry run, apply (35 identities, 70 Elo sides of 2097), a second pass writing nothing; a football-data pair on a restored identity refuses a new apply and stays | red: `unreviewed destination dependency inventory` |
+| 35ab | `merge_twins` on a goal-only match football-data paired | the pair cleared (`SET NULL`), its row kept, the tombstone written, no error | green on arrival (no change needed) |
+| 35ac | The purge under both roles of a competition whose match football-data paired | removed; the football-data row kept without a pair; nothing held | green on arrival (no change needed) |
+| 35ad | An archive copy football-data paired, in a plan | held `removal_has_dependents`, never deleted | green on arrival (no change needed) |
+| 35ae | Migrations from production's set (main dc65d69) to the head | names and checksums equal the head's; the catalogue equals a fresh installation's | green: 20 files after 140_football_data, 7 of them out of order; same catalogue |
+| 35af | football-data.co.uk's row of a stored twin pair, dated as the goals archive dates it; `merge_twins`; the reader's next pairing (`footballdata._link`) under the collection role | before the merge, not the result's (the goal-only twin's, or none: two candidates); the merge clears it; the next pairing gives it the result, whose id is unchanged; another row's pair unchanged | green on arrival (no change needed): before the merge, the twin's (its own clubs in this base) |

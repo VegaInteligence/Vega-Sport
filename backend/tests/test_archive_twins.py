@@ -258,6 +258,55 @@ class ArchiveTwinsTest(unittest.TestCase):
                          portugal)
         self.assertNotIn(TWIN, self.rows())
 
+    # -- 35ab (FAILURE_MODES.md §35.3) --
+    def test_35ab_merge_twins_clears_a_football_data_pair_and_keeps_its_row(self):
+        self.seed_apart()
+        twin = self.rows()[TWIN][0]
+        # football-data.co.uk's row of the match, paired with the goal-only row (140: unique, ON DELETE SET NULL).
+        self.x("""INSERT INTO core.footballdata_matches(file_key, row_number, division, season_id, match_date, home_name, away_name,
+                                                        home_goals, away_goals, match_id)
+                  VALUES ('E0/2015', 2, 'E0', 2015, '2015-08-08', 'Leicester', 'Sunderland', 4, 2, %s)""", (twin,))
+        merged, held, printed = self.merge()
+        self.assertEqual((merged, held), ({SEASON: 1}, []))
+        self.assertNotIn("archive twins failed", printed)
+        self.assertEqual(self.x("SELECT row_number, match_id FROM core.footballdata_matches WHERE file_key = 'E0/2015'").fetchall(), [(2, None)])
+        self.assertEqual(self.x("SELECT kind, id, archive_key FROM ops.archive_removals").fetchall(), [("match", twin, TWIN)])
+
+    # -- 35af (FAILURE_MODES.md §35.3) --
+    def test_35af_after_merge_twins_the_next_pairing_gives_the_football_data_row_the_result(self):
+        from vega.sources import footballdata
+
+        self.seed_apart()
+        rows = self.rows()
+        result, twin, arsenal = rows[RESULT][0], rows[TWIN][0], rows["r:2015-16/en.1:0"][0]
+        # The reader pairs only the archived matches of its divisions' countries (footballdata.DIVISIONS).
+        self.assertEqual(self.x("""SELECT DISTINCT cs.archive_country FROM core.matches m
+                                   JOIN core.competition_seasons cs ON cs.id = m.competition_season_id
+                                   WHERE m.archive_key IS NOT NULL""").fetchall(), [("Angleterre",)])
+        # Two rows of the season's file, Leicester–Sunderland on the goals archive's day; the reader's pairing under the
+        # collection role, in a transaction as sources.run_due runs it, one vote enough as in its own test.
+        self.x("""INSERT INTO core.footballdata_matches(file_key, row_number, division, season_id, match_date, home_name, away_name,
+                                                        home_goals, away_goals)
+                  VALUES ('E0/1516', 2, 'E0', 2015, '2015-08-08', 'Arsenal', 'West Ham', 0, 2),
+                         ('E0/1516', 3, 'E0', 2015, '2015-08-11', 'Leicester', 'Sunderland', 4, 2)""")
+        pairs = "SELECT row_number, match_id FROM core.footballdata_matches WHERE file_key = 'E0/1516' ORDER BY 1"
+
+        def link():
+            with self.collect.transaction():
+                footballdata._link(self.collect)
+            return dict(self.x(pairs).fetchall())
+
+        with patch.object(footballdata, "MIN_VOTES", 1):
+            before = link()
+            self.assertEqual(before[2], arsenal)
+            self.assertIn(before[3], (twin, None))  # the goal-only twin's, or none (two candidates)
+            merged, held, printed = self.merge()
+            self.assertEqual((merged, held), ({SEASON: 1}, []))
+            self.assertNotIn("archive twins failed", printed)
+            self.assertEqual(dict(self.x(pairs).fetchall()), {2: arsenal, 3: None})
+            self.assertEqual(link(), {2: arsenal, 3: result})
+        self.assertEqual(self.rows()[RESULT][0], result)
+
     # -- 35g --
     @unittest.skipUnless(HTTP_READY, "requires backend/api/node_modules")
     def test_35g_links_after_the_merge(self):

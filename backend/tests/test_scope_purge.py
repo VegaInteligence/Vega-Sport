@@ -106,6 +106,21 @@ class PurgeUnderRolesTest(unittest.TestCase):
         self.assertEqual(self.purge()[0], {})
         self.assertEqual(self.privileges(), grants)
 
+    def test_35ac_a_football_data_pair_does_not_hold_the_purge(self):
+        # FAILURE_MODES.md §35.3: football-data.co.uk's pair names the match through ON DELETE SET NULL, never a blocking key.
+        comp, edition, season_id = self.league(NAMED, "2019/2020")
+        match = self.x("SELECT id FROM core.matches WHERE competition_season_id = %s ORDER BY id LIMIT 1", (edition,)).fetchone()[0]
+        self.x("""INSERT INTO core.footballdata_matches(file_key, row_number, division, season_id, match_date, home_name, away_name,
+                                                        home_goals, away_goals, match_id)
+                  VALUES ('E0/2019', 2, 'E0', 2019, '2019-10-01', 'Witness Home', 'Witness Away', 1, 0, %s)""", (match,))
+        grants = self.privileges()
+        removed, printed = self.purge()
+        self.assertEqual(removed, {"competitions": 1, "editions": 1, "matches": 2})
+        self.assertNotIn("held", printed)
+        self.assertEqual(self.held_state(comp, edition, season_id), (0, 0, 0, 0, [("purged",)], 0))
+        self.assertEqual(self.x("SELECT row_number, match_id FROM core.footballdata_matches WHERE file_key = 'E0/2019'").fetchall(), [(2, None)])
+        self.assertEqual(self.privileges(), grants)
+
     def test_35k_a_competition_an_artwork_proof_names_is_held_whole(self):
         held = self.league(KEPT, "2024/2025")
         gone = self.league(NAMED, "2025/2026")
