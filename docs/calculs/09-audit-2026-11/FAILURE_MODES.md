@@ -3230,6 +3230,52 @@ round-10 fixtures of the edition have a twin too, `postponed`, without a round a
 - The audit counts five finished/finished PitchAPI pairs (`INTEGRITE.md`; another is Estudiantes de Río Cuarto–
   Instituto, 39992/39993) and 46 finished/postponed pairs: each needs its own reviewed entry, never a rule.
 
+### 43.4 What 159 costs: the reads stay as fast as before (second review, 19 Nov 2026, written before the change)
+
+The second independent review (`evidence/relecture-2/CONSTATS.md`, base `relecture_b_159`: 530 500 matches, 50 500
+of national teams, 30 000 SportScore rows over 1 500 editions) measured 159 right but slower, under `vega_read` with
+`db.mjs`'s session settings and bound parameters: `api.nation_list` 217 → 710 ms (production-like volume) and 499 →
+2 777 ms (whole base); `/api/standings` 41–47 → 186–193 ms; `api.nation_matches` 5.8 → 34 ms, 26 → 653 ms for a
+nation of 416 copies. Causes: `nation_list` read `core.matches` a third time only to fetch columns its two branches
+had, and its anti-join on `abs(k.d - g.d) = 1` cannot hash, so it compares every pair of meetings of two teams;
+`api.standings_rank_conflicts()`, a SECURITY DEFINER function with no argument, aggregates every SportScore row of
+every edition at each call, and `standingsBody` calls it three times; `nation_matches`' lateral join re-reads its
+materialized CTEs once per kept match.
+
+**Properties.**
+- 43s. `api.nation_list`: at most 1.5 times its pre-159 time (119) on both volumes; `core.matches` is read twice
+  (its two branches, as in 119), never a third time; the copy test is a hash join on equal keys (pair, day ± 1,
+  score), not a join filter on `abs()`.
+- 43t. `/api/standings`: the rank check reads only the editions the statement selects. No function aggregates the
+  whole table; the withheld editions are read per edition (`api.standings_withheld(edition)`); on the review's base,
+  under `enable_seqscan = off`, every scan of `core.standings_official` in the route's statement (custom and generic
+  plans) has an index condition on `competition_season_id`. On the small test base the planner may check the Vega
+  branch's authority once over the whole table, as it did with 150: the test requires no more such scans than with
+  150's view. Time: at most 1.5 times 150's on the measurement base; `/api/cup-snapshot?kind=standings` (the same
+  statement) and the worker's `count(*) FROM api.standings` likewise.
+- 43u. `api.nation_matches`: linear in the nation's copies: no node re-executed once per kept match over a
+  materialized CTE; at most 1.5 times 120's time on both volumes.
+- The semantics of 43a–43r are unchanged (same tests, same expectations), the 46 SportScore tables stay admitted.
+
+**Result** (medians of five runs, ms, `evidence/classements/perf/summary.md`; « small »: the review's production-like
+volume, the International Results archive removed):
+
+| Read | 119/120/150, full | first 159, full | 159 now, full | before, small | first 159, small | 159 now, small |
+|---|---|---|---|---|---|---|
+| `/api/standings` statement, three leagues | 37–42 | 128–160 | 31–50 | 21–36 | 67–86 | 20–36 |
+| idem, generic plan | 38 | 128 | 30 | 19 | 139 | 31 |
+| `api.nation_list` | 440 | 2 671 | 598 | 169 | 395 | 242 |
+| `api.nation_matches(100001)` | 25 | 649 | 27 | 6.2 | 23 | 5.6 |
+| `count(*) FROM api.standings` | 4 032 | 3 880 | 4 034 | 1 837 | 2 128 | 2 590 |
+
+What changed: the rank check is written inside `api.standings` as windows partitioned by edition (a condition on the
+edition reaches the scan), `unqualified` reads its edition's rows directly, `api.standings_withheld(edition)` takes
+the edition; `nation_list` carries the columns in its two branches, finds the candidate copies by a hash aggregate
+on (pair, score, day or day before) and tests only those by equal keys, and counts by two hash aggregates;
+`nation_matches` tests a copy by two equal-key joins and joins what the copies lend once, by day. The small volume's
+standings times vary by ±15 ms from one run to the next (the same statement over the same rows read 21 and 38 ms
+before 159).
+
 ## 44. Guarantees of the writers §40 found wanting: an omission is not a deletion (audit E02c, E02d, E03h; 19 Nov 2026, written before the tests)
 
 Lot « garanties », branch `claude/audit-garanties` from `4fb0082d51` (main `2088d36e60` with the « collecte »,
@@ -3492,6 +3538,20 @@ of the five queries of `integrite-cas.zip/sql/final-probe.py`) to fill the lists
 | 45i | The same search, the club's name not known yet | no link, no conflict, the search due again within a day; after the club record is read, the next search refuses as in 45h |
 | 45j | The same search whose candidate is the first team « AA Estudiantes de Río Cuarto » | linked as before (`club_search_squad`) |
 
+### 45.4 The search waiting for a club's name is bounded (second review, point 4; 19 Nov 2026, written before the tests)
+
+The retry of a day (`SEARCH_UNNAMED_AGAIN`) assumed the club's record arrives: two cases never resolve. `/clubs` may
+omit the club (`write_club` records a 404 with no `core.provider_clubs` row, and the `club` unit, queued
+`ON CONFLICT DO NOTHING`, waits 90 days), or answer it without a name (`parse_club` gives `name` None, the column is
+nullable). The whole search (the quick search, up to three squads, their players: five to eight requests 2.5 s apart)
+was then read again every day for that team, on the budget of a reader that pauses at its first refusal.
+
+Rule: one close retry only. A search whose chosen club has no usable name is recorded with the error mark
+`CLUB_UNNAMED` (`ops.transfermarkt_reads.error_code`, `attempts` counting, as `done` already writes them: no
+migration). Due again within a day when the unit did not carry that mark already; carrying it (the close retry was
+spent), at the search's ordinary period for its priority. No link and no conflict while the name is missing. When the
+name arrives, the reserve check applies as in 45h and the search is recorded as usual (the mark cleared).
+
 ## 46. The independent review of 2088d36e60..8587ab6671: a grade status read by key, a first 404, the side journal, the failures' lookup (19 Nov 2026, written before the tests)
 
 An independent review of the six lanes integrated on `claude/audit-reprise-33` (8587ab6671) returned six findings
@@ -3587,63 +3647,3 @@ there is one: five reproduce, one does not.
 | 45k | 45i's search when `/clubs` omits the club (its unit recorded 404, no `core.provider_clubs` row, due again in 90 days); the search read three times, each when due | the first search due again within a day, the next ones at the search's ordinary period (`PERIODS["search"]`, 30 days at priority 1); no link, no conflict at any of them |
 | 45l | The same when the club's record has no name (`parse_club`'s `name` None, the row stored with a NULL name) | as 45k |
 | 45m | After 45k or 45l, the club's name arrives (the reserve's) and the search is read | the reserve check as in 45h (`reserve_side`, no link); the unit's error mark cleared |
-
-### 45.4 The search waiting for a club's name is bounded (second review, point 4; 19 Nov 2026, written before the tests)
-
-The retry of a day (`SEARCH_UNNAMED_AGAIN`) assumed the club's record arrives: two cases never resolve. `/clubs` may
-omit the club (`write_club` records a 404 with no `core.provider_clubs` row, and the `club` unit, queued
-`ON CONFLICT DO NOTHING`, waits 90 days), or answer it without a name (`parse_club` gives `name` None, the column is
-nullable). The whole search (the quick search, up to three squads, their players: five to eight requests 2.5 s apart)
-was then read again every day for that team, on the budget of a reader that pauses at its first refusal.
-
-Rule: one close retry only. A search whose chosen club has no usable name is recorded with the error mark
-`CLUB_UNNAMED` (`ops.transfermarkt_reads.error_code`, `attempts` counting, as `done` already writes them: no
-migration). Due again within a day when the unit did not carry that mark already; carrying it (the close retry was
-spent), at the search's ordinary period for its priority. No link and no conflict while the name is missing. When the
-name arrives, the reserve check applies as in 45h and the search is recorded as usual (the mark cleared).
-
-### 43.4 What 159 costs: the reads stay as fast as before (second review, 19 Nov 2026, written before the change)
-
-The second independent review (`evidence/relecture-2/CONSTATS.md`, base `relecture_b_159`: 530 500 matches, 50 500
-of national teams, 30 000 SportScore rows over 1 500 editions) measured 159 right but slower, under `vega_read` with
-`db.mjs`'s session settings and bound parameters: `api.nation_list` 217 → 710 ms (production-like volume) and 499 →
-2 777 ms (whole base); `/api/standings` 41–47 → 186–193 ms; `api.nation_matches` 5.8 → 34 ms, 26 → 653 ms for a
-nation of 416 copies. Causes: `nation_list` read `core.matches` a third time only to fetch columns its two branches
-had, and its anti-join on `abs(k.d - g.d) = 1` cannot hash, so it compares every pair of meetings of two teams;
-`api.standings_rank_conflicts()`, a SECURITY DEFINER function with no argument, aggregates every SportScore row of
-every edition at each call, and `standingsBody` calls it three times; `nation_matches`' lateral join re-reads its
-materialized CTEs once per kept match.
-
-**Properties.**
-- 43s. `api.nation_list`: at most 1.5 times its pre-159 time (119) on both volumes; `core.matches` is read twice
-  (its two branches, as in 119), never a third time; the copy test is a hash join on equal keys (pair, day ± 1,
-  score), not a join filter on `abs()`.
-- 43t. `/api/standings`: the rank check reads only the editions the statement selects. No function aggregates the
-  whole table; the withheld editions are read per edition (`api.standings_withheld(edition)`); on the review's base,
-  under `enable_seqscan = off`, every scan of `core.standings_official` in the route's statement (custom and generic
-  plans) has an index condition on `competition_season_id`. On the small test base the planner may check the Vega
-  branch's authority once over the whole table, as it did with 150: the test requires no more such scans than with
-  150's view. Time: at most 1.5 times 150's on the measurement base; `/api/cup-snapshot?kind=standings` (the same
-  statement) and the worker's `count(*) FROM api.standings` likewise.
-- 43u. `api.nation_matches`: linear in the nation's copies: no node re-executed once per kept match over a
-  materialized CTE; at most 1.5 times 120's time on both volumes.
-- The semantics of 43a–43r are unchanged (same tests, same expectations), the 46 SportScore tables stay admitted.
-
-**Result** (medians of five runs, ms, `evidence/classements/perf/summary.md`; « small »: the review's production-like
-volume, the International Results archive removed):
-
-| Read | 119/120/150, full | first 159, full | 159 now, full | before, small | first 159, small | 159 now, small |
-|---|---|---|---|---|---|---|
-| `/api/standings` statement, three leagues | 37–42 | 128–160 | 31–50 | 21–36 | 67–86 | 20–36 |
-| idem, generic plan | 38 | 128 | 30 | 19 | 139 | 31 |
-| `api.nation_list` | 440 | 2 671 | 598 | 169 | 395 | 242 |
-| `api.nation_matches(100001)` | 25 | 649 | 27 | 6.2 | 23 | 5.6 |
-| `count(*) FROM api.standings` | 4 032 | 3 880 | 4 034 | 1 837 | 2 128 | 2 590 |
-
-What changed: the rank check is written inside `api.standings` as windows partitioned by edition (a condition on the
-edition reaches the scan), `unqualified` reads its edition's rows directly, `api.standings_withheld(edition)` takes
-the edition; `nation_list` carries the columns in its two branches, finds the candidate copies by a hash aggregate
-on (pair, score, day or day before) and tests only those by equal keys, and counts by two hash aggregates;
-`nation_matches` tests a copy by two equal-key joins and joins what the copies lend once, by day. The small volume's
-standings times vary by ±15 ms from one run to the next (the same statement over the same rows read 21 and 38 ms
-before 159).
