@@ -2852,3 +2852,61 @@ one match: `archives.merge_twins` handles archive `g:` twins only and `identity.
 PitchAPI match only; a guard for native copies belongs with the match identities); the player page's recent form
 (`PlayerScoutOverview.jsx`: `seasonGrade([]).grade` is `null` and the card writes `?? 50`, a copy change that needs a
 validated mock-up).
+
+## 40. The writers still active: repetition, partial answers, authority (audit E02c, E02d, E03h; 19 Nov 2026, written before the tests)
+
+The audit asks for guarantees on every writer still active, not only on those already corrected (VI-27/29/31). The
+inventory and the matrix of guarantees (writer × domain × repetition, partial answer, authority, explicit
+correction, traced refusal, real role) are kept with the evidence of this lot
+(`evidence/writers/MATRICE.md`). This section specifies the end-to-end replays written for the cells the existing
+suites left without a test. They change no writer: a replay that fails on `2088d36e60` is a defect, kept as
+`unittest.expectedFailure` with the defect named, so the suites stay green and the defect visible. The replays live
+in `backend/tests/test_writer_replays.py` (database `vega_v2_writer_replays_test`).
+
+### 40.1 Rules of the replays
+
+- Each replay calls the real writer through its real entry point: `transfermarkt.Reader.read` (fetch → `data_of` →
+  `write_*` → queue row) or `sources.run_due` (prepare → run → `record_run`), on a connection under `vega_collect`.
+  Only the provider is replaced (a fake `fetch`, `get`, Wikidata bridge or honours collector), with synthetic
+  answers; nothing is downloaded.
+- State is compared by a fingerprint: every row of the tables the writer writes, as JSON, sorted, without
+  `updated_at` (and without the surrogate `id` of `core.player_injuries`, which nothing references). Bookkeeping
+  (`ops.source_runs`, `ops.transfermarkt_reads`, `ops.transfermarkt_state`) is checked separately.
+- "Kept" means the fingerprint of the domain rows is the one before the answer. "Traced" means an `ops.*` row names
+  the refusal (`ops.source_runs.error_code`, `ops.transfermarkt_reads.error_code`, `ops.parse_failures`) and the
+  scope or unit is due again within its retry delay.
+
+### 40.2 Failure modes and expected outcomes
+
+| # | Writer, domain | Situation | Expected |
+|---|---|---|---|
+| 40a | Transfermarkt values (`write_values`) | the same history (two points) read twice | the second read changes no row of `core.player_market_values` |
+| 40b | Transfermarkt values | `{"history": []}` after two accepted points | both points kept |
+| 40c | Transfermarkt values | a valid history that omits one of the two accepted points | both points kept (an omission is not a deletion), or the read refused and traced |
+| 40d | Transfermarkt values | `history` of the wrong type | both points kept; the unit carries `SCHEMA_CHANGED` and is due again within a day |
+| 40e | Transfermarkt injuries (`write_injuries`) | the same two episodes read twice | the second read changes no episode (content; the ids are recorded in the evidence) |
+| 40f | Transfermarkt injuries | `{"injuries": []}` after two accepted episodes | both episodes kept, or the read refused and traced |
+| 40g | Transfermarkt injuries | a valid list that omits one of the two episodes | both episodes kept, or the read refused and traced |
+| 40h | Transfermarkt injuries | `injuries` of the wrong type after an accepted read | episodes kept; `api.player_injury_reads` under `vega_read` still names the player (the last accepted read), so the route does not turn a refusal into a 404 |
+| 40i | Transfermarkt squads (`write_squad`) | the same squad (two members) read twice | no change in `core.provider_squads` |
+| 40j | Transfermarkt squads | `{"squad": []}` after two accepted members | both members kept, or the read refused and traced |
+| 40k | Transfermarkt squads | a valid squad without one of the two members | both members kept, or the read refused and traced |
+| 40l | Transfermarkt clubs (`write_club`) | the same club record read twice | no change in `core.provider_clubs` |
+| 40m | UEFA coefficients (`uefa.save`) | the same complete pages read twice | the edition's rows unchanged (`core.ranking_rows`, `core.ranking_season_points`, `core.ranking_editions`) |
+| 40x | UEFA coefficients | the same complete pages read twice (40m) | the edition's resource version (`ops.resource_versions`, kind `ranking`) unchanged: a repeat publishes nothing new and recalculates no cohort |
+| 40n | UEFA coefficients | a page with `totalElements: 0` and no member after a stored edition of two clubs | the two rows kept; the scope fails and is traced |
+| 40o | FIFA ranking (`fifa.save`) | an edition first read with one row of three, then complete at the source | the complete edition replaces it (or the short one is refused and read again) |
+| 40p | Wikipedia honours (`honours.save`) | the same honours read twice | no change in `core.player_honour_titles` |
+| 40q | Wikipedia honours | after two titles, the collector gives nothing (identity not unique, no Honours section, no row parsed: `collect_player` returns `None`) | both titles kept; the player is checked again after the period |
+| 40r | Wikidata clubs (`wikidata.save_club`) | the same club answer read twice | team, venue and coach tenure unchanged |
+| 40s | Wikidata clubs | an answer without `founded` and without `coach` (a partial answer of the bridge: it cannot be told from a removal) | the founded year kept; the current coach's tenure stays open |
+| 40t | Wikidata stadiums (`wikidata.save_stadium`) | an answer without capacity and coordinates | capacity and coordinates kept |
+| 40u | Wikidata player facts (`player_facts.save`) | the same club answer read twice | no player changed |
+| 40v | Wikidata player facts | an empty `bindings` list | birth dates and heights kept |
+| 40w | Wikidata player facts against the Transfermarkt snapshot | a player whose birth date the snapshot attested (`birth_date_source_url`), Wikidata giving another plausible date | the attested date and its provenance stay together: either kept, or replaced with Wikidata's provenance; never Wikidata's date under the snapshot's URL |
+
+Out of these replays, by the existing suites (cited in the matrix): the native PitchAPI families (`test_store`,
+`test_worker`), the cup and Open Matchday snapshots (19a–19w, 22a–22c, 35m–35s), SportScore (S1–S25, 35t, 35v),
+the Transfermarkt transfers and contracts (§20, §33, 35w–35z), the archives and their corrections (§22–§24, 35a–35h),
+Fjelstul and football-data.co.uk (pinned files), the scope purge and the twin merge (a second pass removes nothing).
+The native statistics' empty answer is the « collecte » lot's (VI-21) and is not replayed here.
