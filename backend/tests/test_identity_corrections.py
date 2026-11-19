@@ -153,6 +153,24 @@ class FreshImportTest(Base):
             curated.club_aliases(self.db)
         self.assertEqual((names(740), names(707)), ([("alias", "vega")], []))
 
+    def test_39l_a_shared_name_without_a_reviewed_country_keeps_what_each_club_holds(self):
+        # « Inter » is a reviewed name (CLUB_ALIASES) with no reviewed country: two clubs bear it here.
+        self.assertNotIn("Inter", curated.CLUB_ALIAS_COUNTRIES)
+        alias = curated.CLUB_ALIASES["Inter"]
+        self.x("INSERT INTO core.countries(code) VALUES ('FIN') ON CONFLICT DO NOTHING")
+        self.x("INSERT INTO core.teams(id, name, country_code, is_national) VALUES (9001, 'Inter', 'ITA', false), (9002, 'Inter', 'FIN', false)")
+        from vega.sources import normalize
+        self.x("""INSERT INTO core.entity_names(entity_type, entity_id, name, normalized, kind, source)
+                  VALUES ('team', 9001, %s, %s, 'alias', 'vega')""", (alias, normalize(alias)))
+        held = lambda: self.x("""SELECT entity_id, kind::text, source::text FROM core.entity_names WHERE entity_type = 'team'
+                                 AND entity_id IN (9001, 9002) AND normalized = %s ORDER BY 1""", (normalize(alias),)).fetchall()
+        self.as_role("vega_collect")
+        for _ in range(2):  # the pass, then the pass again
+            with self.db.transaction():
+                _, unmatched = curated.club_aliases(self.db)
+            self.assertEqual(held(), [(9001, "alias", "vega")])
+            self.assertGreaterEqual(unmatched, 1)
+
     def test_39b_a_fresh_import_merges_fc_barcelona_into_740(self):
         self.as_role("vega_collect")
         with self.db.transaction():
