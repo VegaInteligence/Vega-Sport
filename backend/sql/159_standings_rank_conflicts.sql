@@ -126,3 +126,123 @@ INSERT INTO ops.resource_versions(resource_kind, resource_id)
 SELECT 'competition_season', competition_season_id FROM api.standings_rank_conflicts()
 ON CONFLICT (resource_kind, resource_id) DO UPDATE
 SET version = ops.resource_versions.version + 1, updated_at = now();
+
+-- §43.2 (audit E03f, E04d): a nation's match two editions hold. OpenFootball dates a match on its local day, PitchAPI
+-- on the UTC day of its kick-off: an evening match in the Americas is one day earlier in the archive, and 120 kept
+-- one copy per day only (Argentina's World Cup 2026: 11 matches for 8, Mexico's 9 for 5). A copy is absorbed when a
+-- preferred copy of another edition holds the same two teams with the same score by team (two unscored copies agree)
+-- one day apart: the native copy first (no cup or archive key), then the lowest id. Copies of one day stay merged as
+-- in 120. The kept match takes the round and the penalties of the copies it absorbs when it has none. A match is
+-- labelled with its edition's name when the edition has one (cup_name: « World Cup 2026 »), not with the family's
+-- competition, which cups.save names after the first edition it imported (« World Cup 1930 »). The list counts the
+-- matches the page lists. Nothing is written.
+CREATE OR REPLACE FUNCTION api.nation_matches(team_key integer)
+RETURNS TABLE(match_id text, match_date date, season text, competition text, edition text, round text, status text,
+  collected boolean, home_id text, home_name text, home_image text, away_id text, away_name text, away_image text,
+  home_score integer, away_score integer, home_penalties integer, away_penalties integer)
+LANGUAGE sql STABLE STRICT SECURITY DEFINER SET search_path = pg_catalog AS $$
+  WITH own AS MATERIALIZED (
+    SELECT m.id, m.season_id, m.competition_season_id, m.round_id, m.status, m.home_team_id, m.away_team_id,
+      m.home_score, m.away_score, m.home_penalty_score, m.away_penalty_score, coalesce(m.match_date, m.kickoff_at::date) AS d
+    FROM core.matches m WHERE m.home_team_id = team_key
+    UNION ALL
+    SELECT m.id, m.season_id, m.competition_season_id, m.round_id, m.status, m.home_team_id, m.away_team_id,
+      m.home_score, m.away_score, m.home_penalty_score, m.away_penalty_score, coalesce(m.match_date, m.kickoff_at::date)
+    FROM core.matches m WHERE m.away_team_id = team_key AND m.home_team_id <> team_key
+  ), copies AS MATERIALIZED (
+    SELECT o.*, cs.cup_key, cs.archive_key, coalesce(cs.cup_name, co.name) AS competition_name, r.name AS round_name,
+      cs.cup_key IS NULL AND cs.archive_key IS NULL AS native,
+      least(o.home_team_id, o.away_team_id) AS lo, greatest(o.home_team_id, o.away_team_id) AS hi,
+      -- Each copy's score and penalties by team: the lower team id's, then the other's.
+      CASE WHEN o.home_team_id <= o.away_team_id THEN o.home_score ELSE o.away_score END AS score_lo,
+      CASE WHEN o.home_team_id <= o.away_team_id THEN o.away_score ELSE o.home_score END AS score_hi,
+      CASE WHEN o.home_team_id <= o.away_team_id THEN o.home_penalty_score ELSE o.away_penalty_score END AS pens_lo,
+      CASE WHEN o.home_team_id <= o.away_team_id THEN o.away_penalty_score ELSE o.home_penalty_score END AS pens_hi
+    FROM own o
+    JOIN core.competition_seasons cs ON cs.id = o.competition_season_id
+    JOIN core.competitions co ON co.id = cs.competition_id
+    LEFT JOIN core.rounds r ON r.id = o.round_id
+  ), absorbed AS MATERIALIZED (
+    -- The copy of the day before or after, in another edition, with the same score: absorbed by the preferred one.
+    SELECT c.id, k.id AS by_id FROM copies c JOIN copies k
+      ON k.lo = c.lo AND k.hi = c.hi AND abs(k.d - c.d) = 1 AND k.competition_season_id <> c.competition_season_id
+     AND k.score_lo IS NOT DISTINCT FROM c.score_lo AND k.score_hi IS NOT DISTINCT FROM c.score_hi
+     AND (k.native > c.native OR (k.native = c.native AND k.id < c.id))
+  ), picked AS (
+    SELECT c.*, row_number() OVER w AS pick,
+      max(c.round_name) OVER (PARTITION BY coalesce(c.d::text, 'm' || c.id), c.lo, c.hi) AS any_round,
+      max(c.pens_lo) OVER (PARTITION BY coalesce(c.d::text, 'm' || c.id), c.lo, c.hi) AS any_pens_lo,
+      max(c.pens_hi) OVER (PARTITION BY coalesce(c.d::text, 'm' || c.id), c.lo, c.hi) AS any_pens_hi
+    FROM copies c
+    WHERE NOT EXISTS (SELECT 1 FROM absorbed a WHERE a.id = c.id)
+    WINDOW w AS (
+      PARTITION BY coalesce(c.d::text, 'm' || c.id), c.lo, c.hi
+      ORDER BY c.native DESC, (c.home_score IS NOT NULL) DESC, c.id
+    )
+  ), kept AS (
+    -- What the copies absorbed by a copy of the kept one's day hold that the kept copy lacks.
+    SELECT p.*, coalesce(p.round_name, p.any_round, x.round_name) AS round_kept,
+      coalesce(p.any_pens_lo, x.pens_lo) AS pens_lo_kept, coalesce(p.any_pens_hi, x.pens_hi) AS pens_hi_kept
+    FROM picked p
+    LEFT JOIN LATERAL (
+      SELECT max(c.round_name) AS round_name, max(c.pens_lo) AS pens_lo, max(c.pens_hi) AS pens_hi
+      FROM absorbed b JOIN copies c ON c.id = b.id JOIN copies s ON s.id = b.by_id
+      WHERE s.lo = p.lo AND s.hi = p.hi AND s.d = p.d
+    ) x ON true
+    WHERE p.pick = 1
+  )
+  SELECT api.public_id('match', p.id), p.d, se.label, p.competition_name, coalesce(p.cup_key, p.archive_key),
+    p.round_kept, p.status::text, p.native,
+    api.public_id('team', p.home_team_id), h.name, hc.source_url, api.public_id('team', p.away_team_id), a.name, ac.source_url,
+    p.home_score::integer, p.away_score::integer,
+    coalesce(p.home_penalty_score, CASE WHEN p.home_team_id = p.lo THEN p.pens_lo_kept ELSE p.pens_hi_kept END)::integer,
+    coalesce(p.away_penalty_score, CASE WHEN p.away_team_id = p.lo THEN p.pens_lo_kept ELSE p.pens_hi_kept END)::integer
+  FROM kept p
+  JOIN core.seasons se ON se.id = p.season_id
+  JOIN core.teams h ON h.id = p.home_team_id
+  JOIN core.teams a ON a.id = p.away_team_id
+  LEFT JOIN core.assets hc ON hc.id = h.crest_asset_id
+  LEFT JOIN core.assets ac ON ac.id = a.crest_asset_id
+$$;
+
+CREATE OR REPLACE FUNCTION api.nation_list(season_key smallint)
+RETURNS TABLE(team_id text, team_key integer, name text, image_url text, matches integer, last_match date,
+  elo float8, elo_at date, rank integer, season_elo float8, elo_change float8, season_matches integer,
+  wins integer, draws integer, losses integer, result_sum float8, expected_sum float8)
+LANGUAGE sql STABLE STRICT SECURITY DEFINER SET search_path = pg_catalog AS $$
+  WITH nations AS MATERIALIZED (
+    SELECT t.id, t.name, t.crest_asset_id FROM core.teams t WHERE t.is_national AND t.merged_into IS NULL
+  ), games AS MATERIALIZED (
+    SELECT g.team, g.d, least(m.home_team_id, m.away_team_id) AS a, greatest(m.home_team_id, m.away_team_id) AS b, m.id AS match,
+      m.competition_season_id AS edition, coalesce(cs.cup_key IS NULL AND cs.archive_key IS NULL, true) AS native,
+      CASE WHEN m.home_team_id <= m.away_team_id THEN m.home_score ELSE m.away_score END AS score_a,
+      CASE WHEN m.home_team_id <= m.away_team_id THEN m.away_score ELSE m.home_score END AS score_b
+    FROM (
+      SELECT n.id AS team, m.id AS match, coalesce(m.match_date, m.kickoff_at::date) AS d FROM nations n JOIN core.matches m ON m.home_team_id = n.id
+      UNION ALL
+      SELECT n.id, m.id, coalesce(m.match_date, m.kickoff_at::date) FROM nations n JOIN core.matches m ON m.away_team_id = n.id
+    ) g
+    JOIN core.matches m ON m.id = g.match
+    LEFT JOIN core.competition_seasons cs ON cs.id = m.competition_season_id
+  ), played AS MATERIALIZED (
+    -- A match without a date is its own match; a copy api.nation_matches absorbs is not counted.
+    SELECT g.team, count(DISTINCT coalesce(g.d::text || ':' || g.a || ':' || g.b, 'm' || g.match))::integer AS matches, max(g.d) AS last_match
+    FROM games g
+    WHERE NOT EXISTS (
+      SELECT 1 FROM games k WHERE k.team = g.team AND k.a = g.a AND k.b = g.b AND abs(k.d - g.d) = 1 AND k.edition <> g.edition
+        AND k.score_a IS NOT DISTINCT FROM g.score_a AND k.score_b IS NOT DISTINCT FROM g.score_b
+        AND (k.native > g.native OR (k.native = g.native AND k.match < g.match)))
+    GROUP BY g.team
+  )
+  SELECT api.public_id('team', n.id), n.id, n.name, cr.source_url, p.matches, p.last_match,
+    e.elo_after::numeric::float8, e.kickoff_at::date,
+    tp.rank, tp.elo::numeric::float8, tp.elo_change::numeric::float8, tp.matches, tp.wins, tp.draws, tp.losses,
+    tp.result_sum::numeric::float8, tp.expected_sum::numeric::float8
+  FROM nations n
+  JOIN played p ON p.team = n.id
+  LEFT JOIN core.assets cr ON cr.id = n.crest_asset_id
+  LEFT JOIN LATERAL (
+    SELECT x.elo_after, x.kickoff_at FROM agg.team_elo x WHERE x.team_id = n.id ORDER BY x.kickoff_at DESC NULLS LAST LIMIT 1
+  ) e ON true
+  LEFT JOIN agg.team_power tp ON tp.season_id = season_key AND tp.team_id = n.id AND tp.scope = 'nations'
+$$;
