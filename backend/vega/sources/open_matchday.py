@@ -373,12 +373,46 @@ def held(conn, folder, season):
     ).fetchone() is not None
 
 
+def uncovered(conn, folder, season, edition):
+    """[(day, home name, away name)] of the copy's matches (edition `edition`) that no match of PitchAPI's edition of the
+    league in `season` covers: the same two clubs, either side at home, each resolved through merged_into, a day apart
+    at most (FAILURE_MODES.md §45)."""
+    return conn.execute(
+        """SELECT c.match_date::text, c.home_team_name, c.away_team_name FROM core.matches c
+           JOIN core.teams ch ON ch.id = c.home_team_id JOIN core.teams ca ON ca.id = c.away_team_id
+           WHERE c.competition_season_id = %s AND NOT EXISTS (
+             SELECT 1 FROM core.provider_ids p
+             JOIN core.competition_seasons cs ON cs.competition_id = p.entity_id AND cs.cup_key IS NULL AND cs.archive_key IS NULL
+             JOIN core.seasons s ON s.id = cs.season_id AND s.label = %s
+             JOIN core.matches n ON n.competition_season_id = cs.id AND n.season_id = cs.season_id
+             JOIN core.teams nh ON nh.id = n.home_team_id JOIN core.teams na ON na.id = n.away_team_id
+             WHERE p.entity_type = 'competition' AND p.provider = 'pitchapi' AND p.provider_key = %s
+               AND n.match_date BETWEEN c.match_date - 1 AND c.match_date + 1
+               AND ((coalesce(nh.merged_into, nh.id), coalesce(na.merged_into, na.id))
+                      = (coalesce(ch.merged_into, ch.id), coalesce(ca.merged_into, ca.id))
+                 OR (coalesce(nh.merged_into, nh.id), coalesce(na.merged_into, na.id))
+                      = (coalesce(ca.merged_into, ca.id), coalesce(ch.merged_into, ch.id))))
+           ORDER BY c.match_date, c.id""",
+        (edition, sporting_season(season), COVERED.get(folder)),
+    ).fetchall()
+
+
 def drop_copy(conn, folder, season):
     """Remove the edition of `folder` written for `season` before PitchAPI held its league (VI-21):
     its matches (their statistics go with them), rounds, the edition, and the competition with its
-    id when it holds no other edition. Returns the matches removed."""
-    edition = conn.execute("SELECT id, competition_id FROM core.competition_seasons WHERE cup_key = %s", (f"open-matchday:{folder}:{season}",)).fetchone()
+    id when it holds no other edition. Returns the matches removed.
+
+    Only once PitchAPI's edition covers every match of the copy (uncovered): until then nothing goes, the
+    reason is traced once while it stays the same and the next pass tries again (FAILURE_MODES.md §45)."""
+    cup_key = f"open-matchday:{folder}:{season}"
+    edition = conn.execute("SELECT id, competition_id FROM core.competition_seasons WHERE cup_key = %s", (cup_key,)).fetchone()
     if edition is None:
+        return 0
+    missing = uncovered(conn, folder, season, edition[0])
+    if missing:
+        total = conn.execute("SELECT count(*) FROM core.matches WHERE competition_season_id = %s", (edition[0],)).fetchone()[0]
+        shown = ", ".join(f"{day} {home}–{away}" for day, home, away in missing[:5])
+        failure_once(conn, "COPY_NOT_COVERED", f"{cup_key}: {len(missing)} of {total} match(es) without a native match: {shown}", edition[0])
         return 0
     removed = conn.execute("DELETE FROM core.matches WHERE competition_season_id = %s", (edition[0],)).rowcount
     conn.execute("DELETE FROM core.rounds WHERE competition_season_id = %s", (edition[0],))
