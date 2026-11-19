@@ -2912,3 +2912,71 @@ Out of these replays, by the existing suites (cited in the matrix): the native P
 the Transfermarkt transfers and contracts (§20, §33, 35w–35z), the archives and their corrections (§22–§24, 35a–35h),
 Fjelstul and football-data.co.uk (pinned files), the scope purge and the twin merge (a second pass removes nothing).
 The native statistics' empty answer is the « collecte » lot's (VI-21) and is not replayed here.
+
+## 39. Identities: FC Barcelona's sides, administrative results, ranking spellings (19 Nov 2026, written before the tests)
+
+Lot « identités » of the audit's resumption (E03b–E03f, E04b, E04g, E04i), on `main` 2088d36e60.
+
+Reproduced on the public API at 13:22 UTC on 19 November: the six Copa del Rey 2024/25 matches of FC Barcelona
+(`/api/cups/edition?competition=l_v0000071&season=2024/2025`) name `t_2fucJi`, Barcelona SC of Ecuador (707), as
+FC Barcelona's side, and 707's club Elo of 2024/25 ends on the final of 26 April 2025. The cause is in
+`curated.club_aliases`: the reviewed UEFA spelling « Barcelona » → « FC Barcelona » is written on every club named
+« Barcelona », without a country, with `ON CONFLICT DO NOTHING`. FC Barcelona (740) already holds `fcbarcelona` as a UEFA
+`source_spelling` (uefa.link_team writes `normalize(name)`), so only Barcelona SC gets the alias. The identity pass reads
+aliases, not source spellings (`identity._pitch_teams`, `_pitch_clubs`): « FC Barcelona » of a national cup archive (no
+country) and of a European archive (every club) names exactly one club, 707, and the merge moves the source's teams, their
+keys (`openfootball:name:FC Barcelona`, `vega:archive:europe:fc barcelona`) and their matches onto it. A later import
+resolves by those keys (`cups._team`, `archives.Loader.team`) and writes 707 again.
+
+### 39.1 Rules
+
+- A reviewed club spelling (`curated.CLUB_ALIASES`) whose name several clubs bear goes only to the club of the country
+  reviewed for it (`CLUB_ALIAS_COUNTRIES`: « Barcelona » is Spain's); with no reviewed country, to none of them (counted
+  unmatched). It replaces a `source_spelling` of the same normalized form on that club (the alias is the stronger
+  statement), and it is removed from the other clubs of that name that hold it.
+- A reviewed side correction (`identity.SIDE_CORRECTIONS`) names: the club a side was given to and the club that played,
+  each by its PitchAPI key; the provider keys that came with the merge; and each match, by its Vega id or its provider
+  key, with its side, day, opponent, score and the source's name of the side. The identity pass applies it before any
+  merge, under the collection role, whatever `identity.MERGES` says: the side, every core row of that match naming the
+  wrong club (events, statistics, line-ups…), the keys, the pointers of the merged source teams named like the side,
+  the source spellings of that name, and the edition memberships the wrong club holds only through these matches.
+  The match keeps its id, its provider keys, its status, scores and everything hanging from it. Each moved side is
+  recorded once in `core.team_side_corrections` (156: the collection role may only add to it).
+- A correction is idempotent: a side already on the club that played is left and counted done. A match whose stored row
+  differs from the reviewed preimage (another day, opponent, score or name, or a side on a third club) is held: nothing
+  of it moves, the others go on. A correction whose clubs the base does not hold does nothing.
+- Nothing else of the wrong club moves: its other matches, its keys, its names, its Elo before and after.
+- The Open Matchday restoration (`open_matchday_restore.py`) counts `core.team_side_corrections` among the match
+  dependencies created after its captures (checked empty for its 35 ids) and accepts 156 as its reviewed latest schema.
+- The Elo is not rewritten by the correction. The next daily Elo (`power.refresh_elo`, run once per pass when any season
+  is due, i.e. every UTC day) reads the corrected sides.
+- A result a federation decided without the match being played (forfeit, administrative qualification) keeps its stored
+  status and score (the table, the cup's page), and is never a played match for the Elo, hence for the forecasts fitted
+  on Elo (`forecast.FITTED` joins `agg.team_elo`). Its source says so (`awarded`, kept out by `status = 'finished'`), or a
+  reviewed decision names its provider key and its authority (`power.ADMINISTRATIVE`). No rule is drawn from a score.
+- A SportScore spelling (`source_spelling`, source `sportscore`) is evidence for SportScore's table of the edition it was
+  read in. It names no club for UEFA's linking (`uefa._candidates`, `reconcile_teams`), whose clubs are identified by
+  country and their own spellings; the identity pass already ignores every source spelling.
+
+### 39.2 Failure modes and expected outcomes
+
+| # | Situation | Expected | Before the corrections |
+|---|---|---|---|
+| 39a | `club_aliases` on two clubs named « Barcelona » (ECU, ESP), the Spanish one holding `fcbarcelona` as a UEFA source spelling | the alias on 740 only (kind `alias`), none on 707 | red: alias on 707, 740 keeps a source spelling |
+| 39b | A fresh base: club_aliases, a Copa del Rey 2024/25 OpenFootball edition naming « FC Barcelona », a European archive team « FC Barcelona », then the identity pass (vega_collect) | both source teams merge into 740; their matches and keys are 740's; 707 keeps its LigaPro and Libertadores matches | red: both merge into 707 |
+| 39c | A base in production's state (15 sides, 2 keys, 2 pointers and the alias on 707; events and statistics on two of the matches), identity pass | 15 sides, their events/statistics, both keys, both pointers on 740; alias gone from 707; 15 rows in `core.team_side_corrections`; 707's own matches, keys and names unchanged; match ids, provider keys and scores unchanged | red: nothing moves |
+| 39d | The pass again | nothing changes; still 15 records | red (39c) |
+| 39e | The Copa del Rey edition read again, and `Loader.team('FC Barcelona', 'Europe')` | same match ids, sides on 740, no new team | red: 707 |
+| 39f | One match's stored score differs from the preimage | that match held (still on 707, not recorded), the 14 others moved | red (39c) |
+| 39g | The Elo's admitted rows after the pass | the six cup matches admitted with 740 against the same opponents; the nine archive matches not admitted (archive editions); 707's league match unchanged | red: 707 |
+| 39h | Tours–Lorient stored `finished` 0–3 under its reviewed key (production on 19 Nov), and stored `awarded` 0–3 | not an Elo match in either state; the cup read keeps 0–3 | red for `finished`: admitted |
+| 39i | Seraing U21–Beerschot U21 (open-matchday, 0–5, forfeit: voetbalvlaanderen match 7631244), stored `finished` | kept `finished` 0–5 and counted by `core.table_results`; not an Elo match | red: admitted |
+| 39j | A UEFA row « Andorra CF » (ESP) while FC Andorra (845) holds « Andorra CF » as a SportScore spelling | a new UEFA team: 845 is not linked | red: linked to 845 |
+| 39k | SportScore's own linking of a table naming « Andorra CF » in FC Andorra's edition, and the 838 spellings of the 18 November register in their editions | linked as before | green on arrival (no change there) |
+
+Recorded, not corrected here:
+- 33 CONCACAF Champions League 2008/09 matches stored in edition 3333 (`g:champions-league`, « Ligue des champions »,
+  Europe), still served so on 19 Nov (`/api/read/archive?season=2008/2009&competition=g:champions-league`). The worldclub
+  goals file names the CONCACAF competition with UEFA's slug. `archives.QUARANTINE` (main) holds the 33 keys: never
+  rewritten, never removed. Their move needs a reviewed CONCACAF edition, archive plan territory (VI-27).
+- J1 (`l_2ApGa4`) and the Saudi women's league (`l_1SGwQT`) are out of scope (`scope.REMOVED`).
