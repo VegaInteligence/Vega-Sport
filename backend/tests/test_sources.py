@@ -13,10 +13,11 @@ from urllib.parse import parse_qs, urlparse
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from vega import sources
-from vega.sources import SourceError, cups, curated, fifa, honours, market_value_snapshot, normalize, player_fact_snapshot, player_facts, sportscore, uefa, wikidata, worldcup
+from vega.sources import SourceError, cups, curated, fifa, footballdata, honours, market_value_snapshot, normalize, player_fact_snapshot, player_facts, sportscore, uefa, wikidata, worldcup
 sys.path.insert(0, str(ROOT / "tests"))
 from cup_samples import SAMPLES
 import worldcup_samples
+import footballdata_samples
 
 try:
     import psycopg
@@ -228,6 +229,146 @@ class PureTest(unittest.TestCase):
         ]
         self.assertEqual(worldcup.pair(source, base), {"M-1974-38": 11, "M-1974-01": 12, "M-1990-09": 13, "M-2014-40": 14, "M-2014-10": 15, "M-1934-12": 16, "M-1934-13": 17})
         self.assertEqual(worldcup.pair(source, []), {})
+
+    # football-data.co.uk's season files (vega/sources/footballdata.py; the user's choice of 19 November 2026, told
+    # that the site's terms ask for private, non-automated use). Failure modes and expected outcomes, written before
+    # the reader:
+    # - a file differs from its pin, or one is missing: nothing is written (SOURCE_CHANGED);
+    # - files in Latin-1 or UTF-8 with a byte-order mark read the same names; blank lines, trailing empty header
+    #   columns and values past the header are no data; a row shorter than the header lacks the values it does not
+    #   reach;
+    # - a statistic or an odd the file does not give is absent (None), never 0; an odd of 1 or less, or a triple
+    #   with a missing price, is no odd;
+    # - the market average and maximum come from Oddsportal's columns (Avg, Max) when a file has them, else from
+    #   Betbrain's (BbAv, BbMx);
+    # - a row without a score, a date outside its season (July to August of the year after), a division other than
+    #   its file's, the same fixture twice in a file: the file is incoherent, nothing is written (INVALID_SOURCE);
+    # - a row pairs with the archived match of its country and season played by the two teams its names stand for,
+    #   home and away as written, within three days; a name stands for the team found on its side among the
+    #   same-score archived matches of a day apart in at least MIN_SHARE of its rows (and MIN_VOTES), more than any
+    #   other team, one name per team; the reverse fixture, two candidates, a name without enough rows: no pair,
+    #   never a guess.
+    def test_football_data_files_are_the_pinned_ones(self):
+        files = footballdata_samples.files()
+        pins = footballdata_samples.digests(files)
+        digest = footballdata.verify(files, pins)
+        self.assertRegex(digest, "^[0-9a-f]{64}$")
+        self.assertEqual(footballdata.verify(dict(reversed(list(files.items()))), pins), digest)
+        with self.assertRaisesRegex(SourceError, "SOURCE_CHANGED"):
+            footballdata.verify(dict(files, **{"F1/1011": files["F1/1011"] + b"F1,"}), pins)
+        with self.assertRaisesRegex(SourceError, "SOURCE_CHANGED"):
+            footballdata.verify({k: v for k, v in files.items() if k != "N1/1011"}, pins)
+        # The pinned files: the top division of the seven leagues and the second (third and fourth in England), from
+        # 2000/01 to 2020/21, the last season before PitchAPI's.
+        self.assertEqual(len(footballdata.FILES), 14 * 21)
+        self.assertEqual({k.split("/")[0] for k in footballdata.FILES}, set(footballdata.DIVISIONS))
+        self.assertEqual({k.split("/")[1] for k in footballdata.FILES}, {f"{y % 100:02d}{(y + 1) % 100:02d}" for y in range(2000, 2021)})
+        self.assertTrue(all(re.fullmatch("[0-9a-f]{64}", v) for v in footballdata.FILES.values()))
+        self.assertEqual(footballdata.url("F1/1011"), "https://football-data.co.uk/mmz4281/1011/F1.csv")
+        self.assertEqual(footballdata.DIVISIONS["F1"], ("France", 1))
+        # The read view names each division's country and level as the reader does.
+        view = (ROOT / "sql/140_football_data.sql").read_text()
+        self.assertEqual({d: (c, int(n)) for d, c, n in re.findall(r"\('([A-Z0-9]+)', '([^']+)', (\d)\)", view)}, footballdata.DIVISIONS)
+
+    def test_football_data_rows_are_typed(self):
+        rows = {(r["file_key"], r["row_number"]): r for r in footballdata.typed(footballdata_samples.files())}
+        self.assertEqual(sorted(rows), [("F1/1011", 2), ("F1/1011", 3), ("F1/1011", 4), ("F1/1112", 2), ("F1/1112", 3), ("N1/1011", 2), ("N1/1011", 3)])
+        lyon = rows[("F1/1011", 2)]
+        self.assertEqual({k: lyon[k] for k in ("division", "season_id", "match_date", "kickoff_time", "home_name", "away_name", "home_goals",
+                                               "away_goals", "ht_home_goals", "ht_away_goals", "referee")},
+                         {"division": "F1", "season_id": 2010, "match_date": date(2010, 8, 7), "kickoff_time": None, "home_name": "Lyon",
+                          "away_name": "Monaco", "home_goals": 0, "away_goals": 0, "ht_home_goals": 0, "ht_away_goals": 0, "referee": None})
+        self.assertEqual([lyon[f"{side}_{k}"] for k in ("shots", "shots_on_target", "fouls", "corners", "yellow_cards", "red_cards") for side in ("home", "away")],
+                         [14, 9, 5, 2, 12, 15, 8, 3, 1, 2, 0, 0])
+        self.assertEqual([lyon[f"{side}_{k}"] for k in ("woodwork", "offsides", "booking_points", "free_kicks_conceded") for side in ("home", "away")], [None] * 8)
+        self.assertEqual([lyon[f"b365_{k}"] for k in ("home", "draw", "away")], [1.5, 4.0, 6.5])
+        self.assertEqual([lyon[f"market_average_{k}"] for k in ("home", "draw", "away")], [1.5, 3.9, 6.2])
+        self.assertEqual([lyon[f"market_maximum_{k}"] for k in ("home", "draw", "away")], [1.55, 4.2, 7.0])
+        self.assertEqual([lyon[f"{b}_{k}"] for b in ("b365_closing", "pinnacle", "pinnacle_closing") for k in ("home", "draw", "away")], [None] * 9)
+        # The values past the header are not read; a match without statistics has none, never zeros.
+        self.assertEqual(rows[("F1/1011", 3)]["home_name"], "Paris SG")
+        monaco = rows[("F1/1011", 4)]
+        self.assertEqual([monaco[f"home_{k}"] for k in ("shots", "shots_on_target", "fouls", "corners", "yellow_cards", "red_cards")], [None] * 6)
+        self.assertEqual([monaco[f"b365_{k}"] for k in ("home", "draw", "away")], [None] * 3)  # an odd of 1 or less is no odd
+        # Four-digit years, a kick-off time, a referee; Pinnacle's prices and closing prices; Oddsportal's market over Betbrain's.
+        later = rows[("F1/1112", 2)]
+        self.assertEqual((later["match_date"], later["kickoff_time"], later["referee"]), (date(2011, 8, 6), time(20, 0), "A Bonnet"))
+        self.assertEqual([later[f"pinnacle_{k}"] for k in ("home", "draw", "away")], [3.1, 3.3, 2.4])
+        self.assertEqual([later[f"pinnacle_closing_{k}"] for k in ("home", "draw", "away")], [3.0, 3.4, 2.45])
+        self.assertEqual([later[f"market_average_{k}"] for k in ("home", "draw", "away")], [3.0, 3.25, 2.35])
+        self.assertEqual([later[f"market_maximum_{k}"] for k in ("home", "draw", "away")], [3.2, 3.4, 2.5])
+        self.assertEqual((later["home_fouls"], later["home_corners"]), (None, 4))
+        short = rows[("F1/1112", 3)]
+        self.assertEqual((short["home_goals"], short["away_goals"], short["ht_home_goals"], short["referee"], short["home_shots"], short["pinnacle_home"]),
+                         (0, 1, 0, None, None, None))
+        # Latin-1 and the byte-order mark read the same characters.
+        self.assertEqual(rows[("N1/1011", 2)]["home_name"], "Héracles")
+        self.assertEqual(rows[("F1/1112", 2)]["division"], "F1")
+        self.assertEqual(rows[("N1/1011", 3)]["home_shots"], None)
+
+    def test_football_data_incoherent_files_are_refused(self):
+        base = footballdata_samples.TEXTS
+        broken = {
+            "no score": base["F1/1011"].replace("Lyon,Monaco,0,0", "Lyon,Monaco,,0"),
+            "outside its season": base["F1/1011"].replace("07/08/10", "07/08/12"),
+            "another division": base["F1/1011"].replace("F1,07/08/10", "F2,07/08/10"),
+            "a fixture twice": base["F1/1011"].replace("Monaco,Paris SG", "Lyon,Monaco"),
+            "no date": base["F1/1011"].replace("07/08/10", "7 Aug"),
+            "no home team": base["F1/1011"].replace("Lyon,Monaco", ",Monaco"),
+        }
+        for case, text in broken.items():
+            with self.subTest(case), self.assertRaisesRegex(SourceError, "INVALID_SOURCE"):
+                footballdata.typed(footballdata_samples.files(dict(base, **{"F1/1011": text})))
+        # A statistic the file mistypes (145 fouls in 2. Bundesliga 2001/02, 9 red cards in Segunda 2020/21, « NA » for
+        # an attendance in 2000/01) is absent, not a reason to drop the file: the score is what the row must have.
+        typo = base["F1/1011"].replace("Lyon,Monaco,0,0,D,0,0,D,14,9,5,2,12,15", "Lyon,Monaco,0,0,D,0,0,D,14,9,5,2,145,NA")
+        lyon = next(r for r in footballdata.typed(footballdata_samples.files(dict(base, **{"F1/1011": typo}))) if r["home_name"] == "Lyon")
+        self.assertEqual((lyon["home_shots"], lyon["home_fouls"], lyon["away_fouls"]), (14, None, None))
+        # One half-time value alone, or one above the final score, is no half-time score (the table's CHECK).
+        lone = base["F1/1011"].replace("Lyon,Monaco,0,0,D,0,0,D", "Lyon,Monaco,0,0,D,1,,D")
+        lyon = next(r for r in footballdata.typed(footballdata_samples.files(dict(base, **{"F1/1011": lone}))) if r["home_name"] == "Lyon")
+        self.assertEqual((lyon["ht_home_goals"], lyon["ht_away_goals"]), (None, None))
+        # A season that ends in August (2019/20, played on after the spring of 2020) is its season.
+        late = base["F1/1011"].replace("14/08/10", "02/08/11")
+        self.assertEqual(len(footballdata.typed(footballdata_samples.files(dict(base, **{"F1/1011": late})))), 7)
+
+    def test_football_data_rows_pair_with_the_archive(self):
+        # A league of four clubs in two rounds, as football-data names them (A–D) and as the archive holds them (10–13).
+        names, teams = ["A", "B", "C", "D"], [10, 11, 12, 13]
+        fixtures = [(h, a) for h in range(4) for a in range(4) if h != a]
+        start = date(2010, 8, 7)
+        source, base = [], []
+        for n, (h, a) in enumerate(fixtures):
+            day = start + timedelta(days=7 * n)
+            source.append((f"F1/1011:{n + 2}", 2010, "France", day, names[h], names[a], n % 3, 1))
+            base.append((100 + n, 2010, "France", day, teams[h], teams[a], n % 3, 1))
+        # The archive moved a postponed match by two days; another has a score of its own (football-data's stands).
+        base[3] = (103, 2010, "France", base[3][3] + timedelta(days=2), *base[3][4:])
+        base[5] = (105, 2010, "France", base[5][3], base[5][4], base[5][5], 4, 4)
+        # A cup match of the same two clubs, weeks away from their league matches; another country's league on the
+        # same days, with the same scores.
+        base.append((200, 2010, "France", start + timedelta(days=200), 10, 11, 0, 1))
+        base += [(300 + n, 2010, "Espagne", d, t + 10, u + 10, hg, ag) for n, (_, _, _, d, t, u, hg, ag) in enumerate(base[:12])]
+        found = footballdata.pair(source, base)
+        self.assertEqual(found, {f"F1/1011:{n + 2}": 100 + n for n in range(12)})
+        # A Saturday of four divisions and the cups: five other matches of the country on each day, with the same score
+        # (England, 2000–2020: split into fractions, a club's votes fell under half and almost nothing paired).
+        crowded = base + [(400 + 10 * n + k, 2010, "France", d, 20 + 2 * k + n % 2, 30 + 2 * k, hg, ag)
+                          for n, (_, _, _, d, _, _, hg, ag) in enumerate(base[:12]) for k in range(5)]
+        self.assertEqual(footballdata.pair(source, crowded), {f"F1/1011:{n + 2}": 100 + n for n in range(12)})
+        # A fixture the archive does not hold; the archive's copy of a match (two candidates); a club with too few
+        # rows to be known; the reverse fixture is never a pair.
+        extra = [("F1/1011:20", 2010, "France", start + timedelta(days=300), "A", "B", 1, 1),
+                 ("F1/1011:21", 2010, "France", start + timedelta(days=301), "E", "A", 1, 0)]
+        copy = (199, 2010, "France", base[0][3], *base[0][4:])
+        found = footballdata.pair(source + extra, base + [copy])
+        self.assertNotIn("F1/1011:2", found)
+        self.assertNotIn("F1/1011:20", found)
+        self.assertNotIn("F1/1011:21", found)
+        self.assertEqual(len(found), 11)
+        swapped = [(k, s, c, d, a, h, hg, ag) for k, s, c, d, h, a, hg, ag in source[:1]]
+        self.assertEqual(footballdata.pair(swapped + source[1:], [b for b in base if b[0] != 100 + fixtures.index((1, 0))]).get("F1/1011:2"), None)
+        self.assertEqual(footballdata.pair(source, []), {})
 
     def test_curated_aliases_match_the_site(self):
         # dashboard/shared/player-aliases.js: `const ALIASES = Object.freeze({ key: Object.freeze([...]) })`.
@@ -904,6 +1045,144 @@ class UefaTest(unittest.TestCase):
                 self.assertEqual(x(pairs).fetchall(), [("M-1974-01", "USA", "Sweden"), ("M-1974-38", "West Germany", "Netherlands"), ("M-1991-01", None, None)])
             finally:
                 worldcup.FILES, worldcup.COMMIT = pins, commit
+
+    def test_football_data_is_loaded_and_paired_with_the_archive(self):
+        # football-data.co.uk's season files in the base (vega/sources/footballdata.py). Failure modes, written before
+        # the reader ever ran on a base:
+        # - its rows are its own (core.footballdata_matches): the base's matches, teams and statistics do not change;
+        # - each row pairs with the archived match of its country and season between the teams its names stand for;
+        # - the collect role alone does it all (the rows, the pairs, the credit);
+        # - a later run reads no file; an archive that replaces a match clears its pair, the next run pairs the new one;
+        # - a file that is not the pinned one changes nothing (SOURCE_CHANGED).
+        from vega.store import Store
+
+        x = self.db.execute
+
+        class Files:
+            def __init__(self, files):
+                self.files, self.calls = files, []
+
+            def __call__(self, url, *, as_text=False, as_bytes=False):
+                self.calls.append(url)
+                if not as_bytes:
+                    raise AssertionError("the files are read as bytes: their digest is the bytes'")
+                found = re.fullmatch(r"https://football-data\.co\.uk/mmz4281/(\d{4})/([A-Z0-9]+)\.csv", url)
+                return self.files[f"{found[2]}/{found[1]}"]
+
+        run = "SELECT rows_written, unmatched, status, error_code FROM ops.source_runs WHERE source='football_data' AND scope='history'"
+        pairs = """SELECT f.file_key, f.row_number, m.home_team_name, m.away_team_name FROM core.footballdata_matches f
+                   LEFT JOIN core.matches m ON m.id = f.match_id ORDER BY 1, 2"""
+        files = footballdata_samples.files()
+        pins, votes = footballdata.FILES, footballdata.MIN_VOTES
+        with self.db.transaction(force_rollback=True):
+            try:
+                footballdata.FILES, footballdata.MIN_VOTES = footballdata_samples.digests(files), 1
+                for label in ("2010/2011", "2011/2012"):
+                    Store(self.db).season(label)
+                x("INSERT INTO core.teams(id, name) VALUES (9101, 'Olympique Lyonnais'), (9102, 'AS Monaco'), (9103, 'Paris Saint-Germain'), (9104, 'AS Saint-Étienne')")
+                x("INSERT INTO core.competitions(id, name) VALUES (9100, 'French Ligue 1')")
+                x("""INSERT INTO core.competition_seasons(id, competition_id, season_id, native_label, archive_key, archive_name, archive_country)
+                     VALUES (9110, 9100, 2010, '2010/2011', 'engsoccerdata/france/all/2010', 'Championnat de France', 'France'),
+                            (9111, 9100, 2011, '2011/2012', 'engsoccerdata/france/all/2011', 'Championnat de France', 'France')""")
+                archived = [(9110, 2010, "2010-08-07", 9101, 9102, 0, 0, "f:1"), (9110, 2010, "2010-08-08", 9103, 9104, 3, 1, "f:2"),
+                            (9110, 2010, "2010-08-14", 9102, 9103, 2, 2, "f:3"), (9111, 2011, "2011-08-06", 9102, 9101, 1, 2, "f:4"),
+                            (9111, 2011, "2011-08-07", 9104, 9103, 0, 1, "f:5")]
+                names = {9101: "Olympique Lyonnais", 9102: "AS Monaco", 9103: "Paris Saint-Germain", 9104: "AS Saint-Étienne"}
+                for edition, season, day, home, away, hg, ag, key in archived:
+                    x("""INSERT INTO core.matches(competition_season_id, season_id, match_date, status, home_team_id, away_team_id, home_score, away_score,
+                         source, archive_key, home_team_name, away_team_name) VALUES (%s,%s,%s,'finished',%s,%s,%s,%s,'engsoccerdata',%s,%s,%s)""",
+                      (edition, season, day, home, away, hg, ag, key, names[home], names[away]))
+                before = x("SELECT (SELECT count(*) FROM core.matches), (SELECT count(*) FROM core.teams), (SELECT count(*) FROM core.team_match_stats)").fetchone()
+                get = Files(files)
+                x("SET LOCAL ROLE vega_collect")
+                done = sources.run_due(self.db, get, NOW, names={"football_data"})
+                x("RESET ROLE")
+                self.assertEqual(done, {("football_data", "history"): "ok"})
+                self.assertEqual(sorted(get.calls), sorted(footballdata.url(k) for k in files))
+                # Seven rows; the two Eredivisie rows have no archived match.
+                self.assertEqual(x(run).fetchone(), (7, 2, "ok", None))
+                self.assertEqual(x(pairs).fetchall(), [
+                    ("F1/1011", 2, "Olympique Lyonnais", "AS Monaco"), ("F1/1011", 3, "Paris Saint-Germain", "AS Saint-Étienne"),
+                    ("F1/1011", 4, "AS Monaco", "Paris Saint-Germain"), ("F1/1112", 2, "AS Monaco", "Olympique Lyonnais"),
+                    ("F1/1112", 3, "AS Saint-Étienne", "Paris Saint-Germain"), ("N1/1011", 2, None, None), ("N1/1011", 3, None, None)])
+                self.assertEqual(x("SELECT (SELECT count(*) FROM core.matches), (SELECT count(*) FROM core.teams), (SELECT count(*) FROM core.team_match_stats)").fetchone(), before)
+                self.assertEqual(x("""SELECT home_shots, away_shots, referee, pinnacle_closing_home FROM core.footballdata_matches
+                                      WHERE file_key='F1/1112' AND row_number=2""").fetchone(), (10, 13, "A Bonnet", 3.0))
+                self.assertEqual(x("SELECT home_name FROM core.footballdata_matches WHERE file_key='N1/1011' AND row_number=2").fetchone(), ("Héracles",))
+                # The credit: the site, its terms as it states them, the digest of the files read.
+                name, url, terms, revision, digest, coverage = x(
+                    "SELECT name, url, license, revision, archive_sha256, coverage FROM core.source_revisions WHERE source='football-data-co-uk'").fetchone()
+                self.assertEqual((name, url), ("Football-Data", "https://www.football-data.co.uk"))
+                self.assertIn("private individuals", terms)
+                self.assertEqual(digest, footballdata.verify(files, footballdata.FILES))
+                self.assertEqual(revision, digest[:16])
+                self.assertIn("2000/01", coverage)
+                # A later run reads no file.
+                get = Files({})
+                self.assertEqual(sources.run_due(self.db, get, NOW + timedelta(days=8), names={"football_data"}), {("football_data", "history"): "ok"})
+                self.assertEqual((get.calls, x(run).fetchone()), ([], (0, 2, "ok", None)))
+                # The archive replaces Lyon–Monaco (its key changes): the pair is cleared, the next run pairs the new match.
+                old = x("SELECT match_id FROM core.footballdata_matches WHERE file_key='F1/1011' AND row_number=2").fetchone()[0]
+                x("SET LOCAL ROLE vega_collect")
+                x("DELETE FROM core.matches WHERE id=%s", (old,))
+                x("""INSERT INTO core.matches(competition_season_id, season_id, match_date, status, home_team_id, away_team_id, home_score, away_score,
+                     source, archive_key, home_team_name, away_team_name) VALUES (9110, 2010, '2010-08-07', 'finished', 9101, 9102, 0, 0, 'engsoccerdata', 'f:1b',
+                     'Olympique Lyonnais', 'AS Monaco')""")
+                x("RESET ROLE")
+                self.assertEqual(x("SELECT match_id FROM core.footballdata_matches WHERE file_key='F1/1011' AND row_number=2").fetchone(), (None,))
+                self.assertEqual(sources.run_due(self.db, get, NOW + timedelta(days=16), names={"football_data"}), {("football_data", "history"): "ok"})
+                new = x("SELECT match_id FROM core.footballdata_matches WHERE file_key='F1/1011' AND row_number=2").fetchone()[0]
+                self.assertTrue(new is not None and new != old)
+                # A file that is not the pinned one: nothing changes.
+                x("UPDATE core.source_revisions SET revision='0' WHERE source='football-data-co-uk'")
+                changed = Files(dict(files, **{"F1/1011": files["F1/1011"].replace(b"Lyon,Monaco,0,0", b"Lyon,Monaco,1,0")}))
+                self.assertEqual(sources.run_due(self.db, changed, NOW + timedelta(days=24), names={"football_data"}), {("football_data", "history"): "SOURCE_CHANGED"})
+                self.assertEqual(x("SELECT count(*), count(match_id) FROM core.footballdata_matches").fetchone(), (7, 5))
+            finally:
+                footballdata.FILES, footballdata.MIN_VOTES = pins, votes
+
+    def test_football_data_files_are_read_outside_a_transaction(self):
+        # Production ends a session left idle in a transaction for 60 s (infra/aws/database.yaml); the 294 files take
+        # 150 s or more at the source client's interval. Read inside the scope's transaction, the first run lost its
+        # connection, recorded nothing and came back at every restart (found in review, 19 Nov 2026). Here the limit
+        # is half a second and each file takes 0.2 s: the files must be read with no transaction open, then written.
+        import time as clock
+        from vega.store import connect_local
+
+        db = connect_local(DSN)
+        files = footballdata_samples.files()
+        pins = footballdata.FILES
+        states = []
+
+        def slow(url, *, as_text=False, as_bytes=False):
+            states.append(db.info.transaction_status)
+            clock.sleep(0.2)
+            found = re.fullmatch(r"https://football-data\.co\.uk/mmz4281/(\d{4})/([A-Z0-9]+)\.csv", url)
+            return files[f"{found[2]}/{found[1]}"]
+
+        try:
+            footballdata.FILES = footballdata_samples.digests(files)
+            db.execute("SET idle_in_transaction_session_timeout = '500ms'")
+            db.execute("SET ROLE vega_collect")
+            self.assertEqual(sources.run_due(db, slow, NOW, names={"football_data"}), {("football_data", "history"): "ok"})
+            db.execute("RESET ROLE")
+            self.assertEqual(set(states), {psycopg.pq.TransactionStatus.IDLE})
+            self.assertEqual(len(states), 3)
+            self.assertEqual(db.execute("SELECT count(*) FROM core.footballdata_matches").fetchone(), (7,))
+            # A file that differs stops the reading at that file: the others are not fetched for nothing.
+            db.execute("UPDATE core.source_revisions SET revision = '0' WHERE source = 'football-data-co-uk'")
+            files["F1/1011"] += b"F1,"
+            states.clear()
+            self.assertEqual(sources.run_due(db, slow, NOW + timedelta(days=8), names={"football_data"}), {("football_data", "history"): "SOURCE_CHANGED"})
+            self.assertEqual(len(states), 1)
+            self.assertEqual(db.execute("SELECT count(*) FROM core.footballdata_matches").fetchone(), (7,))
+        finally:
+            footballdata.FILES = pins
+            db.execute("RESET ROLE")
+            db.execute("DELETE FROM core.footballdata_matches")
+            db.execute("DELETE FROM core.source_revisions WHERE source = 'football-data-co-uk'")
+            db.execute("DELETE FROM ops.source_runs WHERE source = 'football_data'")
+            db.close()
 
     def test_player_honours(self):
         from vega.store import Store
