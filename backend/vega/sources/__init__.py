@@ -1,7 +1,8 @@
 """Adapters of the sources other than PitchAPI: call -> validate -> match -> write.
 
 Each adapter exposes SCOPES (scope -> period) and run(conn, get, scope, now) returning
-(rows_written, unmatched). `due` and `run_due` schedule them from ops.source_runs;
+(rows_written, unmatched); one that reads for long also has prepare(conn, get, scope, now), called
+with no transaction open, whose result run receives as `prepared`. `due` and `run_due` schedule them from ops.source_runs;
 the worker calls run_due once a day. Responses are processed in memory, never stored.
 """
 
@@ -21,7 +22,7 @@ def normalize(name):
 
 
 def adapters():
-    from . import cups, curated, fifa, honours, odds, open_matchday, sportscore, uefa, wikidata, worldcup
+    from . import cups, curated, fifa, footballdata, honours, odds, open_matchday, sportscore, uefa, wikidata, worldcup
 
     # Keys are core.provider values (ops.source_runs.source). Curated names first: the
     # UEFA links read the reviewed aliases.
@@ -33,7 +34,10 @@ def adapters():
             "oddsapi": odds,
             # The World Cups' line-ups, scorers, referees and stadiums (the Fjelstul World Cup Database). After the cup
             # editions: its matches pair with the archived ones.
-            "fjelstul": worldcup}
+            "fjelstul": worldcup,
+            # The archived league seasons' half-time scores, statistics and prices (football-data.co.uk). Its matches
+            # pair with the archived ones, which the archive task loads.
+            "football_data": footballdata}
 
 
 # A failed scope is tried again after this delay (or its period, if shorter), not at every round.
@@ -72,9 +76,12 @@ def run_due(conn, get, now=None, *, names=None):
         for scope in due(conn, instant, name, adapter):
             code, written, unmatched = None, 0, 0
             try:
+                # An adapter that reads for long (football-data.co.uk's 294 files) reads before its transaction: the
+                # base ends a session left idle in a transaction for 60 s (infra/aws/database.yaml).
+                extra = {"prepared": adapter.prepare(conn, get, scope, instant)} if hasattr(adapter, "prepare") else {}
                 with conn.transaction():
                     conn.execute(f"SET LOCAL lock_timeout = '{LOCK_WAIT}'")
-                    written, unmatched = adapter.run(conn, get, scope, instant)
+                    written, unmatched = adapter.run(conn, get, scope, instant, **extra)
             except (SourceError, StoreError, ValueError, KeyError, TypeError, psycopg.Error) as error:
                 # The scope's writes are rolled back; the other scopes still run.
                 code = (
