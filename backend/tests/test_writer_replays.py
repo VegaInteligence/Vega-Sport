@@ -1,5 +1,6 @@
 """The writers still active, replayed end to end: repetition, partial answers, authority (FAILURE_MODES.md §40,
-written before these tests; audit E02c, E02d, E03h).
+written before these tests; audit E02c, E02d, E03h). The rules of the corrections and their further cases are §44
+(44a–44t), written before the cases added here.
 
 Each replay calls the real writer through its real entry point on a disposable local PostgreSQL
 (VEGA_V2_WRITER_REPLAYS_TEST_DSN, database vega_v2_writer_replays_test), on a connection under the collection role
@@ -17,6 +18,8 @@ from datetime import date, datetime, timedelta, timezone
 import json
 import os
 from pathlib import Path
+import shutil
+import subprocess
 import sys
 import unittest
 from urllib.parse import parse_qs, urlparse
@@ -37,6 +40,8 @@ except ImportError:
 DSN = os.environ.get("VEGA_V2_WRITER_REPLAYS_TEST_DSN")
 STRICT = os.environ.get("WRITER_REPLAY_STRICT", "").strip().lower() in ("1", "true")
 EVIDENCE = os.environ.get("WRITER_REPLAY_EVIDENCE")
+NODE = shutil.which("node")
+HTTP_READY = bool(NODE) and (ROOT / "api" / "node_modules" / "pg").is_dir()
 NOW = datetime(2026, 11, 19, 8, tzinfo=timezone.utc)
 
 
@@ -138,7 +143,7 @@ class WriterReplay(unittest.TestCase):
                                             (list(drop), *(params or ()))).fetchall())
 
     def note(self, step, **state):
-        plain = lambda v: {":".join(k) if isinstance(k, tuple) else k: plain(x) for k, x in v.items()} if isinstance(v, dict) else v
+        plain = lambda v: {":".join(map(str, k)) if isinstance(k, tuple) else str(k): plain(x) for k, x in v.items()} if isinstance(v, dict) else v
         self.observed[step] = plain(state)
 
 
@@ -191,19 +196,35 @@ class TransfermarktReplayTest(WriterReplay):
     def test_40b_an_empty_value_history_keeps_the_points(self):
         accepted = self.accepted_values()
         outcome = self.read("values", "342229", self.VALUES_PATH, {"history": []})
-        self.note("40b", outcome=outcome, before=accepted, after=self.values(), unit=self.unit("values", "342229"))
+        unit = self.unit("values", "342229")
+        self.note("40b", outcome=outcome, before=accepted, after=self.values(), unit=unit)
         self.assertEqual(self.values(), accepted)
+        # 44a: refused and traced, due again within a day; the last accepted read's count kept.
+        self.assertEqual((outcome, unit), ("failed", {"error_code": "HISTORY_EMPTY", "status": 200, "due_within_a_day": True, "rows_written": 2}))
 
-    @defect("write_values deletes every Transfermarkt point of the player absent from a valid, non-empty history "
-            "(transfermarkt.py, DELETE … NOT (valued_at = ANY(days))): an omission is taken for a removal, without trace. "
-            "Owner: VI-21 (Transfermarkt values, outside VI-31).")
     def test_40c_a_truncated_value_history_keeps_the_omitted_point(self):
-        accepted = self.accepted_values()
+        self.accepted_values()
         outcome = self.read("values", "342229", self.VALUES_PATH, {"history": VALUES["history"][1:]})
         unit = self.unit("values", "342229")
-        self.note("40c", outcome=outcome, before=accepted, after=self.values(), unit=unit)
-        refused = outcome != "ok" and unit["error_code"] is not None
-        self.assertTrue(refused or self.values() == accepted, "the omitted point was deleted and the read accepted")
+        marks = self.marks("core.player_market_values", "valued_at")
+        self.note("40c", outcome=outcome, after=self.values(), unit=unit, marks=marks)
+        # 44b: both points kept, the omitted one marked from the day of the read; the read acquitted.
+        today = self.x("SELECT current_date").fetchone()[0]
+        self.assertEqual((outcome, unit["error_code"]), ("ok", None))
+        self.assertEqual(marks, {date(2025, 6, 1): today, date(2026, 9, 15): None})
+        # 44c: listed again, the mark goes; the same history once more writes no row.
+        self.assertEqual(self.read("values", "342229", self.VALUES_PATH, VALUES), "ok")
+        self.assertEqual(self.marks("core.player_market_values", "valued_at"), {date(2025, 6, 1): None, date(2026, 9, 15): None})
+        again = self.values()
+        self.assertEqual(self.read("values", "342229", self.VALUES_PATH, VALUES), "ok")
+        self.assertEqual((self.values(), self.unit("values", "342229")["rows_written"]), (again, 0))
+        # 44d: a value corrected at the source replaces the stored one.
+        corrected = {"history": [value("2025-06-01", 150000000), value("2026-09-15", 175000000)]}
+        self.assertEqual(self.read("values", "342229", self.VALUES_PATH, corrected), "ok")
+        self.assertEqual(self.x("SELECT value_eur FROM core.player_market_values WHERE player_id = 10 AND valued_at = '2026-09-15'").fetchone(), (175000000,))
+
+    def marks(self, table, key, where="player_id = 10"):
+        return dict(self.x(f"SELECT {key}, absent_since FROM {table} WHERE {where}").fetchall())
 
     def test_40d_a_malformed_value_history_keeps_the_points_and_is_traced(self):
         accepted = self.accepted_values()
@@ -235,9 +256,9 @@ class TransfermarktReplayTest(WriterReplay):
         # The ids are recorded, not asserted: no table references core.player_injuries.id.
         self.note("40e", first=accepted, second=self.injuries(), ids_first=first, ids_second=self.ids())
         self.assertEqual(self.injuries(), accepted)
+        self.assertEqual(self.ids(), first)  # 44g: an episode keeps its id
+        self.assertEqual(self.unit("injuries", "342229")["rows_written"], 0)
 
-    @defect("write_injuries deletes the player's Transfermarkt episodes before writing the answer's: a 200 with an empty "
-            "list erases the history and the read is acquitted (error_code NULL). Owner: VI-21 (Transfermarkt injuries).")
     def test_40f_an_empty_injury_list_keeps_the_episodes(self):
         accepted = self.accepted_injuries()
         outcome = self.read("injuries", "342229", self.INJURIES_PATH, {"injuries": []})
@@ -245,20 +266,35 @@ class TransfermarktReplayTest(WriterReplay):
         self.note("40f", outcome=outcome, before=accepted, after=self.injuries(), unit=unit)
         refused = outcome != "ok" and unit["error_code"] is not None
         self.assertTrue(refused or self.injuries() == accepted, "the episodes were erased and the read accepted")
+        # 44f: kept, refused and traced.
+        self.assertEqual((self.injuries(), outcome, unit["error_code"], unit["due_within_a_day"]), (accepted, "failed", "HISTORY_EMPTY", True))
 
-    @defect("write_injuries replaces the whole history by the answer: a valid list without one episode deletes it, "
-            "without trace. Owner: VI-21 (Transfermarkt injuries).")
     def test_40g_a_truncated_injury_list_keeps_the_omitted_episode(self):
         accepted = self.accepted_injuries()
         outcome = self.read("injuries", "342229", self.INJURIES_PATH, {"injuries": INJURIES["injuries"][:1]})
         unit = self.unit("injuries", "342229")
         self.note("40g", outcome=outcome, before=accepted, after=self.injuries(), unit=unit)
-        refused = outcome != "ok" and unit["error_code"] is not None
-        self.assertTrue(refused or self.injuries() == accepted, "the omitted episode was deleted and the read accepted")
+        marks = self.marks("core.player_injuries", "start_date")
+        self.note("40g_marks", marks=marks)
+        # 44g: both kept, the omitted one marked; the read acquitted; listed again, the mark goes and the ids stay.
+        today = self.x("SELECT current_date").fetchone()[0]
+        self.assertEqual((outcome, unit["error_code"]), ("ok", None))
+        self.assertEqual(marks, {date(2025, 3, 1): None, date(2026, 2, 1): today})
+        ids = self.ids()
+        self.assertEqual(self.read("injuries", "342229", self.INJURIES_PATH, INJURIES), "ok")
+        self.assertEqual((self.injuries(), self.ids()), (accepted, ids))
 
-    @defect("a refused injuries read (SCHEMA_CHANGED) keeps the episodes in core.player_injuries but sets error_code on the "
-            "unit, and api.player_injury_reads (116) requires error_code IS NULL: the player leaves the view and the route "
-            "answers 404 although his accepted history is stored. Owner: VI-21 (Transfermarkt injuries, read API).")
+    def test_44h_an_episode_completed_or_relabelled_is_updated_in_place(self):
+        ongoing = {"injuries": [injury("2025-03-01", "2025-03-20"), injury("2026-02-01", None, "Knee injury", 0)]}
+        self.assertEqual(self.read("injuries", "342229", self.INJURIES_PATH, ongoing), "ok")
+        ids = self.ids()
+        corrected = {"injuries": [injury("2025-03-01", "2025-03-20", "Hamstring strain"), injury("2026-02-01", "2026-02-10", "Knee injury", 2)]}
+        self.assertEqual(self.read("injuries", "342229", self.INJURIES_PATH, corrected), "ok")
+        rows = self.x("""SELECT id, label, end_date, matches_missed, absent_since FROM core.player_injuries
+                         WHERE player_id = 10 ORDER BY start_date""").fetchall()
+        self.note("44h", ids=ids, rows=rows)
+        self.assertEqual(rows, [(ids[0], "Hamstring strain", date(2025, 3, 20), 3, None), (ids[1], "Knee injury", date(2026, 2, 10), 2, None)])
+
     def test_40h_a_malformed_injury_answer_keeps_the_history_readable(self):
         accepted = self.accepted_injuries()
         outcome = self.read("injuries", "342229", self.INJURIES_PATH, {"injuries": "x"})
@@ -289,8 +325,6 @@ class TransfermarktReplayTest(WriterReplay):
         self.note("40i", first=accepted, second=self.squad())
         self.assertEqual(self.squad(), accepted)
 
-    @defect("write_squad deletes the club/season's members before writing the answer's: a 200 with an empty squad erases "
-            "them (and the profile candidates the planner reads there), acquitted. Owner: VI-21 (Transfermarkt squads).")
     def test_40j_an_empty_squad_keeps_the_members(self):
         accepted = self.accepted_squad()
         outcome = self.read("squad", "583:2026", self.SQUAD_PATH, {"squad": []})
@@ -298,16 +332,45 @@ class TransfermarktReplayTest(WriterReplay):
         self.note("40j", outcome=outcome, before=accepted, after=self.squad(), unit=unit)
         refused = outcome != "ok" and unit["error_code"] is not None
         self.assertTrue(refused or self.squad() == accepted, "the members were erased and the read accepted")
+        # 44j: kept, refused and traced.
+        self.assertEqual((self.squad(), outcome, unit["error_code"], unit["due_within_a_day"]), (accepted, "failed", "SQUAD_EMPTY", True))
 
-    @defect("write_squad replaces the club/season by the answer: a valid squad without one member deletes him, without "
-            "trace. Owner: VI-21 (Transfermarkt squads).")
     def test_40k_a_truncated_squad_keeps_the_omitted_member(self):
-        accepted = self.accepted_squad()
+        # A third member, Achraf Hakimi (player 12, no birth date, no link): the linker would pair him by his name.
+        self.x("INSERT INTO core.provider_players(provider, provider_key, name, read_on) VALUES ('transfermarkt', '340324', 'Achraf Hakimi', current_date)")
+        full = {"squad": SQUAD["squad"] + [member("340324", 2)]}
+        self.assertEqual(self.read("squad", "583:2026", self.SQUAD_PATH, full), "ok")
         outcome = self.read("squad", "583:2026", self.SQUAD_PATH, {"squad": SQUAD["squad"][:1]})
         unit = self.unit("squad", "583:2026")
-        self.note("40k", outcome=outcome, before=accepted, after=self.squad(), unit=unit)
-        refused = outcome != "ok" and unit["error_code"] is not None
-        self.assertTrue(refused or self.squad() == accepted, "the omitted member was deleted and the read accepted")
+        marks = self.marks("core.provider_squads", "player_key", "club_key = '583'")
+        self.note("40k", outcome=outcome, after=self.squad(), unit=unit, marks=marks)
+        # 44k: every member kept, the omitted ones marked; the read acquitted.
+        today = self.x("SELECT current_date").fetchone()[0]
+        self.assertEqual((outcome, unit["error_code"]), ("ok", None))
+        self.assertEqual(marks, {"342229": None, "288230": today, "340324": today})
+        # An absent member is no link candidate (as when the row was deleted).
+        self.assertEqual(self.reader.link_players(), 0)
+        self.assertIsNone(self.x("SELECT entity_id FROM core.provider_ids WHERE provider = 'transfermarkt' AND provider_key = '340324'").fetchone())
+        # Listed again: the marks go; the same squad once more writes nothing.
+        self.assertEqual(self.read("squad", "583:2026", self.SQUAD_PATH, full), "ok")
+        self.assertEqual(set(self.marks("core.provider_squads", "player_key", "club_key = '583'").values()), {None})
+        again = self.squad()
+        self.assertEqual(self.read("squad", "583:2026", self.SQUAD_PATH, full), "ok")
+        self.assertEqual(self.squad(), again)
+        self.assertEqual(self.reader.link_players(), 1)  # present again: the linker pairs him
+
+    def test_44l_a_club_search_keeps_a_member_its_squad_omits(self):
+        self.x("INSERT INTO ops.transfermarkt_reads(kind, provider_key, priority, next_due_at) VALUES ('search', '2', 1, now() - interval '1 minute')")
+        record = lambda key, name: {"id": int(key), "name": name}
+        self.answers.update({"/quick-search": {"result": {"clubIds": ["1041"]}},
+                             "/players": [record("500001", "Corentin Tolisso"), record("500002", "Alexandre Lacazette")]})
+        both = {"squad": [member("500001", 8), member("500002", 10)]}
+        self.assertEqual(self.read("search", "2", "/club/1041/squad", both), "ok")
+        self.assertEqual(self.read("search", "2", "/club/1041/squad", {"squad": both["squad"][:1]}), "ok")
+        marks = self.marks("core.provider_squads", "player_key", "club_key = '1041'")
+        self.note("44l", marks=marks)
+        today = self.x("SELECT current_date").fetchone()[0]
+        self.assertEqual(marks, {"500001": None, "500002": today})
 
     # Clubs ----------------------------------------------------------------------------------------------------------
 
@@ -324,6 +387,75 @@ def uefa_club(ident, name, position, points):
     return {"member": {"id": ident, "displayName": name, "countryCode": "FRA", "logoUrl": f"https://img.uefa.com/imgml/TP/teams/logos/70x70/{ident}.png"},
             "overallRanking": {"position": position, "totalValue": points, "totalPoints": points - 1, "numberOfTeamsStillInPlaying": 1},
             "seasonRankings": [{"seasonYear": 2027, "totalPoints": 9.5, "nationalAssociationPoints": 2.0, "numberOfTeamsStillInPlaying": 1}]}
+
+
+@required(HTTP_READY, "requires node and backend/api/node_modules (npm ci --prefix backend/api)")
+class ServedTransfermarktTest(TransfermarktReplayTest):
+    """44e, 44i: the real routes under vega_read (tests/read_http.mjs) after the reader's writes. The reader's writes are
+    committed here (the route reads on its own connection); tearDown removes them."""
+
+    def setUp(self):
+        # No enclosing rolled-back transaction: the reader's own transactions commit, the route reads them.
+        self.x, self.observed = self.db.execute, {}
+        self.addCleanup(self.clean)
+        self.clean()
+        self.prepare()
+
+    def prepare(self):
+        x = self.x
+        x("""INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id)
+             VALUES ('player', 'transfermarkt', '342229', 10), ('player', 'transfermarkt', '288230', 11), ('team', 'transfermarkt', '583', 1)""")
+        for kind, key in (("values", "342229"), ("injuries", "342229")):
+            x("INSERT INTO ops.transfermarkt_reads(kind, provider_key, priority, next_due_at) VALUES (%s, %s, 1, now() - interval '1 minute')", (kind, key))
+        self.answers = {}
+        x("SET ROLE vega_collect")
+        self.reader = tm.Reader(self.db, self.fetch, interval=0, jitter=0, sleep=lambda s: None, log=lambda *a, **k: None)
+
+    def clean(self):
+        x = self.x
+        x("RESET ROLE")
+        for sql in ("DELETE FROM core.player_market_values", "DELETE FROM core.player_injuries", "DELETE FROM core.provider_players",
+                    "DELETE FROM ops.transfermarkt_reads", "DELETE FROM core.provider_ids WHERE provider = 'transfermarkt'"):
+            x(sql)
+
+    def http(self, path):
+        done = subprocess.run([NODE, str(ROOT / "tests" / "read_http.mjs"), DSN, json.dumps([{"path": path}])],
+                              capture_output=True, text=True, timeout=120)
+        self.assertEqual(done.returncode, 0, done.stderr)
+        return json.loads(done.stdout.strip().splitlines()[-1])[0]
+
+    def public(self):
+        self.x("RESET ROLE")
+        try:
+            return self.x("SELECT api.public_id('player', 10)").fetchone()[0]
+        finally:
+            self.x("SET ROLE vega_collect")
+
+    def test_44e_an_absent_value_point_is_served_with_its_mark(self):
+        self.accepted_values()
+        self.assertEqual(self.read("values", "342229", self.VALUES_PATH, {"history": VALUES["history"][1:]}), "ok")
+        served = self.http(f"/api/player-market-values?id={self.public()}")
+        self.note("44e", served=served)
+        today = self.x("SELECT current_date::text").fetchone()[0]
+        self.assertEqual(served["status"], 200)
+        self.assertEqual([(p["date"], p.get("absentSince")) for p in served["body"]["data"]["history"]],
+                         [("2025-06-01", today), ("2026-09-15", None)])
+
+    def test_44i_a_refused_injury_read_keeps_the_list_served(self):
+        self.accepted_injuries()
+        route = f"/api/players/{self.public()}/injuries"
+        first = self.http(route)
+        self.assertEqual(self.read("injuries", "342229", self.INJURIES_PATH, {"injuries": "x"}), "schema")
+        after = self.http(route)
+        self.note("44i", first=first, after=after)
+        self.assertEqual((first["status"], len(first["body"]["data"]["injuries"])), (200, 2))
+        self.assertEqual((after["status"], after["body"]), (200, first["body"]))
+
+
+
+# The inherited replays run in TransfermarktReplayTest only.
+for _name in [n for n in dir(TransfermarktReplayTest) if n.startswith("test_")]:
+    setattr(ServedTransfermarktTest, _name, None)
 
 
 class RankingReplayTest(WriterReplay):
@@ -363,9 +495,6 @@ class RankingReplayTest(WriterReplay):
                   ranking_versions_after=self.x("SELECT version FROM ops.resource_versions WHERE resource_kind = 'ranking'").fetchall())
         self.assertEqual(self.edition(), accepted)
 
-    @defect("uefa.save deletes and rewrites the edition's rows and increments its resource version at every read, even when "
-            "the pages are identical: a repeat publishes a new version (the European level's cohorts recalculate) for an "
-            "unchanged ranking. Content is idempotent (40m), publication is not. Owner: VI-21 (UEFA coefficients).")
     def test_40x_the_same_uefa_pages_twice_publish_no_new_version(self):
         complete, _ = self.accepted_uefa()
         versions = lambda: self.x("SELECT resource_id, version FROM ops.resource_versions WHERE resource_kind = 'ranking' ORDER BY 1").fetchall()
@@ -374,8 +503,6 @@ class RankingReplayTest(WriterReplay):
         self.note("40x", before=before, after=versions())
         self.assertEqual(versions(), before)
 
-    @defect("uefa.fetch accepts a page whose totalElements is 0 with no member, and uefa.save deletes the edition's rows "
-            "before writing none: the stored coefficients are erased and the scope recorded ok. Owner: VI-21 (UEFA coefficients).")
     def test_40n_an_empty_uefa_edition_keeps_the_stored_rows(self):
         _, accepted = self.accepted_uefa()
         results = sources.run_due(self.db, self.uefa_get([], 0), NOW + timedelta(days=2), names={"uefa"})
@@ -383,10 +510,21 @@ class RankingReplayTest(WriterReplay):
                   run=self.scope_run("uefa", "uefa_clubs:2027"))
         self.assertEqual(self.edition()["rows"], accepted["rows"])
         self.assertNotEqual(results[("uefa", "uefa_clubs:2027")], "ok")
+        self.assertEqual((results[("uefa", "uefa_clubs:2027")], self.scope_run("uefa", "uefa_clubs:2027")[:2]), ("EMPTY_EDITION", ("error", "EMPTY_EDITION")))
 
-    @defect("fifa.run reads an edition once: a stored edition is never read again, so an edition first published or read "
-            "short (one row of three) stays short, and a correction of it at the source is never applied. fifa.save has no "
-            "completeness check. Owner: VI-21 (FIFA ranking).")
+    def test_44o_a_changed_uefa_edition_is_replaced_once(self):
+        complete, accepted = self.accepted_uefa()
+        versions = lambda: dict(self.x("SELECT resource_id, version FROM ops.resource_versions WHERE resource_kind = 'ranking'").fetchall())
+        before = versions()
+        changed = [complete[0], uefa_club(52748, "Olympique Lyonnais", 2, 81.5)]
+        sources.run_due(self.db, self.uefa_get(changed, 2), NOW + timedelta(days=2), names={"uefa"})
+        points = self.x("""SELECT r.points FROM core.ranking_rows r JOIN core.ranking_editions e ON e.id = r.edition_id
+                           WHERE e.kind = 'uefa_clubs' AND r.provider_key = '52748'""").fetchall()
+        after = versions()
+        self.note("44o", before=before, after=after, points=points)
+        self.assertEqual(points, [(81.5,)])
+        self.assertEqual({k: after[k] - before.get(k, 0) for k in after}, {k: 1 for k in after})
+
     def test_40o_a_short_fifa_edition_is_completed_or_refused(self):
         self.as_collector()
         page = '<html><script id="__NEXT_DATA__" type="application/json">' + json.dumps(
@@ -403,14 +541,30 @@ class RankingReplayTest(WriterReplay):
             raise SourceError("HTTP_404")
 
         self.x("INSERT INTO core.countries(code) VALUES ('ARG') ON CONFLICT DO NOTHING")
+        where = "edition_id IN (SELECT id FROM core.ranking_editions WHERE kind = 'fifa_men')"
+        version = lambda: self.x("""SELECT v.version FROM ops.resource_versions v JOIN core.ranking_editions e ON e.id = v.resource_id
+                                    WHERE v.resource_kind = 'ranking' AND e.kind = 'fifa_men'""").fetchall()
         self.assertEqual(sources.run_due(self.db, get, NOW, names={"fifa"}), {("fifa", "fifa_men:editions"): "ok"})
-        short = self.rows("core.ranking_rows", "edition_id IN (SELECT id FROM core.ranking_editions WHERE kind = 'fifa_men')")
+        short, first_version = self.rows("core.ranking_rows", where), version()
         listed = {"rankings": full}  # the source now lists the whole edition
-        second = sources.run_due(self.db, get, NOW + timedelta(days=2), names={"fifa"})
-        after = self.rows("core.ranking_rows", "edition_id IN (SELECT id FROM core.ranking_editions WHERE kind = 'fifa_men')")
-        self.note("40o", first=short, second_outcome=second, after=after)
+        # 44p: within a week the latest edition is not read again; after a week it is, and the whole edition replaces it.
+        self.assertEqual(sources.run_due(self.db, get, NOW + timedelta(days=2), names={"fifa"}), {("fifa", "fifa_men:editions"): "ok"})
+        self.assertEqual(self.rows("core.ranking_rows", where), short)
+        second = sources.run_due(self.db, get, NOW + timedelta(days=8), names={"fifa"})
+        after, second_version = self.rows("core.ranking_rows", where), version()
+        self.note("40o", first=short, second_outcome=second, after=after, versions=(first_version, second_version))
         self.assertEqual(len(short), 1)
         self.assertEqual(len(after), 3)
+        self.assertEqual([v - 1 for (v,) in second_version], [v for (v,) in first_version])
+        # An identical re-read a week later writes no row and raises no version.
+        sources.run_due(self.db, get, NOW + timedelta(days=16), names={"fifa"})
+        self.assertEqual((self.rows("core.ranking_rows", where), version()), (after, second_version))
+        # 44q: a re-read shorter than stored is refused once, the stored rows kept.
+        listed = {"rankings": full[:2]}
+        for week in (24, 32):
+            self.assertEqual(sources.run_due(self.db, get, NOW + timedelta(days=week), names={"fifa"}), {("fifa", "fifa_men:editions"): "ok"})
+        failures = self.x("SELECT error_code FROM ops.parse_failures WHERE error_code = 'EDITION_SHORTER'").fetchall()
+        self.assertEqual((self.rows("core.ranking_rows", where), version(), failures), (after, second_version, [("EDITION_SHORTER",)]))
 
 
 class HonoursReplayTest(WriterReplay):
@@ -510,9 +664,6 @@ class WikidataReplayTest(WriterReplay):
         self.note("40r", outcome=results, first=accepted, second=self.club_state())
         self.assertEqual(self.club_state(), accepted)
 
-    @defect("wikidata.save_club writes founded_year from the answer as it is (NULL when absent) and closes the open Wikidata "
-            "tenure when the answer names no coach: a partial bridge answer erases the founded year and ends the current coach's "
-            "tenure the day of the read. Owner: VI-21 (Wikidata clubs).")
     def test_40s_a_club_answer_without_founded_or_coach_keeps_them(self):
         self.accepted_club()
         partial = dict(self.CLUB, founded=None, coach=None)
@@ -522,9 +673,13 @@ class WikidataReplayTest(WriterReplay):
         open_tenures = self.x("SELECT count(*) FROM core.team_coach_tenures WHERE team_id = 1 AND end_date IS NULL").fetchone()[0]
         self.note("40s", founded_year=founded, open_tenures=open_tenures, tenures=self.rows("core.team_coach_tenures"))
         self.assertEqual((founded, open_tenures), (1970, 1))
+        # 44s: a later answer naming another coach closes the open tenure that day and opens his.
+        succeeded = later + wikidata.CLUB_PERIOD + timedelta(days=1)
+        self.run_with(self.answers(club=dict(self.CLUB, founded="1970", coach={"name": "Arne Slot", "photo": None})), succeeded)
+        tenures = self.x("""SELECT c.name, t.start_date, t.end_date FROM core.team_coach_tenures t JOIN core.coaches c ON c.id = t.coach_id
+                            WHERE t.team_id = 1 ORDER BY t.start_date, c.name""").fetchall()
+        self.assertEqual(tenures, [("Luis Enrique", NOW.date(), succeeded.date()), ("Arne Slot", succeeded.date(), None)])
 
-    @defect("wikidata.save_stadium writes capacity, its date and the coordinates from the answer as they are: an answer "
-            "without them sets them to NULL. Owner: VI-21 (Wikidata stadiums).")
     def test_40t_a_stadium_answer_without_capacity_keeps_it(self):
         self.accepted_club()
         partial = dict(self.STADIUM, capacity=None, capacityAsOf=None, coordinates=None)
@@ -532,6 +687,10 @@ class WikidataReplayTest(WriterReplay):
         venue = self.x("SELECT capacity, latitude IS NOT NULL, longitude IS NOT NULL FROM core.venues").fetchone()
         self.note("40t", venue=venue)
         self.assertEqual(venue, (47929, True, True))
+        # 44r: a correction applies, the coordinates kept when the answer omits them again.
+        self.run_with(self.answers(stadium=dict(self.STADIUM, capacity=48583, capacityAsOf="2024", coordinates=None)),
+                      NOW + 2 * wikidata.STADIUM_PERIOD + timedelta(days=2))
+        self.assertEqual(self.x("SELECT capacity, capacity_observed, latitude IS NOT NULL FROM core.venues").fetchone(), (48583, "2024", True))
 
     # Player facts ---------------------------------------------------------------------------------------------------
 
@@ -564,9 +723,6 @@ class WikidataReplayTest(WriterReplay):
         self.note("40v", outcome=results[("wikidata", "players")], before=accepted, after=self.facts())
         self.assertEqual(self.facts(), accepted)
 
-    @defect("player_facts.save replaces core.players.birth_date whatever its provenance and leaves birth_date_source_url as "
-            "it was: a date the Transfermarkt snapshot attested (player_fact_snapshot, coalesce) is overwritten by Wikidata's and "
-            "served under the snapshot's URL. Owner: VI-21 (player facts; the « six dates Wikidata écrasées »).")
     def test_40w_a_snapshot_attested_birth_date_keeps_its_provenance(self):
         url = "https://www.transfermarkt.com/-/profil/spieler/340324"
         self.x("UPDATE core.players SET birth_date = '1998-11-04', birth_date_source_url = %s WHERE id = 12", (url,))
@@ -578,6 +734,17 @@ class WikidataReplayTest(WriterReplay):
         birth, source = self.x("SELECT birth_date, birth_date_source_url FROM core.players WHERE id = 12").fetchone()
         self.note("40w", birth_date=birth, birth_date_source_url=source)
         self.assertFalse(birth == date(1998, 11, 5) and source == url, "Wikidata's date is served under the snapshot's URL")
+        # 44t: the attested date and its URL kept, the height written, the conflict traced once over two reads; a date
+        # without provenance is still corrected.
+        self.x("RESET ROLE")
+        self.x("UPDATE core.players SET birth_date = '1997-05-14' WHERE id = 11")
+        self.as_collector()
+        self.run_with({}, NOW + timedelta(days=31), players=other + [person("Q5794", ["Ousmane Dembélé"], "1997-05-15")])
+        conflicts = self.x("SELECT error_code, message FROM ops.parse_failures WHERE error_code = 'BIRTH_DATE_CONFLICT'").fetchall()
+        facts = self.x("SELECT id, birth_date, birth_date_source_url, height_cm FROM core.players WHERE id IN (11, 12) ORDER BY id").fetchall()
+        self.note("44t", conflicts=conflicts, facts=facts)
+        self.assertEqual(facts, [(11, date(1997, 5, 15), None, None), (12, date(1998, 11, 4), url, 181)])
+        self.assertEqual([c for c, _ in conflicts], ["BIRTH_DATE_CONFLICT"])
 
 
 class NativeReplayTest(WriterReplay):
