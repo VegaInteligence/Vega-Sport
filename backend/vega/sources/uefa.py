@@ -86,11 +86,16 @@ def _country(conn, code):
     return code
 
 
+# A ranking's spelling (SportScore, source_spelling) names a club for the table of the edition it was read in, never
+# for UEFA's link: « Andorra CF » is FC Andorra in LaLiga2's table and another Spanish club elsewhere (FAILURE_MODES.md §39).
+RANKING_SPELLING = "n.kind = 'source_spelling' AND n.source = 'sportscore'"
+
+
 def _candidates(conn, country, key):
     found = set()
     for team, name, short, alias in conn.execute(
-        """SELECT t.id, t.name, t.short_name, n.name FROM core.teams t
-           LEFT JOIN core.entity_names n ON n.entity_type = 'team' AND n.entity_id = t.id
+        f"""SELECT t.id, t.name, t.short_name, n.name FROM core.teams t
+           LEFT JOIN core.entity_names n ON n.entity_type = 'team' AND n.entity_id = t.id AND NOT ({RANKING_SPELLING})
            WHERE t.country_code = %s AND t.is_national IS NOT TRUE AND t.merged_into IS NULL""",
         (country,),
     ):
@@ -300,7 +305,7 @@ def reconcile_teams(conn):
         # official one ("Paris Saint-Germain").
         spellings = {normalize(name)} | {
             n for (n,) in conn.execute(
-                "SELECT normalized FROM core.entity_names WHERE entity_type='team' AND entity_id=%s", (team,)
+                f"SELECT n.normalized FROM core.entity_names n WHERE n.entity_type='team' AND n.entity_id=%s AND NOT ({RANKING_SPELLING})", (team,)
             ).fetchall()
         }
         found = set()
