@@ -160,6 +160,24 @@ class PurgeUnderRolesTest(unittest.TestCase):
         self.assertEqual(self.purge()[0], {"held": 1})
         self.assertEqual(self.privileges(), grants)
 
+    def test_46l_a_competition_a_side_correction_names_is_held_whole(self):
+        # FAILURE_MODES.md §46: 156's journal names its match by (match_id, season_id); the collection role only adds to it.
+        held = self.league(KEPT, "2024/2025")
+        gone = self.league(NAMED, "2025/2026")
+        match, home = self.x("SELECT id, home_team_id FROM core.matches WHERE competition_season_id = %s ORDER BY id LIMIT 1",
+                             (held[1],)).fetchone()
+        self.x("""INSERT INTO core.team_side_corrections(match_id, season_id, side, from_team, to_team, from_key, to_key, correction, proof_sha256)
+                  VALUES (%s, %s, 'home', %s, %s, 't_test01', 't_test02', 'test-side', %s)""", (match, held[2], home, home + 100000, "5" * 64))
+        before, grants = self.held_state(*held), self.privileges()
+        removed, printed = self.purge()
+        self.assertEqual(removed, {"competitions": 1, "editions": 1, "matches": 2, "held": 1})
+        self.assertIn(f"scope purge held competition={held[0]} tables=core.team_side_corrections", printed)
+        self.assertEqual(self.held_state(*held), before)
+        self.assertEqual(self.held_state(*gone), (0, 0, 0, 0, [("purged",)], 0))
+        self.assertEqual(self.x("SELECT match_id, correction FROM core.team_side_corrections").fetchall(), [(match, "test-side")])
+        self.assertEqual(self.purge()[0], {"held": 1})
+        self.assertEqual(self.privileges(), grants)
+
 
 if __name__ == "__main__":
     unittest.main()

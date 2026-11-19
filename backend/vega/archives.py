@@ -1004,8 +1004,9 @@ def merge_twins(conn, held=None):
 
     Under the branch's archive guarantees (FAILURE_MODES.md §35): each season runs in its own transaction, which first
     tries the archive apply lock (vega.archives.apply): held by an apply, the pass stops there without an error. A pair
-    with a key of the quarantine or of an attestation ledger, or a row core.archive_match_attestations names, is never
-    merged; it is printed and appended to `held` ({season, goal, result, reason}). Each removed goal-only match gets its
+    with a key of the quarantine or of an attestation ledger, or a row core.archive_match_attestations or
+    core.team_side_corrections names, is never merged; it is printed and appended to `held` ({season, goal, result,
+    reason}). Each removed goal-only match gets its
     tombstone (ops.archive_removals, no plan) in the deleting transaction, so that a later reference to it is refused
     and a reviewed alias may name it. A season that fails in the database is rolled back alone and printed."""
     import psycopg
@@ -1051,11 +1052,15 @@ def merge_twins(conn, held=None):
                     attested_ids.update(i for i in (match_id, former_id) if i is not None)
                     if former_key:
                         attested_keys.add(former_key)
+                # A reviewed side correction (156) names its match by a foreign key: the pair is held, as an attested one
+                # (FAILURE_MODES.md §46).
+                corrected = {m for (m,) in conn.execute("SELECT match_id FROM core.team_side_corrections WHERE season_id = %s", (season,))}
                 merged = 0
                 for twin in twins:
                     goal, result = by_key[twin["goal"]], by_key[twin["result"]]
                     reason = keep.get(goal[1]) or keep.get(result[1]) or (
-                        "attested" if {goal[0], result[0]} & attested_ids or goal[1] in attested_keys else None)
+                        "attested" if {goal[0], result[0]} & attested_ids or goal[1] in attested_keys else None) or (
+                        "side_corrected" if {goal[0], result[0]} & corrected else None)
                     if reason:
                         held.append({"season": label, "goal": goal[1], "result": result[1], "reason": reason})
                         print(f"archive twins held season={label} goal={goal[1]} result={result[1]} reason={reason}", flush=True)

@@ -215,6 +215,33 @@ class ArchiveTwinsTest(unittest.TestCase):
         self.assertEqual(held, [{"season": SEASON, "goal": TWIN, "result": RESULT, "reason": "ledger"}])
         self.assertEqual(self.state(), before)
 
+    # -- §46 (46k, 46l): a reviewed side correction (156) names its match by a foreign key; a merge holds the pair --
+    def side_correction(self, key):
+        match, home = self.x("SELECT id, home_team_id FROM core.matches WHERE archive_key = %s", (key,)).fetchone()
+        self.x("""INSERT INTO core.team_side_corrections(match_id, season_id, side, from_team, to_team, from_key, to_key, correction, proof_sha256)
+                  VALUES (%s, 2015, 'home', %s, %s, 't_test01', 't_test02', 'test-side', %s)""", (match, home, home + 100000, "5" * 64))
+        return match
+
+    def journal(self):
+        return self.x("SELECT match_id, side, from_team, to_team, correction, applied_at FROM core.team_side_corrections ORDER BY 1, 2").fetchall()
+
+    def test_46k_a_pair_a_side_correction_names_is_held(self):
+        for named in (TWIN, RESULT):
+            with self.subTest(named=named):
+                self.setUp()
+                self.seed_apart()
+                match = self.side_correction(named)
+                before, journal = self.state(), self.journal()
+                for _ in range(2):  # the pass, then the pass again
+                    merged, held, printed = self.merge()
+                    self.assertEqual(merged, {})
+                    self.assertEqual(held, [{"season": SEASON, "goal": TWIN, "result": RESULT, "reason": "side_corrected"}])
+                    self.assertNotIn("failed", printed)
+                    self.assertEqual(self.state(), before)
+                    self.assertEqual(self.journal(), journal)
+                # The reviewed removal's guard names the journal too (archives.Loader.dependents, removal_has_dependents).
+                self.assertIn("core.team_side_corrections.match_id", archives.Loader(self.collect).dependents([match])[match])
+
     # -- 35e --
     def test_35e_an_apply_in_progress_stops_the_pass_without_error(self):
         from vega.store import connect_local
