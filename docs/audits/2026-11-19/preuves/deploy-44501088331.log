@@ -1,0 +1,598 @@
+deploy	UNKNOWN STEP	﻿2026-11-19T09:57:13.9027609Z Current runner version: '2.338.2'
+deploy	UNKNOWN STEP	2026-11-19T09:57:13.9061295Z ##[group]Runner Image Provisioner
+deploy	UNKNOWN STEP	2026-11-19T09:57:13.9062355Z Hosted Compute Agent
+deploy	UNKNOWN STEP	2026-11-19T09:57:13.9063196Z Version: 20261103.629
+deploy	UNKNOWN STEP	2026-11-19T09:57:13.9063900Z Commit: 15dbd9ccb5dbf34fae002b6ed1a2670f52df37bc
+deploy	UNKNOWN STEP	2026-11-19T09:57:13.9064912Z Build Date: 2026-11-03T17:26:59Z
+deploy	UNKNOWN STEP	2026-11-19T09:57:13.9065801Z Worker ID: {ed4f1a6e-661a-4ddb-ac69-e36005241f57}
+deploy	UNKNOWN STEP	2026-11-19T09:57:13.9066587Z Region: northcentralus
+deploy	UNKNOWN STEP	2026-11-19T09:57:13.9067313Z Cloud: Azure
+deploy	UNKNOWN STEP	2026-11-19T09:57:13.9067888Z ##[endgroup]
+deploy	UNKNOWN STEP	2026-11-19T09:57:13.9070680Z ##[group]Operating System
+deploy	UNKNOWN STEP	2026-11-19T09:57:13.9071515Z Ubuntu
+deploy	UNKNOWN STEP	2026-11-19T09:57:13.9072152Z 24.04.5
+deploy	UNKNOWN STEP	2026-11-19T09:57:13.9072868Z LTS
+deploy	UNKNOWN STEP	2026-11-19T09:57:13.9073391Z ##[endgroup]
+deploy	UNKNOWN STEP	2026-11-19T09:57:13.9074436Z ##[group]Runner Image
+deploy	UNKNOWN STEP	2026-11-19T09:57:13.9075536Z Image: ubuntu-24.04-arm
+deploy	UNKNOWN STEP	2026-11-19T09:57:13.9076213Z Version: 20261111.182.1
+deploy	UNKNOWN STEP	2026-11-19T09:57:13.9077762Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24-arm64/20261111.182/images/ubuntu/Ubuntu2404-Arm64-Readme.md
+deploy	UNKNOWN STEP	2026-11-19T09:57:13.9079635Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24-arm64%2F20261111.182
+deploy	UNKNOWN STEP	2026-11-19T09:57:13.9080759Z ##[endgroup]
+deploy	UNKNOWN STEP	2026-11-19T09:57:13.9081904Z ##[group]GITHUB_TOKEN Permissions
+deploy	UNKNOWN STEP	2026-11-19T09:57:13.9085736Z Contents: read
+deploy	UNKNOWN STEP	2026-11-19T09:57:13.9086378Z Metadata: read
+deploy	UNKNOWN STEP	2026-11-19T09:57:13.9087144Z ##[endgroup]
+deploy	UNKNOWN STEP	2026-11-19T09:57:13.9091526Z Secret source: Actions
+deploy	UNKNOWN STEP	2026-11-19T09:57:13.9092760Z Cache mode: write
+deploy	UNKNOWN STEP	2026-11-19T09:57:13.9093817Z Prepare workflow directory
+deploy	UNKNOWN STEP	2026-11-19T09:57:13.9596787Z Prepare all required actions
+deploy	UNKNOWN STEP	2026-11-19T09:57:13.9651789Z Getting action download info
+deploy	UNKNOWN STEP	2026-11-19T09:57:14.2597100Z Download action repository 'actions/checkout@v7' (SHA:3d3c42e5aac5ba805825da76410c181273ba90b1)
+deploy	UNKNOWN STEP	2026-11-19T09:57:14.3485970Z Download action repository 'aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd' (SHA:e1253824e5c10ff9df46874f81ed3ec929e19cfd)
+deploy	UNKNOWN STEP	2026-11-19T09:57:14.6590088Z Download action repository 'oven-sh/setup-bun@v2' (SHA:0c5077e51419868618aeaa5fe8019c62421857d6)
+deploy	UNKNOWN STEP	2026-11-19T09:57:14.9236423Z Download action repository 'actions/setup-node@v7' (SHA:949feb2413d6458794dcd2491c4babbbce0c15c1)
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.1392112Z Complete job name: deploy
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.2485085Z ##[group]Run actions/checkout@v7
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.2486755Z with:
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.2487498Z   repository: VegaInteligence/Vega-Sport
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.2492388Z   token: ***
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.2493073Z   ssh-strict: true
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.2493877Z   ssh-user: git
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.2494997Z   persist-credentials: true
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.2496242Z   clean: true
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.2497156Z   sparse-checkout-cone-mode: true
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.2497960Z   fetch-depth: 1
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.2498715Z   fetch-tags: false
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.2499402Z   show-progress: true
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.2500117Z   lfs: false
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.2501011Z   submodules: false
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.2501735Z   set-safe-directory: true
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.2502674Z   allow-unsafe-pr-checkout: false
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.2504197Z env:
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.2505209Z   AWS_REGION: us-east-2
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.2506270Z   CFN_ROLE: arn:aws:iam::361769570630:role/vega-v2-cloudformation
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.2507281Z ##[endgroup]
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.3444305Z Syncing repository: VegaInteligence/Vega-Sport
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.3447771Z ##[group]Getting Git version info
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.3449160Z Working directory is '/home/runner/work/Vega-Sport/Vega-Sport'
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.3451425Z [command]/usr/bin/git version
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.3497327Z git version 2.56.1
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.3517521Z ##[endgroup]
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.3527856Z Temporarily overriding HOME='/home/runner/work/_temp/8a80210f-18b2-4be3-9e0e-b6d707451c60' before making global git config changes
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.3530054Z Adding repository directory to the temporary git global config as a safe directory
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.3534221Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Vega-Sport/Vega-Sport
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.3571142Z Deleting the contents of '/home/runner/work/Vega-Sport/Vega-Sport'
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.3575365Z ##[group]Determining repository object format
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.3576841Z ##[endgroup]
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.3578322Z ##[group]Initializing the repository
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.3581235Z [command]/usr/bin/git init /home/runner/work/Vega-Sport/Vega-Sport
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.3659667Z hint: Using 'master' as the name for the initial branch. This default branch name
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.3661411Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.3663306Z hint: to use in all of your new repositories, which will suppress this warning,
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.3664895Z hint: call:
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.3665875Z hint:
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.3667264Z hint: 	git config --global init.defaultBranch <name>
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.3668501Z hint:
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.3669715Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.3671378Z hint: 'development'. The just-created branch can be renamed via this command:
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.3672640Z hint:
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.3673833Z hint: 	git branch -m <name>
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.3675204Z hint:
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.3676686Z hint: Disable this message with "git config set advice.defaultBranchName false"
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.3678505Z Initialized empty Git repository in /home/runner/work/Vega-Sport/Vega-Sport/.git/
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.3681925Z [command]/usr/bin/git remote add origin https://github.com/VegaInteligence/Vega-Sport
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.3735103Z ##[endgroup]
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.3736394Z ##[group]Disabling automatic garbage collection
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.3749051Z [command]/usr/bin/git config --local gc.auto 0
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.3783926Z ##[endgroup]
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.3785870Z ##[group]Setting up auth
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.3787216Z Removing SSH command configuration
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.3788712Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.3821210Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.4139769Z Removing HTTP extra header
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.4142679Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.4177538Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.4405912Z Removing includeIf entries pointing to credentials config files
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.4409095Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.4452292Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.4686750Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-b99d4822-964d-45da-9e92-2cc5f8b94c2f.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.4730966Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/Vega-Sport/Vega-Sport/.git.path /home/runner/work/_temp/git-credentials-b99d4822-964d-45da-9e92-2cc5f8b94c2f.config
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.4766078Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/Vega-Sport/Vega-Sport/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-b99d4822-964d-45da-9e92-2cc5f8b94c2f.config
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.4802157Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-b99d4822-964d-45da-9e92-2cc5f8b94c2f.config
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.4836729Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-b99d4822-964d-45da-9e92-2cc5f8b94c2f.config
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.4870451Z ##[endgroup]
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.4871774Z ##[group]Fetching the repository
+deploy	UNKNOWN STEP	2026-11-19T09:57:15.4876434Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +2088d36e607d26e756ce71e523556b4f1e40407a:refs/remotes/origin/main
+deploy	UNKNOWN STEP	2026-11-19T09:57:17.3530789Z From https://github.com/VegaInteligence/Vega-Sport
+deploy	UNKNOWN STEP	2026-11-19T09:57:17.3532028Z  * [new ref]         2088d36e607d26e756ce71e523556b4f1e40407a -> origin/main
+deploy	UNKNOWN STEP	2026-11-19T09:57:17.3537985Z [command]/usr/bin/git branch --list --remote origin/main
+deploy	UNKNOWN STEP	2026-11-19T09:57:17.3563578Z   origin/main
+deploy	UNKNOWN STEP	2026-11-19T09:57:17.3571429Z [command]/usr/bin/git rev-parse refs/remotes/origin/main
+deploy	UNKNOWN STEP	2026-11-19T09:57:17.3596829Z 2088d36e607d26e756ce71e523556b4f1e40407a
+deploy	UNKNOWN STEP	2026-11-19T09:57:17.3600581Z ##[endgroup]
+deploy	UNKNOWN STEP	2026-11-19T09:57:17.3601442Z ##[group]Determining the checkout info
+deploy	UNKNOWN STEP	2026-11-19T09:57:17.3602455Z ##[endgroup]
+deploy	UNKNOWN STEP	2026-11-19T09:57:17.3605502Z [command]/usr/bin/git sparse-checkout disable
+deploy	UNKNOWN STEP	2026-11-19T09:57:17.3651344Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+deploy	UNKNOWN STEP	2026-11-19T09:57:17.3683240Z ##[group]Checking out the ref
+deploy	UNKNOWN STEP	2026-11-19T09:57:17.3686898Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+deploy	UNKNOWN STEP	2026-11-19T09:57:17.6758772Z Switched to a new branch 'main'
+deploy	UNKNOWN STEP	2026-11-19T09:57:17.6759620Z branch 'main' set up to track 'origin/main'.
+deploy	UNKNOWN STEP	2026-11-19T09:57:17.6797153Z ##[endgroup]
+deploy	UNKNOWN STEP	2026-11-19T09:57:17.6832747Z [command]/usr/bin/git log -1 --format=%H
+deploy	UNKNOWN STEP	2026-11-19T09:57:17.6859894Z 2088d36e607d26e756ce71e523556b4f1e40407a
+deploy	UNKNOWN STEP	2026-11-19T09:57:17.7177103Z ##[group]Run aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd
+deploy	UNKNOWN STEP	2026-11-19T09:57:17.7177873Z with:
+deploy	UNKNOWN STEP	2026-11-19T09:57:17.7178246Z   role-to-assume: arn:aws:iam::361769570630:role/vega-v2-deploy
+deploy	UNKNOWN STEP	2026-11-19T09:57:17.7178687Z   aws-region: us-east-2
+deploy	UNKNOWN STEP	2026-11-19T09:57:17.7179032Z   role-duration-seconds: 7200
+deploy	UNKNOWN STEP	2026-11-19T09:57:17.7179357Z   audience: sts.amazonaws.com
+deploy	UNKNOWN STEP	2026-11-19T09:57:17.7179748Z env:
+deploy	UNKNOWN STEP	2026-11-19T09:57:17.7180042Z   AWS_REGION: us-east-2
+deploy	UNKNOWN STEP	2026-11-19T09:57:17.7180437Z   CFN_ROLE: arn:aws:iam::361769570630:role/vega-v2-cloudformation
+deploy	UNKNOWN STEP	2026-11-19T09:57:17.7180875Z ##[endgroup]
+deploy	UNKNOWN STEP	2026-11-19T09:57:17.9752214Z Assuming role with OIDC
+deploy	UNKNOWN STEP	2026-11-19T09:57:18.0747720Z Authenticated as assumedRoleId AROAVIOZFSFDKXETKXLEB:GitHubActions
+deploy	UNKNOWN STEP	2026-11-19T09:57:18.1677560Z ##[group]Run oven-sh/setup-bun@v2
+deploy	UNKNOWN STEP	2026-11-19T09:57:18.1678193Z with:
+deploy	UNKNOWN STEP	2026-11-19T09:57:18.1678601Z   bun-version: 1.4.4
+deploy	UNKNOWN STEP	2026-11-19T09:57:18.1679525Z   no-cache: false
+deploy	UNKNOWN STEP	2026-11-19T09:57:18.1682574Z   token: ***
+deploy	UNKNOWN STEP	2026-11-19T09:57:18.1682925Z env:
+deploy	UNKNOWN STEP	2026-11-19T09:57:18.1683283Z   AWS_REGION: us-east-2
+deploy	UNKNOWN STEP	2026-11-19T09:57:18.1683628Z   CFN_ROLE: arn:aws:iam::361769570630:role/vega-v2-cloudformation
+deploy	UNKNOWN STEP	2026-11-19T09:57:18.1684112Z   AWS_DEFAULT_REGION: us-east-2
+deploy	UNKNOWN STEP	2026-11-19T09:57:18.1684716Z   AWS_ACCESS_KEY_ID: ***
+deploy	UNKNOWN STEP	2026-11-19T09:57:18.1685305Z   AWS_SECRET_ACCESS_KEY: ***
+deploy	UNKNOWN STEP	2026-11-19T09:57:18.1690061Z   AWS_SESSION_TOKEN: ***
+deploy	UNKNOWN STEP	2026-11-19T09:57:18.1690491Z ##[endgroup]
+deploy	UNKNOWN STEP	2026-11-19T09:57:18.4562096Z Cache hit for: bun-0yevxgGhmwVvrjbtfn8+T8MjEpc=
+deploy	UNKNOWN STEP	2026-11-19T09:57:19.1262327Z Received 50206367 of 50206367 (100.0%), 90.3 MBs/sec
+deploy	UNKNOWN STEP	2026-11-19T09:57:19.1263713Z Cache Size: ~48 MB (50206367 B)
+deploy	UNKNOWN STEP	2026-11-19T09:57:19.1371305Z [command]/usr/bin/tar -xf /home/runner/work/_temp/98f766b8-334d-420f-8b91-45e1175a09bc/cache.tzst -P -C /home/runner/work/Vega-Sport/Vega-Sport --use-compress-program unzstd
+deploy	UNKNOWN STEP	2026-11-19T09:57:19.2540257Z Cache restored successfully
+deploy	UNKNOWN STEP	2026-11-19T09:57:19.2565503Z [command]/home/runner/.bun/bin/bun --revision
+deploy	UNKNOWN STEP	2026-11-19T09:57:19.2600787Z 1.4.4+38afee6c8
+deploy	UNKNOWN STEP	2026-11-19T09:57:19.2605730Z Using a cached version of Bun: 1.4.4+38afee6c8
+deploy	UNKNOWN STEP	2026-11-19T09:57:19.2758347Z ##[group]Run actions/setup-node@v7
+deploy	UNKNOWN STEP	2026-11-19T09:57:19.2758890Z with:
+deploy	UNKNOWN STEP	2026-11-19T09:57:19.2759146Z   node-version: 24
+deploy	UNKNOWN STEP	2026-11-19T09:57:19.2759507Z   package-manager-cache: false
+deploy	UNKNOWN STEP	2026-11-19T09:57:19.2759822Z   check-latest: false
+deploy	UNKNOWN STEP	2026-11-19T09:57:19.2762908Z   token: ***
+deploy	UNKNOWN STEP	2026-11-19T09:57:19.2763207Z env:
+deploy	UNKNOWN STEP	2026-11-19T09:57:19.2763490Z   AWS_REGION: us-east-2
+deploy	UNKNOWN STEP	2026-11-19T09:57:19.2763893Z   CFN_ROLE: arn:aws:iam::361769570630:role/vega-v2-cloudformation
+deploy	UNKNOWN STEP	2026-11-19T09:57:19.2764318Z   AWS_DEFAULT_REGION: us-east-2
+deploy	UNKNOWN STEP	2026-11-19T09:57:19.2765031Z   AWS_ACCESS_KEY_ID: ***
+deploy	UNKNOWN STEP	2026-11-19T09:57:19.2765487Z   AWS_SECRET_ACCESS_KEY: ***
+deploy	UNKNOWN STEP	2026-11-19T09:57:19.2770172Z   AWS_SESSION_TOKEN: ***
+deploy	UNKNOWN STEP	2026-11-19T09:57:19.2770494Z ##[endgroup]
+deploy	UNKNOWN STEP	2026-11-19T09:57:19.3897030Z Found in cache @ /opt/hostedtoolcache/node/24.22.2/arm64
+deploy	UNKNOWN STEP	2026-11-19T09:57:20.2515721Z ##[group]Environment details
+deploy	UNKNOWN STEP	2026-11-19T09:57:22.1501803Z node: v24.22.2
+deploy	UNKNOWN STEP	2026-11-19T09:57:22.1502209Z npm: 11.19.1
+deploy	UNKNOWN STEP	2026-11-19T09:57:22.1502439Z yarn: 1.22.22
+deploy	UNKNOWN STEP	2026-11-19T09:57:22.1503306Z ##[endgroup]
+deploy	UNKNOWN STEP	2026-11-19T09:57:22.1634243Z ##[group]Run set -o pipefail; bash infra/aws/deploy.sh | tee -a "$GITHUB_STEP_SUMMARY"
+deploy	UNKNOWN STEP	2026-11-19T09:57:22.1635430Z ^[[36;1mset -o pipefail; bash infra/aws/deploy.sh | tee -a "$GITHUB_STEP_SUMMARY"^[[0m
+deploy	UNKNOWN STEP	2026-11-19T09:57:22.1673096Z shell: /usr/bin/bash -e {0}
+deploy	UNKNOWN STEP	2026-11-19T09:57:22.1673531Z env:
+deploy	UNKNOWN STEP	2026-11-19T09:57:22.1673915Z   AWS_REGION: us-east-2
+deploy	UNKNOWN STEP	2026-11-19T09:57:22.1674269Z   CFN_ROLE: arn:aws:iam::361769570630:role/vega-v2-cloudformation
+deploy	UNKNOWN STEP	2026-11-19T09:57:22.1675113Z   AWS_DEFAULT_REGION: us-east-2
+deploy	UNKNOWN STEP	2026-11-19T09:57:22.1675818Z   AWS_ACCESS_KEY_ID: ***
+deploy	UNKNOWN STEP	2026-11-19T09:57:22.1676739Z   AWS_SECRET_ACCESS_KEY: ***
+deploy	UNKNOWN STEP	2026-11-19T09:57:22.1681389Z   AWS_SESSION_TOKEN: ***
+deploy	UNKNOWN STEP	2026-11-19T09:57:22.1681800Z   IMAGE_TAG: 2088d36e607d26e756ce71e523556b4f1e40407a
+deploy	UNKNOWN STEP	2026-11-19T09:57:22.1682211Z   WORKER_DESIRED_COUNT: 1
+deploy	UNKNOWN STEP	2026-11-19T09:57:22.1682520Z   IMPORT_ARCHIVES: false
+deploy	UNKNOWN STEP	2026-11-19T09:57:22.1682834Z   ARCHIVE_SOURCES_BUCKET: 
+deploy	UNKNOWN STEP	2026-11-19T09:57:22.1683295Z   PITCHAPI_API_KEY: ***
+deploy	UNKNOWN STEP	2026-11-19T09:57:22.1683737Z   LIVE_PROVIDER: 
+deploy	UNKNOWN STEP	2026-11-19T09:57:22.1684086Z ##[endgroup]
+deploy	UNKNOWN STEP	2026-11-19T09:57:23.8372323Z == 1. Database vega-football-db-postgres (about 10 minutes the first time)
+deploy	UNKNOWN STEP	2026-11-19T09:57:24.6896211Z 
+deploy	UNKNOWN STEP	2026-11-19T09:57:24.6897121Z Waiting for changeset to be created..
+deploy	UNKNOWN STEP	2026-11-19T09:57:24.7414407Z 
+deploy	UNKNOWN STEP	2026-11-19T09:57:24.7415931Z No changes to deploy. Stack vega-v2-database is up to date
+deploy	UNKNOWN STEP	2026-11-19T09:57:24.8298063Z == 2. Secrets
+deploy	UNKNOWN STEP	2026-11-19T09:57:32.5866369Z v2 secrets present in SSM (/vega/v2/*)
+deploy	UNKNOWN STEP	2026-11-19T09:57:33.2500572Z == 3. Worker stack, worker and backfill stopped
+deploy	UNKNOWN STEP	2026-11-19T09:57:34.1733308Z 
+deploy	UNKNOWN STEP	2026-11-19T09:57:34.1734788Z Waiting for changeset to be created..
+deploy	UNKNOWN STEP	2026-11-19T09:57:44.6009220Z Waiting for stack create/update to complete
+deploy	UNKNOWN STEP	2026-11-19T09:59:45.0028182Z Successfully created/updated stack - vega-v2-worker
+deploy	UNKNOWN STEP	2026-11-19T09:59:45.1022173Z == 4. Worker image 2088d36e607d26e756ce71e523556b4f1e40407a (linux/arm64)
+deploy	UNKNOWN STEP	2026-11-19T09:59:46.5624910Z 
+deploy	UNKNOWN STEP	2026-11-19T09:59:46.5626086Z Login Succeeded
+deploy	UNKNOWN STEP	2026-11-19T09:59:46.5626952Z WARNING! Your credentials are stored unencrypted in '/home/runner/.docker/config.json'.
+deploy	UNKNOWN STEP	2026-11-19T09:59:46.5627833Z Configure a credential helper to remove this warning. See
+deploy	UNKNOWN STEP	2026-11-19T09:59:46.5628419Z https://docs.docker.com/go/credential-store/
+deploy	UNKNOWN STEP	2026-11-19T09:59:46.5628694Z 
+deploy	UNKNOWN STEP	2026-11-19T09:59:47.0489401Z #0 building with "default" instance using docker driver
+deploy	UNKNOWN STEP	2026-11-19T09:59:47.0489805Z 
+deploy	UNKNOWN STEP	2026-11-19T09:59:47.0490073Z #1 [internal] load build definition from Dockerfile
+deploy	UNKNOWN STEP	2026-11-19T09:59:47.0490887Z #1 transferring dockerfile: 4.35kB 0.0s done
+deploy	UNKNOWN STEP	2026-11-19T09:59:47.0491340Z #1 DONE 0.0s
+deploy	UNKNOWN STEP	2026-11-19T09:59:47.0491574Z 
+deploy	UNKNOWN STEP	2026-11-19T09:59:47.0491889Z #2 [auth] library/python:pull token for registry-1.docker.io
+deploy	UNKNOWN STEP	2026-11-19T09:59:47.0492334Z #2 DONE 0.0s
+deploy	UNKNOWN STEP	2026-11-19T09:59:47.0492484Z 
+deploy	UNKNOWN STEP	2026-11-19T09:59:47.0493109Z #3 [internal] load metadata for docker.io/library/python:3.14-slim
+deploy	UNKNOWN STEP	2026-11-19T09:59:47.3346742Z #3 DONE 0.5s
+deploy	UNKNOWN STEP	2026-11-19T09:59:47.4486632Z 
+deploy	UNKNOWN STEP	2026-11-19T09:59:47.4487922Z #4 [internal] load build context
+deploy	UNKNOWN STEP	2026-11-19T09:59:47.4489426Z #4 transferring context: 8.74MB 0.1s done
+deploy	UNKNOWN STEP	2026-11-19T09:59:47.4490216Z #4 DONE 0.1s
+deploy	UNKNOWN STEP	2026-11-19T09:59:47.4490395Z 
+deploy	UNKNOWN STEP	2026-11-19T09:59:47.4490966Z #5 [ 1/18] FROM docker.io/library/python:3.14-slim@sha256:9aaa474097d094040649f2162a627c0049b408f52138d980916788d80f04802f
+deploy	UNKNOWN STEP	2026-11-19T09:59:47.4492434Z #5 resolve docker.io/library/python:3.14-slim@sha256:9aaa474097d094040649f2162a627c0049b408f52138d980916788d80f04802f done
+deploy	UNKNOWN STEP	2026-11-19T09:59:47.4493522Z #5 sha256:acd43e9bebc37bc4ba7a5f47bd7598913337803e53d468f37d940f11f5d5f1ef 16.78MB / 30.21MB 0.1s
+deploy	UNKNOWN STEP	2026-11-19T09:59:47.4494687Z #5 sha256:093c3b5dab6f9b53f743c03e7a9681123491b66978d56cf1be9f4b1f3dad9426 1.27MB / 1.27MB 0.1s done
+deploy	UNKNOWN STEP	2026-11-19T09:59:47.4495640Z #5 sha256:c794ddf3dfbe3597d43798fc1945e1664fca6859462ba411279efee1359b5f5b 3.15MB / 12.33MB 0.1s
+deploy	UNKNOWN STEP	2026-11-19T09:59:47.4496624Z #5 sha256:d0f983deeeb561ef14ee4fc979f0b49a44a4ba1f9914e2323763bc5552ddc6fb 0B / 249B 0.1s
+deploy	UNKNOWN STEP	2026-11-19T09:59:47.4497886Z #5 sha256:9aaa474097d094040649f2162a627c0049b408f52138d980916788d80f04802f 10.37kB / 10.37kB done
+deploy	UNKNOWN STEP	2026-11-19T09:59:47.4498866Z #5 sha256:973d41424c3fd81029ac9230bcdec2580fb67b49af9004279001c301182ae868 1.75kB / 1.75kB done
+deploy	UNKNOWN STEP	2026-11-19T09:59:47.4499723Z #5 sha256:f81b7d0196c8f1e437a7ad184ebf99d9f10edc434ff135d5ec49601f51eef489 5.11kB / 5.11kB done
+deploy	UNKNOWN STEP	2026-11-19T09:59:47.6299511Z #5 sha256:acd43e9bebc37bc4ba7a5f47bd7598913337803e53d468f37d940f11f5d5f1ef 30.21MB / 30.21MB 0.2s
+deploy	UNKNOWN STEP	2026-11-19T09:59:47.6300504Z #5 sha256:c794ddf3dfbe3597d43798fc1945e1664fca6859462ba411279efee1359b5f5b 12.33MB / 12.33MB 0.2s
+deploy	UNKNOWN STEP	2026-11-19T09:59:47.6301660Z #5 sha256:d0f983deeeb561ef14ee4fc979f0b49a44a4ba1f9914e2323763bc5552ddc6fb 249B / 249B 0.2s
+deploy	UNKNOWN STEP	2026-11-19T09:59:47.6302434Z #5 extracting sha256:acd43e9bebc37bc4ba7a5f47bd7598913337803e53d468f37d940f11f5d5f1ef
+deploy	UNKNOWN STEP	2026-11-19T09:59:47.7303606Z #5 sha256:acd43e9bebc37bc4ba7a5f47bd7598913337803e53d468f37d940f11f5d5f1ef 30.21MB / 30.21MB 0.3s done
+deploy	UNKNOWN STEP	2026-11-19T09:59:47.7306188Z #5 sha256:c794ddf3dfbe3597d43798fc1945e1664fca6859462ba411279efee1359b5f5b 12.33MB / 12.33MB 0.2s done
+deploy	UNKNOWN STEP	2026-11-19T09:59:47.7308107Z #5 sha256:d0f983deeeb561ef14ee4fc979f0b49a44a4ba1f9914e2323763bc5552ddc6fb 249B / 249B 0.2s done
+deploy	UNKNOWN STEP	2026-11-19T09:59:48.5272546Z #5 extracting sha256:acd43e9bebc37bc4ba7a5f47bd7598913337803e53d468f37d940f11f5d5f1ef 0.8s done
+deploy	UNKNOWN STEP	2026-11-19T09:59:48.5273553Z #5 extracting sha256:093c3b5dab6f9b53f743c03e7a9681123491b66978d56cf1be9f4b1f3dad9426 0.1s done
+deploy	UNKNOWN STEP	2026-11-19T09:59:48.9894790Z #5 extracting sha256:c794ddf3dfbe3597d43798fc1945e1664fca6859462ba411279efee1359b5f5b
+deploy	UNKNOWN STEP	2026-11-19T09:59:49.6251208Z #5 extracting sha256:c794ddf3dfbe3597d43798fc1945e1664fca6859462ba411279efee1359b5f5b 0.5s done
+deploy	UNKNOWN STEP	2026-11-19T09:59:49.6746470Z #5 extracting sha256:d0f983deeeb561ef14ee4fc979f0b49a44a4ba1f9914e2323763bc5552ddc6fb
+deploy	UNKNOWN STEP	2026-11-19T09:59:49.8473459Z #5 extracting sha256:d0f983deeeb561ef14ee4fc979f0b49a44a4ba1f9914e2323763bc5552ddc6fb done
+deploy	UNKNOWN STEP	2026-11-19T09:59:49.8474452Z #5 DONE 2.4s
+deploy	UNKNOWN STEP	2026-11-19T09:59:49.8474761Z 
+deploy	UNKNOWN STEP	2026-11-19T09:59:49.8475013Z #6 [ 2/18] WORKDIR /app
+deploy	UNKNOWN STEP	2026-11-19T09:59:49.8475564Z #6 DONE 0.0s
+deploy	UNKNOWN STEP	2026-11-19T09:59:49.8475765Z 
+deploy	UNKNOWN STEP	2026-11-19T09:59:49.8476473Z #7 [ 3/18] RUN apt-get update && apt-get install -y --no-install-recommends nodejs && rm -rf /var/lib/apt/lists/*
+deploy	UNKNOWN STEP	2026-11-19T09:59:49.8477396Z #7 0.143 Hit:1 http://deb.debian.org/debian trixie InRelease
+deploy	UNKNOWN STEP	2026-11-19T09:59:49.8478601Z #7 0.143 Get:2 http://deb.debian.org/debian trixie-updates InRelease [47.3 kB]
+deploy	UNKNOWN STEP	2026-11-19T09:59:50.0589440Z #7 0.145 Get:3 http://deb.debian.org/debian-security trixie-security InRelease [43.4 kB]
+deploy	UNKNOWN STEP	2026-11-19T09:59:50.0590728Z #7 0.155 Get:4 http://deb.debian.org/debian trixie/main arm64 Packages [9614 kB]
+deploy	UNKNOWN STEP	2026-11-19T09:59:50.0591457Z #7 0.204 Get:5 http://deb.debian.org/debian trixie-updates/main arm64 Packages [1108 B]
+deploy	UNKNOWN STEP	2026-11-19T09:59:50.0592571Z #7 0.205 Get:6 http://deb.debian.org/debian-security trixie-security/main arm64 Packages [326 kB]
+deploy	UNKNOWN STEP	2026-11-19T09:59:50.5833692Z #7 0.879 Fetched 10.0 MB in 1s (13.4 MB/s)
+deploy	UNKNOWN STEP	2026-11-19T09:59:51.1109008Z #7 0.879 Reading package lists...
+deploy	UNKNOWN STEP	2026-11-19T09:59:51.6596353Z #7 1.424 Reading package lists...
+deploy	UNKNOWN STEP	2026-11-19T09:59:51.8555163Z #7 1.965 Building dependency tree...
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.0058537Z #7 2.152 Reading state information...
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.1182252Z #7 2.414 The following additional packages will be installed:
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.2463335Z #7 2.415   libbrotli1 libcares2 libicu76 libnghttp2-14 libnode115 libuv1t64 node-acorn
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.2466373Z #7 2.415   node-balanced-match node-brace-expansion node-cjs-module-lexer node-corepack
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.2467075Z #7 2.415   node-minimatch node-undici node-xtend
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.2467644Z #7 2.416 Suggested packages:
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.2468046Z #7 2.416   npm
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.2468395Z #7 2.416 Recommended packages:
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.2468746Z #7 2.416   nodejs-doc
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.2469179Z #7 2.479 The following NEW packages will be installed:
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.2469923Z #7 2.480   libbrotli1 libcares2 libicu76 libnghttp2-14 libnode115 libuv1t64 node-acorn
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.2472630Z #7 2.480   node-balanced-match node-brace-expansion node-cjs-module-lexer node-corepack
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.2473589Z #7 2.480   node-minimatch node-undici node-xtend nodejs
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.2474143Z #7 2.508 0 upgraded, 15 newly installed, 0 to remove and 1 not upgraded.
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.2474899Z #7 2.508 Need to get 22.7 MB of archives.
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.2475486Z #7 2.508 After this operation, 101 MB of additional disk space will be used.
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.2477469Z #7 2.508 Get:1 http://deb.debian.org/debian-security trixie-security/main arm64 libbrotli1 arm64 1.1.0-2+deb13u1 [294 kB]
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.2478577Z #7 2.513 Get:2 http://deb.debian.org/debian-security trixie-security/main arm64 libcares2 arm64 1.34.9-1~deb13u1 [96.1 kB]
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.2479550Z #7 2.513 Get:3 http://deb.debian.org/debian trixie/main arm64 libicu76 arm64 76.1-4 [9524 kB]
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.2480425Z #7 2.542 Get:4 http://deb.debian.org/debian trixie/main arm64 libnghttp2-14 arm64 1.64.0-1.1+deb13u1 [71.6 kB]
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.4079220Z #7 2.543 Get:5 http://deb.debian.org/debian trixie/main arm64 libuv1t64 arm64 1.50.0-2 [148 kB]
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.4080114Z #7 2.544 Get:6 http://deb.debian.org/debian trixie/main arm64 node-xtend all 4.0.2-3 [3932 B]
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.4080965Z #7 2.544 Get:7 http://deb.debian.org/debian trixie/main arm64 node-corepack all 0.24.0-5 [712 kB]
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.4082656Z #7 2.546 Get:8 http://deb.debian.org/debian-security trixie-security/main arm64 nodejs arm64 20.19.2+dfsg-1+deb13u3 [355 kB]
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.4083649Z #7 2.547 Get:9 http://deb.debian.org/debian trixie/main arm64 node-acorn all 8.8.1+ds+~cs25.17.7-2 [128 kB]
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.4085229Z #7 2.547 Get:10 http://deb.debian.org/debian trixie/main arm64 node-cjs-module-lexer all 1.2.3+dfsg-1 [30.6 kB]
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.4086097Z #7 2.548 Get:11 http://deb.debian.org/debian trixie/main arm64 node-balanced-match all 2.0.0-1 [4872 B]
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.4087124Z #7 2.548 Get:12 http://deb.debian.org/debian trixie/main arm64 node-brace-expansion all 2.0.1+~1.1.0-2 [8012 B]
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.4087953Z #7 2.548 Get:13 http://deb.debian.org/debian trixie/main arm64 node-minimatch all 9.0.3-6 [76.8 kB]
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.4088846Z #7 2.568 Get:14 http://deb.debian.org/debian trixie/main arm64 node-undici all 7.3.0+dfsg1+~cs24.12.11-1 [333 kB]
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.4089821Z #7 2.569 Get:15 http://deb.debian.org/debian-security trixie-security/main arm64 libnode115 arm64 20.19.2+dfsg-1+deb13u3 [10.9 MB]
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.4090615Z #7 2.704 debconf: unable to initialize frontend: Dialog
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.4091167Z #7 2.704 debconf: (TERM is not set, so the dialog frontend is not usable.)
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.4091722Z #7 2.704 debconf: falling back to frontend: Readline
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.5645034Z #7 2.705 debconf: unable to initialize frontend: Readline
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.5647910Z #7 2.705 debconf: (Can't locate Term/ReadLine.pm in @INC (you may need to install the Term::ReadLine module) (@INC entries checked: /etc/perl /usr/local/lib/aarch64-linux-gnu/perl/5.40.1 /usr/local/share/perl/5.40.1 /usr/lib/aarch64-linux-gnu/perl5/5.40 /usr/share/perl5 /usr/lib/aarch64-linux-gnu/perl-base /usr/lib/aarch64-linux-gnu/perl/5.40 /usr/share/perl/5.40 /usr/local/lib/site_perl) at /usr/share/perl5/Debconf/FrontEnd/Readline.pm line 8, <STDIN> line 15.)
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.5650315Z #7 2.705 debconf: falling back to frontend: Teletype
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.5650919Z #7 2.709 debconf: unable to initialize frontend: Teletype
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.5651457Z #7 2.709 debconf: (This frontend requires a controlling tty.)
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.5652033Z #7 2.709 debconf: falling back to frontend: Noninteractive
+deploy	UNKNOWN STEP	2026-11-19T09:59:52.9778807Z #7 3.274 Fetched 22.7 MB in 0s (232 MB/s)
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.1974941Z #7 3.288 Selecting previously unselected package libbrotli1:arm64.
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.1976305Z #7 3.288 (Reading database ... 
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.1976843Z (Reading database ... 5%
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.1977428Z (Reading database ... 10%
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.1978581Z (Reading database ... 15%
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.1979281Z (Reading database ... 20%
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.1979718Z (Reading database ... 25%
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.1980245Z (Reading database ... 30%
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.1980770Z (Reading database ... 35%
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.1981203Z (Reading database ... 40%
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.1981680Z (Reading database ... 45%
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.1983311Z (Reading database ... 50%
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.1984119Z (Reading database ... 55%
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.1985192Z (Reading database ... 60%
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.1985835Z (Reading database ... 65%
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.1986165Z (Reading database ... 70%
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.1986531Z (Reading database ... 75%
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.1986833Z (Reading database ... 80%
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.1987220Z (Reading database ... 85%
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.1987535Z (Reading database ... 90%
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.1987856Z (Reading database ... 95%
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.1988180Z (Reading database ... 100%
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.1988754Z (Reading database ... 5655 files and directories currently installed.)
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.1989408Z #7 3.292 Preparing to unpack .../00-libbrotli1_1.1.0-2+deb13u1_arm64.deb ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.1989958Z #7 3.294 Unpacking libbrotli1:arm64 (1.1.0-2+deb13u1) ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.1990570Z #7 3.322 Selecting previously unselected package libcares2:arm64.
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.1991148Z #7 3.322 Preparing to unpack .../01-libcares2_1.34.9-1~deb13u1_arm64.deb ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.1991768Z #7 3.324 Unpacking libcares2:arm64 (1.34.9-1~deb13u1) ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.1992291Z #7 3.342 Selecting previously unselected package libicu76:arm64.
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.1992861Z #7 3.342 Preparing to unpack .../02-libicu76_76.1-4_arm64.deb ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.1993342Z #7 3.343 Unpacking libicu76:arm64 (76.1-4) ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.3717076Z #7 3.668 Selecting previously unselected package libnghttp2-14:arm64.
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.4751866Z #7 3.669 Preparing to unpack .../03-libnghttp2-14_1.64.0-1.1+deb13u1_arm64.deb ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.4752860Z #7 3.670 Unpacking libnghttp2-14:arm64 (1.64.0-1.1+deb13u1) ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.4753426Z #7 3.687 Selecting previously unselected package libuv1t64:arm64.
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.4754050Z #7 3.688 Preparing to unpack .../04-libuv1t64_1.50.0-2_arm64.deb ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.4754813Z #7 3.689 Unpacking libuv1t64:arm64 (1.50.0-2) ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.4755394Z #7 3.709 Selecting previously unselected package node-xtend.
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.4755964Z #7 3.710 Preparing to unpack .../05-node-xtend_4.0.2-3_all.deb ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.4756411Z #7 3.711 Unpacking node-xtend (4.0.2-3) ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.4756987Z #7 3.724 Selecting previously unselected package node-corepack.
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.4757559Z #7 3.725 Preparing to unpack .../06-node-corepack_0.24.0-5_all.deb ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.4758106Z #7 3.726 Unpacking node-corepack (0.24.0-5) ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.4758581Z #7 3.771 Selecting previously unselected package nodejs.
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.5826590Z #7 3.772 Preparing to unpack .../07-nodejs_20.19.2+dfsg-1+deb13u3_arm64.deb ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.5827988Z #7 3.773 Unpacking nodejs (20.19.2+dfsg-1+deb13u3) ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.5828735Z #7 3.804 Selecting previously unselected package node-acorn.
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.5829476Z #7 3.805 Preparing to unpack .../08-node-acorn_8.8.1+ds+~cs25.17.7-2_all.deb ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.5830497Z #7 3.806 Unpacking node-acorn (8.8.1+ds+~cs25.17.7-2) ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.5831042Z #7 3.830 Selecting previously unselected package node-cjs-module-lexer.
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.5831724Z #7 3.831 Preparing to unpack .../09-node-cjs-module-lexer_1.2.3+dfsg-1_all.deb ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.5832357Z #7 3.832 Unpacking node-cjs-module-lexer (1.2.3+dfsg-1) ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.5832895Z #7 3.847 Selecting previously unselected package node-balanced-match.
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.5833567Z #7 3.848 Preparing to unpack .../10-node-balanced-match_2.0.0-1_all.deb ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.5834107Z #7 3.849 Unpacking node-balanced-match (2.0.0-1) ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.5835301Z #7 3.863 Selecting previously unselected package node-brace-expansion.
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.5836036Z #7 3.864 Preparing to unpack .../11-node-brace-expansion_2.0.1+~1.1.0-2_all.deb ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.5836719Z #7 3.865 Unpacking node-brace-expansion (2.0.1+~1.1.0-2) ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.5837250Z #7 3.879 Selecting previously unselected package node-minimatch.
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.7984062Z #7 3.880 Preparing to unpack .../12-node-minimatch_9.0.3-6_all.deb ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.7985270Z #7 3.881 Unpacking node-minimatch (9.0.3-6) ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.7986088Z #7 3.901 Selecting previously unselected package node-undici.
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.7986982Z #7 3.902 Preparing to unpack .../13-node-undici_7.3.0+dfsg1+~cs24.12.11-1_all.deb ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.7987824Z #7 3.908 Unpacking node-undici (7.3.0+dfsg1+~cs24.12.11-1) ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.7988599Z #7 3.942 Selecting previously unselected package libnode115:arm64.
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.7989392Z #7 3.943 Preparing to unpack .../14-libnode115_20.19.2+dfsg-1+deb13u3_arm64.deb ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.7990228Z #7 3.944 Unpacking libnode115:arm64 (20.19.2+dfsg-1+deb13u3) ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:53.9703457Z #7 4.266 Setting up libbrotli1:arm64 (1.1.0-2+deb13u1) ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:54.1705367Z #7 4.269 Setting up libuv1t64:arm64 (1.50.0-2) ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:54.1706394Z #7 4.272 Setting up libnghttp2-14:arm64 (1.64.0-1.1+deb13u1) ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:54.1706972Z #7 4.274 Setting up node-cjs-module-lexer (1.2.3+dfsg-1) ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:54.1707539Z #7 4.277 Setting up node-balanced-match (2.0.0-1) ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:54.1708122Z #7 4.279 Setting up node-brace-expansion (2.0.1+~1.1.0-2) ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:54.1708620Z #7 4.283 Setting up libcares2:arm64 (1.34.9-1~deb13u1) ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:54.1709844Z #7 4.285 Setting up node-undici (7.3.0+dfsg1+~cs24.12.11-1) ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:54.1710402Z #7 4.293 Setting up libicu76:arm64 (76.1-4) ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:54.1710910Z #7 4.295 Setting up node-minimatch (9.0.3-6) ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:54.1711355Z #7 4.298 Setting up node-xtend (4.0.2-3) ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:54.1711877Z #7 4.301 Setting up node-acorn (8.8.1+ds+~cs25.17.7-2) ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:54.1712384Z #7 4.305 Setting up node-corepack (0.24.0-5) ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:54.1712900Z #7 4.307 Setting up libnode115:arm64 (20.19.2+dfsg-1+deb13u3) ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:54.1713449Z #7 4.310 Setting up nodejs (20.19.2+dfsg-1+deb13u3) ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:54.1714118Z #7 4.314 update-alternatives: using /usr/bin/nodejs to provide /usr/bin/js (js) in auto mode
+deploy	UNKNOWN STEP	2026-11-19T09:59:54.1715625Z #7 4.314 update-alternatives: warning: skip creation of /usr/share/man/man1/js.1.gz because associated file /usr/share/man/man1/nodejs.1.gz (of link group js) doesn't exist
+deploy	UNKNOWN STEP	2026-11-19T09:59:54.1716532Z #7 4.316 Processing triggers for libc-bin (2.41-12+deb13u4) ...
+deploy	UNKNOWN STEP	2026-11-19T09:59:54.3789970Z #7 DONE 4.7s
+deploy	UNKNOWN STEP	2026-11-19T09:59:54.5499734Z 
+deploy	UNKNOWN STEP	2026-11-19T09:59:54.5500619Z #8 [ 4/18] COPY backend/requirements.txt .
+deploy	UNKNOWN STEP	2026-11-19T09:59:54.5501520Z #8 DONE 0.0s
+deploy	UNKNOWN STEP	2026-11-19T09:59:54.5501677Z 
+deploy	UNKNOWN STEP	2026-11-19T09:59:54.5501986Z #9 [ 5/18] RUN pip install --no-cache-dir -r requirements.txt
+deploy	UNKNOWN STEP	2026-11-19T09:59:55.6851553Z #9 1.285 Collecting psycopg==3.3.9 (from psycopg[binary]==3.3.9->-r requirements.txt (line 1))
+deploy	UNKNOWN STEP	2026-11-19T09:59:55.8427019Z #9 1.311   Downloading psycopg-3.3.9-py3-none-any.whl.metadata (4.4 kB)
+deploy	UNKNOWN STEP	2026-11-19T09:59:55.8428272Z #9 1.443 Collecting boto3==1.44.4 (from -r requirements.txt (line 2))
+deploy	UNKNOWN STEP	2026-11-19T09:59:55.9922213Z #9 1.447   Downloading boto3-1.44.4-py3-none-any.whl.metadata (6.6 kB)
+deploy	UNKNOWN STEP	2026-11-19T09:59:55.9923126Z #9 1.593 Collecting botocore<1.45.0,>=1.44.4 (from boto3==1.44.4->-r requirements.txt (line 2))
+deploy	UNKNOWN STEP	2026-11-19T09:59:56.1214893Z #9 1.596   Downloading botocore-1.44.6-py3-none-any.whl.metadata (5.6 kB)
+deploy	UNKNOWN STEP	2026-11-19T09:59:56.1215720Z #9 1.603 Collecting jmespath<2.0.0,>=0.7.1 (from boto3==1.44.4->-r requirements.txt (line 2))
+deploy	UNKNOWN STEP	2026-11-19T09:59:56.1217271Z #9 1.606   Downloading jmespath-1.1.0-py3-none-any.whl.metadata (7.6 kB)
+deploy	UNKNOWN STEP	2026-11-19T09:59:56.1218435Z #9 1.616 Collecting s3transfer<0.20.0,>=0.19.0 (from boto3==1.44.4->-r requirements.txt (line 2))
+deploy	UNKNOWN STEP	2026-11-19T09:59:56.1219345Z #9 1.619   Downloading s3transfer-0.19.3-py3-none-any.whl.metadata (1.7 kB)
+deploy	UNKNOWN STEP	2026-11-19T09:59:56.1220115Z #9 1.722 Collecting psycopg-binary==3.3.9 (from psycopg[binary]==3.3.9->-r requirements.txt (line 1))
+deploy	UNKNOWN STEP	2026-11-19T09:59:56.2512332Z #9 1.726   Downloading psycopg_binary-3.3.9-cp314-cp314-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl.metadata (2.7 kB)
+deploy	UNKNOWN STEP	2026-11-19T09:59:56.2513462Z #9 1.735 Collecting python-dateutil<3.0.0,>=2.1 (from botocore<1.45.0,>=1.44.4->boto3==1.44.4->-r requirements.txt (line 2))
+deploy	UNKNOWN STEP	2026-11-19T09:59:56.2514398Z #9 1.738   Downloading python_dateutil-2.9.0.post0-py2.py3-none-any.whl.metadata (8.4 kB)
+deploy	UNKNOWN STEP	2026-11-19T09:59:56.2515458Z #9 1.751 Collecting urllib3!=2.2.0,<3,>=1.25.4 (from botocore<1.45.0,>=1.44.4->boto3==1.44.4->-r requirements.txt (line 2))
+deploy	UNKNOWN STEP	2026-11-19T09:59:56.2516256Z #9 1.755   Downloading urllib3-2.8.0-py3-none-any.whl.metadata (7.4 kB)
+deploy	UNKNOWN STEP	2026-11-19T09:59:56.2517180Z #9 1.763 Collecting six>=1.5 (from python-dateutil<3.0.0,>=2.1->botocore<1.45.0,>=1.44.4->boto3==1.44.4->-r requirements.txt (line 2))
+deploy	UNKNOWN STEP	2026-11-19T09:59:56.2517988Z #9 1.766   Downloading six-1.17.0-py2.py3-none-any.whl.metadata (1.7 kB)
+deploy	UNKNOWN STEP	2026-11-19T09:59:56.2518547Z #9 1.783 Downloading psycopg-3.3.9-py3-none-any.whl (219 kB)
+deploy	UNKNOWN STEP	2026-11-19T09:59:56.2519081Z #9 1.791 Downloading boto3-1.44.4-py3-none-any.whl (140 kB)
+deploy	UNKNOWN STEP	2026-11-19T09:59:56.2519920Z #9 1.798 Downloading psycopg_binary-3.3.9-cp314-cp314-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl (4.1 MB)
+deploy	UNKNOWN STEP	2026-11-19T09:59:56.2521037Z #9 1.812    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.1/4.1 MB 344.3 MB/s  0:00:00
+deploy	UNKNOWN STEP	2026-11-19T09:59:56.2521791Z #9 1.815 Downloading botocore-1.44.6-py3-none-any.whl (16.6 MB)
+deploy	UNKNOWN STEP	2026-11-19T09:59:56.2522572Z #9 1.852    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 16.6/16.6 MB 485.3 MB/s  0:00:00
+deploy	UNKNOWN STEP	2026-11-19T09:59:56.3798415Z #9 1.855 Downloading jmespath-1.1.0-py3-none-any.whl (20 kB)
+deploy	UNKNOWN STEP	2026-11-19T09:59:56.3799838Z #9 1.858 Downloading python_dateutil-2.9.0.post0-py2.py3-none-any.whl (229 kB)
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.3185529Z #9 1.861 Downloading s3transfer-0.19.3-py3-none-any.whl (90 kB)
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.3186441Z #9 1.864 Downloading urllib3-2.8.0-py3-none-any.whl (135 kB)
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.3186988Z #9 1.867 Downloading six-1.17.0-py2.py3-none-any.whl (11 kB)
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.3187982Z #9 1.980 Installing collected packages: urllib3, six, psycopg-binary, psycopg, jmespath, python-dateutil, botocore, s3transfer, boto3
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.3188599Z #9 2.919 
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.4712351Z #9 2.920 Successfully installed boto3-1.44.4 botocore-1.44.6 jmespath-1.1.0 psycopg-3.3.9 psycopg-binary-3.3.9 python-dateutil-2.9.0.post0 s3transfer-0.19.3 six-1.17.0 urllib3-2.8.0
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.4715022Z #9 2.921 WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.4716549Z #9 2.921 
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.4716995Z #9 2.921 [notice] A new release of pip is available: 26.2.2 -> 26.3
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.4718193Z #9 2.921 [notice] To update, run: pip install --upgrade pip
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.6561851Z #9 DONE 3.3s
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.7692235Z 
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.7693230Z #10 [ 6/18] COPY backend/vega vega
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.7693668Z #10 DONE 0.0s
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.7694075Z 
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.7694264Z #11 [ 7/18] COPY backend/sql sql
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.7695070Z #11 DONE 0.0s
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.7695311Z 
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.7695677Z #12 [ 8/18] COPY backend/archives backend/archives
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.7696053Z #12 DONE 0.0s
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.7696198Z 
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.7697817Z #13 [ 9/18] COPY dashboard/shared/archive.js dashboard/shared/archive-text.js dashboard/shared/openfootball-history.js dashboard/shared/
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.7698569Z #13 DONE 0.0s
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.7699094Z 
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.7699653Z #14 [10/18] COPY dashboard/shared/legacy-8018e08 dashboard/shared/legacy-8018e08
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.7700097Z #14 DONE 0.0s
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.7700245Z 
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.7702135Z #15 [11/18] COPY dashboard/frontend/src/services/wikidata-club.js dashboard/frontend/src/services/wikidata-club-identity.js      dashboard/frontend/src/services/wikidata-stadium.js dashboard/frontend/src/services/stadium-plans.js      dashboard/frontend/src/services/format.js dashboard/frontend/src/services/image-source.js dashboard/frontend/src/services/player-aliases.js      dashboard/frontend/src/services/
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.7703778Z #15 DONE 0.0s
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.9961207Z 
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.9962666Z #16 [12/18] COPY dashboard/frontend/src/data-url.js dashboard/frontend/src/model.js dashboard/frontend/src/
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.9963373Z #16 DONE 0.0s
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.9963593Z 
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.9964107Z #17 [13/18] COPY dashboard/frontend/src/services/api-routes.js dashboard/frontend/src/services/
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.9964863Z #17 DONE 0.0s
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.9965024Z 
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.9965586Z #18 [14/18] COPY dashboard/shared/player-aliases.js dashboard/shared/league-rules.json dashboard/shared/cup-logos.json dashboard/shared/
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.9966343Z #18 DONE 0.0s
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.9966495Z 
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.9968176Z #19 [15/18] COPY dashboard/frontend/src/services/openfootball-france-cup.js dashboard/frontend/src/services/openfootball-cups.js      dashboard/frontend/src/services/cup-archives.js dashboard/frontend/src/services/openligadb.js      dashboard/frontend/src/services/competition-selector.js dashboard/frontend/src/services/nations-results.js dashboard/frontend/src/services/
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.9969729Z #19 DONE 0.0s
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.9969881Z 
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.9970159Z #20 [16/18] COPY dashboard/shared/competition-scope.js dashboard/shared/
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.9970623Z #20 DONE 0.0s
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.9970770Z 
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.9971020Z #21 [17/18] COPY backend/sources backend/sources
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.9971407Z #21 DONE 0.0s
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.9971540Z 
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.9971792Z #22 [18/18] COPY backend/certs/rds-us-east-2.pem rds-ca.pem
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.9972227Z #22 DONE 0.0s
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.9972394Z 
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.9972567Z #23 exporting to image
+deploy	UNKNOWN STEP	2026-11-19T09:59:57.9972872Z #23 exporting layers
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.1756365Z #23 exporting layers 1.3s done
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.1933211Z #23 writing image sha256:f4c3d680d1afea06c0beafc6b19be98ff9d5b3721f54201188462245a59b11d1 done
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.1935277Z #23 naming to 361769570630.dkr.ecr.us-east-2.amazonaws.com/vega-v2-worker:2088d36e607d26e756ce71e523556b4f1e40407a done
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.1936136Z #23 DONE 1.3s
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.2729647Z The push refers to repository [361769570630.dkr.ecr.us-east-2.amazonaws.com/vega-v2-worker]
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.3165666Z 97712fcfaf68: Preparing
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.3166102Z 50cabeec968a: Preparing
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.3166798Z 7ab80df845ae: Preparing
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.3167110Z a9101820d062: Preparing
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.3167476Z 31f299a4ca0d: Preparing
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.3167811Z 462292e9541e: Preparing
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.3168171Z 84de5e51d180: Preparing
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.3168966Z 86f11cc3dac1: Preparing
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.3169313Z 53ea20a214d4: Preparing
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.3169682Z 8ea1d6ac20eb: Preparing
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.3170022Z 7825e6c84a86: Preparing
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.3170331Z b4fa06bc3cf4: Preparing
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.3170632Z 735b8ecd508e: Preparing
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.3171011Z 4d15fce8b725: Preparing
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.3171300Z 1c85bc554de1: Preparing
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.3171632Z d69c92268923: Preparing
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.3171941Z f0976895f98a: Preparing
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.3172298Z 02c9c57c8ce7: Preparing
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.3172606Z 61c8466cbc12: Preparing
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.3172946Z afb9392a7c7e: Preparing
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.3173238Z 04e61ff9ed2c: Preparing
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.3174098Z 462292e9541e: Waiting
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.3174750Z 84de5e51d180: Waiting
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.3175124Z 86f11cc3dac1: Waiting
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.3175531Z 53ea20a214d4: Waiting
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.3175850Z 8ea1d6ac20eb: Waiting
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.3176196Z 7825e6c84a86: Waiting
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.3176516Z b4fa06bc3cf4: Waiting
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.3176832Z 735b8ecd508e: Waiting
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.3177133Z 4d15fce8b725: Waiting
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.3177501Z 1c85bc554de1: Waiting
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.3177776Z d69c92268923: Waiting
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.3178096Z f0976895f98a: Waiting
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.3178396Z 02c9c57c8ce7: Waiting
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.3178717Z 61c8466cbc12: Waiting
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.3179055Z afb9392a7c7e: Waiting
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.3179341Z 04e61ff9ed2c: Waiting
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.8553552Z 50cabeec968a: Pushed
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.8655189Z 97712fcfaf68: Pushed
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.8709848Z 31f299a4ca0d: Pushed
+deploy	UNKNOWN STEP	2026-11-19T09:59:59.9072130Z 7ab80df845ae: Pushed
+deploy	UNKNOWN STEP	2026-11-19T10:00:00.0107731Z a9101820d062: Pushed
+deploy	UNKNOWN STEP	2026-11-19T10:00:00.3792152Z 462292e9541e: Pushed
+deploy	UNKNOWN STEP	2026-11-19T10:00:00.4021731Z 86f11cc3dac1: Pushed
+deploy	UNKNOWN STEP	2026-11-19T10:00:00.4593909Z 53ea20a214d4: Pushed
+deploy	UNKNOWN STEP	2026-11-19T10:00:00.5113854Z 84de5e51d180: Pushed
+deploy	UNKNOWN STEP	2026-11-19T10:00:00.5355688Z 8ea1d6ac20eb: Pushed
+deploy	UNKNOWN STEP	2026-11-19T10:00:00.9338862Z 7825e6c84a86: Pushed
+deploy	UNKNOWN STEP	2026-11-19T10:00:00.9745273Z b4fa06bc3cf4: Pushed
+deploy	UNKNOWN STEP	2026-11-19T10:00:01.0169386Z 1c85bc554de1: Pushed
+deploy	UNKNOWN STEP	2026-11-19T10:00:01.0753372Z 02c9c57c8ce7: Layer already exists
+deploy	UNKNOWN STEP	2026-11-19T10:00:01.1337163Z 61c8466cbc12: Layer already exists
+deploy	UNKNOWN STEP	2026-11-19T10:00:01.2051575Z afb9392a7c7e: Layer already exists
+deploy	UNKNOWN STEP	2026-11-19T10:00:01.2315971Z 735b8ecd508e: Pushed
+deploy	UNKNOWN STEP	2026-11-19T10:00:01.2799856Z 04e61ff9ed2c: Layer already exists
+deploy	UNKNOWN STEP	2026-11-19T10:00:01.5089333Z f0976895f98a: Pushed
+deploy	UNKNOWN STEP	2026-11-19T10:00:02.6659501Z 4d15fce8b725: Pushed
+deploy	UNKNOWN STEP	2026-11-19T10:00:04.7243675Z d69c92268923: Pushed
+deploy	UNKNOWN STEP	2026-11-19T10:00:05.6174097Z 2088d36e607d26e756ce71e523556b4f1e40407a: digest: sha256:e23b9793e09a014be7778b96bebbcfea55754b24eb036d47b3963fcf7cca8ce9 size: 4708
+deploy	UNKNOWN STEP	2026-11-19T10:00:05.6200637Z == 5. Migrations and logins
+deploy	UNKNOWN STEP	2026-11-19T10:00:57.4336413Z migration exit code: 0
+deploy	UNKNOWN STEP	2026-11-19T10:00:57.4337244Z == 6. Worker: 1 task(s); backfill: 1 task(s)
+deploy	UNKNOWN STEP	2026-11-19T10:00:58.3905635Z 
+deploy	UNKNOWN STEP	2026-11-19T10:00:58.3906666Z Waiting for changeset to be created..
+deploy	UNKNOWN STEP	2026-11-19T10:01:08.8071647Z Waiting for stack create/update to complete
+deploy	UNKNOWN STEP	2026-11-19T10:04:09.3743827Z Successfully created/updated stack - vega-v2-worker
+deploy	UNKNOWN STEP	2026-11-19T10:04:09.4653123Z == 6b. Live: store, broadcast, full-state read, ingestor schedule (provider '', off)
+deploy	UNKNOWN STEP	2026-11-19T10:04:11.2796912Z 
+deploy	UNKNOWN STEP	2026-11-19T10:04:11.2797892Z Waiting for changeset to be created..
+deploy	UNKNOWN STEP	2026-11-19T10:04:21.6891178Z Waiting for stack create/update to complete
+deploy	UNKNOWN STEP	2026-11-19T10:04:51.8082537Z Successfully created/updated stack - vega-v2-live
+deploy	UNKNOWN STEP	2026-11-19T10:04:51.9090038Z == 7. Read API package
+deploy	UNKNOWN STEP	2026-11-19T10:04:54.6143702Z == 8. Read API stack and distribution
+deploy	UNKNOWN STEP	2026-11-19T10:04:57.5702387Z 
+deploy	UNKNOWN STEP	2026-11-19T10:04:57.5704084Z Waiting for changeset to be created..
+deploy	UNKNOWN STEP	2026-11-19T10:05:07.9666153Z Waiting for stack create/update to complete
+deploy	UNKNOWN STEP	2026-11-19T10:05:38.1084568Z Successfully created/updated stack - vega-v2-api
+deploy	UNKNOWN STEP	2026-11-19T10:05:38.2058681Z read API: https://dngp6kh9jx2bl.cloudfront.net
+deploy	UNKNOWN STEP	2026-11-19T10:05:38.2059347Z done
+deploy	UNKNOWN STEP	2026-11-19T10:05:38.2804869Z Post job cleanup.
+deploy	UNKNOWN STEP	2026-11-19T10:05:38.3972107Z Post job cleanup.
+deploy	UNKNOWN STEP	2026-11-19T10:05:38.5562484Z Post job cleanup.
+deploy	UNKNOWN STEP	2026-11-19T10:05:38.6292297Z Post job cleanup.
+deploy	UNKNOWN STEP	2026-11-19T10:05:38.7100618Z [command]/usr/bin/git version
+deploy	UNKNOWN STEP	2026-11-19T10:05:38.7143267Z git version 2.56.1
+deploy	UNKNOWN STEP	2026-11-19T10:05:38.7178273Z Temporarily overriding HOME='/home/runner/work/_temp/2ff5c337-579c-4956-a9bb-a12391e05c20' before making global git config changes
+deploy	UNKNOWN STEP	2026-11-19T10:05:38.7179260Z Adding repository directory to the temporary git global config as a safe directory
+deploy	UNKNOWN STEP	2026-11-19T10:05:38.7185549Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Vega-Sport/Vega-Sport
+deploy	UNKNOWN STEP	2026-11-19T10:05:38.7222545Z Removing SSH command configuration
+deploy	UNKNOWN STEP	2026-11-19T10:05:38.7228845Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+deploy	UNKNOWN STEP	2026-11-19T10:05:38.7285982Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+deploy	UNKNOWN STEP	2026-11-19T10:05:38.7526403Z Removing HTTP extra header
+deploy	UNKNOWN STEP	2026-11-19T10:05:38.7532918Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+deploy	UNKNOWN STEP	2026-11-19T10:05:38.7575704Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+deploy	UNKNOWN STEP	2026-11-19T10:05:38.7834815Z Removing includeIf entries pointing to credentials config files
+deploy	UNKNOWN STEP	2026-11-19T10:05:38.7841063Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+deploy	UNKNOWN STEP	2026-11-19T10:05:38.7873337Z includeif.gitdir:/home/runner/work/Vega-Sport/Vega-Sport/.git.path
+deploy	UNKNOWN STEP	2026-11-19T10:05:38.7874096Z includeif.gitdir:/home/runner/work/Vega-Sport/Vega-Sport/.git/worktrees/*.path
+deploy	UNKNOWN STEP	2026-11-19T10:05:38.7874911Z includeif.gitdir:/github/workspace/.git.path
+deploy	UNKNOWN STEP	2026-11-19T10:05:38.7875530Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+deploy	UNKNOWN STEP	2026-11-19T10:05:38.7881585Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/Vega-Sport/Vega-Sport/.git.path
+deploy	UNKNOWN STEP	2026-11-19T10:05:38.7910785Z /home/runner/work/_temp/git-credentials-b99d4822-964d-45da-9e92-2cc5f8b94c2f.config
+deploy	UNKNOWN STEP	2026-11-19T10:05:38.7921639Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/Vega-Sport/Vega-Sport/.git.path \/home\/runner\/work\/_temp\/git\-credentials\-b99d4822\-964d\-45da\-9e92\-2cc5f8b94c2f\.config
+deploy	UNKNOWN STEP	2026-11-19T10:05:38.7971848Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/Vega-Sport/Vega-Sport/.git/worktrees/*.path
+deploy	UNKNOWN STEP	2026-11-19T10:05:38.8001055Z /home/runner/work/_temp/git-credentials-b99d4822-964d-45da-9e92-2cc5f8b94c2f.config
+deploy	UNKNOWN STEP	2026-11-19T10:05:38.8010388Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/Vega-Sport/Vega-Sport/.git/worktrees/*.path \/home\/runner\/work\/_temp\/git\-credentials\-b99d4822\-964d\-45da\-9e92\-2cc5f8b94c2f\.config
+deploy	UNKNOWN STEP	2026-11-19T10:05:38.8049078Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+deploy	UNKNOWN STEP	2026-11-19T10:05:38.8076847Z /github/runner_temp/git-credentials-b99d4822-964d-45da-9e92-2cc5f8b94c2f.config
+deploy	UNKNOWN STEP	2026-11-19T10:05:38.8086085Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path \/github\/runner_temp\/git\-credentials\-b99d4822\-964d\-45da\-9e92\-2cc5f8b94c2f\.config
+deploy	UNKNOWN STEP	2026-11-19T10:05:38.8124246Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+deploy	UNKNOWN STEP	2026-11-19T10:05:38.8152436Z /github/runner_temp/git-credentials-b99d4822-964d-45da-9e92-2cc5f8b94c2f.config
+deploy	UNKNOWN STEP	2026-11-19T10:05:38.8160190Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path \/github\/runner_temp\/git\-credentials\-b99d4822\-964d\-45da\-9e92\-2cc5f8b94c2f\.config
+deploy	UNKNOWN STEP	2026-11-19T10:05:38.8199722Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+deploy	UNKNOWN STEP	2026-11-19T10:05:38.8432022Z Removing credentials config '/home/runner/work/_temp/git-credentials-b99d4822-964d-45da-9e92-2cc5f8b94c2f.config'
+deploy	UNKNOWN STEP	2026-11-19T10:05:38.8592523Z Cleaning up orphan processes

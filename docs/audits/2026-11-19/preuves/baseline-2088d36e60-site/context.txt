@@ -1,0 +1,8 @@
+sha=2088d36e607d26e756ce71e523556b4f1e40407a
+dirty=1
+Python 3.12.3
+v24.18.0
+PostgreSQL 18.6 on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 7.5.0-3ubuntu1~18.04) 7.5.0, 64-bit
+2026-11-19T13:28:25Z
+site rc=0
+2026-11-19T13:28:37Z
