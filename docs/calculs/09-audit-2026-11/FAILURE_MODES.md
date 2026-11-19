@@ -2903,6 +2903,8 @@ in `backend/tests/test_writer_replays.py` (database `vega_v2_writer_replays_test
 | 40t | Wikidata stadiums (`wikidata.save_stadium`) | an answer without capacity and coordinates | capacity and coordinates kept |
 | 40u | Wikidata player facts (`player_facts.save`) | the same club answer read twice | no player changed |
 | 40v | Wikidata player facts | an empty `bindings` list | birth dates and heights kept |
+| 40y | Native PitchAPI (`Store.save_references`, `save_matches`, `save_family`) under `vega_collect` | the same league, match summary and player statistics written twice | the second pass changes no row of the match, its statistics, teams, players or provider ids, and the match revision stays |
+| 40z | Native PitchAPI under `vega_collect` | the summary corrected at the source (score 1–0 → 2–0), then the statistics corrected (1 goal → 2) | each correction is written once and raises the revision once |
 | 40w | Wikidata player facts against the Transfermarkt snapshot | a player whose birth date the snapshot attested (`birth_date_source_url`), Wikidata giving another plausible date | the attested date and its provenance stay together: either kept, or replaced with Wikidata's provenance; never Wikidata's date under the snapshot's URL |
 
 Out of these replays, by the existing suites (cited in the matrix): the native PitchAPI families (`test_store`,
