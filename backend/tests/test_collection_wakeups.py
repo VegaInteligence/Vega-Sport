@@ -98,9 +98,16 @@ class EloWakeTest(CollectionBase):
 
     def setUp(self):
         super().setUp()
+        from vega.sources import open_matchday_history
         from vega.store import Store
         from vega.worker import Worker
 
+        # The capsule's live files alone: the results the source published then dropped are created by any read of
+        # their edition (FAILURE_MODES.md §41, its Elo wake tested by 41o); these cases count the live ones.
+        ledger = {k: r for k, r in open_matchday_history.RESULTS.items() if r.get("id_at_incident")}
+        patcher = patch.object(open_matchday_history, "RESULTS", ledger)
+        patcher.start()
+        self.addCleanup(patcher.stop)
         self.clock = datetime(2026, 11, 17, 18, tzinfo=timezone.utc)
         self.stage, self.fetches = "old", []
         self.worker = Worker(Store(self.collect), SimpleNamespace(), clock=lambda: self.clock, calc_conn=self.calc, source_get=self.get)
