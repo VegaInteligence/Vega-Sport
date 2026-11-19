@@ -422,5 +422,147 @@ class ReaderTest(unittest.TestCase):
         self.assertEqual(q("SELECT kind, never_read FROM api.provider_reader_progress WHERE kind = 'squad'"), [("squad", 0)])
 
 
+
+# -- §45 (FAILURE_MODES.md): the search links no reserve to a first team (E03c, E03g) --
+RESERVE_NAME, FIRST_NAME = "AA Estudiantes de Río Cuarto II", "AA Estudiantes de Río Cuarto"
+CUARTO = {f"1407{n:03d}": (f"Jugador Cuarto {n}", f"200{n % 10}-0{n % 9 + 1}-1{n % 9}") for n in range(1, 7)}
+
+
+class CuartoApi:
+    """The provider as it answered for Estudiantes de Río Cuarto (16-18 Nov 2026): the search finds one club, 75142, whose
+    squad holds six of our players; its record names it the reserve (« II »)."""
+
+    def __init__(self, club_name=RESERVE_NAME):
+        self.club_name, self.calls = club_name, []
+
+    def __call__(self, path, params=()):
+        self.calls.append((path, list(params)))
+        query = [v for _, v in params]
+        if path == "/quick-search":
+            return 200, {}, body({"result": {"clubIds": [75142] if query[0] == "Estudiantes de Río Cuarto" else []}, "totalCount": {"clubs": 1}})
+        if path == "/players":
+            return 200, {}, body([player(k, *CUARTO[k], club=75142, joined="2026-01-01", value=25000) for k in query if k in CUARTO])
+        if path == "/clubs":
+            return 200, {}, body([{"id": 75142, "name": self.club_name, "baseDetails": {"countryId": 9},
+                                   "squadDetails": {"currentMarketValue": {"value": 125000}, "averageAge": 20.6, "squadSize": 27}}
+                                  for k in query if k == "75142"])
+        parts = urlparse(path).path.strip("/").split("/")
+        if parts[0] == "club" and parts[2] == "squad":
+            members = sorted(CUARTO) if parts[1] == "75142" and query == ["2026"] else []
+            return 200, {}, body({"squad": [{"playerId": int(k), "shirtNumber": 7} for k in members]})
+        if parts[0] == "player" and parts[2] == "market-value-history":
+            return 200, {}, body({"history": [{"clubId": 75142, "marketValue": {"value": 25000, "determined": "2026-09-17"}}]})
+        if parts[0] == "transfer":
+            return 200, {}, body({"history": {"pending": [], "terminated": [
+                {"id": 6253703, "transferSource": {"clubId": 28181}, "transferDestination": {"clubId": 75142}, "typeDetails": {"type": "STANDARD"},
+                 "details": {"date": "2026-01-01", "fee": None}}]}})
+        return 404, {}, b""
+
+
+@unittest.skipUnless(DSN and psycopg, "requires disposable local sources DB and psycopg")
+class ReserveSearchTest(unittest.TestCase):
+    """45h-45j: Reader.read of a search, under vega_collect, for team 604 whose one candidate is a reserve."""
+
+    @classmethod
+    def setUpClass(cls):
+        from vega.store import connect_local, migrate
+
+        target = urlparse(DSN)
+        if target.hostname not in ("localhost", "127.0.0.1", "::1") or target.path != "/vega_v2_sources_test":
+            raise RuntimeError("dedicated local sources DB required")
+        cls.db = connect_local(DSN)
+        cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
+        migrate(cls.db)
+        x = cls.db.execute
+        x("INSERT INTO core.countries(code) VALUES ('ARG')")
+        x("INSERT INTO core.seasons(id, label) VALUES (2026, '2026/2027') ON CONFLICT DO NOTHING")
+        x("SELECT core.ensure_season_partitions(2026)")
+        x("INSERT INTO core.competitions(id, name, country_code, kind) VALUES (45, 'Liga Profesional', 'ARG', 'league')")
+        x("INSERT INTO core.competition_seasons(id, competition_id, season_id, native_label) VALUES (45, 45, 2026, '2026/2027')")
+        x("INSERT INTO core.teams(id, name, country_code) VALUES (604, 'Estudiantes de Río Cuarto', 'ARG'), (605, 'Rival', 'ARG')")
+        x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('team', 'pitchapi', 't_1dhmUh', 604)")
+        x("""INSERT INTO core.matches(id, competition_season_id, season_id, source, status, home_team_id, away_team_id, kickoff_at, match_date)
+             VALUES (900, 45, 2026, 'pitchapi', 'finished', 604, 605, '2026-09-01T19:00:00Z', '2026-09-01')""")
+        for n, (key, (name, _)) in enumerate(sorted(CUARTO.items())):
+            x("INSERT INTO core.players(id, name, short_name) VALUES (%s, %s, NULL)", (10484 + n, name))
+            x("INSERT INTO core.player_match_stats(season_id, match_id, team_id, player_id, minutes_played) VALUES (2026, 900, 604, %s, 90)", (10484 + n,))
+        # One of them linked already (the snapshot's way): his values and transfers are read.
+        x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('player', 'transfermarkt', '1407001', 10484)")
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.db.execute("RESET ROLE")
+        cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
+        cls.db.close()
+
+    def setUp(self):
+        x = self.db.execute
+        x("RESET ROLE")
+        with self.db.transaction():
+            x("SET LOCAL vega.allow_history_delete = on")  # a fresh case: the previous one's rows go (the reader never deletes them)
+            x("DELETE FROM core.provider_ids WHERE entity_type = 'team' AND provider = 'transfermarkt'")
+            x("DELETE FROM ops.provider_links; DELETE FROM ops.provider_link_conflicts; DELETE FROM core.provider_clubs")
+            x("DELETE FROM core.provider_squads; DELETE FROM core.player_market_values; DELETE FROM core.player_transfers")
+            x("DELETE FROM core.provider_players; DELETE FROM ops.transfermarkt_reads")
+            x("""INSERT INTO ops.transfermarkt_reads(kind, provider_key, priority, next_due_at)
+                 VALUES ('search', '604', 1, now()), ('values', '1407001', 1, now()), ('transfers', '1407001', 1, now())""")
+        self.addCleanup(lambda: self.db.execute("RESET ROLE"))
+
+    def reader(self, api):
+        self.db.execute("SET ROLE vega_collect")
+        return tm.Reader(self.db, api, interval=0, jitter=0, sleep=lambda s: None, log=lambda *a, **k: None)
+
+    def links(self):
+        return self.db.execute("SELECT provider_key, entity_id FROM core.provider_ids WHERE entity_type = 'team' AND provider = 'transfermarkt'").fetchall()
+
+    def conflicts(self):
+        return self.db.execute("SELECT provider_key, entity_id, reason FROM ops.provider_link_conflicts ORDER BY 1").fetchall()
+
+    def search_due(self):
+        return self.db.execute("SELECT next_due_at - now() FROM ops.transfermarkt_reads WHERE kind = 'search' AND provider_key = '604'").fetchone()[0]
+
+    def name_club(self, name):
+        self.db.execute("RESET ROLE")
+        self.db.execute("INSERT INTO core.provider_clubs(provider, provider_key, name, read_on) VALUES ('transfermarkt', '75142', %s, current_date)", (name,))
+
+    def test_45h_a_reserve_found_by_the_search_is_not_linked(self):
+        self.name_club(RESERVE_NAME)
+        reader = self.reader(CuartoApi())
+        self.assertEqual(reader.read("search", [("604", 1)]), "ok")
+        self.assertEqual(self.links(), [])
+        self.assertEqual(self.conflicts(), [("75142", 604, "reserve_side")])
+        self.assertEqual(self.db.execute("SELECT count(*) FROM core.provider_squads WHERE club_key = '75142' AND absent_since IS NULL").fetchone()[0], 6)
+        self.assertEqual(self.db.execute("SELECT count(*) FROM core.provider_players WHERE provider_club = '75142'").fetchone()[0], 6)
+        self.assertGreater(self.search_due(), timedelta(days=20))  # done as usual
+        # The values and transfers read after keep the provider's club, without a team of ours.
+        self.assertEqual(reader.read("values", [("1407001", 1)]), "ok")
+        self.assertEqual(reader.read("transfers", [("1407001", 1)]), "ok")
+        self.assertEqual(self.db.execute("SELECT provider_club, team_id FROM core.player_market_values WHERE player_id = 10484").fetchall(), [("75142", None)])
+        self.assertEqual(self.db.execute("SELECT to_provider_club, to_team_id FROM core.player_transfers WHERE player_id = 10484").fetchall(), [("75142", None)])
+        # A second search refuses again, one conflict row.
+        self.db.execute("RESET ROLE")
+        self.db.execute("UPDATE ops.transfermarkt_reads SET next_due_at = now() WHERE kind = 'search'")
+        self.assertEqual(self.reader(CuartoApi()).read("search", [("604", 1)]), "ok")
+        self.assertEqual((self.links(), self.conflicts()), ([], [("75142", 604, "reserve_side")]))
+
+    def test_45i_a_club_not_named_yet_waits_for_its_record(self):
+        reader = self.reader(CuartoApi())
+        self.assertEqual(reader.read("search", [("604", 1)]), "ok")
+        self.assertEqual((self.links(), self.conflicts()), ([], []))
+        self.assertLessEqual(self.search_due(), timedelta(days=1))
+        # The club's record is read (queued by the plan for the squads it wrote), then the search again.
+        self.assertEqual(reader.read("club", [("75142", 1)]), "ok")
+        self.assertEqual(self.db.execute("SELECT name FROM core.provider_clubs WHERE provider_key = '75142'").fetchone(), (RESERVE_NAME,))
+        self.assertEqual(reader.read("search", [("604", 1)]), "ok")
+        self.assertEqual((self.links(), self.conflicts()), ([], [("75142", 604, "reserve_side")]))
+
+    def test_45j_the_first_team_found_by_the_search_is_linked(self):
+        self.name_club(FIRST_NAME)
+        reader = self.reader(CuartoApi(FIRST_NAME))
+        self.assertEqual(reader.read("search", [("604", 1)]), "ok")
+        self.assertEqual((self.links(), self.conflicts()), ([("75142", 604)], []))
+        self.assertEqual(self.db.execute("SELECT rule, evidence FROM ops.provider_links WHERE entity_type = 'team'").fetchall(), [("club_search_squad", 6)])
+
+
 if __name__ == "__main__":
     unittest.main()
