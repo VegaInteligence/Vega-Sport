@@ -3491,3 +3491,95 @@ of the five queries of `integrite-cas.zip/sql/final-probe.py`) to fill the lists
 | 45h | `Reader.read` of a search for « Estudiantes de Río Cuarto » whose one candidate, with six of our players, is the club « AA Estudiantes de Río Cuarto II » (name known); then its players' values and transfers | no team link, one `reserve_side` conflict (75142, the team), the squad and the players written; the values and transfers read after keep `provider_club` 75142 and no team |
 | 45i | The same search, the club's name not known yet | no link, no conflict, the search due again within a day; after the club record is read, the next search refuses as in 45h |
 | 45j | The same search whose candidate is the first team « AA Estudiantes de Río Cuarto » | linked as before (`club_search_squad`) |
+
+## 46. The independent review of 2088d36e60..8587ab6671: a grade status read by key, a first 404, the side journal, the failures' lookup (19 Nov 2026, written before the tests)
+
+An independent review of the six lanes integrated on `claude/audit-reprise-33` (8587ab6671) returned six findings
+(evidence `relecture/CONSTATS.md`). Each was replayed first on a disposable PostgreSQL 18.6, by the real writers where
+there is one: five reproduce, one does not.
+
+- **1.** `GET /api/read/performance` joins `api.player_grade_status` (155) to its materialized `target` CTE. The view's
+  key set is a `UNION ALL` of the statistics and of the line-ups with a `NOT EXISTS`; the planner pushes no join
+  condition into it, so each call builds the whole view (every partition of `core.player_match_stats`, twice, and of
+  `core.lineup_players`) and hashes it: 14.1 s for one row on the review's base (60 000 matches, 1.5 M statistics,
+  1.8 M line-up rows), 1.8 ms with constants. The read API's `statement_timeout` is 8 s.
+- **2.** 160 serves `api.player_injury_reads` once `read_at` is set, on the premise that the reader sets it only on an
+  accepted read. `Reader.read` records a 404 (`Missing`) by `done(..., status=404, error="NOT_FOUND")`, which sets
+  `read_at`: a player whose first injuries read answers 404 is served `{"injuries": []}` (« never injured ») instead of
+  116's 404. Replayed: real reader under `vega_collect`, real route under `vega_read`. Values and squads have no read
+  gate (no `*_reads` view; `api.club_squad` and `api.player_market_values` serve their rows): nothing to align there.
+- **3.** `identity.correct_sides` journals a moved side by an `INSERT` without `ON CONFLICT` on `(match_id, side)`. One
+  of the fifteen held keeps the keys on Barcelona SC; a later re-read of the Copa del Rey edition (`cups.save`) resolves
+  « FC Barcelona » by `name:FC Barcelona`, still on 707, and puts a moved side back on it; every later identity pass
+  sees the side wrong again, retries the `INSERT`, takes 23505 and rolls back the whole `teams` scope (merges included).
+  Replayed by the real writers under `vega_collect`.
+- **4.** `sources.failure_once` looks up `ops.parse_failures`, which has only its primary key and is never purged: a
+  sequential scan per call (27 ms on 300 000 rows, once per birth-date conflict in a club's transaction).
+- **5.** Not reproduced. The review read `in_match` as NULL for a statistics row without a team and concluded that such
+  rows, graded before the diff, now lose their grade. Before the diff (2088d36e60) and after it, `PLAYER_MATCHES`
+  inner-joins `core.teams` on `s.team_id`: a row without a team is never read by the players' run, so it was never
+  graded and is not graded now (the same run on both commits: no grade, no power-match row). `in_match` is never NULL in
+  the rows the run reads. Nothing changes in `power.py` or in 155: the status of such a row stays `team_not_in_match`
+  (no team of the match), which is what the run does with it.
+- **6.** `core.team_side_corrections` references `core.matches` without `ON DELETE`. `merge_twins` holds a pair an
+  attestation names (143) but not one a side correction names: if one of the corrected archive matches is a goal-only
+  `g:` twin, its `DELETE` fails on the foreign key and its season fails at every pass (printed only). The European
+  archive keys are `g:`-prefixed (`g:champions-league:2020-10-28:1` for 729828), so the case is not only theoretical.
+
+### 46.1 Rules
+
+- **Grade status by key (1).** The performance read resolves the participation's key from its bound values, as the
+  appearance itself is found (`found(values)`): `season_id` the bound edition season, `match_id` and `player_id`
+  `api.internal_id(...)` of the bound public ids, and reads `api.player_grade_status` filtered on these three. No join
+  of the view to a CTE. The planner then pushes the three conditions into both branches of the key set and into the
+  `NOT EXISTS`: every scan of a statistics or line-up partition is an index scan whose condition names `match_id` and
+  `player_id`, in a custom plan and in a generic one (`plan_cache_mode = force_generic_plan`), with `enable_seqscan`
+  at its default. `gradeStatus` and its values are unchanged. The fragment is one exported function of the route
+  (`gradeStatusSql`), so the plan test reads the SQL the route sends. No other reader of the diff reads the view by
+  join (`performance.mjs` is its only reader).
+- **A 404 on injuries is a refusal (2).** The reader records it as before (status 404, `NOT_FOUND`, the next read in
+  `NOT_FOUND_AGAIN`), but `read_at` and `rows_written` stay those of the last accepted read, as for every other refusal
+  (`failed`). Hence, through 160's view unchanged: never read or never accepted → 404; accepted (even empty) then refused
+  by a 404 or by any other refusal → the accepted list is served. Other kinds keep their 404 as an answer (`read_at`
+  set): the profile and club planning read it, and no reader gates them on it. 160 (neither published nor deployed) is
+  corrected in place for the rows the old reader left: an injuries unit whose last attempt was refused
+  (`error_code IS NOT NULL`) and whose player holds no Transfermarkt episode has its `read_at` cleared: nothing shows
+  it was ever accepted, so it stays unknown, as under 116. A unit with held episodes keeps its `read_at` (only an
+  accepted read writes episodes). Lost by that correction: the date of a legacy 404, and an accepted empty list
+  refused later stays a 404 until its next accepted read (116's behaviour, production's today).
+- **The side journal never fails the pass (3).** The journal's `INSERT` is `ON CONFLICT (match_id, side) DO NOTHING`.
+  A side found back on the wrong club after its move is moved again (the facts follow it, as on the first move) and
+  counted as moved; the pass prints how many were moved again. The journal keeps the first move of each side (its
+  clubs, keys, correction, proof digest and `applied_at`): `vega_collect` may only add to it and the key is the side,
+  so a second move adds no row; the pass's line says it. As long as a match of the correction is held, the keys stay on
+  the wrong club and a re-read can put the side back again: the held match must be resolved by review.
+- **The failures' lookup (4).** Migration 157 adds `ops.parse_failures (error_code, competition_season_id, md5(message))`
+  (`lock_timeout` 3 s). `failure_once` asks `error_code = $1`, `competition_season_id = $2` (or `IS NULL` when no
+  edition), `md5(message) = md5($3)` and `message = $3`: an index scan on the three conditions. The message itself is
+  not indexed (up to 2 000 characters, past btree's row size in a multi-byte script). 157 adds no relation naming a
+  match: `open_matchday_restore.REVIEWED_SCHEMAS` stays pinned on 160.
+- **Rows without a team (5).** As on 2088d36e60: never read, never graded, no exclusion recorded; the year is published.
+- **Side journal and removals (6).** The journal is a proof like 143's attestations: it keeps its foreign key, and what
+  would remove a match it names holds instead of failing or dropping it. `merge_twins` holds a pair whose goal-only
+  match or result a side correction names (reason `side_corrected`), printed and appended to `held`, nothing written;
+  the scope purge holds the competition whole (its `_protected` check: the collection role may not delete from the
+  journal); a reviewed removal holds the match (`removal_has_dependents`, through `ops.archive_match_dependents`, which
+  names `core.team_side_corrections.match_id`). `open_matchday_restore.ADDED_DEPENDENCIES` already lists the table. A
+  trigger guard (141) is for relations without a foreign key: the journal needs none.
+
+### 46.2 Failure modes and expected outcomes
+
+| # | Situation | Expected | Before the corrections |
+|---|---|---|---|
+| 46a | `GET /api/read/performance` for three keys of the API seed, under `vega_read` | `gradeStatus` `graded`, `below_display_threshold`, `no_minutes` (38f) | green (the values were right) |
+| 46b | The route's grade-status SQL, `EXPLAIN` with the bound values and as a generic plan, `enable_seqscan` off (the seed is tiny) | every scan of a statistics or line-up partition has an index condition on `match_id` and `player_id` | red: no such condition (the view is built whole) |
+| 46c | The same SQL on the review's base (`relecture_a`), `EXPLAIN (ANALYZE)` custom and generic, defaults | no sequential scan of `player_match_stats` or `lineup_players`; milliseconds | 14.1 s, sequential scans of every partition |
+| 46d | A first injuries read answered 404 by the reader, then `GET /api/players/{id}/injuries` | 404 | red: 200 `{"injuries": []}` |
+| 46e | An accepted read with two episodes, then a 404 | 200, both episodes | red: (would be) served, but `read_at` moved to the 404 |
+| 46f | An accepted empty read, then a 404 | 200 `{"injuries": []}` | green by accident (`read_at` set by the 404) |
+| 46g | 160 on legacy units: first read 404 (no episode), accepted then refused with episodes, accepted then refused without | unknown; known; unknown | the first two as listed, the first wrongly known |
+| 46h | One of the fifteen held, the pass, a re-read of the Copa edition that puts 2276's side back on 707, two more passes | each pass succeeds; 2276 back on 740; the journal still one row for 2276 (the first move), 14 rows | red: both passes fail on 23505 |
+| 46i | `failure_once` on 300 000 rows, with and without an edition | index scan, conditions on the three columns; still one row per (edition, code, message) | sequential scan (27 ms) |
+| 46j | A statistics row without a team, the daily path on the candidate and on 2088d36e60 | not graded, no exclusion, the year published, status `team_not_in_match`; the same on both commits | green on arrival (the finding does not reproduce) |
+| 46k | `merge_twins` on a twin pair whose goal-only match a side correction names | held `side_corrected`, nothing changed, the journal row intact; the season does not fail; again the same | red: the season fails on the foreign key at each pass |
+| 46l | The scope purge of a competition whose match a side correction names; a reviewed removal of such a match | the competition held whole; the match held `removal_has_dependents` naming the journal | green on arrival (the foreign key and the dynamic dependents already hold them) |
