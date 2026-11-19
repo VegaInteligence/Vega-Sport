@@ -17,7 +17,7 @@ from datetime import date, timedelta
 import re
 from urllib.parse import quote
 
-from . import SourceError, normalize
+from . import SourceError, failure_once, normalize
 
 ENDPOINT = "https://query.wikidata.org/sparql?format=json&query="
 AGENT = {"User-Agent": "football-facts-reader/1.0"}
@@ -165,6 +165,8 @@ def squad_of(conn, team):
 
 def save(conn, squad, found):
     """Link and write one club's players; returns (players written, players left without a link)."""
+    held = {player: (birth, url) for player, birth, url in conn.execute(
+        "SELECT id, birth_date, birth_date_source_url FROM core.players WHERE id = ANY(%s)", (list(squad),)).fetchall()}
     linked = dict(conn.execute(
         "SELECT entity_id, provider_key FROM core.provider_ids WHERE entity_type='player' AND provider='wikidata' AND is_current AND entity_id = ANY(%s)",
         (list(squad),),
@@ -184,8 +186,16 @@ def save(conn, squad, found):
                 continue
             conn.execute("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('player','wikidata',%s,%s)", (qid, player))
             linked[player] = qid
+        stored, url = held.get(player, (None, None))
+        if url is not None and stored is not None and stored != birth:
+            # A date with a recorded provenance (the Transfermarkt snapshot) keeps its value and its URL; Wikidata's
+            # other date is traced once, never written under that URL (FAILURE_MODES.md §44, 40w).
+            failure_once(conn, "BIRTH_DATE_CONFLICT", f"player {player}: {stored} ({url}); wikidata {qid}: {birth}")
+            birth = stored
+        # A date Wikidata changes loses a provenance that was not its own.
         written += conn.execute(
-            """UPDATE core.players SET birth_date=%(birth)s, height_cm=coalesce(%(height)s, height_cm), updated_at=now()
+            """UPDATE core.players SET birth_date=%(birth)s, height_cm=coalesce(%(height)s, height_cm),
+                 birth_date_source_url=CASE WHEN birth_date IS DISTINCT FROM %(birth)s THEN NULL ELSE birth_date_source_url END, updated_at=now()
                WHERE id=%(player)s AND (birth_date IS DISTINCT FROM %(birth)s OR (%(height)s::smallint IS NOT NULL AND height_cm IS DISTINCT FROM %(height)s))""",
             {"birth": birth, "height": height, "player": player},
         ).rowcount
