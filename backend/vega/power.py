@@ -1010,10 +1010,13 @@ def refresh_elo(conn):
 # Players: the role-relative method (§§ 4–8) --------------------------------
 
 # The first parameters: the seasons read (the award year spans two), then the year's first
-# day and the day after its last.
+# day and the day after its last. A row whose team is neither side of its match (in_match
+# false) joins no opponent: it would join both sides, two rows for one player-match, and the
+# publication stopped on 23505 (FAILURE_MODES §38); refresh_players records it ungraded.
 PLAYER_MATCHES = """
 SELECT s.match_id, s.player_id, s.season_id AS edition, s.team_id, s.minutes_played, coalesce(lp.position_id, s.position_id) AS position_id, lp.is_starter,
   l.formation, cs.competition_id, m.competition_season_id, s.touches IS NOT NULL AS measured, t.is_national IS TRUE AS national,
+  s.team_id IN (m.home_team_id, m.away_team_id) AS in_match,
   own.elo_before AS own_elo, opp.elo_before AS opponent_elo,
   CASE WHEN mc.events = 'ok' THEN s.goals - (SELECT count(*) FROM core.match_events e
     WHERE e.season_id = s.season_id AND e.match_id = s.match_id AND e.player_id = s.player_id
@@ -1032,9 +1035,10 @@ LEFT JOIN core.lineup_players lp ON lp.season_id = s.season_id AND lp.match_id =
 LEFT JOIN core.lineups l ON l.season_id = s.season_id AND l.match_id = s.match_id AND l.team_id = s.team_id
 LEFT JOIN core.player_match_advanced a ON a.season_id = s.season_id AND a.match_id = s.match_id AND a.player_id = s.player_id
 LEFT JOIN agg.team_elo own ON own.match_id = s.match_id AND own.team_id = s.team_id
-LEFT JOIN agg.team_elo opp ON opp.match_id = s.match_id AND opp.team_id <> s.team_id
+LEFT JOIN agg.team_elo opp ON opp.match_id = s.match_id AND opp.team_id <> s.team_id AND s.team_id IN (m.home_team_id, m.away_team_id)
 WHERE s.season_id = ANY(%s) AND s.minutes_played > 0 AND m.match_date >= %s AND m.match_date < %s"""
-_KEPT = ("match_id", "player_id", "edition", "team_id", "position_id", "is_starter", "formation", "competition_id", "competition_season_id", "measured", "national")
+_KEPT = ("match_id", "player_id", "edition", "team_id", "position_id", "is_starter", "formation", "competition_id", "competition_season_id", "measured", "national",
+         "in_match")
 # The statistics the source leaves blank at zero. A match of a few dozen players shows the
 # common ones whenever the source publishes them; the rare ones need the edition.
 ZERO_IN_MATCH = ("npxg", "shots_on_target", "xa", "chances_created", "passes_into_final_third", "dribbles_succeeded", "dribbles_total",
@@ -1515,11 +1519,18 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
         grade_refs = read_grade_references(conn, reference_season) if before else None
         reference_rows = conn.execute(GRADE_REFERENCE, ([reference_season, reference_season + 1], reference_season, GRADE_FULL_MINUTES)
                                       ).fetchall() if before and grade_refs is None else []
-    # 2. Compute, outside any transaction.
+    # 2. Compute, outside any transaction. The player-matches the year cannot grade are kept
+    # with their reason (agg.player_grade_exclusions): a team that is not a side of the match,
+    # then no role (assign_roles).
+    excluded = [(r["edition"], r["match_id"], r["player_id"], "team_not_in_match") for r in rows if not r["in_match"]]
+    rows = [r for r in rows if r["in_match"]]
     for r in rows:
         r["delta"] = 0.0 if r["own_elo"] is None or r["opponent_elo"] is None else (r["opponent_elo"] - r["own_elo"]) / 400
     restore_zeros(rows)
+    read = rows
     rows = assign_roles(rows)
+    excluded += [(r["edition"], r["match_id"], r["player_id"], "role_undetermined") for r in read if not r["role"]]
+    del read
     refs = references(rows)
     count = len(rows)
     linked, top, women, clubs = team_leagues(rows, leagues)
@@ -1598,6 +1609,7 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
             write_grade_references(conn, *write_refs)
         write_match_grades(conn, season, [(edition, match[0], match[1], match[2], match[3], match[4], match[-1])
                                           for edition, match in zip(editions, matches) if match[-1] is not None], graded_against, run)
+        write_grade_exclusions(conn, season, excluded, run)
         _publish(conn, run, "players", season, count, len(scored))
         write_award(conn, season, scored)
     return len(scored)
@@ -1742,6 +1754,21 @@ def write_match_grades(conn, season, grades, ref_season, run):
            GROUP BY g.season_id, m.competition_season_id, g.player_id""",
         (editions, GRADE_SEASON_MINUTES),
     )
+
+
+def write_grade_exclusions(conn, season, excluded, run):
+    """The award year's player-matches read and not graded, with their reason: [(edition,
+    match, player, reason)], replacing the year's previous ones (a key another year recorded
+    moves to this one: its match changed year)."""
+    conn.execute("DELETE FROM agg.player_grade_exclusions WHERE award_season = %s", (season,))
+    if excluded:
+        conn.cursor().executemany(
+            """INSERT INTO agg.player_grade_exclusions(season_id, match_id, player_id, award_season, reason, run_id)
+               VALUES (%s, %s, %s, %s, %s, %s)
+               ON CONFLICT (season_id, match_id, player_id) DO UPDATE SET award_season = EXCLUDED.award_season,
+                 reason = EXCLUDED.reason, run_id = EXCLUDED.run_id""",
+            [(edition, match, player, season, reason, run) for edition, match, player, reason in excluded],
+        )
 
 
 GRADE_REFERENCE = """
