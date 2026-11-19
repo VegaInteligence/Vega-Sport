@@ -2,7 +2,7 @@
 
 [Situation du 18 novembre](../2026-11-17/SITUATION.md) · [Registre des 91 critères](../2026-11-17/registres/requirements.csv) · [Spécifications des corrections](../../calculs/09-audit-2026-11/FAILURE_MODES.md) (§37 à §46) · [Preuves](preuves/)
 
-**Candidat : `code `79ef8bbb45``**, branche `claude/audit-reprise-33`, [PR 58](https://github.com/VegaInteligence/Vega-Sport/pull/58) en brouillon. CI : voir la PR (le SHA de la branche ajoute à ce code le présent rapport, le registre et les preuves). Il part de `main` `2088d36e60`, déployé le 19 novembre à 10 h 05 UTC (migrations jusqu’à 153). Rien de ce candidat n’est déployé : « branche » ci-dessous veut dire vérifié sur ce SHA par les suites et les rejeux locaux (PostgreSQL 18.6), « production » veut dire observé sur la version servie.
+**Candidat : `code `79ef8bbb45``**, branche `claude/audit-reprise-33`, [PR 58](https://github.com/VegaInteligence/Vega-Sport/pull/58) en brouillon. CI verte sur `c6c4592ca7` (run 44601959463 : Python 743 OK avec 1 échec attendu, API 226/226, site 788/788, image, infrastructure et paquet API réussis) ; `c6c4592ca7` ajoute à ce code le présent rapport, le registre et les preuves. Il part de `main` `2088d36e60`, déployé le 19 novembre à 10 h 05 UTC (migrations jusqu’à 153). Rien de ce candidat n’est déployé : « branche » ci-dessous veut dire vérifié sur ce SHA par les suites et les rejeux locaux (PostgreSQL 18.6), « production » veut dire observé sur la version servie.
 
 Sur les 33 critères suivis, 9 étaient vérifiés à la passation. Des 24 ouverts : **4 sont clos sur branche**, **13 ont avancé et gardent un reste nommé**, **7 sont bloqués** par une décision, une source ou un accès. Aucun des 24 n’est clos en production : il faut le déploiement, puis la mesure.
 
@@ -121,7 +121,7 @@ Seconde relecture, sur `1cc4af1200` : aucune perte de données. Lectures de la m
 
 | Vérification | Résultat |
 | --- | --- |
-| CI GitHub sur le candidat | voir la PR 58 ; dernière CI verte avant ce rapport : run 44580590731 sur `8587ab6671` |
+| CI GitHub sur le candidat | run 44601959463 sur `c6c4592ca7` : Python 743 OK (1 échec attendu, pgvector présent), API 226/226, site 788/788, image, infrastructure et paquet API réussis |
 | Suites locales (PostgreSQL 18.6, Python 3.12, Node 24) | sur `79ef8bbb45` : Python 743 OK (1 sauté : pgvector absent en local ; 1 échec attendu : millésime 2020), API 226/226, site 788/788 |
 | Référence `2088d36e60` | Python 635, API 222, site 788 |
 | Production, API publique, 19 nov. 13 h 19–13 h 39 UTC | 442 lectures ; voir [production](preuves/prod/EVIDENCE.md) |
