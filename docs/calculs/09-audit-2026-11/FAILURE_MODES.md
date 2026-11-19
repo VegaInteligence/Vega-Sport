@@ -3343,7 +3343,7 @@ twice in the lists and in the Elo.
 | referee, stadium | Nicolás Ramírez, Estadio Ciudad de Lanús | no referee, stadium |
 | player statistics | 46 rows (one with `goals_prevented`) | 45 rows |
 | events, line-ups, grades | 17, 46 players, 32 | 17 (one `minute_added` 6 for 5), 46 players (two starters' order swapped), 32 |
-| team statistics | — | some period values differ (0 against 2) |
+| team statistics | the same families | three period values differ (0 against 2, 0 against 1) |
 
 **Canonical: `m_0Feldm`.** It is the more complete copy (referee, one more player-statistics row), and it carries the
 league's round naming. The organiser publishes one match (« Fecha 10 », 21 Sep 21:15 local: the audit's
@@ -3369,5 +3369,12 @@ round-10 fixtures of the edition have a twin too, `postponed`, without a round a
 - Why no code here: the readers to change are outside this lot's write scope (`power.py`, the grades, `api.fixtures`
   and the club and player views); the correction cannot be bounded to the pair and tested end to end from
   `identity.py` alone. A deletion of the match is excluded (user decision required).
+- Preimage to read before writing the entry (read-only, as the schema owner; the audit's `sql/controles/lanus.sql`
+  and `lanus-appearances.sql` count the dependents):
+  `SELECT k.provider_key, m.id, m.season_id, m.competition_season_id, m.status, m.kickoff_at, m.home_team_id,
+  m.away_team_id, m.home_score, m.away_score, r.name FROM core.provider_ids k JOIN core.matches m ON m.id = k.entity_id
+  LEFT JOIN core.rounds r ON r.id = m.round_id WHERE k.entity_type = 'match' AND k.provider = 'pitchapi' AND k.is_current
+  AND k.provider_key IN ('m_0Feldm', 'm_1bi3Az')`. Expected: two rows, one edition, `finished`, 2026-09-22 00:15Z, the
+  same two teams, 2–1, rounds « Clausura - Round 10 » and « 10 »; the entry binds the keys, never the ids.
 - The audit counts five finished/finished PitchAPI pairs (`INTEGRITE.md`; another is Estudiantes de Río Cuarto–
   Instituto, 39992/39993) and 46 finished/postponed pairs: each needs its own reviewed entry, never a rule.
