@@ -2829,8 +2829,10 @@ one is missing: the rows `assign_roles` leaves without a role and the rows the r
   `no_minutes` (a row without minutes), `team_not_in_match`, `outside_award_window` (no date, or an edition the award
   year does not read), the run's recorded reason (`role_undetermined`), `missing_inputs` (a role, no contribution),
   `no_reference` (a contribution, no reference for the role), `award_year_not_computed` (no published players run for
-  the award year: award year 2020 today), `pending` (the run predates the row). The performance read returns it as
-  `gradeStatus` beside `row` (additive). A zero is a grade (`graded`), never a status.
+  the award year: award year 2020 today), `pending` (the statistics row changed after the year's last published run),
+  `unrecorded` (read by that run, ungraded, and no reason recorded: a run before 155 recorded none, so the 615 rows
+  without a role of the years ranked before the deployment say `unrecorded` until their year runs again). The
+  performance read returns it as `gradeStatus` beside `row` (additive). A zero is a grade (`graded`), never a status.
 
 ### 38.2 Failure modes and expected outcomes
 
@@ -2842,6 +2844,7 @@ one is missing: the rows `assign_roles` leaves without a role and the rows the r
 | 38d | `api.player_grade_status` under `vega_read` over the base of 38a–38c plus a 0-minute row, a minutes-less row, a line-up-only player of an uncollected match, a cup edition's row | one row per key, each status above as stated; `graded`/`below_display_threshold` agree with the grade rule on every graded key | red: no such view |
 | 38e | The board of the read API's seed match, one of its players made a 7-minute cameo with z = 0.3 | `Vega grade` absent (`null`) for him, the same values as before for the others; the match ranking and the performance page unchanged (no grade) | red: the board gives him 54.3 |
 | 38f | `GET /api/performance` on a hidden, a graded and an ungraded appearance | `gradeStatus` `below_display_threshold`, `graded`, and the key's status; `row` unchanged | red: no field |
+| 38g | 38c's row with its recorded reason removed and its statistics older than the run, then changed after it | `unrecorded`, then `pending` | red: no such view (written after 38a–38f, before the view's last two statuses) |
 
 Recorded, not changed here: E04e (`PLAYER_MATCHES` reads no archive or cup edition, and no writer stores individual
 statistics for one: only `store.py`, the PitchAPI path, writes `core.player_match_stats`); E04i (two native copies of

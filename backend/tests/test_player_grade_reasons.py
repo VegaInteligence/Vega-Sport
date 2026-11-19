@@ -184,6 +184,21 @@ class PlayerGradeReasonsTest(unittest.TestCase):
         self.assertEqual(self.read.execute("SELECT count(*) FROM api.player_grade_status WHERE grade_status IN ('graded','below_display_threshold')").fetchone()[0],
                          self.one("SELECT count(*) FROM agg.player_match_grades")[0])
 
+    def test_38g_a_row_the_run_did_not_record_is_unrecorded_then_pending_once_it_changes(self):
+        # A year ranked before 155 recorded no reason: its ungraded rows say so, until the year runs again.
+        key = (self.keys[NO_ROLE], NO_ROLE)
+        with self.db.transaction():
+            saved = self.db.execute("DELETE FROM agg.player_grade_exclusions WHERE match_id=%s AND player_id=%s RETURNING *", key).fetchall()
+            self.db.execute("UPDATE core.player_match_stats SET updated_at = '2000-01-01' WHERE season_id=2021 AND match_id=%s AND player_id=%s", key)
+        try:
+            self.assertEqual(self.status(NO_ROLE), [(2021, "unrecorded")])
+            # Its statistics changed after the year's run: the next run reads it.
+            self.db.execute("UPDATE core.player_match_stats SET updated_at = now() + interval '1 minute' WHERE season_id=2021 AND match_id=%s AND player_id=%s", key)
+            self.assertEqual(self.status(NO_ROLE), [(2021, "pending")])
+        finally:
+            with self.db.cursor() as cur:
+                cur.executemany("INSERT INTO agg.player_grade_exclusions VALUES (%s,%s,%s,%s,%s,%s)", saved)
+
 
 if __name__ == "__main__":
     unittest.main()
