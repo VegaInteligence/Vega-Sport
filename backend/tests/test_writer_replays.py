@@ -848,6 +848,62 @@ class NativeReplayTest(WriterReplay):
         self.assertEqual([b - a for a, b in zip(revisions, revisions[1:])], [1, 0, 1])
 
 
+class FailureOnceTest(WriterReplay):
+    """46i: sources.failure_once on a large ops.parse_failures (never purged), under vega_collect: one row per
+    (edition, code, message), each lookup an index scan."""
+
+    def sent(self, *args):
+        """failure_once's lookup as it sends it: (SQL, parameters)."""
+        calls = []
+
+        class Recorder:
+            def __init__(self, conn):
+                self.conn = conn
+
+            def execute(self, sql, params=None):
+                calls.append((sql, params))
+                return self.conn.execute(sql, params)
+
+        sources.failure_once(Recorder(self.db), *args)
+        return calls[0]
+
+    def scans(self, node, out):
+        if node.get("Relation Name") == "parse_failures":
+            out.append((node["Node Type"], node.get("Index Cond", "")))
+        for child in node.get("Plans", []):
+            self.scans(child, out)
+        return out
+
+    def test_46i_the_lookup_is_an_index_scan_and_writes_one_row_per_failure(self):
+        self.x("""INSERT INTO ops.parse_failures(competition_season_id, error_code, message, at)
+                  SELECT CASE WHEN g % 3 = 0 THEN NULL ELSE g % 400 END,
+                         (ARRAY['HTTP_500', 'EMPTY_AFTER_OBSERVATION', 'BIRTH_DATE_CONFLICT', 'SCHEMA_CHANGED'])[1 + g % 4],
+                         'message ' || g, now() FROM generate_series(1, 50000) g""")
+        self.x("ANALYZE ops.parse_failures")
+        self.as_collector()
+        cases = ((None, "BIRTH_DATE_CONFLICT", "player 10: 1998-12-20 (x); wikidata Q1: 1998-12-21"), (30, "EMPTY_AFTER_OBSERVATION", "cup: detail"))
+        for edition, code, message in cases:
+            for _ in range(2):
+                sources.failure_once(self.db, code, message, edition)
+            self.assertEqual(self.x("""SELECT count(*) FROM ops.parse_failures WHERE competition_season_id IS NOT DISTINCT FROM %s
+                                       AND error_code = %s AND message = %s""", (edition, code, message)).fetchone()[0], 1)
+            sql, params = self.sent(code, message, edition)
+            numbered = sql
+            for n in range(1, len(params) + 1):
+                numbered = numbered.replace("%s", f"${n}", 1)
+            plans = {"custom": self.x("EXPLAIN (FORMAT JSON) " + sql, params).fetchone()[0][0]["Plan"],
+                     "generic": self.x("EXPLAIN (FORMAT JSON, GENERIC_PLAN) " + numbered).fetchone()[0][0]["Plan"]}
+            self.note(f"46i {edition}", sql=sql, plans=plans)
+            for name, plan in plans.items():
+                scans = self.scans(plan, [])
+                self.assertTrue(scans, name)
+                for kind, condition in scans:
+                    self.assertNotIn("Seq Scan", kind, f"{name}, edition {edition}")
+                    self.assertIn("error_code", condition, f"{name}, edition {edition}")
+                    self.assertIn("competition_season_id", condition, f"{name}, edition {edition}")
+                    self.assertIn("md5", condition, f"{name}, edition {edition}")
+
+
 @required(DSN and psycopg, "requires a disposable local writer replays DB (VEGA_V2_WRITER_REPLAYS_TEST_DSN) and psycopg")
 class InjuryReadsMigrationTest(unittest.TestCase):
     """46g: 160 on the units the reader left before it (a 404 set read_at). The migrations up to 156 run as migrate runs
