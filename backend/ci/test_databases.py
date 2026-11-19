@@ -24,6 +24,7 @@ SUITES = {
     "VEGA_V2_API_TEST_DSN": "vega_v2_api_test",
     "VEGA_V2_WORKER_TEST_DSN": "vega_v2_worker_test",
     "VEGA_V2_MODELS_TEST_DSN": "vega_v2_models_test",
+    "VEGA_V2_GRADES_TEST_DSN": "vega_v2_grades_test",
     "VEGA_V2_ROLES_TEST_DSN": "vega_v2_roles_test",
     "VEGA_V2_SOURCES_TEST_DSN": "vega_v2_sources_test",
     "VEGA_V2_SNAPSHOTS_TEST_DSN": "vega_v2_snapshots_test",
