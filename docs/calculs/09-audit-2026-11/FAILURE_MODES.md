@@ -2980,3 +2980,93 @@ Recorded, not corrected here:
   goals file names the CONCACAF competition with UEFA's slug. `archives.QUARANTINE` (main) holds the 33 keys: never
   rewritten, never removed. Their move needs a reviewed CONCACAF edition, archive plan territory (VI-27).
 - J1 (`l_2ApGa4`) and the Saudi women's league (`l_1SGwQT`) are out of scope (`scope.REMOVED`).
+
+## 41. Open Matchday's sliding window: left-edge exits, results published then dropped, the 35, the score of 8625 (19 Nov 2026, written before the tests)
+
+Reproduced on `d3e96a097b` (main `2088d36e60` and the collection lot) before any change, on PostgreSQL 18.6 by the real
+writer (`sources.run_due`) under `vega_collect`, with consecutive real versions of the source's results files (Git
+history of `oladeeayo/open-matchday`, `evidence/historique/rouge/gel-*.json`):
+
+- the export is a sliding window: the results file of the season keeps the recent dates only. Over 125 versions of
+  eight folders, every version that drops results drops them from its left edge (dated before its own first result),
+  but six: a moved or replaced result (Kleczew–Podhale 31 Jul → 1 Aug, Emley–Bamber Bridge 6 Oct → 3 Nov, Livyi
+  Bereg–Bukovyna 1 → 14 Nov), Ashton United–Warrington Rylands of 31 Oct (played 1–2 according to the organizer, then
+  dropped), Weston-super-Mare–Billericay of 24 Oct (absent from the organizer's results) and FC Kharkiv–Karpaty of
+  7 Nov (`evidence/historique/fenetres.json`);
+- in a folder without an attestation (`open_matchday_history.for_edition` empty: Poland I and II Liga, Cymru
+  Premier, the FA Cup and every other folder but the three English ones), a version that drops a stored result by
+  its left edge is refused (`SNAPSHOT_DROPS_RESULT`), and so is every later version: the edition is frozen. Poland I
+  Liga 06b3cf48 → 772fb543 (9 dropped), Poland II Liga 77e35fdb → 3a3ac507 (8), Cymru Premier fd27c060 → 772fb543
+  (14), FA Cup 55a7b8e0 → 772fb543 (78): each keeps its old results, never writes the new ones, and adds an
+  `ops.parse_failures` row at each read. Production serves today exactly the latest file of each (its guard reached
+  production on 18–19 Nov, after their last slide): the next slide freezes them;
+- the three English folders keep a dropped result only under `rolling_prefix`'s conditions (at least 50 overlapping
+  results and half the declared rows, four dates, identical scores, dates in 2026/27); a score corrected inside the
+  window while results leave refuses the version, and since the stored score never changes, every later one;
+- nothing creates a result the base never stored: 236 English results (201 never stored, the 35 removed on 18 Nov)
+  and 158 others (Poland 20 + 36, Wales 22, FA Cup qualifying rounds 80) were published by the source and are absent;
+- a live line contradicting an attested final (`final_score`) refuses the whole version: with 8625's organizer final
+  (Ashton United–Warrington Town 0–1, the source 1–2) attested, the NPL edition would be frozen.
+
+### 41.1 Rules
+
+- **A left-edge exit is neither a deletion nor a refusal.** Let *start* be the earliest day of the version's results.
+  When the results file holds exactly its declared rows (`read_files`), every stored finished result of the edition
+  dated on or after *start* (an attested one aside) is in the version as a result, at least one stored result is in
+  it, and no result leaving has its two sides, in the same order, arriving in the version under another key within 31
+  days (a moved result, not a slide), the stored results absent from the version and dated before *start* stay as
+  stored (no write, no removal) and the version is written. Otherwise the guard is unchanged (`SNAPSHOT_DROPS_RESULT`):
+  a result missing inside the window, a result missing on the first day, a version that shares no stored result. A
+  score corrected inside the window is a correction (§19), with or without an exit. In the three English editions
+  `retained`'s identity checks still apply to the kept results. This replaces `rolling_prefix`'s minimum of
+  corroborating observations: the rule deletes nothing either way, and that minimum only decided whether a complete
+  version was written or the edition frozen.
+- **Attested results** (`backend/vega/sources/data/open_matchday_published.json`, its SHA-256 pinned in
+  `open_matchday_history.py` like the 35-result ledger, rebuilt by `evidence/historique/scripts/attestations.py` from
+  the Git history and the organizer capsule `angleterre-575.zip`). Each result: its provider key (the live key's
+  format, `folder:season:date|home|away`), its score, its round when the source gave one, the commit of the version
+  that last published it, and for the English ones the organizer's match id, page and capture digest. Kept, non-COVERED
+  folders only. Excluded: a result whose score varies across versions, one a later version moved (same sides, same
+  order, another day within 31 days) or renamed (another result of its day with one of its sides), one of the 35,
+  an English one the organizer does not confirm (day, sides, score), another folder's one that left from inside the
+  window. 8625's organizer final is attested with the source's contradicting score and commit.
+- **Creation.** In a written version, each attested result of the edition that the base does not hold is created
+  once, after the version's rows: not one of the 35 (`id_at_incident`), not in the version, no `open_matchday` match
+  key equal to it anywhere (current or retired), no match of any edition on its day between its two teams (either
+  orientation, teams resolved as the version's names are), and, without an organizer proof, dated before *start*.
+  Teams by the same resolver as the version's rows (`cups._team`), its round when given, status finished, its score,
+  no half-time and no statistics, the next free position. A result not created for another reason than being one of
+  the 35 is recorded once (`ATTESTED_RESULT_NOT_CREATED`, `sources.failure_once`). An attested result the base holds
+  and the version omits stays as stored, wherever its day. The Elo wakes through `worker.elo_due` (§37): the created
+  match was written after the last run.
+- **The 35** stay to `open_matchday_restore`: creation skips them while they are absent; one of them in a version
+  while absent still refuses it (`ATTESTED_HISTORY_RESTORE_REQUIRED`). Restored, they are attested results the base
+  holds: kept, never duplicated.
+- **An organizer final prevails over the source's line, for that match only.** A live result whose score contradicts
+  an attested final with an organizer proof is written with the attested score (a stored different score is corrected,
+  `revision + 1`, same id), the rest of the version is written, and one `ATTESTED_FINAL_KEPT` row records the
+  contradiction while it stays the same. An attestation from the source alone that a live line contradicts, and an
+  attested final listed as a fixture, still refuse the version (`ATTESTED_HISTORY_CONFLICT`).
+
+### 41.2 Failure modes and expected outcomes
+
+| # | Situation | Expected | Before the corrections |
+|---|---|---|---|
+| 41a | Poland I Liga 06b3cf48 then 772fb543 (9 leave by the left edge, 9 new), real writer under `vega_collect` | the 9 kept (same id, revision, `updated_at`), the 9 new written: 115 finished; no failure row; the next read writes nothing | red: `SNAPSHOT_DROPS_RESULT` at each read, 106 kept, the 9 new never written |
+| 41b | Cymru Premier fd27c060 → 772fb543 (14), FA Cup 55a7b8e0 → 772fb543 (78), Poland II Liga 77e35fdb → 3a3ac507 (8) | accepted the same way | red: frozen |
+| 41c | Poland II Liga 3272e1f9 → b90bce70: Kleczew–Podhale moved from 31 Jul (inside the window) to 1 Aug | refused, edition unchanged | green (unchanged) |
+| 41d | A stored result of the version's first day missing; a stored result after it missing | refused | green (unchanged) |
+| 41e | A version sharing no stored result (all of them before its first day) | refused | green |
+| 41f | A result leaving by the left edge whose two sides arrive under another key 3 days later | refused | green |
+| 41g | A score corrected inside the window while results leave (attested English folder, and another) | written: the correction with `revision + 1`, the left results kept | red: refused |
+| 41h | The three English files of 18 Nov (13a43495) on an empty base | 339 written and 201 created: 540; each created result's teams are those of its names; 8625 written 0–1 | red: 339, 8625 1–2 |
+| 41i | The same files read again | nothing written: no revision, `updated_at` or `cup_updated_at` change, no new failure row | — |
+| 41j | Poland I, Poland II, Wales, FA Cup latest files on an empty base | 106 + 20, 105 + 36, 105 + 22, 142 + 80 | red: no creation |
+| 41k | An attested result whose key another edition holds, or retired; one whose day and teams another match has | not created; `ATTESTED_RESULT_NOT_CREATED` once; nothing else changes | — |
+| 41l | A source-attested result dated on or after the version's first day | not created | — |
+| 41m | The 35 absent, the English files | none created; with one of them in the version: refused `ATTESTED_HISTORY_RESTORE_REQUIRED` | green (unchanged) |
+| 41n | The base after 41h, then `open_matchday_restore` with the reviewed captures (dry run, apply), then two passes | restore 35 with their ids (no collision); next pass keeps them: 575, no duplicate; the pass after writes nothing | — |
+| 41o | `Worker.daily`: a pass whose only change is the creation of attested results | the Elo runs once in that pass and covers their sides; the next pass runs none | — |
+| 41p | 8625 stored 1–2, version still 1–2, organizer 0–1 attested | 8625 becomes 0–1 (`revision + 1`, same id), the rest written, one `ATTESTED_FINAL_KEPT`; read again: nothing, no new row | red: `ATTESTED_HISTORY_CONFLICT`, version refused |
+| 41q | A source-attested final contradicted by a live line; an attested final listed as a fixture | refused `ATTESTED_HISTORY_CONFLICT` | green (unchanged) |
+| 41r | A byte of either attestation file changed | import refused (pinned SHA-256) | green for the ledger |
