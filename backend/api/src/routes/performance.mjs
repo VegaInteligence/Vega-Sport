@@ -129,7 +129,9 @@ export function createPerformanceRoute(read) {
            'rank',1+(SELECT count(*) FROM api.player_appearances a WHERE a.season_id=${season} AND a.match_id=t.match_id AND ${SHOWN("a")} AND a.grade_z>t.grade_z),
            'total',(SELECT count(*) FROM api.player_appearances a WHERE a.season_id=${season} AND a.match_id=t.match_id AND ${SHOWN("a")})) END FROM target t) AS rank,
         (SELECT row_to_json(m) FROM (SELECT ${matchRecordColumns({ shots: params.get("include") === "shots" })} FROM f) m) AS match,
-        (SELECT row_to_json(c) FROM api.competitions c JOIN target t ON c.id=t.league_id) AS competition
+        (SELECT row_to_json(c) FROM api.competitions c JOIN target t ON c.id=t.league_id) AS competition,
+        (SELECT gs.grade_status FROM api.player_grade_status gs JOIN target t
+           ON gs.season_id=t.season_id AND gs.match_id=t.match_id AND gs.player_id=t.player_id) AS grade_status
       FROM publication`;
     const [snapshot] = await read(sql, values);
     checkReadGeneration(params, snapshot?.generation);
@@ -146,6 +148,8 @@ export function createPerformanceRoute(read) {
         competition: c ? { id: c.id, name: c.name, country: c.country, providerCountry: c.country, imageUrl: c.image_url, seasons: c.seasons || [] } : null,
         profile: performanceProfileFromCounts(row, profileCounts(snapshot.profile_counts)),
         rank: snapshot.rank || null,
+        // Why the grade is shown, hidden or missing (155, FAILURE_MODES §38).
+        gradeStatus: snapshot.grade_status ?? null,
       },
       { maxBytes: 256 * 1024 },
     );
