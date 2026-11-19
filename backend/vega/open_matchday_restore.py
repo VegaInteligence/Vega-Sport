@@ -57,10 +57,10 @@ REFS = {
 }
 
 
-# The latest migrations this path was reviewed against: 153 (production on 19 Nov 2026), and 160 with 155 and 156
+# The latest migrations this path was reviewed against: 153 (production on 19 Nov 2026), and 160 with 155, 156 and 157
 # before it. 155 adds agg.player_grade_exclusions and 156 core.team_side_corrections, which both name a match
-# (ADDED_DEPENDENCIES; FAILURE_MODES.md §38, §39); 160 adds columns and no relation naming a match (§44). A later one
-# needs its own review here.
+# (ADDED_DEPENDENCIES; FAILURE_MODES.md §38, §39); 157 adds an index and 160 columns, no relation naming a match (§44,
+# §46). A later one needs its own review here.
 REVIEWED_SCHEMAS = ("153_transfer_history_served.sql", "160_reads_keep_omitted_observations.sql")
 
 

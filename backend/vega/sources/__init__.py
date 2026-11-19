@@ -165,10 +165,13 @@ def failure(conn, code, message, edition=None):
 
 def failure_once(conn, code, message, edition=None):
     """failure(), unless the same row (edition, code, message) is already there: a refusal a source keeps in the same
-    state at each read stays visible once instead of adding a row at each read (FAILURE_MODES.md §37, §36 m3)."""
+    state at each read stays visible once instead of adding a row at each read (FAILURE_MODES.md §37, §36 m3). Looked up
+    by 157's index (code, edition, md5 of the message; §46): the edition compared by `=`, or `IS NULL` without one."""
+    text = message[:2000]
+    where, params = ("competition_season_id IS NULL", ()) if edition is None else ("competition_season_id = %s", (edition,))
     if not conn.execute(
-        """SELECT EXISTS (SELECT 1 FROM ops.parse_failures WHERE competition_season_id IS NOT DISTINCT FROM %s
-             AND error_code = %s AND message = %s)""", (edition, code, message[:2000])
+        f"""SELECT EXISTS (SELECT 1 FROM ops.parse_failures WHERE error_code = %s AND {where}
+              AND md5(message) = md5(%s) AND message = %s)""", (code, *params, text, text)
     ).fetchone()[0]:
         failure(conn, code, message, edition)
 
