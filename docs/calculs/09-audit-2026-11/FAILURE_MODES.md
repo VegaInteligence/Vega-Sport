@@ -3618,11 +3618,32 @@ materialized CTEs once per kept match.
 - 43s. `api.nation_list`: at most 1.5 times its pre-159 time (119) on both volumes; `core.matches` is read twice
   (its two branches, as in 119), never a third time; the copy test is a hash join on equal keys (pair, day ± 1,
   score), not a join filter on `abs()`.
-- 43t. `/api/standings`: the rank check reads only the editions the statement selects. Under `enable_seqscan =
-  off`, every scan of `core.standings_official` in the route's statement (custom and generic plans) has an index
-  condition on `competition_season_id`, and no function aggregates the whole table. The withheld editions are read
-  per edition (`api.standings_withheld(edition)`). Time: at most 1.5 times 150's on the measurement base;
-  `/api/cup-snapshot?kind=standings` and the worker's `count(*) FROM api.standings` likewise.
+- 43t. `/api/standings`: the rank check reads only the editions the statement selects. No function aggregates the
+  whole table; the withheld editions are read per edition (`api.standings_withheld(edition)`); on the review's base,
+  under `enable_seqscan = off`, every scan of `core.standings_official` in the route's statement (custom and generic
+  plans) has an index condition on `competition_season_id`. On the small test base the planner may check the Vega
+  branch's authority once over the whole table, as it did with 150: the test requires no more such scans than with
+  150's view. Time: at most 1.5 times 150's on the measurement base; `/api/cup-snapshot?kind=standings` (the same
+  statement) and the worker's `count(*) FROM api.standings` likewise.
 - 43u. `api.nation_matches`: linear in the nation's copies: no node re-executed once per kept match over a
   materialized CTE; at most 1.5 times 120's time on both volumes.
 - The semantics of 43a–43r are unchanged (same tests, same expectations), the 46 SportScore tables stay admitted.
+
+**Result** (medians of five runs, ms, `evidence/classements/perf/summary.md`; « small »: the review's production-like
+volume, the International Results archive removed):
+
+| Read | 119/120/150, full | first 159, full | 159 now, full | before, small | first 159, small | 159 now, small |
+|---|---|---|---|---|---|---|
+| `/api/standings` statement, three leagues | 37–42 | 128–160 | 31–50 | 21–36 | 67–86 | 20–36 |
+| idem, generic plan | 38 | 128 | 30 | 19 | 139 | 31 |
+| `api.nation_list` | 440 | 2 671 | 598 | 169 | 395 | 242 |
+| `api.nation_matches(100001)` | 25 | 649 | 27 | 6.2 | 23 | 5.6 |
+| `count(*) FROM api.standings` | 4 032 | 3 880 | 4 034 | 1 837 | 2 128 | 2 590 |
+
+What changed: the rank check is written inside `api.standings` as windows partitioned by edition (a condition on the
+edition reaches the scan), `unqualified` reads its edition's rows directly, `api.standings_withheld(edition)` takes
+the edition; `nation_list` carries the columns in its two branches, finds the candidate copies by a hash aggregate
+on (pair, score, day or day before) and tests only those by equal keys, and counts by two hash aggregates;
+`nation_matches` tests a copy by two equal-key joins and joins what the copies lend once, by day. The small volume's
+standings times vary by ±15 ms from one run to the next (the same statement over the same rows read 21 and 38 ms
+before 159).
