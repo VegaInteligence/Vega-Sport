@@ -15,6 +15,10 @@ CREATE TABLE agg.player_grade_exclusions (
 );
 CREATE INDEX player_grade_exclusions_award ON agg.player_grade_exclusions (award_season);
 GRANT SELECT, INSERT, UPDATE, DELETE ON agg.player_grade_exclusions TO vega_calc;
+-- It names a match without a foreign key, as agg.player_match_grades: 141's guard refuses a match a reviewed plan removed
+-- (and ops.archive_lock_references locks it during such a removal).
+CREATE TRIGGER archive_removed_match_id BEFORE INSERT OR UPDATE OF match_id ON agg.player_grade_exclusions FOR EACH ROW
+  WHEN (NEW.match_id IS NOT NULL) EXECUTE FUNCTION ops.reject_removed_archive_reference('match', 'match_id');
 
 -- One row per participation key of the statistics or the line-ups (internal ids, the edition's season), its award
 -- year (1 August – 31 July of the match date) and the first status that applies. graded / below_display_threshold: a
@@ -22,7 +26,9 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON agg.player_grade_exclusions TO vega_calc
 -- edition the run does not read (archive or cup), a match not finished, no statistics row (the match's player
 -- statistics not collected) or none while they are (not played), 0 minutes, no minutes, a team that is not a side of
 -- the match, a date or an edition outside the award year's read, the run's recorded reason, no contribution (the
--- role's inputs missing), no reference for the role, no published run of the award year, or a row newer than the run.
+-- role's inputs missing), no reference for the role, no published run of the award year, a row changed after the
+-- year's run (pending), or else a row that run read and left ungraded without a recorded reason (unrecorded: the runs
+-- before this migration recorded none).
 CREATE VIEW api.player_grade_status AS
 SELECT k.season_id, k.match_id, k.player_id, y.award_season,
   CASE
@@ -37,9 +43,9 @@ SELECT k.season_id, k.match_id, k.player_id, y.award_season,
     WHEN x.reason IS NOT NULL THEN x.reason
     WHEN p.player_id IS NOT NULL AND p.contribution IS NULL THEN 'missing_inputs'
     WHEN p.player_id IS NOT NULL AND p.match_index IS NULL THEN 'no_reference'
-    WHEN NOT EXISTS (SELECT 1 FROM agg.power_runs r WHERE r.kind = 'players' AND r.season_id = y.award_season AND r.status = 'published')
-      THEN 'award_year_not_computed'
-    ELSE 'pending'
+    WHEN r.started_at IS NULL THEN 'award_year_not_computed'
+    WHEN s.updated_at > r.started_at THEN 'pending'
+    ELSE 'unrecorded'
   END AS grade_status
 FROM (SELECT season_id, match_id, player_id FROM core.player_match_stats
       UNION ALL
@@ -53,5 +59,7 @@ LEFT JOIN core.player_match_stats s ON s.season_id = k.season_id AND s.match_id 
 LEFT JOIN core.match_coverage mc ON mc.season_id = k.season_id AND mc.match_id = k.match_id
 LEFT JOIN agg.player_match_grades g ON g.season_id = k.season_id AND g.match_id = k.match_id AND g.player_id = k.player_id
 LEFT JOIN agg.player_grade_exclusions x ON x.season_id = k.season_id AND x.match_id = k.match_id AND x.player_id = k.player_id
-LEFT JOIN agg.player_power_matches p ON p.season_id = y.award_season AND p.match_id = k.match_id AND p.player_id = k.player_id;
+LEFT JOIN agg.player_power_matches p ON p.season_id = y.award_season AND p.match_id = k.match_id AND p.player_id = k.player_id
+LEFT JOIN LATERAL (SELECT max(w.started_at) AS started_at FROM agg.power_runs w
+                   WHERE w.kind = 'players' AND w.season_id = y.award_season AND w.status = 'published') r ON true;
 GRANT SELECT ON api.player_grade_status TO vega_read;
