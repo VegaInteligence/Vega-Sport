@@ -1,0 +1,33 @@
+{
+  "archive": "Vega-Sport-passation-c3a16fa1797d.zip",
+  "sha256": "46d82335aac11d97252c0d4e5b473bee3adf430d9298e60aaf8286466e209c8b",
+  "bytes": 230712153,
+  "audit_commit": "c3a16fa1797d2ce28a2324058c37003fd5d2351d",
+  "parts": [
+    {
+      "file": "parts/Vega-Sport-passation-c3a16fa1797d.zip.part-001",
+      "bytes": 50331648,
+      "sha256": "a72bcc0863040196ecd3959e048ba70d7de874fa8d4eb24adfaee99d9bf96dc8"
+    },
+    {
+      "file": "parts/Vega-Sport-passation-c3a16fa1797d.zip.part-002",
+      "bytes": 50331648,
+      "sha256": "60cf4bb8152ddacf2c3dd341e5175bf250ebb0b0341920967b7569a2bda3a3f7"
+    },
+    {
+      "file": "parts/Vega-Sport-passation-c3a16fa1797d.zip.part-003",
+      "bytes": 50331648,
+      "sha256": "4632a04184b475bda1177a616b963d18c8ee7438c60adfbda9e36deb5c12c1ab"
+    },
+    {
+      "file": "parts/Vega-Sport-passation-c3a16fa1797d.zip.part-004",
+      "bytes": 50331648,
+      "sha256": "a5206d82305e9cdafe3b1060726d2f0275e47932533c3dcc2d094389538ec399"
+    },
+    {
+      "file": "parts/Vega-Sport-passation-c3a16fa1797d.zip.part-005",
+      "bytes": 29385561,
+      "sha256": "f39d9f152e49c40a586d620d9043e5388f5b834d8ad91a261802e61a919bf5ba"
+    }
+  ]
+}
