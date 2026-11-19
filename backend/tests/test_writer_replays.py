@@ -451,6 +451,47 @@ class ServedTransfermarktTest(TransfermarktReplayTest):
         self.assertEqual((first["status"], len(first["body"]["data"]["injuries"])), (200, 2))
         self.assertEqual((after["status"], after["body"]), (200, first["body"]))
 
+    # §46 (46d–46f): a 404 on injuries is a refusal. Its unit is recorded and read again in NOT_FOUND_AGAIN; read_at and
+    # rows_written stay those of the last accepted read.
+    NOT_FOUND = (404, {}, b"")
+
+    def injury_unit(self):
+        self.x("RESET ROLE")
+        try:
+            return self.x("""SELECT read_at, rows_written, error_code, last_http_status, next_due_at - now() > interval '80 days'
+                             FROM ops.transfermarkt_reads WHERE kind = 'injuries' AND provider_key = '342229'""").fetchone()
+        finally:
+            self.x("SET ROLE vega_collect")
+
+    def test_46d_a_first_injuries_read_answered_404_stays_unknown(self):
+        route = f"/api/players/{self.public()}/injuries"
+        self.assertEqual(self.read("injuries", "342229", self.INJURIES_PATH, self.NOT_FOUND), "missing")
+        served = self.http(route)
+        self.note("46d", unit=self.injury_unit(), served=served)
+        self.assertEqual(served["status"], 404, served["body"])
+        self.assertEqual(self.injury_unit(), (None, 0, "NOT_FOUND", 404, True))
+
+    def test_46e_an_accepted_list_stays_served_after_a_404(self):
+        self.accepted_injuries()
+        route = f"/api/players/{self.public()}/injuries"
+        first, unit = self.http(route), self.injury_unit()
+        self.assertEqual(self.read("injuries", "342229", self.INJURIES_PATH, self.NOT_FOUND), "missing")
+        after = self.http(route)
+        self.note("46e", first=first, after=after, before_unit=unit, after_unit=self.injury_unit())
+        self.assertEqual((after["status"], after["body"]), (200, first["body"]))
+        self.assertEqual(len(after["body"]["data"]["injuries"]), 2)
+        self.assertEqual(self.injury_unit(), (*unit[:2], "NOT_FOUND", 404, True))
+
+    def test_46f_an_accepted_empty_list_stays_served_after_a_404(self):
+        self.assertEqual(self.read("injuries", "342229", self.INJURIES_PATH, {"injuries": []}), "ok")
+        route = f"/api/players/{self.public()}/injuries"
+        unit = self.injury_unit()
+        self.assertEqual(self.read("injuries", "342229", self.INJURIES_PATH, self.NOT_FOUND), "missing")
+        served = self.http(route)
+        self.note("46f", served=served, unit=self.injury_unit())
+        self.assertEqual((served["status"], served["body"]["data"]["injuries"]), (200, []))
+        self.assertEqual(self.injury_unit()[:2], unit[:2])
+
 
 
 # The inherited replays run in TransfermarktReplayTest only.
@@ -805,6 +846,58 @@ class NativeReplayTest(WriterReplay):
         self.note("40z", revisions=revisions, score=score, goals=goals)
         self.assertEqual((score, goals), ((2, 0), [(2,)]))
         self.assertEqual([b - a for a, b in zip(revisions, revisions[1:])], [1, 0, 1])
+
+
+@required(DSN and psycopg, "requires a disposable local writer replays DB (VEGA_V2_WRITER_REPLAYS_TEST_DSN) and psycopg")
+class InjuryReadsMigrationTest(unittest.TestCase):
+    """46g: 160 on the units the reader left before it (a 404 set read_at). The migrations up to 156 run as migrate runs
+    them on a new base, the units are written, then 160 runs."""
+
+    UNITS = {  # player: (provider key, error_code, last status, episodes held)
+        10: ("100", "NOT_FOUND", 404, False),  # a first read answered 404
+        11: ("101", "HISTORY_EMPTY", 200, True),  # accepted with episodes, then refused
+        12: ("102", "HTTP_500", 500, False),  # nothing shows an accepted read
+        13: ("103", None, 200, False),  # accepted, empty
+    }
+
+    @classmethod
+    def setUpClass(cls):
+        from vega.store import connect_local
+
+        target = urlparse(DSN)
+        if target.hostname not in ("localhost", "127.0.0.1", "::1") or target.path != "/vega_v2_writer_replays_test":
+            raise RuntimeError("dedicated local writer replays DB required")
+        cls.db = connect_local(DSN)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
+        cls.db.close()
+
+    def test_46g_160_clears_read_at_only_where_no_read_was_accepted(self):
+        x = self.db.execute
+        x("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")
+        files = sorted(p for p in (ROOT / "sql").glob("*.sql") if "vector_optional" not in p.name)
+        for path in [p for p in files if p.name < "160_"]:
+            with self.db.transaction():
+                x(path.read_text(encoding="utf-8"))
+        for player, (key, error, status, held) in self.UNITS.items():
+            x("INSERT INTO core.players(id, name) VALUES (%s, %s)", (player, f"P{player}"))
+            x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('player', 'transfermarkt', %s, %s)", (key, player))
+            x("""INSERT INTO ops.transfermarkt_reads(kind, provider_key, priority, next_due_at, read_at, last_http_status, error_code)
+                 VALUES ('injuries', %s, 1, now() + interval '1 day', now() - interval '3 days', %s, %s)""", (key, status, error))
+            if held:
+                x("""INSERT INTO core.player_injuries(player_id, kind, label, start_date, source, as_of)
+                     VALUES (%s, 'injury', 'Knee', '2026-01-01', 'transfermarkt', '2026-01-02')""", (player,))
+        with self.db.transaction():
+            x((ROOT / "sql" / "160_reads_keep_omitted_observations.sql").read_text(encoding="utf-8"))
+        known = {p for (p,) in x("SELECT player_key FROM api.player_injury_reads").fetchall()}
+        cleared = {p for (p,) in x("""SELECT i.entity_id FROM ops.transfermarkt_reads r JOIN core.provider_ids i
+                                      ON i.entity_type = 'player' AND i.provider = 'transfermarkt' AND i.provider_key = r.provider_key
+                                      WHERE r.kind = 'injuries' AND r.read_at IS NULL""").fetchall()}
+        self.assertEqual((known, cleared), ({11, 13}, {10, 12}))
+        # Only read_at changes: the attempt's status and code, and the schedule, stay.
+        self.assertEqual(x("SELECT count(*) FROM ops.transfermarkt_reads WHERE error_code = 'NOT_FOUND' AND last_http_status = 404").fetchone()[0], 1)
 
 
 if __name__ == "__main__":
