@@ -583,7 +583,7 @@ class Loader:
         for key, mid, edition in candidates:
             facts, row = bound[mid], bound[mid]["row"]
             twin = twins.get(twin_keys.get(key))
-            if facts["events"] or facts["dependents"]:
+            if facts["events"] or holding(facts["dependents"]):
                 held.append((key, mid, "removal_has_dependents"))
             elif twin is None:
                 held.append((key, mid, "twin_missing"))
@@ -592,6 +592,9 @@ class Loader:
             else:
                 removed.append({"key": key, "id": mid, "edition": edition, "revision": row["revision"], "row": row, "events": [], "dependents": [],
                                 "twin": {"key": twin_keys[key], "id": twin["id"], "row": twin}})
+                released = sorted(set(facts["dependents"]) & RELEASED_ON_REMOVAL)
+                if released:
+                    removed[-1]["released"] = released  # cleared by the deletion, paired again by their reader (§45)
         removed_ids = {r["id"] for r in removed}
         for ident, edition in stored_editions:
             if edition in kept or edition not in excluded:
@@ -828,6 +831,17 @@ class ArchiveDrift(ArchiveError):
     """What an approved plan was decided on changed: its season is refused before anything is written."""
 
 
+# The references a reviewed copy's removal releases instead of being held by them (FAILURE_MODES.md §45, the owner's
+# decision on §36's m4): football-data.co.uk's pair is ON DELETE SET NULL and its reader pairs every row again
+# (footballdata._link), so the next pairing gives the row to the twin that stays. Every other reference holds.
+RELEASED_ON_REMOVAL = frozenset({"core.footballdata_matches.match_id"})
+
+
+def holding(dependents):
+    """The dependencies (ops.archive_match_dependents) that hold a reviewed copy's removal."""
+    return [where for where in dependents if where not in RELEASED_ON_REMOVAL]
+
+
 def _copies(excluded):
     """{reviewed copy competition: the competition it copies (or None)} from a dict, or the ids alone."""
     return dict(excluded) if isinstance(excluded, dict) else {e: None for e in excluded or ()}
@@ -867,7 +881,7 @@ def _delete(conn, loader, start, removed, editions, digest=None):
     ids = [r["id"] for r in removed]
     now = loader.bind(start, ids)
     for r in removed:
-        if now[r["id"]]["row"] != r["row"] or now[r["id"]]["events"] or now[r["id"]]["dependents"]:
+        if now[r["id"]]["row"] != r["row"] or now[r["id"]]["events"] or holding(now[r["id"]]["dependents"]):
             raise ArchiveDrift(f"{r['key']} changed before its deletion")
     twins = {r["twin"]["id"]: r for r in removed}
     for ident, row in (conn.execute("SELECT id, to_jsonb(m) FROM core.matches m WHERE season_id = %s AND id = ANY(%s)",

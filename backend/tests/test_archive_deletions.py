@@ -224,12 +224,48 @@ class RemovalTest(Base):
         self.assertEqual(self.apply(plan), "drift")
         self.assertIn(f"r:{RU2}:0", [k for k, *_ in self.state()])
 
-    def test_35ad_a_football_data_pair_holds_the_copy(self):
-        # FAILURE_MODES.md §35.3: football-data.co.uk's pair (140) names the archived copy: the plan holds it, never deletes it.
+    def pair_copy(self):
+        # football-data.co.uk's row of the copy's fixture, paired with the copy (140): Krasnodar–Orenburg 1-0, 13 July 2019.
         self.x("""INSERT INTO core.footballdata_matches(file_key, row_number, division, season_id, match_date, home_name, away_name,
                                                         home_goals, away_goals, match_id)
-                  SELECT 'E0/2019', 2, 'E0', 2019, coalesce(match_date, '2019-08-01'), 'Witness Home', 'Witness Away',
-                         coalesce(home_score, 0), coalesce(away_score, 0), id FROM core.matches WHERE id = %s""", (self.copy,))
+                  SELECT 'P1/1920', 2, 'P1', 2019, match_date, 'FK Krasnodar', 'FK Orenburg', home_score, away_score, id
+                  FROM core.matches WHERE id = %s""", (self.copy,))
+
+    def test_35ad_45f_a_football_data_pair_does_not_hold_the_copy(self):
+        # FAILURE_MODES.md §45 (the owner's decision on §36's m4): the pair is ON DELETE SET NULL and the reader pairs
+        # again, a pointer the next pairing gives to the twin that stays. Alone, it no longer holds a reviewed copy.
+        from vega.sources import footballdata
+        from vega.store import connect_local
+
+        self.pair_copy()
+        twin = self.ids[f"r:{RU1}:0"]
+        plan = self.plan()
+        removed = {r["key"]: r for r in plan["removed"]}
+        self.assertIn(f"r:{RU2}:0", removed)
+        self.assertEqual(removed[f"r:{RU2}:0"]["released"], ["core.footballdata_matches.match_id"])
+        self.assertNotIn("released", removed[f"r:{RU2}:1"])  # an unpaired copy's entry as before
+        self.assertNotIn(f"r:{RU2}:0", {m["key"] for m in plan["matches"] if m["class"] == "held"})
+        collect = connect_local(DSN)
+        self.addCleanup(collect.close)
+        collect.execute("SET ROLE vega_collect")
+        self.assertEqual(self.apply(plan, collect), "applied")
+        self.assertNotIn(f"r:{RU2}:0", [k for k, *_ in self.state()])
+        self.assertEqual(self.x("SELECT kind, id FROM ops.archive_removals WHERE kind = 'match' AND id = %s", (self.copy,)).fetchall(), [("match", self.copy)])
+        pairs = "SELECT row_number, match_id FROM core.footballdata_matches WHERE file_key = 'P1/1920'"
+        self.assertEqual(self.x(pairs).fetchall(), [(2, None)])  # the row is kept, unpaired
+        # The reader's next pairing, under the collection role as sources.run_due runs it (one vote enough, as in 35af;
+        # « Russie » stands for one of its countries): the twin that stays, then nothing more.
+        with patch.dict(footballdata.DIVISIONS, {"P1": ("Russie", 1)}), patch.object(footballdata, "MIN_VOTES", 1):
+            for _ in range(2):
+                with collect.transaction():
+                    footballdata._link(collect)
+                self.assertEqual(self.x(pairs).fetchall(), [(2, twin)])
+        again = self.plan()
+        self.assertEqual(again["removed"], [])
+
+    def test_45g_a_pair_with_another_dependency_still_holds_the_copy(self):
+        self.pair_copy()
+        self.x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('match', 'vega', 'test:bound', %s)", (self.copy,))
         plan = self.plan()
         self.assertNotIn(f"r:{RU2}:0", [r["key"] for r in plan["removed"]])
         held = {m["key"]: m for m in plan["matches"] if m["class"] == "held"}[f"r:{RU2}:0"]
