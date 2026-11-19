@@ -3601,3 +3601,28 @@ Rule: one close retry only. A search whose chosen club has no usable name is rec
 migration). Due again within a day when the unit did not carry that mark already; carrying it (the close retry was
 spent), at the search's ordinary period for its priority. No link and no conflict while the name is missing. When the
 name arrives, the reserve check applies as in 45h and the search is recorded as usual (the mark cleared).
+
+### 43.4 What 159 costs: the reads stay as fast as before (second review, 19 Nov 2026, written before the change)
+
+The second independent review (`evidence/relecture-2/CONSTATS.md`, base `relecture_b_159`: 530 500 matches, 50 500
+of national teams, 30 000 SportScore rows over 1 500 editions) measured 159 right but slower, under `vega_read` with
+`db.mjs`'s session settings and bound parameters: `api.nation_list` 217 → 710 ms (production-like volume) and 499 →
+2 777 ms (whole base); `/api/standings` 41–47 → 186–193 ms; `api.nation_matches` 5.8 → 34 ms, 26 → 653 ms for a
+nation of 416 copies. Causes: `nation_list` read `core.matches` a third time only to fetch columns its two branches
+had, and its anti-join on `abs(k.d - g.d) = 1` cannot hash, so it compares every pair of meetings of two teams;
+`api.standings_rank_conflicts()`, a SECURITY DEFINER function with no argument, aggregates every SportScore row of
+every edition at each call, and `standingsBody` calls it three times; `nation_matches`' lateral join re-reads its
+materialized CTEs once per kept match.
+
+**Properties.**
+- 43s. `api.nation_list`: at most 1.5 times its pre-159 time (119) on both volumes; `core.matches` is read twice
+  (its two branches, as in 119), never a third time; the copy test is a hash join on equal keys (pair, day ± 1,
+  score), not a join filter on `abs()`.
+- 43t. `/api/standings`: the rank check reads only the editions the statement selects. Under `enable_seqscan =
+  off`, every scan of `core.standings_official` in the route's statement (custom and generic plans) has an index
+  condition on `competition_season_id`, and no function aggregates the whole table. The withheld editions are read
+  per edition (`api.standings_withheld(edition)`). Time: at most 1.5 times 150's on the measurement base;
+  `/api/cup-snapshot?kind=standings` and the worker's `count(*) FROM api.standings` likewise.
+- 43u. `api.nation_matches`: linear in the nation's copies: no node re-executed once per kept match over a
+  materialized CTE; at most 1.5 times 120's time on both volumes.
+- The semantics of 43a–43r are unchanged (same tests, same expectations), the 46 SportScore tables stay admitted.
