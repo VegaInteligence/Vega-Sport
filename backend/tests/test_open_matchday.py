@@ -2,7 +2,7 @@
 read like main's collector, written as typed matches and team statistics, read back as
 main's catalogue rows."""
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import csv
 import json
 import os
@@ -144,21 +144,88 @@ class OpenMatchdayTest(unittest.TestCase):
             open_matchday.run(self.db, fake_get, "europe", NOW)
         self.assertEqual(self.db.execute("SELECT count(*) FROM core.matches WHERE source='open_matchday'").fetchone()[0], 19)
 
-    def test_a_copy_written_before_is_removed_once_pitchapi_holds_its_league(self):
-        # The copies read before VI-21 (17 Nov 2026) go with the next read: matches, rounds, edition,
-        # competition and their ids; the cup of the same summary stays as it is.
+    # -- §45 (FAILURE_MODES.md): a copy goes only when the native edition covers it, match by match --
+    COPY_KEY = "open-matchday:ENG_1_premier-league:2026/2027"
+
+    def collect_run(self):
+        """open_matchday.run as the worker runs it: under the collection role, in its own transaction."""
+        with self.db.transaction():
+            self.db.execute("SET LOCAL ROLE vega_collect")
+            out = open_matchday.run(self.db, fake_get, "europe", NOW)
+            self.db.execute("RESET ROLE")
+        return out
+
+    def copy_then_native(self):
+        """The Premier League copy written while PitchAPI did not hold the league, then PitchAPI's edition of
+        2026/2027 created by the catalogue, without a match yet: (native edition, the copy's matches)."""
         from vega.store import Store
 
+        x = self.db.execute
+        x("DELETE FROM core.matches; DELETE FROM core.provider_ids; DELETE FROM core.rounds; DELETE FROM core.competition_seasons; "
+          "DELETE FROM core.competitions; DELETE FROM ops.parse_failures")
+        self.assertEqual(self.collect_run(), (5 + 3 + 7 + 4, 0))
+        comp = x("INSERT INTO core.competitions(name, country_code) VALUES ('Premier League', NULL) RETURNING id").fetchone()[0]
+        x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('competition','pitchapi','l_4WFCIZ',%s)", (comp,))
+        native = x("INSERT INTO core.competition_seasons(competition_id, season_id, native_label) VALUES (%s,%s,'2026/2027') RETURNING id",
+                   (comp, Store(self.db).season("2026/2027"))).fetchone()[0]
+        return native, self.copy()
+
+    def copy(self):
+        return self.db.execute(
+            """SELECT m.id, m.status::text, m.match_date, m.home_team_id, m.away_team_id, m.home_team_name, m.away_team_name, m.home_score, m.away_score
+               FROM core.matches m JOIN core.competition_seasons cs ON cs.id = m.competition_season_id
+               WHERE cs.cup_key = %s ORDER BY m.match_date, m.id""", (self.COPY_KEY,)).fetchall()
+
+    def cover(self, native, matches, *, skip=(), shift=None, swap=()):
+        """PitchAPI's own clubs (the copy's teams merged into them by the identities) and its matches of the copy's
+        days: `skip` left out, `shift` {index: days}, `swap` with the sides the other way round."""
+        x = self.db.execute
+        clubs = {}
+        for team in sorted({t for m in matches for t in (m[3], m[4])}):
+            name = x("SELECT name FROM core.teams WHERE id = %s", (team,)).fetchone()[0]
+            clubs[team] = x("INSERT INTO core.teams(name) VALUES (%s) RETURNING id", (f"PitchAPI {name}",)).fetchone()[0]
+            x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('team','pitchapi',%s,%s)", (f"t_{clubs[team]:06d}", clubs[team]))
+            x("UPDATE core.teams SET merged_into = %s WHERE id = %s", (clubs[team], team))
+        for n, (_, status, day, home, away, _h, _a, hs, aws) in enumerate(matches):
+            if n in skip:
+                continue
+            home, away, hs, aws = (clubs[away], clubs[home], aws, hs) if n in swap else (clubs[home], clubs[away], hs, aws)
+            x("""INSERT INTO core.matches(competition_season_id, season_id, source, status, home_team_id, away_team_id, home_score, away_score, match_date)
+                 VALUES (%s, 2026, 'pitchapi', %s, %s, %s, %s, %s, %s)""",
+              (native, status, home, away, hs, aws, day + timedelta(days=(shift or {}).get(n, 0))))
+
+    def traces(self):
+        return self.db.execute("SELECT error_code, message FROM ops.parse_failures WHERE error_code = 'COPY_NOT_COVERED' ORDER BY id").fetchall()
+
+    def test_45a_an_empty_native_edition_keeps_the_copy(self):
+        # The catalogue creates the native edition before its matches are collected (a season change): the copy's
+        # results stay, the reason is traced once, the next passes try again.
         try:
             with self.db.transaction():
-                self.db.execute("DELETE FROM core.matches; DELETE FROM core.provider_ids; DELETE FROM core.rounds; DELETE FROM core.competition_seasons; DELETE FROM core.competitions")
-                open_matchday.run(self.db, fake_get, "europe", NOW)  # PitchAPI does not hold the league yet: the copy is written
-                self.assertEqual(self.db.execute("SELECT count(*) FROM core.matches WHERE home_team_name = 'Arsenal' OR away_team_name = 'Arsenal'").fetchone()[0] > 0, True)
-                comp = self.db.execute("INSERT INTO core.competitions(name, country_code) VALUES ('Premier League', NULL) RETURNING id").fetchone()[0]
-                self.db.execute("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('competition','pitchapi','l_4WFCIZ',%s)", (comp,))
-                season = Store(self.db).season("2026/2027")
-                self.db.execute("INSERT INTO core.competition_seasons(competition_id, season_id, native_label) VALUES (%s,%s,'2026/2027')", (comp, season))
-                written, _ = open_matchday.run(self.db, fake_get, "europe", NOW)
+                native, before = self.copy_then_native()
+                self.assertEqual(len(before), 5 + 3)
+                for _ in range(2):
+                    self.assertEqual(self.collect_run(), (7 + 4, 0))  # the copy is not read: PitchAPI holds its league
+                    self.assertEqual(self.copy(), before)
+                    self.assertEqual(self.db.execute("SELECT count(*) FROM core.competition_seasons WHERE cup_key = %s", (self.COPY_KEY,)).fetchone()[0], 1)
+                    self.assertEqual(self.db.execute(
+                        "SELECT count(*) FROM core.provider_ids WHERE provider = 'vega' AND provider_key = 'cup:open-matchday:ENG_1_premier-league'").fetchone()[0], 1)
+                    traces = self.traces()
+                    self.assertEqual(len(traces), 1)
+                    self.assertTrue(traces[0][1].startswith(f"{self.COPY_KEY}: 8 of 8 match(es) without a native match: 2026-08-21 Arsenal–Coventry"), traces[0][1])
+                raise psycopg.Rollback()
+        except psycopg.Rollback:
+            pass
+
+    def test_45b_a_copy_written_before_is_removed_once_the_native_edition_covers_it(self):
+        # The copies read before VI-21 (17 Nov 2026) go once PitchAPI's edition holds each of their matches (the same
+        # clubs once the identities are resolved, a day apart at most, either side at home): matches, rounds, edition,
+        # competition and their ids; the cup of the same summary stays as it is.
+        try:
+            with self.db.transaction():
+                native, before = self.copy_then_native()
+                self.cover(native, before, shift={1: 1, 6: -1}, swap={2})
+                written, _ = self.collect_run()
                 self.assertEqual(written, 7 + 4)
                 left = self.db.execute("SELECT split_part(cup_key, ':', 2) FROM core.competition_seasons WHERE cup_key IS NOT NULL").fetchall()
                 self.assertEqual(left, [("AUT_CUP_ofb-cup",)])
@@ -168,6 +235,43 @@ class OpenMatchdayTest(unittest.TestCase):
                 self.assertEqual(self.db.execute(
                     "SELECT count(*) FROM core.provider_ids p WHERE p.entity_type = 'match' AND p.provider = 'open_matchday' AND NOT EXISTS (SELECT 1 FROM core.matches m WHERE m.id = p.entity_id)"
                 ).fetchone()[0], 0)
+                self.assertEqual(self.db.execute("SELECT count(*) FROM core.matches WHERE competition_season_id = %s", (native,)).fetchone()[0], 8)
+                self.assertEqual(self.traces(), [])
+                raise psycopg.Rollback()
+        except psycopg.Rollback:
+            pass
+
+    def test_45c_45d_a_copy_partly_covered_stays_whole(self):
+        # One match of eight without its native match (45c), or with it two days away (45d): nothing of the copy goes.
+        for case, options in (("45c", {"skip": {4}}), ("45d", {"shift": {4: 2}})):
+            with self.subTest(case=case):
+                try:
+                    with self.db.transaction():
+                        native, before = self.copy_then_native()
+                        self.cover(native, before, **options)
+                        self.collect_run()
+                        self.assertEqual(self.copy(), before)
+                        traces = self.traces()
+                        self.assertEqual(len(traces), 1)
+                        self.assertEqual(traces[0][1], f"{self.COPY_KEY}: 1 of 8 match(es) without a native match: 2026-08-22 Nott'm Forest–Leeds")
+                        raise psycopg.Rollback()
+                except psycopg.Rollback:
+                    pass
+
+    def test_45e_a_kept_copy_is_not_read_by_the_elo(self):
+        # Kept beside a native edition that covers part of it, the copy counts nothing twice: the Elo never reads a
+        # COVERED folder.
+        from vega import power
+
+        try:
+            with self.db.transaction():
+                native, before = self.copy_then_native()
+                self.cover(native, before, skip={4})
+                self.collect_run()
+                self.assertEqual(len(self.copy()), 8)
+                ids = {r[0] for r in power.elo_matches(self.db.execute(power.ELO_MATCHES).fetchall())}
+                self.assertFalse(ids & {m[0] for m in before})
+                self.assertEqual(len(ids & {r[0] for r in self.db.execute("SELECT id FROM core.matches WHERE competition_season_id = %s AND status = 'finished'", (native,))}), 4)
                 raise psycopg.Rollback()
         except psycopg.Rollback:
             pass
