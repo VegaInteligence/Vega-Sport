@@ -30,7 +30,7 @@ ROOT = Path(__file__).resolve().parents[1]
 REPO = ROOT.parent
 sys.path.insert(0, str(ROOT))
 from vega import sources
-from vega.sources import SourceError, cups, curated, open_matchday, snapshot
+from vega.sources import SourceError, cups, curated, open_matchday, open_matchday_history, snapshot
 
 try:
     import psycopg
@@ -431,6 +431,12 @@ class OpenMatchdayGuardTest(SnapshotDatabase):
 
     def setUp(self):
         super().setUp()
+        # These cases name real folders with built rows: the attested results of the 35-result ledger only, not the
+        # ones the source published then dropped (FAILURE_MODES.md §41, created in any read of their edition).
+        ledger = {k: r for k, r in open_matchday_history.RESULTS.items() if r.get("id_at_incident")}
+        patcher = patch.object(open_matchday_history, "RESULTS", ledger)
+        patcher.start()
+        self.addCleanup(patcher.stop)
         self.assertEqual(self.read([league()], self.files(), NOW), ("ok", 2, 0))
         self.before = self.state()
         self.assertEqual([r[2:7] for r in self.before], [

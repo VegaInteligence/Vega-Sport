@@ -493,7 +493,7 @@ class RestoreTest(WindowBase):
         self.assertEqual(sum(len(self.state(f)) for f in files), 575)
         # The next pass keeps them: no duplicate, no new match, no revision; the one after writes nothing.
         revisions = {f: {k: v[:6] for k, v in self.state(f).items()} for f in files}
-        self.assertEqual(self.read(files), ("ok", 575, 0))
+        self.assertEqual(self.read(files), ("ok", 575, 1))  # unmatched: 8625's kept final (41p)
         states = {f: self.state(f) for f in files}
         self.assertEqual({f: {k: v[:6] for k, v in s.items()} for f, s in states.items()}, revisions)
         restored = {k: v for s in states.values() for k, v in s.items() if v[0] in self.ids}
@@ -502,7 +502,7 @@ class RestoreTest(WindowBase):
         pairs = self.x("""SELECT count(*) FROM (SELECT match_date, least(home_team_id, away_team_id), greatest(home_team_id, away_team_id)
                           FROM core.matches GROUP BY 1, 2, 3 HAVING count(*) > 1) d""").fetchone()[0]
         self.assertEqual(pairs, 0)
-        self.assertEqual(self.read(files), ("ok", 575, 0))
+        self.assertEqual(self.read(files), ("ok", 575, 1))  # unmatched: 8625's kept final (41p)
         self.assertEqual({f: self.state(f) for f in files}, states)
         self.assertEqual(self.restore(True)["restored"], 0)
 
