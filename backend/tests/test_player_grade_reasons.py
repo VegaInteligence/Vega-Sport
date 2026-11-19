@@ -31,6 +31,7 @@ NOW = datetime(2026, 11, 19, 12, tzinfo=timezone.utc)
 AWARD_2020 = 31 * 22  # the calendar league's matches before 1 August 2021 (1 April + 4 n days, n = 0..30), 22 players each
 # The participations no run may grade, by player: (match index in the season league, team side, what it is).
 THIRD, NO_ROLE, ZERO, NO_MINUTES, BENCH, UNCOLLECTED, CUP = 9999, 9998, 9997, 9996, 9995, 9994, 9993
+NO_TEAM = 9992  # a statistics row without a team (§46, 46j): as on 2088d36e60, never read by the players' run
 
 
 def league(x, cid, key, label, teams, first_day):
@@ -86,7 +87,7 @@ class PlayerGradeReasonsTest(unittest.TestCase):
         cls.calendar = league(x, 1, "l_CALEND", "2021", range(1, 9), date(2021, 4, 1))
         cls.season = league(x, 2, "l_SEASON", "2021/2022", range(11, 19), date(2021, 8, 14))
         x("INSERT INTO core.teams(id,name) VALUES(99,'Third club')")
-        for pid in (THIRD, NO_ROLE, ZERO, NO_MINUTES, BENCH, UNCOLLECTED, CUP):
+        for pid in (THIRD, NO_ROLE, ZERO, NO_MINUTES, BENCH, UNCOLLECTED, CUP, NO_TEAM):
             x("INSERT INTO core.players(id,name) VALUES(%s,%s)", (pid, f"P{pid}"))
         stats = "INSERT INTO core.player_match_stats(season_id,match_id,team_id,player_id,position_id,minutes_played,touches,accurate_passes,accurate_passes_total) VALUES(2021,%s,%s,%s,%s,%s,40,20,25)"
         m = cls.season
@@ -95,6 +96,8 @@ class PlayerGradeReasonsTest(unittest.TestCase):
         x(stats, (m[6][0], m[6][1], NO_ROLE, None, 30))  # no position, no slot, no other match, no keeper data
         x(stats, (m[7][0], m[7][1], ZERO, 62, 0))
         x(stats, (m[8][0], m[8][1], NO_MINUTES, 62, None))
+        x(stats, (m[11][0], None, NO_TEAM, 62, 90))
+        cls.keys[NO_TEAM] = m[11][0]
         x("INSERT INTO core.lineup_players(season_id,match_id,team_id,player_id,is_starter,position_id) VALUES(2021,%s,%s,%s,false,62)", (m[9][0], m[9][1], BENCH))
         x("INSERT INTO core.lineup_players(season_id,match_id,team_id,player_id,is_starter,position_id) VALUES(2021,%s,%s,%s,false,62)", (m[10][0], m[10][1], UNCOLLECTED))
         x("UPDATE core.match_coverage SET player_stats='pending' WHERE season_id=2021 AND match_id=%s", (m[10][0],))
@@ -183,6 +186,15 @@ class PlayerGradeReasonsTest(unittest.TestCase):
         self.assertEqual(wrong, 0)
         self.assertEqual(self.read.execute("SELECT count(*) FROM api.player_grade_status WHERE grade_status IN ('graded','below_display_threshold')").fetchone()[0],
                          self.one("SELECT count(*) FROM agg.player_match_grades")[0])
+
+    def test_46j_a_row_without_a_team_is_treated_as_on_2088d36e60(self):
+        # 2088d36e60's PLAYER_MATCHES inner-joins core.teams on the row's team: such a row was never read, so never
+        # graded (evidence corrections-relecture/c5). The same now: no grade, no exclusion, the year published.
+        self.assertIsNone(self.failure)
+        self.assertEqual(self.one("SELECT count(*) FROM agg.player_match_grades WHERE player_id=%s", NO_TEAM)[0], 0)
+        self.assertEqual(self.one("SELECT count(*) FROM agg.player_power_matches WHERE player_id=%s", NO_TEAM)[0], 0)
+        self.assertEqual(self.one("SELECT count(*) FROM agg.player_grade_exclusions WHERE player_id=%s", NO_TEAM)[0], 0)
+        self.assertEqual(self.status(NO_TEAM), [(2021, "team_not_in_match")])
 
     def test_38g_a_row_the_run_did_not_record_is_unrecorded_then_pending_once_it_changes(self):
         # A year ranked before 155 recorded no reason: its ungraded rows say so, until the year runs again.
