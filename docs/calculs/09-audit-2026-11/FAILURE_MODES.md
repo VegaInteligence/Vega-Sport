@@ -2780,3 +2780,72 @@ guard would keep. The smallest coherent mechanism is a reviewed map of the same 
 date: reason"}`, read by `snapshot.remove(held=…)`: a listed fixture goes with what holds it, the others stay held.
 What goes with it (odds, events, a line-up forecast, another authority's fields) is the decision that needs the user;
 it is not written.
+
+## 38. Player match grades: the first award year, a third team's row, the board's rule, the reasons by key (E04e/f/i/l, VI-21, 19 Nov 2026, written before the tests)
+
+Reproduced on `2088d36e60` with the real writers on a disposable PostgreSQL 18.6 (`vega_calc` for the
+calculations, `vega_read` for the reads): a calendar-year league whose edition 2021 holds 30 matches dated before
+1 August 2021 (award year 2020) and 26 after it, beside an August–May league 2021/22.
+
+**E04f, award year 2020.** The daily path never computes award year 2020, for three reasons that hold together:
+`worker.due_seasons` lists only seasons with PitchAPI editions (2020 holds archives only); `models.refresh_daily(2021)`
+runs `refresh_players(2020)` only when `power.previous_year_changed(2021)` is true, and that query requires player
+statistics in physical season 2020 (`EXISTS … s.season_id = 2020`), which no source ever writes; `stale_rankings`
+re-ranks only a season that already has a published players run. The participations of 1 January–31 July 2021 stored
+in the 2021 editions (MLS, Eliteserien, the first July rounds of 2. Bundesliga, …) are read by no run: 0 of 682 graded
+in the reproduction, 14 418 in production (11 562 once Allsvenskan, `scope.py` `l_1XsMdH`, is set aside). The gate is
+deliberate (its docstring: « the first half of the calendar-year leagues alone would rank a year the European seasons
+are missing from »; `test_models` asserts it). A direct `refresh_players(2020)` grades all 682 against award year
+2020's own references (`grade_reference_year`: a finished year is its own), and publishes a 2020 ranking and award race
+of the calendar-year leagues alone. Which references grade that partial year, and whether it is ranked, is a method
+decision: this section records it as open and changes neither.
+
+**E04l (a), a third team's row.** A statistics row whose team is neither side of its match, with a position, in a match
+whose two Elo sides exist, joins both sides as « opponent » (`opp.team_id <> s.team_id`): two rows for one
+player-match, and the COPY into `agg.player_power_matches` stops the publication on 23505. The whole award year keeps
+its previous rows.
+
+**E04l (b), the board.** `GET /api/matches/{id}/players` reads `api.match_grades.grade`, which no rule masks; the
+performance page, the player's matches and the match ranking show a grade only from 20 minutes or when |z| ≥ 1. A
+7-minute and a 1-minute cameo show 54 and 55 on the board and nothing elsewhere.
+
+**E04l (c), reasons.** Nothing published tells, for one participation, a hidden grade from a missing grade, nor why
+one is missing: the rows `assign_roles` leaves without a role and the rows the read refuses are kept nowhere.
+
+### 38.1 Rules
+
+- The read of an award year keeps the match's two sides only: a statistics row whose team is not one of the match's
+  two teams is not graded; the run records it (`agg.player_grade_exclusions`, reason `team_not_in_match`) and
+  publishes every other grade of the year. A player-match without a role after `assign_roles` is recorded the same
+  way (`role_undetermined`). The exclusions of an award year are replaced with its run, in its transaction.
+- Every reader of a match grade applies one rule, the performance page's: a grade is shown when `minutes >= 20` or
+  `|z| >= 1`, else it is `null`. The board's `Vega grade` keeps its field and its form; a hidden grade is `null`
+  there too. The match ranking's order and ranks are unchanged.
+- `api.player_grade_status` (migration 155) gives, for every participation key (edition season, match, player) of
+  the statistics or the line-ups, its award year and one status, the first that applies:
+  `graded`, `below_display_threshold` (a grade exists, the rule above hides it), `competition_not_admitted` (an
+  archive or cup edition: `PLAYER_MATCHES` reads neither), `match_not_finished`, `no_statistics` (no statistics row,
+  the match's player statistics not collected), `not_played` (no row while the match's statistics are, or 0 minutes),
+  `no_minutes` (a row without minutes), `team_not_in_match`, `outside_award_window` (no date, or an edition the award
+  year does not read), the run's recorded reason (`role_undetermined`), `missing_inputs` (a role, no contribution),
+  `no_reference` (a contribution, no reference for the role), `award_year_not_computed` (no published players run for
+  the award year: award year 2020 today), `pending` (the run predates the row). The performance read returns it as
+  `gradeStatus` beside `row` (additive). A zero is a grade (`graded`), never a status.
+
+### 38.2 Failure modes and expected outcomes
+
+| # | Situation | Expected | On 2088d36e60 |
+|---|---|---|---|
+| 38a | The ordinary daily pass (`due_seasons`, `refresh_elo`, `refresh_daily(elo=False)`) on the two leagues | every positive-minute participation of award year 2020 graded; a second pass changes nothing | red: 0 of 682 graded, 2020 never due; **kept open: method decision** (test marked as an expected failure) |
+| 38b | A third team's row with a position, both Elo sides present, then `refresh_players(2021)` | the run publishes; the row is in `agg.player_grade_exclusions` (`team_not_in_match`), not graded; every other row graded; a second run changes no grade | red: `UniqueViolation` 23505 on `player_power_matches_pkey`, the year's previous rows kept |
+| 38c | A row without position, line-up slot, role history or keeper data | not graded, recorded `role_undetermined`; status `role_undetermined` | red: dropped silently, no trace |
+| 38d | `api.player_grade_status` under `vega_read` over the base of 38a–38c plus a 0-minute row, a minutes-less row, a line-up-only player of an uncollected match, a cup edition's row | one row per key, each status above as stated; `graded`/`below_display_threshold` agree with the grade rule on every graded key | red: no such view |
+| 38e | The board of the read API's seed match, one of its players made a 7-minute cameo with z = 0.3 | `Vega grade` absent (`null`) for him, the same values as before for the others; the match ranking and the performance page unchanged (no grade) | red: the board gives him 54.3 |
+| 38f | `GET /api/performance` on a hidden, a graded and an ungraded appearance | `gradeStatus` `below_display_threshold`, `graded`, and the key's status; `row` unchanged | red: no field |
+
+Recorded, not changed here: E04e (`PLAYER_MATCHES` reads no archive or cup edition, and no writer stores individual
+statistics for one: only `store.py`, the PitchAPI path, writes `core.player_match_stats`); E04i (two native copies of
+one match: `archives.merge_twins` handles archive `g:` twins only and `identity.duplicates` pairs a cup copy with a
+PitchAPI match only; a guard for native copies belongs with the match identities); the player page's recent form
+(`PlayerScoutOverview.jsx`: `seasonGrade([]).grade` is `null` and the card writes `?? 50`, a copy change that needs a
+validated mock-up).
