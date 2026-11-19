@@ -1,0 +1,166 @@
+{
+ "source": "https://github.com/oladeeayo/open-matchday",
+ "use": "FAILURE_MODES.md \u00a741: consecutive real versions of the results files",
+ "files": [
+  {
+   "file": "ENG_6_national-league-north@13a434955d.csv",
+   "folder": "ENG_6_national-league-north",
+   "commit": "13a434955de865f66f95a71937205a3a286488c6",
+   "committed_at": "2026-11-18T06:43:54Z",
+   "url": "https://raw.githubusercontent.com/oladeeayo/open-matchday/13a434955de865f66f95a71937205a3a286488c6/data/ENG_6_national-league-north/results_2627.csv",
+   "sha256": "908634877b7acc50fdc848516ae2cc987e991fabdad369f760bf2d5c00bee70c",
+   "bytes": 8834,
+   "downloaded": "lot calendriers, 19 Nov 2026 (evidence/calendriers/telechargements/om/hist)"
+  },
+  {
+   "file": "ENG_6_national-league-north@226252ce7c.csv",
+   "folder": "ENG_6_national-league-north",
+   "commit": "226252ce7c9581c568f12a31d276f83cd3acb226",
+   "committed_at": "2026-11-13T09:14:10Z",
+   "url": "https://raw.githubusercontent.com/oladeeayo/open-matchday/226252ce7c9581c568f12a31d276f83cd3acb226/data/ENG_6_national-league-north/results_2627.csv",
+   "sha256": "ed3269f65fde1c0a86bd8f7154a3c1a8f9c4b12929f409b72843c01d6618c3ad",
+   "bytes": 9411,
+   "downloaded": "lot calendriers, 19 Nov 2026 (evidence/calendriers/telechargements/om/hist)"
+  },
+  {
+   "file": "ENG_6_national-league-south@13a434955d.csv",
+   "folder": "ENG_6_national-league-south",
+   "commit": "13a434955de865f66f95a71937205a3a286488c6",
+   "committed_at": "2026-11-18T06:43:54Z",
+   "url": "https://raw.githubusercontent.com/oladeeayo/open-matchday/13a434955de865f66f95a71937205a3a286488c6/data/ENG_6_national-league-south/results_2627.csv",
+   "sha256": "5138503bcd91a4a04f9050c1d1d237d7e2757dae57a4a168f42e7b3d27b47370",
+   "bytes": 8504,
+   "downloaded": "lot calendriers, 19 Nov 2026 (evidence/calendriers/telechargements/om/hist)"
+  },
+  {
+   "file": "ENG_7_northern-premier-league@13a434955d.csv",
+   "folder": "ENG_7_northern-premier-league",
+   "commit": "13a434955de865f66f95a71937205a3a286488c6",
+   "committed_at": "2026-11-18T06:43:54Z",
+   "url": "https://raw.githubusercontent.com/oladeeayo/open-matchday/13a434955de865f66f95a71937205a3a286488c6/data/ENG_7_northern-premier-league/results_2627.csv",
+   "sha256": "164e64edef04c9f3c43cfd15e19efa018ee2246cce305d380182456a003340fe",
+   "bytes": 8250,
+   "downloaded": "lot calendriers, 19 Nov 2026 (evidence/calendriers/telechargements/om/hist)"
+  },
+  {
+   "file": "ENG_CUP_fa-cup@55a7b8e0f4.csv",
+   "folder": "ENG_CUP_fa-cup",
+   "commit": "55a7b8e0f4bf49729dc56307d77f175f47456917",
+   "committed_at": "2026-10-24T10:39:56Z",
+   "url": "https://raw.githubusercontent.com/oladeeayo/open-matchday/55a7b8e0f4bf49729dc56307d77f175f47456917/data/ENG_CUP_fa-cup/results_2627.csv",
+   "sha256": "ce6a2035dd9e72924f39568b846e21007ce1a785434ea9c28f7e8b7a277aee14",
+   "bytes": 13435,
+   "downloaded": "lot calendriers, 19 Nov 2026 (evidence/calendriers/telechargements/om/hist)"
+  },
+  {
+   "file": "ENG_CUP_fa-cup@772fb543b5.csv",
+   "folder": "ENG_CUP_fa-cup",
+   "commit": "772fb543b5177b14fa4ef3d2d410b6c06bc92311",
+   "committed_at": "2026-11-09T05:30:43Z",
+   "url": "https://raw.githubusercontent.com/oladeeayo/open-matchday/772fb543b5177b14fa4ef3d2d410b6c06bc92311/data/ENG_CUP_fa-cup/results_2627.csv",
+   "sha256": "fd2e357402fbbc093eb59b4342eac520aa02522238e0f9c345c54d3121db62ab",
+   "bytes": 10497,
+   "downloaded": "lot calendriers, 19 Nov 2026 (evidence/calendriers/telechargements/om/hist)"
+  },
+  {
+   "file": "ENG_CUP_fa-cup@e1ec9773df.csv",
+   "folder": "ENG_CUP_fa-cup",
+   "commit": "e1ec9773df8030a3e0c613f52eb3bd85437c21ab",
+   "committed_at": "2026-11-10T06:45:05Z",
+   "url": "https://raw.githubusercontent.com/oladeeayo/open-matchday/e1ec9773df8030a3e0c613f52eb3bd85437c21ab/data/ENG_CUP_fa-cup/results_2627.csv",
+   "sha256": "4743a27eb399ef52d9077b204f8d3973f4aba286f097ea10404c0924c308d0f9",
+   "bytes": 10577,
+   "downloaded": "lot calendriers, 19 Nov 2026 (evidence/calendriers/telechargements/om/hist)"
+  },
+  {
+   "file": "POL_2_division-1@06b3cf482d.csv",
+   "folder": "POL_2_division-1",
+   "commit": "06b3cf482d7e8e24912994739368f1764bb7bf54",
+   "committed_at": "2026-11-04T05:38:09Z",
+   "url": "https://raw.githubusercontent.com/oladeeayo/open-matchday/06b3cf482d7e8e24912994739368f1764bb7bf54/data/POL_2_division-1/results_2627.csv",
+   "sha256": "7a5ee4ee3c240ff42f23dadf1fe1eee46f8d6c171c0608bc89b07ac61767d953",
+   "bytes": 8376,
+   "downloaded": "lot calendriers, 19 Nov 2026 (evidence/calendriers/telechargements/om/hist)"
+  },
+  {
+   "file": "POL_2_division-1@772fb543b5.csv",
+   "folder": "POL_2_division-1",
+   "commit": "772fb543b5177b14fa4ef3d2d410b6c06bc92311",
+   "committed_at": "2026-11-09T05:30:43Z",
+   "url": "https://raw.githubusercontent.com/oladeeayo/open-matchday/772fb543b5177b14fa4ef3d2d410b6c06bc92311/data/POL_2_division-1/results_2627.csv",
+   "sha256": "8b21b37081fdc6bd5b294cc0f8a4fb40c3976187f3a2ce26f92f20a6a0086be7",
+   "bytes": 8377,
+   "downloaded": "lot calendriers, 19 Nov 2026 (evidence/calendriers/telechargements/om/hist)"
+  },
+  {
+   "file": "POL_3_division-2@3272e1f9d4.csv",
+   "folder": "POL_3_division-2",
+   "commit": "3272e1f9d4b48a354114989e069131745e7eee94",
+   "committed_at": "2026-10-10T11:48:38Z",
+   "url": "https://raw.githubusercontent.com/oladeeayo/open-matchday/3272e1f9d4b48a354114989e069131745e7eee94/data/POL_3_division-2/results_2627.csv",
+   "sha256": "5dbca1225fbec49df2e475b5b97c06f5cf05985283e18d160200b16937724a21",
+   "bytes": 6593,
+   "downloaded": "lot calendriers, 19 Nov 2026 (evidence/calendriers/telechargements/om/hist)"
+  },
+  {
+   "file": "POL_3_division-2@3a3ac5075a.csv",
+   "folder": "POL_3_division-2",
+   "commit": "3a3ac5075ad614d94e0f908f9e0752f937a10cd9",
+   "committed_at": "2026-11-15T05:42:47Z",
+   "url": "https://raw.githubusercontent.com/oladeeayo/open-matchday/3a3ac5075ad614d94e0f908f9e0752f937a10cd9/data/POL_3_division-2/results_2627.csv",
+   "sha256": "49ff49760b580f2a8b4f2588a6c6afcefee97b1e912681ce26a6a98f770e572f",
+   "bytes": 8056,
+   "downloaded": "lot calendriers, 19 Nov 2026 (evidence/calendriers/telechargements/om/hist)"
+  },
+  {
+   "file": "POL_3_division-2@77e35fdbd5.csv",
+   "folder": "POL_3_division-2",
+   "commit": "77e35fdbd5201a917c1f8c6509ee71d44b275a9d",
+   "committed_at": "2026-11-14T05:43:54Z",
+   "url": "https://raw.githubusercontent.com/oladeeayo/open-matchday/77e35fdbd5201a917c1f8c6509ee71d44b275a9d/data/POL_3_division-2/results_2627.csv",
+   "sha256": "d368818e1363409c040235d78156d18f08bd3c29eefecaff8e5c1a75bc1de10c",
+   "bytes": 8341,
+   "downloaded": "lot calendriers, 19 Nov 2026 (evidence/calendriers/telechargements/om/hist)"
+  },
+  {
+   "file": "POL_3_division-2@a49c863c76.csv",
+   "folder": "POL_3_division-2",
+   "commit": "a49c863c763e94a17d378bdc1fcf9d4501839721",
+   "committed_at": "2026-11-16T05:41:33Z",
+   "url": "https://raw.githubusercontent.com/oladeeayo/open-matchday/a49c863c763e94a17d378bdc1fcf9d4501839721/data/POL_3_division-2/results_2627.csv",
+   "sha256": "53465a95a6724acce0967c6a47699f823dbc5a3b822058833bb161b212735fac",
+   "bytes": 8202,
+   "downloaded": "lot calendriers, 19 Nov 2026 (evidence/calendriers/telechargements/om/hist)"
+  },
+  {
+   "file": "POL_3_division-2@b90bce70d4.csv",
+   "folder": "POL_3_division-2",
+   "commit": "b90bce70d49cf9d6a570aa54f2f2896da2ff76be",
+   "committed_at": "2026-10-12T15:41:39Z",
+   "url": "https://raw.githubusercontent.com/oladeeayo/open-matchday/b90bce70d49cf9d6a570aa54f2f2896da2ff76be/data/POL_3_division-2/results_2627.csv",
+   "sha256": "f1c5e5d30aabee1659f52568455dcf5115adb769f9571ae24343506a8a430790",
+   "bytes": 7001,
+   "downloaded": "lot calendriers, 19 Nov 2026 (evidence/calendriers/telechargements/om/hist)"
+  },
+  {
+   "file": "WAL_1_cymru-premier@772fb543b5.csv",
+   "folder": "WAL_1_cymru-premier",
+   "commit": "772fb543b5177b14fa4ef3d2d410b6c06bc92311",
+   "committed_at": "2026-11-09T05:30:43Z",
+   "url": "https://raw.githubusercontent.com/oladeeayo/open-matchday/772fb543b5177b14fa4ef3d2d410b6c06bc92311/data/WAL_1_cymru-premier/results_2627.csv",
+   "sha256": "d7d2411ed3c7bfaa6001106f97309a5593ff4df38f4278dc82d46eb161141718",
+   "bytes": 7908,
+   "downloaded": "lot calendriers, 19 Nov 2026 (evidence/calendriers/telechargements/om/hist)"
+  },
+  {
+   "file": "WAL_1_cymru-premier@fd27c060ea.csv",
+   "folder": "WAL_1_cymru-premier",
+   "commit": "fd27c060eab7dd37476966381d9e79eaab90186d",
+   "committed_at": "2026-11-01T05:13:11Z",
+   "url": "https://raw.githubusercontent.com/oladeeayo/open-matchday/fd27c060eab7dd37476966381d9e79eaab90186d/data/WAL_1_cymru-premier/results_2627.csv",
+   "sha256": "bc154213c5779ef4e56bed3afb2030e797e1235822a4e4b10bd24a3ed05f1776",
+   "bytes": 8324,
+   "downloaded": "lot calendriers, 19 Nov 2026 (evidence/calendriers/telechargements/om/hist)"
+  }
+ ]
+}

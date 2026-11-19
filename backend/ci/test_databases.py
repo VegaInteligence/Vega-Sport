@@ -44,6 +44,7 @@ SUITES = {
     "VEGA_V2_API_NODE_TEST_DSN": "vega_v2_api_node_test",
     "VEGA_V2_COLLECTION_TEST_DSN": "vega_v2_collection_test",
     "VEGA_V2_IDENTITY_TEST_DSN": "vega_v2_identity_test",
+    "VEGA_V2_WINDOW_TEST_DSN": "vega_v2_window_test",
 }
 
 
