@@ -74,7 +74,8 @@
 - Code final `79ef8bbb45`, suites locales sur arbre propre : Python 743 OK (1 sauté, 1 échec attendu 38a), API 226/226, site 788/788 (`evidence/candidat-final-79ef8bbb45`).
 - Livrés dans le dépôt : `docs/audits/2026-11-19/REPRISE.md` (tableau des 33, effets du déploiement, opérations et décisions), registre mis à jour (E : 4 critères passent `implemented_branch` — E02b, E02c, E03h, E04l — ; aucune production changée), preuves `docs/audits/2026-11-19/preuves/` (13 Mo, `SHA256SUMS`). Bilan des 33 : 13 vérifiés (9 à la passation + 4), 13 avancés, 7 bloqués.
 - Hors candidat : branche `claude/audit-coupes` (23 éditions), à livrer en PR séparée après décision.
-- Prochaine action : CI sur le SHA final, mise à jour de la PR 58, remise à Hugo pour la revue Fable 5.2 xhigh et l’avis Astra 6.2 xhigh sur ce SHA ; décisions et accords de l’utilisateur listés dans REPRISE.md.
+- CI 44601959463 verte sur `c6c4592ca7` (Python 743, API 226, site 788).
+- Prochaine action : remise à Hugo pour la revue Fable 5.2 xhigh et l’avis Astra 6.2 xhigh sur ce SHA ; décisions et accords de l’utilisateur listés dans REPRISE.md.
 
 ## Travail publié (synthèse)
 
