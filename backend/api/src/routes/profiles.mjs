@@ -396,7 +396,8 @@ export function createProfileRoute(read) {
       validateParams(params, []);
       const [rows, [known]] = await Promise.all([
         read(
-          `SELECT kind, label, start_date::text AS start_date, end_date::text AS end_date, days, matches_missed, season_year
+          `SELECT kind, label, start_date::text AS start_date, end_date::text AS end_date, days, matches_missed, season_year,
+             absent_since::text AS absent_since
            FROM api.player_injuries WHERE player_key=api.internal_id('player',$1)
            ORDER BY start_date DESC, label`,
           [injuries[1]],
@@ -407,8 +408,10 @@ export function createProfileRoute(read) {
       if (!known) reject(404, "Donnée indisponible.");
       return respond(req, {
         id: injuries[1],
+        // absentSince: the first day the provider's accepted list no longer named the episode (160); omitted otherwise.
         injuries: rows.map((r) => ({ kind: r.kind ?? null, label: r.label ?? null, start: r.start_date, end: r.end_date ?? null,
-          days: r.days ?? null, matchesMissed: r.matches_missed ?? null, season: r.season_year ?? null })),
+          days: r.days ?? null, matchesMissed: r.matches_missed ?? null, season: r.season_year ?? null,
+          ...(r.absent_since && { absentSince: r.absent_since }) })),
       });
     }
     const transfers = path.match(TRANSFERS);
@@ -703,7 +706,7 @@ export function createProfileRoute(read) {
       const id = params.get("id");
       if (!PLAYER.test(`/api/players/${id}`)) reject(400, "Paramètre invalide.");
       const rows = await read(
-        `SELECT valued_at::text AS date, value_eur AS "valueEur", club_id, club_name, club_image_url
+        `SELECT valued_at::text AS date, value_eur AS "valueEur", club_id, club_name, club_image_url, absent_since::text AS absent_since
          FROM api.player_market_values
          WHERE player_id=api.internal_id('player',$1)
          ORDER BY valued_at`,
@@ -712,7 +715,9 @@ export function createProfileRoute(read) {
       if (!rows.length) reject(404, "Donnée indisponible.");
       return respond(req, {
         currency: "EUR", source: "Transfermarkt",
-        history: rows.map((r) => put({ date: r.date, valueEur: r.valueEur }, "club", namedClub(r.club_id, r.club_name, r.club_image_url))),
+        // absentSince: the first day the provider's accepted history no longer listed the point (160); omitted otherwise.
+        history: rows.map((r) => put(put({ date: r.date, valueEur: r.valueEur }, "club", namedClub(r.club_id, r.club_name, r.club_image_url)),
+          "absentSince", r.absent_since)),
       });
     }
     if (path === "/api/players/facts-coverage") {

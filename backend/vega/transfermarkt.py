@@ -6,7 +6,12 @@ What it keeps, as typed rows (a response is never stored):
 - the players it reads (core.provider_players) and the clubs' squads (core.provider_squads)
   and names (core.provider_clubs);
 - for a player linked to one of ours: his market values (core.player_market_values, with the
-  club of each valuation) and injuries (core.player_injuries), replaced whole at each read;
+  club of each valuation) and injuries (core.player_injuries), each kept by its key (the day of
+  a valuation; the start and label of an episode) and never deleted: one the provider no longer
+  lists keeps its facts and the first day it was missed (absent_since). An empty list when he
+  holds some writes nothing (FAILURE_MODES.md §44);
+- a club-season's squad the same way: a member the provider no longer lists is kept, marked
+  absent, and no longer a link candidate; an empty squad when it holds members writes nothing;
 - his transfers (core.player_transfers), each kept by its key and never deleted: a move the
   provider no longer lists keeps its facts and the first day it was missed (absent_since). A
   response that cannot be a whole history (a 404 after one, no history, empty lists after a
@@ -711,7 +716,7 @@ class Reader:
             """SELECT q.club_key, q.player_key, pp.name, pp.birth_date, array_agg(DISTINCT q.season_year) FROM core.provider_squads q
                JOIN core.provider_ids c ON c.entity_type = 'team' AND c.provider = 'transfermarkt' AND c.provider_key = q.club_key AND c.is_current
                JOIN core.provider_players pp ON pp.provider = q.provider AND pp.provider_key = q.player_key
-               WHERE q.provider = 'transfermarkt'
+               WHERE q.provider = 'transfermarkt' AND q.absent_since IS NULL
                  AND NOT EXISTS (SELECT 1 FROM core.provider_ids i WHERE i.entity_type = 'player' AND i.provider = 'transfermarkt'
                                  AND i.provider_key = q.player_key)
                GROUP BY 1, 2, 3, 4"""
@@ -955,11 +960,7 @@ class Reader:
         for p in data["players"].values():
             written += self.observe(p, today, search_priority=priority)
         for club, year, members in data["squads"]:
-            self.conn.execute("DELETE FROM core.provider_squads WHERE provider = 'transfermarkt' AND club_key = %s AND season_year = %s", (club, year))
-            for player, shirt in members:
-                self.conn.execute(
-                    "INSERT INTO core.provider_squads(provider, club_key, season_year, player_key, shirt_number, read_on) VALUES ('transfermarkt', %s, %s, %s, %s, %s)",
-                    (club, year, player, shirt, today))
+            self.squad(club, year, members, today)  # never empty here: fetch_search keeps a squad with members
         # Our players of that season (or the year before), by exact name, each name the only one.
         counts = Counter()
         for name, short in self.conn.execute(
@@ -1125,22 +1126,35 @@ class Reader:
         return len(clubs)
 
     def write_values(self, units, data):
+        """A player's value history (FAILURE_MODES.md §44). Each listed point is written by its day
+        when a fact or its mark differs; a held point the history omits keeps its facts and the
+        first day it was missed (absent_since); nothing is deleted. A history without a usable
+        point when he holds one is refused (HISTORY_EMPTY), nothing written."""
         (key, priority), = units
+        listed = _container(data, "history")
         rows = parse_values(data)
         player = self.player_of(key)
         today = self.now().date()
         written = 0
-        if player is not None and rows:
-            days = [day for day, _, _ in rows]
-            self.conn.execute("DELETE FROM core.player_market_values WHERE player_id = %s AND source = 'transfermarkt' AND NOT (valued_at = ANY(%s))",
-                              (player, days))
+        if player is not None:
+            held = self.conn.execute(
+                "SELECT 1 FROM core.player_market_values WHERE player_id = %s AND source = 'transfermarkt' LIMIT 1", (player,)).fetchone()
+            if not rows and held:
+                raise Failed("HISTORY_EMPTY" if not listed else "HISTORY_INVALID", 200)
             for day, value, club in rows:
                 written += self.conn.execute(
-                    """INSERT INTO core.player_market_values(player_id, valued_at, value_eur, source, as_of, team_id, provider_club)
+                    """INSERT INTO core.player_market_values AS v(player_id, valued_at, value_eur, source, as_of, team_id, provider_club)
                        VALUES (%s, %s, %s, 'transfermarkt', %s, %s, %s)
                        ON CONFLICT (player_id, valued_at, source) DO UPDATE SET value_eur = EXCLUDED.value_eur, as_of = EXCLUDED.as_of,
-                         team_id = EXCLUDED.team_id, provider_club = EXCLUDED.provider_club, updated_at = now()""",
+                         team_id = EXCLUDED.team_id, provider_club = EXCLUDED.provider_club, absent_since = NULL, updated_at = now()
+                       WHERE (v.value_eur, v.team_id, v.provider_club, v.absent_since)
+                         IS DISTINCT FROM (EXCLUDED.value_eur, EXCLUDED.team_id, EXCLUDED.provider_club, NULL::date)""",
                     (player, day, value, today, self.team_of(club), club)).rowcount
+            if rows:
+                written += self.conn.execute(
+                    """UPDATE core.player_market_values SET absent_since = %s, updated_at = now()
+                       WHERE player_id = %s AND source = 'transfermarkt' AND absent_since IS NULL AND NOT (valued_at = ANY(%s))""",
+                    (today, player, [day for day, _, _ in rows])).rowcount
         self.done("values", key, priority, written)
         return written
 
@@ -1228,20 +1242,91 @@ class Reader:
             new.update(pending=move["pending"], absent_since=None, as_of=today)
         return {column: value for column, value in new.items() if row[column] != value}
 
+    INJURY_FACTS = ("kind", "label", "end_date", "days", "matches_missed", "season_year")
+
     def write_injuries(self, units, data):
+        """A player's injuries (FAILURE_MODES.md §44). An episode is keyed by its start and label;
+        inside one start date, one stored and one answered episode left unmatched are the same one
+        relabelled. A matched episode keeps its id and is updated when a fact differs; a held one the
+        answer omits keeps its facts and the first day it was missed (absent_since); nothing is
+        deleted. Refused, nothing written: no usable episode when he holds one (HISTORY_EMPTY), one
+        key with two different facts (HISTORY_CONFLICT)."""
         (key, priority), = units
-        rows = parse_injuries(data)
+        listed = _container(data, "injuries")
         player = self.player_of(key)
         today = self.now().date()
+        if player is None:
+            self.done("injuries", key, priority, 0)
+            return 0
+        answer = {}
+        for i in parse_injuries(data):
+            facts = {"kind": i["kind"], "label": i["label"], "end_date": i["end"], "days": i["days"],
+                     "matches_missed": i["games"], "season_year": i["season"]}
+            seen = answer.setdefault((i["start"], i["label"]), facts)
+            if seen != facts:
+                raise Failed("HISTORY_CONFLICT", 200)
+        cursor = self.conn.execute(
+            """SELECT id, start_date, kind::text AS kind, label, end_date, days, matches_missed, season_year, absent_since
+               FROM core.player_injuries WHERE player_id = %s AND source = 'transfermarkt' ORDER BY id""", (player,))
+        names = [c.name for c in cursor.description]
+        held = [dict(zip(names, row)) for row in cursor.fetchall()]
+        if not answer and held:
+            raise Failed("HISTORY_EMPTY" if not listed else "HISTORY_INVALID", 200)
+        pairs, free = {}, list(held)
+        for k in answer:
+            row = next((r for r in free if (r["start_date"], r["label"]) == k), None)
+            if row is not None:
+                pairs[k] = row
+                free.remove(row)
+        for start in {k[0] for k in answer if k not in pairs}:
+            mine = [k for k in answer if k[0] == start and k not in pairs]
+            theirs = [r for r in free if r["start_date"] == start]
+            if len(mine) == 1 and len(theirs) == 1:  # the same episode, its label corrected
+                pairs[mine[0]] = theirs[0]
+                free.remove(theirs[0])
         written = 0
-        if player is not None:
-            self.conn.execute("DELETE FROM core.player_injuries WHERE player_id = %s AND source = 'transfermarkt'", (player,))
-            for i in rows:
+        for (start, _), facts in answer.items():
+            row = pairs.get((start, _))
+            if row is None:
                 written += self.conn.execute(
                     """INSERT INTO core.player_injuries(player_id, kind, label, start_date, end_date, matches_missed, source, as_of, days, season_year)
                        VALUES (%s, %s, %s, %s, %s, %s, 'transfermarkt', %s, %s, %s)""",
-                    (player, i["kind"], i["label"], i["start"], i["end"], i["games"], today, i["days"], i["season"])).rowcount
+                    (player, facts["kind"], facts["label"], start, facts["end_date"], facts["matches_missed"], today, facts["days"],
+                     facts["season_year"])).rowcount
+            elif row["absent_since"] is not None or any(row[f] != facts[f] for f in self.INJURY_FACTS):
+                written += self.conn.execute(
+                    """UPDATE core.player_injuries SET kind = %s, label = %s, end_date = %s, days = %s, matches_missed = %s, season_year = %s,
+                         as_of = %s, absent_since = NULL, updated_at = now() WHERE id = %s""",
+                    (*(facts[f] for f in self.INJURY_FACTS), today, row["id"])).rowcount
+        missed = [r["id"] for r in free if r["absent_since"] is None]
+        if missed:
+            written += self.conn.execute(
+                "UPDATE core.player_injuries SET absent_since = %s, updated_at = now() WHERE id = ANY(%s)", (today, missed)).rowcount
         self.done("injuries", key, priority, written)
+        return written
+
+    def squad(self, club, year, members, today):
+        """A club-season's members (FAILURE_MODES.md §44): each listed one written when its shirt or
+        its mark differs (read_on: the day the row last changed); a held one the answer omits kept
+        and marked absent from today; nothing deleted. Returns the rows changed."""
+        held = {player: (shirt, absent) for player, shirt, absent in self.conn.execute(
+            """SELECT player_key, shirt_number, absent_since FROM core.provider_squads
+               WHERE provider = 'transfermarkt' AND club_key = %s AND season_year = %s""", (club, year)).fetchall()}
+        written = 0
+        for player, shirt in members:
+            if player not in held:
+                written += self.conn.execute(
+                    "INSERT INTO core.provider_squads(provider, club_key, season_year, player_key, shirt_number, read_on) VALUES ('transfermarkt', %s, %s, %s, %s, %s)",
+                    (club, year, player, shirt, today)).rowcount
+            elif held[player] != (shirt, None):
+                written += self.conn.execute(
+                    """UPDATE core.provider_squads SET shirt_number = %s, absent_since = NULL, read_on = %s
+                       WHERE provider = 'transfermarkt' AND club_key = %s AND season_year = %s AND player_key = %s""",
+                    (shirt, today, club, year, player)).rowcount
+        written += self.conn.execute(
+            """UPDATE core.provider_squads SET absent_since = %s, read_on = %s
+               WHERE provider = 'transfermarkt' AND club_key = %s AND season_year = %s AND absent_since IS NULL AND NOT (player_key = ANY(%s))""",
+            (today, today, club, year, [player for player, _ in members])).rowcount
         return written
 
     def write_squad(self, units, data):
@@ -1249,11 +1334,11 @@ class Reader:
         club, year = key.split(":")
         members = parse_squad(data)
         today = self.now().date()
-        self.conn.execute("DELETE FROM core.provider_squads WHERE provider = 'transfermarkt' AND club_key = %s AND season_year = %s", (club, int(year)))
-        for player, shirt in members:
-            self.conn.execute(
-                "INSERT INTO core.provider_squads(provider, club_key, season_year, player_key, shirt_number, read_on) VALUES ('transfermarkt', %s, %s, %s, %s, %s)",
-                (club, int(year), player, shirt, today))
+        if not members and self.conn.execute(
+                "SELECT 1 FROM core.provider_squads WHERE provider = 'transfermarkt' AND club_key = %s AND season_year = %s LIMIT 1",
+                (club, int(year))).fetchone():
+            raise Failed("SQUAD_EMPTY", 200)
+        self.squad(club, int(year), members, today)
         self.done("squad", key, priority, len(members))
         return len(members)
 
