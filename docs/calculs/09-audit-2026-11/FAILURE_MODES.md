@@ -3575,9 +3575,9 @@ there is one: five reproduce, one does not.
 | 46b | The route's grade-status SQL, `EXPLAIN` with the bound values and as a generic plan, `enable_seqscan` off (the seed is tiny) | every scan of a statistics or line-up partition has an index condition on `match_id` and `player_id` | red: no such condition (the view is built whole) |
 | 46c | The same SQL on the review's base (`relecture_a`), `EXPLAIN (ANALYZE)` custom and generic, defaults | no sequential scan of `player_match_stats` or `lineup_players`; milliseconds | 14.1 s, sequential scans of every partition |
 | 46d | A first injuries read answered 404 by the reader, then `GET /api/players/{id}/injuries` | 404 | red: 200 `{"injuries": []}` |
-| 46e | An accepted read with two episodes, then a 404 | 200, both episodes | red: (would be) served, but `read_at` moved to the 404 |
+| 46e | An accepted read with two episodes, then a 404 | 200, both episodes; `read_at` that of the accepted read | served, but `read_at` moved to the 404's time |
 | 46f | An accepted empty read, then a 404 | 200 `{"injuries": []}` | green by accident (`read_at` set by the 404) |
-| 46g | 160 on legacy units: first read 404 (no episode), accepted then refused with episodes, accepted then refused without | unknown; known; unknown | the first two as listed, the first wrongly known |
+| 46g | 160 on legacy units: first read 404 (no episode), accepted then refused with episodes, accepted then refused without | unknown; known; unknown | known; known; known |
 | 46h | One of the fifteen held, the pass, a re-read of the Copa edition that puts 2276's side back on 707, two more passes | each pass succeeds; 2276 back on 740; the journal still one row for 2276 (the first move), 14 rows | red: both passes fail on 23505 |
 | 46i | `failure_once` on 300 000 rows, with and without an edition | index scan, conditions on the three columns; still one row per (edition, code, message) | sequential scan (27 ms) |
 | 46j | A statistics row without a team, the daily path on the candidate and on 2088d36e60 | not graded, no exclusion, the year published, status `team_not_in_match`; the same on both commits | green on arrival (the finding does not reproduce) |
