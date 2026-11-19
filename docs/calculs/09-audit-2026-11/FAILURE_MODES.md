@@ -2988,7 +2988,7 @@ writer (`sources.run_due`) under `vega_collect`, with consecutive real versions 
 history of `oladeeayo/open-matchday`, `evidence/historique/rouge/gel-*.json`):
 
 - the export is a sliding window: the results file of the season keeps the recent dates only. Over 125 versions of
-  eight folders, every version that drops results drops them from its left edge (dated before its own first result),
+  eight folders, every result a version drops leaves by its left edge (dated before the version's first result),
   but six: a moved or replaced result (Kleczew–Podhale 31 Jul → 1 Aug, Emley–Bamber Bridge 6 Oct → 3 Nov, Livyi
   Bereg–Bukovyna 1 → 14 Nov), Ashton United–Warrington Rylands of 31 Oct (played 1–2 according to the organizer, then
   dropped), Weston-super-Mare–Billericay of 24 Oct (absent from the organizer's results) and FC Kharkiv–Karpaty of
@@ -3070,3 +3070,8 @@ history of `oladeeayo/open-matchday`, `evidence/historique/rouge/gel-*.json`):
 | 41p | 8625 stored 1–2, version still 1–2, organizer 0–1 attested | 8625 becomes 0–1 (`revision + 1`, same id), the rest written, one `ATTESTED_FINAL_KEPT`; read again: nothing, no new row | red: `ATTESTED_HISTORY_CONFLICT`, version refused |
 | 41q | A source-attested final contradicted by a live line; an attested final listed as a fixture | refused `ATTESTED_HISTORY_CONFLICT` | green (unchanged) |
 | 41r | A byte of either attestation file changed | import refused (pinned SHA-256) | green for the ledger |
+
+**Existing expectations adjusted.** `test_source_snapshots.OpenMatchdayGuardTest` and `test_collection_wakeups.EloWakeTest`
+name real folders (National League North, Cymru Premier) with built or capsule rows and count the matches written: the
+results attested for those folders would now be created beside them (22 in Cymru Premier, 59 in the North). Both
+classes keep the 35-result ledger alone; no assertion changes. 41o tests the Elo wake after a creation.
