@@ -1,7 +1,7 @@
 -- Transfermarkt values, injuries and squads keep what an answer omits; the injuries stay served from their last accepted
 -- read; a FIFA edition knows when it was last read (lot « garanties », docs/calculs/09-audit-2026-11/FAILURE_MODES.md
--- §44, 40b–40k, 40o). Additive: three marks and one date, three views with one more column or one condition less.
--- No row is changed here.
+-- §44, 40b–40k, 40o; §46, 46g). Additive: three marks and one date, three views with one more column or one condition
+-- less. One column of the reader's queue is corrected: the read_at a 404 set on an injuries unit never accepted.
 SET LOCAL lock_timeout = '3s';
 
 -- The first day an accepted answer no longer listed the row (NULL: listed at the last accepted read). The reader never
@@ -36,7 +36,16 @@ WHERE i.source = 'transfermarkt'
                   AND l.entity_id = i.player_id AND l.quarantined_at IS NOT NULL);
 
 -- Known once a read was accepted (read_at: the reader sets it only on an accepted read), whatever the last attempt gave:
--- a refused or failed refresh no longer turns the accepted list into a 404 (as 153 for the transfers).
+-- a refused or failed refresh no longer turns the accepted list into a 404 (as 153 for the transfers). A 404 on injuries
+-- is a refusal (transfermarkt.NOT_FOUND_REFUSED, §46): before, the reader set read_at on it, so a first read answered 404
+-- would read as « no injury ». Such a unit's read_at is cleared when nothing shows an accepted read: its last attempt
+-- refused and no Transfermarkt episode of its player (only an accepted read writes one). It stays unknown, as under 116;
+-- an accepted empty list refused since then stays unknown until its next accepted read.
+UPDATE ops.transfermarkt_reads r SET read_at = NULL
+WHERE r.kind = 'injuries' AND r.read_at IS NOT NULL AND r.error_code IS NOT NULL
+  AND NOT EXISTS (SELECT 1 FROM core.provider_ids i JOIN core.player_injuries j ON j.player_id = i.entity_id AND j.source = 'transfermarkt'
+                  WHERE i.entity_type = 'player' AND i.provider = 'transfermarkt' AND i.provider_key = r.provider_key);
+
 CREATE OR REPLACE VIEW api.player_injury_reads AS
 SELECT i.entity_id AS player_key, r.read_at
 FROM core.provider_ids i

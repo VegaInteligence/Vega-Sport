@@ -93,6 +93,9 @@ PERIODS = {
 NOT_FOUND_AGAIN = timedelta(days=90)
 # A search whose chosen club has no record yet: again within a day, its record read by then (FAILURE_MODES.md §45).
 SEARCH_UNNAMED_AGAIN = timedelta(days=1)
+# The kinds whose 404 is a refusal, not an answer: their reads view (api.player_injury_reads, 160) serves the last
+# accepted read, so a 404 keeps that read's read_at, and a first one leaves the player unknown (FAILURE_MODES.md §46).
+NOT_FOUND_REFUSED = frozenset({"injuries"})
 # A failed unit waits 2 ** attempts hours, at most a week; the exponent stops at 8 (256 h) before
 # the timedelta is built, which overflows from 35 attempts.
 RETRY_MAX, RETRY_EXPONENT_MAX = timedelta(days=7), 8
@@ -830,15 +833,18 @@ class Reader:
                ORDER BY priority, next_due_at LIMIT %s""", (kind, BATCH)).fetchall()
         return kind, rows
 
-    def done(self, kind, key, priority, written, *, status=200, error=None, again=None):
+    def done(self, kind, key, priority, written, *, status=200, error=None, again=None, accepted=True):
+        """The unit's attempt recorded and its next read planned. Not `accepted` (a refusal kept on this schedule): its
+        read_at and rows_written stay those of the last accepted read, as after `failed`."""
         now = self.now()
         if again is None:
             days = PERIODS[kind][min(priority, 4) - 1]
             again = timedelta(days=days)
         self.conn.execute(
-            """UPDATE ops.transfermarkt_reads SET read_at = %s, next_due_at = %s, attempts = CASE WHEN %s::text IS NULL THEN 0 ELSE attempts + 1 END,
-                 last_http_status = %s, error_code = %s, rows_written = %s WHERE kind = %s AND provider_key = %s""",
-            (now, now + again, error, status, error, written, kind, key))
+            """UPDATE ops.transfermarkt_reads SET read_at = CASE WHEN %s THEN %s ELSE read_at END, next_due_at = %s,
+                 attempts = CASE WHEN %s::text IS NULL THEN 0 ELSE attempts + 1 END, last_http_status = %s, error_code = %s,
+                 rows_written = CASE WHEN %s THEN %s ELSE rows_written END WHERE kind = %s AND provider_key = %s""",
+            (accepted, now, now + again, error, status, error, accepted, written, kind, key))
 
     def failed(self, kind, units, error):
         for key, _ in units:
@@ -890,7 +896,8 @@ class Reader:
         except Missing:
             with self.conn.transaction():
                 for key, priority in units:
-                    self.done(kind, key, priority, 0, status=404, error="NOT_FOUND", again=NOT_FOUND_AGAIN)
+                    self.done(kind, key, priority, 0, status=404, error="NOT_FOUND", again=NOT_FOUND_AGAIN,
+                              accepted=kind not in NOT_FOUND_REFUSED)
             return "missing"
         except Failed as error:
             with self.conn.transaction():
