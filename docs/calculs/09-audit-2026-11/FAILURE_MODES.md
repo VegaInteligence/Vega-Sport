@@ -2689,3 +2689,94 @@ Recorded, not corrected by this review (Fable's m3 and m4):
 - A football-data pair holds an archive copy's removal (`archives.py:586-587`, 35ad), although the link is
   `ON DELETE SET NULL` and the reader pairs again every week. The arbitration between ignoring `SET NULL` links in
   reviewed removals and a documented manual release is VI-21's.
+
+## 37. Collection wake-ups and shared reads: the Elo after a complementary change, one International Results read, an empty statistics answer (19 Nov 2026, written before the tests)
+
+Reproduced on `2088d36e60` before any change. E04k: with the National League North CSVs of the audit capsule
+(`declenchement-elo.zip`), the real `Worker.daily` under `vega_collect` and `vega_calc` writes the four new results and
+leaves 8 of 258 admitted sides without an Elo for three passes; a native match due in another season then publishes
+260/260. `refresh_elo` runs only when `due_seasons` names a season, and `due_seasons` reads PitchAPI editions only
+(`cs.cup_key IS NULL`). In production the live native seasons are due once a UTC day, so the wait there is bounded by
+the next UTC day; in a base without a live native season it has no bound. E02b: each International Results edition
+is one `node bridge.mjs projection` process, each fetching the same `results.csv` (3.76 MB): eight editions due
+together, eight reads. E02d: a 200 answer whose player statistics list is empty, for a finished match whose family
+already holds rows, is a batch without rows and coverage `ok`; `Store.save_family` sees another fingerprint, deletes
+the rows and records `ok`; the backfill planner skips `ok` families, so nothing asks again.
+
+### 37.1 Rules
+
+- **The Elo is due after a complementary change.** At each daily pass, after the sources ran, the Elo is due without a
+  due season when the last published Elo run (`agg.power_runs`, `kind='elo'`) is older than the population it would
+  read now: a finished, scored match of a cup-source edition (`cup_key` set, no `archive_key`: Open Matchday,
+  OpenFootball, OpenLigaDB, International Results, Fjelstul-paired cups) written or changed after the run started
+  (`core.matches.updated_at > started_at`: a new result, a corrected score, a restored match), or a side the run wrote
+  whose match is gone, no longer finished with its score, or now in an archive edition (a withdrawn match). No run yet
+  and such a match: due. Native changes keep their own rule (`due_seasons`, with its waits). The Elo then runs once for
+  the pass, as before. No new column and no migration: the run's own `started_at` and `agg.team_elo` are the record.
+- **And only then.** A pass that changed nothing makes nothing due: the run started after every change it read, and
+  each side it wrote still has its match. The same CSV read again, an edition whose digest is unchanged, a source in
+  error: no Elo run.
+- **One International Results read per pass.** The editions of `nations-results` due in one `sources.run_due` pass are
+  projected in one bridge process (`bridge.mjs projections`), in which a URL is fetched once and its answer (success
+  or failure) given to every projection of the pass. Each edition keeps its own validation, `save`, digest
+  (`cup_digest`), `cup_checked_at`, `ops.source_runs` status and `last_success_at`. A failed read fails every edition
+  of the pass with its code, writes nothing, keeps their last success, and leaves them due after the usual retry
+  delay; the next pass reads once. A bridge process that fails (timeout, exit) fails each edition with its code. An
+  adapter offers this with `prepare_due(conn, get, scopes, now)`; the others are unchanged.
+- **OpenFootball and OpenLigaDB** are not batched: each of their editions reads its own file (checked by listing
+  the URL each edition's projection fetches), so a shared read would save no request.
+- **PitchAPI summaries read twice in Ligue 1 (E02b's second witness)** are the planner's correction read: a match seen
+  final is asked again `CORRECTION_DELAY` (24 h) later (`planner.after_summary`), and its details again when the
+  summary changed. Intended; not changed.
+- **An empty statistics answer does not erase an accepted observation.** In `Store.save_family`, for a finished match,
+  an answer of a detail family with no row at all (an empty list, or `unavailable`) while that family's tables hold
+  rows for the match is refused: `StoreError("EMPTY_AFTER_OBSERVATION")`. Nothing is deleted or written, the match's
+  revision does not move, and the worker's failure path records it (`ops.parse_failures`, `ops.family_state` status
+  `error`, the job failed and revived after a day as any non-permanent failure). The family is then not `ok`: the
+  backfill planner asks for it again. The same rows given again later make it `ok` with its old fingerprint. A first
+  empty answer (no rows held) is written as before. A partial answer (fewer rows) is not refused: telling a provider's
+  correction from a partial answer needs a rule this section does not give.
+- **A held withdrawal is traced once (§36 m3).** An Open Matchday read that keeps a withdrawn fixture another
+  authority holds (35r) adds an `ops.parse_failures` row only when no row of the same edition, code and message exists:
+  the refusal stays visible, a read in the same state adds nothing. 35r's guard is unchanged.
+
+### 37.2 Failure modes and expected outcomes
+
+| # | Situation | Expected | Before the corrections |
+|---|---|---|---|
+| 37a | Native 2019 match and the previous NLN CSV, one daily pass | Elo published, 250/250 | green |
+| 37b | The current NLN CSV (four new results), no native season due | the same pass publishes the Elo: 258/258 | red: 250/258, no run |
+| 37c | The next pass, one hour later, nothing read | no new Elo run, `agg.team_elo` unchanged | green (nothing ran) |
+| 37d | The same CSV read again seven hours later | no new Elo run | green (nothing ran) |
+| 37e | A complementary score corrected by its source (International Results 1–0 becomes 0–1) | the Elo is due and runs once; the next pass none | red: no run |
+| 37f | A complementary match withdrawn (its row deleted), then restored | each makes the Elo due once; the side then gone / back | red: no run |
+| 37g | Eight International Results editions due together, real bridge and projection, fetch counted in node | 1 request; 8 editions `ok`, each its digest, `cup_checked_at`, `last_success_at` | red: 8 requests |
+| 37h | The next pass at once | nothing due, 0 requests | green |
+| 37i | The editions due again, the source answering 503 | 1 request; 8 editions `error` (`HTTP_502`), rows and `last_success_at` kept | red: 8 requests |
+| 37j | The next pass after the retry delay, the source back | 1 request, 8 editions `ok` | red: 8 requests |
+| 37k | A finished match's player statistics (75 minutes) then a 200 with `[]` | rows kept, family `error`, a `EMPTY_AFTER_OBSERVATION` failure, revision unchanged, the backfill asks again | red: rows deleted, `ok`, nothing asked |
+| 37l | The same rows given again | family `ok`, nothing rewritten | — |
+| 37m | A first empty answer (no rows held) | written `ok`, as before | green |
+| 37n | A held withdrawn fixture read three times unchanged | one `MATCH_HAS_DEPENDENTS` row | red: three rows |
+
+### 37.3 The four planner cases of E04k
+
+The registry names four data changes the planner does not wake, without listing them. Found in the audit pages:
+
+1. A complementary change alone does not wake the Elo (this section, 37b–37f).
+2. An empty statistics answer erases and is never asked again (37k).
+3. A correction written between the players' read and the levels' start of `models.refresh_daily` does not make the
+   season due again (`PIPELINE-NOTES.md` §4): `due_seasons` compares with the levels run's `started_at`.
+4. A result corrected in a later season moves the Elo of earlier seasons, whose player grades read the Elo before the
+   match, and only the corrected season is ranked again (`RECALCUL-JOUEURS.md`).
+
+3 and 4 are recorded, not corrected here: 4 means ranking every season after any Elo change (a whole pass per
+season, the memory limit of 13 November) and is a decision of the grades' owner; 3 belongs to the same reading point.
+
+### 37.4 A way out for a held withdrawal (§36 m3, recorded)
+
+No reviewed path releases a held, not-started fixture. `snapshot.RETRACTIONS` releases only a finished result the
+guard would keep. The smallest coherent mechanism is a reviewed map of the same kind, `{(provider, key): "reviewer,
+date: reason"}`, read by `snapshot.remove(held=…)`: a listed fixture goes with what holds it, the others stay held.
+What goes with it (odds, events, a line-up forecast, another authority's fields) is the decision that needs the user;
+it is not written.

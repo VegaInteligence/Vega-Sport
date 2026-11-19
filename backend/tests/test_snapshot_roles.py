@@ -369,6 +369,15 @@ class OpenMatchdayRolesTest(RolesBase):
                     self.assertIn(code, {c for c, _ in self.failures()})
                     self.assertTrue(any(self.key("2026-11-29") in m or str(self.fixture) in m for c, m in self.failures() if c == code))
 
+    def test_37n_a_held_withdrawal_is_traced_once_while_nothing_changes(self):
+        # FAILURE_MODES.md §37 (§36 m3), written before the code: the same hold read again adds no row.
+        self.assertEqual(self.withdraw(1, "odds")[0], "ok")
+        for day in (2, 3, 4):
+            self.assertEqual(self.om(day, results=self.CORRECTED, fixtures="date,home,away,gw\n")[0], "ok")
+        self.assertEqual(self.matches()[self.key("2026-11-29")][0], self.fixture)  # still held (35r)
+        held = [m for c, m in self.failures() if c == "MATCH_HAS_DEPENDENTS"]
+        self.assertEqual(len(held), 1, held)  # red before §37: four rows
+
     def test_35s_a_match_version_written_after_the_check_cannot_outlive_the_withdrawal(self):
         guard = snapshot._guard_dependents
         late = []
