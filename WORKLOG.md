@@ -1,5 +1,13 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Page Joueurs : Remplaçant et En forme remplacent Explorer et Indices — VI-39 (20 novembre 2026)
+
+- Objectif : l'utilisateur trouvait Explorer (nuage de deux stats) et Indices (indice pondéré à la main) inutiles. Maquette [Onglets Joueurs](https://claude.ai/artifact/9QLiW66xkhhxN5FxLyCtLG) ; direction validée : « Remplaçant + En forme », Sous-cotés écarté. Issue [VI-39](https://linear.app/vegainteligence/issue/VI-39) (créée directement dans Linear avant la règle « issue GitHub d'abord » arrivée sur main le même jour).
+- Méthode (avis Fable) : `/api/players/{id}/similar` + `limit`/`maxAge`/`maxValue` (toute la cohorte, filtres avant la limite, sous la distance médiane, scores mesurés sans filtre) ; âge au 30 juin, valeur de la saison, note de saison (5 matchs notés), 5 axes = moyenne des centiles de ligue stockés. `/api/player-form` : 10 derniers matchs notés (≥ 20 min) en deux fenêtres de 5, note = celle du z moyen pondéré ; temps de jeu sur les 10 derniers matchs du club, absence = 0, transfert exclu. Migration 161 (vues de lecture seulement).
+- Mesures production (lecture seule, vues en ligne) : remplaçants 0,26 s (30 s avant de garder les jointures latérales à part), En forme ~1,5 s par liste toutes compétitions. 25 % des joueurs ont notre date de naissance ; repli sur le profil lié.
+- Validation locale : contrats API 248/248, tests du site 803/803, build OK, migrations et rôles OK. Branche `players-tabs` (worktree `.claude/worktrees/players-tabs`), 2 commits, rien de poussé ni déployé.
+- Prochaine action : pousser sur main et déployer l'API (migration 161) quand l'utilisateur le demande, puis E2E `tests/e2e/players-tabs.e2e.mjs` sur le site public (ordinateur + iPhone 16) avec preuve sauvegardée.
+
 ## Prochains matchs : difficulté des adversaires hors championnat (20 novembre 2026)
 
 - Constat : sur la fiche d’Aston Villa, Galatasaray et le PSG (Ligue des champions) étaient « hors référentiel » : la difficulté ne se mesurait que sur les clubs du championnat.
