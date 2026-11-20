@@ -95,7 +95,7 @@ class RolesTest(unittest.TestCase):
                JOIN pg_auth_members m ON m.member = r.oid JOIN pg_roles g ON g.oid = m.roleid
                WHERE r.rolname LIKE 'vega_v2_%' ORDER BY 1"""
         ).fetchall()
-        self.assertEqual(rows, [("vega_v2_collect", True, 6, "vega_collect"), ("vega_v2_read", True, 12, "vega_read")])
+        self.assertEqual(rows, [("vega_v2_collect", True, migrate.CONNECTION_LIMITS["collect"], "vega_collect"), ("vega_v2_read", True, migrate.CONNECTION_LIMITS["read"], "vega_read")])
         self.assertEqual(self.db.execute("SELECT count(*) FROM ops.schema_migrations").fetchone()[0], len(list((ROOT / "sql").glob("*.sql"))) - 2)
 
     def test_owner_url_from_the_rds_secret(self):

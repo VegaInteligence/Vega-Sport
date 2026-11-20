@@ -108,3 +108,34 @@ test("a refused statement ends its transaction; a lost connection is not given b
   assert.deepEqual(state.sent.map(([sql]) => sql), ["BEGIN", "SET LOCAL enable_nestloop = off", "SELECT 1 AS n", "ROLLBACK", "BEGIN", "SET LOCAL enable_nestloop = off", "SELECT 1 AS n", "COMMIT"]);
   assert.deepEqual(state.released, [closed, null]);
 });
+
+// Incident of 20 November 2026 (VI-33): a copy of the function that sleeps keeps its
+// connection (the pool's own idle limit does not run while the copy is frozen), and the
+// login ran out of connections. The base is asked to close a session left idle.
+test("the base closes a session left idle, when asked to; a statement that found it closed is sent once more", async () => {
+  let { Pool, state } = fakePool([]);
+  createReader("postgresql://reader@localhost/base", { Pool, role: "vega_read", idleSessionMs: 120_000 });
+  assert.match(state.options.options, / -c idle_session_timeout=120000 /);
+  // The role stays last (its test above), and nothing is asked without the option.
+  assert.match(state.options.options, /-c role=vega_read$/);
+  ({ Pool, state } = fakePool([]));
+  createReader("postgresql://reader@localhost/base", { Pool });
+  assert.doesNotMatch(state.options.options, /idle_session_timeout/);
+  for (const bad of [0, -1, 1.5, "120000", Number.NaN]) assert.throws(() => createReader("postgresql://reader@localhost/base", { Pool, idleSessionMs: bad }), /invalid idle session/);
+  // The base's own word for it (57P05) reaches the statement sent on the closed session:
+  // it never ran, and is sent again on a new one.
+  const idle = Object.assign(new Error("terminating connection due to idle-session timeout"), { severity: "FATAL", code: "57P05" });
+  ({ Pool, state } = fakePool([idle, [{ n: 1 }]]));
+  assert.deepEqual(await createReader("postgresql://reader@localhost/base", { Pool }).read("SELECT 1 AS n"), [{ n: 1 }]);
+  assert.equal(state.sent.length, 2);
+  // In a transaction of its own, the closed session is not given back to the pool.
+  ({ Pool, state } = fakePool([idle, [], [], [], [{ n: 1 }], []]));
+  assert.deepEqual(await createReader("postgresql://reader@localhost/base", { Pool }).read("SELECT 1 AS n", [], { plan: ["hashJoins"] }), [{ n: 1 }]);
+  assert.deepEqual(state.released, [idle, null]);
+  // A login out of connections (53300) is the base refusing: asking again at once would
+  // only ask for one more.
+  const full = Object.assign(new Error("too many connections for role"), { severity: "FATAL", code: "53300" });
+  ({ Pool, state } = fakePool([full, [{ n: 1 }]]));
+  await assert.rejects(createReader("postgresql://reader@localhost/base", { Pool }).read("SELECT 1"), full);
+  assert.equal(state.sent.length, 1);
+});
