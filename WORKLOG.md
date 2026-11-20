@@ -1,5 +1,12 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Boutons retour — VI-37 (20 novembre 2026)
+
+- Objectif : les « ← » reviennent à la page d’où l’on vient ([VI-37](https://linear.app/vegainteligence/issue/VI-37)). Demande de logique, pas de maquette (design inchangé).
+- Décision : `BackLink` commun ; Navigation API, page = chemin + `id`/`m`/`cdm` (onglets et filtres sautés) ; libellé = H1 de la page quittée ; sans page précédente du site, lien et libellé fixes d’avant ; ⌘-clic = lien fixe.
+- Validation : tests du site 803/803, build OK, E2E Playwright (joueur → club → retour, club → match → retour, entrée directe, ⌘-clic) vert sans erreur console. Non pilotés en navigateur : nation, rapport, archives, match CdM archivé, matchs du joueur, coupe.
+- Prochaine action : aucune.
+
 ## Mandat en cours
 
 - Mandat (utilisateur, 19 nov., message de passation « Rosky ») : reprendre les 24 critères encore ouverts sur les 33 applicables hors logos (E01b ; E02b–d ; E03b–h ; E04a–g, i–l ; E05b–c), les faire avancer jusqu’à la validation avec une preuve par critère ; comparer d’abord à main, au dernier déploiement et à Linear ; coordonner les sujets VI-19 et VI-21 et vérifier ce qui est livré ; logos = chantier séparé VI-30. Livrable : SHA final, CI, tableau des 33 critères, preuve et environnement (branche ou production) par critère clos, cas précis par blocage. Hugo garde la revue Fable 5.2 xhigh ; l’avis Astra 6.2 xhigh porte sur le même SHA ; E05b se clôt après les deux avis et la vérification de leurs corrections.

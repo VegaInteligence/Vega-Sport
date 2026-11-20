@@ -1,7 +1,7 @@
 "use client";
 import { Skeleton } from "../components/UI.jsx";
+import BackLink from "../components/BackLink.jsx";
 import { useSearchParams } from "next/navigation";
-import Link from "next/link";
 import React, {
   lazy,
   Suspense,
@@ -236,7 +236,10 @@ export default function PlayersPage() {
   const directoryRows = useMemo(
     () =>
       f.compactMode && !id && directoryView === "table"
-        ? (directory.value?.data.players || []).map((row) => ({ ...row, score: row.power?.score ?? null }))
+        ? (directory.value?.data.players || []).map((row) => ({
+            ...row,
+            score: row.power?.score ?? null,
+          }))
         : ranking
           ? rankSeasonPlayers(
               searchPlayerAverages(eligible, filters.query),
@@ -295,12 +298,11 @@ export default function PlayersPage() {
         performanceComparison={Boolean(id)}
       >
         {id && (
-          <Link
+          <BackLink
             className="inline-link competition-back"
             href={f.href("/joueurs/", { id: "", q: "" })}
-          >
-            ← Tous les joueurs
-          </Link>
+            label="Tous les joueurs"
+          />
         )}
         {id && !overview && cohortTab && needsCohort && cohort.loading && (
           <Skeleton label="Chargement des comparaisons de saison…" lines={2} />
@@ -314,7 +316,11 @@ export default function PlayersPage() {
         {id && (
           <Suspense
             fallback={
-              <Skeleton data-page-loading="" label="Chargement du profil…" lines={2} />
+              <Skeleton
+                data-page-loading=""
+                label="Chargement du profil…"
+                lines={2}
+              />
             }
           >
             <PlayerSeasonProfile

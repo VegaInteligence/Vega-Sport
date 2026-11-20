@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef } from "react";
+import BackLink from "./BackLink.jsx";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -136,9 +137,11 @@ export function ArchiveMatchDetail({ match, backHref }) {
       }
       action={
         backHref && (
-          <Link className="inline-link" href={backHref}>
-            ← Retour aux archives
-          </Link>
+          <BackLink
+            className="inline-link"
+            href={backHref}
+            label="Retour aux archives"
+          />
         )
       }
     >
@@ -257,12 +260,11 @@ function SeasonArchive({
                   La publication a changé. Retrouvez ce match dans la liste
                   actualisée.
                 </p>
-                <Link
+                <BackLink
                   className="inline-link"
                   href={hrefWith({ m: null, av: null })}
-                >
-                  ← Retour aux archives
-                </Link>
+                  label="Retour aux archives"
+                />
               </Card>
             );
           const match = bounded

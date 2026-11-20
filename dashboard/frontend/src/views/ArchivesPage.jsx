@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import BackLink from "../components/BackLink.jsx";
 import React from "react";
 import Layout from "../components/Layout.jsx";
 import Archive from "../components/Archive.jsx";
@@ -10,12 +10,11 @@ export default function ArchivesPage() {
   const f = useFootball();
   return (
     <Layout path="/archives/" title="Archives">
-      <Link
+      <BackLink
         className="inline-link competition-back"
         href={f.href("/competitions/")}
-      >
-        ← Retour aux compétitions
-      </Link>
+        label="Retour aux compétitions"
+      />
       <Archive />
       <ArchiveAttribution />
     </Layout>

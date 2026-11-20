@@ -62,6 +62,8 @@ const SITUATIONS = { openPlay: "Jeu placé", fastBreak: "Contre-attaque", corner
 const common = {
   react: React,
   "next/link": { __esModule: true, default: ({ href, children, prefetch, ...props }) => e("a", { href, ...props }, children) },
+  // The server render of a « ← » button (BackLink.jsx): its fixed link and label.
+  "./BackLink.jsx": { __esModule: true, default: ({ href, label, prefix = "← ", onFallback, ...props }) => e("a", { href, ...props }, prefix, label) },
   "./Icon.jsx": { __esModule: true, default: () => null },
   "../hooks/FootballContext.jsx": { useFootball: () => ({ href: (url, params) => `${url}?${new URLSearchParams(params)}` }) },
   "./Hint.jsx": { Hint: () => null, Term: ({ children }) => children },
