@@ -82,7 +82,8 @@
   - E04l ramené à avancé (écran « moy. 50 » non changé, sans maquette). Bilan des 33 : 12 vérifiés (9 + 3 clos), 15 avancés, 6 bloqués.
   - Preuves : `docs/audits/2026-11-19/preuves/integration-main/EVIDENCE.md` ; journaux complets hors dépôt (`delivery/revue-opus-fable-20nov-e82992/validation-opus/`).
   - Gate AWS séparé, BLOQUÉ : erreurs 53300 de l’API de lecture après la mise à jour de la stack API (concurrence 19 > limite 12 du rôle) ; à trancher par Hugo, hors branche.
-- Prochaine action : relecture du SHA final par une session Fable neuve ; puis accords de Hugo (push de la branche pour la CI, effets de données, gate 53300, lectures SQL) listés dans REPRISE.md.
+- 20 nov., CODE PASS Fable sur `25834c73b9`. Seconde intégration : fusion réelle de main `61d0ab3573` (`a97bc68cf5`, aucun conflit) ; UI de la page club et de la journée et correctif de capacité de l’API (VI-33, autre session : `db.mjs`, `handler.mjs`, `migrate.py`, `infra/aws`) gardés tels quels, non réimplémentés. Écart branche/main sur `backend/` et `infra/` identique à celui de `25834c73b9` ; 154 identique à la production ; seules 155–157, 159, 160 ajoutées. Une passe complète sur le SHA intégré, résultats hors dépôt. Gate AWS : 229 refus 53300 en 63 min au recontrôle, correctif de main non déployé.
+- Prochaine action : relecture du delta par Fable ; puis accords de Hugo (push de la branche pour la CI, effets de données, gate 53300, lectures SQL) listés dans REPRISE.md.
 
 ## Travail publié (synthèse)
 

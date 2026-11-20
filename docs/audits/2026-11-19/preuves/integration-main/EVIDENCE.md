@@ -165,3 +165,18 @@ Le SHA final du rapport ne change aucun code (`git diff 16a782abb6 <final> -- ba
 - Le gate AWS des erreurs 53300 (`REPRISE.md`, « État AWS ») n’est pas traité ici.
 - E04l reste partiel : l’écran « moy. 50 » n’est pas modifié sans maquette validée.
 - Linear n’est pas vérifié.
+
+## 9. Seconde intégration : main `61d0ab3573` (après le CODE PASS Fable sur `25834c73b9`)
+
+`git ls-remote origin` au début de la phase : `main` = `61d0ab3573051e5a1cc493558ddbb1f3871b2e30` ; la PR et la branche distante restent à `e82992a37d`. Main a ajouté sept commits depuis `c4a3cacd77` :
+- l’interface de la page club et de la journée, de `f2b200bdcb` à `bb0ac6ab16` ;
+- le correctif de capacité de l’API de lecture, `41a8e75a7d` (tests) puis `61d0ab3573` (code) ;
+- la règle d’`AGENTS.md` sur les issues GitHub.
+
+`git merge --no-ff 61d0ab3573` donne `a97bc68cf5`, sans conflit. Les parents sont `25834c73b9` et `61d0ab3573`, et aucun marqueur ne reste. Contrôles en lecture :
+- **Ce qui ne bouge pas.** L’écart avec ce main sur `backend/`, `infra/`, `dashboard/`, `tests/` et `.github/` concerne les mêmes fichiers que l’écart `c4a3cacd77..25834c73b9`. Sur `backend/` et `infra/`, son contenu est identique ligne à ligne (diff des deux diffs vide, hors lignes `index`). Le code relu CODE PASS n’a donc pas bougé.
+- **Ce qui vient de main.** `git diff 61d0ab3573 a97bc68cf5` est vide sur `infra/`, `backend/vega/migrate.py`, `backend/api/src/db.mjs`, `backend/api/src/handler.mjs` et `dashboard/`. Le correctif et le site sont ceux de main.
+- **154 identique à la production.** Blob `b6ac3564cb` sur `bfab25d4ef`, `61d0ab3573` et `a97bc68cf5` ; SHA-256 `1267453c…`.
+- **Seuls nouveaux SQL.** `git diff --name-status bfab25d4ef a97bc68cf5 -- backend/sql` ne montre que l’ajout de 155, 156, 157, 159 et 160, comme contre `61d0ab3573`. Les fichiers ≤ 154 que 48j applique sont donc bien ceux de la production, ce qui répond au point 2 de Fable.
+
+La passe complète sur le SHA intégré, rapport compris, est consignée hors du dépôt, sous `validation-opus/run-ci/integre-<sha>/` et `validation-opus/RECAP-integre.md`. Elle inclut les tests de capacité de main : `test_api_capacity.py`, `edge.test.mjs`, `db.test.mjs`.
