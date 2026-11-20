@@ -264,6 +264,14 @@ async function archiveFixture({
         return e("a", { href, ...props }, children);
       },
     },
+    // The server render of a « ← » button (BackLink.jsx): its fixed link and label.
+    "./BackLink.jsx": {
+      __esModule: true,
+      default: ({ href, label, prefix = "← ", onFallback, ...props }) => {
+        links.push({ href });
+        return e("a", { href, ...props }, prefix, label);
+      },
+    },
     "next/navigation": {
       usePathname: () => "/archives/",
       useSearchParams: () => params,

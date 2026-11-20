@@ -2,6 +2,7 @@
 /* Club profile: identity rail and tabs, statistics ranked in a referential
  * the user chooses, comparison and similar clubs across every competition. */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import BackLink from "./BackLink.jsx";
 import Link from "next/link";
 import Icon from "./Icon.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
@@ -100,9 +101,11 @@ export default function ClubScoutProfile({ clubId, backHref }) {
   return (
     <div className={`${chartTokens} ${c.shell}`}>
       {backAbove && (
-        <Link className="inline-link competition-back" href={backHref}>
-          ← Tous les clubs
-        </Link>
+        <BackLink
+          className="inline-link competition-back"
+          href={backHref}
+          label="Tous les clubs"
+        />
       )}
       {!dossier ? (
         <ClubLoading state={state} />
@@ -153,11 +156,7 @@ function Profile({ dossier, backHref }) {
       <div className={sA.layout}>
         <IdentityRail dossier={dossier} onTab={setTab} backHref={backHref} />
         <div className={sA.main}>
-          <ComparisonBar
-            dossier={dossier}
-            cmp={cmp}
-            active={referentialTab}
-          />
+          <ComparisonBar dossier={dossier} cmp={cmp} active={referentialTab} />
           <ResearchTabs
             animated
             label="Analyse du club"
@@ -520,9 +519,7 @@ function ClubMenu({ dossier, value, onSelect, label = "Comparer avec" }) {
   const neighbours = useLeagueNeighbours(dossier);
   const suggestions = useMemo(
     () =>
-      neighbours
-        .slice(0, 6)
-        .map((club) => neighbourBrief(club, countryLabel)),
+      neighbours.slice(0, 6).map((club) => neighbourBrief(club, countryLabel)),
     [neighbours],
   );
   return (
@@ -667,7 +664,9 @@ function Comparison({ dossier, rival, onRival }) {
                 <table className={c.table}>
                   <thead>
                     <tr>
-                      <th scope="col"><Term>Indicateur</Term></th>
+                      <th scope="col">
+                        <Term>Indicateur</Term>
+                      </th>
                       <th scope="col">{dossier.name}</th>
                       <th scope="col">{other.name}</th>
                     </tr>
@@ -687,7 +686,10 @@ function Comparison({ dossier, rival, onRival }) {
                         <tr key={key}>
                           <th scope="row">
                             {METRICS[key].label}
-                            <Info text={METRICS[key].info} label={METRICS[key].label} />
+                            <Info
+                              text={METRICS[key].info}
+                              label={METRICS[key].label}
+                            />
                           </th>
                           {[self, other.self].map((club, i) => (
                             <td
@@ -751,8 +753,12 @@ const AllLeaguesItem = ({ meta }) => (
 const neighbourMeta = (club) =>
   [
     club.position != null && ordinal(club.position),
-    club.league && [club.league.name, countryLabel(club.league.country)].filter(Boolean).join(", "),
-    club.record && `${club.record.won}-${club.record.drawn}-${club.record.lost}`,
+    club.league &&
+      [club.league.name, countryLabel(club.league.country)]
+        .filter(Boolean)
+        .join(", "),
+    club.record &&
+      `${club.record.won}-${club.record.drawn}-${club.record.lost}`,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -761,7 +767,11 @@ function Similar({ dossier, onCompare }) {
   const f = useFootball();
   const leagues = useSeasonLeagues();
   const [league, setLeague] = useState(ALL_LEAGUES);
-  const state = useClubNeighbours(dossier.season, dossier.id, league.all ? null : league.id);
+  const state = useClubNeighbours(
+    dossier.season,
+    dossier.id,
+    league.all ? null : league.id,
+  );
   const suggestions = useMemo(() => {
     const own = leagues.find((item) => item.id === dossier.league?.id);
     const major = MAJOR.map(([country, name]) =>
@@ -816,7 +826,11 @@ function Similar({ dossier, onCompare }) {
       {state.error && !state.value ? (
         <ClubLoading state={{ status: "error", error: state.error }} compact />
       ) : state.value === undefined ? (
-        <Skeleton label="Recherche des clubs similaires…" kind="table" lines={4} />
+        <Skeleton
+          label="Recherche des clubs similaires…"
+          kind="table"
+          lines={4}
+        />
       ) : !list.length ? (
         <p className={c.muted}>
           {league.all

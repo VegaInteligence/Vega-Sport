@@ -5,8 +5,10 @@ import { ResearchProvider } from "../src/hooks/ResearchContext.jsx";
 import { routeExists, routeNeedsSeason } from "../src/services/route-data.js";
 import ResourceBootstrap from "../src/components/ResourceBootstrap.jsx";
 import { MediaProvider } from "../src/components/MediaContext.jsx";
+import { useBackMemory } from "../src/services/back-navigation.js";
 export default function Providers({ children, bootstrap, home = false }) {
   const pathname = usePathname();
+  useBackMemory();
   // The home server component supplies its own request-scoped initial data.
   if (pathname === "/" && !home) return children;
   // An unmatched URL renders the 404 page. The data providers show their

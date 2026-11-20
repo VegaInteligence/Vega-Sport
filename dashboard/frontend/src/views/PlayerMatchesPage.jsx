@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import BackLink from "../components/BackLink.jsx";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import Layout from "../components/Layout.jsx";
@@ -198,17 +199,17 @@ export default function PlayerMatchesPage({ currentRows } = {}) {
       hideHeading
       performanceComparison={false}
     >
-      <Link
+      <BackLink
         className="inline-link competition-back"
         href={`/joueurs/${back.size ? `?${back}` : ""}`}
-      >
-        ←{" "}
-        {valid
-          ? returnToOverview
-            ? "Vue d’ensemble du joueur"
-            : "Statistiques du joueur"
-          : "Tous les joueurs"}
-      </Link>
+        label={
+          valid
+            ? returnToOverview
+              ? "Vue d’ensemble du joueur"
+              : "Statistiques du joueur"
+            : "Tous les joueurs"
+        }
+      />
       {!valid ? (
         <Empty>Joueur indisponible.</Empty>
       ) : career && !validCareer ? (
