@@ -7,8 +7,10 @@ On a disposable local PostgreSQL (VEGA_V2_COLLECTION_TEST_DSN, database vega_v2_
   (fixtures/open_matchday/nln-2026, provenance.json): four new results alone make the Elo due, a pass that changes
   nothing runs none (E04k).
 - 37e–37f: a complementary score corrected by its source, a complementary match withdrawn then restored (E04k).
-- 37g–37j: eight International Results editions through the real bridge and projection, each fetch counted in node
-  (fake_results_fetch.mjs): one read per pass, each edition its own state (E02b).
+- 37g–37j: the International Results editions (nine since main's internationals of 2026/27, §48, 48i) through the real
+  bridge and projection, each fetch counted in node (fake_results_fetch.mjs): one read per pass, each edition its own
+  state (E02b).
+- 48f–48h: the season's internationals, outside the Elo, do not wake it; the Nations League still does (§48).
 - 37k–37m: an empty player statistics answer after an accepted one, through the real worker and store (E02d).
 """
 
@@ -53,10 +55,12 @@ RESULTS_CSV = """date,home_team,away_team,home_score,away_score,tournament,city,
 2025-06-15,Mexico,Dominican Republic,3,2,Gold Cup,Los Angeles,United States,TRUE
 2025-12-21,Morocco,Comoros,2,0,African Cup of Nations,Rabat,Morocco,FALSE
 2026-10-01,Scotland,Switzerland,1,0,UEFA Nations League,Glasgow,Scotland,FALSE
+2026-10-10,Brazil,Japan,2,1,Friendly,Rio de Janeiro,Brazil,FALSE
 """
 NATIONS_SCOPES = {"nations-results:nations-league:2026/2027", "nations-results:afcon:2021", "nations-results:afcon:2023",
                   "nations-results:afcon:2025", "nations-results:copa-america:2024", "nations-results:asian-cup:2023",
-                  "nations-results:gold-cup:2023", "nations-results:gold-cup:2025"}
+                  "nations-results:gold-cup:2023", "nations-results:gold-cup:2025", "nations-results:internationals:2026/2027"}
+INTERNATIONALS, NATIONS_LEAGUE = "nations-results:internationals:2026/2027", "nations-results:nations-league:2026/2027"
 
 
 def encode(rows):
@@ -254,7 +258,7 @@ class EloWakeTest(CollectionBase):
 
 @required(DSN and psycopg and NODE, "requires a disposable local collection DB (VEGA_V2_COLLECTION_TEST_DSN), psycopg and node")
 class SharedReadTest(CollectionBase):
-    """37g–37j: the International Results editions due together read results.csv once."""
+    """37g–37j (48i): the International Results editions due together read results.csv once."""
 
     NOW = datetime(2026, 11, 19, 12, tzinfo=timezone.utc)
 
@@ -284,14 +288,14 @@ class SharedReadTest(CollectionBase):
                WHERE cs.cup_key LIKE 'nations-results:%' ORDER BY 1""").fetchall()}
 
     def test_37g_to_37j_one_read_per_pass_and_each_edition_its_state(self):
-        # 37g: the eight editions due together: one request.
+        # 37g: the nine editions due together: one request.
         done, asked = self.run_due(self.NOW)
         self.assertEqual(set(done), NATIONS_SCOPES)
         self.assertEqual(set(done.values()), {"ok"})
         self.assertEqual(asked, [RESULTS_URL])  # red before §37: eight requests
         first = self.editions()
         self.assertEqual(set(first), NATIONS_SCOPES)
-        self.assertEqual(len({e[0] for e in first.values()}), 8)  # each edition its own digest
+        self.assertEqual(len({e[0] for e in first.values()}), len(NATIONS_SCOPES))  # each edition its own digest
         self.assertTrue(all(e[1] == self.NOW and tuple(e[2:5]) == ("ok", None, self.NOW) and e[6] == 1 for e in first.values()), first)
         # 37h: the next pass at once: nothing due, nothing read.
         done, asked = self.run_due(self.NOW + timedelta(minutes=1))
@@ -311,6 +315,80 @@ class SharedReadTest(CollectionBase):
             self.assertEqual((e[0], e[1], e[2], e[4], e[6]), (first[key][0], again, "ok", again, 1))
         self.assertEqual({r[0] for r in self.x("SELECT rows_written FROM ops.source_runs WHERE source='international_results'").fetchall()}, {0})
 
+
+
+@required(DSN and psycopg and NODE, "requires a disposable local collection DB (VEGA_V2_COLLECTION_TEST_DSN), psycopg and node")
+class InternationalsEloTest(CollectionBase):
+    """48f–48h: the season's internationals (main's edition for the home, outside ELO_MATCHES) through the real worker,
+    bridge and projection: they never make the Elo due; the Nations League of the same file still does."""
+
+    native, state, daily = EloWakeTest.native, EloWakeTest.state, EloWakeTest.daily
+
+    def setUp(self):
+        super().setUp()
+        from vega.sources import cups
+        from vega.store import Store
+        from vega.worker import Worker
+
+        csv, log = self.tmp / "results.csv", self.tmp / "fetch.log"
+        csv.write_text(RESULTS_CSV)
+        env = patch.dict(os.environ, {"NODE_OPTIONS": f"--import={RESULTS_PRELOAD.as_uri()}", "VEGA_TEST_RESULTS_CSV": str(csv),
+                                      "VEGA_TEST_FETCH_LOG": str(log)})
+        env.start()
+        self.addCleanup(env.stop)
+        os.environ.pop("VEGA_TEST_RESULTS_FAIL", None)
+        self.nations = {"international_results": cups.For("nations-results")}
+        self.due_scopes = {}
+        scopes = patch.object(cups, "scopes", lambda now: dict(self.due_scopes))
+        scopes.start()
+        self.addCleanup(scopes.stop)
+        self.clock = datetime(2026, 11, 19, 12, tzinfo=timezone.utc)
+        self.worker = Worker(Store(self.collect), SimpleNamespace(), clock=lambda: self.clock, calc_conn=self.calc, source_get=lambda *a, **k: None)
+
+    def read(self, scope):
+        """A pass reading `scope` alone; the edition's matches after it."""
+        self.due_scopes = {scope: timedelta(hours=2)}
+        self.clock += timedelta(hours=3)
+        self.daily(self.nations)
+        status = self.x("SELECT status FROM ops.source_runs WHERE source='international_results' AND scope=%s", (scope,)).fetchone()
+        self.assertEqual(status, ("ok",), scope)
+        return [r[0] for r in self.x("""SELECT m.id FROM core.matches m JOIN core.competition_seasons cs ON cs.id = m.competition_season_id
+                                        WHERE cs.cup_key = %s ORDER BY 1""", (scope,)).fetchall()]
+
+    def test_48f_48g_the_internationals_never_wake_the_elo_the_nations_league_does(self):
+        from vega.worker import elo_due
+
+        first = self.native(2019)
+        self.assertEqual(self.daily({}), [first])
+        runs = self.state()[2]
+        self.assertEqual([r[1] for r in runs], ["published"])
+        # 48f: Brazil–Japan, a friendly of 2026/27, written by the real path: no Elo run, no side of it.
+        friendly = self.read(INTERNATIONALS)
+        self.assertEqual(len(friendly), 1)
+        self.assertFalse(elo_due(self.calc))
+        pairs, published, after, stored = self.state()
+        self.assertEqual(after, runs)  # red on M0: a second run
+        self.assertFalse({m for m, _ in published} & set(friendly))
+        self.assertFalse({m for m, _ in pairs} & set(friendly))
+        # 48g: Scotland–Switzerland, the Nations League: due once, one run, its sides published.
+        league = self.read(NATIONS_LEAGUE)
+        self.assertEqual(len(league), 1)
+        pairs, published, runs, stored = self.state()
+        self.assertEqual([r[1] for r in runs], ["superseded", "published"])
+        self.assertEqual(published, pairs)
+        self.assertEqual({m for m, _ in published} & set(league), set(league))
+        self.assertFalse(elo_due(self.calc))
+        self.clock += timedelta(hours=1)
+        self.daily(self.nations)
+        self.assertEqual(self.state()[2:], (runs, stored))
+
+    def test_48h_without_an_elo_run_internationals_alone_are_not_due(self):
+        from vega.worker import elo_due
+
+        self.assertEqual(len(self.read(INTERNATIONALS)), 1)
+        self.assertFalse(elo_due(self.calc))
+        self.assertEqual(self.x("SELECT count(*) FROM agg.power_runs WHERE kind='elo'").fetchone()[0], 0)  # red on M0: the pass ran one
+        self.assertEqual(self.x("SELECT count(*) FROM agg.team_elo").fetchone()[0], 0)
 
 class EmptyStatisticsTest(CollectionBase):
     """37k–37m: an empty player statistics answer after an accepted one, through the worker and the store."""
