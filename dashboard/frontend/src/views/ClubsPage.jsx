@@ -42,24 +42,38 @@ const EMPTY_FIXTURES = [];
 // different size. Twenty-four cards fit both three- and four-column grids.
 const DIRECTORY_PAGE_SIZE = 24;
 
-function useDirectoryCapacity(gridRef, active, scope) {
-  const [layout, setLayout] = useState({ capacity: 12, height: undefined });
+// A page fills the viewport with whole rows of cards (never fewer than
+// DIRECTORY_PAGE_SIZE, so phones still scroll a full page). Measured from the
+// summary line above the grid, so loading notices between them do not change
+// the size and re-trigger the read.
+const CARD_HEIGHT = 66;
+function useDirectoryCapacity(gridRef, anchorRef, active, scope) {
+  const [layout, setLayout] = useState({ capacity: null, height: undefined });
   useLayoutEffect(() => {
-    if (!active || !gridRef.current) return;
-    const grid = gridRef.current;
+    if (!active || !gridRef.current || !anchorRef.current) return;
+    const grid = gridRef.current,
+      anchor = anchorRef.current;
     const measure = () => {
-      const card = grid.firstElementChild;
-      if (!card) return;
       const style = getComputedStyle(grid);
-      const columns = style.gridTemplateColumns.split(" ").length;
+      const columns = Math.max(
+        1,
+        style.gridTemplateColumns.split(" ").filter(Boolean).length,
+      );
       const gap = parseFloat(style.rowGap) || 0;
-      const height = card.getBoundingClientRect().height;
-      const top = grid.getBoundingClientRect().top + window.scrollY;
+      const height =
+        grid.firstElementChild?.getBoundingClientRect().height || CARD_HEIGHT;
+      const top =
+        anchor.getBoundingClientRect().bottom +
+        (parseFloat(getComputedStyle(anchor).marginBottom) || 0);
       // Reserve the pager, its margin and a small bottom gutter.
       const available = window.innerHeight - top - 64;
-      const rows = Math.max(1, Math.floor((available + gap) / (height + gap)));
-      const capacity = columns * rows;
-      const pageHeight = rows * height + (rows - 1) * gap;
+      const rows = Math.max(
+        Math.ceil(DIRECTORY_PAGE_SIZE / columns),
+        Math.floor((available + gap) / (height + gap)),
+      );
+      const capacity = Math.min(100, columns * rows);
+      const shownRows = Math.ceil(capacity / columns);
+      const pageHeight = shownRows * height + (shownRows - 1) * gap;
       setLayout((previous) =>
         previous.capacity === capacity && previous.height === pageHeight
           ? previous
@@ -74,7 +88,7 @@ function useDirectoryCapacity(gridRef, active, scope) {
       observer.disconnect();
       window.removeEventListener("resize", measure);
     };
-  }, [gridRef, active, scope]);
+  }, [gridRef, anchorRef, active, scope]);
   return layout;
 }
 
@@ -113,19 +127,28 @@ export default function ClubsPage() {
     clubSeason = params.get("clubSeason") || "",
     clubTeam = params.get("clubTeam") || "";
   const fromStandings = Boolean(clubLeague && clubSeason && clubTeam);
-  const gridRef = useRef(null);
+  const gridRef = useRef(null),
+    summaryRef = useRef(null);
   const search = normalizeText(useDeferredValue(query)),
     remoteQuery = useDebouncedValue(search),
     savedView =
       params.get("clubsView") === "saved" ||
       (!params.get("clubsView") && hasSavedClubs),
+    directoryView = !id && !savedView && !fromStandings,
+    layout = useDirectoryCapacity(
+      gridRef,
+      summaryRef,
+      directoryView,
+      [f.season, f.focus, f.compactMode].join("|"),
+    ),
+    pageSize = layout.capacity ?? DIRECTORY_PAGE_SIZE,
     remoteKey = [
       f.season,
       f.focus,
       remoteQuery,
       country,
       competitionId,
-      DIRECTORY_PAGE_SIZE,
+      pageSize,
     ].join("|"),
     directory = useCompactRead(
       "clubs",
@@ -137,10 +160,10 @@ export default function ClubsPage() {
         country: country === "all" ? undefined : country,
         competition: competitionId === "all" ? undefined : competitionId,
         page: paging.key === remoteKey ? paging.page : 1,
-        limit: DIRECTORY_PAGE_SIZE,
+        limit: pageSize,
       },
       {
-        enabled: f.compactMode && !id && !savedView && !fromStandings,
+        enabled: f.compactMode && directoryView && layout.capacity != null,
         refreshManifest: f.refreshManifest,
       },
     );
@@ -287,14 +310,7 @@ export default function ClubsPage() {
             ),
       [clubs, search, activeCountry, activeCompetitionId, remoteDirectory],
     ),
-    layout = useDirectoryCapacity(
-      gridRef,
-      !remoteDirectory && !selected && visible.length > 0,
-      [f.season, f.focus, search, activeCountry, activeCompetitionId].join("|"),
-    ),
-    capacity = remoteDirectory
-      ? DIRECTORY_PAGE_SIZE
-      : Math.min(100, layout.capacity),
+    capacity = pageSize,
     pageKey = [
       f.season,
       f.focus,
@@ -428,6 +444,7 @@ export default function ClubsPage() {
             </div>
           </div>
           <div
+            ref={summaryRef}
             className="club-directory-summary"
             role="status"
             aria-live="polite"

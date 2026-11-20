@@ -84,7 +84,25 @@ The backfill's planner keeps its lane short: each minute it adds at most 2,000 j
 
 The worker and the backfill share the provider key and its pace (one call every 0.5 s). After a 429 a task keeps at least 1 s between its calls, then returns to 0.5 s once ten minutes have passed without another 429 (`pitchapi.RECOVER_AFTER`): the backfill runs at about half its pace while the worker collects a large batch (the player profiles after a new season's calendars), and at its full pace the rest of the time.
 
-The account runs at most 10 Lambdas concurrently: `ReservedConcurrency` stays 0 and the pool size 1 until the quota is raised.
+### The read API's connections
+
+Three numbers go together, and `backend/tests/test_api_capacity.py` fails when they part:
+
+- the function runs at most 32 copies at once (`ReservedConcurrency` in `api.yaml`, passed by `deploy.sh` as `API_COPIES`); a request beyond them is refused by Lambda (429) and the site asks again;
+- each copy keeps one connection (`api-index.mjs`, pool size 1), and asks the base to close its session after two minutes idle (`idle_session_timeout`): a copy that sleeps is frozen, so the pool's own idle limit never runs;
+- the login `vega_v2_read` allows 68 connections (`vega/migrate.py`): two generations of copies, since a deploy leaves the old ones beside the new ones for those two minutes, plus four.
+
+To let more copies run, change the three together, in that order of deploy steps (the migrations set the login before the API stack changes). The instance (db.t4g.medium) gives about 400 connections; its two processors are what the copies share. If the function is throttled (`Throttles` of `vega-v2-api` in CloudWatch) while the base's processors are idle, raise the numbers; if the base is the limit, the answer is fewer calls (longer cache) or RDS Proxy, not more copies.
+
+Until 20 November 2026 the login allowed 12 connections and the function had no limit of its own: the account ran at most 10 functions when that was written, then 1000. At 19 copies the base refused the thirteenth connection (`read failed 53300 <path>` in the function's log, a 503 `DATA_UNAVAILABLE` on every route, VI-33).
+
+When the function fails or cannot be reached, the distribution answers with the copy it holds for up to a day (`stale-if-error=86400`, set by `transport.mjs` on every public answer that does not say otherwise). `/api/health` and `/api/ops/*` are never kept: they say what the function says now.
+
+The function logs one line per request it receives (`{"request":"read","path":…,"status":…,"ms":…,"db":…,"queries":…,"conditional":…}`, the path without its query). Reads the distribution answers by itself leave none: the lines are the calls that reached the function. In CloudWatch Logs Insights, on `/aws/lambda/vega-v2-api`:
+
+```
+filter request = "read" | stats count(*) as calls, sum(conditional) as revalidations, avg(ms), avg(db) by path | sort calls desc
+```
 
 ### Import test: one full season and one archive season
 

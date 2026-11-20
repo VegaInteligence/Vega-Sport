@@ -588,9 +588,8 @@ export function LeaguePlot({
         <span
           key={club.id}
           className={s.plotDot}
-          data-compact={
-            (clubs.length > 30 && club.id !== dossier.id) || undefined
-          }
+          // Every club shows its crest (user, 20 Nov 2026); a large referential draws them smaller.
+          data-dense={clubs.length > 30 || undefined}
           data-self={club.id === dossier.id || highlight.includes(club.id)}
           style={{
             left: `${px(club.values[x])}%`,
@@ -630,6 +629,9 @@ export function LeaguePlot({
 
 /* ------------------------------------------------------- style spectrum */
 
+// The crests of a style axis: the lanes they may take, each this tall (px), and the room a crest needs (% of the axis).
+const MAX_LANES = 3, LANE_HEIGHT = 20, LANE_GAP = 2.8;
+
 export function StyleSpectrum({
   dossier,
   club = dossier.self,
@@ -646,12 +648,27 @@ export function StyleSpectrum({
         if (value == null || !values.length) return null;
         const lo = Math.min(...values),
           hi = Math.max(...values);
-        const pos = (v) => {
+        const at = (v) => {
           const t = hi === lo ? 0.5 : (v - lo) / (hi - lo);
-          return `${4 + (axis.invert ? 1 - t : t) * 92}%`;
+          return 4 + (axis.invert ? 1 - t : t) * 92;
         };
+        const pos = (v) => `${at(v)}%`;
+        // Each crest on the first lane where it clears its neighbour (LANE_GAP % of the axis), at most MAX_LANES lanes;
+        // past that, on the lane whose last crest is farthest.
+        const marks = [], lanes = [];
+        for (const c of dossier.clubs
+          .filter((c) => c.id !== club.id && c.values[axis.key] != null)
+          .map((c) => ({ c, x: at(c.values[axis.key]) }))
+          .sort((a, b) => a.x - b.x)) {
+          let lane = lanes.findIndex((last) => c.x - last >= LANE_GAP);
+          if (lane < 0 && lanes.length < MAX_LANES) lane = lanes.length;
+          if (lane < 0) lane = lanes.indexOf(Math.min(...lanes));
+          lanes[lane] = c.x;
+          marks.push({ ...c, lane });
+        }
+        const height = Math.max(34, lanes.length * LANE_HEIGHT + 2);
         return (
-          <div className={s.spectrumRow} key={axis.key}>
+          <div className={s.spectrumRow} key={axis.key} data-axis={axis.key}>
             <div className={s.spectrumTitle}>
               <strong>
                 {metric.label}
@@ -662,17 +679,28 @@ export function StyleSpectrum({
                 {formatMetric(axis.key, dossier.stats[axis.key]?.median)}
               </span>
             </div>
-            <div className={s.spectrumTrack}>
-              {dossier.clubs
-                .filter((c) => c.id !== club.id && c.values[axis.key] != null)
-                .map((c) => (
-                  <i
+            <div className={s.spectrumTrack} data-track="" style={{ height }}>
+              {/* Each club's crest at its value (user, 20 Nov 2026); the club itself larger, in the middle. */}
+              {marks.map(({ c, x, lane }) => (
+                  <span
                     key={c.id}
-                    style={{ left: pos(c.values[axis.key]) }}
-                    title={c.name}
-                  />
+                    className={s.spectrumMark}
+                    data-club=""
+                    style={{ left: `${x}%`, top: 1 + lane * LANE_HEIGHT + (height - 2 - lanes.length * LANE_HEIGHT) / 2 }}
+                    title={`${c.name} : ${formatMetric(axis.key, c.values[axis.key])}`}
+                  >
+                    <Crest club={c} />
+                  </span>
                 ))}
-              <b style={{ left: pos(value) }} title={club.name} />
+              <span
+                className={s.spectrumSelf}
+                data-club=""
+                data-self="true"
+                style={{ left: pos(value) }}
+                title={`${club.name} : ${formatMetric(axis.key, value)}`}
+              >
+                <Crest club={club} />
+              </span>
             </div>
             <div className={s.spectrumEnds}>
               <span>{axis.low}</span>
@@ -708,191 +736,9 @@ export function styleTags(club) {
 
 /* ---------------------------------------------------------- line chart */
 
-/** Several series over the same matches, hover shows the column. */
-export function MultiLine({
-  labels,
-  series,
-  height = 220,
-  format = (v) => fmtNum(v, 2),
-  ariaLabel,
-  step = 1,
-  details,
-  // How far the chart may grow past the 640 px it is drawn for. A chart that has a
-  // whole row to itself grows more than one beside a table.
-  grow = 1.75,
-}) {
-  const [active, setActive] = useState(null);
-  const width = 640,
-    m = { t: 12, r: 12, b: 26, l: 34 };
-  const all = series.flatMap((serie) => serie.values).filter((v) => v != null);
-  const hi = Math.max(...all, 0.1) * 1.08,
-    lo = Math.min(0, ...all);
-  const n = labels.length;
-  const x = (i) =>
-    m.l +
-    (n === 1 ? (width - m.l - m.r) / 2 : (i / (n - 1)) * (width - m.l - m.r));
-  const y = (v) => m.t + (1 - (v - lo) / (hi - lo)) * (height - m.t - m.b);
-  const ticks = [lo, (lo + hi) / 2, hi];
-  return (
-    <div
-      className={s.trend}
-      style={{ "--chart-cap": `${Math.round(width * grow)}px` }}
-    >
-      <div className={s.trendLegend}>
-        {series.map((serie) => (
-          <span key={serie.name}>
-            <i
-              style={{
-                background: serie.color,
-                opacity: serie.dashed ? 0.7 : 1,
-              }}
-            />
-            {serie.name}
-          </span>
-        ))}
-      </div>
-      <svg
-        viewBox={`0 0 ${width} ${height}`}
-        role="img"
-        aria-label={ariaLabel}
-        onMouseLeave={() => setActive(null)}
-        onMouseMove={(event) => {
-          const box = event.currentTarget.getBoundingClientRect();
-          const vx = ((event.clientX - box.left) / box.width) * width;
-          const i = Math.round(((vx - m.l) / (width - m.l - m.r)) * (n - 1));
-          setActive(Math.max(0, Math.min(n - 1, i)));
-        }}
-      >
-        {ticks.map((t) => (
-          <g key={t}>
-            <line
-              x1={m.l}
-              x2={width - m.r}
-              y1={y(t)}
-              y2={y(t)}
-              stroke="var(--grid)"
-            />
-            <text
-              x={m.l - 6}
-              y={y(t) + 4}
-              textAnchor="end"
-              fontSize="10"
-              fill="var(--muted)"
-            >
-              {format(t)}
-            </text>
-          </g>
-        ))}
-        {labels.map((label, i) =>
-          i % step === 0 || i === n - 1 ? (
-            <text
-              key={i}
-              x={x(i)}
-              y={height - 8}
-              textAnchor="middle"
-              fontSize="10"
-              fill="var(--muted)"
-            >
-              {label}
-            </text>
-          ) : null,
-        )}
-        {series.map((serie) => {
-          const d = serie.values
-            .map((v, i) => (v == null ? null : `${x(i)} ${y(v)}`))
-            .filter(Boolean)
-            .map((p, i) => `${i ? "L" : "M"}${p}`)
-            .join("");
-          return (
-            <g key={serie.name}>
-              {serie.area && (
-                <path
-                  d={`${d}L${x(n - 1)} ${y(lo)}L${x(0)} ${y(lo)}Z`}
-                  fill={serie.color}
-                  opacity="0.1"
-                />
-              )}
-              <path
-                d={d}
-                fill="none"
-                stroke={serie.color}
-                strokeWidth="2"
-                strokeDasharray={serie.dashed ? "5 4" : undefined}
-                strokeLinejoin="round"
-              />
-              {serie.dots &&
-                serie.values.map((v, i) =>
-                  v == null ? null : (
-                    <circle
-                      key={i}
-                      cx={x(i)}
-                      cy={y(v)}
-                      r="2.5"
-                      fill={serie.color}
-                    />
-                  ),
-                )}
-            </g>
-          );
-        })}
-        {active != null && (
-          <g>
-            <line
-              x1={x(active)}
-              x2={x(active)}
-              y1={m.t}
-              y2={height - m.b}
-              stroke="var(--border-strong)"
-            />
-            {series.map((serie) =>
-              serie.values[active] == null ? null : (
-                <circle
-                  key={serie.name}
-                  cx={x(active)}
-                  cy={y(serie.values[active])}
-                  r="4"
-                  fill={serie.color}
-                  stroke="var(--bg)"
-                  strokeWidth="2"
-                />
-              ),
-            )}
-          </g>
-        )}
-      </svg>
-      {active != null && (
-        <div
-          className={s.plotTip}
-          style={{
-            left: `${(x(active) / width) * 100}%`,
-            top: `${(m.t / height) * 100 + 8}%`,
-            transform: "translate(-50%, 0)",
-          }}
-        >
-          <strong>{series[0].tips?.[active] || labels[active]}</strong>
-          {details?.[active]?.map(([label, value, tone]) => (
-            <span key={label}>
-              {label}{" "}
-              <b className={tone === 1 ? s.up : tone === -1 ? s.down : undefined}>
-                {value}
-              </b>
-            </span>
-          ))}
-          {details && <small className={s.plotTipRule}>Cumul</small>}
-          {series.map((serie) => (
-            <span key={serie.name}>
-              {serie.name} <b>{format(serie.values[active])}</b>
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 /** A box's laid-out width, measured: a chart drawn at it keeps its text at its own size.
  * `fallback` until measured (the server's rendering, a test). */
-function useBoxWidth(fallback) {
+export function useBoxWidth(fallback) {
   // A callback ref: the box may appear after the first rendering (data still loading).
   const [node, setNode] = useState(null);
   const [width, setWidth] = useState(fallback);
@@ -1135,56 +981,6 @@ export function XgTrend({ rows, window = 5 }) {
       )}
       </div>
     </div>
-  );
-}
-
-export function PointsTrend({ rows, height = 220, grow }) {
-  let points = 0,
-    xpts = 0;
-  const usable = rows.filter((row) => row.xpts != null);
-  const real = [],
-    expected = [];
-  for (const row of usable) {
-    points += row.points;
-    xpts += row.xpts;
-    real.push(points);
-    expected.push(xpts);
-  }
-  return (
-    <MultiLine
-      height={height}
-      grow={grow}
-      ariaLabel="Points cumulés et points attendus cumulés, avec les points et xPts de chaque match"
-      labels={usable.map((_, i) => `J${i + 1}`)}
-      format={(v) => fmtNum(v, 1)}
-      step={Math.max(1, Math.ceil(usable.length / 10))}
-      details={usable.map((row) => {
-        const gap = row.points - row.xpts;
-        return [
-          ["Points pris", String(row.points)],
-          ["xPts du match", fmtNum(row.xpts, 2)],
-          ["Écart", fmtNum(gap, 2, true), gap > 0 ? 1 : gap < 0 ? -1 : 0],
-        ];
-      })}
-      series={[
-        {
-          name: "Points",
-          color: "var(--accent)",
-          values: real,
-          dots: true,
-          tips: usable.map(
-            (row, i) =>
-              `J${i + 1} · ${dateShort(row.match.date)} · ${row.side === "home" ? "vs" : "à"} ${row.opponent.name} ${row.gf}–${row.ga}`,
-          ),
-        },
-        {
-          name: "Points attendus (xPts)",
-          color: "var(--mq-series-3)",
-          values: expected,
-          dashed: true,
-        },
-      ]}
-    />
   );
 }
 

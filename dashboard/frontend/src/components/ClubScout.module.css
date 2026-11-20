@@ -607,7 +607,7 @@
 }
 .spectrumTrack {
   position: relative;
-  height: 22px;
+  height: 34px;
   border-radius: var(--radius-sm);
   background: linear-gradient(
     90deg,
@@ -616,26 +616,42 @@
     color-mix(in srgb, var(--accent) 18%, transparent)
   );
 }
-.spectrumTrack i {
+.spectrumMark,
+.spectrumSelf {
   position: absolute;
-  top: 6px;
-  width: 6px;
-  height: 10px;
-  margin-left: -3px;
-  border-radius: 0;
-  background: var(--muted-light);
-  opacity: 0.55;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--surface);
 }
-.spectrumTrack b {
-  position: absolute;
-  top: -3px;
+.spectrumMark {
+  z-index: 1;
+  width: 18px;
+  height: 18px;
+  margin-left: -9px;
+  box-shadow: 0 0 0 1px var(--border);
+}
+.spectrumMark :global(.crest) {
   width: 14px;
-  height: 28px;
-  margin-left: -7px;
-  border: 2px solid var(--surface);
-  border-radius: 0;
-  background: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent);
+  height: 14px;
+}
+.spectrumMark:hover {
+  z-index: 3;
+  transform: scale(1.35);
+}
+.spectrumSelf {
+  z-index: 2;
+  top: 50%;
+  width: 30px;
+  height: 30px;
+  margin: -15px 0 0 -15px;
+  box-shadow:
+    0 0 0 2px var(--accent),
+    0 0 0 5px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.spectrumSelf :global(.crest) {
+  width: 22px;
+  height: 22px;
 }
 .spectrumEnds {
   display: flex;
@@ -1279,23 +1295,19 @@
   }
 }
 
-/* Large referentials: plain marks, only the club keeps its crest. */
-.plotDot[data-compact] {
-  width: 9px;
-  height: 9px;
-  margin: -4.5px 0 0 -4.5px;
-  background: var(--muted-light);
-  box-shadow: 0 0 0 2px var(--surface);
-  opacity: 0.75;
+/* Large referentials: every crest, drawn smaller; the one under the pointer comes on top. */
+.plotDot[data-dense]:not([data-self="true"]) {
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
 }
-.plotDot[data-compact] > * {
-  display: none;
+.plotDot[data-dense]:not([data-self="true"]) :global(.crest) {
+  width: 15px;
+  height: 15px;
 }
-.plotDot[data-compact]:hover,
-.plotDot[data-compact]:focus {
+.plotDot:hover,
+.plotDot:focus {
   z-index: 3;
-  opacity: 1;
-  background: var(--ink);
 }
 /* Phones: the menu button is a pill, and its list a panel fixed above the tab
    bar: a list hanging under the button would be cut off where the button sits

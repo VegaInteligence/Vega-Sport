@@ -9,7 +9,7 @@ import Icon from "./Icon.jsx";
 import { PhoneFoldToggle, usePhoneFold } from "./PhoneFold.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { Term } from "./Hint.jsx";
-import FillChart from "./FillChart.jsx";
+import { PointsRaceLines, PointsPerMatch } from "./PointsRace.jsx";
 import { euros, readDay, useClubSquad, weightedAge } from "../services/profile-blocks.js";
 import { json, useResource } from "../services/resources.js";
 import ClubInformation from "./ClubInformation.jsx";
@@ -37,7 +37,6 @@ import {
   MatchRows,
   MetricTable,
   PhaseBars,
-  PointsTrend,
   ShotPair,
   SituationTable,
   SquadTable,
@@ -342,10 +341,8 @@ export function ExpectedCard({ dossier }) {
         </dl>
         <div className={s.expectedGrid}>
           <div className={s.expectedSide}>
-            {/* The chart takes the room the league table leaves under the figures. */}
-            <FillChart base={250} cap={640 * 1.3}>
-              {(height) => <PointsTrend rows={self.rows} height={height} grow={1.3} />}
-            </FillChart>
+            <PointsRaceLines rows={self.rows} />
+            <PointsPerMatch rows={self.rows} />
           </div>
           <LeagueTable dossier={dossier} sort="xpts" compact />
         </div>
