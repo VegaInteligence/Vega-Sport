@@ -1,16 +1,22 @@
-# Reprise des 24 critères ouverts de l’audit Vega-Sport — état au 19 novembre 2026
+# Reprise des 24 critères ouverts de l’audit Vega-Sport — état au 20 novembre 2026
 
-[Situation du 18 novembre](../2026-11-17/SITUATION.md) · [Registre des 91 critères](../2026-11-17/registres/requirements.csv) · [Spécifications des corrections](../../calculs/09-audit-2026-11/FAILURE_MODES.md) (§37 à §47) · [Preuves](preuves/)
+[Situation du 18 novembre](../2026-11-17/SITUATION.md) · [Registre des 91 critères](../2026-11-17/registres/requirements.csv) · [Spécifications des corrections](../../calculs/09-audit-2026-11/FAILURE_MODES.md) (§37 à §48) · [Preuves](preuves/)
 
-**Candidat : code `b2bedf115f`**, branche `claude/audit-reprise-33`, [PR 58](https://github.com/VegaInteligence/Vega-Sport/pull/58) en brouillon. Il ajoute au code `79ef8bbb45` la décision du 20 novembre sur l’année de notation 2020 (§47). CI : voir la PR (la dernière verte, run 44601959463, porte sur `c6c4592ca7`, code `79ef8bbb45`). Il part de `main` `2088d36e60`, déployé le 19 novembre à 10 h 05 UTC (migrations jusqu’à 153). Rien de ce candidat n’est déployé : « branche » ci-dessous veut dire vérifié sur ce SHA par les suites et les rejeux locaux (PostgreSQL 18.6), « production » veut dire observé sur la version servie.
+**Candidat : code `16a782abb6`**, sur la branche locale `claude/audit-reprise-33` ; ce rapport est commité au-dessus, sans autre changement de code. La [PR 58](https://github.com/VegaInteligence/Vega-Sport/pull/58) est en brouillon ; sa branche distante reste à `e82992a37d` : rien n’a été poussé, le push demande l’accord de Hugo.
 
-Sur les 33 critères suivis, 9 étaient vérifiés à la passation. Des 24 ouverts : **4 sont clos sur branche**, **14 ont avancé et gardent un reste nommé**, **6 sont bloqués** par une décision, une source ou un accès. Aucun des 24 n’est clos en production : il faut le déploiement, puis la mesure.
+Le candidat contient une fusion réelle de `main` `c4a3cacd77` (commit `1594b63731`, sans rebase). `main` contient `bfab25d4ef`, en service depuis le 20 novembre à 01 h 50 UTC avec la migration 154 (`migrations applied=1 total=160`). Ce qui s’ajoute à `main` : les lots §37 à §47 et les deux corrections relevées par les revues du 20 novembre (§48).
+
+CI GitHub : aucune sur ce SHA. La dernière verte, le run 44649492575, porte sur `e82992a37d`, branche seule, sans `main`. Les suites locales, rejouées sur ce code avec PostgreSQL 18.6, sont détaillées dans [Vérifications](#vérifications).
+
+Rien de ce candidat n’est déployé. Dans la suite, « branche » veut dire vérifié sur ce SHA par les suites et les rejeux locaux ; « production » veut dire observé sur la version servie.
+
+Sur les 33 critères suivis, 9 étaient vérifiés à la passation. Des 24 ouverts : **3 sont clos sur branche**, **15 ont avancé et gardent un reste nommé**, **6 sont bloqués** par une décision, une source ou un accès. Aucun des 24 n’est clos en production : il faut le déploiement, puis la mesure.
 
 ## Ce qui n’a pas été fait comme le demandait la passation
 
-- **Linear** : ni lu ni mis à jour (règle de l’utilisateur pour ce dossier). La comparaison des critères à Linear n’est pas faite ; les tickets VI-19, VI-21, VI-27 à VI-32 ne portent aucune trace de ce travail.
-- **Avis Astra** : aucun modèle Astra n’est disponible dans la session qui a produit ce candidat. Les lots ont été écrits par des sous-agents Claude Opus 5.5 et coordonnés par Claude Fable 5.2. Une relecture indépendante par un sous-agent Opus neuf a été faite ; elle ne remplace ni la revue Fable de Hugo ni l’avis Astra, tous deux à rendre sur le même SHA (E05b).
-- **Base de production** : aucune lecture SQL ni CloudWatch (session AWS expirée sur le poste). La production n’a été lue que par l’API publique. Les chiffres du registre qui viennent de la base (14 418 notes, 165 186 côtés Elo, 86 619 transferts…) ne sont pas remesurés.
+- **Linear** : ni lu ni mis à jour (règle de l’utilisateur pour ce dossier ; aucun accès à Linear dans la session de finalisation). La vérification des chevauchements n’est donc pas faite, ce qui ne prouve pas qu’il n’y en ait aucun (AGENTS.md). Les tickets VI-19, VI-21 et VI-27 à VI-32 ne portent aucune trace de ce travail. Le périmètre reste celui de VI-27.
+- **Avis** : deux revues indépendantes, en lecture seule, ont été rendues le 20 novembre sur `e82992a37d`. Fable 5.2 a conclu CHANGES_REQUESTED, Opus 5.5 BLOCKED. Fable a ensuite cadré la finalisation (PLAN READY) ; Opus 5.5 seul l’a implémentée et testée. Selon la consigne de Hugo, une session Fable neuve relit le SHA intégré (E05b). Aucun avis Astra.
+- **Base de production** : la session AWS `statarena` fonctionne. Deux lectures AWS ont été faites le 20 novembre par des sessions séparées, sans écriture ni SQL : déploiement, journaux, métriques (voir [État AWS](#état-aws-gate-séparé)). Aucune lecture SQL de la base : elle demande une tâche ECS, donc l’accord de Hugo. Les chiffres du registre qui viennent de la base (14 418 notes, 165 186 côtés Elo, 86 619 transferts…) ne sont pas remesurés.
 
 ## Tableau des 33 critères
 
@@ -37,21 +43,21 @@ Sur les 33 critères suivis, 9 étaient vérifiés à la passation. Des 24 ouver
 | E04c | Coupes européennes, qualifications et barrages | avancé | branche séparée | [coupes](preuves/coupes/EVIDENCE.md) | 856 qualifications 2024/25 et 2025/26 prêtes. Sans source lue : 2021/22 à 2023/24 et 2026/27 ; trois matchs du Partizan |
 | E04d | Compétitions internationales, qualifications | bloqué | branche pour les doublons | [calendriers](preuves/calendriers/EVIDENCE.md), [classements](preuves/classements/EVIDENCE.md) | Décisions : faire entrer les qualifications dans l’Elo des sélections ou les afficher seulement ; source des matchs à venir. Source nouvelle nécessaire pour les séances et la prolongation de la Copa América 2024 |
 | E04e | Participants réels et statistiques pour les noter | bloqué | — | [notes](preuves/notes/EVIDENCE.md), [calendriers](preuves/calendriers/EVIDENCE.md) | Aucune statistique individuelle hors des matchs natifs, et le sélecteur des notes est fermé aux coupes : il faut une source et une décision d’admission |
-| E04f | Une note Vega par participation éligible | avancé | branche | [année 2020](preuves/annee-2020/EVIDENCE.md), [notes](preuves/notes/EVIDENCE.md) | Année de notation 2020 notée contre les références de 2021, sans classement (décision du 20 nov., §47) : 682/682 dans le rejeu. Reste : les coupes et archives que le calcul ne lit pas (E04e) ; les participations sans rôle, désormais motivées (`role_undetermined`) mais non notées ; la mesure en production après déploiement |
+| E04f | Une note Vega par participation éligible | avancé | branche | [année 2020](preuves/annee-2020/EVIDENCE.md), [intégration](preuves/integration-main/EVIDENCE.md) 48a–48e, [notes](preuves/notes/EVIDENCE.md) | Année de notation 2020 notée contre les références de 2021, sans classement (décision du 20 nov., §47 ; §48 pour l’ordre de la production) : 682/682 dans le rejeu par le vrai `Worker.daily`, 2021 inchangé. Reste : les coupes et archives que le calcul ne lit pas (E04e) ; les participations sans rôle, désormais motivées (`role_undetermined`) mais non notées ; la mesure en production après déploiement |
 | E04g | Elo par match pour clubs et sélections | avancé | branche | [collecte](preuves/collecte/EVIDENCE.md) 37a–37f, [historique](preuves/historique/EVIDENCE.md) 41n–41o | Restauration des 35 identités en production (opération à accorder), puis recalcul de leurs 70 côtés |
 | E04h | Elo par match et note de prestation d’équipe | sans objet | — | registre | — |
 | E04i | Bonne entité, match, édition et millésime de chaque note | avancé | branche | [identités](preuves/identites/EVIDENCE.md), [notes](preuves/notes/EVIDENCE.md) | 64 notes pour 32 participations sur Lanús–Estudiantes ; versions de quantiles antérieures à vérifier sur une restauration ponctuelle de la base, dont la fenêtre de sept jours se referme vers le 25 novembre |
 | E04j | Compléter les anciennes saisons selon une politique explicite | bloqué | — | [calendriers](preuves/calendriers/EVIDENCE.md) | Texte de politique proposé ci-dessous : à adopter ou corriger par l’utilisateur |
-| E04k | Rattraper les notes et réveiller le calcul | avancé | branche | [collecte](preuves/collecte/EVIDENCE.md), [année 2020](preuves/annee-2020/EVIDENCE.md) | L’année 2020 est reprise par l’étape des classements périmés (§47) ; les notes des saisons antérieures ne sont pas reclassées après un changement d’Elo ; correction écrite entre deux lectures du calcul |
-| E04l | Signaler les échecs, distinguer zéro, absence et inéligibilité | clos | branche | [notes](preuves/notes/EVIDENCE.md), [corrections de relecture](preuves/corrections-relecture/EVIDENCE.md) | Texte « 0 derniers matchs · moy. 50 » du site : changement d’écran à valider |
+| E04k | Rattraper les notes et réveiller le calcul | avancé | branche | [collecte](preuves/collecte/EVIDENCE.md), [année 2020](preuves/annee-2020/EVIDENCE.md), [intégration](preuves/integration-main/EVIDENCE.md) | L’année 2020 est reprise une fois par l’étape des classements périmés, quel que soit l’ordre de ses calculs (§47, §48) ; les internationaux de la saison ne réveillent plus l’Elo, la Ligue des nations si (48f–48h). Reste : les notes des saisons antérieures ne sont pas reclassées après un changement d’Elo ; une correction écrite entre deux lectures du calcul |
+| E04l | Signaler les échecs, distinguer zéro, absence et inéligibilité | avancé | branche | [notes](preuves/notes/EVIDENCE.md), [corrections de relecture](preuves/corrections-relecture/EVIDENCE.md) | Partiel : données et API closes sur la branche. L’écran affiche toujours « moy. 50 » quand aucun match n’est admissible (`PlayerScoutOverview.jsx:501`, `:715`), et `gradeStatus` n’est lu par aucun écran. Le changement d’écran attend une maquette validée ; il ne bloque pas ce lot |
 | E04m | Algorithmes Vega et non note de fournisseur | inchangé | production | registre | — |
 | E04n | Résultats internationaux anciens | inchangé | production | registre | — |
 | E05a | Coordonner les pistes et respecter les propriétaires | inchangé | branche | registre | Vérification Linear non refaite |
-| E05b | Double revue indépendante de la branche réunie | bloqué | — | [relecture interne](preuves/relecture/CONSTATS.md) | Les deux avis, Fable 5.2 xhigh (Hugo) et Astra 6.2 xhigh, sur le même SHA, puis la vérification de leurs corrections |
+| E05b | Double revue indépendante de la branche réunie | bloqué | — | [relecture interne](preuves/relecture/CONSTATS.md), [intégration](preuves/integration-main/EVIDENCE.md) | Deux avis rendus sur `e82992a37d` (Fable, Opus), leurs corrections faites (§48) ; reste la relecture du SHA intégré par une session Fable neuve |
 | E05c | Corriger les défauts confirmés et valider avant fusion | avancé | branche | [témoins rejoués](preuves/temoins-34ca-sur-2088d36e60/EVIDENCE.md), [corrections de relecture](preuves/corrections-relecture/EVIDENCE.md), CI | Les deux avis ; accord sur les effets du déploiement |
 | E06a | Rapport de couverture, matrice des sources | inchangé | branche | registre | — |
 | E06b | Documenter changements, migrations, déploiements | inchangé | branche | ce document, `WORKLOG.md` | À répéter après le déploiement |
-| E06e | Validation AWS avec le profil autorisé | inchangé | branche | registre | Non refaite : session expirée |
+| E06e | Validation AWS avec le profil autorisé | inchangé | production (lecture seule) | [État AWS](#état-aws-gate-séparé) | Relue le 20 nov. sans écriture : déploiement conforme ; erreurs 53300 de l’API de lecture, gate séparé |
 
 Les deux critères de logos (E06c, E06d) restent au chantier séparé.
 
@@ -68,14 +74,43 @@ Accord de l’utilisateur nécessaire avant le déploiement. Chaque point est ap
 | Classement Veikkausliiga | la table mêlée n’est plus servie | vue de lecture (159) | `/api/standings?competition=l_3Ci5Cg` : table Vega ou 404 | vue de 150 |
 | Pages nation | une rencontre tenue par deux éditions listée une fois ; libellé de l’édition | vue de lecture (159) | Argentine : 8 matchs de Coupe du monde 2026 | fonctions de 119–120 |
 | Elo | un recalcul complet au premier passage | `worker.elo_due` | — | — |
-| Année de notation 2020/21 | le classement 2020/21 publié le 18 nov. (ligues à année civile seules, MLS en tête) retiré, ainsi que sa course au prix ; les notes d’août 2020 à juillet 2021 recalculées contre les références de 2021 ; les références propres de 2020 supprimées | étape des classements périmés du worker (`power.stale_rankings`, §47) | `/api/rankings/power?kind=players&season=2020/2021` sans ligne ; dans la base, `ref_season` 2021 pour l’année 2020 | relancer l’ancien calcul de 2020 (le code de `79ef8bbb45`) ; le prochain calcul de 2021/22 n’aura plus le classement 2020 comme a priori pour les joueurs de ces ligues |
+| Matchs internationaux de la saison | hors de l’Elo comme sur `main` ; ne réveillent plus le recalcul de l’Elo, la Ligue des nations et les autres éditions complémentaires si | `power.ELO_MATCHES`, `worker._COMPLEMENTARY` (§48) | aucun calcul Elo après une mise à jour de l’édition `nations-results:internationals:2026/2027` seule | — |
+| Année de notation 2020/21 | le classement 2020/21 publié le 18 nov. (ligues à année civile seules, MLS en tête) retiré, ainsi que sa course au prix ; les notes d’août 2020 à juillet 2021 recalculées contre les références de 2021 ; les références propres de 2020 supprimées ; 2021/22 inchangé | étape des classements périmés du worker au premier passage (`power.stale_rankings`, §47 et §48 : le calcul publié de 2020 classe des joueurs) | journal `player ranking season=2020 method=power-ranking-v8 players=0` ; `/api/rankings/power?kind=players&season=2020/2021` répond 404 ; dans la base, `ref_season` 2021 pour l’année 2020 | relancer l’ancien calcul de 2020 (le code de `79ef8bbb45`) |
+| Effets secondaires de 2020, actés | la contribution d’un match de 2020 reste mesurée sur la population de 2020 (méthode d’une année en cours) ; l’a priori de 2021/22 lit le classement 2020 retiré jusqu’à son prochain calcul, qui n’en trouvera plus ; 2020 sort des années du modèle de compositions (`players` > 0) ; l’éligibilité des révélations 2021 lit le classement 2020 | — | — | — |
 
-Migrations ajoutées : 155, 156, 157, 159, 160, additives ; 160 remet en outre à NULL la date de lecture des unités de blessures dont la seule lecture a été refusée (aucun épisode stocké), et 159 incrémente une fois la version de l’édition Veikkausliiga 2026.
+Migrations ajoutées : 155, 156, 157, 159 et 160, toutes additives. Depuis le schéma de production (154), elles s’appliquent une fois (`applied=5 total=165`), puis plus rien (48j). Deux ont un effet sur les données :
+- **160** remet à NULL la date de lecture de **toute** unité de blessures dont la dernière tentative a échoué et dont le joueur n’a aucun épisode Transfermarkt stocké. Cela inclut une liste vide acceptée puis refusée : la base ne distingue pas ce cas d’un premier 404. Le volume n’est pas mesuré.
+- **159** incrémente une fois la version de **chaque** édition dont les rangs SportScore stockés se contredisent, la Veikkausliiga 2026 et toute autre (48k). En production, `DUPLICATE_GROUP` est aussi relevé sur `l_1xXulJ` et `l_45VZuL`. Le nombre d’éditions touchées n’est pas mesuré.
 
 ## Opérations de production à accorder séparément
 
 1. **Restauration des 35 rencontres anglaises** avec leurs identifiants d’origine (`python -m vega.open_matchday_restore`, captures de `35-matchs-identites-et-elo.zip`) : essai à blanc, application, second passage ; procédure dans [historique](preuves/historique/EVIDENCE.md). Services arrêtés pendant l’opération.
 2. **Lecture de la base** : `aws login --profile statarena`, puis une tâche de diagnostic en lecture seule. Les requêtes à poser sont listées dans [production](preuves/prod/EVIDENCE.md).
+
+## État AWS (gate séparé)
+
+**BLOQUÉ.** Relecture en lecture seule du 20 novembre, de 02 h 15 à 02 h 24 UTC, profil `statarena`, us-east-2, par une session distincte : aucune écriture, aucun SQL, aucune tâche lancée. Rien n’est corrigé dans cette branche : la limite de 12 connexions (`backend/vega/migrate.py`), le pool (`backend/api/src/db.mjs`) et la concurrence de la Lambda (`infra/aws/api.yaml`) sont ceux de `main`.
+
+Le déploiement en service est sain :
+- **Tâches** : worker, backfill et live sur `bfab25d4ef`, définitions `:151`.
+- **Migration** : tâche migrate `exit 0`, journal `applied=1 total=160`.
+- **Base** : RDS PostgreSQL 18.3, `available`.
+- **Journaux** : aucune erreur du worker depuis 01 h 50 UTC.
+
+En revanche, l’API de lecture refuse par salves des requêtes en `53300` (`too_many_connections`) :
+- **Volume** : 71 refus entre 01 h 50 et 02 h 15, puis 2 jusqu’à 02 h 18 min 43 s ; aucun ensuite jusqu’au relevé, avec un trafic qui continue.
+- **Moment** : ces salves suivent la mise à jour de la stack `vega-v2-api` (01 h 54). La concurrence Lambda a atteint 19, au-delà de la limite de 12 du rôle `vega_v2_read`.
+- **Antériorité** : le même motif existait dès le 15 novembre (127 refus). Il ne vient donc pas de ce code. En revanche, un nouveau déploiement de l’API risque de relancer une salve.
+
+Pour lever le blocage, Hugo doit décider comment traiter l’écart entre la concurrence de la Lambda et la limite du rôle (réglage, ou défaut connu accepté). En cas de réglage, il faut ensuite constater zéro `53300` sur 30 minutes de trafic comparable. Au prochain déploiement, surveiller les cinq minutes qui suivent la mise à jour de l’API.
+
+Lectures restant à faire, en `SELECT` seulement, par une tâche `diagnose` à accorder :
+- `agg.power_runs` de 2020 et 2021 ;
+- `core.player_match_stats` par saison ;
+- les notes 2020 par `ref_season` ;
+- les lignes visées par 160 ;
+- les éditions en conflit de rang ;
+- `pg_stat_activity` par rôle.
 
 ## Décisions prises
 
@@ -95,6 +130,8 @@ Migrations ajoutées : 155, 156, 157, 159, 160, additives ; 160 remet en outre �
 | Statistiques natives (E02d) | Refuser une réponse qui a moins de lignes que l’observation acceptée ? | Oui pour un match terminé depuis plus de 48 h |
 | Retenue de fixture | Qu’emporte la levée d’une retenue (cotes, événements, prévision) ? | Rien n’est supprimé ; la fixture est marquée retirée |
 | Dates de naissance | Restaurer les six dates écrasées par Wikidata ? | Oui, depuis l’instantané |
+| Effets du déploiement | Accorder les effets de données ci-dessus, dont le retrait du classement 2020/21 et les portées de 159 et 160 ? | Oui, après les lectures SQL de l’[État AWS](#état-aws-gate-séparé) qui confirment que 2020 est partielle en production |
+| Erreurs 53300 (gate AWS) | Régler l’écart entre la concurrence de la Lambda et la limite du rôle de lecture, ou l’accepter comme défaut connu ? | À trancher avant de déployer l’API ; hors de cette branche |
 
 ## Politique proposée pour les saisons d’avant 2021/22 (E04j)
 
@@ -121,14 +158,29 @@ Première relecture, sur `8587ab6671` :
 | lignes de statistiques sans équipe | — | ne se reproduit pas : elles n’ont jamais été notées |
 | fusion de jumeaux d’archives contre la clé étrangère de 156 | très faible | la paire nommée par une correction est retenue |
 
-Seconde relecture, sur `1cc4af1200` : aucune perte de données. Lectures de la migration 159 trois à vingt-cinq fois plus lentes (pages nation, classements) : ramenées à au plus 1,5 fois leur temps d’avant (§43.4). Recherche Transfermarkt d’un club sans nom refaite chaque jour : bornée à une reprise (§45.4). Migrations 155 à 160 corrigées en place pendant la journée : une base de développement migrée sur un SHA intermédiaire du candidat est à recréer ; la production, à 153, n’est pas concernée.
+Seconde relecture, sur `1cc4af1200` : aucune perte de données. Lectures de la migration 159 trois à vingt-cinq fois plus lentes (pages nation, classements) : ramenées à au plus 1,5 fois leur temps d’avant (§43.4). Recherche Transfermarkt d’un club sans nom refaite chaque jour : bornée à une reprise (§45.4). Migrations 155 à 160 corrigées en place pendant la journée : une base de développement migrée sur un SHA intermédiaire du candidat est à recréer ; la production, à 154 depuis le 20 nov., n’est pas concernée (aucune de ces migrations n’y est appliquée).
+
+Revues du 20 novembre sur `e82992a37d` (lecture seule) : Fable 5.2 CHANGES_REQUESTED, Opus 5.5 BLOCKED. Leurs motifs et ce que la finalisation en fait ([intégration](preuves/integration-main/EVIDENCE.md)) :
+
+| Motif | Suite |
+| --- | --- |
+| Le recalcul de 2020 ne se déclenche pas dans l’ordre de la production | corrigé (§48, 48a–48e) |
+| `e82992a37d` n’est pas le SHA déployable, il manque `main` | fusion réelle de `c4a3cacd77` ; 154 et la bande des sélections conservées ; migrations rejouées depuis 154 (48j) |
+| Les internationaux réveillent l’Elo à chaque résultat | corrigé (48f–48h) ; lecture partagée à neuf éditions (48i) |
+| E04l déclaré clos | ramené à avancé (écran non changé) |
+| Portées de 159 et 160, effets secondaires de 2020 | décrits ci-dessus ; volumes non mesurés |
+| Le rapport sous-déclarait la CI et l’état de production | mis à jour |
+| Incident 53300 | gate séparé, non traité ici |
 
 ## Vérifications
 
 | Vérification | Résultat |
 | --- | --- |
-| CI GitHub sur le candidat | run 44601959463 sur `c6c4592ca7` : Python 743 OK (1 échec attendu, pgvector présent), API 226/226, site 788/788, image, infrastructure et paquet API réussis |
-| Suites locales (PostgreSQL 18.6, Python 3.12, Node 24) | sur `b2bedf115f` (arbre de travail identique au commit pour le code) : Python 747 OK (1 sauté : pgvector absent en local ; plus d’échec attendu), API 226/226, site 788/788 ([année 2020](preuves/annee-2020/EVIDENCE.md)) ; sur `79ef8bbb45` : Python 743 OK (1 sauté, 1 échec attendu 38a), API 226/226, site 788/788 |
+| CI GitHub | aucune sur le code `16a782abb6` ni sur le SHA du rapport, faute de push ; la dernière, le run 44649492575, est verte sur `e82992a37d` (branche seule) ; avant elle, le run 44601959463 sur `c6c4592ca7` |
+| Suites locales du code `16a782abb6` (PostgreSQL 18.6, Python 3.14, Node 24 et 26, harnais de la CI) | Python 758/758 OK, aucun test sauté, aucun échec attendu ; API 227/227 ; site 803/803 ; build du site, image du worker et ses contrôles, `cfn-lint`, paquets API et live réussis ([intégration](preuves/integration-main/EVIDENCE.md)) |
+| Référence `main` `c4a3cacd77`, même harnais | Python 636, API 223, site 803 : tout vert |
+| Tests §48 | rouges sur la fusion `1594b63731` (6 échecs sur 46), puis verts sur `16a782abb6` (46/46) |
+| Suites antérieures du candidat | `b2bedf115f` : Python 747 (1 sauté, pgvector absent), API 226, site 788 ; `79ef8bbb45` : Python 743 (1 sauté, 1 échec attendu 38a) |
 | Référence `2088d36e60` | Python 635, API 222, site 788 |
 | Production, API publique, 19 nov. 13 h 19–13 h 39 UTC | 442 lectures ; voir [production](preuves/prod/EVIDENCE.md) |
 
@@ -138,3 +190,6 @@ Seconde relecture, sur `1cc4af1200` : aucune perte de données. Lectures de la m
 - Le rendu du site : aucun écran n’a été modifié, aucun parcours navigateur n’a été rejoué sur le candidat.
 - Les scores de Pologne, du pays de Galles et de la FA Cup rattrapés ne sont pas recoupés avec les organisateurs : ils portent la mention « publié par la source » avec le commit.
 - Le travail isolé « Isolated pilot » (données réelles PitchAPI) ne tourne que sur `main` et les branches `claude/v2-*` : il n’a pas tourné sur ce candidat.
+- Sans lecture de la base de production : que 2020 soit bien la seule année partielle (`core.player_match_stats` sans saison 2020) ; l’heure exacte des calculs publiés de 2020 et 2021 (déduite des journaux) ; la durée du calcul 2020 sur RDS.
+- Les clubs créés par nom pour les 359 matchs Open Matchday ne sont pas comptés : risque de doublons (E03c).
+- La page nation : un amical de l’édition des internationaux est listé une fois, sous le nom de l’édition (« Matchs internationaux 2026/2027 », 48l). Le carrousel de `main` en fait le groupe « Matchs internationaux 2026/2027 2026/27 » (saison en double), pas « Matchs amicaux ». Le libellé est le même avec ou sans 159 : le nom de la compétition vient de la projection de `main`. Constat seulement : l’écran n’est pas modifié.
