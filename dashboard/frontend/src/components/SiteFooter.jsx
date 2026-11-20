@@ -1,7 +1,6 @@
 import Link from "next/link";
 import StatarenaLogo from "./StatarenaLogo.jsx";
 
-const repository = "https://github.com/VegaInteligence/Vega-Sport";
 /** Pages without the football context (404, error) link to plain paths. */
 const plainHref = (page) => page;
 const groups = [
@@ -20,24 +19,6 @@ const groups = [
       ["Performances", "/joueurs/"],
       ["Classement Ballon d’Or", "/classement-joueurs/"],
       ["Power Ranking", "/power-ranking/"],
-    ],
-  },
-  {
-    title: "Méthode",
-    links: [
-      ["Données & méthode", "/methode/"],
-      [
-        "Modèle mathématique",
-        `${repository}/blob/main/docs/METHODE_CLASSEMENT_BALLON_D_OR.md`,
-      ],
-    ],
-  },
-  {
-    title: "Projet",
-    links: [
-      ["GitHub", repository],
-      ["Documentation", `${repository}/tree/main/docs`],
-      ["Signaler un problème", `${repository}/issues`],
     ],
   },
 ];

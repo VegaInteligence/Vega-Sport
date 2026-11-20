@@ -282,7 +282,7 @@
     display: none;
   }
   /* Footer: the « Explorer » links are the tab bar's own, always on screen:
-     the footer keeps the three other groups. */
+     the footer keeps « Joueurs ». */
   .site-footer-main > nav.site-footer-column:first-of-type {
     display: none;
   }
