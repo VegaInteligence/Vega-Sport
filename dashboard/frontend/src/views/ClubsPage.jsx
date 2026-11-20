@@ -339,22 +339,20 @@ export default function ClubsPage() {
   // What the club is ranked against starts with the page (the profile renders first).
   useClubStart(/^t_[A-Za-z0-9]{6}$/.test(id || "") ? id : null);
   return (
-    <Layout path="/clubs/" title="Clubs">
+    <Layout path="/clubs/" title="Clubs" hideHeading={Boolean(selected)}>
       {selected ? (
         <>
-          <Link
-            className="inline-link competition-back"
-            href={f.href("/clubs/", { clubView: "", clubScope: "", vs: "" })}
-          >
-            ← Tous les clubs
-          </Link>
           <FootballContext.Provider value={profileContext}>
             <Suspense
               fallback={
                 <Skeleton data-page-loading="" label="Chargement du profil du club…" lines={2} />
               }
             >
-              <ClubScoutProfile key={selected.id} clubId={selected.id} />
+              <ClubScoutProfile
+                key={selected.id}
+                clubId={selected.id}
+                backHref={f.href("/clubs/", { clubView: "", clubScope: "", vs: "" })}
+              />
             </Suspense>
           </FootballContext.Provider>
         </>

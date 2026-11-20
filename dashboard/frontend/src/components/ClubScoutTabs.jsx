@@ -86,7 +86,7 @@ function competitionRecords(dossier) {
   }));
 }
 
-export function IdentityRail({ dossier, onTab }) {
+export function IdentityRail({ dossier, onTab, backHref }) {
   const f = useFootball();
   const self = dossier.self,
     r = self.record;
@@ -97,9 +97,14 @@ export function IdentityRail({ dossier, onTab }) {
   const more = usePhoneFold();
   return (
     <aside className={s.rail} aria-label="Identité du club" {...more.fold}>
+      {backHref && (
+        <Link className={`inline-link ${s.railBack}`} href={backHref}>
+          ← Tous les clubs
+        </Link>
+      )}
       <div className={s.identity}>
         <Crest club={dossier} className={`crest ${s.bigCrest}`} />
-        <h2 className={s.name}>{dossier.name}</h2>
+        <h1 className={s.name}>{dossier.name}</h1>
         <p className={s.sub}>
           {[dossier.league?.name, dossier.season].filter(Boolean).join(" · ")}
         </p>
