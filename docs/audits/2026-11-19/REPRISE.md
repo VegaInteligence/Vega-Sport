@@ -2,9 +2,9 @@
 
 [Situation du 18 novembre](../2026-11-17/SITUATION.md) · [Registre des 91 critères](../2026-11-17/registres/requirements.csv) · [Spécifications des corrections](../../calculs/09-audit-2026-11/FAILURE_MODES.md) (§37 à §48) · [Preuves](preuves/)
 
-**Candidat : code `16a782abb6`**, sur la branche locale `claude/audit-reprise-33` ; ce rapport est commité au-dessus, sans autre changement de code. La [PR 58](https://github.com/VegaInteligence/Vega-Sport/pull/58) est en brouillon ; sa branche distante reste à `e82992a37d` : rien n’a été poussé, le push demande l’accord de Hugo.
+**Candidat : code `16a782abb6`**, relu CODE PASS par Fable sur `25834c73b9`, puis fusionné avec le dernier `main` (voir plus bas), sur la branche locale `claude/audit-reprise-33` ; ce rapport est commité au-dessus, sans autre changement de code. La [PR 58](https://github.com/VegaInteligence/Vega-Sport/pull/58) est en brouillon ; sa branche distante reste à `e82992a37d` : rien n’a été poussé, le push demande l’accord de Hugo.
 
-Le candidat contient une fusion réelle de `main` `c4a3cacd77` (commit `1594b63731`, sans rebase). `main` contient `bfab25d4ef`, en service depuis le 20 novembre à 01 h 50 UTC avec la migration 154 (`migrations applied=1 total=160`). Ce qui s’ajoute à `main` : les lots §37 à §47 et les deux corrections relevées par les revues du 20 novembre (§48).
+Le candidat contient deux fusions réelles de `main`, sans rebase : `c4a3cacd77` (commit `1594b63731`), puis `61d0ab3573`, la tête de `origin/main` lue au début de la seconde intégration (commit `a97bc68cf5`, aucun conflit). Cette seconde fusion apporte l’interface de la page club et de la journée (jusqu’à `bb0ac6ab16`) et le correctif de capacité de l’API de lecture écrit par une autre session (`41a8e75a7d` tests, `61d0ab3573` code : `db.mjs`, `handler.mjs`, `migrate.py`, `infra/aws`), conservés tels quels. L’écart de la branche avec ce `main` sur `backend/` et `infra/` est identique, ligne à ligne, à celui relu sur `25834c73b9` ; `infra/aws`, `migrate.py`, `db.mjs`, `handler.mjs` et `dashboard/` sont ceux de `main` ; la migration 154 est identique octet pour octet à celle de `bfab25d4ef` (blob `b6ac3564cb`) ; sous `backend/sql`, la branche n’ajoute à `bfab25d4ef` comme à `61d0ab3573` que 155, 156, 157, 159 et 160. Si `main` avance encore, l’écart est nommé à la publication, pas réintégré sans fin. `main` contient `bfab25d4ef`, en service depuis le 20 novembre à 01 h 50 UTC avec la migration 154 (`migrations applied=1 total=160`). Ce qui s’ajoute à `main` : les lots §37 à §47 et les deux corrections relevées par les revues du 20 novembre (§48).
 
 CI GitHub : aucune sur ce SHA. La dernière verte, le run 44649492575, porte sur `e82992a37d`, branche seule, sans `main`. Les suites locales, rejouées sur ce code avec PostgreSQL 18.6, sont détaillées dans [Vérifications](#vérifications).
 
@@ -89,20 +89,24 @@ Migrations ajoutées : 155, 156, 157, 159 et 160, toutes additives. Depuis le sc
 
 ## État AWS (gate séparé)
 
-**BLOQUÉ.** Relecture en lecture seule du 20 novembre, de 02 h 15 à 02 h 24 UTC, profil `statarena`, us-east-2, par une session distincte : aucune écriture, aucun SQL, aucune tâche lancée. Rien n’est corrigé dans cette branche : la limite de 12 connexions (`backend/vega/migrate.py`), le pool (`backend/api/src/db.mjs`) et la concurrence de la Lambda (`infra/aws/api.yaml`) sont ceux de `main`.
+**BLOQUÉ, et aggravé au recontrôle.** Deux relectures en lecture seule du 20 novembre, profil `statarena`, us-east-2, par des sessions distinctes : de 02 h 15 à 02 h 24 UTC, puis de 02 h 24 min 42 s à 02 h 53 min 38 s UTC (`finalisation-avis-aws-recontrole.md`). Aucune écriture, aucun SQL, aucune tâche lancée.
 
-Le déploiement en service est sain :
-- **Tâches** : worker, backfill et live sur `bfab25d4ef`, définitions `:151`.
+Le déploiement en service est inchangé et sain :
+- **Tâches** : worker, backfill et live sur `bfab25d4ef`, définitions `:151`, un seul déploiement `COMPLETED` ; aucune stack modifiée depuis 01 h 54 UTC.
 - **Migration** : tâche migrate `exit 0`, journal `applied=1 total=160`.
-- **Base** : RDS PostgreSQL 18.3, `available`.
-- **Journaux** : aucune erreur du worker depuis 01 h 50 UTC.
+- **Base** : RDS PostgreSQL 18.3 (état non relu au recontrôle, la commande ayant été refusée ; métriques lues).
 
-En revanche, l’API de lecture refuse par salves des requêtes en `53300` (`too_many_connections`) :
-- **Volume** : 71 refus entre 01 h 50 et 02 h 15, puis 2 jusqu’à 02 h 18 min 43 s ; aucun ensuite jusqu’au relevé, avec un trafic qui continue.
-- **Moment** : ces salves suivent la mise à jour de la stack `vega-v2-api` (01 h 54). La concurrence Lambda a atteint 19, au-delà de la limite de 12 du rôle `vega_v2_read`.
-- **Antériorité** : le même motif existait dès le 15 novembre (127 refus). Il ne vient donc pas de ce code. En revanche, un nouveau déploiement de l’API risque de relancer une salve.
+L’API de lecture refuse des requêtes en `53300` (`too_many_connections`), de plus en plus souvent :
+- **Volume** : 73 refus de 01 h 50 à 02 h 24 UTC, puis 156 de 02 h 24 à 02 h 53, soit 229 en 63 minutes depuis le déploiement (contre 1 sur les 24 h précédentes).
+- **Gravité** : jusqu’à 31 % des requêtes sur une tranche de 5 minutes ; `/api/health` touché.
+- **Sans déploiement** : trois salves (02 h 25–02 h 31, 02 h 43–02 h 44, 02 h 47–02 h 49 UTC) sans aucune mise à jour ; `DatabaseConnections` plafonne à 19 pendant les salves ; concurrence de la Lambda jusqu’à 23, et à 1 pendant une salve (connexions gardées par des copies inactives, hypothèse).
+- **Cause probable, non confirmée en SQL** : la limite de 12 connexions du login `vega_v2_read`, pas la limite globale. Elle ne vient pas du code de ce candidat (motif déjà vu le 15 novembre).
 
-Pour lever le blocage, Hugo doit décider comment traiter l’écart entre la concurrence de la Lambda et la limite du rôle (réglage, ou défaut connu accepté). En cas de réglage, il faut ensuite constater zéro `53300` sur 30 minutes de trafic comparable. Au prochain déploiement, surveiller les cinq minutes qui suivent la mise à jour de l’API.
+**Correctif et statut de production sont deux choses séparées.**
+- **Le correctif** est celui de `main` (`61d0ab3573`, VI-33, une autre session) : au plus 32 copies de la fonction (`ReservedConcurrency`, passé par `deploy.sh`), login à 68 connexions, session inactive fermée par la base après 2 minutes, `stale-if-error` sur les réponses publiques. Ce candidat le contient par fusion, sans le modifier ni le réimplémenter ; ses tests de `main` (`test_api_capacity.py`, `edge.test.mjs`, `db.test.mjs`) tournent dans les suites de ce candidat.
+- **Le statut de production** : au recontrôle (jusqu’à 02 h 53 UTC), ce correctif n’était pas déployé, la production étant toujours `bfab25d4ef`. Son déploiement et sa mesure relèvent de `main` et de Hugo, pas de cette branche. Déployer ce candidat déploierait aussi ce correctif.
+
+Pour lever le blocage : un réglage en production (celui de `main` une fois déployé, ou un autre choisi par Hugo), puis zéro `53300` sur au moins 30 minutes consécutives à au moins 150 invocations par 5 minutes, sans palier de `DatabaseConnections` à 19. L’accepter comme défaut connu n’est plus recommandé.
 
 Lectures restant à faire, en `SELECT` seulement, par une tâche `diagnose` à accorder :
 - `agg.power_runs` de 2020 et 2021 ;
@@ -131,7 +135,7 @@ Lectures restant à faire, en `SELECT` seulement, par une tâche `diagnose` à a
 | Retenue de fixture | Qu’emporte la levée d’une retenue (cotes, événements, prévision) ? | Rien n’est supprimé ; la fixture est marquée retirée |
 | Dates de naissance | Restaurer les six dates écrasées par Wikidata ? | Oui, depuis l’instantané |
 | Effets du déploiement | Accorder les effets de données ci-dessus, dont le retrait du classement 2020/21 et les portées de 159 et 160 ? | Oui, après les lectures SQL de l’[État AWS](#état-aws-gate-séparé) qui confirment que 2020 est partielle en production |
-| Erreurs 53300 (gate AWS) | Régler l’écart entre la concurrence de la Lambda et la limite du rôle de lecture, ou l’accepter comme défaut connu ? | À trancher avant de déployer l’API ; hors de cette branche |
+| Erreurs 53300 (gate AWS) | Déployer le correctif de capacité de `main` (`61d0ab3573`) ou un autre réglage, puis le mesurer ? | Oui, avant tout déploiement de ce candidat ; plus comme défaut accepté (jusqu’à 31 % de refus, `/api/health` touché) ; hors de cette branche |
 
 ## Politique proposée pour les saisons d’avant 2021/22 (E04j)
 
@@ -165,20 +169,21 @@ Revues du 20 novembre sur `e82992a37d` (lecture seule) : Fable 5.2 CHANGES_REQUE
 | Motif | Suite |
 | --- | --- |
 | Le recalcul de 2020 ne se déclenche pas dans l’ordre de la production | corrigé (§48, 48a–48e) |
-| `e82992a37d` n’est pas le SHA déployable, il manque `main` | fusion réelle de `c4a3cacd77` ; 154 et la bande des sélections conservées ; migrations rejouées depuis 154 (48j) |
+| `e82992a37d` n’est pas le SHA déployable, il manque `main` | fusions réelles de `c4a3cacd77` puis `61d0ab3573` ; 154 (identique à la production) et la bande des sélections conservées ; migrations rejouées depuis 154 (48j) |
 | Les internationaux réveillent l’Elo à chaque résultat | corrigé (48f–48h) ; lecture partagée à neuf éditions (48i) |
 | E04l déclaré clos | ramené à avancé (écran non changé) |
 | Portées de 159 et 160, effets secondaires de 2020 | décrits ci-dessus ; volumes non mesurés |
 | Le rapport sous-déclarait la CI et l’état de production | mis à jour |
-| Incident 53300 | gate séparé, non traité ici |
+| Incident 53300 | gate séparé ; correctif écrit sur `main` (`61d0ab3573`), contenu par fusion, non réimplémenté ici |
 
 ## Vérifications
 
 | Vérification | Résultat |
 | --- | --- |
-| CI GitHub | aucune sur le code `16a782abb6` ni sur le SHA du rapport, faute de push ; la dernière, le run 44649492575, est verte sur `e82992a37d` (branche seule) ; avant elle, le run 44601959463 sur `c6c4592ca7` |
+| CI GitHub | aucune sur le code `16a782abb6` ni sur les SHA intégrés, faute de push ; la dernière, le run 44649492575, est verte sur `e82992a37d` (branche seule) ; avant elle, le run 44601959463 sur `c6c4592ca7` |
 | Suites locales du code `16a782abb6` (PostgreSQL 18.6, Python 3.14, Node 24 et 26, harnais de la CI) | Python 758/758 OK, aucun test sauté, aucun échec attendu ; API 227/227 ; site 803/803 ; build du site, image du worker et ses contrôles, `cfn-lint`, paquets API et live réussis ([intégration](preuves/integration-main/EVIDENCE.md)) |
 | Référence `main` `c4a3cacd77`, même harnais | Python 636, API 223, site 803 : tout vert |
+| Après la fusion de `61d0ab3573` | une passe complète sur le SHA intégré, résultats consignés hors du dépôt (`validation-opus/run-ci/`) pour ne pas changer le SHA testé |
 | Tests §48 | rouges sur la fusion `1594b63731` (6 échecs sur 46), puis verts sur `16a782abb6` (46/46) |
 | Suites antérieures du candidat | `b2bedf115f` : Python 747 (1 sauté, pgvector absent), API 226, site 788 ; `79ef8bbb45` : Python 743 (1 sauté, 1 échec attendu 38a) |
 | Référence `2088d36e60` | Python 635, API 222, site 788 |
