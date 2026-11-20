@@ -1,0 +1,349 @@
+/* « Remplaçant » (PlayerReplacements.jsx): the reference, one row of filters, the closest
+   players beside the comparison of the one selected. Phone: the filters stay on one
+   scrolling row and the comparison goes under the list. */
+.root {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+.reference {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.avatar {
+  width: 44px;
+  height: 44px;
+}
+.referenceName {
+  margin: 0;
+  font-size: var(--text-lg);
+  color: var(--ink-strong);
+}
+.referenceMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.search {
+  position: relative;
+  width: min(260px, 100%);
+}
+.search input {
+  width: 100%;
+  min-height: var(--control-h);
+}
+.options {
+  position: absolute;
+  z-index: 5;
+  inset: calc(100% + 4px) 0 auto;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-pop);
+}
+.options li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.options li[aria-selected="true"],
+.options li:hover {
+  background: var(--surface-hover);
+}
+.options span,
+.who > span:last-child {
+  display: grid;
+  min-width: 0;
+}
+.options small,
+.who small {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.error {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  min-width: 0;
+}
+.group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.groupLabel {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+.listCard,
+.comparison {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  min-width: 0;
+}
+.listHead,
+.candidate {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px 56px 68px 44px;
+  gap: 12px;
+  align-items: center;
+}
+.listHead {
+  padding: 10px 16px 4px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.listHead span:nth-child(n + 3) {
+  text-align: right;
+}
+.list {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+}
+.candidate {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+.candidate:hover {
+  background: var(--surface-hover);
+}
+.candidate[aria-pressed="true"] {
+  border-color: var(--border-strong);
+  background: var(--surface-subtle);
+}
+.candidate > span:nth-child(n + 3) {
+  text-align: right;
+}
+.who {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.who strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink-strong);
+}
+.similarity {
+  display: grid;
+  gap: 4px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+.similarity i,
+.bars i {
+  position: relative;
+  display: block;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--surface-subtle);
+}
+.similarity i::before,
+.bars i::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--w);
+  border-radius: 3px;
+  background: var(--accent);
+}
+.value {
+  font-weight: 600;
+}
+.comparison {
+  position: sticky;
+  top: 12px;
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+}
+.comparisonTitle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--ink-strong);
+}
+.comparisonTitle span[aria-hidden] {
+  color: var(--muted);
+  font-weight: 400;
+}
+.trio {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+.trio > div {
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+  padding: 10px;
+  border-radius: var(--radius);
+  background: var(--surface-subtle);
+}
+.trio dt {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.trio dd {
+  margin: 0;
+  color: var(--ink-strong);
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+.delta {
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--surface-subtle);
+}
+.good {
+  color: var(--mq-pos-2, var(--accent));
+}
+.bad {
+  color: var(--mq-neg-2, var(--muted));
+}
+.flat {
+  color: var(--muted);
+}
+.axes {
+  display: grid;
+  gap: 10px;
+}
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.legend span::before {
+  content: "";
+  display: inline-block;
+  width: 10px;
+  height: 6px;
+  margin-right: 6px;
+  border-radius: 3px;
+  vertical-align: 1px;
+}
+.legendRef::before,
+.barRef::before {
+  background: var(--muted-light) !important;
+}
+.legendCand::before {
+  background: var(--accent);
+}
+.axis {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr) 48px;
+  gap: 10px;
+  align-items: center;
+  font-size: var(--text-sm);
+}
+.axis > :last-child {
+  justify-self: end;
+}
+.bars {
+  display: grid;
+  gap: 3px;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.none {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+}
+
+@media (max-width: 640px) {
+  .head {
+    padding: 12px;
+  }
+  .search {
+    width: 100%;
+  }
+  .chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin-inline: calc(-1 * var(--page-gutter, 16px));
+    padding-inline: var(--page-gutter, 16px);
+  }
+  .chips::-webkit-scrollbar {
+    display: none;
+  }
+  .body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .comparison {
+    position: static;
+  }
+  .listHead,
+  .candidate {
+    grid-template-columns: minmax(0, 1fr) 62px 60px 40px;
+    gap: 8px;
+  }
+  .ageCol {
+    display: none;
+  }
+  .axis {
+    grid-template-columns: 84px minmax(0, 1fr) 44px;
+  }
+}

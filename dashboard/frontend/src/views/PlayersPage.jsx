@@ -101,6 +101,12 @@ export default function PlayersPage() {
   };
   const mode = f.filters.basis;
   const setMode = (basis) => f.setFilters((v) => ({ ...v, basis }));
+  // « Remplaçant » without a reference in the URL starts from the directory's first player: the
+  // same first page Performances reads (cached when the visitor comes from it).
+  const directoryRead =
+    !id &&
+    (directoryView === "table" ||
+      (directoryView === "replace" && !params.get("replace")));
   const queryKey = compactQuery({
       ...playerReadParams(f, { sort, ranking }),
       page: undefined,
@@ -111,7 +117,7 @@ export default function PlayersPage() {
       "players",
       playerReadParams(f, { sort, ranking, page: requestedPage }),
       {
-        enabled: f.compactMode && !id && directoryView === "table",
+        enabled: f.compactMode && directoryRead,
         refreshManifest: f.refreshManifest,
       },
     );
@@ -198,7 +204,7 @@ export default function PlayersPage() {
         ].includes(profileView) ||
         (((overview && radarEligible) || profileView === "stats") &&
           comparisonIntent === comparisonKey)
-      : ["explore", "indices"].includes(directoryView));
+      : false);
   // Tabs built on the cohort; elsewhere it only feeds the rail's Vega index.
   const cohortTab = ["similar", "compare", "advanced", "stats"].includes(
     profileView,
@@ -234,7 +240,7 @@ export default function PlayersPage() {
   );
   const directoryRows = useMemo(
     () =>
-      f.compactMode && !id && directoryView === "table"
+      f.compactMode && directoryRead
         ? (directory.value?.data.players || []).map((row) => ({
             ...row,
             score: row.power?.score ?? null,
@@ -361,9 +367,7 @@ export default function PlayersPage() {
               f.compactMode
                 ? directoryView === "table"
                   ? directory
-                  : ["explore", "indices"].includes(directoryView)
-                    ? cohort
-                    : null
+                  : null
                 : null
             }
           />

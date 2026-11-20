@@ -80,7 +80,11 @@ export const PLAYER_RANKINGS = {
 export const playerRankingKey = (value) =>
   value === "all" || Object.hasOwn(PLAYER_RANKINGS, value) ? value : "";
 
-export function playerDirectoryRanking(filters, defaults = false, compact = true) {
+export function playerDirectoryRanking(
+  filters,
+  defaults = false,
+  compact = true,
+) {
   if (filters.ranking) return filters.ranking === "all" ? "" : filters.ranking;
   return defaults &&
     !filters.query?.trim() &&
@@ -93,8 +97,10 @@ export function playerDirectoryRanking(filters, defaults = false, compact = true
     : "";
 }
 
+// Explorer and Indices were replaced by Remplaçant and En forme (VI-39): their old links open
+// Performances.
 export const playerDirectoryView = (value) =>
-  ["explore", "indices", "lists"].includes(value) ? value : "table";
+  ["replace", "form", "lists"].includes(value) ? value : "table";
 
 export const playerLeagueIds = (value = "") =>
   [

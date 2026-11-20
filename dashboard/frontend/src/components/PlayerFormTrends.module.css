@@ -1,0 +1,52 @@
+/* « En forme » (PlayerFormTrends.jsx): one row per player with his last ten matches drawn as
+   a curve, the dotted line between the five before and the last five. */
+.scroll {
+  overflow-x: auto;
+}
+.table {
+  width: 100%;
+  font-variant-numeric: tabular-nums;
+}
+.table td {
+  vertical-align: middle;
+}
+.num {
+  text-align: right;
+}
+.curve {
+  display: block;
+}
+.area {
+  fill: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.6;
+}
+.end {
+  fill: var(--accent);
+}
+.falling .area {
+  fill: color-mix(in srgb, var(--mq-neg-2, var(--muted)) 16%, transparent);
+}
+.falling .line {
+  stroke: var(--mq-neg-2, var(--muted));
+}
+.falling .end {
+  fill: var(--mq-neg-2, var(--muted));
+}
+.split {
+  stroke: var(--border);
+  stroke-dasharray: 2 3;
+}
+
+@media (max-width: 640px) {
+  .table th:nth-child(3),
+  .table td:nth-child(3) {
+    display: none;
+  }
+  .curve {
+    width: 88px;
+  }
+}

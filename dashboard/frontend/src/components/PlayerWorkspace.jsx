@@ -5,16 +5,20 @@ import { useSearchParams } from "next/navigation";
 import PlayerDirectory from "./PlayerDirectory.jsx";
 import { ResearchLists, ResearchTabs, useHasSaved } from "./ResearchUI.jsx";
 import { playerDirectoryView } from "../services/player-leaderboard.js";
-const PlayerExplorer = lazy(() => import("./PlayerExplorer.jsx"));
-const PlayerIndices = lazy(() => import("./PlayerIndices.jsx"));
-export default function PlayerWorkspace({ profiles, resource, ...props }) {
+const PlayerReplacements = lazy(() => import("./PlayerReplacements.jsx"));
+const PlayerFormTrends = lazy(() => import("./PlayerFormTrends.jsx"));
+export default function PlayerWorkspace({
+  profiles: _profiles,
+  resource,
+  ...props
+}) {
   const params = useSearchParams(),
     hasSaved = useHasSaved("players");
   const items = [
     ...(hasSaved ? [["lists", "Mes listes"]] : []),
     ["table", "Performances"],
-    ["explore", "Explorer"],
-    ["indices", "Indices"],
+    ["replace", "Remplaçant"],
+    ["form", "En forme"],
     ...(hasSaved ? [] : [["lists", "Mes listes"]]),
   ];
   const view = playerDirectoryView(params.get("playersView"));
@@ -68,16 +72,10 @@ export default function PlayerWorkspace({ profiles, resource, ...props }) {
                 </p>
               )}
               {view === "table" && <PlayerDirectory {...props} />}
-              {view === "explore" && (
-                <PlayerExplorer
-                  rows={props.rows}
-                  mode={props.mode}
-                  onMode={props.onMode}
-                />
+              {view === "replace" && (
+                <PlayerReplacements fallback={props.rows?.[0]} />
               )}
-              {view === "indices" && (
-                <PlayerIndices rows={props.rows} profiles={profiles} />
-              )}
+              {view === "form" && <PlayerFormTrends />}
               {view === "lists" && <ResearchLists kind="players" />}
             </>
           )}
