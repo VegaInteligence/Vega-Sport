@@ -1,12 +1,12 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
-## Remplaçant : compatibilité avec l'équipe — VI-40 / #62 (20 novembre 2026)
+## Remplaçant : compatibilité avec l'équipe — VI-40 / #62 (20 novembre 2026, clos)
 
-- Demande : remplacer un joueur dans une équipe (dynamique, discipline, replis défensifs, efforts), pas stat = stat. Maquette [Remplaçant en équipe](https://claude.ai/artifact/32HzcLEv6yjbxxHp1DDFKb) v2 validée, avec en plus : pentagone grand et interactif, liste aussi haute que la carte, et (hors Remplaçant) probabilités de match alignées sur la barre.
-- Livré sur main (39484cd060) et déployé (Deploy 44759143273, API à 15:10 UTC, migration 162). `team_fit.py` → `agg.player_team_fit` ; tri par compatibilité (profil 40, rôle 20, style 15, travail défensif 10, effort 10, discipline 5) ; « En forme » devenu le filtre « Forme » de Performances ; changement de saison sans écran de chargement global (3f4aab873a).
-- Données : effort seulement en Premier League (178 joueurs) ; replis non mesurables (travail défensif ajusté à la possession en approche).
-- Validation : E2E public 27/28 (`dashboard/outputs/vi-40-e2e/` du checkout principal). C3 échoue tant que `agg.player_team_fit` est vide en production (prochain passage de la chaîne des modèles ; dernier passage à 11:08 UTC). Le contrôle C2 lit mal les clubs : à corriger.
-- Prochaine action : quand la table est remplie, vérifier `/similar` (fit non nul), corriger C2, relancer l'E2E, puis clore VI-40 et #62.
+- Demande : remplacer un joueur dans une équipe (dynamique, discipline, replis défensifs, efforts). Maquettes validées : [Remplaçant en équipe](https://claude.ai/artifact/32HzcLEv6yjbxxHp1DDFKb) v2 et [Comparer les joueurs](https://claude.ai/artifact/QQeoRmH9759hK6aTu35QW5).
+- Livré sur main et déployé : `team_fit.py` → `agg.player_team_fit` (162), tri par compatibilité (profil 40, rôle 20, style 15, travail défensif 10, effort 10, discipline 5) ; pentagone interactif ; liste aussi haute que la carte ; « En forme » → filtre « Forme » de Performances ; « Comparer » ouvre la comparaison avec le joueur à remplacer en premier ; nouvelle fenêtre de comparaison ; étiquette « Ligue plus faible » seulement quand elle coûte (> 50) ; probabilités de match alignées ; changement de saison sans écran de chargement global.
+- Production : table calculée à la demande de l'utilisateur (2026/27 : 12 525 ; 2025/26 : 18 320), puis à chaque passage des modèles. Lecture sans cache 0,55–0,74 s.
+- Validation : E2E public 29/29 (`dashboard/outputs/vi-40-e2e/` du checkout principal), API 253/253, site 808/808.
+- Limites : effort seulement en Premier League ; replis non mesurables (travail défensif en approche) ; pondérations à valider sur de vrais transferts.
 
 ## Page Joueurs : Remplaçant et En forme remplacent Explorer et Indices — VI-39 (20 novembre 2026)
 
