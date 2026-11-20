@@ -34,6 +34,24 @@ function supportsGzip(header) {
   );
   return (weights.get("gzip") ?? weights.get("*") ?? 0) > 0;
 }
+/**
+ * What the distribution is told. A public answer may be served from the copy the
+ * distribution holds for a day when the function fails or cannot be reached (a slightly
+ * old answer rather than an error), unless it says how long itself. `must-revalidate`
+ * would forbid it: it is the application's word to browsers, which revalidate anyway
+ * (max-age=0). Until 20 November 2026 `stale-if-error=0` was added to every answer: each
+ * failure of the function was shown, the home's own 24 hours included.
+ * An error, a personal answer and an answer that says nothing are kept by no one.
+ */
+export function edgeCacheControl(value) {
+  if (!value) return "no-store";
+  const directives = value.split(",").map((part) => part.trim()).filter(Boolean);
+  const has = (name) => directives.some((d) => d.toLowerCase().split("=")[0] === name);
+  if (has("no-store") || has("private") || !has("public")) return value;
+  const kept = directives.filter((d) => d.toLowerCase() !== "must-revalidate");
+  if (!has("stale-if-error")) kept.push("stale-if-error=86400");
+  return kept.join(", ");
+}
 export const adapt = (route) => async (event) => {
   const method = event?.requestContext?.http?.method,
     path = event?.rawPath;
@@ -78,9 +96,7 @@ export const adapt = (route) => async (event) => {
   delete headers.connection;
   delete headers["vercel-cdn-cache-control"];
   delete headers["cdn-cache-control"];
-  if (!headers["cache-control"]) headers["cache-control"] = "no-store";
-  else if (!/no-store/i.test(headers["cache-control"]))
-    headers["cache-control"] += ", stale-if-error=0";
+  headers["cache-control"] = edgeCacheControl(headers["cache-control"]);
   const out = {
     statusCode: res.status,
     headers,

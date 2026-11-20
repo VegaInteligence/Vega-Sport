@@ -36,6 +36,10 @@ if [ -z "${VEGA_V2_DEPLOY_EXPORT:-}" ]; then
   exit
 fi
 COUNT=${WORKER_DESIRED_COUNT:-1}
+# Copies of the read API's function that may run at once (api.yaml, ReservedConcurrency).
+# Passed on every deploy: CloudFormation keeps a stack's previous value for a parameter
+# that is not. The login's connection limit follows it (backend/vega/migrate.py).
+API_COPIES=32
 # The live ingestor stays off until a live provider is chosen (doc "Live"): LIVE_PROVIDER names its
 # adapter (vega/live/adapters.py) and turns on the schedule that starts it.
 ARCHIVES=${ARCHIVE_SOURCES_BUCKET:-}
@@ -105,7 +109,7 @@ url=$(aws ssm get-parameter --name /vega/v2/read-database-url --with-decryption 
 ops=$(aws ssm get-parameter --name /vega/v2/ops-key --with-decryption --query Parameter.Value --output text)
 [ -n "${GITHUB_ACTIONS:-}" ] && echo "::add-mask::$ops"
 media=$(output vega-v2-api ApiOrigin)
-api() { stack vega-v2-api api.yaml --capabilities CAPABILITY_IAM --parameter-overrides ReleaseKey="$key" ReadDatabaseUrl="$url" OpsKey="$ops" MediaBaseUrl="$1"; }
+api() { stack vega-v2-api api.yaml --capabilities CAPABILITY_IAM --parameter-overrides ReleaseKey="$key" ReadDatabaseUrl="$url" OpsKey="$ops" MediaBaseUrl="$1" ReservedConcurrency="$API_COPIES"; }
 if [ -n "$media" ] && [ "$media" != None ]; then api "$media/"; else
   api ""
   media=$(output vega-v2-api ApiOrigin)

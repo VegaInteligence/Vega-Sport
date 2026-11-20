@@ -18,6 +18,15 @@ from .store import migrate
 from .worker import connect
 
 LOGINS = ("collect", "calc", "read")
+# A connection limit per login keeps the instance's connections for the others.
+# read: the read API's function keeps one connection per copy, and a deploy leaves the old
+# copies beside the new ones until the base closes their idle sessions: twice the copies
+# (infra/aws/api.yaml, ReservedConcurrency: 32), plus a margin for a diagnostic session.
+# backend/tests/test_api_capacity.py fails when the two numbers part. (12 until
+# 20 November 2026, for an account that ran 10 functions at most: the account's limit
+# became 1000, 19 copies ran and the base refused the thirteenth, 53300.)
+READ_MARGIN = 4
+CONNECTION_LIMITS = {"collect": 6, "calc": 4, "read": 2 * 32 + READ_MARGIN}
 
 
 def owner_url(env):
@@ -43,9 +52,7 @@ def ensure_logins(conn, env):
             statement = "ALTER ROLE {} LOGIN PASSWORD {}" if exists else "CREATE ROLE {} LOGIN PASSWORD {}"
             conn.execute(sql.SQL(statement).format(sql.Identifier(login), sql.Literal(password)))
             conn.execute(sql.SQL("GRANT {} TO {}").format(sql.Identifier(f"vega_{role}"), sql.Identifier(login)))
-            # A connection limit per login keeps the burstable instance's slots for the others.
-            limit = {"collect": 6, "calc": 4, "read": 12}[role]
-            conn.execute(sql.SQL("ALTER ROLE {} CONNECTION LIMIT {}").format(sql.Identifier(login), sql.Literal(limit)))
+            conn.execute(sql.SQL("ALTER ROLE {} CONNECTION LIMIT {}").format(sql.Identifier(login), sql.Literal(CONNECTION_LIMITS[role])))
         done.append(login)
     return done
 
