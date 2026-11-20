@@ -26,10 +26,6 @@ export function ClubFacts({ club, matches }) {
     wiki = value?.wiki;
   const coach = wiki?.coach || value?.observedCoach;
   const isWikiCoach = Boolean(wiki?.coach);
-  const observedDiffers =
-    wiki?.coach &&
-    value?.observedCoach &&
-    normalizeText(wiki.coach.name) !== normalizeText(value.observedCoach.name);
   const stadium = wiki?.stadium || value?.observedStadium?.name;
   const photo = (isWikiCoach ? wiki.coach.photo : null) || value?.coachPhoto;
   const photoCredit = /^https:\/\/commons\.wikimedia\.org\/wiki\/File:/.test(
@@ -46,11 +42,27 @@ export function ClubFacts({ club, matches }) {
         <>
           <div className="club-facts-grid">
             <div className="club-coach">
-              <Media
-                name={coach?.name || "?"}
-                url={photo?.url}
-                className="club-coach-photo"
-              />
+              {photoCredit && (photo.author || photo.license) ? (
+                // The licence's credit: on the photo (hover), its file page behind it.
+                <a
+                  href={photoCredit}
+                  target="_blank"
+                  rel="noreferrer"
+                  title={`Photo : ${[photo.author, photo.license].filter(Boolean).join(" · ")}`}
+                >
+                  <Media
+                    name={coach?.name || "?"}
+                    url={photo?.url}
+                    className="club-coach-photo"
+                  />
+                </a>
+              ) : (
+                <Media
+                  name={coach?.name || "?"}
+                  url={photo?.url}
+                  className="club-coach-photo"
+                />
+              )}
               <div className="club-fact-copy">
                 <span className="club-fact-label">Entraîneur</span>
                 <strong>{coach?.name || "Non renseigné"}</strong>
@@ -59,22 +71,6 @@ export function ClubFacts({ club, matches }) {
                     {coach
                       ? `Observé le ${date(coach.date)}`
                       : "Aucune donnée disponible"}
-                  </small>
-                )}
-                {observedDiffers && (
-                  <small>
-                    Dernier match de la saison : {value.observedCoach.name} ·{" "}
-                    {date(value.observedCoach.date)}
-                  </small>
-                )}
-                {photoCredit && (photo.author || photo.license) && (
-                  <small>
-                    <a href={photoCredit} target="_blank" rel="noreferrer">
-                      Photo :{" "}
-                      {[photo.author, photo.license]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </a>
                   </small>
                 )}
               </div>
@@ -118,10 +114,6 @@ export function ClubFacts({ club, matches }) {
               onClose={() => setStadiumOpen(false)}
             />
           )}
-          <p className="club-facts-source">
-            Les informations du club peuvent évoluer indépendamment de la saison
-            sélectionnée.
-          </p>
         </>
       )}
     </Card>

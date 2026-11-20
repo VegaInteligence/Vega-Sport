@@ -63,6 +63,9 @@ const common = {
   react: React,
   "next/link": { __esModule: true, default: ({ href, children, prefetch, ...props }) => e("a", { href, ...props }, children) },
   // The server render of a « ← » button (BackLink.jsx): its fixed link and label.
+  // A coming match's forecast (ClubScoutTabs' Upcoming): none here, so no chances are shown.
+  "../services/forecasts.js": { share: (v) => `${Math.round(v * 100)} %`, useMatchForecast: () => null },
+  "../services/cup-matches.js": { matchForecast: () => null },
   "./BackLink.jsx": { __esModule: true, default: ({ href, label, prefix = "← ", onFallback, ...props }) => e("a", { href, ...props }, prefix, label) },
   "./Icon.jsx": { __esModule: true, default: () => null },
   "../hooks/FootballContext.jsx": { useFootball: () => ({ href: (url, params) => `${url}?${new URLSearchParams(params)}` }) },

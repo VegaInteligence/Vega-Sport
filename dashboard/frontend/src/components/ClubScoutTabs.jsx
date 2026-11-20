@@ -18,6 +18,8 @@ import {
   weightedAge,
 } from "../services/profile-blocks.js";
 import { json, useResource } from "../services/resources.js";
+import { share, useMatchForecast } from "../services/forecasts.js";
+import { matchForecast } from "../services/cup-matches.js";
 import ClubInformation from "./ClubInformation.jsx";
 import { PercentilePizza } from "./PlayerScoutCharts.jsx";
 import {
@@ -584,11 +586,15 @@ export function Upcoming({ dossier, limit = 6 }) {
             </span>
             <span className={c.matchOpp}>
               <Crest club={opponent} />
-              <span>
-                {opponent.name}
-                {member?.position != null && (
-                  <small> · {ordinal(member.position)}</small>
-                )}
+              <span className={c.oppText}>
+                <span>
+                  {opponent.name}
+                  {member?.position != null && (
+                    <small> · {ordinal(member.position)}</small>
+                  )}
+                </span>
+                {/* On a narrow card the difficulty's column is hidden: the chances come under the name. */}
+                <UpcomingChances match={match} home={home} narrow />
               </span>
             </span>
             <span className={c.matchScore}>
@@ -612,30 +618,72 @@ export function Upcoming({ dossier, limit = 6 }) {
                       : "Sans Elo pour le situer"
               }
             >
-              {measured ? (
-                <span
-                  className={c.difficulty}
-                  aria-label={`Difficulté ${level} sur 5`}
-                >
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <i key={i} data-on={i <= level} />
-                  ))}
-                </span>
-              ) : (
-                <small className={c.muted}>
-                  {member
-                    ? "données insuffisantes"
-                    : pending
-                      ? "…"
-                      : "sans Elo"}
-                </small>
-              )}
+              <span className={c.difficultyCell}>
+                {measured ? (
+                  <span
+                    className={c.difficulty}
+                    aria-label={`Difficulté ${level} sur 5`}
+                  >
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <i key={i} data-on={i <= level} />
+                    ))}
+                  </span>
+                ) : (
+                  <small className={c.muted}>
+                    {member
+                      ? "données insuffisantes"
+                      : pending
+                        ? "…"
+                        : "sans Elo"}
+                  </small>
+                )}
+                <UpcomingChances match={match} home={home} />
+              </span>
             </span>
             <span className={c.matchComp}>{match.league}</span>
           </MatchRowLink>
         );
       })}
     </div>
+  );
+}
+
+/** The club's chances in a match to come, from its side: win, draw, loss. Nothing without a forecast. */
+function UpcomingChances({ match, home, narrow = false }) {
+  const forecast = matchForecast(useMatchForecast(match.id)?.forecast);
+  if (!forecast) return null;
+  const parts = [
+    ["V", "Victoire", home ? forecast.home : forecast.away],
+    ["N", "Nul", forecast.draw],
+    ["D", "Défaite", home ? forecast.away : forecast.home],
+  ];
+  const label = parts
+    .map(([, word, value]) => `${word} ${share(value)}`)
+    .join(", ");
+  return (
+    <span
+      className={`${c.chances}${narrow ? ` ${c.chancesNarrow}` : ""}`}
+      role="img"
+      aria-label={label}
+      title={label}
+    >
+      <span className={c.chancesBar}>
+        {parts.map(([key, , value]) => (
+          <i
+            key={key}
+            data-result={key}
+            style={{ flexGrow: Math.max(value, 0.02) }}
+          />
+        ))}
+      </span>
+      <span className={c.chancesShares}>
+        {parts.map(([key, , value]) => (
+          <b key={key} data-result={key}>
+            {share(value)}
+          </b>
+        ))}
+      </span>
+    </span>
   );
 }
 

@@ -862,6 +862,70 @@
   display: inline-flex;
   gap: 2px;
 }
+/* The difficulty, then the club's chances under it. */
+.difficultyCell {
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+}
+/* The club's chances, small: a bar in the form's colours (win, draw, loss), the shares under it. */
+.chances {
+  display: grid;
+  gap: 2px;
+  width: 92px;
+  max-width: 100%;
+}
+/* The name's copy, shown only where the difficulty's column is hidden (narrow cards). */
+.chances.chancesNarrow {
+  display: none;
+}
+@container (max-width: 380px) {
+  .chances.chancesNarrow {
+    display: grid;
+  }
+}
+.oppText {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.chancesBar {
+  display: flex;
+  gap: 1px;
+  height: 4px;
+}
+.chancesBar i {
+  flex-basis: 0;
+  min-width: 2px;
+}
+.chancesShares {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.chancesShares b {
+  font-weight: 600;
+}
+.chancesBar [data-result="V"] {
+  background: var(--accent);
+}
+.chancesShares [data-result="V"] {
+  color: var(--accent);
+}
+.chancesBar [data-result="N"] {
+  background: var(--muted);
+  opacity: 0.5;
+}
+.chancesShares [data-result="N"] {
+  color: var(--muted);
+}
+.chancesBar [data-result="D"] {
+  background: light-dark(#aa3d43, #e98c91);
+}
+.chancesShares [data-result="D"] {
+  color: light-dark(#aa3d43, #e98c91);
+}
 .difficulty i {
   width: 6px;
   height: 12px;
