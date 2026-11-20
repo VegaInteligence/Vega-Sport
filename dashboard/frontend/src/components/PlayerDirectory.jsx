@@ -53,20 +53,9 @@ export default function PlayerDirectory({
       (page.rows === rows ? Math.min(page.value, pages) : 1),
     visible = pagination ? rows : rows.slice((current - 1) * 20, current * 20);
   return (
-    <Card
-      title="Performances"
-      action={
-        <>
-          <SavedViews />
-          <MetricPicker
-            label="Colonnes"
-            value={r.data.settings.columns}
-            includeMeta
-            onChange={(columns) => r.setSettings({ columns })}
-          />
-        </>
-      }
-    >
+    // The tab above names the view: no title; ranking, calculation and the table's actions
+    // share one row (one scrolling row of pills on a phone).
+    <Card className="player-directory-card">
       <div className="player-directory-toolbar">
         <div className="filter-rail">
           {onRanking && (
@@ -96,12 +85,21 @@ export default function PlayerDirectory({
               ["per90", "Par 90 minutes"],
             ]}
           />
+          {ranking === "grade" && (
+            <span className="player-directory-note">
+              Au moins {MIN_GRADED_MATCHES} matchs notés
+            </span>
+          )}
+          <div className="card-actions player-directory-actions">
+            <SavedViews />
+            <MetricPicker
+              label="Colonnes"
+              value={r.data.settings.columns}
+              includeMeta
+              onChange={(columns) => r.setSettings({ columns })}
+            />
+          </div>
         </div>
-        <span role="status">
-          {number(total)} joueur{total === 1 ? "" : "s"}
-          {ranking === "grade" &&
-            ` · Au moins ${MIN_GRADED_MATCHES} matchs notés`}
-        </span>
       </div>
       {rows.length ? (
         <div className="table-scroll">

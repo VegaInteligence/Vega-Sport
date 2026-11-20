@@ -7,6 +7,46 @@
   overflow-x: auto;
   scrollbar-width: thin;
 }
+/* Players page: no grey line under the tabs nor above the table; the active tab's blue line stays. */
+.research-tabs:has(+ #player-workspace-panel) {
+  border-bottom: 0;
+}
+.card.player-directory-card {
+  border-top: 0;
+}
+.player-directory-card > .card-body:first-child {
+  padding-top: 0;
+}
+.player-directory-card .player-directory-toolbar {
+  align-items: flex-end;
+}
+.player-directory-card .player-directory-actions {
+  margin-left: auto;
+}
+.player-directory-note {
+  align-self: flex-end;
+  line-height: 30px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+/* One height on the row: the ranking select and the actions as tall as the segments. */
+@media (min-width: 641px) {
+  .player-directory-card .player-ranking-field select {
+    height: 30px;
+    min-height: 30px;
+    padding-block: 0;
+  }
+  .player-directory-card .player-directory-actions .button {
+    height: 30px;
+    min-height: 30px;
+  }
+}
+@media (max-width: 640px) {
+  .player-directory-card .player-directory-actions {
+    margin-left: 0;
+    flex-wrap: nowrap;
+  }
+}
 .research-tabs button {
   flex: 0 0 auto;
   padding: 12px 0;
