@@ -292,6 +292,10 @@
     a.competition-highlight-match:nth-of-type(n + 4) {
     display: none;
   }
+  /* The third is the last shown: no line under it, the next card brings one. */
+  .competition-highlights-card a.competition-highlight-match:nth-of-type(3) {
+    border-bottom: 0;
+  }
   /* A fold's button inside a card's body keeps clear of what surrounds it. */
   .home-defence > .phone-fold-toggle,
   .home-potw > .phone-fold-toggle {

@@ -709,7 +709,8 @@
   gap: 1px;
   overflow: hidden;
   border: 0;
-  border-block: 1px solid var(--border);
+  /* Its top line only: the block after it brings the next one. */
+  border-top: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--border);
 }
@@ -1462,7 +1463,8 @@ p.similarIntro {
   gap: 1px;
   overflow: hidden;
   border: 0;
-  border-block: 1px solid var(--border);
+  /* Its top line only: the block after it brings the next one. */
+  border-top: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--border);
 }

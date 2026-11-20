@@ -1451,7 +1451,8 @@ th[aria-sort="descending"] .sort-indicator {
 .data-table tbody tr:hover {
   background: var(--surface-hover);
 }
-.data-table tbody tr:last-child td {
+.data-table tbody tr:last-child td,
+.data-table tbody tr:last-child th {
   border-bottom: 0;
 }
 .table-player {

@@ -16,6 +16,13 @@
 - 20 nov. : sur les fiches joueur et club (ordinateur), la saison, la période et « Autre compétition » passent de 34–38 px à 30 px de haut, la hauteur du groupe de compétitions. Le texte de la saison passe à 12 px. Le téléphone ne change pas (tout est déjà à 40 px). Petite retouche : pas d’issue Linear dédiée.
 - 20 nov. : page club. « Le club en bref » perd trois lignes : l’entraîneur du dernier match, le crédit photo et la note sur les informations du club. Le crédit CC BY-SA reste au survol de la photo, qui renvoie vers sa page Wikimedia. « Prochains matchs » : sous les rectangles de difficulté, les chances du club (victoire, nul, défaite) en petite barre aux couleurs de la Forme, avec les pourcentages (source `/api/forecasts/match`). Quand la carte est étroite (téléphone, ordinateur d’environ 1 100 px de large), la colonne de difficulté est masquée : les chances passent alors sous le nom de l’adversaire. Vérifié à 1 440 px, 1 100 px et sur iPhone 16 : 6 matchs sur 6 montrent leurs chances, une seule fois chacun.
 - 20 nov. : page club, « Derniers matchs » et « Prochains matchs » côte à côte. Une seule grille (sous-grille CSS) : les deux titres partagent une ligne, et chaque paire de matchs partage une ligne à la hauteur de la plus haute. Les deux listes commencent au même niveau et leurs séparateurs se rejoignent, quelle que soit la largeur. Avec 6 matchs de chaque côté, plus de vide sous les derniers matchs. Sur téléphone (cartes empilées), chaque liste garde ses hauteurs. Vérifié à 1 440 px, 1 100 px et sur iPhone 16.
+- 20 nov. : plus de double ligne sur le site (demande de l’utilisateur). Un détecteur parcourt 12 pages et tous leurs onglets, sur ordinateur et iPhone 16. Il cherche deux traits superposés en largeur, à moins de 40 px l’un de l’autre, sans rien de visible entre eux. Il en trouvait 57 (24 cas distincts) avant la correction, 0 après. Règles retenues :
+  - pas de trait gris sous les onglets, le trait bleu de l’onglet actif reste ;
+  - les bandeaux de chiffres clés gardent leur trait du haut seulement ;
+  - pas de trait sous les barres de filtres (joueur, nations) ;
+  - la dernière ligne d’un tableau ou d’une liste (classements de l’accueil, matchs mis en avant, meilleurs joueurs d’un match) perd son trait ; le bloc suivant apporte le sien.
+  Script : `scratchpad/back-e2e/double-lines/detect.mjs`.
+- 20 nov. : page club, la carte qui suit les chiffres clés (« Profil de performance » sur la vue d’ensemble) remonte de 10 px. L’écart entre les chiffres et le trait de la carte passe de 16 à 6 px, sur ordinateur et sur téléphone.
 - Prochaine action : aucune.
 
 ## Mandat en cours

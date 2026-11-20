@@ -1297,7 +1297,8 @@ select optgroup {
   overflow: auto;
   scrollbar-width: none;
   margin: 16px 0 20px;
-  border-bottom: 1px solid var(--border);
+  /* No grey line: the active tab's blue one marks the tabs, the panel brings its own. */
+  border-bottom: 0;
   background: var(--bg);
 }
 .match-view-tabs button {
@@ -1752,6 +1753,10 @@ select optgroup {
 }
 .match-player-row:last-child {
   border: 0;
+}
+/* The rows end on their own line: the footer under them needs none. */
+.match-leaders-card .card-footer {
+  border-top: 0;
 }
 .match-player-row:hover {
   background: var(--surface-hover);

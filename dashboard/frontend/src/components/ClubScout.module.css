@@ -205,9 +205,14 @@
   gap: 1px;
   overflow: hidden;
   border: 0;
-  border-block: 1px solid var(--border);
+  /* Its top line only: the block after it brings the next one. */
+  border-top: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--border);
+}
+/* Without a line of its own at its foot, the strip sits closer to the card after it. */
+.stack > .kpis:has(+ .card) {
+  margin-bottom: -10px;
 }
 .kpis > div {
   display: grid;

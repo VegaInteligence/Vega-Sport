@@ -5,8 +5,8 @@
   gap: 6px;
   margin: 12px 0 14px;
   padding: 0 0 12px;
+  /* No line under the filters: the block after them brings its own. */
   border: 0;
-  border-bottom: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: none;
 }

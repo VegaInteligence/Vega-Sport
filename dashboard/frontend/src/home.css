@@ -809,6 +809,9 @@ html[data-theme="light"] {
   border-bottom: 1px solid var(--border);
   color: inherit;
 }
+.home-race-row:last-child {
+  border-bottom: 0;
+}
 .home-race-row > i {
   height: 22px;
   border-radius: 0;
