@@ -2669,8 +2669,8 @@ th[aria-sort="descending"] .sort-indicator {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 20px;
-  padding: 18px;
+  gap: 12px;
+  padding: 8px 8px 8px 14px;
   margin: 4px 0 10px;
   border: 1px solid var(--border);
   border-radius: 0;
@@ -2678,16 +2678,9 @@ th[aria-sort="descending"] .sort-indicator {
 }
 .matchday-heading {
   min-width: 0;
+  margin: 0;
+  font-size: var(--text-md);
 }
-.matchday-eyebrow {
-  color: var(--muted);
-  font-size: var(--text-xs);
-}
-.matchday-heading h3 {
-  margin: 4px 0;
-  font-size: var(--text-lg);
-}
-.matchday-heading p,
 .matchday-note {
   margin: 0;
   color: var(--muted);
@@ -2714,8 +2707,10 @@ th[aria-sort="descending"] .sort-indicator {
 }
 @media (max-width: 600px) {
   .matchday-toolbar {
-    align-items: flex-start;
-    flex-direction: column;
+    padding: 8px;
+  }
+  .matchday-heading {
+    display: none;
   }
   .matchday-navigation {
     width: 100%;

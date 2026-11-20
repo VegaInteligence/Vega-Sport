@@ -7,9 +7,13 @@ Parameters:
   ReadDatabaseUrl: {Type: String, NoEcho: true, MaxLength: 2000, Description: 'vega_v2_read login on vega-football-db-postgres, without sslmode (the function verifies TLS with the bundled CA)'}
   ReservedConcurrency:
     Type: Number
-    Default: 0
-    AllowedValues: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-    Description: Zero omits the reservation; deployment preflight must verify account limit <=10 in that case.
+    Default: 32
+    MinValue: 1
+    MaxValue: 90
+    Description: >-
+      Copies of the function that may run at once; each keeps one connection of the login
+      vega_v2_read, whose limit is twice this number plus a margin (backend/vega/migrate.py;
+      backend/tests/test_api_capacity.py keeps them together). deploy.sh passes it.
   OpsKey:
     Type: String
     NoEcho: true
@@ -21,8 +25,6 @@ Parameters:
     Default: ''
     AllowedPattern: '(https://[a-z0-9.-]+/)?'
     Description: 'This distribution, https://<ApiOrigin domain>/, once known (second deploy); empty, no media map'
-Conditions:
-  Reserve: !Not [!Equals [!Ref ReservedConcurrency, '0']]
 Resources:
   Logs:
     Type: AWS::Logs::LogGroup
@@ -63,7 +65,9 @@ Resources:
       # answers itself (6.6 MB for a position group's players): twice the share of 512.
       MemorySize: 1024
       Timeout: 25
-      ReservedConcurrentExecutions: !If [Reserve, !Ref ReservedConcurrency, !Ref 'AWS::NoValue']
+      # Always limited: without it the account's limit (1000) is the function's, and the
+      # login's connections ran out at the thirteenth copy (20 November 2026).
+      ReservedConcurrentExecutions: !Ref ReservedConcurrency
       Role: !GetAtt RuntimeRole.Arn
       Code: {S3Bucket: !Sub 'vega-v2-releases-${AWS::AccountId}-${AWS::Region}', S3Key: !Ref ReleaseKey}
       Environment:
