@@ -617,10 +617,17 @@ function MatchCarousel({ nation }) {
     return () => window.removeEventListener("resize", update);
   }, [update, groups]);
   useEffect(() => {
-    // The jump row follows the group in view.
-    track.current?.parentElement?.parentElement
-      ?.querySelector(`[data-jump="${at.group}"]`)
-      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    // The jump row follows the group in view, sideways only: scrollIntoView would also move the
+    // page to the row when it is below the fold (a phone opened 800 px down the page).
+    const button = track.current?.parentElement?.parentElement?.querySelector(
+      `[data-jump="${at.group}"]`,
+    );
+    const row = button?.parentElement;
+    if (!row) return;
+    const b = button.getBoundingClientRect(),
+      r = row.getBoundingClientRect();
+    if (b.left < r.left) row.scrollLeft += b.left - r.left;
+    else if (b.right > r.right) row.scrollLeft += b.right - r.right;
   }, [at.group]);
   if (!groups.length) return null;
   const scroll = (direction) =>
