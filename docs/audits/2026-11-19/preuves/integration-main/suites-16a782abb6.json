@@ -1,0 +1,176 @@
+{
+  "started": "2026-11-20T02:45:18.078205+00:00",
+  "finished": "2026-11-20T02:57:13.330710+00:00",
+  "rehearsal": true,
+  "source_before": {
+    "rehearsal": true,
+    "tree": "c82f3a05853ba6e74c70b55b2e36dc7ca1580929",
+    "checkout": "/var/folders/8z/mp96_9353w79bsgv7kftgk2h0000gn/T/vega-run-ci-rehearsal-1i3xza6o/checkout",
+    "repo_head": "16a782abb636577056d7865d6ca42d46281f4ad7"
+  },
+  "source_after": {
+    "rehearsal": true,
+    "tree": "c82f3a05853ba6e74c70b55b2e36dc7ca1580929",
+    "checkout": "/var/folders/8z/mp96_9353w79bsgv7kftgk2h0000gn/T/vega-run-ci-rehearsal-1i3xza6o/checkout",
+    "repo_head": "16a782abb636577056d7865d6ca42d46281f4ad7"
+  },
+  "source_unchanged": true,
+  "results": {
+    "backend_and_package": {
+      "npm ci": 0,
+      "python": 0,
+      "api": 0,
+      "api ZIP": 0,
+      "live ZIP": 0
+    },
+    "site": {
+      "bun install": 0,
+      "site": 0,
+      "site build": 0
+    },
+    "infra": {
+      "lint": 0,
+      "deploy shell": 0,
+      "secrets shell": 0
+    },
+    "worker": {
+      "build": 0,
+      "check 1": 0,
+      "check 2": 0,
+      "check 3": 0,
+      "check 4": 0
+    }
+  },
+  "counts": {
+    "site": {
+      "tests": 803,
+      "suites": 0,
+      "pass": 803,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "python": {
+      "ran": 758,
+      "seconds": 491.545,
+      "result": "OK",
+      "counted": {
+        "ok": 758
+      },
+      "skipped": {},
+      "e2e_classes": {
+        "test_snapshot_roles.CupEditionLockTest": {
+          "ok": 1
+        },
+        "test_snapshot_roles.CupPeriodsTest": {
+          "ok": 2
+        },
+        "test_snapshot_roles.OpenMatchdayRolesTest": {
+          "ok": 5
+        },
+        "test_transfermarkt_history.ServedHistoryTest": {
+          "ok": 4
+        },
+        "test_archive_twins.ArchiveTwinsTest": {
+          "ok": 12
+        },
+        "test_sportscore_standings.SportScoreNativeRaceTest": {
+          "ok": 2
+        },
+        "test_player_grade_reasons.PlayerGradeReasonsTest": {
+          "ok": 12
+        },
+        "test_award_year_2020_order.AwardYear2020ProductionOrderTest": {
+          "ok": 5
+        },
+        "test_collection_wakeups.EloWakeTest": {
+          "ok": 2
+        },
+        "test_collection_wakeups.SharedReadTest": {
+          "ok": 1
+        },
+        "test_collection_wakeups.InternationalsEloTest": {
+          "ok": 2
+        },
+        "test_deploy_migrations.DeploymentMigrationsTest": {
+          "ok": 3
+        }
+      },
+      "failures_and_errors": []
+    },
+    "api": {
+      "tests": 227,
+      "suites": 0,
+      "pass": 227,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    }
+  },
+  "skips": {
+    "python": {},
+    "api": 0,
+    "site": 0
+  },
+  "e2e_classes": {
+    "test_snapshot_roles.CupEditionLockTest": {
+      "ok": 1
+    },
+    "test_snapshot_roles.CupPeriodsTest": {
+      "ok": 2
+    },
+    "test_snapshot_roles.OpenMatchdayRolesTest": {
+      "ok": 5
+    },
+    "test_transfermarkt_history.ServedHistoryTest": {
+      "ok": 4
+    },
+    "test_archive_twins.ArchiveTwinsTest": {
+      "ok": 12
+    },
+    "test_sportscore_standings.SportScoreNativeRaceTest": {
+      "ok": 2
+    },
+    "test_player_grade_reasons.PlayerGradeReasonsTest": {
+      "ok": 12
+    },
+    "test_award_year_2020_order.AwardYear2020ProductionOrderTest": {
+      "ok": 5
+    },
+    "test_collection_wakeups.EloWakeTest": {
+      "ok": 2
+    },
+    "test_collection_wakeups.SharedReadTest": {
+      "ok": 1
+    },
+    "test_collection_wakeups.InternationalsEloTest": {
+      "ok": 2
+    },
+    "test_deploy_migrations.DeploymentMigrationsTest": {
+      "ok": 3
+    }
+  },
+  "verdicts": {
+    "no_skip_anywhere": true,
+    "e2e_classes_all_ok": true,
+    "python_result_ok": true
+  },
+  "env": {
+    "CI": "true"
+  },
+  "rerun": [
+    "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/ci-clean/bin/python",
+    "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/delivery/revue-opus-fable-20nov-e82992/validation-opus/run-ci/run-ci.py",
+    "rehearsal-16a782abb6-again",
+    "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/delivery/revue-opus-fable-20nov-e82992/candidat",
+    "--rehearsal",
+    "16a782abb6"
+  ],
+  "pg": "postgres (PostgreSQL) 18.6 (Debian 18.6-1.pgdg12+2)",
+  "node_api": "v24.15.0",
+  "node_site": "v26.4.0",
+  "python": "Python 3.14.6",
+  "bun": "1.4.4"
+}

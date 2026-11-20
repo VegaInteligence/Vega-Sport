@@ -16,9 +16,9 @@ Résultat (`prod-ranking-2020-2021.json`, en-têtes dans `prod-ranking-2020-2021
 
 ## 3. Tests (rouge, puis vert)
 
-`backend/tests/test_player_grade_reasons.py`, base `vega_v2_grades_test`. La base de §38 est reprise telle quelle : une ligue à année civile 2021, dont 31 journées tombent avant le 1er août 2021, soit 682 participations de l’année 2020 ; une ligue août–mai 2021/22. Le déroulé reproduit celui de la production :
+`backend/tests/test_player_grade_reasons.py`, base `vega_v2_grades_test`. La base de §38 est reprise telle quelle : une ligue à année civile 2021, dont 31 journées tombent avant le 1er août 2021, soit 682 participations de l’année 2020 ; une ligue août–mai 2021/22. Le déroulé :
 1. l’Elo ;
-2. un premier calcul de 2020 selon l’ancienne règle (son classement et ses références propres), comme le 18 novembre ;
+2. un premier calcul de 2020 selon l’ancienne règle (son classement et ses références propres), **avant** le chemin quotidien de 2021 : l’ordre inverse de la production, où 2020 a été calculée sept secondes après 2021 (relevé par les deux revues du 20 nov. ; l’ordre réel est rejoué en §48, `../integration-main/EVIDENCE.md`) ;
 3. le chemin quotidien ;
 4. l’étape des classements périmés ;
 5. un second passage.
@@ -48,7 +48,7 @@ PYTHONPATH=backend CI=true python -m unittest backend/tests/test_player_grade_re
 - `partial_year` : une année dont la saison propre n’a aucune statistique de joueur, alors que la première moitié de la saison suivante en a ;
 - `partial_years` ;
 - `refresh_players` : une année partielle est notée contre les références de l’année suivante, si celle-ci est terminée. Son classement, ses rôles et son prix sont vidés, ses références propres supprimées, et le calcul est publié avec `players` = 0 ;
-- `stale_rankings` : ajoute une année partielle quand elle n’a pas de calcul de la méthode en cours, ou quand son calcul est plus ancien que le dernier de l’année suivante.
+- `stale_rankings` : ajoute une année partielle quand elle n’a pas de calcul de la méthode en cours, ou quand son calcul est plus ancien que le dernier de l’année suivante. Ces deux conditions ne la listent pas dans l’ordre de la production : §48 (`16a782abb6`) ajoute deux conditions d’état, un calcul publié qui classe des joueurs, ou des références propres restantes.
 
 `METHOD_VERSION` est inchangé ; aucune migration.
 
@@ -58,6 +58,6 @@ Sur l’arbre de travail dont le code est commité tel quel en `b2bedf115f` (`su
 
 ## 6. Ce que le déploiement changerait, et qui n’est pas vérifié
 
-- Le classement 2020/21 et sa course au prix disparaissent de la production à la première étape des classements périmés suivant le déploiement. Les notes des matchs de janvier à juillet 2021 des ligues à année civile changent de valeur, puisqu’elles passent des références 2020 à celles de 2021.
+- Le classement 2020/21 et sa course au prix disparaissent de la production à la première étape des classements périmés suivant le déploiement, avec la correction de §48 (sans elle, jamais : voir `../integration-main/EVIDENCE.md`). Les notes des matchs de janvier à juillet 2021 des ligues à année civile changent de valeur, puisqu’elles passent des références 2020 à celles de 2021.
 - Le classement 2021/22 lit le classement 2020 comme a priori pour les joueurs de ces ligues. Il le garde jusqu’à son prochain calcul, qui n’en trouvera plus.
 - Non vérifié : l’état actuel des notes 2020 en base, et la durée du calcul sur la base de production.

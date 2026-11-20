@@ -1,5 +1,5 @@
 c69b408fd6db631dae0fba75ffe1ef96b0b28ee30482cdf01f38e148a31dee8e  ./annee-2020.tar.gz
-c1cc9cb22a97a177790eda67fe4728d787120b81eb2dd16a506cfdfeb9801949  ./annee-2020/EVIDENCE.md
+5a52b75a2e57fea26d719994ee92f9a036570e6167bb5e91823e138a52c5e8f8  ./annee-2020/EVIDENCE.md
 aac515b3e4ea215b28046708e8f4408a7a094cfcbe99e4cfd47d426d09d1daf8  ./base2-six-lots.tar.gz
 01aa939be5fddba9b3cd037050aaa526556734abf691e46017bf63bdc286b23b  ./base2-six-lots/context.txt
 4a4ede731fe4ec25cdd21ed94f318c89730a37ef76645b877f6b8f9841f76105  ./baseline-2088d36e60-site.tar.gz
@@ -32,6 +32,15 @@ a9ffe439a0f2223c7207ab2afa7cd760e78c7030579206a95a58a6c58005afc6  ./historique/E
 356cea0738e993005cfb5c3dcb5771a89c7ecb44de8efee2ed13587aae9859ca  ./identites/EVIDENCE.md
 fda369c8dc30be2c80fe41ed18dd2b013711c4e55e4cbf3126daf307dead432f  ./integration-4fb0082d51.tar.gz
 304c9be350a7862a78d2fc73b4f7cd449880df5251eb490ffab5c0572fb4fbc2  ./integration-4fb0082d51/context.txt
+23793eec332741d8764ac19ceef60b3879fd96ad601f3e6217230df81b1c0f97  ./integration-main/EVIDENCE.md
+952a56ce7813dd0d6c46e301d200b0ba246b8ac5b1f8a31e5809f25376b021de  ./integration-main/green-48.txt
+ccf3179d4e8e2d5c8c06f25b92abc53b7e7142c73d149745cb3c5240cc039660  ./integration-main/m0-existing.txt
+bd92e0209089fb4b0e7c482a81ce5cc8c2a68ff3a0a22fcddd934e187845ac1e  ./integration-main/red-48.txt
+c6e43da61dbbec34e712ba9a33f067b19857ee03e6b08a0840b90aa6dfa588fd  ./integration-main/run-48.sh
+4143cc16befaada9dfcc0f95f54105612761594fa70e4558764c9d24e0f1bd76  ./integration-main/run-ci-main-reference.py
+e948fad197f3988c42770b356eac47db6d545a5cdeb756e6be364d9a0b6d6b11  ./integration-main/run-ci.py
+d661cb0d10332c1cbee3976e59aab8f6eb7f99468b36aeb2b2e3f5090cceab56  ./integration-main/suites-16a782abb6.json
+c471f9875315044966507e5d07babdd4fa2926e846c6bb8c88eb73acbb911b58  ./integration-main/suites-main-c4a3cacd77.json
 d36ea281417f39fe07cf60e0e18315979163c8d65404f7dfae2acfb1ab482712  ./notes.tar.gz
 4e0d25abc13edc3850b72221f62fde5f5640d3a76258df5d899c2681ec9cf50a  ./notes/EVIDENCE.md
 4d47043a8022580d3009065e9ec2f23d8632248f2f7d5b53208bfa11839697db  ./prod.tar.gz

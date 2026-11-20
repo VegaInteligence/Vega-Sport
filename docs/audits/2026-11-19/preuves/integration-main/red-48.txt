@@ -1,0 +1,153 @@
+# red-48: §48's tests on f133ab8c85 (tests committed, code = M0 1594b63731)
+HEAD=f133ab8c8576762ed82d84725029b9d048fc7c78 status=[]
+backend/vega vs M0 1594b63731: []
+date=2026-11-20T02:41:54Z postgres (PostgreSQL) 18.6 (Debian 18.6-1.pgdg12+2) Python 3.14.6 node=v24.15.0
+env: set -a; . validation-opus/dsn.env; set +a (127.0.0.1:55561, trust); PATH=node 24.15.0; PYTHONPATH=backend CI=true PYTHONDONTWRITEBYTECODE=1
+command (from candidat/): ci-clean/bin/python -m unittest backend/tests/test_award_year_2020_order.py backend/tests/test_collection_wakeups.py backend/tests/test_deploy_migrations.py backend/tests/test_player_grade_reasons.py backend/tests/test_source_identity.py -v
+
+test_48a_production_s_state_lists_award_year_2020 (backend.tests.test_award_year_2020_order.AwardYear2020ProductionOrderTest.test_48a_production_s_state_lists_award_year_2020) ... FAIL
+test_48b_the_worker_s_pass_grades_2020_against_2021_and_ranks_nothing (backend.tests.test_award_year_2020_order.AwardYear2020ProductionOrderTest.test_48b_the_worker_s_pass_grades_2020_against_2021_and_ranks_nothing) ... FAIL
+test_48c_a_second_pass_changes_nothing (backend.tests.test_award_year_2020_order.AwardYear2020ProductionOrderTest.test_48c_a_second_pass_changes_nothing) ... ok
+test_48d_a_new_run_of_2021_sends_2020_back_once (backend.tests.test_award_year_2020_order.AwardYear2020ProductionOrderTest.test_48d_a_new_run_of_2021_sends_2020_back_once) ... FAIL
+test_48e_the_read_api_before_and_after (backend.tests.test_award_year_2020_order.AwardYear2020ProductionOrderTest.test_48e_the_read_api_before_and_after) ... FAIL
+test_37a_to_37d_four_new_complementary_results_wake_the_elo_once (backend.tests.test_collection_wakeups.EloWakeTest.test_37a_to_37d_four_new_complementary_results_wake_the_elo_once) ... ok
+test_37e_37f_a_corrected_withdrawn_or_restored_complementary_match_wakes_the_elo_once (backend.tests.test_collection_wakeups.EloWakeTest.test_37e_37f_a_corrected_withdrawn_or_restored_complementary_match_wakes_the_elo_once) ... ok
+test_37k_to_37m_an_empty_answer_keeps_the_observation_and_is_asked_again (backend.tests.test_collection_wakeups.EmptyStatisticsTest.test_37k_to_37m_an_empty_answer_keeps_the_observation_and_is_asked_again) ... family=league_matches job=15 error=RESOURCE_NOT_FOUND
+family=player_stats job=44 error=EMPTY_AFTER_OBSERVATION
+ok
+test_48f_48g_the_internationals_never_wake_the_elo_the_nations_league_does (backend.tests.test_collection_wakeups.InternationalsEloTest.test_48f_48g_the_internationals_never_wake_the_elo_the_nations_league_does) ... FAIL
+test_48h_without_an_elo_run_internationals_alone_are_not_due (backend.tests.test_collection_wakeups.InternationalsEloTest.test_48h_without_an_elo_run_internationals_alone_are_not_due) ... FAIL
+test_37g_to_37j_one_read_per_pass_and_each_edition_its_state (backend.tests.test_collection_wakeups.SharedReadTest.test_37g_to_37j_one_read_per_pass_and_each_edition_its_state) ... ok
+test_48j_production_s_schema_then_the_five_migrations_once (backend.tests.test_deploy_migrations.DeploymentMigrationsTest.test_48j_production_s_schema_then_the_five_migrations_once) ... ok
+test_48k_159_moves_each_conflicting_edition_once_160_clears_the_failed_units_without_an_episode (backend.tests.test_deploy_migrations.DeploymentMigrationsTest.test_48k_159_moves_each_conflicting_edition_once_160_clears_the_failed_units_without_an_episode) ... ok
+test_48l_a_friendly_of_the_internationals_edition_is_listed_once_by_its_edition (backend.tests.test_deploy_migrations.DeploymentMigrationsTest.test_48l_a_friendly_of_the_internationals_edition_is_listed_once_by_its_edition) ... ok
+test_38b_a_second_run_changes_nothing (backend.tests.test_player_grade_reasons.PlayerGradeReasonsTest.test_38b_a_second_run_changes_nothing) ... ok
+test_38b_a_third_team_s_row_is_set_aside_and_the_year_published (backend.tests.test_player_grade_reasons.PlayerGradeReasonsTest.test_38b_a_third_team_s_row_is_set_aside_and_the_year_published) ... ok
+test_38c_a_row_without_a_role_is_recorded (backend.tests.test_player_grade_reasons.PlayerGradeReasonsTest.test_38c_a_row_without_a_role_is_recorded) ... ok
+test_38d_each_participation_has_one_status (backend.tests.test_player_grade_reasons.PlayerGradeReasonsTest.test_38d_each_participation_has_one_status) ... ok
+test_38g_a_row_the_run_did_not_record_is_unrecorded_then_pending_once_it_changes (backend.tests.test_player_grade_reasons.PlayerGradeReasonsTest.test_38g_a_row_the_run_did_not_record_is_unrecorded_then_pending_once_it_changes) ... ok
+test_46j_a_row_without_a_team_is_treated_as_on_2088d36e60 (backend.tests.test_player_grade_reasons.PlayerGradeReasonsTest.test_46j_a_row_without_a_team_is_treated_as_on_2088d36e60) ... ok
+test_47a_award_year_2020_is_graded_against_award_year_2021 (backend.tests.test_player_grade_reasons.PlayerGradeReasonsTest.test_47a_award_year_2020_is_graded_against_award_year_2021) ... ok
+test_47a_award_year_2020_s_rows_have_a_grade_status (backend.tests.test_player_grade_reasons.PlayerGradeReasonsTest.test_47a_award_year_2020_s_rows_have_a_grade_status) ... ok
+test_47b_award_year_2020_is_not_ranked (backend.tests.test_player_grade_reasons.PlayerGradeReasonsTest.test_47b_award_year_2020_is_not_ranked) ... ok
+test_47c_the_stale_step_lists_award_year_2020_until_it_is_graded (backend.tests.test_player_grade_reasons.PlayerGradeReasonsTest.test_47c_the_stale_step_lists_award_year_2020_until_it_is_graded) ... ok
+test_47d_a_second_pass_changes_nothing (backend.tests.test_player_grade_reasons.PlayerGradeReasonsTest.test_47d_a_second_pass_changes_nothing) ... ok
+test_47f_a_new_run_of_2021_sends_2020_back_to_the_stale_step (backend.tests.test_player_grade_reasons.PlayerGradeReasonsTest.test_47f_a_new_run_of_2021_sends_2020_back_to_the_stale_step) ... ok
+test_archive_teams_are_matched_in_their_country (backend.tests.test_source_identity.ParseTest.test_archive_teams_are_matched_in_their_country) ... ok
+test_club_core_names (backend.tests.test_source_identity.ParseTest.test_club_core_names) ... ok
+test_club_world_cup_spellings (backend.tests.test_source_identity.ParseTest.test_club_world_cup_spellings) ... ok
+test_continental_club_spellings (backend.tests.test_source_identity.ParseTest.test_continental_club_spellings) ... ok
+test_country_names_follow_the_site (backend.tests.test_source_identity.ParseTest.test_country_names_follow_the_site) ... ok
+test_cup_spellings_of_professional_clubs (backend.tests.test_source_identity.ParseTest.test_cup_spellings_of_professional_clubs) ... ok
+test_national_competitions_are_mains (backend.tests.test_source_identity.ParseTest.test_national_competitions_are_mains) ... ok
+test_national_team_spellings (backend.tests.test_source_identity.ParseTest.test_national_team_spellings) ... ok
+test_source_only_national_teams_join_their_twin (backend.tests.test_source_identity.ParseTest.test_source_only_national_teams_join_their_twin) ... ok
+test_the_top_seven_is_the_site_s_europe_focus (backend.tests.test_source_identity.ParseTest.test_the_top_seven_is_the_site_s_europe_focus) ... ok
+test_a_team_two_sources_share_keeps_its_name (backend.tests.test_source_identity.SourceIdentityTest.test_a_team_two_sources_share_keeps_its_name) ... ok
+test_archive_teams_merge_into_the_club_of_their_country (backend.tests.test_source_identity.SourceIdentityTest.test_archive_teams_merge_into_the_club_of_their_country) ... ok
+test_cup_teams_merge_into_the_same_pitchapi_teams (backend.tests.test_source_identity.SourceIdentityTest.test_cup_teams_merge_into_the_same_pitchapi_teams) ... ok
+test_editorial_lists_as_rows (backend.tests.test_source_identity.SourceIdentityTest.test_editorial_lists_as_rows) ... ok
+test_every_competition_s_matches_enter_the_elo (backend.tests.test_source_identity.SourceIdentityTest.test_every_competition_s_matches_enter_the_elo) ... ok
+test_national_teams_come_from_the_world_cup (backend.tests.test_source_identity.SourceIdentityTest.test_national_teams_come_from_the_world_cup) ... ok
+test_scopes_naming_provider_ids_are_recorded (backend.tests.test_source_identity.SourceIdentityTest.test_scopes_naming_provider_ids_are_recorded) ... ok
+test_shared_site_data_as_rows (backend.tests.test_source_identity.SourceIdentityTest.test_shared_site_data_as_rows) ... ok
+test_the_season_s_internationals_stay_out_of_the_elo (backend.tests.test_source_identity.SourceIdentityTest.test_the_season_s_internationals_stay_out_of_the_elo) ... ok
+test_world_cup_of_clubs_teams_merge_into_their_clubs (backend.tests.test_source_identity.SourceIdentityTest.test_world_cup_of_clubs_teams_merge_into_their_clubs) ... ok
+
+======================================================================
+FAIL: test_48a_production_s_state_lists_award_year_2020 (backend.tests.test_award_year_2020_order.AwardYear2020ProductionOrderTest.test_48a_production_s_state_lists_award_year_2020)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/delivery/revue-opus-fable-20nov-e82992/candidat/backend/tests/test_award_year_2020_order.py", line 172, in test_48a_production_s_state_lists_award_year_2020
+    self.assertEqual(self.stale_deployed, [2020])  # red on M0: []
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Lists differ: [] != [2020]
+
+Second list contains 1 additional elements.
+First extra element 0:
+2020
+
+- []
++ [2020]
+
+======================================================================
+FAIL: test_48b_the_worker_s_pass_grades_2020_against_2021_and_ranks_nothing (backend.tests.test_award_year_2020_order.AwardYear2020ProductionOrderTest.test_48b_the_worker_s_pass_grades_2020_against_2021_and_ranks_nothing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/delivery/revue-opus-fable-20nov-e82992/candidat/backend/tests/test_award_year_2020_order.py", line 176, in test_48b_the_worker_s_pass_grades_2020_against_2021_and_ranks_nothing
+    self.assertEqual(self.ranking_lines(self.log_first), ["player ranking season=2020 method=power-ranking-v8 players=0"])
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Lists differ: [] != ['player ranking season=2020 method=power-ranking-v8 players=0']
+
+Second list contains 1 additional elements.
+First extra element 0:
+'player ranking season=2020 method=power-ranking-v8 players=0'
+
+- []
++ ['player ranking season=2020 method=power-ranking-v8 players=0']
+
+======================================================================
+FAIL: test_48d_a_new_run_of_2021_sends_2020_back_once (backend.tests.test_award_year_2020_order.AwardYear2020ProductionOrderTest.test_48d_a_new_run_of_2021_sends_2020_back_once)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/delivery/revue-opus-fable-20nov-e82992/candidat/backend/tests/test_award_year_2020_order.py", line 207, in test_48d_a_new_run_of_2021_sends_2020_back_once
+    self.assertEqual(self.grades_2020(), self.after_first["grades"])  # no grade of 2020 rewritten
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Lists differ: [(2021, 1000, 100, 2021, 1.1385629, datetime.datetime(2026, 11,[87832 chars]')))] != [(2021, 1000, 100, 2020, 0.9781503, datetime.datetime(2026, 11,[87763 chars]')))]
+
+First differing element 0:
+(2021, 1000, 100, 2021, 1.1385629, datetime.datetime(2026, 11,[59 chars]C')))
+(2021, 1000, 100, 2020, 0.9781503, datetime.datetime(2026, 11,[59 chars]C')))
+
+Diff is 274284 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_48e_the_read_api_before_and_after (backend.tests.test_award_year_2020_order.AwardYear2020ProductionOrderTest.test_48e_the_read_api_before_and_after)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/delivery/revue-opus-fable-20nov-e82992/candidat/backend/tests/test_award_year_2020_order.py", line 219, in test_48e_the_read_api_before_and_after
+    self.assertEqual((after[whole_2020]["status"], after[award_2020]["status"]), (404, 404))
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Tuples differ: (200, 200) != (404, 404)
+
+First differing element 0:
+200
+404
+
+- (200, 200)
++ (404, 404)
+
+======================================================================
+FAIL: test_48f_48g_the_internationals_never_wake_the_elo_the_nations_league_does (backend.tests.test_collection_wakeups.InternationalsEloTest.test_48f_48g_the_internationals_never_wake_the_elo_the_nations_league_does)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/delivery/revue-opus-fable-20nov-e82992/candidat/backend/tests/test_collection_wakeups.py", line 370, in test_48f_48g_the_internationals_never_wake_the_elo_the_nations_league_does
+    self.assertEqual(after, runs)  # red on M0: a second run
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+AssertionError: Lists differ: [(1, 'superseded', 1), (3, 'published', 1)] != [(1, 'published', 1)]
+
+First differing element 0:
+(1, 'superseded', 1)
+(1, 'published', 1)
+
+First list contains 1 additional elements.
+First extra element 1:
+(3, 'published', 1)
+
+- [(1, 'superseded', 1), (3, 'published', 1)]
++ [(1, 'published', 1)]
+
+======================================================================
+FAIL: test_48h_without_an_elo_run_internationals_alone_are_not_due (backend.tests.test_collection_wakeups.InternationalsEloTest.test_48h_without_an_elo_run_internationals_alone_are_not_due)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/lemonnierhugo/.codex/visualizations/2026/11/17/01a1e6f1-9c43-7b81-a52e-3ee15c953578/production-architecture-review/delivery/revue-opus-fable-20nov-e82992/candidat/backend/tests/test_collection_wakeups.py", line 390, in test_48h_without_an_elo_run_internationals_alone_are_not_due
+    self.assertEqual(self.x("SELECT count(*) FROM agg.power_runs WHERE kind='elo'").fetchone()[0], 0)  # red on M0: the pass ran one
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 1 != 0
+
+----------------------------------------------------------------------
+Ran 46 tests in 37.275s
+
+FAILED (failures=6)
+exit=1
