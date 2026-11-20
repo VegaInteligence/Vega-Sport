@@ -61,3 +61,9 @@
 - Built (`PointsRace.jsx`, `PointsPerMatch`, taken over from the finished xpts-chart session): one row per match, as tall as a table row — round, home/away, the opponent's crest and name, score, V/N/D, a 0–3 gauge filled to the points with the match's xPts as a tick, the gap (formatted as the table's « Écart »); each row opens its match (`MatchRowLink`). Phone: home/away hidden, narrower gauge.
 - Validated: E2E written first (`~/Agents/scratch/xpts-matches-20261120/e2e.mjs`): production before 2/16; local build 16/16 (Arsenal desktop and phone, Nottingham Forest); the left column now ends level with the table. Site suite: the 9 failures main has in this environment, no other. Two expectations of the E2E corrected, not the code: the minus sign (the site's « -1,6 », as the table) and the red test (`--danger` is rgb(255,138,128)).
 - Linear: not touched in this folder.
+
+## One header for every competition — 20 Nov 2026 ([#61](https://github.com/VegaInteligence/Vega-Sport/issues/61))
+
+- Asked: same header structure for leagues and cups. Mock-ups (one-row header; then breadcrumb, season timeline, identity rail) were not kept: the user chose the current Champions League header, with a name in scale with the site, for every competition, then the season selector at the size of the view buttons.
+- Built: leagues and the Nations League use `EditionHeader` (crest, name, season ‹ ›, views on the right); the « Saison de compétition » block is gone. Name 15 px / 650 (was 20 px / 700), crest 26 px; the season selector is the views' frame (30 px, 26 px controls, 12 px / 500); on phones both are 44 px tall, the field keeping the site's 16 px.
+- Validated: six pages (Serie A, Ligue 2, Champions League, Coupe de France, Coupe du monde, Ligue des nations) show one `.edition-head` and no old block, 49 px on desktop; ‹ on Serie A gives 2025/2026; no horizontal scroll on phones. Site suite 803/803, build passes. Evidence: scratchpad `heads-after/README.md`.
