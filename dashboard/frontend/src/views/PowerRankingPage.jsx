@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import Layout from "../components/Layout.jsx";
+import SideFilters from "../components/SideFilters.jsx";
 import { Card, Grade, Media, Pager, Segments } from "../components/UI.jsx";
 import SeasonSelect from "../components/SeasonSelect.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
@@ -69,9 +70,11 @@ function PlayersTab({ season }) {
   );
   return (
     <>
-      <div className="match-section-toolbar">
-        <Segments label="Poste" value={role} items={RANKING_ROLES} onChange={(v) => (setRole(v), setPage(1))} />
-      </div>
+      <SideFilters>
+        <div className="match-section-toolbar">
+          <Segments label="Poste" value={role} items={RANKING_ROLES} onChange={(v) => (setRole(v), setPage(1))} />
+        </div>
+      </SideFilters>
       <Card
         title="Classement des joueurs"
       >
@@ -201,12 +204,14 @@ export default function PowerRankingPage() {
   const [tab, setTab] = useUrlState("tab", "players", ["players", "clubs"]);
   return (
     <Layout path="/power-ranking/" title="Power Ranking">
-      <div className="match-section-toolbar">
-        <Segments label="Classement" value={tab} items={TABS} onChange={setTab} />
-        {seasons.length > 1 && (
-          <SeasonSelect label="Saison" value={f.season} seasons={seasons.map((s) => s.id)} onChange={f.changeSeason} />
-        )}
-      </div>
+      <SideFilters>
+        <div className="match-section-toolbar">
+          <Segments label="Classement" value={tab} items={TABS} onChange={setTab} />
+          {seasons.length > 1 && (
+            <SeasonSelect label="Saison" value={f.season} seasons={seasons.map((s) => s.id)} onChange={f.changeSeason} />
+          )}
+        </div>
+      </SideFilters>
       {tab === "players" ? <PlayersTab season={f.season} /> : <ClubsTab season={f.season} />}
     </Layout>
   );

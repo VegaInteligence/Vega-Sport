@@ -12,6 +12,9 @@ import React, {
 } from "react";
 import Icon from "../components/Icon.jsx";
 import Layout from "../components/Layout.jsx";
+import SideFilters from "../components/SideFilters.jsx";
+import { OnlyB, useBWide } from "../components/SideContext.jsx";
+import { CompetitionSide } from "../components/SideContexts.jsx";
 import CompetitionOptions from "../components/CompetitionOptions.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import {
@@ -306,6 +309,7 @@ function Fixtures({
   );
   const showHighlights = supported && view === "standings";
   // The league replayed to its end, where the base projects it (a domestic league in progress).
+  const bWide = useBWide();
   const projection = useSeasonProjection(
     supported ? competition?.id : null,
     seasonLabel(season),
@@ -334,11 +338,28 @@ function Fixtures({
     competition?.imageUrl,
     artwork,
   );
+  // B (VI-41): with the sidebar shown, the column beside the table moves into it.
+  const highlightsInSide = bWide && showHighlights;
+  const highlights =
+    showHighlights && overviewFixtures ? (
+      <CompetitionHighlights
+        matches={overviewFixtures.matches || []}
+        competition={competition}
+        season={season}
+        onShowMatches={(next) => {
+          setStatus(next);
+          setPage(1);
+          setView("matches");
+        }}
+      />
+    ) : null;
   return (
     <div
       className={
         "competition-detail-layout" +
-        (showHighlights ? " competition-detail-layout--overview" : "")
+        (showHighlights && !highlightsInSide
+          ? " competition-detail-layout--overview"
+          : "")
       }
     >
       <Card
@@ -480,23 +501,23 @@ function Fixtures({
           </AsyncState>
         )}
       </Card>
-      {showHighlights && overviewFixtures && (
-        <CompetitionHighlights
-          matches={overviewFixtures.matches || []}
-          competition={competition}
-          season={season}
-          onShowMatches={(next) => {
-            setStatus(next);
-            setPage(1);
-            setView("matches");
-          }}
-        />
-      )}
+      {!highlightsInSide && highlights}
       {showHighlights && (
         <LeagueRoundCards
           competition={competition?.id}
           season={seasonLabel(season)}
         />
+      )}
+      {competition && (
+        <OnlyB>
+          <CompetitionSide
+            competition={competition}
+            season={seasonLabel(season)}
+            projection={projection}
+            view={view}
+            highlights={highlightsInSide ? highlights : null}
+          />
+        </OnlyB>
       )}
     </div>
   );
@@ -895,6 +916,7 @@ export default function CompetitionsPage() {
           >
             ← Retour à la compétition
           </button>
+          <SideFilters>
           <div className="filter-fields competition-directory-toolbar">
             <div className="filter-field filter-search competition-directory-search">
               <label htmlFor="competition-directory-search">
@@ -955,6 +977,7 @@ export default function CompetitionsPage() {
               />
             </div>
           </div>
+          </SideFilters>
           <div className="competition-directory">
             {groups.map((group, index) => (
               <section

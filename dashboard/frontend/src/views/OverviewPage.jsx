@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
 import Layout from "../components/Layout.jsx";
+import SideFilters from "../components/SideFilters.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { useResearch } from "../hooks/ResearchContext.jsx";
 import { useResourceBootstrap } from "../services/resource-bootstrap.js";
@@ -569,10 +570,12 @@ function OverviewContent({
             </h2>
           </div>
         )}
-        <div className="home-toolbar-filters">
-          <SeasonFilter f={f} compact />
-          <HomePreferences f={f} />
-        </div>
+        <SideFilters>
+          <div className="home-toolbar-filters">
+            <SeasonFilter f={f} compact />
+            <HomePreferences f={f} />
+          </div>
+        </SideFilters>
       </div>
       {!results.length && !internationals.length && !archived && (
         <p className="home-meta" role="status">

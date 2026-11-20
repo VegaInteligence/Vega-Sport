@@ -12,6 +12,8 @@ import { advancedChips, countAdvanced } from "../services/advanced-filters.js";
 import SiteHeader from "./SiteHeader.jsx";
 import SiteFooter from "./SiteFooter.jsx";
 import TabBar from "./TabBar.jsx";
+import SideFilters from "./SideFilters.jsx";
+import BSide from "./BSide.jsx";
 import PageWorkspace from "./PageWorkspace.jsx";
 import NavigationPrefetch from "./NavigationPrefetch.jsx";
 import PlayerSearchResults from "./PlayerSearchResults.jsx";
@@ -331,6 +333,7 @@ export default function Layout({
       </Link>
       <div className="app-shell">
         <SiteHeader path={path} href={f.navigationHref || f.href} />
+        <BSide path={path} />
         <PageWorkspace key={pageIdentity} className={className} loader={loader}>
           {!hideHeading && (
             <div className="page-heading">
@@ -360,7 +363,11 @@ export default function Layout({
             </div>
           )}
           {subnav}
-          {filters && <Filters kind={filterKind} />}
+          {filters && (
+            <SideFilters>
+              <Filters kind={filterKind} />
+            </SideFilters>
+          )}
           {filters && filterKind === "performances" && <PlayerSearchResults />}
           {f.notice && (
             <div role="status" className="notice">

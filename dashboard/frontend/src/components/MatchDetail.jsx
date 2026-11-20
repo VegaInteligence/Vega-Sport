@@ -1,4 +1,6 @@
 import { nationalFlagCode } from "../services/national-flags.js";
+import { OnlyB } from "./SideContext.jsx";
+import { MatchSide } from "./SideContexts.jsx";
 import BackLink from "./BackLink.jsx";
 import { editionArtworkUrl } from "../services/competition-artwork.js";
 import React, {
@@ -525,6 +527,9 @@ export default function MatchDetail({ match }) {
     ["upcoming", "calendar"].includes(search.get("from")) || upcoming;
   return (
     <div className="match-detail">
+      <OnlyB>
+        <MatchSide match={match} view={view} upcoming={upcoming} />
+      </OnlyB>
       <div className="match-breadcrumb-row">
         <nav className="match-breadcrumb" aria-label="Fil d’Ariane du match">
           <BackLink

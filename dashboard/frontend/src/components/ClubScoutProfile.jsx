@@ -6,6 +6,8 @@ import BackLink from "./BackLink.jsx";
 import Link from "next/link";
 import Icon from "./Icon.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
+import { OnlyB, useBWide } from "./SideContext.jsx";
+import { ClubSide } from "./SideContexts.jsx";
 import { Segments, Skeleton } from "./UI.jsx";
 import { ResearchTabs } from "./ResearchUI.jsx";
 import { chartTokens, RadarChart } from "./PlayerScoutCharts.jsx";
@@ -151,10 +153,17 @@ function Profile({ dossier, backHref }) {
     setRival(club);
     setTab("compare");
   };
+  // B (VI-41): with the sidebar shown, the identity column moves into it.
+  const bWide = useBWide();
+  const rail = <IdentityRail dossier={dossier} onTab={setTab} backHref={backHref} />;
   return (
     <RankingProvider value={setRanking}>
-      <div className={sA.layout}>
-        <IdentityRail dossier={dossier} onTab={setTab} backHref={backHref} />
+      <div
+        className={sA.layout}
+        data-club-layout=""
+        style={bWide ? { gridTemplateColumns: "minmax(0, 1fr)" } : undefined}
+      >
+        {!bWide && rail}
         <div className={sA.main}>
           <ComparisonBar dossier={dossier} cmp={cmp} active={referentialTab} />
           <ResearchTabs
@@ -188,6 +197,12 @@ function Profile({ dossier, backHref }) {
           </div>
         </div>
       </div>
+      <OnlyB>
+        <ClubSide
+          dossier={dossier}
+          rail={bWide ? <div className={`${chartTokens} ${c.shell}`}>{rail}</div> : null}
+        />
+      </OnlyB>
       {ranking && (
         <ClubRankingDialog
           dossier={ranking.base ? dossier : view}

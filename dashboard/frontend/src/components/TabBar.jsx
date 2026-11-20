@@ -5,6 +5,8 @@ import Link from "next/link";
 import Icon from "./Icon.jsx";
 import GlobalSearch from "./GlobalSearch.jsx";
 import { pages } from "../../../shared/pages.js";
+import { SECTIONS, currentSection } from "./navigation.js";
+import { NavIcon, PhoneSheet } from "./SiteNavigation.jsx";
 
 /** A tab's short label and icon, by page key. */
 const TABS = {
@@ -57,6 +59,10 @@ function activeTab(path) {
 export default function TabBar({ path, href }) {
   const active = activeTab(path);
   const [searching, setSearching] = useState(false);
+  // A (VI-41): the section whose pages are open in a sheet.
+  const [sheet, setSheet] = useState("");
+  useEffect(() => setSheet(""), [path]);
+  const section = currentSection(path);
   const trigger = useRef(null);
   // Closed from the keyboard, the focus goes back to the button that opened it.
   const closeSearch = (reason) => {
@@ -93,7 +99,59 @@ export default function TabBar({ path, href }) {
   );
   return (
     <>
-      <nav className="tabbar" aria-label="Navigation principale">
+      <nav className="tabbar nav-a-only" aria-label="Navigation principale">
+        {SECTIONS.filter((item) => item.key !== "calendar").map((item, index) => [
+          index === 2 && (
+            <button
+              key="search"
+              type="button"
+              className="tabbar-item tabbar-search"
+              aria-label="Rechercher un joueur, un club ou une compétition"
+              aria-haspopup="dialog"
+              aria-expanded={searching}
+              onClick={() => {
+                setSheet("");
+                flushSync(() => setSearching(true));
+              }}
+            >
+              <Icon name="search" />
+              <span>Recherche</span>
+            </button>
+          ),
+          item.items ? (
+            <button
+              key={item.key}
+              type="button"
+              className="tabbar-item"
+              aria-current={section === item.key ? "page" : undefined}
+              aria-expanded={sheet === item.key}
+              onClick={() => setSheet((open) => (open === item.key ? "" : item.key))}
+            >
+              <NavIcon name={item.icon} size={21} />
+              <span>{item.label}</span>
+            </button>
+          ) : (
+            <Link
+              key={item.key}
+              className="tabbar-item"
+              aria-current={section === item.key ? "page" : undefined}
+              href={href(item.path)}
+            >
+              <NavIcon name={item.icon} size={21} />
+              <span>{item.key === "overview" ? "Accueil" : item.label}</span>
+            </Link>
+          ),
+        ])}
+      </nav>
+      <div className="nav-a-only">
+        <PhoneSheet
+          section={SECTIONS.find((item) => item.key === sheet)}
+          path={path}
+          href={href}
+          onClose={() => setSheet("")}
+        />
+      </div>
+      <nav className="tabbar nav-c-only" aria-label="Navigation principale">
         {tabs.slice(0, before).map(tab)}
         <button
           ref={trigger}

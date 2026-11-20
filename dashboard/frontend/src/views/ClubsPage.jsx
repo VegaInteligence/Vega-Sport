@@ -13,6 +13,7 @@ import React, {
 } from "react";
 import Icon from "../components/Icon.jsx";
 import Layout from "../components/Layout.jsx";
+import SideFilters from "../components/SideFilters.jsx";
 import ClubSkeleton from "../components/ClubSkeleton.jsx";
 import CompetitionOptions from "../components/CompetitionOptions.jsx";
 import { FootballContext, useFootball } from "../hooks/FootballContext.jsx";
@@ -381,6 +382,7 @@ export default function ClubsPage() {
       ) : (
         <>
           <ClubsViewSwitch savedFirst={hasSavedClubs} href={f.href} />
+          <SideFilters>
           <div className="clubs-toolbar club-directory-toolbar">
             <div className="filter-input-wrap club-directory-search">
               <Icon name="search" />
@@ -445,6 +447,7 @@ export default function ClubsPage() {
               </label>
             </div>
           </div>
+          </SideFilters>
           <div
             ref={summaryRef}
             className="club-directory-summary"

@@ -1,5 +1,8 @@
 import Link from "next/link";
 import React, { useState } from "react";
+import SideFilters from "./SideFilters.jsx";
+import { OnlyB } from "./SideContext.jsx";
+import { PlayerSide } from "./SideContexts.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { useResearch } from "../hooks/ResearchContext.jsx";
 import { playerSelection } from "../services/research-storage.js";
@@ -36,6 +39,8 @@ export default function PlayerDirectory({
   const f = useFootball(),
     r = useResearch();
   const [page, setPage] = useState({ rows: null, value: 1 });
+  // B (VI-41): the row under the pointer fills the sidebar's context.
+  const [hovered, setHovered] = useState(null);
   const columns = [
     ...new Set([
       ...(PLAYER_RANKINGS[ranking]?.columns || []),
@@ -56,8 +61,15 @@ export default function PlayerDirectory({
     // The tab above names the view: no title; ranking, calculation and the table's actions
     // share one row (one scrolling row of pills on a phone).
     <Card className="player-directory-card">
+      <OnlyB>
+        {(() => {
+          const row = visible.find((item) => item.playerId === hovered) || visible[0];
+          return <PlayerSide row={row} shown={columns} />;
+        })()}
+      </OnlyB>
       <div className="player-directory-toolbar">
         <div className="filter-rail">
+          <SideFilters>
           {onRanking && (
             <label className="player-ranking-field">
               Classement
@@ -85,6 +97,7 @@ export default function PlayerDirectory({
               ["per90", "Par 90 minutes"],
             ]}
           />
+          </SideFilters>
           {ranking === "grade" && (
             <span className="player-directory-note">
               Au moins {MIN_GRADED_MATCHES} matchs notés
@@ -162,7 +175,11 @@ export default function PlayerDirectory({
               {visible.map((row) => {
                 const entry = playerSelection(row.profile, f);
                 return (
-                  <tr key={row.playerId} data-player-id={row.playerId}>
+                  <tr
+                    key={row.playerId}
+                    data-player-id={row.playerId}
+                    onMouseEnter={() => setHovered(row.playerId)}
+                  >
                     <td>
                       <span className="research-row-actions">
                         <label className="research-check">

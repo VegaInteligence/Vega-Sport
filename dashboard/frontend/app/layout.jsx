@@ -17,6 +17,7 @@ import "../src/research.css";
 import "../src/player-profile-redesign.css";
 import "../src/home.css";
 import "../src/phone.css";
+import "../src/navigation.css";
 const siteUrl = "https://vegasport.vercel.app";
 const faviconVersion = 2;
 const description = "Vega Intelligence : statistiques de football, analyses de matchs, joueurs et compétitions.";
@@ -69,6 +70,13 @@ export default function RootLayout({ children }) {
           id="vega-route"
           dangerouslySetInnerHTML={{
             __html: `try{document.documentElement.toggleAttribute("data-club-profile",/^\\/clubs\\/?$/.test(location.pathname)&&new URLSearchParams(location.search).has("id"))}catch{}`,
+          }}
+        />
+        {/* VI-41 preview: the navigation under review, « a », « b » or « c » (?nav= sets it, the page remembers it). */}
+        <script
+          id="vega-nav"
+          dangerouslySetInnerHTML={{
+            __html: `try{var d=document.documentElement,q=new URLSearchParams(location.search).get("nav"),n=/^[abc]$/.test(q||"")?q:localStorage.getItem("vega.nav");n=/^[abc]$/.test(n||"")?n:"a";if(q)localStorage.setItem("vega.nav",n);d.dataset.nav=n;d.dataset.side=localStorage.getItem("vega.side")==="rail"?"rail":"full"}catch{document.documentElement.dataset.nav="a"}`,
           }}
         />
         <script
