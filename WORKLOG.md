@@ -34,3 +34,12 @@
 - Kept on purpose: the archived copies (Uruguay–Spain 2026) are fixed in the base by the audit branches (`test_nation_match_copies.py`); the carousel only shows one card.
 - Validated: tests written first (`tests/nation-match-carousel.test.mjs`, 3/3); site suite 754/763, the 9 failures equal to main's in this environment (Node 22); build; E2E 20/20 on the local build against the production API (Spain, France, Argentina; desktop and phone). Evidence: `~/Agents/scratch/nation-run-carousel-20261120/e2e.mjs`, `e2e-local/`.
 - Linear: not touched in this folder (rule in ~/.claude/CLAUDE.md).
+
+## Club page — crests instead of dots on the referential map and the style axes (20 Nov 2026)
+
+- Ask (user, on Arsenal's « Stats avancées »): « Carte du référentiel » showed dots, « pas intuitif, il faut voir directement les logos des clubs »; « pareil pour la manière d'avoir le ballon ».
+- Cause: `LeaguePlot` (ClubScoutUI.jsx) hid every other club's crest behind a plain mark once the referential held more than 30 clubs (31 at « Niveau comparable », 132 at « Tous les clubs »); `StyleSpectrum` drew plain ticks.
+- Built: the map always shows crests (20 px above 30 clubs, the club itself 38 px on top, hover raises one); each style axis places every club's crest at its value on up to three lanes (first lane where it clears its neighbour, 2.8 % of the axis), the track as tall as its lanes, the club 30 px with its ring; each crest named (title: club and value).
+- No mock-up: the user named the change. E2E written first (`~/Agents/scratch/club-crests-20261120/e2e.mjs`): on production before the change 8/12 (1/31 and 1/132 crests, no crest on the axes); on the local build 12/12. Site suite: the 9 failures main has in this environment, no other.
+- Seen during the run: the production API answered 503 « DATA_UNAVAILABLE » on every route from at least 02:28 to 02:31 UTC, then a new publication (409 on stale local reads). Not caused here (no backend change); cause not traced (no AWS access).
+- Linear: not touched in this folder (rule in ~/.claude/CLAUDE.md).
