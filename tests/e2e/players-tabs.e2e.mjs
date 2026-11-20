@@ -23,6 +23,7 @@
 //  F4 The list follows the page's competitions: the request carries the page's leagues.
 //  P1 Phone (iPhone 16, 393×852): the filter chips of both tabs stay on one scrolling row
 //     (same top for every chip), nothing makes the page scroll sideways.
+//  P2 Phone: tapping a candidate opens the comparison right under him (not after the 40 rows).
 //  X1 No provider name in the visible text of either tab.
 //  X2 No page error in the console during the whole run.
 //
@@ -134,7 +135,7 @@ try {
   await shot(page, "replace-selected-desktop");
   const before = new URL(page.url()).searchParams.get("replace");
   await page.getByRole("combobox", { name: "Joueur à remplacer" }).fill(picked.name.split(" ").at(-1));
-  await page.getByRole("option").first().click();
+  await page.getByRole("listbox").getByRole("option").first().click();
   await page.waitForTimeout(500);
   rows = await readCandidates(page);
   const after = new URL(page.url()).searchParams.get("replace");
@@ -184,6 +185,17 @@ try {
     });
     await shot(page, `${view}-phone`);
     check(`P1-${view}`, "one row of chips, no sideways page scroll", JSON.stringify(layout), layout.tops.length === 1 && layout.pageOverflow <= 0);
+    if (view === "replace") {
+      const row = candidates(page).nth(5);
+      await row.click();
+      const inline = page.locator("[data-replacement-comparison-inline]");
+      await inline.waitFor({ timeout: 10000 });
+      const [rowBox, panelBox] = [await row.boundingBox(), await inline.boundingBox()];
+      await shot(page, "replace-selected-phone");
+      const gap = Math.round(panelBox.y - (rowBox.y + rowBox.height));
+      check("P2", "comparison within 20 px under the tapped player", `gap ${gap} px, ${await inline.getAttribute("data-replacement-comparison-inline")}`,
+        gap >= 0 && gap <= 20 && (await inline.getAttribute("data-replacement-comparison-inline")) === (await row.getAttribute("data-replacement-candidate")));
+    }
     await page.close();
   }
 } catch (error) {

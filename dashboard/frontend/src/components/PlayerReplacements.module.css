@@ -206,6 +206,9 @@
   gap: 16px;
   padding: 16px;
 }
+.inline {
+  display: none;
+}
 .comparisonTitle {
   display: flex;
   flex-wrap: wrap;
@@ -334,6 +337,13 @@
   }
   .comparison {
     position: static;
+  }
+  .side {
+    display: none;
+  }
+  .inline {
+    display: grid;
+    margin: 4px 0 8px;
   }
   .listHead,
   .candidate {

@@ -163,7 +163,7 @@ function Delta({ value, unit = "", better }) {
   );
 }
 
-function Comparison({ reference, candidate, season }) {
+function Comparison({ reference, candidate, season, inline = false }) {
   const f = useFootball();
   const axes =
     reference.axes && candidate.axes
@@ -172,9 +172,12 @@ function Comparison({ reference, candidate, season }) {
         )
       : [];
   return (
+    // On a phone the comparison opens under the selected player (inline), not after the list.
     <section
-      className={s.comparison}
-      data-replacement-comparison={candidate.id}
+      className={`${s.comparison} ${inline ? s.inline : s.side}`}
+      {...(inline
+        ? { "data-replacement-comparison-inline": candidate.id }
+        : { "data-replacement-comparison": candidate.id })}
       aria-label="Comparaison"
     >
       <h3 className={s.comparisonTitle}>
@@ -413,6 +416,14 @@ export default function PlayerReplacements({ fallback }) {
                       {row.grade == null ? "—" : <Grade value={row.grade} />}
                     </span>
                   </button>
+                  {reference && row.id === selected?.id && (
+                    <Comparison
+                      reference={reference}
+                      candidate={row}
+                      season={f.season}
+                      inline
+                    />
+                  )}
                 </li>
               ))}
             </ul>
