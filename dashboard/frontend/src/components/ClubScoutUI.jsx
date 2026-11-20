@@ -588,9 +588,8 @@ export function LeaguePlot({
         <span
           key={club.id}
           className={s.plotDot}
-          data-compact={
-            (clubs.length > 30 && club.id !== dossier.id) || undefined
-          }
+          // Every club shows its crest (user, 20 Nov 2026); a large referential draws them smaller.
+          data-dense={clubs.length > 30 || undefined}
           data-self={club.id === dossier.id || highlight.includes(club.id)}
           style={{
             left: `${px(club.values[x])}%`,
@@ -630,6 +629,9 @@ export function LeaguePlot({
 
 /* ------------------------------------------------------- style spectrum */
 
+// The crests of a style axis: the lanes they may take, each this tall (px), and the room a crest needs (% of the axis).
+const MAX_LANES = 3, LANE_HEIGHT = 20, LANE_GAP = 2.8;
+
 export function StyleSpectrum({
   dossier,
   club = dossier.self,
@@ -646,12 +648,27 @@ export function StyleSpectrum({
         if (value == null || !values.length) return null;
         const lo = Math.min(...values),
           hi = Math.max(...values);
-        const pos = (v) => {
+        const at = (v) => {
           const t = hi === lo ? 0.5 : (v - lo) / (hi - lo);
-          return `${4 + (axis.invert ? 1 - t : t) * 92}%`;
+          return 4 + (axis.invert ? 1 - t : t) * 92;
         };
+        const pos = (v) => `${at(v)}%`;
+        // Each crest on the first lane where it clears its neighbour (LANE_GAP % of the axis), at most MAX_LANES lanes;
+        // past that, on the lane whose last crest is farthest.
+        const marks = [], lanes = [];
+        for (const c of dossier.clubs
+          .filter((c) => c.id !== club.id && c.values[axis.key] != null)
+          .map((c) => ({ c, x: at(c.values[axis.key]) }))
+          .sort((a, b) => a.x - b.x)) {
+          let lane = lanes.findIndex((last) => c.x - last >= LANE_GAP);
+          if (lane < 0 && lanes.length < MAX_LANES) lane = lanes.length;
+          if (lane < 0) lane = lanes.indexOf(Math.min(...lanes));
+          lanes[lane] = c.x;
+          marks.push({ ...c, lane });
+        }
+        const height = Math.max(34, lanes.length * LANE_HEIGHT + 2);
         return (
-          <div className={s.spectrumRow} key={axis.key}>
+          <div className={s.spectrumRow} key={axis.key} data-axis={axis.key}>
             <div className={s.spectrumTitle}>
               <strong>
                 {metric.label}
@@ -662,17 +679,28 @@ export function StyleSpectrum({
                 {formatMetric(axis.key, dossier.stats[axis.key]?.median)}
               </span>
             </div>
-            <div className={s.spectrumTrack}>
-              {dossier.clubs
-                .filter((c) => c.id !== club.id && c.values[axis.key] != null)
-                .map((c) => (
-                  <i
+            <div className={s.spectrumTrack} data-track="" style={{ height }}>
+              {/* Each club's crest at its value (user, 20 Nov 2026); the club itself larger, in the middle. */}
+              {marks.map(({ c, x, lane }) => (
+                  <span
                     key={c.id}
-                    style={{ left: pos(c.values[axis.key]) }}
-                    title={c.name}
-                  />
+                    className={s.spectrumMark}
+                    data-club=""
+                    style={{ left: `${x}%`, top: 1 + lane * LANE_HEIGHT + (height - 2 - lanes.length * LANE_HEIGHT) / 2 }}
+                    title={`${c.name} : ${formatMetric(axis.key, c.values[axis.key])}`}
+                  >
+                    <Crest club={c} />
+                  </span>
                 ))}
-              <b style={{ left: pos(value) }} title={club.name} />
+              <span
+                className={s.spectrumSelf}
+                data-club=""
+                data-self="true"
+                style={{ left: pos(value) }}
+                title={`${club.name} : ${formatMetric(axis.key, value)}`}
+              >
+                <Crest club={club} />
+              </span>
             </div>
             <div className={s.spectrumEnds}>
               <span>{axis.low}</span>
