@@ -4,7 +4,7 @@
  * Elo, its matches, the players of its latest tournament and its runs in the major tournaments.
  * Everything comes from /api/nations: a fact the base lacks (a coach, a score of an old final)
  * is left out, never filled in. */
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Empty, Media, Segments, Skeleton } from "./UI.jsx";
 import { ResearchTabs } from "./ResearchUI.jsx";
@@ -27,6 +27,7 @@ import {
 } from "../services/nations.js";
 import { editionView, tournamentEdition } from "../services/cup-catalog.js";
 import { RUN_STEPS, runDepth, runStage, runTone, runsByTournament } from "../services/tournament-runs.js";
+import { matchCarousel } from "../services/nation-carousel.js";
 import { trophyArt } from "../services/trophy-art.js";
 import rail from "./ClubScoutTabs.module.css";
 import s from "./Nations.module.css";
@@ -355,25 +356,110 @@ function Tournaments({ runs, nation }) {
   );
 }
 
-function TournamentPath({ run, id }) {
+/** One match of the carousel: round and day, each side with its flag and goals, the winner in bold, the result
+ * from the nation's side; the match's page when the base holds it. */
+function MatchTile({ match, id }) {
+  const f = useFootball();
+  const side = sideOf(match, id);
+  const pens = match.homePenalties != null && match.awayPenalties != null;
+  const homeWins = match.homeScore > match.awayScore || (match.homeScore === match.awayScore && pens && match.homePenalties > match.awayPenalties);
+  const awayWins = match.awayScore > match.homeScore || (match.homeScore === match.awayScore && pens && match.awayPenalties > match.homePenalties);
+  const round = roundLabel(match.round);
+  const row = (team, goals, wins) => (
+    <span className={s.tileTeam} data-w={wins ? "" : undefined} data-d={!homeWins && !awayWins ? "" : undefined}>
+      <NationalFlag name={team.name} season={match.date} className={s.tileFlag} />
+      <span className={s.tileName}>{nationName(team.name)}</span>
+      <b>{goals}</b>
+    </span>
+  );
+  const body = (
+    <>
+      <span className={s.tileTop}>
+        <span>{round || competitionLabel(match)}</span>
+        <span>{dateShort(match.date)}</span>
+      </span>
+      {row(match.home, match.homeScore, homeWins)}
+      {row(match.away, match.awayScore, awayWins)}
+      <span className={s.tileFoot}>
+        <span>{pens ? `t.a.b. ${match.homePenalties}–${match.awayPenalties}` : ""}</span>
+        {side.result && <b className={s.result} data-r={side.result}>{side.result}</b>}
+      </span>
+    </>
+  );
+  const final = round === "Finale" ? "" : undefined;
+  return match.id ? (
+    <Link className={s.tile} data-final={final} href={f.href("/matchs/", { id: match.id })} prefetch={false}>
+      {body}
+    </Link>
+  ) : (
+    <div className={s.tile} data-final={final}>{body}</div>
+  );
+}
+
+/** Every played match of the nation, newest first, one group per competition edition (mock-up B, 20 Nov 2026):
+ * arrows, swipe, and the row of editions to jump to. */
+function MatchCarousel({ nation }) {
+  const groups = useMemo(() => matchCarousel(nation), [nation]);
+  const track = useRef(null);
+  const [at, setAt] = useState({ group: 0, start: true, end: false });
+  const update = useCallback(() => {
+    const t = track.current;
+    if (!t) return;
+    const parts = [...t.querySelectorAll("[data-group]")];
+    const group = Math.max(0, parts.findLastIndex((part) => part.offsetLeft - t.offsetLeft <= t.scrollLeft + 8));
+    setAt({ group, start: t.scrollLeft < 4, end: t.scrollLeft + t.clientWidth >= t.scrollWidth - 4 });
+  }, []);
+  useEffect(() => {
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, [update, groups]);
+  useEffect(() => {
+    // The jump row follows the group in view.
+    track.current?.parentElement?.parentElement?.querySelector(`[data-jump="${at.group}"]`)?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [at.group]);
+  if (!groups.length) return null;
+  const scroll = (direction) => track.current?.scrollBy({ left: direction * track.current.clientWidth * 0.8, behavior: "smooth" });
+  const jump = (i) => {
+    const t = track.current, part = t?.querySelector(`[data-group="${i}"]`);
+    if (part) t.scrollTo({ left: part.offsetLeft - t.offsetLeft, behavior: "smooth" });
+  };
   return (
-    <div className={s.path}>
-      {run.games.map((game, i) => {
-        const side = sideOf(game, id);
-        return (
-          <div key={i} className={s.step} data-r={side.result || undefined}>
-            <small>{roundLabel(game.round) || "—"}</small>
-            <b>
-              {nationName(game.home.name)} – {nationName(game.away.name)}
-            </b>
-            <span>
-              {game.homeScore == null ? "—" : `${game.homeScore}–${game.awayScore}`}
-              {side.pens ? ` (t.a.b. ${game.homePenalties}–${game.awayPenalties})` : ""}
-            </span>
-          </div>
-        );
-      })}
-    </div>
+    <Card
+      // An element, not a string: the title is not looked up in the glossary (its « i » said what a match is).
+      title={<>Matchs</>}
+      action={
+        <span className={s.arrows}>
+          <button type="button" aria-label="Matchs plus récents" disabled={at.start} onClick={() => scroll(-1)}>‹</button>
+          <button type="button" aria-label="Matchs plus anciens" disabled={at.end} onClick={() => scroll(1)}>›</button>
+        </span>
+      }
+    >
+      <div className={s.jump} role="tablist" aria-label="Compétitions">
+        {groups.map((group, i) => (
+          <button key={group.key} type="button" role="tab" data-jump={i} aria-selected={at.group === i} onClick={() => jump(i)}>
+            {group.label}
+          </button>
+        ))}
+      </div>
+      <div className={s.rail}>
+        <div className={s.track} ref={track} onScroll={update}>
+          {groups.map((group, i) => (
+            <div key={group.key} className={s.group} data-group={i}>
+              <div className={s.groupLabel}>
+                <b>{group.label}</b>
+                {[group.stage, `${group.matches.length} match${group.matches.length > 1 ? "s" : ""}`].filter(Boolean).map((part) => ` · ${part}`).join("")}
+              </div>
+              <div className={s.tiles}>
+                {group.matches.map((match, j) => (
+                  <MatchTile key={match.id || `${match.date}-${j}`} match={match} id={nation.id} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Card>
   );
 }
 
@@ -505,11 +591,7 @@ function Overview({ nation, last, onTab }) {
           )}
         </Card>
       </div>
-      {last && last.games.length > 0 && (
-        <Card title={last.label} text="Le parcours, match par match">
-          <TournamentPath run={last} id={nation.id} />
-        </Card>
-      )}
+      <MatchCarousel nation={nation} />
       {nation.players && (
         <Card
           title={`Les joueurs : ${nation.players.competition}`}

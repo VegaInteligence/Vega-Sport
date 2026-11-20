@@ -22,3 +22,12 @@
   - VI-22 : clubs similaires et compétitions mises en avant (f9e49f7068, migration 123).
   - Site : en-tête de match à cinq KPI (c626e11a6f), forme récente en barres fines (f29f32df63), minutes par match en colonnes (40f4d051ed), sans cartes ni coins arrondis (63b1794771), graphiques xG, tirs et probabilité redessinés (840414438c).
   - En attente chez leurs sessions : choix de la source des matchs de sélections (ESPN ou API-Football), maquette v2 du parcours en tournoi de la page nation et doublon Argentine/Coupe du monde 1930 dans `/api/nations/{id}`, maquette du graphique de probabilité de victoire, affichage des saisons 2000–2020.
+
+## Nation page — every match in one carousel, with flags (20 Nov 2026, worktree `~/Agents/worktrees/vega-nation-carousel-20261120`)
+
+- Ask (user, on Spain's page): the « Coupe du monde 2026 » run card (`TournamentPath`) with flags, and a carousel through all the matches instead of the World Cup alone. Supersedes the 18 Nov table mock-up (never validated).
+- Mock-up (`~/Agents/scratch/nation-run-carousel-20261120`, real Spain data): A, the World Cup run; B, every match, one group per edition. User, 20 Nov: « Ok je prends ta recommandation tu peux déployer » → B.
+- Built: `services/nation-carousel.js` (`matchCarousel`: played matches newest first, a tournament game takes its run's label and stage — « Euro 2020 », not « Euro 2021 » —, others « Ligue des nations 2026/27 », « Matchs amicaux 2025/26 »; the same two nations within a day kept once, the collected match); `MatchCarousel` and `MatchTile` in NationPages.jsx replace `TournamentPath` (flags from flag-icons by the match's date, winner in bold, V/N/D, the final framed in gold, arrows, scroll-snap, a row of editions to jump to, the match page when held); title without the glossary « i ».
+- Kept on purpose: the archived copies (Uruguay–Spain 2026) are fixed in the base by the audit branches (`test_nation_match_copies.py`); the carousel only shows one card.
+- Validated: tests written first (`tests/nation-match-carousel.test.mjs`, 3/3); site suite 754/763, the 9 failures equal to main's in this environment (Node 22); build; E2E 20/20 on the local build against the production API (Spain, France, Argentina; desktop and phone). Evidence: `~/Agents/scratch/nation-run-carousel-20261120/e2e.mjs`, `e2e-local/`.
+- Linear: not touched in this folder (rule in ~/.claude/CLAUDE.md).
