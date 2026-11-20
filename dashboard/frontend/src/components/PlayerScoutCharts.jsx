@@ -237,7 +237,7 @@ function AxisLabel({ x, y, angle, lines, className, extra }) {
 const GROW = 1.3;
 const cap = (width) => ({ "--chart-cap": `${Math.round(width)}px` });
 
-export function PercentilePizza({ items, cohort, size = 560 }) {
+export function PercentilePizza({ items, cohort, size = 560, grow = GROW }) {
   const t = useTip();
   const [active, setActive] = useState(null);
   const c = size / 2,
@@ -246,7 +246,7 @@ export function PercentilePizza({ items, cohort, size = 560 }) {
   const step = (Math.PI * 2) / items.length;
   const radius = (p) => r0 + ((r1 - r0) * p) / 100;
   return (
-    <div className={s.chart} ref={t.ref} style={cap(size * GROW)}>
+    <div className={s.chart} ref={t.ref} style={cap(size * grow)}>
       <svg
         viewBox={`0 0 ${size} ${size}`}
         role="img"
