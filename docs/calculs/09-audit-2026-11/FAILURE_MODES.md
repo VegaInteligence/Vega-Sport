@@ -3689,7 +3689,8 @@ measured at 18:37 UTC, before that run; how 2020's rows are graded in production
   players run of the present method, or whose run started before the last published players run of the next year
   (its references may have moved). The worker's stale step ranks the years it lists, most recent first: the next year
   first, then the partial year. `refresh_daily` and `previous_year_changed` are unchanged (a year with statistics
-  of its own).
+  of its own). These two conditions miss production's order, where 2020's earlier-rule run started after 2021's: see
+  §48 (48a–48e), which adds two conditions of state.
 - `METHOD_VERSION` is unchanged: no other year's ranking or grade changes.
 
 ### 47.2 Failure modes and expected outcomes
@@ -3701,3 +3702,80 @@ measured at 18:37 UTC, before that run; how 2020's rows are graded in production
 | 47c | `stale_rankings` before the daily path (no run of 2020), after it (2020's earlier run older than 2021's), after the stale step | `[2020]`, `[2020]`, `[]` | red: 2020 never listed |
 | 47d | A second stale step and `refresh_players(2020)` again | no grade rewritten (`changed_at` unchanged), the same counts; 2020 not listed | red: as 47a |
 | 47f | `refresh_players(2021)` after 47a, then `refresh_players(2020)` | 2020 listed by `stale_rankings` (its run is older), then not; no grade rewritten | red: as 47c |
+
+(The table has no 47e: a numbering gap, no scenario missing.)
+
+## 48. The candidate on main `c4a3cacd77`: award year 2020 in production's order, the season's internationals and the Elo's wake-up, the deployment's migrations (second reviews of `e82992a37d`, 20 Nov 2026, written before the tests)
+
+The two reviews of `e82992a37d` (Fable and Opus, 20 Nov 2026, CHANGES_REQUESTED and BLOCKED) found two defects and one
+missing integration. The candidate is now merged with main `c4a3cacd77` (M0, `1594b63731`: a real merge, one textual
+conflict in a comment of `power.py`, both sides kept). Main is production's code: `bfab25d4ef` is deployed since
+20 Nov 01:50 UTC, migration 154 applied (`migrations applied=1 total=160`); `c4a3cacd77` adds only site files to it.
+
+- **Award year 2020 is not listed in production's order.** §47.1's conditions list a partial year without a
+  published run of the present method, or whose run started before the next year's last. In production both years
+  were ranked by `power-ranking-v8` on 18 Nov, 2021/22 at 23:39:52 UTC, then 2020/21 at 23:39:58 (the stale step,
+  most recent first). 2020's run is the later: neither condition holds, 2020 is never listed, and after deployment its
+  ranking (MLS first) would stay served with its grades against its own references. §47's test ranked 2020 by the
+  earlier rule before 2021's run: the reverse order.
+- **The season's internationals wake the Elo for nothing.** Main reads every international of 2026/27
+  (`nations-results:internationals:2026/2027`) for the home's week strip only and leaves it out of `ELO_MATCHES`.
+  The candidate's `worker.elo_due` (§37) counts every finished match of a cup-source edition (`_COMPLEMENTARY`): each
+  result of that edition makes the Elo due, and the full recomputation then reads nothing new.
+- **37g–37j hold eight editions**; main adds a ninth that reads the same `results.csv`, and the test file has no
+  2026/27 match outside the Nations League (red on M0: the ninth edition unexpected).
+- **The deployment's migrations** were never replayed from production's schema: files up to 154, then the merged
+  tree's.
+
+### 48.1 Rules
+
+- **When a partial year runs** (amends §47.1). `stale_rankings` lists a partial year when any of four conditions
+  holds: no published players run of the present method; its run started before the next year's last published run
+  (§47); **its published run ranked players** (`players IS DISTINCT FROM 0`: an earlier rule's ranking, whatever the
+  order of the two runs); **references of its own remain** (`agg.match_grade_roles` with `ref_season` = the year,
+  read by its primary key). The partial run itself publishes `players` = 0 and deletes those references in the
+  transaction that publishes it, so once it has run neither new condition holds: listed once, then not, and a second
+  pass writes nothing. No condition on `agg.player_match_grades` (its cost on the production base is not measured,
+  and the run is atomic). `METHOD_VERSION` is unchanged.
+- **Award year 2021 is unchanged by the 2020 run.** The 2020 run reads 2021's kept references and writes nothing of
+  2021: its ranking, roles and award race, its run, its grades and its references stay as they are. What 2021/22
+  keeps, acted and not changed here: its ranking's prior (`previous`, read from 2020's ranking at its last run) until
+  its next run, which then finds no 2020 ranking; the contribution C of a 2020 player-match measured against 2020's own
+  population (§47.1, as for any year in progress); 2020 leaves the years of the line-up model (`lineup.py`, which needs
+  `players` > 0) and the breakout eligibility reading 2020's ranking. No method is extended beyond award year 2020.
+- **The Elo's wake-up reads what the Elo reads.** `_COMPLEMENTARY` leaves out the editions `ELO_MATCHES` leaves out,
+  by the same predicate: `left(cs.cup_key, 31) <> 'nations-results:internationals:'`. Every other cup-source
+  edition — International Results' Nations League and tournaments, OpenLigaDB's Nations League, Open Matchday,
+  OpenFootball — still makes it due. Without any published Elo run, a base holding only internationals is not due.
+- **One read of `results.csv` for nine editions.** The internationals edition is an International Results edition
+  like the others: due with them, it is projected in the same bridge process (`prepare_due`), each edition keeping its
+  own digest, state and failure.
+- **The deployment's migrations.** From production's schema (the files up to 154, identical on `bfab25d4ef` and on
+  the merged tree) the merged tree's `python -m vega.migrate` applies exactly 155, 156, 157, 159 and 160
+  (`applied=5 total=165`), then nothing (`applied=0`); the checksums up to 154 are unchanged. 159 moves the version of
+  each edition whose stored SportScore ranks conflict, once, and no other; 160 clears `read_at` of every injuries unit
+  whose last attempt failed and of whose player no Transfermarkt episode is stored — an accepted empty list refused
+  since included — and of no other unit. `vega_read` then reads 154's `api.home_internationals`, `api.standings`,
+  `api.nation_matches` and `api.player_grade_status`.
+
+### 48.2 Failure modes and expected outcomes
+
+E2E on a disposable local PostgreSQL 18, under the real roles. 48a–48e: §38's base (`test_player_grade_reasons.py`),
+the real `Worker.daily` under `vega_collect` and `vega_calc`, the real read API (`read_http.mjs`, `vega_read`).
+48f–48i: `test_collection_wakeups.py`, the real worker, bridge and projection, `results.csv` from the test file.
+48j–48l: `test_deploy_migrations.py`, the real `python -m vega.migrate`.
+
+| # | Situation | Expected | On M0 `1594b63731` |
+|---|---|---|---|
+| 48a | §38's base; the Elo; 2021's daily models; **then** 2020 ranked by the earlier rule (production's order: 2020's run the later) | `stale_rankings` = `[2020]` | to observe |
+| 48b | Then the real `Worker.daily()` | 682 grades of award year 2020, each `ref_season` 2021; no `agg.player_power`, `agg.player_power_roles` or award row of 2020; one published 2020 run, `players` = 0; no `agg.match_grade_*` of `ref_season` 2020; the journal's `player ranking season=2020 … players=0`; award year 2021's run, ranking, roles, award race, grades and references unchanged | to observe |
+| 48c | A second `Worker.daily()` | 2020 not listed, no run added, no grade rewritten (`changed_at`) | to observe |
+| 48d | `refresh_players(2021)`, then `Worker.daily()` twice | 2020 listed once then not; no grade of 2020 rewritten | to observe |
+| 48e | The read API under `vega_read`, before 48b (production's state) and after | before: `/api/rankings/power?kind=players&season=2020/2021&scope=all` 200 with rows; after: 404, and 404 without `scope`; `season=2021/2022&scope=all` 200, the same body before and after; `/api/rankings/match` of a 2020 match: each grade that of `agg.player_match_grades` (`ref_season` 2021); 682 statuses `graded` or `below_display_threshold` | to observe |
+| 48f | An Elo published; a result written in `nations-results:internationals:2026/2027` by the real path | the pass: `elo_due` false, no Elo run, no side of that match in `agg.team_elo` | to observe |
+| 48g | Then a result of `nations-results:nations-league:2026/2027` | due once: one run, its sides published; the next pass none | to observe |
+| 48h | A base without an Elo run, internationals only (real path) | `elo_due` false | to observe |
+| 48i | 37g–37j with nine editions, `results.csv` holding one 2026/27 friendly | one request a pass; nine editions `ok`, each its digest; failing and back as 37i–37j | to observe |
+| 48j | Production's schema (files up to 154) with rows, then the merged tree's `python -m vega.migrate`, then again | `applied=5 total=165` (155, 156, 157, 159, 160), then `applied=0 total=165`; rows up to 154 and their checksums unchanged; `vega_read` reads `api.home_internationals`, `api.standings`, `api.nation_matches`, `api.player_grade_status` | to observe |
+| 48k | 48j's data effects | 159: the version of each conflicting edition moves once (an existing version + 1, a new one created), no other; 160: `read_at` cleared on the failed units without an episode (an accepted empty list refused since included), kept on an ok unit, a failed unit with an episode and the other kinds | to observe |
+| 48l | 48j, a 2026/27 friendly of the internationals edition (verification only, main's site untouched) | `api.nation_matches` lists it once, with its edition's name; main's site tests green | to observe |
