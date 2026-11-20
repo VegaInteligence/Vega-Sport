@@ -201,7 +201,7 @@ const tabs = await load("ClubScoutTabs.jsx", {
   "./UI.jsx": { Segments: () => null, Skeleton: () => null },
   "./ResearchUI.jsx": { BookmarkButton: () => null },
   "./PhoneFold.jsx": { PhoneFoldToggle: () => null, usePhoneFold: () => ({ fold: {}, part: "", button: null }) },
-  "./FillChart.jsx": { __esModule: true, default: () => null },
+  "./PointsRace.jsx": { PointsRaceLines: () => null, PointsPerMatch: () => null },
   "../services/profile-blocks.js": { euros: () => "", readDay: () => "", useClubSquad: () => null, weightedAge: () => null },
   "../services/resources.js": { json: async () => ({}), useResource: () => ({}) },
   "./ClubInformation.jsx": { __esModule: true, default: () => null },
@@ -209,7 +209,7 @@ const tabs = await load("ClubScoutTabs.jsx", {
   // Today's service: an opponent of the reference without a measured centile still comes back.
   "../services/club-scout.js": { FAMILIES: {}, METRICS: {}, PERFORMANCE_KEYS: [], PHASES: [], formatMetric: () => "",
     opponentStrength: (dossier, id) => { const c = dossier.clubs.find((x) => x.id === id); return c ? { club: c, centile: c.centile ?? null } : null; } },
-  "./ClubScoutUI.jsx": { ...ui, PointsTrend: () => null, LeagueTable: () => null, FormStrip: () => null },
+  "./ClubScoutUI.jsx": { ...ui, LeagueTable: () => null, FormStrip: () => null },
   "./ClubSubstitutions.jsx": { __esModule: true, default: () => null },
   "./ClubPassingTriangle.jsx": { __esModule: true, default: () => null },
 });
