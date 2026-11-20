@@ -9,6 +9,7 @@ UEFA club becomes its own team, linked later by reconcile_teams (never a fuzzy m
 
 from collections import defaultdict
 from datetime import timedelta
+import struct
 from urllib.parse import urlencode
 
 from . import SourceError, normalize
@@ -55,6 +56,10 @@ def fetch(get, kind, year):
         page += 1
     if len(members) != total:
         raise SourceError("INCOMPLETE_PAGINATION")
+    if not members:
+        # An edition without a member is never written: it would delete the stored rows, or create an empty edition
+        # marked current (FAILURE_MODES.md §44, 40n).
+        raise SourceError("EMPTY_EDITION")
     rows = []
     real = lambda value: float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) else None
     count = lambda value: int(value) if isinstance(value, int) and not isinstance(value, bool) else None
@@ -86,11 +91,16 @@ def _country(conn, code):
     return code
 
 
+# A ranking's spelling (SportScore, source_spelling) names a club for the table of the edition it was read in, never
+# for UEFA's link: « Andorra CF » is FC Andorra in LaLiga2's table and another Spanish club elsewhere (FAILURE_MODES.md §39).
+RANKING_SPELLING = "n.kind = 'source_spelling' AND n.source = 'sportscore'"
+
+
 def _candidates(conn, country, key):
     found = set()
     for team, name, short, alias in conn.execute(
-        """SELECT t.id, t.name, t.short_name, n.name FROM core.teams t
-           LEFT JOIN core.entity_names n ON n.entity_type = 'team' AND n.entity_id = t.id
+        f"""SELECT t.id, t.name, t.short_name, n.name FROM core.teams t
+           LEFT JOIN core.entity_names n ON n.entity_type = 'team' AND n.entity_id = t.id AND NOT ({RANKING_SPELLING})
            WHERE t.country_code = %s AND t.is_national IS NOT TRUE AND t.merged_into IS NULL""",
         (country,),
     ):
@@ -158,25 +168,41 @@ def crest_club(conn, team):
     return merged
 
 
+def _real(value):
+    """A value as a real column gives it back."""
+    return None if value is None else struct.unpack("f", struct.pack("f", float(value)))[0]
+
+
+ROW_COLUMNS = "row_no, team_id, country_code, position, points, provider_key, entity_name, earned_points, teams_still_playing, image_asset_id"
+
+
 def save(conn, kind, year, rows, updated, now):
-    """Replace one edition's rows; returns (rows written, clubs not linked to a team)."""
+    """Write one edition when its rows differ from the stored ones: replaced whole and its version raised once. Identical
+    pages write no row and raise no version; the edition's record changes only where a field differs (FAILURE_MODES.md
+    §44, 40x). Returns (rows written, clubs not linked to a team)."""
     label = f"{year - 1}/{year}"
     current = year == current_end_year(now)
-    edition = conn.execute(
-        """INSERT INTO core.ranking_editions(kind, provider, label, period, published_on, is_current, source_url, source_updated_at)
-           VALUES (%s, 'uefa', %s, %s, %s, %s, %s, %s)
-           ON CONFLICT (kind, provider, label) DO UPDATE SET published_on = EXCLUDED.published_on,
-             is_current = EXCLUDED.is_current, source_url = EXCLUDED.source_url, source_updated_at = EXCLUDED.source_updated_at, updated_at = now()
-           RETURNING id""",
-        (kind, label, label, (updated or "")[:10] or None, current, source_url(kind, year), updated or None),
-    ).fetchone()[0]
+    record = ((updated or "")[:10] or None, current, source_url(kind, year), updated or None)
+    found = conn.execute("SELECT id FROM core.ranking_editions WHERE kind = %s AND provider = 'uefa' AND label = %s", (kind, label)).fetchone()
+    if found:
+        edition = found[0]
+        conn.execute(
+            """UPDATE core.ranking_editions SET published_on = %s, is_current = %s, source_url = %s, source_updated_at = %s, updated_at = now()
+               WHERE id = %s AND (published_on, is_current, source_url, source_updated_at) IS DISTINCT FROM (%s::date, %s, %s, %s::timestamptz)""",
+            (*record, edition, *record),
+        )
+    else:
+        edition = conn.execute(
+            """INSERT INTO core.ranking_editions(kind, provider, label, period, published_on, is_current, source_url, source_updated_at)
+               VALUES (%s, 'uefa', %s, %s, %s, %s, %s, %s) RETURNING id""",
+            (kind, label, label, *record),
+        ).fetchone()[0]
     if current:
         conn.execute(
-            "UPDATE core.ranking_editions SET is_current = (id = %s) WHERE kind = %s AND provider = 'uefa'",
-            (edition, kind),
+            "UPDATE core.ranking_editions SET is_current = (id = %s) WHERE kind = %s AND provider = 'uefa' AND is_current IS DISTINCT FROM (id = %s)",
+            (edition, kind, edition),
         )
-    conn.execute("DELETE FROM core.ranking_rows WHERE edition_id = %s", (edition,))
-    written, unmatched, seen = 0, 0, set()
+    planned, seasons, unmatched, seen = [], {}, 0, set()
     for row_no, row in enumerate(rows, 1):
         if kind == "uefa_clubs":
             team, linked = link_team(conn, row)
@@ -210,25 +236,32 @@ def save(conn, kind, year, rows, updated, now):
                            ON CONFLICT (resource_kind, resource_id) DO UPDATE SET version = ops.resource_versions.version + 1, updated_at = now()""",
                         resource,
                     )
-        conn.execute(
-            """INSERT INTO core.ranking_rows(edition_id, row_no, team_id, country_code, position, points, provider_key, entity_name,
-                 earned_points, teams_still_playing, image_asset_id) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
-            (edition, row_no, *target, row["position"], row["points"], row["id"], row["name"], row.get("earned"), row.get("still"), logo),
-        )
+        planned.append((row_no, *target, row["position"], row["points"], row["id"], row["name"], row.get("earned"), row.get("still"), logo))
         for season_year, points, association, still in row.get("seasons") or []:
-            conn.execute(
-                """INSERT INTO core.ranking_season_points(edition_id, row_no, season_year, points, association_points, teams_still_playing)
-                   VALUES (%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING""",
-                (edition, row_no, season_year, points, association, still),
-            )
-        written += 1
+            seasons.setdefault((row_no, season_year), (points, association, still))  # ON CONFLICT DO NOTHING: the first
+    stored = [tuple(r) for r in conn.execute(f"SELECT {ROW_COLUMNS} FROM core.ranking_rows WHERE edition_id = %s ORDER BY row_no", (edition,))]
+    stored_seasons = {(r, y): (p, a, s_) for r, y, p, a, s_ in conn.execute(
+        "SELECT row_no, season_year, points, association_points, teams_still_playing FROM core.ranking_season_points WHERE edition_id = %s", (edition,))}
+    same_rows = stored == [(*r[:4], _real(r[4]), r[5], r[6], _real(r[7]), *r[8:]) for r in planned]
+    same_seasons = stored_seasons == {k: (_real(p), _real(a), s_) for k, (p, a, s_) in seasons.items()}
+    if same_rows and same_seasons:
+        return 0, unmatched
+    conn.execute("DELETE FROM core.ranking_rows WHERE edition_id = %s", (edition,))
+    for row in planned:
+        conn.execute(f"INSERT INTO core.ranking_rows(edition_id, {ROW_COLUMNS}) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)", (edition, *row))
+    for (row_no, season_year), (points, association, still) in seasons.items():
+        conn.execute(
+            """INSERT INTO core.ranking_season_points(edition_id, row_no, season_year, points, association_points, teams_still_playing)
+               VALUES (%s,%s,%s,%s,%s,%s)""",
+            (edition, row_no, season_year, points, association, still),
+        )
     # The European level reads the current club coefficients: its cohorts recalculate.
     conn.execute(
         """INSERT INTO ops.resource_versions(resource_kind, resource_id) VALUES ('ranking', %s)
            ON CONFLICT (resource_kind, resource_id) DO UPDATE SET version = ops.resource_versions.version + 1, updated_at = now()""",
         (edition,),
     )
-    return written, unmatched
+    return len(planned), unmatched
 
 
 def run(conn, get, scope, now):
@@ -300,7 +333,7 @@ def reconcile_teams(conn):
         # official one ("Paris Saint-Germain").
         spellings = {normalize(name)} | {
             n for (n,) in conn.execute(
-                "SELECT normalized FROM core.entity_names WHERE entity_type='team' AND entity_id=%s", (team,)
+                f"SELECT n.normalized FROM core.entity_names n WHERE n.entity_type='team' AND n.entity_id=%s AND NOT ({RANKING_SPELLING})", (team,)
             ).fetchall()
         }
         found = set()

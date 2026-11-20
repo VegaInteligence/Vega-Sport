@@ -748,10 +748,21 @@ class Store:
                 "SELECT pg_advisory_xact_lock(hashtextextended(%s,0))",
                 ("pitchapi:match:" + key,),
             )
-            sid, eid, home, away = self.conn.execute(
-                "SELECT season_id,competition_season_id,home_team_id,away_team_id FROM core.matches WHERE id=%s FOR UPDATE",
+            sid, eid, home, away, status = self.conn.execute(
+                "SELECT season_id,competition_season_id,home_team_id,away_team_id,status::text FROM core.matches WHERE id=%s FOR UPDATE",
                 (mid,),
             ).fetchone()
+            if status == "finished" and not any(batch.rows.values()) and any(
+                self.conn.execute(
+                    sql.SQL("SELECT EXISTS (SELECT 1 FROM core.{} WHERE season_id=%s AND match_id=%s)").format(sql.Identifier(table)),
+                    (sid, mid),
+                ).fetchone()[0]
+                for table in tables
+            ):
+                # A finished match's family answered without a row (an empty list, or unavailable) while it holds the
+                # rows of an accepted answer: refused, the rows kept; the failure path makes the family due again
+                # (FAILURE_MODES.md §37, E02d). A first empty answer is written as before.
+                raise StoreError("EMPTY_AFTER_OBSERVATION")
             self.references(batch)
             self._unknown(family, batch)
             fingerprint = digest(batch)

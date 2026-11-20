@@ -193,6 +193,36 @@ def due_seasons(conn, now):
     ]
 
 
+# The complementary matches the Elo reads (power.ELO_MATCHES): a finished, scored match of a cup-source edition,
+# apart from the season's other internationals, which ELO_MATCHES leaves out by the same predicate (the home's week
+# strip only; FAILURE_MODES.md §48).
+_COMPLEMENTARY = """FROM core.matches m JOIN core.competition_seasons cs ON cs.id = m.competition_season_id
+                      AND cs.cup_key IS NOT NULL AND cs.archive_key IS NULL
+                      AND left(cs.cup_key, 31) <> 'nations-results:internationals:'
+                    WHERE m.status = 'finished' AND m.home_score IS NOT NULL AND m.away_score IS NOT NULL
+                      AND m.home_team_id IS NOT NULL AND m.away_team_id IS NOT NULL AND m.match_date IS NOT NULL"""
+
+
+def elo_due(conn):
+    """Whether the Elo is older than the population it would read now, apart from the native seasons (due_seasons,
+    with their own waits): a complementary match (Open Matchday, the cup sources) written or changed after the last
+    published Elo run started (a new result, a corrected score, a restored match), or a side that run wrote whose match
+    is gone, no longer finished with its score, or now archived (a withdrawn match), or a side of another run (sides
+    restored from a copy). Without a run, any complementary match. FAILURE_MODES.md §37 (E04k)."""
+    return conn.execute(
+        f"""WITH run AS (SELECT id, started_at FROM agg.power_runs WHERE kind = 'elo' AND status = 'published'
+                         ORDER BY id DESC LIMIT 1)
+            SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM run) THEN EXISTS (SELECT 1 {_COMPLEMENTARY})
+              ELSE EXISTS (SELECT 1 {_COMPLEMENTARY} AND m.updated_at > (SELECT started_at FROM run))
+                OR EXISTS (SELECT 1 FROM agg.team_elo e WHERE e.run_id IS DISTINCT FROM (SELECT id FROM run))
+                OR EXISTS (SELECT 1 FROM agg.team_elo e WHERE NOT EXISTS (
+                     SELECT 1 FROM core.matches m JOIN core.competition_seasons cs ON cs.id = m.competition_season_id AND cs.archive_key IS NULL
+                     WHERE m.id = e.match_id AND m.season_id = e.season_id AND m.status = 'finished'
+                       AND m.home_score IS NOT NULL AND m.away_score IS NOT NULL))
+              END"""
+    ).fetchone()[0]
+
+
 # Appearances a base must hold before a return curve is looked for (returns.py): below, no
 # length of absence would gather the returns a point of the curve needs.
 RETURNS_MIN_APPEARANCES = 100000
@@ -506,7 +536,9 @@ class Worker:
             ok, clubs = self._daily_step(("usual lineups", year), now, lambda: lineup.refresh_usuals(self.calc_conn, year))
             if ok:
                 print(f"usual lineups year={year} clubs={clubs}", flush=True)
-        if seasons:
+        # A complementary source changed what the Elo reads (elo_due): due without a native season (§37, E04k).
+        _, stale_elo = self._daily_step(("elo due",), now, lambda: elo_due(self.calc_conn))
+        if seasons or stale_elo:
             # The Elo covers every match in order: once for the pass, never once per season
             # (with ~140 archive seasons due at once it rewrote agg.team_elo 95 times).
             from . import power

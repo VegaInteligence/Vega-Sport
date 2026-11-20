@@ -1,0 +1,82 @@
+[
+  {
+    "label": "old",
+    "commit": "496e94ec4c976cbc244fc734c86e6772778a35f1",
+    "path": "public-source/old/build_summary.json",
+    "status": 200,
+    "url": "https://raw.githubusercontent.com/oladeeayo/open-matchday/496e94ec4c976cbc244fc734c86e6772778a35f1/build_summary.json",
+    "bytes": 27749,
+    "sha256": "1f0bef2d8e99330eb79cc55651e9e3ed0173faefba7910bd73b659f65ae4b8bf",
+    "at": "2026-11-18T14:20:07.381052+00:00",
+    "local": "old/build_summary.json"
+  },
+  {
+    "label": "old",
+    "commit": "496e94ec4c976cbc244fc734c86e6772778a35f1",
+    "path": "public-source/old/data/ENG_6_national-league-north/fixtures_2627.csv",
+    "status": 200,
+    "url": "https://raw.githubusercontent.com/oladeeayo/open-matchday/496e94ec4c976cbc244fc734c86e6772778a35f1/data/ENG_6_national-league-north/fixtures_2627.csv",
+    "bytes": 4448,
+    "sha256": "9fb4d201f600d813beaca7fd35a8f0f56d0071bf19eab201e8e325b79f116f37",
+    "at": "2026-11-18T14:20:07.365719+00:00",
+    "local": "old/fixtures_2627.csv"
+  },
+  {
+    "label": "old",
+    "commit": "496e94ec4c976cbc244fc734c86e6772778a35f1",
+    "path": "public-source/old/data/ENG_6_national-league-north/results_2627.csv",
+    "status": 200,
+    "url": "https://raw.githubusercontent.com/oladeeayo/open-matchday/496e94ec4c976cbc244fc734c86e6772778a35f1/data/ENG_6_national-league-north/results_2627.csv",
+    "bytes": 9411,
+    "sha256": "ed3269f65fde1c0a86bd8f7154a3c1a8f9c4b12929f409b72843c01d6618c3ad",
+    "at": "2026-11-18T14:20:07.385201+00:00",
+    "local": "old/results_2627.csv"
+  },
+  {
+    "label": "current",
+    "commit": "13a434955de865f66f95a71937205a3a286488c6",
+    "path": "public-source/current/build_summary.json",
+    "status": 200,
+    "url": "https://raw.githubusercontent.com/oladeeayo/open-matchday/13a434955de865f66f95a71937205a3a286488c6/build_summary.json",
+    "bytes": 27749,
+    "sha256": "9e21004f3e3a6fb9fc2e631b4ff1a15e4a9d202277602759d88d15b6c312c259",
+    "at": "2026-11-18T14:20:07.691179+00:00",
+    "local": "current/build_summary.json"
+  },
+  {
+    "label": "current",
+    "commit": "13a434955de865f66f95a71937205a3a286488c6",
+    "path": "public-source/current/data/ENG_6_national-league-north/fixtures_2627.csv",
+    "status": 200,
+    "url": "https://raw.githubusercontent.com/oladeeayo/open-matchday/13a434955de865f66f95a71937205a3a286488c6/data/ENG_6_national-league-north/fixtures_2627.csv",
+    "bytes": 4708,
+    "sha256": "d2c1e25d0d0ed0a04a0b567473768bec5ebd64c80b93767bc3c83a04e2af71c9",
+    "at": "2026-11-18T14:20:07.909362+00:00",
+    "local": "current/fixtures_2627.csv"
+  },
+  {
+    "label": "current",
+    "commit": "13a434955de865f66f95a71937205a3a286488c6",
+    "path": "public-source/current/data/ENG_6_national-league-north/results_2627.csv",
+    "status": 200,
+    "url": "https://raw.githubusercontent.com/oladeeayo/open-matchday/13a434955de865f66f95a71937205a3a286488c6/data/ENG_6_national-league-north/results_2627.csv",
+    "bytes": 8834,
+    "sha256": "908634877b7acc50fdc848516ae2cc987e991fabdad369f760bf2d5c00bee70c",
+    "at": "2026-11-18T14:20:07.898343+00:00",
+    "local": "current/results_2627.csv"
+  },
+  {
+    "url": "https://multi-club-matches.football.web.gc.nationalleagueservices.co.uk/v2/matches/?seasonID=2026&competitionID=373&page.size=600&page.number=1",
+    "file": "national-north-2026.json",
+    "status": 200,
+    "sha256": "c1379a923b3a83edcb803009cfa9b528cfd4075af2d5a37a6099201f68a68581",
+    "at": "2026-11-18T14:33:31.271593+00:00",
+    "meta": {
+      "totalCount": 552,
+      "count": 552
+    },
+    "local": "organizer-four.json",
+    "extraction": "data rows matching FullTime and UTC date 2026-11-17",
+    "excerpt_sha256": "83b0bdfc44390a09a9558977651e401994b9e6c10d48673f261ed25e8bb33752"
+  }
+]

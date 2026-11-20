@@ -2,9 +2,10 @@
 
 Each adapter exposes SCOPES (scope -> period) and run(conn, get, scope, now) returning
 (rows_written, unmatched); one that reads for long also has prepare(conn, get, scope, now), called
-with no transaction open, whose result run receives as `prepared`. `due` and `run_due` schedule them from ops.source_runs;
-the worker calls run_due once a day. Responses are processed in memory, never stored; adapters can record narrow source
-evidence for their decisions.
+with no transaction open, whose result run receives as `prepared`; one whose scopes read one file has
+prepare_due(conn, get, scopes, now), called once for the scopes due together ({scope: prepared}, or None).
+`due` and `run_due` schedule them from ops.source_runs; the worker calls run_due once a day. Responses are
+processed in memory, never stored; adapters can record narrow source evidence for their decisions.
 """
 
 from datetime import datetime, timedelta, timezone
@@ -76,13 +77,25 @@ def run_due(conn, get, now=None, *, names=None):
     for name, adapter in adapters().items():
         if names and name not in names:
             continue
-        for scope in due(conn, instant, name, adapter):
+        scopes = due(conn, instant, name, adapter)
+        # An adapter whose scopes due together read the same file reads it once for them, outside any transaction
+        # (prepare_due: {scope: what its run receives as `prepared`}, or None); a failure of that read is each scope's.
+        shared, shared_error = None, None
+        if scopes and hasattr(adapter, "prepare_due"):
+            try:
+                shared = adapter.prepare_due(conn, get, scopes, instant)
+            except (SourceError, StoreError, ValueError, KeyError, TypeError, psycopg.Error) as error:
+                shared_error = error
+        for scope in scopes:
             code, detail, refusal, written, unmatched = None, None, None, 0, 0
             atomic_status = getattr(adapter, "ATOMIC_RUN_STATUS", False)
             try:
+                if shared_error is not None:
+                    raise shared_error
                 # An adapter that reads for long (football-data.co.uk's 294 files) reads before its transaction: the
                 # base ends a session left idle in a transaction for 60 s (infra/aws/database.yaml).
-                extra = {"prepared": adapter.prepare(conn, get, scope, instant)} if hasattr(adapter, "prepare") else {}
+                extra = ({"prepared": shared[scope]} if shared is not None and scope in shared
+                         else {"prepared": adapter.prepare(conn, get, scope, instant)} if hasattr(adapter, "prepare") else {})
                 with conn.transaction():
                     conn.execute(f"SET LOCAL lock_timeout = '{LOCK_WAIT}'")
                     written, unmatched = adapter.run(conn, get, scope, instant, **extra)
@@ -148,6 +161,19 @@ def failure(conn, code, message, edition=None):
     """One ops.parse_failures row: a source response that was not written (its code and why)."""
     conn.execute("INSERT INTO ops.parse_failures(competition_season_id, error_code, message, at) VALUES (%s,%s,%s,now())",
                  (edition, code, message[:2000]))
+
+
+def failure_once(conn, code, message, edition=None):
+    """failure(), unless the same row (edition, code, message) is already there: a refusal a source keeps in the same
+    state at each read stays visible once instead of adding a row at each read (FAILURE_MODES.md §37, §36 m3). Looked up
+    by 157's index (code, edition, md5 of the message; §46): the edition compared by `=`, or `IS NULL` without one."""
+    text = message[:2000]
+    where, params = ("competition_season_id IS NULL", ()) if edition is None else ("competition_season_id = %s", (edition,))
+    if not conn.execute(
+        f"""SELECT EXISTS (SELECT 1 FROM ops.parse_failures WHERE error_code = %s AND {where}
+              AND md5(message) = md5(%s) AND message = %s)""", (code, *params, text, text)
+    ).fetchone()[0]:
+        failure(conn, code, message, edition)
 
 
 class SourceError(RuntimeError):

@@ -71,6 +71,9 @@ def bridge(command, *args):
     return wikidata.bridge(command, *args)
 
 
+_BRIDGE = bridge
+
+
 def _pair(value):
     return value if isinstance(value, list) and len(value) == 2 and all(isinstance(v, int) and not isinstance(v, bool) and v >= 0 for v in value) else None
 
@@ -409,12 +412,35 @@ def save(conn, kind, competition, season, body, now):
     return changes
 
 
-def run(conn, get, scope, now):
+def _query(scope):
     kind, competition, season = scope.split(":", 2)
     if (kind, competition, season) not in EDITIONS:
         raise ValueError(scope)
-    query = {"competition": competition, "season": season}
-    answer = bridge("projection", kind, urlencode(query)) or {}
+    return kind, competition, season, urlencode({"competition": competition, "season": season})
+
+
+# The sources whose editions read one file: International Results' editions all read results.csv (3.76 MB). Each
+# OpenFootball and OpenLigaDB edition reads its own file, so reading them together would save no request.
+SHARED_FILE = frozenset({"nations-results"})
+
+
+def prepare_due(kind, scopes):
+    """{scope: answer} of the editions of `kind` due in one pass, projected in one bridge process where each URL is read
+    once (FAILURE_MODES.md §37, E02b); None when they are read one by one (one edition, or a source of one file per
+    edition). A bridge replaced by a test answers one edition at a time and keeps its own path."""
+    if kind not in SHARED_FILE or len(scopes) < 2 or bridge is not _BRIDGE:
+        return None
+    queries = [_query(scope)[3] for scope in scopes]
+    answers = bridge("projections", kind, json.dumps(queries))
+    if not isinstance(answers, list) or len(answers) != len(scopes):
+        raise SourceError("INVALID_JSON")
+    return dict(zip(scopes, answers))
+
+
+def run(conn, get, scope, now, *, prepared=None):
+    """`prepared`: this edition's answer of prepare_due, else the edition is projected on its own."""
+    kind, competition, season, query = _query(scope)
+    answer = (prepared if prepared is not None else bridge("projection", kind, query)) or {}
     body = answer.get("body")
     observation = body.get("phaseObservation") if isinstance(body, dict) and cup_periods.applies(kind, competition, season) else None
     try:
@@ -443,5 +469,8 @@ class For:
     def scopes(self, now):
         return {scope: period for scope, period in scopes(now).items() if scope.startswith(self.kind + ":")}
 
-    def run(self, conn, get, scope, now):
-        return run(conn, get, scope, now)
+    def prepare_due(self, conn, get, scopes, now):
+        return prepare_due(self.kind, scopes)
+
+    def run(self, conn, get, scope, now, *, prepared=None):
+        return run(conn, get, scope, now, prepared=prepared)

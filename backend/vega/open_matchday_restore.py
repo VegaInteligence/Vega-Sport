@@ -36,8 +36,11 @@ ELO = "agg.team_elo"
 MATCH_STATS = "core.team_match_stats"
 ENRICHMENT_COLUMNS = {"home_score_ht", "away_score_ht", "revision", "updated_at"}
 # Relations naming a match created after the reviewed captures: 141, 143, the Fjelstul World Cup Database's pair
-# (137_worldcup_database.sql) and football-data.co.uk's (140_football_data.sql). Each is still checked for occupancy.
-ADDED_DEPENDENCIES = {"core.archive_match_attestations", "ops.archive_removals", "core.worldcup_matches", "core.footballdata_matches"}
+# (137_worldcup_database.sql), football-data.co.uk's (140_football_data.sql), the players' run's recorded exclusions
+# (155_player_grade_status.sql) and the reviewed side corrections (156_team_side_corrections.sql). Each is still checked
+# for occupancy.
+ADDED_DEPENDENCIES = {"core.archive_match_attestations", "ops.archive_removals", "core.worldcup_matches", "core.footballdata_matches",
+                      "agg.player_grade_exclusions", "core.team_side_corrections"}
 # The Fjelstul World Cup Database's own match keys (137_worldcup_database.sql): text keys of core.worldcup_matches, never
 # an id of core.matches.
 FJELSTUL_MATCH_KEYS = frozenset({"core.worldcup_matches", "core.worldcup_appearances", "core.worldcup_goals",
@@ -52,6 +55,13 @@ REFS = {
     "venue_id": ("core.venues", "venue_id", ("id", "name", "city")),
     "referee_id": ("core.referees", "referee_id", ("id", "name")),
 }
+
+
+# The latest migrations this path was reviewed against: 153 (production on 19 Nov 2026), and 160 with 155, 156 and 157
+# before it. 155 adds agg.player_grade_exclusions and 156 core.team_side_corrections, which both name a match
+# (ADDED_DEPENDENCIES; FAILURE_MODES.md §38, §39); 157 adds an index and 160 columns, no relation naming a match (§44,
+# §46). A later one needs its own review here.
+REVIEWED_SCHEMAS = ("153_transfer_history_served.sql", "160_reads_keep_omitted_observations.sql")
 
 
 class Refusal(RuntimeError):
@@ -169,7 +179,7 @@ def guard_schema(conn, before, after):
     applied = dict(conn.execute("SELECT version, encode(checksum,'hex') FROM ops.schema_migrations"))
     require(applied == {k: h for k, h in known.items() if "vector_optional" not in k or k in applied}, "destination schema mismatch")
     early = {k: h for k, h in known.items() if k <= "133_cohort_max_wait.sql" and ("vector_optional" not in k or k in applied)}
-    require(tuple(sorted(applied))[-1] == "153_transfer_history_served.sql", "unreviewed destination schema version")
+    require(tuple(sorted(applied))[-1] in REVIEWED_SCHEMAS, "unreviewed destination schema version")
     for capture in (before, after):
         require({n: h for n, h, _ in plain_rows(capture, "migrations")} == early, "preimage schema mismatch")
 

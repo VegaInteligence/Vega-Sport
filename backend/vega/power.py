@@ -279,9 +279,28 @@ def elo_updates(matches, *, initial=ELO_INITIAL, k=ELO_K, home=ELO_HOME, seeds=N
 # spellings are reviewed (curated.CLUB_ALIASES) and applied before the identity pass merges them
 # (merged_rows). Left out: a club against a national team, a cup match without its day, two teams not
 # marked national in a national teams' competition (historic nations, no clubs), the historic archives
-# (archive_key; the user's decision of 17 November), the copies elo_matches drops, and the season's other internationals
-# (nations-results:internationals, read on 19 November 2026 for the home's week strip only: their effect on the
-# Elo is to be measured and decided first).
+# (archive_key; the user's decision of 17 November), the results decided without play (ADMINISTRATIVE), the copies
+# elo_matches drops, and the season's other internationals (nations-results:internationals, read on 19 November 2026
+# for the home's week strip only: their effect on the Elo is to be measured and decided first).
+#
+# A result a federation decided without the match being played keeps its status and score for the table and the cup's
+# page, and is no match of the Elo, nor so of the forecasts fitted on it (FAILURE_MODES.md §39). A source that says so
+# stores it `awarded` (status <> 'finished'). One that does not is named here by its match key, with the authority:
+# never a rule drawn from a score.
+ADMINISTRATIVE = {
+    # Tours FC–FC Lorient, Coupe de France 2024/25, round 9: Lorient qualified by the FFF without the match played.
+    ("openfootball", "france-cup:2024/2025:2024-12-21|Tours FC|FC Lorient|"):
+        "https://www.fff.fr/article/13900-lorient-qualifie-pour-les-16es-de-finale.html",
+    # Seraing U21–Beerschot VA U21, 18 Sep 2026: forfeit (forfeitByOneTeam), 0–5, no player on the sheet.
+    ("open_matchday", "BEL_U21_pro-league:2026/2027:2026-09-18|Seraing U21|Beerschot VA U21"):
+        "https://www.voetbalvlaanderen.be/wedstrijd/7631244",
+}
+
+
+def _literal(text):
+    return "'" + text.replace("'", "''") + "'"
+
+
 ELO_MATCHES = """
 WITH nations AS (
   SELECT DISTINCT m.competition_season_id FROM core.matches m JOIN core.teams t ON t.id = m.home_team_id AND t.is_national)
@@ -299,6 +318,9 @@ WHERE m.status = 'finished' AND m.home_score IS NOT NULL AND m.away_score IS NOT
   AND m.home_team_id IS NOT NULL AND m.away_team_id IS NOT NULL
   AND (cs.cup_key IS NULL OR (m.match_date IS NOT NULL AND (th.is_national IS TRUE) = (ta.is_national IS TRUE)
        AND (th.is_national OR cs.id NOT IN (SELECT competition_season_id FROM nations))))
+  AND NOT EXISTS (SELECT 1 FROM core.provider_ids k WHERE k.entity_type = 'match' AND k.entity_id = m.id
+                  AND (k.provider::text, k.provider_key) IN (""" + ", ".join(
+    f"({_literal(provider)}, {_literal(key)})" for provider, key in sorted(ADMINISTRATIVE)) + """))
 ORDER BY 3 NULLS LAST, m.match_date NULLS LAST, m.id"""
 
 
@@ -1013,10 +1035,13 @@ def refresh_elo(conn):
 # Players: the role-relative method (§§ 4–8) --------------------------------
 
 # The first parameters: the seasons read (the award year spans two), then the year's first
-# day and the day after its last.
+# day and the day after its last. A row whose team is neither side of its match (in_match
+# false) joins no opponent: it would join both sides, two rows for one player-match, and the
+# publication stopped on 23505 (FAILURE_MODES §38); refresh_players records it ungraded.
 PLAYER_MATCHES = """
 SELECT s.match_id, s.player_id, s.season_id AS edition, s.team_id, s.minutes_played, coalesce(lp.position_id, s.position_id) AS position_id, lp.is_starter,
   l.formation, cs.competition_id, m.competition_season_id, s.touches IS NOT NULL AS measured, t.is_national IS TRUE AS national,
+  s.team_id IN (m.home_team_id, m.away_team_id) AS in_match,
   own.elo_before AS own_elo, opp.elo_before AS opponent_elo,
   CASE WHEN mc.events = 'ok' THEN s.goals - (SELECT count(*) FROM core.match_events e
     WHERE e.season_id = s.season_id AND e.match_id = s.match_id AND e.player_id = s.player_id
@@ -1035,9 +1060,10 @@ LEFT JOIN core.lineup_players lp ON lp.season_id = s.season_id AND lp.match_id =
 LEFT JOIN core.lineups l ON l.season_id = s.season_id AND l.match_id = s.match_id AND l.team_id = s.team_id
 LEFT JOIN core.player_match_advanced a ON a.season_id = s.season_id AND a.match_id = s.match_id AND a.player_id = s.player_id
 LEFT JOIN agg.team_elo own ON own.match_id = s.match_id AND own.team_id = s.team_id
-LEFT JOIN agg.team_elo opp ON opp.match_id = s.match_id AND opp.team_id <> s.team_id
+LEFT JOIN agg.team_elo opp ON opp.match_id = s.match_id AND opp.team_id <> s.team_id AND s.team_id IN (m.home_team_id, m.away_team_id)
 WHERE s.season_id = ANY(%s) AND s.minutes_played > 0 AND m.match_date >= %s AND m.match_date < %s"""
-_KEPT = ("match_id", "player_id", "edition", "team_id", "position_id", "is_starter", "formation", "competition_id", "competition_season_id", "measured", "national")
+_KEPT = ("match_id", "player_id", "edition", "team_id", "position_id", "is_starter", "formation", "competition_id", "competition_season_id", "measured", "national",
+         "in_match")
 # The statistics the source leaves blank at zero. A match of a few dozen players shows the
 # common ones whenever the source publishes them; the rare ones need the edition.
 ZERO_IN_MATCH = ("npxg", "shots_on_target", "xa", "chances_created", "passes_into_final_third", "dribbles_succeeded", "dribbles_total",
@@ -1485,8 +1511,35 @@ def previous_year_changed(conn, season):
     return bool(row and row[0])
 
 
+def partial_year(conn, season):
+    """An award year whose own season holds no player statistics while the next season's
+    first half does (the calendar-year editions' matches before 1 August): award year 2020,
+    whose European seasons are archives only. It is graded against the next award year's
+    references and never ranked (user decision of 20 Nov 2026, FAILURE_MODES §47)."""
+    _, end = award_year(season)
+    row = conn.execute(
+        """SELECT NOT EXISTS (SELECT 1 FROM core.player_match_stats s WHERE s.season_id = %(season)s)
+             AND EXISTS (SELECT 1 FROM core.matches m
+                         JOIN core.competition_seasons cs ON cs.id = m.competition_season_id AND cs.archive_key IS NULL AND cs.cup_key IS NULL
+                         WHERE m.season_id = %(next)s AND m.status = 'finished' AND m.match_date < %(end)s
+                           AND EXISTS (SELECT 1 FROM core.player_match_stats s WHERE s.season_id = m.season_id AND s.match_id = m.id))""",
+        {"season": season, "next": season + 1, "end": end},
+    ).fetchone()
+    return bool(row and row[0])
+
+
+def partial_years(conn):
+    """The partial award years of the base (partial_year), most recent first."""
+    candidates = [s for (s,) in conn.execute(
+        """SELECT y.id - 1 FROM core.seasons y
+           WHERE EXISTS (SELECT 1 FROM core.player_match_stats s WHERE s.season_id = y.id) ORDER BY 1 DESC""").fetchall()]
+    return [s for s in candidates if partial_year(conn, s)]
+
+
 def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
-    """The player power ranking of one season's award year (after refresh_elo).
+    """The player power ranking of one season's award year (after refresh_elo). A partial
+    award year (partial_year) has its match grades, against the next award year once that
+    one is over, and no ranking: its ranking, roles and award race are emptied.
 
     Three steps, and no transaction open during the second: the base ends a session that
     stays idle inside a transaction (60 s, infra/aws/database.yaml), and fitting the
@@ -1511,18 +1564,30 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
         # Last season's own index of each player, his role and club then: the prior (version 8).
         previous = {p: (z, role, team) for p, z, role, team in conn.execute(
             "SELECT player_id, coalesce(index_season, index), role, team_id FROM agg.player_power WHERE season_id = %s", (season - 1,)).fetchall()}
-        # The match grades' reference (grade_reference_year).
-        reference_season = grade_reference_year(season, started.date())
+        # The match grades' reference (grade_reference_year); a partial year's is the next
+        # award year once that one is over (§47).
+        partial = partial_year(conn, season)
+        if partial:
+            reference_season = season + 1 if award_year(season + 1)[1] <= started.date() else None
+        else:
+            reference_season = grade_reference_year(season, started.date())
         finished = reference_season == season
-        before = reference_season == season - 1
-        grade_refs = read_grade_references(conn, reference_season) if before else None
+        other = reference_season is not None and not finished  # the year before, or a partial year's next
+        grade_refs = read_grade_references(conn, reference_season) if other else None
         reference_rows = conn.execute(GRADE_REFERENCE, ([reference_season, reference_season + 1], reference_season, GRADE_FULL_MINUTES)
-                                      ).fetchall() if before and grade_refs is None else []
-    # 2. Compute, outside any transaction.
+                                      ).fetchall() if other and grade_refs is None else []
+    # 2. Compute, outside any transaction. The player-matches the year cannot grade are kept
+    # with their reason (agg.player_grade_exclusions): a team that is not a side of the match,
+    # then no role (assign_roles).
+    excluded = [(r["edition"], r["match_id"], r["player_id"], "team_not_in_match") for r in rows if not r["in_match"]]
+    rows = [r for r in rows if r["in_match"]]
     for r in rows:
         r["delta"] = 0.0 if r["own_elo"] is None or r["opponent_elo"] is None else (r["opponent_elo"] - r["own_elo"]) / 400
     restore_zeros(rows)
+    read = rows
     rows = assign_roles(rows)
+    excluded += [(r["edition"], r["match_id"], r["player_id"], "role_undetermined") for r in read if not r["role"]]
+    del read
     refs = references(rows)
     count = len(rows)
     linked, top, women, clubs = team_leagues(rows, leagues)
@@ -1557,13 +1622,16 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
             grade_refs = grade_references(reference_rows)
             write_refs = (reference_season, grade_refs)
             graded_against = reference_season
+        elif partial:
+            grade_refs = {"roles": {}, "spreads": {}, "quantiles": {}}  # no finished year after it yet: no grade
         else:
             grade_refs = grade_references(graded)
     matches = [(*match, match_index(role, competition, c, grade_refs)) for match, (role, competition, _, c) in zip(matches, graded)]
     del graded, reference_rows
     contributions = {p: [(role, m, c, team, level) for role, m, c, team, _, level in items] for p, items in detailed.items()}
     scored, settings = season_scores(contributions, eligibility=eligibility, linked=linked, top=top, women=women, clubs=clubs, previous=previous)
-    blocks, roles = season_details(detailed, scored)
+    # A partial year is never ranked (§47): its ranking, roles and award race are emptied below.
+    scored, (blocks, roles) = ({}, ({}, {})) if partial else (scored, season_details(detailed, scored))
     # 3. Write, in one transaction: the season's ranking changes at once or not at all.
     with conn.transaction():
         run = _start(conn, "players", season, started_at=started)
@@ -1599,8 +1667,13 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
                     copy.write_row((season, player, role, x["matches"], int(x["minutes"]), x["total"], x["rate"], run))
         if write_refs:
             write_grade_references(conn, *write_refs)
+        if partial:
+            # No year is graded against a partial year's own references (an earlier rule's run kept them).
+            for table in ("agg.match_grade_roles", "agg.match_grade_spreads", "agg.match_grade_quantiles"):
+                conn.execute(f"DELETE FROM {table} WHERE ref_season = %s", (season,))
         write_match_grades(conn, season, [(edition, match[0], match[1], match[2], match[3], match[4], match[-1])
                                           for edition, match in zip(editions, matches) if match[-1] is not None], graded_against, run)
+        write_grade_exclusions(conn, season, excluded, run)
         _publish(conn, run, "players", season, count, len(scored))
         write_award(conn, season, scored)
     return len(scored)
@@ -1747,6 +1820,21 @@ def write_match_grades(conn, season, grades, ref_season, run):
     )
 
 
+def write_grade_exclusions(conn, season, excluded, run):
+    """The award year's player-matches read and not graded, with their reason: [(edition,
+    match, player, reason)], replacing the year's previous ones (a key another year recorded
+    moves to this one: its match changed year)."""
+    conn.execute("DELETE FROM agg.player_grade_exclusions WHERE award_season = %s", (season,))
+    if excluded:
+        conn.cursor().executemany(
+            """INSERT INTO agg.player_grade_exclusions(season_id, match_id, player_id, award_season, reason, run_id)
+               VALUES (%s, %s, %s, %s, %s, %s)
+               ON CONFLICT (season_id, match_id, player_id) DO UPDATE SET award_season = EXCLUDED.award_season,
+                 reason = EXCLUDED.reason, run_id = EXCLUDED.run_id""",
+            [(edition, match, player, season, reason, run) for edition, match, player, reason in excluded],
+        )
+
+
 GRADE_REFERENCE = """
 SELECT p.role, cs.competition_id, p.minutes, p.contribution
 FROM agg.player_power_matches p
@@ -1818,11 +1906,28 @@ def write_award(conn, season, scored):
 
 def stale_rankings(conn):
     """The seasons whose published player ranking is of another method than METHOD_VERSION,
-    most recent first."""
-    return [s for (s,) in conn.execute(
-        """SELECT season_id FROM agg.power_runs WHERE kind = 'players' AND status = 'published' AND method_version <> %s
-           ORDER BY season_id DESC""", (METHOD_VERSION,)
-    ).fetchall()]
+    and the partial award years (partial_year) without a published run of the present
+    method, whose run started before the next year's last (its references may have
+    moved), whose published run ranked players, or that still have references of their
+    own (an earlier rule's run, whatever its order: production ranked 2020 after 2021,
+    FAILURE_MODES §48), most recent first. The partial run publishes players = 0 and
+    deletes those references itself, so it is listed once."""
+    stale = {s for (s,) in conn.execute(
+        "SELECT season_id FROM agg.power_runs WHERE kind = 'players' AND status = 'published' AND method_version <> %s", (METHOD_VERSION,)
+    ).fetchall()}
+    for season in partial_years(conn):
+        own, ranked, following, references = conn.execute(
+            """WITH own AS (SELECT started_at, players FROM agg.power_runs
+                            WHERE kind = 'players' AND season_id = %(season)s AND status = 'published' AND method_version = %(method)s
+                            ORDER BY started_at DESC LIMIT 1)
+               SELECT (SELECT started_at FROM own), (SELECT players IS DISTINCT FROM 0 FROM own),
+                      (SELECT max(started_at) FROM agg.power_runs WHERE kind = 'players' AND season_id = %(season)s + 1 AND status = 'published'),
+                      EXISTS (SELECT 1 FROM agg.match_grade_roles WHERE ref_season = %(season)s)""",
+            {"season": season, "method": METHOD_VERSION},
+        ).fetchone()
+        if own is None or ranked or references or (following is not None and own < following):
+            stale.add(season)
+    return sorted(stale, reverse=True)
 
 
 def refresh_power(conn, season):

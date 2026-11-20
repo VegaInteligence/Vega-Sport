@@ -34,7 +34,16 @@ test("once read: his injuries, most recent first, and none when he had none", { 
     { kind: "injury", label: "Contracture", start: "2026-11-01", end: null, days: null, matchesMissed: null, season: 2026 },
     { kind: "injury", label: "Entorse de la cheville", start: "2025-10-02", end: "2025-10-30", days: 29, matchesMissed: 4, season: 2025 },
   ]);
-  // A read that failed tells nothing.
+  // A refresh that failed after an accepted read keeps the accepted list served (160, FAILURE_MODES.md §44, 40h):
+  // it no longer turns it into a 404. An episode the provider stopped listing carries the day it was first missed.
   await owner.query("UPDATE ops.transfermarkt_reads SET error_code = 'HTTP_500' WHERE kind = 'injuries' AND provider_key = '987654'");
+  const refused = await get(`/api/players/${id}/injuries`);
+  assert.equal(refused.response.status, 200);
+  assert.deepEqual(refused.body.data, { id, injuries: body.injuries });
+  await owner.query("UPDATE core.player_injuries SET absent_since = '2026-11-18' WHERE player_id = 102 AND label = 'Contracture'");
+  assert.deepEqual((await get(`/api/players/${id}/injuries`)).body.data.injuries[0],
+    { ...body.injuries[0], absentSince: "2026-11-18" });
+  // A first read refused stays unknown.
+  await owner.query("UPDATE ops.transfermarkt_reads SET read_at = NULL WHERE kind = 'injuries' AND provider_key = '987654'");
   assert.equal((await get(`/api/players/${id}/injuries`)).response.status, 404);
 });

@@ -24,6 +24,7 @@ SUITES = {
     "VEGA_V2_API_TEST_DSN": "vega_v2_api_test",
     "VEGA_V2_WORKER_TEST_DSN": "vega_v2_worker_test",
     "VEGA_V2_MODELS_TEST_DSN": "vega_v2_models_test",
+    "VEGA_V2_GRADES_TEST_DSN": "vega_v2_grades_test",
     "VEGA_V2_ROLES_TEST_DSN": "vega_v2_roles_test",
     "VEGA_V2_SOURCES_TEST_DSN": "vega_v2_sources_test",
     "VEGA_V2_SNAPSHOTS_TEST_DSN": "vega_v2_snapshots_test",
@@ -39,7 +40,13 @@ SUITES = {
     "VEGA_V2_MEDIA_TEST_DSN": "vega_v2_media_test",
     "VEGA_V2_ARCHIVES_TEST_DSN": "vega_v2_archives_test",
     "VEGA_V2_LIVE_TEST_DSN": "vega_v2_live_test",
+    "VEGA_V2_WRITER_REPLAYS_TEST_DSN": "vega_v2_writer_replays_test",
     "VEGA_V2_API_NODE_TEST_DSN": "vega_v2_api_node_test",
+    "VEGA_V2_COLLECTION_TEST_DSN": "vega_v2_collection_test",
+    "VEGA_V2_IDENTITY_TEST_DSN": "vega_v2_identity_test",
+    "VEGA_V2_WINDOW_TEST_DSN": "vega_v2_window_test",
+    "VEGA_V2_CLASSEMENTS_TEST_DSN": "vega_v2_classements_test",
+    "VEGA_V2_DEPLOY_TEST_DSN": "vega_v2_deploy_test",
 }
 
 

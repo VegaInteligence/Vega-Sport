@@ -117,20 +117,26 @@ def save_club(conn, team, club, now):
                    VALUES ('venue', %s, %s, %s, 'alias', 'wikidata') ON CONFLICT DO NOTHING""",
                 (venue, club["stadiumAlias"], club["stadiumAlias"].lower()),
             )
+    # A field the answer omits keeps the known one (FAILURE_MODES.md §44, 40s): a partial answer is no removal.
     conn.execute(
-        "UPDATE core.teams SET founded_year=%s, home_venue_id=coalesce(%s, home_venue_id), wikidata_fetched_at=%s, updated_at=now() WHERE id=%s",
+        """UPDATE core.teams SET founded_year=coalesce(%s, founded_year), home_venue_id=coalesce(%s, home_venue_id), wikidata_fetched_at=%s,
+             updated_at=now() WHERE id=%s""",
         (int(founded) if isinstance(founded, str) and founded.isdigit() else None, venue, club.get("fetchedAt") or now, team),
     )
     coach = club.get("coach")
     current = _coach(conn, coach["name"], coach.get("photo")) if coach and coach.get("name") else None
     today = now.date()
-    # One open Wikidata tenure: the current coach. A change closes the previous one today.
+    # One open Wikidata tenure: the current coach. Another coach named closes the previous one today; an answer naming
+    # none changes no tenure (a partial answer cannot be told from a departure: the tenure stays open until the next
+    # coach is named, FAILURE_MODES.md §44).
+    if current is None:
+        return True
     conn.execute(
         """UPDATE core.team_coach_tenures SET end_date=%s, updated_at=now()
            WHERE team_id=%s AND source='wikidata' AND end_date IS NULL AND coach_id IS DISTINCT FROM %s AND start_date<=%s""",
         (today, team, current, today),
     )
-    if current and not conn.execute(
+    if not conn.execute(
         "SELECT 1 FROM core.team_coach_tenures WHERE team_id=%s AND coach_id=%s AND source='wikidata' AND end_date IS NULL", (team, current)
     ).fetchone():
         conn.execute(
@@ -147,13 +153,25 @@ def save_stadium(conn, venue, stadium, now):
         return False
     partial = lambda value: value if isinstance(value, str) and PARTIAL.match(value) else None
     observed, opened, created = partial(stadium.get("capacityAsOf")), partial(stadium.get("opened")), partial(stadium.get("created"))
-    point = stadium.get("coordinates") or {}
+    point = stadium.get("coordinates") if isinstance(stadium.get("coordinates"), dict) else {}
+    number = lambda value: value if isinstance(value, (int, float)) and not isinstance(value, bool) else None
+    lat, lon = number(point.get("lat")), number(point.get("lon"))
     capacity = stadium.get("capacity")
+    capacity = capacity if isinstance(capacity, int) and not isinstance(capacity, bool) and capacity > 0 else None
+    # A field the answer omits keeps the known one (FAILURE_MODES.md §44, 40t): the capacity with its dates, the two
+    # coordinates together, the opening date with its year, the creation date. A given value replaces (a correction).
     conn.execute(
-        """UPDATE core.venues SET capacity=%s, capacity_observed=%s, capacity_as_of=%s, latitude=%s, longitude=%s,
-             opened=%s, created=%s, opened_year=%s, wikidata_fetched_at=%s, updated_at=now() WHERE id=%s""",
-        (capacity if isinstance(capacity, int) and capacity > 0 else None, observed, observed if observed and len(observed) == 10 else None,
-         point.get("lat"), point.get("lon"), opened, created, int(opened[:4]) if opened else None, stadium.get("fetchedAt") or now, venue),
+        """UPDATE core.venues SET
+             capacity=CASE WHEN %(capacity)s::int IS NULL THEN capacity ELSE %(capacity)s END,
+             capacity_observed=CASE WHEN %(capacity)s::int IS NULL THEN capacity_observed ELSE %(observed)s END,
+             capacity_as_of=CASE WHEN %(capacity)s::int IS NULL THEN capacity_as_of ELSE %(as_of)s::date END,
+             latitude=CASE WHEN %(point)s THEN %(lat)s ELSE latitude END, longitude=CASE WHEN %(point)s THEN %(lon)s ELSE longitude END,
+             opened=coalesce(%(opened)s, opened),
+             opened_year=CASE WHEN %(opened)s::text IS NULL THEN opened_year ELSE %(opened_year)s END,
+             created=coalesce(%(created)s, created), wikidata_fetched_at=%(fetched)s, updated_at=now() WHERE id=%(venue)s""",
+        {"capacity": capacity, "observed": observed, "as_of": observed if observed and len(observed) == 10 else None,
+         "point": lat is not None and lon is not None, "lat": lat, "lon": lon, "opened": opened,
+         "opened_year": int(opened[:4]) if opened else None, "created": created, "fetched": stadium.get("fetchedAt") or now, "venue": venue},
     )
     return True
 

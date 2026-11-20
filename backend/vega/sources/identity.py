@@ -510,12 +510,147 @@ def duplicates(conn):
     return len(rows)
 
 
+# Sides a merge gave to the wrong club, reviewed one by one (FAILURE_MODES.md §39). « Barcelona » → « FC Barcelona »
+# (curated.CLUB_ALIASES) was written on Ecuador's Barcelona SC only, FC Barcelona holding the spelling as UEFA's; the
+# merges then gave Barcelona SC FC Barcelona's teams of a Copa del Rey archive and of two European archives, with their
+# keys and matches. The fifteen matches, as production stored them on 18 November 2026 (the audit's barcelone-15.csv;
+# UEFA's club 50080 and the RFEF's records name FC Barcelona): each by its Vega id or its provider key, the side, its
+# day, the opponent and the score. The cup matches' Vega ids were 2250, 2263, 2271, 2272, 2275 and 2276.
+SIDE_CORRECTIONS = {
+    "barcelona-740": {
+        "from": "t_2fucJi", "to": "t_32jSEF", "name": "FC Barcelona",
+        "keys": (("openfootball", "name:FC Barcelona"), ("vega", "archive:europe:fc barcelona")),
+        "matches": (
+            (556498, "home", "1998-09-30", 854, 2, 0),
+            (554741, "away", "1998-12-09", 854, 0, 2),
+            (730179, "home", "2020-10-20", 4554, 5, 1),
+            (729828, "away", "2020-10-28", 875, 0, 2),
+            (729504, "home", "2020-11-04", 4546, 2, 1),
+            (728874, "away", "2020-11-24", 4546, 0, 4),
+            (728490, "away", "2020-12-02", 4554, 0, 3),
+            (728186, "home", "2020-12-08", 875, 0, 3),
+            (725354, "home", "2021-02-16", 4691, 1, 4),
+            (("openfootball", "copa-del-rey-archive:2024/2025:2025-01-04|UD Barbastro|FC Barcelona|"), "away", "2025-01-04", 1759, 0, 4),
+            (("openfootball", "copa-del-rey-archive:2024/2025:2025-01-15|FC Barcelona|Real Betis|"), "home", "2025-01-15", 475, 5, 1),
+            (("openfootball", "copa-del-rey-archive:2024/2025:2025-02-06|Valencia CF|FC Barcelona|"), "away", "2025-02-06", 4706, 0, 5),
+            (("openfootball", "copa-del-rey-archive:2024/2025:2025-02-25|FC Barcelona|Atlético Madrid|"), "home", "2025-02-25", 774, 4, 4),
+            (("openfootball", "copa-del-rey-archive:2024/2025:2025-04-02|Atlético Madrid|FC Barcelona|"), "away", "2025-04-02", 774, 0, 1),
+            (("openfootball", "copa-del-rey-archive:2024/2025:2025-04-26|FC Barcelona|Real Madrid|"), "home", "2025-04-26", 4710, 3, 2),
+        ),
+    },
+}
+
+
+def _correction_digest(name, correction):
+    import hashlib
+    import json
+
+    return hashlib.sha256(json.dumps([name, correction], sort_keys=True, default=list).encode()).hexdigest()
+
+
+def correct_sides(conn):
+    """Apply SIDE_CORRECTIONS (FAILURE_MODES.md §39): {correction: (sides moved, already done, held)}. A match whose
+    stored row is not the reviewed one is held; nothing of it moves."""
+    out = {}
+    for name, c in SIDE_CORRECTIONS.items():
+        teams = dict(conn.execute(
+            "SELECT provider_key, entity_id FROM core.provider_ids WHERE entity_type = 'team' AND provider = 'pitchapi' AND provider_key = ANY(%s)",
+            ([c["from"], c["to"]],),
+        ).fetchall())
+        if c["from"] not in teams or c["to"] not in teams:
+            out[name] = (0, 0, 0)  # a base without these clubs: nothing to correct
+            continue
+        wrong, right = teams[c["from"]], teams[c["to"]]
+        digest = _correction_digest(name, c)
+        columns = conn.execute(
+            """SELECT k.conrelid::regclass::text, a.attname FROM pg_constraint k
+               JOIN pg_attribute a ON a.attrelid = k.conrelid AND a.attnum = ANY(k.conkey)
+               WHERE k.contype = 'f' AND k.confrelid = 'core.teams'::regclass AND k.conparentid = 0
+                 AND k.conrelid::regclass::text LIKE 'core.%%' AND k.conrelid <> 'core.matches'::regclass
+                 AND EXISTS (SELECT 1 FROM pg_attribute m WHERE m.attrelid = k.conrelid AND m.attname = 'match_id' AND NOT m.attisdropped)
+               ORDER BY 1, 2"""
+        ).fetchall()
+        moved = done = held = again = 0
+        editions = set()
+        for ref, side, day, opponent, home_score, away_score in c["matches"]:
+            if isinstance(ref, tuple):
+                found = conn.execute("SELECT entity_id FROM core.provider_ids WHERE entity_type = 'match' AND provider = %s AND provider_key = %s",
+                                     ref).fetchone()
+                match = found and found[0]
+            else:
+                match = ref
+            row = match and conn.execute(
+                """SELECT id, season_id, competition_season_id, home_team_id, away_team_id, home_score, away_score, match_date::text,
+                     home_team_name, away_team_name FROM core.matches WHERE id = %s FOR UPDATE""",
+                (match,),
+            ).fetchone()
+            other = "away" if side == "home" else "home"
+            values = row and dict(zip(("id", "season", "edition", "home", "away", "home_score", "away_score", "day", "home_name", "away_name"), row))
+            if not values or (values["day"], values["home_score"], values["away_score"], values[other], values[f"{side}_name"]) != (
+                    day, home_score, away_score, opponent, c["name"]) or values[side] not in (wrong, right):
+                held += 1
+                continue
+            editions.add(values["edition"])
+            if values[side] == right:
+                done += 1
+                continue
+            conn.execute(f"UPDATE core.matches SET {side}_team_id = %s, updated_at = now() WHERE id = %s AND {side}_team_id = %s",
+                         (right, values["id"], wrong))
+            for table, column in columns:
+                conn.execute(f"UPDATE {table} SET {column} = %s WHERE match_id = %s AND {column} = %s", (right, values["id"], wrong))
+            # A side moved before and put back since (a re-read resolved it by a key a held match kept on the wrong club)
+            # is moved again; the journal, which the collection role may only add to, keeps its first move (§46).
+            again += not conn.execute(
+                """INSERT INTO core.team_side_corrections(match_id, season_id, side, from_team, to_team, from_key, to_key, correction, proof_sha256)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT (match_id, side) DO NOTHING""",
+                (values["id"], values["season"], side, wrong, right, c["from"], c["to"], name, digest),
+            ).rowcount
+            moved += 1
+        out[name] = (moved, done, held)
+        if again:
+            print(f"team side correction {name} moved again={again} (journal: first move kept)", flush=True)
+        if held:
+            # A held match keeps what names it: the keys a later import resolves its side by stay too.
+            continue
+        # What came with the merges: the source's keys, the pointers of its merged teams, its spelling, and the edition
+        # memberships the wrong club holds only through these matches.
+        for provider, key in c["keys"]:
+            conn.execute(
+                """UPDATE core.provider_ids p SET entity_id = %s, updated_at = now(),
+                     is_current = NOT EXISTS (SELECT 1 FROM core.provider_ids k WHERE k.entity_type = 'team' AND k.entity_id = %s
+                                              AND k.provider = p.provider AND k.is_current)
+                   WHERE p.entity_type = 'team' AND p.entity_id = %s AND p.provider = %s AND p.provider_key = %s""",
+                (right, right, wrong, provider, key),
+            )
+        conn.execute("UPDATE core.teams SET merged_into = %s, updated_at = now() WHERE merged_into = %s AND name = %s", (right, wrong, c["name"]))
+        conn.execute(
+            """INSERT INTO core.entity_names(entity_type, entity_id, name, normalized, kind, source)
+               SELECT 'team', %s, name, normalized, kind, source FROM core.entity_names
+               WHERE entity_type = 'team' AND entity_id = %s AND name = %s AND kind = 'source_spelling' ON CONFLICT DO NOTHING""",
+            (right, wrong, c["name"]),
+        )
+        conn.execute("DELETE FROM core.entity_names WHERE entity_type = 'team' AND entity_id = %s AND name = %s AND kind = 'source_spelling'",
+                     (wrong, c["name"]))
+        for edition in sorted(editions):
+            if not conn.execute("SELECT 1 FROM core.matches WHERE competition_season_id = %s AND %s IN (home_team_id, away_team_id) LIMIT 1",
+                                (edition, wrong)).fetchone():
+                conn.execute("""INSERT INTO core.team_seasons(team_id, competition_season_id) SELECT %s, %s
+                                WHERE EXISTS (SELECT 1 FROM core.team_seasons WHERE team_id = %s AND competition_season_id = %s)
+                                ON CONFLICT DO NOTHING""", (right, edition, wrong, edition))
+                conn.execute("DELETE FROM core.team_seasons WHERE team_id = %s AND competition_season_id = %s", (wrong, edition))
+    return out
+
+
 def run(conn, get, scope, now):
     if scope != "teams":
         raise ValueError(scope)
     # No statement of the pass may run longer than STATEMENT_LIMIT: past it the pass fails,
     # is rolled back and retried later, and the daily pass that runs it goes on.
     conn.execute(f"SET LOCAL statement_timeout = '{STATEMENT_LIMIT}'")
+    # The reviewed side corrections first: a merge below never reads a side they correct (FAILURE_MODES.md §39).
+    for name, (moved, done, held) in correct_sides(conn).items():
+        if moved or held:
+            print(f"team side correction {name} moved={moved} done={done} held={held}", flush=True)
     found, candidates = pairs(conn)
     if not MERGES:
         duplicates(conn)

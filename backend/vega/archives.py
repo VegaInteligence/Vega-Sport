@@ -583,7 +583,7 @@ class Loader:
         for key, mid, edition in candidates:
             facts, row = bound[mid], bound[mid]["row"]
             twin = twins.get(twin_keys.get(key))
-            if facts["events"] or facts["dependents"]:
+            if facts["events"] or holding(facts["dependents"]):
                 held.append((key, mid, "removal_has_dependents"))
             elif twin is None:
                 held.append((key, mid, "twin_missing"))
@@ -592,6 +592,9 @@ class Loader:
             else:
                 removed.append({"key": key, "id": mid, "edition": edition, "revision": row["revision"], "row": row, "events": [], "dependents": [],
                                 "twin": {"key": twin_keys[key], "id": twin["id"], "row": twin}})
+                released = sorted(set(facts["dependents"]) & RELEASED_ON_REMOVAL)
+                if released:
+                    removed[-1]["released"] = released  # cleared by the deletion, paired again by their reader (§45)
         removed_ids = {r["id"] for r in removed}
         for ident, edition in stored_editions:
             if edition in kept or edition not in excluded:
@@ -828,6 +831,17 @@ class ArchiveDrift(ArchiveError):
     """What an approved plan was decided on changed: its season is refused before anything is written."""
 
 
+# The references a reviewed copy's removal releases instead of being held by them (FAILURE_MODES.md §45, the owner's
+# decision on §36's m4): football-data.co.uk's pair is ON DELETE SET NULL and its reader pairs every row again
+# (footballdata._link), so the next pairing gives the row to the twin that stays. Every other reference holds.
+RELEASED_ON_REMOVAL = frozenset({"core.footballdata_matches.match_id"})
+
+
+def holding(dependents):
+    """The dependencies (ops.archive_match_dependents) that hold a reviewed copy's removal."""
+    return [where for where in dependents if where not in RELEASED_ON_REMOVAL]
+
+
 def _copies(excluded):
     """{reviewed copy competition: the competition it copies (or None)} from a dict, or the ids alone."""
     return dict(excluded) if isinstance(excluded, dict) else {e: None for e in excluded or ()}
@@ -867,7 +881,7 @@ def _delete(conn, loader, start, removed, editions, digest=None):
     ids = [r["id"] for r in removed]
     now = loader.bind(start, ids)
     for r in removed:
-        if now[r["id"]]["row"] != r["row"] or now[r["id"]]["events"] or now[r["id"]]["dependents"]:
+        if now[r["id"]]["row"] != r["row"] or now[r["id"]]["events"] or holding(now[r["id"]]["dependents"]):
             raise ArchiveDrift(f"{r['key']} changed before its deletion")
     twins = {r["twin"]["id"]: r for r in removed}
     for ident, row in (conn.execute("SELECT id, to_jsonb(m) FROM core.matches m WHERE season_id = %s AND id = ANY(%s)",
@@ -990,8 +1004,9 @@ def merge_twins(conn, held=None):
 
     Under the branch's archive guarantees (FAILURE_MODES.md §35): each season runs in its own transaction, which first
     tries the archive apply lock (vega.archives.apply): held by an apply, the pass stops there without an error. A pair
-    with a key of the quarantine or of an attestation ledger, or a row core.archive_match_attestations names, is never
-    merged; it is printed and appended to `held` ({season, goal, result, reason}). Each removed goal-only match gets its
+    with a key of the quarantine or of an attestation ledger, or a row core.archive_match_attestations or
+    core.team_side_corrections names, is never merged; it is printed and appended to `held` ({season, goal, result,
+    reason}). Each removed goal-only match gets its
     tombstone (ops.archive_removals, no plan) in the deleting transaction, so that a later reference to it is refused
     and a reviewed alias may name it. A season that fails in the database is rolled back alone and printed."""
     import psycopg
@@ -1037,11 +1052,15 @@ def merge_twins(conn, held=None):
                     attested_ids.update(i for i in (match_id, former_id) if i is not None)
                     if former_key:
                         attested_keys.add(former_key)
+                # A reviewed side correction (156) names its match by a foreign key: the pair is held, as an attested one
+                # (FAILURE_MODES.md §46).
+                corrected = {m for (m,) in conn.execute("SELECT match_id FROM core.team_side_corrections WHERE season_id = %s", (season,))}
                 merged = 0
                 for twin in twins:
                     goal, result = by_key[twin["goal"]], by_key[twin["result"]]
                     reason = keep.get(goal[1]) or keep.get(result[1]) or (
-                        "attested" if {goal[0], result[0]} & attested_ids or goal[1] in attested_keys else None)
+                        "attested" if {goal[0], result[0]} & attested_ids or goal[1] in attested_keys else None) or (
+                        "side_corrected" if {goal[0], result[0]} & corrected else None)
                     if reason:
                         held.append({"season": label, "goal": goal[1], "result": result[1], "reason": reason})
                         print(f"archive twins held season={label} goal={goal[1]} result={result[1]} reason={reason}", flush=True)

@@ -62,9 +62,12 @@ async function body(read, f, suffix, params) {
     case "/players":
     case "/players/halves": {
       const [rows, lineup] = await Promise.all([
-        // The whole match's rows carry each player's Vega grade (the halves have none).
+        // The whole match's rows carry each player's Vega grade (the halves have none), shown by
+        // every reader's one rule: from 20 minutes, or below them when |z| >= 1 (performance.mjs
+        // SHOWN, rankings.mjs GRADE_MINUTES, api.player_appearances; FAILURE_MODES §38).
         suffix === "/players"
-          ? read(`SELECT r.*,g.grade FROM api.match_player_stat_rows r LEFT JOIN api.match_grades g
+          ? read(`SELECT r.*,CASE WHEN g.minutes>=20 OR abs(g.match_index)>=1 THEN g.grade END AS grade
+             FROM api.match_player_stat_rows r LEFT JOIN api.match_grades g
                ON g.edition_season=r.season_id AND g.match_key=r.match_id AND g.player_id=r.player_public_id
              WHERE r.season_id=$1 AND r.match_id=$2`, at)
           : read(`SELECT * FROM api.match_player_half_rows ${where}`, at),

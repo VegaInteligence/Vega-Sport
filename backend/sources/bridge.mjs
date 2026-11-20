@@ -12,6 +12,8 @@
  *   node backend/sources/bridge.mjs projection <open-cups|openligadb|nations-results> '<query string>'
  *     main's own source projection (scripts/source-projections), which fetches its source
  *     and normalizes it: prints {status, body}.
+ *   node backend/sources/bridge.mjs projections <open-cups|openligadb|nations-results> '<json array of query strings>'
+ *     the same for several editions in one process, each URL fetched once: prints [{status, body}, …].
  */
 import { readFileSync } from "node:fs";
 import { fetchWikidataClub } from "../../dashboard/frontend/src/services/wikidata-club.js";
@@ -34,6 +36,26 @@ else if (command === "plans") {
   const { GET } = await import(`./projections/${args[0]}.mjs`);
   const response = await GET(new Request(`http://bridge/api/${args[0]}?${args[1] || ""}`));
   out = { status: response.status, body: await response.json().catch(() => null) };
+} else if (command === "projections") {
+  // Several editions of one projection in one process, in order: each URL is fetched once and its answer, success or
+  // failure, given to every edition that asks for it (FAILURE_MODES.md §37: one read of results.csv per pass).
+  if (!["open-cups", "openligadb", "nations-results"].includes(args[0])) process.exit(2);
+  const queries = JSON.parse(args[1] || "[]");
+  if (!Array.isArray(queries) || !queries.every((q) => typeof q === "string")) process.exit(2);
+  const { GET } = await import(`./projections/${args[0]}.mjs`);
+  const fetchOnce = globalThis.fetch, read = new Map();
+  globalThis.fetch = async (url, init) => {
+    const key = String(url);
+    if (!read.has(key))
+      read.set(key, fetchOnce(url, init).then(async (r) => ({ status: r.status, headers: [...r.headers], body: await r.arrayBuffer() })));
+    const got = await read.get(key);
+    return new Response([101, 204, 205, 304].includes(got.status) ? null : got.body.slice(0), { status: got.status, headers: got.headers });
+  };
+  out = [];
+  for (const query of queries) {
+    const response = await GET(new Request(`http://bridge/api/${args[0]}?${query}`));
+    out.push({ status: response.status, body: await response.json().catch(() => null) });
+  }
 } else {
   console.error("unknown command");
   process.exit(2);

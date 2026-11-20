@@ -2689,3 +2689,1093 @@ Recorded, not corrected by this review (Fable's m3 and m4):
 - A football-data pair holds an archive copy's removal (`archives.py:586-587`, 35ad), although the link is
   `ON DELETE SET NULL` and the reader pairs again every week. The arbitration between ignoring `SET NULL` links in
   reviewed removals and a documented manual release is VI-21's.
+
+## 37. Collection wake-ups and shared reads: the Elo after a complementary change, one International Results read, an empty statistics answer (19 Nov 2026, written before the tests)
+
+Reproduced on `2088d36e60` before any change. E04k: with the National League North CSVs of the audit capsule
+(`declenchement-elo.zip`), the real `Worker.daily` under `vega_collect` and `vega_calc` writes the four new results and
+leaves 8 of 258 admitted sides without an Elo for three passes; a native match due in another season then publishes
+260/260. `refresh_elo` runs only when `due_seasons` names a season, and `due_seasons` reads PitchAPI editions only
+(`cs.cup_key IS NULL`). In production the live native seasons are due once a UTC day, so the wait there is bounded by
+the next UTC day; in a base without a live native season it has no bound. E02b: each International Results edition
+is one `node bridge.mjs projection` process, each fetching the same `results.csv` (3.76 MB): eight editions due
+together, eight reads. E02d: a 200 answer whose player statistics list is empty, for a finished match whose family
+already holds rows, is a batch without rows and coverage `ok`; `Store.save_family` sees another fingerprint, deletes
+the rows and records `ok`; the backfill planner skips `ok` families, so nothing asks again.
+
+### 37.1 Rules
+
+- **The Elo is due after a complementary change.** At each daily pass, after the sources ran, the Elo is due without a
+  due season when the last published Elo run (`agg.power_runs`, `kind='elo'`) is older than the population it would
+  read now: a finished, scored match of a cup-source edition (`cup_key` set, no `archive_key`: Open Matchday,
+  OpenFootball, OpenLigaDB, International Results, Fjelstul-paired cups) written or changed after the run started
+  (`core.matches.updated_at > started_at`: a new result, a corrected score, a restored match), or a side the run wrote
+  whose match is gone, no longer finished with its score, or now in an archive edition (a withdrawn match). No run yet
+  and such a match: due. Native changes keep their own rule (`due_seasons`, with its waits). The Elo then runs once for
+  the pass, as before. No new column and no migration: the run's own `started_at` and `agg.team_elo` are the record.
+- **And only then.** A pass that changed nothing makes nothing due: the run started after every change it read, and
+  each side it wrote still has its match. The same CSV read again, an edition whose digest is unchanged, a source in
+  error: no Elo run.
+- **One International Results read per pass.** The editions of `nations-results` due in one `sources.run_due` pass are
+  projected in one bridge process (`bridge.mjs projections`), in which a URL is fetched once and its answer (success
+  or failure) given to every projection of the pass. Each edition keeps its own validation, `save`, digest
+  (`cup_digest`), `cup_checked_at`, `ops.source_runs` status and `last_success_at`. A failed read fails every edition
+  of the pass with its code, writes nothing, keeps their last success, and leaves them due after the usual retry
+  delay; the next pass reads once. A bridge process that fails (timeout, exit) fails each edition with its code. An
+  adapter offers this with `prepare_due(conn, get, scopes, now)`; the others are unchanged.
+- **OpenFootball and OpenLigaDB** are not batched: each of their editions reads its own file (checked by listing
+  the URL each edition's projection fetches), so a shared read would save no request.
+- **PitchAPI summaries read twice in Ligue 1 (E02b's second witness)** are the planner's correction read: a match seen
+  final is asked again `CORRECTION_DELAY` (24 h) later (`planner.after_summary`), and its details again when the
+  summary changed. Intended; not changed.
+- **An empty statistics answer does not erase an accepted observation.** In `Store.save_family`, for a finished match,
+  an answer of a detail family with no row at all (an empty list, or `unavailable`) while that family's tables hold
+  rows for the match is refused: `StoreError("EMPTY_AFTER_OBSERVATION")`. Nothing is deleted or written, the match's
+  revision does not move, and the worker's failure path records it (`ops.parse_failures`, `ops.family_state` status
+  `error`, the job failed and revived after a day as any non-permanent failure). The family is then not `ok`: the
+  backfill planner asks for it again. The same rows given again later make it `ok` with its old fingerprint. A first
+  empty answer (no rows held) is written as before. A partial answer (fewer rows) is not refused: telling a provider's
+  correction from a partial answer needs a rule this section does not give.
+- **A held withdrawal is traced once (§36 m3).** An Open Matchday read that keeps a withdrawn fixture another
+  authority holds (35r) adds an `ops.parse_failures` row only when no row of the same edition, code and message exists:
+  the refusal stays visible, a read in the same state adds nothing. 35r's guard is unchanged.
+
+### 37.2 Failure modes and expected outcomes
+
+| # | Situation | Expected | Before the corrections |
+|---|---|---|---|
+| 37a | Native 2019 match and the previous NLN CSV, one daily pass | Elo published, 250/250 | green |
+| 37b | The current NLN CSV (four new results), no native season due | the same pass publishes the Elo: 258/258 | red: 250/258, no run |
+| 37c | The next pass, one hour later, nothing read | no new Elo run, `agg.team_elo` unchanged | green (nothing ran) |
+| 37d | The same CSV read again seven hours later | no new Elo run | green (nothing ran) |
+| 37e | A complementary score corrected by its source (International Results 1–0 becomes 0–1) | the Elo is due and runs once; the next pass none | red: no run |
+| 37f | A complementary match withdrawn (its row deleted), then restored | each makes the Elo due once; the side then gone / back | red: no run |
+| 37g | Eight International Results editions due together, real bridge and projection, fetch counted in node | 1 request; 8 editions `ok`, each its digest, `cup_checked_at`, `last_success_at` | red: 8 requests |
+| 37h | The next pass at once | nothing due, 0 requests | green |
+| 37i | The editions due again, the source answering 503 | 1 request; 8 editions `error` (`HTTP_502`), rows and `last_success_at` kept | red: 8 requests |
+| 37j | The next pass after the retry delay, the source back | 1 request, 8 editions `ok` | red: 8 requests |
+| 37k | A finished match's player statistics (75 minutes) then a 200 with `[]` | rows kept, family `error`, a `EMPTY_AFTER_OBSERVATION` failure, revision unchanged, the backfill asks again | red: rows deleted, `ok`, nothing asked |
+| 37l | The same rows given again | family `ok`, nothing rewritten | — |
+| 37m | A first empty answer (no rows held) | written `ok`, as before | green |
+| 37n | A held withdrawn fixture read three times unchanged | one `MATCH_HAS_DEPENDENTS` row | red: three rows |
+
+### 37.3 The four planner cases of E04k
+
+The registry names four data changes the planner does not wake, without listing them. Found in the audit pages:
+
+1. A complementary change alone does not wake the Elo (this section, 37b–37f).
+2. An empty statistics answer erases and is never asked again (37k).
+3. A correction written between the players' read and the levels' start of `models.refresh_daily` does not make the
+   season due again (`PIPELINE-NOTES.md` §4): `due_seasons` compares with the levels run's `started_at`.
+4. A result corrected in a later season moves the Elo of earlier seasons, whose player grades read the Elo before the
+   match, and only the corrected season is ranked again (`RECALCUL-JOUEURS.md`).
+
+3 and 4 are recorded, not corrected here: 4 means ranking every season after any Elo change (a whole pass per
+season, the memory limit of 13 November) and is a decision of the grades' owner; 3 belongs to the same reading point.
+
+### 37.4 A way out for a held withdrawal (§36 m3, recorded)
+
+No reviewed path releases a held, not-started fixture. `snapshot.RETRACTIONS` releases only a finished result the
+guard would keep. The smallest coherent mechanism is a reviewed map of the same kind, `{(provider, key): "reviewer,
+date: reason"}`, read by `snapshot.remove(held=…)`: a listed fixture goes with what holds it, the others stay held.
+What goes with it (odds, events, a line-up forecast, another authority's fields) is the decision that needs the user;
+it is not written.
+
+## 38. Player match grades: the first award year, a third team's row, the board's rule, the reasons by key (E04e/f/i/l, VI-21, 19 Nov 2026, written before the tests)
+
+Reproduced on `2088d36e60` with the real writers on a disposable PostgreSQL 18.6 (`vega_calc` for the
+calculations, `vega_read` for the reads): a calendar-year league whose edition 2021 holds 30 matches dated before
+1 August 2021 (award year 2020) and 26 after it, beside an August–May league 2021/22.
+
+**E04f, award year 2020.** The daily path never computes award year 2020, for three reasons that hold together:
+`worker.due_seasons` lists only seasons with PitchAPI editions (2020 holds archives only); `models.refresh_daily(2021)`
+runs `refresh_players(2020)` only when `power.previous_year_changed(2021)` is true, and that query requires player
+statistics in physical season 2020 (`EXISTS … s.season_id = 2020`), which no source ever writes; `stale_rankings`
+re-ranks only a season that already has a published players run. The participations of 1 January–31 July 2021 stored
+in the 2021 editions (MLS, Eliteserien, the first July rounds of 2. Bundesliga, …) are read by no run: 0 of 682 graded
+in the reproduction, 14 418 in production (11 562 once Allsvenskan, `scope.py` `l_1XsMdH`, is set aside). The gate is
+deliberate (its docstring: « the first half of the calendar-year leagues alone would rank a year the European seasons
+are missing from »; `test_models` asserts it). A direct `refresh_players(2020)` grades all 682 against award year
+2020's own references (`grade_reference_year`: a finished year is its own), and publishes a 2020 ranking and award race
+of the calendar-year leagues alone. Which references grade that partial year, and whether it is ranked, is a method
+decision: this section records it as open and changes neither.
+
+**E04l (a), a third team's row.** A statistics row whose team is neither side of its match, with a position, in a match
+whose two Elo sides exist, joins both sides as « opponent » (`opp.team_id <> s.team_id`): two rows for one
+player-match, and the COPY into `agg.player_power_matches` stops the publication on 23505. The whole award year keeps
+its previous rows.
+
+**E04l (b), the board.** `GET /api/matches/{id}/players` reads `api.match_grades.grade`, which no rule masks; the
+performance page, the player's matches and the match ranking show a grade only from 20 minutes or when |z| ≥ 1. A
+7-minute and a 1-minute cameo show 54 and 55 on the board and nothing elsewhere.
+
+**E04l (c), reasons.** Nothing published tells, for one participation, a hidden grade from a missing grade, nor why
+one is missing: the rows `assign_roles` leaves without a role and the rows the read refuses are kept nowhere.
+
+### 38.1 Rules
+
+- The read of an award year keeps the match's two sides only: a statistics row whose team is not one of the match's
+  two teams is not graded; the run records it (`agg.player_grade_exclusions`, reason `team_not_in_match`) and
+  publishes every other grade of the year. A player-match without a role after `assign_roles` is recorded the same
+  way (`role_undetermined`). The exclusions of an award year are replaced with its run, in its transaction.
+- Every reader of a match grade applies one rule, the performance page's: a grade is shown when `minutes >= 20` or
+  `|z| >= 1`, else it is `null`. The board's `Vega grade` keeps its field and its form; a hidden grade is `null`
+  there too. The match ranking's order and ranks are unchanged.
+- `api.player_grade_status` (migration 155) gives, for every participation key (edition season, match, player) of
+  the statistics or the line-ups, its award year and one status, the first that applies:
+  `graded`, `below_display_threshold` (a grade exists, the rule above hides it), `competition_not_admitted` (an
+  archive or cup edition: `PLAYER_MATCHES` reads neither), `match_not_finished`, `no_statistics` (no statistics row,
+  the match's player statistics not collected), `not_played` (no row while the match's statistics are, or 0 minutes),
+  `no_minutes` (a row without minutes), `team_not_in_match`, `outside_award_window` (no date, or an edition the award
+  year does not read), the run's recorded reason (`role_undetermined`), `missing_inputs` (a role, no contribution),
+  `no_reference` (a contribution, no reference for the role), `award_year_not_computed` (no published players run for
+  the award year: award year 2020 today), `pending` (the statistics row changed after the year's last published run),
+  `unrecorded` (read by that run, ungraded, and no reason recorded: a run before 155 recorded none, so the 615 rows
+  without a role of the years ranked before the deployment say `unrecorded` until their year runs again). The
+  performance read returns it as `gradeStatus` beside `row` (additive). A zero is a grade (`graded`), never a status.
+
+### 38.2 Failure modes and expected outcomes
+
+| # | Situation | Expected | On 2088d36e60 |
+|---|---|---|---|
+| 38a | The ordinary daily pass (`due_seasons`, `refresh_elo`, `refresh_daily(elo=False)`) on the two leagues | every positive-minute participation of award year 2020 graded; a second pass changes nothing | red: 0 of 682 graded, 2020 never due; decided on 20 Nov 2026 and replaced by §47 (47a) |
+| 38b | A third team's row with a position, both Elo sides present, then `refresh_players(2021)` | the run publishes; the row is in `agg.player_grade_exclusions` (`team_not_in_match`), not graded; every other row graded; a second run changes no grade | red: `UniqueViolation` 23505 on `player_power_matches_pkey`, the year's previous rows kept |
+| 38c | A row without position, line-up slot, role history or keeper data | not graded, recorded `role_undetermined`; status `role_undetermined` | red: dropped silently, no trace |
+| 38d | `api.player_grade_status` under `vega_read` over the base of 38a–38c plus a 0-minute row, a minutes-less row, a line-up-only player of an uncollected match, a cup edition's row | one row per key, each status above as stated; `graded`/`below_display_threshold` agree with the grade rule on every graded key | red: no such view |
+| 38e | The board of the read API's seed match, one of its players made a 7-minute cameo with z = 0.3 | `Vega grade` absent (`null`) for him, the same values as before for the others; the match ranking and the performance page unchanged (no grade) | red: the board gives him 54.3 |
+| 38f | `GET /api/performance` on a hidden, a graded and an ungraded appearance | `gradeStatus` `below_display_threshold`, `graded`, and the key's status; `row` unchanged | red: no field |
+| 38g | 38c's row with its recorded reason removed and its statistics older than the run, then changed after it | `unrecorded`, then `pending` | red: no such view (written after 38a–38f, before the view's last two statuses) |
+
+Recorded, not changed here: E04e (`PLAYER_MATCHES` reads no archive or cup edition, and no writer stores individual
+statistics for one: only `store.py`, the PitchAPI path, writes `core.player_match_stats`); E04i (two native copies of
+one match: `archives.merge_twins` handles archive `g:` twins only and `identity.duplicates` pairs a cup copy with a
+PitchAPI match only; a guard for native copies belongs with the match identities); the player page's recent form
+(`PlayerScoutOverview.jsx`: `seasonGrade([]).grade` is `null` and the card writes `?? 50`, a copy change that needs a
+validated mock-up).
+
+## 39. Identities: FC Barcelona's sides, administrative results, ranking spellings (19 Nov 2026, written before the tests)
+
+Lot « identités » of the audit's resumption (E03b–E03f, E04b, E04g, E04i), on `main` 2088d36e60.
+
+Reproduced on the public API at 13:22 UTC on 19 November: the six Copa del Rey 2024/25 matches of FC Barcelona
+(`/api/cups/edition?competition=l_v0000071&season=2024/2025`) name `t_2fucJi`, Barcelona SC of Ecuador (707), as
+FC Barcelona's side, and 707's club Elo of 2024/25 ends on the final of 26 April 2025. The cause is in
+`curated.club_aliases`: the reviewed UEFA spelling « Barcelona » → « FC Barcelona » is written on every club named
+« Barcelona », without a country, with `ON CONFLICT DO NOTHING`. FC Barcelona (740) already holds `fcbarcelona` as a UEFA
+`source_spelling` (uefa.link_team writes `normalize(name)`), so only Barcelona SC gets the alias. The identity pass reads
+aliases, not source spellings (`identity._pitch_teams`, `_pitch_clubs`): « FC Barcelona » of a national cup archive (no
+country) and of a European archive (every club) names exactly one club, 707, and the merge moves the source's teams, their
+keys (`openfootball:name:FC Barcelona`, `vega:archive:europe:fc barcelona`) and their matches onto it. A later import
+resolves by those keys (`cups._team`, `archives.Loader.team`) and writes 707 again.
+
+### 39.1 Rules
+
+- A reviewed club spelling (`curated.CLUB_ALIASES`) whose name several clubs bear goes only to the club of the country
+  reviewed for it (`CLUB_ALIAS_COUNTRIES`: « Barcelona » is Spain's); with no reviewed country nothing is written and
+  nothing is removed: each club keeps what it holds, and the name is counted unmatched and logged for review
+  (amended by the coordinator on 19 November, before the test 39l: production's homonyms among the 301 reviewed names
+  are not measured, and taking an alias from a club that resolves by it would make the next cup import create a second
+  club). It replaces a `source_spelling` of the same normalized form on that club (the alias is the stronger
+  statement), and it is removed from the other clubs of that name that hold it.
+- A reviewed side correction (`identity.SIDE_CORRECTIONS`) names: the club a side was given to and the club that played,
+  each by its PitchAPI key; the provider keys that came with the merge; and each match, by its Vega id or its provider
+  key, with its side, day, opponent, score and the source's name of the side. The identity pass applies it before any
+  merge, under the collection role, whatever `identity.MERGES` says: the side, every core row of that match naming the
+  wrong club (events, statistics, line-ups…), the keys, the pointers of the merged source teams named like the side,
+  the source spellings of that name, and the edition memberships the wrong club holds only through these matches.
+  The match keeps its id, its provider keys, its status, scores and everything hanging from it. Each moved side is
+  recorded once in `core.team_side_corrections` (156: the collection role may only add to it).
+- A correction is idempotent: a side already on the club that played is left and counted done. A match whose stored row
+  differs from the reviewed preimage (another day, opponent, score or name, or a side on a third club) is held: nothing
+  of it moves, the others go on. A correction whose clubs the base does not hold does nothing.
+- Nothing else of the wrong club moves: its other matches, its keys, its names, its Elo before and after.
+- The Open Matchday restoration (`open_matchday_restore.py`) counts `core.team_side_corrections` among the match
+  dependencies created after its captures (checked empty for its 35 ids) and accepts 156 as its reviewed latest schema.
+- The Elo is not rewritten by the correction. The next daily Elo (`power.refresh_elo`, run once per pass when any season
+  is due, i.e. every UTC day) reads the corrected sides.
+- A result a federation decided without the match being played (forfeit, administrative qualification) keeps its stored
+  status and score (the table, the cup's page), and is never a played match for the Elo, hence for the forecasts fitted
+  on Elo (`forecast.FITTED` joins `agg.team_elo`). Its source says so (`awarded`, kept out by `status = 'finished'`), or a
+  reviewed decision names its provider key and its authority (`power.ADMINISTRATIVE`). No rule is drawn from a score.
+- A SportScore spelling (`source_spelling`, source `sportscore`) is evidence for SportScore's table of the edition it was
+  read in. It names no club for UEFA's linking (`uefa._candidates`, `reconcile_teams`), whose clubs are identified by
+  country and their own spellings; the identity pass already ignores every source spelling.
+
+### 39.2 Failure modes and expected outcomes
+
+| # | Situation | Expected | Before the corrections |
+|---|---|---|---|
+| 39a | `club_aliases` on two clubs named « Barcelona » (ECU, ESP), the Spanish one holding `fcbarcelona` as a UEFA source spelling | the alias on 740 only (kind `alias`), none on 707 | red: alias on 707, 740 keeps a source spelling |
+| 39b | A fresh base: club_aliases, a Copa del Rey 2024/25 OpenFootball edition naming « FC Barcelona », a European archive team « FC Barcelona », then the identity pass (vega_collect) | both source teams merge into 740; their matches and keys are 740's; 707 keeps its LigaPro and Libertadores matches | red: both merge into 707 |
+| 39c | A base in production's state (15 sides, 2 keys, 2 pointers and the alias on 707; events and statistics on two of the matches), identity pass | 15 sides, their events/statistics, both keys, both pointers on 740; alias gone from 707; 15 rows in `core.team_side_corrections`; 707's own matches, keys and names unchanged; match ids, provider keys and scores unchanged | red: nothing moves |
+| 39d | The pass again | nothing changes; still 15 records | red (39c) |
+| 39e | The Copa del Rey edition read again, and `Loader.team('FC Barcelona', 'Europe')` | same match ids, sides on 740, no new team | red: 707 |
+| 39f | One match's stored score differs from the preimage | that match held (still on 707, not recorded), the 14 others moved | red (39c) |
+| 39g | The Elo's admitted rows after the pass | the six cup matches admitted with 740 against the same opponents; the nine archive matches not admitted (archive editions); 707's league match unchanged | red: 707 |
+| 39h | Tours–Lorient stored `finished` 0–3 under its reviewed key (production on 19 Nov), and stored `awarded` 0–3 | not an Elo match in either state; the cup read keeps 0–3 | red for `finished`: admitted |
+| 39i | Seraing U21–Beerschot U21 (open-matchday, 0–5, forfeit: voetbalvlaanderen match 7631244), stored `finished` | kept `finished` 0–5 and counted by `core.table_results`; not an Elo match | red: admitted |
+| 39j | A UEFA row « Andorra CF » (ESP) while FC Andorra (845) holds « Andorra CF » as a SportScore spelling | a new UEFA team: 845 is not linked | red: linked to 845 |
+| 39k | SportScore's own linking of a table naming « Andorra CF » in FC Andorra's edition, and the 838 spellings of the 18 November register in their editions | linked as before | green on arrival (no change there) |
+| 39l | `club_aliases` on two clubs named « Inter » (ITA, FIN), a reviewed name with no reviewed country, the Italian one holding the alias « Internazionale Milano » | nothing written, nothing removed: the Italian club keeps its alias, the Finnish one gets none; one name unmatched; the pass again changes nothing | red on the lane's first rule: the alias is removed from the Italian club |
+
+Recorded, not corrected here:
+- 33 CONCACAF Champions League 2008/09 matches stored in edition 3333 (`g:champions-league`, « Ligue des champions »,
+  Europe), still served so on 19 Nov (`/api/read/archive?season=2008/2009&competition=g:champions-league`). The worldclub
+  goals file names the CONCACAF competition with UEFA's slug. `archives.QUARANTINE` (main) holds the 33 keys: never
+  rewritten, never removed. Their move needs a reviewed CONCACAF edition, archive plan territory (VI-27).
+- J1 (`l_2ApGa4`) and the Saudi women's league (`l_1SGwQT`) are out of scope (`scope.REMOVED`).
+
+## 40. The writers still active: repetition, partial answers, authority (audit E02c, E02d, E03h; 19 Nov 2026, written before the tests)
+
+The audit asks for guarantees on every writer still active, not only on those already corrected (VI-27/29/31). The
+inventory and the matrix of guarantees (writer × domain × repetition, partial answer, authority, explicit
+correction, traced refusal, real role) are kept with the evidence of this lot
+(`evidence/writers/MATRICE.md`). This section specifies the end-to-end replays written for the cells the existing
+suites left without a test. They change no writer: a replay that fails on `2088d36e60` is a defect, kept as
+`unittest.expectedFailure` with the defect named, so the suites stay green and the defect visible. The replays live
+in `backend/tests/test_writer_replays.py` (database `vega_v2_writer_replays_test`).
+
+### 40.1 Rules of the replays
+
+- Each replay calls the real writer through its real entry point: `transfermarkt.Reader.read` (fetch → `data_of` →
+  `write_*` → queue row) or `sources.run_due` (prepare → run → `record_run`), on a connection under `vega_collect`.
+  Only the provider is replaced (a fake `fetch`, `get`, Wikidata bridge or honours collector), with synthetic
+  answers; nothing is downloaded.
+- State is compared by a fingerprint: every row of the tables the writer writes, as JSON, sorted, without
+  `updated_at` (and without the surrogate `id` of `core.player_injuries`, which nothing references). Bookkeeping
+  (`ops.source_runs`, `ops.transfermarkt_reads`, `ops.transfermarkt_state`) is checked separately.
+- "Kept" means the fingerprint of the domain rows is the one before the answer. "Traced" means an `ops.*` row names
+  the refusal (`ops.source_runs.error_code`, `ops.transfermarkt_reads.error_code`, `ops.parse_failures`) and the
+  scope or unit is due again within its retry delay.
+
+### 40.2 Failure modes and expected outcomes
+
+| # | Writer, domain | Situation | Expected |
+|---|---|---|---|
+| 40a | Transfermarkt values (`write_values`) | the same history (two points) read twice | the second read changes no row of `core.player_market_values` |
+| 40b | Transfermarkt values | `{"history": []}` after two accepted points | both points kept |
+| 40c | Transfermarkt values | a valid history that omits one of the two accepted points | both points kept (an omission is not a deletion), or the read refused and traced |
+| 40d | Transfermarkt values | `history` of the wrong type | both points kept; the unit carries `SCHEMA_CHANGED` and is due again within a day |
+| 40e | Transfermarkt injuries (`write_injuries`) | the same two episodes read twice | the second read changes no episode (content; the ids are recorded in the evidence) |
+| 40f | Transfermarkt injuries | `{"injuries": []}` after two accepted episodes | both episodes kept, or the read refused and traced |
+| 40g | Transfermarkt injuries | a valid list that omits one of the two episodes | both episodes kept, or the read refused and traced |
+| 40h | Transfermarkt injuries | `injuries` of the wrong type after an accepted read | episodes kept; `api.player_injury_reads` under `vega_read` still names the player (the last accepted read), so the route does not turn a refusal into a 404 |
+| 40i | Transfermarkt squads (`write_squad`) | the same squad (two members) read twice | no change in `core.provider_squads` |
+| 40j | Transfermarkt squads | `{"squad": []}` after two accepted members | both members kept, or the read refused and traced |
+| 40k | Transfermarkt squads | a valid squad without one of the two members | both members kept, or the read refused and traced |
+| 40l | Transfermarkt clubs (`write_club`) | the same club record read twice | no change in `core.provider_clubs` |
+| 40m | UEFA coefficients (`uefa.save`) | the same complete pages read twice | the edition's rows unchanged (`core.ranking_rows`, `core.ranking_season_points`, `core.ranking_editions`) |
+| 40x | UEFA coefficients | the same complete pages read twice (40m) | the edition's resource version (`ops.resource_versions`, kind `ranking`) unchanged: a repeat publishes nothing new and recalculates no cohort |
+| 40n | UEFA coefficients | a page with `totalElements: 0` and no member after a stored edition of two clubs | the two rows kept; the scope fails and is traced |
+| 40o | FIFA ranking (`fifa.save`) | an edition first read with one row of three, then complete at the source | the complete edition replaces it (or the short one is refused and read again) |
+| 40p | Wikipedia honours (`honours.save`) | the same honours read twice | no change in `core.player_honour_titles` |
+| 40q | Wikipedia honours | after two titles, the collector gives nothing (identity not unique, no Honours section, no row parsed: `collect_player` returns `None`) | both titles kept; the player is checked again after the period |
+| 40r | Wikidata clubs (`wikidata.save_club`) | the same club answer read twice | team, venue and coach tenure unchanged |
+| 40s | Wikidata clubs | an answer without `founded` and without `coach` (a partial answer of the bridge: it cannot be told from a removal) | the founded year kept; the current coach's tenure stays open |
+| 40t | Wikidata stadiums (`wikidata.save_stadium`) | an answer without capacity and coordinates | capacity and coordinates kept |
+| 40u | Wikidata player facts (`player_facts.save`) | the same club answer read twice | no player changed |
+| 40v | Wikidata player facts | an empty `bindings` list | birth dates and heights kept |
+| 40y | Native PitchAPI (`Store.save_references`, `save_matches`, `save_family`) under `vega_collect` | the same league, match summary and player statistics written twice | the second pass changes no row of the match, its statistics, teams, players or provider ids, and the match revision stays |
+| 40z | Native PitchAPI under `vega_collect` | the summary corrected at the source (score 1–0 → 2–0), then the statistics corrected (1 goal → 2) | each correction is written once and raises the revision once |
+| 40w | Wikidata player facts against the Transfermarkt snapshot | a player whose birth date the snapshot attested (`birth_date_source_url`), Wikidata giving another plausible date | the attested date and its provenance stay together: either kept, or replaced with Wikidata's provenance; never Wikidata's date under the snapshot's URL |
+
+Out of these replays, by the existing suites (cited in the matrix): the native PitchAPI families (`test_store`,
+`test_worker`), the cup and Open Matchday snapshots (19a–19w, 22a–22c, 35m–35s), SportScore (S1–S25, 35t, 35v),
+the Transfermarkt transfers and contracts (§20, §33, 35w–35z), the archives and their corrections (§22–§24, 35a–35h),
+Fjelstul and football-data.co.uk (pinned files), the scope purge and the twin merge (a second pass removes nothing).
+The native statistics' empty answer is the « collecte » lot's (VI-21) and is not replayed here.
+
+## 41. Open Matchday's sliding window: left-edge exits, results published then dropped, the 35, the score of 8625 (19 Nov 2026, written before the tests)
+
+Reproduced on `d3e96a097b` (main `2088d36e60` and the collection lot) before any change, on PostgreSQL 18.6 by the real
+writer (`sources.run_due`) under `vega_collect`, with consecutive real versions of the source's results files (Git
+history of `oladeeayo/open-matchday`, `evidence/historique/rouge/gel-*.json`):
+
+- the export is a sliding window: the results file of the season keeps the recent dates only. Over 125 versions of
+  eight folders, every result a version drops leaves by its left edge (dated before the version's first result),
+  but six: a moved or replaced result (Kleczew–Podhale 31 Jul → 1 Aug, Emley–Bamber Bridge 6 Oct → 3 Nov, Livyi
+  Bereg–Bukovyna 1 → 14 Nov), Ashton United–Warrington Rylands of 31 Oct (played 1–2 according to the organizer, then
+  dropped), Weston-super-Mare–Billericay of 24 Oct (absent from the organizer's results) and FC Kharkiv–Karpaty of
+  7 Nov (`evidence/historique/fenetres.json`);
+- in a folder without an attestation (`open_matchday_history.for_edition` empty: Poland I and II Liga, Cymru
+  Premier, the FA Cup and every other folder but the three English ones), a version that drops a stored result by
+  its left edge is refused (`SNAPSHOT_DROPS_RESULT`), and so is every later version: the edition is frozen. Poland I
+  Liga 06b3cf48 → 772fb543 (9 dropped), Poland II Liga 77e35fdb → 3a3ac507 (8), Cymru Premier fd27c060 → 772fb543
+  (14), FA Cup 55a7b8e0 → 772fb543 (78): each keeps its old results, never writes the new ones, and adds an
+  `ops.parse_failures` row at each read. Production serves today exactly the latest file of each (its guard reached
+  production on 18–19 Nov, after their last slide): the next slide freezes them;
+- the three English folders keep a dropped result only under `rolling_prefix`'s conditions (at least 50 overlapping
+  results and half the declared rows, four dates, identical scores, dates in 2026/27); a score corrected inside the
+  window while results leave refuses the version, and since the stored score never changes, every later one;
+- nothing creates a result the base never stored: 236 English results (201 never stored, the 35 removed on 18 Nov)
+  and 158 others (Poland 20 + 36, Wales 22, FA Cup qualifying rounds 80) were published by the source and are absent;
+- a live line contradicting an attested final (`final_score`) refuses the whole version: with 8625's organizer final
+  (Ashton United–Warrington Town 0–1, the source 1–2) attested, the NPL edition would be frozen.
+
+### 41.1 Rules
+
+- **A left-edge exit is neither a deletion nor a refusal.** Let *start* be the earliest day of the version's results.
+  When the results file holds exactly its declared rows (`read_files`), every stored finished result of the edition
+  dated on or after *start* (an attested one aside) is in the version as a result, at least one stored result is in
+  it, and no result leaving has its two sides, in the same order, arriving in the version under another key within 31
+  days (a moved result, not a slide), the stored results absent from the version and dated before *start* stay as
+  stored (no write, no removal) and the version is written. Otherwise the guard is unchanged (`SNAPSHOT_DROPS_RESULT`):
+  a result missing inside the window, a result missing on the first day, a version that shares no stored result. A
+  score corrected inside the window is a correction (§19), with or without an exit. In the three English editions
+  `retained`'s identity checks still apply to the kept results. This replaces `rolling_prefix`'s minimum of
+  corroborating observations: the rule deletes nothing either way, and that minimum only decided whether a complete
+  version was written or the edition frozen.
+- **Attested results** (`backend/vega/sources/data/open_matchday_published.json`, its SHA-256 pinned in
+  `open_matchday_history.py` like the 35-result ledger, rebuilt by `evidence/historique/scripts/attestations.py` from
+  the Git history and the organizer capsule `angleterre-575.zip`). Each result: its provider key (the live key's
+  format, `folder:season:date|home|away`), its score, its round when the source gave one, the commit of the version
+  that last published it, and for the English ones the organizer's match id, page and capture digest. Kept, non-COVERED
+  folders only. Excluded: a result whose score varies across versions, one a later version moved (same sides, same
+  order, another day within 31 days) or renamed (another result of its day with one of its sides), one of the 35,
+  an English one the organizer does not confirm (day, sides, score), another folder's one that left from inside the
+  window. 8625's organizer final is attested with the source's contradicting score and commit.
+- **Creation.** In a written version, each attested result of the edition that the base does not hold is created
+  once, after the version's rows: not one of the 35 (`id_at_incident`), not in the version, no `open_matchday` match
+  key equal to it anywhere (current or retired), no match of any edition on its day between its two teams (either
+  orientation, teams resolved as the version's names are), and, without an organizer proof, dated before *start*.
+  Teams by the same resolver as the version's rows (`cups._team`), its round when given, status finished, its score,
+  no half-time and no statistics, the next free position. A result not created for another reason than being one of
+  the 35 is recorded once (`ATTESTED_RESULT_NOT_CREATED`, `sources.failure_once`). An attested result the base holds
+  and the version omits stays as stored, wherever its day. The Elo wakes through `worker.elo_due` (§37): the created
+  match was written after the last run.
+- **The 35** stay to `open_matchday_restore`: creation skips them while they are absent; one of them in a version
+  while absent still refuses it (`ATTESTED_HISTORY_RESTORE_REQUIRED`). Restored, they are attested results the base
+  holds: kept, never duplicated.
+- **An organizer final prevails over the source's line, for that match only.** A live result whose score contradicts
+  an attested final with an organizer proof is written with the attested score (a stored different score is corrected,
+  `revision + 1`, same id), the rest of the version is written, and one `ATTESTED_FINAL_KEPT` row records the
+  contradiction while it stays the same. An attestation from the source alone that a live line contradicts, and an
+  attested final listed as a fixture, still refuse the version (`ATTESTED_HISTORY_CONFLICT`).
+
+### 41.2 Failure modes and expected outcomes
+
+| # | Situation | Expected | Before the corrections |
+|---|---|---|---|
+| 41a | Poland I Liga 06b3cf48 then 772fb543 (9 leave by the left edge, 9 new), real writer under `vega_collect` | the 9 kept (same id, revision, `updated_at`), the 9 new written: 115 finished; no failure row; the next read writes nothing | red: `SNAPSHOT_DROPS_RESULT` at each read, 106 kept, the 9 new never written |
+| 41b | Cymru Premier fd27c060 → 772fb543 (14), FA Cup 55a7b8e0 → 772fb543 (78), Poland II Liga 77e35fdb → 3a3ac507 (8) | accepted the same way | red: frozen |
+| 41c | Poland II Liga 3272e1f9 → b90bce70: Kleczew–Podhale moved from 31 Jul (inside the window) to 1 Aug | refused, edition unchanged | green (unchanged) |
+| 41d | A stored result of the version's first day missing; a stored result after it missing | refused | green (unchanged) |
+| 41e | A version sharing no stored result (all of them before its first day) | refused | green |
+| 41f | A result leaving by the left edge whose two sides arrive under another key 3 days later | refused | green |
+| 41g | A score corrected inside the window while results leave (attested English folder, and another) | written: the correction with `revision + 1`, the left results kept | red: refused |
+| 41h | The three English files of 18 Nov (13a43495) on an empty base | 339 written and 201 created: 540; each created result's teams are those of its names; 8625 written 0–1 | red: 339, 8625 1–2 |
+| 41i | The same files read again | nothing written: no revision, `updated_at` or `cup_updated_at` change, no new failure row | — |
+| 41j | Poland I, Poland II, Wales, FA Cup latest files on an empty base | 106 + 20, 105 + 36, 105 + 22, 142 + 80 | red: no creation |
+| 41k | An attested result whose key another edition holds, or retired; one whose day and teams another match has | not created; `ATTESTED_RESULT_NOT_CREATED` once; nothing else changes | — |
+| 41l | A source-attested result dated on or after the version's first day | not created | — |
+| 41m | The 35 absent, the English files | none created; with one of them in the version: refused `ATTESTED_HISTORY_RESTORE_REQUIRED` | green (unchanged) |
+| 41n | The base after 41h, then `open_matchday_restore` with the reviewed captures (dry run, apply), then two passes | restore 35 with their ids (no collision); next pass keeps them: 575, no duplicate; the pass after writes nothing | — |
+| 41o | `Worker.daily`: a pass whose only change is the creation of attested results | the Elo runs once in that pass and covers their sides; the next pass runs none | — |
+| 41p | 8625 stored 1–2, version still 1–2, organizer 0–1 attested | 8625 becomes 0–1 (`revision + 1`, same id), the rest written, one `ATTESTED_FINAL_KEPT`; read again: nothing, no new row | red: `ATTESTED_HISTORY_CONFLICT`, version refused |
+| 41q | A source-attested final contradicted by a live line; an attested final listed as a fixture | refused `ATTESTED_HISTORY_CONFLICT` | green (unchanged) |
+| 41r | A byte of either attestation file changed | import refused (pinned SHA-256) | green for the ledger |
+
+**Existing expectations adjusted.** `test_source_snapshots.OpenMatchdayGuardTest` and `test_collection_wakeups.EloWakeTest`
+name real folders (National League North, Cymru Premier) with built or capsule rows and count the matches written: the
+results attested for those folders would now be created beside them (22 in Cymru Premier, 59 in the North). Both
+classes keep the 35-result ledger alone; no assertion changes. 41o tests the Elo wake after a creation.
+
+## 43. A league table mixed from three phases, a World Cup listed twice on the nation pages, a native match stored twice (audit E02c, E03f, E04d, E04i; 19 Nov 2026, written before the tests)
+
+Lot « classements », branch `claude/audit-classements` from `74970d7fe3` (main `2088d36e60` and six lots). Migration
+159 is additive (functions and views); no published migration changes; no row is deleted or rewritten by it.
+
+### 43.1 Veikkausliiga 2026: three phase tables served as one (E02c)
+
+**What production serves (19 Nov, lot « production »).** `GET /api/standings?competition=l_3Ci5Cg`: one table of 12
+rows, `source` SportScore, `fetchedAt` 2026-11-19T09:01:50.914Z (before the 10:05 UTC deployment), positions
+1,1,1,2,2,3,4,4,4,5,6,6, clubs at 32, 27 or 22 matches; ΣW 123 ≠ ΣL 114.
+
+**Why.** SportScore's widget (`?sport=football&slug=finnish-veikkausliiga`, captured 19 Nov 17:26 UTC) answers three
+tables, each with `"group": ""`: the regular season (12 clubs, 22 matches, ranks 1–12), the championship group (6
+clubs, 32 matches, ranks 1–6) and the relegation group (6 clubs, 27 matches, ranks 1–6). The writer deployed before
+10:05 (main `21b6fa74f2`, `sportscore.py` of `dc65d69`) stored every row under group NULL (`len(tables) > 1` keeps the
+group, but `""` reads None), sorted by (group, team, position, …), and inserted with `ON CONFLICT DO NOTHING`: each
+club kept its row of lowest rank. KuPS (1st of the regular season, 3rd of the championship group) kept its 22-match
+row, Inter Turku (2nd, 1st) its 32-match row, Lahti (7th, 1st) its 27-match row — exactly the 12 rows served. The
+rows have no basis (written before 138's column). Since the deployment the writer refuses the answer
+(`check`: `DUPLICATE_GROUP`, three tables named None) and keeps the stored rows; migration 150's view still serves
+them because nothing in it reads the ranks.
+
+**Rules.**
+- A response's tables are refused when two or more of them carry no name: the source does not tell its phases apart,
+  and Vega does not name them by position or by count. Code `DUPLICATE_GROUP` (unchanged), its detail naming « N
+  tables without a name ». The accepted table keeps its rows, its date and its ETag; the scope is tried again at the
+  content cadence. Distinct named tables are published as today (one table per group).
+- The rank invariant the writer applies (`check`) is now also applied when the table is read: within one stored
+  table of an edition (SportScore's rows, no stage, one `group_name`), two clubs sharing a rank have equal points,
+  and a table that is the edition's only table holds all its ranks (its highest rank is at most its number of rows).
+  Shared ranks of equal points stay admissible: the writer has admitted them since VI-29 (cases S11, S34 of
+  FAILURE_MODES_SPORTSCORE.md; « 1…n without repetition » is read as « no rank shared between clubs of different
+  points »). No played-count rule is added: a split league's official single table (ranks 1–6 at 32 matches, 7–12 at
+  27) is one phase-consistent table.
+- An edition whose stored SportScore rows break it is withheld (`api.standings_rank_conflicts()`): its official rows
+  are not the authority, so `api.standings` serves Vega's own table of the edition when one exists (as for an edition
+  without an official table), and nothing otherwise. The edition stays the one `/api/standings` selects (it is listed
+  by `api.standings_withheld()`, with J1's exclusion of 147/150): a withheld current edition answers 404 « Donnée
+  indisponible. », never the previous season's table. Rows that satisfy the invariant again (a later accepted
+  response replaces them) are served again: the rule reads the content, not an edition.
+- 159 raises the resource version of each edition it withholds, once, as 150 did for J1.
+
+**Failure modes and expected outcomes.**
+
+| # | Situation | Expected | On `74970d7fe3` |
+|---|---|---|---|
+| 43a | The captured widget answer, through `sources.run_due` under `vega_collect`, over the stored rows | refused `DUPLICATE_GROUP`, detail « 3 tables without a name »; stored rows, `as_of` and version unchanged; one `ops.parse_failures` row | refused `DUPLICATE_GROUP` (« two tables named None »): green on arrival but for the detail |
+| 43b | The 12 stored rows of production (no basis, `as_of` 09:01:50.914Z), no Vega table; `GET /api/standings?competition=l_3Ci5Cg` and `&season=2026` under `vega_read`, a 2025 edition with its own table present | 404 both, not the 2025 table | red expected: 200, the mixed table |
+| 43c | The same with Vega's table of the edition (`agg.standings`) | 200, `source` « Vega », Vega's rows | red expected: the SportScore rows |
+| 43d | The same rows re-ranked 1–12 (an admissible table) | 200, SportScore, served as stored | green |
+| 43e | A shared rank of equal points (S34's table), a multi-table edition whose groups each start at 1 (World Cup groups, USL's two conferences) | served | green |
+| 43f | Two clubs at the same rank with different points inside one group of a multi-table edition | withheld | red expected |
+| 43g | The edition's only table ranks 1–11 and 13 (12 rows) | withheld | red expected |
+| 43h | 159 applied over a base holding 43b's rows | the withheld edition's resource version raised once, the previous edition's unchanged | red expected: no 159 |
+| 43i | The 47 SportScore answers of `/api/standings` read in production on 19 Nov (`evidence/prod/raw/standings-*-1.body`), replayed through `check` (as widget tables) and through `api.standings_rank_conflicts()` (as stored rows) | 46 admitted by both; Veikkausliiga refused (`DUPLICATE_POSITION` as one stored table) and withheld | — |
+
+Not covered: whether production's `agg.standings` holds a Vega table for this edition (no public read shows it).
+If it does, the route serves it after deployment; if not, 404 until SportScore answers an admissible table. Naming
+SportScore's unnamed phases (« saison régulière », « groupe championnat ») would need a source that names them.
+
+### 43.2 The World Cup 2026 twice on the nation pages (E03f, E04d)
+
+**What production serves (19 Nov).** `GET /api/nations/t_0WmIZB?season=…` (Argentina): 11 World Cup 2026 matches for
+8: three copies dated the day before (06-16, 06-27, 07-11), `competition` « World Cup 1930 », `edition`
+`open-cups:world-cup-history:2026`. Mexico: 9 for 5. France, Ivory Coast and Qatar: their copies share the native
+day. Every archive match of the family reads « World Cup 1930 » (Argentina: 84, France: 66), the Euro's « Euro
+2021 », International Results' « Copa América 2024 » and « Coupe d'Afrique des nations 2021 ».
+
+**Why.** `api.nation_matches` (120) keeps one copy per (day, pair of teams): OpenFootball dates a match on its local
+day, PitchAPI on the UTC day of its kick-off, and an evening match in the Americas is one day earlier in the archive.
+The label is `core.competitions.name` of the edition's competition; `cups.save` creates the family's competition once,
+named after the body of the first edition it imports (`name = body.get("name")`: « World Cup 1930 »). The edition's
+own name is `core.competition_seasons.cup_name` (« World Cup 2026 »).
+
+**Rules.**
+- Two copies of one match: the same two teams (the merged identities, as the function reads them), the same score
+  by team (two unscored copies agree), days at most one apart, in two different editions. Only one is listed: the
+  native copy first (no cup key, no archive key), then a scored one, then the lowest id. Copies of one day stay
+  merged as before (whatever their edition or score).
+- Kept distinct: the same teams one day apart in the same edition, or with a different score, or two days apart.
+- The kept copy takes the round and the penalties from the copies it absorbs when it has none (as 120 does for a
+  copy of the same day).
+- A match's `competition` is its edition's name when the edition has one (`cup_name`), else its competition's:
+  « World Cup 2026 » for the 2026 archive, « World Cup 1978 » for 1978; a native edition keeps « World Cup ».
+- Nothing changes in the base: the read only.
+
+**Failure modes and expected outcomes** (`GET /api/nations/{id}?season=2025/2026` under `vega_read`).
+
+| # | Situation | Expected | On `74970d7fe3` |
+|---|---|---|---|
+| 43k | A native match and its archive copy dated the day before, same score, other edition | one match, the native one (`id` present, native round) | red expected: both |
+| 43l | The same with another score in the copy | both | green |
+| 43m | Two matches one day apart, same score, same edition | both | green |
+| 43n | Two copies on the same day | one (120 unchanged) | green |
+| 43o | An archive match no native copy holds | listed, `competition` « World Cup 2026 » (its edition's name) | red expected: « World Cup 1930 » |
+| 43p | A copy two days apart | both | green |
+| 43q | The native copy without penalties, the copy of the day before with them | one match, the copy's penalties | red expected |
+| 43r | Argentina's World Cup 2026 as production holds it (8 native, 3 copies J−1, 5 copies the same day) | 8 matches; one run « Coupe du monde 2026 » of 8 games | red expected: 11 |
+
+### 43.3 Lanús–Estudiantes stored twice as a native match (E03f, E04i): specification, not code
+
+**What production serves (19 Nov, 17:30 UTC, `evidence/classements/raw/lanus/`).** Two matches of Liga Profesional
+2026 (`l_45VZuL`), both PitchAPI keys, both finished 2–1 at 2026-09-22T00:15Z, Lanús (`t_0rsFNq`) – Estudiantes
+(`t_1HsET8`): `m_0Feldm` and `m_1bi3Az` (RDS ids 40022 and 40023 per the audit's `sql/controles/lanus.sql`; the
+public reads do not show which id is which). Each serves its line-ups (2 × 11 starters, 2 × 12 substitutes, the same
+players), 17 events, team statistics, player statistics and 32 grades: 64 grades for 32 appearances, and the match
+twice in the lists and in the Elo.
+
+| | `m_0Feldm` | `m_1bi3Az` |
+|---|---|---|
+| round | « Clausura - Round 10 », the name the other 9 round-10 matches carry | « 10 » |
+| referee, stadium | Nicolás Ramírez, Estadio Ciudad de Lanús | no referee, stadium |
+| player statistics | 46 rows (one with `goals_prevented`) | 45 rows |
+| events, line-ups, grades | 17, 46 players, 32 | 17 (one `minute_added` 6 for 5), 46 players (two starters' order swapped), 32 |
+| team statistics | the same families | three period values differ (0 against 2, 0 against 1) |
+
+**Canonical: `m_0Feldm`.** It is the more complete copy (referee, one more player-statistics row), and it carries the
+league's round naming. The organiser publishes one match (« Fecha 10 », 21 Sep 21:15 local: the audit's
+`INTEGRITE.md`). Not verified: which copy PitchAPI serves today (no provider call is permitted to this lot). The other
+round-10 fixtures of the edition have a twin too, `postponed`, without a round and without a score (`m_14LPSW`,
+`m_0jdOYm`, …): the provider's superseded copies, which `m_1bi3Az` resembles by its key, round and missing referee.
+
+**Correction (specified, not written).** A reviewed list, `identity.MATCH_TWINS = {"lanus-estudiantes-2026-09-22":
+{"keep": "m_0Feldm", "drop": "m_1bi3Az", "proof": …}}`, on the model of `SIDE_CORRECTIONS` and
+`core.team_side_corrections` (156):
+- Preimage, both rows `FOR UPDATE`: edition of `l_45VZuL` 2026, `pitchapi` current keys `m_0Feldm` and `m_1bi3Az`,
+  status `finished`, kick-off 2026-09-22 00:15Z, home `t_0rsFNq`, away `t_1HsET8`, score 2–1. Any difference: the pair
+  is held (nothing written, a line printed), as a held side correction.
+- Effect: one row in a new journal `core.match_twin_corrections(match_id, canonical_id, correction, proof_sha256,
+  applied_at)` (additive migration, the collection role may insert, nobody may update or delete), nothing else
+  written. Every reader of a match skips a journaled `match_id`: the Elo (`power.ELO_MATCHES`, next to
+  `ADMINISTRATIVE`), the grades (`agg.player_match_grades` and the board), the lists (`api.fixtures` and the views
+  over `core.matches`: league fixtures, club and player pages, `api.nation_matches`), `core.table_results` and
+  `agg.standings`. Its rows, keys, statistics, events, line-ups and grades stay stored; its public id answers 404
+  (or a redirect to the canonical id, a site decision).
+- Idempotent: a second pass finds the journal row and writes nothing. A PitchAPI refresh of the dropped key writes
+  the row as before; the journal keeps it unread.
+- Why no code here: the readers to change are outside this lot's write scope (`power.py`, the grades, `api.fixtures`
+  and the club and player views); the correction cannot be bounded to the pair and tested end to end from
+  `identity.py` alone. A deletion of the match is excluded (user decision required).
+- Preimage to read before writing the entry (read-only, as the schema owner; the audit's `sql/controles/lanus.sql`
+  and `lanus-appearances.sql` count the dependents):
+  `SELECT k.provider_key, m.id, m.season_id, m.competition_season_id, m.status, m.kickoff_at, m.home_team_id,
+  m.away_team_id, m.home_score, m.away_score, r.name FROM core.provider_ids k JOIN core.matches m ON m.id = k.entity_id
+  LEFT JOIN core.rounds r ON r.id = m.round_id WHERE k.entity_type = 'match' AND k.provider = 'pitchapi' AND k.is_current
+  AND k.provider_key IN ('m_0Feldm', 'm_1bi3Az')`. Expected: two rows, one edition, `finished`, 2026-09-22 00:15Z, the
+  same two teams, 2–1, rounds « Clausura - Round 10 » and « 10 »; the entry binds the keys, never the ids.
+- The audit counts five finished/finished PitchAPI pairs (`INTEGRITE.md`; another is Estudiantes de Río Cuarto–
+  Instituto, 39992/39993) and 46 finished/postponed pairs: each needs its own reviewed entry, never a rule.
+
+### 43.4 What 159 costs: the reads stay as fast as before (second review, 19 Nov 2026, written before the change)
+
+The second independent review (`evidence/relecture-2/CONSTATS.md`, base `relecture_b_159`: 530 500 matches, 50 500
+of national teams, 30 000 SportScore rows over 1 500 editions) measured 159 right but slower, under `vega_read` with
+`db.mjs`'s session settings and bound parameters: `api.nation_list` 217 → 710 ms (production-like volume) and 499 →
+2 777 ms (whole base); `/api/standings` 41–47 → 186–193 ms; `api.nation_matches` 5.8 → 34 ms, 26 → 653 ms for a
+nation of 416 copies. Causes: `nation_list` read `core.matches` a third time only to fetch columns its two branches
+had, and its anti-join on `abs(k.d - g.d) = 1` cannot hash, so it compares every pair of meetings of two teams;
+`api.standings_rank_conflicts()`, a SECURITY DEFINER function with no argument, aggregates every SportScore row of
+every edition at each call, and `standingsBody` calls it three times; `nation_matches`' lateral join re-reads its
+materialized CTEs once per kept match.
+
+**Properties.**
+- 43s. `api.nation_list`: at most 1.5 times its pre-159 time (119) on both volumes; `core.matches` is read twice
+  (its two branches, as in 119), never a third time; the copy test is a hash join on equal keys (pair, day ± 1,
+  score), not a join filter on `abs()`.
+- 43t. `/api/standings`: the rank check reads only the editions the statement selects. No function aggregates the
+  whole table; the withheld editions are read per edition (`api.standings_withheld(edition)`); on the review's base,
+  under `enable_seqscan = off`, every scan of `core.standings_official` in the route's statement (custom and generic
+  plans) has an index condition on `competition_season_id`. On the small test base the planner may check the Vega
+  branch's authority once over the whole table, as it did with 150: the test requires no more such scans than with
+  150's view. Time: at most 1.5 times 150's on the measurement base; `/api/cup-snapshot?kind=standings` (the same
+  statement) and the worker's `count(*) FROM api.standings` likewise.
+- 43u. `api.nation_matches`: linear in the nation's copies: no node re-executed once per kept match over a
+  materialized CTE; at most 1.5 times 120's time on both volumes.
+- The semantics of 43a–43r are unchanged (same tests, same expectations), the 46 SportScore tables stay admitted.
+
+**Result** (medians of five runs, ms, `evidence/classements/perf/summary.md`; « small »: the review's production-like
+volume, the International Results archive removed):
+
+| Read | 119/120/150, full | first 159, full | 159 now, full | before, small | first 159, small | 159 now, small |
+|---|---|---|---|---|---|---|
+| `/api/standings` statement, three leagues | 37–42 | 128–160 | 31–50 | 21–36 | 67–86 | 20–36 |
+| idem, generic plan | 38 | 128 | 30 | 19 | 139 | 31 |
+| `api.nation_list` | 440 | 2 671 | 598 | 169 | 395 | 242 |
+| `api.nation_matches(100001)` | 25 | 649 | 27 | 6.2 | 23 | 5.6 |
+| `count(*) FROM api.standings` | 4 032 | 3 880 | 4 034 | 1 837 | 2 128 | 2 590 |
+
+What changed: the rank check is written inside `api.standings` as windows partitioned by edition (a condition on the
+edition reaches the scan), `unqualified` reads its edition's rows directly, `api.standings_withheld(edition)` takes
+the edition; `nation_list` carries the columns in its two branches, finds the candidate copies by a hash aggregate
+on (pair, score, day or day before) and tests only those by equal keys, and counts by two hash aggregates;
+`nation_matches` tests a copy by two equal-key joins and joins what the copies lend once, by day. The small volume's
+standings times vary by ±15 ms from one run to the next (the same statement over the same rows read 21 and 38 ms
+before 159).
+
+## 44. Guarantees of the writers §40 found wanting: an omission is not a deletion (audit E02c, E02d, E03h; 19 Nov 2026, written before the tests)
+
+Lot « garanties », branch `claude/audit-garanties` from `4fb0082d51` (main `2088d36e60` with the « collecte »,
+« notes » and « writers » lots). It corrects the twelve defects §40 proved (40c, 40f, 40g, 40h, 40j, 40k, 40n, 40o,
+40s, 40t, 40w, 40x) and `write_search`, which the matrix names without a replay. The model is VI-31's for the
+transfers (§33, 35w–35z, migration 153): the last accepted read stays served, an element the provider stops listing is
+kept and marked absent from the day of the read instead of being deleted, a refusal is traced and the unit stays due.
+Migration 160 is additive (columns and views); no published migration changes; no row is deleted or rewritten by it.
+
+### 44.1 What the code does on `4fb0082d51` (the §40 replays, red with `WRITER_REPLAY_STRICT=1`)
+
+- `write_values` deletes every Transfermarkt point of the player absent from a non-empty history (40c); an empty
+  history is acquitted without a write (40b holds, but the unit is not refused).
+- `write_injuries` deletes all the player's episodes and inserts the answer: an empty list erases them (40f), a short
+  one drops the omitted episode (40g), every read gives the episodes new ids (40e). A refused read sets `error_code`,
+  and `api.player_injury_reads` (116) requires `error_code IS NULL`: the route answers 404 although the accepted
+  history is stored (40h).
+- `write_squad` and `write_search` delete a club-season's members and insert the answer: empty (40j) or short (40k)
+  answers erase members, acquitted.
+- `uefa.fetch` accepts `totalElements: 0` with no member and `uefa.save` deletes the edition's rows (40n); every read,
+  identical or not, deletes and rewrites the rows and raises the edition's `ranking` resource version (40x).
+- `fifa.run` reads an edition once: one stored short (one row of three) is never read again (40o).
+- `wikidata.save_club` writes `founded_year` as the answer gives it (NULL when absent) and closes the open Wikidata
+  tenure when the answer names no coach (40s); `save_stadium` writes capacity, its date and the coordinates as given,
+  NULL included (40t).
+- `player_facts.save` replaces `core.players.birth_date` whatever its provenance and leaves `birth_date_source_url`:
+  a date the Transfermarkt snapshot attested is served under the snapshot's URL with Wikidata's value (40w).
+
+### 44.2 Rules
+
+**Empty answers (40b, 40f, 40j, 40n).** An answer that is valid in form but holds no element never removes an
+accepted observation. For a Transfermarkt history (values, injuries) or squad, when the player (club-season) holds at
+least one row of the provider, the read is refused: `Failed` with HTTP 200 and a code (`HISTORY_EMPTY` for values and
+injuries, `SQUAD_EMPTY` for a squad), nothing is written, `ops.transfermarkt_reads` keeps `read_at` and
+`rows_written` of the last accepted read and carries the code, the attempts and the bounded backoff (the unit is due
+again within the retry delay). Holding nothing, the empty answer is an ordinary one (a player never injured, a season
+without a squad): acquitted, 0 rows. An empty UEFA edition is refused whatever is stored (`EMPTY_EDITION`): it would
+otherwise delete the rows, or create an empty edition marked current; the scope fails, `ops.source_runs` traces it and
+the next attempt comes after `RETRY_AFTER`.
+
+**Malformed answers (40d, 40h).** Unchanged refusals (`SCHEMA_CHANGED`, schema stop). A refused or failed refresh
+never hides an accepted read: `api.player_injury_reads` names the player once one read was accepted (`read_at IS NOT
+NULL`; the reader sets `read_at` only in `done`, never on a refusal), whatever the last attempt gave, as 153 does for
+the transfers. A first read refused stays unknown (404); a quarantine still hides everything.
+
+**Histories (values 40c, injuries 40g).** An element a valid, non-empty answer omits is not deleted: it keeps its facts
+and is marked `absent_since` = the day of the read (the first day it was missed; a later omission keeps that day).
+Listed again, the mark is cleared. Nothing of the provider's rows is deleted by the reader any more.
+- A value point is keyed by its day (the table's key). A listed point is written only when its value, club, team or
+  mark differ: a second identical pass changes no row and records `rows_written` 0; a real correction (another value
+  on that day) replaces it. A point of the 6 July 2026 snapshot (`market_value_snapshot`, same source) that the
+  reader's history omits is marked like any other: it no longer oscillates (deleted by the reader, re-inserted by the
+  snapshot the next day), since the snapshot only rewrites a point whose `as_of` is not later than its vintage.
+- An injury episode has no provider id. It is keyed by (start date, label). An answered episode matches the stored one
+  of the same key; then, inside one start date, one stored episode left unmatched and one answered episode left
+  unmatched are the same episode whose label the provider corrected. Otherwise the answered episode is new. A matched
+  episode keeps its id and is updated in place when a fact differs (end, days, games, season, kind, label). The same
+  key twice in one answer is one episode when both state the same facts; with different facts the answer is refused
+  (`HISTORY_CONFLICT`), as for the transfers.
+- Served: **with the mark, as 153 serves the transfers**. `api.player_market_values` and `api.player_injuries` gain
+  `absent_since` as their last column; `GET /api/player-market-values` adds `absentSince` to a point and
+  `GET /api/players/{id}/injuries` to an episode only when it is set (additive fields: a body without absence is the
+  same bytes as before). The site reads neither field: an absent point stays on the value curve and can remain the
+  « latest value » of the profile (139), and an absent episode stays in the list. This keeps what the site showed
+  before a truncated answer; the price is that a real removal by the provider (a value or an episode deleted, a start
+  date corrected) stays shown, marked in the API, until a person decides.
+
+**Current state (squads 40j, 40k, `write_search`).** A member may leave for real; a truncated answer cannot be told
+from a departure. The squad response carries no size of its own, and the club record's `squadSize` (`/clubs`) counts
+the current squad, not a season's: it cannot check a past season, and nothing proves it counts the same members as
+`/club/{id}/squad` for the current one. No threshold is invented. The rule: a member omitted by a valid, non-empty
+squad is kept and marked `absent_since` (listed again: the mark goes); the linker (`link_players`) reads the present
+members only, so a departure or a truncation weighs on the links exactly as the deletion did, but the observation and
+its day stay. `read_on` is the day the row last changed: a second identical pass writes nothing. `write_search` writes
+the candidates' squads by the same rule (it never wrote an empty one). What this lets through: a truncated answer
+still removes a member from the link candidates until he is listed again; a real departure is kept marked, never
+removed.
+
+**Fields absent from an answer (40t, 40s).** A field an answer omits does not set a known field to NULL.
+- Stadium: the capacity, its observed date and its day are written together when the answer gives a capacity, else
+  all three kept; the coordinates when both are given, else both kept; the opening date (and its year) and the
+  creation date each when given. A different given value replaces the stored one (a correction).
+- Club: `founded_year` when given (a different year replaces), else kept; the stadium was already kept (coalesce).
+- Coach: a Wikidata tenure is closed only when the answer names another coach; it closes on the day of that read and
+  the new one opens. An answer without a coach changes no tenure. A real departure without a successor named is not
+  seen: the tenure stays open until the next named coach. This is the known limit of the rule.
+
+**Birth dates (40w).** A birth date with a recorded provenance (`core.players.birth_date_source_url` set: the
+Transfermarkt snapshot writes it only with the date it fills) keeps its value and its URL. A different plausible date
+from Wikidata does not replace it and never takes its URL: the conflict is traced once in `ops.parse_failures`
+(`BIRTH_DATE_CONFLICT`, the player, the stored date and URL, Wikidata's date and person). The link and the height are
+still written. A date without provenance (empty, or written by Wikidata, which records none) is replaced as before: a
+Wikidata correction applies. The dates already overwritten in production are not repaired by the code (it would change
+the date the site shows): §44.4 gives the query that lists them.
+
+**FIFA editions (40o).** The source states no edition size (the overview lists rows only), so a completeness check
+would need an invented threshold. The rule is a re-read: the latest stored edition, while it is the latest of the
+catalogue, is read again when its last read (`core.ranking_editions.checked_at`, new) is at least `REREAD` (7 days)
+old. An identical re-read writes no row and raises no version (only `checked_at`); a re-read with at least as many rows
+and other content replaces the rows and raises the version once; a re-read with fewer rows than stored is refused: the
+stored rows stay, `ops.parse_failures` records `EDITION_SHORTER` once for that edition and count, and the next re-read
+comes a week later; an empty re-read (not published) changes nothing. Older editions keep main's rule (never read
+again). What it lets through: an edition read short and superseded before its re-read stays short.
+
+**UEFA editions (40x, 40n).** `uefa.save` builds the edition's rows (links, logos and crests as before) and compares
+them with the stored rows and season points: equal, it deletes and inserts nothing and raises no `ranking` version;
+the edition's own record is updated only when one of its fields differs. Any difference replaces the edition and
+raises its version once. The emptiness refusal is in `fetch` (above). Only `fetch` and `save` change (the « identités »
+lot holds the rest of `uefa.py`).
+
+### 44.3 Failure modes and expected outcomes
+
+| # | Writer | Situation | Expected |
+|---|---|---|---|
+| 44a (40b) | values | `{"history": []}` after two accepted points | both kept; `HISTORY_EMPTY`, 200, due within a day |
+| 44b (40c) | values | a valid history without one of the two points | both kept; the omitted one `absent_since` = read day; read acquitted |
+| 44c | values | then the whole history again | the mark cleared; a third identical pass writes no row (`rows_written` 0) |
+| 44d | values | a point's value corrected at the source | the new value replaces it |
+| 44e | values | the absent point through `GET /api/player-market-values` under `vega_read` | served with `absentSince`; the other points without the field |
+| 44f (40f) | injuries | `{"injuries": []}` after two episodes | both kept; `HISTORY_EMPTY` |
+| 44g (40g) | injuries | a valid list without one episode | both kept, the omitted one marked; listed again: mark cleared, ids unchanged (40e: same ids on a repeat) |
+| 44h | injuries | an ongoing episode's end date and games filled; another's label corrected | updated in place, same ids, no new episode |
+| 44i (40h) | injuries | `injuries: "x"` after an accepted read | `api.player_injury_reads` names the player; `GET /api/players/{id}/injuries` 200 with both episodes |
+| 44j (40j) | squad | `{"squad": []}` after two members | both kept; `SQUAD_EMPTY` |
+| 44k (40k) | squad | a valid squad without one member | both kept, the omitted one marked; not a link candidate; listed again: cleared |
+| 44l | search | a candidate's squad without one stored member | the member kept and marked, not deleted |
+| 44m (40n) | UEFA | `totalElements: 0`, no member | stored rows kept; scope `EMPTY_EDITION` |
+| 44n (40x) | UEFA | the same pages twice | rows and `ranking` version unchanged |
+| 44o | UEFA | one club's points changed | the edition replaced, version raised once |
+| 44p (40o) | FIFA | the latest edition read with one row of three, complete at the source a week later | three rows, version raised once; an identical re-read after another week writes nothing |
+| 44q | FIFA | a re-read shorter than stored | stored rows kept; `EDITION_SHORTER` in `ops.parse_failures` once |
+| 44r (40t) | stadium | an answer without capacity and coordinates | both kept; a later answer with another capacity replaces it |
+| 44s (40s) | club | an answer without `founded` and coach | founded year kept, tenure open; a later answer naming another coach closes it that day and opens his |
+| 44t (40w) | player facts | a snapshot-attested date, Wikidata another | date and URL kept; `BIRTH_DATE_CONFLICT` once; height written; a date without provenance is still corrected |
+
+### 44.4 What stays open or for the operator
+
+- The six birth dates Wikidata overwrote before this change are listed by
+  `SELECT p.id, p.birth_date, o.birth_date, p.birth_date_source_url FROM core.players p JOIN core.player_fact_observations o
+  ON o.player_id = p.id AND o.source = 'transfermarkt_snapshot' AND o.source_url = p.birth_date_source_url
+  WHERE o.birth_date IS NOT NULL AND o.birth_date <> p.birth_date`; restoring them changes what the site shows and is a
+  user decision (closed question: « restore the snapshot's date for these players, yes or no? »).
+- Absent values and episodes stay served; whether the site should hide or mark them is a design decision (mock-up
+  first).
+- A squad departure without a later listing stays marked forever; a FIFA edition superseded before its re-read stays
+  as read; a coach leaving without a named successor keeps an open tenure.
+- No history table of absences ended (153 has one for the transfers): the mark is cleared on reappearance and the
+  absence is not kept for values, injuries and squads.
+
+## 45. Residuals: an Open Matchday copy kept until its native edition covers it, a football-data pair no longer holds a reviewed copy, the Transfermarkt search refuses a reserve (audit E02b, E03f/E03h, E03c/E03g; 19 Nov 2026, written before the tests)
+
+Lot « résiduels », branch `claude/audit-residuels` from the candidate `8587ab6671` (main `2088d36e60` with six lots).
+No migration. Three defects the earlier lots left open, each reproduced on `8587ab6671` before any change
+(`open_matchday.py`, `archives.py` and `transfermarkt.py` are the same functions there as on `2088d36e60` for the
+lines concerned).
+
+### 45.1 What the code does on `8587ab6671`
+
+- **E02b.** `open_matchday.held(conn, folder, season)` answers true as soon as the copied league
+  (`COVERED[folder]`) has a PitchAPI edition for the season, empty or not, and `run` then calls `drop_copy`, which
+  deletes every match of the copy, its rounds, its edition and competition, with no trace. Replayed by
+  `open_matchday.run` under `vega_collect`: a first pass writes the Premier League copy (5 results, 3 fixtures); the
+  catalogue then creates the native 2026/2027 edition with no match; the second pass deletes the 8 matches, the
+  edition and the competition, and `ops.parse_failures` stays empty. At a season change the catalogue creates the native
+  edition before its matches are collected: the copy's results disappear until PitchAPI writes its own, and for good
+  where PitchAPI never does.
+- **m4 (§36, 35ad).** `Loader.removals` holds a reviewed archive copy (`removal_has_dependents`) when
+  `ops.archive_match_dependents` names any dependency, football-data.co.uk's pair
+  (`core.footballdata_matches.match_id`) included; `_delete` refuses the same at apply (`ArchiveDrift`). That pair is
+  `ON DELETE SET NULL` and the reader pairs every row again each week (`footballdata._link`): it is a derived pointer,
+  not a fact of the copy.
+- **E03c/E03g.** `pick_clubs` (the votes) never links a first team to a reserve (`is_reserve`, conflict
+  `reserve_side`), but `write_search` links the club `pick_search` chose without that check. Production: team 604
+  (Estudiantes de Río Cuarto, Liga Profesional) linked on 16 Nov 2026 21:51:17 UTC by `club_search_squad` (evidence 6)
+  to Transfermarkt's 75142, « AA Estudiantes de Río Cuarto II » (`mainClubId` 14602); the votes noted the conflict on
+  18 Nov 00:31:27 without removing the link; `team_of` and `attach_teams` keep reading it: three values and four
+  transfers carry `team_id`/`to_team_id` 604 for `provider_club` 75142 (`integrite-cas.zip`, `operateur/reserve-*.csv`),
+  and `GET /api/teams/t_1dhmUh/squad?season=2026/2027` serves the reserve's record as the club's squad (value 125 000 €,
+  27 players, average age 20.6, ranked 30th of 30; read 19 Nov 2026).
+
+### 45.2 Rules
+
+**An Open Matchday copy goes only when the native edition covers it, match by match (E02b).**
+- `held` is unchanged: a COVERED folder is not read in a season PitchAPI holds its league. The copy then stays as last
+  read (frozen), so it never doubles what PitchAPI writes for the same days. The Elo already never reads a COVERED
+  folder (`power.elo_matches` skips them whatever their state), so a copy kept beside its native edition counts nothing
+  twice; `identity.duplicates` only notes, in `ops.data_warnings`, a copy match whose clubs are PitchAPI's within a day.
+- `drop_copy` removes the copy (matches, rounds, edition, competition and its id, the match ids), as before, only when
+  every match of the copy, whatever its status, has a match of a PitchAPI edition of the copied league for that season
+  (competition keyed `pitchapi`/`COVERED[folder]`, `cup_key` and `archive_key` NULL, the season's label) with the same
+  two clubs, either side at home, each club resolved through `core.teams.merged_into`, whose `match_date` is at most one
+  day from the copy's. A copy without a match is covered.
+- Otherwise nothing is deleted: the whole copy stays (no partial removal, so a copy match not covered never
+  disappears), the reason is traced once while it stays the same (`failure_once`, code `COPY_NOT_COVERED`, edition of
+  the copy, message `open-matchday:<folder>:<season>: <n> of <total> match(es) without a native match: <first five as
+  day home–away>`), and the next pass (six hours) tries again. A copy covered later goes at that pass.
+- What this lets through: a copy fixture PitchAPI moves by more than a day, or a copy club the identities never link
+  to PitchAPI's, keeps the copy, frozen and traced, until a person decides; the copy edition stays visible as a
+  complementary competition meanwhile, as it was before its league was held.
+
+**A football-data pair alone does not hold a reviewed copy (m4; decision of the owner, taken by the coordinator).**
+- In the removal of a reviewed archive copy (`Loader.removals`) and in its check at apply (`_delete`), the dependency
+  `core.footballdata_matches.match_id` alone no longer holds the copy; every other dependency and every event holds it
+  as before (`removal_has_dependents`). The removed entry of the plan names what its removal releases
+  (`"released": ["core.footballdata_matches.match_id"]`, only when there is one: other plans are unchanged).
+- The deletion clears the pair (`ON DELETE SET NULL`); the football-data row stays, unpaired; the reader's next pairing
+  (`footballdata._link`, under `vega_collect`) gives it the twin that stays when the twin is the one match of its
+  clubs and score; a second pairing changes nothing.
+- 141's guards stay as they are: `ops.archive_match_dependents` still lists the pair (the plan shows it), the
+  `archive_removed_*` triggers fire on a non-null reference only (the `SET NULL` passes) and the tombstone refuses a
+  later pairing to the removed id. Should they refuse the removal, they are not bypassed: the case is described and
+  stops there.
+- Unchanged: `merge_twins` (35ab), the purge (35ac), the restorer's refusal (35aa).
+
+**The Transfermarkt search links no reserve to a first team (E03c, E03g).**
+- `write_search` applies `pick_clubs`'s checks to the chosen club before `_link`: its name is the one
+  `core.provider_clubs` holds. No name known yet, or a name that is no club (`NO_CLUB`): no link, the search is due
+  again in a day (the squads it wrote queue the club's record, read at priority 1 before searches, so the next search
+  knows the name). `is_reserve(club name) != is_reserve(team name)`: no link, the conflict row of the votes
+  (`ops.provider_link_conflicts`, reason `reserve_side`, `ON CONFLICT DO NOTHING`), the search done as usual. The
+  players and squads the search read are written as before.
+- Known limit, not changed here: `RESERVE`'s single letters also match « D.C. United » (`c`) and « B 93 » (`b`). D.C.
+  United is linked already (links never move); a club so spelled that only the search would find is now refused and
+  noted, as the votes do.
+
+**The production link 604 → 75142 (specified, not applied).** The pre-image in the repository is the 18 Nov 15:37
+UTC read of `integrite-cas.zip`; the reader has kept writing since (four or five transfers are named across the
+audit's reads), so the rows to correct are not entirely known here. A reviewed correction, on the model of
+`identity.SIDE_CORRECTIONS` (§39), would be: `TEAM_LINK_CORRECTIONS = {"estudiantes-rio-cuarto-604": {"team": 604
+(by its PitchAPI key t_1dhmUh), "club": "75142", "club_name": "AA Estudiantes de Río Cuarto II", "values": [(player,
+valued_at, value_eur) × 3: (10490, 2026-09-17, 25 000), (10491, 2026-09-17, 25 000), (10496, 2026-05-22, 50 000)],
+"transfers": [(id, player, transfer_date, source_key) × 4: (82621, 10484, 2025-01-01, 6041364), (63313, 10490,
+2026-01-01, 6253703), (77477, 10491, 2026-01-01, 6257185), (86811, 10499, 2026-01-01, 6257187)]}}`. Applied in one
+transaction, it would check the pre-image (the current transfermarkt key of 604 is 75142, its link row
+`club_search_squad`, the provider club's name, exactly these values and transfers carrying 75142 and 604 and no
+other); on any difference it holds the whole correction, writes nothing and traces why once. Otherwise: the key row
+`core.provider_ids(team, transfermarkt, 75142, 604)` becomes `is_current = false` (kept: the key stays taken, so
+neither the search nor the votes give 75142 to 604 again, and 604 may get its real club), its `ops.provider_links`
+row is quarantined (`quarantine_reason = 'reserve_side'`, which `api.club_squad` already excludes), the three values'
+`team_id` and the four transfers' `to_team_id` (and `from_team_id` where 75142 is the origin) become NULL. Nothing is
+deleted: the values and transfers stay, served under the provider club's name (« AA Estudiantes de Río Cuarto II »,
+`coalesce(team, provider club)` in 135/153/160's views) without a canonical club; the squad route answers 404 for 604
+until its real club is linked. A journal row per correction (its digest, as §39) makes a second application a no-op.
+The six players linked through 75142's squads (`link_players`) are persons, linked by name and birth date: not
+touched. To apply it, an operator needs the production rows of the pre-image at that time (a read under `vega_read`
+of the five queries of `integrite-cas.zip/sql/final-probe.py`) to fill the lists, then the code and its test.
+
+### 45.3 Failure modes and expected outcomes
+
+| # | Situation | Expected |
+|---|---|---|
+| 45a | Copy of the Premier League (5 results, 3 fixtures) written by `open_matchday.run` under `vega_collect`; the native edition then created empty; `run` again, twice | the copy keeps its 8 matches, edition and competition; one `COPY_NOT_COVERED` row naming 8 of 8, still one after the third pass |
+| 45b | The native edition then holds the 8 matches (PitchAPI's clubs, the copy's teams merged into them; one a day later, one with sides swapped); `run` | the copy goes as before (matches, rounds, edition, competition, ids); the cup of the same summary stays |
+| 45c | The native edition holds 7 of the 8 | the whole copy stays; the trace names 1 of 8 with its day and clubs |
+| 45d | The missing native match is two days from the copy's | not a cover: the copy stays |
+| 45e | A kept copy beside a covering native edition, `power.elo_matches` | the copy's rows are not among the Elo's matches |
+| 45f | (35ad rewritten) A reviewed archive copy football-data paired, its twin identical; plan, apply, then `footballdata._link` twice under `vega_collect` | the plan removes the copy (`released` names the pair), the apply deletes it, the football-data row is kept unpaired, the first pairing gives it the twin, the second changes nothing, a new plan removes nothing more |
+| 45g | The paired copy also bound by a provider key | held `removal_has_dependents`, never deleted |
+| 45h | `Reader.read` of a search for « Estudiantes de Río Cuarto » whose one candidate, with six of our players, is the club « AA Estudiantes de Río Cuarto II » (name known); then its players' values and transfers | no team link, one `reserve_side` conflict (75142, the team), the squad and the players written; the values and transfers read after keep `provider_club` 75142 and no team |
+| 45i | The same search, the club's name not known yet | no link, no conflict, the search due again within a day; after the club record is read, the next search refuses as in 45h |
+| 45j | The same search whose candidate is the first team « AA Estudiantes de Río Cuarto » | linked as before (`club_search_squad`) |
+
+### 45.4 The search waiting for a club's name is bounded (second review, point 4; 19 Nov 2026, written before the tests)
+
+The retry of a day (`SEARCH_UNNAMED_AGAIN`) assumed the club's record arrives: two cases never resolve. `/clubs` may
+omit the club (`write_club` records a 404 with no `core.provider_clubs` row, and the `club` unit, queued
+`ON CONFLICT DO NOTHING`, waits 90 days), or answer it without a name (`parse_club` gives `name` None, the column is
+nullable). The whole search (the quick search, up to three squads, their players: five to eight requests 2.5 s apart)
+was then read again every day for that team, on the budget of a reader that pauses at its first refusal.
+
+Rule: one close retry only. A search whose chosen club has no usable name is recorded with the error mark
+`CLUB_UNNAMED` (`ops.transfermarkt_reads.error_code`, `attempts` counting, as `done` already writes them: no
+migration). Due again within a day when the unit did not carry that mark already; carrying it (the close retry was
+spent), at the search's ordinary period for its priority. No link and no conflict while the name is missing. When the
+name arrives, the reserve check applies as in 45h and the search is recorded as usual (the mark cleared).
+
+| # | Situation | Expected |
+|---|---|---|
+| 45k | 45i's search when `/clubs` omits the club (its unit recorded 404, no `core.provider_clubs` row, due again in 90 days); the search read three times, each when due | the first search due again within a day, the next ones at the search's ordinary period (`PERIODS["search"]`, 30 days at priority 1); no link, no conflict at any of them |
+| 45l | The same when the club's record has no name (`parse_club`'s `name` None, the row stored with a NULL name) | as 45k |
+| 45m | After 45k or 45l, the club's name arrives (the reserve's) and the search is read | the reserve check as in 45h (`reserve_side`, no link); the unit's error mark cleared |
+
+## 46. The independent review of 2088d36e60..8587ab6671: a grade status read by key, a first 404, the side journal, the failures' lookup (19 Nov 2026, written before the tests)
+
+An independent review of the six lanes integrated on `claude/audit-reprise-33` (8587ab6671) returned six findings
+(evidence `relecture/CONSTATS.md`). Each was replayed first on a disposable PostgreSQL 18.6, by the real writers where
+there is one: five reproduce, one does not.
+
+- **1.** `GET /api/read/performance` joins `api.player_grade_status` (155) to its materialized `target` CTE. The view's
+  key set is a `UNION ALL` of the statistics and of the line-ups with a `NOT EXISTS`; the planner pushes no join
+  condition into it, so each call builds the whole view (every partition of `core.player_match_stats`, twice, and of
+  `core.lineup_players`) and hashes it: 14.1 s for one row on the review's base (60 000 matches, 1.5 M statistics,
+  1.8 M line-up rows), 1.8 ms with constants. The read API's `statement_timeout` is 8 s.
+- **2.** 160 serves `api.player_injury_reads` once `read_at` is set, on the premise that the reader sets it only on an
+  accepted read. `Reader.read` records a 404 (`Missing`) by `done(..., status=404, error="NOT_FOUND")`, which sets
+  `read_at`: a player whose first injuries read answers 404 is served `{"injuries": []}` (« never injured ») instead of
+  116's 404. Replayed: real reader under `vega_collect`, real route under `vega_read`. Values and squads have no read
+  gate (no `*_reads` view; `api.club_squad` and `api.player_market_values` serve their rows): nothing to align there.
+- **3.** `identity.correct_sides` journals a moved side by an `INSERT` without `ON CONFLICT` on `(match_id, side)`. One
+  of the fifteen held keeps the keys on Barcelona SC; a later re-read of the Copa del Rey edition (`cups.save`) resolves
+  « FC Barcelona » by `name:FC Barcelona`, still on 707, and puts a moved side back on it; every later identity pass
+  sees the side wrong again, retries the `INSERT`, takes 23505 and rolls back the whole `teams` scope (merges included).
+  Replayed by the real writers under `vega_collect`.
+- **4.** `sources.failure_once` looks up `ops.parse_failures`, which has only its primary key and is never purged: a
+  sequential scan per call (27 ms on 300 000 rows, once per birth-date conflict in a club's transaction).
+- **5.** Not reproduced. The review read `in_match` as NULL for a statistics row without a team and concluded that such
+  rows, graded before the diff, now lose their grade. Before the diff (2088d36e60) and after it, `PLAYER_MATCHES`
+  inner-joins `core.teams` on `s.team_id`: a row without a team is never read by the players' run, so it was never
+  graded and is not graded now (the same run on both commits: no grade, no power-match row). `in_match` is never NULL in
+  the rows the run reads. Nothing changes in `power.py` or in 155: the status of such a row stays `team_not_in_match`
+  (no team of the match), which is what the run does with it.
+- **6.** `core.team_side_corrections` references `core.matches` without `ON DELETE`. `merge_twins` holds a pair an
+  attestation names (143) but not one a side correction names: if one of the corrected archive matches is a goal-only
+  `g:` twin, its `DELETE` fails on the foreign key and its season fails at every pass (printed only). The European
+  archive keys are `g:`-prefixed (`g:champions-league:2020-10-28:1` for 729828), so the case is not only theoretical.
+
+### 46.1 Rules
+
+- **Grade status by key (1).** The performance read resolves the participation's key from its bound values, as the
+  appearance itself is found (`found(values)`): `season_id` the bound edition season, `match_id` and `player_id`
+  `api.internal_id(...)` of the bound public ids, and reads `api.player_grade_status` filtered on these three. No join
+  of the view to a CTE. The planner then pushes the three conditions into both branches of the key set and into the
+  `NOT EXISTS`: every scan of a statistics or line-up partition is an index scan on the participation's key (on the review's
+  base the primary key with `season_id`, `match_id` and `player_id`), in a custom plan and in a generic one (`plan_cache_mode = force_generic_plan`), with `enable_seqscan`
+  at its default. `gradeStatus` and its values are unchanged. The fragment is one exported function of the route
+  (`gradeStatusSql`), so the plan test reads the SQL the route sends. No other reader of the diff reads the view by
+  join (`performance.mjs` is its only reader).
+- **A 404 on injuries is a refusal (2).** The reader records it as before (status 404, `NOT_FOUND`, the next read in
+  `NOT_FOUND_AGAIN`), but `read_at` and `rows_written` stay those of the last accepted read, as for every other refusal
+  (`failed`). Hence, through 160's view unchanged: never read or never accepted → 404; accepted (even empty) then refused
+  by a 404 or by any other refusal → the accepted list is served. Other kinds keep their 404 as an answer (`read_at`
+  set): the profile and club planning read it, and no reader gates them on it. 160 (neither published nor deployed) is
+  corrected in place for the rows the old reader left: an injuries unit whose last attempt was refused
+  (`error_code IS NOT NULL`) and whose player holds no Transfermarkt episode has its `read_at` cleared: nothing shows
+  it was ever accepted, so it stays unknown, as under 116. A unit with held episodes keeps its `read_at` (only an
+  accepted read writes episodes). Lost by that correction: the date of a legacy 404, and an accepted empty list
+  refused later stays a 404 until its next accepted read (116's behaviour, production's today).
+- **The side journal never fails the pass (3).** The journal's `INSERT` is `ON CONFLICT (match_id, side) DO NOTHING`.
+  A side found back on the wrong club after its move is moved again (the facts follow it, as on the first move) and
+  counted as moved; the pass prints how many were moved again. The journal keeps the first move of each side (its
+  clubs, keys, correction, proof digest and `applied_at`): `vega_collect` may only add to it and the key is the side,
+  so a second move adds no row; the pass's line says it. As long as a match of the correction is held, the keys stay on
+  the wrong club and a re-read can put the side back again: the held match must be resolved by review.
+- **The failures' lookup (4).** Migration 157 adds `ops.parse_failures (error_code, competition_season_id, md5(message))`
+  (`lock_timeout` 3 s). `failure_once` asks `error_code = $1`, `competition_season_id = $2` (or `IS NULL` when no
+  edition), `md5(message) = md5($3)` and `message = $3`: an index scan on the three conditions. The message itself is
+  not indexed (up to 2 000 characters, past btree's row size in a multi-byte script). 157 adds no relation naming a
+  match: `open_matchday_restore.REVIEWED_SCHEMAS` stays pinned on 160.
+- **Rows without a team (5).** As on 2088d36e60: never read, never graded, no exclusion recorded; the year is published.
+- **Side journal and removals (6).** The journal is a proof like 143's attestations: it keeps its foreign key, and what
+  would remove a match it names holds instead of failing or dropping it. `merge_twins` holds a pair whose goal-only
+  match or result a side correction names (reason `side_corrected`), printed and appended to `held`, nothing written;
+  the scope purge holds the competition whole (its `_protected` check: the collection role may not delete from the
+  journal); a reviewed removal holds the match (`removal_has_dependents`, through `ops.archive_match_dependents`, which
+  names `core.team_side_corrections.match_id`). `open_matchday_restore.ADDED_DEPENDENCIES` already lists the table. A
+  trigger guard (141) is for relations without a foreign key: the journal needs none.
+
+### 46.2 Failure modes and expected outcomes
+
+| # | Situation | Expected | Before the corrections |
+|---|---|---|---|
+| 46a | `GET /api/read/performance` for three keys of the API seed, under `vega_read` | `gradeStatus` `graded`, `below_display_threshold`, `no_minutes` (38f) | green (the values were right) |
+| 46b | The route's grade-status SQL, `EXPLAIN` with the bound values and as a generic plan, `enable_seqscan` off (the seed is tiny) | every scan of a statistics or line-up partition is an index scan on the participation's key (on the seed the planner takes the primary key or the `(player_id, season_id)` index: the condition names `player_id`) | red: index scans of every partition without any condition (the view is built whole) |
+| 46c | The same SQL on the review's base (`relecture_a`), `EXPLAIN (ANALYZE)` custom and generic, defaults | no sequential scan of `player_match_stats` or `lineup_players`; milliseconds | 27.8–31.8 s a call under the read API's settings (no parallel query; 14.1 s in the review with parallel workers), sequential scans of every partition; after: 4.4–6.8 ms a call, 1.1–1.3 ms executed |
+| 46d | A first injuries read answered 404 by the reader, then `GET /api/players/{id}/injuries` | 404 | red: 200 `{"injuries": []}` |
+| 46e | An accepted read with two episodes, then a 404 | 200, both episodes; `read_at` that of the accepted read | served, but `read_at` moved to the 404's time |
+| 46f | An accepted empty read, then a 404 | 200 `{"injuries": []}` | green by accident (`read_at` set by the 404) |
+| 46g | 160 on legacy units: first read 404 (no episode), accepted then refused with episodes, accepted then refused without | unknown; known; unknown | known; known; known |
+| 46h | One of the fifteen held, the pass, a re-read of the Copa edition that puts 2276's side back on 707, two more passes | each pass succeeds; the six cup sides the re-read put back (2276 among them) on 740 again; the journal unchanged, 14 rows | red: both passes fail on 23505 |
+| 46i | `failure_once` on 300 000 rows, with and without an edition | index scan, conditions on the three columns; still one row per (edition, code, message) | sequential scan (27 ms) |
+| 46j | A statistics row without a team, the daily path on the candidate and on 2088d36e60 | not graded, no exclusion, the year published, status `team_not_in_match`; the same on both commits | green on arrival (the finding does not reproduce) |
+| 46k | `merge_twins` on a twin pair whose goal-only match a side correction names | the goal-only match or the result named: held `side_corrected`, nothing changed, the journal row intact; the season does not fail; again the same | red: the twin named, the season fails on the foreign key at each pass; the result named, the pair is merged unreviewed |
+| 46l | The scope purge of a competition whose match a side correction names; a reviewed removal of such a match | the competition held whole; the match held `removal_has_dependents` naming the journal | green on arrival (the foreign key and the dynamic dependents already hold them) |
+
+## 47. Award year 2020: graded against award year 2021, never ranked (audit E04f, E04k; user decision of 20 Nov 2026, written before the tests)
+
+The user's decision (20 Nov 2026), on §38's open question: the participations of award year 2020 (1 August 2020 –
+31 July 2021) are graded against the references of award year 2021, and no ranking or award race of 2020 is published.
+Award year 2020 holds only the first half of the calendar-year editions 2021 (MLS, Eliteserien, the first July rounds
+of 2. Bundesliga, …): the base has no player statistics of the European seasons 2020/21, which are archives only. Its
+own references would be those of half a year of non-European leagues, and its ranking that of those leagues alone.
+
+Found in production on 20 Nov 2026 (`GET /api/rankings/power?kind=players&season=2020/2021`, kept under
+`evidence/annee-2020/`): a 2020/21 players ranking is published, `power-ranking-v8`, computed 18 Nov 2026 at
+23:39:58 UTC, seven seconds after 2021/22's: its first ten are MLS players (Carles Gil, New England, 93.4). The
+daily path does not reach 2020 (§38); `stale_rankings` did, through a published 2020 run of an earlier method, and
+`refresh_players(2020)` ranked the year and graded it against its own references. §38's « 14 418 ungraded » was
+measured at 18:37 UTC, before that run; how 2020's rows are graded in production since is not read (no base access).
+
+### 47.1 Rules
+
+- **A partial award year.** An award year whose own season holds no player statistics (`core.player_match_stats`
+  with `season_id` = the year: the condition `previous_year_changed` already uses), while the next season holds
+  statistics of finished admitted matches dated before 1 August of the year's end (`PLAYER_MATCHES` reads them).
+  In the base: 2020 only.
+- **Its grades.** `refresh_players` of a partial year reads the year as before (`PLAYER_MATCHES`, the same roles,
+  contributions and exclusions) and grades each player-match against the next award year's references when that
+  year is over: those kept (`agg.match_grade_*` of `ref_season` = year + 1), else computed from that year's
+  player-matches and kept, as a finished year before is today. `agg.player_match_grades.ref_season` says it (2021).
+  If the next year is not over, no grade (`no_reference`): a year in progress is no reference.
+- **No ranking.** The partial year's run writes its player-matches (`agg.player_power_matches`: contributions and
+  grades, which the status view reads), its grades, its exclusions, and no ranking: `agg.player_power` and
+  `agg.player_power_roles` of the year are emptied, its award race replaced by an empty one (`write_award` of no
+  player). The run is published (`agg.power_runs`, `players` = 0), so the status view no longer says
+  `award_year_not_computed`. A ranking of 2020 that a previous run published is removed with that run's
+  replacement; the next year's prior (`previous`, read from `agg.player_power` of the year before) then finds none
+  for anyone, as already for every player of the European leagues.
+- **Its own references.** No year is graded against a partial year's own references: the partial run deletes those
+  an earlier rule's run kept (`agg.match_grade_*` of `ref_season` = the year).
+- **When it runs.** `stale_rankings` lists, beside the years of another method, a partial year with no published
+  players run of the present method, or whose run started before the last published players run of the next year
+  (its references may have moved). The worker's stale step ranks the years it lists, most recent first: the next year
+  first, then the partial year. `refresh_daily` and `previous_year_changed` are unchanged (a year with statistics
+  of its own). These two conditions miss production's order, where 2020's earlier-rule run started after 2021's: see
+  §48 (48a–48e), which adds two conditions of state.
+- `METHOD_VERSION` is unchanged: no other year's ranking or grade changes.
+
+### 47.2 Failure modes and expected outcomes
+
+| # | Situation | Expected | On 79ef8bbb45 |
+|---|---|---|---|
+| 47a (38a) | §38's base, the daily path (`due_seasons`, `refresh_elo`, `refresh_daily(elo=False)`), then the worker's stale step | every positive-minute participation of award year 2020 graded (682), each with `ref_season` 2021; status `graded` or `below_display_threshold` | red: 0 of 682 graded |
+| 47b | The same base, award year 2020 first ranked by the earlier rule (as production on 18 Nov), then 47a | the earlier ranking and award race removed: no `agg.player_power`, `agg.player_power_roles` or award row of 2020; one published 2020 run, `players` = 0; 2021 still ranked | red: the 2020 ranking kept |
+| 47c | `stale_rankings` before the daily path (no run of 2020), after it (2020's earlier run older than 2021's), after the stale step | `[2020]`, `[2020]`, `[]` | red: 2020 never listed |
+| 47d | A second stale step and `refresh_players(2020)` again | no grade rewritten (`changed_at` unchanged), the same counts; 2020 not listed | red: as 47a |
+| 47f | `refresh_players(2021)` after 47a, then `refresh_players(2020)` | 2020 listed by `stale_rankings` (its run is older), then not; no grade rewritten | red: as 47c |
+
+(The table has no 47e: a numbering gap, no scenario missing.)
+
+## 48. The candidate on main `c4a3cacd77`: award year 2020 in production's order, the season's internationals and the Elo's wake-up, the deployment's migrations (second reviews of `e82992a37d`, 20 Nov 2026, written before the tests)
+
+The two reviews of `e82992a37d` (Fable and Opus, 20 Nov 2026, CHANGES_REQUESTED and BLOCKED) found two defects and one
+missing integration. The candidate is now merged with main `c4a3cacd77` (M0, `1594b63731`: a real merge, one textual
+conflict in a comment of `power.py`, both sides kept). Main is production's code: `bfab25d4ef` is deployed since
+20 Nov 01:50 UTC, migration 154 applied (`migrations applied=1 total=160`); `c4a3cacd77` adds only site files to it.
+
+- **Award year 2020 is not listed in production's order.** §47.1's conditions list a partial year without a
+  published run of the present method, or whose run started before the next year's last. In production both years
+  were ranked by `power-ranking-v8` on 18 Nov, 2021/22 at 23:39:52 UTC, then 2020/21 at 23:39:58 (the stale step,
+  most recent first). 2020's run is the later: neither condition holds, 2020 is never listed, and after deployment its
+  ranking (MLS first) would stay served with its grades against its own references. §47's test ranked 2020 by the
+  earlier rule before 2021's run: the reverse order.
+- **The season's internationals wake the Elo for nothing.** Main reads every international of 2026/27
+  (`nations-results:internationals:2026/2027`) for the home's week strip only and leaves it out of `ELO_MATCHES`.
+  The candidate's `worker.elo_due` (§37) counts every finished match of a cup-source edition (`_COMPLEMENTARY`): each
+  result of that edition makes the Elo due, and the full recomputation then reads nothing new.
+- **37g–37j hold eight editions**; main adds a ninth that reads the same `results.csv`, and the test file has no
+  2026/27 match outside the Nations League (red on M0: the ninth edition unexpected).
+- **The deployment's migrations** were never replayed from production's schema: files up to 154, then the merged
+  tree's.
+
+### 48.1 Rules
+
+- **When a partial year runs** (amends §47.1). `stale_rankings` lists a partial year when any of four conditions
+  holds: no published players run of the present method; its run started before the next year's last published run
+  (§47); **its published run ranked players** (`players IS DISTINCT FROM 0`: an earlier rule's ranking, whatever the
+  order of the two runs); **references of its own remain** (`agg.match_grade_roles` with `ref_season` = the year,
+  read by its primary key). The partial run itself publishes `players` = 0 and deletes those references in the
+  transaction that publishes it, so once it has run neither new condition holds: listed once, then not, and a second
+  pass writes nothing. No condition on `agg.player_match_grades` (its cost on the production base is not measured,
+  and the run is atomic). `METHOD_VERSION` is unchanged.
+- **Award year 2021 is unchanged by the 2020 run.** The 2020 run reads 2021's kept references and writes nothing of
+  2021: its ranking, roles and award race, its run, its grades and its references stay as they are. What 2021/22
+  keeps, acted and not changed here: its ranking's prior (`previous`, read from 2020's ranking at its last run) until
+  its next run, which then finds no 2020 ranking; the contribution C of a 2020 player-match measured against 2020's own
+  population (§47.1, as for any year in progress); 2020 leaves the years of the line-up model (`lineup.py`, which needs
+  `players` > 0) and the breakout eligibility reading 2020's ranking. No method is extended beyond award year 2020.
+- **The Elo's wake-up reads what the Elo reads.** `_COMPLEMENTARY` leaves out the editions `ELO_MATCHES` leaves out,
+  by the same predicate: `left(cs.cup_key, 31) <> 'nations-results:internationals:'`. Every other cup-source
+  edition — International Results' Nations League and tournaments, OpenLigaDB's Nations League, Open Matchday,
+  OpenFootball — still makes it due. Without any published Elo run, a base holding only internationals is not due.
+- **One read of `results.csv` for nine editions.** The internationals edition is an International Results edition
+  like the others: due with them, it is projected in the same bridge process (`prepare_due`), each edition keeping its
+  own digest, state and failure.
+- **The deployment's migrations.** From production's schema (the files up to 154, identical on `bfab25d4ef` and on
+  the merged tree) the merged tree's `python -m vega.migrate` applies exactly 155, 156, 157, 159 and 160
+  (`applied=5 total=165`), then nothing (`applied=0`); the checksums up to 154 are unchanged. 159 moves the version of
+  each edition whose stored SportScore ranks conflict, once, and no other; 160 clears `read_at` of every injuries unit
+  whose last attempt failed and of whose player no Transfermarkt episode is stored — an accepted empty list refused
+  since included — and of no other unit. `vega_read` then reads 154's `api.home_internationals`, `api.standings`,
+  `api.nation_matches` and `api.player_grade_status`.
+
+### 48.2 Failure modes and expected outcomes
+
+E2E on a disposable local PostgreSQL 18, under the real roles. 48a–48e: §38's base (`test_player_grade_reasons.py`),
+the real `Worker.daily` under `vega_collect` and `vega_calc`, the real read API (`read_http.mjs`, `vega_read`).
+48f–48i: `test_collection_wakeups.py`, the real worker, bridge and projection, `results.csv` from the test file.
+48j–48l: `test_deploy_migrations.py`, the real `python -m vega.migrate`.
+
+| # | Situation | Expected | On M0 `1594b63731` (tests `f133ab8c85`; green on `16a782abb6`) |
+|---|---|---|---|
+| 48a | §38's base; the Elo; 2021's daily models; **then** 2020 ranked by the earlier rule (production's order: 2020's run the later) | `stale_rankings` = `[2020]` | red: `[]` (the published 2020 run ranked players) |
+| 48b | Then the real `Worker.daily()` | 682 grades of award year 2020, each `ref_season` 2021; no `agg.player_power`, `agg.player_power_roles` or award row of 2020; one published 2020 run, `players` = 0; no `agg.match_grade_*` of `ref_season` 2020; the journal's `player ranking season=2020 … players=0`; award year 2021's run, ranking, roles, award race, grades and references unchanged | red: no `player ranking season=2020` line, 2020 not recomputed |
+| 48c | A second `Worker.daily()` | 2020 not listed, no run added, no grade rewritten (`changed_at`) | green (nothing moves) |
+| 48d | `refresh_players(2021)`, then `Worker.daily()` twice | 2020 listed once then not; no grade of 2020 rewritten | red: 2020's grades move only after a new 2021 run (references 2020 → 2021) |
+| 48e | The read API under `vega_read`, before 48b (production's state) and after | before: `/api/rankings/power?kind=players&season=2020/2021&scope=all` 200 with rows; after: 404, and 404 without `scope`; `season=2021/2022&scope=all` 200, the same body before and after; `/api/rankings/match` of a 2020 match: each grade that of `agg.player_match_grades` (`ref_season` 2021); 682 statuses `graded` or `below_display_threshold` | red: 2020/21 still 200, with and without `scope` |
+| 48f | An Elo published; a result written in `nations-results:internationals:2026/2027` by the real path | the pass: `elo_due` false, no Elo run, no side of that match in `agg.team_elo` | red: a second Elo run |
+| 48g | Then a result of `nations-results:nations-league:2026/2027` | due once: one run, its sides published; the next pass none | — (after 48f's red) |
+| 48h | A base without an Elo run, internationals only (real path) | `elo_due` false | red: the pass runs an Elo (1 run) |
+| 48i | 37g–37j with nine editions, `results.csv` holding one 2026/27 friendly | one request a pass; nine editions `ok`, each its digest; failing and back as 37i–37j | red before the adaptation (the ninth edition unexpected); green adapted: the shared read already covers it |
+| 48j | Production's schema (files up to 154) with rows, then the merged tree's `python -m vega.migrate`, then again | `applied=5 total=165` (155, 156, 157, 159, 160), then `applied=0 total=165`; rows up to 154 and their checksums unchanged; `vega_read` reads `api.home_internationals`, `api.standings`, `api.nation_matches`, `api.player_grade_status` | green (no code needed) |
+| 48k | 48j's data effects | 159: the version of each conflicting edition moves once (an existing version + 1, a new one created), no other; 160: `read_at` cleared on the failed units without an episode (an accepted empty list refused since included), kept on an ok unit, a failed unit with an episode and the other kinds | green |
+| 48l | 48j, a 2026/27 friendly of the internationals edition (verification only, main's site untouched) | `api.nation_matches` lists it once, with its edition's name; main's site tests green | green (verification only) |

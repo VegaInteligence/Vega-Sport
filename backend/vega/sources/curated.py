@@ -405,20 +405,53 @@ def stadium_plans(conn):
     return written, unmatched
 
 
+# The country a spelling of CLUB_ALIASES was reviewed for, when several clubs bear its name: « Barcelona » is the
+# Spanish club, never Ecuador's Barcelona SC (VI-21, 19 Nov 2026; FAILURE_MODES.md §39). A name several clubs bear
+# without an entry here gives its spelling to none of them.
+CLUB_ALIAS_COUNTRIES = {"Barcelona": "ESP"}
+
+
 def club_aliases(conn):
-    """The reviewed spelling of each club named as a key (several clubs may share a name:
-    each gets it; the UEFA link still needs the same country and a unique match)."""
+    """The reviewed spelling of each club named as a key, written as its alias (FAILURE_MODES.md §39). A name one
+    club bears: that club. A name several bear: the one of the country reviewed for it (CLUB_ALIAS_COUNTRIES), and the
+    other clubs of that name lose the alias if they held it; with no reviewed country, or not exactly one club of that
+    country, nothing is written or removed (each club keeps what it holds), the name is counted unmatched and logged
+    for review. The alias replaces a source spelling of the same form on the club (UEFA's « FC Barcelona » on FC
+    Barcelona): the identity pass reads aliases, not source spellings."""
     from . import normalize
 
-    written = 0
+    written = unmatched = 0
     for name, alias in CLUB_ALIASES.items():
-        for (team,) in conn.execute("SELECT id FROM core.teams WHERE name = %s AND is_national IS NOT TRUE AND merged_into IS NULL", (name,)).fetchall():
+        clubs = conn.execute(
+            "SELECT id, country_code FROM core.teams WHERE name = %s AND is_national IS NOT TRUE AND merged_into IS NULL ORDER BY id",
+            (name,),
+        ).fetchall()
+        if len(clubs) > 1:
+            country = CLUB_ALIAS_COUNTRIES.get(name)
+            chosen = [team for team, code in clubs if country and code == country]
+            if len(chosen) != 1:
+                # Not reviewed for these clubs: what each holds stays (39l); taking the alias from the club that
+                # resolves by it would make the next cup import create a second club.
+                unmatched += 1
+                print(f"club alias {name!r} shared by {len(clubs)} clubs without a reviewed country: unchanged", flush=True)
+                continue
+            others = [team for team, _ in clubs if team not in chosen]
+            written += conn.execute(
+                """DELETE FROM core.entity_names WHERE entity_type = 'team' AND entity_id = ANY(%s) AND normalized = %s
+                   AND kind = 'alias' AND source = 'vega'""",
+                (others, normalize(alias)),
+            ).rowcount
+        else:
+            chosen = [team for team, _ in clubs]
+        for team in chosen:
             written += conn.execute(
                 """INSERT INTO core.entity_names(entity_type, entity_id, name, normalized, kind, source)
-                   VALUES ('team', %s, %s, %s, 'alias', 'vega') ON CONFLICT DO NOTHING""",
+                   VALUES ('team', %s, %s, %s, 'alias', 'vega')
+                   ON CONFLICT (entity_type, entity_id, normalized) DO UPDATE SET name = EXCLUDED.name, kind = 'alias', source = 'vega', updated_at = now()
+                   WHERE core.entity_names.kind = 'source_spelling'""",
                 (team, alias, normalize(alias)),
             ).rowcount
-    return written, 0
+    return written, unmatched
 
 
 def player_facts(conn):
