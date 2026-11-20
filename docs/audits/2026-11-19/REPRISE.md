@@ -1,10 +1,10 @@
 # Reprise des 24 critères ouverts de l’audit Vega-Sport — état au 19 novembre 2026
 
-[Situation du 18 novembre](../2026-11-17/SITUATION.md) · [Registre des 91 critères](../2026-11-17/registres/requirements.csv) · [Spécifications des corrections](../../calculs/09-audit-2026-11/FAILURE_MODES.md) (§37 à §46) · [Preuves](preuves/)
+[Situation du 18 novembre](../2026-11-17/SITUATION.md) · [Registre des 91 critères](../2026-11-17/registres/requirements.csv) · [Spécifications des corrections](../../calculs/09-audit-2026-11/FAILURE_MODES.md) (§37 à §47) · [Preuves](preuves/)
 
-**Candidat : `code `79ef8bbb45``**, branche `claude/audit-reprise-33`, [PR 58](https://github.com/VegaInteligence/Vega-Sport/pull/58) en brouillon. CI verte sur `c6c4592ca7` (run 44601959463 : Python 743 OK avec 1 échec attendu, API 226/226, site 788/788, image, infrastructure et paquet API réussis) ; `c6c4592ca7` ajoute à ce code le présent rapport, le registre et les preuves. Il part de `main` `2088d36e60`, déployé le 19 novembre à 10 h 05 UTC (migrations jusqu’à 153). Rien de ce candidat n’est déployé : « branche » ci-dessous veut dire vérifié sur ce SHA par les suites et les rejeux locaux (PostgreSQL 18.6), « production » veut dire observé sur la version servie.
+**Candidat : code `b2bedf115f`**, branche `claude/audit-reprise-33`, [PR 58](https://github.com/VegaInteligence/Vega-Sport/pull/58) en brouillon. Il ajoute au code `79ef8bbb45` la décision du 20 novembre sur l’année de notation 2020 (§47). CI : voir la PR (la dernière verte, run 44601959463, porte sur `c6c4592ca7`, code `79ef8bbb45`). Il part de `main` `2088d36e60`, déployé le 19 novembre à 10 h 05 UTC (migrations jusqu’à 153). Rien de ce candidat n’est déployé : « branche » ci-dessous veut dire vérifié sur ce SHA par les suites et les rejeux locaux (PostgreSQL 18.6), « production » veut dire observé sur la version servie.
 
-Sur les 33 critères suivis, 9 étaient vérifiés à la passation. Des 24 ouverts : **4 sont clos sur branche**, **13 ont avancé et gardent un reste nommé**, **7 sont bloqués** par une décision, une source ou un accès. Aucun des 24 n’est clos en production : il faut le déploiement, puis la mesure.
+Sur les 33 critères suivis, 9 étaient vérifiés à la passation. Des 24 ouverts : **4 sont clos sur branche**, **14 ont avancé et gardent un reste nommé**, **6 sont bloqués** par une décision, une source ou un accès. Aucun des 24 n’est clos en production : il faut le déploiement, puis la mesure.
 
 ## Ce qui n’a pas été fait comme le demandait la passation
 
@@ -37,12 +37,12 @@ Sur les 33 critères suivis, 9 étaient vérifiés à la passation. Des 24 ouver
 | E04c | Coupes européennes, qualifications et barrages | avancé | branche séparée | [coupes](preuves/coupes/EVIDENCE.md) | 856 qualifications 2024/25 et 2025/26 prêtes. Sans source lue : 2021/22 à 2023/24 et 2026/27 ; trois matchs du Partizan |
 | E04d | Compétitions internationales, qualifications | bloqué | branche pour les doublons | [calendriers](preuves/calendriers/EVIDENCE.md), [classements](preuves/classements/EVIDENCE.md) | Décisions : faire entrer les qualifications dans l’Elo des sélections ou les afficher seulement ; source des matchs à venir. Source nouvelle nécessaire pour les séances et la prolongation de la Copa América 2024 |
 | E04e | Participants réels et statistiques pour les noter | bloqué | — | [notes](preuves/notes/EVIDENCE.md), [calendriers](preuves/calendriers/EVIDENCE.md) | Aucune statistique individuelle hors des matchs natifs, et le sélecteur des notes est fermé aux coupes : il faut une source et une décision d’admission |
-| E04f | Une note Vega par participation éligible | bloqué | — | [notes](preuves/notes/EVIDENCE.md) | Décision de méthode sur le millésime 2020 (11 562 notes dans le périmètre gardé) : retirer le verrou, ou noter contre les références de 2021 sans classement 2020 |
+| E04f | Une note Vega par participation éligible | avancé | branche | [année 2020](preuves/annee-2020/EVIDENCE.md), [notes](preuves/notes/EVIDENCE.md) | Année de notation 2020 notée contre les références de 2021, sans classement (décision du 20 nov., §47) : 682/682 dans le rejeu. Reste : les coupes et archives que le calcul ne lit pas (E04e) ; les participations sans rôle, désormais motivées (`role_undetermined`) mais non notées ; la mesure en production après déploiement |
 | E04g | Elo par match pour clubs et sélections | avancé | branche | [collecte](preuves/collecte/EVIDENCE.md) 37a–37f, [historique](preuves/historique/EVIDENCE.md) 41n–41o | Restauration des 35 identités en production (opération à accorder), puis recalcul de leurs 70 côtés |
 | E04h | Elo par match et note de prestation d’équipe | sans objet | — | registre | — |
 | E04i | Bonne entité, match, édition et millésime de chaque note | avancé | branche | [identités](preuves/identites/EVIDENCE.md), [notes](preuves/notes/EVIDENCE.md) | 64 notes pour 32 participations sur Lanús–Estudiantes ; versions de quantiles antérieures à vérifier sur une restauration ponctuelle de la base, dont la fenêtre de sept jours se referme vers le 25 novembre |
 | E04j | Compléter les anciennes saisons selon une politique explicite | bloqué | — | [calendriers](preuves/calendriers/EVIDENCE.md) | Texte de politique proposé ci-dessous : à adopter ou corriger par l’utilisateur |
-| E04k | Rattraper les notes et réveiller le calcul | avancé | branche | [collecte](preuves/collecte/EVIDENCE.md) | Millésime 2020 (E04f) ; les notes des saisons antérieures ne sont pas reclassées après un changement d’Elo ; correction écrite entre deux lectures du calcul |
+| E04k | Rattraper les notes et réveiller le calcul | avancé | branche | [collecte](preuves/collecte/EVIDENCE.md), [année 2020](preuves/annee-2020/EVIDENCE.md) | L’année 2020 est reprise par l’étape des classements périmés (§47) ; les notes des saisons antérieures ne sont pas reclassées après un changement d’Elo ; correction écrite entre deux lectures du calcul |
 | E04l | Signaler les échecs, distinguer zéro, absence et inéligibilité | clos | branche | [notes](preuves/notes/EVIDENCE.md), [corrections de relecture](preuves/corrections-relecture/EVIDENCE.md) | Texte « 0 derniers matchs · moy. 50 » du site : changement d’écran à valider |
 | E04m | Algorithmes Vega et non note de fournisseur | inchangé | production | registre | — |
 | E04n | Résultats internationaux anciens | inchangé | production | registre | — |
@@ -68,6 +68,7 @@ Accord de l’utilisateur nécessaire avant le déploiement. Chaque point est ap
 | Classement Veikkausliiga | la table mêlée n’est plus servie | vue de lecture (159) | `/api/standings?competition=l_3Ci5Cg` : table Vega ou 404 | vue de 150 |
 | Pages nation | une rencontre tenue par deux éditions listée une fois ; libellé de l’édition | vue de lecture (159) | Argentine : 8 matchs de Coupe du monde 2026 | fonctions de 119–120 |
 | Elo | un recalcul complet au premier passage | `worker.elo_due` | — | — |
+| Année de notation 2020/21 | le classement 2020/21 publié le 18 nov. (ligues à année civile seules, MLS en tête) retiré, ainsi que sa course au prix ; les notes d’août 2020 à juillet 2021 recalculées contre les références de 2021 ; les références propres de 2020 supprimées | étape des classements périmés du worker (`power.stale_rankings`, §47) | `/api/rankings/power?kind=players&season=2020/2021` sans ligne ; dans la base, `ref_season` 2021 pour l’année 2020 | relancer l’ancien calcul de 2020 (le code de `79ef8bbb45`) ; le prochain calcul de 2021/22 n’aura plus le classement 2020 comme a priori pour les joueurs de ces ligues |
 
 Migrations ajoutées : 155, 156, 157, 159, 160, additives ; 160 remet en outre à NULL la date de lecture des unités de blessures dont la seule lecture a été refusée (aucun épisode stocké), et 159 incrémente une fois la version de l’édition Veikkausliiga 2026.
 
@@ -76,11 +77,16 @@ Migrations ajoutées : 155, 156, 157, 159, 160, additives ; 160 remet en outre �
 1. **Restauration des 35 rencontres anglaises** avec leurs identifiants d’origine (`python -m vega.open_matchday_restore`, captures de `35-matchs-identites-et-elo.zip`) : essai à blanc, application, second passage ; procédure dans [historique](preuves/historique/EVIDENCE.md). Services arrêtés pendant l’opération.
 2. **Lecture de la base** : `aws login --profile statarena`, puis une tâche de diagnostic en lecture seule. Les requêtes à poser sont listées dans [production](preuves/prod/EVIDENCE.md).
 
+## Décisions prises
+
+| Sujet | Décision | Effet |
+| --- | --- | --- |
+| Année de notation 2020 (E04f), 20 nov. | Noter les matchs d’août 2020 à juillet 2021 contre les références de 2021, sans classement ni prix 2020 | §47, appliqué sur la branche ; le classement 2020/21 servi aujourd’hui disparaît au déploiement |
+
 ## Décisions attendues
 
 | Sujet | Question | Recommandation |
 | --- | --- | --- |
-| Millésime 2020 (E04f) | Noter les matchs d’août 2020 à juillet 2021 ? | Oui, contre les références de 2021, sans publier de classement 2020 |
 | Forme récente | Remplacer « moy. 50 » quand aucun match n’est admissible ? | Oui : afficher le nombre de matchs sans moyenne |
 | Anciennes saisons (E04j) | Adopter la politique ci-dessous ? | Oui |
 | Sélections (E04d) | Faire entrer les qualifications (1 403 du Mondial, 239 de l’Euro, 401 de la CAN) dans l’Elo des sélections ? | Mesurer l’effet d’abord ; afficher sans Elo en attendant |
@@ -122,7 +128,7 @@ Seconde relecture, sur `1cc4af1200` : aucune perte de données. Lectures de la m
 | Vérification | Résultat |
 | --- | --- |
 | CI GitHub sur le candidat | run 44601959463 sur `c6c4592ca7` : Python 743 OK (1 échec attendu, pgvector présent), API 226/226, site 788/788, image, infrastructure et paquet API réussis |
-| Suites locales (PostgreSQL 18.6, Python 3.12, Node 24) | sur `79ef8bbb45` : Python 743 OK (1 sauté : pgvector absent en local ; 1 échec attendu : millésime 2020), API 226/226, site 788/788 |
+| Suites locales (PostgreSQL 18.6, Python 3.12, Node 24) | sur `b2bedf115f` (arbre de travail identique au commit pour le code) : Python 747 OK (1 sauté : pgvector absent en local ; plus d’échec attendu), API 226/226, site 788/788 ([année 2020](preuves/annee-2020/EVIDENCE.md)) ; sur `79ef8bbb45` : Python 743 OK (1 sauté, 1 échec attendu 38a), API 226/226, site 788/788 |
 | Référence `2088d36e60` | Python 635, API 222, site 788 |
 | Production, API publique, 19 nov. 13 h 19–13 h 39 UTC | 442 lectures ; voir [production](preuves/prod/EVIDENCE.md) |
 
