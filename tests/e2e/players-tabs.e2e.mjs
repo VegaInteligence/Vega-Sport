@@ -24,6 +24,9 @@
 //  F4 The list follows the page's competitions: the request carries the page's leagues.
 //  P1 Phone (iPhone 16, 393×852): the filter chips of both tabs stay on one scrolling row
 //     (same top for every chip), nothing makes the page scroll sideways.
+//  C1 (VI-40) Default order: compatibility with the replaced player's team, highest first.
+//  C2 No candidate plays for the replaced player's club.
+//  C3 The panel's six components can each be opened; « Rôle dans l'équipe » shows six shares.
 //  P2 Phone: tapping a candidate opens the comparison right under him (not after the 40 rows).
 //  X1 No provider name in the visible text of either tab.
 //  X2 No page error in the console during the whole run.
@@ -114,6 +117,21 @@ try {
   await shot(page, "replace-desktop");
   check("R1", "≥ 1 candidate, resemblance 0–100", `${rows.length} candidates, ${rows.map((r) => r.similarity).join("/")}`,
     rows.length > 0 && rows.every((r) => Number.isFinite(r.similarity) && r.similarity >= 0 && r.similarity <= 100));
+  const fitOrder = await candidates(page).evaluateAll((rows) => rows.map((r) => Number(r.dataset.fit)));
+  check("C1", "compatibility descending by default", fitOrder.slice(0, 12).join(","), fitOrder.length > 0 && fitOrder.every((v, i) => !i || fitOrder[i - 1] >= v));
+  const refClub = (await page.locator("h2").first().locator("xpath=..").innerText()).split("\n").find((l) => l.includes("·"))?.split("·").at(-1)?.trim();
+  const clubs = rows.map((r) => r.text.split("\n")[1]?.split("·").at(-1)?.trim());
+  check("C2", `no team-mate of the replaced player (${refClub})`, clubs.slice(0, 8).join(" | "), refClub && !clubs.includes(refClub));
+  const side = page.locator("[data-replacement-comparison]");
+  const opened = [];
+  for (const key of ["profile", "role", "style", "defense", "effort", "discipline"]) {
+    await side.locator(`[data-fit-component="${key}"]`).click();
+    opened.push(`${key}:${await side.locator(`[data-fit-component="${key}"]`).getAttribute("aria-pressed")}`);
+  }
+  await side.locator('[data-fit-component="role"]').click();
+  const shareRows = await side.locator("em").count();
+  await shot(page, "replace-fit-desktop");
+  check("C3", "six components open; role shows six shares", `${opened.join(",")} · ${shareRows} rows`, opened.every((o) => o.endsWith(":true")) && shareRows === 6);
   await chip(page, "Âge", "≤ 25 ans");
   rows = await readCandidates(page).catch(() => []);
   check("R2", "every age ≤ 25", rows.map((r) => r.age).join(","), rows.every((r) => r.age != null && r.age <= 25));

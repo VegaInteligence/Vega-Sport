@@ -163,14 +163,196 @@ function Delta({ value, unit = "", better }) {
   );
 }
 
+const COMPONENTS = [
+  ["profile", "Profil"],
+  ["role", "Rôle dans l’équipe"],
+  ["style", "Style de club"],
+  ["defense", "Travail défensif"],
+  ["effort", "Effort"],
+  ["discipline", "Discipline"],
+];
+const SHARES = [
+  ["touches", "Ballons touchés"],
+  ["passes", "Passes"],
+  ["finalThird", "Passes dernier tiers"],
+  ["chances", "Occasions créées"],
+  ["shots", "Tirs"],
+  ["defensive", "Actions défensives"],
+];
+const STYLE = [
+  ["possession", "Possession"],
+  ["fieldTilt", "Territoire"],
+  ["directness", "Jeu direct"],
+  ["ppda", "Pressing"],
+  ["crosses", "Centres"],
+];
+const fmt = (value, digits = 0, unit = "") =>
+  value == null
+    ? "—"
+    : `${Number(value).toLocaleString("fr-FR", { maximumFractionDigits: digits, minimumFractionDigits: digits })}${unit}`;
+
+/** Reference against candidate, one row per figure, bars on a common scale. */
+function Pairs({ rows, refName, candName }) {
+  const shown = rows.filter(([, a, b]) => a != null || b != null);
+  if (!shown.length) return <p className={s.detailEmpty}>—</p>;
+  return (
+    <div className={s.axes}>
+      <p className={s.legend}>
+        <span className={s.legendRef}>{refName}</span>
+        <span className={s.legendCand}>{candName}</span>
+      </p>
+      {shown.map(([label, a, b, text, max = 100]) => (
+        <div key={label} className={s.pair}>
+          <span>{label}</span>
+          <span className={s.bars}>
+            <i
+              className={s.barRef}
+              style={{ "--w": `${Math.min(100, (100 * (a ?? 0)) / max)}%` }}
+            />
+            <i
+              className={s.barCand}
+              style={{ "--w": `${Math.min(100, (100 * (b ?? 0)) / max)}%` }}
+            />
+          </span>
+          <em>
+            {text(a)} → <b>{text(b)}</b>
+          </em>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ComponentDetail({ part, reference, candidate }) {
+  const r = reference.context || {},
+    c = candidate.context || {};
+  const names = [reference.name, candidate.name];
+  if (part === "role") {
+    const max =
+      Math.max(
+        0.05,
+        ...SHARES.flatMap(([k]) => [r.shares?.[k] ?? 0, c.shares?.[k] ?? 0]),
+      ) * 1.15;
+    return (
+      <Pairs
+        refName={names[0]}
+        candName={names[1]}
+        rows={SHARES.map(([k, label]) => [
+          label,
+          r.shares?.[k],
+          c.shares?.[k],
+          (v) => fmt(v == null ? null : v * 100, 1, " %"),
+          max,
+        ])}
+      />
+    );
+  }
+  if (part === "style")
+    return (
+      <Pairs
+        refName={r.team?.name || names[0]}
+        candName={c.team?.name || names[1]}
+        rows={STYLE.map(([k, label]) => [
+          label,
+          r.style?.[k],
+          c.style?.[k],
+          (v) => fmt(v),
+        ])}
+      />
+    );
+  if (part === "defense")
+    return (
+      <Pairs
+        refName={names[0]}
+        candName={names[1]}
+        rows={[
+          [
+            "Actions / 90",
+            r.defensiveP90,
+            c.defensiveP90,
+            (v) => fmt(v, 1),
+            Math.max(1, r.defensiveP90 ?? 0, c.defensiveP90 ?? 0) * 1.15,
+          ],
+          ["Centile au poste", r.defensive, c.defensive, (v) => fmt(v)],
+        ]}
+      />
+    );
+  if (part === "effort")
+    return (
+      <Pairs
+        refName={names[0]}
+        candName={names[1]}
+        rows={[
+          [
+            "Distance / 90",
+            r.distanceP90,
+            c.distanceP90,
+            (v) => fmt(v == null ? null : v / 1000, 1, " km"),
+            13000,
+          ],
+          [
+            "Course rapide / 90",
+            r.runningP90,
+            c.runningP90,
+            (v) => fmt(v, 0, " m"),
+            Math.max(1, r.runningP90 ?? 0, c.runningP90 ?? 0) * 1.15,
+          ],
+          [
+            "Sprints / 90",
+            r.sprintsP90,
+            c.sprintsP90,
+            (v) => fmt(v, 1),
+            Math.max(1, r.sprintsP90 ?? 0, c.sprintsP90 ?? 0) * 1.15,
+          ],
+          ["Centile au poste", r.effort, c.effort, (v) => fmt(v)],
+        ]}
+      />
+    );
+  if (part === "discipline")
+    return (
+      <Pairs
+        refName={names[0]}
+        candName={names[1]}
+        rows={[
+          [
+            "Fautes / 90",
+            r.foulsP90,
+            c.foulsP90,
+            (v) => fmt(v, 1),
+            Math.max(1, r.foulsP90 ?? 0, c.foulsP90 ?? 0) * 1.15,
+          ],
+          [
+            "Cartons / 90",
+            r.cardPointsP90,
+            c.cardPointsP90,
+            (v) => fmt(v, 2),
+            Math.max(0.1, r.cardPointsP90 ?? 0, c.cardPointsP90 ?? 0) * 1.15,
+          ],
+          ["Note discipline", r.discipline, c.discipline, (v) => fmt(v)],
+        ]}
+      />
+    );
+  return (
+    <Pairs
+      refName={names[0]}
+      candName={names[1]}
+      rows={AXES.map(([k, label]) => [
+        label,
+        reference.axes?.[k],
+        candidate.axes?.[k],
+        (v) => fmt(v),
+      ])}
+    />
+  );
+}
+
 function Comparison({ reference, candidate, season, inline = false }) {
   const f = useFootball();
-  const axes =
-    reference.axes && candidate.axes
-      ? AXES.filter(
-          ([key]) => reference.axes[key] != null && candidate.axes[key] != null,
-        )
-      : [];
+  const [part, setPart] = useState("role");
+  const fit = candidate.fit || {
+    score: candidate.similarity,
+    profile: candidate.similarity,
+  };
   return (
     // On a phone the comparison opens under the selected player (inline), not after the list.
     <section
@@ -180,11 +362,43 @@ function Comparison({ reference, candidate, season, inline = false }) {
         : { "data-replacement-comparison": candidate.id })}
       aria-label="Comparaison"
     >
-      <h3 className={s.comparisonTitle}>
-        <span>{reference.name}</span>
-        <span aria-hidden="true">→</span>
-        <span>{candidate.name}</span>
-      </h3>
+      <div className={s.comparisonHead}>
+        <h3 className={s.comparisonTitle}>
+          <span>{reference.name}</span>
+          <span aria-hidden="true">→</span>
+          <span>{candidate.name}</span>
+        </h3>
+        <strong className={s.score} aria-label={`Compatibilité ${fit.score} %`}>
+          {fit.score}
+          <small>%</small>
+        </strong>
+      </div>
+      <div className={s.components} role="group" aria-label="Compatibilité">
+        {COMPONENTS.map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            className={s.component}
+            aria-pressed={part === key}
+            onClick={() => setPart(key)}
+            data-fit-component={key}
+          >
+            <span>{label}</span>
+            <i
+              className={s.componentBar}
+              style={{ "--w": `${fit[key] ?? 0}%` }}
+            />
+            <b>{fit[key] ?? "—"}</b>
+          </button>
+        ))}
+      </div>
+      <div className={s.detail}>
+        <ComponentDetail
+          part={part}
+          reference={reference}
+          candidate={candidate}
+        />
+      </div>
       <dl className={s.trio}>
         <div>
           <dt>Âge</dt>
@@ -216,36 +430,6 @@ function Comparison({ reference, candidate, season, inline = false }) {
           )}
         </div>
       </dl>
-      {axes.length > 0 && (
-        <div className={s.axes}>
-          <p className={s.legend}>
-            <span className={s.legendRef}>{reference.name}</span>
-            <span className={s.legendCand}>{candidate.name}</span>
-          </p>
-          {axes.map(([key, label]) => (
-            <div key={key} className={s.axis}>
-              <span>{label}</span>
-              <span
-                className={s.bars}
-                aria-label={`${label} : ${reference.axes[key]} contre ${candidate.axes[key]}`}
-              >
-                <i
-                  className={s.barRef}
-                  style={{ "--w": `${reference.axes[key]}%` }}
-                />
-                <i
-                  className={s.barCand}
-                  style={{ "--w": `${candidate.axes[key]}%` }}
-                />
-              </span>
-              <Delta
-                value={candidate.axes[key] - reference.axes[key]}
-                better="higher"
-              />
-            </div>
-          ))}
-        </div>
-      )}
       <div className={s.actions}>
         <Link
           className="button"
@@ -280,7 +464,7 @@ export default function PlayerReplacements({ fallback }) {
     params.get("replace") || fallback?.playerId || fallback?.id || null;
   const [age, setAge] = useState("all"),
     [value, setValue] = useState("all"),
-    [sort, setSort] = useState("similarity"),
+    [sort, setSort] = useState("fit"),
     [picked, setPicked] = useState(null);
   const read = usePlayerReplacements(referenceId, f.season, { age, value });
   const data = read.value;
@@ -381,7 +565,7 @@ export default function PlayerReplacements({ fallback }) {
           <div className={s.listCard}>
             <div className={s.listHead} aria-hidden="true">
               <span>Joueur</span>
-              <span>Ressemblance</span>
+              <span>Compatibilité</span>
               <span className={s.ageCol}>Âge</span>
               <span>Valeur</span>
               <span>Note</span>
@@ -400,6 +584,7 @@ export default function PlayerReplacements({ fallback }) {
                     data-value={row.value_eur ?? ""}
                     data-note={row.grade ?? ""}
                     data-similarity={row.similarity}
+                    data-fit={row.fit?.score ?? row.similarity}
                   >
                     <span className={s.who}>
                       <Media
@@ -409,12 +594,21 @@ export default function PlayerReplacements({ fallback }) {
                       />
                       <span>
                         <strong>{row.name}</strong>
-                        <small>{subtitle(row)}</small>
+                        <small>
+                          {subtitle(row)}
+                          {row.levelGap != null && (
+                            <span className={s.tag}>Ligue plus faible</span>
+                          )}
+                        </small>
                       </span>
                     </span>
                     <span className={s.similarity}>
-                      <span>{row.similarity} %</span>
-                      <i style={{ "--w": `${row.similarity}%` }} />
+                      <span>{row.fit?.score ?? row.similarity} %</span>
+                      <i
+                        style={{
+                          "--w": `${row.fit?.score ?? row.similarity}%`,
+                        }}
+                      />
                     </span>
                     <span className={s.ageCol}>
                       {row.age == null ? "—" : `${row.age} ans`}

@@ -251,6 +251,65 @@ function person(r) {
     row.axes = Object.fromEntries(AXES.map((a) => [a, r[a] === null || r[a] === undefined ? null : Math.round(r[a])]));
   return row;
 }
+// Compatibility with the replaced player's team (VI-40, docs/calculs/05-joueurs/
+// 13-remplacant-compatibilite-equipe.md): the FIT_GATE closest in profile, less his team-mates,
+// ranked by Σ weight × component ÷ Σ weights of the known components, less LEAGUE_GAP_COST per
+// point of a weaker league beyond LEAGUE_GAP_FREE (agg.player_team_fit, team_fit.py, 162).
+export const FIT_WEIGHTS = { profile: 40, role: 20, style: 15, defense: 10, effort: 10, discipline: 5 };
+export const FIT_GATE = 300, FIT_MIN_SHARES = 4, FIT_MIN_STYLE = 5;
+const SHARE_KEYS = [["touches", "touches"], ["passes", "passes"], ["final_third", "finalThird"], ["chances", "chances"], ["shots", "shots"], ["defensive", "defensive"]];
+const known = (v) => v !== null && v !== undefined && Number.isFinite(Number(v));
+const gapOf = (a, b, min) => {
+  const pairs = a.map((v, i) => [v, b[i]]).filter(([x, y]) => known(x) && known(y));
+  return pairs.length >= min ? 100 - pairs.reduce((sum, [x, y]) => sum + Math.abs(x - y), 0) / pairs.length : null;
+};
+const notBelow = (ref, cand) => (known(ref) && known(cand) ? 100 - Math.max(0, ref - cand) : null);
+/** Each club's style in the league edition where it has the most matches, and that league's level. */
+function clubStyles(rows) {
+  const editions = new Map();
+  for (const r of rows) {
+    const key = `${r.team_key}:${r.competition_season_id}`;
+    if (!editions.has(key)) editions.set(key, { team: r.team_key, covered: 0, level: r.league_level, centiles: {} });
+    const e = editions.get(key);
+    e.covered += Number(r.covered_matches) || 0;
+    e.centiles[r.metric_key] = r.percentile;
+  }
+  const best = new Map();
+  for (const e of editions.values()) if (!best.has(e.team) || e.covered > best.get(e.team).covered) best.set(e.team, e);
+  return best;
+}
+const styleVector = (style) => Object.keys(STYLE_AXES).map((k) => style?.centiles[k]);
+function compatibility(similarityValue, ref, cand, refStyle, candStyle) {
+  const parts = {
+    profile: similarityValue,
+    role: ref && cand ? gapOf(SHARE_KEYS.map(([k]) => ref[`role_${k}`]), SHARE_KEYS.map(([k]) => cand[`role_${k}`]), FIT_MIN_SHARES) : null,
+    style: refStyle && candStyle ? gapOf(styleVector(refStyle), styleVector(candStyle), FIT_MIN_STYLE) : null,
+    defense: notBelow(ref?.defensive, cand?.defensive),
+    effort: notBelow(ref?.effort, cand?.effort),
+    discipline: notBelow(ref?.discipline, cand?.discipline),
+  };
+  let weight = 0, total = 0;
+  for (const [k, w] of Object.entries(FIT_WEIGHTS)) if (parts[k] !== null) { weight += w; total += w * parts[k]; }
+  const gap = known(refStyle?.level) && known(candStyle?.level) ? Math.round(refStyle.level - candStyle.level) : null;
+  const penalty = gap !== null ? Math.max(0, gap - LEAGUE_GAP_FREE) * LEAGUE_GAP_COST : 0;
+  const fit = { score: Math.round(total / weight - penalty) };
+  for (const k of Object.keys(FIT_WEIGHTS)) fit[k] = parts[k] === null ? null : Math.round(parts[k]);
+  return { fit, exact: total / weight - penalty, levelGap: gap !== null && gap > 0 ? gap : null };
+}
+const round = (v, d) => (known(v) ? Math.round(Number(v) * 10 ** d) / 10 ** d : null);
+/** What the comparison panel shows of a player in his team. */
+function teamContext(row, style, teamName) {
+  if (!row) return undefined;
+  const context = { team: { id: row.team_id, name: teamName } };
+  context.shares = Object.fromEntries(SHARE_KEYS.map(([k, name]) => [name, round(row[`share_${k}`], 3)]));
+  for (const [key, value] of [["defensive", row.defensive], ["defensiveP90", round(row.defensive_p90, 1)], ["effort", row.effort],
+    ["distanceP90", round(row.distance_p90, 0)], ["runningP90", round(row.running_p90, 0)], ["sprintsP90", round(row.sprints_p90, 1)],
+    ["discipline", row.discipline], ["foulsP90", round(row.fouls_p90, 2)], ["cardPointsP90", round(row.card_points_p90, 2)]])
+    put(context, key, value);
+  if (style) context.style = Object.fromEntries(Object.entries(STYLE_AXES).map(([k, name]) => [name, style.centiles[k] ?? null]));
+  return context;
+}
+
 async function replacements(read, id, params) {
   validateParams(params, ["season", ...REPLACEMENT_PARAMS]);
   const season = params.get("season");
@@ -260,9 +319,14 @@ async function replacements(read, id, params) {
   const maxValue = boundedInt(params.get("maxValue"), 1, 1e12);
   const ME = `SELECT * FROM api.player_embedding_vectors
               WHERE season_id=(SELECT k.season_id FROM api.season_keys k WHERE k.season=$2) AND player_key=api.internal_id('player',$1)`;
-  const [reference] = await read(`WITH me AS (${ME}) SELECT ${PERSON} FROM me ${PERSON_JOINS("me")}`, [id, season]);
+  const [reference] = await read(
+    `WITH me AS (${ME}) SELECT ${PERSON}, me.season_id AS season_key, me.player_key, t.team_key AS fit_team
+     FROM me ${PERSON_JOINS("me")} LEFT JOIN LATERAL (${keyed("api.player_team_fit", "me")}) t ON true`,
+    [id, season],
+  );
   if (!reference) reject(404, "Donnée indisponible.");
-  const rows = await read(
+  // The gate: the closest in profile, filtered, less the replaced player's team-mates.
+  const gate = await read(
     `WITH me AS (${ME}),
           d AS (SELECT o.season_id, o.player_key, sqrt(${SQUARES}) AS distance FROM api.player_embedding_vectors o
                 JOIN me ON o.season_id=me.season_id AND o.women=me.women AND o.player_key<>me.player_key),
@@ -270,18 +334,55 @@ async function replacements(read, id, params) {
           f AS MATERIALIZED (
             SELECT d.season_id, d.player_key, d.distance FROM d CROSS JOIN m
             JOIN api.player_replacement_facts x ON x.season_id=d.season_id AND x.player_key=d.player_key
-            WHERE d.distance < m.median AND ($3::int IS NULL OR x.age <= $3) AND ($4::float8 IS NULL OR x.value_eur <= $4)),
-          n AS (SELECT * FROM f ORDER BY distance, player_key LIMIT $5)
-     SELECT ${PERSON}, n.distance, m.median, m.players, (SELECT count(*)::int FROM f) AS matched
-     FROM m LEFT JOIN (n ${PERSON_JOINS("n")}) ON true
-     ORDER BY n.distance, n.player_key`,
-    [id, season, maxAge, maxValue, limit],
+            WHERE d.distance < m.median AND ($3::int IS NULL OR x.age <= $3) AND ($4::float8 IS NULL OR x.value_eur <= $4)
+              AND ($5::int IS NULL OR NOT EXISTS (SELECT 1 FROM api.player_team_fit t
+                                                   WHERE t.season_id=d.season_id AND t.player_key=d.player_key AND t.team_key=$5))),
+          n AS (SELECT * FROM f ORDER BY distance, player_key LIMIT ${FIT_GATE})
+     SELECT n.player_key, n.distance, m.median, m.players, (SELECT count(*)::int FROM f) AS matched
+     FROM m LEFT JOIN n ON true ORDER BY n.distance, n.player_key`,
+    [id, season, maxAge, maxValue, reference.fit_team ?? null],
   );
-  const [first] = rows;
+  const [first] = gate;
+  const candidates = gate.filter((r) => r.distance !== null);
+  const seasonKey = reference.season_key;
+  const keys = [reference.player_key, ...candidates.map((r) => r.player_key)];
+  const fits = new Map((await read(
+    `SELECT f.*, api.public_id('team', f.team_key) AS team_id FROM api.player_team_fit f WHERE f.season_id=$1 AND f.player_key=ANY($2::int[])`,
+    [seasonKey, keys],
+  )).map((r) => [r.player_key, r]));
+  const teams = [...new Set([...fits.values()].map((r) => r.team_key))];
+  const styles = teams.length
+    ? clubStyles(await read(
+        `SELECT team_key, competition_season_id, metric_key, percentile, covered_matches, league_level
+         FROM api.team_style_centiles WHERE season_id=$1 AND team_key=ANY($2::int[]) AND NOT women`,
+        [seasonKey, teams],
+      ))
+    : new Map();
+  const refFit = fits.get(reference.player_key);
+  const refStyle = refFit ? styles.get(refFit.team_key) : undefined;
+  const ranked = candidates
+    .map((r) => {
+      const row = fits.get(r.player_key), value = similarity(r.distance, r.median);
+      return { r, row, similarity: value, ...compatibility(value, refFit, row, refStyle, row && styles.get(row.team_key)) };
+    })
+    .sort((a, b) => b.exact - a.exact || a.r.distance - b.r.distance || a.r.player_key - b.r.player_key)
+    .slice(0, limit);
+  const people = new Map((ranked.length ? await read(
+    `SELECT ${PERSON}, n.player_key FROM (SELECT $1::smallint AS season_id, k AS player_key FROM unnest($2::int[]) k) n ${PERSON_JOINS("n")}`,
+    [seasonKey, ranked.map((c) => c.r.player_key)],
+  ) : []).map((r) => [r.player_key, r]));
+  const teamNames = new Map((teams.length ? await read(
+    `SELECT team_key, name FROM api.team_identities WHERE team_key=ANY($1::int[])`, [teams],
+  ) : []).map((r) => [r.team_key, r.name]));
+  const withContext = (row, fit) => {
+    const context = teamContext(fit, fit && styles.get(fit.team_key), fit && teamNames.get(fit.team_key));
+    return context ? { ...row, context } : row;
+  };
   return {
     id, season, compared: first?.players ?? 0, matched: first?.matched ?? 0,
-    reference: person(reference),
-    similar: rows.filter((r) => r.distance !== null).map((r) => ({ ...person(r), similarity: similarity(r.distance, r.median) })),
+    reference: withContext(person(reference), refFit),
+    similar: ranked.filter((c) => people.has(c.r.player_key)).map((c) =>
+      withContext(put({ ...person(people.get(c.r.player_key)), similarity: c.similarity, fit: c.fit }, "levelGap", c.levelGap), c.row)),
   };
 }
 

@@ -839,6 +839,10 @@ def refresh_daily(conn, season, *, elo=True):
         print(f"daily models season={season} xg=rejected error={type(error).__name__}", flush=True)
     # The players' whole profile as a short vector, for "players like him" (embedding.py).
     embedding.refresh(conn, season)
+    # What each player brings to his team, for « Remplaçant » (team_fit.py, VI-40).
+    from . import team_fit
+
+    team_fit.refresh(conn, season)
     # The players below the ranking's minutes who already play like its regulars (breakout.py).
     from . import breakout
 

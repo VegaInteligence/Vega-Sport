@@ -209,6 +209,99 @@
 .inline {
   display: none;
 }
+.comparisonHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.score {
+  font-size: 30px;
+  line-height: 1;
+  color: var(--ink-strong);
+}
+.score small {
+  margin-left: 3px;
+  font-size: var(--text-sm);
+  color: var(--muted);
+  font-weight: 500;
+}
+.components {
+  display: grid;
+  gap: 2px;
+}
+.component {
+  display: grid;
+  grid-template-columns: 128px minmax(0, 1fr) 34px;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  text-align: left;
+  font-size: var(--text-sm);
+}
+.component:hover {
+  background: var(--surface-hover);
+}
+.component[aria-pressed="true"] {
+  border-color: var(--border);
+  background: var(--surface-subtle);
+}
+.component b {
+  text-align: right;
+}
+.componentBar {
+  position: relative;
+  display: block;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--surface-subtle);
+}
+.componentBar::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--w);
+  border-radius: 3px;
+  background: var(--accent);
+}
+.detail {
+  padding: 12px;
+  border-radius: var(--radius);
+  background: var(--surface-subtle);
+}
+.detailEmpty {
+  margin: 0;
+  color: var(--muted);
+}
+.pair {
+  display: grid;
+  grid-template-columns: 128px minmax(0, 1fr) 104px;
+  gap: 10px;
+  align-items: center;
+  font-size: var(--text-sm);
+}
+.pair em {
+  font-style: normal;
+  text-align: right;
+  color: var(--muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.pair em b {
+  color: var(--ink-strong);
+  font-weight: 600;
+}
+.tag {
+  margin-left: 6px;
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: var(--text-2xs);
+  color: var(--muted);
+}
 .comparisonTitle {
   display: flex;
   flex-wrap: wrap;
@@ -355,5 +448,11 @@
   }
   .axis {
     grid-template-columns: 84px minmax(0, 1fr) 44px;
+  }
+  .component {
+    grid-template-columns: 112px minmax(0, 1fr) 30px;
+  }
+  .pair {
+    grid-template-columns: 96px minmax(0, 1fr) 92px;
   }
 }

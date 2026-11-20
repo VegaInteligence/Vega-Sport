@@ -17,7 +17,8 @@ export const VALUE_FILTERS = [
   ["25000000", "≤ 25 M€"],
 ];
 export const REPLACEMENT_SORTS = [
-  ["similarity", "Ressemblance"],
+  ["fit", "Compatibilité"],
+  ["similarity", "Profil"],
   ["grade", "Note"],
   ["value", "Prix"],
 ];
@@ -47,7 +48,8 @@ export function replacementUrl(
   return `/api/players/${encodeURIComponent(id)}/similar?${params}`;
 }
 
-/** The candidates in the chosen order: a missing note or price goes last, then by resemblance. */
+/** The candidates in the chosen order (compatibility, profile, note or price): a missing value goes
+ * last, then by resemblance. */
 export function sortCandidates(rows, sort) {
   const missingLast = (a, b, pick, direction) => {
     const x = pick(a),
@@ -59,11 +61,13 @@ export function sortCandidates(rows, sort) {
   };
   return [...rows].sort(
     (a, b) =>
-      (sort === "grade"
-        ? missingLast(a, b, (p) => p.grade, -1)
-        : sort === "value"
-          ? missingLast(a, b, (p) => p.value_eur, 1)
-          : 0) ||
+      (sort === "fit"
+        ? missingLast(a, b, (p) => p.fit?.score ?? p.similarity, -1)
+        : sort === "grade"
+          ? missingLast(a, b, (p) => p.grade, -1)
+          : sort === "value"
+            ? missingLast(a, b, (p) => p.value_eur, 1)
+            : 0) ||
       b.similarity - a.similarity ||
       a.name.localeCompare(b.name, "fr"),
   );
