@@ -1,4 +1,5 @@
 import { nationalFlagCode } from "../services/national-flags.js";
+import BackLink from "./BackLink.jsx";
 import { editionArtworkUrl } from "../services/competition-artwork.js";
 import React, {
   lazy,
@@ -14,7 +15,15 @@ import { useSearchParams } from "next/navigation";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import useLiveMatch from "../hooks/useLiveMatch.js";
 import { isLiveWindow } from "../services/live-client.js";
-import { Card, Media, Grade, Segments, Empty, AsyncState, Skeleton } from "./UI.jsx";
+import {
+  Card,
+  Media,
+  Grade,
+  Segments,
+  Empty,
+  AsyncState,
+  Skeleton,
+} from "./UI.jsx";
 import Icon from "./Icon.jsx";
 import { XgTimeline, ShotMap } from "./Charts.jsx";
 import { normalizeShots } from "./MatchSections.jsx";
@@ -37,7 +46,12 @@ import {
   statValue,
 } from "../services/match-data.js";
 import { useResource } from "../services/resources.js";
-import { gradeTitle, leadingPlayers, playerOf, useMatchGrades } from "../services/match-grades.js";
+import {
+  gradeTitle,
+  leadingPlayers,
+  playerOf,
+  useMatchGrades,
+} from "../services/match-grades.js";
 import {
   matchReadSource,
   matchResourceKey,
@@ -227,9 +241,18 @@ function MatchPlayer({ row, rank, grade, link = false }) {
   const id = playerOf(row);
   // A best grade opens the player's page; elsewhere a row opens his performance of the match.
   const Element = link && /^p_/.test(id || "") ? Link : "button";
-  const props = Element === Link
-    ? { href: f.href("/joueurs/", { id }), "aria-label": `Voir la fiche de ${row.name}` }
-    : { onClick: () => f.setPlayer(row.id), "aria-busy": (f.player === row.id && f.deferredPerformance?.loading) || undefined };
+  const props =
+    Element === Link
+      ? {
+          href: f.href("/joueurs/", { id }),
+          "aria-label": `Voir la fiche de ${row.name}`,
+        }
+      : {
+          onClick: () => f.setPlayer(row.id),
+          "aria-busy":
+            (f.player === row.id && f.deferredPerformance?.loading) ||
+            undefined,
+        };
   return (
     <Element className="match-player-row" {...props}>
       {rank && (
@@ -239,9 +262,11 @@ function MatchPlayer({ row, rank, grade, link = false }) {
       <span className="player-copy">
         <strong className="player-name">{row.name}</strong>
         <span className="player-meta">
-          {f.player === row.id && f.deferredPerformance?.loading
-            ? <Skeleton kind="inline" label="Chargement de la performance…" />
-            : row.team}
+          {f.player === row.id && f.deferredPerformance?.loading ? (
+            <Skeleton kind="inline" label="Chargement de la performance…" />
+          ) : (
+            row.team
+          )}
           {isNumber(row.goals) && row.goals > 0
             ? ` · ${number(row.goals)} but${row.goals > 1 ? "s" : ""}`
             : ""}
@@ -252,7 +277,10 @@ function MatchPlayer({ row, rank, grade, link = false }) {
       </span>
       <span className="match-player-minutes">{number(row.minutes)}′</span>
       {(grade?.grade ?? row.grade) != null && (
-        <Grade value={grade?.grade ?? row.grade} title={grade ? gradeTitle(grade) : undefined} />
+        <Grade
+          value={grade?.grade ?? row.grade}
+          title={grade ? gradeTitle(grade) : undefined}
+        />
       )}
     </Element>
   );
@@ -391,8 +419,17 @@ export function liveTeamStats(live, match) {
   const home = (live.stats || []).find((s) => s.teamId === match.home.id);
   const away = (live.stats || []).find((s) => s.teamId === match.away.id);
   if (!home || !away) return null;
-  const rows = LIVE_STATS.filter(([key]) => home[key] != null && away[key] != null);
-  return rows.length ? rows.map(([key, label, format]) => ({ key, label, home: format(home[key]), away: format(away[key]) })) : null;
+  const rows = LIVE_STATS.filter(
+    ([key]) => home[key] != null && away[key] != null,
+  );
+  return rows.length
+    ? rows.map(([key, label, format]) => ({
+        key,
+        label,
+        home: format(home[key]),
+        away: format(away[key]),
+      }))
+    : null;
 }
 function LiveTimeline({ events, match }) {
   if (!events.length) return null;
@@ -404,7 +441,9 @@ function LiveTimeline({ events, match }) {
           className={`${e.teamId === match.away.id ? "is-away" : "is-home"}${e.cancelled ? " is-cancelled" : ""}`}
         >
           <span>
-            {e.minute != null ? `${e.minute}${e.minuteAdded ? `+${e.minuteAdded}` : ""}’` : "—"}
+            {e.minute != null
+              ? `${e.minute}${e.minuteAdded ? `+${e.minuteAdded}` : ""}’`
+              : "—"}
           </span>
           <strong>{LIVE_EVENTS[e.type]}</strong>
           {e.playerName && <span>{e.playerName}</span>}
@@ -446,15 +485,23 @@ export default function MatchDetail({ match }) {
         .sort((a, b) => (b.gradeZ ?? -99) - (a.gradeZ ?? -99)),
     [f.data, match.id],
   );
-  const leading = leadingPlayers(players.length ? players : match.leadingPlayers, grades, { match: match.id });
+  const leading = leadingPlayers(
+    players.length ? players : match.leadingPlayers,
+    grades,
+    { match: match.id },
+  );
   const competition = f.allCompetitions.find((c) => c.id === match.leagueId);
   const homeName = match.home.name ?? "Équipe non renseignée";
   const awayName = match.away.name ?? "Équipe non renseignée";
   // Live: the feed's minute and score until PitchAPI has the score, then core's.
   const live = useLiveMatch(match.id, isLiveWindow(match));
-  const liveScore = live && live.families?.score !== "core" && live.status !== "scheduled" ? live.score : null;
+  const liveScore =
+    live && live.families?.score !== "core" && live.status !== "scheduled"
+      ? live.score
+      : null;
   const liveEvents = liveScore ? liveTimeline(live) : [];
-  const liveStats = live && live.status !== "scheduled" ? liveTeamStats(live, match) : null;
+  const liveStats =
+    live && live.status !== "scheduled" ? liveTeamStats(live, match) : null;
   const status = liveScore
     ? live.status === "finished"
       ? "Résultat provisoire"
@@ -480,7 +527,7 @@ export default function MatchDetail({ match }) {
     <div className="match-detail">
       <div className="match-breadcrumb-row">
         <nav className="match-breadcrumb" aria-label="Fil d’Ariane du match">
-          <Link
+          <BackLink
             href={
               fromUpcoming
                 ? f.href("/matchs/", {
@@ -492,17 +539,19 @@ export default function MatchDetail({ match }) {
                     ...(search.get("week") ? { week: search.get("week") } : {}),
                   })
             }
-          >
-            <Icon name="back" />
-            {fromUpcoming ? "Matchs à venir" : "Résultats"}
-          </Link>
+            prefix={<Icon name="back" />}
+            label={fromUpcoming ? "Matchs à venir" : "Résultats"}
+          />
           <Icon name="right" />
           <span>{match.league || competition?.name || "Compétition"}</span>
           <Icon name="right" />
           <span>{match.season || f.season}</span>
         </nav>
         <div className="match-breadcrumb-actions">
-          <Link className="inline-link" href={f.href("/rapport/", { id: match.id })}>
+          <Link
+            className="inline-link"
+            href={f.href("/rapport/", { id: match.id })}
+          >
             Rapport du match →
           </Link>
           <BookmarkButton
@@ -518,7 +567,11 @@ export default function MatchDetail({ match }) {
           <div>
             {(competition || match.editionArtwork) && (
               <Media
-                url={editionArtworkUrl(match.leagueId, competition?.imageUrl, match.editionArtwork)}
+                url={editionArtworkUrl(
+                  match.leagueId,
+                  competition?.imageUrl,
+                  match.editionArtwork,
+                )}
                 initials={false}
               />
             )}
@@ -553,7 +606,10 @@ export default function MatchDetail({ match }) {
               <span />
               {status}
             </span>
-            <div className="scoreboard-score" data-live={liveScore ? "" : undefined}>
+            <div
+              className="scoreboard-score"
+              data-live={liveScore ? "" : undefined}
+            >
               {liveScore ? (
                 <>
                   <strong>{number(liveScore.home)}</strong>
@@ -599,7 +655,9 @@ export default function MatchDetail({ match }) {
               </div>
             ))}
           </div>
-        ) : !upcoming && <MatchKpis match={match} />}
+        ) : (
+          !upcoming && <MatchKpis match={match} />
+        )}
       </section>
       {match.coverage?.teamStatsReliable === false && (
         <p role="status" className="notice notice-warning">
@@ -634,12 +692,21 @@ export default function MatchDetail({ match }) {
                 </button>
               }
             >
-              <XgTimeline match={match} onPlayer={f.setPlayer} maxHeight={290} />
+              <XgTimeline
+                match={match}
+                onPlayer={f.setPlayer}
+                maxHeight={290}
+              />
             </Card>
             <Card fold title="Les chiffres du match">
               <StatRows match={match} stats={overviewStats(match)} />
             </Card>
-            {(!upcoming || liveScore) && <MatchWinProbability match={match} live={liveScore ? live : null} />}
+            {(!upcoming || liveScore) && (
+              <MatchWinProbability
+                match={match}
+                live={liveScore ? live : null}
+              />
+            )}
             <Card
               title="Meilleures notes"
               className="match-leaders-card match-overview-wide"
@@ -655,7 +722,13 @@ export default function MatchDetail({ match }) {
             >
               <div className="match-leaders-grid">
                 {leading.map((r, i) => (
-                  <MatchPlayer key={r.id} row={r} rank={i + 1} grade={grades.get(playerOf(r))} link />
+                  <MatchPlayer
+                    key={r.id}
+                    row={r}
+                    rank={i + 1}
+                    grade={grades.get(playerOf(r))}
+                    link
+                  />
                 ))}
               </div>
               {!leading.length && <Empty>Aucune note collectée.</Empty>}
@@ -681,9 +754,15 @@ export default function MatchDetail({ match }) {
           ) : (
             <MatchShots match={match} />
           ))}
-        {view === "lineups" && <MatchLineups key={`${match.id}:lineups`} match={match} />}
-        {view === "players" && <MatchPlayersBoard key={`${match.id}:players`} match={match} />}
-        {view === "analyses" && <MatchAnalyses key={`${match.id}:analyses`} match={match} />}
+        {view === "lineups" && (
+          <MatchLineups key={`${match.id}:lineups`} match={match} />
+        )}
+        {view === "players" && (
+          <MatchPlayersBoard key={`${match.id}:players`} match={match} />
+        )}
+        {view === "analyses" && (
+          <MatchAnalyses key={`${match.id}:analyses`} match={match} />
+        )}
       </div>
     </div>
   );

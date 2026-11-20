@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import Link from "next/link";
+import BackLink from "./BackLink.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { cupWorkerSnapshot } from "../services/cup-worker-client.js";
 import { json, useResource } from "../services/resources.js";
@@ -28,12 +28,11 @@ export default function StandingsClubProfile({
   const display = (value) => (value == null ? "—" : number(value));
   return (
     <>
-      <Link
+      <BackLink
         className="inline-link competition-back"
         href={f.href("/competitions/", { id: leagueId })}
-      >
-        ← Retour à la compétition
-      </Link>
+        label="Retour à la compétition"
+      />
       <AsyncState resource={result}>
         {(standing) => {
           const row = standing?.tables
@@ -72,15 +71,33 @@ export default function StandingsClubProfile({
                     <table className="data-table club-record-table">
                       <thead>
                         <tr>
-                          <th><Term>Position</Term></th>
-                          <th><Term>Pts</Term></th>
-                          <th><Term>J</Term></th>
-                          <th><Term>V</Term></th>
-                          <th><Term>N</Term></th>
-                          <th><Term>D</Term></th>
-                          <th><Term>BP</Term></th>
-                          <th><Term>BC</Term></th>
-                          <th><Term>Diff.</Term></th>
+                          <th>
+                            <Term>Position</Term>
+                          </th>
+                          <th>
+                            <Term>Pts</Term>
+                          </th>
+                          <th>
+                            <Term>J</Term>
+                          </th>
+                          <th>
+                            <Term>V</Term>
+                          </th>
+                          <th>
+                            <Term>N</Term>
+                          </th>
+                          <th>
+                            <Term>D</Term>
+                          </th>
+                          <th>
+                            <Term>BP</Term>
+                          </th>
+                          <th>
+                            <Term>BC</Term>
+                          </th>
+                          <th>
+                            <Term>Diff.</Term>
+                          </th>
                         </tr>
                       </thead>
                       <tbody>

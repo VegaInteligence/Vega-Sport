@@ -2,6 +2,7 @@
 /* Club profile tabs: identity rail and the overview, statistics, style,
  * matches and squad tabs (the player profile adapted to a club). */
 import React, { useMemo, useState } from "react";
+import BackLink from "./BackLink.jsx";
 import Link from "next/link";
 import { Segments, Skeleton } from "./UI.jsx";
 import { BookmarkButton } from "./ResearchUI.jsx";
@@ -10,7 +11,12 @@ import { PhoneFoldToggle, usePhoneFold } from "./PhoneFold.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { Term } from "./Hint.jsx";
 import { PointsRaceLines, PointsPerMatch } from "./PointsRace.jsx";
-import { euros, readDay, useClubSquad, weightedAge } from "../services/profile-blocks.js";
+import {
+  euros,
+  readDay,
+  useClubSquad,
+  weightedAge,
+} from "../services/profile-blocks.js";
 import { json, useResource } from "../services/resources.js";
 import ClubInformation from "./ClubInformation.jsx";
 import { PercentilePizza } from "./PlayerScoutCharts.jsx";
@@ -98,9 +104,11 @@ export function IdentityRail({ dossier, onTab, backHref }) {
   return (
     <aside className={s.rail} aria-label="Identité du club" {...more.fold}>
       {backHref && (
-        <Link className={`inline-link ${s.railBack}`} href={backHref}>
-          ← Tous les clubs
-        </Link>
+        <BackLink
+          className={`inline-link ${s.railBack}`}
+          href={backHref}
+          label="Tous les clubs"
+        />
       )}
       <div className={s.identity}>
         <Crest club={dossier} className={`crest ${s.bigCrest}`} />
@@ -117,7 +125,10 @@ export function IdentityRail({ dossier, onTab, backHref }) {
       </div>
       <div className={s.railSection}>
         <div className={s.railTitle}>
-          <div className={s.railName}><Term>Classement</Term></div> <span>{dossier.league?.name}</span>
+          <div className={s.railName}>
+            <Term>Classement</Term>
+          </div>{" "}
+          <span>{dossier.league?.name}</span>
         </div>
         <div className={s.position}>
           <strong>{ordinal(self.position)}</strong>
@@ -128,19 +139,25 @@ export function IdentityRail({ dossier, onTab, backHref }) {
         </div>
         <dl className={c.facts}>
           <div>
-            <dt><Term>Bilan</Term></dt>
+            <dt>
+              <Term>Bilan</Term>
+            </dt>
             <dd>
               {r.w}-{r.d}-{r.l}
             </dd>
           </div>
           <div>
-            <dt><Term hint="Buts marqués et encaissés.">Buts</Term></dt>
+            <dt>
+              <Term hint="Buts marqués et encaissés.">Buts</Term>
+            </dt>
             <dd>
               {r.gf}–{r.ga}
             </dd>
           </div>
           <div>
-            <dt><Term>xPts</Term></dt>
+            <dt>
+              <Term>xPts</Term>
+            </dt>
             <dd>{fmtNum(paired.expected, 1)}</dd>
             {Number.isFinite(gap) && (
               <small className={gap >= 0 ? c.up : c.down}>
@@ -151,7 +168,9 @@ export function IdentityRail({ dossier, onTab, backHref }) {
             )}
           </div>
           <div>
-            <dt><Term>Forme</Term></dt>
+            <dt>
+              <Term>Forme</Term>
+            </dt>
             <dd>
               <FormStrip rows={dossier.allRows} />
             </dd>
@@ -166,7 +185,10 @@ export function IdentityRail({ dossier, onTab, backHref }) {
       </div>
       <div className={`${s.railSection} phone-fold-part`}>
         <div className={s.railTitle}>
-          <div className={s.railName}><Term>Indice Vega club</Term></div> <span>sur 100</span>
+          <div className={s.railName}>
+            <Term>Indice Vega club</Term>
+          </div>{" "}
+          <span>sur 100</span>
         </div>
         <div className={s.index}>
           <strong>{self.vegaIndex ?? "—"}</strong>
@@ -181,7 +203,9 @@ export function IdentityRail({ dossier, onTab, backHref }) {
         </button>
       </div>
       <div className={`${s.railSection} phone-fold-part`}>
-        <div className={s.railTitle}><Term>Toutes compétitions</Term></div>
+        <div className={s.railTitle}>
+          <Term>Toutes compétitions</Term>
+        </div>
         <ul className={s.comps}>
           {competitionRecords(dossier).map((comp) => (
             <li key={comp.id}>
@@ -227,37 +251,60 @@ export function IdentityRail({ dossier, onTab, backHref }) {
  */
 function SquadFacts({ dossier }) {
   const f = useFootball();
-  const current = Boolean(dossier.season) && dossier.season === f?.manifest?.defaultSeason;
+  const current =
+    Boolean(dossier.season) && dossier.season === f?.manifest?.defaultSeason;
   const squad = useClubSquad(dossier.id, dossier.season, current).value;
   const ages = useAgeProfile(dossier.id, dossier.season).value;
   const weighted = weightedAge(ages?.minutesByAge);
   if (!(current && squad) && !weighted) return null;
   const facts = [
-    current && squad && {
-      label: "Valeur estimée",
-      value: euros(squad.value),
-      note: !squad.league
-        ? squad.top18Value ? `${euros(squad.top18Value)} pour ses 18 premiers` : ""
-        : squad.league.valued === squad.league.clubs
-          ? `${ordinal(squad.league.rank)} du championnat sur ${squad.league.clubs}`
-          : `${ordinal(squad.league.rank)} des ${squad.league.valued} clubs estimés (sur ${squad.league.clubs})`,
+    current &&
+      squad && {
+        label: "Valeur estimée",
+        value: euros(squad.value),
+        note: !squad.league
+          ? squad.top18Value
+            ? `${euros(squad.top18Value)} pour ses 18 premiers`
+            : ""
+          : squad.league.valued === squad.league.clubs
+            ? `${ordinal(squad.league.rank)} du championnat sur ${squad.league.clubs}`
+            : `${ordinal(squad.league.rank)} des ${squad.league.valued} clubs estimés (sur ${squad.league.clubs})`,
+      },
+    current &&
+      squad?.averageAge != null && {
+        label: "Âge moyen",
+        value: `${fmtNum(squad.averageAge, 1)} ans`,
+        note: squad.size
+          ? `${squad.size} joueurs dans l’effectif`
+          : "de l’effectif",
+      },
+    weighted && {
+      label: "Âge pondéré",
+      value: `${fmtNum(weighted.age, 1)} ans`,
+      note: "par minutes jouées",
     },
-    current && squad?.averageAge != null && {
-      label: "Âge moyen",
-      value: `${fmtNum(squad.averageAge, 1)} ans`,
-      note: squad.size ? `${squad.size} joueurs dans l’effectif` : "de l’effectif",
-    },
-    weighted && { label: "Âge pondéré", value: `${fmtNum(weighted.age, 1)} ans`, note: "par minutes jouées" },
   ].filter(Boolean);
   return (
     <div className={`${s.railSection} phone-fold-part`}>
       <div className={s.railTitle}>
-        <div className={s.railName}><Term>Effectif</Term></div> {current && squad && <span>au {readDay(squad.readOn)}</span>}
+        <div className={s.railName}>
+          <Term>Effectif</Term>
+        </div>{" "}
+        {current && squad && <span>au {readDay(squad.readOn)}</span>}
       </div>
       <dl className={c.facts}>
         {facts.map((fact, i) => (
-          <div key={fact.label} style={facts.length % 2 && i === facts.length - 1 ? { gridColumn: "1 / -1" } : undefined}>
-            <dt><Term>{fact.label}</Term></dt>
+          <div
+            key={fact.label}
+            style={
+              facts.length % 2 && i === facts.length - 1
+                ? { gridColumn: "1 / -1" }
+                : undefined
+            }
+          >
+            <dt>
+              <Term>{fact.label}</Term>
+            </dt>
             <dd>{fact.value}</dd>
             {fact.note && <small>{fact.note}</small>}
           </div>
@@ -304,54 +351,62 @@ export function ExpectedCard({ dossier }) {
   const tone = (value, better = 1) =>
     Number.isFinite(value) ? (value * better >= 0 ? c.up : c.down) : undefined;
   return (
-      <Card
-        fold
-        title="Résultats et attendus"
-        text={`Les écarts entre le réel et l’attendu signalent la finition, le gardien ou la réussite : ils tendent à se résorber. À droite, le classement de ${dossier.league?.name || "son championnat"} si chaque match s’était joué selon ses xG.`}
-      >
-        <dl className={`${c.facts} ${s.factsLine}`}>
-          <div>
-            <dt><Term>Points · xPts</Term></dt>
-            <dd>
-              {fmtNum(points.actual)} · {fmtNum(points.expected, 1)}
-            </dd>
-            <small className={tone(points.delta)}>
-              {fmtNum(points.delta, 1, true)} pts{on(points.matches)}
-            </small>
-          </div>
-          <div>
-            <dt><Term>Buts · xG</Term></dt>
-            <dd>
-              {fmtNum(goals.for.goals)} · {fmtNum(goals.for.xg, 1)}
-            </dd>
-            <small className={tone(goals.for.delta)}>
-              {fmtNum(goals.for.delta, 1, true)} buts{on(goals.for.matches)}
-            </small>
-          </div>
-          <div>
-            <dt><Term>Encaissés · xG contre</Term></dt>
-            <dd>
-              {fmtNum(goals.against.goals)} · {fmtNum(goals.against.xg, 1)}
-            </dd>
-            <small className={tone(goals.against.delta, -1)}>
-              {fmtNum(goals.against.delta, 1, true)} buts
-              {on(goals.against.matches)}
-            </small>
-          </div>
-          <div>
-            <dt><Term>Buts évités par le gardien</Term></dt>
-            <dd>{fmtNum(keeper, 1, true)}</dd>
-            <small>xGOT concédés − buts encaissés</small>
-          </div>
-        </dl>
-        <div className={s.expectedGrid}>
-          <div className={s.expectedSide}>
-            <PointsRaceLines rows={self.rows} />
-            <PointsPerMatch rows={self.rows} />
-          </div>
-          <LeagueTable dossier={dossier} sort="xpts" compact />
+    <Card
+      fold
+      title="Résultats et attendus"
+      text={`Les écarts entre le réel et l’attendu signalent la finition, le gardien ou la réussite : ils tendent à se résorber. À droite, le classement de ${dossier.league?.name || "son championnat"} si chaque match s’était joué selon ses xG.`}
+    >
+      <dl className={`${c.facts} ${s.factsLine}`}>
+        <div>
+          <dt>
+            <Term>Points · xPts</Term>
+          </dt>
+          <dd>
+            {fmtNum(points.actual)} · {fmtNum(points.expected, 1)}
+          </dd>
+          <small className={tone(points.delta)}>
+            {fmtNum(points.delta, 1, true)} pts{on(points.matches)}
+          </small>
         </div>
-      </Card>
+        <div>
+          <dt>
+            <Term>Buts · xG</Term>
+          </dt>
+          <dd>
+            {fmtNum(goals.for.goals)} · {fmtNum(goals.for.xg, 1)}
+          </dd>
+          <small className={tone(goals.for.delta)}>
+            {fmtNum(goals.for.delta, 1, true)} buts{on(goals.for.matches)}
+          </small>
+        </div>
+        <div>
+          <dt>
+            <Term>Encaissés · xG contre</Term>
+          </dt>
+          <dd>
+            {fmtNum(goals.against.goals)} · {fmtNum(goals.against.xg, 1)}
+          </dd>
+          <small className={tone(goals.against.delta, -1)}>
+            {fmtNum(goals.against.delta, 1, true)} buts
+            {on(goals.against.matches)}
+          </small>
+        </div>
+        <div>
+          <dt>
+            <Term>Buts évités par le gardien</Term>
+          </dt>
+          <dd>{fmtNum(keeper, 1, true)}</dd>
+          <small>xGOT concédés − buts encaissés</small>
+        </div>
+      </dl>
+      <div className={s.expectedGrid}>
+        <div className={s.expectedSide}>
+          <PointsRaceLines rows={self.rows} />
+          <PointsPerMatch rows={self.rows} />
+        </div>
+        <LeagueTable dossier={dossier} sort="xpts" compact />
+      </div>
+    </Card>
   );
 }
 
@@ -391,11 +446,7 @@ export function Overview({ dossier, onTab, base = dossier }) {
             `${self.record.gf}–${self.record.ga}`,
             `${fmtNum(v.goalsFor, 2)} – ${fmtNum(v.goalsAgainst, 2)} / match`,
           ],
-          [
-            "xG pour",
-            fmtNum(v.xg, 2),
-            `${ordinal(self.ranks.xg)} / ${total}`,
-          ],
+          ["xG pour", fmtNum(v.xg, 2), `${ordinal(self.ranks.xg)} / ${total}`],
           [
             "xG contre",
             fmtNum(v.xga, 2),
@@ -636,11 +687,21 @@ export function Style({ dossier }) {
                 <table className={c.table}>
                   <thead>
                     <tr>
-                      <th scope="col"><Term>Système</Term></th>
-                      <th scope="col"><Term>MJ</Term></th>
-                      <th scope="col"><Term>V-N-D</Term></th>
-                      <th scope="col"><Term>Buts</Term></th>
-                      <th scope="col"><Term>Pts / match</Term></th>
+                      <th scope="col">
+                        <Term>Système</Term>
+                      </th>
+                      <th scope="col">
+                        <Term>MJ</Term>
+                      </th>
+                      <th scope="col">
+                        <Term>V-N-D</Term>
+                      </th>
+                      <th scope="col">
+                        <Term>Buts</Term>
+                      </th>
+                      <th scope="col">
+                        <Term>Pts / match</Term>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -715,10 +776,7 @@ export function Matches({ dossier }) {
       : dossier.allRows.filter((row) => row.match.leagueId === scope);
   return (
     <div className={c.stack}>
-      <Card
-        title="Dynamique des xG"
-        text="Toutes compétitions."
-      >
+      <Card title="Dynamique des xG" text="Toutes compétitions.">
         <XgTrend rows={dossier.allRows} />
       </Card>
       <div className={c.grid2}>
@@ -737,10 +795,7 @@ export function Matches({ dossier }) {
         </Card>
       </div>
       <ClubSubstitutions id={dossier.id} season={dossier.season} />
-      <Card
-        title="Cartes des tirs"
-        text="Toutes compétitions."
-      >
+      <Card title="Cartes des tirs" text="Toutes compétitions.">
         <ShotPair profile={dossier.shotsAll} />
       </Card>
       <Card
