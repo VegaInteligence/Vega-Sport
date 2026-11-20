@@ -609,7 +609,8 @@ export default function PlayerScoutOverview({
               <div>
                 {enoughMinutes ? (
                   <>
-                    <PercentilePizza items={pizza} cohort={peers} size={520} />
+                    {/* The club page's scale (the user, 20 Nov 2026): drawn at 440 px, no growth. */}
+                    <PercentilePizza items={pizza} cohort={peers} size={440} grow={1} />
                     <ToneLegend />
                     <p className={s.note} style={{ marginTop: 8 }}>
                       Un tiret signale un indicateur non classé : il doit être

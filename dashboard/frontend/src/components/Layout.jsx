@@ -316,6 +316,7 @@ export default function Layout({
   className = "",
   subnav,
   performanceComparison = true,
+  loader,
   children,
 }) {
   const f = useFootball();
@@ -330,7 +331,7 @@ export default function Layout({
       </Link>
       <div className="app-shell">
         <SiteHeader path={path} href={f.navigationHref || f.href} />
-        <PageWorkspace key={pageIdentity} className={className}>
+        <PageWorkspace key={pageIdentity} className={className} loader={loader}>
           {!hideHeading && (
             <div className="page-heading">
               <div className="page-heading-copy">

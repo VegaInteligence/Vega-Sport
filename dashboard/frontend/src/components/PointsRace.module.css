@@ -87,10 +87,8 @@
 }
 .keyPoints::before,
 .keyXpts::before,
-.keyWin::before,
-.keyDraw::before,
-.keyLoss::before,
-.keyMark::before {
+.keyFill::before,
+.keyTick::before {
   content: "";
   display: inline-block;
   width: 14px;
@@ -108,35 +106,146 @@
     transparent 5px 8px
   );
 }
-.keyWin::before {
-  height: 9px;
-  width: 9px;
+.keyFill::before {
+  height: 8px;
   background: var(--accent);
+  opacity: 0.85;
 }
-.keyDraw::before {
-  height: 9px;
-  width: 9px;
-  background: var(--muted);
-}
-.keyLoss::before {
-  height: 9px;
-  width: 9px;
-  background: var(--danger);
-}
-.keyMark::before {
-  height: 2px;
+.keyTick::before {
+  width: 2px;
+  height: 12px;
   background: var(--ink-strong);
 }
-.win {
-  fill: var(--accent);
+/* Match by match: one row per match, as tall as a row of the table beside it (37 px). */
+.rowsHead,
+.row {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) 42px 22px minmax(56px, 128px) 42px;
+  align-items: center;
+  column-gap: 10px;
 }
-.draw {
-  fill: var(--muted);
+.rowsHead {
+  height: 30px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-size: var(--text-xs);
 }
-.loss {
-  fill: var(--danger);
+.rowsHead > :nth-child(3),
+.score {
+  text-align: center;
 }
-.xptsMark {
-  stroke: var(--ink-strong);
-  stroke-width: 2;
+.rowsHead > :last-child,
+.gap {
+  text-align: right;
+}
+.rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rows > li {
+  border-bottom: 1px solid var(--border);
+}
+.rowLink {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+.row {
+  height: 36px;
+  font-size: var(--text-sm);
+}
+.rowLink:hover .row {
+  background: var(--surface-subtle);
+}
+.round {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.opponent {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.opponent small {
+  flex: none;
+  width: 28px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.opponent :global(.crest) {
+  flex: none;
+  width: 18px;
+  height: 18px;
+}
+.opponent b {
+  overflow: hidden;
+  color: var(--ink-strong);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.score {
+  color: var(--ink-strong);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.result {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  font-size: 11px;
+  background: color-mix(in srgb, var(--muted) 22%, transparent);
+  color: var(--muted);
+}
+.result[data-r="V"] {
+  background: color-mix(in srgb, var(--positive, #34d399) 22%, transparent);
+  color: var(--positive, #34d399);
+}
+.result[data-r="D"] {
+  background: color-mix(in srgb, var(--danger) 22%, transparent);
+  color: var(--danger);
+}
+.gauge {
+  position: relative;
+  height: 10px;
+  /* Its own tint: visible on the row's hover background too. */
+  background: color-mix(in srgb, var(--ink-strong) 9%, transparent);
+}
+.gauge > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--accent);
+  opacity: 0.85;
+}
+.gauge > i {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--ink-strong);
+}
+.gap {
+  color: var(--accent);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.gap[data-down] {
+  color: var(--danger);
+}
+@media (max-width: 600px) {
+  .rowsHead,
+  .row {
+    grid-template-columns: 26px minmax(0, 1fr) 36px 20px 52px 36px;
+    column-gap: 6px;
+  }
+  .opponent small {
+    display: none;
+  }
+  .rowsHead > :nth-child(5) {
+    white-space: nowrap;
+  }
 }

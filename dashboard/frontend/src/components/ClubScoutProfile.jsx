@@ -91,17 +91,25 @@ function useClubTab() {
   return [tab, change];
 }
 
-export default function ClubScoutProfile({ clubId }) {
+export default function ClubScoutProfile({ clubId, backHref }) {
   const state = useClubDossier(clubId);
   const dossier = state.status === "ready" ? state.dossier : null;
+  // No rail while reading, after an error or for an empty season: the link stays above.
+  const backAbove =
+    backHref && (state.status === "error" || dossier?.coverage.empty);
   return (
     <div className={`${chartTokens} ${c.shell}`}>
+      {backAbove && (
+        <Link className="inline-link competition-back" href={backHref}>
+          ← Tous les clubs
+        </Link>
+      )}
       {!dossier ? (
         <ClubLoading state={state} />
       ) : dossier.coverage.empty ? (
         <ClubEmptySeason dossier={dossier} played={dossier.coverage.played} />
       ) : (
-        <Profile key={dossier.id} dossier={dossier} />
+        <Profile key={dossier.id} dossier={dossier} backHref={backHref} />
       )}
     </div>
   );
@@ -120,7 +128,7 @@ const brief = (club, league) => ({
     .join(" · "),
 });
 
-function Profile({ dossier }) {
+function Profile({ dossier, backHref }) {
   const [tab, setTab] = useClubTab();
   const cmp = useComparison(dossier);
   const view = cmp.view;
@@ -143,7 +151,7 @@ function Profile({ dossier }) {
   return (
     <RankingProvider value={setRanking}>
       <div className={sA.layout}>
-        <IdentityRail dossier={dossier} onTab={setTab} />
+        <IdentityRail dossier={dossier} onTab={setTab} backHref={backHref} />
         <div className={sA.main}>
           <ComparisonBar
             dossier={dossier}

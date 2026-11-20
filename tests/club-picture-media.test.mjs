@@ -30,6 +30,8 @@ async function loadUI() {
     react: React,
     "next/link": { __esModule: true, default: ({ children, ...props }) => h("a", props, children) },
     "./Icon.jsx": { __esModule: true, default: () => null },
+    "./ClubSkeleton.jsx": { __esModule: true, default: () => null },
+    "./UI.jsx": { Skeleton: () => null },
     "./PhoneFold.jsx": { useCardFold: () => ({ section: {}, head: {}, part: "", button: null, wrap: (c) => c }) },
     "../hooks/FootballContext.jsx": { useFootball: () => null },
     "./PlayerScoutCharts.jsx": { PercentileBar: () => null, toneVar: () => "" },
