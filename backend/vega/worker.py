@@ -193,9 +193,12 @@ def due_seasons(conn, now):
     ]
 
 
-# The complementary matches the Elo reads (power.ELO_MATCHES): a finished, scored match of a cup-source edition.
+# The complementary matches the Elo reads (power.ELO_MATCHES): a finished, scored match of a cup-source edition,
+# apart from the season's other internationals, which ELO_MATCHES leaves out by the same predicate (the home's week
+# strip only; FAILURE_MODES.md §48).
 _COMPLEMENTARY = """FROM core.matches m JOIN core.competition_seasons cs ON cs.id = m.competition_season_id
                       AND cs.cup_key IS NOT NULL AND cs.archive_key IS NULL
+                      AND left(cs.cup_key, 31) <> 'nations-results:internationals:'
                     WHERE m.status = 'finished' AND m.home_score IS NOT NULL AND m.away_score IS NOT NULL
                       AND m.home_team_id IS NOT NULL AND m.away_team_id IS NOT NULL AND m.match_date IS NOT NULL"""
 

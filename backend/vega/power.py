@@ -1907,19 +1907,25 @@ def write_award(conn, season, scored):
 def stale_rankings(conn):
     """The seasons whose published player ranking is of another method than METHOD_VERSION,
     and the partial award years (partial_year) without a published run of the present
-    method or whose run started before the next year's last (its references may have
-    moved), most recent first."""
+    method, whose run started before the next year's last (its references may have
+    moved), whose published run ranked players, or that still have references of their
+    own (an earlier rule's run, whatever its order: production ranked 2020 after 2021,
+    FAILURE_MODES §48), most recent first. The partial run publishes players = 0 and
+    deletes those references itself, so it is listed once."""
     stale = {s for (s,) in conn.execute(
         "SELECT season_id FROM agg.power_runs WHERE kind = 'players' AND status = 'published' AND method_version <> %s", (METHOD_VERSION,)
     ).fetchall()}
     for season in partial_years(conn):
-        own, following = conn.execute(
-            """SELECT (SELECT max(started_at) FROM agg.power_runs
-                       WHERE kind = 'players' AND season_id = %(season)s AND status = 'published' AND method_version = %(method)s),
-                      (SELECT max(started_at) FROM agg.power_runs WHERE kind = 'players' AND season_id = %(season)s + 1 AND status = 'published')""",
+        own, ranked, following, references = conn.execute(
+            """WITH own AS (SELECT started_at, players FROM agg.power_runs
+                            WHERE kind = 'players' AND season_id = %(season)s AND status = 'published' AND method_version = %(method)s
+                            ORDER BY started_at DESC LIMIT 1)
+               SELECT (SELECT started_at FROM own), (SELECT players IS DISTINCT FROM 0 FROM own),
+                      (SELECT max(started_at) FROM agg.power_runs WHERE kind = 'players' AND season_id = %(season)s + 1 AND status = 'published'),
+                      EXISTS (SELECT 1 FROM agg.match_grade_roles WHERE ref_season = %(season)s)""",
             {"season": season, "method": METHOD_VERSION},
         ).fetchone()
-        if own is None or (following is not None and own < following):
+        if own is None or ranked or references or (following is not None and own < following):
             stale.add(season)
     return sorted(stale, reverse=True)
 
