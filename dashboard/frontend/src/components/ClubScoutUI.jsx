@@ -2,6 +2,8 @@
 import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Icon from "./Icon.jsx";
+import ClubSkeleton from "./ClubSkeleton.jsx";
+import { Skeleton } from "./UI.jsx";
 import { useCardFold } from "./PhoneFold.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { PercentileBar, toneVar } from "./PlayerScoutCharts.jsx";
@@ -34,28 +36,14 @@ export function ClubLoading({ state, compact = false }) {
       </div>
     );
   const p = state.progress;
-  const share =
-    p?.step === "league" && p.total ? 20 + (80 * p.done) / p.total : p ? 10 : 2;
-  return (
-    <div
-      className={s.loading}
-      data-compact={compact || undefined}
-      role="status"
-    >
-      <strong>
-        {p?.step === "league"
-          ? `Construction du référentiel ${p.league ? `· ${p.league}` : "du championnat"}`
-          : "Lecture du club"}
-      </strong>
-      <span>
-        {p?.step === "league"
-          ? `${p.done} / ${p.total} clubs lus · chaque indicateur est classé contre tout le championnat`
-          : "Matchs, tirs et apparitions de la saison…"}
-      </span>
-      <span className={s.progress}>
-        <i style={{ width: `${share}%` }} />
-      </span>
-    </div>
+  const label =
+    p?.step === "league"
+      ? `Construction du référentiel${p.league ? ` · ${p.league}` : ""} · ${p.done} / ${p.total} clubs lus`
+      : "Lecture du club";
+  return compact ? (
+    <Skeleton label={label} lines={4} />
+  ) : (
+    <ClubSkeleton label={label} />
   );
 }
 

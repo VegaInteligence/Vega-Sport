@@ -64,6 +64,13 @@ export default function RootLayout({ children }) {
           type="font/woff2"
           crossOrigin="anonymous"
         />
+        {/* A club's page opens on its skeleton, not the logo (LoadingPage reads this flag). */}
+        <script
+          id="vega-route"
+          dangerouslySetInnerHTML={{
+            __html: `try{document.documentElement.toggleAttribute("data-club-profile",/^\\/clubs\\/?$/.test(location.pathname)&&new URLSearchParams(location.search).has("id"))}catch{}`,
+          }}
+        />
         <script
           id="vega-theme"
           dangerouslySetInnerHTML={{

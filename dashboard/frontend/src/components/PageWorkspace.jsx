@@ -5,7 +5,7 @@ import PageLoader from "./PageLoader.jsx";
 import { useResourceBootstrap } from "../services/resource-bootstrap.js";
 
 /** Keep the shared navigation available while the first viewport is prepared. */
-export default function PageWorkspace({ className = "", children }) {
+export default function PageWorkspace({ className = "", loader, children }) {
   const main = useRef(null);
   const [ready, setReady] = useState(false);
   const bootstrap = useResourceBootstrap();
@@ -18,11 +18,14 @@ export default function PageWorkspace({ className = "", children }) {
   );
   return (
     <div className="page-presentation">
-      {(!ready || serverHome) && (
-        <div className={serverHome ? "server-home-loader" : undefined}>
-          <PageLoader overlay />
-        </div>
-      )}
+      {(!ready || serverHome) &&
+        (loader && !serverHome ? (
+          <div className="workspace page-skeleton-overlay">{loader}</div>
+        ) : (
+          <div className={serverHome ? "server-home-loader" : undefined}>
+            <PageLoader overlay />
+          </div>
+        ))}
       <main
         ref={main}
         id="main"

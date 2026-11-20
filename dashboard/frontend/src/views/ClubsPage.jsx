@@ -13,6 +13,7 @@ import React, {
 } from "react";
 import Icon from "../components/Icon.jsx";
 import Layout from "../components/Layout.jsx";
+import ClubSkeleton from "../components/ClubSkeleton.jsx";
 import CompetitionOptions from "../components/CompetitionOptions.jsx";
 import { FootballContext, useFootball } from "../hooks/FootballContext.jsx";
 import { Media, Pager, Empty, Skeleton } from "../components/UI.jsx";
@@ -339,14 +340,17 @@ export default function ClubsPage() {
   // What the club is ranked against starts with the page (the profile renders first).
   useClubStart(/^t_[A-Za-z0-9]{6}$/.test(id || "") ? id : null);
   return (
-    <Layout path="/clubs/" title="Clubs" hideHeading={Boolean(selected)}>
+    <Layout
+      path="/clubs/"
+      title="Clubs"
+      hideHeading={Boolean(selected)}
+      loader={id ? <ClubSkeleton /> : undefined}
+    >
       {selected ? (
         <>
           <FootballContext.Provider value={profileContext}>
             <Suspense
-              fallback={
-                <Skeleton data-page-loading="" label="Chargement du profil du club…" lines={2} />
-              }
+              fallback={<ClubSkeleton label="Chargement du profil du club…" />}
             >
               <ClubScoutProfile
                 key={selected.id}
