@@ -37,6 +37,8 @@ async function loadUI() {
     react: React,
     "next/link": { __esModule: true, default: ({ children, ...props }) => h("a", props, children) },
     "./Icon.jsx": { __esModule: true, default: () => null },
+    "./ClubSkeleton.jsx": { __esModule: true, default: () => null },
+    "./UI.jsx": { Skeleton: () => null },
     // The phone fold is off in these renders: a card renders as it always did.
     "./PhoneFold.jsx": {
       useCardFold: () => ({

@@ -52,6 +52,7 @@
 - Built: banner on one line (label + navigation, 52 px instead of ~120 px; navigation only on phones); half-pitch SVG with faint stripes behind the team; directory page size measured from the viewport in whole rows (40 at 1600×1000, 60 at 2000×1150, never under 24, so phones keep 24), one read at that size.
 - Rule (user's correction): new issues go to GitHub, not Linear; Linear's GitHub Issues sync creates the Linear issue; small fixes need no issue. The sync is off today (test issue #59 was not imported, then closed): the user turns it on in Linear → Settings → Integrations → GitHub.
 - No separate mock-up: the user named each change; approved on the local preview's screenshots. Evidence: scratchpad `evidence/README.md` (headless captures, results.json, rerun script). Site suite 803/803, build passes. Not checked: the « Suivants » button with the new page size, live window resize.
+- Follow-up (20 Nov): a club's page opens on a skeleton of its layout instead of the Vega logo and « Lecture du club » (site loader via a head flag on `/clubs?id=`, page overlay via Layout `loader`, the profile's own loading state); the title and back link follow 1d94abd293 (another session: back link at the top of the identity rail), so the skeleton draws that link there. The directory keeps the logo. Site suite 803/803 (three test stub lists gained the new imports), build passes; frames in scratchpad `frames/`.
 
 ## Club page — « Match par match » as one row per match (20 Nov 2026)
 
