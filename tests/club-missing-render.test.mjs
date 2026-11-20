@@ -212,7 +212,10 @@ const tabs = await load("ClubScoutTabs.jsx", {
   "./PlayerScoutCharts.jsx": { PercentilePizza: () => null },
   // Today's service: an opponent of the reference without a measured centile still comes back.
   "../services/club-scout.js": { FAMILIES: {}, METRICS: {}, PERFORMANCE_KEYS: [], PHASES: [], formatMetric: () => "",
-    opponentStrength: (dossier, id) => { const c = dossier.clubs.find((x) => x.id === id); return c ? { club: c, centile: c.centile ?? null } : null; } },
+    opponentStrength: (dossier, id) => { const c = dossier.clubs.find((x) => x.id === id); return c ? { club: c, centile: c.centile ?? null } : null; },
+    // Club Elo of the season: one opponent outside the league is rated, the other is not.
+    useEuropeLevels: () => ({ status: "ready", value: { levels: new Map([["t_e", 1990]]) } }),
+    opponentEloStrength: (dossier, levels, id) => (levels.has(id) ? { elo: levels.get(id), centile: 95 } : null) },
   "./ClubScoutUI.jsx": { ...ui, LeagueTable: () => null, FormStrip: () => null },
   "./ClubSubstitutions.jsx": { __esModule: true, default: () => null },
   "./ClubPassingTriangle.jsx": { __esModule: true, default: () => null },
@@ -225,11 +228,14 @@ test("coming matches: no fabricated difficulty, the reason told apart", () => {
     upcoming: [
       { id: "m_1", date: "2026-11-21", home: { id: "t_a", name: "Club A" }, away: { id: "t_m", name: "Membre" }, league: "Ligue" },
       { id: "m_2", date: "2026-11-25", home: { id: "t_o", name: "Ailleurs" }, away: { id: "t_a", name: "Club A" }, league: "Coupe" },
+      { id: "m_3", date: "2026-12-08", home: { id: "t_a", name: "Club A" }, away: { id: "t_e", name: "Europe" }, league: "Ligue des champions" },
     ],
   } }));
-  assert.doesNotMatch(markup, /Difficulté 1 sur 5/);
+  assert.doesNotMatch(markup, /Difficulté 1 sur 5|hors référentiel/);
   assert.match(rowOf(markup.replaceAll("<a", "<tr"), "Membre"), /6e[\s\S]*données insuffisantes/);
-  assert.match(rowOf(markup.replaceAll("<a", "<tr"), "Ailleurs"), /hors référentiel/);
+  // Outside the league: rated by its club Elo among the league's clubs, else « sans Elo ».
+  assert.match(rowOf(markup.replaceAll("<a", "<tr"), "Ailleurs"), /sans Elo/);
+  assert.match(rowOf(markup.replaceAll("<a", "<tr"), "Europe"), /Elo 1990 : centile 95[\s\S]*Difficulté 5 sur 5/);
 });
 
 test("results and expected: each pair on the same matches", () => {

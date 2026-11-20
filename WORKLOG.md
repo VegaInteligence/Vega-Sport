@@ -1,5 +1,12 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Prochains matchs : difficulté des adversaires hors championnat (20 novembre 2026)
+
+- Constat : sur la fiche d’Aston Villa, Galatasaray et le PSG (Ligue des champions) étaient « hors référentiel » : la difficulté ne se mesurait que sur les clubs du championnat.
+- Décision de l’utilisateur : « Oui, via l’Elo ». Un adversaire hors championnat est placé par son Elo de club au centile des Elo des clubs du championnat, noté de 1 à 5 comme les autres. Les adversaires du championnat gardent la différence de xG. Sans Elo : « sans Elo ». Demande de logique : design inchangé, pas de maquette.
+- Validation : E2E local sur Aston Villa (Galatasaray 2/5, PSG 5/5, lignes de Premier League inchangées, aucune erreur console). Petit changement : pas de ticket Linear (aucun ticket en cours ne le recouvre).
+- Prochaine action : pousser sur main si l’utilisateur le demande.
+
 ## Boutons retour — VI-37 (20 novembre 2026)
 
 - Objectif : les « ← » reviennent à la page d’où l’on vient ([VI-37](https://linear.app/vegainteligence/issue/VI-37)). Demande de logique, pas de maquette (design inchangé).

@@ -26,7 +26,9 @@ import {
   PERFORMANCE_KEYS,
   PHASES,
   formatMetric,
+  opponentEloStrength,
   opponentStrength,
+  useEuropeLevels,
 } from "../services/club-scout.js";
 import {
   Card,
@@ -533,7 +535,7 @@ export function Overview({ dossier, onTab, base = dossier }) {
         </Card>
         <Card
           title="Prochains matchs"
-          text="Difficulté : centile de la différence de xG de l’adversaire en championnat"
+          text="Difficulté : centile de l’adversaire parmi les clubs du championnat (différence de xG, ou Elo hors championnat)"
         >
           <Upcoming dossier={base} />
         </Card>
@@ -544,18 +546,33 @@ export function Overview({ dossier, onTab, base = dossier }) {
 }
 
 export function Upcoming({ dossier, limit = 6 }) {
+  const shown = dossier.upcoming.slice(0, limit);
+  const opponentOf = (match) =>
+    match.home.id === dossier.id ? match.away : match.home;
+  // An opponent outside the league (Europe, cups) is placed by its club Elo among the
+  // league's clubs; the Elo is read only when such an opponent is on the list.
+  const foreign = shown.some(
+    (match) => !dossier.clubs.some((club) => club.id === opponentOf(match).id),
+  );
+  const levels = useEuropeLevels(foreign);
   if (!dossier.upcoming.length)
     return <p className={c.muted}>Aucun match à venir collecté.</p>;
   return (
     <div className={c.matchList}>
-      {dossier.upcoming.slice(0, limit).map((match) => {
+      {shown.map((match) => {
         const home = match.home.id === dossier.id;
-        const opponent = home ? match.away : match.home;
+        const opponent = opponentOf(match);
         // A member of the reference keeps its place; a difficulty needs a measured centile
         // (never level 1 by default), and the label says which of the two is missing.
         const member = dossier.clubs.find((club) => club.id === opponent.id);
-        const strength = opponentStrength(dossier, opponent.id);
+        const byElo = !member && levels.status === "ready";
+        const strength = member
+          ? opponentStrength(dossier, opponent.id)
+          : byElo
+            ? opponentEloStrength(dossier, levels.value.levels, opponent.id)
+            : null;
         const measured = Boolean(strength) && Number.isFinite(strength.centile);
+        const pending = !member && levels.status === "loading";
         const level = measured
           ? Math.max(1, Math.ceil(strength.centile / 20))
           : 0;
@@ -585,10 +602,14 @@ export function Upcoming({ dossier, limit = 6 }) {
             <span
               title={
                 measured
-                  ? `Adversaire au centile ${strength.centile} de la différence de xG`
+                  ? member
+                    ? `Adversaire au centile ${strength.centile} de la différence de xG`
+                    : `Elo ${Math.round(strength.elo)} : centile ${strength.centile} des clubs du championnat`
                   : member
                     ? "Pas assez de matchs avec xG pour le situer"
-                    : "Hors championnat de référence"
+                    : pending
+                      ? undefined
+                      : "Sans Elo pour le situer"
               }
             >
               {measured ? (
@@ -602,7 +623,11 @@ export function Upcoming({ dossier, limit = 6 }) {
                 </span>
               ) : (
                 <small className={c.muted}>
-                  {member ? "données insuffisantes" : "hors référentiel"}
+                  {member
+                    ? "données insuffisantes"
+                    : pending
+                      ? "…"
+                      : "sans Elo"}
                 </small>
               )}
             </span>

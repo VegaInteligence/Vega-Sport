@@ -1995,6 +1995,20 @@ export function opponentStrength(dossier, opponentId) {
   return rank == null ? null : { club, centile: rank };
 }
 
+/**
+ * Strength of an opponent outside the league (a European or cup opponent): centile of its
+ * club Elo among the Elo of the league's clubs, so a level 5 means as strong as the league's
+ * best. `levels` is the Elo of every club ranked in the season (useEuropeLevels); unknown
+ * without the opponent's Elo or five rated clubs in the league.
+ */
+export function opponentEloStrength(dossier, levels, opponentId) {
+  const elo = levels?.get(opponentId);
+  if (!finite(elo)) return null;
+  const values = dossier.clubs.map((c) => levels.get(c.id)).filter(finite);
+  const rank = centile(values, elo, 1);
+  return rank == null ? null : { elo, centile: rank };
+}
+
 export const formatMetric = (key, value, { total = false } = {}) => {
   const metric = METRICS[key];
   if (value == null || Number.isNaN(value)) return "—";
