@@ -2,96 +2,19 @@
 /* The « Analyses » tab, all on one page: who dominated minute by minute, how each team played,
  * the two halves, the players whose actions weighed most, the pass networks and where each team
  * (or player) acted. Everything answers the pointer: a minute, a player, a zone. */
-import React, { useMemo, useRef, useState } from "react";
+import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { Card, Empty, Media, Segments, Skeleton } from "./UI.jsx";
 import { Term } from "./Hint.jsx";
 import { useHoverBubble } from "./HoverCard.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import useMatchSection from "../hooks/useMatchSection.js";
+import MatchMomentum from "./MatchMomentum.jsx";
 import { playerRows, styleGroups, teamStatsByPeriod } from "../services/match-tabs.js";
 import { number } from "../services/format.js";
 import s from "./MatchTabs.module.css";
 
 const HOME = "var(--home)", AWAY = "var(--away)";
-
-/* ---------------------------------------------------------- momentum */
-
-function Momentum({ match, points, goals }) {
-  const svgRef = useRef(null);
-  const [at, setAt] = useState(null);
-  const bubble = useHoverBubble({ width: 220, follow: true });
-  if (!points?.length) return null;
-  const W = 1200, H = 210, mid = H / 2, last = Math.max(90, ...points.map((p) => p.minute));
-  const x = (m) => 14 + (m / last) * (W - 28);
-  const pick = (event) => {
-    const box = svgRef.current.getBoundingClientRect();
-    const vx = ((event.clientX - box.left) / box.width) * W;
-    let best = points[0];
-    for (const p of points) if (Math.abs(x(p.minute) - vx) < Math.abs(x(best.minute) - vx)) best = p;
-    setAt(best);
-    const side = best.value >= 0 ? match.home.name : match.away.name;
-    bubble.show(svgRef.current, (
-      <>
-        <p className={s.bubbleHead}>{Math.round(best.minute)}′</p>
-        <p className={s.bubbleNote}>
-          {best.value === 0 ? "Équilibre" : `${side} pousse : ${Math.abs(best.value)} sur 100`}
-        </p>
-      </>
-    ), event);
-  };
-  return (
-    <Card title="Qui a dominé, minute par minute">
-      <p className={s.muted}>
-        Pression offensive de chaque équipe : au-dessus {match.home.name}, en dessous {match.away.name}. Survolez ou touchez une minute.
-      </p>
-      <svg
-        ref={svgRef}
-        className={s.chart}
-        viewBox={`0 0 ${W} ${H}`}
-        role="img"
-        aria-label="Pression offensive minute par minute"
-        onPointerMove={pick}
-        onPointerDown={pick}
-        onPointerLeave={() => {
-          setAt(null);
-          bubble.hide();
-        }}
-      >
-        <line x1="14" x2={W - 14} y1={mid} y2={mid} className={s.axis} />
-        <line x1={x(45)} x2={x(45)} y1="0" y2={H} className={s.axis} />
-        <text x={x(45) + 5} y="13" className="chart-tick">Mi-temps</text>
-        {points.map((p) => {
-          const h = (Math.abs(p.value) / 100) * (mid - 16), home = p.value >= 0;
-          return (
-            <rect
-              key={p.minute}
-              x={x(p.minute) - 4.5}
-              y={home ? mid - h : mid}
-              width="9"
-              height={Math.max(1, h)}
-              fill={home ? HOME : AWAY}
-              opacity={at && at.minute !== p.minute ? 0.45 : 0.9}
-            />
-          );
-        })}
-        {goals.map((g, i) => (
-          <g key={i}>
-            <line x1={x(g.minute)} x2={x(g.minute)} y1="18" y2={H - 18} className={s.goalLine} />
-            <text x={x(g.minute)} y={g.side === "home" ? 14 : H - 4} textAnchor="middle" className="chart-tick">
-              ⚽ {g.minute}′
-            </text>
-          </g>
-        ))}
-      </svg>
-      <div className={s.legend}>
-        <span><i className={s.dot} style={{ background: HOME }} /> {match.home.name} pousse</span>
-        <span><i className={s.dot} style={{ background: AWAY }} /> {match.away.name} pousse</span>
-      </div>
-      {bubble.bubble}
-    </Card>
-  );
-}
 
 /* ------------------------------------------------------------- style */
 
@@ -511,16 +434,13 @@ export default function MatchAnalyses({ match }) {
   const players = useMatchSection(match, "players");
   const periods = teamStatsByPeriod(stats.data);
   const images = useMemo(() => new Map(playerRows(players.data).map((r) => [r.id, r.imageUrl])), [players.data]);
-  const goals = (events.data?.events || [])
-    .filter((e) => e.event_type === "goal")
-    .map((e) => ({ minute: e.minute, side: e.team_id === match.home.id ? (e.is_own_goal ? "away" : "home") : e.is_own_goal ? "home" : "away" }));
   const loading = [momentum, stats, advanced, network, heat].every((r) => r.loading && !r.data);
   if (loading) return <Skeleton label="Chargement des analyses…" lines={5} />;
   const nothing = !momentum.data?.points?.length && !advanced.data?.teams?.length && !network.data?.networks?.length && !heat.data?.teams?.length && !periods.FirstHalf;
   if (nothing) return <Empty>Aucune analyse disponible pour ce match.</Empty>;
   return (
     <div className={s.stack}>
-      <Momentum match={match} points={momentum.data?.points} goals={goals} />
+      <MatchMomentum match={match} points={momentum.data?.points} events={events.data?.events} />
       <div className={`${s.grid2} ${s.balanced}`}>
         <Style match={match} teams={advanced.data?.teams} />
         <div className={s.stack}>
