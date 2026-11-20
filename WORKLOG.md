@@ -4,7 +4,7 @@
 
 - Demande : remplacer un joueur dans une équipe (dynamique, discipline, replis défensifs, efforts). Maquettes validées : [Remplaçant en équipe](https://claude.ai/artifact/32HzcLEv6yjbxxHp1DDFKb) v2 et [Comparer les joueurs](https://claude.ai/artifact/QQeoRmH9759hK6aTu35QW5).
 - Livré sur main et déployé : `team_fit.py` → `agg.player_team_fit` (162), tri par compatibilité (profil 40, rôle 20, style 15, travail défensif 10, effort 10, discipline 5) ; pentagone interactif ; liste aussi haute que la carte ; « En forme » → filtre « Forme » de Performances ; « Comparer » ouvre la comparaison avec le joueur à remplacer en premier ; nouvelle fenêtre de comparaison ; étiquette « Ligue plus faible » seulement quand elle coûte (> 50) ; probabilités de match alignées ; changement de saison sans écran de chargement global.
-- Production : table calculée à la demande de l'utilisateur (2026/27 : 12 525 ; 2025/26 : 18 320), puis à chaque passage des modèles. Lecture sans cache 0,55–0,74 s.
+- Production : table calculée pour toutes les saisons depuis 2021 (archives exclues, demande de l'utilisateur), de 6 445 joueurs (2021/22) à 18 320 (2025/26). Le worker la refait à chaque passage des modèles d'une saison ; un changement de `MODEL_VERSION` demandera de relancer le calcul à la main pour les saisons passées. Lecture sans cache 0,55–0,74 s.
 - Validation : E2E public 29/29 (`dashboard/outputs/vi-40-e2e/` du checkout principal), API 253/253, site 808/808.
 - Limites : effort seulement en Premier League ; replis non mesurables (travail défensif en approche) ; pondérations à valider sur de vrais transferts.
 
