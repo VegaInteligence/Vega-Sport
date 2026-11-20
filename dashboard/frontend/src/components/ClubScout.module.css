@@ -162,6 +162,23 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
+/* Last and coming matches side by side: one grid for both cards, the heading on its first
+   row and one row per match after it, so the two lists start level and each pair of rows
+   takes the taller one's height: their lines meet. Six matches each (Overview). */
+.matchPair {
+  grid-template-rows: auto repeat(6, auto);
+  row-gap: 0;
+}
+.matchPair > .card {
+  display: grid;
+  grid-row: span 7;
+  grid-template-rows: subgrid;
+}
+.matchPair .matchList {
+  display: grid;
+  grid-row: span 6;
+  grid-template-rows: subgrid;
+}
 .grid3 {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

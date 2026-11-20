@@ -528,7 +528,7 @@ export function Overview({ dossier, onTab, base = dossier }) {
         </div>
       </Card>
       <ExpectedCard dossier={mixedReferential(dossier) ? base : dossier} />
-      <div className={c.grid2}>
+      <div className={`${c.grid2} ${c.matchPair}`}>
         <Card
           title="Derniers matchs"
           text="Toutes compétitions · barres : xG pour (bleu) et contre (orange)"
