@@ -211,6 +211,80 @@ const comparable = (name) => name.normalize("NFKD").toLowerCase().replace(/[^a-z
 const namedClub = (id, name, image) =>
   name && (id || !NO_CLUB.includes(comparable(name))) ? put(put(put({}, "id", id), "name", name), "image_url", image) : null;
 
+/**
+ * The « Remplaçant » read (VI-39): GET /api/players/{id}/similar?season=&limit=[&maxAge=][&maxValue=].
+ * The whole season's cohort is searched; the filters apply before the limit and only players
+ * closer than the median distance are kept. The similarity and `compared` are measured on the
+ * unfiltered cohort, so a filter never moves a score; `matched` counts what the filters keep.
+ * Each player, the reference included, with his age, value, season grade and profile axes
+ * (api.player_replacement_facts, api.player_profile_axes, 161).
+ */
+const REPLACEMENT_PARAMS = ["limit", "maxAge", "maxValue"];
+export const REPLACEMENT_LIMIT = 50, REPLACEMENT_DEFAULT = 20;
+const AXES = ["construction", "creation", "percussion", "defense", "finishing"];
+const boundedInt = (raw, low, high) => {
+  if (raw === null) return null;
+  if (!/^\d{1,12}$/.test(raw) || Number(raw) < low || Number(raw) > high) reject(400, "Paramètre invalide.");
+  return Number(raw);
+};
+const PERSON = `p.player_id, p.name, p.image_url, p.minutes, p.role, p.team_id, p.team, p.score,
+  x.age, x.value_eur, x.value_date, x.grade, ${AXES.map((a) => `a.${a}`).join(", ")}`;
+// Laterals kept apart (OFFSET 0), so each view is read for the listed players only: joined
+// plainly, the planner built the facts and axes of every season's players first (30 s on the
+// 2026/2027 base, 20 Nov 2026).
+const keyed = (view, alias) => `SELECT * FROM ${view} v WHERE v.season_id=${alias}.season_id AND v.player_key=${alias}.player_key OFFSET 0`;
+const PERSON_JOINS = (alias) => `CROSS JOIN LATERAL (${keyed("api.player_embedding_people", alias)}) p
+  CROSS JOIN LATERAL (${keyed("api.player_replacement_facts", alias)}) x
+  LEFT JOIN LATERAL (${keyed("api.player_profile_axes", alias)}) a ON true`;
+function person(r) {
+  const row = { id: r.player_id, name: r.name, minutes: r.minutes };
+  put(row, "image_url", r.image_url);
+  put(row, "role", r.role);
+  put(row, "position", r.role ? (ROLE_LABEL[r.role] ?? r.role) : null);
+  if (r.team_id) row.team = { id: r.team_id, name: r.team };
+  put(row, "score", r.score === null || r.score === undefined ? null : Math.round(r.score * 10) / 10);
+  put(row, "age", r.age);
+  put(row, "value_eur", r.value_eur);
+  put(row, "value_date", r.value_date);
+  put(row, "grade", r.grade === null || r.grade === undefined ? null : Math.round(r.grade));
+  if (AXES.some((a) => r[a] !== null && r[a] !== undefined))
+    row.axes = Object.fromEntries(AXES.map((a) => [a, r[a] === null || r[a] === undefined ? null : Math.round(r[a])]));
+  return row;
+}
+async function replacements(read, id, params) {
+  validateParams(params, ["season", ...REPLACEMENT_PARAMS]);
+  const season = params.get("season");
+  if (!/^\d{4}\/\d{4}$/.test(season || "")) reject(400, "Paramètre invalide.");
+  const limit = boundedInt(params.get("limit"), 1, REPLACEMENT_LIMIT) ?? REPLACEMENT_DEFAULT;
+  const maxAge = boundedInt(params.get("maxAge"), 15, 45);
+  const maxValue = boundedInt(params.get("maxValue"), 1, 1e12);
+  const ME = `SELECT * FROM api.player_embedding_vectors
+              WHERE season_id=(SELECT k.season_id FROM api.season_keys k WHERE k.season=$2) AND player_key=api.internal_id('player',$1)`;
+  const [reference] = await read(`WITH me AS (${ME}) SELECT ${PERSON} FROM me ${PERSON_JOINS("me")}`, [id, season]);
+  if (!reference) reject(404, "Donnée indisponible.");
+  const rows = await read(
+    `WITH me AS (${ME}),
+          d AS (SELECT o.season_id, o.player_key, sqrt(${SQUARES}) AS distance FROM api.player_embedding_vectors o
+                JOIN me ON o.season_id=me.season_id AND o.women=me.women AND o.player_key<>me.player_key),
+          m AS (SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY distance) AS median, count(*)::int AS players FROM d),
+          f AS MATERIALIZED (
+            SELECT d.season_id, d.player_key, d.distance FROM d CROSS JOIN m
+            JOIN api.player_replacement_facts x ON x.season_id=d.season_id AND x.player_key=d.player_key
+            WHERE d.distance < m.median AND ($3::int IS NULL OR x.age <= $3) AND ($4::float8 IS NULL OR x.value_eur <= $4)),
+          n AS (SELECT * FROM f ORDER BY distance, player_key LIMIT $5)
+     SELECT ${PERSON}, n.distance, m.median, m.players, (SELECT count(*)::int FROM f) AS matched
+     FROM m LEFT JOIN (n ${PERSON_JOINS("n")}) ON true
+     ORDER BY n.distance, n.player_key`,
+    [id, season, maxAge, maxValue, limit],
+  );
+  const [first] = rows;
+  return {
+    id, season, compared: first?.players ?? 0, matched: first?.matched ?? 0,
+    reference: person(reference),
+    similar: rows.filter((r) => r.distance !== null).map((r) => ({ ...person(r), similarity: similarity(r.distance, r.median) })),
+  };
+}
+
 function respond(req, data) {
   const etag = `W/"profile-v1-${createHash("sha256").update(JSON.stringify(data)).digest("hex")}"`;
   if (req.method === "HEAD" || matchesEtag(req.headers.get("if-none-match"), etag)) return send(req, null, 200, { etag, ttl: 300 });
@@ -670,6 +744,7 @@ export function createProfileRoute(read) {
       return respond(req, data);
     }
     const similar = path.match(SIMILAR);
+    if (similar && REPLACEMENT_PARAMS.some((key) => params.has(key))) return respond(req, await replacements(read, similar[1], params));
     if (similar) {
       validateParams(params, ["season"]);
       const season = params.get("season");
