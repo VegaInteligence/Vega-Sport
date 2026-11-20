@@ -1509,8 +1509,35 @@ def previous_year_changed(conn, season):
     return bool(row and row[0])
 
 
+def partial_year(conn, season):
+    """An award year whose own season holds no player statistics while the next season's
+    first half does (the calendar-year editions' matches before 1 August): award year 2020,
+    whose European seasons are archives only. It is graded against the next award year's
+    references and never ranked (user decision of 20 Nov 2026, FAILURE_MODES §47)."""
+    _, end = award_year(season)
+    row = conn.execute(
+        """SELECT NOT EXISTS (SELECT 1 FROM core.player_match_stats s WHERE s.season_id = %(season)s)
+             AND EXISTS (SELECT 1 FROM core.matches m
+                         JOIN core.competition_seasons cs ON cs.id = m.competition_season_id AND cs.archive_key IS NULL AND cs.cup_key IS NULL
+                         WHERE m.season_id = %(next)s AND m.status = 'finished' AND m.match_date < %(end)s
+                           AND EXISTS (SELECT 1 FROM core.player_match_stats s WHERE s.season_id = m.season_id AND s.match_id = m.id))""",
+        {"season": season, "next": season + 1, "end": end},
+    ).fetchone()
+    return bool(row and row[0])
+
+
+def partial_years(conn):
+    """The partial award years of the base (partial_year), most recent first."""
+    candidates = [s for (s,) in conn.execute(
+        """SELECT y.id - 1 FROM core.seasons y
+           WHERE EXISTS (SELECT 1 FROM core.player_match_stats s WHERE s.season_id = y.id) ORDER BY 1 DESC""").fetchall()]
+    return [s for s in candidates if partial_year(conn, s)]
+
+
 def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
-    """The player power ranking of one season's award year (after refresh_elo).
+    """The player power ranking of one season's award year (after refresh_elo). A partial
+    award year (partial_year) has its match grades, against the next award year once that
+    one is over, and no ranking: its ranking, roles and award race are emptied.
 
     Three steps, and no transaction open during the second: the base ends a session that
     stays idle inside a transaction (60 s, infra/aws/database.yaml), and fitting the
@@ -1535,13 +1562,18 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
         # Last season's own index of each player, his role and club then: the prior (version 8).
         previous = {p: (z, role, team) for p, z, role, team in conn.execute(
             "SELECT player_id, coalesce(index_season, index), role, team_id FROM agg.player_power WHERE season_id = %s", (season - 1,)).fetchall()}
-        # The match grades' reference (grade_reference_year).
-        reference_season = grade_reference_year(season, started.date())
+        # The match grades' reference (grade_reference_year); a partial year's is the next
+        # award year once that one is over (§47).
+        partial = partial_year(conn, season)
+        if partial:
+            reference_season = season + 1 if award_year(season + 1)[1] <= started.date() else None
+        else:
+            reference_season = grade_reference_year(season, started.date())
         finished = reference_season == season
-        before = reference_season == season - 1
-        grade_refs = read_grade_references(conn, reference_season) if before else None
+        other = reference_season is not None and not finished  # the year before, or a partial year's next
+        grade_refs = read_grade_references(conn, reference_season) if other else None
         reference_rows = conn.execute(GRADE_REFERENCE, ([reference_season, reference_season + 1], reference_season, GRADE_FULL_MINUTES)
-                                      ).fetchall() if before and grade_refs is None else []
+                                      ).fetchall() if other and grade_refs is None else []
     # 2. Compute, outside any transaction. The player-matches the year cannot grade are kept
     # with their reason (agg.player_grade_exclusions): a team that is not a side of the match,
     # then no role (assign_roles).
@@ -1588,13 +1620,16 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
             grade_refs = grade_references(reference_rows)
             write_refs = (reference_season, grade_refs)
             graded_against = reference_season
+        elif partial:
+            grade_refs = {"roles": {}, "spreads": {}, "quantiles": {}}  # no finished year after it yet: no grade
         else:
             grade_refs = grade_references(graded)
     matches = [(*match, match_index(role, competition, c, grade_refs)) for match, (role, competition, _, c) in zip(matches, graded)]
     del graded, reference_rows
     contributions = {p: [(role, m, c, team, level) for role, m, c, team, _, level in items] for p, items in detailed.items()}
     scored, settings = season_scores(contributions, eligibility=eligibility, linked=linked, top=top, women=women, clubs=clubs, previous=previous)
-    blocks, roles = season_details(detailed, scored)
+    # A partial year is never ranked (§47): its ranking, roles and award race are emptied below.
+    scored, (blocks, roles) = ({}, ({}, {})) if partial else (scored, season_details(detailed, scored))
     # 3. Write, in one transaction: the season's ranking changes at once or not at all.
     with conn.transaction():
         run = _start(conn, "players", season, started_at=started)
@@ -1630,6 +1665,10 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
                     copy.write_row((season, player, role, x["matches"], int(x["minutes"]), x["total"], x["rate"], run))
         if write_refs:
             write_grade_references(conn, *write_refs)
+        if partial:
+            # No year is graded against a partial year's own references (an earlier rule's run kept them).
+            for table in ("agg.match_grade_roles", "agg.match_grade_spreads", "agg.match_grade_quantiles"):
+                conn.execute(f"DELETE FROM {table} WHERE ref_season = %s", (season,))
         write_match_grades(conn, season, [(edition, match[0], match[1], match[2], match[3], match[4], match[-1])
                                           for edition, match in zip(editions, matches) if match[-1] is not None], graded_against, run)
         write_grade_exclusions(conn, season, excluded, run)
@@ -1865,11 +1904,22 @@ def write_award(conn, season, scored):
 
 def stale_rankings(conn):
     """The seasons whose published player ranking is of another method than METHOD_VERSION,
-    most recent first."""
-    return [s for (s,) in conn.execute(
-        """SELECT season_id FROM agg.power_runs WHERE kind = 'players' AND status = 'published' AND method_version <> %s
-           ORDER BY season_id DESC""", (METHOD_VERSION,)
-    ).fetchall()]
+    and the partial award years (partial_year) without a published run of the present
+    method or whose run started before the next year's last (its references may have
+    moved), most recent first."""
+    stale = {s for (s,) in conn.execute(
+        "SELECT season_id FROM agg.power_runs WHERE kind = 'players' AND status = 'published' AND method_version <> %s", (METHOD_VERSION,)
+    ).fetchall()}
+    for season in partial_years(conn):
+        own, following = conn.execute(
+            """SELECT (SELECT max(started_at) FROM agg.power_runs
+                       WHERE kind = 'players' AND season_id = %(season)s AND status = 'published' AND method_version = %(method)s),
+                      (SELECT max(started_at) FROM agg.power_runs WHERE kind = 'players' AND season_id = %(season)s + 1 AND status = 'published')""",
+            {"season": season, "method": METHOD_VERSION},
+        ).fetchone()
+        if own is None or (following is not None and own < following):
+            stale.add(season)
+    return sorted(stale, reverse=True)
 
 
 def refresh_power(conn, season):

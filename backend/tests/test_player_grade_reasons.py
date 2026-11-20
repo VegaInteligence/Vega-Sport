@@ -6,8 +6,11 @@ A disposable base: a calendar-year league whose edition 2021 holds 31 matches be
 run must not grade: a third team's row, a row without any role, a 0-minute row, a row
 without minutes, a line-up-only player of a match whose statistics were collected and of
 one whose statistics were not, a cup edition's row. The calculations run under vega_calc,
-in the order Worker.daily runs them (due_seasons, refresh_elo once, refresh_daily(elo=False));
-the reasons are read under vega_read.
+in the order Worker.daily runs them (due_seasons, refresh_elo once, refresh_daily(elo=False), then the
+stale rankings' step); the reasons are read under vega_read.
+
+Award year 2020 (§47, the user's decision of 20 Nov 2026): graded against award year 2021's references, never
+ranked. Before the daily path, the year is ranked once by the earlier rule, as production was on 18 Nov 2026.
 """
 
 from datetime import date, datetime, timedelta, timezone
@@ -15,6 +18,7 @@ import os
 from pathlib import Path
 import sys
 import unittest
+from unittest import mock
 from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -116,12 +120,29 @@ class PlayerGradeReasonsTest(unittest.TestCase):
         cls.due = worker.due_seasons(db, NOW)
         cls.failure = None
         power.refresh_elo(calc)
+        cls.stale_before = power.stale_rankings(calc)
+        # Award year 2020 ranked by the earlier rule (its own references, a ranking and an award race), as
+        # production's run of 18 Nov 2026 at 23:39 UTC (§47).
+        with mock.patch.object(power, "partial_year", lambda conn, season: False, create=True):
+            power.refresh_players(calc, 2020)
+        cls.ranked_before = cls.one("SELECT count(*) FROM agg.player_power WHERE season_id=2020")[0]
         for season in cls.due:
             try:
                 models.refresh_daily(calc, season, elo=False)
             except Exception as error:  # the worker logs the step as failed and goes on
                 cls.failure = error
+        # The worker's stale rankings' step, most recent first.
+        cls.stale_after_daily = power.stale_rankings(calc)
+        for season in cls.stale_after_daily:
+            power.refresh_players(calc, season)
+        cls.stale_after = power.stale_rankings(calc)
         cls.first = cls.one("SELECT count(*), max(changed_at) FROM agg.player_match_grades")
+        # A second stale step, and award year 2020 run again directly: nothing moves.
+        for season in power.stale_rankings(calc):
+            power.refresh_players(calc, season)
+        power.refresh_players(calc, 2020)
+        cls.second = cls.one("SELECT count(*), max(changed_at) FROM agg.player_match_grades")
+        cls.stale_second = power.stale_rankings(calc)
 
     @classmethod
     def one(cls, sql, *args):
@@ -132,17 +153,50 @@ class PlayerGradeReasonsTest(unittest.TestCase):
             "SELECT award_season, grade_status FROM api.player_grade_status WHERE season_id=2021 AND match_id=%s AND player_id=%s",
             (self.keys[player], player)).fetchall()
 
-    @unittest.expectedFailure
-    def test_38a_the_daily_path_grades_award_year_2020(self):
-        # Open (§38: a method decision): award year 2020 is never due, its rows never graded.
-        graded = self.one("""SELECT count(*) FROM agg.player_match_grades g JOIN core.matches m ON m.id=g.match_id AND m.season_id=g.season_id
-                             WHERE m.match_date < '2021-08-01'""")[0]
-        self.assertEqual(graded, AWARD_2020)
+    def test_47a_award_year_2020_is_graded_against_award_year_2021(self):
+        # §47 (38a's open question, decided): every positive-minute participation of award year 2020 graded,
+        # against the references of award year 2021.
+        rows = self.db.execute("""SELECT g.award_season, g.ref_season, count(*) FROM agg.player_match_grades g
+                                  JOIN core.matches m ON m.id=g.match_id AND m.season_id=g.season_id
+                                  WHERE m.match_date < '2021-08-01' GROUP BY 1, 2""").fetchall()
+        self.assertEqual(rows, [(2020, 2021, AWARD_2020)])
+        self.assertGreater(self.one("SELECT count(*) FROM agg.match_grade_roles WHERE ref_season=2021")[0], 0)
+        self.assertEqual(self.one("SELECT count(*) FROM agg.match_grade_roles WHERE ref_season=2020")[0], 0)
 
-    def test_38a_award_year_2020_is_named_as_not_computed(self):
+    def test_47a_award_year_2020_s_rows_have_a_grade_status(self):
         mid = self.calendar[0][0]
-        rows = self.read.execute("SELECT DISTINCT award_season, grade_status FROM api.player_grade_status WHERE season_id=2021 AND match_id=%s", (mid,)).fetchall()
-        self.assertEqual(rows, [(2020, "award_year_not_computed")])
+        rows = self.read.execute("SELECT DISTINCT award_season, grade_status FROM api.player_grade_status WHERE season_id=2021 AND match_id=%s ORDER BY 2", (mid,)).fetchall()
+        self.assertTrue(rows and {r[0] for r in rows} == {2020} and {r[1] for r in rows} <= {"graded", "below_display_threshold"}, rows)
+        self.assertEqual(self.read.execute("""SELECT count(*) FROM api.player_grade_status
+                                              WHERE award_season=2020 AND grade_status IN ('graded','below_display_threshold')""").fetchone()[0], AWARD_2020)
+
+    def test_47b_award_year_2020_is_not_ranked(self):
+        self.assertGreater(self.ranked_before, 0)  # the earlier rule ranked it
+        for table in ("agg.player_power", "agg.player_power_roles"):
+            self.assertEqual(self.one(f"SELECT count(*) FROM {table} WHERE season_id=2020")[0], 0, table)
+        self.assertEqual(self.one("SELECT count(*) FROM agg.player_award_ranking WHERE season_id=2020")[0], 0)
+        self.assertEqual(self.one("""SELECT count(*), min(players), max(players) FROM agg.power_runs
+                                     WHERE kind='players' AND season_id=2020 AND status='published'"""), (1, 0, 0))
+        # Award year 2021 stays ranked.
+        self.assertGreater(self.one("SELECT count(*) FROM agg.player_power WHERE season_id=2021 AND rank IS NOT NULL")[0], 0)
+
+    def test_47c_the_stale_step_lists_award_year_2020_until_it_is_graded(self):
+        self.assertEqual(self.stale_before, [2020])
+        self.assertEqual(self.stale_after_daily, [2020])  # its run is older than 2021's
+        self.assertEqual(self.stale_after, [])
+
+    def test_47d_a_second_pass_changes_nothing(self):
+        self.assertEqual(self.second, self.first)
+        self.assertEqual(self.stale_second, [])
+
+    def test_47f_a_new_run_of_2021_sends_2020_back_to_the_stale_step(self):
+        self.power.refresh_players(self.calc, 2021)
+        try:
+            self.assertEqual(self.power.stale_rankings(self.calc), [2020])
+        finally:
+            self.power.refresh_players(self.calc, 2020)
+        self.assertEqual(self.power.stale_rankings(self.calc), [])
+        self.assertEqual(self.one("SELECT count(*), max(changed_at) FROM agg.player_match_grades"), self.first)
 
     def test_38b_a_third_team_s_row_is_set_aside_and_the_year_published(self):
         self.assertIsNone(self.failure)

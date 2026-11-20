@@ -2838,7 +2838,7 @@ one is missing: the rows `assign_roles` leaves without a role and the rows the r
 
 | # | Situation | Expected | On 2088d36e60 |
 |---|---|---|---|
-| 38a | The ordinary daily pass (`due_seasons`, `refresh_elo`, `refresh_daily(elo=False)`) on the two leagues | every positive-minute participation of award year 2020 graded; a second pass changes nothing | red: 0 of 682 graded, 2020 never due; **kept open: method decision** (test marked as an expected failure) |
+| 38a | The ordinary daily pass (`due_seasons`, `refresh_elo`, `refresh_daily(elo=False)`) on the two leagues | every positive-minute participation of award year 2020 graded; a second pass changes nothing | red: 0 of 682 graded, 2020 never due; decided on 20 Nov 2026 and replaced by §47 (47a) |
 | 38b | A third team's row with a position, both Elo sides present, then `refresh_players(2021)` | the run publishes; the row is in `agg.player_grade_exclusions` (`team_not_in_match`), not graded; every other row graded; a second run changes no grade | red: `UniqueViolation` 23505 on `player_power_matches_pkey`, the year's previous rows kept |
 | 38c | A row without position, line-up slot, role history or keeper data | not graded, recorded `role_undetermined`; status `role_undetermined` | red: dropped silently, no trace |
 | 38d | `api.player_grade_status` under `vega_read` over the base of 38a–38c plus a 0-minute row, a minutes-less row, a line-up-only player of an uncollected match, a cup edition's row | one row per key, each status above as stated; `graded`/`below_display_threshold` agree with the grade rule on every graded key | red: no such view |
@@ -3552,6 +3552,12 @@ migration). Due again within a day when the unit did not carry that mark already
 spent), at the search's ordinary period for its priority. No link and no conflict while the name is missing. When the
 name arrives, the reserve check applies as in 45h and the search is recorded as usual (the mark cleared).
 
+| # | Situation | Expected |
+|---|---|---|
+| 45k | 45i's search when `/clubs` omits the club (its unit recorded 404, no `core.provider_clubs` row, due again in 90 days); the search read three times, each when due | the first search due again within a day, the next ones at the search's ordinary period (`PERIODS["search"]`, 30 days at priority 1); no link, no conflict at any of them |
+| 45l | The same when the club's record has no name (`parse_club`'s `name` None, the row stored with a NULL name) | as 45k |
+| 45m | After 45k or 45l, the club's name arrives (the reserve's) and the search is read | the reserve check as in 45h (`reserve_side`, no link); the unit's error mark cleared |
+
 ## 46. The independent review of 2088d36e60..8587ab6671: a grade status read by key, a first 404, the side journal, the failures' lookup (19 Nov 2026, written before the tests)
 
 An independent review of the six lanes integrated on `claude/audit-reprise-33` (8587ab6671) returned six findings
@@ -3644,6 +3650,54 @@ there is one: five reproduce, one does not.
 | 46k | `merge_twins` on a twin pair whose goal-only match a side correction names | the goal-only match or the result named: held `side_corrected`, nothing changed, the journal row intact; the season does not fail; again the same | red: the twin named, the season fails on the foreign key at each pass; the result named, the pair is merged unreviewed |
 | 46l | The scope purge of a competition whose match a side correction names; a reviewed removal of such a match | the competition held whole; the match held `removal_has_dependents` naming the journal | green on arrival (the foreign key and the dynamic dependents already hold them) |
 
-| 45k | 45i's search when `/clubs` omits the club (its unit recorded 404, no `core.provider_clubs` row, due again in 90 days); the search read three times, each when due | the first search due again within a day, the next ones at the search's ordinary period (`PERIODS["search"]`, 30 days at priority 1); no link, no conflict at any of them |
-| 45l | The same when the club's record has no name (`parse_club`'s `name` None, the row stored with a NULL name) | as 45k |
-| 45m | After 45k or 45l, the club's name arrives (the reserve's) and the search is read | the reserve check as in 45h (`reserve_side`, no link); the unit's error mark cleared |
+## 47. Award year 2020: graded against award year 2021, never ranked (audit E04f, E04k; user decision of 20 Nov 2026, written before the tests)
+
+The user's decision (20 Nov 2026), on §38's open question: the participations of award year 2020 (1 August 2020 –
+31 July 2021) are graded against the references of award year 2021, and no ranking or award race of 2020 is published.
+Award year 2020 holds only the first half of the calendar-year editions 2021 (MLS, Eliteserien, the first July rounds
+of 2. Bundesliga, …): the base has no player statistics of the European seasons 2020/21, which are archives only. Its
+own references would be those of half a year of non-European leagues, and its ranking that of those leagues alone.
+
+Found in production on 20 Nov 2026 (`GET /api/rankings/power?kind=players&season=2020/2021`, kept under
+`evidence/annee-2020/`): a 2020/21 players ranking is published, `power-ranking-v8`, computed 18 Nov 2026 at
+23:39:58 UTC, seven seconds after 2021/22's: its first ten are MLS players (Carles Gil, New England, 93.4). The
+daily path does not reach 2020 (§38); `stale_rankings` did, through a published 2020 run of an earlier method, and
+`refresh_players(2020)` ranked the year and graded it against its own references. §38's « 14 418 ungraded » was
+measured at 18:37 UTC, before that run; how 2020's rows are graded in production since is not read (no base access).
+
+### 47.1 Rules
+
+- **A partial award year.** An award year whose own season holds no player statistics (`core.player_match_stats`
+  with `season_id` = the year: the condition `previous_year_changed` already uses), while the next season holds
+  statistics of finished admitted matches dated before 1 August of the year's end (`PLAYER_MATCHES` reads them).
+  In the base: 2020 only.
+- **Its grades.** `refresh_players` of a partial year reads the year as before (`PLAYER_MATCHES`, the same roles,
+  contributions and exclusions) and grades each player-match against the next award year's references when that
+  year is over: those kept (`agg.match_grade_*` of `ref_season` = year + 1), else computed from that year's
+  player-matches and kept, as a finished year before is today. `agg.player_match_grades.ref_season` says it (2021).
+  If the next year is not over, no grade (`no_reference`): a year in progress is no reference.
+- **No ranking.** The partial year's run writes its player-matches (`agg.player_power_matches`: contributions and
+  grades, which the status view reads), its grades, its exclusions, and no ranking: `agg.player_power` and
+  `agg.player_power_roles` of the year are emptied, its award race replaced by an empty one (`write_award` of no
+  player). The run is published (`agg.power_runs`, `players` = 0), so the status view no longer says
+  `award_year_not_computed`. A ranking of 2020 that a previous run published is removed with that run's
+  replacement; the next year's prior (`previous`, read from `agg.player_power` of the year before) then finds none
+  for anyone, as already for every player of the European leagues.
+- **Its own references.** No year is graded against a partial year's own references: the partial run deletes those
+  an earlier rule's run kept (`agg.match_grade_*` of `ref_season` = the year).
+- **When it runs.** `stale_rankings` lists, beside the years of another method, a partial year with no published
+  players run of the present method, or whose run started before the last published players run of the next year
+  (its references may have moved). The worker's stale step ranks the years it lists, most recent first: the next year
+  first, then the partial year. `refresh_daily` and `previous_year_changed` are unchanged (a year with statistics
+  of its own).
+- `METHOD_VERSION` is unchanged: no other year's ranking or grade changes.
+
+### 47.2 Failure modes and expected outcomes
+
+| # | Situation | Expected | On 79ef8bbb45 |
+|---|---|---|---|
+| 47a (38a) | §38's base, the daily path (`due_seasons`, `refresh_elo`, `refresh_daily(elo=False)`), then the worker's stale step | every positive-minute participation of award year 2020 graded (682), each with `ref_season` 2021; status `graded` or `below_display_threshold` | red: 0 of 682 graded |
+| 47b | The same base, award year 2020 first ranked by the earlier rule (as production on 18 Nov), then 47a | the earlier ranking and award race removed: no `agg.player_power`, `agg.player_power_roles` or award row of 2020; one published 2020 run, `players` = 0; 2021 still ranked | red: the 2020 ranking kept |
+| 47c | `stale_rankings` before the daily path (no run of 2020), after it (2020's earlier run older than 2021's), after the stale step | `[2020]`, `[2020]`, `[]` | red: 2020 never listed |
+| 47d | A second stale step and `refresh_players(2020)` again | no grade rewritten (`changed_at` unchanged), the same counts; 2020 not listed | red: as 47a |
+| 47f | `refresh_players(2021)` after 47a, then `refresh_players(2020)` | 2020 listed by `stale_rankings` (its run is older), then not; no grade rewritten | red: as 47c |
