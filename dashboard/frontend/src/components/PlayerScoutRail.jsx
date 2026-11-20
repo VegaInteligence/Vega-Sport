@@ -17,6 +17,7 @@ import {
 } from "../services/scouting-history.js";
 import { playerTeamSeasons } from "../services/player-team-seasons.js";
 import Link from "next/link";
+import BackLink from "./BackLink.jsx";
 import { Media, Skeleton } from "./UI.jsx";
 import PlayerHonours from "./PlayerHonours.jsx";
 import NationalFlag from "./NationalFlag.jsx";
@@ -110,6 +111,7 @@ function Facts({ items, label }) {
  *  positions, availability, palmarès and actions. */
 export default function PlayerScoutRail({
   id,
+  backHref,
   identity,
   fallbackUrl,
   showIdentity = true,
@@ -243,6 +245,13 @@ export default function PlayerScoutRail({
   const positions = heldPositions(profile);
   return (
     <aside className={s.rail} aria-label="Identité du joueur" {...more.fold}>
+      {backHref && (
+        <BackLink
+          className={`inline-link ${s.railBack}`}
+          href={backHref}
+          label="Tous les joueurs"
+        />
+      )}
       {showIdentity && (
         <div className={s.identity}>
           <div className={s.portrait}>

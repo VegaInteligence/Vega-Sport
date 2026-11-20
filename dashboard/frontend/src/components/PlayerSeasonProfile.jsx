@@ -218,6 +218,7 @@ export function PlayerMetricTable({ profile, keys, mode, cohorts }) {
 /** Identity rail beside the tabbed analysis, plus its compact scrolling strip. */
 function ProfileLayout({
   id,
+  backHref,
   identity,
   profile,
   record,
@@ -249,6 +250,7 @@ function ProfileLayout({
         <div ref={railRef}>
           <PlayerScoutRail
             id={id}
+            backHref={backHref}
             identity={identity}
             fallbackUrl={fallbackUrl}
             showIdentity={showIdentity}
@@ -271,6 +273,7 @@ function ProfileLayout({
 
 export default function PlayerSeasonProfile({
   id,
+  backHref,
   rows,
   summaryProfile,
   scopeRows,
@@ -595,6 +598,7 @@ export default function PlayerSeasonProfile({
         <MessiGoats id={id} />
         <ProfileLayout
           id={id}
+          backHref={backHref}
           identity={identity}
           profile={profile}
           record={record}
@@ -697,6 +701,7 @@ export default function PlayerSeasonProfile({
       <MessiGoats id={id} />
       <ProfileLayout
         id={id}
+        backHref={backHref}
         identity={identity}
         profile={profile}
         record={record}

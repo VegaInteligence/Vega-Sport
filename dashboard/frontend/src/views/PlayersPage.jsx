@@ -1,6 +1,5 @@
 "use client";
 import { Skeleton } from "../components/UI.jsx";
-import BackLink from "../components/BackLink.jsx";
 import { useSearchParams } from "next/navigation";
 import React, {
   lazy,
@@ -297,13 +296,6 @@ export default function PlayersPage() {
         filterKind="players"
         performanceComparison={Boolean(id)}
       >
-        {id && (
-          <BackLink
-            className="inline-link competition-back"
-            href={f.href("/joueurs/", { id: "", q: "" })}
-            label="Tous les joueurs"
-          />
-        )}
         {id && !overview && cohortTab && needsCohort && cohort.loading && (
           <Skeleton label="Chargement des comparaisons de saison…" lines={2} />
         )}
@@ -325,6 +317,7 @@ export default function PlayersPage() {
           >
             <PlayerSeasonProfile
               id={id}
+              backHref={f.href("/joueurs/", { id: "", q: "" })}
               rows={playerRows}
               summaryProfile={subject}
               scopeRows={summaryRows}

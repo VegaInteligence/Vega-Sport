@@ -5,6 +5,7 @@
 - Objectif : les « ← » reviennent à la page d’où l’on vient ([VI-37](https://linear.app/vegainteligence/issue/VI-37)). Demande de logique, pas de maquette (design inchangé).
 - Décision : `BackLink` commun ; Navigation API, page = chemin + `id`/`m`/`cdm` (onglets et filtres sautés) ; libellé = H1 de la page quittée ; sans page précédente du site, lien et libellé fixes d’avant ; ⌘-clic = lien fixe.
 - Validation : tests du site 803/803, build OK, E2E Playwright (joueur → club → retour, club → match → retour, entrée directe, ⌘-clic) vert sans erreur console. Non pilotés en navigateur : nation, rapport, archives, match CdM archivé, matchs du joueur, coupe.
+- 20 nov. (suite) : demande d’homogénéité. Sur les fiches joueur et nation, le « ← » passe en haut de la colonne d’identité, comme sur la fiche club (même classe `railBack`, même position). Design repris de la fiche club, que l’utilisateur a désignée comme modèle. Vérifié : ordinateur et iPhone 16, tests 803/803. Constat existant : sur téléphone, la fiche nation défile seule d’environ 800 px au chargement (déjà le cas avant ce changement).
 - Prochaine action : aucune.
 
 ## Mandat en cours

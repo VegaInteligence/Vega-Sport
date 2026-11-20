@@ -704,7 +704,7 @@ function MatchCarousel({ nation }) {
   );
 }
 
-function NationRail({ nation, last }) {
+function NationRail({ nation, last, backHref }) {
   const more = usePhoneFold();
   const played = nation.matches.filter(
     (m) => m.status === "finished" && m.homeScore != null,
@@ -722,6 +722,11 @@ function NationRail({ nation, last }) {
       aria-label="Identité de la sélection"
       {...more.fold}
     >
+      <BackLink
+        className={`inline-link ${rail.railBack}`}
+        href={backHref}
+        label="Toutes les nations"
+      />
       <div className={rail.identity}>
         <NationMark
           nation={nation}
@@ -1023,13 +1028,12 @@ export function NationProfile({ id }) {
   const last = lastTournament(value);
   return (
     <>
-      <BackLink
-        className="inline-link competition-back"
-        href={f.href("/nations/", { id: "" })}
-        label="Toutes les nations"
-      />
       <div className={rail.layout}>
-        <NationRail nation={value} last={last} />
+        <NationRail
+          nation={value}
+          last={last}
+          backHref={f.href("/nations/", { id: "" })}
+        />
         <div className={rail.main}>
           <ResearchTabs
             animated

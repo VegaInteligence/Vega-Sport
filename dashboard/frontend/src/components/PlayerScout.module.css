@@ -29,6 +29,13 @@
 .railSection:empty {
   display: none;
 }
+/* Back to the previous page, at the top of the rail (as on a club's). */
+.railBack {
+  margin: 12px 16px 0;
+}
+.railBack + .identity {
+  padding-top: 10px;
+}
 .identity {
   display: grid;
   justify-items: center;
