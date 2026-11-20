@@ -518,6 +518,19 @@ export function FootballProvider({ children, loadData = true, initialState }) {
   const currentSnapshot = {
     key: seasonKey,
     intent: dataIntent,
+    // The page the read belongs to, without its season: a change of season on the same page
+    // keeps the page on screen (selectSeasonSnapshot).
+    page: JSON.stringify([
+      pathname,
+      initial.get("id"),
+      requestedVersion,
+      dataFocus,
+      clubTeam,
+      compactMode,
+      compactKind,
+      loadData,
+    ]),
+    season: chosen,
     scope: JSON.stringify([
       leagueOnly,
       progressive,

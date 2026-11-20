@@ -30,12 +30,20 @@ export function pagedMatchList(manifest, pathname, id) {
 
 /** Keep data and its metadata together while the same scope is being renewed. */
 export function selectSeasonSnapshot(previous, current, canRetain = true) {
+  // The same read renewed (a new version), or, on the same page, another season: the page and
+  // its last tables stay while it loads, and only the tables change (user, 20 Nov 2026: the
+  // whole site gave way to the loading screen at each change of season).
+  const renewed =
+    previous?.intent === current.intent && previous?.scope === current.scope;
+  const seasonChange =
+    previous?.page !== undefined &&
+    previous.page === current.page &&
+    previous.season !== current.season;
   if (
     canRetain &&
     !current.data &&
     previous?.data &&
-    previous.intent === current.intent &&
-    previous.scope === current.scope &&
+    (renewed || seasonChange) &&
     previous.key !== current.key
   )
     return { ...previous, retained: true };
