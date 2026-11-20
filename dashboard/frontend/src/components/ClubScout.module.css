@@ -1137,7 +1137,8 @@
   align-items: center;
   gap: 10px;
   min-width: 240px;
-  height: 38px;
+  /* As tall as the competition segments beside it. */
+  height: 30px;
   padding: 0 10px 0 8px;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius);

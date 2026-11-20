@@ -13,6 +13,7 @@
 - Décision : `BackLink` commun ; Navigation API, page = chemin + `id`/`m`/`cdm` (onglets et filtres sautés) ; libellé = H1 de la page quittée ; sans page précédente du site, lien et libellé fixes d’avant ; ⌘-clic = lien fixe.
 - Validation : tests du site 803/803, build OK, E2E Playwright (joueur → club → retour, club → match → retour, entrée directe, ⌘-clic) vert sans erreur console. Non pilotés en navigateur : nation, rapport, archives, match CdM archivé, matchs du joueur, coupe.
 - 20 nov. (suite) : demande d’homogénéité. Sur les fiches joueur et nation, le « ← » passe en haut de la colonne d’identité, comme sur la fiche club (même classe `railBack`, même position). Design repris de la fiche club, que l’utilisateur a désignée comme modèle. Vérifié : ordinateur et iPhone 16, tests 803/803. Sur téléphone, la fiche nation défilait seule de 788 px au chargement : la rangée d’éditions du carrousel de matchs se recalait avec `scrollIntoView`, qui déplaçait aussi la page. Elle défile désormais seulement à l’horizontale (ouverture à 0 px, la rangée suit toujours le carrousel).
+- 20 nov. : sur les fiches joueur et club (ordinateur), la saison, la période et « Autre compétition » passent de 34–38 px à 30 px de haut, la hauteur du groupe de compétitions. Le texte de la saison passe à 12 px. Le téléphone ne change pas (tout est déjà à 40 px). Petite retouche : pas d’issue Linear dédiée.
 - Prochaine action : aucune.
 
 ## Mandat en cours

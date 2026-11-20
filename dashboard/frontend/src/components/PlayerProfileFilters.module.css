@@ -32,14 +32,20 @@
   overflow: hidden;
   clip-path: inset(50%);
 }
+/* Season and period stand as tall as the competition segments beside them (30 px). */
+.filters .season > div {
+  height: 30px;
+}
 .filters .season select {
-  min-height: 2.25rem;
+  min-height: 0;
+  height: 100%;
+  font-size: var(--text-sm);
 }
 .pill {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  height: 2.25rem;
+  height: 30px;
   padding: 0 10px 0 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
