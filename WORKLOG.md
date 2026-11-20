@@ -1,12 +1,13 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
-## Règles d'avatar : blasons et portraits — VI-43 / #63 (20 novembre 2026)
+## Règles d'avatar : blasons et portraits — VI-43 / #63 (20 novembre 2026, clos)
 
 - Demande : comparer le site avec la page Avatar de Geist (Vercel), « pas dans le design, dans les recommandations et outils », puis un aperçu local des 7 points. Direction validée par l'utilisateur (« Oui, je valide ») sur la [page de revue](https://claude.ai/artifact/1hAC7P6aYWjfRXAui5LTAD).
 - Décisions : (1) pendant le chargement, la forme seule, jamais d'initiales ; (2) `mediaInitials` : premier et dernier mot, lettres ou chiffres, particule en majuscule comptée pour une personne, sans nom la forme neutre (plus de « — ») ; (3) échelle 16 · 20 · 24 · 28 · 32 · 40 · 48 · 64 · 96 px (`MEDIA_SIZES`, jetons `--media-*`), 95 règles CSS ramenées au pas le plus proche ; (4) un composant : `Media` + `kind`/`size`, `ClubCrest`, `PlayerAvatar` ; le `Picture` des pages club devient `Media` ; (5) `label` pour un blason sans nom écrit à côté (repères de « Style de jeu ») ; (6) `AvatarGroup` (podium de l'accueil) ; (7) règles dans `dashboard/frontend/AGENTS.md` (« Images »).
 - Coordination : `Picture`/`Crest` sont aussi dans le périmètre de VI-30 ; changement consigné en commentaire sur VI-30 (sa branche est entièrement fusionnée, aucun conflit). Issue GitHub #63 créée avec l'accord de l'utilisateur (dépôt public), importée en VI-43.
 - Validation : `tests/e2e/media.e2e.mjs` 50/50 sur l'aperçu, 14/50 sur le site public ; tests du site 814/814 ; build OK. Preuves : `dashboard/outputs/avatars-preview-e2e/` du checkout principal. La page `/apercu/avatars` est restée dans l'aperçu.
-- Livraison demandée (« Oui, livre ») : poussé sur main avec `Fixes #63`. Prochaine action : vérifier le déploiement Vercel et rejouer l'E2E sur le site public.
+- Livré sur main (`87155482fc`, `Fixes #63`, VI-43 clos), CI 44778519558 verte, déployé sur Vercel (READY). E2E sur le site public après déploiement : 50/50, aucune erreur console (preuve : `dashboard/outputs/avatars-preview-e2e/production-87155482fc/`).
+- Prochaine action : aucune.
 
 ## Remplaçant : compatibilité avec l'équipe — VI-40 / #62 (20 novembre 2026, clos)
 
