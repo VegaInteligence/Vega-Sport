@@ -1,11 +1,12 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
-## Remplaçant : compatibilité avec l'équipe (20 novembre 2026, suite de VI-39)
+## Remplaçant : compatibilité avec l'équipe — VI-40 / #62 (20 novembre 2026)
 
-- Retour de l'utilisateur : remplacer un joueur, c'est le remplacer dans une équipe (dynamique de l'équipe, discipline du joueur par rapport à l'équipe), pas seulement stat = stat.
-- Proposition (avis Fable) : « Compatibilité » = 0,50 profil + 0,25 rôle dans l'équipe (parts du jeu de son équipe : ballons, passes, dernier tiers, occasions, tirs, actions défensives, en centiles de rôle) + 0,15 style de club (10 axes de style, club du candidat contre le club du joueur remplacé) + 0,10 discipline (fautes et cartons relatifs à sa propre équipe ; ne pénalise qu'un candidat moins discipliné). Coéquipiers exclus ; ligue plus faible pénalisée (coût de niveau existant, vers le bas seulement). Pondérations à juger, non ajustées : à valider plus tard sur de vrais transferts.
-- Maquette : [Remplaçant en équipe](https://claude.ai/artifact/32HzcLEv6yjbxxHp1DDFKb) (ordinateur et téléphone, données d'exemple).
-- Prochaine action : validation de l'utilisateur (dont le sens de « discipline » : cartons et fautes, ou rigueur tactique) ; puis issue GitHub (règle du jour), table `agg.player_team_fit` calculée par le worker, route `/similar` étendue, tests avant le code.
+- Demande : remplacer un joueur dans une équipe (dynamique, discipline, replis défensifs, efforts), pas stat = stat. Maquette [Remplaçant en équipe](https://claude.ai/artifact/32HzcLEv6yjbxxHp1DDFKb) validée, avec replis et efforts en plus.
+- Fait (6a93cbdf09, local) : `team_fit.py` → `agg.player_team_fit` (162) ; lecture `/similar` triée par compatibilité (profil 40, rôle 20, style 15, travail défensif 10, effort 10, discipline 5 ; coéquipiers exclus ; ligue plus faible pénalisée) ; panneau à six éléments. Note `docs/calculs/05-joueurs/13-remplacant-compatibilite-equipe.md`.
+- Données : effort seulement en Premier League (178 joueurs) ; replis non mesurables (travail défensif ajusté à la possession en approche). Une requête unique a dépassé 2 min en production ; lectures simples + Python : 0,8 s + 13 s.
+- Hors issue (ac0c692b14) : changer de saison sur Joueurs, Clubs et Compétitions ne fait plus passer tout le site par l'écran de chargement.
+- En attente : validation de la maquette v2 (pentagone, en-tête aminci, « En forme » → filtre « Forme » dans Performances), puis push et déploiement (migration 162). La table se remplit au prochain passage quotidien des modèles, sauf calcul lancé à la main.
 
 ## Page Joueurs : Remplaçant et En forme remplacent Explorer et Indices — VI-39 (20 novembre 2026)
 
