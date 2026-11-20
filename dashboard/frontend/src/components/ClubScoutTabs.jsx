@@ -421,7 +421,7 @@ export function Overview({ dossier, onTab, base = dossier }) {
         text={`Centiles face aux ${total} clubs du référentiel (${dossier.league?.name || "son championnat"}). Indicateurs concédés inversés : plus la part est grande, mieux c’est.`}
       >
         <div className={s.profileGrid} {...readingFold.fold}>
-          <PercentilePizza items={pizza} cohort={total} size={520} />
+          <PercentilePizza items={pizza} cohort={total} size={440} grow={1} />
           <PhoneFoldToggle
             {...readingFold.toggle}
             label="Phases de jeu, points forts et faibles"

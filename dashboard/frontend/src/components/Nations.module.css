@@ -227,37 +227,160 @@ a.match:hover {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
-.path {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
-  gap: 8px;
+/* The matches carousel (mock-up B, 20 Nov 2026): one group per competition edition, newest first. */
+.arrows {
+  display: inline-flex;
+  gap: 6px;
 }
-.step {
+.arrows button {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink-strong);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+.arrows button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+.jump {
+  display: flex;
+  gap: 18px;
+  margin: 0 0 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.jump::-webkit-scrollbar {
+  display: none;
+}
+.jump button {
+  flex: none;
+  padding: 0 0 4px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.jump button[aria-selected="true"] {
+  border-bottom-color: var(--ink-strong);
+  color: var(--ink-strong);
+}
+.rail {
+  position: relative;
+}
+.rail::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 40px;
+  background: linear-gradient(90deg, transparent, var(--bg));
+  pointer-events: none;
+}
+.track {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+.track::-webkit-scrollbar {
+  display: none;
+}
+.group {
   display: grid;
-  gap: 2px;
-  padding: 10px 12px;
-  border-left: 3px solid var(--border-strong);
-  border-radius: var(--radius);
+  gap: 8px;
+  align-content: start;
+}
+.groupLabel {
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+.groupLabel b {
+  color: var(--ink-strong);
+  font-weight: 600;
+}
+.tiles {
+  display: flex;
+  gap: 10px;
+}
+.tile {
+  flex: none;
+  display: grid;
+  gap: 8px;
+  width: 184px;
+  padding: 11px 12px 12px;
+  border-radius: 0;
   background: var(--surface-subtle);
   color: var(--ink);
+  text-decoration: none;
+  scroll-snap-align: start;
 }
-.step[data-r="V"] {
-  border-left-color: var(--positive, #34d399);
+a.tile:hover {
+  background: color-mix(in srgb, var(--surface-subtle) 80%, var(--ink-strong) 6%);
 }
-.step[data-r="D"] {
-  border-left-color: var(--negative, #f87171);
+.tile[data-final] {
+  box-shadow: inset 0 0 0 1px #f2c230;
 }
-.step small {
+.tile[data-final] .tileTop span:first-child {
+  color: #f2c230;
+}
+.tileTop,
+.tileFoot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 18px;
   color: var(--muted);
   font-size: var(--text-xs);
 }
-.step b {
-  color: var(--ink-strong);
+.tileTeam {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
   font-size: var(--text-sm);
 }
-.step span {
+.tileTeam[data-w],
+.tileTeam[data-d] {
+  color: var(--ink-strong);
+}
+.tileTeam[data-w] .tileName {
   font-weight: 700;
+}
+.tileTeam b {
   font-variant-numeric: tabular-nums;
+}
+.tileFlag {
+  width: 20px;
+  height: 15px;
+  background-size: cover;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ink-strong) 10%, transparent);
+}
+.tileName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 600px) {
+  .tile {
+    width: 158px;
+  }
+  .arrows {
+    display: none;
+  }
 }
 /* The major tournaments: a row per competition, a tile per edition. A medal is on the gauge and the tile's edge, never
    on the text. */

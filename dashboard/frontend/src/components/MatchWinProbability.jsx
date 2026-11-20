@@ -1,30 +1,14 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Card } from "./UI.jsx";
 import { probabilityLines, share, useMatchWinProbability, withLive } from "../services/forecasts.js";
+import useBoxWidth from "../hooks/useBoxWidth.js";
 import s from "./MatchTabs.module.css";
 
 const HOME = "var(--home)";
 const AWAY = "var(--away)";
 const DRAW = "var(--muted)";
 const RED = "light-dark(#d93025, #ff6b61)";
-
-/** The width the chart is laid out at, measured: drawn at it, its text keeps its size. */
-function useBoxWidth(fallback) {
-  // A callback ref: the box may appear after the first rendering (data still loading).
-  const [node, setNode] = useState(null);
-  const [width, setWidth] = useState(fallback);
-  useEffect(() => {
-    if (!node) return undefined;
-    const read = () => node.clientWidth && setWidth(Math.round(node.clientWidth));
-    read();
-    if (typeof ResizeObserver === "undefined") return undefined;
-    const observer = new ResizeObserver(read);
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [node]);
-  return [setNode, width];
-}
 
 /** A match minute by minute: the chances of each result as three lines, each goal a jump with
  * what it changed for the side that scored. The read-out beside it follows the pointer, else

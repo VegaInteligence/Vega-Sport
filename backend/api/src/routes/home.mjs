@@ -335,6 +335,9 @@ SELECT publication.*,
  (SELECT CASE WHEN start_day IS NULL THEN null ELSE jsonb_build_object('start',start_day,'end',end_day,'current',${!filters.archive},'latest',latest,'asOf',${b(now)}::float8,'asOfDay',as_of_day) END FROM period) period,
  (SELECT count(*)::int FROM weekly) result_count,
  (SELECT coalesce(jsonb_agg(id ORDER BY kickoff DESC,id),'[]'::jsonb) FROM results) results,
+ -- The national teams' results of the week up to today (154): the strip shows them first.
+ (SELECT coalesce(jsonb_agg(to_jsonb(i) - 'n' ORDER BY i.n),'[]'::jsonb) FROM period p
+  CROSS JOIN LATERAL api.home_internationals(p.start_day,least(p.end_day,p.as_of_day)) WITH ORDINALITY i(match_id,match_date,tournament,home_id,home_name,home_score,home_page,away_id,away_name,away_score,away_page,n)) internationals,
  (SELECT id FROM featured) featured,
  ${oneRow("SELECT id,margin,goals FROM biggest_win")} biggest_win,
  (SELECT coalesce(jsonb_object_agg(r.id,to_jsonb(r)),'{}'::jsonb) FROM records r) records,
@@ -404,6 +407,11 @@ export function homeReadRecord(snapshot) {
     period: snapshot.period,
     resultCount: snapshot.result_count,
     results: (snapshot.results || []).map((id) => match(id)),
+    internationals: (snapshot.internationals || []).map((i) => ({
+      id: i.match_id, date: i.match_date, tournament: i.tournament,
+      home: { id: i.home_id, name: i.home_name, score: i.home_score, page: i.home_page },
+      away: { id: i.away_id, name: i.away_name, score: i.away_score, page: i.away_page },
+    })),
     featured: match(snapshot.featured, { full: true }),
     bestOfFeatured: appearance(snapshot.best_featured),
     potw: appearance(snapshot.potw),

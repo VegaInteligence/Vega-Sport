@@ -81,3 +81,35 @@ export function parseTournamentResults(csv, competition, season) {
   }
   return result;
 }
+
+// Every international of a season beyond what the base reads elsewhere: the home's week strip shows them (19 Nov
+// 2026). The Nations League has its editions (OpenLigaDB's League A, parseNationsResults' Leagues B to D), the World
+// Cup is PitchAPI's, and a tournament of TOURNAMENT_EDITIONS is its edition's inside that edition's days.
+const OWN_EDITIONS = new Set(["UEFA Nations League", "FIFA World Cup"]);
+const firstSeason = 2021;
+
+/** The season's internationals (1 July – 30 June) from the CC0 dataset, the tournament as their round. */
+export function parseInternationalResults(csv, season) {
+  const start = Number(/^(\d{4})\/(\d{4})$/.exec(season || "")?.[1]);
+  if (!(start >= firstSeason) || season !== `${start}/${start + 1}`) throw new Error("Unknown season");
+  const from = `${start}-07-01`, to = `${start + 1}-06-30`;
+  if (typeof csv !== "string" || csv.length > 12 * 1024 * 1024) throw new Error("Invalid results data");
+  const lines = csv.split(/\r?\n/), header = csvRow(lines[0] || "");
+  if (!header || header.slice(0, 9).join(",") !== "date,home_team,away_team,home_score,away_score,tournament,city,country,neutral") throw new Error("Invalid results header");
+  const windows = Object.values(TOURNAMENT_EDITIONS).flatMap((e) => Object.values(e.seasons).map((days) => [e.tournament, ...days]));
+  const result = [], seen = new Set();
+  for (const line of lines.slice(1)) {
+    const day = line.slice(0, 10);
+    if (day < from || day > to) continue;
+    const row = csvRow(line);
+    if (!row || row.length < 9 || OWN_EDITIONS.has(row[5])) continue;
+    if (windows.some(([tournament, first, last]) => row[5] === tournament && day >= first && day <= last)) continue;
+    if (!/^\d+$/.test(row[3]) || !/^\d+$/.test(row[4])) continue;
+    const key = [row[0], row[1], row[2]].join("|");
+    if (seen.has(key)) throw new Error("Duplicate international result");
+    seen.add(key);
+    result.push({ key: `internationals:${key}`, date: row[0], home: row[1], away: row[2], homeId: row[1], awayId: row[2],
+      score: [Number(row[3]), Number(row[4])], status: "finished", round: row[5], neutral: row[8] === "TRUE" });
+  }
+  return result;
+}

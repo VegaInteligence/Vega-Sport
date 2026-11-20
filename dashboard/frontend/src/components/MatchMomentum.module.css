@@ -1,0 +1,100 @@
+/* « Qui a dominé, minute par minute ». Its own pair of colours, validated for both themes
+ * (dataviz validate_palette: dark ΔE 27.2 normal / 24.0 protan, light 33.0 / 27.3): the site's
+ * --home / --away (blue / lavender) fail it. On the root: the hover card is drawn outside the chart. */
+:global(:root) {
+  --momentum-home: #4d8fe0;
+  --momentum-away: #cf7434;
+}
+:global(html[data-theme="light"]) {
+  --momentum-home: #1d6fd6;
+  --momentum-away: #d0661c;
+}
+.chart {
+  display: flex;
+  gap: 40px;
+  width: 100%;
+  min-width: 0;
+}
+.stacked {
+  flex-direction: column;
+  gap: 18px;
+}
+.panel {
+  flex: none;
+  min-width: 0;
+}
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin-bottom: 6px;
+}
+.title {
+  color: var(--ink-strong);
+  font-size: var(--text-sm, 13px);
+  font-weight: 650;
+}
+.share {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+  color: var(--ink);
+  font-size: var(--text-xs, 12px);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.shareBar {
+  display: flex;
+  gap: 2px;
+  width: 120px;
+  height: 4px;
+}
+.shareBar i {
+  display: block;
+  min-width: 2px;
+}
+.svg {
+  display: block;
+  overflow: visible;
+  max-width: none;
+  touch-action: pan-y;
+}
+.side {
+  fill: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+}
+.tick {
+  fill: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.goal {
+  font-size: 12px;
+}
+.goalHead {
+  fill: var(--ink-strong);
+  font-weight: 600;
+}
+.goalScore {
+  fill: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.cardRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 4px 0 0;
+  font-size: 12px;
+}
+.cardMuted {
+  color: var(--muted);
+}
+.key {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+}
