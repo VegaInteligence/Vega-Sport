@@ -1,5 +1,12 @@
 # WORKLOG — branche d’audit Vega-Sport, lot VI-27/29/31 (19 novembre 2026)
 
+## Boutons retour — VI-37 (20 novembre 2026)
+
+- Objectif : les « ← » reviennent à la page d’où l’on vient ([VI-37](https://linear.app/vegainteligence/issue/VI-37)). Demande de logique, pas de maquette (design inchangé).
+- Décision : `BackLink` commun ; Navigation API, page = chemin + `id`/`m`/`cdm` (onglets et filtres sautés) ; libellé = H1 de la page quittée ; sans page précédente du site, lien et libellé fixes d’avant ; ⌘-clic = lien fixe.
+- Validation : tests du site 803/803, build OK, E2E Playwright (joueur → club → retour, club → match → retour, entrée directe, ⌘-clic) vert sans erreur console. Non pilotés en navigateur : nation, rapport, archives, match CdM archivé, matchs du joueur, coupe.
+- Prochaine action : aucune.
+
 ## Mandat en cours
 
 - Mandat (Hugo, 19 nov.) : Opus 5.5 code, fusionne et teste les correctifs VI-27/29/31 dans ce worktree unique ; « laisse opus finir avec le dernier main puis fais relire par fable. si les tests passent et que fable valide, demande à opus de push et deploy » ; pas d’Astra ; le coordinateur ne code pas. Réassignations : [VI-27](https://linear.app/vegainteligence/issue/VI-27#comment-b37b14f4-34f0-4065-8f51-53adb730b509) · [VI-29](https://linear.app/vegainteligence/issue/VI-29#comment-dbd206fe-fc40-4f0d-ba3f-3513960ad432) · [VI-31](https://linear.app/vegainteligence/issue/VI-31#comment-81c3b202-f8d0-4ec8-a242-8eb3c16f49fb). Briefs : `E/delivery/reprise-claude-19nov/` (E = dossier de preuves `production-architecture-review`).

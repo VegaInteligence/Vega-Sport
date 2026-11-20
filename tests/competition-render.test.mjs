@@ -50,6 +50,8 @@ test("competition page renders a result-derived league table and its limits", as
     "../services/glossary.js": { explain: () => null },
     "react": reactStub, "next/navigation": { useSearchParams: () => new URLSearchParams({ id: requestedId, edition: requestedEdition }) },
     "next/link": { __esModule: true, default: Link },
+    // The server render of a « ← » button (BackLink.jsx): its fixed link and label, or a button.
+    "../components/BackLink.jsx": { __esModule: true, default: ({ href, label, prefix = "← ", onFallback, ...props }) => href ? elem("a", { href, ...props }, prefix, label) : elem("button", { type: "button", ...props }, prefix, label) },
     "../components/Icon.jsx": { __esModule: true, default: () => null },
     "../components/CompetitionOptions.jsx": { __esModule: true, default: () => null },
     "../components/CupCompetition.jsx": { __esModule: true, default: ({ competition, initialSeason }) => elem("section", { "data-cup-id": competition.id, "data-edition": initialSeason }, competition.name) },
