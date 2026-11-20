@@ -133,6 +133,10 @@ export function cleanEntry(value) {
       ? text(value.imageUrl, 1000)
       : "",
     ...(value.kind === "players" ? { scope: cleanSample(value.scope) } : {}),
+    // The player « Remplaçant » compares the others with (VI-40).
+    ...(value.kind === "players" && value.replaces === true
+      ? { replaces: true }
+      : {}),
   };
 }
 export function cleanSettings(value = {}) {

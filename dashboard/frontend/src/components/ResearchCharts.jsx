@@ -1,7 +1,7 @@
 import React from "react";
 import { isNumber, number } from "../services/format.js";
 import { trendExtent } from "../services/trend-chart.js";
-const COLORS = ["#3b8eff", "#bc8a37", "#a579df", "#dc6d7a"];
+export const COLORS = ["#3b8eff", "#bc8a37", "#a579df", "#dc6d7a"];
 export function ResearchRadar({
   axes,
   series,

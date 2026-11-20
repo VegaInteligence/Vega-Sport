@@ -17,6 +17,9 @@
 //  R5 Selecting a candidate fills the comparison: « <ref> → <candidate> », age / value / note
 //     deltas, and « Voir la fiche » links to /joueurs?id=<candidate id>.
 //  R7 « Comparer » opens the comparison of the candidate with the replaced player.
+//  K1 The comparison (validated mock-up): the replaced player's card first, marked « À remplacer »,
+//     then the candidate's; the pentagon reads an axis on hover; « Qui mène » has one row per axis;
+//     the candidate's values show their gap with the replaced player.
 //  R6 Changing the reference (search a name, pick it) updates the URL's `replace` and the list.
 //  T3 The old « En forme » link (playersView=form) opens Performances on « Forme : En hausse ».
 //  R8 The profile pentagon: hovering an axis reads both values; the legend hides a player.
@@ -189,6 +192,19 @@ try {
   await shot(page, "replace-compare-dialog");
   check("R7", `comparison opens with ${picked.name} and ${refName}`, dialogText.split("\n").slice(0, 4).join(" | "),
     dialogText.includes(picked.name) && dialogText.includes(refName));
+  {
+    const cards = await dialog.locator("[data-comparison-player]").evaluateAll((list) => list.map((card) => card.innerText.split("\n").slice(0, 2).join(" ")));
+    await dialog.locator("[data-comparison-radar]").waitFor({ timeout: 60000 });
+    const axis = dialog.locator("[data-comparison-radar] [data-radar-axis]").first();
+    await axis.hover();
+    const axisPressed = await axis.getAttribute("aria-pressed");
+    const leads = await dialog.locator("[data-comparison-lead]").count();
+    const rowsCount = await dialog.locator("[data-comparison-row]").count();
+    const gaps = await dialog.locator("[data-comparison-row] td:last-child").evaluateAll((cells) => cells.filter((td) => /[+−]\d/.test(td.innerText)).length);
+    await shot(page, "comparison-dialog");
+    check("K1", "replaced player first « À remplacer », candidate after, axis read, leads per axis, gaps", `${cards.join(" | ")} · axis ${axisPressed} · leads ${leads}/${rowsCount} · gaps ${gaps}`,
+      cards[0]?.includes(refName) && cards[0]?.includes("À remplacer") && cards.at(-1)?.includes(picked.name) && axisPressed === "true" && leads === rowsCount && rowsCount > 0 && gaps > 0);
+  }
   await page.keyboard.press("Escape");
   await page.waitForTimeout(300);
   if (await dialog.isVisible()) await dialog.getByRole("button", { name: /Fermer/ }).first().click().catch(() => {});

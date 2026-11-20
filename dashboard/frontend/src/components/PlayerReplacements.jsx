@@ -19,7 +19,10 @@ import {
 import { BookmarkButton } from "./ResearchUI.jsx";
 import Icon from "./Icon.jsx";
 import { useResearch } from "../hooks/ResearchContext.jsx";
-import { playerSelection } from "../services/research-storage.js";
+import {
+  comparisonKey,
+  playerSelection,
+} from "../services/research-storage.js";
 import { Empty, Grade, Media, Skeleton } from "./UI.jsx";
 import s from "./PlayerReplacements.module.css";
 
@@ -516,13 +519,24 @@ function CompareWithReference({ reference, candidate, season }) {
       disabled={!research.ready}
       onClick={() => {
         if (selected) return research.toggleComparison(cand);
-        const adding = research.isComparing(ref) ? 1 : 2;
-        if (research.data.comparison.length + adding > 4)
+        const key = (e) => comparisonKey(e);
+        const others = research.data.comparison.filter(
+          (item) => key(item) !== key(ref) && key(item) !== key(cand),
+        );
+        if (others.length + 2 > 4)
           return research.setMessage(
             "La comparaison contient déjà quatre joueurs ou saisons.",
           );
-        if (!research.isComparing(ref)) research.toggleComparison(ref);
-        research.toggleComparison(cand);
+        // The replaced player first, marked, then the others and the candidate.
+        research.setComparisonKind("players");
+        research.update((previous) => ({
+          ...previous,
+          comparison: [
+            { ...ref, replaces: true },
+            ...others.map(({ replaces, ...item }) => item),
+            cand,
+          ],
+        }));
         research.setComparing(true);
       }}
       data-compare-with-reference=""
