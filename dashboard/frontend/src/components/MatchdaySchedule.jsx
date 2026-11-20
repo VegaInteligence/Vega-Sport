@@ -153,32 +153,15 @@ export default function MatchdaySchedule({
     return <Empty>Aucune rencontre collectée pour cette saison.</Empty>;
   if (!selected)
     return <Empty>Aucune rencontre collectée pour cette saison.</Empty>;
-  const finished = selected.matches.filter(
-    (match) => match.status === "finished" || match.finished === true,
-  ).length;
-  const upcoming = selected.matches.filter(
-    (match) => match.status === "not_started" || match.finished === false,
-  ).length;
   return (
     <section className="matchday-schedule" aria-label="Matchs par journée">
       {resource.loading && (
         <Skeleton label="Chargement des journées…" lines={2} />
       )}
       <div className="matchday-toolbar">
-        <div className="matchday-heading">
-          <span className="matchday-eyebrow">
-            {selected.key === "unknown"
-              ? "Autres rencontres"
-              : "Calendrier de la compétition"}
-          </span>
-          <h3 aria-live="polite">{selected.label}</h3>
-          <p>
-            {selected.matches.length} match
-            {selected.matches.length > 1 ? "s" : ""} · {finished} résultat
-            {finished > 1 ? "s" : ""}
-            {upcoming ? ` · ${upcoming} à venir` : ""} · Heure de Paris
-          </p>
-        </div>
+        <h3 className="matchday-heading" aria-live="polite">
+          {selected.label}
+        </h3>
         <nav
           className="matchday-navigation"
           aria-label="Navigation entre les journées"
