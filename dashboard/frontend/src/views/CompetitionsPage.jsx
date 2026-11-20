@@ -295,8 +295,8 @@ function Fixtures({ competition, day, initialSeason, initialView, editions, onEd
         ...(hasKnockout ? [["bracket", "Tableau"]] : []),
         ...(projection ? [["projection", "Projection"]] : []),
       ];
-  // A cup's page has the edition's head on one row; a league's keeps its title and its season.
-  const cupHead = !day && hasKnockout;
+  // Every competition, league or cup, has the edition's head on one row (#61).
+  const editionHead = !day;
   const overviewFixtures = resource.value || preview.value;
   const artwork = resource.error || resource.refreshError ? null : overviewFixtures?.editionArtwork;
   const imageUrl = editionArtworkUrl(competition?.id, competition?.imageUrl, artwork);
@@ -309,21 +309,11 @@ function Fixtures({ competition, day, initialSeason, initialView, editions, onEd
     >
       <Card
         title={
-          cupHead ? null : competition ? (
-            <span className="competition-detail-title">
-              <Media url={imageUrl} initials={false} />
-              <span>
-                <strong>{competition.name}</strong>
-                <small>{competitionCountryLabel(competition)}</small>
-              </span>
-            </span>
-          ) : (
-            "Calendrier par date"
-          )
+          editionHead ? null : "Calendrier par date"
         }
-        className={"competition-detail" + (cupHead ? " edition-card" : "")}
+        className={"competition-detail" + (editionHead ? " edition-card" : "")}
       >
-        {cupHead && (
+        {editionHead && (
           <EditionHeader
             imageUrl={imageUrl}
             name={competition.name}
@@ -340,27 +330,8 @@ function Fixtures({ competition, day, initialSeason, initialView, editions, onEd
                 onClear={() => onHighlight?.("")}
               />
             )}
-            <Segments value={view} onChange={changeView} label="Vue de la compétition" items={views} />
-          </EditionHeader>
-        )}
-        {!day && !cupHead && (
-          <div className="competition-detail-controls">
-            <label>
-              Saison de compétition
-              <select
-                aria-label="Saison de compétition"
-                value={season}
-                onChange={(e) => pickSeason(e.target.value)}
-              >
-                {competition.seasons?.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </label>
             {supported && <Segments value={view} onChange={changeView} label="Vue de la compétition" items={views} />}
-          </div>
+          </EditionHeader>
         )}
         {supported && view === "standings" ? (
           <CompetitionStandings
