@@ -2,11 +2,11 @@
 
 ## Remplaçant : compatibilité avec l'équipe — VI-40 / #62 (20 novembre 2026)
 
-- Demande : remplacer un joueur dans une équipe (dynamique, discipline, replis défensifs, efforts), pas stat = stat. Maquette [Remplaçant en équipe](https://claude.ai/artifact/32HzcLEv6yjbxxHp1DDFKb) validée, avec replis et efforts en plus.
-- Fait (6a93cbdf09, local) : `team_fit.py` → `agg.player_team_fit` (162) ; lecture `/similar` triée par compatibilité (profil 40, rôle 20, style 15, travail défensif 10, effort 10, discipline 5 ; coéquipiers exclus ; ligue plus faible pénalisée) ; panneau à six éléments. Note `docs/calculs/05-joueurs/13-remplacant-compatibilite-equipe.md`.
-- Données : effort seulement en Premier League (178 joueurs) ; replis non mesurables (travail défensif ajusté à la possession en approche). Une requête unique a dépassé 2 min en production ; lectures simples + Python : 0,8 s + 13 s.
-- Hors issue (ac0c692b14) : changer de saison sur Joueurs, Clubs et Compétitions ne fait plus passer tout le site par l'écran de chargement.
-- En attente : validation de la maquette v2 (pentagone, en-tête aminci, « En forme » → filtre « Forme » dans Performances), puis push et déploiement (migration 162). La table se remplit au prochain passage quotidien des modèles, sauf calcul lancé à la main.
+- Demande : remplacer un joueur dans une équipe (dynamique, discipline, replis défensifs, efforts), pas stat = stat. Maquette [Remplaçant en équipe](https://claude.ai/artifact/32HzcLEv6yjbxxHp1DDFKb) v2 validée, avec en plus : pentagone grand et interactif, liste aussi haute que la carte, et (hors Remplaçant) probabilités de match alignées sur la barre.
+- Livré sur main (39484cd060) et déployé (Deploy 44759143273, API à 15:10 UTC, migration 162). `team_fit.py` → `agg.player_team_fit` ; tri par compatibilité (profil 40, rôle 20, style 15, travail défensif 10, effort 10, discipline 5) ; « En forme » devenu le filtre « Forme » de Performances ; changement de saison sans écran de chargement global (3f4aab873a).
+- Données : effort seulement en Premier League (178 joueurs) ; replis non mesurables (travail défensif ajusté à la possession en approche).
+- Validation : E2E public 27/28 (`dashboard/outputs/vi-40-e2e/` du checkout principal). C3 échoue tant que `agg.player_team_fit` est vide en production (prochain passage de la chaîne des modèles ; dernier passage à 11:08 UTC). Le contrôle C2 lit mal les clubs : à corriger.
+- Prochaine action : quand la table est remplie, vérifier `/similar` (fit non nul), corriger C2, relancer l'E2E, puis clore VI-40 et #62.
 
 ## Page Joueurs : Remplaçant et En forme remplacent Explorer et Indices — VI-39 (20 novembre 2026)
 
