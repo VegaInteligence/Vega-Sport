@@ -14,8 +14,13 @@ const types = {
 
 /** `role`: a group role to read as (vega_read in production, see 017_roles.sql). */
 /** `Pool`: the pool's class (tests give their own). */
-export function createReader(connectionString, { max = 4, timeoutMs = 8000, role = null, ca = null, Pool = pg.Pool } = {}) {
+/** `idleSessionMs`: the base closes a session of this reader left idle that long (none by
+ * default). The function gives it: a copy of the function that sleeps is frozen, the
+ * pool's own idle limit does not run, and the connection it kept counted against the
+ * login for as long as the copy lived (20 November 2026: the login ran out, 53300). */
+export function createReader(connectionString, { max = 4, timeoutMs = 8000, role = null, ca = null, idleSessionMs = null, Pool = pg.Pool } = {}) {
   if (role !== null && !/^[a-z_][a-z0-9_]{0,62}$/.test(role)) throw new Error("invalid role");
+  if (idleSessionMs !== null && !(Number.isInteger(idleSessionMs) && idleSessionMs > 0)) throw new Error("invalid idle session limit");
   const pool = new Pool({
     connectionString,
     max,
@@ -32,14 +37,17 @@ export function createReader(connectionString, { max = 4, timeoutMs = 8000, role
     // No parallel query: the reads touch a few hundred rows, and on the 2-vCPU instance
     // starting the workers cost more than the work (measured on the home: a Gather's first
     // row after 14 s for 0.8 s of work).
-    options: `-c default_transaction_read_only=on -c statement_timeout=${timeoutMs} -c jit=off -c max_parallel_workers_per_gather=0 -c search_path=api${role ? ` -c role=${role}` : ""}`,
+    options: `-c default_transaction_read_only=on -c statement_timeout=${timeoutMs} -c jit=off -c max_parallel_workers_per_gather=0 -c search_path=api${idleSessionMs ? ` -c idle_session_timeout=${idleSessionMs}` : ""}${role ? ` -c role=${role}` : ""}`,
   });
   // An idle connection the base or the network closed: the pool drops it. Unheard, the
   // event would end the process.
   pool.on("error", () => {});
   // A statement that found its connection closed is sent once more, on another one: the
-  // reads change nothing, so asking again is safe. A statement the base refused is not.
-  const lost = (error) => !error.severity && (["ECONNRESET", "EPIPE", "ETIMEDOUT"].includes(error.code) || /Connection terminated|connection.*(closed|ended)/i.test(error.message || ""));
+  // reads change nothing, so asking again is safe. A statement the base refused is not;
+  // one sent on a session the base had closed for being idle (57P05) never ran.
+  const lost = (error) =>
+    error.code === "57P05" ||
+    (!error.severity && (["ECONNRESET", "EPIPE", "ETIMEDOUT"].includes(error.code) || /Connection terminated|connection.*(closed|ended)/i.test(error.message || "")));
   // A statement with planner settings of its own (PLANNER_SETTINGS): they are set for
   // its transaction alone, on one connection, and gone when it ends.
   const planned = async (sql, values, settings) => {
