@@ -4,17 +4,20 @@ import React, { useId, useState } from "react";
 import Icon from "./Icon.jsx";
 import { PhoneFoldToggle, usePhoneFold } from "./PhoneFold.jsx";
 import { Media } from "./UI.jsx";
+import NationalFlag from "./NationalFlag.jsx";
+import { nationalTeamLabel } from "../services/national-flags.js";
 import { Term } from "./Hint.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { number } from "../services/format.js";
 import {
+  internationalLabel,
   leagueOf,
   matchDay,
-  matchWeight,
   shortCompetition,
   shotMapPoints,
   xgTimeline,
   weekPeriodLabel,
+  weekTicker,
 } from "../services/home-insights.js";
 import {
   ChartTip,
@@ -27,90 +30,140 @@ import {
   shortDay,
 } from "./HomeCommon.jsx";
 
-/** Scores of the week, newest day first: each club opens its page, the score opens the match. */
-export function HomeTicker({ results, ranks, competitions, period }) {
+/**
+ * Scores of the week, newest day first: the national teams' first (home-insights.js, weekTicker), then the clubs'.
+ * A club opens its page and the score opens the match; a national side opens its nation's page.
+ */
+export function HomeTicker({
+  results,
+  internationals = [],
+  ranks,
+  competitions,
+  period,
+}) {
   const f = useFootball();
-  const byDay = new Map();
-  for (const match of results) {
-    const day = matchDay(match);
-    if (!byDay.has(day)) byDay.set(day, []);
-    byDay.get(day).push(match);
-  }
-  const days = [...byDay.keys()].sort().reverse().slice(0, 4);
+  const days = weekTicker(results, internationals, ranks);
   if (!days.length) return null;
   return (
     <nav
       className="home-ticker"
       aria-label={`Résultats ${period ? weekPeriodLabel(period) : "de la semaine"}${period?.current === false ? " · archives" : ""}`}
     >
-      {days.map((day) => (
+      {days.map(({ day, matches }) => (
         <React.Fragment key={day}>
           <span className="home-ticker-day">{shortDay(day)}</span>
-          {byDay
-            .get(day)
-            .sort((a, b) => matchWeight(b, ranks) - matchWeight(a, ranks))
-            .slice(0, 8)
-            .map((m) => {
-              const hx = Number.isFinite(m.home.xg) ? m.home.xg : null,
-                ax = Number.isFinite(m.away.xg) ? m.away.xg : null,
-                total = (hx || 0) + (ax || 0),
-                competition = competitions.get(leagueOf(m)),
-                href = matchHref(f, m);
-              return (
-                <div key={m.id} className="home-tick">
-                  <Link className="home-tick-top" href={href} prefetch={false}>
-                    <span>
-                      {shortCompetition(
-                        leagueOf(m),
-                        competition?.name || m.league,
-                      )}
-                    </span>
-                    <span>Terminé</span>
-                  </Link>
-                  {[m.home, m.away].map((team, i) => {
-                    const other = i ? m.home : m.away;
-                    return (
-                      <Link
-                        key={i}
-                        className={`home-tick-team${team.score < other.score ? " is-lost" : ""}`}
-                        href={f.href("/clubs/", { id: team.id })}
-                        prefetch={false}
-                      >
-                        <Media
-                          name={team.name}
-                          url={team.imageUrl}
-                          className="crest home-crest-xs"
-                        />
-                        <span>{team.name}</span>
-                        <b>{team.score}</b>
-                      </Link>
-                    );
-                  })}
-                  <Link
-                    className="home-tick-foot"
-                    href={href}
-                    prefetch={false}
-                    aria-label={`Voir ${m.home.name} – ${m.away.name}`}
-                  >
-                    {total > 0 && (
-                      <>
-                        <span className="home-tick-xg" aria-hidden="true">
-                          <i style={{ width: `${(hx / total) * 100}%` }} />
-                          <i style={{ width: `${(ax / total) * 100}%` }} />
-                        </span>
-                        <span className="home-tick-cap">
-                          <span>{number(hx, 2)} xG</span>
-                          <span>{number(ax, 2)}</span>
-                        </span>
-                      </>
-                    )}
-                  </Link>
-                </div>
-              );
-            })}
+          {matches.map((m) =>
+            m.national ? (
+              <NationalTick key={m.id} match={m} />
+            ) : (
+              <ClubTick
+                key={m.id}
+                match={m}
+                competitions={competitions}
+                f={f}
+              />
+            ),
+          )}
         </React.Fragment>
       ))}
     </nav>
+  );
+}
+
+/** A national teams' result: the flags, the French names, the tournament; no expected goals. */
+function NationalTick({ match: m }) {
+  const f = useFootball();
+  return (
+    <div className="home-tick">
+      <div className="home-tick-top">
+        <span title={internationalLabel(m.tournament)}>
+          {internationalLabel(m.tournament)}
+        </span>
+        <span>Terminé</span>
+      </div>
+      {[m.home, m.away].map((team, i) => {
+        const other = i ? m.home : m.away,
+          className = `home-tick-team${team.score < other.score ? " is-lost" : ""}`,
+          body = (
+            <>
+              <NationalFlag name={team.name} season={m.date.slice(0, 4)} />
+              <span>{nationalTeamLabel(team.name)}</span>
+              <b>{team.score}</b>
+            </>
+          );
+        return team.page ? (
+          <Link
+            key={i}
+            className={className}
+            href={f.href("/nations/", { id: team.id })}
+            prefetch={false}
+          >
+            {body}
+          </Link>
+        ) : (
+          <div key={i} className={className}>
+            {body}
+          </div>
+        );
+      })}
+      <div className="home-tick-foot" />
+    </div>
+  );
+}
+
+function ClubTick({ match: m, competitions, f }) {
+  const hx = Number.isFinite(m.home.xg) ? m.home.xg : null,
+    ax = Number.isFinite(m.away.xg) ? m.away.xg : null,
+    total = (hx || 0) + (ax || 0),
+    competition = competitions.get(leagueOf(m)),
+    href = matchHref(f, m);
+  return (
+    <div className="home-tick">
+      <Link className="home-tick-top" href={href} prefetch={false}>
+        <span>
+          {shortCompetition(leagueOf(m), competition?.name || m.league)}
+        </span>
+        <span>Terminé</span>
+      </Link>
+      {[m.home, m.away].map((team, i) => {
+        const other = i ? m.home : m.away;
+        return (
+          <Link
+            key={i}
+            className={`home-tick-team${team.score < other.score ? " is-lost" : ""}`}
+            href={f.href("/clubs/", { id: team.id })}
+            prefetch={false}
+          >
+            <Media
+              name={team.name}
+              url={team.imageUrl}
+              className="crest home-crest-xs"
+            />
+            <span>{team.name}</span>
+            <b>{team.score}</b>
+          </Link>
+        );
+      })}
+      <Link
+        className="home-tick-foot"
+        href={href}
+        prefetch={false}
+        aria-label={`Voir ${m.home.name} – ${m.away.name}`}
+      >
+        {total > 0 && (
+          <>
+            <span className="home-tick-xg" aria-hidden="true">
+              <i style={{ width: `${(hx / total) * 100}%` }} />
+              <i style={{ width: `${(ax / total) * 100}%` }} />
+            </span>
+            <span className="home-tick-cap">
+              <span>{number(hx, 2)} xG</span>
+              <span>{number(ax, 2)}</span>
+            </span>
+          </>
+        )}
+      </Link>
+    </div>
   );
 }
 

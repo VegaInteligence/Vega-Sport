@@ -2,96 +2,19 @@
 /* The « Analyses » tab, all on one page: who dominated minute by minute, how each team played,
  * the two halves, the players whose actions weighed most, the pass networks and where each team
  * (or player) acted. Everything answers the pointer: a minute, a player, a zone. */
-import React, { useMemo, useRef, useState } from "react";
+import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { Card, Empty, Media, Segments, Skeleton } from "./UI.jsx";
 import { Term } from "./Hint.jsx";
 import { useHoverBubble } from "./HoverCard.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import useMatchSection from "../hooks/useMatchSection.js";
+import MatchMomentum from "./MatchMomentum.jsx";
 import { playerRows, styleGroups, teamStatsByPeriod } from "../services/match-tabs.js";
 import { number } from "../services/format.js";
 import s from "./MatchTabs.module.css";
 
 const HOME = "var(--home)", AWAY = "var(--away)";
-
-/* ---------------------------------------------------------- momentum */
-
-function Momentum({ match, points, goals }) {
-  const svgRef = useRef(null);
-  const [at, setAt] = useState(null);
-  const bubble = useHoverBubble({ width: 220, follow: true });
-  if (!points?.length) return null;
-  const W = 1200, H = 210, mid = H / 2, last = Math.max(90, ...points.map((p) => p.minute));
-  const x = (m) => 14 + (m / last) * (W - 28);
-  const pick = (event) => {
-    const box = svgRef.current.getBoundingClientRect();
-    const vx = ((event.clientX - box.left) / box.width) * W;
-    let best = points[0];
-    for (const p of points) if (Math.abs(x(p.minute) - vx) < Math.abs(x(best.minute) - vx)) best = p;
-    setAt(best);
-    const side = best.value >= 0 ? match.home.name : match.away.name;
-    bubble.show(svgRef.current, (
-      <>
-        <p className={s.bubbleHead}>{Math.round(best.minute)}′</p>
-        <p className={s.bubbleNote}>
-          {best.value === 0 ? "Équilibre" : `${side} pousse : ${Math.abs(best.value)} sur 100`}
-        </p>
-      </>
-    ), event);
-  };
-  return (
-    <Card title="Qui a dominé, minute par minute">
-      <p className={s.muted}>
-        Pression offensive de chaque équipe : au-dessus {match.home.name}, en dessous {match.away.name}. Survolez ou touchez une minute.
-      </p>
-      <svg
-        ref={svgRef}
-        className={s.chart}
-        viewBox={`0 0 ${W} ${H}`}
-        role="img"
-        aria-label="Pression offensive minute par minute"
-        onPointerMove={pick}
-        onPointerDown={pick}
-        onPointerLeave={() => {
-          setAt(null);
-          bubble.hide();
-        }}
-      >
-        <line x1="14" x2={W - 14} y1={mid} y2={mid} className={s.axis} />
-        <line x1={x(45)} x2={x(45)} y1="0" y2={H} className={s.axis} />
-        <text x={x(45) + 5} y="13" className="chart-tick">Mi-temps</text>
-        {points.map((p) => {
-          const h = (Math.abs(p.value) / 100) * (mid - 16), home = p.value >= 0;
-          return (
-            <rect
-              key={p.minute}
-              x={x(p.minute) - 4.5}
-              y={home ? mid - h : mid}
-              width="9"
-              height={Math.max(1, h)}
-              fill={home ? HOME : AWAY}
-              opacity={at && at.minute !== p.minute ? 0.45 : 0.9}
-            />
-          );
-        })}
-        {goals.map((g, i) => (
-          <g key={i}>
-            <line x1={x(g.minute)} x2={x(g.minute)} y1="18" y2={H - 18} className={s.goalLine} />
-            <text x={x(g.minute)} y={g.side === "home" ? 14 : H - 4} textAnchor="middle" className="chart-tick">
-              ⚽ {g.minute}′
-            </text>
-          </g>
-        ))}
-      </svg>
-      <div className={s.legend}>
-        <span><i className={s.dot} style={{ background: HOME }} /> {match.home.name} pousse</span>
-        <span><i className={s.dot} style={{ background: AWAY }} /> {match.away.name} pousse</span>
-      </div>
-      {bubble.bubble}
-    </Card>
-  );
-}
 
 /* ------------------------------------------------------------- style */
 
@@ -244,45 +167,127 @@ function Values({ match, players, images }) {
 
 /* ---------------------------------------------------------- networks */
 
-const NW = 420, NH = 272;
-const nx = (x) => 10 + (x / 105) * (NW - 20);
+// The pitch drawn at 6 units a metre and shown at that size (no enlargement): 105 x 68 m.
+const PM = 6, PAD = 14;
+const NW = 105 * PM + 2 * PAD, NH = 68 * PM + 2 * PAD;
+const nx = (x) => PAD + x * PM;
 // The team attacks to the right: its right flank (y near 0) is at the foot of the drawing.
-const ny = (y) => 10 + (1 - y / 68) * (NH - 20);
+const ny = (y) => PAD + (68 - y) * PM;
+const lastName = (name) => String(name || "").split(" ").at(-1);
+const clock = (seconds) => `${Math.round(seconds / 60)}′`;
 
-function Network({ network, side, threshold }) {
+function PitchMarks() {
+  const box = (x, w, h) => <rect x={nx(x)} y={ny(34 + h / 2)} width={w * PM} height={h * PM} className={s.pitchLine} />;
+  return (
+    <g>
+      <rect x={PAD} y={PAD} width={105 * PM} height={68 * PM} className={s.pitchLine} />
+      <line x1={nx(52.5)} x2={nx(52.5)} y1={PAD} y2={NH - PAD} className={s.pitchLine} />
+      <circle cx={nx(52.5)} cy={ny(34)} r={9.15 * PM} className={s.pitchLine} />
+      {box(0, 16.5, 40.3)}
+      {box(105 - 16.5, 16.5, 40.3)}
+      {box(0, 5.5, 18.3)}
+      {box(105 - 5.5, 5.5, 18.3)}
+    </g>
+  );
+}
+
+// Each pair once, both directions summed; the strongest first.
+function pairs(edges) {
+  const byPair = new Map();
+  for (const e of edges) {
+    const key = [e.from.id, e.to.id].sort().join("|");
+    const pair = byPair.get(key) || { a: e.from.id, b: e.to.id, passes: 0 };
+    pair.passes += e.passes;
+    byPair.set(key, pair);
+  }
+  return [...byPair.values()].sort((x, y) => y.passes - x.passes);
+}
+
+// Discs that would cover each other are pushed apart, a few units at most.
+function spread(points) {
+  const out = points.map((p) => ({ ...p }));
+  for (let round = 0; round < 40; round++) {
+    let moved = false;
+    for (let i = 0; i < out.length; i++)
+      for (let j = i + 1; j < out.length; j++) {
+        const a = out[i], b = out[j];
+        const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 0.01, need = a.r + b.r + 3;
+        if (d >= need) continue;
+        const push = (need - d) / 2, ux = d > 0.01 ? dx / d : 1, uy = d > 0.01 ? dy / d : 0;
+        a.x -= ux * push; a.y -= uy * push; b.x += ux * push; b.y += uy * push;
+        moved = true;
+      }
+    if (!moved) break;
+  }
+  return out;
+}
+
+// Each name below its disc, else above, right or left: the first place that covers no disc and no name.
+function placeLabels(points) {
+  const taken = points.map((p) => ({ x0: p.x - p.r, x1: p.x + p.r, y0: p.y - p.r, y1: p.y + p.r }));
+  const hit = (b) => taken.some((t) => b.x0 < t.x1 && b.x1 > t.x0 && b.y0 < t.y1 && b.y1 > t.y0);
+  return points.map((p) => {
+    const w = p.label.length * 6.6 + 4, h = 14;
+    const spots = [
+      [p.x, p.y + p.r + 13, "middle"],
+      [p.x, p.y - p.r - 5, "middle"],
+      [p.x + p.r + 4, p.y + 4, "start"],
+      [p.x - p.r - 4, p.y + 4, "end"],
+    ];
+    const box = ([x, y, anchor]) => {
+      const x0 = anchor === "middle" ? x - w / 2 : anchor === "start" ? x : x - w;
+      return { x0, x1: x0 + w, y0: y - 11, y1: y - 11 + h };
+    };
+    const spot = spots.find((sp) => !hit(box(sp))) || spots[0];
+    taken.push(box(spot));
+    return { x: spot[0], y: spot[1], anchor: spot[2] };
+  });
+}
+
+function Network({ network, side, links }) {
   const [focus, setFocus] = useState(null);
   const bubble = useHoverBubble({ width: 240 });
   const color = side === "home" ? HOME : AWAY;
-  const nodes = network.nodes || [];
-  const pos = new Map(nodes.map((n) => [n.player.id, n]));
-  const edges = (network.edges || []).filter((e) => e.passes >= threshold && pos.has(e.from.id) && pos.has(e.to.id));
-  const maxEdge = Math.max(1, ...edges.map((e) => e.passes));
-  const maxNode = Math.max(1, ...nodes.map((n) => (n.passes || 0) + (n.passes_received || 0)));
+  const all = network.nodes || [];
+  const placed = all.filter((n) => Number.isFinite(n.avg_x) && Number.isFinite(n.avg_y));
+  const unplaced = all.filter((n) => !placed.includes(n));
+  const ids = new Set(placed.map((n) => n.player.id));
+  const everyPair = pairs((network.edges || []).filter((e) => ids.has(e.from.id) && ids.has(e.to.id)));
+  const shown = links === "all" ? everyPair.filter((p) => p.passes >= 2) : everyPair.slice(0, Number(links));
+  const maxPair = Math.max(1, ...shown.map((p) => p.passes));
+  const touches = (n) => (n.passes || 0) + (n.passes_received || 0);
+  const maxNode = Math.max(1, ...placed.map(touches));
+  const points = spread(placed.map((n) => ({ id: n.player.id, x: nx(n.avg_x), y: ny(n.avg_y), r: 11 + (7 * touches(n)) / maxNode })));
+  const at = new Map(points.map((p) => [p.id, p]));
+  const labels = placeLabels(points.map((p, i) => ({ ...p, label: lastName(placed[i].player.name) })));
+  const total = (network.edges || []).reduce((sum, e) => sum + e.passes, 0);
   const partner = (id) => {
-    const linked = (network.edges || []).filter((e) => e.from.id === id || e.to.id === id).sort((a, b) => b.passes - a.passes)[0];
-    return linked ? `${(linked.from.id === id ? linked.to : linked.from).name} (${linked.passes})` : "—";
+    const best = everyPair.find((p) => p.a === id || p.b === id);
+    if (!best) return "—";
+    const other = placed.find((n) => n.player.id === (best.a === id ? best.b : best.a));
+    return `${lastName(other?.player.name)} (${best.passes})`;
   };
+  const until = network.window?.until_seconds;
   return (
-    <div>
-      <svg className={s.pitchSvg} viewBox={`0 0 ${NW} ${NH}`} role="img" aria-label={`Réseau de passes de ${network.team?.name || ""}`}>
-        <rect x="10" y="10" width={NW - 20} height={NH - 20} className={s.pitchLine} />
-        <line x1={NW / 2} x2={NW / 2} y1="10" y2={NH - 10} className={s.pitchLine} />
-        {edges.map((e, i) => {
-          const a = pos.get(e.from.id), b = pos.get(e.to.id);
-          const lit = !focus || e.from.id === focus || e.to.id === focus;
+    <div className={s.network}>
+      <p className={s.networkHead}>
+        <b>{network.team?.name}</b>
+        <span>{until ? `0–${clock(until)}` : "match entier"} · {number(total)} passes</span>
+      </p>
+      <svg className={s.pitchSvg} viewBox={`0 0 ${NW} ${NH}`} style={{ maxWidth: NW }} role="img" aria-label={`Réseau de passes de ${network.team?.name || ""}`}>
+        <PitchMarks />
+        {shown.map((p) => {
+          const a = at.get(p.a), b = at.get(p.b);
+          const lit = !focus || p.a === focus || p.b === focus;
           return (
-            <line
-              key={i}
-              x1={nx(a.avg_x)} y1={ny(a.avg_y)} x2={nx(b.avg_x)} y2={ny(b.avg_y)}
-              stroke={color}
-              strokeOpacity={lit ? 0.2 + (0.7 * e.passes) / maxEdge : 0.05}
-              strokeWidth={1 + (5 * e.passes) / maxEdge}
-            />
+            <line key={`${p.a}|${p.b}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={color} strokeLinecap="round"
+              strokeOpacity={lit ? 0.25 + (0.65 * p.passes) / maxPair : 0.06}
+              strokeWidth={1.5 + (7 * p.passes) / maxPair} />
           );
         })}
-        {nodes.map((n) => {
-          const r = 7 + (10 * ((n.passes || 0) + (n.passes_received || 0))) / maxNode;
-          const lit = !focus || focus === n.player.id || edges.some((e) => (e.from.id === focus && e.to.id === n.player.id) || (e.to.id === focus && e.from.id === n.player.id));
+        {placed.map((n, i) => {
+          const pt = points[i], label = labels[i];
+          const lit = !focus || focus === n.player.id || shown.some((p) => (p.a === focus && p.b === n.player.id) || (p.b === focus && p.a === n.player.id));
           const detail = (
             <>
               <p className={s.bubbleHead}>{n.player.name}</p>
@@ -292,49 +297,52 @@ function Network({ network, side, threshold }) {
             </>
           );
           return (
-            <g
-              key={n.player.id}
-              tabIndex={0}
-              className={s.node}
-              opacity={lit ? 1 : 0.3}
+            <g key={n.player.id} tabIndex={0} className={s.node} opacity={lit ? 1 : 0.25}
               onMouseEnter={(event) => { setFocus(n.player.id); bubble.show(event.currentTarget, detail); }}
               onMouseLeave={() => { setFocus(null); bubble.hide(); }}
               onFocus={(event) => { setFocus(n.player.id); bubble.show(event.currentTarget, detail); }}
-              onBlur={() => { setFocus(null); bubble.hide(); }}
-            >
-              <circle cx={nx(n.avg_x)} cy={ny(n.avg_y)} r={r} className={s.nodeDisc} stroke={color} />
-              <text x={nx(n.avg_x)} y={ny(n.avg_y) + 3.5} textAnchor="middle" className={s.nodeNumber}>{n.player.shirt_number ?? ""}</text>
-              <text x={nx(n.avg_x)} y={ny(n.avg_y) + r + 11} textAnchor="middle" className={s.nodeName}>{String(n.player.name || "").split(" ").at(-1)}</text>
+              onBlur={() => { setFocus(null); bubble.hide(); }}>
+              <circle cx={pt.x} cy={pt.y} r={pt.r} className={s.nodeDisc} stroke={color} />
+              <text x={pt.x} y={pt.y + 4} textAnchor="middle" className={s.nodeNumber}>{n.player.shirt_number ?? ""}</text>
+              <text x={label.x} y={label.y} textAnchor={label.anchor} className={s.nodeName}>{lastName(n.player.name)}</text>
             </g>
           );
         })}
       </svg>
-      <p className={s.muted}>{network.team?.name} · survolez un joueur pour ses liens</p>
+      <ol className={s.networkRoster}>
+        {[...placed].sort((a, b) => touches(b) - touches(a)).map((n) => (
+          <li key={n.player.id} onMouseEnter={() => setFocus(n.player.id)} onMouseLeave={() => setFocus(null)}>
+            <b style={{ borderColor: color }}>{n.player.shirt_number ?? ""}</b>
+            <span>{lastName(n.player.name)}</span>
+            <em>{number(touches(n))}</em>
+          </li>
+        ))}
+      </ol>
+      {unplaced.length > 0 && <p className={s.muted}>Sans position : {unplaced.map((n) => lastName(n.player.name)).join(", ")}</p>}
       {bubble.bubble}
     </div>
   );
 }
 
 function Networks({ match, networks }) {
-  const [threshold, setThreshold] = useState(4);
+  const [links, setLinks] = useState("12");
   if (!networks?.length) return null;
   const sideOf = (n) => (n.team?.id === match.home.id ? "home" : "away");
   return (
     <Card
-      title={<Term label="Réseaux de passes" hint="Position moyenne de chaque joueur et passes échangées, jusqu’au premier changement de chaque équipe.">Réseaux de passes</Term>}
+      title={<Term label="Réseaux de passes" hint="Position moyenne de chaque joueur et passes échangées dans les deux sens, jusqu’au premier changement de chaque équipe. Chaque équipe attaque vers la droite.">Réseaux de passes</Term>}
       action={
         <Segments
-          label="Passes au moins"
-          value={String(threshold)}
-          onChange={(value) => setThreshold(Number(value))}
-          items={[["2", "2 passes ou plus"], ["4", "4 ou plus"], ["8", "8 ou plus"]]}
+          label="Liens affichés"
+          value={links}
+          onChange={setLinks}
+          items={[["6", "6 liens"], ["12", "12 liens"], ["all", "Tous"]]}
         />
       }
     >
-      <p className={s.muted}>Chaque équipe attaque vers la droite. Les traits sont les passes échangées.</p>
       <div className={s.grid2}>
-        {[...networks].sort((a, b) => (sideOf(a) === "home" ? -1 : 1)).map((n) => (
-          <Network key={n.team?.id} network={n} side={sideOf(n)} threshold={threshold} />
+        {[...networks].sort((a) => (sideOf(a) === "home" ? -1 : 1)).map((n) => (
+          <Network key={n.team?.id} network={n} side={sideOf(n)} links={links} />
         ))}
       </div>
     </Card>
@@ -426,16 +434,13 @@ export default function MatchAnalyses({ match }) {
   const players = useMatchSection(match, "players");
   const periods = teamStatsByPeriod(stats.data);
   const images = useMemo(() => new Map(playerRows(players.data).map((r) => [r.id, r.imageUrl])), [players.data]);
-  const goals = (events.data?.events || [])
-    .filter((e) => e.event_type === "goal")
-    .map((e) => ({ minute: e.minute, side: e.team_id === match.home.id ? (e.is_own_goal ? "away" : "home") : e.is_own_goal ? "home" : "away" }));
   const loading = [momentum, stats, advanced, network, heat].every((r) => r.loading && !r.data);
   if (loading) return <Skeleton label="Chargement des analyses…" lines={5} />;
   const nothing = !momentum.data?.points?.length && !advanced.data?.teams?.length && !network.data?.networks?.length && !heat.data?.teams?.length && !periods.FirstHalf;
   if (nothing) return <Empty>Aucune analyse disponible pour ce match.</Empty>;
   return (
     <div className={s.stack}>
-      <Momentum match={match} points={momentum.data?.points} goals={goals} />
+      <MatchMomentum match={match} points={momentum.data?.points} events={events.data?.events} />
       <div className={`${s.grid2} ${s.balanced}`}>
         <Style match={match} teams={advanced.data?.teams} />
         <div className={s.stack}>

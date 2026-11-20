@@ -9,7 +9,7 @@ import { context, get, skip } from "./context.mjs";
 const home = "/api/read/home?season=2025/2026&leagues=all";
 const favourites = "/api/read/home-favourites?season=2025/2026&leagues=all";
 const KEYS = [
-  "bestOfFeatured", "competitions", "defences", "featured", "hasSeasonPlayers", "highlights", "leaders", "others",
+  "bestOfFeatured", "competitions", "defences", "featured", "hasSeasonPlayers", "highlights", "internationals", "leaders", "others",
   "otherMatches", "period", "potw", "potwMatch", "potwRecent", "potwSeason", "raceOpen", "ranks", "resultCount", "results",
   "rules", "seasonProgress", "streak", "streakNext", "tables", "win",
 ].sort();
@@ -21,6 +21,8 @@ test("home: the week, its featured match and player", { skip }, async () => {
   assert.deepEqual(Object.keys(d).sort(), KEYS);
   assert.deepEqual(d.period, { start: "2025-09-01", end: "2025-09-07", current: true, latest: false, asOf: context.now, asOfDay: "2025-09-06" });
   assert.equal(d.resultCount, 5);
+  // No national edition in the seed: no national result (home-internationals.test.mjs).
+  assert.deepEqual(d.internationals, []);
   // Four most recent days of the week, latest first.
   assert.deepEqual(d.results.map((m) => m.id), ["m_aaaaa5", "m_aaaaa4", "m_aaaaa3", "m_aaaaa2"]);
   assert.deepEqual([d.results[0].stats, d.results[0].shots, d.results[0].coverage, d.results[0].players], [[], [], {}, []]);

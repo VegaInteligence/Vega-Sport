@@ -279,8 +279,9 @@ def elo_updates(matches, *, initial=ELO_INITIAL, k=ELO_K, home=ELO_HOME, seeds=N
 # spellings are reviewed (curated.CLUB_ALIASES) and applied before the identity pass merges them
 # (merged_rows). Left out: a club against a national team, a cup match without its day, two teams not
 # marked national in a national teams' competition (historic nations, no clubs), the historic archives
-# (archive_key; the user's decision of 17 November), the results decided without play (ADMINISTRATIVE), and the copies
-# elo_matches drops.
+# (archive_key; the user's decision of 17 November), the results decided without play (ADMINISTRATIVE), the copies
+# elo_matches drops, and the season's other internationals (nations-results:internationals, read on 19 November 2026
+# for the home's week strip only: their effect on the Elo is to be measured and decided first).
 #
 # A result a federation decided without the match being played keeps its status and score for the table and the cup's
 # page, and is no match of the Elo, nor so of the forecasts fitted on it (FAILURE_MODES.md §39). A source that says so
@@ -309,6 +310,7 @@ SELECT m.id, m.season_id, coalesce(m.kickoff_at, m.match_date::timestamp AT TIME
   coalesce(left(c.country_code, 3) = 'INT', false) OR coalesce(th.is_national, false), cs.cup_key
 FROM core.matches m
 JOIN core.competition_seasons cs ON cs.id = m.competition_season_id AND cs.archive_key IS NULL
+  AND left(coalesce(cs.cup_key, ''), 31) <> 'nations-results:internationals:'
 JOIN core.competitions c ON c.id = cs.competition_id
 JOIN core.teams th ON th.id = m.home_team_id
 JOIN core.teams ta ON ta.id = m.away_team_id

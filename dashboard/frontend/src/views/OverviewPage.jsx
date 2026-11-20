@@ -420,6 +420,7 @@ function CompactOverview() {
                   ? data.period
                   : { ...currentWeek, current: true },
                 results,
+                internationals: validPeriod ? data.internationals || [] : [],
                 ranks,
                 featured: validPeriod ? data.featured : null,
                 bestOfFeatured: validPeriod ? data.bestOfFeatured : null,
@@ -470,6 +471,7 @@ function OverviewContent({
   const {
     matchWeek,
     results,
+    internationals = [],
     tables,
     highlights,
     ranks,
@@ -572,7 +574,7 @@ function OverviewContent({
           <HomePreferences f={f} />
         </div>
       </div>
-      {!results.length && !archived && (
+      {!results.length && !internationals.length && !archived && (
         <p className="home-meta" role="status">
           Aucun match terminé disponible pour cette semaine.
         </p>
@@ -584,6 +586,7 @@ function OverviewContent({
       )}
       <HomeTicker
         results={results}
+        internationals={internationals}
         ranks={ranks}
         competitions={competitions}
         period={matchWeek}

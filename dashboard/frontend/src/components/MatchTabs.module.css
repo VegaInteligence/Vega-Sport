@@ -696,21 +696,6 @@
 }
 
 /* --------------------------------------------------------------- analyses */
-.chart {
-  display: block;
-  width: 100%;
-  height: auto;
-  margin: 8px 0;
-  cursor: crosshair;
-  touch-action: pan-y;
-}
-.axis {
-  stroke: var(--grid, rgb(128 128 128 / 25%));
-}
-.goalLine {
-  stroke: var(--muted-light);
-  stroke-dasharray: 3 3;
-}
 .mirror {
   display: grid;
   gap: 8px;
@@ -824,13 +809,13 @@
 }
 .nodeNumber {
   fill: var(--ink-strong);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   pointer-events: none;
 }
 .nodeName {
   fill: var(--ink-strong);
-  font-size: 9.5px;
+  font-size: 11px;
   paint-order: stroke;
   stroke: var(--pitch-ground);
   stroke-width: 3px;
@@ -889,5 +874,69 @@
   .fillCard .valueList {
     flex: 1 1 auto;
     align-content: space-around;
+  }
+}
+
+/* Pass networks: the team, its window and its passes above; its players by passes below. */
+.network {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.network .pitchSvg {
+  margin-inline: auto;
+}
+.networkHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  font-size: var(--text-sm);
+}
+.networkHead span {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.networkRoster {
+  display: none;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 4px 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-xs);
+}
+.networkRoster li {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+}
+.networkRoster b {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 2px solid;
+  border-radius: 50%;
+  font-size: 10px;
+}
+.networkRoster span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.networkRoster em {
+  color: var(--muted);
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+}
+/* Phones: the drawing is too small for the names; the list below gives them. */
+@media (max-width: 640px) {
+  .nodeName {
+    display: none;
+  }
+  .networkRoster {
+    display: grid;
   }
 }
