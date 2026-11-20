@@ -6,7 +6,7 @@
 //   main club is the replaced player's (agg.player_team_fit), are ranked by `fit.score`:
 //   Σ weight × component ÷ Σ weights of the known components, weights profile 40, role 20, style 15,
 //   defense 10, effort 10, discipline 5; then less 0.15 per point of league gap beyond 50, when the
-//   candidate's league is weaker (`levelGap`). Ties: the closer profile first.
+//   candidate's league is weaker (`levelGap`, returned only then: a gap of 50 or less costs nothing). Ties: the closer profile first.
 // - profile = the similarity; role = 100 − mean |Δ role centile| on the shares both have (4 or
 //   more); style = 100 − mean |Δ centile| of the two clubs on the style axes both have (5 or more),
 //   each club in the league edition where it has the most matches; defense, effort, discipline =

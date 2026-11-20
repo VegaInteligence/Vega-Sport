@@ -16,7 +16,7 @@
 //  R4 Sort « Note »: the candidates' notes are in descending order.
 //  R5 Selecting a candidate fills the comparison: « <ref> → <candidate> », age / value / note
 //     deltas, and « Voir la fiche » links to /joueurs?id=<candidate id>.
-//  R7 « Comparer » in the comparison puts the candidate in the comparison tray (button pressed).
+//  R7 « Comparer » opens the comparison of the candidate with the replaced player.
 //  R6 Changing the reference (search a name, pick it) updates the URL's `replace` and the list.
 //  T3 The old « En forme » link (playersView=form) opens Performances on « Forme : En hausse ».
 //  R8 The profile pentagon: hovering an axis reads both values; the legend hides a player.
@@ -130,9 +130,9 @@ try {
     rows.length > 0 && rows.every((r) => Number.isFinite(r.similarity) && r.similarity >= 0 && r.similarity <= 100));
   const fitOrder = await candidates(page).evaluateAll((rows) => rows.map((r) => Number(r.dataset.fit)));
   check("C1", "compatibility descending by default", fitOrder.slice(0, 12).join(","), fitOrder.length > 0 && fitOrder.every((v, i) => !i || fitOrder[i - 1] >= v));
-  const refClub = (await page.locator("h2").first().locator("xpath=..").innerText()).split("\n").find((l) => l.includes("·"))?.split("·").at(-1)?.trim();
-  const clubs = rows.map((r) => r.text.split("\n")[1]?.split("·").at(-1)?.trim());
-  check("C2", `no team-mate of the replaced player (${refClub})`, clubs.slice(0, 8).join(" | "), refClub && !clubs.includes(refClub));
+  const refClub = await page.locator("[data-reference-team]").getAttribute("data-reference-team");
+  const clubs = await candidates(page).evaluateAll((rows) => rows.map((r) => r.dataset.team));
+  check("C2", `no team-mate of the replaced player (${refClub})`, clubs.slice(0, 8).join(" | "), Boolean(refClub) && clubs.length > 0 && !clubs.includes(refClub));
   const side = page.locator("[data-replacement-comparison]");
   const opened = [];
   for (const key of ["profile", "role", "style", "defense", "effort", "discipline"]) {
@@ -180,11 +180,18 @@ try {
   check("R5", `comparison names ${picked.name}, link to its page`, `${panelText.split("\n")[0]} · ${href}`,
     panelText.includes(picked.name) && href?.includes(`id=${picked.id}`));
   await shot(page, "replace-selected-desktop");
-  const compare = panel.getByRole("button", { name: new RegExp(`^Comparer ${picked.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`) });
-  await compare.click();
+  // R7: « Comparer » opens the comparison of the candidate with the replaced player.
+  const refName = (await page.locator("h2").first().innerText()).trim();
+  await panel.locator("[data-compare-with-reference]").click();
+  const dialog = page.getByRole("dialog");
+  await dialog.waitFor({ timeout: 15000 });
+  const dialogText = await dialog.innerText();
+  await shot(page, "replace-compare-dialog");
+  check("R7", `comparison opens with ${picked.name} and ${refName}`, dialogText.split("\n").slice(0, 4).join(" | "),
+    dialogText.includes(picked.name) && dialogText.includes(refName));
+  await page.keyboard.press("Escape");
   await page.waitForTimeout(300);
-  const pressed = await panel.getByRole("button", { name: new RegExp(`^Retirer ${picked.name.split(" ")[0]}`) }).getAttribute("aria-pressed").catch(() => null);
-  check("R7", "Comparer pressed after the click", `aria-pressed=${pressed}`, pressed === "true");
+  if (await dialog.isVisible()) await dialog.getByRole("button", { name: /Fermer/ }).first().click().catch(() => {});
   const before = new URL(page.url()).searchParams.get("replace");
   await page.getByRole("combobox", { name: "Joueur à remplacer" }).fill(picked.name.split(" ").at(-1));
   await page.getByRole("listbox").getByRole("option").first().click();

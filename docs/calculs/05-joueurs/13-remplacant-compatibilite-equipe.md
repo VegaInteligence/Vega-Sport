@@ -55,7 +55,7 @@ Travail défensif, effort et discipline ne pénalisent qu'un candidat qui fait *
 
 **Score.** Score = Σ poids × élément ÷ Σ poids des éléments connus. Un élément inconnu sort du calcul ; on ne l'impute jamais.
 
-**Niveau.** Si la ligue de C est plus faible que celle de T de plus de 50 points de niveau, le score perd 0,15 point par point au-delà. Une ligue plus forte ne rapporte rien. L'écart est renvoyé (`levelGap`).
+**Niveau.** Si la ligue de C est plus faible que celle de T de plus de 50 points de niveau, le score perd 0,15 point par point au-delà. Une ligue plus forte ne rapporte rien. L'écart n'est renvoyé (`levelGap`, étiquette « Ligue plus faible ») que lorsqu'il coûte des points.
 
 Les pondérations sont un **jugement**, pas un ajustement sur des données. Une validation reste à faire sur de vrais transferts : la note d'un joueur a-t-elle tenu quand la compatibilité était haute ?
 

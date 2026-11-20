@@ -294,7 +294,8 @@ function compatibility(similarityValue, ref, cand, refStyle, candStyle) {
   const penalty = gap !== null ? Math.max(0, gap - LEAGUE_GAP_FREE) * LEAGUE_GAP_COST : 0;
   const fit = { score: Math.round(total / weight - penalty) };
   for (const k of Object.keys(FIT_WEIGHTS)) fit[k] = parts[k] === null ? null : Math.round(parts[k]);
-  return { fit, exact: total / weight - penalty, levelGap: gap !== null && gap > 0 ? gap : null };
+  // The gap is returned only when it costs points (a weaker league beyond LEAGUE_GAP_FREE).
+  return { fit, exact: total / weight - penalty, levelGap: gap !== null && gap > LEAGUE_GAP_FREE ? gap : null };
 }
 const round = (v, d) => (known(v) ? Math.round(Number(v) * 10 ** d) / 10 ** d : null);
 /** What the comparison panel shows of a player in his team. */

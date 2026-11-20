@@ -16,7 +16,10 @@ import {
   usePlayerReplacements,
   VALUE_FILTERS,
 } from "../services/player-replacements.js";
-import { BookmarkButton, ComparePlayerButton } from "./ResearchUI.jsx";
+import { BookmarkButton } from "./ResearchUI.jsx";
+import Icon from "./Icon.jsx";
+import { useResearch } from "../hooks/ResearchContext.jsx";
+import { playerSelection } from "../services/research-storage.js";
 import { Empty, Grade, Media, Skeleton } from "./UI.jsx";
 import s from "./PlayerReplacements.module.css";
 
@@ -490,6 +493,46 @@ function ProfileRadar({ reference, candidate }) {
   );
 }
 
+/** « Comparer » compares the candidate with the player he would replace: both go into the
+ *  comparison and it opens; pressed again, the candidate leaves it (the reference stays). */
+function CompareWithReference({ reference, candidate, season }) {
+  const research = useResearch(),
+    f = useFootball();
+  const entry = (p) =>
+    playerSelection(
+      { id: p.id, name: p.name, imageUrl: p.image_url },
+      f,
+      season,
+    );
+  const ref = entry(reference),
+    cand = entry(candidate);
+  const selected = research.isComparing(cand);
+  return (
+    <button
+      type="button"
+      className="button button-secondary"
+      aria-pressed={selected}
+      aria-label={`${selected ? "Retirer" : "Comparer"} ${candidate.name} et ${reference.name}`}
+      disabled={!research.ready}
+      onClick={() => {
+        if (selected) return research.toggleComparison(cand);
+        const adding = research.isComparing(ref) ? 1 : 2;
+        if (research.data.comparison.length + adding > 4)
+          return research.setMessage(
+            "La comparaison contient déjà quatre joueurs ou saisons.",
+          );
+        if (!research.isComparing(ref)) research.toggleComparison(ref);
+        research.toggleComparison(cand);
+        research.setComparing(true);
+      }}
+      data-compare-with-reference=""
+    >
+      <Icon name="compare" />
+      {selected ? "Dans la comparaison" : "Comparer"}
+    </button>
+  );
+}
+
 function Comparison({ reference, candidate, season, inline = false }) {
   const f = useFootball();
   const [part, setPart] = useState("role");
@@ -582,12 +625,9 @@ function Comparison({ reference, candidate, season, inline = false }) {
         >
           Voir la fiche
         </Link>
-        <ComparePlayerButton
-          profile={{
-            id: candidate.id,
-            name: candidate.name,
-            imageUrl: candidate.image_url,
-          }}
+        <CompareWithReference
+          reference={reference}
+          candidate={candidate}
           season={season}
         />
         <BookmarkButton
@@ -627,7 +667,12 @@ export default function PlayerReplacements({ fallback }) {
     <div className={s.root}>
       <div className={s.head}>
         {reference ? (
-          <div className={s.reference}>
+          <div
+            className={s.reference}
+            data-reference-team={
+              reference.context?.team?.name ?? reference.team?.name ?? ""
+            }
+          >
             <Media
               name={reference.name}
               url={reference.image_url}
@@ -727,6 +772,7 @@ export default function PlayerReplacements({ fallback }) {
                     data-value={row.value_eur ?? ""}
                     data-note={row.grade ?? ""}
                     data-similarity={row.similarity}
+                    data-team={row.context?.team?.name ?? row.team?.name ?? ""}
                     data-fit={row.fit?.score ?? row.similarity}
                   >
                     <span className={s.who}>
