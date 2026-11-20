@@ -696,21 +696,6 @@
 }
 
 /* --------------------------------------------------------------- analyses */
-.chart {
-  display: block;
-  width: 100%;
-  height: auto;
-  margin: 8px 0;
-  cursor: crosshair;
-  touch-action: pan-y;
-}
-.axis {
-  stroke: var(--grid, rgb(128 128 128 / 25%));
-}
-.goalLine {
-  stroke: var(--muted-light);
-  stroke-dasharray: 3 3;
-}
 .mirror {
   display: grid;
   gap: 8px;
