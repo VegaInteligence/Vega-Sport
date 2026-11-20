@@ -52,3 +52,10 @@
 - Built: banner on one line (label + navigation, 52 px instead of ~120 px; navigation only on phones); half-pitch SVG with faint stripes behind the team; directory page size measured from the viewport in whole rows (40 at 1600×1000, 60 at 2000×1150, never under 24, so phones keep 24), one read at that size.
 - Rule (user's correction): new issues go to GitHub, not Linear; Linear's GitHub Issues sync creates the Linear issue; small fixes need no issue. The sync is off today (test issue #59 was not imported, then closed): the user turns it on in Linear → Settings → Integrations → GitHub.
 - No separate mock-up: the user named each change; approved on the local preview's screenshots. Evidence: scratchpad `evidence/README.md` (headless captures, results.json, rerun script). Site suite 803/803, build passes. Not checked: the « Suivants » button with the new page size, live window resize.
+
+## Club page — « Match par match » as one row per match (20 Nov 2026)
+
+- Ask (user, Arsenal, « Résultats et attendus »): too big a gap beside the 20-row table; the match columns said nothing of the opponent. Mock-up A chosen (« Ok A, tu peux déployer »).
+- Built (`PointsRace.jsx`, `PointsPerMatch`, taken over from the finished xpts-chart session): one row per match, as tall as a table row — round, home/away, the opponent's crest and name, score, V/N/D, a 0–3 gauge filled to the points with the match's xPts as a tick, the gap (formatted as the table's « Écart »); each row opens its match (`MatchRowLink`). Phone: home/away hidden, narrower gauge.
+- Validated: E2E written first (`~/Agents/scratch/xpts-matches-20261120/e2e.mjs`): production before 2/16; local build 16/16 (Arsenal desktop and phone, Nottingham Forest); the left column now ends level with the table. Site suite: the 9 failures main has in this environment, no other. Two expectations of the E2E corrected, not the code: the minus sign (the site's « -1,6 », as the table) and the red test (`--danger` is rgb(255,138,128)).
+- Linear: not touched in this folder.
