@@ -2850,16 +2850,20 @@ th[aria-sort="descending"] .sort-indicator {
 }
 
 /* Match forecast (before kick-off) and season projection */
+.match-forecast-bar,
+.match-forecast-shares {
+  /* One grid for the bar and the shares (MatchForecast.jsx): a small part keeps room for its label. */
+  --forecast-min: 64px;
+}
 .match-forecast-bar {
-  display: flex;
+  display: grid;
   gap: 2px;
   height: 10px;
   overflow: hidden;
   border-radius: 0;
 }
 .match-forecast-bar span {
-  flex-basis: 0;
-  min-width: 6px;
+  min-width: 0;
   background: var(--muted);
 }
 .match-forecast-bar span[data-side="home"] {
@@ -2870,8 +2874,7 @@ th[aria-sort="descending"] .sort-indicator {
 }
 .match-forecast-shares {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  gap: 2px;
   margin: 12px 0 0;
   padding: 0;
   list-style: none;

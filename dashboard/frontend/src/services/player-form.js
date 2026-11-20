@@ -9,6 +9,14 @@ export const FORM_TRENDS = [
   ["down", "En baisse"],
   ["minutes", "Temps de jeu en hausse"],
 ];
+/** The « Forme » filter of Performances: `forme` in the URL; the old « En forme » tab's link
+ *  (playersView=form) opens it on the rises. */
+export const FORM_FILTERS = [["all", "Toutes"], ...FORM_TRENDS];
+export function formFilter(params) {
+  const value = params.get("forme");
+  if (FORM_TRENDS.some(([key]) => key === value)) return value;
+  return params.get("playersView") === "form" ? "up" : "all";
+}
 
 export function formUrl(season, leagues = "all") {
   const params = new URLSearchParams({ season });

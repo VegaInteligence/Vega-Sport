@@ -3,7 +3,7 @@
 // (https://claude.ai/artifact/9QLiW66xkhhxN5FxLyCtLG, « Remplaçant + En forme »).
 //
 // Failure modes and expected outcomes:
-//  T1 Tabs: Performances · Remplaçant · En forme · Mes listes (or Mes listes first when the
+//  T1 Tabs: Performances · Remplaçant · Mes listes (or Mes listes first when the
 //     visitor has saved players, as today). No « Explorer », no « Indices ».
 //  T2 Old links: ?playersView=explore and ?playersView=indices open Performances, never a blank
 //     panel or an error.
@@ -18,7 +18,11 @@
 //     deltas, and « Voir la fiche » links to /joueurs?id=<candidate id>.
 //  R7 « Comparer » in the comparison puts the candidate in the comparison tray (button pressed).
 //  R6 Changing the reference (search a name, pick it) updates the URL's `replace` and the list.
-//  F1 En forme « En hausse »: rows sorted by gap, every gap > 0, each with a 10-match curve.
+//  T3 The old « En forme » link (playersView=form) opens Performances on « Forme : En hausse ».
+//  R8 The profile pentagon: hovering an axis reads both values; the legend hides a player.
+//  R9 Desktop: the list of candidates is as tall as the comparison card beside it (no gap).
+//  M1 A coming match's « Probabilités »: each share sits under its own part of the bar.
+//  F1 Performances « Forme : En hausse »: rows sorted by gap, every gap > 0, each with a 10-match curve.
 //  F2 « En baisse »: every gap < 0, steepest first.
 //  F3 « Temps de jeu en hausse »: gaps in minutes > 0.
 //  F4 The list follows the page's competitions: the request carries the page's leagues.
@@ -101,8 +105,8 @@ try {
   // T1, T2
   let page = await open(desktop, {});
   const names = await tabs(page);
-  check("T1", "Performances, Remplaçant, En forme, Mes listes; no Explorer/Indices", names.join(" · "),
-    ["Performances", "Remplaçant", "En forme", "Mes listes"].every((t) => names.includes(t)) && !names.some((t) => /Explorer|Indices/.test(t)));
+  check("T1", "Performances, Remplaçant, Mes listes; no Explorer/Indices/En forme", names.join(" · "),
+    ["Performances", "Remplaçant", "Mes listes"].every((t) => names.includes(t)) && !names.some((t) => /Explorer|Indices|En forme/.test(t)));
   await page.close();
   for (const legacy of ["explore", "indices"]) {
     page = await open(desktop, { playersView: legacy });
@@ -110,6 +114,13 @@ try {
     check(`T2-${legacy}`, "Performances selected", selected, selected.trim() === "Performances");
     await page.close();
   }
+  page = await open(desktop, { playersView: "form" });
+  {
+    const selected = await page.getByRole("tab", { selected: true }).innerText();
+    const forme = await page.getByRole("group", { name: "Forme" }).getByRole("button", { name: "En hausse", exact: true }).getAttribute("aria-pressed");
+    check("T3", "Performances with « En hausse » pressed", `${selected.trim()} · ${forme}`, selected.trim() === "Performances" && forme === "true");
+  }
+  await page.close();
 
   // R1–R6
   page = await open(desktop, { playersView: "replace" });
@@ -132,6 +143,23 @@ try {
   const shareRows = await side.locator("em").count();
   await shot(page, "replace-fit-desktop");
   check("C3", "six components open; role shows six shares", `${opened.join(",")} · ${shareRows} rows`, opened.every((o) => o.endsWith(":true")) && shareRows === 6);
+  const radar = side.locator("[data-radar]");
+  const axis = radar.locator('[data-radar-axis="creation"]');
+  await axis.hover();
+  const axisState = `${await axis.getAttribute("aria-pressed")} · ${(await axis.textContent()).replace(/\s+/g, " ")}`;
+  const polygonsBefore = await radar.locator("polygon").count();
+  await radar.locator('[data-radar-toggle="candidate"]').click();
+  const polygonsAfter = await radar.locator("polygon").count();
+  await radar.locator('[data-radar-toggle="candidate"]').click();
+  const radarBox = await radar.boundingBox();
+  check("R8", "hover reads both values; the legend hides the candidate; pentagon ≥ 300 px wide", `${axisState} · polygons ${polygonsBefore}→${polygonsAfter} · ${Math.round(radarBox.width)} px`,
+    axisState.startsWith("true") && /\d|—/.test(axisState.split("Création")[1] || "") && polygonsAfter === polygonsBefore - 1 && radarBox.width >= 300);
+  const heights = await page.evaluate(() => {
+    const list = document.querySelector("[data-replacement-candidate]").closest("ul").parentElement.getBoundingClientRect();
+    const card = document.querySelector("[data-replacement-comparison]").getBoundingClientRect();
+    return { list: Math.round(list.height), card: Math.round(card.height), top: Math.round(list.top - card.top) };
+  });
+  check("R9", "list and comparison the same height and top", JSON.stringify(heights), Math.abs(heights.list - heights.card) <= 2 && Math.abs(heights.top) <= 2);
   await chip(page, "Âge", "≤ 25 ans");
   rows = await readCandidates(page).catch(() => []);
   check("R2", "every age ≤ 25", rows.map((r) => r.age).join(","), rows.every((r) => r.age != null && r.age <= 25));
@@ -169,7 +197,7 @@ try {
   await page.close();
 
   // F1–F4
-  page = await open(desktop, { playersView: "form" });
+  page = await open(desktop, { forme: "up" });
   const formRequests = [];
   page.on("request", (r) => r.url().includes("/api/player-form") && formRequests.push(r.url()));
   const formRows = page.locator("[data-form-row]");
@@ -181,11 +209,11 @@ try {
   await shot(page, "form-up-desktop");
   check("F1", "gaps > 0, descending, each with a curve", form.map((r) => r.gap).join(","),
     form.length > 0 && form.every((r, i) => r.gap > 0 && r.curve && (!i || form[i - 1].gap >= r.gap)));
-  await chip(page, "Tendance", "En baisse");
+  await chip(page, "Forme", "En baisse");
   form = await readForm();
   check("F2", "gaps < 0, steepest first", form.map((r) => r.gap).join(","),
     form.length > 0 && form.every((r, i) => r.gap < 0 && (!i || form[i - 1].gap <= r.gap)));
-  await chip(page, "Tendance", "Temps de jeu en hausse");
+  await chip(page, "Forme", "Temps de jeu en hausse");
   form = await readForm();
   check("F3", "minute gaps > 0", form.map((r) => r.gap).join(","), form.length > 0 && form.every((r) => r.gap > 0));
   await shot(page, "form-minutes-desktop");
@@ -199,16 +227,18 @@ try {
   await page.close();
 
   // P1
-  for (const [view, group] of [["replace", "Âge"], ["form", "Tendance"]]) {
-    page = await open(phone, { playersView: view });
+  for (const [view, group, query, row] of [["replace", "Âge", { playersView: "replace" }, "[data-chip-row] button"],
+    ["form", "Forme", { forme: "up" }, ".player-directory-toolbar .filter-rail > *"]]) {
+    page = await open(phone, query);
     await page.getByRole("group", { name: group }).waitFor({ timeout: 60000 });
     await page.waitForTimeout(1500);
-    const layout = await page.evaluate(() => {
-      const tops = [...document.querySelectorAll("[data-chip-row] button")].map((b) => Math.round(b.getBoundingClientRect().top));
+    const layout = await page.evaluate((selector) => {
+      const tops = [...document.querySelectorAll(selector)].filter((b) => b.getBoundingClientRect().height > 0).map((b) => Math.round(b.getBoundingClientRect().top + b.getBoundingClientRect().height / 2));
       return { tops: [...new Set(tops)], pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth };
-    });
+    }, row);
     await shot(page, `${view}-phone`);
-    check(`P1-${view}`, "one row of chips, no sideways page scroll", JSON.stringify(layout), layout.tops.length === 1 && layout.pageOverflow <= 0);
+    check(`P1-${view}`, "one row of filters, no sideways page scroll", JSON.stringify(layout),
+      Math.max(...layout.tops) - Math.min(...layout.tops) <= 4 && layout.pageOverflow <= 0);
     if (view === "replace") {
       const row = candidates(page).nth(5);
       await row.click();
@@ -221,6 +251,28 @@ try {
         gap >= 0 && gap <= 20 && (await inline.getAttribute("data-replacement-comparison-inline")) === (await row.getAttribute("data-replacement-candidate")));
     }
     await page.close();
+  }
+
+  // M1: a coming match with a forecast, desktop and phone.
+  const api = process.env.VEGA_API_ORIGIN || "https://dngp6kh9jx2bl.cloudfront.net";
+  const today = new Date().toISOString().slice(0, 10);
+  const fixtures = await fetch(`${api}/api/fixtures?season=2026/2027&limit=100&status=upcoming&order=asc`).then((r) => r.json());
+  const match = fixtures.data.matches.find((m) => m.forecast && m.date >= today && m.forecast.home > 0.55);
+  for (const viewport of [desktop, phone]) {
+    const p = await browser.newPage({ locale: "fr-FR", viewport, ...(viewport.width < 600 ? { isMobile: true, hasTouch: true } : {}) });
+    p.on("pageerror", (e) => consoleLog.push(`[${viewport.width}] pageerror ${e.message}`));
+    await p.goto(`${base}/matchs?id=${match.id}`, { waitUntil: "domcontentloaded", timeout: 60000 });
+    await p.locator(".match-forecast-shares").waitFor({ timeout: 60000 });
+    const placed = await p.evaluate(() => ["home", "draw", "away"].map((side) => {
+      const bar = document.querySelector(`.match-forecast-bar [data-side="${side}"]`).getBoundingClientRect();
+      const label = document.querySelector(`.match-forecast-shares [data-side="${side}"] strong`).getBoundingClientRect();
+      const centre = label.left + label.width / 2;
+      return { side, inside: centre >= bar.left - 1 && centre <= bar.right + 1, bar: [Math.round(bar.left), Math.round(bar.right)], label: Math.round(centre) };
+    }));
+    await p.locator(".match-forecast-bar").scrollIntoViewIfNeeded();
+    await p.screenshot({ path: path.join(out, `match-forecast-${viewport.width}.png`) });
+    check(`M1-${viewport.width}`, `${match.home_team.name}–${match.away_team.name}: each share under its own part`, JSON.stringify(placed), placed.every((x) => x.inside));
+    await p.close();
   }
 } catch (error) {
   check("RUN", "run completes", String(error?.stack || error).slice(0, 500), false);

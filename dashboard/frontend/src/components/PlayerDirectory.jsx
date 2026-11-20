@@ -1,11 +1,14 @@
 import Link from "next/link";
-import React, { useState } from "react";
+import React, { lazy, Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { useResearch } from "../hooks/ResearchContext.jsx";
 import { playerSelection } from "../services/research-storage.js";
 import { SCOUT_METRICS } from "../services/scouting.js";
 import { number } from "../services/format.js";
-import { Card, Empty, Media, Pager, Grade, Segments } from "./UI.jsx";
+import { Card, Empty, Media, Pager, Grade, Segments, Skeleton } from "./UI.jsx";
+import { FORM_FILTERS, formFilter } from "../services/player-form.js";
+const PlayerFormTrends = lazy(() => import("./PlayerFormTrends.jsx"));
 import PerformanceContext from "./PerformanceContext.jsx";
 import { PLAYER_RANKINGS } from "../services/player-leaderboard.js";
 import { MIN_GRADED_MATCHES } from "../../../shared/player-profile.js";
@@ -34,8 +37,19 @@ export default function PlayerDirectory({
   onPage,
 }) {
   const f = useFootball(),
-    r = useResearch();
+    r = useResearch(),
+    params = useSearchParams();
   const [page, setPage] = useState({ rows: null, value: 1 });
+  // « Forme » (VI-40): the rises, falls or rising playing time replace the table.
+  const form = formFilter(params);
+  const setForm = (value) => {
+    const url = new URL(window.location.href);
+    if (value === "all") url.searchParams.delete("forme");
+    else url.searchParams.set("forme", value);
+    if (url.searchParams.get("playersView") === "form")
+      url.searchParams.delete("playersView");
+    window.history.replaceState(null, "", url.pathname + url.search);
+  };
   const columns = [
     ...new Set([
       ...(PLAYER_RANKINGS[ranking]?.columns || []),
@@ -85,6 +99,23 @@ export default function PlayerDirectory({
               ["per90", "Par 90 minutes"],
             ]}
           />
+          <div role="group" aria-label="Forme" className="player-form-filter">
+            <span className="player-form-filter-label" aria-hidden="true">
+              Forme
+            </span>
+            <div className="segmented-control">
+              {FORM_FILTERS.map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  aria-pressed={form === key}
+                  onClick={() => setForm(key)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
           {ranking === "grade" && (
             <span className="player-directory-note">
               Au moins {MIN_GRADED_MATCHES} matchs notés
@@ -101,7 +132,11 @@ export default function PlayerDirectory({
           </div>
         </div>
       </div>
-      {rows.length ? (
+      {form !== "all" ? (
+        <Suspense fallback={<Skeleton kind="table" lines={8} />}>
+          <PlayerFormTrends trend={form} />
+        </Suspense>
+      ) : rows.length ? (
         <div className="table-scroll">
           <table className="data-table player-directory-table">
             <caption className="sr-only">
@@ -225,9 +260,23 @@ export default function PlayerDirectory({
                           }
                         >
                           {key === "score" ? (
-                            row.score == null ? "—" : <Grade value={row.score} title="Score Vega de la saison sur 100 : toute sa saison, volume, qualité par match et niveau de son club" />
+                            row.score == null ? (
+                              "—"
+                            ) : (
+                              <Grade
+                                value={row.score}
+                                title="Score Vega de la saison sur 100 : toute sa saison, volume, qualité par match et niveau de son club"
+                              />
+                            )
                           ) : key === "grade" ? (
-                            row.grade == null ? "—" : <Grade value={row.grade} title="Note Vega de la saison sur 100 : la note de son match moyen" />
+                            row.grade == null ? (
+                              "—"
+                            ) : (
+                              <Grade
+                                value={row.grade}
+                                title="Note Vega de la saison sur 100 : la note de son match moyen"
+                              />
+                            )
                           ) : (
                             <>
                               {number(
@@ -255,12 +304,14 @@ export default function PlayerDirectory({
       ) : (
         <Empty>Aucun joueur pour ces filtres.</Empty>
       )}
-      <Pager
-        page={current}
-        total={pages}
-        label="Pagination des joueurs"
-        onChange={onPage || ((value) => setPage({ rows, value }))}
-      />
+      {form === "all" && (
+        <Pager
+          page={current}
+          total={pages}
+          label="Pagination des joueurs"
+          onChange={onPage || ((value) => setPage({ rows, value }))}
+        />
+      )}
     </Card>
   );
 }

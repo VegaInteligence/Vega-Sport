@@ -18,14 +18,17 @@ export default function MatchForecast({ match }) {
     ["Nul", forecast.draw, "draw"],
     [away, forecast.away, "away"],
   ];
+  // The bar and the shares under it share one grid: each share sits under its own part of the
+  // bar (the shares were in three equal thirds: « Nul » fell under the favourite's part).
+  const columns = { gridTemplateColumns: parts.map(([, value]) => `minmax(var(--forecast-min), ${Math.max(value, 0.01)}fr)`).join(" ") };
   return (
     <Card title="Probabilités">
-      <div className="match-forecast-bar" role="img" aria-label={parts.map(([name, value]) => `${name} ${share(value)}`).join(", ")}>
-        {parts.map(([name, value, side]) => (
-          <span key={side} data-side={side} style={{ flexGrow: Math.max(value, 0.04) }} title={name} />
+      <div className="match-forecast-bar" style={columns} role="img" aria-label={parts.map(([name, value]) => `${name} ${share(value)}`).join(", ")}>
+        {parts.map(([name, , side]) => (
+          <span key={side} data-side={side} title={name} />
         ))}
       </div>
-      <ul className="match-forecast-shares">
+      <ul className="match-forecast-shares" style={columns}>
         {parts.map(([name, value, side]) => (
           <li key={side} data-side={side}>
             <strong>{share(value)}</strong>

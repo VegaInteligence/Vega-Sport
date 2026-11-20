@@ -6,7 +6,6 @@ import PlayerDirectory from "./PlayerDirectory.jsx";
 import { ResearchLists, ResearchTabs, useHasSaved } from "./ResearchUI.jsx";
 import { playerDirectoryView } from "../services/player-leaderboard.js";
 const PlayerReplacements = lazy(() => import("./PlayerReplacements.jsx"));
-const PlayerFormTrends = lazy(() => import("./PlayerFormTrends.jsx"));
 export default function PlayerWorkspace({
   profiles: _profiles,
   resource,
@@ -18,7 +17,6 @@ export default function PlayerWorkspace({
     ...(hasSaved ? [["lists", "Mes listes"]] : []),
     ["table", "Performances"],
     ["replace", "Remplaçant"],
-    ["form", "En forme"],
     ...(hasSaved ? [] : [["lists", "Mes listes"]]),
   ];
   const view = playerDirectoryView(params.get("playersView"));
@@ -75,7 +73,6 @@ export default function PlayerWorkspace({
               {view === "replace" && (
                 <PlayerReplacements fallback={props.rows?.[0]} />
               )}
-              {view === "form" && <PlayerFormTrends />}
               {view === "lists" && <ResearchLists kind="players" />}
             </>
           )}

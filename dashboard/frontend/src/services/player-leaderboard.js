@@ -97,10 +97,10 @@ export function playerDirectoryRanking(
     : "";
 }
 
-// Explorer and Indices were replaced by Remplaçant and En forme (VI-39): their old links open
-// Performances.
+// Explorer and Indices were replaced by Remplaçant (VI-39); « En forme » became the « Forme »
+// filter of Performances (VI-40): their old links open Performances.
 export const playerDirectoryView = (value) =>
-  ["replace", "form", "lists"].includes(value) ? value : "table";
+  ["replace", "lists"].includes(value) ? value : "table";
 
 export const playerLeagueIds = (value = "") =>
   [

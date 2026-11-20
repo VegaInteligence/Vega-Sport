@@ -3,11 +3,10 @@
    over their last ten matches, and those whose playing time is rising, on the page's season
    and competitions. */
 import Link from "next/link";
-import React, { useState } from "react";
+import React from "react";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { compactScope, directoryScopeIds } from "../services/compact-reads.js";
-import { FORM_TRENDS, usePlayerForm } from "../services/player-form.js";
-import { ChipGroup } from "./PlayerReplacements.jsx";
+import { usePlayerForm } from "../services/player-form.js";
 import { Empty, Grade, Media, Skeleton } from "./UI.jsx";
 import r from "./PlayerReplacements.module.css";
 import s from "./PlayerFormTrends.module.css";
@@ -44,9 +43,9 @@ function Curve({ values, low, high, falling }) {
 const gap = (value, unit = "") =>
   `${value > 0 ? "+" : value < 0 ? "−" : "±"}${Math.abs(value).toLocaleString("fr-FR", { maximumFractionDigits: 1 })}${unit}`;
 
-export default function PlayerFormTrends() {
+/** The list of one trend; Performances' « Forme » filter chooses it (PlayerDirectory). */
+export default function PlayerFormTrends({ trend = "up" }) {
   const f = useFootball();
-  const [trend, setTrend] = useState("up");
   const leagues = compactScope(
     directoryScopeIds(f.manifest, f.season, f.focus, f.filters),
   );
@@ -56,14 +55,6 @@ export default function PlayerFormTrends() {
   const rows = data?.[trend] || [];
   return (
     <div className={r.root}>
-      <div className={r.chips} data-chip-row="">
-        <ChipGroup
-          label="Tendance"
-          value={trend}
-          items={FORM_TRENDS}
-          onChange={setTrend}
-        />
-      </div>
       {read.error ? (
         <div role="alert" className="notice notice-warning">
           {String(read.error)} <button onClick={read.retry}>Réessayer</button>

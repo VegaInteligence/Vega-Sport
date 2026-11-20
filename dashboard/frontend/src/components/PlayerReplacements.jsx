@@ -346,6 +346,150 @@ function ComponentDetail({ part, reference, candidate }) {
   );
 }
 
+/** The five profile axes as a pentagon: the replaced player in grey, the candidate in blue.
+ *  Hovering, focusing or tapping an axis reads both values; the legend hides either player. */
+function ProfileRadar({ reference, candidate }) {
+  const [active, setActive] = useState(null),
+    [hidden, setHidden] = useState({ reference: false, candidate: false });
+  if (!reference.axes && !candidate.axes) return null;
+  const W = 340,
+    H = 300,
+    cx = 170,
+    cy = 152,
+    R = 108;
+  const at = (i, v) => {
+    const angle = -Math.PI / 2 + (i * 2 * Math.PI) / AXES.length;
+    return [
+      cx + Math.cos(angle) * R * (v / 100),
+      cy + Math.sin(angle) * R * (v / 100),
+    ];
+  };
+  const polygon = (axes) =>
+    AXES.map(([key], i) =>
+      at(i, axes?.[key] ?? 0)
+        .map((x) => x.toFixed(1))
+        .join(","),
+    ).join(" ");
+  const value = (axes, key) => (axes?.[key] == null ? "—" : axes[key]);
+  const players = [
+    ["reference", reference, s.radarRef],
+    ["candidate", candidate, s.radarCand],
+  ];
+  return (
+    <figure className={s.radar} data-radar="">
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        role="img"
+        aria-label={`Profil : ${reference.name} et ${candidate.name}`}
+      >
+        {[25, 50, 75, 100].map((k) => (
+          <polygon
+            key={k}
+            className={s.radarGrid}
+            points={AXES.map((_, i) => at(i, k).join(",")).join(" ")}
+          />
+        ))}
+        {AXES.map(([key], i) => {
+          const [x, y] = at(i, 100);
+          return (
+            <line
+              key={key}
+              className={`${s.radarSpoke} ${active === key ? s.radarSpokeOn : ""}`}
+              x1={cx}
+              y1={cy}
+              x2={x}
+              y2={y}
+            />
+          );
+        })}
+        {players.map(([who, player, cls]) =>
+          hidden[who] ? null : (
+            <polygon key={who} className={cls} points={polygon(player.axes)} />
+          ),
+        )}
+        {players.map(([who, player, cls]) =>
+          hidden[who]
+            ? null
+            : AXES.map(([key], i) => {
+                const [x, y] = at(i, player.axes?.[key] ?? 0);
+                return (
+                  <circle
+                    key={`${who}${key}`}
+                    className={cls}
+                    cx={x}
+                    cy={y}
+                    r={active === key ? 5 : 3}
+                  />
+                );
+              }),
+        )}
+        {AXES.map(([key, label], i) => {
+          const [x, y] = at(i, 128);
+          const on = active === key;
+          return (
+            <g
+              key={key}
+              className={`${s.radarAxis} ${on ? s.radarAxisOn : ""}`}
+              tabIndex={0}
+              role="button"
+              aria-pressed={on}
+              aria-label={`${label} : ${reference.name} ${value(reference.axes, key)}, ${candidate.name} ${value(candidate.axes, key)}`}
+              data-radar-axis={key}
+              onMouseEnter={() => setActive(key)}
+              onMouseLeave={() => setActive(null)}
+              onFocus={() => setActive(key)}
+              onBlur={() => setActive(null)}
+              onClick={() => setActive(on ? null : key)}
+            >
+              <rect
+                x={x - 46}
+                y={y - 16}
+                width="92"
+                height={on ? 40 : 24}
+                rx="6"
+                className={s.radarHit}
+              />
+              <text x={x} y={y} textAnchor="middle">
+                {label}
+              </text>
+              {on && (
+                <text
+                  x={x}
+                  y={y + 16}
+                  textAnchor="middle"
+                  className={s.radarValues}
+                >
+                  <tspan className={s.radarRefText}>
+                    {value(reference.axes, key)}
+                  </tspan>
+                  <tspan dx="4">·</tspan>
+                  <tspan dx="4" className={s.radarCandText}>
+                    {value(candidate.axes, key)}
+                  </tspan>
+                </text>
+              )}
+            </g>
+          );
+        })}
+      </svg>
+      <figcaption className={s.radarLegend}>
+        {players.map(([who, player]) => (
+          <button
+            key={who}
+            type="button"
+            aria-pressed={!hidden[who]}
+            className={who === "reference" ? s.legendRef : s.legendCand}
+            onClick={() => setHidden((h) => ({ ...h, [who]: !h[who] }))}
+            data-radar-toggle={who}
+          >
+            {player.name}
+          </button>
+        ))}
+      </figcaption>
+    </figure>
+  );
+}
+
 function Comparison({ reference, candidate, season, inline = false }) {
   const f = useFootball();
   const [part, setPart] = useState("role");
@@ -373,6 +517,7 @@ function Comparison({ reference, candidate, season, inline = false }) {
           <small>%</small>
         </strong>
       </div>
+      <ProfileRadar reference={reference} candidate={candidate} />
       <div className={s.components} role="group" aria-label="Compatibilité">
         {COMPONENTS.map(([key, label]) => (
           <button
@@ -488,21 +633,19 @@ export default function PlayerReplacements({ fallback }) {
               url={reference.image_url}
               className={`crest ${s.avatar}`}
             />
-            <div>
-              <h2 className={s.referenceName}>{reference.name}</h2>
-              <p className={s.referenceMeta}>
-                {subtitle(reference) && <span>{subtitle(reference)}</span>}
-                {reference.age != null && <span>{reference.age} ans</span>}
-                {reference.value_eur != null && (
-                  <span>{money(reference.value_eur)}</span>
-                )}
-                {reference.grade != null && (
-                  <span>
-                    Note <Grade value={reference.grade} />
-                  </span>
-                )}
-              </p>
-            </div>
+            <h2 className={s.referenceName}>{reference.name}</h2>
+            <p className={s.referenceMeta}>
+              {subtitle(reference) && <span>{subtitle(reference)}</span>}
+              {reference.age != null && <span>{reference.age} ans</span>}
+              {reference.value_eur != null && (
+                <span>{money(reference.value_eur)}</span>
+              )}
+              {reference.grade != null && (
+                <span>
+                  Note <Grade value={reference.grade} />
+                </span>
+              )}
+            </p>
           </div>
         ) : (
           <span />

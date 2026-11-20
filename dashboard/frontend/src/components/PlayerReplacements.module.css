@@ -11,33 +11,34 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px 20px;
-  padding: 14px 16px;
+  gap: 6px 16px;
+  padding: 6px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--surface);
 }
 .reference {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: 4px 10px;
   min-width: 0;
 }
 .avatar {
-  width: 44px;
-  height: 44px;
+  width: 28px;
+  height: 28px;
 }
 .referenceName {
   margin: 0;
-  font-size: var(--text-lg);
+  font-size: var(--text-md);
   color: var(--ink-strong);
 }
 .referenceMeta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px 14px;
-  margin: 2px 0 0;
+  gap: 2px 12px;
+  margin: 0;
   color: var(--muted);
   font-size: var(--text-sm);
 }
@@ -110,9 +111,22 @@
 }
 .body {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
   gap: 14px;
-  align-items: start;
+  align-items: stretch;
+}
+.listCard {
+  /* As tall as the comparison beside it, never taller: its rows scroll inside. */
+  display: flex;
+  flex-direction: column;
+  height: 0;
+  min-height: 100%;
+}
+.listCard .list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .listCard,
 .comparison {
@@ -200,8 +214,6 @@
   font-weight: 600;
 }
 .comparison {
-  position: sticky;
-  top: 12px;
   display: grid;
   gap: 16px;
   padding: 16px;
@@ -431,6 +443,16 @@
   .comparison {
     position: static;
   }
+  .listCard {
+    height: auto;
+    min-height: 0;
+  }
+  .listCard .list {
+    overflow: visible;
+  }
+  .radar svg {
+    max-width: 320px;
+  }
   .side {
     display: none;
   }
@@ -455,4 +477,90 @@
   .pair {
     grid-template-columns: 96px minmax(0, 1fr) 92px;
   }
+}
+
+/* The profile pentagon (ProfileRadar). */
+.radar {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  margin: 0;
+}
+.radar svg {
+  width: 100%;
+  max-width: 380px;
+  height: auto;
+  overflow: visible;
+}
+.radarGrid {
+  fill: none;
+  stroke: var(--border);
+}
+.radarSpoke {
+  stroke: var(--border);
+}
+.radarSpokeOn {
+  stroke: var(--muted);
+}
+.radarRef {
+  fill: color-mix(in srgb, var(--muted-light) 22%, transparent);
+  stroke: var(--muted-light);
+  stroke-width: 1.5;
+}
+.radarCand {
+  fill: color-mix(in srgb, var(--accent) 22%, transparent);
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+circle.radarRef {
+  fill: var(--muted-light);
+}
+circle.radarCand {
+  fill: var(--accent);
+}
+.radarAxis {
+  cursor: pointer;
+  outline: none;
+}
+.radarAxis text {
+  fill: var(--muted);
+  font-size: 12px;
+  font-family: inherit;
+}
+.radarAxisOn text,
+.radarAxis:focus-visible text {
+  fill: var(--ink-strong);
+  font-weight: 600;
+}
+.radarHit {
+  fill: transparent;
+}
+.radarAxisOn .radarHit,
+.radarAxis:focus-visible .radarHit {
+  fill: var(--surface-subtle);
+  stroke: var(--border);
+}
+.radarValues {
+  font-variant-numeric: tabular-nums;
+}
+.radarRefText {
+  fill: var(--muted-light);
+}
+.radarCandText {
+  fill: var(--accent);
+}
+.radarLegend {
+  display: flex;
+  gap: 8px;
+}
+.radarLegend button {
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: var(--text-xs);
+  color: var(--ink);
+}
+.radarLegend button[aria-pressed="false"] {
+  opacity: 0.45;
+  text-decoration: line-through;
 }
