@@ -87,7 +87,15 @@ export function usePlayerReplacements(id, season, filters) {
   const url = enabled ? replacementUrl(id, season, filters) : "";
   const resource = useResource(
     `player-replacements:${url}`,
-    () => json(url).then((body) => body.data || null),
+    // A player without a profile of the season (too few minutes) has no neighbours: null.
+    () =>
+      json(url)
+        .then((body) => body.data || null)
+        .catch((error) =>
+          /\bHTTP 404\b/.test(error?.message || "")
+            ? null
+            : Promise.reject(error),
+        ),
     enabled,
   );
   return { ...resource, enabled };

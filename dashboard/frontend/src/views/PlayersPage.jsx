@@ -89,9 +89,11 @@ export default function PlayersPage() {
     [id, deferredFilters],
   );
   const overview = Boolean(id && !OTHER_PROFILE_VIEWS.includes(profileView));
+  // « Remplaçant » reads the directory's first page in Performances' order (its default
+  // reference is the first player there).
   const ranking = playerDirectoryRanking(
     f.filters,
-    !id && directoryView === "table",
+    !id && ["table", "replace"].includes(directoryView),
     f.compactMode,
   );
   const sort = PLAYER_RANKINGS[ranking]?.sort || manualSort;

@@ -340,6 +340,8 @@ export default function PlayerReplacements({ fallback }) {
         <div role="alert" className="notice notice-warning">
           {String(read.error)} <button onClick={read.retry}>Réessayer</button>
         </div>
+      ) : data === null ? (
+        <Empty>Pas assez de minutes cette saison pour ce joueur.</Empty>
       ) : !data ? (
         <Skeleton
           data-page-loading=""
