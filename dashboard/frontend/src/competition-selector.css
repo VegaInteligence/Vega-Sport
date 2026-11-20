@@ -37,9 +37,9 @@
   background: var(--surface-hover);
 }
 .league-spotlight-logo {
-  width: 26px;
-  height: 26px;
-  flex: 0 0 26px;
+  width: var(--media-28);
+  height: var(--media-28);
+  flex: 0 0 var(--media-28);
 }
 .league-spotlight-item > span:last-child {
   display: grid;
@@ -80,9 +80,9 @@
   border-radius: var(--radius);
 }
 .league-cup-button .crest {
-  width: 21px;
-  height: 21px;
-  flex: 0 0 21px;
+  width: var(--media-20);
+  height: var(--media-20);
+  flex: 0 0 var(--media-20);
 }
 .national-cup-picker {
   position: relative;
@@ -130,9 +130,9 @@
   gap: 10px;
 }
 .competition-detail-title > .crest {
-  width: 32px;
-  height: 32px;
-  flex: 0 0 32px;
+  width: var(--media-32);
+  height: var(--media-32);
+  flex: 0 0 var(--media-32);
 }
 .competition-detail-title > span:last-child {
   display: grid;
@@ -322,9 +322,9 @@
   font-weight: 500;
 }
 .competition-highlight-team .crest {
-  flex: 0 0 22px;
-  width: 22px;
-  height: 22px;
+  flex: 0 0 var(--media-24);
+  width: var(--media-24);
+  height: var(--media-24);
 }
 .competition-highlight-name {
   flex: 1;
@@ -474,7 +474,7 @@
 /* A cup edition's page: the competition, its edition between two arrows, the team followed and the views, on one row. */
 .edition-card > .card-body:first-child { padding-top: 12px; }
 .edition-head { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; margin: 0 -16px 12px; padding: 0 16px 12px; border-bottom: 1px solid var(--border); }
-.edition-logo { width: 26px; height: 26px; flex: 0 0 26px; }
+.edition-logo { width: var(--media-28); height: var(--media-28); flex: 0 0 var(--media-28); }
 .edition-name { margin: 0; color: var(--ink-strong); font-size: var(--text-lg); font-weight: 650; letter-spacing: -0.006em; white-space: nowrap; }
 /* The season reads like the views beside it: the same 2px frame, 26px controls and 12px text. */
 .edition-stepper { display: inline-flex; align-items: center; gap: 2px; padding: 2px; background: var(--surface-subtle); border: 0; border-radius: var(--radius); }
@@ -583,7 +583,7 @@
 .knockout-winner strong { font-weight: 700; }
 .knockout-loser { color: var(--muted); }
 .knockout-tag { position: absolute; top: -7px; right: 7px; padding: 0 5px; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 0; font-size: 9px; line-height: 12px; }
-.knockout-crest { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; flex: 0 0 18px; }
+.knockout-crest { display: inline-flex; align-items: center; justify-content: center; width: var(--media-20); height: var(--media-20); flex: 0 0 var(--media-20); }
 .knockout-crest img { width: 100%; height: 100%; object-fit: contain; }
 .knockout-legs { display: flex; gap: 10px; margin-top: 2px; color: var(--muted); font-size: var(--text-2xs); line-height: 16px; }
 .knockout-legs a { color: var(--muted); text-decoration: underline; text-underline-offset: 2px; }
@@ -642,7 +642,7 @@
 .cup-directory-card:hover { background: var(--surface-hover); border-color: var(--border-strong); }
 .cup-directory-card[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
 .cup-directory-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.cup-directory-crest { width: 32px; height: 32px; flex: 0 0 32px; }
+.cup-directory-crest { width: var(--media-32); height: var(--media-32); flex: 0 0 var(--media-32); }
 .cup-directory-fallback { display: grid; place-items: center; color: var(--muted); background: var(--surface-subtle); border-radius: var(--radius); }
 .cup-directory-fallback .icon { width: 16px; height: 16px; }
 .cup-directory-card-copy { display: grid; flex: 1; min-width: 0; gap: 4px; }
@@ -777,8 +777,8 @@
   position: relative;
 }
 .team-pitch-avatar .player-avatar {
-  width: 44px;
-  height: 44px;
+  width: var(--media-48);
+  height: var(--media-48);
 }
 .team-pitch-avatar .rating-pill {
   position: absolute;

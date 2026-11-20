@@ -65,9 +65,9 @@
   text-align: center;
 }
 .bigCrest {
-  width: 88px !important;
-  height: 88px !important;
-  flex-basis: 88px !important;
+  width: var(--media-96) !important;
+  height: var(--media-96) !important;
+  flex-basis: var(--media-96) !important;
 }
 .name {
   margin: 4px 0 0;
@@ -184,8 +184,8 @@
   color: var(--ink);
 }
 .comps li > :global(.crest) {
-  width: 22px;
-  height: 22px;
+  width: var(--media-24);
+  height: var(--media-24);
   flex: none;
 }
 .comps li span {
@@ -315,8 +315,8 @@
   border-left-color: var(--mq-series-2);
 }
 .versus :global(.crest) {
-  width: 40px;
-  height: 40px;
+  width: var(--media-40);
+  height: var(--media-40);
   flex: none;
 }
 .versus span {
@@ -344,8 +344,8 @@
   gap: 12px;
 }
 .similarHead :global(.crest) {
-  width: 36px;
-  height: 36px;
+  width: var(--media-40);
+  height: var(--media-40);
   flex: none;
 }
 .similarHead span {

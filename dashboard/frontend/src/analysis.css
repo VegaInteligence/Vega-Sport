@@ -71,13 +71,13 @@
   font-size: 60px;
 }
 .podium-avatar {
-  width: 64px;
-  height: 64px;
+  width: var(--media-64);
+  height: var(--media-64);
   border-radius: 50%;
 }
 .podium-gold .podium-avatar {
-  width: 80px;
-  height: 80px;
+  width: var(--media-96);
+  height: var(--media-96);
 }
 .podium-photo {
   display: flex;
@@ -200,8 +200,8 @@ a.rank-player:hover strong {
   color: var(--accent-dark);
 }
 .rank-avatar {
-  width: 28px;
-  height: 28px;
+  width: var(--media-28);
+  height: var(--media-28);
   border-radius: 50%;
 }
 .rank-avatar.rank-avatar-empty .icon {
@@ -209,8 +209,8 @@ a.rank-player:hover strong {
   height: 13px;
 }
 .rank-club .crest {
-  width: 18px;
-  height: 18px;
+  width: var(--media-20);
+  height: var(--media-20);
 }
 .rank-position,
 .rank-club {
@@ -310,8 +310,8 @@ a.rank-player:hover strong {
   }
   .podium-avatar,
   .podium-gold .podium-avatar {
-    width: 44px;
-    height: 44px;
+    width: var(--media-48);
+    height: var(--media-48);
   }
   .podium-score {
     display: block;
@@ -675,8 +675,8 @@ select optgroup {
   padding-right: 44px;
 }
 .pc-portrait {
-  width: 64px;
-  height: 64px;
+  width: var(--media-64);
+  height: var(--media-64);
   border-radius: 0;
   border: 1px solid var(--border-strong);
   background: var(--surface-subtle);
@@ -721,8 +721,8 @@ select optgroup {
 }
 .pc-club .crest,
 .pc-fixture .crest {
-  width: 18px;
-  height: 18px;
+  width: var(--media-20);
+  height: var(--media-20);
   flex-shrink: 0;
 }
 .pc-club .crest img,
@@ -1098,8 +1098,8 @@ select optgroup {
   font-weight: 600;
 }
 .scoreboard-meta .crest {
-  width: 22px;
-  height: 22px;
+  width: var(--media-24);
+  height: var(--media-24);
 }
 .scoreboard-meta .crest img {
   padding: 0;
@@ -1119,9 +1119,9 @@ select optgroup {
   min-width: 0;
 }
 .scoreboard-team > .crest {
-  flex: 0 0 64px;
-  width: 64px;
-  height: 64px;
+  flex: 0 0 var(--media-64);
+  width: var(--media-64);
+  height: var(--media-64);
   padding: 8px;
   border: 1px solid var(--border);
   border-radius: 0;
@@ -1621,8 +1621,8 @@ select optgroup {
   justify-self: end;
 }
 .stats-team .crest {
-  width: 28px;
-  height: 28px;
+  width: var(--media-28);
+  height: var(--media-28);
   flex-shrink: 0;
 }
 .stats-team strong {
@@ -1762,9 +1762,9 @@ select optgroup {
   background: var(--surface-hover);
 }
 .match-player-row .player-avatar {
-  flex: 0 0 30px;
-  width: 30px;
-  height: 30px;
+  flex: 0 0 var(--media-32);
+  width: var(--media-32);
+  height: var(--media-32);
 }
 .match-player-row .player-name {
   color: var(--ink-strong);
@@ -1790,8 +1790,8 @@ select optgroup {
   align-items: start;
 }
 .match-team-players .card-header .crest {
-  width: 32px;
-  height: 32px;
+  width: var(--media-32);
+  height: var(--media-32);
 }
 .match-section-toolbar {
   display: flex;
@@ -1896,8 +1896,8 @@ select optgroup {
   margin-bottom: 10px;
 }
 .match-detail .lineup-title .crest {
-  width: 32px;
-  height: 32px;
+  width: var(--media-32);
+  height: var(--media-32);
 }
 .match-detail .lineup-title strong {
   padding: 2px 8px;
@@ -1932,9 +1932,9 @@ select optgroup {
     gap: 12px;
   }
   .scoreboard-team > .crest {
-    flex-basis: 56px;
-    width: 56px;
-    height: 56px;
+    flex-basis: var(--media-64);
+    width: var(--media-64);
+    height: var(--media-64);
   }
   .scoreboard-team strong {
     font-size: 19px;
@@ -2041,8 +2041,8 @@ select optgroup {
     padding-right: 36px;
   }
   .pc-portrait {
-    width: 52px;
-    height: 52px;
+    width: var(--media-48);
+    height: var(--media-48);
     border-radius: 0;
   }
   .pc-identity h2 {
@@ -2153,8 +2153,8 @@ select optgroup {
     font-size: var(--text-sm);
   }
   .scoreboard-meta .crest {
-    width: 20px;
-    height: 20px;
+    width: var(--media-20);
+    height: var(--media-20);
   }
   .scoreboard-main {
     gap: 8px;
@@ -2164,9 +2164,9 @@ select optgroup {
     gap: 8px;
   }
   .scoreboard-team > .crest {
-    flex-basis: 44px;
-    width: 44px;
-    height: 44px;
+    flex-basis: var(--media-48);
+    width: var(--media-48);
+    height: var(--media-48);
     padding: 4px;
     border-radius: 0;
   }
@@ -2254,8 +2254,8 @@ select optgroup {
     font-size: var(--text-md);
   }
   .stats-team .crest {
-    width: 24px;
-    height: 24px;
+    width: var(--media-24);
+    height: var(--media-24);
   }
   .stats-possession,
   .stats-sections {
@@ -2560,9 +2560,9 @@ select optgroup {
   font-weight: 500;
 }
 .fixture-competition-crest {
-  width: 22px;
-  height: 22px;
-  flex: 0 0 22px;
+  width: var(--media-24);
+  height: var(--media-24);
+  flex: 0 0 var(--media-24);
 }
 .fixture-competition-copy {
   display: grid;
@@ -2609,8 +2609,8 @@ select optgroup {
   white-space: nowrap;
 }
 .fixture-team .crest {
-  width: 20px;
-  height: 20px;
+  width: var(--media-20);
+  height: var(--media-20);
   flex-shrink: 0;
 }
 .fixture-team .crest img {
@@ -2989,8 +2989,8 @@ select optgroup {
   flex: none;
 }
 .home-competition-option .crest {
-  width: 26px;
-  height: 26px;
+  width: var(--media-28);
+  height: var(--media-28);
   flex: none;
 }
 .home-competition-option > span:last-child {

@@ -51,8 +51,8 @@
   font-variant-numeric: tabular-nums;
 }
 .logo {
-  width: 22px;
-  height: 22px;
+  width: var(--media-24);
+  height: var(--media-24);
   object-fit: contain;
 }
 .name {

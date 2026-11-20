@@ -945,8 +945,8 @@
   background: var(--surface-hover);
 }
 .club-picker-options .crest {
-  width: 20px;
-  height: 20px;
+  width: var(--media-20);
+  height: var(--media-20);
 }
 .club-compare-heading {
   display: grid;
@@ -1298,8 +1298,8 @@
   text-overflow: ellipsis;
 }
 .context-opponent .crest {
-  width: 20px;
-  height: 20px;
+  width: var(--media-20);
+  height: var(--media-20);
 }
 .context-score {
   min-width: 46px;
@@ -1348,8 +1348,8 @@
   border-bottom: 0;
 }
 .context-players .player-avatar {
-  width: 28px;
-  height: 28px;
+  width: var(--media-28);
+  height: var(--media-28);
 }
 .context-players span {
   display: grid;

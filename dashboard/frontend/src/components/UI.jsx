@@ -10,9 +10,39 @@ import {
   number,
   safeImageUrl,
   mediaImageSource,
+  mediaInitials,
+  MEDIA_SIZES,
   title,
 } from "../services/format.js";
-export function Media({ name = "", url, fallbackUrl, className = "crest", initials = true }) {
+const MEDIA_CLASS = { player: "player-avatar", club: "crest" };
+/**
+ * A crest or portrait (dashboard/frontend/AGENTS.md, « Images »). `kind`: "player" (round,
+ * cover) or "club" (square, contain; competitions and nations too); without it, `className`
+ * decides as before. `size`: a side of MEDIA_SIZES, else the CSS of its place sets it.
+ * `label`: the name for screen readers when it is not written beside the image (true = `name`).
+ * Order: the image, then `fallbackUrl`, then initials; while an image loads, the shell only.
+ */
+export function Media({
+  name = "",
+  url,
+  fallbackUrl,
+  className,
+  kind,
+  size,
+  label,
+  initials = true,
+}) {
+  const person =
+    kind === "player" ||
+    (!kind && /(^|\s)player-avatar(\s|$)/.test(className || ""));
+  const base = MEDIA_CLASS[kind] || "";
+  const classes =
+    [
+      base && !(className || "").split(/\s+/).includes(base) ? base : "",
+      className ?? (base ? "" : "crest"),
+    ]
+      .filter(Boolean)
+      .join(" ");
   // Source changes remount the attempt state, including a deferred first reveal.
   return (
     <MediaSource
@@ -20,12 +50,93 @@ export function Media({ name = "", url, fallbackUrl, className = "crest", initia
       name={name}
       url={url}
       fallbackUrl={fallbackUrl}
-      className={className}
+      className={classes}
+      person={person}
+      size={MEDIA_SIZES.includes(size) ? size : undefined}
+      label={label === true ? name : label || ""}
       initials={initials}
     />
   );
 }
-function MediaSource({ name, url, fallbackUrl, className, initials }) {
+/** A club's crest from its read ({ name, imageUrl }). */
+export function ClubCrest({ club, ...props }) {
+  return (
+    <Media
+      name={club?.name || ""}
+      url={club?.imageUrl}
+      kind="club"
+      {...props}
+    />
+  );
+}
+/** A player's portrait from its read ({ name, imageUrl }). */
+export function PlayerAvatar({ player, ...props }) {
+  return (
+    <Media
+      name={player?.name || ""}
+      url={player?.imageUrl}
+      kind="player"
+      {...props}
+    />
+  );
+}
+/**
+ * Overlapping portraits or crests: a podium, a line of scorers. The overlap follows the size.
+ * `slots`: a fixed number of places, the empty ones dashed (a podium still to reveal);
+ * `limit`: at most that many images, then « +N ». Hidden from screen readers unless `label`
+ * names the group: the names are normally written beside it.
+ */
+export function AvatarGroup({
+  members = [],
+  kind = "player",
+  size = 28,
+  slots,
+  limit,
+  label,
+  className = "",
+}) {
+  const side = MEDIA_SIZES.includes(size) ? size : 28;
+  const extra = limit && members.length > limit ? members.length - limit : 0;
+  const shown = extra ? members.slice(0, limit) : members;
+  const empty = slots ? Math.max(0, slots - shown.length) : 0;
+  return (
+    <span
+      className={`avatar-group ${className}`.trim()}
+      data-avatar-group=""
+      style={{
+        "--avatar-size": `${side}px`,
+        "--avatar-overlap": `${Math.round(side * 0.3)}px`,
+      }}
+      {...(label
+        ? { role: "img", "aria-label": label }
+        : { "aria-hidden": "true" })}
+    >
+      {shown.map((member, index) => (
+        <Media
+          key={member.id ?? member.rank ?? index}
+          name={member.name}
+          url={member.imageUrl}
+          kind={kind}
+          size={side}
+        />
+      ))}
+      {Array.from({ length: empty }, (_, index) => (
+        <i key={`empty-${index}`} className="avatar-group-empty" />
+      ))}
+      {extra ? <span className="avatar-group-more">+{extra}</span> : null}
+    </span>
+  );
+}
+function MediaSource({
+  name,
+  url,
+  fallbackUrl,
+  className,
+  person,
+  size,
+  label,
+  initials,
+}) {
   const [failed, setFailed] = useState(false);
   const [directFailed, setDirectFailed] = useState(false);
   const [fallbackFailed, setFallbackFailed] = useState(false);
@@ -50,32 +161,36 @@ function MediaSource({ name, url, fallbackUrl, className, initials }) {
     <span
       ref={element}
       className={`${className} ${mediaStyles.media}${!initials && (!src || loaded !== src) ? " " + mediaStyles.empty : ""}`}
-      aria-hidden="true"
+      style={
+        size
+          ? { width: size, height: size, "--media-side": `${size}px` }
+          : undefined
+      }
+      {...(label
+        ? { role: "img", "aria-label": label }
+        : { "aria-hidden": "true" })}
       data-page-media=""
+      data-media-kind={person ? "player" : "club"}
+      data-media-size={size}
       data-media-state={
         !src ? "fallback" : loaded === src ? "ready" : "loading"
       }
     >
-      {initials && (loaded !== src || !src) ? (
+      {initials && !src ? (
         <span className={`image-fallback ${mediaStyles.fallback}`}>
-          {(typeof name === "string" ? name : "")
-            .split(/\s+/)
-            .filter(Boolean)
-            .slice(0, 2)
-            .map((x) => x[0])
-            .join("")
-            .toUpperCase() || "\u2014"}
+          {mediaInitials(name, { person })}
         </span>
       ) : null}
       {src ? (
         <MediaImage
           direct={src === direct}
           dimension={
-            /season-player-portrait|pc-portrait/.test(className)
+            size ||
+            (/season-player-portrait|pc-portrait/.test(className)
               ? 192
               : /home-avatar-xl/.test(className)
                 ? 96
-                : 64
+                : 64)
           }
           className={
             loaded === src ? mediaStyles.imageReady : mediaStyles.imagePending

@@ -71,28 +71,28 @@ html[data-theme="light"] {
   height: 14px;
 }
 .home-crest-xs {
-  width: 15px;
-  height: 15px;
+  width: var(--media-16);
+  height: var(--media-16);
 }
 .home-crest-md {
-  width: 28px;
-  height: 28px;
+  width: var(--media-28);
+  height: var(--media-28);
 }
 .home-crest-lg {
-  width: 64px;
-  height: 64px;
+  width: var(--media-64);
+  height: var(--media-64);
 }
 .home-avatar-sm {
-  width: 28px;
-  height: 28px;
+  width: var(--media-28);
+  height: var(--media-28);
 }
 .home-avatar-lg {
-  width: 48px;
-  height: 48px;
+  width: var(--media-48);
+  height: var(--media-48);
 }
 .home-avatar-xl {
-  width: 96px;
-  height: 96px;
+  width: var(--media-96);
+  height: var(--media-96);
 }
 .home-form {
   display: inline-flex;
@@ -1283,15 +1283,6 @@ html[data-theme="light"] {
 .home-bdo-peek > span {
   display: flex;
 }
-.home-bdo-peek .player-avatar {
-  width: 26px;
-  height: 26px;
-  margin-left: -8px;
-  box-shadow: 0 0 0 2px var(--surface);
-}
-.home-bdo-peek .player-avatar:first-child {
-  margin-left: 0;
-}
 .home-bdo {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
@@ -1546,8 +1537,8 @@ html[data-theme="light"] {
     font-size: 14px;
   }
   .home-crest-lg {
-    width: 44px;
-    height: 44px;
+    width: var(--media-48);
+    height: var(--media-48);
   }
   .home-score-value {
     gap: 6px;
@@ -1979,18 +1970,8 @@ html[data-theme="light"] {
 .home-toolbar .filter-season {
   flex: 0 0 140px;
 }
-.home-bdo-empty {
-  display: inline-block;
-  width: 26px;
-  height: 26px;
-  margin-left: -8px;
-  border: 1px dashed color-mix(in srgb, var(--gold) 55%, var(--border-strong));
-  border-radius: 50%;
-  background: var(--surface-subtle);
-  box-shadow: 0 0 0 2px var(--surface);
-}
-.home-bdo-empty:first-child {
-  margin-left: 0;
+.home-bdo-peek .avatar-group-empty {
+  border-color: color-mix(in srgb, var(--gold) 55%, var(--border-strong));
 }
 .home-trend-more {
   margin-top: auto;

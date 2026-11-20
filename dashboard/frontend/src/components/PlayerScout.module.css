@@ -47,9 +47,9 @@
   position: relative;
 }
 .identity :global(.season-player-portrait) {
-  width: 104px;
-  height: 104px;
-  flex-basis: 104px;
+  width: var(--media-96);
+  height: var(--media-96);
+  flex-basis: var(--media-96);
   border-radius: 50%;
 }
 .portraitCrest {
@@ -58,15 +58,15 @@
   bottom: 0;
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: var(--media-32);
+  height: var(--media-32);
   border-radius: 50%;
   background: var(--surface);
   box-shadow: 0 0 0 1px var(--border);
 }
 .portraitCrest :global(.crest) {
-  width: 22px;
-  height: 22px;
+  width: var(--media-24);
+  height: var(--media-24);
 }
 .rail .identity :global(.player-profile-name) {
   margin: 0;
@@ -258,9 +258,9 @@
   white-space: nowrap;
 }
 .floatingWho :global(.player-avatar) {
-  width: 36px;
-  height: 36px;
-  flex: 0 0 36px;
+  width: var(--media-40);
+  height: var(--media-40);
+  flex: 0 0 var(--media-40);
   border-radius: 50%;
 }
 .pos {
@@ -901,9 +901,9 @@
   font-variant-numeric: tabular-nums;
 }
 .marketClubCrest {
-  flex: 0 0 20px;
-  width: 20px;
-  height: 20px;
+  flex: 0 0 var(--media-20);
+  width: var(--media-20);
+  height: var(--media-20);
   color: var(--ink-strong);
   font-size: 9px;
   font-weight: 650;
@@ -1110,8 +1110,8 @@ p.similarIntro {
   align-items: center;
 }
 .similarHead :global(.player-avatar) {
-  width: 40px;
-  height: 40px;
+  width: var(--media-40);
+  height: var(--media-40);
   border-radius: 50%;
 }
 .similarName {
@@ -1293,8 +1293,8 @@ p.similarIntro {
   gap: 6px;
 }
 .chip :global(.crest) {
-  width: 14px;
-  height: 14px;
+  width: var(--media-16);
+  height: var(--media-16);
 }
 .valueRow {
   display: flex;
@@ -1532,8 +1532,8 @@ p.similarIntro {
   gap: 8px;
 }
 .cell :global(.crest) {
-  width: 18px;
-  height: 18px;
+  width: var(--media-20);
+  height: var(--media-20);
 }
 .compChips {
   display: flex;

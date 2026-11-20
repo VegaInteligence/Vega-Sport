@@ -1,6 +1,9 @@
 // FAILURE_MODES.md §22 (C6), written before the code: the club hero's plain image (ClubScoutUI.jsx Picture, Crest)
 // goes through the site's checked resolver like Media: a Vega reference is never fetched from its reserved host, an
 // image the gate refuses shows the initials.
+// Avatar rules (20 Nov 2026, preview): Picture and Crest are now Media itself. These tests check that they hand
+// Media the club's name and source, and that Media's own resolver and initials keep the guarantees above
+// (Media's rendering is covered by media-assets.test.mjs).
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
@@ -31,7 +34,11 @@ async function loadUI() {
     "next/link": { __esModule: true, default: ({ children, ...props }) => h("a", props, children) },
     "./Icon.jsx": { __esModule: true, default: () => null },
     "./ClubSkeleton.jsx": { __esModule: true, default: () => null },
-    "./UI.jsx": { Skeleton: () => null },
+    "./UI.jsx": {
+      Skeleton: () => null,
+      Media: ({ name, url, kind, label }) =>
+        h("span", { "data-media": JSON.stringify({ name, url: url ?? null, kind, label: label ?? null }) }),
+    },
     "./PhoneFold.jsx": { useCardFold: () => ({ section: {}, head: {}, part: "", button: null, wrap: (c) => c }) },
     "../hooks/FootballContext.jsx": { useFootball: () => null },
     "./PlayerScoutCharts.jsx": { PercentileBar: () => null, toneVar: () => "" },
@@ -58,9 +65,10 @@ const REFERENCE = `https://media.vega.invalid/sha256/${"a".repeat(64)}.png`;
 test("the club hero's crest resolves a Vega reference through /api/assets, never its reserved host", async () => {
   const { Crest } = await loadUI();
   const html = renderToStaticMarkup(h(Crest, { club: { name: "Churchill Brothers", imageUrl: REFERENCE } }));
-  assert.match(html, /<img/);
-  assert.ok(html.includes(`/api/assets?url=${encodeURIComponent(REFERENCE).replaceAll("%", "%")}`.replace(/&/g, "&amp;")), html);
-  assert.ok(!html.includes('src="https://media.vega.invalid'), html);
+  assert.ok(html.includes(JSON.stringify(REFERENCE).replaceAll('"', "&quot;")), html);
+  const src = format.mediaImageSource(REFERENCE);
+  assert.ok(src.includes(`/api/assets?url=${encodeURIComponent(REFERENCE)}`), src);
+  assert.ok(!src.startsWith("https://media.vega.invalid"), src);
 });
 
 // VI-30 V19 (FAILURE_MODES_VI30.md, written before the code): a failure belongs to one source. Picture is keyed by its
@@ -82,12 +90,11 @@ test("a new url is a new attempt: Picture's attempt is keyed by its source", asy
 });
 
 test("a provider image goes the same way; a refused source shows the initials", async () => {
-  const { Crest, Picture } = await loadUI();
+  const { Crest } = await loadUI();
   const pitch = renderToStaticMarkup(h(Crest, { club: { name: "Arsenal", imageUrl: "https://cdn.pitchapi.dev/images/teams/a.png" } }));
-  assert.ok(pitch.includes("/api/assets?url=https%3A%2F%2Fcdn.pitchapi.dev%2Fimages%2Fteams%2Fa.png"), pitch);
-  for (const url of ["https://evil.example/x.png", "javascript:alert(1)", `${REFERENCE}?x=1`, undefined]) {
-    const html = renderToStaticMarkup(h(Picture, { name: "Churchill Brothers", url }));
-    assert.doesNotMatch(html, /<img/, String(url));
-    assert.match(html, /CB/);
-  }
+  assert.ok(pitch.includes("cdn.pitchapi.dev/images/teams/a.png"), pitch);
+  assert.ok(format.mediaImageSource("https://cdn.pitchapi.dev/images/teams/a.png").includes("/api/assets?url=https%3A%2F%2Fcdn.pitchapi.dev%2Fimages%2Fteams%2Fa.png"));
+  for (const url of ["https://evil.example/x.png", "javascript:alert(1)", `${REFERENCE}?x=1`, undefined])
+    assert.equal(format.mediaImageSource(url), "", String(url));
+  assert.equal(format.mediaInitials("Churchill Brothers"), "CB");
 });

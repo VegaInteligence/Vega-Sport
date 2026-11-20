@@ -15,6 +15,17 @@
   --text-xl: 20px;
   --text-2xl: 28px;
 
+  /* Crest and portrait sides (MEDIA_SIZES, dashboard/frontend/AGENTS.md « Images »). */
+  --media-16: 16px;
+  --media-20: 20px;
+  --media-24: 24px;
+  --media-28: 28px;
+  --media-32: 32px;
+  --media-40: 40px;
+  --media-48: 48px;
+  --media-64: 64px;
+  --media-96: 96px;
+
   --radius-xs: 0;
   --radius-sm: 0;
   --radius: 0;

@@ -100,8 +100,8 @@
 .crest {
   display: inline-grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
+  width: var(--media-40);
+  height: var(--media-40);
   border: 1px solid transparent;
   border-radius: var(--radius);
   transition:
@@ -120,8 +120,8 @@
   background: var(--accent-pale);
 }
 .logo {
-  width: 28px;
-  height: 28px;
+  width: var(--media-28);
+  height: var(--media-28);
 }
 .none {
   color: var(--muted-light);

@@ -18,9 +18,9 @@
   min-width: 0;
 }
 .crest {
-  width: 64px !important;
-  height: 64px !important;
-  flex-basis: 64px !important;
+  width: var(--media-64) !important;
+  height: var(--media-64) !important;
+  flex-basis: var(--media-64) !important;
 }
 .identity h1 {
   margin: 0;

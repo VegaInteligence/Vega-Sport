@@ -84,8 +84,8 @@
   height: 92px;
 }
 .avatar {
-  width: 28px;
-  height: 28px;
+  width: var(--media-28);
+  height: var(--media-28);
   flex: none;
 }
 .record {

@@ -79,8 +79,8 @@
   padding-inline-start: 24px;
 }
 .player-season-group-table .player-history-crest {
-  flex-basis: 20px;
-  width: 20px;
+  flex-basis: var(--media-20);
+  width: var(--media-20);
   height: 18px;
 }
 .player-performance-season {
@@ -247,9 +247,9 @@
   font-weight: 400;
 }
 .player-career-identity .player-history-crest {
-  flex-basis: 18px;
-  width: 18px;
-  height: 18px;
+  flex-basis: var(--media-20);
+  width: var(--media-20);
+  height: var(--media-20);
 }
 .player-career-identity > span:last-child {
   overflow-wrap: anywhere;
@@ -364,12 +364,12 @@
   font-weight: 600;
 }
 .player-history-crest {
-  flex: 0 0 24px;
+  flex: 0 0 var(--media-24);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: var(--media-24);
+  height: var(--media-24);
 }
 .player-history-crest img {
   width: 100%;

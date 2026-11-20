@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import Icon from "./Icon.jsx";
 import { PhoneFoldToggle, usePhoneFold } from "./PhoneFold.jsx";
 import BallonDorIcon from "./BallonDorIcon.jsx";
-import { Media } from "./UI.jsx";
+import { AvatarGroup, Media } from "./UI.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { number } from "../services/format.js";
 import { kickoffFormatter } from "../services/fixtures.js";
@@ -583,20 +583,7 @@ export function BallonDorTeaser({ progress, ranking, raceOpen }) {
         </span>
       </span>
       <span className="home-bdo-peek">
-        <span>
-          {top
-            ? top.map((p) => (
-                <Media
-                  key={p.rank}
-                  name={p.name}
-                  url={p.imageUrl}
-                  className="player-avatar"
-                />
-              ))
-            : [1, 2, 3].map((rank) => (
-                <i key={rank} className="home-bdo-empty" aria-hidden="true" />
-              ))}
-        </span>
+        <AvatarGroup members={top || []} slots={3} size={28} />
         {top ? (
           <>
             En tête du classement :{" "}

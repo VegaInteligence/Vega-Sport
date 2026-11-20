@@ -57,8 +57,8 @@
   font-size: var(--text-xs);
 }
 .avatar {
-  width: 36px;
-  height: 36px;
+  width: var(--media-40);
+  height: var(--media-40);
   box-shadow: 0 0 0 2px var(--c);
   border-radius: 50%;
 }

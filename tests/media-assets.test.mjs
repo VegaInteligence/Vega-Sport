@@ -643,7 +643,9 @@ test("decode rejection reports an error after releasing the permit", async () =>
   );
 });
 
-test("Media displays initials until image load has decoded", async () => {
+// Loading is not absence: initials are only for an image that is missing (Geist's rule,
+// 20 Nov 2026). While the image loads, Media shows its neutral shell, no letters.
+test("Media shows its neutral shell, not initials, until image load has decoded", async () => {
   await imageComponent(
     async ({ render, commit }) => {
       const props = {
@@ -653,7 +655,7 @@ test("Media displays initials until image load has decoded", async () => {
       const pending = render(props);
       commit();
       assert.equal(pending.props["data-media-state"], "loading");
-      assert.match(pending.props.children[0].props.className, /image-fallback/);
+      assert.equal(pending.props.children[0], null);
       assert.equal(pending.props.children[1].props.className, "imagePending");
       pending.props.children[1].props.onLoad();
       const ready = render(props);
@@ -669,12 +671,11 @@ test("Media displays initials until image load has decoded", async () => {
 test("Media presents a neutral fallback when the name is unknown", async () => {
   await imageComponent(
     async ({ render, commit }) => {
-      const media = render({
-        name: "  ",
-        url: "https://cdn.pitchapi.dev/first.webp",
-      });
+      const media = render({ name: "  " });
       commit();
-      assert.deepEqual(media.props.children[0].props.children, ["—"]);
+      assert.equal(media.props["data-media-state"], "fallback");
+      assert.match(media.props.children[0].props.className, /image-fallback/);
+      assert.deepEqual(media.props.children[0].props.children, [""]);
     },
     { component: "Media" },
   );

@@ -3,7 +3,7 @@ import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Icon from "./Icon.jsx";
 import ClubSkeleton from "./ClubSkeleton.jsx";
-import { Skeleton } from "./UI.jsx";
+import { Media, Skeleton } from "./UI.jsx";
 import { useCardFold } from "./PhoneFold.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { PercentileBar, toneVar } from "./PlayerScoutCharts.jsx";
@@ -22,7 +22,6 @@ import {
   partOf,
   sumKnown,
 } from "../services/club-supported.js";
-import { safeImageUrl } from "../services/format.js";
 import s from "./ClubScout.module.css";
 
 export const clubStyles = s;
@@ -81,47 +80,33 @@ export function ClubEmptySeason({ dossier, played = 0 }) {
  * /api/assets, never from its reserved host; a refused one shows the initials.
  * A failure belongs to its source: a new url is a new attempt, as Media's (VI-30).
  */
-export function Picture(props) {
-  return <PictureAttempt key={props.url || ""} {...props} />;
-}
-
-function PictureAttempt({
+/** The club pages' image is the site's Media (lazy, queued, decoded before it shows). */
+export function Picture({
   name = "",
   url,
   className = "crest",
   round = false,
+  label,
 }) {
-  const [failed, setFailed] = useState(false);
-  const src = failed ? null : safeImageUrl(url) || null;
-  const initials = name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase();
   return (
-    <span
+    <Media
+      key={url || ""}
+      name={name}
+      url={url}
+      kind={round ? "player" : "club"}
       className={`${className} ${s.picture}`}
-      data-round={round || undefined}
-      aria-hidden="true"
-    >
-      {src ? (
-        <img
-          src={src}
-          alt=""
-          referrerPolicy="no-referrer"
-          onError={() => setFailed(true)}
-        />
-      ) : (
-        <span>{initials || "—"}</span>
-      )}
-    </span>
+      label={label}
+    />
   );
 }
 
-export const Crest = ({ club, className = "crest" }) => (
-  <Picture name={club?.name || ""} url={club?.imageUrl} className={className} />
+export const Crest = ({ club, className = "crest", label }) => (
+  <Picture
+    name={club?.name || ""}
+    url={club?.imageUrl}
+    className={className}
+    label={label}
+  />
 );
 
 /** `fold`: on a phone the card shows closed, its heading alone (PhoneFold). */
@@ -677,7 +662,7 @@ export function StyleSpectrum({
                     style={{ left: `${x}%`, top: 1 + lane * LANE_HEIGHT + (height - 2 - lanes.length * LANE_HEIGHT) / 2 }}
                     title={`${c.name} : ${formatMetric(axis.key, c.values[axis.key])}`}
                   >
-                    <Crest club={c} />
+                    <Crest club={c} label />
                   </span>
                 ))}
               <span
@@ -687,7 +672,7 @@ export function StyleSpectrum({
                 style={{ left: pos(value) }}
                 title={`${club.name} : ${formatMetric(axis.key, value)}`}
               >
-                <Crest club={club} />
+                <Crest club={club} label />
               </span>
             </div>
             <div className={s.spectrumEnds}>

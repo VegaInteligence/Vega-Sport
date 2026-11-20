@@ -363,8 +363,8 @@
   display: grid;
 }
 .markerAvatar {
-  width: 44px !important;
-  height: 44px !important;
+  width: var(--media-48) !important;
+  height: var(--media-48) !important;
   border: 2px solid;
   border-radius: 50%;
   background: var(--surface);
@@ -486,8 +486,8 @@
   font-weight: 650;
 }
 .subAvatar {
-  width: 32px !important;
-  height: 32px !important;
+  width: var(--media-32) !important;
+  height: var(--media-32) !important;
   border-radius: 50%;
 }
 .subWho {
@@ -531,8 +531,8 @@
 }
 @media (max-width: 760px) {
   .markerAvatar {
-    width: 30px !important;
-    height: 30px !important;
+    width: var(--media-32) !important;
+    height: var(--media-32) !important;
   }
   .marker {
     width: 62px;
@@ -600,8 +600,8 @@
   margin-top: 0;
 }
 .motmAvatar {
-  width: 76px !important;
-  height: 76px !important;
+  width: var(--media-64) !important;
+  height: var(--media-64) !important;
   border: 2px solid light-dark(#0f8a5f, #34d399);
   border-radius: 50%;
 }

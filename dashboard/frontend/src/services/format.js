@@ -23,6 +23,38 @@ export function safeImageUrl(value) {
     ? apiUrl(`/api/assets?url=${encodeURIComponent(new URL(value).href)}`)
     : "";
 }
+/** The sides a crest or portrait may take, in px (dashboard/frontend/AGENTS.md, « Images »). */
+export const MEDIA_SIZES = Object.freeze([16, 20, 24, 28, 32, 40, 48, 64, 96]);
+const SURNAME_PARTICLES = new Set(
+  "da das de del della der di do dos du la le mac st ten ter van von".split(
+    " ",
+  ),
+);
+const capital = (letter) => [...letter.toLocaleUpperCase("fr")][0];
+/**
+ * One or two capitals for an image that is missing: the first letter or digit of the first
+ * and last words (« Olympique de Marseille » → OM, « 1. FC Köln » → 1K). For a person, a
+ * capitalised particle before the surname counts (« Kevin De Bruyne » → KD, « Virgil van
+ * Dijk » → VD). "" when the name has no letter or digit: Media shows its neutral shell.
+ */
+export function mediaInitials(name, { person = false } = {}) {
+  if (typeof name !== "string") return "";
+  const words = name
+    .split(/\s+/)
+    .map((word) => ({ word, letter: word.match(/[\p{L}\p{N}]/u)?.[0] }))
+    .filter((part) => part.letter);
+  if (!words.length) return "";
+  let last = words.length > 1 ? words.at(-1) : null;
+  const particle = words.at(-2);
+  if (
+    person &&
+    words.length > 2 &&
+    SURNAME_PARTICLES.has(particle.word.toLowerCase()) &&
+    /^\p{Lu}/u.test(particle.word)
+  )
+    last = particle;
+  return capital(words[0].letter) + (last ? capital(last.letter) : "");
+}
 export function mediaImageSource(
   url,
   fallbackUrl,

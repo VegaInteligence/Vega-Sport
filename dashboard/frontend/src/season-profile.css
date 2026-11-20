@@ -170,9 +170,9 @@
   min-width: 0;
 }
 .season-player-portrait {
-  width: 64px;
-  height: 64px;
-  flex: 0 0 64px;
+  width: var(--media-64);
+  height: var(--media-64);
+  flex: 0 0 var(--media-64);
   border-radius: var(--radius-lg);
 }
 .season-player-identity h2 {
@@ -350,9 +350,9 @@
 }
 .performance-context-logo {
   display: inline-flex;
-  flex: 0 0 16px;
-  width: 16px;
-  height: 16px;
+  flex: 0 0 var(--media-16);
+  width: var(--media-16);
+  height: var(--media-16);
 }
 .performance-context-logo img {
   width: 100%;

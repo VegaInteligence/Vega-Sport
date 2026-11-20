@@ -160,9 +160,9 @@
     border-radius: 0;
   }
   .league-spotlight-logo {
-    flex-basis: 34px;
-    width: 34px;
-    height: 34px;
+    flex-basis: var(--media-32);
+    width: var(--media-32);
+    height: var(--media-32);
   }
   .league-spotlight-item > span:last-child {
     gap: 1px;

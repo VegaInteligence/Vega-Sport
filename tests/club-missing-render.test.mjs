@@ -77,7 +77,7 @@ const common = {
 const ui = await load("ClubScoutUI.jsx", {
   ...common,
   "./ClubSkeleton.jsx": { __esModule: true, default: () => null },
-  "./UI.jsx": { Skeleton: () => null },
+  "./UI.jsx": { Skeleton: () => null, Media: () => null },
   "./PhoneFold.jsx": { useCardFold: () => ({ section: {}, head: {}, part: "", button: null, wrap: (children) => children }) },
   "./PlayerScoutCharts.jsx": { PercentileBar: () => null, toneVar: () => "" },
   "./RankingDialog.jsx": { RankingTrigger: ({ children }) => children },

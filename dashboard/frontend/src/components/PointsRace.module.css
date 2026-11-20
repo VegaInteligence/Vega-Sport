@@ -176,8 +176,8 @@
 }
 .opponent :global(.crest) {
   flex: none;
-  width: 18px;
-  height: 18px;
+  width: var(--media-20);
+  height: var(--media-20);
 }
 .opponent b {
   overflow: hidden;
