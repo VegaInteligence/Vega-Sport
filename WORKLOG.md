@@ -44,3 +44,10 @@
 - No mock-up: the user named the change. E2E written first (`~/Agents/scratch/club-crests-20261120/e2e.mjs`): on production before the change 8/12 (1/31 and 1/132 crests, no crest on the axes); on the local build 12/12. Site suite: the 9 failures main has in this environment, no other.
 - Seen during the run: the production API answered 503 « DATA_UNAVAILABLE » on every route from at least 02:28 to 02:31 UTC, then a new publication (409 on stale local reads). Not caused here (no backend change); cause not traced (no AWS access).
 - Linear: not touched in this folder (rule in ~/.claude/CLAUDE.md).
+
+## Matchday banner, team-of-the-round pitch, club directory, issue rule — 20 Nov 2026
+
+- Asked: slimmer matchday banner (no « Calendrier de la compétition », no match/result counts), a pitch behind « Équipe de la journée », a club directory page that fills the viewport, and an AGENTS.md rule for issues.
+- Built: banner on one line (label + navigation, 52 px instead of ~120 px; navigation only on phones); half-pitch SVG with faint stripes behind the team; directory page size measured from the viewport in whole rows (40 at 1600×1000, 60 at 2000×1150, never under 24, so phones keep 24), one read at that size.
+- Rule (user's correction): new issues go to GitHub, not Linear; Linear's GitHub Issues sync creates the Linear issue; small fixes need no issue. The sync is off today (test issue #59 was not imported, then closed): the user turns it on in Linear → Settings → Integrations → GitHub.
+- No separate mock-up: the user named each change; approved on the local preview's screenshots. Evidence: scratchpad `evidence/README.md` (headless captures, results.json, rerun script). Site suite 803/803, build passes. Not checked: the « Suivants » button with the new page size, live window resize.

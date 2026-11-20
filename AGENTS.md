@@ -56,11 +56,14 @@ Use the [Vega Inteligence workspace](https://linear.app/vegainteligence), team *
 
 ### 3. If no overlapping issue exists
 
-- For substantial implementations, new features, major refactors, or complex bug fixes, create a Linear issue in the appropriate project.
-- Include the implementation scope, requirements, acceptance criteria, and relevant technical context, with the required repository labels.
-- Set its status to **In Progress** before beginning work. Record which agent or session owns the implementation and its branch or worktree when available.
+- For substantial implementations, new features, major refactors, or complex bug fixes, create a **GitHub issue** in the repository the work belongs to. Do not create new issues directly in Linear.
+- Linear's GitHub Issues sync creates the matching Linear issue in team **VI** and keeps title, description, status and comments in step. Find that imported issue, then give it the required repository labels and the right project.
+- If no Linear issue appears for a new GitHub issue, the sync is off for that repository: report it to the user. Do not create the Linear issue by hand.
+- Include the implementation scope, requirements, acceptance criteria, and relevant technical context in the GitHub issue.
+- Set the imported Linear issue to **In Progress** before beginning work. Record which agent or session owns the implementation and its branch or worktree when available.
 - Recheck active issues immediately before starting implementation to catch another agent claiming the same work. If an overlap has appeared, coordinate under the existing issue instead of proceeding independently.
-- For small, isolated changes or trivial fixes, no new Linear issue is necessary.
+- Close the GitHub issue from the commit or pull request that delivers it (`Fixes #<number>`); the sync closes the Linear issue.
+- For small, isolated changes or trivial fixes, no issue is necessary.
 
 ### 4. Keep Linear synchronized
 
