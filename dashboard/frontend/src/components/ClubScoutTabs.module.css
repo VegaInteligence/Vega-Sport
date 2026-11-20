@@ -50,6 +50,13 @@
   padding: 16px;
   border-top: 1px solid var(--border);
 }
+/* Back to the directory, at the top of the rail (sticky with it). */
+.railBack {
+  margin: 12px 16px 0;
+}
+.railBack + .identity {
+  padding-top: 10px;
+}
 .identity {
   display: grid;
   justify-items: center;

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { fmtNum, useBoxWidth } from "./ClubScoutUI.jsx";
+import { Crest, fmtNum, MatchRowLink, useBoxWidth } from "./ClubScoutUI.jsx";
 import s from "./PointsRace.module.css";
 
 // The club's points against its expected points (mock-up B, validated by the user on 20 Nov 2026): the two running
@@ -175,84 +175,65 @@ export function PointsRaceLines({ rows, height = 240 }) {
 }
 
 /** Each match, the points taken against the points its chances were worth. */
-export function PointsPerMatch({ rows, height = 128 }) {
-  // Drawn at the width shown: its text stays 10–11 px on a phone too.
-  const [ref, W] = useBoxWidth(640);
+/** Each match on its own row, as tall as a row of the table beside it (mock-up A, 20 Nov 2026): round, home or
+ * away, the opponent's crest and name, the score, the result, a 0–3 gauge filled to the points taken with the
+ * match's xPts as a tick, and the gap; the row opens the match. */
+export function PointsPerMatch({ rows }) {
   const data = rows.filter((r) => r.xpts != null);
   if (!data.length) return null;
-  const n = data.length,
-    m = { t: 10, r: 92, b: 24, l: 30 };
-  const band = (W - m.l - m.r) / n,
-    bar = Math.min(26, band * 0.55);
-  const y = (v) => m.t + (1 - v / 3) * (height - m.t - m.b);
   return (
-    <figure ref={ref} className={s.figure}>
+    <figure className={s.figure}>
       <figcaption className={s.title}>Match par match</figcaption>
-      <svg
-        viewBox={`0 0 ${W} ${height}`}
-        className={s.svg}
-        role="img"
-        aria-label="Points pris et points attendus de chaque match"
-      >
-        {[0, 1, 3].map((t) => (
-          <g key={t}>
-            <line
-              x1={m.l}
-              x2={W - m.r}
-              y1={y(t)}
-              y2={y(t)}
-              className={s.grid}
-            />
-            <text
-              x={m.l - 6}
-              y={y(t) + 3.5}
-              textAnchor="end"
-              className={s.axis}
-            >
-              {t}
-            </text>
-          </g>
-        ))}
-        {data.map((row, i) => {
-          const cx = m.l + band * (i + 0.5);
-          const result =
-            row.points === 3 ? s.win : row.points === 1 ? s.draw : s.loss;
+      <div className={s.rowsHead} aria-hidden="true">
+        <span>J</span>
+        <span>Adversaire</span>
+        <span>Score</span>
+        <span />
+        <span>Pts · xPts</span>
+        <span>Écart</span>
+      </div>
+      <ol className={s.rows}>
+        {data.map((row) => {
+          const round = rows.indexOf(row) + 1,
+            gap = row.points - row.xpts;
           return (
-            <g key={i}>
-              <title>
-                {`J${i + 1} · ${matchLabel(row)} · ${row.points} pts pour ${fmtNum(row.xpts, 2)} xPts`}
-              </title>
-              <rect
-                x={cx - bar / 2}
-                y={y(Math.max(row.points, 0.06))}
-                width={bar}
-                height={y(0) - y(Math.max(row.points, 0.06))}
-                className={result}
-              />
-              <line
-                x1={cx - bar / 2 - 4}
-                x2={cx + bar / 2 + 4}
-                y1={y(row.xpts)}
-                y2={y(row.xpts)}
-                className={s.xptsMark}
-              />
-              <text
-                x={cx}
-                y={height - 6}
-                textAnchor="middle"
-                className={s.axis}
-              >
-                J{i + 1}
-              </text>
-            </g>
+            <li key={row.match?.id || round}>
+              <MatchRowLink match={row.match} className={s.rowLink}>
+                <span
+                  className={s.row}
+                  data-match-row=""
+                  data-points={row.points}
+                  data-xpts={row.xpts}
+                  title={`J${round} · ${matchLabel(row)} · ${row.points} pts pour ${fmtNum(row.xpts, 2)} xPts`}
+                >
+                  <span className={s.round}>J{round}</span>
+                  <span className={s.opponent}>
+                    <small>{row.side === "home" ? "dom." : "ext."}</small>
+                    <Crest club={row.opponent} />
+                    <b>{row.opponent.name}</b>
+                  </span>
+                  <span className={s.score}>
+                    {row.gf}–{row.ga}
+                  </span>
+                  <b className={s.result} data-r={row.result}>
+                    {row.result}
+                  </b>
+                  <span className={s.gauge} data-gauge="">
+                    <span data-fill="" style={{ width: `${(row.points / 3) * 100}%` }} />
+                    <i data-tick="" style={{ left: `${(row.xpts / 3) * 100}%` }} />
+                  </span>
+                  <span className={s.gap} data-gap="" data-down={gap < 0 || undefined}>
+                    {fmtNum(gap, 1, true)}
+                  </span>
+                </span>
+              </MatchRowLink>
+            </li>
           );
         })}
-      </svg>
+      </ol>
       <figcaption className={s.caption}>
-        <span className={s.keyWin}>Victoire</span>
-        <span className={s.keyDraw}>Nul</span>
-        <span className={s.keyLoss}>Défaite</span>
-        <span className={s.keyMark}>xPts du match</span>
+        <span className={s.keyFill}>Points pris (sur 3)</span>
+        <span className={s.keyTick}>xPts du match</span>
       </figcaption>
     </figure>
   );

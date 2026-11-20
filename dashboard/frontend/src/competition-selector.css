@@ -474,14 +474,15 @@
 /* A cup edition's page: the competition, its edition between two arrows, the team followed and the views, on one row. */
 .edition-card > .card-body:first-child { padding-top: 12px; }
 .edition-head { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; margin: 0 -16px 12px; padding: 0 16px 12px; border-bottom: 1px solid var(--border); }
-.edition-logo { width: 34px; height: 34px; flex: 0 0 34px; }
-.edition-name { margin: 0; color: var(--ink-strong); font-size: var(--text-xl); font-weight: 700; letter-spacing: -0.01em; white-space: nowrap; }
-.edition-stepper { display: inline-flex; align-items: center; background: var(--surface-subtle); border: 1px solid var(--border); border-radius: var(--radius); }
-.edition-stepper button { width: 30px; height: 32px; padding: 0; color: var(--muted); background: none; border: 0; font-size: 16px; line-height: 1; cursor: pointer; }
+.edition-logo { width: 26px; height: 26px; flex: 0 0 26px; }
+.edition-name { margin: 0; color: var(--ink-strong); font-size: var(--text-lg); font-weight: 650; letter-spacing: -0.006em; white-space: nowrap; }
+/* The season reads like the views beside it: the same 2px frame, 26px controls and 12px text. */
+.edition-stepper { display: inline-flex; align-items: center; gap: 2px; padding: 2px; background: var(--surface-subtle); border: 0; border-radius: var(--radius); }
+.edition-stepper button { width: 24px; height: 26px; padding: 0; color: var(--muted); background: none; border: 0; border-radius: var(--radius-sm); font-size: 14px; line-height: 1; cursor: pointer; }
 .edition-stepper button:disabled { opacity: 0.3; cursor: default; }
 .edition-stepper button:not(:disabled):hover { color: var(--ink-strong); }
 .edition-stepper button:focus-visible, .edition-stepper select:focus-visible, .edition-followed:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.edition-stepper select { height: 32px; padding: 0 6px; color: var(--ink-strong); background: var(--surface-subtle); border: 0; border-inline: 1px solid var(--border); border-radius: 0; font-size: var(--text-lg); font-weight: 700; font-variant-numeric: tabular-nums; cursor: pointer; }
+.edition-stepper select { height: 26px; min-height: 26px; padding: 0 8px; color: var(--ink-strong); background: transparent; border: 0; border-radius: var(--radius-sm); font-size: var(--text-sm); font-weight: 500; font-variant-numeric: tabular-nums; cursor: pointer; }
 .edition-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-left: auto; }
 .edition-followed { display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 10px; color: var(--ink-strong); background: var(--accent-soft); border: 1px solid var(--accent-line); border-radius: 0; font-size: var(--text-sm); font-weight: 600; cursor: pointer; }
 .edition-followed span:last-child { color: var(--muted); font-weight: 400; }
@@ -500,8 +501,12 @@
 .edition-group .cup-match-team > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .edition-groups + .nations-note { margin: 12px 0 0; }
 .edition-group .edition-own > * { background: var(--accent-soft); }
+@media (max-width: 640px) {
+  .edition-stepper { padding: 0; }
+  .edition-stepper button { width: 36px; height: 44px; }
+  .edition-stepper select { height: 44px; min-height: 44px; }
+}
 @media (max-width: 860px) {
-  .edition-name { font-size: 18px; }
   .edition-tools { width: 100%; margin-left: 0; }
   .edition-tools .segmented-control { display: flex; flex: 1; }
   .edition-tools .segmented-control button { flex: 1; }
