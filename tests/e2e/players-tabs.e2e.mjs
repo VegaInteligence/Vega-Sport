@@ -16,6 +16,7 @@
 //  R4 Sort « Note »: the candidates' notes are in descending order.
 //  R5 Selecting a candidate fills the comparison: « <ref> → <candidate> », age / value / note
 //     deltas, and « Voir la fiche » links to /joueurs?id=<candidate id>.
+//  R7 « Comparer » in the comparison puts the candidate in the comparison tray (button pressed).
 //  R6 Changing the reference (search a name, pick it) updates the URL's `replace` and the list.
 //  F1 En forme « En hausse »: rows sorted by gap, every gap > 0, each with a 10-match curve.
 //  F2 « En baisse »: every gap < 0, steepest first.
@@ -133,6 +134,11 @@ try {
   check("R5", `comparison names ${picked.name}, link to its page`, `${panelText.split("\n")[0]} · ${href}`,
     panelText.includes(picked.name) && href?.includes(`id=${picked.id}`));
   await shot(page, "replace-selected-desktop");
+  const compare = panel.getByRole("button", { name: new RegExp(`^Comparer ${picked.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`) });
+  await compare.click();
+  await page.waitForTimeout(300);
+  const pressed = await panel.getByRole("button", { name: new RegExp(`^Retirer ${picked.name.split(" ")[0]}`) }).getAttribute("aria-pressed").catch(() => null);
+  check("R7", "Comparer pressed after the click", `aria-pressed=${pressed}`, pressed === "true");
   const before = new URL(page.url()).searchParams.get("replace");
   await page.getByRole("combobox", { name: "Joueur à remplacer" }).fill(picked.name.split(" ").at(-1));
   await page.getByRole("listbox").getByRole("option").first().click();

@@ -16,7 +16,7 @@ import {
   usePlayerReplacements,
   VALUE_FILTERS,
 } from "../services/player-replacements.js";
-import { BookmarkButton } from "./ResearchUI.jsx";
+import { BookmarkButton, ComparePlayerButton } from "./ResearchUI.jsx";
 import { Empty, Grade, Media, Skeleton } from "./UI.jsx";
 import s from "./PlayerReplacements.module.css";
 
@@ -253,6 +253,14 @@ function Comparison({ reference, candidate, season, inline = false }) {
         >
           Voir la fiche
         </Link>
+        <ComparePlayerButton
+          profile={{
+            id: candidate.id,
+            name: candidate.name,
+            imageUrl: candidate.image_url,
+          }}
+          season={season}
+        />
         <BookmarkButton
           kind="players"
           id={candidate.id}
