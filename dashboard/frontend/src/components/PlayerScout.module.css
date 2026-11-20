@@ -909,7 +909,8 @@
    as level bars with the rank at the position, the style tags across the foot. */
 .profileGrid {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  /* The radar's column as the club page's: the bars take the freed width. */
+  grid-template-columns: minmax(0, 480px) minmax(0, 1fr);
   gap: 28px;
   align-items: center;
 }
