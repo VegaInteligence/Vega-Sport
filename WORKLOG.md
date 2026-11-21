@@ -1,5 +1,78 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## No data in git — VI-45 (20–21 November 2026, done)
+
+- Goal: no data in the repository, history included. History rewritten without backup on the user's word, then force-pushed (every branch and the tag): old main 4844e92589 → 8f1b34522d, a clone drops from ~4.1 GB to 34 MB.
+- Removed: `data/`, `dashboard/data/`, `dashboard/outputs/`, `docs/verification/`, `parts/`, `handoff/`, `outputs/`, `dashboard/backend/schema-policies/`, non-.md files under `docs/audits/` (except the 3 read by backend tests). Kept: `backend/vega/sources/data`, `backend/tests/fixtures`, site images.
+- Local checkout, branches and worktrees realigned on the same commits; `.git` 4.8 GB → 36 MB; `.git/info/exclude` blocks the data paths.
+- Rules: never commit data or E2E evidence; never `git pull` from an old clone (re-clone); GitHub keeps the old objects behind 58 `refs/pull/*` until GitHub Support purges them.
+
+## Competition page: « Tous les joueurs » and Player of the Round crown — 20 November 2026
+
+- Goal: on a league's page, a « Tous les joueurs » button on « Joueur de la saison »; a crown on the Team of the Round's best grade (Player of the Round); explain why cups have neither card.
+- Why cups have none: `backend/vega/rounds.py` (MATCHES) takes league editions only (`cup_key IS NULL`, a row of `agg.league_levels`, regular stage). Probe 20 Nov: 53 of 56 leagues have rounds; 0 of 45 cups, and none of the Champions/Europa/Conference League.
+- Mock-up (local, repo untouched): scratchpad worktree `rounds-wt` on origin/main 4844e92589, launch entry `rounds-preview` (port 3034). Button in the card header, same style as « Voir tout »; it opens a new « Joueurs » view (after Projection) with the whole race (same note as the card), 20 per page, round select; crown in `--gold` above the avatar. Ranks 11+ approximated in the mock-up (the API keeps 10). Evidence: scratchpad `rounds-evidence/README.md`.
+- Needed if approved: the worker keeps the whole race (RACE_KEPT 10 → every eligible player), API serves it paged; frontend as mocked. Cups only if the user asks (European league phases first).
+- Linear: no overlapping In Progress issue (VI-19 cup predictions, VI-30 cup crests are different scopes). Create one (repo:vega-sport) once approved.
+- 20 Nov: approved (« Oui, valide »), cups left out. Built in scratchpad worktree `vi44-wt` as [VI-44](https://linear.app/vegainteligence/issue/VI-44): whole race kept, `race=all` + `raceTotal` in the API, Joueurs view, crown. Site 816/816, API 254/254, Python 44/44, E2E 23/23 before deploy. Not pushed. Issue was created in Linear directly from this stale AGENTS.md; main now asks for a GitHub issue first.
+- Next action: the user's go to push main and deploy (API and worker first), then the public E2E.
+
+## Note Vega vs Score Vega: overlap review — 20 November 2026
+
+- Goal: the user finds the season grade (Note Vega) and the Score Vega overlap, and doubts Griezmann (Orlando) at rank 16. Research only: unify or differentiate. No code, no method change.
+- Read-only, public API, 20 Nov 15:10 run (power-ranking-v8). Data in the session scratchpad.
+- Overlap: index ≈ own play + club level (R² 0.94, near-equal weights); season grade z vs own play r = 0.87. The score contains the grade. Across players they still diverge (r = 0.44 on the 1,932 eligible men with score ≥ 49.5; 17 of the top 50 shared).
+- Griezmann: club level ≈ 0 (+0.06/90 vs Real +0.73); rank comes from own play 0.83/90 and 1,510 minutes (3rd most of the top 200). By total he is 13th of the top 173, by regularised rate 41st, by raw rate 64th (crude, across roles). 73 % of his own play is creation/progression/retention judged against centre forwards (same at Atlético: finishing 4th percentile in 2024/2025, rank 23).
+- Recommendation given: one season number (Score); the grade stays a match object (match, recent form, average on the sheet). Score fixes to measure read-only before any change: playing-time/calendar effect of the 75 % total, role of hybrid forwards, κ (user's call).
+- Linear: no issue created (research). VI-21 (calculation audit) is In Progress elsewhere: coordinate there before any method change.
+- Simulated read-only on the base (20 Nov, evidence `~/Agents/scratch/vega-score-sim-20261120/`), ranks among the 3,851 eligible men of measured leagues (Griezmann 15th there):
+  - Total vs rate weights: 50/50 → 19th, rate only → 43rd, total per team match → 36th. On 2024 and 2025 (index on 20 Nov → rest of the year) every weighting predicts the same (0.795 vs 0.796): a product choice, not a correction.
+  - Level share .60 / .70 / .80 (κ 0.80 / 1.00 / 1.31) → 26th / 49th / 99th. The validation cannot settle it (its target contains the level).
+  - Role: his centre-forward matches read as an attacking midfielder's → 211th (he keeps 0.51 of 0.83 per 90; Mbappé 0.05 of 0.63). The role is the largest lever.
+  - Blocks: the weights announced are not the ones that separate players over a season. Goalkeepers: saves 21–31 % for 60 % announced, distribution 66–76 % for 15 %. Cause: saves and finishing hardly repeat from match to match (odd/even matches 0.04 and 0.2), passing does (0.8). Naive rebalancing overshoots (saves 86 %): needs a design.
+  - Grade vs score on the whole population: r 0.72, 0.83 inside one league, grade vs own play 0.95.
+- Correction to the first answer: playing time is not the main cause; the role is.
+- 20 Nov, later: the user asked for a global redesign of the score as a quant study ([VI-42](https://linear.app/vegainteligence/issue/VI-42), In Progress, this session). Fable advisor consulted (read-only). Study run read-only (`study.py`, task 241e72735757457d9b0096cc6d3d3599, diagnose revision 427; evidence in the same scratch folder):
+  - What a block is worth for results (25,511 matches 2024–2025, tested on 3,314 of 2026; rates read before the match): finishing 27.5 ± 5.8 Elo per unit of talent, creation 12.8 ± 3.0, progression 11.3 ± 2.3, defence 12.4 ± 4.2, retention 2.5 ± 1.8 (nothing). Keepers: nothing measurable. A weight per role is not better than one set for all outfield roles. Test log-likelihood: Elo −1.70096, v8 rate −1.69733, 9 blocks −1.69485, attack/defence apart on xG −1.69394.
+  - Noise: minutes that halve it go from ~200 (retention) to 3,500 (finishing) and 13,300 (shot-stopping); the score uses 450 for everything.
+  - Club level weight from 129 World Cup matches (club-only rates): κ = 0.60 ± 0.32, likelihood peak 0.5–0.65; κ = 0 and 0.13 rejected. The current 0.65 holds.
+  - Market values inside a role (11,116 players): v8 0.59; club level alone 0.73.
+  - Not done: raw-unit expectations and roles (the Griezmann effect lives there), written proposal. The user interrupted the turn after the study was launched.
+- 20 Nov, evening: the user asked for a coherent proposal for every position, with advanced statistics. Done, nothing shipped: [docs/calculs/10-score-vega-v9/01-proposition.md](docs/calculs/10-score-vega-v9/01-proposition.md) (untracked, not committed). Final run `study9.py` (diagnose revision 437, task f497f33dc3ef4099989974e46d49768f); two Fable advisor passes.
+  - Corrections to the afternoon's figures: the first block weights (finishing 27.5 …) came from a design that leaked the club's form. Clean design (today's eleven vs the usual eleven, both valued the same day): defence 7.6 ± 1.7, creation 5.8, finishing 5.5, progression 4.5, retention 0.1 ± 1.9 Elo per sd of line-up.
+  - Learning 20–35 weights from results generalises worse than one coefficient on a composite (four architectures tried).
+  - v9 stage 1: per-block noise (λ 218 to 3,440; keeper stops 13,291), weights honoured in talent sd, retention out (a choice), one E for every outfield role (9.1 Elo/unit), start share (13.4 Elo), keeper = goals prevented at 163 Elo per goal, club term ψ (19 ± 11 on World Cup 2026; range 10–36), one 0–100 curve for all roles, three reads (match, season, level).
+  - Validation vs v8 (paired, ×1e5 per match): +71 ± 27 on 13,641 matches of 2025/2026, −27 ± 50 on the 3,315 test matches. Market value at equal club level: 0.14 → 0.24. Not shown to predict better on the test.
+  - Side finding for the forecast owner: lineup-v1's E = 45 mixes team form in; the club's usual-eleven sum of own rates is worth 23.8 ± 1.7 Elo per sd (test gain 0.0088 per match).
+  - Diagnose task revisions 427–437 were registered for these runs (read-only scripts); one duplicate task was stopped.
+- Next action: the user decides ψ and whether retention stays; then build v9 beside v8 (no replacement) and a private comparison page.
+- User input (20 Nov, after the proposal): one grade per position per player, season level = minutes-weighted mean of the position levels; a base position, a second one acquired after some minutes, one-off positions not judged; an outfield player in goal not counted; fix the support striker "with maths"; simulate it.
+- Simulated read-only the same evening (three runs, `~/Agents/scratch/vega-score-sim-20261120/study10*.py`, results in § 11 of the proposal). Design after a Fable review: eight roles (winger / central attacking midfielder split on the slot's place 4–6 in rows 8–9), acquisition at 450 minutes over two seasons, non-acquired matches dropped, talent pooled across a player's positions (covariance measured: neighbours 0.70–0.88, distant 0.20–0.78), front-two forwards read on six style shares by a two-class mixture and judged as a central attacking midfielder for their probability of being the support striker.
+- Results at club weight 24: per-position reading barely moves the top (Yamal, Olise, Kane, Rice, Mbappé within one rank); Griezmann v8 16 → proposal 295 → 847 of 3,881 (566 at weight 10); Julián Álvarez 59 → 148 (48 % support, a borderline case). Check: next-season block rates at an acquired second position are predicted better than by the main-role reading (squared error +0.160 ± 0.024, 634 players); market-value and year-to-year agreement unchanged.
+- Tried and set aside: the style reading on every centre-forward slot (false nines). Classification is right (Dembélé 0.97, Kane 0.00) but attacking-midfielder weights sink scorers (Mbappé 5 → 35).
+- Found on the way: 3,415 player-matches of 729 outfield players in 2025/2026 are filed as goalkeeper with no keeper statistics (Challenger Pro League 1,822, a Serie A 1,566); v8 counts them as keeper matches. Separate fix proposed, not started.
+- Git: history rewritten by another session (VI-45, 20 Nov) and the local checkout realigned on it; the proposal and these notes were committed to main on 21 Nov (worklog merged with main's). Check `git status -sb` against origin/main before any commit; never merge the old history; never commit data.
+- Next action: the user decides ψ (10 / 24 / 36), whether retention stays, and whether § 11 enters the proposal as written (threshold 450, front twos only). Then build v9 beside v8 and a private comparison page (mock-up first).
+
+## Navigation review — 20 November 2026
+
+- Goal: rethink how the site is used, starting from the navbar. Mock-ups first; no frontend code until the user picks a direction.
+- Mock-ups: [Navigation Vega](https://claude.ai/artifact/ErLsxVj8Emn4RcaXUiFrMM), desktop and iPhone 16 for the current bar and four directions: A menus par usage, B recherche d'abord, C barre latérale, D par compétition. Every existing page stays reachable in each one.
+- Decision: the user prefers A and C and asked for a local version of both. [VI-41](https://linear.app/vegainteligence/issue/VI-41) In Progress.
+- Local preview: scratchpad worktree `nav-wt` (detached on origin/main 1f30718fb9), launch entry `nav-preview` on port 3030, `?nav=a` / `?nav=c` or the A | C switch in the header. Repo untouched. Rapport stays out of the menus (needs an id). C's pins are not built.
+- Evidence: scratchpad `nav-evidence/README.md` (desktop, 1024 px, iPhone 16 and 16 Pro Max).
+- Feedback (20 Nov): A is better today; the user likes C. Asked to centre C's search, and for a B = A's header plus a sidebar holding the page's filters instead of the page body. Both built in the preview (switch now A | B | C).
+- B: `SideFilters` portals each page's filters into Layout's `#filter-side` at ≥1100 px (Joueurs, Calendrier, Accueil, Clubs, Compétitions directory, Power Ranking, players list ranking/calculation; table actions stay in the card). Below 1100 px and on phones the filters stay in the page.
+- Open point: on Accueil the sidebar holds only season + Top 7.
+- Feedback (20 Nov): a sidebar with only filters is useless; it needs a real purpose. Reference shared: an instrument-panel dashboard where the sidebar shows the state of the selected object and a timeline of events.
+- Proposal mock-up: [Barre latérale Vega](https://claude.ai/artifact/TLiedfQ97F1d1AKaYisnMG). Default tab « Contexte » = state readouts + timeline of what the page shows (championship: state, projection, matchday; club: Elo, form, next match odds, season timeline; match: state, probabilities, events; players list: the clicked player's sheet). Filtres / Comparer (existing basket) / Suivis (existing saved lists) as tabs. Phone: a context bar above the tab bar opens it as a sheet. Figures in the mock-up are illustrative. Validated: user asked to integrate it into B only.
+- Built in the preview (B only): `BSide` (tabs Contexte / Filtres / Comparer / Suivis, column ≥ 1100 px, context bar + sheet below), `SideContext` blocks, `SideContexts` panels (Ligue/competition, club, match, hovered player) mounted through `OnlyB` so A and C make no extra reads, `SideStores` (comparison basket, saved lists). Panels reuse the pages' cached reads. Club Elo has no history (no curve); live match « now » needs the live feed (off).
+- Checked headless: Ligue 1, 1. FC Köln, upcoming and finished match, hover on Joueurs, Comparer, iPhone sheet, A unchanged, no console errors. Evidence in scratchpad `nav-evidence/b-context/`.
+- Clean-up (user: no fact shown twice in B): on wide screens the page's own side column moves into the sidebar (competition highlights column; club identity rail, wrapped in the chart colour scope), the panel adds only what the page lacks (league projection, hidden on the Projection tab; club Elo; match events; upcoming match forecast unless on Avant-match; players' stats outside the table's columns). Research comparison tray hidden in B. Empty tabs hidden. Phone B keeps the page as is; the sheet adds only the extras.
+- Header menus of A and B open on mouse hover (180 ms close delay), click kept for touch and keyboard. Evidence: `nav-evidence/b-clean/`, `nav-evidence/hover/`.
+- Shared preview (user's choice, to get a friend's opinion): branch `preview/vi-41-navigation` (f822c86384 since the VI-45 history rewrite, same content; main untouched, no CI or auto-deploy for that branch) built as a Vercel preview of project `vega` (dpl_Z2RvbjwgLcUxYLc8ZAwLNiWELN3Y). Previews sit behind Vercel login: the friend uses a 23-hour share link. Delete the branch once a navigation is chosen.
+- Next action: user compares A, B and C locally and picks; then port to main, drop the switch, re-run the phone checks.
+
 ## Règles d'avatar : blasons et portraits — VI-43 / #63 (20 novembre 2026, clos)
 
 - Demande : comparer le site avec la page Avatar de Geist (Vercel), « pas dans le design, dans les recommandations et outils », puis un aperçu local des 7 points. Direction validée par l'utilisateur (« Oui, je valide ») sur la [page de revue](https://claude.ai/artifact/1hAC7P6aYWjfRXAui5LTAD).
@@ -193,3 +266,36 @@
 - Asked: same header structure for leagues and cups. Mock-ups (one-row header; then breadcrumb, season timeline, identity rail) were not kept: the user chose the current Champions League header, with a name in scale with the site, for every competition, then the season selector at the size of the view buttons.
 - Built: leagues and the Nations League use `EditionHeader` (crest, name, season ‹ ›, views on the right); the « Saison de compétition » block is gone. Name 15 px / 650 (was 20 px / 700), crest 26 px; the season selector is the views' frame (30 px, 26 px controls, 12 px / 500); on phones both are 44 px tall, the field keeping the site's 16 px.
 - Validated: six pages (Serie A, Ligue 2, Champions League, Coupe de France, Coupe du monde, Ligue des nations) show one `.edition-head` and no old block, 49 px on desktop; ‹ on Serie A gives 2025/2026; no horizontal scroll on phones. Site suite 803/803, build passes. Evidence: scratchpad `heads-after/README.md`.
+
+## Provider and competition workbook
+
+- Goal: deliver an Excel inventory of Vega-Sport data providers, competition and edition coverage, source metrics and Vega calculations.
+- Scope: read public production catalogues, the 17 November database audit and current main contracts. Publish the verified workbook under `docs/` on `main`. No application or database changes.
+- Direction: cross-reference metrics by provider, list competitions and seasons per source, and distinguish catalogue entries, observed coverage and optional adapters.
+- Result: delivered and verified the workbook with 334 metric rows, 130 competition families, 34 Vega calculations and provider-level coverage. Production catalogues confirm 77 PitchAPI and 30 Open Matchday competitions. Archive and cup counts are dated audit observations.
+- Artifact: /Users/lemonnierhugo/.codex/visualizations/2026/11/18/01a1ef60-edae-7a93-bb31-248d6b3186e5/outputs/01a1ef60-edae-7a93-bb31-248d6b3186e5/Vega Sport Data Coverage.xlsx
+- Validation: verified the saved XLSX, filters, freeze panes, sheet and edition counts, and representative provider and Computed cells. Reviewed previews. Coverage per match and optional odds ingestion remain unverified.
+- Published: `docs/vega-sport-data-coverage.xlsx` in `5a2dca451227c54a76f529c0403d44a10c3d841d`. Fetched origin and verified the remote workbook is byte-identical to the original. Used an isolated worktree to preserve local changes.
+- Next action: complete.
+
+## Previous audit — 2026-11-16
+
+- Goal: validate VI-11–VI-15 against current Vega-Sport code and deployed player workflows, then update Linear with proven completion and remaining work.
+- Constraints: user explicitly prohibited coding. No more script or application implementation; use existing evidence and read-only checks, then update Linear. Preserve requirements, labels, ownership and other agents' work; no production data/infrastructure changes.
+- Coordination: VI-17 is In Progress in the v2-complete worktree for player/club layout changes; this audit uses the main checkout and read-only live requests. Avoid its implementation scope.
+- Direction: capture issue criteria/current versions; inspect data path; run bounded real API and desktop/mobile browser workflows; retain reproducible evidence; obtain independent Fable review and update Linear.
+- Delegation: Opus audit worker terminated on the user's no-code instruction (run 20261116T192819Z-code-150e0179, interrupted, process group terminated). Its result is incomplete and not treated as validation. No further implementation batch or delegation is planned.
+- Progress: existing production API→browser workflows checked on desktop and mobile for Lamine Yamal. Profile facts, market chart and ten injury records render; nationality/agent are missing, profile market contract differs, one injury type is null, and full suspension/coverage/retention acceptance is incomplete. No application code changed. Audit scripts created outside the repo before the stop remain evidence only.
+- Evidence: /Users/lemonnierhugo/.codex/visualizations/2026/11/16/01a1e592-4e7f-76c0-9f14-308d1027bc18/player-data-validation
+- Completion: VI-11–VI-15 now have verified/done-part and remaining-work checklists plus validation comments. All five remain Backlog because full acceptance is unmet; original requirements, owners, labels, projects and parent relationships read back unchanged.
+- Shared evidence: [Linear validation report and uploaded reproducibility archive](https://linear.app/vegainteligence/document/vi-11-vi-15-validation-production-et-ecarts-16-novembre-2026-e5150210a663). Desktop and completed mobile runs each recorded 10 conforming observations and four criteria gaps; the initial mobile timeout is preserved as incomplete.
+- Next action: audit complete. No coding or corrections are authorized for this task; wait for the user's next instruction.
+
+## Account and paywall exploration — 18 November 2026
+
+- Goal: document proposed access by page and tab for Free visitor, Free with Neon account, Plus and Pro. The user requested Markdown only, covering all surfaces, including clubs.
+- Deliverable: [detailed tier matrix](/Users/lemonnierhugo/.codex/visualizations/2026/11/18/01a1ef63-7960-7820-be52-e838580f9572/Vega-Sport-Free-Plus-Pro.md). It covers 13 public routes and 83 access rows, including the player, club, match and nation tabs. The mockups were moved to Trash at the user's request.
+- Baseline: matched labels against upstream main at fc0deba100. Moving the existing index editor, full similarity and technical report into paid tiers remains a proposed product decision.
+- Direction: public reading and browser-local favorites in Free visitor, syncing and manual follow lists in Free account, extended analytics and full Match Centre in Plus, and custom scouting and scenarios in Pro.
+- Live: /live/config returned HTTP 200 with enabled=false again on 18 November. Source, per-competition data, latency and usage rights remain to qualify in [VI-10](https://linear.app/vegainteligence/issue/VI-10/etudier-des-flux-live-gratuits-et-leur-collecte-sur-aws-avec-15-a-30). Predictive offer context remains in [VI-6](https://linear.app/vegainteligence/issue/VI-6/concevoir-loffre-predictive-et-decider-de-son-organisation).
+- Next action: review the proposed access boundaries when requested. Scope remains exploratory.
