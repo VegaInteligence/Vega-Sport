@@ -20,12 +20,15 @@ from ..store import Store
 
 WORLD_CUP_YEARS = ("1930", "1934", "1938", "1950", "1954", "1958", "1962", "1966", "1970", "1974", "1978", "1982",
                    "1986", "1990", "1994", "1998", "2002", "2006", "2010", "2014", "2018", "2022", "2026")
+# The Euros of 1960 to 2016 (openfootball/euro's text files, frontend/src/services/openfootball-euro.js).
+EURO_HISTORY_YEARS = ("1960", "1964", "1968", "1972", "1976", "1980", "1984", "1988", "1992", "1996", "2000", "2004",
+                      "2008", "2012", "2016")
 # frontend/src/services/cup-archives.js (NATIONAL_CUP_ARCHIVES keys and seasons).
 NATIONAL_CUP_ARCHIVES = ("austria-cup-archive", "germany-cup-archive", "fa-cup-archive", "efl-cup-archive", "copa-del-rey-archive",
                          "coppa-italia-archive", "knvb-beker-archive", "portugal-cup-archive", "swiss-cup-archive")
 # The editions main refreshes (aws_refresh_sources.mjs); drift-tested.
 EDITIONS = (
-    *[("open-cups", "euro", s) for s in ("2020", "2024", "2028")],
+    *[("open-cups", "euro", s) for s in (*EURO_HISTORY_YEARS, "2020", "2024", "2028")],
     *[("open-cups", "world-cup-history", s) for s in WORLD_CUP_YEARS],
     # The yearly Club World Cups played since the base's first season (2021/2022).
     *[("open-cups", "club-world-cup", s) for s in ("2021", "2022", "2023", "2025")],

@@ -1,6 +1,7 @@
 import { parseFranceCup } from "../../../dashboard/frontend/src/services/openfootball-france-cup.js";
 import { parseOpenCupText } from "../../../dashboard/frontend/src/services/openfootball-cups.js";
 import { NATIONAL_CUP_ARCHIVES } from "../../../dashboard/frontend/src/services/cup-archives.js";
+import { EURO_HISTORY_FOLDERS, parseEuroText } from "../../../dashboard/frontend/src/services/openfootball-euro.js";
 import { openFootballScore } from "../../../dashboard/shared/openfootball-history.js";
 import { worldCupHalf } from "./world-cup-halves.mjs";
 
@@ -48,11 +49,16 @@ const CONTINENTAL = {
     file: (season) => `africa/champions-league/${season.slice(0, 4)}-${season.slice(7)}_cafcl.txt`, calendar: false },
 };
 const UNDECIDED = "N.N.";
+// The Euros of 1960 to 2016, from openfootball/euro's text files at the commit the reader was checked against
+// (22 November 2026: every match against International Results); 2020 and after from euro.json.
+const EURO_HISTORY_COMMIT = "88d150a6c8db43925ea327b87e990f653c999b11";
 const SOURCES = {
   euro: {
     repo: "euro.json",
-    seasons: new Set(["2020", "2024", "2028"]),
+    seasons: new Set(["2020", "2024", "2028", ...Object.keys(EURO_HISTORY_FOLDERS)]),
     file: "euro.json",
+    history: { repo: "euro", branch: EURO_HISTORY_COMMIT, format: "euro-text", seasons: new Set(Object.keys(EURO_HISTORY_FOLDERS)),
+      file: (season) => `${EURO_HISTORY_FOLDERS[season]}/euro.txt` },
   },
   "france-cup": {
     repo: "europe",
@@ -92,7 +98,9 @@ export async function GET(request) {
   const source =
     found?.yearly && CLUB_WORLD_CUP_YEARS.has(season)
       ? { ...found, ...found.yearly }
-      : found;
+      : found?.history?.seasons.has(season)
+        ? { ...found, ...found.history, seasons: found.seasons }
+        : found;
   if (!source || !source.seasons.has(season))
     return Response.json(
       { error: "Compétition ou édition indisponible." },
@@ -102,7 +110,7 @@ export async function GET(request) {
   const upstream =
     "https://raw.githubusercontent.com/openfootball/" +
     source.repo +
-    "/master/" +
+    "/" + (source.branch || "master") + "/" +
     path;
   try {
     const response = await fetch(upstream, {
@@ -121,6 +129,8 @@ export async function GET(request) {
               name: "Club World Cup " + season,
               matches: parseOpenCupText(await response.text(), Number(season), {}, { halfTime: true }),
             }
+          : source.format === "euro-text"
+          ? { name: "Euro " + season, matches: parseEuroText(await response.text(), Number(season)) }
           : source.format === "continental-text"
           ? {
               name: source.name + " " + season,

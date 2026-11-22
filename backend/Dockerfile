@@ -28,6 +28,7 @@ COPY dashboard/frontend/src/services/api-routes.js dashboard/frontend/src/servic
 COPY dashboard/shared/player-aliases.js dashboard/shared/league-rules.json dashboard/shared/cup-logos.json dashboard/shared/
 # The cup source projections (vega/sources/cups.py) read these services of the site.
 COPY dashboard/frontend/src/services/openfootball-france-cup.js dashboard/frontend/src/services/openfootball-cups.js \
+     dashboard/frontend/src/services/openfootball-euro.js \
      dashboard/frontend/src/services/cup-archives.js dashboard/frontend/src/services/openligadb.js \
      dashboard/frontend/src/services/competition-selector.js dashboard/frontend/src/services/nations-results.js dashboard/frontend/src/services/
 COPY dashboard/shared/competition-scope.js dashboard/shared/

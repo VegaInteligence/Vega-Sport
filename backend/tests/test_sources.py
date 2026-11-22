@@ -974,6 +974,30 @@ class UefaTest(unittest.TestCase):
         with self.db.transaction():
             self.assertEqual(cups.save(self.db, "open-cups", "world-cup-history", "1998", body, NOW + timedelta(days=16)), 0)
 
+    def test_a_euro_before_2020_is_saved_as_its_edition_with_the_world_cups_nations(self):
+        # The Euros of 1960 to 2016 (openfootball/euro's text, tests/openfootball-euro.test.mjs): each is an edition
+        # of the Euro, in the season it ends; a nation is the World Cup archive's of the same spelling; a score
+        # after extra time without its 90 minutes keeps none; a shoot-out is kept; a finished edition is read weekly.
+        x = self.db.execute
+        world = {"name": "World Cup 1966", "season": "1966", "matches": [
+            {"round": "Final", "date": "1966-07-30", "team1": "England", "team2": "West Germany", "score": {"ft": [2, 2], "et": [4, 2]}}]}
+        euro = {"name": "Euro 1976", "season": "1976", "matches": [
+            {"round": "Semi-finals", "date": "1976-06-17", "team1": "West Germany", "team2": "Yugoslavia", "score": {"et": [4, 2]}},
+            {"round": "Final", "date": "1976-06-20", "team1": "Czechoslovakia", "team2": "West Germany", "score": {"et": [2, 2], "p": [5, 3]}}]}
+        with self.db.transaction():
+            cups.save(self.db, "open-cups", "world-cup-history", "1966", world, NOW)
+            self.assertEqual(cups.save(self.db, "open-cups", "euro", "1976", euro, NOW), 2)
+        rows = x("""SELECT m.home_team_id, m.away_team_id, m.home_score, m.away_score, m.home_score_90, m.home_score_et,
+                           m.home_penalty_score, m.away_penalty_score, s.label
+                    FROM core.matches m JOIN core.seasons s ON s.id=m.season_id JOIN core.competition_seasons cs ON cs.id=m.competition_season_id
+                    WHERE cs.cup_key='open-cups:euro:1976' ORDER BY m.archive_position""").fetchall()
+        west = x("""SELECT m.away_team_id FROM core.matches m JOIN core.competition_seasons cs ON cs.id=m.competition_season_id
+                    WHERE cs.cup_key='open-cups:world-cup-history:1966'""").fetchone()[0]
+        self.assertEqual([r[2:] for r in rows], [(4, 2, None, 4, None, None, "1975/1976"), (2, 2, None, 2, 5, 3, "1975/1976")])
+        self.assertEqual((rows[0][0], rows[1][1]), (west, west))
+        self.assertIn(("open-cups", "euro", "1960"), cups.EDITIONS)
+        self.assertEqual(cups.scopes(NOW)["open-cups:euro:1960"], timedelta(days=7))
+
     def test_worldcup_database_is_loaded_and_paired_with_the_archive(self):
         # The Fjelstul World Cup Database in the base (vega/sources/worldcup.py). Failure modes, written before the
         # reader ever ran on a base:

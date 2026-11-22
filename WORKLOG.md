@@ -299,3 +299,14 @@
 - Direction: public reading and browser-local favorites in Free visitor, syncing and manual follow lists in Free account, extended analytics and full Match Centre in Plus, and custom scouting and scenarios in Pro.
 - Live: /live/config returned HTTP 200 with enabled=false again on 18 November. Source, per-competition data, latency and usage rights remain to qualify in [VI-10](https://linear.app/vegainteligence/issue/VI-10/etudier-des-flux-live-gratuits-et-leur-collecte-sur-aws-avec-15-a-30). Predictive offer context remains in [VI-6](https://linear.app/vegainteligence/issue/VI-6/concevoir-loffre-predictive-et-decider-de-son-organisation).
 - Next action: review the proposed access boundaries when requested. Scope remains exploratory.
+
+## Euros 1960–2016 in the base (22 November 2026)
+
+- Ask (user, Spain's nation page): why only two Euros; « retrieve la data des euros et mets la sur la bdd ».
+- Cause: the worker read the Euro from openfootball/euro.json, which holds 2020, 2024 and 2028 only (cups.py EDITIONS); the World Cup archive reads every year.
+- Built (branch `claude/euro-history`): `openfootball-euro.js` reads openfootball/euro's text files (CC0) at a pinned commit (88d150a6), six layouts; the « euro » source serves 1960–2016 from them, 2020+ from the JSON; cups.py EDITIONS gets the 15 years (weekly once finished). Same edition keys (`open-cups:euro:YYYY`), so the nation page and the Elo read them as they read the World Cup archive (Euro stakes 1.20).
+- Data checks: per-edition counts as International Results (286); 284/286 identical in day, teams, score after extra time and shoot-out winner; the 2016 file dates Italy–Ireland and Sweden–Belgium 21 June (played 22 June): corrected; the 1984 and 1992 group stages carry no day in the file: dated from International Results.
+- Validated: reader tests written first (8/8); `test_sources` 34/34; E2E on a local PostgreSQL 18 (real files → `cups.save` → `api.nation_matches` → `tournamentRuns`): 388 Euro matches in 17 editions, no nation split, every run checked by hand (Spain 1964/2008/2012/2024 winner, USSR 1960, Italy 1968 after the replay, Czechoslovakia 1976 on penalties). Site and Python suites: same failures as untouched main (environment). Evidence: `~/Agents/scratch/vega-euro-history-20261122/EVIDENCE.md`.
+- Effect to expect: the nations' Elo takes these 286 matches at its next pass, as it does the archived World Cups (not measured beforehand: the base is private).
+- Not done: the site's Euro page season picker and the nation-page tile links still stop at 2020 (frontend, needs a mock-up).
+- Linear: not touched in this folder (rule in ~/.claude/CLAUDE.md).
