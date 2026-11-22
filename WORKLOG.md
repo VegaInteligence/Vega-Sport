@@ -267,6 +267,14 @@
 - Built: leagues and the Nations League use `EditionHeader` (crest, name, season ‹ ›, views on the right); the « Saison de compétition » block is gone. Name 15 px / 650 (was 20 px / 700), crest 26 px; the season selector is the views' frame (30 px, 26 px controls, 12 px / 500); on phones both are 44 px tall, the field keeping the site's 16 px.
 - Validated: six pages (Serie A, Ligue 2, Champions League, Coupe de France, Coupe du monde, Ligue des nations) show one `.edition-head` and no old block, 49 px on desktop; ‹ on Serie A gives 2025/2026; no horizontal scroll on phones. Site suite 803/803, build passes. Evidence: scratchpad `heads-after/README.md`.
 
+## Club page — style strips on a real scale (22 Nov 2026)
+
+- Ask (user, 1. FC Köln): the « Identité de jeu » strips (possession, territoire, jeu long, PPDA…) gave no way to read that a club is at so many %. Mock-ups A (graduated scale) and B (A + Bayern, Barcelona, Manchester City as landmarks); user: « Prend le A ». Not changed: the « PPDA (approx.) » name (flagged: its values, 4–8, sit below published PPDA because every defensive action counts, not only high ones; no decision yet).
+- Built (`StyleSpectrum` → `SpectrumRow`, ClubScoutUI.jsx; ClubScout.module.css): round graduations (`spectrumScale`: step 0.5–20, ≤ 6 intervals, ≥ 3 marks), dashed gridlines, the median drawn and labelled, crests in a swarm around the centre line at their value, the club's value in the row title, hover/tap a crest → that club lit with its value on every strip. Same component on « Stats avancées › Avec le ballon » and the player page's « Contexte d'équipe » (axes aligned side by side). Card text: « (traits gris) » removed.
+- Validated: E2E written first (`~/Agents/scratch/vega-style-strips-20261122/strips.e2e.mjs`, reference values from the old production page): before 28/93, local build 137/137 three runs; site suite = main's 9 local failures, no other; build passes. Evidence: `EVIDENCE.md` there.
+- Pending elsewhere in this session: the xG trend « from the first match » mock-up (previous season completing the 5-match window) awaits the user's verdict (`~/Agents/scratch/vega-xgroll-20261120/v2-*.png`).
+- Linear: not touched in this folder (rule in ~/.claude/CLAUDE.md).
+
 ## Provider and competition workbook
 
 - Goal: deliver an Excel inventory of Vega-Sport data providers, competition and edition coverage, source metrics and Vega calculations.

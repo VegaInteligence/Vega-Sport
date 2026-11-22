@@ -738,7 +738,7 @@ export function Style({ dossier }) {
         <div className={c.stack}>
           <Card
             title="Identité de jeu"
-            text="Position du club sur chaque axe de style, parmi les clubs du référentiel (traits gris)."
+            text="Position du club sur chaque axe de style, parmi les clubs du référentiel."
           >
             {tags.length > 0 && (
               <div className={c.tags} style={{ marginBottom: 18 }}>

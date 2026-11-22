@@ -602,86 +602,136 @@ export function LeaguePlot({
 
 /* ------------------------------------------------------- style spectrum */
 
-// The crests of a style axis: the lanes they may take, each this tall (px), and the room a crest needs (% of the axis).
-const MAX_LANES = 3, LANE_HEIGHT = 20, LANE_GAP = 2.8;
+// A style axis drawn on a real scale (mock-up A, user, 22 Nov 2026): round graduations, the median, every club's crest
+// at its value. Crests take lanes around the centre line in this order, each LANE px apart, a crest needing GAP px.
+const SWARM = [0, 1, -1, 2, -2], LANE = 19, GAP = 19, EDGE = 16, MEDIAN_ROOM = 16;
+const STEPS = [0.5, 1, 2, 2.5, 5, 10, 20];
+
+/** Round graduations covering the values: the smallest step of STEPS giving at most six intervals, three marks at least. */
+export function spectrumScale(values) {
+  const lo = Math.min(...values),
+    hi = Math.max(...values);
+  const step = STEPS.find((s) => (hi - lo) / s <= 6) ?? Math.ceil((hi - lo) / 60) * 10;
+  const ticks = [];
+  for (let k = Math.floor(lo / step + 1e-9); ticks.length < 3 || ticks.at(-1) < hi - 1e-9; k++)
+    ticks.push(Math.round(k * step * 1e6) / 1e6);
+  return ticks;
+}
+
+const median = (values) => {
+  const v = [...values].sort((a, b) => a - b),
+    m = v.length >> 1;
+  return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2;
+};
 
 export function StyleSpectrum({
   dossier,
   club = dossier.self,
   axes = STYLE_AXES,
 }) {
+  // The club under the pointer, lit with its value on every axis.
+  const [active, setActive] = useState(null);
   return (
-    <div className={s.spectrum}>
-      {axes.map((axis) => {
-        const metric = METRICS[axis.key];
-        const values = dossier.clubs
-          .map((c) => c.values[axis.key])
-          .filter((v) => v != null);
-        const value = club.values[axis.key];
-        if (value == null || !values.length) return null;
-        const lo = Math.min(...values),
-          hi = Math.max(...values);
-        const at = (v) => {
-          const t = hi === lo ? 0.5 : (v - lo) / (hi - lo);
-          return 4 + (axis.invert ? 1 - t : t) * 92;
-        };
-        const pos = (v) => `${at(v)}%`;
-        // Each crest on the first lane where it clears its neighbour (LANE_GAP % of the axis), at most MAX_LANES lanes;
-        // past that, on the lane whose last crest is farthest.
-        const marks = [], lanes = [];
-        for (const c of dossier.clubs
-          .filter((c) => c.id !== club.id && c.values[axis.key] != null)
-          .map((c) => ({ c, x: at(c.values[axis.key]) }))
-          .sort((a, b) => a.x - b.x)) {
-          let lane = lanes.findIndex((last) => c.x - last >= LANE_GAP);
-          if (lane < 0 && lanes.length < MAX_LANES) lane = lanes.length;
-          if (lane < 0) lane = lanes.indexOf(Math.min(...lanes));
-          lanes[lane] = c.x;
-          marks.push({ ...c, lane });
-        }
-        const height = Math.max(34, lanes.length * LANE_HEIGHT + 2);
-        return (
-          <div className={s.spectrumRow} key={axis.key} data-axis={axis.key}>
-            <div className={s.spectrumTitle}>
-              <strong>
-                {metric.label}
-                <Info text={metric.info} label={metric.label} />
-              </strong>
-              <span>
-                {formatMetric(axis.key, value)} · médiane{" "}
-                {formatMetric(axis.key, dossier.stats[axis.key]?.median)}
-              </span>
-            </div>
-            <div className={s.spectrumTrack} data-track="" style={{ height }}>
-              {/* Each club's crest at its value (user, 20 Nov 2026); the club itself larger, in the middle. */}
-              {marks.map(({ c, x, lane }) => (
-                  <span
-                    key={c.id}
-                    className={s.spectrumMark}
-                    data-club=""
-                    style={{ left: `${x}%`, top: 1 + lane * LANE_HEIGHT + (height - 2 - lanes.length * LANE_HEIGHT) / 2 }}
-                    title={`${c.name} : ${formatMetric(axis.key, c.values[axis.key])}`}
-                  >
-                    <Crest club={c} label />
-                  </span>
-                ))}
-              <span
-                className={s.spectrumSelf}
-                data-club=""
-                data-self="true"
-                style={{ left: pos(value) }}
-                title={`${club.name} : ${formatMetric(axis.key, value)}`}
-              >
-                <Crest club={club} label />
-              </span>
-            </div>
-            <div className={s.spectrumEnds}>
-              <span>{axis.low}</span>
-              <span>{axis.high}</span>
-            </div>
-          </div>
-        );
-      })}
+    <div className={s.spectrum} data-active={active ? "" : undefined}>
+      {axes.map((axis) => (
+        <SpectrumRow key={axis.key} axis={axis} dossier={dossier} club={club} active={active} setActive={setActive} />
+      ))}
+    </div>
+  );
+}
+
+function SpectrumRow({ axis, dossier, club, active, setActive }) {
+  const [ref, width] = useBoxWidth(640);
+  const metric = METRICS[axis.key];
+  const value = club.values[axis.key];
+  const others = dossier.clubs.filter((c) => c.id !== club.id && c.values[axis.key] != null);
+  if (value == null || !others.length) return null;
+  const all = [value, ...others.map((c) => c.values[axis.key])];
+  const ticks = spectrumScale(all);
+  const [lo, hi] = [ticks[0], ticks.at(-1)];
+  const x = (v) => {
+    const t = (v - lo) / (hi - lo);
+    return EDGE + (axis.invert ? 1 - t : t) * (width - 2 * EDGE);
+  };
+  const mid = dossier.stats?.[axis.key]?.median ?? median(all);
+  // Each crest on the first lane, in SWARM order, where it clears the last crest; past that, the freest lane.
+  const last = new Map(),
+    marks = [];
+  for (const c of others.map((c) => ({ c, x: x(c.values[axis.key]) })).sort((a, b) => a.x - b.x)) {
+    let lane = SWARM.find((l) => !last.has(l) || c.x - last.get(l) >= GAP);
+    if (lane == null) lane = SWARM.reduce((best, l) => (last.get(l) < last.get(best) ? l : best));
+    last.set(lane, c.x);
+    marks.push({ ...c, lane });
+  }
+  const spread = Math.max(0, ...marks.map((m) => Math.abs(m.lane)));
+  const swarm = Math.max(40, (2 * spread + 1) * LANE + 14);
+  const centre = MEDIAN_ROOM + swarm / 2;
+  const mark = (c, x, top, self) => {
+    const on = active === c.id;
+    const text = formatMetric(axis.key, c.values[axis.key]);
+    return (
+      <span
+        key={c.id}
+        className={self ? s.spectrumSelf : s.spectrumMark}
+        data-club=""
+        data-self={self ? "true" : undefined}
+        data-name={c.name}
+        data-value={text}
+        data-raw={c.values[axis.key]}
+        data-on={on ? "true" : undefined}
+        role="img"
+        aria-label={`${c.name} : ${text}`}
+        style={{ left: x, top }}
+        onPointerEnter={(e) => e.pointerType === "mouse" && setActive(c.id)}
+        onPointerLeave={(e) => e.pointerType === "mouse" && setActive(null)}
+        onPointerDown={(e) => e.pointerType !== "mouse" && setActive(on ? null : c.id)}
+      >
+        <Crest club={c} label />
+        {on && (
+          <span className={s.spectrumTag} data-tag="">
+            {c.name} · {text}
+          </span>
+        )}
+      </span>
+    );
+  };
+  return (
+    <div className={s.spectrumRow} data-axis={axis.key} ref={ref}>
+      <div className={s.spectrumTitle}>
+        <strong>
+          {metric.label}
+          <Info text={metric.info} label={metric.label} />
+        </strong>
+        <span data-self-value="">{formatMetric(axis.key, value)}</span>
+      </div>
+      <div className={s.spectrumTrack} data-track="" style={{ height: MEDIAN_ROOM + swarm }}>
+        {(axis.invert ? [...ticks].reverse() : ticks).map((t) => (
+          <span key={t} className={s.spectrumGrid} data-grid={t} style={{ left: x(t), top: MEDIAN_ROOM }} />
+        ))}
+        <span className={s.spectrumMedian} data-median={mid} style={{ left: x(mid), top: MEDIAN_ROOM }} />
+        <span className={s.spectrumMedianLabel} data-median-label="" style={{ left: x(mid) }}>
+          médiane {formatMetric(axis.key, mid)}
+        </span>
+        {marks.map(({ c, x: at, lane }) => mark(c, at, centre + lane * LANE))}
+        {mark(club, x(value), centre, true)}
+      </div>
+      <div className={s.spectrumAxis}>
+        {/* Left to right as drawn; the two end labels held inside the row. */}
+        {(axis.invert ? [...ticks].reverse() : ticks).map((t, i, list) => (
+          <span
+            key={t}
+            data-tick={t}
+            style={i === list.length - 1 ? { right: 0 } : i === 0 ? { left: 0 } : { left: x(t) }}
+            data-edge={i === 0 ? "start" : i === list.length - 1 ? "end" : undefined}
+          >
+            {formatMetric(axis.key, t).replace(/,0(?=\D|$)/, "")}
+          </span>
+        ))}
+      </div>
+      <div className={s.spectrumEnds}>
+        <span>← {axis.low}</span>
+        <span>{axis.high} →</span>
+      </div>
     </div>
   );
 }
