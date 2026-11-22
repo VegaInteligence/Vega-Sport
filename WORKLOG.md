@@ -308,5 +308,6 @@
 - Data checks: per-edition counts as International Results (286); 284/286 identical in day, teams, score after extra time and shoot-out winner; the 2016 file dates Italy–Ireland and Sweden–Belgium 21 June (played 22 June): corrected; the 1984 and 1992 group stages carry no day in the file: dated from International Results.
 - Validated: reader tests written first (8/8); `test_sources` 34/34; E2E on a local PostgreSQL 18 (real files → `cups.save` → `api.nation_matches` → `tournamentRuns`): 388 Euro matches in 17 editions, no nation split, every run checked by hand (Spain 1964/2008/2012/2024 winner, USSR 1960, Italy 1968 after the replay, Czechoslovakia 1976 on penalties). Site and Python suites: same failures as untouched main (environment). Evidence: `~/Agents/scratch/vega-euro-history-20261122/EVIDENCE.md`.
 - Effect to expect: the nations' Elo takes these 286 matches at its next pass, as it does the archived World Cups (not measured beforehand: the base is private).
+- Deployed 22 Nov (« Yes, deploy »): CI run 45053203946 and deploy run 45053812464 green; live API for Spain lists 12 Euros (1964 Vainqueur … 2024 Vainqueur), as the local E2E.
 - Not done: the site's Euro page season picker and the nation-page tile links still stop at 2020 (frontend, needs a mock-up).
 - Linear: not touched in this folder (rule in ~/.claude/CLAUDE.md).
