@@ -184,7 +184,7 @@ const TERMS = {
   "part des ballons dans les surfaces": "Part des ballons touchés dans les deux surfaces qui sont les siens.",
   "jeu long (part des longs ballons)": "Part de longs ballons dans ses passes réussies : plus elle est haute, plus le jeu est direct.",
   "centres réussis": "Centres arrivés à un coéquipier.",
-  "ppda (approx.)": "Passes adverses permises avant chaque action défensive : plus c'est bas, plus le pressing est intense.",
+  "passes adverses par action défensive": "Passes adverses dans leur moitié, rapportées à toutes ses actions défensives, où qu'elles soient : plus c'est bas, plus il presse.",
   "tacles + interceptions (ajusté poss.)": "Tacles et interceptions, corrigés du temps passé sans le ballon.",
   "duels aériens gagnés": "Duels de la tête gagnés.",
   "fautes": "Fautes commises.",

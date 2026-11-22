@@ -787,24 +787,49 @@ const nextMonth = (time) => {
 /** A tick label: whole numbers bare, halves with their decimal. */
 const tickText = (v) => fmtNum(v, Number.isInteger(v) ? 0 : 1);
 
-/** Mean of each run of `size` consecutive values, null until `size` matches are known. */
-function fullRolling(values, size) {
-  return values.map((_, i) =>
-    i < size - 1
-      ? null
-      : values.slice(i - size + 1, i + 1).reduce((a, b) => a + b, 0) / size,
-  );
+const bothXg = (row) => row.own?.xg != null && row.opp?.xg != null;
+const shortSeason = (season) => String(season).replace(/^20(\d\d)\/20(\d\d)$/, "$1/$2");
+
+/**
+ * The mean of each match's last `size` matches, xG for and against, with how many matches it holds
+ * (`n`) and how many come from the previous season (`fromPrev`). `lead` holds the previous season's
+ * rows that complete the first windows; without it (null) a mean waits for `size` matches.
+ */
+function rollingMeans(rows, lead, size) {
+  const series = [...(lead || []), ...rows],
+    off = series.length - rows.length;
+  return rows.map((row, i) => {
+    const window = series.slice(Math.max(0, off + i - size + 1), off + i + 1);
+    if (!lead && window.length < size) return null;
+    return {
+      for: window.reduce((sum, r) => sum + r.own.xg, 0) / window.length,
+      against: window.reduce((sum, r) => sum + r.opp.xg, 0) / window.length,
+      n: window.length,
+      fromPrev: window.filter((r) => r.match.season !== row.match.season).length,
+    };
+  });
+}
+
+/** What the card says a mean is made of. */
+function meanLabel(mean, size, prevSeason) {
+  const prev = mean.fromPrev ? ` · dont ${mean.fromPrev} de ${prevSeason}` : "";
+  return mean.n < size
+    ? `Moyenne sur ${mean.n} match${mean.n > 1 ? "s" : ""}${prev}`
+    : `Moyenne ${size} matchs${prev}`;
 }
 
 /**
  * The club's xG for and against: each match a dot at its real date, the means over the last
  * `window` matches as two lines, the space between them coloured by the side ahead. Drawn at its
  * measured width; the match nearest the pointer gets its card.
+ * `previous` (the previous season's rows; undefined while read) completes the first windows with
+ * its last matches; without any, the first means are partial. Both are drawn dashed and fainter
+ * until the first mean of `window` matches of the season alone.
  */
-export function XgTrend({ rows, window = 5 }) {
+export function XgTrend({ rows, previous, window = 5 }) {
   const [ref, width] = useBoxWidth(720);
   const [active, setActive] = useState(null);
-  const usable = rows.filter((row) => row.own?.xg != null && row.opp?.xg != null);
+  const usable = rows.filter(bothXg);
   if (!usable.length) return <p className={s.muted}>xG non renseignés.</p>;
   const FOR = "var(--accent)",
     AGAINST = "var(--mq-series-2)";
@@ -820,8 +845,21 @@ export function XgTrend({ rows, window = 5 }) {
   const x = (t) => m.l + ((t - t0) / (t1 - t0)) * iw;
   const xg = usable.map((row) => row.own.xg),
     xga = usable.map((row) => row.opp.xg);
-  const meanFor = fullRolling(xg, window),
-    meanAgainst = fullRolling(xga, window);
+  const first = usable[0]?.match.date;
+  const lead =
+    previous === undefined
+      ? null
+      : previous
+          .filter((row) => bothXg(row) && row.match.date < first)
+          .slice(-(window - 1));
+  const means = rollingMeans(usable, lead, window);
+  const meanFor = means.map((v) => v?.for ?? null),
+    meanAgainst = means.map((v) => v?.against ?? null);
+  const prevSeason = lead?.[0]?.match.season;
+  // The first mean of `window` matches of this season alone: before it, the start is dashed.
+  const pure = means.findIndex((v) => v && v.n === window && !v.fromPrev);
+  const split = pure < 0 ? usable.length - 1 : pure;
+  const leadKind = !means[0] || split === 0 ? null : prevSeason ? "previous" : "partial";
   const peak = Math.max(0.5, ...xg, ...xga);
   let step = peak > 2.5 ? 1 : 0.5;
   if (peak / step > 6) step *= 2;
@@ -832,8 +870,11 @@ export function XgTrend({ rows, window = 5 }) {
   const months = [];
   for (let t = nextMonth(t0); t < t1; t = nextMonth(t)) months.push(t);
   const known = usable.map((_, i) => i).filter((i) => meanFor[i] != null);
-  const line = (values) =>
-    known.map((i, k) => `${k ? "L" : "M"}${x(days[i])},${y(values[i])}`).join("");
+  const line = (values, from = 0, to = usable.length - 1) =>
+    known
+      .filter((i) => i >= from && i <= to)
+      .map((i, k) => `${k ? "L" : "M"}${x(days[i])},${y(values[i])}`)
+      .join("");
   // The space between the two means, cut where they cross: blue where the club creates more.
   const gaps = [];
   for (let k = 0; k < known.length - 1; k++) {
@@ -847,6 +888,7 @@ export function XgTrend({ rows, window = 5 }) {
       gaps.push({
         d: `M${x(xa)},${y(fa)}L${x(xb)},${y(fb)}L${x(xb)},${y(gb)}L${x(xa)},${y(ga)}Z`,
         ahead: fa + fb >= ga + gb,
+        faint: i < split,
       });
     };
     const d0 = meanFor[i] - meanAgainst[i],
@@ -896,6 +938,12 @@ export function XgTrend({ rows, window = 5 }) {
           <i className={s.legendDot} />
           Un match
         </span>
+        {leadKind && (
+          <span data-legend-lead={leadKind}>
+            <i className={s.legendDash} />
+            {leadKind === "previous" ? `Avec la fin de ${shortSeason(prevSeason)}` : `Moins de ${window} matchs`}
+          </span>
+        )}
       </div>
       <div className={s.xgPlot}>
       <svg
@@ -939,7 +987,7 @@ export function XgTrend({ rows, window = 5 }) {
           </text>
         )}
         {gaps.map((gap, i) => (
-          <path key={i} d={gap.d} fill={gap.ahead ? FOR : AGAINST} opacity="0.2" />
+          <path key={i} d={gap.d} fill={gap.ahead ? FOR : AGAINST} opacity={gap.faint ? 0.08 : 0.2} />
         ))}
         {active != null && (
           <line x1={x(days[active])} x2={x(days[active])} y1={m.t} y2={height - m.b} stroke="var(--border-strong)" />
@@ -950,12 +998,38 @@ export function XgTrend({ rows, window = 5 }) {
             <circle data-dot="for" data-match={r.match.id} cx={x(days[i])} cy={y(r.own.xg)} r={active === i ? 4.5 : 3} fill={FOR} fillOpacity={active === i ? 1 : 0.55} />
           </g>
         ))}
-        {known.length > 1 && (
-          <>
-            <path d={line(meanAgainst)} fill="none" stroke={AGAINST} strokeWidth="2.25" strokeLinejoin="round" />
-            <path d={line(meanFor)} fill="none" stroke={FOR} strokeWidth="2.25" strokeLinejoin="round" />
-          </>
-        )}
+        {known.length > 1 &&
+          [
+            ["against", meanAgainst, AGAINST],
+            ["for", meanFor, FOR],
+          ].map(([key, values, color]) => (
+            <g key={key}>
+              {leadKind && (
+                <path
+                  data-mean={key}
+                  data-part="lead"
+                  d={line(values, 0, split)}
+                  fill="none"
+                  stroke={color}
+                  strokeWidth="2"
+                  strokeDasharray="4 4"
+                  strokeOpacity="0.6"
+                  strokeLinejoin="round"
+                />
+              )}
+              {split < usable.length - 1 && (
+                <path
+                  data-mean={key}
+                  data-part="full"
+                  d={line(values, leadKind ? split : 0)}
+                  fill="none"
+                  stroke={color}
+                  strokeWidth="2.25"
+                  strokeLinejoin="round"
+                />
+              )}
+            </g>
+          ))}
         {ends.map(([key, v, color, label], k) => (
           <g key={key}>
             <circle cx={x(days[last])} cy={y(v)} r="4.5" fill={color} stroke="var(--bg)" strokeWidth="2" />
@@ -991,7 +1065,7 @@ export function XgTrend({ rows, window = 5 }) {
           </span>
           {meanFor[active] != null && (
             <>
-              <small className={s.plotTipRule}>Moyenne {window} matchs</small>
+              <small className={s.plotTipRule}>{meanLabel(means[active], window, prevSeason)}</small>
               <span>
                 Créés <b>{fmtNum(meanFor[active], 2)}</b>
               </span>

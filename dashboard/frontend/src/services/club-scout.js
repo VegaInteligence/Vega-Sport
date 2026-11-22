@@ -394,6 +394,53 @@ export function useClubDossier(clubId) {
     : state;
 }
 
+/** The season before `season` (« 2025/2026 » before « 2026/2027 », « 2025 » before « 2026 »), or null. */
+export function previousSeason(season) {
+  const split = /^(\d{4})\/(\d{4})$/.exec(season || "");
+  if (split) return `${+split[1] - 1}/${+split[2] - 1}`;
+  return /^\d{4}$/.test(season || "") ? String(+season - 1) : null;
+}
+
+/**
+ * The club's matches of the season before `season`, as rows (teamRows): what completes the rolling
+ * means of its first matches. [] when the publication has no such season or it cannot be read;
+ * undefined while it is read. One summary read, cached per publication, season and club.
+ */
+export function usePreviousSeasonRows(clubId, season) {
+  const { generation, manifest, versioned } = usePublication();
+  const prev = previousSeason(season);
+  const key =
+    clubId && generation && prev && manifest?.seasons?.some((s) => s.id === prev)
+      ? `${generation}|${prev}|previous:${clubId}`
+      : null;
+  const [state, setState] = useState({ key: null, rows: undefined });
+  useEffect(() => {
+    if (!key) return undefined;
+    let live = true;
+    cachedLoad(key, () =>
+      readActor({
+        season: prev,
+        team: clubId,
+        leagues: "all",
+        detail: "summary",
+        limit: 100,
+        generation,
+        ...(versioned?.club ? { versioned: 1 } : {}),
+      }).then((data) => teamRows(data.matches, clubId)),
+    ).promise.then(
+      (rows) => live && setState({ key, rows }),
+      () => live && setState({ key, rows: [] }),
+    );
+    return () => {
+      live = false;
+    };
+    // `prev`, `clubId`, `generation` are derived from `key`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+  if (!key) return [];
+  return state.key === key ? state.rows : undefined;
+}
+
 /** Any league's cohort, for similar clubs searched in another competition. */
 export function useLeagueCohort(league) {
   const publication = usePublication();
@@ -1308,7 +1355,7 @@ export const METRICS = {
     ...meanOf(own("crosses")),
   },
   ppda: {
-    label: "PPDA (approx.)",
+    label: "Passes adverses par action défensive",
     family: "pressing",
     better: -1,
     digits: 1,

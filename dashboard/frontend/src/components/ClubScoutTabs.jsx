@@ -31,6 +31,7 @@ import {
   opponentEloStrength,
   opponentStrength,
   useEuropeLevels,
+  usePreviousSeasonRows,
 } from "../services/club-scout.js";
 import {
   Card,
@@ -721,8 +722,7 @@ export function Statistics({ dossier }) {
       </div>
       <p className={c.note}>
         ↓ : indicateur concédé, centile inversé. Barres grises : indicateur de
-        style, sans meilleur côté. PPDA approché à partir des passes adverses
-        dans leur moitié de terrain.
+        style, sans meilleur côté.
       </p>
     </div>
   );
@@ -811,7 +811,7 @@ export function Style({ dossier }) {
               y="ppda"
               invertY
               fill
-              yLabel="Pressing (PPDA, bas = intense)"
+              yLabel="Passes adverses par action défensive (bas = pressing intense)"
               quadrants={[
                 ["Presse sans le ballon", "top-left"],
                 ["Domine et presse", "top-right"],
@@ -843,6 +843,7 @@ export function Matches({ dossier }) {
     return [...seen];
   }, [dossier]);
   const [scope, setScope] = useState("all");
+  const previous = usePreviousSeasonRows(dossier.id, dossier.season);
   const rows =
     scope === "all"
       ? dossier.allRows
@@ -850,7 +851,7 @@ export function Matches({ dossier }) {
   return (
     <div className={c.stack}>
       <Card title="Dynamique des xG" text="Toutes compétitions.">
-        <XgTrend rows={dossier.allRows} />
+        <XgTrend rows={dossier.allRows} previous={previous} />
       </Card>
       <div className={c.grid2}>
         <Card

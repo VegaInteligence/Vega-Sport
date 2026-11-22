@@ -47,6 +47,15 @@ $$
 
 Tranches : 0–15′, 16–30′, 31–45′, 46–60′, 61–75′, 76–90′+. La minute ajoutée n'est pas utilisée : un but à 45+2 tombe dans 31–45′, un but à 90+4 dans 76–90′+. Les contre son camp sont exclus.
 
+## Dynamique des xG
+
+`XgTrend` ([ClubScoutUI.jsx](../../../dashboard/frontend/src/components/ClubScoutUI.jsx)) place chaque match où les deux xG sont connus à sa date, toutes compétitions, et trace les moyennes des xG créés et concédés sur les 5 derniers matchs.
+
+Depuis le 22 novembre 2026, les moyennes partent du premier match de la saison :
+- **Saison précédente lue** (`usePreviousSeasonRows`, [club-scout.js](../../../dashboard/frontend/src/services/club-scout.js), une lecture `detail=summary` de plus) : la fenêtre des 4 premiers matchs est complétée par les derniers matchs de la saison d'avant, toutes compétitions, joués avant le premier match de la saison et avec leurs deux xG. Pour un promu, ce sont donc des matchs de la division inférieure.
+- **Pas de saison précédente** (absente de la publication, aucun match du club ou lecture en échec) : la moyenne est partielle, sur 1, 2, 3 puis 4 matchs.
+- **Affichage :** jusqu'au premier match dont les 5 matchs de la fenêtre sont tous de la saison, la courbe est en pointillés et la bande plus pâle. La légende l'indique (« Avec la fin de 25/26 » ou « Moins de 5 matchs ») et la carte de survol le précise (« Moyenne 5 matchs · dont 3 de 2025/2026 », « Moyenne sur 2 matchs »). Pendant la lecture de la saison précédente, la courbe commence au 5e match, comme avant.
+
 ## Tirs par situation
 
 `shotProfile` ([club-scout.js](../../../dashboard/frontend/src/services/club-scout.js)) répartit tirs, xG et buts, pour et contre, entre six catégories. Une seule lecture des situations sert aussi au comptage des penalties ; elle reconnaît les codes normalisés des fiches de match intégrées et la graphie du fournisseur (17 novembre 2026) :

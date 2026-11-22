@@ -94,13 +94,15 @@ Tant que moins de 5 clubs de la référence sont mesurés, ces quatre indicateur
 
 | Indicateur | Formule | Sens |
 | --- | --- | --- |
-| PPDA (approx.) | Σ passes adverses dans leur propre moitié / Σ (tacles + interceptions + fautes du club) | − |
+| Passes adverses par action défensive (clé `ppda`) | Σ passes adverses dans leur propre moitié / Σ (tacles + interceptions + fautes du club) | − |
 | Tacles + interceptions (ajusté poss.) | moyenne par match de `(tacles + interceptions) × 50 / (100 − possession)` | style |
 | Duels gagnés | 100 × Σ duels gagnés du club / Σ (duels gagnés du club + de l'adversaire) | + |
 | Duels aériens gagnés | 100 × Σ aériens gagnés du club / Σ (aériens gagnés du club + de l'adversaire) | + |
 | Fautes / match | moyenne de `fouls` | style |
 
 Le **PPDA** (*passes allowed per defensive action*) mesure combien de passes l'adversaire peut jouer avant une action défensive. Bas = pressing agressif. C'est une **approximation** : le fournisseur ne donne pas la zone des actions défensives, donc toutes les actions défensives du match comptent, pas seulement celles dans la moitié adverse.
+
+Depuis le 22 novembre 2026, les pages l'affichent sous le nom **« Passes adverses par action défensive »** et non plus « PPDA (approx.) » : comme toutes les actions défensives comptent, ses valeurs (≈ 4 à 8 en Europe) sont bien plus basses que le PPDA publié ailleurs (≈ 8 à 15), et le nom PPDA invitait à les comparer. La clé (`ppda`, `ppda_approx` en base) et le calcul ne changent pas. Le PPDA de la fiche match, fourni par la source, garde son nom.
 
 L'**ajustement à la possession** ramène le volume défensif à une possession adverse de 50 % : avec 60 % de possession (40 % pour l'adversaire), 20 actions deviennent 20 × 50 / 40 = 25.
 

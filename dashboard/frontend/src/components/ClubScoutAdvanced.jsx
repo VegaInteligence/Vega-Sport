@@ -194,7 +194,7 @@ export function WithoutBall({ dossier }) {
         <Card
           className={c.grow}
           title="Carte des styles défensifs"
-          text="Possession et PPDA de chaque club : en haut, les équipes qui pressent le plus."
+          text="Possession et pressing de chaque club : en haut, les équipes qui pressent le plus."
         >
           <LeaguePlot
             dossier={dossier}
@@ -202,7 +202,7 @@ export function WithoutBall({ dossier }) {
             y="ppda"
             invertY
             fill
-            yLabel="PPDA (bas = pressing intense)"
+            yLabel="Passes adverses par action défensive (bas = pressing intense)"
             quadrants={[
               ["Presse sans le ballon", "top-left"],
               ["Domine et presse", "top-right"],

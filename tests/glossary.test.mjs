@@ -15,7 +15,7 @@ test("the pages' main figures are explained, briefly and without formulas", () =
     "Matchs", "Minutes", "Note Vega", "Indice Vega", "Valeur marchande", "Disponibilité", "Postes occupés",
     "Classement", "Bilan", "xPts", "Forme", "Indice Vega club", "Valeur estimée", "Âge moyen", "Âge pondéré",
     "Distance parcourue", "Vitesse de pointe", "Repos médian", "Enchaînements courts", "Pts", "J", "BP", "BC", "Diff.",
-    "Possession", "PPDA (approx.)", "Territoire (field tilt)", "Min / B+PD", "Médiane / 90",
+    "Possession", "Passes adverses par action défensive", "Territoire (field tilt)", "Min / B+PD", "Médiane / 90",
   ];
   for (const label of labels) {
     const text = explain(label);

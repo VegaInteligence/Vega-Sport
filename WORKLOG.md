@@ -320,3 +320,11 @@
 - Deployed 22 Nov (« Yes, deploy »): CI run 45053203946 and deploy run 45053812464 green; live API for Spain lists 12 Euros (1964 Vainqueur … 2024 Vainqueur), as the local E2E.
 - Not done: the site's Euro page season picker and the nation-page tile links still stop at 2020 (frontend, needs a mock-up).
 - Linear: not touched in this folder (rule in ~/.claude/CLAUDE.md).
+
+## Club page — xG trend from the first match; PPDA approximation renamed (22 November 2026)
+
+- Ask (user, 22 Nov): « Fait les décisions recommandés » — the two pending recommendations: the « Dynamique des xG » mock-up v2 (means from match 1 with the previous season's last matches, dashed; fallback partial means) and renaming « PPDA (approx.) ».
+- Built (branch `claude/xg-prev-ppda`): `usePreviousSeasonRows` (club-scout.js, one `detail=summary` read of the season before, cached per publication/season/club; [] when the manifest has no such season); `XgTrend` takes `previous`, completes the first windows with its last 4 matches (both xG, before the first match), dashed and fainter until the first pure 5-match mean; legend « Avec la fin de 25/26 » or « Moins de 5 matchs »; card « Moyenne 5 matchs · dont N de 2025/2026 » / « Moyenne sur N matchs ». While the read runs the curve starts at match 5, as before.
+- Rename: METRICS `ppda` label « Passes adverses par action défensive », glossary sentence naming every defensive action, the two style maps' axis label, the card texts; key, calculation and the match page's source PPDA unchanged; DB label (015_metric_labels.sql) unchanged, not shown on the site.
+- Validated: E2E spec written first (`~/Agents/scratch/vega-xg-prev-ppda-20261122/xg.e2e.mjs`): 18/37 on the page before, 37/37 local; means recomputed from the API (Arsenal 1,46 / 1,44 / 1,60 / 1,90 then 2,20 pure); 2021/22 fallback; phone; no « PPDA » left on 9 club views. Site suite: main's 9 local failures; build OK. Evidence: `EVIDENCE.md` there.
+- Linear: not touched in this folder (rule in ~/.claude/CLAUDE.md).
