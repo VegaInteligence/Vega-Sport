@@ -7,6 +7,7 @@ Three CloudFormation stacks, one per block of the backend, plus the live stack (
 | `vega-v2-database` | `database.yaml` | private PostgreSQL 18 (`vega-football-db-postgres`, database `vega_v2`, `db.t4g.medium` since 2026-11-09, gp3 20→100 GB, encrypted, 7-day backups, deletion protection, snapshot on delete), master password managed by Secrets Manager, security groups of the worker and the API |
 | `vega-v2-worker` | `worker.yaml` | ECR repository, ECS cluster, the always-on worker service (Fargate ARM 0.5 vCPU / 4 GB since 2026-11-13, one task), the `vega-v2-backfill` service (1 vCPU / 2 GB, one task while history is collected, none after), the on-demand `vega-v2-migrate` task definition, the private bucket of the image copies (`vega-v2-media-…`, written only under `data/sources/v2/images/` by the worker's task role), and the private release bucket (`vega-v2-releases-…`: the function packages, and the pinned archive sources under `data/sources/`) |
 | `vega-v2-api` | `api.yaml` | the read API Lambda (Node 24 ARM, `backend/api`), its signed Function URL and its own CloudFront distribution; the distribution also serves the image copies at `data/*` from the media bucket (origin access control, bucket policy limited to this distribution) and `api/ops/*`, the status page's read, uncached |
+| `vega-v2-waf` (us-east-1) | `waf.yaml` | the distribution's web ACL: per-address request limits, counting or blocking (VI-35, below) |
 
 Account 361769570630, region us-east-2, AWS CLI profile `statarena`, default VPC `vpc-08e400afa07fc1812` and its three subnets. The subnets route to an internet gateway: the worker gets a public IP for outbound HTTPS (sources, ECR, logs) and no inbound port; no NAT gateway is needed. The database is not publicly accessible: only the worker and API security groups reach it on 5432.
 
@@ -117,6 +118,73 @@ The function logs one line per request it receives (`{"request":"read","path":�
 ```
 filter request = "read" | stats count(*) as calls, sum(conditional) as revalidations, avg(ms), avg(db) by path | sort calls desc
 ```
+
+<!-- BEGIN VI-35 web ACL -->
+### Per-address limit of the distribution (web ACL, VI-35)
+
+Until VI-35 the distribution had no web ACL: one address asking reads the cache does not hold could take the 32 copies, and every other visitor got 429s. `waf.yaml` (stack `vega-v2-waf`, **us-east-1**: a web ACL of CloudFront scope exists only there) is attached by `deploy.sh` (step 7b, then `WebAclArn` of `vega-v2-api`). It sees every request before the cache, cache hits included, and counts per viewer address over the last 5 minutes:
+
+| Rule | Counts | Limit | Action |
+|---|---|---|---|
+| `vega-v2-api-probe-500` | every path but `/data/` | 500 | count, always |
+| `vega-v2-api-probe-3000` | every path but `/data/` | 3000 | count, always |
+| `vega-v2-api-per-ip` | every path but `/data/` | `ApiLimit` (1500) | `Mode` |
+| `vega-v2-all-per-ip` | every path, image copies included | `AllLimit` (6000) | `Mode` |
+
+`Mode=Count` (the default, and the first week) only counts the requests over a limit; `Mode=Block` answers them `429` (JSON `RATE_LIMITED`, `Retry-After: 60`, open CORS, `no-store`) until the address's rate falls back under the limit (usually within 30 s of that). The site's clients do not retry an answer that asks for more than 2 s.
+
+**The site's server is exempt.** Its own reads (the home's initial reads, the reports) leave from Vercel's few shared addresses for every visitor; it sends `X-Vega-Edge-Key`, and a request whose header equals the key exactly is left out of every count. The key is the SSM SecureString `/vega/v2/edge-key` (created once by `ci/secrets.sh`, passed as `SiteKey`); the Vercel project holds it as `VEGA_API_EDGE_KEY` (Production, sensitive, never `NEXT_PUBLIC_`). Without it on either side there is no exemption, and nothing else changes. The site's `/api` proxy never sends it. The status page (`/api/ops/*`, a few reads a minute) and search engines are counted like any address, far under the limits. Whoever holds the key escapes the limit (as everyone did before VI-35): rotate it.
+
+Rotate the key (no moment without a valid key):
+
+```sh
+old=$(aws ssm get-parameter --name /vega/v2/edge-key --with-decryption --query Parameter.Value --output text)
+aws cloudformation deploy --region us-east-1 --stack-name vega-v2-waf --template-file infra/aws/waf.yaml --no-fail-on-empty-changeset --parameter-overrides PreviousSiteKey="$old"
+openssl rand -hex 32 | tr -d '\n' > key && aws ssm put-parameter --name /vega/v2/edge-key --type SecureString --overwrite --value file://key && rm key
+bash infra/aws/deploy.sh   # SiteKey = the new key, PreviousSiteKey kept
+# Vercel: VEGA_API_EDGE_KEY = the new key, redeploy the site; then drop the old key:
+aws cloudformation deploy --region us-east-1 --stack-name vega-v2-waf --template-file infra/aws/waf.yaml --no-fail-on-empty-changeset --parameter-overrides PreviousSiteKey=
+```
+
+**Reading the counts.** Metrics are in CloudWatch, us-east-1, namespace `AWS/WAFV2`, dimensions `WebACL=vega-v2-api` and `Rule=<rule>` (`aws cloudwatch list-metrics --region us-east-1 --namespace AWS/WAFV2` lists them): `CountedRequests` in count mode, `BlockedRequests` in block mode, `AllowedRequests` on the rule `ALL`. A week's requests over each limit:
+
+```sh
+for rule in vega-v2-api-probe-500 vega-v2-api-per-ip vega-v2-api-probe-3000 vega-v2-all-per-ip; do
+  echo "$rule $(aws cloudwatch get-metric-statistics --region us-east-1 --namespace AWS/WAFV2 --metric-name CountedRequests \
+    --dimensions Name=WebACL,Value=vega-v2-api Name=Rule,Value=$rule --start-time "$(date -u -d '-7 days' +%FT%TZ)" \
+    --end-time "$(date -u +%FT%TZ)" --period 604800 --statistics Sum --query 'Datapoints[0].Sum' --output text)"
+done
+```
+
+Who is over a limit now, and what they asked (samples of the last 3 hours):
+
+```sh
+id=$(aws wafv2 list-web-acls --region us-east-1 --scope CLOUDFRONT --query "WebACLs[?Name=='vega-v2-api'].Id" --output text)
+aws wafv2 get-rate-based-statement-managed-keys --region us-east-1 --scope CLOUDFRONT --web-acl-name vega-v2-api --web-acl-id "$id" --rule-name vega-v2-api-per-ip
+aws wafv2 get-sampled-requests --region us-east-1 --scope CLOUDFRONT --web-acl-arn "$(aws cloudformation describe-stacks --region us-east-1 --stack-name vega-v2-waf --query "Stacks[0].Outputs[?OutputKey=='WebAclArn'].OutputValue" --output text)" \
+  --rule-metric-name vega-v2-api-per-ip --time-window StartTime=$(date -u -d '-3 hours' +%s),EndTime=$(date -u +%s) --max-items 500
+```
+
+**Choosing the limit.** A page asks the API about 10 to 75 times when cold (its reads, plus one `/api/assets` per image not yet resolved; the copies under `/data/` are not counted), far less once the browser holds the images (a day). 1500 in 5 minutes is twenty cold heavy pages, or a visitor opening a page every 10 seconds for 5 minutes with a few sharing one address. After a week in count mode: if `vega-v2-api-per-ip` counted nothing from people (samples: browser user agents, home or mobile networks), keep it and block; if it did, raise `ApiLimit` above them (`vega-v2-api-probe-3000` says whether 3000 would do). `vega-v2-api-probe-500` says how close ordinary visitors come. A change of a limit resets the counts for up to a minute.
+
+**Blocking, and back.** Block (only this stack changes; the next `deploy.sh` keeps it):
+
+```sh
+aws cloudformation deploy --region us-east-1 --stack-name vega-v2-waf --template-file infra/aws/waf.yaml --no-fail-on-empty-changeset --parameter-overrides Mode=Block
+```
+
+`Mode=Count` the same way is the way back (a minute or so). `WAF_MODE=Block|Count bash infra/aws/deploy.sh` does the same within a full deploy. To detach the web ACL from the distribution altogether (the distribution then behaves as before VI-35; the next `deploy.sh` attaches it again):
+
+```sh
+aws cloudformation update-stack --stack-name vega-v2-api --use-previous-template --capabilities CAPABILITY_IAM --parameters ParameterKey=WebAclArn,ParameterValue= \
+  ParameterKey=ReleaseKey,UsePreviousValue=true ParameterKey=ReadDatabaseUrl,UsePreviousValue=true ParameterKey=OpsKey,UsePreviousValue=true \
+  ParameterKey=MediaBaseUrl,UsePreviousValue=true ParameterKey=ReservedConcurrency,UsePreviousValue=true
+```
+
+The end-to-end check, once blocking is on (from a workstation: it gets that address limited for a few minutes): `CONFIRM_RATE_LIMIT_E2E=1 VEGA_API_EDGE_KEY=<SSM value> node tests/e2e/rate-limit.e2e.mjs https://dngp6kh9jx2bl.cloudfront.net <evidence dir>`.
+
+Cost: $5 a month for the web ACL, $1 per rule (4), $0.60 per million requests inspected, cache hits included.
+<!-- END VI-35 web ACL -->
 
 ### Import test: one full season and one archive season
 
