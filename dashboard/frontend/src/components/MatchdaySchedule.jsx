@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import Icon from "./Icon.jsx";
 import { Empty, Pager, Skeleton } from "./UI.jsx";
 import { MatchLink } from "./MatchLink.jsx";
@@ -9,6 +9,7 @@ import {
   defaultMatchday,
   matchdayGroups,
   nearestUntried,
+  withNextMatchday,
 } from "../services/competition-matchdays.js";
 
 async function fetchRounds(client, competition, season, candidates) {
@@ -114,15 +115,19 @@ export default function MatchdaySchedule({
     [resource.value, extra],
   );
   const groups = useMemo(
-    () => matchdayGroups(matches, rounds),
+    () => withNextMatchday(matchdayGroups(matches, rounds)),
     [matches, rounds],
   );
+  const nextHeading = useId();
   const selected =
     groups.find((group) => group.key === selection) ||
     groups.find(
       (group) => group.key === defaultMatchday(groups, initialStatus),
     );
   const position = groups.findIndex((group) => group.key === selected?.key);
+  // The following matchday under the selected one; never the unnamed rest of the calendar.
+  const following =
+    groups[position + 1]?.key === "unknown" ? null : groups[position + 1];
   const tried = new Set([...Object.keys(rounds), ...triedExtra]);
   const remaining = nearestUntried(matches, tried);
   const pages = Math.max(1, Math.ceil((selected?.matches.length || 0) / 30));
@@ -222,6 +227,16 @@ export default function MatchdaySchedule({
         onChange={setPage}
         label="Pagination des matchs de la journée"
       />
+      {following && (
+        <section className="matchday-next" aria-labelledby={nextHeading}>
+          <h3 id={nextHeading} className="matchday-next-heading">
+            {following.label}
+          </h3>
+          {following.matches.map((match) => (
+            <MatchLink key={match.id} match={match} showKickoff />
+          ))}
+        </section>
+      )}
       {selected.key === "unknown" &&
         remaining.length > 0 &&
         f.client.configured && (
