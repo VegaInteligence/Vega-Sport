@@ -55,7 +55,13 @@
 - Tried and set aside: the style reading on every centre-forward slot (false nines). Classification is right (Dembélé 0.97, Kane 0.00) but attacking-midfielder weights sink scorers (Mbappé 5 → 35).
 - Found on the way: 3,415 player-matches of 729 outfield players in 2025/2026 are filed as goalkeeper with no keeper statistics (Challenger Pro League 1,822, a Serie A 1,566); v8 counts them as keeper matches. Separate fix proposed, not started.
 - Git: history rewritten by another session (VI-45, 20 Nov) and the local checkout realigned on it; the proposal and these notes were committed to main on 21 Nov (worklog merged with main's). Check `git status -sb` against origin/main before any commit; never merge the old history; never commit data.
-- Next action: the user decides ψ (10 / 24 / 36), whether retention stays, and whether § 11 enters the proposal as written (threshold 450, front twos only). Then build v9 beside v8 and a private comparison page (mock-up first).
+- 23 Nov: the study by position was finished, read-only (`study12.py` to `study17.py`, same scratch folder; synthesis: [Score Vega v9 : étude par poste](https://claude.ai/artifact/XdihNNTSNEBtZe6LxfgQoP)).
+  - ψ: transfers give 8.6 ± 0.4 Elo per 400 of club Elo (World Cup 19 ± 11); 10 recommended, the user's call. The match test cannot settle ψ (the club term cancels).
+  - Eight positions do not beat the seven roles on match results (−34 ± 17 in validation). Without the support-striker case the forecast is the same and Griezmann goes 529 → 372.
+  - Defence block (Massiré Sylla, Union SG, 3rd): it measures activity, worth its price for centre-backs within about ±2 sd; context alone does not move him. The user chose (23 Nov) the base (duels repaired, expectations in context, stabilised scale) plus the defence talent bounded at ±2.0 sd: Sylla 31st at ψ 24, 18th at ψ 10. Written as § 12 of the proposal; nothing in service.
+  - Duel attempts were added before the blanks had their zeros (calculation audit item 1, handed to VI-21, unresolved): fixed in `power.py` on the user's decision, [#71](https://github.com/VegaInteligence/Vega-Sport/issues/71) / [VI-50](https://linear.app/vegainteligence/issue/VI-50), takeover recorded on VI-21. Tests first (RED then GREEN, PostgreSQL 18). `METHOD_VERSION` unchanged: past seasons are not ranked again by themselves, to decide at merge.
+  - Open: 3. Liga holds zeros instead of statistics since October 2026 (data fault); the stabilised scale and the bound are untested on creation and progression, whose extremes are heavier; a national-team Elo with friendlies (#70) would ask for the World Cup ψ again.
+- Next action: the user reviews the PR of branch `claude/project-thread-314siw` (duels fix + § 12), then decides ψ (10 / 24 / 36), whether retention stays, and whether the support-striker case is dropped. Then build v9 beside v8 and a private comparison page (mock-up first).
 
 ## Navigation review — 20 November 2026
 
