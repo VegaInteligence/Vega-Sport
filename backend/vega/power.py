@@ -21,8 +21,8 @@ period, and the comparison between roles.
   STAGE; annex A.4 for the rounds): 1 for a league match, 1.15 for a Champions League
   match, 1.30 for a World Cup match; ×1.05 from the first knockout round, ×1.10 in a
   semi-final, ×1.15 in a final. So a Champions League final (1.32) outweighs any other
-  club final and the World Cup final (1.50) every match. The clubs' and the national
-  teams' Elo moves by K × I_m; a player's match adds I_m (C + κ L), "pénalités comprises"
+  club final and the World Cup final (1.50) every match. The clubs' Elo (and the national
+  teams' before 2021/22) moves by K × I_m; a player's match adds I_m (C + κ L), "pénalités comprises"
   (A.5). The World Cup's matches therefore enter the players' ranking: their level L is
   that of the national team among the national teams, the clubs' among the clubs.
 - Elo: K 20, home advantage 60 points (none on neutral ground), expected score
