@@ -3828,6 +3828,11 @@ base holds as `open-cups:euro:2020` and `:2024`; and the Nations League of 2021/
   current name (`former_names.csv` names only the host country's former names, all ended before 2019): no renamed
   side in these seasons. No new team row may be the same national team as another unmerged row (same flag in
   `national-flags.js`) unless that pair existed before.
+- **No team renamed by the internationals** (found by the E2E run, 23 Nov 2026, before this rule: the five seasons'
+  first read renamed 31 sides of the current week's strip, « Irlande » → « Republic of Ireland », « Autriche » →
+  « Austria »). `cups._team` gives a key's row the name of the edition written last; the Nations League edition
+  writes the French names of the same keys. An internationals edition never renames a row it did not create: its
+  spelling is a name of the source (`entity_names`, `source_spelling`); a side it creates takes the file's name.
 - **The nation page.** `api.nation_matches` is unchanged (one match a day and pair, a copy a day apart absorbed). The
   nation route gives a match of an internationals edition its tournament as competition and no round, so the
   carousel's rule (« another match takes its competition and its season », mock-up B) labels it « Matchs amicaux
@@ -3858,4 +3863,5 @@ run on the real `results.csv` (evidence `donnees-hors-live/internationaux-histor
 | 49j | The fourteen International Results editions due together, the test file holding one friendly a season and one row of each tournament edition | one request; fourteen editions `ok`, each its digest and exactly one match (no tournament row in an internationals edition); failing and back as 37i–37j, nothing rewritten |
 | 49k | An Elo published; a result of `nations-results:internationals:2024/2025` by the real path | `elo_due` false, no Elo run |
 | 49l | The nation route's match of an internationals edition (friendly, World Cup qualifier, Nations League 2024/25), and of the Nations League edition | competition « Friendly », « FIFA World Cup qualification », « UEFA Nations League », no round; carousel « Matchs amicaux 2024/25 », « Qualifications 2025/26 », « Ligue des nations 2024/25 »; the edition's match unchanged |
+| 49n | The Nations League edition writes « Écosse » for the key Scotland; then an internationals season holding Scotland, and a side new to the base | the key keeps « Écosse », « Scotland » a source spelling of it; the new side takes the file's name |
 | 49m | E2E, real `results.csv`: main's editions, then the five seasons, then a second pass | per season its count; no pair of matches of two editions with the same two sides a day or less apart; 0 written on the second pass; teams created and reused counted; no new same-flag pair of unmerged national rows; the Elo's population unchanged; the current home week's strip unchanged |
