@@ -194,7 +194,7 @@ await page.close();
 
 // I3: the nation page.
 page = await open(desktop, `${base}/nations/?${new URLSearchParams({ season, id: nation })}`, "desktop");
-await page.locator("#main h2").first().waitFor({ timeout: 60000 });
+await page.locator("#main h1").first().waitFor({ timeout: 60000 });
 await settled(page);
 await scrollThrough(page);
 const nationCards = await insets(page, "#main [role=tabpanel], #main");
