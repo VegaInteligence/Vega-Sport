@@ -807,7 +807,7 @@ export default function CompetitionsPage() {
     <Layout
       path="/competitions/"
       hideHeading={standalone}
-      title={directory ? "Toutes les compétitions" : "Championnats à la une"}
+      title={directory ? "Toutes les compétitions" : "Compétitions à la une"}
       actions={
         directory ? null : (
           <>
@@ -861,7 +861,8 @@ export default function CompetitionsPage() {
               </div>
             </section>
           )}
-          {isCup(selected) && (
+          {/* Only a cup with a page of its own: a featured cup has the row above, like a league. */}
+          {standalone && (
             <BackLink
               className="inline-link cup-return"
               onFallback={openDirectory}

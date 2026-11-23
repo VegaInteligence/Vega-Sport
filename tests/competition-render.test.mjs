@@ -114,7 +114,7 @@ test("competition page renders a result-derived league table and its limits", as
   run((name) => { if (!(name in stubs)) throw Error("Unexpected import " + name); return stubs[name]; }, mod, mod.exports);
   const html = renderToStaticMarkup(elem(mod.exports.default));
   assert.match(html, /Classement calculé à partir des résultats disponibles/);
-  assert.match(html, /Championnats à la une/);
+  assert.match(html, /Compétitions à la une/);
   assert.doesNotMatch(html, /Explorer les coupes/);
   assert.doesNotMatch(html, /Retrouvez les sept grandes ligues/);
   assert.match(html, /<a[^>]*href="\/archives\/"[^>]*>Archives<\/a>/);
