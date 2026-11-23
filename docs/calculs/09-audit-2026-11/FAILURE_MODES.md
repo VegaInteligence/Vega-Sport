@@ -3911,7 +3911,9 @@ METHOD_VERSION do not change.
 - **The seed.** A national team's first strength in the national pass is 1500 + (p − p̄): p its FIFA points of the
   edition dated 2021-02-18 (`core.ranking_editions` kind `fifa_men`, label the day; `core.ranking_rows.points` by team,
   through `merged_into` and the identity pass's merges), p̄ the mean of that edition's points over all its rows (1 FIFA
-  point = 1 Elo point, the edition centred on 1500). A team the edition does not rate starts at 1500, the edition's mean
+  point = 1 Elo point, the edition centred on 1500). A row `fifa.save` could not link to a team (a nation the base
+  names in French, « Andorre », or otherwise, « United States ») is linked by its FIFA name through the measurement's
+  map (`elo_engine.FIFA_TO_IR`) to the national team International Results keys by that name. A team the edition does not rate starts at 1500, the edition's mean
   (the measurement's rule: `rating.get(t, seeds.get(t, 1500))`). Without that edition, the earliest edition held; without
   any, 1500 for every team. The edition read is the run's `nation_seed_edition` (NULL without one).
 - **The world ranking** (scope `nations`, from 2021/22): a season's reference date is its last counted match (national
@@ -3952,6 +3954,7 @@ the real `results.csv` (evidence `donnees-hors-live/elo-selections/implementatio
 | 50h | Stored stakes of a World Cup final, a friendly | 1.495 and 1.0, as `stakes` gives them; `match_stakes` unchanged |
 | 50i | DB: a World Cup final of 2026 (season 2025/26), no FIFA edition | step = 30 × 1.495 × G × (1 − E); stakes 1.495; run `nation_elo_version` nations-elo-v1, `nation_k` 30, `nation_start` 2021-07-01, seed edition NULL; METHOD_VERSION unchanged; nations rows of 2025/26 and 2026/27 (matches 0, provisional) |
 | 50j | DB: FIFA editions of 2021-04-07 and 2021-02-18, then only 2021-04-07 | seed from 2021-02-18, then from 2021-04-07, the edition traced |
+| 50j' | DB: an edition row not linked to a team, FIFA name « Korea Republic » | seeds the national team International Results keys « South Korea » |
 | 50k | DB: an internationals match between two national sides; one with a side not national; an Elo published, then an internationals result written by the real path; a published run of another `nation_elo_version` | the first in `ELO_MATCHES`, the second not; `elo_due` true, one run, its sides published; due once |
 | 50l | Parser: a Nations League row with `neutral` TRUE; `cups.match_rows` of the Euro 2020 (2021-07-07 England–Denmark, 2021-07-03 Ukraine–England, a June 2021 match), World Cup 2022 (Qatar first, Qatar second), World Cup 2026 (USA–Paraguay) | neutral true; England–Denmark not neutral, Ukraine–England neutral, June NULL; Qatar home not neutral, Qatar away neutral; USA home not neutral |
 | 50m | API: `kind=nations&page=2` on a base without nations rows; `kind=clubs&page=2`; `kind=nations&limit=201`; the row mapper of a nations row, provisional true | 404 (no longer 400); 400; 400; `provisional: true`, no `score`; the list's `ranking.provisional` |

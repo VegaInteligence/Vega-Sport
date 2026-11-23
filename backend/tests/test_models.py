@@ -292,6 +292,16 @@ class ModelsTest(unittest.TestCase):
             self.assertEqual(stakes, 1.0)  # I_m of a friendly-less round: as `stakes` gives it
             x("DELETE FROM core.ranking_editions WHERE label='2021-02-18'")
 
+        # 50j': a row fifa.save could not link (a nation the base names otherwise) is linked by its FIFA name through the
+        # measurement's map to the national team International Results keys by that name.
+        x("INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id) VALUES('team','international_results','South Korea',911)")
+        self.addCleanup(lambda: x("DELETE FROM core.provider_ids WHERE entity_type='team' AND entity_id=911"))
+        x("INSERT INTO core.countries(code) VALUES ('KOR') ON CONFLICT DO NOTHING")
+        x("DELETE FROM core.ranking_rows WHERE edition_id=9101 AND team_id=911")
+        x("INSERT INTO core.ranking_rows(edition_id,row_no,country_code,entity_name,points) VALUES(9101,2,'KOR','Korea Republic',1450)")
+        power.refresh_elo(self.db)
+        self.assertEqual(x("SELECT team_id, elo_before FROM agg.team_elo WHERE match_id=9100 ORDER BY 1").fetchall(), [(910, 1550), (911, 1450)])
+
     def test_a_season_ranked_by_an_older_method_is_ranked_again(self):
         from vega import power
         from vega.store import Store
