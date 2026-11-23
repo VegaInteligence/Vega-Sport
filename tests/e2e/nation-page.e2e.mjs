@@ -168,7 +168,7 @@ try {
   check("O1-beside", "« Prochains matchs » beside the Elo chart", JSON.stringify({ elo: eloBox, upcoming: upBox }),
     eloBox && upBox && Math.abs(eloBox.y - upBox.y) < 4 && upBox.x > eloBox.x + eloBox.width - 1);
 
-  const period = page.getByRole("group", { name: "Période de l’Elo" });
+  const period = page.locator('#main [aria-label="Période de l’Elo"]').first();
   const periodButtons = await period.getByRole("button").allInnerTexts().catch(() => []);
   const axis = () => card(page, "Évolution de l’Elo").locator("svg").first().textContent().catch(() => "");
   const before = await axis();
