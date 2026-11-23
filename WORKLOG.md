@@ -1,6 +1,6 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
-## Club, nation and competition pages — 23 November 2026 (mock-up approved, PR open) — GitHub #76
+## Club, nation and competition pages — 23 November 2026 (merged, #77; follow-up fix local) — GitHub #76
 
 - Goal: the « Pages club, nation et compétition » section of the Discord plan (7 rows): back link and h1 on the nation page, competition header, skeletons instead of the full-screen logo (nation, competition), progressive club page, 16 px card inset and width cap, nation overview (coming matches, tab in the address, save button), fewer clicks.
 - Constraints: mock-up validated by the user before this counts as implementation; nothing pushed without the user's go; no data in git; E2E written first.
@@ -11,7 +11,9 @@
 - Known limits: a direct link to a club season without data shows « Club » as the name; « Autre compétition » still shows a reading line that shifts the club tabs; player and match page skeletons belong to their own work.
 - Merged main b1b27c7 (archived league seasons) on 23 Nov: site 827/827, the three E2E unchanged (16/16, 27/27, 21/21).
 - Review page (before/after): https://claude.ai/artifact/JVo5kN4v2i5PuhzMCPE1dX. Issue: GitHub #76 (Linear issue created by the sync). No overlapping In Progress issue on 23 Nov.
-- Next action: the user's review and merge of the PR; then run the three E2E on the public site.
+- 23 Nov, 23:16 UTC: PR #77 squash-merged (302472f) on the user's go once CI was green. E2E on the public site from the user's Mac: club 16/16, nation 27/27, competition 19/21.
+- The two failures (M1, M2) are one defect, older than this work: the Matchs view listed the calendar as « Journée non renseignée » for up to 0.75 s, between the fixtures and the later answer of `/api/matchdays`. Fix on branch `claude/matchday-labels-wait`: the view keeps its loading state until the names answer; E2E check M7 written first (red 21/22, then 22/22 on the local replay), site 847/847.
+- Next action: the user's go to push and merge the fix, then rerun the competition E2E on the public site.
 
 ## Reliability and security before launch — VI-46 (#67) and VI-35 (23 November 2026)
 
