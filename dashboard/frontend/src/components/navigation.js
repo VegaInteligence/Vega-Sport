@@ -42,9 +42,6 @@ export const SECTIONS = [
   { ...link("matches"), key: "calendar", icon: "calendar" },
 ];
 
-/** Pages about the site itself, under « Plus ». */
-export const ABOUT = [{ ...link("method"), icon: "book" }];
-
 /** The leagues a competitions menu opens straight onto. */
 const SHORTCUT_IDS = [
   "l_3FJFUl",
@@ -79,7 +76,6 @@ const OWNER = {
   "player-ranking": "players",
   matches: "calendar",
   calendar: "calendar",
-  method: "about",
 };
 
 /** The page a path shows (a match, a club or a player belongs to its list). */
