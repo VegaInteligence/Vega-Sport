@@ -101,11 +101,9 @@ CUP_PUBLICATION = {"club-world-cup", "world-cup-history", "france-cup"}
 # file says nothing and is_neutral stays NULL. Euro 2020: from 1 July 2021 only London's matches had a side at home
 # (England; the quarter-finals of St Petersburg, Munich, Baku and Rome had none) — uefa.com, UEFA EURO 2020 venues.
 # World Cup 2022: Qatar; World Cup 2026: the United States, Mexico, Canada; Euro 2024: Germany (fifa.com, uefa.com).
-# Euro 2028: awarded to the UK and Ireland (UEFA, 10 Oct 2023); Northern Ireland, whose Casement Park was dropped, plays
-# no home match there. OpenFootball's spelling of Ireland is not yet published: both are listed (to review then).
+# Euro 2028 is added when OpenFootball publishes its file (its spellings are unknown until then, §51).
 HOSTS = {("euro", "2020"): {"England"}, ("world-cup-history", "2022"): {"Qatar"}, ("euro", "2024"): {"Germany"},
-         ("world-cup-history", "2026"): {"USA", "Mexico", "Canada"},
-         ("euro", "2028"): {"England", "Scotland", "Wales", "Republic of Ireland", "Ireland"}}
+         ("world-cup-history", "2026"): {"USA", "Mexico", "Canada"}}
 HOSTS_FROM = "2021-07-01"
 
 

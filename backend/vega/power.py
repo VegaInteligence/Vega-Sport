@@ -355,19 +355,19 @@ def _day(match):
     return day if day is not None else (match[2].date() if match[2] is not None else None)
 
 
-def nation_updates(matches, *, seeds=None, steps=None, initial=ELO_INITIAL, home=ELO_HOME):
+def nation_updates(matches, *, seeds=None, steps=None, neutral=frozenset(), initial=ELO_INITIAL, home=ELO_HOME):
     """elo_updates' rows for the national matches dated NATION_START or later (a match without a day is not one):
     each team's first strength its seed (`initial` without one), a match moving by NATION_K × its weight
-    (`steps`: {match: w}, 1 without one) × goal_factor(margin)."""
+    (`steps`: {match: w}, 1 without one) × goal_factor(margin); a match of `neutral` on neutral ground (§51)."""
     rating, seeds, steps = {}, seeds or {}, steps or {}
     for match in matches:
-        mid, season, kickoff, h, a, hs, as_, neutral = match[:8]
+        mid, season, kickoff, h, a, hs, as_, on_neutral = match[:8]
         day = _day(match)
         if day is None or day < NATION_START:
             continue
         rh = rating[h] if h in rating else seeds.get(h, initial)
         ra = rating[a] if a in rating else seeds.get(a, initial)
-        eh = expected_score(rh, ra, 0.0 if neutral else home)
+        eh = expected_score(rh, ra, 0.0 if on_neutral or mid in neutral else home)
         result = 1.0 if hs > as_ else 0.0 if hs < as_ else 0.5
         step = NATION_K * steps.get(mid, 1.0) * goal_factor(abs(hs - as_))
         rating[h] = rh + step * (result - eh)
@@ -376,7 +376,8 @@ def nation_updates(matches, *, seeds=None, steps=None, initial=ELO_INITIAL, home
         yield (mid, a, season, kickoff, ra, rating[a], 1 - eh, 1 - result)
 
 
-def elo_passes(old, matches, nations, *, seeds=None, leagues=None, weights=None, nation_seeds=None, nation_steps=None):
+def elo_passes(old, matches, nations, *, seeds=None, leagues=None, weights=None, nation_seeds=None, nation_steps=None,
+               nation_neutral=frozenset()):
     """(the clubs' pass over `old`, today's population, as today; the national pass; the rows to store). `matches`:
     every match, the internationals included; `nations`: the national teams; `nation_steps`: {match: w or None}.
     Stored: the clubs' pass's rows but a national match's of NATION_START_SEASON or later, which are the national
@@ -385,10 +386,38 @@ def elo_passes(old, matches, nations, *, seeds=None, leagues=None, weights=None,
     legacy = list(elo_updates(old, seeds=seeds, leagues=leagues, weights=weights))
     national = {m[0] for m in matches if m[3] in nations and m[4] in nations}
     read = [m for m in matches if m[0] in national and nation_steps.get(m[0], 1.0) is not None]
-    rows = list(nation_updates(read, seeds=nation_seeds, steps=nation_steps))
+    rows = list(nation_updates(read, seeds=nation_seeds, steps=nation_steps, neutral=nation_neutral))
     stored = [r for r in legacy if r[0] not in national or r[2] < NATION_START_SEASON]
     stored += [r for r in rows if r[2] >= NATION_START_SEASON]
     return legacy, rows, stored
+
+
+# PitchAPI's World Cup matches, which no reader gives a neutral ground (§51): (match, year, is_neutral, the home side's
+# name and source keys).
+PITCHAPI_WORLD_CUP = """
+SELECT m.id, extract(year FROM coalesce(m.match_date, m.kickoff_at::date))::int, m.is_neutral,
+  array_append(array(SELECT k.provider_key FROM core.provider_ids k WHERE k.entity_type = 'team' AND k.entity_id = m.home_team_id), t.name)
+FROM core.matches m
+JOIN core.competition_seasons cs ON cs.id = m.competition_season_id AND cs.cup_key IS NULL
+JOIN core.provider_ids c ON c.entity_type = 'competition' AND c.entity_id = cs.competition_id AND c.provider = 'pitchapi'
+  AND c.provider_key = 'l_1XLtP0' AND c.is_current
+JOIN core.teams t ON t.id = m.home_team_id"""
+
+
+def pitchapi_neutral(rows):
+    """The PitchAPI World Cup matches the national pass reads as neutral: is_neutral unwritten and no host of the
+    year's edition (cups.HOSTS, by a name or a source key, « name: » or not) at home."""
+    from .sources.cups import HOSTS
+
+    hosts = {int(season): names | ({"United States"} if "USA" in names else set())
+             for (competition, season), names in HOSTS.items() if competition == "world-cup-history"}
+    out = set()
+    for match, year, neutral, names in rows:
+        if neutral is not None or year not in hosts:
+            continue
+        if not {n.split(":", 1)[1] if str(n).startswith("name:") else n for n in names} & hosts[year]:
+            out.add(match)
+    return out
 
 
 def _years_before(moment, years):
@@ -1144,14 +1173,15 @@ LEFT JOIN core.rounds r ON r.id = m.round_id"""
 
 
 def nation_inputs(conn, matches, merge, weights):
-    """(the national teams, the seed edition's label or None, the seeds, {match: w}) for the national pass. Reads only."""
+    """(the national teams, the seed edition's label or None, the seeds, {match: w}, the PitchAPI World Cup matches on
+    neutral ground) for the national pass. Reads only."""
     nations = {t for (t,) in conn.execute("SELECT id FROM core.teams WHERE is_national").fetchall()}
     nations |= {merge.get(t, t) for t in nations}
     found = conn.execute(NATION_SEED, {"edition": NATION_SEED_EDITION, "names": json.dumps(FIFA_TO_IR)}).fetchall()
     seeds = nation_seeds([(None if team is None else merge.get(team, team), points) for _, team, points in found])
     rounds = dict(conn.execute(NATION_ROUNDS).fetchall())
     steps = {m[0]: nation_weight(m[12], rounds.get(m[0]), weights.get(m[0], 1.0)) for m in matches if m[3] in nations and m[4] in nations}
-    return nations, (found[0][0] if found else None), seeds, steps
+    return nations, (found[0][0] if found else None), seeds, steps, pitchapi_neutral(conn.execute(PITCHAPI_WORLD_CUP).fetchall())
 
 
 def refresh_elo(conn):
@@ -1177,9 +1207,9 @@ def refresh_elo(conn):
     moves = league_moves(conn, conn.execute("SELECT current_date").fetchone()[0], {l for l in leagues.values() if not isinstance(l, tuple)})
     seeds, errors, settings = league_model(matches, leagues, weights=weights, moves=moves, tiers=tiers, countries=countries,
                                            apart=women, previous=previous)
-    nations, seed_edition, national_seeds, steps = nation_inputs(conn, every, merge, weights)
+    nations, seed_edition, national_seeds, steps, neutral = nation_inputs(conn, every, merge, weights)
     rows, national_rows, stored = elo_passes(matches, every, nations, seeds=seeds, leagues=leagues, weights=weights,
-                                             nation_seeds=national_seeds, nation_steps=steps)
+                                             nation_seeds=national_seeds, nation_steps=steps, nation_neutral=neutral)
     present = {s for (s,) in conn.execute("SELECT id FROM core.seasons").fetchall()}
     world = world_ranking(national_rows, started, seasons=present)
     movers = defaultdict(int)
