@@ -114,6 +114,60 @@ AWS_PROFILE=statarena bash infra/aws/import-test.sh
 
 Defaults: Ligue 1 (`LEAGUE=l_3FJFUl`), 2025/2026 (`SEASON=2025`), archive `ARCHIVE_SEASON=2019/2020`. With PitchAPI's free plan at one call every 0.5 s, a 306-match season (13 families each) takes about 40 minutes. The worker service computes the aggregates and, within a day, the levels, similarities and power rankings of the backfilled season (it now runs once for a season never computed). It writes only to `vega-football-db-postgres`.
 
+## Alerts
+
+On 20 November 2026 the API refused every read for hours (VI-33) and no one was told: the database's three alarms notified no one. Since 23 November every alarm notifies the topic `vega-v2-alerts` of its region, of the alarm and of the return to normal (OK), by e-mail. `backend/tests/test_alerts.py` fails when an alarm loses its action, a threshold leaves the number it comes from, a name no longer matches the stack that creates it, or a filter pattern no longer recognises the line the handler writes.
+
+Two stacks, deployed by `deploy.sh` (step 10, after the read API stack):
+
+- `vega-v2-alerts` (`alerts.yaml`, us-east-2): the topic (export `vega-v2-alerts-topic`), the function's, the base's and the worker's alarms, and two metric filters on `/aws/lambda/vega-v2-api` (namespace `Vega/Api`). The base's alarms were in `database.yaml` until then: the first deploy removes them there (step 1) and creates them here (step 10), the same names.
+- `vega-v2-alerts-edge` (`alerts-edge.yaml`, us-east-1): CloudFront and Route 53 metrics exist only there, and an alarm notifies only a topic of its own region, so it has its own `vega-v2-alerts` topic and subscription. It watches the distribution and probes `/api/health` from outside.
+
+| Alarm | Rings when | Do |
+|---|---|---|
+| `vega-v2-api-unreachable` (us-east-1) | `/api/health` failed 3 minutes in a row from outside (Route 53 health check `vega-v2-api-health`, 3 regions, every 30 s); it reads `api.publication`, so a base that refuses is a failure too | `curl -i https://<ApiOrigin>/api/health`; a 503 `DATA_UNAVAILABLE`: the function's log (`read failed <code>`), then the base; no answer: the distribution and the function |
+| `vega-v2-api-db-refused` | 5 reads or more in five minutes the base refused or could not take (`read failed` 53xxx, 57P01–03, 08xxx, 28xxx, ECONNREFUSED, ETIMEDOUT, ENOTFOUND) | 53300: the read login is full (The read API's connections; `SELECT count(*) FROM pg_stat_activity WHERE usename = 'vega_v2_read'`); 57P03: the base is restarting (RDS events); 28xxx: the login's password and `/vega/v2/read-database-url` differ |
+| `vega-v2-api-5xx` | the function answered 10 errors or more in each of two five-minute periods | Logs Insights on the function's log: `filter status >= 500 \| stats count(*) by path` |
+| `vega-v2-api-edge-5xx` (us-east-1) | 5 % or more of the distribution's answers were 5xx, two five-minute periods in a row of at least 100 requests each | the same; errors the distribution covered with its copy (`stale-if-error`) are not counted here |
+| `vega-v2-api-errors` | the function failed (crash, timeout, memory) 5 times or more in 2 of 3 five-minute periods; a 503 is not one | the function's log, `Task timed out` or the error's stack |
+| `vega-v2-api-throttles` | Lambda refused 20 requests or more, two periods in a row: all 32 copies busy | The read API's connections: raise the copies only while the base's processors are idle |
+| `vega-v2-api-copies` | 29 of the 32 copies (90 %) ran at once for 15 minutes | the same, before the refusals |
+| `vega-v2-api-slow` | the slowest tenth of the answers took 20 s or more (80 % of the 25 s limit) for 15 minutes; a statement stops at 8 s, so they wait on something else | the base's CPU and connections, the `ms` and `db` of the request lines |
+| `vega-v2-db-low-memory`, `vega-v2-db-low-storage`, `vega-v2-db-high-cpu` | as before (under 300 MB freeable for 15 minutes, under 3 GB free, over 90 % CPU for 30 minutes) | memory: the backfill and the archives (9 November 2026); storage grows by itself up to `MaxAllocatedStorage` |
+| `vega-v2-db-connections` | more than 88 connections for 15 minutes: the three logins' 78 (`vega/migrate.py`) plus 10 for the owner | `SELECT usename, count(*) FROM pg_stat_activity GROUP BY 1`: a session of the owner left open |
+| `vega-v2-worker-down` | no task of `vega-v2-worker` ran for 15 minutes (its CPU metric stops when no task runs; no Container Insights needed) | `aws ecs describe-services --cluster vega-v2 --services vega-v2-worker` (events, stopped reason) and `/ecs/vega-v2-worker`. Absent when the deploy sets `WORKER_DESIRED_COUNT=0` |
+| `vega-v2-live-read-errors` | `vega-v2-live-read` failed 5 times or more in 2 of 3 periods | only once `LIVE_PROVIDER` is set: until then the live circuit has no alarm and costs nothing |
+
+Missing data counts as normal (no request, no alarm), except for the probe and the worker, whose silence is the failure. Counts, not rates, on the function: a single error at night among three requests rings nothing; the probe sees an outage without traffic.
+
+### The address
+
+Never in the repository: the SSM parameter `/vega/v2/alert-email` (us-east-2), set once by the account owner. Without it the deploy logs `alerts: no SSM parameter /vega/v2/alert-email` and goes on; the alarms still change state in CloudWatch.
+
+```sh
+aws ssm put-parameter --profile statarena --region us-east-2 --name /vega/v2/alert-email --type String --value '<address>'
+```
+
+The next deploy subscribes it to both topics: AWS sends two e-mails « AWS Notification - Subscription Confirmation », one per region; nothing is delivered until each link is followed. Check: `aws sns list-subscriptions-by-topic --region us-east-2 --topic-arn arn:aws:sns:us-east-2:361769570630:vega-v2-alerts` (and `us-east-1`): `PendingConfirmation` until then. Changing the parameter replaces the subscriptions (two new confirmations).
+
+### Testing an alarm
+
+```sh
+aws cloudwatch set-alarm-state --profile statarena --region us-east-2 --alarm-name vega-v2-api-5xx --state-value ALARM --state-reason "test"
+```
+
+The e-mail arrives within a minute; the alarm goes back to OK at its next evaluation (a second e-mail). `--region us-east-1` for `vega-v2-api-unreachable` and `vega-v2-api-edge-5xx`. A filter pattern is tried against a real line without changing anything:
+
+```sh
+aws logs test-metric-filter --profile statarena --region us-east-2 \
+  --filter-pattern "$(aws logs describe-metric-filters --profile statarena --region us-east-2 --log-group-name /aws/lambda/vega-v2-api --query "metricFilters[?metricTransformations[0].metricName=='DatabaseRefused'].filterPattern" --output text)" \
+  --log-event-messages "$(printf '2026-11-20T21:04:05.123Z\tid\tERROR\tread failed 53300 /api/health')"
+```
+
+### Cost
+
+About $3–5 a month: 11 alarms in us-east-2 (12 once the live circuit runs) and 2 in us-east-1, one of them on two metrics ($0.10 per alarm metric, the first 10 free), the two filter metrics ($0.30 each, within the 10 free custom metrics), the HTTPS health check ($0.50 + $1.00 for HTTPS, or $0.75 + $2.00 if a distribution does not count as an AWS endpoint), the probe's requests through the distribution and the function (about half a million a month, around $1), SNS e-mail (the first 1,000 a month free).
+
 ## Status page
 
 The private status page (repository VegaInteligence/Vega-Status, its own Vercel project) reads `GET /api/ops/status`: the jobs of the last and next 24 hours, the queue, the watched matches, the source runs, the model runs, the provider calls per hour and the data warnings, from the `api.ops_*` views (`backend/sql/043_ops_status.sql`, `backend/sql/050_ops_status_reads.sql`, `backend/sql/051_ops_followed_matches.sql`). Its job queries are bounded by the indexes of `ops.fetch_jobs`; a failed read is logged as `read failed <code> <path>`.
