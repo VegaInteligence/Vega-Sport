@@ -5,7 +5,6 @@ import Link from "next/link";
 import React, {
   useState,
   useEffect,
-  useRef,
   useDeferredValue,
   useMemo,
   useCallback,
@@ -84,6 +83,7 @@ import {
 } from "../services/competition-selector.js";
 import {
   PREFERRED_COMPETITION_KEY,
+  VISITOR_COUNTRY_KEY,
   localeCountry,
   preferredCompetition,
 } from "../services/competition-standings.js";
@@ -572,46 +572,37 @@ export default function CompetitionsPage() {
     saved: null,
     country: null,
   });
-  const manualChoice = useRef(false);
   useEffect(() => {
-    let active = true;
-    const controller = new AbortController();
-    let saved = null;
+    let saved = null,
+      kept = null;
     try {
       saved = window.localStorage.getItem(PREFERRED_COMPETITION_KEY);
+      kept = window.localStorage.getItem(VISITOR_COUNTRY_KEY);
     } catch {}
     if (saved) {
       setChoice({ ready: true, saved, country: null });
-      return () => {
-        active = false;
-        controller.abort();
-      };
+      return;
     }
-    const timer = setTimeout(() => controller.abort(), 2500);
-    (async () => {
-      let detected = null;
-      try {
-        const response = await fetch("/api/visitor-country", {
-          cache: "no-store",
-          signal: controller.signal,
-        });
-        if (response.ok) detected = (await response.json()).country;
-      } catch {}
-      if (active && !manualChoice.current)
-        setChoice({
-          ready: true,
-          saved: null,
-          country:
-            detected ||
-            localeCountry(navigator.languages || [navigator.language]),
-        });
-      clearTimeout(timer);
-    })();
-    return () => {
-      active = false;
-      clearTimeout(timer);
-      controller.abort();
-    };
+    // Shown at once: the country kept from an earlier visit, else the browser language's.
+    setChoice({
+      ready: true,
+      saved: null,
+      country:
+        kept || localeCountry(navigator.languages || [navigator.language]),
+    });
+    // The hosting's country is kept for the next visit: what is shown now never changes.
+    const controller = new AbortController();
+    fetch("/api/visitor-country", {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((body) => {
+        if (/^[A-Z]{2}$/.test(body?.country || ""))
+          window.localStorage.setItem(VISITOR_COUNTRY_KEY, body.country);
+      })
+      .catch(() => {});
+    return () => controller.abort();
   }, []);
   // The archived catalogue corrects a few provider country codes even while
   // the full season is still loading (for example Turkey's 1. Lig).
@@ -715,7 +706,6 @@ export default function CompetitionsPage() {
     setDirectory("all");
   }
   function chooseCompetition(next) {
-    manualChoice.current = true;
     setOpenSeason(
       directory && directorySeason !== "all" ? directorySeason : "",
     );

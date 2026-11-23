@@ -12,6 +12,8 @@ export const COUNTRY_LEAGUES = {
 const PROVIDER_COUNTRIES = { TH: "THA", AU: "AUS", US: "USA", BR: "BRA", AR: "ARG", JP: "JPN", KR: "KOR", MX: "MEX", CA: "CAN", CO: "COL", PE: "PER", QA: "QAT", AE: "UAE", SA: "KSA", ZA: "RSA", CL: "CHI", PY: "PAR", UY: "URU" };
 export const DEFAULT_LEAGUE = COUNTRY_LEAGUES.FR;
 export const PREFERRED_COMPETITION_KEY = "statarena.preferred-competition.v1";
+/** The visitor's country as the hosting saw it on an earlier visit (`/api/visitor-country`). */
+export const VISITOR_COUNTRY_KEY = "statarena.visitor-country.v1";
 
 // The result-derived table is suitable only for straightforward league phases.
 // Cups and leagues with split/playoff phases require a dedicated standings source.
