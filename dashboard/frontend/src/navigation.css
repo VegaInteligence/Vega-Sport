@@ -1,0 +1,160 @@
+/* The site's navigation (VI-41): the header groups the pages under menus by
+   use; on phones the tab bar opens each section in a sheet above it. */
+.main-nav {
+  overflow: visible;
+}
+.nav-menu {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+button.nav-button {
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+.nav-button[aria-current="true"] {
+  color: var(--ink-strong);
+}
+.nav-button[aria-current="true"]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--accent);
+}
+.nav-button[aria-expanded="true"] {
+  color: var(--ink-strong);
+}
+.nav-caret {
+  color: var(--muted-light);
+  transition: transform 0.15s;
+}
+.nav-button[aria-expanded="true"] .nav-caret {
+  transform: rotate(180deg);
+}
+.nav-menu-panel {
+  position: absolute;
+  top: calc(100% + 1px);
+  left: -12px;
+  z-index: 50;
+  min-width: 230px;
+  padding: 6px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-pop);
+}
+.nav-menu-panel.is-wide {
+  display: grid;
+  grid-template-columns: 230px 210px;
+  gap: 6px;
+}
+.nav-menu-shortcuts {
+  padding-left: 6px;
+  border-left: 1px solid var(--border);
+}
+.nav-menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.nav-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  padding: 0 10px;
+  color: var(--ink);
+  font-size: var(--text-md);
+  white-space: nowrap;
+}
+.nav-menu-item .nav-icon {
+  color: var(--muted);
+}
+.nav-menu-item:hover {
+  background: var(--surface-subtle);
+  color: var(--ink-strong);
+}
+.nav-menu-item[aria-current="page"] {
+  background: var(--accent-soft);
+  color: var(--ink-strong);
+}
+.nav-menu-item[aria-current="page"] .nav-icon {
+  color: var(--accent-dark);
+}
+
+/* ---------- Phones ---------- */
+@media (max-width: 640px) {
+  /* A section's pages in a sheet above the tab bar. */
+  .nav-sheet-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 44;
+    background: var(--backdrop);
+    animation: nav-fade 0.16s ease-out;
+  }
+  .nav-sheet {
+    position: absolute;
+    left: 50%;
+    bottom: calc(var(--tabbar-space) + 8px);
+    width: min(430px, calc(100% - 24px));
+    padding: 6px;
+    border: 1px solid var(--border-strong);
+    background: var(--surface-raised);
+    box-shadow: var(--shadow-pop);
+    transform: translateX(-50%);
+    animation: nav-sheet-in 0.18s ease-out;
+  }
+  .nav-sheet .nav-menu-item {
+    min-height: 48px;
+    font-size: var(--text-md);
+  }
+  .nav-sheet-rail {
+    position: relative;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 8px 4px 4px;
+    margin-top: 4px;
+    border-top: 1px solid var(--border);
+    scrollbar-width: none;
+  }
+  .nav-sheet-rail::-webkit-scrollbar {
+    display: none;
+  }
+  .nav-pill {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    height: 40px;
+    padding: 0 14px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--ink);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+}
+@keyframes nav-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes nav-sheet-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 10px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-sheet-layer,
+  .nav-sheet {
+    animation: none;
+  }
+}
