@@ -15,7 +15,10 @@
 - Needed if approved: the worker keeps the whole race (RACE_KEPT 10 → every eligible player), API serves it paged; frontend as mocked. Cups only if the user asks (European league phases first).
 - Linear: no overlapping In Progress issue (VI-19 cup predictions, VI-30 cup crests are different scopes). Create one (repo:vega-sport) once approved.
 - 20 Nov: approved (« Oui, valide »), cups left out. Built in scratchpad worktree `vi44-wt` as [VI-44](https://linear.app/vegainteligence/issue/VI-44): whole race kept, `race=all` + `raceTotal` in the API, Joueurs view, crown. Site 816/816, API 254/254, Python 44/44, E2E 23/23 before deploy. Not pushed. Issue was created in Linear directly from this stale AGENTS.md; main now asks for a GitHub issue first.
-- Next action: the user's go to push main and deploy (API and worker first), then the public E2E.
+- 23 Nov: the 20 Nov build never reached main (local worktree lost). Rebuilt from main 71c737c on branch `claude/project-thread-rg90tq`, same scope: `rounds.race_after` keeps the whole race (RACE_KEPT gone, no migration); API `race=all` + `raceTotal` (card keeps its first ten, `RACE_CARD`); site `LeagueRace.jsx` (view `joueurs`, 20 a page, round select, Minutes hidden ≤ 640 px), « Tous les joueurs » in the card, crown (`roundStar`, lowest slot on a tie), round cards mounted for leagues only; `05-journees.md` updated.
+- Same branch: the Euro's selector and the nation-page edition links now list 2028 … 1960 (cup-catalog seasons; the base has held 1960–2016 since 22 Nov).
+- Validated 23 Nov (tests written first, seen red): Python test_models + test_rounds 44/44, API 254/254, site 825/825, build OK, E2E `tests/e2e/league-race.e2e.mjs` 10/10 desktop + iPhone 16 against a local API on the seeded contract base (35-player race added for paging). The E2E caught the phone table hiding the grade column; fixed. Not run against production data (production API not reachable from the cloud session).
+- Next action: the user's go to push and open the PR, then deploy (API and worker first) and run the E2E on the public site. Rounds closed before the deploy keep 10 rows.
 
 ## Note Vega vs Score Vega: overlap review — 20 November 2026
 
@@ -318,7 +321,7 @@
 - Validated: reader tests written first (8/8); `test_sources` 34/34; E2E on a local PostgreSQL 18 (real files → `cups.save` → `api.nation_matches` → `tournamentRuns`): 388 Euro matches in 17 editions, no nation split, every run checked by hand (Spain 1964/2008/2012/2024 winner, USSR 1960, Italy 1968 after the replay, Czechoslovakia 1976 on penalties). Site and Python suites: same failures as untouched main (environment). Evidence: `~/Agents/scratch/vega-euro-history-20261122/EVIDENCE.md`.
 - Effect to expect: the nations' Elo takes these 286 matches at its next pass, as it does the archived World Cups (not measured beforehand: the base is private).
 - Deployed 22 Nov (« Yes, deploy »): CI run 45053203946 and deploy run 45053812464 green; live API for Spain lists 12 Euros (1964 Vainqueur … 2024 Vainqueur), as the local E2E.
-- Not done: the site's Euro page season picker and the nation-page tile links still stop at 2020 (frontend, needs a mock-up).
+- 23 Nov: the Euro page's season picker and the nation-page tile links now reach 1960 (branch `claude/project-thread-rg90tq`, with VI-44). No mock-up: same selector, more options.
 - Linear: not touched in this folder (rule in ~/.claude/CLAUDE.md).
 
 ## Club page — xG trend from the first match; PPDA approximation renamed (22 November 2026)

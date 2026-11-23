@@ -42,12 +42,12 @@ RETRY_MINUTES = 45
 GRADED_SHARE = 0.8
 # Player of the Season: shrunk mean z, Σ m·z / (Σ m + PRIOR_MINUTES), over matches of
 # SEASON_MATCH_MINUTES or more; eligible with RACE_SHARE of his club's possible league
-# minutes and RACE_MATCHES matches.
+# minutes and RACE_MATCHES matches. The whole race is kept (VI-44): the card shows its
+# first ten, the competition's « Joueurs » view all of it.
 PRIOR_MINUTES = 450
 SEASON_MATCH_MINUTES = 20
 RACE_SHARE = 0.5
 RACE_MATCHES = 3
-RACE_KEPT = 10
 
 # Formations, by their roles (slot, accepted roles). The order breaks ties.
 SLOT_ROLES = {
@@ -334,6 +334,17 @@ def publish(conn, season, edition, key, played):
             ) as copy:
                 for index, line, slot, (player, role, minutes, z, team, match) in slots:
                     copy.write_row((edition, key, index, line, slot, formation, player, team, match, season, role, minutes, z))
+    race = race_after(conn, edition, key, season)
+    with conn.cursor().copy(
+        "COPY agg.round_season_race(competition_season_id, round_key, rank, player_id, team_id, z, matches, minutes) FROM STDIN"
+    ) as copy:
+        for rank, (player, team, z, matches, minutes) in enumerate(race, 1):
+            copy.write_row((edition, key, rank, player, team, z, matches, minutes))
+
+
+def race_after(conn, edition, key, season):
+    """The edition's whole Player of the Season race after round `key`: every eligible
+    player, best first (season_race)."""
     # The race over the edition's closed rounds, this one included.
     rows = conn.execute(
         """SELECT g.player_id, g.team_id, g.minutes, g.z FROM agg.player_match_grades g
@@ -351,12 +362,7 @@ def publish(conn, season, edition, key, played):
         {"s": season, "ids": list(closed_matches(conn, edition, key))},
     ).fetchall():
         club_matches[team] = n
-    race = season_race(rows, club_matches)[:RACE_KEPT]
-    with conn.cursor().copy(
-        "COPY agg.round_season_race(competition_season_id, round_key, rank, player_id, team_id, z, matches, minutes) FROM STDIN"
-    ) as copy:
-        for rank, (player, team, z, matches, minutes) in enumerate(race, 1):
-            copy.write_row((edition, key, rank, player, team, z, matches, minutes))
+    return season_race(rows, club_matches)
 
 
 def closed_matches(conn, edition, key):

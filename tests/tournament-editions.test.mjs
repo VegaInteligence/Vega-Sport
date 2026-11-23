@@ -177,7 +177,10 @@ test("8. a run's edition page, or none", () => {
   assert.deepEqual(tournamentEdition("world-cup", 1930), { id: WORLD_CUP_ARCHIVE_ID, edition: "1930" });
   assert.equal(tournamentEdition("world-cup", 1942), null);
   assert.deepEqual(tournamentEdition("euro", 2024), { id: "open-cup:euro", edition: "2024" });
-  assert.equal(tournamentEdition("euro", 2016), null);
+  // The Euros of 1960 to 2016 are in the base (22 Nov 2026): each has its page; 1961 never existed.
+  assert.deepEqual(tournamentEdition("euro", 2016), { id: "open-cup:euro", edition: "2016" });
+  assert.deepEqual(tournamentEdition("euro", 1960), { id: "open-cup:euro", edition: "1960" });
+  assert.equal(tournamentEdition("euro", 1961), null);
   assert.deepEqual(tournamentEdition("afcon", 2025), { id: "nations-results:afcon", edition: "2025" });
   assert.deepEqual(tournamentEdition("copa-america", 2024), { id: "nations-results:copa-america", edition: "2024" });
   assert.equal(tournamentEdition("olympics", 2024), null);

@@ -83,7 +83,8 @@ $$
 - **Le 450 au dénominateur** rapproche de 0 (soit 50) un joueur qui a peu joué, comme le λ du classement Vega. Sans lui, un joueur qui a fait trois très bons matchs passerait devant un titulaire régulier.
 - **Ni niveau du club, ni enjeu, ni a priori de la saison passée.** Dans un même championnat, le niveau du club ne ferait que favoriser les grands clubs ; tous les matchs de championnat ont le même enjeu ; et la course ne récompense que cette saison.
 - **Conditions pour concourir** : au moins 3 matchs, et au moins la moitié des minutes que son club a pu jouer dans ces journées (matchs du club × 90).
-- Le site montre les trois premiers ; les dix premiers sont gardés pour chaque journée.
+- La course entière est gardée pour chaque journée. La carte montre ses dix premiers (moins si la place manque) ; l'onglet « Joueurs » du championnat la montre entière, 20 par page, avec la même note. Les journées fermées avant ce changement n'ont que leurs dix premiers.
+- **Le joueur de la journée** est la meilleure note de l'équipe de la journée (une couronne sur sa photo) ; à égalité, la case la plus basse du terrain.
 
 **Choisi** : 450 minutes, 50 % des minutes, 3 matchs. **Mesuré** : les z, par la note de match.
 

@@ -25,3 +25,29 @@ test("the race fills its card: the whole rows that fit, one at least, the race k
   assert.equal(raceRowsThatFit({ available: 10, rowHeight: 40, gap: 12, max: 10 }), 1);
   assert.equal(raceRowsThatFit({ available: Number.NaN, rowHeight: 40, gap: 12, max: 3 }), 3);
 });
+
+test("the Player of the Round: the best grade of the Team of the Round, the lowest slot on a tie", async () => {
+  const { roundStar } = await import("../dashboard/frontend/src/services/league-rounds.js");
+  const players = [
+    { slot: 0, grade: 70 }, { slot: 4, grade: 89 }, { slot: 9, grade: 89 }, { slot: 10, grade: 81 },
+  ];
+  assert.equal(roundStar({ players }), 4);
+  assert.equal(roundStar({ players: [{ slot: 3, grade: null }, { slot: 7, grade: 60 }] }), 7);
+  assert.equal(roundStar({ players: [{ slot: 3, grade: null }] }), null);
+  assert.equal(roundStar({ players: [] }), null);
+  assert.equal(roundStar(null), null);
+});
+
+test("the whole race, 20 a page: the page asked for, kept inside the race", async () => {
+  const { racePage, RACE_PAGE } = await import("../dashboard/frontend/src/services/league-rounds.js");
+  assert.equal(RACE_PAGE, 20);
+  const race = Array.from({ length: 45 }, (_, i) => ({ rank: i + 1 }));
+  const first = racePage(race, 1);
+  assert.deepEqual([first.page, first.pages, first.rows.length, first.rows[0].rank, first.rows.at(-1).rank], [1, 3, 20, 1, 20]);
+  const last = racePage(race, 3);
+  assert.deepEqual([last.page, last.rows.length, last.rows[0].rank], [3, 5, 41]);
+  assert.equal(racePage(race, 9).page, 3);
+  assert.equal(racePage(race, 0).page, 1);
+  assert.deepEqual(racePage([], 1), { page: 1, pages: 1, rows: [] });
+  assert.deepEqual(racePage(undefined, 2), { page: 1, pages: 1, rows: [] });
+});

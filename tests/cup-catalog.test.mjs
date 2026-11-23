@@ -52,3 +52,13 @@ test("French Cup archive separates match and penalty scores", () => {
   assert.equal(matches[1].date, "2025-05-24");
   assert.throws(() => parseFranceCup(source.replace("# Matches 2", "# Matches 3")), /Incomplete/);
 });
+
+test("the Euro's selector offers every edition the base holds, 1960 to 2028, latest first", async () => {
+  const { OPEN_CUP_CATALOG } = await import("../dashboard/frontend/src/services/cup-catalog.js");
+  const { EURO_HISTORY_FOLDERS } = await import("../dashboard/frontend/src/services/openfootball-euro.js");
+  const euro = OPEN_CUP_CATALOG.find((item) => item.id === "open-cup:euro");
+  const expected = ["2028", "2024", "2020", ...Object.keys(EURO_HISTORY_FOLDERS).sort().reverse()];
+  assert.deepEqual(euro.seasons, expected);
+  assert.equal(euro.seasons.at(-1), "1960");
+  assert.equal(euro.defaultSeason, "2024");
+});

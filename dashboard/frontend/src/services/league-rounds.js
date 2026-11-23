@@ -23,6 +23,36 @@ export function useLeagueRound(competition, season, round) {
   );
 }
 
+/** A closed round's whole Player of the Season race (race=all), for the competition's « Joueurs » view (VI-44). */
+export function useLeagueRace(competition, season, round) {
+  return useResource(
+    `league-race:${competition || "none"}:${season || "none"}:${round || "latest"}`,
+    () => json("/api/rankings/round?" + new URLSearchParams({ competition, season, ...(round ? { round } : {}), race: "all" })).catch(missing),
+    Boolean(competition && season),
+  );
+}
+
+/** The Player of the Round: the slot of the Team of the Round's best grade, the lowest slot on a tie; null without one. */
+export function roundStar(team) {
+  let best = null;
+  for (const p of team?.players || []) {
+    if (!Number.isFinite(p.grade)) continue;
+    if (!best || p.grade > best.grade || (p.grade === best.grade && p.slot < best.slot)) best = p;
+  }
+  return best ? best.slot : null;
+}
+
+// The whole race's rows a page.
+export const RACE_PAGE = 20;
+
+/** One page of the whole race: the page asked for, kept between the first and the last. */
+export function racePage(race, page) {
+  const rows = Array.isArray(race) ? race : [];
+  const pages = Math.max(1, Math.ceil(rows.length / RACE_PAGE));
+  const current = Math.min(pages, Math.max(1, Math.trunc(Number(page)) || 1));
+  return { page: current, pages, rows: rows.slice((current - 1) * RACE_PAGE, current * RACE_PAGE) };
+}
+
 /** A round's label for the page: « Journée 5 » for a numbered round, its own label otherwise. */
 export function roundLabel(round) {
   if (!round) return "";

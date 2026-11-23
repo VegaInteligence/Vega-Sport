@@ -5,7 +5,7 @@ import Icon from "./Icon.jsx";
 import { Card, Grade, Media } from "./UI.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { number } from "../services/format.js";
-import { raceRowsThatFit, roundLabel, teamLines, useLeagueRound, useLeagueRounds } from "../services/league-rounds.js";
+import { raceRowsThatFit, roundLabel, roundStar, teamLines, useLeagueRound, useLeagueRounds } from "../services/league-rounds.js";
 
 // The race's rows on a phone, where the two cards stand one under the other.
 const STACKED_RACE_ROWS = 5;
@@ -26,12 +26,32 @@ function shortName(name = "") {
   return parts.length > 1 ? `${parts[0][0]}. ${parts.slice(1).join(" ")}` : name;
 }
 
+/** The closed rounds of a league, latest first, to pick one from (nothing with a single one). */
+export function RoundSelect({ closed, value, onChange }) {
+  if (closed.length < 2) return null;
+  return (
+    <div className="filter-field league-round-select">
+      <div className="filter-input-wrap">
+        <select aria-label="Journée" value={value} onChange={(event) => onChange(event.target.value)}>
+          {closed.map((r) => (
+            <option key={r.key} value={r.key}>
+              {roundLabel(r)}
+            </option>
+          ))}
+        </select>
+        <Icon name="chevron" className="select-chevron" />
+      </div>
+    </div>
+  );
+}
+
 /**
  * A league's Player of the Season race and Team of the Round (backend/vega/rounds.py), after
  * its latest closed matchweek or one picked among the closed ones. Nothing for a league
- * without a closed round.
+ * without a closed round. « Tous les joueurs » opens the whole race (`onAllPlayers`, VI-44); the
+ * Team of the Round's best grade wears the Player of the Round's crown.
  */
-export default function LeagueRoundCards({ competition, season }) {
+export default function LeagueRoundCards({ competition, season, onAllPlayers }) {
   const f = useFootball();
   const rounds = useLeagueRounds(competition, season);
   const [picked, setPicked] = useState("");
@@ -60,11 +80,19 @@ export default function LeagueRoundCards({ competition, season }) {
   if (!rounds.loading && !rounds.value?.latest) return null;
   const body = round.value;
   const lines = teamLines(body?.team);
+  const star = roundStar(body?.team);
   return (
     <div className="league-round-cards">
       <Card
         title="Joueur de la saison"
         className="league-race"
+        action={
+          onAllPlayers && Number.isFinite(body?.raceTotal) && body.raceTotal > 0 && (
+            <button type="button" className="competition-highlights-more" onClick={onAllPlayers}>
+              Tous les joueurs
+            </button>
+          )
+        }
       >
         {(body ? `Après la ${roundLabel(body.round).toLowerCase()} · note Vega moyenne de ses matchs, resserrée vers 50 tant qu’il a peu joué` : undefined) && <p className="card-note">{body ? `Après la ${roundLabel(body.round).toLowerCase()} · note Vega moyenne de ses matchs, resserrée vers 50 tant qu’il a peu joué` : undefined}</p>}
         {round.loading || rounds.loading ? (
@@ -96,26 +124,7 @@ export default function LeagueRoundCards({ competition, season }) {
       <Card
         title="Équipe de la journée"
         className="league-team"
-        action={
-          closed.length > 1 && (
-            <div className="filter-field league-round-select">
-              <div className="filter-input-wrap">
-                <select
-                  aria-label="Journée"
-                  value={picked || rounds.value?.latest || ""}
-                  onChange={(event) => setPicked(event.target.value)}
-                >
-                  {closed.map((r) => (
-                    <option key={r.key} value={r.key}>
-                      {roundLabel(r)}
-                    </option>
-                  ))}
-                </select>
-                <Icon name="chevron" className="select-chevron" />
-              </div>
-            </div>
-          )
-        }
+        action={<RoundSelect closed={closed} value={picked || rounds.value?.latest || ""} onChange={setPicked} />}
       >
         {(body?.team ? `${body.team.formation} · les meilleures notes Vega de la journée, à partir de 60 minutes` : undefined) && <p className="card-note">{body?.team ? `${body.team.formation} · les meilleures notes Vega de la journée, à partir de 60 minutes` : undefined}</p>}
         {round.loading || rounds.loading ? (
@@ -136,6 +145,11 @@ export default function LeagueRoundCards({ competition, season }) {
                     title={`${p.name} · ${p.team} · ${p.position} · ${number(p.minutes)} min`}
                   >
                     <span className="team-pitch-avatar">
+                      {p.slot === star && (
+                        <span className="team-pitch-crown" role="img" aria-label="Joueur de la journée" title="Joueur de la journée">
+                          <Icon name="crown" />
+                        </span>
+                      )}
                       <Media name={p.name} url={p.imageUrl} className="player-avatar" />
                       <Grade value={p.grade} title="Note Vega du match sur 100" />
                     </span>

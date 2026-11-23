@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { get, skip } from "./context.mjs";
-import { comingMatches, cupFormat, cupStages, groupsByTeam, levelsByTeam, provisionalReason, roundOpponents } from "../src/routes/rankings.mjs";
+import { comingMatches, cupFormat, cupStages, groupsByTeam, levelsByTeam, provisionalReason, roundOpponents, roundRace, RACE_CARD } from "../src/routes/rankings.mjs";
 
 test("club links and a club's UEFA ranking history", { skip }, async () => {
   const links = (await get("/api/club-links?club=t_aaaaa1")).body;
@@ -137,6 +137,13 @@ test("power rankings of players and clubs for a season", { skip }, async () => {
   assert.deepEqual([latest.round.key, latest.team.formation, latest.team.players.map((p) => [p.slot, p.slotRole, p.playerId, p.grade])],
     ["r1", "4-3-3", [[0, "GK", "p_aaaab3", 58.5], [10, "CF", "p_aaaab1", 80.8]]]);
   assert.deepEqual(latest.race.map((r) => [r.rank, r.playerId, r.name, r.grade]), [[1, "p_aaaab1", "Élie Durand", 62.7], [2, "p_aaaab4", "Cristiano Test", 57.1]]);
+  // The card's race (the first ten) and how many the whole race holds; race=all serves it whole (VI-44).
+  assert.equal(latest.raceTotal, 2);
+  const wholeRace = (await get("/api/rankings/round?competition=l_3FJFUl&season=2025/2026&round=r1&race=all")).body;
+  assert.deepEqual([wholeRace.raceTotal, wholeRace.race.map((r) => [r.rank, r.playerId, r.grade, r.minutes])], [2, [[1, "p_aaaab1", 62.7, 260], [2, "p_aaaab4", 57.1, 160]]]);
+  assert.deepEqual(wholeRace.team, latest.team);
+  assert.equal((await get("/api/rankings/round?competition=l_3FJFUl&season=2025/2026&race=10")).response.status, 400);
+  assert.equal((await get("/api/rankings/round?competition=l_3FJFUl&season=2025/2026&race=")).response.status, 400);
   assert.equal((await get("/api/rankings/round?competition=l_3FJFUl&season=2025/2026&round=w2025-09-02")).response.status, 404); // still open
   assert.equal((await get("/api/rankings/round?competition=l_3FJFUl&season=2025/2026&round=x1")).response.status, 400);
   assert.equal((await get("/api/rankings/rounds?competition=l_3FJFUl&season=2024/2025")).response.status, 404);
@@ -311,4 +318,13 @@ test("a cup's format, and each club's opponent of the round in play", () => {
   assert.equal(roundOpponents([]).size, 0);
   // Each club's Elo, its latest season's (the read gives one row per club, newest first), rounded.
   assert.deepEqual([...levelsByTeam([{ team_key: 1, elo: 2011.4 }, { team_key: 3, elo: 1497.6 }])], [[1, 2011], [3, 1498]]);
+});
+
+test("a round's race: the card's first ten by default, the whole race when asked, nothing else (VI-44)", () => {
+  assert.equal(RACE_CARD, 10);
+  const rows = Array.from({ length: 23 }, (_, i) => ({ rank: i + 1 }));
+  assert.deepEqual([roundRace(rows, null).rows.length, roundRace(rows, null).total, roundRace(rows, null).rows.at(-1).rank], [10, 23, 10]);
+  assert.deepEqual([roundRace(rows, "all").rows.length, roundRace(rows, "all").total], [23, 23]);
+  assert.deepEqual(roundRace([], null), { rows: [], total: 0 });
+  for (const bad of ["", "ALL", "20", "all "]) assert.throws(() => roundRace(rows, bad), (error) => error.status === 400);
 });

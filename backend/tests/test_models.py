@@ -85,6 +85,12 @@ class ModelsTest(unittest.TestCase):
         self.assertTrue(race)
         self.assertEqual([r[1] for r in race], sorted((r[1] for r in race), reverse=True))
         self.assertEqual(self.one("SELECT count(*) FROM api.round_season_race WHERE competition_season_id = 1")[0], len(race))
+        # The whole race is kept, not its first ten (VI-44): every eligible player, in the race's order.
+        self.assertFalse(hasattr(rounds, "RACE_KEPT"))
+        key = self.one("SELECT round_key FROM agg.league_rounds WHERE competition_season_id = 1")[0]
+        eligible = rounds.race_after(self.db, 1, key, 2025)
+        stored = self.db.execute("SELECT player_id FROM agg.round_season_race WHERE competition_season_id = 1 ORDER BY rank").fetchall()
+        self.assertEqual([r[0] for r in stored], [r[0] for r in eligible])
         # A second pass closes nothing again and rewrites nothing.
         self.assertEqual(rounds.refresh(self.db, 2025), set())
         self.assertEqual(self.one("SELECT count(*) FROM agg.round_season_race WHERE competition_season_id = 1")[0], len(race))

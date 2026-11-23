@@ -783,17 +783,28 @@ async function leagueRounds(read, params) {
   return { competition, season, rounds: rows.map(roundOf), latest: closed.length ? closed[closed.length - 1].round_key : null };
 }
 
+// The race the round's card shows: its first ten; race=all serves it whole (VI-44).
+export const RACE_CARD = 10;
+
+/** A round's race rows as asked: the card's first ten (mode null) or all of them ("all"); any other value is refused. */
+export function roundRace(rows, mode) {
+  if (mode !== null && mode !== "all") reject(400, "Paramètre invalide.");
+  return { rows: mode === "all" ? rows : rows.slice(0, RACE_CARD), total: rows.length };
+}
+
 /**
  * One closed round of a league (the latest by default): its Team of the Round, the best
  * eleven by Vega's match grades in the formation that fits them best, and the league's
  * Player of the Season race after it (the shrunk mean grade of the season), both frozen at
- * the round's closure.
+ * the round's closure. The race is its first ten unless race=all; raceTotal counts all of it.
  */
 async function leagueRound(read, params) {
-  validateParams(params, ["competition", "season", "round"]);
+  validateParams(params, ["competition", "season", "round", "race"]);
   const { competition, season, edition } = await editionOf(read, params);
   const key = params.get("round");
   if (key !== null && !/^(r\d{1,9}|w\d{4}-\d{2}-\d{2})$/.test(key)) reject(400, "Paramètre invalide.");
+  const mode = params.get("race");
+  roundRace([], mode);
   const [current] = await read(
     key
       ? "SELECT * FROM api.league_rounds WHERE competition_season_id=$1 AND round_key=$2 AND status<>'open'"
@@ -807,13 +818,15 @@ async function leagueRound(read, params) {
   ]);
   const person = (r) => ({ playerId: r.player_id, name: r.player_name, imageUrl: r.image_url ?? null, teamId: r.team_id ?? null, team: r.team ?? null,
     teamImageUrl: r.team_image_url ?? null });
+  const served = roundRace(race, mode);
   return {
     competition, season, round: roundOf(current),
     team: team.length
       ? { formation: team[0].formation, players: team.map((r) => ({ slot: r.slot, line: r.line, slotRole: r.slot_role, position: ROLE_LABEL[r.role] ?? r.role,
           ...person(r), matchId: r.match_id, minutes: r.minutes, grade: round(r.grade, 1) })) }
       : null,
-    race: race.map((r) => ({ rank: r.rank, ...person(r), grade: round(r.grade, 1), matches: r.matches, minutes: r.minutes })),
+    race: served.rows.map((r) => ({ rank: r.rank, ...person(r), grade: round(r.grade, 1), matches: r.matches, minutes: r.minutes })),
+    raceTotal: served.total,
   };
 }
 
