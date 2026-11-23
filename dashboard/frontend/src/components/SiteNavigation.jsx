@@ -5,7 +5,6 @@ import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Archive,
-  BookOpen,
   CalendarDays,
   ChartColumn,
   ChevronDown,
@@ -17,7 +16,6 @@ import {
   Users,
 } from "lucide-react";
 import {
-  ABOUT,
   SECTIONS,
   SHORTCUTS,
   competitionHref,
@@ -35,7 +33,6 @@ const ICONS = {
   ranking: ChartColumn,
   medal: Medal,
   calendar: CalendarDays,
-  book: BookOpen,
 };
 export function NavIcon({ name, size = 18 }) {
   const Symbol = ICONS[name] || Trophy;
@@ -197,32 +194,6 @@ export function HeaderMenus({ path, href }) {
           </Link>
         ),
       )}
-      <div
-        className={`nav-menu nav-about${open === "about" ? " is-open" : ""}`}
-        onPointerEnter={hoverIn("about")}
-        onPointerLeave={hoverOut}
-      >
-        <button
-          type="button"
-          ref={(node) => (triggers.current.about = node)}
-          className="nav-button"
-          aria-expanded={open === "about"}
-          aria-current={active === "about" ? "true" : undefined}
-          onClick={toggle("about")}
-        >
-          Plus
-          <ChevronDown className="nav-caret" size={13} strokeWidth={2} aria-hidden="true" />
-        </button>
-        {open === "about" && (
-          <div className="nav-menu-panel">
-            <div className="nav-menu-list">
-              {ABOUT.map((item) => (
-                <MenuLink key={item.key} {...{ item, path, href }} onPick={() => setOpen("")} />
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
     </nav>
   );
 }

@@ -5,6 +5,10 @@ const directory = path.dirname(fileURLToPath(import.meta.url));
 const config = {
   distDir: process.env.NODE_ENV === "development" ? ".next-dev" : ".next",
   poweredByHeader: false,
+  // « Données & méthode » was removed (VI-41): old links land on the home page.
+  async redirects() {
+    return [{ source: "/methode", destination: "/", permanent: false }];
+  },
   reactStrictMode: true,
   // Reuse visited route segments within the existing four-minute publication
   // revalidation window. Data caches and preference/generation fences still

@@ -154,7 +154,6 @@ test("independent-reader routes mount without downloading a football season", ()
   for (const path of [
     "competitions",
     "archives",
-    "methode",
     "classement-joueurs",
     "calendrier",
     "joueurs/matchs",
