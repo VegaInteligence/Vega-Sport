@@ -23,49 +23,6 @@ const groups = [
   },
 ];
 
-/** Credits the data and image licences require (they used to sit on « Données & méthode »). */
-function Credits() {
-  return (
-    <div className="site-footer-credits">
-      <p>
-        Archives réutilisées sous licence :{" "}
-        <a href="https://www.openligadb.de/">OpenLigaDB</a> (
-        <a href="https://opendatacommons.org/licenses/odbl/1-0/">ODbL 1.0</a>),{" "}
-        <a href="https://github.com/schochastics/football-data">
-          schochastics/football-data
-        </a>{" "}
-        (<a href="https://opendatacommons.org/licenses/by/1-0/">ODC-BY 1.0</a>),{" "}
-        <a href="https://github.com/jalapic/engsoccerdata">engsoccerdata</a> et{" "}
-        <a href="https://github.com/oladeeayo/open-matchday">open-matchday</a>{" "}
-        (usage non commercial avec attribution). Titres de joueurs :{" "}
-        <a href="https://www.thesportsdb.com/">TheSportsDB</a>. Fonds de carte ©{" "}
-        <a href="https://www.openstreetmap.org/copyright">
-          contributeurs OpenStreetMap
-        </a>
-        .
-      </p>
-      <p>
-        Coupes du monde 1930–2018 (compositions, buteurs, cartons, arbitres,
-        stades) :{" "}
-        <a href="https://github.com/jfjelstul/worldcup">
-          The Fjelstul World Cup Database
-        </a>
-        , © 2023 Joshua C. Fjelstul, Ph.D. (
-        <a href="https://creativecommons.org/licenses/by-sa/4.0/legalcode">
-          CC-BY-SA 4.0
-        </a>
-        ), valeurs typées et matchs rapprochés de nos archives. Drapeaux :{" "}
-        <a href="https://github.com/lipis/flag-icons">flag-icons</a>, Panayiotis
-        Lipiridis (<a href="/flag-icons-LICENSE.txt">licence MIT</a>).{" "}
-        <a href="https://github.com/VegaInteligence/Vega-Sport/blob/main/docs/TROPHY_IMAGE_CREDITS.md">
-          Crédits des images de trophées
-        </a>
-        .
-      </p>
-    </div>
-  );
-}
-
 export default function SiteFooter({ href = plainHref, path }) {
   return (
     <footer className="site-footer" aria-label="Pied de page">
@@ -118,7 +75,6 @@ export default function SiteFooter({ href = plainHref, path }) {
             </nav>
           ))}
         </div>
-        <Credits />
       </div>
     </footer>
   );
