@@ -71,7 +71,8 @@
 - Clean-up (user: no fact shown twice in B): on wide screens the page's own side column moves into the sidebar (competition highlights column; club identity rail, wrapped in the chart colour scope), the panel adds only what the page lacks (league projection, hidden on the Projection tab; club Elo; match events; upcoming match forecast unless on Avant-match; players' stats outside the table's columns). Research comparison tray hidden in B. Empty tabs hidden. Phone B keeps the page as is; the sheet adds only the extras.
 - Header menus of A and B open on mouse hover (180 ms close delay), click kept for touch and keyboard. Evidence: `nav-evidence/b-clean/`, `nav-evidence/hover/`.
 - Shared preview (user's choice, to get a friend's opinion): branch `preview/vi-41-navigation` (f822c86384 since the VI-45 history rewrite, same content; main untouched, no CI or auto-deploy for that branch) built as a Vercel preview of project `vega` (dpl_Z2RvbjwgLcUxYLc8ZAwLNiWELN3Y). Previews sit behind Vercel login: the friend uses a 23-hour share link. Delete the branch once a navigation is chosen.
-- Next action: user compares A, B and C locally and picks; then port to main, drop the switch, re-run the phone checks.
+- Decision (23 Nov): A. Ported on branch `claude/project-thread-2gq40n` from current main: header menus (`SiteNavigation` `HeaderMenus`), phone tab bar with section sheets (`TabBar`, `PhoneSheet`), `navigation.js`, `navigation.css` (A rules only). B (`BSide`, `Side*`, page changes) and C (`SideNav`, drawer), the A | B | C switch and the `vega.nav` script are dropped. Site tests 822/822, build OK.
+- Next action: user reviews the PR's Vercel preview (desktop + phone), merges; then delete branch `preview/vi-41-navigation` and close VI-41.
 
 ## Règles d'avatar : blasons et portraits — VI-43 / #63 (20 novembre 2026, clos)
 

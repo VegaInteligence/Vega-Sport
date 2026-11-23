@@ -17,6 +17,7 @@ import "../src/research.css";
 import "../src/player-profile-redesign.css";
 import "../src/home.css";
 import "../src/phone.css";
+import "../src/navigation.css";
 const siteUrl = "https://vegasport.vercel.app";
 const faviconVersion = 2;
 const description = "Vega Intelligence : statistiques de football, analyses de matchs, joueurs et compétitions.";
