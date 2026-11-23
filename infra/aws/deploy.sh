@@ -8,7 +8,8 @@
 # Steps: the base vega-football-db-postgres, its secrets, the worker stack, the
 # worker image, the migrations and logins, the worker start, the live stack (store,
 # broadcast, full-state read, ingestor), the read API package, the read API stack and its
-# distribution, and optionally the historical archive import.
+# distribution, optionally the historical archive import, and the alerts (alerts.yaml, and
+# alerts-edge.yaml in us-east-1).
 #
 # Environment: WORKER_DESIRED_COUNT (1), BACKFILL_DESIRED_COUNT (kept from the previous
 # deploy when unset: 1 while history is collected, 0 once it is), IMPORT_ARCHIVES (false), ARCHIVE_SOURCES_BUCKET
@@ -120,4 +121,22 @@ if [ "${IMPORT_ARCHIVES:-false}" = true ] && [ -n "$ARCHIVES" ]; then
   echo "== 9. Historical archives (runs for a while; logs /ecs/vega-v2-worker, prefix archives)"
   run_task vega-v2-archives
 fi
+# --- Alerts (alerts.yaml here, alerts-edge.yaml in us-east-1; README, Alerts) ---
+# After the read API stack: the edge stack names its distribution. The address is never in
+# the repository: SSM /vega/v2/alert-email, set once by the account owner. Without it the
+# topics have no subscription and the deploy goes on.
+echo "== 10. Alerts: topic vega-v2-alerts and its alarms (here and in us-east-1)"
+alert_email=$(aws ssm get-parameter --name /vega/v2/alert-email --with-decryption --query Parameter.Value --output text 2>/dev/null || true)
+[ "$alert_email" = None ] && alert_email=
+if [ -n "$alert_email" ]; then
+  [ -n "${GITHUB_ACTIONS:-}" ] && echo "::add-mask::$alert_email"
+else
+  echo "alerts: no SSM parameter /vega/v2/alert-email: the alarms notify a topic with no e-mail subscription (README, Alerts)"
+fi
+watch_worker=true; [ "$COUNT" = 0 ] && watch_worker=false
+watch_live=false; [ -n "${LIVE_PROVIDER:-}" ] && watch_live=true
+stack vega-v2-alerts alerts.yaml --parameter-overrides AlertEmail="$alert_email" WatchWorker="$watch_worker" WatchLive="$watch_live"
+stack vega-v2-alerts-edge alerts-edge.yaml --region us-east-1 --parameter-overrides AlertEmail="$alert_email" \
+  DistributionId="$(output vega-v2-api DistributionId)" ApiDomain="${media#https://}"
+# --- end of alerts ---
 echo "done"
