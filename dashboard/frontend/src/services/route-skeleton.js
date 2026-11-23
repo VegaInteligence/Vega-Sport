@@ -6,6 +6,7 @@
 export const ROUTE_SKELETONS = {
   "/clubs": { kind: "club", needsId: true },
   "/competitions": { kind: "competition", needsId: false },
+  "/nations": { kind: "nation", needsId: true },
 };
 
 /** The skeleton kind of a location, or "" when the route keeps the logo. */

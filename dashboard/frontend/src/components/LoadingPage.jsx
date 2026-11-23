@@ -9,11 +9,13 @@ import TabBar from "./TabBar.jsx";
 import PageLoader from "./PageLoader.jsx";
 import ClubSkeleton from "./ClubSkeleton.jsx";
 import CompetitionSkeleton from "./CompetitionSkeleton.jsx";
+import NationSkeleton from "./NationSkeleton.jsx";
 import { routeSkeleton } from "../services/route-skeleton.js";
 /** One skeleton per kind of services/route-skeleton.js. */
 const SKELETONS = {
   club: <ClubSkeleton />,
   competition: <CompetitionSkeleton />,
+  nation: <NationSkeleton />,
 };
 export default function LoadingPage({ href }) {
   const path = usePathname();

@@ -2,7 +2,8 @@ import { SCOUT_METRICS, DEFAULT_INDEX, METRIC_PRESETS } from "./scouting.js";
 import { playerLeagueIds } from "./player-leaderboard.js";
 export const RESEARCH_KEY = "statarena.research.v1";
 const idPattern = /^(p|t|m)_[A-Za-z0-9]+$/;
-const kinds = { players: "p", clubs: "t", matches: "m" };
+// A nation is a team too (t_…): its own kind keeps it out of everything that reads saved clubs.
+const kinds = { players: "p", clubs: "t", nations: "t", matches: "m" };
 const text = (value, length = 100) =>
   typeof value === "string" ? value.slice(0, length) : "";
 export const DEFAULT_COLUMNS = [
