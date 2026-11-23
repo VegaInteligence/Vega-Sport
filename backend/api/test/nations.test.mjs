@@ -149,12 +149,10 @@ test("the nations and a nation are served", { skip }, async () => {
 
 // FAILURE_MODES.md §49 (49l), written before the code: a match of « the season's other internationals » (the
 // edition `nations-results:internationals:<season>`, International Results) comes with its tournament as its
-// competition and no round (the file has no stage), so the nation page's carousel labels it by its competition and
-// season (mock-up B: « Matchs amicaux 2025/26 »), never « Matchs internationaux 2024/2025 2024/25 » nor « Phase de
-// groupes ». Another edition's match is served as before.
+// competition and no round (the file has no stage). Another edition's match is served as before. The carousel's labels
+// of these matches are tested with the site (tests/nation-match-carousel.test.mjs): this package has no site module.
 test("a match of the season's other internationals is served under its tournament", async () => {
   const route = await import("../src/routes/nations.mjs");
-  const { matchCarousel } = await import("../../../dashboard/frontend/src/services/nation-carousel.js");
   assert.equal(typeof route.matchOf, "function");
   const row = (over) => ({
     match_id: "m_x", match_date: "2024-09-07", season: "2024/2025", competition: "Matchs internationaux 2024/2025",
@@ -173,8 +171,6 @@ test("a match of the season's other internationals is served under its tournamen
     ["Friendly", null, "nations-results:internationals:2024/2025"],
     ["UEFA Nations League", null, "nations-results:internationals:2024/2025"],
   ]);
-  assert.deepEqual(matchCarousel({ id: FR, matches: served, tournaments: [] }).map((g) => g.label),
-    ["Qualifications 2025/26", "Matchs amicaux 2024/25", "Ligue des nations 2024/25"]);
   // Another edition's match: its competition and round as stored.
   const league = route.matchOf(row({ competition: "nations-league", edition: "openligadb:nations-league:2026/2027", round: "Groupe 3" }));
   assert.deepEqual([league.competition, league.round], ["nations-league", "Groupe 3"]);
