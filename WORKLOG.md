@@ -352,3 +352,17 @@
 - Built: `spreadChips` (blocks merged around their centres' mean, 6 px apart, inside the chart), chips with the scorer's colour, `data-goal-list` under the chart (now with the swing on the phone too); chart height unchanged.
 - Validated: E2E written first (`winprob.e2e.mjs`): 60/181 on the page before, 181/181 local; site suite = main's 9 local failures; build OK. Evidence: `EVIDENCE.md` there.
 - Linear: not touched in this folder (rule in ~/.claude/CLAUDE.md).
+
+## Archived seasons of the five big leagues on the competition page (23 Nov 2026)
+
+- Ask (user, Ligue 1 screenshot): the picker stops at 2021/2022; wants 2010–2020 for the five big leagues. The base already held their results (archives, football-data); PitchAPI starts at 2021/22.
+- Mock-up approved (« Oui parfait », `~/Agents/scratch/vega-big5-history-20261123/mock/`): seasons 2020/2021…2010/2011 in the picker; Classement / Matchs / Joueurs; side column « Saison » (champion, top scorer, goals per match, relegated) and the last matchday.
+- Built (branch `claude/big5-history`): migration 163 + `sources/tm_history.py` (Transfermarkt datasets, CC0, player seasons 2012/13–2020/21; agent lane), migration 164 + `GET /api/league-history`, `LeagueHistory.jsx`. Colours are facts: next season's European competition, relegation by absence from the next league (league rule when the source families do not match).
+- Validated locally: E2E 12/12 (before: fails on the live site), API 265/265, Python suites OK, site = main's 9 local failures, build OK. Evidence: `~/Agents/scratch/vega-big5-history-20261123/EVIDENCE.md`, `EVIDENCE-tm.md`.
+- Known limits: Transfermarkt 2014/15 (all) and LaLiga 2020/21 incomplete (flagged on the page); points deductions sourced for Serie A only (2010/11–2014/15, 2018/19); production colours depend on the identity merges (to check live).
+- Linear: not touched in this folder (rule in ~/.claude/CLAUDE.md).
+- Shipped 23 Nov: `c6cf70cc29` on main; CI green; deploy run 45196350953 success (user: « Yes, deploy »). Live, all 55 league-seasons answer; champions, points, top scorers and relegations checked against the record; the worker loaded the player seasons at once.
+- Found live: no Champions League colour before 2019/20 (openfootball's European editions write « Olympique Lyonnais (FRA) », rows never merged) and Eibar shown relegated in LaLiga 2014/15 instead of Elche (13th, relegated for debts). Fix (tests first): clubs matched by id or by archived spelling without country tag and legal-form words (migration 165), relegation by absence anywhere in the bottom half.
+- Fix deployed 23 Nov (`cb7aef0981`, run 45261934821, user: « Yes, deploy »): Champions League colours before 2019/20 back, Elche relegated in LaLiga 2014/15; live E2E 12/12 (`e2e/prod-2/`), 55-season check `e2e/live-seasons-after.txt`.
+- Found live: 300 of 1,078 table rows (66 spellings: « Lille OSC », « Olympique Lyonnais », « Bayer 04 Leverkusen », « SS Lazio »…) name no club of the site, so no crest, no link and missing colours (Lyon, Real Sociedad, Betis…). Cause: the archive pass of `sources/identity.py` read ARCHIVE_SPELLINGS only, never the cups' reviewed `curated.CLUB_ALIASES`. Fix (test first): it reads both; 13 spellings added. Merges happen at the next daily `team_identity` run after deploy.
+- Next action: deploy the identity fix, then after the next daily pass re-run `e2e/noid.py` (expect far fewer than 300) and `e2e/live-seasons.py`; then remove the worktree and branch.

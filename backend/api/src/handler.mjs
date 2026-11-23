@@ -27,6 +27,7 @@ import { createRankingRoute } from "./routes/rankings.mjs";
 import { createSupportRoute } from "./routes/support.mjs";
 import { createCupRoute } from "./routes/cups.mjs";
 import { createNationRoute } from "./routes/nations.mjs";
+import { createLeagueHistoryRoute } from "./routes/league-history.mjs";
 import { createWorldCupRoute } from "./routes/worldcup.mjs";
 import { createArchiveDetailRoute } from "./routes/archive-details.mjs";
 import { compactHomePresentation } from "./home-presentation.mjs";
@@ -75,7 +76,7 @@ export function createHandler({ read: query, mediaBase = null, clock = Date.now,
       }
     }
   };
-  const routes = [createSystemRoute(read), createOpsRoute(read, { key: opsKey, clock }), createClubReadRoute(read), createPlayerReadRoute(read, { clock }), createMatchRoute(read), createMatchDetailRoute(read), createProfileRoute(read), createPlayerFormRoute(read), createPartitionRoute(read), createReferenceRoute(read), createDisciplineRoute(read), createPresenceRoute(read), createPerformanceRoute(read), createActorRoute(read, { clock }), createHomeReadRoute(read, clock), createHomeFavouritesRoute(read, clock), createSearchRoute(read), createArchiveRoute(read), createArchiveDetailRoute(read), createRankingRoute(read), createSupportRoute(read, { mediaBase }), createCupRoute(read), createEuropeRoute(read, { clock }), createNationRoute(read), createWorldCupRoute(read)];
+  const routes = [createSystemRoute(read), createOpsRoute(read, { key: opsKey, clock }), createClubReadRoute(read), createPlayerReadRoute(read, { clock }), createMatchRoute(read), createMatchDetailRoute(read), createProfileRoute(read), createPlayerFormRoute(read), createPartitionRoute(read), createReferenceRoute(read), createDisciplineRoute(read), createPresenceRoute(read), createPerformanceRoute(read), createActorRoute(read, { clock }), createHomeReadRoute(read, clock), createHomeFavouritesRoute(read, clock), createSearchRoute(read), createArchiveRoute(read), createArchiveDetailRoute(read), createRankingRoute(read), createSupportRoute(read, { mediaBase }), createCupRoute(read), createEuropeRoute(read, { clock }), createNationRoute(read), createWorldCupRoute(read), createLeagueHistoryRoute(read)];
   async function route(req) {
     const url = new URL(req.url),
       path = url.pathname;

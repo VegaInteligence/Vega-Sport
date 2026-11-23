@@ -24,7 +24,7 @@ def normalize(name):
 
 
 def adapters():
-    from . import cups, curated, fifa, footballdata, honours, odds, open_matchday, sportscore, uefa, wikidata, worldcup
+    from . import cups, curated, fifa, footballdata, honours, odds, open_matchday, sportscore, tm_history, uefa, wikidata, worldcup
 
     # Keys are core.provider values (ops.source_runs.source). Curated names first: the
     # UEFA links read the reviewed aliases.
@@ -39,7 +39,10 @@ def adapters():
             "fjelstul": worldcup,
             # The archived league seasons' half-time scores, statistics and prices (football-data.co.uk). Its matches
             # pair with the archived ones, which the archive task loads.
-            "football_data": footballdata}
+            "football_data": footballdata,
+            # The five big leagues' player seasons of 2012/13 to 2020/21 (transfermarkt-datasets, CC0-1.0). The Transfermarkt
+            # process (vega/transfermarkt.py) writes no source run: this key is the files' reader alone.
+            "transfermarkt": tm_history}
 
 
 # A failed scope is tried again after this delay (or its period, if shorter), not at every round.

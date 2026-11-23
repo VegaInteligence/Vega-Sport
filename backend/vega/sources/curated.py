@@ -121,6 +121,12 @@ CLUB_ALIASES = {
     "RC Lens": "Lens", "RC Strasbourg": "Strasbourg", "Red Star FC": "Red Star", "Rodez AF": "Rodez", "Stade Brestois 29": "Brest",
     "Stade Lavallois": "Laval", "Stade Rennais": "Rennes", "Stade de Reims": "Reims", "Toulouse FC": "Toulouse", "US Boulogne": "Boulogne",
     "USL Dunkerque": "Dunkerque",
+    # The five big leagues' archived seasons 2010/11-2020/21 (openfootball, engsoccerdata), reviewed against the site's
+    # club of the same country on 23 Nov 2026. « Parma FC » (folded in 2015) is left out on purpose.
+    "Athletic Bilbao": "Athletic Club", "RC Celta de Vigo": "Celta Vigo", "Real Betis Balompié": "Real Betis",
+    "Real Sociedad de Fútbol": "Real Sociedad", "TSG 1899 Hoffenheim": "Hoffenheim",
+    "Atalanta BC": "Atalanta", "Bologna FC 1909": "Bologna", "SS Lazio": "Lazio", "UC Sampdoria": "Sampdoria",
+    "Olympique Lyon": "Lyon", "Stade Brest": "Brest", "Stade Reims": "Reims", "Stade Rennes": "Rennes",
     "1899 Hoffenheim": "Hoffenheim", "Bor. Mönchengladbach": "Borussia Mönchengladbach", "FC Ingolstadt 04": "FC Ingolstadt", "SSV Ulm 1846": "Ulm",
     "SV Meppen": "Meppen", "SV Sandhausen": "Sandhausen",
     "AFC Ajax": "Ajax", "SBV Excelsior": "Excelsior", "VVV-Venlo": "VVV",
