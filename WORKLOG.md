@@ -328,3 +328,11 @@
 - Rename: METRICS `ppda` label « Passes adverses par action défensive », glossary sentence naming every defensive action, the two style maps' axis label, the card texts; key, calculation and the match page's source PPDA unchanged; DB label (015_metric_labels.sql) unchanged, not shown on the site.
 - Validated: E2E spec written first (`~/Agents/scratch/vega-xg-prev-ppda-20261122/xg.e2e.mjs`): 18/37 on the page before, 37/37 local; means recomputed from the API (Arsenal 1,46 / 1,44 / 1,60 / 1,90 then 2,20 pure); 2021/22 fallback; phone; no « PPDA » left on 9 club views. Site suite: main's 9 local failures; build OK. Evidence: `EVIDENCE.md` there.
 - Linear: not touched in this folder (rule in ~/.claude/CLAUDE.md).
+
+## Match page — win-probability goal labels overlapped (23 November 2026)
+
+- Ask (user, 23 Nov): « Tjr de l'overlapping dans la probabilité de victoire ». Cause (`MatchWinProbability.jsx`, 19 Nov redraw): every goal label on one row, no collision test; measured on production over 15 matches with 3+ goals: overlaps on 11/13 at 1440 px, 13/15 at 390 px (`~/Agents/scratch/vega-winprob-overlap-20261123/prod/overlaps.txt`). The 19 Nov mock-up showed a one-goal match only.
+- Options mocked: A labels on stacked rows (rejected: a higher goal's line crosses lower labels, unbounded height); B one row of short chips (the score) nudged apart, leaders to their goals, full goal lines listed under the chart. User: « fait l'option recommandé je te fais confiance » → B.
+- Built: `spreadChips` (blocks merged around their centres' mean, 6 px apart, inside the chart), chips with the scorer's colour, `data-goal-list` under the chart (now with the swing on the phone too); chart height unchanged.
+- Validated: E2E written first (`winprob.e2e.mjs`): 60/181 on the page before, 181/181 local; site suite = main's 9 local failures; build OK. Evidence: `EVIDENCE.md` there.
+- Linear: not touched in this folder (rule in ~/.claude/CLAUDE.md).

@@ -259,6 +259,36 @@
   font-size: 11px;
   font-weight: 600;
 }
+.winChip {
+  fill: var(--bg);
+  stroke: var(--border-strong);
+}
+.winGoals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+.winGoals li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.winGoals i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+.winGoals b {
+  color: var(--ink-strong);
+  font-weight: 600;
+}
 .winReadout {
   padding-top: 22px;
   font-variant-numeric: tabular-nums;

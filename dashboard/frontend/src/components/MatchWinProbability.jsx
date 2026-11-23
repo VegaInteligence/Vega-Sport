@@ -9,8 +9,45 @@ const HOME = "var(--home)";
 const AWAY = "var(--away)";
 const DRAW = "var(--muted)";
 const RED = "light-dark(#d93025, #ff6b61)";
+const CHIP_GAP = 6;
 
-/** A match minute by minute: the chances of each result as three lines, each goal a jump with
+/** A chip's width for its text: a dot, the score in tabular figures, padding. */
+const chipWidth = (text) => 22 + text.length * 7;
+
+/**
+ * Left edges for chips of `widths` wanted centred on `centres` (in order), on one row between `lo`
+ * and `hi`: each as close to its centre as the others allow, never closer than CHIP_GAP. Chips that
+ * would touch are moved as one block, centred on their centres' mean.
+ */
+export function spreadChips(centres, widths, lo, hi) {
+  const blocks = [];
+  centres.forEach((centre, i) => {
+    let block = { first: i, last: i, want: centre - widths[i] / 2, size: widths[i] };
+    for (;;) {
+      block.left = Math.min(Math.max(block.want, lo), hi - block.size);
+      const prev = blocks.at(-1);
+      if (!prev || prev.left + prev.size + CHIP_GAP <= block.left) break;
+      blocks.pop();
+      const n1 = prev.last - prev.first + 1, n2 = block.last - block.first + 1;
+      // The merged block's wanted left edge: the mean of each chip's wanted edge, minus its offset in the block.
+      const want = (prev.want * n1 + (block.want - prev.size - CHIP_GAP) * n2) / (n1 + n2);
+      block = { first: prev.first, last: block.last, want, size: prev.size + CHIP_GAP + block.size };
+    }
+    blocks.push(block);
+  });
+  const lefts = [];
+  for (const block of blocks) {
+    let left = block.left;
+    for (let i = block.first; i <= block.last; i++) {
+      lefts.push(left);
+      left += widths[i] + CHIP_GAP;
+    }
+  }
+  return lefts;
+}
+
+/** A match minute by minute: the chances of each result as three lines, each goal a jump marked by a
+ * chip above the plot (the score it made, joined to its minute), and listed under the chart with
  * what it changed for the side that scored. The read-out beside it follows the pointer, else
  * gives the present or final state. `live`: the match's live state (hooks/useLiveMatch.js),
  * drawn from while the base has not read the match yet. */
@@ -43,11 +80,11 @@ export default function MatchWinProbability({ match, live: feed = null }) {
   const head = at
     ? `${Math.round(at.minute)}′${at.score ? ` · ${scoreText(at)}` : ""}`
     : `${live ? `En cours · ${live.minute}′` : "Fin"}${end.score ? ` · ${scoreText(end)}` : ""}`;
-  const goalText = (goal) => {
-    const base = `${goal.minute}′ · ${goal.label}`;
-    if (phone || goal.from == null) return base;
-    return `${base} · ${goal.side === "home" ? home : away} ${Math.round(goal.from * 100)} → ${Math.round(goal.to * 100)} %`;
-  };
+  // One row of chips above the plot, each nudged just enough not to touch the others.
+  const widths = goals.map((goal) => chipWidth(goal.label));
+  const lefts = spreadChips(goals.map((goal) => x(goal.minute)), widths, 0, width);
+  const CHIP_TOP = 4,
+    CHIP_H = 16;
   return (
     <Card title="Probabilité de victoire" className="match-overview-wide">
       <figure className={`chart-figure ${s.winFigure}`}>
@@ -67,7 +104,7 @@ export default function MatchWinProbability({ match, live: feed = null }) {
               onPointerDown={pick}
               onPointerLeave={() => setAt(null)}
             >
-              <g data-plot data-x0={x0} data-x1={x1} data-span={span}>
+              <g data-plot data-x0={x0} data-x1={x1} data-span={span} data-top={m.t}>
                 {[0, 0.25, 0.5, 0.75, 1].map((v) => (
                   <line
                     key={v}
@@ -94,16 +131,20 @@ export default function MatchWinProbability({ match, live: feed = null }) {
                 <path data-line="away" d={path("away")} fill="none" stroke={AWAY} strokeWidth="2.25" strokeLinejoin="round" />
                 <path data-line="home" d={path("home")} fill="none" stroke={HOME} strokeWidth="2.25" strokeLinejoin="round" />
                 {goals.map((goal, i) => {
-                  const gx = x(goal.minute);
-                  const text = goalText(goal);
-                  const left = gx - x0 > text.length * 6.6 + 12;
+                  const gx = x(goal.minute),
+                    left = lefts[i],
+                    bottom = CHIP_TOP + CHIP_H;
                   return (
                     <g key={`goal-${i}`} data-goal>
-                      <line x1={gx} x2={gx} y1={m.t - 6} y2={height - m.b} stroke="var(--ink-strong)" strokeOpacity="0.5" />
-                      <circle cx={gx} cy={m.t - 12} r="4.5" fill={goal.side === "home" ? HOME : AWAY} stroke="var(--bg)" strokeWidth="2" />
-                      <text x={left ? gx - 10 : gx + 10} y={m.t - 8} textAnchor={left ? "end" : "start"} className={s.winGoal}>
-                        {text}
-                      </text>
+                      <line data-goal-line x1={gx} x2={gx} y1={m.t} y2={height - m.b} stroke="var(--ink-strong)" strokeOpacity="0.5" />
+                      <line data-leader x1={left + widths[i] / 2} y1={bottom} x2={gx} y2={m.t} stroke="var(--ink-strong)" strokeOpacity="0.5" />
+                      <g data-chip>
+                        <rect x={left} y={CHIP_TOP} width={widths[i]} height={CHIP_H} className={s.winChip} />
+                        <circle data-chip-dot cx={left + 8} cy={CHIP_TOP + CHIP_H / 2} r="3.5" fill={goal.side === "home" ? HOME : AWAY} />
+                        <text x={left + 15} y={CHIP_TOP + 12} className={s.winGoal}>
+                          {goal.label}
+                        </text>
+                      </g>
                     </g>
                   );
                 })}
@@ -135,6 +176,20 @@ export default function MatchWinProbability({ match, live: feed = null }) {
             </dl>
           </div>
         </div>
+        {goals.length > 0 && (
+          <ol data-goal-list className={s.winGoals}>
+            {goals.map((goal, i) => (
+              <li key={i}>
+                <i style={{ background: goal.side === "home" ? HOME : AWAY }} />
+                <b>
+                  {goal.minute}′ {goal.label}
+                </b>
+                {goal.from != null &&
+                  ` ${goal.side === "home" ? home : away} ${Math.round(goal.from * 100)} → ${Math.round(goal.to * 100)} %`}
+              </li>
+            ))}
+          </ol>
+        )}
         <figcaption>
           Au coup d’envoi{chart.lineups ? ", compositions prises en compte" : ""} : {shares(start)}. Le modèle connaît
           le score, l’heure et les expulsions, pas le jeu lui-même.
