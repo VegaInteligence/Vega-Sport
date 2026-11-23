@@ -13,6 +13,20 @@
 - Review page (before/after): https://claude.ai/artifact/JVo5kN4v2i5PuhzMCPE1dX. Issue: GitHub #76 (Linear issue created by the sync). No overlapping In Progress issue on 23 Nov.
 - Next action: the user's review and merge of the PR; then run the three E2E on the public site.
 
+## Reliability and security before launch — VI-46 (#67) and VI-35 (23 November 2026)
+
+- Goal: the « Fiabilité et sécurité » lot of the 23 Nov plan: someone is told when the API, the base, the CDN or the worker fails; one address can no longer take the 32 copies; a spend alert exists; the site and the API send security headers.
+- Constraint from the user: nothing pushed, merged or deployed to AWS without his word. No cache freshness changes without it either (VI-35).
+- Branch `claude/fiabilite-securite` on main cb7aef0, four parts built separately then assembled (20 commits):
+  - Alerts: `alerts.yaml` (us-east-2) and `alerts-edge.yaml` (us-east-1: CloudFront 5xx, Route 53 probe of `/api/health`), topic `vega-v2-alerts`, address read from SSM `/vega/v2/alert-email`. The three RDS alarms moved out of `database.yaml` (they notified no one).
+  - Spend: `budget.yaml` (120 $ a month, 50/80/100 % and forecast, anomaly detection), deployed once by the account owner, not by `deploy.sh`. `vega-v2-live-read` now has 10 reserved copies.
+  - Per-address limit (VI-35 A.1): `waf.yaml` (us-east-1, CLOUDFRONT scope, Count by default, 1500 requests per 300 s outside `/data/`, 6000 on every path), `WebAclArn` in `api.yaml` (empty: nothing attached), the site's server reads exempted by `X-Vega-Edge-Key` (SSM `/vega/v2/edge-key`, Vercel `VEGA_API_EDGE_KEY`).
+  - Headers: `dashboard/frontend/security-headers.mjs` (HSTS, nosniff, referrer, framing, permissions, CSP in report-only, reports to `/api/csp-report`), API `ViewerHeaders` completed. No visual change.
+- Validated locally on the assembled branch: cfn-lint 0 (us-east-2 on every template, us-east-1 on `alerts-edge.yaml` and `waf.yaml`), `bash -n`, Python 60 tests (alerts, cost caps, rate limit, security headers, capacity, live; 1 skipped), site 847/847, site build OK (static pages kept). Headers E2E 39/39 with 0 CSP violation on 6 pages, desktop and phone, against a local API on synthetic data (branch alone, before assembly).
+- Not validated: nothing ran against AWS or Vercel. Open until a real deploy: the CloudFormation role's permissions, the log filter patterns in CloudWatch, the e-mails, the web ACL association, the rate-limit E2E (`tests/e2e/rate-limit.e2e.mjs`, needs Block mode), CSP reports on Vercel, the stadium map, the live socket. The full Python suite (PostgreSQL) was not run.
+- Read-only audit of the code the same day: findings kept for separate issues (deploy role can escalate through IAM, cache keys bypassed by non-canonical query strings, slow club substitutions route, `claude/v2-*` OIDC trust of the pilot). The deploy summary shows masked values (checked by the user on run 119).
+- Next action: the user's go to push and open the PR; then, in order, deploy `vega-v2-deploy-roles`, set `/vega/v2/alert-email`, run Deploy, confirm both subscription e-mails, deploy `vega-v2-budget` once, set `VEGA_API_EDGE_KEY` on Vercel; a week of counting before Block.
+
 ## No data in git — VI-45 (20–21 November 2026, done)
 
 - Goal: no data in the repository, history included. History rewritten without backup on the user's word, then force-pushed (every branch and the tag): old main 4844e92589 → 8f1b34522d, a clone drops from ~4.1 GB to 34 MB.
@@ -68,7 +82,13 @@
 - Tried and set aside: the style reading on every centre-forward slot (false nines). Classification is right (Dembélé 0.97, Kane 0.00) but attacking-midfielder weights sink scorers (Mbappé 5 → 35).
 - Found on the way: 3,415 player-matches of 729 outfield players in 2025/2026 are filed as goalkeeper with no keeper statistics (Challenger Pro League 1,822, a Serie A 1,566); v8 counts them as keeper matches. Separate fix proposed, not started.
 - Git: history rewritten by another session (VI-45, 20 Nov) and the local checkout realigned on it; the proposal and these notes were committed to main on 21 Nov (worklog merged with main's). Check `git status -sb` against origin/main before any commit; never merge the old history; never commit data.
-- Next action: the user decides ψ (10 / 24 / 36), whether retention stays, and whether § 11 enters the proposal as written (threshold 450, front twos only). Then build v9 beside v8 and a private comparison page (mock-up first).
+- 23 Nov: the study by position was finished, read-only (`study12.py` to `study17.py`, same scratch folder; synthesis: [Score Vega v9 : étude par poste](https://claude.ai/artifact/XdihNNTSNEBtZe6LxfgQoP)).
+  - ψ: transfers give 8.6 ± 0.4 Elo per 400 of club Elo (World Cup 19 ± 11); 10 recommended, the user's call. The match test cannot settle ψ (the club term cancels).
+  - Eight positions do not beat the seven roles on match results (−34 ± 17 in validation). Without the support-striker case the forecast is the same and Griezmann goes 529 → 372.
+  - Defence block (Massiré Sylla, Union SG, 3rd): it measures activity, worth its price for centre-backs within about ±2 sd; context alone does not move him. The user chose (23 Nov) the base (duels repaired, expectations in context, stabilised scale) plus the defence talent bounded at ±2.0 sd: Sylla 31st at ψ 24, 18th at ψ 10. Written as § 12 of the proposal; nothing in service.
+  - Duel attempts were added before the blanks had their zeros (calculation audit item 1, handed to VI-21, unresolved): fixed in `power.py` on the user's decision, [#71](https://github.com/VegaInteligence/Vega-Sport/issues/71) / [VI-50](https://linear.app/vegainteligence/issue/VI-50), takeover recorded on VI-21. Tests first (RED then GREEN, PostgreSQL 18). `METHOD_VERSION` unchanged: past seasons are not ranked again by themselves, to decide at merge.
+  - Open: 3. Liga holds zeros instead of statistics since October 2026 (data fault); the stabilised scale and the bound are untested on creation and progression, whose extremes are heavier; a national-team Elo with friendlies (#70) would ask for the World Cup ψ again.
+- Next action: the user reviews the PR of branch `claude/project-thread-314siw` (duels fix + § 12), then decides ψ (10 / 24 / 36), whether retention stays, and whether the support-striker case is dropped. Then build v9 beside v8 and a private comparison page (mock-up first).
 
 ## Navigation review — 20 November 2026
 

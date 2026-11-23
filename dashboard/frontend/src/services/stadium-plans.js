@@ -147,3 +147,8 @@ const PLANS = {
 export function stadiumPlans(id) {
   return Object.hasOwn(PLANS, id || "") ? PLANS[id] : [];
 }
+
+/** Every plan, for the site's security headers (the frames and geolocation they allow). */
+export function allStadiumPlans() {
+  return Object.values(PLANS).flat();
+}

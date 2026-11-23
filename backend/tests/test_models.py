@@ -216,6 +216,42 @@ class ModelsTest(unittest.TestCase):
         self.assertTrue(all(r[3] == "award" and r[4] == "published" for r in race))
         self.assertAlmostEqual(race[0][2], ranked[0][5], places=3)
 
+    def test_a_blank_duel_side_reads_like_a_written_zero(self):
+        # Issue #71 (calculation audit of 16 November 2026, item 1): a defender's duel attempts are
+        # his duels won and lost, added once the blanks have their zeros. The same match is graded
+        # the same whether the source writes a 0 or leaves it blank.
+        from vega import power
+
+        x = self.db.execute
+        match, player = 1, 103  # a defender of club 1, at home to club 2
+        key = "season_id=2025 AND match_id=%s AND player_id=%s"
+        before = self.one(f"SELECT duels_won, duels_lost FROM core.player_match_stats WHERE {key}", match, player)
+        # The match publishes both sides of the duels, and his row carries statistics.
+        self.assertEqual(self.one(
+            f"""SELECT (SELECT touches IS NOT NULL FROM core.player_match_stats WHERE {key}),
+                       EXISTS (SELECT 1 FROM core.player_match_stats WHERE season_id=2025 AND match_id=%s AND player_id<>%s AND duels_won > 0),
+                       EXISTS (SELECT 1 FROM core.player_match_stats WHERE season_id=2025 AND match_id=%s AND player_id<>%s AND duels_lost > 0)""",
+            match, player, match, player, match, player), (True, True, True))
+
+        def defence(won, lost):
+            x(f"UPDATE core.player_match_stats SET duels_won=%s, duels_lost=%s WHERE {key}", (won, lost, match, player))
+            power.refresh_players(self.db, 2025)
+            return self.one(f"SELECT defence FROM agg.player_power_matches WHERE {key}", match, player)[0]
+
+        try:
+            # D1: five duels won, none lost.
+            written = defence(5, 0)
+            self.assertIsNotNone(written)
+            self.assertAlmostEqual(defence(5, None), written, places=5)
+            # D2: none won, three lost.
+            written = defence(0, 3)
+            self.assertAlmostEqual(defence(None, 3), written, places=5)
+            # And the two readings differ from each other: the duels do count in the block.
+            self.assertNotAlmostEqual(defence(5, 0), written, places=3)
+        finally:
+            x(f"UPDATE core.player_match_stats SET duels_won=%s, duels_lost=%s WHERE {key}", (*before, match, player))
+            power.refresh_players(self.db, 2025)
+
     def test_zzz_a_world_cup_final_counts_for_its_stakes(self):
         # Version 3 (072): the World Cup's matches enter the players' ranking, each match
         # counted for its stakes, the clubs' Elo and the national teams' alike.
