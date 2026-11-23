@@ -17,6 +17,7 @@
 # set by the workflow), IMAGE_TAG (git HEAD), PITCHAPI_API_KEY or PITCHAPI_API_KEY_FILE
 # (needed once, to create /vega/v2/pitchapi-key) and LIVE_PROVIDER
 # (empty: the live circuit is deployed, the schedule that starts its ingestor is off).
+# VI-35: WAF_MODE (Count or Block; unset, the web ACL keeps its mode, Count the first time).
 set -euo pipefail
 export AWS_REGION=${AWS_REGION:-us-east-2}
 ACCOUNT=361769570630
@@ -104,13 +105,25 @@ npm ci --prefix backend/api >/dev/null
 zip=$(python3 infra/aws/package_api.py "${RUNNER_TEMP:-$(mktemp -d)}/api-package" | tail -1)
 key="releases/v2-api/$(basename "$zip")"
 aws s3 cp "$zip" "s3://$RELEASES/$key" >/dev/null
+# BEGIN VI-35 web ACL
+# The distribution's per-address limit (waf.yaml). A web ACL of CloudFront scope lives in
+# us-east-1 only. Its mode is kept unless WAF_MODE names one; the site's server key
+# (/vega/v2/edge-key) takes the site's own reads out of the counts.
+echo "== 7b. Web ACL of the distribution (us-east-1, mode ${WAF_MODE:-kept})"
+edge=$(aws ssm get-parameter --name /vega/v2/edge-key --with-decryption --query Parameter.Value --output text)
+[ -n "${GITHUB_ACTIONS:-}" ] && echo "::add-mask::$edge"
+waf_mode=(); [ -n "${WAF_MODE:-}" ] && waf_mode=(Mode="$WAF_MODE")
+stack vega-v2-waf waf.yaml --region us-east-1 --parameter-overrides SiteKey="$edge" ${waf_mode[@]+"${waf_mode[@]}"}
+web_acl=$(aws cloudformation describe-stacks --region us-east-1 --stack-name vega-v2-waf \
+  --query "Stacks[0].Outputs[?OutputKey=='WebAclArn'].OutputValue" --output text)
+# END VI-35 web ACL
 echo "== 8. Read API stack and distribution"
 url=$(aws ssm get-parameter --name /vega/v2/read-database-url --with-decryption --query Parameter.Value --output text)
 [ -n "${GITHUB_ACTIONS:-}" ] && echo "::add-mask::$url"
 ops=$(aws ssm get-parameter --name /vega/v2/ops-key --with-decryption --query Parameter.Value --output text)
 [ -n "${GITHUB_ACTIONS:-}" ] && echo "::add-mask::$ops"
 media=$(output vega-v2-api ApiOrigin)
-api() { stack vega-v2-api api.yaml --capabilities CAPABILITY_IAM --parameter-overrides ReleaseKey="$key" ReadDatabaseUrl="$url" OpsKey="$ops" MediaBaseUrl="$1" ReservedConcurrency="$API_COPIES"; }
+api() { stack vega-v2-api api.yaml --capabilities CAPABILITY_IAM --parameter-overrides ReleaseKey="$key" ReadDatabaseUrl="$url" OpsKey="$ops" MediaBaseUrl="$1" ReservedConcurrency="$API_COPIES" WebAclArn="$web_acl"; }
 if [ -n "$media" ] && [ "$media" != None ]; then api "$media/"; else
   api ""
   media=$(output vega-v2-api ApiOrigin)

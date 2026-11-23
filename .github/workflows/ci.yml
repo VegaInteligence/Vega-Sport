@@ -78,6 +78,8 @@ jobs:
       - run: cfn-lint --regions us-east-2 -- infra/aws/*.yaml
       # Alerts: the edge stack lives in us-east-1 (CloudFront and Route 53 metrics).
       - run: cfn-lint --regions us-east-1 -- infra/aws/alerts-edge.yaml
+      # VI-35: the web ACL of CloudFront scope lives in us-east-1.
+      - run: cfn-lint --regions us-east-1 -- infra/aws/waf.yaml
       - name: Deployment scripts parse
         run: bash -n infra/aws/deploy.sh && bash -n infra/aws/ci/secrets.sh
   image:
