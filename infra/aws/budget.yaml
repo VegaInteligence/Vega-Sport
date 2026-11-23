@@ -16,6 +16,16 @@ Parameters:
     Default: ''
     AllowedPattern: '([^@\s]+@[^@\s]+\.[^@\s]+)?'
     Description: A second person who receives the same mails (two people run the service); empty, the first address only.
+  # A budget's notifications are replaced, not edited, and CloudFormation cannot replace a
+  # resource that keeps its name (23 November 2026: the second address could not be added to
+  # the deployed budget). The name carries this number: raise it whenever a recipient
+  # changes (AlertEmail, AlertEmail2, AlertTopicArn). The spend is read from the account,
+  # not kept by the budget: a new budget shows the month's spend at once.
+  Revision:
+    Type: String
+    Default: '2'
+    AllowedPattern: '[0-9]+'
+    Description: Raise it by one whenever a recipient changes; the budget is then created again under its new name.
   # The estimate is $76-81 a month (infra/aws/README.md, "Cost"). At $120, 50 % arrives late
   # in a normal month, 80 % ($96) means about $15 above the estimate, and 100 % half again
   # the usual spend.
@@ -62,7 +72,7 @@ Resources:
     Type: AWS::Budgets::Budget
     Properties:
       Budget:
-        BudgetName: vega-v2-monthly
+        BudgetName: !Sub 'vega-v2-monthly-${Revision}'
         BudgetType: COST
         TimeUnit: MONTHLY
         BudgetLimit: {Amount: !Ref MonthlyBudget, Unit: USD}
