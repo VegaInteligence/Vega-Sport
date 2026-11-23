@@ -147,7 +147,7 @@ function seasonParam(params) {
   return season;
 }
 
-function nationOf(r) {
+export function nationOf(r) {
   const out = { id: r.team_id, name: r.name, imageUrl: r.image_url ?? null, matches: r.matches };
   put(out, "lastMatch", r.last_match ? String(r.last_match).slice(0, 10) : null);
   put(out, "elo", num(r.elo));
@@ -155,6 +155,7 @@ function nationOf(r) {
     out.ranking = {
       rank: r.rank, elo: num(r.season_elo), eloChange: num(r.elo_change), matches: r.season_matches,
       wins: r.wins, draws: r.draws, losses: r.losses, results: num(r.result_sum), expected: num(r.expected_sum),
+      provisional: r.provisional === true,
     };
   return out;
 }
@@ -179,22 +180,31 @@ export function matchOf(r) {
   return out;
 }
 
+// The nations whose place in the season's world ranking is provisional (§50: fewer than 8 counted matches in four years).
+async function provisionalOf(read, season) {
+  const rows = await read(`SELECT team_key FROM api.power_clubs WHERE season_id=${SEASON_KEY} AND scope='nations' AND provisional`, [season]);
+  return new Set(rows.map((r) => r.team_key));
+}
+
 export function createNationRoute(read) {
   return async (req, path, params) => {
     if (path === "/api/nations") {
       const season = seasonParam(params);
-      const rows = (await read(`SELECT * FROM api.nation_list(${SEASON_KEY})`, [season])).filter((r) => !placeholderTeam(r.name));
+      const [listed, flags] = await Promise.all([read(`SELECT * FROM api.nation_list(${SEASON_KEY})`, [season]), provisionalOf(read, season)]);
+      const rows = listed.filter((r) => !placeholderTeam(r.name)).map((r) => ({ ...r, provisional: flags.has(r.team_key) }));
       const nations = rows.map(nationOf).sort((a, b) => (a.ranking?.rank ?? Infinity) - (b.ranking?.rank ?? Infinity) || (b.elo ?? -Infinity) - (a.elo ?? -Infinity) || a.name.localeCompare(b.name));
       return respond(req, { season, ranked: nations.filter((n) => n.ranking).length, nations });
     }
     const nation = path.match(NATION);
     if (!nation) return null;
     const season = seasonParam(params);
-    const [list, [key]] = await Promise.all([
+    const [list, [key], flags] = await Promise.all([
       read(`SELECT * FROM api.nation_list(${SEASON_KEY})`, [season]),
       read("SELECT api.internal_id('team',$1) AS key", [nation[1]]),
+      provisionalOf(read, season),
     ]);
-    const own = key?.key == null ? null : list.find((r) => r.team_key === key.key && !placeholderTeam(r.name));
+    const found = key?.key == null ? null : list.find((r) => r.team_key === key.key && !placeholderTeam(r.name));
+    const own = found && { ...found, provisional: flags.has(found.team_key) };
     if (!own) reject(404, "Ressource introuvable.");
     const [matchRows, eloRows, playerRows] = await Promise.all([
       read("SELECT * FROM api.nation_matches($1::integer) ORDER BY match_date DESC NULLS LAST", [own.team_key]),

@@ -33,7 +33,9 @@ ADDED = ["155_player_grade_status.sql", "156_team_side_corrections.sql", "157_pa
          # VI-39 (20 Nov 2026): the reads of the players page's « Remplaçant » and « En forme ».
          "161_player_replacements_and_form.sql",
          # VI-40: what each player brings to his team, for « Remplaçant ».
-         "162_player_team_fit.sql"]
+         "162_player_team_fit.sql",
+         # #70 / VI-49 (§50): the nations' world ranking and the national Elo's run settings.
+         "163_nation_world_ranking.sql"]
 # SportScore editions: A, a rank shared at different points (a version already kept); B, rank 5 in a table of two (no
 # version yet); C, a table that holds (its version kept).
 A, B, C = 9601, 9602, 9603

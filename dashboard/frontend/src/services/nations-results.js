@@ -42,7 +42,7 @@ export function parseNationsResults(csv) {
     const key = [row[0], home.english, away.english].join("|");
     if (seen.has(key)) throw new Error("Duplicate Nations League result");
     seen.add(key);
-    result.push({ key: "nations:" + key, date: row[0], home: home.french, away: away.french, homeId: home.english, awayId: away.english, score: [Number(row[3]), Number(row[4])], status: "finished", league: home.league, group: home.group, round: "Groupe " + home.group });
+    result.push({ key: "nations:" + key, date: row[0], home: home.french, away: away.french, homeId: home.english, awayId: away.english, score: [Number(row[3]), Number(row[4])], status: "finished", league: home.league, group: home.group, round: "Groupe " + home.group, neutral: row[8] === "TRUE" });
   }
   return result;
 }

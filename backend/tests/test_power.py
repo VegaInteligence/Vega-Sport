@@ -691,9 +691,9 @@ class NationEloTest(unittest.TestCase):
 
     def test_50d_the_fifa_seed(self):
         seeds = power.nation_seeds([("A", 1700.0), ("B", 1500.0), ("C", 1300.0), (None, 1100.0)])
-        self.assertEqual(seeds, {"A": 1600.0, "B": 1400.0, "C": 1200.0})
+        self.assertEqual(seeds, {"A": 1800.0, "B": 1600.0, "C": 1400.0})  # p̄ = 1400, the unlinked row included
         rows = list(power.nation_updates([self.match(1, "2022-06-01", "A", "D", 0, 0, neutral=True)], seeds=seeds))
-        self.assertEqual((rows[0][4], rows[1][4]), (1600.0, 1500.0))  # D, absent from the edition, starts at its mean
+        self.assertEqual((rows[0][4], rows[1][4]), (1800.0, 1500.0))  # D, absent from the edition, starts at its mean
 
     def test_50e_nothing_before_1_july_2021_moves_a_later_rating(self):
         later = [self.match(2, "2021-07-01", "A", "B", 1, 0), self.match(3, "2022-09-01", "B", "C", 2, 2)]

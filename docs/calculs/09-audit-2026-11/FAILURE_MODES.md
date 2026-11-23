@@ -3945,7 +3945,7 @@ the real `results.csv` (evidence `donnees-hors-live/elo-selections/implementatio
 | 50a | Goal margins 0, 1, 2, 3, 5 | G = 1, 1, 1.5, 1.75, 2 |
 | 50b | Classes: « Friendly », « FIFA World Cup qualification », « CONCACAF Nations League qualification », « UEFA Nations League », « CONCACAF Nations League », « Copa América », « Gold Cup », « FIFA World Cup », « UEFA Euro », « CONMEBOL–UEFA Cup of Champions », « CONIFA World Football Cup », a tournament edition's World Cup final (I_m 1.495) | w 0.5, 1.0, 1.0, 1.05, 1.05, 1.20, 1.20, 1.30, 1.20, 0.75, no match, 1.495 |
 | 50c | One national match, a 3–0 friendly at home between two 1500 teams | after − before = 30 × 0.5 × 1.75 × (1 − E(60)); the two sides sum to 3000 |
-| 50d | Seeds from points {A 1700, B 1500, C 1300, unlinked 1100}; a team D absent | A 1600, B 1400, C 1200; D 1500 |
+| 50d | Seeds from points {A 1700, B 1500, C 1300, unlinked 1100} (mean 1400) | A 1800, B 1600, C 1400; D, absent, 1500 |
 | 50e | Two match lists equal from 1 July 2021, one with a 2019 national result added | identical national rows from 1 July 2021 |
 | 50f | Clubs and nations mixed, internationals added | the clubs' rows equal `elo_updates` over the population without the internationals |
 | 50g | The world ranking: a team whose last match is 25 months before the reference date; one 23 months before with no match in the season; one with 7 matches in 4 years, one with 8; two equal strengths; the season in progress | first not listed; second listed, matches 0, change 0, start = peak = low = elo; provisional True / False; same rank, next rank skipped; reference today |

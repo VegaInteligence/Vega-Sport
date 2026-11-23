@@ -53,7 +53,7 @@ EDITIONS = (
     ("nations-results", "asian-cup", "2023"),
     *[("nations-results", "gold-cup", s) for s in ("2023", "2025")],
     # Every other international of each season (friendlies, qualifiers, the other confederations' Nations Leagues…):
-    # the home's week strip and the nation page, outside the Elo (power.ELO_MATCHES).
+    # the home's week strip, the nation page, and the national teams' Elo since §50 (power.ELO_MATCHES).
     *[("nations-results", "internationals", s) for s in INTERNATIONAL_SEASONS],
 )
 PROVIDER = {"open-cups": "openfootball", "openligadb": "openligadb", "nations-results": "international_results"}
@@ -96,6 +96,25 @@ SCORE_PARTS = ("ft", "ht", "et", "p")
 CANCELED = ("canceled", "cancelled")
 TOURS_AWARD = "france-cup:2024/2025:2024-12-21|Tours FC|FC Lorient|"
 CUP_PUBLICATION = {"club-world-cup", "world-cup-history", "france-cup"}
+# The hosts of the World Cups and Euros from 1 July 2021 (the national teams' Elo's first day, FAILURE_MODES.md §50), as
+# OpenFootball names them: such a match is on neutral ground unless its home side (team1) is one. Before that day the
+# file says nothing and is_neutral stays NULL. Euro 2020: from 1 July 2021 only London's matches had a side at home
+# (England; the quarter-finals of St Petersburg, Munich, Baku and Rome had none) — uefa.com, UEFA EURO 2020 venues.
+# World Cup 2022: Qatar; World Cup 2026: the United States, Mexico, Canada; Euro 2024: Germany (fifa.com, uefa.com).
+# Euro 2028: awarded to the UK and Ireland (UEFA, 10 Oct 2023); Northern Ireland, whose Casement Park was dropped, plays
+# no home match there. OpenFootball's spelling of Ireland is not yet published: both are listed (to review then).
+HOSTS = {("euro", "2020"): {"England"}, ("world-cup-history", "2022"): {"Qatar"}, ("euro", "2024"): {"Germany"},
+         ("world-cup-history", "2026"): {"USA", "Mexico", "Canada"},
+         ("euro", "2028"): {"England", "Scotland", "Wales", "Republic of Ireland", "Ireland"}}
+HOSTS_FROM = "2021-07-01"
+
+
+def _neutral(competition, season, m):
+    """None (unknown), or whether an OpenFootball World Cup or Euro match from HOSTS_FROM was on neutral ground."""
+    hosts = HOSTS.get((competition, season))
+    if hosts is None or (m.get("date") or "") < HOSTS_FROM:
+        return None
+    return m.get("team1") not in hosts
 
 
 def score_parts(score):
@@ -153,7 +172,7 @@ def match_rows(kind, competition, season, body):
                 "home_score_90": ft[0] if ft and et else None, "away_score_90": ft[1] if ft and et else None,
                 "home_score_ht": ht and ht[0], "away_score_ht": ht and ht[1],
                 "home_score_et": et and et[0], "away_score_et": et and et[1],
-                "home_penalty_score": p and p[0], "away_penalty_score": p and p[1], "is_neutral": None,
+                "home_penalty_score": p and p[0], "away_penalty_score": p and p[1], "is_neutral": _neutral(competition, season, m),
             }
         else:
             score, penalties = _pair(m.get("score")), _pair(m.get("penalties"))
@@ -169,7 +188,7 @@ def match_rows(kind, competition, season, body):
                 "home_score_ht": None, "away_score_ht": None,
                 "home_score_et": score[0] if score and extra else None, "away_score_et": score[1] if score and extra else None,
                 "home_penalty_score": penalties and penalties[0], "away_penalty_score": penalties and penalties[1],
-                # A tournament's dataset says whether the ground was neutral (the Nations League's rows do not).
+                # A tournament's dataset says whether the ground was neutral (the Nations League's rows too, §50).
                 "is_neutral": m["neutral"] if isinstance(m.get("neutral"), bool) else None,
             }
             key = str(m["key"]).split(":", 1)[1]

@@ -193,12 +193,10 @@ def due_seasons(conn, now):
     ]
 
 
-# The complementary matches the Elo reads (power.ELO_MATCHES): a finished, scored match of a cup-source edition,
-# apart from the season's other internationals, which ELO_MATCHES leaves out by the same predicate (the home's week
-# strip only; FAILURE_MODES.md §48).
+# The complementary matches the Elo reads (power.ELO_MATCHES): a finished, scored match of a cup-source edition, the
+# season's other internationals included since §50 (23 Nov 2026; ELO_MATCHES' side rule then keeps the national pairs).
 _COMPLEMENTARY = """FROM core.matches m JOIN core.competition_seasons cs ON cs.id = m.competition_season_id
                       AND cs.cup_key IS NOT NULL AND cs.archive_key IS NULL
-                      AND left(cs.cup_key, 31) <> 'nations-results:internationals:'
                     WHERE m.status = 'finished' AND m.home_score IS NOT NULL AND m.away_score IS NOT NULL
                       AND m.home_team_id IS NOT NULL AND m.away_team_id IS NOT NULL AND m.match_date IS NOT NULL"""
 
@@ -208,18 +206,22 @@ def elo_due(conn):
     with their own waits): a complementary match (Open Matchday, the cup sources) written or changed after the last
     published Elo run started (a new result, a corrected score, a restored match), or a side that run wrote whose match
     is gone, no longer finished with its score, or now archived (a withdrawn match), or a side of another run (sides
-    restored from a copy). Without a run, any complementary match. FAILURE_MODES.md §37 (E04k)."""
+    restored from a copy), or a run of another national method (power.NATION_ELO_VERSION, §50: once after a change).
+    Without a run, any complementary match. FAILURE_MODES.md §37 (E04k)."""
+    from . import power
+
     return conn.execute(
         f"""WITH run AS (SELECT id, started_at FROM agg.power_runs WHERE kind = 'elo' AND status = 'published'
                          ORDER BY id DESC LIMIT 1)
             SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM run) THEN EXISTS (SELECT 1 {_COMPLEMENTARY})
               ELSE EXISTS (SELECT 1 {_COMPLEMENTARY} AND m.updated_at > (SELECT started_at FROM run))
+                OR (SELECT r.nation_elo_version FROM agg.power_runs r WHERE r.id = (SELECT id FROM run)) IS DISTINCT FROM %s
                 OR EXISTS (SELECT 1 FROM agg.team_elo e WHERE e.run_id IS DISTINCT FROM (SELECT id FROM run))
                 OR EXISTS (SELECT 1 FROM agg.team_elo e WHERE NOT EXISTS (
                      SELECT 1 FROM core.matches m JOIN core.competition_seasons cs ON cs.id = m.competition_season_id AND cs.archive_key IS NULL
                      WHERE m.id = e.match_id AND m.season_id = e.season_id AND m.status = 'finished'
                        AND m.home_score IS NOT NULL AND m.away_score IS NOT NULL))
-              END"""
+              END""", (power.NATION_ELO_VERSION,)
     ).fetchone()[0]
 
 

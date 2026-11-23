@@ -15,7 +15,7 @@
  * UEFA coefficients, the FIFA ranking), whoever supplies it; the supplier stays in the
  * body's `provider`.
  *
- * GET /api/rankings/power?kind=players|clubs|nations&season=&limit= — Vega's power
+ * GET /api/rankings/power?kind=players|clubs|nations&season=&limit=[&page= for nations] — Vega's power
  * rankings (docs/METHODE_CLASSEMENT_BALLON_D_OR.md on main, vega/power.py): players by
  * their standardised index, the ranked players of a top division (the site's
  * `ballonDorRanking(season)` entries), clubs and national teams by their Elo strength
@@ -682,7 +682,11 @@ async function powerRanking(read, params) {
     reject(400, "Paramètre invalide.");
   const limit = Number(limitRaw);
   if (kind === "players" && params.get("scope") === "all") return wholeRanking(read, params, season, limit);
-  if (params.has("scope") || params.has("page") || params.has("role") || params.has("universe")) reject(400, "Paramètre invalide.");
+  // The nations' world ranking (about 205 nations from 2021/22, FAILURE_MODES §50) is read a page at a time.
+  const paged = kind === "nations" && params.has("page");
+  if (params.has("scope") || (params.has("page") && !paged) || params.has("role") || params.has("universe")) reject(400, "Paramètre invalide.");
+  if (paged && !/^[1-9]\d{0,3}$/.test(params.get("page"))) reject(400, "Paramètre invalide.");
+  const page = paged ? Number(params.get("page")) : 1;
   if (kind === "players") {
     // The award race: the eligible players of a measured top division, numbered in their
     // order (`powerRank` is the player's rank among every ranked player; since
@@ -711,18 +715,25 @@ async function powerRanking(read, params) {
     };
   }
   const [rows, reference] = await Promise.all([
-    read(`SELECT * FROM api.power_clubs WHERE season_id=${SEASON_KEY} AND scope=$2 ORDER BY rank, team_id LIMIT $3`, [season, kind, limit]),
+    read(`SELECT *, count(*) OVER ()::integer AS total FROM api.power_clubs WHERE season_id=${SEASON_KEY} AND scope=$2
+          ORDER BY rank, team_id LIMIT $3 OFFSET $4`, [season, kind, limit, (page - 1) * limit]),
     referenceLevel(read),
   ]);
   if (!rows.length) reject(404, "Donnée indisponible.");
-  // A club's score out of 100 is read against the clubs' leagues: national teams have none.
   return {
     season, kind, method: { version: rows[0].method_version, computedAt: iso(rows[0].computed_at) },
-    ...(kind === "clubs" ? { reference: round(reference, 1) } : {}),
-    rows: rows.map((r) => ({
-      rank: r.rank, teamId: r.team_id, name: r.name, imageUrl: r.image_url ?? null, country: r.country ?? null,
-      ...(kind === "clubs" ? { score: outOf100(r.elo, reference) } : {}), elo: round(r.elo, 1), eloChange: round(r.elo_change, 1), matches: r.matches, lastMatchAt: iso(r.last_match_at), ...clubSeason(r),
-    })),
+    ...(kind === "clubs" ? { reference: round(reference, 1) } : { page, limit, total: rows[0].total }),
+    rows: rows.map((r) => powerRow(kind, r, reference)),
+  };
+}
+
+/** One row of the clubs' or the nations' power ranking. A club's score out of 100 is read against the clubs' leagues:
+ * national teams have none; a nation's row says whether its place is provisional (§50). */
+export function powerRow(kind, r, reference) {
+  return {
+    rank: r.rank, teamId: r.team_id, name: r.name, imageUrl: r.image_url ?? null, country: r.country ?? null,
+    ...(kind === "clubs" ? { score: outOf100(r.elo, reference) } : {}), elo: round(r.elo, 1), eloChange: round(r.elo_change, 1), matches: r.matches, lastMatchAt: iso(r.last_match_at), ...clubSeason(r),
+    ...(kind === "nations" ? { provisional: r.provisional === true } : {}),
   };
 }
 
