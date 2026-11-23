@@ -62,7 +62,7 @@ def one(pattern, text, what):
 
 
 def parameter(text, name):
-    return one(rf"\n  {name}:\n((?:    .*\n)+)", text, f"parameter {name}")
+    return one(rf"\n  {name}:\n((?:    [^\n]*\n)+)", text, f"parameter {name}")
 
 
 def default(text, name):
@@ -94,11 +94,12 @@ class ModeTest(unittest.TestCase):
 
     def test_only_mode_block_blocks(self):
         t = waf()
-        self.assertEqual(one(r"\n  Blocking: (.*)\n", t, "Blocking condition"), "!Equals [!Ref Mode, Block]")
+        self.assertEqual(one(r"\n  Blocking: ([^\n]*)\n", t, "Blocking condition"), "!Equals [!Ref Mode, Block]")
         for rule in rules(t):
             action = one(r"\n          Action:(.*?)\n          (?:Statement|VisibilityConfig):", rule, "rule action")
             if "Block" in action:
-                self.assertTrue(action.strip().startswith("!If [Blocking,"), rule.split("\n")[0])
+                self.assertRegex(action, r"^ !If\n\s+- Blocking\n\s+- Block:", rule.split("\n")[0])
+                self.assertTrue(action.rstrip().endswith("- Count: {}"), rule.split("\n")[0])
         self.assertIn("DefaultAction: {Allow: {}}", t)
 
     def test_the_deploy_never_chooses_block_itself(self):
@@ -110,8 +111,10 @@ class BlockResponseTest(unittest.TestCase):
     def test_a_readable_429(self):
         t = waf()
         self.assertIn("ResponseCode: 429", t)
-        headers = one(r"ResponseHeaders:\n((?:\s+- \{Name: .*\}\n)+)", t, "response headers")
-        names = dict(re.findall(r"Name: ([\w-]+), Value: '?([^'}]*)'?\}", headers))
+        blocks = re.findall(r"ResponseHeaders:\n((?:\s+- \{Name: [^\n]*\}\n)+)", t)
+        self.assertEqual(len(blocks), t.count("ResponseCode: 429"))
+        self.assertEqual(len(set(blocks)), 1)
+        names = dict(re.findall(r"Name: ([\w-]+), Value: '?([^'}]*)'?\}", blocks[0]))
         self.assertEqual(names.get("Access-Control-Allow-Origin"), "*")
         self.assertIn("Retry-After", names.get("Access-Control-Expose-Headers", ""))
         self.assertEqual(names.get("Cache-Control"), "no-store")
@@ -133,22 +136,26 @@ class ExemptionTest(unittest.TestCase):
 
     def test_no_key_no_exemption(self):
         t = waf()
-        self.assertEqual(one(r"\n  HasSiteKey: (.*)\n", t, "HasSiteKey"), "!Not [!Equals [!Ref SiteKey, '']]")
+        self.assertEqual(one(r"\n  HasSiteKey: ([^\n]*)\n", t, "HasSiteKey"), "!Not [!Equals [!Ref SiteKey, '']]")
         self.assertIn("HasPreviousSiteKey: !And [!Condition HasSiteKey, !Not [!Equals [!Ref PreviousSiteKey, '']]]", t)
-        # Every exemption is behind the condition.
-        self.assertEqual(t.count("!If [HasSiteKey"), t.count("SiteKeyExempt"))
+        # Every scope of a rule, the only place the key appears, is behind the condition.
+        scopes = re.findall(r"ScopeDownStatement: ([^\n]*)\n\s+- ([^\n]*)\n", t)
+        self.assertEqual(len(scopes), t.count("RateBasedStatement:"))
+        for head, condition in scopes:
+            self.assertEqual((head, condition), ("!If", "HasSiteKey  # SiteKeyExempt"))
 
     def test_exact_match_on_the_header_only(self):
         t = waf()
         matches = re.findall(r"ByteMatchStatement: \{FieldToMatch: \{SingleHeader: \{Name: (\S+)\}\}, PositionalConstraint: (\w+), SearchString: !Ref (\w+)", t)
-        self.assertEqual(sorted(m[2] for m in matches), ["PreviousSiteKey", "SiteKey"])
+        self.assertEqual({m[2] for m in matches}, {"PreviousSiteKey", "SiteKey"})
+        self.assertEqual(len(re.findall(r"SearchString: !Ref \w*SiteKey", t)), len(matches))
         for header, constraint, _ in matches:
             self.assertEqual(header, "x-vega-edge-key")
             self.assertEqual(constraint, "EXACTLY")
 
     def test_no_rule_allows(self):
         for rule in rules(waf()):
-            self.assertNotIn("Allow", rule)
+            self.assertNotRegex(rule, r"\bAllow: \{")
 
 
 class AssociationTest(unittest.TestCase):
