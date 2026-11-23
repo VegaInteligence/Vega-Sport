@@ -34,12 +34,13 @@ export function loadingLabel(state) {
     : "Lecture du club";
 }
 
-export function ClubLoading({ state, compact = false }) {
+export function ClubLoading({ state, compact = false, children }) {
   if (state.status === "error")
     return (
       <div className={s.loading} role="alert">
         <strong>Lecture impossible</strong>
         <span>{state.error}</span>
+        {children}
       </div>
     );
   const label = loadingLabel(state);
@@ -56,7 +57,7 @@ export function ClubLoading({ state, compact = false }) {
  * A club the base knows in the season without any match statistics: its
  * results may be known (`played`), but there is nothing to rank yet.
  */
-export function ClubEmptySeason({ dossier, played = 0 }) {
+export function ClubEmptySeason({ dossier, played = 0, children }) {
   const games = `${played} match${played > 1 ? "s" : ""} joué${played > 1 ? "s" : ""}`;
   return (
     <div className={s.loading} role="status" data-empty-season="">
@@ -73,6 +74,7 @@ export function ClubEmptySeason({ dossier, played = 0 }) {
       {played > 0 && (
         <span>La fiche se remplira dès qu’elles le seront.</span>
       )}
+      {children}
     </div>
   );
 }

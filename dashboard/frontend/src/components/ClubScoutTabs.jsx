@@ -100,9 +100,10 @@ function competitionRecords(dossier) {
 /**
  * The top of the identity column: the way back, the crest, the name, the league and season,
  * the coach and stadium. `club` is the dossier, or what the page's read of the club gives
- * before it (clubEarly): the column starts the same either way.
+ * before it (clubEarly): the column starts the same either way. `season`: the season's
+ * selector (ClubSeasonSelect), else the season in text.
  */
-export function RailHead({ club, backHref }) {
+export function RailHead({ club, backHref, season }) {
   return (
     <>
       {backHref && (
@@ -115,9 +116,8 @@ export function RailHead({ club, backHref }) {
       <div className={s.identity}>
         <Crest club={club} className={`crest ${s.bigCrest}`} />
         <h1 className={s.name}>{club.name}</h1>
-        <p className={s.sub}>
-          {[club.league?.name, club.season].filter(Boolean).join(" · ")}
-        </p>
+        {club.league?.name && <p className={s.sub}>{club.league.name}</p>}
+        {season || <p className={s.sub}>{club.season}</p>}
         <div className={s.chips}>
           {club.coach && (
             <span className={s.chip}>Entraîneur · {club.coach}</span>
@@ -129,7 +129,7 @@ export function RailHead({ club, backHref }) {
   );
 }
 
-export function IdentityRail({ dossier, onTab, backHref }) {
+export function IdentityRail({ dossier, onTab, backHref, season }) {
   const f = useFootball();
   const self = dossier.self,
     r = self.record;
@@ -140,7 +140,7 @@ export function IdentityRail({ dossier, onTab, backHref }) {
   const more = usePhoneFold();
   return (
     <aside className={s.rail} aria-label="Identité du club" {...more.fold}>
-      <RailHead club={dossier} backHref={backHref} />
+      <RailHead club={dossier} backHref={backHref} season={season} />
       <div className={s.railSection}>
         <div className={s.railTitle}>
           <div className={s.railName}>
@@ -546,6 +546,11 @@ export function Overview({ dossier, onTab, base = dossier }) {
         <Card
           title="Derniers matchs"
           text="Toutes compétitions · barres : xG pour (bleu) et contre (orange)"
+          action={
+            <button className={s.cardLink} onClick={() => onTab("matches")}>
+              Tous les matchs →
+            </button>
+          }
         >
           <MatchRows rows={dossier.allRows} limit={6} />
         </Card>
