@@ -109,17 +109,28 @@ export function standings(matches, { league, start }) {
 
 const ident = (team) => team.id || team.key;
 
+// Legal-form and filler words the editions add or drop around a club's name.
+const FORMS = new Set(["fc", "cf", "sc", "ac", "as", "ssc", "afc", "sl", "sv", "vfl", "bv", "rc", "rcd", "ogc", "losc", "osc", "cd", "ud",
+  "sd", "us", "ss", "fk", "kv", "pfc", "club", "de", "the"]);
+
+/** A club's name as the editions agree on it: the country tag (« (FRA) ») and legal-form words dropped, folded. */
+export function clubName(name) {
+  const words = fold(String(name || "").replace(/\s*\([A-Z]{3}\)\s*$/, "")).split(" ").filter((w) => w && !FORMS.has(w) && !/^\d+$/.test(w));
+  return words.join(" ");
+}
+
 /**
  * Each row with its colour: the European competition the club played the next season, else its relegation. `next`:
  * the next season's {league, cl, el, ecl}, sets of club ids (a club without one: its name, folded).
  */
 export function zones(table, { league, start, next }) {
-  const has = (set, team) => Boolean(set) && (set.has(ident(team)) || set.has(fold(team.name)) || set.has(team.key));
+  const names = (team) => [team.name, ...(team.names || [])].map(clubName).filter(Boolean);
+  const has = (set, team) => Boolean(set) && (set.has(ident(team)) || set.has(team.key) || names(team).some((n) => set.has(n)));
   const rule = HISTORY_LEAGUES[league].down(start);
   const n = table.length;
   const absent = table.filter((r) => !has(next.league, r.team));
   const plausible = next.league && next.league.size > 0 && absent.length >= rule.down && absent.length <= rule.down + 1
-    && absent.every((r) => r.rank > n - rule.down - 3);
+    && absent.every((r) => r.rank > n / 2);
   const down = new Set((plausible ? absent : table.slice(n - rule.down)).map((r) => r.team.key));
   return table.map((r) => {
     let zone = null;

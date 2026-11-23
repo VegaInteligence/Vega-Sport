@@ -349,4 +349,6 @@
 - Validated locally: E2E 12/12 (before: fails on the live site), API 265/265, Python suites OK, site = main's 9 local failures, build OK. Evidence: `~/Agents/scratch/vega-big5-history-20261123/EVIDENCE.md`, `EVIDENCE-tm.md`.
 - Known limits: Transfermarkt 2014/15 (all) and LaLiga 2020/21 incomplete (flagged on the page); points deductions sourced for Serie A only (2010/11–2014/15, 2018/19); production colours depend on the identity merges (to check live).
 - Linear: not touched in this folder (rule in ~/.claude/CLAUDE.md).
-- Next action: push, deploy (migrations 163–164, worker reads the Transfermarkt files), live E2E.
+- Shipped 23 Nov: `c6cf70cc29` on main; CI green; deploy run 45196350953 success (user: « Yes, deploy »). Live, all 55 league-seasons answer; champions, points, top scorers and relegations checked against the record; the worker loaded the player seasons at once.
+- Found live: no Champions League colour before 2019/20 (openfootball's European editions write « Olympique Lyonnais (FRA) », rows never merged) and Eibar shown relegated in LaLiga 2014/15 instead of Elche (13th, relegated for debts). Fix (tests first): clubs matched by id or by archived spelling without country tag and legal-form words (migration 165), relegation by absence anywhere in the bottom half.
+- Next action: deploy the fix, re-check the 55 seasons, live E2E.

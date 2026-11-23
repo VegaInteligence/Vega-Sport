@@ -10,7 +10,7 @@
  */
 import { createHash } from "node:crypto";
 import { matchesEtag, reject, send, validateParams } from "../http.mjs";
-import { editionKeys, historySeason, HISTORY_LEAGUES, matchdays, playersIncomplete, standings, summary, zones, fold } from "../league-history.mjs";
+import { clubName, editionKeys, historySeason, HISTORY_LEAGUES, matchdays, playersIncomplete, standings, summary, zones, fold } from "../league-history.mjs";
 
 const PLAYERS_FROM = 2012;
 const CREDITS = {
@@ -24,7 +24,8 @@ function respond(req, data) {
 }
 
 const day = (value) => (value ? String(value instanceof Date ? value.toISOString() : value).slice(0, 10) : null);
-const team = (key, id, name, image) => ({ key: String(key ?? fold(name)), id: id ?? null, name, imageUrl: image ?? null });
+// A side: the club as the site shows it, with its spelling in the archive (`names`) to match it across editions.
+const team = (key, id, name, image, source) => ({ key: String(key ?? fold(name)), id: id ?? null, name, imageUrl: image ?? null, names: source ? [source] : [] });
 const out = (t) => ({ id: t.id, name: t.name, imageUrl: t.imageUrl });
 
 async function season(req, params, read) {
@@ -37,24 +38,24 @@ async function season(req, params, read) {
   const nextKeys = start + 1 <= 2020 ? editionKeys(league, start + 1) : [];
   const [rows, nextRows, players] = await Promise.all([
     read("SELECT * FROM api.league_history_matches($1, $2::smallint)", [edition.key, start]),
-    read("SELECT kind, team_key, public_id, name FROM api.league_history_next($1, $2::text[], $3::smallint)", [league, nextKeys, start + 1]),
+    read("SELECT kind, team_key, public_id, name, source_name FROM api.league_history_next($1, $2::text[], $3::smallint)", [league, nextKeys, start + 1]),
     start >= PLAYERS_FROM
       ? read("SELECT * FROM api.league_history_players($1, $2::smallint)", [league, start])
       : read("SELECT * FROM api.league_history_scorers($1, $2::smallint)", [edition.key, start]),
   ]);
   const matches = rows.map((r) => ({
     date: day(r.match_date), round: r.round ?? null,
-    home: team(r.home_key, r.home_id, r.home_name, r.home_image), away: team(r.away_key, r.away_id, r.away_name, r.away_image),
+    home: team(r.home_key, r.home_id, r.home_name, r.home_image, r.home_source), away: team(r.away_key, r.away_id, r.away_name, r.away_image, r.away_source),
     homeScore: r.home_score ?? null, awayScore: r.away_score ?? null,
   }));
-  // The next season by club: its id when the site holds it, its archive row, its name (folded).
+  // The next season by club: its id when the site holds it, its archive row, its names as clubName agrees on them.
   const next = { league: new Set(), cl: new Set(), el: new Set(), ecl: new Set() };
   for (const r of nextRows) {
     const set = next[r.kind];
     if (!set) continue;
     set.add(String(r.team_key));
     if (r.public_id) set.add(r.public_id);
-    set.add(fold(r.name));
+    for (const name of [r.name, r.source_name]) if (clubName(name)) set.add(clubName(name));
   }
   const table = zones(standings(matches, { league, start }), { league, start, next });
   const appearances = start >= PLAYERS_FROM;

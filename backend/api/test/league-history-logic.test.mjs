@@ -13,6 +13,12 @@
 //   ecl). A club absent from the league the next season is relegated — when that set is not plausible (more clubs
 //   than the league relegates plus one, or one far up the table: two source families spelling clubs differently),
 //   the league's rule decides (its bottom N). A relegation play-off place that stayed up is "relegation-po".
+// - Names across editions (live, 23 Nov 2026: no Champions League colour before 2019/20): openfootball's European
+//   editions write « Olympique Lyonnais (FRA) », « FC Barcelona (ESP) », rows the identity pass has not merged; the
+//   league files « Olympique Lyonnais », engsoccerdata « Barcelona ». A club is matched by its id, else by its
+//   archived spellings with the country tag and the legal-form words (FC, AS, SSC…) dropped — equal, never contained.
+// - Relegation by absence holds a club relegated from mid-table (Elche, 13th, LaLiga 2014/15, for its debts): the
+//   absent clubs only need to be in the bottom half.
 // - Matchdays: by the round's number ("Matchday 7", "7"); a season whose matches mostly carry none is grouped by month.
 // - Players: a season whose players' goals fall short of the scores by more than own goals can explain (4.5 %: own
 //   goals are 2–3.5 % of goals in these leagues) is incomplete in the file (Transfermarkt datasets, 2014/15) and says so.
@@ -20,7 +26,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  HISTORY_LEAGUES, editionKeys, historySeason, standings, zones, matchdays, summary, DEDUCTIONS, playersIncomplete,
+  HISTORY_LEAGUES, editionKeys, historySeason, standings, zones, matchdays, summary, DEDUCTIONS, playersIncomplete, clubName,
 } from "../src/league-history.mjs";
 
 const club = (key, name = key) => ({ key, id: null, name, imageUrl: null });
@@ -106,4 +112,25 @@ test("a players' file short of the season's goals is incomplete", () => {
   assert.equal(playersIncomplete(837, 1009), true); // LaLiga 2014/15 in the file
   assert.equal(playersIncomplete(843 - 50, 843), true); // Bundesliga 2014/15: 50 short
   assert.equal(playersIncomplete(0, 0), false);
+});
+
+test("a club across editions: country tag and legal-form words dropped, equality only", () => {
+  assert.equal(clubName("Olympique Lyonnais (FRA)"), clubName("Olympique Lyonnais"));
+  assert.equal(clubName("FC Barcelona (ESP)"), clubName("Barcelona"));
+  assert.equal(clubName("FC Bayern München"), clubName("Bayern München (GER)"));
+  assert.equal(clubName("SSC Napoli (ITA)"), clubName("Napoli"));
+  assert.notEqual(clubName("Sporting CP (POR)"), clubName("Sporting Gijón"));
+  assert.notEqual(clubName("Inter"), clubName("Internacional"));
+  // A league row matched through its archived spelling (its site name differs: « Lyon »).
+  const table = "ABCDEFGHIJKLMNOPQRST".split("").map((k, i) => ({ rank: i + 1, team: { key: k, id: null, name: k, names: [k] } }));
+  table[1] = { rank: 2, team: { key: "lyon", id: "t_lyon", name: "Lyon", names: ["Lyon", "Olympique Lyonnais"] } };
+  const next = { league: new Set(["t_lyon", ..."ACDEFGHIJKLMNOPQ".split("").map(clubName)]), cl: new Set([clubName("Olympique Lyonnais (FRA)")]), el: new Set(), ecl: new Set() };
+  assert.equal(zones(table, { league: "l_3FJFUl", start: 2016, next })[1].zone, "cl");
+});
+
+test("relegated from mid-table: Elche, 13th, LaLiga 2014/15", () => {
+  const table = "ABCDEFGHIJKLMNOPQRST".split("").map((k, i) => ({ rank: i + 1, team: { key: k, id: null, name: k } }));
+  // M (13th), S, T absent next season; R (18th) stayed.
+  const next = { league: new Set("ABCDEFGHIJKLNOPQR".split("")), cl: new Set(), el: new Set(), ecl: new Set() };
+  assert.deepEqual(zones(table, { league: "l_0ErfuF", start: 2014, next }).filter((r) => r.zone === "relegation").map((r) => r.team.key), ["M", "S", "T"]);
 });

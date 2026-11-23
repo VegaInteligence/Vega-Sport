@@ -7,7 +7,8 @@
 //  2. A club the site holds comes with its public id and crest; an archived team merged into it (merged_into) reads as
 //     that club; a club only the archive knows has its archived name, no id, no crest.
 //  3. The table counts played matches only; each row's colour is what the club did the next season (Champions League
-//     from the next season's archived edition; relegation from the next season's league).
+//     from the next season's archived edition, its club matched by id or by name without the country tag and legal-form
+//     words, « FC Bayern Munich (GER) »; relegation from the next season's league).
 //  4. From 2012/13 the players are the league season's rows (core.league_player_seasons, 163), best scorers first;
 //     before, the scorers of the archived goals, own goals apart.
 //  5. The summary: champion and points, top scorer, goals per played match, relegated clubs.
@@ -40,6 +41,8 @@ with db.transaction():
     x("""INSERT INTO core.teams(id, name, crest_asset_id) VALUES (9701, 'Bayern Munich', 9799), (9702, 'Borussia Dortmund', NULL),
          (9703, 'SV Darmstadt 98', NULL), (9704, 'Hannover 96', NULL), (9705, 'RB Leipzig', NULL)""")
     x("INSERT INTO core.teams(id, name, merged_into) VALUES (9711, 'Borussia Dortmund (archive)', 9702)")
+    # The next season's Champions League names Bayern as openfootball's European files do, a row never merged.
+    x("INSERT INTO core.teams(id, name) VALUES (9712, 'FC Bayern Munich (GER)')")
     x("""INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES
          ('team','pitchapi','t_bayern1',9701), ('team','pitchapi','t_bvb0001',9702)""")
     x("""INSERT INTO core.competition_seasons(id, competition_id, season_id, native_label, archive_key, archive_name, archive_country) VALUES
@@ -52,7 +55,7 @@ with db.transaction():
         (9720, 2015, '2015-08-22', 'Matchday 2', 9702, 9703, 2, 2, 2), (9720, 2015, '2015-08-23', 'Matchday 2', 9704, 9701, 0, 1, 3),
         (9720, 2015, '2016-05-14', 'Matchday 34', 9701, 9703, None, None, 4),
         (9721, 2016, '2016-08-26', 'Matchday 1', 9701, 9703, 3, 0, 0), (9721, 2016, '2016-08-27', 'Matchday 1', 9705, 9701, 1, 1, 1),
-        (9722, 2016, '2016-09-13', None, 9701, 9702, 2, 0, 0),
+        (9722, 2016, '2016-09-13', None, 9712, 9702, 2, 0, 0),
         (9723, 2011, '2011-08-05', 'Matchday 1', 9702, 9701, 3, 1, 0),
     ]
     for edition, season, day, rnd, home, away, hs, aws, pos in rows:

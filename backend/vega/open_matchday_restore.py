@@ -63,8 +63,10 @@ REFS = {
 # §46). 161 (VI-39) adds views in api only: no table, so nothing dependencies() reads. 162 (VI-40) adds
 # agg.player_team_fit, keyed by season and player: no column naming a match. 163 adds core.league_player_seasons, keyed
 # by league, season, player and club (transfermarkt-datasets): no column naming a match. 164 adds functions of the api
-# schema only (the archived league seasons' reads): no table. A later one needs its own review here.
-REVIEWED_SCHEMAS = ("153_transfer_history_served.sql", "163_league_player_seasons.sql", "164_league_history_reads.sql")
+# schema only (the archived league seasons' reads): no table; 165 replaces two of them. A later one needs its own
+# review here.
+REVIEWED_SCHEMAS = ("153_transfer_history_served.sql", "163_league_player_seasons.sql", "164_league_history_reads.sql",
+                    "165_league_history_spellings.sql")
 
 
 class Refusal(RuntimeError):
