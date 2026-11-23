@@ -21,6 +21,40 @@ $$
 
 « Gros clubs » : nombre d'équipes du match (0, 1 ou 2) dans la liste `FEATURED_CLUB_IDS` de [home.js](../../../dashboard/frontend/src/services/home.js#L33) (29 clubs : Arsenal, PSG, Real Madrid, Bayern, Inter, Benfica, Ajax…). Les rangs viennent des tableaux de l'accueil.
 
+C'est `api.home_weight_v1` ([044_home_settings.sql](../../../backend/sql/044_home_settings.sql)). Il ordonne toujours le fil des résultats et les matchs à venir ; l'importance v2 ci-dessous le remplacera quand la maquette sera validée (VI-48).
+
+## Importance d'un match (v2)
+
+`api.home_importance_v2` ([163_home_importance_v2.sql](../../../backend/sql/163_home_importance_v2.sql), VI-48 / #69) remplace la liste de clubs par un score général :
+
+$$
+\text{importance} = \text{enjeu} \times \text{niveau} + \text{équilibre}
+$$
+
+- **enjeu** = prestige de la compétition × multiplicateur du tour, les valeurs de l'Elo ([power.py](../../../backend/vega/power.py), `PRESTIGE`, `STAGE`, `round_of`) : Coupe du monde 1,30, Ligue des champions 1,15, Ligue Europa 1,08, Ligue Conférence 1,04, sinon 1 ; ×1,05 dès le premier tour à élimination directe, ×1,10 en demi-finale, ×1,15 en finale (un tour de phase « regular » est ordinaire quel que soit son nom). Les valeurs sont des lignes de `core.home_stakes` ; un test les compare à power.py ([test_home_importance.py](../../../backend/tests/test_home_importance.py)) et la classification des tours à `round_of`. Le prestige des coupes complémentaires (`CUP_PRESTIGE`) n'y est pas : `api.fixtures` ne contient aucune de leurs éditions ;
+- **niveau** = (moyenne des deux notes − centre) / diviseur. La note d'une équipe : son Elo de la saison (`agg.team_power`), sinon le niveau de son championnat cette saison (`agg.league_levels`, le plus haut s'il y en a plusieurs), sinon celui de la compétition du match, sinon le centre (terme nul, jamais NULL). Centre et diviseur sont une ligne de `core.home_level_scales` par périmètre : `clubs` 1400 et 100 ; `nations` (les deux équipes sont des sélections) **provisoirement** les mêmes valeurs, en attendant le changement d'échelle de l'Elo des sélections, qui se fera par une migration de données sur cette ligne ;
+- **équilibre** = 1 − |p_dom − p_ext| : les probabilités du pronostic du match (`agg.match_forecasts`) s'il existe ; sinon le score attendu de l'Elo, $E = 1/(1 + 10^{(R_\text{ext} − R_\text{dom} − h)/400})$ avec l'avantage du terrain du calcul Elo (`agg.power_runs.elo_home_advantage`, 60 ; 0 sur terrain neutre), si les deux équipes ont une note ; sinon 0,5.
+
+Exemples (graine des tests) : finale de Ligue des champions entre deux clubs à 1900 et 1800 : 1,3225 × 4,5 + 0,57 = **6,52** ; deux clubs sans Elo d'un championnat de niveau 1500 : 1 + 0,83 = **1,83** ; rien de connu : **0,5**. Ordres de grandeur mesurés sur la production (23 nov. 2026, API publique) : Arsenal–Dortmund (LdC) 6,93, Liverpool–Manchester United 5,27, un match de Ligue 2 1,6 à 1,9.
+
+L'API arrondit l'importance à 2 décimales (`weight`, `weight2`) ; les tris lisent la valeur exacte.
+
+## À l'affiche
+
+Clé `billboard` de `/api/read/home` : les matchs du périmètre du visiteur (mêmes `leagues` et même saison que le reste de la lecture) dont le **jour à Paris** va d'hier à aujourd'hui + 3 (5 jours), terminés, en cours ou à venir (un match reporté ou annulé n'y est pas). Chaque jour garde ses **8** matchs les plus importants. Ordre : jour ↑, importance ↓, coup d'envoi ↑, identifiant. Chaque match a ses champs habituels (`fixture`), `time`, `day` (jour à Paris), `weight` (importance v2) et `forecast` (domicile / nul / extérieur) quand il y a un pronostic. Les bornes et le plafond sont des données : `api.home_rules_v2`.
+
+Les matchs à venir (`highlights`) gardent l'ordre du poids éditorial v1 et portent aussi `weight2`, leur importance v2.
+
+## Coin d'un pays
+
+`/api/read/home-local?season=AAAA/AAAA&country=XXX` (code à trois lettres majuscules, sinon 400 ; aucun paramètre personnel ni `leagues`) : lecture commune, mise en cache comme l'accueil (une copie par pays) :
+- `competitions` : les compétitions de ce pays présentes dans la saison (`api.editions`), avec leur niveau quand il est connu, la plus haute d'abord ;
+- `window` : les bornes utilisées, d'hier à aujourd'hui + **7** jours à Paris (`api.home_rules_v2` ; plus large qu'« À l'affiche » : un lundi, la première division d'un pays ne joue souvent pas avant le vendredi) ;
+- `matches` : leurs matchs de cette fenêtre, mêmes champs et même ordre qu'« À l'affiche », au plus 16 par jour ;
+- `table` : les 6 premiers du classement (`api.standing_rows`, sans phase ni groupe) du championnat le plus haut du pays qui a un niveau ; `null` sinon.
+
+Un code bien formé sans compétition répond 200 avec des listes vides. La sélection nationale du pays n'y est pas : l'API n'a pas de lien fiable entre un pays et sa sélection.
+
 ## Match de la semaine
 
 `selectMatchOfTheWeek` (SQL : `showcase_weight`) :

@@ -20,7 +20,7 @@ import { createDisciplineRoute } from "./routes/discipline.mjs";
 import { createPresenceRoute } from "./routes/presence.mjs";
 import { createPerformanceRoute } from "./routes/performance.mjs";
 import { createActorRoute } from "./routes/actors.mjs";
-import { createHomeFavouritesRoute, createHomeReadRoute } from "./routes/home.mjs";
+import { createHomeFavouritesRoute, createHomeLocalRoute, createHomeReadRoute } from "./routes/home.mjs";
 import { createSearchRoute } from "./routes/search.mjs";
 import { createArchiveRoute } from "./routes/archives.mjs";
 import { createRankingRoute } from "./routes/rankings.mjs";
@@ -32,13 +32,14 @@ import { createArchiveDetailRoute } from "./routes/archive-details.mjs";
 import { compactHomePresentation } from "./home-presentation.mjs";
 
 /** The compact home cards (media=1), plus what the choice of « Prochains matchs »
- * reads (home-upcoming.js on the site): each offered match's editorial weight and cup
- * flag, and every club's rank, a favourite's match coming from the personal read. */
+ * reads (home-upcoming.js on the site): each offered match's editorial weight, its
+ * importance v2 (weight2, VI-48) and cup flag, and every club's rank, a favourite's
+ * match coming from the personal read. */
 export function presentHome(data) {
   const out = compactHomePresentation(data);
   if (!out || !data) return out;
   if (Array.isArray(out.highlights))
-    out.highlights = out.highlights.map((h, i) => ({ ...h, weight: data.highlights[i]?.weight, europe: data.highlights[i]?.europe }));
+    out.highlights = out.highlights.map((h, i) => ({ ...h, weight: data.highlights[i]?.weight, weight2: data.highlights[i]?.weight2, europe: data.highlights[i]?.europe }));
   if (Array.isArray(data.ranks)) out.ranks = data.ranks.map(([id, v]) => [id, { rank: v?.rank, form: v?.form }]);
   return out;
 }
@@ -75,7 +76,7 @@ export function createHandler({ read: query, mediaBase = null, clock = Date.now,
       }
     }
   };
-  const routes = [createSystemRoute(read), createOpsRoute(read, { key: opsKey, clock }), createClubReadRoute(read), createPlayerReadRoute(read, { clock }), createMatchRoute(read), createMatchDetailRoute(read), createProfileRoute(read), createPlayerFormRoute(read), createPartitionRoute(read), createReferenceRoute(read), createDisciplineRoute(read), createPresenceRoute(read), createPerformanceRoute(read), createActorRoute(read, { clock }), createHomeReadRoute(read, clock), createHomeFavouritesRoute(read, clock), createSearchRoute(read), createArchiveRoute(read), createArchiveDetailRoute(read), createRankingRoute(read), createSupportRoute(read, { mediaBase }), createCupRoute(read), createEuropeRoute(read, { clock }), createNationRoute(read), createWorldCupRoute(read)];
+  const routes = [createSystemRoute(read), createOpsRoute(read, { key: opsKey, clock }), createClubReadRoute(read), createPlayerReadRoute(read, { clock }), createMatchRoute(read), createMatchDetailRoute(read), createProfileRoute(read), createPlayerFormRoute(read), createPartitionRoute(read), createReferenceRoute(read), createDisciplineRoute(read), createPresenceRoute(read), createPerformanceRoute(read), createActorRoute(read, { clock }), createHomeReadRoute(read, clock), createHomeFavouritesRoute(read, clock), createHomeLocalRoute(read, clock), createSearchRoute(read), createArchiveRoute(read), createArchiveDetailRoute(read), createRankingRoute(read), createSupportRoute(read, { mediaBase }), createCupRoute(read), createEuropeRoute(read, { clock }), createNationRoute(read), createWorldCupRoute(read)];
   async function route(req) {
     const url = new URL(req.url),
       path = url.pathname;

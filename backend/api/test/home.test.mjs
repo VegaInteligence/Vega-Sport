@@ -8,8 +8,9 @@ import { context, get, skip } from "./context.mjs";
 
 const home = "/api/read/home?season=2025/2026&leagues=all";
 const favourites = "/api/read/home-favourites?season=2025/2026&leagues=all";
+// "billboard" (« À l'affiche », VI-48): added deliberately, home-importance.test.mjs holds its contract.
 const KEYS = [
-  "bestOfFeatured", "competitions", "defences", "featured", "hasSeasonPlayers", "highlights", "internationals", "leaders", "others",
+  "bestOfFeatured", "billboard", "competitions", "defences", "featured", "hasSeasonPlayers", "highlights", "internationals", "leaders", "others",
   "otherMatches", "period", "potw", "potwMatch", "potwRecent", "potwSeason", "raceOpen", "ranks", "resultCount", "results",
   "rules", "seasonProgress", "streak", "streakNext", "tables", "win",
 ].sort();
@@ -42,6 +43,9 @@ test("home: the week, its featured match and player", { skip }, async () => {
   assert.ok(Math.abs(s.grade - 100 / (1 + 10 ** (-((90 * 3.3) / 160) / 4))) < 1e-4 && Math.abs(s.xg - 2.3) < 1e-9);
   assert.deepEqual([s.gradeMinutes, s.gradeCount], [160, 2]);
   assert.equal(d.win, null); // no win by three goals or more
+  // « À l'affiche »: yesterday (Friday 5) to Tuesday 9, every importance a number (home-importance.test.mjs).
+  assert.deepEqual(d.billboard.map((r) => [r.fixture.id, r.day]), [["m_aaaaa5", "2025-09-05"], ["m_aaaaa6", "2025-09-06"]]);
+  assert.ok(d.billboard.every((r) => typeof r.weight === "number"));
 });
 
 test("home: tables, ranks, leaders, highlights and markers", { skip }, async () => {
