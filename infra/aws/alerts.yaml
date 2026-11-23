@@ -13,6 +13,13 @@ Parameters:
     Default: ''
     AllowedPattern: '([^@\s]+@[^@\s]+\.[^@\s]+)?'
     Description: 'Where the alerts go: deploy.sh reads it from SSM /vega/v2/alert-email; empty, the topic has no subscription'
+  # Two people run the service: the SSM parameter may hold a second address after a comma.
+  AlertEmail2:
+    Type: String
+    NoEcho: true
+    Default: ''
+    AllowedPattern: '([^@\s]+@[^@\s]+\.[^@\s]+)?'
+    Description: 'A second address for the same alerts (the part after the comma in SSM /vega/v2/alert-email); empty, the first one only'
   WatchWorker:
     Type: String
     Default: 'true'
@@ -25,6 +32,7 @@ Parameters:
     Description: 'true once a live provider is chosen (deploy.sh: LIVE_PROVIDER): until then, no alarm and no cost for the live circuit'
 Conditions:
   HasEmail: !Not [!Equals [!Ref AlertEmail, '']]
+  HasEmail2: !Not [!Equals [!Ref AlertEmail2, '']]
   Worker: !Equals [!Ref WatchWorker, 'true']
   Live: !Equals [!Ref WatchLive, 'true']
 Resources:
@@ -43,6 +51,14 @@ Resources:
       TopicArn: !Ref Topic
       Protocol: email
       Endpoint: !Ref AlertEmail
+  # Each address confirms on its own, from its own e-mail.
+  EmailSubscription2:
+    Type: AWS::SNS::Subscription
+    Condition: HasEmail2
+    Properties:
+      TopicArn: !Ref Topic
+      Protocol: email
+      Endpoint: !Ref AlertEmail2
 
   # --- The read API's function (api.yaml: vega-v2-api, 32 copies, 25 s) ---------------
   # Errors are what the handler did not catch: a crash, a timeout, memory. A database

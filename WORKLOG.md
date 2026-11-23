@@ -13,6 +13,8 @@
 - Not validated: nothing ran against AWS or Vercel. Open until a real deploy: the CloudFormation role's permissions, the log filter patterns in CloudWatch, the e-mails, the web ACL association, the rate-limit E2E (`tests/e2e/rate-limit.e2e.mjs`, needs Block mode), CSP reports on Vercel, the stadium map, the live socket. The full Python suite (PostgreSQL) was not run.
 - Read-only audit of the code the same day: findings kept for separate issues (deploy role can escalate through IAM, cache keys bypassed by non-canonical query strings, slow club substitutions route, `claude/v2-*` OIDC trust of the pilot). The deploy summary shows masked values (checked by the user on run 119).
 - Next action: the user's go to push and open the PR; then, in order, deploy `vega-v2-deploy-roles`, set `/vega/v2/alert-email`, run Deploy, confirm both subscription e-mails, deploy `vega-v2-budget` once, set `VEGA_API_EDGE_KEY` on Vercel; a week of counting before Block.
+- 23 Nov, evening: PR #73 squash-merged on the user's word (main 1b10ced), the site's headers are live through Vercel. The AWS side follows in the order above.
+- Two addresses: the user wants the alerts sent to two people. `/vega/v2/alert-email` may hold two addresses separated by a comma; `deploy.sh` splits it into `AlertEmail` and `AlertEmail2`, each topic has a subscription per address, and `budget.yaml` takes `AlertEmail2` (the owner passes it by hand). Tests first (seen red): `test_alerts` 15, `test_cost_caps` 13; cfn-lint 0 in both regions. Not validated on AWS.
 
 ## No data in git — VI-45 (20–21 November 2026, done)
 

@@ -135,21 +135,29 @@ if [ "${IMPORT_ARCHIVES:-false}" = true ] && [ -n "$ARCHIVES" ]; then
   run_task vega-v2-archives
 fi
 # --- Alerts (alerts.yaml here, alerts-edge.yaml in us-east-1; README, Alerts) ---
-# After the read API stack: the edge stack names its distribution. The address is never in
-# the repository: SSM /vega/v2/alert-email, set once by the account owner. Without it the
-# topics have no subscription and the deploy goes on.
+# After the read API stack: the edge stack names its distribution. The addresses are never
+# in the repository: SSM /vega/v2/alert-email, set once by the account owner, one address
+# or two separated by a comma (two people run the service). Without it the topics have no
+# subscription and the deploy goes on.
 echo "== 10. Alerts: topic vega-v2-alerts and its alarms (here and in us-east-1)"
-alert_email=$(aws ssm get-parameter --name /vega/v2/alert-email --with-decryption --query Parameter.Value --output text 2>/dev/null || true)
-[ "$alert_email" = None ] && alert_email=
+alert_emails=$(aws ssm get-parameter --name /vega/v2/alert-email --with-decryption --query Parameter.Value --output text 2>/dev/null || true)
+[ "$alert_emails" = None ] && alert_emails=
+alert_emails=${alert_emails//[[:space:]]/}
+IFS=, read -r alert_email alert_email2 alert_more <<<"$alert_emails" || true
 if [ -n "$alert_email" ]; then
-  [ -n "${GITHUB_ACTIONS:-}" ] && echo "::add-mask::$alert_email"
+  if [ -n "${GITHUB_ACTIONS:-}" ]; then
+    echo "::add-mask::$alert_email"
+    [ -n "$alert_email2" ] && echo "::add-mask::$alert_email2"
+  fi
+  [ -n "$alert_more" ] && echo "alerts: /vega/v2/alert-email holds more than two addresses: the first two are subscribed (README, Alerts)"
 else
+  alert_email2=
   echo "alerts: no SSM parameter /vega/v2/alert-email: the alarms notify a topic with no e-mail subscription (README, Alerts)"
 fi
 watch_worker=true; [ "$COUNT" = 0 ] && watch_worker=false
 watch_live=false; [ -n "${LIVE_PROVIDER:-}" ] && watch_live=true
-stack vega-v2-alerts alerts.yaml --parameter-overrides AlertEmail="$alert_email" WatchWorker="$watch_worker" WatchLive="$watch_live"
-stack vega-v2-alerts-edge alerts-edge.yaml --region us-east-1 --parameter-overrides AlertEmail="$alert_email" \
+stack vega-v2-alerts alerts.yaml --parameter-overrides AlertEmail="$alert_email" AlertEmail2="$alert_email2" WatchWorker="$watch_worker" WatchLive="$watch_live"
+stack vega-v2-alerts-edge alerts-edge.yaml --region us-east-1 --parameter-overrides AlertEmail="$alert_email" AlertEmail2="$alert_email2" \
   DistributionId="$(output vega-v2-api DistributionId)" ApiDomain="${media#https://}"
 # --- end of alerts ---
 echo "done"
