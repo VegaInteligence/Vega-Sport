@@ -606,6 +606,9 @@ a.run:focus-visible {
 .upcoming {
   grid-template-columns: 52px minmax(0, 1fr);
 }
+.upcoming .date {
+  white-space: nowrap;
+}
 .opponent {
   display: inline-flex;
   align-items: center;
@@ -614,6 +617,17 @@ a.run:focus-visible {
 }
 @media (max-width: 640px) {
   .upcoming {
-    grid-template-columns: 44px minmax(0, 1fr);
+    grid-template-columns: 52px minmax(0, 1fr);
   }
+}
+
+/* The identity column's action: save the nation, across the column. Two classes, so the
+   shared toolbar's flex row (research.css) cannot win on stylesheet order. */
+.railActions.railActions {
+  display: grid;
+  margin: 0;
+}
+.railActions.railActions > * {
+  justify-content: center;
+  width: 100%;
 }

@@ -15,7 +15,8 @@ import BackLink from "./BackLink.jsx";
 import NationSkeleton from "./NationSkeleton.jsx";
 import Link from "next/link";
 import { Empty, Media, Segments, Skeleton } from "./UI.jsx";
-import { ResearchTabs } from "./ResearchUI.jsx";
+import { BookmarkButton, ResearchTabs } from "./ResearchUI.jsx";
+import { useResearch } from "../hooks/ResearchContext.jsx";
 import { PhoneFoldToggle, usePhoneFold } from "./PhoneFold.jsx";
 import { Card, dateShort, fmtNum, Kpis } from "./ClubScoutUI.jsx";
 import { LineChart, TipBody } from "./PlayerScoutCharts.jsx";
@@ -94,6 +95,18 @@ function Record({ wins, draws, losses }) {
 export function NationIndex() {
   const f = useFootball();
   const nations = useNations(f.season);
+  const research = useResearch();
+  const saved = useMemo(
+    () =>
+      new Set(
+        (research?.ready ? research.data.lists : []).flatMap((list) =>
+          list.entries
+            .filter((entry) => entry.kind === "nations")
+            .map((entry) => entry.id),
+        ),
+      ),
+    [research?.ready, research?.data.lists],
+  );
   const [scope, setScope] = useState("ranked");
   const [query, setQuery] = useState("");
   const data = nations.value;
@@ -101,13 +114,15 @@ export function NationIndex() {
     const all = data?.nations || [];
     const needle = normalizeText(query.trim());
     return all
-      .filter((n) => scope === "all" || n.ranking)
+      .filter((n) =>
+        scope === "saved" ? saved.has(n.id) : scope === "all" || n.ranking,
+      )
       .filter(
         (n) =>
           !needle ||
           normalizeText(`${nationName(n.name)} ${n.name}`).includes(needle),
       );
-  }, [data, scope, query]);
+  }, [data, scope, query, saved]);
   if (nations.loading && !data)
     return (
       <Skeleton
@@ -142,6 +157,7 @@ export function NationIndex() {
           items={[
             ["ranked", `Classées cette saison · ${data.ranked}`],
             ["all", `Toutes les sélections · ${data.nations.length}`],
+            ["saved", `Mes sélections · ${saved.size}`],
           ]}
         />
       </div>
@@ -233,7 +249,9 @@ export function NationIndex() {
               {!rows.length && (
                 <tr>
                   <td colSpan={7} className={s.muted}>
-                    Aucune sélection ne correspond.
+                    {scope === "saved" && !saved.size
+                      ? "Aucune sélection enregistrée."
+                      : "Aucune sélection ne correspond."}
                   </td>
                 </tr>
               )}
@@ -846,6 +864,17 @@ function NationRail({ nation, last, backHref }) {
           </div>
         </div>
       )}
+      <div className={rail.railSection}>
+        <div className={`research-toolbar ${s.railActions}`}>
+          <BookmarkButton
+            kind="nations"
+            id={nation.id}
+            name={nationName(nation.name)}
+            imageUrl={nation.imageUrl}
+            season={nation.season}
+          />
+        </div>
+      </div>
     </aside>
   );
 }
