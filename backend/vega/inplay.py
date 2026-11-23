@@ -17,6 +17,14 @@ free factors apart). The final score is the present score plus those goals; the 
 scores keep the forecast's correction (Dixon and Coles), and a level score changes no
 rate, so that at kick-off the three probabilities are the forecast's own.
 
+A match that went to extra time (the caller says so) runs on to the 120th minute: its first
+90 are the same; at a minute m after the 90th the goals still to come, each side, are
+Poisson(λ × EXTRA_SHARE × (120 − m) / 30 × the red-card factor × the score factor, all of
+it after STATE_FROM), without the low-score correction, and the three probabilities are a
+win in extra time, level at the 120th (a shoot-out, outside the model) and a loss in extra
+time. EXTRA_SHARE is an assumption, not a fit: extra time scored at the match's mean rate
+per minute.
+
 The model knows the score, the clock and the dismissals. It knows nothing of the play
 itself (pressure, chances), of substitutions or of injuries
 (docs/calculs/06-accueil-et-matchs/03-pronostics-et-projections.md).
@@ -38,6 +46,7 @@ STATE_SAMPLE = 5000  # matches read for that fit
 STATE_MIN_CASES = 500  # match-minutes with a side ahead, below which the two factors stay at 1
 STATE_TILTS = [step / 40 for step in range(17)]  # 0 to 0.4 by 0.025: the tilts tried
 STATE_REFIT = 1.1  # the base holds this many times the matches of the factors' last fit: fit them again
+EXTRA_SHARE = 1 / 3  # extra time's share of a match's goals: its 30 minutes at the mean rate (an assumption, not fitted)
 
 
 def band(minute, added=0):
@@ -60,6 +69,11 @@ def remaining(profile, minute, added=0):
     index = min(QUARTERS - 1, int(clock // 15))
     inside = profile[index] * (1.0 - (clock - 15 * index) / 15)
     return inside + sum(profile[index + 1:QUARTERS]) + tail
+
+
+def extra_remaining(minute):
+    """In extra time, the share of a match's goals still to come after `minute` (90..120)."""
+    return EXTRA_SHARE * (120 - min(120, max(90, minute))) / 30
 
 
 def factors(reds_home, reds_away, down, up):
@@ -109,11 +123,12 @@ def outcome(rate_home, rate_away, share, score_home, score_away, reds_home, reds
     return (home / total, draw / total, away / total) if total > 0 else (1 / 3, 1 / 3, 1 / 3)
 
 
-def timeline(rate_home, rate_away, events, model, rho=0.0, last=90):
+def timeline(rate_home, rate_away, events, model, rho=0.0, last=90, extra=False):
     """The three probabilities at each minute from 0 to `last`. `events`: goals and reds in
     order, each (minute, added, kind, side) with kind "goal" or "red" and side "home" or
-    "away". An event of minute m counts from minute m on. Returns
-    [(minute, home, draw, away, score_home, score_away)]."""
+    "away". An event of minute m counts from minute m on (an event past `last` at `last`).
+    `extra`: the match went to extra time, `last` then up to 120 (see the module's note).
+    Returns [(minute, home, draw, away, score_home, score_away)]."""
     points, state, index = [], [0, 0, 0, 0], 0  # score home, score away, reds home, reds away
     ordered = sorted(events, key=lambda e: (min(int(e[0]), last), e[1] or 0))
     for minute in range(0, last + 1):
@@ -121,9 +136,12 @@ def timeline(rate_home, rate_away, events, model, rho=0.0, last=90):
             _, _, kind, side = ordered[index]
             state[(0 if kind == "goal" else 2) + (0 if side == "home" else 1)] += 1
             index += 1
-        share = remaining(model["profile"], minute, 0)
-        late = late_share(model["profile"], minute, 0)
-        points.append((minute, *outcome(rate_home, rate_away, share, state[0], state[1], state[2], state[3], model, rho, late), state[0], state[1]))
+        if extra and minute > 90:
+            share = late = extra_remaining(minute)
+            correction = 0.0
+        else:
+            share, late, correction = remaining(model["profile"], minute, 0), late_share(model["profile"], minute, 0), rho
+        points.append((minute, *outcome(rate_home, rate_away, share, state[0], state[1], state[2], state[3], model, correction, late), state[0], state[1]))
     return points
 
 
