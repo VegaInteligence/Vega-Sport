@@ -289,6 +289,8 @@ $$
 
 Raison : six duels gagnés sur huit ne disent pas la même chose que six sur vingt (§ 5.2).
 
+Les tentatives de duels ne sont pas publiées par la source : ce sont les duels gagnés plus les duels perdus, additionnés une fois que chacun a reçu son zéro (règle « un vide vaut zéro »). Un total dont une part reste inconnue reste inconnu. Jusqu'au 23 novembre 2026 l'addition se faisait avant : cinq duels gagnés et aucun perdu devenaient cinq réussites pour zéro tentative ([#71](https://github.com/VegaInteligence/Vega-Sport/issues/71)).
+
 **Gardiens.** Les buts évités (xGOT subis − buts encaissés) sont déjà un écart à l'attendu, donc $\hat{x} = 0$ (§ 7.2). S'y ajoutent les sorties aériennes et les poings, les sorties dans la profondeur, et les passes et longs ballons réussis.
 
 Une mesure avec moins de 30 matchs de référence dans le rôle n'est pas évaluée.
