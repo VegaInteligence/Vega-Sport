@@ -25,6 +25,8 @@ import {
 } from "../components/UI.jsx";
 import { MatchLink } from "../components/MatchLink.jsx";
 import MatchdaySchedule from "../components/MatchdaySchedule.jsx";
+import { LeagueHistoryRail, LeagueHistoryView } from "../components/LeagueHistory.jsx";
+import { isHistorySeason, useLeagueHistory, withHistorySeasons } from "../services/league-history.js";
 import {
   defaultCompetitionMatchStatus,
   orderCompetitionMatches,
@@ -177,9 +179,11 @@ function Fixtures({
   heading = false,
 }) {
   const f = useFootball();
+  // The five big leagues also offer their archived seasons, 2010/11–2020/21 (services/league-history.js).
+  const seasons = withHistorySeasons(competition);
   const [season, setSeason] = useState(
     (initialSeason &&
-      competition?.seasons?.find(
+      seasons.find(
         (s) => String(s) === initialSeason || seasonLabel(s) === initialSeason,
       )) ||
       competition?.seasons?.find((s) => seasonLabel(s) === f.season) ||
@@ -187,6 +191,8 @@ function Fixtures({
       f.season,
   );
   const supported = !day;
+  const archived = !day && isHistorySeason(competition?.id, seasonLabel(season));
+  const history = useLeagueHistory(archived ? competition?.id : null, seasonLabel(season));
   const hasKnockout = Boolean(
     competition &&
     (competition.id === WORLD_CUP_ID ||
@@ -248,6 +254,7 @@ function Fixtures({
   // calendar when that table cannot be shown (needFixtures below).
   const previewEnabled =
     !day &&
+    !archived &&
     Boolean(competition) &&
     !hasKnockout &&
     f.manifest.capabilities?.fixturePaginationOrder === true;
@@ -305,26 +312,32 @@ function Fixtures({
         day ? "date:" + day : competition.id + ":" + season,
       );
     },
-    f.statusKnown && needsFullCalendar,
+    f.statusKnown && needsFullCalendar && !archived,
   );
-  const showHighlights = supported && view === "standings";
+  const showHighlights = supported && view === "standings" && !archived;
   // The league replayed to its end, where the base projects it (a domestic league in progress).
   const projection = useSeasonProjection(
-    supported ? competition?.id : null,
+    supported && !archived ? competition?.id : null,
     seasonLabel(season),
   );
   // A league with a closed round has the whole Player of the Season race (VI-44); a cup has no rounds.
   const leagueRounds = useLeagueRounds(
-    supported && !hasKnockout ? competition?.id : null,
+    supported && !hasKnockout && !archived ? competition?.id : null,
     seasonLabel(season),
   );
   const hasRace = Boolean(leagueRounds.value?.latest);
   // Asked for by its address, the view gives way to the table where the league has no race.
-  const noRace = view === "players" && !leagueRounds.loading && !hasRace;
+  const noRace = !archived && view === "players" && !leagueRounds.loading && !hasRace;
   useEffect(() => {
     if (noRace) setViewState("standings");
   }, [noRace]);
-  const views = worldCup
+  const views = archived
+    ? [
+        ["standings", "Classement"],
+        ["matches", "Matchs"],
+        ["players", "Joueurs"],
+      ]
+    : worldCup
     ? [
         ["bracket", "Tableau"],
         ["standings", "Groupes"],
@@ -353,7 +366,7 @@ function Fixtures({
     <div
       className={
         "competition-detail-layout" +
-        (showHighlights ? " competition-detail-layout--overview" : "")
+        (showHighlights || archived ? " competition-detail-layout--overview" : "")
       }
     >
       <Card
@@ -370,7 +383,7 @@ function Fixtures({
             onSeason={pickSeason}
             editions={
               editions ||
-              (competition.seasons || []).map((value) => ({
+              seasons.map((value) => ({
                 season: String(value),
                 id: competition.id,
               }))
@@ -393,7 +406,9 @@ function Fixtures({
             )}
           </EditionHeader>
         )}
-        {supported && view === "standings" ? (
+        {archived ? (
+          <LeagueHistoryView resource={history} view={view} />
+        ) : supported && view === "standings" ? (
           <CompetitionStandings
             competition={competition}
             season={season}
@@ -501,6 +516,7 @@ function Fixtures({
           </AsyncState>
         )}
       </Card>
+      {archived && history.value && <LeagueHistoryRail value={history.value} />}
       {showHighlights && overviewFixtures && (
         <CompetitionHighlights
           matches={overviewFixtures.matches || []}
@@ -890,7 +906,7 @@ export default function CompetitionsPage() {
                 initialSeason={requestedEdition || openSeason}
                 {...(isCup(selected)
                   ? edition
-                  : { initialView: edition.initialView, onView: edition.onView })}
+                  : { initialView: edition.initialView, onView: edition.onView, onSeason: edition.onSeason })}
               />
             )
           ) : (!id && !choice.ready) ||

@@ -340,3 +340,13 @@
 - Built: `spreadChips` (blocks merged around their centres' mean, 6 px apart, inside the chart), chips with the scorer's colour, `data-goal-list` under the chart (now with the swing on the phone too); chart height unchanged.
 - Validated: E2E written first (`winprob.e2e.mjs`): 60/181 on the page before, 181/181 local; site suite = main's 9 local failures; build OK. Evidence: `EVIDENCE.md` there.
 - Linear: not touched in this folder (rule in ~/.claude/CLAUDE.md).
+
+## Archived seasons of the five big leagues on the competition page (23 Nov 2026)
+
+- Ask (user, Ligue 1 screenshot): the picker stops at 2021/2022; wants 2010–2020 for the five big leagues. The base already held their results (archives, football-data); PitchAPI starts at 2021/22.
+- Mock-up approved (« Oui parfait », `~/Agents/scratch/vega-big5-history-20261123/mock/`): seasons 2020/2021…2010/2011 in the picker; Classement / Matchs / Joueurs; side column « Saison » (champion, top scorer, goals per match, relegated) and the last matchday.
+- Built (branch `claude/big5-history`): migration 163 + `sources/tm_history.py` (Transfermarkt datasets, CC0, player seasons 2012/13–2020/21; agent lane), migration 164 + `GET /api/league-history`, `LeagueHistory.jsx`. Colours are facts: next season's European competition, relegation by absence from the next league (league rule when the source families do not match).
+- Validated locally: E2E 12/12 (before: fails on the live site), API 265/265, Python suites OK, site = main's 9 local failures, build OK. Evidence: `~/Agents/scratch/vega-big5-history-20261123/EVIDENCE.md`, `EVIDENCE-tm.md`.
+- Known limits: Transfermarkt 2014/15 (all) and LaLiga 2020/21 incomplete (flagged on the page); points deductions sourced for Serie A only (2010/11–2014/15, 2018/19); production colours depend on the identity merges (to check live).
+- Linear: not touched in this folder (rule in ~/.claude/CLAUDE.md).
+- Next action: push, deploy (migrations 163–164, worker reads the Transfermarkt files), live E2E.

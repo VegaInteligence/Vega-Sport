@@ -64,6 +64,9 @@ test("competition page renders a result-derived league table and its limits", as
     "../components/LeagueRace.jsx": { __esModule: true, default: () => elem("div", null, "Course entière") },
     "../services/league-rounds.js": { useLeagueRounds: () => ({ loading: false, value: null }) },
     "../services/forecasts.js": { useSeasonProjection: () => null },
+    // The archived seasons of the five big leagues (league-history.test.mjs covers the view).
+    "../services/league-history.js": { ...(await import("../dashboard/frontend/src/services/league-history.js")), useLeagueHistory: () => ({ loading: false, value: null }) },
+    "../components/LeagueHistory.jsx": { LeagueHistoryView: () => elem("div", null, "Saison archivée"), LeagueHistoryRail: () => null },
     "../components/Layout.jsx": { __esModule: true, default: ({ children, title, actions }) => elem("main", null, elem("h1", null, title), actions, children) },
     "../hooks/FootballContext.jsx": { useFootball: () => context }, "../components/UI.jsx": UI,
     "../components/MatchLink.jsx": { MatchLink: ({ match }) => elem("p", { "data-match": match.id }, match.id) },
