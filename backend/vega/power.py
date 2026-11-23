@@ -84,6 +84,7 @@ period, and the comparison between roles.
 """
 
 from collections import defaultdict
+import json
 import re
 from datetime import date, timedelta
 from bisect import bisect_left, bisect_right
@@ -1107,12 +1108,29 @@ def elo_groups(conn, matches):
     return leagues, tiers, countries, women
 
 
-# The FIFA edition the national pass starts from: NATION_SEED_EDITION, else the earliest held (§50).
+# The FIFA edition the national pass starts from: NATION_SEED_EDITION, else the earliest held (§50). A row fifa.save
+# could not link to a team is linked by its FIFA name through FIFA_TO_IR to the national team International Results
+# keys by that name (the measurement's map, elo_engine.FIFA_TO_IR: a nation the base names in French, « Andorre », or
+# otherwise, « United States », still starts at its points).
 NATION_SEED = """
-WITH e AS (SELECT id, label FROM core.ranking_editions WHERE kind = 'fifa_men' ORDER BY label <> %s, label LIMIT 1)
-SELECT e.label, coalesce(t.merged_into, r.team_id), r.points
-FROM e JOIN core.ranking_rows r ON r.edition_id = e.id LEFT JOIN core.teams t ON t.id = r.team_id
+WITH e AS (SELECT id, label FROM core.ranking_editions WHERE kind = 'fifa_men' ORDER BY label <> %(edition)s, label LIMIT 1)
+SELECT e.label, coalesce(t.merged_into, r.team_id, n.merged_into, n.id), r.points
+FROM e JOIN core.ranking_rows r ON r.edition_id = e.id
+LEFT JOIN core.teams t ON t.id = r.team_id
+LEFT JOIN core.provider_ids k ON r.team_id IS NULL AND k.entity_type = 'team' AND k.provider = 'international_results'
+  AND k.provider_key = coalesce((%(names)s::jsonb) ->> r.entity_name, r.entity_name)
+LEFT JOIN core.teams n ON n.id = k.entity_id AND n.is_national
 WHERE r.points IS NOT NULL ORDER BY r.row_no"""
+# FIFA's names → International Results' (elo_engine.FIFA_TO_IR, 23 Nov 2026: no FIFA row of 2021-02-18 unmatched).
+FIFA_TO_IR = {
+    "USA": "United States", "IR Iran": "Iran", "Côte d'Ivoire": "Ivory Coast", "Korea Republic": "South Korea",
+    "Türkiye": "Turkey", "Congo DR": "DR Congo", "Czechia": "Czech Republic", "Cabo Verde": "Cape Verde",
+    "China PR": "China", "Kyrgyz Republic": "Kyrgyzstan", "The Gambia": "Gambia", "DPR Korea": "North Korea",
+    "Korea DPR": "North Korea", "St. Kitts and Nevis": "Saint Kitts and Nevis", "St. Lucia": "Saint Lucia",
+    "St. Vincent / Grenadines": "Saint Vincent and the Grenadines",
+    "St. Vincent and the Grenadines": "Saint Vincent and the Grenadines", "Chinese Taipei": "Taiwan",
+    "Macau, China": "Macau", "US Virgin Islands": "United States Virgin Islands", "Brunei Darussalam": "Brunei",
+}
 # An internationals match's tournament: its round's name (§49).
 NATION_ROUNDS = """
 SELECT m.id, r.name FROM core.matches m
@@ -1124,7 +1142,7 @@ def nation_inputs(conn, matches, merge, weights):
     """(the national teams, the seed edition's label or None, the seeds, {match: w}) for the national pass. Reads only."""
     nations = {t for (t,) in conn.execute("SELECT id FROM core.teams WHERE is_national").fetchall()}
     nations |= {merge.get(t, t) for t in nations}
-    found = conn.execute(NATION_SEED, (NATION_SEED_EDITION,)).fetchall()
+    found = conn.execute(NATION_SEED, {"edition": NATION_SEED_EDITION, "names": json.dumps(FIFA_TO_IR)}).fetchall()
     seeds = nation_seeds([(None if team is None else merge.get(team, team), points) for _, team, points in found])
     rounds = dict(conn.execute(NATION_ROUNDS).fetchall())
     steps = {m[0]: nation_weight(m[12], rounds.get(m[0]), weights.get(m[0], 1.0)) for m in matches if m[3] in nations and m[4] in nations}
