@@ -73,7 +73,7 @@ def one(pattern, body, what):
 def resources(body):
     """Top-level resources of a template: name -> (type, its indented block)."""
     out = {}
-    section = body.split("\nResources:\n", 1)[-1].split("\nOutputs:\n", 1)[0] if "\nResources:\n" in body else ""
+    section = body.split("\nResources:\n", 1)[-1].split("\nOutputs:\n", 1)[0] + "\n" if "\nResources:\n" in body else ""
     for m in re.finditer(r"^  (\w+):\n((?:(?:    .*)?\n)+)", section, re.M):
         kind = re.search(r"^    Type: (\S+)", m.group(2), re.M)
         if kind:
@@ -146,7 +146,7 @@ class FilterPatternTest(unittest.TestCase):
         assert run.returncode == 0, run.stderr
         cls.lines = [lambda_text_line(level, message) for level, message in json.loads(run.stdout)]
         filters = {name: block for name, (kind, block) in resources(text(ALERTS)).items() if kind == "AWS::Logs::MetricFilter"}
-        cls.patterns = {prop(b, "MetricName"): prop(b, "FilterPattern") for b in filters.values()}
+        cls.patterns = {re.search(r"MetricName: (\w+)", b).group(1): prop(b, "FilterPattern") for b in filters.values()}
 
     def lines_with(self, needle):
         found = [line for line in self.lines if needle in line]
@@ -208,14 +208,14 @@ class AlertsTest(unittest.TestCase):
         self.assertRegex(self.edge, r"Namespace: AWS/Route53")
         self.assertRegex(self.edge, r"\{Name: Region, Value: Global\}")
         one(r"^\s*stack vega-v2-alerts-edge alerts-edge\.yaml --region us-east-1 ", DEPLOY, "edge stack deployed in us-east-1")
-        line = one(r"^\s*(stack vega-v2-alerts alerts\.yaml .*)$", DEPLOY, "alerts stack deployed")
+        line = one(r"^\s*(stack vega-v2-alerts alerts\.yaml [^\n]*)$", DEPLOY, "alerts stack deployed")
         self.assertNotIn("--region", line)
 
     def test_the_probe_reads_the_base_through_the_distribution(self):
         check = [b for kind, b in resources(self.edge).values() if kind == "AWS::Route53::HealthCheck"]
         self.assertEqual(len(check), 1)
         self.assertEqual(prop(check[0], "ResourcePath"), "/api/health")
-        self.assertEqual(prop(check[0], "Type"), "HTTPS")
+        self.assertRegex(check[0], r"\n        Type: HTTPS\n")
         # /api/health reads api.publication and api.editions: a base that refuses is a 503.
         system = (ROOT / "backend/api/src/routes/system.mjs").read_text()
         self.assertRegex(system, r'path === "/api/health"\) \{\n\s+validateParams\(params, \[\]\);\n\s+const \[r\] = await read\(')
@@ -264,7 +264,7 @@ class AlertsTest(unittest.TestCase):
             self.assertEqual(len(sub), 1)
             self.assertEqual(prop(sub[0], "Condition"), "HasEmail")
             self.assertEqual(prop(sub[0], "Endpoint"), "!Ref AlertEmail")
-        read = one(r"^(alert_email=.*)$", DEPLOY, "the address read")
+        read = one(r"^(alert_email=[^\n]*)$", DEPLOY, "the address read")
         self.assertIn("/vega/v2/alert-email", read)
         self.assertTrue(read.rstrip().endswith("|| true)"), "a missing parameter must not stop the deploy")
         self.assertRegex(DEPLOY, r"no SSM parameter /vega/v2/alert-email")
