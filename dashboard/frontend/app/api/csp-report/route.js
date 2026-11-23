@@ -9,7 +9,11 @@ export const MAX_BYTES = 16 * 1024;
 export const MAX_REPORTS = 10;
 export const LOG_QUOTA = 20;
 const WINDOW_MS = 60 * 1000;
-const TYPES = ["application/csp-report", "application/reports+json", "application/json"];
+const TYPES = [
+  "application/csp-report",
+  "application/reports+json",
+  "application/json",
+];
 const FIELD = 200;
 
 let windowStart = 0,
@@ -21,7 +25,8 @@ export function __resetForTests() {
   dropped = 0;
 }
 
-const empty = (status) => new Response(null, { status, headers: { "Cache-Control": "no-store" } });
+const empty = (status) =>
+  new Response(null, { status, headers: { "Cache-Control": "no-store" } });
 
 async function readBounded(request) {
   const declared = Number(request.headers.get("content-length"));
@@ -43,13 +48,16 @@ async function readBounded(request) {
   return new TextDecoder().decode(Buffer.concat(chunks));
 }
 
-const text = (value) => (typeof value === "string" ? value.slice(0, FIELD) : undefined);
+const text = (value) =>
+  typeof value === "string" ? value.slice(0, FIELD) : undefined;
 // A URL keeps its origin and path; a query or a fragment may hold someone's data.
 function place(value) {
   if (typeof value !== "string" || !value) return undefined;
   try {
     const url = new URL(value);
-    return (url.origin === "null" ? url.protocol : url.origin + url.pathname).slice(0, FIELD);
+    return (
+      url.origin === "null" ? url.protocol : url.origin + url.pathname
+    ).slice(0, FIELD);
   } catch {
     return text(value);
   }
@@ -68,7 +76,9 @@ function entry(report) {
   const legacy = report?.["csp-report"];
   if (legacy && typeof legacy === "object")
     return {
-      directive: text(legacy["effective-directive"] || legacy["violated-directive"]),
+      directive: text(
+        legacy["effective-directive"] || legacy["violated-directive"],
+      ),
       blocked: place(legacy["blocked-uri"]),
       page: pathOf(legacy["document-uri"]),
       source: place(legacy["source-file"]),
@@ -105,7 +115,10 @@ function log(line) {
 }
 
 export async function POST(request) {
-  const type = (request.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+  const type = (request.headers.get("content-type") || "")
+    .split(";")[0]
+    .trim()
+    .toLowerCase();
   if (!TYPES.includes(type)) return empty(415);
   const body = await readBounded(request);
   if (body === null) return empty(413);
@@ -115,7 +128,10 @@ export async function POST(request) {
   } catch {
     return empty(400);
   }
-  for (const report of (Array.isArray(parsed) ? parsed : [parsed]).slice(0, MAX_REPORTS)) {
+  for (const report of (Array.isArray(parsed) ? parsed : [parsed]).slice(
+    0,
+    MAX_REPORTS,
+  )) {
     const line = entry(report);
     if (line) log(line);
   }

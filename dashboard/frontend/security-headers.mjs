@@ -17,7 +17,9 @@ const origins = (values) => [...new Set(values.filter(Boolean))];
 function apiOrigins(env) {
   const configured = (() => {
     try {
-      return env.NEXT_PUBLIC_API_ORIGIN ? new URL(env.NEXT_PUBLIC_API_ORIGIN).origin : "";
+      return env.NEXT_PUBLIC_API_ORIGIN
+        ? new URL(env.NEXT_PUBLIC_API_ORIGIN).origin
+        : "";
     } catch {
       return "";
     }
@@ -27,10 +29,14 @@ function apiOrigins(env) {
 }
 const plans = allStadiumPlans();
 const framed = origins(
-  plans.filter((plan) => plan.embedded && !plan.imageUrl).map((plan) => new URL(plan.url).origin),
+  plans
+    .filter((plan) => plan.embedded && !plan.imageUrl)
+    .map((plan) => new URL(plan.url).origin),
 );
 const locating = origins(
-  plans.filter((plan) => plan.allowGeolocation).map((plan) => new URL(plan.url).origin),
+  plans
+    .filter((plan) => plan.allowGeolocation)
+    .map((plan) => new URL(plan.url).origin),
 );
 
 export function contentSecurityPolicy(env = process.env) {
@@ -42,11 +48,26 @@ export function contentSecurityPolicy(env = process.env) {
     "default-src": ["'self'"],
     // 'unsafe-inline': Next's inline payload scripts and the layout's three boot scripts,
     // without nonces (they would make every page dynamic). Eval: React in development only.
-    "script-src": ["'self'", "'unsafe-inline'", ...(development ? ["'unsafe-eval'"] : []), MAPLIBRE, ...toolbar],
+    "script-src": [
+      "'self'",
+      "'unsafe-inline'",
+      ...(development ? ["'unsafe-eval'"] : []),
+      MAPLIBRE,
+      ...toolbar,
+    ],
     // Server-rendered style attributes and MapLibre's stylesheet.
     "style-src": ["'self'", "'unsafe-inline'", MAPLIBRE, ...toolbar],
-    "img-src": ["'self'", "data:", "blob:", ...api, ...(preview ? [VERCEL_LIVE, "https://vercel.com"] : [])],
-    "font-src": ["'self'", ...(preview ? [VERCEL_LIVE, "https://assets.vercel.com"] : [])],
+    "img-src": [
+      "'self'",
+      "data:",
+      "blob:",
+      ...api,
+      ...(preview ? [VERCEL_LIVE, "https://vercel.com"] : []),
+    ],
+    "font-src": [
+      "'self'",
+      ...(preview ? [VERCEL_LIVE, "https://assets.vercel.com"] : []),
+    ],
     "connect-src": [
       "'self'",
       ...api,
@@ -73,7 +94,10 @@ export function contentSecurityPolicy(env = process.env) {
 
 export function securityHeaders(env = process.env) {
   return [
-    { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
+    {
+      key: "Strict-Transport-Security",
+      value: "max-age=63072000; includeSubDomains",
+    },
     { key: "X-Content-Type-Options", value: "nosniff" },
     { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
     { key: "X-Frame-Options", value: "DENY" },
@@ -88,7 +112,10 @@ export function securityHeaders(env = process.env) {
         "browsing-topics=()",
       ].join(", "),
     },
-    { key: "Content-Security-Policy-Report-Only", value: contentSecurityPolicy(env) },
+    {
+      key: "Content-Security-Policy-Report-Only",
+      value: contentSecurityPolicy(env),
+    },
     { key: "Reporting-Endpoints", value: `csp="${CSP_REPORT_PATH}"` },
   ];
 }
