@@ -11,6 +11,11 @@ Parameters:
     Type: String
     AllowedPattern: '[^@\s]+@[^@\s]+\.[^@\s]+'
     Description: Who receives the budget and anomaly mails; passed at deploy time, never written in the repository.
+  AlertEmail2:
+    Type: String
+    Default: ''
+    AllowedPattern: '([^@\s]+@[^@\s]+\.[^@\s]+)?'
+    Description: A second person who receives the same mails (two people run the service); empty, the first address only.
   # The estimate is $76-81 a month (infra/aws/README.md, "Cost"). At $120, 50 % arrives late
   # in a normal month, 80 % ($96) means about $15 above the estimate, and 100 % half again
   # the usual spend.
@@ -49,6 +54,7 @@ Parameters:
     Description: Role whose ecs:RunTask on vega-v2-live is denied at 100 % of the actual spend; empty, no automatic action.
 Conditions:
   CreateMonitor: !Equals [!Ref ExistingServiceMonitorArn, '']
+  HasEmail2: !Not [!Equals [!Ref AlertEmail2, '']]
   HasTopic: !Not [!Equals [!Ref AlertTopicArn, '']]
   CutOff: !Not [!Equals [!Ref LiveSchedulerRoleName, '']]
 Resources:
@@ -66,18 +72,22 @@ Resources:
         - Notification: {NotificationType: ACTUAL, ComparisonOperator: GREATER_THAN, Threshold: 50, ThresholdType: PERCENTAGE}
           Subscribers:
             - {SubscriptionType: EMAIL, Address: !Ref AlertEmail}
+            - !If [HasEmail2, {SubscriptionType: EMAIL, Address: !Ref AlertEmail2}, !Ref AWS::NoValue]
             - !If [HasTopic, {SubscriptionType: SNS, Address: !Ref AlertTopicArn}, !Ref AWS::NoValue]
         - Notification: {NotificationType: ACTUAL, ComparisonOperator: GREATER_THAN, Threshold: 80, ThresholdType: PERCENTAGE}
           Subscribers:
             - {SubscriptionType: EMAIL, Address: !Ref AlertEmail}
+            - !If [HasEmail2, {SubscriptionType: EMAIL, Address: !Ref AlertEmail2}, !Ref AWS::NoValue]
             - !If [HasTopic, {SubscriptionType: SNS, Address: !Ref AlertTopicArn}, !Ref AWS::NoValue]
         - Notification: {NotificationType: ACTUAL, ComparisonOperator: GREATER_THAN, Threshold: 100, ThresholdType: PERCENTAGE}
           Subscribers:
             - {SubscriptionType: EMAIL, Address: !Ref AlertEmail}
+            - !If [HasEmail2, {SubscriptionType: EMAIL, Address: !Ref AlertEmail2}, !Ref AWS::NoValue]
             - !If [HasTopic, {SubscriptionType: SNS, Address: !Ref AlertTopicArn}, !Ref AWS::NoValue]
         - Notification: {NotificationType: FORECASTED, ComparisonOperator: GREATER_THAN, Threshold: 100, ThresholdType: PERCENTAGE}
           Subscribers:
             - {SubscriptionType: EMAIL, Address: !Ref AlertEmail}
+            - !If [HasEmail2, {SubscriptionType: EMAIL, Address: !Ref AlertEmail2}, !Ref AWS::NoValue]
             - !If [HasTopic, {SubscriptionType: SNS, Address: !Ref AlertTopicArn}, !Ref AWS::NoValue]
       ResourceTags: [{Key: project, Value: vega-v2}]
   ServicesMonitor:
@@ -96,7 +106,9 @@ Resources:
       SubscriptionName: vega-v2-anomalies
       Frequency: DAILY
       MonitorArnList: [!If [CreateMonitor, !Ref ServicesMonitor, !Ref ExistingServiceMonitorArn]]
-      Subscribers: [{Type: EMAIL, Address: !Ref AlertEmail}]
+      Subscribers:
+        - {Type: EMAIL, Address: !Ref AlertEmail}
+        - !If [HasEmail2, {Type: EMAIL, Address: !Ref AlertEmail2}, !Ref AWS::NoValue]
       ThresholdExpression: !Sub '{"Dimensions": {"Key": "ANOMALY_TOTAL_IMPACT_ABSOLUTE", "MatchOptions": ["GREATER_THAN_OR_EQUAL"], "Values": ["${AnomalyImpactUsd}"]}}'
       ResourceTags: [{Key: project, Value: vega-v2}]
   # The cut-off, when asked for: nothing that serves the site stops. The live ingestor is
@@ -150,7 +162,9 @@ Resources:
         IamActionDefinition:
           PolicyArn: !Ref StopLiveStarts
           Roles: [!Ref LiveSchedulerRoleName]
-      Subscribers: [{Type: EMAIL, Address: !Ref AlertEmail}]
+      Subscribers:
+        - {Type: EMAIL, Address: !Ref AlertEmail}
+        - !If [HasEmail2, {Type: EMAIL, Address: !Ref AlertEmail2}, !Ref AWS::NoValue]
 Outputs:
   BudgetName: {Value: !Ref Budget}
   MonitorArn: {Value: !If [CreateMonitor, !Ref ServicesMonitor, !Ref ExistingServiceMonitorArn]}

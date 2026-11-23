@@ -12,6 +12,13 @@ Parameters:
     Default: ''
     AllowedPattern: '([^@\s]+@[^@\s]+\.[^@\s]+)?'
     Description: 'Where the alerts go: deploy.sh reads it from SSM /vega/v2/alert-email (us-east-2); empty, the topic has no subscription'
+  # Two people run the service: the SSM parameter may hold a second address after a comma.
+  AlertEmail2:
+    Type: String
+    NoEcho: true
+    Default: ''
+    AllowedPattern: '([^@\s]+@[^@\s]+\.[^@\s]+)?'
+    Description: 'A second address for the same alerts (the part after the comma in SSM /vega/v2/alert-email); empty, the first one only'
   DistributionId:
     Type: String
     AllowedPattern: 'E[A-Z0-9]{8,20}'
@@ -22,6 +29,7 @@ Parameters:
     Description: Its domain (vega-v2-api output ApiOrigin, without https://)
 Conditions:
   HasEmail: !Not [!Equals [!Ref AlertEmail, '']]
+  HasEmail2: !Not [!Equals [!Ref AlertEmail2, '']]
 Resources:
   Topic:
     Type: AWS::SNS::Topic
@@ -36,6 +44,14 @@ Resources:
       TopicArn: !Ref Topic
       Protocol: email
       Endpoint: !Ref AlertEmail
+  # Each address confirms on its own, from its own e-mail.
+  EmailSubscription2:
+    Type: AWS::SNS::Subscription
+    Condition: HasEmail2
+    Properties:
+      TopicArn: !Ref Topic
+      Protocol: email
+      Endpoint: !Ref AlertEmail2
   # GET /api/health reads api.publication and api.editions (routes/system.mjs): 200 when
   # the base answers and holds editions, 503 when it refuses or is unreachable. The path is
   # never cached (no Cache-Control: no-store at the distribution), so each probe reaches the
