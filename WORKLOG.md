@@ -1,5 +1,17 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+
+## Accounts and offers, stage 1 — VI-38 (23 November 2026, branch `claude/vi-38-comptes-plans`, draft PR)
+
+- Goal: prepare accounts and offers. User's decisions: Neon Auth for sign-in only; plan, preferences, follows and lists in the AWS base; payment by Stripe; four levels (0 visitor, 1 account, 2 Plus, 3 Pro). Ask before pushing, merging or creating any Neon, AWS or Stripe resource.
+- Preparation document (audit of what each level opens, licences, architecture, stages, open decisions): https://claude.ai/artifact/FsdntxmDn1G3VKvW1XuCPU. Four detailed reports in the project files (`vi-38-comptes/`).
+- Audit, main 639764b: 95 API routes (49 stay public, 25 Plus, 1 Pro, 18 carry public and reserved content together and must be split, 1 personal, 1 internal); 43 of the 74 Plus items of the scope are public today, 3 of the 78 Pro items exist; public bulk reads carry the advanced measures, so nothing can be reserved before they are split; PitchAPI publishes no terms of use, six sources are non-commercial.
+- Research changed the VI-38 design: the pass is HMAC (a CloudFront function cannot verify Neon's EdDSA token); the account API is two functions (a front outside the VPC that verifies Neon, signs the pass and talks to Stripe; a store in the VPC, alone on schema `account`); reserved reads get their own paths (`/api/l2/…`, `/api/l3/…`), never a body that varies with the level on one URL; without a domain of our own the pass travels in a header (`X-Vega-Pass`), with one it becomes an HttpOnly cookie.
+- Built on `claude/vi-38-comptes-plans` (backend only, no screen, nothing deployed): `backend/account` (failure modes written first, then tests, then `src/pass.mjs`, `src/gate.mjs`, `src/access-rules.mjs`, empty until an offer opens) and `backend/account/sql/001_accounts.sql` (schema `account`, group role `vega_account`, no e-mail or name kept). The migration draft was written a few minutes before `test/schema.test.mjs`; its failure modes were fixed before both.
+- Validated 23 Nov: `npm test --prefix backend/account` 42/42 with `VEGA_V2_ACCOUNT_TEST_DSN` on a local PostgreSQL 16 (CI runs 18), 30/30 and 12 skipped without it. Not run: the Python suites and the read API suites (no PostgreSQL 18 here); CI is wired (`ci.yml`, `backend/ci/test_databases.py`) but has not run.
+- The account tables are kept out of `backend/sql` on purpose: some sixty suites drop `api,ops,agg,core` and migrate again, which a fifth schema created by that chain would break, and user data must not follow the football schemas' rebuilds. Their run in a deployment (own directory, own record of applied files) is stage 2; nothing is applied yet.
+- Next action: the user approved the push and a draft PR on 23 Nov (rebased on main cb7aef0, account suites 42/42 again); read the CI result. Then the decisions of the document (domain, Neon region, sign-in methods, PitchAPI terms), a mock-up of sign-in and account screens before any frontend work, and stage 2 (free accounts).
+
 ## No data in git — VI-45 (20–21 November 2026, done)
 
 - Goal: no data in the repository, history included. History rewritten without backup on the user's word, then force-pushed (every branch and the tag): old main 4844e92589 → 8f1b34522d, a clone drops from ~4.1 GB to 34 MB.
