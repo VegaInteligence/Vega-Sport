@@ -72,7 +72,7 @@ aws ce get-anomaly-monitors --profile statarena --query "AnomalyMonitors[?Monito
 ```
 
 ```sh
-aws cloudformation deploy --profile statarena --region us-east-2 --stack-name vega-v2-budget --template-file infra/aws/budget.yaml --capabilities CAPABILITY_IAM --no-fail-on-empty-changeset --parameter-overrides AlertEmail=<address> ExistingServiceMonitorArn=<ARN printed above, empty if none>
+aws cloudformation deploy --profile statarena --region us-east-2 --stack-name vega-v2-budget --template-file infra/aws/budget.yaml --capabilities CAPABILITY_IAM --no-fail-on-empty-changeset --parameter-overrides AlertEmail=<address> AlertEmail2=<second address, empty if none> ExistingServiceMonitorArn=<ARN printed above, empty if none>
 ```
 
 Optional, off by default: `LiveSchedulerRoleName=<the live stack's SchedulerRole>` (`aws cloudformation describe-stack-resource --stack-name vega-v2-live --logical-resource-id SchedulerRole --query StackResourceDetail.PhysicalResourceId`) makes the budget deny, at 100 %, the start of new live ingestor tasks; nothing that serves the site stops. Reverse it with `aws budgets execute-budget-action --execution-type REVERSE_BUDGET_ACTION`. `AlertTopicArn=<vega-v2-alerts>` also sends the budget mails to that topic, once its policy lets `budgets.amazonaws.com` publish.
@@ -224,13 +224,13 @@ Missing data counts as normal (no request, no alarm), except for the probe and t
 
 ### The address
 
-Never in the repository: the SSM parameter `/vega/v2/alert-email` (us-east-2), set once by the account owner. Without it the deploy logs `alerts: no SSM parameter /vega/v2/alert-email` and goes on; the alarms still change state in CloudWatch.
+Never in the repository: the SSM parameter `/vega/v2/alert-email` (us-east-2), set once by the account owner: one address, or two separated by a comma (two people run the service; a third is not subscribed and the deploy says so). Without it the deploy logs `alerts: no SSM parameter /vega/v2/alert-email` and goes on; the alarms still change state in CloudWatch.
 
 ```sh
-aws ssm put-parameter --profile statarena --region us-east-2 --name /vega/v2/alert-email --type String --value '<address>'
+aws ssm put-parameter --profile statarena --region us-east-2 --name /vega/v2/alert-email --type String --overwrite --value '<address>[,<second address>]'
 ```
 
-The next deploy subscribes it to both topics: AWS sends two e-mails « AWS Notification - Subscription Confirmation », one per region; nothing is delivered until each link is followed. Check: `aws sns list-subscriptions-by-topic --region us-east-2 --topic-arn arn:aws:sns:us-east-2:361769570630:vega-v2-alerts` (and `us-east-1`): `PendingConfirmation` until then. Changing the parameter replaces the subscriptions (two new confirmations).
+The next deploy subscribes each address to both topics: AWS sends each address two e-mails « AWS Notification - Subscription Confirmation », one per region; nothing is delivered to an address until it has followed each of its links. Check: `aws sns list-subscriptions-by-topic --region us-east-2 --topic-arn arn:aws:sns:us-east-2:361769570630:vega-v2-alerts` (and `us-east-1`): `PendingConfirmation` until then. Changing an address replaces its subscriptions (two new confirmations for that address); adding the second one leaves the first one's alone.
 
 ### Testing an alarm
 
