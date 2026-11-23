@@ -179,13 +179,14 @@ def match_rows(kind, competition, season, body):
     return out
 
 
-def _team(conn, provider, key, name):
+def _team(conn, provider, key, name, rename=True):
+    """`rename` False: a row the base holds keeps its name, the source's spelling a name of that source (§49)."""
     row = conn.execute("SELECT entity_id FROM core.provider_ids WHERE entity_type='team' AND provider=%s AND provider_key=%s", (provider, key)).fetchone()
     if row:
         if name:
             # A team another source also holds (PitchAPI's, or a nation two cup sources share) keeps
             # its name; the source's spelling is a name of that source (identity.py).
-            if conn.execute("SELECT 1 FROM core.provider_ids WHERE entity_type='team' AND entity_id=%s AND provider<>%s", (row[0], provider)).fetchone():
+            if not rename or conn.execute("SELECT 1 FROM core.provider_ids WHERE entity_type='team' AND entity_id=%s AND provider<>%s", (row[0], provider)).fetchone():
                 from .identity import spelling_row
 
                 spelling_row(conn, row[0], provider, name)  # a name of that source (search)
@@ -396,9 +397,11 @@ def save(conn, kind, competition, season, body, now):
     for former, key in renumbered.items():
         before[key] = snapshot.rekey(conn, provider, before[key], former, key)
     changes, keep = 0, set()
+    # The internationals rename no side (§49): the Nations League edition names the same keys in French.
+    rename = (kind, competition) != ("nations-results", "internationals")
     for key, m in rows:
-        home = m.get("home_existing_id") or (_team(conn, provider, m["home_key"], m["home"]) if m["home"] else None)
-        away = m.get("away_existing_id") or (_team(conn, provider, m["away_key"], m["away"]) if m["away"] else None)
+        home = m.get("home_existing_id") or (_team(conn, provider, m["home_key"], m["home"], rename) if m["home"] else None)
+        away = m.get("away_existing_id") or (_team(conn, provider, m["away_key"], m["away"], rename) if m["away"] else None)
         values = {k: m[k] for k in ("status", "home_score", "away_score", "home_score_90", "away_score_90", "home_score_ht",
                                      "away_score_ht", "home_score_et", "away_score_et", "home_penalty_score", "away_penalty_score", "is_neutral")}
         values.update(competition_season_id=edition, season_id=season_id, match_date=m["date"], home_team_id=home, away_team_id=away,
