@@ -12,6 +12,7 @@ import React, {
   useState,
 } from "react";
 import BackLink from "./BackLink.jsx";
+import NationSkeleton from "./NationSkeleton.jsx";
 import Link from "next/link";
 import { Empty, Media, Segments, Skeleton } from "./UI.jsx";
 import { ResearchTabs } from "./ResearchUI.jsx";
@@ -1028,14 +1029,15 @@ export function NationProfile({ id }) {
   );
   if (nation.loading && !value)
     return (
-      <>
-        {back}
-        <Skeleton
-          data-page-loading=""
-          label="Chargement de la sélection…"
-          lines={6}
-        />
-      </>
+      <NationSkeleton
+        back={
+          <BackLink
+            className="inline-link"
+            href={backHref}
+            label="Toutes les nations"
+          />
+        }
+      />
     );
   if (nation.error)
     return (
