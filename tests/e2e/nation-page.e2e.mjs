@@ -17,9 +17,12 @@
 //     « Vue d'ensemble » removes the parameter.
 //  T3 An old link to the removed tab (nationView=history) opens the overview.
 //  O1 « Prochains matchs » beside the Elo chart: the not-started matches, soonest first (France has two:
-//     25 and 28 March 2027), each against « Espagne ». No « Derniers matchs » card.
-//  O2 No coming match (served without them): no « Prochains matchs » card; the Elo card takes the
-//     panel's whole width.
+//     25 and 28 March 2027), each titled home – away like the other match rows (« Espagne – France »,
+//     then « France – Espagne »), the year shown since it is not the current one. No « Derniers matchs » card.
+//  O6 Under them, in the same card, « Derniers résultats »: the latest finished matches, newest first,
+//     each with its score and V/N/D, so the column holds 6 rows (2 coming + 4 results).
+//  O2 No coming match (served without them): no « Prochains matchs » card; a « Derniers résultats » card
+//     with 6 finished matches sits beside the Elo chart (chosen on screenshots over a full-width chart).
 //  O3 The Elo card switches between the recent window and the whole history (two buttons, the
 //     second one changes the chart's axis).
 //  O4 « Les joueurs » in the overview: 5 rows and the link to the whole table, which opens « Joueurs »
@@ -159,8 +162,19 @@ try {
   const upcoming = card(page, "Prochains matchs");
   const rows = await upcoming.locator("[data-upcoming]").evaluateAll((list) =>
     list.map((row) => ({ date: row.getAttribute("data-upcoming"), text: row.innerText.replace(/\s+/g, " ") })));
-  check("O1-upcoming", "2 coming matches, soonest first, against Espagne", JSON.stringify(rows),
-    rows.length === 2 && rows[0].date < rows[1].date && rows.every((r) => /Espagne/.test(r.text)));
+  const thisYear = String(new Date().getFullYear());
+  check("O1-upcoming", "2 coming matches, soonest first: Espagne – France, France – Espagne, with their year", JSON.stringify(rows),
+    rows.length === 2 && rows[0].date < rows[1].date &&
+      /Espagne – France/.test(rows[0].text) && /France – Espagne/.test(rows[1].text) &&
+      rows.every((r) => r.date.slice(0, 4) === thisYear || r.text.includes(r.date.slice(0, 4))));
+  const resultsHead = await upcoming.getByText("Derniers résultats", { exact: true }).count();
+  const results = await upcoming.locator("[data-result]").evaluateAll((list) =>
+    list.map((row) => ({ date: row.getAttribute("data-result"), text: row.innerText.replace(/\s+/g, " ") })));
+  check("O6", "« Derniers résultats » in the same card: 4 finished matches, newest first, score and V/N/D; 6 rows in all",
+    `heading ${resultsHead} · ${JSON.stringify(results)}`,
+    resultsHead === 1 && results.length === 4 && rows.length + results.length === 6 &&
+      results.every((r, i) => !i || results[i - 1].date >= r.date) &&
+      results.every((r) => /\d+–\d+/.test(r.text) && /(^|\s)[VND]$/.test(r.text.trim())));
   const latest = await card(page, "Derniers matchs").count();
   check("O1-no-latest", "no « Derniers matchs » card", `${latest} card(s)`, latest === 0);
   const eloBox = await box(card(page, "Évolution de l’Elo"));
@@ -272,10 +286,13 @@ try {
   });
   page = await open(ctx, nationUrl());
   const none = await card(page, "Prochains matchs").count();
-  const panel = await box(page.locator("#main [role=tabpanel]").first());
-  const wide = await box(card(page, "Évolution de l’Elo"));
-  check("O2", "no « Prochains matchs »; the Elo card as wide as the panel", `${none} card(s) · elo ${Math.round(wide?.width || 0)} / panel ${Math.round(panel?.width || 0)}`,
-    none === 0 && wide && panel && wide.width >= panel.width - 2);
+  const alone = card(page, "Derniers résultats");
+  const aloneRows = await alone.locator("[data-result]").count();
+  const chart = await box(card(page, "Évolution de l’Elo"));
+  const side = await box(alone);
+  check("O2", "no « Prochains matchs »; « Derniers résultats » (6 rows) beside the Elo chart",
+    `${none} card(s) · results ${aloneRows} · ${JSON.stringify({ chart, side })}`,
+    none === 0 && aloneRows === 6 && chart && side && Math.abs(chart.y - side.y) < 4 && side.x > chart.x + chart.width - 1);
   await shot(page, "overview-no-upcoming", false);
   await page.close();
   await ctx.close();

@@ -273,8 +273,22 @@ const TABS = [
 const TAB_KEYS = TABS.map(([key]) => key);
 /** The Elo card's recent window: the last matches. */
 const RECENT_ELO = 16;
+/** Rows of the column beside the Elo chart: the coming matches, then the latest results. */
+const MATCH_ROWS = 6;
 
-function MatchRow({ match, id }) {
+/** A match's day, with its year under it when it is not this year's. */
+function MatchDate({ date }) {
+  if (!date) return <span className={s.date}>—</span>;
+  const year = date.slice(0, 4);
+  return (
+    <span className={s.date}>
+      {dateShort(date)}
+      {year !== String(new Date().getFullYear()) && <small>{year}</small>}
+    </span>
+  );
+}
+
+function MatchRow({ match, id, ...rest }) {
   const f = useFootball();
   const side = sideOf(match, id);
   const score =
@@ -285,7 +299,7 @@ function MatchRow({ match, id }) {
       : `${match.homeScore}–${match.awayScore}`;
   const body = (
     <>
-      <span className={s.date}>{match.date ? dateShort(match.date) : "—"}</span>
+      <MatchDate date={match.date} />
       <span className={s.teams}>
         <b>
           {nationName(match.home.name)} – {nationName(match.away.name)}
@@ -314,11 +328,14 @@ function MatchRow({ match, id }) {
       className={s.match}
       href={f.href("/matchs/", { id: match.id })}
       prefetch={false}
+      {...rest}
     >
       {body}
     </Link>
   ) : (
-    <div className={s.match}>{body}</div>
+    <div className={s.match} {...rest}>
+      {body}
+    </div>
   );
 }
 
@@ -879,49 +896,6 @@ function NationRail({ nation, last, backHref }) {
   );
 }
 
-/** A coming match: its day, the opponent with its flag, the competition and the round. */
-function UpcomingRow({ match, id }) {
-  const f = useFootball();
-  const side = sideOf(match, id);
-  const body = (
-    <>
-      <span className={s.date}>{match.date ? dateShort(match.date) : "—"}</span>
-      <span className={s.teams}>
-        <b className={s.opponent}>
-          <NationalFlag
-            name={side.opponent.name}
-            season={match.date}
-            className={s.tileFlag}
-          />
-          {nationName(side.opponent.name)}
-        </b>
-        <small>
-          {[competitionLabel(match), roundLabel(match.round)]
-            .filter(Boolean)
-            .join(" · ")}
-        </small>
-      </span>
-    </>
-  );
-  return match.id ? (
-    <Link
-      className={`${s.match} ${s.upcoming}`}
-      data-upcoming={match.date || ""}
-      href={f.href("/matchs/", { id: match.id })}
-      prefetch={false}
-    >
-      {body}
-    </Link>
-  ) : (
-    <div
-      className={`${s.match} ${s.upcoming}`}
-      data-upcoming={match.date || ""}
-    >
-      {body}
-    </div>
-  );
-}
-
 /** The Elo after each ranked match: the recent window, or the whole history. */
 function EloCard({ nation, wide }) {
   const [period, setPeriod] = useState("recent");
@@ -960,6 +934,10 @@ function Overview({ nation, last, onTab }) {
     .filter((m) => m.status === "not_started")
     .sort((a, b) => String(a.date || "9").localeCompare(String(b.date || "9")))
     .slice(0, 4);
+  // The column beside the chart holds six rows: the coming matches, then the latest results.
+  const results = nation.matches
+    .filter((m) => m.status === "finished" && m.homeScore != null)
+    .slice(0, MATCH_ROWS - upcoming.length);
   const lastGoals = last
     ? last.games.reduce(
         (sum, g) => {
@@ -1007,19 +985,43 @@ function Overview({ nation, last, onTab }) {
           ],
         ]}
       />
-      {upcoming.length ? (
+      {upcoming.length || results.length ? (
         <div className={s.grid2}>
           <EloCard nation={nation} />
-          <Card title={<>Prochains matchs</>}>
-            <div className={s.matches}>
-              {upcoming.map((m, i) => (
-                <UpcomingRow
-                  key={m.id || `${m.date}:${i}`}
-                  match={m}
-                  id={nation.id}
-                />
-              ))}
-            </div>
+          <Card
+            title={
+              upcoming.length ? <>Prochains matchs</> : <>Derniers résultats</>
+            }
+          >
+            {upcoming.length > 0 && (
+              <div className={s.matches}>
+                {upcoming.map((m, i) => (
+                  <MatchRow
+                    key={m.id || `${m.date}:${i}`}
+                    match={m}
+                    id={nation.id}
+                    data-upcoming={m.date || ""}
+                  />
+                ))}
+              </div>
+            )}
+            {results.length > 0 && (
+              <>
+                {upcoming.length > 0 && (
+                  <h4 className={s.subhead}>Derniers résultats</h4>
+                )}
+                <div className={s.matches}>
+                  {results.map((m, i) => (
+                    <MatchRow
+                      key={m.id || `${m.date}:${i}`}
+                      match={m}
+                      id={nation.id}
+                      data-result={m.date || ""}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
           </Card>
         </div>
       ) : (
