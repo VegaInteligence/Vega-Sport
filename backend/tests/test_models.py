@@ -5,7 +5,7 @@ formulas of the docs; the database must agree.
 """
 
 from collections import Counter
-from datetime import timedelta
+from datetime import date, timedelta
 import os
 from pathlib import Path
 import sys
@@ -242,7 +242,14 @@ class ModelsTest(unittest.TestCase):
         elo = dict(x("SELECT team_id, stakes FROM agg.team_elo WHERE match_id=9000").fetchall())
         self.assertEqual({k: round(v, 4) for k, v in elo.items()}, {900: 1.495, 901: 1.495})
         before, after, expected = self.one("SELECT elo_before, elo_after, expected FROM agg.team_elo WHERE match_id=9000 AND team_id=900")
-        self.assertAlmostEqual(after - before, power.ELO_K * final_stakes * (1 - expected), places=3)
+        # §50 (50i): a national match from 1 July 2021 moves by K_n 30 × its weight (a final's stakes) × the goal margin's G.
+        self.assertAlmostEqual(after - before, power.NATION_K * final_stakes * power.goal_factor(1) * (1 - expected), places=3)
+        self.assertEqual(before, 1500.0)  # no FIFA edition held: every nation starts at 1500
+        self.assertEqual(self.one("""SELECT method_version, nation_elo_version, nation_k, nation_start, nation_seed_edition FROM agg.power_runs
+                                     WHERE kind='elo' AND status='published'"""), (power.METHOD_VERSION, "nations-elo-v1", 30.0, date(2021, 7, 1), None))
+        self.assertEqual(x("SELECT team_id, matches, rank, provisional FROM agg.team_power WHERE scope='nations' AND season_id=2025 ORDER BY 1").fetchall(),
+                         [(900, 1, 1, True), (901, 1, 2, True)])
+        self.assertFalse(power.stale_rankings(self.db))
         self.assertEqual(self.one("SELECT count(*), min(stakes), max(stakes) FROM agg.team_elo WHERE match_id<>9000"), (112, 1.0, 1.0))
         # The two players' final is one of their matches of the year, with their national team.
         rows = x("SELECT player_id, team_id, role, round(stakes::numeric, 4), contribution IS NOT NULL FROM agg.player_power_matches WHERE match_id=9000 ORDER BY 1").fetchall()
@@ -259,6 +266,31 @@ class ModelsTest(unittest.TestCase):
             self.one("SELECT linked_leagues FROM agg.power_runs WHERE kind='players' AND season_id=2025 AND status='published'")[0],
             self.one("SELECT count(*) FROM agg.league_levels WHERE linked")[0],
         )
+
+    def test_the_national_seed_reads_the_fifa_edition_of_18_february_2021(self):
+        # §50 (50j): 1500 + the points less the edition's mean; without that edition, the earliest held, traced.
+        from vega import power
+
+        x = self.db.execute
+        self.addCleanup(lambda: [x(q) for q in (
+            "DELETE FROM agg.team_power WHERE team_id IN (910, 911)", "DELETE FROM agg.team_elo WHERE team_id IN (910, 911)",
+            "DELETE FROM core.ranking_editions WHERE kind='fifa_men'", "DELETE FROM core.matches WHERE id=9100",
+            "DELETE FROM core.competition_seasons WHERE id=91", "DELETE FROM core.competitions WHERE id=91", "DELETE FROM core.teams WHERE id IN (910, 911)")])
+        x("INSERT INTO core.teams(id,name,is_national) VALUES(910,'Nation C',true),(911,'Nation D',true)")
+        x("INSERT INTO core.competitions(id,name) VALUES(91,'internationals')")
+        x("INSERT INTO core.competition_seasons(id,competition_id,season_id,native_label,cup_key) VALUES(91,91,2025,'2025/2026','nations-results:internationals:2025/2026')")
+        x("""INSERT INTO core.matches(id,competition_season_id,season_id,source,status,home_team_id,away_team_id,home_score,away_score,match_date,is_neutral)
+             VALUES(9100,91,2025,'international_results','finished',910,911,1,0,'2026-03-27',false)""")
+        for edition, label, points in ((9101, "2021-04-07", (1550, 1450)), (9102, "2021-02-18", (1600, 1400))):
+            x("INSERT INTO core.ranking_editions(id,kind,provider,label) VALUES(%s,'fifa_men','fifa',%s)", (edition, label))
+            x("INSERT INTO core.ranking_rows(edition_id,row_no,team_id,points) VALUES(%s,1,910,%s),(%s,2,911,%s)", (edition, points[0], edition, points[1]))
+        for label, seeds in (("2021-02-18", (1600, 1400)), ("2021-04-07", (1550, 1450))):
+            power.refresh_elo(self.db)
+            self.assertEqual(x("SELECT team_id, elo_before FROM agg.team_elo WHERE match_id=9100 ORDER BY 1").fetchall(), [(910, seeds[0]), (911, seeds[1])])
+            self.assertEqual(self.one("SELECT nation_seed_edition FROM agg.power_runs WHERE kind='elo' AND status='published'")[0], label)
+            stakes = self.one("SELECT stakes FROM agg.team_elo WHERE match_id=9100 AND team_id=910")[0]
+            self.assertEqual(stakes, 1.0)  # I_m of a friendly-less round: as `stakes` gives it
+            x("DELETE FROM core.ranking_editions WHERE label='2021-02-18'")
 
     def test_a_season_ranked_by_an_older_method_is_ranked_again(self):
         from vega import power

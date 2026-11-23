@@ -123,6 +123,22 @@ class PureTest(unittest.TestCase):
     # - a match is paired with the base's archived match of the same edition, day and teams, in either order and
     #   under the spellings the two sources use; two candidates, a women's match (the base holds none), a replay of
     #   the day after: no pair, never a guess.
+    def test_50l_a_world_cup_or_euro_match_is_neutral_unless_its_home_side_hosts_it(self):
+        # §50 (written before the code): from 1 July 2021 OpenFootball's World Cup and Euro matches are on neutral ground
+        # unless the home side is a host of the edition (cups.HOSTS); before that day is_neutral stays unknown (NULL).
+        def neutral(competition, season, matches):
+            return [row["is_neutral"] for _, row in cups.match_rows("open-cups", competition, season, {"matches": matches})]
+
+        game = lambda day, home, away: {"round": "Matchday 1", "date": day, "team1": home, "team2": away, "score": {"ft": [1, 0]}}
+        self.assertEqual(neutral("euro", "2020", [game("2021-07-07", "England", "Denmark"), game("2021-07-03", "Ukraine", "England"),
+                                                  game("2021-06-13", "England", "Croatia")]), [False, True, None])
+        self.assertEqual(neutral("world-cup-history", "2022", [game("2022-11-20", "Qatar", "Ecuador"), game("2022-11-29", "Netherlands", "Qatar")]),
+                         [False, True])
+        self.assertEqual(neutral("world-cup-history", "2026", [game("2026-06-12", "USA", "Paraguay"), game("2026-06-13", "Qatar", "Switzerland")]),
+                         [False, True])
+        self.assertEqual(neutral("world-cup-history", "1998", [game("1998-06-10", "Brazil", "Scotland")]), [None])
+        self.assertEqual(neutral("club-world-cup", "2025", [game("2025-06-15", "Al Ahly SC", "Inter Miami CF")]), [None])
+
     def test_worldcup_files_are_the_pinned_ones(self):
         files = worldcup_samples.texts()
         pins = worldcup_samples.digests(files)

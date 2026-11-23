@@ -10,9 +10,10 @@ On a disposable local PostgreSQL (VEGA_V2_COLLECTION_TEST_DSN, database vega_v2_
 - 37g–37j: the International Results editions (nine since main's internationals of 2026/27, §48, 48i) through the real
   bridge and projection, each fetch counted in node (fake_results_fetch.mjs): one read per pass, each edition its own
   state (E02b).
-- 48f–48h: the season's internationals, outside the Elo, do not wake it; the Nations League still does (§48).
-- 49h–49k: the internationals of 2021/22 to 2025/26 (§49): one season list, finished seasons read weekly, fourteen
-  editions in one read with no tournament row in an internationals edition, none waking the Elo.
+- 48f–48h, 49k turned by §50 (50k, the user's decision of 23 Nov 2026): the season's internationals enter the Elo and wake
+  it, as the Nations League does.
+- 49h–49j: the internationals of 2021/22 to 2025/26 (§49): one season list, finished seasons read weekly, fourteen
+  editions in one read with no tournament row in an internationals edition.
 - 37k–37m: an empty player statistics answer after an accepted one, through the real worker and store (E02d).
 """
 
@@ -372,55 +373,66 @@ class InternationalsEloTest(CollectionBase):
         return [r[0] for r in self.x("""SELECT m.id FROM core.matches m JOIN core.competition_seasons cs ON cs.id = m.competition_season_id
                                         WHERE cs.cup_key = %s ORDER BY 1""", (scope,)).fetchall()]
 
-    def test_48f_48g_the_internationals_never_wake_the_elo_the_nations_league_does(self):
+    def national(self, *names):
+        """National teams the file names, as an edition of NATIONAL_CUPS would have marked them."""
+        for name in names:
+            team = self.x("INSERT INTO core.teams(name, is_national) VALUES (%s, true) RETURNING id", (name,)).fetchone()[0]
+            self.x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('team','international_results',%s,%s)",
+                   (name, team))
+
+    def test_50k_the_internationals_wake_the_elo_as_the_nations_league_does(self):
         from vega.worker import elo_due
 
         first = self.native(2019)
         self.assertEqual(self.daily({}), [first])
         runs = self.state()[2]
         self.assertEqual([r[1] for r in runs], ["published"])
-        # 48f: Brazil–Japan, a friendly of 2026/27, written by the real path: no Elo run, no side of it.
+        # Brazil–Japan, a friendly of 2026/27 between two national sides, written by the real path: one run, its sides published.
+        self.national("Brazil", "Japan")
         friendly = self.read(INTERNATIONALS)
         self.assertEqual(len(friendly), 1)
-        self.assertFalse(elo_due(self.calc))
         pairs, published, after, stored = self.state()
-        self.assertEqual(after, runs)  # red on M0: a second run
-        self.assertFalse({m for m, _ in published} & set(friendly))
-        self.assertFalse({m for m, _ in pairs} & set(friendly))
-        # 48g: Scotland–Switzerland, the Nations League: due once, one run, its sides published.
+        self.assertEqual([r[1] for r in after], ["superseded", "published"])  # red before §50: no second run
+        self.assertEqual(published, pairs)
+        self.assertEqual({m for m, _ in published} & set(friendly), set(friendly))
+        self.assertFalse(elo_due(self.calc))
+        # Scotland–Switzerland, the Nations League: due once, one run, its sides published, as before.
         league = self.read(NATIONS_LEAGUE)
         self.assertEqual(len(league), 1)
         pairs, published, runs, stored = self.state()
-        self.assertEqual([r[1] for r in runs], ["superseded", "published"])
+        self.assertEqual([r[1] for r in runs], ["superseded", "superseded", "published"])
         self.assertEqual(published, pairs)
-        self.assertEqual({m for m, _ in published} & set(league), set(league))
         self.assertFalse(elo_due(self.calc))
         self.clock += timedelta(hours=1)
         self.daily(self.nations)
         self.assertEqual(self.state()[2:], (runs, stored))
 
-    def test_48h_without_an_elo_run_internationals_alone_are_not_due(self):
-        from vega.worker import elo_due
-
+    def test_50k_without_an_elo_run_internationals_alone_are_due(self):
         self.assertEqual(len(self.read(INTERNATIONALS)), 1)
-        self.assertFalse(elo_due(self.calc))
-        self.assertEqual(self.x("SELECT count(*) FROM agg.power_runs WHERE kind='elo'").fetchone()[0], 0)  # red on M0: the pass ran one
-        self.assertEqual(self.x("SELECT count(*) FROM agg.team_elo").fetchone()[0], 0)
+        self.assertEqual(self.x("SELECT count(*) FROM agg.power_runs WHERE kind='elo' AND status='published'").fetchone()[0], 1)
 
-    def test_49k_an_older_season_s_internationals_never_wake_the_elo(self):
+    def test_50k_an_older_season_s_internationals_wake_the_elo(self):
         from vega.worker import elo_due
 
         first = self.native(2019)
         self.assertEqual(self.daily({}), [first])
-        runs = self.state()[2]
         # Italy–France of 7 Sep 2024, the Nations League of 2024/25 that no edition holds, written by the real path.
-        older = self.read("nations-results:internationals:2024/2025")  # red before §49: no such edition
+        self.national("Italy", "France")
+        older = self.read("nations-results:internationals:2024/2025")
         self.assertEqual(len(older), 1)
-        self.assertFalse(elo_due(self.calc))
         pairs, published, after, stored = self.state()
-        self.assertEqual(after, runs)
-        self.assertFalse({m for m, _ in pairs} & set(older))
+        self.assertEqual([r[1] for r in after], ["superseded", "published"])
+        self.assertEqual({m for m, _ in published} & set(older), set(older))
+        self.assertFalse(elo_due(self.calc))
 
+    def test_50k_a_run_of_another_national_method_is_due_once(self):
+        from vega.worker import elo_due
+
+        first = self.native(2019)
+        self.assertEqual(self.daily({}), [first])
+        self.assertFalse(elo_due(self.calc))
+        self.x("UPDATE agg.power_runs SET nation_elo_version = NULL WHERE kind='elo' AND status='published'")
+        self.assertTrue(elo_due(self.calc))
 
     def test_49n_an_internationals_edition_renames_no_team(self):
         (self.tmp / "results.csv").write_text(RESULTS_CSV + "2024-10-15,Scotland,Portugal,0,0,UEFA Nations League,Glasgow,Scotland,FALSE\n")

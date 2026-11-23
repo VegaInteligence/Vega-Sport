@@ -16,7 +16,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { get, skip } from "./context.mjs";
-import { placeholderTeam, seasonRecord, tournamentRuns } from "../src/routes/nations.mjs";
+import { nationOf, placeholderTeam, seasonRecord, tournamentRuns } from "../src/routes/nations.mjs";
 
 const FR = "t_fr", m = (over) => ({
   date: "2026-06-16", competition: "World Cup", edition: null, round: "1", season: "2025/2026", status: "finished",
@@ -174,4 +174,12 @@ test("a match of the season's other internationals is served under its tournamen
   // Another edition's match: its competition and round as stored.
   const league = route.matchOf(row({ competition: "nations-league", edition: "openligadb:nations-league:2026/2027", round: "Groupe 3" }));
   assert.deepEqual([league.competition, league.round], ["nations-league", "Groupe 3"]);
+});
+
+test("50m. a nation's place in the world ranking says whether it is provisional", () => {
+  const row = { team_id: "t_gib", name: "Gibraltar", matches: 6, rank: 187, season_elo: 1163.2, elo_change: -12, season_matches: 6,
+    wins: 0, draws: 1, losses: 5, result_sum: 0.5, expected_sum: 1.2 };
+  assert.equal(nationOf({ ...row, provisional: true }).ranking.provisional, true);
+  assert.equal(nationOf(row).ranking.provisional, false);
+  assert.equal(nationOf({ ...row, rank: null }).ranking, undefined);
 });

@@ -649,5 +649,115 @@ class ScoreTest(unittest.TestCase):
         self.assertEqual(power.award_year(2026), (date(2026, 8, 1), date(2027, 8, 1)))
 
 
+class NationEloTest(unittest.TestCase):
+    """§50 (23 Nov 2026, written before the code): the national teams' Elo from 1 July 2021, variant C4 of the
+    measurement (donnees-hors-live/elo-selections/scripts/elo_engine.py), the clubs' untouched."""
+
+    @staticmethod
+    def at(day):
+        from datetime import datetime, timezone
+
+        return datetime.fromisoformat(day).replace(hour=18, tzinfo=timezone.utc)
+
+    def match(self, mid, day, home, away, hs, as_, *, season=None, neutral=False, cup=None):
+        when = self.at(day)
+        season = season if season is not None else (when.year if when.month >= 7 else when.year - 1)
+        return (mid, season, when, home, away, hs, as_, neutral, when.date(), 1, cup is not None, True, cup)
+
+    def test_50a_the_goal_margin(self):
+        self.assertEqual([power.goal_factor(m) for m in (0, 1, 2, 3, 5)], [1.0, 1.0, 1.5, 1.75, 2.0])
+
+    def test_50b_a_match_s_weight_by_its_class(self):
+        cup = "nations-results:internationals:2024/2025"
+        for name, weight in (("Friendly", 0.5), ("FIFA World Cup qualification", 1.0), ("CONCACAF Nations League qualification", 1.0),
+                             ("UEFA Nations League", 1.05), ("CONCACAF Nations League", 1.05), ("Copa América", 1.20), ("Gold Cup", 1.20),
+                             ("FIFA World Cup", 1.30), ("UEFA Euro", 1.20), ("CONMEBOL–UEFA Cup of Champions", 0.75),
+                             ("CONIFA World Football Cup", None), ("Island Games", None)):
+            with self.subTest(name=name):
+                self.assertEqual(power.nation_weight(cup, name, 1.0), weight)
+        # A tournament edition's match (or PitchAPI's) weighs its stakes I_m: the World Cup final 1.30 × 1.15.
+        final = power.stakes("l_1XLtP0", None, "final", "final")
+        self.assertEqual(power.nation_weight(None, "final", final), final)
+        self.assertEqual(power.nation_weight("open-cups:euro:2024", "Final", 1.38), 1.38)
+
+    def test_50c_the_national_step(self):
+        rows = list(power.nation_updates([self.match(1, "2024-03-26", "A", "B", 3, 0)], steps={1: 0.5}))
+        (_, _, _, _, before, after, expected, result), other = rows
+        self.assertEqual((before, result), (1500.0, 1.0))
+        self.assertAlmostEqual(expected, power.expected_score(1500, 1500, power.ELO_HOME))
+        self.assertAlmostEqual(after - before, power.NATION_K * 0.5 * 1.75 * (1 - expected))
+        self.assertAlmostEqual(after + other[5], 3000)
+        self.assertEqual(power.NATION_K, 30.0)
+
+    def test_50d_the_fifa_seed(self):
+        seeds = power.nation_seeds([("A", 1700.0), ("B", 1500.0), ("C", 1300.0), (None, 1100.0)])
+        self.assertEqual(seeds, {"A": 1600.0, "B": 1400.0, "C": 1200.0})
+        rows = list(power.nation_updates([self.match(1, "2022-06-01", "A", "D", 0, 0, neutral=True)], seeds=seeds))
+        self.assertEqual((rows[0][4], rows[1][4]), (1600.0, 1500.0))  # D, absent from the edition, starts at its mean
+
+    def test_50e_nothing_before_1_july_2021_moves_a_later_rating(self):
+        later = [self.match(2, "2021-07-01", "A", "B", 1, 0), self.match(3, "2022-09-01", "B", "C", 2, 2)]
+        early = [self.match(1, "2019-06-01", "A", "C", 5, 0), self.match(0, "2021-06-30", "B", "A", 3, 0)]
+        self.assertEqual(list(power.nation_updates(early + later)), list(power.nation_updates(later)))
+        self.assertEqual(power.NATION_START.isoformat(), "2021-07-01")
+
+    def test_50f_the_clubs_rows_are_today_s(self):
+        cup = "nations-results:internationals:2023/2024"
+        clubs = [self.match(10, "2019-09-01", "X", "Y", 1, 0), self.match(11, "2023-09-01", "Y", "X", 2, 2),
+                 self.match(12, "2024-02-01", "X", "Z", 0, 3)]
+        nations = [self.match(20, "2019-06-01", "N1", "N2", 2, 0, cup="open-cups:world-cup-history:2018"),
+                   self.match(21, "2023-10-14", "N1", "N2", 1, 1, cup=cup), self.match(22, "2023-06-01", "N2", "N1", 0, 1, season=2022)]
+        old = [m for m in clubs + nations if m[0] != 21]
+        legacy, national, stored = power.elo_passes(old, clubs + nations, {"N1", "N2"}, nation_steps={21: 0.5, 20: 1.3, 22: 1.0})
+        self.assertEqual(legacy, list(power.elo_updates(old)))
+        self.assertEqual([r for r in stored if r[1] in "XYZ"], [r for r in legacy if r[1] in "XYZ"])
+        # The 2018 World Cup's match keeps its legacy row (before 2021/22); the others are the national pass's.
+        self.assertEqual({r[0] for r in stored if r[1] == "N1"}, {20, 21, 22})
+        self.assertEqual([r for r in stored if r[0] == 20], [r for r in legacy if r[0] == 20])
+        self.assertEqual(sorted(r for r in stored if r[0] in (21, 22)), sorted(national))
+        self.assertEqual(national[0][4], 1500.0)  # the 2018 match does not reach the national pass
+
+    def test_50g_the_world_ranking(self):
+        rows = []
+
+        def play(mid, day, home, away, hs, as_, neutral=False):
+            seeds = {r[1]: r[5] for r in rows}
+            rows.extend(power.nation_updates([self.match(mid, day, home, away, hs, as_, neutral=neutral)], seeds=seeds))
+
+        play(1, "2022-05-01", "Gone", "Old", 1, 0)   # Gone's last match: 25 months before 2024-06-01
+        play(2, "2022-07-01", "Old", "Busy", 0, 1)   # Old's last: 23 months before it, none in 2023/24
+        for i in range(7):
+            play(10 + i, f"2023-0{i + 1}-15", "Busy", "Few", 1, 1)
+        play(30, "2023-09-01", "Busy", "Eight", 2, 0)
+        for i in range(7):
+            play(40 + i, f"2023-10-0{i + 1}", "Eight", "Pair", 0, 0)
+        play(50, "2024-05-01", "T1", "T2", 0, 0, neutral=True)  # two equal strengths
+        play(60, "2024-06-01", "Pair", "Twin", 0, 0)  # 2023/24's last counted match: its reference date
+        ranking = power.world_ranking(rows, self.at("2026-11-23"), seasons={2023, 2025, 2026})
+        season = {r["team"]: r for r in ranking if r["season"] == 2023}
+        self.assertNotIn("Gone", season)
+        old = season["Old"]
+        self.assertEqual((old["matches"], old["elo_change"]), (0, 0.0))
+        self.assertEqual({old["elo_start"], old["elo_peak"], old["elo_low"]}, {old["elo"]})
+        self.assertEqual(old["last_match_at"].date().isoformat(), "2022-07-01")
+        self.assertTrue(season["Few"]["provisional"])  # 7 counted matches in four years
+        self.assertFalse(season["Eight"]["provisional"])  # 8
+        self.assertEqual(season["T1"]["rank"], season["T2"]["rank"])
+        for r in season.values():
+            self.assertEqual(r["rank"], 1 + sum(o["elo"] > r["elo"] for o in season.values()))
+            self.assertAlmostEqual(r["elo_start"] + r["elo_change"], r["elo"], places=6)
+        self.assertEqual(season["Pair"]["matches"], 8)
+        # No counted match in 2025/26: no ranking; the season in progress reads the two years up to today.
+        self.assertFalse([r for r in ranking if r["season"] in (2025, 2026)])
+        ranking = power.world_ranking(rows, self.at("2026-05-01"), seasons={2025})
+        self.assertEqual({r["team"]: (r["matches"], r["provisional"]) for r in ranking}, {"Pair": (0, False), "Twin": (0, True)})
+
+    def test_50h_the_stored_stakes_stay(self):
+        self.assertAlmostEqual(power.stakes("l_1XLtP0", None, "final", "final"), 1.495)
+        self.assertEqual(power.stakes(None, "nations-results:internationals:2024/2025", None, "Friendly"), 1.0)
+        self.assertEqual(power.stakes(None, "nations-results:internationals:2024/2025", None, "UEFA Nations League"), 1.0)
+        self.assertEqual(power.METHOD_VERSION, "power-ranking-v8")
+
+
 if __name__ == "__main__":
     unittest.main()

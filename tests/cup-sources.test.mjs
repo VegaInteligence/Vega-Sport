@@ -60,6 +60,12 @@ test("Nations results cover other leagues without assigning teams to the wrong g
   assert.throws(() => parseNationsResults(csv + "2026-09-26,Scotland,Switzerland,0,3,UEFA Nations League,Glasgow,Scotland,FALSE\n"), /Duplicate/);
 });
 
+test("50l. the Nations League's results say whether the ground was neutral", async () => {
+  const { parseNationsResults } = await import("../dashboard/frontend/src/services/nations-results.js");
+  const csv = "date,home_team,away_team,home_score,away_score,tournament,city,country,neutral\n2026-09-26,Scotland,Switzerland,0,3,UEFA Nations League,Glasgow,Scotland,FALSE\n2026-10-10,Gibraltar,Andorra,1,1,UEFA Nations League,Faro,Portugal,TRUE\n";
+  assert.deepEqual(parseNationsResults(csv).map((row) => row.neutral), [false, true]);
+});
+
 test("the yearly Club World Cups are read from their text files, in the season of their year", async () => {
   // openfootball/club-worldcup, 2021/clubworldcup.txt (CC0): played in February 2022.
   const text = "= Club World Cup 2021\n\n# Date       Thu Feb 3 - Sat Feb 12 2022 (9d)\n# Teams      7\n# Matches    8\n\n\n\n▪ Round 1\n  Thu Feb 3 2022\n    20:30  Al Jazira Club (UAE)    v AS Pirae (TAH)           4-1 (3-0)\n\n\n▪ Round 2\n  Sat Feb 5\n    20:30  Al Ahly SC (EGY)        v CF Monterrey (MEX)       1-0 (0-0)\n  Sun Feb 6\n    20:30  Al Hilal (KSA)          v Al Jazira Club (UAE)     6-1 (2-1)\n\n\n▪ Match 5th place\n  Wed Feb 9\n    17:30  CF Monterrey (MEX)      v Al Jazira Club (UAE)     3-1 (3-0)\n\n\n▪ Semifinals\n  Tue Feb 8\n    20:30  Palmeiras (BRA)         v Al Ahly SC (EGY)         2-0 (1-0)\n  Wed Feb 9\n    20:30  Al Hilal (KSA)          v Chelsea FC (ENG)         0-1 (0-1)\n\n\n▪ Match 3rd place\n  Sat Feb 12\n    17:00  Al Hilal (KSA)          v Al Ahly SC (EGY)         0-4 (0-3)\n\n\n▪ Final\n  Sat Feb 12\n    20:30  Chelsea FC (ENG)        v Palmeiras (BRA)          2-1 a.e.t. (1-1, 0-0)\n";
