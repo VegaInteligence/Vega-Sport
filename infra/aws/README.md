@@ -72,8 +72,10 @@ aws ce get-anomaly-monitors --profile statarena --query "AnomalyMonitors[?Monito
 ```
 
 ```sh
-aws cloudformation deploy --profile statarena --region us-east-2 --stack-name vega-v2-budget --template-file infra/aws/budget.yaml --capabilities CAPABILITY_IAM --no-fail-on-empty-changeset --parameter-overrides AlertEmail=<address> AlertEmail2=<second address, empty if none> ExistingServiceMonitorArn=<ARN printed above, empty if none>
+aws cloudformation deploy --profile statarena --region us-east-2 --stack-name vega-v2-budget --template-file infra/aws/budget.yaml --capabilities CAPABILITY_IAM --no-fail-on-empty-changeset --parameter-overrides AlertEmail=<address> AlertEmail2=<second address, empty if none> Revision=<number, see below> ExistingServiceMonitorArn=<ARN printed above, empty if none>
 ```
+
+Changing who receives the mails: a budget's notifications cannot be edited in place, and CloudFormation cannot replace a budget that keeps its name, so the name ends with a number (`vega-v2-monthly-<Revision>`). Run the command again with the new addresses and raise `Revision` by one (the template's default is 2; the budget created on 23 November 2026 is `vega-v2-monthly`, without a number): the budget is created again under the new name and the old one is deleted. Nothing is lost: the spend is read from the account. Without a new `Revision` the update fails and rolls back, and the recipients stay as they were.
 
 Optional, off by default: `LiveSchedulerRoleName=<the live stack's SchedulerRole>` (`aws cloudformation describe-stack-resource --stack-name vega-v2-live --logical-resource-id SchedulerRole --query StackResourceDetail.PhysicalResourceId`) makes the budget deny, at 100 %, the start of new live ingestor tasks; nothing that serves the site stops. Reverse it with `aws budgets execute-budget-action --execution-type REVERSE_BUDGET_ACTION`. `AlertTopicArn=<vega-v2-alerts>` also sends the budget mails to that topic, once its policy lets `budgets.amazonaws.com` publish.
 
