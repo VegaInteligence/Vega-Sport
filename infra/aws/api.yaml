@@ -174,8 +174,14 @@ Resources:
     Properties:
       ResponseHeadersPolicyConfig:
         Name: vega-v2-api
+        # JSON and images, never a page: nothing may run in them or frame them, and HTTPS
+        # is remembered (backend/tests/test_api_security_headers.py).
         SecurityHeadersConfig:
           ContentTypeOptions: {Override: true}
+          StrictTransportSecurity: {AccessControlMaxAgeSec: 63072000, IncludeSubdomains: true, Preload: false, Override: true}
+          FrameOptions: {FrameOption: DENY, Override: true}
+          ReferrerPolicy: {ReferrerPolicy: no-referrer, Override: true}
+          ContentSecurityPolicy: {ContentSecurityPolicy: "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'", Override: true}
         CorsConfig:
           AccessControlAllowCredentials: false
           AccessControlAllowHeaders: {Items: ['*']}
