@@ -134,6 +134,12 @@ Resources:
                 Resource:
                   - !Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:vega-v2-alerts*'
                   - !Sub 'arn:${AWS::Partition}:sns:us-east-1:${AWS::AccountId}:vega-v2-alerts*'
+              # IAM knows no subscription resource: these three match no ARN, the topic's
+              # included (simulate-principal-policy, 23 November 2026), so they are granted on *.
+              - Sid: AlertSubscriptions
+                Effect: Allow
+                Action: ['sns:GetSubscriptionAttributes', 'sns:SetSubscriptionAttributes', 'sns:Unsubscribe']
+                Resource: '*'
               - Sid: AlertTopicsList
                 Effect: Allow
                 Action: ['sns:ListTopics']

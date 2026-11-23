@@ -342,6 +342,17 @@ class AlertsTest(unittest.TestCase):
             self.assertIn(needle, block)
         self.assertIn(":cloudformation:us-east-1:${AWS::AccountId}:stack/vega-v2-alerts-edge/*", ROLES)
 
+    def test_the_role_may_read_change_and_end_a_subscription(self):
+        # 23 November 2026, first deploy of the roles: `aws iam simulate-principal-policy` denied
+        # the three actions on the topic's ARN, on a subscription's ARN and on `*`. IAM knows no
+        # subscription resource: a statement scoped to the topic never applies to them, and the
+        # stack would stop on EmailSubscription. They are granted on `*`, and nothing else is.
+        block = one(r"(\n              # --- Alerts \(alerts\.yaml.*?# --- end of alerts\n)", ROLES, "alerts block of the CloudFormation role")
+        statement = one(r"(              - Sid: AlertSubscriptions\n(?:                [^\n]*\n)+)", block, "AlertSubscriptions statement")
+        actions = sorted(re.findall(r"'(sns:\w+)'", statement))
+        self.assertEqual(actions, ["sns:GetSubscriptionAttributes", "sns:SetSubscriptionAttributes", "sns:Unsubscribe"])
+        self.assertRegex(statement, r"\n                Resource: '\*'\n")
+
     def test_ci_lints_the_edge_template_for_its_region(self):
         self.assertRegex(CI, r"cfn-lint --regions us-east-1 -- infra/aws/alerts-edge\.yaml")
 
