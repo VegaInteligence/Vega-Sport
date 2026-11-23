@@ -15,6 +15,9 @@ Failure modes, and what is expected:
 - a budget below the current spend (an alert every month, soon ignored) or far above it
   (an alert that comes too late) -> the default lies between the current estimate's
   ceiling ($81, infra/aws/README.md) and twice it;
+- recipients that can never change once the budget exists (a budget's notifications are
+  replaced, not edited, and a resource that keeps its name cannot be replaced) -> the
+  budget's name carries a Revision parameter, raised with the recipients;
 - a second "AWS services" anomaly monitor, which the account refuses (one per account;
   Cost Explorer may already have created one) -> the stack creates it only when no
   existing monitor's ARN is given;
@@ -87,6 +90,21 @@ class BudgetTemplateTest(unittest.TestCase):
         self.assertTrue(addresses)
         for address in addresses:
             self.assertIn(address.strip(), ("!Ref AlertEmail", "!Ref AlertEmail2", "!Ref AlertTopicArn"))
+
+    def test_the_recipients_can_change_after_the_first_deploy(self):
+        # 23 November 2026: adding the second address to the deployed budget showed a
+        # replacement of the Budget resource (its notifications cannot change in place), and
+        # CloudFormation cannot replace a resource that keeps its name. The name carries a
+        # revision the owner raises with the recipients; the cut-off's role still matches it.
+        revision = one(r"\n  Revision:\n((?:    .*\n)+)", self.text, "Revision parameter")
+        self.assertIn("AllowedPattern: '[0-9]+'", revision)
+        self.assertRegex(revision, r"Default: '[0-9]+'")
+        self.assertIn("BudgetName: !Sub 'vega-v2-monthly-${Revision}'", self.text)
+        self.assertNotRegex(self.text, r"BudgetName: vega-v2-monthly\n")
+        self.assertIn("budget/vega-v2-monthly*", self.text)
+        command = one(r"(aws cloudformation deploy [^\n]*--stack-name vega-v2-budget [^\n]*)", README, "owner's command")
+        self.assertIn("Revision=", command)
+        self.assertRegex(README, r"raise `Revision`")
 
     def test_a_second_person_receives_every_mail_when_named(self):
         second = one(r"\n  AlertEmail2:\n((?:    .*\n)+)", self.text, "AlertEmail2 parameter")
