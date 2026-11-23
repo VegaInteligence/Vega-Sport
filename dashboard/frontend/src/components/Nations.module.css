@@ -601,3 +601,19 @@ a.run:focus-visible {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* « Prochains matchs »: the day, then the opponent with its flag over the competition. */
+.upcoming {
+  grid-template-columns: 52px minmax(0, 1fr);
+}
+.opponent {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+@media (max-width: 640px) {
+  .upcoming {
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
+}
