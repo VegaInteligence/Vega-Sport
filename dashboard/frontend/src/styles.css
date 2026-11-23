@@ -2990,6 +2990,8 @@ th[aria-sort="descending"] .sort-indicator {
   grid-template-columns: 300px minmax(0, 1fr);
   gap: 28px;
   align-items: start;
+  max-width: 1600px;
+  margin-inline: auto;
 }
 .club-skeleton-aside {
   display: grid;
@@ -3019,6 +3021,9 @@ th[aria-sort="descending"] .sort-indicator {
   display: grid;
   gap: 22px;
   min-width: 0;
+}
+.club-skeleton-shapes {
+  display: contents;
 }
 .club-skeleton-toolbar {
   display: flex;

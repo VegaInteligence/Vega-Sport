@@ -278,9 +278,25 @@ export default function ClubsPage() {
     loadFixtures,
   );
   const extraFixtures = additional.value || EMPTY_FIXTURES;
-  const selected =
+  const found =
     localSelected ||
     fixtureClub(extraFixtures, id, f.manifest.clubCountries, f.allCatalog);
+  // A season where the club played no match keeps its page (its profile says the season is
+  // empty), never the directory: named as it was in the season the visitor came from.
+  const [lastClub, setLastClub] = useState(null);
+  useEffect(() => {
+    if (found)
+      setLastClub((last) =>
+        last?.id === found.id && last.name === found.name ? last : found,
+      );
+  }, [found]);
+  const selected =
+    found ||
+    (!fromStandings && /^t_[A-Za-z0-9]{6}$/.test(id || "")
+      ? lastClub?.id === id
+        ? lastClub
+        : { id }
+      : null);
   const profileData = useMemo(
     () =>
       extraFixtures.length
@@ -355,6 +371,7 @@ export default function ClubsPage() {
               <ClubScoutProfile
                 key={selected.id}
                 clubId={selected.id}
+                club={selected}
                 backHref={f.href("/clubs/", { clubView: "", clubScope: "", vs: "" })}
               />
             </Suspense>
