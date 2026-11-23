@@ -422,6 +422,20 @@ class InternationalsEloTest(CollectionBase):
         self.assertFalse({m for m, _ in pairs} & set(older))
 
 
+    def test_49n_an_internationals_edition_renames_no_team(self):
+        (self.tmp / "results.csv").write_text(RESULTS_CSV + "2024-10-15,Scotland,Portugal,0,0,UEFA Nations League,Glasgow,Scotland,FALSE\n")
+        self.read(NATIONS_LEAGUE)
+        name = """SELECT t.id, t.name FROM core.teams t JOIN core.provider_ids p ON p.entity_type='team' AND p.entity_id=t.id
+                  AND p.provider='international_results' AND p.provider_key=%s"""
+        scotland = self.x(name, ("Scotland",)).fetchone()
+        self.assertEqual(scotland[1], "Écosse")
+        self.assertEqual(len(self.read("nations-results:internationals:2024/2025")), 2)
+        self.assertEqual(self.x(name, ("Scotland",)).fetchone(), scotland)  # red before §49's rule: « Scotland »
+        self.assertEqual(self.x(name, ("Portugal",)).fetchone()[1], "Portugal")
+        spellings = {r[0] for r in self.x("SELECT name FROM core.entity_names WHERE entity_type='team' AND entity_id=%s AND kind='source_spelling'",
+                                          (scotland[0],)).fetchall()}
+        self.assertIn("Scotland", spellings)
+
 class InternationalSeasonsTest(unittest.TestCase):
     """49h–49i: one season list in the projection and in cups.EDITIONS; a finished season is read weekly."""
 
