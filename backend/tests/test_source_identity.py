@@ -519,6 +519,32 @@ class SourceIdentityTest(unittest.TestCase):
         read = {r[0] for r in x(power.ELO_MATCHES).fetchall()}
         self.assertEqual(read & {9970, 9971, 9972}, {9970, 9971})  # red before §50: {9971}
 
+    def test_51a_51b_a_fifa_member_of_the_internationals_is_a_national_team(self):
+        from vega.sources import curated
+
+        x = self.db.execute
+        ids = (9980, 9981, 9982, 9983, 9984)
+        self.addCleanup(lambda: [x(q, (list(ids),)) for q in (
+            "DELETE FROM core.ranking_editions WHERE label='2099-01-01' AND 0 <> all(%s)", "DELETE FROM core.provider_ids WHERE entity_type='team' AND entity_id = ANY(%s)",
+            "UPDATE core.teams SET merged_into = NULL WHERE id = ANY(%s)", "DELETE FROM core.teams WHERE id = ANY(%s)")])
+        x("""INSERT INTO core.teams(id, name, is_national) VALUES (9980, 'Kenya', false), (9981, 'South Korea', false), (9982, 'Zanzibar', false),
+             (9984, 'USA', true), (9983, 'United States', false)""")
+        x("UPDATE core.teams SET merged_into = 9984 WHERE id = 9983")
+        x("""INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('team','international_results','Kenya',9980),
+             ('team','international_results','South Korea',9981), ('team','international_results','Zanzibar',9982), ('team','international_results','United States',9983)""")
+        x("INSERT INTO core.countries(code) VALUES ('KEN'), ('KOR'), ('USA') ON CONFLICT DO NOTHING")
+        edition = x("INSERT INTO core.ranking_editions(id, kind, provider, label) VALUES (9980, 'fifa_men', 'fifa', '2099-01-01') RETURNING id").fetchone()[0]
+        x("""INSERT INTO core.ranking_rows(edition_id, row_no, country_code, entity_name, points) VALUES (%s, 1, 'KEN', 'Kenya', 1100),
+             (%s, 2, 'KOR', 'Korea Republic', 1580), (%s, 3, 'USA', 'USA', 1680)""", (edition, edition, edition))
+        with self.db.transaction():
+            curated.national_teams(self.db)
+        rows = dict((r[0], r[1:]) for r in x("SELECT id, is_national, name FROM core.teams WHERE id = ANY(%s)", (list(ids),)).fetchall())
+        self.assertEqual(rows, {9980: (True, "Kenya"), 9981: (True, "South Korea"), 9982: (False, "Zanzibar"),
+                                9983: (False, "United States"), 9984: (True, "USA")})  # red before §51: Kenya, South Korea not national
+        with self.db.transaction():
+            written, _ = curated.national_teams(self.db)
+        self.assertEqual(written, 0)
+
     def test_a_team_two_sources_share_keeps_its_name(self):
         # Italy, merged from OpenLigaDB (League A) and International Results (Leagues B to D): neither renames it at
         # each pass; each spelling stays a name of its source. A team one source alone holds still takes its spelling.

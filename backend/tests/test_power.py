@@ -752,6 +752,20 @@ class NationEloTest(unittest.TestCase):
         ranking = power.world_ranking(rows, self.at("2026-05-01"), seasons={2025})
         self.assertEqual({r["team"]: (r["matches"], r["provisional"]) for r in ranking}, {"Pair": (0, False), "Twin": (0, True)})
 
+    def test_51c_a_match_the_national_pass_reads_as_neutral(self):
+        game = self.match(1, "2022-11-21", "A", "B", 1, 0)  # its tuple: not neutral
+        legacy, national, _ = power.elo_passes([game], [game], {"A", "B"}, nation_neutral={1})
+        self.assertAlmostEqual(national[0][6], 0.5)
+        self.assertAlmostEqual(legacy[0][6], power.expected_score(1500, 1500, power.ELO_HOME))
+
+    def test_51d_pitchapi_s_world_cups_are_neutral_unless_a_host_is_at_home(self):
+        from vega.sources import cups
+
+        rows = [(1, 2022, None, {"Qatar"}), (2, 2022, None, {"Ecuador"}), (3, 2026, None, {"United States", "name:USA"}),
+                (4, 2026, None, {"Spain"}), (5, 2026, False, {"Spain"})]
+        self.assertEqual(power.pitchapi_neutral(rows), {2, 4})
+        self.assertNotIn(("euro", "2028"), cups.HOSTS)
+
     def test_50h_the_stored_stakes_stay(self):
         self.assertAlmostEqual(power.stakes("l_1XLtP0", None, "final", "final"), 1.495)
         self.assertEqual(power.stakes(None, "nations-results:internationals:2024/2025", None, "Friendly"), 1.0)
