@@ -25,6 +25,9 @@
 //  M4 No API read when moving between matchdays (the calendar is in memory).
 //  M5 Phone: the second block's heading is visible; no sideways scroll.
 //  M6 Champions League, view Matchs: its round and the next one, the same way.
+//  M7 The matchday names answer after the fixtures (held back 1.5 s here, as on a real network): the
+//     Matchs view never lists the calendar as « Journée non renseignée » meanwhile. It stays in its
+//     loading state (the page is not ready) and then shows the named matchdays at once.
 //  X1 No page error in the console during the run (failed loads of remote images excluded).
 //
 // Run (local front whose API origin is <api>, or one whose API reads must be redirected to <api>):
@@ -54,7 +57,7 @@ const address = (query = {}) => `${base}/competitions/?${new URLSearchParams({ s
 const browser = await chromium.launch();
 
 // API reads go to <api>, optionally after a delay; the site's own routes are left alone.
-async function context(kind, { delay = 0, storage = null, country } = {}) {
+async function context(kind, { delay = 0, storage = null, country, matchdayDelay = 0 } = {}) {
   const ctx = await browser.newContext(kind === "phone"
     ? { locale: "fr-FR", ...devices["iPhone 14"] }
     : { locale: "fr-FR", viewport: { width: 1440, height: 900 } });
@@ -68,6 +71,11 @@ async function context(kind, { delay = 0, storage = null, country } = {}) {
     } catch { await route.abort().catch(() => {}); }
   });
   await ctx.route(/va\.vercel-scripts\.com|_vercel\/(insights|speed-insights)/, (route) => route.abort());
+  // The matchday names alone, later than the rest; the read itself is served by the route above.
+  if (matchdayDelay) await ctx.route((url) => url.pathname === "/api/matchdays", async (route) => {
+    await new Promise((r) => setTimeout(r, matchdayDelay));
+    await route.fallback().catch(() => {});
+  });
   ctx.countryRequests = [];
   if (country) await ctx.route("**/api/visitor-country", async (route) => {
     ctx.countryRequests.push(Date.now());
@@ -254,8 +262,45 @@ async function matchdays(page) {
   await page.locator("#matchday-choice").waitFor({ timeout: 60000 });
   const s = await matchdays(page);
   check("M6 cup: its round and the next one", { nextBlocks: s.expectedNext ? 1 : 0, nextHeading: s.expectedNext }, s,
-    s.expectedNext ? s.nextBlocks === 1 && s.nextHeading === s.expectedNext && s.nextRows > 0 : s.nextBlocks === 0);
+    s.options > 1 && (s.expectedNext ? s.nextBlocks === 1 && s.nextHeading === s.expectedNext && s.nextRows > 0 : s.nextBlocks === 0));
   await shot(page, "matchs-cup-desktop", true);
+  await page.close();
+  await ctx.close();
+}
+{
+  const ctx = await context("desktop", { country: { value: null }, matchdayDelay: 1500 });
+  const page = await open(ctx, address({ id: LEAGUE, view: "matchs" }), "matchs late names");
+  // Sampled from the first paint until the named matchdays are there.
+  const seen = { samples: 0, unnamedOnly: 0, unnamedNote: 0, readyWhileUnnamed: 0, loadingWhileWaiting: 0 };
+  let s = null;
+  for (const start = Date.now(); Date.now() - start < 30000; ) {
+    const now = await page.evaluate(() => {
+      const select = document.querySelector("#matchday-choice");
+      const options = [...(select?.options || [])].map((o) => o.textContent.trim());
+      const main = document.querySelector("#main");
+      return {
+        options,
+        note: /n’est pas précisée|Recherche des journées en cours/.test(document.querySelector(".matchday-schedule")?.textContent || ""),
+        ready: main?.getAttribute("data-page-ready") === "true" && !main.querySelector("[data-page-loading]"),
+        loading: Boolean(main?.querySelector("[data-page-loading]")),
+      };
+    }).catch(() => null);
+    if (now) {
+      seen.samples++;
+      const unnamed = now.options.length === 1 && now.options[0] === "Journée non renseignée";
+      if (unnamed) seen.unnamedOnly++;
+      if (now.note) seen.unnamedNote++;
+      if (unnamed && now.ready) seen.readyWhileUnnamed++;
+      if (!now.options.length && now.loading) seen.loadingWhileWaiting++;
+      if (now.options.length > 1) break;
+    }
+    await page.waitForTimeout(50);
+  }
+  await ready(page).catch(() => {});
+  s = await matchdays(page);
+  check("M7 matchday names answered late: never « Journée non renseignée » meanwhile", { unnamedOnly: 0, unnamedNote: 0, readyWhileUnnamed: 0, nextBlocks: 1 }, { ...seen, options: s.options, current: s.current, nextBlocks: s.nextBlocks },
+    seen.unnamedOnly === 0 && seen.unnamedNote === 0 && seen.readyWhileUnnamed === 0 && seen.loadingWhileWaiting > 0 && s.options > 1 && s.nextBlocks === 1);
+  await shot(page, "matchs-league-late-names", true);
   await page.close();
   await ctx.close();
 }

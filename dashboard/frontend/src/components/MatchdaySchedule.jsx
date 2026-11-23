@@ -158,6 +158,14 @@ export default function MatchdaySchedule({
     return <Empty>Aucune rencontre collectée pour cette saison.</Empty>;
   if (!selected)
     return <Empty>Aucune rencontre collectée pour cette saison.</Empty>;
+  // The matchday names answer after the fixtures. Until they do, the calendar would read as one
+  // unnamed list (« Journée non renseignée »): the view keeps its loading state instead.
+  if (competition.id && season && resource.loading && !resource.value)
+    return (
+      <section className="matchday-schedule" aria-label="Matchs par journée">
+        <Skeleton data-page-loading="" label="Chargement des journées…" kind="table" lines={9} />
+      </section>
+    );
   return (
     <section className="matchday-schedule" aria-label="Matchs par journée">
       {resource.loading && (
