@@ -677,9 +677,6 @@ export function BallonDorRace({ ranking }) {
           >
             Classement complet <Icon name="arrow" />
           </Link>
-          <Link className="button button-secondary" href={f.href("/methode/")}>
-            La méthode
-          </Link>
         </div>
       </div>
     </section>

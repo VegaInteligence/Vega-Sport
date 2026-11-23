@@ -63,13 +63,6 @@
     "navigation": false
   },
   {
-    "key": "method",
-    "path": "/methode/",
-    "title": "Données & méthode",
-    "component": "MethodPage",
-    "navigation": false
-  },
-  {
     "key": "report",
     "path": "/rapport/",
     "title": "Rapport",

@@ -1,6 +1,6 @@
 import React from "react";
 
-/** Coverage limits of the historical archives (licences: Données & méthode). */
+/** Coverage limits of the historical archives (licences: site footer). */
 export default function ArchiveAttribution() {
   return (
     <details className="historical-archive-note">
