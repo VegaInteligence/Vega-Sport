@@ -739,7 +739,7 @@ function NationRail({ nation, last, backHref }) {
           nation={nation}
           className={`${rail.bigCrest} ${s.bigMark}`}
         />
-        <h2 className={rail.name}>{nationName(nation.name)}</h2>
+        <h1 className={rail.name}>{nationName(nation.name)}</h1>
         <p className={rail.sub}>Sélection nationale</p>
         {current && (
           <div className={rail.chips}>
@@ -1017,30 +1017,47 @@ export function NationProfile({ id }) {
   const nation = useNation(id, f.season);
   const [tab, setTab] = useState("overview");
   const value = nation.value;
+  const backHref = f.href("/nations/", { id: "" });
+  // No identity column while reading, after an error or for an unknown nation: the link stays above.
+  const back = (
+    <BackLink
+      className="inline-link competition-back"
+      href={backHref}
+      label="Toutes les nations"
+    />
+  );
   if (nation.loading && !value)
     return (
-      <Skeleton
-        data-page-loading=""
-        label="Chargement de la sélection…"
-        lines={6}
-      />
+      <>
+        {back}
+        <Skeleton
+          data-page-loading=""
+          label="Chargement de la sélection…"
+          lines={6}
+        />
+      </>
     );
   if (nation.error)
     return (
-      <p role="alert" className="notice notice-warning">
-        Sélection indisponible. {String(nation.error.message || nation.error)}
-      </p>
+      <>
+        {back}
+        <p role="alert" className="notice notice-warning">
+          Sélection indisponible. {String(nation.error.message || nation.error)}
+        </p>
+      </>
     );
-  if (!value) return <Empty>Cette sélection n’existe pas.</Empty>;
+  if (!value)
+    return (
+      <>
+        {back}
+        <Empty>Cette sélection n’existe pas.</Empty>
+      </>
+    );
   const last = lastTournament(value);
   return (
     <>
       <div className={rail.layout}>
-        <NationRail
-          nation={value}
-          last={last}
-          backHref={f.href("/nations/", { id: "" })}
-        />
+        <NationRail nation={value} last={last} backHref={backHref} />
         <div className={rail.main}>
           <ResearchTabs
             animated
