@@ -1,0 +1,118 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Vega alerts in us-east-1 (stack vega-v2-alerts-edge): CloudFront and Route 53 metrics exist
+  only there, and an alarm notifies only a topic of its own region, so this stack has its
+  own topic vega-v2-alerts and e-mail subscription. It watches the read API's distribution
+  (api.yaml) and probes /api/health from outside, which answers even when no one reads.
+  deploy.sh deploys it with --region us-east-1, after the read API stack.
+Parameters:
+  AlertEmail:
+    Type: String
+    NoEcho: true
+    Default: ''
+    AllowedPattern: '([^@\s]+@[^@\s]+\.[^@\s]+)?'
+    Description: 'Where the alerts go: deploy.sh reads it from SSM /vega/v2/alert-email (us-east-2); empty, the topic has no subscription'
+  DistributionId:
+    Type: String
+    AllowedPattern: 'E[A-Z0-9]{8,20}'
+    Description: The read API's distribution (vega-v2-api output DistributionId)
+  ApiDomain:
+    Type: String
+    AllowedPattern: '[a-z0-9]+\.cloudfront\.net'
+    Description: Its domain (vega-v2-api output ApiOrigin, without https://)
+Conditions:
+  HasEmail: !Not [!Equals [!Ref AlertEmail, '']]
+Resources:
+  Topic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: vega-v2-alerts
+      DisplayName: Vega alerts
+      Tags: [{Key: project, Value: vega-v2}]
+  EmailSubscription:
+    Type: AWS::SNS::Subscription
+    Condition: HasEmail
+    Properties:
+      TopicArn: !Ref Topic
+      Protocol: email
+      Endpoint: !Ref AlertEmail
+  # GET /api/health reads api.publication and api.editions (routes/system.mjs): 200 when
+  # the base answers and holds editions, 503 when it refuses or is unreachable. The path is
+  # never cached (no Cache-Control: no-store at the distribution), so each probe reaches the
+  # function and the base. Three regions (the fewest Route 53 takes), every 30 s; unhealthy
+  # after 3 failures in a row, as seen by at most 18 % of the checkers. A checker gives the
+  # answer 2 s after connecting: a cold copy that opens its TLS connection to the base can
+  # miss once, which 3 failures in a row absorb.
+  HealthCheck:
+    Type: AWS::Route53::HealthCheck
+    Properties:
+      HealthCheckConfig:
+        Type: HTTPS
+        FullyQualifiedDomainName: !Ref ApiDomain
+        Port: 443
+        ResourcePath: /api/health
+        EnableSNI: true
+        RequestInterval: 30
+        FailureThreshold: 3
+        Regions: [us-east-1, us-west-2, eu-west-1]
+      HealthCheckTags: [{Key: Name, Value: vega-v2-api-health}, {Key: project, Value: vega-v2}]
+  # Missing data is breaching: a probe that reports nothing is not a probe that sees health.
+  UnreachableAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: vega-v2-api-unreachable
+      AlarmDescription: /api/health of the read API failed for 3 minutes in a row, seen from outside (Route 53 health check vega-v2-api-health)
+      Namespace: AWS/Route53
+      MetricName: HealthCheckStatus
+      Dimensions: [{Name: HealthCheckId, Value: !Ref HealthCheck}]
+      Statistic: Minimum
+      Period: 60
+      EvaluationPeriods: 3
+      DatapointsToAlarm: 3
+      Threshold: 1
+      ComparisonOperator: LessThanThreshold
+      TreatMissingData: breaching
+      AlarmActions: [!Ref Topic]
+      OKActions: [!Ref Topic]
+  # The share of the distribution's answers that are 5xx, counted only in five-minute
+  # periods of at least 100 requests: one error among three requests at night is 33 %, not
+  # an incident. It sees what viewers get: an error the distribution replaced by its copy
+  # (stale-if-error, transport.mjs) is not one of them; vega-v2-api-5xx (alerts.yaml) is.
+  Edge5xxAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: vega-v2-api-edge-5xx
+      AlarmDescription: 5 % or more of the read API distribution's answers were 5xx in 2 five-minute periods in a row of at least 100 requests
+      Metrics:
+        - Id: requests
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/CloudFront
+              MetricName: Requests
+              Dimensions: [{Name: DistributionId, Value: !Ref DistributionId}, {Name: Region, Value: Global}]
+            Period: 300
+            Stat: Sum
+        - Id: rate
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/CloudFront
+              MetricName: 5xxErrorRate
+              Dimensions: [{Name: DistributionId, Value: !Ref DistributionId}, {Name: Region, Value: Global}]
+            Period: 300
+            Stat: Average
+        - Id: guarded
+          Label: 5xx rate (%) of periods with 100 requests or more
+          ReturnData: true
+          Expression: 'IF(requests >= 100, rate, 0)'
+      EvaluationPeriods: 2
+      DatapointsToAlarm: 2
+      Threshold: 5
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref Topic]
+      OKActions: [!Ref Topic]
+Outputs:
+  TopicArn: {Value: !Ref Topic}
+  HealthCheckId: {Value: !Ref HealthCheck}

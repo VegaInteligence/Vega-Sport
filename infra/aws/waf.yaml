@@ -1,0 +1,188 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Per-address request limit of the read API's distribution (api.yaml), VI-35. A web ACL of
+  CloudFront scope exists only in us-east-1, whatever the distribution's region: deploy.sh
+  deploys this stack (vega-v2-waf) there and passes its WebAclArn to vega-v2-api. It counts
+  first (Mode=Count); Mode=Block turns the same rules into a 429.
+Parameters:
+  Mode:
+    Type: String
+    Default: Count
+    AllowedValues: [Count, Block]
+    Description: 'Count: the rules only count the requests over their limit (metrics, samples). Block: those requests get a 429.'
+  ApiLimit:
+    Type: Number
+    Default: 1500
+    MinValue: 300
+    MaxValue: 2000000000
+    Description: >-
+      Requests to the API (every path but /data/) one address may send in 5 minutes,
+      cache hits included (the web ACL sees every request before the cache).
+  AllLimit:
+    Type: Number
+    Default: 6000
+    MinValue: 1500
+    MaxValue: 2000000000
+    Description: Requests of any path, the image copies included, one address may send in 5 minutes.
+  RetryAfterSeconds:
+    Type: Number
+    Default: 60
+    MinValue: 10
+    MaxValue: 600
+    Description: Retry-After of the 429 (the site's clients do not retry an answer that asks for more than 2 s).
+  SiteKey:
+    Type: String
+    NoEcho: true
+    Default: ''
+    AllowedPattern: '([A-Za-z0-9_-]{32,128})?'
+    Description: >-
+      SSM /vega/v2/edge-key. A request whose X-Vega-Edge-Key header equals it is not counted
+      (the site's server, whose few shared addresses read for every visitor). Empty: no exemption.
+  PreviousSiteKey:
+    Type: String
+    NoEcho: true
+    Default: ''
+    AllowedPattern: '([A-Za-z0-9_-]{32,128})?'
+    Description: The key being replaced, accepted too while the site moves to the new one; empty otherwise.
+Rules:
+  CloudFrontScope:
+    Assertions:
+      - Assert: !Equals [!Ref 'AWS::Region', us-east-1]
+        AssertDescription: A web ACL of CloudFront scope is created in us-east-1 only.
+Conditions:
+  Blocking: !Equals [!Ref Mode, Block]
+  HasSiteKey: !Not [!Equals [!Ref SiteKey, '']]
+  HasPreviousSiteKey: !And [!Condition HasSiteKey, !Not [!Equals [!Ref PreviousSiteKey, '']]]
+Resources:
+  WebAcl:
+    Type: AWS::WAFv2::WebACL
+    Properties:
+      Name: vega-v2-api
+      Description: Per-address limit of the read API distribution, VI-35
+      Scope: CLOUDFRONT
+      DefaultAction: {Allow: {}}
+      CustomResponseBodies:
+        rate-limited:
+          ContentType: APPLICATION_JSON
+          Content: '{"ok":false,"available":false,"error":{"code":"RATE_LIMITED","message":"Trop de requêtes. Réessayez dans un instant.","retry":true}}'
+      # Rules in order: the two probes only ever count (they bracket ApiLimit, to choose
+      # it on a week of real traffic), then the two limits Mode sets. Each rule counts the
+      # requests of one address (the viewer's, as CloudFront sees it: never a header the
+      # viewer writes) over the last 5 minutes. SiteKeyExempt: the requests that carry the
+      # site's key are left out of every count, when a key is set.
+      Rules:
+        - Name: vega-v2-api-probe-500
+          Priority: 0
+          Action: {Count: {}}
+          Statement:
+            RateBasedStatement:
+              Limit: 500
+              EvaluationWindowSec: 300
+              AggregateKeyType: IP
+              ScopeDownStatement: !If
+                - HasSiteKey  # SiteKeyExempt
+                - AndStatement:
+                    Statements:
+                      - NotStatement: {Statement: {ByteMatchStatement: {FieldToMatch: {UriPath: {}}, PositionalConstraint: STARTS_WITH, SearchString: /data/, TextTransformations: [{Priority: 0, Type: NONE}]}}}
+                      - NotStatement:
+                          Statement: !If
+                            - HasPreviousSiteKey
+                            - OrStatement:
+                                Statements:
+                                  - ByteMatchStatement: {FieldToMatch: {SingleHeader: {Name: x-vega-edge-key}}, PositionalConstraint: EXACTLY, SearchString: !Ref SiteKey, TextTransformations: [{Priority: 0, Type: NONE}]}
+                                  - ByteMatchStatement: {FieldToMatch: {SingleHeader: {Name: x-vega-edge-key}}, PositionalConstraint: EXACTLY, SearchString: !Ref PreviousSiteKey, TextTransformations: [{Priority: 0, Type: NONE}]}
+                            - {ByteMatchStatement: {FieldToMatch: {SingleHeader: {Name: x-vega-edge-key}}, PositionalConstraint: EXACTLY, SearchString: !Ref SiteKey, TextTransformations: [{Priority: 0, Type: NONE}]}}
+                - NotStatement: {Statement: {ByteMatchStatement: {FieldToMatch: {UriPath: {}}, PositionalConstraint: STARTS_WITH, SearchString: /data/, TextTransformations: [{Priority: 0, Type: NONE}]}}}
+          VisibilityConfig: {SampledRequestsEnabled: true, CloudWatchMetricsEnabled: true, MetricName: vega-v2-api-probe-500}
+        - Name: vega-v2-api-probe-3000
+          Priority: 1
+          Action: {Count: {}}
+          Statement:
+            RateBasedStatement:
+              Limit: 3000
+              EvaluationWindowSec: 300
+              AggregateKeyType: IP
+              ScopeDownStatement: !If
+                - HasSiteKey  # SiteKeyExempt
+                - AndStatement:
+                    Statements:
+                      - NotStatement: {Statement: {ByteMatchStatement: {FieldToMatch: {UriPath: {}}, PositionalConstraint: STARTS_WITH, SearchString: /data/, TextTransformations: [{Priority: 0, Type: NONE}]}}}
+                      - NotStatement:
+                          Statement: !If
+                            - HasPreviousSiteKey
+                            - OrStatement:
+                                Statements:
+                                  - ByteMatchStatement: {FieldToMatch: {SingleHeader: {Name: x-vega-edge-key}}, PositionalConstraint: EXACTLY, SearchString: !Ref SiteKey, TextTransformations: [{Priority: 0, Type: NONE}]}
+                                  - ByteMatchStatement: {FieldToMatch: {SingleHeader: {Name: x-vega-edge-key}}, PositionalConstraint: EXACTLY, SearchString: !Ref PreviousSiteKey, TextTransformations: [{Priority: 0, Type: NONE}]}
+                            - {ByteMatchStatement: {FieldToMatch: {SingleHeader: {Name: x-vega-edge-key}}, PositionalConstraint: EXACTLY, SearchString: !Ref SiteKey, TextTransformations: [{Priority: 0, Type: NONE}]}}
+                - NotStatement: {Statement: {ByteMatchStatement: {FieldToMatch: {UriPath: {}}, PositionalConstraint: STARTS_WITH, SearchString: /data/, TextTransformations: [{Priority: 0, Type: NONE}]}}}
+          VisibilityConfig: {SampledRequestsEnabled: true, CloudWatchMetricsEnabled: true, MetricName: vega-v2-api-probe-3000}
+        - Name: vega-v2-api-per-ip
+          Priority: 2
+          Action: !If
+            - Blocking
+            - Block:
+                CustomResponse:
+                  ResponseCode: 429
+                  CustomResponseBodyKey: rate-limited
+                  ResponseHeaders:
+                    - {Name: Retry-After, Value: !Ref RetryAfterSeconds}
+                    - {Name: Cache-Control, Value: no-store}
+                    - {Name: Access-Control-Allow-Origin, Value: '*'}
+                    - {Name: Access-Control-Expose-Headers, Value: Retry-After}
+            - Count: {}
+          Statement:
+            RateBasedStatement:
+              Limit: !Ref ApiLimit
+              EvaluationWindowSec: 300
+              AggregateKeyType: IP
+              ScopeDownStatement: !If
+                - HasSiteKey  # SiteKeyExempt
+                - AndStatement:
+                    Statements:
+                      - NotStatement: {Statement: {ByteMatchStatement: {FieldToMatch: {UriPath: {}}, PositionalConstraint: STARTS_WITH, SearchString: /data/, TextTransformations: [{Priority: 0, Type: NONE}]}}}
+                      - NotStatement:
+                          Statement: !If
+                            - HasPreviousSiteKey
+                            - OrStatement:
+                                Statements:
+                                  - ByteMatchStatement: {FieldToMatch: {SingleHeader: {Name: x-vega-edge-key}}, PositionalConstraint: EXACTLY, SearchString: !Ref SiteKey, TextTransformations: [{Priority: 0, Type: NONE}]}
+                                  - ByteMatchStatement: {FieldToMatch: {SingleHeader: {Name: x-vega-edge-key}}, PositionalConstraint: EXACTLY, SearchString: !Ref PreviousSiteKey, TextTransformations: [{Priority: 0, Type: NONE}]}
+                            - {ByteMatchStatement: {FieldToMatch: {SingleHeader: {Name: x-vega-edge-key}}, PositionalConstraint: EXACTLY, SearchString: !Ref SiteKey, TextTransformations: [{Priority: 0, Type: NONE}]}}
+                - NotStatement: {Statement: {ByteMatchStatement: {FieldToMatch: {UriPath: {}}, PositionalConstraint: STARTS_WITH, SearchString: /data/, TextTransformations: [{Priority: 0, Type: NONE}]}}}
+          VisibilityConfig: {SampledRequestsEnabled: true, CloudWatchMetricsEnabled: true, MetricName: vega-v2-api-per-ip}
+        - Name: vega-v2-all-per-ip
+          Priority: 3
+          Action: !If
+            - Blocking
+            - Block:
+                CustomResponse:
+                  ResponseCode: 429
+                  CustomResponseBodyKey: rate-limited
+                  ResponseHeaders:
+                    - {Name: Retry-After, Value: !Ref RetryAfterSeconds}
+                    - {Name: Cache-Control, Value: no-store}
+                    - {Name: Access-Control-Allow-Origin, Value: '*'}
+                    - {Name: Access-Control-Expose-Headers, Value: Retry-After}
+            - Count: {}
+          Statement:
+            RateBasedStatement:
+              Limit: !Ref AllLimit
+              EvaluationWindowSec: 300
+              AggregateKeyType: IP
+              ScopeDownStatement: !If
+                - HasSiteKey  # SiteKeyExempt
+                - NotStatement:
+                    Statement: !If
+                      - HasPreviousSiteKey
+                      - OrStatement:
+                          Statements:
+                            - ByteMatchStatement: {FieldToMatch: {SingleHeader: {Name: x-vega-edge-key}}, PositionalConstraint: EXACTLY, SearchString: !Ref SiteKey, TextTransformations: [{Priority: 0, Type: NONE}]}
+                            - ByteMatchStatement: {FieldToMatch: {SingleHeader: {Name: x-vega-edge-key}}, PositionalConstraint: EXACTLY, SearchString: !Ref PreviousSiteKey, TextTransformations: [{Priority: 0, Type: NONE}]}
+                      - {ByteMatchStatement: {FieldToMatch: {SingleHeader: {Name: x-vega-edge-key}}, PositionalConstraint: EXACTLY, SearchString: !Ref SiteKey, TextTransformations: [{Priority: 0, Type: NONE}]}}
+                - !Ref 'AWS::NoValue'
+          VisibilityConfig: {SampledRequestsEnabled: true, CloudWatchMetricsEnabled: true, MetricName: vega-v2-all-per-ip}
+      VisibilityConfig: {SampledRequestsEnabled: true, CloudWatchMetricsEnabled: true, MetricName: vega-v2-api}
+Outputs:
+  WebAclArn: {Value: !GetAtt WebAcl.Arn}
+  Mode: {Value: !Ref Mode}
