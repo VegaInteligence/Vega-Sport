@@ -1,0 +1,298 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Vega alerts in the deploy's region: the topic vega-v2-alerts and its e-mail subscription,
+  and the alarms of the read API's function, the database and the worker. The alarms on the
+  distribution and the outside probe are in alerts-edge.yaml (us-east-1, where CloudFront
+  and Route 53 metrics exist). Every alarm says ALARM and OK to the topic
+  (backend/tests/test_alerts.py). On 20 November 2026 the API refused every read for hours
+  and no one was told (VI-33).
+Parameters:
+  AlertEmail:
+    Type: String
+    NoEcho: true
+    Default: ''
+    AllowedPattern: '([^@\s]+@[^@\s]+\.[^@\s]+)?'
+    Description: 'Where the alerts go: deploy.sh reads it from SSM /vega/v2/alert-email; empty, the topic has no subscription'
+  WatchWorker:
+    Type: String
+    Default: 'true'
+    AllowedValues: ['true', 'false']
+    Description: 'false while the worker is stopped on purpose (deploy.sh: WORKER_DESIRED_COUNT=0): no alarm for a service meant to be off'
+  WatchLive:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: 'true once a live provider is chosen (deploy.sh: LIVE_PROVIDER): until then, no alarm and no cost for the live circuit'
+Conditions:
+  HasEmail: !Not [!Equals [!Ref AlertEmail, '']]
+  Worker: !Equals [!Ref WatchWorker, 'true']
+  Live: !Equals [!Ref WatchLive, 'true']
+Resources:
+  Topic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: vega-v2-alerts
+      DisplayName: Vega alerts
+      Tags: [{Key: project, Value: vega-v2}]
+  # The owner confirms it once from the e-mail AWS sends (README, Alerts); until then the
+  # topic delivers nothing.
+  EmailSubscription:
+    Type: AWS::SNS::Subscription
+    Condition: HasEmail
+    Properties:
+      TopicArn: !Ref Topic
+      Protocol: email
+      Endpoint: !Ref AlertEmail
+
+  # --- The read API's function (api.yaml: vega-v2-api, 32 copies, 25 s) ---------------
+  # Errors are what the handler did not catch: a crash, a timeout, memory. A database
+  # error is not one (the handler answers 503): the log filters below count those.
+  ApiErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: vega-v2-api-errors
+      AlarmDescription: vega-v2-api failed 5 times or more in each of 2 of the last 3 five-minute periods (crash, timeout or memory, not a 503)
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions: [{Name: FunctionName, Value: vega-v2-api}]
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 3
+      DatapointsToAlarm: 2
+      Threshold: 5
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref Topic]
+      OKActions: [!Ref Topic]
+  # Requests Lambda refused because the 32 copies were all busy (429; the site asks again).
+  # A burst of a page's reads gives a few; 20 in each of two periods is a lasting shortage.
+  ApiThrottlesAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: vega-v2-api-throttles
+      AlarmDescription: vega-v2-api refused 20 requests or more (all its copies busy) in each of 2 five-minute periods
+      Namespace: AWS/Lambda
+      MetricName: Throttles
+      Dimensions: [{Name: FunctionName, Value: vega-v2-api}]
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 2
+      DatapointsToAlarm: 2
+      Threshold: 20
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref Topic]
+      OKActions: [!Ref Topic]
+  # Before the refusals: 90 % of the copies (ceil(0.9 x 32) = 29) in use for 15 minutes.
+  ApiCopiesAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: vega-v2-api-copies
+      AlarmDescription: 29 of the 32 copies of vega-v2-api or more ran at once in each of 3 five-minute periods (README, The read API's connections)
+      Namespace: AWS/Lambda
+      MetricName: ConcurrentExecutions
+      Dimensions: [{Name: FunctionName, Value: vega-v2-api}]
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 3
+      DatapointsToAlarm: 3
+      Threshold: 29
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref Topic]
+      OKActions: [!Ref Topic]
+  # 80 % of the function's 25 s. A statement stops at 8 s (db.mjs), so answers that long
+  # wait on something else: connections, the base's processors, compression. p90, not
+  # the maximum: one slow read at night is not an alarm.
+  ApiSlowAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: vega-v2-api-slow
+      AlarmDescription: The slowest tenth of vega-v2-api's answers took 20 s or more (its limit is 25 s) for 15 minutes
+      Namespace: AWS/Lambda
+      MetricName: Duration
+      Dimensions: [{Name: FunctionName, Value: vega-v2-api}]
+      ExtendedStatistic: p90
+      Period: 300
+      EvaluationPeriods: 3
+      DatapointsToAlarm: 3
+      Threshold: 20000
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref Topic]
+      OKActions: [!Ref Topic]
+  # `read failed <code> <path>` (backend/api/src/handler.mjs), as Lambda's text format writes
+  # it: `<time>\t<request id>\tERROR\tread failed 53300 /api/...`. Counted: the base refuses
+  # or cannot be reached: 53xxx (out of resources, 53300 too many connections: VI-33),
+  # 57P01-57P03 (shut down, starting), 08xxx (connection), 28xxx (login), and Node's
+  # ECONNREFUSED, ETIMEDOUT, ENOTFOUND. Not counted: a statement that ran too long (57014),
+  # which the 5xx filter sees. %regex%: a space and a quote are not in its character set,
+  # hence \x20 and \x22; no parentheses (CloudWatch Logs, filter pattern syntax).
+  DatabaseRefusedFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: /aws/lambda/vega-v2-api
+      FilterPattern: '%failed\x2053[0-9A-Z]{3}\x20|failed\x2057P0[123]\x20|failed\x2008[0-9A-Z]{3}\x20|failed\x2028[0-9A-Z]{3}\x20|failed\x20ECONNREFUSED\x20|failed\x20ETIMEDOUT\x20|failed\x20ENOTFOUND\x20%'
+      MetricTransformations:
+        - {MetricNamespace: Vega/Api, MetricName: DatabaseRefused, MetricValue: '1', DefaultValue: 0, Unit: Count}
+  DatabaseRefusedAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: vega-v2-api-db-refused
+      AlarmDescription: The base refused or could not be reached on 5 reads or more of vega-v2-api in five minutes (read failed 53300, 57P03, 08..., ECONNREFUSED)
+      Namespace: Vega/Api
+      MetricName: DatabaseRefused
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 5
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref Topic]
+      OKActions: [!Ref Topic]
+  # The line of each request (handler.mjs): `{"request":"read",...,"status":503,...}`.
+  # Answers the distribution serves from its copy (stale-if-error) are not in it: these
+  # are the 5xx the function gave, before the distribution hides some of them.
+  Responses5xxFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: /aws/lambda/vega-v2-api
+      FilterPattern: '%\x22status\x22:5[0-9][0-9],%'
+      MetricTransformations:
+        - {MetricNamespace: Vega/Api, MetricName: Responses5xx, MetricValue: '1', DefaultValue: 0, Unit: Count}
+  Responses5xxAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: vega-v2-api-5xx
+      AlarmDescription: vega-v2-api answered 10 errors (5xx) or more in each of 2 five-minute periods
+      Namespace: Vega/Api
+      MetricName: Responses5xx
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 2
+      DatapointsToAlarm: 2
+      Threshold: 10
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref Topic]
+      OKActions: [!Ref Topic]
+
+  # --- The database (database.yaml: vega-football-db-postgres) -------------------------
+  # The first three were in database.yaml until 23 November 2026, with no action.
+  DatabaseLowMemoryAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: vega-v2-db-low-memory
+      AlarmDescription: Under 300 MB freeable on vega-football-db-postgres for 15 minutes
+      Namespace: AWS/RDS
+      MetricName: FreeableMemory
+      Dimensions: [{Name: DBInstanceIdentifier, Value: vega-football-db-postgres}]
+      Statistic: Minimum
+      Period: 300
+      EvaluationPeriods: 3
+      Threshold: 314572800
+      ComparisonOperator: LessThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref Topic]
+      OKActions: [!Ref Topic]
+  DatabaseLowStorageAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: vega-v2-db-low-storage
+      AlarmDescription: Under 3 GB free storage on vega-football-db-postgres (autoscaling up to MaxAllocatedStorage)
+      Namespace: AWS/RDS
+      MetricName: FreeStorageSpace
+      Dimensions: [{Name: DBInstanceIdentifier, Value: vega-football-db-postgres}]
+      Statistic: Minimum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 3221225472
+      ComparisonOperator: LessThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref Topic]
+      OKActions: [!Ref Topic]
+  DatabaseHighCpuAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: vega-v2-db-high-cpu
+      AlarmDescription: Over 90 % CPU on vega-football-db-postgres for 30 minutes
+      Namespace: AWS/RDS
+      MetricName: CPUUtilization
+      Dimensions: [{Name: DBInstanceIdentifier, Value: vega-football-db-postgres}]
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 6
+      Threshold: 90
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref Topic]
+      OKActions: [!Ref Topic]
+  # The three logins together hold at most 78 connections (vega/migrate.py: collect 6,
+  # calc 4, read 68); owner's margin: 10 (migrations, a psql session, RDS's own). Above
+  # 88 for 15 minutes, something holds connections no login limit bounds (the owner's),
+  # long before the instance's ~400 run out. The read login's own limit shows as
+  # vega-v2-api-db-refused (53300), not here: the metric counts all logins together.
+  DatabaseConnectionsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: vega-v2-db-connections
+      AlarmDescription: More than the logins' 78 connections plus 10 on vega-football-db-postgres for 15 minutes
+      Namespace: AWS/RDS
+      MetricName: DatabaseConnections
+      Dimensions: [{Name: DBInstanceIdentifier, Value: vega-football-db-postgres}]
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 3
+      DatapointsToAlarm: 3
+      Threshold: 88
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref Topic]
+      OKActions: [!Ref Topic]
+
+  # --- The worker (worker.yaml: cluster vega-v2, service vega-v2-worker) ---------------
+  # Without Container Insights (off in worker.yaml) ECS still sends the service's CPU each
+  # minute, and only while a task runs: no sample for 15 minutes is a worker that does not
+  # run (a deploy stops it for a few minutes only). A task that restarts in a loop still
+  # sends some samples: its errors are in /ecs/vega-v2-worker, not here.
+  WorkerDownAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: Worker
+    Properties:
+      AlarmName: vega-v2-worker-down
+      AlarmDescription: No task of the collection service vega-v2-worker ran for 15 minutes
+      Namespace: AWS/ECS
+      MetricName: CPUUtilization
+      Dimensions: [{Name: ClusterName, Value: vega-v2}, {Name: ServiceName, Value: vega-v2-worker}]
+      Statistic: SampleCount
+      Period: 300
+      EvaluationPeriods: 3
+      DatapointsToAlarm: 3
+      Threshold: 1
+      ComparisonOperator: LessThanThreshold
+      TreatMissingData: breaching
+      AlarmActions: [!Ref Topic]
+      OKActions: [!Ref Topic]
+
+  # --- Live (live.yaml), only once a provider is chosen --------------------------------
+  LiveReadErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: Live
+    Properties:
+      AlarmName: vega-v2-live-read-errors
+      AlarmDescription: vega-v2-live-read failed 5 times or more in each of 2 of the last 3 five-minute periods
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions: [{Name: FunctionName, Value: vega-v2-live-read}]
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 3
+      DatapointsToAlarm: 2
+      Threshold: 5
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref Topic]
+      OKActions: [!Ref Topic]
+Outputs:
+  TopicArn: {Value: !Ref Topic, Export: {Name: vega-v2-alerts-topic}}

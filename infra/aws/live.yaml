@@ -98,6 +98,12 @@ Resources:
       Handler: index.handler
       MemorySize: 256
       Timeout: 10
+      # Always limited, as the read API (api.yaml): without it the function takes what the
+      # account leaves (1000 less the API's 32). The distribution keeps each match's state
+      # 2 s, so the origin sees about one read per match and edge every 2 s; 10 copies of
+      # 30 ms hold hundreds a second. At most $86 a month if all ten run without stop.
+      # Beyond them Lambda answers 429 and the page reads again at its next poll.
+      ReservedConcurrentExecutions: 10
       Role: !GetAtt ReadRole.Arn
       Code: {S3Bucket: !Sub 'vega-v2-releases-${AWS::AccountId}-${AWS::Region}', S3Key: !Ref ReleaseKey}
       Environment:

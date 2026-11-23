@@ -7,6 +7,7 @@ Three CloudFormation stacks, one per block of the backend, plus the live stack (
 | `vega-v2-database` | `database.yaml` | private PostgreSQL 18 (`vega-football-db-postgres`, database `vega_v2`, `db.t4g.medium` since 2026-11-09, gp3 20→100 GB, encrypted, 7-day backups, deletion protection, snapshot on delete), master password managed by Secrets Manager, security groups of the worker and the API |
 | `vega-v2-worker` | `worker.yaml` | ECR repository, ECS cluster, the always-on worker service (Fargate ARM 0.5 vCPU / 4 GB since 2026-11-13, one task), the `vega-v2-backfill` service (1 vCPU / 2 GB, one task while history is collected, none after), the on-demand `vega-v2-migrate` task definition, the private bucket of the image copies (`vega-v2-media-…`, written only under `data/sources/v2/images/` by the worker's task role), and the private release bucket (`vega-v2-releases-…`: the function packages, and the pinned archive sources under `data/sources/`) |
 | `vega-v2-api` | `api.yaml` | the read API Lambda (Node 24 ARM, `backend/api`), its signed Function URL and its own CloudFront distribution; the distribution also serves the image copies at `data/*` from the media bucket (origin access control, bucket policy limited to this distribution) and `api/ops/*`, the status page's read, uncached |
+| `vega-v2-waf` (us-east-1) | `waf.yaml` | the distribution's web ACL: per-address request limits, counting or blocking (VI-35, below) |
 
 Account 361769570630, region us-east-2, AWS CLI profile `statarena`, default VPC `vpc-08e400afa07fc1812` and its three subnets. The subnets route to an internet gateway: the worker gets a public IP for outbound HTTPS (sources, ECR, logs) and no inbound port; no NAT gateway is needed. The database is not publicly accessible: only the worker and API security groups reach it on 5432.
 
@@ -62,6 +63,20 @@ A stack the workflow has changed once keeps `vega-v2-cloudformation` as its role
 
 A run is checked on what it deployed, not on its colour: its log ends with `done`, and `aws lambda get-function-configuration --function-name vega-v2-api --query LastModified` gives the time of the run.
 
+#### Spend alerts (`budget.yaml`, stack `vega-v2-budget`)
+
+The owner deploys it once with his own credentials (the workflow's roles have no billing permission, and `deploy.sh` never touches it): a monthly cost budget of $120 (the estimate below is $76–81) that mails at 50, 80 and 100 % of the actual spend and when the forecast passes 100 %, and Cost Anomaly Detection that mails once a day an anomaly of $10 or more. Budgets without actions and anomaly detection are free. The address is a parameter, never in the repository. The account allows one services anomaly monitor, and Cost Explorer may have created one already: list it first, and pass its ARN if there is one.
+
+```sh
+aws ce get-anomaly-monitors --profile statarena --query "AnomalyMonitors[?MonitorDimension=='SERVICE'].MonitorArn" --output text
+```
+
+```sh
+aws cloudformation deploy --profile statarena --region us-east-2 --stack-name vega-v2-budget --template-file infra/aws/budget.yaml --capabilities CAPABILITY_IAM --no-fail-on-empty-changeset --parameter-overrides AlertEmail=<address> ExistingServiceMonitorArn=<ARN printed above, empty if none>
+```
+
+Optional, off by default: `LiveSchedulerRoleName=<the live stack's SchedulerRole>` (`aws cloudformation describe-stack-resource --stack-name vega-v2-live --logical-resource-id SchedulerRole --query StackResourceDetail.PhysicalResourceId`) makes the budget deny, at 100 %, the start of new live ingestor tasks; nothing that serves the site stops. Reverse it with `aws budgets execute-budget-action --execution-type REVERSE_BUDGET_ACTION`. `AlertTopicArn=<vega-v2-alerts>` also sends the budget mails to that topic, once its policy lets `budgets.amazonaws.com` publish.
+
 ### Deploy
 
 From a workstation:
@@ -104,6 +119,73 @@ The function logs one line per request it receives (`{"request":"read","path":�
 filter request = "read" | stats count(*) as calls, sum(conditional) as revalidations, avg(ms), avg(db) by path | sort calls desc
 ```
 
+<!-- BEGIN VI-35 web ACL -->
+### Per-address limit of the distribution (web ACL, VI-35)
+
+Until VI-35 the distribution had no web ACL: one address asking reads the cache does not hold could take the 32 copies, and every other visitor got 429s. `waf.yaml` (stack `vega-v2-waf`, **us-east-1**: a web ACL of CloudFront scope exists only there) is attached by `deploy.sh` (step 7b, then `WebAclArn` of `vega-v2-api`). It sees every request before the cache, cache hits included, and counts per viewer address over the last 5 minutes:
+
+| Rule | Counts | Limit | Action |
+|---|---|---|---|
+| `vega-v2-api-probe-500` | every path but `/data/` | 500 | count, always |
+| `vega-v2-api-probe-3000` | every path but `/data/` | 3000 | count, always |
+| `vega-v2-api-per-ip` | every path but `/data/` | `ApiLimit` (1500) | `Mode` |
+| `vega-v2-all-per-ip` | every path, image copies included | `AllLimit` (6000) | `Mode` |
+
+`Mode=Count` (the default, and the first week) only counts the requests over a limit; `Mode=Block` answers them `429` (JSON `RATE_LIMITED`, `Retry-After: 60`, open CORS, `no-store`) until the address's rate falls back under the limit (usually within 30 s of that). The site's clients do not retry an answer that asks for more than 2 s.
+
+**The site's server is exempt.** Its own reads (the home's initial reads, the reports) leave from Vercel's few shared addresses for every visitor; it sends `X-Vega-Edge-Key`, and a request whose header equals the key exactly is left out of every count. The key is the SSM SecureString `/vega/v2/edge-key` (created once by `ci/secrets.sh`, passed as `SiteKey`); the Vercel project holds it as `VEGA_API_EDGE_KEY` (Production, sensitive, never `NEXT_PUBLIC_`). Without it on either side there is no exemption, and nothing else changes. The site's `/api` proxy never sends it. The status page (`/api/ops/*`, a few reads a minute) and search engines are counted like any address, far under the limits. Whoever holds the key escapes the limit (as everyone did before VI-35): rotate it.
+
+Rotate the key (no moment without a valid key):
+
+```sh
+old=$(aws ssm get-parameter --name /vega/v2/edge-key --with-decryption --query Parameter.Value --output text)
+aws cloudformation deploy --region us-east-1 --stack-name vega-v2-waf --template-file infra/aws/waf.yaml --no-fail-on-empty-changeset --parameter-overrides PreviousSiteKey="$old"
+openssl rand -hex 32 | tr -d '\n' > key && aws ssm put-parameter --name /vega/v2/edge-key --type SecureString --overwrite --value file://key && rm key
+bash infra/aws/deploy.sh   # SiteKey = the new key, PreviousSiteKey kept
+# Vercel: VEGA_API_EDGE_KEY = the new key, redeploy the site; then drop the old key:
+aws cloudformation deploy --region us-east-1 --stack-name vega-v2-waf --template-file infra/aws/waf.yaml --no-fail-on-empty-changeset --parameter-overrides PreviousSiteKey=
+```
+
+**Reading the counts.** Metrics are in CloudWatch, us-east-1, namespace `AWS/WAFV2`, dimensions `WebACL=vega-v2-api` and `Rule=<rule>` (`aws cloudwatch list-metrics --region us-east-1 --namespace AWS/WAFV2` lists them): `CountedRequests` in count mode, `BlockedRequests` in block mode, `AllowedRequests` on the rule `ALL`. A week's requests over each limit:
+
+```sh
+for rule in vega-v2-api-probe-500 vega-v2-api-per-ip vega-v2-api-probe-3000 vega-v2-all-per-ip; do
+  echo "$rule $(aws cloudwatch get-metric-statistics --region us-east-1 --namespace AWS/WAFV2 --metric-name CountedRequests \
+    --dimensions Name=WebACL,Value=vega-v2-api Name=Rule,Value=$rule --start-time "$(date -u -d '-7 days' +%FT%TZ)" \
+    --end-time "$(date -u +%FT%TZ)" --period 604800 --statistics Sum --query 'Datapoints[0].Sum' --output text)"
+done
+```
+
+Who is over a limit now, and what they asked (samples of the last 3 hours):
+
+```sh
+id=$(aws wafv2 list-web-acls --region us-east-1 --scope CLOUDFRONT --query "WebACLs[?Name=='vega-v2-api'].Id" --output text)
+aws wafv2 get-rate-based-statement-managed-keys --region us-east-1 --scope CLOUDFRONT --web-acl-name vega-v2-api --web-acl-id "$id" --rule-name vega-v2-api-per-ip
+aws wafv2 get-sampled-requests --region us-east-1 --scope CLOUDFRONT --web-acl-arn "$(aws cloudformation describe-stacks --region us-east-1 --stack-name vega-v2-waf --query "Stacks[0].Outputs[?OutputKey=='WebAclArn'].OutputValue" --output text)" \
+  --rule-metric-name vega-v2-api-per-ip --time-window StartTime=$(date -u -d '-3 hours' +%s),EndTime=$(date -u +%s) --max-items 500
+```
+
+**Choosing the limit.** A page asks the API about 10 to 75 times when cold (its reads, plus one `/api/assets` per image not yet resolved; the copies under `/data/` are not counted), far less once the browser holds the images (a day). 1500 in 5 minutes is twenty cold heavy pages, or a visitor opening a page every 10 seconds for 5 minutes with a few sharing one address. After a week in count mode: if `vega-v2-api-per-ip` counted nothing from people (samples: browser user agents, home or mobile networks), keep it and block; if it did, raise `ApiLimit` above them (`vega-v2-api-probe-3000` says whether 3000 would do). `vega-v2-api-probe-500` says how close ordinary visitors come. A change of a limit resets the counts for up to a minute.
+
+**Blocking, and back.** Block (only this stack changes; the next `deploy.sh` keeps it):
+
+```sh
+aws cloudformation deploy --region us-east-1 --stack-name vega-v2-waf --template-file infra/aws/waf.yaml --no-fail-on-empty-changeset --parameter-overrides Mode=Block
+```
+
+`Mode=Count` the same way is the way back (a minute or so). `WAF_MODE=Block|Count bash infra/aws/deploy.sh` does the same within a full deploy. To detach the web ACL from the distribution altogether (the distribution then behaves as before VI-35; the next `deploy.sh` attaches it again):
+
+```sh
+aws cloudformation update-stack --stack-name vega-v2-api --use-previous-template --capabilities CAPABILITY_IAM --parameters ParameterKey=WebAclArn,ParameterValue= \
+  ParameterKey=ReleaseKey,UsePreviousValue=true ParameterKey=ReadDatabaseUrl,UsePreviousValue=true ParameterKey=OpsKey,UsePreviousValue=true \
+  ParameterKey=MediaBaseUrl,UsePreviousValue=true ParameterKey=ReservedConcurrency,UsePreviousValue=true
+```
+
+The end-to-end check, once blocking is on (from a workstation: it gets that address limited for a few minutes): `CONFIRM_RATE_LIMIT_E2E=1 VEGA_API_EDGE_KEY=<SSM value> node tests/e2e/rate-limit.e2e.mjs https://dngp6kh9jx2bl.cloudfront.net <evidence dir>`.
+
+Cost: $5 a month for the web ACL, $1 per rule (4), $0.60 per million requests inspected, cache hits included.
+<!-- END VI-35 web ACL -->
+
 ### Import test: one full season and one archive season
 
 After the first deploy, `import-test.sh` loads one complete league season through the backfill task and one archive season through the archive task, then reads them back through the read API (match families, season loader, clubs, standings, power rankings, archive):
@@ -113,6 +195,60 @@ AWS_PROFILE=statarena bash infra/aws/import-test.sh
 ```
 
 Defaults: Ligue 1 (`LEAGUE=l_3FJFUl`), 2025/2026 (`SEASON=2025`), archive `ARCHIVE_SEASON=2019/2020`. With PitchAPI's free plan at one call every 0.5 s, a 306-match season (13 families each) takes about 40 minutes. The worker service computes the aggregates and, within a day, the levels, similarities and power rankings of the backfilled season (it now runs once for a season never computed). It writes only to `vega-football-db-postgres`.
+
+## Alerts
+
+On 20 November 2026 the API refused every read for hours (VI-33) and no one was told: the database's three alarms notified no one. Since 23 November every alarm notifies the topic `vega-v2-alerts` of its region, of the alarm and of the return to normal (OK), by e-mail. `backend/tests/test_alerts.py` fails when an alarm loses its action, a threshold leaves the number it comes from, a name no longer matches the stack that creates it, or a filter pattern no longer recognises the line the handler writes.
+
+Two stacks, deployed by `deploy.sh` (step 10, after the read API stack):
+
+- `vega-v2-alerts` (`alerts.yaml`, us-east-2): the topic (export `vega-v2-alerts-topic`), the function's, the base's and the worker's alarms, and two metric filters on `/aws/lambda/vega-v2-api` (namespace `Vega/Api`). The base's alarms were in `database.yaml` until then: the first deploy removes them there (step 1) and creates them here (step 10), the same names.
+- `vega-v2-alerts-edge` (`alerts-edge.yaml`, us-east-1): CloudFront and Route 53 metrics exist only there, and an alarm notifies only a topic of its own region, so it has its own `vega-v2-alerts` topic and subscription. It watches the distribution and probes `/api/health` from outside.
+
+| Alarm | Rings when | Do |
+|---|---|---|
+| `vega-v2-api-unreachable` (us-east-1) | `/api/health` failed 3 minutes in a row from outside (Route 53 health check `vega-v2-api-health`, 3 regions, every 30 s); it reads `api.publication`, so a base that refuses is a failure too | `curl -i https://<ApiOrigin>/api/health`; a 503 `DATA_UNAVAILABLE`: the function's log (`read failed <code>`), then the base; no answer: the distribution and the function |
+| `vega-v2-api-db-refused` | 5 reads or more in five minutes the base refused or could not take (`read failed` 53xxx, 57P01–03, 08xxx, 28xxx, ECONNREFUSED, ETIMEDOUT, ENOTFOUND) | 53300: the read login is full (The read API's connections; `SELECT count(*) FROM pg_stat_activity WHERE usename = 'vega_v2_read'`); 57P03: the base is restarting (RDS events); 28xxx: the login's password and `/vega/v2/read-database-url` differ |
+| `vega-v2-api-5xx` | the function answered 10 errors or more in each of two five-minute periods | Logs Insights on the function's log: `filter status >= 500 \| stats count(*) by path` |
+| `vega-v2-api-edge-5xx` (us-east-1) | 5 % or more of the distribution's answers were 5xx, two five-minute periods in a row of at least 100 requests each | the same; errors the distribution covered with its copy (`stale-if-error`) are not counted here |
+| `vega-v2-api-errors` | the function failed (crash, timeout, memory) 5 times or more in 2 of 3 five-minute periods; a 503 is not one | the function's log, `Task timed out` or the error's stack |
+| `vega-v2-api-throttles` | Lambda refused 20 requests or more, two periods in a row: all 32 copies busy | The read API's connections: raise the copies only while the base's processors are idle |
+| `vega-v2-api-copies` | 29 of the 32 copies (90 %) ran at once for 15 minutes | the same, before the refusals |
+| `vega-v2-api-slow` | the slowest tenth of the answers took 20 s or more (80 % of the 25 s limit) for 15 minutes; a statement stops at 8 s, so they wait on something else | the base's CPU and connections, the `ms` and `db` of the request lines |
+| `vega-v2-db-low-memory`, `vega-v2-db-low-storage`, `vega-v2-db-high-cpu` | as before (under 300 MB freeable for 15 minutes, under 3 GB free, over 90 % CPU for 30 minutes) | memory: the backfill and the archives (9 November 2026); storage grows by itself up to `MaxAllocatedStorage` |
+| `vega-v2-db-connections` | more than 88 connections for 15 minutes: the three logins' 78 (`vega/migrate.py`) plus 10 for the owner | `SELECT usename, count(*) FROM pg_stat_activity GROUP BY 1`: a session of the owner left open |
+| `vega-v2-worker-down` | no task of `vega-v2-worker` ran for 15 minutes (its CPU metric stops when no task runs; no Container Insights needed) | `aws ecs describe-services --cluster vega-v2 --services vega-v2-worker` (events, stopped reason) and `/ecs/vega-v2-worker`. Absent when the deploy sets `WORKER_DESIRED_COUNT=0` |
+| `vega-v2-live-read-errors` | `vega-v2-live-read` failed 5 times or more in 2 of 3 periods | only once `LIVE_PROVIDER` is set: until then the live circuit has no alarm and costs nothing |
+
+Missing data counts as normal (no request, no alarm), except for the probe and the worker, whose silence is the failure. Counts, not rates, on the function: a single error at night among three requests rings nothing; the probe sees an outage without traffic.
+
+### The address
+
+Never in the repository: the SSM parameter `/vega/v2/alert-email` (us-east-2), set once by the account owner. Without it the deploy logs `alerts: no SSM parameter /vega/v2/alert-email` and goes on; the alarms still change state in CloudWatch.
+
+```sh
+aws ssm put-parameter --profile statarena --region us-east-2 --name /vega/v2/alert-email --type String --value '<address>'
+```
+
+The next deploy subscribes it to both topics: AWS sends two e-mails « AWS Notification - Subscription Confirmation », one per region; nothing is delivered until each link is followed. Check: `aws sns list-subscriptions-by-topic --region us-east-2 --topic-arn arn:aws:sns:us-east-2:361769570630:vega-v2-alerts` (and `us-east-1`): `PendingConfirmation` until then. Changing the parameter replaces the subscriptions (two new confirmations).
+
+### Testing an alarm
+
+```sh
+aws cloudwatch set-alarm-state --profile statarena --region us-east-2 --alarm-name vega-v2-api-5xx --state-value ALARM --state-reason "test"
+```
+
+The e-mail arrives within a minute; the alarm goes back to OK at its next evaluation (a second e-mail). `--region us-east-1` for `vega-v2-api-unreachable` and `vega-v2-api-edge-5xx`. A filter pattern is tried against a real line without changing anything:
+
+```sh
+aws logs test-metric-filter --profile statarena --region us-east-2 \
+  --filter-pattern "$(aws logs describe-metric-filters --profile statarena --region us-east-2 --log-group-name /aws/lambda/vega-v2-api --query "metricFilters[?metricTransformations[0].metricName=='DatabaseRefused'].filterPattern" --output text)" \
+  --log-event-messages "$(printf '2026-11-20T21:04:05.123Z\tid\tERROR\tread failed 53300 /api/health')"
+```
+
+### Cost
+
+About $3–5 a month: 11 alarms in us-east-2 (12 once the live circuit runs) and 2 in us-east-1, one of them on two metrics ($0.10 per alarm metric, the first 10 free), the two filter metrics ($0.30 each, within the 10 free custom metrics), the HTTPS health check ($0.50 + $1.00 for HTTPS, or $0.75 + $2.00 if a distribution does not count as an AWS endpoint), the probe's requests through the distribution and the function (about half a million a month, around $1), SNS e-mail (the first 1,000 a month free).
 
 ## Status page
 

@@ -1,0 +1,157 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Vega spend alerts: a monthly cost budget (mail at 50, 80 and 100 % of the actual spend
+  and when the forecast passes it) and Cost Anomaly Detection (a daily mail when a service
+  costs more than usual). Deployed once by the account owner (infra/aws/README.md,
+  "One-time setup"), never by deploy.sh: the workflow's roles have no billing permission.
+  Budgets and Cost Explorer are global; the stack lives in us-east-2 with the others.
+  Optional: at 100 % of the actual spend, stop the live ingestor's starts (LiveSchedulerRoleName).
+Parameters:
+  AlertEmail:
+    Type: String
+    AllowedPattern: '[^@\s]+@[^@\s]+\.[^@\s]+'
+    Description: Who receives the budget and anomaly mails; passed at deploy time, never written in the repository.
+  # The estimate is $76-81 a month (infra/aws/README.md, "Cost"). At $120, 50 % arrives late
+  # in a normal month, 80 % ($96) means about $15 above the estimate, and 100 % half again
+  # the usual spend.
+  MonthlyBudget:
+    Type: Number
+    Default: 120
+    MinValue: 50
+    MaxValue: 2000
+    Description: Monthly cost budget in USD, gross of credits and refunds.
+  AlertTopicArn:
+    Type: String
+    Default: ''
+    AllowedPattern: '(arn:aws:sns:[a-z0-9-]+:\d{12}:[A-Za-z0-9_-]+)?'
+    Description: >-
+      Optional SNS topic (vega-v2-alerts, alerts.yaml) that also receives the budget mails;
+      its policy must let budgets.amazonaws.com publish. Empty, mail only.
+  # The account allows one AWS managed monitor of the SERVICE dimension, and Cost Explorer
+  # creates one by itself for new users. List it first (README); if there is one, pass it.
+  ExistingServiceMonitorArn:
+    Type: String
+    Default: ''
+    AllowedPattern: '(arn:aws:ce::\d{12}:anomalymonitor/[0-9a-f-]+)?'
+    Description: ARN of the account's existing services anomaly monitor; empty, the stack creates one.
+  AnomalyImpactUsd:
+    Type: Number
+    Default: 10
+    MinValue: 1
+    Description: An anomaly is mailed when its total impact reaches this many USD (the usual spend is about $2.60 a day).
+  # The cut-off. Its target is the role EventBridge Scheduler uses to start the live
+  # ingestor (live.yaml SchedulerRole): aws cloudformation describe-stack-resource
+  # --stack-name vega-v2-live --logical-resource-id SchedulerRole. Empty, no action.
+  LiveSchedulerRoleName:
+    Type: String
+    Default: ''
+    AllowedPattern: '[\w+=,.@-]{0,64}'
+    Description: Role whose ecs:RunTask on vega-v2-live is denied at 100 % of the actual spend; empty, no automatic action.
+Conditions:
+  CreateMonitor: !Equals [!Ref ExistingServiceMonitorArn, '']
+  HasTopic: !Not [!Equals [!Ref AlertTopicArn, '']]
+  CutOff: !Not [!Equals [!Ref LiveSchedulerRoleName, '']]
+Resources:
+  Budget:
+    Type: AWS::Budgets::Budget
+    Properties:
+      Budget:
+        BudgetName: vega-v2-monthly
+        BudgetType: COST
+        TimeUnit: MONTHLY
+        BudgetLimit: {Amount: !Ref MonthlyBudget, Unit: USD}
+        # Gross spend: credits would hide an abuse until they run out.
+        CostTypes: {IncludeCredit: false, IncludeRefund: false}
+      NotificationsWithSubscribers:
+        - Notification: {NotificationType: ACTUAL, ComparisonOperator: GREATER_THAN, Threshold: 50, ThresholdType: PERCENTAGE}
+          Subscribers:
+            - {SubscriptionType: EMAIL, Address: !Ref AlertEmail}
+            - !If [HasTopic, {SubscriptionType: SNS, Address: !Ref AlertTopicArn}, !Ref AWS::NoValue]
+        - Notification: {NotificationType: ACTUAL, ComparisonOperator: GREATER_THAN, Threshold: 80, ThresholdType: PERCENTAGE}
+          Subscribers:
+            - {SubscriptionType: EMAIL, Address: !Ref AlertEmail}
+            - !If [HasTopic, {SubscriptionType: SNS, Address: !Ref AlertTopicArn}, !Ref AWS::NoValue]
+        - Notification: {NotificationType: ACTUAL, ComparisonOperator: GREATER_THAN, Threshold: 100, ThresholdType: PERCENTAGE}
+          Subscribers:
+            - {SubscriptionType: EMAIL, Address: !Ref AlertEmail}
+            - !If [HasTopic, {SubscriptionType: SNS, Address: !Ref AlertTopicArn}, !Ref AWS::NoValue]
+        - Notification: {NotificationType: FORECASTED, ComparisonOperator: GREATER_THAN, Threshold: 100, ThresholdType: PERCENTAGE}
+          Subscribers:
+            - {SubscriptionType: EMAIL, Address: !Ref AlertEmail}
+            - !If [HasTopic, {SubscriptionType: SNS, Address: !Ref AlertTopicArn}, !Ref AWS::NoValue]
+      ResourceTags: [{Key: project, Value: vega-v2}]
+  ServicesMonitor:
+    Type: AWS::CE::AnomalyMonitor
+    Condition: CreateMonitor
+    Properties:
+      MonitorName: vega-v2-services
+      MonitorType: DIMENSIONAL
+      MonitorDimension: SERVICE
+      ResourceTags: [{Key: project, Value: vega-v2}]
+  # A mail a day listing the anomalies whose impact reached AnomalyImpactUsd (IMMEDIATE
+  # needs an SNS subscriber; a daily mail is enough at this size).
+  AnomalyMail:
+    Type: AWS::CE::AnomalySubscription
+    Properties:
+      SubscriptionName: vega-v2-anomalies
+      Frequency: DAILY
+      MonitorArnList: [!If [CreateMonitor, !Ref ServicesMonitor, !Ref ExistingServiceMonitorArn]]
+      Subscribers: [{Type: EMAIL, Address: !Ref AlertEmail}]
+      ThresholdExpression: !Sub '{"Dimensions": {"Key": "ANOMALY_TOTAL_IMPACT_ABSOLUTE", "MatchOptions": ["GREATER_THAN_OR_EQUAL"], "Values": ["${AnomalyImpactUsd}"]}}'
+      ResourceTags: [{Key: project, Value: vega-v2}]
+  # The cut-off, when asked for: nothing that serves the site stops. The live ingestor is
+  # the one cost that a fault can multiply by itself (a start every 15 minutes, each task
+  # expected to stop on its own); the deny stops new starts, a running task finishes.
+  # Reverse it with aws budgets execute-budget-action --execution-type REVERSE_BUDGET_ACTION.
+  StopLiveStarts:
+    Type: AWS::IAM::ManagedPolicy
+    Condition: CutOff
+    Properties:
+      Description: Attached by the vega-v2-monthly budget at 100 %, denies starting the live ingestor
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Deny
+            Action: 'ecs:RunTask'
+            Resource: !Sub 'arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:task-definition/vega-v2-live:*'
+  BudgetActionRole:
+    Type: AWS::IAM::Role
+    Condition: CutOff
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: {Service: budgets.amazonaws.com}
+            Action: 'sts:AssumeRole'
+            Condition:
+              StringEquals: {'aws:SourceAccount': !Ref 'AWS::AccountId'}
+              ArnLike: {'aws:SourceArn': !Sub 'arn:${AWS::Partition}:budgets::${AWS::AccountId}:budget/vega-v2-monthly*'}
+      Policies:
+        - PolicyName: AttachTheDenyToTheSchedulerRole
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ['iam:AttachRolePolicy', 'iam:DetachRolePolicy']
+                Resource: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${LiveSchedulerRoleName}'
+                Condition: {ArnEquals: {'iam:PolicyARN': !Ref StopLiveStarts}}
+  CutOffAction:
+    Type: AWS::Budgets::BudgetsAction
+    Condition: CutOff
+    Properties:
+      BudgetName: !Ref Budget
+      NotificationType: ACTUAL
+      ActionThreshold: {Type: PERCENTAGE, Value: 100}
+      ActionType: APPLY_IAM_POLICY
+      ApprovalModel: AUTOMATIC
+      ExecutionRoleArn: !GetAtt BudgetActionRole.Arn
+      Definition:
+        IamActionDefinition:
+          PolicyArn: !Ref StopLiveStarts
+          Roles: [!Ref LiveSchedulerRoleName]
+      Subscribers: [{Type: EMAIL, Address: !Ref AlertEmail}]
+Outputs:
+  BudgetName: {Value: !Ref Budget}
+  MonitorArn: {Value: !If [CreateMonitor, !Ref ServicesMonitor, !Ref ExistingServiceMonitorArn]}
+  AnomalySubscriptionArn: {Value: !Ref AnomalyMail}
