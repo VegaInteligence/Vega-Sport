@@ -3052,8 +3052,8 @@ th[aria-sort="descending"] .sort-indicator {
   display: grid;
   gap: 26px;
 }
-html[data-club-profile] .club-route-logo,
-html:not([data-club-profile]) .club-route-skeleton {
+html[data-route-skeleton] .route-logo,
+html:not([data-route-skeleton]) .route-skeleton {
   display: none;
 }
 .page-skeleton-overlay {

@@ -5,6 +5,7 @@ import Providers from "./providers.jsx";
 import ShellFallback from "./shell-fallback.jsx";
 import { homeBootstrapGuardScript } from "../src/services/home-bootstrap-preferences.js";
 import { apiUrl } from "../src/data-url.js";
+import { routeSkeletonScript } from "../src/services/route-skeleton.js";
 import "../src/brand-tokens.css";
 import "../src/fonts.css";
 import "../src/theme.css";
@@ -65,12 +66,10 @@ export default function RootLayout({ children }) {
           type="font/woff2"
           crossOrigin="anonymous"
         />
-        {/* A club's page opens on its skeleton, not the logo (LoadingPage reads this flag). */}
+        {/* Item pages open on their skeleton, not the logo (services/route-skeleton.js). */}
         <script
           id="vega-route"
-          dangerouslySetInnerHTML={{
-            __html: `try{document.documentElement.toggleAttribute("data-club-profile",/^\\/clubs\\/?$/.test(location.pathname)&&new URLSearchParams(location.search).has("id"))}catch{}`,
-          }}
+          dangerouslySetInnerHTML={{ __html: routeSkeletonScript }}
         />
         <script
           id="vega-theme"
