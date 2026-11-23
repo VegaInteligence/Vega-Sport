@@ -1,5 +1,17 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Club, nation and competition pages — 23 November 2026 (mock-up awaiting validation)
+
+- Goal: the « Pages club, nation et compétition » section of the Discord plan (7 rows): back link and h1 on the nation page, competition header, skeletons instead of the full-screen logo (nation, competition), progressive club page, 16 px card inset and width cap, nation overview (coming matches, tab in the address, save button), fewer clicks.
+- Constraints: mock-up validated by the user before this counts as implementation; nothing pushed without the user's go; no data in git; E2E written first.
+- Branch `claude/pages-club-nation-competition` (local, from main 639764b), built by three sub-branches merged into it (`claude/proto-comp`, `claude/proto-nation`, `claude/proto-club`).
+- Decisions taken in the mock-up, to be confirmed: nation « Historique » tab replaced by a « Récent / Depuis 1930 » switch on the Elo chart; « Prochaine journée » inferred from the coming fixtures because the API names played matchdays only; title « Compétitions à la une »; « Enregistrer » kept (no « Suivre »); width cap 1600 px; club figures shown once, already against Europe (the European pool is read in parallel, the page shows identity and last matches first).
+- Validated 23 Nov on a local replay of production answers (season 2026/2027; PSG, France, Ligue 1, Champions League): site 825/825, build OK, E2E `tests/e2e/club-page.e2e.mjs` 16/16, `nation-page.e2e.mjs` 27/27, `competition-page.e2e.mjs` 21/21. Not run against the public site (not reachable from the cloud session).
+- Load, every API answer 400 ms late, median of 3: club name 2.5 s → 1.1 s, page revealed 3.0 s → 1.5 s, figures final 3.0 s → 2.5 s, 30 requests both; nation and competition unchanged (skeleton instead of the logo).
+- Known limits: a direct link to a club season without data shows « Club » as the name; « Autre compétition » still shows a reading line that shifts the club tabs; player and match page skeletons belong to their own work.
+- Review page (before/after): https://claude.ai/artifact/JVo5kN4v2i5PuhzMCPE1dX. Linear: no overlapping In Progress issue on 23 Nov; GitHub issue to create once the user validates.
+- Next action: the user's validation of the mock-up and go to create the GitHub issue, push and open the PR.
+
 ## No data in git — VI-45 (20–21 November 2026, done)
 
 - Goal: no data in the repository, history included. History rewritten without backup on the user's word, then force-pushed (every branch and the tag): old main 4844e92589 → 8f1b34522d, a clone drops from ~4.1 GB to 34 MB.
