@@ -61,7 +61,7 @@ def one(pattern, text, what):
 def resources(text, kind):
     """The body of each resource of a type, as text (two-space resource indentation)."""
     blocks = re.split(r"\n  (?=[A-Za-z0-9]+:\n)", text.split("\nResources:\n", 1)[1].split("\nOutputs:\n", 1)[0])
-    return [block for block in blocks if re.search(rf"\n    Type: {re.escape(kind)}\n", "\n" + block)]
+    return [block + "\n" for block in blocks if re.search(rf"\n    Type: {re.escape(kind)}\n", "\n" + block)]
 
 
 class BudgetTemplateTest(unittest.TestCase):
@@ -118,7 +118,7 @@ class BudgetTemplateTest(unittest.TestCase):
         for kind in ("AWS::Budgets::BudgetsAction", "AWS::IAM::ManagedPolicy", "AWS::IAM::Role"):
             for block in resources(self.text, kind):
                 self.assertIn("Condition: CutOff", block, kind)
-        policy = one(r"PolicyDocument:\n((?:          .*\n)+)", resources(self.text, "AWS::IAM::ManagedPolicy")[0], "deny policy")
+        policy = one(r"PolicyDocument:\n((?:        .*\n)+)", resources(self.text, "AWS::IAM::ManagedPolicy")[0], "deny policy")
         self.assertIn("Effect: Deny", policy)
         self.assertNotIn("Effect: Allow", policy)
         self.assertIn("Action: 'ecs:RunTask'", policy)
