@@ -1,5 +1,5 @@
 import Link from "next/link";
-import React, { useMemo, useState } from "react";
+import React, { Suspense, lazy, useMemo, useState } from "react";
 import Icon from "./Icon.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { number, date, isNumber } from "../services/format.js";
@@ -16,6 +16,13 @@ import {
 } from "../services/player-profile.js";
 import { finishedReadAppearances } from "../services/season-player.js";
 import { Term } from "./Hint.jsx";
+// His match (moments, shots, activity zone) is read only once a dialog opens.
+const PlayerMatchSections = lazy(() => import("./PlayerMatchSections.jsx"));
+/** True on the page of that very match, where « Voir le match » would lead nowhere. */
+const onMatchPage = (matchId) =>
+  typeof window !== "undefined" &&
+  /^\/matchs\/?$/.test(window.location.pathname) &&
+  new URLSearchParams(window.location.search).get("id") === matchId;
 export const metrics = [
   ["minutes", "Minutes"],
   ["grade", "Note Vega"],
@@ -232,20 +239,22 @@ export function PlayerDialog() {
           </button>
           <div className="performance-links">
             <Link
-              className="button button-ghost"
+              className={`button ${onMatchPage(row.matchId) ? "button-primary" : "button-ghost"}`}
               href={f.href("/joueurs/", { id: row.playerId, q: "" })}
               onClick={close}
             >
               Fiche joueur
             </Link>
-            <Link
-              className="button button-primary"
-              href={f.href("/matchs/", { id: row.matchId })}
-              onClick={close}
-            >
-              Voir le match
-              <Icon name="arrow" />
-            </Link>
+            {!onMatchPage(row.matchId) && (
+              <Link
+                className="button button-primary"
+                href={f.href("/matchs/", { id: row.matchId })}
+                onClick={close}
+              >
+                Voir le match
+                <Icon name="arrow" />
+              </Link>
+            )}
           </div>
         </>
       }
@@ -281,6 +290,11 @@ export function PlayerDialog() {
               </div>
             ))}
           </dl>
+          {row.matchId && row.playerId && (
+            <Suspense fallback={null}>
+              <PlayerMatchSections match={match} row={row} />
+            </Suspense>
+          )}
           {profile.sections.length > 0 && (
             <section
               className="pc-profile"

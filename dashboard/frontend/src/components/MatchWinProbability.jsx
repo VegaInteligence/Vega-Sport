@@ -56,7 +56,7 @@ export default function MatchWinProbability({ match, live: feed = null }) {
   const [ref, width] = useBoxWidth(900);
   const [at, setAt] = useState(null);
   if (!chart) return null;
-  const { lines, series, goals, reds, span, start, end, live } = chart;
+  const { lines, series, goals, reds, span, start, end, live, extra, penalties } = chart;
   const home = match.home?.name || "Domicile",
     away = match.away?.name || "Extérieur";
   const shares = (point) => `${home} ${share(point.home)} · nul ${share(point.draw)} · ${away} ${share(point.away)}`;
@@ -77,9 +77,15 @@ export default function MatchWinProbability({ match, live: feed = null }) {
   };
   const shown = at || end;
   const scoreText = (point) => (point.score ? `${point.score[0]}–${point.score[1]}` : "");
+  // The end of a match that went past the 90th: « a.p. » after extra time, the shoot-out's score after one.
+  const pens = penalties ? `${penalties[0]}–${penalties[1]}` : "";
+  const after = penalties ? ` · t.a.b. ${pens}` : extra ? " a.p." : "";
   const head = at
     ? `${Math.round(at.minute)}′${at.score ? ` · ${scoreText(at)}` : ""}`
-    : `${live ? `En cours · ${live.minute}′` : "Fin"}${end.score ? ` · ${scoreText(end)}` : ""}`;
+    : live
+      ? penalties ? `Tirs au but · ${pens}` : `En cours · ${live.minute}′${end.score ? ` · ${scoreText(end)}` : ""}`
+      : `Fin${end.score ? ` · ${scoreText(end)}` : ""}${after}`;
+  const ticks = extra ? [0, 15, 30, 45, 60, 75, 90, 105, 120] : [0, 15, 30, 45, 60, 75, 90];
   // One row of chips above the plot, each nudged just enough not to touch the others.
   const widths = goals.map((goal) => chipWidth(goal.label));
   const lefts = spreadChips(goals.map((goal) => x(goal.minute)), widths, 0, width);
@@ -122,7 +128,13 @@ export default function MatchWinProbability({ match, live: feed = null }) {
                   </text>
                 ))}
                 <line x1={x(45)} x2={x(45)} y1={m.t} y2={height - m.b} stroke="var(--border-strong)" />
-                {[0, 15, 30, 45, 60, 75, 90].map((minute) => (
+                {extra && (
+                  <g data-extra-time>
+                    <line x1={x(90)} x2={x(90)} y1={m.t} y2={height - m.b} stroke="var(--muted)" strokeWidth="1.5" />
+                    <line x1={x(105)} x2={x(105)} y1={m.t} y2={height - m.b} stroke="var(--border-strong)" strokeDasharray="2 3" />
+                  </g>
+                )}
+                {ticks.map((minute) => (
                   <text key={minute} x={x(minute)} y={height - 8} textAnchor="middle" className={s.winTick}>
                     {minute === 45 ? "MT" : `${minute}′`}
                   </text>
@@ -153,6 +165,11 @@ export default function MatchWinProbability({ match, live: feed = null }) {
                     <title>{`${red.minute}′ : expulsion (${red.side === "home" ? home : away})`}</title>
                   </rect>
                 ))}
+                {extra && (
+                  <text x={x(90) + 6} y={m.t + 12} className={s.winPeriod}>
+                    {phone ? "Prol." : "Prolongation"}
+                  </text>
+                )}
                 {at && <line x1={x(at.minute)} x2={x(at.minute)} y1={m.t} y2={height - m.b} stroke="var(--ink-strong)" strokeWidth="1.5" />}
               </g>
             </svg>
@@ -162,7 +179,8 @@ export default function MatchWinProbability({ match, live: feed = null }) {
             <dl>
             {[
               [home, shown.home, HOME],
-              ["Nul", shown.draw, DRAW],
+              // After the 90th of a match in extra time, level means a shoot-out.
+              [extra && shown.minute > 90 ? "Tirs au but" : "Nul", shown.draw, DRAW],
               [away, shown.away, AWAY],
             ].map(([name, value, color]) => (
               <div key={name}>

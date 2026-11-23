@@ -242,6 +242,10 @@ export function normalizeShots(payload) {
       xgot: s.expected_goals_on_target,
       vegaXg: s.expected_goals_vega,
       minute: s.minute,
+      minuteAdded: s.minute_added,
+      bodyPart: s.shot_type,
+      situation: s.situation,
+      isBlocked: s.is_blocked,
       type: s.is_own_goal ? "OwnGoal" : s.event_type,
       isGoal:
         typeof s.is_goal === "boolean"
