@@ -3959,3 +3959,42 @@ the real `results.csv` (evidence `donnees-hors-live/elo-selections/implementatio
 | 50l | Parser: a Nations League row with `neutral` TRUE; `cups.match_rows` of the Euro 2020 (2021-07-07 England–Denmark, 2021-07-03 Ukraine–England, a June 2021 match), World Cup 2022 (Qatar first, Qatar second), World Cup 2026 (USA–Paraguay) | neutral true; England–Denmark not neutral, Ukraine–England neutral, June NULL; Qatar home not neutral, Qatar away neutral; USA home not neutral |
 | 50m | API: `kind=nations&page=2` on a base without nations rows; `kind=clubs&page=2`; `kind=nations&limit=201`; the row mapper of a nations row, provisional true | 404 (no longer 400); 400; 400; `provisional: true`, no `score`; the list's `ranking.provisional` |
 | 50n | E2E, real `results.csv` with the FIFA edition of 2021-02-18 as input | Gibraltar ~52nd of the Nations League's teams and ~187th of the world; Spearman with the FIFA ranking > 0.9 (measured 0.987); ~205 teams for 2026/27 (the base's national rows); club rows identical before and after |
+
+## 51. The national teams' Elo, review of §50: the FIFA members of the internationals are national teams, PitchAPI's World Cups on neutral ground (23 Nov 2026, written before the tests)
+
+The review of §50 found that production lists 154 national teams (about 142 current FIFA members): with the rule « both
+sides national », some 69 FIFA members (Kenya, Philippines, Fiji, Bermuda, Guam, Tonga, Rwanda…) are not national, so
+the world ranking would hold ~140 nations and every qualifier or friendly against the others would be dropped — not
+variant C4 (211 nations), which the user chose. Decided (coordinator, 23 Nov 2026): such a side is a national team.
+
+### 51.1 Rules
+
+- **A FIFA member is national.** `curated.national_teams` (daily, before the identity pass) also marks national a team
+  International Results keys by a name that a FIFA men's ranking edition the base holds lists (`core.ranking_rows.entity_name`,
+  through the measurement's map `power.FIFA_TO_IR`). The base's own FIFA editions are the authority (since 2021, current
+  members only), not a constant. It reads every such row, the ones created as non-national by the 2026/27 edition
+  included. A row merged into another (`merged_into`) is not marked: its nation is the row it was merged into. A side no
+  FIFA edition lists (CONIFA, Island Games, Muratti Vase, Guadeloupe…) stays as it is. Nothing is renamed (49n holds);
+  a side that is the same nation as another national row under another spelling is merged by the identity pass's
+  existing rules (`NATION_SPELLINGS`, flags), as for every national team.
+- **Their nation pages.** A team marked national gets the nation pages' list entry and its own page (`api.nation_list`
+  reads `is_national`), with no layout change.
+- **PitchAPI's World Cups in the national pass.** A PitchAPI World Cup match (`l_1XLtP0`) whose `is_neutral` no reader
+  wrote (NULL) is read by the national pass as neutral unless its home side is a host of that year's edition (the hosts
+  of `cups.HOSTS`, by the team's name or any of its source keys; 2022 Qatar, 2026 the United States, Mexico, Canada).
+  The clubs' pass and the stored legacy rows are untouched; `core.matches.is_neutral` is not written.
+- **No speculative host.** `cups.HOSTS` holds the editions whose spellings are known (Euro 2020, 2024, World Cups 2022,
+  2026); Euro 2028 is added when its file exists.
+
+### 51.2 Failure modes and expected outcomes
+
+51a–51b: `backend/tests/test_source_identity.py` (disposable PostgreSQL). 51c–51d: `backend/tests/test_power.py`,
+`test_sources.py`. 51e: the E2E run under the production rule.
+
+| # | Situation | Expected |
+|---|---|---|
+| 51a | A FIFA edition lists « Kenya » and « Korea Republic »; International Results' rows « Kenya », « South Korea » (non-national, created by an internationals edition), « Zanzibar » (no FIFA row), « United States » merged into « USA » | after `national_teams`: Kenya and South Korea national; Zanzibar not; the merged row not marked; no name changed |
+| 51b | The same pass run again | nothing written |
+| 51c | The national pass: a match in `nation_neutral`, its tuple not neutral, two equal strengths | expected 0.5 (no home advantage); the clubs' pass of the same tuple keeps its advantage |
+| 51d | `pitchapi_neutral`: World Cup 2022 Qatar at home, Ecuador at home; 2026 « United States » at home, Spain at home; a match with is_neutral written | Qatar and the United States not neutral, Ecuador and Spain neutral, the written one not listed; `cups.HOSTS` has no Euro 2028 |
+| 51e | E2E, production rule (no hand marking) | ~205–211 nations for 2026/27; Gibraltar 52nd of 54, ~187th; Spearman ≥ 0.98; clubs' and pre-2021/22 national rows identical |
