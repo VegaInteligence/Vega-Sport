@@ -2979,6 +2979,8 @@ th[aria-sort="descending"] .sort-indicator {
   grid-template-columns: 300px minmax(0, 1fr);
   gap: 28px;
   align-items: start;
+  max-width: 1600px;
+  margin-inline: auto;
 }
 .club-skeleton-aside {
   display: grid;
