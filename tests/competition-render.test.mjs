@@ -54,6 +54,7 @@ test("competition page renders a result-derived league table and its limits", as
     "../components/BackLink.jsx": { __esModule: true, default: ({ href, label, prefix = "← ", onFallback, ...props }) => href ? elem("a", { href, ...props }, prefix, label) : elem("button", { type: "button", ...props }, prefix, label) },
     "../components/Icon.jsx": { __esModule: true, default: () => null },
     "../components/CompetitionOptions.jsx": { __esModule: true, default: () => null },
+    "../components/CompetitionSkeleton.jsx": { __esModule: true, default: ({ label = "Chargement de la compétition…" }) => elem("div", { "data-page-loading": "" }, label) },
     "../components/CupCompetition.jsx": { __esModule: true, default: ({ competition, initialSeason }) => elem("section", { "data-cup-id": competition.id, "data-edition": initialSeason }, competition.name) },
     "../components/NationsCompetition.jsx": { __esModule: true, default: ({ competition }) => elem("section", { "data-nations-id": competition.id }, competition.name) },
     "../components/NativeKnockoutBracket.jsx": { __esModule: true, default: ({ competition }) => elem("section", { "data-native-bracket": competition.id }, "Tableau éliminatoire") },

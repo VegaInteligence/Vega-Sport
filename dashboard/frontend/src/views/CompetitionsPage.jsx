@@ -13,6 +13,7 @@ import React, {
 import Icon from "../components/Icon.jsx";
 import Layout from "../components/Layout.jsx";
 import CompetitionOptions from "../components/CompetitionOptions.jsx";
+import CompetitionSkeleton from "../components/CompetitionSkeleton.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import {
   Card,
@@ -807,6 +808,7 @@ export default function CompetitionsPage() {
     <Layout
       path="/competitions/"
       hideHeading={standalone}
+      loader={<CompetitionSkeleton />}
       title={directory ? "Toutes les compétitions" : "Compétitions à la une"}
       actions={
         directory ? null : (
@@ -896,10 +898,7 @@ export default function CompetitionsPage() {
             )
           ) : (!id && !choice.ready) ||
             (awaitsCupIndex(id) && cupIndex.loading) ? (
-            <Skeleton
-              data-page-loading=""
-              label="Chargement de la compétition…"
-            />
+            <CompetitionSkeleton detail />
           ) : awaitsCupIndex(id) && cupIndex.error ? (
             <div className="notice" role="alert">
               Les coupes nationales sont indisponibles.{" "}
