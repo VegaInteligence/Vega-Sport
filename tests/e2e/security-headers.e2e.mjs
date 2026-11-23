@@ -122,17 +122,20 @@ try {
     page.locator("a[href]").evaluateAll((as) => as.map((a) => a.getAttribute("href")));
   const links = await hrefs(p0);
   const find = (list, re) => list.find((h) => re.test(h || ""));
-  const club = find(links, /^\/clubs\/?\?.*\bid=t_/),
-    match = find(links, /^\/matchs\/?\?.*\bid=m_/);
+  const club = find(links, /^\/clubs\/?\?.*\bid=t_/);
+  let match = find(links, /^\/matchs\/?\?.*\bid=m_/);
   const league = match && new URLSearchParams(match.split("?")[1]).get("competition");
   const competition =
     find(links, /^\/competitions\/?\?.*\bid=l_/) || (league && `/competitions?id=${league}`);
+  // The home may link no player or match (podium hidden, quiet week): the other pages do.
   let player = find(links, /^\/joueurs\/?\?.*\bid=p_/);
-  for (const url of [match, club].filter(Boolean)) {
-    if (player) break;
+  for (const url of [match, club, competition].filter(Boolean)) {
+    if (player && match) break;
     await p0.goto(base + url, { waitUntil: "domcontentloaded", timeout: 90000 });
     await settle(p0);
-    player = find(await hrefs(p0), /^\/joueurs\/?\?.*\bid=p_/);
+    const more = await hrefs(p0);
+    player ||= find(more, /^\/joueurs\/?\?.*\bid=p_/);
+    match ||= find(more, /^\/matchs\/?\?.*\bid=m_/);
   }
   const pages = [
     ["home", "/"],
@@ -165,6 +168,21 @@ try {
     check(`S2 ${name}`, "no blocking Content-Security-Policy", String(response.headers.get("content-security-policy")), !response.headers.get("content-security-policy"));
   }
   check("S1 page document", "status 200", String(first?.status()), first?.status() === 200);
+
+  // S0: the collector sees a violation when there is one (an image from an origin not allowed).
+  {
+    const { context, page } = await open(desktop);
+    await page.goto(base + "/", { waitUntil: "domcontentloaded", timeout: 90000 });
+    await page.evaluate(() => {
+      const img = new Image();
+      img.src = "https://e2e.invalid/control.png";
+      document.body.append(img);
+    });
+    await page.waitForTimeout(500);
+    const seen = await page.evaluate(() => window.__csp);
+    check("S0 control", "an img-src violation is collected", JSON.stringify(seen.map((v) => `${v.directive} ${v.blocked} ${v.disposition}`)), seen.some((v) => v.directive === "img-src" && v.disposition === "report"));
+    await context.close();
+  }
 
   // S3: normal use, desktop and phone.
   for (const viewport of [desktop, phone]) {
