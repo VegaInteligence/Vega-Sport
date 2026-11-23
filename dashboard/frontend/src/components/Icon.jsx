@@ -28,6 +28,7 @@ import {
   GitCompareArrows,
   Save,
   House,
+  Crown,
 } from "lucide-react";
 const icons = {
   search: Search,
@@ -59,6 +60,7 @@ const icons = {
   compare: GitCompareArrows,
   save: Save,
   home: House,
+  crown: Crown,
 };
 export default function Icon({ name, className = "" }) {
   const Component = icons[name] || CircleDot;

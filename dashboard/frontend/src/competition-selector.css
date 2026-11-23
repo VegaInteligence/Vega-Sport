@@ -865,3 +865,86 @@
   .wcm-result strong { font-size: 38px; }
   .wcm-head-top { flex-direction: column; gap: 4px; }
 }
+
+/* The Player of the Round's crown, above the photo of the Team of the Round's best grade (VI-44). */
+.team-pitch-crown {
+  position: absolute;
+  top: -15px;
+  left: 50%;
+  z-index: 1;
+  display: grid;
+  transform: translateX(-50%);
+  color: var(--gold);
+  line-height: 0;
+}
+.team-pitch-crown .icon {
+  width: 18px;
+  height: 18px;
+  fill: color-mix(in srgb, var(--gold) 35%, transparent);
+}
+.team-pitch-line:first-child .team-pitch-player {
+  padding-top: 4px;
+}
+
+/* A league's « Joueurs » view: the whole race after a closed round, 20 a page (VI-44). */
+.league-race-view {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.league-race-view-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+.league-race-view-head .card-note {
+  margin: 0;
+}
+.league-race-table {
+  width: 100%;
+  min-width: 0;
+}
+.league-race-table tbody th {
+  max-width: 0;
+}
+.league-race-table .power-ranking-name {
+  max-width: 100%;
+  min-width: 0;
+}
+.league-race-table .power-ranking-name > span {
+  min-width: 0;
+}
+.league-race-table .power-ranking-name :is(strong, small) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.league-race-table :is(th, td) {
+  vertical-align: middle;
+}
+.league-race-table thead th:first-child,
+.league-race-table td.league-race-rank {
+  width: 1%;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.league-race-table tbody th {
+  font-weight: inherit;
+  text-align: left;
+}
+.league-race-table :is(th, td):is(:nth-child(3), :nth-child(4)) {
+  width: 1%;
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 640px) {
+  .league-race-table .league-race-minutes {
+    display: none;
+  }
+  .league-race-table :is(th, td) {
+    padding-inline: 6px;
+  }
+}

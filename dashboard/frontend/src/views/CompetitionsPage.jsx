@@ -41,6 +41,8 @@ import {
 } from "../services/catalog-client.js";
 import CompetitionHighlights from "../components/CompetitionHighlights.jsx";
 import LeagueRoundCards from "../components/LeagueRoundCards.jsx";
+import LeagueRace from "../components/LeagueRace.jsx";
+import { useLeagueRounds } from "../services/league-rounds.js";
 import SeasonSelect from "../components/SeasonSelect.jsx";
 import CupCompetition from "../components/CupCompetition.jsx";
 import NationsCompetition from "../components/NationsCompetition.jsx";
@@ -199,7 +201,8 @@ function Fixtures({
       ? "matches"
       : asked === "standings" ||
           asked === "matches" ||
-          (asked === "bracket" && hasKnockout)
+          (asked === "bracket" && hasKnockout) ||
+          (asked === "players" && !hasKnockout)
         ? asked
         : worldCup
           ? "bracket"
@@ -310,6 +313,17 @@ function Fixtures({
     supported ? competition?.id : null,
     seasonLabel(season),
   );
+  // A league with a closed round has the whole Player of the Season race (VI-44); a cup has no rounds.
+  const leagueRounds = useLeagueRounds(
+    supported && !hasKnockout ? competition?.id : null,
+    seasonLabel(season),
+  );
+  const hasRace = Boolean(leagueRounds.value?.latest);
+  // Asked for by its address, the view gives way to the table where the league has no race.
+  const noRace = view === "players" && !leagueRounds.loading && !hasRace;
+  useEffect(() => {
+    if (noRace) setViewState("standings");
+  }, [noRace]);
   const views = worldCup
     ? [
         ["bracket", "Tableau"],
@@ -321,6 +335,7 @@ function Fixtures({
         ["matches", "Matchs"],
         ...(hasKnockout ? [["bracket", "Tableau"]] : []),
         ...(projection ? [["projection", "Projection"]] : []),
+        ...(hasRace ? [["players", "Joueurs"]] : []),
       ];
   // Every competition, league or cup, has the edition's head on one row (#61).
   const editionHead = !day;
@@ -389,6 +404,12 @@ function Fixtures({
             onRetry={resource.retry}
             onNeedFixtures={needFixtures}
             served
+          />
+        ) : supported && view === "players" && !hasKnockout && (hasRace || leagueRounds.loading) ? (
+          <LeagueRace
+            key={seasonLabel(season)}
+            competition={competition?.id}
+            season={seasonLabel(season)}
           />
         ) : supported && view === "projection" && projection ? (
           <SeasonProjection
@@ -492,10 +513,11 @@ function Fixtures({
           }}
         />
       )}
-      {showHighlights && (
+      {showHighlights && !hasKnockout && (
         <LeagueRoundCards
           competition={competition?.id}
           season={seasonLabel(season)}
+          onAllPlayers={() => setView("players")}
         />
       )}
     </div>
@@ -507,12 +529,14 @@ const VIEW_OF_PARAM = {
   groupes: "groups",
   classement: "standings",
   matchs: "matches",
+  joueurs: "players",
 };
 const PARAM_OF_VIEW = {
   bracket: "tableau",
   groups: "groupes",
   standings: "classement",
   matches: "matchs",
+  players: "joueurs",
 };
 
 function availableView(id, edition, view) {
@@ -864,7 +888,9 @@ export default function CompetitionsPage() {
                 key={`${selected.id}:${requestedEdition}`}
                 competition={selected}
                 initialSeason={requestedEdition || openSeason}
-                {...(isCup(selected) ? edition : null)}
+                {...(isCup(selected)
+                  ? edition
+                  : { initialView: edition.initialView, onView: edition.onView })}
               />
             )
           ) : (!id && !choice.ready) ||
