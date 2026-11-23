@@ -60,6 +60,8 @@ L’ordre des opérations est essentiel :
 
 Une performance passée conserve ainsi le niveau de l’adversaire à cette date. Les championnats doivent être reliés par les rencontres internationales de clubs : des Elo calculés séparément avec la même moyenne ne créent pas automatiquement une échelle commune. Les clubs et les sélections restent deux ensembles distincts.
 
+Mise en œuvre pour les sélections (23 novembre 2026, `backend/vega/power.py`, FAILURE_MODES §50) : une passe à part, à partir du 1ᵉʳ juillet 2021, sur tous les matchs entre deux sélections (phases finales, éliminatoires, Ligues des nations, tournois mineurs, amicaux). Pas K = 30 × w × G, où G vaut 1 jusqu’à un but d’écart, 1,5 pour deux, (11 + écart) / 8 au-delà, et w l’enjeu du match pour une phase finale (Coupe du monde 1,30, Euro et championnats continentaux 1,20, Ligue des nations 1,05, tours compris), 1 pour un éliminatoire, 0,75 pour un autre tournoi, 0,5 pour un amical. Chaque sélection part de ses points FIFA du 18 février 2021 (1 point FIFA = 1 point Elo, l’édition centrée sur 1500 ; 1500 pour une sélection que l’édition ne classe pas). Les matchs antérieurs gardent l’Elo d’avant (K 20, départ 1500), qui ne nourrit plus les saisons depuis 2021/22. Le classement mondial d’une saison liste les sélections ayant joué dans les deux ans précédant sa date de référence, provisoire sous 8 matchs en quatre ans.
+
 Une extension envisagée consiste à séparer la force offensive et la force défensive. La discussion n’en fournit pas les équations.
 
 ## 4. Définir les rôles et les occasions d’agir

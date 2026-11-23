@@ -32,6 +32,11 @@ period, and the comparison between roles.
   divisions of a country together, and since version 4 the other confederations' club
   competitions tie their leagues: Copa Libertadores and Sudamericana, the CONCACAF and CAF
   Champions Cups).
+- National teams (nations-elo-v1, 23 November 2026, FAILURE_MODES §50): their own pass from 1 July 2021 over every
+  match between two national teams, friendlies and qualifiers included: K 30 × w × G(goal margin), w the stakes I_m of
+  a final tournament's match, 1 for a qualifier, 0.75 for a minor tournament, 0.5 for a friendly; each nation starts at
+  its FIFA points of 18 February 2021 centred on 1500. The clubs' pass, and the national rows before 2021/22, are as
+  above (K 20, 1500); I_m stored and read by the players' ranking is unchanged. « National teams: Elo from 1 July 2021 ».
 - Common scale (§ 3: "des Elo calculés séparément avec la même moyenne ne créent pas
   automatiquement une échelle commune"): a club enters at its league's level, not at 1500
   whatever the league. Version 4 (15 November 2026) gives every league a level and its
