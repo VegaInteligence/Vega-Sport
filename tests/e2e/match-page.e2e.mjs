@@ -46,6 +46,12 @@
 //      lines) and its read-out ends on « Tirs au but 100 % », the kicks not being counted as goals.
 //  V11 Feed disabled (enabled:false): no « Direct » tab, the usual default view (overview).
 //  V12 Score family core: no « Direct » tab.
+//  F1 A finished match that went to extra time, on its usual page (feed off, the read API's answer
+//     mocked: a goal at the 98th): the overview's chart runs to the 120th (« 120′ » tick, the two
+//     extra-time lines, « Prolongation »), its read-out ends on the winner at 100 % with « a.p. », and
+//     « Après prolongation » stands under the score.
+//  F2 The same after a shoot-out (0–0, 4–3 on penalties): « Tirs au but 4–3 » under the score, the
+//     read-out ends on « Tirs au but 100 % » with « t.a.b. 4–3 ».
 //  P1 Phone (iPhone 15, 393×852): no sideways scroll on Direct, line-ups, shots and the picker.
 //  X1 No page error in the console during the run (failed loads of remote images and of the fake
 //     live host excluded).
@@ -53,7 +59,7 @@
 // Run (local front against the API it proxies, or the public site):
 //   node tests/e2e/match-page.e2e.mjs <base url> <api base> <match id> <evidence dir>
 // e.g. node tests/e2e/match-page.e2e.mjs http://127.0.0.1:3000 http://127.0.0.1:8765 m_08LEIz /tmp/match-page-e2e
-// ONLY=N,L,D,T,A,V,P runs some sections (by the ids' letter). It writes evidence.json (setup,
+// ONLY=N,L,D,T,A,V,F,P runs some sections (by the ids' letter). It writes evidence.json (setup,
 // inputs, expected, actual, console) and screenshots, desktop and phone, into the evidence dir;
 // exit code 1 when any check fails.
 import { createRequire } from "node:module";
@@ -176,11 +182,17 @@ const liveState = (scene, families = { score: "live", events: "live", stats: "li
     },
   };
 };
-let forecastPoints = [];
+let forecastPoints = [], timeline = null;
 try {
-  const { timeline } = await import(new URL("../../dashboard/shared/inplay.js", import.meta.url));
+  ({ timeline } = await import(new URL("../../dashboard/shared/inplay.js", import.meta.url)));
   forecastPoints = timeline(1.18, 1.42, [], { profile: [0.13, 0.14, 0.18, 0.16, 0.16, 0.16, 0.07], down: 0.6, up: 1.7, ahead: 0.9, behind: 1.1 }, -0.03, 0);
 } catch { /* the chart's content is not checked */ }
+// The read API's answer for a finished match that went to the 120th (rankings.mjs, liveProbability): the last point is the result.
+const pastForecast = (goals, score, penalties) => {
+  const points = timeline(1.18, 1.42, goals, forecast.inplay, forecast.rho, 120, true).map((q) => ({ ...q, home: +q.home.toFixed(4), draw: +q.draw.toFixed(4), away: +q.away.toFixed(4) }));
+  Object.assign(points.at(-1), { home: score[0] > score[1] ? 1 : 0, draw: score[0] === score[1] ? 1 : 0, away: score[0] < score[1] ? 1 : 0 });
+  return { ...forecast, status: "finished", extraTime: true, penalties, points, events: goals };
+};
 const forecast = { match: id, status: "not_started", rates: { home: 1.18, away: 1.42 }, inplay: { profile: [0.13, 0.14, 0.18, 0.16, 0.16, 0.16, 0.07], down: 0.6, up: 1.7, ahead: 0.9, behind: 1.1 }, rho: -0.03, model: { version: 2, fittedAt: "2026-11-01T03:00:00Z", matches: 1 }, points: forecastPoints, events: [] };
 
 // ---------------------------------------------------------------- the browser
@@ -196,7 +208,16 @@ async function open(context, query = {}, live = null) {
   const tag = context === desktop ? "desktop" : "phone";
   page.on("console", (m) => m.type() === "error" && !IGNORED.test(m.text()) && consoleLog.push(`[${tag}] ${m.text().slice(0, 400)}`));
   page.on("pageerror", (e) => consoleLog.push(`[${tag}] pageerror ${e.message}`));
-  if (live) {
+  if (live?.past) {
+    await page.route("**/live/config", (r) => json(r, { enabled: false }));
+    await page.route("**/api/forecasts/live?*", (r) => json(r, live.past));
+    if (live.score) await page.route(`**/api/matches/${id}/summary*`, async (route) => {
+      const body = await (await route.fetch()).json();
+      body.data.match.home.score = live.score[0];
+      body.data.match.away.score = live.score[1];
+      await json(route, body);
+    });
+  } else if (live) {
     const { kickoff, state } = liveState(live.scene, live.families);
     await page.route("**/live/config", (r) => json(r, { enabled: live.enabled !== false, http: "live.invalid", realtime: "live.invalid", key: "e2e" }));
     await page.route(`**/live/matches/${id}`, (r) => json(r, state));
@@ -595,6 +616,45 @@ await section("V", async () => {
     await shot(p, name);
     await p.close();
   }
+});
+
+// ---------------------------------------------------------------- F: a finished match that went to the 120th
+await section("F", async () => {
+  if (!timeline) {
+    for (const n of ["F1", "F2"]) skip(n, "the shared in-play model", "dashboard/shared/inplay.js could not be loaded");
+    return;
+  }
+  const chartOf = async (page) => {
+    const chartBox = page.locator('[data-chart="win-probability"]').first();
+    await chartBox.locator("[data-extra-time]").waitFor({ timeout: 90000 }).catch(() => {});
+    return {
+      liveView: await page.locator("[data-live-view]").count(),
+      extraLines: await chartBox.locator("[data-extra-time] line").count(),
+      lastTick: prime(await chartBox.locator("text").filter({ hasText: /^120/ }).first().textContent().catch(() => "")),
+      period: ((await chartBox.locator("text").filter({ hasText: /^Prol/ }).first().textContent().catch(() => "")) || "").trim(),
+      readout: ((await page.locator("[data-readout]").first().textContent().catch(() => "")) || "").replace(/\s+/g, " ").trim(),
+      note: ((await page.locator(".scoreboard-shootout").textContent().catch(() => "")) || "").replace(/\s+/g, " ").trim(),
+    };
+  };
+  const homeName = summary?.data?.match?.home?.name || "";
+  // After extra time: 1–0, the goal at the 98th.
+  let page = await open(desktop, {}, { past: pastForecast([{ minute: 98, added: 0, kind: "goal", side: "home" }], [1, 0], null), score: [1, 0] });
+  let got = await chartOf(page);
+  check("F1 finished after extra time: the usual page's chart runs to the 120th, « a.p. », « Après prolongation »",
+    { liveView: 0, extraLines: 2, lastTick: "120′", period: "Prolongation", readout: `Fin · 1–0 a.p. … ${homeName} 100 % …`, note: "Après prolongation" }, got,
+    got.liveView === 0 && got.extraLines === 2 && got.lastTick === "120′" && got.period === "Prolongation" && /^Fin · 1–0 a\.p\./.test(got.readout)
+      && got.readout.includes(`${homeName}100 %`) && got.note === "Après prolongation");
+  await page.locator('[data-chart="win-probability"]').first().scrollIntoViewIfNeeded().catch(() => {});
+  await shot(page, "desktop-finished-extra-time");
+  await page.close();
+  // After a shoot-out: 0–0, 4–3 on penalties.
+  page = await open(desktop, {}, { past: pastForecast([], [0, 0], [4, 3]), score: [0, 0] });
+  got = await chartOf(page);
+  check("F2 finished after a shoot-out: « Tirs au but 4–3 », the chart ends on « Tirs au but 100 % »",
+    { liveView: 0, extraLines: 2, lastTick: "120′", readout: "Fin · 0–0 · t.a.b. 4–3 … Tirs au but 100 % …", note: "Tirs au but 4–3" }, got,
+    got.liveView === 0 && got.extraLines === 2 && got.lastTick === "120′" && /^Fin · 0–0 · t\.a\.b\. 4–3/.test(got.readout) && /Tirs au but\s*100 %/.test(got.readout) && got.note === "Tirs au but 4–3");
+  await shot(page, "desktop-finished-shootout");
+  await page.close();
 });
 
 // ---------------------------------------------------------------- P: phone
