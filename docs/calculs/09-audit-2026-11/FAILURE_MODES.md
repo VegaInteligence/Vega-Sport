@@ -3779,3 +3779,83 @@ the real `Worker.daily` under `vega_collect` and `vega_calc`, the real read API 
 | 48j | Production's schema (files up to 154) with rows, then the merged tree's `python -m vega.migrate`, then again | `applied=5 total=165` (155, 156, 157, 159, 160), then `applied=0 total=165`; rows up to 154 and their checksums unchanged; `vega_read` reads `api.home_internationals`, `api.standings`, `api.nation_matches`, `api.player_grade_status` | green (no code needed) |
 | 48k | 48j's data effects | 159: the version of each conflicting edition moves once (an existing version + 1, a new one created), no other; 160: `read_at` cleared on the failed units without an episode (an accepted empty list refused since included), kept on an ok unit, a failed unit with an episode and the other kinds | green |
 | 48l | 48j, a 2026/27 friendly of the internationals edition (verification only, main's site untouched) | `api.nation_matches` lists it once, with its edition's name; main's site tests green | green (verification only) |
+
+## 49. The season's other internationals of 2021/22 to 2025/26 (International Results, 23 Nov 2026, written before the tests)
+
+Main reads every international of 2026/27 that no other edition holds (`nations-results:internationals:2026/2027`,
+§48, migration 154) for the home's week strip. The nation page's carousel lists a nation's matches by edition and
+season; it showed no friendly or qualifier before 2026/27. The same edition is now read for each season from
+2021/22, the base's first, so that the nation page lists them; the Elo may later ask for more depth (another agent
+measures their effect: they stay out of it). The source is the same file (`results.csv`, CC0; the user's decision
+of 20 Nov 2026: free sources only).
+
+What an older season must not take: a match another edition already holds. The rule of 2026/27 (leave out the
+Nations League and the World Cup, and a tournament of `TOURNAMENT_EDITIONS` inside one of its editions' days) is not
+right for the older seasons as it stands: `results.csv` writes the Euro 2020's last seven matches (2–11 July 2021,
+season 2021/22 by their day) and the Euro 2024 (51 matches, 2023/24 and 2024/25) under « UEFA Euro », which the
+base holds as `open-cups:euro:2020` and `:2024`; and the Nations League of 2021/22 (the 2021 Finals), 2022/23 and
+2024/25 is held by no edition.
+
+### 49.1 Rules
+
+- **The seasons.** `INTERNATIONAL_SEASONS`, 2021/2022 to 2026/2027, one list in `nations-results.js` (projection and
+  parser) and one in `cups.py` (`EDITIONS`), equal (drift-tested). Going further back is the first year of each line.
+- **Held elsewhere, left out of every season:** « FIFA World Cup » (every edition is `open-cups:world-cup-history`,
+  1930–2026; 2022 and 2026 also PitchAPI's) and « UEFA Euro » (every edition is `open-cups:euro`, 1960–2028).
+- **Held elsewhere for some seasons:** « UEFA Nations League » is left out of a season for which the base holds a
+  Nations League edition — 2026/27 (OpenLigaDB's League A, International Results' Leagues B to D), as today — and kept
+  in the others (no edition holds 2021/22's Finals, 2022/23, 2024/25 or their play-offs), its round « UEFA Nations
+  League ». A tournament of `TOURNAMENT_EDITIONS` is left out inside one of its editions' days, as today (AFCON
+  2021/2023/2025, Copa América 2024, Asian Cup 2023, Gold Cup 2023/2025).
+- **Kept, held nowhere:** the World Cup and Euro qualifiers, the confederations' qualifiers, the CONCACAF Nations
+  League, Copa América 2021's knock-out matches of 1–10 July 2021 and the Gold Cup 2021 (no edition of theirs in
+  `TOURNAMENT_EDITIONS`: the summer cups of 2021 belong to 2020/21, before the base's first season), the Finalissima
+  2022, the Arab Cups, the regional cups and the non-FIFA sides (CONIFA, Island Games, Muratti Vase), as 2026/27 keeps
+  them. A match belongs to the season of its day (1 July–30 June); the match key (`internationals:day|home|away`)
+  carries no season and the days of two seasons are disjoint: no key in two editions.
+- **The same read.** No score (`NA`) is no match; a key twice in a season refuses the edition (as today); a season
+  without a single match is a failed read (as today). The 2026/27 edition is unchanged for the same file.
+- **The schedule.** An internationals season is running until 1 July of its last year: every two hours (2026/27, as
+  today); then finished: weekly. Every other edition keeps its period. The editions due together still read
+  `results.csv` once (§37, `prepare_due`), each with its own digest, state and failure.
+- **Outside the Elo, the forecasts and the worker's wake-up, unchanged.** `ELO_MATCHES` and `_COMPLEMENTARY` leave out
+  the prefix `nations-results:internationals:`, every season included; their text is not changed. A finished past
+  season has nothing to forecast.
+- **Identity.** A side is keyed by the file's English name under `international_results`, as in the other editions of
+  the file: a name the base holds from them is the same row; a new name is a new row, not marked national (no nation
+  page unless it plays an edition of `curated.NATIONAL_CUPS`, the convention of 2026/27); the identity pass merges it
+  with PitchAPI's national team of the same or a reviewed name, as before. `results.csv` writes every era under the
+  current name (`former_names.csv` names only the host country's former names, all ended before 2019): no renamed
+  side in these seasons. No new team row may be the same national team as another unmerged row (same flag in
+  `national-flags.js`) unless that pair existed before.
+- **The nation page.** `api.nation_matches` is unchanged (one match a day and pair, a copy a day apart absorbed). The
+  nation route gives a match of an internationals edition its tournament as competition and no round, so the
+  carousel's rule (« another match takes its competition and its season », mock-up B) labels it « Matchs amicaux
+  2024/25 », « Qualifications 2025/26 », « Ligue des nations 2024/25 », and its tile « Match amical », never « Phase
+  de groupes » (the file has no stage) nor « Matchs internationaux 2026/2027 2026/27 » (2026/27's matches today). No
+  layout change.
+- **The home's strip** reads the national editions by day (154): the current week is unchanged. An archived week of
+  a past season (`archive=1`) shows that week's internationals as it already shows that week's AFCON or Copa América
+  matches: measured, reported, not decided here.
+
+### 49.2 Failure modes and expected outcomes
+
+49a–49g, 49l: `tests/cup-sources.test.mjs`, `backend/api/test/nations.test.mjs` (pure). 49h–49k:
+`backend/tests/test_collection_wakeups.py` (disposable PostgreSQL, the real worker, bridge and projection). 49m: the E2E
+run on the real `results.csv` (evidence `donnees-hors-live/internationaux-historique/`).
+
+| # | Situation | Expected |
+|---|---|---|
+| 49a | The projection asked for 2021/2022 … 2025/2026; for 2020/2021 and 2027/2028 | 200, « Matchs internationaux 2021/2022 » …; 400 (the parser: « Unknown season » for 2020/2021) |
+| 49b | Euro 2020's quarter-final of 2 July 2021 and Euro 2024's matches of June and July 2024 | in no internationals season |
+| 49c | The World Cup 2022 (20 Nov–18 Dec 2022) and the World Cup 2026's June matches | in no internationals season |
+| 49d | A Nations League match of 7 Sep 2024; one of 2026/27 | the first in 2024/2025, round « UEFA Nations League »; the second in none |
+| 49e | AFCON 2021 (Jan 2022), Asian Cup 2023 and AFCON 2023 (Jan 2024), Gold Cup 2023 and 2025 (June), Copa América 2024 (June–July), AFCON 2025 (Dec 2025) | in no internationals season; their qualifiers kept |
+| 49f | Copa América 2021's final (10 July 2021), a Gold Cup 2021 match (July 2021), the Finalissima (1 June 2022) | kept in 2021/2022, each its tournament as round |
+| 49g | 2026/27 with main's test file (S1–S4) | the same rows as main |
+| 49h | `cups.INTERNATIONAL_SEASONS`, the projection's list, `EDITIONS` | equal lists; each season an edition `nations-results:internationals:<season>` |
+| 49i | `cups.scopes` on 19 Nov 2026 | internationals 2021/22–2025/26 weekly, 2026/27 every 2 hours; every other edition the period main gives it |
+| 49j | The fourteen International Results editions due together, the test file holding one friendly a season and one row of each tournament edition | one request; fourteen editions `ok`, each its digest and exactly one match (no tournament row in an internationals edition); failing and back as 37i–37j, nothing rewritten |
+| 49k | An Elo published; a result of `nations-results:internationals:2024/2025` by the real path | `elo_due` false, no Elo run |
+| 49l | The nation route's match of an internationals edition (friendly, World Cup qualifier, Nations League 2024/25), and of the Nations League edition | competition « Friendly », « FIFA World Cup qualification », « UEFA Nations League », no round; carousel « Matchs amicaux 2024/25 », « Qualifications 2025/26 », « Ligue des nations 2024/25 »; the edition's match unchanged |
+| 49m | E2E, real `results.csv`: main's editions, then the five seasons, then a second pass | per season its count; no pair of matches of two editions with the same two sides a day or less apart; 0 written on the second pass; teams created and reused counted; no new same-flag pair of unmerged national rows; the Elo's population unchanged; the current home week's strip unchanged |
