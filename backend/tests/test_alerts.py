@@ -26,6 +26,10 @@ Failure modes, and what is expected:
   timeout (57014) is not a refused connection; a 404 is not a 5xx;
 - the alert address in the repository -> it is a NoEcho parameter, empty by default, read
   by deploy.sh from SSM /vega/v2/alert-email; without it the deploy goes on and says so;
+- one person told, asleep or away (23 November 2026: two people run the service) -> the
+  parameter may hold two addresses separated by a comma; deploy.sh gives each its own
+  NoEcho parameter and each topic a subscription per address; a third address is not
+  dropped in silence: the deploy says so and goes on;
 - an alarm that sounds at night on three requests -> every alarm says how it treats
   missing data, the distribution's error rate counts only periods of at least 100
   requests, and the only alarms that treat missing data as breaching are the ones whose
@@ -256,19 +260,65 @@ class AlertsTest(unittest.TestCase):
 
     def test_the_address_stays_out_of_the_repository(self):
         for body in (self.alerts, self.edge):
-            param = one(r"\n  AlertEmail:\n((?:    .*\n)+)", body, "AlertEmail parameter")
-            self.assertIn("NoEcho: true", param)
-            self.assertIn("Default: ''", param)
             self.assertNotRegex(body, r"[\w.+-]+@[\w-]+\.[\w.]+")
-            sub = [b for kind, b in resources(body).values() if kind == "AWS::SNS::Subscription"]
-            self.assertEqual(len(sub), 1)
-            self.assertEqual(prop(sub[0], "Condition"), "HasEmail")
-            self.assertEqual(prop(sub[0], "Endpoint"), "!Ref AlertEmail")
-        read = one(r"^(alert_email=[^\n]*)$", DEPLOY, "the address read")
+            for name in ("AlertEmail", "AlertEmail2"):
+                param = one(rf"\n  {name}:\n((?:    .*\n)+)", body, f"{name} parameter")
+                self.assertIn("NoEcho: true", param)
+                self.assertIn("Default: ''", param)
+        read = one(r"^(alert_emails=[^\n]*)$", DEPLOY, "the addresses read")
         self.assertIn("/vega/v2/alert-email", read)
         self.assertTrue(read.rstrip().endswith("|| true)"), "a missing parameter must not stop the deploy")
         self.assertRegex(DEPLOY, r"no SSM parameter /vega/v2/alert-email")
-        self.assertEqual(len(re.findall(r'AlertEmail="\$alert_email"', DEPLOY)), 2)
+        self.assertEqual(len(re.findall(r'AlertEmail="\$alert_email" AlertEmail2="\$alert_email2"', DEPLOY)), 2)
+
+    def test_each_address_has_its_subscription_on_each_topic(self):
+        for body in (self.alerts, self.edge):
+            first = one(r"\n  AlertEmail:\n((?:    .*\n)+)", body, "AlertEmail parameter")
+            second = one(r"\n  AlertEmail2:\n((?:    .*\n)+)", body, "AlertEmail2 parameter")
+            self.assertEqual(prop(first, "AllowedPattern"), prop(second, "AllowedPattern"))
+            sub = [b for kind, b in resources(body).values() if kind == "AWS::SNS::Subscription"]
+            self.assertEqual(
+                sorted((prop(b, "Condition"), prop(b, "Endpoint"), prop(b, "Protocol")) for b in sub),
+                [("HasEmail", "!Ref AlertEmail", "email"), ("HasEmail2", "!Ref AlertEmail2", "email")])
+            self.assertIn("HasEmail2: !Not [!Equals [!Ref AlertEmail2, '']]", body)
+
+    @required(shutil.which("bash"), "bash")
+    def test_the_deploy_gives_each_address_its_parameter(self):
+        fragment = one(r"(\n# --- Alerts \(alerts\.yaml.*?# --- end of alerts ---\n)", DEPLOY, "alerts step of deploy.sh")
+
+        def run(value, actions=""):
+            script = (
+                "set -euo pipefail\n"
+                'aws() { printf "%s\\n" "$FAKE_VALUE"; }\n'
+                'stack() { echo "stack $*"; }\n'
+                "output() { echo E2NNDNWK491L8W; }\n"
+                "COUNT=1; media=https://d111111abcdef8.cloudfront.net\n" + fragment)
+            env = {"PATH": "/usr/bin:/bin", "FAKE_VALUE": value}
+            if actions:
+                env["GITHUB_ACTIONS"] = actions
+            done = subprocess.run(["bash", "-c", script], capture_output=True, text=True, env=env, timeout=30)
+            self.assertEqual(done.returncode, 0, done.stderr)
+            return done.stdout
+
+        def overrides(out):
+            lines = [line for line in out.splitlines() if line.startswith("stack ")]
+            self.assertEqual(len(lines), 2, out)
+            return [(re.search(r'AlertEmail=(\S*)', line).group(1), re.search(r'AlertEmail2=(\S*)', line).group(1)) for line in lines]
+
+        self.assertEqual(overrides(run("a@example.org")), [("a@example.org", "")] * 2)
+        self.assertEqual(overrides(run("a@example.org,b@example.net")), [("a@example.org", "b@example.net")] * 2)
+        self.assertEqual(overrides(run(" a@example.org , b@example.net ")), [("a@example.org", "b@example.net")] * 2)
+        self.assertEqual(overrides(run("a@example.org,")), [("a@example.org", "")] * 2)
+        out = run("None")
+        self.assertEqual(overrides(out), [("", "")] * 2)
+        self.assertIn("no SSM parameter /vega/v2/alert-email", out)
+        out = run("a@example.org,b@example.net,c@example.com")
+        self.assertEqual(overrides(out), [("a@example.org", "b@example.net")] * 2)
+        self.assertRegex(out, r"alerts: /vega/v2/alert-email holds more than two addresses")
+        self.assertNotIn("c@example.com", out)
+        masked = run("a@example.org,b@example.net", actions="true")
+        self.assertIn("::add-mask::a@example.org", masked)
+        self.assertIn("::add-mask::b@example.net", masked)
 
     def test_no_alarm_sounds_on_a_handful_of_requests(self):
         for body in (self.alerts, self.edge):

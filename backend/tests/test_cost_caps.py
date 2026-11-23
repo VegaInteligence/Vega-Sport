@@ -9,7 +9,8 @@ Failure modes, and what is expected:
 - a notification threshold missing (50, 80 or 100 % of the actual spend, 100 % of the
   forecast) -> budget.yaml holds each one exactly once, as a percentage;
 - an address written in the template (it would be in the repository and in every copy
-  of it) -> every subscriber is the AlertEmail parameter (or the optional alert topic),
+  of it) -> every subscriber is the AlertEmail parameter, the optional second address
+  AlertEmail2 (two people run the service) or the optional alert topic,
   which has no default, and no e-mail address appears in the file;
 - a budget below the current spend (an alert every month, soon ignored) or far above it
   (an alert that comes too late) -> the default lies between the current estimate's
@@ -85,7 +86,20 @@ class BudgetTemplateTest(unittest.TestCase):
         addresses = re.findall(r"Address: ([^,}\n]+)", self.text)
         self.assertTrue(addresses)
         for address in addresses:
-            self.assertIn(address.strip(), ("!Ref AlertEmail", "!Ref AlertTopicArn"))
+            self.assertIn(address.strip(), ("!Ref AlertEmail", "!Ref AlertEmail2", "!Ref AlertTopicArn"))
+
+    def test_a_second_person_receives_every_mail_when_named(self):
+        second = one(r"\n  AlertEmail2:\n((?:    .*\n)+)", self.text, "AlertEmail2 parameter")
+        self.assertIn("Default: ''", second)
+        self.assertIn("HasEmail2: !Not [!Equals [!Ref AlertEmail2, '']]", self.text)
+        # Wherever the first address is a subscriber, the second one follows it, only when given.
+        firsts = re.findall(r"\{(SubscriptionType|Type): EMAIL, Address: !Ref AlertEmail\}", self.text)
+        seconds = re.findall(
+            r"!If \[HasEmail2, \{(SubscriptionType|Type): EMAIL, Address: !Ref AlertEmail2\}, !Ref AWS::NoValue\]", self.text)
+        self.assertEqual(len(firsts), 6, "four notifications, the anomaly mail, the cut-off")
+        self.assertEqual(sorted(firsts), sorted(seconds))
+        for subscribers in re.findall(r"Subscribers:((?:\n\s+- .*)+|.*)", self.text):
+            self.assertEqual(subscribers.count("!Ref AlertEmail}"), subscribers.count("!Ref AlertEmail2}"), subscribers)
 
     def test_the_budget_s_amount_is_near_the_current_spend(self):
         amount = one(r"\n  MonthlyBudget:\n((?:    .*\n)+)", self.text, "MonthlyBudget parameter")
@@ -131,6 +145,7 @@ class BudgetTemplateTest(unittest.TestCase):
         self.assertIn("--template-file infra/aws/budget.yaml", command)
         self.assertIn("--region us-east-2", command)
         self.assertIn("AlertEmail=", command)
+        self.assertIn("AlertEmail2=", command)
 
 
 class ConcurrencyTest(unittest.TestCase):
