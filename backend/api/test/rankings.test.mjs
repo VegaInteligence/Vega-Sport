@@ -255,6 +255,40 @@ test("a finished match minute by minute", { skip }, async () => {
   assert.equal((await get("/api/forecasts/live?match=1")).response.status, 400);
 });
 
+// Extra time (issue #68). Failure modes and expected outcomes, written before the code:
+// - a finished match level at the 90th and decided in extra time (m_xtime1, 0-0 then 1-0 at 112'): `extraTime`, points to
+//   the 120th, the extra-time goal counted at its minute, the 120th point the result (1, 0, 0), `penalties` null;
+// - decided on penalties (m_shoot1, 1-1, 4-3): points to the 120th, the 120th point a draw (0, 1, 0), `penalties` [4, 3];
+// - penalties stated without an extra-time score (m_shoot2, 2-2 with a goal at 90+3 and one at 101', 5-4): extra time all
+//   the same; the 90+3 goal stays in regulation (score 2-1 at the 90th), the 101st's counts at the 101st;
+// - goal events that do not add up to the final score (extra time included): no timeline (404), the route's check as
+//   before (not seeded here);
+// - a match without extra time (m_aaaaa1): unchanged, no `extraTime` or `penalties` key;
+// - in play with a clock past the 90th and nothing in the base saying extra time (m_live91, clock 100): it stops at the
+//   90th as before; extra time in play is the live feed's to say (its period), the site carrying the model on.
+test("a match that went to extra time, minute by minute", { skip }, async () => {
+  const live = async (id) => (await get(`/api/forecasts/live?match=${id}`)).body;
+  const three = (p) => [p.home, p.draw, p.away];
+  const decided = await live("m_xtime1");
+  assert.deepEqual([decided.status, decided.extraTime, decided.penalties, decided.points.length, decided.points.at(-1).minute], ["finished", true, null, 121, 120]);
+  assert.deepEqual([decided.points[90].score, decided.points[111].score, decided.points[112].score], [[0, 0], [0, 0], [1, 0]]);
+  assert.ok(decided.points[112].home > decided.points[111].home);
+  assert.deepEqual(three(decided.points[120]), [1, 0, 0]);
+  // The first 91 points are the regulation timeline's: the 90th is not forced to a result.
+  assert.ok(decided.points[90].draw > 0 && decided.points[90].draw < 1);
+  const shoot = await live("m_shoot1");
+  assert.deepEqual([shoot.extraTime, shoot.penalties, shoot.points.length, shoot.points[120].score], [true, [4, 3], 121, [1, 1]]);
+  assert.deepEqual(three(shoot.points[120]), [0, 1, 0]);
+  const stated = await live("m_shoot2");
+  assert.deepEqual([stated.extraTime, stated.penalties, stated.points.length], [true, [5, 4], 121]);
+  assert.deepEqual([stated.points[89].score, stated.points[90].score, stated.points[100].score, stated.points[101].score], [[1, 1], [1, 2], [1, 2], [2, 2]]);
+  assert.deepEqual(three(stated.points[120]), [0, 1, 0]);
+  const plain = await live("m_aaaaa1");
+  assert.deepEqual([plain.points.length, "extraTime" in plain, "penalties" in plain], [91, false, false]);
+  const inPlay = await live("m_live91");
+  assert.deepEqual([inPlay.status, inPlay.points.length, "extraTime" in inPlay, inPlay.points[90].score], ["in_play", 91, false, [1, 1]]);
+});
+
 test("the season's breakouts, and a player's own flag", { skip }, async () => {
   const { body } = await get("/api/rankings/breakouts?season=2025/2026");
   assert.deepEqual([body.season, body.candidates, body.flagged, body.rows.length], ["2025/2026", 12, 1, 1]);
