@@ -99,7 +99,14 @@ function useClubTab() {
 
 export default function ClubScoutProfile({ clubId, backHref, club }) {
   const state = useClubDossier(clubId);
-  const read = state.status === "ready" ? state.dossier : null;
+  // The figures show once, against their default reference (Europe): until its pool is read
+  // (or has failed, and the league stands in), the page keeps its early view.
+  const pool = useEuropePool(true);
+  const read =
+    state.status === "ready" &&
+    (pool.status !== "loading" || state.dossier.coverage.empty)
+      ? state.dossier
+      : null;
   // A season without any match of the club names nobody: the page's club does.
   const dossier =
     read && !read.allRows.length && club?.name

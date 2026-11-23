@@ -354,11 +354,10 @@ function useComparisonStart(clubId, key, publication) {
     if (!ready) return;
     const quiet = (entry) => entry?.promise.catch(() => {});
     const { league } = clubLeagues(f.data, clubId);
-    // The league's reads first: the profile waits for them, the European comparison does not
-    // (its reads, eleven of them, used to share the network with the league's two).
-    const europe = () => europeKey(publication) && quiet(europeLoad(publication));
-    if (league) leagueCohort(league, publication).promise.then(europe, europe);
-    else europe();
+    // Both together: the profile's figures wait for the league's cohort and for the European
+    // pool, its default reference (ClubScoutProfile).
+    if (league) quiet(leagueCohort(league, publication));
+    if (europeKey(publication)) quiet(europeLoad(publication));
     // One start per club and publication, once the page's own read of the club is there.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, ready]);
