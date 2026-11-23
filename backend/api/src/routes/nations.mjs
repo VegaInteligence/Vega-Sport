@@ -159,10 +159,17 @@ function nationOf(r) {
   return out;
 }
 
-function matchOf(r) {
+// « The season's other internationals » (nations-results:internationals:<season>): the file names each match's
+// tournament (« Friendly », « FIFA World Cup qualification »…), stored as its round, and no stage (FAILURE_MODES §49).
+const INTERNATIONALS = /^nations-results:internationals:/;
+
+/** One match of the nation; a match of the season's other internationals under its tournament, with no round. */
+export function matchOf(r) {
+  const internationals = INTERNATIONALS.test(r.edition || "") && Boolean(r.round);
   const out = {
-    date: r.match_date ? String(r.match_date).slice(0, 10) : null, season: r.season, competition: r.competition,
-    edition: r.edition ?? null, round: r.round ?? null, status: r.status,
+    date: r.match_date ? String(r.match_date).slice(0, 10) : null, season: r.season,
+    competition: internationals ? r.round : r.competition,
+    edition: r.edition ?? null, round: internationals ? null : r.round ?? null, status: r.status,
     home: { id: r.home_id, name: r.home_name, imageUrl: r.home_image ?? null },
     away: { id: r.away_id, name: r.away_name, imageUrl: r.away_image ?? null },
     homeScore: r.home_score, awayScore: r.away_score, homePenalties: r.home_penalties, awayPenalties: r.away_penalties,

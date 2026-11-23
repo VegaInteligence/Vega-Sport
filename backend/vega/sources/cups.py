@@ -8,7 +8,7 @@ that would drop or unplay a result already held, or whose scores cannot be read 
 FAILURE_MODES.md §19).
 """
 
-from datetime import timedelta
+from datetime import date, timedelta
 import hashlib
 import json
 import re
@@ -26,6 +26,10 @@ EURO_HISTORY_YEARS = ("1960", "1964", "1968", "1972", "1976", "1980", "1984", "1
 # frontend/src/services/cup-archives.js (NATIONAL_CUP_ARCHIVES keys and seasons).
 NATIONAL_CUP_ARCHIVES = ("austria-cup-archive", "germany-cup-archive", "fa-cup-archive", "efl-cup-archive", "copa-del-rey-archive",
                          "coppa-italia-archive", "knvb-beker-archive", "portugal-cup-archive", "swiss-cup-archive")
+# The seasons of « the season's other internationals » (International Results): 2021/22, the base's first, to 2026/27.
+# Going further back is this line's first year; frontend/src/services/nations-results.js INTERNATIONAL_SEASONS is the
+# same list (drift-tested, FAILURE_MODES.md §49).
+INTERNATIONAL_SEASONS = tuple(f"{year}/{year + 1}" for year in range(2021, 2027))
 # The editions main refreshes (aws_refresh_sources.mjs); drift-tested.
 EDITIONS = (
     *[("open-cups", "euro", s) for s in (*EURO_HISTORY_YEARS, "2020", "2024", "2028")],
@@ -48,9 +52,9 @@ EDITIONS = (
     ("nations-results", "copa-america", "2024"),
     ("nations-results", "asian-cup", "2023"),
     *[("nations-results", "gold-cup", s) for s in ("2023", "2025")],
-    # Every other international of the season (friendlies, qualifiers, the other confederations' Nations Leagues):
-    # the home's week strip, outside the Elo (power.ELO_MATCHES).
-    ("nations-results", "internationals", "2026/2027"),
+    # Every other international of each season (friendlies, qualifiers, the other confederations' Nations Leagues…):
+    # the home's week strip and the nation page, outside the Elo (power.ELO_MATCHES).
+    *[("nations-results", "internationals", s) for s in INTERNATIONAL_SEASONS],
 )
 PROVIDER = {"open-cups": "openfootball", "openligadb": "openligadb", "nations-results": "international_results"}
 # The tournament each summer cup is, for its Vega season (seasons.py: played in June/July,
@@ -60,10 +64,14 @@ TOURNAMENTS = {"euro": "Euro", "world-cup-history": "World Cup", "club-world-cup
 
 
 def scopes(now):
-    """Running editions every two hours, finished ones weekly."""
+    """Running editions every two hours, finished ones weekly. A season of internationals is running until 1 July of
+    its last year (§49): the past seasons are read weekly."""
     out = {}
     for kind, competition, season in EDITIONS:
-        recent = int(season[:4]) >= now.year - 1
+        if competition == "internationals":
+            recent = now.date() < date(int(season[-4:]), 7, 1)
+        else:
+            recent = int(season[:4]) >= now.year - 1
         out[f"{kind}:{competition}:{season}"] = timedelta(hours=2) if recent else timedelta(days=7)
     return out
 
