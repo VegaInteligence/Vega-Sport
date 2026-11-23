@@ -118,3 +118,43 @@ export function nearestUntried(matches, tried, now = Date.now(), limit = 24) {
     .slice(0, limit)
     .map(({ match }) => match);
 }
+
+const isPlayed = (match) => match.status === "finished" || match.finished === true;
+const teamKey = (team) => team?.id || team?.name || null;
+/**
+ * The API names the round of played matches only. When no named matchday is still to
+ * play, the next one is read from the earliest unnamed fixtures to come: each club once, at
+ * most as many matches as a named matchday holds. It becomes « Prochaine journée », just
+ * before the unnamed rest (« Journée non renseignée »), which stays last.
+ */
+export function withNextMatchday(groups, now = Date.now()) {
+  const unknown = groups.find((group) => group.key === "unknown");
+  const named = groups.filter((group) => group.key !== "unknown");
+  const size = Math.max(0, ...named.filter((group) => !group.playoff).map((group) => group.matches.length));
+  if (!unknown || size < 2) return groups;
+  const namedToCome = named.some((group) =>
+    group.matches.some((match) => !isPlayed(match) && (instant(match) ?? -Infinity) >= now),
+  );
+  if (namedToCome) return groups;
+  const taken = [], teams = new Set();
+  for (const match of unknown.matches) {
+    const time = instant(match);
+    if (isPlayed(match) || time == null || time < now - 12 * 3600000) continue;
+    const sides = [teamKey(match.home_team || match.home), teamKey(match.away_team || match.away)];
+    if (sides.some((side) => !side || teams.has(side))) break;
+    sides.forEach((side) => teams.add(side));
+    taken.push(match);
+    if (taken.length >= size) break;
+  }
+  if (!taken.length) return groups;
+  const rest = unknown.matches.filter((match) => !taken.includes(match));
+  const next = {
+    key: "next",
+    name: "",
+    playoff: false,
+    label: "Prochaine journée",
+    matches: taken,
+    firstTime: instant(taken[0]) ?? Infinity,
+  };
+  return [...named, next, ...(rest.length ? [{ ...unknown, matches: rest }] : [])];
+}

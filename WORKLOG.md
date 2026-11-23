@@ -1,5 +1,18 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Club, nation and competition pages — 23 November 2026 (mock-up approved, PR open) — GitHub #76
+
+- Goal: the « Pages club, nation et compétition » section of the Discord plan (7 rows): back link and h1 on the nation page, competition header, skeletons instead of the full-screen logo (nation, competition), progressive club page, 16 px card inset and width cap, nation overview (coming matches, tab in the address, save button), fewer clicks.
+- Constraints: mock-up validated by the user before this counts as implementation; nothing pushed without the user's go; no data in git; E2E written first.
+- Branch `claude/pages-club-nation-competition` (local, from main 639764b), built by three sub-branches merged into it (`claude/proto-comp`, `claude/proto-nation`, `claude/proto-club`).
+- 23 Nov: the user approved the mock-up as shown (decision card « Valider et ouvrir la PR »), with no change requested. Decisions it carries: nation « Historique » tab replaced by a « Récent / Depuis 1930 » switch on the Elo chart; « Prochaine journée » inferred from the coming fixtures because the API names played matchdays only; title « Compétitions à la une »; « Enregistrer » kept (no « Suivre »); width cap 1600 px; club figures shown once, already against Europe (the European pool is read in parallel, the page shows identity and last matches first).
+- Validated 23 Nov on a local replay of production answers (season 2026/2027; PSG, France, Ligue 1, Champions League): site 825/825, build OK, E2E `tests/e2e/club-page.e2e.mjs` 16/16, `nation-page.e2e.mjs` 27/27, `competition-page.e2e.mjs` 21/21. Not run against the public site (not reachable from the cloud session).
+- Load, every API answer 400 ms late, median of 3: club name 2.5 s → 1.1 s, page revealed 3.0 s → 1.5 s, figures final 3.0 s → 2.5 s, 30 requests both; nation and competition unchanged (skeleton instead of the logo).
+- Known limits: a direct link to a club season without data shows « Club » as the name; « Autre compétition » still shows a reading line that shifts the club tabs; player and match page skeletons belong to their own work.
+- Merged main b1b27c7 (archived league seasons) on 23 Nov: site 827/827, the three E2E unchanged (16/16, 27/27, 21/21).
+- Review page (before/after): https://claude.ai/artifact/JVo5kN4v2i5PuhzMCPE1dX. Issue: GitHub #76 (Linear issue created by the sync). No overlapping In Progress issue on 23 Nov.
+- Next action: the user's review and merge of the PR; then run the three E2E on the public site.
+
 ## Reliability and security before launch — VI-46 (#67) and VI-35 (23 November 2026)
 
 - Goal: the « Fiabilité et sécurité » lot of the 23 Nov plan: someone is told when the API, the base, the CDN or the worker fails; one address can no longer take the 32 copies; a spend alert exists; the site and the API send security headers.

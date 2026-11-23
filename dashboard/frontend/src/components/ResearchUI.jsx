@@ -506,7 +506,9 @@ export function ResearchLists({ kind = "players" }) {
                     ? "/joueurs/"
                     : kind === "clubs"
                       ? "/clubs/"
-                      : "/matchs/",
+                      : kind === "nations"
+                        ? "/nations/"
+                        : "/matchs/",
                   {
                     id: entry.id,
                     season: entry.season || f.season,
@@ -527,7 +529,13 @@ export function ResearchLists({ kind = "players" }) {
       ) : (
         <Empty>
           Aucun{" "}
-          {kind === "players" ? "joueur" : kind === "clubs" ? "club" : "match"}{" "}
+          {kind === "players"
+            ? "joueur"
+            : kind === "clubs"
+              ? "club"
+              : kind === "nations"
+                ? "sélection"
+                : "match"}{" "}
           dans cette liste.
         </Empty>
       )}
