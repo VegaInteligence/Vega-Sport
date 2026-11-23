@@ -1,5 +1,14 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## National-team internationals of 2021/22 to 2025/26 — GitHub #70 / Linear VI-49 (23 November 2026)
+
+- Goal: « the season's other internationals » (friendlies, qualifiers, older Nations Leagues…) collected for 2021/22–2025/26 as for 2026/27, listed on the nation page. Branch `claude/internationaux-historique` (worktree `/home/user/worktrees/internationaux-historique`), not pushed.
+- Built: one season list (`INTERNATIONAL_SEASONS` in nations-results.js and cups.py, drift-tested; going back = first year of each line); every season leaves out the World Cup and the Euro (held by open-cups; Euro 2020's July 2021 games would otherwise enter 2021/22), the UEFA Nations League where the base has its edition (2026/27 only), a TOURNAMENT_EDITIONS tournament inside its days; finished seasons read weekly, 2026/27 every 2 h; the nation route serves these matches under their tournament (carousel « Matchs amicaux 2024/25 », « Qualifications 2025/26 »); an internationals edition renames no team (49n, found by the E2E). FAILURE_MODES §49 → tests → code, separate commits.
+- Decision (hugo, 23 Nov): these matches will enter the national-team Elo from 2021/22, starting from the FIFA points of February 2021 — a separate next step on this branch by another agent; this work keeps `ELO_MATCHES` and `_COMPLEMENTARY` untouched (Elo population identical in the E2E).
+- E2E (real results.csv, PostgreSQL 16 + local ANALYZE ONLY shim): 4 809 matches (1 182 / 703 / 1 055 / 998 / 871), 0 duplicate with any other edition, 76 sides created (35 non-FIFA/regional, no nation page), first pass 6.8 s and one read, second pass 0 rows. Evidence: `/mnt/project-files/donnees-hors-live/internationaux-historique/EVIDENCE.md`.
+- Open: archived weeks of past seasons' home now show that week's internationals (current week unchanged); Copa América 2021 knock-outs and Gold Cup 2021 appear as plain groups (no tournament edition); English names of minor tournaments (« Arab Cup 2025/26 »); « Copa América qualification » labelled « Copa América » (2 matches).
+- Next: user decisions above; the Elo change (other agent); push/PR when asked.
+
 ## No data in git — VI-45 (20–21 November 2026, done)
 
 - Goal: no data in the repository, history included. History rewritten without backup on the user's word, then force-pushed (every branch and the tag): old main 4844e92589 → 8f1b34522d, a clone drops from ~4.1 GB to 34 MB.

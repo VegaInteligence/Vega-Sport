@@ -3829,7 +3829,7 @@ base holds as `open-cups:euro:2020` and `:2024`; and the Nations League of 2021/
   side in these seasons. No new team row may be the same national team as another unmerged row (same flag in
   `national-flags.js`) unless that pair existed before.
 - **No team renamed by the internationals** (found by the E2E run, 23 Nov 2026, before this rule: the five seasons'
-  first read renamed 31 sides of the current week's strip, « Irlande » → « Republic of Ireland », « Autriche » →
+  first read renamed the current week strip's sides the Nations League names in French, « Irlande » → « Republic of Ireland », « Autriche » →
   « Austria »). `cups._team` gives a key's row the name of the edition written last; the Nations League edition
   writes the French names of the same keys. An internationals edition never renames a row it did not create: its
   spelling is a name of the source (`entity_names`, `source_spelling`); a side it creates takes the file's name.
