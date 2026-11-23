@@ -26,6 +26,14 @@ import s from "./ClubScout.module.css";
 
 export const clubStyles = s;
 
+/** What a club read in progress says to screen readers. */
+export function loadingLabel(state) {
+  const p = state?.progress;
+  return p?.step === "league"
+    ? `Construction du référentiel${p.league ? ` · ${p.league}` : ""} · ${p.done} / ${p.total} clubs lus`
+    : "Lecture du club";
+}
+
 export function ClubLoading({ state, compact = false }) {
   if (state.status === "error")
     return (
@@ -34,11 +42,7 @@ export function ClubLoading({ state, compact = false }) {
         <span>{state.error}</span>
       </div>
     );
-  const p = state.progress;
-  const label =
-    p?.step === "league"
-      ? `Construction du référentiel${p.league ? ` · ${p.league}` : ""} · ${p.done} / ${p.total} clubs lus`
-      : "Lecture du club";
+  const label = loadingLabel(state);
   return compact ? (
     <Skeleton label={label} lines={4} />
   ) : (

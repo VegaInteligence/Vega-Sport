@@ -354,11 +354,38 @@ function useComparisonStart(clubId, key, publication) {
     if (!ready) return;
     const quiet = (entry) => entry?.promise.catch(() => {});
     const { league } = clubLeagues(f.data, clubId);
-    if (league) quiet(leagueCohort(league, publication));
-    if (europeKey(publication)) quiet(europeLoad(publication));
+    // The league's reads first: the profile waits for them, the European comparison does not
+    // (its reads, eleven of them, used to share the network with the league's two).
+    const europe = () => europeKey(publication) && quiet(europeLoad(publication));
+    if (league) leagueCohort(league, publication).promise.then(europe, europe);
+    else europe();
     // One start per club and publication, once the page's own read of the club is there.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, ready]);
+}
+
+/**
+ * What the page's read of the club (its summary, already in memory) shows before the club's
+ * dossier: its name, crest, league, coach, stadium and matches. No rank, centile or index:
+ * those need the league's cohort. null when `data` is not this club's read.
+ */
+export function clubEarly(data, clubId, season) {
+  if (!isClubRead(data, clubId)) return null;
+  const { league } = clubLeagues(data, clubId);
+  const summary = clubSummary(data, clubId);
+  const allRows = teamRows(data.matches, clubId);
+  const lastRow = allRows[allRows.length - 1];
+  const lastHome = [...allRows].reverse().find((row) => row.side === "home");
+  return {
+    id: clubId,
+    season,
+    name: summary.name,
+    imageUrl: lastRow?.match[lastRow.side]?.imageUrl || summary.imageUrl,
+    coach: lastRow?.match[lastRow.side]?.coach || null,
+    stadium: lastHome?.match.stadium || null,
+    league,
+    allRows,
+  };
 }
 
 /**

@@ -97,6 +97,38 @@ function competitionRecords(dossier) {
   }));
 }
 
+/**
+ * The top of the identity column: the way back, the crest, the name, the league and season,
+ * the coach and stadium. `club` is the dossier, or what the page's read of the club gives
+ * before it (clubEarly): the column starts the same either way.
+ */
+export function RailHead({ club, backHref }) {
+  return (
+    <>
+      {backHref && (
+        <BackLink
+          className={`inline-link ${s.railBack}`}
+          href={backHref}
+          label="Tous les clubs"
+        />
+      )}
+      <div className={s.identity}>
+        <Crest club={club} className={`crest ${s.bigCrest}`} />
+        <h1 className={s.name}>{club.name}</h1>
+        <p className={s.sub}>
+          {[club.league?.name, club.season].filter(Boolean).join(" · ")}
+        </p>
+        <div className={s.chips}>
+          {club.coach && (
+            <span className={s.chip}>Entraîneur · {club.coach}</span>
+          )}
+          {club.stadium && <span className={s.chip}>{club.stadium}</span>}
+        </div>
+      </div>
+    </>
+  );
+}
+
 export function IdentityRail({ dossier, onTab, backHref }) {
   const f = useFootball();
   const self = dossier.self,
@@ -108,26 +140,7 @@ export function IdentityRail({ dossier, onTab, backHref }) {
   const more = usePhoneFold();
   return (
     <aside className={s.rail} aria-label="Identité du club" {...more.fold}>
-      {backHref && (
-        <BackLink
-          className={`inline-link ${s.railBack}`}
-          href={backHref}
-          label="Tous les clubs"
-        />
-      )}
-      <div className={s.identity}>
-        <Crest club={dossier} className={`crest ${s.bigCrest}`} />
-        <h1 className={s.name}>{dossier.name}</h1>
-        <p className={s.sub}>
-          {[dossier.league?.name, dossier.season].filter(Boolean).join(" · ")}
-        </p>
-        <div className={s.chips}>
-          {dossier.coach && (
-            <span className={s.chip}>Entraîneur · {dossier.coach}</span>
-          )}
-          {dossier.stadium && <span className={s.chip}>{dossier.stadium}</span>}
-        </div>
-      </div>
+      <RailHead club={dossier} backHref={backHref} />
       <div className={s.railSection}>
         <div className={s.railTitle}>
           <div className={s.railName}>

@@ -15,6 +15,7 @@ import {
   METRICS,
   PERFORMANCE_KEYS,
   PHASES,
+  clubEarly,
   europeReferential,
   formatMetric,
   rebase,
@@ -34,6 +35,7 @@ import {
   ClubEmptySeason,
   ClubLoading,
   Crest,
+  loadingLabel,
   Info,
   MatchRows,
   MenuItem,
@@ -42,8 +44,10 @@ import {
   ordinal,
 } from "./ClubScoutUI.jsx";
 import { RankingDialog, RankingProvider } from "./RankingDialog.jsx";
+import ClubSkeleton, { ClubSkeletonRail } from "./ClubSkeleton.jsx";
 import {
   IdentityRail,
+  RailHead,
   Matches,
   Overview,
   Squad,
@@ -107,7 +111,9 @@ export default function ClubScoutProfile({ clubId, backHref }) {
           label="Tous les clubs"
         />
       )}
-      {!dossier ? (
+      {!dossier && state.status !== "error" ? (
+        <ClubEarly clubId={clubId} state={state} backHref={backHref} />
+      ) : !dossier ? (
         <ClubLoading state={state} />
       ) : dossier.coverage.empty ? (
         <ClubEmptySeason dossier={dossier} played={dossier.coverage.played} />
@@ -115,6 +121,44 @@ export default function ClubScoutProfile({ clubId, backHref }) {
         <Profile key={dossier.id} dossier={dossier} backHref={backHref} />
       )}
     </div>
+  );
+}
+
+/**
+ * While the dossier is read (the club's shots and appearances, its league's matches): the
+ * identity column's head and the last matches from the page's read of the club, already in
+ * memory, the rest in grey. The page is revealed then; nothing ranked is shown before the
+ * league's cohort. Without that read (another club's, or none), the whole skeleton.
+ */
+function ClubEarly({ clubId, state, backHref }) {
+  const f = useFootball();
+  const club = useMemo(
+    () => clubEarly(f.data, clubId, f.season),
+    [f.data, clubId, f.season],
+  );
+  const label = loadingLabel(state);
+  if (!club) return <ClubLoading state={state} />;
+  return (
+    <ClubSkeleton
+      live
+      label={label}
+      rail={
+        <aside className={sA.rail} aria-label="Identité du club">
+          <RailHead club={club} backHref={backHref} />
+          <div className="club-skeleton-shapes" aria-hidden="true">
+            <ClubSkeletonRail />
+          </div>
+        </aside>
+      }
+      after={
+        <Card
+          title="Derniers matchs"
+          text="Toutes compétitions · barres : xG pour (bleu) et contre (orange)"
+        >
+          <MatchRows rows={club.allRows} limit={6} />
+        </Card>
+      }
+    />
   );
 }
 

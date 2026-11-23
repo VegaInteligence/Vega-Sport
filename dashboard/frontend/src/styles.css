@@ -3011,6 +3011,9 @@ th[aria-sort="descending"] .sort-indicator {
   gap: 22px;
   min-width: 0;
 }
+.club-skeleton-shapes {
+  display: contents;
+}
 .club-skeleton-toolbar {
   display: flex;
   justify-content: space-between;
