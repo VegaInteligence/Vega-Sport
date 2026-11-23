@@ -1048,7 +1048,7 @@ SELECT s.match_id, s.player_id, s.season_id AS edition, s.team_id, s.minutes_pla
       AND e.event_type = 'goal' AND e.is_penalty AND e.is_own_goal IS NOT TRUE) END AS np_goals,
   s.npxg, s.shots_on_target, s.big_chances_missed, s.assists, s.xa, s.chances_created, s.big_chances_created,
   s.passes_into_final_third, a.progressive_passes, a.progressive_carries, s.dribbles_succeeded, s.dribbles_total,
-  s.tackles, s.interceptions, s.recoveries, s.clearances, s.shot_blocks, s.duels_won, s.duels_won + s.duels_lost AS duels_attempted,
+  s.tackles, s.interceptions, s.recoveries, s.clearances, s.shot_blocks, s.duels_won, s.duels_lost,
   s.aerials_won, s.aerials_total, s.dribbled_past, s.errors_led_to_goal, s.accurate_passes, s.accurate_passes_total,
   s.dispossessed, s.touches, s.goals_prevented, s.high_claims, s.punches, s.sweeper_actions, s.long_balls_accurate, s.long_balls_total
 FROM core.player_match_stats s
@@ -1067,13 +1067,19 @@ _KEPT = ("match_id", "player_id", "edition", "team_id", "position_id", "is_start
 # The statistics the source leaves blank at zero. A match of a few dozen players shows the
 # common ones whenever the source publishes them; the rare ones need the edition.
 ZERO_IN_MATCH = ("npxg", "shots_on_target", "xa", "chances_created", "passes_into_final_third", "dribbles_succeeded", "dribbles_total",
-                 "shot_blocks", "duels_won", "duels_attempted", "aerials_won", "aerials_total", "dribbled_past", "dispossessed")
+                 "shot_blocks", "duels_won", "duels_lost", "aerials_won", "aerials_total", "dribbled_past", "dispossessed")
 ZERO_IN_EDITION = ("np_goals", "assists", "big_chances_missed", "big_chances_created", "errors_led_to_goal")
+# The totals the source does not publish, each the sum of its parts. They are added once the
+# parts have their zeros, never in the query: a sum with a blank part is a blank, and a blank
+# total read as a zero made five duels won and none lost five successes out of no attempt
+# (issue #71). A part that stays unknown leaves its total unknown.
+SUMS = {"duels_attempted": ("duels_won", "duels_lost")}
 
 
 def restore_zeros(rows):
     """Give a blank its zero where the source publishes the statistic (see the module's
-    notes): `rows` are changed in place, and the number of values restored is returned."""
+    notes), then add the totals of SUMS: `rows` are changed in place, and the number of
+    values restored is returned."""
     in_match, in_edition = defaultdict(set), defaultdict(set)
     for r in rows:
         for name in ZERO_IN_MATCH:
@@ -1096,6 +1102,10 @@ def restore_zeros(rows):
             if r.get(name) is None and name in seen:
                 r[name] = 0.0
                 restored += 1
+    for r in rows:
+        for total, parts in SUMS.items():
+            values = [r.get(part) for part in parts]
+            r[total] = None if None in values else sum(values)
     return restored
 
 
