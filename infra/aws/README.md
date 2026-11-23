@@ -62,6 +62,20 @@ A stack the workflow has changed once keeps `vega-v2-cloudformation` as its role
 
 A run is checked on what it deployed, not on its colour: its log ends with `done`, and `aws lambda get-function-configuration --function-name vega-v2-api --query LastModified` gives the time of the run.
 
+#### Spend alerts (`budget.yaml`, stack `vega-v2-budget`)
+
+The owner deploys it once with his own credentials (the workflow's roles have no billing permission, and `deploy.sh` never touches it): a monthly cost budget of $120 (the estimate below is $76–81) that mails at 50, 80 and 100 % of the actual spend and when the forecast passes 100 %, and Cost Anomaly Detection that mails once a day an anomaly of $10 or more. Budgets without actions and anomaly detection are free. The address is a parameter, never in the repository. The account allows one services anomaly monitor, and Cost Explorer may have created one already: list it first, and pass its ARN if there is one.
+
+```sh
+aws ce get-anomaly-monitors --profile statarena --query "AnomalyMonitors[?MonitorDimension=='SERVICE'].MonitorArn" --output text
+```
+
+```sh
+aws cloudformation deploy --profile statarena --region us-east-2 --stack-name vega-v2-budget --template-file infra/aws/budget.yaml --capabilities CAPABILITY_IAM --no-fail-on-empty-changeset --parameter-overrides AlertEmail=<address> ExistingServiceMonitorArn=<ARN printed above, empty if none>
+```
+
+Optional, off by default: `LiveSchedulerRoleName=<the live stack's SchedulerRole>` (`aws cloudformation describe-stack-resource --stack-name vega-v2-live --logical-resource-id SchedulerRole --query StackResourceDetail.PhysicalResourceId`) makes the budget deny, at 100 %, the start of new live ingestor tasks; nothing that serves the site stops. Reverse it with `aws budgets execute-budget-action --execution-type REVERSE_BUDGET_ACTION`. `AlertTopicArn=<vega-v2-alerts>` also sends the budget mails to that topic, once its policy lets `budgets.amazonaws.com` publish.
+
 ### Deploy
 
 From a workstation:
