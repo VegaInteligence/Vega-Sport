@@ -80,6 +80,43 @@ class ParseTest(unittest.TestCase):
         self.assertIsNone(match("FC", "france"))  # nothing left of the name
         self.assertIsNone(match("West Ham United", ""))
 
+    def test_archive_teams_take_the_reviewed_club_spellings(self):
+        # The archived seasons of the five big leagues, live on 23 Nov 2026: 300 of their 1,078 table rows named no club of
+        # the site, « Lille OSC », « Olympique Lyonnais » or « Bayer 04 Leverkusen » among them, spellings the cups' pass
+        # already reviewed (curated.CLUB_ALIASES) that the archive pass did not read. Each now names its club, in its
+        # country only; a club the base does not hold, or a spelling nobody reviewed, still names none.
+        site = {"france": ["Lille", "Lyon", "Marseille", "Rennes", "Reims", "Brest", "Troyes", "Bordeaux", "Nice", "Montpellier"],
+                "espagne": ["Athletic Club", "Real Sociedad", "Real Betis", "Celta Vigo", "Mallorca", "Espanyol", "Deportivo A Coruña"],
+                "allemagne": ["Bayer Leverkusen", "Wolfsburg", "Hoffenheim", "Mainz 05", "Borussia Mönchengladbach", "Darmstadt"],
+                "italie": ["Lazio", "Fiorentina", "Atalanta", "Bologna", "Sampdoria", "Parma"]}
+        exact, core, ids = {}, {}, {}
+        for country, names in site.items():
+            for name in names:
+                team = ids.setdefault(name, len(ids) + 100)
+                for where in (country, None):
+                    exact.setdefault((where, identity.normalize(name)), set()).add(team)
+                    key, forms = identity.club_parts(name)
+                    core.setdefault((where, key), {}).setdefault(team, set()).add(forms)
+        match = lambda name, country: identity.match_archive_team((exact, core), name, country)
+        cases = {"france": {"Lille OSC": "Lille", "Olympique Lyonnais": "Lyon", "Olympique Lyon": "Lyon", "Olympique Marseille": "Marseille",
+                            "Stade Rennais": "Rennes", "Stade Rennes": "Rennes", "Stade de Reims": "Reims", "Stade Reims": "Reims",
+                            "Stade Brestois 29": "Brest", "Stade Brest": "Brest", "ESTAC Troyes": "Troyes", "Girondins Bordeaux": "Bordeaux",
+                            "OGC Nice": "Nice", "Montpellier HSC": "Montpellier"},
+                 "espagne": {"Athletic Bilbao": "Athletic Club", "Real Sociedad de Fútbol": "Real Sociedad", "Real Betis Balompié": "Real Betis",
+                             "RC Celta": "Celta Vigo", "RC Celta de Vigo": "Celta Vigo", "RCD Mallorca": "Mallorca",
+                             "Espanyol Barcelona": "Espanyol", "Deportivo La Coruña": "Deportivo A Coruña"},
+                 "allemagne": {"Bayer 04 Leverkusen": "Bayer Leverkusen", "VfL Wolfsburg": "Wolfsburg", "1899 Hoffenheim": "Hoffenheim",
+                               "TSG 1899 Hoffenheim": "Hoffenheim", "1. FSV Mainz 05": "Mainz 05",
+                               "Bor. Mönchengladbach": "Borussia Mönchengladbach", "SV Darmstadt 98": "Darmstadt"},
+                 "italie": {"SS Lazio": "Lazio", "Lazio Roma": "Lazio", "ACF Fiorentina": "Fiorentina", "Atalanta BC": "Atalanta",
+                            "Bologna FC 1909": "Bologna", "UC Sampdoria": "Sampdoria", "Parma Calcio 1913": "Parma"}}
+        for country, spellings in cases.items():
+            for spelling, club in spellings.items():
+                self.assertEqual(match(spelling, country), ids[club], spelling)
+        self.assertIsNone(match("Olympique Lyonnais", "espagne"))  # another country's archive
+        self.assertIsNone(match("SD Eibar", "espagne"))  # reviewed, but a club the base does not hold
+        self.assertIsNone(match("Olympique Lyonnaise", "france"))  # a spelling nobody reviewed
+
     def test_club_world_cup_spellings(self):
         # "Name (XXX)": the club of that name in that country, or of its reviewed spelling.
         pitch = {("chelsea", False): {(1, "ENG")}, ("alain", False): {(2, "UAE"), (3, "KSA")}, ("realmadrid", False): {(4, "ESP")},

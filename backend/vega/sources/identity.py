@@ -25,7 +25,10 @@ same name once the club-form words at either end are set aside ("West Ham United
 "West Ham United") — provided the archive's name carries every form word PitchAPI's does:
 a word PitchAPI keeps tells two clubs apart ("Wimbledon", 1929-2003, and "Wimbledon FC"
 are not "AFC Wimbledon"; "CA Bastia" is not "SC Bastia"). The few archive spellings that
-only lack such a word are reviewed one by one (ARCHIVE_SPELLINGS). A European cup edition
+only lack such a word are reviewed one by one (ARCHIVE_SPELLINGS); a spelling the cups' pass reviewed
+(curated.CLUB_ALIASES, « Olympique Lyonnais » for « Lyon ») names its club too, in the archive's country
+(23 Nov 2026: 300 of the 1,078 table rows of the five big leagues' 2010-2020 seasons named no club of
+the site before the archive pass read that list). A European cup edition
 names no country: its teams are matched the same way among every PitchAPI club. In every
 case exactly one club must answer; two archive teams whose form words contradict ("Parma
 AC", "Parma FC") are not both the same club, and a merge that would make a club play
@@ -339,7 +342,10 @@ def _archive_match(clubs, name, country):
         return None, False
     exact, core = clubs
     where = None if country == EUROPE else country
-    found = exact.get((where, normalize(name)), ()) or exact.get((where, normalize(ARCHIVE_SPELLINGS.get(name, name))), ())
+    from .curated import CLUB_ALIASES
+
+    found = (exact.get((where, normalize(name)), ()) or exact.get((where, normalize(ARCHIVE_SPELLINGS.get(name, name))), ())
+             or exact.get((where, normalize(CLUB_ALIASES.get(name, name))), ()))
     if found:
         return (next(iter(found)), True) if len(found) == 1 else (None, False)
     key, forms = club_parts(name)
