@@ -147,6 +147,13 @@
 .row:last-child {
   border-bottom: 0;
 }
+/* While the read runs: the height of two rows, the board's usual size, so the tab does not move when it comes. */
+.placeholder {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: var(--placeholder, 121px);
+}
 .who {
   display: inline-flex;
   align-items: center;
@@ -300,6 +307,9 @@
   }
   .row .lane {
     inset: 3px 0;
+  }
+  .placeholder {
+    --placeholder: 323px;
   }
 }
 

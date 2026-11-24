@@ -222,6 +222,9 @@ const tabs = await load("ClubScoutTabs.jsx", {
   "./ClubScoutUI.jsx": { ...ui, LeagueTable: () => null, FormStrip: () => null },
   "./ClubSubstitutions.jsx": { __esModule: true, default: () => null },
   "./ClubPassingTriangle.jsx": { __esModule: true, default: () => null },
+  // The squad tab's absents (lot 2 of « Blessés et suspendus »): not rendered by these tests.
+  "./Absences.jsx": { AbsenceBoard: () => null, AbsenceCoverage: () => null, AbsenceMark: () => null },
+  "../services/team-absences.js": { absenceView: () => null, useTeamAbsences: () => ({}) },
 });
 
 test("coming matches: no fabricated difficulty, the reason told apart", () => {

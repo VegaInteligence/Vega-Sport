@@ -1,25 +1,35 @@
 /**
- * A team's absent players today (/api/teams/{id}/absences): the injured, the ill and the
- * suspended, with when they went out and when they are expected back. A club or a national
- * side never read answers 404: no absences known (null), never « nobody is out ».
+ * A team's absent players today (/api/teams/{id}/absences, backend/api/src/routes/profiles.mjs): the injured, the ill
+ * and the suspended, with when they went out and when they are expected back. A club or a national side the base
+ * does not know answers 404: no absences known (null), never « nobody is out ». A national side is asked with its
+ * own id (its injuries and illnesses only).
  *
- * Answer: { id, asOf, squad: { players, read }, absences: [{ player: { id, name, imageUrl,
- * role }, kind: "injury"|"illness"|"suspension"|null, label, start, expectedReturn,
- * matchesMissed, matchesRemaining, competition: { code, id, name }|null, readAt }] }.
+ * Answer (`data`): { id, asOf, squad: { players, read }, absences: [{ player: { id, name, imageUrl, role },
+ * kind: "injury"|"illness"|"suspension"|null, label, start, expectedReturn, matchesMissed, matchesRemaining,
+ * competition: { code, id, name }|null, readAt }] }. `role` is a role key (agg.player_power.role) or null; a
+ * suspension's competition has `id` and `name` null while it is not linked; kind, return and match counts may be
+ * null and stay unknown here (never « injury », a date or 0). A player may be out twice (suspended and injured).
  */
-import { useResource, json } from "./resources.js";
-import { injuryLabel } from "./injury-labels.js";
+import { useResource, primeResource, json } from "./resources.js";
+import { absenceLabel } from "./injury-labels.js";
+import { ROLE_LABEL } from "./power-ranking.js";
 
 const DAY = 86400000;
 const parse = (iso) => Date.parse(`${String(iso).slice(0, 10)}T00:00:00Z`);
 const missing = (error) => (/\bHTTP 404\b/.test(error?.message || "") ? null : Promise.reject(error));
+const key = (id) => `team-absences:${id || "none"}`;
+const load = (id) => () =>
+  json(`/api/teams/${encodeURIComponent(id)}/absences`)
+    .then((body) => body?.data ?? null)
+    .catch(missing);
 
 export function useTeamAbsences(id) {
-  return useResource(
-    `team-absences:${id || "none"}`,
-    () => json(`/api/teams/${encodeURIComponent(id)}/absences`).catch(missing),
-    Boolean(id),
-  );
+  return useResource(key(id), load(id), Boolean(id));
+}
+
+/** Starts the read before its tab is open, so that the squad tab's card is there when the tab is. */
+export function primeTeamAbsences(id) {
+  if (id) Promise.resolve(primeResource(key(id), load(id))).catch(() => {});
 }
 
 /** « injury », « illness », « suspension » or « unknown » (an absence the source did not class). */
@@ -27,11 +37,13 @@ export const absenceKind = (absence) =>
   ["injury", "illness", "suspension"].includes(absence?.kind) ? absence.kind : "unknown";
 
 /** The reason in French; an absence the source did not class is not called an injury. */
-export function absenceReason(absence) {
-  const kind = absenceKind(absence);
-  if (kind === "unknown") return absence?.label ? injuryLabel(absence.label, "unknown").replace(/^Blessure$/, "Absent") : "Absent";
-  return injuryLabel(absence.label, absence.kind);
-}
+export const absenceReason = (absence) => absenceLabel(absence?.label, absence?.kind);
+
+/** The player's role as the site names it; a key it does not know, or none, is « Poste non renseigné ». */
+export const absenceRole = (absence) => ROLE_LABEL[absence?.player?.role] || "Poste non renseigné";
+
+/** A suspension's competition: its name, else its code while it is not linked; null without one. */
+export const absenceCompetition = (absence) => absence?.competition?.name || absence?.competition?.code || null;
 
 const dayMonth = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", timeZone: "UTC" });
 const dayMonthYear = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
@@ -51,13 +63,18 @@ export function returnDistance(iso, asOf) {
   return days < 14 ? `dans ${days} j` : `dans ${Math.round(days / 7)} sem.`;
 }
 
-/** Whether a suspension keeps the player out of a match of this competition (an injury always does). */
-export function absenceApplies(absence, competition) {
-  if (absenceKind(absence) !== "suspension" || !absence.competition || !competition) return true;
-  const { id, name } = absence.competition;
-  if (id && competition.id) return id === competition.id;
-  const norm = (value) => String(value || "").trim().toLowerCase();
-  return !name || !competition.name || norm(name) === norm(competition.name);
+/**
+ * Whether an absence keeps the player out of a match: a suspension only in its own competition (the same id: one
+ * not linked yet, or without a competition, is not placed) with matches still to serve; any other absence when its
+ * return is unknown or comes after the kick-off.
+ */
+export function absenceApplies(absence, match) {
+  if (absenceKind(absence) === "suspension")
+    return Boolean(absence.competition?.id && match?.competitionId && absence.competition.id === match.competitionId)
+      && absence.matchesRemaining !== 0;
+  if (!absence.expectedReturn) return true;
+  const kickoff = Date.parse(match?.kickoff || "");
+  return !Number.isFinite(kickoff) || parse(absence.expectedReturn) > kickoff;
 }
 
 const order = (absence) => {
@@ -68,24 +85,28 @@ const order = (absence) => {
 };
 
 /**
- * What the pages draw: the absences sorted by return (suspensions, then dated returns,
- * then the unknown ones, the latest out first), each player's own by id, and how much of the
- * squad was read. Null when nothing was read.
+ * What the pages draw: the absences sorted by return (suspensions, then dated returns, then the unknown ones, the
+ * latest out first), each with a `key` of its own, each player's first one by id, and how much of the squad was read.
+ * Null when nothing was read. Options: `match` ({ competitionId, kickoff }) keeps the absences that count for that
+ * match; `suspensions: false` leaves the suspensions out (a national side: a club's suspension does not count there).
  */
-export function absenceView(answer, competition = null) {
+export function absenceView(answer, { match = null, suspensions = true } = {}) {
   if (!answer || !Array.isArray(answer.absences)) return null;
   const rows = answer.absences
-    .filter((a) => a?.player?.id && absenceApplies(a, competition))
+    .filter((a) => a?.player?.id && (suspensions || absenceKind(a) !== "suspension") && (!match || absenceApplies(a, match)))
     .sort((a, b) => {
       const [x, y] = [order(a), order(b)];
       return x[0] - y[0] || x[1] - y[1];
-    });
+    })
+    .map((a, i) => ({ ...a, key: `${a.player.id}:${a.kind ?? "unknown"}:${a.start ?? ""}:${a.label ?? ""}:${i}` }));
+  const byPlayer = new Map();
+  for (const a of rows) if (!byPlayer.has(a.player.id)) byPlayer.set(a.player.id, a);
   const players = Number.isFinite(answer.squad?.players) ? answer.squad.players : null;
   const read = Number.isFinite(answer.squad?.read) ? answer.squad.read : null;
   return {
     asOf: answer.asOf,
     rows,
-    byPlayer: new Map(rows.map((a) => [a.player.id, a])),
+    byPlayer,
     squad: players != null && read != null ? { players, read: Math.min(read, players) } : null,
   };
 }
@@ -122,7 +143,8 @@ export function absenceTitle(absence, asOf) {
   const reason = absenceReason(absence);
   if (absenceKind(absence) === "suspension") {
     const n = absence.matchesRemaining;
-    const where = absence.competition?.name ? ` en ${absence.competition.name}` : "";
+    const competition = absenceCompetition(absence);
+    const where = competition ? ` en ${competition}` : "";
     return n ? `${reason} · ${n} match${n > 1 ? "s" : ""} à purger${where}` : `${reason}${where}`;
   }
   return absence.expectedReturn

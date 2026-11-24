@@ -407,8 +407,8 @@ function EloChart({ points, height, wide = false }) {
 
 function PlayersTable({ nationId, players, limit }) {
   const f = useFootball();
-  // Injured or suspended today, at his club or with the side: most likely not available.
-  const absences = absenceView(useTeamAbsences(nationId).value);
+  // Injured or ill today (the side's own read): most likely not available. A club's suspension does not count here.
+  const absences = absenceView(useTeamAbsences(nationId).value, { suspensions: false });
   const rows = limit ? players.rows.slice(0, limit) : players.rows;
   return (
     <div className="table-scroll">

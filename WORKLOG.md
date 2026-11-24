@@ -1,5 +1,12 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Injured and suspended players, lot 2 « Écrans » — VI-15 (24 November 2026, branch `claude/absents-ecrans` from the lot 1 branch, local, not pushed)
+
+- Design: mock-up validated as is by hugo on 24 Nov 2026 (`blesses-suspendus/maquette/`): the « Absents » card at the top of the club's « Effectif » tab (photo, reason, since, one time scale for every return, the squad read in its corner), a mark beside an absent player's name in the club and national-side tables, the absents' block under the pre-match probabilities (one half per side), a suspension in grey as on the player page. No change to it.
+- Done: wired to the real `GET /api/teams/{id}/absences` (`{ data }`, role keys through `ROLE_LABEL` in `services/power-ranking.js`, an unlinked competition by its code, null kind / return / match counts kept unknown, one player out twice = two rows); match block: a suspension only for the match's competition id, an injury only when its return is empty or after kick-off, matches not started only, the forecast's sentence unchanged (the model does not count absents yet); national side: same route with its id, suspensions left out; loading keeps the card's place (two rows), read primed beside the club dossier; empty / 404 / failure: no card. Player page (VI-15 gaps): an unclassified episode is « Motif non précisé » and neutral, unknown matches missed are « — » and not summed as 0.
+- Checks: E2E `K*` in `tests/e2e/club-page`, `nation-page`, `match-page` (`ONLY=K`, answers from `tests/e2e/support/absences.mjs`); evidence `blesses-suspendus/lot2-ecrans/EVIDENCE.md`.
+- Left: not checked against the deployed API (replay only); the model does not use absents (lot 4); when the read ends empty the reserved place closes (the tab moves up once); the player page's fix has unit checks only, no E2E.
+
 ## Injured and suspended players, lot 1 « Données » — VI-15 / FAILURE_MODES § 59 (24 November 2026, branch `claude/absents-blesses-suspendus`, local, not pushed)
 
 - Goal (chantier « Blessés et suspendus », method doc https://claude.ai/artifact/GnscskB9xAnWK9oCNwQdYP): know who is out for a club's next match. Lot 1 = collection, storage, one read; lots 2–4 follow (screen by another agent in its own worktree; the model).

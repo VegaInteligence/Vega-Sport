@@ -59,19 +59,33 @@
 //  F4 The same match finished in 90 minutes (the read API's answer without extraTime): the chart
 //     ends at « 90′ », with no extra-time line.
 //  P1 Phone (iPhone 15, 393×852): no sideways scroll on Direct, line-ups, shots and the picker.
+//  Absents (lot 2 of « Blessés et suspendus », mock-up validated on 24 Nov 2026), on a match not started
+//  (ABSENT_MATCH, default the match given; the replay's PSG – Lorient, Ligue 1, 28 Nov 2026 19:45 UTC). The
+//  answers of GET /api/teams/{id}/absences come from tests/e2e/support/absences.mjs, in the route's exact shape:
+//  K1 « Absents » comes right after « Probabilités » in « Avant-match », one half per side (crest and name).
+//  K2 PSG's half: a suspension shows only when its competition's id is the match's (Pacho's Ligue 1 one); one in a
+//     competition not linked (FRC, id null) or in another (Hakimi's Champions League) does not; an injury shows when
+//     its return is empty or after the kick-off (Kvaratskhelia, Doué's unclassified episode), not when it is before
+//     (Pacho's knee, back on 26 Nov). The side's count is its rows. Lorient's half: Talbi and Makengo.
+//  K3 The forecast's sentence is unchanged (« le modèle ne connaît ni les compositions ni les absents »).
+//  K4 Lorient not known (404): its half reads « Non renseignés », PSG's keeps its rows.
+//  K5 Neither side known (404), or both reads failing: no card, « Probabilités » still there, no page error.
+//  K6 The same match finished (its detail answered as finished, 2–1): no « Absents » card.
+//  K7 Phone (393 px): the halves stacked, no sideways page scroll.
 //  X1 No page error in the console during the run (failed loads of remote images and of the fake
 //     live host excluded).
 //
 // Run (local front against the API it proxies, or the public site):
 //   node tests/e2e/match-page.e2e.mjs <base url> <api base> <match id> <evidence dir>
 // e.g. node tests/e2e/match-page.e2e.mjs http://127.0.0.1:3000 http://127.0.0.1:8765 m_08LEIz /tmp/match-page-e2e
-// ONLY=N,L,D,T,A,V,F,P runs some sections (by the ids' letter). It writes evidence.json (setup,
+// ONLY=N,L,D,T,A,V,F,P,K runs some sections (by the ids' letter); ONLY=K alone needs no summary of the match. It writes evidence.json (setup,
 // inputs, expected, actual, console) and screenshots, desktop and phone, into the evidence dir;
 // exit code 1 when any check fails.
 import { createRequire } from "node:module";
 import { mkdir, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { LIGUE1, LORIENT, PSG, lorientAnswer, psgAnswer, serveAbsences } from "./support/absences.mjs";
 
 const [base = "http://127.0.0.1:3000", api = base, id = "m_08LEIz", out = path.join(os.tmpdir(), "match-page-e2e")] = process.argv.slice(2);
 await mkdir(out, { recursive: true });
@@ -89,6 +103,116 @@ const skip = (cid, expected, reason) => {
   results.push({ id: cid, expected, actual: null, ok: null, skipped: reason });
   console.log("SKIP", cid, "—", reason);
 };
+
+// ---------------------------------------------------------------- K: the absents of a match not started
+const ABSENT_MATCH = process.env.ABSENT_MATCH || id;
+async function absentChecks(browser) {
+  const IGNORE = /Failed to load resource|WebSocket|live\.invalid|ERR_NAME_NOT_RESOLVED/;
+  const openContext = async (contextOptions, plan, finished = false) => {
+    const ctx = await browser.newContext({ locale: "fr-FR", ...contextOptions });
+    await ctx.route(/va\.vercel-scripts\.com/, (r) => r.abort());
+    if (finished) await ctx.route(new RegExp(`/api/matches/${ABSENT_MATCH}(\\?|$)`), async (route) => {
+      const body = await (await route.fetch()).json();
+      Object.assign(body.data, { status: "finished", score_home: 2, score_away: 1 });
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body), headers: { "access-control-allow-origin": "*" } });
+    });
+    await serveAbsences(ctx, plan);
+    const page = await ctx.newPage();
+    const before = consoleLog.length;
+    page.on("console", (m) => m.type() === "error" && !IGNORE.test(m.text()) && consoleLog.push(`[absents] ${m.text().slice(0, 300)}`));
+    page.on("pageerror", (e) => consoleLog.push(`[absents] pageerror ${e.message}`));
+    await page.goto(`${base}/matchs?${new URLSearchParams({ id: ABSENT_MATCH, view: "context" })}`, { waitUntil: "domcontentloaded", timeout: 120000 });
+    await page.locator("h2.card-title").first().waitFor({ timeout: 90000 }).catch(() => {});
+    await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
+    await page.waitForTimeout(2500);
+    return { ctx, page, plan, errors: () => consoleLog.slice(before).filter((l) => /pageerror/.test(l)) };
+  };
+  const read = (page) => page.evaluate(() => {
+    const titles = [...document.querySelectorAll("#main h2.card-title")].map((h) => h.textContent.trim());
+    const card = [...document.querySelectorAll("#main section.card")].find((s) => s.querySelector("h2.card-title")?.textContent.trim() === "Absents");
+    const sides = card ? [...card.querySelectorAll("section")].map((side) => ({
+      team: side.querySelector("h3")?.textContent.replace(/\d+$/, "").trim(), count: side.querySelector("h3 b")?.textContent.trim() || null,
+      crest: Boolean(side.querySelector("h3 [data-media-state], h3 img")),
+      rows: [...side.querySelectorAll("li")].map((li) => ({ name: li.querySelector("a strong")?.textContent.trim(), reason: li.querySelector("a small")?.textContent.trim() })),
+      empty: side.querySelector("p")?.textContent.trim() || null,
+      box: (({ top, bottom }) => ({ top: top + scrollY, bottom: bottom + scrollY }))(side.getBoundingClientRect()),
+    })) : [];
+    return { titles, card: Boolean(card), sides, text: document.querySelector("#main")?.textContent || "" };
+  });
+  const names = (side) => (side?.rows || []).map((r) => r.name).sort();
+  const desktopOptions = { viewport: { width: 1440, height: 900 } };
+
+  let k = await openContext(desktopOptions, { [PSG]: psgAnswer(), [LORIENT]: lorientAnswer() });
+  let got = await read(k.page);
+  await shotOf(k.page, "absents-match-desktop");
+  const at = got.titles.indexOf("Absents");
+  check("K1 « Absents » right after « Probabilités », one half per side", { after: "Probabilités", sides: ["Paris Saint-Germain", "Lorient"], crests: [true, true] },
+    { titles: got.titles, sides: got.sides.map((s) => s.team), crests: got.sides.map((s) => s.crest), requests: k.plan.requests.map((r) => r.id) },
+    at > 0 && got.titles[at - 1] === "Probabilités" && got.sides.length === 2 && got.sides[0].team === "Paris Saint-Germain" && got.sides[1].team === "Lorient" && got.sides.every((s) => s.crest));
+  const [home, away] = got.sides;
+  const expectHome = ["Désiré Doué", "Khvicha Kvaratskhelia", "Willian Pacho"], expectAway = ["Jean-Victor Makengo", "Montassar Talbi"];
+  check(`K2 suspensions of this competition only (${LIGUE1}), injuries back after the kick-off`, { home: expectHome, homeCount: "3", away: expectAway, awayCount: "2", pacho: "the suspension" },
+    { home: names(home), homeCount: home?.count, away: names(away), awayCount: away?.count, pacho: home?.rows.find((r) => r.name === "Willian Pacho")?.reason },
+    JSON.stringify(names(home)) === JSON.stringify(expectHome) && home.count === "3" && JSON.stringify(names(away)) === JSON.stringify(expectAway) && away.count === "2"
+      && /suspension/i.test(home.rows.find((r) => r.name === "Willian Pacho")?.reason || ""));
+  check("K3 the forecast's sentence unchanged", "« le modèle ne connaît ni les compositions ni les absents »", got.text.includes("le modèle ne connaît ni les compositions ni les absents"),
+    got.text.includes("le modèle ne connaît ni les compositions ni les absents"));
+  await k.page.close();
+  await k.ctx.close();
+
+  k = await openContext(desktopOptions, { [PSG]: psgAnswer(), [LORIENT]: 404 });
+  got = await read(k.page);
+  await shotOf(k.page, "absents-match-one-unknown");
+  check("K4 one side not known: « Non renseignés », the other keeps its rows", { home: 3, away: "Non renseignés" }, { home: got.sides[0]?.rows.length, away: got.sides[1]?.empty },
+    got.sides[0]?.rows.length === 3 && got.sides[1]?.empty === "Non renseignés");
+  await k.page.close();
+  await k.ctx.close();
+
+  const none = {};
+  for (const [label, entry] of [["404", 404], ["failure", "abort"]]) {
+    k = await openContext(desktopOptions, { [PSG]: entry, [LORIENT]: entry });
+    got = await read(k.page);
+    none[label] = { card: got.card, forecast: got.titles.includes("Probabilités"), errors: k.errors() };
+    await shotOf(k.page, `absents-match-none-${label}`);
+    await k.page.close();
+    await k.ctx.close();
+  }
+  check("K5 neither side known, or both reads failing: no card, the forecast stays", { "404": { card: false, forecast: true, errors: [] }, failure: { card: false, forecast: true, errors: [] } }, none,
+    Object.values(none).every((v) => !v.card && v.forecast && !v.errors.length));
+
+  k = await openContext(desktopOptions, { [PSG]: psgAnswer(), [LORIENT]: lorientAnswer() }, true);
+  got = await read(k.page);
+  await shotOf(k.page, "absents-match-finished");
+  check("K6 a finished match: no « Absents » card", { card: false }, { card: got.card, titles: got.titles }, !got.card);
+  await k.page.close();
+  await k.ctx.close();
+
+  k = await openContext({ ...devices["iPhone 15"], viewport: { width: 393, height: 852 } }, { [PSG]: psgAnswer(), [LORIENT]: lorientAnswer() });
+  got = await read(k.page);
+  const sideways = await overflowOf(k.page);
+  await shotOf(k.page, "absents-match-phone");
+  check("K7 phone: the halves stacked, no sideways scroll", { stacked: true, overflow: 0 }, { stacked: got.sides.length === 2 && got.sides[1].box.top >= got.sides[0].box.bottom - 1, overflow: sideways },
+    got.sides.length === 2 && got.sides[1].box.top >= got.sides[0].box.bottom - 1 && sideways <= 0);
+  await k.page.close();
+  await k.ctx.close();
+}
+const shotOf = (page, name) => page.screenshot({ path: path.join(out, `${name}.png`), fullPage: true }).catch(() => {});
+const overflowOf = (page) => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+if (ONLY.length && ONLY.every((s) => s === "K")) {
+  const browser = await chromium.launch();
+  await absentChecks(browser);
+  await browser.close();
+  check("X1 no page error", [], consoleLog, consoleLog.length === 0);
+  const failed = results.filter((r) => r.ok === false);
+  await writeFile(path.join(out, "evidence.json"), JSON.stringify({
+    ranAt: new Date().toISOString(), base, api, match: ABSENT_MATCH, only: ONLY,
+    rerun: `ONLY=K ${process.env.ABSENT_MATCH ? `ABSENT_MATCH=${ABSENT_MATCH} ` : ""}node tests/e2e/match-page.e2e.mjs ${base} ${api} ${id} ${out}`,
+    absences: { served: "tests/e2e/support/absences.mjs", [PSG]: psgAnswer(), [LORIENT]: lorientAnswer() },
+    results, console: consoleLog, passed: results.filter((r) => r.ok === true).length, failed: failed.length, total: results.length,
+  }, null, 2));
+  console.log(`${results.filter((r) => r.ok === true).length} passed, ${failed.length} failed of ${results.length} · evidence in ${out}`);
+  process.exit(failed.length ? 1 : 0);
+}
 
 // ---------------------------------------------------------------- the API's answers
 const read = async (p) => {
@@ -745,6 +869,8 @@ await section("P", async () => {
   check("P1 phone: no sideways scroll", { live: 0, lineups: 0, shots: 0, picker: 0, pickerInside: 0, notMeasured: [] }, { ...phoneOverflow, notMeasured: missing },
     views.length > 0 && missing.length === 0 && Object.values(phoneOverflow).every((v) => v <= 0));
 });
+
+await section("K", () => absentChecks(browser));
 
 check("X1 no page error", [], consoleLog, consoleLog.length === 0);
 await browser.close();

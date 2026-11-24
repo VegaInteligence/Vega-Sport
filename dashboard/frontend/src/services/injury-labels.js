@@ -180,8 +180,8 @@ const RULES = [
 
 const BY_KIND = { illness: "Maladie", suspension: "Suspension" };
 
-/** The label in French; null or unknown words give the kind's own (« Blessure »). */
-export function injuryLabel(label, kind) {
+/** The label's own French words, or null when it names nothing known. */
+function knownLabel(label) {
   const key = String(label || "").trim().toLowerCase().replace(/\s+/g, " ");
   if (EXACT[key]) return EXACT[key];
   for (const [pattern, text] of RULES) {
@@ -191,5 +191,17 @@ export function injuryLabel(label, kind) {
       return text.replace("{at}", part.at).replace("{of}", part.of);
     }
   }
-  return BY_KIND[kind] || "Blessure";
+  return null;
+}
+
+/** The label in French; null or unknown words give the kind's own (« Blessure »). */
+export function injuryLabel(label, kind) {
+  return knownLabel(label) || BY_KIND[kind] || "Blessure";
+}
+
+/** An absence's reason: as injuryLabel for an injury, an illness or a suspension; an episode the source did not
+ *  class keeps its label's own words, else « Motif non précisé », never « Blessure ». */
+export function absenceLabel(label, kind) {
+  if (["injury", "illness", "suspension"].includes(kind)) return injuryLabel(label, kind);
+  return knownLabel(label) || "Motif non précisé";
 }

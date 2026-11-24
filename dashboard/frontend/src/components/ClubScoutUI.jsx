@@ -6,7 +6,6 @@ import ClubSkeleton from "./ClubSkeleton.jsx";
 import { Media, Skeleton } from "./UI.jsx";
 import { useCardFold } from "./PhoneFold.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
-import { AbsenceMark } from "./Absences.jsx";
 import { PercentileBar, toneVar } from "./PlayerScoutCharts.jsx";
 import { RankingTrigger } from "./RankingDialog.jsx";
 import { Hint, Term } from "./Hint.jsx";
@@ -1550,7 +1549,8 @@ export function MatchRows({ rows, limit = 99, competitionName = true }) {
 
 /* ----------------------------------------------------------------- squad */
 
-export function SquadTable({ dossier, absences = null, limit = 30 }) {
+/** `mark(playerId)`: what stands beside a player's name (the squad tab: his absence's mark), or nothing. */
+export function SquadTable({ dossier, mark = null, limit = 30 }) {
   const f = useFootball();
   const possible = dossier.allRecord.matches * 90 || 1;
   const rows = dossier.squad.profiles
@@ -1596,10 +1596,7 @@ export function SquadTable({ dossier, absences = null, limit = 30 }) {
                     <span>
                       <strong>
                         {player.name}
-                        <AbsenceMark
-                          absence={absences?.byPlayer.get(player.id)}
-                          asOf={absences?.asOf}
-                        />
+                        {mark?.(player.id)}
                       </strong>
                       <small>
                         {player.role?.label || "Poste non renseigné"}

@@ -60,7 +60,7 @@ import {
   styleTags,
 } from "./ClubScoutUI.jsx";
 import ClubSubstitutions from "./ClubSubstitutions.jsx";
-import { AbsenceBoard, AbsenceCoverage } from "./Absences.jsx";
+import { AbsenceBoard, AbsenceCoverage, AbsenceMark } from "./Absences.jsx";
 import { absenceView, useTeamAbsences } from "../services/team-absences.js";
 import ClubPassingTriangle from "./ClubPassingTriangle.jsx";
 import {
@@ -989,13 +989,21 @@ export function Squad({ dossier }) {
     .sort((a, b) => b.ga - a.ga)
     .slice(0, 8);
   const maxGa = Math.max(1, ...top.map((p) => p.ga));
-  const absences = absenceView(useTeamAbsences(dossier.id).value);
+  const absent = useTeamAbsences(dossier.id);
+  const absences = absenceView(absent.value);
   return (
     <div className={c.stack}>
-      {absences?.rows.length > 0 && (
-        <Card title="Absents" action={<AbsenceCoverage view={absences} />}>
-          <AbsenceBoard view={absences} />
+      {/* Its place is kept while it is read; nobody out, a squad not read or a failed read: no card. */}
+      {absent.loading && !absent.value ? (
+        <Card title="Absents">
+          <AbsenceBoard loading />
         </Card>
+      ) : (
+        absences?.rows.length > 0 && (
+          <Card title="Absents" action={<AbsenceCoverage view={absences} />}>
+            <AbsenceBoard view={absences} />
+          </Card>
+        )
       )}
       <Kpis
         items={[
@@ -1062,7 +1070,15 @@ export function Squad({ dossier }) {
         title="Temps de jeu et contributions"
         text="Toutes compétitions · part du temps : minutes / minutes possibles du club."
       >
-        <SquadTable dossier={dossier} absences={absences} />
+        <SquadTable
+          dossier={dossier}
+          mark={(id) => (
+            <AbsenceMark
+              absence={absences?.byPlayer.get(id)}
+              asOf={absences?.asOf}
+            />
+          )}
+        />
       </Card>
     </div>
   );
