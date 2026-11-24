@@ -28,11 +28,11 @@
 //     links, and every reading must be that one icon. How it failed before:
 //      - at load (B5a dark, B5f light): React did not recognise the link whose address the theme
 //        script had changed, and put the page's favicon.svg link back beside it;
-//      - after a navigation inside the site (B5g light, B5l dark): React rebuilt the head's
+//      - after a navigation inside the site (B5k dark, B5l light): React rebuilt the head's
 //        links, and favicon.svg came back, beside the themed icon or in its place;
-//      - after the theme button (B5h), then a navigation (B5i): two links, then favicon.svg again;
-//      - storage refused by the browser (B5k): no themed icon at all, at load or after the button.
-//     Without scripts (B5j) the page still names an icon: favicon.svg at the new version.
+//      - after the theme button (B5m), then a navigation (B5n): two links, then favicon.svg again;
+//      - storage refused by the browser (B5p): no themed icon at all, at load or after the button.
+//     Without scripts (B5o) the page still names an icon: favicon.svg at the new version.
 //     /favicon.ico and /apple-touch-icon.png answer with the new icon (night tile, ivory
 //     mark, no blue). On each the asterisk stands alone, in the middle of its tile: as much
 //     ink in the left half as in the right, in the top half as in the bottom (« V* » had
@@ -325,12 +325,12 @@ try {
   // The place of the brand at the top left of a card: 146 × 70 px from (65, 54).
   const report = await pixels(dark, `/api/rapport/image?id=${REPORT}&n=1`, [0.06, 0.04, 0.195, 0.092]);
   check("B10", "report image 1080 × 1350: ivory wordmark at the top left (over 8 % of that place), no blue star", brief(report), report.size?.[0] === 1080 && report.size?.[1] === 1350 && report.ivory > 0.08 && report.blue === 0);
-  // ---- B5l: the dark theme's icon after a navigation inside the site
+  // ---- B5k: the dark theme's icon after a navigation inside the site
   await dark.evaluate(() => { window.__sameDocument = true; });
   const rebuiltDark = await follow(dark, '.topbar a[href^="/matchs"]', (url) => url.pathname.startsWith("/matchs"));
   const movedDark = await icons(dark);
   const stayedDark = await dark.evaluate(() => window.__sameDocument === true);
-  check("B5l", `dark theme, after a navigation inside the site (home → Matchs, same document): still ${themeIcon("dark")} alone`,
+  check("B5k", `dark theme, after a navigation inside the site (home → Matchs, same document): still ${themeIcon("dark")} alone`,
     `${readings(movedDark)} — same document: ${stayedDark} — head's icon links rebuilt: ${rebuiltDark}`, stayedDark && only(movedDark, themeIcon("dark")));
   await dark.context().close();
 
@@ -343,31 +343,14 @@ try {
   const iconLight = await icons(light);
   check("B5f", `light theme: the page names one icon, ${themeIcon("light")}`, readings(iconLight), only(iconLight, themeIcon("light")));
   await light.locator(".topbar").screenshot({ path: path.join(out, "header-desktop-light.png") });
-  // ---- B5g–B5i: the icon across a navigation inside the site and the theme button
-  await light.evaluate(() => { window.__sameDocument = true; });
-  const sameDocument = () => light.evaluate(() => window.__sameDocument === true);
-  const rebuilt = await follow(light, '.topbar a[href^="/matchs"]', (url) => url.pathname.startsWith("/matchs"));
-  const moved = await icons(light);
-  check("B5g", `light theme, after a navigation inside the site (home → Matchs, same document): still ${themeIcon("light")} alone`,
-    `${readings(moved)} — same document: ${await sameDocument()} — head's icon links rebuilt: ${rebuilt}`, (await sameDocument()) && only(moved, themeIcon("light")));
-  await light.locator(".theme-toggle").first().click();
-  await light.waitForFunction(() => document.documentElement.dataset.theme === "dark");
-  const switched = await icons(light);
-  check("B5h", `after the theme button (light → dark): ${themeIcon("dark")} alone`, readings(switched), only(switched, themeIcon("dark")));
-  const rebuiltBack = await follow(light, ".topbar .brand", (url) => url.pathname === "/");
-  const back = await icons(light);
-  check("B5i", `after the button, then a navigation (Matchs → home, same document): still ${themeIcon("dark")} alone`,
-    `${readings(back)} — same document: ${await sameDocument()} — head's icon links rebuilt: ${rebuiltBack}`, (await sameDocument()) && only(back, themeIcon("dark")));
-  await light.context().close();
-
-  // ---- B5j: without scripts
+  // ---- B5o: without scripts
   const plain = await open({ ...DESKTOP, javaScriptEnabled: false }, "no-scripts");
   await plain.goto(base + "/", { waitUntil: "load" });
   const iconPlain = await icons(plain, 1);
-  check("B5j", `without scripts the page names one icon, /branding/vega/favicon.svg?v=${VERSION}`, readings(iconPlain), only(iconPlain, `/branding/vega/favicon.svg?v=${VERSION}`));
+  check("B5o", `without scripts the page names one icon, /branding/vega/favicon.svg?v=${VERSION}`, readings(iconPlain), only(iconPlain, `/branding/vega/favicon.svg?v=${VERSION}`));
   await plain.context().close();
 
-  // ---- B5k: the browser refuses the storage (reads and writes throw)
+  // ---- B5p: the browser refuses the storage (reads and writes throw)
   const refused = await open(DESKTOP, "storage-refused");
   await refused.context().addInitScript(() => {
     const refuse = () => { throw new DOMException("The operation is insecure.", "SecurityError"); };
@@ -379,7 +362,7 @@ try {
   await refused.locator(".theme-toggle").first().click();
   await refused.waitForFunction(() => document.documentElement.dataset.theme === "light");
   const iconRefusedLight = await icons(refused);
-  check("B5k", `storage refused: ${themeIcon("dark")} alone at load, ${themeIcon("light")} alone after the theme button`,
+  check("B5p", `storage refused: ${themeIcon("dark")} alone at load, ${themeIcon("light")} alone after the theme button`,
     `at load: ${readings(iconRefused)} — after the button: ${readings(iconRefusedLight)}`, only(iconRefused, themeIcon("dark")) && only(iconRefusedLight, themeIcon("light")));
   await refused.context().close();
 
@@ -393,6 +376,21 @@ try {
   // The asterisk sits at the top right of the logo: the last 13 % of its width, the first 27 % of its height.
   const corner = await pixels(light, "/branding/vega/logo-dark.svg", [0.87, 0, 1, 0.27]);
   check("B3-asterisk", "logo-dark.svg: its top right corner is mostly ivory ink (the asterisk)", brief(corner), corner.ivory > 0.25);
+  // ---- B5l–B5n: the icon across a navigation inside the site and the theme button
+  await light.evaluate(() => { window.__sameDocument = true; });
+  const sameDocument = () => light.evaluate(() => window.__sameDocument === true);
+  const rebuilt = await follow(light, '.topbar a[href^="/matchs"]', (url) => url.pathname.startsWith("/matchs"));
+  const moved = await icons(light);
+  check("B5l", `light theme, after a navigation inside the site (home → Matchs, same document): still ${themeIcon("light")} alone`,
+    `${readings(moved)} — same document: ${await sameDocument()} — head's icon links rebuilt: ${rebuilt}`, (await sameDocument()) && only(moved, themeIcon("light")));
+  await light.locator(".theme-toggle").first().click();
+  await light.waitForFunction(() => document.documentElement.dataset.theme === "dark");
+  const switched = await icons(light);
+  check("B5m", `after the theme button (light → dark): ${themeIcon("dark")} alone`, readings(switched), only(switched, themeIcon("dark")));
+  const rebuiltBack = await follow(light, ".topbar .brand", (url) => url.pathname === "/");
+  const back = await icons(light);
+  check("B5n", `after the button, then a navigation (Matchs → home, same document): still ${themeIcon("dark")} alone`,
+    `${readings(back)} — same document: ${await sameDocument()} — head's icon links rebuilt: ${rebuiltBack}`, (await sameDocument()) && only(back, themeIcon("dark")));
   await light.context().close();
 
   // ---- B4: phone
@@ -466,7 +464,7 @@ try {
         observed: new Date().toISOString(),
         base,
         rerun: `node tests/e2e/brand.e2e.mjs ${base} ${out}`,
-        setup: "Chromium headless, fr-FR; desktop 1365×900 (dark, then light through localStorage statarena.theme), widths 1120, 1024, 768 and 700, phone 393×852 (touch, ×3). B5: every list of icons is read 5 times, 300 ms apart, after a navigation once the head's icon links are rebuilt (a new apple-touch-icon node, waited for 5 s at most); B5j runs with JavaScript off; B5k makes Storage.getItem and Storage.setItem throw. B9 holds every /api/ answer for 8 s. A local server needs ORION_API_ORIGIN (report images) and, for the header to carry the account button as in production, NEON_AUTH_BASE_URL=http://127.0.0.1:9 with any NEON_AUTH_COOKIE_SECRET of 32 characters.",
+        setup: "Chromium headless, fr-FR; desktop 1365×900 (dark, then light through localStorage statarena.theme), widths 1120, 1024, 768 and 700, phone 393×852 (touch, ×3). B5: every list of icons is read 5 times, 300 ms apart, after a navigation once the head's icon links are rebuilt (a new apple-touch-icon node, waited for 5 s at most); B5o runs with JavaScript off; B5p makes Storage.getItem and Storage.setItem throw. B9 holds every /api/ answer for 8 s. A local server needs ORION_API_ORIGIN (report images) and, for the header to carry the account button as in production, NEON_AUTH_BASE_URL=http://127.0.0.1:9 with any NEON_AUTH_COOKIE_SECRET of 32 characters.",
         inputs: { home: "/", loading: "/joueurs/", report: REPORT, faviconVersion: VERSION, ivory: IVORY, night: NIGHT },
         results,
         console: consoleLog,
