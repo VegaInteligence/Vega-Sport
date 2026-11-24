@@ -1,5 +1,5 @@
 // E2E — accounts on the site (VI-38): sign-up, sign-out, sign-in, the preferences sync across two devices, the 409
-// merge, sign-out's reset, export, deletion, the sync states, and the switch. Failure modes: docs/COMPTES_SITE.md.
+// merge, sign-out's reset, export, deletion, the sync states, the switch, the account page and the header menu. Failure modes: docs/COMPTES_SITE.md.
 //
 // Run by tests/e2e/accounts/run.sh, which builds and starts the site once per phase:
 //   on      Neon (the stand-in) and the account API set: everything below
@@ -548,6 +548,143 @@ try {
       record("G6", "the verifier is read without the hint", true, read, read);
       await shot(fresh.page, "11-google-return-without-session.png");
       await fresh.context.close();
+    }
+
+    // Section 10: the account page « Lettre » and the header menu (C1 to C7; C8 is O8 above).
+    {
+      const owner = `e2e-lettre-${RUN}@example.test`;
+      const L = await device("lettre");
+      const seed = JSON.parse(JSON.stringify(CAPTURE_SEED));
+      // Seven clubs: one more than a kind shows before « Afficher l’autre ».
+      seed["statarena.research.v1"].lists[0].entries.push(
+        { id: "t_e2eClub6", kind: "clubs", name: "Club six", season: "", imageUrl: "" },
+        { id: "t_e2eClub7", kind: "clubs", name: "Club sept", season: "", imageUrl: "" },
+      );
+      await open(L.page, "/");
+      await L.page.evaluate((value) => {
+        for (const [key, v] of Object.entries(value)) localStorage.setItem(key, JSON.stringify(v));
+      }, seed);
+      await signInForm(L.page, owner, { create: true, next: `/clubs?id=${CLUB_A}` });
+      await until(async () => (await entryLabel(L.page)) === "Mon compte", { timeout: 30000 });
+      const button = L.page.locator("button.account-entry-in");
+      const expanded = () => button.getAttribute("aria-expanded");
+
+      // C6: the menu with a mouse, then the keyboard.
+      await button.hover();
+      await L.page.locator(".account-menu").waitFor({ timeout: 10000 });
+      const menu = await L.page.evaluate(() => {
+        const m = document.querySelector(".account-menu");
+        return {
+          text: m.querySelector(".account-menu-who").textContent,
+          links: [...m.querySelectorAll(".account-menu-links a")].map((a) => [a.textContent.trim(), a.getAttribute("href")]),
+          out: m.querySelector(".account-menu-out")?.textContent.trim(),
+          controls: document.querySelector("button.account-entry-in").getAttribute("aria-controls") === m.id,
+        };
+      });
+      const menuOk = (await expanded()) === "true" && menu.text.includes(owner) && menu.text.includes("Gratuit") && JSON.stringify(menu.links) === JSON.stringify([["Mon compte", "/compte"], ["Paramètres", "/compte#parametres"]]) && menu.out === "Se déconnecter" && menu.controls;
+      record("C6a", "hover opens the menu: who, « Mon compte », « Paramètres », « Se déconnecter », aria-expanded and aria-controls", { expanded: "true", links: [["Mon compte", "/compte"], ["Paramètres", "/compte#parametres"]], out: "Se déconnecter" }, menu, menuOk);
+      await shot(L.page, "12-menu-hover.png");
+      await L.page.mouse.move(700, 700);
+      const left = await until(async () => (await expanded()) === "false", { timeout: 3000 });
+      record("C6b", "leaving with the mouse closes it", "false", await expanded(), Boolean(left));
+      await L.page.locator(".theme-toggle").focus();
+      await L.page.keyboard.press("Tab");
+      const byKeyboard = await until(async () => (await expanded()) === "true", { timeout: 3000 });
+      await L.page.keyboard.press("Tab");
+      const inside = await L.page.evaluate(() => document.activeElement?.closest(".account-menu") ? document.activeElement.textContent.trim() : null);
+      record("C6c", "keyboard focus opens it and Tab goes into its links", { expanded: "true", focus: "Mon compte" }, { expanded: Boolean(byKeyboard), focus: inside }, byKeyboard && inside === "Mon compte");
+      await L.page.keyboard.press("Escape");
+      await L.page.waitForTimeout(400);
+      const escaped = { expanded: await expanded(), focus: await L.page.evaluate(() => document.activeElement?.matches("button.account-entry-in")) };
+      record("C6d", "Escape closes it and gives the focus back to the button, without opening it again", { expanded: "false", focus: true }, escaped, escaped.expanded === "false" && escaped.focus === true);
+
+      // C1: « Paramètres » from another page lands on the settings, and the anchor survives the season sync.
+      await button.hover();
+      await L.page.locator(".account-menu a", { hasText: "Paramètres" }).click();
+      await until(async () => new URL(L.page.url()).pathname === "/compte", { timeout: 30000 });
+      await L.page.locator("#parametres").waitFor({ timeout: 30000 });
+      await L.page.waitForTimeout(3000);
+      const landing = await L.page.evaluate(() => ({ hash: location.hash, top: Math.round(document.getElementById("parametres").getBoundingClientRect().top), header: Math.round(document.querySelector(".topbar").getBoundingClientRect().bottom) }));
+      record("C1a", "« Paramètres » lands on the settings, under the header, #parametres kept", { hash: "#parametres", top: "header … header + 80" }, landing, landing.hash === "#parametres" && landing.top >= landing.header && landing.top <= landing.header + 80);
+      await shot(L.page, "13-parametres.png");
+      await L.page.mouse.move(700, 700);
+      await button.hover();
+      await L.page.locator(".account-menu a", { hasText: "Mon compte" }).click();
+      const top = await until(async () => (await L.page.evaluate(() => window.scrollY)) === 0, { timeout: 5000 });
+      record("C1b", "« Mon compte » from /compte goes back to the top", 0, await L.page.evaluate(() => window.scrollY), Boolean(top));
+      await open(L.page, "/compte#securite");
+      await L.page.locator("#securite").waitFor({ timeout: 30000 });
+      await L.page.waitForTimeout(3000);
+      const direct = await L.page.evaluate(() => ({ hash: location.hash, search: location.search, top: Math.round(document.getElementById("securite").getBoundingClientRect().top) }));
+      record("C1c", "/compte#securite opened directly keeps its hash and lands on the section", { hash: "#securite", top: "56 … 136" }, direct, direct.hash === "#securite" && direct.top >= 56 && direct.top <= 136);
+
+      // C2: the password row only for a credential account.
+      await open(L.page, "/compte");
+      await L.page.locator(".account").waitFor({ timeout: 30000 });
+      const shown = await until(async () => (await L.page.getByRole("button", { name: "Changer le mot de passe" }).count()) === 1, { timeout: 15000 });
+      record("C2a", "an account with a password is offered « Changer le mot de passe »", 1, await L.page.getByRole("button", { name: "Changer le mot de passe" }).count(), Boolean(shown));
+      await L.page.route("**/api/auth/list-accounts**", (route) => route.fulfill({ status: 500, contentType: "application/json", body: '{"message":"down"}' }));
+      await open(L.page, "/compte");
+      await L.page.locator(".account").waitFor({ timeout: 30000 });
+      await L.page.waitForTimeout(4000);
+      const hidden = await L.page.getByRole("button", { name: "Changer le mot de passe" }).count();
+      record("C2b", "list-accounts failing: no password row", 0, hidden, hidden === 0);
+      await L.page.unroute("**/api/auth/list-accounts**");
+
+      // C3: nothing said while the sync works.
+      await open(L.page, "/compte");
+      await until(async () => /À jour/.test(await syncState(L.page)), { timeout: 30000 });
+      const quiet = { state: await L.page.locator(".account-syncblock").getAttribute("data-state"), notes: await L.page.locator(".account-sync-note").count() };
+      record("C3", "a working sync says nothing", { state: "synced", notes: 0 }, quiet, quiet.state === "synced" && quiet.notes === 0);
+
+      // C4: six clubs, then « Afficher l’autre ».
+      const clubs = L.page.locator(".account-favourites").first();
+      const before = await clubs.locator("a").count();
+      const more = L.page.getByRole("button", { name: "Afficher l’autre" });
+      const hasMore = await more.count();
+      if (hasMore) await more.click();
+      const after = await until(async () => ((await clubs.locator("a").count()) === 7 ? 7 : null), { timeout: 5000 });
+      record("C4", "seven clubs: six shown, « Afficher l’autre » shows the seventh", { before: 6, more: 1, after: 7 }, { before, more: hasMore, after: await clubs.locator("a").count() }, before === 6 && hasMore === 1 && after === 7);
+      await shot(L.page, "14-compte-lettre.png");
+
+      // C7: « Se déconnecter » from the menu, the last-save rule kept: signed out, the stores emptied.
+      await L.page.mouse.move(700, 700);
+      await button.hover();
+      await L.page.locator(".account-menu-out").click();
+      const gone = await until(async () => (await entryLabel(L.page)) === "Se connecter" && new URL(L.page.url()).pathname === "/", { timeout: 30000 });
+      const emptied = await listIds(L.page);
+      record("C7", "« Se déconnecter » in the menu signs out from /compte to /, the stores emptied", { entry: "Se connecter", path: "/", favourites: [] }, { entry: await entryLabel(L.page), path: new URL(L.page.url()).pathname, favourites: emptied }, Boolean(gone) && Array.isArray(emptied) && !emptied.includes("t_e2eClub7"));
+      // C6f: signed out, the entry is the link « Se connecter », without a menu.
+      const outEntry = await L.page.evaluate(() => {
+        const e = document.querySelector(".account-entry");
+        return { tag: e?.tagName, expanded: e?.getAttribute("aria-expanded") ?? null };
+      });
+      record("C6f", "signed out: a link « Se connecter », no aria-expanded", { tag: "A", expanded: null }, outEntry, outEntry.tag === "A" && outEntry.expanded === null);
+      await L.context.close();
+
+      // C5 and C6e: a phone, a new account without favourites; the menu by touch.
+      const P = await device("lettre-phone", { phone: true });
+      await signInForm(P.page, `e2e-vide-${RUN}@example.test`, { create: true, next: "/compte" });
+      await until(async () => new URL(P.page.url()).pathname === "/compte", { timeout: 30000 });
+      await P.page.locator(".account").waitFor({ timeout: 30000 });
+      await P.page.waitForTimeout(1500);
+      const empty = await P.page.evaluate(() => {
+        const p = document.querySelector(".lettre-empty");
+        return { text: (p?.textContent || "").replace(/\s+/g, " ").trim(), links: [...(p?.querySelectorAll("a") || [])].map((a) => new URL(a.href).pathname), lists: document.querySelectorAll(".account-favourites").length };
+      });
+      record("C5", "no favourite: « Aucun favori. » and the ways to add one", { text: "Aucun favori.", links: ["/clubs/", "/joueurs/", "/nations/"], lists: 0 }, empty, empty.text.startsWith("Aucun favori.") && JSON.stringify(empty.links) === JSON.stringify(["/clubs/", "/joueurs/", "/nations/"]) && empty.lists === 0);
+      await shot(P.page, "15-compte-sans-favori-telephone.png");
+      const tapButton = P.page.locator("button.account-entry-in");
+      await tapButton.tap();
+      const tapOpen = await until(async () => (await tapButton.getAttribute("aria-expanded")) === "true", { timeout: 3000 });
+      await tapButton.tap();
+      const tapClosed = await until(async () => (await tapButton.getAttribute("aria-expanded")) === "false", { timeout: 3000 });
+      await tapButton.tap();
+      await until(async () => (await tapButton.getAttribute("aria-expanded")) === "true", { timeout: 3000 });
+      await P.page.locator(".lettre-title").tap();
+      const outside = await until(async () => (await tapButton.getAttribute("aria-expanded")) === "false", { timeout: 3000 });
+      record("C6e", "a tap opens and closes the menu; a tap elsewhere closes it", { open: true, closed: true, outside: true }, { open: Boolean(tapOpen), closed: Boolean(tapClosed), outside: Boolean(outside) }, tapOpen && tapClosed && outside);
+      await P.context.close();
     }
 
     // O9: no address, token or account id in a URL the browser asked for.
