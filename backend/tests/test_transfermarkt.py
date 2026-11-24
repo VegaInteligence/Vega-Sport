@@ -368,9 +368,10 @@ class ReaderTest(unittest.TestCase):
                          [("injuries", 5), ("profile", 5), ("search", 2), ("suspensions", 5), ("transfers", 5), ("values", 5)])
         self.drain(reader)
         # The five profiles in one request, both clubs searched (PSG's squad has 4 of our names,
-        # 5 are needed: not linked so), then each player's four histories (values, transfers, injuries, suspensions).
+        # 5 are needed: not linked so), then each player's three histories (values, transfers, injuries); his suspensions
+        # are first due within their period, spread by his key (§59, 59ah), not in this drain.
         paths = [c[0] for c in api.calls]
-        self.assertEqual((paths.count("/players"), paths.count("/quick-search"), len(paths) - paths.count("/players") - paths.count("/quick-search")), (2, 2, 25))
+        self.assertEqual((paths.count("/players"), paths.count("/quick-search"), len(paths) - paths.count("/players") - paths.count("/quick-search")), (2, 2, 20))
         self.assertEqual(q("SELECT count(*) FROM core.provider_ids WHERE entity_type = 'team'"), [(0,)])
         # Barcola's birth date differs from ours: quarantined, his values shown nowhere.
         reader.plan(link=True)

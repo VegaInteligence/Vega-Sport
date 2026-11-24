@@ -4590,6 +4590,18 @@ Evidence: `/mnt/project-files/blesses-suspendus/lot1-donnees/EVIDENCE.md`. Cases
 - **59ag** Blessures servies à l'identique (tests existants inchangés) ; les suspensions du joueur apparaissent dans la
   même liste avec `kind: "suspension"`, les mêmes clés ; le 404 reste réglé par la seule lecture des blessures.
 
+### 59.E. Arriéré de la première mise en file (relecture du coordinateur, 24 Nov 2026, écrit avant le test)
+
+- **59ah Première échéance étalée.** Une unité `suspensions` créée par `enqueue` n'est pas due tout de suite : sa première
+  échéance est `maintenant` + un décalage dans `[0, PERIODS["suspensions"][priorité])`, tiré de façon déterministe de la clé
+  du joueur (`hashtext`, même clé → même décalage, aucun aléa). Attendus : chaque décalage dans sa période (7 jours en
+  priorité 1, 30 en priorité 2…) ; deux mises en file de la même clé donnent la même échéance ; sur 140 joueurs de
+  priorité 1, au plus ≈ un septième dus le premier jour (≤ 40, la marge couvrant la dispersion du hachage) et pas tous à
+  la même heure. Les autres unités (`injuries` d'un nouveau joueur comprise) restent dues aussitôt.
+- **59ai Unité en focus jamais lue.** Une unité `injuries` ou `suspensions` en focus sans lecture acceptée (`read_at`
+  `NULL`, `attempts` = 0) devient due tout de suite, quelle que soit son échéance étalée ; une unité en échec garde son
+  attente.
+
 ### 59.Hypothèses non vérifiées
 
 - **H1** Aucune suspension EN COURS n'a été observée (sonde du 2026-11-24, fichier `07-…`) : on suppose qu'elle a la forme

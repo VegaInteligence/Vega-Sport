@@ -319,6 +319,44 @@ class SuspensionsReplayTest(AbsencesBase):
         self.assertEqual(x("SELECT count(*) FROM ops.transfermarkt_reads").fetchone()[0], count)
 
 
+    def test_59ah_a_new_suspensions_unit_is_first_due_within_its_period_by_its_key(self):
+        x = self.x
+        x("RESET ROLE")
+        x("DELETE FROM ops.transfermarkt_reads")
+        x("DELETE FROM core.provider_ids WHERE entity_type = 'player' AND provider = 'transfermarkt'")
+        # 140 linked players of the season in progress (priority 1) and one who never played (priority 9).
+        for n in range(140):
+            x("INSERT INTO core.players(id, name) VALUES (%s, %s)", (1100 + n, f"Joueur {n}"))
+            x("INSERT INTO core.player_match_stats(season_id, match_id, team_id, player_id, minutes_played) VALUES (2026, 500, 1, %s, 90)",
+              (1100 + n,))
+            x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('player', 'transfermarkt', %s, %s)",
+              (str(7100000 + n), 1100 + n))
+        x("INSERT INTO core.players(id, name) VALUES (1300, 'Jamais joué')")
+        x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('player', 'transfermarkt', '7200000', 1300)")
+        x("SET LOCAL ROLE vega_collect")
+        now = x("SELECT now()").fetchone()[0]
+
+        def dues(kind):
+            return {key: (priority, due - now) for key, priority, due in x(
+                "SELECT provider_key, priority, next_due_at FROM ops.transfermarkt_reads WHERE kind = %s", (kind,)).fetchall()}
+
+        self.reader.enqueue(now)
+        first = dues("suspensions")
+        self.assertEqual(len(first), 141)
+        season = [offset for key, (priority, offset) in first.items() if key != "7200000"]
+        self.assertTrue(all(timedelta(0) <= offset < timedelta(days=7) for offset in season), sorted(season)[-3:])
+        self.assertLessEqual(sum(offset < timedelta(days=1) for offset in season), 40)
+        self.assertGreater(len(set(season)), 100)
+        self.assertEqual(first["7200000"][0], 9)
+        self.assertTrue(timedelta(0) <= first["7200000"][1] < timedelta(days=365))
+        # The other units stay due at once.
+        self.assertEqual({offset for _, offset in dues("injuries").values()}, {timedelta(0)})
+        # The same key, the same first due time.
+        x("DELETE FROM ops.transfermarkt_reads WHERE kind = 'suspensions'")
+        self.reader.enqueue(now)
+        self.assertEqual(dues("suspensions"), first)
+
+
 class FocusTest(AbsencesBase):
     """59o–59v: the daily read of the players who count for a match close at hand."""
 
@@ -404,6 +442,15 @@ class FocusTest(AbsencesBase):
         read_at = self.x("SELECT read_at FROM ops.transfermarkt_reads WHERE kind = 'injuries' AND provider_key = '80001'").fetchone()[0]
         self.assertEqual(after[("injuries", "80001")][1], read_at + tm.FOCUS_PERIOD)
         self.assertEqual(after[("suspensions", "80001")][1], before[("suspensions", "80001")][1])
+
+    def test_59ai_a_focused_unit_never_read_is_due_at_once(self):
+        self.x("""UPDATE ops.transfermarkt_reads SET read_at = NULL, next_due_at = now() + interval '6 days'
+                  WHERE kind = 'suspensions' AND provider_key = '80002'""")
+        before = self.queue()
+        self.reader.focus(self.now)
+        after = self.queue()
+        self.assertLessEqual(after[("suspensions", "80002")][1], self.now)
+        self.assertEqual(after[("suspensions", "80001")][1], before[("suspensions", "80001")][1])  # failing: its wait
 
     def test_59u_due_focused_units_come_first(self):
         self.x("UPDATE ops.transfermarkt_reads SET next_due_at = now() - interval '1 hour' WHERE kind = 'profile'")

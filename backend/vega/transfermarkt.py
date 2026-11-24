@@ -824,19 +824,27 @@ class Reader:
                FROM players p CROSS JOIN (VALUES ('profile'), ('values'), ('transfers'), ('injuries')) k(kind)
                ON CONFLICT DO NOTHING""", (current, current, now)).rowcount
         # Every linked player, not doubted, without a suspensions unit (the players queued before 174 included): his
-        # suspensions, at his injuries' priority when he has that unit (FAILURE_MODES.md §59, 59l).
+        # suspensions, at his injuries' priority when he has that unit (FAILURE_MODES.md §59, 59l). Its first due time is
+        # spread over its period by the player's key (59ah: hashtext, the same key the same offset), so the backlog of
+        # the players already linked is read at the injuries' cruising pace, not before every other unit at once.
         queued += self.conn.execute(
-            """INSERT INTO ops.transfermarkt_reads(kind, provider_key, priority, next_due_at)
-               SELECT 'suspensions', i.provider_key, coalesce(
-                 (SELECT r.priority FROM ops.transfermarkt_reads r WHERE r.kind = 'injuries' AND r.provider_key = i.provider_key),
-                 least(9, greatest(1, %s - coalesce((SELECT max(s.season_id) FROM core.player_match_stats s
-                                                     WHERE s.player_id = i.entity_id AND s.minutes_played > 0), %s - 8) + 1))), %s
-               FROM core.provider_ids i
-               WHERE i.entity_type = 'player' AND i.provider = 'transfermarkt' AND i.is_current
-                 AND NOT EXISTS (SELECT 1 FROM ops.transfermarkt_reads r WHERE r.kind = 'suspensions' AND r.provider_key = i.provider_key)
-                 AND NOT EXISTS (SELECT 1 FROM ops.provider_links l WHERE l.entity_type = 'player' AND l.provider = 'transfermarkt'
-                                 AND l.provider_key = i.provider_key AND l.quarantined_at IS NOT NULL)
-               ON CONFLICT DO NOTHING""", (current, current, now)).rowcount
+            """WITH new AS (
+                 SELECT i.provider_key, coalesce(
+                   (SELECT r.priority FROM ops.transfermarkt_reads r WHERE r.kind = 'injuries' AND r.provider_key = i.provider_key),
+                   least(9, greatest(1, %(current)s - coalesce((SELECT max(s.season_id) FROM core.player_match_stats s
+                                                               WHERE s.player_id = i.entity_id AND s.minutes_played > 0),
+                                                              %(current)s - 8) + 1))) AS priority
+                 FROM core.provider_ids i
+                 WHERE i.entity_type = 'player' AND i.provider = 'transfermarkt' AND i.is_current
+                   AND NOT EXISTS (SELECT 1 FROM ops.transfermarkt_reads r WHERE r.kind = 'suspensions' AND r.provider_key = i.provider_key)
+                   AND NOT EXISTS (SELECT 1 FROM ops.provider_links l WHERE l.entity_type = 'player' AND l.provider = 'transfermarkt'
+                                   AND l.provider_key = i.provider_key AND l.quarantined_at IS NOT NULL))
+               INSERT INTO ops.transfermarkt_reads(kind, provider_key, priority, next_due_at)
+               SELECT 'suspensions', n.provider_key, n.priority,
+                 %(now)s::timestamptz + (abs(hashtext(n.provider_key)::bigint)
+                                         %% (86400 * (%(periods)s::int[])[least(n.priority, 4)])) * interval '1 second'
+               FROM new n
+               ON CONFLICT DO NOTHING""", {"current": current, "now": now, "periods": list(PERIODS["suspensions"])}).rowcount
         # Every linked club: its squads of the seasons the base holds of it, and the year before
         # (a calendar-year league is the provider's year before).
         queued += self.conn.execute(
@@ -887,8 +895,8 @@ class Reader:
         """The daily level above priority 1 (FAILURE_MODES.md §59, 59o–59v): the FOCUS_KINDS units of the FOCUS_PLAYERS
         players with the most minutes of the season in progress at each linked club whose next match not started kicks
         off within FOCUS_HORIZON (at most FOCUS_CLUBS_MAX clubs, the soonest first) carry that kick-off (focus_until);
-        every other unit loses it. A healthy unit entering the focus is due again FOCUS_PERIOD after its last read; a
-        failing one keeps its wait. No unit is added. Returns the units in focus."""
+        every other unit loses it. A healthy unit entering the focus is due again FOCUS_PERIOD after its last read, at
+        once when it was never read (59ai: its spread first due time does not hold); a failing one keeps its wait. No unit is added. Returns the units in focus."""
         current = self.current_season()
         rows = [] if current is None else self.conn.execute(
             """WITH clubs AS (
@@ -921,13 +929,13 @@ class Reader:
                WHERE focus_until IS NOT NULL AND NOT (kind = ANY(%s) AND provider_key = ANY(%s))""", (list(FOCUS_KINDS), keys))
         self.conn.execute(
             """UPDATE ops.transfermarkt_reads r SET focus_until = f.kickoff,
-                 next_due_at = CASE WHEN r.attempts = 0 AND r.read_at IS NOT NULL THEN least(r.next_due_at, r.read_at + %(period)s)
+                 next_due_at = CASE WHEN r.attempts = 0 THEN least(r.next_due_at, coalesce(r.read_at + %(period)s, %(now)s))
                                     ELSE r.next_due_at END
                FROM unnest(%(keys)s::text[], %(kickoffs)s::timestamptz[]) f(key, kickoff)
                WHERE r.kind = ANY(%(kinds)s) AND r.provider_key = f.key
                  AND (r.focus_until IS DISTINCT FROM f.kickoff
-                      OR (r.attempts = 0 AND r.read_at IS NOT NULL AND r.next_due_at > r.read_at + %(period)s))""",
-            {"period": FOCUS_PERIOD, "keys": keys, "kickoffs": kickoffs, "kinds": list(FOCUS_KINDS)})
+                      OR (r.attempts = 0 AND r.next_due_at > coalesce(r.read_at + %(period)s, %(now)s)))""",
+            {"period": FOCUS_PERIOD, "now": now, "keys": keys, "kickoffs": kickoffs, "kinds": list(FOCUS_KINDS)})
         return self.conn.execute("SELECT count(*) FROM ops.transfermarkt_reads WHERE focus_until IS NOT NULL").fetchone()[0]
 
     # Units --------------------------------------------------------------------
