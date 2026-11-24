@@ -569,6 +569,12 @@ class RoundNameTest(unittest.TestCase):
         a = award()
         self.assertEqual(a.reached_round(None, "Finals, Final"), "final")
         self.assertEqual(a.reached_round(None, "finals, final"), "final")
+        self.assertEqual(a.reached_round(None, "  FINALS, FINAL  "), "final")
+        self.assertEqual(a.reached_round("knockout", "Finals, Final"), "final")
+        # « Finals, Final » exactly: another name ending « , final » is not a final, nor a regular-season match.
+        for name in ("Qualifying, Final", "Preliminary round, Final", "Group A, Final"):
+            self.assertIsNone(a.reached_round(None, name), name)
+        self.assertIsNone(a.reached_round("regular", "Finals, Final"))
         # The names production holds and that already read (60.2's 60g kept): unchanged.
         for name, reached in (("Quarterfinals", "quarter_final"), ("Semifinals", "semi_final"), ("Final", "final"),
                               ("Quarts de finale", "quarter_final"), ("Demi-finales", "semi_final"), ("Finale", "final"),
