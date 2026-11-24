@@ -349,9 +349,10 @@ async function matchOdds(read, params) {
  * A match minute by minute: win, draw and loss from the forecast's expected goals, the
  * score, the clock and the dismissals (dashboard/shared/inplay.js). A finished match runs to the 90th
  * minute, where its last point is its result; a match in play stops at its clock. A finished
- * match with an extra-time or a shoot-out score runs to the 120th (`extraTime`), its last point
- * the result, level when a shoot-out decided it (`penalties`: the shoot-out's score, outside
- * the model). The base does not say a match in play is in extra time (no period, a clock past the
+ * match with an extra-time or a shoot-out score, or with a goal or a red card after the 90th
+ * minute (the source gives no extra-time score, and added time is the 90th plus `added`), runs
+ * to the 120th (`extraTime`), its last point the result, level when a shoot-out decided it
+ * (`penalties`: the shoot-out's score, outside the model, null when the base has none). The base does not say a match in play is in extra time (no period, a clock past the
  * 90th being added time as well): it stops at the 90th, the live feed's period carrying it on. A match
  * the base has not read yet (still "not_started" there, though it may be under way) gets
  * its kick-off point only; `inplay` and `rho` are the model the points were drawn with,
@@ -377,8 +378,9 @@ async function liveProbability(read, params) {
   // A finished match whose goal events do not give its score has no timeline to show.
   if (finished && (goals("home") !== s.home_score || goals("away") !== s.away_score)) reject(404, "Donnée indisponible.");
   const seen = Math.max(clock?.minute ?? 0, ...events.map((e) => e.minute), 0);
-  // `?? null`: a base without migration 166 has neither column, and no match then went to extra time.
-  const extra = finished && ((s.home_score_et ?? null) !== null || (s.home_penalty_score ?? null) !== null);
+  // `?? null`: a base without migration 166 has neither column. An event past the 90th says extra time
+  // as well: added time is minute 90 with `added`, and the source's matches carry no extra-time score.
+  const extra = finished && ((s.home_score_et ?? null) !== null || (s.home_penalty_score ?? null) !== null || events.some((e) => e.minute > 90));
   const last = extra ? 120 : finished ? 90 : s.status === "not_started" ? 0 : Math.max(0, Math.min(90, Math.floor(seen)));
   // A match whose two confirmed line-ups were read before it (091) starts from the forecast that read them:
   // the strengths that forecast had (each club's Elo and its form), moved by what each eleven was worth.

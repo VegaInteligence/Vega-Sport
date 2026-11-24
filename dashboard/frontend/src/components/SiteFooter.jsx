@@ -32,11 +32,11 @@ export default function SiteFooter({ href = plainHref, path }) {
             <Link
               className="site-footer-home"
               href={href("/")}
-              aria-label="Vega Intelligence, vue d’ensemble"
+              aria-label="Vega Sport, vue d’ensemble"
             >
               <StatarenaLogo
                 className="site-footer-logo"
-                width={186}
+                width={181}
                 height={40}
               />
             </Link>

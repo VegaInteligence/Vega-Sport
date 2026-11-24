@@ -7,11 +7,13 @@
 import React from "react";
 import { badgeOverflow, placeBadges } from "../services/curve-badges.js";
 import { REPORT_TITLES } from "../services/reports.js";
+import { BRAND_IVORY, WORDMARK } from "../brand-mark.js";
 
 export const WIDTH = 1080, HEIGHT = 1350;
 const BG = "#06080C", PANEL = "#0F141C", LINE = "#1F2835", INK = "#F4F7FB", MUTED = "#8C97A8", SOFT = "#C9D3E0";
 const ACCENT = "#3C96E7", WARM = "#F08A4B", WIN = "#3FB97A", DRAW = "#8C97A8", LOSS = "#E5555A";
-const STAR = "M 559 1 C 530 57 497 115 480 184 C 471 209 487 218 560 223 L 558 232 C 500 231 463 240 446 265 C 411 309 354 406 320 457 C 351 394 380 322 392 281 C 406 239 374 245 335 243 C 230 240 115 237 1 234 C 132 231 279 225 351 220 C 415 216 433 191 456 164 C 494 108 531 45 559 1 Z";
+// The wordmark « Vega. » at the top of every card, in the logo's ivory (src/brand-mark.js).
+const MARK_HEIGHT = 58;
 
 export const TITLES = REPORT_TITLES;
 
@@ -57,8 +59,10 @@ function Frame({ report, n, children, subtitle }) {
     <div style={{ display: "flex", flexDirection: "column", width: WIDTH, height: HEIGHT, background: BG, color: INK, fontFamily: "Inter", padding: "60px 72px 48px" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center" }}>
-          <svg width="56" height="46" viewBox="0 0 567 460"><path d={STAR} fill={ACCENT} /></svg>
-          <div style={{ display: "flex", marginLeft: 16, fontSize: 30, fontWeight: 700, letterSpacing: 6 }}>VEGA</div>
+          <svg width={Math.round((MARK_HEIGHT * WORDMARK.width) / WORDMARK.height)} height={MARK_HEIGHT} viewBox={`0 0 ${WORDMARK.width} ${WORDMARK.height}`}>
+            <path d={WORDMARK.letters} fill={BRAND_IVORY} />
+            <circle cx={WORDMARK.point.cx} cy={WORDMARK.point.cy} r={WORDMARK.point.r} fill={BRAND_IVORY} />
+          </svg>
         </div>
         <div style={{ display: "flex", fontSize: 26, color: MUTED }}>{report.title}</div>
       </div>
