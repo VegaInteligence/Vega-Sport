@@ -21,6 +21,16 @@ const groups = [
       ["Power Ranking", "/power-ranking/"],
     ],
   },
+  {
+    // The legal pages (src/views/LegalPage.jsx), static and public: one address each, never the
+    // season or focus the football pages carry in their links.
+    title: "Informations",
+    plain: true,
+    links: [
+      ["Confidentialité", "/confidentialite/"],
+      ["Conditions d’utilisation", "/conditions-utilisation/"],
+    ],
+  },
 ];
 
 export default function SiteFooter({ href = plainHref, path }) {
@@ -51,10 +61,12 @@ export default function SiteFooter({ href = plainHref, path }) {
               <ul>
                 {group.links.map(([label, destination]) => {
                   const external = destination.startsWith("https:");
+                  const target =
+                    external || group.plain ? destination : href(destination);
                   return (
                     <li key={destination}>
                       <Link
-                        href={external ? destination : href(destination)}
+                        href={target}
                         aria-current={
                           !external &&
                           path?.replace(/\/$/, "") ===

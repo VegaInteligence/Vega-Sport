@@ -20,6 +20,7 @@ import "../src/home.css";
 import "../src/phone.css";
 import "../src/navigation.css";
 import "../src/account.css";
+import "../src/legal.css";
 const siteUrl = "https://vegasport.vercel.app";
 // Raised with every new drawing of the icon, so no browser keeps the old one.
 const faviconVersion = 4;
