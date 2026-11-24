@@ -45,7 +45,9 @@ ADDED = ["155_player_grade_status.sql", "156_team_side_corrections.sql", "157_pa
          # #82: Score Vega v9, the players' level beside the ranking (new tables and two reads).
          "167_player_level.sql",
          # #70 / VI-49 (§51): the nations' world ranking and the national Elo's run settings.
-         "168_nation_world_ranking.sql"]
+         "168_nation_world_ranking.sql",
+         # #90 (§54): Score Vega v9.1, the keeper without goals prevented is flagged on his level row.
+         "169_player_level_measured.sql"]
 # SportScore editions: A, a rank shared at different points (a version already kept); B, rank 5 in a table of two (no
 # version yet); C, a table that holds (its version kept).
 A, B, C = 9601, 9602, 9603
@@ -172,8 +174,8 @@ class DeploymentMigrationsTest(unittest.TestCase):
         self.assertEqual(len(applied), 160)
         self.assertEqual(self.at_production, "migrations applied=160 total=160 logins=unchanged")
         self.assertEqual(self.merged_added, ADDED)
-        self.assertEqual(self.deployed, "migrations applied=13 total=173 logins=unchanged")
-        self.assertEqual(self.again, "migrations applied=0 total=173 logins=unchanged")
+        self.assertEqual(self.deployed, "migrations applied=14 total=174 logins=unchanged")
+        self.assertEqual(self.again, "migrations applied=0 total=174 logins=unchanged")
         self.assertEqual([v for v, *_ in self.migrations_after if v not in {w for w, *_ in self.migrations_before}], ADDED)
         self.assertEqual([r for r in self.migrations_after if r[0] < "155"], self.migrations_before)
         self.assertEqual(self.migrations_again, self.migrations_after)
@@ -186,6 +188,33 @@ class DeploymentMigrationsTest(unittest.TestCase):
             self.assertIsNotNone(self.read.execute(sql).fetchone()[0], sql)
         friendly = self.read.execute("SELECT match_id, tournament, home_name, away_name FROM api.home_internationals('2026-10-05', '2026-10-11')").fetchall()
         self.assertEqual([r[1:] for r in friendly], [("Friendly", "Brazil", "Japan")])
+
+    def test_54l_the_level_rows_have_their_measured_flag(self):
+        # §54: 169 adds the flag to the level's rows (true until a run says otherwise) and serves it last.
+        x = self.db.execute
+        self.assertEqual(x("""SELECT data_type, is_nullable, column_default FROM information_schema.columns
+                              WHERE table_schema = 'agg' AND table_name = 'player_level' AND column_name = 'measured'""").fetchone(),
+                         ("boolean", "NO", "true"))
+        served = [c for (c,) in x("""SELECT column_name FROM information_schema.columns
+                                     WHERE table_schema = 'api' AND table_name = 'player_levels' ORDER BY ordinal_position""").fetchall()]
+        self.assertEqual(served, ["season", "season_id", "player_key", "player_id", "name", "image_url", "team_id", "team", "team_image_url", "position",
+                                  "universe", "eligible", "linked", "minutes", "level", "own", "blocks", "starts", "club", "start_share", "club_level",
+                                  "score", "rank", "position_rank", "version", "computed_at", "reference_season", "measured"])
+        # A row written as the worker in service writes it during the deployment (no flag): it reads measured.
+        player = 9701
+        with self.db.transaction(force_rollback=True):
+            x("SET LOCAL ROLE vega_calc")
+            run = x("""INSERT INTO agg.level_runs(season_id, version, status, started_at, finished_at, players, settings)
+                       VALUES (2026, 'score-vega-v9', 'published', now(), now(), 2, '{}') RETURNING id""").fetchone()[0]
+            x("""INSERT INTO agg.player_level(season_id, player_id, position, team_id, universe, eligible, linked, minutes, level, own, blocks, starts, club,
+                   start_share, club_level, score, rank, position_rank, run_id)
+                 VALUES (2026, %s, 'goalkeeper', 9601, 'men', true, true, 900, 0, 0, 0, 0, 0, 1, 0, 50, 1, 1, %s)""", (player, run))
+            x("""INSERT INTO agg.player_level(season_id, player_id, position, team_id, universe, eligible, linked, minutes, level, own, blocks, starts, club,
+                   start_share, club_level, score, rank, position_rank, run_id, measured)
+                 VALUES (2026, %s, 'goalkeeper', 9601, 'men', true, true, 900, -1, -1, -1, 0, 0, 1, 0, 48, 2, 2, %s, false)""", (player + 1, run))
+            x("SET LOCAL ROLE vega_read")
+            self.assertEqual(x("SELECT player_key, measured FROM api.player_levels WHERE season_id = 2026 ORDER BY rank").fetchall(),
+                             [(player, True), (player + 1, False)])
 
     def test_53a_the_power_runs_keep_main_s_columns_and_the_national_settings_have_their_own_table(self):
         # §53: the Open Matchday restore compares the reviewed run's whole row (open_matchday_restore.verify_elo).

@@ -1,6 +1,7 @@
-"""Score Vega v9, the player's level (docs/calculs/10-score-vega-v9, FAILURE_MODES §49): the
-formulas, without a database. The database pass over the synthetic season is in test_models.py."""
+"""Score Vega v9, the player's level (docs/calculs/10-score-vega-v9, FAILURE_MODES §49; v9.1: §54):
+the formulas, without a database. The database pass over the synthetic season is in test_models.py."""
 
+import json
 from math import exp, sqrt
 from pathlib import Path
 import random
@@ -38,12 +39,18 @@ def cell(minutes, sums=None, *, keeper=None):
     return c
 
 
-def references(lam=1000.0, sd=1.0, *, keeper=(13291.0, 0.062), rho=0.8, delta=0.0, prices=None):
+def keeper_cell(minutes, covered, prevented=0.0):
+    """A keeper's sums at a club: goals prevented known for `covered` of his minutes in goal."""
+    c = level.empty_cell()
+    c[level.MINUTES], c[level.KEEPER_MINUTES], c[level.KEEPER_GOALS] = minutes, covered, prevented
+    return c
+
+
+def references(lam=1000.0, sd=1.0, *, rho=0.8, delta=0.0, prices=None):
     """Measured references, the same for every position and block unless given."""
     return {
         "lam": {(p, b): lam for p in level.OUTFIELD for b in range(NB)},
         "sd": {(p, b): sd for p in level.OUTFIELD for b in range(NB)},
-        "keeper": keeper,
         "rho": {(a, b): rho for a in (True, False) for b in range(NB)},
         "delta": {(a, b): delta for a in (True, False) for b in range(NB)},
         "prices": prices or {p: [level.E * w for w in level.announced(p)] for p in level.OUTFIELD},
@@ -234,6 +241,7 @@ class LevelsTest(unittest.TestCase):
         now = {(1, GK, 1): cell(3000.0, keeper=prevented), (2, GK, 2): cell(3000.0, keeper=0.0)}
         out = level.levels(now, {}, refs, {1: person(team=1), 2: person(team=2)})
         self.assertEqual(out[1]["position"], GK)
+        self.assertEqual(level.KEEPER_LAMBDA, 13291.0)
         self.assertAlmostEqual(out[1]["positions"][GK]["value"], level.GOAL * 0.2 * 3000 / (3000 + 13291.0))
         # Centred on the keepers: the two differ by the value, around zero.
         self.assertAlmostEqual(out[1]["own"] - out[2]["own"], out[1]["positions"][GK]["value"])
@@ -282,8 +290,8 @@ class LevelsTest(unittest.TestCase):
         out = level.levels(now, {}, refs, {1: person(), 2: person()})
         value = level.E * power.WEIGHTS["full_back"]["creation"] * 2.0
         self.assertAlmostEqual(out[1]["positions"][FB]["value"], value)
-        self.assertAlmostEqual(out[1]["blocks"], value / 2)  # centred on the two full-backs
-        self.assertAlmostEqual(out[2]["blocks"], -value / 2)
+        self.assertAlmostEqual(out[1]["blocks"], value / 2 - 1.05)  # centred on the two full-backs, and their offset (54c)
+        self.assertAlmostEqual(out[2]["blocks"], -value / 2 - 1.05)
 
     def test_universes_are_scored_and_ranked_apart(self):
         refs = references()
@@ -297,6 +305,105 @@ class LevelsTest(unittest.TestCase):
         again = level.levels(now, {}, refs, people)
         self.assertAlmostEqual(again[1]["score"], out[1]["score"])
         self.assertEqual((again[5]["rank"], again[1]["rank"]), (1, 2))
+
+    def test_54a_a_keeper_reads_one_reference_whatever_a_year_measured(self):
+        # Measured on each finished year, the keeper's λ was 5 395 minutes for 2024/25 and 13 291 for 2025/26,
+        # and 2024/25 had 36 keepers in its first 100 players. It is a setting now: a measure kept by a run
+        # from before the correction is neither read nor written again.
+        prevented = 0.2 * 3000 / 90
+        now = {(1, GK, 1): cell(3000.0, keeper=prevented), (2, GK, 2): cell(3000.0, keeper=0.0)}
+        people = {1: person(team=1), 2: person(team=2)}
+        plain = level.levels(now, {}, references(), people)
+        earlier = level.levels(now, {}, {**references(), "keeper": (5395.0, 0.099)}, people)
+        self.assertAlmostEqual(earlier[1]["positions"][GK]["value"], level.GOAL * 0.2 * 3000 / (3000 + 13291.0))
+        self.assertEqual(earlier[1]["positions"][GK]["value"], plain[1]["positions"][GK]["value"])
+        self.assertEqual(level.SETTINGS["keeper_lambda"], 13291.0)
+        kept = level.pack(references())
+        self.assertNotIn("keeper", kept)
+        self.assertNotIn("keeper", level.unpack({**kept, "keeper": [5395.0, 0.099]}))
+
+
+    def test_54b_a_keeper_is_measured_when_goals_prevented_cover_half_his_year_in_goal(self):
+        # Goals prevented are missing before 2024/25 and for one keeper in three since: without them a keeper's
+        # value is 0. The flag reads the year's minutes in goal alone, clubs added, and changes no number.
+        now = {(1, GK, 1): keeper_cell(3000.0, 3000.0, 6.0), (2, GK, 2): keeper_cell(3000.0, 1500.0, 2.0),
+               (3, GK, 3): keeper_cell(3000.0, 1499.0, 2.0), (4, GK, 4): keeper_cell(3000.0, 0.0),
+               (5, GK, 5): keeper_cell(3000.0, 1499.0, 2.0),
+               (6, GK, 6): keeper_cell(1000.0, 1000.0, 1.0), (6, GK, 7): keeper_cell(2000.0, 499.0, 1.0),  # two clubs: 1 499 of 3 000
+               (7, CB, 1): cell(3000.0)}
+        before = {(5, GK, 5): keeper_cell(3000.0, 3000.0, 4.0)}  # the year before, whole: it does not decide
+        people = {p: person(team=p) for p in range(1, 8)}
+        out = level.levels(now, before, references(), people)
+        self.assertEqual(level.KEEPER_MEASURED_SHARE, 0.5)
+        self.assertEqual([out[p]["measured"] for p in range(1, 8)], [True, True, False, False, False, False, True])
+        keepers = range(1, 7)
+        self.assertAlmostEqual(out[4]["positions"][GK]["value"], 0.0)
+        self.assertAlmostEqual(out[3]["positions"][GK]["value"], level.GOAL * 90 * 2.0 / (1499 + 13291.0))
+        self.assertAlmostEqual(out[5]["positions"][GK]["value"], level.GOAL * 90 * (2.0 + 0.5 * 4.0) / (1499 + 0.5 * 3000 + 13291.0))
+        # The keepers' centre is the mean of all six, measured or not: their blocks add up to nothing.
+        self.assertAlmostEqual(sum(out[p]["blocks"] for p in keepers), 0.0)
+        self.assertEqual(sorted(out[p]["position_rank"] for p in keepers), list(range(1, 7)))
+        self.assertTrue(all(0 <= out[p]["score"] <= 100 and out[p]["rank"] >= 1 for p in out))
+
+    def test_54c_the_full_backs_centre_is_their_mean_and_their_offset(self):
+        # Players judged at two positions are valued 1.05 higher against the full-backs than against the
+        # players of their other positions: the full-backs' mean is that much too low a centre (men).
+        self.assertEqual(level.POSITION_OFFSETS, {"men": {FB: -1.05}})
+        refs = references(lam=0.0)  # no noise: the talent is the rate
+        sums = [0.0] * NB
+        sums[1] = 2.0 * 1800 / 90  # + 2 sd of creation
+        now = {(1, FB, 1): cell(1800.0, sums), (2, FB, 1): cell(1800.0), (3, CB, 1): cell(1800.0, sums), (4, CB, 1): cell(1800.0)}
+        out = level.levels(now, {}, refs, {p: person() for p in (1, 2, 3, 4)})
+        wide = level.E * power.WEIGHTS["full_back"]["creation"] * 2.0
+        central = level.E * power.WEIGHTS["centre_back"]["creation"] * 2.0
+        self.assertAlmostEqual(out[1]["positions"][FB]["value"], wide)  # the value itself is unchanged
+        self.assertEqual([round(out[p]["blocks"], 6) for p in (1, 2, 3, 4)],
+                         [round(wide / 2 - 1.05, 6), round(-wide / 2 - 1.05, 6), round(central / 2, 6), round(-central / 2, 6)])
+        # A full-back at his position's mean is 1.05 under a centre-back at his: blocks, own level, level, and level at the position.
+        mean = level.levels({(1, FB, 1): cell(1800.0), (2, FB, 1): cell(1800.0), (3, CB, 1): cell(1800.0), (4, CB, 1): cell(1800.0)},
+                            {}, refs, {p: person() for p in (1, 2, 3, 4)})
+        for key in ("blocks", "own", "level"):
+            self.assertAlmostEqual(mean[1][key] - mean[3][key], -1.05)
+        self.assertAlmostEqual(mean[1]["positions"][FB]["level"] - mean[3]["positions"][CB]["level"], -1.05)
+        for r in list(out.values()) + list(mean.values()):
+            self.assertAlmostEqual(r["level"], r["blocks"] + r["starts"] + r["club"])
+            self.assertAlmostEqual(r["own"], r["blocks"] + r["starts"])
+            self.assertTrue(r["measured"])
+
+    def test_54d_the_offset_follows_the_share_of_the_minutes_at_full_back(self):
+        now = {(1, CB, 1): cell(1080.0), (1, FB, 1): cell(720.0), (2, CB, 1): cell(1800.0), (3, FB, 1): cell(1800.0)}
+        out = level.levels(now, {}, references(), {p: person() for p in (1, 2, 3)})
+        self.assertEqual(out[1]["position"], CB)
+        self.assertAlmostEqual(out[1]["positions"][FB]["share"], 0.4)
+        self.assertAlmostEqual(out[1]["blocks"], 0.4 * -1.05)
+        self.assertAlmostEqual(out[1]["positions"][FB]["level"], -1.05 + out[1]["starts"] + out[1]["club"])
+        self.assertAlmostEqual(out[1]["positions"][CB]["level"], out[1]["starts"] + out[1]["club"])
+        self.assertAlmostEqual(out[2]["blocks"], 0.0)
+        self.assertAlmostEqual(out[3]["blocks"], -1.05)
+
+    def test_54e_the_offset_is_the_mens_universe_s(self):
+        # Measured on the men's reference players; the women's universe keeps its positions' means.
+        now = {(p, FB if p % 2 else CB, 1): cell(1800.0) for p in range(1, 9)}
+        people = {p: person(universe="men" if p <= 4 else "women") for p in range(1, 9)}
+        out = level.levels(now, {}, references(), people)
+        self.assertEqual([round(out[p]["blocks"], 6) for p in range(1, 9)], [-1.05, 0.0, -1.05, 0.0, 0.0, 0.0, 0.0, 0.0])
+        men = level.levels({key: c for key, c in now.items() if key[0] <= 4}, {}, references(), {p: people[p] for p in range(1, 5)})
+        self.assertEqual({p: (r["level"], r["score"], r["rank"]) for p, r in men.items()}, {p: (out[p]["level"], out[p]["score"], out[p]["rank"]) for p in men})
+
+    def test_54f_full_backs_alone_keep_their_order_and_their_scores(self):
+        now = {(p, FB, p): cell(1800.0) for p in (1, 2, 3)}
+        out = level.levels(now, {}, references(), {1: person(club=1.0, team=1), 2: person(club=0.0, team=2), 3: person(club=-1.0, team=3)})
+        self.assertEqual([round(out[p]["blocks"], 6) for p in (1, 2, 3)], [-1.05] * 3)
+        self.assertEqual([out[p]["rank"] for p in (1, 2, 3)], [1, 2, 3])
+        self.assertAlmostEqual(out[2]["score"], 50.0)  # the median moves with them
+        self.assertAlmostEqual(out[1]["score"], 100 / (1 + 10 ** (-10.0 / 36)))
+
+    def test_54g_the_version_and_the_settings_of_the_v9_1(self):
+        self.assertEqual(level.LEVEL_VERSION, "score-vega-v9.1")
+        self.assertEqual((level.SETTINGS["keeper_lambda"], level.SETTINGS["keeper_measured_share"]), (13291.0, 0.5))
+        self.assertEqual(level.SETTINGS["position_offsets"], {"men": {"full_back": -1.05}})
+        # As the base keeps and compares them (agg.level_runs.settings, stale).
+        self.assertEqual(json.loads(json.dumps(level.SETTINGS)), level.SETTINGS)
 
 
 if __name__ == "__main__":

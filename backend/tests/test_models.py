@@ -221,17 +221,20 @@ class ModelsTest(unittest.TestCase):
                            WHERE season_id = %s AND status = 'published'""", season)
 
     def test_player_levels_beside_the_ranking(self):
-        # Score Vega v9 (issue #82, FAILURE_MODES §49, 49p and 49q): the level is computed by the ranking's
-        # run, beside it. Expected values are recomputed here from the rows the run kept and the rows inserted.
+        # Score Vega v9 (issue #82, FAILURE_MODES §49, 49p and 49q) and v9.1 (issue #90, §54, 54h): the level is
+        # computed by the ranking's run, beside it. Expected values are recomputed here from the rows the run
+        # kept and the rows inserted.
         from vega import level, power
 
         x = self.db.execute
         run, version, reference, players, settings, measured = self.level_run()
-        self.assertEqual((version, players), (level.LEVEL_VERSION, 88))
+        self.assertEqual((version, players), ("score-vega-v9.1", 88))
         self.assertEqual(reference, 2025)  # the award year is over: it measures its own references and keeps them
-        self.assertEqual({k: settings[k] for k in ("psi", "e", "e_starts", "goal", "defence_bound", "scale", "previous_weight", "acquired_minutes")},
-                         {"psi": 10.0, "e": level.E, "e_starts": level.E_STARTS, "goal": level.GOAL, "defence_bound": 2.0, "scale": 36.0,
+        self.assertEqual({k: settings[k] for k in ("psi", "e", "e_starts", "goal", "keeper_lambda", "defence_bound", "scale", "previous_weight", "acquired_minutes")},
+                         {"psi": 10.0, "e": level.E, "e_starts": level.E_STARTS, "goal": level.GOAL, "keeper_lambda": 13291.0, "defence_bound": 2.0, "scale": 36.0,
                           "previous_weight": 0.5, "acquired_minutes": 450})
+        self.assertEqual((settings["keeper_measured_share"], settings["position_offsets"]), (0.5, {"men": {"full_back": -1.05}}))
+        self.assertEqual(settings, level.SETTINGS)
         self.assertEqual(set(measured["lam"]), set(level.OUTFIELD))
         self.assertTrue(all(len(measured[k][p]) == 5 for k in ("lam", "sd", "prices") for p in level.OUTFIELD))
         rows = x("""SELECT player_id, position, team_id, universe, eligible, linked, minutes, level, own, blocks, starts, club, start_share,
@@ -252,6 +255,9 @@ class ModelsTest(unittest.TestCase):
 
         self.assertEqual({r[0]: r[1] for r in rows}, {p: position_of(p) for p in role})
         self.assertEqual(sum(r[1] == "goalkeeper" for r in rows), 8)
+        # 54h: every keeper has goals prevented in each of his matches, so everybody is measured.
+        self.assertEqual(self.one("SELECT count(*), bool_and(measured) FROM agg.player_level WHERE season_id = 2025"), (88, True))
+        self.assertEqual(self.one("SELECT count(*), bool_and(measured) FROM api.player_levels WHERE season_id = 2025"), (88, True))
         self.assertTrue({r[1] for r in rows} <= set(level.POSITIONS))
         # The parts add up; everybody started every match, so starting separates nobody.
         for r in rows:
@@ -296,7 +302,7 @@ class ModelsTest(unittest.TestCase):
             if position == "goalkeeper":
                 prevented = float(self.one("SELECT sum(goals_prevented) FROM core.player_match_stats WHERE season_id = 2025 AND player_id = %s", player)[0])
                 self.assertAlmostEqual(cell[4], prevented, places=3)
-                self.assertAlmostEqual(value, level.GOAL * 90 * prevented / (1260 + measured["keeper"][0]), places=3)
+                self.assertAlmostEqual(value, level.GOAL * 90 * prevented / (1260 + level.KEEPER_LAMBDA), places=3)
                 self.assertEqual(talents, [None] * 5)
                 continue
             expected = 0.0
@@ -313,9 +319,15 @@ class ModelsTest(unittest.TestCase):
             self.assertAlmostEqual(value, expected, places=2)
         mean = {position: sum(values) / len(values) for position, values in by_position.items()}
         of = {r[0]: r for r in rows}
+        # 54h: the men's full-backs are centred 1.05 under their mean, the other positions on theirs.
+        offset = {"full_back": -1.05}
+        self.assertEqual(sum(position == "full_back" for _, position, *_ in positions), 8)  # one per club (slot 32)
         for player, position, _, _, _, _, value, own_level, *_ in positions:
-            self.assertAlmostEqual(of[player][9], value - mean[position], places=3)
+            self.assertAlmostEqual(of[player][9], value - mean[position] + offset.get(position, 0.0), places=3)
             self.assertAlmostEqual(own_level, of[player][7], places=3)  # one position: its level is the player's
+        for position in by_position:
+            held = [of[player][9] for player, at, *_ in positions if at == position]
+            self.assertAlmostEqual(sum(held) / len(held), offset.get(position, 0.0), places=3)
         # An attacking position's blocks are centred on the year: their sums over its players are nil.
         for position in set(level.ATTACK) & set(by_position):
             for b in range(5):
@@ -326,7 +338,7 @@ class ModelsTest(unittest.TestCase):
             for b, name in enumerate(blocks):
                 self.assertAlmostEqual(measured["prices"][position][b], level.E * power.WEIGHTS[position][name], places=6)
         self.assertEqual({measured["lam"][p][b] for p in level.OUTFIELD for b in range(5)}, {level.DEFAULT_LAMBDA})
-        self.assertEqual(tuple(measured["keeper"]), level.KEEPER_DEFAULT)
+        self.assertNotIn("keeper", measured)  # 54a: the keeper's reference is a setting, not a measure
         # The reads: one row per player and per position, with the run's version.
         self.assertEqual(self.one("SELECT count(*), min(version), max(version) FROM api.player_levels WHERE season_id = 2025"), (88, level.LEVEL_VERSION, level.LEVEL_VERSION))
         self.assertEqual(self.one("SELECT count(*) FROM api.player_level_positions WHERE season_id = 2025")[0], 88)
@@ -392,6 +404,102 @@ class ModelsTest(unittest.TestCase):
             x("DELETE FROM agg.power_runs WHERE season_id = 2024")
             power.refresh_players(self.db, 2025)
         self.assertEqual(self.one("SELECT minutes_two_seasons FROM agg.player_level_positions WHERE season_id = 2025 AND player_id = %s", player)[0], 1260)
+        self.assertEqual(power.stale_rankings(self.db), [])
+
+    def test_a_keeper_without_goals_prevented_on_half_his_minutes_is_not_measured(self):
+        # 54i: goals prevented are missing for whole leagues and years. The keeper stays in the level, flagged.
+        from vega import power
+
+        x = self.db.execute
+        keeper = 100
+        matches = [m for (m,) in x("SELECT match_id FROM core.player_match_stats WHERE season_id = 2025 AND player_id = %s ORDER BY match_id", (keeper,)).fetchall()]
+        kept = dict(x("SELECT match_id, goals_prevented FROM core.player_match_stats WHERE season_id = 2025 AND player_id = %s", (keeper,)).fetchall())
+        self.assertEqual(len(matches), 14)
+        flags = "SELECT player_id, measured FROM agg.player_level WHERE season_id = 2025 AND position = 'goalkeeper' ORDER BY player_id"
+        others = [(team * 100, True) for team in range(2, 9)]
+        self.assertEqual(x(flags).fetchall(), [(keeper, True)] + others)
+        blank = "UPDATE core.player_match_stats SET goals_prevented = NULL WHERE season_id = 2025 AND player_id = %s AND match_id = ANY(%s)"
+        try:
+            x(blank, (keeper, matches[:7]))  # 630 of his 1 260 minutes keep them: half
+            power.refresh_players(self.db, 2025)
+            self.assertEqual(x(flags).fetchall(), [(keeper, True)] + others)
+            x(blank, (keeper, matches[:8]))  # 540: under half
+            power.refresh_players(self.db, 2025)
+            self.assertEqual(x(flags).fetchall(), [(keeper, False)] + others)
+            minutes, covered = self.one("SELECT minutes, keeper_minutes FROM agg.player_level_cells WHERE season_id = 2025 AND player_id = %s", keeper)
+            self.assertEqual((minutes, covered), (1260, 540))
+            row = self.one("SELECT level, score, rank, position_rank FROM agg.player_level WHERE season_id = 2025 AND player_id = %s", keeper)
+            self.assertTrue(all(v is not None for v in row) and 0 <= row[1] <= 100)
+            self.assertEqual(self.one("SELECT measured FROM api.player_levels WHERE season_id = 2025 AND player_key = %s", keeper)[0], False)
+        finally:
+            for match, prevented in kept.items():
+                x("UPDATE core.player_match_stats SET goals_prevented = %s WHERE season_id = 2025 AND player_id = %s AND match_id = %s", (prevented, keeper, match))
+            power.refresh_players(self.db, 2025)
+        self.assertEqual(x(flags).fetchall(), [(keeper, True)] + others)
+
+    def test_a_level_of_another_version_is_computed_again(self):
+        # 54j: after the deployment the levels in place are of `score-vega-v9`. Their years are listed, and
+        # no other year reads their sums.
+        from vega import level, power
+        from vega.store import Store
+
+        x = self.db.execute
+        with self.db.transaction():
+            self.assertEqual(Store(self.db).season("2024/2025"), 2024)
+        player, position = self.one("SELECT player_id, position FROM agg.player_level WHERE season_id = 2025 AND position = 'centre_back' ORDER BY player_id LIMIT 1")
+        levels = "SELECT player_id, level, score, rank FROM agg.player_level WHERE season_id = 2025 ORDER BY player_id"
+        kept = x(levels).fetchall()
+        self.assertEqual(power.stale_rankings(self.db), [])
+        try:
+            x("UPDATE agg.level_runs SET version = 'score-vega-v9' WHERE season_id = 2025 AND status = 'published'")
+            self.assertEqual(power.stale_rankings(self.db), [2025])
+            # The year before, as a run of the earlier version left it: sums for one centre-back.
+            previous = x("""INSERT INTO agg.level_runs(season_id, version, status, started_at, finished_at, players, settings)
+                            VALUES (2024, 'score-vega-v9', 'published', now(), now(), 1, '{}') RETURNING id""").fetchone()[0]
+            x("""INSERT INTO agg.player_level_cells(season_id, player_id, position, team_id, minutes, finishing_minutes, creation_minutes,
+                   progression_minutes, defence_minutes, retention_minutes, finishing_sum, creation_sum, progression_sum, defence_sum, retention_sum,
+                   keeper_minutes, goals_prevented, run_id)
+                 VALUES (2024, %s, %s, 1, 900, 900, 900, 900, 900, 900, 0, 0, 0, 10, 0, 0, 0, %s)""", (player, position, previous))
+            self.assertEqual(power.refresh_players(self.db, 2025), 88)
+            self.assertEqual(power.stale_rankings(self.db), [])  # 2024 has no published ranking: nothing asks for its level
+            self.assertEqual(self.level_run()[1], "score-vega-v9.1")
+            self.assertEqual(level.LEVEL_VERSION, "score-vega-v9.1")
+            self.assertEqual(self.one("SELECT minutes_two_seasons FROM agg.player_level_positions WHERE season_id = 2025 AND player_id = %s", player)[0], 1260)
+            self.assertEqual(x(levels).fetchall(), kept)
+        finally:
+            x("DELETE FROM agg.player_level_cells WHERE season_id = 2024")
+            x("DELETE FROM agg.level_runs WHERE season_id = 2024")
+            x("UPDATE agg.level_runs SET version = %s WHERE season_id = 2025 AND status = 'published'", (level.LEVEL_VERSION,))
+        self.assertEqual(power.stale_rankings(self.db), [])
+
+    def test_a_level_of_other_settings_is_computed_again(self):
+        # 54k: the keeper's reference became a setting, so the level runs published before it hold no
+        # `keeper_lambda`. A year whose level was computed with other settings than the code's is listed again;
+        # its new run holds the code's settings and, here, the same levels.
+        from psycopg.types.json import Jsonb
+        from vega import level, power
+
+        x = self.db.execute
+        levels = "SELECT player_id, level, score, rank FROM agg.player_level WHERE season_id = 2025 ORDER BY player_id"
+        kept = x(levels).fetchall()
+        self.assertEqual(power.stale_rankings(self.db), [])
+        run = self.level_run()[0]
+        try:
+            x("UPDATE agg.level_runs SET settings = settings - 'keeper_lambda' WHERE id = %s", (run,))
+            self.assertEqual(power.stale_rankings(self.db), [2025])
+            self.assertEqual(power.refresh_players(self.db, 2025), 88)
+            self.assertEqual(power.stale_rankings(self.db), [])
+            again, _, _, _, settings, measured = self.level_run()
+            self.assertNotEqual(again, run)
+            self.assertEqual(settings, level.SETTINGS)
+            self.assertEqual(settings["keeper_lambda"], 13291.0)
+            self.assertNotIn("keeper", measured)
+            self.assertEqual(x(levels).fetchall(), kept)
+            # Another value of a setting, not only a missing one.
+            x("UPDATE agg.level_runs SET settings = jsonb_set(settings, '{keeper_lambda}', '5395') WHERE id = %s", (again,))
+            self.assertEqual(power.stale_rankings(self.db), [2025])
+        finally:
+            x("UPDATE agg.level_runs SET settings = %s WHERE season_id = 2025 AND status = 'published'", (Jsonb(level.SETTINGS),))
         self.assertEqual(power.stale_rankings(self.db), [])
 
     def test_a_blank_duel_side_reads_like_a_written_zero(self):
