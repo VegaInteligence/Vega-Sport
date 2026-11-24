@@ -46,6 +46,14 @@ Le worker prend les travaux dans l'ordre score, détails, référentiel (le back
 - par club et par joueur : chaque club de l'annuaire (`/api/read/clubs`) et chaque fiche joueur (`/api/read/players`) porte `power`, son classement de la saison lue avec ce détail (`null` s'il n'est pas classé) ;
 - course au Ballon d'Or : les 30 premiers joueurs classés d'un club de première division, numérotés de 1 à 30, sont écrits dans `agg.player_award_ranking` avec la ligne `agg.calc_runs` qui les a produits (`kind='award'`) ; `/api/rankings/power?kind=players` sert cette course (`rank`), avec le rang parmi tous les joueurs classés (`powerRank`), l'indice (`index`) et les deux parts du total (`ownContribution`, `clubLevel`).
 
+**Score Vega v9, le niveau d'un joueur** ([`level.py`](vega/level.py), [`docs/calculs/10-score-vega-v9/`](../docs/calculs/10-score-vega-v9/02-mise-en-service.md), FAILURE_MODES § 49), calculé à côté du classement v8 par la même passe (`power.refresh_players`), sans rien changer à ses sorties ni au site :
+- neuf postes (l'ailier du v8 devient milieu offensif, milieu excentré ou ailier selon son emplacement), cinq blocs dont la défense lue en contexte sur une échelle stabilisée, talent par bloc rétréci par un bruit propre au poste et au bloc, deux saisons (l'année d'avant à ½), un deuxième poste acquis à 450 minutes ;
+- `level = own + club` en points Elo : `own` = valeur aux postes jugés + part des titularisations, `club` = ψ · (Elo du club − moyenne) / 400 ; score = 100 / (1 + 10^(−(level − médiane) / 36)) ;
+- réglages nommés dans `level.py` et gardés avec chaque calcul (`agg.level_runs.settings`) : ψ = 10, E = 9,1 (provisoire à cinq blocs), titularisations 13,4, but évité 163, borne de défense 2,0 ; les mesures de référence (λ, σ, prix de l'attaque, ρ, δ) sont prises sur une année terminée et gardées dans `agg.level_runs.measured` ;
+- tables `agg.level_runs`, `agg.player_level_cells` (sommes par joueur, poste et club), `agg.player_level`, `agg.player_level_positions` (`167_player_level.sql`) ;
+- ordre : `power.stale_rankings` liste, après les années du v8, celles dont le niveau manque ou est plus ancien que celui de l'année d'avant, la plus ancienne d'abord ; une année partielle n'a pas de niveau ;
+- lecture : `/api/rankings/level?season=&universe=&position=&limit=&page=` et `/api/rankings/level/player?season=&player=`.
+
 Les points que la méthode laisse ouverts (son § 12) sont tranchés ainsi. Chaque réglage est nommé dans `power.py` et conservé avec chaque calcul (`agg.power_runs`) :
 
 | Point ouvert | Choix (versions 2 et 3, 12 novembre 2026 : `docs/calculs/05-joueurs/08-audit-classement-puissance.md`) |

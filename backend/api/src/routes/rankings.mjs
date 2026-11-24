@@ -55,6 +55,16 @@
  * GET /api/rankings/power/player?season=&player= — one player's power ranking of a
  * season, for his page: the object of the player reads (powerOf) and `roleCount`, the
  * number of ranked players of his role.
+ *
+ * GET /api/rankings/level?season=&universe=&position=&limit=&page= — the players' level of a
+ * season (Score Vega v9, vega/level.py, docs/calculs/10-score-vega-v9): how many Elo points a
+ * club gains with the player, `own` (what he does at his positions and how often he starts)
+ * and `club` (the level he plays at), and the score out of 100 on the level's curve. Read
+ * beside the power ranking, which it does not change. `position` is one of nine: a winger
+ * of the power ranking is a winger, an attacking midfielder or a wide midfielder.
+ * GET /api/rankings/level/player?season=&player= — one player's level with its parts and
+ * each position he played: judged (its share, value and talents by block, in standard
+ * deviations) or not (too few minutes over two seasons).
  */
 import { createHash } from "node:crypto";
 import { matchesEtag, reject, send, validateParams } from "../http.mjs";
@@ -762,6 +772,72 @@ async function wholeRanking(read, params, season, limit) {
   };
 }
 
+// The level's nine positions (vega/level.py), in French.
+export const POSITION_LABEL = {
+  centre_forward: "Avant-centre", attacking_midfielder: "Milieu offensif", winger: "Ailier", wide_midfielder: "Milieu excentré",
+  central_midfielder: "Milieu central", defensive_midfielder: "Milieu défensif", full_back: "Latéral / piston", centre_back: "Défenseur central",
+  goalkeeper: "Gardien",
+};
+const LEVEL_BLOCKS = ["finishing", "creation", "progression", "defence", "retention"];
+/** Why a level's rank is provisional: under the minutes bar, or (men) in a league whose level is not measured. */
+const levelReason = (r) => (r.eligible === false ? "minutes" : r.universe !== "women" && r.linked === false ? "league" : null);
+
+/** The players' level of a season, in the level's order, a page of `limit` at a time; optionally one position. */
+async function levelRanking(read, params) {
+  validateParams(params, ["season", "universe", "position", "limit", "page"]);
+  const season = params.get("season"), universe = params.get("universe") ?? "men", position = params.get("position");
+  const limitRaw = params.get("limit") ?? "50", pageRaw = params.get("page") ?? "1";
+  if (!/^\d{4}\/\d{4}$/.test(season || "") || !["men", "women"].includes(universe) || (position !== null && !Object.hasOwn(POSITION_LABEL, position))
+    || !/^[1-9]\d{0,2}$/.test(limitRaw) || Number(limitRaw) > 200 || !/^[1-9]\d{0,4}$/.test(pageRaw))
+    reject(400, "Paramètre invalide.");
+  const limit = Number(limitRaw), page = Number(pageRaw);
+  const where = `season_id=${SEASON_KEY} AND universe=$2${position ? " AND position=$3" : ""}`;
+  const values = [season, universe, ...(position ? [position] : [])];
+  const [rows, [count]] = await Promise.all([
+    read(`SELECT * FROM api.player_levels WHERE ${where} ORDER BY rank, player_id LIMIT $${values.length + 1} OFFSET $${values.length + 2}`,
+      [...values, limit, (page - 1) * limit]),
+    read(`SELECT count(*)::int AS total, max(version) AS version, max(computed_at) AS computed_at FROM api.player_levels WHERE ${where}`, values),
+  ]);
+  if (!count?.total) reject(404, "Donnée indisponible.");
+  return {
+    season, universe, position: position ?? null, page, limit, total: count.total,
+    method: { version: count.version, computedAt: iso(count.computed_at) },
+    rows: rows.map((r) => ({
+      rank: r.rank, positionRank: r.position_rank, playerId: r.player_id, name: r.name, imageUrl: r.image_url ?? null, teamId: r.team_id ?? null,
+      team: r.team ?? null, teamImageUrl: r.team_image_url ?? null, position: POSITION_LABEL[r.position] ?? r.position, positionKey: r.position,
+      score: round(r.score, 1), level: round(r.level, 1), own: round(r.own, 1), club: round(r.club, 1), minutes: Math.round(r.minutes),
+      provisional: levelReason(r) !== null, provisionalReason: levelReason(r),
+    })),
+  };
+}
+
+/** One player's level of a season: its parts, and each position he played, the judged ones first. */
+async function levelPlayer(read, params) {
+  validateParams(params, ["season", "player"]);
+  const season = params.get("season"), id = params.get("player");
+  if (!/^\d{4}\/\d{4}$/.test(season || "") || !PLAYER.test(id || "")) reject(400, "Paramètre invalide.");
+  const [[r], positions] = await Promise.all([
+    read(`SELECT * FROM api.player_levels WHERE season_id=${SEASON_KEY} AND player_key=api.internal_id('player',$2)`, [season, id]),
+    read(`SELECT * FROM api.player_level_positions WHERE season_id=${SEASON_KEY} AND player_key=api.internal_id('player',$2)
+          ORDER BY acquired DESC, share DESC NULLS LAST, minutes_two_seasons DESC, position`, [season, id]),
+  ]);
+  if (!r) reject(404, "Donnée indisponible.");
+  return {
+    season, method: { version: r.version, computedAt: iso(r.computed_at) },
+    player: {
+      id, rank: r.rank, positionRank: r.position_rank, position: POSITION_LABEL[r.position] ?? r.position, positionKey: r.position,
+      score: round(r.score, 1), level: round(r.level, 1), own: round(r.own, 1), blocks: round(r.blocks, 1), starts: round(r.starts, 1), club: round(r.club, 1),
+      startShare: round(r.start_share, 3), minutes: Math.round(r.minutes), universe: r.universe, eligible: r.eligible !== false, linked: r.linked !== false,
+      provisional: levelReason(r) !== null, provisionalReason: levelReason(r),
+      positions: positions.map((p) => ({
+        position: POSITION_LABEL[p.position] ?? p.position, positionKey: p.position, judged: p.acquired, minutes: Math.round(p.minutes),
+        minutesTwoSeasons: Math.round(p.minutes_two_seasons), share: round(p.share, 3), value: round(p.value, 1), level: round(p.level, 1),
+        talents: p.acquired && LEVEL_BLOCKS.some((b) => p[b] != null) ? Object.fromEntries(LEVEL_BLOCKS.map((b) => [b, round(p[b], 2)])) : null,
+      })),
+    },
+  };
+}
+
 /** A league edition's competition_season_id from its public id and season, or a 404. */
 async function editionOf(read, params) {
   const competition = params.get("competition"), season = params.get("season");
@@ -854,6 +930,8 @@ export function createRankingRoute(read) {
     if (path === "/api/rankings/power") return respond(req, await powerRanking(read, params));
     if (path === "/api/rankings/power/player") return respond(req, await powerPlayer(read, params));
     if (path === "/api/rankings/power/history") return respond(req, await powerHistory(read, params));
+    if (path === "/api/rankings/level") return respond(req, await levelRanking(read, params));
+    if (path === "/api/rankings/level/player") return respond(req, await levelPlayer(read, params));
     if (path === "/api/rankings/leagues") return respond(req, await leagueLevels(read, params));
     if (path === "/api/rankings/breakouts") return respond(req, await breakouts(read, params));
     if (path === "/api/rankings/match") return respond(req, await matchGrades(read, params));

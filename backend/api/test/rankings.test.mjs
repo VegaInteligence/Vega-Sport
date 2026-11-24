@@ -45,6 +45,50 @@ test("ranking index and editions", { skip }, async () => {
   assert.equal((await get("/api/rankings/edition?kind=fifa-men&edition=2025-09-18.fifa")).response.status, 400); // no source in a key
 });
 
+test("the players' level of a season (Score Vega v9), read beside the power ranking", { skip }, async () => {
+  // FAILURE_MODES §49, 49t: the level's rows, under the read role; the power ranking's answer (next test) is unchanged.
+  const { response, body } = await get("/api/rankings/level?season=2025/2026");
+  assert.equal(response.status, 200);
+  assert.deepEqual([body.season, body.universe, body.position, body.page, body.limit, body.total], ["2025/2026", "men", null, 1, 50, 3]);
+  assert.deepEqual(body.method, { version: "score-vega-v9", computedAt: "2025-09-06T03:05:00.000Z" });
+  assert.deepEqual(body.rows.map((r) => [r.rank, r.positionRank, r.playerId, r.position, r.positionKey, r.score, r.level]), [
+    [1, 1, "p_aaaab1", "Avant-centre", "centre_forward", 79.7, 21.4], [2, 1, "p_aaaab4", "Milieu offensif", "attacking_midfielder", 50, 0],
+    [3, 1, "p_aaaab3", "Gardien", "goalkeeper", 40.5, -6],
+  ]);
+  assert.deepEqual(Object.keys(body.rows[0]), ["rank", "positionRank", "playerId", "name", "imageUrl", "teamId", "team", "teamImageUrl", "position", "positionKey",
+    "score", "level", "own", "club", "minutes", "provisional", "provisionalReason"]);
+  // The level is what he does (his blocks and his starts) and his club: the parts are served with it.
+  assert.deepEqual([body.rows[0].own, body.rows[0].club, body.rows[0].minutes, body.rows[0].provisionalReason], [14.2, 7.2, 260, null]);
+  assert.deepEqual([body.rows[2].provisional, body.rows[2].provisionalReason], [true, "minutes"]);
+  // One position, a page at a time.
+  const tens = (await get("/api/rankings/level?season=2025/2026&position=attacking_midfielder")).body;
+  assert.deepEqual([tens.position, tens.total, tens.rows.map((r) => r.playerId)], ["attacking_midfielder", 1, ["p_aaaab4"]]);
+  const second = (await get("/api/rankings/level?season=2025/2026&limit=2&page=2")).body;
+  assert.deepEqual([second.page, second.limit, second.total, second.rows.map((r) => r.rank)], [2, 2, 3, [3]]);
+  assert.equal((await get("/api/rankings/level?season=2025/2026&universe=women")).response.status, 404);
+  assert.equal((await get("/api/rankings/level?season=2024/2025")).response.status, 404);
+  for (const bad of ["", "?season=2025", "?season=2025/2026&position=striker", "?season=2025/2026&universe=all", "?season=2025/2026&limit=0",
+    "?season=2025/2026&page=0", "?season=2025/2026&kind=players"])
+    assert.equal((await get("/api/rankings/level" + bad)).response.status, 400, bad);
+  // One player's level, for his page: its parts, and each position he played, judged or not.
+  const own = (await get("/api/rankings/level/player?season=2025/2026&player=p_aaaab1")).body;
+  assert.deepEqual([own.season, own.method.version], ["2025/2026", "score-vega-v9"]);
+  assert.deepEqual(own.player, {
+    id: "p_aaaab1", rank: 1, positionRank: 1, position: "Avant-centre", positionKey: "centre_forward", score: 79.7, level: 21.4, own: 14.2, blocks: 11,
+    starts: 3.2, club: 7.2, startShare: 0.9, minutes: 260, universe: "men", eligible: true, linked: true, provisional: false, provisionalReason: null,
+    positions: [
+      { position: "Avant-centre", positionKey: "centre_forward", judged: true, minutes: 200, minutesTwoSeasons: 2600, share: 1, value: 13.5, level: 21.4,
+        talents: { finishing: 1.25, creation: 0.4, progression: 0.1, defence: -0.3, retention: 0.2 } },
+      { position: "Ailier", positionKey: "winger", judged: false, minutes: 60, minutesTwoSeasons: 60, share: null, value: null, level: null, talents: null },
+    ],
+  });
+  const keeper = (await get("/api/rankings/level/player?season=2025/2026&player=p_aaaab3")).body.player;
+  assert.deepEqual([keeper.position, keeper.provisionalReason, keeper.positions[0].talents], ["Gardien", "minutes", null]);
+  assert.equal((await get("/api/rankings/level/player?season=2025/2026&player=p_aaaab2")).response.status, 404);
+  assert.equal((await get("/api/rankings/level/player?season=2025/2026&player=aaaab1")).response.status, 400);
+  assert.equal((await get("/api/rankings/level/player?season=2025/2026")).response.status, 400);
+});
+
 test("power rankings of players and clubs for a season", { skip }, async () => {
   const { response, body } = await get("/api/rankings/power?kind=players&season=2025/2026");
   assert.equal(response.status, 200);
