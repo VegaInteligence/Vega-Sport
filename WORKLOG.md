@@ -48,19 +48,21 @@
 - Tests first: `tests/e2e/consent.e2e.mjs` (E1–E17, X1), red on main 3/21 (E11, E4, X1 pass: they hold on main too), green 21/21 on the dev server (before E14 was tightened) and 21/21 on a production build of the final code (`/_vercel/insights/script.js` and `/_vercel/speed-insights/script.js` requested only after « Accepter », outside Europe, or with a stored acceptance). E14 tightened after the first captures (sign-in button clear at first view): red, then green. Site suite 997/997, build OK. Evidence …/scratchpad/bandeau-cookies/ (e2e-red/, e2e-green/, e2e-prod/).
 - Next: the owner's look at the captures; not pushed: the owner's go is needed; then one line in SiteFooter.jsx when the two branches meet.
 
-## Theme colour: the site's theme alone — 24 November 2026 ([PR #112](https://github.com/VegaInteligence/Vega-Sport/pull/112) open, not merged)
+## Theme colour: the site's theme alone — 24 November 2026 (merged, [#112](https://github.com/VegaInteligence/Vega-Sport/pull/112); live and verified)
 
 - Goal (user, 24 Nov): at load, after a theme change and after a navigation inside the site, the page has one `meta[name="theme-color"]`, the colour of the site's theme (`#0E0F12` dark, `#F6F8FB` light). Before: the tag was React's (`viewport.themeColor`) and the theme script and `applyTheme` rewrote it, so two tags at load in the light theme, and `#0E0F12` back on a light page after the theme button and a navigation.
 - Constraints: tests first; nothing merged without the user's word. No Linear from this folder (user rule) and no issue created: a small, isolated fix.
 - Decision: as for the icon, the theme script writes the page's one tag (`#vega-theme-color`, `window.__vegaSetThemeColor`) while the head is read, and `viewport` names no `themeColor`; the head's `<noscript>` carries `#0E0F12` (without scripts the page stays dark); `applyTheme` calls the script's function before it writes the storage. Trade-off: a reader of the raw HTML that runs no script and skips `<noscript>` finds no theme colour (the manifest still says `#0E0F12`).
-- Branch `claude/theme-color`, the session's own worktree `.claude/worktrees/eager-wilbur-45a453` (not under `~/Agents/worktrees/`); started on #88's branch, rebased onto main 8d1f1e7 once #88 was merged.
+- 24 Nov, 16:19 UTC: #112 squash-merged (d8fa104) on the user's word (« Fusionner au vert »), every CI check green on 9e354c7. Vercel served it within a minute.
+- Verified on the public site, 24 Nov: `tests/e2e/brand.e2e.mjs` 55/55 on https://vegasport.vercel.app from merged main (B12a to B12j green). Evidence: `~/Agents/scratch/vega-theme-color-20261124/public-site/`.
+- Review of the diff by a second agent: nothing serious; its remark applied (a navigation check now fails when the head's rebuild is not seen, B5k–B5n and B12 alike).
 - Checks, `tests/e2e/brand.e2e.mjs`: B12a to B12j (each theme at load, after a navigation, the theme button both ways, then a navigation, without scripts, storage refused), written before the fix. Each reading gives the tags, the site's theme and the body's background, five times over 1.2 s.
 - Checked 24 Nov: 50/55 on the source before the fix (B12d to B12h red), 55/55 on the dev server with the fix, again on the pushed commit after the rebase; 54/55 on a local `next build` + `next start` (X1 only: the Vercel scripts do not exist off Vercel). Site tests 966/975, the same 9 failures as main on Node 22. Site build OK. Evidence: `~/Agents/scratch/vega-theme-color-20261124/` (`red-dev`, `green-dev`, `green-dev-rebased`, `green-start`, `probe/`).
 - Safari, read and not run: 15 to 18 use the tag and follow a script; 26 colours its bars from the page's background, which is the same two colours (`--bg`).
 - Known limit: when React re-creates the whole document, the theme goes back to dark and the script's two tags are removed until the next theme change or reload. Measured on production builds with an induced fault: before this change `#0E0F12` stayed (React's own tag), now no theme colour.
 - User decision, 24 Nov (« Changement à part »): that case is handled in its own change, not in #112. Tracked in GitHub [#113](https://github.com/VegaInteligence/Vega-Sport/issues/113) (measure, probe, what its check needs).
-- Not checked: the public site (the Vercel preview asks for a sign-in); the accounts E2E; Firefox and Safari; no phone's bars were looked at by eye.
-- Next action: the user's word to merge #112; then the brand E2E on the public site. #113 after that.
+- Not checked: the accounts E2E (the account's theme goes through the same `applyTheme`); Firefox and Safari; no phone's bars were looked at by eye.
+- Next action: #113 (the re-created document), in its own change.
 
 ## Tab icon: the site's theme alone — 24 November 2026 (merged, #88; live and verified)
 
