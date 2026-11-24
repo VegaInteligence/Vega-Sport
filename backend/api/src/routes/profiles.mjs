@@ -53,6 +53,13 @@
  * side), the foot he shoots with and his share of his team's passes in its pass networks,
  * placed among the players of his role in his league (117).
  *
+ * GET /api/players/{id}/injuries — the player's injuries once they were read, most recent first (116, 160), with his
+ * suspensions in the same list and shape (`kind: "suspension"`, 174).
+ * GET /api/teams/{id}/absences — the club's current injured and suspended players (174, FAILURE_MODES.md §59): `squad`
+ * counts the members of its current Transfermarkt squad and those whose absences were read (45 days or less), `asOf` is
+ * the oldest of those reads; each absence names its player, kind, label, start, expected return, matches missed and,
+ * for a suspension, the matches remaining and the competition. 404 only for an unknown team.
+ *
  * GET /api/players/{id}/transfers — the player's transfers once they were read, oldest first
  * (135): the date, the kind (transfer, free, loan, loan_return, internal; null when the
  * provider gives none), the fee when it is known, the club left and the club joined. A club
@@ -99,8 +106,11 @@ const PASSING = /^\/api\/teams\/(t_(?:[A-Za-z0-9]{6}|v\d{7}))\/passing$/;
 const AGE_PROFILE = /^\/api\/teams\/(t_(?:[A-Za-z0-9]{6}|v\d{7}))\/age-profile$/;
 const ACTIONS = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/actions$/;
 const FACED = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/faced$/;
-// GET /api/players/{id}/injuries: a player's injuries, most recent first (api.player_injuries, 116).
+// GET /api/players/{id}/injuries: a player's injuries and suspensions, most recent first (api.player_injuries, 116;
+// api.player_suspensions, 174).
 const INJURIES = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/injuries$/;
+// GET /api/teams/{id}/absences: a club's current injured and suspended players (api.team_absences, 174).
+const TEAM_ABSENCES = /^\/api\/teams\/(t_(?:[A-Za-z0-9]{6}|v\d{7}))\/absences$/;
 // GET /api/players/{id}/transfers: a player's transfers, oldest first (api.player_transfers, 135).
 const TRANSFERS = /^\/api\/players\/(p_(?:[A-Za-z0-9]{6}|v\d{7}))\/transfers$/;
 const SQUAD = /^\/api\/teams\/(t_(?:[A-Za-z0-9]{6}|v\d{7}))\/squad$/;
@@ -571,10 +581,15 @@ export function createProfileRoute(read) {
     if (injuries) {
       validateParams(params, []);
       const [rows, [known]] = await Promise.all([
+        // The suspensions (174) in the same list and shape, kind "suspension"; « known » stays the injuries' read.
         read(
           `SELECT kind, label, start_date::text AS start_date, end_date::text AS end_date, days, matches_missed, season_year,
              absent_since::text AS absent_since
-           FROM api.player_injuries WHERE player_key=api.internal_id('player',$1)
+           FROM (SELECT kind, label, start_date, end_date, days, matches_missed, season_year, absent_since
+                 FROM api.player_injuries WHERE player_key=api.internal_id('player',$1)
+                 UNION ALL
+                 SELECT kind, label, start_date, end_date, days, matches_missed, season_year, absent_since
+                 FROM api.player_suspensions WHERE player_key=api.internal_id('player',$1)) e
            ORDER BY start_date DESC, label`,
           [injuries[1]],
         ),
@@ -588,6 +603,42 @@ export function createProfileRoute(read) {
         injuries: rows.map((r) => ({ kind: r.kind ?? null, label: r.label ?? null, start: r.start_date, end: r.end_date ?? null,
           days: r.days ?? null, matchesMissed: r.matches_missed ?? null, season: r.season_year ?? null,
           ...(r.absent_since && { absentSince: r.absent_since }) })),
+      });
+    }
+    const absences = path.match(TEAM_ABSENCES);
+    if (absences) {
+      validateParams(params, []);
+      const args = [absences[1]];
+      const [[team], [squad], rows] = await Promise.all([
+        read(`SELECT team_id FROM api.team_keys WHERE team_id=api.internal_id('team',$1)`, args),
+        read(
+          `SELECT count(*)::int AS players, count(*) FILTER (WHERE is_read)::int AS read, min(read_on)::text AS as_of
+           FROM api.team_absence_players WHERE team_key=api.internal_id('team',$1)`,
+          args,
+        ),
+        read(
+          `SELECT player_id, name, image_url, role, kind, label, start_date::text AS start_date, end_date::text AS end_date,
+             matches_missed, matches_remaining, competition_code, competition_id, competition_name, read_on::text AS read_on
+           FROM api.team_absences WHERE team_key=api.internal_id('team',$1)
+           ORDER BY start_date DESC, name, label`,
+          args,
+        ),
+      ]);
+      // 404 only for a team the base does not know; a known one without a read squad has an empty list.
+      if (!team) reject(404, "Donnée indisponible.");
+      return respond(req, {
+        id: absences[1],
+        // The oldest read of the squad's read players; a member never read (or read too long ago) is unknown, not available.
+        asOf: squad.as_of ?? null,
+        squad: { players: squad.players, read: squad.read },
+        absences: rows.map((r) => ({
+          player: { id: r.player_id, name: r.name ?? null, imageUrl: r.image_url ?? null, role: r.role ?? null },
+          kind: r.kind ?? null, label: r.label ?? null, start: r.start_date, expectedReturn: r.end_date ?? null,
+          matchesMissed: r.matches_missed ?? null, matchesRemaining: r.kind === "suspension" ? r.matches_remaining ?? null : null,
+          competition: r.kind === "suspension" && r.competition_code
+            ? { code: r.competition_code, id: r.competition_id ?? null, name: r.competition_name ?? null } : null,
+          readAt: r.read_on,
+        })),
       });
     }
     const transfers = path.match(TRANSFERS);

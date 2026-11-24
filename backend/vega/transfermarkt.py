@@ -1,6 +1,6 @@
 """Transfermarkt's data in the base: a process of the worker (`--transfermarkt process`) that
 reads Transfermarkt's JSON API, the routes the MIT project felipeall/transfermarkt-api (v5)
-documents, with a client of its own (six GETs, the standard library: no dependency).
+documents, with a client of its own (seven GETs, the standard library: no dependency).
 
 What it keeps, as typed rows (a response is never stored):
 - the players it reads (core.provider_players) and the clubs' squads (core.provider_squads)
@@ -10,6 +10,8 @@ What it keeps, as typed rows (a response is never stored):
   a valuation; the start and label of an episode) and never deleted: one the provider no longer
   lists keeps its facts and the first day it was missed (absent_since). An empty list when he
   holds some writes nothing (FAILURE_MODES.md §44);
+- his suspensions (core.player_suspensions, from /player/{id}/absence, its other absences skipped) the same way, in a
+  table of their own: a read of the injuries never marks or refuses because of a suspension, nor the reverse (§59);
 - a club-season's squad the same way: a member the provider no longer lists is kept, marked
   absent, and no longer a link candidate; an empty squad when it holds members writes nothing;
 - his transfers (core.player_transfers), each kept by its key and never deleted: a move the
@@ -47,7 +49,9 @@ again.
 Order: the queue (ops.transfermarkt_reads), the most recent players first (priority 1 = a
 player of the season in progress), then each unit when it is due again: a profile read in
 batches of a hundred tells when a player's value or club changed, and only then are his
-values or transfers read again before their period.
+values or transfers read again before their period. Above priority 1, the focus (§59): the
+injuries and suspensions of the most used players of a club with a match close at hand are
+read daily and first (FOCUS_*).
 """
 
 from collections import Counter, defaultdict
@@ -62,6 +66,7 @@ from urllib.parse import urlencode, urlparse
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from .sources import normalize
+from .sources.tm_history import LEAGUES as TM_LEAGUES
 
 BASE = "https://tmapi.transfermarkt.technology"
 PROVIDER = "transfermarkt"
@@ -80,22 +85,34 @@ MIN_TOKEN = 3
 MIN_AGE, MAX_AGE = 15, 45
 # Within a priority, the kinds in this order. Injuries come right after the profiles and the
 # clubs: every player page shows them, and nothing else gives them (16 Nov 2026).
-KINDS = ("profile", "club", "injuries", "search", "values", "squad", "transfers")
+# The suspensions (lot 1 « Blessés et suspendus », FAILURE_MODES.md §59) right after the injuries, for the same reason.
+KINDS = ("profile", "club", "injuries", "suspensions", "search", "values", "squad", "transfers")
 # Days before a unit is read again, by priority (1 = the season in progress, 2 the one before,
 # 3 the one before that, 4 and more older): a profile weekly for a player of the season, the
 # values and transfers when the profile says they changed, else monthly; a club's record monthly
 # for the two last seasons, its squad's value and age move (16 Nov 2026).
 PERIODS = {
     "profile": (7, 30, 90, 365), "values": (30, 90, 365, 365), "transfers": (30, 90, 365, 365),
-    "injuries": (7, 30, 90, 365), "squad": (7, 365, 365, 365), "club": (30, 30, 180, 180),
+    "injuries": (7, 30, 90, 365), "suspensions": (7, 30, 90, 365), "squad": (7, 365, 365, 365), "club": (30, 30, 180, 180),
     "search": (30, 90, 365, 365),  # a club not found yet is searched again
 }
+# A level above priority 1 for the players who count for a match close at hand (FAILURE_MODES.md §59, 59o–59v): the
+# FOCUS_PLAYERS most used players (minutes of the season in progress) of each linked club with a match not started in the
+# next FOCUS_HORIZON have their FOCUS_KINDS read again FOCUS_PERIOD after their last read; everything else keeps PERIODS.
+# At most FOCUS_CLUBS_MAX clubs, the soonest kick-offs first: the focus costs at most 80 x 18 x 2 = 2,880 requests a day,
+# under a tenth of the ~31,400 the reader can ask (INTERVAL + JITTER / 2 apart).
+FOCUS_KINDS = ("injuries", "suspensions")
+FOCUS_PLAYERS = 18
+FOCUS_HORIZON = timedelta(days=7)
+FOCUS_PERIOD = timedelta(days=1)
+FOCUS_CLUBS_MAX = 80
 NOT_FOUND_AGAIN = timedelta(days=90)
 # A search whose chosen club has no record yet: again within a day, its record read by then (FAILURE_MODES.md §45).
 SEARCH_UNNAMED_AGAIN = timedelta(days=1)
-# The kinds whose 404 is a refusal, not an answer: their reads view (api.player_injury_reads, 160) serves the last
+# The kinds whose 404 is a refusal, not an answer: their reads views (api.player_injury_reads, 160;
+# api.player_suspension_reads, 174) serve the last
 # accepted read, so a 404 keeps that read's read_at, and a first one leaves the player unknown (FAILURE_MODES.md §46).
-NOT_FOUND_REFUSED = frozenset({"injuries"})
+NOT_FOUND_REFUSED = frozenset({"injuries", "suspensions"})
 # The search's mark while its club has no name: the close retry spent, it comes back at its period (§45.4).
 SEARCH_UNNAMED = "CLUB_UNNAMED"
 # A failed unit waits 2 ** attempts hours, at most a week; the exponent stops at 8 (256 h) before
@@ -429,6 +446,39 @@ def parse_injuries(data):
     return out
 
 
+def is_suspension(name):
+    """A suspension of /player/{id}/absence: its name says so (« Yellow card suspension », « Red card suspension »,
+    « Indirect card suspension » seen on 24 Nov 2026). The route lists other absences too (national-team call-ups,
+    leave): those are no suspension and are read nowhere (FAILURE_MODES.md §59, 59a)."""
+    return isinstance(name, str) and "suspension" in name.casefold()
+
+
+def _count(value):
+    """A number of matches as given: an integer of 0 or more (0 stays 0); anything else is unknown (None)."""
+    return value if isinstance(value, int) and not isinstance(value, bool) and 0 <= value <= 1000 else None
+
+
+def parse_suspensions(data):
+    """The suspensions of a /player/{id}/absence response (59a, 59b): each one's label, start, end (None: not given, an
+    ongoing one's may be), days, matches missed and possible (None: unknown, never 0), Transfermarkt's competition code
+    as given and season. An element without an object, a start or a suspension's name is skipped."""
+    out = []
+    for entry in _container(data, "absences"):
+        if not isinstance(entry, dict) or not is_suspension(entry.get("name")):
+            continue
+        start, end = _day(entry.get("start")), _day(entry.get("end"))
+        if start is None:
+            continue
+        duration = _obj(entry.get("durationDetails")).get("days")
+        days = (end - start).days + 1 if end else (duration + 1 if _count(duration) is not None else None)
+        code, season = entry.get("competitionId"), entry.get("seasonId")
+        out.append({"label": entry["name"], "start": start, "end": end, "days": days,
+                    "games": _count(entry.get("missedGamesCount")), "possible": _count(entry.get("possibleMissingGamesCount")),
+                    "competition": code if isinstance(code, str) and re.fullmatch(r"[A-Za-z0-9]{1,12}", code) else None,
+                    "season": season if isinstance(season, int) and not isinstance(season, bool) and 1900 <= season <= 2100 else None})
+    return out
+
+
 def parse_squad(data):
     out = {}
     for member in _container(data, "squad"):
@@ -619,8 +669,9 @@ class Reader:
                 self.link_players()
             self.quarantine()
             queued = self.enqueue(now)
+            focused = self.focus(now)
             self.conn.execute("UPDATE ops.transfermarkt_state SET planned_at = %s WHERE id = 1", (now,))
-        self.log(f"transfermarkt planned queued={queued} link={link}", flush=True)
+        self.log(f"transfermarkt planned queued={queued} focused={focused} link={link}", flush=True)
         return queued
 
     def _link(self, entity_type, key, entity, rule, evidence=0):
@@ -772,6 +823,20 @@ class Reader:
                SELECT k.kind, p.provider_key, least(9, greatest(1, %s - coalesce(p.last, %s - 8) + 1)), %s
                FROM players p CROSS JOIN (VALUES ('profile'), ('values'), ('transfers'), ('injuries')) k(kind)
                ON CONFLICT DO NOTHING""", (current, current, now)).rowcount
+        # Every linked player, not doubted, without a suspensions unit (the players queued before 174 included): his
+        # suspensions, at his injuries' priority when he has that unit (FAILURE_MODES.md §59, 59l).
+        queued += self.conn.execute(
+            """INSERT INTO ops.transfermarkt_reads(kind, provider_key, priority, next_due_at)
+               SELECT 'suspensions', i.provider_key, coalesce(
+                 (SELECT r.priority FROM ops.transfermarkt_reads r WHERE r.kind = 'injuries' AND r.provider_key = i.provider_key),
+                 least(9, greatest(1, %s - coalesce((SELECT max(s.season_id) FROM core.player_match_stats s
+                                                     WHERE s.player_id = i.entity_id AND s.minutes_played > 0), %s - 8) + 1))), %s
+               FROM core.provider_ids i
+               WHERE i.entity_type = 'player' AND i.provider = 'transfermarkt' AND i.is_current
+                 AND NOT EXISTS (SELECT 1 FROM ops.transfermarkt_reads r WHERE r.kind = 'suspensions' AND r.provider_key = i.provider_key)
+                 AND NOT EXISTS (SELECT 1 FROM ops.provider_links l WHERE l.entity_type = 'player' AND l.provider = 'transfermarkt'
+                                 AND l.provider_key = i.provider_key AND l.quarantined_at IS NOT NULL)
+               ON CONFLICT DO NOTHING""", (current, current, now)).rowcount
         # Every linked club: its squads of the seasons the base holds of it, and the year before
         # (a calendar-year league is the provider's year before).
         queued += self.conn.execute(
@@ -818,10 +883,62 @@ class Reader:
                WHERE queued.read_at IS NULL AND queued.priority > EXCLUDED.priority""", (current, now)).rowcount
         return queued
 
+    def focus(self, now):
+        """The daily level above priority 1 (FAILURE_MODES.md §59, 59o–59v): the FOCUS_KINDS units of the FOCUS_PLAYERS
+        players with the most minutes of the season in progress at each linked club whose next match not started kicks
+        off within FOCUS_HORIZON (at most FOCUS_CLUBS_MAX clubs, the soonest first) carry that kick-off (focus_until);
+        every other unit loses it. A healthy unit entering the focus is due again FOCUS_PERIOD after its last read; a
+        failing one keeps its wait. No unit is added. Returns the units in focus."""
+        current = self.current_season()
+        rows = [] if current is None else self.conn.execute(
+            """WITH clubs AS (
+                 SELECT i.entity_id AS team, min(m.kickoff_at) AS kickoff
+                 FROM core.provider_ids i
+                 JOIN core.matches m ON m.home_team_id = i.entity_id OR m.away_team_id = i.entity_id
+                 WHERE i.entity_type = 'team' AND i.provider = 'transfermarkt' AND i.is_current
+                   AND NOT EXISTS (SELECT 1 FROM ops.provider_links l WHERE l.entity_type = 'team' AND l.provider = 'transfermarkt'
+                                   AND l.provider_key = i.provider_key AND l.quarantined_at IS NOT NULL)
+                   AND m.status = 'not_started' AND m.kickoff_at > %(now)s AND m.kickoff_at <= %(until)s
+                 GROUP BY 1 ORDER BY 2, 1 LIMIT %(clubs)s),
+               ranked AS (
+                 SELECT c.team, c.kickoff, s.player_id,
+                   row_number() OVER (PARTITION BY c.team ORDER BY sum(s.minutes_played) DESC, s.player_id) AS rank
+                 FROM clubs c
+                 JOIN core.player_match_stats s ON s.team_id = c.team AND s.season_id = %(season)s AND s.minutes_played > 0
+                 GROUP BY c.team, c.kickoff, s.player_id)
+               SELECT i.provider_key, min(r.kickoff)
+               FROM ranked r
+               JOIN core.provider_ids i ON i.entity_type = 'player' AND i.provider = 'transfermarkt' AND i.entity_id = r.player_id
+                 AND i.is_current
+               WHERE r.rank <= %(players)s
+                 AND NOT EXISTS (SELECT 1 FROM ops.provider_links l WHERE l.entity_type = 'player' AND l.provider = 'transfermarkt'
+                                 AND l.provider_key = i.provider_key AND l.quarantined_at IS NOT NULL)
+               GROUP BY 1""",
+            {"now": now, "until": now + FOCUS_HORIZON, "clubs": FOCUS_CLUBS_MAX, "season": current, "players": FOCUS_PLAYERS}).fetchall()
+        keys, kickoffs = [k for k, _ in rows], [t for _, t in rows]
+        self.conn.execute(
+            """UPDATE ops.transfermarkt_reads SET focus_until = NULL
+               WHERE focus_until IS NOT NULL AND NOT (kind = ANY(%s) AND provider_key = ANY(%s))""", (list(FOCUS_KINDS), keys))
+        self.conn.execute(
+            """UPDATE ops.transfermarkt_reads r SET focus_until = f.kickoff,
+                 next_due_at = CASE WHEN r.attempts = 0 AND r.read_at IS NOT NULL THEN least(r.next_due_at, r.read_at + %(period)s)
+                                    ELSE r.next_due_at END
+               FROM unnest(%(keys)s::text[], %(kickoffs)s::timestamptz[]) f(key, kickoff)
+               WHERE r.kind = ANY(%(kinds)s) AND r.provider_key = f.key
+                 AND (r.focus_until IS DISTINCT FROM f.kickoff
+                      OR (r.attempts = 0 AND r.read_at IS NOT NULL AND r.next_due_at > r.read_at + %(period)s))""",
+            {"period": FOCUS_PERIOD, "keys": keys, "kickoffs": kickoffs, "kinds": list(FOCUS_KINDS)})
+        return self.conn.execute("SELECT count(*) FROM ops.transfermarkt_reads WHERE focus_until IS NOT NULL").fetchone()[0]
+
     # Units --------------------------------------------------------------------
 
     def next_units(self):
-        """The next due unit, or for a profile or a club the next due hundred of them."""
+        """The next due unit, or for a profile or a club the next due hundred of them. A due unit in focus first (59u)."""
+        row = self.conn.execute(
+            """SELECT kind, provider_key, priority FROM ops.transfermarkt_reads WHERE focus_until > now() AND next_due_at <= now()
+               ORDER BY focus_until, next_due_at LIMIT 1""").fetchone()
+        if row is not None:
+            return row[0], [(row[1], row[2])]
         row = self.conn.execute(
             """SELECT kind, provider_key, priority FROM ops.transfermarkt_reads WHERE next_due_at <= now()
                ORDER BY priority, array_position(%s::text[], kind), next_due_at LIMIT 1""", (list(KINDS),)).fetchone()
@@ -839,14 +956,17 @@ class Reader:
         """The unit's attempt recorded and its next read planned. Not `accepted` (a refusal kept on this schedule): its
         read_at and rows_written stay those of the last accepted read, as after `failed`."""
         now = self.now()
+        # A unit in focus read on its ordinary schedule comes back within FOCUS_PERIOD (59r); a given wait (a 404) stays.
+        focusable = again is None and kind in FOCUS_KINDS
         if again is None:
             days = PERIODS[kind][min(priority, 4) - 1]
             again = timedelta(days=days)
         self.conn.execute(
-            """UPDATE ops.transfermarkt_reads SET read_at = CASE WHEN %s THEN %s ELSE read_at END, next_due_at = %s,
+            """UPDATE ops.transfermarkt_reads SET read_at = CASE WHEN %s THEN %s ELSE read_at END,
+                 next_due_at = CASE WHEN %s AND focus_until > %s THEN least(%s, %s) ELSE %s END,
                  attempts = CASE WHEN %s::text IS NULL THEN 0 ELSE attempts + 1 END, last_http_status = %s, error_code = %s,
                  rows_written = CASE WHEN %s THEN %s ELSE rows_written END WHERE kind = %s AND provider_key = %s""",
-            (accepted, now, now + again, error, status, error, accepted, written, kind, key))
+            (accepted, now, focusable, now, now + again, now + FOCUS_PERIOD, now + again, error, status, error, accepted, written, kind, key))
 
     def failed(self, kind, units, error):
         for key, _ in units:
@@ -889,6 +1009,8 @@ class Reader:
                     data = HTTP_404  # write_transfers decides: an ordinary answer, or a refusal after a history
             elif kind == "injuries":
                 data = self.get(f"/player/{keys[0]}/injury")
+            elif kind == "suspensions":
+                data = self.get(f"/player/{keys[0]}/absence")
             else:
                 club, year = keys[0].split(":")
                 data = self.get(f"/club/{club}/squad", [("season", year)])
@@ -1333,6 +1455,85 @@ class Reader:
             written += self.conn.execute(
                 "UPDATE core.player_injuries SET absent_since = %s, updated_at = now() WHERE id = ANY(%s)", (today, missed)).rowcount
         self.done("injuries", key, priority, written)
+        return written
+
+    SUSPENSION_FACTS = ("label", "end_date", "days", "matches_missed", "matches_possible", "competition_id", "season_year")
+
+    def competition_of(self, code):
+        """Our competition for a Transfermarkt code, only by the mapping the base already has (tm_history.LEAGUES, the
+        five leagues' codes to their PitchAPI key): None for another code (CL, EURO) or a league the base does not hold."""
+        if code not in TM_LEAGUES:
+            return None
+        row = self.conn.execute(
+            """SELECT entity_id FROM core.provider_ids WHERE entity_type = 'competition' AND provider = 'pitchapi'
+               AND provider_key = %s AND is_current""", (TM_LEAGUES[code],)).fetchone()
+        return row[0] if row else None
+
+    def write_suspensions(self, units, data):
+        """A player's suspensions (FAILURE_MODES.md §59, 59a–59k), in core.player_suspensions alone: the injuries' rows are
+        never read nor written here, nor these by write_injuries. As the injuries (§44): a suspension is keyed by its start,
+        competition and label; inside one start and competition, one stored and one answered left unmatched are the same
+        one relabelled; a matched one keeps its id and is updated when a fact differs; a held one the answer omits keeps its
+        facts and the first day it was missed (absent_since); nothing is deleted. Refused, nothing written: no usable
+        suspension when he holds one (HISTORY_EMPTY; HISTORY_INVALID when suspensions were listed but none usable), one key
+        with two different facts (HISTORY_CONFLICT). The other absences of the route (call-ups, leave) are skipped."""
+        (key, priority), = units
+        listed = [e for e in _container(data, "absences") if isinstance(e, dict) and is_suspension(e.get("name"))]
+        read = parse_suspensions(data)
+        player = self.player_of(key)
+        today = self.now().date()
+        if player is None:
+            self.done("suspensions", key, priority, 0)
+            return 0
+        competitions = {code: self.competition_of(code) for code in {s["competition"] for s in read}}
+        answer = {}
+        for s in read:
+            facts = {"label": s["label"], "end_date": s["end"], "days": s["days"], "matches_missed": s["games"],
+                     "matches_possible": s["possible"], "competition_id": competitions[s["competition"]], "season_year": s["season"]}
+            seen = answer.setdefault((s["start"], s["competition"], s["label"]), facts)
+            if seen != facts:
+                raise Failed("HISTORY_CONFLICT", 200)
+        cursor = self.conn.execute(
+            """SELECT id, start_date, competition_code, label, end_date, days, matches_missed, matches_possible, competition_id,
+                      season_year, absent_since
+               FROM core.player_suspensions WHERE player_id = %s AND source = 'transfermarkt' ORDER BY id""", (player,))
+        names = [c.name for c in cursor.description]
+        held = [dict(zip(names, row)) for row in cursor.fetchall()]
+        if not answer and held:
+            raise Failed("HISTORY_INVALID" if listed else "HISTORY_EMPTY", 200)
+        pairs, free = {}, list(held)
+        for k in answer:
+            row = next((r for r in free if (r["start_date"], r["competition_code"], r["label"]) == k), None)
+            if row is not None:
+                pairs[k] = row
+                free.remove(row)
+        for side in {k[:2] for k in answer if k not in pairs}:
+            mine = [k for k in answer if k[:2] == side and k not in pairs]
+            theirs = [r for r in free if (r["start_date"], r["competition_code"]) == side]
+            if len(mine) == 1 and len(theirs) == 1:  # the same suspension, its label corrected
+                pairs[mine[0]] = theirs[0]
+                free.remove(theirs[0])
+        written = 0
+        for k, facts in answer.items():
+            start, code, _ = k
+            row = pairs.get(k)
+            if row is None:
+                written += self.conn.execute(
+                    """INSERT INTO core.player_suspensions(player_id, label, start_date, end_date, days, matches_missed, matches_possible,
+                         competition_code, competition_id, season_year, source, as_of)
+                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'transfermarkt', %s)""",
+                    (player, facts["label"], start, facts["end_date"], facts["days"], facts["matches_missed"], facts["matches_possible"],
+                     code, facts["competition_id"], facts["season_year"], today)).rowcount
+            elif row["absent_since"] is not None or any(row[f] != facts[f] for f in self.SUSPENSION_FACTS):
+                written += self.conn.execute(
+                    f"""UPDATE core.player_suspensions SET {', '.join(f'{f} = %s' for f in self.SUSPENSION_FACTS)},
+                          as_of = %s, absent_since = NULL, updated_at = now() WHERE id = %s""",
+                    (*(facts[f] for f in self.SUSPENSION_FACTS), today, row["id"])).rowcount
+        missed = [r["id"] for r in free if r["absent_since"] is None]
+        if missed:
+            written += self.conn.execute(
+                "UPDATE core.player_suspensions SET absent_since = %s, updated_at = now() WHERE id = ANY(%s)", (today, missed)).rowcount
+        self.done("suspensions", key, priority, written)
         return written
 
     def squad(self, club, year, members, today):

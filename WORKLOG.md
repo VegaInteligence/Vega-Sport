@@ -1,5 +1,13 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Injured and suspended players, lot 1 « Données » — VI-15 / FAILURE_MODES § 59 (24 November 2026, branch `claude/absents-blesses-suspendus`, local, not pushed)
+
+- Goal (chantier « Blessés et suspendus », method doc https://claude.ai/artifact/GnscskB9xAnWK9oCNwQdYP): know who is out for a club's next match. Lot 1 = collection, storage, one read; lots 2–4 follow (screen by another agent in its own worktree; the model).
+- Constraints: no change to the model (`forecast.py`, `lineup.py`, `power.py`, `models.py`, `agg.team_elo`, `agg.team_power`) until hugo validates the method; the injuries' behaviour unchanged; nothing pushed, no AWS, no production.
+- Decisions: a sister table `core.player_suspensions` (174), not more rows of `core.player_injuries`: each unit reconciles only its own table, so `absent_since` and `HISTORY_EMPTY` of one never touch the other's episodes; unit `suspensions` on `/player/{id}/absence`, names containing « suspension » only; competition code as given, ours only through `tm_history.LEAGUES` (no new mapping); matches missed / possible keep NULL ≠ 0; 404 is a refusal as for injuries. Focus (`FOCUS_*` in transfermarkt.py, column `ops.transfermarkt_reads.focus_until`): injuries and suspensions of the 18 most used players of each linked club with a match not started within 7 days read daily and first, capped at 80 clubs (soonest kick-offs; ≤ 2,880 requests a day, < 10 % of the reader's ~31,400). `GET /api/teams/{id}/absences` (contract in EVIDENCE) on `api.team_absence_players` / `api.team_absences`: squad = latest Transfermarkt squad of the linked club; read = both units read within 45 days; an open-ended episode shown only on a read ≤ 45 days and, for an injury, if he has not played since its start. `/api/players/{id}/injuries` also lists the suspensions (`kind: "suspension"`).
+- Tests first (red, then green): evidence /mnt/project-files/blesses-suspendus/lot1-donnees/EVIDENCE.md, bundle lot1.bundle beside it.
+- Next: lots 2 to 4 (screen on this contract; model only after hugo validates the method); push and CI on the owner's word.
+
 ## Tab icon: the site's theme alone — 24 November 2026 (pull request #88 open, not merged)
 
 - Goal (user, 24 Nov): after load, after the theme button and after a navigation inside the site, the page names one icon, the one of the site's theme (`icon-dark.svg`, `icon-light.svg`). Before: React put the metadata's `favicon.svg` link back, beside the themed one when the theme script had changed the link first, in its place after a navigation when React had taken the link first.
