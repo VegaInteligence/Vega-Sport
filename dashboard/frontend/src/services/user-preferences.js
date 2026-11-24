@@ -191,6 +191,19 @@ export function favouritesOf(contract) {
  *   it. Nothing is saved when the state is what was last saved or applied. A failed save is retried on the next
  *   change. Nothing here throws to the caller.
  * - The first-sign-in merge (local data vs the account's) is not here: VI-38's adapter owns it.
+ *
+ * The adapter's contract (VI-38):
+ * - `load()` resolves with the account's contract, or null / undefined when it has none; a rejection is a failed
+ *   load (tried again on the next change).
+ * - `save(contract)` resolves with undefined / null (saved as sent), or with a contract to re-apply (another device
+ *   wrote first: the adapter reloaded, merged and rewrote, and hands the result back); a rejection is a failed save.
+ *   A returned contract is validated and written exactly as after load, and becomes the saved state, so writing it
+ *   saves nothing again. Rule for a local change made while that save was in flight: per top-level key, a key whose
+ *   local value differs from the value sent keeps the local value, every other key takes the returned contract's;
+ *   that is written, and saved next (debounced, once the stores hold it), on top of the returned contract.
+ * - An invalid or other-version contract, from load or from save, is never written and goes to `report(error)`.
+ *   From load it stops the sync (the account's data is never overwritten); from save it is ignored (the save itself
+ *   succeeded) and the sync goes on.
  */
 export function createPreferencesSync({
   read,
@@ -198,6 +211,7 @@ export function createPreferencesSync({
   delay = 1000,
   setTimer = (fn, ms) => setTimeout(fn, ms),
   clearTimer = (id) => clearTimeout(id),
+  report = () => {},
 }) {
   let adapter = null, generation = 0, timer = null;
   let phase = "idle"; // idle | loading | ready | stopped
@@ -223,8 +237,9 @@ export function createPreferencesSync({
             let contract;
             try {
               contract = validateContract(value);
-            } catch {
+            } catch (error) {
               phase = "stopped";
+              safely(report, error);
               return;
             }
             last = JSON.stringify(contract);
@@ -239,6 +254,27 @@ export function createPreferencesSync({
           if (run === generation) phase = "idle";
         },
       );
+  }
+  // The contract save handed back: applied over the local changes made since `sent`. True when it was written.
+  function reapply(answer, sent) {
+    let contract;
+    try {
+      contract = validateContract(answer);
+    } catch (error) {
+      safely(report, error);
+      return false;
+    }
+    let local = null;
+    try {
+      local = read();
+    } catch {}
+    const next = { ...contract };
+    if (local)
+      for (const key of Object.keys(next))
+        if (JSON.stringify(local[key]) !== JSON.stringify(sent[key])) next[key] = local[key];
+    last = JSON.stringify(contract);
+    safely(write, next);
+    return true;
   }
   function flush() {
     if (!adapter || phase !== "ready") return;
@@ -257,16 +293,23 @@ export function createPreferencesSync({
     if (json === last && !failed) return;
     const run = generation, current = adapter;
     saving = true;
+    let applied = false;
     Promise.resolve()
       .then(() => current.save(value))
       .then(
-        () => run === generation && ((last = json), (failed = false)),
+        (answer) => {
+          if (run !== generation) return;
+          (last = json), (failed = false);
+          if (answer != null) applied = reapply(answer, value);
+        },
         () => run === generation && (failed = true),
       )
       .finally(() => {
         if (run !== generation) return;
         saving = false;
-        if (again) (again = false), flush();
+        // After a re-applied contract the stores update first: the next save waits for the debounce.
+        if (applied) (again = false), schedule();
+        else if (again) (again = false), flush();
       });
   }
   return {
@@ -284,6 +327,12 @@ export function createPreferencesSync({
       else schedule();
     },
   };
+}
+
+function safely(fn, value) {
+  try {
+    fn(value);
+  } catch {}
 }
 
 // The site's one controller. PreferencesSync.jsx connects the stores; VI-38 sets the adapter.

@@ -27,6 +27,15 @@
 //  Y6 Local data overwrites the account before its contract is read → no save before load answers; a failed load
 //     is tried again on the next change; null (no account data) or an invalid contract writes nothing.
 //  Y7 A removed adapter keeps saving → setAdapter(null) cancels the pending save and stops.
+//  S1 The contract a save hands back (VI-38's 409 merge) is ignored, or applied twice → save resolving with an object
+//     validates it and writes it once, exactly as after load (unknown keys dropped).
+//  S2 Writing the returned contract echoes back as a save → no save follows it while nothing changes locally.
+//  S3 undefined or null from save re-applies something → nothing is written (the behaviour before this extension).
+//  S4 An invalid or other-version contract from save is written, throws, or stops the sync → ignored, reported to
+//     `report` as a bad load is, and the next change still saves.
+//  S5 A local change made while that save was in flight is lost under the returned contract → per top-level key, a
+//     key whose local value changed since the save was sent keeps the local value, the others take the returned
+//     contract's; that is written, then saved next (debounced), on top of the returned contract.
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
@@ -151,7 +160,7 @@ test("U7 the favourites are derived from every list, never stored", () => {
 
 // ---------- The sync seam ----------
 function harness({ contract = toContract(STORES) } = {}) {
-  const timers = [], log = { reads: 0, writes: [], saves: [] };
+  const timers = [], log = { reads: 0, writes: [], saves: [], reports: [] };
   let state = contract;
   const sync = createPreferencesSync({
     read: () => (log.reads++, state),
@@ -162,6 +171,7 @@ function harness({ contract = toContract(STORES) } = {}) {
     delay: 1000,
     setTimer: (fn, ms) => (timers.push({ fn, ms, live: true }), timers.length - 1),
     clearTimer: (id) => timers[id] && (timers[id].live = false),
+    report: (error) => log.reports.push(error),
   });
   const fire = () => {
     for (const t of timers.splice(0)) if (t.live) t.fn();
@@ -303,4 +313,101 @@ test("Y7 removing the adapter stops everything", async () => {
   h.sync.changed(), h.fire();
   await tick();
   assert.equal(saves, 0);
+});
+
+// ---------- A contract handed back by save (VI-38: 409, reload, merge, rewrite) ----------
+test("S1–S2 the returned contract is applied once, without an echo", async () => {
+  const h = harness(), sent = [];
+  h.sync.setAdapter({ load: async () => null, save: async (v) => (sent.push(v), { ...v, country: "ITA", extra: 1 }) });
+  await tick();
+  h.set({ theme: "dark" }), h.sync.changed(), h.fire();
+  await tick();
+  await tick();
+  assert.equal(sent.length, 1);
+  assert.equal(h.log.writes.length, 1);
+  assert.equal(h.log.writes[0].country, "ITA");
+  assert.equal(h.log.writes[0].theme, "dark");
+  assert.ok(!("extra" in h.log.writes[0]));
+  h.sync.changed(), h.fire(); // the stores' change caused by the write
+  await tick();
+  await tick();
+  assert.equal(sent.length, 1);
+  assert.equal(h.log.writes.length, 1);
+});
+
+test("S3 undefined or null from save: nothing re-applied", async () => {
+  for (const answer of [undefined, null]) {
+    const h = harness();
+    let saves = 0;
+    h.sync.setAdapter({ load: async () => null, save: async () => (saves++, answer) });
+    await tick();
+    h.set({ theme: "dark" }), h.sync.changed(), h.fire();
+    await tick();
+    await tick();
+    assert.equal(saves, 1);
+    assert.equal(h.log.writes.length, 0);
+    h.sync.changed(), h.fire();
+    await tick();
+    assert.equal(saves, 1, "saved state is not saved again");
+  }
+});
+
+test("S4 an invalid returned contract is ignored and reported, like a bad load", async () => {
+  for (const answer of [{ v: 2, focus: "all" }, { focus: "all" }, "x"]) {
+    const h = harness();
+    let saves = 0;
+    h.sync.setAdapter({ load: async () => null, save: async () => (saves++, answer) });
+    await tick();
+    h.set({ theme: "dark" }), h.sync.changed(), h.fire();
+    await tick();
+    await tick();
+    assert.equal(h.log.writes.length, 0, JSON.stringify(answer));
+    assert.equal(h.log.reports.length, 1);
+    h.set({ theme: "light" }), h.sync.changed(), h.fire();
+    await tick();
+    await tick();
+    assert.equal(saves, 2, "the sync keeps working");
+  }
+  // A bad load is reported the same way.
+  const h = harness();
+  h.sync.setAdapter({ load: async () => ({ v: 9 }), save: async () => {} });
+  await tick();
+  await tick();
+  assert.equal(h.log.reports.length, 1);
+});
+
+test("S5 a change made during the in-flight save is saved next, on top of the returned contract", async () => {
+  const h = harness(), saving = [];
+  h.sync.setAdapter({
+    load: async () => null,
+    save: (value) => {
+      const d = deferred();
+      saving.push({ value, answer: d.resolve });
+      return d.promise;
+    },
+  });
+  await tick();
+  h.set({ theme: "dark" }), h.sync.changed(), h.fire();
+  await tick();
+  assert.equal(saving.length, 1);
+  // Local change while the save is in flight.
+  h.set({ focus: "europe" }), h.sync.changed(), h.fire();
+  // Another device changed the country and the theme; the merge hands this back.
+  saving[0].answer({ ...saving[0].value, country: "ITA", theme: "light" });
+  await tick();
+  await tick();
+  assert.equal(h.log.writes.length, 1);
+  assert.deepEqual([h.log.writes[0].country, h.log.writes[0].theme, h.log.writes[0].focus], ["ITA", "light", "europe"]);
+  assert.equal(saving.length, 1, "not at once: the stores apply the write first");
+  h.sync.changed(), h.fire();
+  await tick();
+  assert.equal(saving.length, 2);
+  assert.deepEqual([saving[1].value.country, saving[1].value.theme, saving[1].value.focus], ["ITA", "light", "europe"]);
+  saving[1].answer(undefined);
+  await tick();
+  await tick();
+  h.sync.changed(), h.fire();
+  await tick();
+  assert.equal(saving.length, 2);
+  assert.equal(h.log.writes.length, 1);
 });
