@@ -45,10 +45,14 @@ Resources:
                          'ec2:RevokeSecurityGroupIngress', 'ec2:RevokeSecurityGroupEgress', 'ec2:CreateTags', 'ec2:DeleteTags']
                 Resource: '*'
                 Condition: {StringEquals: {'ec2:Vpc': !Sub 'arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:vpc/vpc-08e400afa07fc1812'}}
+              # ec2:CreateSecurityGroup is authorized on the group and on the VPC, and ec2:Vpc is set for
+              # neither: both are named here (backend/account/FAILURE_MODES.md W14, Deploy 132).
               - Sid: SecurityGroupCreate
                 Effect: Allow
                 Action: ['ec2:CreateSecurityGroup', 'ec2:CreateTags']
-                Resource: !Sub 'arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:security-group/*'
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:security-group/*'
+                  - !Sub 'arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:vpc/vpc-08e400afa07fc1812'
               - Sid: Containers
                 Effect: Allow
                 Action: ['ecr:*']
@@ -319,10 +323,11 @@ Resources:
                 Resource: '*'
                 Condition: {StringEquals: {'kms:ViaService': !Sub 'ssm.${AWS::Region}.amazonaws.com'}}
 Outputs:
-  # Read by deploy.sh's account preflight (backend/account/FAILURE_MODES.md W4): 1 once this stack
-  # holds the account API's grants above. The Deploy cannot update this stack; the owner does,
-  # from his Mac (backend/account/DEPLOYMENT.md, section 3).
-  AccountGrants: {Value: '1'}
+  # Read by deploy.sh's account preflight (backend/account/FAILURE_MODES.md W4): 2 once this stack
+  # holds the account API's grants above, the VPC of SecurityGroupCreate included (W14; 1 lacked
+  # it). The Deploy cannot update this stack; the owner does, from his Mac
+  # (backend/account/DEPLOYMENT.md, section 3).
+  AccountGrants: {Value: '2'}
   PilotRoleArn: {Value: !GetAtt PilotRole.Arn}
   DeployRoleArn: {Value: !GetAtt DeployRole.Arn}
   CloudFormationRoleArn: {Value: !GetAtt CloudFormationRole.Arn}
