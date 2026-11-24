@@ -5,7 +5,7 @@ import { useCardFold } from "./PhoneFold.jsx";
 import { Skeleton } from "./UI.jsx";
 import { Term } from "./Hint.jsx";
 import { dateFr, fmt, InjuryTimeline, Legend, LineChart, TipBody } from "./PlayerScoutCharts.jsx";
-import { availability, injuryRows, usePlayerInjuries, usePowerHistory } from "../services/player-availability.js";
+import { availability, injuryRows, missedTotal, usePlayerInjuries, usePowerHistory } from "../services/player-availability.js";
 import s from "./PlayerScout.module.css";
 
 /** A card of the profile: on a phone it shows closed, its heading alone. */
@@ -66,7 +66,8 @@ export function PlayerInjuries({ id }) {
   const rows = injuries.value ? injuryRows(injuries.value) : null;
   const totals = rows ? availability(rows) : null;
   const seasons = rows ? [...new Set(rows.map((r) => r.season))].sort().reverse().slice(0, 6) : [];
-  const missed = rows ? rows.reduce((t, r) => t + (r.missed || 0), 0) : 0;
+  // Null when one absence has its matches missed unknown: the heading then leaves the total out.
+  const missed = rows ? missedTotal(rows) : null;
   return (
     <section className={s.block}>
       <div className={s.sectionHead}>
@@ -80,7 +81,7 @@ export function PlayerInjuries({ id }) {
                 : !rows
                   ? "Historique pas encore relevé pour ce joueur."
                   : rows.length
-                    ? `${rows.length} absence${rows.length > 1 ? "s" : ""} relevée${rows.length > 1 ? "s" : ""} · ${fmt(totals.weeks)} semaine${totals.weeks > 1 ? "s" : ""} d’arrêt sur douze mois · ${fmt(missed)} match${missed > 1 ? "s" : ""} manqué${missed > 1 ? "s" : ""}`
+                    ? `${rows.length} absence${rows.length > 1 ? "s" : ""} relevée${rows.length > 1 ? "s" : ""} · ${fmt(totals.weeks)} semaine${totals.weeks > 1 ? "s" : ""} d’arrêt sur douze mois${missed != null ? ` · ${fmt(missed)} match${missed > 1 ? "s" : ""} manqué${missed > 1 ? "s" : ""}` : ""}`
                     : "Aucune blessure relevée."}
           </p>
         </div>

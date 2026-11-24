@@ -1549,7 +1549,8 @@ export function MatchRows({ rows, limit = 99, competitionName = true }) {
 
 /* ----------------------------------------------------------------- squad */
 
-export function SquadTable({ dossier, limit = 30 }) {
+/** `mark(playerId)`: what stands beside a player's name (the squad tab: his absence's mark), or nothing. */
+export function SquadTable({ dossier, mark = null, limit = 30 }) {
   const f = useFootball();
   const possible = dossier.allRecord.matches * 90 || 1;
   const rows = dossier.squad.profiles
@@ -1593,7 +1594,10 @@ export function SquadTable({ dossier, limit = 30 }) {
                       round
                     />
                     <span>
-                      <strong>{player.name}</strong>
+                      <strong>
+                        {player.name}
+                        {mark?.(player.id)}
+                      </strong>
                       <small>
                         {player.role?.label || "Poste non renseigné"}
                       </small>

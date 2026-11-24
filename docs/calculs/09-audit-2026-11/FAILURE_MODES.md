@@ -4493,6 +4493,139 @@ an unscored friendly of 20 March 2027), `test_classements_plans` 43s, `test_depl
 | 58e | The plan | `core.matches` read twice (43s unchanged) |
 | 58f | The deployment | 173 applied and reviewed; the counters one higher |
 
+
+## 59. The injured and suspended players, lot 1 « Données » (VI-15, 24 Nov 2026, written before the tests)
+
+The suspensions read from Transfermarkt's `/player/{id}/absence` (`core.player_suspensions`, `174_absences_suspensions.sql`),
+the daily read of the players who count for a match close at hand (`transfermarkt.FOCUS_*`), `GET /api/teams/{id}/absences`
+and the suspensions in `GET /api/players/{id}/injuries`. Model untouched (no forecast, lineup, power or Elo change). Tests:
+`backend/tests/test_transfermarkt_absences.py` (names carry the cases), `backend/api/test/team-absences.test.mjs`.
+Evidence: `/mnt/project-files/blesses-suspendus/lot1-donnees/EVIDENCE.md`. Cases as written there (in French):
+
+### 59.A. Lecture des suspensions (nouvelle unité `suspensions`, `GET /player/{id}/absence`)
+
+- **59a Tri des entrées.** Seules les entrées dont `name` contient « suspension » (insensible à la casse) sont gardées. Les
+  autres (convocation en sélection, congé, nom absent ou non textuel) sont ignorées explicitement et ne s'écrivent nulle
+  part. Une entrée sans `start` lisible, ou qui n'est pas un objet, est sautée. `absences` absent ou `null` = liste vide ;
+  `absences` d'un autre type = `SCHEMA_CHANGED`, rien d'écrit.
+- **59b Faits lus.** Libellé, début, fin (`null` gardé `NULL`), jours (fin − début + 1, sinon `durationDetails.days` + 1),
+  `missedGamesCount` et `possibleMissingGamesCount` : un entier ≥ 0 est gardé tel quel (0 reste 0), `null`, absent, booléen
+  ou texte donne `NULL` (inconnu ≠ zéro). Code de compétition Transfermarkt tel quel (`CL`, `EURO`, `FR1` ; motif
+  `^[A-Za-z0-9]{1,12}$`, sinon `NULL`), saison 1900–2100.
+- **59c Compétition interne.** Seule correspondance existante du dépôt : `vega/sources/tm_history.LEAGUES` (GB1, ES1, L1,
+  IT1, FR1 → clé PitchAPI → `core.competitions.id`). Un code hors de cette table (CL, EURO…) garde son code et un id
+  `NULL` ; un code de la table dont la compétition n'est pas dans la base aussi. Aucune correspondance inventée.
+- **59d Rejeu.** La même réponse deux fois : mêmes lignes, mêmes id, `rows_written` 0.
+- **59e Épisode omis.** Une suspension tenue que la réponse ne liste plus est gardée et marquée `absent_since` = jour de
+  la lecture ; listée de nouveau, la marque part. Rien n'est effacé.
+- **59f Réponse vide.** Liste vide alors que le joueur tient des suspensions : refus `HISTORY_EMPTY`, rien d'écrit,
+  `read_at` et `rows_written` de la dernière lecture acceptée gardés, unité relue selon la reprise. Liste sans aucune
+  suspension (seulement des convocations) alors qu'il en tient : même refus `HISTORY_EMPTY`. Liste dont les suspensions
+  sont toutes inutilisables (sans début) : `HISTORY_INVALID`. Première lecture vide (il n'en tient aucune) : acceptée
+  (`read_at` posé, 0 ligne) — le joueur est « lu, sans suspension ».
+- **59g Conflit.** Une même clé (début, compétition, libellé) avec deux faits différents : `HISTORY_CONFLICT`, rien d'écrit.
+- **59h Correction de libellé.** Dans un même début et une même compétition, une ligne tenue et une ligne répondue restées
+  seules sans pendant sont le même épisode : mise à jour en place, id gardé.
+- **59i 404 ≠ liste vide.** Un 404 est un refus (`NOT_FOUND_REFUSED`) : une première lecture 404 laisse `read_at` à
+  `NULL` (inconnu) ; après une lecture acceptée, un 404 garde `read_at`, `rows_written` et les lignes ; unité relue dans
+  90 jours (`NOT_FOUND_AGAIN`).
+- **59j Quarantaine.** Un lien en quarantaine n'écrit rien (`done` à 0) et rien de lui n'est servi.
+- **59k Isolation des deux unités (contrainte absolue).** Une lecture de blessures, quelle qu'en soit l'issue (liste
+  tronquée qui marque `absent_since`, `HISTORY_EMPTY`, 404), ne touche jamais `core.player_suspensions` ; une lecture de
+  suspensions ne touche jamais `core.player_injuries` (empreintes de lignes identiques avant et après).
+- **59l Mise en file.** Chaque joueur relié hors quarantaine reçoit une unité `suspensions`, à la priorité de son unité
+  `injuries` quand il en a une ; un joueur en quarantaine n'en reçoit pas ; un second plan n'ajoute aucune ligne.
+- **59m Refus du fournisseur.** Un défi WAF sur `/absence` met le lecteur en pause ; rien d'écrit.
+- **59n Suspension en cours (hypothèse H1).** `end` futur ou `null`, `returningDays` non nul : lue comme les autres, fin
+  `NULL` gardée `NULL`, jours `NULL` si `durationDetails.days` est `null`.
+
+### 59.B. Relecture quotidienne ciblée (« focus »)
+
+- **59o Périmètre.** Pour chaque club relié (lien Transfermarkt courant d'une équipe) qui a un match `not_started` dont
+  le coup d'envoi tombe dans `]maintenant, maintenant + 7 jours]` : ses 18 joueurs aux minutes les plus nombreuses de la
+  saison en cours (égalité : id du joueur), classés parmi tous ses joueurs ; seuls ceux qui sont reliés hors quarantaine
+  ont une unité. Seules les unités `injuries` et `suspensions` passent en focus.
+- **59p Hors périmètre (rien ne change).** Le 19e joueur ; un club dont le prochain match est dans 8 jours ; un club qui
+  n'a dans la fenêtre qu'un match fini, en cours ou reporté ; un match `not_started` dont le coup d'envoi est passé ; une
+  équipe non reliée ; les minutes d'une autre saison ; les autres unités (profil, valeurs, transferts, effectifs).
+- **59q La file ne grossit pas.** Le focus n'insère aucune ligne ; les unités hors périmètre gardent `next_due_at`,
+  `priority` et `focus_until` `NULL`.
+- **59r Rythme.** Unité en focus lue et acceptée : relue dans 1 jour ; unité hors focus de priorité 1 : 7 jours ; un
+  échec ou un refus garde sa reprise exponentielle ; un 404 garde ses 90 jours.
+- **59s Entrée dans le périmètre.** Une unité saine (`attempts` = 0) lue il y a plus d'un jour devient due
+  (`next_due_at` ≤ `read_at` + 1 jour) ; une unité en échec (`attempts` > 0) garde son échéance.
+- **59t Sortie.** Le plan suivant (match joué, club sans match proche) remet `focus_until` à `NULL` ; la lecture suivante
+  reprend `PERIODS`.
+- **59u Ordre.** Une unité en focus due passe avant toute autre unité due (lots de profils compris).
+- **59v Plafond de charge.** Au plus `FOCUS_CLUBS_MAX` clubs (80) en focus, les coups d'envoi les plus proches d'abord
+  (puis l'id d'équipe) : la charge du focus reste ≤ 80 × 18 × 2 = 2 880 requêtes par jour (≈ 9 % des ≈ 31 400 du
+  lecteur).
+
+### 59.C. `GET /api/teams/{id}/absences`
+
+- **59w Équipe inconnue.** Identifiant mal formé ou inconnu : 404 ; paramètre de requête inattendu : 400.
+- **59x Équipe connue sans lien ni effectif lu.** 200 `{id, asOf: null, squad: {players: 0, read: 0}, absences: []}`.
+- **59y Effectif actuel et lecture.** L'effectif = la dernière saison d'effectif Transfermarkt tenue du club relié, ses
+  membres non marqués absents (`core.provider_squads`, déjà la base de `/api/teams/{id}/squad` et des liens de 118).
+  `players` compte tous ses membres (reliés ou non) ; `read` compte les membres reliés hors quarantaine dont les unités
+  `injuries` ET `suspensions` ont chacune une lecture acceptée datant de 45 jours au plus ; `asOf` = la plus ancienne de
+  ces lectures (pour un joueur : la plus ancienne de ses deux), `null` sans joueur lu. Un joueur jamais lu est inconnu.
+- **59z Absent actuel.** Épisode non marqué `absent_since`, commencé au plus tard aujourd'hui, fin vide ou ≥ aujourd'hui.
+  Fini hier : non ; commence demain : non ; marqué `absent_since` : non.
+- **59aa Garde des fins vides périmées.** Un épisode à fin vide n'est montré que si la dernière lecture acceptée de son
+  unité date de 45 jours au plus ET, pour une blessure ou maladie (ou un épisode non classé), si le joueur n'a joué aucun
+  match (minutes > 0) daté après le début de l'épisode. Une suspension à fin vide n'a que la garde d'âge de lecture (elle
+  vaut pour une compétition, il peut jouer ailleurs). Un épisode à fin datée ≥ aujourd'hui est borné par sa fin.
+- **59ab Forme.** Blessure : `matchesRemaining` `null`, `competition` `null`. Suspension : `competition`
+  `{code, id, name}` (id public et nom si la compétition interne est connue, sinon `null`), `matchesRemaining` =
+  possibles − manqués (≥ 0) quand les deux sont connus, sinon `null` (hypothèse H2). `matchesMissed` garde `null` ≠ 0.
+  `expectedReturn` = fin. `readAt` = jour de la dernière lecture acceptée de l'unité qui donne l'épisode.
+- **59ac Quarantaine.** Aucun épisode d'un lien en quarantaine ; ce joueur compte dans `players`, pas dans `read`.
+- **59ad Hors effectif.** Un joueur d'un autre club, ou un ancien membre marqué `absent_since`, n'apparaît pas.
+- **59ae Cache.** Même ETag (`W/"profile-v1-…"`) et même durée de cache (300 s) que `/injuries`, 304 sur `If-None-Match`.
+- **59af Ordre.** Début le plus récent d'abord, puis nom du joueur, puis libellé.
+
+### 59.D. `GET /api/players/{id}/injuries`
+
+- **59ag** Blessures servies à l'identique (tests existants inchangés) ; les suspensions du joueur apparaissent dans la
+  même liste avec `kind: "suspension"`, les mêmes clés ; le 404 reste réglé par la seule lecture des blessures.
+
+### 59.E. Arriéré de la première mise en file (relecture du coordinateur, 24 Nov 2026, écrit avant le test)
+
+- **59ah Première échéance étalée.** Une unité `suspensions` créée par `enqueue` n'est pas due tout de suite : sa première
+  échéance est `maintenant` + un décalage dans `[0, PERIODS["suspensions"][priorité])`, tiré de façon déterministe de la clé
+  du joueur (`hashtext`, même clé → même décalage, aucun aléa). Attendus : chaque décalage dans sa période (7 jours en
+  priorité 1, 30 en priorité 2…) ; deux mises en file de la même clé donnent la même échéance ; sur 140 joueurs de
+  priorité 1, au plus ≈ un septième dus le premier jour (≤ 40, la marge couvrant la dispersion du hachage) et pas tous à
+  la même heure. Les autres unités (`injuries` d'un nouveau joueur comprise) restent dues aussitôt.
+- **59ai Unité en focus jamais lue.** Une unité `injuries` ou `suspensions` en focus sans lecture acceptée (`read_at`
+  `NULL`, `attempts` = 0) devient due tout de suite, quelle que soit son échéance étalée ; une unité en échec garde son
+  attente.
+
+### 59.F. Une sélection (maquette validée par hugo ; le marqueur de l'onglet Joueurs d'une sélection, écrit avant le test)
+
+- **59aj Effectif d'une sélection.** Pour une équipe nationale non reliée à Transfermarkt, l'effectif est la liste que sa
+  page affiche déjà (`api.nation_players` : les joueurs du dernier tournoi joué), chacun relié par son lien de joueur
+  Transfermarkt habituel. `players` compte toute cette liste (un joueur non relié ou en quarantaine est inconnu) ;
+  `read` et `asOf` suivent les mêmes règles qu'un club (les deux unités lues, 45 jours au plus). Un joueur d'un tournoi
+  plus ancien seulement n'en fait pas partie. Une sélection sans joueur : 200, effectif 0, liste vide.
+- **59ak Ce qui compte pour une sélection.** Ses blessures et maladies en cours, quelle que soit la compétition, avec les
+  mêmes gardes (fin vide : lecture ≤ 45 jours et pas de match joué depuis). Ses suspensions ne sont JAMAIS rendues pour une
+  sélection : une suspension ne vaut que pour une compétition de sélections, et la base ne sait pas encore relier un code
+  Transfermarkt à une compétition de sélections (limite écrite dans le commentaire de la vue). Les clubs sont inchangés ;
+  le contrat de la réponse est le même.
+
+### 59.Hypothèses non vérifiées
+
+- **H1** Aucune suspension EN COURS n'a été observée (sonde du 2026-11-24, fichier `07-…`) : on suppose qu'elle a la forme
+  d'une blessure en cours (`end` futur ou `null`, `returningDays` non nul) ; le code tolère les deux.
+- **H2** `possibleMissingGamesCount` = nombre total de matchs de la suspension (épisodes clos observés : 1 manqué sur 1
+  possible), donc restant = possibles − manqués.
+- **H3** Les noms de suspension contiennent tous « suspension » (trois vus : « Yellow card suspension », « Red card
+  suspension », « Indirect card suspension »).
+- **H4** L'année de saison Transfermarkt = notre `season_id` (année de début), comme le lecteur l'utilise déjà pour les
+  effectifs.
+
 ## 60. The Ballon d'Or race on the Score Vega v9.1 with the three criteria, stage 1: computed and stored beside the v8 race (issue #105; hugo, 24 Nov 2026: « le classement BO est le score v9 + une fine tuning sur les 3 façons de juger un joueur au ballon d'or », 60 / 30 / 10; written before the tests)
 
 Written as § 59 (rules 59.1 and 59.2, cases 59a to 59af) before PR #110 took that number: the commits 262a7778, ffb937ac, ca9cc4fe and 5709ff06 and the evidence files in `/mnt/project-files/vega-ballon-dor/evidence/` say § 59 for what is § 60 here.

@@ -31,11 +31,10 @@ export function applyTheme(theme) {
       requestAnimationFrame(() => root.removeAttribute("data-theme-switching")),
     );
   }
-  document
-    .querySelector('meta[name="theme-color"]')
-    ?.setAttribute("content", next === "light" ? "#F6F8FB" : "#0E0F12");
-  // Before the storage, which a browser may refuse: the icon follows the theme shown.
+  // Before the storage, which a browser may refuse: the icon and the browser's colour follow
+  // the theme shown. Both tags are the theme script's (app/layout.jsx), not React's.
   window.__vegaSetFavicon?.(next);
+  window.__vegaSetThemeColor?.(next);
   try {
     if (theme === "light" || theme === "dark") localStorage.setItem(THEME_KEY, theme);
     else localStorage.removeItem(THEME_KEY);

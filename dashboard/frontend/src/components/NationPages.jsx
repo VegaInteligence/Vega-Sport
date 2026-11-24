@@ -23,6 +23,8 @@ import { Card, dateShort, fmtNum, Kpis } from "./ClubScoutUI.jsx";
 import { LineChart, TipBody } from "./PlayerScoutCharts.jsx";
 import FillChart from "./FillChart.jsx";
 import NationalFlag from "./NationalFlag.jsx";
+import { AbsenceMark } from "./Absences.jsx";
+import { absenceView, useTeamAbsences } from "../services/team-absences.js";
 import { Term } from "./Hint.jsx";
 import { useTabParam } from "../hooks/useTabParam.js";
 import { useFootball } from "../hooks/FootballContext.jsx";
@@ -403,8 +405,10 @@ function EloChart({ points, height, wide = false }) {
   );
 }
 
-function PlayersTable({ players, limit }) {
+function PlayersTable({ nationId, players, limit }) {
   const f = useFootball();
+  // Injured or ill today (the side's own read): most likely not available. A club's suspension does not count here.
+  const absences = absenceView(useTeamAbsences(nationId).value, { suspensions: false });
   const rows = limit ? players.rows.slice(0, limit) : players.rows;
   return (
     <div className="table-scroll">
@@ -440,7 +444,13 @@ function PlayersTable({ players, limit }) {
                     url={p.imageUrl}
                     className={`player-avatar ${s.avatar}`}
                   />
-                  {p.name}
+                  <span>
+                    {p.name}
+                    <AbsenceMark
+                      absence={absences?.byPlayer.get(p.id)}
+                      asOf={absences?.asOf}
+                    />
+                  </span>
                 </Link>
               </th>
               <td className={s.muted}>
@@ -1053,7 +1063,7 @@ function Overview({ nation, last, onTab }) {
             </button>
           }
         >
-          <PlayersTable players={nation.players} limit={5} />
+          <PlayersTable nationId={nation.id} players={nation.players} limit={5} />
         </Card>
       )}
       {nation.tournaments.length > 0 && (
@@ -1167,7 +1177,7 @@ export function NationProfile({ id }) {
                   title={`Les joueurs : ${value.players.competition}`}
                   text="Minutes, buts, passes décisives et xG au tournoi · club actuel"
                 >
-                  <PlayersTable players={value.players} />
+                  <PlayersTable nationId={value.id} players={value.players} />
                 </Card>
               ) : (
                 <Empty>

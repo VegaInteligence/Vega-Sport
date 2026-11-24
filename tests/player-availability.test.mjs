@@ -40,7 +40,8 @@ test("an injury still running ends today, a finished one on its own date", () =>
   // An expected return still to come is an absence running today.
   assert.equal(rows[2].ongoing, true);
   assert.equal(rows[2].end, "2026-11-16");
-  assert.equal(rows[2].missed, 0);
+  // Matches missed not given: unknown, not zero (VI-15; this line asserted 0 before lot 2).
+  assert.equal(rows[2].missed, null);
 });
 
 test("availability counts the last twelve months only, and the absence running today", () => {
@@ -62,4 +63,29 @@ test("availability counts the last twelve months only, and the absence running t
 
 test("a player never injured is available", () => {
   assert.deepEqual(availability(injuryRows([], today), today), { count: 0, weeks: 0, current: null, missed: 0 });
+});
+
+// VI-15, two gaps (lot 2 of « Blessés et suspendus »): an episode the source did not class (kind null) is not an
+// injury, and matches missed unknown (null) are neither counted as zero nor written « 0 ».
+test("an unclassified episode is not called an injury; unknown matches missed stay unknown", () => {
+  const rows = injuryRows(
+    [
+      { kind: null, label: null, start: "2026-10-01", end: "2026-10-05", matchesMissed: null, season: 2026 },
+      { kind: null, label: "Knee injury", start: "2026-09-01", end: "2026-09-10", matchesMissed: 2, season: 2026 },
+      { kind: "injury", label: "Ankle sprain", start: "2026-08-01", end: "2026-08-20", matchesMissed: 3, season: 2026 },
+    ],
+    today,
+  );
+  // No kind and no label: a neutral reason, its own type (the timeline does not paint it as an injury).
+  assert.equal(rows[0].type, "unknown");
+  assert.notEqual(rows[0].label, "Blessure");
+  assert.equal(rows[0].label, "Motif non précisé");
+  assert.equal(rows[0].missed, null);
+  // No kind but a label that says what it is: the label, still not typed as an injury.
+  assert.equal(rows[1].label, "Blessure au genou");
+  assert.equal(rows[1].type, "unknown");
+  assert.equal(rows[1].missed, 2);
+  // One unknown count in the window: the total is unknown, not the sum of the others.
+  assert.equal(availability(rows, today).missed, null);
+  assert.equal(availability(rows.slice(1), today).missed, 5);
 });
