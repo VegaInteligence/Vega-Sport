@@ -38,11 +38,16 @@
 //     contract's; that is written, then saved next (debounced), on top of the returned contract.
 //  R1 The account screen cannot tell the person sync stopped → setPreferencesSync({ load, save, report }): a bad load
 //     and a bad contract returned by save both reach the adapter's report; without report nothing throws.
+//  C1 After sign-out the next person on this browser inherits the account's lists, or the emptied stores are saved
+//     over the account → clearPreferences(), once signed out (setPreferencesSync(null)), writes the « nothing chosen »
+//     contract to the stores, keeping the keys named in `keep` (default: the theme); with an adapter set, or before
+//     the stores are connected, it writes nothing and returns false; no save ever follows it.
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
   CONTRACT_VERSION,
   LIMITS,
+  clearPreferences,
   connectPreferences,
   createPreferencesSync,
   favouritesOf,
@@ -449,6 +454,42 @@ test("R1 setPreferencesSync passes the adapter's report; without one, nothing th
     assert.doesNotThrow(() => preferencesChanged());
     await wait();
     assert.equal(saves, 1);
+  } finally {
+    setPreferencesSync(null);
+    disconnect();
+  }
+});
+
+// ---------- Sign-out (VI-38): the stores back to « nothing chosen » ----------
+test("C1 clearPreferences empties the stores once signed out, never an account", async () => {
+  const empty = validateContract({ v: CONTRACT_VERSION });
+  assert.equal(clearPreferences(), false); // stores not connected yet
+  let state = toContract(STORES), writes = 0, saves = 0;
+  const disconnect = connectPreferences({ read: () => state, write: (value) => ((state = value), writes++) });
+  try {
+    // Signed in: refused, nothing written, nothing saved.
+    setPreferencesSync({ load: async () => null, save: async () => void saves++ });
+    await tick();
+    await tick();
+    assert.equal(clearPreferences(), false);
+    assert.equal(writes, 0);
+    assert.deepEqual(state, toContract(STORES));
+    // Signed out: « nothing chosen », the theme kept.
+    setPreferencesSync(null);
+    assert.equal(clearPreferences(), true);
+    assert.equal(writes, 1);
+    assert.deepEqual(state, { ...empty, theme: "light" });
+    assert.deepEqual(favouritesOf(state), { clubs: [], players: [] });
+    // keep: [] clears the theme too; another key can be kept.
+    state = toContract(STORES);
+    assert.equal(clearPreferences({ keep: [] }), true);
+    assert.deepEqual(state, empty);
+    state = toContract(STORES);
+    assert.equal(clearPreferences({ keep: ["country", "v", "unknown"] }), true);
+    assert.deepEqual(state, { ...empty, country: "BRA" });
+    preferencesChanged();
+    await new Promise((r) => setTimeout(r, 1100));
+    assert.equal(saves, 0);
   } finally {
     setPreferencesSync(null);
     disconnect();
