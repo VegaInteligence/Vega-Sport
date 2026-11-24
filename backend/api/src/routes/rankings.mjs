@@ -61,7 +61,9 @@
  * club gains with the player, `own` (what he does at his positions and how often he starts)
  * and `club` (the level he plays at), and the score out of 100 on the level's curve. Read
  * beside the power ranking, which it does not change. `position` is one of nine: a winger
- * of the power ranking is a winger, an attacking midfielder or a wide midfielder.
+ * of the power ranking is a winger, an attacking midfielder or a wide midfielder. A rank is
+ * provisional under the minutes bar, in a league whose level is not measured, or (v9.1) for a
+ * keeper without goals prevented on half his minutes in goal (`provisionalReason`).
  * GET /api/rankings/level/player?season=&player= — one player's level with its parts and
  * each position he played: judged (its share, value and talents by block, in standard
  * deviations) or not (too few minutes over two seasons).
@@ -792,8 +794,11 @@ export const POSITION_LABEL = {
   goalkeeper: "Gardien",
 };
 const LEVEL_BLOCKS = ["finishing", "creation", "progression", "defence", "retention"];
-/** Why a level's rank is provisional: under the minutes bar, or (men) in a league whose level is not measured. */
-const levelReason = (r) => (r.eligible === false ? "minutes" : r.universe !== "women" && r.linked === false ? "league" : null);
+/** Why a level's rank is provisional, the first that holds: « minutes » (under the season's bar), « league » (men, a
+ * league whose level is not measured), « keeper_data » (a keeper without goals prevented on half his minutes in goal:
+ * his level is his starts and his club alone, Score Vega v9.1); else null. */
+export const levelReason = (r) => (r.eligible === false ? "minutes" : r.universe !== "women" && r.linked === false ? "league"
+  : r.measured === false ? "keeper_data" : null);
 
 /** The players' level of a season, in the level's order, a page of `limit` at a time; optionally one position. */
 async function levelRanking(read, params) {
@@ -841,7 +846,7 @@ async function levelPlayer(read, params) {
       id, rank: r.rank, positionRank: r.position_rank, position: POSITION_LABEL[r.position] ?? r.position, positionKey: r.position,
       score: round(r.score, 1), level: round(r.level, 1), own: round(r.own, 1), blocks: round(r.blocks, 1), starts: round(r.starts, 1), club: round(r.club, 1),
       startShare: round(r.start_share, 3), minutes: Math.round(r.minutes), universe: r.universe, eligible: r.eligible !== false, linked: r.linked !== false,
-      provisional: levelReason(r) !== null, provisionalReason: levelReason(r),
+      measured: r.measured !== false, provisional: levelReason(r) !== null, provisionalReason: levelReason(r),
       positions: positions.map((p) => ({
         position: POSITION_LABEL[p.position] ?? p.position, positionKey: p.position, judged: p.acquired, minutes: Math.round(p.minutes),
         minutesTwoSeasons: Math.round(p.minutes_two_seasons), share: round(p.share, 3), value: round(p.value, 1), level: round(p.level, 1),
