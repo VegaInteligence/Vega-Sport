@@ -23,9 +23,10 @@ export default function ThemeToggle() {
     document
       .querySelector('meta[name="theme-color"]')
       ?.setAttribute("content", next === "light" ? "#F6F8FB" : "#0E0F12");
+    // Before the storage, which a browser may refuse: the icon follows the theme shown.
+    window.__vegaSetFavicon?.(next);
     try {
       localStorage.setItem("statarena.theme", next);
-      window.__vegaSetFavicon?.(next);
     } catch {}
     setTheme(next);
   }

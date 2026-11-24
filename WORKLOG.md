@@ -1,5 +1,16 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Tab icon: the site's theme alone — 24 November 2026 (pull request open, not merged)
+
+- Goal (user, 24 Nov): after load, after the theme button and after a navigation inside the site, the page names one icon, the one of the site's theme (`icon-dark.svg`, `icon-light.svg`). Before: React put the metadata's `favicon.svg` link back, beside the themed one when the theme script had changed the link first, in its place after a navigation when React had taken the link first.
+- Constraints: tests first; `faviconVersion` kept; nothing merged without the user's word. No Linear from this folder (user rule) and no issue created: a small, isolated fix.
+- Decision: the theme script (`themeScript` in `app/layout.jsx`) writes the page's one `link[rel="icon"]` (`#vega-icon`) while the head is read, and `metadata.icons` names no icon; `favicon.svg` stays in a `<noscript>` for a browser without scripts; the theme button sets the icon before it writes the storage. Trade-off: a reader of the raw HTML that runs no script and skips `<noscript>` finds no icon link and asks for `/favicon.ico`.
+- Branch `claude/favicon-theme`, worktree `~/Agents/worktrees/vega-favicon-theme-20261124`, from main 0302d45.
+- Checked 24 Nov, `tests/e2e/brand.e2e.mjs` B5 rewritten first: 32/38 on unchanged main (B5f, B5g, B5h, B5i, B5k, B5l red; B5a passes there when React takes the link before the script), 38/38 on the dev server with the fix, 37/38 on a local `next build` + `next start` (X1 alone: Vercel's two analytics scripts do not exist off Vercel). Site tests 812/821, the same 9 failures as unchanged main on Node 22. Site build OK. Evidence: `~/Agents/scratch/vega-favicon-theme-20261124/` (`evidence-red`, `evidence-green-dev`, `evidence-green-build`).
+- Not checked: the public site (nothing deployed); a real browser tab (headless Chromium reads the links, it draws no tab).
+- Found beside it, not fixed: `meta[name="theme-color"]` has the same fault (back to `#0E0F12` after the light theme and a navigation; two tags at load in the light theme).
+- Next action: the user's word to merge; then the brand E2E on the public site.
+
 ## Score Vega v9 in service — [VI-53](https://linear.app/vegainteligence/issue/VI-53), GitHub #82 (24 November 2026, stage 1 built and checked on production data, not merged)
 
 - Goal (user, 24 Nov): the v9 « qui prend tout en compte » goes into service, then every player of every season since 2021 is computed with it. No v8.1.
