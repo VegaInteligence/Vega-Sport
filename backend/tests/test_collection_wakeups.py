@@ -871,6 +871,48 @@ class InternationalsEloTest(CollectionBase):
         self.assertEqual([s for (s,) in x(rankings, (year,)).fetchall()], ["superseded", "published"])
 
 
+    def test_60p_a_year_whose_race_is_missing_or_of_another_version_or_settings_is_ranked_again_once(self):
+        # FAILURE_MODES §60, 60p: power.stale_rankings lists, with the level's years, a year whose published level of the
+        # present version has players and whose race (agg.award_runs) is missing, of another version or of other
+        # settings, or started before that level; the real worker's pass computes it, the next lists nothing.
+        from psycopg.types.json import Jsonb
+        from vega import award, level, power
+        from vega.store import Store
+
+        x = self.x
+        first = self.native(2019)
+        self.assertEqual(self.daily({}), [first])
+        with self.db.transaction():
+            year = Store(self.db).season("2021/2022")
+        x("""INSERT INTO agg.power_runs(kind, season_id, method_version, status, started_at, finished_at, players)
+             VALUES ('players', %s, %s, 'published', clock_timestamp(), clock_timestamp(), 3)""", (year, power.METHOD_VERSION))
+        level_run = x("""INSERT INTO agg.level_runs(season_id, version, status, started_at, finished_at, players, settings)
+                         VALUES (%s, %s, 'published', clock_timestamp(), clock_timestamp(), 3, %s) RETURNING id""",
+                      (year, level.LEVEL_VERSION, Jsonb(level.SETTINGS))).fetchone()[0]
+        race = x("""INSERT INTO agg.award_runs(season_id, version, status, started_at, finished_at, level_run_id, reference_season, players,
+                      settings, spreads)
+                    VALUES (%s, 'vega-award-v0', 'published', clock_timestamp(), clock_timestamp(), %s, %s, 3, %s, '{}') RETURNING id""",
+                 (year, level_run, year, Jsonb(award.SETTINGS))).fetchone()[0]
+        self.assertEqual(power.stale_rankings(self.calc), [year])  # another version
+        x("UPDATE agg.award_runs SET version = %s WHERE id = %s", (award.AWARD_VERSION, race))
+        self.assertEqual(power.stale_rankings(self.calc), [])
+        x("UPDATE agg.award_runs SET settings = '{}' WHERE id = %s", (race,))
+        self.assertEqual(power.stale_rankings(self.calc), [year])  # other settings
+        x("DELETE FROM agg.award_runs WHERE id = %s", (race,))
+        self.assertEqual((power.stale_rankings(self.calc), award.stale(self.calc)), ([year], [year]))  # missing
+        rankings = "SELECT status FROM agg.power_runs WHERE kind = 'players' AND season_id = %s ORDER BY id"
+        races = "SELECT version, status FROM agg.award_runs WHERE season_id = %s ORDER BY id"
+        self.clock += timedelta(hours=2)
+        self.daily({})
+        self.assertEqual([s for (s,) in x(rankings, (year,)).fetchall()], ["superseded", "published"])
+        self.assertEqual(x(races, (year,)).fetchall(), [(award.AWARD_VERSION, "published")])  # this base holds no statistics: a run of none
+        self.assertEqual(power.stale_rankings(self.calc), [])
+        self.clock += timedelta(hours=2)
+        self.daily({})
+        self.assertEqual([s for (s,) in x(rankings, (year,)).fetchall()], ["superseded", "published"])
+        self.assertEqual(x(races, (year,)).fetchall(), [(award.AWARD_VERSION, "published")])
+
+
 class InternationalSeasonsTest(unittest.TestCase):
     """50h–50i: one season list in the projection and in cups.EDITIONS; a finished season is read weekly."""
 

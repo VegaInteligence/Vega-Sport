@@ -654,20 +654,31 @@ def start_shares(rows):
     return out
 
 
-def recentre(cells):
+def recentre(cells, means=None):
     """Take an attacking position's mean per 90 out of its cells' block sums: the four
-    positions share one reference group, so each is put back on its own zero."""
+    positions share one reference group, so each is put back on its own zero. `means`:
+    {(position, block): mean per minute} to take out instead of the cells' own (the award's
+    cells take out the level's, FAILURE_MODES §60). -> the means taken out."""
+    taken = {}
     for position in ATTACK:
         mine = [c for (_, at, _), c in cells.items() if at == position]
         for b in range(NB):
-            minutes = sum(c[BLOCK_MINUTES + b] for c in mine)
-            if minutes > 0:
+            if means is None:
+                minutes = sum(c[BLOCK_MINUTES + b] for c in mine)
+                if minutes <= 0:
+                    continue
                 per_minute = sum(c[BLOCK_SUMS + b] for c in mine) / minutes
-                for c in mine:
-                    c[BLOCK_SUMS + b] -= per_minute * c[BLOCK_MINUTES + b]
+            elif (position, b) in means:
+                per_minute = means[(position, b)]
+            else:
+                continue
+            taken[(position, b)] = per_minute
+            for c in mine:
+                c[BLOCK_SUMS + b] -= per_minute * c[BLOCK_MINUTES + b]
+    return taken
 
 
-def read(rows, *, centre, faced=frozenset(), team_passes=None, samples=True):
+def read(rows, *, centre, faced=frozenset(), team_passes=None, samples=True, stakes=None):
     """A season's player-matches as the level reads them. rows: the ranking's, with their v8
     role and their Elo gap `delta` (power.refresh_players); centre: the clubs' mean Elo
     (power.level_centres); faced: {(match, player)} the keeper of a shot; `samples`: also
@@ -675,7 +686,12 @@ def read(rows, *, centre, faced=frozenset(), team_passes=None, samples=True):
     -> {"cells": {(player, position, club): cell} of the club matches, "club": {player: his
     clubs' Elo above the centre in units of 400, by minutes}, "shares": start_shares,
     "samples": {(position, block): {player: [values]}}}.
-    The national teams' matches set the references with the others and enter no cell."""
+    The national teams' matches set the references with the others and enter no cell.
+    With `stakes` ({match: I_m}, 1 without one) the reading also holds "award_cells", the
+    Ballon d'Or race's (FAILURE_MODES §60): the same cells, each match's block values (a
+    keeper's goals prevented) times its stakes, its minutes unweighted, and the national
+    teams' matches under their national team; the attack is recentred on the level's means.
+    "cells" and everything else are what they are without it."""
     judged = judge(rows, main_roles(rows), faced)
     situations(rows, judged, team_passes)
     outfield = [r for r in judged if r["position"] != GOALKEEPER]
@@ -688,36 +704,55 @@ def read(rows, *, centre, faced=frozenset(), team_passes=None, samples=True):
             entry = club[r["player_id"]]
             entry[0] += r["minutes_played"] * (r["own_elo"] - centre) / 400
             entry[1] += r["minutes_played"]
+    award = {} if stakes is not None else None
     for r in judged:
-        if r.get("national"):
+        national = bool(r.get("national"))
+        if national and award is None:
             continue
         player, position, minutes = r["player_id"], r["position"], r["minutes_played"]
+        key = (player, position, r["team_id"])
+        weight = stakes.get(r["match_id"], 1.0) if award is not None else 1.0
         if position == GOALKEEPER:
-            c = cells.get((player, position, r["team_id"]))
-            if c is None:
-                c = cells[(player, position, r["team_id"])] = empty_cell()
-            c[MINUTES] += minutes
             prevented = r.get("goals_prevented")
-            if prevented is not None:
-                c[KEEPER_MINUTES] += minutes
-                c[KEEPER_GOALS] += prevented
+            for target, w in (((cells, 1.0),) if not national else ()) + (((award, weight),) if award is not None else ()):
+                c = target.get(key)
+                if c is None:
+                    c = target[key] = empty_cell()
+                c[MINUTES] += minutes
+                if prevented is not None:
+                    c[KEEPER_MINUTES] += minutes
+                    c[KEEPER_GOALS] += prevented if w == 1.0 else w * prevented
             continue
         scores = match_blocks(r, refs, fits)
         if all(x is None for x in scores):
             continue
-        c = cells.get((player, position, r["team_id"]))
-        if c is None:
-            c = cells[(player, position, r["team_id"])] = empty_cell()
-        c[MINUTES] += minutes
-        for b, x in enumerate(scores):
-            if x is not None:
-                c[BLOCK_MINUTES + b] += minutes
-                c[BLOCK_SUMS + b] += x
-                if samples and minutes >= FULL_MATCH:
-                    values[(position, b)][player].append(x * 90 / minutes)
-    recentre(cells)
-    return {"cells": cells, "club": {p: total / minutes for p, (total, minutes) in club.items() if minutes > 0}, "shares": start_shares(rows),
-            "samples": values}
+        if not national:
+            c = cells.get(key)
+            if c is None:
+                c = cells[key] = empty_cell()
+            c[MINUTES] += minutes
+            for b, x in enumerate(scores):
+                if x is not None:
+                    c[BLOCK_MINUTES + b] += minutes
+                    c[BLOCK_SUMS + b] += x
+                    if samples and minutes >= FULL_MATCH:
+                        values[(position, b)][player].append(x * 90 / minutes)
+        if award is not None:
+            c = award.get(key)
+            if c is None:
+                c = award[key] = empty_cell()
+            c[MINUTES] += minutes
+            for b, x in enumerate(scores):
+                if x is not None:
+                    c[BLOCK_MINUTES + b] += minutes
+                    c[BLOCK_SUMS + b] += x if weight == 1.0 else weight * x
+    means = recentre(cells)
+    reading = {"cells": cells, "club": {p: total / minutes for p, (total, minutes) in club.items() if minutes > 0}, "shares": start_shares(rows),
+               "samples": values}
+    if award is not None:
+        recentre(award, means)
+        reading["award_cells"] = award
+    return reading
 
 
 # References measured on a finished year -------------------------------------------
@@ -815,15 +850,21 @@ def unpack(kept):
             "full_matches": kept.get("full_matches", {})}
 
 
+def people_of(reading, scored):
+    """levels()'s players of a reading: those with a club cell, each with his start share,
+    his club, his universe and the v8 ranking's minutes bar and measured league."""
+    players = {p for p, _, _ in reading["cells"]}
+    return {p: {"share": reading["shares"].get(p, 0.0), "club": reading["club"].get(p, 0.0), "universe": r["universe"],
+                "reference": bool(r["eligible"] and r["linked"]), "eligible": bool(r["eligible"]), "linked": bool(r["linked"])}
+            for p, r in scored.items() if p in players}
+
+
 def season(reading, before, kept, scored):
     """A season's levels from its reading, the season before's cells, the references kept by
     a finished year (None: measure them on this one) and the v8 ranking's rows (their
     universe, and who is above the minutes bar in a measured league).
     -> ({player: level}, references)."""
-    players = {p for p, _, _ in reading["cells"]}
-    people = {p: {"share": reading["shares"].get(p, 0.0), "club": reading["club"].get(p, 0.0), "universe": r["universe"],
-                  "reference": bool(r["eligible"] and r["linked"]), "eligible": bool(r["eligible"]), "linked": bool(r["linked"])}
-              for p, r in scored.items() if p in players}
+    people = people_of(reading, scored)
     before = {key: c for key, c in before.items() if key[0] in people}
     refs = kept or measure(reading, before, people)
     out = levels(reading["cells"], before, refs, people)

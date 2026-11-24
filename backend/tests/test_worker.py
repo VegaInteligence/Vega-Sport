@@ -715,6 +715,69 @@ class WorkerTest(unittest.TestCase):
             self.assertRegex(error_code(error), r"^WORKER_KEYERROR@test_worker\.py:\d+$")
         self.assertEqual(error_code(StoreError("LEASE_LOST")), "LEASE_LOST")
 
+    def test_60x_the_award_race_is_read_again_once_a_utc_day(self):
+        # FAILURE_MODES §60, 60x: the pass runs about every 60 s; award.due is asked once a UTC day, the day marked
+        # when it succeeds, and each year it lists is read again once. A reread that fails waits RETRY_DAILY_AFTER and
+        # is tried again that day, without asking award.due again.
+        from vega import award
+        from vega.worker import RETRY_DAILY_AFTER
+
+        listed, asked, reread = [[2025], [], [2025], [2025]], [], []
+        failing = []
+
+        def due(conn):
+            asked.append(self.now)
+            return listed.pop(0)
+
+        def again(conn, season):
+            if failing:
+                failing.pop(0)
+                raise RuntimeError("a player's name")
+            reread.append((self.now, season))
+            return 88
+
+        for name in ("due", "reread"):
+            self.addCleanup(setattr, award, name, getattr(award, name))
+        award.due, award.reread = due, again
+        self.now = self.now.replace(hour=10, minute=0)  # the passes below never cross midnight
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.worker.daily()
+            self.now += timedelta(minutes=1)  # a match updated between the two passes: due would list the year again
+            self.worker.daily()
+        self.assertEqual((len(asked), len(reread)), (1, 1))
+        self.assertEqual(out.getvalue().count(f"award race season=2025 version={award.AWARD_VERSION} players=88"), 1)
+        # The next UTC day: asked again; nothing changed after the race, nothing read.
+        self.now += timedelta(days=1)
+        with contextlib.redirect_stdout(out):
+            self.worker.daily()
+            self.now += timedelta(minutes=1)
+            self.worker.daily()
+        self.assertEqual((len(asked), len(reread)), (2, 1))
+        # The day after, the year listed: read again once.
+        self.now += timedelta(days=1)
+        with contextlib.redirect_stdout(out):
+            self.worker.daily()
+            self.now += timedelta(minutes=1)
+            self.worker.daily()
+        self.assertEqual((len(asked), len(reread)), (3, 2))
+        # A reread that fails: logged without its text, tried again after the wait the same day, due not asked again.
+        self.now = self.now.replace(hour=1) + timedelta(days=1)
+        failing.append(True)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.worker.daily()
+            self.now += timedelta(minutes=1)
+            self.worker.daily()
+            self.assertEqual(len(reread), 2)
+            self.now += RETRY_DAILY_AFTER
+            self.worker.daily()
+            self.now += timedelta(minutes=1)
+            self.worker.daily()
+        self.assertEqual((len(asked), len(reread)), (4, 3))
+        self.assertRegex(out.getvalue(), r"daily step=award 2025 error=WORKER_RUNTIMEERROR@test_worker\.py:\d+ retry_at=")
+        self.assertNotIn("a player's name", out.getvalue())
+
     def test_partitioned_tables_are_analysed_once_a_day(self):
         calls = []
         real = self.worker.calc_conn

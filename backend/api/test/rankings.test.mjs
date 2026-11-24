@@ -103,6 +103,67 @@ test("the players' level of a season (Score Vega v9.1), read beside the power ra
   assert.equal((await get("/api/rankings/level/player?season=2025/2026")).response.status, 400);
 });
 
+test("60q: the Ballon d'Or race on the level (Score Vega v9.1 and the three criteria), read beside the v8 race", { skip }, async () => {
+  // FAILURE_MODES §60, 60q: the ranked players in their order, the raw parts served with the score. 60ab: the seed's
+  // failed run of the next day follows the published race, which is still the one served, with its method.
+  const { response, body } = await get("/api/rankings/award?season=2025/2026");
+  assert.equal(response.status, 200);
+  assert.deepEqual([body.season, body.page, body.limit, body.total], ["2025/2026", 1, 30, 2]);
+  assert.deepEqual(body.method, { version: "vega-award-v1", computedAt: "2025-09-06T03:06:00.000Z" });
+  assert.deepEqual(Object.keys(body.rows[0]), ["rank", "playerId", "name", "imageUrl", "teamId", "team", "teamImageUrl", "position", "score",
+    "individual", "collective", "fairPlay", "level"]);
+  assert.deepEqual(body.rows.map((r) => [r.rank, r.playerId, r.teamId, r.position, r.score, r.individual, r.collective, r.fairPlay, r.level]), [
+    [1, "p_aaaab1", "t_aaaaa1", "Avant-centre", 82.5, 21.4, 0.5, -0.25, 25.5],
+    [2, "p_aaaab4", "t_aaaaa2", "Milieu offensif", 52.5, 0, 0.2, -0.1, 1.5],
+  ]);
+  // The nine fields the site reads (ballon-dor.js, its 30 first entries), with their names and their types.
+  for (const row of body.rows) {
+    assert.equal(typeof row.rank, "number");
+    for (const key of ["playerId", "name", "teamId", "team", "position"]) assert.equal(typeof row[key], "string", key);
+    for (const key of ["imageUrl", "teamImageUrl"]) assert.ok(row[key] === null || typeof row[key] === "string", key);
+    assert.equal(typeof row.score, "number");
+    assert.ok(row.score >= 0 && row.score <= 100);
+  }
+  assert.deepEqual(body.rows.map((r) => [r.name, r.team]), [["Élie Durand", "Olympique Été"], ["Cristiano Test", "Racing Club"]]);
+  assert.equal(typeof body.rows[0].teamImageUrl, "string"); // club 1's crest has its copy
+  // A page at a time.
+  const second = (await get("/api/rankings/award?season=2025/2026&limit=1&page=2")).body;
+  assert.deepEqual([second.page, second.limit, second.total, second.rows.map((r) => r.playerId)], [2, 1, 2, ["p_aaaab4"]]);
+  assert.equal((await get("/api/rankings/award?season=2024/2025")).response.status, 404);
+  for (const bad of ["", "?season=2025", "?season=2025/2026&limit=0", "?season=2025/2026&limit=201", "?season=2025/2026&page=0",
+    "?season=2025/2026&kind=players", "?season=2025/2026&universe=men"])
+    assert.equal((await get("/api/rankings/award" + bad)).response.status, 400, bad);
+  assert.equal((await get("/api/rankings/award?season=2025/2026&limit=200")).response.status, 200);
+  // One player's race: his parts and their z, his card points and covered minutes, his rank or his reason, his honours.
+  const own = (await get("/api/rankings/award/player?season=2025/2026&player=p_aaaab1")).body;
+  assert.deepEqual([own.season, own.method.version], ["2025/2026", "vega-award-v1"]);
+  const p = own.player;
+  assert.deepEqual([p.id, p.rank, p.reason, p.position, p.positionKey, p.score, p.individual, p.collective, p.fairPlay, p.level],
+    ["p_aaaab1", 1, null, "Avant-centre", "centre_forward", 82.5, 21.4, 0.5, -0.25, 25.5]);
+  assert.deepEqual([p.zIndividual, p.zCollective, p.zFairPlay, p.cardPoints, p.fairPlayMinutes], [1.2, 1.5, 0.5, 1, 260]);
+  assert.deepEqual(p.honours.map((h) => [h.kind, h.reached, h.leagueRank, h.share, h.value, h.teamId, h.reason]),
+    [["league", null, 1, 1, 0.5, "t_aaaaa1", null]]);
+  assert.equal(typeof p.honours[0].competition, "string");
+  const keeper = (await get("/api/rankings/award/player?season=2025/2026&player=p_aaaab3")).body.player;
+  assert.deepEqual([keeper.rank, keeper.reason, keeper.score, keeper.fairPlayMinutes, keeper.honours], [null, "keeper_data", 37.5, 180, []]);
+  assert.equal((await get("/api/rankings/award/player?season=2025/2026&player=p_aaaab2")).response.status, 404);
+  assert.equal((await get("/api/rankings/award/player?season=2024/2025&player=p_aaaab1")).response.status, 404);
+  for (const bad of ["?season=2025/2026&player=aaaab1", "?season=2025/2026", "?player=p_aaaab1", "?season=2025/2026&player=p_aaaab1&limit=2"])
+    assert.equal((await get("/api/rankings/award/player" + bad)).response.status, 400, bad);
+});
+
+test("60s: the v8 race's read is unchanged beside the new race", { skip }, async () => {
+  // FAILURE_MODES §60, 60s: /api/rankings/power?kind=players serves the v8 ranking, not the new race's rows or scores.
+  const { response, body } = await get("/api/rankings/power?kind=players&season=2025/2026");
+  assert.equal(response.status, 200);
+  assert.equal(body.method.version, "power-ranking-v3");
+  assert.deepEqual(body.rows.map((r) => [r.rank, r.playerId, r.score, r.index]), [[1, "p_aaaab1", 87.5, 1.4], [2, "p_aaaab4", 50, 0]]);
+  for (const row of body.rows) for (const key of ["individual", "collective", "fairPlay", "level"]) assert.ok(!(key in row), key);
+  const award = await get("/api/rankings/award?season=2025/2026");
+  assert.equal(award.response.status, 200);
+  assert.notDeepEqual(award.body.rows.map((r) => r.score), body.rows.map((r) => r.score));
+});
+
 test("power rankings of players and clubs for a season", { skip }, async () => {
   const { response, body } = await get("/api/rankings/power?kind=players&season=2025/2026");
   assert.equal(response.status, 200);
