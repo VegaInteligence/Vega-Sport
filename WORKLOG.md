@@ -1,5 +1,19 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Theme colour: the site's theme alone — 24 November 2026 ([PR #112](https://github.com/VegaInteligence/Vega-Sport/pull/112) open, not merged)
+
+- Goal (user, 24 Nov): at load, after a theme change and after a navigation inside the site, the page has one `meta[name="theme-color"]`, the colour of the site's theme (`#0E0F12` dark, `#F6F8FB` light). Before: the tag was React's (`viewport.themeColor`) and the theme script and `applyTheme` rewrote it, so two tags at load in the light theme, and `#0E0F12` back on a light page after the theme button and a navigation.
+- Constraints: tests first; nothing merged without the user's word. No Linear from this folder (user rule) and no issue created: a small, isolated fix.
+- Decision: as for the icon, the theme script writes the page's one tag (`#vega-theme-color`, `window.__vegaSetThemeColor`) while the head is read, and `viewport` names no `themeColor`; the head's `<noscript>` carries `#0E0F12` (without scripts the page stays dark); `applyTheme` calls the script's function before it writes the storage. Trade-off: a reader of the raw HTML that runs no script and skips `<noscript>` finds no theme colour (the manifest still says `#0E0F12`).
+- Branch `claude/theme-color`, the session's own worktree `.claude/worktrees/eager-wilbur-45a453` (not under `~/Agents/worktrees/`); started on #88's branch, rebased onto main 8d1f1e7 once #88 was merged.
+- Checks, `tests/e2e/brand.e2e.mjs`: B12a to B12j (each theme at load, after a navigation, the theme button both ways, then a navigation, without scripts, storage refused), written before the fix. Each reading gives the tags, the site's theme and the body's background, five times over 1.2 s.
+- Checked 24 Nov: 50/55 on the source before the fix (B12d to B12h red), 55/55 on the dev server with the fix, again on the pushed commit after the rebase; 54/55 on a local `next build` + `next start` (X1 only: the Vercel scripts do not exist off Vercel). Site tests 966/975, the same 9 failures as main on Node 22. Site build OK. Evidence: `~/Agents/scratch/vega-theme-color-20261124/` (`red-dev`, `green-dev`, `green-dev-rebased`, `green-start`, `probe/`).
+- Safari, read and not run: 15 to 18 use the tag and follow a script; 26 colours its bars from the page's background, which is the same two colours (`--bg`).
+- Known limit: when React re-creates the whole document, the theme goes back to dark and the script's two tags are removed until the next theme change or reload. Measured on production builds with an induced fault: before this change `#0E0F12` stayed (React's own tag), now no theme colour.
+- User decision, 24 Nov (« Changement à part »): that case is handled in its own change, not in #112. Tracked in GitHub [#113](https://github.com/VegaInteligence/Vega-Sport/issues/113) (measure, probe, what its check needs).
+- Not checked: the public site (the Vercel preview asks for a sign-in); the accounts E2E; Firefox and Safari; no phone's bars were looked at by eye.
+- Next action: the user's word to merge #112; then the brand E2E on the public site. #113 after that.
+
 ## Tab icon: the site's theme alone — 24 November 2026 (merged, #88; live and verified)
 
 - Goal (user, 24 Nov): after load, after a theme change and after a navigation inside the site, the page names one icon, the one of the site's theme (`icon-dark.svg`, `icon-light.svg`). Before: React put the metadata's `favicon.svg` link back, beside the themed one or in its place.
@@ -10,7 +24,7 @@
 - Evidence: the description of [PR #88](https://github.com/VegaInteligence/Vega-Sport/pull/88) (before and after) and [its comment](https://github.com/VegaInteligence/Vega-Sport/pull/88#issuecomment-7136100666) (the public site).
 - Known limit, not fixed: when React re-creates the whole document (the shell fails to hydrate, or the visitor comes back from Next's own error page), the icon link is removed, or stays on the theme before, until the theme changes again. The theme itself goes back to dark there. Seen only with faults induced by the review.
 - Not checked: Firefox and Safari; the accounts E2E (`tests/e2e/accounts/`, whose theme goes through `applyTheme`); no tab was looked at by eye.
-- Follow-up, in its own session since 24 Nov: `meta[name="theme-color"]` has the same fault (back to `#0E0F12` after the light theme and a navigation; two tags at load in the light theme).
+- Follow-up: `meta[name="theme-color"]` had the same fault; see the section above.
 - Next action: none here.
 
 ## Score Vega v9 in service — [VI-53](https://linear.app/vegainteligence/issue/VI-53), GitHub #82 (24 November 2026, stage 1 built and checked on production data, not merged)
