@@ -216,6 +216,21 @@ def main(dsn):
     x("""INSERT INTO agg.player_power(season_id,player_id,role,team_id,matches,minutes,total,rate,eligible,run_id,own_total,level_total)
          VALUES (2025,102,'centre_forward',2,6,540,0.6,0.055,false,%(run)s,0.55,0.05),(2024,101,'centre_forward',1,30,2400,14,0.44,true,%(run)s,12.0,2.0)""", {"run": run})
     x("INSERT INTO agg.lineup_models(version, fitted_at, matches, rated, elo_per_unit, elo_per_unit_error) VALUES ('lineup-v1', '2025-09-06T03:14:00Z', 28524, 75907, 44.8, 3.2)")
+    # The players' level (167, Score Vega v9), as level.write keeps it beside the ranking: the forward judged up
+    # front (his hour on the wing is not: too few minutes), a number 10, and the keeper below the minutes bar.
+    level_run = x("""INSERT INTO agg.level_runs(season_id, version, status, started_at, finished_at, players, settings)
+                     VALUES (2025, 'score-vega-v9', 'published', '2025-09-06T03:00:00Z', '2025-09-06T03:05:00Z', 3, '{"psi": 10}') RETURNING id""").fetchone()[0]
+    x("""INSERT INTO agg.player_level(season_id, player_id, position, team_id, universe, eligible, linked, minutes, level, own, blocks, starts, club,
+           start_share, club_level, score, rank, position_rank, run_id)
+         VALUES (2025,101,'centre_forward',1,'men',true,true,260,21.4,14.2,11.0,3.2,7.2,0.9,0.72,79.7,1,1,%(run)s),
+                (2025,104,'attacking_midfielder',2,'men',true,true,160,0,1.5,1.0,0.5,-1.5,0.6,-0.15,50,2,1,%(run)s),
+                (2025,103,'goalkeeper',4,'men',false,true,180,-6.0,-6.0,-2.0,-4.0,0,0.2,0,40.5,3,1,%(run)s)""", {"run": level_run})
+    x("""INSERT INTO agg.player_level_positions(season_id, player_id, position, acquired, minutes, minutes_two_seasons, share, value, level,
+           finishing, creation, progression, defence, retention, run_id)
+         VALUES (2025,101,'centre_forward',true,200,2600,1,13.5,21.4,1.25,0.4,0.1,-0.3,0.2,%(run)s),
+                (2025,101,'winger',false,60,60,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,%(run)s),
+                (2025,104,'attacking_midfielder',true,160,160,1,2.5,0,0.1,0.5,0.2,0,0.1,%(run)s),
+                (2025,103,'goalkeeper',true,180,180,1,-1.2,-6.0,NULL,NULL,NULL,NULL,NULL,%(run)s)""", {"run": level_run})
     # Match grades (099): match 1's players, a forward's great match, a winger's ordinary one, and a
     # keeper's ten minutes, too short and too ordinary for a grade to show.
     x("""INSERT INTO agg.player_power_matches(season_id,match_id,player_id,team_id,role,minutes,contribution,run_id,match_index)
