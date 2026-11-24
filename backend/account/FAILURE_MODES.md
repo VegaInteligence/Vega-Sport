@@ -13,6 +13,8 @@
   ac08d79), the preferences became one document per account (coordinator's decision): S8 to S15
   and the old sections 5 and 6 were withdrawn, S17 and the new section 5 written, sections 7 to 9
   amended, all before their tests and code changed.
+  Section 10 (the deployment wiring: `deploy.sh`, the shared templates, the run of `sql/` by
+  `migrate.py`) was written on 24 Nov 2026, before its tests and before the shared files changed.
 - **Scope of stage 1:** the access levels, the signed pass that carries a level, the decision
   taken on a request before the cache, and the account tables with their database role. The
   sign-in itself (Neon Auth), the account API's HTTP routes, Stripe and every screen come later
@@ -233,14 +235,57 @@ a valid Neon session except the preflight:
 | X9 | A second device, with a still valid token, saves after the deletion. | `410 ACCOUNT_ERASED`, nothing stored (S16). |
 | X10 | The whole path, as the site will drive it: sign in, read `null`, write the site's complete example, read it back deep-equal, a second device writes with a stale `If-Match` and is refused, then with the current one, export, delete, everything gone. | `test/account-api.e2e.test.mjs` runs it with Function URL events through the real front, the real store and a local PostgreSQL, a token signed by a key made in the test and served through an injected key-set fetcher, and a recorded Neon client. It writes `evidence.json` (setup, inputs, exact rerun command, expected and actual results, the front's log lines, the row counts before and after) to `VEGA_ACCOUNT_E2E_EVIDENCE` or, by default, `<tmp>/vega-account-e2e/<run>/`. |
 
-## 10. Not covered yet
+## 10. The deployment wiring (`infra/aws/deploy.sh`, `backend/vega/migrate.py`)
+
+Tests: `backend/tests/test_account_deploy.py` (the real `deploy.sh` and `ci/secrets.sh`, run
+offline with a stand-in `aws`, `npm` and `python3` on `PATH`, in every state below),
+`backend/tests/test_account_migrations.py` (the real `python -m vega.migrate` on a local
+PostgreSQL, `VEGA_V2_ACCOUNT_MIGRATE_TEST_DSN`), `backend/tests/test_account_capacity.py`; the
+package checks run in CI (`ci.yml`, job « Read API package »).
+
+The Deploy workflow is run several times a day by two people for other work, and the owner's
+manual steps (`DEPLOYMENT.md`, section 3) come in his own time. One switch decides everything:
+the SSM parameter **`/vega/v2/account-deploy`** (String), which the owner creates last, with
+the value `on`. It is a parameter of its own rather than `/vega/v2/neon-auth-url`: the auth URL is
+the first value the owner holds, and once the switch is on a missing prerequisite fails every
+Deploy (W5); with a switch of its own the values can be written in any order, checked, and the
+account turned on in one last step, or paused (`off`) without losing them.
+
+| # | What can go wrong | Expected outcome |
+|---|---|---|
+| W1 | The switch is absent (the case until the owner's last step). | The Deploy does exactly what it did before this change: the same stacks with the same parameter overrides, the same task, the same uploads, the same SSM parameters written (none of the account's). One line says so: `account: off (no SSM parameter /vega/v2/account-deploy): the account API is not deployed (backend/account/DEPLOYMENT.md, section 3)`. |
+| W2 | The switch is `off`. | As W1, the line saying `off`. Resources an earlier `on` Deploy made stay as they are (W11): the database's security group, the migrate task's password, the account stack (not updated), the base's account tables. Turning off never deletes. |
+| W3 | The switch holds another value (`On`, `true`, a typo). | The preflight fails naming the parameter and the two values allowed. Nothing is changed. |
+| W4 | The switch is `on` and the stack `vega-v2-deploy-roles` was not updated from the Mac (its output `AccountGrants` is not `1`). | The preflight fails naming the stack and the command of `DEPLOYMENT.md`, section 3. Nothing is changed. (Without the check: the security group and the migrate task change, then the upload to `releases/v2-account/` is refused to the deploy role, or the account stack's creation is refused to the CloudFormation role and rolls back.) |
+| W5 | The switch is `on` and a value the owner writes is missing or malformed: `/vega/v2/neon-auth-url`, `/vega/v2/neon-project-id`, `/vega/v2/neon-branch-id`, `/vega/v2/site-origins` (String each; the patterns are `account.yaml`'s `AllowedPattern`, whole-value). | The preflight fails and names every one that is wrong in the same run. Nothing is changed. |
+| W6 | `/vega/v2/neon-api-key` (SecureString) is absent. | Not an error: the stack gets an empty `NeonApiKey` and one line says that `DELETE /account` answers 503 `DELETION_UNAVAILABLE` (X3). Present but not one word of 16 to 512 printable characters: the preflight fails naming it. |
+| W7 | The generated secrets are absent: `/vega/v2/password-account`, `/vega/v2/account-database-url`, `/vega/v2/pass-key/k1`. | Created by step 2 (`ci/secrets.sh`) when the switch is `on`, never when it is not; values through mode-0600 files, as the other secrets. The pass key is 32 random bytes in base64url (43 characters). Present but malformed (the URL not of `account.yaml`'s pattern, a pass key that is not 43 or more base64url characters): the preflight fails naming it. |
+| W8 | The stack `vega-v2-account` is in a state CloudFormation cannot update: `ROLLBACK_COMPLETE` (a first creation that failed), any `*_FAILED`, any `*_IN_PROGRESS`. | The preflight fails naming the state and the recovery: the deploy role cannot delete a stack, so the owner deletes it from the Mac (`ROLLBACK_COMPLETE`), or runs `continue-update-rollback` (`UPDATE_ROLLBACK_FAILED`). Nothing is changed. |
+| W9 | A preflight failure blocks the colleague's Deploy too. | Every preflight message ends with how to deploy without the account: set `/vega/v2/account-deploy` to `off`. |
+| W10 | The steps run in the wrong order. | With the switch `on`: the database stack (security group `AccountSG`) at step 1; the secrets at step 2; the worker stack at step 3, whose migrate task then names `/vega/v2/password-account` (it exists since step 2: a task naming a missing parameter does not start); the migrate task at step 5 (the account SQL, then the login); the account stack last, at step 11, after the alerts: it imports the security group and its store connects as the login, and its failure leaves everything else deployed (the run still fails: no `done`). |
+| W11 | A shared template's new resource or secret exists before the switch. | `database.yaml` (security group, its two rules, its export), `worker.yaml` (the migrate task's `V2_ACCOUNT_PASSWORD`) and `alerts.yaml` (the connections threshold counts the account's 18) take a parameter `Account`, `false` by default. `deploy.sh` passes `Account=true` when `on`, and nothing otherwise, so a stack keeps its previous value: a later `off` Deploy never removes the security group the account stack imports (the database stack's update would fail: an export in use) nor the migrate task's password. |
+| W12 | A secret reaches a log, a command line or CloudFormation's events. | Never printed by `deploy.sh` or `secrets.sh`. The database URL, the pass key and the Neon key reach the stack as `NoEcho` parameters on the command line, as the read API's URL does (`api.yaml`): visible to `ps` on the runner only, masked in the workflow's log with `::add-mask::`, `****` in CloudFormation's events. The password reaches the migrate task as an ECS secret. |
+| W13 | A package is built from the wrong entry, or the store's without its CA. | The offline check of each kind fails the build: `account-front` answers a request `503 NOT_CONFIGURED` (not 404: without settings it serves nothing), `account-store` answers a command `{ ok: false, code: 'NOT_CONFIGURED' }` and holds `rds-ca.pem`; `api` and `live` keep their 404 check. |
+| M1 | The runner of `sql/` runs where it should not (any football suite, today's migrate task). | It runs only when `V2_ACCOUNT_PASSWORD` is set, the only way the login is asked for (it joins the group `vega_account` that `001` creates). Without it nothing of `account` or `account_admin` is read or touched, and the output line is as before (`migrations applied=… total=… logins=…`). |
+| M2 | The files are applied partly, twice, or out of order. | After the football `migrate()`, before `ensure_logins()`: the files `NNN_name.sql` of `sql/`, by name; each one not recorded runs in its own transaction with the insert of its record (`account_admin.applied`: name, sha256 of its bytes, instant). The line gains `account applied=N total=M`. |
+| M3 | A second run changes something. | `account applied=0`, the records unchanged; the login's password and limit set again (`ALTER ROLE`). |
+| M4 | A file applied once is edited. | The run stops with an error naming the file (`ACCOUNT_SQL_CHANGED 001_accounts.sql`); no later file runs; the task exits non-zero, which stops the Deploy at step 5 before the account stack. |
+| M5 | A file fails midway. | Its transaction rolls back: nothing of it and no record; the files before it stay recorded; exit non-zero. Once fixed, the next run applies it. |
+| M6 | Two migrate tasks run at once. | Each transaction takes `pg_advisory_xact_lock(hashtext('vega-account-migrations'))` before it reads the record: each file is applied once, the other run finds it recorded. |
+| M7 | The password is set but the image holds no `account/sql` (or an empty one). | The task fails before any migration, naming the directory. |
+| M8 | The record is read or changed by a login. | `account_admin` belongs to the owner, is not in schema `account`, and grants nothing to anyone (`PUBLIC`, `vega_account`, `vega_read`, `vega_collect`, `vega_calc`). |
+| M9 | A football suite's rebuild (`DROP SCHEMA … api,ops,agg,core CASCADE`, then the migrations) takes a person's data with it. | `account` and `account_admin` and their rows survive it; no football schema depends on them; no Python suite drops either schema. |
+| M10 | The store's copies hold more connections than the login allows, or the logins more than the instance. | `vega_v2_account` has the limit 2 × 8 + 2 = 18 (8 copies of the store, `ReservedConcurrentExecutions` in `account.yaml`, one connection each, `max: 1` in `lambda/store-index.mjs`; two generations during a deploy; a margin of 2), and a copy gives its idle connection back within 2 minutes. The four logins together hold 96, under 200. |
+
+## 11. Not covered yet
 
 - A real Neon token: the claims and header Neon sets (`kid`, the `sub` format) are taken from
   Neon's documentation and Better Auth's source, not from a token (no Neon project exists yet).
 - The Lambda Invoke API itself: the production transport is tested with a stand-in for the SDK's
   `send`; the SDK, IAM and throttling are only exercised once deployed.
 - PostgreSQL 18 (production): the suites run on 16 locally; CI runs 18.
-- Applying `sql/` in a deployment and its record of applied files (`DEPLOYMENT.md`).
+- A real Deploy with the switch on: section 10 is exercised offline (a stand-in `aws`) and on a
+  local PostgreSQL, never against AWS.
 - The meaning of the document's keys: the site's (`user-preferences.js`, `validateContract`), on every load.
 - The merge at the first sign-in: the site's adapter (section 6).
 - Rate limits: a Function URL takes no web ACL; the front's reserved concurrency bounds it.
