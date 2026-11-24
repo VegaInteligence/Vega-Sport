@@ -125,6 +125,8 @@ before(async () => {
   owner = new pg.Client({ connectionString: process.env.VEGA_V2_API_NODE_TEST_DSN });
   await owner.connect();
   const run = (await x("INSERT INTO agg.power_runs(kind,method_version,status,elo_home_advantage,finished_at) VALUES ('elo','seed-importance','published',60,now()) RETURNING id")).rows[0].id;
+  // A competition's country is a foreign key: the seed has France only.
+  await x("INSERT INTO core.countries(code) SELECT unnest($1::text[]) ON CONFLICT DO NOTHING", [COMPETITIONS.map((c) => c[2])]);
   for (const [cid, name, country, kind, key, level] of COMPETITIONS) {
     await x("INSERT INTO core.competitions(id,name,country_code,kind) VALUES ($1,$2,$3,$4)", [cid, name, country, kind]);
     if (key) await x("INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id) VALUES ('competition','pitchapi',$1,$2)", [key, cid]);
