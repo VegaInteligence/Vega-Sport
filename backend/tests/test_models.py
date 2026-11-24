@@ -815,6 +815,377 @@ class ModelsTest(unittest.TestCase):
             x("DELETE FROM agg.match_forecasts WHERE match_id BETWEEN 9200 AND 9216")
             x("DELETE FROM core.matches WHERE id BETWEEN 9200 AND 9215")
 
+    # §59 (issue #105): the Ballon d'Or race on the Score Vega v9.1 with the three criteria, stage 1, computed by the
+    # ranking's run beside the v8 race. The cases are named test_59*: they run before the cases that add a World Cup
+    # final or matches to play (test_zzz*), and each puts the base back as it found it.
+
+    AWARD = """SELECT player_id, team_id, position, universe, eligible, linked, top_division, measured, individual, collective, card_points,
+                      fair_play_minutes, fair_play, z_individual, z_collective, z_fair_play, level, score, rank, reason
+               FROM agg.player_award WHERE season_id = 2025 ORDER BY player_id"""
+    HONOURS = """SELECT player_id, team_id, competition_season_id, kind, reached, league_rank, progress, factor, prestige, share, value, reason
+                 FROM agg.player_award_honours WHERE season_id = 2025 ORDER BY player_id, competition_season_id, team_id"""
+    V8_AWARD = "SELECT season_id, award, rank, player_id, team_id, score, calc_run_id FROM agg.player_award_ranking ORDER BY season_id, rank"
+    V8_AWARD_RUNS = "SELECT id, status, model_version, cohort_definition FROM agg.calc_runs WHERE kind = 'award' ORDER BY id"
+    LEVEL_TABLES = {
+        "player_level": "SELECT * FROM agg.player_level WHERE season_id = 2025 ORDER BY player_id",
+        "player_level_cells": "SELECT * FROM agg.player_level_cells WHERE season_id = 2025 ORDER BY player_id, position, team_id",
+        "player_power": "SELECT * FROM agg.player_power WHERE season_id = 2025 ORDER BY player_id",
+        "level_runs": "SELECT id, status, started_at FROM agg.level_runs WHERE season_id = 2025 ORDER BY id",
+        "power_runs": "SELECT id, status, started_at FROM agg.power_runs WHERE kind = 'players' AND season_id = 2025 ORDER BY id",
+    }
+
+    def award_rows(self):
+        names = ("player", "team", "position", "universe", "eligible", "linked", "top_division", "measured", "individual", "collective", "card_points",
+                 "fair_play_minutes", "fair_play", "z_individual", "z_collective", "z_fair_play", "level", "score", "rank", "reason")
+        return {r[0]: dict(zip(names, r)) for r in self.db.execute(self.AWARD).fetchall()}
+
+    def honours(self, edition=None):
+        names = ("player", "team", "edition", "kind", "reached", "league_rank", "progress", "factor", "prestige", "share", "value", "reason")
+        rows = [dict(zip(names, r)) for r in self.db.execute(self.HONOURS).fetchall()]
+        return [r for r in rows if edition is None or r["edition"] == edition]
+
+    def award_run(self):
+        return self.one("""SELECT id, version, status, level_run_id, reference_season, players, settings, spreads, started_at
+                           FROM agg.award_runs WHERE season_id = 2025 AND status = 'published'""")
+
+    def snapshot(self, queries):
+        return {name: self.db.execute(sql).fetchall() for name, sql in queries.items()}
+
+    def standings(self):
+        return dict(self.db.execute("""SELECT team_id, position FROM api.standings
+                                       WHERE competition_season_id = 1 AND stage IS NULL AND group_name IS NULL""").fetchall())
+
+    def award_cup(self, edition, key, matches):
+        """A complementary cup edition of 2025 (results only, no player rows), as cups.save writes it: matches are
+        (id, round name, home, away, status, score, extra time, shoot-out). Removed, and the race read again, after the case."""
+        from vega import award
+
+        x = self.db.execute
+        x("INSERT INTO core.competitions(id,name,kind) VALUES(%s,%s,'cup')", (edition, f"Coupe {edition}"))
+        x("INSERT INTO core.competition_seasons(id,competition_id,season_id,native_label,cup_key) VALUES(%s,%s,2025,'2025/2026',%s)",
+          (edition, edition, key))
+        rounds = {}
+        for mid, name, home, away, status, score, extra, shootout in matches:
+            if name not in rounds:
+                rounds[name] = x("INSERT INTO core.rounds(competition_season_id,name) VALUES(%s,%s) RETURNING id", (edition, name)).fetchone()[0]
+            x("""INSERT INTO core.matches(id,competition_season_id,season_id,source,status,round_id,home_team_id,away_team_id,home_score,away_score,
+                   home_score_et,away_score_et,home_penalty_score,away_penalty_score,match_date)
+                 VALUES(%s,%s,2025,'openfootball',%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'2025-10-01')""",
+              (mid, edition, status, rounds[name], home, away, *(score or (None, None)), *(extra or (None, None)), *(shootout or (None, None))))
+
+        def remove():
+            x("DELETE FROM core.matches WHERE competition_season_id = %s", (edition,))
+            x("DELETE FROM core.rounds WHERE competition_season_id = %s", (edition,))
+            x("DELETE FROM core.competition_seasons WHERE id = %s", (edition,))
+            x("DELETE FROM core.competitions WHERE id = %s", (edition,))
+            award.reread(self.db, 2025)
+
+        self.addCleanup(remove)
+
+    def test_59_the_race_is_computed_and_stored_by_the_ranking_s_run(self):
+        # 59.1, « Stored » and « When »: one published run of the present version and settings, reading the year's
+        # published level; a row per men's player with a level; the synthetic league's 88 players all in the race.
+        from vega import award, level
+
+        run, version, status, level_run, reference, players, settings, spreads, _ = self.award_run()
+        self.assertEqual((version, status, players, reference), (award.AWARD_VERSION, "published", 88, 2025))
+        self.assertEqual(settings, award.SETTINGS)
+        self.assertEqual(level_run, self.level_run()[0])
+        self.assertEqual(set(spreads), {"individual", "collective", "fair_play"})
+        self.assertTrue(set(spreads["fair_play"]) <= set(level.POSITIONS))
+        rows = self.award_rows()
+        self.assertEqual(set(rows), {p for p, *_ in self.facts["players"]})
+        self.assertEqual(sorted(r["rank"] for r in rows.values()), list(range(1, 89)))
+        self.assertTrue(all(r["reason"] is None and r["universe"] == "men" and r["eligible"] and r["linked"] and r["top_division"] and r["measured"]
+                            for r in rows.values()))
+        self.assertTrue(all(0 < r["score"] < 100 for r in rows.values()))
+        # The race in its order: by A, the best first.
+        ordered = sorted(rows.values(), key=lambda r: r["rank"])
+        self.assertTrue(all(a["level"] >= b["level"] for a, b in zip(ordered, ordered[1:])))
+        self.assertEqual(self.one("SELECT count(*) FROM agg.award_runs WHERE season_id = 2025 AND status = 'published'")[0], 1)
+        self.assertEqual(self.one("SELECT count(*) FROM api.award_race WHERE season_id = 2025")[0], 88)
+
+    def test_59b_the_individual_part_is_the_year_s_level_without_the_year_before(self):
+        # The base holds no year before and no stakes other than 1, no national match: I is the stored v9.1 level.
+        from vega import award  # noqa: F401
+
+        level = dict(self.db.execute("SELECT player_id, level FROM agg.player_level WHERE season_id = 2025").fetchall())
+        rows = self.award_rows()
+        self.assertEqual(set(rows), set(level))
+        for p, r in rows.items():
+            self.assertAlmostEqual(r["individual"], level[p], places=4)
+
+    def test_59d_league_honours_by_the_final_table(self):
+        from vega import award
+
+        ranks = self.standings()
+        self.assertEqual(ranks, {8: 1, 6: 2, 2: 3, 5: 4, 4: 5, 7: 6, 3: 7, 1: 8})
+        values = {1: 0.5, 2: 0.2, 3: 0.1, 4: 0.05}
+        league = self.honours(1)
+        self.assertEqual(len(league), 88)  # every league honour is kept, whatever its rank
+        rows = self.award_rows()
+        for h in league:
+            self.assertEqual((h["kind"], h["reached"], h["league_rank"], h["reason"]), ("league", None, ranks[h["team"]], None), h)
+            self.assertAlmostEqual(h["progress"], 1.0)
+            self.assertAlmostEqual(h["factor"], 1.0)  # the strongest league of the base
+            self.assertAlmostEqual(h["share"], 1.0)  # 14 of 14 matches
+            self.assertAlmostEqual(h["value"], values.get(ranks[h["team"]], 0.0), places=6)
+            self.assertAlmostEqual(rows[h["player"]]["collective"], h["value"], places=6)
+        self.assertEqual(len(self.honours()), 88)  # no other honour in the base
+        self.assertEqual(award.LEAGUE_VALUE, 0.5)
+
+    def test_59e_a_player_of_two_clubs_has_the_honours_of_each(self):
+        # 105 plays 7 matches for club 1 (rank 8), then 7 for club 2 (rank 3), in 205's place; club 1 fields 9105
+        # in the other 7.
+        from vega import award, power  # noqa: F401
+
+        x = self.db.execute
+        mine = [m for (m,) in x("""SELECT p.match_id FROM core.player_match_stats p JOIN core.matches m ON m.id = p.match_id
+                                   WHERE p.season_id = 2025 AND p.player_id = 105 AND 2 NOT IN (m.home_team_id, m.away_team_id)
+                                   ORDER BY p.match_id LIMIT 7""").fetchall()]
+        theirs = [m for (m,) in x("""SELECT p.match_id FROM core.player_match_stats p JOIN core.matches m ON m.id = p.match_id
+                                     WHERE p.season_id = 2025 AND p.player_id = 205 AND 1 NOT IN (m.home_team_id, m.away_team_id)
+                                     ORDER BY p.match_id LIMIT 7""").fetchall()]
+        self.assertEqual((len(mine), len(theirs)), (7, 7))
+        move = ["UPDATE core.player_match_stats SET player_id = %s WHERE season_id = 2025 AND player_id = %s AND match_id = ANY(%s)",
+                "UPDATE core.lineup_players SET player_id = %s WHERE season_id = 2025 AND player_id = %s AND match_id = ANY(%s)"]
+        x("INSERT INTO core.players(id,name) VALUES(9105,'P9105')")
+        try:
+            for sql in move:
+                x(sql, (9105, 105, mine))
+                x(sql, (105, 205, theirs))
+            power.refresh_players(self.db, 2025)
+            got = [(h["team"], h["league_rank"], h["share"], h["value"]) for h in self.honours(1) if h["player"] == 105]
+            self.assertEqual([g[:2] for g in got], [(1, 8), (2, 3)])
+            self.assertAlmostEqual(got[0][2], 0.5)
+            self.assertAlmostEqual(got[1][2], 0.5)
+            self.assertAlmostEqual(got[0][3], 0.0)
+            self.assertAlmostEqual(got[1][3], 0.5 * 0.2 * 0.5)
+            self.assertAlmostEqual(self.award_rows()[105]["collective"], 0.05, places=6)
+        finally:
+            for sql in move:
+                x(sql, (205, 105, theirs))
+                x(sql, (105, 9105, mine))
+            power.refresh_players(self.db, 2025)
+            x("DELETE FROM core.players WHERE id = 9105")
+        self.assertEqual(len(self.honours(1)), 88)
+
+    def test_59f_a_final_won_on_penalties_and_one_without_a_winner(self):
+        from vega import award
+
+        self.award_cup(70, "open-cups:coupe-70:2025/2026", [(9701, "Final", 1, 2, "finished", (1, 1), (1, 1), (4, 3))])
+        self.award_cup(71, "open-cups:coupe-71:2025/2026", [(9711, "Final", 3, 4, "finished", (1, 1), None, None)])
+        award.reread(self.db, 2025)
+        reached = {(h["edition"], h["team"]): (h["kind"], h["reached"], h["reason"]) for h in self.honours() if h["edition"] in (70, 71)}
+        self.assertEqual(reached, {(70, 1): ("national_cup", "winner", None), (70, 2): ("national_cup", "final", None),
+                                   (71, 3): ("national_cup", "final", "no_winner"), (71, 4): ("national_cup", "final", "no_winner")})
+        # No player rows: the share is his minutes in the club's PitchAPI matches of the edition's window, all of them.
+        cup = self.honours(70)
+        self.assertEqual(len(cup), 22)
+        self.assertTrue(all(abs(h["share"] - 1.0) < 1e-9 for h in cup))
+        self.assertTrue(all(abs(h["value"] - (0.15 if h["team"] == 1 else 0.09)) < 1e-6 for h in cup))
+
+    def test_59g_quarter_finalists_eliminated_or_still_to_play(self):
+        from vega import award
+
+        self.award_cup(72, "open-cups:coupe-72:2025/2026", [(9721, "Quarter-finals", 5, 6, "finished", (0, 2), None, None),
+                                                            (9722, "Quarter-finals", 7, 8, "not_started", None, None, None)])
+        award.reread(self.db, 2025)
+        reached = {(h["team"], h["reached"]) for h in self.honours(72)}
+        self.assertEqual(reached, {(5, "quarter_final"), (6, "quarter_final"), (7, "quarter_final"), (8, "quarter_final")})
+
+    def test_59h_a_league_with_one_match_to_play(self):
+        from vega import award
+
+        x = self.db.execute
+        x("""INSERT INTO core.matches(id,competition_season_id,season_id,source,status,home_team_id,away_team_id,match_date)
+             VALUES(9057,1,2025,'pitchapi','not_started',1,2,'2025-10-08')""")
+        try:
+            award.reread(self.db, 2025)
+            league = self.honours(1)
+            self.assertEqual(len(league), 88)
+            self.assertTrue(all(abs(h["progress"] - 56 / 57) < 1e-9 for h in league))
+            champion = [h for h in league if h["league_rank"] == 1]
+            self.assertTrue(all(abs(h["value"] - 0.5 * 56 / 57) < 1e-6 for h in champion))
+            self.assertEqual(sorted(r["rank"] for r in self.award_rows().values()), list(range(1, 89)))  # the race exists
+        finally:
+            x("DELETE FROM core.matches WHERE id = 9057")
+            award.reread(self.db, 2025)
+        self.assertTrue(all(abs(h["progress"] - 1.0) < 1e-9 for h in self.honours(1)))
+
+    def test_59i_card_points_of_the_covered_matches(self):
+        # Match 17, club 3 at club 4: 301 a yellow, a second yellow and its red; 302 a direct red; 303 a yellow then a
+        # direct red. Its events are covered; no other match's are.
+        from vega import award
+
+        x = self.db.execute
+        self.assertEqual(self.one("SELECT home_team_id, away_team_id FROM core.matches WHERE id = 17"), (3, 4))
+        events = [(301, 20, "yellow_card"), (301, 60, "second_yellow"), (301, 60, "red_card"), (302, 30, "red_card"),
+                  (303, 10, "yellow_card"), (303, 50, "red_card")]
+        try:
+            for seq, (player, minute, kind) in enumerate(events, 1):
+                x("""INSERT INTO core.match_events(season_id,match_id,team_id,seq,event_type,minute,player_id)
+                     VALUES(2025,17,3,%s,%s,%s,%s)""", (seq, kind, minute, player))
+            x("UPDATE core.match_coverage SET events = 'ok' WHERE season_id = 2025 AND match_id = 17")
+            award.reread(self.db, 2025)
+            rows = self.award_rows()
+            self.assertEqual([rows[p]["card_points"] for p in (301, 302, 303)], [3, 4, 5])
+            played = {p for (p,) in x("SELECT player_id FROM core.player_match_stats WHERE season_id = 2025 AND match_id = 17").fetchall()}
+            self.assertEqual(len(played), 22)
+            self.assertEqual({p for p, r in rows.items() if r["fair_play_minutes"] > 0}, played)
+            self.assertTrue(all(rows[p]["fair_play_minutes"] == 90 for p in played))
+            self.assertEqual(sum(r["card_points"] for r in rows.values()), 12)
+            # Pulled to the centre-backs' mean: the clean covered centre-back above, the direct reds below, the worst last.
+            self.assertEqual({rows[p]["position"] for p in (302, 303, 402)}, {"centre_back"})
+            self.assertGreater(rows[402]["fair_play"], rows[302]["fair_play"])
+            self.assertGreater(rows[302]["fair_play"], rows[303]["fair_play"])
+            self.assertTrue(all(abs(r["z_fair_play"]) <= award.Z_CAP for r in rows.values()))
+        finally:
+            x("DELETE FROM core.match_events WHERE season_id = 2025 AND match_id = 17")
+            x("UPDATE core.match_coverage SET events = 'pending' WHERE season_id = 2025 AND match_id = 17")
+            award.reread(self.db, 2025)
+
+    def test_59j_a_season_without_covered_events(self):
+        from vega import award  # noqa: F401
+
+        rows = self.award_rows()
+        self.assertTrue(all(r["card_points"] == 0 and r["fair_play_minutes"] == 0 and r["z_fair_play"] == 0 for r in rows.values()))
+        by_position = defaultdict(set)
+        for r in rows.values():
+            by_position[r["position"]].add(round(r["fair_play"], 9))
+        self.assertTrue(all(len(values) == 1 for values in by_position.values()), by_position)  # the position's mean
+
+    def test_59k_a_keeper_not_measured_is_out_of_the_race(self):
+        from vega import award, power  # noqa: F401
+
+        x = self.db.execute
+        keeper = 100
+        matches = [m for (m,) in x("SELECT match_id FROM core.player_match_stats WHERE season_id = 2025 AND player_id = %s ORDER BY match_id", (keeper,)).fetchall()]
+        kept = dict(x("SELECT match_id, goals_prevented FROM core.player_match_stats WHERE season_id = 2025 AND player_id = %s", (keeper,)).fetchall())
+        try:
+            x("UPDATE core.player_match_stats SET goals_prevented = NULL WHERE season_id = 2025 AND player_id = %s AND match_id = ANY(%s)",
+              (keeper, matches[:8]))  # 540 of his 1 260 minutes in goal: under half
+            power.refresh_players(self.db, 2025)
+            row = self.award_rows()[keeper]
+            self.assertEqual((row["measured"], row["rank"], row["reason"]), (False, None, "keeper_data"))
+            self.assertTrue(all(row[k] is not None for k in ("individual", "collective", "fair_play", "level", "score")))
+            self.assertEqual(sorted(r["rank"] for p, r in self.award_rows().items() if p != keeper), list(range(1, 88)))
+            self.assertEqual(self.award_run()[5], 88)  # computed and kept, out of the race
+        finally:
+            for match, prevented in kept.items():
+                x("UPDATE core.player_match_stats SET goals_prevented = %s WHERE season_id = 2025 AND player_id = %s AND match_id = %s", (prevented, keeper, match))
+            power.refresh_players(self.db, 2025)
+        self.assertIsNotNone(self.award_rows()[keeper]["rank"])
+
+    def test_59o_a_cup_written_after_its_race_is_read_again_alone(self):
+        from vega import award, power
+
+        x = self.db.execute
+        self.assertEqual(award.due(self.db), [])
+        before = self.snapshot(self.LEVEL_TABLES)
+        run = self.award_run()[0]
+        collective = {p: r["collective"] for p, r in self.award_rows().items()}
+        self.award_cup(73, "open-cups:coupe-73:2025/2026", [(9731, "Final", 1, 3, "finished", (2, 0), None, None)])
+        self.assertEqual(award.due(self.db), [2025])
+        self.assertEqual(power.stale_rankings(self.db), [])  # the ranking and the level are not run again
+        award.reread(self.db, 2025)
+        self.assertEqual({(h["team"], h["reached"]) for h in self.honours(73)}, {(1, "winner"), (3, "final")})
+        rows = self.award_rows()
+        for p, r in rows.items():
+            gained = {1: 0.15, 3: 0.09}.get(p // 100, 0.0)
+            self.assertAlmostEqual(r["collective"], collective[p] + gained, places=6)
+        self.assertEqual(self.snapshot(self.LEVEL_TABLES), before)
+        self.assertNotEqual(self.award_run()[0], run)  # a new run of the race, published
+        self.assertEqual(self.one("SELECT count(*) FROM agg.award_runs WHERE season_id = 2025 AND status = 'published'")[0], 1)
+        self.assertEqual(award.due(self.db), [])
+        self.assertEqual(x("SELECT count(*) FROM agg.player_award WHERE season_id = 2025").fetchone()[0], 88)
+
+    def test_59p_a_race_of_another_version_or_other_settings_or_missing(self):
+        from vega import award, power
+
+        x = self.db.execute
+        self.assertEqual(power.stale_rankings(self.db), [])
+        self.assertEqual(award.stale(self.db), [])
+        for change in ("UPDATE agg.award_runs SET version = 'vega-award-v0' WHERE season_id = 2025 AND status = 'published'",
+                       "UPDATE agg.award_runs SET settings = '{}' WHERE season_id = 2025 AND status = 'published'",
+                       "UPDATE agg.award_runs SET status = 'superseded' WHERE season_id = 2025 AND status = 'published'"):
+            x(change)
+            self.assertEqual(award.stale(self.db), [2025], change)
+            self.assertEqual(power.stale_rankings(self.db), [2025], change)
+            power.refresh_players(self.db, 2025)
+            self.assertEqual(power.stale_rankings(self.db), [], change)
+            self.assertEqual(self.award_run()[1:3], (award.AWARD_VERSION, "published"))
+        # A race started before the year's level: computed again.
+        x("UPDATE agg.award_runs SET started_at = started_at - interval '1 day' WHERE season_id = 2025 AND status = 'published'")
+        self.assertEqual(power.stale_rankings(self.db), [2025])
+        power.refresh_players(self.db, 2025)
+        self.assertEqual(power.stale_rankings(self.db), [])
+
+    def test_59s_the_v8_race_is_what_the_v8_gives(self):
+        from vega import award, power
+
+        x = self.db.execute
+        v8 = self.snapshot({"award": self.V8_AWARD, "runs": self.V8_AWARD_RUNS})
+        scored = {}
+        for p, eligible, rank, index_season, index, total, minutes, team in x(
+                "SELECT player_id, eligible, rank, index_season, index, total, minutes, team_id FROM agg.player_power WHERE season_id = 2025").fetchall():
+            scored[p] = {"eligible": eligible, "rank": rank, "index": index, "total": total, "minutes": minutes, "team": team}
+            if index_season is not None:
+                scored[p]["index_season"] = index_season
+        race = power.award_race(scored)
+        stored = [r for r in v8["award"] if r[0] == 2025]
+        self.assertEqual([(r[2], r[3], r[4]) for r in stored], [(rank, p, team) for rank, p, team, _ in race])
+        self.assertEqual(len(stored), 30)
+        self.assertEqual([r[2] for r in v8["runs"] if r[1] == "published"], [power.METHOD_VERSION])
+        award.refresh(self.db, 2025)
+        award.reread(self.db, 2025)
+        self.assertEqual(self.snapshot({"award": self.V8_AWARD, "runs": self.V8_AWARD_RUNS}), v8)
+
+    def test_59t_the_level_and_the_ranking_are_not_touched_by_the_race(self):
+        from vega import award
+
+        before = self.snapshot(self.LEVEL_TABLES)
+        award.refresh(self.db, 2025)
+        award.reread(self.db, 2025)
+        award.refresh(self.db, 2025)
+        self.assertEqual(self.snapshot(self.LEVEL_TABLES), before)
+
+    def test_59v_a_value_table_changed_then_refresh_from_the_stored_rows(self):
+        # LEAGUE_RANKS given a fifth place: club 4 (fifth) gains it, from the stored honours, no match read.
+        from unittest import mock
+        from vega import award
+
+        class NoMatchRead:
+            """The connection, refusing any read of a match, its events or its statistics."""
+
+            def __init__(self, conn):
+                self.conn = conn
+
+            def execute(self, sql, *args, **kwargs):
+                for table in ("core.matches", "core.match_events", "core.player_match_stats", "core.lineup_players", "api.standings"):
+                    if table in str(sql):
+                        raise AssertionError(f"award.refresh read {table}")
+                return self.conn.execute(sql, *args, **kwargs)
+
+            def __getattr__(self, name):
+                return getattr(self.conn, name)
+
+        self.assertEqual(self.standings()[4], 5)
+        try:
+            with mock.patch.dict(award.LEAGUE_RANKS, {5: 0.05}):
+                award.refresh(NoMatchRead(self.db), 2025)
+                self.assertEqual(self.award_run()[6]["league_ranks"]["5"], 0.05)
+            rows = self.award_rows()
+            for h in self.honours(1):
+                if h["team"] == 4:
+                    self.assertAlmostEqual(h["value"], 0.5 * 0.05, places=6)
+                    self.assertAlmostEqual(rows[h["player"]]["collective"], 0.025, places=6)
+            self.assertEqual(award.stale(self.db), [2025])  # other settings than the present ones
+        finally:
+            award.refresh(self.db, 2025)
+        self.assertTrue(all(h["value"] == 0 for h in self.honours(1) if h["team"] == 4))
+        self.assertEqual(award.stale(self.db), [])
+
     @classmethod
     def tearDownClass(cls):
         cls.db.execute("DROP SCHEMA IF EXISTS api,ops,agg,core CASCADE")

@@ -216,6 +216,19 @@ class AwardYear2020ProductionOrderTest(unittest.TestCase):
         self.assertEqual(power.stale_rankings(self.calc), [])
         self.assertEqual(self.grades_2020(), self.after_first["grades"])  # no grade of 2020 rewritten
 
+    def test_59r_a_partial_award_year_has_no_race_of_players(self):
+        # FAILURE_MODES §59, 59r: the partial year's run publishes no player; its level has none, its race neither (no
+        # row, no run that ranked one). Award year 2021, ranked by its models, has its race.
+        from vega import award
+
+        self.assertEqual(self.one("SELECT count(*) FROM agg.player_award WHERE season_id = 2020")[0], 0)
+        self.assertEqual(self.one("SELECT count(*) FROM agg.player_award_honours WHERE season_id = 2020")[0], 0)
+        self.assertEqual(self.one("SELECT count(*) FROM agg.award_runs WHERE season_id = 2020 AND players > 0")[0], 0)
+        version, players = self.one("SELECT version, players FROM agg.award_runs WHERE season_id = 2021 AND status = 'published'")
+        self.assertEqual(version, award.AWARD_VERSION)
+        self.assertGreater(players, 0)
+        self.assertNotIn(2020, award.stale(self.calc))
+
     def clock_at(self, at):
         type(self).clock = at
 
