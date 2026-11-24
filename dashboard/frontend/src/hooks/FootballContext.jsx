@@ -84,6 +84,7 @@ const EMPTY_PREFERENCES = {
   defaultSeason: "",
   favoriteLeagueIds: [],
   onboardingComplete: false,
+  homeCountry: "",
 };
 const EMPTY_PAGE_SEASONS = {};
 const preferenceStore = createBrowserStateStore({
@@ -100,6 +101,11 @@ const preferenceStore = createBrowserStateStore({
         ? [...new Set(saved.favoriteLeagueIds.filter((id) => typeof id === "string"))]
         : [],
       onboardingComplete: saved.onboardingComplete === true,
+      // « Chez vous » (VI-48): as normalizeHomeState keeps it for the home cookie.
+      homeCountry:
+        typeof saved.homeCountry === "string" && /^(?:[A-Z]{3}|none)$/.test(saved.homeCountry)
+          ? saved.homeCountry
+          : "",
     };
   },
 });

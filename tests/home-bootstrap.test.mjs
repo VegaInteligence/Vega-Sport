@@ -148,3 +148,69 @@ test("backend without resolved-media capability receives no media option", async
     false,
   );
 });
+
+// « Chez vous » (VI-48): the server resolves the visitor's country as the browser will, and reads its strip with the
+// home so that the first paint has it. Failure modes and expected outcomes:
+//  S1 The detected country is lost on the server → the hosting's ISO-2 code (x-vercel-ip-country) comes back as
+//     `visitorCountry`, and the strip's country (`homeCountry`) is its base code (FR → FRA).
+//  S2 The cookie's manual choice is ignored → it beats the detected country; "none" gives no country and no read.
+//  S3 The strip is read under another key than the browser's → the resource key is the browser's useCompactRead key
+//     (season, country, generation; no media), seeded only when the API announces compactReads["home-local"].
+//  S4 A failed strip read breaks the home's bootstrap → the home stays ready, the strip is simply not seeded.
+//  S5 No country, or an archived season (the window is today's) → no read at all.
+function localSource(config = {}) {
+  const paths = [];
+  const m = { ...manifest, capabilities: { ...manifest.capabilities, compactReads: { home: true, "home-local": config.announce !== false } } };
+  return {
+    paths,
+    fetch: async (path) => {
+      paths.push(path);
+      if (path.includes("/manifest")) return m;
+      if (path.includes("/api/read/home-local")) {
+        if (config.localFails) throw new Error("Initial data unavailable (500)");
+        return { data: { country: new URL(path, "https://api.test").searchParams.get("country"), matches: [] }, meta: { generation: "42" }, media: { local: "direct" } };
+      }
+      return { data: { marker: "home" }, meta: { generation: "42" }, media: { asset: "direct" } };
+    },
+  };
+}
+test("S1–S5 the strip's country on the server, and its read under the browser's key", async () => {
+  const clock = Math.floor(now / 300000);
+  const current = { ...saved, season: "2025/2026" };
+  let io = localSource();
+  let result = await prepareHomeBootstrap(new URLSearchParams(), current, io.fetch, now, { country: "FR" });
+  assert.equal(result.visitorCountry, "FR");
+  assert.equal(result.homeCountry, "FRA");
+  const key = compactQuery({ season: "2025/2026", country: "FRA", generation: "42" });
+  assert.deepEqual(result.resources[`compact:home-local:${key}:${clock}`].data, { country: "FRA", matches: [] });
+  assert.ok(io.paths.some((p) => p.startsWith("/api/read/home-local?") && new URL(p, "https://api.test").searchParams.get("media") === "1"));
+  assert.deepEqual(result.media, { asset: "direct", local: "direct" });
+  // S2: the cookie's choice beats the hosting; "none" reads nothing.
+  io = localSource();
+  result = await prepareHomeBootstrap(new URLSearchParams(), { ...current, preferences: { ...current.preferences, homeCountry: "BRA" } }, io.fetch, now, { country: "FR" });
+  assert.equal(result.homeCountry, "BRA");
+  io = localSource();
+  result = await prepareHomeBootstrap(new URLSearchParams(), { ...current, preferences: { ...current.preferences, homeCountry: "none" } }, io.fetch, now, { country: "FR" });
+  assert.equal(result.homeCountry, null);
+  assert.ok(!io.paths.some((p) => p.includes("home-local")));
+  // S3: not announced, not read.
+  io = localSource({ announce: false });
+  result = await prepareHomeBootstrap(new URLSearchParams(), current, io.fetch, now, { country: "FR" });
+  assert.equal(result.homeCountry, "FRA");
+  assert.ok(!io.paths.some((p) => p.includes("home-local")));
+  // S4: a failed strip read leaves the home ready.
+  io = localSource({ localFails: true });
+  result = await prepareHomeBootstrap(new URLSearchParams(), current, io.fetch, now, { country: "FR" });
+  assert.equal(result.homeReady, true);
+  assert.ok(!Object.keys(result.resources).some((k) => k.startsWith("compact:home-local:")));
+  // S5: nothing detected, no choice: no country, no read.
+  io = localSource();
+  result = await prepareHomeBootstrap(new URLSearchParams(), current, io.fetch, now);
+  assert.equal(result.visitorCountry, null);
+  assert.equal(result.homeCountry, null);
+  assert.ok(!io.paths.some((p) => p.includes("home-local")));
+  io = localSource();
+  result = await prepareHomeBootstrap(new URLSearchParams(), saved, io.fetch, now, { country: "FR" }); // 2024/2025: archived
+  assert.equal(result.homeCountry, "FRA");
+  assert.ok(!io.paths.some((p) => p.includes("home-local")));
+});

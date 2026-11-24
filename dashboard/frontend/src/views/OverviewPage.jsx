@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Layout from "../components/Layout.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { useResearch } from "../hooks/ResearchContext.jsx";
@@ -9,12 +9,22 @@ import { useResourceBootstrap } from "../services/resource-bootstrap.js";
 import { mirrorHomeState } from "../services/home-bootstrap-preferences.js";
 import { AsyncState, Empty, Skeleton } from "../components/UI.jsx";
 import useCompactRead from "../hooks/useCompactRead.js";
-import { compactGeneration, compactScope } from "../services/compact-reads.js";
+import {
+  compactGeneration,
+  compactScope,
+  supportsCompactRead,
+} from "../services/compact-reads.js";
+import {
+  initialTitleRace,
+  menuCountries,
+  resolveHomeCountry,
+} from "../services/home-country.js";
 import { chooseUpcoming } from "../services/home-upcoming.js";
 import { fixtureWeek, parisDay } from "../services/fixtures.js";
 import HomePreferences from "../components/HomePreferences.jsx";
 import SeasonFilter from "../components/SeasonFilter.jsx";
 import {
+  HomeLocal,
   HomeTicker,
   MatchOfTheWeek,
   NumberOfTheWeek,
@@ -75,6 +85,32 @@ function useClock() {
     };
   }, []);
   return now;
+}
+
+/**
+ * « Chez vous » (VI-48): the visitor's choice (preferences.homeCountry), else the country the
+ * hosting detected: on the server with the bootstrap, else from /api/visitor-country.
+ */
+function useHomeCountry(f) {
+  const bootstrap = useResourceBootstrap();
+  const choice = f.preferences.homeCountry || "";
+  // undefined: not asked yet; null: asked, nothing detected.
+  const [detected, setDetected] = useState(bootstrap?.visitorCountry);
+  useEffect(() => {
+    if (choice || detected !== undefined) return undefined;
+    const controller = new AbortController(),
+      timer = setTimeout(() => controller.abort(), 2500);
+    fetch("/api/visitor-country", { cache: "no-store", signal: controller.signal })
+      .then((response) => (response.ok ? response.json() : {}))
+      .then((body) => setDetected(body.country || null))
+      .catch(() => !controller.signal.aborted && setDetected(null))
+      .finally(() => clearTimeout(timer));
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [choice, detected]);
+  return resolveHomeCountry(choice, detected);
 }
 
 /**
@@ -315,6 +351,7 @@ function CompactOverview() {
       archive: archived ? 1 : undefined,
     },
     favourites = { personalTeams: saved("clubs"), personalPlayers: saved("players") },
+    country = useHomeCountry(f),
     // Doc "Accueil", two reads: the common read is the same for every visitor of a
     // scope and cached as such; the favourites are a small personal read of their own.
     summary = useCompactRead(
@@ -331,6 +368,31 @@ function CompactOverview() {
         refreshManifest: f.refreshManifest,
       },
     );
+  // « Chez vous »: a common read per country (same for every visitor of it), today's window only.
+  const local = useCompactRead(
+    "home-local",
+    { season: f.season, country, generation: compactGeneration(f.manifest) },
+    {
+      enabled:
+        Boolean(country) && !archived && supportsCompactRead(f.manifest, "home-local"),
+      clock: Math.floor(now / 300_000),
+      refreshManifest: f.refreshManifest,
+    },
+  );
+  // While another country's strip loads, the last one stays (no jump of the page below it).
+  const lastLocal = useRef(null);
+  if (local.value?.data && !local.loading) lastLocal.current = local.value.data;
+  const shownLocal = !country
+    ? null
+    : local.value?.data?.country === country
+      ? local.value.data
+      : local.loading
+        ? lastLocal.current
+        : null;
+  const countries = useMemo(
+    () => menuCountries(f.manifest.competitions || []),
+    [f.manifest],
+  );
   // The synthesis refreshes in the background: the last one stays on screen, and a failed
   // refresh is tried again a minute later without a word on the page.
   const retrySummary = summary.retry;
@@ -400,6 +462,7 @@ function CompactOverview() {
           // (home-upcoming.js).
           highlights = chooseUpcoming({
             editorial: data.highlights || [],
+            billboard: data.billboard,
             favourites: mine?.favourites,
             matches: mine?.upcoming,
             rules: data.rules,
@@ -414,6 +477,17 @@ function CompactOverview() {
               competitions={competitions}
               archived={archived}
               now={now}
+              country={country}
+              local={
+                shownLocal
+                  ? {
+                      country: shownLocal.country,
+                      matches: shownLocal.matches || [],
+                      countries,
+                      onChoose: (code) => f.savePreferences({ homeCountry: code }),
+                    }
+                  : null
+              }
               model={{
                 ...data,
                 matchWeek: validPeriod
@@ -467,6 +541,8 @@ function OverviewContent({
   archived,
   now,
   model,
+  country = null,
+  local = null,
 }) {
   const {
     matchWeek,
@@ -531,9 +607,8 @@ function OverviewContent({
         </Empty>
       </Layout>
     );
-  const initialTable = tables.some((t) => t.leagueId === "l_3FJFUl")
-    ? "l_3FJFUl"
-    : tables[0]?.leagueId;
+  // « Course au titre » opens on the visitor's country's league when it is there, else on Ligue 1.
+  const initialTable = initialTitleRace(tables, competitions, country);
   const hasWeekSummary = Boolean(potw || win);
   const hasFinishing =
     leaders.clinical.length > 0 || leaders.wasteful.length > 0;
@@ -591,6 +666,14 @@ function OverviewContent({
         competitions={competitions}
         period={matchWeek}
       />
+      {local?.matches.length > 0 && (
+        <HomeLocal
+          matches={local.matches}
+          country={local.country}
+          countries={local.countries}
+          onChoose={local.onChoose}
+        />
+      )}
       <div className="home-bento">
         {featured && (
           <div className={hasWeekSummary ? "home-span-8" : "home-span-12"}>
@@ -629,7 +712,7 @@ function OverviewContent({
         {tables.length > 0 && (
           <div className={highlights.length ? "home-span-7" : "home-span-12"}>
             <TitleRace
-              key={`${scopeKey}:${f.season}`}
+              key={`${scopeKey}:${f.season}:${country || ""}`}
               tables={tables}
               competitions={competitions}
               initial={initialTable}

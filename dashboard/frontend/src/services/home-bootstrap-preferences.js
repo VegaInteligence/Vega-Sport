@@ -5,6 +5,7 @@ export const DEFAULT_HOME_STATE = Object.freeze({
     defaultSeason: "",
     favoriteLeagueIds: Object.freeze([]),
     onboardingComplete: false,
+    homeCountry: "",
   }),
   season: "",
   personalTeams: Object.freeze([]),
@@ -19,6 +20,7 @@ export function normalizeHomeState(input) {
       defaultSeason: "",
       favoriteLeagueIds: [],
       onboardingComplete: false,
+      homeCountry: "",
     },
     season: "",
     personalTeams: [],
@@ -70,6 +72,12 @@ export function normalizeHomeState(input) {
       defaultSeason: season(p.defaultSeason),
       favoriteLeagueIds,
       onboardingComplete: p.onboardingComplete === true,
+      // « Chez vous » (VI-48): a base country code, "none", or "" (no choice). A malformed one is no choice.
+      homeCountry:
+        typeof p.homeCountry === "string" &&
+        /^(?:[A-Z]{3}|none)$/.test(p.homeCountry)
+          ? p.homeCountry
+          : "",
     },
     season: season(input.season),
     personalTeams,

@@ -147,3 +147,31 @@ test("annual seasons survive cookie and browser bootstrap comparison", () => {
   delete globalThis.localStorage;
   delete globalThis.sessionStorage;
 });
+
+// « Chez vous » (VI-48): the visitor's country choice is one more preference (orion.preferences.v1 homeCountry),
+// mirrored in the home cookie so that the server draws the same strip. Failure modes and expected outcomes:
+//  H1 The choice is lost between the browser and the cookie → normalized, encoded and decoded unchanged ("BRA",
+//     "none"); absent → "" (no choice), so every cookie written before VI-48 still matches its browser.
+//  H2 A malformed choice ("bra", "BR", 12, an object) poisons the whole state (clientOnly) → it is dropped to "",
+//     the rest of the state kept.
+//  H3 The guard script misses a changed choice → a browser whose saved choice differs from the cookie's is a
+//     mismatch (the server's strip would be another country's); the same choice matches.
+test("H1–H3 the home country choice: normalized, kept by the cookie, compared by the guard", () => {
+  assert.equal(normalizeHomeState({}).preferences.homeCountry, "");
+  assert.equal(normalizeHomeState({ preferences: { homeCountry: "BRA" } }).preferences.homeCountry, "BRA");
+  assert.equal(normalizeHomeState({ preferences: { homeCountry: "none" } }).preferences.homeCountry, "none");
+  for (const bad of ["bra", "BR", 12, { code: "BRA" }, "INT-2"]) {
+    const state = normalizeHomeState({ preferences: { homeCountry: bad, focus: "all" } });
+    assert.equal(state.clientOnly, undefined, JSON.stringify(bad));
+    assert.equal(state.preferences.homeCountry, "");
+    assert.equal(state.preferences.focus, "all");
+  }
+  const state = normalizeHomeState({ preferences: { homeCountry: "BRA" }, season: "2026/2027" });
+  assert.deepEqual(decodeHomeState(encodeHomeState(state)), state);
+  const cookie = `vega.home.v1=${encodeHomeState(state)}`;
+  assert.equal(guard({ cookie, preferences: JSON.stringify({ homeCountry: "BRA" }), pages: JSON.stringify({ "/": "2026/2027" }) }), undefined);
+  assert.equal(guard({ cookie, preferences: JSON.stringify({ homeCountry: "FRA" }), pages: JSON.stringify({ "/": "2026/2027" }) }), "true");
+  // A cookie written before VI-48 (no homeCountry) and a browser without a choice still match.
+  const before = `vega.home.v1=${encodeURIComponent(JSON.stringify({ v: 1, state: { preferences: { focus: "europe", defaultSeason: "", favoriteLeagueIds: [], onboardingComplete: false }, season: "", personalTeams: [], personalPlayers: [] } }))}`;
+  assert.equal(guard({ cookie: before, preferences: JSON.stringify({ focus: "europe" }) }), undefined);
+});

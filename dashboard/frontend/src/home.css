@@ -229,6 +229,71 @@ html[data-theme="light"] {
   background: var(--away);
 }
 
+/* « Chez vous » (VI-48): the country's matches, drawn as the results strip above; its head
+   (the kicker and the country button) stays put while the cells scroll. */
+.home-local {
+  display: flex;
+  margin: 0 0 16px;
+  border-top: 1px solid var(--border);
+}
+.home-local .home-ticker {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  border-top: 0;
+}
+.home-local-head {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  padding: 9px 14px 8px 0;
+  border-right: 1px solid var(--border);
+}
+.home-local-picker {
+  position: relative;
+}
+.home-local-country {
+  gap: 8px;
+  height: 32px;
+  padding: 0 32px 0 10px;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.home-local-country .national-flag,
+.home-local-menu .national-flag {
+  flex: none;
+  width: 20px;
+  height: 15px;
+}
+.home-local-menu {
+  left: 0;
+  top: calc(100% + 4px);
+  max-height: min(360px, 60vh);
+  overflow-y: auto;
+}
+.home-local-menu button.nav-menu-item {
+  width: 100%;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.home-local-menu .nav-menu-item[aria-checked="true"] {
+  background: var(--accent-soft);
+  color: var(--ink-strong);
+}
+.home-local-menu .home-local-none {
+  margin-top: 6px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+}
+
 /* Bento grid */
 .home-bento {
   display: grid;
@@ -2036,5 +2101,23 @@ html[data-theme="light"] {
 @container (max-width: 680px) {
   .home-motw-content {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  /* « Chez vous »: the head above the strip, the strip scrolls as the results' one. */
+  .home-local {
+    flex-direction: column;
+  }
+  .home-local-head {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .home-local-country {
+    height: 40px;
   }
 }

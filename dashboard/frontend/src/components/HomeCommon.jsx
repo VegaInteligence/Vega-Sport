@@ -16,13 +16,14 @@ const weekdayFormat = new Intl.DateTimeFormat("fr-FR", {
 });
 export const shortDay = (day) =>
   day ? dayFormat.format(new Date(day.slice(0, 10) + "T12:00:00Z")) : "";
-/** "Aujourd’hui", "Demain" or the weekday of a kickoff, in Paris time. */
+/** "Hier", "Aujourd’hui", "Demain" or the weekday of a kickoff, in Paris time. */
 export function relativeDay(time, now) {
   const day = parisDay(time),
     today = parisDay(now),
     tomorrow = parisDay(now + 864e5);
   if (day === today) return "Aujourd’hui";
   if (day === tomorrow) return "Demain";
+  if (day === parisDay(now - 864e5)) return "Hier";
   return weekdayFormat.format(new Date(day + "T12:00:00Z"));
 }
 export function countdown(time, now) {
@@ -61,6 +62,14 @@ export function matchHref(f, match) {
   });
 }
 export function fixtureHref(f, fixture) {
+  // A finished fixture (« À l'affiche », « Chez vous ») opens on its result.
+  if (fixture.status === "finished")
+    return f.href("/matchs/", {
+      tab: "results",
+      id: fixture.id,
+      competition: fixture.league?.id || "",
+      sourceSeason: fixture.season || "",
+    });
   return f.href("/matchs/", {
     id: fixture.id,
     competition: fixture.league?.id || "",

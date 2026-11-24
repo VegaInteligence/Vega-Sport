@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import React, { useId, useState } from "react";
+import React, { useEffect, useId, useRef, useState } from "react";
 import Icon from "./Icon.jsx";
 import { PhoneFoldToggle, usePhoneFold } from "./PhoneFold.jsx";
 import { Media } from "./UI.jsx";
@@ -9,6 +9,12 @@ import { nationalTeamLabel } from "../services/national-flags.js";
 import { Term } from "./Hint.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { number } from "../services/format.js";
+import { kickoffFormatter } from "../services/fixtures.js";
+import {
+  countryFlag,
+  homeCountryName,
+  HOME_COUNTRY_NONE,
+} from "../services/home-country.js";
 import {
   internationalLabel,
   leagueOf,
@@ -21,6 +27,7 @@ import {
 } from "../services/home-insights.js";
 import {
   ChartTip,
+  fixtureHref,
   FormDots,
   Kicker,
   lastName,
@@ -67,6 +74,170 @@ export function HomeTicker({
         </React.Fragment>
       ))}
     </nav>
+  );
+}
+
+/**
+ * « Chez vous » (VI-48): the visitor's country's matches of yesterday → today + 7 (/api/read/home-local, a
+ * common read: no favourite in it), drawn as the results strip above: a day's label, then a cell per match,
+ * the score once played, the kickoff before. The country button opens the menu of the manifest's countries.
+ */
+export function HomeLocal({ matches, country, countries, onChoose }) {
+  const f = useFootball(),
+    name = homeCountryName(country),
+    days = [];
+  for (const match of matches) {
+    const last = days.at(-1);
+    if (last?.day === match.day) last.matches.push(match);
+    else days.push({ day: match.day, matches: [match] });
+  }
+  return (
+    <section className="home-local" aria-label={`Chez vous · ${name}`}>
+      <div className="home-local-head">
+        <Kicker>Chez vous</Kicker>
+        <CountryMenu
+          country={country}
+          countries={countries}
+          onChoose={onChoose}
+        />
+      </div>
+      <nav className="home-ticker" aria-label={`Matchs · ${name}`}>
+        {days.map(({ day, matches: list }) => (
+          <React.Fragment key={day}>
+            <span className="home-ticker-day">{shortDay(day)}</span>
+            {list.map((m) => (
+              <LocalTick key={m.fixture.id} match={m} f={f} />
+            ))}
+          </React.Fragment>
+        ))}
+      </nav>
+    </section>
+  );
+}
+
+/** A match of a country's strip: the competition and the kickoff (or its state), the sides, the score once played. */
+function LocalTick({ match: { fixture: x, time }, f }) {
+  const scored =
+      Number.isInteger(x.score_home) && Number.isInteger(x.score_away),
+    shown = scored && (x.status === "finished" || x.status === "in_play"),
+    href = fixtureHref(f, x);
+  return (
+    <div className="home-tick">
+      <Link className="home-tick-top" href={href} prefetch={false}>
+        <span>{shortCompetition(x.league?.id, x.league?.name)}</span>
+        <span>
+          {x.status === "finished"
+            ? "Terminé"
+            : x.status === "in_play"
+              ? "En cours"
+              : kickoffFormatter.format(time)}
+        </span>
+      </Link>
+      {[x.home_team, x.away_team].map((team, i) => {
+        const own = i ? x.score_away : x.score_home,
+          other = i ? x.score_home : x.score_away;
+        return (
+          <Link
+            key={i}
+            className={`home-tick-team${shown && x.status === "finished" && own < other ? " is-lost" : ""}`}
+            href={f.href("/clubs/", { id: team.id })}
+            prefetch={false}
+          >
+            <Media
+              name={team.name}
+              url={team.image_url}
+              className="crest home-crest-xs"
+            />
+            <span>{team.name}</span>
+            {shown && <b>{own}</b>}
+          </Link>
+        );
+      })}
+      <div className="home-tick-foot" />
+    </div>
+  );
+}
+
+/** The country button and its menu (the header menus' panel), with « Ne rien afficher » last. */
+function CountryMenu({ country, countries, onChoose }) {
+  const [open, setOpen] = useState(false),
+    root = useRef(null),
+    button = useRef(null),
+    panel = useRef(null),
+    name = homeCountryName(country);
+  useEffect(() => {
+    if (!open) return undefined;
+    panel.current
+      ?.querySelector('[aria-checked="true"]')
+      ?.scrollIntoView({ block: "nearest" });
+    const onPointer = (event) => {
+      if (!root.current?.contains(event.target)) setOpen(false);
+    };
+    const onKey = (event) => {
+      if (event.key !== "Escape") return;
+      setOpen(false);
+      button.current?.focus();
+    };
+    document.addEventListener("pointerdown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+  const choose = (code) => {
+    setOpen(false);
+    onChoose(code);
+  };
+  return (
+    <div className="home-local-picker" ref={root}>
+      <button
+        type="button"
+        ref={button}
+        className="filter-input-wrap home-local-country"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={`Pays : ${name}`}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <NationalFlag code={countryFlag(country)} name={name} />
+        <span>{name}</span>
+        <Icon name="chevron" className="select-chevron" />
+      </button>
+      {open && (
+        <div
+          className="nav-menu-panel home-local-menu"
+          role="menu"
+          aria-label="Pays"
+          ref={panel}
+        >
+          <div className="nav-menu-list">
+            {countries.map((c) => (
+              <button
+                key={c.code}
+                type="button"
+                role="menuitemradio"
+                aria-checked={c.code === country}
+                className="nav-menu-item"
+                onClick={() => choose(c.code)}
+              >
+                <NationalFlag code={c.flag} name={c.name} />
+                <span>{c.name}</span>
+              </button>
+            ))}
+            <button
+              type="button"
+              role="menuitemradio"
+              aria-checked={false}
+              className="nav-menu-item home-local-none"
+              onClick={() => choose(HOME_COUNTRY_NONE)}
+            >
+              <span>Ne rien afficher</span>
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

@@ -11,6 +11,7 @@ import {
   DEFAULT_HOME_STATE,
   normalizeHomeState,
 } from "../services/home-bootstrap-preferences.js";
+import { resolveHomeCountry } from "../services/home-country.js";
 
 const origin = process.env.NEXT_PUBLIC_API_ORIGIN || API_ORIGIN;
 async function serverJson(path) {
@@ -23,11 +24,17 @@ async function serverJson(path) {
   return response.json();
 }
 
+/**
+ * `country`: the hosting's ISO-2 code of the visitor (x-vercel-ip-country), when there is one.
+ * The result names it (`visitorCountry`) and the strip's country (`homeCountry`, the browser's
+ * own rule: home-country.js), and seeds the strip's read under the browser's key.
+ */
 export async function prepareHomeBootstrap(
   search,
   saved,
   fetchJson = serverJson,
   now = Date.now(),
+  { country = null } = {},
 ) {
   const normalized = normalizeHomeState(
     saved?.clientOnly ? DEFAULT_HOME_STATE : saved || DEFAULT_HOME_STATE,
@@ -37,7 +44,19 @@ export async function prepareHomeBootstrap(
     : normalized;
   const manifest = await fetchJson("/api/dashboard/manifest");
   const resources = { manifest };
-  const result = { resources, state, now, createdAt: now, homeReady: false };
+  const visitorCountry = /^[A-Z]{2}$/.test(country || "") ? country : null;
+  const result = {
+    resources,
+    state,
+    now,
+    createdAt: now,
+    homeReady: false,
+    visitorCountry,
+    homeCountry: resolveHomeCountry(
+      state.preferences.homeCountry,
+      visitorCountry,
+    ),
+  };
   if (
     saved?.clientOnly ||
     normalized.clientOnly ||
@@ -73,9 +92,22 @@ export async function prepareHomeBootstrap(
     archive: archiveSeason(season, manifest.defaultSeason, now) ? 1 : undefined,
     // The common read takes no favourites: they have their own read, client side.
   };
-  const summary = await fetchJson(
-    `/api/read/home?${compactQuery({ ...params, ...(manifest.capabilities.resolvedMedia ? { media: 1 } : {}) })}`,
-  );
+  const media = manifest.capabilities.resolvedMedia ? { media: 1 } : {};
+  // « Chez vous » (VI-48): the country's common read, beside the home's; never in the way of the home.
+  const localParams =
+    result.homeCountry &&
+    !params.archive &&
+    manifest.capabilities.compactReads["home-local"] === true
+      ? { season, country: result.homeCountry, generation }
+      : null;
+  const [summary, local] = await Promise.all([
+    fetchJson(`/api/read/home?${compactQuery({ ...params, ...media })}`),
+    localParams
+      ? fetchJson(
+          `/api/read/home-local?${compactQuery({ ...localParams, ...media })}`,
+        ).catch(() => null)
+      : null,
+  ]);
   if (!summary.data || String(summary.meta?.generation) !== String(generation))
     return result;
   resources[`compact-catalogue:${season}:home:${generation}`] = {
@@ -90,8 +122,15 @@ export async function prepareHomeBootstrap(
   resources[
     `compact:home:${compactQuery(params)}:${Math.floor(now / 300_000)}`
   ] = summary;
+  if (local?.data && String(local.meta?.generation) === String(generation))
+    resources[
+      `compact:home-local:${compactQuery(localParams)}:${Math.floor(now / 300_000)}`
+    ] = local;
   result.homeReady = true;
-  result.media = summary.media || null;
+  result.media =
+    summary.media || local?.media
+      ? { ...summary.media, ...local?.media }
+      : null;
   result.homeKey = compactQuery(params);
   return result;
 }
