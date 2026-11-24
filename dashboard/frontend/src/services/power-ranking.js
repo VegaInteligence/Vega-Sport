@@ -18,6 +18,17 @@ export const RANKING_ROLES = [
   ["centre_forward", "Avant-centres"],
 ];
 
+/** One player's role (agg.player_power.role), as the ranking's table names it (rankings.mjs ROLE_LABEL). */
+export const ROLE_LABEL = {
+  goalkeeper: "Gardien",
+  centre_back: "Défenseur central",
+  full_back: "Latéral / piston",
+  defensive_midfielder: "Milieu défensif",
+  central_midfielder: "Milieu central",
+  winger: "Ailier / milieu offensif",
+  centre_forward: "Avant-centre",
+};
+
 /** Why a rank is provisional, in a few words for a table cell (the API's provisionalReason). */
 export const PROVISIONAL_SHORT = {
   minutes: "Peu de minutes",

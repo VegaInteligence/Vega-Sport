@@ -12,6 +12,7 @@ import { ResearchTabs } from "./ResearchUI.jsx";
 import { chartTokens, RadarChart } from "./PlayerScoutCharts.jsx";
 import { countryLabel } from "../services/competition-selector.js";
 import { normalizeText } from "../services/format.js";
+import { primeTeamAbsences } from "../services/team-absences.js";
 import {
   METRICS,
   PERFORMANCE_KEYS,
@@ -99,6 +100,8 @@ function useClubTab() {
 
 export default function ClubScoutProfile({ clubId, backHref, club }) {
   const state = useClubDossier(clubId);
+  // The squad tab's absents are read beside the dossier: its card is there when the tab opens.
+  useEffect(() => primeTeamAbsences(clubId), [clubId]);
   // The figures show once, against their default reference (Europe): until its pool is read
   // (or has failed, and the league stands in), the page keeps its early view.
   const pool = useEuropePool(true);

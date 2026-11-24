@@ -34,13 +34,19 @@
 //  S3 Phone: the save button is visible without opening the identity column's fold.
 //  P1 Phone: the heading, three tabs and « Prochains matchs »; no sideways page scroll.
 //  X1 No page error in the console during the whole run.
+// Absents (lot 2 of « Blessés et suspendus », mock-up validated on 24 Nov 2026), the « Joueurs » tab; the answers of
+// GET /api/teams/{id}/absences come from tests/e2e/support/absences.mjs, in the route's exact shape:
+//  K1 The table asks the route with the nation's own id; a mark beside each injured or ill player (Olise, Mbappé),
+//     its title the reason; a suspension (a club competition's) marks nobody.
+//  K2 An empty squad (200, 0 / 0, no absent): the table, no mark, no error.   K3 404: the same.
+//  K4 A network failure: the same.   K5 Phone (393 px): the marks, no sideways page scroll.
 //
 // Run (local front against the API named by NEXT_PUBLIC_API_ORIGIN, or the public site):
 //   node tests/e2e/nation-page.e2e.mjs <base url> <evidence dir> [api origin]
 // e.g. node tests/e2e/nation-page.e2e.mjs http://127.0.0.1:3012 /tmp/nation-e2e http://127.0.0.1:8765
 // The optional api origin receives the requests the page sends to the built-in API distribution
 // (images included), for a local replay of the API. The nation and season default to France 2026/2027
-// (NATION, SEASON environment variables). It writes evidence.json (setup, inputs, expected, actual,
+// (NATION, SEASON environment variables); ONLY=K runs the absents' checks alone. It writes evidence.json (setup, inputs, expected, actual,
 // console) and one screenshot per step into the evidence dir; exit code 1 when any check fails.
 import { createRequire } from "node:module";
 import { execSync } from "node:child_process";
@@ -48,10 +54,13 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { existsSync, readdirSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { FRANCE, emptyAnswer, franceAnswer, serveAbsences } from "./support/absences.mjs";
 
 const [base = "http://127.0.0.1:3000", out = path.join(os.tmpdir(), "nation-e2e"), apiOrigin = ""] = process.argv.slice(2);
 const NATION = process.env.NATION || "t_2ysHaw", NAME = process.env.NATION_NAME || "France";
 const SEASON = process.env.SEASON || "2026/2027";
+const ONLY = (process.env.ONLY || "").split(",").map((s) => s.trim()).filter(Boolean);
+const want = (section) => !ONLY.length || ONLY.includes(section);
 const DISTRIBUTION = "https://dngp6kh9jx2bl.cloudfront.net";
 await mkdir(out, { recursive: true });
 
@@ -137,7 +146,7 @@ const backLink = (page) => page.locator("#main [data-back]").first();
 const box = async (locator) => ((await locator.count()) ? locator.boundingBox({ timeout: 5000 }).catch(() => null) : null);
 const visible = (locator) => locator.evaluate((el) => el.checkVisibility({ visibilityProperty: true })).catch(() => false);
 
-try {
+run: try {
   // Warm the dev server's compilation so the timed run below measures the page, not the build.
   {
     const ctx = await context(desktop);
@@ -145,6 +154,56 @@ try {
     await page.close();
     await ctx.close();
   }
+
+  // K1–K5: the absents' marks of the « Joueurs » tab (answers from support/absences.mjs).
+  if (want("K")) {
+    const playersTable = (page) =>
+      page.evaluate(() => {
+        const card = [...document.querySelectorAll("#main section")].find((s) => /^Les joueurs/.test(s.querySelector("h3")?.textContent.trim() || ""));
+        return [...(card?.querySelectorAll("tbody tr") || [])].map((tr) => {
+          const link = tr.querySelector("th a[href*='id=']");
+          return { id: link ? new URL(link.href).searchParams.get("id") : null, name: link?.textContent.trim(), title: tr.querySelector("th i[title]")?.getAttribute("title") || null };
+        });
+      });
+    const playersPage = async (viewport, entry) => {
+      const plan = { [FRANCE]: entry };
+      const ctx = await context(viewport);
+      await serveAbsences(ctx, plan);
+      const before = consoleLog.length;
+      const page = await open(ctx, nationUrl({ nationView: "players" }));
+      await page.locator("#main tbody tr").first().waitFor({ timeout: 60000 }).catch(() => {});
+      await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
+      await page.waitForTimeout(1200);
+      return { ctx, page, plan, errors: () => consoleLog.slice(before).filter((l) => /pageerror/.test(l)) };
+    };
+    let k = await playersPage(desktop, franceAnswer());
+    let table = await playersTable(k.page);
+    const marked = table.filter((r) => r.title);
+    await shot(k.page, "absents-players-desktop");
+    check("K1", "the side's own absences (same route, the nation's id): a mark beside Olise and Mbappé, with the reason; no mark for a suspension",
+      JSON.stringify({ requests: k.plan.requests.map((r) => r.id), rows: table.length, marked: marked.map((r) => `${r.name}: ${r.title}`) }),
+      k.plan.requests.some((r) => r.id === FRANCE) && marked.length === 2 && marked.some((r) => r.id === "p_2HDCEW") && marked.some((r) => r.id === "p_217YMB")
+        && !marked.some((r) => r.id === "p_1NIzYq") && marked.every((r) => r.title.length > 3));
+    await k.page.close();
+    await k.ctx.close();
+    for (const [cid, entry, label] of [["K2", emptyAnswer(FRANCE), "an empty squad (0 / 0)"], ["K3", 404, "404"], ["K4", "abort", "a network failure"]]) {
+      k = await playersPage(desktop, entry);
+      table = await playersTable(k.page);
+      check(cid, `${label}: the table, no mark, no page error`, JSON.stringify({ rows: table.length, marked: table.filter((r) => r.title).length, errors: k.errors() }),
+        table.length > 5 && !table.some((r) => r.title) && !k.errors().length);
+      await k.page.close();
+      await k.ctx.close();
+    }
+    k = await playersPage(phone, franceAnswer());
+    table = await playersTable(k.page);
+    const phoneOverflow = await k.page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    await shot(k.page, "absents-players-phone");
+    check("K5", "phone: the marks, no sideways page scroll", JSON.stringify({ marked: table.filter((r) => r.title).length, overflow: phoneOverflow }),
+      table.filter((r) => r.title).length === 2 && phoneOverflow <= 0);
+    await k.page.close();
+    await k.ctx.close();
+  }
+  if (ONLY.length && ONLY.every((s) => s === "K")) break run;
 
   // H1, B1, T1, O1, O3, O4, O5, T2, T3
   let ctx = await context(desktop);
@@ -391,7 +450,8 @@ try {
   await writeFile(path.join(out, "evidence.json"), JSON.stringify({
     run: new Date().toISOString(),
     setup: { base, apiOrigin: apiOrigin || null, nation: NATION, name: NAME, season: SEASON },
-    command: `node tests/e2e/nation-page.e2e.mjs ${base} ${out}${apiOrigin ? ` ${apiOrigin}` : ""}`,
+    command: `${ONLY.length ? `ONLY=${ONLY.join(",")} ` : ""}node tests/e2e/nation-page.e2e.mjs ${base} ${out}${apiOrigin ? ` ${apiOrigin}` : ""}`,
+    absences: want("K") ? { served: "tests/e2e/support/absences.mjs", france: franceAnswer() } : undefined,
     passed, failed: results.length - passed, results, console: consoleLog,
   }, null, 2));
   console.log(`${passed}/${results.length} passed · evidence ${out}/evidence.json`);

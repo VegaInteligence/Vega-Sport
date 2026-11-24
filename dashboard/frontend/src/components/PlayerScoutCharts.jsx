@@ -814,7 +814,7 @@ export function InjuryTimeline({ seasons, injuries }) {
                         ["Du", dateFr(item.start)],
                         ["Au", dateFr(item.end)],
                         ["Durée", `${length} j`],
-                        ["Matchs manqués", item.missed],
+                        ...(item.missed != null ? [["Matchs manqués", item.missed]] : []),
                       ]}
                     />
                   );
@@ -829,10 +829,13 @@ export function InjuryTimeline({ seasons, injuries }) {
                         bottom: 3,
                         left: `${(start / 365) * 100}%`,
                         width: `max(6px, ${(length / 365) * 100}%)`,
+                        // An episode the source did not class is neutral, never an injury's red.
                         background:
                           item.type === "suspension"
                             ? "var(--muted-light)"
-                            : "var(--mq-neg-2)",
+                            : item.type === "unknown"
+                              ? "var(--mq-mid)"
+                              : "var(--mq-neg-2)",
                         outline: "none",
                         cursor: "default",
                       }}

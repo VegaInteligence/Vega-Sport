@@ -184,6 +184,8 @@ class FakeApi:
         if parts[0] == "player" and parts[2] == "injury":
             injuries = [{"seasonId": 2025, "name": "Hamstring injury", "start": "2026-03-01", "end": "2026-03-20", "missedGamesCount": 4}] if parts[1] == "342229" else []
             return 200, {}, body({"injuries": injuries})
+        if parts[0] == "player" and parts[2] == "absence":  # §59: the suspensions unit (none here)
+            return 200, {}, body({"playerId": parts[1], "absences": [], "competitionIds": []})
         if parts[0] == "club" and parts[2] == "squad":
             members = ["342229", "288230", "340324", "999001"] if parts[1] == "583" and query == ["2026"] else []
             return 200, {}, body({"squad": [{"playerId": int(k), "shirtNumber": 7} for k in members]})
@@ -359,14 +361,15 @@ class ReaderTest(unittest.TestCase):
         now = datetime.now(timezone.utc)
         reader = tm.Reader(self.db, api, interval=0, jitter=0, sleep=lambda s: None, clock=lambda: now, log=lambda *a, **k: None)
         q = lambda sql, *a: self.db.execute(sql, a or None).fetchall()
-        # The first step plans: the snapshot's five links, each with its four units.
+        # The first step plans: the snapshot's five links, each with its five units (the suspensions since §59).
         self.assertEqual(reader.step(), "planned")
         self.assertEqual(q("SELECT count(*) FROM core.provider_ids WHERE provider = 'transfermarkt' AND entity_type = 'player'"), [(5,)])
         self.assertEqual(q("SELECT kind, count(*) FROM ops.transfermarkt_reads GROUP BY 1 ORDER BY 1"),
-                         [("injuries", 5), ("profile", 5), ("search", 2), ("transfers", 5), ("values", 5)])
+                         [("injuries", 5), ("profile", 5), ("search", 2), ("suspensions", 5), ("transfers", 5), ("values", 5)])
         self.drain(reader)
         # The five profiles in one request, both clubs searched (PSG's squad has 4 of our names,
-        # 5 are needed: not linked so), then each player's three histories.
+        # 5 are needed: not linked so), then each player's three histories (values, transfers, injuries); his suspensions
+        # are first due within their period, spread by his key (§59, 59ah), not in this drain.
         paths = [c[0] for c in api.calls]
         self.assertEqual((paths.count("/players"), paths.count("/quick-search"), len(paths) - paths.count("/players") - paths.count("/quick-search")), (2, 2, 20))
         self.assertEqual(q("SELECT count(*) FROM core.provider_ids WHERE entity_type = 'team'"), [(0,)])
@@ -450,6 +453,8 @@ class CuartoApi:
                                    "squadDetails": {"currentMarketValue": {"value": 125000}, "averageAge": 20.6, "squadSize": 27}}
                                   for k in query if k == "75142"])
         parts = urlparse(path).path.strip("/").split("/")
+        if parts[0] == "player" and parts[2] == "absence":  # §59: the suspensions unit (none here)
+            return 200, {}, body({"playerId": parts[1], "absences": [], "competitionIds": []})
         if parts[0] == "club" and parts[2] == "squad":
             members = sorted(CUARTO) if parts[1] == "75142" and query == ["2026"] else []
             return 200, {}, body({"squad": [{"playerId": int(k), "shirtNumber": 7} for k in members]})

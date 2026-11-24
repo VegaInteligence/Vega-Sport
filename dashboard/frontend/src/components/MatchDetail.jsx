@@ -34,6 +34,7 @@ const MatchContext = lazy(() => import("./MatchContext.jsx"));
 const MatchForecast = lazy(() => import("./MatchForecast.jsx"));
 const MatchOdds = lazy(() => import("./MatchOdds.jsx"));
 import MatchWinProbability from "./MatchWinProbability.jsx";
+import { MatchAbsences } from "./Absences.jsx";
 import { useMatchWinProbability } from "../services/forecasts.js";
 import MatchKpis from "./MatchKpis.jsx";
 import MatchLineups from "./MatchLineups.jsx";
@@ -763,6 +764,7 @@ export default function MatchDetail({ match }) {
             }
           >
             {upcoming && <MatchForecast match={match} />}
+            {upcoming && <MatchAbsences match={match} />}
             {upcoming && <MatchOdds match={match} />}
             <MatchContext match={match} />
           </Suspense>
