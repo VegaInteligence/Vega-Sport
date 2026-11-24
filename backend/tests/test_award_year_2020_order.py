@@ -50,6 +50,8 @@ OF_2021 = {
     "roles": "SELECT * FROM agg.match_grade_roles WHERE ref_season = 2021 ORDER BY role",
     "spreads": "SELECT * FROM agg.match_grade_spreads WHERE ref_season = 2021 ORDER BY role, competition_id",
     "quantiles": "SELECT * FROM agg.match_grade_quantiles WHERE ref_season = 2021 ORDER BY role, step",
+    "levels": "SELECT * FROM agg.player_level WHERE season_id = 2021 ORDER BY player_id",
+    "level_runs": "SELECT id, status, version, started_at, players FROM agg.level_runs WHERE season_id = 2021 ORDER BY id",
 }
 
 
@@ -95,6 +97,9 @@ class AwardYear2020ProductionOrderTest(unittest.TestCase):
         models.refresh_daily(calc, 2021, elo=False)
         with earlier_rule():
             power.refresh_players(calc, 2020)
+        # The earlier rule's code had no level (Score Vega v9, §49): what its two runs of 2020 wrote here is removed.
+        for table in ("agg.player_level_positions", "agg.player_level", "agg.player_level_cells", "agg.level_runs"):
+            db.execute(f"DELETE FROM {table} WHERE season_id = 2020")
         cls.production = {
             "runs": cls.runs(2020), "ranked": cls.one("SELECT count(*) FROM agg.player_power WHERE season_id = 2020")[0],
             "own_refs": cls.one("SELECT count(*) FROM agg.match_grade_roles WHERE ref_season = 2020")[0],
@@ -184,7 +189,12 @@ class AwardYear2020ProductionOrderTest(unittest.TestCase):
         for table in ("agg.match_grade_roles", "agg.match_grade_spreads", "agg.match_grade_quantiles"):
             self.assertEqual(self.one(f"SELECT count(*) FROM {table} WHERE ref_season = 2020")[0], 0, table)
         self.assertEqual(self.after_first["stale"], [])
-        # Award year 2021 is unchanged: its ranking, roles, award race, runs, grades and references (48.1).
+        # 49s: a partial year has no level either: no row, no sum kept, a published level run of no player.
+        for table in ("agg.player_level", "agg.player_level_positions", "agg.player_level_cells"):
+            self.assertEqual(self.one(f"SELECT count(*) FROM {table} WHERE season_id = 2020")[0], 0, table)
+        self.assertEqual(self.db.execute("SELECT players, reference_season, measured FROM agg.level_runs WHERE season_id = 2020 AND status = 'published'").fetchall(),
+                         [(0, None, None)])
+        # Award year 2021 is unchanged: its ranking, roles, award race, runs, grades and references (48.1), and its level.
         self.assertEqual(self.after_first["2021"], self.production["2021"])
 
     def test_48c_a_second_pass_changes_nothing(self):

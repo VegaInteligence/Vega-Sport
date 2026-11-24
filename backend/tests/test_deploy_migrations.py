@@ -41,7 +41,9 @@ ADDED = ["155_player_grade_status.sql", "156_team_side_corrections.sql", "157_pa
          # The same reads with each side's archived spelling (European editions' clubs matched by name).
          "165_league_history_spellings.sql",
          # #68: a match's extra-time and shoot-out scores beside its two strengths (view only).
-         "166_match_strengths_extra_time.sql"]
+         "166_match_strengths_extra_time.sql",
+         # #82: Score Vega v9, the players' level beside the ranking (new tables and two reads).
+         "167_player_level.sql"]
 # SportScore editions: A, a rank shared at different points (a version already kept); B, rank 5 in a table of two (no
 # version yet); C, a table that holds (its version kept).
 A, B, C = 9601, 9602, 9603
@@ -162,8 +164,8 @@ class DeploymentMigrationsTest(unittest.TestCase):
         self.assertEqual(len(applied), 160)
         self.assertEqual(self.at_production, "migrations applied=160 total=160 logins=unchanged")
         self.assertEqual(self.merged_added, ADDED)
-        self.assertEqual(self.deployed, "migrations applied=11 total=171 logins=unchanged")
-        self.assertEqual(self.again, "migrations applied=0 total=171 logins=unchanged")
+        self.assertEqual(self.deployed, "migrations applied=12 total=172 logins=unchanged")
+        self.assertEqual(self.again, "migrations applied=0 total=172 logins=unchanged")
         self.assertEqual([v for v, *_ in self.migrations_after if v not in {w for w, *_ in self.migrations_before}], ADDED)
         self.assertEqual([r for r in self.migrations_after if r[0] < "155"], self.migrations_before)
         self.assertEqual(self.migrations_again, self.migrations_after)
