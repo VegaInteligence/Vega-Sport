@@ -25,11 +25,15 @@ import "../src/consent.css";
 const siteUrl = "https://vegasport.vercel.app";
 // Raised with every new drawing of the icon, so no browser keeps the old one.
 const faviconVersion = 5;
-// The tab's icon follows the site's theme, which only the browser knows: the theme script
-// writes the page's one link[rel="icon"] itself, and `metadata.icons` names none. React puts a
-// metadata link back as soon as its address has changed under it (at hydration, at every
-// navigation): the page then named favicon.svg, which follows the system's colours.
-const themeScript = `var t="dark";try{if(localStorage.getItem("statarena.theme")==="light")t="light"}catch{}try{document.documentElement.dataset.theme=t;document.querySelector('meta[name="theme-color"]')?.setAttribute("content",t==="light"?"#F6F8FB":"#0E0F12")}catch{}try{window.__vegaSetFavicon=function(theme){var link=document.getElementById("vega-icon");if(!link){link=document.createElement("link");link.id="vega-icon";link.rel="icon";link.type="image/svg+xml";link.setAttribute("sizes","any");document.head.appendChild(link)}link.href="/branding/vega/icon-"+(theme==="light"?"light":"dark")+".svg?v=${faviconVersion}"};window.__vegaSetFavicon(t)}catch{}`;
+// The colour the browser gives its own bars: the page's background in each theme (--bg, theme.css).
+const themeColors = { dark: "#0E0F12", light: "#F6F8FB" };
+// The tab's icon and the browser's colour follow the site's theme, which only the browser knows:
+// the theme script writes the page's one link[rel="icon"] and its one meta[name="theme-color"]
+// itself, and neither `metadata.icons` nor `viewport` names one. React puts a tag of its own back
+// as soon as its address or its colour has changed under it (at hydration, at every navigation):
+// the page then named favicon.svg, which follows the system's colours, and the dark theme's
+// colour beside the light one's, or in its place.
+const themeScript = `var t="dark";try{if(localStorage.getItem("statarena.theme")==="light")t="light"}catch{}try{document.documentElement.dataset.theme=t}catch{}try{window.__vegaSetFavicon=function(theme){var link=document.getElementById("vega-icon");if(!link){link=document.createElement("link");link.id="vega-icon";link.rel="icon";link.type="image/svg+xml";link.setAttribute("sizes","any");document.head.appendChild(link)}link.href="/branding/vega/icon-"+(theme==="light"?"light":"dark")+".svg?v=${faviconVersion}"};window.__vegaSetFavicon(t)}catch{}try{window.__vegaSetThemeColor=function(theme){var meta=document.getElementById("vega-theme-color")||document.createElement("meta");meta.id="vega-theme-color";meta.name="theme-color";meta.content=theme==="light"?"${themeColors.light}":"${themeColors.dark}";if(!meta.parentNode)document.head.appendChild(meta)};window.__vegaSetThemeColor(t)}catch{}`;
 // The share picture: the wordmark on a frame of the presentation film (public/branding/vega/).
 const shareImage = "/branding/vega/share-1200x630.jpg";
 const description = "Vega Intelligence : statistiques de football, analyses de matchs, joueurs et compétitions.";
@@ -49,8 +53,9 @@ export const metadata = {
 };
 // viewportFit "cover": the page reaches the screen's edges, and the shell keeps clear of
 // the notch and the home indicator with the safe-area insets (styles.css).
+// No themeColor here, nor in a page's own viewport: that tag is the theme script's (themeScript
+// above), and React would take it over or add a second one.
 export const viewport = {
-  themeColor: "#0E0F12",
   colorScheme: "dark light",
   viewportFit: "cover",
 };
@@ -81,7 +86,8 @@ export default function RootLayout({ children }) {
           id="vega-route"
           dangerouslySetInnerHTML={{ __html: routeSkeletonScript }}
         />
-        {/* Without scripts nothing reads the site's theme: the icon that follows the system's colours. */}
+        {/* Without scripts nothing reads the site's theme: the icon that follows the system's
+            colours, and the dark theme's colour, the page staying dark. */}
         <noscript>
           <link
             rel="icon"
@@ -89,6 +95,7 @@ export default function RootLayout({ children }) {
             type="image/svg+xml"
             sizes="any"
           />
+          <meta name="theme-color" content={themeColors.dark} />
         </noscript>
         <script id="vega-theme" dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
