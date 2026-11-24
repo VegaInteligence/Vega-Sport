@@ -1837,7 +1837,8 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
     beside the ranking, from the same player-matches, and writes it in the same transaction:
     the ranking's own rows are those it wrote before the level existed. The Ballon d'Or race on
     the level (award.py, FAILURE_MODES §59) is computed and written with it, beside the v8 race
-    (write_award), which it does not change."""
+    (write_award), which it does not change. A failure of the race, at its read, its computation
+    or its write, is caught and kept as a failed run: it never blocks the ranking or the level."""
     from . import award
     from . import level as levels  # level.py reads this module's blocks and references
 
@@ -1875,10 +1876,19 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
                                       ).fetchall() if other and grade_refs is None else []
         # The level's own reads: a partial year has no level.
         level_inputs = None if partial else levels.read_inputs(conn, season, reference_season)
-        # The race's own reads: the year's honours and cards, and the spreads of the year its level is placed on.
+        # The race's own reads: the year's honours and cards, and the spreads of the year its level is placed on. In a
+        # savepoint: a failure of the race never blocks the ranking or the level (§59, 59z).
         award_reference = None if partial or not (finished or level_inputs["kept"] is not None) else reference_season
-        award_inputs = None if partial else award.read_inputs(conn, season)
-        award_spreads = None if partial else award.reference_spreads(conn, season, award_reference)
+        award_inputs = award_spreads = award_failed = None
+        if not partial:
+            try:
+                with conn.transaction():
+                    award_inputs = award.read_inputs(conn, season)
+                    award_spreads = award.reference_spreads(conn, season, award_reference)
+            except MemoryError:
+                raise
+            except Exception as error:
+                award_failed = _award_failed(season, "read", error)
     # 2. Compute, outside any transaction. The player-matches the year cannot grade are kept
     # with their reason (agg.player_grade_exclusions): a team that is not a side of the match,
     # then no role (assign_roles).
@@ -1944,9 +1954,17 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
     level_reference = reference_season if not partial and (finished or level_inputs["kept"] is not None) else None
     level_cells = reading["cells"] if reading else {}
     # The race: the individual part is the level of the year's award cells alone (their stakes, the national matches).
-    award_people = {} if partial or not level_rows else award.people_of(
-        award.individual(reading["award_cells"], level_refs, levels.people_of(reading, scored)), level_rows, scored)
-    award_race_rows = award.compute(award_people, award_inputs, award_spreads)
+    award_people, award_race_rows = {}, ({}, [], {})
+    if award_failed is None:
+        try:
+            award_people = {} if partial or not level_rows else award.people_of(
+                award.individual(reading["award_cells"], level_refs, levels.people_of(reading, scored)), level_rows, scored)
+            award_race_rows = award.compute(award_people, award_inputs, award_spreads)
+        except MemoryError:
+            raise
+        except Exception as error:
+            award_people, award_race_rows = {}, ({}, [], {})
+            award_failed = _award_failed(season, "compute", error)
     del reading, level_inputs, award_inputs
     # 3. Write, in one transaction: the season's ranking changes at once or not at all.
     with conn.transaction():
@@ -1993,8 +2011,33 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
         _publish(conn, run, "players", season, count, len(scored))
         write_award(conn, season, scored)
         level_run = levels.write(conn, season, started, level_rows, level_cells, level_refs, level_reference)
-        award.write(conn, season, started, award_people, award_race_rows, level_run, award_reference)
+        if award_failed is None:
+            try:
+                with conn.transaction():
+                    award.write(conn, season, started, award_people, award_race_rows, level_run, award_reference)
+            except MemoryError:
+                raise
+            except Exception as error:
+                award_failed = _award_failed(season, "write", error)
+        if award_failed is not None:
+            # The failed run is kept (award.stale does not list the year again for this level); the race published
+            # before, its rows and its honours stay as they were.
+            try:
+                with conn.transaction():
+                    award.write_failed(conn, season, started, level_run)
+            except MemoryError:
+                raise
+            except Exception as error:
+                _award_failed(season, "write", error)
     return len(scored)
+
+
+def _award_failed(season, step, error):
+    """Log a failure of the race (§59, 59z): its step and the error's code, never its text."""
+    from .worker import error_code  # here: the worker imports this module
+
+    print(f"award race failed season={season} step={step} error={error_code(error)}", flush=True)
+    return step
 
 
 # Match grades (15 November 2026) -------------------------------------------------
