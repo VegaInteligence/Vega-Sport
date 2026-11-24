@@ -36,8 +36,8 @@ export default function SiteFooter({ href = plainHref, path }) {
             >
               <StatarenaLogo
                 className="site-footer-logo"
-                width={181}
-                height={40}
+                width={105}
+                height={56}
               />
             </Link>
           </div>

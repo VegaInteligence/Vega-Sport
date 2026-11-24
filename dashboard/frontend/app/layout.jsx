@@ -22,7 +22,7 @@ import "../src/navigation.css";
 import "../src/account.css";
 const siteUrl = "https://vegasport.vercel.app";
 // Raised with every new drawing of the icon, so no browser keeps the old one.
-const faviconVersion = 3;
+const faviconVersion = 4;
 // The share picture: the wordmark on a frame of the presentation film (public/branding/vega/).
 const shareImage = "/branding/vega/share-1200x630.jpg";
 const description = "Vega Intelligence : statistiques de football, analyses de matchs, joueurs et compétitions.";

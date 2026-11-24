@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import styles from "./PageLoader.module.css";
 import { MARK } from "../brand-mark.js";
 
-// The mark « V. », inlined so the loading screen needs no image request (src/brand-mark.js).
+// The mark « V* », inlined so the loading screen needs no image request (src/brand-mark.js).
 export default function PageLoader({ overlay = false }) {
   const [spark, setSpark] = useState(0);
   const follow = (event) => {
@@ -42,18 +42,13 @@ export default function PageLoader({ overlay = false }) {
             <svg
               key={spark}
               className={`${styles.symbol}${spark ? ` ${styles.spark}` : ""}`}
-              viewBox={`-20 -210 ${MARK.width + 100} ${MARK.height + 230}`}
+              viewBox={`-30 -40 ${MARK.width + 60} ${MARK.height + 80}`}
               aria-hidden="true"
               focusable="false"
             >
               <path d={MARK.letter} className={styles.shape} />
-              {/* The point waits like a ball: it bounces (PageLoader.module.css). */}
-              <circle
-                cx={MARK.point.cx}
-                cy={MARK.point.cy}
-                r={MARK.point.r}
-                className={styles.point}
-              />
+              {/* The asterisk turns while the page waits (PageLoader.module.css). */}
+              <path d={MARK.sign} className={styles.sign} />
             </svg>
           </span>
         </button>
