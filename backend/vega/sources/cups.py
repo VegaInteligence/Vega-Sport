@@ -212,9 +212,10 @@ def _team(conn, provider, key, name, rename=True):
         return row[0]
     team = conn.execute("INSERT INTO core.teams(name) VALUES (%s) RETURNING id", (name or key,)).fetchone()[0]
     conn.execute("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('team',%s,%s,%s)", (provider, key, team))
-    # A team the base did not know: the identity pass (identity.py), due once a day, looks
-    # at it at its next turn (an hour after its last one at the earliest) rather than the next day.
-    conn.execute("UPDATE ops.source_runs SET last_success_at = NULL WHERE source = 'vega' AND scope = 'team_identity'")
+    # A team the base did not know: the national teams' marking (curated.national_teams) and the identity pass
+    # (identity.py), due once a day, look at it at their next turn (an hour after their last one at the earliest) rather
+    # than the next day, the marking first (curated.scopes): a merge then finds it national (§55).
+    conn.execute("UPDATE ops.source_runs SET last_success_at = NULL WHERE source = 'vega' AND scope IN ('national_teams', 'team_identity')")
     return team
 
 
