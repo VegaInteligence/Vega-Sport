@@ -15,12 +15,14 @@ import { FootballContext } from "../hooks/FootballContext.jsx";
 import { normalizeText, number } from "../services/format.js";
 import {
   buildSearchIndex,
+  liftFavouriteResults,
   searchIndex,
   globalCompetitionCatalog,
   searchedEdition,
   SEARCH_LABELS,
 } from "../services/global-search.js";
 import { cachedResource, useResource } from "../services/resources.js";
+import useFavourites from "../hooks/useFavourites.js";
 import { nationName, useNations } from "../services/nations.js";
 import { cupIndex, servesCupWorkerIndex } from "../services/catalog-client.js";
 import {
@@ -154,9 +156,11 @@ export default function GlobalSearch({ sheet = false, onClose }) {
     () => (armed ? buildSearchIndex(data, competitions) : null),
     [armed, data, competitions],
   );
+  // Effect 7: at equal relevance, the visitor's favourite clubs and players first.
+  const favourites = useFavourites();
   const localResults = useMemo(
-    () => searchIndex(index, deferred),
-    [index, deferred],
+    () => searchIndex(index, deferred, { favourites }),
+    [index, deferred, favourites],
   );
   const currentRemote = ready ? remoteResult : null;
   const loading =
@@ -178,8 +182,8 @@ export default function GlobalSearch({ sheet = false, onClose }) {
       total: (r.total || 0) + nationResults.length,
     });
     if (!remote) return withNations(localResults);
-    const players = currentRemote?.value?.players || [],
-      clubs = currentRemote?.value?.clubs || [],
+    const players = liftFavouriteResults("players", currentRemote?.value?.players || [], deferred, favourites.players),
+      clubs = liftFavouriteResults("clubs", currentRemote?.value?.clubs || [], deferred, favourites.clubs),
       competitions = localResults.competitions || [];
     return withNations({
       ...localResults,
@@ -190,7 +194,7 @@ export default function GlobalSearch({ sheet = false, onClose }) {
       clubsCount: undefined,
       total: players.length + clubs.length + competitions.length,
     });
-  }, [remote, localResults, currentRemote?.value, nationResults]);
+  }, [remote, localResults, currentRemote?.value, nationResults, deferred, favourites]);
   const options = useMemo(
     () => results.order.flatMap((kind) => results[kind] || []),
     [results],
