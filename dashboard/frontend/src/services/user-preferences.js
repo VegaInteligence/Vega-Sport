@@ -201,7 +201,9 @@ export function favouritesOf(contract) {
  *   saves nothing again. Rule for a local change made while that save was in flight: per top-level key, a key whose
  *   local value differs from the value sent keeps the local value, every other key takes the returned contract's;
  *   that is written, and saved next (debounced, once the stores hold it), on top of the returned contract.
- * - An invalid or other-version contract, from load or from save, is never written and goes to `report(error)`.
+ * - An invalid or other-version contract, from load or from save, is never written and goes to `report(error)`:
+ *   the option given here, and the adapter's own optional `report` (setPreferencesSync({ load, save, report }), so
+ *   the account screen can say that sync has stopped). Either may be absent; neither may throw into the sync.
  *   From load it stops the sync (the account's data is never overwritten); from save it is ignored (the save itself
  *   succeeded) and the sync goes on.
  */
@@ -217,6 +219,10 @@ export function createPreferencesSync({
   let phase = "idle"; // idle | loading | ready | stopped
   let pending = false, saving = false, again = false, failed = false, last = null;
 
+  const tell = (current, error) => {
+    safely(report, error);
+    if (typeof current?.report === "function") safely(current.report, error);
+  };
   const cancel = () => {
     if (timer !== null) clearTimer(timer);
     timer = null;
@@ -239,7 +245,7 @@ export function createPreferencesSync({
               contract = validateContract(value);
             } catch (error) {
               phase = "stopped";
-              safely(report, error);
+              tell(current, error);
               return;
             }
             last = JSON.stringify(contract);
@@ -256,12 +262,12 @@ export function createPreferencesSync({
       );
   }
   // The contract save handed back: applied over the local changes made since `sent`. True when it was written.
-  function reapply(answer, sent) {
+  function reapply(answer, sent, current) {
     let contract;
     try {
       contract = validateContract(answer);
     } catch (error) {
-      safely(report, error);
+      tell(current, error);
       return false;
     }
     let local = null;
@@ -300,7 +306,7 @@ export function createPreferencesSync({
         (answer) => {
           if (run !== generation) return;
           (last = json), (failed = false);
-          if (answer != null) applied = reapply(answer, value);
+          if (answer != null) applied = reapply(answer, value, current);
         },
         () => run === generation && (failed = true),
       )
@@ -342,7 +348,10 @@ const site = createPreferencesSync({
   write: (contract) => (bridge ? bridge.write(contract) : (waiting = contract)),
 });
 
-/** VI-38: the account's { load, save } once signed in, null when signed out. Without it nothing happens. */
+/**
+ * VI-38: the account's { load, save, report? } once signed in, null when signed out. Without it nothing happens.
+ * `report(error)`, optional: an invalid or other-version contract from load (sync stopped) or from save (ignored).
+ */
 export function setPreferencesSync(adapter) {
   waiting = null;
   site.setAdapter(adapter || null);

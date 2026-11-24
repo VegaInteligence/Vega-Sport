@@ -36,13 +36,18 @@
 //  S5 A local change made while that save was in flight is lost under the returned contract → per top-level key, a
 //     key whose local value changed since the save was sent keeps the local value, the others take the returned
 //     contract's; that is written, then saved next (debounced), on top of the returned contract.
+//  R1 The account screen cannot tell the person sync stopped → setPreferencesSync({ load, save, report }): a bad load
+//     and a bad contract returned by save both reach the adapter's report; without report nothing throws.
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
   CONTRACT_VERSION,
   LIMITS,
+  connectPreferences,
   createPreferencesSync,
   favouritesOf,
+  preferencesChanged,
+  setPreferencesSync,
   fromContract,
   toContract,
   validateContract,
@@ -410,4 +415,42 @@ test("S5 a change made during the in-flight save is saved next, on top of the re
   await tick();
   assert.equal(saving.length, 2);
   assert.equal(h.log.writes.length, 1);
+});
+
+// ---------- The site's controller: the adapter's own report (account screen) ----------
+test("R1 setPreferencesSync passes the adapter's report; without one, nothing throws", async () => {
+  let state = toContract(STORES);
+  const disconnect = connectPreferences({ read: () => state, write: (value) => (state = value) });
+  const wait = () => new Promise((r) => setTimeout(r, 1100)); // the site's 1 s debounce
+  try {
+    // A bad load reaches report.
+    const reports = [];
+    setPreferencesSync({ load: async () => ({ v: 9 }), save: async () => {}, report: (e) => reports.push(e) });
+    await tick();
+    await tick();
+    assert.equal(reports.length, 1);
+    assert.ok(reports[0] instanceof Error);
+    // A bad contract returned by save reaches it too.
+    const saved = [];
+    setPreferencesSync({ load: async () => null, save: async () => ({ v: 2 }), report: (e) => saved.push(e) });
+    await tick();
+    state = { ...state, theme: "dark" };
+    preferencesChanged();
+    await wait();
+    assert.equal(saved.length, 1);
+    // Without report: no throw, for either.
+    setPreferencesSync({ load: async () => ({ v: 9 }), save: async () => {} });
+    await tick();
+    await tick();
+    let saves = 0;
+    setPreferencesSync({ load: async () => null, save: async () => (saves++, "x") });
+    await tick();
+    state = { ...state, theme: "light" };
+    assert.doesNotThrow(() => preferencesChanged());
+    await wait();
+    assert.equal(saves, 1);
+  } finally {
+    setPreferencesSync(null);
+    disconnect();
+  }
 });
