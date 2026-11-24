@@ -17,9 +17,10 @@
 //     28 to 32 px tall, in a tap target of 44 px, and the page does not scroll sideways.
 //  B5 (favicon) The page names one icon, the one of the site's theme: /branding/vega/icon-dark.svg
 //     in the dark theme, icon-light.svg in the light one, with the new version number, in a
-//     single link[rel="icon"]. favicon.svg follows the system's colours, not the site's theme:
-//     a page with scripts must not name it. Each list of icons is read five times over 1.2 s,
-//     and every reading must be that one icon. How it failed before:
+//     single icon link (« icon » or « shortcut icon »). favicon.svg follows the system's
+//     colours, not the site's theme: a page with scripts must not name it. Each list of icons
+//     is read five times over 1.2 s, after a navigation once React has rebuilt the head's icon
+//     links, and every reading must be that one icon. How it failed before:
 //      - at load (B5a dark, B5f light): React did not recognise the link whose address the theme
 //        script had changed, and put the page's favicon.svg link back beside it;
 //      - after a navigation inside the site (B5g light, B5l dark): React rebuilt the head's
@@ -159,7 +160,7 @@ const icons = async (page, times = 5) => {
   const seen = [];
   for (let i = 0; i < times; i++) {
     if (i) await page.waitForTimeout(300);
-    const list = await page.evaluate(() => [...document.querySelectorAll('link[rel="icon"]')].map((l) => new URL(l.href).pathname + new URL(l.href).search));
+    const list = await page.evaluate(() => [...document.querySelectorAll('link[rel~="icon"]')].map((l) => new URL(l.href).pathname + new URL(l.href).search));
     const names = list.join(", ") || "none";
     if (!seen.includes(names)) seen.push(names);
   }
@@ -169,6 +170,17 @@ const themeIcon = (theme) => `/branding/vega/icon-${theme}.svg?v=${VERSION}`;
 /** That icon alone, at every reading. */
 const only = (seen, address) => seen.length === 1 && seen[0] === address;
 const readings = (seen) => seen.join(" ; then ");
+/** Follow a link inside the site and wait for the new page's head. Nothing on the network tells
+ *  when it is there (the document stays the same), but React rebuilds the head's icon links
+ *  on the way: the apple-touch-icon link becomes a new node. Answers whether that was seen. */
+const follow = async (page, link, there) => {
+  await page.evaluate(() => { const apple = document.querySelector('link[rel="apple-touch-icon"]'); if (apple) apple.dataset.before = "1"; });
+  await page.locator(link).first().click();
+  await page.waitForURL(there);
+  return page
+    .waitForFunction(() => { const apple = document.querySelector('link[rel="apple-touch-icon"]'); return Boolean(apple) && !apple.dataset.before; }, null, { timeout: 5000 })
+    .then(() => true, () => false);
+};
 
 const text = async (address) => {
   const response = await fetch(new URL(address, base));
@@ -290,13 +302,11 @@ try {
   check("B10", "report image 1080 × 1350: ivory wordmark at the top left (over 8 % of that place), no blue star", brief(report), report.size?.[0] === 1080 && report.size?.[1] === 1350 && report.ivory > 0.08 && report.blue === 0);
   // ---- B5l: the dark theme's icon after a navigation inside the site
   await dark.evaluate(() => { window.__sameDocument = true; });
-  await dark.locator('.topbar a[href^="/matchs"]').first().click();
-  await dark.waitForURL((url) => url.pathname.startsWith("/matchs"));
-  await dark.waitForLoadState("networkidle");
+  const rebuiltDark = await follow(dark, '.topbar a[href^="/matchs"]', (url) => url.pathname.startsWith("/matchs"));
   const movedDark = await icons(dark);
   const stayedDark = await dark.evaluate(() => window.__sameDocument === true);
   check("B5l", `dark theme, after a navigation inside the site (home → Matchs, same document): still ${themeIcon("dark")} alone`,
-    `${readings(movedDark)} — same document: ${stayedDark}`, stayedDark && only(movedDark, themeIcon("dark")));
+    `${readings(movedDark)} — same document: ${stayedDark} — head's icon links rebuilt: ${rebuiltDark}`, stayedDark && only(movedDark, themeIcon("dark")));
   await dark.context().close();
 
   // ---- B2 and B5 (light)
@@ -311,22 +321,18 @@ try {
   // ---- B5g–B5i: the icon across a navigation inside the site and the theme button
   await light.evaluate(() => { window.__sameDocument = true; });
   const sameDocument = () => light.evaluate(() => window.__sameDocument === true);
-  await light.locator('.topbar a[href^="/matchs"]').first().click();
-  await light.waitForURL((url) => url.pathname.startsWith("/matchs"));
-  await light.waitForLoadState("networkidle");
+  const rebuilt = await follow(light, '.topbar a[href^="/matchs"]', (url) => url.pathname.startsWith("/matchs"));
   const moved = await icons(light);
   check("B5g", `light theme, after a navigation inside the site (home → Matchs, same document): still ${themeIcon("light")} alone`,
-    `${readings(moved)} — same document: ${await sameDocument()}`, (await sameDocument()) && only(moved, themeIcon("light")));
+    `${readings(moved)} — same document: ${await sameDocument()} — head's icon links rebuilt: ${rebuilt}`, (await sameDocument()) && only(moved, themeIcon("light")));
   await light.locator(".theme-toggle").first().click();
   await light.waitForFunction(() => document.documentElement.dataset.theme === "dark");
   const switched = await icons(light);
   check("B5h", `after the theme button (light → dark): ${themeIcon("dark")} alone`, readings(switched), only(switched, themeIcon("dark")));
-  await light.locator(".topbar .brand").first().click();
-  await light.waitForURL((url) => url.pathname === "/");
-  await light.waitForLoadState("networkidle");
+  const rebuiltBack = await follow(light, ".topbar .brand", (url) => url.pathname === "/");
   const back = await icons(light);
   check("B5i", `after the button, then a navigation (Matchs → home, same document): still ${themeIcon("dark")} alone`,
-    `${readings(back)} — same document: ${await sameDocument()}`, (await sameDocument()) && only(back, themeIcon("dark")));
+    `${readings(back)} — same document: ${await sameDocument()} — head's icon links rebuilt: ${rebuiltBack}`, (await sameDocument()) && only(back, themeIcon("dark")));
   await light.context().close();
 
   // ---- B5j: without scripts
@@ -413,7 +419,7 @@ try {
         observed: new Date().toISOString(),
         base,
         rerun: `node tests/e2e/brand.e2e.mjs ${base} ${out}`,
-        setup: "Chromium headless, fr-FR; desktop 1365×900 (dark, then light through localStorage statarena.theme), phone 393×852 (touch, ×3). B5: every list of icons is read 5 times, 300 ms apart; B5j runs with JavaScript off; B5k makes Storage.getItem and Storage.setItem throw. B9 holds every /api/ answer for 8 s.",
+        setup: "Chromium headless, fr-FR; desktop 1365×900 (dark, then light through localStorage statarena.theme), phone 393×852 (touch, ×3). B5: every list of icons is read 5 times, 300 ms apart, after a navigation once the head's icon links are rebuilt (a new apple-touch-icon node, waited for 5 s at most); B5j runs with JavaScript off; B5k makes Storage.getItem and Storage.setItem throw. B9 holds every /api/ answer for 8 s.",
         inputs: { home: "/", loading: "/joueurs/", report: REPORT, faviconVersion: VERSION, ivory: IVORY, night: NIGHT },
         results,
         console: consoleLog,
