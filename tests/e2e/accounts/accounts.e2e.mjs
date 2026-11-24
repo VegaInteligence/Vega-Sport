@@ -6,7 +6,8 @@
 //   nosync  Neon set, ACCOUNT_API_ORIGIN absent: sign-in works, « Synchronisation : Indisponible », nothing reset
 //   off     nothing set: today's site (no entry, /connexion and /compte are 404, /api/auth and /api/account 404,
 //           no request to them)
-//   node tests/e2e/accounts/accounts.e2e.mjs <evidence dir> <on|nosync|off> [captures dir]
+//   verify  the build of « on », the stand-in requiring a confirmed address: the e-mail codes (section 8, R1 to R13)
+//   node tests/e2e/accounts/accounts.e2e.mjs <evidence dir> <on|nosync|off|verify> [captures dir]
 //
 // What stands in for what (said in the evidence): Neon Auth is a real Better Auth server on 127.0.0.1:4100
 // (auth-stand-in.mjs); the account API is the real front and store on the local PostgreSQL (account-api-stand-in.mjs);
@@ -21,8 +22,8 @@ const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT || "playwright");
 
 const [OUT, PHASE = "on", CAPTURES = ""] = process.argv.slice(2);
-if (!OUT || !["on", "nosync", "off"].includes(PHASE)) {
-  console.error("usage: accounts.e2e.mjs <evidence dir> <on|nosync|off> [captures dir]");
+if (!OUT || !["on", "nosync", "off", "verify"].includes(PHASE)) {
+  console.error("usage: accounts.e2e.mjs <evidence dir> <on|nosync|off|verify> [captures dir]");
   process.exit(2);
 }
 const SITE = process.env.SITE || "http://127.0.0.1:3100";
@@ -163,8 +164,8 @@ let auth = null, api = null;
 const evidence = { phase: PHASE };
 try {
   if (PHASE !== "off") {
-    auth = await startAuthStandIn({ port: 4100, siteOrigin: SITE });
-    if (PHASE === "on")
+    auth = await startAuthStandIn({ port: 4100, siteOrigin: SITE, requireVerification: PHASE === "verify" });
+    if (PHASE === "on" || PHASE === "verify")
       api = await startAccountApiStandIn({ port: 4200, authUrl: "https://auth.stand-in.test/neondb/auth", jwksUrl: auth.jwksUrl, deleteUser: (id) => auth.deleteUser(id) });
   }
   const userId = async (email) => (await auth.pool.query('SELECT id FROM "user" WHERE email = $1', [email])).rows[0]?.id ?? null;
@@ -562,6 +563,213 @@ try {
       }
     }
   }
+
+  if (PHASE === "verify") {
+    const email = `e2e-${RUN}@example.test`;
+    const NEW_PASSWORD = "nouveau-motdepasse-2";
+    const V = await device("V");
+    const page = V.page;
+    const title = () => page.locator(".signin-title").textContent();
+    const titled = (text) => until(async () => ((await title()) || "").trim() === text, { timeout: 30000 });
+    const view = () =>
+      page.evaluate(() => ({
+        title: document.querySelector(".signin-title")?.textContent.trim(),
+        address: document.querySelector(".signin-address")?.textContent.trim() ?? null,
+        error: document.querySelector(".signin-error")?.textContent.trim() ?? null,
+        note: document.querySelector('.signin-note[role="status"]')?.textContent.trim() ?? null,
+        code: document.querySelector('input[name="code"]')?.value ?? null,
+        email: document.querySelector('input[name="email"]')?.value ?? null,
+        password: document.querySelector('input[name="password"]')?.value ?? null,
+        focus: document.activeElement?.getAttribute("name") ?? null,
+        google: document.querySelectorAll(".signin-google").length,
+        headings: document.querySelectorAll("h1").length,
+      }));
+    const calls = (suffix) => sameOriginCalls.filter((call) => call.path === `/api/auth/${suffix}`).length;
+    const signedIn = async () => (await page.evaluate(() => fetch("/api/auth/get-session", { headers: { "X-Force-Fetch": "1" } }).then((r) => r.json()).catch(() => null)))?.user?.email ?? null;
+    const lastCode = (address, type) => auth.codes(address, type).at(-1);
+    const wrongCode = (right) => (right === "000000" ? "111111" : "000000");
+
+    // R1: a sign-up answer without a session opens « Confirmer l'adresse ».
+    await signInForm(page, email, { create: true, next: "/compte" });
+    record("R1a", "sign-up with verification required opens « Confirmer l'adresse »", true, await titled("Confirmer l’adresse"), (await titled("Confirmer l’adresse")) === true);
+    const first = await view();
+    record("R1b", "the step shows the address, the code field has the focus, no Google button, one h1", { address: email, focus: "code", google: 0, headings: 1 }, first, first.address === email && first.focus === "code" && first.google === 0 && first.headings === 1);
+    record("R1c", "the address is not in the URL", false, page.url().includes("example.test"), !page.url().includes("example.test") && !decodeURIComponent(page.url()).includes("@"));
+    record("R1d", "one code was sent at sign-up; nobody is signed in", { codes: 1, session: null }, { codes: auth.codes(email, "email-verification").length, session: await signedIn() }, auth.codes(email, "email-verification").length === 1 && (await signedIn()) === null);
+    const field = page.locator('input[name="code"]');
+    const attributes = await field.evaluate((input) => ({ inputMode: input.inputMode, autocomplete: input.autocomplete, maxLength: input.maxLength }));
+    record("R3a", "the code field is numeric and announced as a one-time code", { inputMode: "numeric", autocomplete: "one-time-code" }, attributes, attributes.inputMode === "numeric" && attributes.autocomplete === "one-time-code");
+    await shot(page, "v01-confirmer.png");
+
+    // R3: an incomplete code sends nothing.
+    await field.fill("12 34");
+    const before = calls("email-otp/verify-email");
+    await page.locator(".account-submit").click();
+    await page.waitForTimeout(800);
+    const partial = await view();
+    record("R3b", "four digits: cleaned in the field, nothing sent, the focus stays in the field", { code: "1234", sent: 0, focus: "code" }, { code: partial.code, sent: calls("email-otp/verify-email") - before, focus: partial.focus }, partial.code === "1234" && calls("email-otp/verify-email") === before && partial.focus === "code");
+
+    // R4: a wrong code.
+    await field.fill(wrongCode(lastCode(email, "email-verification")));
+    await page.locator(".account-submit").click();
+    await page.locator(".signin-error").waitFor({ timeout: 30000 });
+    const refused = await view();
+    record("R4a", "a wrong code: « Code incorrect. », the field emptied and focused, the address kept", { error: "Code incorrect.", code: "", focus: "code", address: email }, refused, refused.error === "Code incorrect." && refused.code === "" && refused.focus === "code" && refused.address === email);
+    await shot(page, "v02-code-incorrect.png");
+
+    // R5: another code, then the wait.
+    const resend = page.locator(".signin-resend");
+    await resend.click();
+    await until(() => auth.codes(email, "email-verification").length === 2);
+    await page.locator('.signin-note[role="status"]').waitFor({ timeout: 10000 });
+    const waiting = await resend.evaluate((button) => ({ disabled: button.disabled, text: button.textContent.trim() }));
+    record("R5", "« Renvoyer le code » sends a second code, says so, then waits", { codes: 2, disabled: true }, { codes: auth.codes(email, "email-verification").length, ...waiting, note: (await view()).note }, auth.codes(email, "email-verification").length === 2 && waiting.disabled === true && /\d/.test(waiting.text));
+
+    // R3 + R1: the code pasted with text around it signs the person in and brings them back.
+    const code = lastCode(email, "email-verification");
+    await field.fill(`Votre code : ${code.slice(0, 3)}-${code.slice(3)}.`);
+    const pasted = (await view()).code;
+    await page.locator(".account-submit").click();
+    await until(async () => new URL(page.url()).pathname === "/compte", { timeout: 30000 });
+    const hero = await page.locator(".account-hero").textContent({ timeout: 30000 });
+    record("R3c", "a pasted code keeps its six digits and confirms the address: signed in, back to ?next=", { pasted: code, path: "/compte" }, { pasted, path: new URL(page.url()).pathname, address: hero.includes(email) }, pasted === code && hero.includes(email));
+    const verified = (await auth.pool.query('SELECT "emailVerified" AS v FROM "user" WHERE email = $1', [email])).rows[0]?.v;
+    record("R1e", "the address is confirmed at the auth server", true, verified, verified === true);
+    await page.getByRole("button", { name: "Se déconnecter" }).click();
+    await until(async () => new URL(page.url()).pathname === "/", { timeout: 30000 });
+
+    // R2 + R6 + R11: an account left unconfirmed, then a sign-in.
+    const late = `e2e-late-${RUN}@example.test`;
+    await signInForm(page, late, { create: true, next: "/compte" });
+    await titled("Confirmer l’adresse");
+    await page.locator(".signin-back").click();
+    await titled("Connexion");
+    const backView = await view();
+    record("R11a", "« Retour » gives « Connexion », the address kept, the password cleared, Google back", { title: "Connexion", email: late, password: "", google: 1 }, backView, backView.email === late && backView.password === "" && backView.google === 1);
+    const sentBefore = auth.codes(late, "email-verification").length;
+    // R6: the confirmation's own session is withheld (as with Neon's auto sign-in off): the cookies are dropped.
+    await V.context.route(`${SITE}/api/auth/email-otp/verify-email`, async (route) => {
+      const answer = await route.fetch();
+      const headers = Object.fromEntries(Object.entries(answer.headers()).filter(([name]) => name.toLowerCase() !== "set-cookie"));
+      const body = await answer.json().catch(() => null);
+      await route.fulfill({ status: answer.status(), headers, body: JSON.stringify(body && typeof body === "object" ? { ...body, token: null } : body) });
+    });
+    await page.locator('input[name="password"]').fill(PASSWORD);
+    await page.locator(".account-submit").click();
+    await titled("Confirmer l’adresse");
+    await until(() => auth.codes(late, "email-verification").length > sentBefore);
+    await page.waitForTimeout(1000);
+    const asked = auth.codes(late, "email-verification").length - sentBefore;
+    record("R2", "sign-in with an unconfirmed address opens the step and asks for exactly one code", { title: "Confirmer l’adresse", codes: 1 }, { title: (await view()).title, codes: asked }, asked === 1);
+    const signIns = calls("sign-in/email");
+    await page.locator('input[name="code"]').fill(lastCode(late, "email-verification"));
+    await page.locator(".account-submit").click();
+    await until(async () => new URL(page.url()).pathname === "/compte", { timeout: 30000 });
+    record("R6", "no session from the confirmation: the site signs in with the password it held", { path: "/compte", signIns: 1 }, { path: new URL(page.url()).pathname, signIns: calls("sign-in/email") - signIns, session: await signedIn() }, new URL(page.url()).pathname === "/compte" && calls("sign-in/email") - signIns === 1 && (await signedIn()) === late);
+    await V.context.unroute(`${SITE}/api/auth/email-otp/verify-email`);
+    await page.getByRole("button", { name: "Se déconnecter" }).click();
+    await until(async () => new URL(page.url()).pathname === "/", { timeout: 30000 });
+
+    // R7 + R12 + R13: « Mot de passe oublié ? ».
+    await open(page, "/connexion?next=/compte");
+    await titled("Connexion");
+    await page.locator('input[name="email"]').fill(email);
+    await page.locator('input[name="password"]').fill("brouillon");
+    await page.locator(".signin-forgot").click();
+    await titled("Mot de passe oublié");
+    const forgot = await view();
+    record("R13a", "« Mot de passe oublié »: its own title, the address kept, no password field, no Google button", { title: "Mot de passe oublié", email, password: null, google: 0 }, forgot, forgot.email === email && forgot.password === null && forgot.google === 0);
+    await shot(page, "v03-oubli.png");
+    await page.locator('input[name="email"]').fill("");
+    const requests = () => calls("email-otp/request-password-reset") + calls("forget-password/email-otp");
+    const none = requests();
+    await page.locator(".account-submit").click();
+    await page.waitForTimeout(800);
+    record("R7a", "an empty address sends nothing and keeps the focus", { sent: 0, focus: "email" }, { sent: requests() - none, focus: (await view()).focus }, requests() === none && (await view()).focus === "email");
+    const stranger = `inconnu-${RUN}@example.test`;
+    await page.locator('input[name="email"]').fill(stranger);
+    await page.locator(".account-submit").click();
+    await titled("Nouveau mot de passe");
+    const unknown = await view();
+    await page.waitForTimeout(500);
+    record("R7b", "an address without an account gets the same step, no error, and no e-mail", { title: "Nouveau mot de passe", error: null, mails: 0 }, { title: unknown.title, error: unknown.error, mails: auth.codes(stranger).length }, unknown.error === null && auth.codes(stranger).length === 0);
+    await page.reload({ waitUntil: "domcontentloaded" });
+    record("R12a", "reloading a step shows « Connexion »", true, await titled("Connexion"), (await titled("Connexion")) === true);
+    await open(page, "/connexion?mode=oubli&next=/compte");
+    record("R12b", "?mode=oubli opens « Mot de passe oublié »", true, await titled("Mot de passe oublié"), (await titled("Mot de passe oublié")) === true);
+
+    // R9 + R10: the reset.
+    await page.locator('input[name="email"]').fill(email);
+    await page.locator(".account-submit").click();
+    await titled("Nouveau mot de passe");
+    await until(() => auth.codes(email, "forget-password").length === 1);
+    const reset = await view();
+    record("R9a", "« Nouveau mot de passe »: the address, the code field focused, the password as new-password", { address: email, focus: "code", autocomplete: "new-password" }, { ...reset, autocomplete: await page.locator('input[name="password"]').getAttribute("autocomplete") }, reset.address === email && reset.focus === "code" && (await page.locator('input[name="password"]').getAttribute("autocomplete")) === "new-password");
+    await shot(page, "v04-nouveau-mot-de-passe.png");
+    const resetCode = lastCode(email, "forget-password");
+    await page.locator('input[name="code"]').fill(resetCode);
+    await page.locator('input[name="password"]').fill("court");
+    await page.locator(".account-submit").click();
+    await page.locator(".signin-error").waitFor({ timeout: 30000 });
+    const short = await view();
+    record("R9b", "a short password: told in plain words, the step and the code kept", { title: "Nouveau mot de passe", error: "8 caractères", code: resetCode }, short, short.title === "Nouveau mot de passe" && /8 caractères/.test(short.error) && short.code === resetCode);
+    await page.locator('input[name="code"]').fill(wrongCode(resetCode));
+    await page.locator('input[name="password"]').fill(NEW_PASSWORD);
+    await page.locator(".account-submit").click();
+    await until(async () => (await view()).error === "Code incorrect.", { timeout: 30000 });
+    const badCode = await view();
+    record("R9c", "a wrong code: « Code incorrect. », the code emptied, the new password kept", { error: "Code incorrect.", code: "", password: NEW_PASSWORD }, badCode, badCode.error === "Code incorrect." && badCode.code === "" && badCode.password === NEW_PASSWORD);
+    await page.locator('input[name="code"]').fill(resetCode);
+    await page.locator(".account-submit").click();
+    await until(async () => new URL(page.url()).pathname === "/compte", { timeout: 30000 });
+    record("R10", "the reset signs in with the new password and brings the person back", { path: "/compte", session: email }, { path: new URL(page.url()).pathname, session: await signedIn() }, new URL(page.url()).pathname === "/compte" && (await signedIn()) === email);
+    await page.getByRole("button", { name: "Se déconnecter" }).click();
+    await until(async () => new URL(page.url()).pathname === "/", { timeout: 30000 });
+    await signInForm(page, email, { password: PASSWORD, next: "/compte" });
+    const old = await page.locator(".signin-error").textContent({ timeout: 30000 });
+    record("R10b", "the old password no longer opens the account", "Adresse ou mot de passe incorrect.", old, old === "Adresse ou mot de passe incorrect.");
+    await page.locator('input[name="password"]').fill(NEW_PASSWORD);
+    await page.locator(".account-submit").click();
+    await until(async () => new URL(page.url()).pathname === "/compte", { timeout: 30000 });
+    record("R10c", "the new password does", "/compte", new URL(page.url()).pathname, new URL(page.url()).pathname === "/compte");
+    const leaked = [...consoleErrors.map((e) => e.error), ...sameOriginCalls.map((c) => c.path)].filter((text) => /example\.test|\b\d{6}\b/.test(text));
+    record("O9", "no address and no code in a URL of the site or in the console", [], leaked, leaked.length === 0);
+    await V.context.close();
+
+    if (CAPTURES)
+      for (const [phone, theme, suffix] of [[false, "dark", "bureau-sombre"], [false, "light", "bureau-clair"], [true, "dark", "telephone-sombre"], [true, "light", "telephone-clair"]]) {
+        const c = await device(`capture-${suffix}`, { phone, theme, scale: 2 });
+        const owner = CAPTURE_OWNERS[suffix];
+        await open(c.page, "/connexion");
+        await c.page.locator(".signin-forgot").waitFor({ timeout: 30000 });
+        await c.page.locator('input[name="email"]').fill(owner);
+        await capture(c.page, `connexion-avec-oubli-${suffix}.png`);
+        await signInForm(c.page, owner, { create: true });
+        await c.page.locator('input[name="code"]').waitFor({ timeout: 30000 });
+        await capture(c.page, `confirmer-adresse-${suffix}.png`);
+        const sent = auth.codes(owner, "email-verification").at(-1);
+        await c.page.locator('input[name="code"]').fill(sent.slice(0, 4));
+        await capture(c.page, `confirmer-adresse-saisie-${suffix}.png`);
+        await c.page.locator('input[name="code"]').fill(sent === "000000" ? "111111" : "000000");
+        await c.page.locator(".account-submit").click();
+        await c.page.locator(".signin-error").waitFor({ timeout: 30000 });
+        await capture(c.page, `confirmer-adresse-code-incorrect-${suffix}.png`);
+        await c.page.locator(".signin-resend").click();
+        await c.page.locator('.signin-note[role="status"]').waitFor({ timeout: 10000 });
+        await capture(c.page, `confirmer-adresse-renvoye-${suffix}.png`);
+        await c.page.locator(".signin-back").click();
+        await c.page.locator(".signin-forgot").click();
+        await c.page.locator(".signin-title", { hasText: "Mot de passe oublié" }).waitFor({ timeout: 10000 });
+        await capture(c.page, `mot-de-passe-oublie-${suffix}.png`);
+        await c.page.locator(".account-submit").click();
+        await c.page.locator(".signin-title", { hasText: "Nouveau mot de passe" }).waitFor({ timeout: 30000 });
+        await capture(c.page, `nouveau-mot-de-passe-${suffix}.png`);
+        await c.page.locator('input[name="code"]').fill("482913");
+        await c.page.locator('input[name="password"]').fill("un-nouveau-secret");
+        await capture(c.page, `nouveau-mot-de-passe-rempli-${suffix}.png`);
+        await c.context.close();
+      }
+  }
 } catch (error) {
   failure = error?.stack || String(error);
   console.error(failure);
@@ -581,9 +789,10 @@ try {
             on: "NEON_AUTH_BASE_URL=http://127.0.0.1:4100/neondb/auth NEON_AUTH_COOKIE_SECRET=<32+> ACCOUNT_API_ORIGIN=http://127.0.0.1:4200 NEXT_PUBLIC_API_ORIGIN=http://127.0.0.1:8765",
             nosync: "the same without ACCOUNT_API_ORIGIN",
             off: "NEXT_PUBLIC_API_ORIGIN only",
+            verify: "the build of « on »",
           }[PHASE],
-          neonAuth: PHASE === "off" ? "not set" : "stand-in: a real Better Auth 1.7.27 server with the JWT plugin (EdDSA), cookies named __Secure-neon-auth.*, on 127.0.0.1:4100/neondb/auth, base vega_site_auth_e2e (local PostgreSQL 16); JWT iss/aud set to https://auth.stand-in.test for the account front's verifier",
-          accountApi: PHASE === "on" ? "the real front and store of backend/account on base vega_site_account_e2e (local PostgreSQL 16), role vega_account; Neon's deletion is the stand-in's, enabled only for step O8c" : "not set",
+          neonAuth: PHASE === "off" ? "not set" : "stand-in: a real Better Auth 1.7.27 server with the JWT plugin (EdDSA), cookies named __Secure-neon-auth.*, on 127.0.0.1:4100/neondb/auth, base vega_site_auth_e2e (local PostgreSQL 16); JWT iss/aud set to https://auth.stand-in.test for the account front's verifier; the Email OTP plugin (six digits, 15 minutes, 3 attempts), its e-mails kept in an outbox the run reads" + (PHASE === "verify" ? "; a confirmed address required, a code sent at sign-up, a session opened by the confirmation" : "; no confirmation required"),
+          accountApi: PHASE === "on" || PHASE === "verify" ? "the real front and store of backend/account on base vega_site_account_e2e (local PostgreSQL 16), role vega_account; Neon's deletion is the stand-in's, enabled only for step O8c" : "not set",
           data: `${DATA}: recorded production answers (23 Nov 2026) replayed; images routed there from ${IMAGES}`,
           browser: "Playwright Chromium, 1440x900 desktop (devices A, B), 390x844 phone for captures",
         },

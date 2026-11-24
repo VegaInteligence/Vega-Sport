@@ -1,7 +1,11 @@
 // A local stand-in for Neon Auth (VI-38 E2E only; never shipped): a real Better Auth server (Neon Auth is managed
-// Better Auth, @neon/auth 0.8.2 depends on better-auth ~1.7.12) with e-mail and password, sign-up open, no e-mail
-// verification, and the JWT plugin (EdDSA / Ed25519, the key set at /.well-known/jwks.json), on the local
+// Better Auth, @neon/auth 0.8.2 depends on better-auth ~1.7.12) with e-mail and password, sign-up open, the JWT
+// plugin (EdDSA / Ed25519, the key set at /.well-known/jwks.json) and the Email OTP plugin (six-digit codes for the
+// address confirmation and the forgotten password, as Neon's « verification code » method), on the local
 // PostgreSQL. Its cookies carry Neon's names (__Secure-neon-auth.*), which @neon/auth/next looks for.
+// No e-mail leaves: the codes go to `outbox` ({ email, otp, type }), which the E2E reads as the person's mailbox.
+// `requireVerification` (off by default, as Neon's branch was until this work): sign-in refused until the address
+// is confirmed, a code sent at sign-up, none at sign-in, a session opened by the confirmation.
 //
 //   node tests/e2e/accounts/auth-stand-in.mjs     (AUTH_PORT=4100 SITE_ORIGIN=http://127.0.0.1:3100
 //                                                  AUTH_DSN=postgresql://vega_test:local-only@127.0.0.1:5432/vega_site_auth_e2e)
@@ -25,6 +29,7 @@ export async function startAuthStandIn({
   port = Number(process.env.AUTH_PORT || 4100),
   siteOrigin = process.env.SITE_ORIGIN || "http://127.0.0.1:3100",
   dsn = process.env.AUTH_DSN || "postgresql://vega_test:local-only@127.0.0.1:5432/vega_site_auth_e2e",
+  requireVerification = false,
   log = () => {},
 } = {}) {
   const { default: pg } = await load("pg", requireAccount);
@@ -38,21 +43,32 @@ export async function startAuthStandIn({
   await admin.end();
 
   const { betterAuth } = await load("better-auth");
-  const { jwt } = await load("better-auth/plugins");
+  const { jwt, emailOTP } = await load("better-auth/plugins");
   const { getMigrations } = await load("better-auth/db/migration");
   const { toNodeHandler } = await load("better-auth/node");
   const pool = new pg.Pool({ connectionString: dsn, max: 4 });
+  const outbox = [];
   const options = {
     appName: "Vega stand-in",
     baseURL: `http://127.0.0.1:${port}`,
     basePath: BASE_PATH,
     secret: "stand-in-secret-0123456789abcdef0123456789",
     database: pool,
-    emailAndPassword: { enabled: true, requireEmailVerification: false, minPasswordLength: 8 },
+    emailAndPassword: { enabled: true, requireEmailVerification: requireVerification, minPasswordLength: 8 },
+    emailVerification: { sendOnSignUp: requireVerification, sendOnSignIn: false, autoSignInAfterVerification: true },
     trustedOrigins: [siteOrigin],
     advanced: { cookiePrefix: "neon-auth", useSecureCookies: true },
     rateLimit: { enabled: false },
     plugins: [
+      emailOTP({
+        otpLength: 6,
+        expiresIn: 900,
+        allowedAttempts: 3,
+        overrideDefaultEmailVerification: true,
+        async sendVerificationOTP({ email, otp, type }) {
+          outbox.push({ email, otp, type });
+        },
+      }),
       jwt({
         jwks: { keyPairConfig: { alg: "EdDSA", crv: "Ed25519" }, jwksPath: "/.well-known/jwks.json" },
         jwt: { issuer: ISSUER, audience: ISSUER, expirationTime: "15m" },
@@ -76,6 +92,9 @@ export async function startAuthStandIn({
     jwksUrl: `http://127.0.0.1:${port}${BASE_PATH}/.well-known/jwks.json`,
     requests,
     pool,
+    outbox,
+    /** The codes sent to an address, oldest first; `type`: email-verification | forget-password | sign-in. */
+    codes: (email, type) => outbox.filter((mail) => mail.email === email && (!type || mail.type === type)).map((mail) => mail.otp),
     /** Neon's deletion of a user, as the account front's Neon client would ask it. */
     async deleteUser(id) {
       const { rowCount } = await pool.query('DELETE FROM "user" WHERE id = $1', [id]);
