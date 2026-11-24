@@ -15,6 +15,9 @@ import {
   validateMatchPublication,
 } from "../services/match-resources.js";
 import { ResearchLists, useHasSaved } from "../components/ResearchUI.jsx";
+import useFavourites from "../hooks/useFavourites.js";
+import { favouritesFirstWithinDay, involvesFavourite, matchesLeague } from "../services/preference-effects.js";
+import usePreselect from "../hooks/usePreselect.js";
 import PaginatedMatches from "../components/PaginatedMatches.jsx";
 import WorldCupArchiveMatch from "../components/WorldCupArchiveMatch.jsx";
 function RemoteDetail({ id }) {
@@ -45,8 +48,20 @@ export default function MatchesPage() {
     upcoming = !saved && tab !== "results",
     selected = f.data.matches.find((m) => m.id === id),
     fixture = f.data.fixtures?.find((m) => m.id === id),
+    favouriteClubs = useFavourites().clubs,
+    // Effect 3: within a day, a favourite club's result first.
+    results = favouritesFirstWithinDay(f.matches, (m) => m.date, (m) => involvesFavourite(m, favouriteClubs)),
     pages = Math.max(1, Math.ceil(f.matches.length / 30)),
     current = Math.min(page, pages);
+  // Effect 9: the league filter starts on the first followed league (not over the URL's, not after a clear).
+  usePreselect("matches", {
+    ready: Boolean(f.preferencesReady && !id && !saved && f.competitions?.length),
+    candidate: matchesLeague(f.preferences?.favoriteLeagueIds),
+    inUrl: Boolean(search.get("league") || search.get("leagues")),
+    options: new Set((f.competitions || []).map((c) => c.id)),
+    current: f.filters.league,
+    apply: (league) => f.setFilters((v) => ({ ...v, league, leagues: [], match: "all" })),
+  });
   return (
     <Layout
       path={archived ? "/competitions/" : "/matchs/"}
@@ -106,7 +121,7 @@ export default function MatchesPage() {
         <UpcomingMatches />
       ) : (
         <Card title="Résultats">
-          {f.matches.slice((current - 1) * 30, current * 30).map((m) => (
+          {results.slice((current - 1) * 30, current * 30).map((m) => (
             <MatchLink key={m.id} match={m} week={search.get("week")} />
           ))}
           {!f.matches.length && (
