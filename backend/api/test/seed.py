@@ -309,7 +309,9 @@ def main(dsn):
     # Extra time (issue #68), in a cup edition of its own, of an earlier season (2023/2024) and keyed as a cup's, so that
     # the league's tables, the season's rates and the PitchAPI-era reads stay as they are; clubs 1 and 2 (their Elo after match 1): m_xtime1 0-0 at the 90th, 1-0 at the 112th; m_shoot1 1-1 after extra time, 4-3 on
     # penalties; m_shoot2 2-2 then 5-4 on penalties, no extra-time score stated; m_live91 in play, its clock at the
-    # 100th with nothing saying it is in extra time.
+    # 100th with nothing saying it is in extra time. As the provider gives a match (no extra-time score, the shoot-out's
+    # not always): m_xtime2 2-1 with its winner at the 108th and no score but the final one; m_xtime3 1-1 with a goal at
+    # the 118th and no shoot-out score (the 2022 World Cup final's case in production); m_stop90 1-0, its goal at 90+4.
     cup = x("INSERT INTO core.competitions(name,country_code,kind) VALUES ('Coupe Test','FRA','cup') RETURNING id").fetchone()[0]
     edition = x("INSERT INTO core.competition_seasons(competition_id,season_id,native_label,is_current,cup_key) VALUES (%s,2023,'2023/2024',false,'openligadb:extra-time-test:2023/2024') RETURNING id", (cup,)).fetchone()[0]
     for key, status, score, score_90, score_et, penalties, goals in [
@@ -317,6 +319,9 @@ def main(dsn):
         ("m_shoot1", "finished", (1, 1), (1, 1), (1, 1), (4, 3), [(30, 0, 1), (75, 0, 2)]),
         ("m_shoot2", "finished", (2, 2), None, None, (5, 4), [(12, 0, 1), (40, 0, 2), (90, 3, 2), (101, 0, 1)]),
         ("m_live91", "in_play", (1, 1), None, None, None, [(20, 0, 1), (80, 0, 2)]),
+        ("m_xtime2", "finished", (2, 1), None, None, None, [(30, 0, 1), (60, 0, 2), (108, 0, 1)]),
+        ("m_xtime3", "finished", (1, 1), None, None, None, [(20, 0, 1), (118, 0, 2)]),
+        ("m_stop90", "finished", (1, 0), None, None, None, [(90, 4, 1)]),
     ]:
         mid = x(
             """INSERT INTO core.matches(competition_season_id,season_id,source,status,home_team_id,away_team_id,home_score,away_score,home_score_90,away_score_90,

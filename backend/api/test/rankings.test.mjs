@@ -310,6 +310,31 @@ test("a finished match minute by minute", { skip }, async () => {
 // - a match without extra time (m_aaaaa1): unchanged, no `extraTime` or `penalties` key;
 // - in play with a clock past the 90th and nothing in the base saying extra time (m_live91, clock 100): it stops at the
 //   90th as before; extra time in play is the live feed's to say (its period), the site carrying the model on.
+// Extra time the base holds no score of (24 Nov 2026: the provider gives no extra-time score, and not always the
+// shoot-out's; in production the 2022 World Cup final stopped at the 90th with its 108th and 118th minute goals piled
+// there). Failure modes and expected outcomes, written before the code:
+// - a finished match with a goal after the 90th minute and no extra-time or shoot-out score (m_xtime2, 2-1, the winner
+//   at the 108th): `extraTime`, points to the 120th, 1-1 at the 90th and until the 107th, 2-1 from the 108th, the 120th
+//   point the result, `penalties` null;
+// - the same, level at the 120th (m_xtime3, 1-1, a goal at the 118th): the 120th point a draw (the shoot-out),
+//   `penalties` null since the base has no shoot-out score;
+// - a goal in the second half's stoppage time (m_stop90, minute 90 + 4) is no extra time: 91 points, no `extraTime` key.
+test("extra time known by its events alone", { skip }, async () => {
+  const live = async (id) => (await get(`/api/forecasts/live?match=${id}`)).body;
+  const three = (p) => [p.home, p.draw, p.away];
+  const decided = await live("m_xtime2");
+  assert.deepEqual([decided.status, decided.extraTime, decided.penalties, decided.points.length, decided.points.at(-1).minute], ["finished", true, null, 121, 120]);
+  assert.deepEqual([decided.points[90].score, decided.points[107].score, decided.points[108].score], [[1, 1], [1, 1], [2, 1]]);
+  assert.ok(decided.points[90].draw > 0 && decided.points[90].draw < 1);
+  assert.deepEqual(three(decided.points[120]), [1, 0, 0]);
+  const level = await live("m_xtime3");
+  assert.deepEqual([level.extraTime, level.penalties, level.points.length, level.points[117].score, level.points[118].score], [true, null, 121, [1, 0], [1, 1]]);
+  assert.deepEqual(three(level.points[120]), [0, 1, 0]);
+  const stoppage = await live("m_stop90");
+  assert.deepEqual([stoppage.points.length, "extraTime" in stoppage, stoppage.points[90].score], [91, false, [1, 0]]);
+  assert.deepEqual(three(stoppage.points[90]), [1, 0, 0]);
+});
+
 test("a match that went to extra time, minute by minute", { skip }, async () => {
   const live = async (id) => (await get(`/api/forecasts/live?match=${id}`)).body;
   const three = (p) => [p.home, p.draw, p.away];
