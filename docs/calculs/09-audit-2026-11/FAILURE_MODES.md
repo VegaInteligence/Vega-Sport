@@ -4217,3 +4217,71 @@ Formulas without a base (`backend/tests/test_level.py`), then E2E on the disposa
 | 54l | E2E: production's schema, then this tree's migrations; a level row written without the flag (as the worker in service writes it during the deployment), one written with it false | 14 applied of 174; `agg.player_level.measured` is `boolean NOT NULL DEFAULT true`; `api.player_levels` keeps its columns in order with `measured` last; under `vega_calc` both rows are written, under `vega_read` the view reads true and false |
 | 54m | The read API: the reasons in order; E2E, a measured centre-forward and a keeper above the minutes bar, in a measured league, without goals prevented | a row under the bar reads `minutes`, a man in an unmeasured league `league`, whatever the flag; the keeper is provisional, reason `keeper_data`, `measured` false on his own read; the centre-forward is not provisional, `measured` true; the method's version is `score-vega-v9.1`; the answers' other fields are unchanged |
 | 54n | `test_41n` (the Open Matchday restore on a base whose last migration is 169) | passes: 169 is a reviewed destination schema |
+
+## 55. Italy and Greece lost by a merge: the national flag kept, marked before the merge, the Elo woken by the national teams it read (production after PR #89, 24 Nov 2026, written before the tests)
+
+Production after the deployment of PR #89 (main 25c7647, Deploy 127, read through the public API at 10:20 UTC): the Elo
+was redone at 10:15 UTC with 143 national teams ranked for 2026/27 instead of ~210; clubs unchanged. « Italie » (5th the
+day before) and « Grèce » (26th) are gone from the ranking and from `/api/nations`; their matches all sit on new rows
+« Italy » and « Greece », which are not national.
+
+Read in the code (identity.py, cups.py, curated.py, worker.py at b17014d):
+- Italy and Greece are League A nations, read from OpenLigaDB; PitchAPI holds neither. Their rows (« Italie », « Grèce »,
+  national) had no International Results key, so the internationals of 2021/22–2025/26 (§50) created « Italy » and
+  « Greece » (`cups._team`, a team the base did not know).
+- `cups._team` re-arms the identity pass only (`ops.source_runs`, scope `team_identity`), not `national_teams`, which ran
+  before the cup sources in the same pass (the `vega` adapter is the first of `sources.adapters`) and is due a day later.
+- At the next pass the identity pass merged « Italie » into « Italy » (`identity.nation_twins`: the row named in English
+  stays). `identity._candidates` reads « national » from the editions, not from the flag; `identity.merge_teams` moves
+  matches, keys and names but not `is_national`: the row that stays is not national, the national row is now a pointer.
+- The national pass (`power.nation_inputs`) reads `core.teams.is_national`; the two nations' matches are no longer
+  between two national sides and leave it. `/api/nations` lists unmerged national rows.
+- `worker.elo_due` does not look at the national teams: when the daily `national_teams` marks them (its OpenLigaDB Nations
+  League matches and the FIFA edition both name the row that stays), the Elo waits for the next daily seasons pass.
+
+### 55.1 Rules
+
+- **A merge keeps the flag.** `identity.merge_teams` marks national the team that stays when a team merged into it
+  is, in the same statement set as the merge, provided the team that stays holds no PitchAPI key: a PitchAPI national
+  team that stays is already national (a national candidate only joins a PitchAPI team marked national), and a
+  national row joined to a PitchAPI club would be a wrong merge, whose flag must not make a club a nation. Every
+  merge goes through `merge_teams` (the cup and International Results pairs, the source-only twins, the archive teams).
+- **The marking keeps it too.** `curated.national_teams` marks national an unmerged team into which a national team
+  was merged (same PitchAPI exception): it repairs the merges made before this rule (production's « Italy » and
+  « Greece »), whatever the other rules say.
+- **A new team is marked before it is merged.** A team the base did not know (`cups._team`) re-arms `national_teams`
+  as well as `team_identity`; at the next pass `national_teams` runs first (`curated.scopes` order).
+- **The Elo knows the national teams it read.** The run's row of `agg.nation_elo_runs` (§53) keeps the count and an md5
+  of the ids of the unmerged national teams at the run's read (`power.NATION_SET`, one query for the writer and the
+  reader); `worker.elo_due` is true when the present set gives another pair, or the row has none (a run from before the
+  migration). The Elo writes no flag and no merge, and the marking and the identity pass run before `elo_due` in the
+  daily pass: one run per change, no loop. A merge of two national rows changes the set: one more run, same ratings.
+- **Repair at the deployment.** Migration 170 adds the two columns to `agg.nation_elo_runs` (never to `agg.power_runs`,
+  §53) and re-arms `national_teams` and `team_identity` (the precedent of 071, 075, 096 and 121: `UPDATE ops.source_runs
+  SET last_success_at = NULL`): the first daily pass after it marks, merges, then runs the Elo once.
+- **A pending merge does not stop the Elo.** Found by 55d: in the pass that creates « Italy », before the identity pass
+  merges « Italie » into it, `refresh_elo` reads the merge (`identity.pairs`) and the national pass rates « Italy »
+  (`nation_inputs` adds the merge targets of national rows), while the clubs' season rows are written for every team
+  not marked national: « Italy » twice in `agg.team_power` (key season, team), the whole Elo refused (unique violation)
+  and retried an hour later. A team of the national pass's set is a nation in that write as well (scope and rank).
+- **Names unchanged.** No row is renamed: « Italy » keeps its name (the site shows « Italie » through
+  `nationalTeamLabel`); a French-named row that has an International Results key (« Monténégro », « Biélorussie »,
+  « Estonie ») is found by that key and keeps its row and name (50n).
+
+### 55.2 Failure modes and expected outcomes
+
+55a–55c: `backend/tests/test_source_identity.py`. 55d–55f, 55h, 55j: `test_collection_wakeups.py` (the real `Worker.daily`,
+bridge and projection). 55g: `test_deploy_migrations.py`. All on a disposable PostgreSQL 18.
+
+| # | Situation | Expected |
+|---|---|---|
+| 55a | `merge_teams`: a national source-only row merged into a source-only row not marked; a non-national row into another; a national row into a PitchAPI club | the first kept row national; the second not; the club not |
+| 55b | `national_teams`: an unmerged row « Italy » not national with « Italie » (national) merged into it; a PitchAPI club with a national row merged into it | « Italy » national; the club not; a second run writes nothing |
+| 55c | `cups._team` creates a team | `national_teams` and `team_identity` both re-armed (`last_success_at` NULL); a known team re-arms neither |
+| 55d | Production's scenario: « Italie » national with an OpenLigaDB key and a Nations League A match against France; a FIFA edition naming Italy; then an internationals edition naming « Italy » (real path), then the next daily pass | one unmerged row of the two, national, with both sources' keys and every match; its 2024/25 Italy–France match in the national pass; Italy ranked in scope `nations`; listed by `api.nation_list` |
+| 55e | The Elo published, then a team marked national (or a national row merged) with no match changed | `elo_due` true; after one run, false; the run's row holds the present count and md5 |
+| 55f | A run's row without the national set (before 170) | `elo_due` true, once |
+| 55g | Production's schema, then this tree's migrations | 170 applied; `agg.nation_elo_runs` has its two new columns; `agg.power_runs` still main's 34; `national_teams` and `team_identity` re-armed |
+| 55h | An internationals edition naming « Montenegro » for a row « Monténégro » that has that International Results key | the same row, its name « Monténégro » (50n) |
+| 55j | The pass that creates « Italy » while « Italie » (national) is not merged yet: the Elo of that pass | published, no error; « Italy » in scope `nations` only, never also a club row |
+| 55i | The national E2E (51n) | 210 nations for 2026/27, Gibraltar 52nd of 54 and 188th, Spearman 0.988, clubs identical |

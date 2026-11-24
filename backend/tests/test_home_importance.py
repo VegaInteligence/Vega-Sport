@@ -1,4 +1,4 @@
-"""The home's importance v2 (GitHub #69, Linear VI-48) keeps its stakes as rows of sql/170_home_importance_v2.sql; the
+"""The home's importance v2 (GitHub #69, Linear VI-48) keeps its stakes as rows of sql/171_home_importance_v2.sql; the
 Elo's stakes are constants of vega/power.py (PRESTIGE, STAGE, round_of). Written before the migration (AGENTS.md).
 
 Failure modes this guards against, and the expected outcome:
@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from vega import power  # noqa: E402
 
-MIGRATION = ROOT / "sql" / "170_home_importance_v2.sql"
+MIGRATION = ROOT / "sql" / "171_home_importance_v2.sql"
 
 
 def rows(sql, table):

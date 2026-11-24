@@ -207,7 +207,9 @@ def elo_due(conn):
     published Elo run started (a new result, a corrected score, a restored match), or a side that run wrote whose match
     is gone, no longer finished with its score, or now archived (a withdrawn match), or a side of another run (sides
     restored from a copy), or a run of another national method (power.NATION_ELO_VERSION against the run's row of
-    agg.nation_elo_runs, a run from before 168 having none; §51, §53: once after a change).
+    agg.nation_elo_runs, a run from before 168 having none; §51, §53: once after a change), or a run that read
+    other national teams (power.NATION_SET against the run's count and md5, a run from before 170 having none; §55: a
+    team flagged, unflagged or merged).
     Without a run, any complementary match. FAILURE_MODES.md §37 (E04k)."""
     from . import power
 
@@ -217,6 +219,8 @@ def elo_due(conn):
             SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM run) THEN EXISTS (SELECT 1 {_COMPLEMENTARY})
               ELSE EXISTS (SELECT 1 {_COMPLEMENTARY} AND m.updated_at > (SELECT started_at FROM run))
                 OR (SELECT n.version FROM agg.nation_elo_runs n WHERE n.run_id = (SELECT id FROM run)) IS DISTINCT FROM %s
+                OR (SELECT ROW(n.national_teams, n.national_teams_md5) FROM agg.nation_elo_runs n WHERE n.run_id = (SELECT id FROM run))
+                   IS DISTINCT FROM (SELECT ROW(p.count, p.md5) FROM ({power.NATION_SET}) p(count, md5))
                 OR EXISTS (SELECT 1 FROM agg.team_elo e WHERE e.run_id IS DISTINCT FROM (SELECT id FROM run))
                 OR EXISTS (SELECT 1 FROM agg.team_elo e WHERE NOT EXISTS (
                      SELECT 1 FROM core.matches m JOIN core.competition_seasons cs ON cs.id = m.competition_season_id AND cs.archive_key IS NULL

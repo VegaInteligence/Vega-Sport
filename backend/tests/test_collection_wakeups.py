@@ -456,6 +456,116 @@ class InternationalsEloTest(CollectionBase):
         spellings = {r[0] for r in self.x("SELECT name FROM core.entity_names WHERE entity_type='team' AND entity_id=%s AND kind='source_spelling'",
                                           (scotland[0],)).fetchall()}
         self.assertIn("Scotland", spellings)
+    def vega(self):
+        """The curated adapter with its two scopes of the national teams alone (curated.scopes keeps their order)."""
+        from vega.sources import curated
+
+        scopes = patch.object(curated, "scopes", lambda now: {"national_teams": timedelta(days=1), "team_identity": timedelta(days=1)})
+        scopes.start()
+        self.addCleanup(scopes.stop)
+        return {"vega": curated, **self.nations}
+
+    def test_55d_a_league_a_nation_named_in_english_by_the_internationals_stays_national_and_ranked(self):
+        # §55 (55d): production's Italy of 24 Nov 2026. « Italie », national, read from OpenLigaDB (Nations League A, against
+        # France), no International Results key; a FIFA edition naming Italy; then the internationals of 2024/25 name « Italy ».
+        from vega.sources import identity
+
+        x = self.x
+        (self.tmp / "results.csv").write_text(RESULTS_CSV + "2024-10-12,Montenegro,Iceland,2,0,Friendly,Podgorica,Montenegro,FALSE\n")
+        self.national("France", "Iceland")
+        italie = x("INSERT INTO core.teams(name, is_national) VALUES ('Italie', true) RETURNING id").fetchone()[0]
+        x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('team','openligadb','name:Italien',%s)", (italie,))
+        # 55h: « Monténégro », national, with its International Results key (a League C nation of 2026/27's edition).
+        montenegro = x("INSERT INTO core.teams(name, is_national) VALUES ('Monténégro', true) RETURNING id").fetchone()[0]
+        x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('team','international_results','Montenegro',%s)",
+          (montenegro,))
+        france = x("SELECT entity_id FROM core.provider_ids WHERE provider='international_results' AND provider_key='France'").fetchone()[0]
+        with self.db.transaction():
+            from vega.store import Store
+
+            season = Store(self.db).season("2026/2027")
+            comp = x("INSERT INTO core.competitions(name) VALUES ('UEFA Nations League') RETURNING id").fetchone()[0]
+            edition = x("""INSERT INTO core.competition_seasons(competition_id, season_id, native_label, cup_key)
+                           VALUES (%s, %s, '2026/2027', 'openligadb:nations-league:2026/2027') RETURNING id""", (comp, season)).fetchone()[0]
+            league_a = x("""INSERT INTO core.matches(competition_season_id, season_id, source, status, home_team_id, away_team_id, home_score,
+                              away_score, match_date, kickoff_at) VALUES (%s, %s, 'openligadb', 'finished', %s, %s, 1, 1, '2026-09-05',
+                              '2026-09-05 18:45+00') RETURNING id""", (edition, season, italie, france)).fetchone()[0]
+            fifa = x("INSERT INTO core.ranking_editions(kind, provider, label) VALUES ('fifa_men', 'fifa', '2026-10-01') RETURNING id").fetchone()[0]
+            x("INSERT INTO core.countries(code) VALUES ('FRA'), ('ITA'), ('ISL'), ('MNE') ON CONFLICT DO NOTHING")
+            x("""INSERT INTO core.ranking_rows(edition_id, row_no, country_code, entity_name, points) VALUES (%s, 1, 'FRA', 'France', 1870),
+                 (%s, 2, 'ITA', 'Italy', 1720), (%s, 3, 'ISL', 'Iceland', 1350), (%s, 4, 'MNE', 'Montenegro', 1400)""", (fifa, fifa, fifa, fifa))
+        adapters = self.vega()
+        self.nations = adapters  # read() passes them all
+        first = self.native(2019)
+        self.assertEqual(self.daily(adapters), [first])
+        # 55j: that pass's Elo, « Italie » not merged yet, is published (daily() fails on any step error; red before §55:
+        # DATABASE_23505, « Italy » both a club and a nation in agg.team_power).
+        older = self.read("nations-results:internationals:2024/2025")
+        self.assertEqual(len(older), 2)
+        italy = x("SELECT entity_id FROM core.provider_ids WHERE provider='international_results' AND provider_key='Italy'").fetchone()[0]
+        self.assertNotEqual(italy, italie)  # the internationals created « Italy »: the base had no International Results key for Italie
+        self.assertEqual(x("SELECT count(*) FROM agg.team_power WHERE team_id = %s AND scope = 'clubs'", (italy,)).fetchone()[0], 0)
+        # The next pass, two hours later: the marking, the identity pass, then the Elo.
+        self.clock += timedelta(hours=2)
+        self.due_scopes = {}
+        self.daily(adapters)
+        rows = x("SELECT id, name, is_national IS TRUE FROM core.teams WHERE id IN (%s, %s) AND merged_into IS NULL", (italie, italy)).fetchall()
+        self.assertEqual(rows, [(italy, "Italy", True)])  # red before §55: « Italy » not national
+        self.assertEqual(x("SELECT merged_into FROM core.teams WHERE id = %s", (italie,)).fetchone()[0], italy)
+        self.assertEqual(sorted(p for (p,) in x("SELECT provider::text FROM core.provider_ids WHERE entity_type='team' AND entity_id=%s", (italy,)).fetchall()),
+                         ["international_results", "openligadb"])
+        self.assertEqual(x("SELECT count(*) FROM core.matches WHERE %s IN (home_team_id, away_team_id)", (italy,)).fetchone()[0], 2)
+        # In the national pass: the Italy–France match of 2024/25 has its two national sides, Italy is ranked among the nations.
+        friendly = next(m for m in older if x("SELECT %s IN (home_team_id, away_team_id) FROM core.matches WHERE id=%s", (italy, m)).fetchone()[0])
+        self.assertEqual(x("SELECT count(*) FROM agg.team_elo WHERE match_id = %s", (friendly,)).fetchone()[0], 2)
+        self.assertEqual(x("SELECT count(*) FROM agg.team_elo WHERE match_id = %s", (league_a,)).fetchone()[0], 2)
+        self.assertIsNotNone(x("SELECT rank FROM agg.team_power WHERE scope='nations' AND season_id=2024 AND team_id=%s", (italy,)).fetchone())
+        listed = {key for (key,) in x("SELECT team_key FROM api.nation_list(2026::smallint)").fetchall()}
+        self.assertIn(italy, listed)
+        self.assertNotIn(italie, listed)
+        # 55h: « Monténégro » keeps its row and its name (50n).
+        self.assertEqual(x("SELECT name, merged_into FROM core.teams WHERE id=%s", (montenegro,)).fetchone(), ("Monténégro", None))
+        self.assertEqual(x("SELECT entity_id FROM core.provider_ids WHERE provider='international_results' AND provider_key='Montenegro'").fetchone()[0],
+                         montenegro)
+        self.assertFalse(identity.pairs(self.db)[0])
+
+    def test_55e_55f_the_elo_is_due_when_its_national_teams_change(self):
+        from vega import power
+        from vega.worker import elo_due
+
+        x = self.x
+        first = self.native(2019)
+        self.assertEqual(self.daily({}), [first])
+        self.assertFalse(elo_due(self.calc))
+        published = "SELECT id FROM agg.power_runs WHERE kind='elo' AND status='published'"
+        present = x(power.NATION_SET).fetchone()
+        self.assertEqual(x(f"SELECT national_teams, national_teams_md5 FROM agg.nation_elo_runs WHERE run_id = ({published})").fetchone(), present)
+        # 55e: a team marked national, no match changed: due; one run, then not.
+        team = x("INSERT INTO core.teams(name) VALUES ('Freedonia') RETURNING id").fetchone()[0]
+        self.assertFalse(elo_due(self.calc))
+        x("UPDATE core.teams SET is_national = true WHERE id = %s", (team,))
+        self.assertTrue(elo_due(self.calc))  # red before §55: the flags are not looked at
+        self.clock += timedelta(hours=2)
+        self.daily({})
+        self.assertEqual([r[1] for r in self.state()[2]], ["superseded", "published"])
+        self.assertFalse(elo_due(self.calc))
+        # A national row merged into another: the set changes, due once.
+        other = x("INSERT INTO core.teams(name, is_national) VALUES ('Freedonie', true) RETURNING id").fetchone()[0]
+        self.clock += timedelta(hours=2)
+        self.daily({})
+        self.assertFalse(elo_due(self.calc))
+        x("UPDATE core.teams SET merged_into = %s WHERE id = %s", (team, other))
+        self.assertTrue(elo_due(self.calc))
+        self.clock += timedelta(hours=2)
+        self.daily({})
+        self.assertFalse(elo_due(self.calc))
+        # 55f: a run's row without the set (a run from before 170): due once.
+        x(f"UPDATE agg.nation_elo_runs SET national_teams = NULL, national_teams_md5 = NULL WHERE run_id = ({published})")
+        self.assertTrue(elo_due(self.calc))
+        self.clock += timedelta(hours=2)
+        self.daily({})
+        self.assertFalse(elo_due(self.calc))
+
 
 class InternationalSeasonsTest(unittest.TestCase):
     """50h–50i: one season list in the projection and in cups.EDITIONS; a finished season is read weekly."""
