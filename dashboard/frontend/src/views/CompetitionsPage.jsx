@@ -87,9 +87,11 @@ import {
   PREFERRED_COMPETITION_KEY,
   VISITOR_COUNTRY_KEY,
   localeCountry,
-  preferredCompetition,
 } from "../services/competition-standings.js";
 import { writePreferredCompetition } from "../services/local-preferences.js";
+import { openingCompetition } from "../services/preference-effects.js";
+import useFavourites from "../hooks/useFavourites.js";
+import { useResearch } from "../hooks/ResearchContext.jsx";
 import { preferencesChanged } from "../services/user-preferences.js";
 export function SupplementalPanel({
   data: value,
@@ -571,6 +573,8 @@ function availableView(id, edition, view) {
 
 export default function CompetitionsPage() {
   const f = useFootball();
+  const research = useResearch(),
+    favourites = useFavourites();
   const params = useSearchParams();
   const id = params.get("id");
   const requestedEdition = params.get("edition") || "";
@@ -678,10 +682,18 @@ export default function CompetitionsPage() {
     f.focus === "europe"
       ? expandedCatalog.filter(inEuropeFocus)
       : expandedCatalog;
+  // Effects 4 and 11: the saved competition, else the first favourite club's league, else the visitor's country's
+  // (homeCountry, not « Aucun pays »), else the detected country / browser language, as before.
   const chosenId =
     id ||
-    (choice.ready
-      ? preferredCompetition(catalog, choice.saved, choice.country)
+    (choice.ready && f.preferencesReady !== false && research?.ready !== false
+      ? openingCompetition(catalog, {
+          saved: choice.saved,
+          favouriteClubs: favourites.order.clubs,
+          clubCountries: f.manifest?.clubCountries,
+          homeCountry: f.preferences?.homeCountry,
+          detected: choice.country,
+        })
       : null);
   // By its own id or the canonical id it answers to (l_v…, VI-30): the URL keeps the id it was asked with.
   const selected = findCompetition(id ? expandedCatalog : catalog, chosenId);

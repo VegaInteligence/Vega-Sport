@@ -96,6 +96,8 @@ test("competition page renders a result-derived league table and its limits", as
     // The account sync (user-preferences.test.mjs): no adapter here, so a no-op.
     "../services/local-preferences.js": { writePreferredCompetition: () => {} },
     "../services/user-preferences.js": { preferencesChanged: () => {} },
+    "../services/preference-effects.js": await import("../dashboard/frontend/src/services/preference-effects.js"),
+    "../hooks/useFavourites.js": { __esModule: true, default: () => ({ clubs: new Set(), players: new Set(), order: { clubs: [], players: [] } }) },
   };
   stubs["./UI.jsx"] = UI;
   stubs["./NationalFlag.jsx"] = { __esModule: true, default: () => null };
