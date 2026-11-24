@@ -167,6 +167,7 @@ async function overview({
     "../services/home-upcoming.js": await src("services/home-upcoming.js"),
     "../services/home-country.js": await src("services/home-country.js"),
     "../services/home-priority.js": await src("services/home-priority.js"),
+    "../services/preference-effects.js": await src("services/preference-effects.js"),
     "../../../shared/competition-scope.js": await import(
       path.join(root, "dashboard/shared/competition-scope.js")
     ),

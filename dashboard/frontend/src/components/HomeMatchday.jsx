@@ -43,11 +43,14 @@ export function HomeTicker({
   period,
   localLeagues = null,
   priority,
+  favourites = null,
 }) {
   const f = useFootball();
+  // Favourite clubs' results first (effect 1), then the country's or the weight's as `priority` says.
   const days = weekTicker(results, internationals, ranks, {
     leagues: localLeagues,
     priority,
+    favourites,
   });
   if (!days.length) return null;
   return (

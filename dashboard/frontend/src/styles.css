@@ -2501,11 +2501,20 @@ th[aria-sort="descending"] .sort-indicator {
 :is(.standings-table tr, .standings-legend span)[data-zone="ko"] { --zone: var(--accent); }
 :is(.standings-table tr, .standings-legend span)[data-zone="ko-po"] { --zone: color-mix(in srgb, var(--accent) 45%, transparent); }
 /* The visitor's saved clubs. */
+/* A saved club or player (#69, effects 5 and 6: the same highlight as the standings' saved clubs). */
 .standings-table tr[data-followed="true"],
-.standings-table tr[data-followed="true"] th:nth-child(2) {
+.standings-table tr[data-followed="true"] th:nth-child(2),
+.home-scorers-list li[data-followed="true"],
+.home-dumbbells li[data-followed="true"],
+.rank-row[data-followed="true"],
+.podium-place[data-followed="true"] {
   background: color-mix(in srgb, var(--accent) 12%, var(--surface));
 }
-.standings-table tr[data-followed="true"] .standings-team span {
+.standings-table tr[data-followed="true"] .standings-team span,
+.home-scorers-list li[data-followed="true"] strong,
+.home-dumbbells li[data-followed="true"] strong,
+.rank-row[data-followed="true"] .rank-player,
+.podium-place[data-followed="true"] .podium-identity strong {
   color: var(--ink-strong);
   font-weight: 650;
 }

@@ -311,7 +311,7 @@ export function AlsoShone({ performances, matches, period }) {
 }
 
 /** Goals scored against expected goals: who finishes above or below their chances. */
-export function Finishing({ leaders, scopeIds }) {
+export function Finishing({ leaders, scopeIds, favourites = null }) {
   const f = useFootball(),
     [mode, setMode] = useState("clinical");
   const list = leaders[mode];
@@ -348,7 +348,11 @@ export function Finishing({ leaders, scopeIds }) {
             lo = (Math.min(p.goals, p.xg) / max) * 100,
             hi = (Math.max(p.goals, p.xg) / max) * 100;
           return (
-            <li key={p.playerId} data-player-id={p.playerId}>
+            <li
+              key={p.playerId}
+              data-player-id={p.playerId}
+              data-followed={favourites?.has(p.playerId) || undefined}
+            >
               <button type="button" onClick={() => f.setPlayer(p.lastId)}>
                 <Media
                   name={p.name}
@@ -397,7 +401,7 @@ export function Finishing({ leaders, scopeIds }) {
 }
 
 /** Season scorers and assist providers, switched like the finishing card. */
-export function SeasonScorers({ leaders, scopeIds }) {
+export function SeasonScorers({ leaders, scopeIds, favourites = null }) {
   const f = useFootball(),
     [mode, setMode] = useState("goals");
   const list = leaders[mode] || [];
@@ -424,7 +428,11 @@ export function SeasonScorers({ leaders, scopeIds }) {
       </div>
       <ol className="home-scorers-list">
         {list.map((p, i) => (
-          <li key={p.playerId} data-player-id={p.playerId}>
+          <li
+            key={p.playerId}
+            data-player-id={p.playerId}
+            data-followed={favourites?.has(p.playerId) || undefined}
+          >
             <button type="button" onClick={() => f.setPlayer(p.lastId)}>
               <span className="home-scorer-rank">{i + 1}</span>
               <Media
