@@ -1172,6 +1172,12 @@ JOIN core.competition_seasons cs ON cs.id = m.competition_season_id AND left(cs.
 LEFT JOIN core.rounds r ON r.id = m.round_id"""
 
 
+# The national teams a run read (§55): their count and the md5 of their ids, the unmerged teams flagged national. The run
+# keeps it in agg.nation_elo_runs; worker.elo_due compares it with the present set (a run without it differs).
+NATION_SET = """SELECT count(*)::int, md5(coalesce(string_agg(id::text, ',' ORDER BY id), ''))
+FROM core.teams WHERE is_national AND merged_into IS NULL"""
+
+
 def nation_inputs(conn, matches, merge, weights):
     """(the national teams, the seed edition's label or None, the seeds, {match: w}, the PitchAPI World Cup matches on
     neutral ground) for the national pass. Reads only."""
@@ -1208,6 +1214,7 @@ def refresh_elo(conn):
     seeds, errors, settings = league_model(matches, leagues, weights=weights, moves=moves, tiers=tiers, countries=countries,
                                            apart=women, previous=previous)
     nations, seed_edition, national_seeds, steps, neutral = nation_inputs(conn, every, merge, weights)
+    national_set = conn.execute(NATION_SET).fetchone()
     rows, national_rows, stored = elo_passes(matches, every, nations, seeds=seeds, leagues=leagues, weights=weights,
                                              nation_seeds=national_seeds, nation_steps=steps, nation_neutral=neutral)
     present = {s for (s,) in conn.execute("SELECT id FROM core.seasons").fetchall()}
@@ -1239,12 +1246,15 @@ def refresh_elo(conn):
                  ORDER BY e.season_id, e.team_id, e.kickoff_at DESC NULLS LAST, e.match_id DESC)
                INSERT INTO agg.team_power(season_id, team_id, scope, elo, elo_change, matches, rank, last_match_at, run_id,
                  elo_start, elo_peak, elo_low, wins, draws, losses, result_sum, expected_sum)
-               SELECT l.season_id, l.team_id, CASE WHEN t.is_national THEN 'nations' ELSE 'clubs' END, l.elo_after, l.elo_after - l.start,
-                 l.matches, rank() OVER (PARTITION BY l.season_id, t.is_national IS TRUE ORDER BY l.elo_after DESC), l.kickoff_at, %s,
+               SELECT l.season_id, l.team_id, CASE WHEN n.national THEN 'nations' ELSE 'clubs' END, l.elo_after, l.elo_after - l.start,
+                 l.matches, rank() OVER (PARTITION BY l.season_id, n.national ORDER BY l.elo_after DESC), l.kickoff_at, %s,
                  l.start, s.peak, s.low, s.wins, s.draws, s.losses, s.result_sum, s.expected_sum
                FROM last l JOIN season s USING (season_id, team_id) JOIN core.teams t ON t.id = l.team_id
-               WHERE t.is_national IS NOT TRUE OR l.season_id < %s""",
-            (run, NATION_START_SEASON),
+               -- A national team of the pass is one, flag or not (a row a pending merge will flag, §55j): the world
+               -- ranking below writes its seasons from 2021/22.
+               CROSS JOIN LATERAL (SELECT t.is_national IS TRUE OR l.team_id = ANY(%s::int[]) AS national) n
+               WHERE NOT n.national OR l.season_id < %s""",
+            (run, sorted(nations), NATION_START_SEASON),
         )
         # The nations' world ranking from 2021/22 (§51).
         with conn.cursor().copy(
@@ -1286,8 +1296,10 @@ def refresh_elo(conn):
              settings.get("pair_sd"), settings.get("dispersion"), MEASURED_SE, run),
         )
         # The national pass's settings, in their own table: agg.power_runs keeps main's columns (§53).
-        conn.execute("INSERT INTO agg.nation_elo_runs(run_id, version, k, start_date, seed_edition) VALUES (%s,%s,%s,%s,%s)",
-                     (run, NATION_ELO_VERSION, NATION_K, NATION_START, seed_edition))
+        # With the national teams it read (§55).
+        conn.execute("""INSERT INTO agg.nation_elo_runs(run_id, version, k, start_date, seed_edition, national_teams, national_teams_md5)
+                        VALUES (%s,%s,%s,%s,%s,%s,%s)""",
+                     (run, NATION_ELO_VERSION, NATION_K, NATION_START, seed_edition, *national_set))
         _publish(conn, run, "elo", None, len(rows) // 2)
     return len(rows) // 2
 

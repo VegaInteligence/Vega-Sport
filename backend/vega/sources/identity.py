@@ -463,6 +463,15 @@ def merge_teams(conn, found, columns):
            ON CONFLICT DO NOTHING""",
         (keeps, [row[3] or "" for row in found], [row[2] for row in found]),
     )
+    # The team that stays is national when a team merged into it is (FAILURE_MODES.md §55: « Italie » into « Italy »),
+    # unless it is a PitchAPI team: a national one already is, and a club is never made a nation by a merge.
+    conn.execute(
+        """UPDATE core.teams k SET is_national = true, updated_at = now()
+           FROM unnest(%s::int[], %s::int[]) m(gone, kept) JOIN core.teams g ON g.id = m.gone
+           WHERE k.id = m.kept AND g.is_national AND k.is_national IS NOT TRUE
+             AND NOT EXISTS (SELECT 1 FROM core.provider_ids p WHERE p.entity_type = 'team' AND p.entity_id = k.id AND p.provider = 'pitchapi')""",
+        (drops, keeps),
+    )
     # A pointer, never a removal (094); a team merged before into one merged now points to
     # the team that stays, so a pointer never leads to another.
     conn.execute(
