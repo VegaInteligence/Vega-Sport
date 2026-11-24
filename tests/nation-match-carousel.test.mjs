@@ -73,3 +73,26 @@ test("each group has a stable key; an empty nation has no group", () => {
   assert.deepEqual(matchCarousel(null), []);
   assert.deepEqual(matchCarousel({ id: "t_x", matches: [], tournaments: [] }), []);
 });
+
+// FAILURE_MODES.md §50 (50l), written with the API's test before the code (moved here: the API package has no site
+// module): the season's other internationals, as the nation route serves them (routes/nations.mjs matchOf), are
+// grouped by their tournament and season — never « Matchs internationaux 2024/2025 2024/25 » —, their tile under the
+// tournament, never « Phase de groupes ».
+test("the season's other internationals are grouped by tournament and season", async () => {
+  const { matchOf } = await import("../backend/api/src/routes/nations.mjs");
+  const row = (match_date, season, round) => ({
+    match_id: `m_${match_date}`, match_date, season, competition: `Matchs internationaux ${season}`,
+    edition: `nations-results:internationals:${season}`, round, status: "finished", collected: false,
+    home_id: ES.id, home_name: "Spain", home_image: null, away_id: "t_it", away_name: "Italy", away_image: null,
+    home_score: 1, away_score: 0, home_penalties: null, away_penalties: null,
+  });
+  const served = [
+    row("2025-11-13", "2025/2026", "FIFA World Cup qualification"),
+    row("2025-06-09", "2024/2025", "Friendly"),
+    row("2024-09-07", "2024/2025", "UEFA Nations League"),
+  ].map(matchOf);
+  assert.deepEqual(matchCarousel({ id: ES.id, matches: served, tournaments: [] }).map((g) => g.label),
+    ["Qualifications 2025/26", "Matchs amicaux 2024/25", "Ligue des nations 2024/25"]);
+  const { roundLabel, competitionLabel } = await import("../dashboard/frontend/src/services/nations.js");
+  assert.deepEqual(served.map((m) => roundLabel(m.round) || competitionLabel(m)), ["Qualifications", "Match amical", "Ligue des nations"]);
+});

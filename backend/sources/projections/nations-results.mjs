@@ -1,7 +1,7 @@
-import { parseInternationalResults, parseNationsResults, parseTournamentResults, TOURNAMENT_EDITIONS } from "../../../dashboard/frontend/src/services/nations-results.js";
+import { INTERNATIONAL_SEASONS, parseInternationalResults, parseNationsResults, parseTournamentResults, TOURNAMENT_EDITIONS } from "../../../dashboard/frontend/src/services/nations-results.js";
 // competition: the Nations League's leagues B to D (the default), a tournament of TOURNAMENT_EDITIONS, or every other
-// international of the season (internationals, 2026/2027: the home's week strip).
-const INTERNATIONALS = new Set(["2026/2027"]);
+// international of a season (internationals, 2021/2022 to 2026/2027: the home's week strip, the nation page).
+const INTERNATIONALS = new Set(INTERNATIONAL_SEASONS);
 export async function GET(request) {
   const params = new URL(request.url).searchParams;
   const season = params.get("season"), competition = params.get("competition") || "nations-league";
