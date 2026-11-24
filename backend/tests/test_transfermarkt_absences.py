@@ -554,7 +554,8 @@ class ServedAbsencesTest(AbsencesBase):
     def clean(self):
         x = self.x
         x("RESET ROLE")
-        for sql in ("DELETE FROM core.player_injuries", "DELETE FROM core.player_suspensions", "DELETE FROM ops.transfermarkt_reads",
+        for sql in ("DELETE FROM core.player_match_stats WHERE match_id IN (700, 701)", "DELETE FROM core.matches WHERE id IN (700, 701)",
+                    "DELETE FROM core.player_injuries", "DELETE FROM core.player_suspensions", "DELETE FROM ops.transfermarkt_reads",
                     "DELETE FROM core.provider_squads", "DELETE FROM ops.provider_links",
                     "DELETE FROM core.provider_ids WHERE provider = 'transfermarkt'", "UPDATE ops.transfermarkt_state SET paused_until = NULL"):
             x(sql)
@@ -610,6 +611,44 @@ class ServedAbsencesTest(AbsencesBase):
         self.assertEqual((unknown["status"], malformed["status"], param["status"]), (404, 404, 400))
         self.assertEqual((bare["status"], bare["body"]["data"]),
                          (200, {"id": self.public("team", 8), "asOf": None, "squad": {"players": 0, "read": 0}, "absences": []}))
+
+    def test_59aj_59ak_a_national_teams_squad_is_its_page_s_players_and_only_injuries_count(self):
+        x = self.x
+        x("""INSERT INTO core.teams(id, name, country_code, is_national) VALUES (9, 'France', 'FRA', true), (19, 'Allemagne', NULL, true),
+               (18, 'Sans Joueurs', NULL, true) ON CONFLICT DO NOTHING""")
+        x("""INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id)
+             VALUES ('team', 'pitchapi', 't_fra009', 9), ('team', 'pitchapi', 't_ger019', 19), ('team', 'pitchapi', 't_none18', 18)
+             ON CONFLICT DO NOTHING""")
+        x("INSERT INTO core.competitions(id, name, kind) VALUES (40, 'Coupe du monde', 'cup'), (41, 'Ligue des nations', 'cup') ON CONFLICT DO NOTHING")
+        x("""INSERT INTO core.competition_seasons(id, competition_id, season_id, native_label) VALUES (40, 40, 2026, '2026'), (41, 41, 2026, '2026')
+             ON CONFLICT DO NOTHING""")
+        # The older tournament (41): 12 played; the last one (40): 10, 11 and 13 (doubted).
+        x("""INSERT INTO core.matches(id, competition_season_id, season_id, source, status, home_team_id, away_team_id, kickoff_at, match_date)
+             VALUES (700, 41, 2026, 'pitchapi', 'finished', 9, 19, '2026-06-01T19:00:00Z', '2026-06-01'),
+                    (701, 40, 2026, 'pitchapi', 'finished', 19, 9, '2026-07-10T19:00:00Z', '2026-07-10')""")
+        for match, player in ((700, 12), (701, 10), (701, 11), (701, 13)):
+            x("INSERT INTO core.player_match_stats(season_id, match_id, team_id, player_id, minutes_played) VALUES (2026, %s, 9, %s, 90)", (match, player))
+        nation, p10 = self.public("team", 9), self.public("player", 10)
+        served, empty = self.http(f"/api/teams/{nation}/absences", f"/api/teams/{self.public('team', 18)}/absences")
+        self.assertEqual(served["status"], 200)
+        d = self.d
+        # 10, 11, 13 counted; 10 read; 11's open-ended ankle is stale (he played since), his suspension and 10's do not
+        # count for a national team; 12 (older tournament only) is not in the squad.
+        self.assertEqual(served["body"]["data"], {
+            "id": nation, "asOf": self.read_day, "squad": {"players": 3, "read": 1},
+            "absences": [
+                {"player": {"id": p10, "name": "Kylian Mbappé", "imageUrl": None, "role": None}, "kind": "injury", "label": "Knock",
+                 "start": d(-2), "expectedReturn": None, "matchesMissed": 0, "matchesRemaining": None, "competition": None,
+                 "readAt": self.read_day},
+                {"player": {"id": p10, "name": "Kylian Mbappé", "imageUrl": None, "role": None}, "kind": "injury",
+                 "label": "Cruciate ligament tear", "start": d(-30), "expectedReturn": d(30), "matchesMissed": 5,
+                 "matchesRemaining": None, "competition": None, "readAt": self.read_day},
+            ]})
+        self.assertEqual((empty["status"], empty["body"]["data"]["squad"], empty["body"]["data"]["absences"]),
+                         (200, {"players": 0, "read": 0}, []))
+        # The club's answer is unchanged by the nation's rows.
+        club, = self.http(f"/api/teams/{self.public('team', 1)}/absences")
+        self.assertEqual((club["body"]["data"]["squad"], len(club["body"]["data"]["absences"])), ({"players": 4, "read": 1}, 4))
 
     def test_59ag_the_players_injuries_list_carries_his_suspensions(self):
         served, doubted = self.http(f"/api/players/{self.public('player', 10)}/injuries", f"/api/players/{self.public('player', 13)}/injuries")

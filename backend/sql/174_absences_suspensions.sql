@@ -58,11 +58,14 @@ WHERE i.entity_type = 'player' AND i.provider = 'transfermarkt' AND i.is_current
   AND NOT EXISTS (SELECT 1 FROM ops.provider_links l WHERE l.entity_type = 'player' AND l.provider = 'transfermarkt'
                   AND l.provider_key = i.provider_key AND l.quarantined_at IS NOT NULL);
 
--- A club's current squad and what is known of each member's absences (GET /api/teams/{id}/absences). The squad: the
--- latest season of the linked club's Transfermarkt squad the base holds, its members not marked absent (the squads 118
--- shows for every linked club). A member is read when his injuries and his suspensions each have an accepted read of 45
--- days or less (a member not linked, doubted, never read or read too long ago is unknown, not available); read_on: the
--- older of his two reads.
+-- A team's current squad and what is known of each member's absences (GET /api/teams/{id}/absences).
+-- - A club linked to Transfermarkt: the latest season of its Transfermarkt squad the base holds, its members not marked
+--   absent (the squads 118 shows for every linked club), each by his provider key.
+-- - A national team not linked to Transfermarkt (§59, 59aj): the players its page shows (api.nation_players, 119: those of
+--   its last tournament played), each by his usual Transfermarkt player link.
+-- player_key: our player when his link is current and not doubted (else NULL: unknown). A member is read when his injuries
+-- and his suspensions each have an accepted read of 45 days or less (a member not linked, doubted, never read or read too
+-- long ago is unknown, not available); read_on: the older of his two reads.
 CREATE VIEW api.team_absence_players AS
 WITH settings AS (SELECT 45 AS fresh_days),
 clubs AS (
@@ -73,35 +76,56 @@ clubs AS (
   WHERE i.entity_type = 'team' AND i.provider = 'transfermarkt' AND i.is_current
     AND NOT EXISTS (SELECT 1 FROM ops.provider_links l WHERE l.entity_type = 'team' AND l.provider = 'transfermarkt'
                     AND l.provider_key = i.provider_key AND l.quarantined_at IS NOT NULL)
+),
+members AS (
+  SELECT c.team_key, false AS is_national, q.player_key AS provider_key, m.player_key
+  FROM clubs c
+  JOIN core.provider_squads q ON q.provider = 'transfermarkt' AND q.club_key = c.club_key AND q.season_year = c.season_year
+    AND q.absent_since IS NULL
+  LEFT JOIN LATERAL (
+    SELECT i.entity_id AS player_key FROM core.provider_ids i
+    WHERE i.entity_type = 'player' AND i.provider = 'transfermarkt' AND i.provider_key = q.player_key AND i.is_current
+      AND NOT EXISTS (SELECT 1 FROM ops.provider_links l WHERE l.entity_type = 'player' AND l.provider = 'transfermarkt'
+                      AND l.provider_key = q.player_key AND l.quarantined_at IS NOT NULL)
+  ) m ON true
+  UNION ALL
+  SELECT t.id, true, k.provider_key, CASE WHEN k.provider_key IS NOT NULL THEN n.player_key END
+  FROM core.teams t
+  CROSS JOIN LATERAL (SELECT DISTINCT api.internal_id('player', np.player_id) AS player_key FROM api.nation_players(t.id) np) n
+  LEFT JOIN LATERAL (
+    SELECT i.provider_key FROM core.provider_ids i
+    WHERE i.entity_type = 'player' AND i.provider = 'transfermarkt' AND i.entity_id = n.player_key AND i.is_current
+      AND NOT EXISTS (SELECT 1 FROM ops.provider_links l WHERE l.entity_type = 'player' AND l.provider = 'transfermarkt'
+                      AND l.provider_key = i.provider_key AND l.quarantined_at IS NOT NULL)
+    LIMIT 1
+  ) k ON true
+  WHERE t.is_national IS TRUE
+    AND NOT EXISTS (SELECT 1 FROM core.provider_ids i WHERE i.entity_type = 'team' AND i.provider = 'transfermarkt'
+                    AND i.entity_id = t.id AND i.is_current)
 )
-SELECT c.team_key, q.player_key AS provider_key, m.player_key, api.public_id('player', m.player_key) AS player_id, p.name,
+SELECT q.team_key, q.is_national, q.provider_key, q.player_key, api.public_id('player', q.player_key) AS player_id, p.name,
   ph.source_url AS image_url, w.role, ri.read_at AS injuries_read_at, rs.read_at AS suspensions_read_at,
   (ri.read_at >= current_date - st.fresh_days AND rs.read_at >= current_date - st.fresh_days) IS TRUE AS is_read,
   CASE WHEN (ri.read_at >= current_date - st.fresh_days AND rs.read_at >= current_date - st.fresh_days) IS TRUE
        THEN least(ri.read_at, rs.read_at)::date END AS read_on
-FROM clubs c
+FROM members q
 CROSS JOIN settings st
-JOIN core.provider_squads q ON q.provider = 'transfermarkt' AND q.club_key = c.club_key AND q.season_year = c.season_year
-  AND q.absent_since IS NULL
-LEFT JOIN LATERAL (
-  SELECT i.entity_id AS player_key FROM core.provider_ids i
-  WHERE i.entity_type = 'player' AND i.provider = 'transfermarkt' AND i.provider_key = q.player_key AND i.is_current
-    AND NOT EXISTS (SELECT 1 FROM ops.provider_links l WHERE l.entity_type = 'player' AND l.provider = 'transfermarkt'
-                    AND l.provider_key = q.player_key AND l.quarantined_at IS NOT NULL)
-) m ON true
-LEFT JOIN core.players p ON p.id = m.player_key
+LEFT JOIN core.players p ON p.id = q.player_key
 LEFT JOIN core.assets ph ON ph.id = p.photo_asset_id
-LEFT JOIN LATERAL (SELECT w.role FROM agg.player_power w WHERE w.player_id = m.player_key ORDER BY w.season_id DESC LIMIT 1) w ON true
-LEFT JOIN ops.transfermarkt_reads ri ON m.player_key IS NOT NULL AND ri.kind = 'injuries' AND ri.provider_key = q.player_key
+LEFT JOIN LATERAL (SELECT w.role FROM agg.player_power w WHERE w.player_id = q.player_key ORDER BY w.season_id DESC LIMIT 1) w ON true
+LEFT JOIN ops.transfermarkt_reads ri ON q.player_key IS NOT NULL AND ri.kind = 'injuries' AND ri.provider_key = q.provider_key
   AND ri.read_at IS NOT NULL
-LEFT JOIN ops.transfermarkt_reads rs ON m.player_key IS NOT NULL AND rs.kind = 'suspensions' AND rs.provider_key = q.player_key
+LEFT JOIN ops.transfermarkt_reads rs ON q.player_key IS NOT NULL AND rs.kind = 'suspensions' AND rs.provider_key = q.provider_key
   AND rs.read_at IS NOT NULL;
 
--- The current absences of a club's current squad, one row per episode. Current: not marked absent_since, started today
+-- The current absences of a team's current squad, one row per episode. Current: not marked absent_since, started today
 -- at the latest, its end empty or today or later. An episode with an empty end is shown only while its unit's last
 -- accepted read is 45 days old or less and, for an injury or an illness (or an unclassified episode), while the player
 -- has played no match after its start; a suspension keeps only the first guard (it holds for one competition, he may
 -- play in another). An episode with an end is bounded by it. readAt: the day of its unit's last accepted read.
+-- A national team (59ak) gets its players' injuries and illnesses, whatever the competition, and NO suspension: a
+-- suspension counts for a national team only when it is for a competition of national teams, and the base cannot yet
+-- tell which Transfermarkt competition codes are (known limit, to lift with a mapping of those codes).
 CREATE VIEW api.team_absences AS
 WITH settings AS (SELECT 45 AS fresh_days)
 SELECT s.team_key, s.player_key, s.player_id, s.name, s.image_url, s.role, e.kind, e.label, e.start_date, e.end_date,
@@ -129,7 +153,7 @@ CROSS JOIN LATERAL (
     c.name, s.suspensions_read_at::date
   FROM core.player_suspensions u
   LEFT JOIN core.competitions c ON c.id = u.competition_id
-  WHERE u.player_id = s.player_key AND u.source = 'transfermarkt' AND s.suspensions_read_at IS NOT NULL
+  WHERE u.player_id = s.player_key AND u.source = 'transfermarkt' AND s.suspensions_read_at IS NOT NULL AND NOT s.is_national
     AND u.absent_since IS NULL AND u.start_date <= current_date
     AND (u.end_date >= current_date OR (u.end_date IS NULL AND s.suspensions_read_at >= current_date - st.fresh_days))
 ) e

@@ -4602,6 +4602,19 @@ Evidence: `/mnt/project-files/blesses-suspendus/lot1-donnees/EVIDENCE.md`. Cases
   `NULL`, `attempts` = 0) devient due tout de suite, quelle que soit son échéance étalée ; une unité en échec garde son
   attente.
 
+### 59.F. Une sélection (maquette validée par hugo ; le marqueur de l'onglet Joueurs d'une sélection, écrit avant le test)
+
+- **59aj Effectif d'une sélection.** Pour une équipe nationale non reliée à Transfermarkt, l'effectif est la liste que sa
+  page affiche déjà (`api.nation_players` : les joueurs du dernier tournoi joué), chacun relié par son lien de joueur
+  Transfermarkt habituel. `players` compte toute cette liste (un joueur non relié ou en quarantaine est inconnu) ;
+  `read` et `asOf` suivent les mêmes règles qu'un club (les deux unités lues, 45 jours au plus). Un joueur d'un tournoi
+  plus ancien seulement n'en fait pas partie. Une sélection sans joueur : 200, effectif 0, liste vide.
+- **59ak Ce qui compte pour une sélection.** Ses blessures et maladies en cours, quelle que soit la compétition, avec les
+  mêmes gardes (fin vide : lecture ≤ 45 jours et pas de match joué depuis). Ses suspensions ne sont JAMAIS rendues pour une
+  sélection : une suspension ne vaut que pour une compétition de sélections, et la base ne sait pas encore relier un code
+  Transfermarkt à une compétition de sélections (limite écrite dans le commentaire de la vue). Les clubs sont inchangés ;
+  le contrat de la réponse est le même.
+
 ### 59.Hypothèses non vérifiées
 
 - **H1** Aucune suspension EN COURS n'a été observée (sonde du 2026-11-24, fichier `07-…`) : on suppose qu'elle a la forme
