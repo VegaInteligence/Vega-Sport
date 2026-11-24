@@ -116,8 +116,8 @@ def reached_round(stage, name):
     kind = power.round_of(stage, name)
     if kind in ("semi_final", "final"):
         return kind
-    if kind is None and (name or "").strip().lower().endswith(", final"):
-        return "final"  # OpenFootball's « Finals, Final » (§60.3); power.round_of, the v8 stakes' reading, is not changed
+    if kind is None and stage != "regular" and (name or "").strip().lower() == "finals, final":
+        return "final"  # OpenFootball's « Finals, Final », that name only (§60.3); power.round_of, the v8 stakes' reading, is not changed
     if kind == "knockout":
         name = (name or "").strip().lower()
         if any(word in name for word in _QUARTER):
@@ -209,7 +209,12 @@ def own_spreads(people):
 def combine(people, spreads=None):
     """The race from each men's player's parts. people: {player: {"individual", "collective",
     "fair_play", "position", "universe", "reference", "eligible", "linked", "top_division",
-    "measured"}}; spreads: the reference year's (own_spreads()), None for the year's own.
+    "measured"}}; spreads, as award.reference_spreads gives them (§60.3), one of three cases:
+    - None: the year is its own reference year: its own spreads (own_spreads()) and its own k
+      (collective_scale on its ranked players, `source` own);
+    - a reference run's spreads (non-empty): that run's spreads and its k (`source` reference);
+    - {}: placed on a reference year without a published run of this version: the year's own
+      spreads, k = 0 (`source` none).
     -> ({player: {"z_individual", "z_collective", "z_fair_play", "level", "score", "rank",
     "reason"}}, the spreads used)."""
     men = {p: r for p, r in people.items() if r.get("universe", "men") == "men"}
@@ -282,8 +287,12 @@ def card_means(people, cards):
 def evaluate(people, honours, cards, spreads=None):
     """The year's race from its people (their individual part, position and flags), honours
     (their parameters and shares) and cards ({player: (points, covered minutes)}). Each honour
-    is given its value from the present tables. -> (rows, honours, spreads), the spreads those
-    used (the reference year's, else the year's own, each position's mean card rate third)."""
+    is given its value from the present tables. spreads: combine()'s three cases (None: the
+    year's own spreads and k; a reference run's spreads: that run's spreads and k; {}: placed on
+    a reference year without a published run of this version, k = 0, `source` none); the card
+    rates are pulled to the reference run's position means when it kept them, else the year's own.
+    -> (rows, honours, spreads), the spreads those used (the reference year's, else the year's
+    own, each position's mean card rate third)."""
     collective = defaultdict(float)
     for h in honours:
         h["value"] = h["share"] * honour_value(h["kind"], reached=h["reached"], league_rank=h["league_rank"], progress=h["progress"],
@@ -858,8 +867,8 @@ def write(conn, season, started, people, computed, level_run, reference_season):
 
 
 def _stored(conn, season):
-    """The published race's run and its people as stored."""
-    run = conn.execute("""SELECT id, level_run_id, reference_season, spreads -> 'national_cups' FROM agg.award_runs
+    """The published race's run (id, level run, reference year, its national_cups fact, version) and its people as stored."""
+    run = conn.execute("""SELECT id, level_run_id, reference_season, spreads -> 'national_cups', version FROM agg.award_runs
                           WHERE season_id = %s AND status = 'published'""", (season,)).fetchone()
     if run is None:
         return None, {}, {}
@@ -875,19 +884,24 @@ def _stored(conn, season):
 
 def refresh(conn, season):
     """The race again from its stored rows (the individual parts, the honours' parameters and
-    shares, the card points and covered minutes), with the present tables: no match is read."""
+    shares, the card points and covered minutes), with the present tables: no match is read. A
+    run of another AWARD_VERSION is left as it is (§60.3, 60au): its honours were read under
+    that version's rules, so nothing is stored and stale() goes on listing the year for the
+    ranking's run. The run's own national_cups fact is kept, and a run without one stays without
+    one: a placed year never takes its reference year's (60av)."""
     run, people, cards = _stored(conn, season)
-    if run is None:
+    if run is None or run[4] != AWARD_VERSION:
         return 0
     names = ("player", "team", "edition", "kind", "reached", "league_rank", "progress", "factor", "prestige", "share", "reason")
     honours = [dict(zip(names, r)) for r in conn.execute(
         """SELECT player_id, team_id, competition_season_id, kind, reached, league_rank, progress, factor, prestige, share, reason
            FROM agg.player_award_honours WHERE season_id = %s ORDER BY player_id, competition_season_id, team_id""", (season,)).fetchall()]
-    _, level_run, reference_season, cups = run
+    _, level_run, reference_season, cups, _ = run
     spreads = reference_spreads(conn, season, reference_season)
     rows, honours, used = evaluate(people, honours, cards, spreads) if people else ({}, [], {})
+    used = {k: v for k, v in used.items() if k != "national_cups"}  # never the reference run's fact
     if people and cups is not None:
-        used = {**used, "national_cups": cups}  # the published run's fact: refresh reads no edition
+        used["national_cups"] = cups  # the published run's own fact: refresh reads no edition
     with conn.transaction():
         _store(conn, season, None, level_run, reference_season, people, rows, honours, used)
     return len(rows)
@@ -899,7 +913,7 @@ def reread(conn, season):
     run, people, _ = _stored(conn, season)
     if run is None:
         return 0
-    _, level_run, reference_season, _ = run
+    _, level_run, reference_season, _, _ = run
     started = conn.execute("SELECT clock_timestamp()").fetchone()[0]
     inputs = read_inputs(conn, season)
     spreads = reference_spreads(conn, season, reference_season)
