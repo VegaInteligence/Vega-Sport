@@ -34,6 +34,18 @@ export function authErrorMessage(error) {
   return "La connexion est momentanément indisponible. Réessayez dans un instant.";
 }
 
+/**
+ * The return from Google refused on the way (docs/COMPTES_SITE.md section 9, G2): one sentence; an unknown code
+ * follows the generic one in parentheses so it can be reported. `code` is already clean (account-return.js).
+ */
+export function returnErrorMessage(code) {
+  if (code === "account_not_linked")
+    return "Cette adresse a déjà un compte avec un mot de passe, jamais confirmé : connectez-vous avec ce mot de passe et confirmez l'adresse d'abord.";
+  if (code === "access_denied") return "La connexion avec Google a été annulée ou refusée.";
+  const generic = "La connexion avec Google n'a pas abouti. Réessayez.";
+  return typeof code === "string" && code ? `${generic} (${code})` : generic;
+}
+
 /** The refusal of DELETE /account (an AccountApiError) → what the person reads. */
 export function deletionMessage(error) {
   switch (error?.code) {
