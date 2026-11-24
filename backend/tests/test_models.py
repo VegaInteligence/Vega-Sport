@@ -815,8 +815,8 @@ class ModelsTest(unittest.TestCase):
             x("DELETE FROM agg.match_forecasts WHERE match_id BETWEEN 9200 AND 9216")
             x("DELETE FROM core.matches WHERE id BETWEEN 9200 AND 9215")
 
-    # §59 (issue #105): the Ballon d'Or race on the Score Vega v9.1 with the three criteria, stage 1, computed by the
-    # ranking's run beside the v8 race. The cases are named test_59*: they run before the cases that add a World Cup
+    # §60 (issue #105): the Ballon d'Or race on the Score Vega v9.1 with the three criteria, stage 1, computed by the
+    # ranking's run beside the v8 race. The cases are named test_60*: they run before the cases that add a World Cup
     # final or matches to play (test_zzz*), and each puts the base back as it found it.
 
     AWARD = """SELECT player_id, team_id, position, universe, eligible, linked, top_division, measured, individual, collective, card_points,
@@ -884,8 +884,8 @@ class ModelsTest(unittest.TestCase):
 
         self.addCleanup(remove)
 
-    def test_59_the_race_is_computed_and_stored_by_the_ranking_s_run(self):
-        # 59.1, « Stored » and « When »: one published run of the present version and settings, reading the year's
+    def test_60_the_race_is_computed_and_stored_by_the_ranking_s_run(self):
+        # 60.1, « Stored » and « When »: one published run of the present version and settings, reading the year's
         # published level; a row per men's player with a level; the synthetic league's 88 players all in the race.
         from vega import award, level
 
@@ -907,7 +907,7 @@ class ModelsTest(unittest.TestCase):
         self.assertEqual(self.one("SELECT count(*) FROM agg.award_runs WHERE season_id = 2025 AND status = 'published'")[0], 1)
         self.assertEqual(self.one("SELECT count(*) FROM api.award_race WHERE season_id = 2025")[0], 88)
 
-    def test_59b_the_individual_part_is_the_year_s_level_without_the_year_before(self):
+    def test_60b_the_individual_part_is_the_year_s_level_without_the_year_before(self):
         # The base holds no year before and no stakes other than 1, no national match: I is the stored v9.1 level.
         from vega import award  # noqa: F401
 
@@ -917,7 +917,7 @@ class ModelsTest(unittest.TestCase):
         for p, r in rows.items():
             self.assertAlmostEqual(r["individual"], level[p], places=4)
 
-    def test_59d_league_honours_by_the_final_table(self):
+    def test_60d_league_honours_by_the_final_table(self):
         from vega import award
 
         ranks = self.standings()
@@ -936,7 +936,7 @@ class ModelsTest(unittest.TestCase):
         self.assertEqual(len(self.honours()), 88)  # no other honour in the base
         self.assertEqual(award.LEAGUE_VALUE, 0.5)
 
-    def test_59e_a_player_of_two_clubs_has_the_honours_of_each(self):
+    def test_60e_a_player_of_two_clubs_has_the_honours_of_each(self):
         # 105 plays 7 matches for club 1 (rank 8), then 7 for club 2 (rank 3), in 205's place; club 1 fields 9105
         # in the other 7.
         from vega import award, power  # noqa: F401
@@ -972,7 +972,7 @@ class ModelsTest(unittest.TestCase):
             x("DELETE FROM core.players WHERE id = 9105")
         self.assertEqual(len(self.honours(1)), 88)
 
-    def test_59f_a_final_won_on_penalties_and_one_without_a_winner(self):
+    def test_60f_a_final_won_on_penalties_and_one_without_a_winner(self):
         from vega import award
 
         self.award_cup(70, "open-cups:coupe-70:2025/2026", [(9701, "Final", 1, 2, "finished", (1, 1), (1, 1), (4, 3))])
@@ -987,7 +987,7 @@ class ModelsTest(unittest.TestCase):
         self.assertTrue(all(abs(h["share"] - 1.0) < 1e-9 for h in cup))
         self.assertTrue(all(abs(h["value"] - (0.15 if h["team"] == 1 else 0.09)) < 1e-6 for h in cup))
 
-    def test_59g_quarter_finalists_eliminated_or_still_to_play(self):
+    def test_60g_quarter_finalists_eliminated_or_still_to_play(self):
         from vega import award
 
         self.award_cup(72, "open-cups:coupe-72:2025/2026", [(9721, "Quarter-finals", 5, 6, "finished", (0, 2), None, None),
@@ -996,7 +996,7 @@ class ModelsTest(unittest.TestCase):
         reached = {(h["team"], h["reached"]) for h in self.honours(72)}
         self.assertEqual(reached, {(5, "quarter_final"), (6, "quarter_final"), (7, "quarter_final"), (8, "quarter_final")})
 
-    def test_59h_a_league_with_one_match_to_play(self):
+    def test_60h_a_league_with_one_match_to_play(self):
         from vega import award
 
         x = self.db.execute
@@ -1015,7 +1015,7 @@ class ModelsTest(unittest.TestCase):
             award.reread(self.db, 2025)
         self.assertTrue(all(abs(h["progress"] - 1.0) < 1e-9 for h in self.honours(1)))
 
-    def test_59i_card_points_of_the_covered_matches(self):
+    def test_60i_card_points_of_the_covered_matches(self):
         # Match 17, club 3 at club 4: 301 a yellow, a second yellow and its red; 302 a direct red; 303 a yellow then a
         # direct red. Its events are covered; no other match's are.
         from vega import award
@@ -1047,7 +1047,7 @@ class ModelsTest(unittest.TestCase):
             x("UPDATE core.match_coverage SET events = 'pending' WHERE season_id = 2025 AND match_id = 17")
             award.reread(self.db, 2025)
 
-    def test_59j_a_season_without_covered_events(self):
+    def test_60j_a_season_without_covered_events(self):
         from vega import award  # noqa: F401
 
         rows = self.award_rows()
@@ -1057,7 +1057,7 @@ class ModelsTest(unittest.TestCase):
             by_position[r["position"]].add(round(r["fair_play"], 9))
         self.assertTrue(all(len(values) == 1 for values in by_position.values()), by_position)  # the position's mean
 
-    def test_59k_a_keeper_not_measured_is_out_of_the_race(self):
+    def test_60k_a_keeper_not_measured_is_out_of_the_race(self):
         from vega import award, power  # noqa: F401
 
         x = self.db.execute
@@ -1079,7 +1079,7 @@ class ModelsTest(unittest.TestCase):
             power.refresh_players(self.db, 2025)
         self.assertIsNotNone(self.award_rows()[keeper]["rank"])
 
-    def test_59o_a_cup_written_after_its_race_is_read_again_alone(self):
+    def test_60o_a_cup_written_after_its_race_is_read_again_alone(self):
         from vega import award, power
 
         x = self.db.execute
@@ -1102,7 +1102,7 @@ class ModelsTest(unittest.TestCase):
         self.assertEqual(award.due(self.db), [])
         self.assertEqual(x("SELECT count(*) FROM agg.player_award WHERE season_id = 2025").fetchone()[0], 88)
 
-    def test_59p_a_race_of_another_version_or_other_settings_or_missing(self):
+    def test_60p_a_race_of_another_version_or_other_settings_or_missing(self):
         from vega import award, power
 
         x = self.db.execute
@@ -1123,7 +1123,7 @@ class ModelsTest(unittest.TestCase):
         power.refresh_players(self.db, 2025)
         self.assertEqual(power.stale_rankings(self.db), [])
 
-    def test_59s_the_v8_race_is_what_the_v8_gives(self):
+    def test_60s_the_v8_race_is_what_the_v8_gives(self):
         from vega import award, power
 
         x = self.db.execute
@@ -1143,7 +1143,7 @@ class ModelsTest(unittest.TestCase):
         award.reread(self.db, 2025)
         self.assertEqual(self.snapshot({"award": self.V8_AWARD, "runs": self.V8_AWARD_RUNS}), v8)
 
-    def test_59t_the_level_and_the_ranking_are_not_touched_by_the_race(self):
+    def test_60t_the_level_and_the_ranking_are_not_touched_by_the_race(self):
         from vega import award
 
         before = self.snapshot(self.LEVEL_TABLES)
@@ -1152,7 +1152,7 @@ class ModelsTest(unittest.TestCase):
         award.refresh(self.db, 2025)
         self.assertEqual(self.snapshot(self.LEVEL_TABLES), before)
 
-    def test_59v_a_value_table_changed_then_refresh_from_the_stored_rows(self):
+    def test_60v_a_value_table_changed_then_refresh_from_the_stored_rows(self):
         # LEAGUE_RANKS given a fifth place: club 4 (fifth) gains it, from the stored honours, no match read.
         from unittest import mock
         from vega import award
@@ -1188,7 +1188,7 @@ class ModelsTest(unittest.TestCase):
         self.assertTrue(all(h["value"] == 0 for h in self.honours(1) if h["team"] == 4))
         self.assertEqual(award.stale(self.db), [])
 
-    def test_59y_award_due_is_bounded_by_the_award_year(self):
+    def test_60y_award_due_is_bounded_by_the_award_year(self):
         # After the 2025 race: a match of season 2026 dated 1 September 2026 (award year 2026) updated, then an event of
         # it, list nothing; a match of season 2026 dated 1 May 2026 (inside award year 2025) lists 2025.
         from vega import award
@@ -1225,7 +1225,7 @@ class ModelsTest(unittest.TestCase):
         ("player_power_matches", "match_id, player_id"), ("player_power_roles", "player_id, role"), ("player_match_grades", "match_id, player_id"),
         ("player_award_ranking", "award, rank"))}
 
-    def test_59z_a_failure_of_the_race_never_blocks_the_ranking_or_the_level(self):
+    def test_60z_a_failure_of_the_race_never_blocks_the_ranking_or_the_level(self):
         # award.read_inputs (a statement error inside the read's transaction), award.compute, then award.write (after its
         # rows, a statement error inside the write's transaction) made to fail in turn.
         import contextlib
@@ -1275,7 +1275,7 @@ class ModelsTest(unittest.TestCase):
         self.assertEqual(len(x(failed).fetchall()), before + 3)
         self.assertEqual((power.stale_rankings(self.db), award.stale(self.db)), ([], []))
 
-    def test_59aa_a_memory_error_in_the_race_is_not_caught(self):
+    def test_60aa_a_memory_error_in_the_race_is_not_caught(self):
         from unittest import mock
         from vega import award, power
 
@@ -1290,7 +1290,7 @@ class ModelsTest(unittest.TestCase):
             power.refresh_players(self.db, 2025)
         self.assertEqual(self.db.execute(runs).fetchall(), before)
 
-    def test_59ac_players_at_the_edges_of_the_individual_part(self):
+    def test_60ac_players_at_the_edges_of_the_individual_part(self):
         # 9301 and 9302 play a national-team match alone (award cells, no club cell); 9303 comes on for club 1 in match 1
         # with no position in his line-up or his statistics. Nothing raises; a row is a men's level row's.
         from vega import award, power
@@ -1338,7 +1338,7 @@ class ModelsTest(unittest.TestCase):
             x("DELETE FROM core.teams WHERE id IN (83, 84)")
         self.assertEqual(set(self.award_rows()), {p for p, *_ in self.facts["players"]})
 
-    def test_59ad_the_league_rank_is_read_from_the_base_tables(self):
+    def test_60ad_the_league_rank_is_read_from_the_base_tables(self):
         # The league's official table (sportscore, whole league) beside Vega's: agreeing, clubs 6 and 8 swapped (a points
         # deduction); one club's matches counted otherwise; two clubs at one place with different points.
         from vega import award
@@ -1383,7 +1383,7 @@ class ModelsTest(unittest.TestCase):
             award.reread(self.db, 2025)
         self.assertEqual({h["team"]: h["league_rank"] for h in self.honours(1)}, vega)
 
-    def test_59ae_one_honour_per_team_and_real_competition(self):
+    def test_60ae_one_honour_per_team_and_real_competition(self):
         # PitchAPI's World Cup (l_1XLtP0) and OpenFootball's (world-cup-history) of the same year, the same final; the
         # German cup of OpenLigaDB and open-matchday's copy of it, the same final.
         from vega import award
@@ -1417,7 +1417,7 @@ class ModelsTest(unittest.TestCase):
             x("DELETE FROM core.provider_ids WHERE entity_type = 'competition' AND entity_id = 76")
             x("DELETE FROM core.competitions WHERE id = 76")
 
-    def test_59af_a_final_of_two_legs_is_won_on_aggregate(self):
+    def test_60af_a_final_of_two_legs_is_won_on_aggregate(self):
         # Club 1 wins 3–0 at home, loses 1–0 away: 3–1 on aggregate, the second leg lost.
         from vega import award
 

@@ -103,8 +103,8 @@ test("the players' level of a season (Score Vega v9.1), read beside the power ra
   assert.equal((await get("/api/rankings/level/player?season=2025/2026")).response.status, 400);
 });
 
-test("59q: the Ballon d'Or race on the level (Score Vega v9.1 and the three criteria), read beside the v8 race", { skip }, async () => {
-  // FAILURE_MODES §59, 59q: the ranked players in their order, the raw parts served with the score. 59ab: the seed's
+test("60q: the Ballon d'Or race on the level (Score Vega v9.1 and the three criteria), read beside the v8 race", { skip }, async () => {
+  // FAILURE_MODES §60, 60q: the ranked players in their order, the raw parts served with the score. 60ab: the seed's
   // failed run of the next day follows the published race, which is still the one served, with its method.
   const { response, body } = await get("/api/rankings/award?season=2025/2026");
   assert.equal(response.status, 200);
@@ -152,8 +152,8 @@ test("59q: the Ballon d'Or race on the level (Score Vega v9.1 and the three crit
     assert.equal((await get("/api/rankings/award/player" + bad)).response.status, 400, bad);
 });
 
-test("59s: the v8 race's read is unchanged beside the new race", { skip }, async () => {
-  // FAILURE_MODES §59, 59s: /api/rankings/power?kind=players serves the v8 ranking, not the new race's rows or scores.
+test("60s: the v8 race's read is unchanged beside the new race", { skip }, async () => {
+  // FAILURE_MODES §60, 60s: /api/rankings/power?kind=players serves the v8 ranking, not the new race's rows or scores.
   const { response, body } = await get("/api/rankings/power?kind=players&season=2025/2026");
   assert.equal(response.status, 200);
   assert.equal(body.method.version, "power-ranking-v3");

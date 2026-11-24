@@ -1836,7 +1836,7 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
     The same run computes the players' level (Score Vega v9.1, level.py; FAILURE_MODES §49, §54)
     beside the ranking, from the same player-matches, and writes it in the same transaction:
     the ranking's own rows are those it wrote before the level existed. The Ballon d'Or race on
-    the level (award.py, FAILURE_MODES §59) is computed and written with it, beside the v8 race
+    the level (award.py, FAILURE_MODES §60) is computed and written with it, beside the v8 race
     (write_award), which it does not change. A failure of the race, at its read, its computation
     or its write, is caught and kept as a failed run: it never blocks the ranking or the level."""
     from . import award
@@ -1877,7 +1877,7 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
         # The level's own reads: a partial year has no level.
         level_inputs = None if partial else levels.read_inputs(conn, season, reference_season)
         # The race's own reads: the year's honours and cards, and the spreads of the year its level is placed on. In a
-        # savepoint: a failure of the race never blocks the ranking or the level (§59, 59z).
+        # savepoint: a failure of the race never blocks the ranking or the level (§60, 60z).
         award_reference = None if partial or not (finished or level_inputs["kept"] is not None) else reference_season
         award_inputs = award_spreads = award_failed = None
         if not partial:
@@ -2033,7 +2033,7 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
 
 
 def _award_failed(season, step, error):
-    """Log a failure of the race (§59, 59z): its step and the error's code, never its text."""
+    """Log a failure of the race (§60, 60z): its step and the error's code, never its text."""
     from .worker import error_code  # here: the worker imports this module
 
     print(f"award race failed season={season} step={step} error={error_code(error)}", flush=True)
@@ -2297,7 +2297,7 @@ def stale_rankings(conn):
     deletes those references itself, so it is listed once. After them, oldest first, the
     years whose level (Score Vega v9.1) is missing, of another version or other settings, or
     older than the year before's (§49, §54), the years whose Ballon d'Or race on the level is
-    missing or out of date (award.stale, §59), and the years whose ranking read another national
+    missing or out of date (award.stale, §60), and the years whose ranking read another national
     Elo than the published run's: other national teams, or another national method
     (NATION_STALE, §56). Ranked again, a year started after that run: it is listed once."""
     stale = {s for (s,) in conn.execute(

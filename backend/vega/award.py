@@ -1,5 +1,5 @@
 """The Ballon d'Or race on the Score Vega v9.1 with the three criteria, stage 1 (issue #105,
-docs/calculs/09-audit-2026-11/FAILURE_MODES.md §59, docs/calculs/10-score-vega-v9/04).
+docs/calculs/09-audit-2026-11/FAILURE_MODES.md §60, docs/calculs/10-score-vega-v9/04).
 
 The owner's weights: individual performance 60 %, collective performances and trophies 30 %,
 class and fair play 10 %. Stage 1 computes the race and stores it beside the v8 race
@@ -311,7 +311,7 @@ WHERE m.competition_season_id = ANY(%(editions)s) AND m.status <> 'canceled'"""
 # The final tables of the leagues, from the base tables of these editions alone (the table of the whole league first):
 # the official one (sportscore) when its ranks do not contradict themselves (api.standings's rule) and it counts, club
 # by club, the matches Vega's own table counts when Vega has one; else Vega's. api.standings reads every official
-# table through that rule whatever edition is asked (§59, 59ad): the race reads nothing of the api schema.
+# table through that rule whatever edition is asked (§60, 60ad): the race reads nothing of the api schema.
 STANDINGS = """
 WITH official AS (
   SELECT o.competition_season_id, o.team_id, o.group_name, o.position, o.played,
@@ -401,7 +401,7 @@ WHERE s.season_id = ANY(%(seasons)s) AND s.minutes_played > 0
 GROUP BY 1"""
 
 
-# One real competition two sources hold for the same year (§59, 59ae): an edition of the left source is the right one's
+# One real competition two sources hold for the same year (§60, 60ae): an edition of the left source is the right one's
 # competition. open-matchday's copies of PitchAPI's leagues and UEFA competitions (open_matchday.COVERED) are added by
 # _competition.
 SAME_COMPETITION = {
@@ -636,7 +636,7 @@ def people_of(individual_rows, level_rows, scored):
     """The race's men's players: those with an individual part and a level row of the year, at the
     level's main position and club, with the v8 ranking's flags (minutes bar, measured league, top
     division). No row for a player without a level row (national-team matches alone) or of another
-    universe (§59, 59ac)."""
+    universe (§60, 60ac)."""
     out = {}
     for p, r in individual_rows.items():
         mine = level_rows.get(p)
@@ -716,7 +716,7 @@ def reread(conn, season):
 def due(conn):
     """The years whose published race has players and a match of the award year (of its season or the
     next, dated from 1 August to 31 July: power.award_year) or an event of such a match changed after
-    the race started: their honours and cards are read again (§59, 59y)."""
+    the race started: their honours and cards are read again (§60, 60y)."""
     return [s for (s,) in conn.execute(
         """SELECT r.season_id FROM agg.award_runs r
            CROSS JOIN LATERAL (SELECT make_date(r.season_id, 8, 1) AS start, make_date(r.season_id + 1, 8, 1) AS stop) y
@@ -734,7 +734,7 @@ def stale(conn):
     """The years whose published ranking and level of the present version have players and whose
     race is missing, of another AWARD_VERSION or other settings(), or started before that level; not
     a year whose last run failed with this version and these settings at or after that level's start
-    (§59, 59z): the next level run, another version or other settings list it again."""
+    (§60, 60z): the next level run, another version or other settings list it again."""
     from psycopg.types.json import Jsonb
 
     return [s for (s,) in conn.execute(
@@ -751,7 +751,7 @@ def stale(conn):
 
 
 def write_failed(conn, season, started, level_run):
-    """Keep the run of a ranking whose race failed (§59, 59z): its version, settings, start and level
+    """Keep the run of a ranking whose race failed (§60, 60z): its version, settings, start and level
     run, no player. The race published before stays published."""
     from psycopg.types.json import Jsonb
 

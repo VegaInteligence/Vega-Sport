@@ -871,8 +871,8 @@ class InternationalsEloTest(CollectionBase):
         self.assertEqual([s for (s,) in x(rankings, (year,)).fetchall()], ["superseded", "published"])
 
 
-    def test_59p_a_year_whose_race_is_missing_or_of_another_version_or_settings_is_ranked_again_once(self):
-        # FAILURE_MODES §59, 59p: power.stale_rankings lists, with the level's years, a year whose published level of the
+    def test_60p_a_year_whose_race_is_missing_or_of_another_version_or_settings_is_ranked_again_once(self):
+        # FAILURE_MODES §60, 60p: power.stale_rankings lists, with the level's years, a year whose published level of the
         # present version has players and whose race (agg.award_runs) is missing, of another version or of other
         # settings, or started before that level; the real worker's pass computes it, the next lists nothing.
         from psycopg.types.json import Jsonb

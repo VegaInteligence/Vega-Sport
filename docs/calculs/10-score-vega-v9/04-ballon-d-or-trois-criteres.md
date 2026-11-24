@@ -1,6 +1,6 @@
 # Course au Ballon d'Or sur le Score Vega v9.1 : les trois critères
 
-**Statut : étape 1 codée le 24 novembre 2026, ticket [#105](https://github.com/VegaInteligence/Vega-Sport/issues/105), pas encore déployée.** Version `vega-award-v1`. La course est calculée et rangée à côté de la course v8, qui ne change pas : `/api/rankings/power?kind=players`, `agg.player_award_ranking` et le site restent ce qu'ils sont. La nouvelle course se lit par ses propres routes. L'étape 2, la bascule du site (maquette d'abord), viendra après la lecture des vrais classements par le propriétaire. Les règles et les cas d'échec sont dans [FAILURE_MODES § 59](../09-audit-2026-11/FAILURE_MODES.md), le code dans [`award.py`](../../../backend/vega/award.py).
+**Statut : étape 1 codée le 24 novembre 2026, ticket [#105](https://github.com/VegaInteligence/Vega-Sport/issues/105), pas encore déployée.** Version `vega-award-v1`. La course est calculée et rangée à côté de la course v8, qui ne change pas : `/api/rankings/power?kind=players`, `agg.player_award_ranking` et le site restent ce qu'ils sont. La nouvelle course se lit par ses propres routes. L'étape 2, la bascule du site (maquette d'abord), viendra après la lecture des vrais classements par le propriétaire. Les règles et les cas d'échec sont dans [FAILURE_MODES § 60](../09-audit-2026-11/FAILURE_MODES.md), le code dans [`award.py`](../../../backend/vega/award.py).
 
 ## 1. Ce qu'est la course
 
@@ -24,7 +24,7 @@ I est le niveau v9.1 de l'année de prix seule, en points Elo, calculé par la m
 - les matchs des sélections entrent, avec leur enjeu (`NATIONAL_MATCHES = True`) ; la part des titularisations et le niveau du club restent ceux du niveau ;
 - le niveau v9.1, ses cellules, `LEVEL_VERSION` et `level.SETTINGS` ne changent pas (`level.read(..., stakes=)` rend `award_cells` à côté de `cells`).
 
-Le niveau du club reste dans I, comme le dit le § 59.1 : le propriétaire l'a confirmé sur une carte de décision.
+Le niveau du club reste dans I, comme le dit le § 60.1 : le propriétaire l'a confirmé sur une carte de décision.
 
 ### 2.2 Collectif, C
 
@@ -64,7 +64,7 @@ Un joueur masculin au-dessus du seuil de minutes, d'un championnat mesuré, d'un
 
 ## 3. Ce qui est rangé
 
-Migration 174 (`174_player_award.sql`, revue dans `open_matchday_restore.REVIEWED_SCHEMAS`) :
+Migration 175 (`175_player_award.sql`, revue dans `open_matchday_restore.REVIEWED_SCHEMAS`) :
 - `agg.award_runs` : un calcul publié par année, sa version, ses réglages, ses écarts, le calcul du niveau lu ; un calcul dont la course a échoué y reste avec le statut `failed`, sans joueur ;
 - `agg.player_award` : I, C, F bruts, points de carton et minutes couvertes, les trois z, A, score, rang ou raison ;
 - `agg.player_award_honours` : chaque honneur avec ce dont sa valeur se calcule (type, tour, rang, avancement, facteur, prestige, part), en double précision ; chaque honneur de championnat est gardé, quel que soit son rang ;

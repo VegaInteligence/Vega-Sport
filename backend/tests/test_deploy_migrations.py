@@ -56,8 +56,8 @@ ADDED = ["155_player_grade_status.sql", "156_team_side_corrections.sql", "157_pa
          "172_international_goals.sql",
          # §58: a nation's last match is a played one (api.nation_list redefined).
          "173_nation_last_played.sql",
-         # #105 (§59): the Ballon d'Or race on the Score Vega v9.1 beside the v8 race (three tables, two reads).
-         "174_player_award.sql"]
+         # #105 (§60): the Ballon d'Or race on the Score Vega v9.1 beside the v8 race (three tables, two reads).
+         "175_player_award.sql"]
 # SportScore editions: A, a rank shared at different points (a version already kept); B, rank 5 in a table of two (no
 # version yet); C, a table that holds (its version kept).
 A, B, C = 9601, 9602, 9603

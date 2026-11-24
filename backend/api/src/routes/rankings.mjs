@@ -69,7 +69,7 @@
  * deviations) or not (too few minutes over two seasons).
  *
  * GET /api/rankings/award?season=&limit=&page= — the Ballon d'Or race on the level (vega/award.py,
- * FAILURE_MODES §59, docs/calculs/10-score-vega-v9/04): the ranked players in their order, 30 a page
+ * FAILURE_MODES §60, docs/calculs/10-score-vega-v9/04): the ranked players in their order, 30 a page
  * by default (200 at most), each with his score and the raw parts it is made of: `individual` and
  * `level` in Elo points, `collective` in honour points, `fairPlay` in card points per 90 (negative).
  * Read beside the power ranking's race, which it does not change.
@@ -864,7 +864,7 @@ async function levelPlayer(read, params) {
   };
 }
 
-/** The Ballon d'Or race on the level of a season (§59): its ranked players, a page of `limit` at a time. */
+/** The Ballon d'Or race on the level of a season (§60): its ranked players, a page of `limit` at a time. */
 async function awardRanking(read, params) {
   validateParams(params, ["season", "limit", "page"]);
   const season = params.get("season"), limitRaw = params.get("limit") ?? "30", pageRaw = params.get("page") ?? "1";

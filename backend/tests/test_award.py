@@ -1,8 +1,8 @@
-"""The Ballon d'Or race on the Score Vega v9.1 with the three criteria, stage 1 (issue #105, FAILURE_MODES §59,
-59a–59c, 59f–59n, 59u–59w, 59ac, 59af): the formulas, without a database. The database pass over the synthetic season
-is in test_models.py (59b, 59d–59k, 59o, 59p, 59s, 59t, 59v, 59y–59aa, 59ac–59af), the worker's in
-test_collection_wakeups.py (59p) and test_worker.py (59x), the partial year in test_award_year_2020_order.py (59r), the
-migration in test_deploy_migrations.py (59u), the reads in backend/api/test/rankings.test.mjs (59q, 59s, 59ab)."""
+"""The Ballon d'Or race on the Score Vega v9.1 with the three criteria, stage 1 (issue #105, FAILURE_MODES §60,
+60a–60c, 60f–60n, 60u–60w, 60ac, 60af): the formulas, without a database. The database pass over the synthetic season
+is in test_models.py (60b, 60d–60k, 60o, 60p, 60s, 60t, 60v, 60y–60aa, 60ac–60af), the worker's in
+test_collection_wakeups.py (60p) and test_worker.py (60x), the partial year in test_award_year_2020_order.py (60r), the
+migration in test_deploy_migrations.py (60u), the reads in backend/api/test/rankings.test.mjs (60q, 60s, 60ab)."""
 
 import importlib
 import json
@@ -85,9 +85,9 @@ def read(rows, stakes):
 
 
 class StakesTest(unittest.TestCase):
-    """59a–59c: the individual part is the year's v9.1 level, each match's values times its stakes."""
+    """60a–60c: the individual part is the year's v9.1 level, each match's values times its stakes."""
 
-    def test_59a_a_match_s_values_count_for_its_stakes_and_its_minutes_do_not(self):
+    def test_60a_a_match_s_values_count_for_its_stakes_and_its_minutes_do_not(self):
         rows = season_rows()
         match = next(r["match_id"] for r in rows if r["player_id"] == BACK)
         base, twice, thrice = read(rows, {}), read(rows, {match: 2.0}), read(rows, {match: 3.0})
@@ -108,7 +108,7 @@ class StakesTest(unittest.TestCase):
             for i in range(level.CELL):
                 self.assertAlmostEqual(base["award_cells"][k][i], c[i], places=9)
 
-    def test_59b_the_individual_part_is_the_award_year_s_level_alone(self):
+    def test_60b_the_individual_part_is_the_award_year_s_level_alone(self):
         refs = references()
         rng = random.Random(9)
         now = {(p, CB, 1 + p % 4): cell(1800.0, [rng.gauss(0, 20) for _ in range(NB)]) for p in range(1, 41)}
@@ -124,7 +124,7 @@ class StakesTest(unittest.TestCase):
         self.assertEqual(level.LEVEL_VERSION, "score-vega-v9.1")
         self.assertNotIn("stakes", level.SETTINGS)
 
-    def test_59c_national_matches_enter_the_award_cells_alone_with_their_stakes(self):
+    def test_60c_national_matches_enter_the_award_cells_alone_with_their_stakes(self):
         rows = season_rows(national=True)
         clubs = [r for r in rows if not r["national"]]
         base, doubled = read(rows, {}), read(rows, {m: 2.0 for m in (1001, 1002, 1003)})
@@ -148,9 +148,9 @@ class StakesTest(unittest.TestCase):
 
 
 class HonoursTest(unittest.TestCase):
-    """59f, 59g, 59u, 59w: rounds, winners, values and shares."""
+    """60f, 60g, 60u, 60w: rounds, winners, values and shares."""
 
-    def test_59f_the_winner_of_a_final(self):
+    def test_60f_the_winner_of_a_final(self):
         a = award()
         self.assertEqual(a.final_winner((2, 1), None, None), "home")
         self.assertEqual(a.final_winner((0, 3), None, None), "away")
@@ -160,7 +160,7 @@ class HonoursTest(unittest.TestCase):
         self.assertIsNone(a.final_winner((1, 1), None, None))  # drawn, no shoot-out written: no winner
         self.assertIsNone(a.final_winner(None, None, None))  # not played
 
-    def test_59g_the_round_a_team_reached(self):
+    def test_60g_the_round_a_team_reached(self):
         a = award()
         for stage, name, reached in (("knockout", "1/8", "round_of_16"), ("knockout", "1/4", "quarter_final"), ("knockout", "1/2", "semi_final"),
                                      ("final", "final", "final"), (None, "Round of 16", "round_of_16"), (None, "Quarter-finals", "quarter_final"),
@@ -172,7 +172,7 @@ class HonoursTest(unittest.TestCase):
         # The order of the rounds, the best last: a team keeps the furthest it has a match of.
         self.assertEqual(a.ROUNDS, ("round_of_16", "quarter_final", "semi_final", "final", "winner"))
 
-    def test_59u_the_value_tables(self):
+    def test_60u_the_value_tables(self):
         a = award()
         self.assertEqual(a.ROUND_VALUE, {"winner": 1.0, "final": 0.6, "semi_final": 0.4, "quarter_final": 0.25, "round_of_16": 0.15})
         self.assertEqual(a.LEAGUE_RANKS, {1: 1.0, 2: 0.4, 3: 0.2, 4: 0.1})
@@ -206,18 +206,18 @@ class HonoursTest(unittest.TestCase):
         self.assertAlmostEqual(a.share(1400, 14), 1.0)
         self.assertEqual(a.share(0, 0), 0.0)
 
-    def test_59u_the_migration_is_the_last_and_reviewed(self):
+    def test_60u_the_migration_is_the_last_and_reviewed(self):
         from vega import open_matchday_restore
 
         files = sorted(p.name for p in (ROOT / "sql").glob("[0-9][0-9][0-9]_*.sql"))
-        self.assertEqual(files[-1], "174_player_award.sql")
-        self.assertIn("174_player_award.sql", open_matchday_restore.REVIEWED_SCHEMAS)
-        text = (ROOT / "sql" / "174_player_award.sql").read_text(encoding="utf-8")
+        self.assertEqual(files[-1], "175_player_award.sql")
+        self.assertIn("175_player_award.sql", open_matchday_restore.REVIEWED_SCHEMAS)
+        text = (ROOT / "sql" / "175_player_award.sql").read_text(encoding="utf-8")
         for name in ("agg.award_runs", "agg.player_award", "agg.player_award_honours", "api.award_race", "api.award_honours"):
             self.assertIn(name, text)
         self.assertNotIn("agg.player_award_ranking", text)  # the v8 race's table is not touched
 
-    def test_59w_a_national_tournament_without_player_rows(self):
+    def test_60w_a_national_tournament_without_player_rows(self):
         a = award()
         self.assertEqual(a.NATIONAL_PROXY_SHARE, 0.5)
         self.assertEqual(a.national_share(True), 0.5)  # seen with that national team
@@ -225,9 +225,9 @@ class HonoursTest(unittest.TestCase):
 
 
 class FairPlayTest(unittest.TestCase):
-    """59i, 59j: the FIFA team conduct points and the rate pulled to the position's mean."""
+    """60i, 60j: the FIFA team conduct points and the rate pulled to the position's mean."""
 
-    def test_59i_card_points_of_a_player_match(self):
+    def test_60i_card_points_of_a_player_match(self):
         a = award()
         self.assertEqual(a.card_points([]), 0)
         self.assertEqual(a.card_points([(20, "yellow_card")]), 1)
@@ -237,7 +237,7 @@ class FairPlayTest(unittest.TestCase):
         self.assertEqual(a.card_points([(10, "yellow_card"), (50, "red_card")]), 5)
         self.assertEqual(a.card_points([(10, "goal"), (50, "substitution")]), 0)
 
-    def test_59j_the_rate_is_pulled_to_the_position_s_mean(self):
+    def test_60j_the_rate_is_pulled_to_the_position_s_mean(self):
         a = award()
         self.assertEqual(a.CARD_PRIOR_MINUTES, 900)
         self.assertAlmostEqual(a.pulled_rate(3, 900, 0.2), 90 * (3 + 0.2 * 900 / 90) / 1800)
@@ -255,9 +255,9 @@ def people_of(levels_out, collective, fair_play):
 
 
 class RaceTest(unittest.TestCase):
-    """59k–59n: the scale, the reasons and the race."""
+    """60k–60n: the scale, the reasons and the race."""
 
-    def test_59k_59l_the_first_reason_that_holds(self):
+    def test_60k_60l_the_first_reason_that_holds(self):
         a = award()
         ok = {"eligible": True, "linked": True, "top_division": True, "measured": True}
         self.assertIsNone(a.race_reason(ok))
@@ -267,7 +267,7 @@ class RaceTest(unittest.TestCase):
         self.assertEqual(a.race_reason({**ok, "eligible": False, "linked": False}), "minutes")
         self.assertFalse(a.KEEPER_IN_RACE)
 
-    def test_59k_a_keeper_not_measured_has_his_parts_and_his_score_and_no_rank(self):
+    def test_60k_a_keeper_not_measured_has_his_parts_and_his_score_and_no_rank(self):
         a = award()
         people = {p: {"individual": float(p), "collective": 0.1 * (p % 3), "fair_play": -0.02 * (p % 4), "position": CB, "universe": "men",
                       "reference": True, "eligible": True, "linked": True, "top_division": True, "measured": True} for p in range(1, 31)}
@@ -280,7 +280,7 @@ class RaceTest(unittest.TestCase):
         self.assertIsNotNone(keeper["level"])
         self.assertEqual(sorted(r["rank"] for p, r in rows.items() if p != 99), list(range(1, 31)))
 
-    def test_59l_out_of_the_race_by_minutes_league_or_division(self):
+    def test_60l_out_of_the_race_by_minutes_league_or_division(self):
         a = award()
         base = {"collective": 0.0, "fair_play": 0.0, "position": CB, "universe": "men", "reference": True, "eligible": True, "linked": True,
                 "top_division": True, "measured": True}
@@ -293,7 +293,7 @@ class RaceTest(unittest.TestCase):
         self.assertEqual(rows[30]["rank"], 1)  # the best player in the race
         self.assertTrue(all(rows[p]["score"] > rows[30]["score"] for p in (91, 92, 93)))  # scored, not ranked
 
-    def test_59m_a_player_at_the_mean_on_c_and_f_keeps_his_year_only_score(self):
+    def test_60m_a_player_at_the_mean_on_c_and_f_keeps_his_year_only_score(self):
         a = award()
         refs = references()
         rng = random.Random(4)
@@ -308,7 +308,7 @@ class RaceTest(unittest.TestCase):
         self.assertEqual([p for p, _ in sorted(rows.items(), key=lambda x: x[1]["rank"])], [p for p, _ in sorted(out.items(), key=lambda x: x[1]["rank"])])
         self.assertEqual(json.loads(json.dumps(spreads)), spreads)  # kept with the run (agg.award_runs.spreads)
 
-    def test_59m_the_weights_and_the_scale(self):
+    def test_60m_the_weights_and_the_scale(self):
         a = award()
         self.assertEqual(a.WEIGHTS, {"individual": 0.6, "collective": 0.3, "fair_play": 0.1})
         self.assertAlmostEqual(a.combined(1.0, 2.0, -1.0), 0.6 + 0.6 - 0.1)
@@ -327,7 +327,7 @@ class RaceTest(unittest.TestCase):
         self.assertAlmostEqual(rows[20]["z_fair_play"], 0.0)
         self.assertAlmostEqual(rows[20]["level"], 10.0 + 5.0 * (0.6 * 2 + 0.3 * 2) / 0.6)
 
-    def test_59n_z_c_and_z_f_are_bounded_at_4(self):
+    def test_60n_z_c_and_z_f_are_bounded_at_4(self):
         a = award()
         self.assertEqual(a.Z_CAP, 4.0)
         self.assertEqual(a.zscore(7.0, 0.0, 1.0, cap=4.0), 4.0)
@@ -342,13 +342,13 @@ class RaceTest(unittest.TestCase):
 
 
 class EdgesTest(unittest.TestCase):
-    """59ac, 59af: the players at the edges of the individual part, and a final of two legs."""
+    """60ac, 60af: the players at the edges of the individual part, and a final of two legs."""
 
     @staticmethod
     def row(position, universe="men", team=1, level_=10.0):
         return {"position": position, "universe": universe, "team": team, "level": level_, "measured": True}
 
-    def test_59ac_whose_row(self):
+    def test_60ac_whose_row(self):
         a = award()
         flags = {"eligible": True, "linked": True, "top_division": True}
         # 1: a level row and its award cells; 2: national matches alone (award cells, no level row); 3: a level row and
@@ -366,7 +366,7 @@ class EdgesTest(unittest.TestCase):
         self.assertEqual((sorted(rows), honours), ([1, 5], []))
         self.assertEqual(a.compute({}, inputs, None), ({}, [], {}))
 
-    def test_59af_a_final_of_two_legs(self):
+    def test_60af_a_final_of_two_legs(self):
         from datetime import date
 
         a = award()
@@ -394,9 +394,9 @@ class EdgesTest(unittest.TestCase):
 
 
 class SettingsTest(unittest.TestCase):
-    """59p, 59u: the version and the settings a run keeps and stale() compares."""
+    """60p, 60u: the version and the settings a run keeps and stale() compares."""
 
-    def test_59p_59u_the_version_and_the_settings(self):
+    def test_60p_60u_the_version_and_the_settings(self):
         a = award()
         self.assertEqual(a.AWARD_VERSION, "vega-award-v1")
         self.assertEqual(a.SETTINGS, {

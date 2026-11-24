@@ -97,7 +97,7 @@ class AwardYear2020ProductionOrderTest(unittest.TestCase):
         models.refresh_daily(calc, 2021, elo=False)
         with earlier_rule():
             power.refresh_players(calc, 2020)
-        # The earlier rule's code had no level (Score Vega v9, §49) and no race on it (§59): what its two runs of 2020 wrote
+        # The earlier rule's code had no level (Score Vega v9, §49) and no race on it (§60): what its two runs of 2020 wrote
         # here is removed.
         for table in ("agg.player_level_positions", "agg.player_level", "agg.player_level_cells", "agg.player_award_honours", "agg.player_award",
                       "agg.award_runs", "agg.level_runs"):
@@ -218,8 +218,8 @@ class AwardYear2020ProductionOrderTest(unittest.TestCase):
         self.assertEqual(power.stale_rankings(self.calc), [])
         self.assertEqual(self.grades_2020(), self.after_first["grades"])  # no grade of 2020 rewritten
 
-    def test_59r_a_partial_award_year_has_no_race_of_players(self):
-        # FAILURE_MODES §59, 59r: the partial year's run publishes no player; its level has none, its race neither (no
+    def test_60r_a_partial_award_year_has_no_race_of_players(self):
+        # FAILURE_MODES §60, 60r: the partial year's run publishes no player; its level has none, its race neither (no
         # row, no run that ranked one). Award year 2021, ranked by its models, has its race.
         from vega import award
 

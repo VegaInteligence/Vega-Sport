@@ -715,8 +715,8 @@ class WorkerTest(unittest.TestCase):
             self.assertRegex(error_code(error), r"^WORKER_KEYERROR@test_worker\.py:\d+$")
         self.assertEqual(error_code(StoreError("LEASE_LOST")), "LEASE_LOST")
 
-    def test_59x_the_award_race_is_read_again_once_a_utc_day(self):
-        # FAILURE_MODES §59, 59x: the pass runs about every 60 s; award.due is asked once a UTC day, the day marked
+    def test_60x_the_award_race_is_read_again_once_a_utc_day(self):
+        # FAILURE_MODES §60, 60x: the pass runs about every 60 s; award.due is asked once a UTC day, the day marked
         # when it succeeds, and each year it lists is read again once. A reread that fails waits RETRY_DAILY_AFTER and
         # is tried again that day, without asking award.due again.
         from vega import award

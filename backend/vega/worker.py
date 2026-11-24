@@ -279,7 +279,7 @@ class Worker:
         self._analyzed = None  # UTC day of the last ops.analyze_partitioned()
         self._archives = None  # UTC day of the last agg.refresh_archive_seasons()
         self._scoped = None  # UTC day of the last scope.purge()
-        self._award = None  # UTC day of the last award.due() (§59, 59x)
+        self._award = None  # UTC day of the last award.due() (§60, 60x)
         self._award_due = set()  # the years it listed that are still to read again
         self._lineups = None  # UTC day of the last look at the line-up model (lineup.refresh)
         self._lineup_seen = {}  # matches whose line-ups gave no forecast: lineup.forecast_matches
@@ -582,9 +582,9 @@ class Worker:
             ok, players = self._daily_step(("ranking", season), now, lambda: power.refresh_players(self.calc_conn, season))
             if ok:
                 print(f"player ranking season={season} method={power.METHOD_VERSION} players={players}", flush=True)
-        # Then the Ballon d'Or race on the level (award.py, §59): a year whose matches or events of the award
+        # Then the Ballon d'Or race on the level (award.py, §60): a year whose matches or events of the award
         # year changed after its race started has its honours and cards read again, the ranking and the level as
-        # they are. Asked once a UTC day (59x); a year whose reread failed is tried again after the wait that day.
+        # they are. Asked once a UTC day (60x); a year whose reread failed is tried again after the wait that day.
         from . import award
 
         if self._award != now.date():

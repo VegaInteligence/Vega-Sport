@@ -1,4 +1,4 @@
--- 24 Nov 2026 (#105; FAILURE_MODES.md §59): the Ballon d'Or race on the Score Vega v9.1 with the three criteria
+-- 24 Nov 2026 (#105; FAILURE_MODES.md §60): the Ballon d'Or race on the Score Vega v9.1 with the three criteria
 -- (vega/award.py, docs/calculs/10-score-vega-v9/04), stage 1. The ranking's run (power.refresh_players) computes it
 -- beside the v8 race, whose race table, runs and views are not changed: new tables and two new views only, no data
 -- moved. No column names a match.

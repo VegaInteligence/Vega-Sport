@@ -232,8 +232,8 @@ def main(dsn):
                 (2025,101,'winger',false,60,60,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,%(run)s),
                 (2025,104,'attacking_midfielder',true,160,160,1,2.5,0,0.1,0.5,0.2,0,0.1,%(run)s),
                 (2025,103,'goalkeeper',true,180,180,1,-1.2,-6.0,NULL,NULL,NULL,NULL,NULL,%(run)s)""", {"run": level_run})
-    # The Ballon d'Or race on the level (174, FAILURE_MODES §59), as award.write keeps it beside the v8 race: the forward
-    # and the number 10 ranked, the keeper not measured scored and out of the race. Only once 174 is in the schema.
+    # The Ballon d'Or race on the level (175, FAILURE_MODES §60), as award.write keeps it beside the v8 race: the forward
+    # and the number 10 ranked, the keeper not measured scored and out of the race. Only once 175 is in the schema.
     if x("SELECT to_regclass('agg.player_award')").fetchone()[0]:
         award_run = x("""INSERT INTO agg.award_runs(season_id, version, status, started_at, finished_at, level_run_id, reference_season, players,
                            settings, spreads)
@@ -249,7 +249,7 @@ def main(dsn):
                prestige, share, value, reason, run_id)
              VALUES (2025,101,1,1,'league',NULL,1,1,1,NULL,1,0.5,NULL,%(run)s),
                     (2025,104,2,1,'league',NULL,2,1,1,NULL,1,0.2,NULL,%(run)s)""", {"run": award_run})
-        # A run of the next day whose race failed (59ab): kept with no player, the race above still served.
+        # A run of the next day whose race failed (60ab): kept with no player, the race above still served.
         x("""INSERT INTO agg.award_runs(season_id, version, status, started_at, finished_at, level_run_id, players, settings)
              VALUES (2025, 'vega-award-v1', 'failed', '2025-09-07T03:05:00Z', '2025-09-07T03:05:30Z', %s, NULL, '{}')""", (level_run,))
     # Match grades (099): match 1's players, a forward's great match, a winger's ordinary one, and a

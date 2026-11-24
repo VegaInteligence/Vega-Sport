@@ -658,7 +658,7 @@ def recentre(cells, means=None):
     """Take an attacking position's mean per 90 out of its cells' block sums: the four
     positions share one reference group, so each is put back on its own zero. `means`:
     {(position, block): mean per minute} to take out instead of the cells' own (the award's
-    cells take out the level's, FAILURE_MODES §59). -> the means taken out."""
+    cells take out the level's, FAILURE_MODES §60). -> the means taken out."""
     taken = {}
     for position in ATTACK:
         mine = [c for (_, at, _), c in cells.items() if at == position]
@@ -688,7 +688,7 @@ def read(rows, *, centre, faced=frozenset(), team_passes=None, samples=True, sta
     "samples": {(position, block): {player: [values]}}}.
     The national teams' matches set the references with the others and enter no cell.
     With `stakes` ({match: I_m}, 1 without one) the reading also holds "award_cells", the
-    Ballon d'Or race's (FAILURE_MODES §59): the same cells, each match's block values (a
+    Ballon d'Or race's (FAILURE_MODES §60): the same cells, each match's block values (a
     keeper's goals prevented) times its stakes, its minutes unweighted, and the national
     teams' matches under their national team; the attack is recentred on the level's means.
     "cells" and everything else are what they are without it."""
