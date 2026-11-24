@@ -502,16 +502,18 @@ try {
     const errorReturn = async (page, code) => {
       await open(page, `/connexion?next=%2Fclubs&error=${encodeURIComponent(code)}&error_description=State+not+found`);
       const text = await page.locator(".signin-error").textContent({ timeout: 30000 });
+      const marked = await page.locator('.signin-form input[aria-invalid="true"]').count();
       const search = await until(async () => {
         // The site adds its own `season` to the address: only next and the error's absence are read.
         const query = new URL(page.url()).searchParams;
         return query.has("error") || query.has("error_description") ? null : query.get("next");
       }, { timeout: 10000 });
-      return { text, search };
+      return { text, search, marked };
     };
     {
       const linked = await errorReturn(A.page, "account_not_linked");
       record("G2a", "account_not_linked: sign in with the password and confirm the address first", { text: "…mot de passe…confirm…", search: "/clubs" }, linked, /mot de passe/.test(linked.text) && /confirm/.test(linked.text) && linked.search === "/clubs");
+      record("G2d", "the fields are not marked as wrong by a Google return", 0, linked.marked, linked.marked === 0);
       await shot(A.page, "10-google-account-not-linked.png");
       const denied = await errorReturn(A.page, "access_denied");
       record("G2b", "access_denied: the Google step was cancelled or refused", "…Google…annulée…", denied.text, /Google/.test(denied.text) && /annulée|refusée/.test(denied.text));
@@ -528,6 +530,8 @@ try {
       await open(fresh.page, `${page}&neon_auth_session_verifier=e2e-unknown-verifier`);
       const landed = await until(async () => (new URL(fresh.page.url()).pathname === "/connexion" ? fresh.page.url() : null), { timeout: 60000 });
       const text = await fresh.page.locator(".signin-error").textContent({ timeout: 30000 }).catch(() => "");
+      // The sentence shows before the router has removed `error` from the address: wait for the cleaned address.
+      await until(async () => !new URL(fresh.page.url()).searchParams.has("error"), { timeout: 10000 });
       const after = landed ? new URL(fresh.page.url()) : null;
       const actual = { landed: Boolean(landed), next: after?.searchParams.get("next"), error: after?.searchParams.get("error") ?? null, verifier: fresh.page.url().includes("verifier"), text };
       record("G5", "a verifier return without a session goes to /connexion, the code said, the page kept as next", { landed: true, next: page, error: null, verifier: false, text: "…(VERIFICATION_NOT_FOUND)" }, actual, actual.landed && actual.next === page && actual.error === null && !actual.verifier && /\(VERIFICATION_NOT_FOUND\)$/.test(text));
