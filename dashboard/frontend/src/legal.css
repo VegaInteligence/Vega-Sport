@@ -4,7 +4,7 @@
 
 .legal {
   --legal-measure: 40rem;
-  --legal-num: 44px;
+  --legal-num: 52px;
   --legal-anchor: calc(var(--header-h) + 28px);
   display: grid;
   padding-bottom: 24px;
