@@ -9,7 +9,7 @@ import { cupEditionTable, cupTable } from "../services/catalog-client.js";
 import { useResource } from "../services/resources.js";
 import { editionArtworkUrl } from "../services/competition-artwork.js";
 import { competitionCountryLabel } from "../services/competition-selector.js";
-import { normalizeOpenCup, normalizeRoundSides, normalizeSupplementalCup, filterCupMatches, resultsAsOpenCup, leagueTable, numberedCupRounds, groupTables } from "../services/cup-matches.js";
+import { normalizeOpenCup, normalizeRoundSides, normalizeSupplementalCup, filterCupMatches, resultsAsOpenCup, leagueTable, numberedCupRounds, groupTables, scorerLines } from "../services/cup-matches.js";
 import { combineCupLegs, knockoutStage } from "../services/knockout-bracket.js";
 import { cupWorkerSnapshot } from "../services/cup-worker-client.js";
 import { NATIONAL_CUP_ARCHIVES, GERMAN_CUP_FOLDER, isGermanCupSeason } from "../services/cup-archives.js";
@@ -79,6 +79,8 @@ function CupMatch({ match, nationalTeams, season, highlight, hrefForMatch }) {
   // A match with a page of its own (an archived World Cup match) opens it.
   const href = match.id && hrefForMatch ? hrefForMatch(match.id) : null;
   const Row = href ? Link : "div";
+  // International Results' scorers, only when the list is complete (§57).
+  const scorers = scorerLines(match.scorers);
   return (
     <Row {...(href ? { href, prefetch: false } : {})} className={"match-row cup-match" + (highlight && nationalTeams && [match.home, match.away].some((name) => sameNationalTeam(name, highlight)) ? " cup-match-own" : "")}>
       <span className="match-date">{match.date ? date(match.date) : "Date à préciser"}</span>
@@ -87,6 +89,7 @@ function CupMatch({ match, nationalTeams, season, highlight, hrefForMatch }) {
         <strong className="score">{match.status === "canceled" ? "Annulé" : match.score ? match.score[0] + " – " + match.score[1] : "À venir"}</strong>
         <span className="team-name">{badge(match.away, match.awayImage)}<span>{label(match.away)}</span></span>
         {match.notes?.length > 0 && <span className="cup-match-notes">{match.notes.join(" · ")}</span>}
+        {scorers && <span className="cup-match-notes cup-match-scorers" aria-label="Buteurs"><span>{scorers.home}</span><span>{scorers.away}</span></span>}
         {match.status === "scheduled" && <MatchForecastBar home={match.home} away={match.away} forecast={match.forecast} />}
       </span>
       <span className="match-league">{match.round || ""}</span>

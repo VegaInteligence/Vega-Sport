@@ -222,6 +222,11 @@ a.match:hover {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* A match's scorers under its teams (International Results, §57): wraps, never cut. */
+.teams small.scorers {
+  color: var(--muted);
+  white-space: normal;
+}
 .score {
   color: var(--ink-strong);
   font-weight: 700;

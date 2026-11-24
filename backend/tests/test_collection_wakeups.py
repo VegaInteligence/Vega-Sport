@@ -901,7 +901,9 @@ class InternationalSeasonsTest(unittest.TestCase):
         self.assertEqual(periods["nations-results:internationals:2026/2027"], timedelta(hours=2))
         # Every other edition: main's rule (its first year from the year before now's: every two hours, else weekly).
         for scope, period in periods.items():
-            if ":internationals:" not in scope:
+            if scope == GOALS_SCOPE:  # §57: the scorers, no edition, every two hours whatever the season
+                self.assertEqual(period, timedelta(hours=2))
+            elif ":internationals:" not in scope:
                 season = scope.split(":", 2)[2]
                 self.assertEqual(period, timedelta(hours=2) if int(season[:4]) >= now.year - 1 else timedelta(days=7), scope)
         # 2026/27 finished on 1 July 2027: weekly from then.

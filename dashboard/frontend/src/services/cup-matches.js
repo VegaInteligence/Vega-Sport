@@ -2,6 +2,8 @@ import { normalizeText } from "../model.js";
 import { isFinalPool1950 } from "../../../shared/world-cup-1950.js";
 import { parisDay, validDay } from "./fixtures.js";
 import { knockoutStage } from "./knockout-bracket.js";
+// A national match's scorers line (International Results, §57), for the cup lists.
+export { scorerLines } from "./international-scorers.js";
 
 function scoreNumber(value) {
   if (Number.isInteger(value) && value >= 0) return value;
@@ -154,7 +156,9 @@ export function normalizeSupplementalCup(results, fixtures) {
 
 /** The results-v1 matches of International Results in the open-cups shape normalizeOpenCup reads. */
 export function resultsAsOpenCup(matches) {
-  return (matches || []).map((match) => ({ date: match.date, team1: match.home, team2: match.away, round: match.round || "", score: Array.isArray(match.score) ? { ft: match.score } : undefined }));
+  // International Results' scorers (§57) go through untouched.
+  return (matches || []).map((match) => ({ date: match.date, team1: match.home, team2: match.away, round: match.round || "", score: Array.isArray(match.score) ? { ft: match.score } : undefined,
+    ...(match.scorers && { scorers: match.scorers }) }));
 }
 
 export function normalizeRoundSides(matches) {
@@ -172,7 +176,8 @@ export function normalizeOpenCup(matches) {
     if (extra) notes.push("après prolongation");
     if (penalties) notes.push("tirs au but " + penalties[0] + " – " + penalties[1]);
     const forecast = score ? null : matchForecast(match.forecast);
-    return [{ key: "open:" + index, ...(match.id && { id: match.id }), date: validDay(match.date) ? match.date : "", home, away, score, penalties: canceled ? null : penalties, notes, roundName: String(match.round || ""), group: String(match.group || ""), number: Number.isInteger(match.num) ? match.num : null, round: readableRound(match.round, match.group), status: canceled ? "canceled" : score ? "finished" : "scheduled", ...(forecast && !canceled && { forecast }), ...ownSides(match) }];
+    return [{ key: "open:" + index, ...(match.id && { id: match.id }), date: validDay(match.date) ? match.date : "", home, away, score, penalties: canceled ? null : penalties, notes, roundName: String(match.round || ""), group: String(match.group || ""), number: Number.isInteger(match.num) ? match.num : null, round: readableRound(match.round, match.group), status: canceled ? "canceled" : score ? "finished" : "scheduled", ...(forecast && !canceled && { forecast }), ...ownSides(match),
+      ...(match.scorers && { scorers: match.scorers }) }];
   });
 }
 

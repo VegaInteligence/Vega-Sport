@@ -14,7 +14,7 @@ import json
 import re
 from urllib.parse import urlencode
 
-from . import SourceError, cup_periods, snapshot
+from . import SourceError, cup_periods, international_goals, snapshot
 from ..seasons import sporting_season
 from ..store import Store
 
@@ -65,7 +65,8 @@ TOURNAMENTS = {"euro": "Euro", "world-cup-history": "World Cup", "club-world-cup
 
 def scopes(now):
     """Running editions every two hours, finished ones weekly. A season of internationals is running until 1 July of
-    its last year (§50): the past seasons are read weekly."""
+    its last year (§50): the past seasons are read weekly. The scorers of International Results' matches every two
+    hours, after the editions (§57)."""
     out = {}
     for kind, competition, season in EDITIONS:
         if competition == "internationals":
@@ -73,6 +74,8 @@ def scopes(now):
         else:
             recent = int(season[:4]) >= now.year - 1
         out[f"{kind}:{competition}:{season}"] = timedelta(hours=2) if recent else timedelta(days=7)
+    # The scorers of the held matches (goalscorers.csv, §57), last: they attach to the matches the editions wrote.
+    out[international_goals.SCOPE] = international_goals.PERIOD
     return out
 
 
@@ -445,13 +448,16 @@ def save(conn, kind, competition, season, body, now):
 
 
 def _query(scope):
+    if scope == international_goals.SCOPE:
+        return "nations-results", "goalscorers", None, international_goals.QUERY
     kind, competition, season = scope.split(":", 2)
     if (kind, competition, season) not in EDITIONS:
         raise ValueError(scope)
     return kind, competition, season, urlencode({"competition": competition, "season": season})
 
 
-# The sources whose editions read one file: International Results' editions all read results.csv (3.76 MB). Each
+# The sources whose editions read one file: International Results' editions all read results.csv (3.76 MB), and its
+# scorers goalscorers.csv (§57): one read of each per pass. Each
 # OpenFootball and OpenLigaDB edition reads its own file, so reading them together would save no request.
 SHARED_FILE = frozenset({"nations-results"})
 
@@ -472,6 +478,8 @@ def prepare_due(kind, scopes):
 def run(conn, get, scope, now, *, prepared=None):
     """`prepared`: this edition's answer of prepare_due, else the edition is projected on its own."""
     kind, competition, season, query = _query(scope)
+    if scope == international_goals.SCOPE:
+        return international_goals.run(conn, prepared if prepared is not None else bridge("projection", kind, query), now)
     answer = (prepared if prepared is not None else bridge("projection", kind, query)) or {}
     body = answer.get("body")
     observation = body.get("phaseObservation") if isinstance(body, dict) and cup_periods.applies(kind, competition, season) else None
