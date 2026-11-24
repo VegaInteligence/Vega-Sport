@@ -1,5 +1,10 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## A nation's « Dernier match » is a fixture — FAILURE_MODES § 58 (24 November 2026)
+
+- Production: `/api/nations?season=2026/2027` gave 8 nations a future last match (Nations League fixtures of March 2027). Cause: `api.nation_list` (159) took the latest day of any match. Fix: `173_nation_last_played.sql`, the latest day of a finished match with both scores; `matches` stays the matches held (the nation page's « N matchs collectés », kept equal by the § 43 test). Same branch, own commits.
+- Tests first: `test_nation_match_copies` 58a–58d red (2027-03-20), then green; plan test 43s green; deploy counters 18/178.
+
 ## Scorers of the national matches from International Results — FAILURE_MODES § 57 (24 November 2026)
 
 - Goal (hugo, « oui branche le et récupère tout »): read `goalscorers.csv` of International Results (CC0) for every match the `nations-results:*` editions hold, every season; show complete lists on the site. Branch `claude/buteurs-selections` (worktree `/home/user/worktrees/buteurs-selections`), local commits, not pushed (the coordinator pushes).
