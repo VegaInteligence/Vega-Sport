@@ -486,6 +486,61 @@ try {
     const google = await A.page.locator(".signin-error").textContent({ timeout: 20000 });
     record("O7", "« Continuer avec Google » fails in plain words when Google is not set up", "…Google…", google, /Google|indisponible|injoignable/.test(google));
 
+    // Section 9, the return from Google. G1: the request carries an absolute error return with the same next.
+    {
+      const next = `/clubs?id=${CLUB_A}`;
+      await open(A.page, `/connexion?next=${encodeURIComponent(next)}`);
+      await A.page.locator(".signin-google").waitFor({ timeout: 30000 });
+      const asked = A.page.waitForRequest((request) => request.url().endsWith("/api/auth/sign-in/social"), { timeout: 20000 });
+      await A.page.locator(".signin-google").click();
+      const body = (await asked).postDataJSON();
+      const wanted = { callbackURL: `${SITE}${next}`, errorCallbackURL: `${SITE}/connexion?next=${encodeURIComponent(next)}` };
+      const got = { callbackURL: body?.callbackURL, errorCallbackURL: body?.errorCallbackURL };
+      record("G1", "Google's sign-in carries the page and an error return on /connexion with the same next", wanted, got, got.callbackURL === wanted.callbackURL && got.errorCallbackURL === wanted.errorCallbackURL);
+    }
+    // G2 to G4: Neon sends the person back to /connexion?error=<code>.
+    const errorReturn = async (page, code) => {
+      await open(page, `/connexion?next=%2Fclubs&error=${encodeURIComponent(code)}&error_description=State+not+found`);
+      const text = await page.locator(".signin-error").textContent({ timeout: 30000 });
+      const marked = await page.locator('.signin-form input[aria-invalid="true"]').count();
+      const search = await until(async () => {
+        // The site adds its own `season` to the address: only next and the error's absence are read.
+        const query = new URL(page.url()).searchParams;
+        return query.has("error") || query.has("error_description") ? null : query.get("next");
+      }, { timeout: 10000 });
+      return { text, search, marked };
+    };
+    {
+      const linked = await errorReturn(A.page, "account_not_linked");
+      record("G2a", "account_not_linked: sign in with the password and confirm the address first", { text: "…mot de passe…confirm…", search: "/clubs" }, linked, /mot de passe/.test(linked.text) && /confirm/.test(linked.text) && linked.search === "/clubs");
+      record("G2d", "the fields are not marked as wrong by a Google return", 0, linked.marked, linked.marked === 0);
+      await shot(A.page, "10-google-account-not-linked.png");
+      const denied = await errorReturn(A.page, "access_denied");
+      record("G2b", "access_denied: the Google step was cancelled or refused", "…Google…annulée…", denied.text, /Google/.test(denied.text) && /annulée|refusée/.test(denied.text));
+      const other = await errorReturn(A.page, "state_mismatch");
+      record("G2c", "any other code: the generic sentence, the code in parentheses", "…(state_mismatch)", other.text, /Google/.test(other.text) && /\(state_mismatch\)$/.test(other.text) && !/State not found/.test(other.text));
+      const dirty = await errorReturn(A.page, "<b>lea@example.test</b>");
+      record("G3", "a code that is not clean is never shown", "the generic sentence alone", dirty.text, !/[<@(]|example/.test(dirty.text) && /Google/.test(dirty.text));
+      record("G4", "the error leaves the address, next stays", "/clubs", other.search, other.search === "/clubs");
+    }
+    // G5 / G6: a return with a verifier the session cannot be opened with, in a browser without the hint.
+    {
+      const fresh = await device("google-return");
+      const page = `/clubs?id=${CLUB_A}`;
+      await open(fresh.page, `${page}&neon_auth_session_verifier=e2e-unknown-verifier`);
+      const landed = await until(async () => (new URL(fresh.page.url()).pathname === "/connexion" ? fresh.page.url() : null), { timeout: 60000 });
+      const text = await fresh.page.locator(".signin-error").textContent({ timeout: 30000 }).catch(() => "");
+      // The sentence shows before the router has removed `error` from the address: wait for the cleaned address.
+      await until(async () => !new URL(fresh.page.url()).searchParams.has("error"), { timeout: 10000 });
+      const after = landed ? new URL(fresh.page.url()) : null;
+      const actual = { landed: Boolean(landed), next: after?.searchParams.get("next"), error: after?.searchParams.get("error") ?? null, verifier: fresh.page.url().includes("verifier"), text };
+      record("G5", "a verifier return without a session goes to /connexion, the code said, the page kept as next", { landed: true, next: page, error: null, verifier: false, text: "…(VERIFICATION_NOT_FOUND)" }, actual, actual.landed && actual.next === page && actual.error === null && !actual.verifier && /\(VERIFICATION_NOT_FOUND\)$/.test(text));
+      const read = sameOriginCalls.some((c) => c.device === "google-return" && c.path === "/api/auth/get-session");
+      record("G6", "the verifier is read without the hint", true, read, read);
+      await shot(fresh.page, "11-google-return-without-session.png");
+      await fresh.context.close();
+    }
+
     // O9: no address, token or account id in a URL the browser asked for.
     const leaked = sameOriginCalls.filter((c) => c.path.includes("@") || c.path.includes(id));
     record("O9", "no address or account id in a same-origin URL", [], leaked, leaked.length === 0);
@@ -515,6 +570,12 @@ try {
         await c.page.locator(".account-submit").click();
         await c.page.locator(".signin-error").waitFor({ timeout: 20000 });
         await capture(c.page, `connexion-erreur-${suffix}.png`);
+        // Section 9: the returns from Google that Neon refused.
+        for (const [code, name] of [["account_not_linked", "compte-non-confirme"], ["access_denied", "annule"], ["VERIFICATION_NOT_FOUND", "echec"]]) {
+          await open(c.page, `/connexion?error=${code}`);
+          await c.page.locator(".signin-error").waitFor({ timeout: 30000 });
+          await capture(c.page, `connexion-retour-google-${name}-${suffix}.png`);
+        }
         // A new account without a favourite, then the owner's: favourites chosen before the sign-up (capture-seed.json)
         // are merged into the account at the first sign-in.
         if (suffix === "bureau-sombre") {

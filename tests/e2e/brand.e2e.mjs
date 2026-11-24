@@ -1,7 +1,8 @@
-// E2E — the site carries the logo « Vega* », the user's final choice of 24 Nov 2026 (charter:
-// docs/brand/README.md; it replaced « Vega. » the same day): in the header and the footer the
-// wordmark with « Sport » small underneath, the mark « V* » where room is short (the asterisk
-// never stands alone), two colours only (ivory #F4F1EA, night #07080B).
+// E2E — the site carries Vega's logo, the asterisk (the user, 24 Nov 2026: « pour moi le logo ça
+// doit juste être un astérisque »; charter: docs/brand/README.md). In the header and the footer
+// the wordmark « Vega* » with « Sport » small underneath; where room is short and on every icon
+// the asterisk alone (it replaced the mark « V* » the same day); two colours only (ivory
+// #F4F1EA, night #07080B).
 // Written before the implementation, against the real pages, on a desktop (1365×900, dark and
 // light) and an iPhone 16 (393×852).
 //
@@ -15,31 +16,47 @@
 //     (« M 559 1 »), the ivory or night fill, and no circle left (the full stop is gone).
 //     Checked on the logo, the mark, the two icons and the favicon. The asterisk is there:
 //     the top right corner of the logo is mostly ink, where the full stop's logo had none.
-//  B4 (phone) The header shows the mark « V* » (/branding/vega/symbol-dark.svg, 1.3 to 1.8
-//     times wider than tall), 26 to 30 px tall, in a tap target of 44 px, and the page does
-//     not scroll sideways.
-//  B5 (favicon) The page's icon is /branding/vega/icon-dark.svg in the dark theme and
-//     icon-light.svg in the light one, with the new version number. React puts the page's own
-//     favicon.svg link back beside it after hydration (as before this change): that one must
-//     be the new drawing at the new version too, and no other icon may be named.
+//     The mark, the two icons and the favicon are one outline each: the asterisk, no letter.
+//  B4 (phone) The header shows the asterisk alone (/branding/vega/symbol-dark.svg, a little
+//     taller than wide: 0.85 to 1 times), 26 to 30 px tall, in a tap target of 44 px, and the
+//     page does not scroll sideways. Before: « V* », 1.5 times wider than tall.
+//  B5 (favicon) The page names one icon, the one of the site's theme: /branding/vega/icon-dark.svg
+//     in the dark theme, icon-light.svg in the light one, with the new version number, in a
+//     single icon link (« icon » or « shortcut icon »). favicon.svg follows the system's
+//     colours, not the site's theme: a page with scripts must not name it. Each list of icons
+//     is read five times over 1.2 s, after a navigation once React has rebuilt the head's icon
+//     links, and every reading must be that one icon. How it failed before:
+//      - at load (B5a dark, B5f light): React did not recognise the link whose address the theme
+//        script had changed, and put the page's favicon.svg link back beside it;
+//      - after a navigation inside the site (B5k dark, B5l light): React rebuilt the head's
+//        links, and favicon.svg came back, beside the themed icon or in its place;
+//      - after the theme button (B5m), then a navigation (B5n): two links, then favicon.svg again;
+//      - storage refused by the browser (B5p): no themed icon at all, at load or after the button.
+//     Without scripts (B5o) the page still names an icon: favicon.svg at the new version.
 //     /favicon.ico and /apple-touch-icon.png answer with the new icon (night tile, ivory
-//     mark, no blue).
+//     mark, no blue). On each the asterisk stands alone, in the middle of its tile: as much
+//     ink in the left half as in the right, in the top half as in the bottom (« V* » had
+//     its letter on the left).
 //  B6 (app icons) /api/vega-image?kind=icon at 180, 192 and 512 px: a PNG of that size, night
-//     tile, ivory mark, no blue, no pure black; theme=light gives the ivory tile.
+//     tile, ivory mark, no blue, no pure black; theme=light gives the ivory tile. The same
+//     balance of ink, left and right, top and bottom.
 //  B7 (share image) og:image and twitter:image name the same picture, 1200 × 630, with the
 //     ivory wordmark in its lower left quarter and no blue; the old address
 //     /api/vega-image?kind=og leads to that same picture.
 //  B8 (footer) The footer's home link shows the wordmark, at its proportions, 48 to 64 px tall.
-//  B9 (loading) While a page waits for its data, the loading mark is « V* »: no star outline,
-//     no gradient, no circle, the letter and the asterisk as two outlines.
+//  B9 (loading) While a page waits for its data, the loading mark is the asterisk alone: no
+//     star outline, no gradient, no circle, one outline. It is seen turning: read eight times,
+//     150 ms apart, its angle is at least once away from a multiple of 60° (a six-petalled
+//     shape turned by 60° looks the same: before, it stepped by 60° and never seemed to move).
 //  B10 (report card) A report image carries the wordmark in ivory at its top left, no blue star.
 //  B11 (in between) The wordmark must not take the menus' room, the account button being in
 //     the header (a local server shows it only with NEON_AUTH_BASE_URL and
 //     NEON_AUTH_COOKIE_SECRET set, see the evidence's setup). At 1120 px the wordmark shows and
-//     every menu still ends before the search field. At 1024, 768 and 700 px the mark « V* »
+//     every menu still ends before the search field. At 1024, 768 and 700 px the asterisk
 //     shows instead, in a link no wider than 44 px, and the header's parts neither overlap nor
 //     leave the window. Before: at 1024 px « Vega Sport. » pushed two menus under the search.
-//  X1 No page error and no console error on the home page (desktop dark and light, phone).
+//  X1 No page error and no console error on the home page (desktop dark and light, phone,
+//     without scripts, storage refused) nor on the Matchs page reached from it.
 //     The loading page's console is recorded in the evidence, not judged here.
 //
 // Run against a local front (NEXT_PUBLIC_API_ORIGIN = the public API) or the public site:
@@ -71,7 +88,7 @@ function playwright() {
 }
 
 const IVORY = [244, 241, 234], NIGHT = [7, 8, 11];
-const VERSION = 4; // faviconVersion of app/layout.jsx after the change
+const VERSION = 5; // faviconVersion of app/layout.jsx after the change
 const REPORT = "t_1gkhxH"; // Arsenal: a club whose report exists
 const results = [];
 const check = (id, expected, actual, ok) => {
@@ -150,6 +167,39 @@ const darkIcon = (p, side) =>
 const lightIcon = (p, side) =>
   p.size && (!side || (p.size[0] === side && p.size[1] === side)) && p.ivory > 0.5 && p.night > 0.03 && p.blue === 0;
 
+/** The icons the page names, read several times 300 ms apart: every different list seen. */
+const icons = async (page, times = 5) => {
+  const seen = [];
+  for (let i = 0; i < times; i++) {
+    if (i) await page.waitForTimeout(300);
+    const list = await page.evaluate(() => [...document.querySelectorAll('link[rel~="icon"]')].map((l) => new URL(l.href).pathname + new URL(l.href).search));
+    const names = list.join(", ") || "none";
+    if (!seen.includes(names)) seen.push(names);
+  }
+  return seen;
+};
+const themeIcon = (theme) => `/branding/vega/icon-${theme}.svg?v=${VERSION}`;
+/** That icon alone, at every reading. */
+const only = (seen, address) => seen.length === 1 && seen[0] === address;
+const readings = (seen) => seen.join(" ; then ");
+/** Follow a link inside the site and wait for the new page's head. Nothing on the network tells
+ *  when it is there (the document stays the same), but React rebuilds the head's icon links
+ *  on the way: the apple-touch-icon link becomes a new node. Answers whether that was seen. */
+const follow = async (page, link, there) => {
+  await page.evaluate(() => { const apple = document.querySelector('link[rel="apple-touch-icon"]'); if (apple) apple.dataset.before = "1"; });
+  await page.locator(link).first().click();
+  await page.waitForURL(there);
+  return page
+    .waitForFunction(() => { const apple = document.querySelector('link[rel="apple-touch-icon"]'); return Boolean(apple) && !apple.dataset.before; }, null, { timeout: 5000 })
+    .then(() => true, () => false);
+};
+/** The asterisk alone in the middle of its tile: as much ink left as right, top as bottom. */
+const balance = async (page, url, ink) => {
+  const halves = [[0, 0, 0.5, 1], [0.5, 0, 1, 1], [0, 0, 1, 0.5], [0, 0.5, 1, 1]];
+  const [left, right, top, bottom] = (await Promise.all(halves.map((region) => pixels(page, url, region)))).map((p) => p[ink] ?? -1);
+  return { left: pct(left), right: pct(right), top: pct(top), bottom: pct(bottom), ok: [left, right, top, bottom].every((v) => v > 0.02) && Math.abs(left - right) < 0.006 && Math.abs(top - bottom) < 0.006 };
+};
+
 const text = async (address) => {
   const response = await fetch(new URL(address, base));
   return { status: response.status, body: response.ok ? await response.text() : "" };
@@ -219,14 +269,13 @@ try {
   }
   const sane = (b) => b.right <= b.width && b.overlap <= 0 && b.sideways <= 0;
   const account = await dark.evaluate(() => Boolean(document.querySelector(".topbar .account-entry")));
-  check("B11", "with the account button shown — 1120 px: the wordmark, every menu before the search; 1024, 768 and 700 px: the mark « V* » in a link of 44 px at most; nothing overlaps or leaves the window", { accountButton: account, between },
+  check("B11", "with the account button shown — 1120 px: the wordmark, every menu before the search; 1024, 768 and 700 px: the asterisk alone in a link of 44 px at most; nothing overlaps or leaves the window", { accountButton: account, between },
     account && between.every(sane) && between[0].shows === "logo-dark.svg" && between[0].menusPastTheSearch === 0 && between.slice(1).every((b) => b.shows === "symbol-dark.svg" && b.link <= 44));
   await dark.setViewportSize(DESKTOP.viewport);
 
   // ---- B5 (dark) and B7 on the same page
-  const icon = await dark.evaluate(() => [...document.querySelectorAll('link[rel="icon"]')].map((l) => new URL(l.href).pathname + new URL(l.href).search));
-  const themed = (list, theme) => list.includes(`/branding/vega/icon-${theme}.svg?v=${VERSION}`) && list.every((href) => [`/branding/vega/icon-${theme}.svg?v=${VERSION}`, `/branding/vega/favicon.svg?v=${VERSION}`].includes(href));
-  check("B5a", `the page's icon in the dark theme: /branding/vega/icon-dark.svg?v=${VERSION} (and at most the page's own favicon.svg?v=${VERSION})`, icon.join(", "), themed(icon, "dark"));
+  const icon = await icons(dark);
+  check("B5a", `dark theme: the page names one icon, ${themeIcon("dark")}`, readings(icon), only(icon, themeIcon("dark")));
   for (const [id, address, test, what] of [
     ["B5b", "/branding/vega/icon-dark.svg", darkIcon, "night tile, ivory mark, no blue"],
     ["B5c", "/branding/vega/icon-light.svg", lightIcon, "ivory tile, night mark, no blue"],
@@ -236,11 +285,17 @@ try {
     const p = await pixels(dark, address);
     check(id, `${address}: ${what}`, brief(p), test(p));
   }
+  for (const [id, address, ink] of [["B5g", "/branding/vega/icon-dark.svg", "ivory"], ["B5h", "/branding/vega/icon-light.svg", "night"], ["B5i", "/favicon.ico", "ivory"], ["B5j", "/apple-touch-icon.png", "ivory"]]) {
+    const b = await balance(dark, address, ink);
+    check(id, `${address}: the asterisk alone, as much ink left as right, top as bottom`, b, b.ok);
+  }
   // ---- B6: app icons
   for (const side of [180, 192, 512]) {
     const p = await pixels(dark, `/api/vega-image?kind=icon&size=${side}`);
     check(`B6-${side}`, `app icon ${side} px: a PNG of that size, night tile, ivory mark, no blue, no pure black`, brief(p), p.type === "image/png" && darkIcon(p, side));
   }
+  const app = await balance(dark, "/api/vega-image?kind=icon&size=512", "ivory");
+  check("B6-alone", "app icon 512 px: the asterisk alone, as much ink left as right, top as bottom", app, app.ok);
   const lightApp = await pixels(dark, "/api/vega-image?kind=icon&size=192&theme=light");
   check("B6-light", "app icon, theme=light: ivory tile, night mark", brief(lightApp), lightIcon(lightApp, 192));
 
@@ -270,6 +325,13 @@ try {
   // The place of the brand at the top left of a card: 146 × 70 px from (65, 54).
   const report = await pixels(dark, `/api/rapport/image?id=${REPORT}&n=1`, [0.06, 0.04, 0.195, 0.092]);
   check("B10", "report image 1080 × 1350: ivory wordmark at the top left (over 8 % of that place), no blue star", brief(report), report.size?.[0] === 1080 && report.size?.[1] === 1350 && report.ivory > 0.08 && report.blue === 0);
+  // ---- B5k: the dark theme's icon after a navigation inside the site
+  await dark.evaluate(() => { window.__sameDocument = true; });
+  const rebuiltDark = await follow(dark, '.topbar a[href^="/matchs"]', (url) => url.pathname.startsWith("/matchs"));
+  const movedDark = await icons(dark);
+  const stayedDark = await dark.evaluate(() => window.__sameDocument === true);
+  check("B5k", `dark theme, after a navigation inside the site (home → Matchs, same document): still ${themeIcon("dark")} alone`,
+    `${readings(movedDark)} — same document: ${stayedDark} — head's icon links rebuilt: ${rebuiltDark}`, stayedDark && only(movedDark, themeIcon("dark")));
   await dark.context().close();
 
   // ---- B2 and B5 (light)
@@ -278,19 +340,57 @@ try {
   await light.waitForFunction(() => document.documentElement.dataset.theme === "light" && [...document.querySelectorAll(".topbar .brand img")].some((i) => i.complete && i.naturalWidth > 0 && i.getBoundingClientRect().width > 0));
   const headLight = await shown(light, ".topbar .brand");
   check("B2", "light theme: the header shows logo-light.svg and only it", headLight.images.map((i) => i.src).join(", ") || "none", headLight.images.length === 1 && headLight.images[0].src === "/branding/vega/logo-light.svg" && undistorted(headLight.images[0]));
-  const iconLight = await light.evaluate(() => [...document.querySelectorAll('link[rel="icon"]')].map((l) => new URL(l.href).pathname + new URL(l.href).search));
-  check("B5f", `the page's icon in the light theme: /branding/vega/icon-light.svg?v=${VERSION} (and at most the page's own favicon.svg?v=${VERSION})`, iconLight.join(", "), themed(iconLight, "light"));
+  const iconLight = await icons(light);
+  check("B5f", `light theme: the page names one icon, ${themeIcon("light")}`, readings(iconLight), only(iconLight, themeIcon("light")));
   await light.locator(".topbar").screenshot({ path: path.join(out, "header-desktop-light.png") });
+  // ---- B5o: without scripts
+  const plain = await open({ ...DESKTOP, javaScriptEnabled: false }, "no-scripts");
+  await plain.goto(base + "/", { waitUntil: "load" });
+  const iconPlain = await icons(plain, 1);
+  check("B5o", `without scripts the page names one icon, /branding/vega/favicon.svg?v=${VERSION}`, readings(iconPlain), only(iconPlain, `/branding/vega/favicon.svg?v=${VERSION}`));
+  await plain.context().close();
+
+  // ---- B5p: the browser refuses the storage (reads and writes throw)
+  const refused = await open(DESKTOP, "storage-refused");
+  await refused.context().addInitScript(() => {
+    const refuse = () => { throw new DOMException("The operation is insecure.", "SecurityError"); };
+    Storage.prototype.getItem = refuse;
+    Storage.prototype.setItem = refuse;
+  });
+  await refused.goto(base + "/", { waitUntil: "networkidle" });
+  const iconRefused = await icons(refused);
+  await refused.locator(".theme-toggle").first().click();
+  await refused.waitForFunction(() => document.documentElement.dataset.theme === "light");
+  const iconRefusedLight = await icons(refused);
+  check("B5p", `storage refused: ${themeIcon("dark")} alone at load, ${themeIcon("light")} alone after the theme button`,
+    `at load: ${readings(iconRefused)} — after the button: ${readings(iconRefusedLight)}`, only(iconRefused, themeIcon("dark")) && only(iconRefusedLight, themeIcon("light")));
+  await refused.context().close();
 
   // ---- B3: the drawings themselves
   for (const [file, fill] of [["logo-dark", "#F4F1EA"], ["logo-light", "#07080B"], ["symbol-dark", "#F4F1EA"], ["symbol-light", "#07080B"], ["icon-dark", "#F4F1EA"], ["icon-light", "#07080B"], ["favicon", "#F4F1EA"]]) {
     const svg = await text(`/branding/vega/${file}.svg`);
-    const facts = { status: svg.status, gradient: /linearGradient/i.test(svg.body), star: svg.body.includes("M 559 1"), fill: svg.body.toUpperCase().includes(fill), circles: (svg.body.match(/<circle/g) || []).length };
-    check(`B3-${file}`, `${file}.svg: no gradient, no star outline, ${fill}, no circle left`, facts, svg.status === 200 && !facts.gradient && !facts.star && facts.fill && facts.circles === 0);
+    const facts = { status: svg.status, gradient: /linearGradient/i.test(svg.body), star: svg.body.includes("M 559 1"), fill: svg.body.toUpperCase().includes(fill), circles: (svg.body.match(/<circle/g) || []).length, outlines: (svg.body.match(/<path/g) || []).length };
+    const alone = file.startsWith("logo") || facts.outlines === 1;
+    check(`B3-${file}`, `${file}.svg: no gradient, no star outline, ${fill}, no circle left${file.startsWith("logo") ? "" : ", one outline (the asterisk alone)"}`, facts, svg.status === 200 && !facts.gradient && !facts.star && facts.fill && facts.circles === 0 && alone);
   }
   // The asterisk sits at the top right of the logo: the last 13 % of its width, the first 27 % of its height.
   const corner = await pixels(light, "/branding/vega/logo-dark.svg", [0.87, 0, 1, 0.27]);
   check("B3-asterisk", "logo-dark.svg: its top right corner is mostly ivory ink (the asterisk)", brief(corner), corner.ivory > 0.25);
+  // ---- B5l–B5n: the icon across a navigation inside the site and the theme button
+  await light.evaluate(() => { window.__sameDocument = true; });
+  const sameDocument = () => light.evaluate(() => window.__sameDocument === true);
+  const rebuilt = await follow(light, '.topbar a[href^="/matchs"]', (url) => url.pathname.startsWith("/matchs"));
+  const moved = await icons(light);
+  check("B5l", `light theme, after a navigation inside the site (home → Matchs, same document): still ${themeIcon("light")} alone`,
+    `${readings(moved)} — same document: ${await sameDocument()} — head's icon links rebuilt: ${rebuilt}`, (await sameDocument()) && only(moved, themeIcon("light")));
+  await light.locator(".theme-toggle").first().click();
+  await light.waitForFunction(() => document.documentElement.dataset.theme === "dark");
+  const switched = await icons(light);
+  check("B5m", `after the theme button (light → dark): ${themeIcon("dark")} alone`, readings(switched), only(switched, themeIcon("dark")));
+  const rebuiltBack = await follow(light, ".topbar .brand", (url) => url.pathname === "/");
+  const back = await icons(light);
+  check("B5n", `after the button, then a navigation (Matchs → home, same document): still ${themeIcon("dark")} alone`,
+    `${readings(back)} — same document: ${await sameDocument()} — head's icon links rebuilt: ${rebuiltBack}`, (await sameDocument()) && only(back, themeIcon("dark")));
   await light.context().close();
 
   // ---- B4: phone
@@ -299,9 +399,9 @@ try {
   await phone.waitForFunction(() => [...document.querySelectorAll(".topbar .brand img")].some((i) => i.complete && i.naturalWidth > 0 && i.getBoundingClientRect().width > 0));
   const headPhone = await shown(phone, ".topbar .brand");
   const mark = headPhone.images.length === 1 ? headPhone.images[0] : null;
-  check("B4a", "phone: the header shows the mark « V* » (symbol-dark.svg, 1.3 to 1.8 times wider than tall), 26–30 px tall",
+  check("B4a", "phone: the header shows the asterisk alone (symbol-dark.svg, 0.85 to 1 times as wide as tall), 26–30 px tall",
     mark ? `${mark.src} own ${mark.natural.join("×")} drawn ${mark.box.join("×")}` : `${headPhone.images.length} images`,
-    mark && mark.src === "/branding/vega/symbol-dark.svg" && ratio(mark.natural) > 1.3 && ratio(mark.natural) < 1.8 && undistorted(mark) && mark.box[1] >= 26 && mark.box[1] <= 30);
+    mark && mark.src === "/branding/vega/symbol-dark.svg" && ratio(mark.natural) > 0.85 && ratio(mark.natural) < 1 && undistorted(mark) && mark.box[1] >= 26 && mark.box[1] <= 30);
   const sideways = await phone.evaluate(() => document.documentElement.scrollWidth - innerWidth);
   check("B4b", "phone: a 44 px tap target and no sideways scroll", { link: headPhone.link, sideways }, headPhone.link[0] >= 44 && headPhone.link[1] >= 44 && sideways <= 0);
   await phone.locator(".topbar").screenshot({ path: path.join(out, "header-phone.png") });
@@ -328,8 +428,23 @@ try {
         };
       }),
     )
+    .then(async (facts) => {
+      const angles = [];
+      for (let i = 0; i < 8; i++) {
+        angles.push(await slow.evaluate(() => {
+          const path = document.querySelector("[data-page-loader] svg path:last-of-type");
+          if (!path) return null;
+          const m = new DOMMatrixReadOnly(getComputedStyle(path).transform);
+          return Math.round((Math.atan2(m.b, m.a) * 180) / Math.PI);
+        }));
+        await slow.waitForTimeout(150);
+      }
+      return { ...facts, angles };
+    })
     .catch((error) => ({ missing: error.message.split("\n")[0] }));
-  check("B9", "the loading mark is « V* »: no star outline, no gradient, no circle, the letter and the asterisk as two outlines", loader, loader.star === false && loader.gradients === 0 && loader.circles === 0 && loader.outlines === 2);
+  check("B9", "the loading mark is the asterisk alone: no star outline, no gradient, no circle, one outline", loader, loader.star === false && loader.gradients === 0 && loader.circles === 0 && loader.outlines === 1);
+  const off = (loader.angles || []).filter((a) => a !== null).map((a) => Math.abs(((a % 60) + 90) % 60 - 30));
+  check("B9b", "the loading mark is seen turning: an angle at least 5° away from a multiple of 60° among eight readings", loader.angles || "none", off.some((d) => d >= 5));
   // The page may finish loading while the picture is taken: a missing picture is not a failed check.
   if (!loader.missing) await slow.locator("[data-page-loader]").screenshot({ path: path.join(out, "loading.png"), timeout: 3000 }).catch(() => {});
   await slow.context().close();
@@ -345,11 +460,11 @@ try {
     path.join(out, "evidence.json"),
     JSON.stringify(
       {
-        subject: "Brand: the logo « Vega* » on the site (header, footer, icons, share image, loading mark, report cards)",
+        subject: "Brand: Vega's logo on the site — the wordmark « Vega* » in the header and the footer, the asterisk alone as mark, icons and loading mark, the share image, the report cards",
         observed: new Date().toISOString(),
         base,
         rerun: `node tests/e2e/brand.e2e.mjs ${base} ${out}`,
-        setup: "Chromium headless, fr-FR; desktop 1365×900 (dark, then light through localStorage statarena.theme), widths 1120, 1024, 768 and 700, phone 393×852 (touch, ×3). B9 holds every /api/ answer for 8 s. A local server needs ORION_API_ORIGIN (report images) and, for the header to carry the account button as in production, NEON_AUTH_BASE_URL=http://127.0.0.1:9 with any NEON_AUTH_COOKIE_SECRET of 32 characters.",
+        setup: "Chromium headless, fr-FR; desktop 1365×900 (dark, then light through localStorage statarena.theme), widths 1120, 1024, 768 and 700, phone 393×852 (touch, ×3). B5: every list of icons is read 5 times, 300 ms apart, after a navigation once the head's icon links are rebuilt (a new apple-touch-icon node, waited for 5 s at most); B5o runs with JavaScript off; B5p makes Storage.getItem and Storage.setItem throw. B9 holds every /api/ answer for 8 s. A local server needs ORION_API_ORIGIN (report images) and, for the header to carry the account button as in production, NEON_AUTH_BASE_URL=http://127.0.0.1:9 with any NEON_AUTH_COOKIE_SECRET of 32 characters.",
         inputs: { home: "/", loading: "/joueurs/", report: REPORT, faviconVersion: VERSION, ivory: IVORY, night: NIGHT },
         results,
         console: consoleLog,

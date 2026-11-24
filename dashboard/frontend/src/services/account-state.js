@@ -12,7 +12,8 @@
  */
 import { accountsOn, accountSyncOn } from "./account-switch.js";
 import { authClient } from "./auth-client.js";
-import { clearHint, setHint, shouldReadSession } from "./account-hint.js";
+import { clearHint, setHint } from "./account-hint.js";
+import { failedReturnHref, hasVerifier, readsSession } from "./account-return.js";
 import { createAccountAdapter, createAccountApi, forgetMerged } from "./account-sync.js";
 import { clearPreferences, setPreferencesSync } from "./user-preferences.js";
 
@@ -99,15 +100,19 @@ function signedOut() {
 export function refreshSession({ force = false } = {}) {
   if (!accountsOn()) return Promise.resolve(state);
   if (reading && !force) return reading;
-  if (!shouldReadSession({ storage: storage(), force })) {
+  // Section 9, G5 and G6: a return from Google carries a verifier, which this read exchanges for the session.
+  const here = currentPage();
+  const returning = hasVerifier(here.search);
+  if (!readsSession({ storage: storage(), force, search: here.search })) {
     if (state.status === "unknown") signedOut();
     return Promise.resolve(state);
   }
   reading = (async () => {
     try {
       const client = await authClient();
-      const { data } = await client.getSession(force ? { fetchOptions: { headers: { "X-Force-Fetch": "1" } } } : undefined);
+      const { data, error } = await client.getSession(force ? { fetchOptions: { headers: { "X-Force-Fetch": "1" } } } : undefined);
       const user = data?.user;
+      if (!(user && typeof user.id === "string") && returning) return failedReturn(here, error);
       if (user && typeof user.id === "string") {
         const same = state.user?.id === user.id;
         setHint(storage());
@@ -120,13 +125,34 @@ export function refreshSession({ force = false } = {}) {
         clearHint(storage());
         signedOut();
       }
-    } catch {
+    } catch (thrown) {
+      // A refused verifier comes back as a thrown HTTP error (@neon/auth's createHttpResponseError).
+      if (returning) return failedReturn(here, thrown);
       // Neon out of reach: shown signed out, nothing removed from the stores.
       if (state.status === "unknown") signedOut();
     }
     return state;
   })();
   return reading;
+}
+
+/** The page's path and query, or an empty page outside a browser. */
+function currentPage() {
+  try {
+    const { pathname, search } = globalThis.window?.location ?? {};
+    return { pathname: typeof pathname === "string" ? pathname : "/", search: typeof search === "string" ? search : "" };
+  } catch {
+    return { pathname: "/", search: "" };
+  }
+}
+
+/** G5: the return opened no session: /connexion says so (the address replaced, not pushed). Never throws. */
+function failedReturn(here, failure) {
+  if (state.status === "unknown") signedOut();
+  try {
+    globalThis.window?.location.replace(failedReturnHref(here, failure));
+  } catch {}
+  return state;
 }
 
 /** After a sign-in or a sign-up on /connexion, and when /connexion opens (it always reads, W6). */
