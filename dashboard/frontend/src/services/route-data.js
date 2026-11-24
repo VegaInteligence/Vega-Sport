@@ -16,6 +16,14 @@ export function routeExists(pathname) {
   return pageRoutes.has(path) || (accountsOn() && ACCOUNT_ROUTES.has(path));
 }
 const ACCOUNT_ROUTES = new Set(["/connexion", "/compte"]);
+/**
+ * Static pages: the legal texts (src/views/LegalPage.jsx). They render outside the data providers,
+ * so the server's HTML carries the whole page and nothing waits for the API or the account switch.
+ */
+export const STATIC_PAGES = new Set([
+  "/confidentialite",
+  "/conditions-utilisation",
+]);
 
 /** Pages with their own readers must not download a season before mounting. */
 export function routeNeedsSeason(pathname, params) {

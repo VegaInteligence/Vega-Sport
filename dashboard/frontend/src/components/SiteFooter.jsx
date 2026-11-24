@@ -1,5 +1,6 @@
 import Link from "next/link";
 import StatarenaLogo from "./StatarenaLogo.jsx";
+import ConsentSettingsLink from "./ConsentSettingsLink.jsx";
 
 /** Pages without the football context (404, error) link to plain paths. */
 const plainHref = (page) => page;
@@ -20,6 +21,18 @@ const groups = [
       ["Classement Ballon d’Or", "/classement-joueurs/"],
       ["Power Ranking", "/power-ranking/"],
     ],
+  },
+  {
+    // The legal pages (src/views/LegalPage.jsx), static and public: one address each, never the
+    // season or focus the football pages carry in their links.
+    title: "Informations",
+    plain: true,
+    links: [
+      ["Confidentialité", "/confidentialite/"],
+      ["Conditions d’utilisation", "/conditions-utilisation/"],
+    ],
+    // Reopens the consent banner (Consent.jsx): a button, styled as the links above it (consent.css).
+    after: <ConsentSettingsLink />,
   },
 ];
 
@@ -51,10 +64,12 @@ export default function SiteFooter({ href = plainHref, path }) {
               <ul>
                 {group.links.map(([label, destination]) => {
                   const external = destination.startsWith("https:");
+                  const target =
+                    external || group.plain ? destination : href(destination);
                   return (
                     <li key={destination}>
                       <Link
-                        href={external ? destination : href(destination)}
+                        href={target}
                         aria-current={
                           !external &&
                           path?.replace(/\/$/, "") ===
@@ -71,6 +86,7 @@ export default function SiteFooter({ href = plainHref, path }) {
                     </li>
                   );
                 })}
+                {group.after && <li>{group.after}</li>}
               </ul>
             </nav>
           ))}
