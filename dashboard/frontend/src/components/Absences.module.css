@@ -1,0 +1,368 @@
+/* Absent players: the colours of the player page's injury timeline (an injury --mq-neg-2,
+   a suspension --muted-light), an illness one step softer, an unclassed absence neutral. */
+.glyph[data-kind="injury"],
+.bar[data-kind="injury"],
+.cells i[data-kind="injury"] {
+  --absence: var(--mq-neg-2);
+}
+.glyph[data-kind="illness"],
+.bar[data-kind="illness"],
+.cells i[data-kind="illness"] {
+  --absence: var(--mq-neg-1);
+}
+.glyph[data-kind="suspension"],
+.bar[data-kind="suspension"],
+.cells i[data-kind="suspension"] {
+  --absence: var(--muted-light);
+}
+.glyph[data-kind="unknown"],
+.bar[data-kind="unknown"],
+.cells i[data-kind="unknown"] {
+  --absence: var(--mq-mid);
+}
+
+/* ------------------------------------------------------------- the sign */
+.glyph {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  width: 10px;
+  height: 10px;
+  vertical-align: -1px;
+}
+/* A cross: its two strokes. */
+.glyph[data-kind="injury"]::before,
+.glyph[data-kind="injury"]::after,
+.glyph[data-kind="illness"]::before,
+.glyph[data-kind="illness"]::after {
+  content: "";
+  position: absolute;
+  background: var(--absence);
+}
+.glyph[data-kind="injury"]::before,
+.glyph[data-kind="illness"]::before {
+  inset: 3.5px 0;
+}
+.glyph[data-kind="injury"]::after,
+.glyph[data-kind="illness"]::after {
+  inset: 0 3.5px;
+}
+.glyph[data-kind="suspension"] {
+  width: 8px;
+  height: 11px;
+  vertical-align: -2px;
+  background: var(--absence);
+}
+.glyph[data-kind="unknown"] {
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--absence);
+  border-radius: 50%;
+  background: none;
+}
+.mark {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 7px;
+  font-style: normal;
+  vertical-align: 0;
+  cursor: default;
+}
+
+/* -------------------------------------------------- the squad's coverage */
+.coverage {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+.coverage b {
+  color: var(--ink-strong);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.cells {
+  display: inline-flex;
+  gap: 2px;
+}
+.cells i {
+  width: 5px;
+  height: 12px;
+  background: var(--absence, var(--mq-mid));
+}
+.cells i[data-kind="available"] {
+  background: var(--border-strong);
+}
+.cells i[data-kind="unread"] {
+  background: none;
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+
+/* ------------------------------------------------------- the squad card */
+.board {
+  --cols: minmax(190px, 1.15fr) minmax(210px, 1.35fr) minmax(200px, 2.3fr) 118px;
+  display: grid;
+}
+.head,
+.row {
+  display: grid;
+  grid-template-columns: var(--cols);
+  align-items: center;
+  gap: 0 20px;
+}
+.head {
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.head > :last-child {
+  text-align: right;
+}
+.axis {
+  position: relative;
+  height: 1.4em;
+}
+.axis > span {
+  position: absolute;
+  top: 0;
+  /* A month's name starts on its line, as the month does. */
+  padding-left: 5px;
+  border-left: 1px solid var(--grid);
+  color: var(--muted-light);
+  white-space: nowrap;
+}
+.rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.row {
+  min-height: 60px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.row:last-child {
+  border-bottom: 0;
+}
+.who {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+.who > span {
+  display: grid;
+  min-width: 0;
+}
+.who strong {
+  overflow: hidden;
+  color: var(--ink-strong);
+  font-size: var(--text-md);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.who:hover strong {
+  color: var(--accent);
+}
+.who small {
+  color: var(--muted-light);
+  font-size: var(--text-xs);
+}
+.reason {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.reason > span {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  color: var(--ink);
+  font-size: var(--text-sm);
+  font-weight: 550;
+}
+.reason > span .glyph {
+  align-self: center;
+}
+.reason small {
+  color: var(--muted-light);
+  font-size: var(--text-xs);
+}
+
+/* The lane: today at its left edge, the month starts as lines, the return where the bar ends. */
+.laneCell {
+  position: relative;
+  height: 22px;
+}
+.grid {
+  position: absolute;
+  inset: 0;
+  border-left: 2px solid var(--ink-strong);
+}
+.grid i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--grid);
+}
+.lane {
+  position: absolute;
+  inset: 5px 0;
+  display: flex;
+  align-items: center;
+}
+.bar {
+  display: block;
+  height: 100%;
+  background: var(--absence);
+}
+/* Return unknown: the bar fades out instead of ending on a day. */
+.bar[data-open] {
+  width: 34%;
+  background: linear-gradient(90deg, var(--absence) 0 30%, transparent);
+}
+/* Beyond the scale: the bar runs out of the lane. */
+.bar[data-beyond] {
+  width: 100% !important;
+  clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 50%, calc(100% - 6px) 100%, 0 100%);
+}
+.cards {
+  display: inline-flex;
+  gap: 3px;
+  padding-left: 6px;
+}
+.cards .glyph {
+  width: 9px;
+  height: 12px;
+}
+.back {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  text-align: right;
+}
+.back strong {
+  color: var(--ink-strong);
+  font-size: var(--text-md);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.back small {
+  color: var(--muted-light);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+.back .unknown {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+/* A phone: the player and his return on one line, the reason under them, the lane last. */
+@media (max-width: 760px) {
+  .board {
+    --cols: minmax(0, 1fr) auto;
+  }
+  .head {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .head > span:not(.axis) {
+    display: none;
+  }
+  .row {
+    grid-template-areas:
+      "who back"
+      "reason reason"
+      "lane lane";
+    gap: 8px 12px;
+    padding: 12px 0;
+  }
+  .row > .who {
+    grid-area: who;
+  }
+  .row > .back {
+    grid-area: back;
+  }
+  .row > .reason {
+    grid-area: reason;
+    padding-left: 42px;
+  }
+  .row > .laneCell {
+    grid-area: lane;
+    height: 16px;
+  }
+  .row .lane {
+    inset: 3px 0;
+  }
+}
+
+/* --------------------------------------------------------- a match's sides */
+.sides {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 28px;
+}
+.side {
+  min-width: 0;
+}
+.side h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+  color: var(--ink-strong);
+  font-size: var(--text-md);
+  font-weight: 650;
+}
+.side h3 b {
+  margin-left: auto;
+  color: var(--muted);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.sideRows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sideRows li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+}
+.sideRows li:last-child {
+  border-bottom: 0;
+}
+.sideRows .who small {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  color: var(--muted);
+}
+.sideRows .who small .glyph {
+  margin-top: 0.3em;
+}
+.empty {
+  margin: 0;
+  padding: 14px 0;
+  color: var(--muted-light);
+  font-size: var(--text-sm);
+}
+@media (max-width: 640px) {
+  .sides {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+}

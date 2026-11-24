@@ -60,6 +60,8 @@ import {
   styleTags,
 } from "./ClubScoutUI.jsx";
 import ClubSubstitutions from "./ClubSubstitutions.jsx";
+import { AbsenceBoard, AbsenceCoverage } from "./Absences.jsx";
+import { absenceView, useTeamAbsences } from "../services/team-absences.js";
 import ClubPassingTriangle from "./ClubPassingTriangle.jsx";
 import {
   goalsBesideXg,
@@ -987,8 +989,14 @@ export function Squad({ dossier }) {
     .sort((a, b) => b.ga - a.ga)
     .slice(0, 8);
   const maxGa = Math.max(1, ...top.map((p) => p.ga));
+  const absences = absenceView(useTeamAbsences(dossier.id).value);
   return (
     <div className={c.stack}>
+      {absences?.rows.length > 0 && (
+        <Card title="Absents" action={<AbsenceCoverage view={absences} />}>
+          <AbsenceBoard view={absences} />
+        </Card>
+      )}
       <Kpis
         items={[
           ["Joueurs utilisés", fmtNum(squad.used), "toutes compétitions"],
@@ -1054,7 +1062,7 @@ export function Squad({ dossier }) {
         title="Temps de jeu et contributions"
         text="Toutes compétitions · part du temps : minutes / minutes possibles du club."
       >
-        <SquadTable dossier={dossier} />
+        <SquadTable dossier={dossier} absences={absences} />
       </Card>
     </div>
   );
