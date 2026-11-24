@@ -17,7 +17,7 @@
 //     of the football pages carry the season and focus (a legal page has one address);
 //     `aria-current="page"` is on the current page's link only.
 //  L6 (sibling) Each legal page links to the other one outside the footer.
-//  L7 (contents) A `nav[aria-label="Sommaire"]` lists the sections (13 for the privacy page, 12 for the
+//  L7 (contents) A `nav[aria-label="Sommaire"]` lists the sections (12 for the privacy page, 12 for the
 //     terms); every one of its links is a `#id` that names a section heading of the page, in order.
 //  L8 (anchor) Following a Sommaire link on a desktop leaves the section's heading fully visible
 //     under the sticky header (scroll-margin-top), not hidden behind it.
@@ -30,6 +30,22 @@
 //     `[data-legal-field]`, reading « [À compléter : … »], visible (a box, a dashed underline or a
 //     tinted background); while one is shown, the line « Version provisoire : les champs entre
 //     crochets restent à compléter. » ([data-legal-provisional]) is under the banner.
+//  L12 (en bref) The privacy page shows 4 « En bref » tiles, the terms 3, each with its label and
+//     sentence, each a link to the section it sums up (named by its title).
+//  L13 (references) Every « section N » written in the text is a link to the section that really has
+//     the number N on the page — a section added or moved later must not leave a reference pointing
+//     to the wrong place.
+//  L14 (fields) The pages use exactly four owner fields: publisherName, publisherAddress, contactEmail,
+//     applicableLaw. No « [À compléter » text stands outside a field element, and a punctuation mark
+//     right after a field stays on the field's line (never alone at the start of a line).
+//  L15 (final text) None of phase 1's sample strings is left (« Exemple à confirmer », « Cette section
+//     décrira », …); the owner's note « Champs à compléter » is not on the page.
+//  L16 (typography) In the text: typographic apostrophes only (no '), and no ordinary breaking space
+//     before « : ; ! ? » or inside « … » (a no-break space instead).
+//  L17 (cookies anchor) The privacy page's section « Cookies et stockage du navigateur » has the id
+//     `cookies`: the cookie banner's link points to /confidentialite#cookies.
+//  L18 (phone anchor) On a 390 px phone, opening the Sommaire and following its first link shows the
+//     first field of that section between the sticky bars at the top and the tab bar at the bottom.
 //  X1 No page error and no console error on the legal pages, apart from network failures of third
 //     party scripts a local server cannot reach, and Vercel's analytics scripts (/_vercel/), which
 //     `next start` does not serve (recorded in the evidence, not judged).
@@ -49,9 +65,29 @@ const { chromium } = createRequire(import.meta.url)(process.env.PLAYWRIGHT_CORE 
 
 const SITE = "https://vegasport.vercel.app";
 const PAGES = [
-  { path: "/confidentialite", title: "Confidentialité", sections: 13, sibling: "/conditions-utilisation" },
-  { path: "/conditions-utilisation", title: "Conditions d’utilisation", sections: 12, sibling: "/confidentialite" },
+  {
+    path: "/confidentialite", title: "Confidentialité", sections: 12, sibling: "/conditions-utilisation", refs: 5,
+    facts: [
+      ["Sans compte", "Vos choix restent dans votre navigateur.", "Sans compte : ce que le site traite"],
+      ["Avec un compte", "E-mail et mot de passe chez Neon Auth, préférences et listes chez AWS.", "Avec un compte : ce qui s’ajoute"],
+      ["Connexion Google", "Vos données Google servent uniquement à créer votre compte et à vous connecter.", "Connexion avec Google"],
+      ["Suppression", "Depuis « Mon compte », avec effet immédiat.", "Supprimer votre compte"],
+    ],
+  },
+  {
+    path: "/conditions-utilisation", title: "Conditions d’utilisation", sections: 12, sibling: "/confidentialite", refs: 0,
+    facts: [
+      ["Gratuit", "Tout le site est gratuit, avec ou sans compte.", "Offres payantes"],
+      ["Informations", "Notes, probabilités et prévisions sont données à titre d’information, sans garantie.", "Données, notes et prévisions"],
+      ["Compte", "Facultatif, supprimable à tout moment depuis « Mon compte ».", "Le compte"],
+    ],
+  },
 ];
+const FIELDS = ["applicableLaw", "contactEmail", "publisherAddress", "publisherName"];
+const SAMPLES = ["Exemple à confirmer", "Cette section décrira", "Cette section indiquera", "Cette section précisera", "Cette section listera", "Champs à compléter"];
+// Compare text whatever the kind of space (ordinary, no-break, narrow no-break).
+const flat = (text) => text.replace(/[\u00a0\u202f\s]+/g, " ").trim();
+const usedFields = new Set();
 // The footer's labels; the apostrophe of the site is the typographic one (« Vue d’ensemble »).
 const FOOTER = [
   ["Confidentialité", "/confidentialite/"],
@@ -181,12 +217,92 @@ try {
     check(`L11 ${p.path} fields`, "at least one field « [À compléter : … »] marked and visible",
       fields.list.slice(0, 4), fields.list.length > 0 && fields.list.every((f) => /^\[À compléter : .+\]$/.test(f.text) && f.shown && f.marked));
     check(`L11 ${p.path} note`, `the line « ${PROVISIONAL} » is shown`, fields.note, fields.note?.shown && fields.note.text === PROVISIONAL);
+    // L12 – L17: the text itself.
+    const text = await desk.evaluate(() => {
+      const main = document.querySelector("main");
+      const number_ = (heading) => heading?.querySelector(".legal-num")?.textContent.trim() || null;
+      const title = (heading) => heading?.querySelector(".legal-heading")?.textContent.replace(/\s+/g, " ").trim() || null;
+      const facts = [...main.querySelectorAll(".legal-facts li a")].map((a) => {
+        const target = document.getElementById(decodeURIComponent((a.getAttribute("href") || "").slice(1)));
+        return {
+          label: a.querySelector(".legal-fact-label")?.textContent || "",
+          value: a.querySelector(".legal-fact-value")?.textContent || "",
+          section: target?.matches("[data-legal-section]") ? title(target) : null,
+        };
+      });
+      // Every « section N » of the prose, and where its link (if any) leads.
+      const refs = [];
+      const walker = document.createTreeWalker(main.querySelector(".legal-text") || main, NodeFilter.SHOW_TEXT);
+      const loose = [];
+      const breaking = [];
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        if (node.parentElement.closest("h2, .legal-num")) continue;
+        const value = node.nodeValue;
+        if (value.includes("[À compléter") && !node.parentElement.closest("[data-legal-field]")) loose.push(value.slice(0, 80));
+        if (/'/.test(value)) breaking.push(`apostrophe: ${value.slice(0, 60)}`);
+        for (const m of value.matchAll(/ [:;!?»]|« /g)) breaking.push(`space « ${m[0]} »: ${value.slice(Math.max(0, m.index - 30), m.index + 10)}`);
+      }
+      // « section N » is counted per block (a paragraph, an item, a cell): React may split « section » and its
+      // number into two text nodes, so text nodes alone would miss them.
+      for (const block of (main.querySelector(".legal-text") || main).querySelectorAll("p, li, td, th")) {
+        if (block.querySelector("p, li, td, th")) continue;
+        const written = [...block.textContent.matchAll(/sections?[\s\u00a0\u202f]+(\d+)/g)].map((m) => m[1]);
+        const links = [...block.querySelectorAll("a[href^='#']")].filter((a) => /^sections?[\s\u00a0\u202f]+\d+$/.test(a.textContent.trim()));
+        written.forEach((number, i) => {
+          const link = links[i];
+          const target = link ? document.getElementById(decodeURIComponent(link.getAttribute("href").slice(1))) : null;
+          refs.push({
+            written: number,
+            linkText: link ? link.textContent.replace(/\D+/g, "") : null,
+            linkedTo: target?.matches("[data-legal-section]") ? number_(target) : null,
+          });
+        });
+      }
+      // A punctuation mark just after a field: on the field's last line.
+      const detached = [];
+      for (const field of main.querySelectorAll("[data-legal-field]")) {
+        const next = field.nextSibling;
+        if (!next || next.nodeType !== 3 || !/^[.,;:]/.test(next.nodeValue)) continue;
+        const range = document.createRange();
+        range.setStart(next, 0);
+        range.setEnd(next, 1);
+        const mark = range.getBoundingClientRect(), rects = field.getClientRects(), last = rects[rects.length - 1];
+        if (Math.abs(mark.top + mark.height / 2 - (last.top + last.height / 2)) > last.height / 2) detached.push(`${field.dataset.legalField} ${next.nodeValue[0]}`);
+      }
+      const cookies = document.getElementById("cookies");
+      return {
+        facts,
+        refs,
+        loose,
+        breaking: breaking.slice(0, 8),
+        detached,
+        fields: [...new Set([...main.querySelectorAll("[data-legal-field]")].map((f) => f.dataset.legalField))],
+        body: main.innerText,
+        cookies: cookies?.matches("[data-legal-section]") ? title(cookies) : null,
+      };
+    });
+    const wanted = p.facts.map(([label, value, section]) => ({ label, value, section }));
+    check(`L12 ${p.path}`, `${p.facts.length} « En bref » tiles, each leading to its section`, text.facts.map((f) => ({ ...f, label: flat(f.label), value: flat(f.value) })),
+      text.facts.length === wanted.length && wanted.every((w, i) => flat(text.facts[i].label) === w.label && flat(text.facts[i].value) === w.value && flat(text.facts[i].section || "") === w.section));
+    check(`L13 ${p.path}`, `every « section N » links to the section numbered N (at least ${p.refs})`, { refs: text.refs.length, wrong: text.refs.filter((r) => r.written !== r.linkedTo || r.linkText !== r.written) },
+      text.refs.length >= p.refs && text.refs.every((r) => r.written === r.linkedTo && r.linkText === r.written));
+    text.fields.forEach((name) => usedFields.add(name));
+    check(`L14 ${p.path}`, "fields are owner fields only, no loose « [À compléter », punctuation stays with its field",
+      { fields: text.fields, loose: text.loose, detached: text.detached },
+      text.fields.length > 0 && text.fields.every((f) => FIELDS.includes(f)) && text.loose.length === 0 && text.detached.length === 0);
+    const left = SAMPLES.filter((sample) => text.body.includes(sample));
+    check(`L15 ${p.path}`, "no phase 1 sample text, no owner's note", left.length ? left : "none", left.length === 0);
+    check(`L16 ${p.path}`, "typographic apostrophes, no-break spaces before : ; ! ? and inside « »", text.breaking.length ? text.breaking : "none", text.breaking.length === 0);
+    if (p.path === "/confidentialite")
+      check("L17", "#cookies is the section « Cookies et stockage du navigateur »", text.cookies, flat(text.cookies || "") === "Cookies et stockage du navigateur");
     await desk.evaluate(() => window.scrollTo(0, 0));
     await desk.screenshot({ path: path.join(out, `${p.path.slice(1)}-desktop.png`) });
     check(`L9 ${p.path}`, "accounts off (/connexion is the 404 page) and the page renders in full",
       accountsOff ? { accountsOff, h1: facts.h1s[0] || null } : "accounts are on on this server: not run",
       accountsOff ? facts.h1s[0] === p.title && facts.sections.length === p.sections : null);
   }
+
+  check("L14 both", "the two pages together use exactly the four owner fields", [...usedFields].sort(), [...usedFields].sort().join() === FIELDS.join());
 
   // ---- L5: the footer on four pages
   for (const route of ["/", "/clubs", ...PAGES.map((p) => p.path)]) {
@@ -225,6 +341,24 @@ try {
     check(`L10 ${p.path}`, "390 px: no sideways scroll, nothing wider than the screen outside its own scroll box", sideways,
       sideways.overflow <= 0 && sideways.wide.length === 0);
     await phone.screenshot({ path: path.join(out, `${p.path.slice(1)}-phone.png`) });
+    // L18: the Sommaire's first link, then the first field of that section between the bars.
+    let reached = { missing: true };
+    const toggle = phone.locator(".legal-toc-toggle");
+    if (await toggle.count()) {
+      await toggle.click();
+      await phone.locator('nav[aria-label="Sommaire"] a').first().click();
+      await phone.waitForTimeout(900);
+      reached = await phone.evaluate(() => {
+        const field = document.querySelector("main [data-legal-field]");
+        if (!field) return { field: null };
+        const box = field.getBoundingClientRect();
+        const toc = document.querySelector(".legal-toc")?.getBoundingClientRect();
+        const bar = document.querySelector(".tabbar")?.getBoundingClientRect();
+        return { top: Math.round(box.top), bottom: Math.round(box.bottom), tocBottom: Math.round(toc?.bottom ?? 0), tabbarTop: Math.round(bar?.top ?? innerHeight) };
+      });
+    }
+    check(`L18 ${p.path}`, "phone: after the Sommaire's first link, the section's first field is fully visible between the bars", reached,
+      !reached.missing && reached.top >= reached.tocBottom && reached.bottom <= reached.tabbarTop);
   }
   await phone.context().close();
 
