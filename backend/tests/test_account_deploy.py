@@ -7,6 +7,10 @@ with their outputs, parameters and status), records every call, and keeps what a
 deploy). `python3` stands in for infra/aws/package_api.py only (the packages are built for real in CI, job « Read
 API package »). A run is judged on the calls it made: the stacks deployed with their overrides, the parameters
 written, the uploads, the tasks, and on its log.
+
+Evidence: one JSON file per Deploy run (the state given, the environment, the exit code, the log, every call, the
+state after; the secrets in it are the run's own random ones) in VEGA_ACCOUNT_DEPLOY_EVIDENCE, or by default
+<tmp>/vega-account-deploy/<run>/. Rerun: PYTHONPATH=backend:backend/tests python3 -m unittest -v test_account_deploy
 """
 import hashlib
 import json
@@ -17,6 +21,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -33,6 +38,7 @@ NEON = {
 }
 SWITCH = "/vega/v2/account-deploy"
 TEMPLATE = (ROOT / "infra/aws/account.yaml").read_text()
+EVIDENCE = Path(os.environ.get("VEGA_ACCOUNT_DEPLOY_EVIDENCE") or Path(tempfile.gettempdir()) / "vega-account-deploy" / time.strftime("%Y%m%dT%H%M%S"))
 
 FAKE_AWS = r'''
 import json, os, re, sys
@@ -274,7 +280,14 @@ class AccountDeployTest(unittest.TestCase):
         calls = [json.loads(line) for line in log.splitlines()]
         for c in calls:
             c["argv"] = [a.replace(str(tmp / "runner"), "<tmp>") for a in c["argv"]]
-        return Run(done, calls, json.loads((tmp / "state.json").read_text()))
+        after = json.loads((tmp / "state.json").read_text())
+        EVIDENCE.mkdir(parents=True, exist_ok=True)
+        runs = sorted(EVIDENCE.glob(f"{self.id()}.*.json"))
+        (EVIDENCE / f"{self.id()}.{len(runs)}.json").write_text(json.dumps({
+            "test": self.id(), "command": f"bash {script} (cwd {ROOT})", "env": {k: v for k, v in env.items() if k != "PATH"},
+            "state_given": state, "exit_code": done.returncode, "stdout": done.stdout, "stderr": done.stderr, "calls": calls,
+            "state_after": after}, indent=1))
+        return Run(done, calls, after)
 
     def assert_today(self, run, line):
         self.assertEqual(run.code, 0, run.log)

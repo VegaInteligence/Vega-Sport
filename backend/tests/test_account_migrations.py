@@ -83,8 +83,11 @@ class AccountMigrationsTest(unittest.TestCase):
         cls.absent_after_first = x("SELECT to_regnamespace('account'), to_regnamespace('account_admin')").fetchone()
         cls.on = last_line(run(ROOT, FIRST))
         cls.records = x("SELECT name, sha256, applied_at FROM account_admin.applied ORDER BY name").fetchall()
+        secret = "SELECT rolpassword FROM pg_authid WHERE rolname = 'vega_v2_account'"
+        cls.secret_on = x(secret).fetchone()[0]
         cls.again = last_line(run(ROOT, SECOND))
         cls.records_again = x("SELECT name, sha256, applied_at FROM account_admin.applied ORDER BY name").fetchall()
+        cls.secret_again = x(secret).fetchone()[0]
         cls.off = last_line(run(ROOT))
         cls.records_off = x("SELECT name, sha256, applied_at FROM account_admin.applied ORDER BY name").fetchall()
         # The login, with the second password, as the store connects.
@@ -100,11 +103,6 @@ class AccountMigrationsTest(unittest.TestCase):
                 cls.login_record = "allowed"
             except psycopg.errors.InsufficientPrivilege:
                 cls.login_record = "denied"
-        try:
-            psycopg.connect(login_url(FIRST), autocommit=True).close()
-            cls.first_password = "accepted"
-        except psycopg.OperationalError:
-            cls.first_password = "refused"
 
     @classmethod
     def tearDownClass(cls):
@@ -146,7 +144,9 @@ class AccountMigrationsTest(unittest.TestCase):
         total = LINE.fullmatch(self.first).group(2)
         self.assertEqual(self.again, f"migrations applied=0 total={total} account applied=0 total={len(FILES)} logins=vega_v2_account")
         self.assertEqual(self.records_again, self.records)
-        self.assertEqual(self.first_password, "refused")
+        # The password is set again (a local server may trust 127.0.0.1, so its stored verifier is compared).
+        self.assertTrue(self.secret_on.startswith("SCRAM-SHA-256$"))
+        self.assertNotEqual(self.secret_again, self.secret_on)
 
     def test_m4_an_edited_applied_file_stops_the_run(self):
         backend = copy_backend(self.tmp())

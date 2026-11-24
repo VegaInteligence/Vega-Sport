@@ -11,7 +11,7 @@ Parameters:
   BackfillDesiredCount: {Type: Number, Default: 0, AllowedValues: [0, 1], Description: 'The backfill service: 1 while history is collected, 0 once it is.'}
   CollectUrlParameter: {Type: String, Default: /vega/v2/collect-database-url}
   CalcUrlParameter: {Type: String, Default: /vega/v2/calc-database-url}
-  PasswordParameterPrefix: {Type: String, Default: /vega/v2/password, Description: 'SecureStrings <prefix>-collect, -calc, -read'}
+  PasswordParameterPrefix: {Type: String, Default: /vega/v2/password, Description: 'SecureStrings <prefix>-collect, -calc, -read (and -account)'}
   PitchApiKeyParameter: {Type: String, Default: /vega/v2/pitchapi-key}
   OddsApiKeyParameter:
     Type: String
@@ -22,7 +22,17 @@ Parameters:
     Default: ''
     AllowedPattern: '[a-z0-9.-]{0,63}'
     Description: "Bucket holding main's data/sources (read only, archive import); empty, no archive task"
+  # The account API (VI-38): true once SSM /vega/v2/account-deploy is on (deploy.sh), then kept.
+  # The migrate task then gets the account login's password, which also makes it apply
+  # backend/account/sql (backend/vega/migrate.py). Off, the task names no parameter that may not
+  # exist: a task naming a missing parameter does not start.
+  Account:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: 'true: the migrate task applies backend/account/sql and sets the login vega_v2_account (<prefix>-account)'
 Conditions:
+  HasAccount: !Equals [!Ref Account, 'true']
   HasArchiveSources: !Not [!Equals [!Ref ArchiveSourcesBucket, '']]
   HasOddsApi: !Not [!Equals [!Ref OddsApiKeyParameter, '']]
 Resources:
@@ -205,6 +215,10 @@ Resources:
             - {Name: V2_COLLECT_PASSWORD, ValueFrom: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${PasswordParameterPrefix}-collect'}
             - {Name: V2_CALC_PASSWORD, ValueFrom: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${PasswordParameterPrefix}-calc'}
             - {Name: V2_READ_PASSWORD, ValueFrom: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${PasswordParameterPrefix}-read'}
+            - !If
+              - HasAccount
+              - {Name: V2_ACCOUNT_PASSWORD, ValueFrom: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${PasswordParameterPrefix}-account'}
+              - !Ref AWS::NoValue
           LogConfiguration:
             LogDriver: awslogs
             Options: {awslogs-group: !Ref Logs, awslogs-region: !Ref 'AWS::Region', awslogs-stream-prefix: migrate}

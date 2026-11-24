@@ -67,6 +67,8 @@ Resources:
                   - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/vega-v2-api*'
                   - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/ecs/vega-v2-live*'
                   - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/vega-v2-live*'
+                  # VI-38: the account API (account.yaml), its two functions' log groups.
+                  - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/vega-v2-account*'
               - Sid: LogsDescribe
                 Effect: Allow
                 Action: ['logs:DescribeLogGroups']
@@ -80,6 +82,8 @@ Resources:
                   - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/vega-v2-worker-*'
                   - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/vega-v2-api-*'
                   - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/vega-v2-live-*'
+                  # VI-38: CloudFormation names them vega-v2-account-<Id>-<random>.
+                  - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/vega-v2-account-*'
               - Sid: ServiceLinkedRoles
                 Effect: Allow
                 Action: 'iam:CreateServiceLinkedRole'
@@ -91,12 +95,15 @@ Resources:
                 Resource:
                   - !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:vega-v2-api*'
                   - !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:vega-v2-live*'
+                  # VI-38: the front (its Function URL and its public permissions included) and the store.
+                  - !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:vega-v2-account*'
               - Sid: ReleaseRead
                 Effect: Allow
                 Action: ['s3:GetObject']
                 Resource:
                   - !Sub 'arn:${AWS::Partition}:s3:::${ReleaseBucket}/releases/v2-api/*'
                   - !Sub 'arn:${AWS::Partition}:s3:::${ReleaseBucket}/releases/v2-live/*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${ReleaseBucket}/releases/v2-account/*'
               # Live (live.yaml): its tables and its AppSync Events API.
               - Sid: LiveTables
                 Effect: Allow
@@ -246,6 +253,7 @@ Resources:
                 Resource:
                   - !Sub 'arn:${AWS::Partition}:s3:::${ReleaseBucket}/releases/v2-api/*'
                   - !Sub 'arn:${AWS::Partition}:s3:::${ReleaseBucket}/releases/v2-live/*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${ReleaseBucket}/releases/v2-account/*'
               - Sid: Secrets
                 Effect: Allow
                 Action: ['ssm:GetParameter', 'ssm:PutParameter']
@@ -311,6 +319,10 @@ Resources:
                 Resource: '*'
                 Condition: {StringEquals: {'kms:ViaService': !Sub 'ssm.${AWS::Region}.amazonaws.com'}}
 Outputs:
+  # Read by deploy.sh's account preflight (backend/account/FAILURE_MODES.md W4): 1 once this stack
+  # holds the account API's grants above. The Deploy cannot update this stack; the owner does,
+  # from his Mac (backend/account/DEPLOYMENT.md, section 3).
+  AccountGrants: {Value: '1'}
   PilotRoleArn: {Value: !GetAtt PilotRole.Arn}
   DeployRoleArn: {Value: !GetAtt DeployRole.Arn}
   CloudFormationRoleArn: {Value: !GetAtt CloudFormationRole.Arn}
