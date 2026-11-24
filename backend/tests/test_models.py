@@ -459,8 +459,12 @@ class ModelsTest(unittest.TestCase):
         # §51 (51i): a national match from 1 July 2021 moves by K_n 30 × its weight (a final's stakes) × the goal margin's G.
         self.assertAlmostEqual(after - before, power.NATION_K * final_stakes * power.goal_factor(1) * (1 - expected), places=3)
         self.assertEqual(before, 1500.0)  # no FIFA edition held: every nation starts at 1500
-        self.assertEqual(self.one("""SELECT method_version, nation_elo_version, nation_k, nation_start, nation_seed_edition FROM agg.power_runs
-                                     WHERE kind='elo' AND status='published'"""), (power.METHOD_VERSION, "nations-elo-v1", 30.0, date(2021, 7, 1), None))
+        # §53 (53b): the run's national settings in their own table, one row for the published run and none for another.
+        self.assertEqual(self.one("""SELECT r.method_version, n.version, n.k, n.start_date, n.seed_edition FROM agg.power_runs r
+                                     JOIN agg.nation_elo_runs n ON n.run_id = r.id WHERE r.kind='elo' AND r.status='published'"""),
+                         (power.METHOD_VERSION, "nations-elo-v1", 30.0, date(2021, 7, 1), None))
+        self.assertEqual(self.one("""SELECT count(*) FROM agg.nation_elo_runs n JOIN agg.power_runs r ON r.id = n.run_id
+                                     WHERE r.kind <> 'elo' OR r.status <> 'published'""")[0], 0)
         self.assertEqual(x("SELECT team_id, matches, rank, provisional FROM agg.team_power WHERE scope='nations' AND season_id=2025 ORDER BY 1").fetchall(),
                          [(900, 1, 1, True), (901, 1, 2, True)])
         self.assertFalse(power.stale_rankings(self.db))
@@ -501,7 +505,8 @@ class ModelsTest(unittest.TestCase):
         for label, seeds in (("2021-02-18", (1600, 1400)), ("2021-04-07", (1550, 1450))):
             power.refresh_elo(self.db)
             self.assertEqual(x("SELECT team_id, elo_before FROM agg.team_elo WHERE match_id=9100 ORDER BY 1").fetchall(), [(910, seeds[0]), (911, seeds[1])])
-            self.assertEqual(self.one("SELECT nation_seed_edition FROM agg.power_runs WHERE kind='elo' AND status='published'")[0], label)
+            self.assertEqual(self.one("""SELECT n.seed_edition FROM agg.nation_elo_runs n JOIN agg.power_runs r ON r.id = n.run_id
+                                         WHERE r.kind='elo' AND r.status='published'""")[0], label)
             stakes = self.one("SELECT stakes FROM agg.team_elo WHERE match_id=9100 AND team_id=910")[0]
             self.assertEqual(stakes, 1.0)  # I_m of a friendly-less round: as `stakes` gives it
             x("DELETE FROM core.ranking_editions WHERE label='2021-02-18'")

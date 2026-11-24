@@ -58,6 +58,12 @@ UNITS = [
     ("values", "70005", "HTTP_404", False, "kept"),  # another kind
 ]
 NATIONS = (9611, 9612)
+# agg.power_runs on main 0302d45 (after 167): no migration of the national Elo changes it (§53, 53a).
+POWER_RUN_COLUMNS = ["id", "kind", "season_id", "method_version", "elo_initial", "elo_k", "elo_home_advantage", "regularisation_minutes",
+                     "eligibility_minutes", "total_weight", "rate_weight", "min_reference_matches", "matches", "players", "status", "started_at",
+                     "finished_at", "seed_rounds", "link_matches", "level_prior_matches", "eligibility_share", "level_share", "level_weight",
+                     "score_scale", "year_start", "year_end", "linked_leagues", "level_exchange", "tier_gap", "tier_gap_sd", "top_sd", "pair_sd",
+                     "dispersion", "measured_se"]
 FRIENDLY = 9621
 
 
@@ -180,6 +186,18 @@ class DeploymentMigrationsTest(unittest.TestCase):
             self.assertIsNotNone(self.read.execute(sql).fetchone()[0], sql)
         friendly = self.read.execute("SELECT match_id, tournament, home_name, away_name FROM api.home_internationals('2026-10-05', '2026-10-11')").fetchall()
         self.assertEqual([r[1:] for r in friendly], [("Friendly", "Brazil", "Japan")])
+
+    def test_53a_the_power_runs_keep_main_s_columns_and_the_national_settings_have_their_own_table(self):
+        # §53: the Open Matchday restore compares the reviewed run's whole row (open_matchday_restore.verify_elo).
+        x = self.db.execute
+        columns = [c for (c,) in x("""SELECT column_name FROM information_schema.columns
+                                      WHERE table_schema = 'agg' AND table_name = 'power_runs' ORDER BY ordinal_position""").fetchall()]
+        self.assertEqual(columns, POWER_RUN_COLUMNS)  # red before §53: the four nation_* columns of 168
+        self.assertEqual([c for (c,) in x("""SELECT column_name FROM information_schema.columns
+                                             WHERE table_schema = 'agg' AND table_name = 'nation_elo_runs' ORDER BY ordinal_position""").fetchall()],
+                         ["run_id", "version", "k", "start_date", "seed_edition"])
+        for privilege in ("SELECT", "INSERT", "UPDATE", "DELETE"):
+            self.assertTrue(x("SELECT has_table_privilege('vega_calc', 'agg.nation_elo_runs', %s)", (privilege,)).fetchone()[0], privilege)
 
     def test_48k_159_moves_each_conflicting_edition_once_160_clears_the_failed_units_without_an_episode(self):
         self.assertEqual(self.versions_after, {A: 5, B: 1, C: 2})

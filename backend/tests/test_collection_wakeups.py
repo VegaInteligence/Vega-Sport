@@ -430,9 +430,18 @@ class InternationalsEloTest(CollectionBase):
 
         first = self.native(2019)
         self.assertEqual(self.daily({}), [first])
-        self.assertFalse(elo_due(self.calc))
-        self.x("UPDATE agg.power_runs SET nation_elo_version = NULL WHERE kind='elo' AND status='published'")
+        self.assertFalse(elo_due(self.calc))  # 53c: the run's row holds the present version
+        published = "SELECT id FROM agg.power_runs WHERE kind='elo' AND status='published'"
+        # 53d: another version in the run's row (agg.nation_elo_runs, §53), then no row (a run from before 168): due.
+        self.x(f"UPDATE agg.nation_elo_runs SET version = 'nations-elo-v0' WHERE run_id = ({published})")
         self.assertTrue(elo_due(self.calc))
+        self.x(f"DELETE FROM agg.nation_elo_runs WHERE run_id = ({published})")
+        self.assertTrue(elo_due(self.calc))
+        # One run, then not due.
+        self.daily({})
+        self.assertEqual([r[1] for r in self.state()[2]], ["superseded", "published"])
+        self.assertFalse(elo_due(self.calc))
+        self.assertEqual(self.x(f"SELECT version FROM agg.nation_elo_runs WHERE run_id = ({published})").fetchone()[0], "nations-elo-v1")
 
     def test_50n_an_internationals_edition_renames_no_team(self):
         (self.tmp / "results.csv").write_text(RESULTS_CSV + "2024-10-15,Scotland,Portugal,0,0,UEFA Nations League,Glasgow,Scotland,FALSE\n")
