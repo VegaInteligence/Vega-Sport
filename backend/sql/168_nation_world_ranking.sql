@@ -1,16 +1,24 @@
 -- 23 Nov 2026 (#70, VI-49; FAILURE_MODES.md §51): the national teams' Elo from 2021/22 (friendlies and qualifiers, a
 -- FIFA seed) and their world ranking. A nation of a season's ranking from 2021/22 is listed when it played a counted
 -- match in the two years up to the season's reference date; `provisional` when it played fewer than 8 in four years
--- (false for the clubs and the seasons before). The Elo run records the national pass's settings, so that the worker
--- runs it again once when they change (worker.elo_due) without re-ranking the players (METHOD_VERSION unchanged).
+-- (false for the clubs and the seasons before). Each Elo run keeps the national pass's settings in its own row of
+-- agg.nation_elo_runs, so that the worker runs it again once when they change (worker.elo_due) without re-ranking the
+-- players (METHOD_VERSION unchanged). agg.power_runs keeps its columns: the Open Matchday restore compares a reviewed
+-- run's whole row (open_matchday_restore.verify_elo; FAILURE_MODES.md §53).
 SET LOCAL lock_timeout = '3s';
 
 ALTER TABLE agg.team_power ADD COLUMN provisional boolean NOT NULL DEFAULT false;
-ALTER TABLE agg.power_runs
-  ADD COLUMN nation_elo_version text,
-  ADD COLUMN nation_k real,
-  ADD COLUMN nation_start date,
-  ADD COLUMN nation_seed_edition text;
+
+-- One row per Elo run of the national pass, written with the run (power.refresh_elo). A run without one (before this
+-- migration) is of another national method. A run deleted takes its row with it.
+CREATE TABLE agg.nation_elo_runs (
+  run_id integer PRIMARY KEY REFERENCES agg.power_runs ON DELETE CASCADE,
+  version text NOT NULL,
+  k real NOT NULL,
+  start_date date NOT NULL,
+  seed_edition text
+);
+GRANT SELECT, INSERT, UPDATE, DELETE ON agg.nation_elo_runs TO vega_calc;
 
 -- 064's view, with the row's provisional flag last.
 CREATE OR REPLACE VIEW api.power_clubs AS

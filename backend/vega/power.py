@@ -1281,10 +1281,13 @@ def refresh_elo(conn):
             )
         conn.execute(
             """UPDATE agg.power_runs SET seed_rounds=%s, level_exchange=%s, tier_gap=%s, tier_gap_sd=%s, top_sd=%s, pair_sd=%s,
-                 dispersion=%s, measured_se=%s, nation_elo_version=%s, nation_k=%s, nation_start=%s, nation_seed_edition=%s WHERE id=%s""",
+                 dispersion=%s, measured_se=%s WHERE id=%s""",
             (settings["rounds"], settings.get("exchange"), settings.get("tier_gap"), settings.get("tier_gap_sd"), settings.get("top_sd"),
-             settings.get("pair_sd"), settings.get("dispersion"), MEASURED_SE, NATION_ELO_VERSION, NATION_K, NATION_START, seed_edition, run),
+             settings.get("pair_sd"), settings.get("dispersion"), MEASURED_SE, run),
         )
+        # The national pass's settings, in their own table: agg.power_runs keeps main's columns (§53).
+        conn.execute("INSERT INTO agg.nation_elo_runs(run_id, version, k, start_date, seed_edition) VALUES (%s,%s,%s,%s,%s)",
+                     (run, NATION_ELO_VERSION, NATION_K, NATION_START, seed_edition))
         _publish(conn, run, "elo", None, len(rows) // 2)
     return len(rows) // 2
 
