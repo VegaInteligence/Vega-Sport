@@ -122,19 +122,20 @@ button:disabled {
   justify-content: center;
   flex-shrink: 0;
 }
-/* The wordmark « Vega Sport. » at its own proportions. Under 1024px the mark « V. » alone,
-   as narrow as the mark it replaces: the menus keep the room they had. */
+/* The wordmark « Vega* » with « Sport » underneath, at its own proportions. Under 1120px the
+   mark « V* » alone: with the account button in the header, the wordmark would push a menu
+   under the search field (tests/e2e/brand.e2e.mjs, B11). */
 .brand-logo {
   display: block;
-  height: 28px;
-  aspect-ratio: 4323 / 954;
+  height: 40px;
+  aspect-ratio: 2138 / 1137;
 }
 .brand-mark {
   display: none;
-  height: 30px;
-  aspect-ratio: 731 / 675;
+  height: 26px;
+  aspect-ratio: 1049 / 679;
 }
-@media (max-width: 1023px) {
+@media (max-width: 1119px) {
   .brand-logo {
     display: none;
   }
@@ -1861,9 +1862,9 @@ th[aria-sort="descending"] .sort-indicator {
 }
 .site-footer-logo {
   display: block;
-  height: 40px;
+  height: 56px;
   max-width: 100%;
-  aspect-ratio: 4323 / 954;
+  aspect-ratio: 2138 / 1137;
 }
 .site-footer-column h2 {
   margin: 4px 0 12px;

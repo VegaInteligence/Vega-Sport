@@ -12,7 +12,7 @@ import { BRAND_IVORY, WORDMARK } from "../brand-mark.js";
 export const WIDTH = 1080, HEIGHT = 1350;
 const BG = "#06080C", PANEL = "#0F141C", LINE = "#1F2835", INK = "#F4F7FB", MUTED = "#8C97A8", SOFT = "#C9D3E0";
 const ACCENT = "#3C96E7", WARM = "#F08A4B", WIN = "#3FB97A", DRAW = "#8C97A8", LOSS = "#E5555A";
-// The wordmark « Vega. » at the top of every card, in the logo's ivory (src/brand-mark.js).
+// The wordmark « Vega* » at the top of every card, in the logo's ivory (src/brand-mark.js).
 const MARK_HEIGHT = 58;
 
 export const TITLES = REPORT_TITLES;
@@ -61,7 +61,7 @@ function Frame({ report, n, children, subtitle }) {
         <div style={{ display: "flex", alignItems: "center" }}>
           <svg width={Math.round((MARK_HEIGHT * WORDMARK.width) / WORDMARK.height)} height={MARK_HEIGHT} viewBox={`0 0 ${WORDMARK.width} ${WORDMARK.height}`}>
             <path d={WORDMARK.letters} fill={BRAND_IVORY} />
-            <circle cx={WORDMARK.point.cx} cy={WORDMARK.point.cy} r={WORDMARK.point.r} fill={BRAND_IVORY} />
+            <path d={WORDMARK.sign} fill={BRAND_IVORY} />
           </svg>
         </div>
         <div style={{ display: "flex", fontSize: 26, color: MUTED }}>{report.title}</div>

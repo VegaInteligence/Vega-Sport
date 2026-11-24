@@ -18,8 +18,8 @@
   position: relative;
   display: grid;
   place-items: center;
-  width: 132px;
-  height: 156px;
+  width: 168px;
+  height: 124px;
   padding: 12px;
   border: 0;
   border-radius: 0;
@@ -58,16 +58,17 @@
   overflow: visible;
 }
 .shape,
-.point {
+.sign {
   fill: currentColor;
 }
 .shape {
   opacity: 0.92;
 }
-/* Up fast, down faster, as a ball does, along the slope of the V's arm so it never crosses
-   it; the box keeps room above the letter for it. */
-.point {
-  animation: bounce 900ms infinite;
+/* The asterisk turns on itself, one petal's step at a time. */
+.sign {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: turn 3600ms steps(6, end) infinite;
 }
 .spark {
   animation: spark 620ms cubic-bezier(0.23, 1, 0.32, 1);
@@ -83,19 +84,13 @@
   .control:hover .shape {
     opacity: 1;
   }
-  .control:hover .point {
-    animation-duration: 620ms;
+  .control:hover .sign {
+    animation-duration: 1800ms;
   }
 }
-@keyframes bounce {
-  0%,
-  100% {
-    transform: translate(0, 0);
-    animation-timing-function: cubic-bezier(0.2, 0.6, 0.35, 1);
-  }
-  50% {
-    transform: translate(58px, -170px);
-    animation-timing-function: cubic-bezier(0.65, 0, 0.8, 0.4);
+@keyframes turn {
+  to {
+    transform: rotate(360deg);
   }
 }
 @keyframes spark {
@@ -115,7 +110,7 @@
     transform: none;
     transition: none;
   }
-  .point,
+  .sign,
   .spark {
     animation: none;
   }
