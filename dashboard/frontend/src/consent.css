@@ -1,0 +1,160 @@
+/* The consent banner (components/Consent.jsx): a night card at the bottom, never a wall over the page.
+   The brand's voice of the account screens (account.css): the logo's serif and point for the title, square corners,
+   Inter for the rest. « Accepter » and « Refuser » are one style: refusing is as easy as accepting. */
+
+:root,
+html[data-theme="dark"] {
+  --consent-bg: var(--vega-night);
+  --consent-line: var(--border-strong);
+}
+html[data-theme="light"] {
+  --consent-bg: var(--surface);
+  --consent-line: var(--border-strong);
+}
+
+.consent {
+  position: fixed;
+  left: calc(var(--page-gutter) + env(safe-area-inset-left, 0px));
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  z-index: 60;
+  display: grid;
+  gap: 12px;
+  width: min(392px, calc(100% - 2 * var(--page-gutter)));
+  padding: 20px 20px 20px;
+  border: 1px solid var(--consent-line);
+  background: var(--consent-bg);
+  box-shadow: var(--shadow-overlay);
+  color: var(--ink);
+  animation: consent-in 0.22s ease-out;
+}
+.consent-title {
+  margin: 0;
+  color: var(--ink-strong);
+  font-family: var(--account-serif);
+  font-size: 26px;
+  font-weight: 500;
+  letter-spacing: -0.012em;
+  line-height: 1.05;
+}
+.consent-text {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-md);
+  line-height: 1.5;
+}
+.consent-text a {
+  color: var(--ink-strong);
+  text-decoration: underline;
+  text-decoration-color: var(--muted-light);
+  text-underline-offset: 3px;
+  white-space: nowrap;
+}
+.consent-text a:hover {
+  text-decoration-color: currentColor;
+}
+.consent-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 4px;
+}
+.consent-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--consent-line);
+  background: transparent;
+  color: var(--ink-strong);
+  font-size: 14px;
+  font-weight: 550;
+  touch-action: manipulation;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+}
+.consent-button:hover {
+  border-color: var(--account-cta);
+  background: var(--account-cta);
+  color: var(--account-cta-ink);
+}
+/* The current choice, when the banner is opened again: the same box, a point before the word. */
+.consent-button[aria-pressed="true"] {
+  border-color: var(--ink-strong);
+}
+.consent-button[aria-pressed="true"]::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* The footer's « Cookies » (ConsentSettingsLink): a link of the footer's columns. */
+.consent-settings-link {
+  display: inline-block;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: var(--text-md);
+  line-height: 1.5;
+  text-align: left;
+  cursor: pointer;
+}
+.consent-settings-link:hover {
+  color: var(--accent-dark);
+}
+
+/* While the card is open the page's last lines can be scrolled clear of it. */
+html[data-consent="open"] body {
+  padding-bottom: calc(var(--consent-h, 0px) + 24px);
+}
+
+@keyframes consent-in {
+  from {
+    opacity: 0;
+    translate: 0 8px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .consent {
+    animation: none;
+  }
+}
+
+/* Phones: the width of the tab bar, just above it (or above the screen's edge where there is none). */
+@media (max-width: 640px) {
+  .consent {
+    left: 50%;
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    width: min(430px, calc(100% - 24px));
+    padding: 12px 14px 12px;
+    gap: 8px;
+    transform: translateX(-50%);
+  }
+  body:has(.tabbar) .consent {
+    bottom: calc(var(--tabbar-space) + 8px);
+  }
+  html[data-consent="open"] body:has(.tabbar) {
+    padding-bottom: calc(var(--consent-h, 0px) + 8px);
+  }
+  .consent-title {
+    font-size: 21px;
+  }
+  .consent-text {
+    font-size: var(--text-sm);
+    line-height: 1.45;
+  }
+  .consent-actions {
+    margin-top: 0;
+  }
+  .consent-button {
+    height: var(--control-h);
+    font-size: 15px;
+  }
+}
