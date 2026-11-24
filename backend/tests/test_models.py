@@ -856,13 +856,13 @@ class ModelsTest(unittest.TestCase):
                                        WHERE competition_season_id = 1 AND stage IS NULL AND group_name IS NULL""").fetchall())
 
     def award_cup(self, edition, key, matches):
-        """A complementary cup edition of 2025 (results only, no player rows), as cups.save writes it: matches are
-        (id, round name, home, away, status, score, extra time, shoot-out[, day], 1 October 2025 by default). Removed, and
-        the race read again, after the case."""
+        """A complementary cup edition of 2025 (results only, no player rows), as cups.save and open_matchday.save write
+        it: a competition without a kind (§60.3), a collector's key; matches are (id, round name, home, away, status,
+        score, extra time, shoot-out[, day], 1 October 2025 by default). Removed, and the race read again, after the case."""
         from vega import award
 
         x = self.db.execute
-        x("INSERT INTO core.competitions(id,name,kind) VALUES(%s,%s,'cup')", (edition, f"Coupe {edition}"))
+        x("INSERT INTO core.competitions(id,name) VALUES(%s,%s)", (edition, f"Coupe {edition}"))
         x("INSERT INTO core.competition_seasons(id,competition_id,season_id,native_label,cup_key) VALUES(%s,%s,2025,'2025/2026',%s)",
           (edition, edition, key))
         rounds = {}
@@ -884,6 +884,18 @@ class ModelsTest(unittest.TestCase):
 
         self.addCleanup(remove)
 
+    # One national cup edition of 2025 for each of award.NATIONAL_CUP_COUNTRIES (§60.3: the national cups of a year are
+    # counted only with the five), keyed as their collectors key them; one ordinary round between clubs 7 and 8 (no
+    # honour of its own). Editions 91 to 95.
+    HELD = {"ENG": "open-cups:efl-cup-archive:2025/2026", "ESP": "open-matchday:ESP_CUP_copa-del-rey:2025/2026",
+            "GER": "open-cups:germany-cup-archive:2025/2026", "ITA": "open-matchday:ITA_CUP_coppa-italia:2025/2026",
+            "FRA": "open-cups:france-cup:2025/2026"}
+
+    def held_cups(self, *countries):
+        for n, country in enumerate(countries or self.HELD):
+            edition = 91 + list(self.HELD).index(country)
+            self.award_cup(edition, self.HELD[country], [(9910 + edition - 90, "1. Runde", 7, 8, "finished", (1, 0), None, None)])
+
     def test_60_the_race_is_computed_and_stored_by_the_ranking_s_run(self):
         # 60.1, « Stored » and « When »: one published run of the present version and settings, reading the year's
         # published level; a row per men's player with a level; the synthetic league's 88 players all in the race.
@@ -893,8 +905,14 @@ class ModelsTest(unittest.TestCase):
         self.assertEqual((version, status, players, reference), (award.AWARD_VERSION, "published", 88, 2025))
         self.assertEqual(settings, award.SETTINGS)
         self.assertEqual(level_run, self.level_run()[0])
-        self.assertEqual(set(spreads), {"individual", "collective", "fair_play"})
+        self.assertEqual(set(spreads), {"individual", "collective", "fair_play", "collective_scale", "national_cups"})
         self.assertTrue(set(spreads["fair_play"]) <= set(level.POSITIONS))
+        # §60.3: the year is its own reference: its own k, on its 30 best (88 ranked); no national cup in the base.
+        scale = spreads["collective_scale"]
+        self.assertEqual((scale["source"], scale["top"]), ("own", 30))
+        self.assertGreater(scale["k"], 0)
+        self.assertAlmostEqual(scale["k"], scale["mean_top_individual"] / scale["mean_top_collective"], places=9)
+        self.assertEqual(spreads["national_cups"], {"counted": False, "held": []})
         rows = self.award_rows()
         self.assertEqual(set(rows), {p for p, *_ in self.facts["players"]})
         self.assertEqual(sorted(r["rank"] for r in rows.values()), list(range(1, 89)))
@@ -975,8 +993,9 @@ class ModelsTest(unittest.TestCase):
     def test_60f_a_final_won_on_penalties_and_one_without_a_winner(self):
         from vega import award
 
-        self.award_cup(70, "open-cups:coupe-70:2025/2026", [(9701, "Final", 1, 2, "finished", (1, 1), (1, 1), (4, 3))])
-        self.award_cup(71, "open-cups:coupe-71:2025/2026", [(9711, "Final", 3, 4, "finished", (1, 1), None, None)])
+        self.held_cups()
+        self.award_cup(70, "open-cups:fa-cup-archive:2025/2026", [(9701, "Final", 1, 2, "finished", (1, 1), (1, 1), (4, 3))])
+        self.award_cup(71, "open-cups:copa-del-rey-archive:2025/2026", [(9711, "Final", 3, 4, "finished", (1, 1), None, None)])
         award.reread(self.db, 2025)
         reached = {(h["edition"], h["team"]): (h["kind"], h["reached"], h["reason"]) for h in self.honours() if h["edition"] in (70, 71)}
         self.assertEqual(reached, {(70, 1): ("national_cup", "winner", None), (70, 2): ("national_cup", "final", None),
@@ -990,7 +1009,8 @@ class ModelsTest(unittest.TestCase):
     def test_60g_quarter_finalists_eliminated_or_still_to_play(self):
         from vega import award
 
-        self.award_cup(72, "open-cups:coupe-72:2025/2026", [(9721, "Quarter-finals", 5, 6, "finished", (0, 2), None, None),
+        self.held_cups()
+        self.award_cup(72, "open-cups:coppa-italia-archive:2025/2026", [(9721, "Quarter-finals", 5, 6, "finished", (0, 2), None, None),
                                                             (9722, "Quarter-finals", 7, 8, "not_started", None, None, None)])
         award.reread(self.db, 2025)
         reached = {(h["team"], h["reached"]) for h in self.honours(72)}
@@ -1083,11 +1103,13 @@ class ModelsTest(unittest.TestCase):
         from vega import award, power
 
         x = self.db.execute
+        self.held_cups()  # the five countries' cups in the base (§60.3), read before the case
+        award.reread(self.db, 2025)
         self.assertEqual(award.due(self.db), [])
         before = self.snapshot(self.LEVEL_TABLES)
         run = self.award_run()[0]
         collective = {p: r["collective"] for p, r in self.award_rows().items()}
-        self.award_cup(73, "open-cups:coupe-73:2025/2026", [(9731, "Final", 1, 3, "finished", (2, 0), None, None)])
+        self.award_cup(73, "open-cups:knvb-beker-archive:2025/2026", [(9731, "Final", 1, 3, "finished", (2, 0), None, None)])
         self.assertEqual(award.due(self.db), [2025])
         self.assertEqual(power.stale_rankings(self.db), [])  # the ranking and the level are not run again
         award.reread(self.db, 2025)
@@ -1400,6 +1422,7 @@ class ModelsTest(unittest.TestCase):
             x("""INSERT INTO core.player_match_stats(season_id,match_id,team_id,player_id,minutes_played) VALUES(2025,9761,%s,%s,90)""", (team, player))
         self.addCleanup(x, "DELETE FROM core.teams WHERE id IN (85, 86)")  # after the cups' own clean-up
         try:
+            self.held_cups()
             self.award_cup(77, "open-cups:world-cup-history:2026", [(9771, "Final", 85, 86, "finished", (2, 0), None, None, "2026-07-19")])
             self.award_cup(78, "openligadb:germany-cup:2025/2026", [(9781, "Final", 1, 2, "finished", (1, 0), None, None)])
             self.award_cup(79, "open-matchday:GER_CUP_dfb-pokal:2025/2026", [(9791, "Final", 1, 2, "finished", (1, 0), None, None)])
@@ -1421,13 +1444,242 @@ class ModelsTest(unittest.TestCase):
         # Club 1 wins 3–0 at home, loses 1–0 away: 3–1 on aggregate, the second leg lost.
         from vega import award
 
-        self.award_cup(80, "open-cups:coupe-80:2025/2026", [(9801, "Final", 1, 2, "finished", (3, 0), None, None, "2025-10-01"),
+        self.held_cups()
+        self.award_cup(80, "open-cups:portugal-cup-archive:2025/2026", [(9801, "Final", 1, 2, "finished", (3, 0), None, None, "2025-10-01"),
                                                             (9802, "Final", 2, 1, "finished", (1, 0), None, None, "2025-10-02")])
-        self.award_cup(81, "open-cups:coupe-81:2025/2026", [(9811, "Final", 3, 4, "finished", (2, 0), None, None, "2025-10-01"),
+        self.award_cup(81, "open-cups:swiss-cup-archive:2025/2026", [(9811, "Final", 3, 4, "finished", (2, 0), None, None, "2025-10-01"),
                                                             (9812, "Final", 4, 3, "not_started", None, None, None, "2025-10-02")])
         award.reread(self.db, 2025)
         reached = {(h["edition"], h["team"]): (h["reached"], h["reason"]) for h in self.honours() if h["edition"] in (80, 81)}
         self.assertEqual(reached, {(80, 1): ("winner", None), (80, 2): ("final", None), (81, 3): ("final", None), (81, 4): ("final", None)})
+
+    # §60.3 (stage 1.1): a final's shoot-out from its copy, the national cups written as their collectors write them, the
+    # five countries' cups, a year in progress on its reference year's k.
+
+    def pitchapi_final(self, edition, provider, home, away, score, day, players):
+        """A PitchAPI edition of 2025 holding one final (round stage `final`), with a player row for each (team, player)."""
+        x = self.db.execute
+        x("INSERT INTO core.competitions(id,name) VALUES(%s,%s)", (edition, f"Competition {edition}"))
+        x("INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id) VALUES('competition','pitchapi',%s,%s)", (provider, edition))
+        x("INSERT INTO core.competition_seasons(id,competition_id,season_id,native_label) VALUES(%s,%s,2025,'2026')", (edition, edition))
+        final = x("INSERT INTO core.rounds(competition_season_id,name,stage) VALUES(%s,'Final','final') RETURNING id", (edition,)).fetchone()[0]
+        mid = 9000 + edition
+        x("""INSERT INTO core.matches(id,competition_season_id,season_id,source,status,round_id,home_team_id,away_team_id,home_score,away_score,match_date)
+             VALUES(%s,%s,2025,'pitchapi','finished',%s,%s,%s,%s,%s,%s)""", (mid, edition, final, home, away, *score, day))
+        for team, player in players:
+            x("INSERT INTO core.player_match_stats(season_id,match_id,team_id,player_id,minutes_played) VALUES(2025,%s,%s,%s,90)", (mid, team, player))
+
+        def remove():
+            x("DELETE FROM core.player_match_stats WHERE season_id = 2025 AND match_id = %s", (mid,))
+            x("DELETE FROM core.matches WHERE season_id = 2025 AND id = %s", (mid,))
+            x("DELETE FROM core.rounds WHERE competition_season_id = %s", (edition,))
+            x("DELETE FROM core.competition_seasons WHERE id = %s", (edition,))
+            x("DELETE FROM core.provider_ids WHERE entity_type = 'competition' AND entity_id = %s", (edition,))
+            x("DELETE FROM core.competitions WHERE id = %s", (edition,))
+            award.reread(self.db, 2025)
+
+        from vega import award
+
+        self.addCleanup(remove)
+
+    def test_60ag_a_final_takes_its_shoot_out_from_its_copy(self):
+        # The World Cup 2022 final as production holds it: PitchAPI's 3–3 without a shoot-out; OpenFootball's copy the same
+        # day, the same sides and ids, 3–3 (after extra time 3–3), 4–2 on penalties. Then the copy one day before.
+        from vega import award
+
+        x = self.db.execute
+        x("INSERT INTO core.teams(id,name,is_national) VALUES(87,'Nation 87',true),(88,'Nation 88',true)")
+        self.addCleanup(x, "DELETE FROM core.teams WHERE id IN (87, 88)")
+        self.pitchapi_final(82, "l_1XLtP0", 87, 88, (3, 3), "2026-07-19", [(87, 105), (88, 205)])
+        self.award_cup(83, "open-cups:world-cup-history:2026", [(9831, "Final", 87, 88, "finished", (3, 3), (3, 3), (4, 2), "2026-07-19")])
+        award.reread(self.db, 2025)
+        got = {(h["player"], h["edition"]): (h["reached"], h["reason"]) for h in self.honours() if h["edition"] in (82, 83)}
+        self.assertEqual(got, {(105, 82): ("winner", None), (205, 82): ("final", None)})
+        self.assertEqual(self.one("SELECT home_penalty_score, away_penalty_score FROM core.matches WHERE id = 9082"), (None, None))  # not written
+        x("UPDATE core.matches SET match_date = '2026-07-18', home_team_id = 88, away_team_id = 87, home_penalty_score = 2, away_penalty_score = 4 WHERE id = 9831")
+        award.reread(self.db, 2025)
+        got = {(h["player"], h["edition"]): (h["reached"], h["reason"]) for h in self.honours() if h["edition"] in (82, 83)}
+        self.assertEqual(got, {(105, 82): ("winner", None), (205, 82): ("final", None)})
+        x("UPDATE core.matches SET away_score = 2, away_score_et = 2 WHERE id = 9831")  # another score: no copy
+        award.reread(self.db, 2025)
+        got = {(h["player"], h["edition"]): (h["reached"], h["reason"]) for h in self.honours() if h["edition"] in (82, 83)}
+        self.assertEqual(got, {(105, 82): ("final", "no_winner"), (205, 82): ("final", "no_winner")})
+
+    def test_60at_a_listed_final_without_a_shoot_out_or_a_copy(self):
+        # The Champions League 2026 final as production holds it: PitchAPI's PSG–Arsenal 1–1, no shoot-out, no copy; its
+        # PitchAPI key in award.REVIEWED_SHOOTOUTS (4–3 for PSG). Then the row's own score other than the entry's.
+        from vega import award
+
+        x = self.db.execute
+        x("INSERT INTO core.teams(id,name) VALUES(89,'Paris Saint-Germain'),(90,'Arsenal')")
+        self.addCleanup(x, "DELETE FROM core.teams WHERE id IN (89, 90)")
+        self.pitchapi_final(96, "l_0bfbkO", 89, 90, (1, 1), "2026-05-30", [(89, 105), (90, 205)])
+        x("INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id) VALUES('match','pitchapi','m_0DIsqq',9096)")
+        self.addCleanup(x, "DELETE FROM core.provider_ids WHERE entity_type = 'match' AND entity_id = 9096")
+        award.reread(self.db, 2025)
+        got = {(h["team"], h["reached"], h["reason"]) for h in self.honours(96)}
+        self.assertEqual(got, {(89, "winner", None), (90, "final", None)})
+        x("UPDATE core.matches SET home_score_et = 2, away_score_et = 2 WHERE id = 9096")  # the base wins: 2–2 after extra time, the entry ignored
+        award.reread(self.db, 2025)
+        self.assertEqual({(h["team"], h["reached"], h["reason"]) for h in self.honours(96)}, {(89, "final", "no_winner"), (90, "final", "no_winner")})
+
+    def test_60ak_the_german_cup_written_as_openligadb_writes_it(self):
+        from vega import award
+
+        self.held_cups("ENG", "ESP", "ITA", "FRA")
+        self.award_cup(84, "openligadb:germany-cup:2025/2026", [
+            (9841, "Quarts de finale", 1, 3, "finished", (2, 0), None, None), (9842, "Quarts de finale", 2, 4, "finished", (1, 0), None, None),
+            (9843, "Quarts de finale", 5, 6, "finished", (0, 1), None, None), (9844, "Quarts de finale", 7, 8, "finished", (1, 2), None, None),
+            (9845, "Demi-finales", 1, 6, "finished", (1, 0), None, None), (9846, "Demi-finales", 2, 8, "finished", (2, 1), None, None),
+            (9847, "Finale", 1, 2, "finished", (3, 0), None, None)])
+        award.reread(self.db, 2025)
+        reached = {(h["team"], h["kind"], h["reached"], h["reason"]) for h in self.honours(84)}
+        self.assertEqual(reached, {(1, "national_cup", "winner", None), (2, "national_cup", "final", None), (6, "national_cup", "semi_final", None),
+                                   (8, "national_cup", "semi_final", None), (3, "national_cup", "quarter_final", None),
+                                   (4, "national_cup", "quarter_final", None), (5, "national_cup", "quarter_final", None),
+                                   (7, "national_cup", "quarter_final", None)})
+        values = {1: 0.15, 2: 0.09, 6: 0.06, 8: 0.06}
+        self.assertTrue(all(abs(h["value"] - values.get(h["team"], 0.15 * 0.25)) < 1e-6 for h in self.honours(84)))
+        self.assertEqual(self.award_run()[7]["national_cups"], {"counted": True, "held": ["ENG", "ESP", "FRA", "GER", "ITA"]})
+
+    def test_60al_the_fa_cup_archive_written_as_openfootball_writes_it(self):
+        from vega import award
+
+        self.held_cups()
+        self.award_cup(85, "open-cups:fa-cup-archive:2025/2026", [
+            (9851, "Quarterfinals", 5, 6, "finished", (0, 2), None, None), (9852, "Quarterfinals", 7, 8, "finished", (1, 0), None, None),
+            (9853, "Quarterfinals", 3, 4, "finished", (2, 0), None, None), (9854, "Quarterfinals", 1, 2, "finished", (1, 0), None, None),
+            (9855, "Semifinals", 6, 7, "finished", (2, 1), None, None), (9856, "Semifinals", 3, 1, "finished", (0, 1), None, None),
+            (9857, "Final", 6, 1, "finished", (1, 0), None, None)])
+        award.reread(self.db, 2025)
+        self.assertEqual({(h["team"], h["kind"], h["reached"]) for h in self.honours(85)},
+                         {(6, "national_cup", "winner"), (1, "national_cup", "final"), (7, "national_cup", "semi_final"), (3, "national_cup", "semi_final"),
+                          (5, "national_cup", "quarter_final"), (8, "national_cup", "quarter_final"), (4, "national_cup", "quarter_final"),
+                          (2, "national_cup", "quarter_final")})
+
+    def test_60am_one_cup_of_two_sources_gives_one_honour(self):
+        # The FA Cup in OpenFootball's archive and in open-matchday's folder; the German cup of OpenLigaDB and open-matchday.
+        from vega import award
+
+        self.held_cups()
+        self.award_cup(86, "open-cups:fa-cup-archive:2025/2026", [(9861, "Final", 1, 2, "finished", (1, 0), None, None)])
+        self.award_cup(87, "open-matchday:ENG_CUP_fa-cup:2025/2026", [(9871, "Final", 1, 2, "finished", (1, 0), None, None)])
+        self.award_cup(88, "openligadb:germany-cup:2025/2026", [(9881, "Finale", 3, 4, "finished", (2, 0), None, None)])
+        self.award_cup(89, "open-matchday:GER_CUP_dfb-pokal:2025/2026", [(9891, "Final", 3, 4, "finished", (2, 0), None, None)])
+        award.reread(self.db, 2025)
+        self.assertEqual({(h["team"], h["reached"]) for h in self.honours(86)}, {(1, "winner"), (2, "final")})
+        self.assertEqual(self.honours(87), [])
+        self.assertEqual({(h["team"], h["reached"]) for h in self.honours(88)}, {(3, "winner"), (4, "final")})
+        self.assertEqual(self.honours(89), [])
+        self.assertEqual(len([h for h in self.honours() if h["player"] == 101 and h["kind"] == "national_cup"]), 1)
+
+    def test_60ar_a_year_in_progress_ends_on_its_reference_year_s_k(self):
+        # The published 2025 run made a year in progress whose reference year (2026 here, a season without matches) has no
+        # published run yet; then that reference run published, as if computed after it.
+        from psycopg.types.json import Jsonb
+        from vega import award
+        from vega.store import Store
+
+        x = self.db.execute
+        with self.db.transaction():
+            Store(self.db).season("2026/2027")
+        own = self.award_run()[7]
+        try:
+            x("UPDATE agg.award_runs SET reference_season = 2026 WHERE season_id = 2025 AND status = 'published'")
+            award.refresh(self.db, 2025)
+            spreads = self.award_run()[7]
+            self.assertEqual((spreads["collective_scale"]["k"], spreads["collective_scale"]["source"]), (0.0, "none"))
+            self.assertTrue(all(r["z_collective"] == 0 for r in self.award_rows().values()))
+            # Its own spreads otherwise, as before: refresh measures them on the stored individual parts (agg.player_award.individual,
+            # a `real`), the run built from the ranking on its float values, so they agree to the `real`'s precision whatever ran before.
+            self.assertEqual(len(spreads["individual"]), len(own["individual"]))
+            for got, kept in zip(spreads["individual"], own["individual"]):
+                self.assertAlmostEqual(got, kept, places=6)
+            self.assertEqual(award.stale(self.db), [])  # no reference run to take: not listed (no loop)
+            reference = {**own, "collective_scale": {**own["collective_scale"], "k": 3.0}}
+            x("""INSERT INTO agg.award_runs(season_id, version, status, started_at, finished_at, reference_season, players, settings, spreads)
+                 VALUES (2026, %s, 'published', clock_timestamp(), clock_timestamp(), 2026, 5, %s, %s)""",
+              (award.AWARD_VERSION, Jsonb(award.settings()), Jsonb(reference)))
+            self.assertEqual(award.stale(self.db), [2025])
+            award.refresh(self.db, 2025)
+            spreads = self.award_run()[7]
+            self.assertEqual(spreads["collective_scale"], {**reference["collective_scale"], "source": "reference"})
+            for r in self.award_rows().values():
+                self.assertAlmostEqual(r["z_collective"], 3.0 * r["collective"], places=5)
+            self.assertEqual(award.stale(self.db), [])
+        finally:
+            x("DELETE FROM agg.award_runs WHERE season_id = 2026")
+            x("UPDATE agg.award_runs SET reference_season = 2025 WHERE season_id = 2025 AND status = 'published'")
+            award.refresh(self.db, 2025)
+        self.assertEqual(self.award_run()[7]["collective_scale"]["source"], "own")
+        self.assertEqual(award.stale(self.db), [])
+
+    def test_60as_the_national_cups_wait_for_the_five_countries(self):
+        from vega import award
+
+        self.award_cup(90, "openligadb:germany-cup:2025/2026", [(9901, "Finale", 1, 2, "finished", (3, 0), None, None)])
+        award.reread(self.db, 2025)
+        self.assertEqual(self.honours(90), [])
+        self.assertEqual([h for h in self.honours() if h["kind"] == "national_cup"], [])
+        self.assertEqual(self.award_run()[7]["national_cups"], {"counted": False, "held": ["GER"]})
+        self.held_cups("ENG", "ESP", "ITA", "FRA")
+        award.reread(self.db, 2025)
+        self.assertEqual({(h["team"], h["kind"], h["reached"]) for h in self.honours(90)}, {(1, "national_cup", "winner"), (2, "national_cup", "final")})
+        self.assertEqual(self.award_run()[7]["national_cups"], {"counted": True, "held": ["ENG", "ESP", "FRA", "GER", "ITA"]})
+        # award.refresh reads no match: it keeps the fact.
+        award.refresh(self.db, 2025)
+        self.assertEqual(self.award_run()[7]["national_cups"], {"counted": True, "held": ["ENG", "ESP", "FRA", "GER", "ITA"]})
+
+    def test_60au_refresh_leaves_a_run_of_another_version_to_the_ranking(self):
+        from vega import award
+
+        x = self.db.execute
+        before = self.award_run()
+        honours = self.honours()
+        try:
+            x("UPDATE agg.award_runs SET version = 'vega-award-v1' WHERE id = %s", (before[0],))
+            self.assertEqual(award.stale(self.db), [2025])
+            self.assertEqual(award.refresh(self.db, 2025), 0)
+            after = self.award_run()
+            self.assertEqual((after[0], after[1]), (before[0], "vega-award-v1"))  # nothing stored under v1.1's name
+            self.assertEqual(self.honours(), honours)
+            self.assertEqual(award.stale(self.db), [2025])  # left to the next ranking's run, which reads the honours again
+        finally:
+            x("UPDATE agg.award_runs SET version = %s WHERE season_id = 2025 AND status = 'published'", (award.AWARD_VERSION,))
+        self.assertEqual(award.stale(self.db), [])
+
+    def test_60av_a_placed_year_never_keeps_its_reference_s_national_cups(self):
+        from psycopg.types.json import Jsonb
+        from vega import award
+        from vega.store import Store
+
+        x = self.db.execute
+        with self.db.transaction():
+            Store(self.db).season("2026/2027")
+        own = self.award_run()[7]
+        fact = {"counted": False, "held": ["GER"]}
+        theirs = {"counted": True, "held": ["ENG", "ESP", "FRA", "GER", "ITA"]}
+        reference = {**own, "national_cups": theirs}
+        try:
+            x("""INSERT INTO agg.award_runs(season_id, version, status, started_at, finished_at, reference_season, players, settings, spreads)
+                 VALUES (2026, %s, 'published', clock_timestamp(), clock_timestamp(), 2026, 5, %s, %s)""",
+              (award.AWARD_VERSION, Jsonb(award.settings()), Jsonb(reference)))
+            x("""UPDATE agg.award_runs SET reference_season = 2026, spreads = spreads - 'national_cups'
+                 WHERE season_id = 2025 AND status = 'published'""")
+            award.refresh(self.db, 2025)
+            spreads = self.award_run()[7]
+            self.assertEqual(spreads["collective_scale"]["source"], "reference")  # placed on 2026
+            self.assertNotIn("national_cups", spreads)  # its own run had none: 2026's is not its fact
+            x("UPDATE agg.award_runs SET spreads = spreads || %s WHERE season_id = 2025 AND status = 'published'",
+              (Jsonb({"national_cups": fact}),))
+            award.refresh(self.db, 2025)
+            self.assertEqual(self.award_run()[7]["national_cups"], fact)  # its own fact kept
+        finally:
+            x("DELETE FROM agg.award_runs WHERE season_id = 2026")
+            x("UPDATE agg.award_runs SET reference_season = 2025 WHERE season_id = 2025 AND status = 'published'")
+            award.reread(self.db, 2025)
+        self.assertEqual(self.award_run()[7]["collective_scale"]["source"], "own")
+        self.assertEqual(award.stale(self.db), [])
 
     @classmethod
     def tearDownClass(cls):

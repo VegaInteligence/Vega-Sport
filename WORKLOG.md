@@ -1,6 +1,6 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
-## « Mon compte » « Lettre », made shippable — VI-38 (24 November 2026, same branch `claude/vi-38-compte-feuille-blanche`, local, not pushed)
+## « Mon compte » « Lettre », made shippable — VI-38 (24 November 2026, branch `claude/vi-38-compte-feuille-blanche`, PR #124)
 
 - The owner chose A « Lettre ». Direction B (`AccountDiptych.jsx` and its CSS), the `?piste=` switch and `DEFAULT_PISTE` were removed, along with the dead account CSS.
 - Failure modes first: docs/COMPTES_SITE.md section 10, C1–C8 (anchors, password row, sync line, favourites 6 per kind, empty state, menu, sign-out, delete and export). Competitions sit with the favourites; the default-season and home-priority controls are not shown.
@@ -9,7 +9,7 @@
 - Checks: site suite 1026/1026. Accounts E2E 102/102: on 62 (after the fixes), verify 25, nosync 4, off 11. Evidence: …/scratchpad/vi38fb/e2e-final, e2e-final-on2.
 - Captures: `/mnt/project-files/vi-38-comptes/captures-lettre-final/`.
 - Not verified: real Neon Auth, Google, Safari, real touch devices. In dark mode, the Ligue 1 and Premier League logos are hard to see across the whole site.
-- Next action: the coordinator pushes and opens the PR.
+- Next action: merge PR #124 once CI is green (approved by the owner), then check /compte on the public site.
 
 ## « Mon compte » from a blank sheet: two directions — VI-38 (24 November 2026, mock-up, branch `claude/vi-38-compte-feuille-blanche` from origin/main cb56e51, local, not pushed)
 
@@ -21,6 +21,14 @@
 - Captures: `/mnt/project-files/vi-38-comptes/captures-feuille-blanche/` (a-lettre/, b-diptyque/, a sheet each, comparaison.png).
 - Not done until a direction is chosen: docs/COMPTES_SITE.md section 7, E2E cases for the menu and the settings, removal of the switch and of the other direction.
 - Next action: the owner picks A or B.
+
+## Injured and suspended players, the Transfermarkt reader on production — FAILURE_MODES § 59am, 59an (24 November 2026, branch `claude/absents-lecteur-saisons`)
+
+- Seen (worker logs 16:40–20:18 UTC, read only from the owner's Mac): 1,805 suspensions read, no refusal by Transfermarkt, yet no PSG player read (« 0 / 25 renseignés » the evening before PSG–Roma).
+- 59am: the squad unit « 350:1894 » (a linked club with a match of 1895) broke `provider_squads_season_year_check` (1900–2100); not a `Failed`, so the reader process died, eleven times, about 1 h 15 lost. Fix: `SQUAD_YEARS`; such a season is never queued, and one already queued fails `SEASON_OUT_OF_RANGE` with no request.
+- 59an: the focus took the 80 soonest clubs, all kicking off within two days on a European midweek. `FOCUS_CLUBS_MAX` 80 → 200 (at most 7,200 requests a day, under a quarter of the reader's ~31,400). The spread of 59ah is kept.
+- Tests first (`tests/test_transfermarkt_absences.py`: `SquadSeasonTest`, the named thresholds): red 3/3, then green; the three reader test files 84/84 on PostgreSQL 18.
+- Needs a Deploy (worker). Next: check PSG's « renseignés » climb once the focus runs with 200 clubs.
 
 ## Injured and suspended players, the squad card without a read date — FAILURE_MODES § 59al (24 November 2026, branch `claude/absents-asof-vide` from origin/main 16e2cc6, local, not pushed)
 
@@ -38,13 +46,23 @@
 - Not checked: the signed-in header, real touch devices, Safari.
 - Next action: none here.
 
+## The Ballon d'Or race, version 1.1 — #105 / VI-59, FAILURE_MODES § 60.3 (24 November 2026, branch `claude/project-thread-314siw` from main d1325a8f)
+
+- Stage 1 merged as PR #118, deployed as Deploy 137 on 24 Nov 2026 and read in production (six years, `/mnt/project-files/vega-ballon-dor/03`, `prod/full/`). Compared with the real results it showed: the World Cup 2022 and Champions League 2026 finals both `final` + `no_winner` (shoot-outs missing); no national cup honour in any year (`kind = 'cup'`, which no collector writes); z_C a plateau (21 to 24 of our top 30 at the cap of 4 each year). Causes: `04-causes-v1-1.md` (production re-read that evening); scales: `05-simulation-echelles.md`.
+- Approved by hugo, 24 Nov 20:51 Paris (« Oui, avec l'échelle proportionnelle »; a deploy to be asked again) and 21:05 (« Oui, une liste relue »: three finals' shoot-outs).
+- v1.1 changes (`AWARD_VERSION = "vega-award-v1.1"`, settings name the scale: each year recomputed once): a final without a shoot-out takes its copy's (another edition of the same real competition, same teams, ≤ 1 day, same score after extra time; not from events: PitchAPI's never hold shoot-out goals), else `award.REVIEWED_SHOOTOUTS` (Europa League 2022 and 2023, Champions League 2026, copied from OpenFootball, keyed by PitchAPI match key); « Finals, Final » read as a final (race only, `power.round_of` unchanged); a national cup by its key (`power._cup_country`) or `kind = 'cup'`, one honour per cup across sources (`CUP_LOGO_ALSO` groups; order PitchAPI, OpenLigaDB, OpenFootball, others), counted only when the year holds the five countries' cups (`NATIONAL_CUP_COUNTRIES`; today 2024/25 alone), the fact in `spreads.national_cups`; z_C = k × C, k = mean top-30 z_I / mean top-30 C of the ranked players (`spreads.collective_scale`), a year in progress on its reference year's k (k 0 until it exists, then `award.stale` lists it). No migration, no route, view or response change.
+- Tests first: red `/mnt/project-files/vega-ballon-dor/evidence/red_v1-1_2026-11-24.txt`, green `green_v1-1_2026-11-24.txt` (test_award 34, test_models 73, award_year_2020_order 6, collection_wakeups 24, worker 46, power 52, home_importance 3, deploy_migrations 6); scale cross-checked on the saved production rows (`crosscheck_v1-1_2026-11-24.txt`: k 6.32 and 4.78, the V8a top 10s); OpenFootball lines `shootouts_openfootball_2026-11-24.txt`.
+- Known limits: open-matchday's numbered cup rounds unread; International Results' tournaments without rounds; the Club World Cup's share window; a future final decided on penalties without a shoot-out, copy or reviewed entry stays `no_winner` (no log line).
+- Review of PR #121 (second PR, § 60.3 amended first, 60au–60av): « Finals, Final » read exactly and never on stage `regular`; `award.refresh` leaves a run of another version (stale() keeps listing it) and never stores a reference year's `national_cups` as a placed year's; 60ar made independent of test order (the `real` column's precision); `combine` / `evaluate` docstrings name the three cases of `spreads`. Evidence `red_v1-1-review_2026-11-24.txt`, `green_v1-1-review_2026-11-24.txt` (test_award 34, test_models 75). No version change.
+- Merged: PR #121 (`fae8f218`), all checks green; carried by Deploy 138, launched on 24 Nov at 20:43 UTC on `d41e54e` with the owner's approval (one Deploy for #121 and #122). Next: read the six seasons in production once computed again (version, the three listed finals and the World Cup 2022 final, the cups of 2024/25); then the comparison with the real results redone on v1.1.
+
 ## The Ballon d'Or race on the Score Vega v9.1 with the three criteria, stage 1 — #105, FAILURE_MODES § 60 (24 November 2026, branch `claude/project-thread-314siw`)
 
 - Goal (hugo: « le classement BO est le score v9 + une fine tuning sur les 3 façons de juger un joueur au ballon d'or », 60 / 30 / 10): the race computed and stored beside the v8 race, served by new reads; the v8 race, `agg.player_award_ranking`, `/api/rankings/power?kind=players` and the site unchanged. The club part stays in the individual part (the owner's decision card).
 - Built: `vega/award.py`; `level.read(..., stakes=)` returns `award_cells` beside the unchanged `cells`; `award.write` in `power.refresh_players`' write transaction; `award.stale` joined to `power.stale_rankings`; the worker rereads the years `award.due` lists; migration `175_player_award.sql` (three tables, `api.award_race`, `api.award_honours`), reviewed in `open_matchday_restore.REVIEWED_SCHEMAS`; `GET /api/rankings/award` and `/api/rankings/award/player`. Note `docs/calculs/10-score-vega-v9/04-ballon-d-or-trois-criteres.md`.
 - Phase 3 (review of phase 2, § 60 amended first, cases 60x–60af): `award.due` asked once a UTC day (`Worker._award`), bounded to the award year's dates; a failure of the race (read, compute, write) caught in savepoints, kept as a `failed` run, never blocking the ranking or the level, `award.stale` not looping on it; a row only with a men's level row; league ranks from the base tables (`api.standings` read every official table: the two `vega_calc` grants on `api` dropped); one honour per team and real competition (the World Cup of PitchAPI and OpenFootball, the German cup of OpenLigaDB and open-matchday); a two-legged final won on aggregate.
 - Tests first (phase 1, `ffb937ac`; phase 3 on top of `23f8618f`), seen red, then green on PostgreSQL 18; evidence `/mnt/project-files/vega-ballon-dor/evidence/` (red and green, 24 Nov, and `_phase3`).
-- Not deployed. Next: the PR and its checks, then after a Deploy the six seasons computed once (`stale_rankings` lists them) and their races compared with the real results before stage 2 (the site's switch, mock-up first).
+- Merged (PR #118), deployed (Deploy 137, 24 Nov) and read in production; followed by v1.1 above. Stage 2 (the site's switch, mock-up first) after v1.1's comparison.
 
 ## Injured and suspended players, lot 2 « Écrans » — VI-15 (24 November 2026, on the lot 1 branch `claude/absents-blesses-suspendus`, pushed on the owner's word, [PR #110](https://github.com/VegaInteligence/Vega-Sport/pull/110))
 
