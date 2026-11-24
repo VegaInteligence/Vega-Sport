@@ -20,6 +20,11 @@ export const HOME_PRIORITIES = Object.freeze({
  * not read it from the preferences, a cookie or the URL, and show no control for it. Every function that orders
  * matches takes `priority` as a parameter (chooseUpcoming / chooseBillboard, weekTicker), so the setting will only
  * have to be passed in; both values are implemented and tested (tests/home-priority.test.mjs).
+ * Where the stored value will come from: `preferences.homePriority` of the preferences store (orion.preferences.v1,
+ * FootballContext; "" = not chosen), which the shared contract carries as `homePriority` ("location" |
+ * "importance" | null) to and from the account (user-preferences.js, GET / PUT /account/preferences, VI-38). It is
+ * already stored and synced, and read by nothing: applying it is `priorityOf(f.preferences.homePriority)` here,
+ * plus the home cookie (home-bootstrap-preferences.js) for the server render.
  */
 export const HOME_PRIORITY = HOME_PRIORITIES.LOCATION;
 

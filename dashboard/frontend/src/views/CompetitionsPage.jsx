@@ -89,6 +89,8 @@ import {
   localeCountry,
   preferredCompetition,
 } from "../services/competition-standings.js";
+import { writePreferredCompetition } from "../services/local-preferences.js";
+import { preferencesChanged } from "../services/user-preferences.js";
 export function SupplementalPanel({
   data: value,
   id = "",
@@ -725,9 +727,8 @@ export default function CompetitionsPage() {
     setOpenSeason(
       directory && directorySeason !== "all" ? directorySeason : "",
     );
-    try {
-      window.localStorage.setItem(PREFERRED_COMPETITION_KEY, next);
-    } catch {}
+    writePreferredCompetition(next);
+    preferencesChanged();
     setChoice({ ready: true, saved: next, country: null });
     setDirectory(false);
     window.history.pushState(

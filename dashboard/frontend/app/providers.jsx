@@ -5,6 +5,7 @@ import { ResearchProvider } from "../src/hooks/ResearchContext.jsx";
 import { routeExists, routeNeedsSeason } from "../src/services/route-data.js";
 import ResourceBootstrap from "../src/components/ResourceBootstrap.jsx";
 import { MediaProvider } from "../src/components/MediaContext.jsx";
+import PreferencesSync from "../src/components/PreferencesSync.jsx";
 import { useBackMemory } from "../src/services/back-navigation.js";
 export default function Providers({ children, bootstrap, home = false }) {
   const pathname = usePathname();
@@ -30,6 +31,7 @@ function DataProviders({ children, pathname, bootstrap }) {
           initialState={bootstrap?.state}
         >
           <ResearchProvider initialState={bootstrap?.state}>
+            <PreferencesSync />
             {children}
           </ResearchProvider>
         </FootballProvider>

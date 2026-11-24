@@ -1,0 +1,40 @@
+# Préférences du visiteur — le contrat partagé
+
+Un seul objet, versionné, décrit tout ce que le visiteur a choisi sur le site. Le site le construit depuis ses stockages locaux et le réapplique ; le compte (VI-38) le stocke et le rend tel quel par `GET` / `PUT /account/preferences`. Code : [user-preferences.js](../dashboard/frontend/src/services/user-preferences.js) (l'exemple complet, commenté, est en tête du fichier), tests : `tests/user-preferences.test.mjs`.
+
+## Le contrat (version 1)
+
+| Clé | Valeurs | « Pas choisi » | Stockage local |
+| --- | --- | --- | --- |
+| `v` | `1` ; toute autre valeur est refusée | — | — |
+| `focus` | `"europe"` \| `"all"` | `"europe"` | `orion.preferences.v1` `focus` |
+| `theme` | `"light"` \| `"dark"` \| `null` | `null` (sombre affiché) | `statarena.theme` |
+| `leagues` | identifiants `l_…`, dans l'ordre, 200 au plus | `[]` | `favoriteLeagueIds` |
+| `country` | trois capitales \| `"none"` \| `null` | `null` : la détection s'applique ; `"none"` : « Aucun pays » choisi | `homeCountry` (`""` = `null`) |
+| `homePriority` | `"location"` \| `"importance"` \| `null` | `null` : `HOME_PRIORITY` du code | `homePriority` (`""` = `null`) — transporté, pas encore appliqué |
+| `defaultSeason` | `"AAAA/AAAA"` \| `null` | `null` (aucun écran ne l'écrit) | `defaultSeason` |
+| `onboarded` | `true` \| `false` | `false` | `onboardingComplete` |
+| `competition` | identifiant de compétition \| `null` | `null` : règle du pays | `statarena.preferred-competition.v1` |
+| `lists` | 1 à 50 listes `{ id, name, entries }`, 5000 entrées chacune | une liste « Ma sélection » vide | `statarena.research.v1` |
+| `activeList` | l'id d'une des listes | la première | idem |
+| `views` | recherches de joueurs enregistrées, 50 au plus | `[]` | idem |
+| `templates` | indices de recrutement, 50 au plus | `[]` | idem |
+| `comparison` | joueurs comparés (avec saison), 4 au plus | `[]` | idem |
+| `researchSettings` | colonnes, nuage de points, métriques de comparaison, indice | réglages par défaut | idem (`settings`) |
+
+Une entrée de liste a la forme de `cleanEntry` ([research-storage.js](../dashboard/frontend/src/services/research-storage.js)) : `id`, `kind` (`clubs` t_…, `nations` t_…, `players` p_…, `matches` m_…), `name`, `season`, `imageUrl`, et pour un joueur `scope` (son échantillon) et `replaces: true` s'il est le « Remplaçant ». Les listes et tout le bloc recherche passent par `cleanResearch` : le site et le contrat ont les mêmes règles et les mêmes bornes (`LIMITS`).
+
+**Les favoris** ne sont pas une clé : `favouritesOf(contract)` les dérive (clubs et joueurs de **toutes** les listes, une fois chacun, triés, 100 par type, ce que l'accueil envoie à `home-favourites`). Une clé `favourites` reçue est ignorée, comme toute clé inconnue.
+
+Règles : `validateContract` refuse un non-objet et une version inconnue ; une valeur invalide retombe à « pas choisi », le reste est gardé. `toContract` ne lève jamais d'erreur. L'aller-retour stockages → contrat → stockages est sans perte.
+
+## La synchronisation
+
+`setPreferencesSync({ load, save } | null)` branche le compte. Sans adaptateur, rien ne se passe (aucune lecture, aucun minuteur, aucune requête). Avec : `load()` une fois ; le contrat rendu est validé puis écrit une fois par les setters existants (préférences, recherches, thème, compétition) ; `null` n'écrit rien. Rien n'est enregistré avant la réponse de `load` ; un `load` en échec est retenté au changement suivant ; un contrat d'une autre version n'est jamais écrasé. `save` est différé (1 s), jamais concurrent, de l'état le plus récent ; un échec est retenté au changement suivant, sans jamais bloquer l'interface.
+
+Le seul point de branchement est [PreferencesSync.jsx](../dashboard/frontend/src/components/PreferencesSync.jsx), monté dans `ResearchProvider` ([providers.jsx](../dashboard/frontend/app/providers.jsx)) ; le bouton du thème et la page Compétitions signalent leurs propres écritures. La page Compétitions lit sa compétition à l'ouverture : une valeur venue du compte s'y applique à la visite suivante de la page.
+
+## Partage avec VI-38
+
+- **Ce dépôt, côté site (#69)** : le contrat, sa validation, la synchronisation sans React, le branchement sur les stockages.
+- **VI-38 (comptes, `backend/account/**`)** : le stockage serveur, les écrans de connexion, l'adaptateur `{ load, save }` qui appelle `/account/preferences`, et la **fusion à la première connexion** (données locales contre données du compte), qui n'est pas ici.

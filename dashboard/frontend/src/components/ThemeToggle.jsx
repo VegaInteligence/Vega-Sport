@@ -1,33 +1,22 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Sun, Moon } from "lucide-react";
+import { applyTheme, THEME_EVENT } from "../services/local-preferences.js";
+import { preferencesChanged } from "../services/user-preferences.js";
 export default function ThemeToggle() {
   const [theme, setTheme] = useState("dark");
   useEffect(() => {
     setTheme(
       document.documentElement.dataset.theme === "light" ? "light" : "dark",
     );
+    // The account's theme, applied by the preferences sync.
+    const follow = (event) => setTheme(event.detail === "light" ? "light" : "dark");
+    window.addEventListener(THEME_EVENT, follow);
+    return () => window.removeEventListener(THEME_EVENT, follow);
   }, []);
   function toggle() {
-    const root = document.documentElement,
-      next = root.dataset.theme === "light" ? "dark" : "light";
-    // Hover transitions on buttons, fields and cards would otherwise fade
-    // those elements into the new theme after everything else: switch with
-    // transitions off, then restore them once the new colours are painted.
-    root.setAttribute("data-theme-switching", "");
-    root.dataset.theme = next;
-    void document.body.offsetHeight;
-    requestAnimationFrame(() =>
-      requestAnimationFrame(() => root.removeAttribute("data-theme-switching")),
-    );
-    document
-      .querySelector('meta[name="theme-color"]')
-      ?.setAttribute("content", next === "light" ? "#F6F8FB" : "#0E0F12");
-    try {
-      localStorage.setItem("statarena.theme", next);
-      window.__vegaSetFavicon?.(next);
-    } catch {}
-    setTheme(next);
+    applyTheme(document.documentElement.dataset.theme === "light" ? "dark" : "light");
+    preferencesChanged();
   }
   const label =
     theme === "dark" ? "Activer le thème clair" : "Activer le thème sombre";

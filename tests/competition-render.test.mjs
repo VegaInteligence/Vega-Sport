@@ -93,6 +93,9 @@ test("competition page renders a result-derived league table and its limits", as
     "../services/league-fates.js": { useLeagueFates: () => ({ value: null }) },
     "../services/cup-worker-client.js": { cupWorkerSnapshot: async () => ({ tables: [] }) },
     "../services/competition-matches.js": ordering,
+    // The account sync (user-preferences.test.mjs): no adapter here, so a no-op.
+    "../services/local-preferences.js": { writePreferredCompetition: () => {} },
+    "../services/user-preferences.js": { preferencesChanged: () => {} },
   };
   stubs["./UI.jsx"] = UI;
   stubs["./NationalFlag.jsx"] = { __esModule: true, default: () => null };
