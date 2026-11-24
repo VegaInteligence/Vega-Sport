@@ -18,16 +18,20 @@
   position: relative;
   display: grid;
   place-items: center;
-  width: 144px;
-  height: 116px;
+  width: 132px;
+  height: 156px;
   padding: 12px;
   border: 0;
   border-radius: 0;
   background: transparent;
-  color: inherit;
+  /* The logo's own colours, not the page's ink (docs/brand/README.md). */
+  color: var(--vega-ivory);
   cursor: pointer;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
+}
+:global([data-theme="light"]) .control {
+  color: var(--vega-night);
 }
 .control:focus-visible {
   outline: none;
@@ -53,15 +57,17 @@
   height: auto;
   overflow: visible;
 }
-.shape {
-  opacity: 0.9;
+.shape,
+.point {
+  fill: currentColor;
 }
-.trace {
-  stroke: var(--accent);
-  stroke-width: 7;
-  stroke-linecap: round;
-  stroke-dasharray: 0.12 0.88;
-  animation: trace 2200ms linear infinite;
+.shape {
+  opacity: 0.92;
+}
+/* Up fast, down faster, as a ball does, along the slope of the V's arm so it never crosses
+   it; the box keeps room above the letter for it. */
+.point {
+  animation: bounce 900ms infinite;
 }
 .spark {
   animation: spark 620ms cubic-bezier(0.23, 1, 0.32, 1);
@@ -77,13 +83,19 @@
   .control:hover .shape {
     opacity: 1;
   }
-  .control:hover .trace {
-    animation-duration: 1000ms;
+  .control:hover .point {
+    animation-duration: 620ms;
   }
 }
-@keyframes trace {
-  to {
-    stroke-dashoffset: -1;
+@keyframes bounce {
+  0%,
+  100% {
+    transform: translate(0, 0);
+    animation-timing-function: cubic-bezier(0.2, 0.6, 0.35, 1);
+  }
+  50% {
+    transform: translate(58px, -170px);
+    animation-timing-function: cubic-bezier(0.65, 0, 0.8, 0.4);
   }
 }
 @keyframes spark {
@@ -103,13 +115,9 @@
     transform: none;
     transition: none;
   }
-  .trace,
+  .point,
   .spark {
     animation: none;
-  }
-  .trace {
-    stroke-dasharray: none;
-    opacity: 0.25;
   }
   .control:active .shape {
     opacity: 0.65;

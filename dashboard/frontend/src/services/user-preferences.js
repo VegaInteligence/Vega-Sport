@@ -319,6 +319,7 @@ export function createPreferencesSync({
       });
   }
   return {
+    active: () => Boolean(adapter),
     setAdapter(next) {
       cancel();
       generation++;
@@ -371,6 +372,26 @@ export function connectPreferences(next) {
   return () => {
     if (bridge === next) bridge = null;
   };
+}
+
+/**
+ * VI-38, sign-out: the stores go back to « nothing chosen », so the next person on this browser does not inherit the
+ * account's lists. `keep`: contract keys left as this browser has them (default: the theme, the device's look).
+ * Only once signed out, after setPreferencesSync(null): with an adapter set nothing is written and false is returned,
+ * so an emptied contract is never saved over an account. False too while the stores are not loaded.
+ */
+export function clearPreferences({ keep = ["theme"] } = {}) {
+  if (site.active() || !bridge) return false;
+  waiting = null;
+  const next = canonical({});
+  try {
+    const now = bridge.read();
+    if (now) for (const key of list(keep)) if (key !== "v" && Object.hasOwn(next, key)) next[key] = now[key];
+    bridge.write(canonical(next));
+  } catch {
+    return false;
+  }
+  return true;
 }
 
 /** Any change of a synced value (the stores' provider, the theme toggle, the competitions page). */

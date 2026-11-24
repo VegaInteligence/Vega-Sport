@@ -10,7 +10,10 @@ On a disposable local PostgreSQL (VEGA_V2_COLLECTION_TEST_DSN, database vega_v2_
 - 37g–37j: the International Results editions (nine since main's internationals of 2026/27, §48, 48i) through the real
   bridge and projection, each fetch counted in node (fake_results_fetch.mjs): one read per pass, each edition its own
   state (E02b).
-- 48f–48h: the season's internationals, outside the Elo, do not wake it; the Nations League still does (§48).
+- 48f–48h, 50k turned by §51 (51k, the user's decision of 23 Nov 2026): the season's internationals enter the Elo and wake
+  it, as the Nations League does.
+- 50h–50j: the internationals of 2021/22 to 2025/26 (§50): one season list, finished seasons read weekly, fourteen
+  editions in one read with no tournament row in an internationals edition.
 - 37k–37m: an empty player statistics answer after an accepted one, through the real worker and store (E02d).
 """
 
@@ -45,7 +48,9 @@ NLN = ROOT / "tests/fixtures/open_matchday/nln-2026"
 FOLDER = "ENG_6_national-league-north"
 RESULTS_PRELOAD = ROOT / "tests/fake_results_fetch.mjs"
 RESULTS_URL = "https://raw.githubusercontent.com/martj42/international_results/master/results.csv"
-# One result of each International Results edition the base reads (cups.EDITIONS), in the dataset's columns.
+# One result of each International Results edition the base reads (cups.EDITIONS), in the dataset's columns; since §50
+# (50j), one row of the World Cup, the Euro and each tournament inside the older internationals seasons too, which
+# stay out of them (each internationals season keeps exactly its one row held nowhere else).
 RESULTS_CSV = """date,home_team,away_team,home_score,away_score,tournament,city,country,neutral
 2022-01-10,Senegal,Zimbabwe,1,0,African Cup of Nations,Bafoussam,Cameroon,TRUE
 2023-06-25,United States,Jamaica,1,1,Gold Cup,Chicago,United States,FALSE
@@ -56,10 +61,23 @@ RESULTS_CSV = """date,home_team,away_team,home_score,away_score,tournament,city,
 2025-12-21,Morocco,Comoros,2,0,African Cup of Nations,Rabat,Morocco,FALSE
 2026-10-01,Scotland,Switzerland,1,0,UEFA Nations League,Glasgow,Scotland,FALSE
 2026-10-10,Brazil,Japan,2,1,Friendly,Rio de Janeiro,Brazil,FALSE
+2021-07-10,Argentina,Brazil,1,0,Copa América,Rio de Janeiro,Brazil,TRUE
+2021-07-11,Italy,England,1,1,UEFA Euro,London,England,TRUE
+2022-12-18,Argentina,France,3,3,FIFA World Cup,Lusail,Qatar,TRUE
+2023-03-23,France,Netherlands,4,0,UEFA Euro qualification,Saint-Denis,France,FALSE
+2024-03-26,England,Belgium,2,2,Friendly,London,England,FALSE
+2024-06-14,Germany,Scotland,5,1,UEFA Euro,Munich,Germany,FALSE
+2024-07-14,Spain,England,2,1,UEFA Euro,Berlin,Germany,TRUE
+2024-09-07,Italy,France,3,1,UEFA Nations League,Paris,France,TRUE
+2025-11-13,Ivory Coast,Kenya,1,0,African Cup of Nations qualification,Abidjan,Ivory Coast,FALSE
+2026-06-15,Spain,Cape Verde,0,0,FIFA World Cup,Atlanta,United States,TRUE
 """
+# The seasons of the season's other internationals (§50): 2021/22, the base's first, to 2026/27.
+SEASONS = ("2021/2022", "2022/2023", "2023/2024", "2024/2025", "2025/2026", "2026/2027")
 NATIONS_SCOPES = {"nations-results:nations-league:2026/2027", "nations-results:afcon:2021", "nations-results:afcon:2023",
                   "nations-results:afcon:2025", "nations-results:copa-america:2024", "nations-results:asian-cup:2023",
-                  "nations-results:gold-cup:2023", "nations-results:gold-cup:2025", "nations-results:internationals:2026/2027"}
+                  "nations-results:gold-cup:2023", "nations-results:gold-cup:2025",
+                  *(f"nations-results:internationals:{season}" for season in SEASONS)}
 INTERNATIONALS, NATIONS_LEAGUE = "nations-results:internationals:2026/2027", "nations-results:nations-league:2026/2027"
 
 
@@ -258,7 +276,7 @@ class EloWakeTest(CollectionBase):
 
 @required(DSN and psycopg and NODE, "requires a disposable local collection DB (VEGA_V2_COLLECTION_TEST_DSN), psycopg and node")
 class SharedReadTest(CollectionBase):
-    """37g–37j (48i): the International Results editions due together read results.csv once."""
+    """37g–37j (48i, 50j): the International Results editions due together read results.csv once."""
 
     NOW = datetime(2026, 11, 19, 12, tzinfo=timezone.utc)
 
@@ -288,7 +306,7 @@ class SharedReadTest(CollectionBase):
                WHERE cs.cup_key LIKE 'nations-results:%' ORDER BY 1""").fetchall()}
 
     def test_37g_to_37j_one_read_per_pass_and_each_edition_its_state(self):
-        # 37g: the nine editions due together: one request.
+        # 37g (50j): the fourteen editions due together: one request.
         done, asked = self.run_due(self.NOW)
         self.assertEqual(set(done), NATIONS_SCOPES)
         self.assertEqual(set(done.values()), {"ok"})
@@ -355,40 +373,126 @@ class InternationalsEloTest(CollectionBase):
         return [r[0] for r in self.x("""SELECT m.id FROM core.matches m JOIN core.competition_seasons cs ON cs.id = m.competition_season_id
                                         WHERE cs.cup_key = %s ORDER BY 1""", (scope,)).fetchall()]
 
-    def test_48f_48g_the_internationals_never_wake_the_elo_the_nations_league_does(self):
+    def national(self, *names):
+        """National teams the file names, as an edition of NATIONAL_CUPS would have marked them."""
+        for name in names:
+            team = self.x("INSERT INTO core.teams(name, is_national) VALUES (%s, true) RETURNING id", (name,)).fetchone()[0]
+            self.x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('team','international_results',%s,%s)",
+                   (name, team))
+
+    def test_51k_the_internationals_wake_the_elo_as_the_nations_league_does(self):
         from vega.worker import elo_due
 
         first = self.native(2019)
         self.assertEqual(self.daily({}), [first])
         runs = self.state()[2]
         self.assertEqual([r[1] for r in runs], ["published"])
-        # 48f: Brazil–Japan, a friendly of 2026/27, written by the real path: no Elo run, no side of it.
+        # Brazil–Japan, a friendly of 2026/27 between two national sides, written by the real path: one run, its sides published.
+        self.national("Brazil", "Japan")
         friendly = self.read(INTERNATIONALS)
         self.assertEqual(len(friendly), 1)
-        self.assertFalse(elo_due(self.calc))
         pairs, published, after, stored = self.state()
-        self.assertEqual(after, runs)  # red on M0: a second run
-        self.assertFalse({m for m, _ in published} & set(friendly))
-        self.assertFalse({m for m, _ in pairs} & set(friendly))
-        # 48g: Scotland–Switzerland, the Nations League: due once, one run, its sides published.
+        self.assertEqual([r[1] for r in after], ["superseded", "published"])  # red before §51: no second run
+        self.assertEqual(published, pairs)
+        self.assertEqual({m for m, _ in published} & set(friendly), set(friendly))
+        self.assertFalse(elo_due(self.calc))
+        # Scotland–Switzerland, the Nations League: due once, one run, its sides published, as before.
         league = self.read(NATIONS_LEAGUE)
         self.assertEqual(len(league), 1)
         pairs, published, runs, stored = self.state()
-        self.assertEqual([r[1] for r in runs], ["superseded", "published"])
+        self.assertEqual([r[1] for r in runs], ["superseded", "superseded", "published"])
         self.assertEqual(published, pairs)
-        self.assertEqual({m for m, _ in published} & set(league), set(league))
         self.assertFalse(elo_due(self.calc))
         self.clock += timedelta(hours=1)
         self.daily(self.nations)
         self.assertEqual(self.state()[2:], (runs, stored))
 
-    def test_48h_without_an_elo_run_internationals_alone_are_not_due(self):
+    def test_51k_without_an_elo_run_internationals_alone_are_due(self):
+        self.assertEqual(len(self.read(INTERNATIONALS)), 1)
+        self.assertEqual(self.x("SELECT count(*) FROM agg.power_runs WHERE kind='elo' AND status='published'").fetchone()[0], 1)
+
+    def test_51k_an_older_season_s_internationals_wake_the_elo(self):
         from vega.worker import elo_due
 
-        self.assertEqual(len(self.read(INTERNATIONALS)), 1)
+        first = self.native(2019)
+        self.assertEqual(self.daily({}), [first])
+        # Italy–France of 7 Sep 2024, the Nations League of 2024/25 that no edition holds, written by the real path.
+        self.national("Italy", "France")
+        older = self.read("nations-results:internationals:2024/2025")
+        self.assertEqual(len(older), 1)
+        pairs, published, after, stored = self.state()
+        self.assertEqual([r[1] for r in after], ["superseded", "published"])
+        self.assertEqual({m for m, _ in published} & set(older), set(older))
         self.assertFalse(elo_due(self.calc))
-        self.assertEqual(self.x("SELECT count(*) FROM agg.power_runs WHERE kind='elo'").fetchone()[0], 0)  # red on M0: the pass ran one
-        self.assertEqual(self.x("SELECT count(*) FROM agg.team_elo").fetchone()[0], 0)
+
+    def test_51k_a_run_of_another_national_method_is_due_once(self):
+        from vega.worker import elo_due
+
+        first = self.native(2019)
+        self.assertEqual(self.daily({}), [first])
+        self.assertFalse(elo_due(self.calc))  # 53c: the run's row holds the present version
+        published = "SELECT id FROM agg.power_runs WHERE kind='elo' AND status='published'"
+        # 53d: another version in the run's row (agg.nation_elo_runs, §53), then no row (a run from before 168): due.
+        self.x(f"UPDATE agg.nation_elo_runs SET version = 'nations-elo-v0' WHERE run_id = ({published})")
+        self.assertTrue(elo_due(self.calc))
+        self.x(f"DELETE FROM agg.nation_elo_runs WHERE run_id = ({published})")
+        self.assertTrue(elo_due(self.calc))
+        # One run, then not due.
+        self.daily({})
+        self.assertEqual([r[1] for r in self.state()[2]], ["superseded", "published"])
+        self.assertFalse(elo_due(self.calc))
+        self.assertEqual(self.x(f"SELECT version FROM agg.nation_elo_runs WHERE run_id = ({published})").fetchone()[0], "nations-elo-v1")
+
+    def test_50n_an_internationals_edition_renames_no_team(self):
+        (self.tmp / "results.csv").write_text(RESULTS_CSV + "2024-10-15,Scotland,Portugal,0,0,UEFA Nations League,Glasgow,Scotland,FALSE\n")
+        self.read(NATIONS_LEAGUE)
+        name = """SELECT t.id, t.name FROM core.teams t JOIN core.provider_ids p ON p.entity_type='team' AND p.entity_id=t.id
+                  AND p.provider='international_results' AND p.provider_key=%s"""
+        scotland = self.x(name, ("Scotland",)).fetchone()
+        self.assertEqual(scotland[1], "Écosse")
+        self.assertEqual(len(self.read("nations-results:internationals:2024/2025")), 2)
+        self.assertEqual(self.x(name, ("Scotland",)).fetchone(), scotland)  # red before §50's rule: « Scotland »
+        self.assertEqual(self.x(name, ("Portugal",)).fetchone()[1], "Portugal")
+        spellings = {r[0] for r in self.x("SELECT name FROM core.entity_names WHERE entity_type='team' AND entity_id=%s AND kind='source_spelling'",
+                                          (scotland[0],)).fetchall()}
+        self.assertIn("Scotland", spellings)
+
+class InternationalSeasonsTest(unittest.TestCase):
+    """50h–50i: one season list in the projection and in cups.EDITIONS; a finished season is read weekly."""
+
+    def test_50h_one_season_list(self):
+        from vega.sources import cups
+
+        self.assertEqual(tuple(cups.INTERNATIONAL_SEASONS), SEASONS)
+        self.assertEqual([s for k, c, s in cups.EDITIONS if (k, c) == ("nations-results", "internationals")], list(SEASONS))
+
+    @required(NODE, "requires node")
+    def test_50h_the_projection_reads_the_same_list(self):
+        import subprocess
+
+        from vega.sources import cups
+
+        script = (f"const m = await import({json.dumps((ROOT.parent / 'dashboard/frontend/src/services/nations-results.js').as_uri())});"
+                  "console.log(JSON.stringify(m.INTERNATIONAL_SEASONS))")
+        out = subprocess.run([NODE, "--input-type=module", "-e", script], capture_output=True, text=True, check=True).stdout
+        self.assertEqual(json.loads(out), list(cups.INTERNATIONAL_SEASONS))
+
+    def test_50i_finished_seasons_weekly_the_others_as_before(self):
+        from vega.sources import cups
+
+        now = datetime(2026, 11, 19, 12, tzinfo=timezone.utc)
+        periods = cups.scopes(now)
+        for season in SEASONS[:-1]:
+            self.assertEqual(periods[f"nations-results:internationals:{season}"], timedelta(days=7), season)
+        self.assertEqual(periods["nations-results:internationals:2026/2027"], timedelta(hours=2))
+        # Every other edition: main's rule (its first year from the year before now's: every two hours, else weekly).
+        for scope, period in periods.items():
+            if ":internationals:" not in scope:
+                season = scope.split(":", 2)[2]
+                self.assertEqual(period, timedelta(hours=2) if int(season[:4]) >= now.year - 1 else timedelta(days=7), scope)
+        # 2026/27 finished on 1 July 2027: weekly from then.
+        self.assertEqual(cups.scopes(datetime(2027, 6, 30, 23, tzinfo=timezone.utc))["nations-results:internationals:2026/2027"], timedelta(hours=2))
+        self.assertEqual(cups.scopes(datetime(2027, 7, 1, 0, tzinfo=timezone.utc))["nations-results:internationals:2026/2027"], timedelta(days=7))
 
 class EmptyStatisticsTest(CollectionBase):
     """37k–37m: an empty player statistics answer after an accepted one, through the worker and the store."""
