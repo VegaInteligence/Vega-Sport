@@ -262,3 +262,81 @@ test("results and expected: each pair on the same matches", () => {
   assert.match(markup, /\+0,4/);
   assert.doesNotMatch(markup, /\+1,2<\/dd>|4 · 1,8/);
 });
+
+// The squad tab's « Absents » card when no read date is known (asOf null: no player's suspensions read yet).
+// Written before the fix: in production, absenceScale(rows, null) threw RangeError and the tab fell to its error
+// boundary. The reference day is then the latest read of the absences shown, else today (UTC).
+const absences = await import("../dashboard/frontend/src/services/team-absences.js");
+const board = await load("Absences.jsx", {
+  ...common,
+  "./UI.jsx": { Card: ({ children }) => children, ClubCrest: () => null, PlayerAvatar: () => null, Skeleton: () => null },
+  "./PlayerScoutCharts.jsx": { chartTokens: "" },
+  "../services/team-absences.js": absences,
+});
+const player = (id, name) => ({ id, name, imageUrl: null, role: "winger" });
+const injury = (id, name, start, expectedReturn, extra = {}) => ({
+  player: player(id, name), kind: "injury", label: "Cruciate ligament tear", start, expectedReturn,
+  matchesMissed: 0, matchesRemaining: null, competition: null, readAt: "2026-11-23", ...extra,
+});
+// PSG's answer in production (2026-11-23).
+const psg = {
+  id: "t_41iFW3", asOf: null, squad: { players: 25, read: 0 },
+  absences: [
+    injury("p_4bGFWS", "Désiré Doué", "2026-11-22", null),
+    injury("p_2ZwqC5", "Khvicha Kvaratskhelia", "2026-10-21", "2027-05-31", { matchesMissed: 5 }),
+  ],
+};
+const finite = (scale) => scale.ticks.length > 0 && scale.ticks.every((t) => Number.isFinite(t.at) && t.at > 0 && t.at < 1 && t.label);
+
+test("absents: no read date, the card holds on the latest read (PSG in production)", () => {
+  const view = absences.absenceView(psg);
+  assert.equal(view.asOf, "2026-11-23");
+  const scale = absences.absenceScale(view.rows, view.asOf);
+  assert.ok(finite(scale));
+  const markup = html(e(board.AbsenceBoard, { view }));
+  assert.match(markup, /Désiré Doué[\s\S]*Khvicha Kvaratskhelia|Khvicha Kvaratskhelia[\s\S]*Désiré Doué/);
+  assert.match(markup, /dans 27 sem\./);
+  assert.doesNotMatch(markup, /NaN|Invalid/);
+});
+
+test("absents: no read date and no dated return, the card holds", () => {
+  const view = absences.absenceView({ ...psg, absences: [psg.absences[0]] });
+  assert.ok(finite(absences.absenceScale(view.rows, view.asOf)));
+  const markup = html(e(board.AbsenceBoard, { view }));
+  assert.match(markup, /Désiré Doué[\s\S]*Inconnu/);
+  assert.doesNotMatch(markup, /NaN|Invalid/);
+});
+
+test("absents: no read date and no absence, no card", () => {
+  const view = absences.absenceView({ ...psg, absences: [] });
+  assert.equal(html(e(board.AbsenceBoard, { view })), "");
+});
+
+test("absents: no read date nor read day, the reference is today (UTC)", () => {
+  const view = absences.absenceView({ ...psg, absences: psg.absences.map((a) => ({ ...a, readAt: null })) });
+  assert.equal(view.asOf, new Date().toISOString().slice(0, 10));
+});
+
+test("absents: a known read date is kept, the scale unchanged", () => {
+  const view = absences.absenceView({ ...psg, asOf: "2026-11-23" });
+  assert.equal(view.asOf, "2026-11-23");
+  const scale = absences.absenceScale(view.rows, view.asOf);
+  assert.deepEqual(scale.ticks.map((t) => t.label), ["déc.", "janv.", "févr.", "mars", "avr.", "mai"]);
+  const span = Date.UTC(2027, 5, 1) - Date.UTC(2026, 10, 23);
+  assert.equal(scale.ticks[0].at, (Date.UTC(2026, 11, 1) - Date.UTC(2026, 10, 23)) / span);
+  assert.equal(scale.at("2027-05-31"), (Date.UTC(2027, 4, 31) - Date.UTC(2026, 10, 23)) / span);
+});
+
+test("absents: an empty or invalid day never throws nor reads NaN", () => {
+  for (const asOf of [null, undefined, "", "n/a"]) {
+    const scale = absences.absenceScale(psg.absences, asOf);
+    assert.ok(finite(scale), String(asOf));
+    assert.ok(Number.isFinite(scale.at("2027-05-31")));
+    assert.equal(absences.returnDistance("2027-05-31", asOf), null, String(asOf));
+    assert.doesNotMatch(absences.absenceTitle(psg.absences[1], asOf), /NaN|Invalid/);
+    assert.doesNotMatch(absences.absenceDate("2026-10-21", asOf), /NaN|Invalid/);
+    assert.doesNotMatch(html(e(board.AbsenceMark, { absence: psg.absences[1], asOf })), /NaN|Invalid/);
+  }
+  // An invalid read date in the answer: the view falls back like a missing one.
+  assert.equal(absences.absenceView({ ...psg, asOf: "n/a" }).asOf, "2026-11-23");
+});

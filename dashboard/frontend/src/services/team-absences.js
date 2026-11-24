@@ -16,6 +16,8 @@ import { ROLE_LABEL } from "./power-ranking.js";
 
 const DAY = 86400000;
 const parse = (iso) => Date.parse(`${String(iso).slice(0, 10)}T00:00:00Z`);
+const known = (iso) => Boolean(iso) && Number.isFinite(parse(iso));
+const today = () => new Date().toISOString().slice(0, 10);
 const missing = (error) => (/\bHTTP 404\b/.test(error?.message || "") ? null : Promise.reject(error));
 const key = (id) => `team-absences:${id || "none"}`;
 const load = (id) => () =>
@@ -56,7 +58,7 @@ export function absenceDate(iso, asOf) {
 
 /** « dans 9 j », « dans 27 sem. »; null when the day has passed or is unknown. */
 export function returnDistance(iso, asOf) {
-  if (!iso || !asOf) return null;
+  if (!known(iso) || !known(asOf)) return null;
   const days = Math.round((parse(iso) - parse(asOf)) / DAY);
   if (days < 0) return null;
   if (days === 0) return "aujourd’hui";
@@ -103,8 +105,10 @@ export function absenceView(answer, { match = null, suspensions = true } = {}) {
   for (const a of rows) if (!byPlayer.has(a.player.id)) byPlayer.set(a.player.id, a);
   const players = Number.isFinite(answer.squad?.players) ? answer.squad.players : null;
   const read = Number.isFinite(answer.squad?.read) ? answer.squad.read : null;
+  // No read date (no player's suspensions read yet): the latest read of the absences shown, else today (UTC).
+  const reads = rows.map((a) => a.readAt).filter(known).sort();
   return {
-    asOf: answer.asOf,
+    asOf: known(answer.asOf) ? answer.asOf : reads.at(-1)?.slice(0, 10) ?? today(),
     rows,
     byPlayer,
     squad: players != null && read != null ? { players, read: Math.min(read, players) } : null,
@@ -116,8 +120,8 @@ export function absenceView(answer, { match = null, suspensions = true } = {}) {
  * the latest return, at least six weeks and at most nine months; its month starts as ticks.
  */
 export function absenceScale(rows, asOf) {
-  const start = parse(asOf);
-  const latest = Math.max(start + 42 * DAY, ...rows.filter((a) => a.expectedReturn).map((a) => parse(a.expectedReturn)));
+  const start = parse(known(asOf) ? asOf : today());
+  const latest = Math.max(start + 42 * DAY, ...rows.filter((a) => known(a.expectedReturn)).map((a) => parse(a.expectedReturn)));
   const last = new Date(latest);
   let end = Date.UTC(last.getUTCFullYear(), last.getUTCMonth() + 1, 1);
   const cap = new Date(start);

@@ -1,5 +1,12 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Injured and suspended players, the squad card without a read date — FAILURE_MODES § 59al (24 November 2026, branch `claude/absents-asof-vide` from origin/main 16e2cc6, local, not pushed)
+
+- Broke (production, after #110): the club's « Effectif » tab showed « Chargement impossible » for any club with an absent player and no player read yet (`asOf: null`, `read: 0`; PSG on 23 Nov).
+- Cause: `absenceScale(rows, null)` parsed a null day, and `Intl.DateTimeFormat.format(new Date(NaN))` threw `RangeError: Invalid time value`; `AbsenceBoard` called it unguarded.
+- Fix (`services/team-absences.js` only): `absenceView` gives a usable `asOf` (the answer's when valid, else the latest `readAt` of the absences shown, else today UTC), so the scale, the return distances and the marks share one reference; `absenceScale` falls back to today on an empty or invalid day and skips invalid returns; `returnDistance` is null on an invalid day. No text added on screen; backend and contract unchanged.
+- Tests first (`tests/club-missing-render.test.mjs`, 6 cases incl. a server render of `AbsenceBoard` on PSG's answer): red 4/6 (RangeError), then green; site suite 1017/1017.
+
 ## Header: the asterisk alone at the top left, no menu under the search — #109 (24 November 2026, merged, #114; live and verified)
 
 - Goal (the owner): no menu cut or hidden under the search between the phone layout and 1120 px, the header 56 px tall, 44 px tap targets on touch; then (« Moi de base je voulais juste qu'en haut à gauche ça soit un asterisk c'est tout ») the asterisk alone at the top left at every width.
