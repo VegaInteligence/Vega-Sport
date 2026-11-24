@@ -4910,9 +4910,13 @@ Read in the code (`d1325a8f`):
   future final decided on penalties whose shoot-out the base lacks stays `final` and `no_winner` (its honour rows
   carry the reason, `api.award_honours`) until an entry is reviewed and added. No line is logged for it: the race
   logs only its failures (`award race failed …`), and no per-final log is built.
-- **« Finals, Final ».** `award.reached_round` reads a name ending « , final » (OpenFootball's « Finals, Final »)
-  as `final`. `power.round_of` is not changed: it also sets the v8 ranking's match stakes and is mirrored in SQL
-  (`core.home_stakes`); the change is the race's alone.
+- **« Finals, Final ».** `award.reached_round` reads the name « Finals, Final » exactly (OpenFootball's; trimmed,
+  case ignored) as `final`, never for a match of stage `regular`; any other name ending « , final » (« Qualifying,
+  Final », « Preliminary round, Final »…) reads as before (`None`). `power.round_of` is not changed: it also sets the
+  v8 ranking's match stakes and is mirrored in SQL (`core.home_stakes`); the change is the race's alone. Among the
+  round names read in production on 24 Nov (above), none other than the Copa Libertadores' « Finals, Final » ends
+  « , final », so no known name of the base reads differently from the PR #121 rule; the whole list of the base's
+  round names is not verified in production (review of PR #121, 24 Nov 2026).
 - **Numbered rounds.** open-matchday's cups name their rounds « 1 » to « 7 »: no round is read from a number (none is
   guessed), so those editions give no honour (a known limit).
 - **A national cup.** An edition of the award year is a national cup (`national_cup`) when it is neither an
@@ -4933,8 +4937,9 @@ Read in the code (`d1325a8f`):
   year, to anyone. A cup marked `kind = 'cup'` without a key counts for no country. With the base as read, 2024/25
   alone is counted (2025/26 holds Germany's alone, 2026/27 no French cup, the years before none). The run keeps the
   fact in its spreads (`agg.award_runs.spreads`, key `national_cups`: `counted`, true or false, and `held`, the
-  countries whose national cup the year's editions hold); `award.refresh`, which reads no match, keeps the published
-  run's fact.
+  countries whose national cup the year's editions hold). `award.refresh`, which reads no match, keeps the
+  published run's own fact, and a run without one stays without one: a year placed on another year never keeps its
+  reference year's `national_cups` as its own (the reference's spreads give the placement and k, not the fact).
 - **The collective scale.** z_C = k × C, without a cap: a player with C = 0 has z_C = 0. k = (mean of the
   `award.SCALE_TOP` = 30 highest z_I) / (mean of the 30 highest C), the two taken separately among the year's
   ranked players (those in the race, `race_reason` None; 30 is the size of the award's list); with fewer than 30
@@ -4951,6 +4956,10 @@ Read in the code (`d1325a8f`):
   another reference year and a `source` other than `reference` once that reference year has a published run of the
   present version with players: whatever the order the years are computed in after a deploy, the year in progress
   ends computed on its reference year's v1.1 k.
+- **`award.refresh` recomputes a run of this version only.** A year whose published run is of another
+  `AWARD_VERSION` (v1 before the deploy) is not refreshed: refresh stores nothing (it returns 0) and `award.stale`
+  goes on listing the year, which the next ranking's run computes in full (its honours read again). refresh never
+  writes honours read under another version's rules under the present version's name.
 - **The protection of 60.1 holds.** The new reads (the copies, the listed finals' keys and team names) run inside `read_inputs`, in the race's read
   savepoint; k is computed inside `compute`: a failure of either is the race's (`step=read` or `compute`), never the
   ranking's or the level's (60z).
@@ -4962,14 +4971,14 @@ Read in the code (`d1325a8f`):
 #### 60.3.2 Failure modes and expected outcomes
 
 60ag–60aj (the shoot-out from a final's copy, « Finals, Final »), 60at (the list), 60al and 60am's keys, 60an–60ar (the scale) and
-60as's fact without a base: `backend/tests/test_award.py`, no database. 60ag, 60ak–60am, 60ar, 60as, 60at, and the cases of
+60as's fact without a base: `backend/tests/test_award.py`, no database. 60ag, 60ak–60am, 60ar, 60as, 60at, 60au, 60av, and the cases of
 60.2 that add a cup (60f, 60g, 60o, 60ae, 60af) with their cups written as `cups.save` and `open_matchday.save` write
 them (no kind, a national cup's key, the five countries' cups held): `backend/tests/test_models.py`.
 
 | # | Situation | Expected |
 |---|---|---|
 | 60ag | PitchAPI's World Cup final 3–3 without a shoot-out; OpenFootball's copy of the same World Cup the same day, the same sides, 3–3 (after extra time 3–3), shoot-out 4–2; the same copy one day apart; sides swapped | PitchAPI's home side `winner`, the other `final`, no reason; the same; the shoot-out read team by team |
-| 60ah | OpenFootball's « Finals, Final » (Copa Libertadores 2023 to 2025); the names production holds (« Quarterfinals », « Semifinals », « Final », « Quarts de finale », « Demi-finales », « Finale »); « 1 » to « 7 » | `final`; their rounds as before; none; `power.round_of` unchanged |
+| 60ah | OpenFootball's « Finals, Final » (Copa Libertadores 2023 to 2025), any case, spaces around; the names production holds (« Quarterfinals », « Semifinals », « Final », « Quarts de finale », « Demi-finales », « Finale »); « 1 » to « 7 »; « Qualifying, Final », « Preliminary round, Final », « Group A, Final »; « Finals, Final » of stage `regular` | `final`; their rounds as before; none; none; none; `power.round_of` unchanged |
 | 60ai | A copy of another score (2–1, or 2–2 its score at 90 minutes alone), of another competition, two days apart, of the same edition, of other teams, without its shoot-out or level on it; two copies whose shoot-outs disagree; no copy (the Champions League 2026 final) | nothing taken: both `final`, `no_winner` |
 | 60aj | A final of two legs level on aggregate, the second leg's shoot-out only in its copy (open-matchday's copy of the same cup) | the winner of that shoot-out `winner`, the other `final` |
 | 60ak | OpenLigaDB's German cup of the year, its competition without a kind, rounds « Quarts de finale », « Demi-finales », « Finale », a final 3–0, the five countries' cups held | `national_cup`: the winner `winner`, the other `final`, value 0.15 × factor × round |
@@ -4982,6 +4991,8 @@ them (no kind, a national cup's key, the five countries' cups held): `backend/te
 | 60aq | Every C at zero; every z_I at zero; no ranked player | k = 0, z_C = 0 for all, the race computed, nothing raises |
 | 60ar | A year in progress (its reference year another) with and without its reference year's published v1.1 run; a reference year computed after it | with it: the reference's k (`source` `reference`), never its own; without it: k 0 (`source` `none`) and, once the reference year's run is published, `award.stale` lists the year; computed again, it takes the reference's k and is no longer listed |
 | 60as | A year whose editions hold the German cup alone; the same with the five countries' cups | no `national_cup` honour, `national_cups.counted` false; the five counted, `counted` true, `held` the five |
+| 60au | A year whose published run is of another `AWARD_VERSION` (v1), then `award.refresh` | nothing stored (refresh returns 0): the same run, its version and honours unchanged; `award.stale` still lists the year |
+| 60av | A year placed on a reference year whose published v1.1 run holds a `national_cups` fact, then `award.refresh`: its own run without a fact; its own run with its own fact | no `national_cups` stored (the reference's never taken); its own fact kept |
 
 Not verified: which national cup editions and cup round names the production base holds beyond those read on
 24 Nov; the value of `core.competitions.kind` in production. The effect of v1.1 on the World Cup 2022 final and on
