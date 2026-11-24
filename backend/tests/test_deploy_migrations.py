@@ -53,7 +53,9 @@ ADDED = ["155_player_grade_status.sql", "156_team_side_corrections.sql", "157_pa
          # VI-48 (#69): the home's importance v2, its settings and its two windows (api functions, two settings tables).
          "171_home_importance_v2.sql",
          # §57: the scorers of the national matches from International Results (core.international_goals, one read).
-         "172_international_goals.sql"]
+         "172_international_goals.sql",
+         # §58: a nation's last match is a played one (api.nation_list redefined).
+         "173_nation_last_played.sql"]
 # SportScore editions: A, a rank shared at different points (a version already kept); B, rank 5 in a table of two (no
 # version yet); C, a table that holds (its version kept).
 A, B, C = 9601, 9602, 9603
@@ -185,8 +187,8 @@ class DeploymentMigrationsTest(unittest.TestCase):
         self.assertEqual(len(applied), 160)
         self.assertEqual(self.at_production, "migrations applied=160 total=160 logins=unchanged")
         self.assertEqual(self.merged_added, ADDED)
-        self.assertEqual(self.deployed, "migrations applied=17 total=177 logins=unchanged")
-        self.assertEqual(self.again, "migrations applied=0 total=177 logins=unchanged")
+        self.assertEqual(self.deployed, "migrations applied=18 total=178 logins=unchanged")
+        self.assertEqual(self.again, "migrations applied=0 total=178 logins=unchanged")
         self.assertEqual([v for v, *_ in self.migrations_after if v not in {w for w, *_ in self.migrations_before}], ADDED)
         self.assertEqual([r for r in self.migrations_after if r[0] < "155"], self.migrations_before)
         self.assertEqual(self.migrations_again, self.migrations_after)
