@@ -630,8 +630,9 @@ class ServedAbsencesTest(AbsencesBase):
         player11 = {"id": p11, "name": "Ousmane Dembélé", "imageUrl": None, "role": None}
         self.assertEqual(served["body"]["data"], {
             "id": team, "asOf": self.read_day,
-            # 10, 11, 13 (doubted), the member not linked; 12 left. Read: 10 only (11's suspensions are 50 days old, 13 doubted).
-            "squad": {"players": 4, "read": 1},
+            # 10, 11, 13 (doubted), the member not linked; 12 left. Read (59ao: his injuries read 45 days ago at most): 10 and 11
+            # (11's suspensions are 50 days old, they do not count), not 13 (doubted).
+            "squad": {"players": 4, "read": 2},
             "absences": [
                 {"player": player11, "kind": "suspension", "label": "Red card suspension", "start": d(-1), "expectedReturn": d(6),
                  "matchesMissed": 1, "matchesRemaining": None, "competition": {"code": "FR1", "id": "l_3FJFUl", "name": "Ligue 1"},
@@ -650,7 +651,8 @@ class ServedAbsencesTest(AbsencesBase):
         data = served["body"]["data"]
         self.assertEqual([(a["label"], a["expectedReturn"]) for a in data["absences"] if a["player"]["id"] == self.public("player", 10)],
                          [("Cruciate ligament tear", self.d(30))])
-        self.assertEqual((data["squad"], data["asOf"]), ({"players": 4, "read": 0}, None))
+        # 59ao: 11's injuries are still fresh, he alone is read.
+        self.assertEqual((data["squad"], data["asOf"]), ({"players": 4, "read": 1}, self.read_day))
 
     def test_59w_59x_unknown_and_unlinked_teams(self):
         unknown, malformed, bare, param = self.http("/api/teams/t_zzzzz9/absences", "/api/teams/xyz/absences",
@@ -680,10 +682,10 @@ class ServedAbsencesTest(AbsencesBase):
         served, empty = self.http(f"/api/teams/{nation}/absences", f"/api/teams/{self.public('team', 18)}/absences")
         self.assertEqual(served["status"], 200)
         d = self.d
-        # 10, 11, 13 counted; 10 read; 11's open-ended ankle is stale (he played since), his suspension and 10's do not
+        # 10, 11, 13 counted; 10 and 11 read (59ao: their injuries); 11's open-ended ankle is stale (he played since), his suspension and 10's do not
         # count for a national team; 12 (older tournament only) is not in the squad.
         self.assertEqual(served["body"]["data"], {
-            "id": nation, "asOf": self.read_day, "squad": {"players": 3, "read": 1},
+            "id": nation, "asOf": self.read_day, "squad": {"players": 3, "read": 2},
             "absences": [
                 {"player": {"id": p10, "name": "Kylian Mbappé", "imageUrl": None, "role": None}, "kind": "injury", "label": "Knock",
                  "start": d(-2), "expectedReturn": None, "matchesMissed": 0, "matchesRemaining": None, "competition": None,
@@ -696,7 +698,7 @@ class ServedAbsencesTest(AbsencesBase):
                          (200, {"players": 0, "read": 0}, []))
         # The club's answer is unchanged by the nation's rows.
         club, = self.http(f"/api/teams/{self.public('team', 1)}/absences")
-        self.assertEqual((club["body"]["data"]["squad"], len(club["body"]["data"]["absences"])), ({"players": 4, "read": 1}, 4))
+        self.assertEqual((club["body"]["data"]["squad"], len(club["body"]["data"]["absences"])), ({"players": 4, "read": 2}, 4))
 
     def test_59ag_the_players_injuries_list_carries_his_suspensions(self):
         served, doubted = self.http(f"/api/players/{self.public('player', 10)}/injuries", f"/api/players/{self.public('player', 13)}/injuries")

@@ -1,5 +1,11 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Injured and suspended players, the « renseignés » counter on the injuries alone — FAILURE_MODES § 59ao (24 November 2026, branch `claude/absents-compteur-blessures`)
+
+- hugo (card, 24 Nov): « Blessures lues seulement ». `GET /api/teams/{id}/absences`: `squad.read` counts the members whose injuries were read 45 days ago at most, whatever their suspensions; `asOf` is the oldest of those injuries reads. The view (174) and the absences listed are unchanged.
+- Tests first (`tests/test_transfermarkt_absences.py` ServedAbsencesTest, `backend/api/test/team-absences.test.mjs`): red 4, then green; absences 31/31, read API 297/297 on PostgreSQL 18.
+- Needs a Deploy (read API).
+
 ## « Mon compte » « Lettre », made shippable — VI-38 (24 November 2026, branch `claude/vi-38-compte-feuille-blanche`, PR #124)
 
 - The owner chose A « Lettre ». Direction B (`AccountDiptych.jsx` and its CSS), the `?piste=` switch and `DEFAULT_PISTE` were removed, along with the dead account CSS.

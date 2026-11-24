@@ -46,8 +46,8 @@ test("the current squad's absences, in the contract's shape, cached as /injuries
   const who = { id: player, name: "Élie Durand", imageUrl: "https://img.example/p1.png", role: "centre_forward" };
   assert.deepEqual(body.data, {
     id: team, asOf: today.d,
-    // 101 read (both units), 102 injuries only (unknown), 9199 not linked (unknown).
-    squad: { players: 3, read: 1 },
+    // Read (59ao): his injuries read 45 days ago at most, whatever his suspensions: 101 and 102; 9199 not linked (unknown).
+    squad: { players: 3, read: 2 },
     absences: [
       { player: who, kind: "suspension", label: "Yellow card suspension", start: today.c, expectedReturn: today.e, matchesMissed: 0,
         matchesRemaining: 1, competition: { code: "FR1", id: "l_3FJFUl", name: "Ligue 1" }, readAt: today.d },
