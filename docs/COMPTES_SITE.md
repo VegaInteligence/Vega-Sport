@@ -132,11 +132,35 @@ wordmark) beside the form. `/compte` shows who is signed in, what the account ke
 | S11 | The sync's state reads alone in the hero (« Indisponible » of what?) or runs long. | `syncLabel` gives a short `pill` naming the sync (« Synchronisé », « Synchronisation… », « Synchro en échec », « Synchro arrêtée », « Synchro indisponible ») beside the block's `text`; « En échec » carries the reason and « Nouvel essai au prochain changement. » as its detail (`tests/account-messages.test.mjs`). |
 | S10 | The header entry changes width between its states. | 124 px in every state from 1024 px up, the icon size below, as before (O6). |
 
+## 8. Forgotten password and address confirmation (`tests/account-code.test.mjs`, E2E phase `verify`)
+
+Both go through a six-digit code sent by e-mail (Neon Auth's Email OTP; a link would need a sender of our own),
+as steps of `/connexion`: « Confirmer l'adresse », « Mot de passe oublié », « Nouveau mot de passe ». Neon's
+settings these steps are written for: verification required, by code, a code sent at sign-up, none at sign-in
+(the site asks for it), auto sign-in after verification. The site also works with verification off, as before.
+
+| # | What can go wrong | Expected outcome |
+| --- | --- | --- |
+| R1 | Sign-up with verification required leaves the person on the form, with no session and no word. | A sign-up answer without a session token opens « Confirmer l'adresse »: the address (on the screen only, never in a URL) and the code field. With a token (verification off) the person is signed in as before. |
+| R2 | Sign-in with an address never confirmed ends on an error with no way on. | `EMAIL_NOT_VERIFIED`: the same step opens and the site asks for one code (`emailOtp.sendVerificationOtp`, type `email-verification`). |
+| R3 | The code is pasted with spaces or text around it, or is incomplete. | `cleanCode(text)` keeps the digits, six at most. With fewer than six nothing is sent and the field takes the focus. The field is `inputMode="numeric"`, `autoComplete="one-time-code"`. |
+| R4 | A wrong, expired or used-up code. | `INVALID_OTP`: « Code incorrect. » · `OTP_EXPIRED`: « Ce code a expiré. Demandez-en un nouveau. » · `TOO_MANY_ATTEMPTS`: « Trop d'essais. Demandez un nouveau code. » The code field is emptied and focused; the address and the passwords typed are kept. |
+| R5 | The e-mail does not arrive, or « Renvoyer le code » is hammered. | « Renvoyer le code » asks for a new code, then is disabled for 30 s; its failure reads as O5. |
+| R6 | The address is confirmed but Neon opens no session (auto sign-in off). | After `emailOtp.verifyEmail` the session is read; without one the site signs in with the password still in memory from the previous step. |
+| R7 | « Mot de passe oublié ? » tells who has an account. | The answer and the screen are the same whether the address has an account or not: the code step opens. An empty address sends nothing (focus on the field). |
+| R8 | Neon's server knows only one of Better Auth's two request routes. | `emailOtp.requestPasswordReset`; a 404 falls back to `forgetPassword.emailOtp` (the route Neon documents). |
+| R9 | A wrong code or a short password sends the person back to the start. | « Nouveau mot de passe » holds the code and the new password (8 characters at least, the eye button, `new-password`) on one screen; an error keeps the step, and all but a wrong code. |
+| R10 | After the reset the new password must be typed again. | A successful `emailOtp.resetPassword` is followed by `signIn.email` with the address and the new password, then `?next=`. If that sign-in fails: « Connexion », the address filled, « Mot de passe modifié. Connectez-vous. » |
+| R11 | A step loses the address, or keeps a password longer than needed. | « Retour » gives « Connexion » with the address kept. The password survives only from sign-up or sign-in to the confirmation that follows (R6); codes and passwords are cleared on every other change of step and after success. |
+| R12 | Reloading a step leaves a half state. | Steps live in memory: a reload shows « Connexion ». Only `?mode=creer` and `?mode=oubli` open another step. |
+| R13 | A step has no title, no focus, or says nothing to a screen reader. | Each step has its `h1` and focuses its first empty field; errors are `role="alert"`, « Code envoyé » is `role="status"`. Google's button and « ou » show only on « Connexion » and « Créer un compte ». |
+
 ## Not covered here
 
 - A real Neon token, Neon's cookies and Google: the container cannot reach Neon. The E2E runs against a local
   Better Auth server (Neon Auth is managed Better Auth) with the JWT plugin and the account API's real front and
   store on the local PostgreSQL. To be checked on a Vercel preview: sign-up, sign-in, Google, `iss` / `aud` of
   Neon's JWT against the account front's verifier.
-- Password reset and e-mail verification: no screen (they need Neon's SMTP sender set up, see the WORKLOG).
+- Neon's real e-mails (the shared sender, their wording, their delay): the E2E reads the codes from the stand-in's
+  outbox (the same Better Auth Email OTP plugin). To be checked by a person on the public site.
 - A session ended in another tab: this tab keeps its stores until its next save answers 401.
