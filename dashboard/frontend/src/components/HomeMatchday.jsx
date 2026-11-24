@@ -19,6 +19,7 @@ import {
   xgTimeline,
   weekPeriodLabel,
   scoreboardTicker,
+  tickForecast,
 } from "../services/home-insights.js";
 import {
   ChartTip,
@@ -167,7 +168,8 @@ export function HomeTicker({
 
 /**
  * A match to come or in play, in a result's box: the competition and the kick-off (Paris time, as « À l'affiche »)
- * or « En direct »; the teams without score (a match in play: its score when the record carries it); an empty foot.
+ * or « En direct »; the teams, never a score; in the foot, where a result has its xG, the pre-match forecast when the
+ * record has one (home, draw, away: a bar in the matches lists' colours, then the shares), else nothing.
  */
 function ComingTick({ match: m, competitions, f, anchor }) {
   const { fixture } = m,
@@ -175,6 +177,7 @@ function ComingTick({ match: m, competitions, f, anchor }) {
     home = fixture.home_team || {},
     away = fixture.away_team || {},
     competition = competitions.get(leagueOf(fixture)),
+    odds = tickForecast(m),
     // As the matches lists: the feed's not-started match opens on « À venir », the others on the result.
     href =
       fixture.status === "in_play"
@@ -183,11 +186,7 @@ function ComingTick({ match: m, competitions, f, anchor }) {
             leagueId: fixture.league?.id,
             season: fixture.season,
           })
-        : fixtureHref(f, fixture),
-    score =
-      live &&
-      Number.isInteger(fixture.score_home) &&
-      Number.isInteger(fixture.score_away);
+        : fixtureHref(f, fixture);
   return (
     <div className="home-tick" data-ticker-anchor={anchor ? "" : undefined}>
       <Link className="home-tick-top" href={href} prefetch={false}>
@@ -212,15 +211,37 @@ function ComingTick({ match: m, competitions, f, anchor }) {
             className="crest home-crest-xs"
           />
           <span>{team.name}</span>
-          {score && <b>{i ? fixture.score_away : fixture.score_home}</b>}
         </Link>
       ))}
       <Link
         className="home-tick-foot"
         href={href}
         prefetch={false}
-        aria-label={`Voir ${home.name} – ${away.name}`}
-      />
+        aria-label={
+          odds
+            ? `Pronostic d’avant-match : ${home.name} ${odds.home} %, nul ${odds.draw} %, ${away.name} ${odds.away} %`
+            : `Voir ${home.name} – ${away.name}`
+        }
+      >
+        {odds && (
+          <>
+            <span className="home-tick-odds" aria-hidden="true">
+              {["home", "draw", "away"].map((side) => (
+                <i
+                  key={side}
+                  data-side={side}
+                  style={{ flexGrow: odds[side] }}
+                />
+              ))}
+            </span>
+            <span className="home-tick-cap">
+              <span>{`${odds.home} %`}</span>
+              <span>{`${odds.draw} %`}</span>
+              <span>{`${odds.away} %`}</span>
+            </span>
+          </>
+        )}
+      </Link>
     </div>
   );
 }

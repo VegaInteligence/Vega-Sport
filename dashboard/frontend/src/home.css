@@ -228,6 +228,20 @@ html[data-theme="light"] {
 .home-tick-xg i:last-child {
   background: var(--away);
 }
+/* A match to come's pre-match forecast, in a result's xG place: home, draw, away (colours: styles.css, the matches
+   lists' forecast bar). */
+.home-tick-odds {
+  display: flex;
+  gap: 2px;
+  height: 3px;
+  margin-top: 3px;
+  overflow: hidden;
+}
+.home-tick-odds i {
+  flex-basis: 0;
+  min-width: 4px;
+  background: var(--muted);
+}
 
 /* The visitor's country (VI-48): its menu, a line of the home's preferences panel. */
 .home-country-picker {

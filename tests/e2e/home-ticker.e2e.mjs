@@ -22,6 +22,15 @@
 //  H6 It snaps back after the visitor scrolled it → a scroll by the visitor, then the page's clock refresh
 //     (visibilitychange): the strip stays where the visitor left it.
 //  P1 Phone 390 × 844: the anchored tick wholly in view, no jump, no sideways page scroll.
+//  F1 The pre-match forecast is missing, wrong or does not add up (the owner, 24 Nov 2026: « dans le bandeau du haut
+//     il me faut les prédictions de victoire etc mais ne met pas les scores ») → every tick not finished whose API
+//     record has a forecast (`forecast`, else `fixture.forecast`) shows in its foot three whole percentages (home,
+//     draw, away) equal to the API's shares rounded here by largest remainder, summing to 100, with a three-part
+//     bar and the accessible name « Pronostic d’avant-match : … »; a record without one keeps an empty foot.
+//  F2 The bar's colours are its own → its home / draw / away parts have the computed colours of the matches lists'
+//     forecast bar (.list-forecast-bar, probed on the same page).
+//  F3 A score shows on a tick not finished → no team score, and the foot holds only the three « N % ».
+//  F4 The ticks differ in size → every tick the same height (and 182 px wide, H4), at 1440 and on the phone.
 //  X1 No page error, no console error, no hydration warning (failed remote loads excluded).
 //
 // Run (same setup as tests/e2e/home-country.e2e.mjs: the test double in front of the replay, the clock fixed for
@@ -108,6 +117,21 @@ function expectedStrip() {
 const want = expectedStrip();
 inputs.expected = want;
 
+// F1: the shares each tick not finished should show, from the API's records (null: no forecast, an empty foot).
+const shares = (f) => {
+  const parts = [f?.home, f?.draw, f?.away];
+  if (!parts.every((v) => typeof v === "number" && v >= 0 && v <= 1)) return null;
+  const total = parts[0] + parts[1] + parts[2];
+  if (!(total > 0.98 && total < 1.02)) return null;
+  const exact = parts.map((v) => (v / total) * 100), whole = exact.map(Math.floor);
+  let left = 100 - whole[0] - whole[1] - whole[2];
+  const order = [0, 1, 2].sort((a, b) => exact[b] - whole[b] - (exact[a] - whole[a]) || a - b);
+  for (const i of order) if (left-- > 0) whole[i]++;
+  return whole;
+};
+const wantShares = new Map((home.billboard || []).map((m) => [m.fixture.id, shares(m.forecast) || shares(m.fixture.forecast)]));
+inputs.expectedShares = Object.fromEntries(wantShares);
+
 // ---------- The page ----------
 const browser = await chromium.launch();
 async function newContext({ country = "XX", phone = false, js = true } = {}) {
@@ -177,6 +201,59 @@ const view = (page) =>
       overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
     };
   });
+// F1–F4: each tick's foot, team scores and size; the colours of its bar and of the lists' bar (a probe, removed).
+const feet = (page) =>
+  page.evaluate(() => {
+    const nav = document.querySelector(".home-ticker");
+    const probe = document.createElement("span");
+    probe.className = "list-forecast-bar";
+    probe.innerHTML = '<i data-side="home"></i><i data-side="draw"></i><i data-side="away"></i>';
+    document.body.append(probe);
+    const paint = (el) => { const c = getComputedStyle(el); return `${c.backgroundColor} ${c.opacity}`; };
+    const listColours = [...probe.children].map(paint);
+    probe.remove();
+    return {
+      listColours,
+      ticks: [...nav.querySelectorAll(".home-tick")].map((t) => {
+        const a = t.querySelector("a.home-tick-top"), foot = t.querySelector(".home-tick-foot"), r = t.getBoundingClientRect();
+        return {
+          id: a ? new URL(a.getAttribute("href"), location.href).searchParams.get("id") : "nation",
+          top: t.querySelector(".home-tick-top span:last-child")?.textContent,
+          scores: [...t.querySelectorAll(".home-tick-team b")].map((b) => b.textContent),
+          foot: foot?.textContent ?? null,
+          caption: [...(foot?.querySelectorAll(".home-tick-cap > span") || [])].map((x) => x.textContent),
+          bar: [...(foot?.querySelectorAll(".home-tick-odds i") || [])].map((i) => [i.dataset.side, Math.round(i.getBoundingClientRect().width), paint(i)]),
+          label: foot?.getAttribute("aria-label") ?? null,
+          height: Math.round(r.height * 10) / 10,
+          width: Math.round(r.width),
+        };
+      }),
+    };
+  });
+function checkFeet(tag, got) {
+  const open = got.ticks.filter((t) => t.top !== "Terminé");
+  const wrong = open.filter((t) => {
+    const w = wantShares.get(t.id);
+    if (w === undefined) return true; // a tick the billboard does not hold (no favourites, no country here)
+    if (!w) return t.foot !== "" || t.bar.length || !/^Voir /.test(t.label || "");
+    const caption = w.map((v) => `${v} %`);
+    return JSON.stringify(t.caption) !== JSON.stringify(caption) || t.caption.reduce((a, v) => a + parseInt(v, 10), 0) !== 100 ||
+      JSON.stringify(t.bar.map(([side]) => side)) !== '["home","draw","away"]' ||
+      !(t.label || "").startsWith("Pronostic d’avant-match : ") || !(t.label || "").includes(`nul ${w[1]} %`);
+  });
+  check(`F1 ${tag}: every tick not finished shows the API's forecast as three shares summing to 100 (or an empty foot without one)`,
+    { ticks: open.length, withForecast: open.filter((t) => wantShares.get(t.id)).length, wrong: [] },
+    { ticks: open.length, withForecast: open.filter((t) => t.caption.length).length, wrong, sample: open.slice(0, 3) },
+    open.length > 0 && open.some((t) => t.caption.length === 3) && wrong.length === 0);
+  const colours = open.filter((t) => t.bar.length).map((t) => t.bar.map(([, , c]) => c));
+  check(`F2 ${tag}: the bar has the lists' forecast colours`, got.listColours, [...new Set(colours.map((c) => JSON.stringify(c)))],
+    colours.length > 0 && colours.every((c) => JSON.stringify(c) === JSON.stringify(got.listColours)));
+  const scored = open.filter((t) => t.scores.length || (t.foot && !/^(\d+ %){3}$/.test(t.foot)));
+  check(`F3 ${tag}: no score on a tick not finished`, [], scored, scored.length === 0);
+  const heights = [...new Set(got.ticks.map((t) => t.height))], widths = [...new Set(got.ticks.map((t) => t.width))];
+  check(`F4 ${tag}: every tick the same height and width`, { heights: 1, widths: [182] }, { heights, widths },
+    heights.length === 1 && JSON.stringify(widths) === "[182]");
+}
 const consoleOf = (page, tag) => {
   page.on("console", (m) => {
     const text = m.text();
@@ -206,13 +283,14 @@ async function visit({ phone = false, country = "XX", tag }) {
   await page.waitForLoadState("networkidle").catch(() => {});
   await page.waitForFunction(() => Object.keys(document.querySelector(".home-ticker")).some((k) => k.startsWith("__reactFiber")), null, { timeout: 60000 });
   await page.waitForTimeout(1500);
-  return { context, page, server, strip: await readStrip(page), view: await view(page), log: await page.evaluate(() => window.__tickerLog) };
+  return { context, page, server, strip: await readStrip(page), view: await view(page), log: await page.evaluate(() => window.__tickerLog), feet: await feet(page) };
 }
 
 // ---------- Desktop, no country ----------
 {
-  const { context, page, server, strip, view: v, log } = await visit({ tag: "desktop" });
-  inputs.desktop = { strip, view: v, log };
+  const { context, page, server, strip, view: v, log, feet: ft } = await visit({ tag: "desktop" });
+  inputs.desktop = { strip, view: v, log, feet: ft };
+  checkFeet("1440", ft);
   check("H1 the strip = the week's results, then the matches in play and to come (recomputed from the API)", wantTicks, ticksOf(strip),
     want.ahead && JSON.stringify(ticksOf(strip)) === JSON.stringify(wantTicks) && wantTicks.flat().some(([, top]) => /^\d\d:\d\d$/.test(top)));
   check("H2 days oldest first", wantLabels, strip?.days.map((d) => d.label), JSON.stringify(strip?.days.map((d) => d.label)) === JSON.stringify(wantLabels) && want.days.every((d, i) => !i || d.day > want.days[i - 1].day));
@@ -239,8 +317,9 @@ async function visit({ phone = false, country = "XX", tag }) {
 
 // ---------- Phone, no country ----------
 {
-  const { context, page, view: v, log } = await visit({ phone: true, tag: "phone" });
-  inputs.phone = { view: v, log };
+  const { context, page, view: v, log, feet: ft } = await visit({ phone: true, tag: "phone" });
+  inputs.phone = { view: v, log, feet: ft };
+  checkFeet("phone 390", ft);
   const lefts = [...new Set(log.map((s) => s.left))];
   check("P1 phone 390: the anchored tick in view, no jump, no sideways page scroll", { anchorInView: true, lefts: 1, overflow: 0 }, { ...v, lefts },
     v.anchorIndex === v.firstOpen && v.anchorInView && lefts.length === 1 && v.overflow <= 0);

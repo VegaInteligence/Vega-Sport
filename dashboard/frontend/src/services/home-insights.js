@@ -8,6 +8,7 @@ import { HOME_PRIORITY, isLocal } from "./home-priority.js";
 import { involvesFavourite, preferenceOrder } from "./preference-effects.js";
 import { ahead } from "./home-upcoming.js";
 import { LIVE_SPAN_MS } from "./live-client.js";
+import { matchForecast } from "./cup-matches.js";
 
 export const CHAMPIONS_LEAGUE_ID = "l_0bfbkO";
 export const EUROPA_LEAGUE_ID = "l_38d9HA";
@@ -307,6 +308,24 @@ export function scoreboardTicker(
   const ordered = [...days.values()].sort((a, b) => (a.day < b.day ? -1 : 1));
   const anchor = ordered.flatMap((d) => d.matches).find((m) => m.tick)?.id ?? null;
   return { days: ordered, anchor, ahead: true };
+}
+
+/**
+ * A strip tick's pre-match forecast (doc "Accueil", « Le bandeau »): the record's own `forecast` (the billboard's and
+ * the country's records; it stays the pre-match one while the match is played), else its fixture's; as whole
+ * percentages of home, draw, away that sum to 100 (largest remainder; a tie goes to home, then draw, then away).
+ * Null without a valid forecast (matchForecast: three shares in [0, 1] summing to about 1).
+ */
+export function tickForecast(m) {
+  const f = matchForecast(m?.forecast) || matchForecast(m?.fixture?.forecast);
+  if (!f) return null;
+  const sides = ["home", "draw", "away"],
+    total = f.home + f.draw + f.away,
+    exact = sides.map((side) => (f[side] / total) * 100),
+    whole = exact.map(Math.floor);
+  let left = 100 - whole.reduce((a, b) => a + b, 0);
+  for (const i of [0, 1, 2].sort((a, b) => exact[b] - whole[b] - (exact[a] - whole[a]) || a - b)) if (left-- > 0) whole[i]++;
+  return { home: whole[0], draw: whole[1], away: whole[2] };
 }
 
 /** The week's showcase: a meeting of big clubs, ideally near the top of the table. */

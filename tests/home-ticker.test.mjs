@@ -36,12 +36,27 @@
 //     NextMatches does (fixtureHref); each team opens its club; no score, never is-lost; an empty foot link to the
 //     match; the anchored tick carries data-ticker-anchor; one inline script right after the nav; the nav says
 //     « Résultats et matchs à venir … ».
-//  R2 A match in play → « En direct » (the site's live label) in place of the time; its score only when the record
-//     carries both sides' (fixture.score_home / score_away); never is-lost.
+//  R2 A match in play → « En direct » (the site's live label) in place of the time; never a score (the owner,
+//     24 Nov 2026: « ne met pas les scores »), even when the record carries fixture.score_home / score_away; never
+//     is-lost.
+// The pre-match forecast in the foot (the owner, 24 Nov 2026: « dans le bandeau du haut il me faut les prédictions de
+// victoire etc mais ne met pas les scores »):
+//  F1 A tick to come or in play whose record has a forecast (the billboard's and the country's records: `forecast`
+//     {home, draw, away}; else the fixture's own `forecast`) shows nothing, or percentages that do not add up, or
+//     colours of its own → a three-part bar (home, draw, away; data-side as MatchForecastBar, the list forecast's
+//     colours) and a caption of three whole percentages that sum to 100 (largest remainder), in the place of a
+//     result's xG bar and caption; the foot's accessible name « Pronostic d’avant-match : <home> N %, nul N %,
+//     <away> N % ».
+//  F2 A record without a forecast (the favourites' read carries none), or a malformed one (a share missing, out of
+//     [0, 1], a sum far from 1) → the empty foot of before, « Voir <home> – <away> »; no placeholder, no invented value.
+//  F3 A score slips in → no score of any kind on a tick not finished: no team score (<b>), no predicted score, no
+//     expected goals, even when the forecast object carries them.
+//  F4 The results move → a result tick's markup is the one of before, in a strip with matches to come too; the
+//     results-only strip stays byte for byte (B1).
 import test from "node:test";
 import assert from "node:assert/strict";
 import { React, compile, renderToStaticMarkup, src } from "./support/render-component.mjs";
-import { weekTicker, scoreboardTicker } from "../dashboard/frontend/src/services/home-insights.js";
+import { weekTicker, scoreboardTicker, tickForecast } from "../dashboard/frontend/src/services/home-insights.js";
 
 const h = React.createElement;
 const at = (iso) => Date.parse(iso);
@@ -56,7 +71,7 @@ const result = (id, timeUtc, leagueId = PL, extra = {}) => ({
   away: { id: `t_${id}a`, name: `${id} A`, imageUrl: null, score: 1, xg: 0.5 },
   ...extra,
 });
-const entry = (id, timeUtc, { league = UCL, weight = 1, status = "not_started", home, away, score } = {}) => ({
+const entry = (id, timeUtc, { league = UCL, weight = 1, status = "not_started", home, away, score, forecast = null } = {}) => ({
   fixture: {
     id, season: "2026/2027", date: timeUtc.slice(0, 10), time_utc: timeUtc, status, round_name: "5",
     home_team: { id: home || `t_${id}h`, name: `${id} H`, image_url: null },
@@ -64,7 +79,7 @@ const entry = (id, timeUtc, { league = UCL, weight = 1, status = "not_started", 
     league: { id: league, name: league === UCL ? "UEFA Champions League" : "League" },
     score_home: score ? score[0] : null, score_away: score ? score[1] : null,
   },
-  time: at(timeUtc), day: parisDay(at(timeUtc)), weight, forecast: null,
+  time: at(timeUtc), day: parisDay(at(timeUtc)), weight, forecast,
 });
 const ids = (days) => days.map((d) => [d.day, d.matches.map((m) => m.id)]);
 
@@ -243,16 +258,103 @@ test("R1 a match to come: kick-off time, the « À l'affiche » link, no score; 
   assert.match(after, /^<div hidden=""><script>(?:(?!<\/script)[\s\S])+<\/script><\/div>$/);
 });
 
-test("R2 a match in play: « En direct », its score only when the record carries it", () => {
+test("R2 a match in play: « En direct », never a score", () => {
   const now = at("2026-11-24T19:30:00Z");
   const billboard = [entry("liv", "2026-11-24T17:45:00Z", { status: "in_play", score: [1, 2] }), entry("raw", "2026-11-24T19:00:00Z")];
   const html = render({ now, upcoming: { billboard, window: WINDOW } });
   const ticks = html.split('<div class="home-tick"').slice(1);
   const liv = ticks.find((t) => t.includes("id=liv")), raw = ticks.find((t) => t.includes("id=raw"));
   assert.ok(liv.includes("<span>En direct</span>") && raw.includes("<span>En direct</span>"));
-  assert.deepEqual([...liv.matchAll(/<b>(\d+)<\/b>/g)].map((m) => m[1]), ["1", "2"]);
+  assert.ok(!liv.includes("<b>") && !raw.includes("<b>"), "no live score");
   assert.ok(!liv.includes("is-lost"));
-  assert.ok(!raw.includes("<b>"));
+});
+
+// ---------- The pre-match forecast ----------
+const ARS = { home: 0.7445, draw: 0.1633, away: 0.0922 }; // Real Madrid – PSV in the replay: 74,45 / 16,33 / 9,22
+const tickOf = (html, id) => html.slice(0, html.indexOf("</nav>")).split('<div class="home-tick"').slice(1).find((t) => t.includes(`id=${id}`));
+const capOf = (tick) => [...(tick.match(/<span class="home-tick-cap">(.*?)<\/span><\/a>/)?.[1] || "").matchAll(/<span>([^<]*)<\/span>/g)].map((m) => m[1]);
+
+test("F1 shares: whole percentages that sum to 100 (largest remainder)", () => {
+  assert.deepEqual(tickForecast({ forecast: ARS }), { home: 75, draw: 16, away: 9 });
+  assert.deepEqual(tickForecast({ forecast: { home: 0.6743, draw: 0.1955, away: 0.1302 } }), { home: 67, draw: 20, away: 13 });
+  assert.deepEqual(tickForecast({ forecast: { home: 1 / 3, draw: 1 / 3, away: 1 / 3 } }), { home: 34, draw: 33, away: 33 });
+  assert.deepEqual(tickForecast({ forecast: { home: 0.505, draw: 0.25, away: 0.245 } }), { home: 51, draw: 25, away: 24 });
+  assert.deepEqual(tickForecast({ forecast: { home: 0, draw: 0, away: 1 } }), { home: 0, draw: 0, away: 100 });
+  // The record's own forecast first (it holds the pre-match one while the match is played), else the fixture's.
+  assert.deepEqual(tickForecast({ forecast: null, fixture: { forecast: ARS } }), { home: 75, draw: 16, away: 9 });
+  assert.deepEqual(tickForecast({ forecast: { home: 0.2, draw: 0.3, away: 0.5 }, fixture: { forecast: ARS } }), { home: 20, draw: 30, away: 50 });
+  for (let i = 0; i < 500; i++) {
+    const a = ((i * 37) % 101) / 100, b = (1 - a) * (((i * 53) % 97) / 96);
+    const s = tickForecast({ forecast: { home: a, draw: b, away: 1 - a - b } });
+    assert.equal(s.home + s.draw + s.away, 100, JSON.stringify([a, b]));
+    assert.ok([s.home, s.draw, s.away].every((v) => Number.isInteger(v) && v >= 0));
+  }
+});
+
+test("F1 a tick to come with a forecast: the bar and the three shares in its foot", () => {
+  const billboard = [entry("gal", "2026-11-24T17:45:00Z", { forecast: ARS })];
+  const gal = tickOf(render({ now: NOW, upcoming: { billboard, window: WINDOW } }), "gal");
+  const href = "/matchs/?id=gal&amp;competition=l_0bfbkO&amp;sourceSeason=2026%2F2027&amp;from=upcoming&amp;tab=upcoming";
+  const foot = gal.slice(gal.indexOf('class="home-tick-foot"') - `<a href="${href}" `.length);
+  assert.equal(
+    foot,
+    `<a href="${href}" class="home-tick-foot" aria-label="Pronostic d’avant-match : gal H 75 %, nul 16 %, gal A 9 %">` +
+      '<span class="home-tick-odds" aria-hidden="true"><i data-side="home" style="flex-grow:75"></i><i data-side="draw" style="flex-grow:16"></i><i data-side="away" style="flex-grow:9"></i></span>' +
+      '<span class="home-tick-cap"><span>75 %</span><span>16 %</span><span>9 %</span></span></a></div>',
+  );
+  assert.deepEqual(capOf(gal).map((v) => parseInt(v, 10)).reduce((a, b) => a + b, 0), 100);
+});
+
+test("F1 a match in play shows its pre-match forecast, « En direct » on top", () => {
+  const now = at("2026-11-24T19:30:00Z");
+  const billboard = [entry("liv", "2026-11-24T17:45:00Z", { status: "in_play", score: [1, 2], forecast: ARS })];
+  const liv = tickOf(render({ now, upcoming: { billboard, window: WINDOW } }), "liv");
+  assert.ok(liv.includes("<span>En direct</span>"));
+  assert.deepEqual(capOf(liv), ["75 %", "16 %", "9 %"]);
+  assert.ok(liv.includes('aria-label="Pronostic d’avant-match : liv H 75 %, nul 16 %, liv A 9 %"'));
+});
+
+test("F2 no forecast, or a malformed one: the empty foot", () => {
+  const malformed = [null, undefined, { home: 0.5, draw: 0.5 }, { home: 0.5, draw: 0.3, away: 0.4 }, { home: -0.1, draw: 0.6, away: 0.5 }, { home: "0.5", draw: 0.25, away: 0.25 }, { home: NaN, draw: 0.5, away: 0.5 }];
+  for (const forecast of malformed) {
+    assert.equal(tickForecast({ forecast, fixture: {} }), null, JSON.stringify(forecast));
+    const gal = tickOf(render({ now: NOW, upcoming: { billboard: [entry("gal", "2026-11-24T17:45:00Z", { forecast })], window: WINDOW } }), "gal");
+    assert.ok(gal.endsWith('class="home-tick-foot" aria-label="Voir gal H – gal A"></a></div>'), JSON.stringify(forecast));
+    assert.ok(!/home-tick-odds|home-tick-cap|\d %/.test(gal));
+  }
+  // A favourite's match (the personal read carries no forecast).
+  const mine = [{ ...entry("fav", "2026-11-25T20:00:00Z"), forecast: undefined, favourites: ["t_favh"] }];
+  delete mine[0].forecast;
+  const fav = tickOf(render({ now: NOW, upcoming: { billboard: [], matches: mine, window: WINDOW } }), "fav");
+  assert.ok(fav.endsWith('class="home-tick-foot" aria-label="Voir fav H – fav A"></a></div>'));
+});
+
+test("F3 no score of any kind on a tick not finished", () => {
+  const rich = { ...ARS, score: [2, 1], predicted_score: { home: 2, away: 1 }, home_goals: 1.84, away_goals: 0.71, xg: { home: 1.84, away: 0.71 } };
+  const now = at("2026-11-24T18:30:00Z");
+  const billboard = [
+    entry("liv", "2026-11-24T17:45:00Z", { status: "in_play", score: [3, 0], forecast: rich }),
+    entry("ars", "2026-11-24T20:00:00Z", { score: [1, 1], forecast: rich }),
+  ];
+  const html = render({ now, upcoming: { billboard, window: WINDOW } });
+  for (const id of ["liv", "ars"]) {
+    const tick = tickOf(html, id);
+    assert.ok(!tick.includes("<b>"), `${id}: no team score`);
+    assert.ok(!/xG|1,84|0,71|2 – 1|2-1|3 – 0/.test(tick), `${id}: no predicted score nor expected goals`);
+    assert.deepEqual(capOf(tick), ["75 %", "16 %", "9 %"]);
+    // Only the kick-off (or « En direct ») and the shares carry digits besides the links' ids.
+    const text = tick.replace(/<[^>]+>/g, "|").replace(/aria-label="[^"]*"/g, "");
+    assert.deepEqual(text.match(/\d+/g).filter((d) => !["75", "16", "9"].includes(d)), id === "ars" ? ["21", "00"] : []);
+  }
+});
+
+test("F4 result ticks keep their markup beside the matches to come", () => {
+  const billboard = [entry("gal", "2026-11-24T17:45:00Z", { forecast: ARS }), entry("mon2", "2026-11-23T20:00:00Z", { status: "finished", score: [2, 1], forecast: ARS })];
+  const html = render({ now: NOW, upcoming: { billboard, window: WINDOW } });
+  const resultTicks = BEFORE.slice(0, BEFORE.indexOf("</nav>")).split('<div class="home-tick">').slice(1).map((t) => '<div class="home-tick">' + t.replace(/<span class="home-ticker-day">[^<]*<\/span>$/, ""));
+  assert.equal(resultTicks.length, 5);
+  for (const t of resultTicks) assert.ok(html.includes(t), t.slice(0, 120));
+  assert.equal(render({}), BEFORE);
 });
 
 test("S1 where the strip opens", () => {
