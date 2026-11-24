@@ -13,7 +13,8 @@ import { useAccount } from "../hooks/useAccount.js";
 import { authClient } from "../services/auth-client.js";
 import { expectSession, sessionChanged } from "../services/account-state.js";
 import { safeNext } from "../services/account-links.js";
-import { authErrorMessage } from "../services/account-messages.js";
+import { authErrorMessage, returnErrorMessage } from "../services/account-messages.js";
+import { googleReturn, returnError } from "../services/account-return.js";
 import {
   CODE_LENGTH,
   RESEND_WAIT_SECONDS,
@@ -47,6 +48,8 @@ export default function SignInPage() {
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
+  // The error of Google's return is not the fields': they are not marked (section 9).
+  const [fromGoogle, setFromGoogle] = useState(false);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [shown, setShown] = useState(false);
@@ -62,6 +65,17 @@ export default function SignInPage() {
   // This page always asks (W6): a browser without the hint may still hold the session's cookie.
   useEffect(() => {
     sessionChanged();
+  }, []);
+  // Section 9 (G2 to G4): a return from Google that Neon refused, read once on arrival, then out of the address.
+  useEffect(() => {
+    const returned = returnError(window.location.search);
+    if (!returned.present) return;
+    setError(returnErrorMessage(returned.code));
+    setFromGoogle(true);
+    // Through the router: a bare history.replaceState is overwritten by the router's own first commit.
+    router.replace(`${window.location.pathname}${returned.search}`, { scroll: false });
+    // Only the address the page opened with.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {
     if (account.status === "signed-in") router.replace(next);
@@ -88,6 +102,7 @@ export default function SignInPage() {
   async function run(work, refused) {
     setBusy(true);
     setError("");
+    setFromGoogle(false);
     setNote("");
     try {
       const client = await authClient();
@@ -108,6 +123,7 @@ export default function SignInPage() {
     setCode("");
     setShown(false);
     setError("");
+    setFromGoogle(false);
     setNote(said);
     setBusy(false);
   }
@@ -213,7 +229,7 @@ export default function SignInPage() {
   async function google() {
     if (busy) return;
     const done = await run((client) =>
-      client.signIn.social({ provider: "google", callbackURL: `${window.location.origin}${next}` }),
+      client.signIn.social({ provider: "google", ...googleReturn(window.location.origin, next) }),
     );
     if (done?.data?.url) {
       expectSession();
@@ -275,7 +291,7 @@ export default function SignInPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  aria-invalid={error ? true : undefined}
+                  aria-invalid={error && !fromGoogle ? true : undefined}
                 />
               </label>
             )}
@@ -293,7 +309,7 @@ export default function SignInPage() {
                     required
                     value={code}
                     onChange={(e) => setCode(cleanCode(e.target.value))}
-                    aria-invalid={error ? true : undefined}
+                    aria-invalid={error && !fromGoogle ? true : undefined}
                   />
                   {cells.map((digit, index) => (
                     <span key={index} className="signin-code-cell" data-next={index === Math.min(code.length, CODE_LENGTH - 1) || undefined} aria-hidden="true">
@@ -317,7 +333,7 @@ export default function SignInPage() {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    aria-invalid={error ? true : undefined}
+                    aria-invalid={error && !fromGoogle ? true : undefined}
                   />
                   <button
                     className="signin-eye"
