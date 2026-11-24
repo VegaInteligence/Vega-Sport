@@ -1,11 +1,12 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
-## Legal pages and consent banner joined (24 November 2026, branch `claude/pages-legales`, local, not pushed)
+## Legal pages and consent banner joined (24 November 2026, branch `claude/pages-legales`, pushed)
 
 - `claude/bandeau-cookies` merged with `--no-ff` (layout.jsx: legal.css, then Consent and consent.css; WORKLOG: both sections). Banner reviewed on the captures: layout and behaviour kept.
 - Built after the merge: « Cookies » (`ConsentSettingsLink.jsx`) third in the footer's « Informations », styled as its links (desktop, and the phone's 44 px rows); the banner's title ends with the logo's asterisk (`BrandAsterisk.jsx`, shared with `LegalAsterisk`, the path from brand-mark.js once); `PRIVACY_HREF = "/confidentialite#cookies"`; on the legal pages, while the banner is open on a desktop, the sticky Sommaire ends above it and scrolls inside its box (consent.css), full height again after the choice; table captions read but hidden visually (`sr-only`; every table follows its section heading); privacy text aligned with the code (unknown location, no choice = nothing measured and the banner returns, key `vega.consent.v1`, not linked to the account, a refusal stops sending from the current page, outside Europe unless refused in this browser).
 - Tests first: consent.e2e (E8/E9 through the footer button, E18–E21) and legal-pages.e2e (L5 « Cookies », L19 captions, L20 text) red on the merge (consent 19/29, legal 44/51; E20 at 1280 × 680 red alone later), then green on `next dev` (legal 51/51, consent 28/30 with 2 not run: accounts off) and on `next start` (legal 51/51, consent 28/30, accounts off; consent 29/29 with the fake NEON_AUTH_* variables). legal-field.test.mjs: its stubs follow the asterisk's move. Site suite 1004: 1001 then the 3 legal-field tests green after the stub fix. Build OK. Evidence …/scratchpad/pages-legales/evidence/joint-*.
-- Not pushed: the owner's go is needed. One pull request from `claude/pages-legales`.
+- 24 Nov: origin/main 8d1f1e7 merged in (#106 Google's return on /connexion, #107/#108 the asterisk as the mark, #88 tab icon; WORKLOG the only conflict). On the merged tree: site suite 1010/1010, CI-style build OK, on `next start` legal 51/51 and consent 28/30 (2 not run, accounts off), consent 29/29 with the fake NEON_AUTH_* variables. Evidence …/scratchpad/pages-legales/evidence/push-*.
+- Pushed on the owner's go (« Pousser et ouvrir la PR », 24 Nov 17:00 Paris); the coordinator opens the issue and the pull request. Not merged, not deployed.
 
 ## Legal pages — phase 2 of 2, the reviewed text (24 November 2026, branch `claude/pages-legales`, local, not pushed)
 
