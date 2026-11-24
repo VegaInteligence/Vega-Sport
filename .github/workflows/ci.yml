@@ -46,6 +46,11 @@ jobs:
         run: python -m unittest discover -s backend/tests -v
       - name: Read API suites
         run: npm test --prefix backend/api
+      # The account tables are applied alone on their own database (backend/account/test/schema.test.mjs).
+      - name: Account dependencies
+        run: npm ci --prefix backend/account
+      - name: Account suites
+        run: npm test --prefix backend/account
   site:
     name: Site tests and build
     runs-on: ubuntu-latest
