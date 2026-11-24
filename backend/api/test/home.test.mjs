@@ -8,9 +8,10 @@ import { context, get, skip } from "./context.mjs";
 
 const home = "/api/read/home?season=2025/2026&leagues=all";
 const favourites = "/api/read/home-favourites?season=2025/2026&leagues=all";
-// "billboard" (« À l'affiche », VI-48): added deliberately, home-importance.test.mjs holds its contract.
+// "billboard" and "billboardWindow" (« À l'affiche », VI-48): added deliberately, home-importance.test.mjs holds their
+// contract.
 const KEYS = [
-  "bestOfFeatured", "billboard", "competitions", "defences", "featured", "hasSeasonPlayers", "highlights", "internationals", "leaders", "others",
+  "bestOfFeatured", "billboard", "billboardWindow", "competitions", "defences", "featured", "hasSeasonPlayers", "highlights", "internationals", "leaders", "others",
   "otherMatches", "period", "potw", "potwMatch", "potwRecent", "potwSeason", "raceOpen", "ranks", "resultCount", "results",
   "rules", "seasonProgress", "streak", "streakNext", "tables", "win",
 ].sort();

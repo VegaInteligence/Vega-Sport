@@ -41,6 +41,10 @@
 //     answer (window.start, window.end) for the site's columns.
 // L5  a stale page is served after a publication → `generation` that is not the publication's is a 409.
 // L6  the table: the top six of the country's highest-level league (api.standing_rows), null when there is none.
+// B7  the site merges home-local's matches into « À l'affiche » (24 Nov: the country inside the existing cards) and must
+//     keep them to the billboard's days, but the read does not say which days those are (an empty billboard says
+//     nothing) → `billboardWindow` {start, end}: the Paris days used, next to `billboard`, as home-local's `window`;
+//     kept by the compact presentation (media=1).
 //
 // The seed's week: "now" is Saturday 6 September 2025, 14:00 in Paris (context.mjs): yesterday is 5 Sep, the billboard
 // runs to 9 Sep and home-local to 13 Sep. The rows below are written after the seed; the next test file seeds again.
@@ -173,6 +177,8 @@ test("billboard: yesterday to today + 3 in Paris days, eight a day, day then imp
   const { response, body } = await get(home);
   assert.equal(response.status, 200);
   const b = body.data.billboard;
+  // B7: the bounds used, yesterday → today + 3.
+  assert.deepEqual(body.data.billboardWindow, { start: "2025-09-05", end: "2025-09-09" });
   // B1, B2, B4: 5 Sep (m5, 980005 at 00:30 Paris, 980004), 6 Sep (m6, 980009 in play), 7 Sep (the final, Ligue 2,
   // Série A; not the postponed one), 8 Sep (eight of nine), 9 Sep (the World Cup; not 980007, 10 Sep in Paris).
   assert.deepEqual(
@@ -198,8 +204,11 @@ test("billboard: yesterday to today + 3 in Paris days, eight a day, day then imp
 });
 
 test("billboard: the visitor's leagues only", { skip }, async () => {
-  const b = (await get("/api/read/home?season=2025/2026&leagues=l_3FJFUl")).body.data.billboard;
-  assert.deepEqual(weights(b), [["m_aaaaa5", 2.62], ["m_aaaaa6", 2.73]]); // B5
+  const { data } = (await get("/api/read/home?season=2025/2026&leagues=l_3FJFUl")).body;
+  assert.deepEqual(weights(data.billboard), [["m_aaaaa5", 2.62], ["m_aaaaa6", 2.73]]); // B5
+  // B7: the window does not depend on the scope; media=1 keeps it.
+  assert.deepEqual(data.billboardWindow, { start: "2025-09-05", end: "2025-09-09" });
+  assert.deepEqual((await get("/api/read/home?season=2025/2026&leagues=l_3FJFUl&media=1")).body.data.billboardWindow, data.billboardWindow);
 });
 
 test("highlights keep v1's order and carry v2 as weight2", { skip }, async () => {
@@ -400,4 +409,10 @@ test("R2 media=1 keeps the ranks of the billboard's teams", () => {
   assert.equal(served.get("t_aaaaa1").rank, 1);
   assert.equal(served.get("t_aaaaa2").rank, 2);
   assert.equal(presentHome(data).billboard.length, 1);
+});
+
+test("B7 the compact presentation keeps the billboard's window", () => {
+  const data = { results: [], highlights: [], tables: [], defences: [], ranks: [], billboard: [], billboardWindow: { start: "2025-09-05", end: "2025-09-09" } };
+  assert.deepEqual(compactHomePresentation(data).billboardWindow, { start: "2025-09-05", end: "2025-09-09" });
+  assert.deepEqual(presentHome(data).billboardWindow, { start: "2025-09-05", end: "2025-09-09" });
 });

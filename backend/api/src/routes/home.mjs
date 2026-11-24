@@ -15,7 +15,7 @@
  * relational-home.js on main.
  *
  * Importance v2 (168_home_importance_v2.sql, VI-48): stakes × level + balance, for « À l'affiche »
- * (`billboard`, the window of api.home_rules_v2), `highlights[].weight2` and GET /api/read/home-local
+ * (`billboard`, the window of api.home_rules_v2, its bounds as `billboardWindow`), `highlights[].weight2` and GET /api/read/home-local
  * (a country's competitions and matches). The existing blocks keep v1 until the user validates v2:
  * HIGHLIGHT_ORDER is the switch.
  *
@@ -394,6 +394,8 @@ SELECT publication.*,
  (SELECT coalesce(jsonb_agg(${tableRow("d")}||jsonb_build_object('perGame',d.per_game) ORDER BY d.per_game,d.clean_sheets DESC,d.league_id,d.rank),'[]'::jsonb) FROM defences d) defences,
  ${jsonRows(`SELECT * FROM upcoming ORDER BY highlight_order LIMIT ${UPCOMING_OFFERED}`)} highlights,
  ${windowJson("billboard")} billboard,
+ -- The billboard's Paris days, so the site keeps home-local's matches to them (VI-48: the country in the cards).
+ (SELECT jsonb_build_object('start',${parisToday(instant)}-billboard_days_before,'end',${parisToday(instant)}+billboard_days_after) FROM rules2) billboard_bounds,
  (SELECT to_jsonb(r) FROM rules r) rules,
  ${oneRow("SELECT u.* FROM upcoming u JOIN streak s ON s.team_id IN(u.home_team_id,u.away_team_id) ORDER BY u.highlight_order LIMIT 1")} streak_next,
  (SELECT coalesce(avg(least(1,played::float8/games)),0) FROM table_totals t WHERE games>0 AND ${notCup()}
@@ -471,6 +473,7 @@ export function homeReadRecord(snapshot) {
     ranks: snapshot.ranks || [],
     highlights: (snapshot.highlights || []).map(upcomingRecord),
     billboard: (snapshot.billboard || []).map(windowRecord),
+    billboardWindow: snapshot.billboard_bounds ?? null,
     streak: snapshot.streak,
     defences: snapshot.defences || [],
     win: snapshot.biggest_win ? { match: match(snapshot.biggest_win.id), margin: snapshot.biggest_win.margin, goals: snapshot.biggest_win.goals } : null,

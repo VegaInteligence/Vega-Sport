@@ -1,6 +1,7 @@
 // Test double of the two home reads of VI-48 (#69) while they are not deployed: a small HTTP proxy in front of a
 // real read API (the public one, or a local replay of it). Every request is forwarded unchanged, except:
-//  - GET /api/read/home: the upstream answer, plus `data.billboard` (« À l'affiche ») when the upstream has none;
+//  - GET /api/read/home: the upstream answer, plus `data.billboard` (« À l'affiche ») and `data.billboardWindow` (its
+//    Paris days, { start, end }) when the upstream has none;
 //  - GET /api/read/home-local?season&country: answered here, in the shape of backend/api/src/routes/home.mjs
 //    (homeLocalRecord: { country, window, competitions, matches, table }, each match a windowRecord);
 //  - GET /api/dashboard/manifest: the upstream manifest, with compactReads["home-local"] announced when absent.
@@ -129,6 +130,12 @@ async function metaOf() {
   };
 }
 
+/** The billboard's Paris days (the real read's billboard_bounds): yesterday → today + 3. */
+export function billboardWindowAt(now = NOW) {
+  const today = parisDayOf(now);
+  return { start: addDays(today, -RULES.billboardBefore), end: addDays(today, RULES.billboardAfter) };
+}
+
 export async function billboardFor(params) {
   const season = params.get("season"), leagues = params.get("leagues") || "all";
   const today = parisDayOf(NOW);
@@ -208,8 +215,14 @@ async function handle(req, res) {
     const r = await fetch(upstream + req.url, { headers: { accept: "application/json" } });
     if (!r.ok) return forward(req, res);
     const body = await r.json();
-    if (body.data && !Object.hasOwn(body.data, "billboard") && state.billboard) body.data.billboard = await billboardFor(url.searchParams);
-    if (body.data && !state.billboard) delete body.data.billboard;
+    if (body.data && !Object.hasOwn(body.data, "billboard") && state.billboard) {
+      body.data.billboard = await billboardFor(url.searchParams);
+      body.data.billboardWindow = billboardWindowAt();
+    }
+    if (body.data && !state.billboard) {
+      delete body.data.billboard;
+      delete body.data.billboardWindow;
+    }
     return sendJson(res, 200, body);
   }
   if (req.method === "GET" && url.pathname === "/api/read/home-local") {
