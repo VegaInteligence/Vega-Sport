@@ -8,7 +8,7 @@
 // Both windows are computed from the upstream's own public reads, never from invented data: /api/fixtures (the
 // fixtures, their forecast), /api/rankings/power (the clubs' Elo), /api/competitions (a league's country) and
 // /api/standings (the table). The importance is the documented v2 formula (docs/calculs/06-accueil-et-matchs/
-// 01-accueil.md, backend/sql/169_home_importance_v2.sql): stakes × level + balance. What the public reads do not
+// 01-accueil.md, backend/sql/170_home_importance_v2.sql): stakes × level + balance. What the public reads do not
 // give is left at the formula's neutral value, and listed here so nobody reads the double as the real thing:
 //  - a side's rating: its club Elo when the club is among the power ranking's first 200, else the centre (the
 //    league-level fallback, agg.league_levels, is not public); national teams always at the centre;
@@ -30,7 +30,7 @@ const [upstream = "http://127.0.0.1:8765", port = "8766", nowArg] = process.argv
 const NOW = Date.parse(nowArg || process.env.VEGA_NOW || "") || Date.now();
 const state = { billboard: true };
 
-// api.home_rules_v2 and the formula's rows (169_home_importance_v2.sql).
+// api.home_rules_v2 and the formula's rows (170_home_importance_v2.sql).
 export const RULES = { billboardBefore: 1, billboardAfter: 3, billboardPerDay: 8, localBefore: 1, localAfter: 7, localPerDay: 16, tableRows: 6 };
 const PRESTIGE = { l_1XLtP0: 1.3, l_0bfbkO: 1.15, l_38d9HA: 1.08, l_2WZ2tt: 1.04 };
 const ROUND = { knockout: 1.05, semi_final: 1.1, final: 1.15 };

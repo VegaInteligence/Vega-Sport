@@ -2,7 +2,7 @@
 // `highlights[].weight2` on /api/read/home, and the common read /api/read/home-local?country=XXX. Written before the
 // code (AGENTS.md): the failure modes, edge cases and expected outcomes first, then the tests.
 //
-// importance = stakes × level + balance (sql/169_home_importance_v2.sql)
+// importance = stakes × level + balance (sql/170_home_importance_v2.sql)
 //   stakes  = competition prestige × round multiplier, the values of vega/power.py (PRESTIGE, STAGE via round_of),
 //             stored as rows (core.home_stakes);
 //   level   = (mean of the two sides' rating − centre) / divisor, centre and divisor a row per scope (clubs, nations:
