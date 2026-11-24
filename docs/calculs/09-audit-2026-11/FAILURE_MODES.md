@@ -4624,6 +4624,24 @@ Evidence: `/mnt/project-files/blesses-suspendus/lot1-donnees/EVIDENCE.md`. Cases
   (« dans 27 sem. » pour un retour au 31 mai 2027), aucun `NaN` ni « Invalid » ; sans absence, pas de carte ; un `asOf`
   connu donne la même échelle qu'avant. Le contrat de la route est inchangé.
 
+### 59.H. Le lecteur en production le soir du Deploy 136 (journaux du worker du 24 Nov 2026, écrit avant le correctif)
+
+Constat (journaux `/ecs/vega-v2-worker`, 16 h 40 à 20 h 18 UTC) : 1 805 suspensions lues de 17 h 12 à 19 h 20, aucune
+pause ni refus de Transfermarkt ; pourtant aucun joueur du PSG lu (« 0 / 25 renseignés » le soir d'un PSG–Roma du
+lendemain), 1 sur 26 à Lorient. Deux causes.
+
+- **59am Une saison d'effectif hors de la plage de la base.** Un club lié dont la base tient un match de 1895 met en file
+  l'effectif « 350:1894 » (la saison et la précédente) ; son écriture est refusée par `provider_squads_season_year_check`
+  (114 : 1900 à 2100), l'exception n'est pas un `Failed`, le processus du lecteur meurt et l'unité, intacte, revient au
+  redémarrage (onze morts de 16 h 40 à 20 h 01, environ 1 h 15 perdue). Attendus : une saison hors de `SQUAD_YEARS` n'est
+  jamais mise en file (`enqueue`) ; une unité déjà en file échoue (`SEASON_OUT_OF_RANGE`, attente exponentielle) sans
+  requête ni écriture, et le lecteur continue. Les unités valides du même club restent en file.
+- **59an Le plafond du focus.** Les nouvelles unités `suspensions` sont étalées sur leur période (59ah) ; seuls les
+  joueurs du focus passent avant. Avec 80 clubs, les plus proches d'abord, un soir de coupes d'Europe les remplit tous de
+  clubs jouant sous deux jours : le PSG, qui joue le lendemain, n'y entre pas. Attendus : `FOCUS_CLUBS_MAX` = 200, la charge
+  maximale du focus (200 × 18 × 2 = 7 200 requêtes par jour) reste sous le quart de ce que le lecteur peut demander.
+  L'étalement de 59ah est inchangé : un club qui ne joue pas dans les 7 jours se remplit au fil de la semaine.
+
 ### 59.Hypothèses non vérifiées
 
 - **H1** Aucune suspension EN COURS n'a été observée (sonde du 2026-11-24, fichier `07-…`) : on suppose qu'elle a la forme
