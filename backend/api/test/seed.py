@@ -249,6 +249,9 @@ def main(dsn):
                prestige, share, value, reason, run_id)
              VALUES (2025,101,1,1,'league',NULL,1,1,1,NULL,1,0.5,NULL,%(run)s),
                     (2025,104,2,1,'league',NULL,2,1,1,NULL,1,0.2,NULL,%(run)s)""", {"run": award_run})
+        # A run of the next day whose race failed (59ab): kept with no player, the race above still served.
+        x("""INSERT INTO agg.award_runs(season_id, version, status, started_at, finished_at, level_run_id, players, settings)
+             VALUES (2025, 'vega-award-v1', 'failed', '2025-09-07T03:05:00Z', '2025-09-07T03:05:30Z', %s, NULL, '{}')""", (level_run,))
     # Match grades (099): match 1's players, a forward's great match, a winger's ordinary one, and a
     # keeper's ten minutes, too short and too ordinary for a grade to show.
     x("""INSERT INTO agg.player_power_matches(season_id,match_id,player_id,team_id,role,minutes,contribution,run_id,match_index)

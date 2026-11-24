@@ -1,8 +1,8 @@
 """The Ballon d'Or race on the Score Vega v9.1 with the three criteria, stage 1 (issue #105, FAILURE_MODES §59,
-59a–59c, 59f–59n, 59u–59w): the formulas, without a database. The database pass over the synthetic season is in
-test_models.py (59b, 59d–59k, 59o, 59p, 59s, 59t, 59v), the worker's in test_collection_wakeups.py (59p), the partial
-year in test_award_year_2020_order.py (59r), the migration in test_deploy_migrations.py (59u), the reads in
-backend/api/test/rankings.test.mjs (59q, 59s)."""
+59a–59c, 59f–59n, 59u–59w, 59ac, 59af): the formulas, without a database. The database pass over the synthetic season
+is in test_models.py (59b, 59d–59k, 59o, 59p, 59s, 59t, 59v, 59y–59aa, 59ac–59af), the worker's in
+test_collection_wakeups.py (59p) and test_worker.py (59x), the partial year in test_award_year_2020_order.py (59r), the
+migration in test_deploy_migrations.py (59u), the reads in backend/api/test/rankings.test.mjs (59q, 59s, 59ab)."""
 
 import importlib
 import json
@@ -339,6 +339,58 @@ class RaceTest(unittest.TestCase):
         people[1]["collective"] = 50.0
         rows, _ = a.combine(people)
         self.assertEqual(rows[1]["z_collective"], 4.0)
+
+
+class EdgesTest(unittest.TestCase):
+    """59ac, 59af: the players at the edges of the individual part, and a final of two legs."""
+
+    @staticmethod
+    def row(position, universe="men", team=1, level_=10.0):
+        return {"position": position, "universe": universe, "team": team, "level": level_, "measured": True}
+
+    def test_59ac_whose_row(self):
+        a = award()
+        flags = {"eligible": True, "linked": True, "top_division": True}
+        # 1: a level row and its award cells; 2: national matches alone (award cells, no level row); 3: a level row and
+        # no award cell; 4: a women's player with national matches; 5: a ranking row without a role.
+        individual_rows = {1: self.row(CB), 2: self.row(CF, team=900), 4: self.row(CM, team=900), 5: self.row(FB, level_=-3.0)}
+        level_rows = {1: self.row(CB), 3: self.row(CM), 4: self.row(CM, universe="women", team=7), 5: self.row(FB, team=2)}
+        scored = {1: {**flags, "role": "centre_back"}, 3: {**flags, "role": "central_midfielder"}, 4: {**flags, "role": "central_midfielder"},
+                  5: dict(flags)}
+        people = a.people_of(individual_rows, level_rows, scored)
+        self.assertEqual(sorted(people), [1, 5])
+        self.assertEqual((people[5]["position"], people[5]["team"], people[5]["individual"]), (FB, 2, -3.0))
+        inputs = {"editions": {}, "teams": {}, "progress": {}, "ranks": {}, "strongest": None, "club_leagues": {}, "minutes": {}, "honoured": {},
+                  "windows": {}, "seen": set(), "cards": {}}
+        rows, honours, _ = a.compute(people, inputs, None)
+        self.assertEqual((sorted(rows), honours), ([1, 5], []))
+        self.assertEqual(a.compute({}, inputs, None), ({}, [], {}))
+
+    def test_59af_a_final_of_two_legs(self):
+        from datetime import date
+
+        a = award()
+        editions = {e: (a.NATIONAL_CUP, None, None, f"open-cups:c{e}:2025/2026") for e in range(1, 7)}
+        first, second = date(2026, 5, 1), date(2026, 5, 8)
+
+        def leg(edition, day, home, away, finished, score=None, extra=None, shootout=None):
+            return (edition, day, home, away, finished, *(score or (None, None)), *(extra or (None, None)), *(shootout or (None, None)), None, "Final")
+
+        knockouts = [
+            leg(1, first, 1, 2, True, (2, 1)), leg(1, second, 2, 1, True, (1, 1)),  # 3–2 on aggregate
+            leg(2, first, 3, 4, True, (1, 0)), leg(2, second, 4, 3, True, (1, 0), (1, 0), (4, 2)),  # 1–1, the second leg's shoot-out
+            leg(3, first, 5, 6, True, (0, 0)), leg(3, second, 6, 5, True, (1, 1)),  # level, no shoot-out
+            leg(4, first, 7, 8, True, (2, 0)), leg(4, second, 8, 7, False),  # the second leg to play
+            leg(5, first, 1, 2, True, (1, 0)), leg(5, second, 2, 1, True, (1, 0), (2, 0)),  # extra time decides: 2–1 for 2
+            leg(6, first, 3, 4, True, (0, 1)),  # one final, as before
+        ]
+        self.assertEqual(a._reached(editions, knockouts), {
+            (1, 1): ("winner", None), (1, 2): ("final", None),
+            (2, 4): ("winner", None), (2, 3): ("final", None),
+            (3, 5): ("final", "no_winner"), (3, 6): ("final", "no_winner"),
+            (4, 7): ("final", None), (4, 8): ("final", None),
+            (5, 2): ("winner", None), (5, 1): ("final", None),
+            (6, 4): ("winner", None), (6, 3): ("final", None)})
 
 
 class SettingsTest(unittest.TestCase):

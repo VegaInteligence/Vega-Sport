@@ -104,7 +104,8 @@ test("the players' level of a season (Score Vega v9.1), read beside the power ra
 });
 
 test("59q: the Ballon d'Or race on the level (Score Vega v9.1 and the three criteria), read beside the v8 race", { skip }, async () => {
-  // FAILURE_MODES §59, 59q: the ranked players in their order, the raw parts served with the score.
+  // FAILURE_MODES §59, 59q: the ranked players in their order, the raw parts served with the score. 59ab: the seed's
+  // failed run of the next day follows the published race, which is still the one served, with its method.
   const { response, body } = await get("/api/rankings/award?season=2025/2026");
   assert.equal(response.status, 200);
   assert.deepEqual([body.season, body.page, body.limit, body.total], ["2025/2026", 1, 30, 2]);
