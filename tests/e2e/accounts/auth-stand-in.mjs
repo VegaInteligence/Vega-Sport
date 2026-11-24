@@ -84,6 +84,14 @@ export async function startAuthStandIn({
   const server = http.createServer((req, res) => {
     // The path only: never a body, a cookie or an address.
     requests.push(`${req.method} ${req.url.split("?")[0]}`);
+    // Neon's answer to a session verifier it does not know (seen on the real Neon Auth, 24 Nov 2026): 400
+    // VERIFICATION_NOT_FOUND. The stand-in knows no verifier (no Google here), so every one is unknown.
+    const url = new URL(req.url, "http://stand-in");
+    if (url.pathname === `${BASE_PATH}/get-session` && url.searchParams.has("neon_auth_session_verifier")) {
+      res.writeHead(400, { "content-type": "application/json" });
+      res.end(JSON.stringify({ code: "VERIFICATION_NOT_FOUND", message: "Verification not found" }));
+      return;
+    }
     handler(req, res);
   });
   await new Promise((resolve) => server.listen(port, "127.0.0.1", resolve));

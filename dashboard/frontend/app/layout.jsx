@@ -24,7 +24,12 @@ import Consent from "../src/components/Consent.jsx";
 import "../src/consent.css";
 const siteUrl = "https://vegasport.vercel.app";
 // Raised with every new drawing of the icon, so no browser keeps the old one.
-const faviconVersion = 4;
+const faviconVersion = 5;
+// The tab's icon follows the site's theme, which only the browser knows: the theme script
+// writes the page's one link[rel="icon"] itself, and `metadata.icons` names none. React puts a
+// metadata link back as soon as its address has changed under it (at hydration, at every
+// navigation): the page then named favicon.svg, which follows the system's colours.
+const themeScript = `var t="dark";try{if(localStorage.getItem("statarena.theme")==="light")t="light"}catch{}try{document.documentElement.dataset.theme=t;document.querySelector('meta[name="theme-color"]')?.setAttribute("content",t==="light"?"#F6F8FB":"#0E0F12")}catch{}try{window.__vegaSetFavicon=function(theme){var link=document.getElementById("vega-icon");if(!link){link=document.createElement("link");link.id="vega-icon";link.rel="icon";link.type="image/svg+xml";link.setAttribute("sizes","any");document.head.appendChild(link)}link.href="/branding/vega/icon-"+(theme==="light"?"light":"dark")+".svg?v=${faviconVersion}"};window.__vegaSetFavicon(t)}catch{}`;
 // The share picture: the wordmark on a frame of the presentation film (public/branding/vega/).
 const shareImage = "/branding/vega/share-1200x630.jpg";
 const description = "Vega Intelligence : statistiques de football, analyses de matchs, joueurs et compétitions.";
@@ -35,7 +40,6 @@ export const metadata = {
   description,
   manifest: "/site.webmanifest",
   icons: {
-    icon: [{ url: `/branding/vega/favicon.svg?v=${faviconVersion}`, type: "image/svg+xml", sizes: "any" }],
     apple: [{ url: "/api/vega-image?kind=icon&size=180", sizes: "180x180" }],
   },
   openGraph: { type: "website", locale: "fr_FR", siteName: "Vega Intelligence",
@@ -77,12 +81,16 @@ export default function RootLayout({ children }) {
           id="vega-route"
           dangerouslySetInnerHTML={{ __html: routeSkeletonScript }}
         />
-        <script
-          id="vega-theme"
-          dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem("statarena.theme")==="light"?"light":"dark";document.documentElement.dataset.theme=t;document.querySelector('meta[name="theme-color"]')?.setAttribute("content",t==="light"?"#F6F8FB":"#0E0F12");window.__vegaSetFavicon=function(theme){document.querySelectorAll('link[rel="icon"]').forEach(function(link){if(link.href.includes("/branding/vega/"))link.href=theme==="light"?"/branding/vega/icon-light.svg?v=${faviconVersion}":"/branding/vega/icon-dark.svg?v=${faviconVersion}"})};document.addEventListener("DOMContentLoaded",function(){window.__vegaSetFavicon(t)},{once:true})}catch{}`,
-          }}
-        />
+        {/* Without scripts nothing reads the site's theme: the icon that follows the system's colours. */}
+        <noscript>
+          <link
+            rel="icon"
+            href={`/branding/vega/favicon.svg?v=${faviconVersion}`}
+            type="image/svg+xml"
+            sizes="any"
+          />
+        </noscript>
+        <script id="vega-theme" dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body>
         <Consent />

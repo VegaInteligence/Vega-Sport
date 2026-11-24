@@ -19,3 +19,5 @@ next-env.d.ts
 .vercel/
 output/playwright/
 prototypes/
+# The brand files gathered for sharing (logo, social pack, charter, the film): too large for the repository.
+graphic pack/
