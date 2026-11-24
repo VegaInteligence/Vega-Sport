@@ -58,7 +58,7 @@ after(async () => {
       path.join(OUT, "evidence.json"),
       JSON.stringify(
         {
-          subject: "Account API (VI-38, stage 2a): sign in, read null, write, read back, second device merges, export, delete, everything gone",
+          subject: "Account API (VI-38, stage 2a): sign in, read null, write the site's complete contract, read it back deep-equal, a second device's stale write refused then accepted, export, delete, everything gone",
           observed: new Date().toISOString(),
           rerun: "VEGA_V2_ACCOUNT_TEST_DSN=postgresql://vega_test:local-only@127.0.0.1:5432/vega_v2_account_test VEGA_ACCOUNT_E2E_EVIDENCE=<dir> node --test backend/account/test/account-api.e2e.test.mjs",
           setup: {
@@ -70,7 +70,7 @@ after(async () => {
             neon: "deletion recorded, not called",
             origins: [SITE],
           },
-          inputs: { accountId: ACCOUNT, now: NOW, deviceA: contract(), deviceB: DEVICE_B },
+          inputs: { accountId: ACCOUNT, now: NOW, deviceA: contract(), deviceB: DEVICE_B, contractSource: "header of dashboard/frontend/src/services/user-preferences.js, claude/accueil-importance-pays ac08d79, elisions filled" },
           steps,
           neonCalls,
           frontLog: logs,
@@ -87,14 +87,14 @@ after(async () => {
 });
 
 /** One request through the front, recorded with its expectation; tokens are not written out. */
-async function step(name, expected, method, route, { body, origin = SITE, sub = ACCOUNT, handler = front } = {}) {
-  const headers = { Origin: origin, "X-Vega-Session": token(key, { sub }) };
+async function step(name, expected, method, route, { body, origin = SITE, sub = ACCOUNT, handler = front, ifMatch } = {}) {
+  const headers = { Origin: origin, "X-Vega-Session": token(key, { sub }), ...(ifMatch !== undefined && { "If-Match": ifMatch }) };
   if (body !== undefined) headers["Content-Type"] = "application/json";
   const out = await handler(event(method, route, { headers, body: body === undefined ? undefined : JSON.stringify(body) }));
   const parsed = out.body ? JSON.parse(out.body) : null;
   // A pass is written out as its claims only (signed with the test's key, but a pass all the same).
   const answer = parsed?.pass ? { ...parsed, pass: `<pass: ${JSON.stringify(verifyPass(parsed.pass, keyring, NOW))}>` } : parsed;
-  const record = { name, request: { method, route, origin, body: body ?? null, session: `<EdDSA token, sub ${sub}>` }, expected, status: out.statusCode, headers: out.headers, answer, rows: await rowsOf(db, sub) };
+  const record = { name, request: { method, route, origin, ...(ifMatch !== undefined && { ifMatch }), body: body ?? null, session: `<EdDSA token, sub ${sub}>` }, expected, status: out.statusCode, headers: out.headers, answer, rows: await rowsOf(db, sub) };
   steps.push(record);
   record.ok = out.statusCode === expected.status;
   assert.equal(out.statusCode, expected.status, `${name}: ${out.body}`);
@@ -103,20 +103,9 @@ async function step(name, expected, method, route, { body, origin = SITE, sub = 
   return { out, body: parsed, record };
 }
 
-const DEVICE_B = {
-  v: 1,
-  focus: "europe",
-  theme: "light",
-  country: null,
-  homePriority: "location",
-  preferredCompetition: null,
-  onboardingComplete: false,
-  leagues: ["l_SerieA"],
-  lists: [
-    { id: "main", name: "Sélection du téléphone", entries: [{ kind: "clubs", id: "t_PSG" }, { kind: "players", id: "p_Dembele", season: "2025/2026" }] },
-    { id: "list-1700000000999", name: "Téléphone", entries: [{ kind: "matches", id: "m_Classico" }] },
-  ],
-};
+// What a second device holds: the same site, other choices (a null theme, no country, no list entry).
+const DEVICE_B = { ...contract(), theme: null, country: null, homePriority: "location", lists: [{ id: "main", name: "Sélection du téléphone", entries: [] }], activeList: "main", views: [], comparison: [] };
+const GONE = { accounts: 0, preferences: 0, stripe_customers: 0, subscriptions: 0, erasures: 1 };
 
 test("X10: the whole path, from the first sign-in to nothing left", { skip }, async () => {
   try {
@@ -126,40 +115,31 @@ test("X10: the whole path, from the first sign-in to nothing left", { skip }, as
     assert.equal(signIn.body.level, 1);
     assert.deepEqual(verifyPass(signIn.body.pass, keyring, NOW), { ok: true, accountId: ACCOUNT, level: 1, expiresAt: NOW + 600 });
 
-    // 2. Never saved: null.
-    const empty = await step("read before any save", { status: 200, answer: null }, "GET", "/account/preferences");
-    assert.equal(empty.body, null);
+    // 2. Never saved: null, without revision.
+    const empty = await step("read before any save", { status: 200, answer: { contract: null, revision: null } }, "GET", "/account/preferences");
+    assert.deepEqual(empty.body, { contract: null, revision: null });
 
-    // 3. Device A writes its preferences; the answer is what is stored.
-    const written = await step("device A writes", { status: 200, answer: "the contract, normalised" }, "PUT", "/account/preferences", { body: contract() });
-    const expectedA = { ...contract(), favourites: { clubs: ["t_PSG", "t_OM"], players: ["p_Mbappe"] } };
-    assert.deepEqual(written.body, expectedA);
+    // 3. Device A writes the site's complete contract.
+    const written = await step("device A writes the complete contract", { status: 200, answer: { revision: 1 } }, "PUT", "/account/preferences", { body: contract() });
+    assert.deepEqual(written.body, { revision: 1 });
 
-    // 4. Read back: identical.
-    const back = await step("read back", { status: 200, answer: "same as written" }, "GET", "/account/preferences");
-    assert.deepEqual(back.body, expectedA);
+    // 4. Read back: deep-equal (C6); the keys come back in jsonb's order, which does not matter.
+    const back = await step("read back", { status: 200, answer: "deep-equal to what was written, revision 1" }, "GET", "/account/preferences");
+    assert.deepEqual(back.body, { contract: contract(), revision: 1 });
+    back.record.keyOrderKept = JSON.stringify(back.body.contract) === JSON.stringify(contract());
 
-    // 5. A second device signs in and merges what its browser held.
+    // 5. Device A saves again; device B, which read revision 1, is refused, then reads and writes.
+    await step("device A saves again", { status: 200, answer: { revision: 2 } }, "PUT", "/account/preferences", { body: contract({ focus: "europe" }) });
     await step("device B signs in", { status: 200, created: false }, "POST", "/account/session");
-    const merged = await step("device B merges", { status: 200, answer: "account wins field by field; lists united" }, "POST", "/account/preferences/merge", { body: DEVICE_B });
-    assert.deepEqual(merged.body, {
-      v: 1,
-      focus: "all", // the account's
-      theme: "dark", // the account's
-      country: "FRA",
-      homePriority: "importance",
-      preferredCompetition: "l_Ligue1",
-      onboardingComplete: true,
-      leagues: ["l_Ligue1", "l_PremierLeague"], // the account's, not empty
-      lists: [
-        { id: "main", name: "Ma sélection", entries: [{ kind: "players", id: "p_Mbappe", season: "2025/2026" }, { kind: "clubs", id: "t_PSG" }, { kind: "players", id: "p_Dembele", season: "2025/2026" }] },
-        { id: "list-1700000000000", name: "Matchs", entries: [{ kind: "matches", id: "m_Final2022" }, { kind: "clubs", id: "t_OM", season: "2025" }] },
-        { id: "list-1700000000999", name: "Téléphone", entries: [{ kind: "matches", id: "m_Classico" }] },
-      ],
-      favourites: { clubs: ["t_PSG", "t_OM"], players: ["p_Mbappe", "p_Dembele"] },
-    });
-    const again = await step("device A reads the merge", { status: 200, answer: "the merged contract" }, "GET", "/account/preferences");
-    assert.deepEqual(again.body, merged.body);
+    const stale = await step("device B writes over revision 1", { status: 409, code: "STALE", revision: 2 }, "PUT", "/account/preferences", { body: DEVICE_B, ifMatch: "1" });
+    assert.equal(stale.body.error.code, "STALE");
+    assert.equal(stale.body.revision, 2);
+    const current = await step("device B reads", { status: 200, answer: "revision 2" }, "GET", "/account/preferences");
+    assert.deepEqual(current.body, { contract: contract({ focus: "europe" }), revision: 2 });
+    const accepted = await step("device B writes over revision 2", { status: 200, answer: { revision: 3 } }, "PUT", "/account/preferences", { body: DEVICE_B, ifMatch: '"2"' });
+    assert.deepEqual(accepted.body, { revision: 3 });
+    const third = await step("device A reads device B's document", { status: 200, answer: "device B's document, revision 3" }, "GET", "/account/preferences");
+    assert.deepEqual(third.body, { contract: DEVICE_B, revision: 3 });
 
     // 6. Export: everything the base holds for this id, compared with the rows themselves.
     const exported = await step("export", { status: 200, answer: "every row of the account" }, "GET", "/account/export");
@@ -169,17 +149,14 @@ test("X10: the whole path, from the first sign-in to nothing left", { skip }, as
     assert.equal(x.v, 1);
     assert.equal(x.account.accountId, ACCOUNT);
     assert.equal(x.account.level, 1);
-    assert.deepEqual(x.preferences, merged.body);
     assert.match(x.identity, /Neon/);
-    const held = await rowsOf(db, ACCOUNT);
-    assert.equal(x.follows.length, held.follows);
-    assert.equal(x.lists.length, held.lists);
-    assert.equal(x.lists.reduce((n, l) => n + l.entries.length, 0), held.list_entries);
-    const dbEntries = (await db.query("SELECT l.client_id, e.kind, e.entity_id, e.season FROM account.list_entries e JOIN account.lists l USING (list_id) WHERE l.account_id = $1 ORDER BY 1, 2, 3", [ACCOUNT])).rows;
-    const exportedEntries = x.lists.flatMap((l) => l.entries.map((e) => ({ client_id: l.clientId, kind: e.kind, entity_id: e.entityId, season: e.season }))).sort((a, b) => (a.client_id + a.kind + a.entity_id < b.client_id + b.kind + b.entity_id ? -1 : 1));
-    assert.deepEqual(exportedEntries, dbEntries);
-    const prefs = (await db.query("SELECT focus, theme, country, home_priority, preferred_competition, onboarding_complete FROM account.preferences WHERE account_id = $1", [ACCOUNT])).rows[0];
-    assert.deepEqual([prefs.focus, prefs.theme, prefs.country, prefs.home_priority, prefs.preferred_competition, prefs.onboarding_complete], [x.preferences.focus, x.preferences.theme, x.preferences.country, x.preferences.homePriority, x.preferences.preferredCompetition, x.preferences.onboardingComplete]);
+    assert.deepEqual(x.preferences.contract, DEVICE_B);
+    assert.equal(x.preferences.revision, 3);
+    const row = (await db.query("SELECT document, revision, updated_at FROM account.preferences WHERE account_id = $1", [ACCOUNT])).rows[0];
+    assert.deepEqual(x.preferences.contract, row.document);
+    assert.equal(x.preferences.revision, Number(row.revision));
+    assert.equal(x.preferences.updatedAt, row.updated_at.toISOString());
+    assert.deepEqual(x.stripe, { customer: null, subscriptions: [] });
 
     // 7. Deletion without a Neon key: refused, nothing erased (X3).
     const before = await rowsOf(db, ACCOUNT);
@@ -192,19 +169,18 @@ test("X10: the whole path, from the first sign-in to nothing left", { skip }, as
     const gone = await step("delete", { status: 200, answer: { erased: true, identityDeleted: true } }, "DELETE", "/account");
     assert.deepEqual(gone.body, { erased: true, identityDeleted: true });
     assert.deepEqual(neonCalls, [ACCOUNT]);
-    assert.deepEqual(await rowsOf(db, ACCOUNT), { accounts: 0, preferences: 0, follows: 0, lists: 0, stripe_customers: 0, subscriptions: 0, erasures: 1, list_entries: 0 });
+    assert.deepEqual(await rowsOf(db, ACCOUNT), GONE);
 
     // 9. Device B still holds a valid token: its next save is refused, nothing comes back (X9).
     const late = await step("device B saves after the deletion", { status: 410, code: "ACCOUNT_ERASED" }, "PUT", "/account/preferences", { body: DEVICE_B });
     assert.equal(late.body.error.code, "ACCOUNT_ERASED");
     await step("device B signs in after the deletion", { status: 410, code: "ACCOUNT_ERASED" }, "POST", "/account/session");
     await step("export after the deletion", { status: 410, code: "ACCOUNT_ERASED" }, "GET", "/account/export");
-    assert.deepEqual(await rowsOf(db, ACCOUNT), { accounts: 0, preferences: 0, follows: 0, lists: 0, stripe_customers: 0, subscriptions: 0, erasures: 1, list_entries: 0 });
+    assert.deepEqual(await rowsOf(db, ACCOUNT), GONE);
 
     // 10. The deletion repeated (a retry after a lost answer) succeeds.
     await step("delete again", { status: 200 }, "DELETE", "/account");
-    const tomb = (await db.query("SELECT account_id FROM account.erasures")).rows.map((r) => r.account_id);
-    assert.ok(tomb.includes(ACCOUNT));
+    assert.deepEqual(await rowsOf(db, ACCOUNT), GONE);
   } catch (error) {
     failure = error.message.split("\n")[0];
     throw error;
@@ -215,6 +191,6 @@ test("X2: an account the base does not hold exports as empty", { skip }, async (
   const out = await step("export of an unknown account", { status: 200, answer: "account null" }, "GET", "/account/export", { sub: "never-signed-in" });
   assert.equal(out.body.account, null);
   assert.equal(out.body.preferences, null);
-  assert.deepEqual(out.body.lists, []);
-  assert.deepEqual(await rowsOf(db, "never-signed-in"), { accounts: 0, preferences: 0, follows: 0, lists: 0, stripe_customers: 0, subscriptions: 0, erasures: 0, list_entries: 0 });
+  assert.deepEqual(out.body.stripe, { customer: null, subscriptions: [] });
+  assert.deepEqual(await rowsOf(db, "never-signed-in"), { accounts: 0, preferences: 0, stripe_customers: 0, subscriptions: 0, erasures: 0 });
 });

@@ -87,28 +87,51 @@ export async function freshBase() {
 /** Rows held for an account id in every account table (the erasure check). */
 export async function rowsOf(db, id) {
   const out = {};
-  for (const table of ["accounts", "preferences", "follows", "lists", "stripe_customers", "subscriptions", "erasures"])
+  for (const table of ["accounts", "preferences", "stripe_customers", "subscriptions", "erasures"])
     out[table] = (await db.query(`SELECT count(*)::int AS n FROM account.${table} WHERE account_id = $1`, [id])).rows[0].n;
-  out.list_entries = (await db.query("SELECT count(*)::int AS n FROM account.list_entries e JOIN account.lists l USING (list_id) WHERE l.account_id = $1", [id])).rows[0].n;
   return out;
 }
 
-/** A contract as the site would send it. */
+/**
+ * The site's contract: the complete example of the header of user-preferences.js (branch
+ * claude/accueil-importance-pays, ac08d79), its elisions filled with values of the same shape:
+ * nested settings and index, a nations entry, unicode names, empty strings, nulls, decimals.
+ */
 export function contract(overrides = {}) {
+  const scope = { league: "all", focus: "all", role: "all", venue: "all", result: "all", from: "", to: "" };
   return {
     v: 1,
     focus: "all",
-    theme: "dark",
+    theme: "light",
+    leagues: ["l_3FJFUl"],
     country: "FRA",
     homePriority: "importance",
-    preferredCompetition: "l_Ligue1",
-    onboardingComplete: true,
-    leagues: ["l_Ligue1", "l_PremierLeague"],
+    defaultSeason: "2026/2027",
+    onboarded: true,
+    competition: "l_3FJFUl",
     lists: [
-      { id: "main", name: "Ma sélection", entries: [{ kind: "players", id: "p_Mbappe", season: "2025/2026" }, { kind: "clubs", id: "t_PSG" }] },
-      { id: "list-1700000000000", name: "Matchs", entries: [{ kind: "matches", id: "m_Final2022" }, { kind: "clubs", id: "t_OM", season: "2025" }] },
+      {
+        id: "main",
+        name: "Ma sélection",
+        entries: [
+          { id: "t_aaaaa1", kind: "clubs", name: "Club", season: "", imageUrl: "" },
+          { id: "p_aaaab1", kind: "players", name: "Joueur", season: "2026/2027", imageUrl: "https://dngp6kh9jx2bl.cloudfront.net/data/p.webp", scope, replaces: true },
+          { id: "t_FRA", kind: "nations", name: "France 🇫🇷", season: "", imageUrl: "" },
+          { id: "m_x1", kind: "matches", name: "Argentine – France « finale »", season: "2022", imageUrl: "" },
+        ],
+      },
+      { id: "list-1700000000000", name: "日本の選手 — à suivre", entries: [] },
     ],
-    favourites: { clubs: ["t_PSG", "t_OM"], players: ["p_Mbappe"] },
+    activeList: "main",
+    views: [{ id: "v1", name: "Ailiers", query: "pos=F&minutes=900", settings: { columns: ["matches", "xg"], filters: { league: "all", leagues: ["l_A", "l_B"], minutes: 900, from: "" }, sort: { key: "xg", direction: "desc" }, basis: null } }],
+    templates: [{ id: "t1", name: "Mon indice", groups: ["F"], minMinutes: 600, weights: [{ key: "xg", direction: "max", weight: 2 }, { key: "fouls", direction: "min", weight: 0.5 }] }],
+    comparison: [{ id: "p_aaaab1", kind: "players", name: "Joueur", season: "2026/2027", imageUrl: "", scope: { ...scope, leagues: ["l_3FJFUl"] } }],
+    researchSettings: {
+      columns: ["matches", "minutes", "grade", "goals", "assists", "xg", "xa", "chancesCreated"],
+      scatter: { x: "xg", y: "xa" },
+      comparisonMetrics: ["xg", "xa", "chancesCreated"],
+      index: { name: "Mon indice", minMinutes: 450, weights: [{ key: "passesAccurate", weight: 1, direction: "max" }, { key: "chancesCreated", weight: 1.25, direction: "max" }, { key: "recoveries", weight: -0.75, direction: "min" }] },
+    },
     ...overrides,
   };
 }

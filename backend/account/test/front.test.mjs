@@ -52,7 +52,7 @@ test("H1: an event that is not a Function URL 2.0 event", async () => {
 
 test("H2: a path no route claims is 404; exact paths only", async () => {
   const { handler, auth, calls } = setup();
-  for (const path of ["/account/", "/accounts", "/account/preferences/", "/account//session", "/ACCOUNT/session", "/account/preferences%2Fmerge", "/account/./session", "/api/read/x", "/"]) {
+  for (const path of ["/account/", "/accounts", "/account/preferences/", "/account//session", "/ACCOUNT/session", "/account/preferences%2Fmerge", "/account/./session", "/account/preferences/merge", "/api/read/x", "/"]) {
     const out = plain(await handler(event("GET", path, { headers: auth() })));
     assert.equal(out.statusCode, 404, path);
     assert.equal(json(out).error.code, "NOT_FOUND");
@@ -66,7 +66,6 @@ test("H3: a known path with another method is 405 with Allow", async () => {
     ["GET", "/account/session", "POST, OPTIONS"],
     ["POST", "/account/preferences", "GET, PUT, OPTIONS"],
     ["HEAD", "/account/preferences", "GET, PUT, OPTIONS"],
-    ["GET", "/account/preferences/merge", "POST, OPTIONS"],
     ["POST", "/account/export", "GET, OPTIONS"],
     ["GET", "/account", "DELETE, OPTIONS"],
   ]) {
@@ -117,7 +116,7 @@ test("H5: session failures: 401 with a code, 503 when Neon's keys are out of rea
   assert.equal(jwks.calls, 1);
 });
 
-test("H6, H7: PUT and merge need JSON under 1 MiB, checked after the session", async () => {
+test("H6, H7: PUT needs JSON under 4 MiB, checked after the session", async () => {
   const { handler, auth, calls } = setup();
   const put = (headers, body, base64) => handler(event("PUT", "/account/preferences", { headers, body, base64 }));
   let out = await put({ Origin: SITE, "Content-Type": "application/json" }, JSON.stringify(contract()));
@@ -127,10 +126,10 @@ test("H6, H7: PUT and merge need JSON under 1 MiB, checked after the session", a
     assert.equal(out.statusCode, 415, String(type));
     assert.equal(json(out).error.code, "UNSUPPORTED_MEDIA_TYPE");
   }
-  out = plain(await put({ ...auth(), "Content-Type": "application/json" }, "x".repeat(1024 * 1024 + 1)));
+  out = plain(await put({ ...auth(), "Content-Type": "application/json" }, "x".repeat(4 * 1024 * 1024 + 1)));
   assert.equal(out.statusCode, 413);
   assert.equal(json(out).error.code, "BODY_TOO_LARGE");
-  out = plain(await put({ ...auth(), "Content-Type": "application/json" }, "x".repeat(800 * 1024), true)); // 800 KiB, ~1.07 MiB once base64
+  out = plain(await put({ ...auth(), "Content-Type": "application/json" }, "x".repeat(3500 * 1024), true)); // 3.4 MiB, 4.6 MiB once base64
   assert.notEqual(out.statusCode, 413); // the bound is on the decoded body
   for (const body of ["{", "", "ÿ"]) {
     out = plain(await put({ ...auth(), "Content-Type": "application/json" }, body));
@@ -144,20 +143,54 @@ test("H6, H7: PUT and merge need JSON under 1 MiB, checked after the session", a
   assert.equal(calls.length, 0);
 });
 
-test("H8: a refused contract is 400 or 422 with its path, the store not called", async () => {
+test("H8: a refused document is 400, 422 or 413, the store not called", async () => {
   const { handler, auth, calls } = setup();
-  const send = (body, path = "/account/preferences", method = "PUT") =>
-    handler(event(method, path, { headers: { ...auth(), "Content-Type": "application/json; charset=utf-8" }, body: JSON.stringify(body) }));
-  let out = plain(await send(contract({ email: "a@b.c" })));
-  assert.equal(out.statusCode, 400);
-  assert.equal(json(out).error.code, "CONTRACT_INVALID");
-  assert.equal(json(out).error.path, "email");
-  out = await send({ v: 2 });
-  assert.equal(json(out).error.code, "CONTRACT_VERSION");
-  out = await send({ v: 1, lists: Array.from({ length: 51 }, (_, i) => ({ id: `l${i}`, name: "L", entries: [] })) }, "/account/preferences/merge", "POST");
-  assert.equal(out.statusCode, 422);
-  assert.equal(json(out).error.code, "CONTRACT_LIMIT");
+  const send = (body) => handler(event("PUT", "/account/preferences", { headers: { ...auth(), "Content-Type": "application/json; charset=utf-8" }, body: typeof body === "string" ? body : JSON.stringify(body) }));
+  for (const [body, status, code] of [
+    [[contract()], 400, "CONTRACT_INVALID"],
+    ["null", 400, "CONTRACT_INVALID"],
+    ['"x"', 400, "CONTRACT_INVALID"],
+    [{ ...contract(), v: 2 }, 422, "CONTRACT_VERSION"],
+    [{ ...contract(), v: "1" }, 422, "CONTRACT_VERSION"],
+    [{ v: 1, pad: "x".repeat(2 * 1024 * 1024) }, 413, "CONTRACT_LIMIT"],
+    ['{"v":1,"name":"a\\u0000b"}', 400, "CONTRACT_INVALID"],
+    ['{"v":1,"name":"\\ud800"}', 400, "CONTRACT_INVALID"],
+  ]) {
+    const out = plain(await send(body));
+    assert.equal(out.statusCode, status, code);
+    assert.equal(json(out).error.code, code);
+  }
   assert.equal(calls.length, 0);
+});
+
+test("PUT and GET: the document goes to the store as sent; the answers are the store's", async () => {
+  const { handler, auth, calls } = setup({ answer: (c) => ({ ok: true, value: c.command === "putPreferences" ? { revision: 4 } : { contract: contract(), revision: 4 } }) });
+  const body = JSON.stringify({ ...contract(), unknown: { kept: [null, ""] } });
+  let out = plain(await handler(event("PUT", "/account/preferences", { headers: { ...auth({ sub: "acc-p" }), "Content-Type": "application/json" }, body })));
+  assert.equal(out.statusCode, 200);
+  assert.deepEqual(json(out), { revision: 4 });
+  assert.deepEqual(calls[0], { command: "putPreferences", accountId: "acc-p", preferences: JSON.parse(body) });
+  out = plain(await handler(event("GET", "/account/preferences", { headers: auth({ sub: "acc-p" }) })));
+  assert.deepEqual(json(out), { contract: contract(), revision: 4 });
+});
+
+test("H17: If-Match carries a revision to the store; anything else is 400; STALE is 409 with the revision", async () => {
+  const { handler, auth, calls } = setup({ answer: (c) => (c.ifMatch === 3 ? { ok: true, value: { revision: 4 } } : { ok: false, code: "STALE", message: "stale", revision: 5 }) });
+  const put = (ifMatch) => handler(event("PUT", "/account/preferences", { headers: { ...auth(), "Content-Type": "application/json", "If-Match": ifMatch }, body: JSON.stringify(contract()) }));
+  for (const bad of ["*", "abc", "0", "-1", "1.5", "3, 4", 'W/"3"', ""]) {
+    const out = plain(await put(bad));
+    assert.equal(out.statusCode, 400, bad);
+    assert.equal(json(out).error.code, "INVALID_REQUEST");
+  }
+  assert.equal(calls.length, 0);
+  for (const good of ["3", '"3"']) assert.deepEqual(json(plain(await put(good))), { revision: 4 }, good);
+  assert.equal(calls[0].ifMatch, 3);
+  const out = plain(await put("2"));
+  assert.equal(out.statusCode, 409);
+  assert.deepEqual(json(out), { ok: false, revision: 5, error: { code: "STALE", message: json(out).error.message, retry: false } });
+  // Without the header the field is not sent: the last write wins.
+  await handler(event("PUT", "/account/preferences", { headers: { ...auth(), "Content-Type": "application/json" }, body: JSON.stringify(contract()) }));
+  assert.equal(Object.hasOwn(calls.at(-1), "ifMatch"), false);
 });
 
 test("H9: CORS answers only the listed origins; another origin is refused before the session", async () => {
@@ -185,7 +218,7 @@ test("H9: CORS answers only the listed origins; another origin is refused before
 
 test("H10: a preflight from an allowed origin, without session, never reaches the store", async () => {
   const { handler, calls } = setup();
-  for (const path of ["/account/session", "/account/preferences", "/account/preferences/merge", "/account/export", "/account"]) {
+  for (const path of ["/account/session", "/account/preferences", "/account/export", "/account"]) {
     const out = plain(await handler(event("OPTIONS", path, { headers: { Origin: "http://localhost:3000", "Access-Control-Request-Method": "PUT", "Access-Control-Request-Headers": "x-vega-session, content-type" } })));
     assert.equal(out.statusCode, 204, path);
     assert.equal(out.body, "");
@@ -243,7 +276,7 @@ test("H13: a failing store is 503 STORE_UNAVAILABLE without detail; a code fault
 });
 
 test("H14: the log line holds no token, no account id, no IP, no body", async () => {
-  const { handler, auth, lines } = setup({ answer: () => ({ ok: true, value: parseLike() }) });
+  const { handler, auth, lines } = setup({ answer: () => ({ ok: true, value: { revision: 1 } }) });
   const headers = { ...auth({ sub: "secret-account-id" }), "Content-Type": "application/json" };
   await handler(event("PUT", "/account/preferences", { headers, body: JSON.stringify(contract({ lists: [{ id: "main", name: "Nom très personnel", entries: [] }] })) }));
   await handler(event("GET", "/account/preferences", { headers: { ...headers, "X-Vega-Session": "bad.token.here" } }));
@@ -254,9 +287,6 @@ test("H14: the log line holds no token, no account id, no IP, no body", async ()
     for (const secret of ["secret-account-id", headers["X-Vega-Session"].slice(0, 30), "203.0.113.9", "personnel", "bad.token.here"]) assert.ok(!line.includes(secret), `${secret} in ${line}`);
   }
 });
-function parseLike() {
-  return { ...contract(), favourites: { clubs: ["t_PSG", "t_OM"], players: ["p_Mbappe"] } };
-}
 
 test("H15: without its configuration the front answers 503 NOT_CONFIGURED to everything", async () => {
   const lines = [];
@@ -295,7 +325,7 @@ test("H15: without its configuration the front answers 503 NOT_CONFIGURED to eve
 test("H16: an erased account gets 410 on every route but DELETE", async () => {
   const neon = { deleteUser: async () => ({ ok: true }) };
   const { handler, auth } = setup({ neon, answer: (c) => (c.command === "erase" ? { ok: true, value: { erased: false } } : { ok: false, code: "ACCOUNT_ERASED", message: "erased" }) });
-  for (const [method, path, body] of [["POST", "/account/session"], ["GET", "/account/preferences"], ["PUT", "/account/preferences", contract()], ["POST", "/account/preferences/merge", contract()], ["GET", "/account/export"]]) {
+  for (const [method, path, body] of [["POST", "/account/session"], ["GET", "/account/preferences"], ["PUT", "/account/preferences", contract()], ["GET", "/account/export"]]) {
     const out = plain(await handler(event(method, path, { headers: { ...auth(), "Content-Type": "application/json" }, ...(body && { body: JSON.stringify(body) }) })));
     assert.equal(out.statusCode, 410, `${method} ${path}`);
     assert.equal(json(out).error.code, "ACCOUNT_ERASED");

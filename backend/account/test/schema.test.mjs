@@ -1,5 +1,6 @@
 // The account tables and their role (backend/account/sql/001_accounts.sql), on a disposable local
-// database. Failure modes pinned here: backend/account/FAILURE_MODES.md, section 3 (S1 to S14).
+// database. Failure modes pinned here: backend/account/FAILURE_MODES.md, section 3 (S1 to S7, S16, S17;
+// S8 to S15 were withdrawn on 24 Nov 2026 with the typed preference tables).
 //
 //   VEGA_V2_ACCOUNT_TEST_DSN=postgresql://<owner>@127.0.0.1:5432/vega_v2_account_test npm test
 //
@@ -14,7 +15,7 @@ const DSN = process.env.VEGA_V2_ACCOUNT_TEST_DSN;
 const skip = !DSN && "requires VEGA_V2_ACCOUNT_TEST_DSN (local vega_v2_account_test)";
 // Every file of sql/, in order: what a deployment applies (001 the tables, 002 the account API's additions).
 const MIGRATION = migrations().map((m) => m.sql).join("\n");
-const TABLES = ["accounts", "preferences", "follows", "lists", "list_entries", "stripe_customers", "subscriptions", "stripe_events", "erasures"];
+const TABLES = ["accounts", "preferences", "stripe_customers", "subscriptions", "stripe_events", "erasures"];
 const OTHERS = ["vega_read", "vega_collect", "vega_calc"];
 let db;
 
@@ -84,7 +85,7 @@ test("S2: the account role is granted the account schema and nothing else", { sk
   assert.doesNotMatch(MIGRATION, /REFERENCES (?!account\.)/);
   await as("vega_account", async () => {
     await db.query("INSERT INTO account.accounts (account_id) VALUES ('s2')");
-    await db.query("INSERT INTO account.lists (account_id, client_id, name) VALUES ('s2', 'main', 'Mes joueurs')");
+    await db.query("INSERT INTO account.preferences (account_id, document) VALUES ('s2', '{\"v\":1}')");
     assert.equal(await one("SELECT account.level_of('s2')"), 1);
     await db.query("DELETE FROM account.accounts WHERE account_id = 's2'");
     await refused("CREATE TABLE account.extra (x int)", [], DENIED);
@@ -95,19 +96,13 @@ test("S2: the account role is granted the account schema and nothing else", { sk
 test("S3: deleting an account erases every row that names it", { skip }, async () => {
   const id = await account("s3"),
     other = await account("s3-other");
-  await db.query("INSERT INTO account.preferences (account_id, theme) VALUES ($1, 'dark'), ($2, 'light')", [id, other]);
-  await db.query("INSERT INTO account.follows (account_id, kind, entity_id) VALUES ($1, 'competition', 'l_abc123'), ($2, 'competition', 'l_abc123')", [id, other]);
-  for (const owner of [id, other]) {
-    const list = await one("INSERT INTO account.lists (account_id, client_id, name) VALUES ($1, 'main', 'Liste') RETURNING list_id", [owner]);
-    await db.query("INSERT INTO account.list_entries (list_id, kind, entity_id) VALUES ($1, 'players', 'p_abc123')", [list]);
-  }
+  await db.query("INSERT INTO account.preferences (account_id, document) VALUES ($1, '{\"v\":1,\"theme\":\"dark\"}'), ($2, '{\"v\":1}')", [id, other]);
   await db.query("INSERT INTO account.stripe_customers (account_id, customer_id) VALUES ($1, 'cus_s3')", [id]);
   await subscribe("sub_s3", id, 2, "active", "2099-01-01", "2026-11-23");
   await db.query("DELETE FROM account.accounts WHERE account_id = $1", [id]);
-  for (const table of ["preferences", "follows", "lists", "stripe_customers", "subscriptions"])
+  for (const table of ["preferences", "stripe_customers", "subscriptions"])
     assert.equal(await one(`SELECT count(*)::int FROM account.${table} WHERE account_id = $1`, [id]), 0, table);
-  assert.equal(await one("SELECT count(*)::int FROM account.list_entries"), 1); // the other account's entry stays
-  assert.equal(await one("SELECT count(*)::int FROM account.follows WHERE account_id = $1", [other]), 1);
+  assert.equal(await one("SELECT count(*)::int FROM account.preferences WHERE account_id = $1", [other]), 1); // the other account's stays
   // Every table but the list of handled events and the erasures (S16) hangs from an account.
   const hanging = await rows(
     "SELECT c.relname FROM pg_constraint k JOIN pg_class c ON c.oid = k.conrelid WHERE k.contype = 'f' AND k.confdeltype = 'c' AND c.relnamespace = 'account'::regnamespace",
@@ -170,56 +165,7 @@ test("S7: a Stripe customer belongs to one account, an account has one customer"
   await refused("INSERT INTO account.stripe_customers (account_id, customer_id) VALUES ($1, 'sub_wrong')", [b], CHECK);
 });
 
-test("S8: the same entity is followed once and listed once per list", { skip }, async () => {
-  const id = await account("s8");
-  const follow = "INSERT INTO account.follows (account_id, kind, entity_id) VALUES ($1, 'competition', 'l_abc123') ON CONFLICT DO NOTHING";
-  assert.equal((await db.query(follow, [id])).rowCount, 1);
-  assert.equal((await db.query(follow, [id])).rowCount, 0);
-  const first = await one("INSERT INTO account.lists (account_id, client_id, name) VALUES ($1, 'main', 'A') RETURNING list_id", [id]);
-  const second = await one("INSERT INTO account.lists (account_id, client_id, name, position) VALUES ($1, 'list-1795000000000', 'B', 1) RETURNING list_id", [id]);
-  await refused("INSERT INTO account.lists (account_id, client_id, name) VALUES ($1, 'main', 'again')", [id], UNIQUE);
-  const add = "INSERT INTO account.list_entries (list_id, kind, entity_id, season) VALUES ($1, 'players', 'p_abc123', '2025/2026') ON CONFLICT DO NOTHING";
-  assert.equal((await db.query(add, [first])).rowCount, 1);
-  assert.equal((await db.query(add, [first])).rowCount, 0);
-  assert.equal((await db.query(add, [second])).rowCount, 1); // another list may hold the same player
-});
-
-test("S9: only public Vega ids of the right kind are stored", { skip }, async () => {
-  const id = await account("s9");
-  const list = await one("INSERT INTO account.lists (account_id, client_id, name) VALUES ($1, 'main', 'A') RETURNING list_id", [id]);
-  const entry = "INSERT INTO account.list_entries (list_id, kind, entity_id) VALUES ($1, $2, $3)";
-  for (const [kind, entity] of [["players", "t_abc123"], ["clubs", "p_abc123"], ["matches", "l_abc123"], ["players", "12345"], ["players", "p_"], ["players", "p_abc 123"], ["players", "p_abc123'; --"], ["players", "p_" + "a".repeat(25)], ["coaches", "p_abc123"]])
-    await refused(entry, [list, kind, entity], CHECK);
-  for (const [kind, entity] of [["players", "p_abc123"], ["players", "p_v1234567"], ["clubs", "t_abc123"], ["matches", "m_abc123"]]) await db.query(entry, [list, kind, entity]);
-  const follow = "INSERT INTO account.follows (account_id, kind, entity_id) VALUES ($1, $2, $3)";
-  for (const [kind, entity] of [["competition", "t_abc123"], ["nation", "l_abc123"], ["player", "p_abc123"], ["competition", "l_"]]) await refused(follow, [id, kind, entity], CHECK);
-  await db.query(follow, [id, "nation", "t_abc123"]);
-  for (const bad of ["", "a b", "é", "x".repeat(65), "a.b"]) await refused("INSERT INTO account.accounts (account_id) VALUES ($1)", [bad], CHECK);
-  await db.query("INSERT INTO account.accounts (account_id) VALUES ('0f3c9a52-7b1e-4c7a-9d4e-2a6b8c1d5e90')");
-});
-
-test("S10: positions and names are bounded", { skip }, async () => {
-  const id = await account("s10");
-  await refused("INSERT INTO account.lists (account_id, client_id, name, position) VALUES ($1, 'a', 'A', 50)", [id], CHECK);
-  await refused("INSERT INTO account.lists (account_id, client_id, name, position) VALUES ($1, 'a', 'A', -1)", [id], CHECK);
-  await refused("INSERT INTO account.lists (account_id, client_id, name) VALUES ($1, 'a', '')", [id], CHECK);
-  await refused("INSERT INTO account.lists (account_id, client_id, name) VALUES ($1, 'a', $2)", [id, "n".repeat(61)], CHECK);
-  await refused("INSERT INTO account.lists (account_id, client_id, name) VALUES ($1, 'a b', 'A')", [id], CHECK);
-  const list = await one("INSERT INTO account.lists (account_id, client_id, name, position) VALUES ($1, 'a', $2, 49) RETURNING list_id", [id, "n".repeat(60)]);
-  await refused("INSERT INTO account.list_entries (list_id, kind, entity_id, position) VALUES ($1, 'players', 'p_abc123', 5000)", [list], CHECK);
-  await refused("INSERT INTO account.list_entries (list_id, kind, entity_id, season) VALUES ($1, 'players', 'p_abc123', 'last year')", [list], CHECK);
-  await db.query("INSERT INTO account.list_entries (list_id, kind, entity_id, position, season) VALUES ($1, 'players', 'p_abc123', 4999, '2026')", [list]);
-});
-
-test("S11: preferences are typed and checked; no column holds JSON or unchecked text", { skip }, async () => {
-  const id = await account("s11");
-  await db.query("INSERT INTO account.preferences (account_id) VALUES ($1)", [id]);
-  assert.deepEqual(await rows("SELECT focus, theme, country, preferred_competition, onboarding_complete FROM account.preferences WHERE account_id = $1", [id]), [
-    { focus: "europe", theme: null, country: null, preferred_competition: null, onboarding_complete: false },
-  ]);
-  for (const [column, value] of [["focus", "world"], ["theme", "blue"], ["country", "fra"], ["preferred_competition", "t_abc123"]])
-    await refused(`UPDATE account.preferences SET ${column} = $2 WHERE account_id = $1`, [id, value], CHECK);
-  await db.query("UPDATE account.preferences SET focus = 'all', theme = 'dark', country = 'BRA', preferred_competition = 'l_abc123', onboarding_complete = true WHERE account_id = $1", [id]);
+test("S11 (withdrawn), S17: one JSON column, the preference document; every other column typed and checked", { skip }, async () => {
   const columns = await rows(
     `SELECT c.table_name, c.column_name, c.data_type,
             EXISTS (SELECT 1 FROM pg_constraint k JOIN pg_attribute a ON a.attrelid = k.conrelid AND a.attnum = ANY (k.conkey)
@@ -228,62 +174,27 @@ test("S11: preferences are typed and checked; no column holds JSON or unchecked 
   );
   assert.ok(columns.length > 20);
   for (const column of columns) {
-    assert.ok(!["json", "jsonb", "ARRAY", "bytea", "USER-DEFINED"].includes(column.data_type), `${column.table_name}.${column.column_name}: ${column.data_type}`);
-    if (column.data_type === "text") assert.ok(column.constrained, `${column.table_name}.${column.column_name}: text without a check`);
+    const where = `${column.table_name}.${column.column_name}`;
+    if (where === "preferences.document") assert.equal(column.data_type, "jsonb");
+    else assert.ok(!["json", "jsonb", "ARRAY", "bytea", "USER-DEFINED"].includes(column.data_type), `${where}: ${column.data_type}`);
+    if (["text", "jsonb"].includes(column.data_type)) assert.ok(column.constrained, `${where}: without a check`);
     // Identity stays at Neon: no column for an e-mail, a person's name, a phone, an address or a password.
-    assert.doesNotMatch(column.column_name, /^(e_?mail|(first|last|full|display|user)_?name|phone|address|ip(_address)?|password|birth.*)$/i, `${column.table_name}.${column.column_name}: personal data`);
+    assert.doesNotMatch(column.column_name, /^(e_?mail|(first|last|full|display|user)_?name|phone|address|ip(_address)?|password|birth.*)$/i, `${where}: personal data`);
   }
+  assert.deepEqual((await rows("SELECT column_name FROM information_schema.columns WHERE table_schema = 'account' AND table_name = 'preferences' ORDER BY ordinal_position")).map((r) => r.column_name), ["account_id", "document", "revision", "updated_at"]);
 });
 
-test("S12: the chosen country is the base's three-letter code or « none », as in the browser", { skip }, async () => {
-  const id = await account("s12");
-  await db.query("INSERT INTO account.preferences (account_id) VALUES ($1)", [id]);
-  const set = "UPDATE account.preferences SET country = $2 WHERE account_id = $1";
-  assert.equal(await one("SELECT country FROM account.preferences WHERE account_id = $1", [id]), null); // no choice: the detected country applies
-  for (const bad of ["FR", "BR", "fra", "Fra", "FRAN", "NONE", "None", "", "INT-2", "F1A", " FRA"]) await refused(set, [id, bad], CHECK);
-  for (const good of ["FRA", "ENG", "BRA", "none"]) {
-    await db.query(set, [id, good]);
-    assert.equal(await one("SELECT country FROM account.preferences WHERE account_id = $1", [id]), good);
-  }
-  await db.query(set, [id, null]); // back to no choice
-});
-
-test("S13: the home priority is « location » or « importance », and unset until the person chooses", { skip }, async () => {
-  const id = await account("s13");
-  await db.query("INSERT INTO account.preferences (account_id) VALUES ($1)", [id]);
-  const set = "UPDATE account.preferences SET home_priority = $2 WHERE account_id = $1";
-  assert.equal(await one("SELECT home_priority FROM account.preferences WHERE account_id = $1", [id]), null); // the site's fixed value applies
-  for (const bad of ["", "local", "Location", "IMPORTANCE", "both", "location "]) await refused(set, [id, bad], CHECK);
-  for (const good of ["location", "importance"]) {
-    await db.query(set, [id, good]);
-    assert.equal(await one("SELECT home_priority FROM account.preferences WHERE account_id = $1", [id]), good);
-  }
-});
-
-test("S14: favourite clubs and players have one source, the lists; follows hold competitions and national teams only", { skip }, async () => {
-  const id = await account("s14");
-  const follow = "INSERT INTO account.follows (account_id, kind, entity_id) VALUES ($1, $2, $3)";
-  for (const [kind, entity] of [["club", "t_abc123"], ["clubs", "t_abc123"], ["player", "p_abc123"], ["players", "p_abc123"], ["match", "m_abc123"]]) await refused(follow, [id, kind, entity], CHECK);
-  await db.query(follow, [id, "competition", "l_abc123"]);
-  await db.query(follow, [id, "nation", "t_abc123"]);
-  const list = await one("INSERT INTO account.lists (account_id, client_id, name) VALUES ($1, 'main', 'A') RETURNING list_id", [id]);
-  await db.query("INSERT INTO account.list_entries (list_id, kind, entity_id) VALUES ($1, 'clubs', 't_abc123'), ($1, 'players', 'p_abc123')", [list]);
-  // What the home page reads as favourites: the clubs and players of the account's lists.
-  assert.deepEqual(
-    await rows("SELECT e.kind, e.entity_id FROM account.list_entries e JOIN account.lists l USING (list_id) WHERE l.account_id = $1 AND e.kind IN ('clubs', 'players') ORDER BY e.kind", [id]),
-    [{ kind: "clubs", entity_id: "t_abc123" }, { kind: "players", entity_id: "p_abc123" }],
-  );
-});
-
-test("S15: the followed competitions keep their order, bounded like the contract", { skip }, async () => {
-  const id = await account("s15");
-  const follow = "INSERT INTO account.follows (account_id, kind, entity_id, position) VALUES ($1, 'competition', $2, $3)";
-  await db.query(follow, [id, "l_Z", 0]);
-  await db.query(follow, [id, "l_A", 1]);
-  await db.query(follow, [id, "l_M", 199]);
-  for (const bad of [-1, 200]) await refused(follow, [id, "l_B", bad], CHECK);
-  assert.deepEqual((await rows("SELECT entity_id FROM account.follows WHERE account_id = $1 ORDER BY position", [id])).map((r) => r.entity_id), ["l_Z", "l_A", "l_M"]);
-  assert.equal(await one("SELECT position FROM account.follows WHERE account_id = $1 AND entity_id = 'l_Z'", [id]), 0);
+test("S17: the document is an object of version 1 under 3 MiB of text; the revision starts at 1", { skip }, async () => {
+  const id = await account("s17");
+  const put = "INSERT INTO account.preferences (account_id, document, revision) VALUES ($1, $2::jsonb, $3) ON CONFLICT (account_id) DO UPDATE SET document = EXCLUDED.document, revision = EXCLUDED.revision";
+  for (const bad of ["[]", "null", "1", '"x"', "{}", '{"v":2}', '{"v":"1"}', '{"v":1.5}']) await refused(put, [id, bad, 1], CHECK);
+  for (const revision of [0, -1]) await refused(put, [id, '{"v":1}', revision], CHECK);
+  await refused(put, [id, JSON.stringify({ v: 1, pad: "x".repeat(3 * 1024 * 1024) }), 1], CHECK);
+  await db.query(put, [id, JSON.stringify({ v: 1, pad: "x".repeat(2 * 1024 * 1024) }), 1]);
+  await db.query(put, [id, '{"v":1,"nested":{"a":[null,"",1.25]}}', 2]);
+  assert.deepEqual(await one("SELECT document FROM account.preferences WHERE account_id = $1", [id]), { v: 1, nested: { a: [null, "", 1.25] } });
+  assert.equal(await one("SELECT revision = 2 AND updated_at <= now() FROM account.preferences WHERE account_id = $1", [id]), true);
+  await refused("INSERT INTO account.preferences (account_id, document) VALUES ('nobody', '{\"v\":1}')", [], "23503");
 });
 
 test("S16: an erasure outlives the account row, holds the id and the instant, and the account role can write it", { skip }, async () => {
