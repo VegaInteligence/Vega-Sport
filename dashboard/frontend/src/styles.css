@@ -143,12 +143,35 @@ button:disabled {
     display: block;
   }
 }
+/* The menus keep their room. The actions take what is left, set against the right edge,
+   and of them only the search gives way: its field narrows, then, where a field no longer
+   fits, it is its icon (« The header between the phone layout and 920px », below;
+   tests/e2e/header.e2e.mjs). */
 .main-nav {
   display: flex;
   align-self: stretch;
   align-items: stretch;
   gap: 22px;
+  flex-shrink: 0;
+}
+.topbar-actions {
+  flex: 1 1 0;
   min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+.topbar-actions > * {
+  flex-shrink: 0;
+}
+.topbar-actions > .global-search {
+  flex-shrink: 1;
+  min-width: 200px;
+}
+/* A menu's shorter name (navigation.js), shown where the header is tight. */
+.nav-short {
+  display: none;
 }
 .nav-button {
   display: inline-flex;
@@ -1956,16 +1979,117 @@ th[aria-sort="descending"] .sort-indicator {
   .competition-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .main-nav {
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
   .lineup-grid,
   .data-chart-grid {
     grid-template-columns: minmax(0, 1fr);
   }
   .card-header {
     flex-wrap: wrap;
+  }
+}
+/* The header between the phone layout and 920px. A field no longer fits beside the five
+   menus there: the search is its icon, a square like the theme's. Engaged (a click, a tap,
+   « / », the Tab key) it opens as a field in the menus' place, from the icon leftwards, and
+   the menus come back when it closes. */
+@media (min-width: 641px) and (max-width: 919px) {
+  .topbar-actions > .global-search {
+    flex: none;
+    width: var(--control-h);
+    min-width: 0;
+    height: var(--control-h);
+  }
+  .topbar .global-search-field {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 100%;
+  }
+  /* Closed: the icon alone. The field is still there, unseen, to take the focus. */
+  .topbar .global-search:not(.is-engaged, :focus-within) .global-search-field {
+    border-color: transparent;
+    background: none;
+  }
+  .topbar .global-search:not(.is-engaged, :focus-within) .global-search-field:hover {
+    border-color: var(--border);
+    background: var(--surface);
+  }
+  .topbar .global-search:not(.is-engaged, :focus-within) .global-search-field > .icon:first-child {
+    left: 8px;
+    width: 17px;
+    height: 17px;
+    color: var(--muted);
+  }
+  .topbar .global-search:not(.is-engaged, :focus-within) .global-search-field input[type="search"] {
+    padding: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+  .topbar .global-search:not(.is-engaged, :focus-within) :is(.global-search-hint, .global-search-clear) {
+    display: none;
+  }
+  /* Open: as wide as its results panel. */
+  .topbar .global-search:is(.is-engaged, :focus-within) .global-search-field {
+    z-index: 45;
+    width: 380px;
+    border-color: var(--border-strong);
+    background: var(--surface-raised);
+  }
+  .topbar:has(.global-search:is(.is-engaged, :focus-within)) .main-nav {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+/* Under 761px the five menus and the three icons need the gaps tightened and the first
+   menu's shorter name. */
+@media (min-width: 641px) and (max-width: 760px) {
+  .topbar {
+    gap: 14px;
+  }
+  .main-nav {
+    gap: 12px;
+  }
+  .topbar-actions {
+    gap: 10px;
+  }
+  .nav-long {
+    display: none;
+  }
+  .nav-short {
+    display: inline;
+  }
+}
+/* A touch screen wider than a phone: the header's controls keep their look and answer a
+   finger on 44px (the phone's own sizes are under 640px, below). */
+@media (min-width: 641px) and (pointer: coarse) {
+  .topbar :is(.brand, .theme-toggle, .account-entry) {
+    position: relative;
+  }
+  .topbar :is(.brand, .theme-toggle, .account-entry, .global-search-clear)::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+  }
+  /* The search field: its input stands 44px tall across the 34px field. The six pixels
+     above and below are a border nothing is painted in, so a focused field looks as it does
+     under a mouse. */
+  .topbar .global-search .global-search-field input[type="search"] {
+    height: 44px;
+    border-block: 6px solid transparent;
+    background-clip: padding-box;
+  }
+}
+@media (min-width: 641px) and (max-width: 919px) and (pointer: coarse) {
+  .topbar .global-search:not(.is-engaged, :focus-within) .global-search-field input[type="search"] {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 44px;
+    max-width: none;
+    transform: translate(-50%, -50%);
   }
 }
 @media (max-width: 640px) {

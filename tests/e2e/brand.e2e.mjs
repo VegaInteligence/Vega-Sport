@@ -52,10 +52,12 @@
 //  B10 (report card) A report image carries the wordmark in ivory at its top left, no blue star.
 //  B11 (in between) The wordmark must not take the menus' room, the account button being in
 //     the header (a local server shows it only with NEON_AUTH_BASE_URL and
-//     NEON_AUTH_COOKIE_SECRET set, see the evidence's setup). At 1120 px the wordmark shows and
-//     every menu still ends before the search field. At 1024, 768 and 700 px the asterisk
-//     shows instead, in a link no wider than 44 px, and the header's parts neither overlap nor
-//     leave the window. Before: at 1024 px « Vega Sport. » pushed two menus under the search.
+//     NEON_AUTH_COOKIE_SECRET set, see the evidence's setup). At 1120 px the wordmark shows; at
+//     1024, 768 and 700 px the asterisk shows instead, in a link no wider than 44 px. At each
+//     of the four widths every menu ends before the search (its field, or its icon under
+//     920 px) and the header's parts neither overlap nor leave the window. Before: at 1024 px
+//     « Vega Sport. » pushed two menus under the search; with the asterisk, one was still cut
+//     there, two at 768 px and three at 700 px (issue 109; every width: header.e2e.mjs).
 //  B12 (theme colour) The page names one theme colour, the one of the site's theme: a single
 //     meta[name="theme-color"], #0E0F12 in the dark theme, #F6F8FB in the light one, which is
 //     also the page's own background. Read like the icons: five times over 1.2 s, after a
@@ -291,9 +293,10 @@ try {
         const parts = [...top.children].map((c) => c.getBoundingClientRect()).filter((b) => b.width > 0);
         let overlap = -Infinity;
         for (let i = 1; i < parts.length; i++) overlap = Math.max(overlap, parts[i - 1].right - parts[i].left);
-        const actions = top.querySelector(".topbar-actions").getBoundingClientRect().left;
+        // The search itself: the actions' box takes all the room the menus leave.
+        const search = top.querySelector(".global-search-field").getBoundingClientRect().left;
         const menus = [...top.children[1].querySelectorAll("a,button")].map((e) => e.getBoundingClientRect()).filter((b) => b.width > 0);
-        return { width, right: Math.round(Math.max(...parts.map((b) => b.right))), overlap: Math.round(overlap), sideways: document.documentElement.scrollWidth - innerWidth, menusPastTheSearch: menus.filter((b) => b.right > actions + 0.5).length };
+        return { width, right: Math.round(Math.max(...parts.map((b) => b.right))), overlap: Math.round(overlap), sideways: document.documentElement.scrollWidth - innerWidth, menusPastTheSearch: menus.filter((b) => b.right > search + 0.5).length };
       }, width)),
       shows: brand.images.map((i) => i.src.split("/").pop()).join(","),
       link: brand.link[0],
@@ -302,8 +305,8 @@ try {
   }
   const sane = (b) => b.right <= b.width && b.overlap <= 0 && b.sideways <= 0;
   const account = await dark.evaluate(() => Boolean(document.querySelector(".topbar .account-entry")));
-  check("B11", "with the account button shown — 1120 px: the wordmark, every menu before the search; 1024, 768 and 700 px: the asterisk alone in a link of 44 px at most; nothing overlaps or leaves the window", { accountButton: account, between },
-    account && between.every(sane) && between[0].shows === "logo-dark.svg" && between[0].menusPastTheSearch === 0 && between.slice(1).every((b) => b.shows === "symbol-dark.svg" && b.link <= 44));
+  check("B11", "with the account button shown — 1120 px: the wordmark; 1024, 768 and 700 px: the asterisk alone in a link of 44 px at most; at each width every menu before the search, nothing overlaps or leaves the window", { accountButton: account, between },
+    account && between.every(sane) && between.every((b) => b.menusPastTheSearch === 0) && between[0].shows === "logo-dark.svg" && between.slice(1).every((b) => b.shows === "symbol-dark.svg" && b.link <= 44));
   await dark.setViewportSize(DESKTOP.viewport);
 
   // ---- B5 (dark) and B7 on the same page

@@ -190,7 +190,15 @@ export function HeaderMenus({ path, href }) {
               setOpen("");
             }}
           >
-            {section.label}
+            {section.short ? (
+              // One of the two is shown (styles.css), and only that one is read out.
+              <>
+                <span className="nav-long">{section.label}</span>
+                <span className="nav-short">{section.short}</span>
+              </>
+            ) : (
+              section.label
+            )}
           </Link>
         ),
       )}
