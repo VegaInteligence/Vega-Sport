@@ -71,7 +71,7 @@ REFS = {
 # api.power_clubs: no relation naming a match. A later one needs its own review here.
 REVIEWED_SCHEMAS = ("153_transfer_history_served.sql", "163_league_player_seasons.sql", "164_league_history_reads.sql",
                     "165_league_history_spellings.sql", "166_match_strengths_extra_time.sql", "167_player_level.sql",
-                    "168_nation_world_ranking.sql")
+                    "168_nation_world_ranking.sql", "169_player_level_measured.sql")
 
 
 class Refusal(RuntimeError):

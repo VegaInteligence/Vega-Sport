@@ -24,6 +24,11 @@ The user's choices (23 and 24 November 2026): the club weighs PSI = 10; retentio
 block; no support-striker position (one price list for the attack); the defence talent is
 bounded at 2.0. λ and σ, ρ and δ, and the attack's price list are measured on a finished
 year (measure) and kept with its run.
+
+v9.1 (the user's choice of 24 November 2026 after a measure on the production base,
+FAILURE_MODES §54): the keeper's λ is a setting, the same for every year (KEEPER_LAMBDA); a
+keeper without goals prevented on half his minutes in goal is flagged, not measured
+(KEEPER_MEASURED_SHARE); the men's full-backs are centred above their mean (POSITION_OFFSETS).
 """
 
 from collections import defaultdict
@@ -31,7 +36,7 @@ from math import exp, log, sqrt
 
 from . import power
 
-LEVEL_VERSION = "score-vega-v9"
+LEVEL_VERSION = "score-vega-v9.1"  # a run of another version is not read, and its year is computed again (stale)
 CENTRE_FORWARD, ATTACKING_MIDFIELDER, WINGER, WIDE_MIDFIELDER = "centre_forward", "attacking_midfielder", "winger", "wide_midfielder"
 CENTRAL_MIDFIELDER, DEFENSIVE_MIDFIELDER, FULL_BACK, CENTRE_BACK = "central_midfielder", "defensive_midfielder", "full_back", "centre_back"
 GOALKEEPER = "goalkeeper"
@@ -56,6 +61,18 @@ DEFENCE = BLOCKS.index("defence")
 E = 9.1  # Elo points for one standard deviation of a position's composition (study: 13.8 ± 1.7 per composition sd)
 E_STARTS = 13.4  # Elo points between starting never and always
 GOAL = 163.0  # Elo points for one goal prevented per 90 minutes
+# Minutes for which a keeper's goals prevented count for half: the measure of 2025/26 (σ 0.062 goal per 90),
+# read for every year. Measured on each year it was unstable (5 395 minutes for 2024/25, which put 36 keepers
+# in the first 100 players): one keeper per team, and a count that varies much between matches. A convention,
+# the highest of the measures (8 179 on two years together, 10 639 per keeper) and the user's choice (§54).
+KEEPER_LAMBDA = 13291.0
+# A keeper is measured when goals prevented are known for this share of his minutes in goal of the year.
+# Without them his value is 0: the base has them for 1 to 6 % of the keepers' minutes before 2024/25 (§54).
+KEEPER_MEASURED_SHARE = 0.5
+# Elo points added to a position's centred value, per universe. Men judged at two positions are valued
+# 1.05 ± 0.11 higher against the full-backs than against the players of their other positions, every season
+# from 2021/22: the full-backs' mean is that much too low a centre. Not measured among the women (§54).
+POSITION_OFFSETS = {"men": {FULL_BACK: -1.05}}
 PSI = 10.0  # Elo points for 400 points of club Elo (user's choice of 24 Nov 2026; transfers measure 8.6 ± 0.4)
 PREVIOUS_WEIGHT = 0.5  # the season before, against the season
 ACQUIRED_MINUTES = 450  # over the two seasons, for a position other than the main one to be judged
@@ -67,7 +84,6 @@ MIN_FULL_MATCHES = 8  # of a player, for him to count in that measure
 MIN_PLAYERS = 30  # for a position and a block to have a measure of their own
 MAX_LAMBDA = 60000.0
 DEFAULT_LAMBDA, DEFAULT_SD = 3000.0, 1.0  # a position and block without a measure
-KEEPER_DEFAULT = (13000.0, 0.06)  # measured on 2025/26: 13 291 minutes, 0.062 goal per 90
 BORROW_LAMBDA, BORROW_SD = 30000.0, 0.5  # the wide midfielder takes the winger's measure above this noise or under this share of its spread
 MIN_PAIRS, MIN_PAIRS_OWN = 20, 40  # players of two positions for a correlation; for the adjacent and the others to have their own
 DEFAULT_RHO, MAX_RHO = 0.5, 0.98
@@ -356,13 +372,19 @@ def _value(mine, refs):
     left = {r: x[1] for r, x in mine.items() if r not in acquired}
     if base == GOALKEEPER:
         c = mine[base][2]
-        value = GOAL * 90 * c[KEEPER_GOALS] / (c[KEEPER_MINUTES] + refs["keeper"][0])
+        value = GOAL * 90 * c[KEEPER_GOALS] / (c[KEEPER_MINUTES] + KEEPER_LAMBDA)
         return base, {base: [value, 1.0, mine[base][0], mine[base][1], [None] * NB]}, left
     z = _talents(mine, base, acquired, refs)
     i = 0 if sum(mine[r][0] for r in acquired) > 0 else 1  # no minute of the season at a judged position: the two seasons'
     total = sum(mine[r][i] for r in acquired)
     return base, {r: [sum(refs["prices"][r][b] * z[b][r] for b in range(NB)), mine[r][i] / total, mine[r][0], mine[r][1], [z[b][r] for b in range(NB)]]
                   for r in acquired}, left
+
+
+def keeper_measured(minutes, covered):
+    """Whether a keeper's year is judged on his goals prevented: they are known for
+    KEEPER_MEASURED_SHARE of his minutes in goal at least, and for some."""
+    return covered > 0 and covered >= KEEPER_MEASURED_SHARE * minutes
 
 
 def levels(now, before, refs, people):
@@ -373,12 +395,19 @@ def levels(now, before, refs, people):
     "club": his club's Elo above the mean in units of 400, "universe", "reference",
     "eligible"}}. Each universe is centred and ranked apart: the positions' means, the mean
     start share of a main position and the median level are those of its reference players
-    (else of its eligible players, else of all), whom the others are placed against."""
+    (else of its eligible players, else of all), whom the others are placed against. A
+    position's centre is that mean less the universe's offset for it (POSITION_OFFSETS).
+    `measured`: false for a keeper without goals prevented on enough of the season's minutes
+    in goal (keeper_measured); his numbers are computed like the others'."""
     mixed = _mixed(now, before, people)
     teams = defaultdict(lambda: defaultdict(float))
-    for (player, _, team), c in now.items():
+    in_goal = defaultdict(lambda: [0.0, 0.0])  # the season's minutes in goal, and those with goals prevented
+    for (player, position, team), c in now.items():
         if player in mixed:
             teams[player][team] += c[MINUTES]
+            if position == GOALKEEPER:
+                in_goal[player][0] += c[MINUTES]
+                in_goal[player][1] += c[KEEPER_MINUTES]
     valued = {p: _value(mine, refs) for p, mine in mixed.items()}
     out = {}
     for universe in sorted({people[p].get("universe", "men") for p in valued}):
@@ -401,6 +430,8 @@ def levels(now, before, refs, people):
             # A position no reference player holds: its players are centred among all.
             wide_mean, wide_start = centres(members)
             mean, start = {**wide_mean, **mean}, {**wide_start, **start}
+        offsets = POSITION_OFFSETS.get(universe, {})
+        mean = {r: m - offsets.get(r, 0.0) for r, m in mean.items()}
         for p in members:
             base, positions, left = valued[p]
             person = people[p]
@@ -412,7 +443,8 @@ def levels(now, before, refs, people):
                       "minutes": sum(x[2] for x in positions.values()) + sum(mixed[p][r][0] for r in left),
                       "positions": {r: {"value": x[0], "share": x[1], "minutes": x[2], "minutes_two_seasons": x[3], "talents": x[4],
                                         "level": x[0] - mean[r] + starts + club} for r, x in positions.items()},
-                      "unjudged": left, "unjudged_minutes": {r: mixed[p][r][0] for r in left}, "blocks": blocks, "starts": starts, "own": blocks + starts, "club": club, "level": blocks + starts + club}
+                      "unjudged": left, "unjudged_minutes": {r: mixed[p][r][0] for r in left}, "blocks": blocks, "starts": starts, "own": blocks + starts, "club": club, "level": blocks + starts + club,
+                      "measured": base != GOALKEEPER or keeper_measured(*in_goal[p])}
         ordered = sorted(out[p]["level"] for p in reference)
         median = ordered[len(ordered) // 2]
         seen = defaultdict(int)
@@ -642,7 +674,7 @@ def read(rows, *, centre, faced=frozenset(), team_passes=None, samples=True):
     keep each player's per-90 values in his full matches, for measure().
     -> {"cells": {(player, position, club): cell} of the club matches, "club": {player: his
     clubs' Elo above the centre in units of 400, by minutes}, "shares": start_shares,
-    "samples": {(position, block): {player: [values]}}, "keeper_samples": {player: [values]}}.
+    "samples": {(position, block): {player: [values]}}}.
     The national teams' matches set the references with the others and enter no cell."""
     judged = judge(rows, main_roles(rows), faced)
     situations(rows, judged, team_passes)
@@ -650,7 +682,7 @@ def read(rows, *, centre, faced=frozenset(), team_passes=None, samples=True):
     refs = power.group_references(outfield, "group")
     fits = expectations(outfield)
     cells, club = {}, defaultdict(lambda: [0.0, 0.0])
-    values, keeper_values = defaultdict(lambda: defaultdict(list)), defaultdict(list)
+    values = defaultdict(lambda: defaultdict(list))
     for r in rows:
         if not r.get("national") and r["own_elo"] is not None:
             entry = club[r["player_id"]]
@@ -669,8 +701,6 @@ def read(rows, *, centre, faced=frozenset(), team_passes=None, samples=True):
             if prevented is not None:
                 c[KEEPER_MINUTES] += minutes
                 c[KEEPER_GOALS] += prevented
-                if samples and minutes >= FULL_MATCH:
-                    keeper_values[player].append(prevented * 90 / minutes)
             continue
         scores = match_blocks(r, refs, fits)
         if all(x is None for x in scores):
@@ -687,7 +717,7 @@ def read(rows, *, centre, faced=frozenset(), team_passes=None, samples=True):
                     values[(position, b)][player].append(x * 90 / minutes)
     recentre(cells)
     return {"cells": cells, "club": {p: total / minutes for p, (total, minutes) in club.items() if minutes > 0}, "shares": start_shares(rows),
-            "samples": values, "keeper_samples": keeper_values}
+            "samples": values}
 
 
 # References measured on a finished year -------------------------------------------
@@ -737,7 +767,7 @@ def correlations(now, before, refs, people):
 
 def measure(reading, before, people):
     """The references of a year, from its own player-matches (read, with samples): λ and σ
-    per position and block, the keeper's, the prices, ρ and δ. `full_matches`: the full
+    per position and block, the prices, ρ and δ. `full_matches`: the full
     matches of each position, the weights of the attack's price list."""
     lam, sd = {}, {}
     for key, by_player in reading["samples"].items():
@@ -759,8 +789,7 @@ def measure(reading, before, people):
         listed = price_list({position: sigma[position] for position in PRICED}, {position: announced(position) for position in PRICED}, full)
         for position in ATTACK:
             prices[position] = [listed[b] * sigma[position][b] for b in range(NB)]
-    refs = {"lam": lam, "sd": sd, "keeper": noise_and_spread(list(reading["keeper_samples"].values())) or KEEPER_DEFAULT, "prices": prices,
-            "full_matches": full}
+    refs = {"lam": lam, "sd": sd, "prices": prices, "full_matches": full}
     refs["rho"], refs["delta"] = correlations(reading["cells"], before, refs, people)
     return refs
 
@@ -768,7 +797,7 @@ def measure(reading, before, people):
 def pack(refs):
     """The references as they are kept (agg.level_runs.measured)."""
     return {"lam": {p: [refs["lam"][(p, b)] for b in range(NB)] for p in OUTFIELD}, "sd": {p: [refs["sd"][(p, b)] for b in range(NB)] for p in OUTFIELD},
-            "keeper": list(refs["keeper"]), "prices": {p: list(refs["prices"][p]) for p in OUTFIELD},
+            "prices": {p: list(refs["prices"][p]) for p in OUTFIELD},
             "rho": {name: [refs["rho"][(near, b)] for b in range(NB)] for name, near in (("adjacent", True), ("other", False))},
             "delta": {name: [refs["delta"][(near, b)] for b in range(NB)] for name, near in (("adjacent", True), ("other", False))},
             "full_matches": refs.get("full_matches", {}), "blocks": list(BLOCKS)}
@@ -780,7 +809,7 @@ def unpack(kept):
         return None
     return {"lam": {(p, b): float(v) for p, values in kept["lam"].items() for b, v in enumerate(values)},
             "sd": {(p, b): float(v) for p, values in kept["sd"].items() for b, v in enumerate(values)},
-            "keeper": tuple(float(v) for v in kept["keeper"]), "prices": {p: [float(v) for v in values] for p, values in kept["prices"].items()},
+            "prices": {p: [float(v) for v in values] for p, values in kept["prices"].items()},
             "rho": {(near, b): float(v) for name, near in (("adjacent", True), ("other", False)) for b, v in enumerate(kept["rho"][name])},
             "delta": {(near, b): float(v) for name, near in (("adjacent", True), ("other", False)) for b, v in enumerate(kept["delta"][name])},
             "full_matches": kept.get("full_matches", {})}
@@ -806,7 +835,9 @@ def season(reading, before, kept, scored):
 
 # Database -------------------------------------------------------------------
 
-SETTINGS = {"psi": PSI, "e": E, "e_starts": E_STARTS, "goal": GOAL, "defence_bound": DEFENCE_BOUND, "scale": SCALE, "previous_weight": PREVIOUS_WEIGHT,
+SETTINGS = {"psi": PSI, "e": E, "e_starts": E_STARTS, "goal": GOAL, "keeper_lambda": KEEPER_LAMBDA, "keeper_measured_share": KEEPER_MEASURED_SHARE,
+            "position_offsets": {universe: dict(offsets) for universe, offsets in POSITION_OFFSETS.items()},
+            "defence_bound": DEFENCE_BOUND, "scale": SCALE, "previous_weight": PREVIOUS_WEIGHT,
             "acquired_minutes": ACQUIRED_MINUTES, "competition_events": COMPETITION_EVENTS, "full_match": FULL_MATCH, "min_full_matches": MIN_FULL_MATCHES,
             "min_players": MIN_PLAYERS, "default_lambda": DEFAULT_LAMBDA, "default_sd": DEFAULT_SD}
 _CELL_COLUMNS = ("minutes", *(b + "_minutes" for b in BLOCKS), *(b + "_sum" for b in BLOCKS), "keeper_minutes", "goals_prevented")
@@ -856,11 +887,12 @@ def write(conn, season_id, started, out, cells, refs, reference_season):
             copy.write_row((season_id, player, position, team, *c, run))
     with conn.cursor().copy(
         """COPY agg.player_level(season_id, player_id, position, team_id, universe, eligible, linked, minutes, level, own, blocks, starts, club,
-             start_share, club_level, score, rank, position_rank, run_id) FROM STDIN"""
+             start_share, club_level, score, rank, position_rank, run_id, measured) FROM STDIN"""
     ) as copy:
         for player, r in out.items():
             copy.write_row((season_id, player, r["position"], r["team"], r["universe"], r["eligible"], r["linked"], r["minutes"], r["level"], r["own"],
-                            r["blocks"], r["starts"], r["club"], r["start_share"], r["club_level"], r["score"], r["rank"], r["position_rank"], run))
+                            r["blocks"], r["starts"], r["club"], r["start_share"], r["club_level"], r["score"], r["rank"], r["position_rank"], run,
+                            r["measured"]))
     with conn.cursor().copy(
         f"""COPY agg.player_level_positions(season_id, player_id, position, acquired, minutes, minutes_two_seasons, share, value, level,
               {', '.join(BLOCKS)}, run_id) FROM STDIN"""
@@ -877,13 +909,15 @@ def write(conn, season_id, started, out, cells, refs, reference_season):
 
 def stale(conn):
     """The award years whose published ranking has players and whose level is missing, of
-    another version, or older than the level of the year before (it reads half of that
-    year's sums, and its references while it is in progress), oldest first: a year's level
-    is computed after the year before's."""
+    another version, computed with other settings than SETTINGS, or older than the level of
+    the year before (it reads half of that year's sums, and its references while it is in
+    progress), oldest first: a year's level is computed after the year before's."""
+    from psycopg.types.json import Jsonb
+
     return [s for (s,) in conn.execute(
         """SELECT p.season_id FROM agg.power_runs p
            LEFT JOIN agg.level_runs own ON own.season_id = p.season_id AND own.status = 'published' AND own.version = %(version)s
            LEFT JOIN agg.level_runs prev ON prev.season_id = p.season_id - 1 AND prev.status = 'published' AND prev.players > 0
            WHERE p.kind = 'players' AND p.status = 'published' AND p.players > 0
-             AND (own.id IS NULL OR own.started_at < prev.started_at)
-           ORDER BY 1""", {"version": LEVEL_VERSION}).fetchall()]
+             AND (own.id IS NULL OR own.started_at < prev.started_at OR own.settings IS DISTINCT FROM %(settings)s)
+           ORDER BY 1""", {"version": LEVEL_VERSION, "settings": Jsonb(SETTINGS)}).fetchall()]
