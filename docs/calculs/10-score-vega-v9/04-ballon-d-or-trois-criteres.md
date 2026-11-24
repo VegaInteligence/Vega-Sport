@@ -36,8 +36,9 @@ C = Σ part × valeur, sur les honneurs de l'année, un par joueur, équipe et �
 | Coupe nationale | 0,15 × facteur × tour |
 | Compétition internationale | (prestige − 1) / (1,30 − 1) × tour |
 
-- Tour : vainqueur 1, finale 0,6, demi-finale 0,4, quart 0,25, huitième 0,15. Une équipe atteint un tour quand elle a un match de ce tour, joué ou à jouer ; aucun tour n'est projeté. Le vainqueur d'une finale : le score, puis la prolongation, puis les tirs au but ; une finale jouée sans vainqueur lisible donne `final` aux deux, raison `no_winner`.
-- Rang : celui de `api.standings` (le tableau officiel quand il tient, sinon celui de Vega). Avancement : matchs joués de l'édition sur ses matchs.
+- Tour : vainqueur 1, finale 0,6, demi-finale 0,4, quart 0,25, huitième 0,15. Une équipe atteint un tour quand elle a un match de ce tour, joué ou à jouer ; aucun tour n'est projeté. Le vainqueur d'une finale : le score, puis la prolongation, puis les tirs au but ; une finale jouée sans vainqueur lisible donne `final` aux deux, raison `no_winner`. Une finale en deux matchs (les deux derniers matchs de la finale, les mêmes équipes, chacune une fois à domicile) se gagne au cumul des buts (le score après prolongation quand il y en a une), puis aux tirs au but du match retour ; tant qu'une manche reste à jouer, les deux équipes ont `final`, sans vainqueur.
+- Une compétition tenue par deux sources la même année donne un seul honneur par équipe, celui de l'édition lue d'abord (`award.SAME_COMPETITION`) : PitchAPI, puis OpenLigaDB, puis l'autre source. La Coupe du monde d'OpenFootball (2022 et 2026) est celle de PitchAPI ; une copie open-matchday d'un championnat ou d'une coupe UEFA que PitchAPI tient est celle de PitchAPI ; la Coupe d'Allemagne d'open-matchday est celle d'OpenLigaDB.
+- Rang : lu dans les tables de base, pour les seules éditions de l'année : le tableau officiel (sportscore, championnat entier) quand ses places ne se contredisent pas (la règle de `api.standings`) et qu'il compte, club par club, les matchs que compte le tableau de Vega quand Vega en a un ; sinon celui de Vega (`agg.standings`). La course ne lit rien du schéma api : `api.standings` relit tous les tableaux officiels pour sa vérification des places, quelle que soit l'édition demandée. Avancement : matchs joués de l'édition sur ses matchs.
 - Facteur : 2 / (1 + 10^((L_max − L) / 400)), L le niveau du championnat (`agg.league_levels`), L_max celui de la plus forte première division masculine ; pour une coupe nationale, le championnat du club dans l'année (celui où il a joué le plus de matchs) ; un club sans championnat mesuré a un facteur 0, raison `no_league`. Exemple : 200 points sous L_max, facteur 0,48.
 - Prestige : `power.PRESTIGE` et `CUP_PRESTIGE` (Coupe du monde 1,30 → 1 ; Euro 1,20 → 0,67 ; Ligue des champions 1,15 → 0,5).
 - Part : minutes du joueur pour l'équipe dans l'édition / (90 × matchs joués de l'équipe), au plus 1. Une édition sans feuilles de match (les éditions complémentaires) : ses minutes pour le club dans ses matchs PitchAPI entre le premier et le dernier match du club dans l'édition, sur ces matchs. Une sélection sans feuilles de match : 0,5 (`NATIONAL_PROXY_SHARE`) pour un joueur vu avec elle (un match PitchAPI, ou buteur relié du tournoi, § 57). Un joueur de deux clubs a les honneurs de chacun, à ses minutes avec chacun.
@@ -57,21 +58,24 @@ C = Σ part × valeur, sur les honneurs de l'année, un par joueur, équipe et �
 
 ### 2.5 La course
 
+Une ligne pour chaque joueur masculin qui a une ligne de niveau de l'année et une cellule de la course ; aucune pour un joueur qui n'a joué que pour sa sélection (pas de cellule de club, donc pas de niveau), une joueuse, ou un joueur sans rôle dans le classement.
+
 Un joueur masculin au-dessus du seuil de minutes, d'un championnat mesuré, d'un club de première division, et mesuré s'il est gardien, est classé 1, 2, 3… par A. Les autres joueurs masculins ont leurs parties et leur score, sans rang, avec la première raison qui tient : `minutes`, `league`, `not_top_division`, `keeper_data` (`KEEPER_IN_RACE = False`).
 
 ## 3. Ce qui est rangé
 
 Migration 174 (`174_player_award.sql`, revue dans `open_matchday_restore.REVIEWED_SCHEMAS`) :
-- `agg.award_runs` : un calcul publié par année, sa version, ses réglages, ses écarts, le calcul du niveau lu ;
+- `agg.award_runs` : un calcul publié par année, sa version, ses réglages, ses écarts, le calcul du niveau lu ; un calcul dont la course a échoué y reste avec le statut `failed`, sans joueur ;
 - `agg.player_award` : I, C, F bruts, points de carton et minutes couvertes, les trois z, A, score, rang ou raison ;
 - `agg.player_award_honours` : chaque honneur avec ce dont sa valeur se calcule (type, tour, rang, avancement, facteur, prestige, part), en double précision ; chaque honneur de championnat est gardé, quel que soit son rang ;
-- les lectures `api.award_race` et `api.award_honours` ; le rôle de calcul lit `api.standings`, seule vue du schéma api qui lui est ouverte.
+- les lectures `api.award_race` et `api.award_honours` ; le rôle de calcul n'a aucun droit sur le schéma api.
 
 Quand :
 - la passe du classement écrit la course dans sa transaction d'écriture (`award.write`), sans toucher la course v8 ;
 - `award.refresh(conn, saison)` refait C, F, les z et la course à partir des lignes rangées, sans lire un match : les tables de valeurs changent, la course se recalcule ;
-- `award.reread(conn, saison)` relit les honneurs et les cartons (résultats, tours, tableaux, événements ; pas les statistiques de joueurs), puis range. Le worker l'appelle, après les classements à refaire, pour chaque année que `award.due` liste : un match ou un événement de l'année a changé après le début de sa course ;
-- `power.stale_rankings` liste aussi les années dont le niveau publié a des joueurs et dont la course manque, est d'une autre version ou d'autres réglages, ou a commencé avant ce niveau (`award.stale`). Au déploiement, les six saisons sont donc recalculées une fois.
+- `award.reread(conn, saison)` relit les honneurs et les cartons (résultats, tours, tableaux, événements ; pas les statistiques de joueurs), puis range. Le worker passe environ toutes les 60 s mais ne demande `award.due` qu'une fois par jour UTC, après les classements à refaire ; il relit une fois chaque année listée : un match daté de l'année du prix (1ᵉʳ août au 31 juillet) ou un événement d'un tel match a changé après le début de sa course. Une relecture qui échoue attend une heure, comme toute étape, et est retentée le jour même ;
+- `power.stale_rankings` liste aussi les années dont le niveau publié a des joueurs et dont la course manque, est d'une autre version ou d'autres réglages, ou a commencé avant ce niveau (`award.stale`), sauf si son dernier calcul a échoué avec cette version et ces réglages après le début de ce niveau : pas de boucle. Au déploiement, les six saisons sont donc recalculées une fois.
+- Un échec de la course ne bloque jamais le classement ni le niveau : sa lecture et son écriture tournent dans un point de sauvegarde, son calcul est surveillé ; le classement, les notes, le niveau et la course v8 sont publiés comme sans elle, une ligne `award race failed season=… step=read|compute|write error=<code>` est écrite (le code, jamais le message), un calcul `failed` est gardé, et la course publiée avant reste servie. Une `MemoryError` n'est pas rattrapée.
 
 Lecture :
 - `GET /api/rankings/award?season=&limit=&page=` (30 par défaut, 200 au plus) : les joueurs classés dans leur ordre, chacun avec `rank, playerId, name, imageUrl, teamId, team, teamImageUrl, position, score` (les neuf champs que le site lit aujourd'hui, mêmes noms et types) et les parties brutes `individual, collective, fairPlay, level` ;
@@ -81,7 +85,7 @@ Lecture :
 ## 4. Ce qui n'est pas vérifié
 
 - Rien n'a tourné sur la base de production : les tests sont sur une ligue synthétique de 8 clubs et 88 joueurs, sur PostgreSQL 18 jetable. Les vrais classements des six saisons se liront après un Deploy.
-- La durée sur les volumes réels (environ 20 000 joueurs et 15 000 matchs par saison) n'est pas mesurée ; les lectures des honneurs et des cartons sont ensemblistes (une douzaine de requêtes par année), mais la fenêtre des éditions complémentaires et la vue `api.standings` sont les plus coûteuses.
+- La durée sur les volumes réels (environ 20 000 joueurs et 15 000 matchs par saison) n'est pas mesurée ; les lectures des honneurs et des cartons sont ensemblistes (une douzaine de requêtes par année), mais la fenêtre des éditions complémentaires est la plus coûteuse.
 - Les poids des honneurs (0,5, 0,15, les tours) sont une première proposition, réglable sans relire un match.
 - Le barème FIFA (§ 2.3).
 
@@ -90,5 +94,6 @@ Lecture :
 - Coupes nationales avant 2025/2026 : la plupart n'ont pas de feuilles de match ni toujours leurs tours ; leurs honneurs reposent sur la part par fenêtre, ou manquent.
 - Supercoupes : un seul match, souvent un jour sans autre match PitchAPI du club, donc une fenêtre vide : pas de part, pas d'honneur.
 - Tournois des sélections sans tours ni feuilles de match (International Results) : pas de tour lisible, donc pas d'honneur ; la part de 0,5 ne s'applique qu'aux éditions qui ont des tours.
-- Une coupe présente à la fois en édition PitchAPI et en édition complémentaire sous deux compétitions distinctes compterait deux fois : non observé, à vérifier sur les vraies saisons.
+- Une coupe présente à la fois en édition PitchAPI et en édition complémentaire compte une fois quand la paire est nommée (§ 2.2) ; la Coupe du monde l'est. D'autres paires (Coupe du monde des clubs, Euro) ne sont pas vérifiées : la base de production n'a pas été lue.
+- Un match daté hors de l'année du prix mais d'une édition qui s'y termine (les matchs de groupe d'une coupe jouée sur l'année civile) ne relance pas la relecture : la saison en cours est recalculée chaque jour de toute façon.
 - Les cartons ne comptent que sur les matchs dont les événements sont couverts ; avant leur couverture, F est la moyenne du poste.
