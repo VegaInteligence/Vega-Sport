@@ -1,0 +1,221 @@
+/* Accounts (VI-38): the header entry, /connexion and /compte. Tokens of theme.css only. */
+
+/* Header entry: one fixed size in every state, so nothing moves when the session arrives. */
+.account-entry {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 124px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  color: var(--ink);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  white-space: nowrap;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+}
+.account-entry:hover {
+  border-color: var(--muted-light);
+  background: var(--surface-hover);
+  color: var(--ink-strong);
+}
+.account-entry[aria-current="page"] {
+  border-color: var(--accent-line);
+  color: var(--accent-dark);
+}
+.account-entry svg {
+  flex-shrink: 0;
+}
+.account-entry-pending {
+  border-color: transparent;
+}
+@media (max-width: 1023px) {
+  .account-entry {
+    width: 34px;
+    padding: 0;
+    border-color: transparent;
+    color: var(--muted);
+  }
+  .account-entry-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+@media (max-width: 640px) {
+  .account-entry {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+/* /connexion and /compte: one column. */
+.account-panel {
+  display: grid;
+  gap: 18px;
+  width: min(100%, 420px);
+  padding: 8px 0 32px;
+}
+.account-panel > .segmented-control {
+  justify-self: start;
+}
+.account-form {
+  display: grid;
+  gap: 14px;
+}
+.account-field {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+.account-field input {
+  width: 100%;
+  height: var(--control-h);
+  padding: 0 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink-strong);
+  font: inherit;
+  font-size: var(--text-md);
+  font-weight: 400;
+}
+.account-field input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+  border-color: var(--accent);
+}
+.account-field input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+.account-error {
+  color: var(--danger);
+  font-size: var(--text-md);
+  line-height: 1.5;
+}
+.account-submit,
+.account-google {
+  width: 100%;
+  min-height: var(--control-h);
+}
+.account-submit:disabled,
+.account-google:disabled,
+.account-actions .button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.account-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.account-divider::before,
+.account-divider::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid var(--border);
+}
+
+/* /compte */
+.account-summary {
+  width: min(100%, 560px);
+}
+.account-facts {
+  display: grid;
+  border-top: 1px solid var(--border-strong);
+}
+.account-facts > div {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: var(--text-md);
+}
+.account-facts dt {
+  color: var(--muted);
+}
+.account-facts dd {
+  min-width: 0;
+  color: var(--ink-strong);
+  font-weight: 500;
+}
+.account-email {
+  overflow-wrap: anywhere;
+}
+.account-sync {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+.account-sync-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted-light);
+}
+.account-sync[data-state="synced"] .account-sync-dot {
+  background: var(--accent);
+}
+.account-sync[data-state="failed"] .account-sync-dot,
+.account-sync[data-state="stopped"] .account-sync-dot {
+  background: var(--danger);
+}
+.account-sync-detail {
+  flex-basis: 100%;
+  padding-left: 16px;
+  color: var(--muted);
+  font-weight: 400;
+}
+.account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.account-unsaved {
+  flex-wrap: wrap;
+  margin: 0;
+}
+.account-danger {
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.account-delete {
+  color: var(--danger);
+}
+.account-delete:hover {
+  color: var(--danger);
+}
+.account-delete-confirm {
+  border-color: var(--danger);
+  background: var(--danger);
+  color: var(--bg);
+}
+@media (max-width: 640px) {
+  .account-panel,
+  .account-summary {
+    width: 100%;
+  }
+  .account-facts > div {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+  .account-actions .button {
+    flex: 1 1 100%;
+    min-height: var(--control-h);
+  }
+}

@@ -1,4 +1,5 @@
 import { pages } from "../../../shared/pages.js";
+import { accountsOn } from "./account-switch.js";
 
 const routePath = (pathname) => (pathname || "/").replace(/\/$/, "") || "/";
 const pageRoutes = new Set([
@@ -11,8 +12,10 @@ const pageRoutes = new Set([
  */
 export function routeExists(pathname) {
   const path = routePath(pathname);
-  return pageRoutes.has(path);
+  // The account pages exist only with accounts on (VI-38, account-switch.js); off, they are the 404 page.
+  return pageRoutes.has(path) || (accountsOn() && ACCOUNT_ROUTES.has(path));
 }
+const ACCOUNT_ROUTES = new Set(["/connexion", "/compte"]);
 
 /** Pages with their own readers must not download a season before mounting. */
 export function routeNeedsSeason(pathname, params) {
@@ -27,6 +30,8 @@ export function routeNeedsSeason(pathname, params) {
       "/rapport",
       "/calendrier",
       "/joueurs/matchs",
+      "/connexion",
+      "/compte",
     ].includes(path)
   )
     return false;
