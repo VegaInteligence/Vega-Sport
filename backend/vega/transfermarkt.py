@@ -99,14 +99,20 @@ PERIODS = {
 # A level above priority 1 for the players who count for a match close at hand (FAILURE_MODES.md §59, 59o–59v): the
 # FOCUS_PLAYERS most used players (minutes of the season in progress) of each linked club with a match not started in the
 # next FOCUS_HORIZON have their FOCUS_KINDS read again FOCUS_PERIOD after their last read; everything else keeps PERIODS.
-# At most FOCUS_CLUBS_MAX clubs, the soonest kick-offs first: the focus costs at most 80 x 18 x 2 = 2,880 requests a day,
-# under a tenth of the ~31,400 the reader can ask (INTERVAL + JITTER / 2 apart).
+# At most FOCUS_CLUBS_MAX clubs, the soonest kick-offs first: the focus costs at most 200 x 18 x 2 = 7,200 requests a day,
+# under a quarter of the ~31,400 the reader can ask (INTERVAL + JITTER / 2 apart). 80 clubs at first: on a midweek of
+# European nights they were all clubs kicking off within two days, and a club playing the day after (PSG, 24 Nov 2026)
+# had none of its players' suspensions read (59an).
 FOCUS_KINDS = ("injuries", "suspensions")
 FOCUS_PLAYERS = 18
 FOCUS_HORIZON = timedelta(days=7)
 FOCUS_PERIOD = timedelta(days=1)
-FOCUS_CLUBS_MAX = 80
+FOCUS_CLUBS_MAX = 200
 NOT_FOUND_AGAIN = timedelta(days=90)
+# The squad seasons core.provider_squads holds (114: season_year BETWEEN 1900 AND 2100). A season out of it (a club's
+# match of 1895 gave « 350:1894 ») is never queued, and one queued before fails without a request (59am): the base's
+# refusal had killed the reader eleven times on 24 Nov 2026.
+SQUAD_YEARS = (1900, 2100)
 # A search whose chosen club has no record yet: again within a day, its record read by then (FAILURE_MODES.md §45).
 SEARCH_UNNAMED_AGAIN = timedelta(days=1)
 # The kinds whose 404 is a refusal, not an answer: their reads views (api.player_injury_reads, 160;
@@ -855,8 +861,8 @@ class Reader:
                FROM core.provider_ids i
                JOIN seasons s ON s.team = i.entity_id
                CROSS JOIN LATERAL (VALUES (s.season_id), (s.season_id - 1)) y(year)
-               WHERE i.entity_type = 'team' AND i.provider = 'transfermarkt' AND i.is_current AND y.year <= %s
-               ON CONFLICT DO NOTHING""", (current, now, current)).rowcount
+               WHERE i.entity_type = 'team' AND i.provider = 'transfermarkt' AND i.is_current AND y.year <= %s AND y.year >= %s
+               ON CONFLICT DO NOTHING""", (current, now, current, SQUAD_YEARS[0])).rowcount
         # Every club of ours no link reached: its search, priority by its last season.
         queued += self.conn.execute(
             """WITH last AS (SELECT v.team, max(m.season_id) AS season FROM core.matches m
@@ -1021,6 +1027,8 @@ class Reader:
                 data = self.get(f"/player/{keys[0]}/absence")
             else:
                 club, year = keys[0].split(":")
+                if not SQUAD_YEARS[0] <= int(year) <= SQUAD_YEARS[1]:
+                    raise Failed("SEASON_OUT_OF_RANGE", None)
                 data = self.get(f"/club/{club}/squad", [("season", year)])
         except Blocked as error:
             self.blocked(error)

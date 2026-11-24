@@ -99,9 +99,11 @@ class PureTest(unittest.TestCase):
         self.assertEqual(tm.FOCUS_KINDS, ("injuries", "suspensions"))
         self.assertEqual(tm.PERIODS["suspensions"], tm.PERIODS["injuries"])
         self.assertIn("suspensions", tm.NOT_FOUND_REFUSED)
-        # The focus's whole load stays a small share of what the reader can ask in a day.
+        # 59an: 200 clubs, so that a midweek of European nights (some 80 clubs kicking off within two days) leaves room for
+        # the clubs playing the day after. The focus's whole load stays under a quarter of what the reader can ask in a day.
+        self.assertEqual(tm.FOCUS_CLUBS_MAX, 200)
         daily = 86400 / (tm.INTERVAL + tm.JITTER / 2)
-        self.assertLessEqual(tm.FOCUS_CLUBS_MAX * tm.FOCUS_PLAYERS * len(tm.FOCUS_KINDS), 0.10 * daily)
+        self.assertLessEqual(tm.FOCUS_CLUBS_MAX * tm.FOCUS_PLAYERS * len(tm.FOCUS_KINDS), 0.25 * daily)
 
 
 @required(DSN and psycopg, "requires a disposable local absences DB (VEGA_V2_ABSENCES_TEST_DSN) and psycopg")
@@ -492,6 +494,52 @@ class FocusTest(AbsencesBase):
     def test_59o_the_plan_applies_the_focus(self):
         self.reader.plan()
         self.assertEqual(len(self.focused()), 2 * len(self.expected_players))
+
+
+class SquadSeasonTest(AbsencesBase):
+    """59am: a squad season out of core.provider_squads' range (1900-2100) is never queued, and one queued before is a failed
+    unit, never a crash of the reader (production, 24 Nov 2026: « 350:1894 » refused by provider_squads_season_year_check
+    killed the reader eleven times)."""
+
+    def setUp(self):
+        transaction = self.db.transaction(force_rollback=True)
+        transaction.__enter__()
+        self.addCleanup(transaction.__exit__, None, None, None)
+        x = self.x = self.db.execute
+        self.now = x("SELECT now()").fetchone()[0]
+        x("INSERT INTO core.seasons(id, label) VALUES (1900, '1900/1901') ON CONFLICT DO NOTHING")
+        x("SELECT core.ensure_season_partitions(1900)")
+        x("INSERT INTO core.competition_seasons(id, competition_id, season_id, native_label) VALUES (28, 30, 1900, '1900/1901')")
+        x("""INSERT INTO core.matches(id, competition_season_id, season_id, source, status, home_team_id, away_team_id, kickoff_at, match_date)
+             VALUES (480, 28, 1900, 'pitchapi', 'finished', 1, 2, '1900-05-01T15:00:00Z', '1900-05-01')""")
+        x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('team', 'transfermarkt', '583', 1)")
+        self.requests = []
+        x("SET LOCAL ROLE vega_collect")
+        self.reader = tm.Reader(self.db, self.fetch, interval=0, jitter=0, sleep=lambda s: None, log=lambda *a, **k: None)
+
+    def fetch(self, path, params=()):
+        self.requests.append(path)
+        return 200, {}, body({"squad": []})
+
+    def squads(self):
+        return sorted(k for (k,) in self.x("SELECT provider_key FROM ops.transfermarkt_reads WHERE kind = 'squad'").fetchall())
+
+    def test_59am_a_season_before_1900_is_not_queued(self):
+        self.reader.enqueue(self.now)
+        self.assertIn("583:1900", self.squads())
+        self.assertIn("583:2026", self.squads())
+        self.assertNotIn("583:1899", self.squads())
+
+    def test_59am_a_queued_season_out_of_range_fails_without_a_request(self):
+        for key in ("583:1894", "583:2101"):
+            self.x("INSERT INTO ops.transfermarkt_reads(kind, provider_key, priority, next_due_at) VALUES ('squad', %s, 9, now() - interval '1 minute')",
+                   (key,))
+            self.assertEqual(self.reader.read("squad", [(key, 9)]), "failed")
+            self.assertEqual(self.x("""SELECT read_at IS NULL, attempts, error_code, next_due_at > now()
+                                       FROM ops.transfermarkt_reads WHERE kind = 'squad' AND provider_key = %s""", (key,)).fetchone(),
+                             (True, 1, "SEASON_OUT_OF_RANGE", True))
+        self.assertEqual(self.requests, [])
+        self.assertEqual(self.x("SELECT count(*) FROM core.provider_squads").fetchone()[0], 0)
 
 
 @required(DSN and psycopg and HTTP_READY, "requires the absences DB, psycopg, node and backend/api/node_modules")

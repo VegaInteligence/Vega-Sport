@@ -1,5 +1,13 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Injured and suspended players, the Transfermarkt reader on production — FAILURE_MODES § 59am, 59an (24 November 2026, branch `claude/absents-lecteur-saisons`)
+
+- Seen (worker logs 16:40–20:18 UTC, read only from the owner's Mac): 1,805 suspensions read, no refusal by Transfermarkt, yet no PSG player read (« 0 / 25 renseignés » the evening before PSG–Roma).
+- 59am: the squad unit « 350:1894 » (a linked club with a match of 1895) broke `provider_squads_season_year_check` (1900–2100); not a `Failed`, so the reader process died, eleven times, about 1 h 15 lost. Fix: `SQUAD_YEARS`; such a season is never queued, and one already queued fails `SEASON_OUT_OF_RANGE` with no request.
+- 59an: the focus took the 80 soonest clubs, all kicking off within two days on a European midweek. `FOCUS_CLUBS_MAX` 80 → 200 (at most 7,200 requests a day, under a quarter of the reader's ~31,400). The spread of 59ah is kept.
+- Tests first (`tests/test_transfermarkt_absences.py`: `SquadSeasonTest`, the named thresholds): red 3/3, then green; the three reader test files 84/84 on PostgreSQL 18.
+- Needs a Deploy (worker). Next: check PSG's « renseignés » climb once the focus runs with 200 clubs.
+
 ## Injured and suspended players, the squad card without a read date — FAILURE_MODES § 59al (24 November 2026, branch `claude/absents-asof-vide` from origin/main 16e2cc6, local, not pushed)
 
 - Broke (production, after #110): the club's « Effectif » tab showed « Chargement impossible » for any club with an absent player and no player read yet (`asOf: null`, `read: 0`; PSG on 23 Nov).
