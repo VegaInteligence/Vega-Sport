@@ -1137,9 +1137,10 @@ input[type="date"] {
   min-width: 4px;
   background: var(--muted);
 }
-.list-forecast-bar [data-side="home"] { background: var(--accent); }
-.list-forecast-bar [data-side="draw"] { opacity: 0.45; }
-.list-forecast-bar [data-side="away"] { background: #e0973a; }
+/* The same colours in the home strip's pre-match forecast (home.css, .home-tick-odds). */
+:is(.list-forecast-bar, .home-tick-odds) [data-side="home"] { background: var(--accent); }
+:is(.list-forecast-bar, .home-tick-odds) [data-side="draw"] { opacity: 0.45; }
+:is(.list-forecast-bar, .home-tick-odds) [data-side="away"] { background: #e0973a; }
 .list-forecast-shares {
   display: flex;
   justify-content: space-between;

@@ -1,5 +1,12 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## The strip's pre-match forecast, no score — #69 (24 November 2026, branch `claude/accueil-bandeau-pronostics` from main a6b0cd5, local, not pushed)
+
+- Goal (hugo: « dans le bandeau du haut il me faut les prédictions de victoire etc mais ne met pas les scores »): every tick not finished shows the win probabilities (home / draw / away) and no score of any kind (live score removed); results unchanged; no API change.
+- Built: `tickForecast` (home-insights.js; record `forecast`, else `fixture.forecast`; matchForecast validation; whole percentages summing to 100 by largest remainder); `ComingTick` foot = `.home-tick-odds` bar (colours shared with `.list-forecast-bar` in styles.css) + `.home-tick-cap`, aria-label « Pronostic d’avant-match : … »; no forecast → the empty foot of before. Sources: billboard and home-local records carry it; the favourites' read does not.
+- Tests first: home-ticker.test.mjs 17 (5 red against a stub), then green; suite 991/991. E2E F1–F4 added: red on main (F1, F2 × 2), then 16/16 morning and evening. Evidence …/scratchpad/e2e-ticker-forecast/. Captures /mnt/project-files/accueil-vi-48/captures-v5/.
+- Next: the owner's look at the captures; push only on his go.
+
 ## The home's strip with the matches to come — #69 (24 November 2026, branch `claude/accueil-bandeau-a-venir`, local, not pushed)
 
 - Goal (the owner, on production: « sur le bandeau en haut [je vois] que les matchs finis ; je veux aussi les futurs matchs »): the strip shows the results and the matches to come. Design decided by the coordinating session (scoreboard, time left to right, opened on now); no new card, band or control; « À l'affiche » untouched; no API change (data: `billboard`, `billboardWindow`, the favourites' `upcoming`, `localMatches`).
