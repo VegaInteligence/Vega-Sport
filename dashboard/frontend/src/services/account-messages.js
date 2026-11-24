@@ -21,6 +21,11 @@ export function authErrorMessage(error) {
   if (is("PASSWORD_TOO_LONG")) return "Ce mot de passe est trop long.";
   if (is("INVALID_EMAIL", "email_address_invalid")) return "Cette adresse e-mail n'est pas valide.";
   if (is("EMAIL_NOT_VERIFIED", "email_not_confirmed")) return "Il faut d'abord confirmer votre adresse e-mail.";
+  // The e-mail codes (section 8, R4).
+  if (is("INVALID_OTP")) return "Code incorrect.";
+  if (is("OTP_EXPIRED")) return "Ce code a expiré. Demandez-en un nouveau.";
+  if (is("TOO_MANY_ATTEMPTS")) return "Trop d'essais. Demandez un nouveau code.";
+  if (is("over_email_send_rate_limit")) return "Trop de codes demandés. Patientez une minute avant de réessayer.";
   if (is("PROVIDER_NOT_FOUND", "SOCIAL_SIGN_IN_FAILED", "oauth_provider_not_supported", "bad_oauth_callback", "oauth_callback_failed") || code.startsWith("OAUTH"))
     return "La connexion avec Google n'est pas disponible pour le moment.";
   if (status === 429 || is("over_request_rate_limit")) return "Trop de tentatives. Patientez une minute avant de réessayer.";
