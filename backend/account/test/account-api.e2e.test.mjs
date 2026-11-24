@@ -92,7 +92,9 @@ async function step(name, expected, method, route, { body, origin = SITE, sub = 
   if (body !== undefined) headers["Content-Type"] = "application/json";
   const out = await handler(event(method, route, { headers, body: body === undefined ? undefined : JSON.stringify(body) }));
   const parsed = out.body ? JSON.parse(out.body) : null;
-  const record = { name, request: { method, route, origin, body: body ?? null, session: `<EdDSA token, sub ${sub}>` }, expected, status: out.statusCode, headers: out.headers, answer: parsed, rows: await rowsOf(db, sub) };
+  // A pass is written out as its claims only (signed with the test's key, but a pass all the same).
+  const answer = parsed?.pass ? { ...parsed, pass: `<pass: ${JSON.stringify(verifyPass(parsed.pass, keyring, NOW))}>` } : parsed;
+  const record = { name, request: { method, route, origin, body: body ?? null, session: `<EdDSA token, sub ${sub}>` }, expected, status: out.statusCode, headers: out.headers, answer, rows: await rowsOf(db, sub) };
   steps.push(record);
   record.ok = out.statusCode === expected.status;
   assert.equal(out.statusCode, expected.status, `${name}: ${out.body}`);
@@ -123,7 +125,6 @@ test("X10: the whole path, from the first sign-in to nothing left", { skip }, as
     assert.equal(signIn.body.created, true);
     assert.equal(signIn.body.level, 1);
     assert.deepEqual(verifyPass(signIn.body.pass, keyring, NOW), { ok: true, accountId: ACCOUNT, level: 1, expiresAt: NOW + 600 });
-    signIn.record.answer.pass = "<pass, verified>";
 
     // 2. Never saved: null.
     const empty = await step("read before any save", { status: 200, answer: null }, "GET", "/account/preferences");

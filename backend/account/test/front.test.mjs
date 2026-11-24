@@ -52,7 +52,7 @@ test("H1: an event that is not a Function URL 2.0 event", async () => {
 
 test("H2: a path no route claims is 404; exact paths only", async () => {
   const { handler, auth, calls } = setup();
-  for (const path of ["/account", "/account/", "/account/preferences/", "/account//session", "/ACCOUNT/session", "/account/preferences%2Fmerge", "/account/./session", "/api/read/x", "/"]) {
+  for (const path of ["/account/", "/accounts", "/account/preferences/", "/account//session", "/ACCOUNT/session", "/account/preferences%2Fmerge", "/account/./session", "/api/read/x", "/"]) {
     const out = plain(await handler(event("GET", path, { headers: auth() })));
     assert.equal(out.statusCode, 404, path);
     assert.equal(json(out).error.code, "NOT_FOUND");
