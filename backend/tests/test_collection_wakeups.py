@@ -566,6 +566,42 @@ class InternationalsEloTest(CollectionBase):
         self.daily({})
         self.assertFalse(elo_due(self.calc))
 
+    def test_56i_the_pass_that_redoes_the_elo_ranks_again_the_years_that_read_the_earlier_one(self):
+        from psycopg.types.json import Jsonb
+        from vega import level, power
+        from vega.store import Store
+
+        x = self.x
+        first = self.native(2019)
+        self.assertEqual(self.daily({}), [first])
+        with self.db.transaction():
+            year = Store(self.db).season("2021/2022")
+        # A year ranked with players on that Elo, as refresh_players leaves it, its level of the present version.
+        x("""INSERT INTO agg.power_runs(kind, season_id, method_version, status, started_at, finished_at, players)
+             VALUES ('players', %s, %s, 'published', clock_timestamp(), clock_timestamp(), 3)""", (year, power.METHOD_VERSION))
+        x("""INSERT INTO agg.level_runs(season_id, version, status, started_at, finished_at, players, settings)
+             VALUES (%s, %s, 'published', clock_timestamp(), clock_timestamp(), 0, %s)""", (year, level.LEVEL_VERSION, Jsonb(level.SETTINGS)))
+        self.assertEqual(power.stale_rankings(self.calc), [])
+        elo = "SELECT status FROM agg.power_runs WHERE kind = 'elo' ORDER BY id"
+        rankings = "SELECT status FROM agg.power_runs WHERE kind = 'players' AND season_id = %s ORDER BY id"
+        self.clock += timedelta(hours=2)
+        self.daily({})
+        self.assertEqual(([s for (s,) in x(elo).fetchall()], [s for (s,) in x(rankings, (year,)).fetchall()]), (["published"], ["published"]))
+        # A team marked national: the next pass runs the Elo, then ranks the year again (this base holds no statistics:
+        # an empty run of the year).
+        x("INSERT INTO core.teams(name, is_national) VALUES ('Freedonia', true)")
+        self.assertEqual(power.stale_rankings(self.calc), [])  # the published Elo run is still the one the year read
+        self.clock += timedelta(hours=2)
+        self.daily({})
+        self.assertEqual([s for (s,) in x(elo).fetchall()], ["superseded", "published"])
+        self.assertEqual([s for (s,) in x(rankings, (year,)).fetchall()], ["superseded", "published"])  # red before §56: one run
+        self.assertEqual(power.stale_rankings(self.calc), [])
+        # The pass after: neither.
+        self.clock += timedelta(hours=2)
+        self.daily({})
+        self.assertEqual([s for (s,) in x(elo).fetchall()], ["superseded", "published"])
+        self.assertEqual([s for (s,) in x(rankings, (year,)).fetchall()], ["superseded", "published"])
+
 
 class InternationalSeasonsTest(unittest.TestCase):
     """50h–50i: one season list in the projection and in cups.EDITIONS; a finished season is read weekly."""

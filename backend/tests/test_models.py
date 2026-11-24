@@ -502,6 +502,79 @@ class ModelsTest(unittest.TestCase):
             x("UPDATE agg.level_runs SET settings = %s WHERE season_id = 2025 AND status = 'published'", (Jsonb(level.SETTINGS),))
         self.assertEqual(power.stale_rankings(self.db), [])
 
+    def test_a_year_that_read_another_national_elo_is_ranked_again(self):
+        # §56 (56a–56h): a year's ranking and level read the national teams' Elo. When the published Elo run is of
+        # other national teams (or of another national method) than the run the ranking read, the year is listed.
+        from psycopg.types.json import Jsonb
+        from vega import level, power
+        from vega.store import Store
+
+        x = self.db.execute
+        published = "SELECT id FROM agg.power_runs WHERE kind = 'elo' AND status = 'published'"
+        row = "SELECT version, k, start_date, seed_edition, national_teams, national_teams_md5 FROM agg.nation_elo_runs WHERE run_id = %s"
+        write = "INSERT INTO agg.nation_elo_runs(run_id, version, k, start_date, seed_edition, national_teams, national_teams_md5) VALUES (%s,%s,%s,%s,%s,%s,%s)"
+        ranking = "SELECT player_id, index, rank FROM agg.player_power WHERE season_id = 2025 ORDER BY player_id"
+        levels = "SELECT player_id, level, score, rank FROM agg.player_level WHERE season_id = 2025 ORDER BY player_id"
+        with self.db.transaction():
+            years = [Store(self.db).season(label) for label in ("2022/2023", "2023/2024", "2024/2025")]
+        self.assertEqual(years, [2022, 2023, 2024])
+        self.assertEqual(power.stale_rankings(self.db), [])
+        kept = x(ranking).fetchall(), x(levels).fetchall()
+        team = x("INSERT INTO core.teams(id, name, is_national) VALUES (920, 'Nation Z', true) RETURNING id").fetchone()[0]
+        try:
+            # 56a: a team marked national, the Elo run again: the year's ranking read the earlier national teams.
+            power.refresh_elo(self.db)
+            self.assertEqual(power.stale_rankings(self.db), [2025])
+            # 56b: ranked again, on the same numbers (the team has no match), it is listed no more.
+            self.assertEqual(power.refresh_players(self.db, 2025), 88)
+            self.assertEqual(power.stale_rankings(self.db), [])
+            self.assertEqual((x(ranking).fetchall(), x(levels).fetchall()), kept)
+            # 56c: the Elo run again with the same national teams, as every pass with a due season does.
+            read = x(published).fetchone()[0]
+            power.refresh_elo(self.db)
+            served = x(published).fetchone()[0]
+            self.assertNotEqual(read, served)
+            self.assertEqual(x(row, (read,)).fetchone(), x(row, (served,)).fetchone())
+            self.assertEqual(power.stale_rankings(self.db), [])
+            read_row, served_row = x(row, (read,)).fetchone(), x(row, (served,)).fetchone()
+            # 56d: the run the ranking read holds no national set (a run from before 170): production after #92.
+            x("UPDATE agg.nation_elo_runs SET national_teams = NULL, national_teams_md5 = NULL WHERE run_id = %s", (read,))
+            self.assertEqual(power.stale_rankings(self.db), [2025])
+            # 56e: it has no row at all (a run from before 168).
+            x("DELETE FROM agg.nation_elo_runs WHERE run_id = %s", (read,))
+            self.assertEqual(power.stale_rankings(self.db), [2025])
+            # 56g: neither run has a row: nothing to compare. Nor without a published Elo run.
+            x("DELETE FROM agg.nation_elo_runs WHERE run_id = %s", (served,))
+            self.assertEqual(power.stale_rankings(self.db), [])
+            x(write, (served, *served_row))
+            x("UPDATE agg.power_runs SET status = 'superseded' WHERE id = %s", (served,))
+            self.assertEqual(power.stale_rankings(self.db), [])
+            x("UPDATE agg.power_runs SET status = 'published' WHERE id = %s", (served,))
+            # 56f: the run it read is of another national method, with the same national teams.
+            x(write, (read, "nations-elo-v0", *read_row[1:]))
+            self.assertEqual(power.stale_rankings(self.db), [2025])
+            # 56h: with 2025, a year with players ranked before any Elo run (its level in place), a year without
+            # players, and a year of an older method: that one first, then the years oldest first.
+            x("""INSERT INTO agg.power_runs(kind, season_id, method_version, status, started_at, finished_at, players) VALUES
+                   ('players', 2022, 'power-ranking-v1', 'published', '2020-01-01', '2020-01-01', NULL),
+                   ('players', 2023, %(method)s, 'published', '2020-01-01', '2020-01-01', 3),
+                   ('players', 2024, %(method)s, 'published', '2020-01-01', '2020-01-01', 0)""", {"method": power.METHOD_VERSION})
+            x("""INSERT INTO agg.level_runs(season_id, version, status, started_at, finished_at, players, settings)
+                 VALUES (2023, %s, 'published', '2020-01-01', '2020-01-01', 0, %s)""", (level.LEVEL_VERSION, Jsonb(level.SETTINGS)))
+            self.assertEqual(power.stale_rankings(self.db), [2022, 2023, 2025])
+            x("DELETE FROM agg.nation_elo_runs WHERE run_id = %s", (read,))
+            x(write, (read, *read_row))
+            self.assertEqual(power.stale_rankings(self.db), [2022, 2023])
+        finally:
+            # The other tests read the published seasons: this one leaves 2025 alone behind, on the earlier national teams.
+            x("DELETE FROM agg.level_runs WHERE season_id = 2023")
+            x("DELETE FROM agg.power_runs WHERE season_id IN (2022, 2023, 2024)")
+            x("DELETE FROM core.teams WHERE id = %s", (team,))
+            power.refresh_elo(self.db)
+            power.refresh_players(self.db, 2025)
+        self.assertEqual(power.stale_rankings(self.db), [])
+        self.assertEqual((x(ranking).fetchall(), x(levels).fetchall()), kept)
+
     def test_a_blank_duel_side_reads_like_a_written_zero(self):
         # Issue #71 (calculation audit of 16 November 2026, item 1): a defender's duel attempts are
         # his duels won and lost, added once the blanks have their zeros. The same match is graded
