@@ -1,5 +1,14 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Italy and Greece lost after PR #89 — FAILURE_MODES § 55 (24 November 2026, local fix)
+
+- Goal: production after Deploy 127 ranked 143 nations for 2026/27 (210 expected) and lost « Italie » and « Grèce » from the ranking and `/api/nations`. Branch `claude/selections-drapeau-fusion` (worktree `/home/user/worktrees/selections-fix`, from main b17014d), not pushed.
+- Cause (code): the internationals created « Italy » and « Greece »; `identity.nation_twins` merged the flagged OpenLigaDB rows into them and `merge_teams` did not carry `is_national`; `cups._team` re-armed only `team_identity`. Also found (55j): during a pending merge the Elo run stopped on `team_power_pkey`.
+- Fix: a merge carries the flag (never onto a PitchAPI team); `curated.national_teams` repairs a merge that lost it; a new team re-arms `national_teams` and `team_identity`; each Elo run keeps its national set (`power.NATION_SET`, count + md5) in `agg.nation_elo_runs` and `elo_due` reruns once when it changes; the national pass's teams are written as nations even before their flag; migration 170 (two columns, re-arms both scopes), reviewed in the restore guard. Names unchanged.
+- Checked on PostgreSQL 18.4: § 55 tests 6/6 red before the code, green after; eight targeted files 236/236; national E2E identical to the reference (210 ranked, Gibraltar 52nd/54 and 188th, ρ 0.988, clubs identical). Evidence: `elo-selections/implementation/EVIDENCE.md` « Correctif Italie / Grèce (24 novembre) ».
+- After deploy: 170 re-arms both scopes; the worker's next daily pass (within the hour) flags Italy, Greece and the FIFA members only International Results names, and the Elo reruns in the same pass (the run has no national set).
+- Next action: the user's review and push; then read `/api/rankings/power?kind=nations` and `/api/nations` in production.
+
 ## National-team internationals of 2021/22 to 2025/26 — GitHub #70 / Linear VI-49 (23 November 2026)
 
 - Goal: « the season's other internationals » (friendlies, qualifiers, older Nations Leagues…) collected for 2021/22–2025/26 as for 2026/27, listed on the nation page. Branch `claude/internationaux-historique` (worktree `/home/user/worktrees/internationaux-historique`), pushed, draft PR #89.
