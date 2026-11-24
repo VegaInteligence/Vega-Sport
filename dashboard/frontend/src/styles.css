@@ -123,7 +123,7 @@ button:disabled {
   flex-shrink: 0;
 }
 /* The wordmark « Vega* » with « Sport » underneath, at its own proportions. Under 1120px the
-   mark « V* » alone: with the account button in the header, the wordmark would push a menu
+   asterisk alone: with the account button in the header, the wordmark would push a menu
    under the search field (tests/e2e/brand.e2e.mjs, B11). */
 .brand-logo {
   display: block;
@@ -132,8 +132,8 @@ button:disabled {
 }
 .brand-mark {
   display: none;
-  height: 26px;
-  aspect-ratio: 1049 / 679;
+  height: 28px;
+  aspect-ratio: 285 / 316;
 }
 @media (max-width: 1119px) {
   .brand-logo {

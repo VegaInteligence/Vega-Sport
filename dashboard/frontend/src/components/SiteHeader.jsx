@@ -19,14 +19,14 @@ export default function SiteHeader({ path, href }) {
         aria-label="Vega Sport, vue d’ensemble"
         href={href("/")}
       >
-        {/* The wordmark with « Sport » underneath; where the menus need the room, the mark
-            « V* » (styles.css shows one of the two). */}
+        {/* The wordmark with « Sport » underneath; where the menus need the room, the
+            asterisk alone (styles.css shows one of the two). */}
         <StatarenaLogo className="brand-logo" width={75} height={40} />
         <StatarenaLogo
           layout="symbol"
           className="brand-mark"
-          width={40}
-          height={26}
+          width={25}
+          height={28}
         />
       </Link>
       <HeaderMenus path={path} href={href} />
