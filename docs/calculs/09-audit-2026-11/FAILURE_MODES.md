@@ -4642,6 +4642,11 @@ lendemain), 1 sur 26 à Lorient. Deux causes.
   maximale du focus (200 × 18 × 2 = 7 200 requêtes par jour) reste sous le quart de ce que le lecteur peut demander.
   L'étalement de 59ah est inchangé : un club qui ne joue pas dans les 7 jours se remplit au fil de la semaine.
 
+- **59ao Le compteur « renseignés » (choix de hugo, 24 Nov 2026 : « Blessures lues seulement »).** Un membre compte comme
+  lu dès que ses blessures ont une lecture acceptée de 45 jours au plus, quelles que soient ses suspensions ; `asOf` est
+  la plus ancienne de ces lectures de blessures. Les suspensions affichées et leur fraîcheur ne changent pas (59y, 59aa).
+  Attendus : le PSG du 24 Nov au soir, ses blessures lues et ses suspensions pas encore, n'affiche plus « 0 / 25 ».
+
 ### 59.Hypothèses non vérifiées
 
 - **H1** Aucune suspension EN COURS n'a été observée (sonde du 2026-11-24, fichier `07-…`) : on suppose qu'elle a la forme

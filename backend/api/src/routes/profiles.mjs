@@ -612,8 +612,13 @@ export function createProfileRoute(read) {
       const [[team], [squad], rows] = await Promise.all([
         read(`SELECT team_id FROM api.team_keys WHERE team_id=api.internal_id('team',$1)`, args),
         read(
-          `SELECT count(*)::int AS players, count(*) FILTER (WHERE is_read)::int AS read, min(read_on)::text AS as_of
-           FROM api.team_absence_players WHERE team_key=api.internal_id('team',$1)`,
+          // A member counts as read when his injuries were read 45 days ago at most (api.team_absence_players' window),
+          // whatever his suspensions (59ao, hugo on 24 Nov 2026: the card shows the injured first; the suspensions, new,
+          // were read over a week and left the counter at 0 beside two injured players).
+          `SELECT count(*)::int AS players, count(*) FILTER (WHERE fresh)::int AS read,
+             min(injuries_read_at::date) FILTER (WHERE fresh)::text AS as_of
+           FROM (SELECT injuries_read_at, (injuries_read_at >= current_date - 45) IS TRUE AS fresh
+                 FROM api.team_absence_players WHERE team_key=api.internal_id('team',$1)) s`,
           args,
         ),
         read(
@@ -628,7 +633,7 @@ export function createProfileRoute(read) {
       if (!team) reject(404, "Donnée indisponible.");
       return respond(req, {
         id: absences[1],
-        // The oldest read of the squad's read players; a member never read (or read too long ago) is unknown, not available.
+        // The oldest injuries read of the squad's read players; a member never read (or read too long ago) is unknown, not available.
         asOf: squad.as_of ?? null,
         squad: { players: squad.players, read: squad.read },
         absences: rows.map((r) => ({
