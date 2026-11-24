@@ -139,13 +139,6 @@ html[data-theme-switching] *::after {
 [data-theme="light"] .logo-light {
   display: block;
 }
-.topbar-actions {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-shrink: 0;
-}
 .theme-toggle {
   display: grid;
   place-items: center;

@@ -7,6 +7,15 @@
 - Fix (`services/team-absences.js` only): `absenceView` gives a usable `asOf` (the answer's when valid, else the latest `readAt` of the absences shown, else today UTC), so the scale, the return distances and the marks share one reference; `absenceScale` falls back to today on an empty or invalid day and skips invalid returns; `returnDistance` is null on an invalid day. No text added on screen; backend and contract unchanged.
 - Tests first (`tests/club-missing-render.test.mjs`, 6 cases incl. a server render of `AbsenceBoard` on PSG's answer): red 4/6 (RangeError), then green; site suite 1017/1017.
 
+## Header: the asterisk alone at the top left, no menu under the search — #109 (24 November 2026, merged, #114; live and verified)
+
+- Goal (the owner): no menu cut or hidden under the search between the phone layout and 1120 px, the header 56 px tall, 44 px tap targets on touch; then (« Moi de base je voulais juste qu'en haut à gauche ça soit un asterisk c'est tout ») the asterisk alone at the top left at every width.
+- Built: the menus never shrink, only the search gives way (a field down to 200 px; its icon from 641 to 919 px, opening in the menus' place); « Accueil » from 641 to 760 px (`short` in navigation.js, also the tab bar's); 44 px tap areas on touch from 641 px; the header draws and loads the asterisk alone, the wordmark stays in the footer. Mock-up https://claude.ai/artifact/94j8SKxg1yhPMhFuTD25fC validated (« Yes, implement »).
+- Tests first: `tests/e2e/header.e2e.mjs` (new), brand.e2e.mjs B1, B2, B11; red on the old header, then green.
+- 24 Nov, 17:47 UTC: PR #114 squash-merged (d1325a8). Verified on https://vegasport.vercel.app: header E2E 37/37, brand E2E 55/55, the asterisk alone at 1840 px in both themes. Evidence: the PR's and the issue's last comments; local files in `/home/romai/Agents/scratch/vega-header-menus-20261124/` (EVIDENCE.md).
+- Not checked: the signed-in header, real touch devices, Safari.
+- Next action: none here.
+
 ## The Ballon d'Or race on the Score Vega v9.1 with the three criteria, stage 1 — #105, FAILURE_MODES § 60 (24 November 2026, branch `claude/project-thread-314siw`)
 
 - Goal (hugo: « le classement BO est le score v9 + une fine tuning sur les 3 façons de juger un joueur au ballon d'or », 60 / 30 / 10): the race computed and stored beside the v8 race, served by new reads; the v8 race, `agg.player_award_ranking`, `/api/rankings/power?kind=players` and the site unchanged. The club part stays in the individual part (the owner's decision card).

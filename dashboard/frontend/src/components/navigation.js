@@ -11,9 +11,10 @@ const link = (key, label) => ({
   label: label || page(key).title,
 });
 
-/** The sections, in reading order. A section with `items` is a menu. */
+/** The sections, in reading order. A section with `items` is a menu; `short` is its name
+ * where room is short (the phone's tab bar, the header under 761px). */
 export const SECTIONS = [
-  { ...link("overview"), key: "overview", icon: "home" },
+  { ...link("overview"), key: "overview", icon: "home", short: "Accueil" },
   {
     key: "competitions",
     label: "Compétitions",

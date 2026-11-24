@@ -88,7 +88,7 @@ export default function TabBar({ path, href }) {
               href={href(item.path)}
             >
               <NavIcon name={item.icon} size={21} />
-              <span>{item.key === "overview" ? "Accueil" : item.label}</span>
+              <span>{item.short || item.label}</span>
             </Link>
           ),
         ])}
