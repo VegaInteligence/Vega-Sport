@@ -1,7 +1,6 @@
 "use client";
-// /compte (VI-38): what both mock-up directions share (AccountLetter « Lettre », AccountDiptych « Diptyque »): the
-// page's state and actions (useAccountPage), and the controls that are the same in both: the theme, the country, the
-// competitions' picker, the password, the export and the deletion. Each direction lays them out its own way.
+// /compte (VI-38, docs/COMPTES_SITE.md section 10): the page's state and actions (useAccountPage) and its controls: the
+// theme, the country, the competitions' picker, the password, the export and the deletion. AccountLetter lays them out.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import HomeCountryMenu from "./HomeCountryMenu.jsx";
@@ -12,7 +11,8 @@ import { accountSyncOn } from "../services/account-switch.js";
 import { authClient } from "../services/auth-client.js";
 import { eraseAccount, exportAccount, signOut } from "../services/account-state.js";
 import { ACCOUNT_PATH, signInHref } from "../services/account-links.js";
-import { authErrorMessage, deletionMessage, planLabel, syncLabel } from "../services/account-messages.js";
+import { authErrorMessage, deletionMessage, planLabel } from "../services/account-messages.js";
+import { favouriteGroups, hasPassword, syncNote } from "../services/account-page.js";
 import { accountSummary } from "../services/account-summary.js";
 import { menuCountries } from "../services/home-country.js";
 import { applyTheme, THEME_EVENT } from "../services/local-preferences.js";
@@ -27,15 +27,6 @@ export const SECTIONS = [
   ["parametres", "Paramètres"],
   ["securite", "Sécurité"],
 ];
-const GROUPS = [
-  ["clubs", "Clubs"],
-  ["players", "Joueurs"],
-  ["nations", "Nations"],
-];
-/** Favourites shown per kind before « Afficher les N autres ». */
-const PER_GROUP = 6;
-/** Sync states that need no word on the page: it works, or is about to. */
-const QUIET = new Set(["idle", "syncing", "synced"]);
 
 function download(data) {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -65,10 +56,7 @@ function useTheme() {
   return [theme, choose];
 }
 
-/**
- * Whether the account signs in with a password: Better Auth's list-accounts (through /api/auth) holds a "credential"
- * account. null while unknown or out of reach: the password action then stays hidden (a Google-only account has none).
- */
+/** C2: whether the account signs in with a password (Better Auth's list-accounts, through /api/auth); null while unknown. */
 function usePassword(ready) {
   const [has, setHas] = useState(null);
   useEffect(() => {
@@ -77,8 +65,8 @@ function usePassword(ready) {
     (async () => {
       try {
         const client = await authClient();
-        const { data } = (await client?.listAccounts()) ?? {};
-        if (live && Array.isArray(data)) setHas(data.some((account) => account?.providerId === "credential"));
+        const answer = await client?.listAccounts();
+        if (live) setHas(hasPassword(answer));
       } catch {}
     })();
     return () => {
@@ -102,7 +90,7 @@ function useCompetitions(f) {
   }, [f.manifest, f.competitions, f.preferences.favoriteLeagueIds]);
 }
 
-/** Everything /compte reads and does, for either direction. */
+/** Everything /compte reads and does. */
 export function useAccountPage() {
   const account = useAccount();
   const router = useRouter();
@@ -118,18 +106,10 @@ export function useAccountPage() {
     const timer = window.setTimeout(() => setContract(currentContract()), 1200);
     return () => window.clearTimeout(timer);
   }, [account.status, account.sync, f.preferences]);
-  // Every favourite, grouped by kind; a long group shows its first PER_GROUP until asked for the rest.
+  // C4: every favourite, grouped by kind; a long group shows its first ones until asked for the rest.
   const [opened, setOpened] = useState(() => new Set());
   const summary = useMemo(() => accountSummary(contract, { shown: Infinity }), [contract]);
-  const groups = useMemo(
-    () =>
-      GROUPS.map(([kind, label]) => {
-        const every = summary.favourites.filter((entry) => entry.kind === kind);
-        const entries = opened.has(kind) ? every : every.slice(0, PER_GROUP);
-        return { kind, label, entries, more: every.length - entries.length };
-      }).filter((group) => group.entries.length),
-    [summary.favourites, opened],
-  );
+  const groups = useMemo(() => favouriteGroups(summary.favourites, opened), [summary.favourites, opened]);
   const competitions = useCompetitions(f);
 
   // Signed out on arrival: to /connexion and back. Signed out from here (this page or the header's menu): home.
@@ -153,8 +133,6 @@ export function useAccountPage() {
     router.replace("/");
   }
 
-  const syncState = sync ? account.sync.state : "unavailable";
-  const label = syncLabel(sync ? account.sync : { state: "unavailable" });
   return {
     f,
     ready,
@@ -163,10 +141,9 @@ export function useAccountPage() {
     email: account.user?.email || "",
     name: account.user?.name || "",
     plan: planLabel(account.level),
-    syncState,
-    // Said only when the sync does not work: « Synchronisation en échec », « arrêtée », « indisponible ».
-    syncNote: QUIET.has(syncState) ? null : { text: `Synchronisation ${label.text.toLocaleLowerCase("fr")}`, detail: label.detail },
-    summary,
+    syncState: sync ? account.sync.state : "unavailable",
+    // C3: said only when the sync does not work.
+    syncNote: syncNote(account.sync, sync),
     groups,
     competitions,
     showAll: (kind) => setOpened((now) => new Set(now).add(kind)),
@@ -182,9 +159,9 @@ export function useAccountPage() {
 }
 
 /** The sync's state when it does not work, else an empty marker (data-state: the E2E reads it). */
-export function SyncNote({ page, className = "" }) {
+export function SyncNote({ page }) {
   return (
-    <div className={`account-syncblock ${className}`.trim()} data-state={page.syncState} aria-live="polite">
+    <div className="account-syncblock" data-state={page.syncState} aria-live="polite">
       {page.syncNote && (
         <p className="account-sync-note">
           {page.syncNote.text}
@@ -431,20 +408,43 @@ export function DeleteAction({ page, className = "" }) {
   );
 }
 
-/** The sections' anchors: #parametres from the header's menu, followed once the session is read. */
+/** How long a section is held in place while the page above it is still loading (C1). */
+const HOLD_MS = 2000;
+const RELEASE = ["wheel", "touchstart", "keydown", "pointerdown"];
+
+/**
+ * The sections' anchors (C1): the address's hash once the session is read, a hashchange, or the header's menu when
+ * already on /compte (its event names the section, "" for the top). A section is held under the header while the
+ * content above it grows, until the reader moves or HOLD_MS passes.
+ */
 export function useSectionHash(ready, onSection) {
   const latest = useRef(onSection);
   latest.current = onSection;
   useEffect(() => {
     if (!ready) return undefined;
-    const go = () => {
-      const id = window.location.hash.slice(1);
-      latest.current(SECTIONS.some(([key]) => key === id) ? id : null);
+    let release = () => {};
+    const go = (event) => {
+      release();
+      const asked = event?.type === "vega:account-section" ? event.detail : window.location.hash.slice(1);
+      const id = SECTIONS.some(([key]) => key === asked) ? asked : null;
+      latest.current(id);
+      if (!id || typeof ResizeObserver !== "function") return;
+      const observer = new ResizeObserver(() => latest.current(id));
+      const timer = setTimeout(() => release(), HOLD_MS);
+      release = () => {
+        observer.disconnect();
+        clearTimeout(timer);
+        RELEASE.forEach((name) => window.removeEventListener(name, release, true));
+        release = () => {};
+      };
+      observer.observe(document.body);
+      RELEASE.forEach((name) => window.addEventListener(name, release, { capture: true, passive: true }));
     };
     go();
     window.addEventListener("hashchange", go);
     window.addEventListener("vega:account-section", go);
     return () => {
+      release();
       window.removeEventListener("hashchange", go);
       window.removeEventListener("vega:account-section", go);
     };

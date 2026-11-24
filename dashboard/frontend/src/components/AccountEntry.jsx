@@ -81,10 +81,10 @@ function AccountMenu({ account, here }) {
   const blur = (event) => {
     if (!unsaved && event.relatedTarget && !root.current?.contains(event.relatedTarget)) setOpen(false);
   };
-  // Already on /compte: Next changes the address without a hashchange, so the page is told.
-  const go = () => {
+  // Already on /compte: Next changes the address without a hashchange, so the page is told where to go (C1).
+  const go = (section) => () => {
     close();
-    if (here) setTimeout(() => window.dispatchEvent(new Event("vega:account-section")), 0);
+    if (here) setTimeout(() => window.dispatchEvent(new CustomEvent("vega:account-section", { detail: section })), 0);
   };
 
   async function out(force = false) {
@@ -123,10 +123,10 @@ function AccountMenu({ account, here }) {
             <span className="account-menu-plan">{planLabel(account.level)}</span>
           </p>
           <nav className="account-menu-links" aria-label="Mon compte">
-            <Link href={ACCOUNT_PATH} onClick={go}>
+            <Link href={ACCOUNT_PATH} onClick={go("")}>
               Mon compte
             </Link>
-            <Link href={`${ACCOUNT_PATH}#parametres`} onClick={go}>
+            <Link href={`${ACCOUNT_PATH}#parametres`} onClick={go("parametres")}>
               Paramètres
             </Link>
           </nav>

@@ -135,7 +135,6 @@ html[data-theme="light"] {
   background: var(--surface-hover);
   color: var(--ink-strong);
 }
-.account-entry-in[aria-current="page"],
 .account-entry-in[data-current] {
   border-color: var(--account-cta);
   color: var(--ink-strong);
@@ -170,8 +169,7 @@ html[data-theme="light"] {
     display: block;
   }
   .account-entry-in,
-  .account-entry-in[aria-current="page"],
-.account-entry-in[data-current] {
+  .account-entry-in[data-current] {
     justify-content: center;
     padding: 0;
     border-color: transparent;
@@ -678,7 +676,7 @@ html[data-theme="light"] {
   }
 }
 
-/* /compte: what both directions share. One serif title, text actions, no frame. */
+/* /compte « Lettre » (docs/COMPTES_SITE.md section 10): one serif title, text actions, no frame. */
 .account {
   --account-col: 600px;
   color: var(--ink);
@@ -818,7 +816,7 @@ html[data-theme="light"] {
   min-width: 240px;
 }
 
-/* A « Lettre »: one column, the title, then favourites, settings and security, read down the page. */
+/* One column: the title, then favourites, settings and security, read down the page. */
 .account-lettre {
   width: min(100%, var(--account-col));
   margin: 0 auto;
@@ -860,9 +858,7 @@ html[data-theme="light"] {
   margin-top: 112px;
   scroll-margin-top: calc(var(--header-h) + 48px);
 }
-.lettre-section > h2,
-.diptyque-group > h2,
-.diptyque-rows dt {
+.lettre-section > h2 {
   display: flex;
   align-items: baseline;
   gap: 16px;
@@ -871,8 +867,6 @@ html[data-theme="light"] {
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-}
-.lettre-section > h2 {
   margin-bottom: 36px;
 }
 .lettre-group + .lettre-group {
@@ -935,9 +929,7 @@ html[data-theme="light"] {
   font-weight: 400;
 }
 .lettre-quiet,
-.diptyque-quiet,
-.lettre-rows dd.lettre-quiet,
-.diptyque-rows dd.diptyque-quiet {
+.lettre-rows dd.lettre-quiet {
   color: var(--muted);
 }
 .lettre-empty {
@@ -959,173 +951,12 @@ html[data-theme="light"] {
   color: var(--ink-strong);
 }
 .lettre-actions,
-.lettre-actions .account-data,
-.diptyque-actions,
-.diptyque-actions .account-data {
+.lettre-actions .account-data {
   display: grid;
   gap: 22px;
   justify-items: start;
 }
 
-/* B « Diptyque »: /connexion's composition, the night panel beside the content. */
-.workspace.account-page-b {
-  padding: 0;
-}
-/* The panel runs down to the footer's line. */
-.app-shell:has(.account-page-b) .site-footer {
-  margin-top: 0;
-}
-.account-diptyque {
-  display: grid;
-  grid-template-columns: minmax(380px, 5fr) minmax(0, 7fr);
-  min-height: calc(100vh - var(--header-h));
-}
-.diptyque-panel {
-  background: var(--vega-night);
-  color: var(--vega-ivory);
-}
-/* Dark theme: the night is close to the page; a hairline keeps the two leaves apart. */
-html[data-theme="dark"] .diptyque-panel {
-  border-right: 1px solid var(--border);
-}
-.diptyque-who {
-  position: sticky;
-  top: var(--header-h);
-  padding: 88px clamp(32px, 4.4vw, 72px) 64px;
-}
-.diptyque-title {
-  color: var(--vega-ivory);
-  font-family: var(--account-serif);
-  font-size: clamp(56px, 5vw, 72px);
-  font-weight: 500;
-  letter-spacing: -0.02em;
-  line-height: 1;
-}
-.diptyque-address {
-  margin-top: 30px;
-  color: var(--vega-ivory);
-  font-size: 15px;
-  overflow-wrap: anywhere;
-}
-.diptyque-plan {
-  margin-top: 4px;
-  color: rgb(244 241 234 / 0.56);
-  font-size: 14px;
-}
-.diptyque-sync .account-sync-note,
-.diptyque-who .account-unsaved {
-  color: #e8c995;
-}
-.diptyque-who .account-link {
-  color: var(--vega-ivory);
-  text-decoration-color: rgb(244 241 234 / 0.4);
-}
-.diptyque-signout {
-  margin-top: 44px;
-  color: rgb(244 241 234 / 0.72);
-  font-size: 14px;
-  font-weight: 400;
-  text-decoration-color: rgb(244 241 234 / 0.28);
-}
-.diptyque-signout:hover {
-  color: var(--vega-ivory);
-}
-.diptyque-content {
-  width: 100%;
-  max-width: 760px;
-  padding: 72px clamp(32px, 6vw, 96px) 144px;
-}
-.research-tabs.diptyque-tabs {
-  margin-top: 0;
-  margin-bottom: 52px;
-}
-.diptyque-tabs button {
-  font-size: 15px;
-}
-.diptyque-group + .diptyque-group {
-  margin-top: 52px;
-}
-.diptyque-group > h2 {
-  margin-bottom: 24px;
-}
-.diptyque-group > h2 .account-link {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 400;
-  letter-spacing: 0;
-  text-transform: none;
-  text-decoration-color: transparent;
-}
-.diptyque-group > h2 .account-link:hover {
-  color: var(--ink-strong);
-  text-decoration-color: currentColor;
-}
-/* The favourites as a wall: crest or portrait, the name under it. */
-.diptyque-wall {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-  gap: 32px 8px;
-}
-.diptyque-wall li > a,
-.diptyque-wall li > span {
-  display: grid;
-  justify-items: center;
-  gap: 12px;
-  color: var(--ink);
-  font-size: 13px;
-  line-height: 1.35;
-  text-align: center;
-}
-.diptyque-wall li > a:hover {
-  color: var(--ink-strong);
-}
-.diptyque-wall li > a > span:last-child,
-.diptyque-wall li > span > span:last-child {
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-.diptyque-more {
-  margin-top: 24px;
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 400;
-}
-.diptyque-browse {
-  display: flex;
-  gap: 24px;
-}
-.diptyque-rows {
-  display: grid;
-  gap: 40px;
-}
-.diptyque-rows > div {
-  display: grid;
-  gap: 14px;
-}
-.diptyque-rows dd {
-  color: var(--ink-strong);
-  font-size: 17px;
-}
-
-@media (max-width: 900px) {
-  .account-diptyque {
-    grid-template-columns: minmax(0, 1fr);
-    min-height: 0;
-  }
-  .diptyque-who {
-    position: static;
-    padding: 48px var(--page-gutter) 32px;
-  }
-  .diptyque-signout {
-    margin-top: 28px;
-  }
-  .diptyque-content {
-    max-width: none;
-    padding: 28px var(--page-gutter) 96px;
-  }
-}
 @media (max-width: 640px) {
   .account-lettre {
     padding: 56px 0 112px;
@@ -1155,24 +986,5 @@ html[data-theme="dark"] .diptyque-panel {
   }
   .account-form .account-actions {
     justify-content: flex-start;
-  }
-  .diptyque-who {
-    padding: 36px var(--page-gutter) 28px;
-  }
-  .diptyque-title {
-    font-size: 44px;
-  }
-  .diptyque-address {
-    margin-top: 20px;
-  }
-  .diptyque-signout {
-    margin-top: 20px;
-  }
-  .research-tabs.diptyque-tabs {
-    margin-bottom: 36px;
-  }
-  .diptyque-wall {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 26px 8px;
   }
 }

@@ -1,9 +1,10 @@
 "use client";
-// /compte, direction A « Lettre » (VI-38 mock-up): one narrow column read from top to bottom, like a letter. The one
-// title in the logo's letters, who is signed in on one line, then the favourites in the same letters (the person's
-// own content), the settings and the security in the site's text. No tab, no frame, no icon.
+// /compte « Lettre » (VI-38, docs/COMPTES_SITE.md section 10): one narrow column read from top to bottom, like a
+// letter. The one title in the logo's letters, who is signed in on one line, then the favourites in the same letters
+// (the person's own content), the settings and the security in the site's text. No tab, no frame, no icon.
 import Link from "next/link";
 import { Media } from "./UI.jsx";
+import { moreLabel } from "../services/account-page.js";
 import {
   CompetitionsChoice,
   CountryChoice,
@@ -65,7 +66,7 @@ export default function AccountLetter({ page }) {
             </ul>
             {group.more > 0 && (
               <button className="account-link lettre-more" type="button" onClick={() => page.showAll(group.kind)}>
-                Afficher les {group.more} autres
+                {moreLabel(group.more)}
               </button>
             )}
           </div>
@@ -122,7 +123,7 @@ export default function AccountLetter({ page }) {
             <dd className="lettre-quiet">Français</dd>
           </div>
           <div>
-            <dt id="lettre-pays">Pays</dt>
+            <dt>Pays</dt>
             <dd>
               <CountryChoice page={page} />
             </dd>
