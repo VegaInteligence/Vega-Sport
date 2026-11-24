@@ -1590,7 +1590,11 @@ class ModelsTest(unittest.TestCase):
             spreads = self.award_run()[7]
             self.assertEqual((spreads["collective_scale"]["k"], spreads["collective_scale"]["source"]), (0.0, "none"))
             self.assertTrue(all(r["z_collective"] == 0 for r in self.award_rows().values()))
-            self.assertEqual(spreads["individual"], own["individual"])  # its own spreads otherwise, as before
+            # Its own spreads otherwise, as before: refresh measures them on the stored individual parts (agg.player_award.individual,
+            # a `real`), the run built from the ranking on its float values, so they agree to the `real`'s precision whatever ran before.
+            self.assertEqual(len(spreads["individual"]), len(own["individual"]))
+            for got, kept in zip(spreads["individual"], own["individual"]):
+                self.assertAlmostEqual(got, kept, places=6)
             self.assertEqual(award.stale(self.db), [])  # no reference run to take: not listed (no loop)
             reference = {**own, "collective_scale": {**own["collective_scale"], "k": 3.0}}
             x("""INSERT INTO agg.award_runs(season_id, version, status, started_at, finished_at, reference_season, players, settings, spreads)
@@ -1625,6 +1629,57 @@ class ModelsTest(unittest.TestCase):
         # award.refresh reads no match: it keeps the fact.
         award.refresh(self.db, 2025)
         self.assertEqual(self.award_run()[7]["national_cups"], {"counted": True, "held": ["ENG", "ESP", "FRA", "GER", "ITA"]})
+
+    def test_60au_refresh_leaves_a_run_of_another_version_to_the_ranking(self):
+        from vega import award
+
+        x = self.db.execute
+        before = self.award_run()
+        honours = self.honours()
+        try:
+            x("UPDATE agg.award_runs SET version = 'vega-award-v1' WHERE id = %s", (before[0],))
+            self.assertEqual(award.stale(self.db), [2025])
+            self.assertEqual(award.refresh(self.db, 2025), 0)
+            after = self.award_run()
+            self.assertEqual((after[0], after[1]), (before[0], "vega-award-v1"))  # nothing stored under v1.1's name
+            self.assertEqual(self.honours(), honours)
+            self.assertEqual(award.stale(self.db), [2025])  # left to the next ranking's run, which reads the honours again
+        finally:
+            x("UPDATE agg.award_runs SET version = %s WHERE season_id = 2025 AND status = 'published'", (award.AWARD_VERSION,))
+        self.assertEqual(award.stale(self.db), [])
+
+    def test_60av_a_placed_year_never_keeps_its_reference_s_national_cups(self):
+        from psycopg.types.json import Jsonb
+        from vega import award
+        from vega.store import Store
+
+        x = self.db.execute
+        with self.db.transaction():
+            Store(self.db).season("2026/2027")
+        own = self.award_run()[7]
+        fact = {"counted": False, "held": ["GER"]}
+        theirs = {"counted": True, "held": ["ENG", "ESP", "FRA", "GER", "ITA"]}
+        reference = {**own, "national_cups": theirs}
+        try:
+            x("""INSERT INTO agg.award_runs(season_id, version, status, started_at, finished_at, reference_season, players, settings, spreads)
+                 VALUES (2026, %s, 'published', clock_timestamp(), clock_timestamp(), 2026, 5, %s, %s)""",
+              (award.AWARD_VERSION, Jsonb(award.settings()), Jsonb(reference)))
+            x("""UPDATE agg.award_runs SET reference_season = 2026, spreads = spreads - 'national_cups'
+                 WHERE season_id = 2025 AND status = 'published'""")
+            award.refresh(self.db, 2025)
+            spreads = self.award_run()[7]
+            self.assertEqual(spreads["collective_scale"]["source"], "reference")  # placed on 2026
+            self.assertNotIn("national_cups", spreads)  # its own run had none: 2026's is not its fact
+            x("UPDATE agg.award_runs SET spreads = spreads || %s WHERE season_id = 2025 AND status = 'published'",
+              (Jsonb({"national_cups": fact}),))
+            award.refresh(self.db, 2025)
+            self.assertEqual(self.award_run()[7]["national_cups"], fact)  # its own fact kept
+        finally:
+            x("DELETE FROM agg.award_runs WHERE season_id = 2026")
+            x("UPDATE agg.award_runs SET reference_season = 2025 WHERE season_id = 2025 AND status = 'published'")
+            award.reread(self.db, 2025)
+        self.assertEqual(self.award_run()[7]["collective_scale"]["source"], "own")
+        self.assertEqual(award.stale(self.db), [])
 
     @classmethod
     def tearDownClass(cls):
