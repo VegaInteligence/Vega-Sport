@@ -107,7 +107,7 @@ Forwarded, exactly: `POST /api/account/session`, `GET|PUT /api/account/preferenc
 | O4 | `?next=` sends the person to another site (open redirect) or to a script URL. | Only a same-origin path: starts with one `/`, not `//` or `/\`, no scheme, no control characters, at most 512 characters, and not `/connexion` itself; anything else gives `/`. |
 | O5 | Sign-in errors are cryptic. | Plain French: wrong address or password, account already exists, password too short (8), invalid address, too many attempts, service unreachable. Never the address in a URL or a log. |
 | O6 | The header jumps when the state arrives. | The entry has a fixed size from the first paint (an empty slot of the same size while unknown). |
-| O7 | Google sign-in breaks. | `signIn.social({ provider: "google", callbackURL })` with a same-origin callback; an error is shown in plain words. Against the local stand-in Google is not configured: only the error path is exercised here. |
+| O7 | Google sign-in breaks. | `signIn.social({ provider: "google", callbackURL, errorCallbackURL })` with same-origin URLs; an error is shown in plain words (the return: section 9). Against the local stand-in Google is not configured: only the error path is exercised here. |
 | O8 | Export or deletion fails silently. | « Exporter mes données » downloads `vega-account-export.json` from `GET /account/export`. « Supprimer mon compte » asks to type « SUPPRIMER »; `503 DELETION_UNAVAILABLE` and `409 SUBSCRIPTION_ACTIVE` are told in plain words, nothing is signed out; success signs out and empties the stores. |
 | O9 | An address, a token or an account id ends in analytics, logs, URLs or error reports. | None in a URL (`/compte` takes no parameter, `?next=` only a path), no `console` line carries them, the adapter's errors carry the API's code and message only. Vercel Analytics sees URLs only. |
 | O10 | The CSP blocks the flow. | Everything is same-origin (`/api/auth`, `/api/account`); Google's sign-in is a top-level navigation, which `connect-src` does not govern. No CSP change. |
@@ -154,6 +154,26 @@ settings these steps are written for: verification required, by code, a code sen
 | R11 | A step loses the address, or keeps a password longer than needed. | « Retour » gives « Connexion » with the address kept. The password survives only from sign-up or sign-in to the confirmation that follows (R6); codes and passwords are cleared on every other change of step and after success. |
 | R12 | Reloading a step leaves a half state. | Steps live in memory: a reload shows « Connexion ». Only `?mode=creer` and `?mode=oubli` open another step. |
 | R13 | A step has no title, no focus, or says nothing to a screen reader. | Each step has its `h1` and focuses its first empty field; errors are `role="alert"`, « Code envoyé » is `role="status"`. Google's button and « ou » show only on « Connexion » and « Créer un compte ». |
+
+## 9. The return from Google (`tests/account-return.test.mjs`, E2E phase `on`)
+
+Google's sign-in leaves the site: the browser goes to Neon, then Google, then Neon's callback, which sends it back
+to the site. A refusal on the way (Neon or Google) used to end on Neon's own error page, and a return whose session
+could not be opened showed the page signed out without a word (24 November 2026, the owner's report).
+
+| # | What can go wrong | Expected outcome |
+| --- | --- | --- |
+| G1 | Neon or Google refuses the sign-in and the person lands on Neon's error page, off the site. | `signIn.social` gets `errorCallbackURL`: the site's absolute `/connexion` with the same `next` (Neon resolves a relative path against its own host). `callbackURL` is unchanged (the site's origin + `next`). |
+| G2 | `/connexion?error=<code>` shows nothing, or shows the raw code alone. | One plain French sentence in the usual error place (`role="alert"`): `account_not_linked` says the address already has an account with a password never confirmed: sign in with it and confirm the address first; `access_denied` says the Google step was cancelled or refused; any other code gets the generic sentence followed by the code in parentheses, so it can be reported. |
+| G3 | The code in the address carries text meant to be shown (an address, a script, a long string). | Only a code of letters, digits, `_` and `-`, 64 characters at most, is ever shown; anything else reads as the generic sentence alone. `error_description` is never shown. |
+| G4 | The error stays in the address: a reload or a shared link shows it again. | Read once on arrival, then `error` and `error_description` are removed from the address; `next` and every other parameter are kept. |
+| G5 | The return carries `neon_auth_session_verifier` but the session cannot be opened (Neon answers 400, or no user): the page shows « Se connecter » without a word. | The session read finds no user while the verifier is in the address: the person is sent to `/connexion?error=<the code get-session answered, else session_not_opened>&next=<the page, without the verifier>` (the address replaced, not pushed). |
+| G6 | A return with a verifier is never read because this browser holds no hint (W6). | The verifier in the address counts as a reason to read the session, like a forced read; without a verifier the hint rule is unchanged (no read without the hint, nothing more read). |
+| G7 | G5 throws, loops or leaves the site. | `refreshSession()` still never throws; `next` follows O4 (a path of this site, never `/connexion`); `/connexion` carries no verifier, so it cannot send itself again. |
+
+What the stand-in cannot show: Neon's real refusals on the way back (its codes are Better Auth's: `account_not_linked`,
+`state_mismatch`, `please_restart_the_process`…) and a real verifier. The E2E opens `/connexion?error=…` as Neon would
+send it, and returns with a verifier the stand-in does not know (it answers no session, as Neon's 400 does).
 
 ## Not covered here
 
