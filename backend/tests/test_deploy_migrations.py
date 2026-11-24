@@ -45,7 +45,7 @@ ADDED = ["155_player_grade_status.sql", "156_team_side_corrections.sql", "157_pa
          # #82: Score Vega v9, the players' level beside the ranking (new tables and two reads).
          "167_player_level.sql",
          # #70 / VI-49 (§50): the nations' world ranking and the national Elo's run settings.
-         "163_nation_world_ranking.sql"]
+         "168_nation_world_ranking.sql"]
 # SportScore editions: A, a rank shared at different points (a version already kept); B, rank 5 in a table of two (no
 # version yet); C, a table that holds (its version kept).
 A, B, C = 9601, 9602, 9603

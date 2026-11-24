@@ -4029,7 +4029,7 @@ METHOD_VERSION do not change.
   League parser reads the file's `neutral` column, as the tournaments' parser does.
 - **Versioning.** `METHOD_VERSION` is not raised: it names the player ranking, and `stale_rankings` would re-rank every
   past player season. The Elo run records `nation_elo_version` (`nations-elo-v1`), `nation_k`, `nation_start` and
-  `nation_seed_edition` (`agg.power_runs`, migration 163); `elo_due` is true while the last published Elo run has
+  `nation_seed_edition` (`agg.power_runs`, migration 168); `elo_due` is true while the last published Elo run has
   another `nation_elo_version` (one run after the deployment).
 
 ### 50.2 Failure modes and expected outcomes
