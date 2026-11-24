@@ -1,5 +1,15 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Score Vega v9 in service — [VI-53](https://linear.app/vegainteligence/issue/VI-53), GitHub #82 (24 November 2026, stage 1 built, not merged)
+
+- Goal (user, 24 Nov): the v9 « qui prend tout en compte » goes into service, then every player of every season since 2021 is computed with it. No v8.1.
+- User decisions: ψ = 10; retention stays (five blocks); support-striker case removed (one price list for the attack); defence block in context, stabilised scale, talent bounded at ± 2.0 (23 Nov). The Ballon d'Or race stays: v9 score adjusted by three criteria, 60 % individual / 30 % collective and trophies / 10 % class and fair play, a separate ticket. Match grades keep their calculation.
+- Stage 1 (this branch, `claude/project-thread-314siw`): the level is computed beside the v8 by `power.refresh_players` (`backend/vega/level.py`, migration 167, `agg.level_runs`, `agg.player_level*`), read by `/api/rankings/level` and `/api/rankings/level/player`. v8 outputs, `METHOD_VERSION` and the site unchanged. Note: [docs/calculs/10-score-vega-v9/02-mise-en-service.md](docs/calculs/10-score-vega-v9/02-mise-en-service.md); rules and cases: FAILURE_MODES § 49.
+- Order: `stale_rankings` lists the years whose level is missing or older than the year before's, oldest first, after the v8's own years; a partial award year has no level.
+- Checked (tests first, seen red): `test_level.py` 18 formulas, `test_models.py` two E2E on PostgreSQL 18, `test_award_year_2020_order.py`, API contract test. Evidence outside the repository (`/mnt/project-files/vega-score-v9/level/EVIDENCE.md`). Long runs go on the user's Mac (his answer of 24 Nov).
+- Not verified: the port against production data (the module set like `study17.py` must return `study17_run1.txt`'s figures; needs a read-only diagnose task on AWS and the user's approval). `E = 9.1` is the four-block value, provisional for five blocks.
+- Next action: the user's go for merge and deploy (nothing is merged or deployed without it); then the comparison v8 / v9 per season since 2021, stage 2 (switch of the public ranking, mock-up first, nine positions instead of seven roles) and the Ballon d'Or criteria ticket.
+
 ## Match page and « Direct » view — [VI-47](https://linear.app/vegainteligence/issue/VI-47), GitHub #68 (23 November 2026, in progress)
 
 - Goal: the « Page match » lot of the 20 Nov Discord plan plus a live view of a match. The user handles the live data provider; the page is built on the existing live contract (`/live/config`, `/live/matches/{id}`).
@@ -94,7 +104,6 @@
   - Validation vs v8 (paired, ×1e5 per match): +71 ± 27 on 13,641 matches of 2025/2026, −27 ± 50 on the 3,315 test matches. Market value at equal club level: 0.14 → 0.24. Not shown to predict better on the test.
   - Side finding for the forecast owner: lineup-v1's E = 45 mixes team form in; the club's usual-eleven sum of own rates is worth 23.8 ± 1.7 Elo per sd (test gain 0.0088 per match).
   - Diagnose task revisions 427–437 were registered for these runs (read-only scripts); one duplicate task was stopped.
-- Next action: the user decides ψ and whether retention stays; then build v9 beside v8 (no replacement) and a private comparison page.
 - User input (20 Nov, after the proposal): one grade per position per player, season level = minutes-weighted mean of the position levels; a base position, a second one acquired after some minutes, one-off positions not judged; an outfield player in goal not counted; fix the support striker "with maths"; simulate it.
 - Simulated read-only the same evening (three runs, `~/Agents/scratch/vega-score-sim-20261120/study10*.py`, results in § 11 of the proposal). Design after a Fable review: eight roles (winger / central attacking midfielder split on the slot's place 4–6 in rows 8–9), acquisition at 450 minutes over two seasons, non-acquired matches dropped, talent pooled across a player's positions (covariance measured: neighbours 0.70–0.88, distant 0.20–0.78), front-two forwards read on six style shares by a two-class mixture and judged as a central attacking midfielder for their probability of being the support striker.
 - Results at club weight 24: per-position reading barely moves the top (Yamal, Olise, Kane, Rice, Mbappé within one rank); Griezmann v8 16 → proposal 295 → 847 of 3,881 (566 at weight 10); Julián Álvarez 59 → 148 (48 % support, a borderline case). Check: next-season block rates at an acquired second position are predicted better than by the main-role reading (squared error +0.160 ± 0.024, 634 players); market-value and year-to-year agreement unchanged.
@@ -107,7 +116,7 @@
   - Defence block (Massiré Sylla, Union SG, 3rd): it measures activity, worth its price for centre-backs within about ±2 sd; context alone does not move him. The user chose (23 Nov) the base (duels repaired, expectations in context, stabilised scale) plus the defence talent bounded at ±2.0 sd: Sylla 31st at ψ 24, 18th at ψ 10. Written as § 12 of the proposal; nothing in service.
   - Duel attempts were added before the blanks had their zeros (calculation audit item 1, handed to VI-21, unresolved): fixed in `power.py` on the user's decision, [#71](https://github.com/VegaInteligence/Vega-Sport/issues/71) / [VI-50](https://linear.app/vegainteligence/issue/VI-50), takeover recorded on VI-21. Tests first (RED then GREEN, PostgreSQL 18). `METHOD_VERSION` unchanged: past seasons are not ranked again by themselves, to decide at merge.
   - Open: 3. Liga holds zeros instead of statistics since October 2026 (data fault); the stabilised scale and the bound are untested on creation and progression, whose extremes are heavier; a national-team Elo with friendlies (#70) would ask for the World Cup ψ again.
-- Next action: the user reviews the PR of branch `claude/project-thread-314siw` (duels fix + § 12), then decides ψ (10 / 24 / 36), whether retention stays, and whether the support-striker case is dropped. Then build v9 beside v8 and a private comparison page (mock-up first).
+- 23–24 Nov: the PR of the duels fix and § 12 was merged (#72) and the user decided ψ, retention and the support-striker case. The build is the section « Score Vega v9 in service » at the top.
 
 ## Navigation review — 20 November 2026
 
