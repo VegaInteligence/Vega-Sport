@@ -1,5 +1,16 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## « Mon compte » « Lettre », made shippable — VI-38 (24 November 2026, same branch `claude/vi-38-compte-feuille-blanche`, local, not pushed)
+
+- The owner chose A « Lettre ». Direction B (`AccountDiptych.jsx` and its CSS), the `?piste=` switch and `DEFAULT_PISTE` were removed, along with the dead account CSS.
+- Failure modes first: docs/COMPTES_SITE.md section 10, C1–C8 (anchors, password row, sync line, favourites 6 per kind, empty state, menu, sign-out, delete and export). Competitions sit with the favourites; the default-season and home-priority controls are not shown.
+- Tests before the code: `tests/account-page.test.mjs` (9, red: module missing) and E2E section 10 in phase `on`. Red on the mock-up code: C1b (« Mon compte » on /compte stayed at 1072 px), C1c (a direct `#securite` landed at 147 px), C4 (« Afficher les 1 autres »), and C5 spacing (0 px). Already green, because the mock-up predated them: C1a, C2, C3, C6a–d, C6f, C7. Two test bugs were fixed before the code: C5's trailing slash, and C6e tapping the title under the phone's menu.
+- Code: `services/account-page.js` (hasPassword, syncNote, favouriteGroups, moreLabel). The menu's event names its section, and a section is held under the header while the page loads (2 s at most, released when the reader moves). « Afficher l’autre ». The competitions are 40 px under « Aucun favori. ».
+- Checks: site suite 1026/1026. Accounts E2E 102/102: on 62 (after the fixes), verify 25, nosync 4, off 11. Evidence: …/scratchpad/vi38fb/e2e-final, e2e-final-on2.
+- Captures: `/mnt/project-files/vi-38-comptes/captures-lettre-final/`.
+- Not verified: real Neon Auth, Google, Safari, real touch devices. In dark mode, the Ligue 1 and Premier League logos are hard to see across the whole site.
+- Next action: the coordinator pushes and opens the PR.
+
 ## « Mon compte » from a blank sheet: two directions — VI-38 (24 November 2026, mock-up, branch `claude/vi-38-compte-feuille-blanche` from origin/main cb56e51, local, not pushed)
 
 - Goal (the owner, after refusing passes 1 and 2 of `claude/vi-38-profil-parametres`): start again from a blank sheet; a simple, épuré, elegant `/compte` holding the account and the settings, reached from a header menu (« Mon compte » → top, « Paramètres » → `#parametres`). Two directions built as code, captured, for him to pick one.
