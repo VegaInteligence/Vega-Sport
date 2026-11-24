@@ -1,5 +1,12 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Legal pages « Confidentialité » and « Conditions d’utilisation » — phase 1 of 2 (24 November 2026, branch `claude/pages-legales` from main 5433b48, local, not pushed)
+
+- Goal (hugo): two public French pages Google asks for before it publishes the OAuth app « Vega Sport », both linked in the footer. Phase 1: structure, design, footer, tests, placeholder text; phase 2: the reviewed text.
+- Decisions: routes `/confidentialite` and `/conditions-utilisation`, the bare form canonical, `/x/` → 308 → `/x` as every route (no `trailingSlash`). Static pages outside the data providers and the account switch (`STATIC_PAGES`, route-data.js): the server's HTML holds the whole text, prerendered (○) by the build. `LegalPage` view (night banner with `AccountArt`, Garamond title with the logo's asterisk, « En bref », sticky Sommaire marking the section in view, a bar under the header on a phone), `Legal.jsx` (`LegalField`, `LegalTable`, `LegalAsterisk`), text in `src/content/legal-privacy.jsx` / `legal-terms.jsx`, the owner's facts in `src/content/legal-identity.js` (all null: « [À compléter : …] » and the « Version provisoire » line), `src/legal.css`. Footer: third column « Informations », plain links (no season/focus query).
+- Tests first: `tests/e2e/legal-pages.e2e.mjs` red on main 5/33, then 33/33 on `next dev` and on `next start` (replay API, accounts off); `not-found-route.test.mjs` updated first (red: no `STATIC_PAGES`), suite 998/998; build OK. Evidence …/scratchpad/pages-legales/evidence/. Captures /mnt/project-files/pages-legales/captures/.
+- Not pushed: the owner's go is needed (captures to judge, then phase 2's text). Next: integrate the reviewed text, fill legal-identity.js with the owner's answers.
+
 ## The strip's pre-match forecast, no score — #69 (24 November 2026, branch `claude/accueil-bandeau-pronostics` from main a6b0cd5, local, not pushed)
 
 - Goal (hugo: « dans le bandeau du haut il me faut les prédictions de victoire etc mais ne met pas les scores »): every tick not finished shows the win probabilities (home / draw / away) and no score of any kind (live score removed); results unchanged; no API change.

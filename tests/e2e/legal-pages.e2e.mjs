@@ -31,7 +31,8 @@
 //     tinted background); while one is shown, the line « Version provisoire : les champs entre
 //     crochets restent à compléter. » ([data-legal-provisional]) is under the banner.
 //  X1 No page error and no console error on the legal pages, apart from network failures of third
-//     party scripts a local server cannot reach (recorded in the evidence, not judged).
+//     party scripts a local server cannot reach, and Vercel's analytics scripts (/_vercel/), which
+//     `next start` does not serve (recorded in the evidence, not judged).
 //
 // Run against a local front or the public site:
 //   node tests/e2e/legal-pages.e2e.mjs <base url> <evidence dir>
@@ -78,8 +79,9 @@ async function open(viewport, label) {
   page.on("console", (m) => {
     if (m.type() !== "error") return;
     const text = m.text();
-    // A resource a local server cannot reach (analytics, the API's images): recorded, not judged.
-    if (/^Failed to load resource/.test(text)) network.push(`${label}: ${text.slice(0, 200)}`);
+    // A resource a local server cannot reach or does not serve (the API's images, Vercel's analytics
+    // scripts under /_vercel/, which only Vercel serves): recorded, not judged.
+    if (/^Failed to load resource/.test(text) || /\/_vercel\//.test(text)) network.push(`${label}: ${text.slice(0, 200)}`);
     else consoleLog.push(`${label} console: ${text.slice(0, 300)}`);
   });
   return page;
