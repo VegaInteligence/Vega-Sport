@@ -569,9 +569,10 @@ class Worker:
         # Every season's player ranking is of the present method: a season the rules above leave
         # out (no match in 400 days, an archive season) is ranked again, its ranking alone, most
         # recent first and STALE_RANKINGS a pass. Without player statistics it is a quick, empty run.
-        # After them come the years whose level (Score Vega v9.1) is missing, of another version or
-        # other settings, or older than the year before's, oldest first (power.stale_rankings): a
-        # year's level reads the year before's.
+        # After them come, oldest first (power.stale_rankings), the years whose level (Score Vega v9.1)
+        # is missing, of another version or other settings, or older than the year before's (a
+        # year's level reads the year before's), and the years whose ranking read another national
+        # Elo than the one the step above published (§56).
         from . import power
 
         _, stale = self._daily_step(("stale rankings",), now, lambda: power.stale_rankings(self.calc_conn))

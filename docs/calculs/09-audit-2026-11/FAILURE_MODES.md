@@ -4285,3 +4285,69 @@ bridge and projection). 55g: `test_deploy_migrations.py`. All on a disposable Po
 | 55h | An internationals edition naming « Montenegro » for a row « Monténégro » that has that International Results key | the same row, its name « Monténégro » (50n) |
 | 55j | The pass that creates « Italy » while « Italie » (national) is not merged yet: the Elo of that pass | published, no error; « Italy » in scope `nations` only, never also a club row |
 | 55i | The national E2E (51n) | 210 nations for 2026/27, Gibraltar 52nd of 54 and 188th, Spearman 0.988, clubs identical |
+
+## 56. A year that read another national Elo is ranked again (issue #93; user decision of 24 Nov 2026, written before the tests)
+
+Production on 24 Nov 2026. Deploy 128 (#91, §54) restarted the worker: the Elo was redone at 10:15 UTC, without Italy
+and Greece (§55), and the six award years 2021 to 2026 were ranked again from 10:18 to 10:47 UTC, v8 ranking and
+level together, on that Elo. Deploy 129 (#92) repairs the national teams and the Elo runs once more. The year in
+progress is then ranked by the daily pass; nothing ranks the past years again.
+
+Read in the code (main 29002bc):
+- `power.PLAYER_MATCHES` reads each player-match's `own_elo` and `opponent_elo` from `agg.team_elo` (LEFT JOIN) and
+  `core.teams.is_national`. A national match without its Elo rows has `delta` 0 and no team level
+  (`refresh_players`).
+- `power.stale_rankings` lists a year for `METHOD_VERSION`, the partial years (§47, §48), then `level.stale` (§49,
+  §54: the level's version, its settings, a level older than the year before's). None looks at the Elo.
+- `worker.elo_due` (§53, §55) runs the Elo again « without re-ranking the players » (168's own words).
+- Measured on production, the level alone, the first 200 rows of each year: no player outside goal and full-back moves
+  by more than 0.1 point between the two national Elos. Not measured: the v8 ranking, the players beyond.
+
+Decided by the user (24 Nov 2026, the card « Reclasser les saisons passées quand l'Elo des sélections change ? »):
+« À chaque changement des sélections ». Not chosen: once after the repair; never.
+
+### 56.1 Rules
+
+- **The national Elo a ranking read.** The Elo run a published player ranking read is the last Elo run, published or
+  superseded, finished at or before the ranking's `started_at` (`refresh_players` takes that time before its read;
+  the worker runs one step at a time). What that run was is its row of `agg.nation_elo_runs` (§53, §55): `version`,
+  `national_teams`, `national_teams_md5`. No row, or a row without the national set, is a value of its own (a run from
+  before 168, from before 170).
+- **A year that read another one is listed.** `power.stale_rankings` lists a year whose published ranking has
+  players (`players > 0`) and whose three values differ from the published Elo run's (`IS DISTINCT FROM`, each
+  value). The national teams are the user's decision; the version is listed with them, since a run of another
+  national method is another Elo in the same way. No bound on the year: a year without player statistics
+  publishes no player and is never listed (the archive seasons, a partial award year).
+- **Nothing to compare, nothing listed.** No published Elo run: no year. Neither run has a row (a base from before
+  168): equal, no year.
+- **The same Elo again lists nothing.** The daily Elo run of a pass with a due season reads the same national
+  teams: its row equals the superseded run's, and no year is listed. A year is listed once per change.
+- **Oldest first, with the level's years.** These years join `level.stale`'s, one list, oldest first, after the
+  years of another method (most recent first, as before): a year's level reads the year before's (§49). A year
+  listed twice is ranked once.
+- **Ranked as a whole.** The worker calls `power.refresh_players` (§49): the v8 ranking, the level, the match
+  grades and the award race of the year, as for a change of method. Its new run started after the Elo: not listed
+  again.
+- **In the pass that redoes the Elo.** In `Worker.daily` the Elo step comes before the stale rankings: the years
+  are ranked in the same pass, `STALE_RANKINGS` at most. An Elo step that fails leaves the published run as it
+  was: nothing is listed until it succeeds, and the rankings made meanwhile on the old Elo are listed after it.
+- **Not changed.** `worker.elo_due`, `refresh_elo`, `NATION_ELO_VERSION`, `METHOD_VERSION`, `LEVEL_VERSION`, the
+  level's settings, `level.stale`, the shape of `agg.power_runs` (§53). No migration: the rule reads 168's and
+  170's columns.
+
+### 56.2 Failure modes and expected outcomes
+
+56a–56h: `backend/tests/test_models.py`, the synthetic league and its real ranking of 88 players. 56i:
+`backend/tests/test_collection_wakeups.py`, the real `Worker.daily`. All on a disposable PostgreSQL 18.
+
+| # | Situation | Expected |
+|---|---|---|
+| 56a | A year ranked, then a team marked national and the Elo run again (`refresh_elo`) | the year is listed |
+| 56b | That year ranked again (`refresh_players`) | not listed; the ranking and the level are the earlier ones (the team has no match) |
+| 56c | The Elo run again with the same national teams | nothing listed |
+| 56d | The run a ranking read has a row without the national set (before 170), the published run has its set: production after #92 | the year is listed |
+| 56e | The run a ranking read has no row (before 168), the published run has one | the year is listed |
+| 56f | The run a ranking read is of another national version, same national teams | the year is listed |
+| 56g | Neither run has a row; no published Elo run at all | nothing listed |
+| 56h | Two years with players that read another national Elo, one without players (`players = 0`), and a year of an older method | the year of the older method first, then the two years oldest first; the year without players is not listed |
+| 56i | `Worker.daily`: a year ranked with players, a team marked national, the next pass; then one more pass | the first pass publishes one Elo run then one new ranking run of the year; the second publishes neither |

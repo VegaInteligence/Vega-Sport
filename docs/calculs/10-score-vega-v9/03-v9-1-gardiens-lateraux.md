@@ -1,6 +1,6 @@
 # Score Vega v9.1 : gardiens et latéraux
 
-**Statut : choix de l'utilisateur du 24 novembre 2026, ticket [#90](https://github.com/VegaInteligence/Vega-Sport/issues/90).** Version `score-vega-v9.1`. Le classement public reste `power-ranking-v8` et le site n'affiche pas le niveau : rien ne change pour le visiteur. Les règles et les cas d'échec sont dans [FAILURE_MODES § 54](../09-audit-2026-11/FAILURE_MODES.md).
+**Statut : choix de l'utilisateur du 24 novembre 2026, ticket [#90](https://github.com/VegaInteligence/Vega-Sport/issues/90).** Version `score-vega-v9.1`, en production depuis le 24 novembre 2026 (PR #91, Deploy 128 ; chiffres réels au § 4.1). Le classement public reste `power-ranking-v8` et le site n'affiche pas le niveau : rien ne change pour le visiteur. Les règles et les cas d'échec sont dans [FAILURE_MODES § 54](../09-audit-2026-11/FAILURE_MODES.md).
 
 ## 1. Pourquoi
 
@@ -79,6 +79,25 @@ Dans les 100 premiers des joueurs de référence masculins (lignes de la mesure,
 | Latéraux, référence fixe et − 1,05 (simulation, à un ou deux près) | 14 | 10 | 10 | 10 | 8 | 12 |
 
 45 à 66 joueurs sont à moins d'un point de la 100ᵉ place selon la saison : ces comptes bougent de quelques unités pour peu de chose. Les chiffres réels se liront après le recalcul. Ils incluront aussi le nouvel Elo des sélections (#89), que le recalcul de chaque saison relit : une partie de l'écart entre v9 et v9.1 viendra de là.
+
+### 4.1 Chiffres réels en production
+
+Lus sur l'API de production le 24 novembre, après le recalcul des six saisons (de 10:18 à 10:47 UTC), parmi les 100 premiers joueurs de référence :
+
+| | 2021/22 | 2022/23 | 2023/24 | 2024/25 | 2025/26 | 2026/27 |
+| --- | --- | --- | --- | --- | --- | --- |
+| Gardiens, v9 | 0 | 0 | 0 | 36 | 9 | 11 |
+| Gardiens, v9.1 | 0 | 0 | 0 | 10 | 10 | 13 |
+| Latéraux, v9 | 18 | 15 | 12 | 8 | 9 | 16 |
+| Latéraux, v9.1 | 14 | 11 | 10 | 11 | 8 | 12 |
+
+- Les latéraux sont à un près de la simulation. Les gardiens de 2025/2026 et de 2026/2027 sont un et deux de plus que la ligne « référence fixe » : leur valeur ne change pas (0 à + 0,1 point), la baisse des latéraux libère des places.
+- En 2024/2025, les gardiens des 200 premières lignes perdent 8,6 points en moyenne (2,6 à 13,9). Le premier, Yéhvann Diouf, passe de la 1ʳᵉ place (35,9) à la 35ᵉ (22,0).
+- De 2021/2022 à 2023/2024, les gardiens sortent avec un rang provisoire, raison `keeper_data` ; le premier de 2021/2022 est 200ᵉ.
+- Les latéraux des 200 premières lignes perdent 0,91 à 1,01 point en moyenne selon la saison.
+- Hors gardiens et latéraux, aucun joueur des 200 premières lignes ne bouge de plus de 0,1 point, sauf 26 joueurs qui ont une part de leurs minutes au poste de latéral, à hauteur de cette part. Le changement d'Elo des sélections entre les deux calculs pèse donc 0,1 point au plus sur le niveau de ces joueurs.
+
+Ce recalcul a lu l'Elo des sélections de 10:15 UTC, où l'Italie et la Grèce manquaient (FAILURE_MODES § 55). Depuis le § 56 (ticket #93), une année dont le classement a lu un autre Elo des sélections que celui en service est reclassée : ces six saisons le seront après l'Elo corrigé, et le tableau sera relu.
 
 ## 5. Ce qui reste ouvert
 

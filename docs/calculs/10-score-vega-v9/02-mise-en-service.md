@@ -55,7 +55,7 @@ La méthode est celle de la [proposition](01-proposition.md) (§§ 4, 11 et 12),
 
 ## 5. Ordre de calcul des saisons
 
-Le niveau d'une année lit celui de l'année d'avant. `power.stale_rankings` liste donc, après les années que le v8 doit refaire, celles dont le niveau manque ou est plus ancien que celui de l'année précédente, la plus ancienne d'abord. Au premier déploiement la passe quotidienne calcule ainsi 2021, 2022, …, puis l'année en cours (calculée une première fois sans l'année d'avant, puis refaite), en quelques passes, vingt années au plus par passe. Calculer le niveau d'une année refait aussi son classement v8, avec les mêmes valeurs.
+Le niveau d'une année lit celui de l'année d'avant. `power.stale_rankings` liste donc, après les années que le v8 doit refaire, celles dont le niveau manque ou est plus ancien que celui de l'année précédente, la plus ancienne d'abord. Au premier déploiement la passe quotidienne calcule ainsi 2021, 2022, …, puis l'année en cours (calculée une première fois sans l'année d'avant, puis refaite), en quelques passes, vingt années au plus par passe. Calculer le niveau d'une année refait aussi son classement v8, avec les mêmes valeurs. Depuis le 24 novembre 2026 (FAILURE_MODES § 56, ticket #93), la même liste porte les années dont le classement a lu un autre Elo des sélections que celui en service : quand la liste des sélections change, l'Elo est refait puis ces années sont reclassées, classement v8 et niveau, la plus ancienne d'abord.
 
 Une année dont le niveau est d'une autre version que `LEVEL_VERSION`, ou calculé avec d'autres réglages que ceux du code (`agg.level_runs.settings`, clé manquante comprise), est listée aussi : après le déploiement du v9.1, toutes les années sont refaites, la plus ancienne d'abord.
 
