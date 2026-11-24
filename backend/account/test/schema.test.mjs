@@ -7,13 +7,14 @@
 // group roles are created empty to check that they hold nothing on the schema.
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import pg from "pg";
+import { migrations } from "./support.mjs";
 
 const DSN = process.env.VEGA_V2_ACCOUNT_TEST_DSN;
 const skip = !DSN && "requires VEGA_V2_ACCOUNT_TEST_DSN (local vega_v2_account_test)";
-const MIGRATION = readFileSync(new URL("../sql/001_accounts.sql", import.meta.url), "utf8");
-const TABLES = ["accounts", "preferences", "follows", "lists", "list_entries", "stripe_customers", "subscriptions", "stripe_events"];
+// Every file of sql/, in order: what a deployment applies (001 the tables, 002 the account API's additions).
+const MIGRATION = migrations().map((m) => m.sql).join("\n");
+const TABLES = ["accounts", "preferences", "follows", "lists", "list_entries", "stripe_customers", "subscriptions", "stripe_events", "erasures"];
 const OTHERS = ["vega_read", "vega_collect", "vega_calc"];
 let db;
 
@@ -27,7 +28,7 @@ before(async () => {
   await db.query("DROP SCHEMA IF EXISTS account CASCADE");
   for (const role of OTHERS) await db.query(`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${role}') THEN CREATE ROLE ${role} NOLOGIN; END IF; END $$`);
   await db.query("BEGIN");
-  await db.query(MIGRATION);
+  for (const file of migrations()) await db.query(file.sql);
   await db.query("COMMIT");
 });
 after(() => db?.end());
@@ -107,11 +108,11 @@ test("S3: deleting an account erases every row that names it", { skip }, async (
     assert.equal(await one(`SELECT count(*)::int FROM account.${table} WHERE account_id = $1`, [id]), 0, table);
   assert.equal(await one("SELECT count(*)::int FROM account.list_entries"), 1); // the other account's entry stays
   assert.equal(await one("SELECT count(*)::int FROM account.follows WHERE account_id = $1", [other]), 1);
-  // Every table but the list of handled events hangs from an account.
+  // Every table but the list of handled events and the erasures (S16) hangs from an account.
   const hanging = await rows(
     "SELECT c.relname FROM pg_constraint k JOIN pg_class c ON c.oid = k.conrelid WHERE k.contype = 'f' AND k.confdeltype = 'c' AND c.relnamespace = 'account'::regnamespace",
   );
-  assert.deepEqual([...new Set(hanging.map((r) => r.relname))].sort(), TABLES.filter((t) => !["accounts", "stripe_events"].includes(t)).sort());
+  assert.deepEqual([...new Set(hanging.map((r) => r.relname))].sort(), TABLES.filter((t) => !["accounts", "stripe_events", "erasures"].includes(t)).sort());
 });
 
 test("S4: a subscription's level is 2 or 3, its status one Stripe knows", { skip }, async () => {
@@ -272,4 +273,27 @@ test("S14: favourite clubs and players have one source, the lists; follows hold 
     await rows("SELECT e.kind, e.entity_id FROM account.list_entries e JOIN account.lists l USING (list_id) WHERE l.account_id = $1 AND e.kind IN ('clubs', 'players') ORDER BY e.kind", [id]),
     [{ kind: "clubs", entity_id: "t_abc123" }, { kind: "players", entity_id: "p_abc123" }],
   );
+});
+
+test("S15: the followed competitions keep their order, bounded like the contract", { skip }, async () => {
+  const id = await account("s15");
+  const follow = "INSERT INTO account.follows (account_id, kind, entity_id, position) VALUES ($1, 'competition', $2, $3)";
+  await db.query(follow, [id, "l_Z", 0]);
+  await db.query(follow, [id, "l_A", 1]);
+  await db.query(follow, [id, "l_M", 199]);
+  for (const bad of [-1, 200]) await refused(follow, [id, "l_B", bad], CHECK);
+  assert.deepEqual((await rows("SELECT entity_id FROM account.follows WHERE account_id = $1 ORDER BY position", [id])).map((r) => r.entity_id), ["l_Z", "l_A", "l_M"]);
+  assert.equal(await one("SELECT position FROM account.follows WHERE account_id = $1 AND entity_id = 'l_Z'", [id]), 0);
+});
+
+test("S16: an erasure outlives the account row, holds the id and the instant, and the account role can write it", { skip }, async () => {
+  const id = await account("s16");
+  await as("vega_account", async () => {
+    await db.query("INSERT INTO account.erasures (account_id) VALUES ($1)", [id]);
+    await db.query("DELETE FROM account.accounts WHERE account_id = $1", [id]);
+  });
+  assert.equal(await one("SELECT count(*)::int FROM account.erasures WHERE account_id = $1 AND erased_at <= now()", [id]), 1);
+  await refused("INSERT INTO account.erasures (account_id) VALUES ($1)", [id], UNIQUE);
+  await refused("INSERT INTO account.erasures (account_id) VALUES ($1)", ["a b"], CHECK);
+  for (const role of OTHERS) assert.equal(await one("SELECT has_table_privilege($1, 'account.erasures', 'SELECT')", [role]), false, role);
 });
