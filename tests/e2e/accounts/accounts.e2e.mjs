@@ -503,14 +503,15 @@ try {
       await open(page, `/connexion?next=%2Fclubs&error=${encodeURIComponent(code)}&error_description=State+not+found`);
       const text = await page.locator(".signin-error").textContent({ timeout: 30000 });
       const search = await until(async () => {
-        const value = new URL(page.url()).search;
-        return value.includes("error") ? null : value;
+        // The site adds its own `season` to the address: only next and the error's absence are read.
+        const query = new URL(page.url()).searchParams;
+        return query.has("error") || query.has("error_description") ? null : query.get("next");
       }, { timeout: 10000 });
       return { text, search };
     };
     {
       const linked = await errorReturn(A.page, "account_not_linked");
-      record("G2a", "account_not_linked: sign in with the password and confirm the address first", { text: "…mot de passe…confirm…", search: "?next=%2Fclubs" }, linked, /mot de passe/.test(linked.text) && /confirm/.test(linked.text) && linked.search === "?next=%2Fclubs");
+      record("G2a", "account_not_linked: sign in with the password and confirm the address first", { text: "…mot de passe…confirm…", search: "/clubs" }, linked, /mot de passe/.test(linked.text) && /confirm/.test(linked.text) && linked.search === "/clubs");
       await shot(A.page, "10-google-account-not-linked.png");
       const denied = await errorReturn(A.page, "access_denied");
       record("G2b", "access_denied: the Google step was cancelled or refused", "…Google…annulée…", denied.text, /Google/.test(denied.text) && /annulée|refusée/.test(denied.text));
@@ -518,7 +519,7 @@ try {
       record("G2c", "any other code: the generic sentence, the code in parentheses", "…(state_mismatch)", other.text, /Google/.test(other.text) && /\(state_mismatch\)$/.test(other.text) && !/State not found/.test(other.text));
       const dirty = await errorReturn(A.page, "<b>lea@example.test</b>");
       record("G3", "a code that is not clean is never shown", "the generic sentence alone", dirty.text, !/[<@(]|example/.test(dirty.text) && /Google/.test(dirty.text));
-      record("G4", "the error leaves the address, next stays", "?next=%2Fclubs", other.search, other.search === "?next=%2Fclubs");
+      record("G4", "the error leaves the address, next stays", "/clubs", other.search, other.search === "/clubs");
     }
     // G5 / G6: a return with a verifier the session cannot be opened with, in a browser without the hint.
     {
