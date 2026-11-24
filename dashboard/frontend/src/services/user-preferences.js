@@ -378,6 +378,20 @@ export function connectPreferences(next) {
 }
 
 /**
+ * The browser's contract now, as the sync reads it (the stores, the theme, the preferred competition): the one reader
+ * for the account screen (first sign-in merge). null while the stores are not loaded. Reads only: no load, no save.
+ */
+export function currentContract() {
+  if (!bridge) return null;
+  try {
+    const value = bridge.read();
+    return value == null ? null : canonical(value);
+  } catch {
+    return null;
+  }
+}
+
+/**
  * VI-38, sign-out: the stores go back to « nothing chosen », so the next person on this browser does not inherit the
  * account's lists. `keep`: contract keys left as this browser has them (default: the theme, the device's look).
  * Only once signed out, after setPreferencesSync(null): with an adapter set nothing is written and false is returned,
