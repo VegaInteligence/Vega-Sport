@@ -6,7 +6,7 @@ import { ArrowRight } from "lucide-react";
 import AccountArt from "../components/AccountArt.jsx";
 import LegalShell from "../components/LegalShell.jsx";
 import LegalToc from "../components/LegalToc.jsx";
-import { LegalAsterisk } from "../components/Legal.jsx";
+import { LegalAsterisk, frenchText, typeset } from "../components/Legal.jsx";
 import { missingLegalFields } from "../content/legal-identity.js";
 
 const SITE = "https://vegasport.vercel.app";
@@ -20,27 +20,48 @@ const dateLabel = (iso) =>
 
 /** The page's metadata: title, description, canonical (the bare address, the one given to Google). */
 export function legalMetadata(page) {
+  const title = frenchText(page.title),
+    description = frenchText(page.description);
   return {
-    title: page.title,
-    description: page.description,
+    title,
+    description,
     alternates: { canonical: page.path },
     openGraph: {
-      title: page.title,
-      description: page.description,
+      title,
+      description,
       url: `${SITE}${page.path}`,
       type: "article",
     },
   };
 }
 
-export default function LegalPage({ page }) {
+export default function LegalPage({ page: source }) {
+  // The text as written in src/content, set in French typography (Legal.jsx).
+  const page = {
+    ...source,
+    title: frenchText(source.title),
+    intro: typeset(source.intro),
+    sibling: { ...source.sibling, title: frenchText(source.sibling.title) },
+    facts: (source.facts || []).map((fact) => ({
+      ...fact,
+      label: frenchText(fact.label),
+      value: frenchText(fact.value),
+    })),
+    sections: source.sections.map((section) => ({
+      ...section,
+      title: frenchText(section.title),
+      short: section.short && frenchText(section.short),
+      body: typeset(section.body),
+    })),
+  };
   const numbers = new Map(
     page.sections.map((section, index) => [section.id, index + 1]),
   );
   const items = page.sections.map((section) => ({
     id: section.id,
     number: numbers.get(section.id),
-    title: section.title,
+    // The Sommaire takes the short form of a long title.
+    title: section.short || section.title,
   }));
   const provisional = missingLegalFields().length > 0;
   return (
@@ -53,6 +74,7 @@ export default function LegalPage({ page }) {
               {page.title}
               <LegalAsterisk />
             </h1>
+            {page.intro && <p className="legal-intro">{page.intro}</p>}
             <p className="legal-meta">
               <span>
                 Mise à jour le{" "}
@@ -72,12 +94,15 @@ export default function LegalPage({ page }) {
           </p>
         )}
 
-        {page.facts?.length > 0 && (
+        {page.facts.length > 0 && (
           <section className="legal-facts" aria-labelledby="legal-facts-title">
             <h2 id="legal-facts-title" className="legal-facts-title">
               En bref
             </h2>
-            <ul>
+            <ul
+              data-count={page.facts.length}
+              style={{ "--facts": page.facts.length }}
+            >
               {page.facts.map(({ icon: Glyph, label, value, section }) => (
                 <li key={label}>
                   <a href={`#${section}`}>

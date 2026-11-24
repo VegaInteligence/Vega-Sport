@@ -75,7 +75,7 @@ export default function LegalToc({ items }) {
         <span className="legal-toc-toggle-label">Sommaire</span>
         <span className="legal-toc-toggle-current">
           <span className="legal-num">{current?.number}</span>
-          {current?.title}
+          <span className="legal-toc-toggle-title">{current?.title}</span>
         </span>
         <ChevronDown size={18} strokeWidth={1.8} aria-hidden="true" />
       </button>
