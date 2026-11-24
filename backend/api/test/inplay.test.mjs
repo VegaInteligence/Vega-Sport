@@ -2,7 +2,7 @@
 // (backend/tests/test_inplay.py checks the same numbers with the Python functions).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { outcome, poisson, rates, remaining, timeline, lateShare } from "../../../dashboard/shared/inplay.js";
+import { outcome, poisson, rates, remaining, timeline, lateShare, extraRemaining, EXTRA_SHARE } from "../../../dashboard/shared/inplay.js";
 
 const MODEL = { profile: [0.13, 0.14, 0.18, 0.16, 0.16, 0.16, 0.07], down: 0.6, up: 1.7 };
 const RHO = -0.03;
@@ -60,4 +60,62 @@ test("the expected goals of each side from the two strengths", () => {
   close(rates(model, 1600, 1500), [Math.exp(0.26 + 0.93 * 0.4), Math.exp(0.32 - 0.91 * 0.4)]);
   close(rates(model, 1600, 1500, true), [Math.exp(0.26 + 0.93 * 0.25), Math.exp(0.32 - 0.91 * 0.25)]);
   assert.ok(Math.abs(poisson(1.3).reduce((a, b) => a + b, 0) - 1) < 1e-12);
+});
+
+// Extra time (issue #68): the timeline carried to the 120th minute when the caller says the
+// match went there (`extra`). Failure modes and expected outcomes, written before the code:
+// 1. Level at the 90th, decided in extra time: the points run 0..120; 0..90 are the regulation
+//    timeline's own; from the 91st the goals still to come are Poisson(λ × EXTRA_SHARE ×
+//    (120 − m) / 30 × the red-card factors × the score factors, all of it "late"), without
+//    the low-score correction; a goal at the 104th counts from the 104th; the 120th is the result.
+// 2. Level at the 120th (a shoot-out): the 120th point is (0, 1, 0), the shoot-out being outside the model.
+// 3. A red card in extra time counts from its minute (95th), not from the 90th.
+// 4. A goal at 90+3 is regulation (stored as minute 90, added 3): it counts at the 90th.
+// 5. Without `extra`, nothing changes: a goal stored at the 105th still counts at the 90th.
+// 6. In play in extra time (the live feed's period): the points stop at the clock, and an event
+//    past the clock counts at the clock, as in regulation.
+// The values are also checked by backend/tests/test_inplay.py (extra time).
+const TILT = { ...MODEL, ahead: 0.85, behind: 1.15 };
+const goal = (minute, side, added = 0) => ({ minute, added, kind: "goal", side });
+const three = (p) => [p.home, p.draw, p.away];
+
+test("extra time: the share of goals still to come after the 90th", () => {
+  close([90, 91, 105, 119, 120].map(extraRemaining), [1 / 3, 0.322222, 1 / 6, 0.011111, 0]);
+  assert.equal(EXTRA_SHARE, 1 / 3);
+});
+
+test("extra time: level at the 90th, decided at the 104th", () => {
+  const regulation = [goal(23, "home"), goal(45, "away", 3)];
+  const points = timeline(1.6, 1.1, [...regulation, goal(104, "home")], TILT, RHO, 120, true);
+  assert.equal(points.length, 121);
+  assert.deepEqual(points.slice(0, 91), timeline(1.6, 1.1, regulation, TILT, RHO));
+  close(three(points[90]), [0.096132, 0.83894, 0.064928]);
+  for (const [minute, want, score] of [[91, [0.306922, 0.499078, 0.194], [1, 1]], [103, [0.218275, 0.6388, 0.142925], [1, 1]],
+    [104, [0.837683, 0.144894, 0.017423], [2, 1]], [119, [0.986251, 0.013653, 0.000096], [2, 1]]]) {
+    close(three(points[minute]), want);
+    assert.deepEqual([points[minute].minute, points[minute].score], [minute, score]);
+  }
+  assert.deepEqual(three(points[120]), [1, 0, 0]);
+  // Level at the 120th: the shoot-out is outside the model.
+  assert.deepEqual(three(timeline(1.6, 1.1, regulation, TILT, RHO, 120, true)[120]), [0, 1, 0]);
+});
+
+test("extra time: a red card counts from its minute, a goal at 90+3 stays in regulation", () => {
+  const red = timeline(1.6, 1.1, [goal(23, "home"), goal(45, "away", 3), { minute: 95, added: 0, kind: "red", side: "away" }], TILT, RHO, 120, true);
+  close(three(red[94]), [0.288057, 0.528252, 0.183692]);
+  close(three(red[95]), [0.468771, 0.447136, 0.084092]);
+  close(three(red[110]), [0.244944, 0.702216, 0.05284]);
+  const late = timeline(1.6, 1.1, [goal(23, "home"), goal(45, "away", 3), goal(90, "home", 3)], TILT, RHO, 120, true);
+  assert.deepEqual([late[89].score, late[90].score, late[91].score], [[1, 1], [2, 1], [2, 1]]);
+  close(three(late[91]), [0.76551, 0.191043, 0.043447]);
+});
+
+test("extra time: without the flag nothing changes, in play it stops at the clock", () => {
+  const events = [goal(23, "home"), goal(105, "away")];
+  const regulation = timeline(1.6, 1.1, events, TILT, RHO);
+  assert.equal(regulation.length, 91);
+  assert.deepEqual(regulation[90].score, [1, 1]);
+  assert.deepEqual(timeline(1.6, 1.1, events, TILT, RHO, 90, false), regulation);
+  const live = timeline(1.6, 1.1, events, TILT, RHO, 100, true);
+  assert.deepEqual([live.length, live.at(-1).minute, live[90].score, live[100].score], [101, 100, [1, 0], [1, 1]]);
 });

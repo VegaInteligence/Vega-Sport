@@ -164,5 +164,56 @@ class StepsTest(unittest.TestCase):
         self.assertEqual((clean["down"], clean["up"]), (1.0, 1.0))
 
 
+class ExtraTimeTest(unittest.TestCase):
+    """Extra time (issue #68), the same failure modes and values as the read API's suite
+    (backend/api/test/inplay.test.mjs): with `extra`, the timeline runs to the 120th; 0..90
+    are the regulation timeline's own; from the 91st the goals to come are Poisson(λ ×
+    EXTRA_SHARE × (120 − m) / 30 × the red-card and score factors, all of it late), without
+    the low-score correction; an extra-time event counts from its minute, a 90+3 goal at the
+    90th; the 120th is the result, level meaning a shoot-out (outside the model); without
+    `extra` nothing changes; in play the points stop at the clock."""
+
+    TILT = {**MODEL, "ahead": 0.85, "behind": 1.15}
+    REGULATION = [(23, 0, "goal", "home"), (45, 3, "goal", "away")]
+
+    def close(self, got, want):
+        for a, b in zip(got, want):
+            self.assertAlmostEqual(a, b, places=6)
+
+    def test_the_share_still_to_come_after_the_90th(self):
+        self.close([inplay.extra_remaining(m) for m in (90, 91, 105, 119, 120)], [1 / 3, 0.322222, 1 / 6, 0.011111, 0.0])
+        self.assertEqual(inplay.EXTRA_SHARE, 1 / 3)
+
+    def test_level_at_the_90th_decided_at_the_104th(self):
+        points = inplay.timeline(1.6, 1.1, self.REGULATION + [(104, 0, "goal", "home")], self.TILT, RHO, 120, extra=True)
+        self.assertEqual(len(points), 121)
+        self.assertEqual(points[:91], inplay.timeline(1.6, 1.1, self.REGULATION, self.TILT, RHO))
+        self.close(points[90][1:4], (0.096132, 0.83894, 0.064928))
+        for minute, want, score in ((91, (0.306922, 0.499078, 0.194), (1, 1)), (103, (0.218275, 0.6388, 0.142925), (1, 1)),
+                                    (104, (0.837683, 0.144894, 0.017423), (2, 1)), (119, (0.986251, 0.013653, 0.000096), (2, 1))):
+            self.close(points[minute][1:4], want)
+            self.assertEqual((points[minute][0], points[minute][4:]), (minute, score))
+        self.assertEqual(points[120][1:4], (1.0, 0.0, 0.0))
+        # Level at the 120th: the shoot-out is outside the model.
+        self.assertEqual(inplay.timeline(1.6, 1.1, self.REGULATION, self.TILT, RHO, 120, extra=True)[120][1:4], (0.0, 1.0, 0.0))
+
+    def test_a_red_card_counts_from_its_minute_a_goal_at_90_3_stays_in_regulation(self):
+        red = inplay.timeline(1.6, 1.1, self.REGULATION + [(95, 0, "red", "away")], self.TILT, RHO, 120, extra=True)
+        self.close(red[94][1:4], (0.288057, 0.528252, 0.183692))
+        self.close(red[95][1:4], (0.468771, 0.447136, 0.084092))
+        self.close(red[110][1:4], (0.244944, 0.702216, 0.05284))
+        late = inplay.timeline(1.6, 1.1, self.REGULATION + [(90, 3, "goal", "home")], self.TILT, RHO, 120, extra=True)
+        self.assertEqual([late[89][4:], late[90][4:], late[91][4:]], [(1, 1), (2, 1), (2, 1)])
+        self.close(late[91][1:4], (0.76551, 0.191043, 0.043447))
+
+    def test_without_the_flag_nothing_changes_in_play_it_stops_at_the_clock(self):
+        events = [(23, 0, "goal", "home"), (105, 0, "goal", "away")]
+        regulation = inplay.timeline(1.6, 1.1, events, self.TILT, RHO)
+        self.assertEqual((len(regulation), regulation[90][4:]), (91, (1, 1)))
+        self.assertEqual(inplay.timeline(1.6, 1.1, events, self.TILT, RHO, 90, extra=False), regulation)
+        live = inplay.timeline(1.6, 1.1, events, self.TILT, RHO, 100, extra=True)
+        self.assertEqual((len(live), live[-1][0], live[90][4:], live[100][4:]), (101, 100, (1, 0), (1, 1)))
+
+
 if __name__ == "__main__":
     unittest.main()

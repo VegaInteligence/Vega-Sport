@@ -1048,7 +1048,7 @@ SELECT s.match_id, s.player_id, s.season_id AS edition, s.team_id, s.minutes_pla
       AND e.event_type = 'goal' AND e.is_penalty AND e.is_own_goal IS NOT TRUE) END AS np_goals,
   s.npxg, s.shots_on_target, s.big_chances_missed, s.assists, s.xa, s.chances_created, s.big_chances_created,
   s.passes_into_final_third, a.progressive_passes, a.progressive_carries, s.dribbles_succeeded, s.dribbles_total,
-  s.tackles, s.interceptions, s.recoveries, s.clearances, s.shot_blocks, s.duels_won, s.duels_won + s.duels_lost AS duels_attempted,
+  s.tackles, s.interceptions, s.recoveries, s.clearances, s.shot_blocks, s.duels_won, s.duels_lost,
   s.aerials_won, s.aerials_total, s.dribbled_past, s.errors_led_to_goal, s.accurate_passes, s.accurate_passes_total,
   s.dispossessed, s.touches, s.goals_prevented, s.high_claims, s.punches, s.sweeper_actions, s.long_balls_accurate, s.long_balls_total
 FROM core.player_match_stats s
@@ -1067,13 +1067,19 @@ _KEPT = ("match_id", "player_id", "edition", "team_id", "position_id", "is_start
 # The statistics the source leaves blank at zero. A match of a few dozen players shows the
 # common ones whenever the source publishes them; the rare ones need the edition.
 ZERO_IN_MATCH = ("npxg", "shots_on_target", "xa", "chances_created", "passes_into_final_third", "dribbles_succeeded", "dribbles_total",
-                 "shot_blocks", "duels_won", "duels_attempted", "aerials_won", "aerials_total", "dribbled_past", "dispossessed")
+                 "shot_blocks", "duels_won", "duels_lost", "aerials_won", "aerials_total", "dribbled_past", "dispossessed")
 ZERO_IN_EDITION = ("np_goals", "assists", "big_chances_missed", "big_chances_created", "errors_led_to_goal")
+# The totals the source does not publish, each the sum of its parts. They are added once the
+# parts have their zeros, never in the query: a sum with a blank part is a blank, and a blank
+# total read as a zero made five duels won and none lost five successes out of no attempt
+# (issue #71). A part that stays unknown leaves its total unknown.
+SUMS = {"duels_attempted": ("duels_won", "duels_lost")}
 
 
 def restore_zeros(rows):
     """Give a blank its zero where the source publishes the statistic (see the module's
-    notes): `rows` are changed in place, and the number of values restored is returned."""
+    notes), then add the totals of SUMS: `rows` are changed in place, and the number of
+    values restored is returned."""
     in_match, in_edition = defaultdict(set), defaultdict(set)
     for r in rows:
         for name in ZERO_IN_MATCH:
@@ -1096,6 +1102,10 @@ def restore_zeros(rows):
             if r.get(name) is None and name in seen:
                 r[name] = 0.0
                 restored += 1
+    for r in rows:
+        for total, parts in SUMS.items():
+            values = [r.get(part) for part in parts]
+            r[total] = None if None in values else sum(values)
     return restored
 
 
@@ -1221,9 +1231,15 @@ def fit_poisson(obs, iterations=25):
 
 def references(rows):
     """Per role and indicator: how to expect a value, and the dispersion s (§§ 5–6)."""
+    return group_references(rows, "role")
+
+
+def group_references(rows, key):
+    """references() for the groups the rows' field `key` names: the roles, or the level's
+    reference groups (level.py), each read with the blocks of its kind."""
     by_role = defaultdict(list)
     for r in rows:
-        by_role[r["role"]].append(r)
+        by_role[r[key]].append(r)
     refs = {}
     for role, items in by_role.items():
         for indicators in blocks_of(role).values():
@@ -1543,7 +1559,13 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
 
     Three steps, and no transaction open during the second: the base ends a session that
     stays idle inside a transaction (60 s, infra/aws/database.yaml), and fitting the
-    references of a large season takes longer than that."""
+    references of a large season takes longer than that.
+
+    The same run computes the players' level (Score Vega v9, level.py; FAILURE_MODES §49)
+    beside the ranking, from the same player-matches, and writes it in the same transaction:
+    the ranking's own rows are those it wrote before the level existed."""
+    from . import level as levels  # level.py reads this module's blocks and references
+
     # The run starts here, before the read and the computation: its row is only written
     # in step 3, so it is given this time.
     started = conn.execute("SELECT clock_timestamp()").fetchone()[0]
@@ -1576,6 +1598,8 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
         grade_refs = read_grade_references(conn, reference_season) if other else None
         reference_rows = conn.execute(GRADE_REFERENCE, ([reference_season, reference_season + 1], reference_season, GRADE_FULL_MINUTES)
                                       ).fetchall() if other and grade_refs is None else []
+        # The level's own reads: a partial year has no level.
+        level_inputs = None if partial else levels.read_inputs(conn, season, reference_season)
     # 2. Compute, outside any transaction. The player-matches the year cannot grade are kept
     # with their reason (agg.player_grade_exclusions): a team that is not a side of the match,
     # then no role (assign_roles).
@@ -1592,6 +1616,9 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
     count = len(rows)
     linked, top, women, clubs = team_leagues(rows, leagues)
     centre = level_centres(rows)
+    # The level reads the year's rows before the loop below lets them go.
+    reading = None if partial else levels.read(rows, centre=centre[False], faced=level_inputs["faced"], team_passes=level_inputs["team_passes"],
+                                               samples=level_inputs["kept"] is None)
     matches = []
     graded = []  # (role, competition, minutes, C) of each player-match, for the match grades
     editions = []  # the edition's season of each player-match: where its grade is kept
@@ -1632,6 +1659,12 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
     scored, settings = season_scores(contributions, eligibility=eligibility, linked=linked, top=top, women=women, clubs=clubs, previous=previous)
     # A partial year is never ranked (§47): its ranking, roles and award race are emptied below.
     scored, (blocks, roles) = ({}, ({}, {})) if partial else (scored, season_details(detailed, scored))
+    # The level: its references are a finished year's, kept by that year's run (the year itself once
+    # it is over); a year in progress with no finished year before it measures its own, kept nowhere.
+    level_rows, level_refs = ({}, None) if partial else levels.season(reading, level_inputs["before"], level_inputs["kept"], scored)
+    level_reference = reference_season if not partial and (finished or level_inputs["kept"] is not None) else None
+    level_cells = reading["cells"] if reading else {}
+    del reading, level_inputs
     # 3. Write, in one transaction: the season's ranking changes at once or not at all.
     with conn.transaction():
         run = _start(conn, "players", season, started_at=started)
@@ -1676,6 +1709,7 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
         write_grade_exclusions(conn, season, excluded, run)
         _publish(conn, run, "players", season, count, len(scored))
         write_award(conn, season, scored)
+        levels.write(conn, season, started, level_rows, level_cells, level_refs, level_reference)
     return len(scored)
 
 
@@ -1911,7 +1945,8 @@ def stale_rankings(conn):
     moved), whose published run ranked players, or that still have references of their
     own (an earlier rule's run, whatever its order: production ranked 2020 after 2021,
     FAILURE_MODES §48), most recent first. The partial run publishes players = 0 and
-    deletes those references itself, so it is listed once."""
+    deletes those references itself, so it is listed once. After them, the years whose
+    level (Score Vega v9) is missing or older than the year before's, oldest first (§49)."""
     stale = {s for (s,) in conn.execute(
         "SELECT season_id FROM agg.power_runs WHERE kind = 'players' AND status = 'published' AND method_version <> %s", (METHOD_VERSION,)
     ).fetchall()}
@@ -1927,7 +1962,11 @@ def stale_rankings(conn):
         ).fetchone()
         if own is None or ranked or references or (following is not None and own < following):
             stale.add(season)
-    return sorted(stale, reverse=True)
+    # Then the years whose level alone is to compute (level.stale), oldest first: a year's level
+    # reads the year before's.
+    from . import level
+
+    return sorted(stale, reverse=True) + [season for season in level.stale(conn) if season not in stale]
 
 
 def refresh_power(conn, season):

@@ -113,12 +113,48 @@ Resources:
                 Action: ['appsync:CreateApi', 'appsync:TagResource', 'appsync:ListApis',
                          'appsync:CreateApiKey', 'appsync:UpdateApiKey', 'appsync:DeleteApiKey', 'appsync:ListApiKeys']
                 Resource: '*'
-              # The database alarms (database.yaml).
+              # The alarms of this region (alerts.yaml; database.yaml's until 23 November 2026).
               - Sid: DatabaseAlarms
                 Effect: Allow
                 Action: ['cloudwatch:PutMetricAlarm', 'cloudwatch:DeleteAlarms', 'cloudwatch:DescribeAlarms', 'cloudwatch:TagResource',
                          'cloudwatch:UntagResource', 'cloudwatch:ListTagsForResource']
                 Resource: !Sub 'arn:${AWS::Partition}:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:vega-v2-*'
+              # --- Alerts (alerts.yaml here, alerts-edge.yaml in us-east-1: CloudFront and Route 53
+              # metrics exist only there). The topic and its e-mail subscription in both regions
+              # (a subscription's ARN is the topic's plus an id), the alarms of us-east-1 (those
+              # of this region are DatabaseAlarms), the API log's metric filters (Logs, above),
+              # and the outside probe: a health check has no name to scope by, and its creation
+              # takes no resource.
+              - Sid: AlertTopics
+                Effect: Allow
+                Action: ['sns:CreateTopic', 'sns:DeleteTopic', 'sns:GetTopicAttributes', 'sns:SetTopicAttributes', 'sns:TagResource',
+                         'sns:UntagResource', 'sns:ListTagsForResource', 'sns:ListSubscriptionsByTopic', 'sns:GetDataProtectionPolicy',
+                         'sns:PutDataProtectionPolicy', 'sns:Subscribe', 'sns:Unsubscribe', 'sns:GetSubscriptionAttributes',
+                         'sns:SetSubscriptionAttributes']
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:vega-v2-alerts*'
+                  - !Sub 'arn:${AWS::Partition}:sns:us-east-1:${AWS::AccountId}:vega-v2-alerts*'
+              # IAM knows no subscription resource: these three match no ARN, the topic's
+              # included (simulate-principal-policy, 23 November 2026), so they are granted on *.
+              - Sid: AlertSubscriptions
+                Effect: Allow
+                Action: ['sns:GetSubscriptionAttributes', 'sns:SetSubscriptionAttributes', 'sns:Unsubscribe']
+                Resource: '*'
+              - Sid: AlertTopicsList
+                Effect: Allow
+                Action: ['sns:ListTopics']
+                Resource: '*'
+              - Sid: EdgeAlarms
+                Effect: Allow
+                Action: ['cloudwatch:PutMetricAlarm', 'cloudwatch:DeleteAlarms', 'cloudwatch:DescribeAlarms', 'cloudwatch:TagResource',
+                         'cloudwatch:UntagResource', 'cloudwatch:ListTagsForResource']
+                Resource: !Sub 'arn:${AWS::Partition}:cloudwatch:us-east-1:${AWS::AccountId}:alarm:vega-v2-*'
+              - Sid: HealthCheck
+                Effect: Allow
+                Action: ['route53:CreateHealthCheck', 'route53:GetHealthCheck', 'route53:UpdateHealthCheck', 'route53:DeleteHealthCheck',
+                         'route53:ChangeTagsForResource', 'route53:ListTagsForResource', 'route53:ListHealthChecks']
+                Resource: '*'
+              # --- end of alerts
               # The schedule that starts the live ingestor (live.yaml IngestorSchedule).
               - Sid: LiveSchedule
                 Effect: Allow
@@ -135,6 +171,18 @@ Resources:
                 Effect: Allow
                 Action: ['cloudfront:*']
                 Resource: '*'
+              # BEGIN VI-35 web ACL: the distribution's web ACL (waf.yaml), CloudFront scope,
+              # which exists in us-east-1 only; GetWebACL also lets the distribution take it.
+              - Sid: WebAcl
+                Effect: Allow
+                Action: ['wafv2:CreateWebACL', 'wafv2:UpdateWebACL', 'wafv2:DeleteWebACL', 'wafv2:GetWebACL',
+                         'wafv2:TagResource', 'wafv2:UntagResource', 'wafv2:ListTagsForResource']
+                Resource: !Sub 'arn:${AWS::Partition}:wafv2:us-east-1:${AWS::AccountId}:global/webacl/vega-v2-*/*'
+              - Sid: WebAclList
+                Effect: Allow
+                Action: ['wafv2:ListWebACLs']
+                Resource: '*'
+              # END VI-35 web ACL
   DeployRole:
     Type: AWS::IAM::Role
     Properties:
@@ -163,7 +211,18 @@ Resources:
                          'cloudformation:ExecuteChangeSet', 'cloudformation:DescribeChangeSet', 'cloudformation:DeleteChangeSet',
                          'cloudformation:DescribeStacks', 'cloudformation:DescribeStackEvents', 'cloudformation:GetTemplateSummary',
                          'cloudformation:ListStackResources']
-                Resource: !Sub 'arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/vega-v2-*/*'
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/vega-v2-*/*'
+                  # Alerts: the edge stack lives in us-east-1 (alerts-edge.yaml).
+                  - !Sub 'arn:${AWS::Partition}:cloudformation:us-east-1:${AWS::AccountId}:stack/vega-v2-alerts-edge/*'
+              # BEGIN VI-35 waf stack: vega-v2-waf, in us-east-1 (CloudFront scope).
+              - Sid: WebAclStack
+                Effect: Allow
+                Action: ['cloudformation:CreateStack', 'cloudformation:UpdateStack', 'cloudformation:CreateChangeSet',
+                         'cloudformation:ExecuteChangeSet', 'cloudformation:DescribeChangeSet', 'cloudformation:DeleteChangeSet',
+                         'cloudformation:DescribeStacks', 'cloudformation:DescribeStackEvents', 'cloudformation:GetTemplateSummary']
+                Resource: !Sub 'arn:${AWS::Partition}:cloudformation:us-east-1:${AWS::AccountId}:stack/vega-v2-waf/*'
+              # END VI-35 waf stack
               - Sid: Templates
                 Effect: Allow
                 Action: ['cloudformation:ValidateTemplate', 'cloudformation:ListExports']

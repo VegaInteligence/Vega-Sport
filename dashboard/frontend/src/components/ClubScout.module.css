@@ -114,7 +114,8 @@
 /* ---------------------------------------------------------------- cards */
 .card {
   min-width: 0;
-  padding: 18px 0;
+  /* The same 16 px as the key figures' cells and the identity column. */
+  padding: 18px 16px;
   border: 0;
   border-top: 1px solid var(--border-strong);
   border-radius: var(--radius-lg);
@@ -144,9 +145,19 @@
 .cardAction {
   flex: none;
 }
+/* « Le club en bref » and the ranking (UI.jsx cards) under the overview: the same inset. */
+.shell :global(.club-overview-info) > :global(.card) > :global(.card-header),
+.shell :global(.club-overview-info) > :global(.card) > :global(.card-body) {
+  padding-inline: 16px;
+}
 /* On a phone a card's selector goes under its title when both do not fit, and scrolls
-   within the card instead of widening the page. */
+   within the card instead of widening the page. The page's gutter is the only inset. */
 @media (max-width: 640px) {
+  .card,
+  .shell :global(.club-overview-info) > :global(.card) > :global(.card-header),
+  .shell :global(.club-overview-info) > :global(.card) > :global(.card-body) {
+    padding-inline: 0;
+  }
   .cardHead {
     flex-wrap: wrap;
   }

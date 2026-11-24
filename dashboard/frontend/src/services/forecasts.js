@@ -123,6 +123,8 @@ const cupStages = (stages) => Object.fromEntries(CUP_STAGES.map((stage) => [stag
 
 // The live feed's goals (any kind: each counts for the side whose score it raises) and dismissals.
 const LIVE_GOALS = new Set(["goal", "own_goal", "penalty_goal"]);
+// The feed's periods after the 90 minutes: a match that has one went to extra time.
+const LIVE_EXTRA = new Set(["extra_time", "penalties"]);
 
 /**
  * The match minute by minute from the live feed, while the base has not read it yet: the
@@ -130,28 +132,44 @@ const LIVE_GOALS = new Set(["goal", "own_goal", "penalty_goal"]);
  * with the feed's goals and red cards, by the same calculation (shared/inplay.js). The
  * answer as it is when the base already has the match's events, when the feed has not
  * started, or when its goal events do not give its score (no chart is better than a wrong
- * one). `live`: the state of /live/matches/{id} (hooks/useLiveMatch.js); `match`: the
- * match, for its two teams' ids.
+ * one). A match the feed says went to extra time (its period, or an event's) runs past the
+ * 90th, to the 120th (`extraTime`); a shoot-out's kicks are not its goals: they are counted
+ * apart (`penalties`: the kicks scored), the match ending level. `live`: the state of
+ * /live/matches/{id} (hooks/useLiveMatch.js); `match`: the match, for its two teams' ids.
  */
 export function withLive(answer, live, match) {
   if (!answer || !live || !answer.inplay || !answer.rates) return answer;
   if (live.families?.events === "core" || !["in_play", "half_time", "finished"].includes(live.status)) return answer;
   const side = (teamId) => (teamId === match?.home?.id ? "home" : teamId === match?.away?.id ? "away" : null);
-  const events = (live.events || [])
-    .filter((e) => !e.cancelled && e.minute != null && (LIVE_GOALS.has(e.type) || e.type === "red_card"))
+  const all = live.events || [];
+  const kicks = all.filter((e) => e.period === "penalties" && !e.cancelled);
+  const events = all
+    .filter((e) => e.period !== "penalties" && !e.cancelled && e.minute != null && (LIVE_GOALS.has(e.type) || e.type === "red_card"))
     .map((e) => ({ minute: e.minute, added: e.minuteAdded || 0, kind: e.type === "red_card" ? "red" : "goal", side: side(e.teamId) }));
   if (events.some((e) => !e.side)) return answer;
   const goals = (name) => events.filter((e) => e.kind === "goal" && e.side === name).length;
   if (goals("home") !== live.score?.home || goals("away") !== live.score?.away) return answer;
   const finished = live.status === "finished";
-  const clock = live.status === "half_time" ? 45 : Math.max(live.minute ?? 0, ...events.map((e) => e.minute));
-  const last = finished ? 90 : Math.max(0, Math.min(90, Math.floor(clock)));
-  const points = timeline(answer.rates.home, answer.rates.away, events, answer.inplay, answer.rho ?? 0, last);
+  const shootout = live.period === "penalties" || kicks.length > 0;
+  const extra = shootout || LIVE_EXTRA.has(live.period) || all.some((e) => LIVE_EXTRA.has(e.period));
+  const top = extra ? 120 : 90;
+  // The break of extra time is at the 105th; a shoot-out comes after the 120th.
+  const clock = shootout
+    ? 120
+    : live.status === "half_time"
+      ? extra ? Math.max(90, Math.min(105, live.minute ?? 105)) : 45
+      : Math.max(live.minute ?? 0, ...events.map((e) => e.minute));
+  const last = finished ? top : Math.max(extra ? 90 : 0, Math.min(top, Math.floor(clock)));
+  const points = timeline(answer.rates.home, answer.rates.away, events, answer.inplay, answer.rho ?? 0, last, extra);
   if (finished) {
     const end = points.at(-1), [h, a] = end.score;
     Object.assign(end, { home: h > a ? 1 : 0, draw: h === a ? 1 : 0, away: h < a ? 1 : 0 });
   }
-  return { ...answer, status: finished ? "finished" : "in_play", points, events, live: true };
+  const scored = (name) => kicks.filter((e) => e.type === "penalty_goal" && side(e.teamId) === name).length;
+  return {
+    ...answer, status: finished ? "finished" : "in_play", points, events, live: true,
+    ...(extra ? { extraTime: true, penalties: kicks.length ? [scored("home"), scored("away")] : null } : {}),
+  };
 }
 
 /** A finished or running match minute by minute, or null without one (a match to play, no goal timeline). */
@@ -191,17 +209,24 @@ export function probabilityLines(answer) {
     });
   const jumps = new Set(goals.filter((goal) => goal.from != null).map((goal) => goal.minute));
   const pick = (p) => ({ minute: p.minute, home: p.home, draw: p.draw, away: p.away, score: p.score ?? null });
+  // A match that went to extra time (the API's answer or the live feed's): after the 90th the middle line
+  // is no longer a draw but a level 120th minute, so the lines step at the 90th as they do at a goal.
+  const extra = answer.extraTime === true;
   const lines = [];
   points.forEach((p, i) => {
-    if (i && jumps.has(p.minute)) lines.push({ ...pick(points[i - 1]), minute: p.minute });
+    if (i && jumps.has(p.minute) && !(extra && p.minute === 91)) lines.push({ ...pick(points[i - 1]), minute: p.minute });
     lines.push(pick(p));
+    if (extra && p.minute === 90 && points[i + 1]) lines.push({ ...pick(points[i + 1]), minute: 90 });
   });
   return {
     lines,
     series: points.map(pick),
     goals,
     reds: (answer.events || []).filter((event) => event.kind === "red").map((event) => ({ minute: event.minute, side: event.side })),
-    span: Math.max(90, points.at(-1).minute),
+    span: extra ? 120 : Math.max(90, points.at(-1).minute),
+    extra,
+    // The shoot-out's score, [home, away], or null without one.
+    penalties: extra ? (answer.penalties ?? null) : null,
     start: points[0],
     end: points.at(-1),
     live: answer.status === "in_play" ? points.at(-1) : null,

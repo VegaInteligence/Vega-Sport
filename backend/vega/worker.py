@@ -75,7 +75,7 @@ RETRY_DAILY_AFTER = timedelta(hours=1)
 # The side work on its own rhythm (side_loop): a daily pass every minute (it does
 # nothing when nothing is due), the image copies every five.
 SIDE_DAILY_EVERY = 60
-# Seasons ranked again a pass because their ranking is of an older method (Worker.daily).
+# Seasons ranked again a pass because their ranking is of an older method or their level is to compute (Worker.daily).
 STALE_RANKINGS = 20
 SIDE_MEDIA_EVERY = 300
 
@@ -562,6 +562,8 @@ class Worker:
         # Every season's player ranking is of the present method: a season the rules above leave
         # out (no match in 400 days, an archive season) is ranked again, its ranking alone, most
         # recent first and STALE_RANKINGS a pass. Without player statistics it is a quick, empty run.
+        # After them come the years whose level (Score Vega v9) is missing or older than the year
+        # before's, oldest first (power.stale_rankings): a year's level reads the year before's.
         from . import power
 
         _, stale = self._daily_step(("stale rankings",), now, lambda: power.stale_rankings(self.calc_conn))

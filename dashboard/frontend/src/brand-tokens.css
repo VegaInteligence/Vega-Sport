@@ -1,5 +1,8 @@
 /* Vega Intelligence design tokens. Legacy aliases preserve component compatibility. */
 :root {
+  /* The logo's two colours (docs/brand/README.md): nothing else draws it. */
+  --vega-night: #07080b;
+  --vega-ivory: #f4f1ea;
   --vega-black: #000000;
   --vega-white: #ffffff;
   --vega-ink: #0b0d12;

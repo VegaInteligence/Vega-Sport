@@ -3,6 +3,7 @@
  * the user chooses, comparison and similar clubs across every competition. */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import BackLink from "./BackLink.jsx";
+import SeasonSelect from "./SeasonSelect.jsx";
 import Link from "next/link";
 import Icon from "./Icon.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
@@ -15,6 +16,7 @@ import {
   METRICS,
   PERFORMANCE_KEYS,
   PHASES,
+  clubEarly,
   europeReferential,
   formatMetric,
   rebase,
@@ -34,6 +36,7 @@ import {
   ClubEmptySeason,
   ClubLoading,
   Crest,
+  loadingLabel,
   Info,
   MatchRows,
   MenuItem,
@@ -42,8 +45,10 @@ import {
   ordinal,
 } from "./ClubScoutUI.jsx";
 import { RankingDialog, RankingProvider } from "./RankingDialog.jsx";
+import ClubSkeleton, { ClubSkeletonRail } from "./ClubSkeleton.jsx";
 import {
   IdentityRail,
+  RailHead,
   Matches,
   Overview,
   Squad,
@@ -92,9 +97,21 @@ function useClubTab() {
   return [tab, change];
 }
 
-export default function ClubScoutProfile({ clubId, backHref }) {
+export default function ClubScoutProfile({ clubId, backHref, club }) {
   const state = useClubDossier(clubId);
-  const dossier = state.status === "ready" ? state.dossier : null;
+  // The figures show once, against their default reference (Europe): until its pool is read
+  // (or has failed, and the league stands in), the page keeps its early view.
+  const pool = useEuropePool(true);
+  const read =
+    state.status === "ready" &&
+    (pool.status !== "loading" || state.dossier.coverage.empty)
+      ? state.dossier
+      : null;
+  // A season without any match of the club names nobody: the page's club does.
+  const dossier =
+    read && !read.allRows.length && club?.name
+      ? { ...read, name: club.name, imageUrl: read.imageUrl || club.imageUrl }
+      : read;
   // No rail while reading, after an error or for an empty season: the link stays above.
   const backAbove =
     backHref && (state.status === "error" || dossier?.coverage.empty);
@@ -107,14 +124,78 @@ export default function ClubScoutProfile({ clubId, backHref }) {
           label="Tous les clubs"
         />
       )}
-      {!dossier ? (
-        <ClubLoading state={state} />
+      {!dossier && state.status !== "error" ? (
+        <ClubEarly clubId={clubId} state={state} backHref={backHref} />
+      ) : !dossier ? (
+        <ClubLoading state={state}>
+          {club?.name && <strong>{club.name}</strong>}
+          <ClubSeasonSelect />
+        </ClubLoading>
       ) : dossier.coverage.empty ? (
-        <ClubEmptySeason dossier={dossier} played={dossier.coverage.played} />
+        <ClubEmptySeason dossier={dossier} played={dossier.coverage.played}>
+          <ClubSeasonSelect season={dossier.season} />
+        </ClubEmptySeason>
       ) : (
         <Profile key={dossier.id} dossier={dossier} backHref={backHref} />
       )}
     </div>
+  );
+}
+
+/**
+ * While the dossier is read (the club's shots and appearances, its league's matches): the
+ * identity column's head and the last matches from the page's read of the club, already in
+ * memory, the rest in grey. The page is revealed then; nothing ranked is shown before the
+ * league's cohort. Without that read (another club's, or none), the whole skeleton.
+ */
+function ClubEarly({ clubId, state, backHref }) {
+  const f = useFootball();
+  const club = useMemo(
+    () => clubEarly(f.data, clubId, f.season),
+    [f.data, clubId, f.season],
+  );
+  const label = loadingLabel(state);
+  if (!club) return <ClubLoading state={state} />;
+  return (
+    <ClubSkeleton
+      live
+      label={label}
+      rail={
+        <aside className={sA.rail} aria-label="Identité du club">
+          <RailHead
+            club={club}
+            backHref={backHref}
+            season={<ClubSeasonSelect season={club.season} />}
+          />
+          <div className="club-skeleton-shapes" aria-hidden="true">
+            <ClubSkeletonRail />
+          </div>
+        </aside>
+      }
+      after={
+        <Card
+          title="Derniers matchs"
+          text="Toutes compétitions · barres : xG pour (bleu) et contre (orange)"
+        >
+          <MatchRows rows={club.allRows} limit={6} />
+        </Card>
+      }
+    />
+  );
+}
+
+/** The club's season, chosen where the club is shown: the page reads the club in it. */
+function ClubSeasonSelect({ season }) {
+  const f = useFootball();
+  const seasons = (f?.manifest?.seasons || []).map((item) => item.id);
+  if (!seasons.length || !f.changeSeason) return null;
+  return (
+    <SeasonSelect
+      value={season || f.season}
+      seasons={seasons}
+      onChange={f.changeSeason}
+      className={sA.season}
+    />
   );
 }
 
@@ -154,7 +235,12 @@ function Profile({ dossier, backHref }) {
   return (
     <RankingProvider value={setRanking}>
       <div className={sA.layout}>
-        <IdentityRail dossier={dossier} onTab={setTab} backHref={backHref} />
+        <IdentityRail
+          dossier={dossier}
+          onTab={setTab}
+          backHref={backHref}
+          season={<ClubSeasonSelect season={dossier.season} />}
+        />
         <div className={sA.main}>
           <ComparisonBar dossier={dossier} cmp={cmp} active={referentialTab} />
           <ResearchTabs

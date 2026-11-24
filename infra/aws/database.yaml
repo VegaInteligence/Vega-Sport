@@ -100,50 +100,8 @@ Resources:
       AutoMinorVersionUpgrade: true
       EnablePerformanceInsights: false
       Tags: [{Key: project, Value: vega-v2}]
-  # Alarms of the AWS review (doc "Mise en place": instance, backups, alarms), visible in
-  # CloudWatch; the collection backlog is on the status page (ops views).
-  LowMemoryAlarm:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      AlarmName: vega-v2-db-low-memory
-      AlarmDescription: Under 300 MB freeable on vega-football-db-postgres for 15 minutes
-      Namespace: AWS/RDS
-      MetricName: FreeableMemory
-      Dimensions: [{Name: DBInstanceIdentifier, Value: !Ref Database}]
-      Statistic: Minimum
-      Period: 300
-      EvaluationPeriods: 3
-      Threshold: 314572800
-      ComparisonOperator: LessThanThreshold
-      TreatMissingData: notBreaching
-  LowStorageAlarm:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      AlarmName: vega-v2-db-low-storage
-      AlarmDescription: Under 3 GB free storage on vega-football-db-postgres (autoscaling up to MaxAllocatedStorage)
-      Namespace: AWS/RDS
-      MetricName: FreeStorageSpace
-      Dimensions: [{Name: DBInstanceIdentifier, Value: !Ref Database}]
-      Statistic: Minimum
-      Period: 300
-      EvaluationPeriods: 1
-      Threshold: 3221225472
-      ComparisonOperator: LessThanThreshold
-      TreatMissingData: notBreaching
-  HighCpuAlarm:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      AlarmName: vega-v2-db-high-cpu
-      AlarmDescription: Over 90 % CPU on vega-football-db-postgres for 30 minutes
-      Namespace: AWS/RDS
-      MetricName: CPUUtilization
-      Dimensions: [{Name: DBInstanceIdentifier, Value: !Ref Database}]
-      Statistic: Average
-      Period: 300
-      EvaluationPeriods: 6
-      Threshold: 90
-      ComparisonOperator: GreaterThanThreshold
-      TreatMissingData: notBreaching
+  # Its alarms (memory, storage, CPU, connections) are in alerts.yaml since 23 November
+  # 2026, with the topic they notify: here they notified no one.
 Outputs:
   DatabaseEndpoint: {Value: !GetAtt Database.Endpoint.Address, Export: {Name: vega-v2-db-endpoint}}
   DatabasePort: {Value: !GetAtt Database.Endpoint.Port, Export: {Name: vega-v2-db-port}}

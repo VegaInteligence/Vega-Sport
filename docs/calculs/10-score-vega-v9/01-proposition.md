@@ -2,7 +2,7 @@
 
 **Statut : proposition. Rien de ce qui suit n'est en service.** 20 novembre 2026, ticket [VI-42](https://linear.app/vegainteligence/issue/VI-42). Le score en service reste `power-ranking-v8` ([formules](../08-notes-vega/01-formules-et-raisons.md)).
 
-Toutes les mesures viennent de la base de production, lue en lecture seule. Les scripts, leurs sorties et la façon de les relancer sont dans `~/Agents/scratch/vega-score-sim-20261120/` (`study9.py` est le calcul final des sections 1 à 10, `study10_run2.py` celui de la section 11, `README.md` décrit la tâche de diagnostic).
+Toutes les mesures viennent de la base de production, lue en lecture seule. Les scripts, leurs sorties et la façon de les relancer sont dans `~/Agents/scratch/vega-score-sim-20261120/` (`study9.py` est le calcul final des sections 1 à 10, `study10_run2.py` celui de la section 11, `study14.py` à `study17.py` ceux de la section 12, `README.md` décrit la tâche de diagnostic).
 
 ## 1. En bref
 
@@ -285,6 +285,7 @@ Autres contrôles :
 | Seuil d'un second poste | 450 minutes sur deux saisons | choisi ; 270 et 900 donnent presque le même classement |
 | Lien entre deux postes d'un même joueur | § 11.2 | mesuré |
 | Lecture du soutien d'une attaque à deux | sur le style, § 11.1 | proposé ; étendue à tous les avant-centres : essayée et écartée |
+| Bloc défense : attendus en contexte, échelle stabilisée, talent borné à ± 2 écarts-types | § 12 | retenu le 23 novembre 2026 ; la borne est gratuite mais non prouvée (§ 12.4) |
 
 ## 9. Limites et étape 2
 
@@ -423,3 +424,88 @@ Le même défaut touche le « faux 9 » aligné seul en pointe : Dembélé en 20
 6. **Le lien entre postes** contient encore le style du club : le retirer demande un autre estimateur que celui essayé, qui ajoutait du bruit.
 7. **Le haut du classement** garde quelques joueurs de championnats moyens. C'est la question de ψ, toujours ouverte.
 
+## 12. Le bloc défense : attendus en contexte, échelle stabilisée, talent borné (ajout du 23 novembre 2026, simulé)
+
+Origine : avec le calcul des sections 4 et 11, Massiré Sylla (défenseur central de l'Union Saint-Gilloise, axial d'une défense à trois, 1 248 minutes) sort 3e du classement 2026/2027 à ψ = 24, avec un talent défensif de + 4,0 écarts-types. Ses 14 matchs sont réels, sans doublon. Quatre calculs en lecture seule ont cherché ce que mesure le bloc et comment le corriger. Rien n'est en service. La correction du § 12.3 a été retenue le 23 novembre 2026.
+
+### 12.1 Ce qui a été écarté
+
+- **Le style de son équipe.** L'Union n'est pas plus exposée que les autres (facteur 1,03 à 1,08) et la part du club dans son écart est nulle. Le poste axial d'une défense à trois explique + 0,36 écart-type, pas + 4.
+- **Les données.** Les erreurs menant à un but, vides dans la source pour l'Union, sont bien lues comme zéro (effet + 0,12 sur un seul des neuf indicateurs).
+- **Le contexte seul.** Attendus en contexte, part des actions de l'équipe, échelle stabilisée, rétrécissement des comptages : Sylla reste 1er défenseur central dans toutes ces variantes (de + 3,80 à + 2,90 écarts-types).
+
+### 12.2 Ce que mesure le bloc
+
+| Question | Résultat | Lecture |
+| --- | --- | --- |
+| Suit-il les occasions concédées par l'équipe ? | + 0,031 ± 0,029 | aucun lien mesurable |
+| Suit-il la valeur marchande des défenseurs centraux ? | corrélation 0,06 | presque aucun lien |
+| Les neuf indicateurs vont-ils ensemble ? | corrélation moyenne + 0,05 | ils ne mesurent pas une même qualité |
+| Vaut-il son prix dans les résultats des matchs ? (1 = prix annoncé) | centraux 1,05 ± 0,26 ; latéraux 0,84 ± 0,50 ; milieux défensifs 0,48 ± 0,38 | oui pour les centraux |
+| Qu'est-ce qui porte cette valeur chez les centraux ? | tacles, interceptions, récupérations 1,10 ± 0,26 ; dégagements et tirs contrés 1,04 ± 0,29 ; taux de réussite − 0,27 ± 0,33 | les volumes, pas les taux |
+| Les entraîneurs le suivent-ils ? | + 4,9 ± 0,8 point de titularisations par écart-type | oui (lu sur la saison précédente seulement) |
+
+Le bloc mesure l'activité défensive, pas la qualité au sens du consensus. Cette activité vaut bien son prix dans les résultats, dans la plage où elle a été mesurée : environ ± 2 écarts-types. Un point Elo de valeur d'un défenseur central vaut 1,17 ± 0,25 point Elo de résultat. Le problème est ailleurs : un talent de + 4 sort de cette plage, et le calcul prolonge le prix en ligne droite là où aucun joueur n'était annoncé (personne au-dessus de + 3 dans le calibrage).
+
+Quatre défauts réels ont été trouvés en chemin :
+
+1. **Duels (score en service).** Les tentatives étaient additionnées avant que les vides aient leur zéro : cinq duels gagnés et aucun perdu devenaient cinq réussites pour zéro tentative. 4 à 6 % des matchs de joueurs de champ ; 0,07 écart-type en moyenne sur un talent de saison, 0,4 au plus. Corrigé dans `backend/vega/power.py` ([#71](https://github.com/VegaInteligence/Vega-Sport/issues/71)).
+2. **3. Liga.** Depuis octobre 2026 la source livre des zéros à la place des statistiques : la compétition tombe à − 3,59 en 2026/2027. Défaut de données, à signaler et à filtrer.
+3. **Effet de compétition.** L'attendu ne dépend que du rôle et de l'écart Elo. La compétition porte 14 % (2025/2026) puis 33 % (2026/2027) de ce qui sépare les défenseurs centraux.
+4. **Échelle.** Les comptages sont asymétriques : sur une échelle linéaire, un seul match (15 récupérations et 7 interceptions) vaut 2,3 à lui seul.
+
+### 12.3 La correction retenue
+
+**La base**, pour tous les rôles de champ :
+
+1. *Duels* : tentatives = gagnés + perdus, additionnés une fois les zéros rendus.
+2. *Attendus en contexte.* Pour chaque rôle et chaque indicateur de volume, une régression de Poisson sur Δ = (Elo adverse − Elo propre) / 400 avant le match (le seul terme du calcul actuel, § 4.1), sur ln(passes tentées par l'adversaire / leur moyenne), et sur la place dans une défense à trois (axial ou excentré pour un défenseur central, simple indicateur de défense à trois pour les autres rôles). S'y ajoute un effet de la compétition et de la saison, rétréci vers zéro : u = ln((observé + k) / (attendu + k)), k = 50 actions. Les indicateurs conditionnels reçoivent le même effet rétréci sur leur taux.
+3. *Échelle stabilisée.* L'écart d'un match n'est plus x − x̂ mais
+
+$$
+z = \sqrt{\frac{t}{90}}\;\frac{2\sqrt{x + 3/8} - c(\hat{x})}{s}
+$$
+
+où c(x̂) est l'espérance exacte de 2√(X + 3/8) pour une loi de Poisson de moyenne x̂, s la dispersion du rôle et t les minutes jouées. Une courte entrée en jeu ne pèse plus autant qu'un match entier.
+
+**La borne.** Le talent défensif d'un joueur à un poste (après le rétrécissement du § 4.2) est borné entre − 2,0 et + 2,0 écarts-types. La règle : le prix du bloc a été vérifié jusqu'à environ 2 écarts-types, le score ne paie pas au-delà.
+
+### 12.4 Ce que ça change, et ce que ça coûte
+
+Saison 2026/2027 (4 486 joueurs, une seule grille de prix, sans le cas du soutien) :
+
+| Variante | Sylla, ψ = 24 | Sylla, ψ = 10 | Sylla parmi les centraux (ψ = 24) | van Dijk (ψ = 24) |
+| --- | --- | --- | --- | --- |
+| Calcul des sections 4 et 11 | 3e (score 93) | 1er | 1er | 37e |
+| Base seule | 11e (90) | 3e | 1er | 39e |
+| Base + borne à 2,5 | 16e (88) | 5e | 1er | 39e |
+| **Base + borne à 2,0 (retenu)** | **31e (86)** | **18e** | **6e** | 39e |
+| Base + moitié volumes, moitié taux | 23e (87) | 12e | 3e | 18e |
+
+| Variante | Prévision des matchs, validation | Prévision des matchs, test | Valeur marchande des centraux | Même joueur d'une saison à la suivante (centraux) |
+| --- | --- | --- | --- | --- |
+| Calcul des sections 4 et 11 | référence | référence | 0,202 | 0,729 |
+| Base seule | − 9,3 ± 6,7 | + 2,9 ± 13,3 | 0,201 | 0,689 |
+| Base + borne à 2,5 | − 9,0 ± 6,7 | + 2,9 ± 13,3 | 0,202 | 0,688 |
+| **Base + borne à 2,0 (retenu)** | − 9,8 ± 6,8 | + 5,0 ± 13,4 | 0,204 | 0,686 |
+| Base + moitié volumes, moitié taux | − 22,5 ± 10,9 | + 6,0 ± 20,3 | 0,186 | 0,632 |
+
+Prévision : écart apparié par match face au calcul des sections 4 et 11, multiplié par 100 000 ; négatif veut dire moins bon (même plan d'expérience qu'au § 6).
+
+- **La base** ne coûte rien de mesurable. La défense des centraux vaut toujours son prix (1,09 ± 0,27). Sur l'échelle stabilisée, plus aucun défenseur central ne dépasse + 3 écarts-types en 2025/2026, contre 3 avant. La stabilité des centraux baisse de 0,729 à 0,689 : une partie venait de l'effet de compétition, qui suit un joueur resté dans son championnat.
+- **La borne à 2,0** touche vers le haut 5 défenseurs centraux sur 1 077 en 2026/2027 et 15 sur 2 695 en 2025/2026, aucun défenseur d'élite ; vers le bas, 3 et 12. Elle est gratuite, mais non prouvée. La part de valeur au-dessus de la borne a un écart-type de 0,39 point Elo, contre 7,9 pour tout le bloc des défenseurs : le test ne peut pas la voir (+ 1,5 ± 4,3 fois son prix), et borner ou non ne change pas la prévision (− 0,5 ± 0,8 en validation, + 0,8 ± 1,5 sur le test). Rien ne montre que la valeur s'arrête de croître au-dessus de 2, rien ne montre qu'elle continue.
+- **Les dix premiers défenseurs centraux** en 2026/2027 à ψ = 24 deviennent : Upamecano (18e), Hill, Vušković, Huijsen, Gabriel, Sylla (31e), Tarkowski, Guéhi, van Dijk (39e), Jacquet.
+
+### 12.5 Essayé et écarté
+
+- **Un bloc fait seulement de taux de réussite.** La liste ressemble au consensus (van Dijk 1er défenseur central, Sylla 69e au général), mais elle prévoit moins bien les matchs (− 55,9 ± 20,3 en validation), suit moins la valeur marchande (0,20 → 0,15) et tient moins d'une saison à l'autre (0,73 → 0,61).
+- **Moitié volumes, moitié taux.** Remonte van Dijk (39e → 18e), Saliba et Rúben Dias, avec un coût partout (tableaux du § 12.4 ; défense des centraux à 0,88 ± 0,30 de son prix). Le mélange n'a pas été remis à l'échelle et resserre les centraux de 5,2 à 4,5 points Elo, ce qui explique une partie de ce coût. À reprendre si le but devient de rapprocher la liste du consensus.
+- **Le prix du bloc mesuré par famille de postes** au lieu du prix annoncé. Les écarts entre familles restent dans la marge d'erreur (centraux 1,05 ± 0,26, latéraux 0,84 ± 0,50, milieux défensifs 0,48 ± 0,38) et Sylla ne passe que de la 3e à la 5e place.
+
+### 12.6 Limites
+
+1. **À ψ = 10, Sylla reste le premier défenseur central** (18e au général), devant Tarkowski, Hill et Vušković. Avec un poids du club faible, la valeur propre domine et les joueurs de championnats moyens montent : c'est la question de ψ (§ 4.5), pas un reste du défaut.
+2. **Les autres blocs ont des extrêmes plus lourds.** En 2025/2026, 22 avant-centres dépassent + 3 écarts-types en progression (maximum + 8,51) et 14 défenseurs centraux en création (maximum + 5,45). La plupart jouent dans de petits championnats, et le niveau de leur club les garde hors du haut du classement ; Sylla est sorti parce que l'Union est haute (+ 18 points Elo à ψ = 24). L'échelle stabilisée et la borne n'ont été testées que sur la défense : à tester sur ces deux blocs avant d'en faire une règle générale.
+3. **E, E_s et les λ** des sections 4 et 6 n'ont pas été réestimés sur la nouvelle échelle.
+4. **Le test des entraîneurs** ne lit que la saison précédente.
+5. **Le classement de 2026/2027** repose sur un tiers de saison : le rang d'un joueur à 1 248 minutes doit afficher sa marge (§ 4.6).

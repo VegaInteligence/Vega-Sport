@@ -1,0 +1,260 @@
+/* What opens a player's performance of the match from the match tabs (MatchLineups,
+   MatchPlayersBoard, MatchAnalyses): bare buttons that keep the look of what they wrap,
+   and the line-ups laid out with their benches beside the pitch on wide screens. */
+
+.open {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.open:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.name {
+  overflow: hidden;
+  color: var(--ink-strong);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.name:hover,
+.open:hover .name {
+  text-decoration: underline;
+}
+/* A card that is one button (best grade, leaders): the card's look, full width. */
+.open.cardButton {
+  padding: 16px;
+}
+.cardButton {
+  width: 100%;
+  height: 100%;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.cardButton:hover {
+  border-color: var(--border-strong);
+}
+.row {
+  width: 100%;
+}
+
+/* ---------------------------------------------------------------- line-ups */
+.lineups {
+  display: grid;
+  gap: 16px;
+  align-items: start;
+}
+.pitchCol {
+  min-width: 0;
+}
+.pitchCol > div {
+  max-width: 900px;
+  margin-inline: auto;
+}
+.benches {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 24px;
+  min-width: 0;
+}
+.bench {
+  min-width: 0;
+}
+.bench + .bench {
+  border-left: 1px solid var(--border);
+  padding-left: 24px;
+}
+.benchHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--home);
+}
+.away .benchHead {
+  border-bottom-color: var(--away);
+}
+.benchHead h3 {
+  margin: 0;
+  overflow: hidden;
+  color: var(--ink-strong);
+  font-size: var(--text-md);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.benchHead strong {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+.coach {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.coach b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.label {
+  margin: 10px 0 2px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.sub {
+  display: grid;
+  grid-template-columns: auto 28px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  min-height: 38px;
+  padding: 3px 0;
+  border-top: 1px solid var(--border);
+}
+.sub:first-of-type {
+  border-top: 0;
+}
+.sub:hover {
+  background: var(--surface-hover);
+}
+.subMinute {
+  min-width: 40px;
+  white-space: nowrap;
+  color: light-dark(#0f8a5f, #86efac);
+  font-size: var(--text-sm);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.avatar {
+  width: var(--media-28) !important;
+  height: var(--media-28) !important;
+  border-radius: 50%;
+}
+.who {
+  display: grid;
+  min-width: 0;
+  font-size: var(--text-sm);
+}
+.who small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.none {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.chip {
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+button.chip:hover {
+  border-color: var(--border-strong);
+  color: var(--ink-strong);
+}
+/* The marker of a starter is a button: its photo, number and grade, nothing else. */
+.marker {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+.marker:focus-visible > span:first-child {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 50%;
+}
+
+/* Wide screens: the pitch at most 900 px, both benches in a column beside it. */
+@media (min-width: 1280px) {
+  .lineups {
+    grid-template-columns: minmax(0, 900px) minmax(300px, 1fr);
+  }
+  .pitchCol > div {
+    margin-inline: 0;
+  }
+  .benches {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+  .bench + .bench {
+    border-left: 0;
+    padding-left: 0;
+  }
+}
+/* Very wide screens: the column is wide enough for the two benches side by side. */
+@media (min-width: 1680px) {
+  .benches {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+  }
+  .bench + .bench {
+    border-left: 1px solid var(--border);
+    padding-left: 24px;
+  }
+}
+@media (max-width: 640px) {
+  .benches {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+  .bench + .bench {
+    border-left: 0;
+    padding-left: 0;
+  }
+  .sub {
+    min-height: 44px;
+  }
+  .chip {
+    padding: 6px 10px;
+  }
+}
+
+/* ---------------------------------------------------------- pass networks */
+g.node {
+  cursor: pointer;
+}
+.node:focus-visible circle {
+  stroke-width: 4;
+}
+.link {
+  stroke: transparent;
+  stroke-width: 14;
+  stroke-linecap: round;
+  cursor: help;
+  outline: none;
+}
+.linkLit {
+  stroke: var(--ink-strong);
+  stroke-opacity: 0.12;
+}
+.rosterItem {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 32px;
+}

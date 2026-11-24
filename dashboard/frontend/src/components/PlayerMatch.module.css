@@ -1,0 +1,187 @@
+/* PlayerMatchSections: his match inside the performance dialog. */
+.sections {
+  display: grid;
+  gap: 16px;
+  margin-top: 18px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+}
+.moments {
+  display: grid;
+  gap: 6px;
+}
+.timeline {
+  position: relative;
+  height: 22px;
+  margin: 0 8px;
+}
+.timeline::before {
+  position: absolute;
+  top: 10px;
+  right: 0;
+  left: 0;
+  height: 2px;
+  background: var(--border);
+  content: "";
+}
+.played {
+  position: absolute;
+  top: 9px;
+  height: 4px;
+  background: var(--accent);
+}
+.half {
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  width: 1px;
+  height: 12px;
+  background: var(--border-strong);
+}
+.mark {
+  position: absolute;
+  top: 0;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-raised);
+  color: var(--ink-strong);
+  font-size: 11px;
+  line-height: 1;
+  transform: translateX(-50%);
+}
+.scale {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+.momentList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--ink);
+  font-size: var(--text-sm);
+}
+.momentList li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.momentList li > b {
+  color: var(--ink-strong);
+  font-variant-numeric: tabular-nums;
+}
+.icon {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  font-size: 11px;
+}
+.mark b,
+.icon b {
+  display: block;
+  width: 8px;
+  height: 11px;
+}
+.yellow b {
+  background: #facc15;
+}
+.red b {
+  background: #ef4444;
+}
+.on {
+  color: light-dark(#0f8a5f, #86efac);
+}
+.off {
+  color: light-dark(#c0263c, #fda4af);
+}
+.own {
+  filter: grayscale(1);
+}
+/* Moments across, then shots and zone; with only one of them, it sits beside the moments. */
+.sections {
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  column-gap: 24px;
+  align-items: start;
+}
+.sections > .moments {
+  grid-column: 1 / -1;
+}
+.single {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+.single > .moments {
+  grid-column: auto;
+}
+.single .shotPitch {
+  max-width: 260px;
+}
+.block {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.block h4 {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.figures {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.figures strong {
+  margin-right: -8px;
+  color: var(--ink-strong);
+  font: 650 20px / 1.1 var(--font-display);
+}
+.figures span::before {
+  margin-right: 12px;
+  content: "·";
+}
+.shotPitch,
+.zonePitch {
+  --pitch-ground: light-dark(#f3f6f9, #12151a);
+  --pitch-mark: light-dark(#cdd5df, #2e333b);
+  display: block;
+  width: 100%;
+  height: auto;
+  background: var(--pitch-ground);
+}
+.shotPitch {
+  max-width: 300px;
+}
+.line {
+  fill: none;
+  stroke: var(--pitch-mark);
+  stroke-width: 0.3;
+}
+.arrow {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 2;
+  stroke-linecap: square;
+}
+@media (max-width: 640px) {
+  .sections {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .shotPitch {
+    max-width: 280px;
+  }
+}
