@@ -8,6 +8,7 @@ import { Media } from "../components/UI.jsx";
 import { Term } from "../components/Hint.jsx";
 import SeasonSelect from "../components/SeasonSelect.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
+import useFavourites from "../hooks/useFavourites.js";
 import { number } from "../services/format.js";
 import { useBallonDorRanking, useBreakouts } from "../services/ballon-dor.js";
 
@@ -77,10 +78,13 @@ function Cell({ href, className, children, ...props }) {
 }
 
 function PodiumPlace({ rank, medal, entry }) {
-  const links = useEntryLinks(entry);
+  const links = useEntryLinks(entry),
+    // Effect 6: a favourite player keeps the standings' highlight of saved clubs.
+    followed = useFavourites().players.has(entry?.playerId);
   return (
     <li
       className={`card podium-place podium-${medal}`}
+      data-followed={followed || undefined}
       value={rank}
       aria-label={
         entry
@@ -132,10 +136,12 @@ function PodiumPlace({ rank, medal, entry }) {
 }
 
 function RankRow({ rank, entry }) {
-  const links = useEntryLinks(entry);
+  const links = useEntryLinks(entry),
+    followed = useFavourites().players.has(entry?.playerId);
   return (
     <li
       className="rank-row"
+      data-followed={followed || undefined}
       value={rank}
       aria-label={
         entry

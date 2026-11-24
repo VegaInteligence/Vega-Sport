@@ -11,6 +11,9 @@ COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/vega vega
 COPY backend/sql sql
+# The account's tables, applied by the migrate task apart from the football schemas, only once the
+# account is on (vega/migrate.py ACCOUNT_SQL, backend/account/DEPLOYMENT.md section 4).
+COPY backend/account/sql account/sql
 # The archive import: its builders, the honours collector and the edition script, with the
 # site's shared/archive.js.
 COPY backend/archives backend/archives

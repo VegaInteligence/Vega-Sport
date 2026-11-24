@@ -20,8 +20,15 @@ const pageRoutes = readdirSync(app, { recursive: true })
         .join("/"),
   );
 
-test("every page of the app directory keeps its data providers", () => {
+test("every page of the app directory keeps its data providers", (t) => {
   assert.ok(pageRoutes.includes("/") && pageRoutes.includes("/clubs"));
+  // /connexion and /compte are pages only with accounts on (account-switch.js); off, they are the 404 page.
+  const saved = process.env.NEXT_PUBLIC_VEGA_ACCOUNTS;
+  process.env.NEXT_PUBLIC_VEGA_ACCOUNTS = "1";
+  t.after(() => {
+    if (saved === undefined) delete process.env.NEXT_PUBLIC_VEGA_ACCOUNTS;
+    else process.env.NEXT_PUBLIC_VEGA_ACCOUNTS = saved;
+  });
   for (const route of pageRoutes)
     for (const suffix of route === "/" ? [""] : ["", "/"])
       assert.equal(

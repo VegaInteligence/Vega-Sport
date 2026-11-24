@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Layout from "../components/Layout.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { useResearch } from "../hooks/ResearchContext.jsx";
@@ -9,8 +9,22 @@ import { useResourceBootstrap } from "../services/resource-bootstrap.js";
 import { mirrorHomeState } from "../services/home-bootstrap-preferences.js";
 import { AsyncState, Empty, Skeleton } from "../components/UI.jsx";
 import useCompactRead from "../hooks/useCompactRead.js";
-import { compactGeneration, compactScope } from "../services/compact-reads.js";
+import {
+  compactGeneration,
+  compactScope,
+  supportsCompactRead,
+} from "../services/compact-reads.js";
+import {
+  menuCountries,
+  resolveHomeCountry,
+} from "../services/home-country.js";
+import {
+  HOME_PRIORITY,
+  localLeagues,
+  localMatches,
+} from "../services/home-priority.js";
 import { chooseUpcoming } from "../services/home-upcoming.js";
+import { favouriteSets, titleRaceOpening } from "../services/preference-effects.js";
 import { fixtureWeek, parisDay } from "../services/fixtures.js";
 import HomePreferences from "../components/HomePreferences.jsx";
 import SeasonFilter from "../components/SeasonFilter.jsx";
@@ -78,22 +92,50 @@ function useClock() {
 }
 
 /**
+ * The visitor's country (VI-48): their choice (preferences.homeCountry), else the country the
+ * hosting detected: on the server with the bootstrap, else from /api/visitor-country.
+ */
+function useHomeCountry(f) {
+  const bootstrap = useResourceBootstrap();
+  const choice = f.preferences.homeCountry || "";
+  // undefined: not asked yet; null: asked, nothing detected.
+  const [detected, setDetected] = useState(bootstrap?.visitorCountry);
+  useEffect(() => {
+    if (choice || detected !== undefined) return undefined;
+    const controller = new AbortController(),
+      timer = setTimeout(() => controller.abort(), 2500);
+    fetch("/api/visitor-country", { cache: "no-store", signal: controller.signal })
+      .then((response) => (response.ok ? response.json() : {}))
+      .then((body) => setDetected(body.country || null))
+      .catch(() => !controller.signal.aborted && setDetected(null))
+      .finally(() => clearTimeout(timer));
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [choice, detected]);
+  return resolveHomeCountry(choice, detected);
+}
+
+/**
  * The home follows the saved competitions. Without a choice it shows the
  * Top 7 Europe leagues and the European cups; "all competitions" chosen in
- * the filter opens it to every league.
+ * the filter opens it to every league. `chosen`: the visitor picked these leagues
+ * (the default focus is no choice), so the country's matches stay inside them.
  */
 function homeScope(f, focusIds) {
   if (f.filters.league !== "all")
-    return { ids: new Set([f.filters.league]), label: null };
+    return { ids: new Set([f.filters.league]), label: null, chosen: true };
   const favorites = f.preferences.favoriteLeagueIds;
   if (favorites.length)
     return {
       ids: new Set(favorites),
       label: `${favorites.length} compétition${favorites.length > 1 ? "s" : ""} suivie${favorites.length > 1 ? "s" : ""}`,
+      chosen: true,
     };
   if (f.focus === "all" && f.preferences.onboardingComplete)
-    return { ids: null, label: "toutes les compétitions" };
-  return { ids: focusIds, label: "Top 7 Europe et coupes d’Europe" };
+    return { ids: null, label: "toutes les compétitions", chosen: true };
+  return { ids: focusIds, label: "Top 7 Europe et coupes d’Europe", chosen: false };
 }
 
 function LegacyOverview() {
@@ -315,6 +357,7 @@ function CompactOverview() {
       archive: archived ? 1 : undefined,
     },
     favourites = { personalTeams: saved("clubs"), personalPlayers: saved("players") },
+    country = useHomeCountry(f),
     // Doc "Accueil", two reads: the common read is the same for every visitor of a
     // scope and cached as such; the favourites are a small personal read of their own.
     summary = useCompactRead(
@@ -331,6 +374,39 @@ function CompactOverview() {
         refreshManifest: f.refreshManifest,
       },
     );
+  // The visitor's country: a common read per country (same for every visitor of it), today's window
+  // only. Its matches enter the existing cards (home-priority.js); no card of its own.
+  const local = useCompactRead(
+    "home-local",
+    { season: f.season, country, generation: compactGeneration(f.manifest) },
+    {
+      enabled:
+        Boolean(country) && !archived && supportsCompactRead(f.manifest, "home-local"),
+      clock: Math.floor(now / 300_000),
+      refreshManifest: f.refreshManifest,
+    },
+  );
+  // While a newly chosen country's read loads, « À l'affiche » keeps the last country's choice
+  // (no blank, no second reorder); « Aucun pays » applies at once.
+  const lastLocal = useRef(null);
+  const answered =
+    local.value?.data?.country === country ? local.value.data : null;
+  if (answered) lastLocal.current = answered;
+  else if (!country) lastLocal.current = null;
+  const shownLocal = !country
+    ? null
+    : answered || (local.loading ? lastLocal.current : null);
+  const countries = useMemo(
+    () => menuCountries(f.manifest.competitions || []),
+    [f.manifest],
+  );
+  // The country menu of the preferences panel: the only control of the country.
+  const countryControl = {
+    country,
+    choice: f.preferences.homeCountry || "",
+    countries,
+    onChoose: (code) => f.savePreferences({ homeCountry: code }),
+  };
   // The synthesis refreshes in the background: the last one stays on screen, and a failed
   // refresh is tried again a minute later without a word on the page.
   const retrySummary = summary.retry;
@@ -357,7 +433,7 @@ function CompactOverview() {
         actions={
           <>
             <SeasonFilter f={f} compact />
-            <HomePreferences f={f} />
+            <HomePreferences f={f} country={countryControl} />
           </>
         }
       >
@@ -396,14 +472,35 @@ function CompactOverview() {
             data.competitions || [],
           ),
           mine = personal.value?.data,
-          // The five upcoming matches, chosen from the big matches and the favourites'
-          // (home-upcoming.js).
+          // The country's competitions: the results strip's now, « À l'affiche »'s once its
+          // home-local read has answered (home-priority.js).
+          tickerLeagues = localLeagues(
+            country,
+            competitions.values(),
+            answered?.competitions,
+          ),
+          cardLeagues = localLeagues(
+            shownLocal?.country,
+            competitions.values(),
+            shownLocal?.competitions,
+          ),
+          // The five upcoming matches, chosen from the big matches, the favourites' and the
+          // country's (home-upcoming.js), under the priority fixed in home-priority.js.
           highlights = chooseUpcoming({
             editorial: data.highlights || [],
+            billboard: data.billboard,
             favourites: mine?.favourites,
             matches: mine?.upcoming,
             rules: data.rules,
             now,
+            local: localMatches({
+              billboard: data.billboard,
+              local: shownLocal,
+              window: data.billboardWindow,
+              scopeIds: scope.chosen ? scope.ids : null,
+              leagues: cardLeagues,
+            }),
+            priority: HOME_PRIORITY,
           });
         return (
           <>
@@ -414,6 +511,9 @@ function CompactOverview() {
               competitions={competitions}
               archived={archived}
               now={now}
+              country={country}
+              countryControl={countryControl}
+              countryLeagues={tickerLeagues}
               model={{
                 ...data,
                 matchWeek: validPeriod
@@ -467,7 +567,13 @@ function OverviewContent({
   archived,
   now,
   model,
+  country = null,
+  countryControl = null,
+  countryLeagues = null,
 }) {
+  // The visitor's favourites (every list; on the server, the home cookie's): effects 1, 2, 5.
+  const research = useResearch();
+  const favourites = useMemo(() => favouriteSets(research?.data.lists), [research?.data.lists]);
   const {
     matchWeek,
     results,
@@ -509,7 +615,7 @@ function OverviewContent({
         actions={
           <>
             <SeasonFilter f={f} compact />
-            <HomePreferences f={f} />
+            <HomePreferences f={f} country={countryControl} />
           </>
         }
       >
@@ -531,9 +637,13 @@ function OverviewContent({
         </Empty>
       </Layout>
     );
-  const initialTable = tables.some((t) => t.leagueId === "l_3FJFUl")
-    ? "l_3FJFUl"
-    : tables[0]?.leagueId;
+  // « Course au titre » (effect 2): the first favourite club's league, else the country's, else Ligue 1.
+  const initialTable = titleRaceOpening(tables, competitions, {
+    favouriteClubs: favourites.order.clubs,
+    matches: [...results, ...(highlights || [])],
+    clubCountries: f.manifest?.clubCountries,
+    country,
+  });
   const hasWeekSummary = Boolean(potw || win);
   const hasFinishing =
     leaders.clinical.length > 0 || leaders.wasteful.length > 0;
@@ -571,7 +681,7 @@ function OverviewContent({
         )}
         <div className="home-toolbar-filters">
           <SeasonFilter f={f} compact />
-          <HomePreferences f={f} />
+          <HomePreferences f={f} country={countryControl} />
         </div>
       </div>
       {!results.length && !internationals.length && !archived && (
@@ -590,6 +700,9 @@ function OverviewContent({
         ranks={ranks}
         competitions={competitions}
         period={matchWeek}
+        localLeagues={countryLeagues}
+        priority={HOME_PRIORITY}
+        favourites={favourites.clubs}
       />
       <div className="home-bento">
         {featured && (
@@ -629,7 +742,7 @@ function OverviewContent({
         {tables.length > 0 && (
           <div className={highlights.length ? "home-span-7" : "home-span-12"}>
             <TitleRace
-              key={`${scopeKey}:${f.season}`}
+              key={`${scopeKey}:${f.season}:${country || ""}:${initialTable || ""}`}
               tables={tables}
               competitions={competitions}
               initial={initialTable}
@@ -650,6 +763,7 @@ function OverviewContent({
           <div className={seasonSpan("home-span-5")}>
             <Finishing
               leaders={leaders}
+              favourites={favourites.players}
               scopeIds={scope.ids ? [...scope.ids] : null}
             />
           </div>
@@ -658,6 +772,7 @@ function OverviewContent({
           <div className={seasonSpan("home-span-4")}>
             <SeasonScorers
               leaders={leaders}
+              favourites={favourites.players}
               scopeIds={scope.ids ? [...scope.ids] : null}
             />
           </div>

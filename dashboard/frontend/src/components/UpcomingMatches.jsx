@@ -3,6 +3,8 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import React, { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useFootball } from "../hooks/FootballContext.jsx";
+import useFavourites from "../hooks/useFavourites.js";
+import { favouritesFirstWithinDay, involvesFavourite } from "../services/preference-effects.js";
 import { Media, Pager } from "./UI.jsx";
 import Icon from "./Icon.jsx";
 import {
@@ -115,17 +117,24 @@ export default function UpcomingMatches({
       compact && f.filters.league === "all"
         ? f.preferences.favoriteLeagueIds
         : undefined;
-  const entries = useMemo(
-    () =>
-      upcomingFixtures(f.data.fixtures, {
-        week,
-        now,
-        league,
-        query,
-        favoriteLeagueIds,
-      }),
-    [f.data.fixtures, week.start, now, league, query, favoriteLeagueIds],
-  );
+  const favouriteClubs = useFavourites().clubs;
+  const entries = useMemo(() => {
+    const listed = upcomingFixtures(f.data.fixtures, {
+      week,
+      now,
+      league,
+      query,
+      favoriteLeagueIds,
+    });
+    // Effect 3: on the matches page, a favourite club's match leads its day.
+    return compact
+      ? listed
+      : favouritesFirstWithinDay(
+          listed,
+          (entry) => entry.day,
+          (entry) => involvesFavourite(entry.fixture, favouriteClubs),
+        );
+  }, [f.data.fixtures, week.start, now, league, query, favoriteLeagueIds, compact, favouriteClubs]);
   // The home preview always lists Champions League matches first.
   const preview = useMemo(
     () =>

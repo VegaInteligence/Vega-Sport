@@ -31,7 +31,8 @@ import {
 } from "./HomeCommon.jsx";
 
 /**
- * Scores of the week, newest day first: the national teams' first (home-insights.js, weekTicker), then the clubs'.
+ * Scores of the week, newest day first: the national teams' first (home-insights.js, weekTicker), then the clubs',
+ * the visitor's country's (`localLeagues`, home-priority.js) as `priority` says.
  * A club opens its page and the score opens the match; a national side opens its nation's page.
  */
 export function HomeTicker({
@@ -40,9 +41,17 @@ export function HomeTicker({
   ranks,
   competitions,
   period,
+  localLeagues = null,
+  priority,
+  favourites = null,
 }) {
   const f = useFootball();
-  const days = weekTicker(results, internationals, ranks);
+  // Favourite clubs' results first (effect 1), then the country's or the weight's as `priority` says.
+  const days = weekTicker(results, internationals, ranks, {
+    leagues: localLeagues,
+    priority,
+    favourites,
+  });
   if (!days.length) return null;
   return (
     <nav

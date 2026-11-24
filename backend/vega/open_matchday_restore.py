@@ -70,12 +70,13 @@ REFS = {
 # keyed by an Elo run (no column of agg.power_runs, whose reviewed row verify_elo compares whole) and redefines
 # api.power_clubs: no relation naming a match. 169 (#90) adds a column to agg.player_level and redefines
 # api.player_levels: no relation naming a match. 170 (§55) adds two columns to agg.nation_elo_runs (none to
-# agg.power_runs) and re-arms two scopes of ops.source_runs: no relation naming a match. A later one needs its own
-# review here.
+# agg.power_runs) and re-arms two scopes of ops.source_runs: no relation naming a match. 171 (VI-48) adds
+# core.home_stakes and core.home_level_scales, settings keyed by kind and key and by scope (no column naming a match,
+# a team or an edition), and api functions and a view. A later one needs its own review here.
 REVIEWED_SCHEMAS = ("153_transfer_history_served.sql", "163_league_player_seasons.sql", "164_league_history_reads.sql",
                     "165_league_history_spellings.sql", "166_match_strengths_extra_time.sql", "167_player_level.sql",
                     "168_nation_world_ranking.sql", "169_player_level_measured.sql",
-                    "170_nation_elo_national_set.sql")
+                    "170_nation_elo_national_set.sql", "171_home_importance_v2.sql")
 
 
 class Refusal(RuntimeError):

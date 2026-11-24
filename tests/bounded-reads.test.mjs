@@ -461,6 +461,7 @@ test("navbar focus/typing selects the advertised read path and cancels its debou
       // The national teams: one cached read of the season's list, outside the typed reads.
       "../services/nations.js": { nationName: (name) => name, useNations: () => ({ loading: false, value: null }) },
       "../services/global-search.js": globalSearch,
+      "../hooks/useFavourites.js": { __esModule: true, default: () => ({ clubs: new Set(), players: new Set(), order: { clubs: [], players: [] } }) },
       "../services/resources.js": {
         cachedResource: () => undefined,
         useResource: (key, loader, enabled) => {

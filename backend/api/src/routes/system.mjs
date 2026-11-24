@@ -31,7 +31,7 @@ export const editionCounts = (p) => ({
 export const editionDigest = (p) => digest(JSON.stringify([p.season, p.league_id, iso(p.retrieved_at), editionCounts(p)])).slice(0, 16);
 
 /** The compact reads this API serves; the others stay on the current API until ported. */
-export const COMPACT_READS = { home: true, players: true, clubs: true, player: true, club: true, league: true, performance: true, discipline: true, presence: true };
+export const COMPACT_READS = { home: true, "home-local": true, players: true, clubs: true, player: true, club: true, league: true, performance: true, discipline: true, presence: true };
 
 /** What the site reads to choose its reads (dashboard/frontend: compact-reads.js,
  * season_data.js, actor-reads.js, global-search-client.js, season-version.js,

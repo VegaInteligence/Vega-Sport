@@ -1,0 +1,163 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Vega account API (backend/account, VI-38): a front function outside the VPC, behind its
+  Function URL, that verifies the Neon session and signs the Vega pass; a store function in the
+  VPC, invoked by the front only, the only code with a connection to schema account (login
+  vega_v2_account). Deployed by deploy.sh (step 11) once SSM /vega/v2/account-deploy is on:
+  backend/account/DEPLOYMENT.md.
+Parameters:
+  FrontReleaseKey: {Type: String, AllowedPattern: 'releases/v2-account/[a-f0-9]{64}\.zip', Description: 'ZIP of backend/account/lambda/front-index.mjs, bundled'}
+  StoreReleaseKey: {Type: String, AllowedPattern: 'releases/v2-account/[a-f0-9]{64}\.zip', Description: 'ZIP of backend/account/lambda/store-index.mjs, bundled, with rds-ca.pem'}
+  AccountDatabaseUrl:
+    Type: String
+    NoEcho: true
+    MaxLength: 2000
+    AllowedPattern: 'postgresql://vega_v2_account:[^@]+@[^/]+/vega_v2'
+    Description: 'vega_v2_account login on vega-football-db-postgres, without sslmode (the store verifies TLS with the bundled CA); SSM /vega/v2/account-database-url'
+  NeonAuthUrl:
+    Type: String
+    AllowedPattern: 'https://[A-Za-z0-9.-]+(/[A-Za-z0-9._~-]+)*/?'
+    Description: 'The Neon branch auth URL (NEON_AUTH_BASE_URL); its key set is <url>/.well-known/jwks.json, iss and aud its origin'
+  SiteOrigins:
+    Type: String
+    AllowedPattern: '(https://[a-z0-9.-]+|http://localhost:[0-9]+)(,(https://[a-z0-9.-]+|http://localhost:[0-9]+))*'
+    Description: 'Comma-separated exact origins allowed by CORS (never *), e.g. https://vegasport.vercel.app'
+  PassKeys:
+    Type: String
+    NoEcho: true
+    AllowedPattern: '[A-Za-z0-9_-]{1,16}:[A-Za-z0-9_-]{43,}(,[A-Za-z0-9_-]{1,16}:[A-Za-z0-9_-]{43,})*'
+    Description: 'name:base64url pairs of the pass keys (32 bytes at least each); SSM /vega/v2/pass-key/<name>. The CloudFront gate holds the same keys.'
+  PassKeyCurrent: {Type: String, AllowedPattern: '[A-Za-z0-9_-]{1,16}', Description: 'Name of the key that signs (one of PassKeys)'}
+  NeonApiKey:
+    Type: String
+    NoEcho: true
+    Default: ''
+    Description: 'Neon API key that deletes auth users (SSM /vega/v2/neon-api-key); empty, DELETE /account answers 503 and erases nothing'
+  NeonProjectId: {Type: String, Default: '', AllowedPattern: '([A-Za-z0-9_-]{1,64})?'}
+  NeonBranchId: {Type: String, Default: '', AllowedPattern: '([A-Za-z0-9_-]{1,64})?'}
+Resources:
+  FrontLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/vega-v2-account-front
+      RetentionInDays: 14
+  StoreLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/vega-v2-account-store
+      RetentionInDays: 14
+  StoreRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement: [{Effect: Allow, Principal: {Service: lambda.amazonaws.com}, Action: 'sts:AssumeRole'}]
+      Policies:
+        - PolicyName: Runtime
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ['logs:CreateLogStream', 'logs:PutLogEvents']
+                Resource: !GetAtt StoreLogs.Arn
+              - Effect: Allow
+                Action: ['ec2:CreateNetworkInterface', 'ec2:DescribeNetworkInterfaces', 'ec2:DescribeSubnets', 'ec2:DeleteNetworkInterface', 'ec2:AssignPrivateIpAddresses', 'ec2:UnassignPrivateIpAddresses']
+                Resource: '*'
+              # The function's own code may not use these (as api.yaml): only Lambda, for its ENIs.
+              - Effect: Deny
+                Action: 'ec2:*'
+                Resource: '*'
+                Condition:
+                  ArnEquals:
+                    'lambda:SourceFunctionArn': !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:vega-v2-account-store'
+  Store:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: vega-v2-account-store
+      Description: Account store, schema account only (login vega_v2_account); invoked by vega-v2-account-front
+      Runtime: nodejs24.x
+      Architectures: [arm64]
+      Handler: index.handler
+      MemorySize: 256
+      Timeout: 10
+      # One connection per copy: 8 copies, and the login's limit is 2 x 8 + 2 = 18 (two generations
+      # of copies during a deploy, plus a diagnostic session; DEPLOYMENT.md, migrate.py).
+      ReservedConcurrentExecutions: 8
+      Role: !GetAtt StoreRole.Arn
+      Code: {S3Bucket: !Sub 'vega-v2-releases-${AWS::AccountId}-${AWS::Region}', S3Key: !Ref StoreReleaseKey}
+      Environment:
+        Variables:
+          VEGA_RELEASE: !Ref StoreReleaseKey
+          V2_ACCOUNT_DATABASE_URL: !Ref AccountDatabaseUrl
+      VpcConfig:
+        # database.yaml: AccountSG, egress 5432 to the database only, exported as vega-v2-account-sg.
+        SecurityGroupIds: [!ImportValue vega-v2-account-sg]
+        SubnetIds: [subnet-0233a9567335f56ce, subnet-04c9af303f55d9718, subnet-0e72516f361932c15]
+  FrontRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement: [{Effect: Allow, Principal: {Service: lambda.amazonaws.com}, Action: 'sts:AssumeRole'}]
+      Policies:
+        - PolicyName: Runtime
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ['logs:CreateLogStream', 'logs:PutLogEvents']
+                Resource: !GetAtt FrontLogs.Arn
+              # The only principal of the stack allowed to invoke the store: its function, not
+              # its versions or aliases, and nothing else.
+              - Effect: Allow
+                Action: 'lambda:InvokeFunction'
+                Resource: !GetAtt Store.Arn
+  Front:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: vega-v2-account-front
+      Description: Account API front (Neon session, pass, routes); outside the VPC, no database
+      Runtime: nodejs24.x
+      Architectures: [arm64]
+      Handler: index.handler
+      MemorySize: 256
+      Timeout: 10
+      # No connection of its own, but a public URL: the cap of the copies bounds abuse (a Function
+      # URL takes no web ACL).
+      ReservedConcurrentExecutions: 10
+      Role: !GetAtt FrontRole.Arn
+      Code: {S3Bucket: !Sub 'vega-v2-releases-${AWS::AccountId}-${AWS::Region}', S3Key: !Ref FrontReleaseKey}
+      Environment:
+        Variables:
+          VEGA_RELEASE: !Ref FrontReleaseKey
+          VEGA_NEON_AUTH_URL: !Ref NeonAuthUrl
+          VEGA_SITE_ORIGINS: !Ref SiteOrigins
+          VEGA_PASS_KEYS: !Ref PassKeys
+          VEGA_PASS_KEY_CURRENT: !Ref PassKeyCurrent
+          VEGA_ACCOUNT_STORE_FUNCTION: !Ref Store
+          VEGA_NEON_API_KEY: !Ref NeonApiKey
+          VEGA_NEON_PROJECT_ID: !Ref NeonProjectId
+          VEGA_NEON_BRANCH_ID: !Ref NeonBranchId
+  # Public: the Neon session is the caller's proof. No CORS configuration here: the function
+  # answers preflights and CORS itself, from SiteOrigins (FAILURE_MODES.md H9, H10).
+  FrontUrl:
+    Type: AWS::Lambda::Url
+    Properties: {AuthType: NONE, TargetFunctionArn: !GetAtt Front.Arn, InvokeMode: BUFFERED}
+  FrontUrlPublic:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref Front
+      Action: lambda:InvokeFunctionUrl
+      FunctionUrlAuthType: NONE
+      Principal: '*'
+  FrontUrlInvoke:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref Front
+      Action: lambda:InvokeFunction
+      InvokedViaFunctionUrl: true
+      Principal: '*'
+Outputs:
+  # https://<id>.lambda-url.us-east-2.on.aws/ : the site's ACCOUNT_API_ORIGIN (without the slash), a server-side variable.
+  FrontUrl: {Value: !GetAtt FrontUrl.FunctionUrl, Export: {Name: vega-v2-account-url}}
+  StoreFunctionArn: {Value: !GetAtt Store.Arn}

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import Layout from "../components/Layout.jsx";
@@ -15,6 +15,7 @@ import {
   useWholeRanking,
 } from "../services/power-ranking.js";
 import { Term } from "../components/Hint.jsx";
+import { powerRankingTarget } from "../services/preference-effects.js";
 
 const TABS = [
   ["players", "Joueurs"],
@@ -144,6 +145,16 @@ function PlayersTab({ season }) {
 function ClubsTab({ season }) {
   const f = useFootball();
   const resource = useClubRanking(season);
+  // Effect 12: the table opens at the visitor's country's first club (scrolled to it, nothing added); never
+  // after the visitor scrolled, nor with an anchor in the address.
+  const scrolled = useRef(false);
+  useEffect(() => {
+    if (scrolled.current || !f.preferencesReady || !resource.value?.length) return;
+    scrolled.current = true;
+    const target = powerRankingTarget(resource.value, f.preferences?.homeCountry);
+    if (!target || window.location.hash || window.scrollY > 0) return;
+    document.querySelector(`.power-ranking-table tr[data-team-id="${target}"]`)?.scrollIntoView({ block: "center" });
+  }, [f.preferencesReady, f.preferences?.homeCountry, resource.value]);
   return (
     <Card title="Classement des clubs">
       <p className="card-note">
@@ -172,7 +183,7 @@ function ClubsTab({ season }) {
               </tr>
             ) : (
               resource.value.map((r) => (
-                <tr key={r.teamId}>
+                <tr key={r.teamId} data-team-id={r.teamId}>
                   <td>{number(r.rank)}</td>
                   <td>
                     <Link className="power-ranking-name" href={f.href("/clubs/", { id: r.teamId })} prefetch={false}>

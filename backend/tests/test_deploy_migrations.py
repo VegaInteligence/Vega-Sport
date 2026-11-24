@@ -49,7 +49,9 @@ ADDED = ["155_player_grade_status.sql", "156_team_side_corrections.sql", "157_pa
          # #90 (§54): Score Vega v9.1, the keeper without goals prevented is flagged on his level row.
          "169_player_level_measured.sql",
          # §55: the national teams an Elo run read (agg.nation_elo_runs), the marking and the identity pass re-armed.
-         "170_nation_elo_national_set.sql"]
+         "170_nation_elo_national_set.sql",
+         # VI-48 (#69): the home's importance v2, its settings and its two windows (api functions, two settings tables).
+         "171_home_importance_v2.sql"]
 # SportScore editions: A, a rank shared at different points (a version already kept); B, rank 5 in a table of two (no
 # version yet); C, a table that holds (its version kept).
 A, B, C = 9601, 9602, 9603
@@ -181,8 +183,8 @@ class DeploymentMigrationsTest(unittest.TestCase):
         self.assertEqual(len(applied), 160)
         self.assertEqual(self.at_production, "migrations applied=160 total=160 logins=unchanged")
         self.assertEqual(self.merged_added, ADDED)
-        self.assertEqual(self.deployed, "migrations applied=15 total=175 logins=unchanged")
-        self.assertEqual(self.again, "migrations applied=0 total=175 logins=unchanged")
+        self.assertEqual(self.deployed, "migrations applied=16 total=176 logins=unchanged")
+        self.assertEqual(self.again, "migrations applied=0 total=176 logins=unchanged")
         self.assertEqual([v for v, *_ in self.migrations_after if v not in {w for w, *_ in self.migrations_before}], ADDED)
         self.assertEqual([r for r in self.migrations_after if r[0] < "155"], self.migrations_before)
         self.assertEqual(self.migrations_again, self.migrations_after)
@@ -191,7 +193,9 @@ class DeploymentMigrationsTest(unittest.TestCase):
                     f"SELECT count(*) FROM api.nation_matches({NATIONS[0]})", "SELECT count(*) FROM api.player_grade_status",
                     "SELECT count(*) FROM api.player_replacement_facts", "SELECT count(*) FROM api.player_profile_axes",
                     "SELECT count(*) FROM api.player_form_grades", "SELECT count(*) FROM api.team_finished_matches",
-                    "SELECT count(*) FROM api.player_team_fit", "SELECT count(home_penalty_score) FROM api.match_strengths"):
+                    "SELECT count(*) FROM api.player_team_fit", "SELECT count(home_penalty_score) FROM api.match_strengths",
+                    "SELECT count(*) FROM api.home_rules_v2",
+                    "SELECT count(*) FROM api.home_importance_v2(2026::smallint, ARRAY[]::integer[])"):
             self.assertIsNotNone(self.read.execute(sql).fetchone()[0], sql)
         friendly = self.read.execute("SELECT match_id, tournament, home_name, away_name FROM api.home_internationals('2026-10-05', '2026-10-11')").fetchall()
         self.assertEqual([r[1:] for r in friendly], [("Friendly", "Brazil", "Japan")])

@@ -44,6 +44,8 @@ import {
   sortPlayerAverages,
 } from "../services/player-directory.js";
 import { EMPTY_ADVANCED } from "../services/advanced-filters.js";
+import usePreselect from "../hooks/usePreselect.js";
+import { playersLeague } from "../services/preference-effects.js";
 
 const OTHER_PROFILE_VIEWS = [
   "stats",
@@ -72,6 +74,15 @@ export default function PlayersPage() {
     [directoryPage, setDirectoryPage] = useState({ key: "", page: 1 }),
     [comparisonIntent, setComparisonIntent] = useState("");
   const id = params.get("id");
+  // Effect 10: the league filter starts on the followed league when exactly one is followed.
+  usePreselect("players", {
+    ready: Boolean(f.preferencesReady && !id && f.competitions?.length),
+    candidate: playersLeague(f.preferences?.favoriteLeagueIds),
+    inUrl: Boolean(params.get("league") || params.get("leagues")),
+    options: new Set((f.competitions || []).map((c) => c.id)),
+    current: f.filters.league,
+    apply: (league) => f.setFilters((v) => ({ ...v, league, leagues: [], match: "all" })),
+  });
   const deferredFilters = useDeferredValue(f.filters);
   const filters = useMemo(
     () =>

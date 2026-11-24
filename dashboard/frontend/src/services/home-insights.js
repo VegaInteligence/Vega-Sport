@@ -4,6 +4,8 @@ import { knockoutStage } from "./knockout-bracket.js";
 import { SIMPLE_LEAGUES } from "./competition-standings.js";
 import { rankSeasonPlayers } from "./player-leaderboard.js";
 import { GRADE_SEASON_MINUTES, gradeOf } from "./grades.js";
+import { HOME_PRIORITY, isLocal } from "./home-priority.js";
+import { involvesFavourite, preferenceOrder } from "./preference-effects.js";
 
 export const CHAMPIONS_LEAGUE_ID = "l_0bfbkO";
 export const EUROPA_LEAGUE_ID = "l_38d9HA";
@@ -199,9 +201,17 @@ export const internationalLabel = (tournament) =>
 /**
  * The week strip: each day the national teams' results first, in the API's order (their two sides' Elo; during an
  * international break they are the week's news), then the clubs' by their weight; eight a day, the four latest days
- * of both lists.
+ * of both lists. The visitor's country (home-priority.js, `leagues`: its competitions, null without one): under
+ * "location" its results lead the clubs of each day, before the cut; under "importance" it only breaks ties.
  */
-export function weekTicker(results, internationals = [], ranks = new Map()) {
+export function weekTicker(results, internationals = [], ranks = new Map(), { leagues = null, priority = HOME_PRIORITY, favourites = null } = {}) {
+  // Effect 1 (preference-effects.js): a favourite club's result leads its day, then the priority's order.
+  const clubOrder = preferenceOrder({
+    favourite: (m) => involvesFavourite(m, favourites),
+    local: (m) => isLocal(m, leagues),
+    weight: (a, b) => matchWeight(b, ranks) - matchWeight(a, ranks),
+    priority,
+  });
   const days = new Map();
   const day = (key) =>
     days.get(key) ||
@@ -216,7 +226,7 @@ export function weekTicker(results, internationals = [], ranks = new Map()) {
       day,
       matches: [
         ...nations,
-        ...clubs.sort((a, b) => matchWeight(b, ranks) - matchWeight(a, ranks)),
+        ...clubs.sort(clubOrder),
       ].slice(0, 8),
     }));
 }

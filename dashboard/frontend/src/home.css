@@ -229,6 +229,59 @@ html[data-theme="light"] {
   background: var(--away);
 }
 
+/* The visitor's country (VI-48): its menu, a line of the home's preferences panel. */
+.home-country-picker {
+  position: relative;
+}
+.home-country-button {
+  gap: 8px;
+  height: 32px;
+  padding: 0 32px 0 10px;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.home-country-button .national-flag,
+.home-country-menu .national-flag {
+  flex: none;
+  width: 20px;
+  height: 15px;
+}
+.home-country-menu {
+  left: 0;
+  top: calc(100% + 4px);
+  max-height: min(360px, 60vh);
+  overflow-y: auto;
+}
+.home-country-menu button.nav-menu-item {
+  width: 100%;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.home-country-menu .nav-menu-item[aria-checked="true"] {
+  background: var(--accent-soft);
+  color: var(--ink-strong);
+}
+.home-country-menu .home-country-none {
+  margin-top: 6px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+}
+/* Apart from the competitions below it. */
+.home-preferences-country {
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+.home-preferences-country .home-country-picker {
+  display: inline-block;
+}
+
 /* Bento grid */
 .home-bento {
   display: grid;

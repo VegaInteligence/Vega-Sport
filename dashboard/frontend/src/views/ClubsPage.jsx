@@ -22,6 +22,8 @@ const ClubScoutProfile = lazy(
 );
 import StandingsClubProfile from "../components/StandingsClubProfile.jsx";
 import { ResearchLists, useHasSaved } from "../components/ResearchUI.jsx";
+import usePreselect from "../hooks/usePreselect.js";
+import { clubsCountry } from "../services/preference-effects.js";
 import { fixtureClub } from "../services/club-fixtures.js";
 import { useResource } from "../services/resources.js";
 import useCompactRead from "../hooks/useCompactRead.js";
@@ -218,6 +220,15 @@ export default function ClubsPage() {
     [clubs, remoteDirectory, directory.value],
   );
   const activeCountry = countries.includes(country) ? country : "all";
+  // Effect 12: the directory's country filter starts on the visitor's country (not « Aucun pays »).
+  usePreselect("clubs", {
+    ready: Boolean(f.preferencesReady && directoryView && countries.length),
+    candidate: clubsCountry(f.preferences?.homeCountry),
+    inUrl: false,
+    options: new Set(countries),
+    current: country,
+    apply: setCountry,
+  });
   const competitions = useMemo(() => {
     const represented = new Set(
       remoteDirectory

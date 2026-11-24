@@ -1,5 +1,5 @@
 import Page from "../src/views/OverviewPage.jsx";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import Providers from "./providers.jsx";
 import { prepareHomeBootstrap } from "../src/server/home-bootstrap.js";
 import {
@@ -17,9 +17,20 @@ export default async function HomePage({ searchParams }) {
   const saved = decodeHomeState(
     (await cookies()).get(HOME_STATE_COOKIE)?.value,
   );
+  // The visitor's country (VI-48): the hosting's, as /api/visitor-country reads it.
+  const country =
+    (await headers()).get("x-vercel-ip-country")?.toUpperCase() || null;
   let bootstrap = null;
   try {
-    bootstrap = await prepareHomeBootstrap(params, saved);
+    bootstrap = await prepareHomeBootstrap(
+      params,
+      saved,
+      undefined,
+      undefined,
+      {
+        country: country && !/^(XX|T1)$/.test(country) ? country : null,
+      },
+    );
   } catch {
     // The ordinary client reader retains its visible retry/error behavior.
   }
