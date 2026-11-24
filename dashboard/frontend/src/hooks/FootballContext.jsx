@@ -101,7 +101,7 @@ const preferenceStore = createBrowserStateStore({
         ? [...new Set(saved.favoriteLeagueIds.filter((id) => typeof id === "string"))]
         : [],
       onboardingComplete: saved.onboardingComplete === true,
-      // « Chez vous » (VI-48): as normalizeHomeState keeps it for the home cookie.
+      // The visitor's country (VI-48): as normalizeHomeState keeps it for the home cookie.
       homeCountry:
         typeof saved.homeCountry === "string" && /^(?:[A-Z]{3}|none)$/.test(saved.homeCountry)
           ? saved.homeCountry

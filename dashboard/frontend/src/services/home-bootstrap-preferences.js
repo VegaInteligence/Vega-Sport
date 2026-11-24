@@ -72,7 +72,7 @@ export function normalizeHomeState(input) {
       defaultSeason: season(p.defaultSeason),
       favoriteLeagueIds,
       onboardingComplete: p.onboardingComplete === true,
-      // « Chez vous » (VI-48): a base country code, "none", or "" (no choice). A malformed one is no choice.
+      // The visitor's country (VI-48): a base country code, "none", or "" (no choice). A malformed one is no choice.
       homeCountry:
         typeof p.homeCountry === "string" &&
         /^(?:[A-Z]{3}|none)$/.test(p.homeCountry)

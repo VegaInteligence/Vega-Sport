@@ -62,7 +62,7 @@ export function matchHref(f, match) {
   });
 }
 export function fixtureHref(f, fixture) {
-  // A finished fixture (« À l'affiche », « Chez vous ») opens on its result.
+  // A finished fixture (« À l’affiche ») opens on its result.
   if (fixture.status === "finished")
     return f.href("/matchs/", {
       tab: "results",

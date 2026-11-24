@@ -148,14 +148,14 @@ test("annual seasons survive cookie and browser bootstrap comparison", () => {
   delete globalThis.sessionStorage;
 });
 
-// « Chez vous » (VI-48): the visitor's country choice is one more preference (orion.preferences.v1 homeCountry),
-// mirrored in the home cookie so that the server draws the same strip. Failure modes and expected outcomes:
+// The visitor's country (VI-48): their choice is one more preference (orion.preferences.v1 homeCountry),
+// mirrored in the home cookie so that the server picks the same matches. Failure modes and expected outcomes:
 //  H1 The choice is lost between the browser and the cookie → normalized, encoded and decoded unchanged ("BRA",
 //     "none"); absent → "" (no choice), so every cookie written before VI-48 still matches its browser.
 //  H2 A malformed choice ("bra", "BR", 12, an object) poisons the whole state (clientOnly) → it is dropped to "",
 //     the rest of the state kept.
 //  H3 The guard script misses a changed choice → a browser whose saved choice differs from the cookie's is a
-//     mismatch (the server's strip would be another country's); the same choice matches.
+//     mismatch (the server's cards would follow another country); the same choice matches.
 test("H1–H3 the home country choice: normalized, kept by the cookie, compared by the guard", () => {
   assert.equal(normalizeHomeState({}).preferences.homeCountry, "");
   assert.equal(normalizeHomeState({ preferences: { homeCountry: "BRA" } }).preferences.homeCountry, "BRA");

@@ -17,7 +17,7 @@ export default async function HomePage({ searchParams }) {
   const saved = decodeHomeState(
     (await cookies()).get(HOME_STATE_COOKIE)?.value,
   );
-  // « Chez vous » (VI-48): the hosting's country of the visitor, as /api/visitor-country reads it.
+  // The visitor's country (VI-48): the hosting's, as /api/visitor-country reads it.
   const country =
     (await headers()).get("x-vercel-ip-country")?.toUpperCase() || null;
   let bootstrap = null;

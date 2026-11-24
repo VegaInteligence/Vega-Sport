@@ -66,13 +66,13 @@ function CompetitionPicker({ f, competitions, initialIds, onClose, country }) {
       }
     >
       {country && (
-        // « Chez vous » (VI-48): the strip's country, always reachable here, even when the
-        // strip is hidden (« Ne rien afficher », nothing detected, no match). It applies at once.
+        // The visitor's country (VI-48): the matches the home's cards favour (home-priority.js).
+        // It applies at once.
         <section
           className="home-competition-section home-preferences-country"
-          aria-label="Chez vous"
+          aria-label="Votre pays"
         >
-          <h3>Chez vous</h3>
+          <h3>Votre pays</h3>
           <HomeCountryMenu
             id="home-country-filter"
             country={country.country}

@@ -149,14 +149,14 @@ test("backend without resolved-media capability receives no media option", async
   );
 });
 
-// « Chez vous » (VI-48): the server resolves the visitor's country as the browser will, and reads its strip with the
-// home so that the first paint has it. Failure modes and expected outcomes:
+// The visitor's country (VI-48): the server resolves it as the browser will, and reads its home-local with the home so
+// that the first paint picks the same matches for the cards (home-priority.js). Failure modes and expected outcomes:
 //  S1 The detected country is lost on the server → the hosting's ISO-2 code (x-vercel-ip-country) comes back as
-//     `visitorCountry`, and the strip's country (`homeCountry`) is its base code (FR → FRA).
+//     `visitorCountry`, and the cards' country (`homeCountry`) is its base code (FR → FRA).
 //  S2 The cookie's manual choice is ignored → it beats the detected country; "none" gives no country and no read.
-//  S3 The strip is read under another key than the browser's → the resource key is the browser's useCompactRead key
+//  S3 home-local is read under another key than the browser's → the resource key is the browser's useCompactRead key
 //     (season, country, generation; no media), seeded only when the API announces compactReads["home-local"].
-//  S4 A failed strip read breaks the home's bootstrap → the home stays ready, the strip is simply not seeded.
+//  S4 A failed home-local read breaks the home's bootstrap → the home stays ready, home-local is simply not seeded.
 //  S5 No country, or an archived season (the window is today's) → no read at all.
 function localSource(config = {}) {
   const paths = [];

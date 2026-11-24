@@ -9,9 +9,6 @@ import { nationalTeamLabel } from "../services/national-flags.js";
 import { Term } from "./Hint.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { number } from "../services/format.js";
-import { kickoffFormatter } from "../services/fixtures.js";
-import { homeCountryName, stripDays } from "../services/home-country.js";
-import HomeCountryMenu from "./HomeCountryMenu.jsx";
 import {
   internationalLabel,
   leagueOf,
@@ -24,7 +21,6 @@ import {
 } from "../services/home-insights.js";
 import {
   ChartTip,
-  fixtureHref,
   FormDots,
   Kicker,
   lastName,
@@ -35,7 +31,8 @@ import {
 } from "./HomeCommon.jsx";
 
 /**
- * Scores of the week, newest day first: the national teams' first (home-insights.js, weekTicker), then the clubs'.
+ * Scores of the week, newest day first: the national teams' first (home-insights.js, weekTicker), then the clubs',
+ * the visitor's country's (`localLeagues`, home-priority.js) as `priority` says.
  * A club opens its page and the score opens the match; a national side opens its nation's page.
  */
 export function HomeTicker({
@@ -44,9 +41,14 @@ export function HomeTicker({
   ranks,
   competitions,
   period,
+  localLeagues = null,
+  priority,
 }) {
   const f = useFootball();
-  const days = weekTicker(results, internationals, ranks);
+  const days = weekTicker(results, internationals, ranks, {
+    leagues: localLeagues,
+    priority,
+  });
   if (!days.length) return null;
   return (
     <nav
@@ -71,95 +73,6 @@ export function HomeTicker({
         </React.Fragment>
       ))}
     </nav>
-  );
-}
-
-/**
- * « Chez vous » (VI-48): the visitor's country's matches of yesterday → today + 7 (/api/read/home-local, a
- * common read: no favourite in it), drawn as the results strip above: a day's label, then a cell per match,
- * the score once played, the kickoff before. The country button opens the menu of the manifest's countries.
- */
-export function HomeLocal({
-  matches,
-  country,
-  choice,
-  countries,
-  onChoose,
-  empty = false,
-}) {
-  const f = useFootball(),
-    name = homeCountryName(country);
-  return (
-    <section className="home-local" aria-label={`Chez vous · ${name}`}>
-      <div className="home-local-head">
-        <Kicker>Chez vous</Kicker>
-        <HomeCountryMenu
-          country={country}
-          choice={choice}
-          countries={countries}
-          onChoose={onChoose}
-        />
-      </div>
-      {empty ? (
-        // A country chosen by hand without match keeps its head: the way back stays here.
-        <p className="home-meta home-local-empty" role="status">
-          Aucun match d’ici 7 jours
-        </p>
-      ) : (
-        <nav className="home-ticker" aria-label={`Matchs · ${name}`}>
-          {stripDays(matches).map(({ day, matches: list }) => (
-            <React.Fragment key={day}>
-              <span className="home-ticker-day">{shortDay(day)}</span>
-              {list.map((m) => (
-                <LocalTick key={m.fixture.id} match={m} f={f} />
-              ))}
-            </React.Fragment>
-          ))}
-        </nav>
-      )}
-    </section>
-  );
-}
-
-/** A match of a country's strip: the competition and the kickoff (or its state), the sides, the score once played. */
-function LocalTick({ match: { fixture: x, time }, f }) {
-  const scored =
-      Number.isInteger(x.score_home) && Number.isInteger(x.score_away),
-    shown = scored && (x.status === "finished" || x.status === "in_play"),
-    href = fixtureHref(f, x);
-  return (
-    <div className="home-tick">
-      <Link className="home-tick-top" href={href} prefetch={false}>
-        <span>{shortCompetition(x.league?.id, x.league?.name)}</span>
-        <span>
-          {x.status === "finished"
-            ? "Terminé"
-            : x.status === "in_play"
-              ? "En cours"
-              : kickoffFormatter.format(time)}
-        </span>
-      </Link>
-      {[x.home_team, x.away_team].map((team, i) => {
-        const own = i ? x.score_away : x.score_home,
-          other = i ? x.score_home : x.score_away;
-        return (
-          <Link
-            key={i}
-            className={`home-tick-team${shown && x.status === "finished" && own < other ? " is-lost" : ""}`}
-            href={f.href("/clubs/", { id: team.id })}
-            prefetch={false}
-          >
-            <Media
-              name={team.name}
-              url={team.image_url}
-              className="crest home-crest-xs"
-            />
-            <span>{team.name}</span>
-            {shown && <b>{own}</b>}
-          </Link>
-        );
-      })}
-    </div>
   );
 }
 

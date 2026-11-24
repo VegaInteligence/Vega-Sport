@@ -28,8 +28,9 @@ async function serverJson(path) {
 
 /**
  * `country`: the hosting's ISO-2 code of the visitor (x-vercel-ip-country), when there is one.
- * The result names it (`visitorCountry`) and the strip's country (`homeCountry`, the browser's
- * own rule: home-country.js), and seeds the strip's read under the browser's key.
+ * The result names it (`visitorCountry`) and the cards' country (`homeCountry`, the browser's
+ * own rule: home-country.js), and seeds its read under the browser's key, so that the server
+ * and the browser's first render pick the same matches (home-priority.js).
  */
 export async function prepareHomeBootstrap(
   search,
@@ -95,7 +96,7 @@ export async function prepareHomeBootstrap(
     // The common read takes no favourites: they have their own read, client side.
   };
   const media = manifest.capabilities.resolvedMedia ? { media: 1 } : {};
-  // « Chez vous » (VI-48): the country's common read, beside the home's; never in the way of the home.
+  // The visitor's country (VI-48): its common read, beside the home's; never in the way of the home.
   const localParams =
     result.homeCountry &&
     !params.archive &&

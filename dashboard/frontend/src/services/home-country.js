@@ -1,11 +1,10 @@
 /**
- * « Chez vous » (VI-48, #69; doc "Accueil", « Coin d'un pays »): which country the home's strip shows.
- * A manual choice (preferences.homeCountry, saved with the other preferences and mirrored in the
- * home cookie) beats the country the hosting detects (x-vercel-ip-country, ISO-2), which beats
- * nothing. « Ne rien afficher » is the choice "none". The base names a country by its own
- * three-letter code (FRA, ENG, GER…), never ISO-2: the table below maps one to the other for the
- * countries of the manifest, and for a flag. Pseudo codes (INT, INT-2, UEFA, the confederations)
- * are no country and stay out.
+ * The visitor's country (VI-48, #69; doc "Accueil", « Le pays du visiteur »): the country whose matches the
+ * home's existing cards favour (home-priority.js). A manual choice (preferences.homeCountry, saved with the other
+ * preferences and mirrored in the home cookie) beats the country the hosting detects (x-vercel-ip-country, ISO-2),
+ * which beats nothing. « Aucun pays » is the choice "none". The base names a country by its own three-letter code
+ * (FRA, ENG, GER…), never ISO-2: the table below maps one to the other for the countries of the manifest, and for a
+ * flag. Pseudo codes (INT, INT-2, UEFA, the confederations) are no country and stay out.
  */
 import { countryLabel } from "./competition-selector.js";
 
@@ -90,7 +89,7 @@ export function homeCountryChoice(value) {
     : "";
 }
 
-/** The strip's country: the manual choice, else the detected one, else null. */
+/** The visitor's country: the manual choice, else the detected one, else null. */
 export function resolveHomeCountry(choice, detectedIso) {
   const chosen = homeCountryChoice(choice);
   if (chosen === HOME_COUNTRY_NONE) return null;
@@ -135,32 +134,4 @@ export function initialTitleRace(
   return tables.some((t) => t.leagueId === DEFAULT_TITLE_RACE)
     ? DEFAULT_TITLE_RACE
     : tables[0]?.leagueId;
-}
-
-/** The strip's days in the API's order, each day's matches by kick-off (the API's selection unchanged). */
-export function stripDays(matches = []) {
-  const days = [];
-  for (const match of matches) {
-    const last = days.at(-1);
-    if (last?.day === match.day) last.matches.push(match);
-    else days.push({ day: match.day, matches: [match] });
-  }
-  for (const day of days)
-    day.matches.sort(
-      (a, b) =>
-        a.time - b.time ||
-        String(a.fixture?.id).localeCompare(String(b.fixture?.id)),
-    );
-  return days;
-}
-
-/**
- * "matches": the strip; "empty": a country chosen by hand without match keeps its head and one
- * line (the way back stays on the page); "hidden": no country, no answer, or a detected country
- * without match.
- */
-export function stripMode({ choice, country, data }) {
-  if (!country || !data) return "hidden";
-  if (data.matches?.length) return "matches";
-  return homeCountryChoice(choice) === country ? "empty" : "hidden";
 }

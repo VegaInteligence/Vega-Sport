@@ -229,32 +229,11 @@ html[data-theme="light"] {
   background: var(--away);
 }
 
-/* « Chez vous » (VI-48): the country's matches, drawn as the results strip above; its head
-   (the kicker and the country button) stays put while the cells scroll. */
-.home-local {
-  display: flex;
-  margin: 0 0 16px;
-  border-top: 1px solid var(--border);
-}
-.home-local .home-ticker {
-  flex: 1 1 auto;
-  min-width: 0;
-  margin: 0;
-  border-top: 0;
-}
-.home-local-head {
-  display: flex;
-  flex: none;
-  flex-direction: column;
-  justify-content: center;
-  gap: 10px;
-  padding: 9px 14px 8px 0;
-  border-right: 1px solid var(--border);
-}
-.home-local-picker {
+/* The visitor's country (VI-48): its menu, a line of the home's preferences panel. */
+.home-country-picker {
   position: relative;
 }
-.home-local-country {
+.home-country-button {
   gap: 8px;
   height: 32px;
   padding: 0 32px 0 10px;
@@ -264,19 +243,19 @@ html[data-theme="light"] {
   white-space: nowrap;
   cursor: pointer;
 }
-.home-local-country .national-flag,
-.home-local-menu .national-flag {
+.home-country-button .national-flag,
+.home-country-menu .national-flag {
   flex: none;
   width: 20px;
   height: 15px;
 }
-.home-local-menu {
+.home-country-menu {
   left: 0;
   top: calc(100% + 4px);
   max-height: min(360px, 60vh);
   overflow-y: auto;
 }
-.home-local-menu button.nav-menu-item {
+.home-country-menu button.nav-menu-item {
   width: 100%;
   border: 0;
   background: none;
@@ -284,28 +263,22 @@ html[data-theme="light"] {
   text-align: left;
   cursor: pointer;
 }
-.home-local-menu .nav-menu-item[aria-checked="true"] {
+.home-country-menu .nav-menu-item[aria-checked="true"] {
   background: var(--accent-soft);
   color: var(--ink-strong);
 }
-.home-local-menu .home-local-none {
+.home-country-menu .home-country-none {
   margin-top: 6px;
   border-top: 1px solid var(--border);
   color: var(--muted);
 }
-/* A country chosen by hand with no match in the window: the head stays, one muted line. */
-.home-local .home-local-empty {
-  align-self: center;
-  margin: 0;
-  padding: 0 14px;
-}
-/* The same menu, as a line of the preferences panel, apart from the competitions below it. */
+/* Apart from the competitions below it. */
 .home-preferences-country {
   margin-bottom: 20px;
   padding-bottom: 20px;
   border-bottom: 1px solid var(--border);
 }
-.home-preferences-country .home-local-picker {
+.home-preferences-country .home-country-picker {
   display: inline-block;
 }
 
@@ -2116,41 +2089,5 @@ html[data-theme="light"] {
 @container (max-width: 680px) {
   .home-motw-content {
     grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 640px) {
-  /* « Chez vous »: the head above the strip, the strip scrolls as the results' one. */
-  .home-local {
-    flex-direction: column;
-  }
-  .home-local-head {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    padding: 6px 0;
-    border-right: 0;
-    border-bottom: 1px solid var(--border);
-  }
-  .home-local-country {
-    height: 40px;
-  }
-  /* The cells keep the desktop's height: no 44px team rows, no empty foot under them. */
-  .home-local .home-tick {
-    gap: 3px;
-  }
-  /* The vertical day label sets the strip's height: at the phone's 12px floor it outgrows
-     the cells; tighter letters and padding keep it to their height. */
-  .home-local .home-ticker-day {
-    padding: 4px 5px;
-    letter-spacing: 0.02em;
-  }
-  .home-local .home-tick-top,
-  .home-local .home-tick-team {
-    min-height: 0;
-  }
-  .home-local .home-local-empty {
-    align-self: flex-start;
-    padding: 10px 0;
   }
 }

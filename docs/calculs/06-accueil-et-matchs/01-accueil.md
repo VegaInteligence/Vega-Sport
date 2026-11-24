@@ -41,27 +41,48 @@ L'API arrondit l'importance à 2 décimales (`weight`, `weight2`) ; les tris lis
 
 ## À l'affiche
 
-Clé `billboard` de `/api/read/home` : les matchs du périmètre du visiteur (mêmes `leagues` et même saison que le reste de la lecture) dont le **jour à Paris** va d'hier à aujourd'hui + 3 (5 jours), terminés, en cours ou à venir (un match reporté ou annulé n'y est pas). Chaque jour garde ses **8** matchs les plus importants. Ordre : jour ↑, importance ↓, coup d'envoi ↑, identifiant. Chaque match a ses champs habituels (`fixture`), `time`, `day` (jour à Paris), `weight` (importance v2) et `forecast` (domicile / nul / extérieur) quand il y a un pronostic. Les bornes et le plafond sont des données : `api.home_rules_v2`.
+Clé `billboard` de `/api/read/home` : les matchs du périmètre du visiteur (mêmes `leagues` et même saison que le reste de la lecture) dont le **jour à Paris** va d'hier à aujourd'hui + 3 (5 jours), terminés, en cours ou à venir (un match reporté ou annulé n'y est pas). Chaque jour garde ses **8** matchs les plus importants. Ordre : jour ↑, importance ↓, coup d'envoi ↑, identifiant. Chaque match a ses champs habituels (`fixture`), `time`, `day` (jour à Paris), `weight` (importance v2) et `forecast` (domicile / nul / extérieur) quand il y a un pronostic. Les bornes et le plafond sont des données : `api.home_rules_v2` ; les bornes utilisées sont dans la réponse, `billboardWindow` (`start`, `end`, jours de Paris), même quand `billboard` est vide.
 
 Les matchs à venir (`highlights`) gardent l'ordre du poids éditorial v1 et portent aussi `weight2`, leur importance v2.
 
-Sur la page, le bloc « À l'affiche » (titre « Les matchs du moment ») remplace « À ne pas manquer », même place et même dessin : `chooseBillboard` ([home-upcoming.js](../../../dashboard/frontend/src/services/home-upcoming.js)) garde les règles des favoris (3 places au plus, la grande carte au match d'un favori dans les 48 h) ; sinon la grande carte est le match **non terminé** le plus important (`weight` servi), et les 4 autres places vont aux plus importants suivants, terminés ou non, rangés par coup d'envoi ; un match terminé montre son score à la place de l'heure. Sans `billboard` servi (ancienne publication), ou si la fenêtre n'a plus rien à jouer, le choix d'avant (`highlights`, titre « Les 7 prochains jours ») reste.
+Sur la page, le bloc « À l'affiche » (titre « Les matchs du moment ») remplace « À ne pas manquer », même place et même dessin : `chooseBillboard` ([home-upcoming.js](../../../dashboard/frontend/src/services/home-upcoming.js)) garde les règles des favoris (3 places au plus, la grande carte au match d'un favori dans les 48 h) ; sinon la grande carte est le match **non terminé** le plus important (`weight` servi), et les 4 autres places vont aux plus importants suivants, terminés ou non, rangés par coup d'envoi ; un match terminé montre son score à la place de l'heure. Sans `billboard` servi (ancienne publication), ou si la fenêtre n'a plus rien à jouer, le choix d'avant (`highlights`, titre « Les 7 prochains jours ») reste. Le pays du visiteur y entre selon la section suivante.
 
-## Coin d'un pays
+## Le pays du visiteur
+
+Le pays ne crée ni carte ni bande : il change ce que montrent les cartes existantes (décision du 24 novembre 2026, la bande « Chez vous » ayant été refusée). Aucun drapeau, aucune étiquette ne le signale.
+
+**Le pays** ([home-country.js](../../../dashboard/frontend/src/services/home-country.js)) : le choix du visiteur (`homeCountry` dans `orion.preferences.v1`, recopié dans le cookie `vega.home.v1`), sinon le pays détecté par l'hébergeur (`x-vercel-ip-country`, lu par le serveur de la page, sinon `/api/visitor-country`, code ISO à deux lettres traduit par une table : GB → ENG, DE → GER…), sinon aucun. Le seul réglage est la ligne « Votre pays » du panneau des préférences de l'accueil (bouton des compétitions) : les pays des compétitions du manifeste, puis « Aucun pays » (`none`, les cartes choisissent comme sans pays) ; le choix s'applique tout de suite, sans recharger. Les codes INT, INT-2, UEFA ne sont jamais un pays.
+
+**Un match local** : sa compétition est du pays du visiteur (code à trois lettres de la base). Une coupe d'Europe n'est jamais locale, quels que soient ses clubs.
+
+**La priorité** ([home-priority.js](../../../dashboard/frontend/src/services/home-priority.js)) : `HOME_PRIORITY`, « localisation » (`location`) ou « importance du match » (`importance`). Elle deviendra un réglage du visiteur (« Privilégier : localisation ou importance du match », préférences / compte, VI-38) ; d'ici là elle est fixée dans le code à **`location`**, et les fonctions qui ordonnent les matchs la reçoivent en paramètre. Les deux valeurs sont implémentées et testées.
+
+**« À l'affiche »** (`localMatches`, puis `chooseBillboard` de [home-upcoming.js](../../../dashboard/frontend/src/services/home-upcoming.js)) :
+- candidats locaux : les matchs locaux de `billboard`, plus les `matches` de `/api/read/home-local` dont le jour est dans `billboardWindow` et dont la compétition est dans les championnats **choisis** par le visiteur (filtre de compétition ou compétitions suivies ; le périmètre par défaut Top 7 Europe n'est pas un choix et ne les écarte pas ; « toutes les compétitions » non plus). Un match servi par les deux lectures compte une fois ;
+- `location` : les favoris gardent leurs places (3 au plus) ; puis jusqu'à **2** places (`localPlaces`) vont aux matchs locaux les plus importants (importance ↓, coup d'envoi ↑, identifiant), en laissant toujours au moins **1** place (`bigPlacesKept`) aux grands matchs quand il y en a ; le reste aux grands matchs par importance ; un côté trop court est complété par l'autre ;
+- `importance` : aucune place réservée, l'importance seule ; à importance égale un match local passe devant ;
+- la grande carte : le match d'un favori dans les 48 h, sinon le match **non terminé** le plus important parmi les choisis ; si tous sont terminés, le match à venir le plus important prend la place du grand match choisi le plus léger (jamais une place locale) ;
+- sans pays, avec « Aucun pays », sans réponse de home-local (pas encore chargée, saison archivée, lecture non annoncée par le manifeste) : le choix d'avant, à l'identique. Pendant le chargement d'un pays nouvellement choisi, la carte garde le choix du pays précédent.
+
+Exemple (24 nov. 2026, 8 h à Paris, visiteur en France, sans favori ; importances du double de test sur un rejeu de la production) : Arsenal – Dortmund (LdC, 6,93) en grande carte ; Brest – Paris FC (L1, 3,89) et Nantes – Grenoble (L2, terminé, 0,5) pour la France ; PSG – Roma (6,39) et Bruges – Liverpool (6,30) pour les grands matchs. En `importance`, aucun match français : les cinq plus importants, 6,93 / 6,39 / 6,30 / 5,87 / 5,84, comme sans pays.
+
+**Fil des résultats** (`weekTicker`) : chaque jour les sélections nationales d'abord, comme avant ; puis, en `location`, les résultats locaux devant les autres (puis le poids éditorial), avant la coupe à 8 par jour ; en `importance`, le poids éditorial d'abord, le local seulement à égalité. Le fil ne montre que les résultats des championnats du visiteur : rien n'y est ajouté.
+
+**« Course au titre »** s'ouvre sur le championnat du pays quand il est parmi ses onglets (`initialTitleRace`), sinon sur la Ligue 1 comme avant, quelle que soit la priorité.
+
+Rendu serveur : le serveur de la page lit home-local avec l'accueil, sous la clé du navigateur ; le HTML et le premier rendu du navigateur montrent les mêmes cinq matchs.
+
+### Lecture home-local
 
 `/api/read/home-local?season=AAAA/AAAA&country=XXX` (code à trois lettres majuscules, sinon 400 ; aucun paramètre personnel ni `leagues`) : lecture commune, mise en cache comme l'accueil (une copie par pays) :
 - `competitions` : les compétitions de ce pays présentes dans la saison (`api.editions`), avec leur niveau quand il est connu, la plus haute d'abord ;
-- `window` : les bornes utilisées, d'hier à aujourd'hui + **7** jours à Paris (`api.home_rules_v2` ; plus large qu'« À l'affiche » : un lundi, la première division d'un pays ne joue souvent pas avant le vendredi) ;
+- `window` : les bornes utilisées, d'hier à aujourd'hui + **7** jours à Paris (`api.home_rules_v2`) ; « À l'affiche » n'en garde que les jours de `billboardWindow` ;
 - `matches` : leurs matchs de cette fenêtre, mêmes champs et même ordre qu'« À l'affiche », au plus 16 par jour ;
-- `table` : les 6 premiers du classement (`api.standing_rows`, sans phase ni groupe) du championnat le plus haut du pays qui a un niveau ; `null` sinon.
+- `table` : les 6 premiers du classement (`api.standing_rows`, sans phase ni groupe) du championnat le plus haut du pays qui a un niveau ; `null` sinon. Non affichée.
 
 Un code bien formé sans compétition répond 200 avec des listes vides. La sélection nationale du pays n'y est pas : l'API n'a pas de lien fiable entre un pays et sa sélection.
 
-Sur la page, c'est la bande « Chez vous », sous celle des résultats, dessinée comme elle ([HomeMatchday.jsx](../../../dashboard/frontend/src/components/HomeMatchday.jsx), `HomeLocal`) : les `matches` servis (la sélection de l'API reste), groupés par jour et, dans un jour, rangés par coup d'envoi (puis identifiant du match), le score une fois joué, l'heure de Paris avant. `table` n'est pas affichée pour l'instant. Le pays ([home-country.js](../../../dashboard/frontend/src/services/home-country.js)) : le choix du visiteur (`homeCountry` dans `orion.preferences.v1`, recopié dans le cookie `vega.home.v1`), sinon le pays détecté par l'hébergeur (`x-vercel-ip-country`, lu par le serveur de la page, sinon `/api/visitor-country`, code ISO à deux lettres traduit par une table : GB → ENG, DE → GER…), sinon rien. « Ne rien afficher » (`none`) cache la bande. Le menu liste les pays des compétitions du manifeste ; les codes INT, INT-2, UEFA ne sont jamais un pays. Le même menu est toujours dans le panneau des préférences de l'accueil (bouton des compétitions, ligne « Chez vous »), appliqué tout de suite : c'est le chemin de retour quand la bande est cachée. Un pays choisi à la main sans match dans la fenêtre garde la tête de la bande (« Chez vous » et son bouton) avec une ligne « Aucun match d’ici 7 jours » ; un pays seulement détecté sans match ne montre rien. La bande n'apparaît pas sans pays, sur une saison archivée, ou si le manifeste n'annonce pas `compactReads["home-local"]`. Les favoris n'y entrent jamais.
-
 La saison lue est celle de la page (`season=2026/2027` par défaut) : pour un pays à saison civile comme le Brésil, elle désigne l'édition 2026 (vérifié en production le 24 novembre 2026).
-
-« Course au titre » s'ouvre sur le championnat du pays du visiteur quand il est parmi ses onglets (`initialTitleRace`), sinon sur la Ligue 1 comme avant.
 
 ## Match de la semaine
 

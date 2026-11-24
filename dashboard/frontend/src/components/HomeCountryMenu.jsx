@@ -9,9 +9,9 @@ import {
 } from "../services/home-country.js";
 
 /**
- * « Chez vous » (VI-48): the country button and its menu (the header menus' panel), the
- * manifest's countries then « Ne rien afficher ». Shared by the strip's head and the home's
- * preferences panel, so the choice is never out of reach.
+ * The visitor's country (VI-48): the button and its menu (the header menus' panel), the
+ * manifest's countries then « Aucun pays » (none: the cards choose as without a country).
+ * A line of the home's preferences panel; the cards follow the choice at once.
  */
 export default function HomeCountryMenu({
   country,
@@ -24,11 +24,7 @@ export default function HomeCountryMenu({
     root = useRef(null),
     button = useRef(null),
     panel = useRef(null),
-    name = country
-      ? homeCountryName(country)
-      : choice === HOME_COUNTRY_NONE
-        ? "Ne rien afficher"
-        : "Aucun pays";
+    name = country ? homeCountryName(country) : "Aucun pays";
   useEffect(() => {
     if (!open) return undefined;
     panel.current
@@ -56,12 +52,12 @@ export default function HomeCountryMenu({
     onChoose(code);
   };
   return (
-    <div className="home-local-picker" ref={root}>
+    <div className="home-country-picker" ref={root}>
       <button
         type="button"
         ref={button}
         id={id}
-        className="filter-input-wrap home-local-country"
+        className="filter-input-wrap home-country-button"
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={`Pays : ${name}`}
@@ -73,7 +69,7 @@ export default function HomeCountryMenu({
       </button>
       {open && (
         <div
-          className="nav-menu-panel home-local-menu"
+          className="nav-menu-panel home-country-menu"
           role="menu"
           aria-label="Pays"
           ref={panel}
@@ -96,10 +92,10 @@ export default function HomeCountryMenu({
               type="button"
               role="menuitemradio"
               aria-checked={!country && choice === HOME_COUNTRY_NONE}
-              className="nav-menu-item home-local-none"
+              className="nav-menu-item home-country-none"
               onClick={() => choose(HOME_COUNTRY_NONE)}
             >
-              <span>Ne rien afficher</span>
+              <span>Aucun pays</span>
             </button>
           </div>
         </div>
