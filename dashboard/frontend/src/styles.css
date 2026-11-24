@@ -122,26 +122,11 @@ button:disabled {
   justify-content: center;
   flex-shrink: 0;
 }
-/* The wordmark « Vega* » with « Sport » underneath, at its own proportions. Under 1120px the
-   asterisk alone: with the account button in the header, the wordmark would push a menu
-   under the search field (tests/e2e/brand.e2e.mjs, B11). */
-.brand-logo {
-  display: block;
-  height: 40px;
-  aspect-ratio: 2138 / 1137;
-}
+/* The asterisk alone, at its own proportions, at every width (tests/e2e/brand.e2e.mjs, B1). */
 .brand-mark {
-  display: none;
+  display: block;
   height: 28px;
   aspect-ratio: 285 / 316;
-}
-@media (max-width: 1119px) {
-  .brand-logo {
-    display: none;
-  }
-  .brand-mark {
-    display: block;
-  }
 }
 /* The menus keep their room. The actions take what is left, set against the right edge,
    and of them only the search gives way: its field narrows, then, where a field no longer

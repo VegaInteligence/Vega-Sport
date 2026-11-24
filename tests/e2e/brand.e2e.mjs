@@ -1,17 +1,20 @@
 // E2E — the site carries Vega's logo, the asterisk (the user, 24 Nov 2026: « pour moi le logo ça
-// doit juste être un astérisque »; charter: docs/brand/README.md). In the header and the footer
-// the wordmark « Vega* » with « Sport » small underneath; where room is short and on every icon
-// the asterisk alone (it replaced the mark « V* » the same day); two colours only (ivory
-// #F4F1EA, night #07080B).
+// doit juste être un astérisque »; charter: docs/brand/README.md). At the top left of the
+// header, at every width, the asterisk alone (the user, the same day: « Moi de base je voulais
+// juste qu'en haut à gauche ça soit un asterisk c'est tout »); in the footer the wordmark
+// « Vega* » with « Sport » small underneath; on every icon the asterisk alone (it replaced the
+// mark « V* »); two colours only (ivory #F4F1EA, night #07080B).
 // Written before the implementation, against the real pages, on a desktop (1365×900, dark and
 // light) and an iPhone 16 (393×852).
 //
 // Failure modes and expected outcomes:
-//  B1 (header) Desktop, dark: the home link of the header shows one image, the wordmark with
-//     « Sport » underneath (/branding/vega/logo-dark.svg, 1.6 to 2.2 times wider than tall),
-//     drawn at its own proportions, 36 to 44 px tall. The header keeps its 56 px and nothing
-//     in it overlaps or leaves the window. Before: « Vega Sport. » on one line, 28 px.
-//  B2 (theme) Light theme: the same place shows logo-light.svg and only it.
+//  B1 (header) Desktop, dark: the home link of the header shows one image, the asterisk alone
+//     (/branding/vega/symbol-dark.svg, 0.85 to 1 times as wide as tall), drawn at its own
+//     proportions, 26 to 30 px tall, in a link no wider than 44 px; the header's markup holds
+//     no wordmark at all (none drawn, none loaded). The header keeps its 56 px and nothing in
+//     it overlaps or leaves the window. Before: from 1120 px up, the wordmark « Vega* » with
+//     « Sport » underneath (logo-dark.svg, 75 × 40 px); before that, « Vega Sport. ».
+//  B2 (theme) Light theme: the same place shows symbol-light.svg and only it.
 //  B3 (drawings) The served files are the new drawings: no gradient, no star outline
 //     (« M 559 1 »), the ivory or night fill, and no circle left (the full stop is gone).
 //     Checked on the logo, the mark, the two icons and the favicon. The asterisk is there:
@@ -50,12 +53,11 @@
 //     150 ms apart, its angle is at least once away from a multiple of 60° (a six-petalled
 //     shape turned by 60° looks the same: before, it stepped by 60° and never seemed to move).
 //  B10 (report card) A report image carries the wordmark in ivory at its top left, no blue star.
-//  B11 (in between) The wordmark must not take the menus' room, the account button being in
-//     the header (a local server shows it only with NEON_AUTH_BASE_URL and
-//     NEON_AUTH_COOKIE_SECRET set, see the evidence's setup). At 1120 px the wordmark shows; at
-//     1024, 768 and 700 px the asterisk shows instead, in a link no wider than 44 px. At each
-//     of the four widths every menu ends before the search (its field, or its icon under
-//     920 px) and the header's parts neither overlap nor leave the window. Before: at 1024 px
+//  B11 (in between) The account button being in the header (a local server shows it only
+//     with NEON_AUTH_BASE_URL and NEON_AUTH_COOKIE_SECRET set, see the evidence's setup), at
+//     1120, 1024, 768 and 700 px the asterisk alone shows, in a link no wider than 44 px,
+//     every menu ends before the search (its field, or its icon under 920 px) and the
+//     header's parts neither overlap nor leave the window. Before: at 1024 px
 //     « Vega Sport. » pushed two menus under the search; with the asterisk, one was still cut
 //     there, two at 768 px and three at 700 px (issue 109; every width: header.e2e.mjs).
 //  B12 (theme colour) The page names one theme colour, the one of the site's theme: a single
@@ -266,10 +268,13 @@ try {
   await dark.waitForFunction(() => [...document.querySelectorAll(".topbar .brand img")].some((i) => i.complete && i.naturalWidth > 0));
   const head = await shown(dark, ".topbar .brand");
   const one = head.images.length === 1 ? head.images[0] : null;
-  check("B1a", "one image in the header's home link: /branding/vega/logo-dark.svg", head.images.map((i) => i.src).join(", ") || "none", one?.src === "/branding/vega/logo-dark.svg");
-  check("B1b", "the wordmark with « Sport » underneath (own width 1.6 to 2.2 times its height), drawn at its proportions, 36–44 px tall",
-    one ? `own ${one.natural.join("×")} drawn ${one.box.join("×")}` : "none",
-    one && ratio(one.natural) > 1.6 && ratio(one.natural) < 2.2 && undistorted(one) && one.box[1] >= 36 && one.box[1] <= 44);
+  const wordmarks = await dark.evaluate(() => [...document.querySelectorAll(".topbar img")].filter((i) => /\/logo-(dark|light)\.svg/.test(i.getAttribute("src") || "")).length);
+  check("B1a", "one image in the header's home link: /branding/vega/symbol-dark.svg; no wordmark in the header's markup",
+    { shown: head.images.map((i) => i.src).join(", ") || "none", wordmarksInMarkup: wordmarks },
+    one?.src === "/branding/vega/symbol-dark.svg" && wordmarks === 0);
+  check("B1b", "the asterisk alone (own width 0.85 to 1 times its height), drawn at its proportions, 26–30 px tall, in a link 44 px wide at most",
+    one ? `own ${one.natural.join("×")} drawn ${one.box.join("×")}, link ${head.link.join("×")}` : "none",
+    one && ratio(one.natural) > 0.85 && ratio(one.natural) < 1 && undistorted(one) && one.box[1] >= 26 && one.box[1] <= 30 && head.link[0] <= 44);
   const bar = await dark.evaluate(() => {
     const top = document.querySelector(".topbar"), r = top.getBoundingClientRect();
     const parts = [...top.children].map((c) => c.getBoundingClientRect()).filter((b) => b.width > 0);
@@ -305,8 +310,8 @@ try {
   }
   const sane = (b) => b.right <= b.width && b.overlap <= 0 && b.sideways <= 0;
   const account = await dark.evaluate(() => Boolean(document.querySelector(".topbar .account-entry")));
-  check("B11", "with the account button shown — 1120 px: the wordmark; 1024, 768 and 700 px: the asterisk alone in a link of 44 px at most; at each width every menu before the search, nothing overlaps or leaves the window", { accountButton: account, between },
-    account && between.every(sane) && between.every((b) => b.menusPastTheSearch === 0) && between[0].shows === "logo-dark.svg" && between.slice(1).every((b) => b.shows === "symbol-dark.svg" && b.link <= 44));
+  check("B11", "with the account button shown — at 1120, 1024, 768 and 700 px: the asterisk alone in a link of 44 px at most, every menu before the search, nothing overlaps or leaves the window", { accountButton: account, between },
+    account && between.every(sane) && between.every((b) => b.menusPastTheSearch === 0 && b.shows === "symbol-dark.svg" && b.link <= 44));
   await dark.setViewportSize(DESKTOP.viewport);
 
   // ---- B5 (dark) and B7 on the same page
@@ -390,7 +395,7 @@ try {
   await light.goto(base + "/", { waitUntil: "networkidle" });
   await light.waitForFunction(() => document.documentElement.dataset.theme === "light" && [...document.querySelectorAll(".topbar .brand img")].some((i) => i.complete && i.naturalWidth > 0 && i.getBoundingClientRect().width > 0));
   const headLight = await shown(light, ".topbar .brand");
-  check("B2", "light theme: the header shows logo-light.svg and only it", headLight.images.map((i) => i.src).join(", ") || "none", headLight.images.length === 1 && headLight.images[0].src === "/branding/vega/logo-light.svg" && undistorted(headLight.images[0]));
+  check("B2", "light theme: the header shows symbol-light.svg and only it", headLight.images.map((i) => i.src).join(", ") || "none", headLight.images.length === 1 && headLight.images[0].src === "/branding/vega/symbol-light.svg" && undistorted(headLight.images[0]));
   const iconLight = await icons(light);
   check("B5f", `light theme: the page names one icon, ${themeIcon("light")}`, readings(iconLight), only(iconLight, themeIcon("light")));
   const colourLight = await colours(light);
