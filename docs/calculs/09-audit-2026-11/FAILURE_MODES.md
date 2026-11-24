@@ -4615,6 +4615,15 @@ Evidence: `/mnt/project-files/blesses-suspendus/lot1-donnees/EVIDENCE.md`. Cases
   Transfermarkt à une compétition de sélections (limite écrite dans le commentaire de la vue). Les clubs sont inchangés ;
   le contrat de la réponse est le même.
 
+### 59.G. La carte « Absents » sans date de lecture (régression de production du 24 Nov 2026, écrit avant le correctif)
+
+- **59al `asOf` nul côté site.** Une équipe avec des absents mais aucun joueur lu (`asOf: null`, `read: 0`, cf. 59y) :
+  la vue (`absenceView`) prend pour référence le `readAt` le plus récent des absences affichées, à défaut le jour même
+  (UTC) ; un `asOf` invalide vaut un `asOf` nul. L'échelle (`absenceScale`) ne lève jamais (date vide ou invalide : le
+  jour même) et `returnDistance` rend `null` sur une date invalide. Attendus : l'onglet Effectif du PSG du 23 Nov se rend
+  (« dans 27 sem. » pour un retour au 31 mai 2027), aucun `NaN` ni « Invalid » ; sans absence, pas de carte ; un `asOf`
+  connu donne la même échelle qu'avant. Le contrat de la route est inchangé.
+
 ### 59.Hypothèses non vérifiées
 
 - **H1** Aucune suspension EN COURS n'a été observée (sonde du 2026-11-24, fichier `07-…`) : on suppose qu'elle a la forme

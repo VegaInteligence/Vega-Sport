@@ -1,5 +1,12 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Injured and suspended players, the squad card without a read date — FAILURE_MODES § 59al (24 November 2026, branch `claude/absents-asof-vide` from origin/main 16e2cc6, local, not pushed)
+
+- Broke (production, after #110): the club's « Effectif » tab showed « Chargement impossible » for any club with an absent player and no player read yet (`asOf: null`, `read: 0`; PSG on 23 Nov).
+- Cause: `absenceScale(rows, null)` parsed a null day, and `Intl.DateTimeFormat.format(new Date(NaN))` threw `RangeError: Invalid time value`; `AbsenceBoard` called it unguarded.
+- Fix (`services/team-absences.js` only): `absenceView` gives a usable `asOf` (the answer's when valid, else the latest `readAt` of the absences shown, else today UTC), so the scale, the return distances and the marks share one reference; `absenceScale` falls back to today on an empty or invalid day and skips invalid returns; `returnDistance` is null on an invalid day. No text added on screen; backend and contract unchanged.
+- Tests first (`tests/club-missing-render.test.mjs`, 6 cases incl. a server render of `AbsenceBoard` on PSG's answer): red 4/6 (RangeError), then green; site suite 1017/1017.
+
 ## Injured and suspended players, lot 2 « Écrans » — VI-15 (24 November 2026, on the lot 1 branch `claude/absents-blesses-suspendus`, pushed on the owner's word, [PR #110](https://github.com/VegaInteligence/Vega-Sport/pull/110))
 
 - Design: mock-up validated as is by hugo on 24 Nov 2026 (`blesses-suspendus/maquette/`): the « Absents » card at the top of the club's « Effectif » tab (photo, reason, since, one time scale for every return, the squad read in its corner), a mark beside an absent player's name in the club and national-side tables, the absents' block under the pre-match probabilities (one half per side), a suspension in grey as on the player page. No change to it.
