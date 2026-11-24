@@ -4134,7 +4134,7 @@ is rewritten.
 | # | Situation | Expected |
 |---|---|---|
 | 53a | Production's schema, then this tree's migrations | `agg.power_runs` has main's 34 columns, in main's order; `agg.nation_elo_runs` exists, readable and writable by `vega_calc` |
-| 53b | `refresh_elo` (51i, 51j) | one `agg.nation_elo_runs` row for the published run: nations-elo-v1, 30, 2021-07-01, the seed edition read (NULL without one); none for another run |
+| 53b | `refresh_elo` (51i, 51j) | one `agg.nation_elo_runs` row for the published run: nations-elo-v1, 30, 2021-07-01, the seed edition read (NULL without one); a superseded Elo run keeps its own row; no row for a run of another kind (players) |
 | 53c | A published Elo run with its row of the present version | `elo_due` false |
 | 53d | The same run with another version in its row, or with no row | `elo_due` true; after one run, false |
 | 53e | `test_41n` on PostgreSQL 18 | passes: `to_jsonb` of run 2097 has the capture's keys; the 16 tests of `test_open_matchday_window` pass |

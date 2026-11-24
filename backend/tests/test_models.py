@@ -459,12 +459,13 @@ class ModelsTest(unittest.TestCase):
         # §51 (51i): a national match from 1 July 2021 moves by K_n 30 × its weight (a final's stakes) × the goal margin's G.
         self.assertAlmostEqual(after - before, power.NATION_K * final_stakes * power.goal_factor(1) * (1 - expected), places=3)
         self.assertEqual(before, 1500.0)  # no FIFA edition held: every nation starts at 1500
-        # §53 (53b): the run's national settings in their own table, one row for the published run and none for another.
+        # §53 (53b): the run's national settings in their own table: a row for the published Elo run (a superseded one
+        # keeps its own), none for a run of another kind.
         self.assertEqual(self.one("""SELECT r.method_version, n.version, n.k, n.start_date, n.seed_edition FROM agg.power_runs r
                                      JOIN agg.nation_elo_runs n ON n.run_id = r.id WHERE r.kind='elo' AND r.status='published'"""),
                          (power.METHOD_VERSION, "nations-elo-v1", 30.0, date(2021, 7, 1), None))
         self.assertEqual(self.one("""SELECT count(*) FROM agg.nation_elo_runs n JOIN agg.power_runs r ON r.id = n.run_id
-                                     WHERE r.kind <> 'elo' OR r.status <> 'published'""")[0], 0)
+                                     WHERE r.kind <> 'elo'""")[0], 0)
         self.assertEqual(x("SELECT team_id, matches, rank, provisional FROM agg.team_power WHERE scope='nations' AND season_id=2025 ORDER BY 1").fetchall(),
                          [(900, 1, 1, True), (901, 1, 2, True)])
         self.assertFalse(power.stale_rankings(self.db))
