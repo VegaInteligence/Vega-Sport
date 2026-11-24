@@ -56,6 +56,13 @@ Le worker prend les travaux dans l'ordre score, détails, référentiel (le back
 - ordre : `power.stale_rankings` liste, après les années du v8, celles dont le niveau manque, est d'une autre version (`LEVEL_VERSION`) ou d'autres réglages, ou est plus ancien que celui de l'année d'avant, avec celles dont le classement a lu un autre Elo des sélections que celui en service (§56), la plus ancienne d'abord ; une année partielle n'a pas de niveau ;
 - lecture : `/api/rankings/level?season=&universe=&position=&limit=&page=` et `/api/rankings/level/player?season=&player=`.
 
+**Course au Ballon d'Or sur le Score Vega v9.1, trois critères** ([`award.py`](vega/award.py), [note](../docs/calculs/10-score-vega-v9/04-ballon-d-or-trois-criteres.md), FAILURE_MODES § 59), étape 1 : calculée par la même passe et rangée à côté de la course v8, qui ne change pas (`agg.player_award_ranking`, `/api/rankings/power?kind=players`, le site) :
+- I (60 %) le niveau v9.1 de l'année seule, chaque match à son enjeu, matchs des sélections compris ; C (30 %) les honneurs de l'année (championnat par rang, coupe nationale et compétition internationale par tour, à la part de minutes du joueur) ; F (10 %) les points de carton FIFA par 90 des matchs couverts, tirés vers la moyenne du poste ;
+- z sur les joueurs de référence masculins, z_C et z_F bornés à ± 4, B = 0,6 z_I + 0,3 z_C + 0,1 z_F, A = μ_I + σ_I B / 0,6, score sur la courbe du niveau ; classés : seuil de minutes, championnat mesuré, première division, gardien mesuré ; les autres ont leur score et la raison (`minutes`, `league`, `not_top_division`, `keeper_data`) ;
+- réglages nommés dans `award.py` et gardés avec chaque calcul (`agg.award_runs.settings`), écarts de l'année de référence dans `agg.award_runs.spreads` ;
+- tables `agg.award_runs`, `agg.player_award`, `agg.player_award_honours` (`174_player_award.sql`) ; `award.refresh` refait la course depuis ces lignes sans lire un match, `award.reread` relit honneurs et cartons ; le worker relit les années que `award.due` liste, et `power.stale_rankings` liste celles dont la course manque ou est d'une autre version ou d'autres réglages ;
+- lecture : `/api/rankings/award?season=&limit=&page=` et `/api/rankings/award/player?season=&player=`.
+
 Les points que la méthode laisse ouverts (son § 12) sont tranchés ainsi. Chaque réglage est nommé dans `power.py` et conservé avec chaque calcul (`agg.power_runs`) :
 
 | Point ouvert | Choix (versions 2 et 3, 12 novembre 2026 : `docs/calculs/05-joueurs/08-audit-classement-puissance.md`) |

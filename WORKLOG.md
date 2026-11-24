@@ -1,5 +1,12 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## The Ballon d'Or race on the Score Vega v9.1 with the three criteria, stage 1 — #105, FAILURE_MODES § 59 (24 November 2026, branch `claude/project-thread-314siw`)
+
+- Goal (hugo: « le classement BO est le score v9 + une fine tuning sur les 3 façons de juger un joueur au ballon d'or », 60 / 30 / 10): the race computed and stored beside the v8 race, served by new reads; the v8 race, `agg.player_award_ranking`, `/api/rankings/power?kind=players` and the site unchanged. The club part stays in the individual part (the owner's decision card).
+- Built: `vega/award.py`; `level.read(..., stakes=)` returns `award_cells` beside the unchanged `cells`; `award.write` in `power.refresh_players`' write transaction; `award.stale` joined to `power.stale_rankings`; the worker rereads the years `award.due` lists; migration `174_player_award.sql` (three tables, `api.award_race`, `api.award_honours`, the calc role reads `api.standings`), reviewed in `open_matchday_restore.REVIEWED_SCHEMAS`; `GET /api/rankings/award` and `/api/rankings/award/player`. Note `docs/calculs/10-score-vega-v9/04-ballon-d-or-trois-criteres.md`.
+- Tests first (phase 1, `ffb937ac`), seen red, then green on PostgreSQL 18; evidence `/mnt/project-files/vega-ballon-dor/evidence/` (red and green, 24 Nov).
+- Not deployed. Next: the PR and its checks, then after a Deploy the six seasons computed once (`stale_rankings` lists them) and their races compared with the real results before stage 2 (the site's switch, mock-up first).
+
 ## The strip's pre-match forecast, no score — #69 (24 November 2026, branch `claude/accueil-bandeau-pronostics` from main a6b0cd5, local, not pushed)
 
 - Goal (hugo: « dans le bandeau du haut il me faut les prédictions de victoire etc mais ne met pas les scores »): every tick not finished shows the win probabilities (home / draw / away) and no score of any kind (live score removed); results unchanged; no API change.
