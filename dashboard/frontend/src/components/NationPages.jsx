@@ -12,15 +12,18 @@ import React, {
   useState,
 } from "react";
 import BackLink from "./BackLink.jsx";
+import NationSkeleton from "./NationSkeleton.jsx";
 import Link from "next/link";
 import { Empty, Media, Segments, Skeleton } from "./UI.jsx";
-import { ResearchTabs } from "./ResearchUI.jsx";
+import { BookmarkButton, ResearchTabs } from "./ResearchUI.jsx";
+import { useResearch } from "../hooks/ResearchContext.jsx";
 import { PhoneFoldToggle, usePhoneFold } from "./PhoneFold.jsx";
 import { Card, dateShort, fmtNum, Kpis } from "./ClubScoutUI.jsx";
 import { LineChart, TipBody } from "./PlayerScoutCharts.jsx";
 import FillChart from "./FillChart.jsx";
 import NationalFlag from "./NationalFlag.jsx";
 import { Term } from "./Hint.jsx";
+import { useTabParam } from "../hooks/useTabParam.js";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { normalizeText, number } from "../services/format.js";
 import {
@@ -92,6 +95,18 @@ function Record({ wins, draws, losses }) {
 export function NationIndex() {
   const f = useFootball();
   const nations = useNations(f.season);
+  const research = useResearch();
+  const saved = useMemo(
+    () =>
+      new Set(
+        (research?.ready ? research.data.lists : []).flatMap((list) =>
+          list.entries
+            .filter((entry) => entry.kind === "nations")
+            .map((entry) => entry.id),
+        ),
+      ),
+    [research?.ready, research?.data.lists],
+  );
   const [scope, setScope] = useState("ranked");
   const [query, setQuery] = useState("");
   const data = nations.value;
@@ -99,13 +114,15 @@ export function NationIndex() {
     const all = data?.nations || [];
     const needle = normalizeText(query.trim());
     return all
-      .filter((n) => scope === "all" || n.ranking)
+      .filter((n) =>
+        scope === "saved" ? saved.has(n.id) : scope === "all" || n.ranking,
+      )
       .filter(
         (n) =>
           !needle ||
           normalizeText(`${nationName(n.name)} ${n.name}`).includes(needle),
       );
-  }, [data, scope, query]);
+  }, [data, scope, query, saved]);
   if (nations.loading && !data)
     return (
       <Skeleton
@@ -140,6 +157,7 @@ export function NationIndex() {
           items={[
             ["ranked", `Classées cette saison · ${data.ranked}`],
             ["all", `Toutes les sélections · ${data.nations.length}`],
+            ["saved", `Mes sélections · ${saved.size}`],
           ]}
         />
       </div>
@@ -231,7 +249,9 @@ export function NationIndex() {
               {!rows.length && (
                 <tr>
                   <td colSpan={7} className={s.muted}>
-                    Aucune sélection ne correspond.
+                    {scope === "saved" && !saved.size
+                      ? "Aucune sélection enregistrée."
+                      : "Aucune sélection ne correspond."}
                   </td>
                 </tr>
               )}
@@ -249,10 +269,26 @@ const TABS = [
   ["overview", "Vue d’ensemble"],
   ["matches", "Matchs"],
   ["players", "Joueurs"],
-  ["history", "Historique"],
 ];
+const TAB_KEYS = TABS.map(([key]) => key);
+/** The Elo card's recent window: the last matches. */
+const RECENT_ELO = 16;
+/** Rows of the column beside the Elo chart: the coming matches, then the latest results. */
+const MATCH_ROWS = 6;
 
-function MatchRow({ match, id }) {
+/** A match's day, with its year under it when it is not this year's. */
+function MatchDate({ date }) {
+  if (!date) return <span className={s.date}>—</span>;
+  const year = date.slice(0, 4);
+  return (
+    <span className={s.date}>
+      {dateShort(date)}
+      {year !== String(new Date().getFullYear()) && <small>{year}</small>}
+    </span>
+  );
+}
+
+function MatchRow({ match, id, ...rest }) {
   const f = useFootball();
   const side = sideOf(match, id);
   const score =
@@ -263,7 +299,7 @@ function MatchRow({ match, id }) {
       : `${match.homeScore}–${match.awayScore}`;
   const body = (
     <>
-      <span className={s.date}>{match.date ? dateShort(match.date) : "—"}</span>
+      <MatchDate date={match.date} />
       <span className={s.teams}>
         <b>
           {nationName(match.home.name)} – {nationName(match.away.name)}
@@ -292,11 +328,14 @@ function MatchRow({ match, id }) {
       className={s.match}
       href={f.href("/matchs/", { id: match.id })}
       prefetch={false}
+      {...rest}
     >
       {body}
     </Link>
   ) : (
-    <div className={s.match}>{body}</div>
+    <div className={s.match} {...rest}>
+      {body}
+    </div>
   );
 }
 
@@ -739,7 +778,7 @@ function NationRail({ nation, last, backHref }) {
           nation={nation}
           className={`${rail.bigCrest} ${s.bigMark}`}
         />
-        <h2 className={rail.name}>{nationName(nation.name)}</h2>
+        <h1 className={rail.name}>{nationName(nation.name)}</h1>
         <p className={rail.sub}>Sélection nationale</p>
         {current && (
           <div className={rail.chips}>
@@ -842,17 +881,63 @@ function NationRail({ nation, last, backHref }) {
           </div>
         </div>
       )}
+      <div className={rail.railSection}>
+        <div className={`research-toolbar ${s.railActions}`}>
+          <BookmarkButton
+            kind="nations"
+            id={nation.id}
+            name={nationName(nation.name)}
+            imageUrl={nation.imageUrl}
+            season={nation.season}
+          />
+        </div>
+      </div>
     </aside>
+  );
+}
+
+/** The Elo after each ranked match: the recent window, or the whole history. */
+function EloCard({ nation, wide }) {
+  const [period, setPeriod] = useState("recent");
+  const points = period === "all" ? nation.elo : nation.elo.slice(-RECENT_ELO);
+  const first = nation.elo.find((p) => p.date)?.date?.slice(0, 4);
+  return (
+    <Card
+      title="Évolution de l’Elo"
+      text="Après chaque match classé"
+      className={s.fill}
+      action={
+        nation.elo.length > RECENT_ELO && (
+          <Segments
+            label="Période de l’Elo"
+            value={period}
+            onChange={setPeriod}
+            items={[
+              ["recent", "Récent"],
+              ["all", first ? `Depuis ${first}` : "Tout"],
+            ]}
+          />
+        )
+      }
+    >
+      <FillChart base={240} cap={640 * 1.3}>
+        {(height) => <EloChart points={points} height={height} wide={wide} />}
+      </FillChart>
+    </Card>
   );
 }
 
 function Overview({ nation, last, onTab }) {
   const r = nation.ranking,
     rec = nation.record;
-  const recent = nation.matches
+  const upcoming = nation.matches
+    .filter((m) => m.status === "not_started")
+    .sort((a, b) => String(a.date || "9").localeCompare(String(b.date || "9")))
+    .slice(0, 4);
+  // The column beside the chart holds six rows: the coming matches, then the latest results.
+  const results = nation.matches
     .filter((m) => m.status === "finished" && m.homeScore != null)
-    .slice(0, 6);
-  const elo = nation.elo.slice(-16);
+    .slice(0, MATCH_ROWS - upcoming.length);
   const lastGoals = last
     ? last.games.reduce(
         (sum, g) => {
@@ -900,61 +985,68 @@ function Overview({ nation, last, onTab }) {
           ],
         ]}
       />
-      <div className={s.grid2}>
-        <Card
-          title="Évolution de l’Elo"
-          text="Après chaque match classé"
-          className={s.fill}
-        >
-          <FillChart base={240} cap={640 * 1.3}>
-            {(height) => <EloChart points={elo} height={height} />}
-          </FillChart>
-        </Card>
-        <Card title="Derniers matchs" text="Toutes compétitions">
-          {recent.length ? (
-            <div className={s.matches}>
-              {recent.map((m, i) => (
-                <MatchRow key={m.id || i} match={m} id={nation.id} />
-              ))}
-            </div>
-          ) : (
-            <p className={s.muted}>Aucun match joué collecté.</p>
-          )}
-        </Card>
-      </div>
+      {upcoming.length || results.length ? (
+        <div className={s.grid2}>
+          <EloCard nation={nation} />
+          <Card
+            title={
+              upcoming.length ? <>Prochains matchs</> : <>Derniers résultats</>
+            }
+          >
+            {upcoming.length > 0 && (
+              <div className={s.matches}>
+                {upcoming.map((m, i) => (
+                  <MatchRow
+                    key={m.id || `${m.date}:${i}`}
+                    match={m}
+                    id={nation.id}
+                    data-upcoming={m.date || ""}
+                  />
+                ))}
+              </div>
+            )}
+            {results.length > 0 && (
+              <>
+                {upcoming.length > 0 && (
+                  <h4 className={s.subhead}>Derniers résultats</h4>
+                )}
+                <div className={s.matches}>
+                  {results.map((m, i) => (
+                    <MatchRow
+                      key={m.id || `${m.date}:${i}`}
+                      match={m}
+                      id={nation.id}
+                      data-result={m.date || ""}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </Card>
+        </div>
+      ) : (
+        <EloCard nation={nation} wide />
+      )}
       <MatchCarousel nation={nation} />
       {nation.players && (
         <Card
           title={`Les joueurs : ${nation.players.competition}`}
           text="Minutes, buts, passes décisives et xG au tournoi · club actuel"
           action={
-            nation.players.rows.length > 12 && (
-              <button
-                type="button"
-                className={s.link}
-                onClick={() => onTab("players")}
-              >
-                Les {nation.players.rows.length} joueurs →
-              </button>
-            )
-          }
-        >
-          <PlayersTable players={nation.players} limit={12} />
-        </Card>
-      )}
-      {nation.tournaments.length > 0 && (
-        <Card
-          title="Grands tournois"
-          action={
             <button
               type="button"
               className={s.link}
-              onClick={() => onTab("history")}
+              onClick={() => onTab("players")}
             >
-              Historique →
+              Les {nation.players.rows.length} joueurs →
             </button>
           }
         >
+          <PlayersTable players={nation.players} limit={5} />
+        </Card>
+      )}
+      {nation.tournaments.length > 0 && (
+        <Card title="Grands tournois">
           <Tournaments runs={nation.tournaments} nation={nation} />
         </Card>
       )}
@@ -992,55 +1084,53 @@ function Matches({ nation }) {
   );
 }
 
-function History({ nation }) {
-  return (
-    <div className={s.stack}>
-      <Card title="Grands tournois">
-        {nation.tournaments.length ? (
-          <Tournaments runs={nation.tournaments} nation={nation} />
-        ) : (
-          <p className={s.muted}>Aucun grand tournoi collecté.</p>
-        )}
-      </Card>
-      <Card
-        title="Elo Vega"
-        text="Après chaque match classé, depuis le premier"
-      >
-        <EloChart points={nation.elo} height={260} wide />
-      </Card>
-    </div>
-  );
-}
-
 export function NationProfile({ id }) {
   const f = useFootball();
   const nation = useNation(id, f.season);
-  const [tab, setTab] = useState("overview");
+  const [tab, setTab] = useTabParam("nationView", TAB_KEYS);
   const value = nation.value;
+  const backHref = f.href("/nations/", { id: "" });
+  // No identity column while reading, after an error or for an unknown nation: the link stays above.
+  const back = (
+    <BackLink
+      className="inline-link competition-back"
+      href={backHref}
+      label="Toutes les nations"
+    />
+  );
   if (nation.loading && !value)
     return (
-      <Skeleton
-        data-page-loading=""
-        label="Chargement de la sélection…"
-        lines={6}
+      <NationSkeleton
+        back={
+          <BackLink
+            className="inline-link"
+            href={backHref}
+            label="Toutes les nations"
+          />
+        }
       />
     );
   if (nation.error)
     return (
-      <p role="alert" className="notice notice-warning">
-        Sélection indisponible. {String(nation.error.message || nation.error)}
-      </p>
+      <>
+        {back}
+        <p role="alert" className="notice notice-warning">
+          Sélection indisponible. {String(nation.error.message || nation.error)}
+        </p>
+      </>
     );
-  if (!value) return <Empty>Cette sélection n’existe pas.</Empty>;
+  if (!value)
+    return (
+      <>
+        {back}
+        <Empty>Cette sélection n’existe pas.</Empty>
+      </>
+    );
   const last = lastTournament(value);
   return (
     <>
       <div className={rail.layout}>
-        <NationRail
-          nation={value}
-          last={last}
-          backHref={f.href("/nations/", { id: "" })}
-        />
+        <NationRail nation={value} last={last} backHref={backHref} />
         <div className={rail.main}>
           <ResearchTabs
             animated
@@ -1073,7 +1163,6 @@ export function NationProfile({ id }) {
                   Aucune statistique de joueur collectée pour cette sélection.
                 </Empty>
               ))}
-            {tab === "history" && <History nation={value} />}
           </div>
         </div>
       </div>

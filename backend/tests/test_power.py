@@ -426,6 +426,26 @@ class OmittedZeroTest(unittest.TestCase):
         self.assertEqual([(r.get("npxg"), r.get("assists"), r.get("big_chances_missed")) for r in rows],
                          [(0.4, 1.0, 0.0), (0.0, 0.0, 0.0), (None, None, None), (None, 0.0, 1.0), (None, None, None)])
 
+    def test_duel_attempts_are_added_once_the_blanks_have_their_zeros(self):
+        # Issue #71 (calculation audit of 16 November 2026, item 1). The attempts are the duels won
+        # and lost. Added in SQL, a blank side made the sum a blank, which was then read as no
+        # attempt: five duels won and none lost stood five above an expectation of 0.
+        row = lambda match, measured=True, **values: {"match_id": match, "competition_season_id": 10, "measured": measured, **values}
+        rows = [
+            row(1, duels_won=4.0, duels_lost=3.0),  # D6: both written
+            row(1, duels_won=5.0, duels_lost=None),  # D1: none lost
+            row(1, duels_won=None, duels_lost=3.0),  # D2: none won
+            row(1, duels_won=None, duels_lost=None),  # D3: no duel
+            row(1, measured=False, duels_won=None, duels_lost=None),  # D4: a row without statistics stays unknown
+            row(2, duels_won=2.0, duels_lost=None),  # D5: this match shows no duel lost, the attempts stay unknown
+        ]
+        self.assertEqual(power.restore_zeros(rows), 4)
+        self.assertEqual([r["duels_attempted"] for r in rows], [7.0, 5.0, 3.0, 0.0, None, None])
+        # D7: nobody wins more duels than he attempts.
+        self.assertTrue(all(0 <= r["duels_won"] <= r["duels_attempted"] for r in rows if r["duels_attempted"] is not None))
+        # A total is never given a zero of its own: it comes from its parts.
+        self.assertNotIn("duels_attempted", power.ZERO_IN_MATCH + power.ZERO_IN_EDITION)
+
 
 class ExpectationTest(unittest.TestCase):
     def test_poisson_fit_recovers_the_opponent_effect(self):

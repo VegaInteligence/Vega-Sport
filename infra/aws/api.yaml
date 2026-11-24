@@ -25,6 +25,15 @@ Parameters:
     Default: ''
     AllowedPattern: '(https://[a-z0-9.-]+/)?'
     Description: 'This distribution, https://<ApiOrigin domain>/, once known (second deploy); empty, no media map'
+  # BEGIN VI-35 web ACL
+  WebAclArn:
+    Type: String
+    Default: ''
+    AllowedPattern: '(arn:aws:wafv2:us-east-1:[0-9]{12}:global/webacl/vega-v2-[A-Za-z0-9-]+/[a-f0-9-]{36})?'
+    Description: 'Web ACL of the distribution (waf.yaml, stack vega-v2-waf in us-east-1, output WebAclArn); empty, none'
+Conditions:
+  HasWebAcl: !Not [!Equals [!Ref WebAclArn, '']]
+  # END VI-35 web ACL
 Resources:
   Logs:
     Type: AWS::Logs::LogGroup
@@ -165,8 +174,14 @@ Resources:
     Properties:
       ResponseHeadersPolicyConfig:
         Name: vega-v2-api
+        # JSON and images, never a page: nothing may run in them or frame them, and HTTPS
+        # is remembered (backend/tests/test_api_security_headers.py).
         SecurityHeadersConfig:
           ContentTypeOptions: {Override: true}
+          StrictTransportSecurity: {AccessControlMaxAgeSec: 63072000, IncludeSubdomains: true, Preload: false, Override: true}
+          FrameOptions: {FrameOption: DENY, Override: true}
+          ReferrerPolicy: {ReferrerPolicy: no-referrer, Override: true}
+          ContentSecurityPolicy: {ContentSecurityPolicy: "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'", Override: true}
         CorsConfig:
           AccessControlAllowCredentials: false
           AccessControlAllowHeaders: {Items: ['*']}
@@ -184,6 +199,8 @@ Resources:
         HttpVersion: http2and3
         IPV6Enabled: true
         PriceClass: PriceClass_100
+        # VI-35: the per-address limit (waf.yaml), when deploy.sh passes it.
+        WebACLId: !If [HasWebAcl, !Ref WebAclArn, !Ref 'AWS::NoValue']
         Origins:
           - Id: api
             DomainName: !Select [2, !Split ['/', !GetAtt Origin.FunctionUrl]]

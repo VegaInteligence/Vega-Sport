@@ -5,7 +5,6 @@ import Link from "next/link";
 import React, {
   useState,
   useEffect,
-  useRef,
   useDeferredValue,
   useMemo,
   useCallback,
@@ -13,6 +12,7 @@ import React, {
 import Icon from "../components/Icon.jsx";
 import Layout from "../components/Layout.jsx";
 import CompetitionOptions from "../components/CompetitionOptions.jsx";
+import CompetitionSkeleton from "../components/CompetitionSkeleton.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import {
   Card,
@@ -25,6 +25,8 @@ import {
 } from "../components/UI.jsx";
 import { MatchLink } from "../components/MatchLink.jsx";
 import MatchdaySchedule from "../components/MatchdaySchedule.jsx";
+import { LeagueHistoryRail, LeagueHistoryView } from "../components/LeagueHistory.jsx";
+import { isHistorySeason, useLeagueHistory, withHistorySeasons } from "../services/league-history.js";
 import {
   defaultCompetitionMatchStatus,
   orderCompetitionMatches,
@@ -83,6 +85,7 @@ import {
 } from "../services/competition-selector.js";
 import {
   PREFERRED_COMPETITION_KEY,
+  VISITOR_COUNTRY_KEY,
   localeCountry,
   preferredCompetition,
 } from "../services/competition-standings.js";
@@ -177,9 +180,11 @@ function Fixtures({
   heading = false,
 }) {
   const f = useFootball();
+  // The five big leagues also offer their archived seasons, 2010/11–2020/21 (services/league-history.js).
+  const seasons = withHistorySeasons(competition);
   const [season, setSeason] = useState(
     (initialSeason &&
-      competition?.seasons?.find(
+      seasons.find(
         (s) => String(s) === initialSeason || seasonLabel(s) === initialSeason,
       )) ||
       competition?.seasons?.find((s) => seasonLabel(s) === f.season) ||
@@ -187,6 +192,8 @@ function Fixtures({
       f.season,
   );
   const supported = !day;
+  const archived = !day && isHistorySeason(competition?.id, seasonLabel(season));
+  const history = useLeagueHistory(archived ? competition?.id : null, seasonLabel(season));
   const hasKnockout = Boolean(
     competition &&
     (competition.id === WORLD_CUP_ID ||
@@ -248,6 +255,7 @@ function Fixtures({
   // calendar when that table cannot be shown (needFixtures below).
   const previewEnabled =
     !day &&
+    !archived &&
     Boolean(competition) &&
     !hasKnockout &&
     f.manifest.capabilities?.fixturePaginationOrder === true;
@@ -305,26 +313,32 @@ function Fixtures({
         day ? "date:" + day : competition.id + ":" + season,
       );
     },
-    f.statusKnown && needsFullCalendar,
+    f.statusKnown && needsFullCalendar && !archived,
   );
-  const showHighlights = supported && view === "standings";
+  const showHighlights = supported && view === "standings" && !archived;
   // The league replayed to its end, where the base projects it (a domestic league in progress).
   const projection = useSeasonProjection(
-    supported ? competition?.id : null,
+    supported && !archived ? competition?.id : null,
     seasonLabel(season),
   );
   // A league with a closed round has the whole Player of the Season race (VI-44); a cup has no rounds.
   const leagueRounds = useLeagueRounds(
-    supported && !hasKnockout ? competition?.id : null,
+    supported && !hasKnockout && !archived ? competition?.id : null,
     seasonLabel(season),
   );
   const hasRace = Boolean(leagueRounds.value?.latest);
   // Asked for by its address, the view gives way to the table where the league has no race.
-  const noRace = view === "players" && !leagueRounds.loading && !hasRace;
+  const noRace = !archived && view === "players" && !leagueRounds.loading && !hasRace;
   useEffect(() => {
     if (noRace) setViewState("standings");
   }, [noRace]);
-  const views = worldCup
+  const views = archived
+    ? [
+        ["standings", "Classement"],
+        ["matches", "Matchs"],
+        ["players", "Joueurs"],
+      ]
+    : worldCup
     ? [
         ["bracket", "Tableau"],
         ["standings", "Groupes"],
@@ -353,7 +367,7 @@ function Fixtures({
     <div
       className={
         "competition-detail-layout" +
-        (showHighlights ? " competition-detail-layout--overview" : "")
+        (showHighlights || archived ? " competition-detail-layout--overview" : "")
       }
     >
       <Card
@@ -370,7 +384,7 @@ function Fixtures({
             onSeason={pickSeason}
             editions={
               editions ||
-              (competition.seasons || []).map((value) => ({
+              seasons.map((value) => ({
                 season: String(value),
                 id: competition.id,
               }))
@@ -393,7 +407,9 @@ function Fixtures({
             )}
           </EditionHeader>
         )}
-        {supported && view === "standings" ? (
+        {archived ? (
+          <LeagueHistoryView resource={history} view={view} />
+        ) : supported && view === "standings" ? (
           <CompetitionStandings
             competition={competition}
             season={season}
@@ -501,6 +517,7 @@ function Fixtures({
           </AsyncState>
         )}
       </Card>
+      {archived && history.value && <LeagueHistoryRail value={history.value} />}
       {showHighlights && overviewFixtures && (
         <CompetitionHighlights
           matches={overviewFixtures.matches || []}
@@ -571,46 +588,37 @@ export default function CompetitionsPage() {
     saved: null,
     country: null,
   });
-  const manualChoice = useRef(false);
   useEffect(() => {
-    let active = true;
-    const controller = new AbortController();
-    let saved = null;
+    let saved = null,
+      kept = null;
     try {
       saved = window.localStorage.getItem(PREFERRED_COMPETITION_KEY);
+      kept = window.localStorage.getItem(VISITOR_COUNTRY_KEY);
     } catch {}
     if (saved) {
       setChoice({ ready: true, saved, country: null });
-      return () => {
-        active = false;
-        controller.abort();
-      };
+      return;
     }
-    const timer = setTimeout(() => controller.abort(), 2500);
-    (async () => {
-      let detected = null;
-      try {
-        const response = await fetch("/api/visitor-country", {
-          cache: "no-store",
-          signal: controller.signal,
-        });
-        if (response.ok) detected = (await response.json()).country;
-      } catch {}
-      if (active && !manualChoice.current)
-        setChoice({
-          ready: true,
-          saved: null,
-          country:
-            detected ||
-            localeCountry(navigator.languages || [navigator.language]),
-        });
-      clearTimeout(timer);
-    })();
-    return () => {
-      active = false;
-      clearTimeout(timer);
-      controller.abort();
-    };
+    // Shown at once: the country kept from an earlier visit, else the browser language's.
+    setChoice({
+      ready: true,
+      saved: null,
+      country:
+        kept || localeCountry(navigator.languages || [navigator.language]),
+    });
+    // The hosting's country is kept for the next visit: what is shown now never changes.
+    const controller = new AbortController();
+    fetch("/api/visitor-country", {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((body) => {
+        if (/^[A-Z]{2}$/.test(body?.country || ""))
+          window.localStorage.setItem(VISITOR_COUNTRY_KEY, body.country);
+      })
+      .catch(() => {});
+    return () => controller.abort();
   }, []);
   // The archived catalogue corrects a few provider country codes even while
   // the full season is still loading (for example Turkey's 1. Lig).
@@ -714,7 +722,6 @@ export default function CompetitionsPage() {
     setDirectory("all");
   }
   function chooseCompetition(next) {
-    manualChoice.current = true;
     setOpenSeason(
       directory && directorySeason !== "all" ? directorySeason : "",
     );
@@ -807,7 +814,8 @@ export default function CompetitionsPage() {
     <Layout
       path="/competitions/"
       hideHeading={standalone}
-      title={directory ? "Toutes les compétitions" : "Championnats à la une"}
+      loader={<CompetitionSkeleton />}
+      title={directory ? "Toutes les compétitions" : "Compétitions à la une"}
       actions={
         directory ? null : (
           <>
@@ -861,7 +869,8 @@ export default function CompetitionsPage() {
               </div>
             </section>
           )}
-          {isCup(selected) && (
+          {/* Only a cup with a page of its own: a featured cup has the row above, like a league. */}
+          {standalone && (
             <BackLink
               className="inline-link cup-return"
               onFallback={openDirectory}
@@ -890,15 +899,12 @@ export default function CompetitionsPage() {
                 initialSeason={requestedEdition || openSeason}
                 {...(isCup(selected)
                   ? edition
-                  : { initialView: edition.initialView, onView: edition.onView })}
+                  : { initialView: edition.initialView, onView: edition.onView, onSeason: edition.onSeason })}
               />
             )
           ) : (!id && !choice.ready) ||
             (awaitsCupIndex(id) && cupIndex.loading) ? (
-            <Skeleton
-              data-page-loading=""
-              label="Chargement de la compétition…"
-            />
+            <CompetitionSkeleton detail />
           ) : awaitsCupIndex(id) && cupIndex.error ? (
             <div className="notice" role="alert">
               Les coupes nationales sont indisponibles.{" "}

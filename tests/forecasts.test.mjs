@@ -152,3 +152,76 @@ test("the live read route's state is what the chart reads", async () => {
   const drawn = withLive(answer, body, { home: { id: "t_aaaaa1" }, away: { id: "t_aaaaa2" } });
   assert.deepEqual(drawn.points, timeline(1.4, 1.2, [{ minute: 33, added: 0, kind: "goal", side: "away" }], inplay, -0.03, 71));
 });
+
+// Extra time on the site (#68). Failure modes and expected outcomes:
+//  X1 The feed says the match is in extra time: the chart runs past the 90th, to the feed's minute, by the
+//     read API's own calculation (timeline(..., extra)); the answer says `extraTime`.
+//  X2 Added time is not extra time: a second half at the 95th stops at the 90th, without `extraTime`.
+//  X3 Extra time's own break (half_time during extra_time) stops at the 105th, not at the 45th.
+//  X4 Extra time just started, no minute given: the 90 minutes played are drawn, nothing is invented after.
+//  X5 A result after extra time ends at the 120th on the result.
+//  X6 A shoot-out's kicks are not goals: the chart ends level at the 120th and says the kicks scored (`penalties`).
+//  X7 Extra time whose goals do not give the feed's score: the answer is left as it is.
+test("a feed in extra time carries the chart to the 120th minute", async () => {
+  const { withLive } = await import("../dashboard/frontend/src/services/forecasts.js");
+  const { timeline } = await import("../dashboard/shared/inplay.js");
+  const inplay = { profile: [0.13, 0.14, 0.18, 0.16, 0.16, 0.16, 0.07], down: 0.6, up: 1.7, ahead: 0.9, behind: 1.1 };
+  const answer = { status: "not_started", rates: { home: 1.6, away: 1.1 }, inplay, rho: -0.03, points: timeline(1.6, 1.1, [], inplay, -0.03, 0), events: [] };
+  const match = { home: { id: "t_aaaaa1" }, away: { id: "t_aaaaa2" } };
+  const event = (type, minute, teamId, period, extra = {}) => ({ type, minute, minuteAdded: null, teamId, period, cancelled: false, ...extra });
+  const regulation = [event("goal", 23, "t_aaaaa1", "first_half"), event("goal", 60, "t_aaaaa2", "second_half")];
+  const core = [{ minute: 23, added: 0, kind: "goal", side: "home" }, { minute: 60, added: 0, kind: "goal", side: "away" }];
+  const families = { score: "live", events: "live", stats: "live" };
+  // X1
+  const extra = { status: "in_play", period: "extra_time", minute: 104, score: { home: 2, away: 1 }, families, events: [...regulation, event("goal", 104, "t_aaaaa1", "extra_time")] };
+  const drawn = withLive(answer, extra, match);
+  const decided = [...core, { minute: 104, added: 0, kind: "goal", side: "home" }];
+  assert.deepEqual(drawn.points, timeline(1.6, 1.1, decided, inplay, -0.03, 104, true));
+  assert.deepEqual([drawn.extraTime, drawn.status, drawn.points.length, drawn.points.at(-1).score], [true, "in_play", 105, [2, 1]]);
+  // X2
+  const added = withLive(answer, { status: "in_play", period: "second_half", minute: 95, score: { home: 1, away: 1 }, families, events: regulation }, match);
+  assert.deepEqual([added.points.length, added.extraTime], [91, undefined]);
+  assert.deepEqual(added.points, timeline(1.6, 1.1, core, inplay, -0.03, 90));
+  // X3
+  const pause = withLive(answer, { status: "half_time", period: "extra_time", minute: 105, score: { home: 1, away: 1 }, families, events: regulation }, match);
+  assert.deepEqual([pause.points.length, pause.extraTime], [106, true]);
+  // X4
+  const started = withLive(answer, { status: "in_play", period: "extra_time", minute: null, score: { home: 1, away: 1 }, families, events: regulation }, match);
+  assert.deepEqual([started.points.length, started.extraTime], [91, true]);
+  // X5
+  const over = withLive(answer, { ...extra, status: "finished", minute: 120 }, match);
+  assert.deepEqual([over.points.length, over.status, over.extraTime, over.penalties], [121, "finished", true, null]);
+  const end = over.points.at(-1);
+  assert.deepEqual([end.minute, end.home, end.draw, end.away, end.score], [120, 1, 0, 0, [2, 1]]);
+  // X6
+  const kick = (seq, type, teamId) => ({ seq, ...event(type, 120, teamId, "penalties") });
+  const kicks = [kick(1, "penalty_goal", "t_aaaaa1"), kick(2, "missed_penalty", "t_aaaaa2"), kick(3, "penalty_goal", "t_aaaaa1"), kick(4, "penalty_goal", "t_aaaaa2")];
+  const shootout = withLive(answer, { status: "in_play", period: "penalties", minute: 120, score: { home: 1, away: 1 }, families, events: [...regulation, ...kicks] }, match);
+  assert.deepEqual([shootout.points.length, shootout.extraTime, shootout.penalties], [121, true, [2, 1]]);
+  const level = shootout.points.at(-1);
+  assert.deepEqual([level.home, level.draw, level.away, level.score], [0, 1, 0, [1, 1]]);
+  assert.deepEqual(shootout.events, core);
+  // X7
+  assert.equal(withLive(answer, { ...extra, score: { home: 3, away: 1 } }, match), answer);
+});
+
+//  L1 An extra-time answer is drawn over 120 minutes and says so (`extra`), with its shoot-out's score.
+//  L2 After the 90th the middle line changes meaning (level at the 90th → level at the 120th): the three
+//     lines step at the 90th, as they do at a goal, instead of sliding over a minute.
+//  L3 A match without extra time keeps its 90 minutes and has no such step.
+test("the chart's lines of an extra-time match", async () => {
+  const { timeline } = await import("../dashboard/shared/inplay.js");
+  const inplay = { profile: [0.13, 0.14, 0.18, 0.16, 0.16, 0.16, 0.07], down: 0.6, up: 1.7, ahead: 0.9, behind: 1.1 };
+  const events = [{ minute: 23, added: 0, kind: "goal", side: "home" }, { minute: 60, added: 0, kind: "goal", side: "away" }];
+  const points = timeline(1.6, 1.1, events, inplay, -0.03, 120, true);
+  const chart = probabilityLines({ status: "finished", extraTime: true, penalties: [4, 3], points, events });
+  assert.deepEqual([chart.span, chart.extra, chart.penalties, chart.series.length], [120, true, [4, 3], 121]);
+  const at90 = chart.lines.filter((p) => p.minute === 90);
+  assert.equal(at90.length, 2);
+  assert.deepEqual([at90[0].draw, at90[1].draw], [points[90].draw, points[91].draw]);
+  assert.ok(at90[1].draw < at90[0].draw);
+  // An extra-time match still in its 90 minutes (extra time about to start) has nothing to step to.
+  assert.equal(probabilityLines({ status: "in_play", extraTime: true, points: points.slice(0, 91), events }).lines.filter((p) => p.minute === 90).length, 1);
+  const plain = probabilityLines({ status: "finished", points: timeline(1.6, 1.1, events, inplay, -0.03, 90), events });
+  assert.deepEqual([plain.span, plain.extra, plain.penalties, plain.lines.filter((p) => p.minute === 90).length], [90, false, null, 1]);
+});

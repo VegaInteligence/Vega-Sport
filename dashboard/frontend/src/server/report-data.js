@@ -4,6 +4,7 @@
  * loader reads the API on the server (the proxy's origin).
  */
 import { API_ORIGIN } from "../api-origin.js";
+import { edgeKeyHeaders } from "./api-edge-key.js";
 import { careerMoves } from "../services/career-moves.js";
 
 const ID = { player: /^p_(?:[A-Za-z0-9]{6}|v\d{7})$/, club: /^t_(?:[A-Za-z0-9]{6}|v\d{7})$/, match: /^m_(?:[A-Za-z0-9]{6}|v\d{7})$/ };
@@ -227,7 +228,7 @@ function apiOrigin() {
 export async function apiGet(path, params = {}, { fetchImpl = fetch, timeout = 15000 } = {}) {
   const url = new URL(path, apiOrigin());
   for (const [key, value] of Object.entries(params)) if (value != null) url.searchParams.set(key, value);
-  const response = await fetchImpl(url, { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(timeout) });
+  const response = await fetchImpl(url, { headers: { Accept: "application/json", ...edgeKeyHeaders() }, signal: AbortSignal.timeout(timeout) });
   if (response.status === 404) return null;
   if (!response.ok) throw new Error(`API ${response.status} ${path}`);
   return response.json();

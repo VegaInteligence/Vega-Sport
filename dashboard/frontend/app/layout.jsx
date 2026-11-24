@@ -5,6 +5,7 @@ import Providers from "./providers.jsx";
 import ShellFallback from "./shell-fallback.jsx";
 import { homeBootstrapGuardScript } from "../src/services/home-bootstrap-preferences.js";
 import { apiUrl } from "../src/data-url.js";
+import { routeSkeletonScript } from "../src/services/route-skeleton.js";
 import "../src/brand-tokens.css";
 import "../src/fonts.css";
 import "../src/theme.css";
@@ -19,7 +20,10 @@ import "../src/home.css";
 import "../src/phone.css";
 import "../src/navigation.css";
 const siteUrl = "https://vegasport.vercel.app";
-const faviconVersion = 2;
+// Raised with every new drawing of the icon, so no browser keeps the old one.
+const faviconVersion = 3;
+// The share picture: the wordmark on a frame of the presentation film (public/branding/vega/).
+const shareImage = "/branding/vega/share-1200x630.jpg";
 const description = "Vega Intelligence : statistiques de football, analyses de matchs, joueurs et compétitions.";
 export const metadata = {
   metadataBase: new URL(siteUrl),
@@ -33,8 +37,8 @@ export const metadata = {
   },
   openGraph: { type: "website", locale: "fr_FR", siteName: "Vega Intelligence",
     title: "Vega Intelligence — Sports Analytics", description,
-    images: [{ url: "/api/vega-image?kind=og", width: 1200, height: 630, alt: "Vega Intelligence" }] },
-  twitter: { card: "summary_large_image", title: "Vega Intelligence", description, images: ["/api/vega-image?kind=og"] },
+    images: [{ url: shareImage, width: 1200, height: 630, alt: "Vega Sport" }] },
+  twitter: { card: "summary_large_image", title: "Vega Intelligence", description, images: [shareImage] },
 };
 // viewportFit "cover": the page reaches the screen's edges, and the shell keeps clear of
 // the notch and the home indicator with the safe-area insets (styles.css).
@@ -65,12 +69,10 @@ export default function RootLayout({ children }) {
           type="font/woff2"
           crossOrigin="anonymous"
         />
-        {/* A club's page opens on its skeleton, not the logo (LoadingPage reads this flag). */}
+        {/* Item pages open on their skeleton, not the logo (services/route-skeleton.js). */}
         <script
           id="vega-route"
-          dangerouslySetInnerHTML={{
-            __html: `try{document.documentElement.toggleAttribute("data-club-profile",/^\\/clubs\\/?$/.test(location.pathname)&&new URLSearchParams(location.search).has("id"))}catch{}`,
-          }}
+          dangerouslySetInnerHTML={{ __html: routeSkeletonScript }}
         />
         <script
           id="vega-theme"

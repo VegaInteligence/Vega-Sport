@@ -3780,6 +3780,103 @@ the real `Worker.daily` under `vega_collect` and `vega_calc`, the real read API 
 | 48k | 48j's data effects | 159: the version of each conflicting edition moves once (an existing version + 1, a new one created), no other; 160: `read_at` cleared on the failed units without an episode (an accepted empty list refused since included), kept on an ok unit, a failed unit with an episode and the other kinds | green |
 | 48l | 48j, a 2026/27 friendly of the internationals edition (verification only, main's site untouched) | `api.nation_matches` lists it once, with its edition's name; main's site tests green | green (verification only) |
 
+## 49. Score Vega v9: the player's level computed beside the v8 ranking (issue #82, VI-53; user decisions of 23 and 24 Nov 2026, written before the tests)
+
+The user's decisions: the v9 of `docs/calculs/10-score-vega-v9/01-proposition.md` goes into service and every season
+since 2021 is computed with it (24 Nov); club weight ψ = 10; retention stays in the score; the support-striker case is
+removed (one price list for the attack); the defence block reads expectations in context on a variance-stabilised
+scale and its talent is kept within ± 2.0 standard deviations (23 Nov, § 12.3). The calculation ported is the study's
+last run (`study17.py`, candidate K3), with retention added as a fifth block. This section covers the calculation
+beside the v8 ranking; the switch of the public ranking, the award race and the match grades are not changed here.
+
+### 49.1 Rules
+
+- **Beside the v8.** `power.refresh_players` computes and publishes the v8 ranking exactly as before (same rows in
+  `agg.player_power*`, grades, award race), then the level (`backend/vega/level.py`) from the same player-matches, in
+  the same write transaction: a season's ranking and level change together or not at all. A failure of the level
+  fails the run. `METHOD_VERSION` is unchanged; the level has its own `LEVEL_VERSION` (`score-vega-v9`). The level
+  reads the ranking's rows before the v8 loop frees them and nothing the v8 run stores: the rows `in_match` with
+  their v8 role, the Elo gap and the clubs' mean Elo, plus the keeper of each shot and the teams' passes.
+- **Positions.** Eight outfield positions and the goalkeeper. A v8 `winger` slot is an attacking midfielder (rows 8
+  and 9, places 4 to 6), a wide midfielder (rows 6 and 7, places 1, 2, 8, 9) or a winger; a substitute without a
+  slot takes the one of the three he started most at, else winger. The other roles keep their name.
+- **Matches not judged.** An outfield player's match in goal (slot 11, or goals prevented recorded) and the match of
+  an outfield player who was the keeper of at least one shot are left out, minutes included. A substitute filed
+  `goalkeeper` by the fallback of `assign_roles` (no slot, no keeper statistic) while his main role is an outfield one
+  is read at his main role (the v8 role of most minutes in the year's rows). National-team matches set the
+  references with the others and enter no level. A club match enters the level when at least one block is measured.
+- **Blocks of a match.** Finishing, creation, progression and retention as the v8 computes them, against the
+  position's reference group: the four attacking positions share one group (`attack`), the others are their own.
+  An attacking position's block is then recentred: its per-90 mean over the year's club matches is taken out.
+- **Defence block.** Per group and volume indicator, expectations by a Poisson regression on the Elo gap, the log of
+  the opponent's passes over their mean and a back-three indicator (for a centre-back also the axial slot of a back
+  three), with the competition-season's own effect shrunk by 50 events; a conditional indicator's rate with the
+  competition's and the opponent's effect, shrunk alike. A volume indicator's deviation is
+  `direction · √(t/90) · (2√(x + 3/8) − c(x̂)) / s`, c the exact Poisson mean of `2√(X + 3/8)`. An indicator the
+  v8 reference leaves out is left out; one without a context fit keeps its v8 deviation.
+- **References measured on a finished year.** λ (minutes that halve the noise) and σ (talent spread per 90) per
+  position and block from the one-way analysis of variance of the per-90 block values of full matches (60 minutes or
+  more; players of 8 full matches or more; 30 players at least), the keeper's on goals prevented; the price list of
+  the attack; ρ and δ between two positions of a player. The reference year is `grade_reference_year`: the year
+  itself once over, else the year before when over and kept; a year with no kept reference measures its own rows and
+  keeps them only when it is over and has levels (`agg.level_runs.measured`, `reference_season` = the year). A
+  position-block without a measure takes λ = 3000 and σ = 1 (the study's fallback), the wide midfielder the winger's
+  when its own is missing, above 30 000 minutes or under half the winger's spread. ρ and δ are measured over the
+  reference players judged at two positions or more.
+- **Two seasons.** A season's sums per player, position and club are kept (`agg.player_level_cells`); the level reads
+  the season's and half of the season before's. A position other than the base one (most weighted minutes) is
+  acquired at 450 minutes over the two seasons; the matches at a position not acquired enter no level.
+- **Talent.** Per block, `ẑ = μ + C (C + D)⁻¹ (y − μ)` over the acquired positions: prior mean 0 at the base
+  position and δ elsewhere, variance 1, correlation ρ (adjacent positions or not), noise λ/M. The defence talent is
+  then bounded to ± 2.0.
+- **Level.** `V_r = Σ_b price(r, b) · ẑ(b, r)`; price = E · weight for the non-attacking positions (the v8 weights,
+  five blocks) and the attack's price list times σ for the attacking ones (the list brings the shares of centre
+  forward, attacking midfielder and winger closest to the announced weights, scaled to E on average). Keeper:
+  `V = G · 90 Σ goals prevented / (M + λ_G)`. `own = Σ_r share_r (V_r − mean_r) + E_s (start share − mean of the
+  base position)`, `level = own + ψ · club`, club the minutes-weighted (Elo_own − centre) / 400 of his club matches
+  with an Elo. The start share is read in the year's rows: the share of his club's matches with eleven starters
+  listed that he started, for a club of five such matches or more, the highest of his clubs.
+  `score = 100 / (1 + 10^(−(level − median) / 36))`, the upper median. Means and median are those of the reference
+  population of the universe (men, women): its eligible players of measured leagues; when it has none (the women's
+  leagues are not measured by the v8), its eligible players; else all its players. A position no reference player
+  holds is centred among all.
+- **Who has a level.** Every player with a judged club match in the year and a row in the v8 ranking. `eligible`,
+  `linked`, `universe` are the v8 ranking's: a rank below the minutes bar or outside a measured league is
+  provisional, as today. A partial award year (§47) has no level: its run publishes 0 players and keeps no measure.
+- **Order.** After the v8's own stale years, `stale_rankings` lists the years whose published ranking has players
+  and whose published level of `LEVEL_VERSION` is missing, or started before the published level run with players
+  of the year before, oldest first. The worker's stale step runs them in that order; a year listed for its level
+  alone re-runs its ranking with it (same values). A partial year's empty level never makes the next year stale:
+  the v8 rule re-runs a partial year after the next one (§48), and the two rules would otherwise call each other.
+
+### 49.2 Failure modes and expected outcomes
+
+Formulas without a base (`backend/tests/test_level.py`), then E2E on the disposable local PostgreSQL 18 of
+`test_models.py`.
+
+| # | Situation | Expected |
+|---|---|---|
+| 49a | One position, one block, rate y in talent sd, minutes M | talent = y · M / (M + λ): the § 4.2 formula |
+| 49b | Two positions with the same rate and noise, ρ → 1 | both talents = the rate shrunk with the summed minutes |
+| 49c | Two positions, ρ = 0 | each talent is its own shrinkage; the second starts from δ |
+| 49d | Counts drawn from a Poisson law with known coefficients, in cells | the regression returns them within four standard errors |
+| 49e | c(x̂) at 0, at 4, at a value between two steps, above the table | 2√(3/8); the exact sum; within 1e-4; the asymptote |
+| 49f | 400 players, 20 matches each, talent and noise spreads both 1 | λ within 15 % of 90 minutes · noise/talent, σ within 10 % |
+| 49g | Spreads of three attacking positions built from known prices | the price list recovers the announced shares; the mean value per sd is E |
+| 49h | Slots 85, 94, 62, 78, 82 of a v8 winger; a substitute winger who started 3 times at 85 | attacking midfielder, attacking midfielder, wide midfielder, wide midfielder, winger; attacking midfielder |
+| 49i | An outfield player at slot 11; one with goals prevented; one who kept goal for a shot; a substitute filed in goal without statistics | the first three matches left out, the fourth read at his main role |
+| 49j | A defender with 15 recoveries in one match and the same total spread over five | the single match weighs less on the stabilised scale than on the linear one |
+| 49k | A raw defence talent of + 6 sd over 1 250 minutes | kept talent = + 2.0; a talent of + 1.5 unchanged |
+| 49l | A player with 300 minutes at a second position over two seasons, then 500 | not acquired: its matches enter no level; acquired: a level per position, shares by the year's minutes |
+| 49m | A keeper: 0.2 goal prevented per 90 over 3 000 minutes, λ_G = 13 291 | value = 163 · 0.2 · 3000 / (3000 + 13 291) before centring |
+| 49n | Two players equal but for the club's Elo (+ 400) | levels differ by ψ = 10; scores follow the curve |
+| 49o | The season before computed, then the season | the season's level reads half of the previous sums; without them, the season alone |
+| 49p | E2E: `refresh_season` of the synthetic league | the file's v8 tests hold unchanged (`agg.player_power*`, grades, award race); one published level run with its settings and measures; a level, a score in 0..100 and a rank for every player with a judged club match; the level's parts add up; talents and values recomputed from the kept sums and measures |
+| 49q | E2E: a second `refresh_players` | the same levels; one published level run, the earlier superseded; `stale_rankings` lists nothing |
+| 49r | E2E: `stale_rankings` on a base ranked before the level existed, two years | both listed, the older first; run in that order, none listed; the year before's sums changed afterwards: the year alone is listed again |
+| 49s | E2E: a partial award year (§47) run before and after the next one | no level, no cell, a published level run of 0 players without a reference; the next year is not listed for it |
+| 49t | E2E: the read API under `vega_read` | `/api/rankings/level` and `/api/rankings/level/player` read the level's rows; the ranking's answers are unchanged |
+
 ## 49. The season's other internationals of 2021/22 to 2025/26 (International Results, 23 Nov 2026, written before the tests)
 
 Main reads every international of 2026/27 that no other edition holds (`nations-results:internationals:2026/2027`,

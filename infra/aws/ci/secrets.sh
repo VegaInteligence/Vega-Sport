@@ -23,6 +23,10 @@ fi
 # The key of the read API's /api/ops/status, read by the private status page (Vega Status).
 openssl rand -hex 32 | tr -d '\n' > "$work/ops"
 put /vega/v2/ops-key "$work/ops"
+# VI-35: the key the site's server sends as X-Vega-Edge-Key, out of the distribution's
+# per-address limit (waf.yaml); the Vercel project holds it as VEGA_API_EDGE_KEY.
+openssl rand -hex 32 | tr -d '\n' > "$work/edge"
+put /vega/v2/edge-key "$work/edge"
 endpoint=$(aws cloudformation describe-stacks --stack-name vega-v2-database \
   --query "Stacks[0].Outputs[?OutputKey=='DatabaseEndpoint'].OutputValue" --output text)
 # The worker verifies TLS against the bundled CA (sslrootcert); the API passes the CA itself,

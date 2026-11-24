@@ -45,6 +45,50 @@ test("ranking index and editions", { skip }, async () => {
   assert.equal((await get("/api/rankings/edition?kind=fifa-men&edition=2025-09-18.fifa")).response.status, 400); // no source in a key
 });
 
+test("the players' level of a season (Score Vega v9), read beside the power ranking", { skip }, async () => {
+  // FAILURE_MODES §49, 49t: the level's rows, under the read role; the power ranking's answer (next test) is unchanged.
+  const { response, body } = await get("/api/rankings/level?season=2025/2026");
+  assert.equal(response.status, 200);
+  assert.deepEqual([body.season, body.universe, body.position, body.page, body.limit, body.total], ["2025/2026", "men", null, 1, 50, 3]);
+  assert.deepEqual(body.method, { version: "score-vega-v9", computedAt: "2025-09-06T03:05:00.000Z" });
+  assert.deepEqual(body.rows.map((r) => [r.rank, r.positionRank, r.playerId, r.position, r.positionKey, r.score, r.level]), [
+    [1, 1, "p_aaaab1", "Avant-centre", "centre_forward", 79.7, 21.4], [2, 1, "p_aaaab4", "Milieu offensif", "attacking_midfielder", 50, 0],
+    [3, 1, "p_aaaab3", "Gardien", "goalkeeper", 40.5, -6],
+  ]);
+  assert.deepEqual(Object.keys(body.rows[0]), ["rank", "positionRank", "playerId", "name", "imageUrl", "teamId", "team", "teamImageUrl", "position", "positionKey",
+    "score", "level", "own", "club", "minutes", "provisional", "provisionalReason"]);
+  // The level is what he does (his blocks and his starts) and his club: the parts are served with it.
+  assert.deepEqual([body.rows[0].own, body.rows[0].club, body.rows[0].minutes, body.rows[0].provisionalReason], [14.2, 7.2, 260, null]);
+  assert.deepEqual([body.rows[2].provisional, body.rows[2].provisionalReason], [true, "minutes"]);
+  // One position, a page at a time.
+  const tens = (await get("/api/rankings/level?season=2025/2026&position=attacking_midfielder")).body;
+  assert.deepEqual([tens.position, tens.total, tens.rows.map((r) => r.playerId)], ["attacking_midfielder", 1, ["p_aaaab4"]]);
+  const second = (await get("/api/rankings/level?season=2025/2026&limit=2&page=2")).body;
+  assert.deepEqual([second.page, second.limit, second.total, second.rows.map((r) => r.rank)], [2, 2, 3, [3]]);
+  assert.equal((await get("/api/rankings/level?season=2025/2026&universe=women")).response.status, 404);
+  assert.equal((await get("/api/rankings/level?season=2024/2025")).response.status, 404);
+  for (const bad of ["", "?season=2025", "?season=2025/2026&position=striker", "?season=2025/2026&universe=all", "?season=2025/2026&limit=0",
+    "?season=2025/2026&page=0", "?season=2025/2026&kind=players"])
+    assert.equal((await get("/api/rankings/level" + bad)).response.status, 400, bad);
+  // One player's level, for his page: its parts, and each position he played, judged or not.
+  const own = (await get("/api/rankings/level/player?season=2025/2026&player=p_aaaab1")).body;
+  assert.deepEqual([own.season, own.method.version], ["2025/2026", "score-vega-v9"]);
+  assert.deepEqual(own.player, {
+    id: "p_aaaab1", rank: 1, positionRank: 1, position: "Avant-centre", positionKey: "centre_forward", score: 79.7, level: 21.4, own: 14.2, blocks: 11,
+    starts: 3.2, club: 7.2, startShare: 0.9, minutes: 260, universe: "men", eligible: true, linked: true, provisional: false, provisionalReason: null,
+    positions: [
+      { position: "Avant-centre", positionKey: "centre_forward", judged: true, minutes: 200, minutesTwoSeasons: 2600, share: 1, value: 13.5, level: 21.4,
+        talents: { finishing: 1.25, creation: 0.4, progression: 0.1, defence: -0.3, retention: 0.2 } },
+      { position: "Ailier", positionKey: "winger", judged: false, minutes: 60, minutesTwoSeasons: 60, share: null, value: null, level: null, talents: null },
+    ],
+  });
+  const keeper = (await get("/api/rankings/level/player?season=2025/2026&player=p_aaaab3")).body.player;
+  assert.deepEqual([keeper.position, keeper.provisionalReason, keeper.positions[0].talents], ["Gardien", "minutes", null]);
+  assert.equal((await get("/api/rankings/level/player?season=2025/2026&player=p_aaaab2")).response.status, 404);
+  assert.equal((await get("/api/rankings/level/player?season=2025/2026&player=aaaab1")).response.status, 400);
+  assert.equal((await get("/api/rankings/level/player?season=2025/2026")).response.status, 400);
+});
+
 test("power rankings of players and clubs for a season", { skip }, async () => {
   const { response, body } = await get("/api/rankings/power?kind=players&season=2025/2026");
   assert.equal(response.status, 200);
@@ -258,6 +302,65 @@ test("a finished match minute by minute", { skip }, async () => {
   // An unknown match, a malformed id.
   assert.equal((await get("/api/forecasts/live?match=m_zzzzzz")).response.status, 404);
   assert.equal((await get("/api/forecasts/live?match=1")).response.status, 400);
+});
+
+// Extra time (issue #68). Failure modes and expected outcomes, written before the code:
+// - a finished match level at the 90th and decided in extra time (m_xtime1, 0-0 then 1-0 at 112'): `extraTime`, points to
+//   the 120th, the extra-time goal counted at its minute, the 120th point the result (1, 0, 0), `penalties` null;
+// - decided on penalties (m_shoot1, 1-1, 4-3): points to the 120th, the 120th point a draw (0, 1, 0), `penalties` [4, 3];
+// - penalties stated without an extra-time score (m_shoot2, 2-2 with a goal at 90+3 and one at 101', 5-4): extra time all
+//   the same; the 90+3 goal stays in regulation (score 2-1 at the 90th), the 101st's counts at the 101st;
+// - goal events that do not add up to the final score (extra time included): no timeline (404), the route's check as
+//   before (not seeded here);
+// - a match without extra time (m_aaaaa1): unchanged, no `extraTime` or `penalties` key;
+// - in play with a clock past the 90th and nothing in the base saying extra time (m_live91, clock 100): it stops at the
+//   90th as before; extra time in play is the live feed's to say (its period), the site carrying the model on.
+// Extra time the base holds no score of (24 Nov 2026: the provider gives no extra-time score, and not always the
+// shoot-out's; in production the 2022 World Cup final stopped at the 90th with its 108th and 118th minute goals piled
+// there). Failure modes and expected outcomes, written before the code:
+// - a finished match with a goal after the 90th minute and no extra-time or shoot-out score (m_xtime2, 2-1, the winner
+//   at the 108th): `extraTime`, points to the 120th, 1-1 at the 90th and until the 107th, 2-1 from the 108th, the 120th
+//   point the result, `penalties` null;
+// - the same, level at the 120th (m_xtime3, 1-1, a goal at the 118th): the 120th point a draw (the shoot-out),
+//   `penalties` null since the base has no shoot-out score;
+// - a goal in the second half's stoppage time (m_stop90, minute 90 + 4) is no extra time: 91 points, no `extraTime` key.
+test("extra time known by its events alone", { skip }, async () => {
+  const live = async (id) => (await get(`/api/forecasts/live?match=${id}`)).body;
+  const three = (p) => [p.home, p.draw, p.away];
+  const decided = await live("m_xtime2");
+  assert.deepEqual([decided.status, decided.extraTime, decided.penalties, decided.points.length, decided.points.at(-1).minute], ["finished", true, null, 121, 120]);
+  assert.deepEqual([decided.points[90].score, decided.points[107].score, decided.points[108].score], [[1, 1], [1, 1], [2, 1]]);
+  assert.ok(decided.points[90].draw > 0 && decided.points[90].draw < 1);
+  assert.deepEqual(three(decided.points[120]), [1, 0, 0]);
+  const level = await live("m_xtime3");
+  assert.deepEqual([level.extraTime, level.penalties, level.points.length, level.points[117].score, level.points[118].score], [true, null, 121, [1, 0], [1, 1]]);
+  assert.deepEqual(three(level.points[120]), [0, 1, 0]);
+  const stoppage = await live("m_stop90");
+  assert.deepEqual([stoppage.points.length, "extraTime" in stoppage, stoppage.points[90].score], [91, false, [1, 0]]);
+  assert.deepEqual(three(stoppage.points[90]), [1, 0, 0]);
+});
+
+test("a match that went to extra time, minute by minute", { skip }, async () => {
+  const live = async (id) => (await get(`/api/forecasts/live?match=${id}`)).body;
+  const three = (p) => [p.home, p.draw, p.away];
+  const decided = await live("m_xtime1");
+  assert.deepEqual([decided.status, decided.extraTime, decided.penalties, decided.points.length, decided.points.at(-1).minute], ["finished", true, null, 121, 120]);
+  assert.deepEqual([decided.points[90].score, decided.points[111].score, decided.points[112].score], [[0, 0], [0, 0], [1, 0]]);
+  assert.ok(decided.points[112].home > decided.points[111].home);
+  assert.deepEqual(three(decided.points[120]), [1, 0, 0]);
+  // The first 91 points are the regulation timeline's: the 90th is not forced to a result.
+  assert.ok(decided.points[90].draw > 0 && decided.points[90].draw < 1);
+  const shoot = await live("m_shoot1");
+  assert.deepEqual([shoot.extraTime, shoot.penalties, shoot.points.length, shoot.points[120].score], [true, [4, 3], 121, [1, 1]]);
+  assert.deepEqual(three(shoot.points[120]), [0, 1, 0]);
+  const stated = await live("m_shoot2");
+  assert.deepEqual([stated.extraTime, stated.penalties, stated.points.length], [true, [5, 4], 121]);
+  assert.deepEqual([stated.points[89].score, stated.points[90].score, stated.points[100].score, stated.points[101].score], [[1, 1], [1, 2], [1, 2], [2, 2]]);
+  assert.deepEqual(three(stated.points[120]), [0, 1, 0]);
+  const plain = await live("m_aaaaa1");
+  assert.deepEqual([plain.points.length, "extraTime" in plain, "penalties" in plain], [91, false, false]);
+  const inPlay = await live("m_live91");
+  assert.deepEqual([inPlay.status, inPlay.points.length, "extraTime" in inPlay, inPlay.points[90].score], ["in_play", 91, false, [1, 1]]);
 });
 
 test("the season's breakouts, and a player's own flag", { skip }, async () => {

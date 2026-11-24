@@ -4,7 +4,7 @@ Expected values are recomputed here, in plain Python, from the rows inserted, wi
 formulas of the docs; the database must agree.
 """
 
-from collections import Counter
+from collections import Counter, defaultdict
 from datetime import date, timedelta
 import os
 from pathlib import Path
@@ -215,6 +215,220 @@ class ModelsTest(unittest.TestCase):
         self.assertEqual([rank_of[r[1]] for r in race], [r[6] for r in ranked[:30]])  # ties may come in either order
         self.assertTrue(all(r[3] == "award" and r[4] == "published" for r in race))
         self.assertAlmostEqual(race[0][2], ranked[0][5], places=3)
+
+    def level_run(self, season=2025):
+        return self.one("""SELECT id, version, reference_season, players, settings, measured FROM agg.level_runs
+                           WHERE season_id = %s AND status = 'published'""", season)
+
+    def test_player_levels_beside_the_ranking(self):
+        # Score Vega v9 (issue #82, FAILURE_MODES §49, 49p and 49q): the level is computed by the ranking's
+        # run, beside it. Expected values are recomputed here from the rows the run kept and the rows inserted.
+        from vega import level, power
+
+        x = self.db.execute
+        run, version, reference, players, settings, measured = self.level_run()
+        self.assertEqual((version, players), (level.LEVEL_VERSION, 88))
+        self.assertEqual(reference, 2025)  # the award year is over: it measures its own references and keeps them
+        self.assertEqual({k: settings[k] for k in ("psi", "e", "e_starts", "goal", "defence_bound", "scale", "previous_weight", "acquired_minutes")},
+                         {"psi": 10.0, "e": level.E, "e_starts": level.E_STARTS, "goal": level.GOAL, "defence_bound": 2.0, "scale": 36.0,
+                          "previous_weight": 0.5, "acquired_minutes": 450})
+        self.assertEqual(set(measured["lam"]), set(level.OUTFIELD))
+        self.assertTrue(all(len(measured[k][p]) == 5 for k in ("lam", "sd", "prices") for p in level.OUTFIELD))
+        rows = x("""SELECT player_id, position, team_id, universe, eligible, linked, minutes, level, own, blocks, starts, club, start_share,
+                           score, rank, position_rank, run_id FROM agg.player_level WHERE season_id = 2025 ORDER BY rank""").fetchall()
+        # Every player of the league has a level: 14 club matches each, all judged.
+        self.assertEqual(len(rows), 88)
+        self.assertEqual({r[0] for r in rows}, {p for p, *_ in self.facts["players"]})
+        self.assertTrue(all(r[16] == run and r[3] == "men" and r[4] and r[5] and r[6] == 14 * 90 for r in rows))
+        # The position: the v8 role of the slot, a winger's slot read as one of three.
+        role = dict(x("SELECT player_id, role FROM agg.player_power WHERE season_id = 2025").fetchall())
+        slot = {p: position for p, _, _, position in self.facts["players"]}
+
+        def position_of(player):
+            if role[player] != "winger":
+                return role[player]
+            row, place = divmod(slot[player], 10)
+            return "attacking_midfielder" if row in (8, 9) and place in (4, 5, 6) else "wide_midfielder" if row in (6, 7) and place in (1, 2, 8, 9) else "winger"
+
+        self.assertEqual({r[0]: r[1] for r in rows}, {p: position_of(p) for p in role})
+        self.assertEqual(sum(r[1] == "goalkeeper" for r in rows), 8)
+        self.assertTrue({r[1] for r in rows} <= set(level.POSITIONS))
+        # The parts add up; everybody started every match, so starting separates nobody.
+        for r in rows:
+            self.assertAlmostEqual(r[8], r[9] + r[10], places=3)
+            self.assertAlmostEqual(r[7], r[8] + r[11], places=3)
+            self.assertEqual((r[12], round(r[10], 4)), (1.0, 0.0))
+        # The club: ψ × the club's Elo before its matches, above the mean of the year, in units of 400.
+        elo = defaultdict(list)
+        for team, before in x("SELECT team_id, elo_before FROM agg.team_elo WHERE season_id = 2025").fetchall():
+            elo[team].append(before)
+        centre = sum(sum(v) for v in elo.values()) / sum(len(v) for v in elo.values())
+        for r in rows:
+            self.assertAlmostEqual(r[11], level.PSI * (sum(elo[r[2]]) / len(elo[r[2]]) - centre) / 400, places=3)
+        # The score: one curve around the median level; the rank is the level's, the position's rank too.
+        ordered = sorted(r[7] for r in rows)
+        median = ordered[len(ordered) // 2]
+        for r in rows:
+            self.assertAlmostEqual(r[13], 100 / (1 + 10 ** (-(r[7] - median) / 36)), places=2)
+            self.assertTrue(0 <= r[13] <= 100)
+        self.assertEqual([r[14] for r in rows], list(range(1, 89)))
+        self.assertEqual([r[7] for r in rows], sorted((r[7] for r in rows), reverse=True))
+        for position in {r[1] for r in rows}:
+            self.assertEqual([r[15] for r in rows if r[1] == position], list(range(1, sum(r[1] == position for r in rows) + 1)))
+        # One position each: its share is whole, its talents are the cell's rates drawn towards the position's
+        # mean by the minutes, its value their sum at the position's prices; the blocks are the value above
+        # the position's mean.
+        blocks = level.BLOCKS
+        cells = {(p, position): (minutes, block_minutes, sums, keeper_minutes, prevented) for p, position, minutes, *rest in x(
+            f"""SELECT player_id, position, minutes, {', '.join(b + '_minutes' for b in blocks)}, {', '.join(b + '_sum' for b in blocks)},
+                       keeper_minutes, goals_prevented FROM agg.player_level_cells WHERE season_id = 2025""").fetchall()
+            for block_minutes, sums, keeper_minutes, prevented in [(rest[:5], rest[5:10], rest[10], rest[11])]}
+        self.assertEqual(len(cells), 88)
+        positions = x(f"""SELECT player_id, position, acquired, minutes, minutes_two_seasons, share, value, level, {', '.join(blocks)}
+                          FROM agg.player_level_positions WHERE season_id = 2025""").fetchall()
+        self.assertEqual(len(positions), 88)
+        by_position = defaultdict(list)
+        for player, position, acquired, minutes, both, share, value, own_level, *talents in positions:
+            by_position[position].append(value)
+            self.assertEqual((acquired, minutes, both, share), (True, 1260, 1260, 1.0))
+            cell = cells[(player, position)]
+            self.assertEqual(cell[0], 1260)
+            if position == "goalkeeper":
+                prevented = float(self.one("SELECT sum(goals_prevented) FROM core.player_match_stats WHERE season_id = 2025 AND player_id = %s", player)[0])
+                self.assertAlmostEqual(cell[4], prevented, places=3)
+                self.assertAlmostEqual(value, level.GOAL * 90 * prevented / (1260 + measured["keeper"][0]), places=3)
+                self.assertEqual(talents, [None] * 5)
+                continue
+            expected = 0.0
+            for b, name in enumerate(blocks):
+                self.assertTrue(0 <= cell[1][b] <= 1260)  # the minutes of the matches that measure the block
+                if not cell[1][b]:
+                    self.assertAlmostEqual(talents[b], 0.0, places=5)  # nothing seen: the position's mean
+                    continue
+                talent = 90 * cell[2][b] / measured["sd"][position][b] / (cell[1][b] + measured["lam"][position][b])
+                if name == "defence":
+                    talent = max(-2.0, min(2.0, talent))
+                self.assertAlmostEqual(talents[b], talent, places=3)
+                expected += measured["prices"][position][b] * talent
+            self.assertAlmostEqual(value, expected, places=2)
+        mean = {position: sum(values) / len(values) for position, values in by_position.items()}
+        of = {r[0]: r for r in rows}
+        for player, position, _, _, _, _, value, own_level, *_ in positions:
+            self.assertAlmostEqual(of[player][9], value - mean[position], places=3)
+            self.assertAlmostEqual(own_level, of[player][7], places=3)  # one position: its level is the player's
+        # An attacking position's blocks are centred on the year: their sums over its players are nil.
+        for position in set(level.ATTACK) & set(by_position):
+            for b in range(5):
+                self.assertAlmostEqual(sum(c[2][b] for (_, at), c in cells.items() if at == position), 0.0, places=2)
+        # A non-attacking position is priced by the announced weights; too few players for a measure of
+        # their own: the stated defaults.
+        for position in set(by_position) - set(level.ATTACK) - {"goalkeeper"}:
+            for b, name in enumerate(blocks):
+                self.assertAlmostEqual(measured["prices"][position][b], level.E * power.WEIGHTS[position][name], places=6)
+        self.assertEqual({measured["lam"][p][b] for p in level.OUTFIELD for b in range(5)}, {level.DEFAULT_LAMBDA})
+        self.assertEqual(tuple(measured["keeper"]), level.KEEPER_DEFAULT)
+        # The reads: one row per player and per position, with the run's version.
+        self.assertEqual(self.one("SELECT count(*), min(version), max(version) FROM api.player_levels WHERE season_id = 2025"), (88, level.LEVEL_VERSION, level.LEVEL_VERSION))
+        self.assertEqual(self.one("SELECT count(*) FROM api.player_level_positions WHERE season_id = 2025")[0], 88)
+        # 49q: a second run gives the same levels, publishes its own run and supersedes the earlier.
+        kept = x("SELECT player_id, level, score, rank FROM agg.player_level WHERE season_id = 2025 ORDER BY player_id").fetchall()
+        runs = self.one("SELECT count(*) FROM agg.level_runs WHERE season_id = 2025")[0]
+        self.assertEqual(power.refresh_players(self.db, 2025), 88)
+        self.assertEqual(x("SELECT player_id, level, score, rank FROM agg.player_level WHERE season_id = 2025 ORDER BY player_id").fetchall(), kept)
+        self.assertEqual(self.one("""SELECT count(*), count(*) FILTER (WHERE status = 'published'), count(*) FILTER (WHERE status = 'running')
+                                     FROM agg.level_runs WHERE season_id = 2025"""), (runs + 1, 1, 0))
+        self.assertNotEqual(self.level_run()[0], run)
+        self.assertEqual(self.one("SELECT count(DISTINCT run_id) FROM agg.player_level WHERE season_id = 2025")[0], 1)
+        self.assertEqual(power.stale_rankings(self.db), [])
+
+    def test_player_levels_of_two_years_are_computed_oldest_first(self):
+        # 49r, 49o: a year's level reads half of the year before's sums, so the years the level leaves stale
+        # are run oldest first; a year whose level is older than the year before's is run again.
+        from vega import level, power
+        from vega.store import Store
+
+        x = self.db.execute
+        with self.db.transaction():
+            before = Store(self.db).season("2024/2025")
+        self.assertEqual(before, 2024)
+        player, position = self.one("SELECT player_id, position FROM agg.player_level WHERE season_id = 2025 AND position = 'centre_back' ORDER BY player_id LIMIT 1")
+        alone = self.one("SELECT minutes_two_seasons, defence FROM agg.player_level_positions WHERE season_id = 2025 AND player_id = %s", player)
+        try:
+            # A base ranked before the level existed: two published rankings with players, no level.
+            x("DELETE FROM agg.player_level WHERE season_id = 2025")
+            x("DELETE FROM agg.player_level_positions WHERE season_id = 2025")
+            x("DELETE FROM agg.player_level_cells WHERE season_id = 2025")
+            x("DELETE FROM agg.level_runs")
+            x("""INSERT INTO agg.power_runs(kind, season_id, method_version, status, finished_at, players)
+                 VALUES ('players', 2024, %s, 'published', now(), 3)""", (power.METHOD_VERSION,))
+            self.assertEqual(power.stale_rankings(self.db), [2024, 2025])
+            for season in power.stale_rankings(self.db):
+                power.refresh_players(self.db, season)
+            self.assertEqual(power.stale_rankings(self.db), [])
+            self.assertEqual(self.level_run(2024)[1:4], (level.LEVEL_VERSION, None, 0))  # no statistics that year: an empty level
+            self.assertEqual(self.one("SELECT count(*) FROM agg.player_level WHERE season_id = 2025")[0], 88)
+            # The year before now has sums for one centre-back: 900 minutes, a defence of + 1 per 90.
+            previous = self.level_run(2024)[0]
+            x("""INSERT INTO agg.player_level_cells(season_id, player_id, position, team_id, minutes, finishing_minutes, creation_minutes,
+                   progression_minutes, defence_minutes, retention_minutes, finishing_sum, creation_sum, progression_sum, defence_sum, retention_sum,
+                   keeper_minutes, goals_prevented, run_id)
+                 VALUES (2024, %s, %s, 1, 900, 900, 900, 900, 900, 900, 0, 0, 0, 10, 0, 0, 0, %s)""", (player, position, previous))
+            x("UPDATE agg.level_runs SET players = 1, started_at = clock_timestamp() WHERE id = %s", (previous,))
+            self.assertEqual(power.stale_rankings(self.db), [2025])  # its level is older than the year before's
+            power.refresh_players(self.db, 2025)
+            self.assertEqual(power.stale_rankings(self.db), [])
+            both, defence = self.one("SELECT minutes_two_seasons, defence FROM agg.player_level_positions WHERE season_id = 2025 AND player_id = %s", player)
+            self.assertEqual((alone[0], both), (1260, 2160))
+            minutes, total = self.one("SELECT defence_minutes, defence_sum FROM agg.player_level_cells WHERE season_id = 2025 AND player_id = %s", player)
+            measured = self.level_run()[5]
+            lam, sd = measured["lam"][position][3], measured["sd"][position][3]
+            self.assertAlmostEqual(defence, max(-2.0, min(2.0, 90 * (total + 0.5 * 10) / sd / (minutes + 0.5 * 900 + lam))), places=3)
+            self.assertNotAlmostEqual(defence, alone[1], places=3)
+        finally:
+            # The other tests read the published seasons: this one leaves 2025 alone behind, as it was.
+            x("DELETE FROM agg.player_level_cells WHERE season_id = 2024")
+            x("DELETE FROM agg.level_runs WHERE season_id = 2024")
+            x("DELETE FROM agg.calc_runs WHERE kind = 'award' AND cohort_definition = 'ballon_dor:2024'")
+            x("DELETE FROM agg.power_runs WHERE season_id = 2024")
+            power.refresh_players(self.db, 2025)
+        self.assertEqual(self.one("SELECT minutes_two_seasons FROM agg.player_level_positions WHERE season_id = 2025 AND player_id = %s", player)[0], 1260)
+        self.assertEqual(power.stale_rankings(self.db), [])
+
+    def test_a_blank_duel_side_reads_like_a_written_zero(self):
+        # Issue #71 (calculation audit of 16 November 2026, item 1): a defender's duel attempts are
+        # his duels won and lost, added once the blanks have their zeros. The same match is graded
+        # the same whether the source writes a 0 or leaves it blank.
+        from vega import power
+
+        x = self.db.execute
+        match, player = 1, 103  # a defender of club 1, at home to club 2
+        key = "season_id=2025 AND match_id=%s AND player_id=%s"
+        before = self.one(f"SELECT duels_won, duels_lost FROM core.player_match_stats WHERE {key}", match, player)
+        # The match publishes both sides of the duels, and his row carries statistics.
+        self.assertEqual(self.one(
+            f"""SELECT (SELECT touches IS NOT NULL FROM core.player_match_stats WHERE {key}),
+                       EXISTS (SELECT 1 FROM core.player_match_stats WHERE season_id=2025 AND match_id=%s AND player_id<>%s AND duels_won > 0),
+                       EXISTS (SELECT 1 FROM core.player_match_stats WHERE season_id=2025 AND match_id=%s AND player_id<>%s AND duels_lost > 0)""",
+            match, player, match, player, match, player), (True, True, True))
+
+        def defence(won, lost):
+            x(f"UPDATE core.player_match_stats SET duels_won=%s, duels_lost=%s WHERE {key}", (won, lost, match, player))
+            power.refresh_players(self.db, 2025)
+            return self.one(f"SELECT defence FROM agg.player_power_matches WHERE {key}", match, player)[0]
+
+        try:
+            # D1: five duels won, none lost.
+            written = defence(5, 0)
+            self.assertIsNotNone(written)
+            self.assertAlmostEqual(defence(5, None), written, places=5)
+            # D2: none won, three lost.
+            written = defence(0, 3)
+            self.assertAlmostEqual(defence(None, 3), written, places=5)
+            # And the two readings differ from each other: the duels do count in the block.
+            self.assertNotAlmostEqual(defence(5, 0), written, places=3)
+        finally:
+            x(f"UPDATE core.player_match_stats SET duels_won=%s, duels_lost=%s WHERE {key}", (*before, match, player))
+            power.refresh_players(self.db, 2025)
 
     def test_zzz_a_world_cup_final_counts_for_its_stakes(self):
         # Version 3 (072): the World Cup's matches enter the players' ranking, each match

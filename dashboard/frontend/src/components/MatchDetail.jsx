@@ -1,5 +1,6 @@
 import { nationalFlagCode } from "../services/national-flags.js";
 import BackLink from "./BackLink.jsx";
+import MatchNav from "./MatchNav.jsx";
 import { editionArtworkUrl } from "../services/competition-artwork.js";
 import React, {
   lazy,
@@ -33,10 +34,13 @@ const MatchContext = lazy(() => import("./MatchContext.jsx"));
 const MatchForecast = lazy(() => import("./MatchForecast.jsx"));
 const MatchOdds = lazy(() => import("./MatchOdds.jsx"));
 import MatchWinProbability from "./MatchWinProbability.jsx";
+import { useMatchWinProbability } from "../services/forecasts.js";
 import MatchKpis from "./MatchKpis.jsx";
 import MatchLineups from "./MatchLineups.jsx";
 import MatchPlayersBoard from "./MatchPlayersBoard.jsx";
 import MatchAnalyses from "./MatchAnalyses.jsx";
+import MatchLive from "./MatchLive.jsx";
+import { liveRunning, liveShootout, liveStatus } from "../services/match-live.js";
 import { periodShort } from "./PlayerMetrics.jsx";
 import { number, date, isNumber } from "../services/format.js";
 import {
@@ -155,6 +159,8 @@ function MatchStatistics({ match }) {
     );
   return <AsyncState resource={resource}>{display}</AsyncState>;
 }
+// While the feed runs the match, its view comes first and opens the page.
+const liveView = ["live", "Direct", "activity"];
 // Before kick-off the context comes first: the other views fill in later.
 const upcomingViews = [
   ...views.filter(([key]) => key === "context"),
@@ -236,25 +242,17 @@ function MatchViewTabs({ view, onChange, panelId, views }) {
     </div>
   );
 }
-function MatchPlayer({ row, rank, grade, link = false }) {
+function MatchPlayer({ row, rank, grade }) {
   const f = useFootball();
-  const id = playerOf(row);
-  // A best grade opens the player's page; elsewhere a row opens his performance of the match.
-  const Element = link && /^p_/.test(id || "") ? Link : "button";
-  const props =
-    Element === Link
-      ? {
-          href: f.href("/joueurs/", { id }),
-          "aria-label": `Voir la fiche de ${row.name}`,
-        }
-      : {
-          onClick: () => f.setPlayer(row.id),
-          "aria-busy":
-            (f.player === row.id && f.deferredPerformance?.loading) ||
-            undefined,
-        };
+  // A best grade opens his performance of the match; its dialog leads to his page.
+  const props = {
+    type: "button",
+    onClick: () => f.setPlayer(row.id),
+    "aria-busy":
+      (f.player === row.id && f.deferredPerformance?.loading) || undefined,
+  };
   return (
-    <Element className="match-player-row" {...props}>
+    <button className="match-player-row" {...props}>
       {rank && (
         <span className="leader-rank">{String(rank).padStart(2, "0")}</span>
       )}
@@ -282,7 +280,7 @@ function MatchPlayer({ row, rank, grade, link = false }) {
           title={grade ? gradeTitle(grade) : undefined}
         />
       )}
-    </Element>
+    </button>
   );
 }
 function MatchShots({ match }) {
@@ -432,22 +430,25 @@ export function liveTeamStats(live, match) {
     : null;
 }
 function LiveTimeline({ events, match }) {
-  if (!events.length) return null;
+  // The scoreboard keeps the goals that stand and the dismissals; the Direct view has the rest.
+  const shown = events.filter((e) => !e.cancelled && e.type !== "yellow_card" && e.period !== "penalties");
+  if (!shown.length) return null;
   return (
-    <ol className="scoreboard-live-events" aria-label="Faits du direct">
-      {events.map((e) => (
+    <ol className="scoreboard-live-events" aria-label="Buts et expulsions">
+      {shown.map((e) => (
         <li
           key={e.seq}
-          className={`${e.teamId === match.away.id ? "is-away" : "is-home"}${e.cancelled ? " is-cancelled" : ""}`}
+          className={e.teamId === match.away.id ? "is-away" : "is-home"}
         >
+          {e.type === "red_card" ? <i className="live-red" aria-hidden="true" /> : null}
+          <strong>{e.playerName || LIVE_EVENTS[e.type]}</strong>
           <span>
             {e.minute != null
               ? `${e.minute}${e.minuteAdded ? `+${e.minuteAdded}` : ""}’`
-              : "—"}
+              : ""}
+            {e.type === "penalty_goal" ? " (pen.)" : e.type === "own_goal" ? " (csc)" : e.type === "missed_penalty" ? " (pen. manqué)" : ""}
           </span>
-          <strong>{LIVE_EVENTS[e.type]}</strong>
-          {e.playerName && <span>{e.playerName}</span>}
-          {e.cancelled && <em>annulé (VAR)</em>}
+          {e.type === "red_card" && <span className="sr-only">Carton rouge</span>}
         </li>
       ))}
     </ol>
@@ -466,9 +467,16 @@ export default function MatchDetail({ match }) {
     panelId = useId();
   // Before kick-off there is nothing to analyse yet: open on the context.
   const upcoming = isUpcomingMatch(match);
-  const tabs = upcoming ? upcomingViews : views;
-  const defaultView = upcoming ? "context" : "overview";
-  const view = views.some(([key]) => key === search.get("view"))
+  // Live: the feed's minute and score until PitchAPI has the score, then core's.
+  const live = useLiveMatch(match.id, isLiveWindow(match));
+  const running = liveRunning(live);
+  const tabs = running
+    ? [liveView, ...views]
+    : upcoming
+      ? upcomingViews
+      : views;
+  const defaultView = running ? "live" : upcoming ? "context" : "overview";
+  const view = tabs.some(([key]) => key === search.get("view"))
     ? search.get("view")
     : defaultView;
   const selectView = (value) => {
@@ -493,21 +501,24 @@ export default function MatchDetail({ match }) {
   const competition = f.allCompetitions.find((c) => c.id === match.leagueId);
   const homeName = match.home.name ?? "Équipe non renseignée";
   const awayName = match.away.name ?? "Équipe non renseignée";
-  // Live: the feed's minute and score until PitchAPI has the score, then core's.
-  const live = useLiveMatch(match.id, isLiveWindow(match));
-  const liveScore =
-    live && live.families?.score !== "core" && live.status !== "scheduled"
-      ? live.score
-      : null;
+  const liveScore = running ? live.score : null;
   const liveEvents = liveScore ? liveTimeline(live) : [];
   const liveStats =
     live && live.status !== "scheduled" ? liveTeamStats(live, match) : null;
-  const status = liveScore
-    ? live.status === "finished"
-      ? "Résultat provisoire"
-      : live.status === "half_time"
-        ? "Mi-temps"
-        : `En direct${live.minute != null ? ` · ${live.minute}${live.minuteAdded ? `+${live.minuteAdded}` : ""}’` : ""}`
+  const liveState = liveStatus(live);
+  const shootout = running ? liveShootout(live, match) : null;
+  // How a finished match went past the 90th, from the read the chart shares (/api/forecasts/live):
+  // the summary does not say it.
+  const past = useMatchWinProbability(match.id, match.status === "finished" && !running);
+  const afterNote = shootout
+    ? `Tirs au but ${shootout.score}`
+    : past?.penalties
+      ? `Tirs au but ${past.penalties[0]}–${past.penalties[1]}`
+      : past?.extraTime
+        ? "Après prolongation"
+        : null;
+  const status = liveState
+    ? liveState.label
     : match.status === "finished"
       ? "Terminé"
       : upcoming
@@ -562,6 +573,7 @@ export default function MatchDetail({ match }) {
           />
         </div>
       </div>
+      <MatchNav match={match} competition={competition} />
       <section className="match-scoreboard" aria-label="Résumé du match">
         <div className="scoreboard-meta">
           <div>
@@ -601,7 +613,7 @@ export default function MatchDetail({ match }) {
           </Link>
           <div className="scoreboard-center">
             <span
-              className={`match-status${match.status === "finished" ? " is-finished" : ""}`}
+              className={`match-status${match.status === "finished" ? " is-finished" : ""}${liveState?.tone === "live" ? " is-live" : ""}`}
             >
               <span />
               {status}
@@ -626,6 +638,9 @@ export default function MatchDetail({ match }) {
                 </>
               )}
             </div>
+            {afterNote && (
+              <span className="scoreboard-shootout">{afterNote}</span>
+            )}
           </div>
           <Link
             className="scoreboard-team scoreboard-away"
@@ -642,7 +657,7 @@ export default function MatchDetail({ match }) {
           </Link>
         </div>
         <LiveTimeline events={liveEvents} match={match} />
-        {liveStats ? (
+        {view === "live" ? null : liveStats ? (
           <div className="match-kpis" data-live="">
             {liveStats.map((s) => (
               <div key={s.key}>
@@ -677,6 +692,7 @@ export default function MatchDetail({ match }) {
         role="tabpanel"
         aria-labelledby={`${panelId}-${view}`}
       >
+        {view === "live" && <MatchLive match={match} live={live} />}
         {view === "overview" && (
           <div className="match-overview-grid">
             <Card
@@ -727,7 +743,6 @@ export default function MatchDetail({ match }) {
                     row={r}
                     rank={i + 1}
                     grade={grades.get(playerOf(r))}
-                    link
                   />
                 ))}
               </div>
