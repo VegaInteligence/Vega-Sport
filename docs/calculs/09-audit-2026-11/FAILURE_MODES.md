@@ -4259,13 +4259,18 @@ Read in the code (identity.py, cups.py, curated.py, worker.py at b17014d):
 - **Repair at the deployment.** Migration 170 adds the two columns to `agg.nation_elo_runs` (never to `agg.power_runs`,
   §53) and re-arms `national_teams` and `team_identity` (the precedent of 071, 075, 096 and 121: `UPDATE ops.source_runs
   SET last_success_at = NULL`): the first daily pass after it marks, merges, then runs the Elo once.
+- **A pending merge does not stop the Elo.** Found by 55d: in the pass that creates « Italy », before the identity pass
+  merges « Italie » into it, `refresh_elo` reads the merge (`identity.pairs`) and the national pass rates « Italy »
+  (`nation_inputs` adds the merge targets of national rows), while the clubs' season rows are written for every team
+  not marked national: « Italy » twice in `agg.team_power` (key season, team), the whole Elo refused (unique violation)
+  and retried an hour later. A team of the national pass's set is a nation in that write as well (scope and rank).
 - **Names unchanged.** No row is renamed: « Italy » keeps its name (the site shows « Italie » through
   `nationalTeamLabel`); a French-named row that has an International Results key (« Monténégro », « Biélorussie »,
   « Estonie ») is found by that key and keeps its row and name (50n).
 
 ### 55.2 Failure modes and expected outcomes
 
-55a–55c: `backend/tests/test_source_identity.py`. 55d–55f, 55h: `test_collection_wakeups.py` (the real `Worker.daily`,
+55a–55c: `backend/tests/test_source_identity.py`. 55d–55f, 55h, 55j: `test_collection_wakeups.py` (the real `Worker.daily`,
 bridge and projection). 55g: `test_deploy_migrations.py`. All on a disposable PostgreSQL 18.
 
 | # | Situation | Expected |
@@ -4278,4 +4283,5 @@ bridge and projection). 55g: `test_deploy_migrations.py`. All on a disposable Po
 | 55f | A run's row without the national set (before 170) | `elo_due` true, once |
 | 55g | Production's schema, then this tree's migrations | 170 applied; `agg.nation_elo_runs` has its two new columns; `agg.power_runs` still main's 34; `national_teams` and `team_identity` re-armed |
 | 55h | An internationals edition naming « Montenegro » for a row « Monténégro » that has that International Results key | the same row, its name « Monténégro » (50n) |
+| 55j | The pass that creates « Italy » while « Italie » (national) is not merged yet: the Elo of that pass | published, no error; « Italy » in scope `nations` only, never also a club row |
 | 55i | The national E2E (51n) | 210 nations for 2026/27, Gibraltar 52nd of 54 and 188th, Spearman 0.988, clubs identical |
