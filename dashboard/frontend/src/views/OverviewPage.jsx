@@ -15,7 +15,6 @@ import {
   supportsCompactRead,
 } from "../services/compact-reads.js";
 import {
-  initialTitleRace,
   menuCountries,
   resolveHomeCountry,
 } from "../services/home-country.js";
@@ -25,6 +24,7 @@ import {
   localMatches,
 } from "../services/home-priority.js";
 import { chooseUpcoming } from "../services/home-upcoming.js";
+import { favouriteSets, titleRaceOpening } from "../services/preference-effects.js";
 import { fixtureWeek, parisDay } from "../services/fixtures.js";
 import HomePreferences from "../components/HomePreferences.jsx";
 import SeasonFilter from "../components/SeasonFilter.jsx";
@@ -571,6 +571,9 @@ function OverviewContent({
   countryControl = null,
   countryLeagues = null,
 }) {
+  // The visitor's favourites (every list; on the server, the home cookie's): effects 1, 2, 5.
+  const research = useResearch();
+  const favourites = useMemo(() => favouriteSets(research?.data.lists), [research?.data.lists]);
   const {
     matchWeek,
     results,
@@ -634,8 +637,13 @@ function OverviewContent({
         </Empty>
       </Layout>
     );
-  // « Course au titre » opens on the visitor's country's league when it is there, else on Ligue 1.
-  const initialTable = initialTitleRace(tables, competitions, country);
+  // « Course au titre » (effect 2): the first favourite club's league, else the country's, else Ligue 1.
+  const initialTable = titleRaceOpening(tables, competitions, {
+    favouriteClubs: favourites.order.clubs,
+    matches: [...results, ...(highlights || [])],
+    clubCountries: f.manifest?.clubCountries,
+    country,
+  });
   const hasWeekSummary = Boolean(potw || win);
   const hasFinishing =
     leaders.clinical.length > 0 || leaders.wasteful.length > 0;
@@ -694,6 +702,7 @@ function OverviewContent({
         period={matchWeek}
         localLeagues={countryLeagues}
         priority={HOME_PRIORITY}
+        favourites={favourites.clubs}
       />
       <div className="home-bento">
         {featured && (
@@ -733,7 +742,7 @@ function OverviewContent({
         {tables.length > 0 && (
           <div className={highlights.length ? "home-span-7" : "home-span-12"}>
             <TitleRace
-              key={`${scopeKey}:${f.season}:${country || ""}`}
+              key={`${scopeKey}:${f.season}:${country || ""}:${initialTable || ""}`}
               tables={tables}
               competitions={competitions}
               initial={initialTable}
@@ -754,6 +763,7 @@ function OverviewContent({
           <div className={seasonSpan("home-span-5")}>
             <Finishing
               leaders={leaders}
+              favourites={favourites.players}
               scopeIds={scope.ids ? [...scope.ids] : null}
             />
           </div>
@@ -762,6 +772,7 @@ function OverviewContent({
           <div className={seasonSpan("home-span-4")}>
             <SeasonScorers
               leaders={leaders}
+              favourites={favourites.players}
               scopeIds={scope.ids ? [...scope.ids] : null}
             />
           </div>

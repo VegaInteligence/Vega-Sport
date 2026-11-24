@@ -66,9 +66,19 @@ Le pays ne crée ni carte ni bande : il change ce que montrent les cartes exista
 
 Exemple (24 nov. 2026, 8 h à Paris, sans favori ; importances du double de test sur un rejeu de la production). France : Arsenal – Dortmund (LdC, 6,93) en grande carte ; Brest – Paris FC (L1, 3,89), le seul match français à venir de la fenêtre (les résultats de Ligue 2 de lundi n'entrent pas) ; PSG – Roma (6,39), Bruges – Liverpool (6,30) et Galatasaray – Aston Villa (5,87) pour les grands matchs. Brésil : Arsenal – Dortmund, Chapecoense – Palmeiras (2,07) et Atlético-MG – Corinthians (1,89), PSG – Roma, Bruges – Liverpool. Sans pays, comme en `importance` pour la France : 6,93 / 6,39 / 6,30 / 5,87 / 5,84 (Real Madrid – PSV).
 
-**Fil des résultats** (`weekTicker`) : chaque jour les sélections nationales d'abord, comme avant ; puis, en `location`, les résultats locaux devant les autres (puis le poids éditorial), avant la coupe à 8 par jour ; en `importance`, le poids éditorial d'abord, le local seulement à égalité. Le fil ne montre que les résultats des championnats du visiteur : rien n'y est ajouté.
+**Fil des résultats** (`weekTicker`) : chaque jour les sélections nationales d'abord, comme avant ; puis les résultats d'un **club favori** du visiteur (effet 1, ci-dessous) ; puis, en `location`, les résultats locaux devant les autres (puis le poids éditorial), avant la coupe à 8 par jour ; en `importance`, le poids éditorial d'abord, le local seulement à égalité. Le fil ne montre que les résultats des championnats du visiteur : rien n'y est ajouté.
 
-**« Course au titre »** s'ouvre sur le championnat du pays quand il est parmi ses onglets (`initialTitleRace`), sinon sur la Ligue 1 comme avant, quelle que soit la priorité.
+**« Course au titre »** s'ouvre sur le championnat du premier club favori qui y figure (effet 2, ci-dessous), sinon sur le championnat du pays quand il est parmi ses onglets (`initialTitleRace`), sinon sur la Ligue 1 comme avant, quelle que soit la priorité.
+
+## Les favoris du visiteur
+
+Règle commune ([preference-effects.js](../../../dashboard/frontend/src/services/preference-effects.js), [PREFERENCES_UTILISATEUR.md](../../PREFERENCES_UTILISATEUR.md)) : les favoris d'abord, puis le pays, puis l'importance du match ; un choix du visiteur sur la page (filtre, onglet) ou un paramètre d'adresse passe avant. Les favoris sont les clubs et joueurs de **toutes** les listes, triés par identifiant (`favouritesOf`) ; « le premier club favori » est le premier de cet ordre, celui que porte aussi le cookie de l'accueil : la page servie et la page hydratée choisissent le même (pas de saut). Aucun élément ajouté.
+
+- **Effet 1, fil des résultats** : chaque jour, après les sélections nationales, les résultats où joue un club favori passent devant ceux du pays, puis l'ordre d'avant (`preferenceOrder`), avant la coupe à 8 ; dans les deux priorités.
+- **Effet 2, « Course au titre »** : s'ouvre sur le championnat du premier club favori présent parmi les onglets : le tableau qui le contient, sinon un résultat ou un match à venir de lui dans un de ces championnats (un match de coupe ne compte pas), sinon le championnat de son pays (`clubCountries` du manifeste). Un favori introuvable laisse la place au suivant, puis au pays, puis à la Ligue 1.
+- **Effet 5, encarts de saison** : dans « Buteurs de la saison » et « Devant le but », la ligne d'un joueur favori prend le surlignage des clubs enregistrés dans les classements (`data-followed`, même fond, même graisse).
+
+Exemple (rejeu du 24 nov. 2026, visiteur en France, favoris Monza et Donyell Malen) : le 23 nov., le match de Monza passe du troisième au premier rang du fil ; la course au titre s'ouvre sur la Serie A au lieu de la Ligue 1, y compris dans le HTML servi ; la ligne de Malen, troisième buteur, est surlignée.
 
 Rendu serveur : le serveur de la page lit home-local avec l'accueil, sous la clé du navigateur ; le HTML et le premier rendu du navigateur montrent les mêmes cinq matchs.
 

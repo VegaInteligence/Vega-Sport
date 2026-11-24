@@ -17,6 +17,7 @@ import Link from "next/link";
 import { Empty, Media, Segments, Skeleton } from "./UI.jsx";
 import { BookmarkButton, ResearchTabs } from "./ResearchUI.jsx";
 import { useResearch } from "../hooks/ResearchContext.jsx";
+import { nationsOpeningScope } from "../services/preference-effects.js";
 import { PhoneFoldToggle, usePhoneFold } from "./PhoneFold.jsx";
 import { Card, dateShort, fmtNum, Kpis } from "./ClubScoutUI.jsx";
 import { LineChart, TipBody } from "./PlayerScoutCharts.jsx";
@@ -107,7 +108,9 @@ export function NationIndex() {
       ),
     [research?.ready, research?.data.lists],
   );
-  const [scope, setScope] = useState("ranked");
+  // Effect 8: opens on « Mes sélections » when a nation is saved (as Clubs on « Mes clubs »), until the visitor picks.
+  const [picked, setScope] = useState(null);
+  const scope = picked ?? nationsOpeningScope(saved.size);
   const [query, setQuery] = useState("");
   const data = nations.value;
   const rows = useMemo(() => {

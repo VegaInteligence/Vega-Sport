@@ -93,6 +93,9 @@ test("calendar and home preview render each Premier League with its own logo and
     "./Icon.jsx": { __esModule: true, default: () => null },
     "../services/fixtures.js": fixtures,
     "../services/competition-identity.js": identities,
+    // Favourites (#69, effect 3): none here.
+    "../hooks/useFavourites.js": { __esModule: true, default: () => ({ clubs: new Set(), players: new Set(), order: { clubs: [], players: [] } }) },
+    "../services/preference-effects.js": await import("../dashboard/frontend/src/services/preference-effects.js"),
   };
   const filename = path.join(
     root,

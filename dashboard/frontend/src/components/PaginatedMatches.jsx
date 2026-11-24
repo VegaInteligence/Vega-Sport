@@ -7,9 +7,12 @@ import { matchPageFilters, readFixturePage } from "../services/match-pages.js";
 import { AsyncState, Card, Empty } from "./UI.jsx";
 import { MatchLink } from "./MatchLink.jsx";
 import UpcomingMatches from "./UpcomingMatches.jsx";
+import useFavourites from "../hooks/useFavourites.js";
+import { favouritesFirstWithinDay, involvesFavourite } from "../services/preference-effects.js";
 
 function Pages({ filters, upcoming, scopeKey }) {
-  const f = useFootball();
+  const f = useFootball(),
+    favouriteClubs = useFavourites().clubs;
   const [paging, setPaging] = useState({
     page: 0,
     cursors: [null],
@@ -77,7 +80,11 @@ function Pages({ filters, upcoming, scopeKey }) {
               </FootballContext.Provider>
             ) : (
               <Card title="Résultats">
-                {value.data.matches.map((match) => (
+                {favouritesFirstWithinDay(
+                  value.data.matches,
+                  (match) => match.date,
+                  (match) => involvesFavourite(match, favouriteClubs),
+                ).map((match) => (
                   <MatchLink key={match.id} match={match} />
                 ))}
                 {!value.data.matches.length && (

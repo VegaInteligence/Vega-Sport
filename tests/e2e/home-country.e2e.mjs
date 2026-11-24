@@ -31,6 +31,15 @@
 //  P1 Phone 390 × 844 (Brazil): the same five, no sideways page scroll.
 //  A2 The API serves no `billboard` (older publication or backend) → the block stays, chosen from `highlights` as
 //     before VI-48 (with the test double's switch only).
+//  V1 Effect 1 (#69, the owner's twelve): a favourite club's result is not first of its day → with a favourite club
+//     (seeded in the research store, every list counts), its result leads its day after the national teams, before
+//     the country's results, then the order of before; the other days unchanged.
+//  V2 Effect 2: « Course au titre » opens on the country's league although the favourite club plays in another
+//     table → it opens on the favourite club's league (here a table other than the country's).
+//  V5 Effect 5: a favourite player in the season scorers / finishing cards is not marked → his row carries the
+//     standings' saved highlight (data-followed), nobody else's.
+//  V0 The server's HTML (JavaScript off, the home cookie carrying the favourites as the site writes it) already shows
+//     V1 and V2: no jump after hydration.
 //  X1 No page error, no console error, no hydration warning during the run (failed remote loads excluded).
 //
 // Run against the site and the API it reads (the API origin defaults to the public one):
@@ -116,15 +125,17 @@ function expectedFive(code, local) {
   if (!lead) return null;
   return { lead: lead.fixture.id, rows: picked.filter((m) => m !== lead).sort(byDay).map((m) => m.fixture.id), local: locals.slice(0, nLocal).map((m) => m.fixture.id) };
 }
-/** The results strip: nations first (API order), then the country's results, then by matchWeight; 8 a day, 4 days. */
-function expectedTicker(code) {
+/** The results strip: nations first (API order), then favourite clubs' results, then the country's, then by
+ * matchWeight; 8 a day, 4 days. */
+function expectedTicker(code, favouriteClubs = new Set()) {
+  const fav = (m) => Number(favouriteClubs.has(m.home?.id) || favouriteClubs.has(m.away?.id));
   const ranks = new Map(home.ranks || []), leagues = code ? countryLeagues(code, null) : new Set();
   const days = new Map();
   const day = (k) => days.get(k) || days.set(k, { day: k, nations: [], clubs: [] }).get(k);
   for (const m of home.internationals || []) day(m.date).nations.push(m);
   for (const m of home.results || []) day(matchDay(m)).clubs.push(m);
   return [...days.values()].sort((a, b) => (a.day < b.day ? 1 : -1)).slice(0, 4).map((d) => {
-    const clubs = [...d.clubs].sort((a, b) => Number(leagues.has(b.leagueId)) - Number(leagues.has(a.leagueId)) || matchWeight(b, ranks) - matchWeight(a, ranks));
+    const clubs = [...d.clubs].sort((a, b) => fav(b) - fav(a) || Number(leagues.has(b.leagueId)) - Number(leagues.has(a.leagueId)) || matchWeight(b, ranks) - matchWeight(a, ranks));
     return [...d.nations.map(() => "nation"), ...clubs.map((m) => m.id)].slice(0, 8);
   });
 }
@@ -201,6 +212,14 @@ const structure = (page) =>
     chezVous: /chez vous/i.test(document.querySelector("main")?.innerText || document.body.innerText),
     afterTicker: document.querySelector(".home-ticker")?.nextElementSibling?.className || null,
   }));
+// The places the favourites change (effects 1, 2, 5), captured as « with » / « without ».
+async function placeShots(page, tag) {
+  const places = [[".home-ticker", "01-bandeau"], [".home-race", "02-course-au-titre"], [".home-season-scorers", "05-buteurs"], [".home-finishing", "05-devant-le-but"]];
+  for (const [selector, name] of places) {
+    const el = page.locator(selector).first();
+    if (await el.count()) await el.screenshot({ path: path.join(out, `${name}-${tag}.png`) }).catch(() => {});
+  }
+}
 const titleTab = (page) =>
   page.locator('.home-race .home-tabs button[aria-pressed="true"]').evaluate((b) => b.childNodes[b.childNodes.length - 1]?.textContent?.trim()).catch(() => null);
 
@@ -242,6 +261,7 @@ for (const v of visitors) {
   const tab = await titleTab(page);
   check(`R1 ${v.iso}: the title race opens on ${v.tab}`, v.tab, tab, tab === v.tab);
   if (v.shots[0]) await shot(page, v.shots[0]);
+  if (v.iso === "FR") await placeShots(page, "sans-favoris");
   if (v.shots[1]) await page.locator(".home-next").screenshot({ path: path.join(out, `${v.shots[1]}.png`) });
   await page.close();
   await context.close();
@@ -250,6 +270,60 @@ inputs.expected = expected;
 // The rule must have something to show: France and Brazil each get local places here.
 check("F1/B1 the data exercise the rule (local places taken for FR and BR)", { FRA: ">0", BRA: ">0" },
   { FRA: expected.FR.five?.local, BRA: expected.BR.five?.local }, expected.FR.five?.local.length > 0 && expected.BR.five?.local.length > 0);
+
+// ---------- V1, V2, V5: the visitor's favourites (effects 1, 2, 5) ----------
+await (async () => {
+  const tables = home.tables || [];
+  const tableLeagues = new Set(tables.map((t) => t.leagueId));
+  // A favourite club whose result is not first of the latest day for a French visitor, and whose league is a table
+  // other than Ligue 1 (the country's): both effects then show.
+  const frDay = (expected.FR?.ticker || [])[0] || [];
+  const candidate = [...frDay].reverse().map((id) => (home.results || []).find((m) => m.id === id))
+    .find((m) => m && tableLeagues.has(m.leagueId) && m.leagueId !== "l_3FJFUl" && frDay.indexOf(m.id) > frDay.lastIndexOf("nation") + 1);
+  const player = (home.leaders?.goals || [])[2];
+  if (!candidate || !player) return notRun("V1/V2/V5 favourites", "the recorded week has no result fit to show the favourite's effect");
+  const club = candidate.home.id, league = candidate.leagueId;
+  const leagueName = (manifest.competitions || []).find((c) => c.id === league)?.name || (home.competitions || []).find((c) => c.id === league)?.name;
+  const favourites = new Set([club]);
+  inputs.favourites = { club: [club, candidate.home.name, league, leagueName], player: [player.playerId, player.name] };
+  const research = { version: 1, activeList: "main", lists: [{ id: "main", name: "Ma sélection", entries: [
+    { kind: "clubs", id: club, name: candidate.home.name }, { kind: "players", id: player.playerId, name: player.name },
+  ] }] };
+  const wantTicker = expectedTicker("FRA", favourites);
+  const context = await newContext({ country: "FR" });
+  await context.addInitScript((value) => {
+    try { localStorage.setItem("statarena.research.v1", value); } catch {}
+  }, JSON.stringify(research));
+  const page = await open(context, "favourites");
+  await settle(page);
+  const tick = await ticker(page);
+  check("V1 a favourite club's result leads its day, then the order of before", wantTicker, tick,
+    JSON.stringify(tick) === JSON.stringify(wantTicker) && JSON.stringify(wantTicker) !== JSON.stringify(expected.FR.ticker));
+  const tab = await titleTab(page);
+  check("V2 « Course au titre » opens on the favourite club's league", leagueName, tab, tab === leagueName && leagueName !== "Ligue 1");
+  const marks = await page.evaluate(() => ({
+    scorers: [...document.querySelectorAll('.home-season-scorers li[data-followed="true"]')].map((li) => li.dataset.playerId),
+    finishing: [...document.querySelectorAll('.home-finishing li[data-followed="true"]')].map((li) => li.dataset.playerId),
+    inFinishing: [...document.querySelectorAll(".home-finishing li")].map((li) => li.dataset.playerId),
+    background: getComputedStyle(document.querySelector('.home-season-scorers li[data-followed="true"]') || document.body).backgroundColor,
+  }));
+  const wantFinishing = marks.inFinishing.filter((id) => id === player.playerId);
+  check("V5 the favourite player is marked in the season cards, nobody else", { scorers: [player.playerId], finishing: wantFinishing }, marks,
+    JSON.stringify(marks.scorers) === JSON.stringify([player.playerId]) && JSON.stringify(marks.finishing) === JSON.stringify(wantFinishing) && !/rgba\(0, 0, 0, 0\)/.test(marks.background));
+  await placeShots(page, "favoris");
+  // V0: the server's HTML with the cookie the visit just wrote.
+  const cookies = (await context.cookies()).filter((c) => c.name === "vega.home.v1");
+  await page.close();
+  await context.close();
+  const serverContext = await newContext({ country: "FR", js: false });
+  await serverContext.addCookies(cookies);
+  const serverPage = await serverContext.newPage();
+  await serverPage.goto(base + "/", { waitUntil: "domcontentloaded", timeout: 120000 });
+  const serverTick = await ticker(serverPage).catch(() => null), serverTab = await titleTab(serverPage);
+  check("V0 the server's HTML already orders the strip and opens the race for the favourite (no jump)", { ticker: wantTicker[0], tab: leagueName },
+    { cookie: cookies.length, ticker: serverTick?.[0], tab: serverTab }, cookies.length === 1 && JSON.stringify(serverTick?.[0]) === JSON.stringify(wantTicker[0]) && serverTab === leagueName);
+  await serverContext.close();
+})().catch((error) => check("V1/V2/V5 favourites", "the favourites' effects", String(error.message).split("\n")[0], false));
 
 // ---------- M1: the preferences panel's country line ----------
 await (async () => {
