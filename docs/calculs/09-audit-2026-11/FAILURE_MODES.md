@@ -4528,14 +4528,28 @@ Read in the code (main 5433b48d):
 - **Collective (30 %).** C = Σ share × value over the honours of the award year, one per (player, team, edition). An
   edition belongs to the year of its last match, played or to play. Kinds and values (`award.honour_value`):
   `league` (a top division): `LEAGUE_VALUE` 0.5 × factor × `LEAGUE_RANKS` (1: 1, 2: 0.4, 3: 0.2, 4: 0.1, else 0) ×
-  progress, the rank that of `api.standings`, progress the edition's finished matches over its matches;
+  progress, progress the edition's finished matches over its matches; the rank is read from the base tables of the
+  year's league editions alone (`award.STANDINGS`; the race reads nothing of the `api` schema, whose `api.standings`
+  reads every official table through its rank check, 59ad): the official table (`core.standings_official`, source
+  `sportscore`, whole league) when its ranks do not contradict themselves (two clubs at one place with different
+  points, or a place beyond the table's size: `api.standings`'s rule, over these editions) and it counts, for each
+  club, the matches Vega's own table counts, when Vega has one; else Vega's own table (`agg.standings`, whole league);
   `national_cup`: `CUP_VALUE` 0.15 × factor × `ROUND_VALUE`; `international`: `award.competition_value(prestige)` =
   (prestige − 1) / (1.30 − 1), from `power.PRESTIGE` / `CUP_PRESTIGE`, × `ROUND_VALUE`. `ROUND_VALUE`: winner 1, final
   0.6, semi-final 0.4, quarter-final 0.25, round of 16 0.15. The factor is `award.league_factor(L, L_max)` =
   2 / (1 + 10^((L_max − L) / 400)) of the club's league of the year (`agg.league_levels`, the strongest men's top
   division L_max), 1 for a national team. A round is reached when the team has a match of it, played or to play; no
   round is projected. The winner of a final (`award.final_winner`): the score, then extra time, then the shoot-out;
-  a final without a winner gives both sides `final`, with the reason `no_winner`.
+  a final without a winner gives both sides `final`, with the reason `no_winner`. A final of two legs (the edition's
+  last two final matches, the same two teams, each at home once) is won on aggregate: each leg's score after extra
+  time when it has one, else its score, then the second leg's shoot-out; level without a shoot-out gives both
+  `final` and `no_winner`; a leg still to play gives both `final`, no winner yet (59af).
+- **One real competition, one honour.** A competition two sources hold for the same year gives a team one honour,
+  of the edition the base reads first (`award.SAME_COMPETITION`): PitchAPI's, then OpenLigaDB's, then the other
+  source's. OpenFootball's World Cup (`open-cups:world-cup-history`, 2022 and 2026 in `cups.EDITIONS`) is PitchAPI's
+  World Cup (`l_1XLtP0`); an open-matchday copy of a league or UEFA competition PitchAPI holds
+  (`open_matchday.COVERED`) is PitchAPI's; open-matchday's German cup (`GER_CUP_dfb-pokal`, `power.SUPERSEDED`) is
+  OpenLigaDB's (59ae). Two editions of one source are two competitions.
 - **Share.** `award.share(minutes, matches)` = minutes / (90 × matches), at most 1: the player's minutes for the team
   in the edition over the team's matches in it; an edition without player rows (a complementary club edition): his
   minutes for the team in its PitchAPI matches between the team's first and last match of the edition, over those
@@ -4555,9 +4569,15 @@ Read in the code (main 5433b48d):
   keeper, is ranked 1, 2, 3… by A. Every other men's player with an individual part has his parts and his score, no
   rank, and the first reason that holds (`award.race_reason`): `minutes`, `league`, `not_top_division`, `keeper_data`
   (`KEEPER_IN_RACE = False`).
+- **Whose row.** A row for each men's player with a level row of the year (`agg.player_level`) and an award cell,
+  at the level row's position and club; none for any other, and nothing raises (59ac): a player whose matches of
+  the year are all a national team's (award cells, no club cell, so no level row); a women's player, national
+  matches or not; a player the ranking cannot give a role (no level row). A level row without an award cell cannot
+  be read (the award cells are the level's matches, national ones added) and would give no row. A player of the
+  ranking whose own row has no role keeps his row at the level's position.
 - **Stored.** Migration 174 (`174_player_award.sql`, reviewed in `open_matchday_restore.REVIEWED_SCHEMAS`):
   `agg.award_runs` (`id, season_id, version, status, started_at, finished_at, level_run_id, reference_season, players,
-  settings, spreads`; one published run per year), `agg.player_award` (`season_id, player_id, team_id, position,
+  settings, spreads`; status `running`, `published`, `superseded` or `failed`; one published run per year), `agg.player_award` (`season_id, player_id, team_id, position,
   universe, eligible, linked, top_division, measured, individual, collective, card_points, fair_play_minutes,
   fair_play, z_individual, z_collective, z_fair_play, level, score, rank, reason, run_id`), `agg.player_award_honours`
   (`season_id, player_id, team_id, competition_season_id, kind, reached, league_rank, progress, factor, prestige,
@@ -4567,11 +4587,27 @@ Read in the code (main 5433b48d):
   `/api/rankings/power?kind=players` are unchanged by a run; the new race writes nothing there.
 - **When.** In `power.refresh_players`'s write transaction (`award.write`). `award.refresh(conn, season)` computes C,
   F, the z and the race again from the stored rows, without reading a match; `award.reread(conn, season)` reads the
-  honours and the cards again (results and events, not the player statistics), then refreshes; the worker calls it,
-  after the stale rankings, for each year `award.due(conn)` lists: a match of the year's editions changed after the
-  year's published race started. `award.stale(conn)` lists, for `power.stale_rankings` with the level's years, a year
-  whose published level of the present version has players and whose race is missing, of another `AWARD_VERSION` or
-  other `award.SETTINGS`, or started before that level.
+  honours and the cards again (results and events, not the player statistics), then refreshes. The worker's pass
+  (about every 60 s) asks `award.due(conn)` once a UTC day, after the stale rankings (`Worker._award`, as `_analyzed`):
+  the day is marked only when that step succeeds, and each year it lists is read again once (`award.reread`); a
+  reread that fails waits `RETRY_DAILY_AFTER` like any step and is tried again that day, `award.due` not asked again
+  (59x). `award.due` lists a year whose published race has players and a match dated in the award year (1 August to
+  31 July, the matches of its season and the next) changed after the race started, or an event of such a match,
+  reached through its match with the same bounds (59y); a match dated outside the award year lists no year, though
+  it may belong to an edition whose last match falls in it (a calendar-year cup's group matches): the season in
+  progress is ranked again every day anyway, and its race with it. `award.stale(conn)` lists, for
+  `power.stale_rankings` with the level's years, a year whose published level of the present version has players and
+  whose race is missing, of another `AWARD_VERSION` or other `award.SETTINGS`, or started before that level; but not
+  a year whose most recent run (highest id) failed with the present version and settings and started at or after
+  that level's start (59z): a new level run, another version or other settings list it again.
+- **A failure of the race never blocks the ranking or the level.** In `power.refresh_players`, the race's reads
+  (step 1) run in a savepoint and their failure is caught; so is its computation (step 2); its write (step 3) runs in
+  a savepoint after the level's and its failure is caught. In each case the ranking, the grades, the level and the
+  v8 race are published exactly as without the race, one line is logged, `award race failed season=<year>
+  step=read|compute|write error=<code>` (`worker.error_code`, never the error's text), and a run row is kept in
+  `agg.award_runs` with the status `failed`, the version, the settings, `started_at` the ranking run's start,
+  `level_run_id`, `players` NULL. The race published before, its rows and its honours stay as they were and stay
+  served. `Exception` alone is caught: a `MemoryError` (or a `KeyboardInterrupt`) ends the run as before (59aa).
 - **Read.** `GET /api/rankings/award?season=&limit=&page=` (limit 30 by default, 200 at most): the ranked players in
   their order, `{season, page, limit, total, method: {version, computedAt}, rows}`, each row `rank, playerId, name,
   imageUrl, teamId, team, teamImageUrl, position, score, individual, collective, fairPlay, level` (the raw parts:
@@ -4581,10 +4617,11 @@ Read in the code (main 5433b48d):
 
 ### 59.2 Failure modes and expected outcomes
 
-59a–59c, 59f–59n, 59u–59w (formulas): `backend/tests/test_award.py`, no database. 59b, 59d–59f, 59g, 59h, 59i–59k,
-59o, 59p, 59s, 59t, 59v: `backend/tests/test_models.py`, the synthetic league and its real ranking of 88 players. 59p:
-`test_collection_wakeups.py`, the real `Worker.daily`. 59r: `test_award_year_2020_order.py`. 59u:
-`test_deploy_migrations.py`. 59q, 59s: `backend/api/test/rankings.test.mjs`. All on a disposable PostgreSQL 18.
+59a–59c, 59f–59n, 59u–59w, 59ac, 59af (formulas): `backend/tests/test_award.py`, no database. 59b, 59d–59f, 59g, 59h,
+59i–59k, 59o, 59p, 59s, 59t, 59v, 59y–59aa, 59ac–59af: `backend/tests/test_models.py`, the synthetic league and its
+real ranking of 88 players. 59p: `test_collection_wakeups.py`, the real `Worker.daily`. 59x: `test_worker.py`, the real
+`Worker.daily`. 59r: `test_award_year_2020_order.py`. 59u: `test_deploy_migrations.py`. 59q, 59s, 59ab:
+`backend/api/test/rankings.test.mjs`. All on a disposable PostgreSQL 18.
 
 | # | Situation | Expected |
 |---|---|---|
@@ -4602,7 +4639,7 @@ Read in the code (main 5433b48d):
 | 59l | A player under the minutes bar; of an unmeasured league; of a lower division | no rank, reasons `minutes`, `league`, `not_top_division` |
 | 59m | Every player at the mean on C and F | his score equals his year-only v9.1 score |
 | 59n | z_C of 7 | bounded at 4 |
-| 59o | A cup of the year written after its race | `award.due` lists the year, `stale_rankings` does not; `award.reread` adds its honours; the ranking and the level are not run again; then nothing is due |
+| 59o | A cup of the year, its matches dated in the award year, written after its race | `award.due` lists the year, `stale_rankings` does not; `award.reread` adds its honours; the ranking and the level are not run again; then nothing is due |
 | 59p | A race of another `AWARD_VERSION` or other settings; a year with a level and no race | `stale_rankings` lists the year; one pass computes it; the next lists nothing |
 | 59q | The reads: a year with a race; a player out of it; a year without one; bad parameters | the race in its order with its 13 keys, the nine the site reads with their types; his reason and honours; 404; 400 |
 | 59r | A partial award year (2020) | no race run with players, no row in `agg.player_award` |
@@ -4611,3 +4648,17 @@ Read in the code (main 5433b48d):
 | 59u | The values: rounds, prestige, league factor, league and cup values, the share; migration 174 | the tables of 59.1; 174 applied once and reviewed, the deployment's counters one higher |
 | 59v | `LEAGUE_RANKS` given a fifth place, then `award.refresh` | the fifth club's players gain it, from the stored honours, without a match read |
 | 59w | A national tournament without player rows | share 0.5 for a player seen with that national team, none otherwise |
+| 59x | The real `Worker.daily`: two passes the same UTC day, a match updated between them; the next UTC days; a reread that fails | `award.due` asked once a day and one reread; the next day a reread only when `award.due` lists the year; the failed reread tried again after `RETRY_DAILY_AFTER` that day, `award.due` not asked again |
+| 59y | After the 2025 race: a match of season 2026 dated 1 September 2026 updated, then an event of it; a match of season 2026 dated 1 May 2026 | 2025 not listed, not listed; listed |
+| 59z | `award.read_inputs`, `award.compute`, then `award.write` (after writing, a statement error) made to fail in turn | each time: the ranking, the grades, the level and the v8 race published and equal to a run without the race; one `failed` run more (version, settings, the ranking's start, its level run, players NULL); the published race, its rows and honours untouched; the log line with the step and a code, not the error's text; `stale_rankings` and `award.stale` list nothing; the next run, repaired, publishes the race |
+| 59aa | A `MemoryError` in the race's computation | `refresh_players` raises it; no run of the ranking, the level or the race is published |
+| 59ab | The read with a `failed` run after the published race | `/api/rankings/award` serves the published race and its method |
+| 59ac | A player with national-team matches alone; a player whose line-ups and statistics give no position; a level row without an award cell; a women's player with national matches; a ranking row without a role | no row, a row only with a men's level row, no row, no row; his row at the level's position; nothing raises, the 88 others keep their row |
+| 59ad | The league's official table: agreeing with Vega's, two clubs swapped (a points deduction); counting other matches than Vega's; two clubs at one place with different points | the official ranks; Vega's; Vega's; the race's reads touch no `api` relation and `vega_calc` has no use of the `api` schema |
+| 59ae | PitchAPI's World Cup and OpenFootball's World Cup of the same year; OpenLigaDB's and open-matchday's German cup of the same year | one honour per team: PitchAPI's edition; OpenLigaDB's |
+| 59af | A final of two legs won on aggregate; level on aggregate, the second leg's shoot-out; level without a shoot-out; the second leg to play | `winner` and `final`; the shoot-out's winner; both `final`, `no_winner`; both `final`, no reason |
+
+Not verified: whether PitchAPI's catalogue holds a cup that `cups.EDITIONS` holds for the same year besides the World
+Cup (the Club World Cup, the Euro): such a pair would give two honours until it is named in `award.SAME_COMPETITION`
+(production not read). J1 (`api.j1_standings_exclusion`) is out of scope (`scope.REMOVED`), so the race's own rank
+rule does not need that exclusion.
