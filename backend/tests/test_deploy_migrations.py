@@ -47,7 +47,9 @@ ADDED = ["155_player_grade_status.sql", "156_team_side_corrections.sql", "157_pa
          # #70 / VI-49 (§51): the nations' world ranking and the national Elo's run settings.
          "168_nation_world_ranking.sql",
          # #90 (§54): Score Vega v9.1, the keeper without goals prevented is flagged on his level row.
-         "169_player_level_measured.sql"]
+         "169_player_level_measured.sql",
+         # §55: the national teams an Elo run read (agg.nation_elo_runs), the marking and the identity pass re-armed.
+         "170_nation_elo_national_set.sql"]
 # SportScore editions: A, a rank shared at different points (a version already kept); B, rank 5 in a table of two (no
 # version yet); C, a table that holds (its version kept).
 A, B, C = 9601, 9602, 9603
@@ -128,6 +130,11 @@ class DeploymentMigrationsTest(unittest.TestCase):
         x = cls.db.execute
         with cls.db.transaction():
             assert Store(cls.db).season("2026/2027") == 2026
+            # Three daily scopes of the curated adapter, run before the deployment (55g).
+            x("""INSERT INTO ops.source_runs(source, scope, last_attempt_at, last_success_at, status) VALUES
+                 ('vega', 'national_teams', now(), now(), 'ok'), ('vega', 'team_identity', now(), now(), 'ok'),
+                 ('vega', 'country_names', now(), now(), 'ok')
+                 ON CONFLICT (source, scope) DO UPDATE SET last_attempt_at = now(), last_success_at = now(), status = 'ok'""")
             for edition in (A, B, C):
                 x("INSERT INTO core.competitions(id, name, kind) VALUES (%s, %s, 'league')", (edition, f"League {edition}"))
                 x("INSERT INTO core.competition_seasons(id, competition_id, season_id, native_label) VALUES (%s, %s, 2026, '2026')", (edition, edition))
@@ -174,8 +181,8 @@ class DeploymentMigrationsTest(unittest.TestCase):
         self.assertEqual(len(applied), 160)
         self.assertEqual(self.at_production, "migrations applied=160 total=160 logins=unchanged")
         self.assertEqual(self.merged_added, ADDED)
-        self.assertEqual(self.deployed, "migrations applied=14 total=174 logins=unchanged")
-        self.assertEqual(self.again, "migrations applied=0 total=174 logins=unchanged")
+        self.assertEqual(self.deployed, "migrations applied=15 total=175 logins=unchanged")
+        self.assertEqual(self.again, "migrations applied=0 total=175 logins=unchanged")
         self.assertEqual([v for v, *_ in self.migrations_after if v not in {w for w, *_ in self.migrations_before}], ADDED)
         self.assertEqual([r for r in self.migrations_after if r[0] < "155"], self.migrations_before)
         self.assertEqual(self.migrations_again, self.migrations_after)
@@ -224,9 +231,15 @@ class DeploymentMigrationsTest(unittest.TestCase):
         self.assertEqual(columns, POWER_RUN_COLUMNS)  # red before §53: the four nation_* columns of 168
         self.assertEqual([c for (c,) in x("""SELECT column_name FROM information_schema.columns
                                              WHERE table_schema = 'agg' AND table_name = 'nation_elo_runs' ORDER BY ordinal_position""").fetchall()],
-                         ["run_id", "version", "k", "start_date", "seed_edition"])
+                         ["run_id", "version", "k", "start_date", "seed_edition", "national_teams", "national_teams_md5"])  # 55g
         for privilege in ("SELECT", "INSERT", "UPDATE", "DELETE"):
             self.assertTrue(x("SELECT has_table_privilege('vega_calc', 'agg.nation_elo_runs', %s)", (privilege,)).fetchone()[0], privilege)
+
+    def test_55g_the_marking_and_the_identity_pass_are_re_armed_by_170(self):
+        # §55: production's two daily scopes, run before the deployment, run at the worker's first pass after it.
+        rows = self.db.execute("""SELECT scope, last_success_at IS NULL FROM ops.source_runs
+                                  WHERE source = 'vega' AND scope IN ('national_teams', 'team_identity', 'country_names') ORDER BY 1""").fetchall()
+        self.assertEqual(rows, [("country_names", False), ("national_teams", True), ("team_identity", True)])
 
     def test_48k_159_moves_each_conflicting_edition_once_160_clears_the_failed_units_without_an_episode(self):
         self.assertEqual(self.versions_after, {A: 5, B: 1, C: 2})
