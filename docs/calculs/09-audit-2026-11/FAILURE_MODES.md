@@ -4453,3 +4453,42 @@ Read in the code (main 5615aad):
 | 57r | `parseGoalscorers` on the real header, « NA » values, a row before 1 July 2021, a wrong header | typed goals with their key, nulls, left out, refused |
 | 57s | The site's scorer line: a complete list, a partial one, none | « Name 23′ (pen.) » per side in minute order, own goal « (csc) »; nothing for partial or none |
 | 57t | The restore guard and the deployment | 172 reviewed, `core.international_goals` a reviewed dependency; the counters one higher |
+
+## 58. A nation's « Dernier match » is a fixture to come (production, 24 Nov 2026, written before the tests)
+
+Observed by the coordinator on production on 24 Nov 2026: `GET /api/nations?season=2026/2027` gives Portugal
+`lastMatch: "2027-03-30"`, and a future day for 8 nations (Spain, England, France, Portugal, Belgium, Germany,
+Netherlands, Norway). The site shows it under « Dernier match » on /nations.
+
+Read in the code (main 966589f): `api.nation_list` (last defined in 159) takes `max(k.d) AS last_match` in its
+`played` CTE over every match of the nation, one per day and pair, whatever its status: the Nations League
+quarter-finals of March 2027, which OpenLigaDB already lists `not_started` without a score, are its latest day.
+`GET /api/nations/{id}` serves the same value (`nationOf`, `lastMatch`), read from the same function.
+
+The `matches` beside it counts the matches the base holds, fixtures included, one per day and pair: the list's
+« Matchs » of all the nations is the number the nation page lists (« N matchs collectés »), and
+`test_nation_match_copies.test_the_list_counts_the_matches_the_page_lists` (§43) holds them equal. It is left as it is.
+
+### 58.1 Rules
+
+- **The last match is played.** `last_match` is the latest day of a match of the nation that is finished
+  (`status = 'finished'`) with both scores known; a fixture (not started, postponed, without a score) is never it. A
+  nation with no played match has none (`lastMatch` absent, « — » on the site).
+- **One match per day and pair, as before.** A day and pair held by two copies is played when one of them is.
+- **Nothing else changes.** The rows listed, `matches`, the Elo, the ranking columns; the function's shape (§43.4,
+  43s: `core.matches` read twice, the copy test by equal keys). `api.nation_list` is redefined by
+  `173_nation_last_played.sql`, reviewed in `open_matchday_restore.REVIEWED_SCHEMAS`.
+
+### 58.2 Failure modes and expected outcomes
+
+`backend/tests/test_nation_match_copies.py` (the real routes under vega_read, Argentina's fixture of §43, which holds
+an unscored friendly of 20 March 2027), `test_classements_plans` 43s, `test_deploy_migrations`.
+
+| # | Situation | Expected |
+|---|---|---|
+| 58a | Argentina's last played match is the World Cup final of 19 July 2026, a fixture of 20 March 2027 is held | `lastMatch` 2026-07-19 in `/api/nations`, red before: 2027-03-20 |
+| 58b | The same nation's page | `lastMatch` 2026-07-19 |
+| 58c | The count beside it | unchanged: 18, the matches the page lists |
+| 58d | A nation whose only match is a fixture (Brazil in the fixture) | listed, `matches` 1, no `lastMatch` |
+| 58e | The plan | `core.matches` read twice (43s unchanged) |
+| 58f | The deployment | 173 applied and reviewed; the counters one higher |
