@@ -16,7 +16,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { get, skip } from "./context.mjs";
-import { placeholderTeam, seasonRecord, tournamentRuns } from "../src/routes/nations.mjs";
+import { nationOf, placeholderTeam, seasonRecord, tournamentRuns } from "../src/routes/nations.mjs";
 
 const FR = "t_fr", m = (over) => ({
   date: "2026-06-16", competition: "World Cup", edition: null, round: "1", season: "2025/2026", status: "finished",
@@ -145,4 +145,41 @@ test("the nations and a nation are served", { skip }, async () => {
   assert.ok(Array.isArray(list.body.data.nations));
   assert.equal((await get("/api/nations?season=2025")).response.status, 400);
   assert.equal((await get("/api/nations/t_zzzzzz?season=2025%2F2026")).response.status, 404);
+});
+
+// FAILURE_MODES.md §50 (50l), written before the code: a match of « the season's other internationals » (the
+// edition `nations-results:internationals:<season>`, International Results) comes with its tournament as its
+// competition and no round (the file has no stage). Another edition's match is served as before. The carousel's labels
+// of these matches are tested with the site (tests/nation-match-carousel.test.mjs): this package has no site module.
+test("a match of the season's other internationals is served under its tournament", async () => {
+  const route = await import("../src/routes/nations.mjs");
+  assert.equal(typeof route.matchOf, "function");
+  const row = (over) => ({
+    match_id: "m_x", match_date: "2024-09-07", season: "2024/2025", competition: "Matchs internationaux 2024/2025",
+    edition: "nations-results:internationals:2024/2025", round: "Friendly", status: "finished", collected: false,
+    home_id: FR, home_name: "France", home_image: null, away_id: "t_it", away_name: "Italy", away_image: null,
+    home_score: 1, away_score: 3, home_penalties: null, away_penalties: null, ...over,
+  });
+  const served = [
+    row({ match_date: "2025-11-13", season: "2025/2026", competition: "Matchs internationaux 2025/2026",
+      edition: "nations-results:internationals:2025/2026", round: "FIFA World Cup qualification" }),
+    row({ match_date: "2025-06-09", round: "Friendly" }),
+    row({ match_date: "2024-09-07", round: "UEFA Nations League" }),
+  ].map(route.matchOf);
+  assert.deepEqual(served.map((s) => [s.competition, s.round, s.edition]), [
+    ["FIFA World Cup qualification", null, "nations-results:internationals:2025/2026"],
+    ["Friendly", null, "nations-results:internationals:2024/2025"],
+    ["UEFA Nations League", null, "nations-results:internationals:2024/2025"],
+  ]);
+  // Another edition's match: its competition and round as stored.
+  const league = route.matchOf(row({ competition: "nations-league", edition: "openligadb:nations-league:2026/2027", round: "Groupe 3" }));
+  assert.deepEqual([league.competition, league.round], ["nations-league", "Groupe 3"]);
+});
+
+test("51m. a nation's place in the world ranking says whether it is provisional", () => {
+  const row = { team_id: "t_gib", name: "Gibraltar", matches: 6, rank: 187, season_elo: 1163.2, elo_change: -12, season_matches: 6,
+    wins: 0, draws: 1, losses: 5, result_sum: 0.5, expected_sum: 1.2 };
+  assert.equal(nationOf({ ...row, provisional: true }).ranking.provisional, true);
+  assert.equal(nationOf(row).ranking.provisional, false);
+  assert.equal(nationOf({ ...row, rank: null }).ranking, undefined);
 });
