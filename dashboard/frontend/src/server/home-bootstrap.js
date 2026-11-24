@@ -7,6 +7,7 @@ import {
 import { europeFocusIds } from "../../../shared/competition-scope.js";
 import { archiveSeason } from "../services/home-insights.js";
 import { API_ORIGIN } from "../api-origin.js";
+import { edgeKeyHeaders } from "./api-edge-key.js";
 import {
   DEFAULT_HOME_STATE,
   normalizeHomeState,
@@ -17,6 +18,7 @@ const origin = process.env.NEXT_PUBLIC_API_ORIGIN || API_ORIGIN;
 async function serverJson(path) {
   const response = await fetch(origin + path, {
     cache: "no-store",
+    headers: edgeKeyHeaders(),
     signal: AbortSignal.timeout(7000),
   });
   if (!response.ok)

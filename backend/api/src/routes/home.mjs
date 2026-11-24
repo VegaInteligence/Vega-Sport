@@ -14,7 +14,7 @@
  * api.home_rules_v1 (044_home_settings.sql). Same blocks and weights as
  * relational-home.js on main.
  *
- * Importance v2 (163_home_importance_v2.sql, VI-48): stakes × level + balance, for « À l'affiche »
+ * Importance v2 (168_home_importance_v2.sql, VI-48): stakes × level + balance, for « À l'affiche »
  * (`billboard`, the window of api.home_rules_v2), `highlights[].weight2` and GET /api/read/home-local
  * (a country's competitions and matches). The existing blocks keep v1 until the user validates v2:
  * HIGHLIGHT_ORDER is the switch.

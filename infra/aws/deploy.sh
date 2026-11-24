@@ -8,7 +8,8 @@
 # Steps: the base vega-football-db-postgres, its secrets, the worker stack, the
 # worker image, the migrations and logins, the worker start, the live stack (store,
 # broadcast, full-state read, ingestor), the read API package, the read API stack and its
-# distribution, and optionally the historical archive import.
+# distribution, optionally the historical archive import, and the alerts (alerts.yaml, and
+# alerts-edge.yaml in us-east-1).
 #
 # Environment: WORKER_DESIRED_COUNT (1), BACKFILL_DESIRED_COUNT (kept from the previous
 # deploy when unset: 1 while history is collected, 0 once it is), IMPORT_ARCHIVES (false), ARCHIVE_SOURCES_BUCKET
@@ -16,6 +17,7 @@
 # set by the workflow), IMAGE_TAG (git HEAD), PITCHAPI_API_KEY or PITCHAPI_API_KEY_FILE
 # (needed once, to create /vega/v2/pitchapi-key) and LIVE_PROVIDER
 # (empty: the live circuit is deployed, the schedule that starts its ingestor is off).
+# VI-35: WAF_MODE (Count or Block; unset, the web ACL keeps its mode, Count the first time).
 set -euo pipefail
 export AWS_REGION=${AWS_REGION:-us-east-2}
 ACCOUNT=361769570630
@@ -103,13 +105,25 @@ npm ci --prefix backend/api >/dev/null
 zip=$(python3 infra/aws/package_api.py "${RUNNER_TEMP:-$(mktemp -d)}/api-package" | tail -1)
 key="releases/v2-api/$(basename "$zip")"
 aws s3 cp "$zip" "s3://$RELEASES/$key" >/dev/null
+# BEGIN VI-35 web ACL
+# The distribution's per-address limit (waf.yaml). A web ACL of CloudFront scope lives in
+# us-east-1 only. Its mode is kept unless WAF_MODE names one; the site's server key
+# (/vega/v2/edge-key) takes the site's own reads out of the counts.
+echo "== 7b. Web ACL of the distribution (us-east-1, mode ${WAF_MODE:-kept})"
+edge=$(aws ssm get-parameter --name /vega/v2/edge-key --with-decryption --query Parameter.Value --output text)
+[ -n "${GITHUB_ACTIONS:-}" ] && echo "::add-mask::$edge"
+waf_mode=(); [ -n "${WAF_MODE:-}" ] && waf_mode=(Mode="$WAF_MODE")
+stack vega-v2-waf waf.yaml --region us-east-1 --parameter-overrides SiteKey="$edge" ${waf_mode[@]+"${waf_mode[@]}"}
+web_acl=$(aws cloudformation describe-stacks --region us-east-1 --stack-name vega-v2-waf \
+  --query "Stacks[0].Outputs[?OutputKey=='WebAclArn'].OutputValue" --output text)
+# END VI-35 web ACL
 echo "== 8. Read API stack and distribution"
 url=$(aws ssm get-parameter --name /vega/v2/read-database-url --with-decryption --query Parameter.Value --output text)
 [ -n "${GITHUB_ACTIONS:-}" ] && echo "::add-mask::$url"
 ops=$(aws ssm get-parameter --name /vega/v2/ops-key --with-decryption --query Parameter.Value --output text)
 [ -n "${GITHUB_ACTIONS:-}" ] && echo "::add-mask::$ops"
 media=$(output vega-v2-api ApiOrigin)
-api() { stack vega-v2-api api.yaml --capabilities CAPABILITY_IAM --parameter-overrides ReleaseKey="$key" ReadDatabaseUrl="$url" OpsKey="$ops" MediaBaseUrl="$1" ReservedConcurrency="$API_COPIES"; }
+api() { stack vega-v2-api api.yaml --capabilities CAPABILITY_IAM --parameter-overrides ReleaseKey="$key" ReadDatabaseUrl="$url" OpsKey="$ops" MediaBaseUrl="$1" ReservedConcurrency="$API_COPIES" WebAclArn="$web_acl"; }
 if [ -n "$media" ] && [ "$media" != None ]; then api "$media/"; else
   api ""
   media=$(output vega-v2-api ApiOrigin)
@@ -120,4 +134,30 @@ if [ "${IMPORT_ARCHIVES:-false}" = true ] && [ -n "$ARCHIVES" ]; then
   echo "== 9. Historical archives (runs for a while; logs /ecs/vega-v2-worker, prefix archives)"
   run_task vega-v2-archives
 fi
+# --- Alerts (alerts.yaml here, alerts-edge.yaml in us-east-1; README, Alerts) ---
+# After the read API stack: the edge stack names its distribution. The addresses are never
+# in the repository: SSM /vega/v2/alert-email, set once by the account owner, one address
+# or two separated by a comma (two people run the service). Without it the topics have no
+# subscription and the deploy goes on.
+echo "== 10. Alerts: topic vega-v2-alerts and its alarms (here and in us-east-1)"
+alert_emails=$(aws ssm get-parameter --name /vega/v2/alert-email --with-decryption --query Parameter.Value --output text 2>/dev/null || true)
+[ "$alert_emails" = None ] && alert_emails=
+alert_emails=${alert_emails//[[:space:]]/}
+IFS=, read -r alert_email alert_email2 alert_more <<<"$alert_emails" || true
+if [ -n "$alert_email" ]; then
+  if [ -n "${GITHUB_ACTIONS:-}" ]; then
+    echo "::add-mask::$alert_email"
+    [ -n "$alert_email2" ] && echo "::add-mask::$alert_email2"
+  fi
+  [ -n "$alert_more" ] && echo "alerts: /vega/v2/alert-email holds more than two addresses: the first two are subscribed (README, Alerts)"
+else
+  alert_email2=
+  echo "alerts: no SSM parameter /vega/v2/alert-email: the alarms notify a topic with no e-mail subscription (README, Alerts)"
+fi
+watch_worker=true; [ "$COUNT" = 0 ] && watch_worker=false
+watch_live=false; [ -n "${LIVE_PROVIDER:-}" ] && watch_live=true
+stack vega-v2-alerts alerts.yaml --parameter-overrides AlertEmail="$alert_email" AlertEmail2="$alert_email2" WatchWorker="$watch_worker" WatchLive="$watch_live"
+stack vega-v2-alerts-edge alerts-edge.yaml --region us-east-1 --parameter-overrides AlertEmail="$alert_email" AlertEmail2="$alert_email2" \
+  DistributionId="$(output vega-v2-api DistributionId)" ApiDomain="${media#https://}"
+# --- end of alerts ---
 echo "done"

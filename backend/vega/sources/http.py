@@ -1,7 +1,8 @@
 """Bounded client for public sources: HTTPS only, no redirect off the host, retries
 with backoff on 429/5xx, a minimum interval between calls. JSON by default; an
 adapter that reads a page (FIFA's edition catalogue) asks for text, one that checks a
-file's digest (football-data.co.uk's season files) for its bytes."""
+file's digest (football-data.co.uk's season files) for its bytes. A body is at most MAX_BYTES, or the cap the call
+names (max_bytes: transfermarkt-datasets' 45 MB appearances file)."""
 
 import json
 import time
@@ -25,7 +26,7 @@ def json_getter(*, interval=0.5, retries=3, timeout=30, sleep=time.sleep, clock=
     opener = build_opener(_SameHost())
     last = [None]
 
-    def get(url, *, as_text=False, as_bytes=False, headers=None):
+    def get(url, *, as_text=False, as_bytes=False, headers=None, max_bytes=MAX_BYTES):
         if urlparse(url).scheme != "https":
             raise SourceError("HTTPS_REQUIRED")
         for attempt in range(retries + 1):
@@ -35,8 +36,8 @@ def json_getter(*, interval=0.5, retries=3, timeout=30, sleep=time.sleep, clock=
             try:
                 accept = "text/csv" if as_bytes else "text/html" if as_text else "application/json"
                 with opener.open(Request(url, headers={"Accept": accept, "User-Agent": "VegaSport-V2/1.0", **(headers or {})}), timeout=timeout) as r:
-                    body = r.read(MAX_BYTES + 1)
-                if len(body) > MAX_BYTES:
+                    body = r.read(max_bytes + 1)
+                if len(body) > max_bytes:
                     raise SourceError("TOO_LARGE")
                 if as_bytes:
                     return body

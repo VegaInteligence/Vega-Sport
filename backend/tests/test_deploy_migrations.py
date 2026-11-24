@@ -34,8 +34,18 @@ ADDED = ["155_player_grade_status.sql", "156_team_side_corrections.sql", "157_pa
          "161_player_replacements_and_form.sql",
          # VI-40: what each player brings to his team, for « Remplaçant ».
          "162_player_team_fit.sql",
+         # The five big leagues' player seasons of 2012/13 to 2020/21 (transfermarkt-datasets).
+         "163_league_player_seasons.sql",
+         # The archived seasons of the five big leagues on the competition page: reads only.
+         "164_league_history_reads.sql",
+         # The same reads with each side's archived spelling (European editions' clubs matched by name).
+         "165_league_history_spellings.sql",
+         # #68: a match's extra-time and shoot-out scores beside its two strengths (view only).
+         "166_match_strengths_extra_time.sql",
+         # #82: Score Vega v9, the players' level beside the ranking (new tables and two reads).
+         "167_player_level.sql",
          # VI-48 (#69): the home's importance v2, its settings and its two windows (api functions, two settings tables).
-         "163_home_importance_v2.sql"]
+         "168_home_importance_v2.sql"]
 # SportScore editions: A, a rank shared at different points (a version already kept); B, rank 5 in a table of two (no
 # version yet); C, a table that holds (its version kept).
 A, B, C = 9601, 9602, 9603
@@ -156,8 +166,8 @@ class DeploymentMigrationsTest(unittest.TestCase):
         self.assertEqual(len(applied), 160)
         self.assertEqual(self.at_production, "migrations applied=160 total=160 logins=unchanged")
         self.assertEqual(self.merged_added, ADDED)
-        self.assertEqual(self.deployed, "migrations applied=8 total=168 logins=unchanged")
-        self.assertEqual(self.again, "migrations applied=0 total=168 logins=unchanged")
+        self.assertEqual(self.deployed, "migrations applied=13 total=173 logins=unchanged")
+        self.assertEqual(self.again, "migrations applied=0 total=173 logins=unchanged")
         self.assertEqual([v for v, *_ in self.migrations_after if v not in {w for w, *_ in self.migrations_before}], ADDED)
         self.assertEqual([r for r in self.migrations_after if r[0] < "155"], self.migrations_before)
         self.assertEqual(self.migrations_again, self.migrations_after)
@@ -166,7 +176,8 @@ class DeploymentMigrationsTest(unittest.TestCase):
                     f"SELECT count(*) FROM api.nation_matches({NATIONS[0]})", "SELECT count(*) FROM api.player_grade_status",
                     "SELECT count(*) FROM api.player_replacement_facts", "SELECT count(*) FROM api.player_profile_axes",
                     "SELECT count(*) FROM api.player_form_grades", "SELECT count(*) FROM api.team_finished_matches",
-                    "SELECT count(*) FROM api.player_team_fit", "SELECT count(*) FROM api.home_rules_v2",
+                    "SELECT count(*) FROM api.player_team_fit", "SELECT count(home_penalty_score) FROM api.match_strengths",
+                    "SELECT count(*) FROM api.home_rules_v2",
                     "SELECT count(*) FROM api.home_importance_v2(2026::smallint, ARRAY[]::integer[])"):
             self.assertIsNotNone(self.read.execute(sql).fetchone()[0], sql)
         friendly = self.read.execute("SELECT match_id, tournament, home_name, away_name FROM api.home_internationals('2026-10-05', '2026-10-11')").fetchall()

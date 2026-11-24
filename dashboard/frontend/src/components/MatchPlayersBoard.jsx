@@ -1,10 +1,8 @@
 "use client";
 /* The « Joueurs » tab: the match's best grade and three markers (the most dangerous, the most
  * present, the most solid), then every player who came on in one table, sorted by grade,
- * sortable by any column, filtered by team, each row opening the player's page. */
+ * sortable by any column, filtered by team; every player opens his performance of the match. */
 import React, { useMemo, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Empty, Media, Segments, Skeleton } from "./UI.jsx";
 import { Hint } from "./Hint.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
@@ -15,14 +13,14 @@ import { explain } from "../services/glossary.js";
 import { number } from "../services/format.js";
 import { GRADE_HIGH } from "../services/grades.js";
 import s from "./MatchTabs.module.css";
+import o from "./MatchPlayerOpen.module.css";
 
 const tone = (grade) => (grade == null ? "" : grade >= GRADE_HIGH ? s.gradeHigh : grade < 45 ? s.gradeLow : "");
 
-function Leader({ title, value, row, detail, team }) {
-  const f = useFootball();
+function Leader({ title, value, row, detail, team, onOpen }) {
   if (!row) return null;
   return (
-    <Link className={`card ${s.panel} ${s.leader}`} href={f.href("/joueurs/", { id: row.id })}>
+    <button type="button" className={`card ${s.panel} ${s.leader} ${o.open} ${o.cardButton}`} onClick={() => onOpen(row)}>
       <span className={s.label}>{title}</span>
       <strong className={s.big}>{value}</strong>
       <span className={s.leaderWho}>
@@ -34,7 +32,7 @@ function Leader({ title, value, row, detail, team }) {
           </small>
         </span>
       </span>
-    </Link>
+    </button>
   );
 }
 
@@ -57,7 +55,6 @@ function Cell({ row, column, best }) {
 
 export default function MatchPlayersBoard({ match }) {
   const f = useFootball();
-  const router = useRouter();
   const players = useMatchSection(match, "players");
   const events = useMatchSection(match, "events");
   const grades = useMatchGrades(match.id);
@@ -71,12 +68,12 @@ export default function MatchPlayersBoard({ match }) {
   const best = Object.fromEntries(BOARD_COLUMNS.map((c) => [c.key, Math.max(...rows.map((r) => r[c.key] ?? -Infinity))]));
   const top = leaders(rows);
   const motm = top.grade;
-  const open = (row) => row.id && router.push(f.href("/joueurs/", { id: row.id }));
+  const open = (row) => row.id && f.setPlayer(`${match.id}:${row.id}`);
   return (
     <div className={s.stack}>
       <div className={s.leaders}>
         {motm && (
-          <Link className={`card ${s.panel} ${s.motm}`} href={f.href("/joueurs/", { id: motm.id })}>
+          <button type="button" className={`card ${s.panel} ${s.motm} ${o.open} ${o.cardButton}`} onClick={() => open(motm)}>
             <Media name={motm.name} url={motm.imageUrl} className={`player-avatar ${s.motmAvatar}`} />
             <span>
               <span className={`${s.label} ${s.good}`}>Meilleure note du match</span>
@@ -96,14 +93,14 @@ export default function MatchPlayersBoard({ match }) {
                 </small>
               </span>
             </span>
-          </Link>
+          </button>
         )}
         <Leader title="Le plus dangereux" row={top.threat} value={top.threat && `${number(top.threat.threat, 2)} xG + xA`}
-          detail={top.threat && `${number(top.threat.goals ?? 0)} but${(top.threat.goals ?? 0) > 1 ? "s" : ""} · ${number(top.threat.shots ?? 0)} tir${(top.threat.shots ?? 0) > 1 ? "s" : ""}`} team={top.threat && teamName(top.threat.teamId)} />
+          detail={top.threat && `${number(top.threat.goals ?? 0)} but${(top.threat.goals ?? 0) > 1 ? "s" : ""} · ${number(top.threat.shots ?? 0)} tir${(top.threat.shots ?? 0) > 1 ? "s" : ""}`} team={top.threat && teamName(top.threat.teamId)} onOpen={open} />
         <Leader title="Le plus présent" row={top.passes} value={top.passes && `${number(top.passes.passes)} passes`}
-          detail={top.passes?.passesTotal ? `${number((100 * top.passes.passes) / top.passes.passesTotal, 0)} % de réussite` : ""} team={top.passes && teamName(top.passes.teamId)} />
+          detail={top.passes?.passesTotal ? `${number((100 * top.passes.passes) / top.passes.passesTotal, 0)} % de réussite` : ""} team={top.passes && teamName(top.passes.teamId)} onOpen={open} />
         <Leader title="Le plus solide" row={top.duels} value={top.duels && `${number(top.duels.duelsWon)} duels gagnés`}
-          detail={top.duels && `${number(top.duels.recovered)} tacles et interceptions`} team={top.duels && teamName(top.duels.teamId)} />
+          detail={top.duels && `${number(top.duels.recovered)} tacles et interceptions`} team={top.duels && teamName(top.duels.teamId)} onOpen={open} />
       </div>
       <section className={`card ${s.panel}`}>
         <div className={s.toolbar}>
@@ -113,7 +110,6 @@ export default function MatchPlayersBoard({ match }) {
             onChange={setTeam}
             items={[["all", "Les deux équipes"], [match.home.id, match.home.name], [match.away.id, match.away.name]]}
           />
-          <small className={s.muted}>Un clic sur une colonne la trie, un clic sur un joueur ouvre sa fiche. En surbrillance : le meilleur du match.</small>
         </div>
         <div className="table-scroll">
           <table className={`data-table ${s.board}`}>
@@ -144,9 +140,16 @@ export default function MatchPlayersBoard({ match }) {
                       <Media name={row.name} url={row.imageUrl} className={`player-avatar ${s.subAvatar}`} />
                       <span>
                         {row.id ? (
-                          <Link href={f.href("/joueurs/", { id: row.id })} onClick={(event) => event.stopPropagation()}>
+                          <button
+                            type="button"
+                            className={`${o.open} ${o.name}`}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              open(row);
+                            }}
+                          >
                             {row.name}
-                          </Link>
+                          </button>
                         ) : (
                           row.name
                         )}

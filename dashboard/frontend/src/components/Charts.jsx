@@ -1,6 +1,8 @@
 import React from "react";
 import { isNumber, number } from "../services/format.js";
 import { Empty } from "./UI.jsx";
+import { useHoverBubble } from "./HoverCard.jsx";
+import t from "./MatchTabs.module.css";
 const compactFormat = new Intl.NumberFormat("fr-FR", {
   maximumFractionDigits: 2,
 });
@@ -160,15 +162,86 @@ export function DeferredScatterPlot(props) {
     />
   );
 }
+const OUTCOMES = {
+  Goal: "But",
+  OwnGoal: "But contre son camp",
+  Miss: "Tir non cadré",
+  Post: "Poteau",
+};
+const BODY_PARTS = {
+  RightFoot: "Pied droit",
+  LeftFoot: "Pied gauche",
+  Header: "Tête",
+  OtherBodyParts: "Autre",
+};
+const SITUATIONS = {
+  RegularPlay: "Jeu placé",
+  FromCorner: "Corner",
+  SetPiece: "Coup de pied arrêté",
+  FastBreak: "Contre-attaque",
+  FreeKick: "Coup franc",
+  ThrowInSetPiece: "Touche",
+  Penalty: "Penalty",
+  IndividualPlay: "Action individuelle",
+};
+/** But, poteau, tir contré, cadré or non cadré, from the fields a shot row carries. */
+function shotOutcome(s) {
+  if (s.isOwnGoal) return OUTCOMES.OwnGoal;
+  if (s.isGoal) return OUTCOMES.Goal;
+  if (s.isBlocked) return "Tir contré";
+  if (OUTCOMES[s.type]) return OUTCOMES[s.type];
+  if (s.type === "AttemptSaved" || s.isOnTarget === true) return "Tir cadré";
+  if (s.isOnTarget === false) return "Tir non cadré";
+  return "Tir";
+}
+const shotMinute = (s) =>
+  isNumber(s.minute)
+    ? `${number(s.minute)}${isNumber(s.minuteAdded) && s.minuteAdded > 0 ? `+${number(s.minuteAdded)}` : ""}′`
+    : "—";
+const xgText = (v) => (isNumber(v) ? number(v, 2) : "Non renseigné");
 const shotText = (s) =>
-  `${s.playerName || "Joueur inconnu"} · ${number(s.minute)}′ · ${s.isOwnGoal ? "But contre son camp" : s.isGoal ? "But" : s.type || "Tir"} · xG : ${isNumber(s.xg) ? compact(s.xg) : "Non renseigné"}`;
+  `${s.playerName || "Joueur inconnu"} · ${shotMinute(s)} · ${shotOutcome(s)} · xG : ${xgText(s.xg)}`;
 const eventId = (match, s) =>
   s.playerId ? `${match.id}:${s.playerId}` : undefined;
-function Point({ match, shot, x, y, onPlayer, showGoalBall = false }) {
+/** The bubble of a shot: who, when, for whom, its xG and how it ended. */
+function ShotCard({ match, shot }) {
+  const home = shot.teamId === match.home.id;
+  const team = home ? match.home : shot.teamId === match.away.id ? match.away : null;
+  const rows = [
+    ["xG", xgText(shot.xg)],
+    ["Issue", shotOutcome(shot)],
+    BODY_PARTS[shot.bodyPart] && ["Surface", BODY_PARTS[shot.bodyPart]],
+    SITUATIONS[shot.situation] && ["Situation", SITUATIONS[shot.situation]],
+  ].filter(Boolean);
+  return (
+    <div data-shot-card>
+      <p className={t.bubbleHead}>{shot.playerName || "Joueur inconnu"}</p>
+      <p className={t.bubbleNote}>
+        {team && (
+          <i
+            className="legend-dot"
+            style={{ background: colors[home ? 0 : 1] }}
+          />
+        )}
+        {[team?.name, shotMinute(shot)].filter(Boolean).join(" · ")}
+      </p>
+      {rows.map(([label, value]) => (
+        <p key={label} className={t.bubbleRow}>
+          <span>{label}</span>
+          <span />
+          <b>{value}</b>
+        </p>
+      ))}
+    </div>
+  );
+}
+function Point({ match, shot, x, y, onPlayer, showGoalBall = false, bubble }) {
   const id = eventId(match, shot);
   const label = shotText(shot);
   const teamColor = colors[shot.teamId === match.home.id ? 0 : 1];
   const ball = showGoalBall && shot.isGoal;
+  const show = (event) =>
+    bubble?.show(event.currentTarget, <ShotCard match={match} shot={shot} />);
   const point = (
     <circle
       className="chart-point shot-point"
@@ -178,19 +251,22 @@ function Point({ match, shot, x, y, onPlayer, showGoalBall = false }) {
       r={ball ? 8 : shot.isGoal ? 6 : 4}
       fill={ball ? "#f8fafc" : shot.isGoal ? teamColor : "transparent"}
       stroke={teamColor}
-      role={id ? "button" : undefined}
-      tabIndex={id ? 0 : undefined}
+      role={id ? "button" : "img"}
+      tabIndex={0}
       aria-label={label}
+      onMouseEnter={show}
+      onMouseLeave={bubble?.hide}
+      onFocus={show}
+      onBlur={bubble?.hide}
       onClick={() => id && onPlayer(id)}
       onKeyDown={(e) => {
-        if (id && ["Enter", " "].includes(e.key)) {
+        if (e.key === "Escape") bubble?.hide();
+        else if (id && ["Enter", " "].includes(e.key)) {
           e.preventDefault();
           onPlayer(id);
         }
       }}
-    >
-      <title>{label}</title>
-    </circle>
+    />
   );
 
   if (!ball) return point;
@@ -217,6 +293,7 @@ function Point({ match, shot, x, y, onPlayer, showGoalBall = false }) {
   );
 }
 export function ShotMap({ match, teamId = "all", onPlayer = () => {} }) {
+  const bubble = useHoverBubble({ width: 240 });
   if (match.coverage?.shots === false || !match.shots?.length)
     return <Empty>Données de tirs indisponibles.</Empty>;
   const shots = match.shots.filter(
@@ -276,9 +353,11 @@ export function ShotMap({ match, teamId = "all", onPlayer = () => {} }) {
             x={26 + (s.x / 105) * 608}
             y={22 + (s.y / 68) * 394}
             onPlayer={onPlayer}
+            bubble={bubble}
           />
         ))}
       </svg>
+      {bubble.bubble}
       <figcaption>
         {shots.filter((s) => !isNumber(s.xg)).length} xG absent ·{" "}
         {shots.length - located.length} coordonnées absentes
@@ -314,6 +393,7 @@ export function XgTimeline({
   maxHeight,
 }) {
   const [box, boxWidth] = useBoxWidth();
+  const bubble = useHoverBubble({ width: 240 });
   const width =
       maxHeight && boxWidth
         ? Math.max(640, Math.round((boxWidth * 280) / maxHeight))
@@ -441,11 +521,13 @@ export function XgTimeline({
                 y={245 - (e.total / max) * 220}
                 onPlayer={onPlayer}
                 showGoalBall
+                bubble={bubble}
               />
             ))}
           </g>
         ))}
       </svg>
+      {bubble.bubble}
       <div className="chart-legend">
         {series.map((s) => (
           <span key={s.side}>

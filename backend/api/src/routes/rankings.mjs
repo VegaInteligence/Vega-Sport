@@ -55,6 +55,16 @@
  * GET /api/rankings/power/player?season=&player= — one player's power ranking of a
  * season, for his page: the object of the player reads (powerOf) and `roleCount`, the
  * number of ranked players of his role.
+ *
+ * GET /api/rankings/level?season=&universe=&position=&limit=&page= — the players' level of a
+ * season (Score Vega v9, vega/level.py, docs/calculs/10-score-vega-v9): how many Elo points a
+ * club gains with the player, `own` (what he does at his positions and how often he starts)
+ * and `club` (the level he plays at), and the score out of 100 on the level's curve. Read
+ * beside the power ranking, which it does not change. `position` is one of nine: a winger
+ * of the power ranking is a winger, an attacking midfielder or a wide midfielder.
+ * GET /api/rankings/level/player?season=&player= — one player's level with its parts and
+ * each position he played: judged (its share, value and talents by block, in standard
+ * deviations) or not (too few minutes over two seasons).
  */
 import { createHash } from "node:crypto";
 import { matchesEtag, reject, send, validateParams } from "../http.mjs";
@@ -338,7 +348,12 @@ async function matchOdds(read, params) {
 /**
  * A match minute by minute: win, draw and loss from the forecast's expected goals, the
  * score, the clock and the dismissals (dashboard/shared/inplay.js). A finished match runs to the 90th
- * minute, where its last point is its result; a match in play stops at its clock. A match
+ * minute, where its last point is its result; a match in play stops at its clock. A finished
+ * match with an extra-time or a shoot-out score, or with a goal or a red card after the 90th
+ * minute (the source gives no extra-time score, and added time is the 90th plus `added`), runs
+ * to the 120th (`extraTime`), its last point the result, level when a shoot-out decided it
+ * (`penalties`: the shoot-out's score, outside the model, null when the base has none). The base does not say a match in play is in extra time (no period, a clock past the
+ * 90th being added time as well): it stops at the 90th, the live feed's period carrying it on. A match
  * the base has not read yet (still "not_started" there, though it may be under way) gets
  * its kick-off point only; `inplay` and `rho` are the model the points were drawn with,
  * which the site carries on with the live feed's goals and red cards.
@@ -363,14 +378,17 @@ async function liveProbability(read, params) {
   // A finished match whose goal events do not give its score has no timeline to show.
   if (finished && (goals("home") !== s.home_score || goals("away") !== s.away_score)) reject(404, "Donnée indisponible.");
   const seen = Math.max(clock?.minute ?? 0, ...events.map((e) => e.minute), 0);
-  const last = finished ? 90 : s.status === "not_started" ? 0 : Math.max(0, Math.min(90, Math.floor(seen)));
+  // `?? null`: a base without migration 166 has neither column. An event past the 90th says extra time
+  // as well: added time is minute 90 with `added`, and the source's matches carry no extra-time score.
+  const extra = finished && ((s.home_score_et ?? null) !== null || (s.home_penalty_score ?? null) !== null || events.some((e) => e.minute > 90));
+  const last = extra ? 120 : finished ? 90 : s.status === "not_started" ? 0 : Math.max(0, Math.min(90, Math.floor(seen)));
   // A match whose two confirmed line-ups were read before it (091) starts from the forecast that read them:
   // the strengths that forecast had (each club's Elo and its form), moved by what each eleven was worth.
   const [rateHome, rateAway] = lineups
     ? inplayRates(forecast, lineups.home_strength + lineups.home_shift, lineups.away_strength + lineups.away_shift, s.neutral)
     : inplayRates(forecast, s.home_elo, s.away_elo, s.neutral);
   const inplay = { profile: [model.q1, model.q2, model.q3, model.q4, model.q5, model.q6, model.after_90], down: model.down, up: model.up, ahead: model.ahead ?? 1, behind: model.behind ?? 1 };
-  const points = inplayTimeline(rateHome, rateAway, events, inplay, forecast.rho, last);
+  const points = inplayTimeline(rateHome, rateAway, events, inplay, forecast.rho, last, extra);
   if (finished) {
     const end = points.at(-1), [h, a] = end.score;
     Object.assign(end, { home: h > a ? 1 : 0, draw: h === a ? 1 : 0, away: h < a ? 1 : 0 });
@@ -380,6 +398,7 @@ async function liveProbability(read, params) {
     // Four decimals: the site draws a live match's minutes from them (shared/inplay.js).
     rates: { home: round(rateHome, 4), away: round(rateAway, 4) },
     ...(lineups ? { lineups: true } : {}),
+    ...(extra ? { extraTime: true, penalties: (s.home_penalty_score ?? null) !== null && (s.away_penalty_score ?? null) !== null ? [s.home_penalty_score, s.away_penalty_score] : null } : {}),
     model: { version: model.version, fittedAt: iso(model.fitted_at), matches: model.matches },
     inplay, rho: forecast.rho,
     points: points.map((p) => ({ minute: p.minute, home: round(p.home, 4), draw: round(p.draw, 4), away: round(p.away, 4), score: p.score })),
@@ -755,6 +774,72 @@ async function wholeRanking(read, params, season, limit) {
   };
 }
 
+// The level's nine positions (vega/level.py), in French.
+export const POSITION_LABEL = {
+  centre_forward: "Avant-centre", attacking_midfielder: "Milieu offensif", winger: "Ailier", wide_midfielder: "Milieu excentré",
+  central_midfielder: "Milieu central", defensive_midfielder: "Milieu défensif", full_back: "Latéral / piston", centre_back: "Défenseur central",
+  goalkeeper: "Gardien",
+};
+const LEVEL_BLOCKS = ["finishing", "creation", "progression", "defence", "retention"];
+/** Why a level's rank is provisional: under the minutes bar, or (men) in a league whose level is not measured. */
+const levelReason = (r) => (r.eligible === false ? "minutes" : r.universe !== "women" && r.linked === false ? "league" : null);
+
+/** The players' level of a season, in the level's order, a page of `limit` at a time; optionally one position. */
+async function levelRanking(read, params) {
+  validateParams(params, ["season", "universe", "position", "limit", "page"]);
+  const season = params.get("season"), universe = params.get("universe") ?? "men", position = params.get("position");
+  const limitRaw = params.get("limit") ?? "50", pageRaw = params.get("page") ?? "1";
+  if (!/^\d{4}\/\d{4}$/.test(season || "") || !["men", "women"].includes(universe) || (position !== null && !Object.hasOwn(POSITION_LABEL, position))
+    || !/^[1-9]\d{0,2}$/.test(limitRaw) || Number(limitRaw) > 200 || !/^[1-9]\d{0,4}$/.test(pageRaw))
+    reject(400, "Paramètre invalide.");
+  const limit = Number(limitRaw), page = Number(pageRaw);
+  const where = `season_id=${SEASON_KEY} AND universe=$2${position ? " AND position=$3" : ""}`;
+  const values = [season, universe, ...(position ? [position] : [])];
+  const [rows, [count]] = await Promise.all([
+    read(`SELECT * FROM api.player_levels WHERE ${where} ORDER BY rank, player_id LIMIT $${values.length + 1} OFFSET $${values.length + 2}`,
+      [...values, limit, (page - 1) * limit]),
+    read(`SELECT count(*)::int AS total, max(version) AS version, max(computed_at) AS computed_at FROM api.player_levels WHERE ${where}`, values),
+  ]);
+  if (!count?.total) reject(404, "Donnée indisponible.");
+  return {
+    season, universe, position: position ?? null, page, limit, total: count.total,
+    method: { version: count.version, computedAt: iso(count.computed_at) },
+    rows: rows.map((r) => ({
+      rank: r.rank, positionRank: r.position_rank, playerId: r.player_id, name: r.name, imageUrl: r.image_url ?? null, teamId: r.team_id ?? null,
+      team: r.team ?? null, teamImageUrl: r.team_image_url ?? null, position: POSITION_LABEL[r.position] ?? r.position, positionKey: r.position,
+      score: round(r.score, 1), level: round(r.level, 1), own: round(r.own, 1), club: round(r.club, 1), minutes: Math.round(r.minutes),
+      provisional: levelReason(r) !== null, provisionalReason: levelReason(r),
+    })),
+  };
+}
+
+/** One player's level of a season: its parts, and each position he played, the judged ones first. */
+async function levelPlayer(read, params) {
+  validateParams(params, ["season", "player"]);
+  const season = params.get("season"), id = params.get("player");
+  if (!/^\d{4}\/\d{4}$/.test(season || "") || !PLAYER.test(id || "")) reject(400, "Paramètre invalide.");
+  const [[r], positions] = await Promise.all([
+    read(`SELECT * FROM api.player_levels WHERE season_id=${SEASON_KEY} AND player_key=api.internal_id('player',$2)`, [season, id]),
+    read(`SELECT * FROM api.player_level_positions WHERE season_id=${SEASON_KEY} AND player_key=api.internal_id('player',$2)
+          ORDER BY acquired DESC, share DESC NULLS LAST, minutes_two_seasons DESC, position`, [season, id]),
+  ]);
+  if (!r) reject(404, "Donnée indisponible.");
+  return {
+    season, method: { version: r.version, computedAt: iso(r.computed_at) },
+    player: {
+      id, rank: r.rank, positionRank: r.position_rank, position: POSITION_LABEL[r.position] ?? r.position, positionKey: r.position,
+      score: round(r.score, 1), level: round(r.level, 1), own: round(r.own, 1), blocks: round(r.blocks, 1), starts: round(r.starts, 1), club: round(r.club, 1),
+      startShare: round(r.start_share, 3), minutes: Math.round(r.minutes), universe: r.universe, eligible: r.eligible !== false, linked: r.linked !== false,
+      provisional: levelReason(r) !== null, provisionalReason: levelReason(r),
+      positions: positions.map((p) => ({
+        position: POSITION_LABEL[p.position] ?? p.position, positionKey: p.position, judged: p.acquired, minutes: Math.round(p.minutes),
+        minutesTwoSeasons: Math.round(p.minutes_two_seasons), share: round(p.share, 3), value: round(p.value, 1), level: round(p.level, 1),
+        talents: p.acquired && LEVEL_BLOCKS.some((b) => p[b] != null) ? Object.fromEntries(LEVEL_BLOCKS.map((b) => [b, round(p[b], 2)])) : null,
+      })),
+    },
+  };
+}
+
 /** A league edition's competition_season_id from its public id and season, or a 404. */
 async function editionOf(read, params) {
   const competition = params.get("competition"), season = params.get("season");
@@ -847,6 +932,8 @@ export function createRankingRoute(read) {
     if (path === "/api/rankings/power") return respond(req, await powerRanking(read, params));
     if (path === "/api/rankings/power/player") return respond(req, await powerPlayer(read, params));
     if (path === "/api/rankings/power/history") return respond(req, await powerHistory(read, params));
+    if (path === "/api/rankings/level") return respond(req, await levelRanking(read, params));
+    if (path === "/api/rankings/level/player") return respond(req, await levelPlayer(read, params));
     if (path === "/api/rankings/leagues") return respond(req, await leagueLevels(read, params));
     if (path === "/api/rankings/breakouts") return respond(req, await breakouts(read, params));
     if (path === "/api/rankings/match") return respond(req, await matchGrades(read, params));

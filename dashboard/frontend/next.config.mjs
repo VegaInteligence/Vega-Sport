@@ -1,5 +1,6 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { securityHeaders } from "./security-headers.mjs";
 const directory = path.dirname(fileURLToPath(import.meta.url));
 /** @type {import('next').NextConfig} */
 const config = {
@@ -8,6 +9,10 @@ const config = {
   // « Données & méthode » was removed (VI-41): old links land on the home page.
   async redirects() {
     return [{ source: "/methode", destination: "/", permanent: false }];
+  },
+  // Every response, pages, routes and static files alike (security-headers.mjs).
+  async headers() {
+    return [{ source: "/:path*", headers: securityHeaders() }];
   },
   reactStrictMode: true,
   // Reuse visited route segments within the existing four-minute publication

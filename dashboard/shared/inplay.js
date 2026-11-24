@@ -11,6 +11,9 @@ export const ADDED = 8;
 export const MAX_RED = 2;
 export const STATE_FROM = 60; // inplay.STATE_FROM: the minute from which the score changes the rates
 export const ELO_HOME = 60; // power.ELO_HOME: the home side's advantage, 0 on neutral ground
+// inplay.EXTRA_SHARE: extra time's share of a match's goals, scored at the match's mean rate per minute (an
+// assumption: the base has no fitted extra-time share yet).
+export const EXTRA_SHARE = 1 / 3;
 
 /** P(0..top) of a Poisson law, the last cell taking the tail. */
 export function poisson(lam, top = MAX_GOALS) {
@@ -50,6 +53,9 @@ export function remaining(profile, minute, added = 0) {
   return rest;
 }
 
+/** In extra time, the share of a match's goals still to come after `minute` (90..120). */
+export const extraRemaining = (minute) => EXTRA_SHARE * (120 - Math.min(120, Math.max(90, minute))) / 30;
+
 /** (home win, draw, away win) from the present state. */
 /** The share of a match's goals still to come after STATE_FROM (the present minute once past it). */
 export const lateShare = (profile, minute, added = 0) => (minute >= STATE_FROM ? remaining(profile, minute, added) : remaining(profile, STATE_FROM, 0));
@@ -79,9 +85,14 @@ export function outcome(rateHome, rateAway, share, scoreHome, scoreAway, redsHom
 
 /**
  * The three probabilities at each minute from 0 to `last`. `events`: [{minute, added, kind,
- * side}] with kind "goal" or "red"; an event of minute m counts from minute m on.
+ * side}] with kind "goal" or "red"; an event of minute m counts from minute m on (an event
+ * past `last` at `last`). `extra`: the match went to extra time (the caller knows it: the
+ * base's extra-time or shoot-out score, the live feed's period), `last` then up to 120. Its
+ * minutes 0..90 are the same; after the 90th the three are a win in extra time, level at the
+ * 120th (a shoot-out, outside the model) and a loss in extra time, the goals still to come
+ * all "late" and without the low-score correction.
  */
-export function timeline(rateHome, rateAway, events, model, rho = 0, last = 90) {
+export function timeline(rateHome, rateAway, events, model, rho = 0, last = 90, extra = false) {
   const ordered = [...events].sort((a, b) => Math.min(a.minute, last) - Math.min(b.minute, last) || (a.added || 0) - (b.added || 0));
   const state = [0, 0, 0, 0];
   const points = [];
@@ -91,8 +102,10 @@ export function timeline(rateHome, rateAway, events, model, rho = 0, last = 90) 
       const e = ordered[index++];
       state[(e.kind === "goal" ? 0 : 2) + (e.side === "home" ? 0 : 1)]++;
     }
-    const [home, draw, away] = outcome(rateHome, rateAway, remaining(model.profile, minute, 0), state[0], state[1], state[2], state[3], model, rho,
-      lateShare(model.profile, minute, 0));
+    const extraShare = extra && minute > 90 ? extraRemaining(minute) : null;
+    const [home, draw, away] = extraShare !== null
+      ? outcome(rateHome, rateAway, extraShare, state[0], state[1], state[2], state[3], model, 0, extraShare)
+      : outcome(rateHome, rateAway, remaining(model.profile, minute, 0), state[0], state[1], state[2], state[3], model, rho, lateShare(model.profile, minute, 0));
     points.push({ minute, home, draw, away, score: [state[0], state[1]] });
   }
   return points;

@@ -216,6 +216,21 @@ def main(dsn):
     x("""INSERT INTO agg.player_power(season_id,player_id,role,team_id,matches,minutes,total,rate,eligible,run_id,own_total,level_total)
          VALUES (2025,102,'centre_forward',2,6,540,0.6,0.055,false,%(run)s,0.55,0.05),(2024,101,'centre_forward',1,30,2400,14,0.44,true,%(run)s,12.0,2.0)""", {"run": run})
     x("INSERT INTO agg.lineup_models(version, fitted_at, matches, rated, elo_per_unit, elo_per_unit_error) VALUES ('lineup-v1', '2025-09-06T03:14:00Z', 28524, 75907, 44.8, 3.2)")
+    # The players' level (167, Score Vega v9), as level.write keeps it beside the ranking: the forward judged up
+    # front (his hour on the wing is not: too few minutes), a number 10, and the keeper below the minutes bar.
+    level_run = x("""INSERT INTO agg.level_runs(season_id, version, status, started_at, finished_at, players, settings)
+                     VALUES (2025, 'score-vega-v9', 'published', '2025-09-06T03:00:00Z', '2025-09-06T03:05:00Z', 3, '{"psi": 10}') RETURNING id""").fetchone()[0]
+    x("""INSERT INTO agg.player_level(season_id, player_id, position, team_id, universe, eligible, linked, minutes, level, own, blocks, starts, club,
+           start_share, club_level, score, rank, position_rank, run_id)
+         VALUES (2025,101,'centre_forward',1,'men',true,true,260,21.4,14.2,11.0,3.2,7.2,0.9,0.72,79.7,1,1,%(run)s),
+                (2025,104,'attacking_midfielder',2,'men',true,true,160,0,1.5,1.0,0.5,-1.5,0.6,-0.15,50,2,1,%(run)s),
+                (2025,103,'goalkeeper',4,'men',false,true,180,-6.0,-6.0,-2.0,-4.0,0,0.2,0,40.5,3,1,%(run)s)""", {"run": level_run})
+    x("""INSERT INTO agg.player_level_positions(season_id, player_id, position, acquired, minutes, minutes_two_seasons, share, value, level,
+           finishing, creation, progression, defence, retention, run_id)
+         VALUES (2025,101,'centre_forward',true,200,2600,1,13.5,21.4,1.25,0.4,0.1,-0.3,0.2,%(run)s),
+                (2025,101,'winger',false,60,60,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,%(run)s),
+                (2025,104,'attacking_midfielder',true,160,160,1,2.5,0,0.1,0.5,0.2,0,0.1,%(run)s),
+                (2025,103,'goalkeeper',true,180,180,1,-1.2,-6.0,NULL,NULL,NULL,NULL,NULL,%(run)s)""", {"run": level_run})
     # Match grades (099): match 1's players, a forward's great match, a winger's ordinary one, and a
     # keeper's ten minutes, too short and too ordinary for a grade to show.
     x("""INSERT INTO agg.player_power_matches(season_id,match_id,player_id,team_id,role,minutes,contribution,run_id,match_index)
@@ -291,6 +306,34 @@ def main(dsn):
         elo_run = x("INSERT INTO agg.power_runs(kind, method_version, status) VALUES ('elo', 'seed', 'published') RETURNING id").fetchone()[0]
         x("""INSERT INTO agg.team_elo(match_id, team_id, season_id, kickoff_at, elo_before, elo_after, expected, result, run_id)
              VALUES (1, 1, 2025, '2025-08-16T19:00:00Z', 1540, 1552, 0.6, 1, %(r)s), (1, 2, 2025, '2025-08-16T19:00:00Z', 1490, 1478, 0.4, 0, %(r)s)""", {"r": elo_run})
+    # Extra time (issue #68), in a cup edition of its own, of an earlier season (2023/2024) and keyed as a cup's, so that
+    # the league's tables, the season's rates and the PitchAPI-era reads stay as they are; clubs 1 and 2 (their Elo after match 1): m_xtime1 0-0 at the 90th, 1-0 at the 112th; m_shoot1 1-1 after extra time, 4-3 on
+    # penalties; m_shoot2 2-2 then 5-4 on penalties, no extra-time score stated; m_live91 in play, its clock at the
+    # 100th with nothing saying it is in extra time. As the provider gives a match (no extra-time score, the shoot-out's
+    # not always): m_xtime2 2-1 with its winner at the 108th and no score but the final one; m_xtime3 1-1 with a goal at
+    # the 118th and no shoot-out score (the 2022 World Cup final's case in production); m_stop90 1-0, its goal at 90+4.
+    cup = x("INSERT INTO core.competitions(name,country_code,kind) VALUES ('Coupe Test','FRA','cup') RETURNING id").fetchone()[0]
+    edition = x("INSERT INTO core.competition_seasons(competition_id,season_id,native_label,is_current,cup_key) VALUES (%s,2023,'2023/2024',false,'openligadb:extra-time-test:2023/2024') RETURNING id", (cup,)).fetchone()[0]
+    for key, status, score, score_90, score_et, penalties, goals in [
+        ("m_xtime1", "finished", (1, 0), (0, 0), (1, 0), None, [(112, 0, 1)]),
+        ("m_shoot1", "finished", (1, 1), (1, 1), (1, 1), (4, 3), [(30, 0, 1), (75, 0, 2)]),
+        ("m_shoot2", "finished", (2, 2), None, None, (5, 4), [(12, 0, 1), (40, 0, 2), (90, 3, 2), (101, 0, 1)]),
+        ("m_live91", "in_play", (1, 1), None, None, None, [(20, 0, 1), (80, 0, 2)]),
+        ("m_xtime2", "finished", (2, 1), None, None, None, [(30, 0, 1), (60, 0, 2), (108, 0, 1)]),
+        ("m_xtime3", "finished", (1, 1), None, None, None, [(20, 0, 1), (118, 0, 2)]),
+        ("m_stop90", "finished", (1, 0), None, None, None, [(90, 4, 1)]),
+    ]:
+        mid = x(
+            """INSERT INTO core.matches(competition_season_id,season_id,source,status,home_team_id,away_team_id,home_score,away_score,home_score_90,away_score_90,
+                 home_score_et,away_score_et,home_penalty_score,away_penalty_score,match_date,kickoff_at)
+               VALUES (%s,2023,'pitchapi',%s,1,2,%s,%s,%s,%s,%s,%s,%s,%s,'2023-07-20','2023-07-20T19:00:00Z') RETURNING id""",
+            (edition, status, *score, *(score_90 or (None, None)), *(score_et or (None, None)), *(penalties or (None, None))),
+        ).fetchone()[0]
+        x("INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id) VALUES ('match','pitchapi',%s,%s)", (key, mid))
+        for seq, (minute, added, team) in enumerate(goals, 1):
+            x("INSERT INTO core.match_events(season_id,match_id,team_id,seq,event_type,minute,minute_added) VALUES (2023,%s,%s,%s,'goal',%s,%s)", (mid, team, seq, minute, added))
+        if status == "in_play":
+            x("INSERT INTO core.match_momentum(season_id,match_id,minute,value) VALUES (2023,%s,45,1),(2023,%s,100,2)", (mid, mid))
     # The players' season totals, as the calculator writes them (the home's leaders read them).
     from vega import calculator
 
