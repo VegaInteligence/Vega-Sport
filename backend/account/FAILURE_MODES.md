@@ -5,6 +5,8 @@
 > découlent. Rien ici ne crée de ressource Neon, AWS ou Stripe.
 
 - **Status:** written on 23 Nov 2026, before the tests it names and before the code they cover.
+  S12 to S14 were added on 24 Nov 2026, before their tests and before the change of the SQL file, when the
+  preference contract was agreed with the home page work (VI-48).
 - **Scope of stage 1:** the access levels, the signed pass that carries a level, the decision
   taken on a request before the cache, and the account tables with their database role. The
   sign-in itself (Neon Auth), the account API's HTTP routes, Stripe and every screen come later
@@ -86,6 +88,9 @@ the followed competitions and the lists. No e-mail, no name, no password, no IP 
 | S9 | An identifier that is not a public Vega id (`p_`, `t_`, `m_`, `l_` followed by the id) is stored. | Refused by a check on the kind and the shape of the id. No foreign key to football tables: a purge or a re-identification there never blocks or deletes a person's lists. |
 | S10 | Unbounded growth: thousands of lists or entries for one account. | Bounded by the account API (stage 2) and by a check on positions; the bounds are those the site already applies locally. |
 | S11 | Preferences that the site does not know (free text, JSON). | Typed columns only, each with a check; no JSON column (repository rule). |
+| S12 | The chosen country is kept in another form than the site's (ISO-2 here, the base's three-letter code in the browser), so a synchronised choice is lost or names another country. | `preferences.country` holds what `homeCountry` holds in the browser: the base's three-letter code (`FRA`, `ENG`, `BRA`) or `none` (« Aucun pays », a choice in itself). NULL means no choice was made, and the detected country applies. A two-letter code is refused. |
+| S13 | The home priority (« privilégier la localisation ou l'importance du match ») holds a value the site does not know. | `preferences.home_priority` is `location` or `importance`. NULL means the value fixed in the site's code (`home-priority.js`) applies; the account stores a value only once the person chose one. |
+| S14 | Favourite clubs and players are kept twice (as follows and as list entries) and drift apart. | One source: the favourites are the clubs and players of the lists, as in the browser (`statarena.research.v1`). `follows` holds competitions and national teams only; a followed club, player or match is refused there. |
 
 ## 4. Not covered by stage 1
 

@@ -35,14 +35,19 @@ CREATE TABLE account.preferences (
   account_id text PRIMARY KEY REFERENCES account.accounts ON DELETE CASCADE,
   focus text NOT NULL DEFAULT 'europe' CHECK (focus IN ('europe', 'all')),
   theme text CHECK (theme IN ('light', 'dark')),
-  -- The perimeter chosen by hand; it wins over the visitor's country.
-  country text CHECK (country ~ '^[A-Z]{2}$'),
+  -- The country chosen by hand, as the browser keeps it (homeCountry): the base's three-letter
+  -- code (FRA, ENG, BRA), or 'none' for « Aucun pays ». NULL: no choice, the detected country applies.
+  country text CHECK (country ~ '^([A-Z]{3}|none)$'),
+  -- « Privilégier la localisation ou l'importance du match » on the home page. NULL: no choice,
+  -- the value fixed in the site's code applies (home-priority.js).
+  home_priority text CHECK (home_priority IN ('location', 'importance')),
   preferred_competition text CHECK (preferred_competition ~ '^l_[A-Za-z0-9]{1,24}$'),
   onboarding_complete boolean NOT NULL DEFAULT false,
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
--- Followed competitions (favoriteLeagueIds) and national teams.
+-- Followed competitions (favoriteLeagueIds) and national teams. Favourite clubs and players are
+-- not followed here: they are the clubs and players of the lists below, their single source.
 CREATE TABLE account.follows (
   account_id text NOT NULL REFERENCES account.accounts ON DELETE CASCADE,
   kind text NOT NULL CHECK (kind IN ('competition', 'nation')),

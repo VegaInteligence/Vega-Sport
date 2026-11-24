@@ -1,5 +1,5 @@
 // The account tables and their role (backend/account/sql/001_accounts.sql), on a disposable local
-// database. Failure modes pinned here: backend/account/FAILURE_MODES.md, section 3 (S1 to S11).
+// database. Failure modes pinned here: backend/account/FAILURE_MODES.md, section 3 (S1 to S14).
 //
 //   VEGA_V2_ACCOUNT_TEST_DSN=postgresql://<owner>@127.0.0.1:5432/vega_v2_account_test npm test
 //
@@ -216,9 +216,9 @@ test("S11: preferences are typed and checked; no column holds JSON or unchecked 
   assert.deepEqual(await rows("SELECT focus, theme, country, preferred_competition, onboarding_complete FROM account.preferences WHERE account_id = $1", [id]), [
     { focus: "europe", theme: null, country: null, preferred_competition: null, onboarding_complete: false },
   ]);
-  for (const [column, value] of [["focus", "world"], ["theme", "blue"], ["country", "fr"], ["country", "FRA"], ["preferred_competition", "t_abc123"]])
+  for (const [column, value] of [["focus", "world"], ["theme", "blue"], ["country", "fra"], ["preferred_competition", "t_abc123"]])
     await refused(`UPDATE account.preferences SET ${column} = $2 WHERE account_id = $1`, [id, value], CHECK);
-  await db.query("UPDATE account.preferences SET focus = 'all', theme = 'dark', country = 'BR', preferred_competition = 'l_abc123', onboarding_complete = true WHERE account_id = $1", [id]);
+  await db.query("UPDATE account.preferences SET focus = 'all', theme = 'dark', country = 'BRA', preferred_competition = 'l_abc123', onboarding_complete = true WHERE account_id = $1", [id]);
   const columns = await rows(
     `SELECT c.table_name, c.column_name, c.data_type,
             EXISTS (SELECT 1 FROM pg_constraint k JOIN pg_attribute a ON a.attrelid = k.conrelid AND a.attnum = ANY (k.conkey)
@@ -232,4 +232,44 @@ test("S11: preferences are typed and checked; no column holds JSON or unchecked 
     // Identity stays at Neon: no column for an e-mail, a person's name, a phone, an address or a password.
     assert.doesNotMatch(column.column_name, /^(e_?mail|(first|last|full|display|user)_?name|phone|address|ip(_address)?|password|birth.*)$/i, `${column.table_name}.${column.column_name}: personal data`);
   }
+});
+
+test("S12: the chosen country is the base's three-letter code or « none », as in the browser", { skip }, async () => {
+  const id = await account("s12");
+  await db.query("INSERT INTO account.preferences (account_id) VALUES ($1)", [id]);
+  const set = "UPDATE account.preferences SET country = $2 WHERE account_id = $1";
+  assert.equal(await one("SELECT country FROM account.preferences WHERE account_id = $1", [id]), null); // no choice: the detected country applies
+  for (const bad of ["FR", "BR", "fra", "Fra", "FRAN", "NONE", "None", "", "INT-2", "F1A", " FRA"]) await refused(set, [id, bad], CHECK);
+  for (const good of ["FRA", "ENG", "BRA", "none"]) {
+    await db.query(set, [id, good]);
+    assert.equal(await one("SELECT country FROM account.preferences WHERE account_id = $1", [id]), good);
+  }
+  await db.query(set, [id, null]); // back to no choice
+});
+
+test("S13: the home priority is « location » or « importance », and unset until the person chooses", { skip }, async () => {
+  const id = await account("s13");
+  await db.query("INSERT INTO account.preferences (account_id) VALUES ($1)", [id]);
+  const set = "UPDATE account.preferences SET home_priority = $2 WHERE account_id = $1";
+  assert.equal(await one("SELECT home_priority FROM account.preferences WHERE account_id = $1", [id]), null); // the site's fixed value applies
+  for (const bad of ["", "local", "Location", "IMPORTANCE", "both", "location "]) await refused(set, [id, bad], CHECK);
+  for (const good of ["location", "importance"]) {
+    await db.query(set, [id, good]);
+    assert.equal(await one("SELECT home_priority FROM account.preferences WHERE account_id = $1", [id]), good);
+  }
+});
+
+test("S14: favourite clubs and players have one source, the lists; follows hold competitions and national teams only", { skip }, async () => {
+  const id = await account("s14");
+  const follow = "INSERT INTO account.follows (account_id, kind, entity_id) VALUES ($1, $2, $3)";
+  for (const [kind, entity] of [["club", "t_abc123"], ["clubs", "t_abc123"], ["player", "p_abc123"], ["players", "p_abc123"], ["match", "m_abc123"]]) await refused(follow, [id, kind, entity], CHECK);
+  await db.query(follow, [id, "competition", "l_abc123"]);
+  await db.query(follow, [id, "nation", "t_abc123"]);
+  const list = await one("INSERT INTO account.lists (account_id, client_id, name) VALUES ($1, 'main', 'A') RETURNING list_id", [id]);
+  await db.query("INSERT INTO account.list_entries (list_id, kind, entity_id) VALUES ($1, 'clubs', 't_abc123'), ($1, 'players', 'p_abc123')", [list]);
+  // What the home page reads as favourites: the clubs and players of the account's lists.
+  assert.deepEqual(
+    await rows("SELECT e.kind, e.entity_id FROM account.list_entries e JOIN account.lists l USING (list_id) WHERE l.account_id = $1 AND e.kind IN ('clubs', 'players') ORDER BY e.kind", [id]),
+    [{ kind: "clubs", entity_id: "t_abc123" }, { kind: "players", entity_id: "p_abc123" }],
+  );
 });
