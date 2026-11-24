@@ -48,7 +48,7 @@ La méthode est celle de la [proposition](01-proposition.md) (§§ 4, 11 et 12),
 | Titularisations | lues dans les compositions | lues dans les lignes du classement : part des matchs du club à onze titulaires listés, clubs de cinq matchs ou plus |
 | Niveau du club | lié à la contribution du v8 | moyenne par les minutes de (Elo du club − moyenne) / 400 sur ses matchs de club |
 | Population de référence | éligibles des championnats mesurés | pareil ; à défaut (les championnats féminins ne sont pas mesurés par le v8), les éligibles de l'univers ; à défaut tous |
-| Coefficient E | 9,1 pour quatre blocs | 9,1 repris tel quel pour cinq blocs : **provisoire**, à relire sur la base de production |
+| Coefficient E | 9,1 pour quatre blocs | 9,1 repris tel quel pour cinq blocs : **provisoire**. Le niveau propre à cinq blocs est 2,5 à 3,5 % plus resserré qu'à quatre (§ 6) ; E se remesure par la régression sur les résultats de match de l'étude, pas encore refaite à cinq blocs |
 | Année partielle (§ 47) | hors étude | pas de niveau : calcul publié à 0 joueur, sans mesure |
 
 ## 5. Ordre de calcul des saisons
@@ -58,5 +58,20 @@ Le niveau d'une année lit celui de l'année d'avant. `power.stale_rankings` lis
 ## 6. Vérifié, et ce qui reste
 
 - Formules sans base : `backend/tests/test_level.py` (cas 49a à 49o). De bout en bout sur PostgreSQL 18 jetable : `test_models.py` (49p à 49r), `test_award_year_2020_order.py` (49s), `backend/api/test/rankings.test.mjs` (49t). Tests écrits avant le code et vus en échec.
-- **Pas encore vérifié : le portage sur la base de production.** Le calcul réglé comme l'étude (quatre blocs, sans conservation) doit rendre les chiffres de `study17_run1.txt` ; le coefficient E à cinq blocs est à lire dans le même passage. Il faut une tâche de diagnostic en lecture seule sur AWS.
-- Restent, chacun avec son ticket : la bascule du classement public et du site (maquette, neuf postes au lieu de sept rôles), les trois critères de la course au Ballon d'Or, la comparaison v8 / v9 saison par saison une fois le calcul déployé.
+- **Le portage, sur la base de production** (24 novembre, tâche de diagnostic en lecture seule, rien d'écrit ; années 2024 à 2026, image en service `e7f826b4`, `level.py` du commit `2143b9cb`). Réglé comme l'étude (quatre blocs, conservation sans prix), le calcul rend les chiffres de `study17_run1.txt` :
+
+| Mesure | Étude | Service réglé comme l'étude |
+| --- | --- | --- |
+| Lignes joueur-match de club par poste, 2024 et 2025 | DC 77 030 … MEX 11 273 ; DC 89 259 … MEX 14 128 | identiques, les neuf postes |
+| λ et σ 2025, huit postes, quatre blocs | étude § 0 | σ identiques à trois décimales sauf une (0,415 contre 0,414) ; λ à 0,2 % près |
+| Gardien 2025 | 13 291 ; 0,062 | 13 291 ; 0,062 |
+| Liste de prix à quatre blocs | AC 3,6 2,3 1,7 1,2 … DC 0,6 0,6 1,7 6,3 | identique, les huit postes |
+| Dispersion du niveau propre | 5,5 (2025) ; 4,5 (2026) | 5,5 ; 4,5 |
+| Vingt premiers, 2025 et 2026, ψ 24 et ψ 10 | listes K3 | les vingt mêmes joueurs dans les quatre listes ; plus grand écart de rang 5 places (2025, ψ 24), 2, 1 et 1 ailleurs |
+| Massiré Sylla 2026 | talent de défense + 3,01 gardé à + 2,00 ; 31ᵉ à ψ 24, 18ᵉ à ψ 10 | + 3,01 gardé à + 2,00 ; 31ᵉ ; 18ᵉ |
+| Hommes éligibles des championnats mesurés | 12 737 (2025) ; 4 486 (2026) | **12 436 ; 4 437** |
+
+- **Écart non expliqué : la population de référence**, 2,4 % plus petite en 2025 et 1,1 % en 2026. L'étude lisait `eligible` et `linked` dans le classement stocké ; le service les prend dans le classement que la même passe vient de calculer (le niveau n'a pas de drapeau à lui). L'écart est donc entre deux passes du v8, pas dans le portage ; quel changement de code ou de données retire 301 joueurs de 2025 n'est pas établi. À lire dans la comparaison v8 / v9 une fois les deux stockés par la même passe.
+- **Avec les réglages du service** (cinq blocs, ψ = 10), sur la même base : 2026 donne Yamal 87,5, Olise 86,9, Rúben Neves 83,8, Kimmich 81,7, Güler 81,7 ; Sylla est 38ᵉ (74,1). 2025 donne Messi 92,2, Olise 90,3, Dembélé 87,3, Yamal 87,2, Cherki 86,5. Cinq blocs contre quatre à ψ = 10 : corrélation des niveaux 0,979 (2025) et 0,973 (2026), 23 et 22 joueurs communs dans les trente premiers, 84 et 81 dans les cent premiers.
+- **Pas vérifié : le coefficient E à cinq blocs.** Ce passage n'a pas la régression sur les résultats de match ; il montre seulement que le niveau propre se resserre de 5,54 à 5,40 (2025) et de 4,54 à 4,38 (2026) quand la conservation entre avec E inchangé.
+- Restent, chacun avec son ticket : la bascule du classement public et du site (maquette, neuf postes au lieu de sept rôles), les trois critères de la course au Ballon d'Or, la comparaison v8 / v9 saison par saison une fois le calcul déployé, E remesuré à cinq blocs.
