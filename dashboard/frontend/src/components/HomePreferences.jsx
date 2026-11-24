@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from "react";
 import Icon from "./Icon.jsx";
 import { Media, Modal } from "./UI.jsx";
+import HomeCountryMenu from "./HomeCountryMenu.jsx";
 import { normalizeText } from "../model.js";
 import { inEuropeFocus } from "../../../shared/competition-scope.js";
 import {
@@ -12,7 +13,7 @@ import {
   orderedCompetitions,
 } from "../services/competition-selector.js";
 
-function CompetitionPicker({ f, competitions, initialIds, onClose }) {
+function CompetitionPicker({ f, competitions, initialIds, onClose, country }) {
   const [selected, setSelected] = useState(() => new Set(initialIds));
   const [query, setQuery] = useState("");
   const search = normalizeText(query).trim();
@@ -64,6 +65,23 @@ function CompetitionPicker({ f, competitions, initialIds, onClose }) {
         </>
       }
     >
+      {country && (
+        // « Chez vous » (VI-48): the strip's country, always reachable here, even when the
+        // strip is hidden (« Ne rien afficher », nothing detected, no match). It applies at once.
+        <section
+          className="home-competition-section home-preferences-country"
+          aria-label="Chez vous"
+        >
+          <h3>Chez vous</h3>
+          <HomeCountryMenu
+            id="home-country-filter"
+            country={country.country}
+            choice={country.choice}
+            countries={country.countries}
+            onChoose={country.onChoose}
+          />
+        </section>
+      )}
       <div
         className="competition-presets"
         role="group"
@@ -138,7 +156,7 @@ function CompetitionPicker({ f, competitions, initialIds, onClose }) {
   );
 }
 
-export default function HomePreferences({ f }) {
+export default function HomePreferences({ f, country = null }) {
   const [open, setOpen] = useState(false);
   const competitions = useMemo(() => {
     const byId = new Map();
@@ -205,6 +223,7 @@ export default function HomePreferences({ f }) {
           f={f}
           competitions={competitions}
           initialIds={ids}
+          country={country}
           onClose={() => setOpen(false)}
         />
       )}

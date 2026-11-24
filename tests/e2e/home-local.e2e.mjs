@@ -8,17 +8,26 @@
 //  A2 The API serves no `billboard` (older publication or backend) → the block stays, chosen from `highlights` as
 //     before VI-48 (checked with the test double's switch; not run against an API without it).
 //  F1 France (x-vercel-ip-country FR, no choice): a « Chez vous » strip under the results strip, its button « France »
-//     with its flag, the cells = /api/read/home-local?country=FRA's matches in the API's order, grouped by day with the
-//     day's label, a finished match with its score, a coming one with its Paris kickoff.
+//     with its flag, the cells = /api/read/home-local?country=FRA's matches (the API's selection), grouped by day with
+//     the day's label and, within a day, in kickoff order (then fixture id), a finished match with its score, a coming
+//     one with its Paris kickoff.
 //  F2 The strip is drawn by the server already (first HTML), not only after the browser's reads.
 //  B1 Brazil (BR): the same with BRA's matches and « Brésil ».
 //  T1 « Course au titre » opens on the visitor's country's league when it is among the tables (GB → ENG → Premier
 //     League; FR → Ligue 1); Brazil, absent from the tables, keeps the default (Ligue 1).
 //  M1 The country menu lists the manifest's countries and « Ne rien afficher »; choosing Brésil while detected in
 //     France shows Brazil, and still after a reload (orion.preferences.v1 homeCountry and the home cookie).
-//  N1 « Ne rien afficher »: the strip leaves, and stays away after a reload (no home-local read by the browser).
+//  N1 « Ne rien afficher »: the strip leaves, and stays away after a reload (no home-local read by the browser); the
+//     way back is the preferences panel's « Chez vous » line (« Ne rien afficher » shown, Escape closes its menu and
+//     not the panel), where choosing France brings the strip back at once, and after a reload.
+//  E1 A country chosen by hand without match in the window (a menu country whose home-local answer has no match) →
+//     the strip's head stays (eyebrow, the country's button) with one muted line « Aucun match d’ici 7 jours » and no
+//     cell; after a reload too (server HTML).
+//  E2 The same country detected (its ISO-2), not chosen → no strip.
 //  U1 A country without competition (JP → JPN) or no country (XX) → no strip, nothing else changes.
 //  P1 Phone 393 × 852: no sideways page scroll; the strip scrolls inside itself as the results strip.
+//  P2 Phone: a « Chez vous » cell is no taller than on desktop (no empty band under the teams); the results strip's
+//     cells keep their phone rows (44px team rows).
 //  X1 No page error and no console error during the run (failed remote loads excluded).
 //
 // Run against the site and the API it reads (the API origin defaults to the public one):
@@ -34,6 +43,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { europeFocusIds } from "../../dashboard/shared/competition-scope.js";
+import { countryFromIso, homeCountryName } from "../../dashboard/frontend/src/services/home-country.js";
 
 const [base = "http://127.0.0.1:3000", out = path.join(os.tmpdir(), "vi-48-e2e"), api = "https://dngp6kh9jx2bl.cloudfront.net"] = process.argv.slice(2);
 const NOW = process.env.VEGA_NOW || null;
@@ -65,6 +75,22 @@ const homePath = `/api/read/home?${query({ generation, leagues: [...europeFocusI
 const localRead = async (country) => (await getJson(`/api/read/home-local?${query({ country, generation, season })}`)).data;
 const home = (await getJson(homePath)).data;
 inputs.manifest = { season, generation, homeLocal: manifest.capabilities?.compactReads?.["home-local"] ?? null };
+// A country of the menu without match in the window (E1, E2), read from the API; preferably one with an ISO-2 code.
+const isoOf = {};
+for (const a of "ABCDEFGHIJKLMNOPQRSTUVWXYZ") for (const b of "ABCDEFGHIJKLMNOPQRSTUVWXYZ") {
+  const code = countryFromIso(a + b);
+  if (code && !isoOf[code]) isoOf[code] = a + b;
+}
+const menuCodes = [...new Set((manifest.competitions || []).map((c) => c.country))].filter((c) => isoOf[c] || ["SCO", "WAL"].includes(c)).sort();
+let emptyCountry = null;
+for (const code of [...menuCodes.filter((c) => isoOf[c]), ...menuCodes.filter((c) => !isoOf[c])]) {
+  const data = await getJson(`/api/read/home-local?${query({ country: code, generation, season })}`).then((b) => b.data).catch(() => null);
+  if (data && Array.isArray(data.matches) && data.matches.length === 0) {
+    emptyCountry = { code, iso: isoOf[code] || null, name: homeCountryName(code), competitions: data.competitions?.length ?? null };
+    break;
+  }
+}
+inputs.emptyCountry = emptyCountry;
 inputs.homePath = homePath;
 
 // The expected « À l'affiche » for a visitor without favourites, from the served weights.
@@ -147,10 +173,14 @@ const strip = (page) =>
   );
 function expectedStrip(data) {
   const days = [];
-  for (const m of data.matches) if (days.at(-1) !== m.day) days.push(m.day);
+  for (const m of data.matches) {
+    if (days.at(-1)?.day !== m.day) days.push({ day: m.day, matches: [] });
+    days.at(-1).matches.push(m);
+  }
+  for (const d of days) d.matches.sort((a, b) => a.time - b.time || String(a.fixture.id).localeCompare(String(b.fixture.id)));
   return {
-    days: days.map(shortDay),
-    cells: data.matches.map((m) => {
+    days: days.map((d) => shortDay(d.day)),
+    cells: days.flatMap((d) => d.matches).map((m) => {
       const x = m.fixture, done = x.status === "finished", live = x.status === "in_play";
       const scored = Number.isInteger(x.score_home) && Number.isInteger(x.score_away);
       return {
@@ -190,6 +220,8 @@ let [shown] = await strip(page);
 let cmp = shown ? sameStrip(shown, fra) : { ok: false };
 check("F1 France: the strip = home-local FRA", { button: "France", flag: "fi-fr", cells: fra.matches.length }, shown && { kicker: shown.kicker, button: shown.button, flag: shown.flag, cells: shown.cells.length, firstDiff: cmp.ok ? null : { want: cmp.want?.cells?.[0], got: cmp.got?.cells?.[0] } },
   shown && /chez vous/i.test(shown.kicker) && shown.button === "France" && shown.flag === "fi-fr" && fra.matches.length > 0 && cmp.ok);
+const deskTick = await page.locator(".home-local .home-tick").first().evaluate((e) => e.getBoundingClientRect().height).catch(() => null);
+inputs.desktopLocalCell = deskTick;
 check("F2 the strip is in the server's first HTML", "class home-local and France in the document", { strip: html.includes('class="home-local"'), france: html.includes("France") }, html.includes('class="home-local"'));
 check("T1 France: the title race opens on Ligue 1", "Ligue 1", await titleTab(page), (await titleTab(page)) === "Ligue 1");
 if (Array.isArray(home.billboard)) {
@@ -279,8 +311,81 @@ await page.locator(".home-next").waitFor({ timeout: 60000 });
 await page.waitForLoadState("networkidle").catch(() => {});
 check("N1 « Ne rien afficher »: no strip, after a reload too, no read", { strip: 0, reads: 0 }, { now: goneNow, afterReload: await page.locator(".home-local").count(), reads: reads.length },
   goneNow === 0 && (await page.locator(".home-local").count()) === 0 && reads.length === 0);
+// A missing control is a failed check, not a crash that hides the checks after it.
+await (async () => {
+  // The way back: the preferences panel's « Chez vous » line.
+  await page.locator("#home-competition-filter").click();
+  const dialog = page.locator("dialog[open]");
+  await dialog.waitFor({ timeout: 10000 });
+  const line = dialog.locator(".home-preferences-country"), control = line.locator("#home-country-filter");
+  const before = { heading: await line.locator("h3").textContent().catch(() => null), label: await control.getAttribute("aria-label").catch(() => null) };
+  await page.waitForTimeout(300);
+  await dialog.screenshot({ path: path.join(out, "preferences-pays.png") });
+  await control.click();
+  const panelMenu = dialog.getByRole("menu", { name: "Pays" });
+  await panelMenu.waitFor({ timeout: 10000 });
+  const panelItems = await panelMenu.getByRole("menuitemradio").allTextContents();
+  const checked = await panelMenu.locator('[aria-checked="true"]').textContent().catch(() => null);
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(300);
+  const afterEscape = { menu: await panelMenu.count(), dialog: await page.locator("dialog[open]").count() };
+  await control.click();
+  await panelMenu.getByRole("menuitemradio", { name: "France" }).click();
+  await page.locator(".home-local .home-tick").first().waitFor({ timeout: 30000 }).catch(() => {});
+  const inPanel = await control.getAttribute("aria-label").catch(() => null);
+  await page.keyboard.press("Escape");
+  await page.locator("dialog[open]").waitFor({ state: "detached", timeout: 5000 }).catch(() => {});
+  const back = (await strip(page))[0];
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.locator(".home-next").waitFor({ timeout: 60000 });
+  await page.locator(".home-local .home-tick").first().waitFor({ timeout: 30000 }).catch(() => {});
+  const backReload = (await strip(page))[0];
+  check("N1 the way back: the panel's « Chez vous » line, France brings the strip back",
+    { heading: "Chez vous", label: "Pays : Ne rien afficher", checked: "Ne rien afficher", afterEscape: { menu: 0, dialog: 1 }, button: "France", sameAsApi: true },
+    { ...before, items: panelItems.length, checked, afterEscape, inPanel, back: back?.button, backReload: backReload?.button, sameAsApi: back ? sameStrip(back, fra).ok : false },
+    before.heading === "Chez vous" && before.label === "Pays : Ne rien afficher" && checked === "Ne rien afficher" && panelItems.length === items.length &&
+      afterEscape.menu === 0 && afterEscape.dialog === 1 && inPanel === "Pays : France" && back?.button === "France" && sameStrip(back, fra).ok && backReload?.button === "France");
+})().catch((error) => check("N1 the way back: the panel's « Chez vous » line, France brings the strip back", "the panel's line", String(error.message).split("\n")[0], false));
 await page.close();
 await context.close();
+
+// ---------- A country chosen by hand without match keeps its head; the same detected stays hidden ----------
+if (emptyCountry) {
+  context = await newContext({ country: "FR" });
+  ({ page } = await open(context, "empty"));
+  await page.locator(".home-local-country").first().click({ timeout: 30000 });
+  await page.getByRole("menu", { name: "Pays" }).getByRole("menuitemradio", { name: emptyCountry.name, exact: true }).click();
+  await page.locator(".home-local-empty").waitFor({ timeout: 30000 }).catch(() => {});
+  const look = async () => page.locator(".home-local").evaluateAll((all) => all.map((s) => ({
+    kicker: s.querySelector(".home-kicker")?.textContent,
+    label: s.querySelector(".home-local-country")?.getAttribute("aria-label"),
+    line: s.querySelector(".home-local-empty")?.textContent,
+    lineClass: s.querySelector(".home-local-empty")?.className,
+    cells: s.querySelectorAll(".home-tick").length,
+  })));
+  const now = await look();
+  if (await page.locator(".home-local").count()) await page.locator(".home-local").screenshot({ path: path.join(out, "chez-vous-sans-match.png") });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.locator(".home-next").waitFor({ timeout: 60000 });
+  await page.waitForLoadState("networkidle").catch(() => {});
+  const reloaded = await look();
+  const good = (v) => v.length === 1 && /chez vous/i.test(v[0].kicker) && v[0].label === `Pays : ${emptyCountry.name}` && v[0].line === "Aucun match d’ici 7 jours" && /home-meta/.test(v[0].lineClass) && v[0].cells === 0;
+  check(`E1 ${emptyCountry.code} chosen by hand, no match: the head stays with one muted line`, { label: `Pays : ${emptyCountry.name}`, line: "Aucun match d’ici 7 jours", cells: 0 }, { now, reloaded }, good(now) && good(reloaded));
+  await page.close();
+  await context.close();
+  if (emptyCountry.iso) {
+    context = await newContext({ country: emptyCountry.iso });
+    ({ page } = await open(context, "empty-detected"));
+    await page.waitForTimeout(800);
+    const count = await page.locator(".home-local").count();
+    check(`E2 ${emptyCountry.iso} → ${emptyCountry.code} detected, no match: no strip`, { strip: 0 }, { strip: count }, count === 0);
+    await page.close();
+    await context.close();
+  } else notRun("E2 detected country without match", `${emptyCountry.code} has no ISO-2 code`);
+} else {
+  notRun("E1 manual country without match", "every menu country has a match in the window");
+  notRun("E2 detected country without match", "every menu country has a match in the window");
+}
 
 // ---------- No country, or one without competition ----------
 for (const [iso, code] of [["JP", "JPN"], ["XX", null]]) {
@@ -332,6 +437,15 @@ const phone = await page.evaluate(() => {
   };
 });
 check("P1 phone: no sideways page scroll, the strip scrolls in itself", { pageOverflow: 0, stripScrolls: true, headInside: true }, phone, phone.pageOverflow <= 0 && phone.stripScrolls && phone.headInside);
+{
+  const cells = await page.evaluate(() => {
+    const local = document.querySelector(".home-local .home-tick")?.getBoundingClientRect().height ?? null;
+    const resultTeam = [...document.querySelectorAll(".home-ticker .home-tick-team")].find((e) => !e.closest(".home-local"));
+    return { local, resultTeamMinHeight: resultTeam ? getComputedStyle(resultTeam).minHeight : null };
+  });
+  check("P2 phone: a « Chez vous » cell as tight as on desktop, the results strip unchanged", { localAtMost: deskTick, resultTeamMinHeight: "44px" }, { ...cells, desktop: deskTick },
+    cells.local != null && deskTick != null && cells.local <= deskTick + 1 && cells.resultTeamMinHeight === "44px");
+}
 await shot(page, "phone-bresil");
 await page.close();
 await context.close();

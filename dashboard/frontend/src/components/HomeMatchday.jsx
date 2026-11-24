@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import React, { useEffect, useId, useRef, useState } from "react";
+import React, { useId, useState } from "react";
 import Icon from "./Icon.jsx";
 import { PhoneFoldToggle, usePhoneFold } from "./PhoneFold.jsx";
 import { Media } from "./UI.jsx";
@@ -10,11 +10,8 @@ import { Term } from "./Hint.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { number } from "../services/format.js";
 import { kickoffFormatter } from "../services/fixtures.js";
-import {
-  countryFlag,
-  homeCountryName,
-  HOME_COUNTRY_NONE,
-} from "../services/home-country.js";
+import { homeCountryName, stripDays } from "../services/home-country.js";
+import HomeCountryMenu from "./HomeCountryMenu.jsx";
 import {
   internationalLabel,
   leagueOf,
@@ -82,35 +79,44 @@ export function HomeTicker({
  * common read: no favourite in it), drawn as the results strip above: a day's label, then a cell per match,
  * the score once played, the kickoff before. The country button opens the menu of the manifest's countries.
  */
-export function HomeLocal({ matches, country, countries, onChoose }) {
+export function HomeLocal({
+  matches,
+  country,
+  choice,
+  countries,
+  onChoose,
+  empty = false,
+}) {
   const f = useFootball(),
-    name = homeCountryName(country),
-    days = [];
-  for (const match of matches) {
-    const last = days.at(-1);
-    if (last?.day === match.day) last.matches.push(match);
-    else days.push({ day: match.day, matches: [match] });
-  }
+    name = homeCountryName(country);
   return (
     <section className="home-local" aria-label={`Chez vous · ${name}`}>
       <div className="home-local-head">
         <Kicker>Chez vous</Kicker>
-        <CountryMenu
+        <HomeCountryMenu
           country={country}
+          choice={choice}
           countries={countries}
           onChoose={onChoose}
         />
       </div>
-      <nav className="home-ticker" aria-label={`Matchs · ${name}`}>
-        {days.map(({ day, matches: list }) => (
-          <React.Fragment key={day}>
-            <span className="home-ticker-day">{shortDay(day)}</span>
-            {list.map((m) => (
-              <LocalTick key={m.fixture.id} match={m} f={f} />
-            ))}
-          </React.Fragment>
-        ))}
-      </nav>
+      {empty ? (
+        // A country chosen by hand without match keeps its head: the way back stays here.
+        <p className="home-meta home-local-empty" role="status">
+          Aucun match d’ici 7 jours
+        </p>
+      ) : (
+        <nav className="home-ticker" aria-label={`Matchs · ${name}`}>
+          {stripDays(matches).map(({ day, matches: list }) => (
+            <React.Fragment key={day}>
+              <span className="home-ticker-day">{shortDay(day)}</span>
+              {list.map((m) => (
+                <LocalTick key={m.fixture.id} match={m} f={f} />
+              ))}
+            </React.Fragment>
+          ))}
+        </nav>
+      )}
     </section>
   );
 }
@@ -153,90 +159,6 @@ function LocalTick({ match: { fixture: x, time }, f }) {
           </Link>
         );
       })}
-      <div className="home-tick-foot" />
-    </div>
-  );
-}
-
-/** The country button and its menu (the header menus' panel), with « Ne rien afficher » last. */
-function CountryMenu({ country, countries, onChoose }) {
-  const [open, setOpen] = useState(false),
-    root = useRef(null),
-    button = useRef(null),
-    panel = useRef(null),
-    name = homeCountryName(country);
-  useEffect(() => {
-    if (!open) return undefined;
-    panel.current
-      ?.querySelector('[aria-checked="true"]')
-      ?.scrollIntoView({ block: "nearest" });
-    const onPointer = (event) => {
-      if (!root.current?.contains(event.target)) setOpen(false);
-    };
-    const onKey = (event) => {
-      if (event.key !== "Escape") return;
-      setOpen(false);
-      button.current?.focus();
-    };
-    document.addEventListener("pointerdown", onPointer);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("pointerdown", onPointer);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
-  const choose = (code) => {
-    setOpen(false);
-    onChoose(code);
-  };
-  return (
-    <div className="home-local-picker" ref={root}>
-      <button
-        type="button"
-        ref={button}
-        className="filter-input-wrap home-local-country"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-label={`Pays : ${name}`}
-        onClick={() => setOpen((value) => !value)}
-      >
-        <NationalFlag code={countryFlag(country)} name={name} />
-        <span>{name}</span>
-        <Icon name="chevron" className="select-chevron" />
-      </button>
-      {open && (
-        <div
-          className="nav-menu-panel home-local-menu"
-          role="menu"
-          aria-label="Pays"
-          ref={panel}
-        >
-          <div className="nav-menu-list">
-            {countries.map((c) => (
-              <button
-                key={c.code}
-                type="button"
-                role="menuitemradio"
-                aria-checked={c.code === country}
-                className="nav-menu-item"
-                onClick={() => choose(c.code)}
-              >
-                <NationalFlag code={c.flag} name={c.name} />
-                <span>{c.name}</span>
-              </button>
-            ))}
-            <button
-              type="button"
-              role="menuitemradio"
-              aria-checked={false}
-              className="nav-menu-item home-local-none"
-              onClick={() => choose(HOME_COUNTRY_NONE)}
-            >
-              <span>Ne rien afficher</span>
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

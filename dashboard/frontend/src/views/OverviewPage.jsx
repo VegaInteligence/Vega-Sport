@@ -17,6 +17,7 @@ import {
 import {
   initialTitleRace,
   menuCountries,
+  stripMode,
   resolveHomeCountry,
 } from "../services/home-country.js";
 import { chooseUpcoming } from "../services/home-upcoming.js";
@@ -393,6 +394,16 @@ function CompactOverview() {
     () => menuCountries(f.manifest.competitions || []),
     [f.manifest],
   );
+  // The same country menu sits in the strip's head and, always, in the preferences panel:
+  // hiding the strip never leaves the visitor without a way back.
+  const homeChoice = f.preferences.homeCountry || "";
+  const countryControl = {
+    country,
+    choice: homeChoice,
+    countries,
+    onChoose: (code) => f.savePreferences({ homeCountry: code }),
+  };
+  const localMode = stripMode({ choice: homeChoice, country, data: shownLocal });
   // The synthesis refreshes in the background: the last one stays on screen, and a failed
   // refresh is tried again a minute later without a word on the page.
   const retrySummary = summary.retry;
@@ -419,7 +430,7 @@ function CompactOverview() {
         actions={
           <>
             <SeasonFilter f={f} compact />
-            <HomePreferences f={f} />
+            <HomePreferences f={f} country={countryControl} />
           </>
         }
       >
@@ -478,15 +489,16 @@ function CompactOverview() {
               archived={archived}
               now={now}
               country={country}
+              countryControl={countryControl}
               local={
-                shownLocal
-                  ? {
+                localMode === "hidden"
+                  ? null
+                  : {
+                      ...countryControl,
                       country: shownLocal.country,
                       matches: shownLocal.matches || [],
-                      countries,
-                      onChoose: (code) => f.savePreferences({ homeCountry: code }),
+                      empty: localMode === "empty",
                     }
-                  : null
               }
               model={{
                 ...data,
@@ -542,6 +554,7 @@ function OverviewContent({
   now,
   model,
   country = null,
+  countryControl = null,
   local = null,
 }) {
   const {
@@ -585,7 +598,7 @@ function OverviewContent({
         actions={
           <>
             <SeasonFilter f={f} compact />
-            <HomePreferences f={f} />
+            <HomePreferences f={f} country={countryControl} />
           </>
         }
       >
@@ -646,7 +659,7 @@ function OverviewContent({
         )}
         <div className="home-toolbar-filters">
           <SeasonFilter f={f} compact />
-          <HomePreferences f={f} />
+          <HomePreferences f={f} country={countryControl} />
         </div>
       </div>
       {!results.length && !internationals.length && !archived && (
@@ -666,12 +679,14 @@ function OverviewContent({
         competitions={competitions}
         period={matchWeek}
       />
-      {local?.matches.length > 0 && (
+      {local && (
         <HomeLocal
           matches={local.matches}
           country={local.country}
+          choice={local.choice}
           countries={local.countries}
           onChoose={local.onChoose}
+          empty={local.empty}
         />
       )}
       <div className="home-bento">

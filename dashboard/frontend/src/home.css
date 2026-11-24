@@ -293,6 +293,21 @@ html[data-theme="light"] {
   border-top: 1px solid var(--border);
   color: var(--muted);
 }
+/* A country chosen by hand with no match in the window: the head stays, one muted line. */
+.home-local .home-local-empty {
+  align-self: center;
+  margin: 0;
+  padding: 0 14px;
+}
+/* The same menu, as a line of the preferences panel, apart from the competitions below it. */
+.home-preferences-country {
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+.home-preferences-country .home-local-picker {
+  display: inline-block;
+}
 
 /* Bento grid */
 .home-bento {
@@ -2119,5 +2134,23 @@ html[data-theme="light"] {
   }
   .home-local-country {
     height: 40px;
+  }
+  /* The cells keep the desktop's height: no 44px team rows, no empty foot under them. */
+  .home-local .home-tick {
+    gap: 3px;
+  }
+  /* The vertical day label sets the strip's height: at the phone's 12px floor it outgrows
+     the cells; tighter letters and padding keep it to their height. */
+  .home-local .home-ticker-day {
+    padding: 4px 5px;
+    letter-spacing: 0.02em;
+  }
+  .home-local .home-tick-top,
+  .home-local .home-tick-team {
+    min-height: 0;
+  }
+  .home-local .home-local-empty {
+    align-self: flex-start;
+    padding: 10px 0;
   }
 }

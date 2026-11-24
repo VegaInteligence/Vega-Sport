@@ -78,3 +78,38 @@ test("C7 the title race opens on the country's league when it is among the table
   assert.equal(initialTitleRace(tables.filter((t) => t.leagueId !== "l_3FJFUl"), competitions, null), "l_4WFCIZ");
   assert.equal(initialTitleRace([], competitions, "FRA"), undefined);
 });
+
+// Round 2 (review of 24 Nov). Failure modes and expected outcomes:
+//  D1 Within a day the strip follows the API's importance order, so a finished match comes after coming ones →
+//     each day's matches by kick-off (then id); the days and the API's selection unchanged.
+//  D2 The strip's state: no country, a detected country without match, or a read not answered → hidden; a country
+//     with matches → its cells; a country chosen by hand without match → its head and one line (no dead end).
+import { stripDays, stripMode } from "../dashboard/frontend/src/services/home-country.js";
+
+test("D1 a day's matches by kick-off, the API's days and selection kept", () => {
+  const m = (id, day, iso) => ({ fixture: { id }, day, time: Date.parse(iso) });
+  const days = stripDays([
+    m("a", "2026-11-23", "2026-11-23T22:00:00Z"),
+    m("chap", "2026-11-24", "2026-11-24T21:00:00Z"),
+    m("santos", "2026-11-24", "2026-11-25T00:00:00Z"),
+    m("bota", "2026-11-24", "2026-11-23T23:30:00Z"),
+    m("z", "2026-11-26", "2026-11-26T20:00:00Z"),
+    m("y", "2026-11-26", "2026-11-26T20:00:00Z"),
+  ]);
+  assert.deepEqual(days.map((d) => [d.day, d.matches.map((x) => x.fixture.id)]), [
+    ["2026-11-23", ["a"]],
+    ["2026-11-24", ["bota", "chap", "santos"]],
+    ["2026-11-26", ["y", "z"]],
+  ]);
+});
+
+test("D2 the strip's state, never a dead end for a hand-chosen country", () => {
+  const some = { country: "FRA", matches: [{}] }, none = { country: "FRA", matches: [] };
+  assert.equal(stripMode({ choice: "", country: null, data: null }), "hidden");
+  assert.equal(stripMode({ choice: "none", country: null, data: null }), "hidden");
+  assert.equal(stripMode({ choice: "", country: "FRA", data: some }), "matches");
+  assert.equal(stripMode({ choice: "", country: "FRA", data: none }), "hidden");
+  assert.equal(stripMode({ choice: "FRA", country: "FRA", data: none }), "empty");
+  assert.equal(stripMode({ choice: "FRA", country: "FRA", data: some }), "matches");
+  assert.equal(stripMode({ choice: "FRA", country: "FRA", data: null }), "hidden");
+});

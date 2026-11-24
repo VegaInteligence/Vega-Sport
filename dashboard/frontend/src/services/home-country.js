@@ -136,3 +136,31 @@ export function initialTitleRace(
     ? DEFAULT_TITLE_RACE
     : tables[0]?.leagueId;
 }
+
+/** The strip's days in the API's order, each day's matches by kick-off (the API's selection unchanged). */
+export function stripDays(matches = []) {
+  const days = [];
+  for (const match of matches) {
+    const last = days.at(-1);
+    if (last?.day === match.day) last.matches.push(match);
+    else days.push({ day: match.day, matches: [match] });
+  }
+  for (const day of days)
+    day.matches.sort(
+      (a, b) =>
+        a.time - b.time ||
+        String(a.fixture?.id).localeCompare(String(b.fixture?.id)),
+    );
+  return days;
+}
+
+/**
+ * "matches": the strip; "empty": a country chosen by hand without match keeps its head and one
+ * line (the way back stays on the page); "hidden": no country, no answer, or a detected country
+ * without match.
+ */
+export function stripMode({ choice, country, data }) {
+  if (!country || !data) return "hidden";
+  if (data.matches?.length) return "matches";
+  return homeCountryChoice(choice) === country ? "empty" : "hidden";
+}
