@@ -8,8 +8,8 @@
 //
 // Failure modes and expected outcomes:
 //  E1 Europe (x-vercel-ip-continent EU), no stored choice: the banner (a region named « Mesure d’audience », the
-//     sentence, « Accepter », « Refuser », the link « Confidentialité » to /confidentialite/, which next/link renders without its final slash) shows on /, /clubs/ and
-//     /connexion (the run's server has accounts on), and NO request goes to a measurement script or endpoint
+//     sentence, « Accepter », « Refuser », the link « Confidentialité » to the privacy page's cookies section, /confidentialite#cookies) shows on /, /clubs/,
+//     /confidentialite and /connexion (when the server has accounts on; else recorded as not run), and NO request goes to a measurement script or endpoint
 //     (va.vercel-scripts.com in development, /_vercel/insights/ and /_vercel/speed-insights/ in production).
 //  E2 « Accepter »: the banner goes, the measurement scripts are requested, localStorage `vega.consent.v1` holds
 //     { measurement: true, at: <ISO date> }; after a reload no banner and the scripts load again.
@@ -19,14 +19,14 @@
 //  E5 Unknown location (no geolocation header: local, another host): the banner shows, nothing measured.
 //  E6 An EU outermost region (country RE, continent AF): the banner shows.
 //  E7 A stored choice older than six months (an acceptance of 200 days ago): the banner shows again, nothing measured.
-//  E8 Reopening (window event `vega:consent-open`, what the footer's « Cookies » button sends): after a refusal the
+//  E8 Reopening with the footer's « Cookies » button (ConsentSettingsLink): after a refusal the
 //     banner shows again, « Refuser » marked as the current choice (aria-pressed true, « Accepter » false); choosing
 //     « Accepter » then loads the measurement without a reload.
 //  E9 Refusing after accepting, in the same page: the measurement components leave at once; no measurement request
 //     after the next load.
 //  E10 Both buttons have the same box (width and height within 1 px) and the same look (background, colour, border,
 //     font size and weight): refusing is as easy as accepting.
-//  E11 The server's HTML of /, /clubs/ and /connexion (requested with the Europe headers) contains neither the banner
+//  E11 The server's HTML of /, /clubs/, /confidentialite and /connexion (requested with the Europe headers) contains neither the banner
 //     nor its buttons: cached pages are the same for everyone.
 //  E12 /api/consent-region answers only {"consent":"required"} or {"consent":"none"}, with Cache-Control private,
 //     no-store, for EU, NA, RE/AF and no header.
@@ -39,6 +39,16 @@
 //  E16 localStorage throwing: the banner shows, nothing is measured, no page error.
 //  E17 The region is announced once (one polite live region holding the banner), and the banner appears without moving
 //     the page (the main heading's position is unchanged after it shows).
+//  E18 The footer's « Informations » column holds « Cookies » as its third entry on /, /clubs/, /confidentialite and
+//     /conditions-utilisation, looking like the two links beside it (font, size, weight, colour, line height, row
+//     height; the same colour on hover), desktop and phone.
+//  E19 The banner's title ends with the logo's asterisk, the very drawing the legal pages' titles use (same path),
+//     not the round point.
+//  E20 /confidentialite with the banner open: on a desktop (1440 × 900, 1280 × 680) the banner does not overlap the
+//     sticky Sommaire (while the banner is open the Sommaire keeps above it and scrolls inside its own box);
+//     on a 390 phone it sits above the tab bar and below the sticky « Sommaire » bar.
+//  E21 Following the banner's « Confidentialité » link (desktop and phone): the section « Cookies et stockage du
+//     navigateur » heading is shown clear of the sticky header (and the phone's Sommaire bar) and of the banner.
 //  X1 No page error during the run.
 //
 // Run against a local site (dev or production build) whose API reads go to the replay of recorded production reads:
@@ -130,6 +140,18 @@ const visible = (page) => banner(page).isVisible().catch(() => false);
 const stored = (page) => page.evaluate((key) => { try { return JSON.parse(localStorage.getItem(key)); } catch { return "unreadable"; } }, KEY);
 const shot = (page, name) => page.screenshot({ path: path.join(out, `${name}.png`) }).catch(() => {});
 
+// /connexion exists only with accounts on (its sign-in form); else it is the 404 page.
+const accountsOn = await fetch(base + "/connexion", { redirect: "manual" }).then(
+  async (r) => r.status === 200 && (await r.text()).includes("signin-submit"),
+  () => false,
+);
+/** The footer's « Cookies » button, as a visitor reaches it. */
+async function reopenFromFooter(page) {
+  const button = page.locator('.site-footer nav[aria-label="Informations"] button', { hasText: "Cookies" });
+  await button.scrollIntoViewIfNeeded({ timeout: 10000 });
+  await button.click();
+}
+
 try {
   // E12 — the answer of /api/consent-region.
   {
@@ -149,10 +171,10 @@ try {
   // E11 — the server's HTML never holds the banner.
   {
     const seen = [];
-    for (const route of ["/", "/clubs/", "/connexion"]) {
+    for (const route of ["/", "/clubs/", "/confidentialite", ...(accountsOn ? ["/connexion"] : [])]) {
       const response = await fetch(base + route, { headers: EU });
       const html = await response.text();
-      seen.push({ route, status: response.status, banner: /Mesure d’audience|Mesure d&#x27;audience|consent-title|>Accepter<|>Refuser</.test(html) });
+      seen.push({ route, status: response.status, banner: /id="consent-title"|class="consent"|>Accepter<\/button>|>Refuser<\/button>/.test(html) });
     }
     check("E11", "no banner markup in the server's HTML", seen, seen.every((s) => s.status === 200 && !s.banner));
   }
@@ -161,7 +183,8 @@ try {
   {
     const { context, page, measured } = await open({ geo: EU, label: "E1" });
     const pages = [];
-    for (const route of ["/", "/clubs/", "/connexion"]) {
+    if (!accountsOn) notRun("E1 /connexion", "accounts are off on this server: /connexion is the 404 page");
+    for (const route of ["/", "/clubs/", "/confidentialite", ...(accountsOn ? ["/connexion"] : [])]) {
       await goto(page, route);
       const region = banner(page);
       const shown = await visible(page);
@@ -172,9 +195,9 @@ try {
     }
     check(
       "E1",
-      "banner with « Accepter », « Refuser » and /confidentialite/ on /, /clubs/, /connexion; no measurement request",
+      "banner with « Accepter », « Refuser » and /confidentialite#cookies on every page; no measurement request",
       { pages, measured },
-      pages.every((p) => p.shown && /^\/confidentialite\/?$/.test(p.link || "") && p.buttons.join("|") === "Accepter|Refuser") && measured.length === 0,
+      pages.every((p) => p.shown && p.link === "/confidentialite#cookies" && p.buttons.join("|") === "Accepter|Refuser") && measured.length === 0,
     );
 
     // E17 — one polite live region, the page does not move.
@@ -294,7 +317,7 @@ try {
     const { context, page, measured } = await open({ geo: EU, stored: refused, label: "E8" });
     await goto(page, "/clubs/");
     const hiddenFirst = !(await visible(page));
-    await page.evaluate(() => window.dispatchEvent(new Event("vega:consent-open")));
+    await reopenFromFooter(page).catch(() => {});
     await page.waitForTimeout(500);
     const shown = await visible(page);
     const pressed = shown
@@ -321,7 +344,7 @@ try {
     const { context, page, measured } = await open({ geo: EU, stored: accepted, label: "E9" });
     await goto(page, "/clubs/");
     const loaded = measured.length;
-    await page.evaluate(() => window.dispatchEvent(new Event("vega:consent-open")));
+    await reopenFromFooter(page).catch(() => {});
     await page.waitForTimeout(400);
     await banner(page).getByRole("button", { name: "Refuser" }).click().catch(() => {});
     await page.waitForTimeout(800);
@@ -440,6 +463,114 @@ try {
       await shot(page, "E14-connexion-phone");
       check("E14", "the sign-in button is clear of the banner at first view", boxes, clear);
     }
+    await context.close();
+  }
+
+  // E18 — the footer's « Cookies », like its neighbours.
+  for (const viewport of [desktop, phone]) {
+    const refused = { measurement: false, at: new Date(Date.now() - DAY).toISOString() };
+    const { context, page } = await open({ geo: EU, viewport, stored: refused, label: `E18-${viewport.width}` });
+    const seen = [];
+    let ok = true;
+    for (const route of ["/", "/clubs/", "/confidentialite", "/conditions-utilisation"]) {
+      await goto(page, route);
+      const column = page.locator('.site-footer nav[aria-label="Informations"]');
+      await column.scrollIntoViewIfNeeded({ timeout: 10000 }).catch(() => {});
+      const look = await page.evaluate(() => {
+        const items = [...document.querySelectorAll('.site-footer nav[aria-label="Informations"] li')];
+        return items.map((li) => {
+          const el = li.querySelector("a, button");
+          if (!el) return null;
+          const s = getComputedStyle(el);
+          return { tag: el.tagName, current: el.getAttribute("aria-current"), text: el.textContent.trim(), font: s.fontFamily, size: s.fontSize, weight: s.fontWeight, color: s.color, line: s.lineHeight, h: Math.round(li.getBoundingClientRect().height), align: s.textAlign, padding: s.padding, deco: s.textDecorationLine };
+        });
+      });
+      // The reference: a link of the column that is not the current page's (that one is highlighted).
+      const first = look.slice(0, 2).find((item) => item && !item.current);
+      const third = look[2];
+      let hover = null;
+      if (third && viewport === desktop) {
+        await page.locator('.site-footer nav[aria-label="Informations"] a').first().hover();
+        const linkHover = await page.evaluate(() => getComputedStyle(document.querySelector('.site-footer nav[aria-label="Informations"] a')).color);
+        await page.locator('.site-footer nav[aria-label="Informations"] button').hover();
+        const buttonHover = await page.evaluate(() => getComputedStyle(document.querySelector('.site-footer nav[aria-label="Informations"] button')).color);
+        hover = { linkHover, buttonHover };
+      }
+      const same = third && first && third.tag === "BUTTON" && third.text === "Cookies" &&
+        ["font", "size", "weight", "color", "line", "h", "deco"].every((k) => first[k] === third[k]) &&
+        (!hover || hover.linkHover === hover.buttonHover);
+      ok &&= Boolean(same) && look.length === 3;
+      seen.push({ route, look, hover });
+    }
+    if (viewport === phone) await shot(page, "E18-footer-phone");
+    else await shot(page, "E18-footer-desktop");
+    check(`E18-${viewport.width}`, "« Cookies » third in « Informations », styled as the links beside it", seen, ok);
+    await context.close();
+  }
+
+  // E19 — the title's asterisk is the legal pages' one.
+  {
+    const { context, page } = await open({ geo: EU, label: "E19" });
+    await goto(page, "/confidentialite");
+    const marks = await page.evaluate(() => ({
+      banner: document.querySelector("#consent-title svg path")?.getAttribute("d") || null,
+      dot: Boolean(document.querySelector("#consent-title .brand-dot")),
+      legal: document.querySelector("h1 svg path")?.getAttribute("d") || null,
+    }));
+    check("E19", "the banner's title carries the legal titles' asterisk, no round point", { banner: marks.banner?.slice(0, 40), legal: marks.legal?.slice(0, 40), dot: marks.dot },
+      marks.banner && marks.banner === marks.legal && !marks.dot);
+    await context.close();
+  }
+
+  // E20 — on the privacy page, with its sticky Sommaire (a short laptop screen too, where the Sommaire is tallest).
+  for (const viewport of [desktop, { width: 1280, height: 680 }, phone]) {
+    const { context, page } = await open({ geo: EU, viewport, label: `E20-${viewport.width}` });
+    await goto(page, "/confidentialite");
+    await page.evaluate(() => window.scrollTo(0, 1600));
+    await page.waitForTimeout(500);
+    const boxes = await page.evaluate(() => {
+      const box = (n) => (n ? n.getBoundingClientRect().toJSON() : null);
+      return {
+        banner: box(document.getElementById("consent-title")?.closest("section")),
+        toc: box(document.querySelector(".legal-toc")),
+        tabbar: box(document.querySelector(".tabbar")),
+        height: innerHeight,
+        width: innerWidth,
+        scrollWidth: document.documentElement.scrollWidth,
+      };
+    });
+    const apart = (a, b) => !a || !b || a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top;
+    const ok = boxes.banner && apart(boxes.banner, boxes.toc) && boxes.scrollWidth <= boxes.width &&
+      (viewport.width > 960 || (boxes.tabbar && boxes.banner.bottom <= boxes.tabbar.top + 0.5 && boxes.banner.top >= boxes.toc.bottom));
+    await shot(page, `E20-confidentialite-${viewport.width}`);
+    check(`E20-${viewport.width}x${viewport.height}`, viewport.width > 960 ? "the banner and the sticky Sommaire do not overlap" : "the banner between the Sommaire bar and the tab bar", boxes, ok);
+    await context.close();
+  }
+
+  // E21 — the banner's link lands on the cookies section, clear of the bars and of the banner.
+  for (const viewport of [desktop, phone]) {
+    const { context, page } = await open({ geo: EU, viewport, label: `E21-${viewport.width}` });
+    await goto(page, "/clubs/");
+    await banner(page).getByRole("link", { name: "Confidentialité" }).click().catch(() => {});
+    await page.waitForURL(/\/confidentialite#cookies$/, { timeout: 30000 }).catch(() => {});
+    await page.waitForLoadState("networkidle", { timeout: 30000 }).catch(() => {});
+    await page.waitForTimeout(1200);
+    const boxes = await page.evaluate(() => {
+      const box = (n) => (n ? n.getBoundingClientRect().toJSON() : null);
+      return {
+        url: location.pathname + location.hash,
+        heading: box(document.getElementById("cookies")),
+        header: box(document.querySelector(".topbar")),
+        toc: getComputedStyle(document.querySelector(".legal-toc") || document.body).position === "sticky" && innerWidth <= 960 ? box(document.querySelector(".legal-toc")) : null,
+        banner: box(document.getElementById("consent-title")?.closest("section")),
+        height: innerHeight,
+      };
+    });
+    const top = Math.max(boxes.header?.bottom ?? 0, boxes.toc?.bottom ?? 0);
+    const ok = boxes.url === "/confidentialite#cookies" && boxes.heading && boxes.banner &&
+      boxes.heading.top >= top - 0.5 && boxes.heading.bottom <= boxes.banner.top;
+    await shot(page, `E21-cookies-${viewport.width}`);
+    check(`E21-${viewport.width}`, "the cookies heading clear of the sticky bars and of the banner", boxes, ok);
     await context.close();
   }
 

@@ -46,6 +46,18 @@
 //     `cookies`: the cookie banner's link points to /confidentialite#cookies.
 //  L18 (phone anchor) On a 390 px phone, opening the Sommaire and following its first link shows the
 //     first field of that section between the sticky bars at the top and the tab bar at the bottom.
+//  L19 (captions) Each table of the pages is introduced by its section's heading: its caption stays in the
+//     table's accessible name but is hidden visually (a box of 1 px or less), desktop and phone, so the page
+//     never shows « Cookies et stockage du navigateur » twice in a row.
+//  L20 (consent text) The privacy page says what the consent banner does (src/services/consent.js,
+//     components/Consent.jsx): it also shows when the location is unknown; without a choice nothing is
+//     measured and it returns on the next page; the choice is kept six months in this browser under
+//     vega.consent.v1 and is not linked to the account; after a refusal nothing more is sent, from the
+//     current page on; outside Europe the measurement works unless it was refused in this browser.
+//  L5 also: the footer's « Informations » column ends with the button « Cookies » (the consent banner's
+//     reopening control), after the two links.
+//  The consent banner itself is tested by tests/e2e/consent.e2e.mjs: here every browser starts with a stored
+//  refusal (vega.consent.v1) so the banner never covers what these checks look at.
 //  X1 No page error and no console error on the legal pages, apart from network failures of third
 //     party scripts a local server cannot reach, and Vercel's analytics scripts (/_vercel/), which
 //     `next start` does not serve (recorded in the evidence, not judged).
@@ -109,6 +121,11 @@ async function open(viewport, label) {
   const context = await browser.newContext({
     viewport, deviceScaleFactor: phone ? 3 : 1, locale: "fr-FR", timezoneId: "Europe/Paris",
     isMobile: phone, hasTouch: phone,
+  });
+  await context.addInitScript(() => {
+    try {
+      localStorage.setItem("vega.consent.v1", JSON.stringify({ measurement: false, at: new Date().toISOString() }));
+    } catch {}
   });
   const page = await context.newPage();
   page.on("pageerror", (e) => consoleLog.push(`${label} pageerror: ${String(e).slice(0, 300)}`));
@@ -304,6 +321,39 @@ try {
 
   check("L14 both", "the two pages together use exactly the four owner fields", [...usedFields].sort(), [...usedFields].sort().join() === FIELDS.join());
 
+  // ---- L19 (desktop) and L20: the tables' captions, the consent text
+  {
+    await desk.goto(base + "/confidentialite", { waitUntil: "networkidle", timeout: 120000 });
+    const captions = await desk.evaluate(() => [...document.querySelectorAll("main table")].map((table) => {
+      const caption = table.querySelector("caption");
+      const box = caption?.getBoundingClientRect();
+      return { caption: caption?.textContent.trim() || null, w: box ? Math.round(box.width) : null, h: box ? Math.round(box.height) : null };
+    }));
+    const named = [];
+    for (const c of captions) named.push(c.caption ? await desk.getByRole("table", { name: c.caption }).count() : 0);
+    check("L19 desktop", "3 tables on the privacy page; each caption names its table and is hidden visually (≤ 1 px)", { captions, named },
+      captions.length === 3 && captions.every((c, i) => c.caption && c.w <= 1 && c.h <= 1 && named[i] === 1));
+    const terms = await fetch(base + "/conditions-utilisation").then((r) => r.text());
+    check("L19 terms", "the terms page has no table (nothing to hide)", (terms.match(/<table/g) || []).length, !/<table/.test(terms));
+    const text = await desk.evaluate(() => ({
+      cookies: document.getElementById("cookies")?.closest("section")?.innerText || "",
+      without: document.getElementById("sans-compte")?.closest("section")?.innerText || "",
+    }));
+    const plain = (t) => flat(t).replace(/’/g, "'");
+    const cookies = plain(text.cookies), without = plain(text.without);
+    const wanted = [
+      [cookies, "Si vous êtes en Europe, ou si votre position est inconnue"],
+      [cookies, "Sans choix de votre part, rien n'est mesuré et le bandeau revient à la page suivante"],
+      [cookies, "gardé six mois dans ce navigateur (clé vega.consent.v1)"],
+      [cookies, "il n'est pas lié à votre compte"],
+      [cookies, "après un refus, plus rien n'est envoyé, dès la page en cours"],
+      [cookies, "sauf si vous l'avez refusée dans ce navigateur"],
+      [without, "En Europe, ou si votre position est inconnue, ces deux outils ne sont chargés qu'après votre accord"],
+    ];
+    const missing = wanted.filter(([where, phrase]) => !where.includes(phrase)).map(([, phrase]) => phrase);
+    check("L20", "the privacy page describes the consent banner as the code does", missing.length ? { missing } : "all present", missing.length === 0);
+  }
+
   // ---- L5: the footer on four pages
   for (const route of ["/", "/clubs", ...PAGES.map((p) => p.path)]) {
     await desk.goto(base + route, { waitUntil: "networkidle", timeout: 120000 });
@@ -312,9 +362,16 @@ try {
       const a = [...document.querySelectorAll(".site-footer a")].find((link) => link.textContent.trim() === label);
       return a ? { label, href: a.getAttribute("href"), current: a.getAttribute("aria-current") } : { label, missing: true };
     }), FOOTER);
+    const column = await desk.evaluate(() =>
+      [...document.querySelectorAll('.site-footer nav[aria-label="Informations"] li')].map((li) => {
+        const control = li.querySelector("a, button");
+        return control ? `${control.tagName.toLowerCase()}:${control.textContent.trim()}` : "empty";
+      }),
+    );
     const ok = links.every((l, i) => !l.missing && bare(l.href) === bare(FOOTER[i][1]) &&
-      (bare(FOOTER[i][1]) === route ? l.current === "page" : l.current === null));
-    check(`L5 ${route}`, "the footer links both pages, aria-current on the current one only", links, ok);
+      (bare(FOOTER[i][1]) === route ? l.current === "page" : l.current === null)) &&
+      column.join("|") === "a:Confidentialité|a:Conditions d’utilisation|button:Cookies";
+    check(`L5 ${route}`, "the footer links both pages, aria-current on the current one only, then the button « Cookies »", { links, column }, ok);
   }
   await desk.locator(".site-footer").scrollIntoViewIfNeeded().catch(() => {});
   await desk.locator(".site-footer").screenshot({ path: path.join(out, "footer-desktop.png") }).catch(() => {});
@@ -341,6 +398,13 @@ try {
     check(`L10 ${p.path}`, "390 px: no sideways scroll, nothing wider than the screen outside its own scroll box", sideways,
       sideways.overflow <= 0 && sideways.wide.length === 0);
     await phone.screenshot({ path: path.join(out, `${p.path.slice(1)}-phone.png`) });
+    if (p.path === "/confidentialite") {
+      const captions = await phone.evaluate(() => [...document.querySelectorAll("main table caption")].map((c) => {
+        const box = c.getBoundingClientRect();
+        return { caption: c.textContent.trim(), w: Math.round(box.width), h: Math.round(box.height) };
+      }));
+      check("L19 phone", "390 px: the 3 captions hidden visually", captions, captions.length === 3 && captions.every((c) => c.w <= 1 && c.h <= 1));
+    }
     // L18: the Sommaire's first link, then the first field of that section between the bars.
     let reached = { missing: true };
     const toggle = phone.locator(".legal-toc-toggle");
