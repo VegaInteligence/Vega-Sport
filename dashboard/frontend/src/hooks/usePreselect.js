@@ -4,8 +4,8 @@
 // it is not preselected again this visit (sessionStorage: a cleared filter stays cleared).
 import { useEffect, useRef } from "react";
 import { preselect, preselectMemory } from "../services/preference-effects.js";
+import { PRESELECT_KEY as KEY } from "../services/user-preferences.js"; // forgotten at sign-out (clearPreferences)
 
-const KEY = "vega.preselect.v1";
 function read() {
   try {
     const value = JSON.parse(window.sessionStorage.getItem(KEY) || "{}");

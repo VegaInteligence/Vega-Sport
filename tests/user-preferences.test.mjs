@@ -42,11 +42,15 @@
 //     over the account → clearPreferences(), once signed out (setPreferencesSync(null)), writes the « nothing chosen »
 //     contract to the stores, keeping the keys named in `keep` (default: the theme); with an adapter set, or before
 //     the stores are connected, it writes nothing and returns false; no save ever follows it.
+//  C2 A visit's memory outlives the sign-out (a filter cleared by the account's owner stays cleared for the next
+//     person) → clearPreferences() also removes every key of VISIT_KEYS from sessionStorage (vega.preselect.v1, the
+//     key usePreselect.js writes); refused (adapter set), it removes nothing; no sessionStorage, no throw.
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
   CONTRACT_VERSION,
   LIMITS,
+  VISIT_KEYS,
   clearPreferences,
   connectPreferences,
   createPreferencesSync,
@@ -491,6 +495,35 @@ test("C1 clearPreferences empties the stores once signed out, never an account",
     await new Promise((r) => setTimeout(r, 1100));
     assert.equal(saves, 0);
   } finally {
+    setPreferencesSync(null);
+    disconnect();
+  }
+});
+
+test("C2 clearPreferences forgets the visit's memory too", async () => {
+  const source = await import("node:fs").then((fs) => fs.readFileSync(new URL("../dashboard/frontend/src/hooks/usePreselect.js", import.meta.url), "utf8"));
+  assert.deepEqual(VISIT_KEYS, ["vega.preselect.v1"]);
+  assert.match(source, /VISIT_KEYS|PRESELECT_KEY/); // the hook's key is the contract module's, not a second literal
+  assert.doesNotMatch(source, /"vega\.preselect\.v1"/);
+  const kept = new Map([["vega.preselect.v1", "{}"], ["other", "1"]]);
+  const before = globalThis.window;
+  globalThis.window = { sessionStorage: { removeItem: (key) => kept.delete(key) } };
+  let state = toContract(STORES);
+  const disconnect = connectPreferences({ read: () => state, write: (value) => (state = value) });
+  try {
+    setPreferencesSync({ load: async () => null, save: async () => {} });
+    assert.equal(clearPreferences(), false);
+    assert.equal(kept.has("vega.preselect.v1"), true);
+    setPreferencesSync(null);
+    assert.equal(clearPreferences(), true);
+    assert.deepEqual([...kept.keys()], ["other"]);
+    globalThis.window = { get sessionStorage() { throw new Error("blocked"); } };
+    assert.equal(clearPreferences(), true);
+    globalThis.window = before;
+    assert.equal(clearPreferences(), true);
+  } finally {
+    globalThis.window = before;
+    if (before === undefined) delete globalThis.window;
     setPreferencesSync(null);
     disconnect();
   }

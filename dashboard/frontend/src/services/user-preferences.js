@@ -55,6 +55,9 @@ import { cleanResearch } from "./research-storage.js";
 import { HOME_PRIORITIES } from "./home-priority.js";
 
 export const CONTRACT_VERSION = 1;
+/** sessionStorage keys holding a visit's memory of the preferences (usePreselect.js): forgotten at sign-out. */
+export const PRESELECT_KEY = "vega.preselect.v1";
+export const VISIT_KEYS = Object.freeze([PRESELECT_KEY]);
 
 /** The site's bounds (research-storage.js, the home's favourites, the API's identifiers()). */
 export const LIMITS = Object.freeze({
@@ -379,6 +382,7 @@ export function connectPreferences(next) {
  * account's lists. `keep`: contract keys left as this browser has them (default: the theme, the device's look).
  * Only once signed out, after setPreferencesSync(null): with an adapter set nothing is written and false is returned,
  * so an emptied contract is never saved over an account. False too while the stores are not loaded.
+ * The visit's memory (VISIT_KEYS, sessionStorage) is forgotten with it: one call puts everything back.
  */
 export function clearPreferences({ keep = ["theme"] } = {}) {
   if (site.active() || !bridge) return false;
@@ -391,6 +395,9 @@ export function clearPreferences({ keep = ["theme"] } = {}) {
   } catch {
     return false;
   }
+  try {
+    for (const key of VISIT_KEYS) window.sessionStorage.removeItem(key);
+  } catch {}
   return true;
 }
 
