@@ -105,13 +105,19 @@ anyone allowed `lambda:GetFunctionConfiguration` on it sees the values.
 9. **`infra/aws/alerts.yaml`** (not in the first plan: `test_alerts.py` ties the connections alarm
    to the logins' sum): parameter `Account`; the alarm's threshold is 106 with the account, 88
    without, as today.
-10. **`infra/aws/api.yaml`**: nothing for this stage. The site calls the Function URL directly. A
-    later `account/*` behaviour on the distribution (custom domain, cookie pass) is stage 3; the
-    gate's key store must then hold the same pass keys.
-11. **Vercel** (Production and Preview, not wired here): `NEON_AUTH_BASE_URL`,
-    `NEON_AUTH_COOKIE_SECRET` (the site's sign-in), `NEXT_PUBLIC_ACCOUNT_ORIGIN` = the stack's
-    `FrontUrl` without its final slash. A preview's origin is random: it is not in `SiteOrigins`, so
-    the account API refuses it (403) unless its exact origin is added.
+10. **`infra/aws/api.yaml`**: nothing for this stage. The site reaches the Function URL through
+    its own relay (`dashboard/frontend/app/api/account`, same origin for the browser), never from
+    the browser. A later `account/*` behaviour on the distribution (custom domain, cookie pass) is
+    stage 3; the gate's key store must then hold the same pass keys.
+11. **Vercel** (Production and Preview, not wired here; `docs/COMPTES_SITE.md`, section 1):
+    `NEON_AUTH_BASE_URL` and `NEON_AUTH_COOKIE_SECRET` (32 characters or more) turn the site's
+    sign-in on; `ACCOUNT_API_ORIGIN` = the stack's `FrontUrl` without its final slash turns the
+    synchronisation on. All three are server-side (nothing is `NEXT_PUBLIC_`), and the site reads
+    them at build time too: a change needs a new deployment of the site. Without the first two
+    the site is the one before accounts; without the third, sign-in works and preferences stay
+    in the browser. The relay calls the account API from Vercel's servers, without an `Origin`,
+    so a preview works without being listed in `SiteOrigins`; Neon Auth, however, accepts
+    sign-in only from its trusted domains (add a preview's exact host there to test on it).
 
 CI (`ci.yml`): `cfn-lint` already lints `infra/aws/*.yaml`, `account.yaml` included (clean); the
 package job builds both account packages; the image job checks the account's SQL files are in
