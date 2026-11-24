@@ -25,7 +25,8 @@
 //     single icon link (« icon » or « shortcut icon »). favicon.svg follows the system's
 //     colours, not the site's theme: a page with scripts must not name it. Each list of icons
 //     is read five times over 1.2 s, after a navigation once React has rebuilt the head's icon
-//     links, and every reading must be that one icon. How it failed before:
+//     links (a navigation check fails when that rebuild is not seen), and every reading must be
+//     that one icon. How it failed before:
 //      - at load (B5a dark, B5f light): React did not recognise the link whose address the theme
 //        script had changed, and put the page's favicon.svg link back beside it;
 //      - after a navigation inside the site (B5k dark, B5l light): React rebuilt the head's
@@ -365,11 +366,11 @@ try {
   const movedDark = await icons(dark);
   const stayedDark = await dark.evaluate(() => window.__sameDocument === true);
   check("B5k", `dark theme, after a navigation inside the site (home → Matchs, same document): still ${themeIcon("dark")} alone`,
-    `${readings(movedDark)} — same document: ${stayedDark} — head's icon links rebuilt: ${rebuiltDark}`, stayedDark && only(movedDark, themeIcon("dark")));
+    `${readings(movedDark)} — same document: ${stayedDark} — head's icon links rebuilt: ${rebuiltDark}`, stayedDark && rebuiltDark && only(movedDark, themeIcon("dark")));
   // ---- B12b–B12d: the theme colour after that navigation, the theme button, and a navigation again
   const colourMovedDark = await colours(dark);
   check("B12b", `dark theme, after a navigation inside the site (home → Matchs, same document): still ${THEME_COLOUR.dark} alone`,
-    `${readings(colourMovedDark)} — same document: ${stayedDark} — head rebuilt: ${rebuiltDark}`, stayedDark && only(colourMovedDark, themed("dark")));
+    `${readings(colourMovedDark)} — same document: ${stayedDark} — head rebuilt: ${rebuiltDark}`, stayedDark && rebuiltDark && only(colourMovedDark, themed("dark")));
   await dark.locator(".theme-toggle").first().click();
   await dark.waitForFunction(() => document.documentElement.dataset.theme === "light");
   const colourSwitchedLight = await colours(dark);
@@ -378,7 +379,7 @@ try {
   const colourBackLight = await colours(dark);
   const stayedLight = await dark.evaluate(() => window.__sameDocument === true);
   check("B12d", `after the button, then a navigation (Matchs → home, same document): still ${THEME_COLOUR.light} alone`,
-    `${readings(colourBackLight)} — same document: ${stayedLight} — head rebuilt: ${rebuiltLight}`, stayedLight && only(colourBackLight, themed("light")));
+    `${readings(colourBackLight)} — same document: ${stayedLight} — head rebuilt: ${rebuiltLight}`, stayedLight && rebuiltLight && only(colourBackLight, themed("light")));
   await dark.context().close();
 
   // ---- B2 and B5 (light)
@@ -437,10 +438,10 @@ try {
   const rebuilt = await follow(light, '.topbar a[href^="/matchs"]', (url) => url.pathname.startsWith("/matchs"));
   const moved = await icons(light);
   check("B5l", `light theme, after a navigation inside the site (home → Matchs, same document): still ${themeIcon("light")} alone`,
-    `${readings(moved)} — same document: ${await sameDocument()} — head's icon links rebuilt: ${rebuilt}`, (await sameDocument()) && only(moved, themeIcon("light")));
+    `${readings(moved)} — same document: ${await sameDocument()} — head's icon links rebuilt: ${rebuilt}`, (await sameDocument()) && rebuilt && only(moved, themeIcon("light")));
   const colourMoved = await colours(light);
   check("B12f", `light theme, after a navigation inside the site (home → Matchs, same document): still ${THEME_COLOUR.light} alone`,
-    `${readings(colourMoved)} — same document: ${await sameDocument()} — head rebuilt: ${rebuilt}`, (await sameDocument()) && only(colourMoved, themed("light")));
+    `${readings(colourMoved)} — same document: ${await sameDocument()} — head rebuilt: ${rebuilt}`, (await sameDocument()) && rebuilt && only(colourMoved, themed("light")));
   await light.locator(".theme-toggle").first().click();
   await light.waitForFunction(() => document.documentElement.dataset.theme === "dark");
   const switched = await icons(light);
@@ -450,10 +451,10 @@ try {
   const rebuiltBack = await follow(light, ".topbar .brand", (url) => url.pathname === "/");
   const back = await icons(light);
   check("B5n", `after the button, then a navigation (Matchs → home, same document): still ${themeIcon("dark")} alone`,
-    `${readings(back)} — same document: ${await sameDocument()} — head's icon links rebuilt: ${rebuiltBack}`, (await sameDocument()) && only(back, themeIcon("dark")));
+    `${readings(back)} — same document: ${await sameDocument()} — head's icon links rebuilt: ${rebuiltBack}`, (await sameDocument()) && rebuiltBack && only(back, themeIcon("dark")));
   const colourBack = await colours(light);
   check("B12h", `after the button, then a navigation (Matchs → home, same document): still ${THEME_COLOUR.dark} alone`,
-    `${readings(colourBack)} — same document: ${await sameDocument()} — head rebuilt: ${rebuiltBack}`, (await sameDocument()) && only(colourBack, themed("dark")));
+    `${readings(colourBack)} — same document: ${await sameDocument()} — head rebuilt: ${rebuiltBack}`, (await sameDocument()) && rebuiltBack && only(colourBack, themed("dark")));
   await light.context().close();
 
   // ---- B4: phone
@@ -527,7 +528,7 @@ try {
         observed: new Date().toISOString(),
         base,
         rerun: `node tests/e2e/brand.e2e.mjs ${base} ${out}`,
-        setup: "Chromium headless, fr-FR; desktop 1365×900 (dark, then light through localStorage statarena.theme), widths 1120, 1024, 768 and 700, phone 393×852 (touch, ×3). B5: every list of icons is read 5 times, 300 ms apart, after a navigation once the head's icon links are rebuilt (a new apple-touch-icon node, waited for 5 s at most); B5o runs with JavaScript off; B5p makes Storage.getItem and Storage.setItem throw. B12: every list of theme colours is read the same way, at the same moments, with the site's theme (html data-theme) and the body's computed background; B12c and B12d press the theme button on the dark page, then follow the home link; B12i and B12j use the pages of B5o and B5p. B9 holds every /api/ answer for 8 s. A local server needs ORION_API_ORIGIN (report images) and, for the header to carry the account button as in production, NEON_AUTH_BASE_URL=http://127.0.0.1:9 with any NEON_AUTH_COOKIE_SECRET of 32 characters.",
+        setup: "Chromium headless, fr-FR; desktop 1365×900 (dark, then light through localStorage statarena.theme), widths 1120, 1024, 768 and 700, phone 393×852 (touch, ×3). B5: every list of icons is read 5 times, 300 ms apart, after a navigation once the head's icon links are rebuilt (a new apple-touch-icon node, waited for 5 s at most; a navigation check fails when it is not seen); B5o runs with JavaScript off; B5p makes Storage.getItem and Storage.setItem throw. B12: every list of theme colours is read the same way, at the same moments, with the site's theme (html data-theme) and the body's computed background; B12c and B12d press the theme button on the dark page, then follow the home link; B12i and B12j use the pages of B5o and B5p. B9 holds every /api/ answer for 8 s. A local server needs ORION_API_ORIGIN (report images) and, for the header to carry the account button as in production, NEON_AUTH_BASE_URL=http://127.0.0.1:9 with any NEON_AUTH_COOKIE_SECRET of 32 characters.",
         inputs: { home: "/", loading: "/joueurs/", report: REPORT, faviconVersion: VERSION, themeColour: THEME_COLOUR, ivory: IVORY, night: NIGHT },
         results,
         console: consoleLog,

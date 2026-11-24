@@ -51,7 +51,8 @@ export const metadata = {
 };
 // viewportFit "cover": the page reaches the screen's edges, and the shell keeps clear of
 // the notch and the home indicator with the safe-area insets (styles.css).
-// No themeColor here: that tag is the theme script's (themeScript above).
+// No themeColor here, nor in a page's own viewport: that tag is the theme script's (themeScript
+// above), and React would take it over or add a second one.
 export const viewport = {
   colorScheme: "dark light",
   viewportFit: "cover",
