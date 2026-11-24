@@ -7,6 +7,7 @@ On a disposable local PostgreSQL (VEGA_V2_COLLECTION_TEST_DSN, database vega_v2_
   (fixtures/open_matchday/nln-2026, provenance.json): four new results alone make the Elo due, a pass that changes
   nothing runs none (E04k).
 - 37e–37f: a complementary score corrected by its source, a complementary match withdrawn then restored (E04k).
+- 57a–57n: the scorers of the held International Results matches (goalscorers.csv), through the same bridge (§57).
 - 37g–37j: the International Results editions (nine since main's internationals of 2026/27, §48, 48i) through the real
   bridge and projection, each fetch counted in node (fake_results_fetch.mjs): one read per pass, each edition its own
   state (E02b).
@@ -79,6 +80,33 @@ NATIONS_SCOPES = {"nations-results:nations-league:2026/2027", "nations-results:a
                   "nations-results:gold-cup:2023", "nations-results:gold-cup:2025",
                   *(f"nations-results:internationals:{season}" for season in SEASONS)}
 INTERNATIONALS, NATIONS_LEAGUE = "nations-results:internationals:2026/2027", "nations-results:nations-league:2026/2027"
+# §57: the scorers of the held matches (goalscorers.csv), one more scope of the same adapter, read in the same pass.
+GOALS_SCOPE = "nations-results:goalscorers"
+GOALS_URL = "https://raw.githubusercontent.com/martj42/international_results/master/goalscorers.csv"
+GOALS_HEADER = "date,home_team,away_team,team,scorer,minute,own_goal,penalty,assist\n"
+# 57b–57c, 57i: goals of RESULTS_CSV's matches, in the file's columns. Mexico–Dominican Republic 3–2 complete (a penalty,
+# an own goal scored by a Mexican for the Dominican Republic); Argentina–Canada 2–0 with one goal (partial);
+# France–Netherlands 4–0 with five (more than the score); Scotland–Switzerland 1–0, the Nations League edition keyed by
+# the English names; Brazil–Japan 2–1 with a minute « NA » and an assist; the 2022 World Cup final, held by no
+# International Results edition; a goal of June 2021, before the base's first held day.
+GOALS_CSV = GOALS_HEADER + """2021-06-11,Turkey,Italy,Italy,Merih Demiral,53,TRUE,FALSE,NA
+2022-12-18,Argentina,France,Argentina,Lionel Messi,23,FALSE,TRUE,NA
+2023-03-23,France,Netherlands,France,Antoine Griezmann,2,FALSE,FALSE,NA
+2023-03-23,France,Netherlands,France,Dayot Upamecano,8,FALSE,FALSE,NA
+2023-03-23,France,Netherlands,France,Kylian Mbappé,21,FALSE,FALSE,NA
+2023-03-23,France,Netherlands,France,Kylian Mbappé,88,FALSE,FALSE,NA
+2023-03-23,France,Netherlands,France,Kylian Mbappé,89,FALSE,FALSE,NA
+2024-06-21,Argentina,Canada,Argentina,Julián Álvarez,49,FALSE,FALSE,NA
+2025-06-15,Mexico,Dominican Republic,Mexico,Raúl Jiménez,12,FALSE,TRUE,NA
+2025-06-15,Mexico,Dominican Republic,Dominican Republic,Johan Vásquez,30,TRUE,FALSE,NA
+2025-06-15,Mexico,Dominican Republic,Mexico,Raúl Jiménez,55,FALSE,FALSE,NA
+2025-06-15,Mexico,Dominican Republic,Dominican Republic,Edarlyn Reyes,70,FALSE,FALSE,NA
+2025-06-15,Mexico,Dominican Republic,Mexico,Alexis Vega,90,FALSE,FALSE,NA
+2026-10-01,Scotland,Switzerland,Scotland,Scott McTominay,61,FALSE,FALSE,NA
+2026-10-10,Brazil,Japan,Brazil,Vinícius Júnior,NA,FALSE,FALSE,Raphinha
+2026-10-10,Brazil,Japan,Japan,Takefusa Kubo,40,FALSE,FALSE,NA
+2026-10-10,Brazil,Japan,Brazil,Rodrygo,77,FALSE,FALSE,NA
+"""
 
 
 def encode(rows):
@@ -285,9 +313,11 @@ class SharedReadTest(CollectionBase):
 
         log = self.tmp / "fetch.log"
         before = len(log.read_text().splitlines()) if log.exists() else 0
-        csv = self.tmp / "results.csv"
+        csv, goals = self.tmp / "results.csv", self.tmp / "goalscorers.csv"
         csv.write_text(RESULTS_CSV)
-        env = {"NODE_OPTIONS": f"--import={RESULTS_PRELOAD.as_uri()}", "VEGA_TEST_RESULTS_CSV": str(csv), "VEGA_TEST_FETCH_LOG": str(log)}
+        goals.write_text(GOALS_CSV)
+        env = {"NODE_OPTIONS": f"--import={RESULTS_PRELOAD.as_uri()}", "VEGA_TEST_RESULTS_CSV": str(csv), "VEGA_TEST_FETCH_LOG": str(log),
+               "VEGA_TEST_GOALSCORERS_CSV": str(goals)}
         with patch.dict(os.environ, env):
             if fail:
                 os.environ["VEGA_TEST_RESULTS_FAIL"] = "1"
@@ -306,11 +336,11 @@ class SharedReadTest(CollectionBase):
                WHERE cs.cup_key LIKE 'nations-results:%' ORDER BY 1""").fetchall()}
 
     def test_37g_to_37j_one_read_per_pass_and_each_edition_its_state(self):
-        # 37g (50j): the fourteen editions due together: one request.
+        # 37g (50j, 57a): the fourteen editions and the scorers due together: one request of each file.
         done, asked = self.run_due(self.NOW)
-        self.assertEqual(set(done), NATIONS_SCOPES)
+        self.assertEqual(set(done), NATIONS_SCOPES | {GOALS_SCOPE})
         self.assertEqual(set(done.values()), {"ok"})
-        self.assertEqual(asked, [RESULTS_URL])  # red before §37: eight requests
+        self.assertEqual(asked, [RESULTS_URL, GOALS_URL])  # red before §37: eight requests; before §57: results.csv alone
         first = self.editions()
         self.assertEqual(set(first), NATIONS_SCOPES)
         self.assertEqual(len({e[0] for e in first.values()}), len(NATIONS_SCOPES))  # each edition its own digest
@@ -321,18 +351,256 @@ class SharedReadTest(CollectionBase):
         # 37i: all due again, the source failing: one request, every edition failed, nothing lost.
         later = self.NOW + timedelta(days=8)
         done, asked = self.run_due(later, fail=True)
-        self.assertEqual((set(done), set(done.values()), asked), (NATIONS_SCOPES, {"HTTP_502"}, [RESULTS_URL]))
+        self.assertEqual((set(done), set(done.values()), asked), (NATIONS_SCOPES | {GOALS_SCOPE}, {"HTTP_502"}, [RESULTS_URL, GOALS_URL]))
         failed = self.editions()
         for key, e in failed.items():
             self.assertEqual((e[0], e[1], e[2], e[3], e[4], e[5], e[6]), (first[key][0], first[key][1], "error", "HTTP_502", self.NOW, later, 1))
         # 37j: after the retry delay, the source back: one request, every edition ok again, nothing rewritten.
         again = later + timedelta(hours=1, minutes=5)
         done, asked = self.run_due(again)
-        self.assertEqual((set(done.values()), asked), ({"ok"}, [RESULTS_URL]))
+        self.assertEqual((set(done.values()), asked), ({"ok"}, [RESULTS_URL, GOALS_URL]))
         for key, e in self.editions().items():
             self.assertEqual((e[0], e[1], e[2], e[4], e[6]), (first[key][0], again, "ok", again, 1))
         self.assertEqual({r[0] for r in self.x("SELECT rows_written FROM ops.source_runs WHERE source='international_results'").fetchall()}, {0})
 
+
+
+@required(DSN and psycopg and NODE, "requires a disposable local collection DB (VEGA_V2_COLLECTION_TEST_DSN), psycopg and node")
+class InternationalGoalsTest(CollectionBase):
+    """57a–57n: the scorers of the held International Results matches (goalscorers.csv) through the real adapter, bridge
+    and projection, both files served by fake_results_fetch.mjs."""
+
+    NOW = datetime(2026, 11, 24, 12, tzinfo=timezone.utc)
+    GOALS = """SELECT m.match_date::text || '|' || m.home_team_name || '|' || m.away_team_name, g.position, g.side::text, g.scorer,
+                      g.minute, g.own_goal, g.penalty, g.assist
+               FROM core.international_goals g JOIN core.matches m ON m.id = g.match_id ORDER BY 1, 2"""
+
+    def setUp(self):
+        super().setUp()
+        self.clock = self.NOW
+        self.goals_csv = GOALS_CSV
+
+    def run_due(self, *, fail=None):
+        """One pass of the International Results adapter, every scope due; {scope: outcome}, the URLs fetched."""
+        from vega import sources
+
+        log, csv, goals = self.tmp / "fetch.log", self.tmp / "results.csv", self.tmp / "goalscorers.csv"
+        before = len(log.read_text().splitlines()) if log.exists() else 0
+        csv.write_text(RESULTS_CSV)
+        goals.write_text(self.goals_csv)
+        env = {"NODE_OPTIONS": f"--import={RESULTS_PRELOAD.as_uri()}", "VEGA_TEST_RESULTS_CSV": str(csv), "VEGA_TEST_FETCH_LOG": str(log),
+               "VEGA_TEST_GOALSCORERS_CSV": str(goals)}
+        with patch.dict(os.environ, env):
+            for name in ("VEGA_TEST_RESULTS_FAIL", "VEGA_TEST_GOALSCORERS_FAIL"):
+                os.environ.pop(name, None)
+            if fail:
+                os.environ[fail] = "1"
+            with contextlib.redirect_stdout(io.StringIO()):
+                done = sources.run_due(self.collect, None, self.clock, names={"international_results"})
+        self.clock += timedelta(days=8)  # every scope due at the next pass
+        lines = log.read_text().splitlines() if log.exists() else []
+        return {scope: outcome for (_, scope), outcome in done.items()}, lines[before:]
+
+    def stored(self):
+        return self.x(self.GOALS).fetchall()
+
+    def run_row(self):
+        return self.x("SELECT status, error_code, rows_written, unmatched FROM ops.source_runs WHERE source='international_results' AND scope=%s",
+                      (GOALS_SCOPE,)).fetchone()
+
+    def versions(self):
+        """{match key: the xmin of its goal rows}: what a pass rewrote."""
+        return dict(self.x("""SELECT m.match_date::text || '|' || m.home_team_name || '|' || m.away_team_name, string_agg(g.xmin::text, ',' ORDER BY g.position)
+                              FROM core.international_goals g JOIN core.matches m ON m.id = g.match_id GROUP BY 1""").fetchall())
+
+    def match(self, key):
+        return self.x("""SELECT entity_id FROM core.provider_ids WHERE entity_type='match' AND provider='international_results'
+                         AND provider_key=%s AND is_current""", (key,)).fetchone()[0]
+
+    def test_57a_to_57d_the_goals_of_the_held_matches_once_per_pass(self):
+        done, asked = self.run_due()
+        # 57a: one request of each file, every scope ok.
+        self.assertEqual(set(done), NATIONS_SCOPES | {GOALS_SCOPE})
+        self.assertEqual(set(done.values()), {"ok"})
+        self.assertEqual(asked, [RESULTS_URL, GOALS_URL])
+        rows = self.stored()
+        mexico = [r[1:] for r in rows if r[0] == "2025-06-15|Mexico|Dominican Republic"]
+        # 57b: in file order; the own goal counts for the Dominican Republic, the side the file credits.
+        self.assertEqual(mexico, [
+            (1, "home", "Raúl Jiménez", 12, False, True, None), (2, "away", "Johan Vásquez", 30, True, False, None),
+            (3, "home", "Raúl Jiménez", 55, False, False, None), (4, "away", "Edarlyn Reyes", 70, False, False, None),
+            (5, "home", "Alexis Vega", 90, False, False, None)])
+        self.assertIn(("2026-10-10|Brazil|Japan", 1, "home", "Vinícius Júnior", None, False, False, "Raphinha"), rows)
+        # The Nations League's edition names its sides in French: its key is the file's.
+        self.assertIn(("2026-10-01|Écosse|Suisse", 1, "home", "Scott McTominay", 61, False, False, None), rows)
+        self.assertEqual(len(rows), 15)
+        # 57c: the World Cup final is no International Results match; the goal of June 2021 is before the first held day.
+        self.assertNotIn("2022-12-18", {r[0][:10] for r in rows})
+        self.assertEqual(self.run_row(), ("ok", None, 15, 1))
+        # 57d: the same file again: nothing written, no row rewritten.
+        versions = self.versions()
+        done, asked = self.run_due()
+        self.assertEqual(done[GOALS_SCOPE], "ok")
+        self.assertEqual(self.run_row(), ("ok", None, 0, 1))
+        self.assertEqual(self.versions(), versions)
+        self.assertEqual(self.stored(), rows)
+
+    def test_57e_57f_a_goal_added_rewrites_its_match_alone_and_a_vanished_list_stays(self):
+        self.run_due()
+        rows, versions = self.stored(), self.versions()
+        # 57e: Argentina–Canada's second goal; 57f: Brazil–Japan's three goals gone from the file.
+        self.goals_csv = "".join(line + "\n" for line in GOALS_CSV.splitlines() if not line.startswith("2026-10-10"))
+        self.goals_csv += "2024-06-21,Argentina,Canada,Argentina,Lautaro Martínez,88,FALSE,FALSE,Lionel Messi\n"
+        done, _ = self.run_due()
+        self.assertEqual(done[GOALS_SCOPE], "ok")
+        after = self.versions()
+        changed = {key for key in after if after[key] != versions.get(key)}
+        self.assertEqual(changed, {"2024-06-21|Argentina|Canada"})
+        self.assertEqual(self.run_row()[2], 2)  # the match's two goals written
+        self.assertEqual([r for r in self.stored() if r[0].startswith("2026-10-10")], [r for r in rows if r[0].startswith("2026-10-10")])
+        self.assertEqual(len([r for r in self.stored() if r[0].startswith("2026-10-10")]), 3)
+
+    def test_57g_an_unreadable_goal_refuses_its_match_alone(self):
+        self.run_due()
+        rows = self.stored()
+        failures = "SELECT count(*) FROM ops.parse_failures WHERE message LIKE %s"
+        # Scotland's goal credited to Wales; a minute « 9x » in France–Netherlands; a goal both own goal and penalty in
+        # England–Belgium (held, no goal yet); Argentina–Canada's second goal, readable.
+        lines = []
+        for line in GOALS_CSV.splitlines():
+            if line.startswith("2026-10-01"):
+                line = line.replace(",Scotland,Scott", ",Wales,Scott")
+            if line.startswith("2023-03-23") and ",21," in line:
+                line = line.replace(",21,", ",9x,")
+            lines.append(line)
+        lines += ["2024-03-26,England,Belgium,England,Harry Kane,30,TRUE,TRUE,NA",
+                  "2024-06-21,Argentina,Canada,Argentina,Lautaro Martínez,88,FALSE,FALSE,NA"]
+        self.goals_csv = "\n".join(lines) + "\n"
+        done, _ = self.run_due()
+        self.assertEqual(done[GOALS_SCOPE], "ok")
+        after = self.stored()
+        for day in ("2026-10-01", "2023-03-23"):
+            self.assertEqual([r for r in after if r[0].startswith(day)], [r for r in rows if r[0].startswith(day)], day)
+        self.assertEqual([r for r in after if r[0].startswith("2024-03-26")], [])
+        self.assertEqual(len([r for r in after if r[0].startswith("2024-06-21")]), 2)
+        for key in ("2026-10-01|Scotland|Switzerland", "2023-03-23|France|Netherlands", "2024-03-26|England|Belgium"):
+            self.assertEqual(self.x(failures, (f"%{key}%",)).fetchone()[0], 1, key)
+        # The same refusals again: no second row.
+        self.run_due()
+        self.assertEqual(self.x(failures, ("%2024-03-26|England|Belgium%",)).fetchone()[0], 1)
+
+    def test_57h_the_file_unavailable_writes_nothing(self):
+        self.run_due()
+        rows = self.stored()
+        done, asked = self.run_due(fail="VEGA_TEST_GOALSCORERS_FAIL")
+        self.assertEqual(done[GOALS_SCOPE], "HTTP_502")
+        self.assertEqual({o for s, o in done.items() if s != GOALS_SCOPE}, {"ok"})
+        self.assertEqual(asked, [RESULTS_URL, GOALS_URL])
+        self.assertEqual(self.stored(), rows)
+
+    def test_57i_complete_partial_or_none_at_read_time(self):
+        self.run_due()
+        complete = dict(self.x("""SELECT match_date::text || '|' || home_name || '|' || away_name, bool_and(complete)
+                                  FROM api.international_goals g JOIN (SELECT id, match_date, home_team_name AS home_name,
+                                    away_team_name AS away_name FROM core.matches) m ON m.id = g.match_key GROUP BY 1""").fetchall())
+        self.assertEqual(complete, {"2025-06-15|Mexico|Dominican Republic": True, "2024-06-21|Argentina|Canada": False,
+                                    "2023-03-23|France|Netherlands": False, "2026-10-01|Écosse|Suisse": True,
+                                    "2026-10-10|Brazil|Japan": True})
+        # A score corrected by a later read changes it.
+        self.x("UPDATE core.matches SET home_score = 1 WHERE id = %s", (self.match("2024-06-21|Argentina|Canada"),))
+        self.assertTrue(self.x("SELECT bool_and(complete) FROM api.international_goals WHERE match_key = %s",
+                               (self.match("2024-06-21|Argentina|Canada"),)).fetchone()[0])
+
+    def test_57j_a_withdrawn_match_takes_its_goals(self):
+        from vega.sources import snapshot
+
+        self.run_due()
+        match = self.match("2025-06-15|Mexico|Dominican Republic")
+        self.assertEqual(snapshot._guard_dependents(self.collect, "international_results", [match], None), {})
+        self.x("DELETE FROM core.provider_ids WHERE entity_type='match' AND entity_id=%s", (match,))
+        self.x("DELETE FROM core.matches WHERE id=%s", (match,))
+        self.assertEqual(self.x("SELECT count(*) FROM core.international_goals WHERE match_id=%s", (match,)).fetchone()[0], 0)
+
+    def lineup(self, team, name, day, *, birth=None):
+        """A player of `team`'s line-up on `day` (a collected match of that day); his id."""
+        from vega.store import Store
+
+        season = Store(self.db).season(f"{day.year - (day.month < 7)}/{day.year - (day.month < 7) + 1}")
+        edition = self.x("SELECT id FROM core.competition_seasons WHERE season_id=%s LIMIT 1", (season,)).fetchone()
+        if edition is None:
+            comp = self.x("INSERT INTO core.competitions(name) VALUES ('Friendlies') RETURNING id").fetchone()[0]
+            edition = self.x("INSERT INTO core.competition_seasons(competition_id, season_id, native_label) VALUES (%s,%s,'x') RETURNING id",
+                             (comp, season)).fetchone()
+        other = self.x("INSERT INTO core.teams(name) VALUES ('Opponent') RETURNING id").fetchone()[0]
+        match = self.x("""INSERT INTO core.matches(competition_season_id, season_id, match_date, status, home_team_id, away_team_id, source)
+                          VALUES (%s,%s,%s,'finished',%s,%s,'pitchapi') RETURNING id""", (edition[0], season, day, team, other)).fetchone()[0]
+        player = self.x("SELECT id FROM core.players WHERE name=%s AND birth_date IS NOT DISTINCT FROM %s", (name, birth)).fetchone()
+        player = player[0] if player else self.x("INSERT INTO core.players(name, birth_date) VALUES (%s,%s) RETURNING id", (name, birth)).fetchone()[0]
+        self.x("INSERT INTO core.lineup_players(season_id, match_id, team_id, player_id) VALUES (%s,%s,%s,%s)", (season, match, team, player))
+        return player
+
+    def team(self, name):
+        return self.x("SELECT entity_id FROM core.provider_ids WHERE entity_type='team' AND provider='international_results' AND provider_key=%s",
+                      (name,)).fetchone()[0]
+
+    def links(self):
+        return {(r[0], r[1]): r[2] for r in self.x("""SELECT m.match_date::text || '|' || m.home_team_name || '|' || m.away_team_name, g.position, g.player_id
+                                                    FROM core.international_goals g JOIN core.matches m ON m.id = g.match_id""").fetchall()}
+
+    def test_57k_to_57m_a_scorer_is_linked_only_when_unambiguous(self):
+        from datetime import date
+
+        self.run_due()
+        mexico, dominican, france = self.team("Mexico"), self.team("Dominican Republic"), self.team("France")
+        argentina, brazil = self.team("Argentina"), self.team("Brazil")
+        key = "2025-06-15|Mexico|Dominican Republic"
+        # 57k: one Mexican of that name, a line-up a year before the goal (the name written without its accent).
+        jimenez = self.lineup(mexico, "Raul Jimenez", date(2024, 6, 1))
+        # 57l: two Alexis Vega in Mexico's line-ups; Edarlyn Reyes in another team's only; Kylian Mbappé three years
+        # before; Julián Álvarez born ten years before the goal; Johan Vásquez (own goal for the Dominican Republic) in
+        # Mexico's line-ups.
+        self.lineup(mexico, "Alexis Vega", date(2025, 3, 1), birth=date(1997, 11, 25))
+        self.lineup(mexico, "Alexis Vega", date(2025, 3, 2), birth=date(2003, 1, 1))
+        self.lineup(brazil, "Edarlyn Reyes", date(2025, 3, 1))
+        self.lineup(france, "Kylian Mbappé", date(2020, 3, 1))
+        self.lineup(argentina, "Julián Álvarez", date(2024, 3, 1), birth=date(2014, 1, 31))
+        vasquez = self.lineup(mexico, "Johan Vásquez", date(2025, 3, 1))
+        versions = self.versions()
+        self.run_due()
+        links = self.links()
+        self.assertEqual(links[(key, 1)], jimenez)
+        self.assertEqual(links[(key, 3)], jimenez)
+        self.assertEqual(links[(key, 2)], vasquez)  # the own goal: the scorer plays for the other side
+        self.assertIsNone(links[(key, 4)])
+        self.assertIsNone(links[(key, 5)])
+        self.assertTrue(all(v is None for (k, _), v in links.items() if not k.startswith("2025-06-15")), links)
+        self.assertEqual(self.run_row()[2], 0)  # a link is no goal written
+        # 57m: a second Raúl Jiménez appears in Mexico's line-ups: unlinked at the next pass, the other rows untouched.
+        self.lineup(mexico, "Raúl Jiménez", date(2025, 9, 1), birth=date(2001, 1, 1))
+        self.run_due()
+        links = self.links()
+        self.assertIsNone(links[(key, 1)])
+        self.assertIsNone(links[(key, 3)])
+        self.assertEqual(links[(key, 2)], vasquez)
+        after = self.versions()
+        self.assertEqual({k for k in after if after[k] != versions[k]}, {key})
+
+    def test_57n_display_data_only(self):
+        counts = """SELECT (SELECT count(*) FROM core.match_events), (SELECT count(*) FROM core.player_match_stats),
+                           (SELECT count(*) FROM agg.team_elo), (SELECT max(updated_at) FROM core.matches)"""
+        from vega import sources
+
+        # The editions first, then the goals alone: nothing the rankings or the Elo read changes.
+        self.goals_csv = GOALS_HEADER
+        self.run_due()
+        before = self.x(counts).fetchone()
+        self.goals_csv = GOALS_CSV
+        self.run_due()
+        self.assertEqual(len(self.stored()), 15)
+        self.assertEqual(self.x(counts).fetchone(), before)
+        for module in ("power", "level"):
+            text = (ROOT / "vega" / f"{module}.py").read_text()
+            self.assertNotIn("international_goals", text, module)
 
 
 @required(DSN and psycopg and NODE, "requires a disposable local collection DB (VEGA_V2_COLLECTION_TEST_DSN), psycopg and node")
@@ -633,7 +901,9 @@ class InternationalSeasonsTest(unittest.TestCase):
         self.assertEqual(periods["nations-results:internationals:2026/2027"], timedelta(hours=2))
         # Every other edition: main's rule (its first year from the year before now's: every two hours, else weekly).
         for scope, period in periods.items():
-            if ":internationals:" not in scope:
+            if scope == GOALS_SCOPE:  # §57: the scorers, no edition, every two hours whatever the season
+                self.assertEqual(period, timedelta(hours=2))
+            elif ":internationals:" not in scope:
                 season = scope.split(":", 2)[2]
                 self.assertEqual(period, timedelta(hours=2) if int(season[:4]) >= now.year - 1 else timedelta(days=7), scope)
         # 2026/27 finished on 1 July 2027: weekly from then.

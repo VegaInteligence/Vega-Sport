@@ -1154,6 +1154,14 @@ input[type="date"] {
   font-size: var(--text-xs);
   text-align: center;
 }
+/* A national match's scorers (International Results, §57): each side's under its team. */
+.match-teams .cup-match-scorers {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+}
+.match-teams .cup-match-scorers > span:first-child { text-align: right; }
+.match-teams .cup-match-scorers > span:last-child { text-align: left; }
 
 /* Coverage */
 .coverage-list {

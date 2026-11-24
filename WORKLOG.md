@@ -7,6 +7,19 @@
 - Tests first: `tests/home-ticker.test.mjs` 11 (10 red against stubs, the markup-unchanged guard green on main), then green; site suite 983/983. E2E `tests/e2e/home-ticker.e2e.mjs` red on main (6 failed), then 8/8 morning and evening; `home-country.e2e.mjs` adjusted (result ticks only; the script holder is not a block) 33 passed, 1 not run. Evidence …/scratchpad/e2e-ticker/ (red: e2e-ticker-red/). Captures /mnt/project-files/accueil-vi-48/captures-v4/.
 - Next: the owner's look at the captures; push only on his go.
 
+## A nation's « Dernier match » is a fixture — FAILURE_MODES § 58 (24 November 2026)
+
+- Production: `/api/nations?season=2026/2027` gave 8 nations a future last match (Nations League fixtures of March 2027). Cause: `api.nation_list` (159) took the latest day of any match. Fix: `173_nation_last_played.sql`, the latest day of a finished match with both scores; `matches` stays the matches held (the nation page's « N matchs collectés », kept equal by the § 43 test). Same branch, own commits.
+- Tests first: `test_nation_match_copies` 58a–58d red (2027-03-20), then green; plan test 43s green; deploy counters 18/178.
+
+## Scorers of the national matches from International Results — FAILURE_MODES § 57 (24 November 2026)
+
+- Goal (hugo, « oui branche le et récupère tout »): read `goalscorers.csv` of International Results (CC0) for every match the `nations-results:*` editions hold, every season; show complete lists on the site. Branch `claude/buteurs-selections` (worktree `/home/user/worktrees/buteurs-selections`), local commits, not pushed (the coordinator pushes).
+- Decisions: one more scope of the same adapter (`nations-results:goalscorers`, every two hours, after the editions, one read of each file per pass through `prepare_due`); goals from 1 July 2021 keyed `date|home|away` as results.csv names the match (the held provider key); `core.international_goals` (172), file order, only changed matches rewritten, a vanished list kept, an unreadable goal keeps its match (`ops.parse_failures` once); completeness at read (`api.international_goals.complete`: each side's goals equal its score); link to `core.players` only when one player of that team's line-ups has the name (comparison form), within two years, at least 15 years old; display data only (no Elo, ranking or `core.match_events`). Site: complete lists only, under the row of the nation page's « Tous les matchs » and of the International Results tournament lists; partial or none = today's row.
+- Measured on the real file (24 Nov 2026, local PostgreSQL 18): 5,607 matches held, 6,334 goals attached, 2,168 complete, 0 partial, 2,986 with goals but no scorer in the file (2026/27: none yet), 453 goalless; 616 goals of 205 matches no International Results edition holds (World Cups, Euros); link rate 0 locally (no `core.players` in the local base). Evidence: `/mnt/project-files/donnees-hors-live/buteurs-selections/EVIDENCE.md`.
+- Tests first, seen red, then green: Python § 57 9/9, targeted Python files 163/163, API 293/293, site 974/974, site build OK.
+- Not done: a mock-up before the frontend change (AGENTS.md); the owner has not seen the captures yet. Next: the owner's look at the captures, then push and CI.
+
 ## Home importance v2, « À l'affiche » and the visitor's country in the cards — VI-48 / #69 (23–24 November 2026)
 
 - Goal: replace the home's importance (`api.home_weight_v1`, a fixed list of 29 clubs) by a general score, serve the data of the new home blocks (backend, 23 Nov) and show them on the current home (frontend, 24 Nov). Branch `claude/accueil-importance-pays` (base main 639764b). Committed locally, not pushed (the user's go is needed).

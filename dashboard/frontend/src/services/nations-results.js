@@ -120,3 +120,28 @@ export function parseInternationalResults(csv, season) {
   }
   return result;
 }
+
+// The scorers of the matches above (goalscorers.csv of the same dataset, FAILURE_MODES.md §57), from the base's first
+// held day: the first season of INTERNATIONAL_SEASONS (every tournament of TOURNAMENT_EDITIONS is played after it).
+export const FIRST_GOAL_DAY = `${INTERNATIONAL_SEASONS[0].slice(0, 4)}-07-01`;
+const GOAL_COLUMNS = "date,home_team,away_team,team,scorer,minute,own_goal,penalty";
+const orNull = (value) => (value === undefined || value === "" || value === "NA" ? null : value);
+
+/** Each goal of goalscorers.csv from FIRST_GOAL_DAY, in file order, with its match's key (`date|home_team|away_team`,
+ * the teams as results.csv names them). Values as the file writes them (« NA » as null); the writer types them
+ * (backend/vega/sources/international_goals.py). */
+export function parseGoalscorers(csv) {
+  if (typeof csv !== "string" || csv.length > 12 * 1024 * 1024) throw new Error("Invalid goalscorers data");
+  const lines = csv.split(/\r?\n/), header = csvRow(lines[0] || "");
+  if (!header || header.slice(0, 8).join(",") !== GOAL_COLUMNS || (header.length > 8 && header[8] !== "assist"))
+    throw new Error("Invalid goalscorers header");
+  const goals = [];
+  for (const line of lines.slice(1)) {
+    if (line.slice(0, 10) < FIRST_GOAL_DAY) continue;
+    const row = csvRow(line);
+    if (!row || row.length < 8) continue;
+    goals.push({ match: [row[0], row[1], row[2]].join("|"), team: row[3], scorer: orNull(row[4]), minute: orNull(row[5]),
+      ownGoal: row[6], penalty: row[7], assist: orNull(row[8]) });
+  }
+  return goals;
+}
