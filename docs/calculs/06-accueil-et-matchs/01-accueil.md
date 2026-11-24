@@ -11,6 +11,23 @@ Calculs dans [home-insights.js](../../../dashboard/frontend/src/services/home-in
 
 Un match compte dans la semaine si son jour (Paris) est dans la fenêtre, n'est pas postérieur à aujourd'hui, et si son coup d'envoi explicite est déjà passé.
 
+## Le bandeau
+
+Le bandeau en haut de l'accueil (`scoreboardTicker`, [home-insights.js](../../../dashboard/frontend/src/services/home-insights.js) ; dessin `HomeTicker`, [HomeMatchday.jsx](../../../dashboard/frontend/src/components/HomeMatchday.jsx)) montre les résultats de la semaine **et les matchs à venir** (demande du propriétaire, 24 nov. 2026 : « je veux aussi les futurs matchs »). Le temps va de gauche à droite et le bandeau s'ouvre sur « maintenant ».
+
+- **Rien à venir ni en cours** (saison archivée, semaine sans match devant, API sans `billboard`) : le bandeau d'avant, à l'identique — les 4 derniers jours de résultats, le plus récent à gauche, 8 par jour, sélections d'abord, puis l'ordre du **fil des résultats** (`weekTicker`, ci-dessous).
+- **Sinon**, les jours du plus ancien au plus récent :
+  - jours passés : les résultats, même règle (4 derniers jours de résultats, 8 par jour, même ordre dans le jour) ;
+  - aujourd'hui : ses résultats (même ordre), puis les matchs en cours, puis les matchs à venir par heure de coup d'envoi ;
+  - jours suivants, jusqu'à la fin de `billboardWindow` : 8 matchs au plus par jour, **choisis** par la règle unique (`preferenceOrder` : clubs favoris, puis le pays du visiteur selon `HOME_PRIORITY`, puis l'importance `weight`), puis **affichés** par heure de coup d'envoi, puis importance.
+- Candidats : l'affiche (`billboard`), puis les matchs à venir des favoris (lecture personnelle), puis ceux du pays (`localMatches`) ; un seul enregistrement par match (le premier lu). Rien après la fin de `billboardWindow` (le match d'un favori dans 15 jours n'allonge pas le bandeau). Un match présent dans les résultats de la semaine garde son enregistrement de résultat (il a les xG).
+- **À venir** : coup d'envoi ≥ maintenant et le flux ne l'a pas commencé (la règle d'« À l'affiche »). **En cours** : le flux dit `in_play`, ou le coup d'envoi est passé depuis moins de 3 h et le flux dit encore « pas commencé » (la fenêtre du direct, `isLiveWindow`). Un match terminé ou au-delà de cette fenêtre qui n'est pas dans les résultats n'est pas montré.
+- Une case à venir a la boîte d'un résultat : compétition courte et heure de coup d'envoi (heure de Paris, comme « À l'affiche ») à la place de « Terminé », les deux équipes sans score, pied vide ; elle ouvre le match comme « À l'affiche ». Un match en cours affiche « En direct », et son score seulement si l'enregistrement le porte (`score_home` / `score_away`).
+- **Ouverture** : sur la première case non terminée, avec jusqu'à deux cases avant elle en vue (moins si elle ne tiendrait plus, sur téléphone) ; un petit script dans le HTML du serveur, juste après le bandeau, fixe le défilement avant le premier affichage (pas de saut à l'hydratation) ; ensuite, seulement si le match d'ancrage change et que le visiteur n'a pas fait défiler le bandeau.
+- Le nom accessible devient « Résultats et matchs à venir … » ; avec les seuls résultats il reste « Résultats … ».
+
+Exemple (rejeu du 24 nov. 2026, 8 h à Paris, sans pays) : Levante – Elche et Monza – Fiorentina (lundi) à gauche, puis mardi Galatasaray – Aston Villa 18:45 (ouverture), Bodø/Glimt – LASK 18:45, Arsenal – Dortmund 21:00…, puis mercredi à vendredi. À 21 h 30 le même jour, les matchs de mardi sont « En direct » (coup d'envoi passé, flux encore « pas commencé »).
+
 ## Poids éditorial d'un match
 
 `matchWeight` sert à ordonner le fil des résultats et les matchs à venir :
@@ -66,7 +83,7 @@ Le pays ne crée ni carte ni bande : il change ce que montrent les cartes exista
 
 Exemple (24 nov. 2026, 8 h à Paris, sans favori ; importances du double de test sur un rejeu de la production). France : Arsenal – Dortmund (LdC, 6,93) en grande carte ; Brest – Paris FC (L1, 3,89), le seul match français à venir de la fenêtre (les résultats de Ligue 2 de lundi n'entrent pas) ; PSG – Roma (6,39), Bruges – Liverpool (6,30) et Galatasaray – Aston Villa (5,87) pour les grands matchs. Brésil : Arsenal – Dortmund, Chapecoense – Palmeiras (2,07) et Atlético-MG – Corinthians (1,89), PSG – Roma, Bruges – Liverpool. Sans pays, comme en `importance` pour la France : 6,93 / 6,39 / 6,30 / 5,87 / 5,84 (Real Madrid – PSV).
 
-**Fil des résultats** (`weekTicker`) : chaque jour les sélections nationales d'abord, comme avant ; puis les résultats d'un **club favori** du visiteur (effet 1, ci-dessous) ; puis, en `location`, les résultats locaux devant les autres (puis le poids éditorial), avant la coupe à 8 par jour ; en `importance`, le poids éditorial d'abord, le local seulement à égalité. Le fil ne montre que les résultats des championnats du visiteur : rien n'y est ajouté.
+**Fil des résultats** (`weekTicker`, les résultats du [bandeau](#le-bandeau)) : chaque jour les sélections nationales d'abord, comme avant ; puis les résultats d'un **club favori** du visiteur (effet 1, ci-dessous) ; puis, en `location`, les résultats locaux devant les autres (puis le poids éditorial), avant la coupe à 8 par jour ; en `importance`, le poids éditorial d'abord, le local seulement à égalité. Le fil ne montre que les résultats des championnats du visiteur : rien n'y est ajouté.
 
 **« Course au titre »** s'ouvre sur le championnat du premier club favori qui y figure (effet 2, ci-dessous), sinon sur le championnat du pays quand il est parmi ses onglets (`initialTitleRace`), sinon sur la Ligue 1 comme avant, quelle que soit la priorité.
 

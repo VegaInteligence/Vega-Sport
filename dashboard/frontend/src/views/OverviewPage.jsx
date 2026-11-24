@@ -484,6 +484,14 @@ function CompactOverview() {
             competitions.values(),
             shownLocal?.competitions,
           ),
+          // The country's candidates among the matches to come (home-priority.js).
+          local = localMatches({
+            billboard: data.billboard,
+            local: shownLocal,
+            window: data.billboardWindow,
+            scopeIds: scope.chosen ? scope.ids : null,
+            leagues: cardLeagues,
+          }),
           // The five upcoming matches, chosen from the big matches, the favourites' and the
           // country's (home-upcoming.js), under the priority fixed in home-priority.js.
           highlights = chooseUpcoming({
@@ -493,15 +501,13 @@ function CompactOverview() {
             matches: mine?.upcoming,
             rules: data.rules,
             now,
-            local: localMatches({
-              billboard: data.billboard,
-              local: shownLocal,
-              window: data.billboardWindow,
-              scopeIds: scope.chosen ? scope.ids : null,
-              leagues: cardLeagues,
-            }),
+            local,
             priority: HOME_PRIORITY,
-          });
+          }),
+          // The strip's matches in play and to come (home-insights.js, scoreboardTicker); none in the archives.
+          tickerUpcoming = archived
+            ? null
+            : { billboard: data.billboard, matches: mine?.upcoming, local, window: data.billboardWindow };
         return (
           <>
             <OverviewContent
@@ -536,6 +542,7 @@ function CompactOverview() {
                 win: validPeriod ? data.win : null,
                 tables: data.tables || [],
                 highlights,
+                tickerUpcoming,
                 yourPlayers: mine?.yourPlayers || [],
                 streakNext:
                   data.streakNext?.time >= now ? data.streakNext : null,
@@ -601,6 +608,7 @@ function OverviewContent({
     progressValue,
     hasSeasonPlayers,
     yourPlayers,
+    tickerUpcoming = null,
   } = model;
   if (
     !results.length &&
@@ -703,6 +711,8 @@ function OverviewContent({
         localLeagues={countryLeagues}
         priority={HOME_PRIORITY}
         favourites={favourites.clubs}
+        upcoming={tickerUpcoming}
+        now={now}
       />
       <div className="home-bento">
         {featured && (

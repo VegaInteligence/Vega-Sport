@@ -1,5 +1,12 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## The home's strip with the matches to come — #69 (24 November 2026, branch `claude/accueil-bandeau-a-venir`, local, not pushed)
+
+- Goal (the owner, on production: « sur le bandeau en haut [je vois] que les matchs finis ; je veux aussi les futurs matchs »): the strip shows the results and the matches to come. Design decided by the coordinating session (scoreboard, time left to right, opened on now); no new card, band or control; « À l'affiche » untouched; no API change (data: `billboard`, `billboardWindow`, the favourites' `upcoming`, `localMatches`).
+- Built: `scoreboardTicker` (home-insights.js): nothing in play or to come → exactly `weekTicker`; else days oldest first, results as before, then today → `billboardWindow.end` the matches in play / to come (8 a day chosen by `preferenceOrder`, shown in play first, then kick-off, weight); one record per fixture, a result keeps its record; to come = home-upcoming's `ahead`; in play = `in_play`, or kick-off passed < 3 h (`LIVE_SPAN_MS`, live-client.js) with the feed still not started. `HomeTicker` draws `ComingTick` (kick-off via `kickoffFormatter`, « En direct », score only if `score_home/away`, `fixtureHref` as NextMatches); `anchorTicker` opens on the first tick not finished (≤ 2 before in view), run by an inline script after the nav (hidden holder, `suppressHydrationWarning`; waits for React's streamed reveal with a MutationObserver) and by a layout effect when the anchor changes and the visitor has not scrolled.
+- Tests first: `tests/home-ticker.test.mjs` 11 (10 red against stubs, the markup-unchanged guard green on main), then green; site suite 983/983. E2E `tests/e2e/home-ticker.e2e.mjs` red on main (6 failed), then 8/8 morning and evening; `home-country.e2e.mjs` adjusted (result ticks only; the script holder is not a block) 33 passed, 1 not run. Evidence …/scratchpad/e2e-ticker/ (red: e2e-ticker-red/). Captures /mnt/project-files/accueil-vi-48/captures-v4/.
+- Next: the owner's look at the captures; push only on his go.
+
 ## Home importance v2, « À l'affiche » and the visitor's country in the cards — VI-48 / #69 (23–24 November 2026)
 
 - Goal: replace the home's importance (`api.home_weight_v1`, a fixed list of 29 clubs) by a general score, serve the data of the new home blocks (backend, 23 Nov) and show them on the current home (frontend, 24 Nov). Branch `claude/accueil-importance-pays` (base main 639764b). Committed locally, not pushed (the user's go is needed).
