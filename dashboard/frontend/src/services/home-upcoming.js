@@ -98,7 +98,8 @@ export function chooseUpcoming({ editorial = [], billboard, favourites = [], mat
 }
 
 // The card is the matches to come: a match leaves at kick-off (or once the feed says it started or ended).
-const ahead = (m, now) => m.time >= now && m.fixture?.status !== "finished" && m.fixture?.status !== "in_play";
+// The home's strip uses the same rule for its matches to come (home-insights.js, scoreboardTicker).
+export const ahead = (m, now) => m.time >= now && m.fixture?.status !== "finished" && m.fixture?.status !== "in_play";
 
 /**
  * The five of « À l'affiche », the big card first, each marked `billboard: true`; none when

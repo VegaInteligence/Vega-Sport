@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import React, { useId, useState } from "react";
+import React, { useId, useLayoutEffect, useRef, useState } from "react";
 import Icon from "./Icon.jsx";
 import { PhoneFoldToggle, usePhoneFold } from "./PhoneFold.jsx";
 import { Media } from "./UI.jsx";
@@ -9,6 +9,7 @@ import { nationalTeamLabel } from "../services/national-flags.js";
 import { Term } from "./Hint.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { number } from "../services/format.js";
+import { kickoffFormatter } from "../services/fixtures.js";
 import {
   internationalLabel,
   leagueOf,
@@ -17,10 +18,11 @@ import {
   shotMapPoints,
   xgTimeline,
   weekPeriodLabel,
-  weekTicker,
+  scoreboardTicker,
 } from "../services/home-insights.js";
 import {
   ChartTip,
+  fixtureHref,
   FormDots,
   Kicker,
   lastName,
@@ -31,9 +33,52 @@ import {
 } from "./HomeCommon.jsx";
 
 /**
- * Scores of the week, newest day first: the national teams' first (home-insights.js, weekTicker), then the clubs',
- * the visitor's country's (`localLeagues`, home-priority.js) as `priority` says.
- * A club opens its page and the score opens the match; a national side opens its nation's page.
+ * Opens the strip on its anchor (the first tick not finished): up to two ticks before it stay in view, or their day's
+ * label when the first of them opens its day, fewer when the anchor would not fit. Plain DOM and self-contained: its
+ * source is also the inline script the server's HTML runs right after the nav (no jump at hydration). Returns the
+ * left edge chosen, null without an anchor; the value set is kept on the element (not an attribute).
+ */
+export function anchorTicker(nav) {
+  var kids = nav.children,
+    ticks = [],
+    at = -1,
+    i;
+  for (i = 0; i < kids.length; i++)
+    if (kids[i].classList.contains("home-tick")) {
+      if (kids[i].hasAttribute("data-ticker-anchor")) at = ticks.length;
+      ticks.push(kids[i]);
+    }
+  if (at < 0) return null;
+  var origin = kids[0].offsetLeft,
+    anchor = ticks[at],
+    right = anchor.offsetLeft + anchor.offsetWidth - origin;
+  var start = function (el) {
+    var before = el.previousElementSibling;
+    return (
+      (before && before.classList.contains("home-ticker-day") ? before : el)
+        .offsetLeft - origin
+    );
+  };
+  var left = start(anchor);
+  for (var k = Math.min(2, at); k > 0; k--)
+    if (right - start(ticks[at - k]) <= nav.clientWidth) {
+      left = start(ticks[at - k]);
+      break;
+    }
+  nav.scrollLeft = left;
+  nav.__vegaTickerLeft = nav.scrollLeft;
+  return left;
+}
+// Run as the server's HTML is parsed. Inside a boundary React streams hidden, the strip has no width yet: it waits
+// for the reveal (a DOM move, seen by a mutation observer before the next frame is painted).
+const ANCHOR_SCRIPT = `(function(n,a){if(n.clientWidth)return a(n);var o=new MutationObserver(function(){if(n.clientWidth){o.disconnect();a(n)}});o.observe(document,{childList:true,subtree:true});setTimeout(function(){o.disconnect()},30000)})(document.currentScript.parentNode.previousElementSibling,${anchorTicker})`;
+
+/**
+ * The strip (doc "Accueil", « Le bandeau »; home-insights.js, scoreboardTicker). Results only: the week's scores,
+ * newest day first, the national teams' first, then the clubs' (favourites, the visitor's country as `priority`
+ * says, weight). With matches in play or to come (`upcoming`, at `now`): time flows left to right, and the strip
+ * opens on the first match not finished. A club opens its page, the score or the kick-off opens the match; a
+ * national side opens its nation's page.
  */
 export function HomeTicker({
   results,
@@ -44,38 +89,139 @@ export function HomeTicker({
   localLeagues = null,
   priority,
   favourites = null,
+  upcoming = null,
+  now,
 }) {
   const f = useFootball();
-  // Favourite clubs' results first (effect 1), then the country's or the weight's as `priority` says.
-  const days = weekTicker(results, internationals, ranks, {
-    leagues: localLeagues,
-    priority,
-    favourites,
-  });
+  const ref = useRef(null);
+  const { days, anchor, ahead } = scoreboardTicker(
+    results,
+    internationals,
+    ranks,
+    {
+      leagues: localLeagues,
+      priority,
+      favourites,
+      upcoming,
+      now,
+    },
+  );
+  // Client renders, and a new anchor: open on it, unless the visitor has moved the strip since it was last set.
+  useLayoutEffect(() => {
+    const nav = ref.current;
+    if (!nav || !anchor) return;
+    if (Math.abs(nav.scrollLeft - (nav.__vegaTickerLeft ?? 0)) > 1) return;
+    anchorTicker(nav);
+  }, [anchor]);
   if (!days.length) return null;
+  const range = `${period ? weekPeriodLabel(period) : "de la semaine"}${period?.current === false ? " · archives" : ""}`;
   return (
-    <nav
-      className="home-ticker"
-      aria-label={`Résultats ${period ? weekPeriodLabel(period) : "de la semaine"}${period?.current === false ? " · archives" : ""}`}
-    >
-      {days.map(({ day, matches }) => (
-        <React.Fragment key={day}>
-          <span className="home-ticker-day">{shortDay(day)}</span>
-          {matches.map((m) =>
-            m.national ? (
-              <NationalTick key={m.id} match={m} />
-            ) : (
-              <ClubTick
-                key={m.id}
-                match={m}
-                competitions={competitions}
-                f={f}
-              />
-            ),
+    <>
+      <nav
+        ref={ref}
+        className="home-ticker"
+        aria-label={
+          ahead ? `Résultats et matchs à venir ${range}` : `Résultats ${range}`
+        }
+      >
+        {days.map(({ day, matches }) => (
+          <React.Fragment key={day}>
+            <span className="home-ticker-day">{shortDay(day)}</span>
+            {matches.map((m) =>
+              m.tick ? (
+                <ComingTick
+                  key={m.id}
+                  match={m}
+                  competitions={competitions}
+                  f={f}
+                  anchor={m.id === anchor}
+                />
+              ) : m.national ? (
+                <NationalTick key={m.id} match={m} />
+              ) : (
+                <ClubTick
+                  key={m.id}
+                  match={m}
+                  competitions={competitions}
+                  f={f}
+                />
+              ),
+            )}
+          </React.Fragment>
+        ))}
+      </nav>
+      {anchor && (
+        // A script React renders itself is never run on the client and logs an error: the server's HTML carries
+        // it, a client render only sets innerHTML (not run), and the layout effect above does the work.
+        <div
+          hidden
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{
+            __html: `<script>${ANCHOR_SCRIPT}</script>`,
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+/**
+ * A match to come or in play, in a result's box: the competition and the kick-off (Paris time, as « À l'affiche »)
+ * or « En direct »; the teams without score (a match in play: its score when the record carries it); an empty foot.
+ */
+function ComingTick({ match: m, competitions, f, anchor }) {
+  const { fixture } = m,
+    live = m.tick === "live",
+    home = fixture.home_team || {},
+    away = fixture.away_team || {},
+    competition = competitions.get(leagueOf(fixture)),
+    // As the matches lists: the feed's not-started match opens on « À venir », the others on the result.
+    href =
+      fixture.status === "in_play"
+        ? matchHref(f, {
+            id: fixture.id,
+            leagueId: fixture.league?.id,
+            season: fixture.season,
+          })
+        : fixtureHref(f, fixture),
+    score =
+      live &&
+      Number.isInteger(fixture.score_home) &&
+      Number.isInteger(fixture.score_away);
+  return (
+    <div className="home-tick" data-ticker-anchor={anchor ? "" : undefined}>
+      <Link className="home-tick-top" href={href} prefetch={false}>
+        <span>
+          {shortCompetition(
+            leagueOf(fixture),
+            competition?.name || fixture.league?.name,
           )}
-        </React.Fragment>
+        </span>
+        <span>{live ? "En direct" : kickoffFormatter.format(m.time)}</span>
+      </Link>
+      {[home, away].map((team, i) => (
+        <Link
+          key={i}
+          className="home-tick-team"
+          href={f.href("/clubs/", { id: team.id })}
+          prefetch={false}
+        >
+          <Media
+            name={team.name}
+            url={team.image_url}
+            className="crest home-crest-xs"
+          />
+          <span>{team.name}</span>
+          {score && <b>{i ? fixture.score_away : fixture.score_home}</b>}
+        </Link>
       ))}
-    </nav>
+      <Link
+        className="home-tick-foot"
+        href={href}
+        prefetch={false}
+        aria-label={`Voir ${home.name} – ${away.name}`}
+      />
+    </div>
   );
 }
 

@@ -6,6 +6,8 @@ import { rankSeasonPlayers } from "./player-leaderboard.js";
 import { GRADE_SEASON_MINUTES, gradeOf } from "./grades.js";
 import { HOME_PRIORITY, isLocal } from "./home-priority.js";
 import { involvesFavourite, preferenceOrder } from "./preference-effects.js";
+import { ahead } from "./home-upcoming.js";
+import { LIVE_SPAN_MS } from "./live-client.js";
 
 export const CHAMPIONS_LEAGUE_ID = "l_0bfbkO";
 export const EUROPA_LEAGUE_ID = "l_38d9HA";
@@ -229,6 +231,82 @@ export function weekTicker(results, internationals = [], ranks = new Map(), { le
         ...clubs.sort(clubOrder),
       ].slice(0, 8),
     }));
+}
+
+// Statuses after which a match is no longer under way, whatever its kick-off.
+const OVER = new Set(["finished", "postponed", "canceled", "abandoned"]);
+/**
+ * A match of the strip that is not a result, at `now`: "upcoming" while its kick-off is ahead and the feed has not
+ * started it (the « À l'affiche » rule, home-upcoming.js), then "live" when the feed says in_play or, the feed still
+ * saying not started, during the live window after kick-off (live-client.js); else null (over, or stale).
+ */
+export function tickState(record, now) {
+  if (ahead(record, now)) return "upcoming";
+  const status = record?.fixture?.status;
+  if (status === "in_play") return "live";
+  if (OVER.has(status) || !Number.isFinite(record?.time)) return null;
+  return record.time < now && now <= record.time + LIVE_SPAN_MS ? "live" : null;
+}
+
+/**
+ * The home's strip (« le bandeau »), results and matches to come (doc "Accueil", « Le bandeau »). `upcoming`:
+ * { billboard, matches, local, window } (the common read's billboard and billboardWindow, the favourites' matches of
+ * the personal read, the country's candidates of localMatches), or null (archived season, older API).
+ * - Nothing to come or in play: exactly weekTicker's days (newest first), no anchor: the strip of before.
+ * - Otherwise days oldest first: weekTicker's result days, as they are; then, from today to the window's end, the
+ *   matches in play and to come, one record per fixture (billboard first, then favourites', then the country's; a
+ *   match among the results keeps its results record), up to 8 a day chosen by the one rule (preferenceOrder:
+ *   favourite clubs, then the country under `priority`, then the served weight), shown after the day's results:
+ *   in play first, then by kick-off, then weight. `anchor`: the id of the first tick that is not finished.
+ */
+export function scoreboardTicker(
+  results,
+  internationals = [],
+  ranks = new Map(),
+  { leagues = null, priority = HOME_PRIORITY, favourites = null, upcoming = null, now = Date.now() } = {},
+) {
+  const past = weekTicker(results, internationals, ranks, { leagues, priority, favourites });
+  const none = { days: past, anchor: null, ahead: false };
+  if (!upcoming || !Array.isArray(upcoming.billboard)) return none;
+  const today = parisDay(now);
+  const end =
+    upcoming.window?.end ||
+    upcoming.billboard.reduce((last, m) => (typeof m?.day === "string" && m.day > last ? m.day : last), today);
+  const known = new Set([...(results || []), ...(internationals || [])].map((m) => m.id));
+  const seen = new Set(),
+    byDay = new Map();
+  for (const m of [...upcoming.billboard, ...(upcoming.matches || []), ...(upcoming.local || [])]) {
+    const id = m?.fixture?.id;
+    if (id == null || seen.has(id)) continue;
+    seen.add(id);
+    if (known.has(id)) continue;
+    const tick = tickState(m, now);
+    if (!tick) continue;
+    const day = typeof m.day === "string" ? m.day : parisDay(m.time);
+    if (day > end || (tick === "upcoming" && day < today)) continue;
+    if (!byDay.has(day)) byDay.set(day, []);
+    byDay.get(day).push({ ...m, id, tick });
+  }
+  if (!byDay.size) return none;
+  const heavier = (a, b) => (b.weight ?? 0) - (a.weight ?? 0);
+  const rule = preferenceOrder({
+    favourite: (m) => involvesFavourite(m, favourites),
+    local: (m) => isLocal(m, leagues),
+    weight: heavier,
+    priority,
+  });
+  const choice = (a, b) => rule(a, b) || a.time - b.time || String(a.id).localeCompare(String(b.id));
+  const shown = (a, b) =>
+    Number(b.tick === "live") - Number(a.tick === "live") || a.time - b.time || heavier(a, b) || String(a.id).localeCompare(String(b.id));
+  const days = new Map(past.map((d) => [d.day, { day: d.day, matches: [...d.matches] }]));
+  for (const [day, list] of byDay) {
+    const picked = list.sort(choice).slice(0, 8).sort(shown);
+    if (days.has(day)) days.get(day).matches.push(...picked);
+    else days.set(day, { day, matches: picked });
+  }
+  const ordered = [...days.values()].sort((a, b) => (a.day < b.day ? -1 : 1));
+  const anchor = ordered.flatMap((d) => d.matches).find((m) => m.tick)?.id ?? null;
+  return { days: ordered, anchor, ahead: true };
 }
 
 /** The week's showcase: a meeting of big clubs, ideally near the top of the table. */

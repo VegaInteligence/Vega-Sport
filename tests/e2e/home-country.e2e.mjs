@@ -21,7 +21,8 @@
 //  N1 No country (XX): « À l'affiche » = the billboard's matches to come by served weight, as before the country.
 //  T1 The results strip, each day: the national teams first, then the visitor's country's results, then the others
 //     by editorial weight (matchWeight), 8 a day, the 4 latest days. Checked for FR, BR, GB (the week's results are
-//     from the visitor's leagues: with no local result the order is the one of before).
+//     from the visitor's leagues: with no local result the order is the one of before). Since the strip also holds
+//     the matches to come (tests/e2e/home-ticker.e2e.mjs), only its result ticks are compared, newest day first.
 //  R1 « Course au titre » opens on the country's league when it is among the tables (FR → Ligue 1, GB → Premier
 //     League), else the default (BR → Ligue 1).
 //  M1 The preferences panel's « Votre pays » line: choosing Brésil while detected in France changes « À l'affiche »
@@ -192,6 +193,8 @@ const card = (page) =>
     rows: [...c.querySelectorAll(".home-next-list a")].map((a) => a.getAttribute("href")),
   })).then((c) => ({ kicker: c.kicker, lead: idOf(c.lead), rows: c.rows.map(idOf) }));
 const sameCard = (got, want) => Boolean(want) && got.lead === want.lead && JSON.stringify(got.rows) === JSON.stringify(want.rows);
+// The strip's results, newest day first (with matches to come the strip runs oldest first: read back; their ticks,
+// « Terminé » not in their top line, are tests/e2e/home-ticker.e2e.mjs's).
 const ticker = (page) =>
   page.evaluate(() => {
     const nav = document.querySelector(".home-ticker");
@@ -199,18 +202,24 @@ const ticker = (page) =>
     const days = [];
     for (const el of nav.children) {
       if (el.classList.contains("home-ticker-day")) days.push([]);
-      else if (el.classList.contains("home-tick")) {
+      else if (el.classList.contains("home-tick") && el.querySelector(".home-tick-top span:last-child")?.textContent === "Terminé") {
         const a = el.querySelector("a.home-tick-top");
         days.at(-1)?.push(a ? new URL(a.getAttribute("href"), location.href).searchParams.get("id") : "nation");
       }
     }
-    return days;
+    const results = days.filter((d) => d.length);
+    return /à venir/.test(nav.getAttribute("aria-label") || "") ? results.reverse() : results;
   });
 const structure = (page) =>
   page.evaluate(() => ({
     strip: document.querySelectorAll(".home-local").length,
     chezVous: /chez vous/i.test(document.querySelector("main")?.innerText || document.body.innerText),
-    afterTicker: document.querySelector(".home-ticker")?.nextElementSibling?.className || null,
+    // The strip's opening script (a hidden holder right after the nav, home-ticker.e2e.mjs) is not a block.
+    afterTicker: (() => {
+      let el = document.querySelector(".home-ticker")?.nextElementSibling;
+      if (el?.hidden && el.querySelector("script")) el = el.nextElementSibling;
+      return el?.className || null;
+    })(),
   }));
 // The places the favourites change (effects 1, 2, 5), captured as « with » / « without ».
 async function placeShots(page, tag) {
