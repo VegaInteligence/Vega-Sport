@@ -4012,7 +4012,7 @@ METHOD_VERSION do not change.
   names in French, « Andorre », or otherwise, « United States ») is linked by its FIFA name through the measurement's
   map (`elo_engine.FIFA_TO_IR`) to the national team International Results keys by that name. A team the edition does not rate starts at 1500, the edition's mean
   (the measurement's rule: `rating.get(t, seeds.get(t, 1500))`). Without that edition, the earliest edition held; without
-  any, 1500 for every team. The edition read is the run's `nation_seed_edition` (NULL without one).
+  any, 1500 for every team. The edition read is the run's `seed_edition` (`agg.nation_elo_runs`, §53; NULL without one).
 - **The world ranking** (scope `nations`, from 2021/22): a season's reference date is its last counted match (national
   pass, season of the match), today for the season in progress (from 1 July). Listed: every national team with a counted
   match in the two years up to that date, ranked (SQL `rank()`, ties share) on its latest strength at that date;
@@ -4028,9 +4028,10 @@ METHOD_VERSION do not change.
   of the edition (`cups.HOSTS`, reviewed, sourced): before that day `is_neutral` stays NULL, as today. The Nations
   League parser reads the file's `neutral` column, as the tournaments' parser does.
 - **Versioning.** `METHOD_VERSION` is not raised: it names the player ranking, and `stale_rankings` would re-rank every
-  past player season. The Elo run records `nation_elo_version` (`nations-elo-v1`), `nation_k`, `nation_start` and
-  `nation_seed_edition` (`agg.power_runs`, migration 168); `elo_due` is true while the last published Elo run has
-  another `nation_elo_version` (one run after the deployment).
+  past player season. The Elo run's national settings, `version` (`nations-elo-v1`), `k`, `start_date` and
+  `seed_edition`, are kept in their own table `agg.nation_elo_runs`, one row per run (migration 168, §53; not in
+  `agg.power_runs`); `elo_due` is true while the last published Elo run has another `version` or no row (one run after
+  the deployment).
 
 ### 51.2 Failure modes and expected outcomes
 
@@ -4049,10 +4050,10 @@ the real `results.csv` (evidence `donnees-hors-live/elo-selections/implementatio
 | 51f | Clubs and nations mixed, internationals added | the clubs' rows equal `elo_updates` over the population without the internationals |
 | 51g | The world ranking: a team whose last match is 25 months before the reference date; one 23 months before with no match in the season; one with 7 matches in 4 years, one with 8; two equal strengths; the season in progress | first not listed; second listed, matches 0, change 0, start = peak = low = elo; provisional True / False; same rank, next rank skipped; reference today |
 | 51h | Stored stakes of a World Cup final, a friendly | 1.495 and 1.0, as `stakes` gives them; `match_stakes` unchanged |
-| 51i | DB: a World Cup final of 2026 (season 2025/26), no FIFA edition | step = 30 × 1.495 × G × (1 − E); stakes 1.495; run `nation_elo_version` nations-elo-v1, `nation_k` 30, `nation_start` 2021-07-01, seed edition NULL; METHOD_VERSION unchanged; nations rows of 2025/26 and 2026/27 (matches 0, provisional) |
+| 51i | DB: a World Cup final of 2026 (season 2025/26), no FIFA edition | step = 30 × 1.495 × G × (1 − E); stakes 1.495; the run's `agg.nation_elo_runs` row nations-elo-v1, k 30, start 2021-07-01, seed edition NULL; METHOD_VERSION unchanged; nations rows of 2025/26 and 2026/27 (matches 0, provisional) |
 | 51j | DB: FIFA editions of 2021-04-07 and 2021-02-18, then only 2021-04-07 | seed from 2021-02-18, then from 2021-04-07, the edition traced |
 | 51j' | DB: an edition row not linked to a team, FIFA name « Korea Republic » | seeds the national team International Results keys « South Korea » |
-| 51k | DB: an internationals match between two national sides; one with a side not national; an Elo published, then an internationals result written by the real path; a published run of another `nation_elo_version` | the first in `ELO_MATCHES`, the second not; `elo_due` true, one run, its sides published; due once |
+| 51k | DB: an internationals match between two national sides; one with a side not national; an Elo published, then an internationals result written by the real path; a published run of another national `version`, or with no `agg.nation_elo_runs` row | the first in `ELO_MATCHES`, the second not; `elo_due` true, one run, its sides published; due once |
 | 51l | Parser: a Nations League row with `neutral` TRUE; `cups.match_rows` of the Euro 2020 (2021-07-07 England–Denmark, 2021-07-03 Ukraine–England, a June 2021 match), World Cup 2022 (Qatar first, Qatar second), World Cup 2026 (USA–Paraguay) | neutral true; England–Denmark not neutral, Ukraine–England neutral, June NULL; Qatar home not neutral, Qatar away neutral; USA home not neutral |
 | 51m | API: `kind=nations&page=2` on a base without nations rows; `kind=clubs&page=2`; `kind=nations&limit=201`; the row mapper of a nations row, provisional true | 404 (no longer 400); 400; 400; `provisional: true`, no `score`; the list's `ranking.provisional` |
 | 51n | E2E, real `results.csv` with the FIFA edition of 2021-02-18 as input | Gibraltar ~52nd of the Nations League's teams and ~187th of the world; Spearman with the FIFA ranking > 0.9 (measured 0.987); ~205 teams for 2026/27 (the base's national rows); club rows identical before and after |
@@ -4095,3 +4096,46 @@ variant C4 (211 nations), which the user chose. Decided (coordinator, 23 Nov 202
 | 52c | The national pass: a match in `nation_neutral`, its tuple not neutral, two equal strengths | expected 0.5 (no home advantage); the clubs' pass of the same tuple keeps its advantage |
 | 52d | `pitchapi_neutral`: World Cup 2022 Qatar at home, Ecuador at home; 2026 « United States » at home, Spain at home; a match with is_neutral written | Qatar and the United States not neutral, Ecuador and Spain neutral, the written one not listed; `cups.HOSTS` has no Euro 2028 |
 | 52e | E2E, production rule (no hand marking) | ~205–211 nations for 2026/27; Gibraltar 52nd of 54, ~187th; Spearman ≥ 0.98; clubs' and pre-2021/22 national rows identical |
+
+## 53. The national teams' Elo leaves `agg.power_runs` as it is: its settings in their own table (24 Nov 2026, written before the tests)
+
+The merge of main 0302d45 ran `test_41n` on PostgreSQL 18 for the first time with migration 168: the Open Matchday
+restore (`open_matchday_restore.verify_elo`, §41) compares the whole row `to_jsonb(agg.power_runs)` of the reviewed Elo
+run 2097 with its capture, and 168 had added four columns to that table (`nation_elo_version`, `nation_k`, `nation_start`,
+`nation_seed_edition`), so the row no longer equals the capture and the restore refuses (« Elo drift: the original run
+differs from the reviewed publication »). main passes it; the branch alone fails it. On PostgreSQL 16 an earlier refusal
+(`preimage schema mismatch`) hid it. Decided (coordinator, 24 Nov 2026): the guard stays as it is; 168, deployed nowhere,
+is rewritten.
+
+### 53.1 Rules
+
+- **No change to the shape of `agg.power_runs`.** A migration of this branch adds, drops or retypes no column of
+  `agg.power_runs`: the restore compares the reviewed run's whole row. Its columns after every migration are main's
+  (0302d45: 34 columns, `id` … `measured_se`).
+- **The national settings in their own table.** `agg.nation_elo_runs (run_id integer PRIMARY KEY REFERENCES
+  agg.power_runs ON DELETE CASCADE, version text NOT NULL, k real NOT NULL, start_date date NOT NULL, seed_edition text)`,
+  the pattern of main's `agg.level_runs` (167): its own table, `GRANT SELECT, INSERT, UPDATE, DELETE … TO vega_calc`.
+  The cascade: a run deleted takes its settings with it, as nothing else blocks it (runs are not pruned by the worker;
+  tests delete theirs).
+- **Written with the run.** `power.refresh_elo` inserts the run's row in the transaction that writes and publishes the
+  run; a failed run leaves neither.
+- **Read by the worker.** `worker.elo_due` compares `power.NATION_ELO_VERSION` with the `version` of the last published
+  Elo run's row; no row (a run from before the migration, production's today) counts as another version: one run after
+  the deployment, then not due.
+- **Unchanged.** `agg.team_power.provisional` and the `api.power_clubs` redefinition stay in 168; the restore guard and
+  `REVIEWED_SCHEMAS` keep their checks (the note on 168 says what it now adds: a table naming a run, no column of a match
+  and no column of `agg.power_runs`).
+
+### 53.2 Failure modes and expected outcomes
+
+53a: `backend/tests/test_deploy_migrations.py`. 53b: `test_models.py` (51i, 51j). 53c–53d: `test_collection_wakeups.py`
+(51k). 53e: `test_open_matchday_window.py` (41n). 53f: the national E2E. All on a disposable PostgreSQL 18.
+
+| # | Situation | Expected |
+|---|---|---|
+| 53a | Production's schema, then this tree's migrations | `agg.power_runs` has main's 34 columns, in main's order; `agg.nation_elo_runs` exists, readable and writable by `vega_calc` |
+| 53b | `refresh_elo` (51i, 51j) | one `agg.nation_elo_runs` row for the published run: nations-elo-v1, 30, 2021-07-01, the seed edition read (NULL without one); none for another run |
+| 53c | A published Elo run with its row of the present version | `elo_due` false |
+| 53d | The same run with another version in its row, or with no row | `elo_due` true; after one run, false |
+| 53e | `test_41n` on PostgreSQL 18 | passes: `to_jsonb` of run 2097 has the capture's keys; the 16 tests of `test_open_matchday_window` pass |
+| 53f | The national E2E (51n) | the numbers of §51/§52's final run: 210 nations, Gibraltar 52nd of 54 and 188th, Spearman 0.988, clubs and pre-2021/22 rows identical |
