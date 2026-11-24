@@ -158,6 +158,6 @@ Resources:
       InvokedViaFunctionUrl: true
       Principal: '*'
 Outputs:
-  # https://<id>.lambda-url.us-east-2.on.aws/ : the site's NEXT_PUBLIC_ACCOUNT_ORIGIN (without the slash).
+  # https://<id>.lambda-url.us-east-2.on.aws/ : the site's ACCOUNT_API_ORIGIN (without the slash), a server-side variable.
   FrontUrl: {Value: !GetAtt FrontUrl.FunctionUrl, Export: {Name: vega-v2-account-url}}
   StoreFunctionArn: {Value: !GetAtt Store.Arn}
