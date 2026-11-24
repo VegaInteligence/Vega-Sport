@@ -16,7 +16,7 @@
 - After deploy only the seasons `worker.due_seasons` lists (played in the last 30 days) are re-ranked on the new national Elo; past years keep v8 and v9 on the old one (nothing lists them).
 - Next action: the user's review and push; the full Python suite on his machine.
 
-## Score Vega v9 in service, then v9.1 — [VI-53](https://linear.app/vegainteligence/issue/VI-53) and [VI-55](https://linear.app/vegainteligence/issue/VI-55), GitHub #82 and #90 (24 November 2026, stage 1 in production; v9.1 on the branch, draft PR, not merged)
+## Score Vega v9 in service, then v9.1 — [VI-53](https://linear.app/vegainteligence/issue/VI-53) and [VI-55](https://linear.app/vegainteligence/issue/VI-55), GitHub #82 and #90 (24 November 2026, stage 1 in production; v9.1 on the branch, draft PR #91, not merged)
 
 - Goal (user, 24 Nov): the v9 « qui prend tout en compte » goes into service, then every player of every season since 2021 is computed with it. No v8.1.
 - User decisions: ψ = 10; retention stays (five blocks); support-striker case removed (one price list for the attack); defence block in context, stabilised scale, talent bounded at ± 2.0 (23 Nov). The Ballon d'Or race stays: v9 score adjusted by three criteria, 60 % individual / 30 % collective and trophies / 10 % class and fair play, a separate ticket. Match grades keep their calculation.
