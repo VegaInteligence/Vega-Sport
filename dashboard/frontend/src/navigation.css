@@ -1,8 +1,5 @@
 /* The site's navigation (VI-41): the header groups the pages under menus by
    use; on phones the tab bar opens each section in a sheet above it. */
-.main-nav {
-  overflow: visible;
-}
 .nav-menu {
   position: relative;
   display: flex;

@@ -73,6 +73,11 @@ const EMPTY_COMPETITIONS = [];
  * the page, which takes the focus as it appears, with the results in a panel
  * under it. `onClose` is called by its close button, Escape and a followed
  * result (with "keyboard" when the keyboard closed it).
+ *
+ * In the header the search is `is-engaged` from the moment its field takes the
+ * focus until the visitor leaves it (a click elsewhere, Escape, the Tab key, a
+ * followed result). Where the header has no room for a field (styles.css, 641
+ * to 919px) the search is its icon and opens as a field only while engaged.
  */
 export default function GlobalSearch({ sheet = false, onClose }) {
   const f = useContext(FootballContext),
@@ -84,7 +89,9 @@ export default function GlobalSearch({ sheet = false, onClose }) {
     [open, setOpen] = useState(sheet),
     [armed, setArmed] = useState(sheet),
     [active, setActive] = useState(0),
-    [settledQuery, setSettledQuery] = useState("");
+    [settledQuery, setSettledQuery] = useState(""),
+    // Declared last: tests/bounded-reads.test.mjs reads the states above by position.
+    [engaged, setEngaged] = useState(false);
   const deferred = useDeferredValue(query);
   const season = f?.season;
   const remote = hasBoundedSearch(f?.manifest);
@@ -253,17 +260,29 @@ export default function GlobalSearch({ sheet = false, onClose }) {
   }, [sheet]);
   useEffect(() => {
     // The sheet has no outside: its results stay until it closes.
-    if (!open || sheet) return;
+    if (!(open || engaged) || sheet) return;
     const close = (event) => {
-      if (!rootRef.current?.contains(event.target)) setOpen(false);
+      if (rootRef.current?.contains(event.target)) return;
+      setOpen(false);
+      setEngaged(false);
     };
     document.addEventListener("pointerdown", close);
     return () => document.removeEventListener("pointerdown", close);
-  }, [open, sheet]);
+  }, [open, engaged, sheet]);
+  // The focus left for another control of the page (the Tab key, a click on a button): the
+  // search closes. A focus that goes nowhere stays engaged: Safari gives none to a clicked
+  // button, and the clear button must still be there when the click ends.
+  const onLeave = (event) => {
+    const next = event.relatedTarget;
+    if (sheet || !next || rootRef.current?.contains(next)) return;
+    setOpen(false);
+    setEngaged(false);
+  };
 
   // Results are real links: Enter follows the highlighted one.
   function close() {
     setOpen(false);
+    setEngaged(false);
     setQuery("");
     inputRef.current?.blur();
     onClose?.();
@@ -291,6 +310,7 @@ export default function GlobalSearch({ sheet = false, onClose }) {
       else if (open && query) setOpen(false);
       else {
         setQuery("");
+        setEngaged(false);
         inputRef.current?.blur();
       }
     }
@@ -301,8 +321,9 @@ export default function GlobalSearch({ sheet = false, onClose }) {
   let position = -1;
   return (
     <div
-      className={`global-search${show ? " is-open" : ""}${sheet ? " is-sheet" : ""}`}
+      className={`global-search${show ? " is-open" : ""}${sheet ? " is-sheet" : ""}${engaged && !sheet ? " is-engaged" : ""}`}
       ref={rootRef}
+      onBlur={onLeave}
     >
       <div className="global-search-field">
         <Icon name="search" />
@@ -327,6 +348,7 @@ export default function GlobalSearch({ sheet = false, onClose }) {
           onFocus={() => {
             setArmed(true);
             setOpen(true);
+            setEngaged(true);
           }}
           onChange={(event) => {
             setQuery(event.target.value);
