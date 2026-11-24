@@ -1821,7 +1821,7 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
     stays idle inside a transaction (60 s, infra/aws/database.yaml), and fitting the
     references of a large season takes longer than that.
 
-    The same run computes the players' level (Score Vega v9, level.py; FAILURE_MODES §49)
+    The same run computes the players' level (Score Vega v9.1, level.py; FAILURE_MODES §49, §54)
     beside the ranking, from the same player-matches, and writes it in the same transaction:
     the ranking's own rows are those it wrote before the level existed."""
     from . import level as levels  # level.py reads this module's blocks and references
@@ -2206,7 +2206,8 @@ def stale_rankings(conn):
     own (an earlier rule's run, whatever its order: production ranked 2020 after 2021,
     FAILURE_MODES §48), most recent first. The partial run publishes players = 0 and
     deletes those references itself, so it is listed once. After them, the years whose
-    level (Score Vega v9) is missing or older than the year before's, oldest first (§49)."""
+    level (Score Vega v9.1) is missing, of another version or other settings, or older than the
+    year before's, oldest first (§49, §54)."""
     stale = {s for (s,) in conn.execute(
         "SELECT season_id FROM agg.power_runs WHERE kind = 'players' AND status = 'published' AND method_version <> %s", (METHOD_VERSION,)
     ).fetchall()}
