@@ -45,6 +45,7 @@ import {
   runsByTournament,
 } from "../services/tournament-runs.js";
 import { matchCarousel } from "../services/nation-carousel.js";
+import { scorerLine } from "../services/international-scorers.js";
 import { trophyArt } from "../services/trophy-art.js";
 import rail from "./ClubScoutTabs.module.css";
 import s from "./Nations.module.css";
@@ -291,9 +292,11 @@ function MatchDate({ date }) {
   );
 }
 
-function MatchRow({ match, id, ...rest }) {
+function MatchRow({ match, id, withScorers = false, ...rest }) {
   const f = useFootball();
   const side = sideOf(match, id);
+  // International Results' scorers, only when the list is complete (§57).
+  const scorers = withScorers ? scorerLine(match.scorers) : null;
   const score =
     match.homeScore == null
       ? match.status === "finished"
@@ -315,6 +318,11 @@ function MatchRow({ match, id, ...rest }) {
             ? ` · t.a.b. ${match.homePenalties}–${match.awayPenalties}`
             : ""}
         </small>
+        {scorers && (
+          <small className={s.scorers} aria-label="Buteurs">
+            {scorers}
+          </small>
+        )}
       </span>
       <span className={s.score}>{score}</span>
       {side.result ? (
@@ -1080,7 +1088,7 @@ function Matches({ nation }) {
       )}
       <div className={s.matches}>
         {rows.map((m, i) => (
-          <MatchRow key={m.id || `${m.date}:${i}`} match={m} id={nation.id} />
+          <MatchRow key={m.id || `${m.date}:${i}`} match={m} id={nation.id} withScorers />
         ))}
       </div>
     </Card>

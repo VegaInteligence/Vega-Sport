@@ -120,7 +120,8 @@ def _claim(conn, provider, expected):
 
 # An ordinary forecast: the forecast pass writes a season's forecasts again for the matches still to play
 # (forecast.py), so it never holds a withdrawal, and the collection never writes agg (FAILURE_MODES.md §35).
-LAPSING = ("agg.match_forecasts.match_id",)
+# The scorers International Results gives its own matches (172, §57) go with the match: they are that source's too.
+LAPSING = ("agg.match_forecasts.match_id", "core.international_goals.match_id")
 # A match's own fields that no snapshot writes (COLUMNS): another authority's facts on the parent.
 PARENT_FIELDS = ("kickoff_at", "venue_id", "referee_id", "attendance")
 

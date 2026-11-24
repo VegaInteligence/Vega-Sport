@@ -6,7 +6,7 @@ Written before the correction. The fixture is Argentina's World Cup 2026 as prod
 `open-cups:world-cup-history:2026` (3 dated the day before, 5 the same day), the family's competition named after
 its first edition (« World Cup 1930 »), and edge cases on 2022 and on friendlies. Failure modes: a copy one day
 earlier listed as a second match; an archive match labelled with the family's first edition; two real matches one
-day apart merged; the kept match losing the shoot-out its copy holds.
+day apart merged; the kept match losing the shoot-out its copy holds. §58 (58a–58d): the last match is a played one.
 """
 
 import json
@@ -174,6 +174,17 @@ class NationMatchCopies(unittest.TestCase):
         [own] = [n for n in self.listing["nations"] if n["id"] == TEAMS[ARG][1]]
         self.assertEqual(own["matches"], len(self.page["matches"]))
         self.assertEqual(len(self.page["matches"]), 8 + 8 + 1 + 1)
+
+    def test_58a_to_58d_the_last_match_is_a_played_one(self):
+        # FAILURE_MODES §58, written before the code: the friendly of 20 March 2027 is a fixture, not the last match.
+        [own] = [n for n in self.listing["nations"] if n["id"] == TEAMS[ARG][1]]
+        self.assertEqual(own["lastMatch"], "2026-07-19")  # red before §58: 2027-03-20
+        self.assertEqual(self.page["lastMatch"], "2026-07-19")
+        self.assertEqual(own["matches"], 18)  # 58c: the matches held, as the page lists them
+        # 58d: Brazil holds that fixture alone: listed, no last match.
+        [brazil] = [n for n in self.listing["nations"] if n["id"] == TEAMS[15][1]]
+        self.assertEqual(brazil["matches"], 1)
+        self.assertNotIn("lastMatch", brazil)
 
 
 if __name__ == "__main__":
