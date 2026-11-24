@@ -12,8 +12,9 @@ writes; the new race is served by its own reads (/api/rankings/award).
   national cup, international competition), one per player, team and edition.
 - F, fair play: minus the FIFA team conduct points per 90 of his covered matches, pulled to his
   position's mean by CARD_PRIOR_MINUTES.
-- z over the year's men's reference players (eligible, linked), z_C and z_F within ± Z_CAP;
-  B = 0.6 z_I + 0.3 z_C + 0.1 z_F; A = μ_I + σ_I B / 0.6; score on the level's curve around the
+- z_I and z_F over the year's men's reference players (eligible, linked), z_F within ± Z_CAP; z_C = k × C,
+  k = mean of the SCALE_TOP highest z_I / mean of the SCALE_TOP highest C of the ranked players (§60.3, stage 1.1;
+  a year that is not its own reference takes its reference year's k); B = 0.6 z_I + 0.3 z_C + 0.1 z_F; A = μ_I + σ_I B / 0.6; score on the level's curve around the
   median I of the year's reference players.
 
 write() runs inside power.refresh_players' write transaction; refresh() computes C, F, the z and
@@ -27,9 +28,13 @@ from datetime import date
 
 from . import level, power
 
-AWARD_VERSION = "vega-award-v1"  # a race of another version is computed again (stale)
+AWARD_VERSION = "vega-award-v1.1"  # a race of another version is computed again (stale)
 WEIGHTS = {"individual": 0.6, "collective": 0.3, "fair_play": 0.1}
-Z_CAP = 4.0  # standard deviations, for z_C and z_F
+Z_CAP = 4.0  # standard deviations, for z_F (z_C has no cap since v1.1, §60.3)
+SCALE_TOP = 30  # z_C = k × C, k the mean of this many highest z_I over that of this many highest C: the award's list of 30
+# The national cups of an award year are counted only when the year's editions hold one of each of these countries
+# (power._cup_country's codes; the owner's decision, §60.3): one country's cup alone would be a bonus no one else can get.
+NATIONAL_CUP_COUNTRIES = ("ENG", "ESP", "GER", "ITA", "FRA")
 LEAGUE_VALUE = 0.5  # a top division's title, its factor 1 and the season complete
 CUP_VALUE = 0.15  # a national cup won, its factor 1
 LEAGUE_RANKS = {1: 1.0, 2: 0.4, 3: 0.2, 4: 0.1}  # a league's value by final rank; any other rank 0
@@ -46,7 +51,8 @@ LEAGUE, NATIONAL_CUP, INTERNATIONAL = "league", "national_cup", "international"
 def settings():
     """The settings a run keeps (agg.award_runs.settings) and stale() compares, read from the
     tables above each time: a table changed is a race to compute again."""
-    return {"weights": dict(WEIGHTS), "z_cap": Z_CAP, "league_value": LEAGUE_VALUE, "cup_value": CUP_VALUE,
+    return {"weights": dict(WEIGHTS), "z_cap": Z_CAP, "collective_scale": "proportional", "scale_top": SCALE_TOP,
+            "national_cup_countries": list(NATIONAL_CUP_COUNTRIES), "league_value": LEAGUE_VALUE, "cup_value": CUP_VALUE,
             "league_ranks": {str(rank): value for rank, value in sorted(LEAGUE_RANKS.items())},
             "round_value": dict(ROUND_VALUE), "card_prior_minutes": CARD_PRIOR_MINUTES, "national_matches": NATIONAL_MATCHES,
             "national_proxy_share": NATIONAL_PROXY_SHARE, "keeper_in_race": KEEPER_IN_RACE, "level_version": level.LEVEL_VERSION}
@@ -110,6 +116,8 @@ def reached_round(stage, name):
     kind = power.round_of(stage, name)
     if kind in ("semi_final", "final"):
         return kind
+    if kind is None and (name or "").strip().lower().endswith(", final"):
+        return "final"  # OpenFootball's « Finals, Final » (§60.3); power.round_of, the v8 stakes' reading, is not changed
     if kind == "knockout":
         name = (name or "").strip().lower()
         if any(word in name for word in _QUARTER):
@@ -206,17 +214,28 @@ def combine(people, spreads=None):
     "reason"}}, the spreads used)."""
     men = {p: r for p, r in people.items() if r.get("universe", "men") == "men"}
     own = own_spreads(men)
-    used = own if spreads is None else spreads
+    used = own if not spreads else spreads
     individual_spread = used.get("individual") or own["individual"]
     collective_spread = used.get("collective") or own["collective"]
     reference = _reference(men)
     ordered = sorted(men[p]["individual"] for p in reference)
     median = ordered[len(ordered) // 2] if ordered else 0.0
+    del collective_spread  # kept with the spreads (own_spreads), it places nothing since v1.1 (§60.3)
+    z_individual = {p: zscore(r["individual"], individual_spread[0], individual_spread[1]) for p, r in men.items()}
+    if spreads:  # the reference year's run: its k, never the year's own
+        given = spreads.get("collective_scale")
+        scale = {**given, "source": "reference"} if given else {**collective_scale([], []), "source": "none"}
+    elif spreads is None:  # the year is its own reference
+        ranked = [p for p, r in men.items() if race_reason(r) is None]
+        scale = {**collective_scale([z_individual[p] for p in ranked], [men[p]["collective"] for p in ranked]), "source": "own"}
+    else:  # placed on a reference year without a published run of this version: no k of its own
+        scale = {**collective_scale([], []), "source": "none"}
+    used = {**used, "collective_scale": scale}
     out = {}
     for p, r in men.items():
         fair = (used.get("fair_play") or {}).get(r["position"]) or own["fair_play"].get(r["position"], [0.0, 0.0])
-        zi = zscore(r["individual"], individual_spread[0], individual_spread[1])
-        zc = zscore(r["collective"], collective_spread[0], collective_spread[1], cap=Z_CAP)
+        zi = z_individual[p]
+        zc = scale["k"] * r["collective"]
         zf = zscore(r["fair_play"], fair[0], fair[1], cap=Z_CAP)
         a = award_level(combined(zi, zc, zf), individual_spread[0], individual_spread[1])
         out[p] = {"z_individual": zi, "z_collective": zc, "z_fair_play": zf, "level": a, "score": score(a, median), "rank": None,
@@ -224,6 +243,16 @@ def combine(people, spreads=None):
     for rank, p in enumerate(sorted((p for p, r in out.items() if r["reason"] is None), key=lambda p: (-out[p]["level"], p)), 1):
         out[p]["rank"] = rank
     return out, used
+
+
+def collective_scale(top_individual, top_collective, size=None):
+    """z_C's slope (§60.3): k = mean of the `size` (SCALE_TOP) highest z_I / mean of the `size` highest C, the two taken
+    separately among the year's ranked players (all of them when fewer); 0 when either mean is not positive."""
+    size = SCALE_TOP if size is None else size
+    zi, c = sorted(top_individual, reverse=True)[:size], sorted(top_collective, reverse=True)[:size]
+    mean_i, mean_c = (sum(zi) / len(zi) if zi else 0.0), (sum(c) / len(c) if c else 0.0)
+    k = mean_i / mean_c if mean_i > 0 and mean_c > 0 else 0.0
+    return {"k": k, "mean_top_individual": mean_i, "mean_top_collective": mean_c, "top": len(zi)}
 
 
 def _by_position(people, reference, values):
@@ -269,7 +298,7 @@ def evaluate(people, honours, cards, spreads=None):
         parts[p] = {**r, "collective": collective.get(p, 0.0), "card_points": points, "fair_play_minutes": minutes,
                     "fair_play": -pulled_rate(points, minutes, means.get(r["position"], 0.0))}
     rows, used = combine(parts, spreads)
-    if spreads is None:
+    if not spreads:
         used = {**used, "fair_play": {pos: [*v[:2], own_means.get(pos, 0.0)] for pos, v in used["fair_play"].items()}}
     for p, r in rows.items():
         r.update({k: parts[p][k] for k in ("collective", "card_points", "fair_play_minutes", "fair_play")})
@@ -302,10 +331,10 @@ CROSS JOIN LATERAL (VALUES (m.home_team_id), (m.away_team_id)) t(team)
 JOIN core.teams tm ON tm.id = t.team
 WHERE m.competition_season_id = ANY(%(editions)s) AND m.status <> 'canceled'
 GROUP BY 1, 2"""
-# The rounds of the cups and the international competitions.
+# The rounds of the cups and the international competitions (the match's id last: §60.3's shoot-outs).
 KNOCKOUTS = """
 SELECT m.competition_season_id, m.match_date, m.home_team_id, m.away_team_id, m.status = 'finished', m.home_score, m.away_score,
-  m.home_score_et, m.away_score_et, m.home_penalty_score, m.away_penalty_score, r.stage::text, r.name
+  m.home_score_et, m.away_score_et, m.home_penalty_score, m.away_penalty_score, r.stage::text, r.name, m.id
 FROM core.matches m JOIN core.rounds r ON r.id = m.round_id
 WHERE m.competition_season_id = ANY(%(editions)s) AND m.status <> 'canceled'"""
 # The final tables of the leagues, from the base tables of these editions alone (the table of the whole league first):
@@ -401,6 +430,126 @@ WHERE s.season_id = ANY(%(seasons)s) AND s.minutes_played > 0
 GROUP BY 1"""
 
 
+# The copies of the finals without a shoot-out (§60.3): a finished match of another edition, any year, of the same two
+# teams, at most a day apart, with both shoot-out scores; award.lent_shootouts keeps those of the same real competition
+# and score. Through the teams' indexes (matches_home_season, matches_away_season).
+COPIES = """
+WITH f AS (SELECT * FROM unnest(%(ids)s::integer[], %(editions)s::integer[], %(homes)s::integer[], %(aways)s::integer[], %(days)s::date[])
+           AS f(final, edition, home, away, day))
+SELECT f.final, m.competition_season_id, cs.cup_key, cp.provider_key, m.match_date, m.home_team_id, m.away_team_id, m.home_score, m.away_score,
+  m.home_score_et, m.away_score_et, m.home_penalty_score, m.away_penalty_score
+FROM f
+JOIN core.matches m ON m.home_team_id IN (f.home, f.away) AND m.away_team_id IN (f.home, f.away) AND m.home_team_id <> m.away_team_id
+  AND m.match_date BETWEEN f.day - 1 AND f.day + 1 AND m.id <> f.final AND m.competition_season_id <> f.edition AND m.status = 'finished'
+  AND m.home_penalty_score IS NOT NULL AND m.away_penalty_score IS NOT NULL
+JOIN core.competition_seasons cs ON cs.id = m.competition_season_id
+LEFT JOIN core.provider_ids cp ON cp.entity_type = 'competition' AND cp.provider = 'pitchapi' AND cp.is_current AND cp.entity_id = cs.competition_id"""
+# The PitchAPI key and the two teams' names of the finals REVIEWED_SHOOTOUTS may name (§60.3).
+LISTED = """
+SELECT m.id, p.provider_key, h.name, a.name
+FROM core.matches m
+JOIN core.provider_ids p ON p.entity_type = 'match' AND p.provider = 'pitchapi' AND p.is_current AND p.entity_id = m.id
+JOIN core.teams h ON h.id = m.home_team_id
+JOIN core.teams a ON a.id = m.away_team_id
+WHERE m.id = ANY(%(ids)s) AND p.provider_key = ANY(%(keys)s)"""
+
+# Shoot-outs a reviewed list gives the race (§60.3; hugo, 24 Nov 2026, 21:05 Paris, decision card « Donner par une liste
+# relue le vainqueur de trois finales européennes ? »: « Oui, une liste relue »: these three finals and no other). PitchAPI's
+# rows hold no shoot-out, their events no shoot-out goal, and no other edition holds a copy. The shape of
+# archives.VERIFIED_SHOOTOUTS (date, team1, team2, score, kicks, the source), which types a goal-only archive's rows at
+# import: the race writes no match row, so it keeps its own list. Keyed by PitchAPI's match key (the source's own id,
+# api.public_id's), bound to its competition, its date, the two teams by name (team1's kicks first, as OpenFootball's
+# line reads: the base may put the other at home) and the score after extra time: an entry is used only for that
+# match, when its row holds no shoot-out and no copy lends one. Values read in OpenFootball's files on 24 Nov 2026
+# (/mnt/project-files/vega-ballon-dor/evidence/shootouts_openfootball_2026-11-24.txt).
+OPENFOOTBALL_UEFA = "https://raw.githubusercontent.com/openfootball/champions-league/master/"
+REVIEWED_SHOOTOUTS = {
+    key: {"competition": competition, "date": day, "team1": team1, "team2": team2, "score": score, "kicks": kicks,
+          "source": OPENFOOTBALL_UEFA + path, "line": line}
+    for key, competition, day, team1, team2, score, kicks, path, line in (
+        ("m_0mZCDy", "l_38d9HA", "2022-05-18", "Eintracht Frankfurt", "Rangers FC", [1, 1], [5, 4], "2021-22/el.txt",
+         "Eintracht Frankfurt (GER) v Rangers FC (SCO)         5-4 pen. 1-1 a.e.t. (1-1, 0-0)"),
+        ("m_2JTU0J", "l_38d9HA", "2023-05-31", "Sevilla FC", "AS Roma", [1, 1], [4, 1], "2022-23/el.txt",
+         "Sevilla FC (ESP)        v AS Roma (ITA)            4-1 pen. 1-1 a.e.t. (1-1, 0-1)"),
+        ("m_0DIsqq", "l_0bfbkO", "2026-05-30", "Paris Saint-Germain FC", "Arsenal FC", [1, 1], [4, 3], "2025-26/cl.txt",
+         "Paris Saint-Germain FC (FRA) v Arsenal FC (ENG)         4-3 pen. 1-1 a.e.t. (1-1, 0-1)"),
+    )
+}
+
+
+def _played(score, extra):
+    """A match's score after extra time when it has one, else its score: (home, away)."""
+    return tuple(extra) if extra is not None and None not in extra else tuple(score)
+
+
+def lent_shootouts(finals, copies, competitions):
+    """{final: (home, away) shoot-out} its copy lends (§60.3, the copy test of rule 43.2). finals: [(match, edition,
+    home, away, day, score home, score away, extra home, extra away)] without a shoot-out; copies: [(final, edition,
+    cup key, PitchAPI key, day, home, away, score home, score away, extra home, extra away, kicks home, kicks away)];
+    competitions: {edition: _competition()} of the finals' editions. Copies that disagree lend nothing."""
+    out = {}
+    for match, edition, home, away, day, hs, as_, he, ae in finals:
+        played = _played((hs, as_), (he, ae))
+        lent = set()
+        for final, c_edition, cup_key, provider_key, c_day, c_home, c_away, chs, cas, che, cae, chp, cap in copies:
+            if final != match or c_edition == edition or {c_home, c_away} != {home, away} or day is None or c_day is None:
+                continue
+            if abs((c_day - day).days) > 1 or None in (chp, cap) or chp == cap or _competition(c_edition, provider_key, cup_key)[0] != competitions[edition][0]:
+                continue
+            c_played = _played((chs, cas), (che, cae))
+            same = c_home == home
+            if (c_played if same else c_played[::-1]) != played:
+                continue
+            lent.add((chp, cap) if same else (cap, chp))
+        if len(lent) == 1:
+            out[match] = lent.pop()
+    return out
+
+
+_NAME_NOISE = {"fc", "cf", "sc", "as", "ac", "afc", "club", "de"}
+
+
+def _name(text):
+    import unicodedata
+
+    plain = unicodedata.normalize("NFKD", str(text or "")).encode("ascii", "ignore").decode().lower()
+    return frozenset(w for w in plain.replace("-", " ").replace(".", " ").split() if w not in _NAME_NOISE)
+
+
+def same_team(listed, base):
+    """Whether a list's team name and the base's name one club: their words, less « FC », « AS »…, equal or one within the other."""
+    a, b = _name(listed), _name(base)
+    return bool(a and b) and (a <= b or b <= a)
+
+
+def listed_shootouts(finals, keys, competitions, entries=None):
+    """{final: (home, away) shoot-out} REVIEWED_SHOOTOUTS gives (§60.3). finals as lent_shootouts'; keys: {match:
+    (PitchAPI key, home's name, away's name)}. An entry is used for its match alone, when its competition, date, the two
+    teams (by name, either at home) and the score after extra time agree."""
+    entries = REVIEWED_SHOOTOUTS if entries is None else entries
+    out = {}
+    for match, edition, home, away, day, hs, as_, he, ae in finals:
+        key, home_name, away_name = keys.get(match, (None, None, None))
+        entry = entries.get(key)
+        if entry is None or competitions[edition][0] != entry["competition"] or day is None or day.isoformat() != entry["date"]:
+            continue
+        straight = same_team(entry["team1"], home_name) and same_team(entry["team2"], away_name)
+        crossed = same_team(entry["team1"], away_name) and same_team(entry["team2"], home_name)
+        if straight == crossed:
+            continue  # neither orientation, or both: not this match
+        score, kicks = (entry["score"], entry["kicks"]) if straight else (entry["score"][::-1], entry["kicks"][::-1])
+        if _played((hs, as_), (he, ae)) != tuple(score):
+            continue  # the base wins: another score, the entry ignored
+        out[match] = tuple(kicks)
+    return out
+
+
+def national_cups(held):
+    """The year's national cups fact (§60.3): counted only when every NATIONAL_CUP_COUNTRIES's cup is held."""
+    held = sorted(c for c in held if c)
+    return {"counted": set(NATIONAL_CUP_COUNTRIES) <= set(held), "held": held}
+
+
 # One real competition two sources hold for the same year (§60, 60ae): an edition of the left source is the right one's
 # competition. open-matchday's copies of PitchAPI's leagues and UEFA competitions (open_matchday.COVERED) are added by
 # _competition.
@@ -410,9 +559,27 @@ SAME_COMPETITION = {
 }
 
 
+SOURCE_ORDER = {"openligadb": 1, "open-cups": 2}  # PitchAPI 0; open-matchday, International Results and the others 3
+
+
+def _cup_groups():
+    """{family: the family of the group's source read first}: the national cups curated.CUP_LOGO_ALSO names as one cup
+    (§60.3; a group with a key power._cup_country names: the Nations League pair is no national cup)."""
+    from .sources.curated import CUP_LOGO_ALSO
+
+    out = {}
+    for site, also in CUP_LOGO_ALSO.items():
+        members = [site, *(key.removeprefix("cup:") for key in also)]
+        if not any(power._cup_country(f"{m}:-") for m in members):
+            continue
+        first = min(members, key=lambda m: (SOURCE_ORDER.get(m.split(":")[0], 3), m))
+        out.update({m: first for m in members})
+    return out
+
+
 def _competition(edition, provider_key, cup_key):
-    """(the real competition an edition is of, the order its source is read in: PitchAPI's 0, OpenLigaDB's 1, the
-    others 2). An edition of no named source is a competition of its own."""
+    """(the real competition an edition is of, the order its source is read in: PitchAPI's 0, OpenLigaDB's 1,
+    OpenFootball's 2, the others 3). An edition of no named source is a competition of its own."""
     from .sources.open_matchday import COVERED
 
     if provider_key:
@@ -421,8 +588,8 @@ def _competition(edition, provider_key, cup_key):
     if len(parts) != 3:
         return ("edition", edition), 0
     family = f"{parts[0]}:{parts[1]}"
-    same = SAME_COMPETITION.get(family) or (COVERED.get(parts[1]) if parts[0] == "open-matchday" else None)
-    return same or family, 1 if parts[0] == "openligadb" else 2
+    same = SAME_COMPETITION.get(family) or (COVERED.get(parts[1]) if parts[0] == "open-matchday" else None) or _cup_groups().get(family)
+    return same or family, SOURCE_ORDER.get(parts[0], 3)
 
 
 def one_per_competition(teams, competitions):
@@ -441,7 +608,7 @@ def read_inputs(conn, season):
     start, end = power.award_year(season)
     seasons = [season, season + 1]
     window = {"seasons": seasons, "start": start, "end": end}
-    editions, competitions = {}, {}
+    editions, competitions, held = {}, {}, set()
     for edition, competition, kind, cup_key, provider_key, league_level, top in conn.execute(EDITIONS, window).fetchall():
         competitions[edition] = _competition(edition, provider_key, cup_key)
         prestige = _prestige(provider_key, cup_key)
@@ -449,14 +616,18 @@ def read_inputs(conn, season):
             editions[edition] = (INTERNATIONAL, None, prestige, cup_key)
         elif league_level is not None and top and cup_key is None:
             editions[edition] = (LEAGUE, float(league_level), None, cup_key)
-        elif kind == "cup":
+        elif kind == "cup" or power._cup_country(cup_key):
             editions[edition] = (NATIONAL_CUP, None, None, cup_key)
+            held.add(power._cup_country(cup_key))
+    cups = national_cups(held)
+    if not cups["counted"]:  # not the five countries' cups: none counted that year, to anyone (§60.3)
+        editions = {e: x for e, x in editions.items() if x[0] != NATIONAL_CUP}
     ids = sorted(editions)
     teams, progress = {}, defaultdict(lambda: [0, 0])
     for edition, team, finished, total, first, last, national in conn.execute(TEAM_MATCHES, {"editions": ids}).fetchall():
         teams[(edition, team)] = {"played": finished, "matches": total, "first": first, "last": last, "national": bool(national)}
     teams = one_per_competition(teams, competitions)
-    knockouts = [r for r in conn.execute(KNOCKOUTS, {"editions": [e for e in ids if editions[e][0] != LEAGUE]}).fetchall()]
+    knockouts = with_shootouts(conn, editions, competitions, conn.execute(KNOCKOUTS, {"editions": [e for e in ids if editions[e][0] != LEAGUE]}).fetchall())
     leagues = [e for e in ids if editions[e][0] == LEAGUE]
     for edition, finished, total in conn.execute(
             "SELECT competition_season_id, count(*) FILTER (WHERE status = 'finished'), count(*) FROM core.matches "
@@ -487,8 +658,25 @@ def read_inputs(conn, season):
         cards[player] += _points({k for k, on in (("yellow_card", yellow), ("second_yellow", second), ("red_card", red)) if on})
     covered = dict(conn.execute(COVERED, window).fetchall())
     return {"editions": editions, "teams": teams, "progress": dict(progress), "ranks": ranks, "strongest": strongest, "club_leagues": club_leagues,
-            "minutes": dict(minutes), "honoured": honoured, "windows": windows, "seen": seen,
+            "minutes": dict(minutes), "honoured": honoured, "windows": windows, "seen": seen, "national_cups": cups,
             "cards": {p: (cards.get(p, 0), covered.get(p, 0.0)) for p in set(cards) | set(covered)}}
+
+
+def with_shootouts(conn, editions, competitions, rows):
+    """KNOCKOUTS' rows, less the match id, a finished final without a shoot-out given the one its copy lends, else the
+    one REVIEWED_SHOOTOUTS gives (§60.3). Nothing is written to the match rows."""
+    finals = [(r[13], r[0], r[2], r[3], r[1], r[5], r[6], r[7], r[8]) for r in rows
+              if r[4] and (r[9] is None or r[10] is None) and reached_round(None if editions[r[0]][3] else r[11], r[12]) == "final"]
+    lent = {}
+    if finals:
+        copies = conn.execute(COPIES, {"ids": [f[0] for f in finals], "editions": [f[1] for f in finals], "homes": [f[2] for f in finals],
+                                       "aways": [f[3] for f in finals], "days": [f[4] for f in finals]}).fetchall()
+        lent = lent_shootouts(finals, copies, competitions)
+        rest = [f for f in finals if f[0] not in lent]
+        if rest and REVIEWED_SHOOTOUTS:
+            keys = {m: (key, h, a) for m, key, h, a in conn.execute(LISTED, {"ids": [f[0] for f in rest], "keys": sorted(REVIEWED_SHOOTOUTS)}).fetchall()}
+            lent.update(listed_shootouts(rest, keys, competitions))
+    return [(*r[:9], *lent[r[13]], *r[11:13]) if r[13] in lent else tuple(r[:13]) for r in rows]
 
 
 def _reached(editions, knockouts):
@@ -596,13 +784,16 @@ _HONOUR = ("player_id", "team_id", "competition_season_id", "kind", "reached", "
 
 
 def reference_spreads(conn, season, reference_season):
-    """The spreads a year is placed on: those its reference year's published race kept, when that
-    is another finished year with a race of players; None (its own) otherwise."""
-    if reference_season is None or reference_season == season:
+    """The spreads a year is placed on: None for a year that is its own reference (it measures its own); else those its
+    reference year's published race of this version kept, when that year has a race of players; else {} (§60.3): the
+    year's own spreads, and no k of its own (a year in progress never measures its k)."""
+    if reference_season == season:
         return None
+    if reference_season is None:
+        return {}
     row = conn.execute("""SELECT spreads FROM agg.award_runs WHERE season_id = %s AND status = 'published' AND version = %s
                             AND reference_season = season_id AND players > 0""", (reference_season, AWARD_VERSION)).fetchone()
-    return row[0] if row and row[0] else None
+    return row[0] if row and row[0] else {}
 
 
 def _store(conn, season, started, level_run, reference_season, people, rows, honours, spreads):
@@ -653,7 +844,10 @@ def compute(people, inputs, spreads):
     """The race of `people` from the year's read (read_inputs) and the spreads it is placed on."""
     if not people:
         return {}, [], {}
-    return evaluate(people, honours_of(inputs, set(people)), {p: inputs["cards"].get(p, (0, 0.0)) for p in people}, spreads)
+    rows, honours, used = evaluate(people, honours_of(inputs, set(people)), {p: inputs["cards"].get(p, (0, 0.0)) for p in people}, spreads)
+    if inputs.get("national_cups") is not None:
+        used = {**used, "national_cups": inputs["national_cups"]}
+    return rows, honours, used
 
 
 def write(conn, season, started, people, computed, level_run, reference_season):
@@ -665,8 +859,8 @@ def write(conn, season, started, people, computed, level_run, reference_season):
 
 def _stored(conn, season):
     """The published race's run and its people as stored."""
-    run = conn.execute("""SELECT id, level_run_id, reference_season FROM agg.award_runs WHERE season_id = %s AND status = 'published'""",
-                       (season,)).fetchone()
+    run = conn.execute("""SELECT id, level_run_id, reference_season, spreads -> 'national_cups' FROM agg.award_runs
+                          WHERE season_id = %s AND status = 'published'""", (season,)).fetchone()
     if run is None:
         return None, {}, {}
     people, cards = {}, {}
@@ -689,9 +883,11 @@ def refresh(conn, season):
     honours = [dict(zip(names, r)) for r in conn.execute(
         """SELECT player_id, team_id, competition_season_id, kind, reached, league_rank, progress, factor, prestige, share, reason
            FROM agg.player_award_honours WHERE season_id = %s ORDER BY player_id, competition_season_id, team_id""", (season,)).fetchall()]
-    _, level_run, reference_season = run
+    _, level_run, reference_season, cups = run
     spreads = reference_spreads(conn, season, reference_season)
     rows, honours, used = evaluate(people, honours, cards, spreads) if people else ({}, [], {})
+    if people and cups is not None:
+        used = {**used, "national_cups": cups}  # the published run's fact: refresh reads no edition
     with conn.transaction():
         _store(conn, season, None, level_run, reference_season, people, rows, honours, used)
     return len(rows)
@@ -703,7 +899,7 @@ def reread(conn, season):
     run, people, _ = _stored(conn, season)
     if run is None:
         return 0
-    _, level_run, reference_season = run
+    _, level_run, reference_season, _ = run
     started = conn.execute("SELECT clock_timestamp()").fetchone()[0]
     inputs = read_inputs(conn, season)
     spreads = reference_spreads(conn, season, reference_season)
@@ -734,7 +930,9 @@ def stale(conn):
     """The years whose published ranking and level of the present version have players and whose
     race is missing, of another AWARD_VERSION or other settings(), or started before that level; not
     a year whose last run failed with this version and these settings at or after that level's start
-    (§60, 60z): the next level run, another version or other settings list it again."""
+    (§60, 60z): the next level run, another version or other settings list it again. Also a year placed on another
+    year whose k it did not take (§60.3: `collective_scale.source` not `reference`) once that year has a published race
+    of this version with players: whatever the order of the years, the year in progress ends on its reference's k."""
     from psycopg.types.json import Jsonb
 
     return [s for (s,) in conn.execute(
@@ -744,7 +942,10 @@ def stale(conn):
            LEFT JOIN LATERAL (SELECT f.status, f.version, f.settings, f.started_at FROM agg.award_runs f
                               WHERE f.season_id = l.season_id ORDER BY f.id DESC LIMIT 1) last ON true
            WHERE l.status = 'published' AND l.version = %(level)s AND l.players > 0
-             AND (a.id IS NULL OR a.version <> %(version)s OR a.settings IS DISTINCT FROM %(settings)s OR a.started_at < l.started_at)
+             AND (a.id IS NULL OR a.version <> %(version)s OR a.settings IS DISTINCT FROM %(settings)s OR a.started_at < l.started_at
+                  OR (a.reference_season <> a.season_id AND coalesce(a.spreads #>> '{collective_scale,source}', '') <> 'reference'
+                      AND EXISTS (SELECT 1 FROM agg.award_runs r WHERE r.season_id = a.reference_season AND r.status = 'published'
+                                    AND r.version = %(version)s AND r.reference_season = r.season_id AND r.players > 0)))
              AND NOT coalesce(last.status = 'failed' AND last.version = %(version)s AND last.settings = %(settings)s
                               AND last.started_at >= l.started_at, false)
            ORDER BY 1""", {"level": level.LEVEL_VERSION, "version": AWARD_VERSION, "settings": Jsonb(settings())}).fetchall()]

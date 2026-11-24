@@ -1,5 +1,5 @@
 """The Ballon d'Or race on the Score Vega v9.1 with the three criteria, stage 1 (issue #105, FAILURE_MODES §60,
-60a–60c, 60f–60n, 60u–60w, 60ac, 60af): the formulas, without a database. The database pass over the synthetic season
+60a–60c, 60f–60n, 60u–60w, 60ac, 60af; stage 1.1, §60.3: 60ag–60aj, 60al, 60am, 60an–60at): the formulas, without a database. The database pass over the synthetic season
 is in test_models.py (60b, 60d–60k, 60o, 60p, 60s, 60t, 60v, 60y–60aa, 60ac–60af), the worker's in
 test_collection_wakeups.py (60p) and test_worker.py (60x), the partial year in test_award_year_2020_order.py (60r), the
 migration in test_deploy_migrations.py (60u), the reads in backend/api/test/rankings.test.mjs (60q, 60s, 60ab)."""
@@ -299,7 +299,8 @@ class RaceTest(unittest.TestCase):
         rng = random.Random(4)
         now = {(p, (CB, CM, CF)[p % 3], 1 + p % 4): cell(1800.0, [rng.gauss(0, 25) for _ in range(NB)]) for p in range(1, 61)}
         out = level.levels(now, {}, refs, {p: person(team=1 + p % 4) for p in range(1, 61)})
-        rows, spreads = a.combine(people_of(out, lambda p: 0.3, lambda p, position: -0.1))
+        # v1.1 (60ao): z_C = k × C, so the player with no honour (C = 0) keeps it; F at the mean.
+        rows, spreads = a.combine(people_of(out, lambda p: 0.0, lambda p, position: -0.1))
         for p, r in out.items():
             self.assertAlmostEqual(rows[p]["z_collective"], 0.0)
             self.assertAlmostEqual(rows[p]["z_fair_play"], 0.0)
@@ -316,18 +317,20 @@ class RaceTest(unittest.TestCase):
         self.assertAlmostEqual(a.award_level(0.0, 10.0, 15.0), 10.0)
         self.assertAlmostEqual(a.score(10.0, 10.0), 50.0)
         self.assertAlmostEqual(a.score(46.0, 10.0), 100 / 1.1)  # ten to one 36 points above the median
-        # Given the reference year's spreads, the year in progress is placed on them.
+        # Given the reference year's spreads and k (v1.1, 60ar), the year in progress is placed on them.
         people = {p: {"individual": float(p), "collective": 0.1 * p, "fair_play": -0.01 * p, "position": CB, "universe": "men", "reference": True,
                       "eligible": True, "linked": True, "top_division": True, "measured": True} for p in range(1, 31)}
-        spreads = {"individual": [10.0, 5.0], "collective": [1.0, 0.5], "fair_play": {CB: [-0.2, 0.1]}}
+        scale = {"k": 1.0, "mean_top_individual": 2.0, "mean_top_collective": 2.0, "top": 30, "source": "own"}
+        spreads = {"individual": [10.0, 5.0], "collective": [1.0, 0.5], "fair_play": {CB: [-0.2, 0.1]}, "collective_scale": scale}
         rows, kept = a.combine(people, spreads)
-        self.assertEqual(kept, spreads)
+        self.assertEqual(kept, {**spreads, "collective_scale": {**scale, "source": "reference"}})
         self.assertAlmostEqual(rows[20]["z_individual"], 2.0)
-        self.assertAlmostEqual(rows[20]["z_collective"], 2.0)
+        self.assertAlmostEqual(rows[20]["z_collective"], 2.0)  # k 1 × C 2.0
         self.assertAlmostEqual(rows[20]["z_fair_play"], 0.0)
         self.assertAlmostEqual(rows[20]["level"], 10.0 + 5.0 * (0.6 * 2 + 0.3 * 2) / 0.6)
 
-    def test_60n_z_c_and_z_f_are_bounded_at_4(self):
+    def test_60n_z_f_is_bounded_at_4_and_z_c_is_not(self):
+        # v1.1 (60.3, « The collective scale »): Z_CAP bounds z_F alone; z_C = k × C has no cap.
         a = award()
         self.assertEqual(a.Z_CAP, 4.0)
         self.assertEqual(a.zscore(7.0, 0.0, 1.0, cap=4.0), 4.0)
@@ -337,8 +340,13 @@ class RaceTest(unittest.TestCase):
         people = {p: {"individual": float(p % 7), "collective": 0.0, "fair_play": 0.0, "position": CB, "universe": "men", "reference": True,
                       "eligible": True, "linked": True, "top_division": True, "measured": True} for p in range(1, 101)}
         people[1]["collective"] = 50.0
-        rows, _ = a.combine(people)
-        self.assertEqual(rows[1]["z_collective"], 4.0)
+        people[2]["fair_play"] = -50.0
+        rows, spreads = a.combine(people)
+        k = spreads["collective_scale"]["k"]
+        self.assertGreater(k, 0)
+        self.assertAlmostEqual(rows[1]["z_collective"], 50.0 * k)
+        self.assertGreater(rows[1]["z_collective"], 4.0)
+        self.assertEqual(rows[2]["z_fair_play"], -4.0)
 
 
 class EdgesTest(unittest.TestCase):
@@ -393,14 +401,344 @@ class EdgesTest(unittest.TestCase):
             (6, 4): ("winner", None), (6, 3): ("final", None)})
 
 
+class ShootoutTest(unittest.TestCase):
+    """60ag, 60ai, 60aj (§60.3): a final's shoot-out taken from its copy, the copy test of rule 43.2."""
+
+    from datetime import date as _date
+
+    DAY = _date(2022, 12, 18)
+    # Edition 1: PitchAPI's World Cup (l_1XLtP0); 2: OpenFootball's (SAME_COMPETITION); 3: another competition.
+    COMPETITIONS = {1: ("l_1XLtP0", 0), 2: ("l_1XLtP0", 2), 3: ("open-cups:euro", 2)}
+    # (match, edition, home, away, day, score, score after extra time): PitchAPI's score of a final that went to
+    # extra time is the score after it (3–3), with no extra-time column, as production holds the World Cup 2022 final.
+    FINAL = (10, 1, 85, 86, DAY, 3, 3, None, None)
+
+    @classmethod
+    def copy(cls, *, edition=2, key="open-cups:world-cup-history:2022", provider=None, day=None, home=85, away=86, score=(3, 3),
+             extra=(3, 3), shootout=(4, 2)):
+        """A candidate copy of match 10: (final, copy's edition, its cup key, its PitchAPI key, day, home, away, score,
+        score after extra time, shoot-out). By default OpenFootball's copy as production holds it: the same day, the
+        same sides, score 3–3 (after extra time), extra time 3–3, shoot-out 4–2."""
+        return (10, edition, key, provider, day or cls.DAY, home, away, *score, *extra, *shootout)
+
+    def lent(self, copies=(), finals=None):
+        return award().lent_shootouts(finals or [self.FINAL], list(copies), self.COMPETITIONS)
+
+    def test_60ag_the_copy_of_the_same_match_lends_its_shoot_out(self):
+        from datetime import timedelta
+
+        a = award()
+        self.assertEqual(self.lent([self.copy()]), {10: (4, 2)})  # the same day, the same sides
+        self.assertEqual(self.lent([self.copy(day=self.DAY - timedelta(days=1))]), {10: (4, 2)})  # one day apart
+        self.assertEqual(self.lent([self.copy(day=self.DAY + timedelta(days=1))]), {10: (4, 2)})
+        self.assertEqual(self.lent([self.copy(home=86, away=85, shootout=(2, 4))]), {10: (4, 2)})  # sides swapped: read team by team
+        self.assertEqual(self.lent([self.copy(score=(3, 3), extra=(None, None))]), {10: (4, 2)})  # a copy without its extra-time score
+        self.assertEqual(self.lent([self.copy(), self.copy(edition=4, key="open-cups:world-cup-history:2022-b")]), {10: (4, 2)})  # two that agree
+        # The final read then: PitchAPI's home side the winner.
+        row = (1, self.DAY, 85, 86, True, 3, 3, None, None, *self.lent([self.copy()])[10], "final", "final")
+        self.assertEqual(a._reached({1: (a.INTERNATIONAL, None, 1.3, None)}, [row]), {(1, 85): ("winner", None), (1, 86): ("final", None)})
+
+    def test_60ai_nothing_is_lent_otherwise(self):
+        from datetime import timedelta
+
+        for name, copies in (
+                ("no copy", []),
+                ("another score", [self.copy(score=(2, 1), extra=(2, 1))]),
+                ("the score at 90 minutes alone equal", [self.copy(score=(2, 2), extra=(2, 2))]),
+                ("another competition", [self.copy(edition=3, key="open-cups:euro:2024")]),
+                ("two days apart", [self.copy(day=self.DAY - timedelta(days=2))]),
+                ("the same edition", [self.copy(edition=1, key=None, provider="l_1XLtP0")]),
+                ("other teams", [self.copy(home=86, away=87)]),
+                ("copies that disagree", [self.copy(), self.copy(edition=4, key="open-cups:world-cup-history:2022-b", shootout=(2, 4))]),
+                ("a copy without its shoot-out", [self.copy(shootout=(None, 4))]),
+                ("a level shoot-out", [self.copy(shootout=(4, 4))])):
+            self.assertEqual(self.lent(copies), {}, name)
+        # The final read without a lent shoot-out: both `final`, `no_winner` (60.1), as the Champions League 2026 and
+        # the Europa League 2022 and 2023 finals stay (no copy, no shoot-out anywhere in the base).
+        a = award()
+        row = (1, self.DAY, 85, 86, True, 3, 3, None, None, None, None, "final", "final")
+        self.assertEqual(a._reached({1: (a.INTERNATIONAL, None, 1.3, None)}, [row]), {(1, 85): ("final", "no_winner"), (1, 86): ("final", "no_winner")})
+
+    def test_60aj_the_second_leg_of_a_final_of_two_legs(self):
+        from datetime import date
+
+        a = award()
+        first, second = date(2026, 5, 1), date(2026, 5, 8)
+        finals = [(20, 5, 3, 4, first, 1, 0, None, None), (21, 5, 4, 3, second, 1, 0, None, None)]  # 1–1 on aggregate
+        copies = [(21, 6, "open-matchday:POR_CUP_taca-de-portugal:2025/2026", None, second, 4, 3, 1, 0, None, None, 2, 4)]
+        competitions = {5: ("open-cups:portugal-cup-archive", 2)}
+        self.assertEqual(a._competition(6, None, copies[0][2])[0], "open-cups:portugal-cup-archive")
+        lent = a.lent_shootouts(finals, copies, competitions)
+        self.assertEqual(lent, {21: (2, 4)})
+        legs = [(5, first, 3, 4, True, 1, 0, None, None, None, None, None, "Final"),
+                (5, second, 4, 3, True, 1, 0, None, None, *lent[21], None, "Final")]
+        editions = {5: (a.NATIONAL_CUP, None, None, "open-cups:portugal-cup-archive:2025/2026")}
+        self.assertEqual(a._reached(editions, legs), {(5, 3): ("winner", None), (5, 4): ("final", None)})
+
+
+class ListedShootoutTest(unittest.TestCase):
+    """60at (§60.3): the reviewed list of three finals' shoot-outs (hugo, 24 Nov 2026, 21:05 Paris): used only for its
+    match, when the row holds no shoot-out and no copy lends one, and its score after extra time is the row's."""
+
+    from datetime import date as _date
+
+    DAY = _date(2022, 5, 18)
+    ENTRY = {"m_test": {"competition": "l_38d9HA", "date": "2022-05-18", "team1": "Eintracht Frankfurt", "team2": "Rangers FC", "score": [1, 1],
+                        "kicks": [5, 4], "source": "https://example.invalid/el.txt", "line": "Eintracht Frankfurt v Rangers FC 5-4 pen. 1-1 a.e.t."}}
+    COMPETITIONS = {1: ("l_38d9HA", 0), 2: ("l_0bfbkO", 0)}
+
+    def listed(self, final=None, keys=None):
+        final = final or (10, 1, 31, 32, self.DAY, 1, 1, None, None)
+        keys = {10: ("m_test", "Eintracht Frankfurt", "Rangers")} if keys is None else keys
+        return award().listed_shootouts([final], keys, self.COMPETITIONS, self.ENTRY)
+
+    def test_60at_a_listed_final_gives_its_winner(self):
+        a = award()
+        self.assertEqual(self.listed(), {10: (5, 4)})
+        # The base puts Rangers at home: the entry is read by team.
+        self.assertEqual(self.listed(keys={10: ("m_test", "Rangers", "Eintracht Frankfurt")}), {10: (4, 5)})
+        row = (1, self.DAY, 31, 32, True, 1, 1, None, None, *self.listed()[10], "final", "final")
+        self.assertEqual(a._reached({1: (a.INTERNATIONAL, None, 1.15, None)}, [row]), {(1, 31): ("winner", None), (1, 32): ("final", None)})
+        for name, final, keys in (
+                ("another score", (10, 1, 31, 32, self.DAY, 2, 1, None, None), None),
+                ("another score after extra time", (10, 1, 31, 32, self.DAY, 1, 1, 2, 1), None),
+                ("another competition", (10, 2, 31, 32, self.DAY, 1, 1, None, None), None),
+                ("another day", (10, 1, 31, 32, self._date(2022, 5, 19), 1, 1, None, None), None),
+                ("another match's key", None, {10: ("m_other", "Eintracht Frankfurt", "Rangers")}),
+                ("not its teams", None, {10: ("m_test", "Eintracht Frankfurt", "Celtic")}),
+                ("no key", None, {})):
+            self.assertEqual(self.listed(final, keys), {}, name)
+        self.assertTrue(a.same_team("Paris Saint-Germain FC", "Paris Saint Germain"))
+        self.assertTrue(a.same_team("AS Roma", "Roma"))
+        self.assertFalse(a.same_team("Sevilla FC", "Real Betis"))
+
+    def test_60at_the_row_and_a_copy_come_before_the_list(self):
+        a = award()
+
+        class Conn:
+            """Answers COPIES and LISTED with the given rows; records what was asked."""
+
+            def __init__(self, copies, listed):
+                self.copies, self.listed, self.asked = copies, listed, []
+
+            def execute(self, sql, params=None):
+                self.asked.append("copies" if sql is a.COPIES else "listed" if sql is a.LISTED else sql)
+                rows = self.copies if sql is a.COPIES else self.listed
+                return type("R", (), {"fetchall": lambda _self: rows})()
+
+        editions, competitions = {1: (a.INTERNATIONAL, None, 1.15, None)}, {1: ("l_38d9HA", 0), 2: ("l_38d9HA", 3)}
+        real = a.REVIEWED_SHOOTOUTS["m_0mZCDy"]
+        final = lambda pens: (1, self.DAY, 31, 32, True, 1, 1, None, None, *pens, "final", "final", 10)
+        listed = [(10, "m_0mZCDy", "Eintracht Frankfurt", "Rangers")]
+        # Listed: the list gives it.
+        conn = Conn([], listed)
+        self.assertEqual(a.with_shootouts(conn, editions, competitions, [final((None, None))])[0][9:11], tuple(real["kicks"]))
+        # The row has its own shoot-out: the row wins, nothing is asked.
+        conn = Conn([], listed)
+        self.assertEqual(a.with_shootouts(conn, editions, competitions, [final((3, 4))])[0][9:11], (3, 4))
+        self.assertEqual(conn.asked, [])
+        # A copy lends one: the copy's, and the list is not consulted.
+        conn = Conn([(10, 2, "open-matchday:UEFA_1_europa-league:2021/2022", None, self.DAY, 31, 32, 1, 1, None, None, 2, 3)], listed)
+        self.assertEqual(a.with_shootouts(conn, editions, competitions, [final((None, None))])[0][9:11], (2, 3))
+        self.assertEqual(conn.asked, ["copies"])
+        # Neither: the row as it is, 13 columns.
+        conn = Conn([], [])
+        self.assertEqual(a.with_shootouts(conn, editions, competitions, [final((None, None))]), [final((None, None))[:13]])
+
+    def test_60at_the_three_reviewed_entries(self):
+        a = award()
+        self.assertEqual(sorted(a.REVIEWED_SHOOTOUTS), ["m_0DIsqq", "m_0mZCDy", "m_2JTU0J"])  # these three, no other (the owner's approval)
+        expected = {"m_0mZCDy": ("l_38d9HA", "2022-05-18", "Eintracht Frankfurt", "Rangers FC", [5, 4], "2021-22/el.txt"),
+                    "m_2JTU0J": ("l_38d9HA", "2023-05-31", "Sevilla FC", "AS Roma", [4, 1], "2022-23/el.txt"),
+                    "m_0DIsqq": ("l_0bfbkO", "2026-05-30", "Paris Saint-Germain FC", "Arsenal FC", [4, 3], "2025-26/cl.txt")}
+        for key, e in a.REVIEWED_SHOOTOUTS.items():
+            competition, day, team1, team2, kicks, path = expected[key]
+            self.assertEqual((e["competition"], e["date"], e["team1"], e["team2"], e["score"], e["kicks"]), (competition, day, team1, team2, [1, 1], kicks))
+            self.assertNotEqual(e["kicks"][0], e["kicks"][1])
+            self.assertFalse(a.same_team(e["team1"], e["team2"]))
+            self.assertTrue(e["source"].startswith("https://raw.githubusercontent.com/openfootball/champions-league/") and e["source"].endswith(path))
+            self.assertIn(f"{e['kicks'][0]}-{e['kicks'][1]} pen. 1-1 a.e.t.", e["line"])
+            self.assertLess(e["line"].index(e["team1"]), e["line"].index(e["team2"]))  # team1's kicks first, as the line reads
+            self.assertIn(e["competition"], power.PRESTIGE)
+
+
+class RoundNameTest(unittest.TestCase):
+    """60ah (§60.3): OpenFootball's « Finals, Final » (the Copa Libertadores of 2023 to 2025) is a final."""
+
+    def test_60ah_finals_final_is_a_final(self):
+        a = award()
+        self.assertEqual(a.reached_round(None, "Finals, Final"), "final")
+        self.assertEqual(a.reached_round(None, "finals, final"), "final")
+        # The names production holds and that already read (60.2's 60g kept): unchanged.
+        for name, reached in (("Quarterfinals", "quarter_final"), ("Semifinals", "semi_final"), ("Final", "final"),
+                              ("Quarts de finale", "quarter_final"), ("Demi-finales", "semi_final"), ("Finale", "final"),
+                              ("Huitièmes de finale", "round_of_16"), ("Third place", None), ("Matchday 3", None)):
+            self.assertEqual(a.reached_round(None, name), reached, name)
+        # open-matchday's numbered rounds (« 1 » to « 7 ») stay unread: a known limit, no round is guessed.
+        for name in ("1", "6", "7"):
+            self.assertIsNone(a.reached_round(None, name), name)
+        # power.round_of, which the v8 ranking's stakes and 171_home_importance_v2.sql read, is not changed.
+        self.assertIsNone(power.round_of(None, "Finals, Final"))
+
+
+class NationalCupTest(unittest.TestCase):
+    """60al, 60am, 60as (§60.3): a national cup by its key, one cup of two sources, the five countries' cups."""
+
+    def test_60al_a_national_cup_is_named_by_its_key(self):
+        for key, country in (("open-cups:fa-cup-archive:2024/2025", "ENG"), ("open-cups:efl-cup-archive:2024/2025", "ENG"),
+                             ("open-cups:copa-del-rey-archive:2024/2025", "ESP"), ("open-cups:coppa-italia-archive:2024/2025", "ITA"),
+                             ("open-cups:france-cup:2024/2025", "FRA"), ("openligadb:germany-cup:2025/2026", "GER"),
+                             ("open-cups:germany-cup-archive:2024/2025", "GER"), ("open-matchday:ENG_CUP_fa-cup:2026/2027", "ENG"),
+                             ("open-matchday:ESP_CUP_copa-del-rey:2026/2027", "ESP"),
+                             ("open-matchday:ENG_1_premier-league:2026/2027", None), ("open-matchday:UEFA_1_champions-league:2026/2027", None),
+                             ("open-cups:copa-libertadores:2025", None), ("open-cups:world-cup-history:2022", None), ("open-cups:euro:2024", None),
+                             ("nations-results:internationals:2025/2026", None), ("openligadb:nations-league:2026/2027", None), (None, None)):
+            self.assertEqual(power._cup_country(key), country, key)
+
+    def test_60am_one_cup_two_sources_one_competition(self):
+        from vega.sources.curated import CUP_LOGO_ALSO
+
+        a = award()
+        fa = a._competition(5, None, "open-cups:fa-cup-archive:2024/2025")
+        copy = a._competition(6, None, "open-matchday:ENG_CUP_fa-cup:2024/2025")
+        self.assertEqual(fa[0], copy[0])
+        self.assertEqual((fa[1], copy[1]), (2, 3))  # OpenFootball read before open-matchday
+        german = [a._competition(e, None, key) for e, key in ((7, "openligadb:germany-cup:2025/2026"), (8, "open-cups:germany-cup-archive:2025/2026"),
+                                                                (9, "open-matchday:GER_CUP_dfb-pokal:2025/2026"))]
+        self.assertEqual({k for k, _ in german}, {"openligadb:germany-cup"})
+        self.assertEqual([o for _, o in german], [1, 2, 3])
+        self.assertEqual(a._competition(1, "l_1XLtP0", None), ("l_1XLtP0", 0))
+        self.assertEqual(a._competition(2, None, "open-cups:world-cup-history:2022"), ("l_1XLtP0", 2))
+        self.assertEqual(a._competition(3, None, "open-matchday:UEFA_1_champions-league:2025/2026"), ("l_0bfbkO", 3))
+        self.assertEqual(a._competition(4, None, None), (("edition", 4), 0))
+        # Every national cup group of CUP_LOGO_ALSO is one competition; the Nations League pair is not a national cup.
+        for site, also in CUP_LOGO_ALSO.items():
+            keys = {a._competition(1, None, f"{k}:2025/2026")[0] for k in (site, *(x.removeprefix("cup:") for x in also))}
+            national = any(power._cup_country(f"{k}:2025/2026") for k in (site, *(x.removeprefix("cup:") for x in also)))
+            self.assertEqual(len(keys), 1 if national else 1 + len(also), site)
+        # Two editions of one source stay two competitions.
+        self.assertNotEqual(a._competition(1, None, "open-cups:fa-cup-archive:2024/2025")[0], a._competition(2, None, "open-cups:efl-cup-archive:2024/2025")[0])
+
+    def test_60as_the_national_cups_are_counted_only_with_the_five_countries(self):
+        a = award()
+        self.assertEqual(a.NATIONAL_CUP_COUNTRIES, ("ENG", "ESP", "GER", "ITA", "FRA"))
+        self.assertEqual(a.national_cups({"GER"}), {"counted": False, "held": ["GER"]})
+        self.assertEqual(a.national_cups(set()), {"counted": False, "held": []})
+        self.assertEqual(a.national_cups({"ENG", "ESP", "GER", "ITA"}), {"counted": False, "held": ["ENG", "ESP", "GER", "ITA"]})
+        self.assertEqual(a.national_cups({"ENG", "ESP", "GER", "ITA", "FRA", "NED"}), {"counted": True, "held": ["ENG", "ESP", "FRA", "GER", "ITA", "NED"]})
+        self.assertEqual(a.national_cups({None, "ENG", "ESP", "GER", "ITA", "FRA"})["counted"], True)
+
+
+def ranked(p, individual, collective, **flags):
+    return {"individual": individual, "collective": collective, "fair_play": 0.0, "position": CB, "universe": "men", "reference": True,
+            "eligible": True, "linked": True, "top_division": True, "measured": True, **flags}
+
+
+class ScaleTest(unittest.TestCase):
+    """60an–60ar (§60.3): z_C = k × C, k = mean of the 30 highest z_I / mean of the 30 highest C of the ranked players."""
+
+    @staticmethod
+    def k_of(rows, people):
+        mine = [p for p, r in rows.items() if r["reason"] is None]
+        top_i = sorted((rows[p]["z_individual"] for p in mine), reverse=True)[:30]
+        top_c = sorted((people[p]["collective"] for p in mine), reverse=True)[:30]
+        return (sum(top_i) / len(top_i)) / (sum(top_c) / len(top_c)), sum(top_i) / len(top_i), sum(top_c) / len(top_c), len(top_i)
+
+    def test_60an_a_larger_c_ranks_above_where_v1_tied_them_at_the_cap(self):
+        a = award()
+        people = {p: ranked(p, float(p % 7), 0.0) for p in range(1, 201)}
+        people[1] = ranked(1, 10.0, 0.37)
+        people[2] = ranked(2, 10.0, 0.73)
+        own = a.own_spreads(people)
+        mean, sd = own["collective"]
+        self.assertLess(mean + a.Z_CAP * sd, 0.37)  # both above the v1 cap: v1 gave both z_C 4
+        rows, spreads = a.combine(people)
+        k, top_i, top_c, top = self.k_of(rows, people)
+        self.assertAlmostEqual(rows[1]["z_collective"], k * 0.37)
+        self.assertAlmostEqual(rows[2]["z_collective"], k * 0.73)
+        self.assertLess(rows[2]["rank"], rows[1]["rank"])
+        self.assertEqual(rows[2]["rank"], 1)
+        scale = spreads["collective_scale"]
+        self.assertEqual(scale["source"], "own")
+        self.assertEqual(scale["top"], 30)
+        for name, value in (("k", k), ("mean_top_individual", top_i), ("mean_top_collective", top_c)):
+            self.assertAlmostEqual(scale[name], value, places=12)
+        self.assertEqual(a.SCALE_TOP, 30)
+        self.assertEqual(json.loads(json.dumps(spreads)), spreads)
+
+    def test_60ao_no_honour_no_collective_part(self):
+        a = award()
+        people = {p: ranked(p, float(p), 0.1 * (p % 3)) for p in range(1, 41)}
+        rows, spreads = a.combine(people)
+        self.assertGreater(spreads["collective_scale"]["k"], 0)
+        for p in people:
+            if people[p]["collective"] == 0:
+                self.assertEqual(rows[p]["z_collective"], 0.0)
+            else:
+                self.assertAlmostEqual(rows[p]["z_collective"], spreads["collective_scale"]["k"] * people[p]["collective"])
+
+    def test_60ap_fewer_than_30_ranked_players_and_those_out_of_the_race(self):
+        a = award()
+        people = {p: ranked(p, float(p), 0.05 * p) for p in range(1, 13)}
+        for p in range(90, 96):  # out of the race (minutes), the highest I and C
+            people[p] = ranked(p, 100.0 + p, 5.0, eligible=False, reference=False)
+        rows, spreads = a.combine(people)
+        k, top_i, top_c, top = self.k_of(rows, people)
+        self.assertEqual(top, 12)
+        scale = spreads["collective_scale"]
+        self.assertEqual(scale["top"], 12)
+        self.assertAlmostEqual(scale["k"], k, places=12)
+        self.assertAlmostEqual(scale["mean_top_collective"], sum(0.05 * p for p in range(1, 13)) / 12, places=12)
+        self.assertAlmostEqual(rows[95]["z_collective"], k * 5.0)  # out of the race: the same k
+        self.assertIsNone(rows[95]["rank"])
+
+    def test_60aq_k_is_zero_when_a_mean_is_not_positive(self):
+        a = award()
+        for name, people in (("every C at zero", {p: ranked(p, float(p), 0.0) for p in range(1, 41)}),
+                             ("every z_I zero", {p: ranked(p, 5.0, 0.1 * p) for p in range(1, 41)}),
+                             ("no ranked player", {p: ranked(p, float(p), 0.1, eligible=False, reference=False) for p in range(1, 6)})):
+            rows, spreads = a.combine(people)
+            self.assertEqual(spreads["collective_scale"]["k"], 0.0, name)
+            self.assertTrue(all(r["z_collective"] == 0.0 for r in rows.values()), name)
+            ranks = sorted(r["rank"] for r in rows.values() if r["rank"] is not None)
+            self.assertEqual(ranks, list(range(1, len(ranks) + 1)), name)
+
+    def test_60ar_a_year_in_progress_takes_its_reference_year_s_k(self):
+        a = award()
+        people = {p: ranked(p, float(p), 0.01 * p) for p in range(1, 41)}  # early in a season: a small C
+        _, own = a.combine(people)
+        reference = {**own, "collective_scale": {"k": 2.5, "mean_top_individual": 3.0, "mean_top_collective": 1.2, "top": 30, "source": "own"}}
+        rows, used = a.combine(people, reference)
+        self.assertEqual(used["collective_scale"], {**reference["collective_scale"], "source": "reference"})
+        self.assertNotAlmostEqual(own["collective_scale"]["k"], 2.5)
+        for p, r in rows.items():
+            self.assertAlmostEqual(r["z_collective"], 2.5 * people[p]["collective"])
+        # Its reference year without a published run of this version: k 0, its own spreads otherwise, never its own k.
+        rows, used = a.combine(people, {})
+        self.assertEqual(used["collective_scale"]["k"], 0.0)
+        self.assertEqual(used["collective_scale"]["source"], "none")
+        self.assertEqual((used["individual"], used["collective"]), (own["individual"], own["collective"]))
+        self.assertTrue(all(r["z_collective"] == 0.0 for r in rows.values()))
+        # evaluate keeps each position's mean card rate with its own spreads, as for a year without a reference.
+        cards = {p: (0, 0.0) for p in people}
+        bare = {p: {k: v for k, v in r.items() if k != "collective"} for p, r in people.items()}
+        _, _, kept = a.evaluate(bare, [], cards, {})
+        self.assertEqual(len(kept["fair_play"][CB]), 3)
+        self.assertEqual(kept["collective_scale"]["source"], "none")
+        # A reference year's run kept without a scale (another version cannot be read, 60.3): k 0.
+        rows, used = a.combine(people, {k: v for k, v in reference.items() if k != "collective_scale"})
+        self.assertEqual((used["collective_scale"]["k"], used["collective_scale"]["source"]), (0.0, "none"))
+
+
 class SettingsTest(unittest.TestCase):
     """60p, 60u: the version and the settings a run keeps and stale() compares."""
 
     def test_60p_60u_the_version_and_the_settings(self):
         a = award()
-        self.assertEqual(a.AWARD_VERSION, "vega-award-v1")
+        self.assertEqual(a.AWARD_VERSION, "vega-award-v1.1")
         self.assertEqual(a.SETTINGS, {
-            "weights": {"individual": 0.6, "collective": 0.3, "fair_play": 0.1}, "z_cap": 4.0, "league_value": 0.5, "cup_value": 0.15,
+            "weights": {"individual": 0.6, "collective": 0.3, "fair_play": 0.1}, "z_cap": 4.0, "collective_scale": "proportional", "scale_top": 30,
+            "national_cup_countries": ["ENG", "ESP", "GER", "ITA", "FRA"], "league_value": 0.5, "cup_value": 0.15,
             "league_ranks": {"1": 1.0, "2": 0.4, "3": 0.2, "4": 0.1},
             "round_value": {"winner": 1.0, "final": 0.6, "semi_final": 0.4, "quarter_final": 0.25, "round_of_16": 0.15},
             "card_prior_minutes": 900, "national_matches": True, "national_proxy_share": 0.5, "keeper_in_race": False,
