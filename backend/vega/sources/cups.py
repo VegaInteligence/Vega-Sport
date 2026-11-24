@@ -28,7 +28,7 @@ NATIONAL_CUP_ARCHIVES = ("austria-cup-archive", "germany-cup-archive", "fa-cup-a
                          "coppa-italia-archive", "knvb-beker-archive", "portugal-cup-archive", "swiss-cup-archive")
 # The seasons of « the season's other internationals » (International Results): 2021/22, the base's first, to 2026/27.
 # Going further back is this line's first year; frontend/src/services/nations-results.js INTERNATIONAL_SEASONS is the
-# same list (drift-tested, FAILURE_MODES.md §49).
+# same list (drift-tested, FAILURE_MODES.md §50).
 INTERNATIONAL_SEASONS = tuple(f"{year}/{year + 1}" for year in range(2021, 2027))
 # The editions main refreshes (aws_refresh_sources.mjs); drift-tested.
 EDITIONS = (
@@ -53,7 +53,7 @@ EDITIONS = (
     ("nations-results", "asian-cup", "2023"),
     *[("nations-results", "gold-cup", s) for s in ("2023", "2025")],
     # Every other international of each season (friendlies, qualifiers, the other confederations' Nations Leagues…):
-    # the home's week strip, the nation page, and the national teams' Elo since §50 (power.ELO_MATCHES).
+    # the home's week strip, the nation page, and the national teams' Elo since §51 (power.ELO_MATCHES).
     *[("nations-results", "internationals", s) for s in INTERNATIONAL_SEASONS],
 )
 PROVIDER = {"open-cups": "openfootball", "openligadb": "openligadb", "nations-results": "international_results"}
@@ -65,7 +65,7 @@ TOURNAMENTS = {"euro": "Euro", "world-cup-history": "World Cup", "club-world-cup
 
 def scopes(now):
     """Running editions every two hours, finished ones weekly. A season of internationals is running until 1 July of
-    its last year (§49): the past seasons are read weekly."""
+    its last year (§50): the past seasons are read weekly."""
     out = {}
     for kind, competition, season in EDITIONS:
         if competition == "internationals":
@@ -96,12 +96,12 @@ SCORE_PARTS = ("ft", "ht", "et", "p")
 CANCELED = ("canceled", "cancelled")
 TOURS_AWARD = "france-cup:2024/2025:2024-12-21|Tours FC|FC Lorient|"
 CUP_PUBLICATION = {"club-world-cup", "world-cup-history", "france-cup"}
-# The hosts of the World Cups and Euros from 1 July 2021 (the national teams' Elo's first day, FAILURE_MODES.md §50), as
+# The hosts of the World Cups and Euros from 1 July 2021 (the national teams' Elo's first day, FAILURE_MODES.md §51), as
 # OpenFootball names them: such a match is on neutral ground unless its home side (team1) is one. Before that day the
 # file says nothing and is_neutral stays NULL. Euro 2020: from 1 July 2021 only London's matches had a side at home
 # (England; the quarter-finals of St Petersburg, Munich, Baku and Rome had none) — uefa.com, UEFA EURO 2020 venues.
 # World Cup 2022: Qatar; World Cup 2026: the United States, Mexico, Canada; Euro 2024: Germany (fifa.com, uefa.com).
-# Euro 2028 is added when OpenFootball publishes its file (its spellings are unknown until then, §51).
+# Euro 2028 is added when OpenFootball publishes its file (its spellings are unknown until then, §52).
 HOSTS = {("euro", "2020"): {"England"}, ("world-cup-history", "2022"): {"Qatar"}, ("euro", "2024"): {"Germany"},
          ("world-cup-history", "2026"): {"USA", "Mexico", "Canada"}}
 HOSTS_FROM = "2021-07-01"
@@ -186,7 +186,7 @@ def match_rows(kind, competition, season, body):
                 "home_score_ht": None, "away_score_ht": None,
                 "home_score_et": score[0] if score and extra else None, "away_score_et": score[1] if score and extra else None,
                 "home_penalty_score": penalties and penalties[0], "away_penalty_score": penalties and penalties[1],
-                # A tournament's dataset says whether the ground was neutral (the Nations League's rows too, §50).
+                # A tournament's dataset says whether the ground was neutral (the Nations League's rows too, §51).
                 "is_neutral": m["neutral"] if isinstance(m.get("neutral"), bool) else None,
             }
             key = str(m["key"]).split(":", 1)[1]
@@ -197,7 +197,7 @@ def match_rows(kind, competition, season, body):
 
 
 def _team(conn, provider, key, name, rename=True):
-    """`rename` False: a row the base holds keeps its name, the source's spelling a name of that source (§49)."""
+    """`rename` False: a row the base holds keeps its name, the source's spelling a name of that source (§50)."""
     row = conn.execute("SELECT entity_id FROM core.provider_ids WHERE entity_type='team' AND provider=%s AND provider_key=%s", (provider, key)).fetchone()
     if row:
         if name:
@@ -414,7 +414,7 @@ def save(conn, kind, competition, season, body, now):
     for former, key in renumbered.items():
         before[key] = snapshot.rekey(conn, provider, before[key], former, key)
     changes, keep = 0, set()
-    # The internationals rename no side (§49): the Nations League edition names the same keys in French.
+    # The internationals rename no side (§50): the Nations League edition names the same keys in French.
     rename = (kind, competition) != ("nations-results", "internationals")
     for key, m in rows:
         home = m.get("home_existing_id") or (_team(conn, provider, m["home_key"], m["home"], rename) if m["home"] else None)

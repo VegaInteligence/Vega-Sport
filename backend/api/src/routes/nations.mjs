@@ -161,7 +161,7 @@ export function nationOf(r) {
 }
 
 // « The season's other internationals » (nations-results:internationals:<season>): the file names each match's
-// tournament (« Friendly », « FIFA World Cup qualification »…), stored as its round, and no stage (FAILURE_MODES §49).
+// tournament (« Friendly », « FIFA World Cup qualification »…), stored as its round, and no stage (FAILURE_MODES §50).
 const INTERNATIONALS = /^nations-results:internationals:/;
 
 /** One match of the nation; a match of the season's other internationals under its tournament, with no round. */
@@ -180,7 +180,7 @@ export function matchOf(r) {
   return out;
 }
 
-// The nations whose place in the season's world ranking is provisional (§50: fewer than 8 counted matches in four years).
+// The nations whose place in the season's world ranking is provisional (§51: fewer than 8 counted matches in four years).
 async function provisionalOf(read, season) {
   const rows = await read(`SELECT team_key FROM api.power_clubs WHERE season_id=${SEASON_KEY} AND scope='nations' AND provisional`, [season]);
   return new Set(rows.map((r) => r.team_key));

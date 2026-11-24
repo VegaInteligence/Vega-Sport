@@ -66,7 +66,7 @@ REFS = {
 # schema only (the archived league seasons' reads): no table; 165 replaces two of them. 166 (#68) replaces the view
 # api.match_strengths (four more columns read from core.matches): no table. 167 (#82) adds agg.level_runs and
 # agg.player_level, agg.player_level_cells, agg.player_level_positions, keyed by season, player, position and club, and
-# two api views: no column naming a match. 168 (§50) adds columns to agg.team_power and agg.power_runs and redefines
+# two api views: no column naming a match. 168 (§51) adds columns to agg.team_power and agg.power_runs and redefines
 # api.power_clubs: no relation naming a match. A later one needs its own review here.
 REVIEWED_SCHEMAS = ("153_transfer_history_served.sql", "163_league_player_seasons.sql", "164_league_history_reads.sql",
                     "165_league_history_spellings.sql", "166_match_strengths_extra_time.sql", "167_player_level.sql",

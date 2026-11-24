@@ -60,7 +60,7 @@ test("Nations results cover other leagues without assigning teams to the wrong g
   assert.throws(() => parseNationsResults(csv + "2026-09-26,Scotland,Switzerland,0,3,UEFA Nations League,Glasgow,Scotland,FALSE\n"), /Duplicate/);
 });
 
-test("50l. the Nations League's results say whether the ground was neutral", async () => {
+test("51l. the Nations League's results say whether the ground was neutral", async () => {
   const { parseNationsResults } = await import("../dashboard/frontend/src/services/nations-results.js");
   const csv = "date,home_team,away_team,home_score,away_score,tournament,city,country,neutral\n2026-09-26,Scotland,Switzerland,0,3,UEFA Nations League,Glasgow,Scotland,FALSE\n2026-10-10,Gibraltar,Andorra,1,1,UEFA Nations League,Faro,Portugal,TRUE\n";
   assert.deepEqual(parseNationsResults(csv).map((row) => row.neutral), [false, true]);
@@ -240,7 +240,7 @@ test("every international of the season is read from International Results, but 
   }
 });
 
-// FAILURE_MODES.md §49 (49a–49g), written before the code: the season's other internationals of 2021/22 to 2025/26,
+// FAILURE_MODES.md §50 (50a–50g), written before the code: the season's other internationals of 2021/22 to 2025/26,
 // without what another edition of the base holds (the World Cup and the Euro always, the Nations League where the base
 // has its edition, a tournament of TOURNAMENT_EDITIONS inside its days).
 test("the older seasons' internationals leave out what the base holds elsewhere, season by season", async () => {
@@ -249,30 +249,30 @@ test("the older seasons' internationals leave out what the base holds elsewhere,
   const head = "date,home_team,away_team,home_score,away_score,tournament,city,country,neutral\n";
   const csv = head + [
     "2021-06-30,Spain,Switzerland,1,1,UEFA Euro,Saint Petersburg,Russia,TRUE", // 2020/21: before the first season
-    "2021-07-02,Spain,Switzerland,1,1,UEFA Euro,Saint Petersburg,Russia,TRUE", // 49b: Euro 2020, open-cups:euro:2020
-    "2021-07-10,Argentina,Brazil,1,0,Copa América,Rio de Janeiro,Brazil,TRUE", // 49f: held nowhere
-    "2021-07-15,Mexico,Guatemala,3,0,Gold Cup,Dallas,United States,TRUE", // 49f
-    "2021-10-10,Spain,France,1,2,UEFA Nations League,Milan,Italy,TRUE", // 49d: the 2021 Finals, held nowhere
-    "2022-01-10,Senegal,Zimbabwe,1,0,African Cup of Nations,Bafoussam,Cameroon,TRUE", // 49e: afcon:2021
+    "2021-07-02,Spain,Switzerland,1,1,UEFA Euro,Saint Petersburg,Russia,TRUE", // 50b: Euro 2020, open-cups:euro:2020
+    "2021-07-10,Argentina,Brazil,1,0,Copa América,Rio de Janeiro,Brazil,TRUE", // 50f: held nowhere
+    "2021-07-15,Mexico,Guatemala,3,0,Gold Cup,Dallas,United States,TRUE", // 50f
+    "2021-10-10,Spain,France,1,2,UEFA Nations League,Milan,Italy,TRUE", // 50d: the 2021 Finals, held nowhere
+    "2022-01-10,Senegal,Zimbabwe,1,0,African Cup of Nations,Bafoussam,Cameroon,TRUE", // 50e: afcon:2021
     "2022-03-24,Italy,North Macedonia,0,1,FIFA World Cup qualification,Palermo,Italy,FALSE",
-    "2022-06-01,Italy,Argentina,0,3,CONMEBOL–UEFA Cup of Champions,London,England,TRUE", // 49f: the Finalissima
+    "2022-06-01,Italy,Argentina,0,3,CONMEBOL–UEFA Cup of Champions,London,England,TRUE", // 50f: the Finalissima
     "2022-06-04,Comoros,Ivory Coast,NA,NA,African Cup of Nations qualification,Moroni,Comoros,FALSE", // no score
-    "2022-12-18,Argentina,France,3,3,FIFA World Cup,Lusail,Qatar,TRUE", // 49c
+    "2022-12-18,Argentina,France,3,3,FIFA World Cup,Lusail,Qatar,TRUE", // 50c
     "2023-03-23,France,Netherlands,4,0,UEFA Euro qualification,Saint-Denis,France,FALSE",
-    "2023-06-25,United States,Jamaica,1,1,Gold Cup,Chicago,United States,FALSE", // 49e: gold-cup:2023
-    "2024-01-13,Qatar,Lebanon,3,0,AFC Asian Cup,Lusail,Qatar,FALSE", // 49e: asian-cup:2023
-    "2024-01-15,Nigeria,Equatorial Guinea,1,1,African Cup of Nations,Abidjan,Ivory Coast,TRUE", // 49e: afcon:2023
-    "2024-06-14,Germany,Scotland,5,1,UEFA Euro,Munich,Germany,FALSE", // 49b: euro:2024
-    "2024-06-21,Argentina,Canada,2,0,Copa América,Atlanta,United States,TRUE", // 49e: copa-america:2024
-    "2024-07-14,Spain,England,2,1,UEFA Euro,Berlin,Germany,TRUE", // 49b
-    "2024-07-14,Argentina,Colombia,1,0,Copa América,Miami Gardens,United States,TRUE", // 49e
-    "2024-09-07,Italy,France,3,1,UEFA Nations League,Paris,France,TRUE", // 49d: kept
-    "2025-06-15,Mexico,Dominican Republic,3,2,Gold Cup,Los Angeles,United States,TRUE", // 49e: gold-cup:2025
-    "2025-12-21,Morocco,Comoros,2,0,African Cup of Nations,Rabat,Morocco,FALSE", // 49e: afcon:2025
+    "2023-06-25,United States,Jamaica,1,1,Gold Cup,Chicago,United States,FALSE", // 50e: gold-cup:2023
+    "2024-01-13,Qatar,Lebanon,3,0,AFC Asian Cup,Lusail,Qatar,FALSE", // 50e: asian-cup:2023
+    "2024-01-15,Nigeria,Equatorial Guinea,1,1,African Cup of Nations,Abidjan,Ivory Coast,TRUE", // 50e: afcon:2023
+    "2024-06-14,Germany,Scotland,5,1,UEFA Euro,Munich,Germany,FALSE", // 50b: euro:2024
+    "2024-06-21,Argentina,Canada,2,0,Copa América,Atlanta,United States,TRUE", // 50e: copa-america:2024
+    "2024-07-14,Spain,England,2,1,UEFA Euro,Berlin,Germany,TRUE", // 50b
+    "2024-07-14,Argentina,Colombia,1,0,Copa América,Miami Gardens,United States,TRUE", // 50e
+    "2024-09-07,Italy,France,3,1,UEFA Nations League,Paris,France,TRUE", // 50d: kept
+    "2025-06-15,Mexico,Dominican Republic,3,2,Gold Cup,Los Angeles,United States,TRUE", // 50e: gold-cup:2025
+    "2025-12-21,Morocco,Comoros,2,0,African Cup of Nations,Rabat,Morocco,FALSE", // 50e: afcon:2025
     "2025-11-13,Ivory Coast,Kenya,1,0,African Cup of Nations qualification,Abidjan,Ivory Coast,FALSE",
-    "2026-06-15,Spain,Cape Verde,0,0,FIFA World Cup,Atlanta,United States,TRUE", // 49c
+    "2026-06-15,Spain,Cape Verde,0,0,FIFA World Cup,Atlanta,United States,TRUE", // 50c
     "2026-06-30,Brazil,Japan,2,0,Friendly,Rio,Brazil,FALSE",
-    "2026-10-01,Scotland,Switzerland,1,0,UEFA Nations League,Glasgow,Scotland,FALSE", // 49d: the 2026/27 editions'
+    "2026-10-01,Scotland,Switzerland,1,0,UEFA Nations League,Glasgow,Scotland,FALSE", // 50d: the 2026/27 editions'
   ].join("\n") + "\n";
   const read = (season) => parseInternationalResults(csv, season).map((r) => [r.date, r.home, r.away, r.round]);
   assert.deepEqual(read("2021/2022"), [
@@ -289,8 +289,8 @@ test("the older seasons' internationals leave out what the base holds elsewhere,
     ["2025-11-13", "Ivory Coast", "Kenya", "African Cup of Nations qualification"],
     ["2026-06-30", "Brazil", "Japan", "Friendly"],
   ]);
-  assert.deepEqual(read("2026/2027"), []); // 49d: the Nations League of 2026/27 stays its editions'
-  // 49a, 49h: the seasons read, one list; the parser refuses a season before it.
+  assert.deepEqual(read("2026/2027"), []); // 50d: the Nations League of 2026/27 stays its editions'
+  // 50a, 50h: the seasons read, one list; the parser refuses a season before it.
   assert.deepEqual(results.INTERNATIONAL_SEASONS, ["2021/2022", "2022/2023", "2023/2024", "2024/2025", "2025/2026", "2026/2027"]);
   assert.throws(() => parseInternationalResults(csv, "2020/2021"), /Unknown/);
   const { GET } = await import("../backend/sources/projections/nations-results.mjs");

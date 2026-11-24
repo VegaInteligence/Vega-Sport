@@ -1,4 +1,4 @@
--- 23 Nov 2026 (#70, VI-49; FAILURE_MODES.md §50): the national teams' Elo from 2021/22 (friendlies and qualifiers, a
+-- 23 Nov 2026 (#70, VI-49; FAILURE_MODES.md §51): the national teams' Elo from 2021/22 (friendlies and qualifiers, a
 -- FIFA seed) and their world ranking. A nation of a season's ranking from 2021/22 is listed when it played a counted
 -- match in the two years up to the season's reference date; `provisional` when it played fewer than 8 in four years
 -- (false for the clubs and the seasons before). The Elo run records the national pass's settings, so that the worker

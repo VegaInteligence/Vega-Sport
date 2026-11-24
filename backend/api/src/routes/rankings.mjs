@@ -701,7 +701,7 @@ async function powerRanking(read, params) {
     reject(400, "Paramètre invalide.");
   const limit = Number(limitRaw);
   if (kind === "players" && params.get("scope") === "all") return wholeRanking(read, params, season, limit);
-  // The nations' world ranking (about 205 nations from 2021/22, FAILURE_MODES §50) is read a page at a time.
+  // The nations' world ranking (about 205 nations from 2021/22, FAILURE_MODES §51) is read a page at a time.
   const paged = kind === "nations" && params.has("page");
   if (params.has("scope") || (params.has("page") && !paged) || params.has("role") || params.has("universe")) reject(400, "Paramètre invalide.");
   if (paged && !/^[1-9]\d{0,3}$/.test(params.get("page"))) reject(400, "Paramètre invalide.");
@@ -747,7 +747,7 @@ async function powerRanking(read, params) {
 }
 
 /** One row of the clubs' or the nations' power ranking. A club's score out of 100 is read against the clubs' leagues:
- * national teams have none; a nation's row says whether its place is provisional (§50). */
+ * national teams have none; a nation's row says whether its place is provisional (§51). */
 export function powerRow(kind, r, reference) {
   return {
     rank: r.rank, teamId: r.team_id, name: r.name, imageUrl: r.image_url ?? null, country: r.country ?? null,

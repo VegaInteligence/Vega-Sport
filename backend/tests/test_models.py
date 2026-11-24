@@ -456,7 +456,7 @@ class ModelsTest(unittest.TestCase):
         elo = dict(x("SELECT team_id, stakes FROM agg.team_elo WHERE match_id=9000").fetchall())
         self.assertEqual({k: round(v, 4) for k, v in elo.items()}, {900: 1.495, 901: 1.495})
         before, after, expected = self.one("SELECT elo_before, elo_after, expected FROM agg.team_elo WHERE match_id=9000 AND team_id=900")
-        # §50 (50i): a national match from 1 July 2021 moves by K_n 30 × its weight (a final's stakes) × the goal margin's G.
+        # §51 (51i): a national match from 1 July 2021 moves by K_n 30 × its weight (a final's stakes) × the goal margin's G.
         self.assertAlmostEqual(after - before, power.NATION_K * final_stakes * power.goal_factor(1) * (1 - expected), places=3)
         self.assertEqual(before, 1500.0)  # no FIFA edition held: every nation starts at 1500
         self.assertEqual(self.one("""SELECT method_version, nation_elo_version, nation_k, nation_start, nation_seed_edition FROM agg.power_runs
@@ -482,7 +482,7 @@ class ModelsTest(unittest.TestCase):
         )
 
     def test_the_national_seed_reads_the_fifa_edition_of_18_february_2021(self):
-        # §50 (50j): 1500 + the points less the edition's mean; without that edition, the earliest held, traced.
+        # §51 (51j): 1500 + the points less the edition's mean; without that edition, the earliest held, traced.
         from vega import power
 
         x = self.db.execute
@@ -506,7 +506,7 @@ class ModelsTest(unittest.TestCase):
             self.assertEqual(stakes, 1.0)  # I_m of a friendly-less round: as `stakes` gives it
             x("DELETE FROM core.ranking_editions WHERE label='2021-02-18'")
 
-        # 50j': a row fifa.save could not link (a nation the base names otherwise) is linked by its FIFA name through the
+        # 51j': a row fifa.save could not link (a nation the base names otherwise) is linked by its FIFA name through the
         # measurement's map to the national team International Results keys by that name.
         x("INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id) VALUES('team','international_results','South Korea',911)")
         self.addCleanup(lambda: x("DELETE FROM core.provider_ids WHERE entity_type='team' AND entity_id=911"))

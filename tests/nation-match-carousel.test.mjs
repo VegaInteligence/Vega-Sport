@@ -74,7 +74,7 @@ test("each group has a stable key; an empty nation has no group", () => {
   assert.deepEqual(matchCarousel({ id: "t_x", matches: [], tournaments: [] }), []);
 });
 
-// FAILURE_MODES.md §49 (49l), written with the API's test before the code (moved here: the API package has no site
+// FAILURE_MODES.md §50 (50l), written with the API's test before the code (moved here: the API package has no site
 // module): the season's other internationals, as the nation route serves them (routes/nations.mjs matchOf), are
 // grouped by their tournament and season — never « Matchs internationaux 2024/2025 2024/25 » —, their tile under the
 // tournament, never « Phase de groupes ».

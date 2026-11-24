@@ -83,7 +83,7 @@ export function parseTournamentResults(csv, competition, season) {
 }
 
 // Every international of a season beyond what the base reads elsewhere: the home's week strip shows them (19 Nov
-// 2026), the nation page lists them by season (FAILURE_MODES.md §49). The seasons read: 2021/22, the base's first, to
+// 2026), the nation page lists them by season (FAILURE_MODES.md §50). The seasons read: 2021/22, the base's first, to
 // 2026/27; going further back is this line's first year (backend/vega/sources/cups.py INTERNATIONAL_SEASONS, the same
 // list, drift-tested).
 export const INTERNATIONAL_SEASONS = Array.from({ length: 2026 - 2021 + 1 }, (_, i) => `${2021 + i}/${2022 + i}`);

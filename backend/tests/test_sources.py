@@ -123,8 +123,8 @@ class PureTest(unittest.TestCase):
     # - a match is paired with the base's archived match of the same edition, day and teams, in either order and
     #   under the spellings the two sources use; two candidates, a women's match (the base holds none), a replay of
     #   the day after: no pair, never a guess.
-    def test_50l_a_world_cup_or_euro_match_is_neutral_unless_its_home_side_hosts_it(self):
-        # §50 (written before the code): from 1 July 2021 OpenFootball's World Cup and Euro matches are on neutral ground
+    def test_51l_a_world_cup_or_euro_match_is_neutral_unless_its_home_side_hosts_it(self):
+        # §51 (written before the code): from 1 July 2021 OpenFootball's World Cup and Euro matches are on neutral ground
         # unless the home side is a host of the edition (cups.HOSTS); before that day is_neutral stays unknown (NULL).
         def neutral(competition, season, matches):
             return [row["is_neutral"] for _, row in cups.match_rows("open-cups", competition, season, {"matches": matches})]
@@ -963,7 +963,7 @@ class UefaTest(unittest.TestCase):
             rows = x("""SELECT m.home_team_name, m.home_score, m.away_score, m.is_neutral, s.label FROM core.matches m JOIN core.seasons s ON s.id=m.season_id
                         JOIN core.competition_seasons cs ON cs.id=m.competition_season_id WHERE cs.cup_key='nations-results:afcon:2023' ORDER BY m.archive_position""").fetchall()
             self.assertEqual(rows, [("Ivory Coast", 2, 0, False, "2023/2024"), ("Nigeria", 1, 1, True, "2023/2024")])
-            # §50: an OpenFootball Euro match from 1 July 2021 is neutral unless its home side hosts the edition (Germany).
+            # §51: an OpenFootball Euro match from 1 July 2021 is neutral unless its home side hosts the edition (Germany).
             self.assertEqual({r[0] == "Germany" for r in x("SELECT m.home_team_name, m.is_neutral FROM core.matches m JOIN core.competition_seasons cs ON cs.id=m.competition_season_id WHERE cs.cup_key='open-cups:euro:2024'").fetchall()
                               if r[1] is not True} - {True}, set())
         finally:

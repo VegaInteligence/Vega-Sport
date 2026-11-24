@@ -147,7 +147,7 @@ test("the nations and a nation are served", { skip }, async () => {
   assert.equal((await get("/api/nations/t_zzzzzz?season=2025%2F2026")).response.status, 404);
 });
 
-// FAILURE_MODES.md §49 (49l), written before the code: a match of « the season's other internationals » (the
+// FAILURE_MODES.md §50 (50l), written before the code: a match of « the season's other internationals » (the
 // edition `nations-results:internationals:<season>`, International Results) comes with its tournament as its
 // competition and no round (the file has no stage). Another edition's match is served as before. The carousel's labels
 // of these matches are tested with the site (tests/nation-match-carousel.test.mjs): this package has no site module.
@@ -176,7 +176,7 @@ test("a match of the season's other internationals is served under its tournamen
   assert.deepEqual([league.competition, league.round], ["nations-league", "Groupe 3"]);
 });
 
-test("50m. a nation's place in the world ranking says whether it is provisional", () => {
+test("51m. a nation's place in the world ranking says whether it is provisional", () => {
   const row = { team_id: "t_gib", name: "Gibraltar", matches: 6, rank: 187, season_elo: 1163.2, elo_change: -12, season_matches: 6,
     wins: 0, draws: 1, losses: 5, result_sum: 0.5, expected_sum: 1.2 };
   assert.equal(nationOf({ ...row, provisional: true }).ranking.provisional, true);

@@ -194,7 +194,7 @@ def due_seasons(conn, now):
 
 
 # The complementary matches the Elo reads (power.ELO_MATCHES): a finished, scored match of a cup-source edition, the
-# season's other internationals included since §50 (23 Nov 2026; ELO_MATCHES' side rule then keeps the national pairs).
+# season's other internationals included since §51 (23 Nov 2026; ELO_MATCHES' side rule then keeps the national pairs).
 _COMPLEMENTARY = """FROM core.matches m JOIN core.competition_seasons cs ON cs.id = m.competition_season_id
                       AND cs.cup_key IS NOT NULL AND cs.archive_key IS NULL
                     WHERE m.status = 'finished' AND m.home_score IS NOT NULL AND m.away_score IS NOT NULL
@@ -206,7 +206,7 @@ def elo_due(conn):
     with their own waits): a complementary match (Open Matchday, the cup sources) written or changed after the last
     published Elo run started (a new result, a corrected score, a restored match), or a side that run wrote whose match
     is gone, no longer finished with its score, or now archived (a withdrawn match), or a side of another run (sides
-    restored from a copy), or a run of another national method (power.NATION_ELO_VERSION, §50: once after a change).
+    restored from a copy), or a run of another national method (power.NATION_ELO_VERSION, §51: once after a change).
     Without a run, any complementary match. FAILURE_MODES.md §37 (E04k)."""
     from . import power
 

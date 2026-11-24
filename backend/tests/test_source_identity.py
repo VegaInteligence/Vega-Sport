@@ -534,8 +534,8 @@ class SourceIdentityTest(unittest.TestCase):
         read = {r[0] for r in x(power.ELO_MATCHES).fetchall()}
         self.assertEqual(read & set(range(960, 966)), {960, 961})
 
-    def test_50k_the_season_s_internationals_enter_the_elo_between_national_sides(self):
-        # E1 (19 Nov 2026) turned by §50 (the user's decision of 23 Nov 2026, measured: variant C4): an international of
+    def test_51k_the_season_s_internationals_enter_the_elo_between_national_sides(self):
+        # E1 (19 Nov 2026) turned by §51 (the user's decision of 23 Nov 2026, measured: variant C4): an international of
         # the season between two national sides is a match of the Elo, as the Nations League's; one with a side not
         # marked national is not (the existing rule).
         from vega import power
@@ -554,9 +554,9 @@ class SourceIdentityTest(unittest.TestCase):
              (9971, 9971, 2026, 'international_results', 'finished', 9971, 9970, 1, 1, '2026-11-14'),
              (9972, 9970, 2026, 'international_results', 'finished', 9970, 9972, 2, 0, '2026-11-18')""")
         read = {r[0] for r in x(power.ELO_MATCHES).fetchall()}
-        self.assertEqual(read & {9970, 9971, 9972}, {9970, 9971})  # red before §50: {9971}
+        self.assertEqual(read & {9970, 9971, 9972}, {9970, 9971})  # red before §51: {9971}
 
-    def test_51a_51b_a_fifa_member_of_the_internationals_is_a_national_team(self):
+    def test_52a_52b_a_fifa_member_of_the_internationals_is_a_national_team(self):
         from vega.sources import curated
 
         x = self.db.execute
@@ -577,7 +577,7 @@ class SourceIdentityTest(unittest.TestCase):
             curated.national_teams(self.db)
         rows = dict((r[0], r[1:]) for r in x("SELECT id, is_national, name FROM core.teams WHERE id = ANY(%s)", (list(ids),)).fetchall())
         self.assertEqual(rows, {9980: (True, "Kenya"), 9981: (True, "South Korea"), 9982: (False, "Zanzibar"),
-                                9983: (False, "United States"), 9984: (True, "USA")})  # red before §51: Kenya, South Korea not national
+                                9983: (False, "United States"), 9984: (True, "USA")})  # red before §52: Kenya, South Korea not national
         with self.db.transaction():
             written, _ = curated.national_teams(self.db)
         self.assertEqual(written, 0)
