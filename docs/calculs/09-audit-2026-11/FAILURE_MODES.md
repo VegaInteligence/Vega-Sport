@@ -4492,3 +4492,122 @@ an unscored friendly of 20 March 2027), `test_classements_plans` 43s, `test_depl
 | 58d | A nation whose only match is a fixture (Brazil in the fixture) | listed, `matches` 1, no `lastMatch` |
 | 58e | The plan | `core.matches` read twice (43s unchanged) |
 | 58f | The deployment | 173 applied and reviewed; the counters one higher |
+
+## 59. The Ballon d'Or race on the Score Vega v9.1 with the three criteria, stage 1: computed and stored beside the v8 race (issue #105; hugo, 24 Nov 2026: « le classement BO est le score v9 + une fine tuning sur les 3 façons de juger un joueur au ballon d'or », 60 / 30 / 10; written before the tests)
+
+The owner's weights, not to be asked again: individual performance 60 %, collective performances and trophies 30 %,
+class and fair play 10 %. He validated the proposal (`/mnt/project-files/vega-ballon-dor/01-etat-des-lieux-et-proposition.md`)
+with its three recommended defaults. Stage 1 computes the new race and stores it beside the v8 race, served by new
+reads; the site and the v8 race stay as they are. Stage 2 (the site's switch, mock-up first) comes after the owner has
+read the real rankings.
+
+Read in the code (main 5433b48d):
+- `power.award_race` ranks the eligible players of a measured top division by `index_season` (v8); `write_award` keeps
+  the first 30 in `agg.player_award_ranking`, which no read uses: `/api/rankings/power?kind=players` sorts
+  `api.power_players` itself. The site reads that route alone (`ballon-dor.js`).
+- `level.read` sums each match's block values without the match's stakes; a national-team match enters no cell, no
+  start share and no club level. `agg.player_level` is the level of two years (the year before for half).
+- Collective facts: `core.rounds.stage` and `name`, `core.matches` scores (`_et`, `_penalty_score`), `api.standings`,
+  `agg.league_levels`; the complementary editions (`cup_key`) have results and no player rows; International Results
+  tournaments have neither rounds nor shoot-outs.
+- Cards: `core.match_events` (`yellow_card`; `second_yellow` followed by its `red_card`), for the matches whose
+  `core.match_coverage.events` is `ok`.
+- The fair-play scale is the FIFA team conduct score: yellow −1, indirect red (second yellow) −3, direct red −4, yellow
+  and direct red −5, one deduction per player and match. Read in two press accounts of the FIFA regulations (NBC,
+  « FIFA's fair play rule », World Cup 2022; FourFourTwo, « What is the FIFA Team Conduct Score », World Cup 2026); the
+  regulation's own text was not read: the scale is not confirmed at its source.
+
+### 59.1 Rules
+
+- **Individual (60 %).** I is the award year's v9.1 level alone, `award.individual(cells, refs, people)`: the same
+  run's rows, positions, blocks and references (`level.read(..., stakes=...)` gives `reading["award_cells"]` beside
+  `reading["cells"]`); the year's cells only (no year before); each match's block values times its stakes
+  (`power.match_stakes`, 1 without one), the minutes unweighted; the national-team matches included with their stakes
+  (`NATIONAL_MATCHES = True`); `starts` and `club` as the level's. `reading["cells"]`, the v9.1 level, `LEVEL_VERSION`
+  and `level.SETTINGS` do not change.
+- **Collective (30 %).** C = Σ share × value over the honours of the award year, one per (player, team, edition). An
+  edition belongs to the year of its last match, played or to play. Kinds and values (`award.honour_value`):
+  `league` (a top division): `LEAGUE_VALUE` 0.5 × factor × `LEAGUE_RANKS` (1: 1, 2: 0.4, 3: 0.2, 4: 0.1, else 0) ×
+  progress, the rank that of `api.standings`, progress the edition's finished matches over its matches;
+  `national_cup`: `CUP_VALUE` 0.15 × factor × `ROUND_VALUE`; `international`: `award.competition_value(prestige)` =
+  (prestige − 1) / (1.30 − 1), from `power.PRESTIGE` / `CUP_PRESTIGE`, × `ROUND_VALUE`. `ROUND_VALUE`: winner 1, final
+  0.6, semi-final 0.4, quarter-final 0.25, round of 16 0.15. The factor is `award.league_factor(L, L_max)` =
+  2 / (1 + 10^((L_max − L) / 400)) of the club's league of the year (`agg.league_levels`, the strongest men's top
+  division L_max), 1 for a national team. A round is reached when the team has a match of it, played or to play; no
+  round is projected. The winner of a final (`award.final_winner`): the score, then extra time, then the shoot-out;
+  a final without a winner gives both sides `final`, with the reason `no_winner`.
+- **Share.** `award.share(minutes, matches)` = minutes / (90 × matches), at most 1: the player's minutes for the team
+  in the edition over the team's matches in it; an edition without player rows (a complementary club edition): his
+  minutes for the team in its PitchAPI matches between the team's first and last match of the edition, over those
+  matches; a national-team tournament without player rows: `NATIONAL_PROXY_SHARE` 0.5 for a player the base has seen
+  play for that national team (any PitchAPI match, or a linked scorer of the tournament, §57), else none. A player of
+  two clubs has the honours of each, at his minutes with each.
+- **Fair play (10 %).** Card points of a covered player-match (`award.card_points`): 1, 3, 4 or 5 as above, the red
+  that follows a second yellow not counted again. The rate is pulled to the main position's mean by
+  `CARD_PRIOR_MINUTES` 900: t = 90 × (points + μ × 900 / 90) / (covered minutes + 900) (`award.pulled_rate`);
+  F = −t. Without a covered minute F is the position's mean.
+- **Scale.** z over the year's men's reference players (eligible, linked): z_I and z_C on all of them, z_F within the
+  main position; z_C and z_F within ± `Z_CAP` 4. The means and spreads are those of the reference year (the last
+  finished award year, the year itself once it is over), kept with its run (`agg.award_runs.spreads`); a year in
+  progress without one measures its own. B = 0.6 z_I + 0.3 z_C + 0.1 z_F; A = μ_I + σ_I · B / 0.6; score =
+  100 / (1 + 10^(−(A − A₀) / 36)), A₀ the median I of the year's reference players.
+- **The race.** A men's player who is eligible, of a measured league, of a top-division club, and measured when a
+  keeper, is ranked 1, 2, 3… by A. Every other men's player with an individual part has his parts and his score, no
+  rank, and the first reason that holds (`award.race_reason`): `minutes`, `league`, `not_top_division`, `keeper_data`
+  (`KEEPER_IN_RACE = False`).
+- **Stored.** Migration 174 (`174_player_award.sql`, reviewed in `open_matchday_restore.REVIEWED_SCHEMAS`):
+  `agg.award_runs` (`id, season_id, version, status, started_at, finished_at, level_run_id, reference_season, players,
+  settings, spreads`; one published run per year), `agg.player_award` (`season_id, player_id, team_id, position,
+  universe, eligible, linked, top_division, measured, individual, collective, card_points, fair_play_minutes,
+  fair_play, z_individual, z_collective, z_fair_play, level, score, rank, reason, run_id`), `agg.player_award_honours`
+  (`season_id, player_id, team_id, competition_season_id, kind, reached, league_rank, progress, factor, prestige,
+  share, value, reason, run_id`), the reads `api.award_race` and `api.award_honours`. Every league honour is kept,
+  whatever its rank: the value tables can be changed and the race computed again from these rows alone.
+- **Beside the v8 race.** `power.award_race`, `power.write_award`, `agg.player_award_ranking` and
+  `/api/rankings/power?kind=players` are unchanged by a run; the new race writes nothing there.
+- **When.** In `power.refresh_players`'s write transaction (`award.write`). `award.refresh(conn, season)` computes C,
+  F, the z and the race again from the stored rows, without reading a match; `award.reread(conn, season)` reads the
+  honours and the cards again (results and events, not the player statistics), then refreshes; the worker calls it,
+  after the stale rankings, for each year `award.due(conn)` lists: a match of the year's editions changed after the
+  year's published race started. `award.stale(conn)` lists, for `power.stale_rankings` with the level's years, a year
+  whose published level of the present version has players and whose race is missing, of another `AWARD_VERSION` or
+  other `award.SETTINGS`, or started before that level.
+- **Read.** `GET /api/rankings/award?season=&limit=&page=` (limit 30 by default, 200 at most): the ranked players in
+  their order, `{season, page, limit, total, method: {version, computedAt}, rows}`, each row `rank, playerId, name,
+  imageUrl, teamId, team, teamImageUrl, position, score, individual, collective, fairPlay, level` (the raw parts:
+  individual and level in Elo points, collective in honour points, fairPlay in card points per 90, negative). `GET
+  /api/rankings/award/player?season=&player=`: his parts, their z, his card points and covered minutes, his rank or
+  his reason, and his honours. 404 without a race; 400 on any other parameter.
+
+### 59.2 Failure modes and expected outcomes
+
+59a–59c, 59f–59n, 59u–59w (formulas): `backend/tests/test_award.py`, no database. 59b, 59d–59f, 59g, 59h, 59i–59k,
+59o, 59p, 59s, 59t, 59v: `backend/tests/test_models.py`, the synthetic league and its real ranking of 88 players. 59p:
+`test_collection_wakeups.py`, the real `Worker.daily`. 59r: `test_award_year_2020_order.py`. 59u:
+`test_deploy_migrations.py`. 59q, 59s: `backend/api/test/rankings.test.mjs`. All on a disposable PostgreSQL 18.
+
+| # | Situation | Expected |
+|---|---|---|
+| 59a | A centre-back's match weighted 2, then 3, every other match 1 | his award cell's block sums move by 1 and by 2 times that match's values; his minutes do not move; with every stake 1 and no national match the award cells are the level's cells |
+| 59b | A player with a strong year before and an ordinary year | I is the ordinary year's level alone; the stored v9.1 level is unchanged |
+| 59c | A player's national-team matches | they enter his award cells under the national team, with their stakes; neither `cells`, his `starts` nor his `club` change |
+| 59d | The league's champion, runner-up, third and fourth, every player 14 of 14 matches | league honours of rank 1 to 8 for every player, values 0.5, 0.2, 0.1, 0.05, then 0; C those values |
+| 59e | A player who played 7 matches for one club and 7 for another | two league honours, share 0.5 each, at each club's rank |
+| 59f | A cup final won on penalties; one drawn without penalty scores | the shoot-out's winner `winner`, the other `final`; both sides `final` and the reason `no_winner` |
+| 59g | A quarter-finalist eliminated, and two quarter-finalists still to play | all three `quarter_final`; no further round |
+| 59h | The league with one match still to play | progress 56 / 57 on every league honour; the race exists |
+| 59i | A player with a yellow, a second yellow and its red; a direct red; a yellow and a direct red | 3, 4 and 5 points |
+| 59j | A season without covered events | `fair_play_minutes` 0, `card_points` 0, F the position's mean, z_F 0 |
+| 59k | A keeper whose goals prevented cover less than half his minutes | parts and score computed, no rank, reason `keeper_data` |
+| 59l | A player under the minutes bar; of an unmeasured league; of a lower division | no rank, reasons `minutes`, `league`, `not_top_division` |
+| 59m | Every player at the mean on C and F | his score equals his year-only v9.1 score |
+| 59n | z_C of 7 | bounded at 4 |
+| 59o | A cup of the year written after its race | `award.due` lists the year, `stale_rankings` does not; `award.reread` adds its honours; the ranking and the level are not run again; then nothing is due |
+| 59p | A race of another `AWARD_VERSION` or other settings; a year with a level and no race | `stale_rankings` lists the year; one pass computes it; the next lists nothing |
+| 59q | The reads: a year with a race; a player out of it; a year without one; bad parameters | the race in its order with its 13 keys, the nine the site reads with their types; his reason and honours; 404; 400 |
+| 59r | A partial award year (2020) | no race run with players, no row in `agg.player_award` |
+| 59s | A run of the new race | `agg.player_award_ranking`, its calc run (`power-ranking-v8`) and `/api/rankings/power?kind=players` are what the v8 gives |
+| 59t | The race computed, refreshed and read again | `agg.player_level`, `agg.player_level_cells` and `agg.player_power` are unchanged |
+| 59u | The values: rounds, prestige, league factor, league and cup values, the share; migration 174 | the tables of 59.1; 174 applied once and reviewed, the deployment's counters one higher |
+| 59v | `LEAGUE_RANKS` given a fifth place, then `award.refresh` | the fifth club's players gain it, from the stored honours, without a match read |
+| 59w | A national tournament without player rows | share 0.5 for a player seen with that national team, none otherwise |
