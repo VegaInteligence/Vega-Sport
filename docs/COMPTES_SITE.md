@@ -19,7 +19,7 @@ Contract and seam: [PREFERENCES_UTILISATEUR.md](PREFERENCES_UTILISATEUR.md). Acc
 | Merge | `src/services/account-merge.js` | First sign-in merge, three-way merge after a 409. |
 | Adapter | `src/services/account-sync.js` | `{ load, save, report }` for `setPreferencesSync`, the client of `/api/account`, the first-merge marker. |
 | State | `src/services/account-state.js`, `src/hooks/useAccount.js` | The signed-in state, read anywhere (no provider needed), and the sync status. |
-| Screens | `src/views/SignInPage.jsx`, `src/views/AccountPage.jsx`, `src/components/AccountEntry.jsx`, `src/components/AccountSync.jsx` | `/connexion`, `/compte`, the header entry, the adapter's mounting point (beside `PreferencesSync`). |
+| Screens | `src/views/SignInPage.jsx`, `src/views/AccountPage.jsx` (`src/components/AccountLetter.jsx`, `AccountParts.jsx`, `src/services/account-page.js`), `src/components/AccountEntry.jsx`, `src/components/AccountSync.jsx` | `/connexion`, `/compte`, the header entry and its menu, the adapter's mounting point (beside `PreferencesSync`). |
 
 Environment, server side only: `NEON_AUTH_BASE_URL`, `NEON_AUTH_COOKIE_SECRET` (32 characters or more),
 `ACCOUNT_API_ORIGIN` (the account front's Function URL origin, no path). The browser never sees them; it gets
@@ -115,7 +115,7 @@ Forwarded, exactly: `POST /api/account/session`, `GET|PUT /api/account/preferenc
 ## 7. The screens' look (`tests/account-summary.test.mjs`, E2E)
 
 Second design of `/connexion`, `/compte` and the header entry (24 November 2026; the first one was refused as too
-bare). `/connexion` is a screen of its own, without the site's header: the brand's night panel (pitch lines, the
+bare). `/compte` and the header's menu were redrawn since: section 10. `/connexion` is a screen of its own, without the site's header: the brand's night panel (pitch lines, the
 wordmark) beside the form. `/compte` shows who is signed in, what the account keeps and the state of the sync.
 
 | # | What can go wrong | Expected outcome |
@@ -123,13 +123,13 @@ wordmark) beside the form. `/compte` shows who is signed in, what the account ke
 | S1 | The monogram shows a wrong or empty letter. | `accountInitial(user)`: the first letter or digit of the name, else of the address before « @ », as a capital (« é » gives « É »); nothing readable gives `""` and the tile stays empty. Never more than one character of the address. |
 | S2 | `/compte` opens before the stores are loaded (`currentContract()` is null) or with a damaged value. | `accountSummary(null)` gives zero counts, no favourite, country `"auto"`; it never throws. |
 | S3 | A club saved in two lists is counted twice. | Counts are per kind of distinct ids over every list: clubs, nations, players, matches; an entry of another kind or without an id is ignored. |
-| S4 | A long selection floods the page. | At most 8 favourites are listed (clubs, nations and players, in the lists' order, once each); `more` holds how many are not shown, and « Afficher les N autres » lists them all (`accountSummary(contract, { shown })`). |
+| S4 | A long selection floods the page. | `accountSummary(contract, { shown })` still bounds its list (8 by default); `/compte` asks for every favourite and cuts per kind instead (section 10, C4). |
 | S5 | The country reads wrong. | `null` → `"auto"` (detection), `"none"` → `"none"`, a code → that code; the screen writes « Automatique », « Aucun » or the country's name. |
 | S6 | Changing between « Se connecter » and « Créer un compte » loses the address typed, or keeps a stale error. | The address stays, the password and the error are cleared, the browser's password manager gets `current-password` / `new-password`. |
 | S7 | The password cannot be checked before sending. | An eye button shows or hides it (`aria-pressed`), without changing the value. |
 | S8 | The drawing costs a request, moves for people who asked for no motion, or is read aloud. | Inline SVG, `aria-hidden`; its slow drift stops under `prefers-reduced-motion`. |
 | S9 | The screen without the site's header leaves no way back. | The wordmark links to `/`, and « Fermer » goes back to `?next=` (same rule as O4). |
-| S11 | The sync's state reads alone in the hero (« Indisponible » of what?) or runs long. | `syncLabel` gives a short `pill` naming the sync (« Synchronisé », « Synchronisation… », « Synchro en échec », « Synchro arrêtée », « Synchro indisponible ») beside the block's `text`; « En échec » carries the reason and « Nouvel essai au prochain changement. » as its detail (`tests/account-messages.test.mjs`). |
+| S11 | The sync's state reads alone or runs long. | `syncLabel` gives the words (« À jour », « En cours », « En échec » with its reason and « Nouvel essai au prochain changement. », « Arrêtée : <raison> », « Indisponible ») and a short `pill`; `/compte` shows them only when the sync does not work (section 10, C3) (`tests/account-messages.test.mjs`). |
 | S10 | The header entry changes width between its states. | 124 px in every state from 1024 px up, the icon size below, as before (O6). |
 
 ## 8. Forgotten password and address confirmation (`tests/account-code.test.mjs`, E2E phase `verify`)
@@ -174,6 +174,28 @@ could not be opened showed the page signed out without a word (24 November 2026,
 What the stand-in cannot show: Neon's real refusals on the way back (its codes are Better Auth's: `account_not_linked`,
 `state_mismatch`, `please_restart_the_process`…) and a real verifier. The E2E opens `/connexion?error=…` as Neon would
 send it, and returns with a verifier the stand-in does not know (it answers no session, as Neon's 400 does).
+
+## 10. The account page « Lettre » and the header menu (`tests/account-page.test.mjs`, E2E phase `on`)
+
+The owner's choice of 24 November 2026, after two refused passes: `/compte` holds the account and the settings in one
+narrow column read down the page. « Mon compte. » in the logo's letters, the address, the plan and « Se déconnecter »;
+then Favoris (clubs, players, nations, and the competitions the home page follows, with « Modifier » opening the home
+page's picker: they are no longer a setting of their own), Paramètres (`#parametres`: theme, « Français » as a quiet
+row, the home country with « Automatique ») and Sécurité (`#securite`). No tab, no frame, no count. The default season
+and the home priority stay in the contract and are synced, but have no control: no page reads them yet. The signed-in
+header entry opens a menu: who is signed in, « Mon compte » (`/compte`), « Paramètres » (`/compte#parametres`),
+« Se déconnecter ». The pure rules are in `src/services/account-page.js`.
+
+| # | What can go wrong | Expected outcome |
+| --- | --- | --- |
+| C1 | « Paramètres » opens the page at the top, or the anchor is lost on the way. | `/compte#parametres` lands on the settings once the session is read (their top under the header, within 80 px of it), and the address keeps `#parametres`: the season sync (`FootballContext.updateQuery`) rewrites the query, never the hash. « Mon compte » opens `/compte` at the top. Already on `/compte`, both still move the page (Next changes the address without a `hashchange`: the menu tells the page). |
+| C2 | A Google-only account is offered « Changer le mot de passe » and fails, or the row flashes. | `hasPassword(answer)` of Better Auth's `listAccounts()`: `true` when its `data` holds an account of provider `credential`, `false` when it holds none, `null` when the answer is an error, not a list, or missing. The row shows only on `true`: hidden while unknown, when `/api/auth/list-accounts` fails or throws. |
+| C3 | The page talks about the sync when it works, or says nothing when it does not. | `syncNote(sync, syncOn)`: `null` for `idle`, `syncing`, `synced` and any unknown state; « Synchronisation en échec » (detail: the reason, then « Nouvel essai au prochain changement. »), « Synchronisation arrêtée » (detail: the reason) or « Synchronisation indisponible » otherwise, and always « indisponible » when the switch has no sync (W2). The block `.account-syncblock` is always there with `data-state`, empty when all is well. |
+| C4 | A long selection floods the page, or one kind hides the others. | `favouriteGroups(favourites, opened)`: one group per kind in the order Clubs, Joueurs, Nations, each in the lists' order, at most 6 (`FAVOURITES_PER_KIND`) until that kind is opened; `more` counts the rest, « Afficher l’autre » for one, « Afficher les N autres » beyond (`moreLabel`). A kind without favourites has no group; a match is never listed; an entry without an id or of an unknown kind is ignored. |
+| C5 | No favourite at all leaves a blank or a broken section. | « Aucun favori. » followed by three links: Clubs, Joueurs, Nations (the pages where a favourite is added). The competitions follow as usual. |
+| C6 | The menu cannot be opened or closed without a mouse, or traps the person. | The entry is a `button` with `aria-label="Mon compte"`, `aria-expanded`, `aria-controls` while open. A mouse opens it on hover and closes it 180 ms after leaving; a click on a hovered entry keeps it open; a tap toggles it. Keyboard focus (`:focus-visible`) opens it and Tab goes into its links; Escape closes it and puts the focus back on the button without opening it again; a pointer down outside and a change of page close it. Signed out, the entry stays the link « Se connecter » (no menu, no `aria-expanded`). Its width does not change (S10). |
+| C7 | « Se déconnecter » from the page or the menu loses the last changes. | Both go through the same `signOut` (O1 to O3): a failed last save is told (« Vos derniers changements n’ont pas pu être enregistrés sur le compte. ») with « Annuler » and « Se déconnecter quand même ». From `/compte` the person then lands on `/`. |
+| C8 | Deletion becomes one click, or export stops working. | Unchanged contracts: « Supprimer mon compte » asks to type « SUPPRIMER » before « Supprimer définitivement » is enabled, and its refusals read as O8; « Exporter mes données » downloads `vega-account-export.json`. Both only with the account API (W2). |
 
 ## Not covered here
 
