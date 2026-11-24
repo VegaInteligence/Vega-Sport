@@ -21,7 +21,7 @@ $$
 
 « Gros clubs » : nombre d'équipes du match (0, 1 ou 2) dans la liste `FEATURED_CLUB_IDS` de [home.js](../../../dashboard/frontend/src/services/home.js#L33) (29 clubs : Arsenal, PSG, Real Madrid, Bayern, Inter, Benfica, Ajax…). Les rangs viennent des tableaux de l'accueil.
 
-C'est `api.home_weight_v1` ([044_home_settings.sql](../../../backend/sql/044_home_settings.sql)). Il ordonne toujours le fil des résultats et les matchs à venir ; l'importance v2 ci-dessous le remplacera quand la maquette sera validée (VI-48).
+C'est `api.home_weight_v1` ([044_home_settings.sql](../../../backend/sql/044_home_settings.sql)). Il ordonne toujours le fil des résultats, le choc de la semaine et `highlights` ; seul « À l'affiche » lit l'importance v2 ci-dessous (VI-48).
 
 ## Importance d'un match (v2)
 
@@ -45,6 +45,8 @@ Clé `billboard` de `/api/read/home` : les matchs du périmètre du visiteur (m�
 
 Les matchs à venir (`highlights`) gardent l'ordre du poids éditorial v1 et portent aussi `weight2`, leur importance v2.
 
+Sur la page, le bloc « À l'affiche » (titre « Les matchs du moment ») remplace « À ne pas manquer », même place et même dessin : `chooseBillboard` ([home-upcoming.js](../../../dashboard/frontend/src/services/home-upcoming.js)) garde les règles des favoris (3 places au plus, la grande carte au match d'un favori dans les 48 h) ; sinon la grande carte est le match **non terminé** le plus important (`weight` servi), et les 4 autres places vont aux plus importants suivants, terminés ou non, rangés par coup d'envoi ; un match terminé montre son score à la place de l'heure. Sans `billboard` servi (ancienne publication), ou si la fenêtre n'a plus rien à jouer, le choix d'avant (`highlights`, titre « Les 7 prochains jours ») reste.
+
 ## Coin d'un pays
 
 `/api/read/home-local?season=AAAA/AAAA&country=XXX` (code à trois lettres majuscules, sinon 400 ; aucun paramètre personnel ni `leagues`) : lecture commune, mise en cache comme l'accueil (une copie par pays) :
@@ -54,6 +56,10 @@ Les matchs à venir (`highlights`) gardent l'ordre du poids éditorial v1 et por
 - `table` : les 6 premiers du classement (`api.standing_rows`, sans phase ni groupe) du championnat le plus haut du pays qui a un niveau ; `null` sinon.
 
 Un code bien formé sans compétition répond 200 avec des listes vides. La sélection nationale du pays n'y est pas : l'API n'a pas de lien fiable entre un pays et sa sélection.
+
+Sur la page, c'est la bande « Chez vous », sous celle des résultats, dessinée comme elle ([HomeMatchday.jsx](../../../dashboard/frontend/src/components/HomeMatchday.jsx), `HomeLocal`) : les `matches` dans l'ordre servi, par jour, le score une fois joué, l'heure de Paris avant. `table` n'est pas affichée pour l'instant. Le pays ([home-country.js](../../../dashboard/frontend/src/services/home-country.js)) : le choix du visiteur (`homeCountry` dans `orion.preferences.v1`, recopié dans le cookie `vega.home.v1`), sinon le pays détecté par l'hébergeur (`x-vercel-ip-country`, lu par le serveur de la page, sinon `/api/visitor-country`, code ISO à deux lettres traduit par une table : GB → ENG, DE → GER…), sinon rien. « Ne rien afficher » (`none`) cache la bande. Le menu liste les pays des compétitions du manifeste ; les codes INT, INT-2, UEFA ne sont jamais un pays. La bande n'apparaît pas sans pays, quand la lecture n'a aucun match, sur une saison archivée, ou si le manifeste n'annonce pas `compactReads["home-local"]`. Les favoris n'y entrent jamais.
+
+« Course au titre » s'ouvre sur le championnat du pays du visiteur quand il est parmi ses onglets (`initialTitleRace`), sinon sur la Ligue 1 comme avant.
 
 ## Match de la semaine
 
