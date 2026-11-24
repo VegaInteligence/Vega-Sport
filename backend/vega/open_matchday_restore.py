@@ -76,12 +76,14 @@ REFS = {
 # scorers, which names a match (match_id, integer, ON DELETE CASCADE: ADDED_DEPENDENCIES, checked for occupancy like the
 # others; none of the 35 restored Open Matchday matches is an International Results match), and the view
 # api.international_goals; no column of agg.power_runs. 173 (§58) redefines the function api.nation_list only: no
-# table. A later one needs its own review here.
+# table. 174 (#105, §59) adds agg.award_runs, agg.player_award and agg.player_award_honours, keyed by season, player,
+# team and edition (competition_season_id, not a match), and two api views: no column naming a match, none of
+# agg.power_runs. A later one needs its own review here.
 REVIEWED_SCHEMAS = ("153_transfer_history_served.sql", "163_league_player_seasons.sql", "164_league_history_reads.sql",
                     "165_league_history_spellings.sql", "166_match_strengths_extra_time.sql", "167_player_level.sql",
                     "168_nation_world_ranking.sql", "169_player_level_measured.sql",
                     "170_nation_elo_national_set.sql", "171_home_importance_v2.sql", "172_international_goals.sql",
-                    "173_nation_last_played.sql")
+                    "173_nation_last_played.sql", "174_player_award.sql")
 
 
 class Refusal(RuntimeError):

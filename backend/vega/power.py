@@ -1835,7 +1835,10 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
 
     The same run computes the players' level (Score Vega v9.1, level.py; FAILURE_MODES §49, §54)
     beside the ranking, from the same player-matches, and writes it in the same transaction:
-    the ranking's own rows are those it wrote before the level existed."""
+    the ranking's own rows are those it wrote before the level existed. The Ballon d'Or race on
+    the level (award.py, FAILURE_MODES §59) is computed and written with it, beside the v8 race
+    (write_award), which it does not change."""
+    from . import award
     from . import level as levels  # level.py reads this module's blocks and references
 
     # The run starts here, before the read and the computation: its row is only written
@@ -1872,6 +1875,10 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
                                       ).fetchall() if other and grade_refs is None else []
         # The level's own reads: a partial year has no level.
         level_inputs = None if partial else levels.read_inputs(conn, season, reference_season)
+        # The race's own reads: the year's honours and cards, and the spreads of the year its level is placed on.
+        award_reference = None if partial or not (finished or level_inputs["kept"] is not None) else reference_season
+        award_inputs = None if partial else award.read_inputs(conn, season)
+        award_spreads = None if partial else award.reference_spreads(conn, season, award_reference)
     # 2. Compute, outside any transaction. The player-matches the year cannot grade are kept
     # with their reason (agg.player_grade_exclusions): a team that is not a side of the match,
     # then no role (assign_roles).
@@ -1890,7 +1897,7 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
     centre = level_centres(rows)
     # The level reads the year's rows before the loop below lets them go.
     reading = None if partial else levels.read(rows, centre=centre[False], faced=level_inputs["faced"], team_passes=level_inputs["team_passes"],
-                                               samples=level_inputs["kept"] is None)
+                                               samples=level_inputs["kept"] is None, stakes=weights)
     matches = []
     graded = []  # (role, competition, minutes, C) of each player-match, for the match grades
     editions = []  # the edition's season of each player-match: where its grade is kept
@@ -1936,7 +1943,11 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
     level_rows, level_refs = ({}, None) if partial else levels.season(reading, level_inputs["before"], level_inputs["kept"], scored)
     level_reference = reference_season if not partial and (finished or level_inputs["kept"] is not None) else None
     level_cells = reading["cells"] if reading else {}
-    del reading, level_inputs
+    # The race: the individual part is the level of the year's award cells alone (their stakes, the national matches).
+    award_people = {} if partial or not level_rows else award.people_of(
+        award.individual(reading["award_cells"], level_refs, levels.people_of(reading, scored)), level_rows, scored)
+    award_race_rows = award.compute(award_people, award_inputs, award_spreads)
+    del reading, level_inputs, award_inputs
     # 3. Write, in one transaction: the season's ranking changes at once or not at all.
     with conn.transaction():
         run = _start(conn, "players", season, started_at=started)
@@ -1981,7 +1992,8 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
         write_grade_exclusions(conn, season, excluded, run)
         _publish(conn, run, "players", season, count, len(scored))
         write_award(conn, season, scored)
-        levels.write(conn, season, started, level_rows, level_cells, level_refs, level_reference)
+        level_run = levels.write(conn, season, started, level_rows, level_cells, level_refs, level_reference)
+        award.write(conn, season, started, award_people, award_race_rows, level_run, award_reference)
     return len(scored)
 
 
@@ -2241,7 +2253,8 @@ def stale_rankings(conn):
     FAILURE_MODES §48), most recent first. The partial run publishes players = 0 and
     deletes those references itself, so it is listed once. After them, oldest first, the
     years whose level (Score Vega v9.1) is missing, of another version or other settings, or
-    older than the year before's (§49, §54), and the years whose ranking read another national
+    older than the year before's (§49, §54), the years whose Ballon d'Or race on the level is
+    missing or out of date (award.stale, §59), and the years whose ranking read another national
     Elo than the published run's: other national teams, or another national method
     (NATION_STALE, §56). Ranked again, a year started after that run: it is listed once."""
     stale = {s for (s,) in conn.execute(
@@ -2263,7 +2276,9 @@ def stale_rankings(conn):
     # Elo (§56), one list, oldest first: a year's level reads the year before's.
     from . import level
 
-    later = set(level.stale(conn)) | {s for (s,) in conn.execute(NATION_STALE).fetchall()}
+    from . import award
+
+    later = set(level.stale(conn)) | set(award.stale(conn)) | {s for (s,) in conn.execute(NATION_STALE).fetchall()}
     return sorted(stale, reverse=True) + sorted(later - stale)
 
 

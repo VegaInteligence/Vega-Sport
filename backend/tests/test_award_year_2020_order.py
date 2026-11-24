@@ -97,8 +97,10 @@ class AwardYear2020ProductionOrderTest(unittest.TestCase):
         models.refresh_daily(calc, 2021, elo=False)
         with earlier_rule():
             power.refresh_players(calc, 2020)
-        # The earlier rule's code had no level (Score Vega v9, §49): what its two runs of 2020 wrote here is removed.
-        for table in ("agg.player_level_positions", "agg.player_level", "agg.player_level_cells", "agg.level_runs"):
+        # The earlier rule's code had no level (Score Vega v9, §49) and no race on it (§59): what its two runs of 2020 wrote
+        # here is removed.
+        for table in ("agg.player_level_positions", "agg.player_level", "agg.player_level_cells", "agg.player_award_honours", "agg.player_award",
+                      "agg.award_runs", "agg.level_runs"):
             db.execute(f"DELETE FROM {table} WHERE season_id = 2020")
         cls.production = {
             "runs": cls.runs(2020), "ranked": cls.one("SELECT count(*) FROM agg.player_power WHERE season_id = 2020")[0],

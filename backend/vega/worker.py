@@ -580,6 +580,15 @@ class Worker:
             ok, players = self._daily_step(("ranking", season), now, lambda: power.refresh_players(self.calc_conn, season))
             if ok:
                 print(f"player ranking season={season} method={power.METHOD_VERSION} players={players}", flush=True)
+        # Then the Ballon d'Or race on the level (award.py, §59): a year whose editions or events changed
+        # after its race started has its honours and cards read again, the ranking and the level as they are.
+        from . import award
+
+        _, due = self._daily_step(("award due",), now, lambda: award.due(self.calc_conn))
+        for season in due or []:
+            ok, players = self._daily_step(("award", season), now, lambda: award.reread(self.calc_conn, season))
+            if ok:
+                print(f"award race season={season} version={award.AWARD_VERSION} players={players}", flush=True)
         return seasons
 
     def mirror(self, limit=200):
