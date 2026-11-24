@@ -38,6 +38,31 @@ Règles : `validateContract` refuse un non-objet et une version inconnue ; une v
 
 Le seul point de branchement est [PreferencesSync.jsx](../dashboard/frontend/src/components/PreferencesSync.jsx), monté dans `ResearchProvider` ([providers.jsx](../dashboard/frontend/app/providers.jsx)) ; le bouton du thème et la page Compétitions signalent leurs propres écritures. La page Compétitions lit sa compétition à l'ouverture : une valeur venue du compte s'y applique à la visite suivante de la page.
 
+## Quelle préférence agit où
+
+Règle unique, là où deux préférences se rencontrent : **les favoris du visiteur, puis son pays, puis l'importance du match** (entre pays et importance, `HOME_PRIORITY` garde son sens : home-priority.js). Un **paramètre d'adresse** ou un **filtre choisi sur la page** passe toujours avant une préférence. Rien n'est ajouté à l'écran : seulement un ordre, l'onglet d'ouverture, la valeur de départ d'un contrôle existant, ou le surlignage que les classements donnent déjà aux clubs enregistrés. Toutes les règles sont dans [preference-effects.js](../dashboard/frontend/src/services/preference-effects.js) ; les pages l'appellent. Les numéros sont ceux du propriétaire (24 nov. 2026).
+
+« Favoris » : clubs et joueurs de toutes les listes (`favouritesOf`), triés par identifiant ; « le premier club favori » est le premier de cet ordre. « Pays » : `homeCountry` (`country` du contrat), jamais « Aucun pays ».
+
+| N° | Préférence | Page | Effet | Préséance |
+| --- | --- | --- | --- | --- |
+| 1 | clubs favoris | Accueil, fil des résultats | leurs résultats en tête de chaque jour (après les sélections), avant la coupe à 8 | favoris > pays > poids éditorial, dans les deux priorités |
+| 2 | premier club favori | Accueil, « Course au titre » | s'ouvre sur son championnat (tableau, sinon un match, sinon son pays) | favori > pays > Ligue 1 ; un onglet cliqué l'emporte |
+| 3 | clubs favoris | Matchs (à venir, résultats) | leurs matchs en tête de leur jour | ordre de la journée gardé pour le reste |
+| 4 | premier club favori | Compétitions | sans compétition enregistrée, s'ouvre sur le championnat de son pays (la page n'a pas de lien club → championnat) | enregistrée > favori > pays (11) > pays détecté / langue ; `?id=` l'emporte |
+| 5 | joueurs favoris | Accueil, buteurs et « Devant le but » | ligne surlignée | — |
+| 6 | joueurs favoris | Ballon d'Or | place du podium et ligne surlignées | — |
+| 7 | clubs et joueurs favoris | Recherche | en tête à pertinence égale (rangs de pertinence de /api/search, score des clubs) | pertinence > favori > ordre d'avant |
+| 8 | une nation enregistrée | Nations | s'ouvre sur « Mes sélections » | le choix du visiteur dans les onglets l'emporte |
+| 9 | compétitions suivies | Matchs | le filtre Compétition part de la première suivie | adresse (`league`, `leagues`) > effacé dans la visite > préférence |
+| 10 | une seule compétition suivie | Joueurs | le filtre Compétition part d'elle | idem |
+| 11 | `homeCountry` | Compétitions | après 4 : championnat du pays avant le pays détecté / la langue | voir 4 |
+| 12 | `homeCountry` | Clubs ; Power Ranking | filtre Pays du répertoire pré-sélectionné ; tableau des clubs ouvert (défilé) sur le premier club du pays | Clubs : effacé dans la visite > préférence ; Power Ranking : jamais après un défilement du visiteur ni avec une ancre |
+
+**Filtres pré-sélectionnés (9, 10, 12 Clubs)** : une fois par ouverture de page, après lecture des préférences, seulement sur une valeur que le contrôle propose ; le contrôle montre la valeur choisie (et l'adresse, pour 9 et 10). Dès que le visiteur change une valeur pré-sélectionnée, elle n'est plus pré-sélectionnée de la visite (`vega.preselect.v1`, sessionStorage).
+
+**Rendu serveur** : seul l'accueil est rendu avec les favoris (cookie `vega.home.v1`) ; 1 et 2 y sont donc déjà dans le HTML servi, sans saut. Ailleurs, l'effet s'applique après `preferencesReady` / la lecture des listes, sans écart d'hydratation (le premier rendu est celui d'avant).
+
 ## Partage avec VI-38
 
 - **Ce dépôt, côté site (#69)** : le contrat, sa validation, la synchronisation sans React, le branchement sur les stockages.
