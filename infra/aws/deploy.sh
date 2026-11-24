@@ -89,8 +89,8 @@ account_preflight() {
     *) problems+=("/vega/v2/account-deploy holds neither value allowed: it must be on or off") ;;
   esac
   if [ ${#problems[@]} = 0 ]; then
-    [ "$(output vega-v2-deploy-roles AccountGrants)" = 1 ] ||
-      problems+=("stack vega-v2-deploy-roles: its output AccountGrants is not 1: the owner updates it from the Mac with infra/aws/deploy-roles.yaml (backend/account/DEPLOYMENT.md, section 3)")
+    [ "$(output vega-v2-deploy-roles AccountGrants)" = 2 ] ||
+      problems+=("stack vega-v2-deploy-roles: its output AccountGrants is not 2: the owner updates it from the Mac with infra/aws/deploy-roles.yaml (backend/account/DEPLOYMENT.md, section 3)")
     # name, pattern (account.yaml's AllowedPattern, matched on the whole value), required or optional, String or SecureString
     while read -r name pattern need secure; do
       value=$(ssm_value "$name" "$([ "$secure" = SecureString ] && echo decrypt)")

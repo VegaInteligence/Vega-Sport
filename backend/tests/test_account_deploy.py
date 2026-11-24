@@ -174,7 +174,7 @@ def base_state():
 
 
 def roles_updated(state):
-    state["stacks"]["vega-v2-deploy-roles"]["outputs"]["AccountGrants"] = "1"
+    state["stacks"]["vega-v2-deploy-roles"]["outputs"]["AccountGrants"] = "2"
     return state
 
 
@@ -334,9 +334,28 @@ class AccountDeployTest(unittest.TestCase):
     # --- the switch is on, a prerequisite is missing: refused before anything changes ---------------------------------
 
     def test_w4_the_roles_not_updated_are_refused(self):
-        state = prepared(base_state())
-        del state["stacks"]["vega-v2-deploy-roles"]["outputs"]["AccountGrants"]
-        self.assert_refused(self.deploy(state), "vega-v2-deploy-roles", "AccountGrants", "DEPLOYMENT.md")
+        for grants in (None, "1"):  # never updated; updated on 24 Nov with the grants that lack W14's
+            with self.subTest(grants=grants):
+                state = prepared(base_state())
+                outputs = state["stacks"]["vega-v2-deploy-roles"]["outputs"]
+                if grants is None:
+                    del outputs["AccountGrants"]
+                else:
+                    outputs["AccountGrants"] = grants
+                self.assert_refused(self.deploy(state), "vega-v2-deploy-roles", "AccountGrants is not 2", "DEPLOYMENT.md")
+
+    def test_w14_the_cloudformation_role_may_create_the_account_security_group(self):
+        """EC2 authorizes ec2:CreateSecurityGroup on the group and on the VPC, and sets ec2:Vpc for neither."""
+        roles = (ROOT / "infra/aws/deploy-roles.yaml").read_text()
+        database = (ROOT / "infra/aws/database.yaml").read_text()
+        group = re.search(r"\n  AccountSG:\n(?:    .*\n)+", database).group(0)
+        vpc = re.search(r"VpcId: (vpc-[0-9a-f]+)", group).group(1)
+        statement = re.search(r"- Sid: SecurityGroupCreate\n(?:(?!\s+- Sid:).*\n)+", roles).group(0)
+        self.assertIn("'ec2:CreateSecurityGroup'", statement)
+        self.assertNotIn("Condition", statement)
+        resources = re.findall(r"!Sub 'arn:\$\{AWS::Partition\}:ec2:\$\{AWS::Region\}:\$\{AWS::AccountId\}:([^']+)'", statement)
+        self.assertEqual(sorted(resources), sorted(["security-group/*", f"vpc/{vpc}"]))
+        self.assertRegex(roles, r"\n  AccountGrants: \{Value: '2'\}")
 
     def test_w5_every_missing_or_malformed_value_is_named_in_one_run(self):
         state = prepared(base_state())
