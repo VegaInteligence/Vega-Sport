@@ -9,9 +9,10 @@
 - Checks, `tests/e2e/brand.e2e.mjs`: B12a to B12j (each theme at load, after a navigation, the theme button both ways, then a navigation, without scripts, storage refused), written before the fix. Each reading gives the tags, the site's theme and the body's background, five times over 1.2 s.
 - Checked 24 Nov: 50/55 on the source before the fix (B12d to B12h red), 55/55 on the dev server with the fix, again on the pushed commit after the rebase; 54/55 on a local `next build` + `next start` (X1 only: the Vercel scripts do not exist off Vercel). Site tests 966/975, the same 9 failures as main on Node 22. Site build OK. Evidence: `~/Agents/scratch/vega-theme-color-20261124/` (`red-dev`, `green-dev`, `green-dev-rebased`, `green-start`, `probe/`).
 - Safari, read and not run: 15 to 18 use the tag and follow a script; 26 colours its bars from the page's background, which is the same two colours (`--bg`).
-- Open decision (the user's): when React re-creates the whole document, the theme goes back to dark and the script's two tags are removed until the next theme change or reload. Measured on production builds with an induced fault: before this change `#0E0F12` stayed (React's own tag), now no theme colour. To decide: put the theme, the icon and the colour back after a re-creation, here or in its own change, or leave it.
+- Known limit: when React re-creates the whole document, the theme goes back to dark and the script's two tags are removed until the next theme change or reload. Measured on production builds with an induced fault: before this change `#0E0F12` stayed (React's own tag), now no theme colour.
+- User decision, 24 Nov (« Changement à part »): that case is handled in its own change, not in #112. Tracked in GitHub [#113](https://github.com/VegaInteligence/Vega-Sport/issues/113) (measure, probe, what its check needs).
 - Not checked: the public site (the Vercel preview asks for a sign-in); the accounts E2E; Firefox and Safari; no phone's bars were looked at by eye.
-- Next action: the user's decision above and word to merge; then the brand E2E on the public site.
+- Next action: the user's word to merge #112; then the brand E2E on the public site. #113 after that.
 
 ## Tab icon: the site's theme alone — 24 November 2026 (merged, #88; live and verified)
 
