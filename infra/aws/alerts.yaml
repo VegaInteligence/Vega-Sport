@@ -30,11 +30,18 @@ Parameters:
     Default: 'false'
     AllowedValues: ['true', 'false']
     Description: 'true once a live provider is chosen (deploy.sh: LIVE_PROVIDER): until then, no alarm and no cost for the live circuit'
+  # true once SSM /vega/v2/account-deploy is on (deploy.sh), then kept: the account's login counts.
+  Account:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: 'true: the connections alarm counts the account login vega_v2_account (18 connections)'
 Conditions:
   HasEmail: !Not [!Equals [!Ref AlertEmail, '']]
   HasEmail2: !Not [!Equals [!Ref AlertEmail2, '']]
   Worker: !Equals [!Ref WatchWorker, 'true']
   Live: !Equals [!Ref WatchLive, 'true']
+  Account: !Equals [!Ref Account, 'true']
 Resources:
   Topic:
     Type: AWS::SNS::Topic
@@ -245,15 +252,17 @@ Resources:
       AlarmActions: [!Ref Topic]
       OKActions: [!Ref Topic]
   # The three logins together hold at most 78 connections (vega/migrate.py: collect 6,
-  # calc 4, read 68); owner's margin: 10 (migrations, a psql session, RDS's own). Above
-  # 88 for 15 minutes, something holds connections no login limit bounds (the owner's),
+  # calc 4, read 68), 96 with the account's (18) once the account is on; owner's margin: 10
+  # (migrations, a psql session, RDS's own). Above 88 (106) for 15 minutes, something holds
+  # connections no login limit bounds (the owner's),
   # long before the instance's ~400 run out. The read login's own limit shows as
   # vega-v2-api-db-refused (53300), not here: the metric counts all logins together.
   DatabaseConnectionsAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: vega-v2-db-connections
-      AlarmDescription: More than the logins' 78 connections plus 10 on vega-football-db-postgres for 15 minutes
+      AlarmDescription: !If [Account, "More than the logins' 96 connections plus 10 on vega-football-db-postgres for 15 minutes",
+                             "More than the logins' 78 connections plus 10 on vega-football-db-postgres for 15 minutes"]
       Namespace: AWS/RDS
       MetricName: DatabaseConnections
       Dimensions: [{Name: DBInstanceIdentifier, Value: vega-football-db-postgres}]
@@ -261,7 +270,7 @@ Resources:
       Period: 300
       EvaluationPeriods: 3
       DatapointsToAlarm: 3
-      Threshold: 88
+      Threshold: !If [Account, 106, 88]
       ComparisonOperator: GreaterThanOrEqualToThreshold
       TreatMissingData: notBreaching
       AlarmActions: [!Ref Topic]

@@ -3,8 +3,8 @@ Description: >-
   Vega account API (backend/account, VI-38): a front function outside the VPC, behind its
   Function URL, that verifies the Neon session and signs the Vega pass; a store function in the
   VPC, invoked by the front only, the only code with a connection to schema account (login
-  vega_v2_account). Not wired into deploy.sh yet: backend/account/DEPLOYMENT.md says what must
-  change first and in which order.
+  vega_v2_account). Deployed by deploy.sh (step 11) once SSM /vega/v2/account-deploy is on:
+  backend/account/DEPLOYMENT.md.
 Parameters:
   FrontReleaseKey: {Type: String, AllowedPattern: 'releases/v2-account/[a-f0-9]{64}\.zip', Description: 'ZIP of backend/account/lambda/front-index.mjs, bundled'}
   StoreReleaseKey: {Type: String, AllowedPattern: 'releases/v2-account/[a-f0-9]{64}\.zip', Description: 'ZIP of backend/account/lambda/store-index.mjs, bundled, with rds-ca.pem'}
