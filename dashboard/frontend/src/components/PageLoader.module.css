@@ -18,8 +18,8 @@
   position: relative;
   display: grid;
   place-items: center;
-  width: 168px;
-  height: 124px;
+  width: 96px;
+  height: 112px;
   padding: 12px;
   border: 0;
   border-radius: 0;
@@ -57,18 +57,14 @@
   height: auto;
   overflow: visible;
 }
-.shape,
+/* The asterisk turns on itself, one petal at a time: 60° brings six petals back onto
+   themselves, so each beat ends where the next one starts. */
 .sign {
   fill: currentColor;
-}
-.shape {
   opacity: 0.92;
-}
-/* The asterisk turns on itself, one petal's step at a time. */
-.sign {
   transform-box: fill-box;
   transform-origin: center;
-  animation: turn 3600ms steps(6, end) infinite;
+  animation: turn 900ms cubic-bezier(0.65, 0, 0.35, 1) infinite;
 }
 .spark {
   animation: spark 620ms cubic-bezier(0.23, 1, 0.32, 1);
@@ -81,16 +77,14 @@
   transform: translate(var(--logo-x, 0px), var(--logo-y, 0px)) scale(0.96);
 }
 @media (hover: hover) and (pointer: fine) {
-  .control:hover .shape {
-    opacity: 1;
-  }
   .control:hover .sign {
-    animation-duration: 1800ms;
+    opacity: 1;
+    animation-duration: 600ms;
   }
 }
 @keyframes turn {
   to {
-    transform: rotate(360deg);
+    transform: rotate(60deg);
   }
 }
 @keyframes spark {
@@ -114,7 +108,7 @@
   .spark {
     animation: none;
   }
-  .control:active .shape {
+  .control:active .sign {
     opacity: 0.65;
   }
 }
