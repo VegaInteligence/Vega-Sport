@@ -21,17 +21,17 @@
 //  P5 A match served by both reads appears twice → one card, the billboard's record kept.
 //  P6 No home-local answer (no country, « Aucun pays », not loaded yet, older API) changes the choice → exactly the
 //     billboard's choice of before, whatever the priority.
+//  K1 (24 Nov, the owner: « je vois un match fini dans une card qui affiche les futurs matchs ») A finished or in-play
+//     match, or one whose kick-off has passed, enters « À l'affiche » as a big match, a local one or a favourite's →
+//     never, in both priorities: the card is the matches to come, as before VI-48.
 //  L1 "location": the favourites keep their places (up to 3) and the card rule; then up to two places go to the
-//     country's most important matches (weight ↓, kick-off ↑, id ↑); at least one place stays to the big matches when
-//     there are any; the rest to the big matches by importance; a short side is completed by the other.
-//  L2 "location", the big card: a favourite's match within 48 h, else the most important match not finished among
-//     the picked; when every pick is finished, the most important coming match takes the place of the lightest big
-//     pick, never of a local place.
+//     country's most important matches to come (weight ↓, kick-off ↑, id ↑); at least one place stays to the big
+//     matches when there are any; the rest to the big matches by importance; a short side is completed by the other.
+//  L2 "location", a country whose only local match in the window is finished → no local place: five big ones, as
+//     without a country.
 //  L3 "location", a country without match in the window → the billboard's choice of before.
-//  L4 "location", a finished local result (even heavier) takes a reserved place from a local match still to play →
-//     the reserved places go first to the unfinished local matches (to play or in play) by importance; a finished one
-//     takes a reserved place only when fewer than localPlaces unfinished local matches exist (by importance among the
-//     finished).
+//  L4 "location", local matches finished or in play beside one to come → only the one to come takes a place; the
+//     other reserved place goes to the big matches.
 //  I1 "importance": no reserved place; importance only, and at equal importance a local match goes before a non-local
 //     one; a light local match never displaces a heavier one.
 //  T1 Results strip, "location": within a day the country's results first (then the editorial weight), before the
@@ -122,10 +122,14 @@ test("P3–P5 the local candidates: the billboard's window, the chosen scope, on
 });
 
 test("L1 location: two places for the country, one at least for the big matches", () => {
+  // France: Monday's Ligue 2 results are finished; Brest – Paris FC is the only local match to come.
   const five = chooseUpcoming({ billboard: BILLBOARD, local: localOf(FRA), priority: "location", now: NOW });
-  // The card: the heaviest not finished; then Brest – Paris FC and one Ligue 2 match (0.5: kick-off, then id).
-  assert.deepEqual(ids(five), ["ars-bvb", "bre-pfc", "nan-gre", "psg-rom", "bru-liv"]);
-  assert.ok(five.every((m) => m.billboard === true));
+  assert.deepEqual(ids(five), ["ars-bvb", "bre-pfc", "psg-rom", "bru-liv", "rma-psv"]);
+  assert.ok(five.every((m) => m.billboard === true && m.fixture.status === "not_started" && m.time >= NOW));
+  // Two local matches to come: both take the reserved places, the big matches keep three.
+  const lyon = entry("lyo-mon", L1, "2026-11-26T20:00:00Z", 1.1);
+  assert.deepEqual(ids(chooseUpcoming({ billboard: BILLBOARD, local: [...localOf(FRA), lyon], priority: "location", now: NOW })),
+    ["ars-bvb", "bre-pfc", "lyo-mon", "psg-rom", "bru-liv"]);
   // Favourites keep their places: three of them, then one local, then one big match.
   const favourites = ["a", "b", "c"].map((teamId) => ({ teamId, strength: 1 }));
   const matches = ["a", "b", "c"].map((t, i) => ({ fixture: { id: `fav-${t}`, status: "not_started" }, time: at(`2026-12-0${i + 3}T20:00:00Z`), favourites: [t] }));
@@ -140,26 +144,21 @@ test("L1 location: two places for the country, one at least for the big matches"
   assert.equal(ids(shared).filter((id) => id === "bre-pfc").length, 1);
   assert.equal(shared.find((m) => m.fixture.id === "bre-pfc").favourite, true);
   assert.equal(shared.find((m) => m.fixture.id === "bre-pfc").weight, 3.89);
-  // Only local matches and nothing big: the country completes the five.
-  const onlyLocal = chooseUpcoming({ billboard: [], local: FRA.matches.slice(0, 3), priority: "location", now: NOW });
-  assert.deepEqual(ids(onlyLocal), ["bre-pfc", "nan-gre", "soc-dun"]);
-  // A short local side: the big matches complete.
-  const oneLocal = chooseUpcoming({ billboard: BILLBOARD, local: [BILLBOARD[5]], priority: "location", now: NOW });
-  assert.deepEqual(ids(oneLocal), ["ars-bvb", "bre-pfc", "psg-rom", "bru-liv", "rma-psv"]);
+  // Only local matches and nothing big: the country's matches to come complete; its results never.
+  const onlyLocal = chooseUpcoming({ billboard: [], local: [...FRA.matches.slice(0, 3), lyon], priority: "location", now: NOW });
+  assert.deepEqual(ids(onlyLocal), ["bre-pfc", "lyo-mon"]);
 });
 
-test("L2 location: the card never takes a local place", () => {
-  // Five finished big results heavier than anything coming, two finished local ones, one coming big match.
-  const done = [1, 2, 3, 4, 5].map((n) => entry(`done${n}`, UCL, "2026-11-23T20:00:00Z", 9 - n, "finished"));
-  const coming = entry("next", UCL, "2026-11-25T20:00:00Z", 2);
-  const locals = FRA.matches.slice(0, 2);
-  const five = chooseUpcoming({ billboard: [...done, coming], local: locals, priority: "location", now: NOW });
-  assert.deepEqual(ids(five), ["next", "nan-gre", "soc-dun", "done1", "done2"]);
+test("L2 location, the country's only local match is finished: five big ones", () => {
+  const billboard = [...BILLBOARD.filter((m) => m.fixture.id !== "bre-pfc"), entry("mci-nap", UCL, "2026-11-24T20:00:00Z", 5.77)];
+  const without = chooseUpcoming({ billboard, now: NOW });
+  assert.deepEqual(ids(without), ["ars-bvb", "psg-rom", "bru-liv", "rma-psv", "mci-nap"]);
+  assert.deepEqual(ids(chooseUpcoming({ billboard, local: [FRA.matches[0]], priority: "location", now: NOW })), ids(without));
 });
 
 test("L3 location, a country without match in the window: the choice of before", () => {
   const before = chooseUpcoming({ billboard: BILLBOARD, now: NOW });
-  assert.deepEqual(ids(before), ["ars-bvb", "psg-rom", "bru-liv", "rma-psv", "bre-eve"]);
+  assert.deepEqual(ids(before), ["ars-bvb", "psg-rom", "bru-liv", "rma-psv", "bre-pfc"]);
   const empty = { country: "BRA", window: FRA.window, competitions: [{ id: BRA, country: "BRA" }], matches: [] };
   assert.deepEqual(ids(chooseUpcoming({ billboard: BILLBOARD, local: localOf(empty), priority: "location", now: NOW })), ids(before));
   // P6: no answer at all, either priority.
@@ -167,13 +166,25 @@ test("L3 location, a country without match in the window: the choice of before",
     assert.deepEqual(ids(chooseUpcoming({ billboard: BILLBOARD, local: null, priority, now: NOW })), ids(before));
 });
 
+test("L4 location: only the country's matches to come take its places", () => {
+  const billboard = BILLBOARD.filter((m) => m.fixture.id !== "bre-pfc");
+  const result = entry("ren-lyo", L1, "2026-11-23T20:00:00Z", 4.5, "finished");
+  const live = entry("mon-nan", L1, "2026-11-24T06:30:00Z", 3.9, "in_play");
+  const soon = entry("nic-tou", L1, "2026-11-26T20:00:00Z", 1.2);
+  const five = chooseUpcoming({ billboard, local: [result, live, soon], priority: "location", now: NOW });
+  assert.deepEqual(ids(five), ["ars-bvb", "nic-tou", "psg-rom", "bru-liv", "rma-psv"]);
+});
+
 test("I1 importance: no reserved place, local only at equal importance", () => {
   const five = chooseUpcoming({ billboard: BILLBOARD, local: localOf(FRA), priority: "importance", now: NOW });
-  assert.deepEqual(ids(five), ["ars-bvb", "psg-rom", "bru-liv", "rma-psv", "bre-eve"]);
-  // A local match as heavy as the fifth goes before it.
-  const tie = entry("lyo-mon", L1, "2026-11-26T20:00:00Z", 5.03);
-  const tied = chooseUpcoming({ billboard: BILLBOARD, local: [...localOf(FRA), tie], priority: "importance", now: NOW });
-  assert.deepEqual(ids(tied), ["ars-bvb", "psg-rom", "bru-liv", "rma-psv", "lyo-mon"]);
+  assert.deepEqual(ids(five), ["ars-bvb", "psg-rom", "bru-liv", "rma-psv", "bre-pfc"]);
+  // An English match as heavy as Brest – Paris FC and earlier: it goes first without the country, after it with France.
+  const tie = entry("eng-tie", PL, "2026-11-26T20:00:00Z", 3.89);
+  assert.deepEqual(ids(chooseUpcoming({ billboard: [...BILLBOARD, tie], priority: "importance", now: NOW })).at(-1), "eng-tie");
+  assert.deepEqual(ids(chooseUpcoming({ billboard: [...BILLBOARD, tie], local: localOf(FRA), priority: "importance", now: NOW })).at(-1), "bre-pfc");
+  // Finished and in-play matches never, in this priority either.
+  const live = entry("live", UCL, "2026-11-24T06:30:00Z", 9, "in_play");
+  assert.ok(!ids(chooseUpcoming({ billboard: [...BILLBOARD, live], local: localOf(FRA), priority: "importance", now: NOW })).includes("live"));
 });
 
 test("T1–T2 the results strip: the country's results first in location, a tie-break in importance", () => {
@@ -195,16 +206,4 @@ test("T1–T2 the results strip: the country's results first in location, a tie-
   for (const priority of ["location", "importance"])
     assert.deepEqual(weekTicker(results, nations, new Map(), { leagues: null, priority }), before);
   assert.deepEqual(before[0].matches.map((m) => m.id), importance[0].matches.map((m) => m.id));
-});
-
-test("L4 location: the reserved places go to the country's matches still to play first", () => {
-  const result = entry("ren-lyo", L1, "2026-11-23T20:00:00Z", 4.5, "finished");
-  const soon = entry("nic-tou", L1, "2026-11-26T20:00:00Z", 1.2);
-  const live = entry("mon-nan", L1, "2026-11-24T06:30:00Z", 0.9, "in_play");
-  // Two unfinished local matches lighter than one finished: the two unfinished take the places.
-  const two = chooseUpcoming({ billboard: BILLBOARD, local: [result, soon, live], priority: "location", now: NOW });
-  assert.deepEqual(ids(two).sort(), ["ars-bvb", "bru-liv", "mon-nan", "nic-tou", "psg-rom"]);
-  // One unfinished and one finished: both taken, the unfinished first among the reserved.
-  const one = chooseUpcoming({ billboard: BILLBOARD, local: [result, soon, entry("nan-gre", L2, "2026-11-23T19:45:00Z", 0.5, "finished")], priority: "location", now: NOW });
-  assert.deepEqual(ids(one), ["ars-bvb", "nic-tou", "ren-lyo", "psg-rom", "bru-liv"]);
 });

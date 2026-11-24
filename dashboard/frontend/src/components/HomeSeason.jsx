@@ -271,18 +271,9 @@ export function TitleRace({ tables, competitions, initial }) {
   );
 }
 
-const finished = (fixture) => fixture.status === "finished";
-const playing = (fixture, time, now) =>
-  fixture.status === "in_play" || (!finished(fixture) && time <= now);
-const score = (fixture) =>
-  Number.isInteger(fixture.score_home) && Number.isInteger(fixture.score_away)
-    ? `${fixture.score_home} – ${fixture.score_away}`
-    : null;
-
 /**
- * « À l'affiche » (VI-48): a countdown to the main game, then the others in kickoff order.
- * Fed by the API's billboard (home-upcoming.js, chooseBillboard), a finished match shows its
- * score where the others show their kickoff; without it, today's upcoming matches.
+ * « À l'affiche » (VI-48): a countdown to the main game, then the others in kickoff order; only
+ * matches to come (home-upcoming.js: chooseBillboard from the API's billboard, else today's choice).
  */
 export function NextMatches({ highlights, ranks, competitions, now }) {
   const f = useFootball();
@@ -339,11 +330,7 @@ export function NextMatches({ highlights, ranks, competitions, now }) {
             />
             {c.name}
           </span>
-          <b>
-            {playing(main.fixture, main.time, now)
-              ? "En cours"
-              : countdown(main.time, now)}
-          </b>
+          <b>{countdown(main.time, now)}</b>
         </span>
         <span className="home-next-vs">
           {side(main.fixture.home_team)}
@@ -356,11 +343,7 @@ export function NextMatches({ highlights, ranks, competitions, now }) {
           <li key={fixture.id}>
             <Link href={fixtureHref(f, fixture)} prefetch={false}>
               <span className="home-next-time">
-                <b>
-                  {finished(fixture)
-                    ? score(fixture) || "Terminé"
-                    : kickoffFormatter.format(time)}
-                </b>
+                <b>{kickoffFormatter.format(time)}</b>
                 {relativeDay(time, now)}
               </span>
               <span className="home-next-teams">

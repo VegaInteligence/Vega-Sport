@@ -87,46 +87,44 @@ test("the big card: the heaviest match when no favourite plays within 48 h; a ma
 });
 
 // « À l'affiche » (VI-48, #69): the same block fed by the API's `billboard` (yesterday → today + 3, by the served
-// importance v2 `weight`, clubs and national teams mixed). Written before chooseBillboard.
+// importance v2 `weight`, clubs and national teams mixed). Written before chooseBillboard; A1, A2, A4 and A8 rewritten
+// before the code on 24 Nov after the owner's review (« je vois un match fini dans une card qui affiche les futurs
+// matchs »): the card is the matches to come, as before VI-48.
 //
 // Failure modes and expected outcomes:
-//  A1 The big card goes to a finished match (it shows a countdown) → the card is the most important match not
-//     finished yet (in play counts as not finished); the rows are the next most important, finished or not.
-//  A2 A heavier finished match pushes the most important coming one out of the five → the card still takes it, the
-//     lightest of the others leaves.
+//  A1 A finished match (yesterday's results, which the API still serves) shows in the card → never picked, neither
+//     the big card nor a row.
+//  A2 A match in play, or one whose kick-off has passed while its status still says not started, shows in the card →
+//     never picked: a match leaves at kick-off, as before VI-48. The five are the heaviest of the rest (served weight),
+//     the card the heaviest.
 //  A3 The favourites lose their places → as today: up to three places, a favourite's match within 48 h takes the
 //     card, a match the favourites and the billboard share counts once and keeps the served weight.
-//  A4 A personal match already kicked off stays → it leaves, as today; a billboard match does not leave at kick-off
-//     (yesterday's results stay, with their score).
+//  A4 A personal match already kicked off stays → it leaves, as a billboard match does.
 //  A5 The API serves no `billboard` (an older publication or backend) → exactly today's choice from `highlights`.
 //  A6 The API serves an empty billboard, or one with nothing left to play → today's choice too, so the block never
 //     disappears while `highlights` has matches.
 //  A7 The choice says where it comes from → each billboard pick carries `billboard: true` (the block's title
 //     follows it); today's picks do not.
+//  A8 Everything in the billboard has kicked off (finished or in play) → today's choice from `highlights`.
 const entry = (id, iso, weight, status = "not_started", extra = {}) => ({
   fixture: { id, status }, time: at(iso), day: iso.slice(0, 10), weight, ...extra,
 });
 
-test("A1–A2 billboard: the card is the most important match not finished, the rows the next most important", () => {
+test("A1–A2 billboard: no finished match, no match in play or kicked off; the heaviest of the rest", () => {
   const now = at("2026-11-24T07:00:00Z");
   const billboard = [
     entry("bre-eve", "2026-11-23T20:00:00Z", 7.1, "finished"),
     entry("mon-fio", "2026-11-23T17:30:00Z", 3.4, "finished"),
     entry("ars-bvb", "2026-11-24T20:00:00Z", 6.9),
     entry("rma-psv", "2026-11-24T20:00:00Z", 5.8),
-    entry("live", "2026-11-24T06:30:00Z", 2.0, "in_play"),
+    entry("live", "2026-11-24T06:30:00Z", 8.0, "in_play"),
+    entry("late", "2026-11-24T06:45:00Z", 7.5),
     entry("psg-rom", "2026-11-25T20:00:00Z", 6.4),
     entry("small", "2026-11-26T18:00:00Z", 1.0),
   ];
   const five = chooseUpcoming({ editorial: [], billboard, now });
-  assert.deepEqual(ids(five), ["ars-bvb", "bre-eve", "psg-rom", "rma-psv", "mon-fio"]);
+  assert.deepEqual(ids(five), ["ars-bvb", "psg-rom", "rma-psv", "small"]);
   assert.ok(five.every((m) => m.billboard === true));
-  // A2: five finished matches heavier than anything coming: the coming one still leads, the lightest leaves.
-  const heavy = [1, 2, 3, 4, 5].map((n) => entry("done" + n, "2026-11-23T20:00:00Z", 9 - n, "finished"));
-  const pick = chooseUpcoming({ billboard: [...heavy, entry("next", "2026-11-25T20:00:00Z", 2), entry("later", "2026-11-26T20:00:00Z", 1)], now });
-  assert.deepEqual(ids(pick), ["next", "done1", "done2", "done3", "done4"]);
-  // In play leads when it is the heaviest not finished.
-  assert.equal(chooseUpcoming({ billboard: [entry("live", "2026-11-24T06:30:00Z", 4, "in_play"), entry("ars", "2026-11-24T20:00:00Z", 3)], now })[0].fixture.id, "live");
 });
 
 test("A3–A4 billboard: the favourites keep their places and the card within 48 h", () => {
@@ -144,22 +142,26 @@ test("A3–A4 billboard: the favourites keep their places and the card within 48
     match("real-gone", "2026-11-24T06:00:00Z", { favourites: ["t_real"] }),
   ];
   const five = chooseUpcoming({ billboard, favourites: FAVOURITES, matches, now });
-  // PSG – Roma is a favourite's, within 48 h: the card; France's next match has a place; Real's started match left.
-  assert.deepEqual(ids(five), ["psg-rom", "fra-next", "ars-bvb", "rma-psv", "bre-eve"]);
+  // PSG – Roma is a favourite's, within 48 h: the card; France's next match has a place; Real's started match left;
+  // Brentford – Everton, finished, never.
+  assert.deepEqual(ids(five), ["psg-rom", "fra-next", "ars-bvb", "rma-psv", "mci-nap"]);
   assert.equal(five[0].weight, 6.4); // the served weight
   assert.equal(five[0].favourite, true);
   assert.equal(ids(five).filter((id) => id === "psg-rom").length, 1);
-  // No favourite within 48 h: the heaviest not finished leads.
+  // No favourite within 48 h: the heaviest leads.
   const far = chooseUpcoming({ billboard, favourites: FAVOURITES, matches: [match("fra-next", "2026-12-01T20:00:00Z", { favourites: ["t_fra"] })], now });
   assert.equal(far[0].fixture.id, "ars-bvb");
 });
 
-test("A5–A7 without a usable billboard, today's choice from highlights", () => {
+test("A5–A8 without a usable billboard, today's choice from highlights", () => {
   const now = at("2026-11-24T07:00:00Z");
   const editorial = [match("big", "2026-11-25T20:00:00Z", { weight: 9 }), match("small", "2026-11-26T20:00:00Z", { weight: 2 })];
   const today = chooseUpcoming({ editorial, now });
   assert.deepEqual(ids(chooseUpcoming({ editorial, now, billboard: undefined })), ids(today));
   assert.deepEqual(ids(chooseUpcoming({ editorial, now, billboard: [] })), ids(today));
   assert.deepEqual(ids(chooseUpcoming({ editorial, now, billboard: [entry("done", "2026-11-23T20:00:00Z", 8, "finished")] })), ids(today));
+  // A8: everything kicked off.
+  const kicked = [entry("done", "2026-11-23T20:00:00Z", 8, "finished"), entry("live", "2026-11-24T06:30:00Z", 9, "in_play"), entry("late", "2026-11-24T06:45:00Z", 7)];
+  assert.deepEqual(ids(chooseUpcoming({ editorial, now, billboard: kicked })), ids(today));
   assert.ok(today.every((m) => !m.billboard));
 });

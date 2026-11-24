@@ -21,9 +21,9 @@
  *
  * « À l'affiche » (VI-48): when the common read serves `billboard` (yesterday → today + 3, each match
  * with its importance v2 `weight`), the big matches come from it instead (chooseBillboard): the
- * favourites keep their places and their card, the big card is the most important match not
- * finished yet, and yesterday's results stay among the others with their score. Without a
- * usable billboard (an older API, an empty window), the choice above is unchanged. The visitor's
+ * favourites keep their places and their card, the big card is the most important match, and a
+ * match still leaves at kick-off (the API's billboard also serves yesterday: never shown here).
+ * Without a usable billboard (an older API, nothing left to play), the choice above is unchanged. The visitor's
  * country takes part in it under the priority of home-priority.js (chooseBillboard's `local`, `priority`);
  * the choice above ignores it.
  */
@@ -97,26 +97,26 @@ export function chooseUpcoming({ editorial = [], billboard, favourites = [], mat
   return [first, ...picked.filter((m) => m !== first)];
 }
 
-const finished = (m) => m.fixture?.status === "finished";
+// The card is the matches to come: a match leaves at kick-off (or once the feed says it started or ended).
+const ahead = (m, now) => m.time >= now && m.fixture?.status !== "finished" && m.fixture?.status !== "in_play";
 
 /**
  * The five of « À l'affiche », the big card first, each marked `billboard: true`; none when
- * the billboard has nothing left to play (the caller then keeps today's choice).
+ * the billboard has nothing left to play (the caller then keeps today's choice). Only matches
+ * to come: the billboard's finished and in-play matches (yesterday's results) are never picked.
  *
  * The visitor's country (home-priority.js): `local` is the list of the country's candidates
  * (localMatches: the billboard's local matches and home-local's inside the billboard's window),
  * or null without a country or an answer, which is the choice of before. `priority`:
  * - "location": after the favourites, up to PRIORITY_RULES.localPlaces places go to the country's
- *   most important matches still to play or in play (a finished one only when fewer remain), leaving at least bigPlacesKept to the big matches when there are any;
- *   the rest to the big matches by importance; a short side is completed by the other;
+ *   most important matches to come, leaving at least bigPlacesKept to the big matches when there
+ *   are any; the rest to the big matches by importance; a short side is completed by the other;
  * - "importance": importance only, a local match first at equal importance.
- * The big card: a favourite's match within 48 h, else the most important not finished among the
- * picked; when every pick is finished, the most important coming one takes the place of the
- * lightest big pick (a local place is kept).
+ * The big card: a favourite's match within 48 h, else the most important of the picked.
  */
 export function chooseBillboard({ billboard = [], favourites = [], matches = [], rules, now = Date.now(), local = null, priority = HOME_PRIORITY } = {}) {
   const { places, favouritePlaces, bigCardHours } = { ...DEFAULT_RULES, ...(rules || {}) };
-  const ordered = favouriteOrder(favourites, matches.filter((m) => m && m.time >= now));
+  const ordered = favouriteOrder(favourites, matches.filter((m) => m && ahead(m, now)));
   const favouriteIds = new Set(ordered.map((m) => m.fixture.id));
   // One record per match, the billboard's first; home-local's local candidates after it.
   const pool = [],
@@ -128,16 +128,14 @@ export function chooseBillboard({ billboard = [], favourites = [], matches = [],
     }
   const localIds = new Set((local || []).map((m) => m?.fixture?.id));
   const isLocal = (m) => localIds.has(m.fixture.id);
-  // The billboard's matches stay after kick-off: yesterday's results show their score.
-  const rest = pool.filter((m) => !favouriteIds.has(m.fixture.id));
+  const rest = pool.filter((m) => ahead(m, now) && !favouriteIds.has(m.fixture.id));
   const order = priorityOf(priority) === HOME_PRIORITIES.IMPORTANCE ? (a, b) => (b.weight ?? 0) - (a.weight ?? 0) || Number(isLocal(b)) - Number(isLocal(a)) || heaviest(a, b) : heaviest;
   let mine = ordered.slice(0, favouritePlaces);
   const free = places - mine.length;
   let theirs;
   if (local && priorityOf(priority) === HOME_PRIORITIES.LOCATION) {
     const { localPlaces, bigPlacesKept } = PRIORITY_RULES;
-    // The reserved places: the country's matches to play or in play first, a finished one only to fill them.
-    const locals = rest.filter(isLocal).sort((a, b) => Number(finished(a)) - Number(finished(b)) || heaviest(a, b)),
+    const locals = rest.filter(isLocal).sort(heaviest),
       bigs = rest.filter((m) => !isLocal(m)).sort(heaviest);
     let nLocal = Math.min(localPlaces, locals.length, bigs.length ? Math.max(free - bigPlacesKept, 0) : free);
     const nBig = Math.min(bigs.length, free - nLocal);
@@ -146,20 +144,10 @@ export function chooseBillboard({ billboard = [], favourites = [], matches = [],
   } else theirs = [...rest].sort(order).slice(0, free);
   if (mine.length + theirs.length < places) mine = ordered.slice(0, places - theirs.length);
   const nearest = [...mine].sort(closest)[0];
-  let card = nearest && nearest.time - now <= bigCardHours * 3_600_000 ? nearest : null;
-  if (!card && theirs.length) {
-    card = [...theirs].sort(order).find((m) => !finished(m)) || null;
-    if (!card) {
-      // Every pick is finished: the most important coming match takes the lightest big place.
-      card = [...rest].sort(order).find((m) => !finished(m) && !theirs.includes(m)) || null;
-      if (card) {
-        const bigPicks = theirs.filter((m) => !isLocal(m));
-        const out = [...(bigPicks.length ? bigPicks : theirs)].sort(order).at(-1);
-        theirs = [...theirs.filter((m) => m !== out), card];
-      }
-    }
-  }
-  card ||= nearest;
+  const card =
+    (nearest && nearest.time - now <= bigCardHours * 3_600_000 ? nearest : null) ||
+    [...theirs].sort(order)[0] ||
+    nearest;
   if (!card) return [];
   const weights = new Map(pool.map((m) => [m.fixture.id, m.weight]));
   const mark = (m, favourite) => ({

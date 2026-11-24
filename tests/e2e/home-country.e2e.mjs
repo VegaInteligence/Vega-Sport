@@ -8,16 +8,17 @@
 //  S1 A strip, band or section of its own comes back → no .home-local element, no « Chez vous » on the page, the
 //     results strip directly followed by the bento grid (main's order).
 //  F1 France (x-vercel-ip-country FR, no choice): « À l'affiche » = the rule of the doc ("location"): the favourites
-//     (none here), then up to 2 places to the country's most important matches still to play or in play (a finished
-//     one only when fewer remain; the billboard's local ones and
-//     home-local FRA's inside `billboardWindow`), at least one to the big matches, the rest to the big matches by
-//     served weight; the big card = the most important not finished among the picked; the rows by day, then time.
+//     (none here), then up to 2 places to the country's most important matches to come (the billboard's local ones
+//     and home-local FRA's inside `billboardWindow`), at least one to the big matches, the rest to the big matches by
+//     served weight; only matches to come (not finished, not in play, kick-off ahead); the big card = the most
+//     important of the picked; the rows by day, then time.
+//  K1 The card shows a finished or in-play match (the owner, 24 Nov: « je vois un match fini dans une card qui affiche
+//     les futurs matchs ») → every match of the card is, in the API's answers, not started with its kick-off ahead.
 //  F2 The server's HTML (JavaScript off) already shows the same five, so the browser's first render does not reorder
 //     them (no flash) and no hydration warning is logged.
 //  B1 Brazil (BR): the same with home-local BRA (its league is outside the default Top 7 focus, which is no choice of
 //     the visitor's: its matches enter).
-//  N1 No country (XX): « À l'affiche » = the billboard by served weight, as before the country (the card the most
-//     important not finished).
+//  N1 No country (XX): « À l'affiche » = the billboard's matches to come by served weight, as before the country.
 //  T1 The results strip, each day: the national teams first, then the visitor's country's results, then the others
 //     by editorial weight (matchWeight), 8 a day, the 4 latest days. Checked for FR, BR, GB (the week's results are
 //     from the visitor's leagues: with no local result the order is the one of before).
@@ -87,35 +88,32 @@ inputs.billboard = (home.billboard || []).map((m) => [m.fixture.id, m.day, m.wei
 const LOCAL_PLACES = 2, BIG_KEPT = 1, PLACES = 5;
 const heaviest = (a, b) => (b.weight ?? 0) - (a.weight ?? 0) || a.time - b.time || a.fixture.id.localeCompare(b.fixture.id);
 const byDay = (a, b) => a.day.localeCompare(b.day) || a.time - b.time || a.fixture.id.localeCompare(b.fixture.id);
-const done = (m) => m.fixture.status === "finished";
+const toCome = (m) => m.time >= nowMs && !["finished", "in_play"].includes(m.fixture.status);
+const records = new Map();
+const remember = (list) => (list || []).forEach((m) => records.set(m.fixture.id, m));
+remember(home.billboard);
 const countryLeagues = (code, local) =>
   new Set([...(manifest.competitions || []), ...(home.competitions || []), ...(local?.competitions || [])].filter((c) => c?.country === code).map((c) => c.id));
 /** « À l'affiche » for a visitor without favourites nor chosen leagues, "location". */
 function expectedFive(code, local) {
-  const billboard = home.billboard || [];
+  const billboard = (home.billboard || []).filter(toCome);
   let locals = [], bigs = [...billboard];
   if (code && local) {
     const leagues = countryLeagues(code, local), w = home.billboardWindow;
     const seen = new Set();
     for (const m of [...billboard.filter((x) => leagues.has(x.fixture.league?.id)),
-      ...(w ? (local.matches || []).filter((x) => x.day >= w.start && x.day <= w.end && leagues.has(x.fixture.league?.id)) : [])])
+      ...(w ? (local.matches || []).filter(toCome).filter((x) => x.day >= w.start && x.day <= w.end && leagues.has(x.fixture.league?.id)) : [])])
       if (!seen.has(m.fixture.id)) seen.add(m.fixture.id), locals.push(m);
     bigs = billboard.filter((x) => !seen.has(x.fixture.id));
   }
-  locals.sort((a, b) => Number(done(a)) - Number(done(b)) || heaviest(a, b));
+  locals.sort(heaviest);
   bigs.sort(heaviest);
   let nLocal = Math.min(LOCAL_PLACES, locals.length, bigs.length ? PLACES - BIG_KEPT : PLACES);
   const nBig = Math.min(bigs.length, PLACES - nLocal);
   nLocal = Math.min(locals.length, PLACES - nBig);
-  let picked = [...locals.slice(0, nLocal), ...bigs.slice(0, nBig)];
-  let lead = [...picked].sort(heaviest).find((m) => !done(m));
-  if (!lead) {
-    lead = [...locals, ...bigs].sort(heaviest).find((m) => !done(m) && !picked.includes(m));
-    if (!lead) return null;
-    const bigPicks = picked.filter((m) => !locals.includes(m));
-    const outPick = [...(bigPicks.length ? bigPicks : picked)].sort(heaviest).at(-1);
-    picked = [...picked.filter((m) => m !== outPick), lead];
-  }
+  const picked = [...locals.slice(0, nLocal), ...bigs.slice(0, nBig)];
+  const lead = [...picked].sort(heaviest)[0];
+  if (!lead) return null;
   return { lead: lead.fixture.id, rows: picked.filter((m) => m !== lead).sort(byDay).map((m) => m.fixture.id), local: locals.slice(0, nLocal).map((m) => m.fixture.id) };
 }
 /** The results strip: nations first (API order), then the country's results, then by matchWeight; 8 a day, 4 days. */
@@ -212,12 +210,13 @@ for (const [code, data] of Object.entries(locals)) inputs[code] = { window: data
 const visitors = [
   { iso: "FR", code: "FRA", tab: "Ligue 1", shots: ["bureau-france", "a-l-affiche-france"] },
   { iso: "BR", code: "BRA", tab: "Ligue 1", shots: ["bureau-bresil", "a-l-affiche-bresil"] },
-  { iso: "XX", code: null, tab: "Ligue 1", shots: ["bureau-sans-pays"] },
+  { iso: "XX", code: null, tab: "Ligue 1", shots: ["bureau-sans-pays", "a-l-affiche-sans-pays"] },
   { iso: "GB", code: "ENG", tab: "Premier League", shots: [] },
 ];
 const expected = {};
 for (const v of visitors) {
   const local = v.code ? locals[v.code] || (await localRead(v.code)) : null;
+  remember(local?.matches);
   const want = expectedFive(v.code, local);
   expected[v.iso] = { five: want, ticker: expectedTicker(v.code) };
   // F2: the server's HTML, JavaScript off.
@@ -234,6 +233,9 @@ for (const v of visitors) {
   check(`S1 ${v.iso}: no strip, main's blocks in main's order`, { strip: 0, chezVous: false, afterTicker: "home-bento" }, s, s.strip === 0 && !s.chezVous && s.afterTicker === "home-bento");
   if (v.code === "FRA" || v.code === "BRA" || !v.code)
     check(`${v.code ? (v.code === "FRA" ? "F1" : "B1") : "N1"} ${v.iso}: « À l'affiche » = the rule recomputed from the API`, want, got, /affiche/i.test(got.kicker || "") && sameCard(got, want));
+  const shown = [got.lead, ...got.rows].map((id) => records.get(id));
+  check(`K1 ${v.iso}: no finished or in-play match in the card`, "every match not started, kick-off ahead",
+    shown.map((m) => m && [m.fixture.id, m.fixture.status, new Date(m.time).toISOString()]), shown.length > 0 && shown.every((m) => m && m.fixture.status === "not_started" && m.time >= nowMs));
   check(`F2 ${v.iso}: the server's HTML shows the same five`, want, server, server && sameCard(server, want));
   const tick = await ticker(page);
   check(`T1 ${v.iso}: the results strip's order`, expected[v.iso].ticker, tick, JSON.stringify(tick) === JSON.stringify(expected[v.iso].ticker));
