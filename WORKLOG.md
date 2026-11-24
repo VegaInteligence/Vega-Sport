@@ -1,5 +1,20 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Tab icon: the site's theme alone — 24 November 2026 (pull request #88 open, not merged)
+
+- Goal (user, 24 Nov): after load, after the theme button and after a navigation inside the site, the page names one icon, the one of the site's theme (`icon-dark.svg`, `icon-light.svg`). Before: React put the metadata's `favicon.svg` link back, beside the themed one when the theme script had changed the link first, in its place after a navigation when React had taken the link first.
+- Constraints: tests first; `faviconVersion` kept; nothing merged without the user's word. No Linear from this folder (user rule) and no issue created: a small, isolated fix.
+- Decision: the theme script (`themeScript` in `app/layout.jsx`) writes the page's one `link[rel="icon"]` (`#vega-icon`) while the head is read, and `metadata.icons` names no icon; `favicon.svg` stays in a `<noscript>` for a browser without scripts; `applyTheme` (`services/local-preferences.js`) sets the icon before it writes the storage, for the theme button and the account's theme alike. Trade-off: a reader of the raw HTML that runs no script and skips `<noscript>` finds no icon link and asks for `/favicon.ico`.
+- Branch `claude/favicon-theme`, worktree `~/Agents/worktrees/vega-favicon-theme-20261124`. Main 5f45f38 merged in on 24 Nov (the asterisk on the icons, `faviconVersion` 5, the theme switch moved to `applyTheme`); the drawing of the icon is not this branch's subject.
+- Checks, `tests/e2e/brand.e2e.mjs`: B5a and B5f tightened, B5k to B5p added (after a navigation in each theme, the theme button, then a navigation, without scripts, storage refused), written before the fix. After a navigation the icons are read once React has rebuilt the head's icon links.
+- Checked 24 Nov on the merged branch: 38/45 on main's own source (B5a, B5f, B5k, B5l, B5m, B5n, B5p red), 45/45 on the dev server with the fix. Site tests 966/975, the same 9 failures as main on Node 22. Site build OK. Before the merge: three red runs (B5a, B5f and the button check red or green as React or the script takes the link first, the others red every time), and every icon check green on a local `next build` + `next start`. Evidence: `~/Agents/scratch/vega-favicon-theme-20261124/`.
+- Review of the diff by a second agent, 24 Nov, before the merge of main: nothing serious; its two remarks on the checks are applied. Its run of a full Chromium, system colours opposite to the site's theme, saw the browser ask for the themed icon only.
+- Known limit: when React re-creates the whole document (the shell fails to hydrate, or the visitor comes back from Next's own error page), the icon link is removed, or stays on the theme before, until the theme changes again. The theme itself goes back to dark there, as on main. Faults induced by the review; not fixed.
+- Not checked: the public site (nothing deployed; the Vercel preview asks for a sign-in); the accounts E2E (`tests/e2e/accounts/`, whose theme goes through `applyTheme`); Firefox and Safari; no tab was looked at by eye.
+- Found beside it, not fixed: `meta[name="theme-color"]` has the same fault (back to `#0E0F12` after the light theme and a navigation; two tags at load in the light theme).
+- Next action: the user's word to merge; then the brand E2E on the public site.
+
+## Score Vega v9 in service — [VI-53](https://linear.app/vegainteligence/issue/VI-53), GitHub #82 (24 November 2026, stage 1 built and checked on production data, not merged)
 ## The strip's pre-match forecast, no score — #69 (24 November 2026, branch `claude/accueil-bandeau-pronostics` from main a6b0cd5, local, not pushed)
 
 - Goal (hugo: « dans le bandeau du haut il me faut les prédictions de victoire etc mais ne met pas les scores »): every tick not finished shows the win probabilities (home / draw / away) and no score of any kind (live score removed); results unchanged; no API change.
