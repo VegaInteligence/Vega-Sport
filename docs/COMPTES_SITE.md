@@ -112,6 +112,26 @@ Forwarded, exactly: `POST /api/account/session`, `GET|PUT /api/account/preferenc
 | O9 | An address, a token or an account id ends in analytics, logs, URLs or error reports. | None in a URL (`/compte` takes no parameter, `?next=` only a path), no `console` line carries them, the adapter's errors carry the API's code and message only. Vercel Analytics sees URLs only. |
 | O10 | The CSP blocks the flow. | Everything is same-origin (`/api/auth`, `/api/account`); Google's sign-in is a top-level navigation, which `connect-src` does not govern. No CSP change. |
 
+## 7. The screens' look (`tests/account-summary.test.mjs`, E2E)
+
+Second design of `/connexion`, `/compte` and the header entry (24 November 2026; the first one was refused as too
+bare). `/connexion` is a screen of its own, without the site's header: the brand's night panel (pitch lines, the
+wordmark) beside the form. `/compte` shows who is signed in, what the account keeps and the state of the sync.
+
+| # | What can go wrong | Expected outcome |
+| --- | --- | --- |
+| S1 | The monogram shows a wrong or empty letter. | `accountInitial(user)`: the first letter or digit of the name, else of the address before « @ », as a capital (« é » gives « É »); nothing readable gives `""` and the tile stays empty. Never more than one character of the address. |
+| S2 | `/compte` opens before the stores are loaded (`currentContract()` is null) or with a damaged value. | `accountSummary(null)` gives zero counts, no favourite, country `"auto"`; it never throws. |
+| S3 | A club saved in two lists is counted twice. | Counts are per kind of distinct ids over every list: clubs, nations, players, matches; an entry of another kind or without an id is ignored. |
+| S4 | A long selection floods the page. | At most 8 favourites are listed (clubs, nations and players, in the lists' order, once each); `more` holds how many are not shown, and « Afficher les N autres » lists them all (`accountSummary(contract, { shown })`). |
+| S5 | The country reads wrong. | `null` → `"auto"` (detection), `"none"` → `"none"`, a code → that code; the screen writes « Automatique », « Aucun » or the country's name. |
+| S6 | Changing between « Se connecter » and « Créer un compte » loses the address typed, or keeps a stale error. | The address stays, the password and the error are cleared, the browser's password manager gets `current-password` / `new-password`. |
+| S7 | The password cannot be checked before sending. | An eye button shows or hides it (`aria-pressed`), without changing the value. |
+| S8 | The drawing costs a request, moves for people who asked for no motion, or is read aloud. | Inline SVG, `aria-hidden`; its slow drift stops under `prefers-reduced-motion`. |
+| S9 | The screen without the site's header leaves no way back. | The wordmark links to `/`, and « Fermer » goes back to `?next=` (same rule as O4). |
+| S11 | The sync's state reads alone in the hero (« Indisponible » of what?) or runs long. | `syncLabel` gives a short `pill` naming the sync (« Synchronisé », « Synchronisation… », « Synchro en échec », « Synchro arrêtée », « Synchro indisponible ») beside the block's `text`; « En échec » carries the reason and « Nouvel essai au prochain changement. » as its detail (`tests/account-messages.test.mjs`). |
+| S10 | The header entry changes width between its states. | 124 px in every state from 1024 px up, the icon size below, as before (O6). |
+
 ## Not covered here
 
 - A real Neon token, Neon's cookies and Google: the container cannot reach Neon. The E2E runs against a local

@@ -1,13 +1,14 @@
 "use client";
-// The header's way into the account (VI-38): « Se connecter » signed out, « Mon compte » signed in. Accounts off:
+// The header's way into the account (VI-38): « Se connecter » signed out, the monogram and « Mon compte » signed in. Accounts off:
 // nothing at all, the header as before. While the session is read the slot keeps its size (no shift).
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogIn, UserRound } from "lucide-react";
+import { LogIn } from "lucide-react";
 import { useAccount } from "../hooks/useAccount.js";
 import { refreshSession } from "../services/account-state.js";
 import { ACCOUNT_PATH, signInHref } from "../services/account-links.js";
+import { accountInitial } from "../services/account-summary.js";
 
 export default function AccountEntry() {
   const account = useAccount();
@@ -25,8 +26,10 @@ export default function AccountEntry() {
   if (account.status === "signed-in") {
     const here = pathname.replace(/\/$/, "") === ACCOUNT_PATH;
     return (
-      <Link className="account-entry" href={ACCOUNT_PATH} aria-current={here ? "page" : undefined} aria-label="Mon compte">
-        <UserRound size={17} strokeWidth={1.7} aria-hidden="true" />
+      <Link className="account-entry account-entry-in" href={ACCOUNT_PATH} aria-current={here ? "page" : undefined} aria-label="Mon compte">
+        <span className="account-entry-monogram" aria-hidden="true">
+          {accountInitial(account.user)}
+        </span>
         <span className="account-entry-label">Mon compte</span>
       </Link>
     );
@@ -35,7 +38,7 @@ export default function AccountEntry() {
     return (
       // The query may have changed since (a club opened on the same page): read again before the click.
       <Link
-        className="account-entry"
+        className="account-entry account-entry-out"
         href={signInHref(`${pathname}${query ? `?${query}` : ""}`)}
         aria-label="Se connecter"
         onPointerDown={readQuery}

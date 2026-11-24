@@ -48,19 +48,23 @@ export function deletionMessage(error) {
   }
 }
 
-/** The sync status of the adapter → { text, detail? } for /compte. */
+/** The sync status of the adapter → { text, pill, detail? } for /compte: the block's words, the hero's short form. */
 export function syncLabel(sync) {
   switch (sync?.state) {
     case "synced":
-      return { text: "À jour" };
+      return { text: "À jour", pill: "Synchronisé" };
     case "failed":
-      return { text: "En échec : nouvel essai au prochain changement", detail: sync.reason };
+      return {
+        text: "En échec",
+        pill: "Synchro en échec",
+        detail: [sync.reason, "Nouvel essai au prochain changement."].filter(Boolean).join(" "),
+      };
     case "stopped":
-      return { text: "Arrêtée", detail: sync.reason };
+      return { text: "Arrêtée", pill: "Synchro arrêtée", detail: sync.reason };
     case "unavailable":
-      return { text: "Indisponible" };
+      return { text: "Indisponible", pill: "Synchro indisponible" };
     default:
-      return { text: "En cours" };
+      return { text: "En cours", pill: "Synchronisation…" };
   }
 }
 
