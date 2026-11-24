@@ -7,14 +7,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import BrandAsterisk from "./BrandAsterisk.jsx";
 import {
   CONSENT_OPEN_EVENT,
   CONSENT_REGION_PATH,
   PRIVACY_HREF,
-  openConsentSettings,
   readConsent,
   writeConsent,
 } from "../services/consent.js";
+
+export { default as ConsentSettingsLink } from "./ConsentSettingsLink.jsx";
 
 // Read by both tools at every send: a refusal in this page stops what their scripts would still send.
 let granted = false;
@@ -101,7 +103,8 @@ export default function Consent() {
             }}
           >
             <h2 id="consent-title" className="consent-title">
-              Mesure d’audience<span className="brand-dot" aria-hidden="true" />
+              Mesure d’audience
+              <BrandAsterisk className="consent-asterisk" />
             </h2>
             <p className="consent-text">
               Vega Sport mesure l’audience et la vitesse des pages avec Vercel.{" "}
@@ -127,14 +130,5 @@ export default function Consent() {
         </>
       )}
     </>
-  );
-}
-
-/** The footer's « Cookies »: shows the banner again with the current choice. */
-export function ConsentSettingsLink({ className = "consent-settings-link" }) {
-  return (
-    <button type="button" className={className} onClick={openConsentSettings}>
-      Cookies
-    </button>
   );
 }

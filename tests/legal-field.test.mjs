@@ -18,8 +18,10 @@ const identity = await src("content/legal-identity.js");
 const brand = await src("brand-mark.js");
 
 async function render(values, element) {
+  // The logo's asterisk lives in its own component since the consent banner uses it too.
+  const BrandAsterisk = await compile("components/BrandAsterisk.jsx", { "../brand-mark.js": brand });
   const Legal = await compile("components/Legal.jsx", {
-    "../brand-mark.js": brand,
+    "./BrandAsterisk.jsx": BrandAsterisk,
     "../content/legal-identity.js": { ...identity, legalIdentity: { ...identity.legalIdentity, ...values } },
   });
   return renderToStaticMarkup(element(Legal));

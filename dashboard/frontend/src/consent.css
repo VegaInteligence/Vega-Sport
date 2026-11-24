@@ -36,6 +36,15 @@ html[data-theme="light"] {
   letter-spacing: -0.012em;
   line-height: 1.05;
 }
+/* The logo's asterisk after the title, as on the legal pages' titles (legal.css, .legal-asterisk). */
+.consent-asterisk {
+  display: inline-block;
+  width: 0.3em;
+  height: 0.34em;
+  margin-left: 0.05em;
+  vertical-align: 0.38em;
+  fill: currentColor;
+}
 .consent-text {
   margin: 0;
   color: var(--muted);
@@ -109,10 +118,26 @@ html[data-theme="light"] {
 .consent-settings-link:hover {
   color: var(--accent-dark);
 }
+@media (max-width: 640px) {
+  /* As the footer's links on a phone (styles.css): a 44 px row. */
+  .consent-settings-link {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+  }
+}
 
 /* While the card is open the page's last lines can be scrolled clear of it. */
 html[data-consent="open"] body {
   padding-bottom: calc(var(--consent-h, 0px) + 24px);
+}
+
+/* The legal pages' sticky Sommaire (legal.css) shares the bottom-left corner on a short screen: while the card is
+   open, the Sommaire ends above it and scrolls inside its own box; it takes its full height back after the choice. */
+@media (min-width: 961px) {
+  html[data-consent="open"] .legal-toc {
+    max-height: calc(100vh - var(--legal-anchor) - var(--consent-h, 0px) - 24px - 24px - 16px);
+  }
 }
 
 @keyframes consent-in {

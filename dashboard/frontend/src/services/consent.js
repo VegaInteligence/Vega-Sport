@@ -9,8 +9,8 @@
  */
 
 export const CONSENT_KEY = "vega.consent.v1";
-/** The privacy page (the site's links carry the trailing slash). */
-export const PRIVACY_HREF = "/confidentialite/";
+/** The privacy page's section on cookies and the browser's storage (src/content/legal-privacy.jsx, id `cookies`). */
+export const PRIVACY_HREF = "/confidentialite#cookies";
 /** Sent by the footer's « Cookies » button (ConsentSettingsLink) to show the banner again. */
 export const CONSENT_OPEN_EVENT = "vega:consent-open";
 export const CONSENT_REGION_PATH = "/api/consent-region";

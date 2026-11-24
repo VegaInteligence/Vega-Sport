@@ -140,11 +140,19 @@ const visible = (page) => banner(page).isVisible().catch(() => false);
 const stored = (page) => page.evaluate((key) => { try { return JSON.parse(localStorage.getItem(key)); } catch { return "unreadable"; } }, KEY);
 const shot = (page, name) => page.screenshot({ path: path.join(out, `${name}.png`) }).catch(() => {});
 
-// /connexion exists only with accounts on (its sign-in form); else it is the 404 page.
-const accountsOn = await fetch(base + "/connexion", { redirect: "manual" }).then(
-  async (r) => r.status === 200 && (await r.text()).includes("signin-submit"),
-  () => false,
-);
+// /connexion exists only with accounts on (its sign-in form, drawn in the browser); else it is the 404 page.
+const accountsOn = await (async () => {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  try {
+    await page.goto(base + "/connexion", { waitUntil: "networkidle", timeout: 120000 });
+    return (await page.locator(".signin-submit").count()) > 0;
+  } catch {
+    return false;
+  } finally {
+    await context.close();
+  }
+})();
 /** The footer's « Cookies » button, as a visitor reaches it. */
 async function reopenFromFooter(page) {
   const button = page.locator('.site-footer nav[aria-label="Informations"] button', { hasText: "Cookies" });

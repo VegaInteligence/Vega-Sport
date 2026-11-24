@@ -78,7 +78,8 @@ export const privacy = {
             </li>
             <li>
               <strong>la mesure d'audience et de performance</strong> : votre
-              consentement, lorsque vous êtes en Europe (
+              consentement, lorsque vous êtes en Europe ou que votre position
+              est inconnue (
               <Ref to="cookies" />) ;
             </li>
             <li>
@@ -122,8 +123,9 @@ export const privacy = {
               documentation de Vercel, ils traitent notamment les pages vues, la
               page de provenance, le pays, le type de navigateur, de système et
               d'appareil, et la vitesse d'affichage. Le site n'y ajoute ni votre
-              adresse e-mail, ni votre identifiant de compte. En Europe, ces
-              deux outils ne sont chargés qu'après votre accord (
+              adresse e-mail, ni votre identifiant de compte. En Europe, ou si
+              votre position est inconnue, ces deux outils ne sont chargés
+              qu'après votre accord (
               <Ref to="cookies" />
               ).
             </li>
@@ -459,19 +461,24 @@ export const privacy = {
             ]}
           />
           <p>
-            <strong>Le bandeau « Cookies ».</strong> Si vous êtes en Europe, un
-            bandeau vous propose « Accepter » ou « Refuser » la mesure
-            d'audience et de performance. Tant que vous n'avez pas accepté,
-            Vercel Web Analytics et Speed Insights ne sont pas chargés. Votre
-            choix, accord ou refus, est gardé six mois dans votre navigateur,
-            puis le bandeau revient. Vous pouvez changer d'avis à tout moment
-            avec le lien « Cookies » en bas de page.
+            <strong>Le bandeau « Mesure d'audience ».</strong> Si vous êtes en
+            Europe, ou si votre position est inconnue, un bandeau vous propose
+            « Accepter » ou « Refuser » la mesure d'audience et de performance.
+            Tant que vous n'avez pas accepté, Vercel Web Analytics et Speed
+            Insights ne sont pas chargés. Sans choix de votre part, rien n'est
+            mesuré et le bandeau revient à la page suivante. Votre choix, accord
+            ou refus, est gardé six mois dans ce navigateur (clé{" "}
+            <code>vega.consent.v1</code>), puis le bandeau revient ; il n'est
+            pas lié à votre compte. Vous pouvez changer d'avis à tout moment
+            avec le lien « Cookies » en bas de page : après un refus, plus rien
+            n'est envoyé, dès la page en cours.
           </p>
           <p>
             Pour savoir si vous êtes en Europe, le site utilise la localisation
             que Vercel déduit de votre adresse IP (code de continent ou de pays
             seulement). Le site ne lit pas et ne garde pas votre adresse IP.
-            Hors d'Europe, il n'y a pas de bandeau et la mesure fonctionne.
+            Hors d'Europe, il n'y a pas de bandeau et la mesure fonctionne, sauf
+            si vous l'avez refusée dans ce navigateur.
           </p>
           <p>
             Vous pouvez aussi effacer ces données à tout moment dans les

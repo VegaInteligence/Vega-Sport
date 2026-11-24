@@ -2,7 +2,7 @@
 // another section, a table, the brand's asterisk, and the French typography applied to all of it.
 // Server components: no state, no browser API.
 import React, { cloneElement, isValidElement } from "react";
-import { WORDMARK } from "../brand-mark.js";
+import BrandAsterisk from "./BrandAsterisk.jsx";
 import {
   legalFieldKinds,
   legalFieldLabels,
@@ -115,7 +115,8 @@ export function LegalTable({ caption, columns, rows, nowrap = [] }) {
   return (
     <div className="legal-table-wrap">
       <table className="legal-table" data-columns={columns.length}>
-        {caption && <caption>{caption}</caption>}
+        {/* Every table follows its section's heading: the caption names it for assistive technology only. */}
+        {caption && <caption className="sr-only">{caption}</caption>}
         <thead>
           <tr>
             {columns.map((column, i) => (
@@ -152,19 +153,7 @@ export function LegalTable({ caption, columns, rows, nowrap = [] }) {
   );
 }
 
-// The asterisk's box inside the wordmark's drawing (src/brand-mark.js).
-const SIGN_BOX = "1849 -5 292 326";
-
-/** The logo's asterisk after a title, as after « Vega »: its top at the capitals' height. */
+/** The logo's asterisk after a title, as after « Vega »: its top at the capitals' height (BrandAsterisk.jsx). */
 export function LegalAsterisk() {
-  return (
-    <svg
-      className="legal-asterisk"
-      viewBox={SIGN_BOX}
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path d={WORDMARK.sign} />
-    </svg>
-  );
+  return <BrandAsterisk className="legal-asterisk" />;
 }
