@@ -4451,7 +4451,7 @@ Read in the code (main 5615aad):
 | 57p | A linked scorer | `player` is the player's public id; else absent |
 | 57q | An International Results tournament's edition body | each match with goals carries `scorers` |
 | 57r | `parseGoalscorers` on the real header, « NA » values, a row before 1 July 2021, a wrong header | typed goals with their key, nulls, left out, refused |
-| 57s | The site's scorer line: a complete list, a partial one, none | « Name 23′ (pen.) » per side in minute order, own goal « (csc) »; nothing for partial or none |
+| 57s | The site's scorer line: a complete list, a partial one, none | « Name 23′ (pen.) » per side in minute order, own goal « (csc) »; a player who scores several times named once with each minute (« Name 57′, 63′ »); on the nation page a side without a goal is left out, no dangling dash; nothing for partial or none |
 | 57t | The restore guard and the deployment | 172 reviewed, `core.international_goals` a reviewed dependency; the counters one higher |
 
 ## 58. A nation's « Dernier match » is a fixture to come (production, 24 Nov 2026, written before the tests)

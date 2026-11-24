@@ -45,7 +45,7 @@ import {
   runsByTournament,
 } from "../services/tournament-runs.js";
 import { matchCarousel } from "../services/nation-carousel.js";
-import { scorerLines } from "../services/international-scorers.js";
+import { scorerLine } from "../services/international-scorers.js";
 import { trophyArt } from "../services/trophy-art.js";
 import rail from "./ClubScoutTabs.module.css";
 import s from "./Nations.module.css";
@@ -296,7 +296,7 @@ function MatchRow({ match, id, withScorers = false, ...rest }) {
   const f = useFootball();
   const side = sideOf(match, id);
   // International Results' scorers, only when the list is complete (§57).
-  const scorers = withScorers ? scorerLines(match.scorers) : null;
+  const scorers = withScorers ? scorerLine(match.scorers) : null;
   const score =
     match.homeScore == null
       ? match.status === "finished"
@@ -320,7 +320,7 @@ function MatchRow({ match, id, withScorers = false, ...rest }) {
         </small>
         {scorers && (
           <small className={s.scorers} aria-label="Buteurs">
-            {`${scorers.home} – ${scorers.away}`.trim()}
+            {scorers}
           </small>
         )}
       </span>
