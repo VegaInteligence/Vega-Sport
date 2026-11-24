@@ -43,7 +43,19 @@ ADDED = ["155_player_grade_status.sql", "156_team_side_corrections.sql", "157_pa
          # #68: a match's extra-time and shoot-out scores beside its two strengths (view only).
          "166_match_strengths_extra_time.sql",
          # #82: Score Vega v9, the players' level beside the ranking (new tables and two reads).
-         "167_player_level.sql"]
+         "167_player_level.sql",
+         # #70 / VI-49 (§51): the nations' world ranking and the national Elo's run settings.
+         "168_nation_world_ranking.sql",
+         # #90 (§54): Score Vega v9.1, the keeper without goals prevented is flagged on his level row.
+         "169_player_level_measured.sql",
+         # §55: the national teams an Elo run read (agg.nation_elo_runs), the marking and the identity pass re-armed.
+         "170_nation_elo_national_set.sql",
+         # VI-48 (#69): the home's importance v2, its settings and its two windows (api functions, two settings tables).
+         "171_home_importance_v2.sql",
+         # §57: the scorers of the national matches from International Results (core.international_goals, one read).
+         "172_international_goals.sql",
+         # §58: a nation's last match is a played one (api.nation_list redefined).
+         "173_nation_last_played.sql"]
 # SportScore editions: A, a rank shared at different points (a version already kept); B, rank 5 in a table of two (no
 # version yet); C, a table that holds (its version kept).
 A, B, C = 9601, 9602, 9603
@@ -56,6 +68,12 @@ UNITS = [
     ("values", "70005", "HTTP_404", False, "kept"),  # another kind
 ]
 NATIONS = (9611, 9612)
+# agg.power_runs on main 0302d45 (after 167): no migration of the national Elo changes it (§53, 53a).
+POWER_RUN_COLUMNS = ["id", "kind", "season_id", "method_version", "elo_initial", "elo_k", "elo_home_advantage", "regularisation_minutes",
+                     "eligibility_minutes", "total_weight", "rate_weight", "min_reference_matches", "matches", "players", "status", "started_at",
+                     "finished_at", "seed_rounds", "link_matches", "level_prior_matches", "eligibility_share", "level_share", "level_weight",
+                     "score_scale", "year_start", "year_end", "linked_leagues", "level_exchange", "tier_gap", "tier_gap_sd", "top_sd", "pair_sd",
+                     "dispersion", "measured_se"]
 FRIENDLY = 9621
 
 
@@ -118,6 +136,11 @@ class DeploymentMigrationsTest(unittest.TestCase):
         x = cls.db.execute
         with cls.db.transaction():
             assert Store(cls.db).season("2026/2027") == 2026
+            # Three daily scopes of the curated adapter, run before the deployment (55g).
+            x("""INSERT INTO ops.source_runs(source, scope, last_attempt_at, last_success_at, status) VALUES
+                 ('vega', 'national_teams', now(), now(), 'ok'), ('vega', 'team_identity', now(), now(), 'ok'),
+                 ('vega', 'country_names', now(), now(), 'ok')
+                 ON CONFLICT (source, scope) DO UPDATE SET last_attempt_at = now(), last_success_at = now(), status = 'ok'""")
             for edition in (A, B, C):
                 x("INSERT INTO core.competitions(id, name, kind) VALUES (%s, %s, 'league')", (edition, f"League {edition}"))
                 x("INSERT INTO core.competition_seasons(id, competition_id, season_id, native_label) VALUES (%s, %s, 2026, '2026')", (edition, edition))
@@ -164,8 +187,8 @@ class DeploymentMigrationsTest(unittest.TestCase):
         self.assertEqual(len(applied), 160)
         self.assertEqual(self.at_production, "migrations applied=160 total=160 logins=unchanged")
         self.assertEqual(self.merged_added, ADDED)
-        self.assertEqual(self.deployed, "migrations applied=12 total=172 logins=unchanged")
-        self.assertEqual(self.again, "migrations applied=0 total=172 logins=unchanged")
+        self.assertEqual(self.deployed, "migrations applied=18 total=178 logins=unchanged")
+        self.assertEqual(self.again, "migrations applied=0 total=178 logins=unchanged")
         self.assertEqual([v for v, *_ in self.migrations_after if v not in {w for w, *_ in self.migrations_before}], ADDED)
         self.assertEqual([r for r in self.migrations_after if r[0] < "155"], self.migrations_before)
         self.assertEqual(self.migrations_again, self.migrations_after)
@@ -174,10 +197,57 @@ class DeploymentMigrationsTest(unittest.TestCase):
                     f"SELECT count(*) FROM api.nation_matches({NATIONS[0]})", "SELECT count(*) FROM api.player_grade_status",
                     "SELECT count(*) FROM api.player_replacement_facts", "SELECT count(*) FROM api.player_profile_axes",
                     "SELECT count(*) FROM api.player_form_grades", "SELECT count(*) FROM api.team_finished_matches",
-                    "SELECT count(*) FROM api.player_team_fit", "SELECT count(home_penalty_score) FROM api.match_strengths"):
+                    "SELECT count(*) FROM api.player_team_fit", "SELECT count(home_penalty_score) FROM api.match_strengths",
+                    "SELECT count(*) FROM api.home_rules_v2",
+                    "SELECT count(*) FROM api.home_importance_v2(2026::smallint, ARRAY[]::integer[])"):
             self.assertIsNotNone(self.read.execute(sql).fetchone()[0], sql)
         friendly = self.read.execute("SELECT match_id, tournament, home_name, away_name FROM api.home_internationals('2026-10-05', '2026-10-11')").fetchall()
         self.assertEqual([r[1:] for r in friendly], [("Friendly", "Brazil", "Japan")])
+
+    def test_54l_the_level_rows_have_their_measured_flag(self):
+        # §54: 169 adds the flag to the level's rows (true until a run says otherwise) and serves it last.
+        x = self.db.execute
+        self.assertEqual(x("""SELECT data_type, is_nullable, column_default FROM information_schema.columns
+                              WHERE table_schema = 'agg' AND table_name = 'player_level' AND column_name = 'measured'""").fetchone(),
+                         ("boolean", "NO", "true"))
+        served = [c for (c,) in x("""SELECT column_name FROM information_schema.columns
+                                     WHERE table_schema = 'api' AND table_name = 'player_levels' ORDER BY ordinal_position""").fetchall()]
+        self.assertEqual(served, ["season", "season_id", "player_key", "player_id", "name", "image_url", "team_id", "team", "team_image_url", "position",
+                                  "universe", "eligible", "linked", "minutes", "level", "own", "blocks", "starts", "club", "start_share", "club_level",
+                                  "score", "rank", "position_rank", "version", "computed_at", "reference_season", "measured"])
+        # A row written as the worker in service writes it during the deployment (no flag): it reads measured.
+        player = 9701
+        with self.db.transaction(force_rollback=True):
+            x("SET LOCAL ROLE vega_calc")
+            run = x("""INSERT INTO agg.level_runs(season_id, version, status, started_at, finished_at, players, settings)
+                       VALUES (2026, 'score-vega-v9', 'published', now(), now(), 2, '{}') RETURNING id""").fetchone()[0]
+            x("""INSERT INTO agg.player_level(season_id, player_id, position, team_id, universe, eligible, linked, minutes, level, own, blocks, starts, club,
+                   start_share, club_level, score, rank, position_rank, run_id)
+                 VALUES (2026, %s, 'goalkeeper', 9601, 'men', true, true, 900, 0, 0, 0, 0, 0, 1, 0, 50, 1, 1, %s)""", (player, run))
+            x("""INSERT INTO agg.player_level(season_id, player_id, position, team_id, universe, eligible, linked, minutes, level, own, blocks, starts, club,
+                   start_share, club_level, score, rank, position_rank, run_id, measured)
+                 VALUES (2026, %s, 'goalkeeper', 9601, 'men', true, true, 900, -1, -1, -1, 0, 0, 1, 0, 48, 2, 2, %s, false)""", (player + 1, run))
+            x("SET LOCAL ROLE vega_read")
+            self.assertEqual(x("SELECT player_key, measured FROM api.player_levels WHERE season_id = 2026 ORDER BY rank").fetchall(),
+                             [(player, True), (player + 1, False)])
+
+    def test_53a_the_power_runs_keep_main_s_columns_and_the_national_settings_have_their_own_table(self):
+        # §53: the Open Matchday restore compares the reviewed run's whole row (open_matchday_restore.verify_elo).
+        x = self.db.execute
+        columns = [c for (c,) in x("""SELECT column_name FROM information_schema.columns
+                                      WHERE table_schema = 'agg' AND table_name = 'power_runs' ORDER BY ordinal_position""").fetchall()]
+        self.assertEqual(columns, POWER_RUN_COLUMNS)  # red before §53: the four nation_* columns of 168
+        self.assertEqual([c for (c,) in x("""SELECT column_name FROM information_schema.columns
+                                             WHERE table_schema = 'agg' AND table_name = 'nation_elo_runs' ORDER BY ordinal_position""").fetchall()],
+                         ["run_id", "version", "k", "start_date", "seed_edition", "national_teams", "national_teams_md5"])  # 55g
+        for privilege in ("SELECT", "INSERT", "UPDATE", "DELETE"):
+            self.assertTrue(x("SELECT has_table_privilege('vega_calc', 'agg.nation_elo_runs', %s)", (privilege,)).fetchone()[0], privilege)
+
+    def test_55g_the_marking_and_the_identity_pass_are_re_armed_by_170(self):
+        # §55: production's two daily scopes, run before the deployment, run at the worker's first pass after it.
+        rows = self.db.execute("""SELECT scope, last_success_at IS NULL FROM ops.source_runs
+                                  WHERE source = 'vega' AND scope IN ('national_teams', 'team_identity', 'country_names') ORDER BY 1""").fetchall()
+        self.assertEqual(rows, [("country_names", False), ("national_teams", True), ("team_identity", True)])
 
     def test_48k_159_moves_each_conflicting_edition_once_160_clears_the_failed_units_without_an_episode(self):
         self.assertEqual(self.versions_after, {A: 5, B: 1, C: 2})

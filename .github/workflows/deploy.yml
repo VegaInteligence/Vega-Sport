@@ -1,6 +1,7 @@
 name: Deploy
 # Deploys the backend: the base vega-football-db-postgres, its secrets, the worker and the
-# backfill (migrations first), the read API and its distribution. Manual only, from the
+# backfill (migrations first), the read API and its distribution, and the account API once SSM
+# /vega/v2/account-deploy is on (backend/account/DEPLOYMENT.md). Manual only, from the
 # v2-production environment, through the vega-v2-deploy role (deploy-roles.yaml).
 on:
   workflow_dispatch:

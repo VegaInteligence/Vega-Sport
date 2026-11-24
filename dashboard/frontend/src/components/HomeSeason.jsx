@@ -271,7 +271,10 @@ export function TitleRace({ tables, competitions, initial }) {
   );
 }
 
-/** The next big games: a countdown to the main one, then the others in kickoff order. */
+/**
+ * « À l'affiche » (VI-48): a countdown to the main game, then the others in kickoff order; only
+ * matches to come (home-upcoming.js: chooseBillboard from the API's billboard, else today's choice).
+ */
 export function NextMatches({ highlights, ranks, competitions, now }) {
   const f = useFootball();
   if (!highlights.length) return null;
@@ -299,12 +302,14 @@ export function NextMatches({ highlights, ranks, competitions, now }) {
     <article className="card home-next">
       <div className="home-card-head">
         <div>
-          <Kicker>À ne pas manquer</Kicker>
+          <Kicker>À l’affiche</Kicker>
           {/* A favourite's next match may be up to 21 days ahead (international break). */}
           <h2>
-            {highlights.some((h) => h.time - now > 7 * 86_400_000)
-              ? "Les prochains matchs"
-              : "Les 7 prochains jours"}
+            {main.billboard
+              ? "Les matchs du moment"
+              : highlights.some((h) => h.time - now > 7 * 86_400_000)
+                ? "Les prochains matchs"
+                : "Les 7 prochains jours"}
           </h2>
         </div>
         <Link className="inline-link" href={f.href("/calendrier/")}>

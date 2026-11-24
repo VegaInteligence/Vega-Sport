@@ -179,9 +179,10 @@ NATIONAL_CUPS = ("nations-league", "euro", "world-cup-history", "afcon", "copa-a
 
 def national_teams(conn):
     """core.competitions.kind = 'international' for NATIONAL_COMPETITIONS, and
-    core.teams.is_national for every team of their PitchAPI matches and for every team of
-    a cup source's edition of NATIONAL_CUPS: a national team PitchAPI does not hold (Italy,
-    Ukraine, a state that no longer exists) is one all the same. The collect never writes
+    core.teams.is_national for every team of their PitchAPI matches, for every team of
+    a cup source's edition of NATIONAL_CUPS, for every FIFA member International Results names (§52), and for a team a
+    national team was merged into (§55): a national team PitchAPI does not hold (Italy, Ukraine, a state that no longer
+    exists) is one all the same. The collect never writes
     either column, so a later collect keeps them."""
     ids = [row[0] for row in conn.execute(
         "SELECT entity_id FROM core.provider_ids WHERE entity_type = 'competition' AND provider = 'pitchapi' AND provider_key = ANY(%s)",
@@ -205,6 +206,27 @@ def national_teams(conn):
              SELECT 1 FROM core.matches m JOIN core.competition_seasons cs ON cs.id = m.competition_season_id
              WHERE split_part(cs.cup_key, ':', 2) = ANY(%s) AND t.id IN (m.home_team_id, m.away_team_id))""",
         (list(NATIONAL_CUPS),),
+    ).rowcount
+    # A FIFA member International Results keys by a name a held FIFA men's edition lists (through the measurement's
+    # map) is a national team, whatever edition created it (FAILURE_MODES.md §52); a merged row's nation is its target.
+    from ..power import FIFA_TO_IR
+
+    written += conn.execute(
+        """UPDATE core.teams t SET is_national = true, updated_at = now()
+           WHERE t.is_national IS NOT TRUE AND t.merged_into IS NULL AND EXISTS (
+             SELECT 1 FROM core.provider_ids p
+             JOIN core.ranking_rows r ON coalesce(%s::jsonb ->> r.entity_name, r.entity_name) = p.provider_key
+             JOIN core.ranking_editions e ON e.id = r.edition_id AND e.kind = 'fifa_men'
+             WHERE p.entity_type = 'team' AND p.provider = 'international_results' AND p.entity_id = t.id)""",
+        (json.dumps(FIFA_TO_IR),),
+    ).rowcount
+    # A team a national team was merged into is national, a PitchAPI team apart (identity.merge_teams, §55): it repairs the
+    # merges made before that rule (« Italie » into « Italy » and « Grèce » into « Greece », 24 Nov 2026).
+    written += conn.execute(
+        """UPDATE core.teams t SET is_national = true, updated_at = now()
+           WHERE t.is_national IS NOT TRUE AND t.merged_into IS NULL
+             AND EXISTS (SELECT 1 FROM core.teams g WHERE g.merged_into = t.id AND g.is_national)
+             AND NOT EXISTS (SELECT 1 FROM core.provider_ids p WHERE p.entity_type = 'team' AND p.entity_id = t.id AND p.provider = 'pitchapi')"""
     ).rowcount
     return written, len(NATIONAL_COMPETITIONS) - len(ids)
 

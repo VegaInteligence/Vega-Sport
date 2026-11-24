@@ -26,6 +26,7 @@ Account 361769570630, region us-east-2, AWS CLI profile `statarena`, default VPC
 
 `deploy.sh` is the whole deployment: the same script runs from the **Deploy** workflow (`.github/workflows/deploy.yml`, manual, role `vega-v2-deploy`) and from a workstation. Every step only creates or changes `vega-v2-*` resources and the base `vega-football-db-postgres`. It deploys the commit it is given (`IMAGE_TAG`, by default `HEAD`) from a clean export of that commit: uncommitted changes in the checkout are not deployed, and editing the checkout while it runs changes nothing:
 
+0. the account API's preflight (VI-38): without SSM `/vega/v2/account-deploy` set to `on`, one line and nothing of the account below; with it, every prerequisite is checked before anything changes, the account steps run (`Account=true` on the database, worker and alerts stacks, the account secrets at step 2, `backend/account/sql` and the login at step 5) and the stack `vega-v2-account` comes last, after the alerts (`backend/account/DEPLOYMENT.md`);
 1. database stack (about 10 minutes the first time);
 2. secrets, created once in SSM SecureStrings (`ci/secrets.sh`): three random login passwords, the status page's key, the PitchAPI key, and the connection URLs built from the database endpoint. Values go through mode-0600 files, never the command line or the log;
 3. worker stack with the worker and the backfill stopped (it creates the ECR repository, the task definitions and the two buckets);

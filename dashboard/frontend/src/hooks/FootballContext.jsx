@@ -84,6 +84,9 @@ const EMPTY_PREFERENCES = {
   defaultSeason: "",
   favoriteLeagueIds: [],
   onboardingComplete: false,
+  homeCountry: "",
+  // Carried for the account (user-preferences.js), not applied yet: home-priority.js keeps HOME_PRIORITY.
+  homePriority: "",
 };
 const EMPTY_PAGE_SEASONS = {};
 const preferenceStore = createBrowserStateStore({
@@ -100,6 +103,12 @@ const preferenceStore = createBrowserStateStore({
         ? [...new Set(saved.favoriteLeagueIds.filter((id) => typeof id === "string"))]
         : [],
       onboardingComplete: saved.onboardingComplete === true,
+      // The visitor's country (VI-48): as normalizeHomeState keeps it for the home cookie.
+      homeCountry:
+        typeof saved.homeCountry === "string" && /^(?:[A-Z]{3}|none)$/.test(saved.homeCountry)
+          ? saved.homeCountry
+          : "",
+      homePriority: ["location", "importance"].includes(saved.homePriority) ? saved.homePriority : "",
     };
   },
 });

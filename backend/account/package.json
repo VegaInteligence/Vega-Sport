@@ -1,0 +1,16 @@
+{
+  "name": "vega-account",
+  "private": true,
+  "type": "module",
+  "description": "Vega accounts: access levels, the signed pass, the gate before the cache, the account tables, and the account API (front and store functions).",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test --test-concurrency=1 test/*.test.mjs"
+  },
+  "dependencies": {
+    "jose": "6.2.15",
+    "pg": "8.23.1"
+  }
+}

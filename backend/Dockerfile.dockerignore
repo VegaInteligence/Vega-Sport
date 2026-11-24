@@ -5,6 +5,8 @@
 !backend/vega/**
 !backend/sql
 !backend/sql/**
+!backend/account/sql
+!backend/account/sql/**
 !dashboard/shared/archive.js
 !dashboard/shared/archive-text.js
 !dashboard/shared/openfootball-history.js

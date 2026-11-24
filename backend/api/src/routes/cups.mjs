@@ -25,6 +25,7 @@ import { matchesEtag, reject, send, validateParams } from "../http.mjs";
 import { fixture, forecastOf } from "./matches.mjs";
 import { standingsBody } from "./reference.mjs";
 import { editionArtworkFields } from "../edition-artwork.mjs";
+import { scorersBy, withScorers } from "../international-goals.mjs";
 
 const LEAGUE = /^l_(?:[A-Za-z0-9]{6}|v\d{7})$/,
   YEAR = /^\d{4}(?:\/\d{4})?$/;
@@ -184,7 +185,11 @@ export async function cupBody(read, competitionId, season) {
   }
   const rows = await read("SELECT * FROM api.cup_matches WHERE competition_season_id=$1 ORDER BY position, match_id", [e.competition_season_id]);
   const forecasts = await forecastsOf(read, rows.filter((r) => r.status !== "finished").map((r) => r.match_id));
-  const each = (build) => (r) => withForecast(build(r), forecasts.get(Number(r.match_id)));
+  // International Results' matches carry their scorers (§57).
+  const scorers = e.kind === "nations-results" && rows.length
+    ? scorersBy(await read("SELECT * FROM api.international_goals WHERE match_key = ANY($1::integer[])", [rows.map((r) => r.match_id)]), (r) => Number(r.match_key))
+    : new Map();
+  const each = (build) => (r) => withScorers(withForecast(build(r), forecasts.get(Number(r.match_id))), scorers.get(Number(r.match_id)));
   const body =
     e.format === "matches-v1"
       ? { name: e.name, season, matches: rows.map(each(openCupMatch)), source }

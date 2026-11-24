@@ -8,13 +8,13 @@ that would drop or unplay a result already held, or whose scores cannot be read 
 FAILURE_MODES.md §19).
 """
 
-from datetime import timedelta
+from datetime import date, timedelta
 import hashlib
 import json
 import re
 from urllib.parse import urlencode
 
-from . import SourceError, cup_periods, snapshot
+from . import SourceError, cup_periods, international_goals, snapshot
 from ..seasons import sporting_season
 from ..store import Store
 
@@ -26,6 +26,10 @@ EURO_HISTORY_YEARS = ("1960", "1964", "1968", "1972", "1976", "1980", "1984", "1
 # frontend/src/services/cup-archives.js (NATIONAL_CUP_ARCHIVES keys and seasons).
 NATIONAL_CUP_ARCHIVES = ("austria-cup-archive", "germany-cup-archive", "fa-cup-archive", "efl-cup-archive", "copa-del-rey-archive",
                          "coppa-italia-archive", "knvb-beker-archive", "portugal-cup-archive", "swiss-cup-archive")
+# The seasons of « the season's other internationals » (International Results): 2021/22, the base's first, to 2026/27.
+# Going further back is this line's first year; frontend/src/services/nations-results.js INTERNATIONAL_SEASONS is the
+# same list (drift-tested, FAILURE_MODES.md §50).
+INTERNATIONAL_SEASONS = tuple(f"{year}/{year + 1}" for year in range(2021, 2027))
 # The editions main refreshes (aws_refresh_sources.mjs); drift-tested.
 EDITIONS = (
     *[("open-cups", "euro", s) for s in (*EURO_HISTORY_YEARS, "2020", "2024", "2028")],
@@ -48,9 +52,9 @@ EDITIONS = (
     ("nations-results", "copa-america", "2024"),
     ("nations-results", "asian-cup", "2023"),
     *[("nations-results", "gold-cup", s) for s in ("2023", "2025")],
-    # Every other international of the season (friendlies, qualifiers, the other confederations' Nations Leagues):
-    # the home's week strip, outside the Elo (power.ELO_MATCHES).
-    ("nations-results", "internationals", "2026/2027"),
+    # Every other international of each season (friendlies, qualifiers, the other confederations' Nations Leagues…):
+    # the home's week strip, the nation page, and the national teams' Elo since §51 (power.ELO_MATCHES).
+    *[("nations-results", "internationals", s) for s in INTERNATIONAL_SEASONS],
 )
 PROVIDER = {"open-cups": "openfootball", "openligadb": "openligadb", "nations-results": "international_results"}
 # The tournament each summer cup is, for its Vega season (seasons.py: played in June/July,
@@ -60,11 +64,18 @@ TOURNAMENTS = {"euro": "Euro", "world-cup-history": "World Cup", "club-world-cup
 
 
 def scopes(now):
-    """Running editions every two hours, finished ones weekly."""
+    """Running editions every two hours, finished ones weekly. A season of internationals is running until 1 July of
+    its last year (§50): the past seasons are read weekly. The scorers of International Results' matches every two
+    hours, after the editions (§57)."""
     out = {}
     for kind, competition, season in EDITIONS:
-        recent = int(season[:4]) >= now.year - 1
+        if competition == "internationals":
+            recent = now.date() < date(int(season[-4:]), 7, 1)
+        else:
+            recent = int(season[:4]) >= now.year - 1
         out[f"{kind}:{competition}:{season}"] = timedelta(hours=2) if recent else timedelta(days=7)
+    # The scorers of the held matches (goalscorers.csv, §57), last: they attach to the matches the editions wrote.
+    out[international_goals.SCOPE] = international_goals.PERIOD
     return out
 
 
@@ -88,6 +99,23 @@ SCORE_PARTS = ("ft", "ht", "et", "p")
 CANCELED = ("canceled", "cancelled")
 TOURS_AWARD = "france-cup:2024/2025:2024-12-21|Tours FC|FC Lorient|"
 CUP_PUBLICATION = {"club-world-cup", "world-cup-history", "france-cup"}
+# The hosts of the World Cups and Euros from 1 July 2021 (the national teams' Elo's first day, FAILURE_MODES.md §51), as
+# OpenFootball names them: such a match is on neutral ground unless its home side (team1) is one. Before that day the
+# file says nothing and is_neutral stays NULL. Euro 2020: from 1 July 2021 only London's matches had a side at home
+# (England; the quarter-finals of St Petersburg, Munich, Baku and Rome had none) — uefa.com, UEFA EURO 2020 venues.
+# World Cup 2022: Qatar; World Cup 2026: the United States, Mexico, Canada; Euro 2024: Germany (fifa.com, uefa.com).
+# Euro 2028 is added when OpenFootball publishes its file (its spellings are unknown until then, §52).
+HOSTS = {("euro", "2020"): {"England"}, ("world-cup-history", "2022"): {"Qatar"}, ("euro", "2024"): {"Germany"},
+         ("world-cup-history", "2026"): {"USA", "Mexico", "Canada"}}
+HOSTS_FROM = "2021-07-01"
+
+
+def _neutral(competition, season, m):
+    """None (unknown), or whether an OpenFootball World Cup or Euro match from HOSTS_FROM was on neutral ground."""
+    hosts = HOSTS.get((competition, season))
+    if hosts is None or (m.get("date") or "") < HOSTS_FROM:
+        return None
+    return m.get("team1") not in hosts
 
 
 def score_parts(score):
@@ -145,7 +173,7 @@ def match_rows(kind, competition, season, body):
                 "home_score_90": ft[0] if ft and et else None, "away_score_90": ft[1] if ft and et else None,
                 "home_score_ht": ht and ht[0], "away_score_ht": ht and ht[1],
                 "home_score_et": et and et[0], "away_score_et": et and et[1],
-                "home_penalty_score": p and p[0], "away_penalty_score": p and p[1], "is_neutral": None,
+                "home_penalty_score": p and p[0], "away_penalty_score": p and p[1], "is_neutral": _neutral(competition, season, m),
             }
         else:
             score, penalties = _pair(m.get("score")), _pair(m.get("penalties"))
@@ -161,7 +189,7 @@ def match_rows(kind, competition, season, body):
                 "home_score_ht": None, "away_score_ht": None,
                 "home_score_et": score[0] if score and extra else None, "away_score_et": score[1] if score and extra else None,
                 "home_penalty_score": penalties and penalties[0], "away_penalty_score": penalties and penalties[1],
-                # A tournament's dataset says whether the ground was neutral (the Nations League's rows do not).
+                # A tournament's dataset says whether the ground was neutral (the Nations League's rows too, §51).
                 "is_neutral": m["neutral"] if isinstance(m.get("neutral"), bool) else None,
             }
             key = str(m["key"]).split(":", 1)[1]
@@ -171,13 +199,14 @@ def match_rows(kind, competition, season, body):
     return out
 
 
-def _team(conn, provider, key, name):
+def _team(conn, provider, key, name, rename=True):
+    """`rename` False: a row the base holds keeps its name, the source's spelling a name of that source (§50)."""
     row = conn.execute("SELECT entity_id FROM core.provider_ids WHERE entity_type='team' AND provider=%s AND provider_key=%s", (provider, key)).fetchone()
     if row:
         if name:
             # A team another source also holds (PitchAPI's, or a nation two cup sources share) keeps
             # its name; the source's spelling is a name of that source (identity.py).
-            if conn.execute("SELECT 1 FROM core.provider_ids WHERE entity_type='team' AND entity_id=%s AND provider<>%s", (row[0], provider)).fetchone():
+            if not rename or conn.execute("SELECT 1 FROM core.provider_ids WHERE entity_type='team' AND entity_id=%s AND provider<>%s", (row[0], provider)).fetchone():
                 from .identity import spelling_row
 
                 spelling_row(conn, row[0], provider, name)  # a name of that source (search)
@@ -186,9 +215,10 @@ def _team(conn, provider, key, name):
         return row[0]
     team = conn.execute("INSERT INTO core.teams(name) VALUES (%s) RETURNING id", (name or key,)).fetchone()[0]
     conn.execute("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('team',%s,%s,%s)", (provider, key, team))
-    # A team the base did not know: the identity pass (identity.py), due once a day, looks
-    # at it at its next turn (an hour after its last one at the earliest) rather than the next day.
-    conn.execute("UPDATE ops.source_runs SET last_success_at = NULL WHERE source = 'vega' AND scope = 'team_identity'")
+    # A team the base did not know: the national teams' marking (curated.national_teams) and the identity pass
+    # (identity.py), due once a day, look at it at their next turn (an hour after their last one at the earliest) rather
+    # than the next day, the marking first (curated.scopes): a merge then finds it national (§55).
+    conn.execute("UPDATE ops.source_runs SET last_success_at = NULL WHERE source = 'vega' AND scope IN ('national_teams', 'team_identity')")
     return team
 
 
@@ -388,9 +418,11 @@ def save(conn, kind, competition, season, body, now):
     for former, key in renumbered.items():
         before[key] = snapshot.rekey(conn, provider, before[key], former, key)
     changes, keep = 0, set()
+    # The internationals rename no side (§50): the Nations League edition names the same keys in French.
+    rename = (kind, competition) != ("nations-results", "internationals")
     for key, m in rows:
-        home = m.get("home_existing_id") or (_team(conn, provider, m["home_key"], m["home"]) if m["home"] else None)
-        away = m.get("away_existing_id") or (_team(conn, provider, m["away_key"], m["away"]) if m["away"] else None)
+        home = m.get("home_existing_id") or (_team(conn, provider, m["home_key"], m["home"], rename) if m["home"] else None)
+        away = m.get("away_existing_id") or (_team(conn, provider, m["away_key"], m["away"], rename) if m["away"] else None)
         values = {k: m[k] for k in ("status", "home_score", "away_score", "home_score_90", "away_score_90", "home_score_ht",
                                      "away_score_ht", "home_score_et", "away_score_et", "home_penalty_score", "away_penalty_score", "is_neutral")}
         values.update(competition_season_id=edition, season_id=season_id, match_date=m["date"], home_team_id=home, away_team_id=away,
@@ -416,13 +448,16 @@ def save(conn, kind, competition, season, body, now):
 
 
 def _query(scope):
+    if scope == international_goals.SCOPE:
+        return "nations-results", "goalscorers", None, international_goals.QUERY
     kind, competition, season = scope.split(":", 2)
     if (kind, competition, season) not in EDITIONS:
         raise ValueError(scope)
     return kind, competition, season, urlencode({"competition": competition, "season": season})
 
 
-# The sources whose editions read one file: International Results' editions all read results.csv (3.76 MB). Each
+# The sources whose editions read one file: International Results' editions all read results.csv (3.76 MB), and its
+# scorers goalscorers.csv (§57): one read of each per pass. Each
 # OpenFootball and OpenLigaDB edition reads its own file, so reading them together would save no request.
 SHARED_FILE = frozenset({"nations-results"})
 
@@ -443,6 +478,8 @@ def prepare_due(kind, scopes):
 def run(conn, get, scope, now, *, prepared=None):
     """`prepared`: this edition's answer of prepare_due, else the edition is projected on its own."""
     kind, competition, season, query = _query(scope)
+    if scope == international_goals.SCOPE:
+        return international_goals.run(conn, prepared if prepared is not None else bridge("projection", kind, query), now)
     answer = (prepared if prepared is not None else bridge("projection", kind, query)) or {}
     body = answer.get("body")
     observation = body.get("phaseObservation") if isinstance(body, dict) and cup_periods.applies(kind, competition, season) else None

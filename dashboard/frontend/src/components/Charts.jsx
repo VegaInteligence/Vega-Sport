@@ -385,12 +385,18 @@ function useBoxWidth() {
  * `maxHeight`: the height its place caps the drawing at (the match overview: 290 px).
  * A wide box then gets a wider drawing at the same scale, where the 640 px one sat in
  * the middle of it with a third of the width left empty (1 015 px wide at 1920).
+ * `extraTime`: the match went to extra time (/api/forecasts/live, as the win-probability
+ * chart reads it); a shot of the extra time (its period, or a minute past the 90th, added
+ * time being 90 + minute_added) says so too. The chart then runs to the 120th with the
+ * win-probability chart's ticks and its marks at the 90th and the 105th. A finished match's
+ * lines run to the end of the span: no shot after the last one adds no xG.
  */
 export function XgTimeline({
   match,
   teamId = "all",
   onPlayer = () => {},
   maxHeight,
+  extraTime = false,
 }) {
   const [box, boxWidth] = useBoxWidth();
   const bubble = useHoverBubble({ width: 240 });
@@ -437,8 +443,19 @@ export function XgTimeline({
       { length: Math.round(max / step) + 1 },
       (_, i) => i * step,
     ),
-    duration = Math.ceil(Math.max(90, ...valid.map((s) => s.minute)) / 15) * 15,
-    timeStep = Math.max(15, Math.ceil(duration / 6 / 15) * 15),
+    extra =
+      extraTime ||
+      match.shots.some(
+        (s) =>
+          s.period === "extra_time" || (isNumber(s.minute) && s.minute > 90),
+      ),
+    duration = Math.max(
+      extra ? 120 : 90,
+      Math.ceil(Math.max(90, ...valid.map((s) => s.minute)) / 15) * 15,
+    ),
+    timeStep = extra ? 15 : Math.max(15, Math.ceil(duration / 6 / 15) * 15),
+    x = (minute) => 44 + (minute / duration) * plot,
+    end = match.status === "finished" ? `H${x(duration)}` : "",
     timeTicks = Array.from(
       { length: Math.floor(duration / timeStep) + 1 },
       (_, i) => i * timeStep,
@@ -482,11 +499,31 @@ export function XgTimeline({
             </text>
           </g>
         ))}
+        {extra && (
+          <g data-extra-time>
+            <line
+              x1={x(90)}
+              x2={x(90)}
+              y1="25"
+              y2="245"
+              stroke="var(--muted)"
+              strokeWidth="1.5"
+            />
+            <line
+              x1={x(105)}
+              x2={x(105)}
+              y1="25"
+              y2="245"
+              stroke="var(--border-strong)"
+              strokeDasharray="2 3"
+            />
+          </g>
+        )}
         {timeTicks.map((value) => (
           <text
             key={value}
             className="chart-tick"
-            x={44 + (value / duration) * plot}
+            x={x(value)}
             y="268"
             textAnchor="middle"
             fill="light-dark(#666668, #9a9a9c)"
@@ -507,7 +544,8 @@ export function XgTimeline({
         {series.map(({ side, events }, i) => (
           <g key={side}>
             <path
-              d={`M44 245 ${events.map((e) => `H${44 + (e.shot.minute / duration) * plot} V${245 - (e.total / max) * 220}`).join(" ")}`}
+              data-series={side}
+              d={`M44 245 ${events.map((e) => `H${x(e.shot.minute)} V${245 - (e.total / max) * 220}`).join(" ")} ${end}`}
               stroke={colors[side === "home" ? 0 : 1]}
               strokeWidth="2"
               fill="none"
@@ -517,7 +555,7 @@ export function XgTimeline({
                 key={e.shot.id || j}
                 match={match}
                 shot={e.shot}
-                x={44 + (e.shot.minute / duration) * plot}
+                x={x(e.shot.minute)}
                 y={245 - (e.total / max) * 220}
                 onPlayer={onPlayer}
                 showGoalBall

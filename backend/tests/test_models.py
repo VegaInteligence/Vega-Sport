@@ -5,7 +5,7 @@ formulas of the docs; the database must agree.
 """
 
 from collections import Counter, defaultdict
-from datetime import timedelta
+from datetime import date, timedelta
 import os
 from pathlib import Path
 import sys
@@ -221,17 +221,20 @@ class ModelsTest(unittest.TestCase):
                            WHERE season_id = %s AND status = 'published'""", season)
 
     def test_player_levels_beside_the_ranking(self):
-        # Score Vega v9 (issue #82, FAILURE_MODES §49, 49p and 49q): the level is computed by the ranking's
-        # run, beside it. Expected values are recomputed here from the rows the run kept and the rows inserted.
+        # Score Vega v9 (issue #82, FAILURE_MODES §49, 49p and 49q) and v9.1 (issue #90, §54, 54h): the level is
+        # computed by the ranking's run, beside it. Expected values are recomputed here from the rows the run
+        # kept and the rows inserted.
         from vega import level, power
 
         x = self.db.execute
         run, version, reference, players, settings, measured = self.level_run()
-        self.assertEqual((version, players), (level.LEVEL_VERSION, 88))
+        self.assertEqual((version, players), ("score-vega-v9.1", 88))
         self.assertEqual(reference, 2025)  # the award year is over: it measures its own references and keeps them
-        self.assertEqual({k: settings[k] for k in ("psi", "e", "e_starts", "goal", "defence_bound", "scale", "previous_weight", "acquired_minutes")},
-                         {"psi": 10.0, "e": level.E, "e_starts": level.E_STARTS, "goal": level.GOAL, "defence_bound": 2.0, "scale": 36.0,
+        self.assertEqual({k: settings[k] for k in ("psi", "e", "e_starts", "goal", "keeper_lambda", "defence_bound", "scale", "previous_weight", "acquired_minutes")},
+                         {"psi": 10.0, "e": level.E, "e_starts": level.E_STARTS, "goal": level.GOAL, "keeper_lambda": 13291.0, "defence_bound": 2.0, "scale": 36.0,
                           "previous_weight": 0.5, "acquired_minutes": 450})
+        self.assertEqual((settings["keeper_measured_share"], settings["position_offsets"]), (0.5, {"men": {"full_back": -1.05}}))
+        self.assertEqual(settings, level.SETTINGS)
         self.assertEqual(set(measured["lam"]), set(level.OUTFIELD))
         self.assertTrue(all(len(measured[k][p]) == 5 for k in ("lam", "sd", "prices") for p in level.OUTFIELD))
         rows = x("""SELECT player_id, position, team_id, universe, eligible, linked, minutes, level, own, blocks, starts, club, start_share,
@@ -252,6 +255,9 @@ class ModelsTest(unittest.TestCase):
 
         self.assertEqual({r[0]: r[1] for r in rows}, {p: position_of(p) for p in role})
         self.assertEqual(sum(r[1] == "goalkeeper" for r in rows), 8)
+        # 54h: every keeper has goals prevented in each of his matches, so everybody is measured.
+        self.assertEqual(self.one("SELECT count(*), bool_and(measured) FROM agg.player_level WHERE season_id = 2025"), (88, True))
+        self.assertEqual(self.one("SELECT count(*), bool_and(measured) FROM api.player_levels WHERE season_id = 2025"), (88, True))
         self.assertTrue({r[1] for r in rows} <= set(level.POSITIONS))
         # The parts add up; everybody started every match, so starting separates nobody.
         for r in rows:
@@ -296,7 +302,7 @@ class ModelsTest(unittest.TestCase):
             if position == "goalkeeper":
                 prevented = float(self.one("SELECT sum(goals_prevented) FROM core.player_match_stats WHERE season_id = 2025 AND player_id = %s", player)[0])
                 self.assertAlmostEqual(cell[4], prevented, places=3)
-                self.assertAlmostEqual(value, level.GOAL * 90 * prevented / (1260 + measured["keeper"][0]), places=3)
+                self.assertAlmostEqual(value, level.GOAL * 90 * prevented / (1260 + level.KEEPER_LAMBDA), places=3)
                 self.assertEqual(talents, [None] * 5)
                 continue
             expected = 0.0
@@ -313,9 +319,15 @@ class ModelsTest(unittest.TestCase):
             self.assertAlmostEqual(value, expected, places=2)
         mean = {position: sum(values) / len(values) for position, values in by_position.items()}
         of = {r[0]: r for r in rows}
+        # 54h: the men's full-backs are centred 1.05 under their mean, the other positions on theirs.
+        offset = {"full_back": -1.05}
+        self.assertEqual(sum(position == "full_back" for _, position, *_ in positions), 8)  # one per club (slot 32)
         for player, position, _, _, _, _, value, own_level, *_ in positions:
-            self.assertAlmostEqual(of[player][9], value - mean[position], places=3)
+            self.assertAlmostEqual(of[player][9], value - mean[position] + offset.get(position, 0.0), places=3)
             self.assertAlmostEqual(own_level, of[player][7], places=3)  # one position: its level is the player's
+        for position in by_position:
+            held = [of[player][9] for player, at, *_ in positions if at == position]
+            self.assertAlmostEqual(sum(held) / len(held), offset.get(position, 0.0), places=3)
         # An attacking position's blocks are centred on the year: their sums over its players are nil.
         for position in set(level.ATTACK) & set(by_position):
             for b in range(5):
@@ -326,7 +338,7 @@ class ModelsTest(unittest.TestCase):
             for b, name in enumerate(blocks):
                 self.assertAlmostEqual(measured["prices"][position][b], level.E * power.WEIGHTS[position][name], places=6)
         self.assertEqual({measured["lam"][p][b] for p in level.OUTFIELD for b in range(5)}, {level.DEFAULT_LAMBDA})
-        self.assertEqual(tuple(measured["keeper"]), level.KEEPER_DEFAULT)
+        self.assertNotIn("keeper", measured)  # 54a: the keeper's reference is a setting, not a measure
         # The reads: one row per player and per position, with the run's version.
         self.assertEqual(self.one("SELECT count(*), min(version), max(version) FROM api.player_levels WHERE season_id = 2025"), (88, level.LEVEL_VERSION, level.LEVEL_VERSION))
         self.assertEqual(self.one("SELECT count(*) FROM api.player_level_positions WHERE season_id = 2025")[0], 88)
@@ -394,6 +406,175 @@ class ModelsTest(unittest.TestCase):
         self.assertEqual(self.one("SELECT minutes_two_seasons FROM agg.player_level_positions WHERE season_id = 2025 AND player_id = %s", player)[0], 1260)
         self.assertEqual(power.stale_rankings(self.db), [])
 
+    def test_a_keeper_without_goals_prevented_on_half_his_minutes_is_not_measured(self):
+        # 54i: goals prevented are missing for whole leagues and years. The keeper stays in the level, flagged.
+        from vega import power
+
+        x = self.db.execute
+        keeper = 100
+        matches = [m for (m,) in x("SELECT match_id FROM core.player_match_stats WHERE season_id = 2025 AND player_id = %s ORDER BY match_id", (keeper,)).fetchall()]
+        kept = dict(x("SELECT match_id, goals_prevented FROM core.player_match_stats WHERE season_id = 2025 AND player_id = %s", (keeper,)).fetchall())
+        self.assertEqual(len(matches), 14)
+        flags = "SELECT player_id, measured FROM agg.player_level WHERE season_id = 2025 AND position = 'goalkeeper' ORDER BY player_id"
+        others = [(team * 100, True) for team in range(2, 9)]
+        self.assertEqual(x(flags).fetchall(), [(keeper, True)] + others)
+        blank = "UPDATE core.player_match_stats SET goals_prevented = NULL WHERE season_id = 2025 AND player_id = %s AND match_id = ANY(%s)"
+        try:
+            x(blank, (keeper, matches[:7]))  # 630 of his 1 260 minutes keep them: half
+            power.refresh_players(self.db, 2025)
+            self.assertEqual(x(flags).fetchall(), [(keeper, True)] + others)
+            x(blank, (keeper, matches[:8]))  # 540: under half
+            power.refresh_players(self.db, 2025)
+            self.assertEqual(x(flags).fetchall(), [(keeper, False)] + others)
+            minutes, covered = self.one("SELECT minutes, keeper_minutes FROM agg.player_level_cells WHERE season_id = 2025 AND player_id = %s", keeper)
+            self.assertEqual((minutes, covered), (1260, 540))
+            row = self.one("SELECT level, score, rank, position_rank FROM agg.player_level WHERE season_id = 2025 AND player_id = %s", keeper)
+            self.assertTrue(all(v is not None for v in row) and 0 <= row[1] <= 100)
+            self.assertEqual(self.one("SELECT measured FROM api.player_levels WHERE season_id = 2025 AND player_key = %s", keeper)[0], False)
+        finally:
+            for match, prevented in kept.items():
+                x("UPDATE core.player_match_stats SET goals_prevented = %s WHERE season_id = 2025 AND player_id = %s AND match_id = %s", (prevented, keeper, match))
+            power.refresh_players(self.db, 2025)
+        self.assertEqual(x(flags).fetchall(), [(keeper, True)] + others)
+
+    def test_a_level_of_another_version_is_computed_again(self):
+        # 54j: after the deployment the levels in place are of `score-vega-v9`. Their years are listed, and
+        # no other year reads their sums.
+        from vega import level, power
+        from vega.store import Store
+
+        x = self.db.execute
+        with self.db.transaction():
+            self.assertEqual(Store(self.db).season("2024/2025"), 2024)
+        player, position = self.one("SELECT player_id, position FROM agg.player_level WHERE season_id = 2025 AND position = 'centre_back' ORDER BY player_id LIMIT 1")
+        levels = "SELECT player_id, level, score, rank FROM agg.player_level WHERE season_id = 2025 ORDER BY player_id"
+        kept = x(levels).fetchall()
+        self.assertEqual(power.stale_rankings(self.db), [])
+        try:
+            x("UPDATE agg.level_runs SET version = 'score-vega-v9' WHERE season_id = 2025 AND status = 'published'")
+            self.assertEqual(power.stale_rankings(self.db), [2025])
+            # The year before, as a run of the earlier version left it: sums for one centre-back.
+            previous = x("""INSERT INTO agg.level_runs(season_id, version, status, started_at, finished_at, players, settings)
+                            VALUES (2024, 'score-vega-v9', 'published', now(), now(), 1, '{}') RETURNING id""").fetchone()[0]
+            x("""INSERT INTO agg.player_level_cells(season_id, player_id, position, team_id, minutes, finishing_minutes, creation_minutes,
+                   progression_minutes, defence_minutes, retention_minutes, finishing_sum, creation_sum, progression_sum, defence_sum, retention_sum,
+                   keeper_minutes, goals_prevented, run_id)
+                 VALUES (2024, %s, %s, 1, 900, 900, 900, 900, 900, 900, 0, 0, 0, 10, 0, 0, 0, %s)""", (player, position, previous))
+            self.assertEqual(power.refresh_players(self.db, 2025), 88)
+            self.assertEqual(power.stale_rankings(self.db), [])  # 2024 has no published ranking: nothing asks for its level
+            self.assertEqual(self.level_run()[1], "score-vega-v9.1")
+            self.assertEqual(level.LEVEL_VERSION, "score-vega-v9.1")
+            self.assertEqual(self.one("SELECT minutes_two_seasons FROM agg.player_level_positions WHERE season_id = 2025 AND player_id = %s", player)[0], 1260)
+            self.assertEqual(x(levels).fetchall(), kept)
+        finally:
+            x("DELETE FROM agg.player_level_cells WHERE season_id = 2024")
+            x("DELETE FROM agg.level_runs WHERE season_id = 2024")
+            x("UPDATE agg.level_runs SET version = %s WHERE season_id = 2025 AND status = 'published'", (level.LEVEL_VERSION,))
+        self.assertEqual(power.stale_rankings(self.db), [])
+
+    def test_a_level_of_other_settings_is_computed_again(self):
+        # 54k: the keeper's reference became a setting, so the level runs published before it hold no
+        # `keeper_lambda`. A year whose level was computed with other settings than the code's is listed again;
+        # its new run holds the code's settings and, here, the same levels.
+        from psycopg.types.json import Jsonb
+        from vega import level, power
+
+        x = self.db.execute
+        levels = "SELECT player_id, level, score, rank FROM agg.player_level WHERE season_id = 2025 ORDER BY player_id"
+        kept = x(levels).fetchall()
+        self.assertEqual(power.stale_rankings(self.db), [])
+        run = self.level_run()[0]
+        try:
+            x("UPDATE agg.level_runs SET settings = settings - 'keeper_lambda' WHERE id = %s", (run,))
+            self.assertEqual(power.stale_rankings(self.db), [2025])
+            self.assertEqual(power.refresh_players(self.db, 2025), 88)
+            self.assertEqual(power.stale_rankings(self.db), [])
+            again, _, _, _, settings, measured = self.level_run()
+            self.assertNotEqual(again, run)
+            self.assertEqual(settings, level.SETTINGS)
+            self.assertEqual(settings["keeper_lambda"], 13291.0)
+            self.assertNotIn("keeper", measured)
+            self.assertEqual(x(levels).fetchall(), kept)
+            # Another value of a setting, not only a missing one.
+            x("UPDATE agg.level_runs SET settings = jsonb_set(settings, '{keeper_lambda}', '5395') WHERE id = %s", (again,))
+            self.assertEqual(power.stale_rankings(self.db), [2025])
+        finally:
+            x("UPDATE agg.level_runs SET settings = %s WHERE season_id = 2025 AND status = 'published'", (Jsonb(level.SETTINGS),))
+        self.assertEqual(power.stale_rankings(self.db), [])
+
+    def test_a_year_that_read_another_national_elo_is_ranked_again(self):
+        # §56 (56a–56h): a year's ranking and level read the national teams' Elo. When the published Elo run is of
+        # other national teams (or of another national method) than the run the ranking read, the year is listed.
+        from psycopg.types.json import Jsonb
+        from vega import level, power
+        from vega.store import Store
+
+        x = self.db.execute
+        published = "SELECT id FROM agg.power_runs WHERE kind = 'elo' AND status = 'published'"
+        row = "SELECT version, k, start_date, seed_edition, national_teams, national_teams_md5 FROM agg.nation_elo_runs WHERE run_id = %s"
+        write = "INSERT INTO agg.nation_elo_runs(run_id, version, k, start_date, seed_edition, national_teams, national_teams_md5) VALUES (%s,%s,%s,%s,%s,%s,%s)"
+        ranking = "SELECT player_id, index, rank FROM agg.player_power WHERE season_id = 2025 ORDER BY player_id"
+        levels = "SELECT player_id, level, score, rank FROM agg.player_level WHERE season_id = 2025 ORDER BY player_id"
+        with self.db.transaction():
+            years = [Store(self.db).season(label) for label in ("2022/2023", "2023/2024", "2024/2025")]
+        self.assertEqual(years, [2022, 2023, 2024])
+        self.assertEqual(power.stale_rankings(self.db), [])
+        kept = x(ranking).fetchall(), x(levels).fetchall()
+        team = x("INSERT INTO core.teams(id, name, is_national) VALUES (920, 'Nation Z', true) RETURNING id").fetchone()[0]
+        try:
+            # 56a: a team marked national, the Elo run again: the year's ranking read the earlier national teams.
+            power.refresh_elo(self.db)
+            self.assertEqual(power.stale_rankings(self.db), [2025])
+            # 56b: ranked again, on the same numbers (the team has no match), it is listed no more.
+            self.assertEqual(power.refresh_players(self.db, 2025), 88)
+            self.assertEqual(power.stale_rankings(self.db), [])
+            self.assertEqual((x(ranking).fetchall(), x(levels).fetchall()), kept)
+            # 56c: the Elo run again with the same national teams, as every pass with a due season does.
+            read = x(published).fetchone()[0]
+            power.refresh_elo(self.db)
+            served = x(published).fetchone()[0]
+            self.assertNotEqual(read, served)
+            self.assertEqual(x(row, (read,)).fetchone(), x(row, (served,)).fetchone())
+            self.assertEqual(power.stale_rankings(self.db), [])
+            read_row, served_row = x(row, (read,)).fetchone(), x(row, (served,)).fetchone()
+            # 56d: the run the ranking read holds no national set (a run from before 170): production after #92.
+            x("UPDATE agg.nation_elo_runs SET national_teams = NULL, national_teams_md5 = NULL WHERE run_id = %s", (read,))
+            self.assertEqual(power.stale_rankings(self.db), [2025])
+            # 56e: it has no row at all (a run from before 168).
+            x("DELETE FROM agg.nation_elo_runs WHERE run_id = %s", (read,))
+            self.assertEqual(power.stale_rankings(self.db), [2025])
+            # 56g: neither run has a row: nothing to compare. Nor without a published Elo run.
+            x("DELETE FROM agg.nation_elo_runs WHERE run_id = %s", (served,))
+            self.assertEqual(power.stale_rankings(self.db), [])
+            x(write, (served, *served_row))
+            x("UPDATE agg.power_runs SET status = 'superseded' WHERE id = %s", (served,))
+            self.assertEqual(power.stale_rankings(self.db), [])
+            x("UPDATE agg.power_runs SET status = 'published' WHERE id = %s", (served,))
+            # 56f: the run it read is of another national method, with the same national teams.
+            x(write, (read, "nations-elo-v0", *read_row[1:]))
+            self.assertEqual(power.stale_rankings(self.db), [2025])
+            # 56h: with 2025, a year with players ranked before any Elo run (its level in place), a year without
+            # players, and a year of an older method: that one first, then the years oldest first.
+            x("""INSERT INTO agg.power_runs(kind, season_id, method_version, status, started_at, finished_at, players) VALUES
+                   ('players', 2022, 'power-ranking-v1', 'published', '2020-01-01', '2020-01-01', NULL),
+                   ('players', 2023, %(method)s, 'published', '2020-01-01', '2020-01-01', 3),
+                   ('players', 2024, %(method)s, 'published', '2020-01-01', '2020-01-01', 0)""", {"method": power.METHOD_VERSION})
+            x("""INSERT INTO agg.level_runs(season_id, version, status, started_at, finished_at, players, settings)
+                 VALUES (2023, %s, 'published', '2020-01-01', '2020-01-01', 0, %s)""", (level.LEVEL_VERSION, Jsonb(level.SETTINGS)))
+            self.assertEqual(power.stale_rankings(self.db), [2022, 2023, 2025])
+            x("DELETE FROM agg.nation_elo_runs WHERE run_id = %s", (read,))
+            x(write, (read, *read_row))
+            self.assertEqual(power.stale_rankings(self.db), [2022, 2023])
+        finally:
+            # The other tests read the published seasons: this one leaves 2025 alone behind, on the earlier national teams.
+            x("DELETE FROM agg.level_runs WHERE season_id = 2023")
+            x("DELETE FROM agg.power_runs WHERE season_id IN (2022, 2023, 2024)")
+            x("DELETE FROM core.teams WHERE id = %s", (team,))
+            power.refresh_elo(self.db)
+            power.refresh_players(self.db, 2025)
+        self.assertEqual(power.stale_rankings(self.db), [])
+        self.assertEqual((x(ranking).fetchall(), x(levels).fetchall()), kept)
+
     def test_a_blank_duel_side_reads_like_a_written_zero(self):
         # Issue #71 (calculation audit of 16 November 2026, item 1): a defender's duel attempts are
         # his duels won and lost, added once the blanks have their zeros. The same match is graded
@@ -456,7 +637,19 @@ class ModelsTest(unittest.TestCase):
         elo = dict(x("SELECT team_id, stakes FROM agg.team_elo WHERE match_id=9000").fetchall())
         self.assertEqual({k: round(v, 4) for k, v in elo.items()}, {900: 1.495, 901: 1.495})
         before, after, expected = self.one("SELECT elo_before, elo_after, expected FROM agg.team_elo WHERE match_id=9000 AND team_id=900")
-        self.assertAlmostEqual(after - before, power.ELO_K * final_stakes * (1 - expected), places=3)
+        # §51 (51i): a national match from 1 July 2021 moves by K_n 30 × its weight (a final's stakes) × the goal margin's G.
+        self.assertAlmostEqual(after - before, power.NATION_K * final_stakes * power.goal_factor(1) * (1 - expected), places=3)
+        self.assertEqual(before, 1500.0)  # no FIFA edition held: every nation starts at 1500
+        # §53 (53b): the run's national settings in their own table: a row for the published Elo run (a superseded one
+        # keeps its own), none for a run of another kind.
+        self.assertEqual(self.one("""SELECT r.method_version, n.version, n.k, n.start_date, n.seed_edition FROM agg.power_runs r
+                                     JOIN agg.nation_elo_runs n ON n.run_id = r.id WHERE r.kind='elo' AND r.status='published'"""),
+                         (power.METHOD_VERSION, "nations-elo-v1", 30.0, date(2021, 7, 1), None))
+        self.assertEqual(self.one("""SELECT count(*) FROM agg.nation_elo_runs n JOIN agg.power_runs r ON r.id = n.run_id
+                                     WHERE r.kind <> 'elo'""")[0], 0)
+        self.assertEqual(x("SELECT team_id, matches, rank, provisional FROM agg.team_power WHERE scope='nations' AND season_id=2025 ORDER BY 1").fetchall(),
+                         [(900, 1, 1, True), (901, 1, 2, True)])
+        self.assertFalse(power.stale_rankings(self.db))
         self.assertEqual(self.one("SELECT count(*), min(stakes), max(stakes) FROM agg.team_elo WHERE match_id<>9000"), (112, 1.0, 1.0))
         # The two players' final is one of their matches of the year, with their national team.
         rows = x("SELECT player_id, team_id, role, round(stakes::numeric, 4), contribution IS NOT NULL FROM agg.player_power_matches WHERE match_id=9000 ORDER BY 1").fetchall()
@@ -473,6 +666,42 @@ class ModelsTest(unittest.TestCase):
             self.one("SELECT linked_leagues FROM agg.power_runs WHERE kind='players' AND season_id=2025 AND status='published'")[0],
             self.one("SELECT count(*) FROM agg.league_levels WHERE linked")[0],
         )
+
+    def test_the_national_seed_reads_the_fifa_edition_of_18_february_2021(self):
+        # §51 (51j): 1500 + the points less the edition's mean; without that edition, the earliest held, traced.
+        from vega import power
+
+        x = self.db.execute
+        self.addCleanup(lambda: [x(q) for q in (
+            "DELETE FROM agg.team_power WHERE team_id IN (910, 911)", "DELETE FROM agg.team_elo WHERE team_id IN (910, 911)",
+            "DELETE FROM core.ranking_editions WHERE kind='fifa_men'", "DELETE FROM core.matches WHERE id=9100",
+            "DELETE FROM core.competition_seasons WHERE id=91", "DELETE FROM core.competitions WHERE id=91", "DELETE FROM core.teams WHERE id IN (910, 911)")])
+        x("INSERT INTO core.teams(id,name,is_national) VALUES(910,'Nation C',true),(911,'Nation D',true)")
+        x("INSERT INTO core.competitions(id,name) VALUES(91,'internationals')")
+        x("INSERT INTO core.competition_seasons(id,competition_id,season_id,native_label,cup_key) VALUES(91,91,2025,'2025/2026','nations-results:internationals:2025/2026')")
+        x("""INSERT INTO core.matches(id,competition_season_id,season_id,source,status,home_team_id,away_team_id,home_score,away_score,match_date,is_neutral)
+             VALUES(9100,91,2025,'international_results','finished',910,911,1,0,'2026-03-27',false)""")
+        for edition, label, points in ((9101, "2021-04-07", (1550, 1450)), (9102, "2021-02-18", (1600, 1400))):
+            x("INSERT INTO core.ranking_editions(id,kind,provider,label) VALUES(%s,'fifa_men','fifa',%s)", (edition, label))
+            x("INSERT INTO core.ranking_rows(edition_id,row_no,team_id,points) VALUES(%s,1,910,%s),(%s,2,911,%s)", (edition, points[0], edition, points[1]))
+        for label, seeds in (("2021-02-18", (1600, 1400)), ("2021-04-07", (1550, 1450))):
+            power.refresh_elo(self.db)
+            self.assertEqual(x("SELECT team_id, elo_before FROM agg.team_elo WHERE match_id=9100 ORDER BY 1").fetchall(), [(910, seeds[0]), (911, seeds[1])])
+            self.assertEqual(self.one("""SELECT n.seed_edition FROM agg.nation_elo_runs n JOIN agg.power_runs r ON r.id = n.run_id
+                                         WHERE r.kind='elo' AND r.status='published'""")[0], label)
+            stakes = self.one("SELECT stakes FROM agg.team_elo WHERE match_id=9100 AND team_id=910")[0]
+            self.assertEqual(stakes, 1.0)  # I_m of a friendly-less round: as `stakes` gives it
+            x("DELETE FROM core.ranking_editions WHERE label='2021-02-18'")
+
+        # 51j': a row fifa.save could not link (a nation the base names otherwise) is linked by its FIFA name through the
+        # measurement's map to the national team International Results keys by that name.
+        x("INSERT INTO core.provider_ids(entity_type,provider,provider_key,entity_id) VALUES('team','international_results','South Korea',911)")
+        self.addCleanup(lambda: x("DELETE FROM core.provider_ids WHERE entity_type='team' AND entity_id=911"))
+        x("INSERT INTO core.countries(code) VALUES ('KOR') ON CONFLICT DO NOTHING")
+        x("DELETE FROM core.ranking_rows WHERE edition_id=9101 AND team_id=911")
+        x("INSERT INTO core.ranking_rows(edition_id,row_no,country_code,entity_name,points) VALUES(9101,2,'KOR','Korea Republic',1450)")
+        power.refresh_elo(self.db)
+        self.assertEqual(x("SELECT team_id, elo_before FROM agg.team_elo WHERE match_id=9100 ORDER BY 1").fetchall(), [(910, 1550), (911, 1450)])
 
     def test_a_season_ranked_by_an_older_method_is_ranked_again(self):
         from vega import power

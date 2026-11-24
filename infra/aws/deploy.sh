@@ -8,8 +8,9 @@
 # Steps: the base vega-football-db-postgres, its secrets, the worker stack, the
 # worker image, the migrations and logins, the worker start, the live stack (store,
 # broadcast, full-state read, ingestor), the read API package, the read API stack and its
-# distribution, optionally the historical archive import, and the alerts (alerts.yaml, and
-# alerts-edge.yaml in us-east-1).
+# distribution, optionally the historical archive import, the alerts (alerts.yaml, and
+# alerts-edge.yaml in us-east-1), and the account API (account.yaml) once SSM
+# /vega/v2/account-deploy is on (backend/account/DEPLOYMENT.md; its preflight runs first).
 #
 # Environment: WORKER_DESIRED_COUNT (1), BACKFILL_DESIRED_COUNT (kept from the previous
 # deploy when unset: 1 while history is collected, 0 once it is), IMPORT_ARCHIVES (false), ARCHIVE_SOURCES_BUCKET
@@ -68,16 +69,77 @@ run_task() {
     --query 'tasks[0].taskArn' --output text)
   echo "$task"
 }
+ssm_value() { aws ssm get-parameter --name "$1" ${2:+--with-decryption} --query Parameter.Value --output text 2>/dev/null || true; }
+
+# --- Account API (VI-38; backend/account/DEPLOYMENT.md, FAILURE_MODES.md section 10) ---
+# One switch: SSM /vega/v2/account-deploy (String), on or off, created last by the owner. Absent
+# or off, nothing of the account is touched: the Deploy is the one before the account, plus one
+# line. On, every prerequisite is checked here, before anything changes; a missing or malformed
+# one stops the Deploy naming it (never a Deploy stopped midway by a half-prepared account).
+# Values are checked against account.yaml's AllowedPattern and never printed.
+ACCOUNT=off
+account_on=()
+account_preflight() {
+  local LC_ALL=C switch status value problems=() p name pattern need secure
+  switch=$(ssm_value /vega/v2/account-deploy)
+  case "$switch" in
+    "") echo "account: off (no SSM parameter /vega/v2/account-deploy): the account API is not deployed (backend/account/DEPLOYMENT.md, section 3)"; return 0 ;;
+    off) echo "account: off (/vega/v2/account-deploy is off): the account API is not deployed (backend/account/DEPLOYMENT.md, section 3)"; return 0 ;;
+    on) ;;
+    *) problems+=("/vega/v2/account-deploy holds neither value allowed: it must be on or off") ;;
+  esac
+  if [ ${#problems[@]} = 0 ]; then
+    [ "$(output vega-v2-deploy-roles AccountGrants)" = 2 ] ||
+      problems+=("stack vega-v2-deploy-roles: its output AccountGrants is not 2: the owner updates it from the Mac with infra/aws/deploy-roles.yaml (backend/account/DEPLOYMENT.md, section 3)")
+    # name, pattern (account.yaml's AllowedPattern, matched on the whole value), required or optional, String or SecureString
+    while read -r name pattern need secure; do
+      value=$(ssm_value "$name" "$([ "$secure" = SecureString ] && echo decrypt)")
+      if [ -z "$value" ]; then
+        [ "$need" = optional ] || problems+=("$name: missing (SSM $secure; backend/account/DEPLOYMENT.md, section 3)")
+      elif ! [[ $value =~ ^($pattern)$ ]]; then
+        problems+=("$name: malformed (SSM $secure, not of the form infra/aws/account.yaml accepts)")
+      fi
+    done <<'PREREQUISITES'
+/vega/v2/neon-auth-url https://[A-Za-z0-9.-]+(/[A-Za-z0-9._~-]+)*/? required String
+/vega/v2/neon-project-id [A-Za-z0-9_-]{1,64} required String
+/vega/v2/neon-branch-id [A-Za-z0-9_-]{1,64} required String
+/vega/v2/site-origins (https://[a-z0-9.-]+|http://localhost:[0-9]+)(,(https://[a-z0-9.-]+|http://localhost:[0-9]+))* required String
+/vega/v2/neon-api-key [[:graph:]]{16,512} optional SecureString
+/vega/v2/account-database-url postgresql://vega_v2_account:[^@]+@[^/]+/vega_v2 optional SecureString
+/vega/v2/pass-key/k1 [A-Za-z0-9_-]{43,} optional SecureString
+PREREQUISITES
+    # Absent, the stack is created at step 11; present, CloudFormation must be able to update it.
+    status=$(aws cloudformation describe-stacks --stack-name vega-v2-account --query 'Stacks[0].StackStatus' --output text 2>/dev/null || true)
+    case "$status" in
+      ""|CREATE_COMPLETE|UPDATE_COMPLETE|UPDATE_ROLLBACK_COMPLETE|IMPORT_COMPLETE|IMPORT_ROLLBACK_COMPLETE) ;;
+      ROLLBACK_COMPLETE) problems+=("stack vega-v2-account is ROLLBACK_COMPLETE (its first creation failed): the owner deletes it from the Mac (aws cloudformation delete-stack --profile statarena --region us-east-2 --stack-name vega-v2-account) and the next Deploy creates it again") ;;
+      UPDATE_ROLLBACK_FAILED) problems+=("stack vega-v2-account is UPDATE_ROLLBACK_FAILED: the owner recovers it from the Mac (aws cloudformation continue-update-rollback --profile statarena --region us-east-2 --stack-name vega-v2-account)") ;;
+      *) problems+=("stack vega-v2-account is $status: CloudFormation cannot update it now (backend/account/DEPLOYMENT.md, section 3)") ;;
+    esac
+  fi
+  if [ ${#problems[@]} -gt 0 ]; then
+    for p in "${problems[@]}"; do echo "account: $p" >&2; done
+    echo "account: the Deploy stops before changing anything. To deploy without the account, set /vega/v2/account-deploy to off (aws ssm put-parameter --name /vega/v2/account-deploy --type String --overwrite --value off)." >&2
+    return 1
+  fi
+  ACCOUNT=on
+  account_on=(Account=true)
+  echo "account: on: every prerequisite is present; the account API is deployed at step 11 (stack vega-v2-account)"
+}
+account_preflight
+# --- end of the account preflight ---
 
 echo "== 1. Database vega-football-db-postgres (about 10 minutes the first time)"
-stack vega-v2-database database.yaml
+# Account=true once the account is on (its store's security group); unset, the stack keeps its value.
+database=(); [ "$ACCOUNT" = on ] && database=(--parameter-overrides Account=true)
+stack vega-v2-database database.yaml ${database[@]+"${database[@]}"}
 echo "== 2. Secrets"
-bash infra/aws/ci/secrets.sh
+VEGA_ACCOUNT=$ACCOUNT bash infra/aws/ci/secrets.sh
 # Optional, once: /vega/v2/odds-api-key (The Odds API, bookmakers' odds of the coming matches).
 ODDS=$(aws ssm get-parameter --name /vega/v2/odds-api-key --query Parameter.Name --output text 2>/dev/null || true)
 echo "== 3. Worker stack, worker and backfill stopped"
 stack vega-v2-worker worker.yaml --capabilities CAPABILITY_IAM \
-  --parameter-overrides ImageTag="$TAG" DesiredCount=0 BackfillDesiredCount=0 ArchiveSourcesBucket="$ARCHIVES" OddsApiKeyParameter="$ODDS"
+  --parameter-overrides ImageTag="$TAG" DesiredCount=0 BackfillDesiredCount=0 ArchiveSourcesBucket="$ARCHIVES" OddsApiKeyParameter="$ODDS" ${account_on[@]+"${account_on[@]}"}
 echo "== 4. Worker image $TAG (linux/arm64)"
 if ! aws ecr describe-images --repository-name vega-v2-worker --image-ids imageTag="$TAG" >/dev/null 2>&1; then
   aws ecr get-login-password | docker login --username AWS --password-stdin "$REGISTRY"
@@ -91,7 +153,7 @@ code=$(aws ecs describe-tasks --cluster vega-v2 --tasks "$task" --query 'tasks[0
 echo "migration exit code: $code"; [ "$code" = 0 ]
 echo "== 6. Worker: $COUNT task(s); backfill: $BACKFILL task(s)"
 stack vega-v2-worker worker.yaml --capabilities CAPABILITY_IAM \
-  --parameter-overrides ImageTag="$TAG" DesiredCount="$COUNT" BackfillDesiredCount="$BACKFILL" ArchiveSourcesBucket="$ARCHIVES" OddsApiKeyParameter="$ODDS"
+  --parameter-overrides ImageTag="$TAG" DesiredCount="$COUNT" BackfillDesiredCount="$BACKFILL" ArchiveSourcesBucket="$ARCHIVES" OddsApiKeyParameter="$ODDS" ${account_on[@]+"${account_on[@]}"}
 echo "== 6b. Live: store, broadcast, full-state read, ingestor schedule (provider '${LIVE_PROVIDER:-}', $([ -n "${LIVE_PROVIDER:-}" ] && echo on || echo off))"
 live_zip=$(python3 infra/aws/package_api.py "${RUNNER_TEMP:-$(mktemp -d)}/live-package" live | tail -1)
 live_key="releases/v2-live/$(basename "$live_zip")"
@@ -156,8 +218,40 @@ else
 fi
 watch_worker=true; [ "$COUNT" = 0 ] && watch_worker=false
 watch_live=false; [ -n "${LIVE_PROVIDER:-}" ] && watch_live=true
-stack vega-v2-alerts alerts.yaml --parameter-overrides AlertEmail="$alert_email" AlertEmail2="$alert_email2" WatchWorker="$watch_worker" WatchLive="$watch_live"
+stack vega-v2-alerts alerts.yaml --parameter-overrides AlertEmail="$alert_email" AlertEmail2="$alert_email2" WatchWorker="$watch_worker" WatchLive="$watch_live" \
+  ${account_on[@]+"${account_on[@]}"}
 stack vega-v2-alerts-edge alerts-edge.yaml --region us-east-1 --parameter-overrides AlertEmail="$alert_email" AlertEmail2="$alert_email2" \
   DistributionId="$(output vega-v2-api DistributionId)" ApiDomain="${media#https://}"
 # --- end of alerts ---
+# --- Account API (VI-38): last, so that its failure leaves everything else deployed. It imports
+# the database's security group (step 1) and its store connects as the login the migrate task set
+# (step 5). Secrets reach the stack as NoEcho parameters, as the read API's URL does (step 8).
+if [ "$ACCOUNT" = on ]; then
+  echo "== 11. Account API: front and store (stack vega-v2-account)"
+  npm ci --prefix backend/account >/dev/null
+  account_dir="${RUNNER_TEMP:-$(mktemp -d)}/account-package"
+  front_zip=$(python3 infra/aws/package_api.py "$account_dir" account-front | tail -1)
+  store_zip=$(python3 infra/aws/package_api.py "$account_dir" account-store | tail -1)
+  front_key="releases/v2-account/$(basename "$front_zip")"
+  store_key="releases/v2-account/$(basename "$store_zip")"
+  aws s3 cp "$front_zip" "s3://$RELEASES/$front_key" >/dev/null
+  aws s3 cp "$store_zip" "s3://$RELEASES/$store_key" >/dev/null
+  account_url=$(aws ssm get-parameter --name /vega/v2/account-database-url --with-decryption --query Parameter.Value --output text)
+  [ -n "${GITHUB_ACTIONS:-}" ] && echo "::add-mask::$account_url"
+  pass_key=$(aws ssm get-parameter --name /vega/v2/pass-key/k1 --with-decryption --query Parameter.Value --output text)
+  [ -n "${GITHUB_ACTIONS:-}" ] && echo "::add-mask::$pass_key"
+  neon_key=$(ssm_value /vega/v2/neon-api-key decrypt)
+  if [ -n "$neon_key" ]; then
+    [ -n "${GITHUB_ACTIONS:-}" ] && echo "::add-mask::$neon_key"
+  else
+    echo "account: no SSM parameter /vega/v2/neon-api-key: DELETE /account answers 503 DELETION_UNAVAILABLE and erases nothing"
+  fi
+  # One pass key today (k1); a rotation adds k2 to PassKeys and later moves PassKeyCurrent.
+  stack vega-v2-account account.yaml --capabilities CAPABILITY_IAM --parameter-overrides FrontReleaseKey="$front_key" StoreReleaseKey="$store_key" \
+    AccountDatabaseUrl="$account_url" NeonAuthUrl="$(ssm_value /vega/v2/neon-auth-url)" SiteOrigins="$(ssm_value /vega/v2/site-origins)" \
+    PassKeys="k1:$pass_key" PassKeyCurrent=k1 NeonApiKey="$neon_key" NeonProjectId="$(ssm_value /vega/v2/neon-project-id)" \
+    NeonBranchId="$(ssm_value /vega/v2/neon-branch-id)"
+  echo "account API: $(output vega-v2-account FrontUrl)"
+fi
+# --- end of the account API ---
 echo "done"

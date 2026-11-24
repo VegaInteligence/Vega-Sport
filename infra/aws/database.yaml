@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >-
   Vega database. A private PostgreSQL instance, reachable only from the worker and the
-  read API security groups.
+  read API security groups (and the account store's, once the account is on).
 Parameters:
   # Doc "Volume": the current season (~1.5 GB) holds in memory on a 4 GB instance, the
   # size chosen once measured. Measured on 2026-11-09 with the archives and the backfill:
@@ -17,6 +17,16 @@ Parameters:
   AllocatedStorage: {Type: Number, Default: 20, MinValue: 20, MaxValue: 200}
   MaxAllocatedStorage: {Type: Number, Default: 100, MinValue: 20, MaxValue: 1000}
   EngineVersion: {Type: String, Default: '18', AllowedPattern: '1[78](\.\d+)?'}
+  # The account API (VI-38): deploy.sh passes true once SSM /vega/v2/account-deploy is on, and
+  # nothing otherwise, so the stack keeps its previous value: the security group the account
+  # stack imports is never removed by a later deploy (backend/account/FAILURE_MODES.md W11).
+  Account:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: 'true: the account store security group (vega-v2-account-sg) and its rule to the database'
+Conditions:
+  HasAccount: !Equals [!Ref Account, 'true']
 Resources:
   DatabaseSG:
     Type: AWS::EC2::SecurityGroup
@@ -42,18 +52,35 @@ Resources:
       SecurityGroupEgress:
         - {IpProtocol: '-1', CidrIp: 127.0.0.1/32, Description: replaced by the database rule}
       Tags: [{Key: Name, Value: vega-v2-api}, {Key: project, Value: vega-v2}]
+  AccountSG:
+    Type: AWS::EC2::SecurityGroup
+    Condition: HasAccount
+    Properties:
+      GroupDescription: Vega v2 account store Lambda, 5432 to the v2 database only
+      VpcId: vpc-08e400afa07fc1812
+      SecurityGroupEgress:
+        - {IpProtocol: '-1', CidrIp: 127.0.0.1/32, Description: replaced by the database rule}
+      Tags: [{Key: Name, Value: vega-v2-account}, {Key: project, Value: vega-v2}]
   WorkerToDatabase:
     Type: AWS::EC2::SecurityGroupEgress
     Properties: {GroupId: !Ref WorkerSG, IpProtocol: tcp, FromPort: 5432, ToPort: 5432, DestinationSecurityGroupId: !Ref DatabaseSG}
   ApiToDatabase:
     Type: AWS::EC2::SecurityGroupEgress
     Properties: {GroupId: !Ref ApiSG, IpProtocol: tcp, FromPort: 5432, ToPort: 5432, DestinationSecurityGroupId: !Ref DatabaseSG}
+  AccountToDatabase:
+    Type: AWS::EC2::SecurityGroupEgress
+    Condition: HasAccount
+    Properties: {GroupId: !Ref AccountSG, IpProtocol: tcp, FromPort: 5432, ToPort: 5432, DestinationSecurityGroupId: !Ref DatabaseSG}
   DatabaseFromWorker:
     Type: AWS::EC2::SecurityGroupIngress
     Properties: {GroupId: !Ref DatabaseSG, IpProtocol: tcp, FromPort: 5432, ToPort: 5432, SourceSecurityGroupId: !Ref WorkerSG, Description: v2 worker}
   DatabaseFromApi:
     Type: AWS::EC2::SecurityGroupIngress
     Properties: {GroupId: !Ref DatabaseSG, IpProtocol: tcp, FromPort: 5432, ToPort: 5432, SourceSecurityGroupId: !Ref ApiSG, Description: v2 read API}
+  DatabaseFromAccount:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: HasAccount
+    Properties: {GroupId: !Ref DatabaseSG, IpProtocol: tcp, FromPort: 5432, ToPort: 5432, SourceSecurityGroupId: !Ref AccountSG, Description: v2 account store}
   SubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
     Properties:
@@ -108,3 +135,5 @@ Outputs:
   MasterSecretArn: {Value: !GetAtt Database.MasterUserSecret.SecretArn, Export: {Name: vega-v2-db-master-secret}}
   WorkerSecurityGroup: {Value: !Ref WorkerSG, Export: {Name: vega-v2-worker-sg}}
   ApiSecurityGroup: {Value: !Ref ApiSG, Export: {Name: vega-v2-api-sg}}
+  # Imported by account.yaml (the store's VPC configuration).
+  AccountSecurityGroup: {Condition: HasAccount, Value: !Ref AccountSG, Export: {Name: vega-v2-account-sg}}

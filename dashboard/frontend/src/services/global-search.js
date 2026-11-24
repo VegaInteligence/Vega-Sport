@@ -3,6 +3,7 @@ import { positionOf } from "./player-profile.js";
 import { competitionCountryLabel } from "./competition-selector.js";
 import { mergeCupCatalog } from "./cup-catalog.js";
 import { playerSearchAliases } from "./player-aliases.js";
+import { liftFavourites } from "./preference-effects.js";
 import {
   EUROPE_FOCUS_IDS,
   inEuropeFocus,
@@ -260,21 +261,52 @@ function fitOf(words, term) {
   return fit;
 }
 
-const byScore = (a, b) =>
+// Effect 7 (#69, preference-effects.js): at equal relevance, a favourite first; relevance itself is unchanged.
+const favouriteFirst = (set, a, b) => (set?.size ? Number(set.has(b.id)) - Number(set.has(a.id)) : 0);
+const byScore = (set) => (a, b) =>
   a[0] - b[0] ||
+  favouriteFirst(set, a[1], b[1]) ||
   b[1].weight - a[1].weight ||
   a[1].name.localeCompare(b[1].name, "fr");
-const byRelevance = ([, a, x], [, b, y]) =>
+const byRelevance = (set) => ([, a, x], [, b, y]) =>
   x.tier - y.tier ||
   x.missed - y.missed ||
   y.coverage - x.coverage ||
   y.prefixes - x.prefixes ||
+  favouriteFirst(set, a, b) ||
   compareText(a.name, b.name) ||
   (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
+const queryParts = (query) => {
+  const needle = searchText(query)
+    .replace(/([a-z])((?:19|20)\d{2})\b/g, "$1 $2")
+    .replace(/\s+/g, " ");
+  const tokens = needle.split(/[\s\-'’.]+/).filter(Boolean);
+  return { needle, tokens, terms: [...new Set(tokens)] };
+};
+
+/**
+ * Effect 7 on the server's answer (/api/search ranks players and clubs itself): its order is kept, and within each
+ * run of equal relevance as the site computes it (players: the relevance tiers; clubs: the score) favourites come
+ * first. `items`: { id, name }.
+ */
+export function liftFavouriteResults(kind, items, query, favourites) {
+  if (!favourites?.size || !items?.length) return items || [];
+  const { needle, tokens, terms } = queryParts(query);
+  const keyOf = (item) => {
+    const e = entry(kind, item.id, item.name || "", { aliases: item.aliases || EMPTY_WORDS, context: "" });
+    if (kind === "players") {
+      const r = relevance(e, needle, tokens, terms);
+      return `${r.tier}:${r.missed}:${r.coverage}:${r.prefixes}`;
+    }
+    return String(score(e, needle, tokens));
+  };
+  return liftFavourites(items, keyOf, (item) => favourites.has(item.id));
+}
+
 const previous = { index: null, needle: "", tokens: 0, candidates: null };
 
-export function searchIndex(index, query) {
+export function searchIndex(index, query, { favourites = null } = {}) {
   const needle = searchText(query)
     .replace(/([a-z])((?:19|20)\d{2})\b/g, "$1 $2")
     .replace(/\s+/g, " ");
@@ -315,7 +347,8 @@ export function searchIndex(index, query) {
     candidates[kind] = matched.map(([, item]) => item);
     // What matches is decided as before (score) for every kind; players are
     // then ranked as /api/search ranks them, clubs and competitions as before.
-    matched.sort(kind === "players" ? byRelevance : byScore);
+    const set = favourites?.[kind === "players" ? "players" : "clubs"];
+    matched.sort(kind === "players" ? byRelevance(set) : byScore(kind === "clubs" ? set : null));
     result[kind] = matched.slice(0, LIMITS[kind]).map(([, item]) => item);
     // The category order still compares the closest name of each.
     best[kind] = closest;

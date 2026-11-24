@@ -19,9 +19,10 @@ import "../src/player-profile-redesign.css";
 import "../src/home.css";
 import "../src/phone.css";
 import "../src/navigation.css";
+import "../src/account.css";
 const siteUrl = "https://vegasport.vercel.app";
 // Raised with every new drawing of the icon, so no browser keeps the old one.
-const faviconVersion = 3;
+const faviconVersion = 5;
 // The tab's icon follows the site's theme, which only the browser knows: the theme script
 // writes the page's one link[rel="icon"] itself, and `metadata.icons` names none. React puts a
 // metadata link back as soon as its address has changed under it (at hydration, at every

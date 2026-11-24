@@ -14,8 +14,9 @@ Failure modes, and what is expected:
   alerts.yaml stays in the deploy's region and holds none of them;
 - a threshold that no longer follows the numbers it was derived from -> the saturation
   alarm is 90 % of the copies (api.yaml ReservedConcurrency), the slow-answer alarm 80 % of
-  the function's timeout, the database connections alarm the three logins' limits plus the
-  owner's margin (vega/migrate.py), below what the instance gives (about 400);
+  the function's timeout, the database connections alarm the logins' limits plus the
+  owner's margin (vega/migrate.py; the account's login once the account is on), below what
+  the instance gives (about 400);
 - a function, log group, cluster, service or instance renamed in its own template -> the
   alarms name what api.yaml, worker.yaml, live.yaml and database.yaml create;
 - a filter pattern that no longer recognises the line the code writes -> the lines are
@@ -233,9 +234,12 @@ class AlertsTest(unittest.TestCase):
         self.assertEqual(float(prop(alarm_named(self.alerts, "vega-v2-api-slow"), "Threshold")), 0.8 * timeout * 1000)
         logins = sum(migrate.CONNECTION_LIMITS.values())
         owner_margin = int(one(r"owner's margin: (\d+)", self.alerts, "owner's margin"))
-        connections = float(prop(alarm_named(self.alerts, "vega-v2-db-connections"), "Threshold"))
-        self.assertEqual(connections, logins + owner_margin)
-        self.assertLess(connections, INSTANCE_CONNECTIONS * 0.5)
+        # The account's login counts once the account is switched on (Account=true, backend/account/FAILURE_MODES.md W11).
+        threshold = prop(alarm_named(self.alerts, "vega-v2-db-connections"), "Threshold")
+        with_account, without = (float(n) for n in re.fullmatch(r"!If \[Account, (\d+), (\d+)\]", threshold).groups())
+        self.assertEqual(with_account, logins + owner_margin)
+        self.assertEqual(without, logins - migrate.CONNECTION_LIMITS["account"] + owner_margin)
+        self.assertLess(with_account, INSTANCE_CONNECTIONS * 0.5)
 
     def test_alarms_name_what_the_other_stacks_create(self):
         function = one(r"^      FunctionName: (\S+)$", API, "API function name")

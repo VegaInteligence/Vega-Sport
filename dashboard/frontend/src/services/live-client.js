@@ -44,6 +44,8 @@ export const liveConfigured = (config) =>
 const MATCH = /^m_(?:[A-Za-z0-9]{6}|v\d{7})$/;
 const AHEAD = 30 * 60 * 1000,
   SPAN = 3 * 60 * 60 * 1000;
+/** How long after its kick-off a match not over by the feed is still taken as under way (the live window). */
+export const LIVE_SPAN_MS = SPAN;
 
 /** A match worth a live read: not over, kick-off within 30 minutes or under way (3 h). */
 export function isLiveWindow(match, now = Date.now()) {

@@ -60,6 +60,12 @@ test("Nations results cover other leagues without assigning teams to the wrong g
   assert.throws(() => parseNationsResults(csv + "2026-09-26,Scotland,Switzerland,0,3,UEFA Nations League,Glasgow,Scotland,FALSE\n"), /Duplicate/);
 });
 
+test("51l. the Nations League's results say whether the ground was neutral", async () => {
+  const { parseNationsResults } = await import("../dashboard/frontend/src/services/nations-results.js");
+  const csv = "date,home_team,away_team,home_score,away_score,tournament,city,country,neutral\n2026-09-26,Scotland,Switzerland,0,3,UEFA Nations League,Glasgow,Scotland,FALSE\n2026-10-10,Gibraltar,Andorra,1,1,UEFA Nations League,Faro,Portugal,TRUE\n";
+  assert.deepEqual(parseNationsResults(csv).map((row) => row.neutral), [false, true]);
+});
+
 test("the yearly Club World Cups are read from their text files, in the season of their year", async () => {
   // openfootball/club-worldcup, 2021/clubworldcup.txt (CC0): played in February 2022.
   const text = "= Club World Cup 2021\n\n# Date       Thu Feb 3 - Sat Feb 12 2022 (9d)\n# Teams      7\n# Matches    8\n\n\n\n▪ Round 1\n  Thu Feb 3 2022\n    20:30  Al Jazira Club (UAE)    v AS Pirae (TAH)           4-1 (3-0)\n\n\n▪ Round 2\n  Sat Feb 5\n    20:30  Al Ahly SC (EGY)        v CF Monterrey (MEX)       1-0 (0-0)\n  Sun Feb 6\n    20:30  Al Hilal (KSA)          v Al Jazira Club (UAE)     6-1 (2-1)\n\n\n▪ Match 5th place\n  Wed Feb 9\n    17:30  CF Monterrey (MEX)      v Al Jazira Club (UAE)     3-1 (3-0)\n\n\n▪ Semifinals\n  Tue Feb 8\n    20:30  Palmeiras (BRA)         v Al Ahly SC (EGY)         2-0 (1-0)\n  Wed Feb 9\n    20:30  Al Hilal (KSA)          v Chelsea FC (ENG)         0-1 (0-1)\n\n\n▪ Match 3rd place\n  Sat Feb 12\n    17:00  Al Hilal (KSA)          v Al Ahly SC (EGY)         0-4 (0-3)\n\n\n▪ Final\n  Sat Feb 12\n    20:30  Chelsea FC (ENG)        v Palmeiras (BRA)          2-1 a.e.t. (1-1, 0-0)\n";
@@ -229,6 +235,74 @@ test("every international of the season is read from International Results, but 
     const body = await (await GET(new Request("http://bridge/api/nations-results?competition=internationals&season=2026%2F2027"))).json();
     assert.deepEqual([body.name, body.season, body.matches.length, body.source.license], ["Matchs internationaux 2026/2027", "2026/2027", 3, "CC0-1.0"]);
     assert.equal((await GET(new Request("http://bridge/api/nations-results?competition=internationals&season=2019%2F2020"))).status, 400);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+// FAILURE_MODES.md §50 (50a–50g), written before the code: the season's other internationals of 2021/22 to 2025/26,
+// without what another edition of the base holds (the World Cup and the Euro always, the Nations League where the base
+// has its edition, a tournament of TOURNAMENT_EDITIONS inside its days).
+test("the older seasons' internationals leave out what the base holds elsewhere, season by season", async () => {
+  const results = await import("../dashboard/frontend/src/services/nations-results.js");
+  const { parseInternationalResults } = results;
+  const head = "date,home_team,away_team,home_score,away_score,tournament,city,country,neutral\n";
+  const csv = head + [
+    "2021-06-30,Spain,Switzerland,1,1,UEFA Euro,Saint Petersburg,Russia,TRUE", // 2020/21: before the first season
+    "2021-07-02,Spain,Switzerland,1,1,UEFA Euro,Saint Petersburg,Russia,TRUE", // 50b: Euro 2020, open-cups:euro:2020
+    "2021-07-10,Argentina,Brazil,1,0,Copa América,Rio de Janeiro,Brazil,TRUE", // 50f: held nowhere
+    "2021-07-15,Mexico,Guatemala,3,0,Gold Cup,Dallas,United States,TRUE", // 50f
+    "2021-10-10,Spain,France,1,2,UEFA Nations League,Milan,Italy,TRUE", // 50d: the 2021 Finals, held nowhere
+    "2022-01-10,Senegal,Zimbabwe,1,0,African Cup of Nations,Bafoussam,Cameroon,TRUE", // 50e: afcon:2021
+    "2022-03-24,Italy,North Macedonia,0,1,FIFA World Cup qualification,Palermo,Italy,FALSE",
+    "2022-06-01,Italy,Argentina,0,3,CONMEBOL–UEFA Cup of Champions,London,England,TRUE", // 50f: the Finalissima
+    "2022-06-04,Comoros,Ivory Coast,NA,NA,African Cup of Nations qualification,Moroni,Comoros,FALSE", // no score
+    "2022-12-18,Argentina,France,3,3,FIFA World Cup,Lusail,Qatar,TRUE", // 50c
+    "2023-03-23,France,Netherlands,4,0,UEFA Euro qualification,Saint-Denis,France,FALSE",
+    "2023-06-25,United States,Jamaica,1,1,Gold Cup,Chicago,United States,FALSE", // 50e: gold-cup:2023
+    "2024-01-13,Qatar,Lebanon,3,0,AFC Asian Cup,Lusail,Qatar,FALSE", // 50e: asian-cup:2023
+    "2024-01-15,Nigeria,Equatorial Guinea,1,1,African Cup of Nations,Abidjan,Ivory Coast,TRUE", // 50e: afcon:2023
+    "2024-06-14,Germany,Scotland,5,1,UEFA Euro,Munich,Germany,FALSE", // 50b: euro:2024
+    "2024-06-21,Argentina,Canada,2,0,Copa América,Atlanta,United States,TRUE", // 50e: copa-america:2024
+    "2024-07-14,Spain,England,2,1,UEFA Euro,Berlin,Germany,TRUE", // 50b
+    "2024-07-14,Argentina,Colombia,1,0,Copa América,Miami Gardens,United States,TRUE", // 50e
+    "2024-09-07,Italy,France,3,1,UEFA Nations League,Paris,France,TRUE", // 50d: kept
+    "2025-06-15,Mexico,Dominican Republic,3,2,Gold Cup,Los Angeles,United States,TRUE", // 50e: gold-cup:2025
+    "2025-12-21,Morocco,Comoros,2,0,African Cup of Nations,Rabat,Morocco,FALSE", // 50e: afcon:2025
+    "2025-11-13,Ivory Coast,Kenya,1,0,African Cup of Nations qualification,Abidjan,Ivory Coast,FALSE",
+    "2026-06-15,Spain,Cape Verde,0,0,FIFA World Cup,Atlanta,United States,TRUE", // 50c
+    "2026-06-30,Brazil,Japan,2,0,Friendly,Rio,Brazil,FALSE",
+    "2026-10-01,Scotland,Switzerland,1,0,UEFA Nations League,Glasgow,Scotland,FALSE", // 50d: the 2026/27 editions'
+  ].join("\n") + "\n";
+  const read = (season) => parseInternationalResults(csv, season).map((r) => [r.date, r.home, r.away, r.round]);
+  assert.deepEqual(read("2021/2022"), [
+    ["2021-07-10", "Argentina", "Brazil", "Copa América"],
+    ["2021-07-15", "Mexico", "Guatemala", "Gold Cup"],
+    ["2021-10-10", "Spain", "France", "UEFA Nations League"],
+    ["2022-03-24", "Italy", "North Macedonia", "FIFA World Cup qualification"],
+    ["2022-06-01", "Italy", "Argentina", "CONMEBOL–UEFA Cup of Champions"],
+  ]);
+  assert.deepEqual(read("2022/2023"), [["2023-03-23", "France", "Netherlands", "UEFA Euro qualification"]]);
+  assert.deepEqual(read("2023/2024"), []);
+  assert.deepEqual(read("2024/2025"), [["2024-09-07", "Italy", "France", "UEFA Nations League"]]);
+  assert.deepEqual(read("2025/2026"), [
+    ["2025-11-13", "Ivory Coast", "Kenya", "African Cup of Nations qualification"],
+    ["2026-06-30", "Brazil", "Japan", "Friendly"],
+  ]);
+  assert.deepEqual(read("2026/2027"), []); // 50d: the Nations League of 2026/27 stays its editions'
+  // 50a, 50h: the seasons read, one list; the parser refuses a season before it.
+  assert.deepEqual(results.INTERNATIONAL_SEASONS, ["2021/2022", "2022/2023", "2023/2024", "2024/2025", "2025/2026", "2026/2027"]);
+  assert.throws(() => parseInternationalResults(csv, "2020/2021"), /Unknown/);
+  const { GET } = await import("../backend/sources/projections/nations-results.mjs");
+  const original = globalThis.fetch;
+  globalThis.fetch = async () => new Response(csv);
+  try {
+    for (const season of ["2021/2022", "2022/2023", "2024/2025", "2025/2026"]) {
+      const body = await (await GET(new Request(`http://bridge/api/nations-results?competition=internationals&season=${encodeURIComponent(season)}`))).json();
+      assert.deepEqual([body.name, body.season], [`Matchs internationaux ${season}`, season]);
+    }
+    for (const season of ["2020/2021", "2027/2028"])
+      assert.equal((await GET(new Request(`http://bridge/api/nations-results?competition=internationals&season=${encodeURIComponent(season)}`))).status, 400);
   } finally {
     globalThis.fetch = original;
   }

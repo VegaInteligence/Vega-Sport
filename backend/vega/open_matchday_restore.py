@@ -37,10 +37,10 @@ MATCH_STATS = "core.team_match_stats"
 ENRICHMENT_COLUMNS = {"home_score_ht", "away_score_ht", "revision", "updated_at"}
 # Relations naming a match created after the reviewed captures: 141, 143, the Fjelstul World Cup Database's pair
 # (137_worldcup_database.sql), football-data.co.uk's (140_football_data.sql), the players' run's recorded exclusions
-# (155_player_grade_status.sql) and the reviewed side corrections (156_team_side_corrections.sql). Each is still checked
-# for occupancy.
+# (155_player_grade_status.sql), the reviewed side corrections (156_team_side_corrections.sql) and International
+# Results' scorers (172_international_goals.sql). Each is still checked for occupancy.
 ADDED_DEPENDENCIES = {"core.archive_match_attestations", "ops.archive_removals", "core.worldcup_matches", "core.footballdata_matches",
-                      "agg.player_grade_exclusions", "core.team_side_corrections"}
+                      "agg.player_grade_exclusions", "core.team_side_corrections", "core.international_goals"}
 # The Fjelstul World Cup Database's own match keys (137_worldcup_database.sql): text keys of core.worldcup_matches, never
 # an id of core.matches.
 FJELSTUL_MATCH_KEYS = frozenset({"core.worldcup_matches", "core.worldcup_appearances", "core.worldcup_goals",
@@ -66,9 +66,22 @@ REFS = {
 # schema only (the archived league seasons' reads): no table; 165 replaces two of them. 166 (#68) replaces the view
 # api.match_strengths (four more columns read from core.matches): no table. 167 (#82) adds agg.level_runs and
 # agg.player_level, agg.player_level_cells, agg.player_level_positions, keyed by season, player, position and club, and
-# two api views: no column naming a match. A later one needs its own review here.
+# two api views: no column naming a match. 168 (§51, §53) adds a column to agg.team_power, the table agg.nation_elo_runs
+# keyed by an Elo run (no column of agg.power_runs, whose reviewed row verify_elo compares whole) and redefines
+# api.power_clubs: no relation naming a match. 169 (#90) adds a column to agg.player_level and redefines
+# api.player_levels: no relation naming a match. 170 (§55) adds two columns to agg.nation_elo_runs (none to
+# agg.power_runs) and re-arms two scopes of ops.source_runs: no relation naming a match. 171 (VI-48) adds
+# core.home_stakes and core.home_level_scales, settings keyed by kind and key and by scope (no column naming a match,
+# a team or an edition), and api functions and a view. 172 (§57) adds core.international_goals, International Results'
+# scorers, which names a match (match_id, integer, ON DELETE CASCADE: ADDED_DEPENDENCIES, checked for occupancy like the
+# others; none of the 35 restored Open Matchday matches is an International Results match), and the view
+# api.international_goals; no column of agg.power_runs. 173 (§58) redefines the function api.nation_list only: no
+# table. A later one needs its own review here.
 REVIEWED_SCHEMAS = ("153_transfer_history_served.sql", "163_league_player_seasons.sql", "164_league_history_reads.sql",
-                    "165_league_history_spellings.sql", "166_match_strengths_extra_time.sql", "167_player_level.sql")
+                    "165_league_history_spellings.sql", "166_match_strengths_extra_time.sql", "167_player_level.sql",
+                    "168_nation_world_ranking.sql", "169_player_level_measured.sql",
+                    "170_nation_elo_national_set.sql", "171_home_importance_v2.sql", "172_international_goals.sql",
+                    "173_nation_last_played.sql")
 
 
 class Refusal(RuntimeError):

@@ -1,6 +1,7 @@
 /**
  * The logo, in the two colours of the charter (docs/brand/README.md): ivory on the dark theme,
- * night on the light one. "horizontal" is the wordmark « Vega Sport. », "symbol" the mark « V. ».
+ * night on the light one. "horizontal" is the wordmark « Vega* » with « Sport » small underneath,
+ * "symbol" the logo by itself, the asterisk.
  */
 export default function VegaLogo({ layout = "horizontal", alt = "Vega Sport", className = "", ...props }) {
   const asset = layout === "symbol" ? "symbol" : "logo";

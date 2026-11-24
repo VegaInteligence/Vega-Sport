@@ -122,19 +122,20 @@ button:disabled {
   justify-content: center;
   flex-shrink: 0;
 }
-/* The wordmark « Vega Sport. » at its own proportions. Under 1024px the mark « V. » alone,
-   as narrow as the mark it replaces: the menus keep the room they had. */
+/* The wordmark « Vega* » with « Sport » underneath, at its own proportions. Under 1120px the
+   asterisk alone: with the account button in the header, the wordmark would push a menu
+   under the search field (tests/e2e/brand.e2e.mjs, B11). */
 .brand-logo {
   display: block;
-  height: 28px;
-  aspect-ratio: 4323 / 954;
+  height: 40px;
+  aspect-ratio: 2138 / 1137;
 }
 .brand-mark {
   display: none;
-  height: 30px;
-  aspect-ratio: 731 / 675;
+  height: 28px;
+  aspect-ratio: 285 / 316;
 }
-@media (max-width: 1023px) {
+@media (max-width: 1119px) {
   .brand-logo {
     display: none;
   }
@@ -1137,9 +1138,10 @@ input[type="date"] {
   min-width: 4px;
   background: var(--muted);
 }
-.list-forecast-bar [data-side="home"] { background: var(--accent); }
-.list-forecast-bar [data-side="draw"] { opacity: 0.45; }
-.list-forecast-bar [data-side="away"] { background: #e0973a; }
+/* The same colours in the home strip's pre-match forecast (home.css, .home-tick-odds). */
+:is(.list-forecast-bar, .home-tick-odds) [data-side="home"] { background: var(--accent); }
+:is(.list-forecast-bar, .home-tick-odds) [data-side="draw"] { opacity: 0.45; }
+:is(.list-forecast-bar, .home-tick-odds) [data-side="away"] { background: #e0973a; }
 .list-forecast-shares {
   display: flex;
   justify-content: space-between;
@@ -1154,6 +1156,14 @@ input[type="date"] {
   font-size: var(--text-xs);
   text-align: center;
 }
+/* A national match's scorers (International Results, §57): each side's under its team. */
+.match-teams .cup-match-scorers {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+}
+.match-teams .cup-match-scorers > span:first-child { text-align: right; }
+.match-teams .cup-match-scorers > span:last-child { text-align: left; }
 
 /* Coverage */
 .coverage-list {
@@ -1852,9 +1862,9 @@ th[aria-sort="descending"] .sort-indicator {
 }
 .site-footer-logo {
   display: block;
-  height: 40px;
+  height: 56px;
   max-width: 100%;
-  aspect-ratio: 4323 / 954;
+  aspect-ratio: 2138 / 1137;
 }
 .site-footer-column h2 {
   margin: 4px 0 12px;
@@ -2516,11 +2526,20 @@ th[aria-sort="descending"] .sort-indicator {
 :is(.standings-table tr, .standings-legend span)[data-zone="ko"] { --zone: var(--accent); }
 :is(.standings-table tr, .standings-legend span)[data-zone="ko-po"] { --zone: color-mix(in srgb, var(--accent) 45%, transparent); }
 /* The visitor's saved clubs. */
+/* A saved club or player (#69, effects 5 and 6: the same highlight as the standings' saved clubs). */
 .standings-table tr[data-followed="true"],
-.standings-table tr[data-followed="true"] th:nth-child(2) {
+.standings-table tr[data-followed="true"] th:nth-child(2),
+.home-scorers-list li[data-followed="true"],
+.home-dumbbells li[data-followed="true"],
+.rank-row[data-followed="true"],
+.podium-place[data-followed="true"] {
   background: color-mix(in srgb, var(--accent) 12%, var(--surface));
 }
-.standings-table tr[data-followed="true"] .standings-team span {
+.standings-table tr[data-followed="true"] .standings-team span,
+.home-scorers-list li[data-followed="true"] strong,
+.home-dumbbells li[data-followed="true"] strong,
+.rank-row[data-followed="true"] .rank-player,
+.podium-place[data-followed="true"] .podium-identity strong {
   color: var(--ink-strong);
   font-weight: 650;
 }

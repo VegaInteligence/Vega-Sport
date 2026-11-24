@@ -534,26 +534,53 @@ class SourceIdentityTest(unittest.TestCase):
         read = {r[0] for r in x(power.ELO_MATCHES).fetchall()}
         self.assertEqual(read & set(range(960, 966)), {960, 961})
 
-    def test_the_season_s_internationals_stay_out_of_the_elo(self):
-        # E1 (19 Nov 2026, written before the code): every international of the season is read for the home's week
-        # strip only (display; the Elo change it would bring is to be measured and decided first). The Nations
-        # League's edition of the same source still counts; the worker reads the season's edition.
+    def test_51k_the_season_s_internationals_enter_the_elo_between_national_sides(self):
+        # E1 (19 Nov 2026) turned by §51 (the user's decision of 23 Nov 2026, measured: variant C4): an international of
+        # the season between two national sides is a match of the Elo, as the Nations League's; one with a side not
+        # marked national is not (the existing rule).
         from vega import power
         from vega.sources import cups
 
         self.assertIn(("nations-results", "internationals", "2026/2027"), cups.EDITIONS)
         x = self.db.execute
-        self.addCleanup(lambda: [x(q) for q in ("DELETE FROM core.matches WHERE id IN (9970, 9971)", "DELETE FROM core.competition_seasons WHERE id IN (9970, 9971)",
-                                                "DELETE FROM core.competitions WHERE id IN (9970, 9971)", "DELETE FROM core.teams WHERE id IN (9970, 9971)")])
-        x("INSERT INTO core.teams(id, name, is_national) VALUES (9970, 'Argentina', true), (9971, 'Costa Rica', true)")
+        self.addCleanup(lambda: [x(q) for q in ("DELETE FROM core.matches WHERE id IN (9970, 9971, 9972)", "DELETE FROM core.competition_seasons WHERE id IN (9970, 9971)",
+                                                "DELETE FROM core.competitions WHERE id IN (9970, 9971)", "DELETE FROM core.teams WHERE id IN (9970, 9971, 9972)")])
+        x("INSERT INTO core.teams(id, name, is_national) VALUES (9970, 'Argentina', true), (9971, 'Costa Rica', true), (9972, 'Zanzibar', false)")
         x("INSERT INTO core.competitions(id, name) VALUES (9970, 'internationals'), (9971, 'nations-league')")
         x("""INSERT INTO core.competition_seasons(id, competition_id, season_id, native_label, cup_key) VALUES
              (9970, 9970, 2026, '2026/2027', 'nations-results:internationals:2098/2099'), (9971, 9971, 2026, '2026/2027', 'nations-results:nations-league:2098/2099')""")
         x("""INSERT INTO core.matches(id, competition_season_id, season_id, source, status, home_team_id, away_team_id, home_score, away_score, match_date) VALUES
              (9970, 9970, 2026, 'international_results', 'finished', 9970, 9971, 7, 0, '2026-11-17'),
-             (9971, 9971, 2026, 'international_results', 'finished', 9971, 9970, 1, 1, '2026-11-14')""")
+             (9971, 9971, 2026, 'international_results', 'finished', 9971, 9970, 1, 1, '2026-11-14'),
+             (9972, 9970, 2026, 'international_results', 'finished', 9970, 9972, 2, 0, '2026-11-18')""")
         read = {r[0] for r in x(power.ELO_MATCHES).fetchall()}
-        self.assertEqual(read & {9970, 9971}, {9971})
+        self.assertEqual(read & {9970, 9971, 9972}, {9970, 9971})  # red before §51: {9971}
+
+    def test_52a_52b_a_fifa_member_of_the_internationals_is_a_national_team(self):
+        from vega.sources import curated
+
+        x = self.db.execute
+        ids = (9980, 9981, 9982, 9983, 9984)
+        self.addCleanup(lambda: [x(q, (list(ids),)) for q in (
+            "DELETE FROM core.ranking_editions WHERE label='2099-01-01' AND 0 <> all(%s)", "DELETE FROM core.provider_ids WHERE entity_type='team' AND entity_id = ANY(%s)",
+            "UPDATE core.teams SET merged_into = NULL WHERE id = ANY(%s)", "DELETE FROM core.teams WHERE id = ANY(%s)")])
+        x("""INSERT INTO core.teams(id, name, is_national) VALUES (9980, 'Kenya', false), (9981, 'South Korea', false), (9982, 'Zanzibar', false),
+             (9984, 'USA', true), (9983, 'United States', false)""")
+        x("UPDATE core.teams SET merged_into = 9984 WHERE id = 9983")
+        x("""INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('team','international_results','Kenya',9980),
+             ('team','international_results','South Korea',9981), ('team','international_results','Zanzibar',9982), ('team','international_results','United States',9983)""")
+        x("INSERT INTO core.countries(code) VALUES ('KEN'), ('KOR'), ('USA') ON CONFLICT DO NOTHING")
+        edition = x("INSERT INTO core.ranking_editions(id, kind, provider, label) VALUES (9980, 'fifa_men', 'fifa', '2099-01-01') RETURNING id").fetchone()[0]
+        x("""INSERT INTO core.ranking_rows(edition_id, row_no, country_code, entity_name, points) VALUES (%s, 1, 'KEN', 'Kenya', 1100),
+             (%s, 2, 'KOR', 'Korea Republic', 1580), (%s, 3, 'USA', 'USA', 1680)""", (edition, edition, edition))
+        with self.db.transaction():
+            curated.national_teams(self.db)
+        rows = dict((r[0], r[1:]) for r in x("SELECT id, is_national, name FROM core.teams WHERE id = ANY(%s)", (list(ids),)).fetchall())
+        self.assertEqual(rows, {9980: (True, "Kenya"), 9981: (True, "South Korea"), 9982: (False, "Zanzibar"),
+                                9983: (False, "United States"), 9984: (True, "USA")})  # red before §52: Kenya, South Korea not national
+        with self.db.transaction():
+            written, _ = curated.national_teams(self.db)
+        self.assertEqual(written, 0)
 
     def test_a_team_two_sources_share_keeps_its_name(self):
         # Italy, merged from OpenLigaDB (League A) and International Results (Leagues B to D): neither renames it at
@@ -575,6 +602,71 @@ class SourceIdentityTest(unittest.TestCase):
         self.assertEqual(x("SELECT name FROM core.teams WHERE id=951").fetchone()[0], "Malta")
         self.assertEqual(x("SELECT name, source FROM core.entity_names WHERE entity_type='team' AND entity_id=950 AND kind='source_spelling' ORDER BY 1").fetchall(),
                          [("Italien", "openligadb"), ("Italy", "international_results")])
+
+    def test_55a_a_merge_keeps_the_national_flag_but_never_makes_a_club_a_nation(self):
+        # §55 (55a): « Italie » (national, OpenLigaDB) merged into « Italy » (International Results, not marked yet).
+        x = self.db.execute
+        ids = [960, 961, 962, 963, 964]
+        self.addCleanup(lambda: [x(q, (ids,)) for q in (
+            "DELETE FROM core.entity_names WHERE entity_type='team' AND entity_id = ANY(%s)",
+            "DELETE FROM core.provider_ids WHERE entity_type='team' AND entity_id = ANY(%s)",
+            "UPDATE core.teams SET merged_into = NULL WHERE id = ANY(%s)",
+            "DELETE FROM core.teams WHERE id = ANY(%s)")])
+        self.addCleanup(x, "UPDATE core.teams SET is_national = false WHERE id = 101")
+        x("""INSERT INTO core.teams(id, name, is_national) VALUES (960, 'Italie', true), (961, 'Italy', NULL), (962, 'Narnia A', false),
+             (963, 'Narnia B', NULL), (964, 'Nationland', true)""")
+        x("""INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('team','openligadb','name:Italie',960),
+             ('team','international_results','Italy',961), ('team','openfootball','name:Narnia A',962), ('team','openfootball','name:Narnia B',963),
+             ('team','openfootball','name:Nationland',964)""")
+        found = [(960, 961, "openligadb", "Italie"), (962, 963, "openfootball", "Narnia A"), (964, 101, "openfootball", "Nationland")]
+        with self.db.transaction():
+            identity.merge_teams(self.db, found, identity.team_columns(self.db, [row[0] for row in found]))
+        flags = dict(x("SELECT id, is_national IS TRUE FROM core.teams WHERE id IN (961, 963, 101)").fetchall())
+        self.assertEqual(flags, {961: True, 963: False, 101: False})  # red before §55: Italy not national
+        self.assertEqual(dict(x("SELECT id, merged_into FROM core.teams WHERE id IN (960, 962, 964)").fetchall()), {960: 961, 962: 963, 964: 101})
+
+    def test_55b_the_marking_repairs_a_merge_that_lost_the_flag(self):
+        # §55 (55b): production's « Italy » after the merge of 24 Nov 2026, and a national row merged into a PitchAPI club.
+        from vega.sources import curated
+
+        x = self.db.execute
+        ids = [970, 971, 972]
+        self.addCleanup(lambda: [x(q, (ids,)) for q in (
+            "UPDATE core.teams SET merged_into = NULL WHERE id = ANY(%s)", "DELETE FROM core.teams WHERE id = ANY(%s)")])
+        self.addCleanup(x, "UPDATE core.teams SET is_national = false WHERE id = 102")
+        x("INSERT INTO core.teams(id, name, is_national) VALUES (970, 'Italy', NULL), (971, 'Italie', true), (972, 'Nationland', true)")
+        x("UPDATE core.teams SET merged_into = 970 WHERE id = 971")
+        x("UPDATE core.teams SET merged_into = 102 WHERE id = 972")
+        with self.db.transaction():
+            curated.national_teams(self.db)
+        flags = dict(x("SELECT id, is_national IS TRUE FROM core.teams WHERE id IN (970, 102)").fetchall())
+        self.assertEqual(flags, {970: True, 102: False})  # red before §55: Italy not national
+        with self.db.transaction():
+            self.assertEqual(curated.national_teams(self.db)[0], 0)
+
+    def test_55c_a_new_team_re_arms_the_marking_and_the_identity_pass(self):
+        from vega.sources import cups
+
+        x = self.db.execute
+        self.addCleanup(lambda: [x("DELETE FROM core.provider_ids WHERE entity_type='team' AND provider='international_results' AND provider_key='Freedonia'"),
+                                 x("DELETE FROM core.teams WHERE name = 'Freedonia'"),
+                                 x("DELETE FROM ops.source_runs WHERE source='vega' AND scope IN ('national_teams', 'team_identity')")])
+        armed = "SELECT scope, last_success_at IS NULL FROM ops.source_runs WHERE source='vega' AND scope IN ('national_teams', 'team_identity') ORDER BY 1"
+
+        def ran():
+            x("""INSERT INTO ops.source_runs(source, scope, last_attempt_at, last_success_at, status) VALUES
+                 ('vega', 'national_teams', %s, %s, 'ok'), ('vega', 'team_identity', %s, %s, 'ok')
+                 ON CONFLICT (source, scope) DO UPDATE SET last_attempt_at = excluded.last_attempt_at, last_success_at = excluded.last_success_at""",
+              (NOW, NOW, NOW, NOW))
+
+        ran()
+        with self.db.transaction():
+            team = cups._team(self.db, "international_results", "Freedonia", "Freedonia")
+        self.assertEqual(x(armed).fetchall(), [("national_teams", True), ("team_identity", True)])  # red before §55: national_teams not re-armed
+        ran()
+        with self.db.transaction():
+            self.assertEqual(cups._team(self.db, "international_results", "Freedonia", "Freedonia"), team)
+        self.assertEqual(x(armed).fetchall(), [("national_teams", False), ("team_identity", False)])
 
 
 if __name__ == "__main__":

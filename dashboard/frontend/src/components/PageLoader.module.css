@@ -18,8 +18,8 @@
   position: relative;
   display: grid;
   place-items: center;
-  width: 132px;
-  height: 156px;
+  width: 96px;
+  height: 112px;
   padding: 12px;
   border: 0;
   border-radius: 0;
@@ -57,17 +57,14 @@
   height: auto;
   overflow: visible;
 }
-.shape,
-.point {
+/* The asterisk turns on itself, one petal at a time: 60° brings six petals back onto
+   themselves, so each beat ends where the next one starts. */
+.sign {
   fill: currentColor;
-}
-.shape {
   opacity: 0.92;
-}
-/* Up fast, down faster, as a ball does, along the slope of the V's arm so it never crosses
-   it; the box keeps room above the letter for it. */
-.point {
-  animation: bounce 900ms infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: turn 900ms cubic-bezier(0.65, 0, 0.35, 1) infinite;
 }
 .spark {
   animation: spark 620ms cubic-bezier(0.23, 1, 0.32, 1);
@@ -80,22 +77,14 @@
   transform: translate(var(--logo-x, 0px), var(--logo-y, 0px)) scale(0.96);
 }
 @media (hover: hover) and (pointer: fine) {
-  .control:hover .shape {
+  .control:hover .sign {
     opacity: 1;
-  }
-  .control:hover .point {
-    animation-duration: 620ms;
+    animation-duration: 600ms;
   }
 }
-@keyframes bounce {
-  0%,
-  100% {
-    transform: translate(0, 0);
-    animation-timing-function: cubic-bezier(0.2, 0.6, 0.35, 1);
-  }
-  50% {
-    transform: translate(58px, -170px);
-    animation-timing-function: cubic-bezier(0.65, 0, 0.8, 0.4);
+@keyframes turn {
+  to {
+    transform: rotate(60deg);
   }
 }
 @keyframes spark {
@@ -115,11 +104,11 @@
     transform: none;
     transition: none;
   }
-  .point,
+  .sign,
   .spark {
     animation: none;
   }
-  .control:active .shape {
+  .control:active .sign {
     opacity: 0.65;
   }
 }

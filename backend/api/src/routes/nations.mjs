@@ -9,12 +9,14 @@
  * of the season, its Elo after each match, its matches (a match held twice, collected and
  * archived, once), its runs in the major tournaments (World Cup, Euro, Africa Cup of Nations…)
  * and the players of its latest edition with player statistics, with the club they last
- * played for. A team that is no national team is not served.
+ * played for; a match International Results gives the scorers of carries them (`scorers`, §57). A team that is no
+ * national team is not served.
  */
 import { createHash } from "node:crypto";
 import { stageKind, UNKNOWN_STAGE_LABEL } from "../../../../dashboard/shared/tournament-stages.js";
 import { finalPoolPosition1950, WORLD_CUP_1950_EDITION } from "../../../../dashboard/shared/world-cup-1950.js";
 import { matchesEtag, reject, send, validateParams } from "../http.mjs";
+import { scorersBy, withScorers } from "../international-goals.mjs";
 
 const NATION = /^\/api\/nations\/(t_(?:[A-Za-z0-9]{6}|v\d{7}))$/;
 // A fixture's team still to qualify, which a source files as a national team (the Euro 2028
@@ -147,7 +149,7 @@ function seasonParam(params) {
   return season;
 }
 
-function nationOf(r) {
+export function nationOf(r) {
   const out = { id: r.team_id, name: r.name, imageUrl: r.image_url ?? null, matches: r.matches };
   put(out, "lastMatch", r.last_match ? String(r.last_match).slice(0, 10) : null);
   put(out, "elo", num(r.elo));
@@ -155,14 +157,22 @@ function nationOf(r) {
     out.ranking = {
       rank: r.rank, elo: num(r.season_elo), eloChange: num(r.elo_change), matches: r.season_matches,
       wins: r.wins, draws: r.draws, losses: r.losses, results: num(r.result_sum), expected: num(r.expected_sum),
+      provisional: r.provisional === true,
     };
   return out;
 }
 
-function matchOf(r) {
+// « The season's other internationals » (nations-results:internationals:<season>): the file names each match's
+// tournament (« Friendly », « FIFA World Cup qualification »…), stored as its round, and no stage (FAILURE_MODES §50).
+const INTERNATIONALS = /^nations-results:internationals:/;
+
+/** One match of the nation; a match of the season's other internationals under its tournament, with no round. */
+export function matchOf(r) {
+  const internationals = INTERNATIONALS.test(r.edition || "") && Boolean(r.round);
   const out = {
-    date: r.match_date ? String(r.match_date).slice(0, 10) : null, season: r.season, competition: r.competition,
-    edition: r.edition ?? null, round: r.round ?? null, status: r.status,
+    date: r.match_date ? String(r.match_date).slice(0, 10) : null, season: r.season,
+    competition: internationals ? r.round : r.competition,
+    edition: r.edition ?? null, round: internationals ? null : r.round ?? null, status: r.status,
     home: { id: r.home_id, name: r.home_name, imageUrl: r.home_image ?? null },
     away: { id: r.away_id, name: r.away_name, imageUrl: r.away_image ?? null },
     homeScore: r.home_score, awayScore: r.away_score, homePenalties: r.home_penalties, awayPenalties: r.away_penalties,
@@ -172,29 +182,41 @@ function matchOf(r) {
   return out;
 }
 
+// The nations whose place in the season's world ranking is provisional (§51: fewer than 8 counted matches in four years).
+async function provisionalOf(read, season) {
+  const rows = await read(`SELECT team_key FROM api.power_clubs WHERE season_id=${SEASON_KEY} AND scope='nations' AND provisional`, [season]);
+  return new Set(rows.map((r) => r.team_key));
+}
+
 export function createNationRoute(read) {
   return async (req, path, params) => {
     if (path === "/api/nations") {
       const season = seasonParam(params);
-      const rows = (await read(`SELECT * FROM api.nation_list(${SEASON_KEY})`, [season])).filter((r) => !placeholderTeam(r.name));
+      const [listed, flags] = await Promise.all([read(`SELECT * FROM api.nation_list(${SEASON_KEY})`, [season]), provisionalOf(read, season)]);
+      const rows = listed.filter((r) => !placeholderTeam(r.name)).map((r) => ({ ...r, provisional: flags.has(r.team_key) }));
       const nations = rows.map(nationOf).sort((a, b) => (a.ranking?.rank ?? Infinity) - (b.ranking?.rank ?? Infinity) || (b.elo ?? -Infinity) - (a.elo ?? -Infinity) || a.name.localeCompare(b.name));
       return respond(req, { season, ranked: nations.filter((n) => n.ranking).length, nations });
     }
     const nation = path.match(NATION);
     if (!nation) return null;
     const season = seasonParam(params);
-    const [list, [key]] = await Promise.all([
+    const [list, [key], flags] = await Promise.all([
       read(`SELECT * FROM api.nation_list(${SEASON_KEY})`, [season]),
       read("SELECT api.internal_id('team',$1) AS key", [nation[1]]),
+      provisionalOf(read, season),
     ]);
-    const own = key?.key == null ? null : list.find((r) => r.team_key === key.key && !placeholderTeam(r.name));
+    const found = key?.key == null ? null : list.find((r) => r.team_key === key.key && !placeholderTeam(r.name));
+    const own = found && { ...found, provisional: flags.has(found.team_key) };
     if (!own) reject(404, "Ressource introuvable.");
-    const [matchRows, eloRows, playerRows] = await Promise.all([
+    const [matchRows, eloRows, playerRows, goalRows] = await Promise.all([
       read("SELECT * FROM api.nation_matches($1::integer) ORDER BY match_date DESC NULLS LAST", [own.team_key]),
       read("SELECT * FROM api.nation_elo($1::integer)", [own.team_key]),
       read("SELECT * FROM api.nation_players($1::integer)", [own.team_key]),
+      // The scorers of its International Results matches (§57), by the match's public id.
+      read("SELECT * FROM api.international_goals WHERE home_key = $1::integer OR away_key = $1::integer", [own.team_key]),
     ]);
-    const matches = matchRows.map(matchOf);
+    const scorers = scorersBy(goalRows, (r) => r.match_id);
+    const matches = matchRows.map((r) => withScorers(matchOf(r), scorers.get(r.match_id)));
     const data = {
       ...nationOf(own),
       season,

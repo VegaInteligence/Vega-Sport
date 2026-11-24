@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { get, skip } from "./context.mjs";
-import { comingMatches, cupFormat, cupStages, groupsByTeam, levelsByTeam, provisionalReason, roundOpponents, roundRace, RACE_CARD } from "../src/routes/rankings.mjs";
+import { comingMatches, cupFormat, cupStages, groupsByTeam, levelReason, levelsByTeam, powerRow, provisionalReason, roundOpponents, roundRace, RACE_CARD } from "../src/routes/rankings.mjs";
 
 test("club links and a club's UEFA ranking history", { skip }, async () => {
   const links = (await get("/api/club-links?club=t_aaaaa1")).body;
@@ -45,12 +45,23 @@ test("ranking index and editions", { skip }, async () => {
   assert.equal((await get("/api/rankings/edition?kind=fifa-men&edition=2025-09-18.fifa")).response.status, 400); // no source in a key
 });
 
-test("the players' level of a season (Score Vega v9), read beside the power ranking", { skip }, async () => {
+test("why a level's rank is provisional: the minutes bar, the unmeasured league, then the keeper without goals prevented", () => {
+  // FAILURE_MODES §54, 54m: the first reason that holds.
+  assert.equal(levelReason({ universe: "men", eligible: true, linked: true, measured: true }), null);
+  assert.equal(levelReason({ universe: "men", eligible: true, linked: true, measured: false }), "keeper_data");
+  assert.equal(levelReason({ universe: "men", eligible: false, linked: true, measured: false }), "minutes");
+  assert.equal(levelReason({ universe: "men", eligible: true, linked: false, measured: false }), "league");
+  assert.equal(levelReason({ universe: "women", eligible: true, linked: false, measured: false }), "keeper_data");
+  assert.equal(levelReason({ universe: "women", eligible: true, linked: false, measured: true }), null);
+});
+
+test("the players' level of a season (Score Vega v9.1), read beside the power ranking", { skip }, async () => {
   // FAILURE_MODES §49, 49t: the level's rows, under the read role; the power ranking's answer (next test) is unchanged.
+  // §54, 54m: the keeper without goals prevented on half his minutes is provisional, with his own reason.
   const { response, body } = await get("/api/rankings/level?season=2025/2026");
   assert.equal(response.status, 200);
   assert.deepEqual([body.season, body.universe, body.position, body.page, body.limit, body.total], ["2025/2026", "men", null, 1, 50, 3]);
-  assert.deepEqual(body.method, { version: "score-vega-v9", computedAt: "2025-09-06T03:05:00.000Z" });
+  assert.deepEqual(body.method, { version: "score-vega-v9.1", computedAt: "2025-09-06T03:05:00.000Z" });
   assert.deepEqual(body.rows.map((r) => [r.rank, r.positionRank, r.playerId, r.position, r.positionKey, r.score, r.level]), [
     [1, 1, "p_aaaab1", "Avant-centre", "centre_forward", 79.7, 21.4], [2, 1, "p_aaaab4", "Milieu offensif", "attacking_midfielder", 50, 0],
     [3, 1, "p_aaaab3", "Gardien", "goalkeeper", 40.5, -6],
@@ -59,7 +70,8 @@ test("the players' level of a season (Score Vega v9), read beside the power rank
     "score", "level", "own", "club", "minutes", "provisional", "provisionalReason"]);
   // The level is what he does (his blocks and his starts) and his club: the parts are served with it.
   assert.deepEqual([body.rows[0].own, body.rows[0].club, body.rows[0].minutes, body.rows[0].provisionalReason], [14.2, 7.2, 260, null]);
-  assert.deepEqual([body.rows[2].provisional, body.rows[2].provisionalReason], [true, "minutes"]);
+  assert.deepEqual([body.rows[2].provisional, body.rows[2].provisionalReason], [true, "keeper_data"]);
+  assert.deepEqual(body.rows.slice(0, 2).map((r) => r.provisional), [false, false]);
   // One position, a page at a time.
   const tens = (await get("/api/rankings/level?season=2025/2026&position=attacking_midfielder")).body;
   assert.deepEqual([tens.position, tens.total, tens.rows.map((r) => r.playerId)], ["attacking_midfielder", 1, ["p_aaaab4"]]);
@@ -72,10 +84,11 @@ test("the players' level of a season (Score Vega v9), read beside the power rank
     assert.equal((await get("/api/rankings/level" + bad)).response.status, 400, bad);
   // One player's level, for his page: its parts, and each position he played, judged or not.
   const own = (await get("/api/rankings/level/player?season=2025/2026&player=p_aaaab1")).body;
-  assert.deepEqual([own.season, own.method.version], ["2025/2026", "score-vega-v9"]);
+  assert.deepEqual([own.season, own.method.version], ["2025/2026", "score-vega-v9.1"]);
   assert.deepEqual(own.player, {
     id: "p_aaaab1", rank: 1, positionRank: 1, position: "Avant-centre", positionKey: "centre_forward", score: 79.7, level: 21.4, own: 14.2, blocks: 11,
-    starts: 3.2, club: 7.2, startShare: 0.9, minutes: 260, universe: "men", eligible: true, linked: true, provisional: false, provisionalReason: null,
+    starts: 3.2, club: 7.2, startShare: 0.9, minutes: 260, universe: "men", eligible: true, linked: true, measured: true, provisional: false,
+    provisionalReason: null,
     positions: [
       { position: "Avant-centre", positionKey: "centre_forward", judged: true, minutes: 200, minutesTwoSeasons: 2600, share: 1, value: 13.5, level: 21.4,
         talents: { finishing: 1.25, creation: 0.4, progression: 0.1, defence: -0.3, retention: 0.2 } },
@@ -83,7 +96,8 @@ test("the players' level of a season (Score Vega v9), read beside the power rank
     ],
   });
   const keeper = (await get("/api/rankings/level/player?season=2025/2026&player=p_aaaab3")).body.player;
-  assert.deepEqual([keeper.position, keeper.provisionalReason, keeper.positions[0].talents], ["Gardien", "minutes", null]);
+  assert.deepEqual([keeper.position, keeper.eligible, keeper.measured, keeper.provisional, keeper.provisionalReason, keeper.positions[0].talents],
+    ["Gardien", true, false, true, "keeper_data", null]);
   assert.equal((await get("/api/rankings/level/player?season=2025/2026&player=p_aaaab2")).response.status, 404);
   assert.equal((await get("/api/rankings/level/player?season=2025/2026&player=aaaab1")).response.status, 400);
   assert.equal((await get("/api/rankings/level/player?season=2025/2026")).response.status, 400);
@@ -215,6 +229,11 @@ test("power rankings of players and clubs for a season", { skip }, async () => {
   assert.equal((await get("/api/rankings/power?kind=players&season=2025/2026&scope=all&role=striker")).response.status, 400);
   assert.equal((await get("/api/rankings/power?kind=players&season=2025/2026&page=2")).response.status, 400);
   assert.equal((await get("/api/rankings/power?kind=nations&season=2025/2026")).response.status, 404);
+  // §51 (51m): the nations' ranking is read a page at a time (about 205 nations, at most 200 a page); the clubs' is not.
+  assert.equal((await get("/api/rankings/power?kind=nations&season=2025/2026&page=2")).response.status, 404); // red before §51: 400
+  assert.equal((await get("/api/rankings/power?kind=nations&season=2025/2026&page=0")).response.status, 400);
+  assert.equal((await get("/api/rankings/power?kind=clubs&season=2025/2026&page=2")).response.status, 400);
+  assert.equal((await get("/api/rankings/power?kind=nations&season=2025/2026&limit=201")).response.status, 400);
   assert.equal((await get("/api/rankings/power?kind=players&season=2025")).response.status, 400);
   assert.equal((await get("/api/rankings/power?kind=ballon&season=2025/2026")).response.status, 400);
 });
@@ -430,4 +449,13 @@ test("a round's race: the card's first ten by default, the whole race when asked
   assert.deepEqual([roundRace(rows, "all").rows.length, roundRace(rows, "all").total], [23, 23]);
   assert.deepEqual(roundRace([], null), { rows: [], total: 0 });
   for (const bad of ["", "ALL", "20", "all "]) assert.throws(() => roundRace(rows, bad), (error) => error.status === 400);
+});
+
+test("51m. a nation's row of the world ranking says whether it is provisional", () => {
+  const row = { rank: 187, team_id: "t_gib", name: "Gibraltar", image_url: null, country: null, elo: 1163.24, elo_change: -12.04, matches: 6,
+    last_match_at: "2026-11-17T00:00:00Z", provisional: true, elo_start: 1175.28, elo_peak: 1180, elo_low: 1150, wins: 0, draws: 1, losses: 5, result_sum: 0.5, expected_sum: 1.2 };
+  const nation = powerRow("nations", row, null);
+  assert.deepEqual([nation.rank, nation.elo, nation.provisional, "score" in nation], [187, 1163.2, true, false]);
+  assert.equal(powerRow("nations", { ...row, provisional: false }, null).provisional, false);
+  assert.equal("provisional" in powerRow("clubs", { ...row, provisional: false }, 1500), false);
 });

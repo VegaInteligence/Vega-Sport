@@ -46,6 +46,11 @@ jobs:
         run: python -m unittest discover -s backend/tests -v
       - name: Read API suites
         run: npm test --prefix backend/api
+      # The account tables are applied alone on their own database (backend/account/test/schema.test.mjs).
+      - name: Account dependencies
+        run: npm ci --prefix backend/account
+      - name: Account suites
+        run: npm test --prefix backend/account
   site:
     name: Site tests and build
     runs-on: ubuntu-latest
@@ -97,6 +102,8 @@ jobs:
           docker run --rm --entrypoint node vega-worker:${{ github.sha }} /app/backend/archives/edition.mjs - - > /dev/null
           # Every file a source adapter reads is where it looks for it in the image.
           docker run --rm --entrypoint python vega-worker:${{ github.sha }} -c "from vega.sources import curated, honours, wikidata; from vega import archives; import sys; missing = [str(p) for p in (curated.SHARED / 'league-rules.json', curated.SHARED / 'cup-logos.json', honours.SCRIPTS / 'player_honours.py', wikidata.BRIDGE, archives.EDITION, archives.TWINS) if not p.exists()]; sys.exit('missing: ' + ', '.join(missing) if missing else 0)"
+          # The account's SQL files, where the migration task reads them (vega/migrate.py ACCOUNT_SQL).
+          docker run --rm --entrypoint python vega-worker:${{ github.sha }} -c "from vega import migrate; import sys; names = sorted(p.name for p in migrate.ACCOUNT_SQL.glob('*.sql')); sys.exit(0 if names[:2] == ['001_accounts.sql', '002_account_api.sql'] else 'account SQL missing: ' + str(names))"
   api-package:
     name: Read API package
     runs-on: ubuntu-latest
@@ -111,5 +118,10 @@ jobs:
       - run: python3 infra/aws/package_api.py "$RUNNER_TEMP/api"
       # GET /live/matches/{id}: its own function, the runtime's AWS SDK left out of the bundle.
       - run: python3 infra/aws/package_api.py "$RUNNER_TEMP/live" live
+      # The account API's two functions (backend/account/FAILURE_MODES.md W13): each build runs its own offline check,
+      # the front's 503 NOT_CONFIGURED and the store's NOT_CONFIGURED, on the bundled file.
+      - run: npm ci --prefix backend/account
+      - run: python3 infra/aws/package_api.py "$RUNNER_TEMP/account" account-front
+      - run: python3 infra/aws/package_api.py "$RUNNER_TEMP/account" account-store
       - uses: actions/upload-artifact@v7
         with: {name: api-package, path: '${{ runner.temp }}/api/*.zip', retention-days: 14}

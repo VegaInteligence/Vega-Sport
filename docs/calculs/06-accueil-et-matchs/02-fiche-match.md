@@ -18,7 +18,8 @@ La source ne les envoie que pour **certaines compétitions et pour les matchs lu
 - les tirs sont triés par minute ; chaque tir avec un xG ajoute un palier à la courbe de son équipe ;
 - un **contre son camp n'ajoute aucun xG** mais compte comme but pour l'autre équipe ;
 - chaque but est placé sur la courbe à la hauteur du xG cumulé de l'équipe qui marque ;
-- la courbe se prolonge jusqu'à `max(90, minute du dernier tir)` ;
+- l'axe va jusqu'à `max(90, minute du dernier tir)` arrondi au quart d'heure, et jusqu'au **120e** pour un match allé en prolongation (`extraTime` de `/api/forecasts/live`, comme la probabilité de victoire, ou un tir de période `extra_time` ou après la 90e ; le temps additionnel est noté 90 + `minute_added`) : graduations tous les quarts d'heure, traits à la 90e et à la 105e ;
+- pour un match terminé, chaque courbe se prolonge à plat jusqu'au bout de l'axe ;
 - **contrôle de cohérence** : si la somme des xG des tirs d'une équipe s'écarte de plus de **0,02** de sa statistique d'équipe `expected_goals`, la page le signale (tirs manquants ou arrondis différents).
 
 ## Carte des tirs

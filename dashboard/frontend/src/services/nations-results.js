@@ -42,7 +42,7 @@ export function parseNationsResults(csv) {
     const key = [row[0], home.english, away.english].join("|");
     if (seen.has(key)) throw new Error("Duplicate Nations League result");
     seen.add(key);
-    result.push({ key: "nations:" + key, date: row[0], home: home.french, away: away.french, homeId: home.english, awayId: away.english, score: [Number(row[3]), Number(row[4])], status: "finished", league: home.league, group: home.group, round: "Groupe " + home.group });
+    result.push({ key: "nations:" + key, date: row[0], home: home.french, away: away.french, homeId: home.english, awayId: away.english, score: [Number(row[3]), Number(row[4])], status: "finished", league: home.league, group: home.group, round: "Groupe " + home.group, neutral: row[8] === "TRUE" });
   }
   return result;
 }
@@ -83,15 +83,22 @@ export function parseTournamentResults(csv, competition, season) {
 }
 
 // Every international of a season beyond what the base reads elsewhere: the home's week strip shows them (19 Nov
-// 2026). The Nations League has its editions (OpenLigaDB's League A, parseNationsResults' Leagues B to D), the World
-// Cup is PitchAPI's, and a tournament of TOURNAMENT_EDITIONS is its edition's inside that edition's days.
-const OWN_EDITIONS = new Set(["UEFA Nations League", "FIFA World Cup"]);
-const firstSeason = 2021;
+// 2026), the nation page lists them by season (FAILURE_MODES.md §50). The seasons read: 2021/22, the base's first, to
+// 2026/27; going further back is this line's first year (backend/vega/sources/cups.py INTERNATIONAL_SEASONS, the same
+// list, drift-tested).
+export const INTERNATIONAL_SEASONS = Array.from({ length: 2026 - 2021 + 1 }, (_, i) => `${2021 + i}/${2022 + i}`);
+// Held elsewhere whatever the season: every World Cup (open-cups:world-cup-history 1930–2026, PitchAPI's 2022 and
+// 2026) and every Euro (open-cups:euro 1960–2028; the Euro 2020's knock-out matches were played in July 2021).
+const ALWAYS_HELD = new Set(["FIFA World Cup", "UEFA Euro"]);
+// Held elsewhere in the seasons the base has an edition of: the Nations League of 2026/27 (OpenLigaDB's League A,
+// parseNationsResults' Leagues B to D). An older season keeps it: no edition holds it.
+const SEASON_HELD = { "UEFA Nations League": new Set(["2026/2027"]) };
+// A tournament of TOURNAMENT_EDITIONS is its edition's inside that edition's days.
 
 /** The season's internationals (1 July – 30 June) from the CC0 dataset, the tournament as their round. */
 export function parseInternationalResults(csv, season) {
   const start = Number(/^(\d{4})\/(\d{4})$/.exec(season || "")?.[1]);
-  if (!(start >= firstSeason) || season !== `${start}/${start + 1}`) throw new Error("Unknown season");
+  if (!(start >= Number(INTERNATIONAL_SEASONS[0].slice(0, 4))) || season !== `${start}/${start + 1}`) throw new Error("Unknown season");
   const from = `${start}-07-01`, to = `${start + 1}-06-30`;
   if (typeof csv !== "string" || csv.length > 12 * 1024 * 1024) throw new Error("Invalid results data");
   const lines = csv.split(/\r?\n/), header = csvRow(lines[0] || "");
@@ -102,7 +109,7 @@ export function parseInternationalResults(csv, season) {
     const day = line.slice(0, 10);
     if (day < from || day > to) continue;
     const row = csvRow(line);
-    if (!row || row.length < 9 || OWN_EDITIONS.has(row[5])) continue;
+    if (!row || row.length < 9 || ALWAYS_HELD.has(row[5]) || SEASON_HELD[row[5]]?.has(season)) continue;
     if (windows.some(([tournament, first, last]) => row[5] === tournament && day >= first && day <= last)) continue;
     if (!/^\d+$/.test(row[3]) || !/^\d+$/.test(row[4])) continue;
     const key = [row[0], row[1], row[2]].join("|");
@@ -112,4 +119,29 @@ export function parseInternationalResults(csv, season) {
       score: [Number(row[3]), Number(row[4])], status: "finished", round: row[5], neutral: row[8] === "TRUE" });
   }
   return result;
+}
+
+// The scorers of the matches above (goalscorers.csv of the same dataset, FAILURE_MODES.md §57), from the base's first
+// held day: the first season of INTERNATIONAL_SEASONS (every tournament of TOURNAMENT_EDITIONS is played after it).
+export const FIRST_GOAL_DAY = `${INTERNATIONAL_SEASONS[0].slice(0, 4)}-07-01`;
+const GOAL_COLUMNS = "date,home_team,away_team,team,scorer,minute,own_goal,penalty";
+const orNull = (value) => (value === undefined || value === "" || value === "NA" ? null : value);
+
+/** Each goal of goalscorers.csv from FIRST_GOAL_DAY, in file order, with its match's key (`date|home_team|away_team`,
+ * the teams as results.csv names them). Values as the file writes them (« NA » as null); the writer types them
+ * (backend/vega/sources/international_goals.py). */
+export function parseGoalscorers(csv) {
+  if (typeof csv !== "string" || csv.length > 12 * 1024 * 1024) throw new Error("Invalid goalscorers data");
+  const lines = csv.split(/\r?\n/), header = csvRow(lines[0] || "");
+  if (!header || header.slice(0, 8).join(",") !== GOAL_COLUMNS || (header.length > 8 && header[8] !== "assist"))
+    throw new Error("Invalid goalscorers header");
+  const goals = [];
+  for (const line of lines.slice(1)) {
+    if (line.slice(0, 10) < FIRST_GOAL_DAY) continue;
+    const row = csvRow(line);
+    if (!row || row.length < 8) continue;
+    goals.push({ match: [row[0], row[1], row[2]].join("|"), team: row[3], scorer: orNull(row[4]), minute: orNull(row[5]),
+      ownGoal: row[6], penalty: row[7], assist: orNull(row[8]) });
+  }
+  return goals;
 }

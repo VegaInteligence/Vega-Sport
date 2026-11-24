@@ -283,7 +283,7 @@ function MatchPlayer({ row, rank, grade }) {
     </button>
   );
 }
-function MatchShots({ match }) {
+function MatchShots({ match, extraTime = false }) {
   const f = useFootball(),
     [chart, setChart] = useState("map"),
     [team, setTeam] = useState("all");
@@ -321,7 +321,12 @@ function MatchShots({ match }) {
         {chart === "map" ? (
           <ShotMap match={match} teamId={team} onPlayer={f.setPlayer} />
         ) : (
-          <XgTimeline match={match} teamId={team} onPlayer={f.setPlayer} />
+          <XgTimeline
+            match={match}
+            teamId={team}
+            onPlayer={f.setPlayer}
+            extraTime={extraTime}
+          />
         )}
       </Card>
       <Card
@@ -364,7 +369,7 @@ function MatchShots({ match }) {
     </div>
   );
 }
-function SummaryShots({ match }) {
+function SummaryShots({ match, extraTime = false }) {
   const f = useFootball();
   const resource = useResource(
     matchResourceKey(
@@ -388,7 +393,7 @@ function SummaryShots({ match }) {
   );
   return (
     <AsyncState resource={resource}>
-      {(value) => <MatchShots match={value} />}
+      {(value) => <MatchShots match={value} extraTime={extraTime} />}
     </AsyncState>
   );
 }
@@ -712,6 +717,7 @@ export default function MatchDetail({ match }) {
                 match={match}
                 onPlayer={f.setPlayer}
                 maxHeight={290}
+                extraTime={past?.extraTime === true}
               />
             </Card>
             <Card fold title="Les chiffres du match">
@@ -765,9 +771,9 @@ export default function MatchDetail({ match }) {
         {view === "standings" && <MatchStandings match={match} />}
         {view === "shots" &&
           (match.summaryVersion ? (
-            <SummaryShots match={match} />
+            <SummaryShots match={match} extraTime={past?.extraTime === true} />
           ) : (
-            <MatchShots match={match} />
+            <MatchShots match={match} extraTime={past?.extraTime === true} />
           ))}
         {view === "lineups" && (
           <MatchLineups key={`${match.id}:lineups`} match={match} />

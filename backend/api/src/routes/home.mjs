@@ -14,6 +14,11 @@
  * api.home_rules_v1 (044_home_settings.sql). Same blocks and weights as
  * relational-home.js on main.
  *
+ * Importance v2 (171_home_importance_v2.sql, VI-48): stakes × level + balance, for « À l'affiche »
+ * (`billboard`, the window of api.home_rules_v2, its bounds as `billboardWindow`), `highlights[].weight2` and GET /api/read/home-local
+ * (a country's competitions and matches). The existing blocks keep v1 until the user validates v2:
+ * HIGHLIGHT_ORDER is the switch.
+ *
  * Differences with the legacy read, by construction (listed for the parity
  * comparison):
  * - a finished match with its final score counts as a result as soon as the score is
@@ -40,7 +45,7 @@ import {
   resolveEditions,
   scopeWhere,
 } from "../publication.mjs";
-import { fixture } from "./matches.mjs";
+import { fixture, forecastOf } from "./matches.mjs";
 import { appearanceRecord } from "./performance.mjs";
 
 // The European club cups (a competition's nature, not an editorial choice).
@@ -51,6 +56,24 @@ export const UPCOMING_OFFERED = 12;
 // The common read: fresh for 60 s, then served stale for 5 minutes while CloudFront
 // computes it again, and for a day if that fails.
 export const HOME_STALE = { revalidate: 300, error: 86400 };
+// The order of the offered upcoming matches: v1's editorial weight. Switching to v2 is
+// "weight2 DESC NULLS LAST,kickoff,id" (VI-48, after the user validates it).
+const HIGHLIGHT_ORDER = "editorial_weight DESC,kickoff,id";
+// The statuses « À l'affiche » and home-local show: played, playing, to play.
+const SHOWN = "('finished','in_play','not_started')";
+// Paris today, from the read's instant.
+const parisToday = (instant) => `((${instant} AT TIME ZONE 'Europe/Paris')::date)`;
+// Importance v2 of the matches of `keys` (a statement of match ids), once per read.
+const importanceSql = (season, keys) => `SELECT i.* FROM api.home_importance_v2(${season}::smallint,ARRAY(${keys})) i`;
+// A window's matches with their importance, the most important `cap` of each Paris day: day ↑, importance ↓,
+// kick-off ↑, id ↑. `source` exposes the fixtures' columns, kickoff and local_day.
+const rankedWindow = (source) => `SELECT w.*,i.weight importance,extract(epoch FROM w.kickoff)*1000 time_ms,
+ CASE WHEN i.home_win IS NOT NULL THEN jsonb_build_object('home_win',i.home_win,'draw',i.draw,'away_win',i.away_win) END forecast,
+ row_number() OVER(PARTITION BY w.local_day ORDER BY i.weight DESC NULLS LAST,w.kickoff,w.id) daily_number
+ FROM (${source}) w LEFT JOIN importance i ON i.match_id=w.match_id`;
+const WINDOW_ORDER = "r.local_day,r.importance DESC NULLS LAST,r.kickoff,r.id";
+const windowRows = (ranked, cap) => `SELECT * FROM (${ranked}) r WHERE r.daily_number<=${cap}`;
+const windowJson = (relation) => `(SELECT coalesce(jsonb_agg(to_jsonb(r) ORDER BY ${WINDOW_ORDER}),'[]'::jsonb) FROM ${relation} r)`;
 // The season leaderboards: [name, who qualifies, order, size] (main's relational-home.js).
 const BOARDS = [
   ["goals", "goals>0", "goals DESC,coalesce(xg,0) DESC,player_id", 10],
@@ -169,6 +192,7 @@ export function homeReadQuery(filters, params, now, editions) {
 WITH publication AS MATERIALIZED (${publication}),
 lists AS MATERIALIZED (${LISTS}),
 rules AS MATERIALIZED (SELECT * FROM api.home_rules_v1),
+rules2 AS MATERIALIZED (SELECT * FROM api.home_rules_v2),
 ${weekSql(fixtureScope, fence, instant, filters.archive)}, league_sides AS MATERIALIZED (
  SELECT f.*,s.team_id,s.name,s.image_url,s.gf,s.ga,
  (f.status='finished' AND ${scoreSql("f.score_home")} AND ${scoreSql("f.score_away")}) scored
@@ -298,10 +322,19 @@ week_apps AS MATERIALIZED (
  WHERE f.status='not_started' AND f.kickoff>${instant}
  AND f.kickoff<=${instant}+make_interval(days=>(SELECT upcoming_days FROM rules))
  AND coalesce(f.home_name,'')<>'' AND coalesce(f.away_name,'')<>''
+), billboard_window AS MATERIALIZED (
+ -- « À l'affiche »: the scope's matches of yesterday to today + 3 (Paris days, api.home_rules_v2).
+ SELECT f.* FROM fixtures f CROSS JOIN rules2 r
+ WHERE f.status IN ${SHOWN} AND f.local_day BETWEEN ${parisToday(instant)}-r.billboard_days_before AND ${parisToday(instant)}+r.billboard_days_after
+ AND coalesce(f.home_name,'')<>'' AND coalesce(f.away_name,'')<>''
+), importance AS MATERIALIZED (
+ ${importanceSql(season, "SELECT match_id FROM billboard_window UNION SELECT match_id FROM upcoming_candidates")}
+), billboard AS MATERIALIZED (
+ ${windowRows(rankedWindow("SELECT * FROM billboard_window"), "(SELECT billboard_per_day FROM rules2)")}
 ), upcoming AS MATERIALIZED (
- SELECT u.*,(league_id=ANY(${uefa})) europe,
- row_number() OVER(ORDER BY editorial_weight DESC,kickoff,id) highlight_order
- FROM upcoming_candidates u
+ SELECT u.*,(league_id=ANY(${uefa})) europe,i.weight weight2,
+ row_number() OVER(ORDER BY ${HIGHLIGHT_ORDER}) highlight_order
+ FROM upcoming_candidates u LEFT JOIN importance i ON i.match_id=u.match_id
 ), streak AS MATERIALIZED (
  SELECT * FROM ranked WHERE streak>=3 AND ${notCup()} ORDER BY streak DESC,rank,league_id LIMIT 1
 ), defence_candidates AS (
@@ -360,6 +393,9 @@ SELECT publication.*,
  (SELECT ${tableRow("s")} FROM streak s) streak,
  (SELECT coalesce(jsonb_agg(${tableRow("d")}||jsonb_build_object('perGame',d.per_game) ORDER BY d.per_game,d.clean_sheets DESC,d.league_id,d.rank),'[]'::jsonb) FROM defences d) defences,
  ${jsonRows(`SELECT * FROM upcoming ORDER BY highlight_order LIMIT ${UPCOMING_OFFERED}`)} highlights,
+ ${windowJson("billboard")} billboard,
+ -- The billboard's Paris days, so the site keeps home-local's matches to them (VI-48: the country in the cards).
+ (SELECT jsonb_build_object('start',${parisToday(instant)}-billboard_days_before,'end',${parisToday(instant)}+billboard_days_after) FROM rules2) billboard_bounds,
  (SELECT to_jsonb(r) FROM rules r) rules,
  ${oneRow("SELECT u.* FROM upcoming u JOIN streak s ON s.team_id IN(u.home_team_id,u.away_team_id) ORDER BY u.highlight_order LIMIT 1")} streak_next,
  (SELECT coalesce(avg(least(1,played::float8/games)),0) FROM table_totals t WHERE games>0 AND ${notCup()}
@@ -372,6 +408,8 @@ FROM publication`;
   return { sql, values };
 }
 
+const round2 = (value) => (value == null ? null : Math.round(Number(value) * 100) / 100);
+
 const upcomingRecord = (row) =>
   row
     ? {
@@ -380,8 +418,18 @@ const upcomingRecord = (row) =>
         day: row.upcoming_day,
         europe: Boolean(row.europe),
         weight: row.editorial_weight,
+        weight2: round2(row.weight2),
       }
     : null;
+
+// A match of a window (« À l'affiche », home-local): its fixture, kick-off, Paris day, importance v2 and forecast.
+export const windowRecord = (row) => ({
+  fixture: fixture(row),
+  time: Number(row.time_ms),
+  day: row.local_day,
+  weight: round2(row.importance),
+  forecast: forecastOf(row.forecast),
+});
 
 export const homeRules = (row) =>
   row
@@ -424,6 +472,8 @@ export function homeReadRecord(snapshot) {
     tables: snapshot.tables || [],
     ranks: snapshot.ranks || [],
     highlights: (snapshot.highlights || []).map(upcomingRecord),
+    billboard: (snapshot.billboard || []).map(windowRecord),
+    billboardWindow: snapshot.billboard_bounds ?? null,
     streak: snapshot.streak,
     defences: snapshot.defences || [],
     win: snapshot.biggest_win ? { match: match(snapshot.biggest_win.id), margin: snapshot.biggest_win.margin, goals: snapshot.biggest_win.goals } : null,
@@ -598,5 +648,112 @@ export function createHomeFavouritesRoute(read, clock = Date.now) {
     const [snapshot] = await read(sql, values);
     checkReadGeneration(params, snapshot?.generation);
     return readResponse(req, params, snapshot, homeFavouritesRecord(snapshot), { periodKey, maxBytes: 512 * 1024, personal: true });
+  };
+}
+
+/**
+ * GET /api/read/home-local?season=YYYY/YYYY&country=XXX — a country's corner of the home (VI-48): its competitions of
+ * the season (api.editions: the PitchAPI editions holding matches, with their level, api.league_levels), their
+ * matches of yesterday → today + 7 Paris days (api.home_rules_v2, its own window, given back as `window`) with their
+ * importance v2 and forecast, the most important `local_per_day` of each day, and the top of the table of the
+ * country's highest league (api.standing_rows). Common to every visitor: no scope, no favourite; cached as the home.
+ * A well-formed code that no competition has answers empty lists (cacheable, so an unknown country costs nothing).
+ */
+const COUNTRY = /^[A-Z]{3}$/;
+
+export function parseHomeLocal(params) {
+  validateParams(params, ["season", "country", "generation"]);
+  const { season } = parseReadScope(params);
+  const country = params.get("country");
+  if (!COUNTRY.test(country || "")) reject(400, "Pays invalide.");
+  return { season, country };
+}
+
+// The country's competitions of the season, the highest level first (a league before a cup at equal level).
+export const LOCAL_COMPETITIONS_SQL = `/*vega:v2:home-local-competitions*/
+SELECT e.league_id id,e.league_name name,e.country,e.kind,e.competition_season_id,e.is_current,l.level
+FROM api.editions e LEFT JOIN api.league_levels l ON l.competition_id=e.league_id
+WHERE e.season=$1 AND e.country=$2
+ORDER BY l.level DESC NULLS LAST,${normalizedSql("e.league_name")},e.league_id,e.is_current DESC,e.competition_season_id DESC`;
+
+/** The competitions once each, and the edition of the table: the highest league with a level (its current edition). */
+export function localCompetitions(rows) {
+  const competitions = [];
+  for (const r of rows)
+    if (!competitions.some((c) => c.id === r.id)) competitions.push({ id: r.id, name: r.name, country: r.country, level: r.level == null ? null : Number(r.level) });
+  const top = rows.find((r) => r.kind === "league" && r.level != null);
+  return { competitions, tableEdition: top ? Number(top.competition_season_id) : null };
+}
+
+export function homeLocalQuery(filters, params, now, editions, tableEdition) {
+  const values = [],
+    b = (value) => bindValue(values, value),
+    publication = publicationSql(filters.scope, values);
+  const season = b(editions.seasonId),
+    ids = b(editions.ids),
+    instant = `${b(new Date(now).toISOString())}::timestamptz`,
+    fence = params.has("generation") ? ` AND EXISTS(SELECT 1 FROM publication WHERE generation=${b(params.get("generation"))})` : "";
+  const sql = `/*vega:v2:home-local*/
+WITH publication AS MATERIALIZED (${publication}),
+rules2 AS MATERIALIZED (SELECT * FROM api.home_rules_v2),
+bounds AS MATERIALIZED (
+ SELECT ${parisToday(instant)}-local_days_before start_day,${parisToday(instant)}+local_days_after end_day FROM rules2
+), fixture_source AS MATERIALIZED (
+ -- The editions' fixtures near the window only: a fixture's date is its UTC day, a Paris day at most one off.
+ SELECT f.*,f.kickoff_at explicit_time FROM api.fixtures f
+ WHERE f.season_id=${season}::smallint AND f.competition_season_id=ANY(${ids}::int[])${fence}
+ AND coalesce(f.day,(f.kickoff_at AT TIME ZONE 'UTC')::date) BETWEEN (SELECT start_day FROM bounds)-1 AND (SELECT end_day FROM bounds)+1
+), local_window AS MATERIALIZED (
+ SELECT f.* FROM (
+  SELECT f.*,coalesce(explicit_time,(f.day+time '12:00') AT TIME ZONE 'UTC') kickoff,
+  coalesce((explicit_time AT TIME ZONE 'Europe/Paris')::date,f.day) local_day FROM fixture_source f) f
+ CROSS JOIN bounds w
+ WHERE f.status IN ${SHOWN} AND f.local_day BETWEEN w.start_day AND w.end_day
+ AND coalesce(f.home_name,'')<>'' AND coalesce(f.away_name,'')<>''
+), importance AS MATERIALIZED (
+ ${importanceSql(season, "SELECT match_id FROM local_window")}
+), local_matches AS MATERIALIZED (
+ ${windowRows(rankedWindow("SELECT * FROM local_window"), "(SELECT local_per_day FROM rules2)")}
+)
+SELECT publication.*,
+ (SELECT jsonb_build_object('start',start_day,'end',end_day) FROM bounds) "window",
+ ${windowJson("local_matches")} matches,
+ (SELECT jsonb_build_object('leagueId',min(t.league_id),'name',min(t.league_name),'rows',jsonb_agg(jsonb_build_object('id',t.id,'name',t.name,
+   'imageUrl',t.image_url,'position',t.position,'played',t.played,'wins',t.wins,'draws',t.draws,'losses',t.losses,
+   'goalsFor',t.goals_for,'goalsAgainst',t.goals_against,'difference',t.difference,'points',t.points) ORDER BY t.position,t.name))
+  FROM (SELECT r.* FROM api.standing_rows r WHERE r.competition_season_id=${b(tableEdition)}::int AND r.stage IS NULL AND r.group_name IS NULL
+   ORDER BY r.position,r.name LIMIT (SELECT local_table_rows FROM rules2)) t HAVING count(*)>0) "table"
+FROM publication`;
+  return { sql, values };
+}
+
+export function homeLocalRecord(snapshot, country, competitions) {
+  return {
+    country,
+    window: snapshot.window,
+    competitions,
+    matches: (snapshot.matches || []).map(windowRecord),
+    table: snapshot.table ?? null,
+  };
+}
+
+export function createHomeLocalRoute(read, clock = Date.now) {
+  return async (req, path, params) => {
+    if (path !== "/api/read/home-local") return null;
+    if (!["GET", "HEAD"].includes(req.method)) reject(405, "Méthode non autorisée.");
+    const filters = parseHomeLocal(params),
+      now = clock(),
+      periodKey = Math.floor(now / 60_000);
+    const { competitions, tableEdition } = localCompetitions(await read(LOCAL_COMPETITIONS_SQL, [filters.season, filters.country]));
+    // The scope: the country's competitions (none: an empty scope, still a publication to answer with).
+    const scope = { season: filters.season, leagueIds: competitions.map((c) => c.id).sort() };
+    const validated = await readValidator(req, params, scope, read, { periodKey, ttl: 60, stale: HOME_STALE });
+    if (validated) return validated;
+    const { sql, values } = homeLocalQuery({ scope }, params, now, await resolveEditions(read, scope), tableEdition);
+    const [snapshot] = await read(sql, values);
+    checkReadGeneration(params, snapshot?.generation);
+    return readResponse(req, params, snapshot, homeLocalRecord(snapshot, filters.country, competitions), {
+      periodKey, maxBytes: 512 * 1024, ttl: 60, stale: HOME_STALE,
+    });
   };
 }
