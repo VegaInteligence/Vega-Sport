@@ -34,6 +34,7 @@ two booleans at build time.
 | W3 | `ACCOUNT_API_ORIGIN` is a URL with a path, a query, credentials, plain http on a public host, or garbage. | `sync` false (the same as absent), never a request to a half-understood address. A trailing slash is accepted (the stack's `FrontUrl` ends with one). |
 | W4 | The flags of the bundle and the server disagree (a variable changed without a rebuild). | The server checks again on every request: a page that believes sync is on gets `503 SYNC_UNAVAILABLE` and shows « indisponible »; nothing errors. |
 | W5 | A public page becomes dynamic or reads cookies because of accounts. | No session read in a layout or a page; `/connexion` and `/compte` are static; the state is fetched in the browser after hydration. The home page is untouched. |
+| W6 | Every visitor, signed in or not, costs a request to `/api/auth` (a server call relayed to Neon) on every page load. | The session is read at page load only when the browser holds the hint `vega.account.hint.v1` (localStorage, the value `1`, nothing about the person). Without it the state is « signed out » at once and no request leaves. The hint is written when a read finds a session and just before leaving for Google; it is removed when a read answers « no session » (kept when Neon is out of reach). `/connexion` always reads (a browser whose storage was emptied but whose cookie lives is recognised there). Storage out of reach: no hint, so the read happens only on `/connexion`. `tests/account-hint.test.mjs`. |
 
 ## 2. The account route (`tests/account-proxy.test.mjs`)
 
