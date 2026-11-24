@@ -25,7 +25,7 @@ C'est `api.home_weight_v1` ([044_home_settings.sql](../../../backend/sql/044_hom
 
 ## Importance d'un match (v2)
 
-`api.home_importance_v2` ([169_home_importance_v2.sql](../../../backend/sql/169_home_importance_v2.sql), VI-48 / #69) remplace la liste de clubs par un score général :
+`api.home_importance_v2` ([170_home_importance_v2.sql](../../../backend/sql/170_home_importance_v2.sql), VI-48 / #69) remplace la liste de clubs par un score général :
 
 $$
 \text{importance} = \text{enjeu} \times \text{niveau} + \text{équilibre}

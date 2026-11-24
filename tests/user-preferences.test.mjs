@@ -45,6 +45,9 @@
 //  C2 A visit's memory outlives the sign-out (a filter cleared by the account's owner stays cleared for the next
 //     person) → clearPreferences() also removes every key of VISIT_KEYS from sessionStorage (vega.preselect.v1, the
 //     key usePreselect.js writes); refused (adapter set), it removes nothing; no sessionStorage, no throw.
+//  C3 The account screen re-reads the stores its own way and drifts from the contract (first sign-in merge) →
+//     currentContract() is the one reader: the browser's contract as the sync reads it, null while the stores are not
+//     connected or when their read throws; it never saves, loads or writes.
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
@@ -54,6 +57,7 @@ import {
   clearPreferences,
   connectPreferences,
   createPreferencesSync,
+  currentContract,
   favouritesOf,
   preferencesChanged,
   setPreferencesSync,
@@ -527,4 +531,34 @@ test("C2 clearPreferences forgets the visit's memory too", async () => {
     setPreferencesSync(null);
     disconnect();
   }
+});
+
+test("C3 currentContract is the one reader of the browser's contract", async () => {
+  assert.equal(currentContract(), null); // stores not connected
+  let state = toContract(STORES), reads = 0, writes = 0, calls = 0;
+  const disconnect = connectPreferences({ read: () => (reads++, state), write: () => writes++ });
+  try {
+    assert.deepEqual(currentContract(), toContract(STORES));
+    state = { ...state, country: "FRA", junk: 1 };
+    assert.deepEqual(currentContract(), { ...toContract(STORES), country: "FRA" }); // validated, unknown keys dropped
+    setPreferencesSync({ load: async () => (calls++, null), save: async () => void calls++ });
+    await tick();
+    await tick();
+    const before = calls;
+    assert.equal(currentContract().country, "FRA");
+    await tick();
+    assert.equal(calls, before);
+    assert.equal(writes, 0);
+    setPreferencesSync(null);
+  } finally {
+    setPreferencesSync(null);
+    disconnect();
+  }
+  const broken = connectPreferences({ read: () => { throw new Error("x"); }, write: () => {} });
+  try {
+    assert.equal(currentContract(), null);
+  } finally {
+    broken();
+  }
+  assert.equal(currentContract(), null);
 });

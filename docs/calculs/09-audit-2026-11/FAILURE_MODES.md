@@ -3816,7 +3816,7 @@ beside the v8 ranking; the switch of the public ranking, the award race and the 
   v8 reference leaves out is left out; one without a context fit keeps its v8 deviation.
 - **References measured on a finished year.** λ (minutes that halve the noise) and σ (talent spread per 90) per
   position and block from the one-way analysis of variance of the per-90 block values of full matches (60 minutes or
-  more; players of 8 full matches or more; 30 players at least), the keeper's on goals prevented; the price list of
+  more; players of 8 full matches or more; 30 players at least), the keeper's no longer (§ 54); the price list of
   the attack; ρ and δ between two positions of a player. The reference year is `grade_reference_year`: the year
   itself once over, else the year before when over and kept; a year with no kept reference measures its own rows and
   keeps them only when it is over and has levels (`agg.level_runs.measured`, `reference_season` = the year). A
@@ -3832,7 +3832,7 @@ beside the v8 ranking; the switch of the public ranking, the award race and the 
 - **Level.** `V_r = Σ_b price(r, b) · ẑ(b, r)`; price = E · weight for the non-attacking positions (the v8 weights,
   five blocks) and the attack's price list times σ for the attacking ones (the list brings the shares of centre
   forward, attacking midfielder and winger closest to the announced weights, scaled to E on average). Keeper:
-  `V = G · 90 Σ goals prevented / (M + λ_G)`. `own = Σ_r share_r (V_r − mean_r) + E_s (start share − mean of the
+  `V = G · 90 Σ goals prevented / (M + λ_G)`, λ_G the setting `KEEPER_LAMBDA` (§ 54). `own = Σ_r share_r (V_r − mean_r) + E_s (start share − mean of the
   base position)`, `level = own + ψ · club`, club the minutes-weighted (Elo_own − centre) / 400 of his club matches
   with an Elo. The start share is read in the year's rows: the share of his club's matches with eleven starters
   listed that he started, for a club of five such matches or more, the highest of his clubs.
@@ -3868,7 +3868,7 @@ Formulas without a base (`backend/tests/test_level.py`), then E2E on the disposa
 | 49j | A defender with 15 recoveries in one match and the same total spread over five | the single match weighs less on the stabilised scale than on the linear one |
 | 49k | A raw defence talent of + 6 sd over 1 250 minutes | kept talent = + 2.0; a talent of + 1.5 unchanged |
 | 49l | A player with 300 minutes at a second position over two seasons, then 500 | not acquired: its matches enter no level; acquired: a level per position, shares by the year's minutes |
-| 49m | A keeper: 0.2 goal prevented per 90 over 3 000 minutes, λ_G = 13 291 | value = 163 · 0.2 · 3000 / (3000 + 13 291) before centring |
+| 49m | A keeper: 0.2 goal prevented per 90 over 3 000 minutes | value = 163 · 0.2 · 3000 / (3000 + 13 291) before centring, λ_G = `KEEPER_LAMBDA` |
 | 49n | Two players equal but for the club's Elo (+ 400) | levels differ by ψ = 10; scores follow the curve |
 | 49o | The season before computed, then the season | the season's level reads half of the previous sums; without them, the season alone |
 | 49p | E2E: `refresh_season` of the synthetic league | the file's v8 tests hold unchanged (`agg.player_power*`, grades, award race); one published level run with its settings and measures; a level, a score in 0..100 and a rank for every player with a judged club match; the level's parts add up; talents and values recomputed from the kept sums and measures |
@@ -4139,3 +4139,81 @@ is rewritten.
 | 53d | The same run with another version in its row, or with no row | `elo_due` true; after one run, false |
 | 53e | `test_41n` on PostgreSQL 18 | passes: `to_jsonb` of run 2097 has the capture's keys; the 16 tests of `test_open_matchday_window` pass |
 | 53f | The national E2E (51n) | the numbers of §51/§52's final run: 210 nations, Gibraltar 52nd of 54 and 188th, Spearman 0.988, clubs and pre-2021/22 rows identical |
+
+## 54. Score Vega v9.1: the keepers' reference, keepers without data, the full-backs' offset (24 Nov 2026, written before the tests)
+
+Issue #90, after § 49. The six seasons computed in production were read on 24 Nov: 2024/25 had 36 goalkeepers in its
+first 100 players, and the user saw many full-backs and goalkeepers at the top. He asked for a measure before any
+correction and named the corrected method v9.1. One read-only task measured the production base (the level module
+of main `0302d456` over 2021/22 to 2026/27, nothing written; its script and output are kept outside the
+repository). Among four options the user chose « Gardiens + latéraux » (24 Nov). This section amends § 49; what it
+does not name is unchanged.
+
+### 54.1 Rules
+
+- **Version.** `LEVEL_VERSION` = `score-vega-v9.1`. A published run of another version is not the year's level:
+  `stale_rankings` lists the year, and neither its cells nor its references are read by another year (§ 49.1). After
+  the deployment every year from 2021 is computed again, oldest first; the year in progress may be computed once
+  without the year before, then again, as at the first deployment.
+- **The keeper's reference is a setting.** λ_G = `KEEPER_LAMBDA` = 13 291 minutes for every year, the measure of
+  2025/26. Measured on each finished year it was 5 395 minutes for 2024/25 (3 786 to 8 051 between the 5th and the
+  95th centile of resampled keepers) and 13 291 for 2025/26 (8 058 to 33 843): one keeper per team and a count that
+  varies much from one match to the next make the analysis of variance unstable. The keeper-seasons of 2024/25 and
+  2025/26 together give 8 179 minutes (6 626 to 12 042), a keeper's years taken as one group 10 639 (8 198 to
+  14 871). 13 291 is a convention, the highest of these measures and the user's choice: it leaves 10, 9 and 11
+  keepers in the first 100 of the last three seasons (keepers are 8 % of the ranked players), where 5 395 put 36
+  in 2024/25 and 8 324 would put 24, 23 and 21. The keeper is no longer measured, and a measure kept by an earlier
+  run is not read.
+- **A keeper is measured or not.** Goals prevented exist for 1 %, 5 % and 6 % of the keepers' minutes of 2021/22 to
+  2023/24, then for 55 to 65 %; since 2024/25 one keeper in three of 900 minutes has none. Without them a keeper's
+  value is 0 and his level is his starts and his club alone. `measured` is false for a player whose main position
+  is goalkeeper and whose minutes in goal with goals prevented, in the year's club matches, are under
+  `KEEPER_MEASURED_SHARE` = 0.5 of his minutes in goal (a keeper with none included); true for every other player.
+  The flag changes no number: his value, level, score and rank are computed as before, and he still counts in the
+  keepers' centre. The read API gives his rank as provisional with the reason `keeper_data`, after the two reasons
+  it had (under the minutes bar he reads `minutes`, in an unmeasured league `league`).
+- **The full-backs' offset.** A reference player judged at two positions (men, 2021/22 to 2026/27, 450 minutes over
+  two seasons at the other position, 18 614 observations) is valued against two populations; the difference, over
+  the players moving each way, measures the gap between the two. One strength per outfield position is fitted on
+  the 21 pairs seen both ways (their mean weighted by the players is nil, χ² 18.3 for 14). The full-backs come out
+  1.05 ± 0.11 points under the mean: centred on their own mean they are valued that much too high. The gap holds
+  in each of the five seasons that can be fitted alone (0.59 to 1.23, 2022/23 to 2026/27) and at 900 minutes at
+  both positions (1.10), is the study's first estimate (1.04) and has the market's sign (a full-back is worth less
+  than a central midfielder of the same level and club). `POSITION_OFFSETS` = {men: {full_back: − 1.05}}: in the
+  men's universe a position's centred value is `V_r − mean_r + offset_r`. A player's `blocks`, `own` and `level`
+  move by the offset times his share at full-back, his level at the position by the offset; the parts still add up
+  and no part is added. The women's universe has no offset (not measured there). The seven other positions'
+  strengths are not applied: the market contradicts the centre-forward's and the centre-back's, the winger's and
+  the centre-back's change between 2021–23 and 2024–26, the attacking midfielder's falls under one point when
+  1 800 minutes are asked at both positions.
+- **A changed setting recomputes.** `stale_rankings` also lists a year whose published level run was computed with
+  other settings than the code's (`agg.level_runs.settings`, a missing key included), oldest first like the others:
+  a deployment that changes a setting and forgets the version still computes every year again. The settings hold
+  `keeper_lambda`, `keeper_measured_share` and `position_offsets`.
+- **Stored and read.** `agg.player_level.measured` (migration 169, `NOT NULL DEFAULT true`: the rows of the runs in
+  place read measured until their year is computed again, a few passes after the deployment), served last by
+  `api.player_levels`. The migration is a reviewed destination schema of the Open Matchday restore (§ 41, § 53).
+- **Not changed.** The v8 ranking's values, `METHOD_VERSION`, the site (it does not show the level), the keepers
+  ranked with the outfield players, the positions' other centres, ψ, E and the five blocks.
+
+### 54.2 Failure modes and expected outcomes
+
+Formulas without a base (`backend/tests/test_level.py`), then E2E on the disposable PostgreSQL 18 base
+(`test_models.py`, `test_deploy_migrations.py`, `test_open_matchday_window.py`, `backend/api/test/rankings.test.mjs`).
+
+| # | Case | Expected |
+| --- | --- | --- |
+| 54a | The same keeper under references kept by a run from before the correction (keeper 5 395 ; 0.099) and under references without a keeper entry | the same value both times, with λ_G = 13 291; the settings hold `keeper_lambda`; the kept measures hold no keeper entry, written or read back |
+| 54b | Keepers of 3 000 minutes in goal this year: goals prevented on all of them, on 1 500, on 1 499, on none; one with 1 499 this year and 3 000 of 3 000 the year before; one with 1 000 of 1 000 at a club and 499 of 2 000 at another; an outfield player | measured: true, true, false, false, false (the year's minutes alone decide), false (clubs added), true; the unmeasured keepers keep a value, a level, a score and a rank, and the keepers' centre is the mean of all of them |
+| 54c | Men: two full-backs and two centre-backs, one of each at + 2 sd of creation; then the four at their position's mean | the value is unchanged; each position's `blocks` are centred on its mean, the full-backs' 1.05 lower; at the mean, the full-back's `blocks`, `own`, `level` and level at the position are 1.05 under the centre-back's; `level = blocks + starts + club` and `own = blocks + starts` for all |
+| 54d | Men: a centre-back with 40 % of his year's minutes at full-back (acquired) | his `blocks` are 0.42 lower than without an offset; his level at full-back 1.05 lower, at centre-back unchanged |
+| 54e | The same two players of 54c in the women's universe; two universes in one call | no offset among the women; the men's unchanged by them |
+| 54f | Men: full-backs alone (no other position) | each loses 1.05; their order, and their scores around their own median, are those without an offset |
+| 54g | The module's version and settings | `LEVEL_VERSION` = `score-vega-v9.1`; `SETTINGS` holds `keeper_lambda` 13 291, `keeper_measured_share` 0.5, `position_offsets` {men: {full_back: − 1.05}}; they survive a JSON round trip unchanged |
+| 54h | E2E: `refresh_season` of the synthetic league | the published level run is of version `score-vega-v9.1` with the code's settings; `agg.player_level.measured` is true for every outfield player and for the 8 keepers (goals prevented in every match); the full-backs' mean `blocks` is − 1.05 and every other position's 0; the parts add up |
+| 54i | E2E: goals prevented removed from 7 of a keeper's 14 matches, then from 8 | measured true (630 of 1 260 minutes: half), then false (540), true for the 7 other keepers both times; his cell keeps 1 260 minutes and 540 with goals prevented; his level, score and ranks exist; the view serves the flag |
+| 54j | E2E: the published level run of the year relabelled `score-vega-v9` (a run from before the deployment); a `score-vega-v9` run of the year before with sums for one centre-back | `stale_rankings` lists the year; after `refresh_players` it lists nothing, the run is of version `score-vega-v9.1`, the centre-back's minutes of two seasons are the year's alone (the other version's sums are not read) and the levels are unchanged |
+| 54k | E2E: the published level run of the year stored without `keeper_lambda`, then with another value | `stale_rankings` lists the year each time; after `refresh_players` it lists nothing, the new run's settings are the code's and the levels are unchanged |
+| 54l | E2E: production's schema, then this tree's migrations; a level row written without the flag (as the worker in service writes it during the deployment), one written with it false | 14 applied of 174; `agg.player_level.measured` is `boolean NOT NULL DEFAULT true`; `api.player_levels` keeps its columns in order with `measured` last; under `vega_calc` both rows are written, under `vega_read` the view reads true and false |
+| 54m | The read API: the reasons in order; E2E, a measured centre-forward and a keeper above the minutes bar, in a measured league, without goals prevented | a row under the bar reads `minutes`, a man in an unmeasured league `league`, whatever the flag; the keeper is provisional, reason `keeper_data`, `measured` false on his own read; the centre-forward is not provisional, `measured` true; the method's version is `score-vega-v9.1`; the answers' other fields are unchanged |
+| 54n | `test_41n` (the Open Matchday restore on a base whose last migration is 169) | passes: 169 is a reviewed destination schema |
