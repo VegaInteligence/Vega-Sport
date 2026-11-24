@@ -650,6 +650,8 @@ try {
     // R6: the confirmation's own session is withheld (as with Neon's auto sign-in off): the cookies are dropped.
     await V.context.route(`${SITE}/api/auth/email-otp/verify-email`, async (route) => {
       const answer = await route.fetch();
+      // route.fetch() keeps the answer's cookies in the context's jar: emptied (nobody is signed in at this point).
+      await V.context.clearCookies();
       const headers = Object.fromEntries(Object.entries(answer.headers()).filter(([name]) => name.toLowerCase() !== "set-cookie"));
       const body = await answer.json().catch(() => null);
       await route.fulfill({ status: answer.status(), headers, body: JSON.stringify(body && typeof body === "object" ? { ...body, token: null } : body) });
