@@ -28,6 +28,10 @@
 //     the picked; when every pick is finished, the most important coming match takes the place of the lightest big
 //     pick, never of a local place.
 //  L3 "location", a country without match in the window → the billboard's choice of before.
+//  L4 "location", a finished local result (even heavier) takes a reserved place from a local match still to play →
+//     the reserved places go first to the unfinished local matches (to play or in play) by importance; a finished one
+//     takes a reserved place only when fewer than localPlaces unfinished local matches exist (by importance among the
+//     finished).
 //  I1 "importance": no reserved place; importance only, and at equal importance a local match goes before a non-local
 //     one; a light local match never displaces a heavier one.
 //  T1 Results strip, "location": within a day the country's results first (then the editorial weight), before the
@@ -191,4 +195,16 @@ test("T1–T2 the results strip: the country's results first in location, a tie-
   for (const priority of ["location", "importance"])
     assert.deepEqual(weekTicker(results, nations, new Map(), { leagues: null, priority }), before);
   assert.deepEqual(before[0].matches.map((m) => m.id), importance[0].matches.map((m) => m.id));
+});
+
+test("L4 location: the reserved places go to the country's matches still to play first", () => {
+  const result = entry("ren-lyo", L1, "2026-11-23T20:00:00Z", 4.5, "finished");
+  const soon = entry("nic-tou", L1, "2026-11-26T20:00:00Z", 1.2);
+  const live = entry("mon-nan", L1, "2026-11-24T06:30:00Z", 0.9, "in_play");
+  // Two unfinished local matches lighter than one finished: the two unfinished take the places.
+  const two = chooseUpcoming({ billboard: BILLBOARD, local: [result, soon, live], priority: "location", now: NOW });
+  assert.deepEqual(ids(two).sort(), ["ars-bvb", "bru-liv", "mon-nan", "nic-tou", "psg-rom"]);
+  // One unfinished and one finished: both taken, the unfinished first among the reserved.
+  const one = chooseUpcoming({ billboard: BILLBOARD, local: [result, soon, entry("nan-gre", L2, "2026-11-23T19:45:00Z", 0.5, "finished")], priority: "location", now: NOW });
+  assert.deepEqual(ids(one), ["ars-bvb", "nic-tou", "ren-lyo", "psg-rom", "bru-liv"]);
 });

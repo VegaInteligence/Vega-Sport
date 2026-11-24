@@ -8,7 +8,8 @@
 //  S1 A strip, band or section of its own comes back → no .home-local element, no « Chez vous » on the page, the
 //     results strip directly followed by the bento grid (main's order).
 //  F1 France (x-vercel-ip-country FR, no choice): « À l'affiche » = the rule of the doc ("location"): the favourites
-//     (none here), then up to 2 places to the country's most important matches (the billboard's local ones and
+//     (none here), then up to 2 places to the country's most important matches still to play or in play (a finished
+//     one only when fewer remain; the billboard's local ones and
 //     home-local FRA's inside `billboardWindow`), at least one to the big matches, the rest to the big matches by
 //     served weight; the big card = the most important not finished among the picked; the rows by day, then time.
 //  F2 The server's HTML (JavaScript off) already shows the same five, so the browser's first render does not reorder
@@ -101,7 +102,7 @@ function expectedFive(code, local) {
       if (!seen.has(m.fixture.id)) seen.add(m.fixture.id), locals.push(m);
     bigs = billboard.filter((x) => !seen.has(x.fixture.id));
   }
-  locals.sort(heaviest);
+  locals.sort((a, b) => Number(done(a)) - Number(done(b)) || heaviest(a, b));
   bigs.sort(heaviest);
   let nLocal = Math.min(LOCAL_PLACES, locals.length, bigs.length ? PLACES - BIG_KEPT : PLACES);
   const nBig = Math.min(bigs.length, PLACES - nLocal);

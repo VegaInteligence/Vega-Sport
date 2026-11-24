@@ -107,7 +107,7 @@ const finished = (m) => m.fixture?.status === "finished";
  * (localMatches: the billboard's local matches and home-local's inside the billboard's window),
  * or null without a country or an answer, which is the choice of before. `priority`:
  * - "location": after the favourites, up to PRIORITY_RULES.localPlaces places go to the country's
- *   most important matches, leaving at least bigPlacesKept to the big matches when there are any;
+ *   most important matches still to play or in play (a finished one only when fewer remain), leaving at least bigPlacesKept to the big matches when there are any;
  *   the rest to the big matches by importance; a short side is completed by the other;
  * - "importance": importance only, a local match first at equal importance.
  * The big card: a favourite's match within 48 h, else the most important not finished among the
@@ -136,7 +136,8 @@ export function chooseBillboard({ billboard = [], favourites = [], matches = [],
   let theirs;
   if (local && priorityOf(priority) === HOME_PRIORITIES.LOCATION) {
     const { localPlaces, bigPlacesKept } = PRIORITY_RULES;
-    const locals = rest.filter(isLocal).sort(heaviest),
+    // The reserved places: the country's matches to play or in play first, a finished one only to fill them.
+    const locals = rest.filter(isLocal).sort((a, b) => Number(finished(a)) - Number(finished(b)) || heaviest(a, b)),
       bigs = rest.filter((m) => !isLocal(m)).sort(heaviest);
     let nLocal = Math.min(localPlaces, locals.length, bigs.length ? Math.max(free - bigPlacesKept, 0) : free);
     const nBig = Math.min(bigs.length, free - nLocal);
