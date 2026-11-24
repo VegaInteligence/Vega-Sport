@@ -15,10 +15,18 @@
 //     logo, the mark, the two icons and the favicon.
 //  B4 (phone) The header shows the mark « V. » (/branding/vega/symbol-dark.svg, about square),
 //     28 to 32 px tall, in a tap target of 44 px, and the page does not scroll sideways.
-//  B5 (favicon) The page's icon is /branding/vega/icon-dark.svg in the dark theme and
-//     icon-light.svg in the light one, with the new version number. React puts the page's own
-//     favicon.svg link back beside it after hydration (as before this change): that one must
-//     be the new drawing at the new version too, and no other icon may be named.
+//  B5 (favicon) The page names one icon, the one of the site's theme: /branding/vega/icon-dark.svg
+//     in the dark theme, icon-light.svg in the light one, with the new version number, in a
+//     single link[rel="icon"]. favicon.svg follows the system's colours, not the site's theme:
+//     a page with scripts must not name it. Each list of icons is read five times over 1.2 s,
+//     and every reading must be that one icon. How it failed before:
+//      - at load (B5a dark, B5f light): React did not recognise the link whose address the theme
+//        script had changed, and put the page's favicon.svg link back beside it;
+//      - after a navigation inside the site (B5g light, B5l dark): React rebuilt the head's
+//        links, and favicon.svg came back, beside the themed icon or in its place;
+//      - after the theme button (B5h), then a navigation (B5i): two links, then favicon.svg again;
+//      - storage refused by the browser (B5k): no themed icon at all, at load or after the button.
+//     Without scripts (B5j) the page still names an icon: favicon.svg at the new version.
 //     /favicon.ico and /apple-touch-icon.png answer with the new icon (night tile, ivory
 //     mark, no blue).
 //  B6 (app icons) /api/vega-image?kind=icon at 180, 192 and 512 px: a PNG of that size, night
@@ -34,7 +42,8 @@
 //     menu still ends before the search field. At 768 and 700 px the mark « V. » shows
 //     instead, in a link no wider than 44 px (the room the old mark took), and the header's
 //     parts neither overlap nor leave the window.
-//  X1 No page error and no console error on the home page (desktop dark and light, phone).
+//  X1 No page error and no console error on the home page (desktop dark and light, phone,
+//     without scripts, storage refused) nor on the Matchs page reached from it.
 //     The loading page's console is recorded in the evidence, not judged here.
 //
 // Run against a local front (NEXT_PUBLIC_API_ORIGIN = the public API) or the public site:
@@ -145,6 +154,22 @@ const darkIcon = (p, side) =>
 const lightIcon = (p, side) =>
   p.size && (!side || (p.size[0] === side && p.size[1] === side)) && p.ivory > 0.5 && p.night > 0.03 && p.blue === 0;
 
+/** The icons the page names, read several times 300 ms apart: every different list seen. */
+const icons = async (page, times = 5) => {
+  const seen = [];
+  for (let i = 0; i < times; i++) {
+    if (i) await page.waitForTimeout(300);
+    const list = await page.evaluate(() => [...document.querySelectorAll('link[rel="icon"]')].map((l) => new URL(l.href).pathname + new URL(l.href).search));
+    const names = list.join(", ") || "none";
+    if (!seen.includes(names)) seen.push(names);
+  }
+  return seen;
+};
+const themeIcon = (theme) => `/branding/vega/icon-${theme}.svg?v=${VERSION}`;
+/** That icon alone, at every reading. */
+const only = (seen, address) => seen.length === 1 && seen[0] === address;
+const readings = (seen) => seen.join(" ; then ");
+
 const text = async (address) => {
   const response = await fetch(new URL(address, base));
   return { status: response.status, body: response.ok ? await response.text() : "" };
@@ -218,9 +243,8 @@ try {
   await dark.setViewportSize(DESKTOP.viewport);
 
   // ---- B5 (dark) and B7 on the same page
-  const icon = await dark.evaluate(() => [...document.querySelectorAll('link[rel="icon"]')].map((l) => new URL(l.href).pathname + new URL(l.href).search));
-  const themed = (list, theme) => list.includes(`/branding/vega/icon-${theme}.svg?v=${VERSION}`) && list.every((href) => [`/branding/vega/icon-${theme}.svg?v=${VERSION}`, `/branding/vega/favicon.svg?v=${VERSION}`].includes(href));
-  check("B5a", `the page's icon in the dark theme: /branding/vega/icon-dark.svg?v=${VERSION} (and at most the page's own favicon.svg?v=${VERSION})`, icon.join(", "), themed(icon, "dark"));
+  const icon = await icons(dark);
+  check("B5a", `dark theme: the page names one icon, ${themeIcon("dark")}`, readings(icon), only(icon, themeIcon("dark")));
   for (const [id, address, test, what] of [
     ["B5b", "/branding/vega/icon-dark.svg", darkIcon, "night tile, ivory mark, no blue"],
     ["B5c", "/branding/vega/icon-light.svg", lightIcon, "ivory tile, night mark, no blue"],
@@ -264,6 +288,15 @@ try {
   // The place of the brand at the top left of a card: 146 × 70 px from (65, 54).
   const report = await pixels(dark, `/api/rapport/image?id=${REPORT}&n=1`, [0.06, 0.04, 0.195, 0.092]);
   check("B10", "report image 1080 × 1350: ivory wordmark at the top left (over 8 % of that place), no blue star", brief(report), report.size?.[0] === 1080 && report.size?.[1] === 1350 && report.ivory > 0.08 && report.blue === 0);
+  // ---- B5l: the dark theme's icon after a navigation inside the site
+  await dark.evaluate(() => { window.__sameDocument = true; });
+  await dark.locator('.topbar a[href^="/matchs"]').first().click();
+  await dark.waitForURL((url) => url.pathname.startsWith("/matchs"));
+  await dark.waitForLoadState("networkidle");
+  const movedDark = await icons(dark);
+  const stayedDark = await dark.evaluate(() => window.__sameDocument === true);
+  check("B5l", `dark theme, after a navigation inside the site (home → Matchs, same document): still ${themeIcon("dark")} alone`,
+    `${readings(movedDark)} — same document: ${stayedDark}`, stayedDark && only(movedDark, themeIcon("dark")));
   await dark.context().close();
 
   // ---- B2 and B5 (light)
@@ -272,10 +305,52 @@ try {
   await light.waitForFunction(() => document.documentElement.dataset.theme === "light" && [...document.querySelectorAll(".topbar .brand img")].some((i) => i.complete && i.naturalWidth > 0 && i.getBoundingClientRect().width > 0));
   const headLight = await shown(light, ".topbar .brand");
   check("B2", "light theme: the header shows logo-light.svg and only it", headLight.images.map((i) => i.src).join(", ") || "none", headLight.images.length === 1 && headLight.images[0].src === "/branding/vega/logo-light.svg" && undistorted(headLight.images[0]));
-  const iconLight = await light.evaluate(() => [...document.querySelectorAll('link[rel="icon"]')].map((l) => new URL(l.href).pathname + new URL(l.href).search));
-  check("B5f", `the page's icon in the light theme: /branding/vega/icon-light.svg?v=${VERSION} (and at most the page's own favicon.svg?v=${VERSION})`, iconLight.join(", "), themed(iconLight, "light"));
+  const iconLight = await icons(light);
+  check("B5f", `light theme: the page names one icon, ${themeIcon("light")}`, readings(iconLight), only(iconLight, themeIcon("light")));
   await light.locator(".topbar").screenshot({ path: path.join(out, "header-desktop-light.png") });
+  // ---- B5g–B5i: the icon across a navigation inside the site and the theme button
+  await light.evaluate(() => { window.__sameDocument = true; });
+  const sameDocument = () => light.evaluate(() => window.__sameDocument === true);
+  await light.locator('.topbar a[href^="/matchs"]').first().click();
+  await light.waitForURL((url) => url.pathname.startsWith("/matchs"));
+  await light.waitForLoadState("networkidle");
+  const moved = await icons(light);
+  check("B5g", `light theme, after a navigation inside the site (home → Matchs, same document): still ${themeIcon("light")} alone`,
+    `${readings(moved)} — same document: ${await sameDocument()}`, (await sameDocument()) && only(moved, themeIcon("light")));
+  await light.locator(".theme-toggle").first().click();
+  await light.waitForFunction(() => document.documentElement.dataset.theme === "dark");
+  const switched = await icons(light);
+  check("B5h", `after the theme button (light → dark): ${themeIcon("dark")} alone`, readings(switched), only(switched, themeIcon("dark")));
+  await light.locator(".topbar .brand").first().click();
+  await light.waitForURL((url) => url.pathname === "/");
+  await light.waitForLoadState("networkidle");
+  const back = await icons(light);
+  check("B5i", `after the button, then a navigation (Matchs → home, same document): still ${themeIcon("dark")} alone`,
+    `${readings(back)} — same document: ${await sameDocument()}`, (await sameDocument()) && only(back, themeIcon("dark")));
   await light.context().close();
+
+  // ---- B5j: without scripts
+  const plain = await open({ ...DESKTOP, javaScriptEnabled: false }, "no-scripts");
+  await plain.goto(base + "/", { waitUntil: "load" });
+  const iconPlain = await icons(plain, 1);
+  check("B5j", `without scripts the page names one icon, /branding/vega/favicon.svg?v=${VERSION}`, readings(iconPlain), only(iconPlain, `/branding/vega/favicon.svg?v=${VERSION}`));
+  await plain.context().close();
+
+  // ---- B5k: the browser refuses the storage (reads and writes throw)
+  const refused = await open(DESKTOP, "storage-refused");
+  await refused.context().addInitScript(() => {
+    const refuse = () => { throw new DOMException("The operation is insecure.", "SecurityError"); };
+    Storage.prototype.getItem = refuse;
+    Storage.prototype.setItem = refuse;
+  });
+  await refused.goto(base + "/", { waitUntil: "networkidle" });
+  const iconRefused = await icons(refused);
+  await refused.locator(".theme-toggle").first().click();
+  await refused.waitForFunction(() => document.documentElement.dataset.theme === "light");
+  const iconRefusedLight = await icons(refused);
+  check("B5k", `storage refused: ${themeIcon("dark")} alone at load, ${themeIcon("light")} alone after the theme button`,
+    `at load: ${readings(iconRefused)} — after the button: ${readings(iconRefusedLight)}`, only(iconRefused, themeIcon("dark")) && only(iconRefusedLight, themeIcon("light")));
+  await refused.context().close();
 
   // ---- B3: the drawings themselves
   for (const [file, fill] of [["logo-dark", "#F4F1EA"], ["logo-light", "#07080B"], ["symbol-dark", "#F4F1EA"], ["symbol-light", "#07080B"], ["icon-dark", "#F4F1EA"], ["icon-light", "#07080B"], ["favicon", "#F4F1EA"]]) {
@@ -338,7 +413,7 @@ try {
         observed: new Date().toISOString(),
         base,
         rerun: `node tests/e2e/brand.e2e.mjs ${base} ${out}`,
-        setup: "Chromium headless, fr-FR; desktop 1365×900 (dark, then light through localStorage statarena.theme), phone 393×852 (touch, ×3). B9 holds every /api/ answer for 8 s.",
+        setup: "Chromium headless, fr-FR; desktop 1365×900 (dark, then light through localStorage statarena.theme), phone 393×852 (touch, ×3). B5: every list of icons is read 5 times, 300 ms apart; B5j runs with JavaScript off; B5k makes Storage.getItem and Storage.setItem throw. B9 holds every /api/ answer for 8 s.",
         inputs: { home: "/", loading: "/joueurs/", report: REPORT, faviconVersion: VERSION, ivory: IVORY, night: NIGHT },
         results,
         console: consoleLog,
