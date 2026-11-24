@@ -136,7 +136,7 @@ export function compactHomePresentation(data) {
   };
   for (const value of [...(data.results || []), data.featured])
     remember(value, ["home", "away"]);
-  for (const value of data.highlights || [])
+  for (const value of [...(data.highlights || []), ...(data.billboard || [])])
     remember(value?.fixture, ["home_team", "away_team"]);
   apply("ranks", (ranks) =>
     ranks == null

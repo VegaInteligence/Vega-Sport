@@ -50,7 +50,9 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
 import { get, skip } from "./context.mjs";
-import { createHandler } from "../src/handler.mjs";
+import { createHandler, presentHome } from "../src/handler.mjs";
+import { compactHomePresentation } from "../src/home-presentation.mjs";
+import { CAPABILITIES, COMPACT_READS } from "../src/routes/system.mjs";
 
 const home = "/api/read/home?season=2025/2026&leagues=all";
 const local = (query) => `/api/read/home-local?season=2025/2026&${query}`;
@@ -370,4 +372,30 @@ test("home-local: the answer's form and its public cache", async () => {
   const head = stubbed();
   assert.equal((await head.handle(new Request("https://api.test" + local("country=FRA"), { method: "HEAD" }))).status, 200);
   assert.ok(!head.seen.some((sql) => sql.includes("/*vega:v2:home-local*/")));
+});
+
+// Round 2 (the site's needs, without a database):
+// R1 the site reads only what the manifest announces (compactReads); home-local unannounced → the strip never shows
+//    → COMPACT_READS["home-local"] is true and in the manifest's capabilities.
+// R2 media=1's compact home keeps the ranks of the teams it shows only; « À l'affiche » teams lose « 1er en
+//    championnat » → the ranks of the billboard's teams are kept too, the others still trimmed.
+test("R1 the manifest announces home-local", () => {
+  assert.equal(COMPACT_READS["home-local"], true);
+  assert.equal(CAPABILITIES.compactReads["home-local"], true);
+});
+
+test("R2 media=1 keeps the ranks of the billboard's teams", () => {
+  const rank = (id, n) => [id, { id, rank: n, leagueId: "l_3FJFUl", form: ["W"] }];
+  const data = {
+    results: [], highlights: [], tables: [], defences: [],
+    ranks: [rank("t_aaaaa1", 1), rank("t_aaaaa2", 2), rank("t_aaaaa3", 3)],
+    billboard: [{ fixture: { id: "m_aaaaa9", home_team: { id: "t_aaaaa1" }, away_team: { id: "t_aaaaa2" } }, time: 1, day: "2025-09-06", weight: 2 }],
+  };
+  // The compact cards' trim: the billboard's teams are shown, so kept; a team shown nowhere is trimmed.
+  assert.deepEqual(compactHomePresentation(data).ranks, [["t_aaaaa1", { rank: 1, form: ["W"] }], ["t_aaaaa2", { rank: 2, form: ["W"] }]]);
+  // What the handler serves (presentHome puts back every club's rank for « Prochains matchs »): the billboard's teams in it.
+  const served = new Map(presentHome(data).ranks);
+  assert.equal(served.get("t_aaaaa1").rank, 1);
+  assert.equal(served.get("t_aaaaa2").rank, 2);
+  assert.equal(presentHome(data).billboard.length, 1);
 });
