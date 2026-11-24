@@ -52,6 +52,12 @@
 //     « Après prolongation » stands under the score.
 //  F2 The same after a shoot-out (0–0, 4–3 on penalties): « Tirs au but 4–3 » under the score, the
 //     read-out ends on « Tirs au but 100 % » with « t.a.b. 4–3 ».
+//  F3 On the F1 page, « Occasions au fil du match » (svg.xg-timeline) runs to the 120th as the
+//     win-probability chart does: the same minute ticks (every 15 to « 120′ »), two extra-time lines,
+//     at the 90th and the 105th (on those ticks), and each side's line drawn to the 120th even when
+//     its last shot is earlier (#68, Argentina – France m_3Zw3cP stopped at the 90th).
+//  F4 The same match finished in 90 minutes (the read API's answer without extraTime): the chart
+//     ends at « 90′ », with no extra-time line.
 //  P1 Phone (iPhone 15, 393×852): no sideways scroll on Direct, line-ups, shots and the picker.
 //  X1 No page error in the console during the run (failed loads of remote images and of the fake
 //     live host excluded).
@@ -245,6 +251,25 @@ async function section(name, fn) {
   try { await fn(); } catch (error) {
     check(`${name} aborted`, "the section runs to its end", error.message.split("\n")[0], false);
   }
+}
+/** The overview's « xG cumulés » chart as minutes: its ticks, its extra-time lines and where each side's line ends,
+ * each read from its x through the scale of the first and last ticks. */
+async function xgSpanOf(page) {
+  const svg = page.locator("svg.xg-timeline").first();
+  await svg.waitFor({ timeout: 90000 });
+  await page.waitForTimeout(500);
+  return svg.evaluate((el) => {
+    const ticks = [...el.querySelectorAll("text.chart-tick")].filter((t) => /^\d+[′']$/.test(t.textContent.trim()))
+      .map((t) => ({ minute: parseInt(t.textContent, 10), x: Number(t.getAttribute("x")) }));
+    const [a, b] = [ticks[0], ticks.at(-1)];
+    const minute = (x) => (a && b && b.x > a.x ? Math.round(a.minute + ((x - a.x) / (b.x - a.x)) * (b.minute - a.minute)) : null);
+    const lastH = (d) => { const hs = [...String(d).matchAll(/H\s*(-?[\d.]+)/g)]; return hs.length ? Number(hs.at(-1)[1]) : null; };
+    return {
+      ticks: ticks.map((t) => t.minute),
+      extraAt: [...el.querySelectorAll("[data-extra-time] line")].map((l) => minute(Number(l.getAttribute("x1")))),
+      linesEndAt: [...el.querySelectorAll("path[data-series]")].map((p) => minute(lastH(p.getAttribute("d")))),
+    };
+  });
 }
 async function playerDialog(page) {
   const d = dialog(page);
@@ -646,7 +671,27 @@ await section("F", async () => {
       && got.readout.includes(`${homeName}100 %`) && got.note === "Après prolongation");
   await page.locator('[data-chart="win-probability"]').first().scrollIntoViewIfNeeded().catch(() => {});
   await shot(page, "desktop-finished-extra-time");
+  if (apiShots.length) {
+    const xg = await xgSpanOf(page);
+    const winTicks = await page.locator('[data-chart="win-probability"] text').evaluateAll((ts) =>
+      ts.map((t) => t.textContent.trim()).filter((t) => /^(\d+′|MT)$/.test(t)).map((t) => (t === "MT" ? 45 : parseInt(t, 10))));
+    const want = [0, 15, 30, 45, 60, 75, 90, 105, 120];
+    check("F3 finished after extra time: « Occasions au fil du match » runs to the 120th, marks at the 90th and the 105th, as the win-probability chart",
+      { ticks: want, winTicks: want, extraAt: [90, 105], linesEndAt: 120 }, { ...xg, winTicks },
+      JSON.stringify(xg.ticks) === JSON.stringify(want) && JSON.stringify(winTicks) === JSON.stringify(want)
+        && JSON.stringify(xg.extraAt) === "[90,105]" && xg.linesEndAt.length > 0 && xg.linesEndAt.every((m) => m === 120));
+    await page.locator("svg.xg-timeline").first().scrollIntoViewIfNeeded().catch(() => {});
+    await shot(page, "desktop-finished-extra-time-xg");
+  } else skip("F3", "the xG chart to the 120th", "the API has no shot for this match");
   await page.close();
+  // The same match in 90 minutes: the read API's answer says nothing of extra time.
+  if (apiShots.length) {
+    page = await open(desktop, {}, { past: { ...forecast, status: "finished" } });
+    const xg = await xgSpanOf(page);
+    check("F4 finished in 90 minutes: « Occasions au fil du match » ends at the 90th, no extra-time line",
+      { lastTick: 90, extraAt: [] }, xg, xg.ticks.at(-1) === 90 && xg.extraAt.length === 0);
+    await page.close();
+  } else skip("F4", "the xG chart to the 90th", "the API has no shot for this match");
   // After a shoot-out: 0–0, 4–3 on penalties.
   page = await open(desktop, {}, { past: pastForecast([], [0, 0], [4, 3]), score: [0, 0] });
   got = await chartOf(page);
