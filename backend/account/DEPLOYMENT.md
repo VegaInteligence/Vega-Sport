@@ -33,7 +33,7 @@ is not `on`, none of them is read):
 
 | Prerequisite | Missing |
 |---|---|
-| Stack `vega-v2-deploy-roles` updated (output `AccountGrants` = 1) | Refused by the preflight. Without the check: the deploy role cannot upload to `releases/v2-account/`, or the CloudFormation role cannot create the account's roles, functions and log groups, after the database and the migrate task have changed. |
+| Stack `vega-v2-deploy-roles` updated (output `AccountGrants` = 2) | Refused by the preflight. Without the check: the deploy role cannot upload to `releases/v2-account/`, or the CloudFormation role cannot create the account's roles, functions and log groups, after the database and the migrate task have changed. |
 | `/vega/v2/neon-auth-url`, `/vega/v2/neon-project-id`, `/vega/v2/neon-branch-id`, `/vega/v2/site-origins` (String) | Refused by the preflight, each named (also when malformed, or stored as SecureString). |
 | `/vega/v2/neon-api-key` (SecureString) | Not required: the stack gets an empty key, one line says `DELETE /account` answers 503 and erases nothing. A Deploy after it is written passes it. |
 | `/vega/v2/password-account`, `/vega/v2/account-database-url`, `/vega/v2/pass-key/k1` | Created by step 2 of that Deploy. Present but malformed: refused by the preflight. |
@@ -68,8 +68,10 @@ anyone allowed `lambda:GetFunctionConfiguration` on it sees the values.
    (`function:vega-v2-account*`, which covers the Function URL and its public permissions) and
    `ReleaseRead` (`releases/v2-account/*`); the deploy role's `Release` (`s3:PutObject` on
    `releases/v2-account/*`: deploy.sh uploads the packages as the deploy role, which the first plan
-   missed); the output `AccountGrants: '1'`. The security group needs nothing new: the
-   CloudFormation role already creates groups in the VPC (as it did `ApiSG`).
+   missed); `SecurityGroupCreate` names the VPC beside `security-group/*` (EC2 authorizes
+   `ec2:CreateSecurityGroup` on both and sets `ec2:Vpc` for neither; the first plan held that the
+   group needed nothing new, and Deploy 132 stopped at step 1: `FAILURE_MODES.md` W14); the output
+   `AccountGrants: '2'`.
 2. **`infra/aws/database.yaml`**: parameter `Account` (`false` by default), condition `HasAccount`;
    under it `AccountSG` (as `ApiSG`), `AccountToDatabase` (egress 5432 to `DatabaseSG`),
    `DatabaseFromAccount` (ingress 5432 from `AccountSG`) and the output `AccountSecurityGroup`
@@ -144,11 +146,11 @@ setup »):
 ```sh
 aws login --profile statarena
 git checkout main && git pull --ff-only
-grep -c 'AccountGrants' infra/aws/deploy-roles.yaml   # 1: this main holds the account's grants
+grep -c "AccountGrants: {Value: '2'}" infra/aws/deploy-roles.yaml   # 1: this main holds the account's grants
 aws cloudformation deploy --profile statarena --region us-east-2 --stack-name vega-v2-deploy-roles \
   --template-file infra/aws/deploy-roles.yaml --capabilities CAPABILITY_NAMED_IAM
 aws cloudformation describe-stacks --profile statarena --region us-east-2 --stack-name vega-v2-deploy-roles \
-  --query "Stacks[0].Outputs[?OutputKey=='AccountGrants'].OutputValue" --output text   # 1
+  --query "Stacks[0].Outputs[?OutputKey=='AccountGrants'].OutputValue" --output text   # 2
 ```
 
 **2. Neon** (console, project `sweet-queen-11955006`, production branch
