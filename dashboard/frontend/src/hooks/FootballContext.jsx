@@ -190,7 +190,8 @@ export function FootballProvider({ children, loadData = true, initialState }) {
       if (value === "" || value == null) url.searchParams.delete(key);
       else url.searchParams.set(key, String(value));
     }
-    window.history.replaceState(null, "", url.pathname + url.search);
+    // The hash stays: an anchor followed to this page (/compte#preferences) still has to land.
+    window.history.replaceState(null, "", url.pathname + url.search + url.hash);
   }
   function setFilters(action) {
     // History updates are synchronous; Next's search-parameter render may follow

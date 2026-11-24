@@ -1,5 +1,27 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## « Mon compte » « Lettre », made shippable — VI-38 (24 November 2026, branch `claude/vi-38-compte-feuille-blanche`, PR #124)
+
+- The owner chose A « Lettre ». Direction B (`AccountDiptych.jsx` and its CSS), the `?piste=` switch and `DEFAULT_PISTE` were removed, along with the dead account CSS.
+- Failure modes first: docs/COMPTES_SITE.md section 10, C1–C8 (anchors, password row, sync line, favourites 6 per kind, empty state, menu, sign-out, delete and export). Competitions sit with the favourites; the default-season and home-priority controls are not shown.
+- Tests before the code: `tests/account-page.test.mjs` (9, red: module missing) and E2E section 10 in phase `on`. Red on the mock-up code: C1b (« Mon compte » on /compte stayed at 1072 px), C1c (a direct `#securite` landed at 147 px), C4 (« Afficher les 1 autres »), and C5 spacing (0 px). Already green, because the mock-up predated them: C1a, C2, C3, C6a–d, C6f, C7. Two test bugs were fixed before the code: C5's trailing slash, and C6e tapping the title under the phone's menu.
+- Code: `services/account-page.js` (hasPassword, syncNote, favouriteGroups, moreLabel). The menu's event names its section, and a section is held under the header while the page loads (2 s at most, released when the reader moves). « Afficher l’autre ». The competitions are 40 px under « Aucun favori. ».
+- Checks: site suite 1026/1026. Accounts E2E 102/102: on 62 (after the fixes), verify 25, nosync 4, off 11. Evidence: …/scratchpad/vi38fb/e2e-final, e2e-final-on2.
+- Captures: `/mnt/project-files/vi-38-comptes/captures-lettre-final/`.
+- Not verified: real Neon Auth, Google, Safari, real touch devices. In dark mode, the Ligue 1 and Premier League logos are hard to see across the whole site.
+- Next action: merge PR #124 once CI is green (approved by the owner), then check /compte on the public site.
+
+## « Mon compte » from a blank sheet: two directions — VI-38 (24 November 2026, mock-up, branch `claude/vi-38-compte-feuille-blanche` from origin/main cb56e51, local, not pushed)
+
+- Goal (the owner, after refusing passes 1 and 2 of `claude/vi-38-profil-parametres`): start again from a blank sheet; a simple, épuré, elegant `/compte` holding the account and the settings, reached from a header menu (« Mon compte » → top, « Paramètres » → `#parametres`). Two directions built as code, captured, for him to pick one.
+- Built: `?piste=a` « Lettre » (default, `DEFAULT_PISTE` in AccountPage.jsx) and `?piste=b` « Diptyque », remembered for the tab's session. Shared state and controls in `AccountParts.jsx`; `AccountLetter.jsx`, `AccountDiptych.jsx`; new `/compte` styles in account.css. Header entry: a button with `aria-expanded` and a words-only menu (who, « Mon compte », « Paramètres », « Se déconnecter »); hover, keyboard focus, tap; Escape closes and gives the focus back.
+- Decisions: the sync is said only when it does not work (failed, stopped, unavailable); its block always carries `data-state`. Language: a quiet « Français » row. Competitions: listed with the favourites, where « Modifier » opens the home page's picker (HomePreferences `trigger`); not repeated in the settings. Favourites grouped by kind, 6 per kind then « Afficher les N autres » (was 8 in all, S4). Password action only with a `credential` account (`listAccounts()`). Lifted from the refused branch: that check, the menu's logic, `updateQuery` keeping the hash, « Automatique » in HomeCountryMenu.
+- E2E selectors: `.account-syncblock` read through `syncState()` (data-state, then the words); S5 no longer reads « Clubs 1 » (no counters), it counts the favourite links.
+- Checks: site suite 1017/1017; accounts E2E on « Lettre » 87/87 (on 47, verify 25, nosync 4, off 11), evidence …/scratchpad/vi38fb/e2e/.
+- Captures: `/mnt/project-files/vi-38-comptes/captures-feuille-blanche/` (a-lettre/, b-diptyque/, a sheet each, comparaison.png).
+- Not done until a direction is chosen: docs/COMPTES_SITE.md section 7, E2E cases for the menu and the settings, removal of the switch and of the other direction.
+- Next action: the owner picks A or B.
+
 ## Injured and suspended players, the Transfermarkt reader on production — FAILURE_MODES § 59am, 59an (24 November 2026, branch `claude/absents-lecteur-saisons`)
 
 - Seen (worker logs 16:40–20:18 UTC, read only from the owner's Mac): 1,805 suspensions read, no refusal by Transfermarkt, yet no PSG player read (« 0 / 25 renseignés » the evening before PSG–Roma).

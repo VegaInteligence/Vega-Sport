@@ -156,7 +156,11 @@ function CompetitionPicker({ f, competitions, initialIds, onClose, country }) {
   );
 }
 
-export default function HomePreferences({ f, country = null }) {
+/**
+ * The home page's competitions: a button and the picker it opens. `trigger` ({ className, text, label }): another
+ * button for the same picker (the account page's plain word).
+ */
+export default function HomePreferences({ f, country = null, trigger = null }) {
   const [open, setOpen] = useState(false);
   const competitions = useMemo(() => {
     const byId = new Map();
@@ -205,19 +209,32 @@ export default function HomePreferences({ f, country = null }) {
   const active = effectiveIds.length > 0 || ids.length > 0;
   return (
     <>
-      <button
-        type="button"
-        id="home-competition-filter"
-        className={`button button-secondary home-filter-button${active ? " is-active" : ""}`}
-        aria-label={`Filtrer les compétitions : ${label}`}
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        title={label}
-        onClick={() => setOpen(true)}
-      >
-        <Icon name="filters" />
-        <span>{active ? label : "Filtrer"}</span>
-      </button>
+      {trigger ? (
+        <button
+          type="button"
+          className={trigger.className}
+          aria-label={trigger.label}
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          onClick={() => setOpen(true)}
+        >
+          {trigger.text}
+        </button>
+      ) : (
+        <button
+          type="button"
+          id="home-competition-filter"
+          className={`button button-secondary home-filter-button${active ? " is-active" : ""}`}
+          aria-label={`Filtrer les compétitions : ${label}`}
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          title={label}
+          onClick={() => setOpen(true)}
+        >
+          <Icon name="filters" />
+          <span>{active ? label : "Filtrer"}</span>
+        </button>
+      )}
       {open && (
         <CompetitionPicker
           f={f}
