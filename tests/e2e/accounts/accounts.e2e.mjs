@@ -681,7 +681,9 @@ try {
       const tapClosed = await until(async () => (await tapButton.getAttribute("aria-expanded")) === "false", { timeout: 3000 });
       await tapButton.tap();
       await until(async () => (await tapButton.getAttribute("aria-expanded")) === "true", { timeout: 3000 });
-      await P.page.locator(".lettre-title").tap();
+      // Elsewhere: the page's left gutter under the open menu (on a phone the menu covers the title).
+      const menuBox = await P.page.locator(".account-menu").boundingBox();
+      await P.page.touchscreen.tap(6, Math.round(menuBox.y + menuBox.height + 24));
       const outside = await until(async () => (await tapButton.getAttribute("aria-expanded")) === "false", { timeout: 3000 });
       record("C6e", "a tap opens and closes the menu; a tap elsewhere closes it", { open: true, closed: true, outside: true }, { open: Boolean(tapOpen), closed: Boolean(tapClosed), outside: Boolean(outside) }, tapOpen && tapClosed && outside);
       await P.context.close();
