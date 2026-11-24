@@ -67,6 +67,15 @@ test("A10 every sync state has a label, « arrêtée » with its reason", () => 
   const stopped = syncLabel({ state: "stopped", reason: "Version de préférences non reconnue : 2." });
   assert.equal(stopped.text, "Arrêtée");
   assert.equal(stopped.detail, "Version de préférences non reconnue : 2.");
+  // S11: the short form for the header of /compte, and the failed state's detail.
+  assert.deepEqual(
+    ["synced", "syncing", "idle", "failed", "stopped", "unavailable"].map((state) => syncLabel({ state }).pill),
+    ["Synchronisé", "Synchronisation…", "Synchronisation…", "Synchro en échec", "Synchro arrêtée", "Synchro indisponible"],
+  );
+  const failed = syncLabel({ state: "failed", reason: "Le serveur des comptes ne répond pas." });
+  assert.equal(failed.text, "En échec");
+  assert.equal(failed.detail, "Le serveur des comptes ne répond pas. Nouvel essai au prochain changement.");
+  assert.equal(syncLabel({ state: "failed" }).detail, "Nouvel essai au prochain changement.");
   assert.equal(planLabel(1), "Gratuit");
   assert.equal(planLabel(null), "Gratuit");
   assert.equal(planLabel(2), "Plus");

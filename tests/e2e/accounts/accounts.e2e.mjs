@@ -12,7 +12,7 @@
 // (auth-stand-in.mjs); the account API is the real front and store on the local PostgreSQL (account-api-stand-in.mjs);
 // the football data are recorded production answers replayed on 127.0.0.1:8765. Google is not configured there.
 import { createRequire } from "node:module";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { startAuthStandIn } from "./auth-stand-in.mjs";
 import { startAccountApiStandIn } from "./account-api-stand-in.mjs";
@@ -38,6 +38,15 @@ const CLUB_A = "t_1iaglr"; // AFC Bournemouth in the recorded data
 const CLUB_B = "t_41iFW3";
 const NATION = "t_2ysHaw";
 const PASSWORD = "motdepasse-e2e-1";
+// The captures' favourites: clubs and players of the recorded data, with their images.
+// Readable addresses for the captures (the stand-in's base is new at every run).
+const CAPTURE_OWNERS = {
+  "bureau-sombre": "lea.martin@example.test",
+  "bureau-clair": "marc.dubois@example.test",
+  "telephone-sombre": "ines.roux@example.test",
+  "telephone-clair": "tom.girard@example.test",
+};
+const CAPTURE_SEED = JSON.parse(readFileSync(new URL("capture-seed.json", import.meta.url), "utf8"));
 const steps = [];
 const consoleErrors = [];
 const sameOriginCalls = [];
@@ -135,7 +144,7 @@ async function toggleBookmark(page, url, wanted) {
 async function signInForm(page, email, { create = false, password = PASSWORD, next = "" } = {}) {
   await open(page, `/connexion${next ? `?next=${encodeURIComponent(next)}` : ""}`);
   await page.getByRole("button", { name: create ? "Créer un compte" : "Se connecter", exact: true }).first().waitFor({ timeout: 30000 });
-  if (create) await page.locator(".segmented-control button", { hasText: "Créer un compte" }).click();
+  if (create) await page.locator(".signin-switch button", { hasText: "Créer un compte" }).click();
   await page.locator('input[name="email"]').fill(email);
   await page.locator('input[name="password"]').fill(password);
   await page.locator(".account-submit").click();
@@ -201,20 +210,20 @@ try {
   }
 
   if (PHASE === "nosync") {
-    const email = `nosync-${RUN}@example.test`;
+    const email = "lea.martin@example.test";
     const a = await device("A");
     await toggleBookmark(a.page, `/clubs?id=${CLUB_A}`, true);
     await signInForm(a.page, email, { create: true, next: "/compte" });
     await until(async () => a.page.url().includes("/compte"), { timeout: 30000 });
-    const sync = await a.page.locator(".account-sync").textContent({ timeout: 30000 });
+    const sync = await a.page.locator(".account-syncblock").textContent({ timeout: 30000 });
     record("W2a", "signed in, /compte says Indisponible", "Indisponible", sync, /Indisponible/.test(sync));
-    record("W2b", "no export or deletion without the account API", 0, await a.page.locator(".account-danger").count(), (await a.page.locator(".account-danger").count()) === 0);
+    record("W2b", "no export or deletion without the account API", 0, await a.page.locator(".account-data").count(), (await a.page.locator(".account-data").count()) === 0);
     await shot(a.page, "nosync-compte.png");
     if (CAPTURES)
       for (const [phone, theme, suffix] of [[false, "dark", "bureau-sombre"], [false, "light", "bureau-clair"], [true, "dark", "telephone-sombre"]]) {
         const c = await device(`capture-${suffix}`, { phone, theme, scale: 2 });
         await signInForm(c.page, email, { next: "/compte" });
-        await c.page.locator(".account-sync").waitFor({ timeout: 30000 });
+        await c.page.locator(".account-syncblock").waitFor({ timeout: 30000 });
         await capture(c.page, `compte-synchro-indisponible-${suffix}.png`);
         await c.context.close();
       }
@@ -274,17 +283,43 @@ try {
     await shot(A.page, "01-signed-out-favourite.png");
 
     // Sign-up from the header, back to the page.
+    const entryWidth = (await A.page.locator(".account-entry").boundingBox())?.width;
     await A.page.locator(".account-entry").click();
     await until(async () => new URL(A.page.url()).pathname === "/connexion");
     const nextParam = new URL(A.page.url()).searchParams.get("next");
     record("O4", "the header link carries the page as ?next=", `/clubs?id=${CLUB_A}…`, nextParam, nextParam?.startsWith(`/clubs?id=${CLUB_A}`));
-    await A.page.locator(".segmented-control button", { hasText: "Créer un compte" }).click();
+    // The screen of its own (docs/COMPTES_SITE.md, section 7).
+    const outWidth = entryWidth;
+    const links = await A.page.evaluate(() => ({
+      wordmark: document.querySelector(".signin-wordmark")?.getAttribute("href"),
+      close: document.querySelector(".signin-close")?.getAttribute("href"),
+      header: document.querySelectorAll(".topbar").length,
+      art: document.querySelector(".signin-brand .account-art")?.getAttribute("aria-hidden"),
+      images: [...document.querySelectorAll(".account-art image, .account-art img")].length,
+    }));
+    record("S9", "no site header; the wordmark goes home and « Fermer » back to ?next=", { wordmark: "/", close: nextParam, header: 0 }, links, links.wordmark === "/" && links.close === nextParam && links.header === 0);
+    record("S8", "the drawing is inline and hidden from screen readers", { art: "true", images: 0 }, { art: links.art, images: links.images }, links.art === "true" && links.images === 0);
     await A.page.locator('input[name="email"]').fill(email);
+    await A.page.locator('input[name="password"]').fill("brouillon");
+    await A.page.locator(".signin-eye").click();
+    const eye = await A.page.evaluate(() => ({ type: document.querySelector('input[name="password"]').type, value: document.querySelector('input[name="password"]').value, pressed: document.querySelector(".signin-eye").getAttribute("aria-pressed") }));
+    record("S7", "the eye shows the password without changing it", { type: "text", value: "brouillon", pressed: "true" }, eye, eye.type === "text" && eye.value === "brouillon" && eye.pressed === "true");
+    await A.page.locator(".signin-switch button", { hasText: "Créer un compte" }).click();
+    const switched = await A.page.evaluate(() => ({
+      title: document.querySelector(".signin-title").textContent,
+      email: document.querySelector('input[name="email"]').value,
+      password: document.querySelector('input[name="password"]').value,
+      type: document.querySelector('input[name="password"]').type,
+      autocomplete: document.querySelector('input[name="password"]').autocomplete,
+    }));
+    record("S6", "changing to « Créer un compte » keeps the address and clears the password", { title: "Créer un compte", email, password: "", type: "password", autocomplete: "new-password" }, switched, switched.title === "Créer un compte" && switched.email === email && switched.password === "" && switched.type === "password" && switched.autocomplete === "new-password");
     await A.page.locator('input[name="password"]').fill(PASSWORD);
     await shot(A.page, "02-sign-up-form.png");
     await A.page.locator(".account-submit").click();
     await until(async () => new URL(A.page.url()).pathname === "/clubs", { timeout: 30000 });
     record("S3", "sign-up brings the person back, signed in", "Mon compte", await entryLabel(A.page), (await until(async () => (await entryLabel(A.page)) === "Mon compte")) === true);
+    const inWidth = (await A.page.locator(".account-entry").boundingBox())?.width;
+    record("S10", "the header entry is 124 px wide signed out and signed in", [124, 124], [outWidth, inWidth], outWidth === 124 && inWidth === 124);
     const id = await userId(email);
     const afterSignUp = await until(async () => {
       const clubs = await docClubs(id);
@@ -293,9 +328,13 @@ try {
     record("A1", "the favourite added before sign-up is in the account", [CLUB_A], afterSignUp, afterSignUp?.includes(CLUB_A));
 
     await open(A.page, "/compte");
-    const facts = await A.page.locator(".account-facts").textContent({ timeout: 30000 });
-    const synced = await until(async () => /À jour/.test(await A.page.locator(".account-sync").textContent()));
-    record("S5", "/compte: the address, « Gratuit », « À jour »", [email, "Gratuit", "À jour"], facts, facts.includes(email) && facts.includes("Gratuit") && synced);
+    const facts = await A.page.locator(".account-hero").textContent({ timeout: 30000 });
+    const synced = await until(async () => /À jour/.test(await A.page.locator(".account-syncblock").textContent()));
+    const kept = await until(async () => {
+      const text = await A.page.locator(".account").textContent();
+      return /Clubs\s*1/.test(text) && (await A.page.locator(`.account-favourites a[href*="${CLUB_A}"]`).count()) === 1 ? text : null;
+    });
+    record("S5", "/compte: the address, « Gratuit », « À jour », the club kept as a favourite", [email, "Gratuit", "À jour", "Clubs 1"], facts, facts.includes(email) && facts.includes("Gratuit") && synced && Boolean(kept));
     await shot(A.page, "03-compte-a-jour.png");
 
     // Sign-out: last save, stores emptied, marker removed.
@@ -309,7 +348,7 @@ try {
 
     // A wrong password, then the right one: the favourite comes back from the account.
     await signInForm(A.page, email, { password: "mauvais-mot-de-passe", next: "/compte" });
-    const wrong = await A.page.locator(".account-error").textContent({ timeout: 30000 });
+    const wrong = await A.page.locator(".signin-error").textContent({ timeout: 30000 });
     record("O5", "a wrong password reads in plain French", "Adresse ou mot de passe incorrect.", wrong, wrong === "Adresse ou mot de passe incorrect.");
     await shot(A.page, "04-wrong-password.png");
     await A.page.locator('input[name="password"]').fill(PASSWORD);
@@ -375,7 +414,7 @@ try {
     record("A6d", "A reloaded holds the merged contract", [CLUB_B, NATION], onA2, Boolean(onA2));
 
     // Sync states on /compte.
-    const state = async (page) => (await page.locator(".account-sync").textContent({ timeout: 30000 })).trim();
+    const state = async (page) => (await page.locator(".account-syncblock").textContent({ timeout: 30000 })).trim();
     await until(async () => /À jour/.test(await state(A.page)));
     api.control.delay = 6000;
     await open(A.page, "/compte");
@@ -427,7 +466,7 @@ try {
     await A.page.getByRole("button", { name: "Supprimer mon compte" }).click();
     await A.page.locator('input[name="confirm"]').fill("SUPPRIMER");
     await A.page.getByRole("button", { name: "Supprimer définitivement" }).click();
-    const refused = await A.page.locator(".account-danger .account-error").textContent({ timeout: 20000 });
+    const refused = await A.page.locator(".account-data .account-error").textContent({ timeout: 20000 });
     record("O8b", "deletion before Neon's key: told in plain words, nothing erased", "pas encore possible", refused, /pas encore possible/.test(refused) && (await api.rows()).accounts > 0);
     await shot(A.page, "09-delete-unavailable.png");
     api.control.deletion = true;
@@ -437,13 +476,13 @@ try {
     const left = await listIds(A.page);
     record("O8c", "deletion done: signed out, stores emptied, no row left but the erasure", { accounts: 0, preferences: 0, erasures: 1 }, { rows, left, user: await userId(email) }, rows.accounts === 0 && rows.preferences === 0 && rows.erasures === 1 && !left?.includes(CLUB_B) && (await userId(email)) === null);
     await signInForm(A.page, email, {});
-    const gone = await A.page.locator(".account-error").textContent({ timeout: 30000 });
+    const gone = await A.page.locator(".signin-error").textContent({ timeout: 30000 });
     record("O8d", "the deleted account cannot sign in", "Adresse ou mot de passe incorrect.", gone, gone === "Adresse ou mot de passe incorrect.");
 
     // Google: not configured on the stand-in: the error path in plain words.
     await open(A.page, "/connexion");
-    await A.page.locator(".account-google").click();
-    const google = await A.page.locator(".account-error").textContent({ timeout: 20000 });
+    await A.page.locator(".signin-google").click();
+    const google = await A.page.locator(".signin-error").textContent({ timeout: 20000 });
     record("O7", "« Continuer avec Google » fails in plain words when Google is not set up", "…Google…", google, /Google|indisponible|injoignable/.test(google));
 
     // O9: no address, token or account id in a URL the browser asked for.
@@ -457,24 +496,36 @@ try {
       for (const [phone, theme, suffix] of [[false, "dark", "bureau-sombre"], [false, "light", "bureau-clair"], [true, "dark", "telephone-sombre"], [true, "light", "telephone-clair"]]) {
         // One account per capture device: the account carries the theme, so a shared one would paint every
         // capture in the theme of the first device.
-        const owner = `capture-${suffix}-${RUN}@example.test`;
+        const owner = CAPTURE_OWNERS[suffix];
         const c = await device(`capture-${suffix}`, { phone, theme, scale: 2 });
         await open(c.page, `/clubs?id=${CLUB_A}`);
         await c.page.locator('.account-entry[aria-label="Se connecter"]').waitFor({ timeout: 60000 });
         await c.page.waitForTimeout(2500);
         await capture(c.page, `en-tete-deconnecte-${suffix}.png`);
         await open(c.page, "/connexion");
-        await c.page.locator(".account-form").waitFor({ timeout: 30000 });
+        await c.page.locator(".signin-form").waitFor({ timeout: 30000 });
         await capture(c.page, `connexion-se-connecter-${suffix}.png`);
-        await c.page.locator(".segmented-control button", { hasText: "Créer un compte" }).click();
-        await c.page.locator('input[name="email"]').fill(owner);
+        await c.page.locator(".signin-switch button", { hasText: "Créer un compte" }).click();
+        await c.page.locator('input[name="email"]').fill("lea.martin@example.test");
         await capture(c.page, `connexion-creer-un-compte-${suffix}.png`);
-        await c.page.locator(".segmented-control button", { hasText: "Se connecter" }).click();
-        await c.page.locator('input[name="email"]').fill(owner);
+        await c.page.locator(".signin-switch button", { hasText: "Se connecter" }).click();
+        await c.page.locator('input[name="email"]').fill("lea.martin@example.test");
         await c.page.locator('input[name="password"]').fill("mauvais-mot-de-passe");
         await c.page.locator(".account-submit").click();
-        await c.page.locator(".account-error").waitFor({ timeout: 20000 });
+        await c.page.locator(".signin-error").waitFor({ timeout: 20000 });
         await capture(c.page, `connexion-erreur-${suffix}.png`);
+        // A new account without a favourite, then the owner's: favourites chosen before the sign-up (capture-seed.json)
+        // are merged into the account at the first sign-in.
+        if (suffix === "bureau-sombre") {
+          await signInForm(c.page, "sacha.petit@example.test", { create: true, next: "/compte" });
+          await until(async () => /À jour/.test(await state(c.page)), { timeout: 30000 });
+          await capture(c.page, `compte-sans-favori-${suffix}.png`);
+          await c.page.getByRole("button", { name: "Se déconnecter" }).click();
+          await until(async () => new URL(c.page.url()).pathname === "/", { timeout: 30000 });
+        }
+        await c.page.evaluate((seed) => {
+          for (const [key, value] of Object.entries(seed)) localStorage.setItem(key, JSON.stringify(value));
+        }, CAPTURE_SEED);
         await signInForm(c.page, owner, { create: true, next: `/clubs?id=${CLUB_A}` });
         await until(async () => (await entryLabel(c.page)) === "Mon compte", { timeout: 30000 });
         await c.page.waitForTimeout(2500);
@@ -504,7 +555,7 @@ try {
           await c.page.locator('input[name="confirm"]').fill("SUPPRIMER");
           api.control.deletion = false;
           await c.page.getByRole("button", { name: "Supprimer définitivement" }).click();
-          await c.page.locator(".account-danger .account-error").waitFor({ timeout: 20000 });
+          await c.page.locator(".account-data .account-error").waitFor({ timeout: 20000 });
           await capture(c.page, `compte-suppression-indisponible-${suffix}.png`);
         }
         await c.context.close();
