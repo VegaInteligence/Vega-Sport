@@ -1,6 +1,4 @@
 import { Suspense } from "react";
-import { SpeedInsights } from "@vercel/speed-insights/next";
-import { Analytics } from "@vercel/analytics/next";
 import Providers from "./providers.jsx";
 import ShellFallback from "./shell-fallback.jsx";
 import { homeBootstrapGuardScript } from "../src/services/home-bootstrap-preferences.js";
@@ -21,6 +19,9 @@ import "../src/phone.css";
 import "../src/navigation.css";
 import "../src/account.css";
 import "../src/legal.css";
+// Consent: the Vercel measurement waits for « Accepter » in Europe (src/services/consent.js).
+import Consent from "../src/components/Consent.jsx";
+import "../src/consent.css";
 const siteUrl = "https://vegasport.vercel.app";
 // Raised with every new drawing of the icon, so no browser keeps the old one.
 const faviconVersion = 4;
@@ -84,11 +85,10 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body>
+        <Consent />
         <Suspense fallback={<ShellFallback />}>
           <Providers>{children}</Providers>
         </Suspense>
-        <SpeedInsights />
-        <Analytics />
       </body>
     </html>
   );
