@@ -1,5 +1,16 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## « Mon compte » from a blank sheet: two directions — VI-38 (24 November 2026, mock-up, branch `claude/vi-38-compte-feuille-blanche` from origin/main cb56e51, local, not pushed)
+
+- Goal (the owner, after refusing passes 1 and 2 of `claude/vi-38-profil-parametres`): start again from a blank sheet; a simple, épuré, elegant `/compte` holding the account and the settings, reached from a header menu (« Mon compte » → top, « Paramètres » → `#parametres`). Two directions built as code, captured, for him to pick one.
+- Built: `?piste=a` « Lettre » (default, `DEFAULT_PISTE` in AccountPage.jsx) and `?piste=b` « Diptyque », remembered for the tab's session. Shared state and controls in `AccountParts.jsx`; `AccountLetter.jsx`, `AccountDiptych.jsx`; new `/compte` styles in account.css. Header entry: a button with `aria-expanded` and a words-only menu (who, « Mon compte », « Paramètres », « Se déconnecter »); hover, keyboard focus, tap; Escape closes and gives the focus back.
+- Decisions: the sync is said only when it does not work (failed, stopped, unavailable); its block always carries `data-state`. Language: a quiet « Français » row. Competitions: listed with the favourites, where « Modifier » opens the home page's picker (HomePreferences `trigger`); not repeated in the settings. Favourites grouped by kind, 6 per kind then « Afficher les N autres » (was 8 in all, S4). Password action only with a `credential` account (`listAccounts()`). Lifted from the refused branch: that check, the menu's logic, `updateQuery` keeping the hash, « Automatique » in HomeCountryMenu.
+- E2E selectors: `.account-syncblock` read through `syncState()` (data-state, then the words); S5 no longer reads « Clubs 1 » (no counters), it counts the favourite links.
+- Checks: site suite 1017/1017; accounts E2E on « Lettre » 87/87 (on 47, verify 25, nosync 4, off 11), evidence …/scratchpad/vi38fb/e2e/.
+- Captures: `/mnt/project-files/vi-38-comptes/captures-feuille-blanche/` (a-lettre/, b-diptyque/, a sheet each, comparaison.png).
+- Not done until a direction is chosen: docs/COMPTES_SITE.md section 7, E2E cases for the menu and the settings, removal of the switch and of the other direction.
+- Next action: the owner picks A or B.
+
 ## Injured and suspended players, the squad card without a read date — FAILURE_MODES § 59al (24 November 2026, branch `claude/absents-asof-vide` from origin/main 16e2cc6, local, not pushed)
 
 - Broke (production, after #110): the club's « Effectif » tab showed « Chargement impossible » for any club with an absent player and no player read yet (`asOf: null`, `read: 0`; PSG on 23 Nov).
