@@ -67,6 +67,14 @@
  * GET /api/rankings/level/player?season=&player= — one player's level with its parts and
  * each position he played: judged (its share, value and talents by block, in standard
  * deviations) or not (too few minutes over two seasons).
+ *
+ * GET /api/rankings/award?season=&limit=&page= — the Ballon d'Or race on the level (vega/award.py,
+ * FAILURE_MODES §60, docs/calculs/10-score-vega-v9/04): the ranked players in their order, 30 a page
+ * by default (200 at most), each with his score and the raw parts it is made of: `individual` and
+ * `level` in Elo points, `collective` in honour points, `fairPlay` in card points per 90 (negative).
+ * Read beside the power ranking's race, which it does not change.
+ * GET /api/rankings/award/player?season=&player= — one player's race: his parts and their z, his
+ * card points and covered minutes, his rank or the reason he is out of the race, and his honours.
  */
 import { createHash } from "node:crypto";
 import { matchesEtag, reject, send, validateParams } from "../http.mjs";
@@ -856,6 +864,57 @@ async function levelPlayer(read, params) {
   };
 }
 
+/** The Ballon d'Or race on the level of a season (§60): its ranked players, a page of `limit` at a time. */
+async function awardRanking(read, params) {
+  validateParams(params, ["season", "limit", "page"]);
+  const season = params.get("season"), limitRaw = params.get("limit") ?? "30", pageRaw = params.get("page") ?? "1";
+  if (!/^\d{4}\/\d{4}$/.test(season || "") || !/^[1-9]\d{0,2}$/.test(limitRaw) || Number(limitRaw) > 200 || !/^[1-9]\d{0,4}$/.test(pageRaw))
+    reject(400, "Paramètre invalide.");
+  const limit = Number(limitRaw), page = Number(pageRaw);
+  const where = `season_id=${SEASON_KEY} AND rank IS NOT NULL`;
+  const [rows, [count]] = await Promise.all([
+    read(`SELECT * FROM api.award_race WHERE ${where} ORDER BY rank, player_id LIMIT $2 OFFSET $3`, [season, limit, (page - 1) * limit]),
+    read(`SELECT count(*)::int AS total, max(version) AS version, max(computed_at) AS computed_at FROM api.award_race WHERE ${where}`, [season]),
+  ]);
+  if (!count?.total) reject(404, "Donnée indisponible.");
+  return {
+    season, page, limit, total: count.total, method: { version: count.version, computedAt: iso(count.computed_at) },
+    rows: rows.map((r) => ({
+      rank: r.rank, playerId: r.player_id, name: r.name, imageUrl: r.image_url ?? null, teamId: r.team_id ?? null, team: r.team ?? null,
+      teamImageUrl: r.team_image_url ?? null, position: POSITION_LABEL[r.position] ?? r.position, score: round(r.score, 1),
+      individual: round(r.individual, 1), collective: round(r.collective, 2), fairPlay: round(r.fair_play, 2), level: round(r.level, 1),
+    })),
+  };
+}
+
+/** One player's Ballon d'Or race of a season: his parts and their z, his cards, his rank or his reason, his honours. */
+async function awardPlayer(read, params) {
+  validateParams(params, ["season", "player"]);
+  const season = params.get("season"), id = params.get("player");
+  if (!/^\d{4}\/\d{4}$/.test(season || "") || !PLAYER.test(id || "")) reject(400, "Paramètre invalide.");
+  const [[r], honours] = await Promise.all([
+    read(`SELECT * FROM api.award_race WHERE season_id=${SEASON_KEY} AND player_key=api.internal_id('player',$2)`, [season, id]),
+    read(`SELECT * FROM api.award_honours WHERE season_id=${SEASON_KEY} AND player_key=api.internal_id('player',$2)
+          ORDER BY value DESC, competition, team_id`, [season, id]),
+  ]);
+  if (!r) reject(404, "Donnée indisponible.");
+  return {
+    season, method: { version: r.version, computedAt: iso(r.computed_at) },
+    player: {
+      id, rank: r.rank, reason: r.reason ?? null, position: POSITION_LABEL[r.position] ?? r.position, positionKey: r.position,
+      teamId: r.team_id ?? null, team: r.team ?? null, score: round(r.score, 1), individual: round(r.individual, 1), collective: round(r.collective, 2),
+      fairPlay: round(r.fair_play, 2), level: round(r.level, 1), zIndividual: round(r.z_individual, 2), zCollective: round(r.z_collective, 2),
+      zFairPlay: round(r.z_fair_play, 2), cardPoints: r.card_points, fairPlayMinutes: Math.round(r.fair_play_minutes),
+      eligible: r.eligible !== false, linked: r.linked !== false, topDivision: r.top_division !== false, measured: r.measured !== false,
+      honours: honours.map((h) => ({
+        competition: h.competition, teamId: h.team_id, team: h.team, kind: h.kind, reached: h.reached ?? null, leagueRank: h.league_rank ?? null,
+        progress: round(h.progress, 3), factor: round(h.factor, 3), prestige: round(h.prestige, 2), share: round(h.share, 3), value: round(h.value, 3),
+        reason: h.reason ?? null,
+      })),
+    },
+  };
+}
+
 /** A league edition's competition_season_id from its public id and season, or a 404. */
 async function editionOf(read, params) {
   const competition = params.get("competition"), season = params.get("season");
@@ -950,6 +1009,8 @@ export function createRankingRoute(read) {
     if (path === "/api/rankings/power/history") return respond(req, await powerHistory(read, params));
     if (path === "/api/rankings/level") return respond(req, await levelRanking(read, params));
     if (path === "/api/rankings/level/player") return respond(req, await levelPlayer(read, params));
+    if (path === "/api/rankings/award") return respond(req, await awardRanking(read, params));
+    if (path === "/api/rankings/award/player") return respond(req, await awardPlayer(read, params));
     if (path === "/api/rankings/leagues") return respond(req, await leagueLevels(read, params));
     if (path === "/api/rankings/breakouts") return respond(req, await breakouts(read, params));
     if (path === "/api/rankings/match") return respond(req, await matchGrades(read, params));
