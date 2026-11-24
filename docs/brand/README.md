@@ -39,6 +39,12 @@ Contrôle de bout en bout : `node tests/e2e/brand.e2e.mjs <adresse du site> <dos
 
 Le logo ne change ni les couleurs ni la police de l’interface : elles vivent dans [`theme.css`](../../dashboard/frontend/src/theme.css), et le texte reste en Inter (auto-hébergée dans [`public/fonts`](../../dashboard/frontend/public/fonts/), licence OFL). Le bleu y est réservé à la sélection et aux signaux.
 
+Une exception, les écrans du compte (`/connexion`, `/compte`, [`account.css`](../../dashboard/frontend/src/account.css)) : la voix de la marque y est reprise telle quelle.
+
+- **Le titre de `/connexion` et le monogramme du compte** sont en EB Garamond (auto-hébergée, `public/fonts/eb-garamond-latin.woff2`, licence OFL), suivis du point rond du logo (`.brand-dot`) : « Connexion. », « L. ».
+- **L’action principale** (« Se connecter ») est ivoire sur nuit au thème sombre, nuit sur ivoire au thème clair.
+- **Le dessin** ([`AccountArt.jsx`](../../dashboard/frontend/src/components/AccountArt.jsx)) : des terrains d’entraînement de nuit vus du ciel, comme le plan du film derrière l’image de partage. Tracé en SVG, nuit et ivoire dans les deux thèmes, sans requête.
+
 ## Archives
 
 Les kits STATARENA (le premier, puis le vert) restent pour mémoire : fichiers dans `public/branding/` et [`public/branding/green`](../../dashboard/frontend/public/branding/green/), guide et références dans ce dossier (`guidelines`, `previews`, `source`, `tokens`, `web`, `manifest.json`).
