@@ -3,14 +3,14 @@
  * vega_account, one connection per copy of the function). It takes typed commands and nothing
  * else, and answers `{ ok: true, value }` or `{ ok: false, code, message }`; an unexpected
  * failure is thrown (the Lambda runtime reports it as a function error). Failure modes:
- * FAILURE_MODES.md, section 7 (D1 to D13), S15, S16 and section 9.
+ * FAILURE_MODES.md, section 7 (D1 to D14), S16, S17 and section 9.
  *
- * Commands: session, getPreferences, putPreferences, mergePreferences, export, erase. Every
- * write of one account runs under a transaction lock on that account, so two writes never mix.
- * The JSON of the preferences is mapped to rows by src/contract.mjs alone.
+ * Commands: session, getPreferences, putPreferences, export, erase. Every write of one account
+ * runs under a transaction lock on that account, so two writes never mix. The preferences are one
+ * document per account (the site's contract, stored as sent; src/contract.mjs checks it).
  */
 import pg from "pg";
-import { parse, toRows, fromRows, merge, ContractError } from "./contract.mjs";
+import { checkContract, ContractError } from "./contract.mjs";
 
 const ACCOUNT_ID = /^[A-Za-z0-9_-]{1,64}$/;
 const DATE_OID = 1082;
@@ -39,16 +39,23 @@ export function createPool(connectionString, { max = 1, timeoutMs = 5000, role =
   return pool;
 }
 
-/** Fields each command takes beyond `command` and `accountId`. */
-const COMMANDS = { session: [], getPreferences: [], putPreferences: ["preferences"], mergePreferences: ["preferences"], export: [], erase: [] };
+/** Fields each command requires, and may take, beyond `command` and `accountId`. */
+const COMMANDS = {
+  session: { required: [], optional: [] },
+  getPreferences: { required: [], optional: [] },
+  putPreferences: { required: ["preferences"], optional: ["ifMatch"] },
+  export: { required: [], optional: [] },
+  erase: { required: [], optional: [] },
+};
 
 class Refusal extends Error {
-  constructor(code, message) {
+  constructor(code, message, details = {}) {
     super(message);
     this.code = code;
+    this.details = details;
   }
 }
-const refuse = (code, message) => ({ ok: false, code, message });
+const refuse = (code, message, details = {}) => ({ ok: false, code, message, ...details });
 const lost = (error) =>
   error.code === "57P05" || (!error.severity && (["ECONNRESET", "EPIPE", "ETIMEDOUT"].includes(error.code) || /Connection terminated|connection.*(closed|ended)/i.test(error.message || "")));
 const iso = (value) => (value instanceof Date ? value.toISOString() : value);
@@ -57,99 +64,23 @@ const iso = (value) => (value instanceof Date ? value.toISOString() : value);
 function checked(command) {
   if (command === null || typeof command !== "object" || Array.isArray(command)) return null;
   if (typeof command.command !== "string" || !Object.hasOwn(COMMANDS, command.command)) return null;
-  const fields = COMMANDS[command.command];
-  if (Object.keys(command).some((key) => !["command", "accountId", ...fields].includes(key))) return null;
-  if (fields.some((field) => command[field] === undefined)) return null;
+  const { required, optional } = COMMANDS[command.command];
+  if (Object.keys(command).some((key) => !["command", "accountId", ...required, ...optional].includes(key))) return null;
+  if (required.some((field) => command[field] === undefined)) return null;
   if (typeof command.accountId !== "string" || !ACCOUNT_ID.test(command.accountId)) return null;
+  if (Object.hasOwn(command, "ifMatch") && !(Number.isSafeInteger(command.ifMatch) && command.ifMatch >= 1)) return null;
   return command;
 }
 
-/** The rows of the preference contract of one account, in their order. */
-async function readRows(client, id) {
-  const preferences = (await client.query("SELECT focus, theme, country, home_priority, preferred_competition, onboarding_complete FROM account.preferences WHERE account_id = $1", [id])).rows[0] ?? null;
-  const leagues = (await client.query("SELECT entity_id FROM account.follows WHERE account_id = $1 AND kind = 'competition' ORDER BY position, entity_id", [id])).rows;
-  const lists = (await client.query("SELECT list_id, client_id, name FROM account.lists WHERE account_id = $1 ORDER BY position, list_id", [id])).rows;
-  const entries = (
-    await client.query(
-      "SELECT e.list_id, e.kind, e.entity_id, e.season FROM account.list_entries e JOIN account.lists l ON l.list_id = e.list_id WHERE l.account_id = $1 ORDER BY e.list_id, e.position, e.kind, e.entity_id",
-      [id],
-    )
-  ).rows;
-  const byList = new Map(lists.map((list) => [list.list_id, []]));
-  for (const entry of entries) byList.get(entry.list_id).push(entry);
-  return { preferences, leagues, lists: lists.map((list) => ({ ...list, entries: byList.get(list.list_id) })) };
-}
-
-/** Replaces the account's preferences with a normalised contract. Rows that stay keep their dates. */
-async function writeContract(client, id, contract, hooks) {
-  const rows = toRows(contract);
-  await client.query("INSERT INTO account.accounts (account_id) VALUES ($1) ON CONFLICT DO NOTHING", [id]);
-  // The columns are the contract's (src/contract.mjs FIELDS), checked as identifiers.
-  const columns = Object.keys(rows.preferences);
-  if (!columns.every((c) => /^[a-z_]{1,63}$/.test(c))) throw new Error("invalid column");
-  await client.query(
-    `INSERT INTO account.preferences (account_id, ${columns.join(", ")}) VALUES ($1, ${columns.map((_, i) => `$${i + 2}`).join(", ")})
-     ON CONFLICT (account_id) DO UPDATE SET ${columns.map((c) => `${c} = EXCLUDED.${c}`).join(", ")}, updated_at = now()`,
-    [id, ...columns.map((c) => rows.preferences[c])],
-  );
-  // Followed competitions; national teams, which the contract does not carry, are left alone.
-  const leagueIds = rows.leagues.map((r) => r.entity_id);
-  await client.query("DELETE FROM account.follows WHERE account_id = $1 AND kind = 'competition' AND NOT (entity_id = ANY ($2::text[]))", [id, leagueIds]);
-  await client.query(
-    `INSERT INTO account.follows (account_id, kind, entity_id, position)
-     SELECT $1, 'competition', e, p FROM unnest($2::text[], $3::smallint[]) AS t(e, p)
-     ON CONFLICT (account_id, kind, entity_id) DO UPDATE SET position = EXCLUDED.position`,
-    [id, leagueIds, rows.leagues.map((r) => r.position)],
-  );
-  // Lists by client_id, then their entries by (kind, id).
-  const clientIds = rows.lists.map((l) => l.client_id);
-  await client.query("DELETE FROM account.lists WHERE account_id = $1 AND NOT (client_id = ANY ($2::text[]))", [id, clientIds]);
-  const listIds = new Map(
-    (
-      await client.query(
-        `INSERT INTO account.lists (account_id, client_id, name, position)
-         SELECT $1, c, n, p FROM unnest($2::text[], $3::text[], $4::smallint[]) AS t(c, n, p)
-         ON CONFLICT (account_id, client_id) DO UPDATE SET name = EXCLUDED.name, position = EXCLUDED.position, updated_at = now()
-         RETURNING list_id, client_id`,
-        [id, clientIds, rows.lists.map((l) => l.name), rows.lists.map((l) => l.position)],
-      )
-    ).rows.map((r) => [r.client_id, r.list_id]),
-  );
-  hooks.beforeEntries?.();
-  const e = { list: [], kind: [], entity: [], season: [], position: [] };
-  for (const list of rows.lists)
-    for (const entry of list.entries) {
-      e.list.push(listIds.get(list.client_id));
-      e.kind.push(entry.kind);
-      e.entity.push(entry.entity_id);
-      e.season.push(entry.season);
-      e.position.push(entry.position);
-    }
-  await client.query(
-    `DELETE FROM account.list_entries x USING account.lists l
-     WHERE l.list_id = x.list_id AND l.account_id = $1
-       AND (x.list_id, x.kind, x.entity_id) NOT IN (SELECT * FROM unnest($2::bigint[], $3::text[], $4::text[]))`,
-    [id, e.list, e.kind, e.entity],
-  );
-  await client.query(
-    `INSERT INTO account.list_entries (list_id, kind, entity_id, season, position)
-     SELECT * FROM unnest($1::bigint[], $2::text[], $3::text[], $4::text[], $5::integer[])
-     ON CONFLICT (list_id, kind, entity_id) DO UPDATE SET season = EXCLUDED.season, position = EXCLUDED.position`,
-    [e.list, e.kind, e.entity, e.season, e.position],
-  );
+/** The stored document and its revision, both null when the account never saved. */
+async function readDocument(client, id) {
+  const row = (await client.query("SELECT document, revision, updated_at FROM account.preferences WHERE account_id = $1", [id])).rows[0];
+  return row ? { contract: row.document, revision: Number(row.revision), updatedAt: iso(row.updated_at) } : null;
 }
 
 /** Everything the base holds for one account (X1), timestamps as ISO text. */
 async function exportOf(client, id) {
   const account = (await client.query("SELECT account_id, created_at, last_seen_on, account.level_of(account_id) AS level FROM account.accounts WHERE account_id = $1", [id])).rows[0];
-  const follows = (await client.query("SELECT kind, entity_id, position, followed_at FROM account.follows WHERE account_id = $1 ORDER BY kind, position, entity_id", [id])).rows;
-  const lists = (await client.query("SELECT list_id, client_id, name, position, created_at, updated_at FROM account.lists WHERE account_id = $1 ORDER BY position, list_id", [id])).rows;
-  const entries = (
-    await client.query(
-      "SELECT e.list_id, e.kind, e.entity_id, e.season, e.position, e.added_at FROM account.list_entries e JOIN account.lists l ON l.list_id = e.list_id WHERE l.account_id = $1 ORDER BY e.list_id, e.position",
-      [id],
-    )
-  ).rows;
   const customer = (await client.query("SELECT customer_id, created_at FROM account.stripe_customers WHERE account_id = $1", [id])).rows[0];
   const subscriptions = (
     await client.query(
@@ -159,16 +90,7 @@ async function exportOf(client, id) {
   ).rows;
   return {
     account: account ? { accountId: account.account_id, createdAt: iso(account.created_at), lastSeenOn: account.last_seen_on, level: account.level } : null,
-    preferences: fromRows(await readRows(client, id)),
-    follows: follows.map((f) => ({ kind: f.kind, entityId: f.entity_id, position: f.position, followedAt: iso(f.followed_at) })),
-    lists: lists.map((l) => ({
-      clientId: l.client_id,
-      name: l.name,
-      position: l.position,
-      createdAt: iso(l.created_at),
-      updatedAt: iso(l.updated_at),
-      entries: entries.filter((x) => x.list_id === l.list_id).map((x) => ({ kind: x.kind, entityId: x.entity_id, season: x.season, position: x.position, addedAt: iso(x.added_at) })),
-    })),
+    preferences: await readDocument(client, id),
     stripe: {
       customer: customer ? { customerId: customer.customer_id, createdAt: iso(customer.created_at) } : null,
       subscriptions: subscriptions.map((s) => ({
@@ -185,7 +107,7 @@ async function exportOf(client, id) {
 }
 
 /**
- * The store's handler. `pool`: from createPool. `hooks.beforeEntries`: a test's way to fail a
+ * The store's handler. `pool`: from createPool. `hooks.beforeDocument`: a test's way to fail a
  * write halfway (D6); none in production.
  */
 export function createStore({ pool, hooks = {} }) {
@@ -204,7 +126,10 @@ export function createStore({ pool, hooks = {} }) {
     } catch (error) {
       failure = error;
       await client.query("ROLLBACK").catch(() => {});
-      if (error instanceof Refusal || error instanceof ContractError) return refuse(error.code, error.message);
+      if (error instanceof Refusal) return refuse(error.code, error.message, error.details);
+      if (error instanceof ContractError) return refuse(error.code, error.message);
+      // A string jsonb cannot hold, should one pass the document's check (C5).
+      if (error.code === "22P05") return refuse("CONTRACT_INVALID", "the preferences hold text the base cannot store");
       throw error;
     } finally {
       client.release(failure && lost(failure) ? failure : undefined);
@@ -220,20 +145,31 @@ export function createStore({ pool, hooks = {} }) {
         const level = (await client.query("SELECT account.level_of($1) AS level", [id])).rows[0].level;
         return { created, level };
       }, { write: true }),
-    getPreferences: (id) => transaction(id, async (client) => fromRows(await readRows(client, id)), { write: false }),
-    putPreferences: (id, { preferences }) => {
-      const contract = parse(preferences);
+    getPreferences: (id) =>
+      transaction(id, async (client) => {
+        const held = await readDocument(client, id);
+        return { contract: held?.contract ?? null, revision: held?.revision ?? null };
+      }, { write: false }),
+    putPreferences: (id, { preferences, ifMatch }) => {
+      const text = checkContract(preferences);
       return transaction(id, async (client) => {
-        await writeContract(client, id, contract, hooks);
-        return fromRows(await readRows(client, id));
-      }, { write: true });
-    },
-    mergePreferences: (id, { preferences }) => {
-      const browser = parse(preferences);
-      return transaction(id, async (client) => {
-        const merged = merge(fromRows(await readRows(client, id)), browser);
-        await writeContract(client, id, merged, hooks);
-        return fromRows(await readRows(client, id));
+        await client.query("INSERT INTO account.accounts (account_id) VALUES ($1) ON CONFLICT DO NOTHING", [id]);
+        hooks.beforeDocument?.();
+        // One statement each way: with If-Match, written only over the revision named (D14).
+        const written =
+          ifMatch === undefined
+            ? await client.query(
+                `INSERT INTO account.preferences AS p (account_id, document) VALUES ($1, $2::jsonb)
+                 ON CONFLICT (account_id) DO UPDATE SET document = EXCLUDED.document, revision = p.revision + 1, updated_at = now()
+                 RETURNING revision`,
+                [id, text],
+              )
+            : await client.query("UPDATE account.preferences SET document = $2::jsonb, revision = revision + 1, updated_at = now() WHERE account_id = $1 AND revision = $3 RETURNING revision", [id, text, ifMatch]);
+        if (!written.rowCount) {
+          const held = await readDocument(client, id);
+          throw new Refusal("STALE", "the preferences changed since that revision", { revision: held?.revision ?? null });
+        }
+        return { revision: Number(written.rows[0].revision) };
       }, { write: true });
     },
     export: (id) => transaction(id, (client) => exportOf(client, id), { write: false }),

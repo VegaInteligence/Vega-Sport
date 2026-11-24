@@ -9,11 +9,12 @@
 /** The largest payload of a synchronous Lambda invocation, each way. */
 export const MAX_PAYLOAD = 6 * 1024 * 1024;
 
-/** The store refused the command (`code`: ACCOUNT_ERASED, CONTRACT_LIMIT, ...). */
+/** The store refused the command (`code`: ACCOUNT_ERASED, STALE, ...; `details`: e.g. STALE's revision). */
 export class StoreRefusal extends Error {
-  constructor(code, message) {
+  constructor(code, message, details = {}) {
     super(message || code);
     this.code = code;
+    this.details = details;
   }
 }
 /** The store could not be reached or failed; no detail of the failure is carried. */
@@ -43,7 +44,10 @@ export function createStoreClient(invoke) {
         throw new StoreUnavailable(error);
       }
       if (answer?.ok === true) return answer.value ?? null;
-      if (answer?.ok === false && typeof answer.code === "string") throw new StoreRefusal(answer.code, answer.message);
+      if (answer?.ok === false && typeof answer.code === "string") {
+        const { ok, code, message, ...details } = answer;
+        throw new StoreRefusal(code, message, details);
+      }
       throw new StoreUnavailable();
     },
   };

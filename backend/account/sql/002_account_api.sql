@@ -1,10 +1,6 @@
 -- 24 Nov 2026 (VI-38, stage 2a): what the account API needs beyond 001.
--- Failure modes: backend/account/FAILURE_MODES.md, S15 and S16 (section 3), D10 and X4 to X9.
+-- Failure modes: backend/account/FAILURE_MODES.md, S16 (section 3), D10 and X4 to X9.
 SET LOCAL lock_timeout = '3s';
-
--- The followed competitions keep the order the site gave them (the contract's `leagues`).
--- 0 to 199: the contract follows 200 competitions at most.
-ALTER TABLE account.follows ADD COLUMN position smallint NOT NULL DEFAULT 0 CHECK (position BETWEEN 0 AND 199);
 
 -- An erased account. A Neon session stays valid up to 15 minutes after the person is deleted at
 -- Neon and is verified offline: without this row, a second device's next call would create the

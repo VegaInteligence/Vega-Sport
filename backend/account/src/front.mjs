@@ -6,28 +6,28 @@
  *
  * Routes, all requiring a valid Neon session in X-Vega-Session but the preflight:
  *   POST   /account/session            the account ensured, its level and a fresh pass
- *   GET    /account/preferences        the preference contract, or null
- *   PUT    /account/preferences        replaced by the body's contract; what is stored
- *   POST   /account/preferences/merge  merged with the body's contract (first sign-in on a device)
+ *   GET    /account/preferences        { contract, revision }: the document as sent, or nulls
+ *   PUT    /account/preferences        stores the body's document; { revision }; If-Match optional
  *   GET    /account/export             everything the AWS side holds about the account
  *   DELETE /account                    AWS rows, then the Neon user
  */
 import { createKeyring, signPass, DEFAULT_LIFETIME } from "./pass.mjs";
-import { parse, ContractError } from "./contract.mjs";
+import { checkContract, ContractError } from "./contract.mjs";
 import { createSessionVerifier } from "./session.mjs";
 import { createStoreClient, lambdaInvoker, StoreRefusal, StoreUnavailable } from "./store-client.mjs";
 import { neonFromEnv } from "./neon.mjs";
 
-/** The largest body of a PUT or a merge, decoded. */
-export const MAX_BODY = 1024 * 1024;
+/** The largest body of a PUT, decoded. A Function URL takes 6 MB; 4 MiB in base64 is 5.6 MB. */
+export const MAX_BODY = 4 * 1024 * 1024;
 const ROUTES = {
   "/account/session": { POST: "session" },
   "/account/preferences": { GET: "getPreferences", PUT: "putPreferences" },
-  "/account/preferences/merge": { POST: "mergePreferences" },
   "/account/export": { GET: "export" },
   "/account": { DELETE: "erase" },
 };
-const WITH_BODY = new Set(["putPreferences", "mergePreferences"]);
+const WITH_BODY = new Set(["putPreferences"]);
+// A revision as If-Match gives it: digits, or an entity tag's quotes around them.
+const REVISION = /^"?([1-9][0-9]{0,15})"?$/;
 const JSON_TYPE = /^application\/json\s*(;.*)?$/i;
 /** status, retry, message, by code. */
 const CODES = {
@@ -43,8 +43,9 @@ const CODES = {
   BODY_TOO_LARGE: [413, false, "Corps trop volumineux."],
   INVALID_JSON: [400, false, "JSON invalide."],
   CONTRACT_INVALID: [400, false, "Préférences invalides."],
-  CONTRACT_VERSION: [400, false, "Version des préférences inconnue."],
-  CONTRACT_LIMIT: [422, false, "Trop de listes ou d'éléments."],
+  CONTRACT_VERSION: [422, false, "Version des préférences inconnue."],
+  CONTRACT_LIMIT: [413, false, "Préférences trop volumineuses."],
+  STALE: [409, false, "Les préférences ont changé depuis cette version."],
   ACCOUNT_ERASED: [410, false, "Ce compte a été supprimé."],
   SUBSCRIPTION_ACTIVE: [409, false, "Un abonnement est en cours : résiliez-le avant de supprimer le compte."],
   DELETION_UNAVAILABLE: [503, false, "La suppression du compte n'est pas encore disponible."],
@@ -87,8 +88,7 @@ export function createFront({ verifier, origins, keyring, store, neon = null, cl
       return reply(200, { accountId, level, created, pass: signPass({ accountId, level, now }, keyring), passExpiresAt: now + DEFAULT_LIFETIME });
     },
     getPreferences: async (accountId) => reply(200, await store.call("getPreferences", { accountId })),
-    putPreferences: async (accountId, preferences) => reply(200, await store.call("putPreferences", { accountId, preferences })),
-    mergePreferences: async (accountId, preferences) => reply(200, await store.call("mergePreferences", { accountId, preferences })),
+    putPreferences: async (accountId, { preferences, ifMatch }) => reply(200, await store.call("putPreferences", { accountId, preferences, ...(ifMatch !== undefined && { ifMatch }) })),
     async export(accountId) {
       const held = await store.call("export", { accountId });
       const body = {
@@ -148,8 +148,14 @@ export function createFront({ verifier, origins, keyring, store, neon = null, cl
       return failure(SESSION_CODES[session.reason] ?? "SESSION_INVALID", cors);
     }
 
-    let preferences;
+    let input;
     if (WITH_BODY.has(command)) {
+      let ifMatch;
+      if (headers["if-match"] !== undefined) {
+        const found = REVISION.exec(headers["if-match"].trim());
+        if (!found || !Number.isSafeInteger(Number(found[1]))) return failure("INVALID_REQUEST", cors, { message: "If-Match : une révision attendue." });
+        ifMatch = Number(found[1]);
+      }
       if (!JSON_TYPE.test(headers["content-type"] ?? "")) return failure("UNSUPPORTED_MEDIA_TYPE", cors);
       const raw = typeof event.body === "string" ? Buffer.from(event.body, event.isBase64Encoded ? "base64" : "utf8") : Buffer.alloc(0);
       if (raw.length > MAX_BODY) return failure("BODY_TOO_LARGE", cors);
@@ -160,16 +166,17 @@ export function createFront({ verifier, origins, keyring, store, neon = null, cl
         return failure("INVALID_JSON", cors);
       }
       try {
-        preferences = parse(value);
+        checkContract(value);
       } catch (error) {
         if (!(error instanceof ContractError)) throw error;
         note.reason = error.code;
-        return failure(error.code, cors, { message: error.message, path: error.path });
+        return failure(error.code, cors, { message: error.message });
       }
+      input = { preferences: value, ifMatch };
     }
 
     try {
-      const out = await work[command](session.accountId, preferences);
+      const out = await work[command](session.accountId, input);
       out.headers = { ...out.headers, ...cors };
       return out;
     } catch (error) {
@@ -177,6 +184,7 @@ export function createFront({ verifier, origins, keyring, store, neon = null, cl
       if (error instanceof StoreRefusal) {
         note.reason = error.code;
         if (["ACCOUNT_ERASED", "SUBSCRIPTION_ACTIVE"].includes(error.code)) return failure(error.code, cors);
+        if (error.code === "STALE") return failure("STALE", cors, { extra: { revision: error.details.revision ?? null } });
         if (error.code.startsWith("CONTRACT_") && CODES[error.code]) return failure(error.code, cors, { message: error.message });
         return failure("INTERNAL", cors);
       }
