@@ -119,6 +119,15 @@ const watch = (name) => (page) => {
 const open = async (page, url) => {
   await page.goto(`${SITE}${url}`, { waitUntil: "domcontentloaded", timeout: 60000 });
 };
+// /compte says the sync's state only when it does not work; its block always carries the state (data-state). The
+// state's former words lead, so the checks below read as before: « À jour », « En cours », « En échec », « Arrêtée »,
+// « Indisponible », then the words on the page (the reason of a stop).
+const SYNC_WORDS = { synced: "À jour", idle: "En cours", syncing: "En cours", failed: "En échec", stopped: "Arrêtée", unavailable: "Indisponible" };
+const syncState = async (page) => {
+  const block = page.locator(".account-syncblock");
+  await block.waitFor({ state: "attached", timeout: 30000 });
+  return `${SYNC_WORDS[await block.getAttribute("data-state")] ?? ""} ${(await block.textContent()) ?? ""}`.trim();
+};
 const entry = (page) => page.locator(".account-entry");
 const entryLabel = async (page) => until(async () => (await entry(page).first().getAttribute("aria-label")) || null);
 const listIds = (page) =>
@@ -216,7 +225,7 @@ try {
     await toggleBookmark(a.page, `/clubs?id=${CLUB_A}`, true);
     await signInForm(a.page, email, { create: true, next: "/compte" });
     await until(async () => a.page.url().includes("/compte"), { timeout: 30000 });
-    const sync = await a.page.locator(".account-syncblock").textContent({ timeout: 30000 });
+    const sync = await syncState(a.page);
     record("W2a", "signed in, /compte says Indisponible", "Indisponible", sync, /Indisponible/.test(sync));
     record("W2b", "no export or deletion without the account API", 0, await a.page.locator(".account-data").count(), (await a.page.locator(".account-data").count()) === 0);
     await shot(a.page, "nosync-compte.png");
@@ -330,12 +339,12 @@ try {
 
     await open(A.page, "/compte");
     const facts = await A.page.locator(".account-hero").textContent({ timeout: 30000 });
-    const synced = await until(async () => /À jour/.test(await A.page.locator(".account-syncblock").textContent()));
+    const synced = await until(async () => /À jour/.test(await syncState(A.page)));
     const kept = await until(async () => {
       const text = await A.page.locator(".account").textContent();
-      return /Clubs\s*1/.test(text) && (await A.page.locator(`.account-favourites a[href*="${CLUB_A}"]`).count()) === 1 ? text : null;
+      return (await A.page.locator(".account-favourites a").count()) === 1 && (await A.page.locator(`.account-favourites a[href*="${CLUB_A}"]`).count()) === 1 ? text : null;
     });
-    record("S5", "/compte: the address, « Gratuit », « À jour », the club kept as a favourite", [email, "Gratuit", "À jour", "Clubs 1"], facts, facts.includes(email) && facts.includes("Gratuit") && synced && Boolean(kept));
+    record("S5", "/compte: the address, « Gratuit », « À jour », the club kept as a favourite", [email, "Gratuit", "À jour", "one favourite: the club"], facts, facts.includes(email) && facts.includes("Gratuit") && synced && Boolean(kept));
     await shot(A.page, "03-compte-a-jour.png");
 
     // Sign-out: last save, stores emptied, marker removed.
@@ -415,7 +424,7 @@ try {
     record("A6d", "A reloaded holds the merged contract", [CLUB_B, NATION], onA2, Boolean(onA2));
 
     // Sync states on /compte.
-    const state = async (page) => (await page.locator(".account-syncblock").textContent({ timeout: 30000 })).trim();
+    const state = syncState;
     await until(async () => /À jour/.test(await state(A.page)));
     api.control.delay = 6000;
     await open(A.page, "/compte");

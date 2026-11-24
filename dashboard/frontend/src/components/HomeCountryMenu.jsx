@@ -11,7 +11,8 @@ import {
 /**
  * The visitor's country (VI-48): the button and its menu (the header menus' panel), the
  * manifest's countries then « Aucun pays » (none: the cards choose as without a country).
- * A line of the home's preferences panel; the cards follow the choice at once.
+ * A line of the home's preferences panel; the cards follow the choice at once. With `auto` (the account's
+ * settings, /compte), « Automatique » leads the menu: no manual choice (""), the detected country applies.
  */
 export default function HomeCountryMenu({
   country,
@@ -19,12 +20,18 @@ export default function HomeCountryMenu({
   countries,
   onChoose,
   id,
+  auto = false,
 }) {
   const [open, setOpen] = useState(false),
     root = useRef(null),
     button = useRef(null),
     panel = useRef(null),
-    name = country ? homeCountryName(country) : "Aucun pays";
+    automatic = auto && !choice,
+    name = country
+      ? homeCountryName(country)
+      : automatic
+        ? "Automatique"
+        : "Aucun pays";
   useEffect(() => {
     if (!open) return undefined;
     panel.current
@@ -75,6 +82,17 @@ export default function HomeCountryMenu({
           ref={panel}
         >
           <div className="nav-menu-list">
+            {auto && (
+              <button
+                type="button"
+                role="menuitemradio"
+                aria-checked={automatic}
+                className="nav-menu-item home-country-auto"
+                onClick={() => choose("")}
+              >
+                <span>Automatique</span>
+              </button>
+            )}
             {countries.map((c) => (
               <button
                 key={c.code}

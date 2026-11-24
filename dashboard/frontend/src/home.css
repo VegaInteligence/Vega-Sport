@@ -286,6 +286,11 @@ html[data-theme="light"] {
   border-top: 1px solid var(--border);
   color: var(--muted);
 }
+.home-country-menu .home-country-auto {
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+}
 /* Apart from the competitions below it. */
 .home-preferences-country {
   margin-bottom: 20px;
