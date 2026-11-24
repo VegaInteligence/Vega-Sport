@@ -670,9 +670,9 @@ try {
       await P.page.waitForTimeout(1500);
       const empty = await P.page.evaluate(() => {
         const p = document.querySelector(".lettre-empty");
-        return { text: (p?.textContent || "").replace(/\s+/g, " ").trim(), links: [...(p?.querySelectorAll("a") || [])].map((a) => new URL(a.href).pathname), lists: document.querySelectorAll(".account-favourites").length };
+        return { text: (p?.textContent || "").replace(/\s+/g, " ").trim(), links: [...(p?.querySelectorAll("a") || [])].map((a) => new URL(a.href).pathname.replace(/\/$/, "")), lists: document.querySelectorAll(".account-favourites").length };
       });
-      record("C5", "no favourite: « Aucun favori. » and the ways to add one", { text: "Aucun favori.", links: ["/clubs/", "/joueurs/", "/nations/"], lists: 0 }, empty, empty.text.startsWith("Aucun favori.") && JSON.stringify(empty.links) === JSON.stringify(["/clubs/", "/joueurs/", "/nations/"]) && empty.lists === 0);
+      record("C5", "no favourite: « Aucun favori. » and the ways to add one", { text: "Aucun favori. …", links: ["/clubs", "/joueurs", "/nations"], lists: 0 }, empty, empty.text.startsWith("Aucun favori.") && JSON.stringify(empty.links) === JSON.stringify(["/clubs", "/joueurs", "/nations"]) && empty.lists === 0);
       await shot(P.page, "15-compte-sans-favori-telephone.png");
       const tapButton = P.page.locator("button.account-entry-in");
       await tapButton.tap();
