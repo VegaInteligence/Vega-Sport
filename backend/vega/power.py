@@ -21,8 +21,8 @@ period, and the comparison between roles.
   STAGE; annex A.4 for the rounds): 1 for a league match, 1.15 for a Champions League
   match, 1.30 for a World Cup match; ×1.05 from the first knockout round, ×1.10 in a
   semi-final, ×1.15 in a final. So a Champions League final (1.32) outweighs any other
-  club final and the World Cup final (1.50) every match. The clubs' and the national
-  teams' Elo moves by K × I_m; a player's match adds I_m (C + κ L), "pénalités comprises"
+  club final and the World Cup final (1.50) every match. The clubs' Elo (and the national
+  teams' before 2021/22) moves by K × I_m; a player's match adds I_m (C + κ L), "pénalités comprises"
   (A.5). The World Cup's matches therefore enter the players' ranking: their level L is
   that of the national team among the national teams, the clubs' among the clubs.
 - Elo: K 20, home advantage 60 points (none on neutral ground), expected score
@@ -32,6 +32,11 @@ period, and the comparison between roles.
   divisions of a country together, and since version 4 the other confederations' club
   competitions tie their leagues: Copa Libertadores and Sudamericana, the CONCACAF and CAF
   Champions Cups).
+- National teams (nations-elo-v1, 23 November 2026, FAILURE_MODES §51): their own pass from 1 July 2021 over every
+  match between two national teams, friendlies and qualifiers included: K 30 × w × G(goal margin), w the stakes I_m of
+  a final tournament's match, 1 for a qualifier, 0.75 for a minor tournament, 0.5 for a friendly; each nation starts at
+  its FIFA points of 18 February 2021 centred on 1500. The clubs' pass, and the national rows before 2021/22, are as
+  above (K 20, 1500); I_m stored and read by the players' ranking is unchanged. « National teams: Elo from 1 July 2021 ».
 - Common scale (§ 3: "des Elo calculés séparément avec la même moyenne ne créent pas
   automatiquement une échelle commune"): a club enters at its league's level, not at 1500
   whatever the league. Version 4 (15 November 2026) gives every league a level and its
@@ -84,6 +89,7 @@ period, and the comparison between roles.
 """
 
 from collections import defaultdict
+import json
 import re
 from datetime import date, timedelta
 from bisect import bisect_left, bisect_right
@@ -268,6 +274,198 @@ def elo_updates(matches, *, initial=ELO_INITIAL, k=ELO_K, home=ELO_HOME, seeds=N
         yield (mid, a, season, kickoff, ra, rating[a], 1 - eh, 1 - result)
 
 
+
+# National teams: Elo from 1 July 2021 (FAILURE_MODES.md §51; the user's decision of 23 Nov 2026, measured as
+# variant C4 in donnees-hors-live/elo-selections, whose elo_engine.py this mirrors) -----------------------------
+#
+# The clubs' Elo above is untouched. A national match (both sides national) dated NATION_START or later is read by a
+# pass of its own: K_n × w × G(margin), w the match's class (its stakes I_m for a tournament edition or PitchAPI,
+# its tournament's class for an internationals edition), G the goal margin's multiplier, each nation starting at its
+# FIFA points of NATION_SEED_EDITION (1 point = 1 Elo point, the edition centred on 1500; a nation the edition does
+# not rate starts at 1500). Nothing before NATION_START reaches it. The national rows of a season before
+# NATION_START_SEASON stay the clubs' pass's (K 20, 1500: the legacy rows the match pages, the nation's curve and the
+# old seasons' rankings read). The stakes stored (agg.team_elo.stakes) stay I_m; w is never written as one.
+NATION_ELO_VERSION = "nations-elo-v1"
+NATION_K = 30.0
+NATION_START = date(2021, 7, 1)
+NATION_START_SEASON = 2021
+NATION_SEED_EDITION = "2021-02-18"
+INTERNATIONALS = "nations-results:internationals:"
+# An internationals match's weight by its tournament (its round name; elo_engine.kind_of): the finals as their
+# editions' prestige (CUP_PRESTIGE, no round: the file has none), the qualifiers 1, the other tournaments 0.75,
+# the friendlies 0.5. A non-FIFA tournament (elo_engine.NON_FIFA) is no match of the Elo.
+NATION_CLASS = {"wc": CUP_PRESTIGE["world-cup-history"], "euro": CUP_PRESTIGE["euro"], "conti": CUP_PRESTIGE["copa-america"],
+                "nl": CUP_PRESTIGE["nations-league"], "qual": 1.0, "minor": 0.75, "friendly": 0.5}
+CONTINENTAL = frozenset({"African Cup of Nations", "Copa América", "AFC Asian Cup", "Gold Cup", "CONCACAF Championship", "Oceania Nations Cup"})
+NON_FIFA = ("CONIFA", "Island Games", "Viva World Cup", "Muratti Vase", "Inter Games", "Coupe de l'Outre-Mer", "ELF Cup",
+            "FIFI Wild Cup", "UNIFFAC", "Corsica Cup", "Niamh Challenge Cup", "Real Madrid 75th Anniversary Cup")
+# The world ranking (scope 'nations', from NATION_START_SEASON): the nations with a counted match in the WINDOW_YEARS
+# up to the season's reference date, provisional below PROVISIONAL_MATCHES counted matches in PROVISIONAL_YEARS.
+WINDOW_YEARS = 2
+PROVISIONAL_YEARS = 4
+PROVISIONAL_MATCHES = 8
+
+
+def goal_factor(margin):
+    """G: 1 up to a goal, 1.5 for two, (11 + margin) / 8 beyond (elo_engine.gd_mult)."""
+    return 1.0 if margin <= 1 else 1.5 if margin == 2 else (11 + margin) / 8
+
+
+def tournament_class(name):
+    """An internationals match's class by its tournament, None for a non-FIFA one (elo_engine.kind_of)."""
+    name = name or ""
+    if any(word in name for word in NON_FIFA):
+        return None
+    if name == "FIFA World Cup":
+        return "wc"
+    if name == "UEFA Euro":
+        return "euro"
+    if name in CONTINENTAL:
+        return "conti"
+    if name in ("UEFA Nations League", "CONCACAF Nations League"):
+        return "nl"
+    if "qualification" in name:
+        return "qual"
+    return "friendly" if name == "Friendly" else "minor"
+
+
+def nation_weight(cup_key, round_name, stakes_im):
+    """w of a national match: its class's for an internationals edition (None: not a match of the Elo), else I_m."""
+    if (cup_key or "").startswith(INTERNATIONALS):
+        kind = tournament_class(round_name)
+        return None if kind is None else NATION_CLASS[kind]
+    return stakes_im
+
+
+def nation_seeds(points):
+    """{team: 1500 + p − p̄} from an edition's [(team or None, points)], p̄ over every row (elo_engine.fifa_seeds)."""
+    values = [p for _, p in points]
+    if not values:
+        return {}
+    mean = sum(values) / len(values)
+    seeds = {}
+    for team, p in points:
+        if team is not None:
+            seeds.setdefault(team, ELO_INITIAL + (p - mean))
+    return seeds
+
+
+def _day(match):
+    day = match[8] if len(match) > 8 else None
+    return day if day is not None else (match[2].date() if match[2] is not None else None)
+
+
+def nation_updates(matches, *, seeds=None, steps=None, neutral=frozenset(), initial=ELO_INITIAL, home=ELO_HOME):
+    """elo_updates' rows for the national matches dated NATION_START or later (a match without a day is not one):
+    each team's first strength its seed (`initial` without one), a match moving by NATION_K × its weight
+    (`steps`: {match: w}, 1 without one) × goal_factor(margin); a match of `neutral` on neutral ground (§52)."""
+    rating, seeds, steps = {}, seeds or {}, steps or {}
+    for match in matches:
+        mid, season, kickoff, h, a, hs, as_, on_neutral = match[:8]
+        day = _day(match)
+        if day is None or day < NATION_START:
+            continue
+        rh = rating[h] if h in rating else seeds.get(h, initial)
+        ra = rating[a] if a in rating else seeds.get(a, initial)
+        eh = expected_score(rh, ra, 0.0 if on_neutral or mid in neutral else home)
+        result = 1.0 if hs > as_ else 0.0 if hs < as_ else 0.5
+        step = NATION_K * steps.get(mid, 1.0) * goal_factor(abs(hs - as_))
+        rating[h] = rh + step * (result - eh)
+        rating[a] = ra - step * (result - eh)
+        yield (mid, h, season, kickoff, rh, rating[h], eh, result)
+        yield (mid, a, season, kickoff, ra, rating[a], 1 - eh, 1 - result)
+
+
+def elo_passes(old, matches, nations, *, seeds=None, leagues=None, weights=None, nation_seeds=None, nation_steps=None,
+               nation_neutral=frozenset()):
+    """(the clubs' pass over `old`, today's population, as today; the national pass; the rows to store). `matches`:
+    every match, the internationals included; `nations`: the national teams; `nation_steps`: {match: w or None}.
+    Stored: the clubs' pass's rows but a national match's of NATION_START_SEASON or later, which are the national
+    pass's. A national match whose weight is None is no match of the Elo."""
+    nation_steps = nation_steps or {}
+    legacy = list(elo_updates(old, seeds=seeds, leagues=leagues, weights=weights))
+    national = {m[0] for m in matches if m[3] in nations and m[4] in nations}
+    read = [m for m in matches if m[0] in national and nation_steps.get(m[0], 1.0) is not None]
+    rows = list(nation_updates(read, seeds=nation_seeds, steps=nation_steps, neutral=nation_neutral))
+    stored = [r for r in legacy if r[0] not in national or r[2] < NATION_START_SEASON]
+    stored += [r for r in rows if r[2] >= NATION_START_SEASON]
+    return legacy, rows, stored
+
+
+# PitchAPI's World Cup matches, which no reader gives a neutral ground (§52): (match, year, is_neutral, the home side's
+# name and source keys).
+PITCHAPI_WORLD_CUP = """
+SELECT m.id, extract(year FROM coalesce(m.match_date, m.kickoff_at::date))::int, m.is_neutral,
+  array_append(array(SELECT k.provider_key FROM core.provider_ids k WHERE k.entity_type = 'team' AND k.entity_id = m.home_team_id), t.name)
+FROM core.matches m
+JOIN core.competition_seasons cs ON cs.id = m.competition_season_id AND cs.cup_key IS NULL
+JOIN core.provider_ids c ON c.entity_type = 'competition' AND c.entity_id = cs.competition_id AND c.provider = 'pitchapi'
+  AND c.provider_key = 'l_1XLtP0' AND c.is_current
+JOIN core.teams t ON t.id = m.home_team_id"""
+
+
+def pitchapi_neutral(rows):
+    """The PitchAPI World Cup matches the national pass reads as neutral: is_neutral unwritten and no host of the
+    year's edition (cups.HOSTS, by a name or a source key, « name: » or not) at home."""
+    from .sources.cups import HOSTS
+
+    hosts = {int(season): names | ({"United States"} if "USA" in names else set())
+             for (competition, season), names in HOSTS.items() if competition == "world-cup-history"}
+    out = set()
+    for match, year, neutral, names in rows:
+        if neutral is not None or year not in hosts:
+            continue
+        if not {n.split(":", 1)[1] if str(n).startswith("name:") else n for n in names} & hosts[year]:
+            out.add(match)
+    return out
+
+
+def _years_before(moment, years):
+    try:
+        return moment.replace(year=moment.year - years)
+    except ValueError:  # 29 February
+        return moment.replace(year=moment.year - years, day=28)
+
+
+def world_ranking(rows, now, seasons=None):
+    """The nations' ranking of each season from NATION_START_SEASON to the one in progress (from 1 July; only those
+    of `seasons` when given), from the national pass's rows in match order: dicts of agg.team_power's columns."""
+    current = now.year if (now.month, now.day) >= (7, 1) else now.year - 1
+    by_team, last_of = defaultdict(list), {}
+    for r in rows:
+        if r[3] is None:
+            continue
+        by_team[r[1]].append(r)
+        last_of[r[2]] = max(last_of.get(r[2], r[3]), r[3])
+    out = []
+    for season in range(NATION_START_SEASON, current + 1):
+        if seasons is not None and season not in seasons:
+            continue
+        ref = now if season == current else last_of.get(season)
+        if ref is None:
+            continue
+        window, older = _years_before(ref, WINDOW_YEARS), _years_before(ref, PROVISIONAL_YEARS)
+        listed = []
+        for team, played in by_team.items():
+            upto = [r for r in played if r[3] <= ref]
+            if not upto or upto[-1][3] <= window:
+                continue
+            own = [r for r in upto if r[2] == season]
+            elo = upto[-1][5]
+            start = own[0][4] if own else elo
+            listed.append({
+                "season": season, "team": team, "elo": elo, "elo_change": elo - start, "matches": len(own),
+                "last_match_at": upto[-1][3], "elo_start": start,
+                "elo_peak": max(r[5] for r in own) if own else elo, "elo_low": min(r[5] for r in own) if own else elo,
+                "wins": sum(r[7] == 1 for r in own), "draws": sum(r[7] == 0.5 for r in own), "losses": sum(r[7] == 0 for r in own),
+                "result_sum": sum(r[7] for r in own), "expected_sum": sum(r[6] for r in own),
+                "provisional": sum(r[3] > older for r in upto) < PROVISIONAL_MATCHES,
+            })
+        for r in listed:
+            r["rank"] = 1 + sum(o["elo"] > r["elo"] for o in listed)
+        out += sorted(listed, key=lambda r: (r["rank"], str(r["team"])))
+    return out
+
 # Columns 8 to 12: the match's day, its competition, whether it comes from a complementary
 # source (a cup-source edition), whether it is international (a European competition, or
 # national teams), the edition's cup key. One Elo for every match (the user, 16 November 2026;
@@ -280,8 +478,8 @@ def elo_updates(matches, *, initial=ELO_INITIAL, k=ELO_K, home=ELO_HOME, seeds=N
 # (merged_rows). Left out: a club against a national team, a cup match without its day, two teams not
 # marked national in a national teams' competition (historic nations, no clubs), the historic archives
 # (archive_key; the user's decision of 17 November), the results decided without play (ADMINISTRATIVE), the copies
-# elo_matches drops, and the season's other internationals (nations-results:internationals, read on 19 November 2026
-# for the home's week strip only: their effect on the Elo is to be measured and decided first).
+# elo_matches drops. The season's other internationals (nations-results:internationals, friendlies, qualifiers…) are
+# matches of the national teams' pass since 23 November 2026 (§51); refresh_elo keeps them out of the clubs' pass.
 #
 # A result a federation decided without the match being played keeps its status and score for the table and the cup's
 # page, and is no match of the Elo, nor so of the forecasts fitted on it (FAILURE_MODES.md §39). A source that says so
@@ -310,7 +508,6 @@ SELECT m.id, m.season_id, coalesce(m.kickoff_at, m.match_date::timestamp AT TIME
   coalesce(left(c.country_code, 3) = 'INT', false) OR coalesce(th.is_national, false), cs.cup_key
 FROM core.matches m
 JOIN core.competition_seasons cs ON cs.id = m.competition_season_id AND cs.archive_key IS NULL
-  AND left(coalesce(cs.cup_key, ''), 31) <> 'nations-results:internationals:'
 JOIN core.competitions c ON c.id = cs.competition_id
 JOIN core.teams th ON th.id = m.home_team_id
 JOIN core.teams ta ON ta.id = m.away_team_id
@@ -945,6 +1142,48 @@ def elo_groups(conn, matches):
     return leagues, tiers, countries, women
 
 
+# The FIFA edition the national pass starts from: NATION_SEED_EDITION, else the earliest held (§51). A row fifa.save
+# could not link to a team is linked by its FIFA name through FIFA_TO_IR to the national team International Results
+# keys by that name (the measurement's map, elo_engine.FIFA_TO_IR: a nation the base names in French, « Andorre », or
+# otherwise, « United States », still starts at its points).
+NATION_SEED = """
+WITH e AS (SELECT id, label FROM core.ranking_editions WHERE kind = 'fifa_men' ORDER BY label <> %(edition)s, label LIMIT 1)
+SELECT e.label, coalesce(t.merged_into, r.team_id, n.merged_into, n.id), r.points
+FROM e JOIN core.ranking_rows r ON r.edition_id = e.id
+LEFT JOIN core.teams t ON t.id = r.team_id
+LEFT JOIN core.provider_ids k ON r.team_id IS NULL AND k.entity_type = 'team' AND k.provider = 'international_results'
+  AND k.provider_key = coalesce((%(names)s::jsonb) ->> r.entity_name, r.entity_name)
+LEFT JOIN core.teams n ON n.id = k.entity_id AND n.is_national
+WHERE r.points IS NOT NULL ORDER BY r.row_no"""
+# FIFA's names → International Results' (elo_engine.FIFA_TO_IR, 23 Nov 2026: no FIFA row of 2021-02-18 unmatched).
+FIFA_TO_IR = {
+    "USA": "United States", "IR Iran": "Iran", "Côte d'Ivoire": "Ivory Coast", "Korea Republic": "South Korea",
+    "Türkiye": "Turkey", "Congo DR": "DR Congo", "Czechia": "Czech Republic", "Cabo Verde": "Cape Verde",
+    "China PR": "China", "Kyrgyz Republic": "Kyrgyzstan", "The Gambia": "Gambia", "DPR Korea": "North Korea",
+    "Korea DPR": "North Korea", "St. Kitts and Nevis": "Saint Kitts and Nevis", "St. Lucia": "Saint Lucia",
+    "St. Vincent / Grenadines": "Saint Vincent and the Grenadines",
+    "St. Vincent and the Grenadines": "Saint Vincent and the Grenadines", "Chinese Taipei": "Taiwan",
+    "Macau, China": "Macau", "US Virgin Islands": "United States Virgin Islands", "Brunei Darussalam": "Brunei",
+}
+# An internationals match's tournament: its round's name (§50).
+NATION_ROUNDS = """
+SELECT m.id, r.name FROM core.matches m
+JOIN core.competition_seasons cs ON cs.id = m.competition_season_id AND left(cs.cup_key, 31) = 'nations-results:internationals:'
+LEFT JOIN core.rounds r ON r.id = m.round_id"""
+
+
+def nation_inputs(conn, matches, merge, weights):
+    """(the national teams, the seed edition's label or None, the seeds, {match: w}, the PitchAPI World Cup matches on
+    neutral ground) for the national pass. Reads only."""
+    nations = {t for (t,) in conn.execute("SELECT id FROM core.teams WHERE is_national").fetchall()}
+    nations |= {merge.get(t, t) for t in nations}
+    found = conn.execute(NATION_SEED, {"edition": NATION_SEED_EDITION, "names": json.dumps(FIFA_TO_IR)}).fetchall()
+    seeds = nation_seeds([(None if team is None else merge.get(team, team), points) for _, team, points in found])
+    rounds = dict(conn.execute(NATION_ROUNDS).fetchall())
+    steps = {m[0]: nation_weight(m[12], rounds.get(m[0]), weights.get(m[0], 1.0)) for m in matches if m[3] in nations and m[4] in nations}
+    return nations, (found[0][0] if found else None), seeds, steps, pitchapi_neutral(conn.execute(PITCHAPI_WORLD_CUP).fetchall())
+
+
 def refresh_elo(conn):
     """Recompute every league's level and every strength in match order, then each season's
     club power ranking. The levels are computed outside any transaction (the base ends a
@@ -953,7 +1192,11 @@ def refresh_elo(conn):
     from .sources import identity
 
     merge = {team: keep for team, keep, *_ in identity.pairs(conn)[0]}
-    matches = elo_matches(merged_rows(conn.execute(ELO_MATCHES).fetchall(), merge))
+    fetched = conn.execute(ELO_MATCHES).fetchall()
+    # The clubs' pass reads today's population (every match but the internationals editions'), the national pass
+    # every national match (§51).
+    matches = elo_matches(merged_rows([r for r in fetched if not (r[12] or "").startswith(INTERNATIONALS)], merge))
+    every = elo_matches(merged_rows(fetched, merge))
     leagues, tiers, countries, women = elo_groups(conn, matches)
     weights = match_stakes(conn)
     previous, was_measured = {}, set()
@@ -964,7 +1207,11 @@ def refresh_elo(conn):
     moves = league_moves(conn, conn.execute("SELECT current_date").fetchone()[0], {l for l in leagues.values() if not isinstance(l, tuple)})
     seeds, errors, settings = league_model(matches, leagues, weights=weights, moves=moves, tiers=tiers, countries=countries,
                                            apart=women, previous=previous)
-    rows = list(elo_updates(matches, seeds=seeds, leagues=leagues, weights=weights))
+    nations, seed_edition, national_seeds, steps, neutral = nation_inputs(conn, every, merge, weights)
+    rows, national_rows, stored = elo_passes(matches, every, nations, seeds=seeds, leagues=leagues, weights=weights,
+                                             nation_seeds=national_seeds, nation_steps=steps, nation_neutral=neutral)
+    present = {s for (s,) in conn.execute("SELECT id FROM core.seasons").fetchall()}
+    world = world_ranking(national_rows, started, seasons=present)
     movers = defaultdict(int)
     for a, b, n, _ in moves[0]:
         movers[a] += n
@@ -976,7 +1223,7 @@ def refresh_elo(conn):
         with conn.cursor().copy(
             "COPY agg.team_elo(match_id, team_id, season_id, kickoff_at, elo_before, elo_after, expected, result, run_id, stakes) FROM STDIN"
         ) as copy:
-            for row in rows:
+            for row in stored:
                 copy.write_row((*row, run, weights.get(row[0], 1.0)))
         conn.execute(
             """WITH season AS (
@@ -995,9 +1242,19 @@ def refresh_elo(conn):
                SELECT l.season_id, l.team_id, CASE WHEN t.is_national THEN 'nations' ELSE 'clubs' END, l.elo_after, l.elo_after - l.start,
                  l.matches, rank() OVER (PARTITION BY l.season_id, t.is_national IS TRUE ORDER BY l.elo_after DESC), l.kickoff_at, %s,
                  l.start, s.peak, s.low, s.wins, s.draws, s.losses, s.result_sum, s.expected_sum
-               FROM last l JOIN season s USING (season_id, team_id) JOIN core.teams t ON t.id = l.team_id""",
-            (run,),
+               FROM last l JOIN season s USING (season_id, team_id) JOIN core.teams t ON t.id = l.team_id
+               WHERE t.is_national IS NOT TRUE OR l.season_id < %s""",
+            (run, NATION_START_SEASON),
         )
+        # The nations' world ranking from 2021/22 (§51).
+        with conn.cursor().copy(
+            """COPY agg.team_power(season_id, team_id, scope, elo, elo_change, matches, rank, last_match_at, run_id, elo_start, elo_peak,
+                 elo_low, wins, draws, losses, result_sum, expected_sum, provisional) FROM STDIN"""
+        ) as copy:
+            for r in world:
+                copy.write_row((r["season"], r["team"], "nations", r["elo"], r["elo_change"], r["matches"], r["rank"], r["last_match_at"], run,
+                                r["elo_start"], r["elo_peak"], r["elo_low"], r["wins"], r["draws"], r["losses"], r["result_sum"],
+                                r["expected_sum"], r["provisional"]))
         # Each league's level, its standard error and what it rests on, for the players' ranking and the reads.
         strengths = {}
         for _, team, _, _, _, after, _, _ in rows:
@@ -1028,6 +1285,9 @@ def refresh_elo(conn):
             (settings["rounds"], settings.get("exchange"), settings.get("tier_gap"), settings.get("tier_gap_sd"), settings.get("top_sd"),
              settings.get("pair_sd"), settings.get("dispersion"), MEASURED_SE, run),
         )
+        # The national pass's settings, in their own table: agg.power_runs keeps main's columns (§53).
+        conn.execute("INSERT INTO agg.nation_elo_runs(run_id, version, k, start_date, seed_edition) VALUES (%s,%s,%s,%s,%s)",
+                     (run, NATION_ELO_VERSION, NATION_K, NATION_START, seed_edition))
         _publish(conn, run, "elo", None, len(rows) // 2)
     return len(rows) // 2
 

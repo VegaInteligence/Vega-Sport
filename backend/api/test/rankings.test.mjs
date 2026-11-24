@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { get, skip } from "./context.mjs";
-import { comingMatches, cupFormat, cupStages, groupsByTeam, levelsByTeam, provisionalReason, roundOpponents, roundRace, RACE_CARD } from "../src/routes/rankings.mjs";
+import { comingMatches, cupFormat, cupStages, groupsByTeam, levelsByTeam, powerRow, provisionalReason, roundOpponents, roundRace, RACE_CARD } from "../src/routes/rankings.mjs";
 
 test("club links and a club's UEFA ranking history", { skip }, async () => {
   const links = (await get("/api/club-links?club=t_aaaaa1")).body;
@@ -215,6 +215,11 @@ test("power rankings of players and clubs for a season", { skip }, async () => {
   assert.equal((await get("/api/rankings/power?kind=players&season=2025/2026&scope=all&role=striker")).response.status, 400);
   assert.equal((await get("/api/rankings/power?kind=players&season=2025/2026&page=2")).response.status, 400);
   assert.equal((await get("/api/rankings/power?kind=nations&season=2025/2026")).response.status, 404);
+  // §51 (51m): the nations' ranking is read a page at a time (about 205 nations, at most 200 a page); the clubs' is not.
+  assert.equal((await get("/api/rankings/power?kind=nations&season=2025/2026&page=2")).response.status, 404); // red before §51: 400
+  assert.equal((await get("/api/rankings/power?kind=nations&season=2025/2026&page=0")).response.status, 400);
+  assert.equal((await get("/api/rankings/power?kind=clubs&season=2025/2026&page=2")).response.status, 400);
+  assert.equal((await get("/api/rankings/power?kind=nations&season=2025/2026&limit=201")).response.status, 400);
   assert.equal((await get("/api/rankings/power?kind=players&season=2025")).response.status, 400);
   assert.equal((await get("/api/rankings/power?kind=ballon&season=2025/2026")).response.status, 400);
 });
@@ -430,4 +435,13 @@ test("a round's race: the card's first ten by default, the whole race when asked
   assert.deepEqual([roundRace(rows, "all").rows.length, roundRace(rows, "all").total], [23, 23]);
   assert.deepEqual(roundRace([], null), { rows: [], total: 0 });
   for (const bad of ["", "ALL", "20", "all "]) assert.throws(() => roundRace(rows, bad), (error) => error.status === 400);
+});
+
+test("51m. a nation's row of the world ranking says whether it is provisional", () => {
+  const row = { rank: 187, team_id: "t_gib", name: "Gibraltar", image_url: null, country: null, elo: 1163.24, elo_change: -12.04, matches: 6,
+    last_match_at: "2026-11-17T00:00:00Z", provisional: true, elo_start: 1175.28, elo_peak: 1180, elo_low: 1150, wins: 0, draws: 1, losses: 5, result_sum: 0.5, expected_sum: 1.2 };
+  const nation = powerRow("nations", row, null);
+  assert.deepEqual([nation.rank, nation.elo, nation.provisional, "score" in nation], [187, 1163.2, true, false]);
+  assert.equal(powerRow("nations", { ...row, provisional: false }, null).provisional, false);
+  assert.equal("provisional" in powerRow("clubs", { ...row, provisional: false }, 1500), false);
 });

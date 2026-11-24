@@ -123,6 +123,22 @@ class PureTest(unittest.TestCase):
     # - a match is paired with the base's archived match of the same edition, day and teams, in either order and
     #   under the spellings the two sources use; two candidates, a women's match (the base holds none), a replay of
     #   the day after: no pair, never a guess.
+    def test_51l_a_world_cup_or_euro_match_is_neutral_unless_its_home_side_hosts_it(self):
+        # §51 (written before the code): from 1 July 2021 OpenFootball's World Cup and Euro matches are on neutral ground
+        # unless the home side is a host of the edition (cups.HOSTS); before that day is_neutral stays unknown (NULL).
+        def neutral(competition, season, matches):
+            return [row["is_neutral"] for _, row in cups.match_rows("open-cups", competition, season, {"matches": matches})]
+
+        game = lambda day, home, away: {"round": "Matchday 1", "date": day, "team1": home, "team2": away, "score": {"ft": [1, 0]}}
+        self.assertEqual(neutral("euro", "2020", [game("2021-07-07", "England", "Denmark"), game("2021-07-03", "Ukraine", "England"),
+                                                  game("2021-06-13", "England", "Croatia")]), [False, True, None])
+        self.assertEqual(neutral("world-cup-history", "2022", [game("2022-11-20", "Qatar", "Ecuador"), game("2022-11-29", "Netherlands", "Qatar")]),
+                         [False, True])
+        self.assertEqual(neutral("world-cup-history", "2026", [game("2026-06-12", "USA", "Paraguay"), game("2026-06-13", "Qatar", "Switzerland")]),
+                         [False, True])
+        self.assertEqual(neutral("world-cup-history", "1998", [game("1998-06-10", "Brazil", "Scotland")]), [None])
+        self.assertEqual(neutral("club-world-cup", "2025", [game("2025-06-15", "Al Ahly SC", "Inter Miami CF")]), [None])
+
     def test_worldcup_files_are_the_pinned_ones(self):
         files = worldcup_samples.texts()
         pins = worldcup_samples.digests(files)
@@ -947,7 +963,9 @@ class UefaTest(unittest.TestCase):
             rows = x("""SELECT m.home_team_name, m.home_score, m.away_score, m.is_neutral, s.label FROM core.matches m JOIN core.seasons s ON s.id=m.season_id
                         JOIN core.competition_seasons cs ON cs.id=m.competition_season_id WHERE cs.cup_key='nations-results:afcon:2023' ORDER BY m.archive_position""").fetchall()
             self.assertEqual(rows, [("Ivory Coast", 2, 0, False, "2023/2024"), ("Nigeria", 1, 1, True, "2023/2024")])
-            self.assertEqual(x("SELECT is_neutral FROM core.matches m JOIN core.competition_seasons cs ON cs.id=m.competition_season_id WHERE cs.cup_key='open-cups:euro:2024' LIMIT 1").fetchone(), (None,))
+            # §51: an OpenFootball Euro match from 1 July 2021 is neutral unless its home side hosts the edition (Germany).
+            self.assertEqual({r[0] == "Germany" for r in x("SELECT m.home_team_name, m.is_neutral FROM core.matches m JOIN core.competition_seasons cs ON cs.id=m.competition_season_id WHERE cs.cup_key='open-cups:euro:2024'").fetchall()
+                              if r[1] is not True} - {True}, set())
         finally:
             cups.bridge = original
 

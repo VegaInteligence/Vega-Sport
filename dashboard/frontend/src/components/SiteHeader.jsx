@@ -15,14 +15,16 @@ export default function SiteHeader({ path, href }) {
     <header className="topbar">
       <Link
         className="brand"
-        aria-label="Vega Intelligence, vue d’ensemble"
+        aria-label="Vega Sport, vue d’ensemble"
         href={href("/")}
       >
+        {/* The wordmark; under 1024px the mark « V. » (styles.css shows one of the two). */}
+        <StatarenaLogo className="brand-logo" width={127} height={28} />
         <StatarenaLogo
           layout="symbol"
-          className="brand-logo"
+          className="brand-mark"
           width={32}
-          height={32}
+          height={30}
         />
       </Link>
       <HeaderMenus path={path} href={href} />

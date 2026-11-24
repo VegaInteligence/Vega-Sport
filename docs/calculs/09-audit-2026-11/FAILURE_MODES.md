@@ -3876,3 +3876,266 @@ Formulas without a base (`backend/tests/test_level.py`), then E2E on the disposa
 | 49r | E2E: `stale_rankings` on a base ranked before the level existed, two years | both listed, the older first; run in that order, none listed; the year before's sums changed afterwards: the year alone is listed again |
 | 49s | E2E: a partial award year (§47) run before and after the next one | no level, no cell, a published level run of 0 players without a reference; the next year is not listed for it |
 | 49t | E2E: the read API under `vega_read` | `/api/rankings/level` and `/api/rankings/level/player` read the level's rows; the ranking's answers are unchanged |
+
+## 50. The season's other internationals of 2021/22 to 2025/26 (International Results, 23 Nov 2026, written before the tests)
+
+Main reads every international of 2026/27 that no other edition holds (`nations-results:internationals:2026/2027`,
+§48, migration 154) for the home's week strip. The nation page's carousel lists a nation's matches by edition and
+season; it showed no friendly or qualifier before 2026/27. The same edition is now read for each season from
+2021/22, the base's first, so that the nation page lists them; the Elo may later ask for more depth (another agent
+measures their effect: they stay out of it). The source is the same file (`results.csv`, CC0; the user's decision
+of 20 Nov 2026: free sources only).
+
+What an older season must not take: a match another edition already holds. The rule of 2026/27 (leave out the
+Nations League and the World Cup, and a tournament of `TOURNAMENT_EDITIONS` inside one of its editions' days) is not
+right for the older seasons as it stands: `results.csv` writes the Euro 2020's last seven matches (2–11 July 2021,
+season 2021/22 by their day) and the Euro 2024 (51 matches, 2023/24 and 2024/25) under « UEFA Euro », which the
+base holds as `open-cups:euro:2020` and `:2024`; and the Nations League of 2021/22 (the 2021 Finals), 2022/23 and
+2024/25 is held by no edition.
+
+### 50.1 Rules
+
+- **The seasons.** `INTERNATIONAL_SEASONS`, 2021/2022 to 2026/2027, one list in `nations-results.js` (projection and
+  parser) and one in `cups.py` (`EDITIONS`), equal (drift-tested). Going further back is the first year of each line.
+- **Held elsewhere, left out of every season:** « FIFA World Cup » (every edition is `open-cups:world-cup-history`,
+  1930–2026; 2022 and 2026 also PitchAPI's) and « UEFA Euro » (every edition is `open-cups:euro`, 1960–2028).
+- **Held elsewhere for some seasons:** « UEFA Nations League » is left out of a season for which the base holds a
+  Nations League edition — 2026/27 (OpenLigaDB's League A, International Results' Leagues B to D), as today — and kept
+  in the others (no edition holds 2021/22's Finals, 2022/23, 2024/25 or their play-offs), its round « UEFA Nations
+  League ». A tournament of `TOURNAMENT_EDITIONS` is left out inside one of its editions' days, as today (AFCON
+  2021/2023/2025, Copa América 2024, Asian Cup 2023, Gold Cup 2023/2025).
+- **Kept, held nowhere:** the World Cup and Euro qualifiers, the confederations' qualifiers, the CONCACAF Nations
+  League, Copa América 2021's knock-out matches of 1–10 July 2021 and the Gold Cup 2021 (no edition of theirs in
+  `TOURNAMENT_EDITIONS`: the summer cups of 2021 belong to 2020/21, before the base's first season), the Finalissima
+  2022, the Arab Cups, the regional cups and the non-FIFA sides (CONIFA, Island Games, Muratti Vase), as 2026/27 keeps
+  them. A match belongs to the season of its day (1 July–30 June); the match key (`internationals:day|home|away`)
+  carries no season and the days of two seasons are disjoint: no key in two editions.
+- **The same read.** No score (`NA`) is no match; a key twice in a season refuses the edition (as today); a season
+  without a single match is a failed read (as today). The 2026/27 edition is unchanged for the same file.
+- **The schedule.** An internationals season is running until 1 July of its last year: every two hours (2026/27, as
+  today); then finished: weekly. Every other edition keeps its period. The editions due together still read
+  `results.csv` once (§37, `prepare_due`), each with its own digest, state and failure.
+- **Outside the Elo, the forecasts and the worker's wake-up, unchanged.** `ELO_MATCHES` and `_COMPLEMENTARY` leave out
+  the prefix `nations-results:internationals:`, every season included; their text is not changed. A finished past
+  season has nothing to forecast.
+- **Identity.** A side is keyed by the file's English name under `international_results`, as in the other editions of
+  the file: a name the base holds from them is the same row; a new name is a new row, not marked national (no nation
+  page unless it plays an edition of `curated.NATIONAL_CUPS`, the convention of 2026/27); the identity pass merges it
+  with PitchAPI's national team of the same or a reviewed name, as before. `results.csv` writes every era under the
+  current name (`former_names.csv` names only the host country's former names, all ended before 2019): no renamed
+  side in these seasons. No new team row may be the same national team as another unmerged row (same flag in
+  `national-flags.js`) unless that pair existed before.
+- **No team renamed by the internationals** (found by the E2E run, 23 Nov 2026, before this rule: the five seasons'
+  first read renamed the current week strip's sides the Nations League names in French, « Irlande » → « Republic of Ireland », « Autriche » →
+  « Austria »). `cups._team` gives a key's row the name of the edition written last; the Nations League edition
+  writes the French names of the same keys. An internationals edition never renames a row it did not create: its
+  spelling is a name of the source (`entity_names`, `source_spelling`); a side it creates takes the file's name.
+- **The nation page.** `api.nation_matches` is unchanged (one match a day and pair, a copy a day apart absorbed). The
+  nation route gives a match of an internationals edition its tournament as competition and no round, so the
+  carousel's rule (« another match takes its competition and its season », mock-up B) labels it « Matchs amicaux
+  2024/25 », « Qualifications 2025/26 », « Ligue des nations 2024/25 », and its tile « Match amical », never « Phase
+  de groupes » (the file has no stage) nor « Matchs internationaux 2026/2027 2026/27 » (2026/27's matches today). No
+  layout change.
+- **The home's strip** reads the national editions by day (154): the current week is unchanged. An archived week of
+  a past season (`archive=1`) shows that week's internationals as it already shows that week's AFCON or Copa América
+  matches: measured, reported, not decided here.
+
+### 50.2 Failure modes and expected outcomes
+
+50a–50g, 50l: `tests/cup-sources.test.mjs`, `backend/api/test/nations.test.mjs` (pure). 50h–50k:
+`backend/tests/test_collection_wakeups.py` (disposable PostgreSQL, the real worker, bridge and projection). 50m: the E2E
+run on the real `results.csv` (evidence `donnees-hors-live/internationaux-historique/`).
+
+| # | Situation | Expected |
+|---|---|---|
+| 50a | The projection asked for 2021/2022 … 2025/2026; for 2020/2021 and 2027/2028 | 200, « Matchs internationaux 2021/2022 » …; 400 (the parser: « Unknown season » for 2020/2021) |
+| 50b | Euro 2020's quarter-final of 2 July 2021 and Euro 2024's matches of June and July 2024 | in no internationals season |
+| 50c | The World Cup 2022 (20 Nov–18 Dec 2022) and the World Cup 2026's June matches | in no internationals season |
+| 50d | A Nations League match of 7 Sep 2024; one of 2026/27 | the first in 2024/2025, round « UEFA Nations League »; the second in none |
+| 50e | AFCON 2021 (Jan 2022), Asian Cup 2023 and AFCON 2023 (Jan 2024), Gold Cup 2023 and 2025 (June), Copa América 2024 (June–July), AFCON 2025 (Dec 2025) | in no internationals season; their qualifiers kept |
+| 50f | Copa América 2021's final (10 July 2021), a Gold Cup 2021 match (July 2021), the Finalissima (1 June 2022) | kept in 2021/2022, each its tournament as round |
+| 50g | 2026/27 with main's test file (S1–S4) | the same rows as main |
+| 50h | `cups.INTERNATIONAL_SEASONS`, the projection's list, `EDITIONS` | equal lists; each season an edition `nations-results:internationals:<season>` |
+| 50i | `cups.scopes` on 19 Nov 2026 | internationals 2021/22–2025/26 weekly, 2026/27 every 2 hours; every other edition the period main gives it |
+| 50j | The fourteen International Results editions due together, the test file holding one friendly a season and one row of each tournament edition | one request; fourteen editions `ok`, each its digest and exactly one match (no tournament row in an internationals edition); failing and back as 37i–37j, nothing rewritten |
+| 50k | An Elo published; a result of `nations-results:internationals:2024/2025` by the real path | `elo_due` false, no Elo run |
+| 50l | The nation route's match of an internationals edition (friendly, World Cup qualifier, Nations League 2024/25), and of the Nations League edition | competition « Friendly », « FIFA World Cup qualification », « UEFA Nations League », no round; carousel « Matchs amicaux 2024/25 », « Qualifications 2025/26 », « Ligue des nations 2024/25 »; the edition's match unchanged |
+| 50n | The Nations League edition writes « Écosse » for the key Scotland; then an internationals season holding Scotland, and a side new to the base | the key keeps « Écosse », « Scotland » a source spelling of it; the new side takes the file's name |
+| 50m | E2E, real `results.csv`: main's editions, then the five seasons, then a second pass | per season its count; no pair of matches of two editions with the same two sides a day or less apart; 0 written on the second pass; teams created and reused counted; no new same-flag pair of unmerged national rows; the Elo's population unchanged; the current home week's strip unchanged |
+
+## 51. The national teams' Elo from 2021/22: friendlies and qualifiers, a FIFA seed, a world ranking (GitHub #70 / VI-49, 23 Nov 2026, written before the tests)
+
+The national teams' Elo read only the tournaments' finals (World Cup, Euro, the Nations League of 2026/27, AFCON, Copa
+América, Asian Cup, Gold Cup): a nation that never qualifies stayed at 1500 above those that qualify and lose (production
+on 23 Nov 2026: Gibraltar 34th of the Nations League's 54, Spearman 0.085 with the FIFA ranking). The measurement of
+23 Nov 2026 (`donnees-hors-live/elo-selections/`, variant C4; `scripts/elo_engine.py`, `run_variants.py`) and the user's
+decision of the same day (decision card: « depuis 2021, départ aux points FIFA ») lift his decision of 20 Nov: the
+season's other internationals (`nations-results:internationals:*`, §48, §50) enter the national teams' Elo, from 1 July
+2021, each nation starting at its FIFA points of 18 Feb 2021. The clubs' Elo, the stakes I_m, the player score and its
+METHOD_VERSION do not change.
+
+### 51.1 Rules
+
+- **The matches.** `ELO_MATCHES` and the worker's `_COMPLEMENTARY` drop the prefix exclusion of
+  `nations-results:internationals:` together: a finished, scored internationals match is a match of the Elo and wakes it
+  (`elo_due`), as every other complementary edition. Two sides not both marked national (`core.teams.is_national`) stay
+  out, the existing rule (a non-FIFA side the file names is never marked national, §50).
+- **Two passes, the clubs' strictly unchanged.** The clubs' pass reads the population of today (every match of
+  `ELO_MATCHES` but the internationals editions) with today's code (`elo_updates`, K 20, the league levels): its rows,
+  the league levels and their seasons are those of today, bit for bit. A national team's rows of a season before 2021/22
+  are that pass's (the *legacy* pass: K 20, 1500, no goal difference), kept because the site reads them: the match pages
+  (`agg.team_elo` by match), the nation page's Elo curve (`api.nation_elo`, every row of the nation), and the nations
+  ranking of a season before 2021/22 (`agg.team_power`, `api.nation_list`).
+- **The national pass** (`nation_updates`): every national match (both sides national) dated 1 July 2021 or later, in
+  match order; nothing before that day enters it, so no match before it changes a rating after it. A match without a
+  day is not in it. A national team's rows of 2021/22 and later are this pass's. The Euro 2020's knock-out matches
+  (2–11 July 2021) belong to 2020/21 (their edition): they count in the national pass, as in the measurement, and keep
+  their legacy rows (their season's page and ranking stay as today).
+- **The national step**: Δ = K_n × w × G(margin) × (result − expected), K_n = 30, the home advantage 60 (none on
+  neutral ground), the result after extra time (a shoot-out is a draw), G(m) = 1 for m ≤ 1, 1.5 for 2, (11 + m) / 8 for
+  m ≥ 3 (`elo_engine.gd_mult`). w by the match's class (`elo_engine.kind_of`, mirrored):
+  - a match of a tournament edition (World Cup, Euro, Nations League, AFCON, Copa América, Asian Cup, Gold Cup) or of
+    PitchAPI: its stakes I_m (`stakes`: prestige × round, today's table);
+  - a match of an internationals edition, by its tournament (its round name): « FIFA World Cup » 1.30, « UEFA Euro »
+    1.20, a continental championship (« African Cup of Nations », « Copa América », « AFC Asian Cup », « Gold Cup »,
+    « CONCACAF Championship », « Oceania Nations Cup ») 1.20, « UEFA Nations League » and « CONCACAF Nations League »
+    1.05 (the prestige of the same tournament's editions, no round: the file has none); a name holding
+    « qualification » 1.0; « Friendly » 0.5; any other (Finalissima, Arab Cup, regional cups) 0.75; a non-FIFA
+    tournament (CONIFA, Island Games, Muratti Vase…, `elo_engine.NON_FIFA`) no match of the Elo.
+- **The stakes stay.** `agg.team_elo.stakes` is I_m as `stakes`/`match_stakes` give it, for every row, the internationals'
+  included (1.0 for a friendly): w is the national step's own multiplier, never written as I_m. `match_stakes`, the
+  player score and docs/calculs/10-score-vega-v9 are not touched.
+- **The seed.** A national team's first strength in the national pass is 1500 + (p − p̄): p its FIFA points of the
+  edition dated 2021-02-18 (`core.ranking_editions` kind `fifa_men`, label the day; `core.ranking_rows.points` by team,
+  through `merged_into` and the identity pass's merges), p̄ the mean of that edition's points over all its rows (1 FIFA
+  point = 1 Elo point, the edition centred on 1500). A row `fifa.save` could not link to a team (a nation the base
+  names in French, « Andorre », or otherwise, « United States ») is linked by its FIFA name through the measurement's
+  map (`elo_engine.FIFA_TO_IR`) to the national team International Results keys by that name. A team the edition does not rate starts at 1500, the edition's mean
+  (the measurement's rule: `rating.get(t, seeds.get(t, 1500))`). Without that edition, the earliest edition held; without
+  any, 1500 for every team. The edition read is the run's `seed_edition` (`agg.nation_elo_runs`, §53; NULL without one).
+- **The world ranking** (scope `nations`, from 2021/22): a season's reference date is its last counted match (national
+  pass, season of the match), today for the season in progress (from 1 July). Listed: every national team with a counted
+  match in the two years up to that date, ranked (SQL `rank()`, ties share) on its latest strength at that date;
+  `provisional` when it has fewer than 8 counted matches in the four years up to it. Its season columns read its counted
+  matches of the season (0 when none: `elo_start` = `elo`, `elo_change` 0, peak = low = `elo`); `last_match_at` its last
+  counted match up to the date. Only a season `core.seasons` holds. Before 2021/22, and for the clubs: as today (the
+  teams with a match in the season).
+- **Reads.** `api.power_clubs` gives `provisional`; `/api/rankings/power?kind=nations` gives it per row, a page of at
+  most 200 (`limit` unchanged) with `page` and `total`, so the ~205 nations are all reachable; `page` stays refused for
+  clubs; `/api/nations` and `/api/nations/{id}` give `ranking.provisional`. No layout change (the site reads
+  `/api/nations`, every nation; showing `provisional` would need a validated mock-up).
+- **Neutral ground.** From 1 July 2021, an OpenFootball World Cup or Euro match is neutral unless its home side is a host
+  of the edition (`cups.HOSTS`, reviewed, sourced): before that day `is_neutral` stays NULL, as today. The Nations
+  League parser reads the file's `neutral` column, as the tournaments' parser does.
+- **Versioning.** `METHOD_VERSION` is not raised: it names the player ranking, and `stale_rankings` would re-rank every
+  past player season. The Elo run's national settings, `version` (`nations-elo-v1`), `k`, `start_date` and
+  `seed_edition`, are kept in their own table `agg.nation_elo_runs`, one row per run (migration 168, §53; not in
+  `agg.power_runs`); `elo_due` is true while the last published Elo run has another `version` or no row (one run after
+  the deployment).
+
+### 51.2 Failure modes and expected outcomes
+
+51a–51h: `backend/tests/test_power.py` (pure). 51i–51k: `backend/tests/test_models.py`, `test_source_identity.py`,
+`test_collection_wakeups.py` (disposable PostgreSQL; 48f, 48h, 50k and E1 turned by the decision). 51l: `tests/cup-sources.test.mjs`,
+`backend/tests/test_sources.py`. 51m: `backend/api/test/rankings.test.mjs`, `nations.test.mjs`. 51n: the E2E run on
+the real `results.csv` (evidence `donnees-hors-live/elo-selections/implementation/`).
+
+| # | Situation | Expected |
+|---|---|---|
+| 51a | Goal margins 0, 1, 2, 3, 5 | G = 1, 1, 1.5, 1.75, 2 |
+| 51b | Classes: « Friendly », « FIFA World Cup qualification », « CONCACAF Nations League qualification », « UEFA Nations League », « CONCACAF Nations League », « Copa América », « Gold Cup », « FIFA World Cup », « UEFA Euro », « CONMEBOL–UEFA Cup of Champions », « CONIFA World Football Cup », a tournament edition's World Cup final (I_m 1.495) | w 0.5, 1.0, 1.0, 1.05, 1.05, 1.20, 1.20, 1.30, 1.20, 0.75, no match, 1.495 |
+| 51c | One national match, a 3–0 friendly at home between two 1500 teams | after − before = 30 × 0.5 × 1.75 × (1 − E(60)); the two sides sum to 3000 |
+| 51d | Seeds from points {A 1700, B 1500, C 1300, unlinked 1100} (mean 1400) | A 1800, B 1600, C 1400; D, absent, 1500 |
+| 51e | Two match lists equal from 1 July 2021, one with a 2019 national result added | identical national rows from 1 July 2021 |
+| 51f | Clubs and nations mixed, internationals added | the clubs' rows equal `elo_updates` over the population without the internationals |
+| 51g | The world ranking: a team whose last match is 25 months before the reference date; one 23 months before with no match in the season; one with 7 matches in 4 years, one with 8; two equal strengths; the season in progress | first not listed; second listed, matches 0, change 0, start = peak = low = elo; provisional True / False; same rank, next rank skipped; reference today |
+| 51h | Stored stakes of a World Cup final, a friendly | 1.495 and 1.0, as `stakes` gives them; `match_stakes` unchanged |
+| 51i | DB: a World Cup final of 2026 (season 2025/26), no FIFA edition | step = 30 × 1.495 × G × (1 − E); stakes 1.495; the run's `agg.nation_elo_runs` row nations-elo-v1, k 30, start 2021-07-01, seed edition NULL; METHOD_VERSION unchanged; nations rows of 2025/26 and 2026/27 (matches 0, provisional) |
+| 51j | DB: FIFA editions of 2021-04-07 and 2021-02-18, then only 2021-04-07 | seed from 2021-02-18, then from 2021-04-07, the edition traced |
+| 51j' | DB: an edition row not linked to a team, FIFA name « Korea Republic » | seeds the national team International Results keys « South Korea » |
+| 51k | DB: an internationals match between two national sides; one with a side not national; an Elo published, then an internationals result written by the real path; a published run of another national `version`, or with no `agg.nation_elo_runs` row | the first in `ELO_MATCHES`, the second not; `elo_due` true, one run, its sides published; due once |
+| 51l | Parser: a Nations League row with `neutral` TRUE; `cups.match_rows` of the Euro 2020 (2021-07-07 England–Denmark, 2021-07-03 Ukraine–England, a June 2021 match), World Cup 2022 (Qatar first, Qatar second), World Cup 2026 (USA–Paraguay) | neutral true; England–Denmark not neutral, Ukraine–England neutral, June NULL; Qatar home not neutral, Qatar away neutral; USA home not neutral |
+| 51m | API: `kind=nations&page=2` on a base without nations rows; `kind=clubs&page=2`; `kind=nations&limit=201`; the row mapper of a nations row, provisional true | 404 (no longer 400); 400; 400; `provisional: true`, no `score`; the list's `ranking.provisional` |
+| 51n | E2E, real `results.csv` with the FIFA edition of 2021-02-18 as input | Gibraltar ~52nd of the Nations League's teams and ~187th of the world; Spearman with the FIFA ranking > 0.9 (measured 0.987); ~205 teams for 2026/27 (the base's national rows); club rows identical before and after |
+
+## 52. The national teams' Elo, review of §51: the FIFA members of the internationals are national teams, PitchAPI's World Cups on neutral ground (23 Nov 2026, written before the tests)
+
+The review of §51 found that production lists 154 national teams (about 142 current FIFA members): with the rule « both
+sides national », some 69 FIFA members (Kenya, Philippines, Fiji, Bermuda, Guam, Tonga, Rwanda…) are not national, so
+the world ranking would hold ~140 nations and every qualifier or friendly against the others would be dropped — not
+variant C4 (211 nations), which the user chose. Decided (coordinator, 23 Nov 2026): such a side is a national team.
+
+### 52.1 Rules
+
+- **A FIFA member is national.** `curated.national_teams` (daily, before the identity pass) also marks national a team
+  International Results keys by a name that a FIFA men's ranking edition the base holds lists (`core.ranking_rows.entity_name`,
+  through the measurement's map `power.FIFA_TO_IR`). The base's own FIFA editions are the authority (since 2021, current
+  members only), not a constant. It reads every such row, the ones created as non-national by the 2026/27 edition
+  included. A row merged into another (`merged_into`) is not marked: its nation is the row it was merged into. A side no
+  FIFA edition lists (CONIFA, Island Games, Muratti Vase, Guadeloupe…) stays as it is. Nothing is renamed (50n holds);
+  a side that is the same nation as another national row under another spelling is merged by the identity pass's
+  existing rules (`NATION_SPELLINGS`, flags), as for every national team.
+- **Their nation pages.** A team marked national gets the nation pages' list entry and its own page (`api.nation_list`
+  reads `is_national`), with no layout change.
+- **PitchAPI's World Cups in the national pass.** A PitchAPI World Cup match (`l_1XLtP0`) whose `is_neutral` no reader
+  wrote (NULL) is read by the national pass as neutral unless its home side is a host of that year's edition (the hosts
+  of `cups.HOSTS`, by the team's name or any of its source keys; 2022 Qatar, 2026 the United States, Mexico, Canada).
+  The clubs' pass and the stored legacy rows are untouched; `core.matches.is_neutral` is not written.
+- **No speculative host.** `cups.HOSTS` holds the editions whose spellings are known (Euro 2020, 2024, World Cups 2022,
+  2026); Euro 2028 is added when its file exists.
+
+### 52.2 Failure modes and expected outcomes
+
+52a–52b: `backend/tests/test_source_identity.py` (disposable PostgreSQL). 52c–52d: `backend/tests/test_power.py`,
+`test_sources.py`. 52e: the E2E run under the production rule.
+
+| # | Situation | Expected |
+|---|---|---|
+| 52a | A FIFA edition lists « Kenya » and « Korea Republic »; International Results' rows « Kenya », « South Korea » (non-national, created by an internationals edition), « Zanzibar » (no FIFA row), « United States » merged into « USA » | after `national_teams`: Kenya and South Korea national; Zanzibar not; the merged row not marked; no name changed |
+| 52b | The same pass run again | nothing written |
+| 52c | The national pass: a match in `nation_neutral`, its tuple not neutral, two equal strengths | expected 0.5 (no home advantage); the clubs' pass of the same tuple keeps its advantage |
+| 52d | `pitchapi_neutral`: World Cup 2022 Qatar at home, Ecuador at home; 2026 « United States » at home, Spain at home; a match with is_neutral written | Qatar and the United States not neutral, Ecuador and Spain neutral, the written one not listed; `cups.HOSTS` has no Euro 2028 |
+| 52e | E2E, production rule (no hand marking) | ~205–211 nations for 2026/27; Gibraltar 52nd of 54, ~187th; Spearman ≥ 0.98; clubs' and pre-2021/22 national rows identical |
+
+## 53. The national teams' Elo leaves `agg.power_runs` as it is: its settings in their own table (24 Nov 2026, written before the tests)
+
+The merge of main 0302d45 ran `test_41n` on PostgreSQL 18 for the first time with migration 168: the Open Matchday
+restore (`open_matchday_restore.verify_elo`, §41) compares the whole row `to_jsonb(agg.power_runs)` of the reviewed Elo
+run 2097 with its capture, and 168 had added four columns to that table (`nation_elo_version`, `nation_k`, `nation_start`,
+`nation_seed_edition`), so the row no longer equals the capture and the restore refuses (« Elo drift: the original run
+differs from the reviewed publication »). main passes it; the branch alone fails it. On PostgreSQL 16 an earlier refusal
+(`preimage schema mismatch`) hid it. Decided (coordinator, 24 Nov 2026): the guard stays as it is; 168, deployed nowhere,
+is rewritten.
+
+### 53.1 Rules
+
+- **No change to the shape of `agg.power_runs`.** A migration of this branch adds, drops or retypes no column of
+  `agg.power_runs`: the restore compares the reviewed run's whole row. Its columns after every migration are main's
+  (0302d45: 34 columns, `id` … `measured_se`).
+- **The national settings in their own table.** `agg.nation_elo_runs (run_id integer PRIMARY KEY REFERENCES
+  agg.power_runs ON DELETE CASCADE, version text NOT NULL, k real NOT NULL, start_date date NOT NULL, seed_edition text)`,
+  the pattern of main's `agg.level_runs` (167): its own table, `GRANT SELECT, INSERT, UPDATE, DELETE … TO vega_calc`.
+  The cascade: a run deleted takes its settings with it, as nothing else blocks it (runs are not pruned by the worker;
+  tests delete theirs).
+- **Written with the run.** `power.refresh_elo` inserts the run's row in the transaction that writes and publishes the
+  run; a failed run leaves neither.
+- **Read by the worker.** `worker.elo_due` compares `power.NATION_ELO_VERSION` with the `version` of the last published
+  Elo run's row; no row (a run from before the migration, production's today) counts as another version: one run after
+  the deployment, then not due.
+- **Unchanged.** `agg.team_power.provisional` and the `api.power_clubs` redefinition stay in 168; the restore guard and
+  `REVIEWED_SCHEMAS` keep their checks (the note on 168 says what it now adds: a table naming a run, no column of a match
+  and no column of `agg.power_runs`).
+
+### 53.2 Failure modes and expected outcomes
+
+53a: `backend/tests/test_deploy_migrations.py`. 53b: `test_models.py` (51i, 51j). 53c–53d: `test_collection_wakeups.py`
+(51k). 53e: `test_open_matchday_window.py` (41n). 53f: the national E2E. All on a disposable PostgreSQL 18.
+
+| # | Situation | Expected |
+|---|---|---|
+| 53a | Production's schema, then this tree's migrations | `agg.power_runs` has main's 34 columns, in main's order; `agg.nation_elo_runs` exists, readable and writable by `vega_calc` |
+| 53b | `refresh_elo` (51i, 51j) | one `agg.nation_elo_runs` row for the published run: nations-elo-v1, 30, 2021-07-01, the seed edition read (NULL without one); a superseded Elo run keeps its own row; no row for a run of another kind (players) |
+| 53c | A published Elo run with its row of the present version | `elo_due` false |
+| 53d | The same run with another version in its row, or with no row | `elo_due` true; after one run, false |
+| 53e | `test_41n` on PostgreSQL 18 | passes: `to_jsonb` of run 2097 has the capture's keys; the 16 tests of `test_open_matchday_window` pass |
+| 53f | The national E2E (51n) | the numbers of §51/§52's final run: 210 nations, Gibraltar 52nd of 54 and 188th, Spearman 0.988, clubs and pre-2021/22 rows identical |
