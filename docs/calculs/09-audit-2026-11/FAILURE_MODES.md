@@ -4351,3 +4351,105 @@ Decided by the user (24 Nov 2026, the card « Reclasser les saisons passées qua
 | 56g | Neither run has a row; no published Elo run at all | nothing listed |
 | 56h | Two years with players that read another national Elo, one without players (`players = 0`), and a year of an older method | the year of the older method first, then the two years oldest first; the year without players is not listed |
 | 56i | `Worker.daily`: a year ranked with players, a team marked national, the next pass; then one more pass | the first pass publishes one Elo run then one new ranking run of the year; the second publishes neither |
+
+## 57. The scorers of the national matches from International Results (`goalscorers.csv`; hugo, 24 Nov 2026: « oui branche le et récupère tout », written before the tests)
+
+The national matches read from International Results (github.com/martj42/international_results, CC0; every
+`nations-results:*` edition: the internationals of 2021/22 to 2026/27, the Nations League's leagues B to D, the
+tournaments of `TOURNAMENT_EDITIONS`) carry their scores only. The same repository's `goalscorers.csv` (date,
+home_team, away_team, team, scorer, minute, own_goal, penalty, and a recent `assist` column rarely filled) names
+their scorers. Measured on the real file on 24 Nov 2026: 47,914 goals, the last on 2026-07-19 (the 2026 World Cup
+final): the 2026/27 season has none yet.
+
+Read in the code (main 5615aad):
+- Every `nations-results` match is bound by `core.provider_ids` (provider `international_results`, `is_current`)
+  under the key `date|home_team|away_team`, the teams as `results.csv` names them (the Nations League's edition
+  keys its matches by the English names too: `parseNationsResults`' `homeId`). `goalscorers.csv` names a match by the
+  same three columns, spelled the same way: no spelling table is needed.
+- `core.worldcup_goals` (137) keeps the Fjelstul database's goals with its own people; it is not reused.
+- `core.match_events` is read by `power.py` (line 1318: goals of the player ranking) and by
+  `ops.archive_match_dependents`; the Elo reads `core.matches`' scores. These goals go to neither.
+
+### 57.1 Rules
+
+- **One more scope of the same adapter.** `nations-results:goalscorers`, last of the International Results adapter's
+  scopes (`cups.For("nations-results")`), every two hours like the current season's editions. The projection
+  (`backend/sources/projections/nations-results.mjs`, `competition=goalscorers`) reads `goalscorers.csv` and gives its
+  goals from the base's first held day (1 July 2021) through `parseGoalscorers` (`nations-results.js`), each with its
+  match key. In a pass where the editions are due with it, the bridge reads `results.csv` once and
+  `goalscorers.csv` once (`prepare_due`, §37).
+- **A goal belongs to the held match of its key.** `date|home_team|away_team` equal to a current provider key of
+  `international_results`. A goal of a match no `nations-results` edition holds (the World Cups and Euros, held by
+  OpenFootball and PitchAPI; a match not read yet) is not stored: it is counted in `unmatched` and attached at the
+  first pass after its match is held.
+- **Stored as the file says.** `core.international_goals` (172): one row per goal, `(match_id, position)` its key,
+  `position` its rank among the match's goals in the file; `side` the team it counts for (`team` column: home or
+  away of the key); scorer as text (NULL for « NA »); minute 1–130 or NULL (« NA »); own goal; penalty; assist as
+  text or NULL; `player_id` (a link to `core.players`, below) or NULL. An own goal counts for the team credited (its
+  `team`); its scorer plays for the other side.
+- **Unchanged rows are not written.** A pass compares each held match's list with the stored one (all its columns
+  but the link, in order) and rewrites only the matches that differ (delete then insert, in one transaction).
+  The same file again writes nothing (`rows_written` 0). `rows_written` counts the goals written.
+- **A match the file stops listing keeps its goals.** A held match with stored goals and none in the file keeps them
+  (a truncated or reorganised file is not a withdrawal). A list that changes replaces the stored one.
+- **An unreadable goal refuses its match only.** A goal whose `team` is neither side of its key, whose minute is
+  neither « NA » nor an integer from 1 to 130, whose `own_goal` or `penalty` is not TRUE/FALSE, or which is both an
+  own goal and a penalty: that match's stored list stays as it was, an `ops.parse_failures` row names it (once,
+  `failure_once`), and every other match is written. A projection that is not 200 (the file unavailable, a header
+  that changed, no goal at all) writes nothing (`HTTP_502`), as an edition's.
+- **Complete or not, at read time.** `api.international_goals` (172) gives each goal with `complete`: the match is
+  finished, both scores are known, and the goals counting for each side equal its score (own goals for the team
+  credited). Otherwise the list is partial (fewer or more goals than the score). Computed at read: a score corrected
+  by a later read of the edition changes it. A 0–0 without goals has no row: nothing to show.
+- **A conservative link.** A goal's scorer is linked to a `core.players` row only when all hold: the scorer's team
+  (the credited side, the other one for an own goal) is a team of the match (`core.matches.home_team_id` /
+  `away_team_id`, after identity merges); among the players of that team's line-ups (`core.lineup_players.team_id`,
+  any season) exactly one has the scorer's name in comparison form (`sources.normalize`: ASCII, lower case, letters
+  and digits); that player played for that team within two years of the goal; his birth date, when known, is at
+  least 15 years before it. No name alone, no nationality alone, no fuzzy match. Recomputed at each pass: a link that
+  stops holding (a second homonym appears, a name changes) is removed; only the rows whose link changes are
+  updated. A link changes no goal row otherwise and does not count in `rows_written`.
+- **Withdrawn with its match.** A match an edition withdraws (`snapshot.remove`) takes its goals
+  (`ON DELETE CASCADE`; `core.international_goals.match_id` lapses like `agg.match_forecasts.match_id`): the
+  removal is not refused for them.
+- **Display data only.** Nothing of the rankings, the Elo, the models or the live pipeline reads the table:
+  `core.match_events`, `core.player_match_stats`, `core.matches` are not written by this scope, and `power.py`,
+  `level.py`, `METHOD_VERSION`, `stale_rankings` are not changed.
+- **Served where the matches are.** The nation page (`GET /api/nations/{id}`): each match gets
+  `scorers: {complete, goals: [{side, name, minute, penalty, ownGoal, assist, player}]}` when it has goals; the
+  International Results cup editions (`GET /api/cups/edition`, the tournaments and the Nations League's leagues B
+  to D) the same on each match. A match without goals has no `scorers`.
+- **Shown only when complete.** The site's nation page « Tous les matchs » and the tournament pages list a
+  match's scorers under its row (« Mbappé 23′ (pen.), Kane 45′ (csc) », home then away, in minute order) when the
+  list is complete; a partial list or none keeps today's row.
+- **Migration.** 172 is reviewed by `open_matchday_restore.REVIEWED_SCHEMAS`; `core.international_goals` names a
+  match and joins `ADDED_DEPENDENCIES`. Nothing is added to `agg.power_runs`.
+
+### 57.2 Failure modes and expected outcomes
+
+57a–57n: `backend/tests/test_collection_wakeups.py`, the real bridge and projection with both files served by
+`fake_results_fetch.mjs`, on a disposable PostgreSQL 18. 57o–57q: `backend/api/test/international-goals.test.mjs`.
+57r–57s: `tests/international-goals.test.mjs` (the site). 57t: `test_open_matchday_window`, `test_deploy_migrations`.
+
+| # | Situation | Expected |
+|---|---|---|
+| 57a | The editions and the goals due together | one request for `results.csv`, one for `goalscorers.csv`; every scope ok |
+| 57b | A held match with three goals, one own goal and one penalty | three rows in file order, sides, minutes, flags as the file says; the own goal on the credited side |
+| 57c | A goal of a match no edition holds (a World Cup match) | not stored; `unmatched` 1 |
+| 57d | The same file at the next pass | nothing written (`rows_written` 0), the rows' `xmin` unchanged |
+| 57e | The file adds a goal to one match | only that match's rows rewritten; the others' `xmin` unchanged |
+| 57f | A held match's goals vanish from the file | its stored goals stay |
+| 57g | A goal whose team is neither side, a minute « 9x », a goal both own goal and penalty | that match's goals not written (stored ones kept), one `ops.parse_failures` row each, the other matches written |
+| 57h | `goalscorers.csv` answers 503 | `HTTP_502` for the scope, nothing written, the editions unaffected |
+| 57i | Goals equal the score / fewer / more / a 0–0 | `complete` true / false / false / no row |
+| 57j | The match removed by its edition | its goals go with it, the removal not refused |
+| 57k | One player of the team's line-ups with the scorer's name, played within two years | linked |
+| 57l | Two such players; the name in another team's line-ups only; the last appearance three years before; a birth date 10 years before the goal; an own goal (the other side's line-ups) | not linked, not linked, not linked, not linked, linked to the other side's player |
+| 57m | A second homonym appears in the team's line-ups | the link removed at the next pass |
+| 57n | A pass with goals | `core.match_events`, `core.player_match_stats`, `agg.team_elo` unchanged |
+| 57o | The nation page with a match whose list is complete, one partial, one without goals | `scorers.complete` true with its goals in minute order / false with its goals / no `scorers` |
+| 57p | A linked scorer | `player` is the player's public id; else absent |
+| 57q | An International Results tournament's edition body | each match with goals carries `scorers` |
+| 57r | `parseGoalscorers` on the real header, « NA » values, a row before 1 July 2021, a wrong header | typed goals with their key, nulls, left out, refused |
+| 57s | The site's scorer line: a complete list, a partial one, none | « Name 23′ (pen.) » per side in minute order, own goal « (csc) »; nothing for partial or none |
+| 57t | The restore guard and the deployment | 172 reviewed, `core.international_goals` a reviewed dependency; the counters one higher |
