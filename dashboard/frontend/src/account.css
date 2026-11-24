@@ -869,7 +869,8 @@ html[data-theme="light"] {
   text-transform: uppercase;
   margin-bottom: 36px;
 }
-.lettre-group + .lettre-group {
+.lettre-group + .lettre-group,
+.lettre-empty + .lettre-group {
   margin-top: 40px;
 }
 .lettre-group > h3 {
