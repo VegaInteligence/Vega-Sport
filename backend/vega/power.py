@@ -2210,6 +2210,28 @@ def write_award(conn, season, scored):
     return len(race)
 
 
+# The years whose published ranking has players and read another national Elo than the one in service (§56). The Elo
+# run a ranking read is the last one, published or superseded, finished at or before the ranking's start (refresh_players
+# takes that time before its read); what a run was is its row of agg.nation_elo_runs (§53, §55): the national method and the
+# national teams it read. No row, or no national set, is a value of its own (a run from before 168, from before 170).
+# Without a published Elo run there is nothing to compare.
+NATION_STALE = """
+WITH served AS (SELECT n.version, n.national_teams, n.national_teams_md5
+                FROM agg.power_runs e LEFT JOIN agg.nation_elo_runs n ON n.run_id = e.id
+                WHERE e.kind = 'elo' AND e.status = 'published' ORDER BY e.id DESC LIMIT 1)
+SELECT p.season_id
+FROM agg.power_runs p
+CROSS JOIN served s
+LEFT JOIN LATERAL (SELECT n.version, n.national_teams, n.national_teams_md5
+                   FROM agg.power_runs e LEFT JOIN agg.nation_elo_runs n ON n.run_id = e.id
+                   WHERE e.kind = 'elo' AND e.status IN ('published', 'superseded') AND e.finished_at <= p.started_at
+                   ORDER BY e.finished_at DESC, e.id DESC LIMIT 1) r ON true
+WHERE p.kind = 'players' AND p.status = 'published' AND p.players > 0
+  AND (r.version IS DISTINCT FROM s.version OR r.national_teams IS DISTINCT FROM s.national_teams
+       OR r.national_teams_md5 IS DISTINCT FROM s.national_teams_md5)
+ORDER BY 1"""
+
+
 def stale_rankings(conn):
     """The seasons whose published player ranking is of another method than METHOD_VERSION,
     and the partial award years (partial_year) without a published run of the present
@@ -2217,9 +2239,11 @@ def stale_rankings(conn):
     moved), whose published run ranked players, or that still have references of their
     own (an earlier rule's run, whatever its order: production ranked 2020 after 2021,
     FAILURE_MODES §48), most recent first. The partial run publishes players = 0 and
-    deletes those references itself, so it is listed once. After them, the years whose
-    level (Score Vega v9.1) is missing, of another version or other settings, or older than the
-    year before's, oldest first (§49, §54)."""
+    deletes those references itself, so it is listed once. After them, oldest first, the
+    years whose level (Score Vega v9.1) is missing, of another version or other settings, or
+    older than the year before's (§49, §54), and the years whose ranking read another national
+    Elo than the published run's: other national teams, or another national method
+    (NATION_STALE, §56). Ranked again, a year started after that run: it is listed once."""
     stale = {s for (s,) in conn.execute(
         "SELECT season_id FROM agg.power_runs WHERE kind = 'players' AND status = 'published' AND method_version <> %s", (METHOD_VERSION,)
     ).fetchall()}
@@ -2235,11 +2259,12 @@ def stale_rankings(conn):
         ).fetchone()
         if own is None or ranked or references or (following is not None and own < following):
             stale.add(season)
-    # Then the years whose level alone is to compute (level.stale), oldest first: a year's level
-    # reads the year before's.
+    # Then the years whose level alone is to compute (level.stale) and those that read another national
+    # Elo (§56), one list, oldest first: a year's level reads the year before's.
     from . import level
 
-    return sorted(stale, reverse=True) + [season for season in level.stale(conn) if season not in stale]
+    later = set(level.stale(conn)) | {s for (s,) in conn.execute(NATION_STALE).fetchall()}
+    return sorted(stale, reverse=True) + sorted(later - stale)
 
 
 def refresh_power(conn, season):
