@@ -231,8 +231,25 @@ try {
     const A = await device("A");
     const B = await device("B");
 
+    // W6: a visitor who never signed in on this browser asks /api/auth nothing, and still gets « Se connecter ».
+    const visitor = await device("visitor");
+    await open(visitor.page, "/");
+    await visitor.page.waitForTimeout(3000);
+    await open(visitor.page, `/clubs?id=${CLUB_A}`);
+    await visitor.page.locator('.account-entry[aria-label="Se connecter"]').waitFor({ timeout: 30000 });
+    await visitor.page.waitForTimeout(3000);
+    const asked = sameOriginCalls.filter((call) => call.device === "visitor");
+    record("W6", "accounts on, never signed in: no request to /api/auth or /api/account while browsing", [], asked, asked.length === 0);
+    await visitor.context.close();
+
     // O6: the slot keeps its size while the session is read.
     const slow = await device("slow");
+    // With the hint (W6), as a browser that signed in before: the session is asked for, slowly here.
+    await slow.context.addInitScript(() => {
+      try {
+        localStorage.setItem("vega.account.hint.v1", "1");
+      } catch {}
+    });
     await slow.context.route(`${SITE}/api/auth/**`, async (route) => {
       await new Promise((resolve) => setTimeout(resolve, 5000));
       await route.continue();

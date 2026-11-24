@@ -12,6 +12,7 @@
  */
 import { accountsOn, accountSyncOn } from "./account-switch.js";
 import { authClient } from "./auth-client.js";
+import { clearHint, setHint, shouldReadSession } from "./account-hint.js";
 import { createAccountAdapter, createAccountApi, forgetMerged } from "./account-sync.js";
 import { clearPreferences, setPreferencesSync } from "./user-preferences.js";
 
@@ -91,10 +92,17 @@ function signedOut() {
   set({ status: "signed-out", user: null, level: null, sync: { state: accountSyncOn() ? "idle" : "unavailable" } });
 }
 
-/** Reads the session (once, unless forced). Never throws. */
+/**
+ * Reads the session (once, unless forced). Never throws. Without the hint that this browser may hold a session
+ * (account-hint.js, W6) an unforced read asks nothing: the state is « signed out » at once.
+ */
 export function refreshSession({ force = false } = {}) {
   if (!accountsOn()) return Promise.resolve(state);
   if (reading && !force) return reading;
+  if (!shouldReadSession({ storage: storage(), force })) {
+    if (state.status === "unknown") signedOut();
+    return Promise.resolve(state);
+  }
   reading = (async () => {
     try {
       const client = await authClient();
@@ -102,12 +110,16 @@ export function refreshSession({ force = false } = {}) {
       const user = data?.user;
       if (user && typeof user.id === "string") {
         const same = state.user?.id === user.id;
+        setHint(storage());
         set({
           status: "signed-in",
           user: { id: user.id, email: typeof user.email === "string" ? user.email : "", name: typeof user.name === "string" ? user.name : "" },
           ...(same ? {} : { level: null }),
         });
-      } else signedOut();
+      } else {
+        clearHint(storage());
+        signedOut();
+      }
     } catch {
       // Neon out of reach: shown signed out, nothing removed from the stores.
       if (state.status === "unknown") signedOut();
@@ -117,8 +129,11 @@ export function refreshSession({ force = false } = {}) {
   return reading;
 }
 
-/** After a sign-in or a sign-up on /connexion. */
+/** After a sign-in or a sign-up on /connexion, and when /connexion opens (it always reads, W6). */
 export const sessionChanged = () => refreshSession({ force: true });
+
+/** Just before leaving for Google: the page that comes back reads the session. */
+export const expectSession = () => setHint(storage());
 
 /**
  * « Se déconnecter » (docs/COMPTES_SITE.md, O1 to O3): the last save first; when it fails, { ok: false,
@@ -141,6 +156,7 @@ export async function signOut({ force = false } = {}) {
     const client = await authClient();
     await client.signOut();
   } catch {}
+  clearHint(storage());
   signedOut();
   return { ok: true };
 }
@@ -162,6 +178,7 @@ export async function eraseAccount() {
     const client = await authClient();
     await client.signOut();
   } catch {}
+  clearHint(storage());
   signedOut();
   return { ok: true };
 }

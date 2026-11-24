@@ -7,7 +7,7 @@ import Layout from "../components/Layout.jsx";
 import { Segments } from "../components/UI.jsx";
 import { useAccount } from "../hooks/useAccount.js";
 import { authClient } from "../services/auth-client.js";
-import { sessionChanged } from "../services/account-state.js";
+import { expectSession, sessionChanged } from "../services/account-state.js";
 import { safeNext } from "../services/account-links.js";
 import { authErrorMessage } from "../services/account-messages.js";
 
@@ -28,6 +28,10 @@ export default function SignInPage() {
   const [busy, setBusy] = useState(false);
   const signUp = mode === "sign-up";
 
+  // This page always asks (W6): a browser without the hint may still hold the session's cookie.
+  useEffect(() => {
+    sessionChanged();
+  }, []);
   useEffect(() => {
     if (account.status === "signed-in") router.replace(next);
   }, [account.status, next, router]);
@@ -66,7 +70,10 @@ export default function SignInPage() {
     const done = await run((client) =>
       client.signIn.social({ provider: "google", callbackURL: `${window.location.origin}${next}` }),
     );
-    if (done?.data?.url) window.location.assign(done.data.url);
+    if (done?.data?.url) {
+      expectSession();
+      window.location.assign(done.data.url);
+    }
   }
 
   return (
