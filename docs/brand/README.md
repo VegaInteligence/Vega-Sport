@@ -28,6 +28,7 @@ Les couleurs du logo sont aussi des jetons : `--vega-night` et `--vega-ivory` ([
 - **Pied de page** : le mot.
 - **Thèmes** : ivoire sur le thème sombre, nuit sur le thème clair ([`StatarenaLogo.jsx`](../../dashboard/frontend/src/components/StatarenaLogo.jsx)).
 - **Icône de l’onglet** : elle suit le thème du site (`icon-dark.svg` ou `icon-light.svg`), et la page n’en nomme qu’une : le script de thème de [`app/layout.jsx`](../../dashboard/frontend/app/layout.jsx) écrit lui-même ce lien, qui ne figure donc pas dans `metadata.icons`. Sans scripts, la page nomme `favicon.svg`, qui suit les couleurs du système. `faviconVersion`, dans le même fichier, augmente à chaque nouveau dessin.
+- **Couleur du navigateur** (`theme-color`) : le fond de la page dans le thème du site (`#0E0F12` sombre, `#F6F8FB` clair). Le même script écrit cette balise, seule de son espèce dans la page, et `viewport` ne la nomme donc pas. Sans scripts, la page reste sombre et nomme `#0E0F12`.
 - **Icônes d’application** : `/api/vega-image?kind=icon&size=180|192|512`, dessinées par le serveur.
 - **Image de partage** : le mot sur une image du film de présentation (plan Mixkit 42355, Stock Video Free License). L’ancienne adresse `/api/vega-image?kind=og` y renvoie.
 - **Écran de chargement** : l’astérisque seul, qui tourne d’un pétale à la fois ([`PageLoader.jsx`](../../dashboard/frontend/src/components/PageLoader.jsx)).
