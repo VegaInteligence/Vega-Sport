@@ -48,6 +48,8 @@ export default function SignInPage() {
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
+  // The error of Google's return is not the fields': they are not marked (section 9).
+  const [fromGoogle, setFromGoogle] = useState(false);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [shown, setShown] = useState(false);
@@ -69,6 +71,7 @@ export default function SignInPage() {
     const returned = returnError(window.location.search);
     if (!returned.present) return;
     setError(returnErrorMessage(returned.code));
+    setFromGoogle(true);
     // Through the router: a bare history.replaceState is overwritten by the router's own first commit.
     router.replace(`${window.location.pathname}${returned.search}`, { scroll: false });
     // Only the address the page opened with.
@@ -99,6 +102,7 @@ export default function SignInPage() {
   async function run(work, refused) {
     setBusy(true);
     setError("");
+    setFromGoogle(false);
     setNote("");
     try {
       const client = await authClient();
@@ -119,6 +123,7 @@ export default function SignInPage() {
     setCode("");
     setShown(false);
     setError("");
+    setFromGoogle(false);
     setNote(said);
     setBusy(false);
   }
@@ -286,7 +291,7 @@ export default function SignInPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  aria-invalid={error ? true : undefined}
+                  aria-invalid={error && !fromGoogle ? true : undefined}
                 />
               </label>
             )}
@@ -304,7 +309,7 @@ export default function SignInPage() {
                     required
                     value={code}
                     onChange={(e) => setCode(cleanCode(e.target.value))}
-                    aria-invalid={error ? true : undefined}
+                    aria-invalid={error && !fromGoogle ? true : undefined}
                   />
                   {cells.map((digit, index) => (
                     <span key={index} className="signin-code-cell" data-next={index === Math.min(code.length, CODE_LENGTH - 1) || undefined} aria-hidden="true">
@@ -328,7 +333,7 @@ export default function SignInPage() {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    aria-invalid={error ? true : undefined}
+                    aria-invalid={error && !fromGoogle ? true : undefined}
                   />
                   <button
                     className="signin-eye"
