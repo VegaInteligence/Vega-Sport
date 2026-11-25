@@ -8,6 +8,7 @@ import NationalFlag from "./NationalFlag.jsx";
 import { nationalTeamLabel } from "../services/national-flags.js";
 import { Term } from "./Hint.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
+import useCrestColours from "../hooks/useCrestColours.js";
 import { number } from "../services/format.js";
 import { kickoffFormatter } from "../services/fixtures.js";
 import {
@@ -681,6 +682,8 @@ export function MatchOfTheWeek({
     h = match.home,
     a = match.away;
   const [active, setActive] = useState(null);
+  // Each team in its crest's colour, as on the match page (FAILURE_MODES § 66).
+  const teamColours = useCrestColours(h, a, { charts: false });
   // On a phone the card opens on the score; its charts unfold on demand.
   const detail = usePhoneFold();
   const timeline = xgTimeline(match);
@@ -727,7 +730,7 @@ export function MatchOfTheWeek({
   const hasShots = match.shots?.some((s) => Number.isFinite(s.xg));
   const text = verdict(match);
   return (
-    <article className="card home-motw" {...detail.fold}>
+    <article className="card home-motw" style={teamColours} {...detail.fold}>
       <div className="home-motw-top">
         <Kicker>
           Le choc de la semaine{period?.current === false && " · archives"}

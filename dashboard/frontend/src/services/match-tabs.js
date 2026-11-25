@@ -112,7 +112,7 @@ export function playerRows(payload) {
 /* ------------------------------------------------------------ coverage */
 
 /**
- * « Statistiques incohérentes » only on team statistics that exist (FAILURE_MODES § 66): the read API's
+ * « Statistiques incohérentes » only on team statistics that exist (FAILURE_MODES § 67): the read API's
  * `teamStatsReliable` is false for every match whose team statistics are not read yet (before and during it) or
  * that the provider does not have, which is not an inconsistency.
  */
@@ -144,7 +144,7 @@ export function lineupView(payload, events, rows, grades, images) {
     return {
       id: p.player_id || null, name: p.name, shirt: p.shirt_number || null, captain: Boolean(p.is_captain),
       x: p.pitch_x, y: p.pitch_y,
-      // The line-up's own photo (FAILURE_MODES § 66) is there before the statistics and the grades.
+      // The line-up's own photo (FAILURE_MODES § 67) is there before the statistics and the grades.
       imageUrl: row?.imageUrl || grade?.imageUrl || p.image_url || images?.get?.(p.player_id) || null,
       grade: grade?.grade ?? row?.grade ?? null, minutes: row?.minutes ?? grade?.minutes ?? null,
       goals: goals.get(p.player_id) || [], ownGoals: owns.get(p.player_id) || [], cards: cards.get(p.player_id) || [],

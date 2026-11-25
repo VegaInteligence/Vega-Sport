@@ -296,7 +296,7 @@ export function lineupsBody(f, teams, players) {
     const entry = (p) => ({
       name: p.name, pitch_x: p.pitch_x ?? 0, pitch_y: p.pitch_y ?? 0, player_id: p.player_id, is_captain: p.is_captain ?? false,
       position_id: p.position_id, shirt_number: present(p.shirt_number) ? String(p.shirt_number) : null,
-      image_url: p.image_url ?? null, // not the provider's: the player's photo in the base (FAILURE_MODES § 66)
+      image_url: p.image_url ?? null, // not the provider's: the player's photo in the base (FAILURE_MODES § 67)
     });
     const side = { subs: mine.filter((p) => !p.is_starter).map(entry), starters: mine.filter((p) => p.is_starter).map(entry) };
     put(side, "confirmed", l.confirmed);

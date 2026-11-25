@@ -5573,7 +5573,30 @@ and the Conference League, played the next evening, would have been.
   or five matches each: the table is shown, the match's teams marked, with « matchs pris en compte »; the same table for
   2023/2024 (groups) or with a club at nine matches: not shown.
 
-## 66. PSG – Roma in play: the official line-ups without photos, and « incohérentes » without statistics (hugo, 25 Nov 2026, 21 h 10 Paris: « sur psg roma les compo officeile j'ai pas les images et aussi j'ai marqué statistique d'equipe signalé comme incoherente alors que y'a aucun stat »; written before the tests)
+## 66. The teams' colours on the home page's « Choc de la semaine » (hugo, 25 Nov 2026, 21 h 29; written before the tests)
+
+hugo, after § 64 in production: « pour les couleurs je veux aussi sur le choc de la semaine sur la page d'accueil ».
+
+### 66.1 Rules
+
+- **The same colours as the match page.** The « Le choc de la semaine » card (`HomeMatchday.jsx`, `.home-motw`) sets
+  `--home` and `--away` from its two teams' crests with the rules of § 64 (`useCrestColours`: dominant colour, lightness
+  per theme, clash rule, blue and violet without a colour). Everything the card draws in the two colours follows: the
+  xG race's lines and areas, the legend's dots, the stat bars, the shot map, the goal markers and the xG tooltip.
+- **Only that card.** The other blocks of the home page (the strip, the forecasts, the tables) keep the theme's blue
+  and violet: the variables are set on the card, not on the page.
+- **Unchanged:** the crests themselves, the card's layout, its texts.
+
+### 66.2 Failure modes and expected outcomes
+
+- **K1** (`tests/e2e/home-colours.e2e.mjs`) the card's home side in its crest's red and its away side in its crest's
+  green (test crests served for the two teams the home read names): the legend's dots, the xG lines and the stat bars
+  have those hues.
+- **K2** (same file) the page outside the card keeps the theme's `--home` and `--away`.
+- **K3** (same file) crests that cannot be read: the card keeps blue and violet, no variable set on it.
+- **K4** (same file) no page error.
+
+## 67. PSG – Roma in play: the official line-ups without photos, and « incohérentes » without statistics (hugo, 25 Nov 2026, 21 h 10 Paris: « sur psg roma les compo officeile j'ai pas les images et aussi j'ai marqué statistique d'equipe signalé comme incoherente alors que y'a aucun stat »; written before the tests)
 
 Two causes, read in the code (`m_36394c`, in play at the time):
 
@@ -5591,7 +5614,7 @@ Two causes, read in the code (`m_36394c`, in play at the time):
   source »). The page's three warnings (`MatchDetail.jsx`, `TeamStats` and `PlayerStats` in `MatchSections.jsx`)
   read the flag alone, so they say « incohérentes » on matches that simply have no statistics yet.
 
-### 66.1 Rules
+### 67.1 Rules
 
 - **Each line-up player carries his photo.** `lineupsBody` adds `image_url` to each starter and substitute: the
   player's photo in the base (`core.players.photo_asset_id`, the same address as the statistics' and the events'
@@ -5610,7 +5633,7 @@ Two causes, read in the code (`m_36394c`, in play at the time):
 - **Calculations unchanged.** `club-scout.js` and `club-analysis.js` keep reading the flag itself: a match whose team
   statistics are not read is still left out of a club's averages.
 
-### 66.2 Failure modes and expected outcomes
+### 67.2 Failure modes and expected outcomes
 
 - **R28** (`backend/api/test/match-families.test.mjs`, the real match's round trip) `/lineups` equals the provider's
   line-ups once each player's `image_url` is set aside; each player's `image_url` is his photo in the players'

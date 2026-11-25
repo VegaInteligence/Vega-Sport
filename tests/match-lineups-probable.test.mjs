@@ -116,7 +116,7 @@ test("61r: the line-ups are read again from 90 min before to 30 min after kick-o
   assert.equal(lineupsWatched({ status: "not_started", timeUtc: null }, null, kickoff), false);
 });
 
-// § 66 (PSG – Roma in play, 25 Nov 2026): the line-up's own photos, and « incohérentes » only on statistics that exist.
+// § 67 (PSG – Roma in play, 25 Nov 2026): the line-up's own photos, and « incohérentes » only on statistics that exist.
 test("R29: each official player takes the line-up's own photo when no statistics row, grade or probable eleven has one", async () => {
   const payload = provider(
     { confirmed: true, starters: [starter("p_h1", "Home One", { image_url: "https://img/h1.webp" }), starter("p_h2", "Home Two", { image_url: null })],
