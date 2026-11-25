@@ -81,6 +81,7 @@ async function readDocument(client, id) {
 /** Everything the base holds for one account (X1), timestamps as ISO text. */
 async function exportOf(client, id) {
   const account = (await client.query("SELECT account_id, created_at, last_seen_on, account.level_of(account_id) AS level FROM account.accounts WHERE account_id = $1", [id])).rows[0];
+  const grant = (await client.query("SELECT level, reason, granted_at FROM account.grants WHERE account_id = $1", [id])).rows[0];
   const customer = (await client.query("SELECT customer_id, created_at FROM account.stripe_customers WHERE account_id = $1", [id])).rows[0];
   const subscriptions = (
     await client.query(
@@ -89,7 +90,16 @@ async function exportOf(client, id) {
     )
   ).rows;
   return {
-    account: account ? { accountId: account.account_id, createdAt: iso(account.created_at), lastSeenOn: account.last_seen_on, level: account.level } : null,
+    account: account
+      ? {
+          accountId: account.account_id,
+          createdAt: iso(account.created_at),
+          lastSeenOn: account.last_seen_on,
+          level: account.level,
+          // A level given by hand, outside Stripe (sql/003, S18), or null.
+          grant: grant ? { level: grant.level, reason: grant.reason, grantedAt: iso(grant.granted_at) } : null,
+        }
+      : null,
     preferences: await readDocument(client, id),
     stripe: {
       customer: customer ? { customerId: customer.customer_id, createdAt: iso(customer.created_at) } : null,

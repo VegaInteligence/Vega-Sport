@@ -105,7 +105,7 @@ async function step(name, expected, method, route, { body, origin = SITE, sub = 
 
 // What a second device holds: the same site, other choices (a null theme, no country, no list entry).
 const DEVICE_B = { ...contract(), theme: null, country: null, homePriority: "location", lists: [{ id: "main", name: "Sélection du téléphone", entries: [] }], activeList: "main", views: [], comparison: [] };
-const GONE = { accounts: 0, preferences: 0, stripe_customers: 0, subscriptions: 0, erasures: 1 };
+const GONE = { accounts: 0, preferences: 0, stripe_customers: 0, subscriptions: 0, grants: 0, erasures: 1 };
 
 test("X10: the whole path, from the first sign-in to nothing left", { skip }, async () => {
   try {
@@ -149,6 +149,7 @@ test("X10: the whole path, from the first sign-in to nothing left", { skip }, as
     assert.equal(x.v, 1);
     assert.equal(x.account.accountId, ACCOUNT);
     assert.equal(x.account.level, 1);
+    assert.equal(x.account.grant, null);
     assert.match(x.identity, /Neon/);
     assert.deepEqual(x.preferences.contract, DEVICE_B);
     assert.equal(x.preferences.revision, 3);
@@ -192,5 +193,5 @@ test("X2: an account the base does not hold exports as empty", { skip }, async (
   assert.equal(out.body.account, null);
   assert.equal(out.body.preferences, null);
   assert.deepEqual(out.body.stripe, { customer: null, subscriptions: [] });
-  assert.deepEqual(await rowsOf(db, "never-signed-in"), { accounts: 0, preferences: 0, stripe_customers: 0, subscriptions: 0, erasures: 0 });
+  assert.deepEqual(await rowsOf(db, "never-signed-in"), { accounts: 0, preferences: 0, stripe_customers: 0, subscriptions: 0, grants: 0, erasures: 0 });
 });

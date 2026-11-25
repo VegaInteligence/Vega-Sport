@@ -69,12 +69,12 @@ test("P6: a pass that lives longer than the maximum is refused even when correct
   assert.throws(() => signPass({ accountId: "acc_1", level: 2, now: NOW, lifetime: 0 }, ring));
 });
 
-test("P7: only levels 1 to 3 are carried; a visitor holds no pass", () => {
-  for (const level of [0, 4, "3", 2.5, null, undefined, -1]) {
+test("P7: only levels 1 to 4 are carried; a visitor holds no pass", () => {
+  for (const level of [0, 5, "3", 2.5, null, undefined, -1]) {
     assert.throws(() => signPass({ accountId: "acc_1", level, now: NOW }, ring), `level ${level}`);
     assert.equal(reason(forge(good, claims({ lvl: level }))), "claims", `level ${level}`);
   }
-  for (const level of [1, 2, 3]) assert.equal(verifyPass(signPass({ accountId: "acc_1", level, now: NOW }, ring), ring, NOW).level, level);
+  for (const level of [1, 2, 3, 4]) assert.equal(verifyPass(signPass({ accountId: "acc_1", level, now: NOW }, ring), ring, NOW).level, level);
 });
 
 test("P8: the account id is required and has one shape", () => {

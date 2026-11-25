@@ -138,7 +138,7 @@ class AccountMigrationsTest(unittest.TestCase):
         self.assertEqual([p.name for p in FILES][:2], ["001_accounts.sql", "002_account_api.sql"])
         x = self.db.execute
         self.assertEqual([r for (r,) in x("SELECT tablename FROM pg_tables WHERE schemaname = 'account' ORDER BY 1").fetchall()],
-                         ["accounts", "erasures", "preferences", "stripe_customers", "stripe_events", "subscriptions"])
+                         ["accounts", "erasures", "grants", "preferences", "stripe_customers", "stripe_events", "subscriptions"])
 
     def test_m3_a_second_run_changes_nothing_but_the_password(self):
         total = LINE.fullmatch(self.first).group(2)
@@ -171,7 +171,7 @@ class AccountMigrationsTest(unittest.TestCase):
         self.assertIsNone(self.db.execute("SELECT to_regclass('account.half')").fetchone()[0])
         self.assertEqual(self.records_now(), self.records)
         (backend / "account/sql" / name).write_text("CREATE TABLE account.half (id integer);\n")
-        self.assertRegex(last_line(run(backend, SECOND)), r" account applied=1 total=3 logins=vega_v2_account$")
+        self.assertRegex(last_line(run(backend, SECOND)), r" account applied=1 total=4 logins=vega_v2_account$")
         self.assertIsNotNone(self.db.execute("SELECT to_regclass('account.half')").fetchone()[0])
         self.assertEqual([n for n, *_ in self.records_now()], [p.name for p in FILES] + [name])
 
@@ -250,7 +250,7 @@ class AccountMigrationsTest(unittest.TestCase):
                JOIN pg_auth_members m ON m.member = r.oid JOIN pg_roles g ON g.oid = m.roleid
                WHERE r.rolname = 'vega_v2_account' GROUP BY 1, 2""").fetchone()
         self.assertEqual(row, (True, migrate.CONNECTION_LIMITS["account"], ["vega_account"]))
-        self.assertEqual(self.login_reads, 0)
+        self.assertEqual(self.login_reads, 2)  # the two founders' rows (003_granted_levels.sql)
         self.assertEqual(self.login_football, "denied")
 
 

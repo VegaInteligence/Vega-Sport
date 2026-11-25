@@ -15,7 +15,7 @@ const DSN = process.env.VEGA_V2_ACCOUNT_TEST_DSN;
 const skip = !DSN && "requires VEGA_V2_ACCOUNT_TEST_DSN (local vega_v2_account_test)";
 // Every file of sql/, in order: what a deployment applies (001 the tables, 002 the account API's additions).
 const MIGRATION = migrations().map((m) => m.sql).join("\n");
-const TABLES = ["accounts", "preferences", "stripe_customers", "subscriptions", "stripe_events", "erasures"];
+const TABLES = ["accounts", "preferences", "stripe_customers", "subscriptions", "stripe_events", "erasures", "grants"];
 const OTHERS = ["vega_read", "vega_collect", "vega_calc"];
 let db;
 
@@ -207,4 +207,35 @@ test("S16: an erasure outlives the account row, holds the id and the instant, an
   await refused("INSERT INTO account.erasures (account_id) VALUES ($1)", [id], UNIQUE);
   await refused("INSERT INTO account.erasures (account_id) VALUES ($1)", ["a b"], CHECK);
   for (const role of OTHERS) assert.equal(await one("SELECT has_table_privilege($1, 'account.erasures', 'SELECT')", [role]), false, role);
+});
+
+test("S18: a grant raises the level, survives no deletion, and the account role only reads it", { skip }, async () => {
+  const at = "2026-12-01T00:00:00Z";
+  const level = (id) => one("SELECT account.level_of($1, $2)", [id, at]);
+  const id = await account("s18");
+  await db.query("INSERT INTO account.grants (account_id, level, reason) VALUES ($1, 3, 'testeur')", [id]);
+  assert.equal(await level(id), 3);
+  await subscribe("sub_s18", id, 2, "active", "2099-01-01", "2026-11-23");
+  assert.equal(await level(id), 3); // the highest of the grant and the subscription
+  await db.query("UPDATE account.grants SET level = 4 WHERE account_id = $1", [id]);
+  assert.equal(await level(id), 4);
+  for (const bad of [0, 1, 5]) await refused("UPDATE account.grants SET level = $2 WHERE account_id = $1", [id, bad], CHECK);
+  await refused("INSERT INTO account.grants (account_id, level, reason) VALUES ($1, 2, 'twice')", [id], UNIQUE);
+  await refused("INSERT INTO account.grants (account_id, level, reason) VALUES ($1, 2, '')", [await account("s18-empty")], CHECK);
+  await as("vega_account", async () => {
+    assert.equal(await one("SELECT level FROM account.grants WHERE account_id = $1", [id]), 4);
+    await refused("UPDATE account.grants SET level = 4 WHERE account_id = $1", [id], DENIED);
+    await refused("INSERT INTO account.grants (account_id, level, reason) VALUES ('s18-other', 4, 'x')", [], DENIED);
+    await refused("DELETE FROM account.grants WHERE account_id = $1", [id], DENIED);
+    // The account's deletion still takes its grant with it.
+    await db.query("DELETE FROM account.accounts WHERE account_id = $1", [id]);
+  });
+  assert.equal(await one("SELECT count(*)::int FROM account.grants WHERE account_id = $1", [id]), 0);
+  assert.equal(await level(id), 0);
+});
+
+test("S19: the two founders hold level 4 from the migration", { skip }, async () => {
+  for (const id of ["38d9b62e-78fb-4343-aad5-0cbe338c5dc7", "ff4449b2-6e9d-4f12-a729-875eb6c5932f"])
+    assert.equal(await one("SELECT account.level_of($1)", [id]), 4, id);
+  assert.equal(await one("SELECT count(*)::int FROM account.grants WHERE level = 4"), 2);
 });
