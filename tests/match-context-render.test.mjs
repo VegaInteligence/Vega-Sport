@@ -1,5 +1,5 @@
 // The « Avant-match » cards: without a previous meeting, « Joueurs les plus utilisés » takes the whole row
-// (FAILURE_MODES.md § 69; hugo, 25 Nov 2026).
+// (FAILURE_MODES.md § 70; hugo, 25 Nov 2026).
 import test from "node:test";
 import assert from "node:assert/strict";
 import path from "node:path";

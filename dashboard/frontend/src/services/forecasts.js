@@ -50,7 +50,7 @@ export function elevenWord(deviation) {
   return `${size >= ELEVEN_FAR ? "nettement " : ""}${deviation > 0 ? "plus fort" : "moins fort"} que son onze habituel`;
 }
 
-/** A side's eleven in a few words for the forecast card (§ 69), and its tone: same, up or down. */
+/** A side's eleven in a few words for the forecast card (§ 70), and its tone: same, up or down. */
 export function elevenTag(deviation) {
   const words = elevenWord(deviation).replace("de son onze habituel", "de l'habituel").replace("que son onze habituel", "que l'habituel");
   const size = Math.abs(deviation);
@@ -67,7 +67,7 @@ export function matchForecastReading(answer, home, away) {
   const read = answer.lineups?.forecast;
   // A match about to be played also reads each club's last ten matches (their chances, and what the results owe to something else).
   const recent = answer.form ? " et leurs dix derniers matchs (xG)" : "";
-  // What the model read, one chip each on the card (§ 69).
+  // What the model read, one chip each on the card (§ 70).
   const sources = ["Force des deux équipes", ...(answer.form ? ["10 derniers matchs (xG)"] : [])];
   if (!read || !answer.lineups.home || !answer.lineups.away)
     return { forecast: answer.forecast, lineups: false, sources, elevens: [], without: null,

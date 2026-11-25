@@ -3041,7 +3041,7 @@ th[aria-sort="descending"] .sort-indicator {
   font-size: var(--text-xs);
   line-height: 1.5;
 }
-/* The forecast in parts (FAILURE_MODES § 69, proposal A of the mock-up): two figures, what the
+/* The forecast in parts (FAILURE_MODES § 70, proposal A of the mock-up): two figures, what the
    model read as chips, each eleven against its usual one, then with and without the line-ups. */
 .match-forecast-figures {
   display: grid;

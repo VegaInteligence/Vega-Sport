@@ -237,7 +237,7 @@ function Content({ match, value }) {
           )}
         </Card>
         {/* With no previous meeting the card goes and the players' card takes the whole row,
-            one team per half (FAILURE_MODES § 69). */}
+            one team per half (FAILURE_MODES § 70). */}
         {h2h.length > 0 && (
           <Card
             title="Confrontations précédentes"

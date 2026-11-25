@@ -226,7 +226,7 @@ test("the chart's lines of an extra-time match", async () => {
   assert.deepEqual([plain.span, plain.extra, plain.penalties, plain.lines.filter((p) => p.minute === 90).length], [90, false, null, 1]);
 });
 
-test("R33 the reading carries its inputs, each eleven's words and tone, and the forecast without the line-ups (§ 69)", () => {
+test("R33 the reading carries its inputs, each eleven's words and tone, and the forecast without the line-ups (§ 70)", () => {
   const forecast = { home: 0.45, draw: 0.27, away: 0.28, homeGoals: 1.4, awayGoals: 1.1, score: [1, 1] };
   const read = { home: 0.52, draw: 0.25, away: 0.23, homeGoals: 1.6, awayGoals: 1.0, score: [1, 0] };
   const alone = matchForecastReading({ forecast }, "Lille", "Lens");

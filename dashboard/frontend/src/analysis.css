@@ -1045,7 +1045,7 @@ select optgroup {
 }
 .match-scoreboard {
   overflow: hidden;
-  /* No line under the head's buttons (hugo, 25 Nov 2026; FAILURE_MODES § 69). */
+  /* No line under the head's buttons (hugo, 25 Nov 2026; FAILURE_MODES § 70). */
   border: 0;
   border-radius: var(--radius-xl);
   background: none;
@@ -1110,7 +1110,7 @@ select optgroup {
   gap: 8px;
 }
 .match-status {
-  /* Plain text with its dot, no box (§ 69). */
+  /* Plain text with its dot, no box (§ 70). */
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -1465,7 +1465,7 @@ select optgroup {
   .match-overview-grid > .card > .card-body > .comparison-stats {
     justify-content: flex-start;
   }
-  /* With no previous meeting the players' card takes the row: one team per half (§ 69). */
+  /* With no previous meeting the players' card takes the row: one team per half (§ 70). */
   .match-overview-grid > .match-overview-wide > .card-body > .context-players {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));

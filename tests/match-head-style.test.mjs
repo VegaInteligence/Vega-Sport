@@ -1,4 +1,4 @@
-// The match page's head without the line under the buttons, and its status as plain text (FAILURE_MODES.md § 69).
+// The match page's head without the line under the buttons, and its status as plain text (FAILURE_MODES.md § 70).
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";

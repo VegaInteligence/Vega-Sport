@@ -36,7 +36,7 @@ export default function MatchForecast({ match }) {
           </li>
         ))}
       </ul>
-      {/* The forecast in parts (FAILURE_MODES § 69, proposal A of the mock-up hugo chose). */}
+      {/* The forecast in parts (FAILURE_MODES § 70, proposal A of the mock-up hugo chose). */}
       <div className="match-forecast-figures">
         <div>
           <small>Score le plus probable</small>

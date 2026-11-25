@@ -1,4 +1,4 @@
-// The forecast card of a match to come, in parts (FAILURE_MODES.md § 69, proposal A of the mock-up hugo chose on 25 Nov
+// The forecast card of a match to come, in parts (FAILURE_MODES.md § 70, proposal A of the mock-up hugo chose on 25 Nov
 // 2026: https://claude.ai/artifact/Prb21eKP44eDYHLC3Xo3N8).
 import test from "node:test";
 import assert from "node:assert/strict";
