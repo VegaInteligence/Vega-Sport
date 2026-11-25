@@ -6,7 +6,7 @@ import {
   matchResourceKey,
   validateMatchPublication,
 } from "../services/match-resources.js";
-import { loadSeason } from "../season_data.js";
+import { seasonSnapshotFixtures } from "../services/season-snapshot-fixtures.js";
 import { seasonLabel } from "../services/format.js";
 import { competitionLabel } from "../services/competition-selector.js";
 import CompetitionStandings from "./CompetitionStandings.jsx";
@@ -31,30 +31,7 @@ async function matchFixtures(f, competition, season, { signal } = {}) {
     ],
   });
   await scoped.loadFixtures({ signal });
-  let value = scoped.fixtures.get(key);
-  if (value.source === "snapshot" && !value.matches.length) {
-    const bucket = seasonLabel(season);
-    const available = f.manifest.seasons
-      .find((s) => s.id === bucket)
-      ?.chunks.some((c) => c.leagueId === competition.id);
-    if (available) {
-      // A deep-linked match can belong to a season outside the global page
-      // filter. Fetch only its competition snapshot, using the shared cache.
-      scoped.data = await loadSeason(
-        f.manifest,
-        bucket,
-        fetch,
-        new Set([competition.id]),
-        { signal },
-      );
-      value = {
-        matches: scoped.localFixtures(competition.id, season),
-        source: "snapshot",
-      };
-      scoped.fixtures.set(key, value);
-    }
-  }
-  return value;
+  return seasonSnapshotFixtures(f, scoped, competition, season, { signal });
 }
 
 export default function MatchStandings({ match }) {

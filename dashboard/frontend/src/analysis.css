@@ -1043,66 +1043,12 @@ select optgroup {
 .match-workspace {
   padding-top: 20px;
 }
-.match-breadcrumb-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 14px;
-}
-.match-breadcrumb {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  color: var(--muted);
-  font-size: var(--text-sm);
-}
-.match-breadcrumb > .icon {
-  width: 12px;
-  color: var(--muted-light);
-}
-.match-breadcrumb a {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--ink);
-  font-weight: 500;
-}
-.match-breadcrumb a .icon {
-  width: 14px;
-}
 .match-scoreboard {
   overflow: hidden;
   border: 0;
   border-top: 1px solid var(--border-strong);
   border-radius: var(--radius-xl);
   background: none;
-}
-.scoreboard-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding: 14px 20px 0;
-  color: var(--muted);
-  font-size: var(--text-sm);
-}
-.scoreboard-meta > div {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--ink-strong);
-  font-size: var(--text-md);
-  font-weight: 600;
-}
-.scoreboard-meta .crest {
-  width: var(--media-24);
-  height: var(--media-24);
-}
-.scoreboard-meta .crest img {
-  padding: 0;
 }
 .scoreboard-main {
   display: grid;
@@ -1391,40 +1337,83 @@ select optgroup {
 .match-overview-wide {
   grid-column: 1 / -1;
 }
-/* The Résumé (issue #221): the shot map's list under a fold, the best grades in one column
-   beside it, the line-ups' board under the pitch. */
-.match-shots-card .chart-figure svg {
-  max-height: 380px;
+/* The Résumé (issue #221): the shot map, the best grades beside it down to the map's foot. */
+/* The finished match's strip, the whole row above the charts (FAILURE_MODES § 63). */
+.match-overview-grid > .match-leaders-strip {
+  grid-column: 1 / -1;
 }
-.match-shot-fold {
-  margin-top: 12px;
-  border-top: 1px solid var(--border);
-}
-.match-shot-fold-toggle {
+/* The shot map (§ 63): each team's name at its end, the pitch, the legend. */
+.match-shot-sides {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  width: 100%;
-  min-height: 40px;
-  padding: 0;
-  color: var(--ink);
+  gap: 12px;
+  margin-bottom: 10px;
   font-size: var(--text-sm);
-  font-weight: 500;
-}
-.match-shot-fold-toggle:hover {
+  font-weight: 600;
   color: var(--ink-strong);
 }
-.match-shot-fold-toggle .icon {
-  transition: transform 0.15s ease;
+.match-shot-sides span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
-.match-shot-fold-toggle .icon.is-open {
-  transform: rotate(180deg);
+.match-shot-sides i {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
 }
-.match-shot-fold .match-shot-list {
+.match-shot-pitch,
+.match-goal-mouth {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.match-shot-pitch {
   max-height: 420px;
 }
-.match-shot-list li.is-goal strong {
-  font-weight: 600;
+.match-goal-mouth {
+  max-height: 300px;
+}
+.match-shot-kick-number {
+  fill: var(--ink-strong);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.match-shot-shootout-head {
+  margin-bottom: 12px;
+}
+.match-shot-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.match-shot-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.match-shot-legend i {
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--muted);
+  border-radius: 50%;
+}
+.match-shot-legend i.is-on {
+  background: color-mix(in srgb, var(--muted) 40%, transparent);
+}
+.match-shot-legend i.is-goal {
+  background: var(--muted);
+}
+.match-table-view {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
 }
 .match-leaders-list .match-player-row:last-child {
   border-bottom: 0;
@@ -1432,13 +1421,17 @@ select optgroup {
 /* On a phone the views' choice takes the card's width, each label whole. */
 @media (max-width: 640px) {
   .match-flow-card .card-actions,
-  .match-flow-card .segmented-control {
+  .match-flow-card .segmented-control,
+  .match-shots-card .card-actions,
+  .match-shots-card .card-actions .segmented-control {
     width: 100%;
   }
-  .match-flow-card .segmented-control {
+  .match-flow-card .segmented-control,
+  .match-shots-card .card-actions .segmented-control {
     display: flex;
   }
-  .match-flow-card .segmented-control button {
+  .match-flow-card .segmented-control button,
+  .match-shots-card .card-actions .segmented-control button {
     flex: 1 1 auto;
     padding: 4px 6px;
     white-space: normal;
@@ -1478,6 +1471,15 @@ select optgroup {
   }
   .match-overview-grid > .match-leaders-card > .card-body {
     justify-content: flex-start;
+  }
+  /* The best grades end with the shot map beside them (hugo, 25 Nov): the rows share the card's height. */
+  .match-overview-grid > .match-leaders-card > .card-body > .match-leaders-list {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+  }
+  .match-overview-grid > .match-leaders-card .match-leaders-list > .match-player-row {
+    flex: 1 1 auto;
   }
   /* The goals keep their separators touching: each row grows, its content centred. */
   .match-overview-grid > .card > .card-body > .match-goals {
@@ -1916,59 +1918,6 @@ select optgroup {
 .shot-team-selector {
   margin-bottom: 14px;
 }
-.match-shot-list {
-  max-height: 620px;
-  padding: 0;
-  margin: 0;
-  overflow: auto;
-  list-style: none;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-strong) transparent;
-}
-.match-shot-list li {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 9px 0;
-  border-bottom: 1px solid var(--border);
-}
-.shot-minute {
-  min-width: 30px;
-  color: var(--muted);
-  font-size: var(--text-sm);
-  font-weight: 600;
-}
-.match-shot-list button {
-  flex: 1;
-  text-align: left;
-  padding: 0;
-}
-.match-shot-list strong {
-  display: block;
-  color: var(--ink-strong);
-  font-size: var(--text-md);
-  font-weight: 500;
-}
-.match-shot-list button span {
-  display: block;
-  margin-top: 2px;
-  color: var(--muted);
-  font-size: var(--text-xs);
-}
-.shot-xg {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
-  color: var(--ink-strong);
-  font-size: var(--text-md);
-  font-weight: 650;
-}
-.shot-xg small {
-  color: var(--muted);
-  font-size: var(--text-2xs);
-  font-weight: 400;
-}
 .archive-select {
   display: flex;
   align-items: center;
@@ -2241,27 +2190,6 @@ select optgroup {
   }
   .match-workspace {
     padding-top: 16px;
-  }
-  .match-breadcrumb-row {
-    flex-wrap: wrap;
-    align-items: flex-start;
-    gap: 10px;
-  }
-  .match-breadcrumb {
-    gap: 6px;
-    font-size: var(--text-xs);
-  }
-  .scoreboard-meta {
-    gap: 8px;
-    padding: 12px 14px 0;
-    font-size: var(--text-xs);
-  }
-  .scoreboard-meta > div {
-    font-size: var(--text-sm);
-  }
-  .scoreboard-meta .crest {
-    width: var(--media-20);
-    height: var(--media-20);
   }
   .scoreboard-main {
     gap: 8px;

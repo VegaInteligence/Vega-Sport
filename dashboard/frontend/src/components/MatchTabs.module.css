@@ -1115,3 +1115,48 @@
     display: grid;
   }
 }
+
+/* The board's search (FAILURE_MODES § 63): a field beside the team choice, the site's search field in small. */
+.search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 0 1 260px;
+  min-width: 0;
+  height: 30px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  transition: border-color 0.15s;
+}
+.search:focus-within {
+  border-color: var(--border-strong);
+}
+.search :global(.icon) {
+  position: absolute;
+  left: 9px;
+  width: 14px;
+  height: 14px;
+  color: var(--muted);
+  pointer-events: none;
+}
+.search input {
+  width: 100%;
+  height: 100%;
+  padding: 0 10px 0 30px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-strong);
+  font: inherit;
+  font-size: var(--text-sm);
+  outline: none;
+}
+.search input::placeholder {
+  color: var(--muted);
+}
+@media (max-width: 640px) {
+  .search {
+    flex: 1 1 100%;
+    height: var(--control-h);
+  }
+}

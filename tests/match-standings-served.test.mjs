@@ -174,7 +174,7 @@ test("a match page asks for the served table and does not load the season's fixt
         matchResourceKey: (_manifest, kind, subject, ...rest) => [kind, subject.id, ...rest].join(":"),
         validateMatchPublication: () => {},
       },
-      "../season_data.js": { loadSeason: async () => ({}) },
+      "../services/season-snapshot-fixtures.js": { seasonSnapshotFixtures: async () => undefined },
       "../services/format.js": { seasonLabel: String },
       "../services/competition-selector.js": { competitionLabel: (c) => c.name },
       "./CompetitionStandings.jsx": {
