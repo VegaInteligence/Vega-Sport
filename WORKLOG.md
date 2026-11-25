@@ -2,9 +2,9 @@
 
 ## Alignement de la navbar Safari / Chromium / Firefox — 25 novembre 2026
 
-- Hugo valide l’astérisque de 25 × 28 px, aligné à gauche, et demande la correction sur ordinateur et mobile. Safari réservait 285 px au lien. Direction visuelle approuvée dans le cadre de [VI-61](https://linear.app/vegainteligence/issue/VI-61), clos. Aucun correctif concurrent trouvé dans Linear. Branche locale `codex/navbar-cross-browser` depuis `c1b92abf`.
-- Correction CSS : dimensions explicites du logo, lien de 40 px sur ordinateur et 44 px sur téléphone. Safari macOS vérifié en clair et sombre, Safari iOS vérifié sur simulateur iPhone 17. E2E ajouté avant le CSS : 96/96 sous Chromium, Firefox et WebKit. Site 1 026/1 026 et compilation Next.js réussie.
-- Suite d’en-tête historique : 34/37, avec les mêmes trois échecs et mesures sur la production sans correctif et sur la branche. Preuves et commandes : `/Users/lemonnierhugo/.codex/visualizations/2026/11/25/01a2125d-5f78-7cf2-89b2-f12e7a7b5244/navbar-verification.md`. Correction locale, prête à intégrer.
+- L’astérisque de 25 × 28 px reste aligné à gauche. Le lien du logo qui prenait 285 px dans Safari mesure 40 px sur ordinateur et 44 px sur téléphone. Direction approuvée dans [VI-61](https://linear.app/vegainteligence/issue/VI-61). Correctif livré sur `main` dans `a8d666a1`.
+- Safari macOS vérifié en clair et sombre, Safari iOS sur simulateur iPhone 17. Vérification ponctuelle E2E : 96/96 sous Chromium, Firefox et WebKit. Suite site : 1 026/1 026 et compilation réussie. Suite d’en-tête historique : mêmes trois échecs avant et après le correctif (34/37).
+- À la demande de Hugo, retirer le test ponctuel et nettoyer la branche, le worktree et le serveur de vérification après livraison. Preuves et reproduction : `/Users/lemonnierhugo/.codex/visualizations/2026/11/25/01a2125d-5f78-7cf2-89b2-f12e7a7b5244/navbar-verification.md`.
 
 ## Fiche joueur d'un match : zéros affichés — 25 novembre 2026
 
