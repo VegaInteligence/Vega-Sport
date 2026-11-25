@@ -64,5 +64,16 @@ export default function useCrestColours(home, away) {
       live = false;
     };
   }, [homePath, awayPath]);
+  // A shot's tooltip is drawn in document.body, outside the page (HoverCard.jsx): the charts' two
+  // colours go there too while the page is open (Codex, § 64).
+  useEffect(() => {
+    const style = document.body.style;
+    for (const name of ["--chart-home", "--chart-away"])
+      if (vars[name]) style.setProperty(name, vars[name]);
+    return () => {
+      style.removeProperty("--chart-home");
+      style.removeProperty("--chart-away");
+    };
+  }, [vars]);
   return vars;
 }

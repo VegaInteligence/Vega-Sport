@@ -94,7 +94,7 @@ function themed({ h, s, l }) {
 /**
  * The match page's `--home` and `--away` from the two crests' colours. A side left out keeps the
  * theme's colour. The away side never clashes with the home one: its first colour, its second,
- * then the theme's violet, then the theme's blue.
+ * the theme's violet, the theme's blue, then the home colour's opposite hue.
  */
 export function matchColours(home, away) {
   const vars = {};
@@ -105,6 +105,8 @@ export function matchColours(home, away) {
     ...(away || []).slice(0, 2),
     { fallback: undefined, h: AWAY_FALLBACK_HUE },
     { fallback: "var(--home-fallback)", h: HOME_FALLBACK_HUE },
+    // A home colour between the theme's blue and violet clashes with both: the opposite hue (Codex, § 64).
+    { h: (homeHue + 180) % 360, s: 0.7, l: 0.5 },
   ];
   const pick = options.find((o) => hueDistance(o.h, homeHue) >= MIN_SPREAD);
   if (pick && !("fallback" in pick)) vars["--away"] = themed(pick);

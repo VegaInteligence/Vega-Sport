@@ -5434,6 +5434,10 @@ si on a pas on reprend bleu et violet ».
   keeps today's colour (home blue, away violet).
 - **Two colours that clash** (hues less than 40° apart): the away side takes its crest's second colour when it has one
   far enough; otherwise its fallback (violet, or blue when the home colour is itself near violet).
+- **Codex's review of PR #229** (checked against the code): (a) a home colour between the theme's blue and violet
+  (215°–255°) with an away crest as close clashed with both fallbacks and the away side kept violet: the opposite hue
+  of the home colour comes last; (b) a shot's tooltip is drawn in `document.body` (`HoverCard.jsx`), outside the page
+  that holds the colours: `--chart-home` / `--chart-away` are also set on `body` while the match page is open.
 - **Reading the crest.** A crest copy lives on the API's image host, which sends no CORS header, so a canvas cannot read
   it. The site serves the same file from its own origin (`/api/crest/data/sources/…/<hash>.<ext>`: only an address
   `safeResolvedMedia` accepts, fetched from `${API_ORIGIN}`, cached a year: the name is the content's hash).
@@ -5445,7 +5449,8 @@ si on a pas on reprend bleu et violet ».
 - **R23** (`tests/crest-colours.test.mjs`) a crest mostly red with white gives red; a black-and-white crest gives no
   colour; transparent pixels do not count; a crest with two colours gives both, the larger first.
 - **R24** (same file) two clashing reds: the away side takes its second colour, or its fallback when it has none; a
-  side with no colour keeps its fallback; the lightness of each theme stays in its range.
+  side with no colour keeps its fallback; two 235° crests: the away side takes 55°; the lightness of each theme stays
+  in its range.
 - **R25** (`tests/crest-route.test.mjs`) the crest route serves only an image copy's address (`data/sources/…/<hash>.
   (webp|png|jpg)`), anything else is 404 without a fetch; a served file is `immutable`.
 - **R26** (`match-tabs.e2e.mjs`) the match page sets `--home` and `--away` from the crests (PSG's blue, Lorient's

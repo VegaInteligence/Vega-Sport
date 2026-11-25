@@ -262,7 +262,9 @@ const teamColours = (page) => page.evaluate(() => {
   const style = getComputedStyle(document.querySelector(".match-detail"));
   const hue = (v) => { const m = /^light-dark\(hsl\(([\d.]+) /.exec(v); return m ? Number(m[1]) : null; };
   const home = style.getPropertyValue("--home").trim(), away = style.getPropertyValue("--away").trim();
-  return { home, away, homeHue: hue(home), awayHue: hue(away) };
+  // A shot's tooltip is drawn in document.body (§ 64, Codex): the charts' colours are there too.
+  const body = getComputedStyle(document.body);
+  return { home, away, homeHue: hue(home), awayHue: hue(away), bodyHome: body.getPropertyValue("--chart-home").trim(), bodyAway: body.getPropertyValue("--chart-away").trim() };
 });
 const sideways = (page) => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 const viewOf = (page) => new URL(page.url()).searchParams.get("view");
@@ -318,6 +320,7 @@ try {
         await page.locator(".match-scoreboard").screenshot({ path: join(out, "couleurs-logos-bureau.png") });
         assert.ok(got.homeHue >= 200 && got.homeHue <= 220, `home ${got.home}`);
         assert.ok(got.awayHue >= 20 && got.awayHue <= 35, `away ${got.away}`);
+        assert.deepEqual([got.bodyHome, got.bodyAway], [got.home, got.away], "the tooltip's colours on body");
         return got;
       });
 

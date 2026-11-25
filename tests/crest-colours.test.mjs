@@ -60,5 +60,8 @@ test("R24 two sides: clash, fallbacks and the lightness of each theme", () => {
   // An away crest as blue as the theme's home blue, home with no colour: away takes violet.
   vars = matchColours([], [blue]);
   assert.equal(vars["--away"], undefined);
+  // A home colour between the theme's blue and violet, the away crest the same: the opposite hue, 40° clear.
+  vars = matchColours([{ h: 235, s: 0.7, l: 0.4 }], [{ h: 235, s: 0.7, l: 0.4 }]);
+  assert.match(vars["--away"], /^light-dark\(hsl\(55 /);
   assert.deepEqual(matchColours(null, undefined), {});
 });
