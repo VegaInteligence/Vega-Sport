@@ -22,7 +22,7 @@ async function loadComponent(file, stubs) {
     "../services/match-resources.js": await import("../dashboard/frontend/src/services/match-resources.js"),
     "../services/momentum.js": await import("../dashboard/frontend/src/services/momentum.js"),
     "../services/head-to-head.js": await import("../dashboard/frontend/src/services/head-to-head.js"),
-    // teamStatsFlagged (FAILURE_MODES § 65): a pure module, read as it is.
+    // teamStatsFlagged (FAILURE_MODES § 66): a pure module, read as it is.
     "../services/match-tabs.js": await import("../dashboard/frontend/src/services/match-tabs.js"),
     ...stubs,
   };

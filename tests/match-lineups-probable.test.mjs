@@ -116,8 +116,8 @@ test("61r: the line-ups are read again from 90 min before to 30 min after kick-o
   assert.equal(lineupsWatched({ status: "not_started", timeUtc: null }, null, kickoff), false);
 });
 
-// § 65 (PSG – Roma in play, 25 Nov 2026): the line-up's own photos, and « incohérentes » only on statistics that exist.
-test("R28: each official player takes the line-up's own photo when no statistics row, grade or probable eleven has one", async () => {
+// § 66 (PSG – Roma in play, 25 Nov 2026): the line-up's own photos, and « incohérentes » only on statistics that exist.
+test("R29: each official player takes the line-up's own photo when no statistics row, grade or probable eleven has one", async () => {
   const payload = provider(
     { confirmed: true, starters: [starter("p_h1", "Home One", { image_url: "https://img/h1.webp" }), starter("p_h2", "Home Two", { image_url: null })],
       subs: [starter("p_h3", "Home Three", { image_url: "https://img/h3.webp" })] },
@@ -135,7 +135,7 @@ test("R28: each official player takes the line-up's own photo when no statistics
   assert.deepEqual(view.away.starters.map((p) => p.imageUrl), ["https://img/grade.webp"]);
 });
 
-test("R29: « incohérentes » only when the flag is false and the match has team statistics", async () => {
+test("R30: « incohérentes » only when the flag is false and the match has team statistics", async () => {
   const { teamStatsFlagged } = await import("../dashboard/frontend/src/services/match-tabs.js");
   const psgRoma = { id: "m_36394c", status: "in_play", coverage: { teamStatsReliable: false, shots: false }, stats: [] };
   assert.equal(teamStatsFlagged(psgRoma), false);
@@ -148,7 +148,7 @@ test("R29: « incohérentes » only when the flag is false and the match has tea
   assert.equal(teamStatsFlagged({ ...psgRoma, stats: [row] }), true);
 });
 
-test("R30: the match page's « incohérent » warnings read teamStatsFlagged, never the flag itself", async () => {
+test("R31: the match page's « incohérent » warnings read teamStatsFlagged, never the flag itself", async () => {
   const { readFile } = await import("node:fs/promises");
   for (const file of ["MatchDetail.jsx", "MatchSections.jsx"]) {
     const source = await readFile(new URL(`../dashboard/frontend/src/components/${file}`, import.meta.url), "utf8");

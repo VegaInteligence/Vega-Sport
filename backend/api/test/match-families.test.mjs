@@ -41,7 +41,7 @@ test("the match and its line-ups, events, shots, momentum and head-to-head", { s
     assert.deepEqual(numbers(await read(suffix)), numbers(fixture(name)), name);
 });
 
-// R27 (FAILURE_MODES § 65): the provider's line-ups, each player with his photo in the base (or null), so the official
+// R28 (FAILURE_MODES § 66): the provider's line-ups, each player with his photo in the base (or null), so the official
 // elevens have their photos before the player statistics are read.
 test("the line-ups, each player with his photo", { skip }, async () => {
   const lineups = await read("/lineups");

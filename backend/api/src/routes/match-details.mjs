@@ -17,7 +17,7 @@
  * - head-to-head meetings name the teams without their crests, as the source does;
  * - a family that was not collected, or that the source said was unavailable, is a 404;
  * - each line-up player carries `image_url`, his photo in the base or null, which the source
- *   does not send (FAILURE_MODES § 65).
+ *   does not send (FAILURE_MODES § 66).
  *
  * GET /api/matches/{id}/lineups/probable — our probable eleven of each side of a match not started
  * (vega/probable.py, FAILURE_MODES §61), read from api.match_probable_lineups (176): a side not
@@ -35,7 +35,7 @@ const FAMILY = {
 };
 const where = "WHERE season_id=$1 AND match_id=$2";
 // A family whose body changed shape without a new match revision: its ETag changes with it, so a client holding the
-// former body reads the new one (the line-ups' photos, FAILURE_MODES § 65).
+// former body reads the new one (the line-ups' photos, FAILURE_MODES § 66).
 const SHAPE = { "/lineups": "photos" };
 const missing = () => reject(404, "Donnée indisponible.");
 
@@ -100,7 +100,7 @@ async function body(read, f, suffix, params) {
     case "/lineups": {
       const [teams, players] = await Promise.all([
         read(`SELECT * FROM api.match_lineup_rows ${where} ORDER BY side DESC`, at),
-        // Each player's photo (FAILURE_MODES § 65): read with the line-up, statistics or not.
+        // Each player's photo (FAILURE_MODES § 66): read with the line-up, statistics or not.
         read(
           `SELECT l.*, pp.image_url FROM api.match_lineup_player_rows l
            LEFT JOIN api.player_profiles pp ON pp.player_id = api.internal_id('player', l.player_id)
