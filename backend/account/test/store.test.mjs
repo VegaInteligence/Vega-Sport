@@ -23,7 +23,7 @@ after(async () => {
   await db?.end();
 });
 const one = async (sql, values) => Object.values((await db.query(sql, values)).rows[0])[0];
-const NONE = { accounts: 0, preferences: 0, stripe_customers: 0, subscriptions: 0, erasures: 0 };
+const NONE = { accounts: 0, preferences: 0, stripe_customers: 0, subscriptions: 0, grants: 0, erasures: 0 };
 const ok = async (command) => {
   const out = await store.handle(command);
   assert.equal(out.ok, true, JSON.stringify(out).slice(0, 300));
@@ -169,6 +169,14 @@ test("export: every row the base holds for the account, nothing of another (X1, 
   assert.equal(out.stripe.customer.customerId, "cus_xe");
   assert.deepEqual(out.stripe.subscriptions.map((s) => [s.subscriptionId, s.level, s.status]), [["sub_xe", 2, "canceled"]]);
   assert.ok(!JSON.stringify(out).includes("xe-other") && !JSON.stringify(out).includes("BRA"));
+  assert.equal(out.account.grant, null);
+  // A grant is exported with the account, even when a subscription gives a higher level (S18).
+  await db.query("INSERT INTO account.grants (account_id, level, reason) VALUES ('xe', 2, 'testeur')");
+  await db.query("SELECT account.record_subscription('sub_xe', 'xe', 3::smallint, 'active', '2099-01-01', false, '2026-09-02')");
+  const granted = await ok({ command: "export", accountId: "xe" });
+  assert.equal(granted.account.level, 3);
+  assert.deepEqual({ ...granted.account.grant, grantedAt: undefined }, { level: 2, reason: "testeur", grantedAt: undefined });
+  assert.ok(!Number.isNaN(Date.parse(granted.account.grant.grantedAt)));
 });
 
 test("D11: the seam refuses a payload beyond 6 MB either way, in both transports", { skip }, async () => {

@@ -87,7 +87,7 @@ export async function freshBase() {
 /** Rows held for an account id in every account table (the erasure check). */
 export async function rowsOf(db, id) {
   const out = {};
-  for (const table of ["accounts", "preferences", "stripe_customers", "subscriptions", "erasures"])
+  for (const table of ["accounts", "preferences", "stripe_customers", "subscriptions", "grants", "erasures"])
     out[table] = (await db.query(`SELECT count(*)::int AS n FROM account.${table} WHERE account_id = $1`, [id])).rows[0].n;
   return out;
 }
