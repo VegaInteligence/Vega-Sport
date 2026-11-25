@@ -1,13 +1,16 @@
-"""« Composition probable »: our probable eleven before the provider's line-ups (FAILURE_MODES.md §61, 61a–61m, written
-before these tests).
+"""« Composition probable »: our probable eleven before the provider's line-ups (FAILURE_MODES.md §61, 61a–61m and
+61u–61ad, written before these tests).
 
-The method (probable-v1) is the study's P5 (`etude_onze_probable.py`, `guess()` and the absence rule « B connue »): its
-self-test's cases are ported in GuessTest. The worker's step (`probable.refresh`) runs on a disposable local PostgreSQL
+probable-v1 is the study's P5 (`etude_onze_probable.py`, `guess()` and the absence rule « B connue »): its self-test's
+cases are ported in GuessTest, and its outputs before probable-v2 are frozen in V1FrozenTest. probable-v2 is the study
+v4's H1 (`v4/etude_onze_melange.py`: P11 for a club of the five leagues, P1a elsewhere): its self-test's cases are ported
+in ScoreTest, SimilarityTest and RouteTest. The worker's step (`probable.refresh`) runs on a disposable local PostgreSQL
 (VEGA_V2_PROBABLE_TEST_DSN, database vega_v2_probable_test) under the calculation role (vega_calc), as the side process
 runs it.
 """
 
 from datetime import date, datetime, timedelta, timezone
+from math import exp
 import os
 from pathlib import Path
 import sys
@@ -64,13 +67,17 @@ class GuessTest(unittest.TestCase):
         self.w = self.p.weights(len(self.hist))
 
     def test_61a_weights_and_method(self):
-        self.assertEqual(self.p.METHOD, "probable-v1")
+        # 61.3: the worker writes probable-v2; probable-v1 stays selectable.
+        self.assertEqual(self.p.METHOD, "probable-v2")
+        self.assertEqual(self.p.METHODS, ("probable-v1", "probable-v2"))
         self.assertEqual((self.p.WINDOW, self.p.MIN_RECENT, self.p.DECAY), (10, 5, 0.8))
         self.assertEqual(self.p.weights(3), [0.8 ** 2, 0.8, 1.0])
         # The one place a window's weights are computed (hugo, 25 Nov: a later method may weigh each eleven otherwise).
-        self.assertEqual(self.p.window_weights(self.p.METHOD, self.hist, None), self.w)
+        self.assertEqual(self.p.window_weights("probable-v1", self.hist, None), self.w)
         with self.assertRaises(ValueError):
             self.p.window_weights("probable-v0", self.hist, None)
+        with self.assertRaises(ValueError):
+            self.p.predict([], None, mr, {}, set(), method="probable-v0")
 
     def test_61a_the_weighted_split_wins(self):
         # P4: weights 2.44 (3-5-2) against 1.51 (4-4-2): the 3-5-2 and its players.
@@ -111,6 +118,222 @@ class GuessTest(unittest.TestCase):
         self.assertTrue(5 in g and 6 not in g, g)
         # Two splits of the same weight: the most recent.
         self.assertEqual(ids(p.guess([ent(0, A442), ent(1, B352)], [1.0, 1.0], mr)[0]), sorted(B352))
+
+
+# The elevens of V1FrozenTest: each starter at a fixed place of his role.
+def spot(p):
+    role = ROLE2[p]
+    if role == "goalkeeper":
+        return (11, 0.1, 0.5)
+    if role == "centre_back":
+        return (30 + p, 0.35, round(0.1 + 0.18 * (p - 2), 2))
+    if role == "central_midfielder":
+        return (70 + p, 0.6, round(0.1 + 0.18 * (p - 7), 2))
+    return (100 + p, 0.85, round(0.2 + 0.3 * (p - 12), 2))
+
+
+# The study v4's self-test world (etude_onze_melange.py, selftest()): 15 is a centre forward too.
+ROLE2 = {**ROLE, 15: "centre_forward"}
+V442 = (1, 2, 3, 4, 6, 7, 8, 9, 10, 12, 13)
+X442 = (1, 2, 3, 4, 5, 7, 8, 9, 10, 12, 14)
+INJURY = {"kind": "injury", "label": "Knee injury", "start": date(2026, 11, 10), "end": None, "remaining": None}
+
+
+def mr2(p):
+    return ROLE2.get(p)
+
+
+def entry(k, starters, bench=(), unused=(), ctype="L", elo=1500.0, formation="4-4-2", spots=False):
+    """An eleven of the study v4's self-test (its `ent`): the starters, the substitutes who came on (`bench`), the others
+    on the sheet who did not (`unused`), the competition type and the opponent's Elo."""
+    came = (*starters, *bench)
+    return probable().Entry(
+        day=date(2026, 9, 6) + timedelta(days=7 * k), starters=tuple(starters), roles={p: ROLE2.get(p) for p in came},
+        came=frozenset(came), match_id=5000 + k, competition_id=30, opponent_id=3, formation=formation,
+        spots={p: spot(p) for p in starters} if spots else {}, shirts={p: p for p in (*came, *unused)},
+        sheet=frozenset((*came, *unused)), ctype=ctype, opp_elo=elo)
+
+
+def target(five=False, ctype="L", elo=1500.0):
+    return probable().Target(match_id=7000, season_id=2026, day=date(2026, 12, 1), team_id=1, opponent_id=2, side="home",
+                             competition_id=30, ctype=ctype, opp_elo=elo, five=five)
+
+
+def xi_of(result):
+    return sorted(p for p, *_ in result["starters"])
+
+
+class V1FrozenTest(unittest.TestCase):
+    """61aa: probable-v1 selected after probable-v2 gives what main gave before it (c83c53e, run on this window)."""
+
+    def test_61aa_probable_v1_unchanged(self):
+        p = probable()
+        window = ([entry(k, A442, bench=(6, 11), spots=True) for k in range(3)]
+                  + [entry(k, B352, bench=(5, 14), formation="3-5-2", spots=True) for k in range(3, 7)]
+                  + [entry(k, V442[:-1] + (14,), bench=(13,), spots=True) for k in range(7, 10)])
+        run = lambda absent, gone: p.predict(window, None, mr2, absent, gone, method="probable-v1")
+        r = run({}, set())
+        self.assertEqual(r["formation"], "4-4-2")
+        self.assertEqual(r["starters"], [
+            (1, 11, 0.1, 0.5, 1.0, None), (2, 32, 0.35, 0.1, 1.0, None), (3, 33, 0.35, 0.28, 1.0, None), (4, 34, 0.35, 0.46, 1.0, None),
+            (6, 36, 0.35, 0.82, 0.3, None), (7, 77, 0.6, 0.1, 1.0, None), (8, 78, 0.6, 0.28, 1.0, None), (9, 79, 0.6, 0.46, 1.0, None),
+            (10, 80, 0.6, 0.64, 1.0, None), (12, 112, 0.85, 0.2, 1.0, None), (14, 114, 0.85, 0.8, 0.3, None)])
+        r = run({3: INJURY}, {12})
+        self.assertEqual(r["starters"], [
+            (1, 11, 0.1, 0.5, 1.0, None), (2, 32, 0.35, 0.1, 1.0, None), (5, 33, 0.35, 0.28, 0.3, 3), (4, 34, 0.35, 0.46, 1.0, None),
+            (6, 36, 0.35, 0.82, 0.3, None), (7, 77, 0.6, 0.1, 1.0, None), (8, 78, 0.6, 0.28, 1.0, None), (9, 79, 0.6, 0.46, 1.0, None),
+            (10, 80, 0.6, 0.64, 1.0, None), (13, 112, 0.85, 0.2, 0.7, None), (14, 114, 0.85, 0.8, 0.3, None)])
+        self.assertEqual([q for q, _ in r["absent"]], [3])
+        r = run({1: INJURY}, set())
+        self.assertEqual(xi_of(r), [2, 3, 4, 6, 7, 8, 9, 10, 12, 14])
+        r = run({7: INJURY, 8: INJURY}, {14})
+        self.assertEqual(r["starters"], [
+            (1, 11, 0.1, 0.5, 1.0, None), (2, 32, 0.35, 0.1, 1.0, None), (3, 33, 0.35, 0.28, 1.0, None), (4, 34, 0.35, 0.46, 1.0, None),
+            (6, 36, 0.35, 0.82, 0.3, None), (11, 77, 0.6, 0.1, 0.4, 7), (13, 78, 0.6, 0.28, 0.7, 8), (9, 79, 0.6, 0.46, 1.0, None),
+            (10, 80, 0.6, 0.64, 1.0, None), (12, 112, 0.85, 0.2, 1.0, None), (5, 114, 0.85, 0.8, 0.3, None)])
+        self.assertEqual([q for q, _ in r["absent"]], [7, 8])
+
+
+class ScoreTest(unittest.TestCase):
+    """61x, 61y: P10's score (the study v3 and v4): a match counts for a player only if he was on its sheet."""
+
+    def test_61y_prior_and_a_by_hand(self):
+        p = probable()
+        self.assertEqual((p.PULL, p.PRIOR), (2.0, 0.6))
+        e0, e1, e2 = entry(0, A442, unused=(14,)), entry(1, X442, unused=(15,)), entry(2, A442)
+        # Two elevens with a substitute (sheets of 12): prior 11 × 1.8 / (12 × 1.8) = 11/12.
+        started, listed, prior = p.availability([e0, e1], [0.8, 1.0])
+        self.assertAlmostEqual(prior, 11 / 12, places=12)
+        self.assertEqual((started[13], listed[13], started[14]), (0.8, 0.8, 1.0))
+        self.assertAlmostEqual(listed[14], 1.8, places=12)
+        self.assertEqual((started[15], listed[15]), (0, 1.0))
+        # An eleven without substitute: it counts for its 11 starters only, and not in the prior.
+        started, listed, prior = p.availability([e0, e1, e2], p.weights(3))
+        self.assertAlmostEqual(prior, 11 / 12, places=12)
+        self.assertAlmostEqual(listed[14], 1.44, places=12)
+        self.assertAlmostEqual(listed[13], 1.64, places=12)
+        self.assertAlmostEqual(listed[15], 0.8, places=12)
+        s = p.scores([e0, e1, e2], p.weights(3))
+        self.assertAlmostEqual(s[15], 2 * prior / 2.8, places=12)
+        self.assertAlmostEqual(s[14], (0.8 + 2 * prior) / 3.44, places=12)
+        self.assertAlmostEqual(s[13], (1.64 + 2 * prior) / 3.64, places=12)
+        # No substitute anywhere: the prior is 0.6.
+        self.assertEqual(p.availability([e2, entry(3, B352)], [0.8, 1.0])[2], 0.6)
+
+    def test_61x_a_starter_back_from_injury_is_not_penalised(self):
+        # The Dembélé case: 13 started the first six, then was off the sheet (injured) for four, where 14 started.
+        p = probable()
+        back = [entry(k, A442, unused=(14, 15, 6, 11, 20)) for k in range(6)] + [entry(k, X442, unused=(15, 6, 11, 20)) for k in range(6, 10)]
+        bench = back[:6] + [entry(k, X442, unused=(13, 15, 6, 11, 20)) for k in range(6, 10)]  # on the bench instead
+        w = p.weights(10)
+        off, on_bench = p.scores(back, w), p.scores(bench, w)
+        first, last = sum(w[:6]), sum(w[6:])
+        prior = 11 * sum(w) / (16 * first + 15 * last)
+        self.assertAlmostEqual(off[13], (first + 2 * prior) / (first + 2), places=12)  # his missed matches do not count
+        self.assertAlmostEqual(off[14], (last + 2 * prior) / (sum(w) + 2), places=12)
+        self.assertGreater(off[13], off[14])
+        self.assertLess(on_bench[13], off[13])  # on the bench, unused: those matches count against him
+        # P11 (a club of the five leagues) takes him back; probable-v1 keeps 14; so does P1a (the latest eleven).
+        self.assertIn(13, xi_of(p.predict(back, target(five=True), mr2, {}, set())))
+        self.assertNotIn(14, xi_of(p.predict(back, target(five=True), mr2, {}, set())))
+        self.assertEqual(xi_of(p.predict(back, target(five=False), mr2, {}, set())), sorted(X442))
+        self.assertEqual(xi_of(p.predict(back, target(five=True), mr2, {}, set(), method="probable-v1")), sorted(X442))
+
+
+class SimilarityTest(unittest.TestCase):
+    """61z: P7's weights (s 400, λ 0.3, W 10), as the study v4 froze them."""
+
+    def test_61z_similarity_by_hand(self):
+        p = probable()
+        self.assertEqual((p.SIMILARITY, p.OTHER_KIND, p.MISSING_GAP), (400.0, 0.3, 150.0))
+        es = [entry(0, A442, ctype="E", elo=1800.0), entry(1, A442, ctype="L", elo=None), entry(2, A442, ctype="L", elo=1600.0)]
+        got = p.similarity_weights(es, target(ctype="L", elo=1600.0))
+        want = [0.64 * exp(-200 / 400) * 0.3, 0.8 * exp(-150 / 400), 1.0]
+        for a, b in zip(got, want):
+            self.assertAlmostEqual(a, b, places=12)
+        # A European match: the league elevens weigh 0.3 more; then all divided by the largest.
+        got = p.similarity_weights(es, target(ctype="E", elo=1800.0))
+        raw = [0.64, 0.8 * exp(-150 / 400) * 0.3, exp(-200 / 400) * 0.3]
+        for a, b in zip(got, [x / max(raw) for x in raw]):
+            self.assertAlmostEqual(a, b, places=12)
+        self.assertEqual(max(got), 1.0)
+        # The match's type and opponent's Elo unknown: one factor for all, divided out (the weights of v1).
+        for a, b in zip(p.similarity_weights(es, target(ctype=None, elo=None)), p.weights(3)):
+            self.assertAlmostEqual(a, b, places=12)
+        # The one place a window's weights are computed.
+        t = target(ctype="L", elo=1600.0)
+        self.assertEqual(p.window_weights("probable-v2", es, t), p.similarity_weights(es, t))
+        self.assertEqual(p.window_weights("probable-v1", es, t), p.weights(3))
+
+
+class RouteTest(unittest.TestCase):
+    """61u, 61w: H1 sends a club of the five leagues to P11, any other to P1a (the latest eleven less the removed)."""
+
+    def setUp(self):
+        self.p = probable()
+        # The study's h5: 5 started the first six (off the sheet after), 6 the next three; 14 on every bench, 15 on the last.
+        self.h5 = ([entry(k, A442, bench=(14,), unused=(6,)) for k in range(6)] + [entry(k, V442, bench=(14,), unused=(20,)) for k in range(6, 9)]
+                   + [entry(9, B352, bench=(14, 15), unused=(6, 20))])
+
+    def test_61u_the_route(self):
+        p = self.p
+        back = [entry(k, A442, unused=(14, 15, 6, 11, 20)) for k in range(6)] + [entry(k, X442, unused=(15, 6, 11, 20)) for k in range(6, 10)]
+        five, other = p.predict(back, target(five=True), mr2, {}, set()), p.predict(back, target(five=False), mr2, {}, set())
+        self.assertEqual(xi_of(five), sorted(A442))  # P11: 13 back
+        self.assertEqual(xi_of(other), sorted(X442))  # P1a: the latest eleven
+        # share: the score (P11's) of each starter, either way.
+        s = p.scores(back, p.window_weights("probable-v2", back, target()))
+        for r in (five, other):
+            for q, _, _, _, share, _ in r["starters"]:
+                self.assertAlmostEqual(share, s[q], places=12)
+
+    def test_61w_p1a_replaces_by_the_best_score_of_his_line(self):
+        p, h5 = self.p, self.h5
+        r = p.predict(h5, target(), mr2, {3: INJURY}, set())
+        self.assertEqual(xi_of(r), sorted(set(B352) - {3} | {5}))
+        self.assertEqual({q: rep for q, *_, rep in r["starters"]}[5], 3)
+        self.assertEqual([q for q, _ in r["absent"]], [3])
+        # v1's order (weighted starts first) would take 6.
+        base = p.latest_eleven(h5, mr2)
+        self.assertEqual(base, [(q, p.LINE[ROLE2[q]]) for q in B352])
+        self.assertEqual(p.guess(h5, p.weights(10), mr2, {3}, None, base)[1], [(3, "D", 6)])
+        # No centre back available: the best score of the outfield lines (15), not v1's order (14).
+        r = p.predict(h5, target(), mr2, {3: INJURY, 5: INJURY, 6: INJURY}, set())
+        self.assertEqual({q: rep for q, *_, rep in r["starters"]}.get(15), 3)
+        self.assertNotIn(14, xi_of(r))
+        self.assertEqual(p.guess(h5, p.weights(10), mr2, {3, 5, 6}, None, base)[1], [(3, "D", 14)])
+
+    def test_61w_a_keeper_only_by_a_keeper(self):
+        p = self.p
+        hist = [entry(k, A442) for k in range(4)] + [entry(k, B352) for k in range(4, 7)]
+        r = p.predict(hist, target(), mr2, {1: INJURY}, set())  # no other keeper: one short, 5 (on the sheets) not in goal
+        self.assertEqual(xi_of(r), sorted(set(B352) - {1}))
+        r = p.predict(hist[:-1] + [entry(6, B352, bench=(20,))], target(), mr2, {1: INJURY}, set())  # 20 came on once
+        self.assertEqual(xi_of(r), sorted(set(B352) - {1} | {20}))
+        self.assertEqual({q: rep for q, *_, rep in r["starters"]}[20], 1)
+        # The same under P11.
+        self.assertEqual(len(p.predict(hist, target(five=True), mr2, {1: INJURY}, set())["starters"]), 10)
+
+    def test_61w_a_gone_forward(self):
+        p = self.p
+        back = [entry(k, A442, unused=(14, 15, 6, 11, 20)) for k in range(6)] + [entry(k, X442, unused=(15, 6, 11, 20)) for k in range(6, 10)]
+        r = p.predict(back, target(), mr2, {}, {12})
+        self.assertEqual(xi_of(r), sorted(set(X442) - {12} | {13}))
+        self.assertIsNone({q: rep for q, *_, rep in r["starters"]}[13])  # gone: named by no one
+        self.assertEqual(r["absent"], [])
+
+    def test_61w_p1a_keeps_the_latest_eleven_s_slots(self):
+        p = self.p
+        window = [entry(k, A442, bench=(6,), spots=True) for k in range(8)] + [entry(k, B352, bench=(5, 6), formation="3-5-2", spots=True) for k in range(8, 10)]
+        # The 4-4-2 weighs more, but P1a draws the latest eleven (3-5-2) in its own slots; 5 (best score) takes 3's.
+        r = p.predict(window, target(), mr2, {3: INJURY}, set())
+        self.assertEqual(r["formation"], "3-5-2")
+        slots = {q: (pos, x, y) for q, pos, x, y, _, _ in r["starters"]}
+        self.assertEqual(slots[5], spot(3))
+        for q in set(B352) - {3}:
+            self.assertEqual(slots[q], spot(q))
+        # P11 takes the 4-4-2 of greatest weight.
+        self.assertEqual(p.predict(window, target(five=True), mr2, {}, set())["formation"], "4-4-2")
 
 
 class MigrationTest(unittest.TestCase):
@@ -281,11 +504,11 @@ class RefreshBase(unittest.TestCase):
             x("INSERT INTO core.player_match_stats(season_id, match_id, team_id, player_id, minutes_played) VALUES (2026, %s, %s, %s, %s)",
               (mid, team, p, 20 if p == 114 else 0))
 
-    def run_step(self, now=NOW):
-        """probable.refresh under the calculation role, as the side process runs it."""
+    def run_step(self, now=NOW, method=None):
+        """probable.refresh under the calculation role, as the side process runs it (its default method unless given)."""
         self.db.execute("SET ROLE vega_calc")
         try:
-            return probable().refresh(self.db, now)
+            return probable().refresh(self.db, now, **({"method": method} if method else {}))
         finally:
             self.db.execute("RESET ROLE")
 
@@ -317,19 +540,24 @@ class RefreshBase(unittest.TestCase):
         x("DELETE FROM core.player_injuries")
         x("DELETE FROM core.player_suspensions")
         x("DELETE FROM core.provider_squads")
-        x("DELETE FROM core.provider_ids WHERE entity_type = 'team'")
+        x("DELETE FROM core.provider_ids WHERE entity_type IN ('team', 'competition')")
         x("DELETE FROM ops.provider_links")
+        x("DELETE FROM agg.team_elo")
         x("DELETE FROM core.lineup_players WHERE match_id >= 3000 AND match_id < 4000")
         x("DELETE FROM core.player_match_stats WHERE match_id >= 3000 AND match_id < 4000")
         x("DELETE FROM core.lineups WHERE match_id >= 3000 AND match_id < 4000")
         x("DELETE FROM core.matches WHERE id >= 3000 AND id < 4000")
+        x("DELETE FROM core.competition_seasons WHERE id >= 3000")
+        x("DELETE FROM core.competitions WHERE id >= 3000")
+        x("DELETE FROM core.teams WHERE id >= 3000")
         x("UPDATE ops.transfermarkt_reads SET read_at = %s", (NOW - timedelta(days=2),))
 
 
 class RefreshTest(RefreshBase):
     def test_61b_61c_61d_scope_window_and_basis(self):
+        # 61aa: under probable-v1, as before probable-v2 (61ab: the same scope and basis under probable-v2).
         self.scenario()
-        counts = self.run_step()
+        counts = self.run_step(method="probable-v1")
         sides = self.sides()
         # PSG in the Ligue 1 match and in the cup tie (30 Nov); Lorient (4 elevens), the match in 8 days and the national match: none.
         self.assertEqual(sorted(sides), [(TARGET, PSG), (CUP_TIE, PSG)])
@@ -373,7 +601,7 @@ class RefreshTest(RefreshBase):
                        # 104 hurt on 20 Nov, played on 22 Nov: not out; 105 from the match day: not out.
                        (injury, (104, "injury", "Knock", date(2026, 11, 20), None)),
                        (injury, (105, "illness", "Flu", date(2026, 11, 28), None))])
-        self.run_step()
+        self.run_step(method="probable-v1")  # 61aa (61w: the same under probable-v2)
         starters = self.starters()
         self.assertNotIn(103, starters)
         self.assertIn(104, starters)
@@ -479,9 +707,157 @@ class RefreshTest(RefreshBase):
         self.assertEqual(len(side), 1)
         self.assertRegex(side[0][1], r"^m_")
         self.assertRegex(side[0][3], r"^t_")
-        self.assertEqual((side[0][4], side[0][5], side[0][6], side[0][7]), ("home", "probable-v1", 10, "4-3-3"))
+        self.assertEqual((side[0][4], side[0][5], side[0][6], side[0][7]), ("home", "probable-v2", 10, "4-3-3"))
         self.assertEqual(len(players), 11)
         self.assertTrue(all(p[0].startswith("p_") and p[1].startswith("Player ") and p[2] == "starter" for p in players))
+
+
+# The window's weights of PSG's Ligue 1 match (TARGET) under probable-v2, oldest first (1003 … 1012): 0.8^k, the cup
+# ties 1003 and 1008 × 0.3 (another type), no Elo anywhere (one factor for all, divided out). Sheets: 15 (11 + 101, 112,
+# 113, 114), 14 for 1003 (112 starts), 13 for 1008 (112 and 113 start).
+W_TARGET = [0.3 * 0.8 ** 9, 0.8 ** 8, 0.8 ** 7, 0.8 ** 6, 0.8 ** 5, 0.3 * 0.8 ** 4, 0.8 ** 3, 0.8 ** 2, 0.8, 1.0]
+SHEET_TARGET = [14, 15, 15, 15, 15, 13, 15, 15, 15, 15]
+
+
+def hand_score(w, sizes, started, listed):
+    prior = 11 * sum(w) / sum(a * b for a, b in zip(w, sizes))
+    return (sum(w[i] for i in started) + 2 * prior) / (sum(w[i] for i in listed) + 2)
+
+
+class RefreshV2Test(RefreshBase):
+    """61u, 61v, 61w, 61ab: probable-v2 in the worker's step, under the calculation role."""
+
+    def compute(self):
+        self.db.execute("SET ROLE vega_calc")
+        try:
+            return {(t.match_id, t.team_id): (t, window, result) for t, window, result in probable().compute(self.db, NOW)}
+        finally:
+            self.db.execute("RESET ROLE")
+
+    def test_61ab_scope_basis_and_share_under_v2(self):
+        self.scenario()
+        counts = self.run_step()
+        sides = self.sides()
+        self.assertEqual(sorted(sides), [(TARGET, PSG), (CUP_TIE, PSG)])
+        self.assertEqual(counts["sides"], 2)
+        self.assertEqual(tuple(sides[(TARGET, PSG)][:5]), (2026, "probable-v2", 10, date(2026, 9, 20), date(2026, 11, 22)))
+        starters = self.starters()
+        # PSG is not of the five leagues here (Ligue 1 has no PitchAPI key): P1a, the latest eleven (1012) in its slots.
+        self.assertEqual(sorted(starters), sorted(BASE))
+        for p, (pos, x, y, share, rep) in starters.items():
+            self.assertEqual((pos, round(x, 2), round(y, 2)), SLOTS[p], p)
+            self.assertIsNone(rep)
+        # share: the score. 100 started all ten; 103 the eight he was on the sheet for (off it in 1003 and 1008).
+        self.assertAlmostEqual(starters[100][3], hand_score(W_TARGET, SHEET_TARGET, range(10), range(10)), places=6)
+        self.assertAlmostEqual(starters[103][3], hand_score(W_TARGET, SHEET_TARGET, (1, 2, 3, 4, 6, 7, 8, 9), (1, 2, 3, 4, 6, 7, 8, 9)), places=6)
+
+    def test_61w_an_injured_starter_under_v2(self):
+        injury = """INSERT INTO core.player_injuries(player_id, kind, label, start_date, end_date, source, as_of)
+                    VALUES (%s, %s, %s, %s, %s, 'transfermarkt', '2026-11-24')"""
+        self.scenario([(injury, (103, "injury", "Thigh injury", date(2026, 11, 23), date(2026, 12, 6)))])
+        self.run_step()
+        starters = self.starters()
+        self.assertNotIn(103, starters)
+        pos, x, y, share, rep = starters[112]  # the only centre back left: in 103's slot, naming him
+        self.assertEqual((pos, round(x, 2), round(y, 2), rep), (34, 0.36, 0.63, 103))
+        self.assertAlmostEqual(share, hand_score(W_TARGET, SHEET_TARGET, (0, 5), range(10)), places=6)
+        self.assertEqual(self.absent(), [(103, "injury", "Thigh injury", date(2026, 12, 6), None)])
+
+    def back_from_injury(self):
+        """The Dembélé case: 110 off PSG's sheets of four Ligue 1 elevens after 1012 (3001–3004, 23–25 Nov), 114 in his
+        slot; no episode, so neither absent nor gone."""
+        for k, at in enumerate((datetime(2026, 11, 23, 12, 0), datetime(2026, 11, 23, 18, 0), datetime(2026, 11, 24, 12, 0),
+                                datetime(2026, 11, 25, 8, 0))):
+            mid = 3001 + k
+            self.db.execute(
+                """INSERT INTO core.matches(id, competition_season_id, season_id, source, status, home_team_id, away_team_id, kickoff_at, match_date)
+                   VALUES (%s, %s, 2026, 'pitchapi', 'finished', %s, %s, %s, %s)""",
+                (mid, L1, PSG, OPP, at.replace(tzinfo=timezone.utc), at.date()))
+            xi = dict(SLOTS)
+            xi[114] = xi.pop(110)
+            self.lineup(mid, PSG, xi, [101, 112, 113])
+
+    def test_61u_the_route_end_to_end(self):
+        x = self.db.execute
+        self.scenario()
+        self.back_from_injury()
+        # The window: 1007 … 1012, then 3001 … 3004 (k = 0); 1008 a cup tie. 110 on the first six sheets, 114 on all ten.
+        w = [0.8 ** 9, 0.3 * 0.8 ** 8, 0.8 ** 7, 0.8 ** 6, 0.8 ** 5, 0.8 ** 4, 0.8 ** 3, 0.8 ** 2, 0.8, 1.0]
+        sizes = [15, 13, 15, 15, 15, 15, 14, 14, 14, 14]
+        s110, s114 = hand_score(w, sizes, range(6), range(6)), hand_score(w, sizes, range(6, 10), range(10))
+        self.assertGreater(s110, s114)
+        # Not of the five leagues: P1a keeps the latest eleven, 114 in 110's slot.
+        self.run_step()
+        starters = self.starters()
+        self.assertNotIn(110, starters)
+        self.assertEqual((starters[114][0], round(starters[114][1], 2), round(starters[114][2], 2)), SLOTS[110])
+        self.assertAlmostEqual(starters[114][3], s114, places=6)
+        self.assertEqual(self.sides()[(TARGET, PSG)][1], "probable-v2")
+        # Ligue 1 given its PitchAPI key of tm_history.LEAGUES: PSG is of the five leagues, P11 takes 110 back, in that slot.
+        x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('competition', 'pitchapi', 'l_3FJFUl', %s)", (L1,))
+        self.run_step()
+        starters = self.starters()
+        self.assertNotIn(114, starters)
+        self.assertEqual(sorted(starters), sorted(BASE))
+        self.assertEqual((starters[110][0], round(starters[110][1], 2), round(starters[110][2], 2)), SLOTS[110])
+        self.assertAlmostEqual(starters[110][3], s110, places=6)
+        # probable-v1 on the same base: 114 keeps it.
+        self.run_step(method="probable-v1")
+        self.assertIn(114, self.starters())
+        self.assertNotIn(110, self.starters())
+        self.assertEqual(self.sides()[(TARGET, PSG)][1], "probable-v1")
+
+    def test_61ab_types_elo_and_sheets_read(self):
+        x = self.db.execute
+        self.scenario()
+        kickoff = dict(HISTORY)
+        elo = """INSERT INTO agg.team_elo(match_id, team_id, season_id, kickoff_at, elo_before, elo_after, expected, result, run_id)
+                 VALUES (%s, %s, 2026, %s, %s, %s, 0.5, 0.5, 1)"""
+        # OPP rated in 1010 (1580 -> 1590) and 1012 (1600 -> 1610), not in 1011 (his latest before it: 1590) nor before 1010.
+        x(elo, (1010, OPP, kickoff[1010], 1580, 1590))
+        x(elo, (1012, OPP, kickoff[1012], 1600, 1610))
+        x(elo, (2004, LORIENT, datetime(2026, 10, 25, 15, 0, tzinfo=timezone.utc), 1440, 1450))  # Lorient's latest: 1450
+        # The cup given the Champions League's PitchAPI key (forecast.LEAGUE_PHASE_CUPS): its matches are « E ».
+        x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('competition', 'pitchapi', 'l_0bfbkO', %s)", (CUP,))
+        got = self.compute()
+        t, window, _ = got[(TARGET, PSG)]
+        self.assertEqual((t.ctype, t.opp_elo, t.five), ("L", 1450.0, False))
+        self.assertEqual({e.match_id: e.ctype for e in window}, {m: "E" if m in (1003, 1008) else "L" for m in range(1003, 1013)})
+        elos = {e.match_id: e.opp_elo for e in window}
+        self.assertEqual((elos[1012], elos[1011], elos[1010], elos[1009]), (1600.0, 1590.0, 1580.0, None))
+        last = window[-1]
+        self.assertEqual(last.match_id, 1012)
+        self.assertEqual(last.sheet, frozenset(BASE) | frozenset(BENCH))  # starters and substitutes
+        t, _, _ = got[(CUP_TIE, PSG)]
+        self.assertEqual((t.ctype, t.opp_elo, t.five), ("E", None, False))
+
+    def test_61v_the_clubs_of_the_five_leagues(self):
+        x = self.db.execute
+        self.scenario()
+        x("INSERT INTO core.seasons(id, label) VALUES (2024, '2024/2025') ON CONFLICT DO NOTHING")
+        x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('competition', 'pitchapi', 'l_3FJFUl', %s)", (L1,))
+        x("INSERT INTO core.competitions(id, name, country_code, kind) VALUES (3201, 'Ligue 2', 'FRA', 'league')")
+        x(f"""INSERT INTO core.competition_seasons(id, competition_id, season_id, native_label, archive_key)
+              VALUES (3025, {L1}, 2025, '2025/2026', NULL), (3201, 3201, 2026, '2026/2027', NULL), (3024, {L1}, 2024, '2024/2025', '2024-25/fr.1')""")
+        x("INSERT INTO core.teams(id, name, country_code, is_national) SELECT t, 'Club ' || t, 'FRA', false FROM generate_series(3101, 3106) t")
+        for mid, cs, season, status, day, home, away in (
+                (3101, L1, 2026, "finished", date(2026, 10, 10), 3101, OPP),  # a Ligue 1 match this award year
+                (3102, L1, 2026, "not_started", date(2026, 12, 12), OPP, 3102),  # only one not started (a promoted club)
+                (3103, 3025, 2025, "finished", date(2026, 3, 1), 3103, OPP2),  # only last award year's
+                (3104, CUP, 2026, "finished", date(2026, 10, 20), 3104, OPP2),  # only a cup match
+                (3105, 3201, 2026, "finished", date(2026, 10, 20), 3105, OPP2),  # only a league without a key of the five
+                (3106, 3024, 2024, "finished", date(2024, 10, 10), 3106, OPP2)):  # only an archive edition of Ligue 1
+            x("""INSERT INTO core.matches(id, competition_season_id, season_id, source, status, home_team_id, away_team_id, kickoff_at, match_date)
+                 VALUES (%s, %s, %s, 'pitchapi', %s, %s, %s, %s, %s)""",
+              (mid, cs, season, status, home, away, datetime(day.year, day.month, day.day, 15, 0, tzinfo=timezone.utc), day))
+        x("SET ROLE vega_calc")
+        try:
+            got = probable().five_clubs(self.db, [PSG, *range(3101, 3107)], [2024, 2025, 2026])
+        finally:
+            x("RESET ROLE")
+        self.assertEqual(got, {(PSG, 2026), (3101, 2026), (3102, 2026), (3103, 2025)})
+        # In the step: PSG's sides are of the five leagues once Ligue 1 has its key.
+        self.assertTrue(all(t.five for t, _, _ in self.compute().values()))
 
 
 if __name__ == "__main__":

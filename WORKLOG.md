@@ -13,6 +13,16 @@
 - Coordination : le connecteur Linear de la session ouvre un autre espace de travail (équipe INC seule). Vérification faite sur GitHub seulement. Les constats 5 et 6 avaient été passés à VI-19 : l'issue importée de #217 reste à étiqueter `repo:vega-sport`, à passer In Progress et à relier à VI-19, par l'utilisateur ou une session qui a accès à l'espace Vega.
 - Prochaine action : lire la CI de la PR (62r, 62s) ; après fusion et déploiement, comparer les projections publiées avant et après.
 
+## « Composition probable » probable-v2 — FAILURE_MODES § 61.3 (25 November 2026, branch `claude/probable-v2` from main c83c53e, local only)
+
+- Goal: the worker's step writes `probable-v2`, the study v4's H1 (`/mnt/project-files/blesses-suspendus/onze-probable/v4/`, run 1, read only on production): 8.43 starters found out of 11 against 7.91 for `probable-v1` on 11 760 validation team-matches (five leagues 8.18 against 7.87). Not pushed, no PR yet; Linear coordination is the user's.
+- Method: a club of the five leagues (a match, any status, of a PitchAPI edition of a `tm_history.LEAGUES` league in the award year) gets P11 (P10's score, a 2, on P7's similarity weights s 400, λ 0.3); any other P1a (the latest eleven, each absent or gone starter replaced by the best score of his line, else of the outfield lines, a keeper by a keeper). The window, lines, absent and gone stay `probable-v1`'s (where the study's own rules differ, `probable.py`'s are kept). `probable-v1` stays selectable: `predict`, `compute`, `refresh(method=…)`.
+- `share` is now the score (0–1), not a count of starts: the site draws « Titulaire N fois sur M » for `probable-v1` rows only. A wording for v2's score needs hugo's validation of a mock-up. Deploy the site with or before the worker.
+- Reads: the competition type and the opponents' Elo inside TARGETS and WINDOWS, one new read (FIVE). `vega_calc` holds SELECT on `core` and `agg` (017): no migration.
+- Tests first (§ 61.3, 61u–61ad): `test_probable_lineups` red (5 failures, 13 errors of 31), then green 31/31; `match-lineups-probable.test.mjs` red 1/5, then green 5/5. Then `test_worker` 47/47 and the site's `node --test tests/*.test.mjs` 1031/1031 (local PostgreSQL 18). Parity with the study's functions on its three self-test worlds and its unit windows: 88 552 cases (4 603 of them in the five leagues), 0 mismatched (evidence `/mnt/project-files/composition-probable/probable-v2/`).
+- Cost (61.1's synthetic base, 3 000 sides): 11 reads instead of 10; a run 11.0–12.9 s with no club of the five, 15.9–17.0 s with all of the five, against 10.1–11.8 s and 12.6–15.2 s for main's `probable-v1` in the same phases; `probable-v1` on the branch writes main's rows (33 000, identical). FIVE first joined a match's two teams by an OR (7.9 s), now by equality (0.2 s).
+- Next: review; a Deploy of the worker and the site (no migration); then check production's five-league keys, Elo coverage and the step's time.
+
 ## Fiche « Performance du joueur » et publication périmée — 25 novembre 2026
 
 - Diagnostic, puis correction validée par Hugo sur `codex/performance-refresh` (base `eaf5ca01`). Aucun chevauchement actif identifié dans Linear VI. La carte de Mbappé (Real Madrid–PSV) imposait la publication de l’accueil à une lecture individuelle. Un décalage produisait le 409 « Rechargez la première page ».

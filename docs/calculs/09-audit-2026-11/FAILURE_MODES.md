@@ -5115,6 +5115,98 @@ complete elevens production's clubs hold in 400 days; the cost on production's b
 base (3 000 clubs × 30 elevens, 1.62 M line-up players, 3 000 sides in scope): 10–11 s a run, of which 4–5 s of reads
 (a first version scanning every line-up of the scope took 26–29 s; the narrowed reads return the same rows,
 `/mnt/project-files/composition-probable/implementation/evidence/cost/`).
+
+### 61.3 `probable-v2`: the study's H1 (study v4, 25 Nov 2026; written before the tests)
+
+The study `/mnt/project-files/blesses-suspendus/onze-probable/v4/` (`etude_onze_melange.py`, read only on production,
+run 1 of 25 Nov 2026, `resultats_run1.md`) chose H1 over P5 (`probable-v1`): on the 11 760 team-matches of the
+validation (since 1 Aug 2026), 8.43 starters found out of 11 against 7.91, +0.518 [+0.491; +0.545]; in the clubs of the
+five leagues 8.18 against 7.87, +0.304 [+0.248; +0.362]; elsewhere 8.46 against 7.91. Its definitions are taken as they
+are (`P10`, `P11`, `P1a`, `H1`, the prior, the similarity of P7, the clubs of the five leagues); where they differ from
+what `probable.py` already does (the window, the lines, the absent, the gone, the placement), `probable.py`'s rule is
+kept. Display only, as 61.1: nothing else changes.
+
+#### 61.3.1 Rules
+
+- **Label.** `probable.METHOD` = `probable-v2`, written in `agg.match_probable_lineups.method`. `probable-v1` stays
+  selectable: `predict(method=…)`, `window_weights(method, …)`, `compute(conn, now, method=…)` and
+  `refresh(conn, now, method=…)` give it unchanged (61a–61l hold under it).
+- **Window, lines, absent, gone.** Those of 61.1, unchanged (the study's own absence rule B and its filter of the gone
+  differ: `probable.py`'s are kept, suspensions and the Transfermarkt squad included).
+- **Clubs of the five leagues.** A side's club is of the five leagues when, in the award year of the match day (1 August
+  to 31 July, `lineup.year_of`), it has a match of an edition of a league whose PitchAPI key is one of
+  `tm_history.LEAGUES` (Premier League, LaLiga, Bundesliga, Serie A, Ligue 1), a PitchAPI edition (no archive or cup
+  key), **whatever the match's status**: the study took the year's FITTED matches knowing the whole year, so a club of
+  the edition counts from its first day (a promoted club before its first match, too). A club relegated last season is
+  not; a cup or a European match does not count.
+- **Competition type of a match** (the study's `KIND`): `E` a competition whose PitchAPI key is one of
+  `forecast.LEAGUE_PHASE_CUPS` (Champions, Europa and Conference League); else none without an edition; else `O` an
+  archive edition; else, for a PitchAPI edition, `L` when the competition has a country (not `INT…`) and is neither a cup
+  nor international, `O` otherwise; for a cup source's edition, `L` for an open-matchday league (not `_CUP_`), `O`
+  otherwise.
+- **Elo.** A past eleven's: the opponent's `elo_before` in that match (`agg.team_elo`), else his latest `elo_after`
+  before it; the match's: the opponent's `elo_before` in it, else his latest `elo_after` before its kick-off (a match not
+  started has no row). Unknown: none.
+- **Similarity weights (P7, s 400, λ 0.3).** w_k = 0.8^k × exp(−|Elo_k − Elo| / 400) × (0.3 when the eleven's type is
+  not the match's, or the match's is unknown), an unknown Elo on either side counting a gap of 150; then every weight
+  divided by the largest. They are `window_weights("probable-v2", …)`: the split, the lines, the order and the
+  placement of v2 all use them.
+- **The score (P10 with those weights, W 10, a 2).** score(j) = (Σ w_k · [j started k] + a · prior) / (Σ w_k · [j on the
+  sheet of k] + a), a = 2. On the sheet: a `core.lineup_players` row of the club in that match, starter or substitute.
+  An eleven whose sheet holds no substitute (11 rows) is an unknown sheet: it counts for its 11 starters only (on the
+  sheet and started) and is left out of the prior. prior = 11 × Σ w / Σ (w × sheet size) over the elevens with a
+  substitute; none: 0.6. A match a player missed off the sheet (injured, left out) never lowers his score.
+- **Five leagues (P11).** `guess` with the similarity weights and, in each line, the score first, then v1's order
+  (weighted starts, appearances, last appearance, id); the absent and the gone removed and replaced by the available
+  player of best score of their line, else of another outfield line (a keeper only by a keeper; none: one short).
+- **Elsewhere (P1a).** The window's latest eleven, each starter in the line of his role in it (else of his latest
+  role); each absent or gone starter replaced by the available player of best score (appeared in the window, neither
+  removed nor already in the eleven) of his line (the line of his weighted starts, else of his role), else of the other
+  outfield lines, ties by v1's order; a keeper only by a keeper (none: one short).
+- **Placement.** Five leagues: 61.1's with the similarity weights. Elsewhere: the latest eleven's formation; the
+  template is the latest eleven when its places are all known, else the most recent eleven of that formation that has
+  them, else the most recent that has them; a starter keeps his slot, a replacement takes the removed player's.
+- **`share`** = the player's score (0 to 1): his weighted share of starts among the sheets he was on, drawn towards the
+  prior. It is not a count of starts. The site's « Titulaire N fois sur M » (N = share × basis) is drawn for
+  `probable-v1` only; under `probable-v2` the bubble shows no count (a wording of the score waits for hugo's
+  validation of a mock-up).
+- **Reads.** The same reads as 61.1, plus: each eleven's and each match's competition type and opponent's Elo, inside
+  the window and target reads; the clubs of the five leagues, one read. Read only; `vega_calc` holds SELECT on every
+  table of `core` and `agg` (017): no migration.
+
+#### 61.3.2 Failure modes and expected outcomes
+
+| # | Situation | Expected |
+|---|---|---|
+| 61u | The same window (a starter off the sheet for the last 4 elevens, back for the match), a club of the five leagues / a club elsewhere | P11's eleven (he is back) / the latest eleven (his stand-in stays); `probable-v1`: his stand-in |
+| 61v | Five leagues: a finished league match this award year; only a league match not started; only last award year's; only a cup match; a league without a PitchAPI key of `tm_history.LEAGUES` | of the five; of the five; not (this year); not; not |
+| 61w | P1a: an absent centre back; no centre back available; a keeper absent with a keeper on the bench; with none; a gone forward | replaced by the best score of his line (not v1's order); by the best score of the outfield lines; by the keeper; one short, never an outfield player; replaced, `replaces` null |
+| 61x | The score: a starter off the sheet the last matches (the Dembélé case), against one on the bench for them | his missed matches do not count: score above the bench player's, taken back by P11 |
+| 61y | Prior and a, by hand: two elevens with a bench; one without bench; no bench anywhere | prior 11/12 and the hand scores (a = 2); the bench-less eleven counts for its starters only, not in the prior; prior 0.6 |
+| 61z | Similarity, by hand: an Elo gap, an unknown Elo (gap 150), another type (× 0.3), the match's type unknown, then the largest weight | as computed by hand; the largest is 1 |
+| 61aa | `probable-v1` selected after the change | the same elevens, replacements, slots and shares as before (61a, 61b, 61e–61g run under it) |
+| 61ab | The worker's run under `vega_calc` | rows labelled `probable-v2`, `share` the score; each eleven's and match's type and opponent's Elo read; nothing else written (61k) |
+| 61ac | The site, rows of `probable-v2` / of `probable-v1` | no « Titulaire N fois sur M » / as before |
+| 61ad | Parity with the study (`etude_onze_melange.py`'s `predict_xis` on its self-test worlds and its unit cases) | `predict` gives H1's eleven and P1a's replacements, case by case |
+
+61u–61ab: `backend/tests/test_probable_lineups.py`; 61ac: `tests/match-lineups-probable.test.mjs`; 61ad: a draft outside
+the repository (`/mnt/project-files/composition-probable/probable-v2/parity/`) on the study's three self-test worlds
+and its unit windows: 88 552 cases (4 603 of the five leagues), 0 mismatched; its control, the route inverted,
+mismatches 11 812 of 35 675.
+
+Cost, on 61.1's synthetic base (3 000 clubs × 30 elevens, 1.62 M line-up players, 3 000 sides, every finished match
+rated in `agg.team_elo`): 11 reads instead of 10 (FIVE), the type and the Elo inside TARGETS and WINDOWS, the same
+write. A run: main's `probable-v1` 10.1–11.8 s, the branch's `probable-v1` 10.3–11.7 s (its rows identical to main's,
+33 000), `probable-v2` with no club of the five 11.0–12.9 s; with all 3 000 of the five, 15.9–17.0 s against 12.6–15.2 s
+for main's `probable-v1` run between them (the base slower in that phase for both); one computation without the write,
+9.5 s against 9.2 s. FIVE joined each match's two teams by an OR at first: 7.9 s with 3 000 clubs of the five; by
+equality, 0.2 s (`…/probable-v2/cost/`).
+
+Not verified: that production's five leagues carry their PitchAPI key in `core.provider_ids` (without it no club is of
+the five, and P1a is used everywhere); how many of the window's opponents have an Elo (an unknown one counts a gap of
+150); the competition types production's editions get; the cost on production's base; the study's gain measured with
+`probable.py`'s absent and gone instead of its own. The bubble's wording of the score waits for hugo.
+
 ## 62. The season projection: each match once, draws of its own for each match, the forecast's law (audit items 5 and 6, [#217](https://github.com/VegaInteligence/Vega-Sport/issues/217); 25 Nov 2026, written before the tests)
 
 Items 5 and 6 of the audit (`SOURCE_AUDIT.md` §5–6, handed off to VI-19 in §1) are still on main `de4d5cd32e`, and a
