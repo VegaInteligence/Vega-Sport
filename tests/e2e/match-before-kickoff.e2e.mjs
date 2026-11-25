@@ -11,9 +11,9 @@ const id = PROBABLE_MATCH_ID;
 const api = "/api/matches/" + id;
 const kickoff = new Date(PROBABLE_KICKOFF).toISOString();
 const message = "Le match n’a pas encore commencé.";
-// Before kick-off the page has two tabs (issue #221, FAILURE_MODES § 62): a game view's address
+// Before kick-off the page has three tabs (issue #221, FAILURE_MODES § 62 and § 63): a game view's address
 // opens « Avant-match », the former « Joueurs » « Compositions », which holds it now.
-const TABS = ["Avant-match", "Compositions"];
+const TABS = ["Avant-match", "Compositions", "Classement"];
 const views = [
   ["stats", "Avant-match"], ["shots", "Avant-match"], ["players", "Compositions"],
   ["analyses", "Avant-match"], ["overview", "Avant-match"],
@@ -111,7 +111,7 @@ try {
     const fixture = await setup(label, device);
     const { page, run } = fixture;
     try {
-      await check(label + " — deux onglets, aucune donnée de jeu lue", {
+      await check(label + " — trois onglets, aucune donnée de jeu lue", {
         tabs: TABS, opened: Object.fromEntries(views), requests: [], pageErrors: [], overflow: 0,
       }, async () => {
         const opened = {};
@@ -142,7 +142,8 @@ try {
       }, async () => {
         // Reset the observations from the five tabs, even when recording a failing baseline.
         run.requests.length = 0;
-        for (const name of TABS) {
+        // Each tab, « Compositions » last: its markers are read below.
+        for (const name of [...TABS.filter((n) => n !== "Compositions"), "Compositions"]) {
           await tab(page, name).click();
           await tab(page, name).and(page.locator('[aria-selected="true"]')).waitFor();
           assert.equal(await tab(page, name).getAttribute("aria-selected"), "true");
@@ -174,7 +175,7 @@ try {
 
   await check("Début en direct sur une fiche déjà ouverte", {
     scheduled: "Avant-match", statsAfterStart: [7, 2], sameDocument: true, selectedTab: "stats",
-    runningTabs: ["Direct", "Résumé", "Compositions", "Statistiques", "Analyses", "Avant-match"],
+    runningTabs: ["Direct", "Résumé", "Compositions", "Statistiques", "Analyses", "Classement", "Avant-match"],
   }, async () => {
     const fixture = await setup("transition", desktop, { live: true });
     const { page, run } = fixture;
@@ -206,7 +207,7 @@ try {
       await tab(page, "Direct").waitFor();
       // M13 (FAILURE_MODES § 62): the Résumé stays a tab while the match runs.
       const runningTabs = (await page.locator('[role="tab"]').allInnerTexts()).map((t) => t.trim());
-      assert.deepEqual(runningTabs, ["Direct", "Résumé", "Compositions", "Statistiques", "Analyses", "Avant-match"]);
+      assert.deepEqual(runningTabs, ["Direct", "Résumé", "Compositions", "Statistiques", "Analyses", "Classement", "Avant-match"]);
       await page.screenshot({ path: join(out, "direct.png") });
       return { before, whileScheduled, text, liveReads: fixture.liveReads() };
     } finally {

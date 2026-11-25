@@ -56,7 +56,8 @@ function Values({ match, players, images, onPlayer }) {
   const top = [...(players || [])]
     .filter((p) => p.possession_value?.vaep_total != null)
     .sort((a, b) => b.possession_value.vaep_total - a.possession_value.vaep_total)
-    .slice(0, 6);
+    // Ten, so the card runs as long as its neighbour (FAILURE_MODES § 63).
+    .slice(0, 10);
   if (!top.length) return null;
   const max = Math.max(...top.map((p) => p.possession_value.vaep_total), 0.01);
   return (
@@ -428,9 +429,9 @@ export default function MatchAnalyses({ match }) {
   const heat = useMatchSection(match, "heatmaps");
   const players = useMatchSection(match, "players");
   const images = useMemo(() => new Map(playerRows(players.data).map((r) => [r.id, r.imageUrl])), [players.data]);
-  const loading = [advanced, network, heat].every((r) => r.loading && !r.data);
+  const loading = [advanced, advancedPlayers, network, heat].every((r) => r.loading && !r.data);
   if (loading) return <Skeleton label="Chargement des analyses…" lines={5} />;
-  const nothing = !advanced.data?.teams?.length && !network.data?.networks?.length && !heat.data?.teams?.length;
+  const nothing = !advanced.data?.teams?.length && !advancedPlayers.data?.players?.length && !network.data?.networks?.length && !heat.data?.teams?.length;
   if (nothing) return <Empty>Aucune analyse disponible pour ce match.</Empty>;
   const openPlayer = (id) => id && f.setPlayer(`${match.id}:${id}`);
   return (

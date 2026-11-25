@@ -301,7 +301,7 @@ export function Grade({ value, title = "Note Vega sur 100" }) {
 }
 export function Segments({ label, value, items, onChange }) {
   return (
-    <div className="segmented-control" aria-label={label}>
+    <div className="segmented-control" role="group" aria-label={label}>
       {items.map(([id, text]) => (
         <button
           key={id}

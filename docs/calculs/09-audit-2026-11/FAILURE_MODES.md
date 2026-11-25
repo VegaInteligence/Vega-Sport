@@ -5262,3 +5262,46 @@ then `tests/e2e/match-before-kickoff.e2e.mjs` brought to the new contract.
 - **M12** no page error.
 - **M14** « Statistiques » offers « Match », « 1re mi-temps », « 2e mi-temps », the second half's own values drawn.
 - **M13** (`match-before-kickoff.e2e.mjs`, transition) once the feed runs: « Direct » first, « Résumé » still a tab.
+
+## 63. The match page after hugo's review of § 62 in production (hugo, 25 Nov 2026, 18 h 31; written before the tests)
+
+hugo's words: the shot map « est dégueulasse » (both teams' shots on the same goal, two blues): each team on its own
+side, a choice of the half (1re mi-temps, 2e mi-temps, prolongation…), and for the shoot-out only the goal with a team
+choice; in « Compositions » a search in the players' table; the finished match's strip (« Meilleure note du match »
+and its three leaders) moved to the Résumé; « Les actions qui ont pesé le plus » longer, to fill its holes; the table
+out of « Avant-match », in a tab of its own with the competition's projection. Site only. Amends § 62.1.
+
+### 63.1 Rules
+
+- **Tabs.** « Résumé », « Compositions », « Statistiques », « Analyses », « Classement », « Avant-match » (a finished
+  match); before kick-off « Avant-match », « Compositions », « Classement »; in play « Direct » then the six.
+  `view=standings` opens « Classement »; « Avant-match » no longer has the table.
+- **Classement.** The competition's table (`.match-standings-card`, as before) and, when the base projects the season
+  (`/api/forecasts/season`), « Projection de fin de saison » (the competition page's projection table).
+- **Carte des tirs.** One pitch, each team on its side: the home team's shots in the left half (they attack the left
+  goal), the away team's in the right half, each in its team colour (`var(--home)`, `var(--away)`), its name at its
+  end. A choice of the period among those with shots: « Match », « 1re mi-temps », « 2e mi-temps », « Prolongation »
+  (ExtraTime), « Tirs au but » (Penalties). « Tirs au but » draws the goal seen from the pitch
+  (`data-chart="goal-mouth"`, posts at y 30.34 and 37.66 m, bar at 2.44 m, from `goal_crossed_y/z`), one mark per kick
+  (scored, saved, missed), and a team choice (« Les deux », home, away). The list under the fold follows the period
+  (and, on the goal, the team).
+- **Résumé of a finished match.** The strip of « Compositions » (« Meilleure note du match », « Le plus dangereux »,
+  « Le plus présent », « Le plus solide ») opens the Résumé; « Compositions » no longer has it. Not before the end
+  (status `finished`).
+- **Compositions.** Above the players' table, a search field « Rechercher un joueur »: the rows whose name holds the
+  text (accents and case ignored), with the team choice; none: « Aucun joueur ne correspond à « … ». ».
+- **Analyses.** « Les actions qui ont pesé le plus » lists up to 10 players (6 before).
+
+### 63.2 Failure modes and expected outcomes (E2E, `tests/e2e/match-tabs.e2e.mjs`)
+
+- **R1** finished match: six tabs in the order above; before kick-off three; `view=standings` → « Classement ».
+- **R2** « Classement »: the table card and « Projection de fin de saison » with a row per team of the projection;
+  « Avant-match » without `.match-standings-card`.
+- **R3** the shot map: every home shot left of the halfway line, every away shot right of it (`data-side`), two colours.
+- **R4** the period choice lists « Match », « 1re mi-temps », « 2e mi-temps », « Tirs au but » (the mock's periods,
+  no extra time); « 1re mi-temps » leaves the first half's shots only (map and list).
+- **R5** « Tirs au but »: `data-chart="goal-mouth"`, one mark per kick; the team choice leaves one team's kicks.
+- **R6** the Résumé of a finished match opens with « Meilleure note du match » (the best grade's player) before
+  « Le match minute par minute »; « Compositions » has no « Meilleure note du match ».
+- **R7** « Compositions »: typing « demb » leaves Dembélé's row only; « zzz » shows « Aucun joueur ne correspond ».
+- **R8** « Les actions qui ont pesé le plus » with 12 players valued: 10 rows.

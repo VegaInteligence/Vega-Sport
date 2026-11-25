@@ -1393,8 +1393,82 @@ select optgroup {
 }
 /* The Résumé (issue #221): the shot map's list under a fold, the best grades in one column
    beside it, the line-ups' board under the pitch. */
-.match-shots-card .chart-figure svg {
-  max-height: 380px;
+/* The finished match's strip, the whole row above the charts (FAILURE_MODES § 63). */
+.match-overview-grid > .match-leaders-strip {
+  grid-column: 1 / -1;
+}
+/* The shot map (§ 63): each team's name at its end, the pitch, the legend. */
+.match-shot-sides {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ink-strong);
+}
+.match-shot-sides span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.match-shot-sides i {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.match-shot-pitch,
+.match-goal-mouth {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.match-shot-pitch {
+  max-height: 420px;
+}
+.match-goal-mouth {
+  max-height: 300px;
+}
+.match-shot-kick-number {
+  fill: var(--ink-strong);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.match-shot-shootout-head {
+  margin-bottom: 12px;
+}
+.match-shot-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.match-shot-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.match-shot-legend i {
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--muted);
+  border-radius: 50%;
+}
+.match-shot-legend i.is-on {
+  background: color-mix(in srgb, var(--muted) 40%, transparent);
+}
+.match-shot-legend i.is-goal {
+  background: var(--muted);
+}
+.match-table-view {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
 }
 .match-shot-fold {
   margin-top: 12px;
@@ -1432,13 +1506,17 @@ select optgroup {
 /* On a phone the views' choice takes the card's width, each label whole. */
 @media (max-width: 640px) {
   .match-flow-card .card-actions,
-  .match-flow-card .segmented-control {
+  .match-flow-card .segmented-control,
+  .match-shots-card .card-actions,
+  .match-shots-card .card-actions .segmented-control {
     width: 100%;
   }
-  .match-flow-card .segmented-control {
+  .match-flow-card .segmented-control,
+  .match-shots-card .card-actions .segmented-control {
     display: flex;
   }
-  .match-flow-card .segmented-control button {
+  .match-flow-card .segmented-control button,
+  .match-shots-card .card-actions .segmented-control button {
     flex: 1 1 auto;
     padding: 4px 6px;
     white-space: normal;

@@ -1,5 +1,14 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## La page match après la revue de hugo en production — FAILURE_MODES § 63 (25 November 2026, branch `claude/page-match-retours` from main fb0de18)
+
+- hugo's review of #223 in production (18 h 31): the shot map « dégueulasse », a search in Compositions, the finished match's strip on the Résumé, a longer « Les actions qui ont pesé le plus », the table in a tab of its own with the projection.
+- Shot map (`MatchShotMap.jsx`): one pitch, the home team's shots mirrored onto the left goal, the away team's on the right, in `--home` / `--away`; a period choice among the periods with shots (« Match » leaves the shoot-out out); « Tirs au but » draws the goal from `goal_crossed_y/z` (posts 30.34–37.66 m, bar 2.44 m), numbered kicks, a team choice. `normalizeShots` now keeps each shot's period and goal crossing. PitchAPI sends no extra-time shots (see the 24 Nov note), so « Prolongation » and « Tirs au but » show only where the family has them.
+- `MatchLeaders` (extracted from the board) opens the Résumé of a finished match; the board has a search on the name (accents ignored). « Les actions qui ont pesé le plus »: 10 rows; Analyses no longer says « Aucune analyse » when only the valued actions exist.
+- Tabs: Résumé, Compositions, Statistiques, Analyses, Classement, Avant-match (before kick-off: Avant-match, Compositions, Classement); `view=standings` opens « Classement » (`MatchTable.jsx`: the table, then « Projection de fin de saison » when `/api/forecasts/season` answers). `Segments` gains `role="group"`.
+- Tests first: `match-tabs.e2e.mjs` R1–R8 added and M-checks moved to the new contract, red 13/20, then green 20/20; `match-before-kickoff.e2e.mjs` 7/7; site 1 042/1 042, build OK. Evidence: `/mnt/project-files/fusion-onglets-match/retours-e2e-*`.
+- Not done here: the redesign of the page's head (breadcrumb, actions, previous / next bar), asked by hugo at 18 h 39 with a mock-up first.
+
 ## La page match en cinq onglets — FAILURE_MODES § 62 (25 November 2026, branch `claude/fusion-onglets-match` from main 492a136, issue #221)
 
 - hugo validated the mock-up (`/mnt/project-files/fusion-onglets-match/`, artifact « Onglets du match ») and asked to code and push. Eight tabs become five: Résumé, Compositions, Statistiques, Analyses, Avant-match.
