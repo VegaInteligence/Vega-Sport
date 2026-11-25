@@ -535,6 +535,13 @@ export function homeFavouritesQuery(filters, params, now, editions) {
   const instant = `${b(new Date(now).toISOString())}::timestamptz`,
     teams = `${b(filters.personalTeams)}::text[]`,
     players = `${b(filters.personalPlayers)}::text[]`;
+  // The followed players' ids, given to each read of their appearances as an array (FAILURE_MODES_OPTIMISATIONS.md,
+  // GH220): both branches of api.player_appearances (statistics rows, line-up rows without them) take it at their tables
+  // (player_match_stats_player_id_season_id, lineup_players_player_id). Only joined to the list, the line-up branch (an
+  // anti-join) could not take the id: the view was computed for whole seasons before the join, 14.7 million buffers for
+  // one player on a base of 240 000 appearances a season, and 503 after 8 s in production (GH #220). The keys become ids
+  // in this statement (followed_players): the ids and the appearances are read in one snapshot.
+  const followedRows = "a.player_id=ANY(ARRAY(SELECT y.player_id FROM followed_players y WHERE y.player_id IS NOT NULL))";
   const sql = `/*vega:v2:home-favourites*/
 WITH publication AS MATERIALIZED (${publication}),
 rules AS MATERIALIZED (SELECT * FROM api.home_rules_v1),
@@ -543,12 +550,12 @@ followed_players AS MATERIALIZED (
  SELECT DISTINCT k player_key,api.internal_id('player',k) player_id FROM unnest(${players}) k
 ), player_clubs AS MATERIALIZED (
  SELECT DISTINCT ON(y.player_id) y.player_key,a.team_id FROM followed_players y JOIN api.player_appearances a ON a.player_id=y.player_id
- WHERE ${seasonPin("a")} AND a.minutes>0 AND a.team_id IS NOT NULL AND a.date IS NOT NULL AND a.team_is_national IS NOT TRUE
+ WHERE ${followedRows} AND ${seasonPin("a")} AND a.minutes>0 AND a.team_id IS NOT NULL AND a.date IS NOT NULL AND a.team_is_national IS NOT TRUE
  AND (coalesce(a.country,'') NOT IN('INT','INT-2','UEFA','WORLD') OR a.league_id=ANY(${uefa}))
  ORDER BY y.player_id,a.date DESC,a.match_id DESC
 ), player_nations AS MATERIALIZED (
  SELECT DISTINCT ON(y.player_id) y.player_key,a.team_id FROM followed_players y JOIN api.player_appearances a ON a.player_id=y.player_id
- WHERE ${recent("a", 3)} AND a.team_is_national AND a.minutes>0 AND a.date IS NOT NULL ORDER BY y.player_id,a.date DESC,a.match_id DESC
+ WHERE ${followedRows} AND ${recent("a", 3)} AND a.team_is_national AND a.minutes>0 AND a.date IS NOT NULL ORDER BY y.player_id,a.date DESC,a.match_id DESC
 ), favourite_rows AS (
  SELECT api.internal_id('team',k) team_id,1 strength,'club' reason,NULL::text player_key FROM unnest(${teams}) k
  UNION ALL SELECT team_id,2,'player_club',player_key FROM player_clubs
@@ -579,11 +586,11 @@ followed_players AS MATERIALIZED (
  CASE WHEN a.team_id=f.home_internal_id THEN f.score_away ELSE f.score_home END ga
  FROM followed_players y JOIN api.player_appearances a ON a.player_id=y.player_id
  JOIN api.fixtures f ON f.season_id=a.season_id AND f.match_id=a.match_id CROSS JOIN period p
- WHERE ${seasonPin("a")} AND a.date BETWEEN p.start_day AND p.end_day AND a.minutes>0
+ WHERE ${followedRows} AND ${seasonPin("a")} AND a.date BETWEEN p.start_day AND p.end_day AND a.minutes>0
 ), your_clubs AS MATERIALIZED (
  SELECT DISTINCT ON(y.player_id) y.player_key,y.player_id,a.player_name,a.image_url,a.team_id,a.team
  FROM followed_players y JOIN api.player_appearances a ON a.player_id=y.player_id
- WHERE ${recent("a", 2)} AND a.minutes>0 AND a.team_id IS NOT NULL AND a.date IS NOT NULL AND a.team_is_national IS NOT TRUE
+ WHERE ${followedRows} AND ${recent("a", 2)} AND a.minutes>0 AND a.team_id IS NOT NULL AND a.date IS NOT NULL AND a.team_is_national IS NOT TRUE
  ORDER BY y.player_id,a.date DESC,a.match_id DESC
 ), your_next AS MATERIALIZED (
  SELECT c.player_key,n.* FROM your_clubs c CROSS JOIN LATERAL (
