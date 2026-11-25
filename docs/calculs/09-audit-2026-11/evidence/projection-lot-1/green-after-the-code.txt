@@ -1,0 +1,48 @@
+# branch claude/projection-lot-1 on main de4d5cd32e, working tree — 2026-11-25T16:08:46Z — Python 3.12.3
+# python3 -m unittest backend.tests.test_forecast -v
+test_a_clubs_form_is_its_last_matches_chances_and_what_its_results_owe_to_something_else (backend.tests.test_forecast.ForecastTest.test_a_clubs_form_is_its_last_matches_chances_and_what_its_results_owe_to_something_else) ... ok
+test_a_copy_of_a_club_plays_at_its_club_s_strength (backend.tests.test_forecast.ForecastTest.test_a_copy_of_a_club_plays_at_its_club_s_strength) ... ok
+test_a_cup_replayed_through_its_bracket (backend.tests.test_forecast.ForecastTest.test_a_cup_replayed_through_its_bracket) ... ok
+test_a_drawn_tie_is_played_as_drawn (backend.tests.test_forecast.ForecastTest.test_a_drawn_tie_is_played_as_drawn) ... ok
+test_a_group_ranked_as_uefa_does (backend.tests.test_forecast.ForecastTest.test_a_group_ranked_as_uefa_does) ... ok
+test_a_knockout_cup_is_projected_once_its_clubs_are_all_in (backend.tests.test_forecast.ForecastTest.test_a_knockout_cup_is_projected_once_its_clubs_are_all_in) ... ok
+test_a_knockout_cup_replayed_to_its_final (backend.tests.test_forecast.ForecastTest.test_a_knockout_cup_replayed_to_its_final) ... ok
+test_a_knockout_cup_s_round_in_play (backend.tests.test_forecast.ForecastTest.test_a_knockout_cup_s_round_in_play) ... ok
+test_a_knockout_round_by_its_name (backend.tests.test_forecast.ForecastTest.test_a_knockout_round_by_its_name) ... ok
+test_a_league_phase_holds_eight_matches_a_club (backend.tests.test_forecast.ForecastTest.test_a_league_phase_holds_eight_matches_a_club) ... ok
+test_a_league_replayed_to_its_end (backend.tests.test_forecast.ForecastTest.test_a_league_replayed_to_its_end) ... ok
+test_a_league_s_state_from_its_matches (backend.tests.test_forecast.ForecastTest.test_a_league_s_state_from_its_matches) ... ok
+test_a_nations_league_group_and_its_matches_left (backend.tests.test_forecast.ForecastTest.test_a_nations_league_group_and_its_matches_left) ... ok
+test_a_nations_league_replayed_to_its_final_four (backend.tests.test_forecast.ForecastTest.test_a_nations_league_replayed_to_its_final_four) ... ok
+test_a_score_grid_is_a_probability_law (backend.tests.test_forecast.ForecastTest.test_a_score_grid_is_a_probability_law) ... ok
+test_a_uefa_league_phase_is_projected_like_a_league (backend.tests.test_forecast.ForecastTest.test_a_uefa_league_phase_is_projected_like_a_league) ... ok
+test_fit_recovers_the_laws_that_made_the_scores (backend.tests.test_forecast.ForecastTest.test_fit_recovers_the_laws_that_made_the_scores) ... ok
+test_the_access_list_settles_a_tie_left_after_all (backend.tests.test_forecast.ForecastTest.test_the_access_list_settles_a_tie_left_after_all) ... ok
+test_the_season_is_projected_jointly_once_its_leagues_are_all_there (backend.tests.test_forecast.ForecastTest.test_the_season_is_projected_jointly_once_its_leagues_are_all_there) ... ok
+test_the_stronger_and_the_home_side_are_favoured (backend.tests.test_forecast.ForecastTest.test_the_stronger_and_the_home_side_are_favoured) ... ok
+test_the_transitional_season_s_promotion_and_relegation (backend.tests.test_forecast.ForecastTest.test_the_transitional_season_s_promotion_and_relegation) ... ok
+test_ties_already_played_stay_as_they_are (backend.tests.test_forecast.ForecastTest.test_ties_already_played_stay_as_they_are) ... ok
+test_what_a_form_adds_is_found_again_in_scores_drawn_from_it (backend.tests.test_forecast.ForecastTest.test_what_a_form_adds_is_found_again_in_scores_drawn_from_it) ... ok
+test_which_cups_are_projected (backend.tests.test_forecast.ForecastTest.test_which_cups_are_projected) ... ok
+test_which_nations_league_editions_are_projected (backend.tests.test_forecast.ForecastTest.test_which_nations_league_editions_are_projected) ... ok
+test_62a_each_regular_match_is_played_to_play_superseded_or_canceled (backend.tests.test_forecast.SeasonReplayTest.test_62a_each_regular_match_is_played_to_play_superseded_or_canceled) ... ok
+test_62b_a_canceled_match_of_an_open_round_is_not_to_play (backend.tests.test_forecast.SeasonReplayTest.test_62b_a_canceled_match_of_an_open_round_is_not_to_play) ... ok
+test_62c_a_pairing_met_twice_keeps_its_limit (backend.tests.test_forecast.SeasonReplayTest.test_62c_a_pairing_met_twice_keeps_its_limit) ... ok
+test_62d_a_knockout_round_and_an_international_edition_are_no_league (backend.tests.test_forecast.SeasonReplayTest.test_62d_a_knockout_round_and_an_international_edition_are_no_league) ... ok
+test_62e_a_postponed_match_of_a_league_phase_is_one_of_its_eight (backend.tests.test_forecast.SeasonReplayTest.test_62e_a_postponed_match_of_a_league_phase_is_one_of_its_eight) ... ok
+test_62f_a_league_is_not_replayed_without_a_club_s_strength (backend.tests.test_forecast.SeasonReplayTest.test_62f_a_league_is_not_replayed_without_a_club_s_strength) ... ok
+test_62g_a_cup_is_not_replayed_without_a_club_s_strength (backend.tests.test_forecast.SeasonReplayTest.test_62g_a_cup_is_not_replayed_without_a_club_s_strength) ... ok
+test_62h_each_fixture_has_a_key_of_its_own_that_a_played_match_does_not_move (backend.tests.test_forecast.SeasonReplayTest.test_62h_each_fixture_has_a_key_of_its_own_that_a_played_match_does_not_move) ... ok
+test_62j_the_fixtures_order_changes_nothing (backend.tests.test_forecast.SeasonReplayTest.test_62j_the_fixtures_order_changes_nothing) ... ok
+test_62k_one_elo_point_for_the_last_club_moves_no_other_club (backend.tests.test_forecast.SeasonReplayTest.test_62k_one_elo_point_for_the_last_club_moves_no_other_club) ... ok
+test_62l_a_match_played_moves_the_other_clubs_little (backend.tests.test_forecast.SeasonReplayTest.test_62l_a_match_played_moves_the_other_clubs_little) ... ok
+test_62m_a_score_is_drawn_from_the_forecast_s_grid (backend.tests.test_forecast.SeasonReplayTest.test_62m_a_score_is_drawn_from_the_forecast_s_grid) ... ok
+test_62n_a_replayed_match_gives_the_points_of_its_forecast (backend.tests.test_forecast.SeasonReplayTest.test_62n_a_replayed_match_gives_the_points_of_its_forecast) ... ok
+test_62o_the_replays_read_rho (backend.tests.test_forecast.SeasonReplayTest.test_62o_the_replays_read_rho) ... ok
+test_62p_a_bracket_s_match_follows_the_forecast_and_extra_time_two_poisson_laws (backend.tests.test_forecast.SeasonReplayTest.test_62p_a_bracket_s_match_follows_the_forecast_and_extra_time_two_poisson_laws) ... ok
+test_62q_one_elo_point_for_the_last_club_moves_no_other_club_s_league_phase (backend.tests.test_forecast.SeasonReplayTest.test_62q_one_elo_point_for_the_last_club_moves_no_other_club_s_league_phase) ... ok
+
+----------------------------------------------------------------------
+Ran 41 tests in 8.710s
+
+OK

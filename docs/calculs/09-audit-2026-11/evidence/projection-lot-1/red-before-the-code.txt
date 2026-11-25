@@ -1,0 +1,184 @@
+# code of main de4d5cd32e, the tests of §62 added — 2026-11-25T16:08:44Z — Python 3.12.3
+# python3 -m unittest backend.tests.test_forecast.SeasonReplayTest -v
+test_62a_each_regular_match_is_played_to_play_superseded_or_canceled (backend.tests.test_forecast.SeasonReplayTest.test_62a_each_regular_match_is_played_to_play_superseded_or_canceled) ... ERROR
+test_62b_a_canceled_match_of_an_open_round_is_not_to_play (backend.tests.test_forecast.SeasonReplayTest.test_62b_a_canceled_match_of_an_open_round_is_not_to_play) ... FAIL
+test_62c_a_pairing_met_twice_keeps_its_limit (backend.tests.test_forecast.SeasonReplayTest.test_62c_a_pairing_met_twice_keeps_its_limit) ... ERROR
+test_62d_a_knockout_round_and_an_international_edition_are_no_league (backend.tests.test_forecast.SeasonReplayTest.test_62d_a_knockout_round_and_an_international_edition_are_no_league) ... ERROR
+test_62e_a_postponed_match_of_a_league_phase_is_one_of_its_eight (backend.tests.test_forecast.SeasonReplayTest.test_62e_a_postponed_match_of_a_league_phase_is_one_of_its_eight) ... FAIL
+test_62f_a_league_is_not_replayed_without_a_club_s_strength (backend.tests.test_forecast.SeasonReplayTest.test_62f_a_league_is_not_replayed_without_a_club_s_strength) ... FAIL
+test_62g_a_cup_is_not_replayed_without_a_club_s_strength (backend.tests.test_forecast.SeasonReplayTest.test_62g_a_cup_is_not_replayed_without_a_club_s_strength) ... FAIL
+test_62h_each_fixture_has_a_key_of_its_own_that_a_played_match_does_not_move (backend.tests.test_forecast.SeasonReplayTest.test_62h_each_fixture_has_a_key_of_its_own_that_a_played_match_does_not_move) ... ERROR
+test_62j_the_fixtures_order_changes_nothing (backend.tests.test_forecast.SeasonReplayTest.test_62j_the_fixtures_order_changes_nothing) ... FAIL
+test_62k_one_elo_point_for_the_last_club_moves_no_other_club (backend.tests.test_forecast.SeasonReplayTest.test_62k_one_elo_point_for_the_last_club_moves_no_other_club) ... FAIL
+test_62l_a_match_played_moves_the_other_clubs_little (backend.tests.test_forecast.SeasonReplayTest.test_62l_a_match_played_moves_the_other_clubs_little) ... FAIL
+test_62m_a_score_is_drawn_from_the_forecast_s_grid (backend.tests.test_forecast.SeasonReplayTest.test_62m_a_score_is_drawn_from_the_forecast_s_grid) ... ERROR
+test_62n_a_replayed_match_gives_the_points_of_its_forecast (backend.tests.test_forecast.SeasonReplayTest.test_62n_a_replayed_match_gives_the_points_of_its_forecast) ... FAIL
+test_62o_the_replays_read_rho (backend.tests.test_forecast.SeasonReplayTest.test_62o_the_replays_read_rho) ... FAIL
+test_62p_a_bracket_s_match_follows_the_forecast_and_extra_time_two_poisson_laws (backend.tests.test_forecast.SeasonReplayTest.test_62p_a_bracket_s_match_follows_the_forecast_and_extra_time_two_poisson_laws) ... FAIL
+test_62q_one_elo_point_for_the_last_club_moves_no_other_club_s_league_phase (backend.tests.test_forecast.SeasonReplayTest.test_62q_one_elo_point_for_the_last_club_moves_no_other_club_s_league_phase) ... FAIL
+
+======================================================================
+ERROR: test_62a_each_regular_match_is_played_to_play_superseded_or_canceled (backend.tests.test_forecast.SeasonReplayTest.test_62a_each_regular_match_is_played_to_play_superseded_or_canceled)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/claude-1000/-home-romai-Vega-Sport/d5a910f9-be76-458c-9b9c-1b556380848b/scratchpad/main-copy/backend/tests/test_forecast.py", line 475, in test_62a_each_regular_match_is_played_to_play_superseded_or_canceled
+    self.assertEqual(table[7], (3, 3, 0, 1))
+                     ~~~~~^^^
+KeyError: 7
+
+======================================================================
+ERROR: test_62c_a_pairing_met_twice_keeps_its_limit (backend.tests.test_forecast.SeasonReplayTest.test_62c_a_pairing_met_twice_keeps_its_limit)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/claude-1000/-home-romai-Vega-Sport/d5a910f9-be76-458c-9b9c-1b556380848b/scratchpad/main-copy/backend/tests/test_forecast.py", line 501, in test_62c_a_pairing_met_twice_keeps_its_limit
+    self.assertEqual(self.ledger(rows), (3, 1, 1, 0, 0))
+                     ^^^^^^^^^^^^^^^^^
+  File "/tmp/claude-1000/-home-romai-Vega-Sport/d5a910f9-be76-458c-9b9c-1b556380848b/scratchpad/main-copy/backend/tests/test_forecast.py", line 459, in ledger
+    counts = forecast.league_ledger(rows, **kwargs)[edition]
+             ^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'vega.forecast' has no attribute 'league_ledger'
+
+======================================================================
+ERROR: test_62d_a_knockout_round_and_an_international_edition_are_no_league (backend.tests.test_forecast.SeasonReplayTest.test_62d_a_knockout_round_and_an_international_edition_are_no_league)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/claude-1000/-home-romai-Vega-Sport/d5a910f9-be76-458c-9b9c-1b556380848b/scratchpad/main-copy/backend/tests/test_forecast.py", line 507, in test_62d_a_knockout_round_and_an_international_edition_are_no_league
+    self.assertEqual(set(forecast.league_ledger(rows)), {1})
+                         ^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'vega.forecast' has no attribute 'league_ledger'
+
+======================================================================
+ERROR: test_62h_each_fixture_has_a_key_of_its_own_that_a_played_match_does_not_move (backend.tests.test_forecast.SeasonReplayTest.test_62h_each_fixture_has_a_key_of_its_own_that_a_played_match_does_not_move)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/claude-1000/-home-romai-Vega-Sport/d5a910f9-be76-458c-9b9c-1b556380848b/scratchpad/main-copy/backend/tests/test_forecast.py", line 530, in test_62h_each_fixture_has_a_key_of_its_own_that_a_played_match_does_not_move
+    self.assertEqual(forecast.fixture_keys([(1, 2), (3, 4), (1, 2)]), [(1, 2, 1), (3, 4, 0), (1, 2, 0)])
+                     ^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'vega.forecast' has no attribute 'fixture_keys'
+
+======================================================================
+ERROR: test_62m_a_score_is_drawn_from_the_forecast_s_grid (backend.tests.test_forecast.SeasonReplayTest.test_62m_a_score_is_drawn_from_the_forecast_s_grid)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/claude-1000/-home-romai-Vega-Sport/d5a910f9-be76-458c-9b9c-1b556380848b/scratchpad/main-copy/backend/tests/test_forecast.py", line 594, in test_62m_a_score_is_drawn_from_the_forecast_s_grid
+    score = forecast.draw_score(rng.random(), rng.random(), lh, la, rho)
+            ^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'vega.forecast' has no attribute 'draw_score'
+
+======================================================================
+FAIL: test_62b_a_canceled_match_of_an_open_round_is_not_to_play (backend.tests.test_forecast.SeasonReplayTest.test_62b_a_canceled_match_of_an_open_round_is_not_to_play)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/claude-1000/-home-romai-Vega-Sport/d5a910f9-be76-458c-9b9c-1b556380848b/scratchpad/main-copy/backend/tests/test_forecast.py", line 492, in test_62b_a_canceled_match_of_an_open_round_is_not_to_play
+    self.assertEqual(sorted(fixtures), [(1, 2), (3, 4), (7, 8)])
+AssertionError: Lists differ: [(1, 2), (3, 4), (6, 5), (7, 8)] != [(1, 2), (3, 4), (7, 8)]
+
+First differing element 2:
+(6, 5)
+(7, 8)
+
+First list contains 1 additional elements.
+First extra element 3:
+(7, 8)
+
+- [(1, 2), (3, 4), (6, 5), (7, 8)]
+?                  --------
+
++ [(1, 2), (3, 4), (7, 8)]
+
+======================================================================
+FAIL: test_62e_a_postponed_match_of_a_league_phase_is_one_of_its_eight (backend.tests.test_forecast.SeasonReplayTest.test_62e_a_postponed_match_of_a_league_phase_is_one_of_its_eight)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/claude-1000/-home-romai-Vega-Sport/d5a910f9-be76-458c-9b9c-1b556380848b/scratchpad/main-copy/backend/tests/test_forecast.py", line 515, in test_62e_a_postponed_match_of_a_league_phase_is_one_of_its_eight
+    self.assertEqual(fixtures, [(9, 1), (12, 13)])
+AssertionError: Lists differ: [(1, 10), (12, 13)] != [(9, 1), (12, 13)]
+
+First differing element 0:
+(1, 10)
+(9, 1)
+
+- [(1, 10), (12, 13)]
+?    ----
+
++ [(9, 1), (12, 13)]
+?   +++
+
+
+======================================================================
+FAIL: test_62f_a_league_is_not_replayed_without_a_club_s_strength (backend.tests.test_forecast.SeasonReplayTest.test_62f_a_league_is_not_replayed_without_a_club_s_strength)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/claude-1000/-home-romai-Vega-Sport/d5a910f9-be76-458c-9b9c-1b556380848b/scratchpad/main-copy/backend/tests/test_forecast.py", line 520, in test_62f_a_league_is_not_replayed_without_a_club_s_strength
+    with self.assertRaisesRegex(ValueError, r"\b2\b"):
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_62g_a_cup_is_not_replayed_without_a_club_s_strength (backend.tests.test_forecast.SeasonReplayTest.test_62g_a_cup_is_not_replayed_without_a_club_s_strength)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/claude-1000/-home-romai-Vega-Sport/d5a910f9-be76-458c-9b9c-1b556380848b/scratchpad/main-copy/backend/tests/test_forecast.py", line 526, in test_62g_a_cup_is_not_replayed_without_a_club_s_strength
+    with self.assertRaisesRegex(ValueError, r"\b2\b"):
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_62j_the_fixtures_order_changes_nothing (backend.tests.test_forecast.SeasonReplayTest.test_62j_the_fixtures_order_changes_nothing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/claude-1000/-home-romai-Vega-Sport/d5a910f9-be76-458c-9b9c-1b556380848b/scratchpad/main-copy/backend/tests/test_forecast.py", line 561, in test_62j_the_fixtures_order_changes_nothing
+    self.assertEqual(first, forecast.simulate(table, fixtures[::-1], MODEL, strengths, simulations=200, seed=3))
+AssertionError: {1: {'positions': [0.43, 0.25, 0.17, 0.095, 0.045, 0.0, 0.005, [3006 chars].68}} != {1: {'positions': [0.45, 0.26, 0.105, 0.075, 0.07, 0.04, 0.0, 0[2970 chars]955}}
+Diff is 23400 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_62k_one_elo_point_for_the_last_club_moves_no_other_club (backend.tests.test_forecast.SeasonReplayTest.test_62k_one_elo_point_for_the_last_club_moves_no_other_club)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/claude-1000/-home-romai-Vega-Sport/d5a910f9-be76-458c-9b9c-1b556380848b/scratchpad/main-copy/backend/tests/test_forecast.py", line 568, in test_62k_one_elo_point_for_the_last_club_moves_no_other_club
+    self.assertLessEqual(self.moved(before, after, range(1, 20)), 0.005, seed)
+AssertionError: 0.02200000000000002 not less than or equal to 0.005 : 0
+
+======================================================================
+FAIL: test_62l_a_match_played_moves_the_other_clubs_little (backend.tests.test_forecast.SeasonReplayTest.test_62l_a_match_played_moves_the_other_clubs_little)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/claude-1000/-home-romai-Vega-Sport/d5a910f9-be76-458c-9b9c-1b556380848b/scratchpad/main-copy/backend/tests/test_forecast.py", line 582, in test_62l_a_match_played_moves_the_other_clubs_little
+    self.assertLessEqual(self.moved(before, after, others), 0.01, seed)
+AssertionError: 0.03799999999999992 not less than or equal to 0.01 : 0
+
+======================================================================
+FAIL: test_62n_a_replayed_match_gives_the_points_of_its_forecast (backend.tests.test_forecast.SeasonReplayTest.test_62n_a_replayed_match_gives_the_points_of_its_forecast)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/claude-1000/-home-romai-Vega-Sport/d5a910f9-be76-458c-9b9c-1b556380848b/scratchpad/main-copy/backend/tests/test_forecast.py", line 625, in test_62n_a_replayed_match_gives_the_points_of_its_forecast
+    self.assertLessEqual(abs(projected[team]["points"] - mean), 4 * error, (rho, team, projected[team]["points"], mean))
+AssertionError: 0.02490646737453961 not less than or equal to 0.011303400642171349 : (-0.2, 1, 1.367845, 1.3429385326254604)
+
+======================================================================
+FAIL: test_62o_the_replays_read_rho (backend.tests.test_forecast.SeasonReplayTest.test_62o_the_replays_read_rho)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/claude-1000/-home-romai-Vega-Sport/d5a910f9-be76-458c-9b9c-1b556380848b/scratchpad/main-copy/backend/tests/test_forecast.py", line 631, in test_62o_the_replays_read_rho
+    self.assertNotEqual(corrected, plain)
+AssertionError: {1: {'positions': [0.5029, 0.4971], 'points': 1.3775}, 2: {'positions': [0.4971, 0.5029], 'points': 1.36205}} == {1: {'positions': [0.5029, 0.4971], 'points': 1.3775}, 2: {'positions': [0.4971, 0.5029], 'points': 1.36205}}
+
+======================================================================
+FAIL: test_62p_a_bracket_s_match_follows_the_forecast_and_extra_time_two_poisson_laws (backend.tests.test_forecast.SeasonReplayTest.test_62p_a_bracket_s_match_follows_the_forecast_and_extra_time_two_poisson_laws)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/claude-1000/-home-romai-Vega-Sport/d5a910f9-be76-458c-9b9c-1b556380848b/scratchpad/main-copy/backend/tests/test_forecast.py", line 645, in test_62p_a_bracket_s_match_follows_the_forecast_and_extra_time_two_poisson_laws
+    self.assertLessEqual(abs(level() - draw), 4 * sqrt(draw * (1 - draw) / n))
+AssertionError: 0.04978180534684906 not less than or equal to 0.005843145663313527
+
+======================================================================
+FAIL: test_62q_one_elo_point_for_the_last_club_moves_no_other_club_s_league_phase (backend.tests.test_forecast.SeasonReplayTest.test_62q_one_elo_point_for_the_last_club_moves_no_other_club_s_league_phase)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/claude-1000/-home-romai-Vega-Sport/d5a910f9-be76-458c-9b9c-1b556380848b/scratchpad/main-copy/backend/tests/test_forecast.py", line 657, in test_62q_one_elo_point_for_the_last_club_moves_no_other_club_s_league_phase
+    self.assertLessEqual(max(abs(before[t]["stages"]["top8"] - after[t]["stages"]["top8"]) for t in range(1, 36)), 0.005, seed)
+AssertionError: 0.01100000000000001 not less than or equal to 0.005 : 5
+
+----------------------------------------------------------------------
+Ran 16 tests in 1.838s
+
+FAILED (failures=11, errors=5)

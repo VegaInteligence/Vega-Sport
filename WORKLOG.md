@@ -1,5 +1,18 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Projection de saison, lot 1 — [#217](https://github.com/VegaInteligence/Vega-Sport/issues/217) (25 novembre 2026, PR ouverte)
+
+- Objectif : rendre la projection de fin de saison (`backend/vega/forecast.py`) plus juste et plus stable. L'utilisateur a demandé si le Monte Carlo à 1 000 rejeux avait un sens, puis « On peut l'améliorer ? », puis a validé le lot 1 (« Oui, lot 1 ») et demandé la PR.
+- Périmètre du lot 1 : (A) chaque match régulier compte une fois, constat 5 de l'audit du 17 novembre ; (B) tirages attachés à chaque match et à chaque club ; (C) un match rejoué suit la loi du pronostic (`rho`), constat 6. Backend seul, aucune maquette.
+- Hors périmètre, à proposer ensuite : vérification élargie sur les saisons passées (lot 2), règles propres à chaque championnat, nombre de rejeux, constat 7 (journée ouverte).
+- Décisions : une ligne `postponed`/`suspended`/`in_play`/sans score est à jouer sauf si le même match (édition, domicile, extérieur) existe déjà comme résultat ou match à jouer (copie que la source a remplacée : 46 paires relevées par l'audit) ; `awarded` avec score = résultat ; un championnat avec un club sans Elo encore en lice n'est pas projeté (règle des coupes) ; le nombre de rejeux reste 1 000 ; `MODEL_VERSION` passe à `forecast-v3`.
+- Méthode : cas d'échec écrits avant les tests (`docs/calculs/09-audit-2026-11/FAILURE_MODES.md`, § 62), tests avant le code. 16 tests rouges sur le code de main `de4d5cd32e`, puis 41/41 verts sur `test_forecast.py`.
+- Mesuré (championnat fictif de 20 clubs, 1 000 rejeux, 30 graines) : parts déplacées par +1 point Elo au dernier, −5,4 à +4,4 points sur main, −0,1 à +0,3 après ; durée d'un championnat 0,161 s puis 0,202 s. Preuve : `docs/calculs/09-audit-2026-11/evidence/projection-lot-1/`.
+- Base de la branche : le main du checkout était resté au 20 novembre (`4844e92589`) alors que `origin/main` avait été réécrit (mise à jour forcée) et avancé jusqu'à `de4d5cd32e`. Le lot, écrit sur l'ancien main, a été reporté sur `origin/main` : `forecast.py` et `test_forecast.py` y étaient identiques ; conflits résolus dans WORKLOG, `FAILURE_MODES.md` (la section devient § 62) et `test_models.py`. Le `main` local n'a pas été touché.
+- Non vérifié : 62r et 62s (`test_models.py`, base jetable) ne tournent qu'en CI, pas de PostgreSQL local ; aucune lecture de production (nombre de matchs reportés, attribués ou sans Elo concernés inconnu) ; le tableau des coupes et la Ligue des nations gardent un générateur commun.
+- Coordination : le connecteur Linear de la session ouvre un autre espace de travail (équipe INC seule). Vérification faite sur GitHub seulement. Les constats 5 et 6 avaient été passés à VI-19 : l'issue importée de #217 reste à étiqueter `repo:vega-sport`, à passer In Progress et à relier à VI-19, par l'utilisateur ou une session qui a accès à l'espace Vega.
+- Prochaine action : lire la CI de la PR (62r, 62s) ; après fusion et déploiement, comparer les projections publiées avant et après.
+
 ## Fiche « Performance du joueur » et publication périmée — 25 novembre 2026
 
 - Diagnostic, puis correction validée par Hugo sur `codex/performance-refresh` (base `eaf5ca01`). Aucun chevauchement actif identifié dans Linear VI. La carte de Mbappé (Real Madrid–PSV) imposait la publication de l’accueil à une lecture individuelle. Un décalage produisait le 409 « Rechargez la première page ».

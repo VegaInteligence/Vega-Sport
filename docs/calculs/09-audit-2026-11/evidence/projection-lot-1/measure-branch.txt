@@ -1,0 +1,14 @@
+# branch claude/projection-lot-1 on main de4d5cd32e, working tree — 2026-11-25T16:08:54Z
+model version: forecast-v3; python 3.12.3
+duration: 0.202 s for one league, 190 matches left, 1 000 replays (mean of 30)
+  title, leader    : mean  60.7 %, from  58.3 to  62.2 over 30 seeds
+  title, 2nd       : mean  26.4 %, from  24.3 to  29.4 over 30 seeds
+  last three, 16th : mean  31.6 %, from  29.0 to  33.7 over 30 seeds
+the last club gains one Elo point, same seed:
+  title, leader    : from -0.1 to +0.2 points (standard deviation 0.05)
+  title, 2nd       : from -0.1 to +0.1 points (standard deviation 0.05)
+  last three, 16th : from -0.1 to +0.3 points (standard deviation 0.10)
+a match between the 10th and the 11th is played 1-1, same seed:
+  title, leader    : from -0.1 to +0.2 points (standard deviation 0.07)
+  title, 2nd       : from -0.2 to +0.2 points (standard deviation 0.09)
+  last three, 16th : from -0.2 to +0.3 points (standard deviation 0.10)

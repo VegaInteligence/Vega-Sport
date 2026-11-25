@@ -445,5 +445,217 @@ class ForecastTest(unittest.TestCase):
         self.assertEqual(forecast.nation_code("Bosnia and Herzegovina"), "BIH")
 
 
+class SeasonReplayTest(unittest.TestCase):
+    """FAILURE_MODES §62 (#217): each match once, draws of its own for each match, the forecast's law.
+    Written before the code; the tolerances are §62.2's."""
+
+    @staticmethod
+    def row(match, home, away, status, hs=None, as_=None, edition=1, regular=True, domestic=True):
+        return (match, edition, home, away, False, status, hs, as_, regular, domestic)
+
+    COUNTS = ("played", "to_play", "superseded", "canceled", "outside")
+
+    def ledger(self, rows, edition=1, **kwargs):
+        counts = forecast.league_ledger(rows, **kwargs)[edition]
+        self.assertEqual(set(counts), set(self.COUNTS))
+        return tuple(counts[key] for key in self.COUNTS)
+
+    def test_62a_each_regular_match_is_played_to_play_superseded_or_canceled(self):
+        row = self.row
+        rows = [row(1, 1, 2, "finished", 2, 1), row(2, 3, 4, "finished", 1, 0), row(3, 5, 6, "finished", 0, 0), row(4, 11, 12, "finished", 1, 1),
+                row(5, 7, 8, "awarded", 3, 0),  # an awarded match counts with its score
+                row(6, 9, 10, "awarded"),  # …and without one its result is not known: to play
+                row(7, 2, 1, "postponed"),  # alone: still to play
+                row(8, 1, 2, "postponed"),  # the source's old copy of match 1
+                row(9, 4, 3, "postponed"), row(10, 4, 3, "not_started"),  # …and of match 10
+                row(11, 6, 5, "suspended"), row(12, 8, 7, "in_play"), row(13, 12, 11, "finished"),
+                row(14, 10, 9, "postponed"), row(15, 10, 9, "postponed"),  # one match written twice: once to play
+                row(16, 3, 5, "canceled", 2, 0), row(17, 1, 3, "not_started")]
+        table, fixtures = forecast.league_state(rows)[1]
+        self.assertEqual(table[7], (3, 3, 0, 1))
+        self.assertEqual(table[8], (0, 0, 3, 1))
+        self.assertEqual(sorted(fixtures), [(1, 3), (2, 1), (4, 3), (6, 5), (8, 7), (9, 10), (10, 9), (12, 11)])
+        self.assertEqual(table[1], (3, 2, 1, 1))  # the old copy of its match adds nothing
+        self.assertEqual((table[3], table[5]), ((3, 1, 0, 1), (1, 0, 0, 1)))  # the canceled 2–0 is no result
+        self.assertEqual((table[9], table[10]), ((0, 0, 0, 0), (0, 0, 0, 0)))
+        self.assertEqual(len(table), 12)
+        counts = self.ledger(rows)
+        self.assertEqual(counts, (5, 8, 3, 1, 0))
+        self.assertEqual(sum(counts), len(rows))  # each match once
+
+    def test_62b_a_canceled_match_of_an_open_round_is_not_to_play(self):
+        row = self.row
+        rows = [row(1, 1, 2, "finished", 1, 0), row(2, 3, 4, "awarded", 3, 0), row(3, 6, 5, "canceled"), row(4, 7, 8, "postponed"),
+                row(5, 5, 6, "finished", 2, 2)]
+        held = {1, 2, 3, 4}
+        table, fixtures = forecast.league_state(rows, held)[1]
+        self.assertEqual(sorted(fixtures), [(1, 2), (3, 4), (7, 8)])
+        self.assertEqual((table[1], table[3], table[5]), ((0, 0, 0, 0), (0, 0, 0, 0), (1, 2, 2, 1)))
+        self.assertEqual(self.ledger(rows, held=held), (1, 3, 0, 1, 0))
+
+    def test_62c_a_pairing_met_twice_keeps_its_limit(self):
+        row = self.row
+        rows = [row(1, 1, 2, "postponed"), row(2, 1, 2, "not_started")] + [row(3 + k, h, h + 1, "finished", 1, 0) for k, h in enumerate((3, 5, 7))]
+        _, fixtures = forecast.league_state(rows)[1]
+        self.assertEqual(fixtures, [(1, 2)])
+        self.assertEqual(self.ledger(rows), (3, 1, 1, 0, 0))
+
+    def test_62d_a_knockout_round_and_an_international_edition_are_no_league(self):
+        row = self.row
+        rows = [row(k, h, h + 1, "finished", 1, 0) for k, h in enumerate((1, 3, 5, 7))] + [row(10, 2, 3, "not_started")]
+        rows += [row(20, 1, 2, "postponed", regular=False), row(21, 1, 2, "postponed", edition=3, domestic=False)]
+        self.assertEqual(set(forecast.league_ledger(rows)), {1})
+        self.assertEqual(self.ledger(rows), (4, 1, 0, 0, 0))
+
+    def test_62e_a_postponed_match_of_a_league_phase_is_one_of_its_eight(self):
+        row = lambda match, home, away, status, hs=None, as_=None: self.row(match, home, away, status, hs, as_, edition=3, domestic=False)
+        rows = [row(k, 1, t, "finished", 1, 0) for k, t in enumerate(range(2, 9))]  # club 1: seven played
+        rows += [row(20, 9, 1, "postponed"), row(21, 1, 10, "not_started"), row(22, 1, 11, "not_started"), row(23, 12, 13, "not_started")]
+        table, fixtures = forecast.league_state(rows, phases={3})[3]
+        self.assertEqual(fixtures, [(9, 1), (12, 13)])
+        self.assertTrue(10 not in table and 11 not in table)
+        self.assertEqual(self.ledger(rows, edition=3, phases={3}), (7, 2, 0, 0, 2))
+
+    def test_62f_a_league_is_not_replayed_without_a_club_s_strength(self):
+        with self.assertRaisesRegex(ValueError, r"\b2\b"):
+            forecast.simulate({1: (0, 0, 0, 0), 2: (0, 0, 0, 0)}, [(1, 2)], MODEL, {1: 1500}, simulations=10)
+
+    def test_62g_a_cup_is_not_replayed_without_a_club_s_strength(self):
+        table = {t: (3 * (36 - t), 40 - t, 10 + t, 7) for t in range(1, 37)}
+        strengths = {t: 1900 - 10 * (t - 1) for t in range(1, 37) if t != 2}
+        with self.assertRaisesRegex(ValueError, r"\b2\b"):
+            forecast.simulate_cup(table, [(1, 2)], MODEL, strengths, {}, simulations=10)
+
+    def test_62h_each_fixture_has_a_key_of_its_own_that_a_played_match_does_not_move(self):
+        self.assertEqual(forecast.fixture_keys([(1, 2), (3, 4), (1, 2)]), [(1, 2, 1), (3, 4, 0), (1, 2, 0)])
+        self.assertEqual(forecast.fixture_keys([(3, 4), (1, 2)]), [(3, 4, 0), (1, 2, 0)])  # the earlier meeting played
+
+    def league(self):
+        """Twenty clubs at mid-season: (table, fixtures, strengths). In the first half the home club, the stronger
+        of the two, won 2–0 a club four places or more below it and drew 1–1 the others."""
+        teams = range(1, 21)
+        strengths = {t: 1800.0 - 18 * (t - 1) for t in teams}
+        table = {t: [0, 0, 0, 0] for t in teams}
+        for h in teams:
+            for a in range(h + 1, 21):
+                hs, as_ = (2, 0) if a - h >= 4 else (1, 1)
+                for t, gf, ga in ((h, hs, as_), (a, as_, hs)):
+                    table[t][0] += 3 if gf > ga else 1 if gf == ga else 0
+                    table[t][1] += gf
+                    table[t][2] += ga
+                    table[t][3] += 1
+        return {t: tuple(v) for t, v in table.items()}, [(a, h) for h in teams for a in range(h + 1, 21)], strengths
+
+    @staticmethod
+    def shares(projection, team):
+        """(title share, share of the last three places)."""
+        return projection[team]["positions"][0], sum(projection[team]["positions"][-3:])
+
+    def moved(self, before, after, teams):
+        return max(abs(x - y) for t in teams for x, y in zip(self.shares(before, t), self.shares(after, t)))
+
+    def test_62j_the_fixtures_order_changes_nothing(self):
+        table, fixtures, strengths = self.league()
+        first = forecast.simulate(table, fixtures, MODEL, strengths, simulations=200, seed=3)
+        self.assertEqual(first, forecast.simulate(table, fixtures, MODEL, strengths, simulations=200, seed=3))  # 62i
+        self.assertEqual(first, forecast.simulate(table, fixtures[::-1], MODEL, strengths, simulations=200, seed=3))
+
+    def test_62k_one_elo_point_for_the_last_club_moves_no_other_club(self):
+        table, fixtures, strengths = self.league()
+        for seed in range(5):
+            before = forecast.simulate(table, fixtures, MODEL, strengths, seed=seed)
+            after = forecast.simulate(table, fixtures, MODEL, {**strengths, 20: strengths[20] + 1}, seed=seed)
+            self.assertLessEqual(self.moved(before, after, range(1, 20)), 0.005, seed)
+
+    def test_62l_a_match_played_moves_the_other_clubs_little(self):
+        table, fixtures, strengths = self.league()
+        played = dict(table)
+        for t in (10, 11):
+            points, scored, conceded, count = played[t]
+            played[t] = (points + 1, scored + 1, conceded + 1, count + 1)
+        left = [f for f in fixtures if f != (11, 10)]
+        self.assertEqual(len(left), len(fixtures) - 1)
+        others = [t for t in range(1, 21) if t not in (10, 11)]
+        for seed in range(5):
+            before = forecast.simulate(table, fixtures, MODEL, strengths, seed=seed)
+            after = forecast.simulate(played, left, MODEL, strengths, seed=seed)
+            self.assertLessEqual(self.moved(before, after, others), 0.01, seed)
+
+    def test_62m_a_score_is_drawn_from_the_forecast_s_grid(self):
+        import random
+        from math import sqrt
+
+        n = 200000
+        for k, (lh, la, rho) in enumerate(((1.3, 1.3, -0.2), (1.6, 1.1, -0.03), (2.4, 0.7, 0.1), (6.0, 0.5, -0.2), (9.0, 0.3, 0.0))):
+            rng = random.Random(100 + k)
+            grid = forecast.score_grid(lh, la, rho)
+            counts = {}
+            for _ in range(n):
+                score = forecast.draw_score(rng.random(), rng.random(), lh, la, rho)
+                counts[score] = counts.get(score, 0) + 1
+            self.assertTrue(all(0 <= i <= forecast.MAX_GOALS and 0 <= j <= forecast.MAX_GOALS for i, j in counts))
+            win, draw, loss = forecast.outcome(grid)
+            expected = {"home": (sum(c for (i, j), c in counts.items() if i > j), win), "draw": (sum(c for (i, j), c in counts.items() if i == j), draw),
+                        "away": (sum(c for (i, j), c in counts.items() if i < j), loss)}
+            expected.update({cell: (counts.get(cell, 0), grid[cell[0]][cell[1]]) for cell in ((0, 0), (0, 1), (1, 0), (1, 1), (2, 1))})
+            for name, (count, p) in expected.items():
+                self.assertLessEqual(abs(count / n - p), 4 * sqrt(p * (1 - p) / n) + 1e-12, (lh, la, rho, name, count / n, p))
+            if (lh, rho) == (6.0, -0.2):
+                self.assertEqual((grid[0][1], counts.get((0, 1), 0)), (0.0, 0))  # a correction below zero is held at zero
+
+    @staticmethod
+    def level(rho):
+        """Two level clubs, 1.3 goals expected each (the audit's case): (model, table, fixtures, strengths)."""
+        from math import log
+
+        model = {"home": (log(1.3), 0.0), "away": (log(1.3), 0.0), "rho": rho, "matches": 1000}
+        return model, {1: (0, 0, 0, 0), 2: (0, 0, 0, 0)}, [(1, 2)], {1: 1500.0, 2: 1500.0}
+
+    def test_62n_a_replayed_match_gives_the_points_of_its_forecast(self):
+        from math import sqrt
+
+        n = 200000
+        for rho in (-0.2, -0.03):
+            model, table, fixtures, strengths = self.level(rho)
+            f = forecast.forecast(model, 1500.0, 1500.0)
+            projected = forecast.simulate(table, fixtures, model, strengths, simulations=n, spread=0.0, seed=53)
+            for team, win in ((1, f["home"]), (2, f["away"])):
+                mean = 3 * win + f["draw"]
+                error = sqrt((9 * win + f["draw"] - mean ** 2) / n)
+                self.assertLessEqual(abs(projected[team]["points"] - mean), 4 * error, (rho, team, projected[team]["points"], mean))
+
+    def test_62o_the_replays_read_rho(self):
+        model, table, fixtures, strengths = self.level(-0.2)
+        corrected = forecast.simulate(table, fixtures, model, strengths, simulations=20000, spread=0.0, seed=53)
+        plain = forecast.simulate(table, fixtures, {**model, "rho": 0.0}, strengths, simulations=20000, spread=0.0, seed=53)
+        self.assertNotEqual(corrected, plain)
+        total = lambda projection: projection[1]["points"] + projection[2]["points"]
+        self.assertLess(total(corrected), total(plain))  # more draws: fewer points in all
+
+    def test_62p_a_bracket_s_match_follows_the_forecast_and_extra_time_two_poisson_laws(self):
+        import random
+        from math import exp, sqrt
+
+        model = {**MODEL, "rho": -0.2}
+        match, _, _ = forecast._knockout_play(random.Random(11), model)
+        now = {0: 1500.0, 1: 1500.0}
+        n = 100000
+        level = lambda **kwargs: sum(1 for _ in range(n) for hs, as_ in [match(0, 1, now, neutral=True, **kwargs)] if hs == as_) / n
+        draw = forecast.forecast(model, 1500.0, 1500.0, neutral=True)["draw"]
+        self.assertLessEqual(abs(level() - draw), 4 * sqrt(draw * (1 - draw) / n))
+        third = [forecast.poisson(forecast.EXTRA_TIME * exp(base)) for base in (model["home"][0], model["away"][0])]
+        draw = sum(h * a for h, a in zip(*third))
+        self.assertLessEqual(abs(level(share=forecast.EXTRA_TIME) - draw), 4 * sqrt(draw * (1 - draw) / n))
+
+    def test_62q_one_elo_point_for_the_last_club_moves_no_other_club_s_league_phase(self):
+        table = {t: (3 * (36 - t), 40 - t, 10 + t, 6) for t in range(1, 37)}
+        strengths = {t: 1900.0 - 10 * (t - 1) for t in range(1, 37)}
+        fixtures = [(t, t + 18) for t in range(1, 19)] + [(t + 18, t % 18 + 1) for t in range(1, 19)]  # two matches left a club
+        for seed in (5, 6, 7):
+            before = forecast.simulate_cup(table, fixtures, MODEL, strengths, {}, seed=seed)
+            after = forecast.simulate_cup(table, fixtures, MODEL, {**strengths, 36: strengths[36] + 1}, {}, seed=seed)
+            self.assertLessEqual(max(abs(before[t]["stages"]["top8"] - after[t]["stages"]["top8"]) for t in range(1, 36)), 0.005, seed)
+
+
 if __name__ == "__main__":
     unittest.main()
