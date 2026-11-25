@@ -5572,3 +5572,26 @@ and the Conference League, played the next evening, would have been.
 - **R27** (`tests/match-standings-served.test.mjs`) the Champions League 2026/2027, a `Vega` table of 36 clubs with four
   or five matches each: the table is shown, the match's teams marked, with « matchs pris en compte »; the same table for
   2023/2024 (groups) or with a club at nine matches: not shown.
+
+## 66. The teams' colours on the home page's « Choc de la semaine » (hugo, 25 Nov 2026, 21 h 29; written before the tests)
+
+hugo, after § 64 in production: « pour les couleurs je veux aussi sur le choc de la semaine sur la page d'accueil ».
+
+### 66.1 Rules
+
+- **The same colours as the match page.** The « Le choc de la semaine » card (`HomeMatchday.jsx`, `.home-motw`) sets
+  `--home` and `--away` from its two teams' crests with the rules of § 64 (`useCrestColours`: dominant colour, lightness
+  per theme, clash rule, blue and violet without a colour). Everything the card draws in the two colours follows: the
+  xG race's lines and areas, the legend's dots, the stat bars, the shot map, the goal markers and the xG tooltip.
+- **Only that card.** The other blocks of the home page (the strip, the forecasts, the tables) keep the theme's blue
+  and violet: the variables are set on the card, not on the page.
+- **Unchanged:** the crests themselves, the card's layout, its texts.
+
+### 66.2 Failure modes and expected outcomes
+
+- **K1** (`tests/e2e/home-colours.e2e.mjs`) the card's home side in its crest's red and its away side in its crest's
+  green (test crests served for the two teams the home read names): the legend's dots, the xG lines and the stat bars
+  have those hues.
+- **K2** (same file) the page outside the card keeps the theme's `--home` and `--away`.
+- **K3** (same file) crests that cannot be read: the card keeps blue and violet, no variable set on it.
+- **K4** (same file) no page error.
