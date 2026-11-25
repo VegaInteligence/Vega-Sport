@@ -16,12 +16,16 @@
  * - a substitute's pitch position is 0, as the source sends it;
  * - head-to-head meetings name the teams without their crests, as the source does;
  * - a family that was not collected, or that the source said was unavailable, is a 404.
+ *
+ * GET /api/matches/{id}/lineups/probable — our probable eleven of each side of a match not started
+ * (vega/probable.py, FAILURE_MODES §61), read from api.match_probable_lineups (176): a side not
+ * computed is null; a match not `not_started`, or with no side computed, is a 404.
  */
 import { createHash } from "node:crypto";
 import { matchesEtag, reject, send, validateParams } from "../http.mjs";
 import * as F from "../match-families.mjs";
 
-const ROUTE = /^\/api\/matches\/(m_(?:[A-Za-z0-9]{6}|v\d{7}))(\/(?:lineups|events|shots|stats|players|players\/halves|momentum|advanced|advanced\/players|advanced\/network|heatmaps|h2h))?$/;
+const ROUTE = /^\/api\/matches\/(m_(?:[A-Za-z0-9]{6}|v\d{7}))(\/(?:lineups\/probable|lineups|events|shots|stats|players|players\/halves|momentum|advanced|advanced\/players|advanced\/network|heatmaps|h2h))?$/;
 const FAMILY = {
   "/lineups": "lineups", "/events": "events", "/shots": "shots", "/stats": "team_stats", "/players": "player_stats",
   "/players/halves": "player_halves", "/momentum": "momentum", "/advanced": "advanced", "/advanced/players": "advanced_players",
@@ -104,12 +108,37 @@ async function body(read, f, suffix, params) {
   return missing();
 }
 
+/** Our probable elevens (§61): their own rows and ETag (each run of the worker's step writes them again). */
+async function probable(read, req, id, params) {
+  if (params.has("v") && !/^[\w.-]{1,200}$/.test(params.get("v"))) reject(400, "Paramètre invalide.");
+  const [f] = await read(
+    `SELECT f.match_id, f.id, f.status, f.revision, f.home_internal_id, f.away_internal_id FROM api.fixtures f WHERE f.match_id=api.internal_id('match',$1)`,
+    [id],
+  );
+  if (!f) reject(404, "Match introuvable.");
+  if (f.status !== "not_started") missing();
+  const [sides, players] = await Promise.all([
+    read(`SELECT team_key, side, method, computed_at, basis_lineups, basis_from::text AS basis_from, basis_to::text AS basis_to, formation
+          FROM api.match_probable_lineups WHERE match_key=$1`, [f.match_id]),
+    read(`SELECT team_key, role, ord, player_id, name, image_url, shirt_number, position_id, pitch_x, pitch_y, share, replaces_id, replaces_name,
+            absence_kind, absence_label, expected_return::text AS expected_return, matches_remaining
+          FROM api.match_probable_lineup_players WHERE match_key=$1 ORDER BY team_key, role, ord`, [f.match_id]),
+  ]);
+  if (!sides.length) missing();
+  const computed = sides.map((s) => new Date(s.computed_at).toISOString()).sort();
+  const url = new URL(req.url);
+  const etag = `W/"match-v1-${createHash("sha256").update(`${url.pathname}|${f.revision}|${computed.join(",")}`).digest("hex")}"`;
+  if (req.method === "HEAD" || matchesEtag(req.headers.get("if-none-match"), etag)) return send(req, null, 200, { etag, ttl: 15 });
+  return send(req, { data: F.probableLineupsBody(f, sides, players) }, 200, { etag, ttl: 15 });
+}
+
 export function createMatchDetailRoute(read) {
   return async (req, path, params) => {
     const m = path.match(ROUTE);
     if (!m) return null;
     const [, id, suffix = ""] = m;
     validateParams(params, suffix === "/heatmaps" ? ["frame", "v"] : ["v"]);
+    if (suffix === "/lineups/probable") return probable(read, req, id, params);
     if (params.has("frame") && !/^(acting_ltr|home_ltr)$/.test(params.get("frame"))) reject(400, "Paramètre invalide.");
     if (params.has("v") && !/^[\w.-]{1,200}$/.test(params.get("v"))) reject(400, "Paramètre invalide.");
     const [f] = await read(
