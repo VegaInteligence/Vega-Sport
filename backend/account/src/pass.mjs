@@ -8,8 +8,9 @@
  */
 import { createHmac, timingSafeEqual } from "node:crypto";
 
-/** Levels a pass may carry: 1 free account, 2 Plus, 3 Pro. A visitor (0) holds none. */
-export const PASS_LEVELS = [1, 2, 3];
+/** Levels a pass may carry: 1 free account, 2 Plus, 3 Pro, 4 Fondateur (granted by hand, sql/003).
+ * A visitor (0) holds none. */
+export const PASS_LEVELS = [1, 2, 3, 4];
 /** The longest a pass may live. A change of plan takes effect at the next renewal. */
 export const MAX_LIFETIME = 900;
 export const DEFAULT_LIFETIME = 600;

@@ -45,7 +45,7 @@ the key (`kid`); the payload is `{ sub, lvl, iat, exp }`.
 | P4 | A pass past its expiry. | Fails: `expired`. The expiry second itself is already expired. |
 | P5 | A pass whose `iat` is in the future beyond the tolerated clock difference (60 s). | Fails: `not-yet`. |
 | P6 | A pass whose lifetime (`exp - iat`) exceeds the maximum (900 s), even correctly signed. | Fails: `lifetime`. A leaked signing call cannot mint a long-lived pass. |
-| P7 | A level that is not an integer from 1 to 3 (0, 4, "3", 2.5, missing). | Signing refuses it; verification fails: `claims`. A visitor never holds a pass. |
+| P7 | A level that is not an integer from 1 to 4 (0, 5, "3", 2.5, missing). | Signing refuses it; verification fails: `claims`. A visitor never holds a pass. |
 | P8 | A missing, empty or malformed account id (not `[A-Za-z0-9_-]{1,64}`). | Signing refuses it; verification fails: `claims`. |
 | P9 | Not three segments, a segment that is not base64url, a payload that is not a JSON object, a token longer than 1024 characters. | Fails: `format`, before any signature is computed. |
 | P10 | Key rotation: two keys are held, the pass is signed with the older one. | Verifies. Signing always uses the key named current. |
@@ -104,6 +104,8 @@ the followed competitions and the lists. No e-mail, no name, no password, no IP 
 | S16 | An erased account is brought back: a Neon session stays valid up to 15 minutes after the person is deleted at Neon, and verification is offline, so a second device's next save would create the account again and store preferences after the erasure. | `account.erasures` keeps the erased account id (and the instant), nothing else, and has no foreign key: it outlives the account row. Every store command refuses an erased id (`ACCOUNT_ERASED`), except the erasure itself, which can be repeated. |
 
 | S17 | The preferences are lost, mixed between two writes, stored for no account, in another version, or grow without bound. | `account.preferences` holds one row per account: `document jsonb` (the site's contract as sent), `revision bigint` (1 at the first write, +1 at each), `updated_at`; it hangs from the account (cascade). Checks: the document is a JSON object, its `v` is 1, its text form is 3 MiB at most (a backstop: the API's bound is 2 MiB of compact JSON, and the text form of `jsonb` is at most 1.5 times longer); the revision is 1 or more. |
+| S18 | A level is given by hand (a founder, a tester) and either stays after the account is deleted, is written by the account API, or comes from Stripe above Pro. | `account.grants` (`003_granted_levels.sql`) holds at most one level per account (2, 3 or 4), a reason, the instant; it hangs from the account (cascade). `account.level_of` takes the highest of 1, the live subscriptions (S5) and the grant. The account API holds SELECT only on it: only the owner of the base writes a grant (a migration). A subscription stays 2 or 3 (S4): level 4 (Fondateur) never comes from Stripe. |
+| S19 | A level above Pro is closed by a reserved read. | A rule names a minimum of 2 or 3 only (`gate.mjs`), so level 4 opens every reserved read, including any rule added later. The pass carries 1 to 4 (P7); the site names 4 « Fondateur ». Granted on 25 Nov 2026 to the two founders (hugo, Romain), by their Neon user id. |
 
 The files of `sql/` are applied in the order of their names, each once (`DEPLOYMENT.md`); a file
 that was applied somewhere is never edited again. On 24 Nov 2026 none was applied anywhere.

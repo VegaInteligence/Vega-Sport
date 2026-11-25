@@ -138,7 +138,7 @@ class AccountMigrationsTest(unittest.TestCase):
         self.assertEqual([p.name for p in FILES][:2], ["001_accounts.sql", "002_account_api.sql"])
         x = self.db.execute
         self.assertEqual([r for (r,) in x("SELECT tablename FROM pg_tables WHERE schemaname = 'account' ORDER BY 1").fetchall()],
-                         ["accounts", "erasures", "preferences", "stripe_customers", "stripe_events", "subscriptions"])
+                         ["accounts", "erasures", "grants", "preferences", "stripe_customers", "stripe_events", "subscriptions"])
 
     def test_m3_a_second_run_changes_nothing_but_the_password(self):
         total = LINE.fullmatch(self.first).group(2)

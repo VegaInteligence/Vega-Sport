@@ -86,4 +86,5 @@ export function syncLabel(sync) {
 }
 
 /** The account's level (backend/account, POST /account/session) → its plan. */
-export const planLabel = (level) => (level === 3 ? "Pro" : level === 2 ? "Plus" : "Gratuit");
+export const planLabel = (level) =>
+  level >= 4 ? "Fondateur" : level === 3 ? "Pro" : level === 2 ? "Plus" : "Gratuit";

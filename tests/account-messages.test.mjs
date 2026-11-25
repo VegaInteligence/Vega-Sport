@@ -80,4 +80,5 @@ test("A10 every sync state has a label, « arrêtée » with its reason", () => 
   assert.equal(planLabel(null), "Gratuit");
   assert.equal(planLabel(2), "Plus");
   assert.equal(planLabel(3), "Pro");
+  assert.equal(planLabel(4), "Fondateur");
 });
