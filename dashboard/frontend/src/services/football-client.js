@@ -71,7 +71,8 @@ export class FootballDataClient {
   async request(path, { signal } = {}) {
     const scope = fixtureScope(path);
     if (scope) return { data: { matches: await completeFixtures(scope, { signal }) } };
-    const response = await publicApiFetch(apiUrl(`/api/pitchapi/${path}`), {
+    const endpoint = path.startsWith("matches/") ? `/api/${path}` : `/api/pitchapi/${path}`;
+    const response = await publicApiFetch(apiUrl(endpoint), {
       headers: { Accept: "application/json" },
       signal,
     });

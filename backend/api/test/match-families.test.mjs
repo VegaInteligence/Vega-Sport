@@ -114,3 +114,42 @@ test("a shot carries Vega's own expected goals when the base has scored it", asy
   assert.deepEqual([scored.expected_goals, scored.expected_goals_vega, scored.expected_goals_on_target], [0.21, 0.18, 0.4]);
   assert.equal("expected_goals_vega" in unscored, false);
 });
+
+test("the match display restores confirmed zeros and keeps raw and half reads independent", { skip }, async () => {
+  const refresh = spawnSync("python3", ["-c", [
+    "import sys",
+    "from vega.store import connect_local",
+    "db = connect_local(sys.argv[1])",
+    "db.execute('SELECT agg.refresh_match_zeros(id) FROM core.competition_seasons')",
+    "db.close()",
+  ].join("\n"), process.env.VEGA_V2_API_NODE_TEST_DSN], {
+    cwd: fileURLToPath(new URL("../../", import.meta.url)),
+    encoding: "utf8",
+  });
+  assert.equal(refresh.status, 0, refresh.stderr);
+
+  const stats = (players, id) => Object.fromEntries(players.find((row) => row.player.id === id).stats
+    .flatMap((group) => Object.values(group.stats).map((item) => [item.key, item.stat])));
+  const raw = await read("/players");
+  const halvesBefore = await read("/players/halves");
+  const display = await get(BASE + "/players/display");
+  assert.equal(display.response.status, 200);
+
+  const noDribbles = "p_13nLyq", noShots = "p_04vc3l", missedDribble = "p_3X9wFa";
+  const shown = display.body.data;
+  assert.equal(stats(raw, noDribbles).dribbles_succeeded, undefined);
+  assert.deepEqual(stats(shown, noDribbles).dribbles_succeeded, {
+    type: "fractionWithPercentage", value: 0, total: 0,
+  });
+  assert.equal(stats(raw, noShots).expected_goals, undefined);
+  assert.equal(stats(shown, noShots).expected_goals.value, 0);
+  assert.equal(stats(shown, noShots).total_shots.value, 0);
+  assert.equal(stats(shown, noShots).ShotsOnTarget.value, 0);
+  assert.deepEqual(stats(shown, missedDribble).dribbles_succeeded, stats(raw, missedDribble).dribbles_succeeded);
+  assert.equal(stats(shown, "p_30KEqj").dribbles_succeeded, undefined);
+  assert.equal(stats(shown, "p_3yNPPF").dribbles_succeeded, undefined);
+  assert.deepEqual(await read("/players/halves"), halvesBefore);
+  assert.deepEqual(await read("/players"), raw);
+  const cached = await get(BASE + "/players/display", { "if-none-match": display.response.headers.get("etag") });
+  assert.equal(cached.response.status, 304);
+});
