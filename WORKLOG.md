@@ -1,5 +1,14 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Notes Vega d'un match dès l'arrivée des stats des joueurs — FAILURE_MODES § 69 (25 novembre 2026, [#236](https://github.com/VegaInteligence/Vega-Sport/issues/236), [VI-163](https://linear.app/vegainteligence/issue/VI-163), branche `claude/notes-par-match` depuis main 3cc7ac6)
+
+- Demande de hugo (21 h 37) : « met cela en match », après Sabah FK – Barcelone resté sans notes. Mesure en production d'abord (lecture seule, `/mnt/project-files/notes-match-par-match/arrivals_run1.txt`) : stats des joueurs 12 s après le statut « fini » ; le passage de la saison était parti 11 s avant elles (une course) ; sur 456 matchs en 14 jours, p95 7,5 min, aucune stat changée après une heure.
+- Choix : noter au plus tôt (à chaque tour de planification, toutes les 60 s) plutôt qu'à 10 min fixes, avec les références du dernier passage publié de l'année ; le passage complet garde sa cadence et corrige (`first_z` garde la note rapide).
+- Code : `vega/arrival_grades.py` (étape), `power.py` (références de contribution gardées par chaque passage, `restore_zeros` et `assign_roles` acceptent l'édition et les minutes de l'année, le passage ne supprime plus une note écrite après son début), `worker.match_grades`, migration 178 (`agg.player_contribution_refs`, `agg.match_grade_arrivals`).
+- Tests écrits d'abord : `backend/tests/test_grades_on_arrival.py` (69a à 69l) et `test_worker` (69m), rouges puis verts ; chaque règle vérifiée par une mutation qui fait échouer son test. Preuves : `/mnt/project-files/notes-match-par-match/tests/`.
+- Relecture de Codex sur #238 (P2, vérifiée) : une lecture de joueur, de club ou de saison n'est validée que par les versions de ses éditions (`actorVersion`, `scopeVersion`), ni par la publication ni par le match ; l'étape avance donc aussi la version de l'édition des matchs notés, dans l'ordre de la collecte. 69e et 69j le vérifient (rouge puis vert).
+- Reste : PR #238 (accord de hugo pour fusionner et déployer, carte du 25 nov. à 22 h 24) ; après le Deploy, lire `agg.match_grade_arrivals` et l'écart `first_z` / `z` au bout d'une semaine.
+
 ## PSG – Roma en direct : photos des compositions et alerte « incohérentes » — FAILURE_MODES § 67 (25 novembre 2026, branche `claude/compo-photos-alerte-stats` depuis main 6e48b6c)
 
 - Signalé par hugo pendant le match (21 h 10) : pas de photos dans les compositions officielles, et « Statistiques d'équipe signalées comme incohérentes » sans aucune stat.

@@ -5671,3 +5671,96 @@ compétition où a lieu le match ».
   card reads `/api/standings?competition=l_0bfbkO&season=2026%2F2027` and shows « 6e » and « 8e » without form; while it
   loads, or when the table fails, no « 1er »; a Premier League match with league ranks: « 3e » and « 5e » with their
   form, and no standings read.
+
+## 69. A match graded as soon as its player statistics arrive (hugo, 25 Nov 2026, 21 h 37 Paris: « met cela en match », after Sabah FK – Barcelone stayed without grades; GitHub #236, VI-163; written before the tests)
+
+Numbered after § 68 (PR #235). Measured on production, read only
+(`/mnt/project-files/notes-match-par-match/arrivals.py`, output `arrivals_run1.txt`, 25 Nov 2026):
+
+- Sabah FK – Barcelone (m_18IfVI): seen finished at 20:02:02 UTC, every detail family within 16 s, its 46 player
+  statistics rows at 20:02:14 and never changed since. The season's players run (`power.refresh_players`, from
+  `models.refresh_daily`) started at 20:02:03, 11 s before them, and published at 20:03:59 without the match; the next
+  one waits at least `RECOMPUTE_AFTER` = 1 h (`due_seasons`). The finished status makes the season due at once (its
+  last run was 6 h old), so the pass starts before the details are fetched: a race on every match night.
+- The 456 finished PitchAPI matches of the 14 days before: player statistics p50 0.3, p90 3.5, p95 7.5, max 101 minutes
+  after the match was seen finished; none whose statistics changed again more than 60 minutes after they arrived.
+
+Read in the code (main 3cc7ac6): the run reads the award year's rows (`PLAYER_MATCHES`), restores the zeros
+(`restore_zeros`: per match, and per edition over the year's rows), gives each row its role (`assign_roles`: the slot's,
+else the player's most played slot role of the year), fits the contribution references on the year's rows
+(`references`: per role and indicator, a Poisson fit α, β for a volume, a rate p for a conditional, 0 for a relative,
+and the spread s), computes C (`match_contribution`) and the grade z against the finished year's grade references
+(`match_index`, `grade_reference_year`, kept in `agg.match_grade_roles/spreads/quantiles`), then `write_match_grades`
+upserts the year's grades and deletes every grade of the award year it did not compute. The contribution references are
+kept nowhere; `agg.team_elo` of a new match exists only after the next Elo pass.
+
+### 69.1 Rules
+
+- **Graded by the step.** A match of a PitchAPI edition (`archive_key` and `cup_key` null), `finished`, kicked off in
+  the last `WINDOW` = 3 days, its `player_stats` coverage `ok`, whose award year (1 August to 31 July of its date) has a
+  published players run with kept contribution references, and whose player statistics changed after that run started
+  (their latest `updated_at` later than its `started_at`: the run did not read them). Not graded again: a match the
+  step graded since its rows last changed, unless a players run of its year was published after that grading (its write
+  may have replaced or removed the step's grades). At most `LIMIT` = 40 matches a pass, the oldest rows first. The
+  finished matches are found by kick-off (178's index `matches_finished_kickoff`), never by reading every match.
+- **Its references.** The last published players run of the award year: its contribution references, now kept by
+  every run in `agg.player_contribution_refs` (178: role, indicator, kind, α, β, p, s, run), and the grade references of
+  its reference year (`grade_reference_year`, read with `read_grade_references`). A year without either (no run since
+  178, a year graded against its own rows, a partial year of § 47) is left to its run, as before.
+- **Its rows.** The run's own read (`PLAYER_MATCHES`) restricted to the match, then the run's own functions:
+  - a row whose team is neither side of the match is not graded;
+  - the zeros: per match as the run; per edition from the edition's rows of the award year (the same rule, the same
+    rows: `restore_zeros` given the edition's statistics seen above zero);
+  - the role: the slot's (`role_of` with the team's highest slot in the match), else the player's most played slot
+    role over his rows of the award year (the same rows the run reads), else `LINE_DEFAULT`, else goalkeeper by
+    `goals_prevented`; a row without a role is not graded;
+  - the Elo: the match's `agg.team_elo` rows when they exist; else each team's last `elo_after` before the match's
+    kick-off, which is the next Elo pass's `elo_before` when nothing before the match changed; none: delta 0, as the run;
+  - C with `match_contribution` and z with `match_index`: no contribution, or no reference for the role, no grade.
+  The same rows with the same references and the same Elo give the run's z.
+- **Writing, one transaction a pass** (`lock_timeout` 5 s: a run writing the same year makes the pass fail and wait for
+  the next one, never the collection wait):
+  - the match's grades upserted as the run does (a grade that moved is rewritten, `first_z` kept), `run_id` the run
+    whose references were read, `ref_season` its reference year;
+  - `agg.player_grade_editions` of the match's players in its edition, recomputed from the grades (the run's formula);
+  - one row of `agg.match_grade_arrivals` (178: the match, its rows' latest `updated_at`, when it was graded, the run,
+    the players graded); rows of matches kicked off more than 7 days ago are deleted;
+  - the match's resource version advanced (`ops.resource_versions`, kind `match`): the summary's ETag changes with the
+    next publication;
+  - its edition's resource version advanced (kind `competition_season`, Codex's review of #238): a player's, a club's
+    or a season's read (`actorVersion`, `scopeVersion` in the read API) is validated by its editions' versions alone,
+    not by the publication or the match, so a read cached between the rows' arrival and the step would keep answering
+    without the grades until another change of the edition. The versions are advanced after the grades, in the order
+    of the collection (`store._flush_versions`: kind, then id).
+  Nothing else: no ranking, no `agg.player_power_matches`, no level, no award race, no exclusion.
+- **The run.** Same cadence. It keeps its contribution references with its ranking (same transaction). Its grades
+  replace the step's when they moved: `first_z` keeps the step's, so the drift between them can be read. Its delete of
+  the award year's grades it did not compute spares a grade changed after the run started: the step's grade of a match
+  whose rows came after the run's read (the race above) stays until a run reads the match.
+- **The worker.** In the collection's own process, at each planning round (every 60 s), after the line-up forecasts: the
+  side process can be an hour into a season. A pass that fails is logged (`match grades error=<code>`) and the
+  collection goes on; a pass that grades logs `match grades matches=<n> players=<m>`.
+
+### 69.2 Failure modes and expected outcomes
+
+Tests: `backend/tests/test_grades_on_arrival.py` (disposable local base `vega_v2_grades_test`, under `vega_calc` and
+`vega_read`; names carry the cases) and `backend/tests/test_worker.py`.
+
+| # | Situation | Expected |
+|---|---|---|
+| 69a | A match read by the year's run, its grades removed and its rows stamped after the run started (the race), then the step | every player-match graded again: the run's z (to 1e-4), role, minutes, team; `ref_season` and `run_id` the run's |
+| 69b | The same, the match also missing from `agg.team_elo` | the same z: the teams' last `elo_after` before the kick-off is the run's `elo_before` |
+| 69c | A substitute with no slot, a player whose blank statistic is published elsewhere in the edition | the run's role and the run's restored zero, so the run's z |
+| 69d | Not graded by the step: a match not finished; `player_stats` not `ok`; a cup edition; kicked off 4 days ago; rows older than the run's start; a year without a published run; a run without kept contribution references | no grade, no arrival row |
+| 69e | A second pass with nothing new | nothing written: same `changed_at`, same arrival row, no resource version moved |
+| 69f | The rows change again after the step | graded again with the new rows; `first_z` kept |
+| 69g | A run published after the step's grade, which did not read the match | its delete spares the step's grades; the step's next pass reads the match again and changes nothing |
+| 69h | A run that started after the step's grade and did not compute it (the row is gone from the year) | that grade deleted, as before |
+| 69i | A row of a third team; a row without any role | not graded; the match's other rows are |
+| 69j | What the step writes | the grades, the editions' sums equal to the run's formula, one arrival row, the match's and its edition's resource versions + 1; `agg.player_power`, `agg.player_power_matches`, `agg.player_contribution_refs` unchanged |
+| 69k | The players' grade status (`api.player_grade_status`) before and after the step | `pending`, then `graded` or `below_display_threshold` |
+| 69l | The run keeps its contribution references | one row per role and indicator the run fitted, of its run; the expectations rebuilt from them equal the run's (to 1e-9) |
+| 69m | The worker: a planning round; the step failing | the step called with the worker's clock; the failure logged with its code, the job taken |
+
+Not verified: the time of a pass on production's base (measured locally only); how often production's runs move the
+step's grades (`first_z` against `z`, to read after a week).
