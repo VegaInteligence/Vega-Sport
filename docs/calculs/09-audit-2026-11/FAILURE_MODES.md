@@ -5362,3 +5362,35 @@ ranked here).
   duplicate, the 30-minute cameo left out; a pool of `count` rows keeps its order.
 - **R14** (`match-tabs.e2e.mjs`) the page holds 4 players and the grades 12: « Meilleures notes » shows 8 rows,
   Dembélé first.
+
+### 63.6 The page's head, direction C « Le fil des matchs » (hugo, 25 Nov 2026, 19 h 03: « je choisi le C »; written before the tests)
+
+hugo found the head ugly (« il faut re design cette partie je la trouve laide », 18 h 39) and chose direction C of
+the mock-up `/mnt/project-files/fusion-onglets-match/maquette-haut-page-match.html`
+(https://claude.ai/artifact/VN84rchq6aR4NwBgin2tZK). It replaces the breadcrumb row, the previous / next bar and the
+scoreboard's top line (competition and date).
+
+- **Top row** (`.match-head`): on the left « ← Résultats » (or « Matchs à venir », as before), « / », then the
+  competition's button (its logo, its name, the season, « · » and the round, a chevron), which opens the round picker
+  (unchanged: rounds, a club search); on the right « Rapport du match » and « Enregistrer ». Without the season's list
+  the button is plain text (name and season), no picker.
+- **The thread** (`nav[aria-label="Matchs de la compétition"]`): « Match précédent » and « Match suivant » arrows (the
+  neighbours in the season's kick-off order, into the next round at either end, as before) around a strip of match
+  tiles: up to six before and six after the current one, each with its round and day, both teams and the score (or
+  the kick-off time); the current tile is marked (`aria-current="page"`) and scrolled into view. A tile opens its
+  match, keeping the address's view. While the list loads, a strip of the same height; without a list, no thread.
+- **Scoreboard.** No line above the teams: the status reads « Terminé · 28 nov. 2026 · 20:45 » (date and time in
+  Paris). Teams, score, shoot-out note and figures are unchanged.
+- Nothing lost: competition, season, round, previous, next, picker, report, bookmark, back link, date and time all
+  stay on the page.
+
+Failure modes (E2E, `match-tabs.e2e.mjs`, the season's fixtures mocked: rounds 13, 14 and 15, four matches each, the
+match in round 14):
+
+- **R15** the top row: « Résultats », the competition's button naming « Ligue 1 », « 2026/2027 » and the round
+  (« 14ᵉ journée », the site's label), « Rapport du match », « Enregistrer »; no `.match-breadcrumb-row`, no `.scoreboard-meta`; the status holds the date.
+- **R16** the thread: the tiles are the six before and six after in kick-off order, the current one marked and fully
+  inside the strip's visible width.
+- **R17** « Match précédent » / « Match suivant » point at the neighbours and keep `view`.
+- **R18** the competition's button opens the picker on round 14, the current match marked.
+- **R19** at 393 px: no sideways scroll, the current tile visible.

@@ -647,7 +647,7 @@ await section("N", async () => {
   await shot(page, "desktop-nav");
 
   // The picker.
-  await bar.locator('button[aria-haspopup="dialog"]').click();
+  await page.locator(".match-head button[data-match-picker]").click(); // § 63.6: the competition's button opens the picker
   const picker = dialog(page);
   await picker.waitFor({ timeout: 10000 });
   const pressed = await picker.locator('[role="group"][aria-label="Journées"] button[aria-pressed="true"]').getAttribute("data-round").catch(() => null);
@@ -1033,7 +1033,7 @@ await section("P", async () => {
     const page = await open(phone, {});
     const bar = page.locator('nav[aria-label="Matchs de la compétition"]');
     await bar.waitFor({ timeout: 90000 });
-    await bar.locator('button[aria-haspopup="dialog"]').click();
+    await page.locator(".match-head button[data-match-picker]").click(); // § 63.6: the competition's button opens the picker
     await dialog(page).waitFor({ timeout: 10000 });
     await page.waitForTimeout(400);
     phoneOverflow.picker = await overflow(page);

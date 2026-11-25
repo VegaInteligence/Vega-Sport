@@ -1,32 +1,74 @@
-/* The match page's previous / next bar and its round picker (MatchNav). */
-.bar {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+/* The match page's head (MatchNav: FAILURE_MODES § 63.6, direction C): the top row, the thread of matches, the round
+   picker. */
+.top {
+  display: flex;
   align-items: center;
-  gap: 12px;
-  min-height: calc(var(--control-h) + 10px);
-  margin: -4px 0 0;
-  padding: 5px 0;
-  border-top: 1px solid var(--border);
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 16px;
 }
-
-/* ------------------------------------------------------------- previous / next */
-.step {
+.crumbs {
   display: flex;
   align-items: center;
   gap: 10px;
   min-width: 0;
-  min-height: var(--control-h);
-  padding: 0 10px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.crumbs > a {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
   color: var(--ink);
-  font-size: var(--text-md);
+  font-weight: 500;
+}
+.crumbs > a :global(.icon) {
+  width: 14px;
+}
+.slash {
+  flex: none;
+  color: var(--muted-light);
+}
+.actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ------------------------------------------------------------- the thread */
+.thread {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: stretch;
+  gap: 8px;
+  margin: 14px 0 16px;
+}
+.threadLoading {
+  height: 76px;
+  margin: 14px 0 16px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.step {
+  display: grid;
+  place-items: center;
+  width: var(--control-h);
+  border: 1px solid var(--border-strong);
+  color: var(--ink);
   text-decoration: none;
 }
 a.step:hover,
 a.step:focus-visible {
   background: var(--surface-hover);
 }
+.stepOff {
+  color: var(--muted-light);
+  opacity: 0.45;
+}
 a.step:focus-visible,
+.tile:focus-visible,
 .center:focus-visible,
 .row:focus-visible,
 .round:focus-visible,
@@ -36,22 +78,72 @@ a.step:focus-visible,
 }
 .step > :global(.icon),
 .step > svg {
-  flex: none;
   width: 16px;
   height: 16px;
-  color: var(--muted);
 }
-.stepNext {
-  flex-direction: row-reverse;
-}
-.stepTeams {
+.strip {
   display: flex;
-  align-items: center;
   gap: 8px;
   min-width: 0;
+  margin: 0;
+  padding: 0;
+  overflow-x: auto;
+  list-style: none;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  mask-image: linear-gradient(90deg, transparent, #000 24px, #000 calc(100% - 24px), transparent);
 }
-.stepName {
+.strip::-webkit-scrollbar {
+  display: none;
+}
+.strip > li {
+  flex: none;
+  scroll-snap-align: center;
+}
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 172px;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 9px 12px 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  text-decoration: none;
+}
+.tile:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-hover);
+}
+.tile[aria-current="page"] {
+  border-color: var(--home);
+  background: color-mix(in srgb, var(--home) 9%, var(--surface));
+}
+.tileHead {
   overflow: hidden;
+  color: var(--muted);
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.tile[aria-current="page"] .tileHead {
+  color: var(--home);
+}
+.tileSide {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  font-size: var(--text-sm);
+}
+.tileName {
+  overflow: hidden;
+  flex: 1;
   min-width: 0;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -105,6 +197,18 @@ a.step:focus-visible,
 }
 .centerDot {
   color: var(--muted-light);
+}
+.centerSeason {
+  color: var(--muted);
+  font-weight: 500;
+}
+.centerStatic {
+  cursor: default;
+}
+.center :global(.crest) {
+  flex: none;
+  width: var(--media-20);
+  height: var(--media-20);
 }
 
 /* ----------------------------------------------------------------------- picker */
@@ -291,25 +395,23 @@ a.step:focus-visible,
 }
 
 /* ------------------------------------------------------------------------ phone */
-@media (max-width: 900px) {
-  .stepName {
+@media (max-width: 640px) {
+  .crumbs {
+    gap: 6px;
+  }
+  .slash,
+  .centerSeason {
     display: none;
   }
-}
-@media (max-width: 640px) {
-  .bar {
-    gap: 4px;
-    margin-top: 0;
-    padding: 4px 0;
+  .thread {
+    grid-template-columns: minmax(0, 1fr);
+    margin: 12px 0 14px;
   }
-  .step {
-    gap: 6px;
-    min-height: var(--control-h);
-    padding: 0 4px;
-    font-size: var(--text-sm);
+  .thread > .step {
+    display: none;
   }
-  .stepTeams {
-    gap: 5px;
+  .tile {
+    width: 140px;
   }
   .kickoff {
     font-size: var(--text-xs);
@@ -317,10 +419,6 @@ a.step:focus-visible,
   .center {
     padding: 0 10px;
     font-size: var(--text-sm);
-  }
-  .centerName,
-  .centerDot {
-    display: none;
   }
   .picker {
     width: 100vw;

@@ -12,6 +12,8 @@
 // goal · R6 the finished match's strip in the Résumé · R7 the search in « Compositions » · R8 ten valued actions.
 // § 63.3 (hugo, 18 h 47): R9 no list under the shot map · R10 the best grades end with the shot map · R11 the
 // competition page's block in « Classement ». § 63.4 (Codex): R13 a blocked shot is not « Cadré ». § 63.5: R14 eight best grades.
+// § 63.6 (hugo chose direction C of the head's mock-up): R15 the top row · R16 the thread of matches · R17 previous /
+// next keep the view · R18 the competition's button opens the picker · R19 the head on a phone.
 //
 // Failure modes (§ 62.2): M1 tabs and default · M2 Résumé's blocks · M3 the three views of « Le match minute par
 // minute » · M4 one view only · M5 (now R9) · M6 « Tous les joueurs » and the board in Compositions ·
@@ -108,6 +110,23 @@ const grades = { grades: players.map((p, i) => ({
   playerId: "p_gr" + String(i).padStart(4, "0"), grade: 45 - i * 2, rank: 5 + i, name: "Joueur noté " + (i + 1),
   team: i % 2 ? AWAY.name : HOME.name, teamId: (i % 2 ? AWAY : HOME).id, minutes: 90,
 }))) };
+// The season's fixtures (§ 63.6): rounds 13, 14 and 15, four matches each, the match second of round 14.
+const H = 3600_000, D = 24 * H;
+const CLUBS = ["Marseille", "Lyon", "Monaco", "Lille", "Rennes", "Nice", "Lens", "Nantes", "Brest", "Toulouse", "Reims", "Auxerre",
+  "Angers", "Metz", "Le Havre", "Strasbourg", "Paris FC", "Montpellier", "Saint-Étienne", "Ajaccio", "Troyes", "Bordeaux"];
+const FIXTURES = [13, 14, 15].flatMap((round, r) => [0, 1, 2, 3].map((k) => {
+  const at = PROBABLE_KICKOFF + (r - 1) * 7 * D + (k - 1) * 2 * H;
+  if (round === 14 && k === 1)
+    return { id, date: new Date(at).toISOString().slice(0, 10), time_utc: new Date(at).toISOString(), status: "finished", round_name: "14",
+      home_team: { id: HOME.id, name: HOME.name }, away_team: { id: AWAY.id, name: AWAY.name }, score_home: 2, score_away: 0 };
+  const n = r * 8 + k * 2;
+  const played = round < 15;
+  return { id: `m_fx${round}${k}`, date: new Date(at).toISOString().slice(0, 10), time_utc: new Date(at).toISOString(),
+    status: played ? "finished" : "not_started", round_name: String(round),
+    home_team: { id: "t_fx" + n, name: CLUBS[n % CLUBS.length] }, away_team: { id: "t_fx" + (n + 1), name: CLUBS[(n + 1) % CLUBS.length] },
+    score_home: played ? k % 3 : null, score_away: played ? 1 : null };
+}));
+const ORDER = FIXTURES.map((m) => m.id);
 const momentum = { points: Array.from({ length: 90 }, (_, i) => ({ minute: i + 1, value: Math.round(Math.sin(i / 6) * 60) })) };
 const forecast = {
   match: id, points: Array.from({ length: 91 }, (_, minute) => {
@@ -176,6 +195,11 @@ async function setup(label, device, plan = {}) {
   await context.route(/\/api\/rankings\/match\?/, (route) => reply(route, grades));
   await context.route(/\/api\/forecasts\/season\?/, (route) => reply(route, projection));
   await context.route("**/live/config", (route) => reply(route, { enabled: false }));
+  await context.route(/\/api\/fixtures\?/, (route) => {
+    const q = new URL(route.request().url()).searchParams;
+    if (q.get("league") !== "l_3FJFUl" || q.get("status") !== "all") return route.fallback();
+    return reply(route, { data: { matches: FIXTURES }, pagination: { generation: "e2e", nextCursor: null } });
+  });
   page.on("request", (request) => {
     const url = new URL(request.url());
     if (url.href.includes(id)) run.requests.push(url.pathname + url.search);
@@ -212,6 +236,56 @@ try {
       await f.go();
       await settle(page, "Le match minute par minute");
       await page.screenshot({ path: join(out, "resume-bureau.png"), fullPage: true });
+
+      await check("R15 the head's top row, no breadcrumb row, the date in the status",
+        { back: "Résultats", competition: ["Ligue 1", "2026/2027", "14ᵉ journée"], report: 1, bookmark: 1, oldRows: 0, status: "Terminé · 28 nov. 2026" }, async () => {
+          const head = page.locator(".match-head");
+          await head.waitFor();
+          const button = head.locator("button[data-match-picker]");
+          await button.waitFor();
+          const name = (await button.textContent()).replace(/\s+/g, " ").trim();
+          const got = {
+            back: (await head.locator("a").first().textContent()).replace(/[←\s]+/g, " ").trim(),
+            competition: ["Ligue 1", "2026/2027", "14ᵉ journée"].filter((t) => name.includes(t)),
+            report: await head.getByRole("link", { name: "Rapport du match" }).count(),
+            bookmark: await head.getByRole("button", { name: /Enregistrer/ }).count(),
+            oldRows: await page.locator(".match-breadcrumb-row, .scoreboard-meta").count(),
+            status: ((await page.locator(".match-scoreboard .match-status").textContent()) || "").replace(/\s+/g, " ").trim().slice(0, 22),
+          };
+          await page.locator(".match-head").screenshot({ path: join(out, "haut-de-page-bureau.png") });
+          assert.deepEqual(got, { back: "Résultats", competition: ["Ligue 1", "2026/2027", "14ᵉ journée"], report: 1, bookmark: 1, oldRows: 0, status: "Terminé · 28 nov. 2026" });
+          return { ...got, name };
+        });
+
+      await check("R16 the thread: six before, six after, the current one marked and in view", { tiles: ORDER, current: id, inView: true }, async () => {
+        const thread = page.locator('nav[aria-label="Matchs de la compétition"]');
+        await thread.locator("[data-match-tile]").first().waitFor();
+        const tiles = await thread.locator("[data-match-tile]").evaluateAll((a) => a.map((x) => x.getAttribute("data-match-tile")));
+        const current = await thread.locator('[data-match-tile][aria-current="page"]').getAttribute("data-match-tile");
+        const inView = await thread.evaluate((nav) => {
+          const strip = nav.querySelector("[data-match-strip]"), tile = nav.querySelector('[aria-current="page"]');
+          const a = strip.getBoundingClientRect(), b = tile.getBoundingClientRect();
+          return b.left >= a.left - 1 && b.right <= a.right + 1;
+        });
+        const got = { tiles, current, inView };
+        assert.deepEqual(got, { tiles: ORDER, current: id, inView: true });
+        return got;
+      });
+
+      await check("R18 the competition's button opens the picker on round 14", { round: "regular:14", current: 1 }, async () => {
+        await page.locator(".match-head button[data-match-picker]").click();
+        const dialog = page.getByRole("dialog");
+        await dialog.waitFor();
+        const got = {
+          round: await dialog.locator('[role="group"][aria-label="Journées"] button[aria-pressed="true"]').getAttribute("data-round"),
+          current: await dialog.locator('a[aria-current="page"]').count(),
+        };
+        await page.screenshot({ path: join(out, "haut-de-page-selecteur.png") });
+        await page.keyboard.press("Escape");
+        await dialog.waitFor({ state: "detached" }).catch(() => {});
+        assert.deepEqual(got, { round: "regular:14", current: 1 });
+        return got;
+      });
 
       await check("M1/R1 six tabs, « Résumé » selected, no view in the address", { tabs: TABS, selected: "Résumé", view: null },
         async () => {
@@ -452,6 +526,15 @@ try {
         assert.deepEqual(got, { shots: "Résumé", players: "Compositions", standings: "Classement", stats: "Statistiques" });
         return got;
       });
+      await check("R17 previous and next point at the neighbours and keep the view", { previous: ORDER[4], next: ORDER[6], view: "stats" }, async () => {
+        const thread = page.locator('nav[aria-label="Matchs de la compétition"]');
+        await thread.locator('a[aria-label^="Match précédent"]').waitFor();
+        const hrefOf = async (label) => new URL(await thread.locator(`a[aria-label^="${label}"]`).getAttribute("href"), base).searchParams;
+        const prev = await hrefOf("Match précédent"), next = await hrefOf("Match suivant");
+        const got = { previous: prev.get("id"), next: next.get("id"), view: prev.get("view") === "stats" && next.get("view") === "stats" ? "stats" : null };
+        assert.deepEqual(got, { previous: ORDER[4], next: ORDER[6], view: "stats" });
+        return got;
+      });
       run.pageErrors = [...run.errors];
     } finally {
       await f.close();
@@ -518,11 +601,17 @@ try {
   {
     const f = await setup("phone", mobile);
     try {
-      await check("M11 phone: no sideways scroll on Résumé and Compositions", { resume: 0, lineups: 0 }, async () => {
+      await check("M11/R19 phone: no sideways scroll on Résumé and Compositions, the current tile visible", { resume: 0, lineups: 0 }, async () => {
         await f.go();
         await settle(f.page, "Le match minute par minute");
         const resume = await sideways(f.page);
         await f.page.screenshot({ path: join(out, "resume-telephone.png"), fullPage: true });
+        // R19 (§ 63.6): the head on a phone, the current tile visible.
+        const tile = f.page.locator('nav[aria-label="Matchs de la compétition"] [aria-current="page"]');
+        await tile.waitFor();
+        const box = await tile.boundingBox();
+        await f.page.locator(".match-head").screenshot({ path: join(out, "haut-de-page-telephone.png") });
+        assert.ok(box && box.x >= 0 && box.x + box.width <= 393 + 1, "R19 current tile " + JSON.stringify(box));
         await f.go("lineups");
         await settle(f.page);
         await f.page.locator("table.data-table").waitFor();

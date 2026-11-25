@@ -1043,66 +1043,12 @@ select optgroup {
 .match-workspace {
   padding-top: 20px;
 }
-.match-breadcrumb-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 14px;
-}
-.match-breadcrumb {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  color: var(--muted);
-  font-size: var(--text-sm);
-}
-.match-breadcrumb > .icon {
-  width: 12px;
-  color: var(--muted-light);
-}
-.match-breadcrumb a {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--ink);
-  font-weight: 500;
-}
-.match-breadcrumb a .icon {
-  width: 14px;
-}
 .match-scoreboard {
   overflow: hidden;
   border: 0;
   border-top: 1px solid var(--border-strong);
   border-radius: var(--radius-xl);
   background: none;
-}
-.scoreboard-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding: 14px 20px 0;
-  color: var(--muted);
-  font-size: var(--text-sm);
-}
-.scoreboard-meta > div {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--ink-strong);
-  font-size: var(--text-md);
-  font-weight: 600;
-}
-.scoreboard-meta .crest {
-  width: var(--media-24);
-  height: var(--media-24);
-}
-.scoreboard-meta .crest img {
-  padding: 0;
 }
 .scoreboard-main {
   display: grid;
@@ -2244,27 +2190,6 @@ select optgroup {
   }
   .match-workspace {
     padding-top: 16px;
-  }
-  .match-breadcrumb-row {
-    flex-wrap: wrap;
-    align-items: flex-start;
-    gap: 10px;
-  }
-  .match-breadcrumb {
-    gap: 6px;
-    font-size: var(--text-xs);
-  }
-  .scoreboard-meta {
-    gap: 8px;
-    padding: 12px 14px 0;
-    font-size: var(--text-xs);
-  }
-  .scoreboard-meta > div {
-    font-size: var(--text-sm);
-  }
-  .scoreboard-meta .crest {
-    width: var(--media-20);
-    height: var(--media-20);
   }
   .scoreboard-main {
     gap: 8px;

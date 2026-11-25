@@ -459,8 +459,10 @@ export default function MatchDetail({ match }) {
     ["upcoming", "calendar"].includes(search.get("from")) || upcoming;
   return (
     <div className="match-detail">
-      <div className="match-breadcrumb-row">
-        <nav className="match-breadcrumb" aria-label="Fil d’Ariane du match">
+      <MatchNav
+        match={match}
+        competition={competition}
+        back={
           <BackLink
             href={
               fromUpcoming
@@ -473,50 +475,41 @@ export default function MatchDetail({ match }) {
                     ...(search.get("week") ? { week: search.get("week") } : {}),
                   })
             }
+            className="match-head-back"
             prefix={<Icon name="back" />}
             label={fromUpcoming ? "Matchs à venir" : "Résultats"}
           />
-          <Icon name="right" />
-          <span>{match.league || competition?.name || "Compétition"}</span>
-          <Icon name="right" />
-          <span>{match.season || f.season}</span>
-        </nav>
-        <div className="match-breadcrumb-actions">
-          <Link
-            className="inline-link"
-            href={f.href("/rapport/", { id: match.id })}
-          >
-            Rapport du match →
-          </Link>
-          <BookmarkButton
-            kind="matches"
-            id={match.id}
-            name={`${homeName} – ${awayName}`}
-            season={seasonLabel(match.season || f.season)}
-          />
-        </div>
-      </div>
-      <MatchNav match={match} competition={competition} />
+        }
+        logo={
+          (competition || match.editionArtwork) && (
+            <Media
+              url={editionArtworkUrl(
+                match.leagueId,
+                competition?.imageUrl,
+                match.editionArtwork,
+              )}
+              initials={false}
+            />
+          )
+        }
+        actions={
+          <>
+            <Link
+              className="button button-secondary match-report-link"
+              href={f.href("/rapport/", { id: match.id })}
+            >
+              Rapport du match
+            </Link>
+            <BookmarkButton
+              kind="matches"
+              id={match.id}
+              name={`${homeName} – ${awayName}`}
+              season={seasonLabel(match.season || f.season)}
+            />
+          </>
+        }
+      />
       <section className="match-scoreboard" aria-label="Résumé du match">
-        <div className="scoreboard-meta">
-          <div>
-            {(competition || match.editionArtwork) && (
-              <Media
-                url={editionArtworkUrl(
-                  match.leagueId,
-                  competition?.imageUrl,
-                  match.editionArtwork,
-                )}
-                initials={false}
-              />
-            )}
-            <span>{match.league || competition?.name}</span>
-          </div>
-          <span>
-            {date(match.timeUtc || match.date)}
-            {time && <> · {time}</>}
-          </span>
-        </div>
         <h1 className="sr-only">
           {homeName} — {awayName}
         </h1>
@@ -540,6 +533,9 @@ export default function MatchDetail({ match }) {
             >
               <span />
               {status}
+              {/* The date in the status line (§ 63.6): the scoreboard has no line above the teams. */}
+              {(match.timeUtc || match.date) && <> · {date(match.timeUtc || match.date)}</>}
+              {time && !upcoming && <> · {time}</>}
             </span>
             <div
               className="scoreboard-score"
