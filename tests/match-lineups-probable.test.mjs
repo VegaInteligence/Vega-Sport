@@ -115,3 +115,44 @@ test("61r: the line-ups are read again from 90 min before to 30 min after kick-o
   assert.equal(lineupsWatched(match, provider({ confirmed: true }, { confirmed: true }), kickoff - 10 * min), false);
   assert.equal(lineupsWatched({ status: "not_started", timeUtc: null }, null, kickoff), false);
 });
+
+// § 67 (PSG – Roma in play, 25 Nov 2026): the line-up's own photos, and « incohérentes » only on statistics that exist.
+test("R29: each official player takes the line-up's own photo when no statistics row, grade or probable eleven has one", async () => {
+  const payload = provider(
+    { confirmed: true, starters: [starter("p_h1", "Home One", { image_url: "https://img/h1.webp" }), starter("p_h2", "Home Two", { image_url: null })],
+      subs: [starter("p_h3", "Home Three", { image_url: "https://img/h3.webp" })] },
+    { confirmed: true, starters: [starter("p_a1", "Away One", { image_url: "https://img/a1.webp" })] },
+  );
+  const bare = lineupView(payload, [], [], new Map(), new Map());
+  assert.deepEqual(bare.home.starters.map((p) => p.imageUrl), ["https://img/h1.webp", null]);
+  assert.deepEqual(bare.home.bench.map((p) => p.imageUrl), ["https://img/h3.webp"]);
+  assert.deepEqual(bare.away.starters.map((p) => p.imageUrl), ["https://img/a1.webp"]);
+  // A statistics row's photo still comes first, then the grade's; our probable eleven's fills a player the line-up has none of.
+  const rows = [{ id: "p_h1", imageUrl: "https://img/row.webp" }];
+  const grades = new Map([["p_a1", { imageUrl: "https://img/grade.webp", grade: 70 }]]);
+  const view = lineupView(payload, [], rows, grades, new Map([["p_h2", "https://img/probable.webp"], ["p_h1", "https://img/old.webp"]]));
+  assert.deepEqual(view.home.starters.map((p) => p.imageUrl), ["https://img/row.webp", "https://img/probable.webp"]);
+  assert.deepEqual(view.away.starters.map((p) => p.imageUrl), ["https://img/grade.webp"]);
+});
+
+test("R30: « incohérentes » only when the flag is false and the match has team statistics", async () => {
+  const { teamStatsFlagged } = await import("../dashboard/frontend/src/services/match-tabs.js");
+  const psgRoma = { id: "m_36394c", status: "in_play", coverage: { teamStatsReliable: false, shots: false }, stats: [] };
+  assert.equal(teamStatsFlagged(psgRoma), false);
+  assert.equal(teamStatsFlagged({ ...psgRoma, stats: undefined }), false);
+  assert.equal(teamStatsFlagged({ ...psgRoma, coverage: undefined }), false);
+  assert.equal(teamStatsFlagged(null), false);
+  const row = { key: "total_shots", home: 0, away: 0 };
+  assert.equal(teamStatsFlagged({ ...psgRoma, coverage: { teamStatsReliable: true }, stats: [row] }), false);
+  assert.equal(teamStatsFlagged({ ...psgRoma, coverage: {}, stats: [row] }), false);
+  assert.equal(teamStatsFlagged({ ...psgRoma, stats: [row] }), true);
+});
+
+test("R31: the match page's « incohérent » warnings read teamStatsFlagged, never the flag itself", async () => {
+  const { readFile } = await import("node:fs/promises");
+  for (const file of ["MatchDetail.jsx", "MatchSections.jsx"]) {
+    const source = await readFile(new URL(`../dashboard/frontend/src/components/${file}`, import.meta.url), "utf8");
+    assert.doesNotMatch(source, /teamStatsReliable\s*===\s*false/, file);
+    assert.match(source, /teamStatsFlagged\(match\)/, file);
+  }
+});
