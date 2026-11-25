@@ -30,7 +30,11 @@ export function matchdayGroups(matches, rounds) {
   const grouped = new Map();
   for (const match of matches || []) {
     const round = rounds?.[match.id];
-    const name = round?.name != null ? String(round.name).trim() : "";
+    const raw = round?.name != null ? String(round.name).trim() : "";
+    // The base names a league phase's round « 3 » or « League Stage - Round 3 »: one round,
+    // named by its number, labelled as the league phase when one of its rows says so (§ 64).
+    const stage = /^League Stage - Round (\d+)$/i.exec(raw);
+    const name = stage ? String(Number(stage[1])) : raw;
     const key = name
       ? `${round.playoff ? "playoff" : "regular"}:${name}`
       : "unknown";
@@ -40,11 +44,13 @@ export function matchdayGroups(matches, rounds) {
         name,
         playoff: Boolean(round?.playoff),
         label: name
-          ? roundLabel(name, round.playoff)
+          ? roundLabel(raw, round.playoff)
           : "Journée non renseignée",
         matches: [],
       });
-    grouped.get(key).matches.push(match);
+    const group = grouped.get(key);
+    if (stage) group.label = roundLabel(raw, round.playoff);
+    group.matches.push(match);
   }
   const groups = [...grouped.values()];
   for (const group of groups) {

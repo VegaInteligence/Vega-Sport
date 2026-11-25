@@ -14,6 +14,7 @@
 // competition page's block in « Classement ». § 63.4 (Codex): R13 a blocked shot is not « Cadré ». § 63.5: R14 eight best grades.
 // § 63.6 (hugo chose direction C of the head's mock-up): R15 the top row · R16 the thread of matches · R17 previous /
 // next keep the view · R18 the competition's button opens the picker · R19 the head on a phone.
+// § 64 (hugo, 19 h 39): R26 each team in its crest's colour, blue and violet without one.
 //
 // Failure modes (§ 62.2): M1 tabs and default · M2 Résumé's blocks · M3 the three views of « Le match minute par
 // minute » · M4 one view only · M5 (now R9) · M6 « Tous les joueurs » and the board in Compositions ·
@@ -23,13 +24,34 @@ import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { join } from "node:path";
+import { deflateSync } from "node:zlib";
 import { PROBABLE_KICKOFF, PROBABLE_MATCH_ID, serveLineups } from "./support/probable.mjs";
 
 const [base, out] = process.argv.slice(2);
 const { chromium, devices } = createRequire(import.meta.url)(process.env.PLAYWRIGHT_CORE || "playwright");
 const id = PROBABLE_MATCH_ID;
 const api = "/api/matches/" + id;
-const HOME = { id: "t_41iFW3", name: "Paris Saint-Germain" }, AWAY = { id: "t_2lHmy6", name: "Lorient" };
+// The crests' copies (§ 64): PSG navy with a red band, Lorient orange with white, each on a transparent ground.
+// As the API gives them: the provider's address, whose copy the site reads by the same file name.
+const PROVIDER = "https://cdn.pitchapi.dev/images/teams/";
+const CREST = { home: "1".repeat(64) + ".png", away: "2".repeat(64) + ".png" };
+const HOME = { id: "t_41iFW3", name: "Paris Saint-Germain", imageUrl: PROVIDER + CREST.home };
+const AWAY = { id: "t_2lHmy6", name: "Lorient", imageUrl: PROVIDER + CREST.away };
+/** A 40×40 RGBA PNG: `paint(x, y)` gives each pixel. */
+function png(paint) {
+  const size = 40, raw = Buffer.alloc((size * 4 + 1) * size);
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) raw.set(paint(x, y), y * (size * 4 + 1) + 1 + x * 4);
+  const table = Array.from({ length: 256 }, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
+  const crc = (buf) => { let c = 0xffffffff; for (const b of buf) c = table[(c ^ b) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
+  const chunk = (type, data) => { const head = Buffer.alloc(8); head.writeUInt32BE(data.length); head.write(type, 4); const tail = Buffer.alloc(4); tail.writeUInt32BE(crc(Buffer.concat([head.subarray(4), data]))); return Buffer.concat([head, data, tail]); };
+  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(size, 0); ihdr.writeUInt32BE(size, 4); ihdr.set([8, 6, 0, 0, 0], 8);
+  return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk("IHDR", ihdr), chunk("IDAT", deflateSync(raw)), chunk("IEND", Buffer.alloc(0))]);
+}
+const inside = (x, y) => (x - 19.5) ** 2 + (y - 19.5) ** 2 < 18 ** 2;
+const CREST_PNG = {
+  [CREST.home]: png((x, y) => (!inside(x, y) ? [0, 0, 0, 0] : x >= 16 && x < 24 ? [218, 41, 28, 255] : [0, 65, 112, 255])),
+  [CREST.away]: png((x, y) => (!inside(x, y) ? [0, 0, 0, 0] : y < 12 ? [255, 255, 255, 255] : [241, 117, 27, 255])),
+};
 const kickoff = new Date(PROBABLE_KICKOFF).toISOString();
 const TABS = ["Résumé", "Compositions", "Statistiques", "Analyses", "Classement", "Avant-match"];
 
@@ -157,7 +179,7 @@ async function check(name, expected, run) {
     result.actual = await run();
     result.passed = true;
   } catch (error) {
-    result.actual = error.message.split("\n").slice(0, 6).join("\n");
+    result.actual = error.message.split("\n").slice(0, 24).join("\n");
     result.passed = false;
   }
   process.stdout.write((result.passed ? "PASS " : "FAIL ") + name + (result.passed ? "" : " — " + result.actual.split("\n")[0]) + "\n");
@@ -165,7 +187,7 @@ async function check(name, expected, run) {
 
 /** A page on the match, its families mocked. `plan`: { status, minutes (from kick-off), roundName, forecast, momentum }. */
 async function setup(label, device, plan = {}) {
-  const { status = "finished", minutes = 300, forecast: withForecast = true, momentum: withMomentum = true, roundName } = plan;
+  const { status = "finished", minutes = 300, forecast: withForecast = true, momentum: withMomentum = true, roundName, crests = true } = plan;
   const context = await browser.newContext({ ...device, locale: "fr-FR", colorScheme: "dark" });
   const page = await context.newPage();
   const run = { label, plan, requests: [], errors: [] };
@@ -195,6 +217,17 @@ async function setup(label, device, plan = {}) {
   await context.route(/\/api\/rankings\/match\?/, (route) => reply(route, grades));
   await context.route(/\/api\/forecasts\/season\?/, (route) => reply(route, projection));
   await context.route("**/live/config", (route) => reply(route, { enabled: false }));
+  // The crests: their copies on the site's origin (§ 64); `crests: false` leaves them unreadable.
+  await context.route(/\/api\/crest\//, (route) => {
+    const file = route.request().url().split("/").pop();
+    return crests && CREST_PNG[file]
+      ? route.fulfill({ status: 200, contentType: "image/png", body: CREST_PNG[file] })
+      : route.fulfill({ status: 404, body: "" });
+  });
+  await context.route(/dngp6kh9jx2bl\.cloudfront\.net\/data\//, (route) => {
+    const file = route.request().url().split("/").pop();
+    return CREST_PNG[file] ? route.fulfill({ status: 200, contentType: "image/png", body: CREST_PNG[file] }) : route.fallback();
+  });
   await context.route(/\/api\/fixtures\?/, (route) => {
     const q = new URL(route.request().url()).searchParams;
     if (q.get("league") !== "l_3FJFUl" || q.get("status") !== "all") return route.fallback();
@@ -224,6 +257,15 @@ const settle = async (page, title) => {
   }
   await page.waitForTimeout(400);
 };
+/** The match page's --home / --away and the hue each gives (null: not a crest's colour). */
+const teamColours = (page) => page.evaluate(() => {
+  const style = getComputedStyle(document.querySelector(".match-detail"));
+  const hue = (v) => { const m = /^light-dark\(hsl\(([\d.]+) /.exec(v); return m ? Number(m[1]) : null; };
+  const home = style.getPropertyValue("--home").trim(), away = style.getPropertyValue("--away").trim();
+  // A shot's tooltip is drawn in document.body (§ 64, Codex): the charts' colours are there too.
+  const body = getComputedStyle(document.body);
+  return { home, away, homeHue: hue(home), awayHue: hue(away), bodyHome: body.getPropertyValue("--chart-home").trim(), bodyAway: body.getPropertyValue("--chart-away").trim() };
+});
 const sideways = (page) => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 const viewOf = (page) => new URL(page.url()).searchParams.get("view");
 
@@ -269,6 +311,16 @@ try {
         });
         const got = { tiles, current, inView };
         assert.deepEqual(got, { tiles: ORDER, current: id, inView: true });
+        return got;
+      });
+
+      await check("R26 each team in its crest's colour: PSG's navy, Lorient's orange", { homeHue: "200–220", awayHue: "20–35" }, async () => {
+        await page.waitForFunction(() => /^light-dark/.test(getComputedStyle(document.querySelector(".match-detail")).getPropertyValue("--away").trim()), null, { timeout: 10000 }).catch(() => {});
+        const got = await teamColours(page);
+        await page.locator(".match-scoreboard").screenshot({ path: join(out, "couleurs-logos-bureau.png") });
+        assert.ok(got.homeHue >= 200 && got.homeHue <= 220, `home ${got.home}`);
+        assert.ok(got.awayHue >= 20 && got.awayHue <= 35, `away ${got.away}`);
+        assert.deepEqual([got.bodyHome, got.bodyAway], [got.home, got.away], "the tooltip's colours on body");
         return got;
       });
 
@@ -499,6 +551,8 @@ try {
           await page.waitForURL((url) => url.searchParams.get("view") === "standings");
           const views = panel(page).getByRole("group", { name: "Vue de la compétition" });
           await views.waitFor();
+          // « Projection » appears once the season's projection is read: a miss stays a miss below.
+          await views.getByRole("button", { name: "Projection", exact: true }).waitFor({ timeout: 30000 }).catch(() => {});
           const names = (await views.locator("button").allInnerTexts()).map((t) => t.trim());
           await panel(page).locator(".competition-standings table.standings-table").first().waitFor({ timeout: 30000 });
           await page.screenshot({ path: join(out, "classement-bureau.png"), fullPage: true });
@@ -546,10 +600,16 @@ try {
 
   // ------------------------------------------------------------------ no forecast, no momentum
   {
-    const f = await setup("xg-only", desktop, { forecast: false, momentum: false });
+    const f = await setup("xg-only", desktop, { forecast: false, momentum: false, crests: false });
     try {
       await f.go();
       await settle(f.page, "Le match minute par minute");
+      await check("R26 crests that cannot be read: blue and violet", { home: "#7fb0ff", away: "#b9a8f0" }, async () => {
+        await f.page.waitForTimeout(1500);
+        const got = await teamColours(f.page);
+        assert.deepEqual({ home: got.home, away: got.away }, { home: "#7fb0ff", away: "#b9a8f0" });
+        return got;
+      });
       await check("M4 no forecast and no momentum: « xG cumulés » alone, drawn", { choices: [], chart: "svg.xg-timeline" }, async () => {
         const card = panel(f.page).locator(".card", { has: f.page.locator(".card-title", { hasText: "Le match minute par minute" }) });
         await card.locator("svg.xg-timeline").waitFor();

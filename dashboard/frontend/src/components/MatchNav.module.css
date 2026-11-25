@@ -117,9 +117,10 @@ a.step:focus-visible,
   border-color: var(--border-strong);
   background: var(--surface-hover);
 }
+/* The site's accent, not a team's colour (the page's --home is the home crest's, § 64). */
 .tile[aria-current="page"] {
-  border-color: var(--home);
-  background: color-mix(in srgb, var(--home) 9%, var(--surface));
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 9%, var(--surface));
 }
 .tileHead {
   overflow: hidden;
@@ -132,7 +133,7 @@ a.step:focus-visible,
   text-overflow: ellipsis;
 }
 .tile[aria-current="page"] .tileHead {
-  color: var(--home);
+  color: var(--accent);
 }
 .tileSide {
   display: flex;

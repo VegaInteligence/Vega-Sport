@@ -5495,3 +5495,45 @@ Failure modes:
 - **R21** (`match-tabs.e2e.mjs`) « Classement »: the table marks PSG's and Lorient's rows (`data-match-team`).
 - (b) has no E2E of its own here (it needs a manifest whose season is not the site's); it is the former loader's code,
   moved unchanged and called the same way.
+
+## 64. The match page in production: a round twice, and the teams' colours (hugo, 25 Nov 2026, 19 h 39; written before the tests)
+
+hugo, on the round picker of a Champions League match: « pq j'ai deux fois 3 et phase de ligue 3e journée », then
+« plutôt que d'avoir bleu et violet est-ce qu'on peut pas déduire des couleurs avec chaque couleur dominante du logo et
+si on a pas on reprend bleu et violet ».
+
+### 64.1 Rules
+
+- **One round, one chip.** The base names a European league phase's round two ways, « 3 » and « League Stage - Round 3 »
+  (`backend/api/src/routes/home.mjs` reads both). `matchdayGroups` puts both in one round: the number is its name (its
+  chip reads « 3 », it sorts with the numbered rounds) and its label keeps « Phase de ligue · 3ᵉ journée » when one of
+  its rows said so. A play-off round stays apart from the regular one of the same number (§ existing test).
+- **Each team in its crest's colour.** On the match page, `--home` and `--away` take the dominant colour of each
+  team's crest: the most frequent coloured hue of its opaque pixels (white, black and greys are not a colour), when it
+  covers at least 8 % of them. The hue and saturation are the crest's; the lightness is set per theme so the colour
+  reads on the page (dark theme 62–72 %, light theme 34–44 %).
+- **Fallback.** No crest, a crest that cannot be read, or a crest with no colour (black and white, grey): that side
+  keeps today's colour (home blue, away violet).
+- **Two colours that clash** (hues less than 40° apart): the away side takes its crest's second colour when it has one
+  far enough; otherwise its fallback (violet, or blue when the home colour is itself near violet).
+- **Codex's review of PR #229** (checked against the code): (a) a home colour between the theme's blue and violet
+  (215°–255°) with an away crest as close clashed with both fallbacks and the away side kept violet: the opposite hue
+  of the home colour comes last; (b) a shot's tooltip is drawn in `document.body` (`HoverCard.jsx`), outside the page
+  that holds the colours: `--chart-home` / `--chart-away` are also set on `body` while the match page is open.
+- **Reading the crest.** A crest copy lives on the API's image host, which sends no CORS header, so a canvas cannot read
+  it. The site serves the same file from its own origin (`/api/crest/data/sources/…/<hash>.<ext>`: only an address
+  `safeResolvedMedia` accepts, fetched from `${API_ORIGIN}`, cached a year: the name is the content's hash).
+
+### 64.2 Failure modes and expected outcomes
+
+- **R22** (`tests/competition-matchdays.test.mjs`) « 3 » and « League Stage - Round 3 » make one round: key
+  `regular:3`, name « 3 », label « Phase de ligue · 3ᵉ journée », both matches in it; « 4 » after it.
+- **R23** (`tests/crest-colours.test.mjs`) a crest mostly red with white gives red; a black-and-white crest gives no
+  colour; transparent pixels do not count; a crest with two colours gives both, the larger first.
+- **R24** (same file) two clashing reds: the away side takes its second colour, or its fallback when it has none; a
+  side with no colour keeps its fallback; two 235° crests: the away side takes 55°; the lightness of each theme stays
+  in its range.
+- **R25** (`tests/crest-route.test.mjs`) the crest route serves only an image copy's address (`data/sources/…/<hash>.
+  (webp|png|jpg)`), anything else is 404 without a fetch; a served file is `immutable`.
+- **R26** (`match-tabs.e2e.mjs`) the match page sets `--home` and `--away` from the crests (PSG's blue, Lorient's
+  orange in the mocks), and keeps blue and violet when the crests do not load.
