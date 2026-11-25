@@ -400,7 +400,8 @@ export function Finishing({ leaders, scopeIds, favourites = null }) {
   );
 }
 
-/** Season scorers and assist providers, switched like the finishing card. */
+/** Season scorers and assist providers, switched like the finishing card. A row opens
+ * the player's page, not his last match. */
 export function SeasonScorers({ leaders, scopeIds, favourites = null }) {
   const f = useFootball(),
     [mode, setMode] = useState("goals");
@@ -433,7 +434,7 @@ export function SeasonScorers({ leaders, scopeIds, favourites = null }) {
             data-player-id={p.playerId}
             data-followed={favourites?.has(p.playerId) || undefined}
           >
-            <button type="button" onClick={() => f.setPlayer(p.lastId)}>
+            <Link href={f.href("/joueurs/", { id: p.playerId })}>
               <span className="home-scorer-rank">{i + 1}</span>
               <Media
                 name={p.name}
@@ -449,7 +450,7 @@ export function SeasonScorers({ leaders, scopeIds, favourites = null }) {
                 </small>
               </span>
               <b>{number(goals ? p.goals : p.assists)}</b>
-            </button>
+            </Link>
           </li>
         ))}
       </ol>
