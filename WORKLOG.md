@@ -1,5 +1,11 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Alignement de la navbar Safari / Chromium / Firefox — 25 novembre 2026
+
+- Hugo valide l’astérisque de 25 × 28 px, aligné à gauche, et demande la correction sur ordinateur et mobile. Safari réservait 285 px au lien. Direction visuelle approuvée dans le cadre de [VI-61](https://linear.app/vegainteligence/issue/VI-61), clos. Aucun correctif concurrent trouvé dans Linear. Branche locale `codex/navbar-cross-browser` depuis `c1b92abf`.
+- Correction CSS : dimensions explicites du logo, lien de 40 px sur ordinateur et 44 px sur téléphone. Safari macOS vérifié en clair et sombre, Safari iOS vérifié sur simulateur iPhone 17. E2E ajouté avant le CSS : 96/96 sous Chromium, Firefox et WebKit. Site 1 026/1 026 et compilation Next.js réussie.
+- Suite d’en-tête historique : 34/37, avec les mêmes trois échecs et mesures sur la production sans correctif et sur la branche. Preuves et commandes : `/Users/lemonnierhugo/.codex/visualizations/2026/11/25/01a2125d-5f78-7cf2-89b2-f12e7a7b5244/navbar-verification.md`. Correction locale, prête à intégrer.
+
 ## Fiche joueur d'un match : zéros affichés — 25 novembre 2026
 
 - [VI-153](https://linear.app/vegainteligence/issue/VI-153), [GitHub #213](https://github.com/VegaInteligence/Vega-Sport/issues/213). Maquette ordinateur et mobile validée par Hugo. Afficher les zéros établis et « Non renseigné » quand la mesure manque. Lecture du PostgreSQL de Vega uniquement. Réalisation directe dans Codex à la demande de Hugo.
