@@ -5649,9 +5649,32 @@ Two causes, read in the code (`m_36394c`, in play at the time):
 - **R32** (`tests/explorer.test.mjs`) the statistics and players sections of a match whose flag is false say
   « incohérentes » when it has team statistics and say nothing of the kind when it has none.
 
-## 68. A match graded as soon as its player statistics arrive (hugo, 25 Nov 2026, 21 h 37 Paris: « met cela en match », after Sabah FK – Barcelone stayed without grades; GitHub #236, VI-163; written before the tests)
+## 68. The teams' rank on « Le choc de la semaine » is the one of the match's competition (hugo, 25 Nov 2026, 21 h 50; written before the tests)
 
-Numbered after § 67 (PR #232). Measured on production, read only
+On the home page, « Le choc de la semaine » was Arsenal – Dortmund (Champions League): both teams read « 1er », their
+place in their own league (`ranks`: the home read's ranks exclude the cups, `home.mjs`). hugo: « je veux le rang de la
+compétition où a lieu le match ».
+
+### 68.1 Rules
+
+- **The match's competition.** A team's rank under its name is its place in the competition the match belongs to.
+  When the served rank is of that competition (`rank.leagueId` is the match's league), it is kept with its form, as
+  before. Otherwise the card reads the competition's table for the match's season (`/api/standings?competition=…&season=
+  …`, the table the competition's page shows: official, else computed from the results) and shows the team's
+  `position` there. That rank has no form beside it: the served form is of another competition.
+- **Never another competition's rank.** While that table loads, when it cannot be read or when the team is not in it,
+  no rank is shown.
+
+### 68.2 Failure modes and expected outcomes
+
+- **R28** (`tests/home-match-rank.test.mjs`) a Champions League match whose two teams have league ranks 1 and 1: the
+  card reads `/api/standings?competition=l_0bfbkO&season=2026%2F2027` and shows « 6e » and « 8e » without form; while it
+  loads, or when the table fails, no « 1er »; a Premier League match with league ranks: « 3e » and « 5e » with their
+  form, and no standings read.
+
+## 69. A match graded as soon as its player statistics arrive (hugo, 25 Nov 2026, 21 h 37 Paris: « met cela en match », after Sabah FK – Barcelone stayed without grades; GitHub #236, VI-163; written before the tests)
+
+Numbered after § 68 (PR #235). Measured on production, read only
 (`/mnt/project-files/notes-match-par-match/arrivals.py`, output `arrivals_run1.txt`, 25 Nov 2026):
 
 - Sabah FK – Barcelone (m_18IfVI): seen finished at 20:02:02 UTC, every detail family within 16 s, its 46 player
@@ -5671,7 +5694,7 @@ and the spread s), computes C (`match_contribution`) and the grade z against the
 upserts the year's grades and deletes every grade of the award year it did not compute. The contribution references are
 kept nowhere; `agg.team_elo` of a new match exists only after the next Elo pass.
 
-### 68.1 Rules
+### 69.1 Rules
 
 - **Graded by the step.** A match of a PitchAPI edition (`archive_key` and `cup_key` null), `finished`, kicked off in
   the last `WINDOW` = 3 days, its `player_stats` coverage `ok`, whose award year (1 August to 31 July of its date) has a
@@ -5718,26 +5741,26 @@ kept nowhere; `agg.team_elo` of a new match exists only after the next Elo pass.
   side process can be an hour into a season. A pass that fails is logged (`match grades error=<code>`) and the
   collection goes on; a pass that grades logs `match grades matches=<n> players=<m>`.
 
-### 68.2 Failure modes and expected outcomes
+### 69.2 Failure modes and expected outcomes
 
 Tests: `backend/tests/test_grades_on_arrival.py` (disposable local base `vega_v2_grades_test`, under `vega_calc` and
 `vega_read`; names carry the cases) and `backend/tests/test_worker.py`.
 
 | # | Situation | Expected |
 |---|---|---|
-| 68a | A match read by the year's run, its grades removed and its rows stamped after the run started (the race), then the step | every player-match graded again: the run's z (to 1e-4), role, minutes, team; `ref_season` and `run_id` the run's |
-| 68b | The same, the match also missing from `agg.team_elo` | the same z: the teams' last `elo_after` before the kick-off is the run's `elo_before` |
-| 68c | A substitute with no slot, a player whose blank statistic is published elsewhere in the edition | the run's role and the run's restored zero, so the run's z |
-| 68d | Not graded by the step: a match not finished; `player_stats` not `ok`; a cup edition; kicked off 4 days ago; rows older than the run's start; a year without a published run; a run without kept contribution references | no grade, no arrival row |
-| 68e | A second pass with nothing new | nothing written: same `changed_at`, same arrival row, no resource version moved |
-| 68f | The rows change again after the step | graded again with the new rows; `first_z` kept |
-| 68g | A run published after the step's grade, which did not read the match | its delete spares the step's grades; the step's next pass reads the match again and changes nothing |
-| 68h | A run that started after the step's grade and did not compute it (the row is gone from the year) | that grade deleted, as before |
-| 68i | A row of a third team; a row without any role | not graded; the match's other rows are |
-| 68j | What the step writes | the grades, the editions' sums equal to the run's formula, one arrival row, the match's and its edition's resource versions + 1; `agg.player_power`, `agg.player_power_matches`, `agg.player_contribution_refs` unchanged |
-| 68k | The players' grade status (`api.player_grade_status`) before and after the step | `pending`, then `graded` or `below_display_threshold` |
-| 68l | The run keeps its contribution references | one row per role and indicator the run fitted, of its run; the expectations rebuilt from them equal the run's (to 1e-9) |
-| 68m | The worker: a planning round; the step failing | the step called with the worker's clock; the failure logged with its code, the job taken |
+| 69a | A match read by the year's run, its grades removed and its rows stamped after the run started (the race), then the step | every player-match graded again: the run's z (to 1e-4), role, minutes, team; `ref_season` and `run_id` the run's |
+| 69b | The same, the match also missing from `agg.team_elo` | the same z: the teams' last `elo_after` before the kick-off is the run's `elo_before` |
+| 69c | A substitute with no slot, a player whose blank statistic is published elsewhere in the edition | the run's role and the run's restored zero, so the run's z |
+| 69d | Not graded by the step: a match not finished; `player_stats` not `ok`; a cup edition; kicked off 4 days ago; rows older than the run's start; a year without a published run; a run without kept contribution references | no grade, no arrival row |
+| 69e | A second pass with nothing new | nothing written: same `changed_at`, same arrival row, no resource version moved |
+| 69f | The rows change again after the step | graded again with the new rows; `first_z` kept |
+| 69g | A run published after the step's grade, which did not read the match | its delete spares the step's grades; the step's next pass reads the match again and changes nothing |
+| 69h | A run that started after the step's grade and did not compute it (the row is gone from the year) | that grade deleted, as before |
+| 69i | A row of a third team; a row without any role | not graded; the match's other rows are |
+| 69j | What the step writes | the grades, the editions' sums equal to the run's formula, one arrival row, the match's and its edition's resource versions + 1; `agg.player_power`, `agg.player_power_matches`, `agg.player_contribution_refs` unchanged |
+| 69k | The players' grade status (`api.player_grade_status`) before and after the step | `pending`, then `graded` or `below_display_threshold` |
+| 69l | The run keeps its contribution references | one row per role and indicator the run fitted, of its run; the expectations rebuilt from them equal the run's (to 1e-9) |
+| 69m | The worker: a planning round; the step failing | the step called with the worker's clock; the failure logged with its code, the job taken |
 
 Not verified: the time of a pass on production's base (measured locally only); how often production's runs move the
 step's grades (`first_z` against `z`, to read after a week).

@@ -1352,7 +1352,7 @@ def restore_zeros(rows, editions=None):
     """Give a blank its zero where the source publishes the statistic (see the module's
     notes), then add the totals of SUMS: `rows` are changed in place, and the number of
     values restored is returned. `editions`: {edition: the ZERO_IN_EDITION statistics its year's
-    rows show above zero}, for rows that are not the whole year (one match, §68)."""
+    rows show above zero}, for rows that are not the whole year (one match, §69)."""
     in_match, in_edition = defaultdict(set), defaultdict(set)
     for edition, names in (editions or {}).items():
         in_edition[edition].update(names)
@@ -1465,7 +1465,7 @@ def slot_minutes(rows, top=None):
 
 def assign_roles(rows, year_minutes=None):
     """The role of each player-match: its slot's, else the player's most played role. `year_minutes`: each player's
-    slot minutes over the award year (slot_minutes), for rows that are not the whole year (one match, §68)."""
+    slot minutes over the award year (slot_minutes), for rows that are not the whole year (one match, §69)."""
     minutes, slot_role = slot_minutes(rows)
     if year_minutes is not None:
         minutes = year_minutes
@@ -1517,7 +1517,7 @@ def fit_poisson(obs, iterations=25):
 
 def references(rows):
     """Per role and indicator: how to expect a value, and the dispersion s (§§ 5–6). Each expectation carries its
-    parameters (`expect.params`: kind, alpha, beta, rate), what agg.player_contribution_refs keeps (§68)."""
+    parameters (`expect.params`: kind, alpha, beta, rate), what agg.player_contribution_refs keeps (§69)."""
     return group_references(rows, "role")
 
 
@@ -1584,7 +1584,7 @@ def _attempts(role, name):
 
 
 def write_contribution_refs(conn, season, refs, run):
-    """The run's contribution references (references()), replacing the award year's (§68)."""
+    """The run's contribution references (references()), replacing the award year's (§69)."""
     conn.execute("DELETE FROM agg.player_contribution_refs WHERE award_season = %s", (season,))
     with conn.cursor().copy(
             "COPY agg.player_contribution_refs(award_season, role, indicator, kind, alpha, beta, rate, spread, run_id) FROM STDIN") as copy:
@@ -1594,7 +1594,7 @@ def write_contribution_refs(conn, season, refs, run):
 
 def read_contribution_refs(conn, season, run):
     """The contribution references the run kept for the award year, as references() gives them: {(role, indicator):
-    (expect, s)}; empty when that run kept none (§68)."""
+    (expect, s)}; empty when that run kept none (§69)."""
     return {(role, name): (expectation(kind, alpha, beta, rate, _attempts(role, name)), s)
             for role, name, kind, alpha, beta, rate, s in conn.execute(
                 """SELECT role, indicator, kind, alpha, beta, rate, spread FROM agg.player_contribution_refs
@@ -1956,7 +1956,7 @@ def refresh_players(conn, season, *, eligibility=ELIGIBILITY):
     rows = assign_roles(rows)
     excluded += [(r["edition"], r["match_id"], r["player_id"], "role_undetermined") for r in read if not r["role"]]
     del read
-    refs = references(rows)  # kept with the ranking (step 3) for the grades of the matches that arrive after it (§68)
+    refs = references(rows)  # kept with the ranking (step 3) for the grades of the matches that arrive after it (§69)
     count = len(rows)
     linked, top, women, clubs = team_leagues(rows, leagues)
     centre = level_centres(rows)
@@ -2212,7 +2212,7 @@ def write_match_grades(conn, season, grades, ref_season, run):
     match, player, team, role, minutes, z)]. Only a grade that moved (or whose match changed)
     is rewritten, so changed_at and first_z show the drift between runs; a player-match no
     longer graded this year is removed, unless its grade changed after the run started: the grade
-    arrival_grades gave a match whose rows came after the run's read (§68)."""
+    arrival_grades gave a match whose rows came after the run's read (§69)."""
     conn.execute("""CREATE TEMP TABLE grades_now (season_id smallint, match_id integer, player_id integer, team_id integer,
                       role text, minutes smallint, z real) ON COMMIT DROP""")
     with conn.cursor().copy("COPY grades_now(season_id, match_id, player_id, team_id, role, minutes, z) FROM STDIN") as copy:

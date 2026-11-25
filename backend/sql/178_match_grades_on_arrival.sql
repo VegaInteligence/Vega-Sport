@@ -1,4 +1,4 @@
--- 25 Nov 2026 (FAILURE_MODES.md §68, GitHub #236; hugo: « met cela en match »): a match is graded as soon as its player
+-- 25 Nov 2026 (FAILURE_MODES.md §69, GitHub #236; hugo: « met cela en match »): a match is graded as soon as its player
 -- statistics arrive, with the references of its award year's last players run (vega/arrival_grades.py), instead of
 -- waiting for the season's next run (at least an hour). Additive: two tables, written by the calculation role, and an
 -- index of the finished matches by kick-off.

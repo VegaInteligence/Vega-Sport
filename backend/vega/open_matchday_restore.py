@@ -87,7 +87,7 @@ REFS = {
 # started, which name a match (ADDED_DEPENDENCIES, checked for occupancy like the others; the restored Open Matchday
 # matches are finished, so none has a row there), two api views and two read grants to vega_calc; no column of
 # agg.power_runs. 177 (GH137) redefines four functions only (api.league_history_matches, _next, _scorers, _players): the
-# same rows, no table, no column. 178 (§68) adds agg.player_contribution_refs, keyed by award year, role and indicator
+# same rows, no table, no column. 178 (§69) adds agg.player_contribution_refs, keyed by award year, role and indicator
 # (no column naming a match), and agg.match_grade_arrivals (match_id, integer, REFERENCES core.matches ON DELETE
 # CASCADE), the matches graded as soon as their player statistics arrived, which names a match (ADDED_DEPENDENCIES,
 # checked for occupancy like the others; it only holds matches kicked off in the last 7 days, so none of the restored

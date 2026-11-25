@@ -452,7 +452,7 @@ class Worker:
 
     def match_grades(self):
         """The matches whose player statistics came after their year's players run, graded with that run's references
-        (arrival_grades.refresh, FAILURE_MODES §68). In the collection's own process: the side work can be an hour into
+        (arrival_grades.refresh, FAILURE_MODES §69). In the collection's own process: the side work can be an hour into
         a season, and the statistics arrive within minutes of the final whistle."""
         from . import arrival_grades
 

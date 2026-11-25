@@ -711,8 +711,8 @@ class WorkerTest(unittest.TestCase):
             self.worker.run(max_jobs=1)
         self.assertEqual(len(re.findall(r"lineup forecasts error=WORKER_ZERODIVISIONERROR@test_worker\.py:\d+", out.getvalue())), 2)
 
-    def test_68m_a_planning_round_grades_the_matches_whose_statistics_arrived(self):
-        # FAILURE_MODES § 68: the collection's own round (the side process can be an hour into a season) grades the
+    def test_69m_a_planning_round_grades_the_matches_whose_statistics_arrived(self):
+        # FAILURE_MODES § 69: the collection's own round (the side process can be an hour into a season) grades the
         # matches whose player statistics came after their year's run (arrival_grades.refresh), with the worker's clock.
         from vega import arrival_grades
 

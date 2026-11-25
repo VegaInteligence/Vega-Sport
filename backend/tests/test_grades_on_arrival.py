@@ -1,4 +1,4 @@
-"""A match graded as soon as its player statistics arrive (docs/calculs/09-audit-2026-11/FAILURE_MODES.md § 68,
+"""A match graded as soon as its player statistics arrive (docs/calculs/09-audit-2026-11/FAILURE_MODES.md § 69,
 written before these tests; hugo, 25 Nov 2026: « met cela en match »).
 
 A disposable base: award year 2025 (a league of eight clubs, 56 matches from August 2025) and award year 2026 (the same
@@ -142,7 +142,7 @@ class GradesOnArrivalTest(unittest.TestCase):
         cls.read.execute("SET ROLE vega_read")
         power.refresh_elo(calc)
         power.refresh_players(calc, 2025)
-        # The year's run, its references captured as it computes them (68l).
+        # The year's run, its references captured as it computes them (69l).
         captured = {}
         original = power.references
 
@@ -212,7 +212,7 @@ class GradesOnArrivalTest(unittest.TestCase):
                 self.db.execute("""INSERT INTO agg.player_match_grades(season_id,match_id,player_id,award_season,team_id,role,minutes,z,first_z,ref_season,run_id)
                                    VALUES(2026,%s,%s,2026,%s,%s,%s,%s,%s,%s,%s)""", (self.M, player, team, role, minutes, z, first, ref, run))
 
-    def test_68a_the_race_the_step_gives_the_run_s_grades_back(self):
+    def test_69a_the_race_the_step_gives_the_run_s_grades_back(self):
         self.assertGreater(len(self.graded), 20)
         self.race(self.M)
         done = self.step_now()
@@ -221,7 +221,7 @@ class GradesOnArrivalTest(unittest.TestCase):
         self.assertRunGrades(self.grades(self.M))
         self.assertEqual(self.grades(self.M)[self.home * 100][5], self.year_run[0])
 
-    def test_68b_without_the_match_s_elo_the_teams_last_ratings_give_the_same_grades(self):
+    def test_69b_without_the_match_s_elo_the_teams_last_ratings_give_the_same_grades(self):
         saved = self.db.execute("SELECT * FROM agg.team_elo WHERE match_id=%s", (self.M,)).fetchall()
         self.assertEqual(len(saved), 2)
         self.race(self.M, elo=False)
@@ -232,7 +232,7 @@ class GradesOnArrivalTest(unittest.TestCase):
             with self.db.cursor() as cur:
                 cur.executemany(f"INSERT INTO agg.team_elo VALUES ({', '.join(['%s'] * len(saved[0]))})", saved)
 
-    def test_68c_the_substitute_s_role_and_the_edition_s_zeros_are_the_run_s(self):
+    def test_69c_the_substitute_s_role_and_the_edition_s_zeros_are_the_run_s(self):
         self.assertEqual(self.graded[SUB][1], "winger")  # his most played slot role, not LINE_DEFAULT's midfielder
         row = next(r for r in self.captured["rows"] if r["match_id"] == self.M and r["player_id"] == self.home * 100 + 5)
         self.assertEqual(row["assists"], 0.0)  # the run restored M's blank assists from the edition
@@ -242,7 +242,7 @@ class GradesOnArrivalTest(unittest.TestCase):
         self.assertEqual(got[SUB][1], "winger")
         self.assertRunGrades(got)
 
-    def test_68d_the_matches_the_step_leaves_alone(self):
+    def test_69d_the_matches_the_step_leaves_alone(self):
         for mid in (self.LIVE, self.PENDING, self.OLD):
             self.race(mid)
         with self.db.transaction():
@@ -275,7 +275,7 @@ class GradesOnArrivalTest(unittest.TestCase):
         # The window: M seen four days later is left alone too.
         self.assertEqual(self.step_now(NOW + timedelta(days=3)), {"matches": 0, "players": 0})
 
-    def test_68e_a_second_pass_writes_nothing(self):
+    def test_69e_a_second_pass_writes_nothing(self):
         self.race(self.M)
         self.step_now()
         grades, arrival, version = self.db.execute(
@@ -286,7 +286,7 @@ class GradesOnArrivalTest(unittest.TestCase):
         self.assertEqual(self.arrival(self.M), arrival)
         self.assertEqual((self.version(self.M), self.edition_version()), (version, edition))
 
-    def test_68f_rows_that_change_again_are_graded_again(self):
+    def test_69f_rows_that_change_again_are_graded_again(self):
         self.race(self.M)
         self.step_now()
         player = self.home * 100 + 9
@@ -302,7 +302,7 @@ class GradesOnArrivalTest(unittest.TestCase):
             self.db.execute("""UPDATE core.player_match_stats SET touches = touches - 40, chances_created = chances_created - 4
                                WHERE season_id=2026 AND match_id=%s AND player_id=%s""", (self.M, player))
 
-    def test_68g_a_run_that_read_before_the_rows_spares_the_step_s_grades(self):
+    def test_69g_a_run_that_read_before_the_rows_spares_the_step_s_grades(self):
         # The run of 25 Nov: it reads the year, the match's rows arrive, the step grades them, the run writes.
         saved = self.db.execute("SELECT * FROM core.player_match_stats WHERE season_id=2026 AND match_id=%s", (self.M,)).fetchall()
         columns = [d.name for d in self.db.execute("SELECT * FROM core.player_match_stats LIMIT 0").description]
@@ -339,7 +339,7 @@ class GradesOnArrivalTest(unittest.TestCase):
             type(self).year_run = self.one("SELECT id, started_at FROM agg.power_runs WHERE kind='players' AND season_id=2026 AND status='published'")
             type(self).graded = self.grades(self.M)
 
-    def test_68h_a_run_that_started_after_the_step_deletes_a_grade_it_no_longer_computes(self):
+    def test_69h_a_run_that_started_after_the_step_deletes_a_grade_it_no_longer_computes(self):
         self.race(self.M)
         self.step_now()
         player = self.home * 100 + 9
@@ -357,7 +357,7 @@ class GradesOnArrivalTest(unittest.TestCase):
             type(self).year_run = self.one("SELECT id, started_at FROM agg.power_runs WHERE kind='players' AND season_id=2026 AND status='published'")
             type(self).graded = self.grades(self.M)
 
-    def test_68i_a_third_club_s_row_and_a_row_without_a_role_are_not_graded(self):
+    def test_69i_a_third_club_s_row_and_a_row_without_a_role_are_not_graded(self):
         self.race(self.M)
         self.step_now()
         got = self.grades(self.M)
@@ -365,7 +365,7 @@ class GradesOnArrivalTest(unittest.TestCase):
         self.assertNotIn(NO_ROLE, got)
         self.assertIn(self.home * 100, got)
 
-    def test_68j_what_the_step_writes(self):
+    def test_69j_what_the_step_writes(self):
         untouched = ("agg.player_power", "agg.player_power_matches", "agg.player_contribution_refs", "agg.player_grade_exclusions")
         before = {t: self.db.execute(f"SELECT md5(coalesce(string_agg(t::text, ',' ORDER BY t::text), '')) FROM {t} t").fetchone()[0] for t in untouched}
         editions = self.edition_sums()  # as the last run wrote them, from the grades M has again (tearDown)
@@ -393,7 +393,7 @@ class GradesOnArrivalTest(unittest.TestCase):
             with self.db.cursor() as cur:
                 cur.executemany("INSERT INTO agg.player_grade_editions VALUES (%s,%s,%s,%s,%s,%s)", editions)
 
-    def test_68k_the_players_grade_status_moves_from_pending_to_graded(self):
+    def test_69k_the_players_grade_status_moves_from_pending_to_graded(self):
         self.race(self.M)
         status = lambda: {s for (s,) in self.read.execute(
             "SELECT grade_status FROM api.player_grade_status WHERE season_id=2026 AND match_id=%s AND player_id < 9000", (self.M,)).fetchall()}
@@ -401,7 +401,7 @@ class GradesOnArrivalTest(unittest.TestCase):
         self.step_now()
         self.assertLessEqual(status(), {"graded", "below_display_threshold"})
 
-    def test_68l_the_run_keeps_its_contribution_references(self):
+    def test_69l_the_run_keeps_its_contribution_references(self):
         refs, rows = self.captured["refs"], self.captured["rows"]
         kept = self.power.read_contribution_refs(self.calc, 2026, self.year_run[0])
         self.assertEqual(set(kept), set(refs))

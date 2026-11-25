@@ -64,7 +64,7 @@ ADDED = ["155_player_grade_status.sql", "156_team_side_corrections.sql", "157_pa
          "176_match_probable_lineups.sql",
          # GH137: /api/league-history's four reads made lighter (four functions redefined, the same rows; no table).
          "177_league_history_lean_reads.sql",
-         # §68 (#236): a match graded as soon as its statistics arrive (the runs' contribution references, the arrivals).
+         # §69 (#236): a match graded as soon as its statistics arrive (the runs' contribution references, the arrivals).
          "178_match_grades_on_arrival.sql"]
 # SportScore editions: A, a rank shared at different points (a version already kept); B, rank 5 in a table of two (no
 # version yet); C, a table that holds (its version kept).

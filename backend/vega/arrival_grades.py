@@ -1,4 +1,4 @@
-"""A match graded as soon as its player statistics arrive (FAILURE_MODES § 68; hugo, 25 Nov 2026: « met cela en match »).
+"""A match graded as soon as its player statistics arrive (FAILURE_MODES § 69; hugo, 25 Nov 2026: « met cela en match »).
 
 The season's players run (power.refresh_players) grades every match of its award year, at most an hour after a finished
 match changed (worker.RECOMPUTE_AFTER), and its read can come before a match's statistics: on 25 Nov 2026 the run started
