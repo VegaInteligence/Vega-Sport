@@ -10,7 +10,8 @@
 # broadcast, full-state read, ingestor), the read API package, the read API stack and its
 # distribution, optionally the historical archive import, the alerts (alerts.yaml, and
 # alerts-edge.yaml in us-east-1), and the account API (account.yaml) once SSM
-# /vega/v2/account-deploy is on (backend/account/DEPLOYMENT.md; its preflight runs first).
+# /vega/v2/account-deploy is on (backend/account/DEPLOYMENT.md; its preflight runs first), then a check of the
+# home's personal read through the distribution (infra/aws/smoke-favourites.mjs).
 #
 # Environment: WORKER_DESIRED_COUNT (1), BACKFILL_DESIRED_COUNT (kept from the previous
 # deploy when unset: 1 while history is collected, 0 once it is), IMPORT_ARCHIVES (false), ARCHIVE_SOURCES_BUCKET
@@ -19,6 +20,8 @@
 # (needed once, to create /vega/v2/pitchapi-key) and LIVE_PROVIDER
 # (empty: the live circuit is deployed, the schedule that starts its ingestor is off).
 # VI-35: WAF_MODE (Count or Block; unset, the web ACL keeps its mode, Count the first time).
+# GH220: SMOKE_TEAM and SMOKE_PLAYER, both or neither (public ids t_… and p_…): the club and the player step 12 follows;
+# unset, it follows the home's player of the week and the team of his match (infra/aws/smoke-favourites.mjs).
 set -euo pipefail
 export AWS_REGION=${AWS_REGION:-us-east-2}
 ACCOUNT=361769570630
@@ -254,4 +257,9 @@ if [ "$ACCOUNT" = on ]; then
   echo "account API: $(output vega-v2-account FrontUrl)"
 fi
 # --- end of the account API ---
+# The home's personal read, as the site asks it, for a followed club, player and both, through the distribution
+# (FAILURE_MODES_OPTIMISATIONS.md, GH220.3): each answer 200, private, naming what it was asked to follow. Last, so that
+# a failure leaves everything above deployed; the run then ends here, without "done".
+echo "== 12. The home's personal read (a club, a player, both)"
+node infra/aws/smoke-favourites.mjs "$media" ${SMOKE_TEAM:+--team "$SMOKE_TEAM"} ${SMOKE_PLAYER:+--player "$SMOKE_PLAYER"}
 echo "done"
