@@ -1,5 +1,13 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Conditions générales de vente — 25 November 2026 (branch `claude/conditions-generales-de-vente`, issue #227)
+
+- hugo asked for classic SaaS sales terms. New static page `/conditions-generales-de-vente` (text `src/content/legal-sale.jsx`, 18 sections, one table of offers and prices), in the footer's « Informations » column and linked from the banners of the two other legal pages; the terms of use's « Offres payantes » points to it.
+- Written for monthly and yearly subscriptions paid with Stripe, French law, consumers: renewal (L215-1 reminder for yearly), termination from « Mon compte » (L215-1-1), 14-day withdrawal with immediate access and pro rata (L221-25) plus the model form, conformity guarantee of digital services, mediation. The page says no paid offer is open yet.
+- Not decided, so owner fields (`legal-identity.js` `legalSale`, null): SIRET, VAT status, mediator, the four prices. The sales terms keep « Version provisoire » until they and the four identity fields are filled.
+- Tests first: `tests/legal-field.test.mjs` F7–F9, `tests/e2e/legal-pages.e2e.mjs` (third page, L5, L6, L14, L19, new L21), `consent.e2e.mjs` E18, `not-found-route.test.mjs`. Red 27/75, then green 75/75; consent 28/30 (2 account checks not run, as before); site 1 045/1 045; build OK.
+- To do when subscriptions open: the privacy page must describe Stripe and the subscription data; the decided values go in `legalSale`.
+
 ## La page match en cinq onglets — FAILURE_MODES § 62 (25 November 2026, branch `claude/fusion-onglets-match` from main 492a136, issue #221)
 
 - hugo validated the mock-up (`/mnt/project-files/fusion-onglets-match/`, artifact « Onglets du match ») and asked to code and push. Eight tabs become five: Résumé, Compositions, Statistiques, Analyses, Avant-match.

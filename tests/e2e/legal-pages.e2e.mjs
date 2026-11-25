@@ -1,6 +1,7 @@
-// E2E — the two public legal pages Google asks for before it publishes the OAuth app « Vega Sport »:
-// /confidentialite (« Confidentialité ») and /conditions-utilisation (« Conditions d'utilisation »),
-// both linked from the site footer. Written before the pages, run red against main first.
+// E2E — the public legal pages: the two Google asks for before it publishes the OAuth app « Vega Sport »,
+// /confidentialite (« Confidentialité ») and /conditions-utilisation (« Conditions d'utilisation »), and the sales
+// terms of the subscriptions, /conditions-generales-de-vente (« Conditions générales de vente », 25 November 2026),
+// all three linked from the site footer. Written before the pages, run red against main first.
 //
 // Failure modes and expected outcomes:
 //  L1 (address) Each page answers 200 at its bare address (the one pasted at Google) without a redirect;
@@ -12,13 +13,14 @@
 //  L3 (title) Exactly one h1, whose text is the page title; <title> is « <titre> — Vega Intelligence »;
 //     a meta description; the canonical link is https://vegasport.vercel.app/<page> (bare form).
 //  L4 (indexable) No `noindex` in a robots meta tag or in an X-Robots-Tag header.
-//  L5 (footer) On /, /clubs and both legal pages, the footer holds « Confidentialité » → /confidentialite
-//     and « Conditions d'utilisation » → /conditions-utilisation, plain: no query, where the other links
-//     of the football pages carry the season and focus (a legal page has one address);
-//     `aria-current="page"` is on the current page's link only.
-//  L6 (sibling) Each legal page links to the other one outside the footer.
+//  L5 (footer) On /, /clubs and the three legal pages, the footer holds « Confidentialité » → /confidentialite,
+//     « Conditions d'utilisation » → /conditions-utilisation and « Conditions générales de vente » →
+//     /conditions-generales-de-vente, plain: no query, where the other links of the football pages carry the
+//     season and focus (a legal page has one address); `aria-current="page"` is on the current page's link only.
+//  L6 (siblings) Each legal page links to the two others outside the footer.
 //  L7 (contents) A `nav[aria-label="Sommaire"]` lists the sections (12 for the privacy page, 12 for the
-//     terms); every one of its links is a `#id` that names a section heading of the page, in order.
+//     terms, 18 for the sales terms); every one of its links is a `#id` that names a section heading of the
+//     page, in order.
 //  L8 (anchor) Following a Sommaire link on a desktop leaves the section's heading fully visible
 //     under the sticky header (scroll-margin-top), not hidden behind it.
 //  L9 (accounts off) With the account features off (the default local state: no NEON_AUTH_*), /connexion
@@ -30,14 +32,16 @@
 //     `[data-legal-field]`, reading « [À compléter : … »], visible (a box, a dashed underline or a
 //     tinted background); while one is shown, the line « Version provisoire : les champs entre
 //     crochets restent à compléter. » ([data-legal-provisional]) is under the banner.
-//  L12 (en bref) The privacy page shows 4 « En bref » tiles, the terms 3, each with its label and
-//     sentence, each a link to the section it sums up (named by its title).
+//  L12 (en bref) The privacy page shows 4 « En bref » tiles, the terms 3, the sales terms 4, each with its
+//     label and sentence, each a link to the section it sums up (named by its title).
 //  L13 (references) Every « section N » written in the text is a link to the section that really has
 //     the number N on the page — a section added or moved later must not leave a reference pointing
 //     to the wrong place.
-//  L14 (fields) The pages use exactly four owner fields: publisherName, publisherAddress, contactEmail,
-//     applicableLaw. No « [À compléter » text stands outside a field element, and a punctuation mark
-//     right after a field stays on the field's line (never alone at the start of a line).
+//  L14 (fields) The privacy page and the terms use exactly four owner fields: publisherName, publisherAddress,
+//     contactEmail, applicableLaw; the sales terms use the owner's fields and the seven sales facts
+//     (legal-identity.js `legalSale`: companyId, vatStatus, mediator and the four prices), and nothing else.
+//     No « [À compléter » text stands outside a field element, and a punctuation mark right after a field
+//     stays on the field's line (never alone at the start of a line).
 //  L15 (final text) None of phase 1's sample strings is left (« Exemple à confirmer », « Cette section
 //     décrira », …); the owner's note « Champs à compléter » is not on the page.
 //  L16 (typography) In the text: typographic apostrophes only (no '), and no ordinary breaking space
@@ -48,14 +52,19 @@
 //     first field of that section between the sticky bars at the top and the tab bar at the bottom.
 //  L19 (captions) Each table of the pages is introduced by its section's heading: its caption stays in the
 //     table's accessible name but is hidden visually (a box of 1 px or less), desktop and phone, so the page
-//     never shows « Cookies et stockage du navigateur » twice in a row.
+//     never shows « Cookies et stockage du navigateur » twice in a row. The privacy page has 3 tables, the
+//     terms none, the sales terms 1 (the offers and their prices).
+//  L21 (sales terms) The sales terms say what a French consumer must be told before subscribing: they are not
+//     in force yet (no paid offer is open), the 14-day withdrawal period with its model form, the automatic
+//     renewal and the termination from « Mon compte », the legal guarantee of conformity, the consumer
+//     mediator, French law; and the terms of use point to them in their section « Offres payantes ».
 //  L20 (consent text) The privacy page says what the consent banner does (src/services/consent.js,
 //     components/Consent.jsx): it also shows when the location is unknown; without a choice nothing is
 //     measured and it returns on the next page; the choice is kept six months in this browser under
 //     vega.consent.v1 and is not linked to the account; after a refusal nothing more is sent, from the
 //     current page on; outside Europe the measurement works unless it was refused in this browser.
 //  L5 also: the footer's « Informations » column ends with the button « Cookies » (the consent banner's
-//     reopening control), after the two links.
+//     reopening control), after the three links.
 //  The consent banner itself is tested by tests/e2e/consent.e2e.mjs: here every browser starts with a stored
 //  refusal (vega.consent.v1) so the banner never covers what these checks look at.
 //  X1 No page error and no console error on the legal pages, apart from network failures of third
@@ -78,7 +87,8 @@ const { chromium } = createRequire(import.meta.url)(process.env.PLAYWRIGHT_CORE 
 const SITE = "https://vegasport.vercel.app";
 const PAGES = [
   {
-    path: "/confidentialite", title: "Confidentialité", sections: 12, sibling: "/conditions-utilisation", refs: 5,
+    path: "/confidentialite", title: "Confidentialité", sections: 12, siblings: ["/conditions-utilisation", "/conditions-generales-de-vente"], refs: 5, tables: 3,
+    fields: ["applicableLaw", "contactEmail", "publisherAddress", "publisherName"],
     facts: [
       ["Sans compte", "Vos choix restent dans votre navigateur.", "Sans compte : ce que le site traite"],
       ["Avec un compte", "E-mail et mot de passe chez Neon Auth, préférences et listes chez AWS.", "Avec un compte : ce qui s’ajoute"],
@@ -87,15 +97,27 @@ const PAGES = [
     ],
   },
   {
-    path: "/conditions-utilisation", title: "Conditions d’utilisation", sections: 12, sibling: "/confidentialite", refs: 0,
+    path: "/conditions-utilisation", title: "Conditions d’utilisation", sections: 12, siblings: ["/confidentialite", "/conditions-generales-de-vente"], refs: 0, tables: 0,
+    fields: ["applicableLaw", "contactEmail", "publisherAddress", "publisherName"],
     facts: [
       ["Gratuit", "Tout le site est gratuit, avec ou sans compte.", "Offres payantes"],
       ["Informations", "Notes, probabilités et prévisions sont données à titre d’information, sans garantie.", "Données, notes et prévisions"],
       ["Compte", "Facultatif, supprimable à tout moment depuis « Mon compte ».", "Le compte"],
     ],
   },
+  {
+    path: "/conditions-generales-de-vente", title: "Conditions générales de vente", sections: 18, siblings: ["/confidentialite", "/conditions-utilisation"], refs: 4, tables: 1,
+    fields: ["companyId", "contactEmail", "mediator", "pricePlusMonthly", "pricePlusYearly", "priceProMonthly", "priceProYearly", "publisherAddress", "publisherName", "vatStatus"],
+    facts: [
+      ["Pas encore ouvert", "Aucun abonnement payant n’est proposé aujourd’hui.", "Objet et champ d’application"],
+      ["Sans engagement", "Résiliable à tout moment depuis « Mon compte ».", "Résiliation"],
+      ["14 jours", "Pour changer d’avis après la souscription, sans motif.", "Droit de rétractation"],
+      ["Paiement", "Par carte, avec Stripe, à chaque échéance.", "Paiement"],
+    ],
+  },
 ];
-const FIELDS = ["applicableLaw", "contactEmail", "publisherAddress", "publisherName"];
+// Every field the pages use together: the owner's four and the seven sales facts.
+const FIELDS = [...new Set(PAGES.flatMap((p) => p.fields))].sort();
 const SAMPLES = ["Exemple à confirmer", "Cette section décrira", "Cette section indiquera", "Cette section précisera", "Cette section listera", "Champs à compléter"];
 // Compare text whatever the kind of space (ordinary, no-break, narrow no-break).
 const flat = (text) => text.replace(/[\u00a0\u202f\s]+/g, " ").trim();
@@ -104,6 +126,7 @@ const usedFields = new Set();
 const FOOTER = [
   ["Confidentialité", "/confidentialite/"],
   ["Conditions d’utilisation", "/conditions-utilisation/"],
+  ["Conditions générales de vente", "/conditions-generales-de-vente/"],
 ];
 const PROVISIONAL = "Version provisoire : les champs entre crochets restent à compléter.";
 const results = [];
@@ -198,8 +221,8 @@ try {
       { title: facts.title, description: facts.description.slice(0, 80), canonical: facts.canonical },
       facts.title === `${p.title} — Vega Intelligence` && facts.description.length > 20 && facts.canonical === SITE + p.path);
     check(`L4 ${p.path} meta`, "no robots meta with noindex", facts.robots.length ? facts.robots : "none", !facts.robots.some((r) => /noindex/i.test(r)));
-    check(`L6 ${p.path}`, `links to ${p.sibling} outside the footer`, facts.siblingLinks.filter((h) => bare(h || "") === p.sibling),
-      facts.siblingLinks.some((h) => bare(h || "") === p.sibling));
+    check(`L6 ${p.path}`, `links to ${p.siblings.join(" and ")} outside the footer`, facts.siblingLinks.filter((h) => p.siblings.includes(bare(h || ""))),
+      p.siblings.every((sibling) => facts.siblingLinks.some((h) => bare(h || "") === sibling)));
     check(`L7 ${p.path}`, `a Sommaire of ${p.sections} links, each naming a section heading, in the page's order`,
       { links: facts.links.length, sections: facts.sections.length, unresolved: facts.links.filter((_, i) => !facts.resolved[i]) },
       facts.links.length === p.sections && facts.sections.length === p.sections && facts.resolved.every(Boolean) &&
@@ -306,7 +329,7 @@ try {
     text.fields.forEach((name) => usedFields.add(name));
     check(`L14 ${p.path}`, "fields are owner fields only, no loose « [À compléter », punctuation stays with its field",
       { fields: text.fields, loose: text.loose, detached: text.detached },
-      text.fields.length > 0 && text.fields.every((f) => FIELDS.includes(f)) && text.loose.length === 0 && text.detached.length === 0);
+      text.fields.length > 0 && text.fields.every((f) => p.fields.includes(f)) && text.loose.length === 0 && text.detached.length === 0);
     const left = SAMPLES.filter((sample) => text.body.includes(sample));
     check(`L15 ${p.path}`, "no phase 1 sample text, no owner's note", left.length ? left : "none", left.length === 0);
     check(`L16 ${p.path}`, "typographic apostrophes, no-break spaces before : ; ! ? and inside « »", text.breaking.length ? text.breaking : "none", text.breaking.length === 0);
@@ -319,11 +342,11 @@ try {
       accountsOff ? facts.h1s[0] === p.title && facts.sections.length === p.sections : null);
   }
 
-  check("L14 both", "the two pages together use exactly the four owner fields", [...usedFields].sort(), [...usedFields].sort().join() === FIELDS.join());
+  check("L14 all", "the three pages together use exactly the owner's four fields and the seven sales facts", [...usedFields].sort(), [...usedFields].sort().join() === FIELDS.join());
 
-  // ---- L19 (desktop) and L20: the tables' captions, the consent text
-  {
-    await desk.goto(base + "/confidentialite", { waitUntil: "networkidle", timeout: 120000 });
+  // ---- L19 (desktop), L20 and L21: the tables' captions, the consent text, the sales terms
+  for (const p of PAGES) {
+    await desk.goto(base + p.path, { waitUntil: "networkidle", timeout: 120000 });
     const captions = await desk.evaluate(() => [...document.querySelectorAll("main table")].map((table) => {
       const caption = table.querySelector("caption");
       const box = caption?.getBoundingClientRect();
@@ -331,10 +354,37 @@ try {
     }));
     const named = [];
     for (const c of captions) named.push(c.caption ? await desk.getByRole("table", { name: c.caption }).count() : 0);
-    check("L19 desktop", "3 tables on the privacy page; each caption names its table and is hidden visually (≤ 1 px)", { captions, named },
-      captions.length === 3 && captions.every((c, i) => c.caption && c.w <= 1 && c.h <= 1 && named[i] === 1));
-    const terms = await fetch(base + "/conditions-utilisation").then((r) => r.text());
-    check("L19 terms", "the terms page has no table (nothing to hide)", (terms.match(/<table/g) || []).length, !/<table/.test(terms));
+    check(`L19 desktop ${p.path}`, `${p.tables} table(s); each caption names its table and is hidden visually (≤ 1 px)`, { captions, named },
+      captions.length === p.tables && captions.every((c, i) => c.caption && c.w <= 1 && c.h <= 1 && named[i] === 1));
+  }
+  {
+    const plain = (t) => flat(t).replace(/’/g, "'");
+    await desk.goto(base + "/conditions-generales-de-vente", { waitUntil: "networkidle", timeout: 120000 });
+    const section = (id) => desk.evaluate((name) => document.getElementById(name)?.closest("section")?.innerText || "", id);
+    const sales = {};
+    for (const id of ["objet", "duree", "resiliation", "retractation", "conformite", "mediation", "droit", "formulaire"]) sales[id] = plain(await section(id));
+    await desk.goto(base + "/conditions-utilisation", { waitUntil: "networkidle", timeout: 120000 });
+    const offers = await desk.evaluate(() => {
+      const box = document.getElementById("offres")?.closest("section");
+      return { text: box?.innerText || "", links: [...(box?.querySelectorAll("a[href]") || [])].map((a) => a.getAttribute("href")) };
+    });
+    const promised = [
+      [sales.objet, "Aucun abonnement payant n'est proposé aujourd'hui"],
+      [sales.duree, "renouvelé automatiquement"],
+      [sales.resiliation, "depuis « Mon compte »"],
+      [sales.retractation, "14 jours"],
+      [sales.conformite, "garantie légale de conformité"],
+      [sales.mediation, "médiateur de la consommation"],
+      [sales.droit, "droit français"],
+      [sales.formulaire, "Je vous notifie par la présente ma rétractation"],
+      [plain(offers.text), "Conditions générales de vente"],
+    ];
+    const absent = promised.filter(([where, phrase]) => !where.includes(phrase)).map(([, phrase]) => phrase);
+    const linked = offers.links.some((href) => bare(href) === "/conditions-generales-de-vente");
+    check("L21", "the sales terms tell what a consumer must know; the terms of use point to them", { absent, linked }, absent.length === 0 && linked);
+  }
+  {
+    await desk.goto(base + "/confidentialite", { waitUntil: "networkidle", timeout: 120000 });
     const text = await desk.evaluate(() => ({
       cookies: document.getElementById("cookies")?.closest("section")?.innerText || "",
       without: document.getElementById("sans-compte")?.closest("section")?.innerText || "",
@@ -370,8 +420,8 @@ try {
     );
     const ok = links.every((l, i) => !l.missing && bare(l.href) === bare(FOOTER[i][1]) &&
       (bare(FOOTER[i][1]) === route ? l.current === "page" : l.current === null)) &&
-      column.join("|") === "a:Confidentialité|a:Conditions d’utilisation|button:Cookies";
-    check(`L5 ${route}`, "the footer links both pages, aria-current on the current one only, then the button « Cookies »", { links, column }, ok);
+      column.join("|") === "a:Confidentialité|a:Conditions d’utilisation|a:Conditions générales de vente|button:Cookies";
+    check(`L5 ${route}`, "the footer links the three pages, aria-current on the current one only, then the button « Cookies »", { links, column }, ok);
   }
   await desk.locator(".site-footer").scrollIntoViewIfNeeded().catch(() => {});
   await desk.locator(".site-footer").screenshot({ path: path.join(out, "footer-desktop.png") }).catch(() => {});
@@ -398,12 +448,12 @@ try {
     check(`L10 ${p.path}`, "390 px: no sideways scroll, nothing wider than the screen outside its own scroll box", sideways,
       sideways.overflow <= 0 && sideways.wide.length === 0);
     await phone.screenshot({ path: path.join(out, `${p.path.slice(1)}-phone.png`) });
-    if (p.path === "/confidentialite") {
+    if (p.tables) {
       const captions = await phone.evaluate(() => [...document.querySelectorAll("main table caption")].map((c) => {
         const box = c.getBoundingClientRect();
         return { caption: c.textContent.trim(), w: Math.round(box.width), h: Math.round(box.height) };
       }));
-      check("L19 phone", "390 px: the 3 captions hidden visually", captions, captions.length === 3 && captions.every((c) => c.w <= 1 && c.h <= 1));
+      check(`L19 phone ${p.path}`, `390 px: the ${p.tables} caption(s) hidden visually`, captions, captions.length === p.tables && captions.every((c) => c.w <= 1 && c.h <= 1));
     }
     // L18: the Sommaire's first link, then the first field of that section between the bars.
     let reached = { missing: true };
@@ -438,7 +488,7 @@ try {
     path.join(out, "evidence.json"),
     JSON.stringify(
       {
-        subject: "Legal pages: /confidentialite and /conditions-utilisation, public, static, indexable, linked from the footer",
+        subject: "Legal pages: /confidentialite, /conditions-utilisation and /conditions-generales-de-vente, public, static, indexable, linked from the footer",
         observed: new Date().toISOString(),
         base,
         rerun: `node tests/e2e/legal-pages.e2e.mjs ${base} ${out}`,

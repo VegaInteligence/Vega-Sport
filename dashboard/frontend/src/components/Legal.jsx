@@ -8,6 +8,8 @@ import {
   legalFieldLabels,
   legalIdentity,
   legalOptionalFields,
+  legalSale,
+  legalSaleLabels,
 } from "../content/legal-identity.js";
 
 const NBSP = " ",
@@ -52,11 +54,14 @@ export function typeset(node) {
  * it (« , »): an optional field the owner chose not to publish (false) leaves out both.
  */
 export function LegalField({ name, before = "" }) {
-  if (!(name in legalFieldLabels))
+  // The owner's four facts, then the sales terms' own (legalSale).
+  const sale = !(name in legalFieldLabels) && name in legalSaleLabels;
+  if (!(name in legalFieldLabels) && !sale)
     throw new Error(
       `LegalField: unknown field « ${name} » (legal-identity.js)`,
     );
-  const value = legalIdentity[name];
+  const value = sale ? legalSale[name] : legalIdentity[name];
+  const label = sale ? legalSaleLabels[name] : legalFieldLabels[name];
   if (value === false) {
     if (!legalOptionalFields.has(name))
       throw new Error(
@@ -82,7 +87,7 @@ export function LegalField({ name, before = "" }) {
     <>
       {before}
       <span className="legal-field" data-legal-field={name}>
-        [À compléter{NBSP}: {legalFieldLabels[name]}]
+        [À compléter{NBSP}: {label}]
       </span>
     </>
   );

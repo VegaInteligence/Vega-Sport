@@ -38,11 +38,11 @@ test("every page of the app directory keeps its data providers", (t) => {
       );
 });
 
-// The legal pages (/confidentialite, /conditions-utilisation) are static text read by Google before it
+// The legal pages (/confidentialite, /conditions-utilisation, /conditions-generales-de-vente) are static text read by Google before it
 // publishes the sign-in app: they render outside the data providers, so the server's HTML carries the
 // whole page and nothing waits for the football API or depends on the account switch.
 test("the static pages render without the data providers, with accounts on or off", (t) => {
-  assert.deepEqual([...STATIC_PAGES].sort(), ["/conditions-utilisation", "/confidentialite"]);
+  assert.deepEqual([...STATIC_PAGES].sort(), ["/conditions-generales-de-vente", "/conditions-utilisation", "/confidentialite"]);
   for (const route of STATIC_PAGES)
     assert.ok(pageRoutes.includes(route), `${route}: no page.jsx in the app directory`);
   const saved = process.env.NEXT_PUBLIC_VEGA_ACCOUNTS;
