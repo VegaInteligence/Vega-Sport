@@ -286,8 +286,9 @@ Resources:
                 Effect: Allow
                 Action: ['logs:GetLogEvents', 'logs:FilterLogEvents']
                 Resource: !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/ecs/vega-v2-worker:*'
-  # The isolated pilot (.github/workflows/pilot.yml) reads the provider key from
-  # SSM with this role, and nothing else: the key lives in one place, no GitHub secret.
+  # The isolated pilot (.github/workflows/pilot.yml, by hand from main) reads its own provider key from SSM with this
+  # role, and nothing else: /vega/v2/pitchapi-pilot-key, never the worker's key (FAILURE_MODES_OPTIMISATIONS.md, GH194). Until
+  # 25 November 2026 it read the worker's key and trusted every claude/v2-* branch too.
   PilotRole:
     Type: AWS::IAM::Role
     Properties:
@@ -304,20 +305,17 @@ Resources:
                 token.actions.githubusercontent.com:aud: sts.amazonaws.com
                 token.actions.githubusercontent.com:repository_id: '1441213700'
                 token.actions.githubusercontent.com:workflow: 'Isolated pilot'
-              StringLike:
-                token.actions.githubusercontent.com:sub:
-                  - 'repo:VegaInteligence@188998341/Vega-Sport@1441213700:ref:refs/heads/main'
-                  - 'repo:VegaInteligence@188998341/Vega-Sport@1441213700:ref:refs/heads/claude/v2-*'
+                token.actions.githubusercontent.com:sub: 'repo:VegaInteligence@188998341/Vega-Sport@1441213700:ref:refs/heads/main'
       Policies:
-        - PolicyName: ProviderKeyOnly
+        - PolicyName: PilotKeyOnly
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
-              - Sid: ProviderKey
+              - Sid: PilotKey
                 Effect: Allow
                 Action: 'ssm:GetParameter'
-                Resource: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vega/v2/pitchapi-key'
-              - Sid: ProviderKeyDecrypt
+                Resource: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/vega/v2/pitchapi-pilot-key'
+              - Sid: PilotKeyDecrypt
                 Effect: Allow
                 Action: 'kms:Decrypt'
                 Resource: '*'

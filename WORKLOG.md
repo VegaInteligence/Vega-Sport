@@ -1,5 +1,11 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Optimisations de l’accueil, des archives et du pilote — 25 novembre 2026
+
+- Sur `codex/optimisations-prioritaires-2511`, correction des [favoris VI-158](https://linear.app/vegainteligence/issue/VI-158), du [pilote VI-134](https://linear.app/vegainteligence/issue/VI-134), des [revalidations VI-77](https://linear.app/vegainteligence/issue/VI-77) et du [cache VI-85](https://linear.app/vegainteligence/issue/VI-85) pour la route de l’historique. Les deux derniers tickets couvrent aussi d’autres routes.
+- Sur PostgreSQL 18.6 local, favoris joueur 6,74 s → 168 ms, mixte 6,82 s → 169 ms. Sur Ligue 1 2019/20, revalidation 69 → 9,7 ms. Parité des 16 réponses de favoris et des quatre fonctions SQL sur 55 archives. Les 326 tests API passent. Sur macOS, une vérification des comptes échoue également sur le code d’origine avec le Bash fourni par le système.
+- Suite après revue de la PR et intégration : déployer, vérifier les trois parcours de favoris sur le site et les durées du CDN. Pour utiliser le pilote manuel, appliquer le rôle IAM et provisionner une clé avec un quota fournisseur indépendant. [Scénarios et critères du lot](docs/calculs/09-audit-2026-11/FAILURE_MODES_OPTIMISATIONS.md).
+
 ## Pays refusés — 25 novembre 2026
 
 - Décision de hugo (25 nov.) : bloquer la Corée du Nord seulement, pour l'instant. Petit changement isolé, sans ticket. Branche `claude/blocage-coree-du-nord` depuis main fb0de18.

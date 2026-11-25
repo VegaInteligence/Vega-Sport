@@ -60,9 +60,17 @@ gh api -X PUT repos/VegaInteligence/Vega-Sport/environments/v2-production
 
 `deploy-roles.yaml` creates `vega-v2-deploy` (assumable only by the **Deploy** workflow of this repository, in the `v2-production` environment, through the existing GitHub OIDC provider) and `vega-v2-cloudformation` (the service role CloudFormation uses, limited to the `vega-v2-*` resources). Both trusts name the workflow: after renaming a workflow, deploy this stack again before the workflow runs.
 
+It also creates `vega-v2-pilot`, assumable only by the **Isolated pilot** workflow run from `main` (`refs/heads/main`), which reads `/vega/v2/pitchapi-pilot-key` and nothing else (FAILURE_MODES_OPTIMISATIONS.md, GH194). That parameter is the pilot's own PitchAPI key, with its own quota if the provider's plan gives one, never a copy of the worker's `/vega/v2/pitchapi-key`; without it the pilot stops before any provider call. The owner creates it once and deploys this stack (the Deploy workflow cannot), from the Mac:
+
+```sh
+aws ssm put-parameter --profile statarena --region us-east-2 --name /vega/v2/pitchapi-pilot-key --type SecureString --value file://<file holding the pilot key>
+```
+
+Delete that file once the parameter is written. Until this stack is deployed, the role in AWS keeps its trust of every `claude/v2-*` branch and its read of the worker's key, though no workflow of this repository asks for it any more.
+
 A stack the workflow has changed once keeps `vega-v2-cloudformation` as its role: later changes use it from a workstation too, where the script passes no role. A template change that needs a permission the role lacks therefore stops both paths, and its rollback fails the same way (the live stack on 10 November 2026: the role could not renew the browser key). Add the permission to `deploy-roles.yaml` and deploy that stack first; `aws iam simulate-principal-policy --policy-source-arn arn:aws:iam::361769570630:role/vega-v2-cloudformation --action-names … --resource-arns …` tells beforehand (an action that takes no resource answers only when asked with `*`). A stack left in `UPDATE_ROLLBACK_FAILED` is recovered, once the role is right, with `aws cloudformation continue-update-rollback --stack-name <stack>`.
 
-A run is checked on what it deployed, not on its colour: its log ends with `done`, and `aws lambda get-function-configuration --function-name vega-v2-api --query LastModified` gives the time of the run.
+A run is checked on what it deployed, not on its colour: its log ends with `done`, and `aws lambda get-function-configuration --function-name vega-v2-api --query LastModified` gives the time of the run. Its last step (12) reads the home's personal read for a followed club, a followed player and both, through the distribution (`infra/aws/smoke-favourites.mjs`, FAILURE_MODES_OPTIMISATIONS.md, GH220.3): whom it follows (the home's player of the week and the team of his match, else the top of its leaders and his club, else the same in the season before; `SMOKE_TEAM=t_… SMOKE_PLAYER=p_…` to name them), then one line per read, each 200, private, the club and the player found where the read puts them. The manifest or the home unavailable, malformed or unreachable, an answer missing what was followed, or seasons without a player to follow: the run ends there, everything above deployed, without `done`. The only `skipped`: a base that holds no season yet, as `/api/health` confirms (503 `pending`).
 
 #### Spend alerts (`budget.yaml`, stack `vega-v2-budget`)
 
@@ -115,6 +123,12 @@ To let more copies run, change the three together, in that order of deploy steps
 Until 20 November 2026 the login allowed 12 connections and the function had no limit of its own: the account ran at most 10 functions when that was written, then 1000. At 19 copies the base refused the thirteenth connection (`read failed 53300 <path>` in the function's log, a 503 `DATA_UNAVAILABLE` on every route, VI-33).
 
 When the function fails or cannot be reached, the distribution answers with the copy it holds for up to a day (`stale-if-error=86400`, set by `transport.mjs` on every public answer that does not say otherwise). `/api/health` and `/api/ops/*` are never kept: they say what the function says now.
+
+The distribution keeps an answer as long as it says (`s-maxage`), 60 s at most for every route (cache policy `vega-v2-api`, `MaxTTL: 60`) but `/api/league-history`, an archived season, kept up to an hour (its own behaviour and cache policy `vega-v2-api-league-history`, `MaxTTL: 3600`; FAILURE_MODES_OPTIMISATIONS.md, GH137). The function answers its revalidations with the digest of its four reads, in one statement, without building the answer. A correction of an archived season may stay an hour at a point of presence; to remove it sooner (the owner, from the Mac):
+
+```sh
+aws cloudfront create-invalidation --profile statarena --paths '/api/league-history*' --distribution-id "$(aws cloudformation describe-stacks --profile statarena --region us-east-2 --stack-name vega-v2-api --query "Stacks[0].Outputs[?OutputKey=='DistributionId'].OutputValue" --output text)"
+```
 
 The function logs one line per request it receives (`{"request":"read","path":…,"status":…,"ms":…,"db":…,"queries":…,"conditional":…}`, the path without its query). Reads the distribution answers by itself leave none: the lines are the calls that reached the function. In CloudWatch Logs Insights, on `/aws/lambda/vega-v2-api`:
 
@@ -270,7 +284,7 @@ The private status page (repository VegaInteligence/Vega-Status, its own Vercel 
 | Workflow | When | What |
 |---|---|---|
 | `ci.yml` (CI) | every change to `backend`, `infra/aws`, the site or its tests | every Python and API suite on a disposable PostgreSQL 18 with pgvector (the engine of `vega-football-db-postgres`), `cfn-lint` of the stacks, the worker image built natively on linux/arm64 and its tools started, the read API package, the site's tests and its build; no secret, no AWS access |
-| `pilot.yml` (Isolated pilot) | `backend` changes, or by hand | real PitchAPI data into a throwaway PostgreSQL 18: the pilot collection, then 700 worker jobs on the real J−1..J+7 calendars and the other sources; only measurements leave the runner |
+| `pilot.yml` (Isolated pilot) | by hand only, from `main` | real PitchAPI data into a throwaway PostgreSQL 18: the pilot collection (1 to 306 matches, 1 by default; the four old regression fixtures on request), then 0 to 700 worker jobs on the real J−1..J+7 calendars and the other sources, at 0.5 s and within a budget of attempts per command; its own key `/vega/v2/pitchapi-pilot-key` (role `vega-v2-pilot`, never the worker's key); only measurements leave the runner |
 | `deploy.yml` (Deploy) | by hand, environment `v2-production` | `deploy.sh` with the `vega-v2-deploy` role |
 
 ## History: the move from the previous backend

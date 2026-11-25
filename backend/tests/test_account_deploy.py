@@ -2,7 +2,8 @@
 W1 to W12, written before these tests).
 
 The real infra/aws/deploy.sh and infra/aws/ci/secrets.sh run from the repository root, offline: `aws`, `npm`,
-`python3` and `docker` are stand-ins on PATH. The stand-in `aws` answers from a JSON state (SSM parameters, stacks
+`python3`, `docker` and `node` are stand-ins on PATH (`node` runs the real probe of step 12 with the real Node.js when
+a test asks it: FAILURE_MODES_OPTIMISATIONS.md, GH220-s). The stand-in `aws` answers from a JSON state (SSM parameters, stacks
 with their outputs, parameters and status), records every call, and keeps what a call writes (put-parameter,
 deploy). `python3` stands in for infra/aws/package_api.py only (the packages are built for real in CI, job « Read
 API package »). A run is judged on the calls it made: the stacks deployed with their overrides, the parameters
@@ -13,6 +14,7 @@ state after; the secrets in it are the run's own random ones) in VEGA_ACCOUNT_DE
 <tmp>/vega-account-deploy/<run>/. Rerun: PYTHONPATH=backend:backend/tests python3 -m unittest -v test_account_deploy
 """
 import hashlib
+import http.server
 import json
 import os
 from pathlib import Path
@@ -21,8 +23,12 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import unittest
+import urllib.parse
+
+from prerequisites import require
 
 ROOT = Path(__file__).resolve().parents[2]
 ACCOUNT = "361769570630"
@@ -138,6 +144,12 @@ with open(os.environ["FAKE_LOG"], "a") as log:
     log.write(json.dumps({"tool": tool, "argv": argv}) + "\n")
 if tool == "docker":
     sys.exit(99)
+if tool == "node":
+    # GH220-s: the real probe, run by the real Node.js, when the test names it; else a probe that passed.
+    real = os.environ.get("FAKE_NODE_REAL")
+    if real and argv[:1] == ["infra/aws/smoke-favourites.mjs"]:
+        os.execv(real, [real, *argv])
+    sys.exit(0)
 if tool == "python3":
     if argv[:1] != ["infra/aws/package_api.py"]:
         sys.exit(99)
@@ -171,6 +183,64 @@ def base_state():
             "vega-v2-alerts-edge": stack(),
         },
     }
+
+
+NODE = shutil.which("node")
+# The read API as the probe of step 12 meets it (GH220-s), in the forms of the real handler (the probe is checked
+# against the handler itself in backend/api/test/smoke-favourites.test.mjs): the manifest, the home with its player of
+# the week, and the personal read naming what it was asked. `scenario`: "well", "home-503" (the home unavailable),
+# "no-club" (the personal read without the followed club).
+SMOKE = {"season": "2025/2026", "team": "t_aaaaa2", "player": "p_aaaab4", "match": "m_aaaaa4", "date": "2025-09-04"}
+
+
+def read_api(scenario):
+    def answer(path, query):
+        if path == "/api/dashboard/manifest":
+            return 200, {"seasons": [{"id": SMOKE["season"], "chunks": []}], "defaultSeason": SMOKE["season"]}, {}
+        if path == "/api/read/home":
+            if scenario == "home-503":
+                return 503, {"ok": False, "available": False, "error": {"code": "DATA_UNAVAILABLE", "retry": True}}, {}
+            potw = {"playerId": SMOKE["player"], "teamId": SMOKE["team"], "matchId": SMOKE["match"], "date": SMOKE["date"]}
+            return 200, {"data": {"potw": potw, "leaders": {"goals": [], "assists": []}}, "meta": {"generation": "7"}}, {}
+        if path == "/api/read/home-favourites":
+            teams, players = query.get("personalTeams", []), query.get("personalPlayers", [])
+            favourites, mine = [], []
+            if teams and scenario != "no-club":
+                favourites.append({"teamId": teams[0], "strength": 1, "reason": "club", "players": players})
+            elif players:
+                favourites.append({"teamId": SMOKE["team"], "strength": 2, "reason": "player_club", "players": players})
+            if players:
+                mine.append({"playerId": players[0], "teamId": SMOKE["team"], "next": None,
+                             "matches": [{"matchId": SMOKE["match"], "date": SMOKE["date"]}]})
+            data = {"period": {"start": "2025-09-01", "end": "2025-09-07", "latest": False}, "rules": None,
+                    "favourites": favourites, "upcoming": [], "yourPlayers": mine}
+            return 200, {"data": data, "meta": {"generation": "7"}}, {"Cache-Control": "private, max-age=0, must-revalidate"}
+        return 404, {"ok": False, "error": {"code": "RESOURCE_NOT_FOUND", "retry": False}}, {}
+    return answer
+
+
+def serve(test, answer):
+    """A local HTTP origin answering `answer(path, query)`, closed after the test; its URL."""
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            url = urllib.parse.urlsplit(self.path)
+            status, body, headers = answer(url.path, urllib.parse.parse_qs(url.query))
+            data = json.dumps(body).encode()
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            for name, value in headers.items():
+                self.send_header(name, value)
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+
+        def log_message(self, *args):
+            pass
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    test.addCleanup(server.server_close)
+    test.addCleanup(server.shutdown)
+    return f"http://127.0.0.1:{server.server_address[1]}"
 
 
 def roles_updated(state):
@@ -256,17 +326,19 @@ TODAY = [
     ("deploy", "vega-v2-api", "ReleaseKey", "ReadDatabaseUrl", "OpsKey", "MediaBaseUrl", "ReservedConcurrency", "WebAclArn"),
     ("deploy", "vega-v2-alerts", "AlertEmail", "AlertEmail2", "WatchWorker", "WatchLive"),
     ("deploy", "vega-v2-alerts-edge", "AlertEmail", "AlertEmail2", "DistributionId", "ApiDomain"),
+    # FAILURE_MODES_OPTIMISATIONS.md, GH220-s: the check of the home's personal read, through the distribution, last.
+    ("node", "infra/aws/smoke-favourites.mjs https://d111111abcdef8.cloudfront.net"),
 ]
 
 
 @unittest.skipUnless(shutil.which("bash") and shutil.which("openssl"), "requires bash and openssl")
 class AccountDeployTest(unittest.TestCase):
-    def deploy(self, state, actions=False, script=ROOT / "infra/aws/deploy.sh"):
+    def deploy(self, state, actions=False, script=ROOT / "infra/aws/deploy.sh", extra=None):
         tmp = Path(tempfile.mkdtemp(prefix="vega-account-deploy-"))
         self.addCleanup(shutil.rmtree, tmp, True)
         bin_dir = tmp / "bin"
         bin_dir.mkdir()
-        for name, source in (("aws", FAKE_AWS), ("npm", FAKE_TOOL), ("python3", FAKE_TOOL), ("docker", FAKE_TOOL)):
+        for name, source in (("aws", FAKE_AWS), ("npm", FAKE_TOOL), ("python3", FAKE_TOOL), ("docker", FAKE_TOOL), ("node", FAKE_TOOL)):
             (bin_dir / name).write_text(f"#!{sys.executable}\n{source}")
             (bin_dir / name).chmod(0o755)
         (tmp / "state.json").write_text(json.dumps(state))
@@ -275,6 +347,7 @@ class AccountDeployTest(unittest.TestCase):
                "CFN_ROLE": f"arn:aws:iam::{ACCOUNT}:role/vega-v2-cloudformation", "WORKER_DESIRED_COUNT": "1"}
         if actions:
             env["GITHUB_ACTIONS"] = "true"
+        env.update(extra or {})
         done = subprocess.run(["bash", str(script)], cwd=ROOT, env=env, capture_output=True, text=True, timeout=120)
         log = (tmp / "calls.log").read_text() if (tmp / "calls.log").exists() else ""
         calls = [json.loads(line) for line in log.splitlines()]
@@ -436,7 +509,8 @@ class AccountDeployTest(unittest.TestCase):
         self.assertLess(index("vega-v2-database"), index("ssm put-parameter /vega/v2/password-account"))
         self.assertLess(index("ssm put-parameter /vega/v2/account-database-url"), index("vega-v2-worker"))
         self.assertLess(index("vega-v2-worker"), index("ecs run-task vega-v2-migrate"))
-        self.assertEqual(order[-1], "vega-v2-account")
+        # The account is the last stack; the check of the home's personal read (GH220-s) follows it.
+        self.assertEqual(order[-2:], ["vega-v2-account", "node infra/aws/smoke-favourites.mjs https://d111111abcdef8.cloudfront.net"])
         self.assertLess(index("vega-v2-alerts-edge"), index("vega-v2-account"))
         # The packages, built after `npm ci` of backend/account and uploaded under releases/v2-account/.
         front, store = (hashlib.sha256(k.encode()).hexdigest() for k in ("account-front", "account-store"))
@@ -449,6 +523,8 @@ class AccountDeployTest(unittest.TestCase):
             ("s3 cp", f"s3://{RELEASES}/releases/v2-account/{store}.zip"),
             ("deploy", "vega-v2-account", "FrontReleaseKey", "StoreReleaseKey", "AccountDatabaseUrl", "NeonAuthUrl", "SiteOrigins", "PassKeys",
              "PassKeyCurrent", "NeonApiKey", "NeonProjectId", "NeonBranchId"),
+            # FAILURE_MODES_OPTIMISATIONS.md, GH220-s: the check of the home's personal read, after the last stack.
+            ("node", "infra/aws/smoke-favourites.mjs https://d111111abcdef8.cloudfront.net"),
         ])
         given, argv = run.overrides("vega-v2-account")
         self.assertEqual(argv[argv.index("--capabilities") + 1], "CAPABILITY_IAM")
@@ -488,6 +564,57 @@ class AccountDeployTest(unittest.TestCase):
             self.assertEqual([line for line in lines if secret in line], [f"::add-mask::{secret}"])
         self.assertEqual(run.overrides("vega-v2-account")[0]["NeonApiKey"], neon_key)
         self.assertNotIn("no SSM parameter /vega/v2/neon-api-key", run.out)
+
+    # --- the check of the home's personal read after a Deploy (FAILURE_MODES_OPTIMISATIONS.md, GH220.3, GH220-s) -------
+
+    def test_GH220_s_the_last_step_checks_the_home_s_personal_read_through_the_distribution(self):
+        run = self.deploy(base_state())
+        self.assertEqual(run.code, 0, run.log)
+        probes = [c["argv"] for c in run.calls if c["tool"] == "node"]
+        self.assertEqual(probes, [["infra/aws/smoke-favourites.mjs", "https://d111111abcdef8.cloudfront.net"]])
+        self.assertEqual(run.writes()[-1], ("node", "infra/aws/smoke-favourites.mjs https://d111111abcdef8.cloudfront.net"))
+        self.assertEqual(run.out.splitlines()[-2:], ["== 12. The home's personal read (a club, a player, both)", "done"])
+
+    def test_GH220_s_the_operator_s_pair_reaches_the_probe(self):
+        run = self.deploy(base_state(), extra={"SMOKE_TEAM": "t_aaaaa1", "SMOKE_PLAYER": "p_aaaab1"})
+        self.assertEqual(run.code, 0, run.log)
+        self.assertEqual([c["argv"] for c in run.calls if c["tool"] == "node"], [[
+            "infra/aws/smoke-favourites.mjs", "https://d111111abcdef8.cloudfront.net", "--team", "t_aaaaa1", "--player", "p_aaaab1"]])
+
+    def test_GH220_s_the_real_probe_ends_the_deploy(self):
+        """deploy.sh's last step run for real (Node.js, infra/aws/smoke-favourites.mjs) against a local read API: well
+        answered, `done`; the home unavailable, or the followed club missing: the run stops there (exit 1, no `done`),
+        every stack above deployed."""
+        require(self, NODE, "node, to run the probe of step 12 (GH220-s)")
+        checks = [
+            "favourites: following the player of the week of 2025/2026 and the team of his match",
+            r"favourites club 200 \d+ ms db \? ms favourites=1 upcoming=0 yourPlayers=0 checked: the club \(strength 1\)",
+            r"favourites player 200 \d+ ms db \? ms favourites=1 upcoming=0 yourPlayers=1 checked: a favourite naming the player, his match of the week",
+            r"favourites both 200 \d+ ms db \? ms favourites=1 upcoming=0 yourPlayers=1 checked: the club \(strength 1\), a favourite naming the player, his match of the week",
+        ]
+        for scenario, failure in (("well", None), ("home-503", "favourites: FAILED the home of 2025/2026: status 503 DATA_UNAVAILABLE"),
+                                  ("no-club", r"favourites club 200 .* FAILED: the club is not among the favourites with strength 1")):
+            with self.subTest(scenario):
+                origin = serve(self, read_api(scenario))
+                state = base_state()
+                state["stacks"]["vega-v2-api"]["outputs"]["ApiOrigin"] = origin
+                run = self.deploy(state, extra={"FAKE_NODE_REAL": NODE})
+                self.assertEqual(run.writes()[:-1], TODAY[:-1], "every stack above the check deployed")
+                self.assertEqual(run.writes()[-1], ("node", f"infra/aws/smoke-favourites.mjs {origin}"))
+                lines = run.out.splitlines()
+                step = lines.index("== 12. The home's personal read (a club, a player, both)")
+                if failure is None:
+                    self.assertEqual(run.code, 0, run.log)
+                    self.assertEqual(len(lines), step + 6, run.out)
+                    for line, check in zip(lines[step + 1:], checks):
+                        self.assertRegex(line, f"^{check}$")
+                    self.assertEqual(lines[-1], "done")
+                else:
+                    self.assertEqual(run.code, 1, run.log)
+                    self.assertRegex(run.out, f"(?m)^{failure}$")
+                    self.assertNotIn("done", lines)
+                for secret in (SMOKE["team"], SMOKE["player"], SMOKE["match"]):
+                    self.assertNotIn(secret, run.log)
 
     def test_w10_a_failed_migration_stops_before_the_account_stack(self):
         state = prepared(base_state())

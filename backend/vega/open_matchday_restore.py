@@ -86,13 +86,14 @@ REFS = {
 # agg.match_probable_lineup_players (match_id, integer, through its parent's key), our probable elevens of matches not
 # started, which name a match (ADDED_DEPENDENCIES, checked for occupancy like the others; the restored Open Matchday
 # matches are finished, so none has a row there), two api views and two read grants to vega_calc; no column of
-# agg.power_runs. A later one needs its own review here.
+# agg.power_runs. 177 (GH137) redefines four functions only (api.league_history_matches, _next, _scorers, _players): the
+# same rows, no table, no column. A later one needs its own review here.
 REVIEWED_SCHEMAS = ("153_transfer_history_served.sql", "163_league_player_seasons.sql", "164_league_history_reads.sql",
                     "165_league_history_spellings.sql", "166_match_strengths_extra_time.sql", "167_player_level.sql",
                     "168_nation_world_ranking.sql", "169_player_level_measured.sql",
                     "170_nation_elo_national_set.sql", "171_home_importance_v2.sql", "172_international_goals.sql",
                     "173_nation_last_played.sql", "174_absences_suspensions.sql",
-                    "175_player_award.sql", "176_match_probable_lineups.sql")
+                    "175_player_award.sql", "176_match_probable_lineups.sql", "177_league_history_lean_reads.sql")
 
 
 class Refusal(RuntimeError):
