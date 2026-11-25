@@ -9,6 +9,7 @@ import { nationalTeamLabel } from "../services/national-flags.js";
 import { Term } from "./Hint.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import useCrestColours from "../hooks/useCrestColours.js";
+import { json, useResource } from "../services/resources.js";
 import { number } from "../services/format.js";
 import { kickoffFormatter } from "../services/fixtures.js";
 import {
@@ -684,6 +685,31 @@ export function MatchOfTheWeek({
   const [active, setActive] = useState(null);
   // Each team in its crest's colour, as on the match page (FAILURE_MODES § 66).
   const teamColours = useCrestColours(h, a, { charts: false });
+  // Each team's place in the match's competition (FAILURE_MODES § 67): the served rank when it is that competition's,
+  // else the competition's table for the match's season; never another competition's rank.
+  const leagueId = match.leagueId;
+  const served = (t) => {
+    const rank = ranks.get(t.id);
+    return rank && rank.leagueId === leagueId ? rank : null;
+  };
+  const elsewhere = Boolean(leagueId) && (!served(h) || !served(a));
+  const standingsUrl =
+    "/api/standings?" +
+    new URLSearchParams({ competition: leagueId || "", ...(match.season && { season: String(match.season) }) });
+  const competitionTable = useResource(
+    "home-competition-table:" + standingsUrl,
+    () => json(standingsUrl),
+    elsewhere,
+  );
+  const rankOf = (t) => {
+    const own = served(t);
+    if (own) return own;
+    for (const table of competitionTable.value?.tables || []) {
+      const row = table.rows?.find((item) => item.id === t.id);
+      if (row && Number.isFinite(row.position)) return { rank: row.position, form: [] };
+    }
+    return null;
+  };
   // On a phone the card opens on the score; its charts unfold on demand.
   const detail = usePhoneFold();
   const timeline = xgTimeline(match);
@@ -708,7 +734,7 @@ export function MatchOfTheWeek({
         </React.Fragment>
       ));
   const team = (t, side) => {
-    const rank = ranks.get(t.id);
+    const rank = rankOf(t);
     return (
       <Link
         className={`home-match-side is-${side}`}
@@ -720,7 +746,13 @@ export function MatchOfTheWeek({
           <strong>{t.name}</strong>
           {rank && (
             <small>
-              {ordinal(rank.rank)} · <FormDots form={rank.form} />
+              {ordinal(rank.rank)}
+              {rank.form?.length ? (
+                <>
+                  {" "}
+                  · <FormDots form={rank.form} />
+                </>
+              ) : null}
             </small>
           )}
         </span>
