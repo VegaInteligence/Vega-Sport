@@ -11,9 +11,12 @@ const id = PROBABLE_MATCH_ID;
 const api = "/api/matches/" + id;
 const kickoff = new Date(PROBABLE_KICKOFF).toISOString();
 const message = "Le match n’a pas encore commencé.";
+// Before kick-off the page has two tabs (issue #221, FAILURE_MODES § 62): a game view's address
+// opens « Avant-match », the former « Joueurs » « Compositions », which holds it now.
+const TABS = ["Avant-match", "Compositions"];
 const views = [
-  ["stats", "Statistiques"], ["shots", "Tirs & xG"], ["players", "Joueurs"],
-  ["analyses", "Analyses"], ["overview", "Vue d’ensemble"],
+  ["stats", "Avant-match"], ["shots", "Avant-match"], ["players", "Compositions"],
+  ["analyses", "Avant-match"], ["overview", "Avant-match"],
 ];
 const summary = {
   id, season: "2026/2027", leagueId: "l_3FJFUl", league: "Ligue 1", summaryVersion: 1,
@@ -108,39 +111,38 @@ try {
     const fixture = await setup(label, device);
     const { page, run } = fixture;
     try {
-      await check(label + " — cinq onglets sans données de jeu", {
-        message, requests: [], pageErrors: [], allTabsReachable: true, overflow: 0,
+      await check(label + " — deux onglets, aucune donnée de jeu lue", {
+        tabs: TABS, opened: Object.fromEntries(views), requests: [], pageErrors: [], overflow: 0,
       }, async () => {
-        await fixture.go(entry);
-        const seen = {};
-        const order = [...views.filter(([key]) => key === entry), ...views.filter(([key]) => key !== entry)];
-        for (const [key, name] of order) {
-          const control = tab(page, name);
-          await control.waitFor();
-          if (key !== entry) await control.click();
-          await page.waitForURL((url) => url.searchParams.get("view") === key);
+        const opened = {};
+        let tabs = [];
+        for (const [key] of [...views.filter(([key]) => key === entry), ...views.filter(([key]) => key !== entry)]) {
+          await fixture.go(key);
+          const selectedTab = page.locator('[role="tab"][aria-selected="true"]');
+          await selectedTab.waitFor();
           await page.waitForTimeout(350);
-          seen[key] = (await panelOf(page).innerText()).trim();
-          assert.equal(await control.getAttribute("aria-selected"), "true");
+          opened[key] = (await selectedTab.innerText()).trim();
+          tabs = (await page.locator('[role="tab"]').allInnerTexts()).map((t) => t.trim());
           if (key === entry) await page.screenshot({ path: join(out, label + ".png") });
         }
         const width = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-        run.visible = seen;
+        run.visible = opened;
         run.tabRequests = [...run.requests];
         run.unexpectedBeforeKickoff = forbidden(run);
-        assert.deepEqual(Object.values(seen), Array(5).fill(message));
+        assert.deepEqual(tabs, TABS);
+        assert.deepEqual(opened, Object.fromEntries(views));
         assert.deepEqual(run.unexpectedBeforeKickoff, []);
         assert.deepEqual(run.errors, []);
         assert.ok(width <= 0);
-        return { seen, width };
+        return { tabs, opened, width };
       });
-      await check(label + " — contexte, classement et compositions", {
-        accessible: ["Avant-match", "Classement", "Compositions"],
+      await check(label + " — contexte et compositions", {
+        accessible: TABS,
         probableAndOfficial: true, playerMessage: message, gameRequests: [],
       }, async () => {
         // Reset the observations from the five tabs, even when recording a failing baseline.
         run.requests.length = 0;
-        for (const name of ["Avant-match", "Classement", "Compositions"]) {
+        for (const name of TABS) {
           await tab(page, name).click();
           await tab(page, name).and(page.locator('[aria-selected="true"]')).waitFor();
           assert.equal(await tab(page, name).getAttribute("aria-selected"), "true");
@@ -171,7 +173,8 @@ try {
   }
 
   await check("Début en direct sur une fiche déjà ouverte", {
-    scheduled: message, statsAfterStart: [7, 2], sameDocument: true, selectedTab: "stats",
+    scheduled: "Avant-match", statsAfterStart: [7, 2], sameDocument: true, selectedTab: "stats",
+    runningTabs: ["Direct", "Résumé", "Compositions", "Statistiques", "Analyses", "Avant-match"],
   }, async () => {
     const fixture = await setup("transition", desktop, { live: true });
     const { page, run } = fixture;
@@ -179,27 +182,31 @@ try {
       await fixture.go("stats");
       await panelOf(page).waitFor();
       await page.evaluate(() => { window.vegaE2EDocument = true; });
-      const before = (await panelOf(page).innerText()).trim();
+      const selectedName = async () => (await page.locator('[role="tab"][aria-selected="true"]').innerText()).trim();
+      const before = await selectedName();
       await page.clock.fastForward(11 * 60_000);
       await page.waitForRequest("**/live/matches/" + id, { timeout: 7000 }).catch((error) => {
         if (!fixture.liveReads()) throw error;
       });
       await page.clock.fastForward(30 * 60_000);
-      const whileScheduled = (await panelOf(page).innerText()).trim();
+      const whileScheduled = await selectedName();
       run.unexpectedWhileScheduled = forbidden(run);
       fixture.start();
       await page.clock.runFor(31000);
       const board = panelOf(page).getByRole("region", { name: "Statistiques des équipes" });
       await board.waitFor();
       const text = await board.innerText();
-      assert.equal(before, message);
-      assert.equal(whileScheduled, message);
+      assert.equal(before, "Avant-match");
+      assert.equal(whileScheduled, "Avant-match");
       assert.deepEqual(run.unexpectedWhileScheduled, []);
       assert.match(text, /7/);
       assert.match(text, /2/);
       assert.equal(await page.evaluate(() => window.vegaE2EDocument), true);
       assert.equal(await tab(page, "Statistiques").getAttribute("aria-selected"), "true");
       await tab(page, "Direct").waitFor();
+      // M13 (FAILURE_MODES § 62): the Résumé stays a tab while the match runs.
+      const runningTabs = (await page.locator('[role="tab"]').allInnerTexts()).map((t) => t.trim());
+      assert.deepEqual(runningTabs, ["Direct", "Résumé", "Compositions", "Statistiques", "Analyses", "Avant-match"]);
       await page.screenshot({ path: join(out, "direct.png") });
       return { before, whileScheduled, text, liveReads: fixture.liveReads() };
     } finally {
@@ -218,8 +225,8 @@ try {
         const text = await board.innerText();
         assert.match(text, /7/);
         assert.match(text, /2/);
-        await tab(page, "Tirs & xG").click();
-        await panelOf(page).getByRole("heading", { name: "Analyse des tirs" }).waitFor();
+        await tab(page, "Résumé").click();
+        await panelOf(page).getByRole("heading", { name: "Carte des tirs" }).waitFor();
         assert.ok(run.requests.includes(api + "/stats"));
         assert.ok(run.requests.includes(api + "/shots"));
         assert.deepEqual(run.errors, []);

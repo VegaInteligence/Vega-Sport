@@ -1,5 +1,16 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## La page match en cinq onglets — FAILURE_MODES § 62 (25 November 2026, branch `claude/fusion-onglets-match` from main 492a136, issue #221)
+
+- hugo validated the mock-up (`/mnt/project-files/fusion-onglets-match/`, artifact « Onglets du match ») and asked to code and push. Eight tabs become five: Résumé, Compositions, Statistiques, Analyses, Avant-match.
+- Résumé: « Le match minute par minute » (win probability, cumulative xG, momentum; each view offered only with data, `MatchFlow.jsx`), « Carte des tirs » with the shots' list under a « Voir les N tirs » fold, « Meilleures notes » → « Tous les joueurs » opens Compositions. Gone: « Les chiffres du match » (the header's strip has them), « Occasions au fil du match », the separate probability card, « Tirs collectés ».
+- Compositions holds the players' board under the line-ups once the match started; Analyses loses the momentum and the halves (in the Résumé and Statistiques); Avant-match ends with the competition's table, for every match as the former « Classement » tab.
+- Addresses: `view=shots` → Résumé, `players` → Compositions, `standings` → Avant-match, not rewritten. Before kick-off the page has two tabs (Avant-match, Compositions) instead of five that said « Le match n’a pas encore commencé. »; no game family is read. In play, Direct comes first and the Résumé stays a tab.
+- hugo asked that no data be lost or forgotten: block-by-block check against main (§ 62.1 « Nothing lost »). Two departures from the mock-up came out of it and were reverted: the Résumé hidden during a live match, the table hidden for a knockout round. Only presentation changes remain: the six figures of « Les chiffres du match » are in Statistiques (the four first also under the score), the halves are Statistiques' period choice, and the cumulative xG chart has no team choice any more (both teams drawn; the shot map keeps it).
+- The shot map's caption names only the gaps there are (it read « 0 xG absent · 0 coordonnées absentes »).
+- Tests first: `tests/e2e/match-tabs.e2e.mjs` (M1–M12) red 10/12, then green 14/14 (M14: the halves in Statistiques) (`/mnt/project-files/fusion-onglets-match/e2e-rouge/`, `e2e-vert/`). `match-before-kickoff.e2e.mjs` moved to the two-tab contract (and M13, the Résumé while live), 7/7 (`e2e-avant-coup-envoi/`). `match-page.e2e.mjs` updated (T, A1, V11, F3/F4) but not run: it needs the public API, which this cloud session cannot reach. Site 1 042/1 042, build OK.
+- Not verified: the real public API on a finished match.
+
 ## « Composition probable » probable-v2 — FAILURE_MODES § 61.3 (25 November 2026, branch `claude/probable-v2` from main c83c53e, local only)
 
 - Goal: the worker's step writes `probable-v2`, the study v4's H1 (`/mnt/project-files/blesses-suspendus/onze-probable/v4/`, run 1, read only on production): 8.43 starters found out of 11 against 7.91 for `probable-v1` on 11 760 validation team-matches (five leagues 8.18 against 7.87). Not pushed, no PR yet; Linear coordination is the user's.

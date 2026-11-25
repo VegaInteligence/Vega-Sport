@@ -358,10 +358,16 @@ export function ShotMap({ match, teamId = "all", onPlayer = () => {} }) {
         ))}
       </svg>
       {bubble.bubble}
-      <figcaption>
-        {shots.filter((s) => !isNumber(s.xg)).length} xG absent ·{" "}
-        {shots.length - located.length} coordonnées absentes
-      </figcaption>
+      {(() => {
+        // Only the gaps there are: a complete map says nothing under it.
+        const gaps = [
+          [shots.filter((s) => !isNumber(s.xg)).length, "xG absent"],
+          [shots.length - located.length, "coordonnées absentes"],
+        ].filter(([n]) => n > 0);
+        return gaps.length ? (
+          <figcaption>{gaps.map(([n, label]) => `${n} ${label}`).join(" · ")}</figcaption>
+        ) : null;
+      })()}
     </figure>
   );
 }

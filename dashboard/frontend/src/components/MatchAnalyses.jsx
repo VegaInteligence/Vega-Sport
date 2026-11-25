@@ -1,7 +1,7 @@
 "use client";
-/* The « Analyses » tab, all on one page: who dominated minute by minute, the pass networks, how
- * each team played, the two halves, the players whose actions weighed most and where each team
- * (or player) acted. Everything answers the pointer: a minute, a player, a link, a zone; a
+/* The « Analyses » tab, all on one page: the pass networks, how each team played, the players
+ * whose actions weighed most and where each team (or player) acted (who dominated minute by
+ * minute is a view of the Résumé's chart, the two halves the period choice of « Statistiques »). Everything answers the pointer: a minute, a player, a link, a zone; a
  * player clicked opens his performance of the match. */
 import React, { useMemo, useState } from "react";
 import { Card, Empty, Media, Segments, Skeleton } from "./UI.jsx";
@@ -9,8 +9,7 @@ import { Term } from "./Hint.jsx";
 import { useHoverBubble } from "./HoverCard.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import useMatchSection from "../hooks/useMatchSection.js";
-import MatchMomentum from "./MatchMomentum.jsx";
-import { playerRows, styleGroups, teamStatsByPeriod } from "../services/match-tabs.js";
+import { playerRows, styleGroups } from "../services/match-tabs.js";
 import { number } from "../services/format.js";
 import s from "./MatchTabs.module.css";
 import o from "./MatchPlayerOpen.module.css";
@@ -45,59 +44,6 @@ function Style({ match, teams }) {
             })}
           </React.Fragment>
         ))}
-      </div>
-    </Card>
-  );
-}
-
-/* ------------------------------------------------------------ halves */
-
-const HALF_ROWS = [
-  ["Buts attendus · xG", "expected_goals", 2],
-  ["Tirs", "total_shots"],
-  ["Tirs cadrés", "ShotsOnTarget"],
-  ["Possession", "BallPossesion", 0, " %"],
-  ["Passes", "passes"],
-  ["Ballons dans la surface adverse", "touches_opp_box"],
-  ["Corners", "corners"],
-];
-
-function Halves({ match, periods }) {
-  if (!periods.FirstHalf || !periods.SecondHalf) return null;
-  const rows = HALF_ROWS.filter(([, key]) => periods.FirstHalf[key] || periods.SecondHalf[key]);
-  const v = (period, key, side, digits, unit = "") => {
-    const value = periods[period]?.[key]?.[side];
-    return value == null ? "—" : `${number(value, digits || 0)}${unit}`;
-  };
-  return (
-    <Card title="Première et deuxième mi-temps">
-      <div className="table-scroll">
-        <table className={`data-table ${s.halves}`}>
-          <thead>
-            <tr>
-              <th scope="col" />
-              <th scope="col" colSpan={2}>1re mi-temps</th>
-              <th scope="col" colSpan={2}>2e mi-temps</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map(([label, key, digits, unit]) => (
-              <tr key={key}>
-                <th scope="row"><Term>{label}</Term></th>
-                {["FirstHalf", "SecondHalf"].map((period) => (
-                  <React.Fragment key={period}>
-                    <td><span className={s.homeText}>{v(period, key, "home", digits, unit)}</span></td>
-                    <td><span className={s.awayText}>{v(period, key, "away", digits, unit)}</span></td>
-                  </React.Fragment>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <div className={s.legend}>
-        <span><i className={s.dot} style={{ background: HOME }} /> {match.home.name}</span>
-        <span><i className={s.dot} style={{ background: AWAY }} /> {match.away.name}</span>
       </div>
     </Card>
   );
@@ -476,31 +422,23 @@ function Zones({ match, heat }) {
 
 export default function MatchAnalyses({ match }) {
   const f = useFootball();
-  const momentum = useMatchSection(match, "momentum");
-  const events = useMatchSection(match, "events");
-  const stats = useMatchSection(match, "stats");
   const advanced = useMatchSection(match, "advanced");
   const advancedPlayers = useMatchSection(match, "advanced/players");
   const network = useMatchSection(match, "advanced/network");
   const heat = useMatchSection(match, "heatmaps");
   const players = useMatchSection(match, "players");
-  const periods = teamStatsByPeriod(stats.data);
   const images = useMemo(() => new Map(playerRows(players.data).map((r) => [r.id, r.imageUrl])), [players.data]);
-  const loading = [momentum, stats, advanced, network, heat].every((r) => r.loading && !r.data);
+  const loading = [advanced, network, heat].every((r) => r.loading && !r.data);
   if (loading) return <Skeleton label="Chargement des analyses…" lines={5} />;
-  const nothing = !momentum.data?.points?.length && !advanced.data?.teams?.length && !network.data?.networks?.length && !heat.data?.teams?.length && !periods.FirstHalf;
+  const nothing = !advanced.data?.teams?.length && !network.data?.networks?.length && !heat.data?.teams?.length;
   if (nothing) return <Empty>Aucune analyse disponible pour ce match.</Empty>;
   const openPlayer = (id) => id && f.setPlayer(`${match.id}:${id}`);
   return (
     <div className={s.stack}>
-      <MatchMomentum match={match} points={momentum.data?.points} events={events.data?.events} />
       <Networks match={match} networks={network.data?.networks} onPlayer={openPlayer} />
       <div className={`${s.grid2} ${s.balanced}`}>
         <Style match={match} teams={advanced.data?.teams} />
-        <div className={s.stack}>
-          <Halves match={match} periods={periods} />
-          <Values match={match} players={advancedPlayers.data?.players} images={images} onPlayer={openPlayer} />
-        </div>
+        <Values match={match} players={advancedPlayers.data?.players} images={images} onPlayer={openPlayer} />
       </div>
       <Zones match={match} heat={heat.data} />
     </div>

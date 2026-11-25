@@ -5206,3 +5206,59 @@ Not verified: that production's five leagues carry their PitchAPI key in `core.p
 the five, and P1a is used everywhere); how many of the window's opponents have an Elo (an unknown one counts a gap of
 150); the competition types production's editions get; the cost on production's base; the study's gain measured with
 `probable.py`'s absent and gone instead of its own. The bubble's wording of the score waits for hugo.
+
+## 62. The match page in five tabs (issue #221; hugo, 25 Nov 2026: mock-up https://claude.ai/artifact/3KkomqcnEFUSvY71pf6eWY validated, « ok code et push ses changements »; written before the tests)
+
+Site only (`MatchDetail.jsx` and the components it draws); no API, worker or migration. Each block of the eight tabs
+lives in one place. E2E: `tests/e2e/match-tabs.e2e.mjs` (the match's families mocked, the rest of the site on any API),
+then `tests/e2e/match-before-kickoff.e2e.mjs` brought to the new contract.
+
+### 62.1 Rules
+
+- **Tabs.** A match neither to play nor running on the feed: « Résumé », « Compositions », « Statistiques »,
+  « Analyses », « Avant-match », in that order, « Résumé » selected with no `view` in the address. Before kick-off
+  (`lineupsBeforeKickoff` and the feed not started): « Avant-match », « Compositions » only, « Avant-match » selected.
+  Running on the feed: « Direct », then the five (« Résumé » keeps its charts, shots and grades during the match).
+- **Addresses.** `view=overview|lineups|stats|analyses|context` open their tab. The former ones open the tab that holds
+  their block: `shots` → « Résumé », `players` → « Compositions », `standings` → « Avant-match ». A view the moment
+  does not show (`stats` before kick-off) opens the default tab; the address is not rewritten, so the tab opens once
+  it exists (kick-off). A tab click writes its own key (`overview` dropped as the default).
+- **Résumé.** « Le match minute par minute »: one card, a choice of « Probabilité de victoire », « xG cumulés » and
+  « Domination », each offered only when it has data (the forecast read, the summary's shots with an xG, the momentum
+  family); first offered selected; no card when none. Then « Carte des tirs » (the shot map with its team choice, the
+  shots listed under a fold « Voir les N tirs », closed), and « Meilleures notes » whose link « Tous les joueurs »
+  opens « Compositions ». Gone: « Les chiffres du match » (the figures under the score), « Occasions au fil du match »,
+  « Analyse des tirs », the separate « Probabilité de victoire » card.
+- **Compositions.** The line-ups as before; after kick-off, under them, the players' board (« Meilleure note du
+  match » and its three leaders, the table with its team choice and sorts). Before kick-off, no board.
+- **Statistiques.** Unchanged.
+- **Analyses.** « Qui a dominé, minute par minute » and « Première et deuxième mi-temps » are gone (one in
+  « Résumé », the other is the period choice of « Statistiques »); the rest unchanged. With nothing else to show:
+  « Aucune analyse disponible pour ce match. ».
+- **Avant-match.** As before, then the competition's table (the former « Classement » tab), for every match as that
+  tab showed it, a knockout round included (a cup's league phase or groups stay readable).
+- **Nothing lost (hugo, 25 Nov 2026: « faut être sûr de ne rien oublier ou perdre en terme de data »).** Each block of
+  the eight tabs is still drawn: « Les chiffres du match » (xG, shots, on target, possession under the score with
+  their halves on hover; all six, big chances and corners included, in « Statistiques »); « Première et deuxième
+  mi-temps » (the period choice of « Statistiques », same family); « Tirs collectés » (the fold, same rows, same team
+  choice); the momentum, the win probability and the cumulative xG (« Le match minute par minute »).
+
+### 62.2 Failure modes and expected outcomes (E2E)
+
+- **M1** finished match, no `view`: five tabs in the order above, « Résumé » selected, the address without `view`.
+- **M2** « Résumé » holds « Le match minute par minute », « Carte des tirs », « Meilleures notes », and none of « Les
+  chiffres du match », « Occasions au fil du match », « Analyse des tirs ».
+- **M3** the three choices with data; « Probabilité de victoire » selected, its chart (`data-chart="win-probability"`);
+  « xG cumulés » draws `svg.xg-timeline`; « Domination » draws `data-chart="momentum"`.
+- **M4** no forecast and no momentum: « xG cumulés » alone, its chart drawn.
+- **M5** the fold lists every shot of the shots family (N in « Voir les N tirs », N rows) once opened.
+- **M6** « Tous les joueurs » selects « Compositions » (`view=lineups`); the players' table is there under the pitch.
+- **M7** « Analyses » holds neither « Qui a dominé, minute par minute » nor « Première et deuxième mi-temps », even with
+  the momentum family and both halves' statistics.
+- **M8** a league match: « Avant-match » shows the competition's table; a final (`roundName` « Final ») too.
+- **M9** each former address: `shots` → « Résumé », `players` → « Compositions », `standings` → « Avant-match ».
+- **M10** before kick-off: two tabs, « Avant-match » selected; `view=stats` opens « Avant-match »; no game family read.
+- **M11** phone (393 px): no sideways scroll on « Résumé » and « Compositions ».
+- **M12** no page error.
+- **M14** « Statistiques » offers « Match », « 1re mi-temps », « 2e mi-temps », the second half's own values drawn.
+- **M13** (`match-before-kickoff.e2e.mjs`, transition) once the feed runs: « Direct » first, « Résumé » still a tab.

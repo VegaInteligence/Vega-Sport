@@ -26,14 +26,14 @@ import {
   Skeleton,
 } from "./UI.jsx";
 import Icon from "./Icon.jsx";
-import { XgTimeline, ShotMap } from "./Charts.jsx";
+import { ShotMap } from "./Charts.jsx";
 import { normalizeShots } from "./MatchSections.jsx";
 import MatchStandings from "./MatchStandings.jsx";
-import { StatRow, StatRows } from "./StatRows.jsx";
+import { StatRow } from "./StatRows.jsx";
 const MatchContext = lazy(() => import("./MatchContext.jsx"));
 const MatchForecast = lazy(() => import("./MatchForecast.jsx"));
 const MatchOdds = lazy(() => import("./MatchOdds.jsx"));
-import MatchWinProbability from "./MatchWinProbability.jsx";
+import MatchFlow from "./MatchFlow.jsx";
 import { MatchAbsences } from "./Absences.jsx";
 import { useMatchWinProbability } from "../services/forecasts.js";
 import MatchKpis from "./MatchKpis.jsx";
@@ -48,8 +48,6 @@ import { number, date, isNumber } from "../services/format.js";
 import {
   groupedStats,
   periodStats,
-  overviewStats,
-  statValue,
 } from "../services/match-data.js";
 import { useResource } from "../services/resources.js";
 import {
@@ -64,16 +62,18 @@ import {
 } from "../services/match-resources.js";
 import { seasonLabel } from "../model.js";
 import { BookmarkButton } from "./ResearchUI.jsx";
+// The match in five tabs (issue #221, FAILURE_MODES § 62): « Vue d’ensemble », « Tirs & xG » and
+// the momentum of « Analyses » make the Résumé, « Joueurs » joins « Compositions », « Classement »
+// joins « Avant-match ».
 const views = [
-  ["overview", "Vue d’ensemble", "activity"],
-  ["context", "Avant-match", "calendar"],
-  ["standings", "Classement", "trophy"],
-  ["stats", "Statistiques", "filters"],
-  ["shots", "Tirs & xG", "target"],
+  ["overview", "Résumé", "activity"],
   ["lineups", "Compositions", "pitch"],
-  ["players", "Joueurs", "players"],
-  ["analyses", "Analyses", "activity"],
+  ["stats", "Statistiques", "filters"],
+  ["analyses", "Analyses", "target"],
+  ["context", "Avant-match", "calendar"],
 ];
+/** The former tabs' addresses open the tab that holds them now. */
+const FORMER_VIEWS = { shots: "overview", players: "lineups", standings: "context" };
 function MatchStatistics({ match }) {
   const f = useFootball(),
     [period, setPeriod] = useState("All"),
@@ -163,12 +163,10 @@ function MatchStatistics({ match }) {
 }
 // While the feed runs the match, its view comes first and opens the page.
 const liveView = ["live", "Direct", "activity"];
-// Before kick-off the context comes first: the other views fill in later.
-const upcomingViews = [
-  ...views.filter(([key]) => key === "context"),
-  ...views.filter(([key]) => key !== "context"),
-];
-const gameViews = new Set(["overview", "stats", "shots", "players", "analyses"]);
+// Before kick-off, only what exists before a match: its context first, then the (probable) line-ups.
+const upcomingViews = ["context", "lineups"].map((key) => views.find(([k]) => k === key));
+// While it runs, the Direct view comes first; the Résumé keeps its charts, its shots and its grades.
+const runningViews = [liveView, ...views];
 function MatchViewTabs({ view, onChange, panelId, views }) {
   const refs = useRef([]);
   useEffect(() => {
@@ -274,93 +272,84 @@ function MatchPlayer({ row, rank, grade }) {
     </button>
   );
 }
-function MatchShots({ match, extraTime = false }) {
+/** The Résumé's shot map (issue #221): the shots of one team or both, their list under a fold. */
+function MatchShots({ match }) {
   const f = useFootball(),
-    [chart, setChart] = useState("map"),
-    [team, setTeam] = useState("all");
+    [team, setTeam] = useState("all"),
+    [open, setOpen] = useState(false),
+    listId = useId();
   const shots = (match.shots || [])
     .filter((s) => team === "all" || s.teamId === team)
     .sort((a, b) => (a.minute ?? Infinity) - (b.minute ?? Infinity));
   return (
-    <div className="match-shot-analysis">
-      <Card
-        title="Analyse des tirs"
-        action={
-          <Segments
-            label="Graphique du match"
-            value={chart}
-            onChange={setChart}
-            items={[
-              ["map", "Carte des tirs"],
-              ["timeline", "xG cumulés"],
-            ]}
-          />
-        }
-      >
-        <div className="shot-team-selector">
-          <Segments
-            label="Équipe des tirs"
-            value={team}
-            onChange={setTeam}
-            items={[
-              ["all", "Les deux équipes"],
-              [match.home.id, match.home.name],
-              [match.away.id, match.away.name],
-            ]}
-          />
-        </div>
-        {chart === "map" ? (
-          <ShotMap match={match} teamId={team} onPlayer={f.setPlayer} />
-        ) : (
-          <XgTimeline
-            match={match}
-            teamId={team}
-            onPlayer={f.setPlayer}
-            extraTime={extraTime}
-          />
-        )}
-      </Card>
-      <Card
-        title="Tirs collectés"
-        action={<span className="data-source-tag">{number(shots.length)}</span>}
-      >
-        {shots.length ? (
-          <ol className="match-shot-list">
-            {shots.map((s, i) => (
-              <li key={s.id || i}>
-                <span className="shot-minute">{number(s.minute)}′</span>
-                <button
-                  onClick={() =>
-                    s.playerId && f.setPlayer(`${match.id}:${s.playerId}`)
-                  }
-                  disabled={!s.playerId}
-                >
-                  <strong>{s.playerName || "Joueur non renseigné"}</strong>
-                  <span>
-                    {s.isOwnGoal
-                      ? "CSC"
-                      : s.isGoal
-                        ? "But"
-                        : s.isOnTarget === true
-                          ? "Tir cadré"
-                          : "Tir"}
+    <Card
+      title="Carte des tirs"
+      className="match-shots-card"
+      action={
+        <Segments
+          label="Équipe des tirs"
+          value={team}
+          onChange={setTeam}
+          items={[
+            ["all", "Les deux"],
+            [match.home.id, match.home.name],
+            [match.away.id, match.away.name],
+          ]}
+        />
+      }
+    >
+      <ShotMap match={match} teamId={team} onPlayer={f.setPlayer} />
+      {shots.length > 0 && (
+        <div className="match-shot-fold">
+          <button
+            type="button"
+            className="match-shot-fold-toggle"
+            aria-expanded={open}
+            aria-controls={listId}
+            onClick={() => setOpen((v) => !v)}
+          >
+            {open ? "Masquer" : "Voir"} les {number(shots.length)} tir{shots.length > 1 ? "s" : ""}
+            <Icon name="chevron" className={open ? "is-open" : ""} />
+          </button>
+          {open && (
+            <ol className="match-shot-list" id={listId}>
+              {shots.map((s, i) => (
+                <li key={s.id || i} className={s.isGoal && !s.isOwnGoal ? "is-goal" : undefined}>
+                  <span className="shot-minute">{number(s.minute)}′</span>
+                  <button
+                    onClick={() =>
+                      s.playerId && f.setPlayer(`${match.id}:${s.playerId}`)
+                    }
+                    disabled={!s.playerId}
+                  >
+                    <strong>{s.playerName || "Joueur non renseigné"}</strong>
+                    <span>
+                      {s.teamId === match.away.id ? match.away.name : match.home.name}
+                      {" · "}
+                      {s.isOwnGoal
+                        ? "CSC"
+                        : s.isGoal
+                          ? "But"
+                          : s.isOnTarget === true
+                            ? "Tir cadré"
+                            : "Tir"}
+                    </span>
+                  </button>
+                  <span className="shot-xg">
+                    {number(s.xg, 2)}
+                    <small>xG</small>
                   </span>
-                </button>
-                <span className="shot-xg">
-                  {number(s.xg, 2)}
-                  <small>xG</small>
-                </span>
-              </li>
-            ))}
-          </ol>
-        ) : (
-          <Empty>Aucun tir collecté.</Empty>
-        )}
-      </Card>
-    </div>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+      )}
+    </Card>
   );
 }
-function SummaryShots({ match, extraTime = false }) {
+/** A summary's match reads its shots, with their coordinates, from the shots family. */
+function SummaryShots({ match }) {
   const f = useFootball();
   const resource = useResource(
     matchResourceKey(
@@ -384,7 +373,7 @@ function SummaryShots({ match, extraTime = false }) {
   );
   return (
     <AsyncState resource={resource}>
-      {(value) => <MatchShots match={value} extraTime={extraTime} />}
+      {(value) => <MatchShots match={value} />}
     </AsyncState>
   );
 }
@@ -461,7 +450,8 @@ export default function MatchDetail({ match }) {
   const f = useFootball(),
     search = useSearchParams(),
     panelId = useId();
-  const requestedView = search.get("view");
+  const askedView = search.get("view");
+  const requestedView = FORMER_VIEWS[askedView] || askedView;
   const [now, setNow] = useState(() => Date.now());
   const beforeKickoff = lineupsBeforeKickoff(match, now);
   const liveWindow = isLiveWindow(match, now);
@@ -482,21 +472,16 @@ export default function MatchDetail({ match }) {
   const running = liveRunning(live);
   const liveStarted = live?.status && live.status !== "scheduled";
   const upcoming = beforeKickoff && !liveStarted;
-  const tabs = running
-    ? [liveView, ...views]
-    : upcoming
-      ? upcomingViews
-      : views;
+  const tabs = running ? runningViews : upcoming ? upcomingViews : views;
   const defaultView = running ? "live" : upcoming ? "context" : "overview";
   const view = tabs.some(([key]) => key === requestedView) ? requestedView : defaultView;
-  const contentView = upcoming && gameViews.has(view) ? "waiting" : view;
   const selectView = (value) => {
     const url = new URL(window.location.href);
     if (value === defaultView) url.searchParams.delete("view");
     else url.searchParams.set("view", value);
     window.history.replaceState(null, "", url.pathname + url.search);
   };
-  const grades = useMatchGrades(match.id, contentView === "overview");
+  const grades = useMatchGrades(match.id, view === "overview");
   const players = useMemo(
     () =>
       f.data.appearances
@@ -703,52 +688,33 @@ export default function MatchDetail({ match }) {
         role="tabpanel"
         aria-labelledby={`${panelId}-${view}`}
       >
-        {contentView === "waiting" && (
-          <section className="card">
-            <Empty>Le match n’a pas encore commencé.</Empty>
-          </section>
-        )}
-        {contentView === "live" && <MatchLive match={match} live={live} />}
-        {contentView === "overview" && (
+        {view === "live" && <MatchLive match={match} live={live} />}
+        {view === "overview" && (
           <div className="match-overview-grid">
-            <Card
-              title="Occasions au fil du match"
-              className="match-overview-chart"
-              action={
-                <button
-                  className="inline-link"
-                  onClick={() => selectView("shots")}
-                >
-                  Analyse des tirs
-                  <Icon name="arrow" />
-                </button>
-              }
-            >
-              <XgTimeline
-                match={match}
-                onPlayer={f.setPlayer}
-                maxHeight={290}
-                extraTime={past?.extraTime === true}
-              />
-            </Card>
-            <Card fold title="Les chiffres du match">
-              <StatRows match={match} stats={overviewStats(match)} />
-            </Card>
-            <MatchWinProbability match={match} live={liveScore ? live : null} />
+            <MatchFlow
+              match={match}
+              live={liveScore ? live : null}
+              extraTime={past?.extraTime === true}
+            />
+            {match.summaryVersion ? (
+              <SummaryShots match={match} />
+            ) : (
+              <MatchShots match={match} />
+            )}
             <Card
               title="Meilleures notes"
-              className="match-leaders-card match-overview-wide"
+              className="match-leaders-card"
               footer={
                 <button
                   className="inline-link"
-                  onClick={() => selectView("players")}
+                  onClick={() => selectView("lineups")}
                 >
                   Tous les joueurs
                   <Icon name="arrow" />
                 </button>
               }
             >
-              <div className="match-leaders-grid">
+              <div className="match-leaders-list">
                 {leading.map((r, i) => (
                   <MatchPlayer
                     key={r.id}
@@ -762,7 +728,7 @@ export default function MatchDetail({ match }) {
             </Card>
           </div>
         )}
-        {contentView === "context" && (
+        {view === "context" && (
           <Suspense
             fallback={
               <Skeleton data-page-loading="" label="Chargement du contexte…" />
@@ -772,28 +738,25 @@ export default function MatchDetail({ match }) {
             {upcoming && <MatchAbsences match={match} />}
             {upcoming && <MatchOdds match={match} />}
             <MatchContext match={match} />
+            {/* The competition's table, as the former « Classement » tab showed it for every match. */}
+            <MatchStandings match={match} />
           </Suspense>
         )}
-        {contentView === "stats" && <MatchStatistics match={match} />}
-        {contentView === "standings" && <MatchStandings match={match} />}
-        {contentView === "shots" &&
-          (match.summaryVersion ? (
-            <SummaryShots match={match} extraTime={past?.extraTime === true} />
-          ) : (
-            <MatchShots match={match} extraTime={past?.extraTime === true} />
-          ))}
-        {contentView === "lineups" && (
-          <MatchLineups
-            key={`${match.id}:lineups`}
-            match={match}
-            before={upcoming}
-            now={now}
-          />
+        {view === "stats" && <MatchStatistics match={match} />}
+        {view === "lineups" && (
+          <div className="match-lineups-view">
+            <MatchLineups
+              key={`${match.id}:lineups`}
+              match={match}
+              before={upcoming}
+              now={now}
+            />
+            {!upcoming && (
+              <MatchPlayersBoard key={`${match.id}:players`} match={match} />
+            )}
+          </div>
         )}
-        {contentView === "players" && (
-          <MatchPlayersBoard key={`${match.id}:players`} match={match} />
-        )}
-        {contentView === "analyses" && (
+        {view === "analyses" && (
           <MatchAnalyses key={`${match.id}:analyses`} match={match} />
         )}
       </div>
