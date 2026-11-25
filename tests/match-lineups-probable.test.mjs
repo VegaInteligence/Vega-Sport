@@ -72,6 +72,18 @@ test("61p: our eleven drawn as probable markers, with its share, whom each repla
   assert.deepEqual([...probableImages(ours)].sort(), [["p_2", "https://img/m.webp"], ["p_9", "https://img/p.webp"]]);
 });
 
+test("61ac: probable-v2's share is a score, not a count of starts: no « Titulaire N fois sur M » is drawn from it", () => {
+  // probable-v1: share = starts / the basis's elevens (the bubble's « Titulaire 4 fois sur 10 »).
+  assert.deepEqual(probableView(ours).home.starters.map((p) => p.share), [0.4, 0.8]);
+  // probable-v2 (FAILURE_MODES §61.3): share is the player's score, so the markers carry no share to count from.
+  const v2 = probableView({ ...ours, method: "probable-v2" });
+  assert.deepEqual(v2.home.starters.map((p) => p.share), [null, null]);
+  assert.deepEqual(v2.away.starters.map((p) => p.share), [null]);
+  // The rest of the eleven is drawn the same.
+  assert.deepEqual(v2.home.starters.map((p) => [p.id, p.x, p.y, p.replaces?.id ?? null]), [["p_2", 0.36, 0.63, "p_9"], ["p_3", 0.36, 0.63, null]]);
+  assert.equal(probableView({ ...ours, method: undefined }).home.starters[0].share, null);
+});
+
 test("61q: ours is read only before kick-off and only while a side lacks the provider's eleven", () => {
   const kickoff = Date.parse("2026-11-28T19:45:00Z");
   const match = (status, extra = {}) => ({ status, timeUtc: "2026-11-28T19:45:00Z", home: { score: null }, away: { score: null }, ...extra });
