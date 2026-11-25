@@ -22,6 +22,8 @@ async function loadComponent(file, stubs) {
     "../services/match-resources.js": await import("../dashboard/frontend/src/services/match-resources.js"),
     "../services/momentum.js": await import("../dashboard/frontend/src/services/momentum.js"),
     "../services/head-to-head.js": await import("../dashboard/frontend/src/services/head-to-head.js"),
+    // teamStatsFlagged (FAILURE_MODES § 67): a pure module, read as it is.
+    "../services/match-tabs.js": await import("../dashboard/frontend/src/services/match-tabs.js"),
     ...stubs,
   };
   const filename = path.join(root, file),

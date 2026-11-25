@@ -8,6 +8,14 @@
 - Tests écrits d'abord : `backend/tests/test_grades_on_arrival.py` (68a à 68l) et `test_worker` (68m), rouges puis verts ; chaque règle vérifiée par une mutation qui fait échouer son test. Preuves : `/mnt/project-files/notes-match-par-match/tests/`.
 - Reste : PR, accord de hugo pour fusionner et déployer ; après le Deploy, lire `agg.match_grade_arrivals` et l'écart `first_z` / `z` au bout d'une semaine.
 
+## PSG – Roma en direct : photos des compositions et alerte « incohérentes » — FAILURE_MODES § 67 (25 novembre 2026, branche `claude/compo-photos-alerte-stats` depuis main 6e48b6c)
+
+- Signalé par hugo pendant le match (21 h 10) : pas de photos dans les compositions officielles, et « Statistiques d'équipe signalées comme incohérentes » sans aucune stat.
+- Photos : `/api/matches/{id}/lineups` ne portait aucune photo ; le site les prenait dans les stats des joueurs et les notes (après le match) ou dans notre onze probable (plus lu dès que les deux onzes officiels sont là). La route joint maintenant `api.player_profiles` (photo déjà en base, pas de migration) et chaque joueur porte `image_url` ; l'ETag de la famille change avec la forme du corps pour qu'aucun 304 ne garde l'ancien. `lineupView` prend cette photo après celle des stats et de la note.
+- Alerte : `teamStatsReliable` vaut `team_stats = 'ok'` depuis le nouveau backend, donc faux pour tout match à venir, en cours ou sans stats chez le fournisseur. `teamStatsFlagged(match)` n'est vrai que si le match a des stats d'équipe ; les trois avertissements le lisent. Les calculs de club lisent toujours le drapeau.
+- Tests d'abord : R28 (aller-retour du vrai match, API), R29–R31 (`match-lineups-probable.test.mjs`), R32 (`explorer.test.mjs`), rouges puis verts. Le harnais de `provider-profile-removal.test.mjs` accepte le module pur `match-tabs.js`.
+- Suite : Deploy (l'API change), après celui de #230 ; vérifier les photos sur un match dont les compositions sont publiées.
+
 ## Optimisations de l’accueil, des archives et du pilote — 25 novembre 2026
 
 - Sur `codex/optimisations-prioritaires-2511`, correction des [favoris VI-158](https://linear.app/vegainteligence/issue/VI-158), du [pilote VI-134](https://linear.app/vegainteligence/issue/VI-134), des [revalidations VI-77](https://linear.app/vegainteligence/issue/VI-77) et du [cache VI-85](https://linear.app/vegainteligence/issue/VI-85) pour la route de l’historique. Les deux derniers tickets couvrent aussi d’autres routes.

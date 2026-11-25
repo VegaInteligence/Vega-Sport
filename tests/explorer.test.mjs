@@ -71,8 +71,12 @@ test('synthetic shards render their collected families and preserve source warni
     assert.match(app.renderPayload(match, 'lineups', shard.lineups.data), /Titulaires/);
     assert.match(app.renderPayload(match, 'players', shard.players.data), /toutes les métriques/);
     if (!match.coverage.teamStatsReliable) {
-      assert.match(app.renderPayload(match, 'stats', shard.stats.data), /incohérences|incohérentes/i);
-      assert.match(app.renderPayload(match, 'players', shard.players.data), /incohérences|incohérentes/i);
+      // R32 (FAILURE_MODES § 67): a flagged match with team statistics says so; the same match without any does not.
+      const flagged = { ...match, stats: [{ key: 'total_shots', home: 0, away: 0 }] };
+      assert.match(app.renderPayload(flagged, 'stats', shard.stats.data), /incohérences|incohérentes/i);
+      assert.match(app.renderPayload(flagged, 'players', shard.players.data), /incohérences|incohérentes/i);
+      assert.doesNotMatch(app.renderPayload(match, 'stats', shard.stats.data), /incohérences|incohérentes/i);
+      assert.doesNotMatch(app.renderPayload(match, 'players', shard.players.data), /incohérences|incohérentes/i);
       assert.match(app.renderPayload(match, 'shots', shard.shots.data), /indisponibles|indisponible/);
     }
   }

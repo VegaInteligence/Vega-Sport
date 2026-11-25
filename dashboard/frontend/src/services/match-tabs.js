@@ -109,6 +109,17 @@ export function playerRows(payload) {
   });
 }
 
+/* ------------------------------------------------------------ coverage */
+
+/**
+ * « Statistiques incohérentes » only on team statistics that exist (FAILURE_MODES § 67): the read API's
+ * `teamStatsReliable` is false for every match whose team statistics are not read yet (before and during it) or
+ * that the provider does not have, which is not an inconsistency.
+ */
+export function teamStatsFlagged(match) {
+  return match?.coverage?.teamStatsReliable === false && (match.stats?.length ?? 0) > 0;
+}
+
 /* ------------------------------------------------------------- line-ups */
 
 /**
@@ -132,7 +143,9 @@ export function lineupView(payload, events, rows, grades, images) {
     const row = byId.get(p.player_id), grade = grades?.get?.(p.player_id);
     return {
       id: p.player_id || null, name: p.name, shirt: p.shirt_number || null, captain: Boolean(p.is_captain),
-      x: p.pitch_x, y: p.pitch_y, imageUrl: row?.imageUrl || grade?.imageUrl || images?.get?.(p.player_id) || null,
+      x: p.pitch_x, y: p.pitch_y,
+      // The line-up's own photo (FAILURE_MODES § 67) is there before the statistics and the grades.
+      imageUrl: row?.imageUrl || grade?.imageUrl || p.image_url || images?.get?.(p.player_id) || null,
       grade: grade?.grade ?? row?.grade ?? null, minutes: row?.minutes ?? grade?.minutes ?? null,
       goals: goals.get(p.player_id) || [], ownGoals: owns.get(p.player_id) || [], cards: cards.get(p.player_id) || [],
       off: off.get(p.player_id) || null, on: on.get(p.player_id) || null,
