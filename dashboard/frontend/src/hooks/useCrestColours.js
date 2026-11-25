@@ -1,5 +1,5 @@
 "use client";
-/* The match page's team colours from the two crests (FAILURE_MODES § 64). Each crest is read once
+/* The teams' colours from the two crests (FAILURE_MODES § 64, § 66). Each crest is read once
  * per page load, from the site's own copy (/api/crest/…: a canvas cannot read the API's host). */
 import { useEffect, useState } from "react";
 import { useResolvedMedia } from "../components/MediaContext.jsx";
@@ -42,8 +42,12 @@ function coloursOf(path) {
   return read.get(path);
 }
 
-/** `--home` / `--away` for the match page's style; {} until the crests are read, or without colour. */
-export default function useCrestColours(home, away) {
+/**
+ * `--home` / `--away` for a block's style; {} until the crests are read, or without colour. `charts`: the shared
+ * charts' colours too, on the block and on `body` (the match page); the home's « choc de la semaine » draws its own
+ * charts and leaves them (FAILURE_MODES § 66).
+ */
+export default function useCrestColours(home, away, { charts = true } = {}) {
   // A provider address resolves to its copy; an address already on the copies' host is kept.
   const homePath = crestPath(useResolvedMedia(home?.imageUrl) || home?.imageUrl);
   const awayPath = crestPath(useResolvedMedia(away?.imageUrl) || away?.imageUrl);
@@ -54,7 +58,7 @@ export default function useCrestColours(home, away) {
       if (!live) return;
       const colours = matchColours(h, a);
       // The shared charts (Charts.jsx: shot tooltip, cumulative xG) follow the same colours.
-      if (Object.keys(colours).length) {
+      if (charts && Object.keys(colours).length) {
         colours["--chart-home"] = colours["--home"] || "var(--home)";
         colours["--chart-away"] = colours["--away"] || "var(--away)";
       }
@@ -63,10 +67,11 @@ export default function useCrestColours(home, away) {
     return () => {
       live = false;
     };
-  }, [homePath, awayPath]);
+  }, [homePath, awayPath, charts]);
   // A shot's tooltip is drawn in document.body, outside the page (HoverCard.jsx): the charts' two
   // colours go there too while the page is open (Codex, § 64).
   useEffect(() => {
+    if (!charts) return undefined;
     const style = document.body.style;
     for (const name of ["--chart-home", "--chart-away"])
       if (vars[name]) style.setProperty(name, vars[name]);
@@ -74,6 +79,6 @@ export default function useCrestColours(home, away) {
       style.removeProperty("--chart-home");
       style.removeProperty("--chart-away");
     };
-  }, [vars]);
+  }, [vars, charts]);
   return vars;
 }

@@ -215,6 +215,7 @@ const matchday = await compile("components/HomeMatchday.jsx", {
   "../services/national-flags.js": { nationalTeamLabel: (name) => name },
   "./Hint.jsx": { Term: ({ children }) => children },
   "../hooks/FootballContext.jsx": { useFootball: () => ({ href: hrefOf }) },
+  "../hooks/useCrestColours.js": { __esModule: true, default: () => ({}) },
   "../services/format.js": await src("services/format.js"),
   "../services/fixtures.js": fixtures,
   "../services/home-insights.js": await src("services/home-insights.js"),
