@@ -88,3 +88,28 @@ test("missing matchdays stay accessible and live lookup prioritizes nearby untri
     ["next"],
   );
 });
+
+test("R22 a league phase round named « 3 » and « League Stage - Round 3 » is one round (FAILURE_MODES § 64)", () => {
+  const groups = matchdayGroups(
+    [
+      { id: "a", date: "2026-10-21" },
+      { id: "b", date: "2026-10-22" },
+      { id: "c", date: "2026-11-04" },
+      { id: "d", date: "2026-09-30" },
+    ],
+    {
+      a: { name: "3" },
+      b: { name: "League Stage - Round 3" },
+      c: { name: "4" },
+      d: { name: "League Stage - Round 2" },
+    },
+  );
+  assert.deepEqual(
+    groups.map((g) => [g.key, g.name, g.label, g.matches.map((m) => m.id)]),
+    [
+      ["regular:2", "2", "Phase de ligue · 2ᵉ journée", ["d"]],
+      ["regular:3", "3", "Phase de ligue · 3ᵉ journée", ["a", "b"]],
+      ["regular:4", "4", "4ᵉ journée", ["c"]],
+    ],
+  );
+});

@@ -62,6 +62,7 @@ import {
 } from "../services/match-resources.js";
 import { seasonLabel } from "../model.js";
 import { BookmarkButton } from "./ResearchUI.jsx";
+import useCrestColours from "../hooks/useCrestColours.js";
 // The match in five tabs (issue #221, FAILURE_MODES § 62): « Vue d’ensemble », « Tirs & xG » and
 // the momentum of « Analyses » make the Résumé, « Joueurs » joins « Compositions », « Classement »
 // joins « Avant-match ».
@@ -457,8 +458,10 @@ export default function MatchDetail({ match }) {
       : null;
   const fromUpcoming =
     ["upcoming", "calendar"].includes(search.get("from")) || upcoming;
+  // Each team in its crest's colour, blue and violet without one (hugo, 25 Nov; § 64).
+  const teamColours = useCrestColours(match.home, match.away);
   return (
-    <div className="match-detail">
+    <div className="match-detail" style={teamColours}>
       <MatchNav
         match={match}
         competition={competition}

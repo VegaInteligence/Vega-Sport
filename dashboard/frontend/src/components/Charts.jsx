@@ -7,7 +7,11 @@ const compactFormat = new Intl.NumberFormat("fr-FR", {
   maximumFractionDigits: 2,
 });
 const compact = (v) => (isNumber(v) ? compactFormat.format(v) : "—");
-const colors = ["light-dark(#1d6fd6, #3b8eff)", "light-dark(#53687f, #9cc7ff)"];
+// A match page gives its teams their crests' colours (--chart-home / --chart-away, § 64).
+const colors = [
+  "var(--chart-home, light-dark(#1d6fd6, #3b8eff))",
+  "var(--chart-away, light-dark(#53687f, #9cc7ff))",
+];
 function bounds(values) {
   const hi = values.reduce((max, v) => Math.max(max, v), 1);
   return { max: hi * 1.05, ticks: [0, hi / 4, hi / 2, (hi * 3) / 4, hi] };

@@ -75,6 +75,8 @@ html[data-theme="dark"] {
   --on-accent: #ffffff;
   --home: #7fb0ff;
   --away: #b9a8f0;
+  /* The theme's home blue, kept when a match page gives --home a crest's colour (§ 64). */
+  --home-fallback: #7fb0ff;
   --danger: #ff8a80;
   --warning-ink: #e8c995;
   --gold: #d9b45a;
@@ -107,6 +109,7 @@ html[data-theme="light"] {
   --on-accent: #ffffff;
   --home: #1d6fd6;
   --away: #6a4dc4;
+  --home-fallback: #1d6fd6;
   --danger: #b53630;
   --warning-ink: #7a5512;
   --gold: #a97c12;
