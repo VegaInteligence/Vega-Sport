@@ -82,3 +82,19 @@ test("61o: cached as a match not started, its ETag following each run", { skip }
   assert.notEqual(again.response.headers.get("etag"), etag);
   assert.equal(again.body.data.computedAt, "2025-09-05T10:30:00.000Z");
 });
+
+test("61t: sides and players are read in one statement, from one snapshot", async () => {
+  // No database: a reader that records each statement. A refresh of the worker committed between two
+  // statements would pair one run's sides with another run's players; one statement sees one snapshot.
+  const { createMatchDetailRoute } = await import("../src/routes/match-details.mjs");
+  const seen = [];
+  const read = async (sql) => {
+    seen.push(sql);
+    if (/api\.fixtures/.test(sql)) return [{ match_id: 6, id: "m_aaaaaa", status: "not_started", revision: 1, home_internal_id: 2, away_internal_id: 3 }];
+    return [];
+  };
+  const route = createMatchDetailRoute(read);
+  const url = "http://x/api/matches/m_aaaaaa/lineups/probable";
+  await assert.rejects(route(new Request(url), "/api/matches/m_aaaaaa/lineups/probable", new URLSearchParams()), (e) => e.status === 404);
+  assert.equal(seen.filter((sql) => /match_probable_lineup/.test(sql)).length, 1);
+});

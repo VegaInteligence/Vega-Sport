@@ -172,13 +172,20 @@ async function probable(read, req, id, params) {
   );
   if (!f) reject(404, "Match introuvable.");
   if (f.status !== "not_started") missing();
-  const [sides, players] = await Promise.all([
-    read(`SELECT team_key, side, method, computed_at, basis_lineups, basis_from::text AS basis_from, basis_to::text AS basis_to, formation
-          FROM api.match_probable_lineups WHERE match_key=$1`, [f.match_id]),
-    read(`SELECT team_key, role, ord, player_id, name, image_url, shirt_number, position_id, pitch_x, pitch_y, share, replaces_id, replaces_name,
-            absence_kind, absence_label, expected_return::text AS expected_return, matches_remaining
-          FROM api.match_probable_lineup_players WHERE match_key=$1 ORDER BY team_key, role, ord`, [f.match_id]),
-  ]);
+  // One statement, so one snapshot: the worker replaces both tables in one transaction, and two reads could
+  // straddle a run, pairing its sides with another run's players (§61t).
+  const sides = await read(
+    `SELECT l.team_key, l.side, l.method, l.computed_at, l.basis_lineups, l.basis_from::text AS basis_from, l.basis_to::text AS basis_to,
+       l.formation, COALESCE((SELECT json_agg(json_build_object('role', p.role, 'ord', p.ord, 'player_id', p.player_id, 'name', p.name,
+         'image_url', p.image_url, 'shirt_number', p.shirt_number, 'position_id', p.position_id, 'pitch_x', p.pitch_x, 'pitch_y', p.pitch_y,
+         'share', p.share, 'replaces_id', p.replaces_id, 'replaces_name', p.replaces_name, 'absence_kind', p.absence_kind,
+         'absence_label', p.absence_label, 'expected_return', p.expected_return::text, 'matches_remaining', p.matches_remaining)
+         ORDER BY p.role, p.ord)
+         FROM api.match_probable_lineup_players p WHERE p.match_key=l.match_key AND p.team_key=l.team_key), '[]'::json) AS players
+     FROM api.match_probable_lineups l WHERE l.match_key=$1`,
+    [f.match_id],
+  );
+  const players = sides.flatMap((s) => s.players.map((p) => ({ ...p, team_key: s.team_key })));
   if (!sides.length) missing();
   const computed = sides.map((s) => new Date(s.computed_at).toISOString()).sort();
   const url = new URL(req.url);

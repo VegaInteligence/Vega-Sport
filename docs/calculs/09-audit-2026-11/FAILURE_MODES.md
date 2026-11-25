@@ -5108,6 +5108,7 @@ Tests: `backend/tests/test_probable_lineups.py` (names carry the cases), `backen
 | 61q | Site: our eleven answered 404 or failing, the provider's absent | the empty state, no page error |
 | 61r | E2E, 40 min before kick-off on a fake clock: both probable; the home side confirmed after 61 s; both after 122 s; 3 minutes more | probable/probable, official/probable, official/official, no read after both official |
 | 61s | E2E layout: 1440 px; 393 px phone | the pitch at most 900 px wide; no sideways scroll |
+| 61t | The worker replaces the rows between the route's reads of the sides and of their players (review of #215) | sides and players read in one statement, from one snapshot: never one run's formation with another run's players |
 
 Not verified: the share of production's finished line-ups that are `confirmed` true (the fixture's are); how many
 complete elevens production's clubs hold in 400 days; the cost on production's base. Measured locally on a synthetic

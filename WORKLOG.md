@@ -9,6 +9,7 @@
 - Site: per side officielle, prévisionnelle (`confirmed` false), probable, else « Non renseignée »; ours only before kick-off and while a side lacks the provider's eleven; line-ups re-read every 60 s from 90 min before to 30 min after kick-off until both are official.
 - Checks: Python `test_probable_lineups` 17/17, `test_worker` 47/47, deploy migrations and award 40/40, whole suite 1063 run once (2 failures from 176 itself, a view count and the archive guard's direct match key, both fixed and run again green; 1 skipped); read API 300/300; site 1030/1030; E2E sections K and C 15/15 (`/mnt/project-files/composition-probable/implementation/e2e/`).
 - Cost, local synthetic base (3 000 sides, 1.62 M line-up players): 10–11 s a run (`implementation/evidence/cost/`); worker → read API chain checked on it.
+- Review of #215 (§61t): the route reads the sides and their players in one statement (one snapshot), not two reads that could straddle a worker run; test red (2 statements) then green.
 - Not verified: production's share of `confirmed` true line-ups and its cost. Needs a Deploy: migration 176, worker, read API, site.
 
 ## Fiche joueur d'un match : zéros affichés — 25 novembre 2026
