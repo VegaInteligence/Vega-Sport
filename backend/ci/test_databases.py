@@ -50,6 +50,8 @@ SUITES = {
     "VEGA_V2_TM_HISTORY_TEST_DSN": "vega_v2_tm_history_test",
     # The injured and suspended players (test_transfermarkt_absences.py, FAILURE_MODES.md §59).
     "VEGA_V2_ABSENCES_TEST_DSN": "vega_v2_absences_test",
+    # Our probable elevens (test_probable_lineups.py, FAILURE_MODES.md §61).
+    "VEGA_V2_PROBABLE_TEST_DSN": "vega_v2_probable_test",
     "VEGA_V2_ACCOUNT_TEST_DSN": "vega_v2_account_test",
     # The run of backend/account/sql by vega.migrate (test_account_migrations.py): apart from the account suite's base.
     "VEGA_V2_ACCOUNT_MIGRATE_TEST_DSN": "vega_v2_account_migrate_test",

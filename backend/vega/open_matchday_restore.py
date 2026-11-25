@@ -38,9 +38,11 @@ ENRICHMENT_COLUMNS = {"home_score_ht", "away_score_ht", "revision", "updated_at"
 # Relations naming a match created after the reviewed captures: 141, 143, the Fjelstul World Cup Database's pair
 # (137_worldcup_database.sql), football-data.co.uk's (140_football_data.sql), the players' run's recorded exclusions
 # (155_player_grade_status.sql), the reviewed side corrections (156_team_side_corrections.sql) and International
-# Results' scorers (172_international_goals.sql). Each is still checked for occupancy.
+# Results' scorers (172_international_goals.sql) and our probable elevens (176_match_probable_lineups.sql). Each is still
+# checked for occupancy.
 ADDED_DEPENDENCIES = {"core.archive_match_attestations", "ops.archive_removals", "core.worldcup_matches", "core.footballdata_matches",
-                      "agg.player_grade_exclusions", "core.team_side_corrections", "core.international_goals"}
+                      "agg.player_grade_exclusions", "core.team_side_corrections", "core.international_goals",
+                      "agg.match_probable_lineups", "agg.match_probable_lineup_players"}
 # The Fjelstul World Cup Database's own match keys (137_worldcup_database.sql): text keys of core.worldcup_matches, never
 # an id of core.matches.
 FJELSTUL_MATCH_KEYS = frozenset({"core.worldcup_matches", "core.worldcup_appearances", "core.worldcup_goals",
@@ -79,14 +81,18 @@ REFS = {
 # table. 174 (§59) adds core.player_suspensions, keyed by player and naming a competition (no column naming a match or a
 # team), a column and a kind on ops.transfermarkt_reads and four api views: no relation naming a match. 175 (#105, §60)
 # adds agg.award_runs, agg.player_award and agg.player_award_honours, keyed by season, player, team and edition
-# (competition_season_id, not a match), and two api views: no column naming a match, none of agg.power_runs. A later
-# one needs its own review here.
+# (competition_season_id, not a match), and two api views: no column naming a match, none of agg.power_runs. 176 (§61)
+# adds agg.match_probable_lineups (match_id, integer, REFERENCES core.matches ON DELETE CASCADE) and
+# agg.match_probable_lineup_players (match_id, integer, through its parent's key), our probable elevens of matches not
+# started, which name a match (ADDED_DEPENDENCIES, checked for occupancy like the others; the restored Open Matchday
+# matches are finished, so none has a row there), two api views and two read grants to vega_calc; no column of
+# agg.power_runs. A later one needs its own review here.
 REVIEWED_SCHEMAS = ("153_transfer_history_served.sql", "163_league_player_seasons.sql", "164_league_history_reads.sql",
                     "165_league_history_spellings.sql", "166_match_strengths_extra_time.sql", "167_player_level.sql",
                     "168_nation_world_ranking.sql", "169_player_level_measured.sql",
                     "170_nation_elo_national_set.sql", "171_home_importance_v2.sql", "172_international_goals.sql",
                     "173_nation_last_played.sql", "174_absences_suspensions.sql",
-                    "175_player_award.sql")
+                    "175_player_award.sql", "176_match_probable_lineups.sql")
 
 
 class Refusal(RuntimeError):

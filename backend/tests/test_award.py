@@ -210,7 +210,7 @@ class HonoursTest(unittest.TestCase):
         from vega import open_matchday_restore
 
         files = sorted(p.name for p in (ROOT / "sql").glob("[0-9][0-9][0-9]_*.sql"))
-        self.assertEqual(files[-1], "175_player_award.sql")
+        self.assertIn("175_player_award.sql", files)  # 176 (§61) came after it
         self.assertIn("175_player_award.sql", open_matchday_restore.REVIEWED_SCHEMAS)
         text = (ROOT / "sql" / "175_player_award.sql").read_text(encoding="utf-8")
         for name in ("agg.award_runs", "agg.player_award", "agg.player_award_honours", "api.award_race", "api.award_honours"):

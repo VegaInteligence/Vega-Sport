@@ -5008,3 +5008,109 @@ not hold (by the guard, no national cup honour for 2021/22 to 2023/24, 2025/26 a
 open-matchday's numbered rounds; International Results' tournaments without rounds; the Club World Cup's share window.
 k of a year in progress follows its reference year's published run: a reread of the reference year moves it on the
 next computation of the year in progress, as the spreads do.
+
+## 61. « Composition probable »: our probable eleven before the provider's line-ups (hugo, 25 Nov 2026: method and mock-up validated, `/mnt/project-files/composition-probable/maquette/`; written before the tests)
+
+Display only. The method is the study's P5 (`/mnt/project-files/blesses-suspendus/onze-probable/etude_onze_probable.py`,
+`guess()` and the absence rule « B connue »), label `probable-v1`, computed by the worker (`vega/probable.py`), stored in
+`agg.match_probable_lineups` and `agg.match_probable_lineup_players` (`176_match_probable_lineups.sql`), served by
+`GET /api/matches/{id}/lineups/probable` and drawn by the « Compositions » tab when the provider sent no line-up for a side.
+**The forecast does not change**: nothing writes `core.lineups`, `agg.match_lineup_forecasts`, `agg.match_forecasts`,
+`agg.lineup_usuals` or anything `forecast.py`, `lineup.py` or `/api/rankings` read; the Avant-match forecast sentence
+(« le modèle ne connaît ni les compositions ni les absents », E2E K3) stays.
+
+Read in the code (main 407c4c1): `core.lineups` (`formation`, `confirmed`), `core.lineup_players` (`is_starter`,
+`position_id`, `pitch_x`, `pitch_y`, `shirt_number`), the ranking's slot roles (`power.role_of(formation, position_id,
+top)`, `power.assign_roles`), `core.player_injuries` and `core.player_suspensions` (174), `api.team_absence_players`
+(a club's current Transfermarkt squad: its latest season held, members not `absent_since`, linked by a current link not
+in quarantine), `services/team-absences.js` `absenceApplies` (a suspension counts when its competition is the match's
+and its matches remaining are not 0), the planner reading line-ups 48 h before (forecast, `confirmed` false), then 50,
+25 and 10 minutes before and at kick-off.
+
+### 61.1 Rules
+
+- **Scope.** A match `not_started` whose kick-off falls in ]now, now + 7 days], both teams known and neither a national
+  team (`core.teams.is_national IS NOT TRUE`; clubs only in v1). Each side is computed on its own.
+- **Window.** The side's last `WINDOW` = 10 complete confirmed elevens: its line-up of a `finished` match kicked off
+  before now (any competition), `confirmed IS TRUE`, exactly 11 starters; kick-off order (then match id), looked for in
+  the `LOOKBACK` = 400 days before now. Fewer than `MIN_RECENT` = 5: no probable eleven for that side (the other side is
+  still computed). Weights 0.8^k, k = 0 for the most recent.
+- **Lines.** A starter's line is his slot's role in that match (`power.role_of`, the ranking's rule: goalkeeper G;
+  centre and full backs D; defensive, central and wide midfielders M; wingers and centre forwards A), else his latest
+  `agg.player_power` role, else « ? ». A player who only came on (minutes > 0) has the line of his latest role.
+- **The eleven (`guess()` ported as is).** The line split of greatest weight (ties: the most recent); in each line the
+  players of most weighted starts, then most weighted appearances (starts and minutes > 0 off the bench), then the most
+  recent appearance, then the smallest id; a player's line is that of his weighted starts. Filled to 11 from the others
+  in the same order. A removed player (absent or gone) is replaced by the most used available player of his line, else
+  of another line, a goalkeeper only by a goalkeeper and an outfield player only by an outfield one; none available:
+  the eleven is one short (never an outfield player in goal).
+- **Absent (removed and listed).** A player who appeared in the window and, for the match's day D:
+  - an injury or illness (Transfermarkt, not `absent_since`, any kind but `suspension`) started before D and on or
+    after his last appearance for the club (starter, or minutes > 0, in any of the club's finished matches): the study's
+    rule « started before match day, no match played for his club since »; its end is not read (as the study);
+  - a suspension (`core.player_suspensions`, Transfermarkt, not `absent_since`) of the match's competition, started on
+    D at the latest, its end D or later, or empty with his suspensions read 45 days ago at most (174's guard), and its
+    matches remaining (possible − missed, when both known) not 0;
+  - none of an episode whose player link is in quarantine.
+  Listed under the side's « Absents », the suspension first when he has both: `kind`, `label`, `expectedReturn` (its
+  end), `matchesRemaining` (a suspension's).
+- **Gone (removed, not listed, never named in `replaces`).** A player who appeared in the window and (i) whose latest
+  line-up of a match kicked off before now is with another club (a national team's line-up does not count), or (ii)
+  whose club's current Transfermarkt squad was read (as `api.team_absence_players`), he is linked (current link, not in
+  quarantine) and not a member. A player without a link, or a club whose squad was never read, keeps his place.
+- **Placement.** The template: among the window's elevens of the chosen line split, the formation of greatest weight
+  (ties: the most recent) and its most recent eleven with every starter's `pitch_x` and `pitch_y` known (else none: the
+  places stay empty). A guessed player who started in the template keeps his slot; a replacement takes the removed
+  player's slot when it is free; the others, heaviest first, take the free slot nearest their weighted mean place in
+  the window (ties: the template's order). `share` = his starts in the window / the window's elevens (« Titulaire N fois
+  sur 10 »). `shirt_number`: his latest in the window.
+- **Writing.** One transaction replaces every row: the matches in scope are written again, every other row is deleted
+  (a match started, finished, postponed, out of the 7 days, or whose sides fell under 5 elevens). Nothing else is
+  written. Run by the worker's daily pass (`Worker.daily`, every minute in the side process) at most every
+  `PROBABLE_EVERY` = 15 minutes; a failure waits `RETRY_DAILY_AFTER` as any daily step. The whole scope is recomputed
+  each time (line-ups and absence reads that arrived since are taken in).
+- **Served.** `GET /api/matches/{id}/lineups/probable` → `{data: {match_id, method, computedAt, home|away: {formation,
+  basis: {lineups, from, to}, starters: [{player_id, name, shirt_number, position_id, pitch_x, pitch_y, share, image_url,
+  replaces: {player_id, name} | null}], absent: [{player_id, name, image_url, kind, label, expectedReturn,
+  matchesRemaining}]} | null}}`; public ids only. 404: unknown match, a match not `not_started` (finished, live,
+  postponed), or no row for either side. ETag over the match's revision and the rows' `computed_at`, cached as the
+  other families of a match not finished (15 s).
+- **Shown (site).** Per side: the provider's eleven `confirmed` → « Composition officielle »; `confirmed` false →
+  « Composition prévisionnelle »; else our eleven → « Composition probable »; else « Non renseignée », and with neither
+  side « Compositions non renseignées. ». Our eleven is read only before kick-off and only when a side lacks the
+  provider's; a 404 or a failed read of it shows the other states, never an error. From 90 minutes before to 30 minutes
+  after kick-off the line-ups are read again every 60 s (not while the page is hidden) until both sides are official;
+  each side flips on its own.
+
+### 61.2 Failure modes and expected outcomes
+
+Tests: `backend/tests/test_probable_lineups.py` (names carry the cases), `backend/api/test/probable-lineups.test.mjs`,
+`tests/match-lineups-probable.test.mjs` (site), E2E section C of `tests/e2e/match-page.e2e.mjs`.
+
+| # | Situation | Expected |
+|---|---|---|
+| 61a | `guess()`'s cases of the study's self-test (weighted split 2.44 vs 1.51, ties by appearances, by recency, by id, the most recent split on a tie, an absent defender replaced by the defender most started, a keeper absent with no other keeper, all midfielders absent with one outfield player available) | the study's elevens and replacements, to the player |
+| 61b | A side with 4 complete confirmed elevens; the other with 10 | the first side null (no row), the second written |
+| 61c | Line-ups not counted: 10 starters, `confirmed` false or NULL, a match not finished, older than 400 days, of a match after now | not in the window |
+| 61d | A national team's match; a match kicked off, finished, postponed, in 8 days | no row; rows held from an earlier run deleted |
+| 61e | An injury started before D after his last appearance; started on D; started before his last appearance; ended before D with no appearance since | absent, not, not, absent (end not read) |
+| 61f | A suspension of the match's competition; of another competition; matches remaining 0; empty end read 50 days ago; quarantined link | absent; not; not; not; not |
+| 61g | An absent starter | replaced within his line, his replacement in his slot with `replaces` naming him; listed in `absent` with kind, label, return, matches remaining |
+| 61h | His latest line-up with another club; his latest line-up with his national team | gone (replaced, not listed, `replaces` null); kept |
+| 61i | The club's squad read and a linked player not in it; squad never read; player not linked | gone; kept; kept |
+| 61j | Placement: a template starter kept; a replacement; a player who never started in the template | his template slot; the removed player's slot; the nearest free slot to his mean place |
+| 61k | A run: fingerprints of `core.lineups`, `core.lineup_players`, `agg.match_forecasts`, `agg.match_lineup_forecasts`, `agg.lineup_usuals` | identical before and after |
+| 61l | Two runs on the same base | the same rows (but `computed_at`) |
+| 61m | The worker: the step in the daily pass, at most every 15 minutes; a failure | runs, then waits; a failure logged and retried after `RETRY_DAILY_AFTER`, the other steps run |
+| 61n | The route: two sides; one side; none; unknown id; a finished match; a malformed id; an extra parameter | 200 with the contract (public ids, `replaces`, `absent`); 200 with the other side null; 404; 404; 404; 404; 400 |
+| 61o | The route's cache | an ETag that changes with `computed_at`, 304 on `If-None-Match`, `max-age` of a match not finished |
+| 61p | Site order per side: confirmed, `confirmed` false, none with ours, none without ours | official, prévisionnelle, probable, « Non renseignée »; neither: « Compositions non renseignées. » |
+| 61q | Site: our eleven answered 404 or failing, the provider's absent | the empty state, no page error |
+| 61r | E2E, 40 min before kick-off on a fake clock: both probable; the home side confirmed after 61 s; both after 122 s; 3 minutes more | probable/probable, official/probable, official/official, no read after both official |
+| 61s | E2E layout: 1440 px; 393 px phone | the pitch at most 900 px wide; no sideways scroll |
+
+Not verified: the share of production's finished line-ups that are `confirmed` true (the fixture's are); how many
+complete elevens production's clubs hold in 400 days; the cost on production's base. Measured locally on a synthetic
+base (3 000 clubs × 30 elevens, 1.62 M line-up players, 3 000 sides in scope): 10–11 s a run, of which 4–5 s of reads
+(a first version scanning every line-up of the scope took 26–29 s; the narrowed reads return the same rows,
+`/mnt/project-files/composition-probable/implementation/evidence/cost/`).
