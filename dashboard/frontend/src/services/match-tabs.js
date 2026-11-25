@@ -155,11 +155,11 @@ export function lineupView(payload, events, rows, grades, images) {
 }
 
 // The methods whose `share` is a starter's starts in the basis / its elevens (« Titulaire N fois sur M »). probable-v2's
-// is a score, not a count (FAILURE_MODES §61.3): its markers carry no share.
+// and probable-v3's is a score, not a count (FAILURE_MODES §61.3, §61.4): their markers carry no share.
 const STARTS_SHARE = new Set(["probable-v1"]);
 
 /**
- * Our probable XI of each side (GET /api/matches/{id}/lineups/probable, methods probable-v1 and probable-v2):
+ * Our probable XI of each side (GET /api/matches/{id}/lineups/probable, methods probable-v1 to probable-v3):
  * { data: { match_id, method, computedAt, home|away: { formation, basis: { lineups, from, to },
  * starters: [{ player_id, name, shirt_number, position_id, pitch_x, pitch_y, share, replaces?,
  * image_url? }], absent: [{ player_id, name, kind, label, expectedReturn, matchesRemaining?,
