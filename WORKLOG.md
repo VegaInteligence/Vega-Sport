@@ -1,5 +1,13 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## « Compositions » tab, our probable XI before the provider's line-ups — mock-up (25 November 2026, branch `claude/composition-probable-maquette` from main 407c4c1, local, not pushed)
+
+- Goal: show our probable XI (new `GET /api/matches/{id}/lineups/probable`, method probable-v1, mocked) when the provider sent no line-up; hugo chose the order: provider XI first (official, then « prévisionnelle »), ours only when the provider sent nothing, else « Compositions non renseignées. ».
+- Mock-up (frontend only, mocked answers; no backend or forecast change): before kick-off a facing head (crest, name, formation, state: « Composition officielle » full dot, « prévisionnelle » half dot, « probable » dashed ring, basis in its hover bubble); probable markers with a dashed team-colour ring, portrait a shade back, no grade or tag; hover « Titulaire N fois sur 10 » and « Remplace X »; the side's « Absents » (AbsentRows, shared with the Avant-match card) in place of its bench; pre-match provider sides show « Remplaçants » (not « Entrés en jeu »); line-ups re-read every 60 s from 90 min before to 30 min after kick-off until both are official.
+- Proposed additions to the contract, for the backend owner: optional `image_url` on starters and absent, `matchesRemaining` on a suspension.
+- Captures and notes: `/mnt/project-files/composition-probable/maquette/`. Site suite 1026/1026.
+- Next action: hugo validates (or not) the direction; no implementation before that.
+
 ## Injured and suspended players, the « renseignés » counter on the injuries alone — FAILURE_MODES § 59ao (24 November 2026, branch `claude/absents-compteur-blessures`)
 
 - hugo (card, 24 Nov): « Blessures lues seulement ». `GET /api/teams/{id}/absences`: `squad.read` counts the members whose injuries were read 45 days ago at most, whatever their suspensions; `asOf` is the oldest of those injuries reads. The view (174) and the absences listed are unchanged.

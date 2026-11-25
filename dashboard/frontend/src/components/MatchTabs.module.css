@@ -458,6 +458,157 @@
   color: var(--ink);
   font-size: 10.5px;
 }
+/* Before the kick-off: each side's crest, name, formation and state, facing each other over the pitch. */
+.sidesHead {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 24px;
+  margin-bottom: 14px;
+}
+.sideHead {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    "crest name"
+    "crest state";
+  align-items: center;
+  gap: 2px 12px;
+  min-width: 0;
+}
+.sideHead[data-side="away"] {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "name crest"
+    "state crest";
+  justify-items: end;
+  text-align: right;
+}
+.sideHead > :first-child {
+  grid-area: crest;
+}
+.sideName {
+  grid-area: name;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+.sideHead[data-side="away"] .sideName {
+  flex-direction: row-reverse;
+}
+.sideName strong {
+  overflow: hidden;
+  color: var(--ink-strong);
+  font-size: var(--text-lg, 17px);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sideFormation {
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+/* The state: a full dot when official, a half one for the provider's forecast, a dashed ring for ours. */
+.sideState {
+  grid-area: state;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 550;
+  white-space: nowrap;
+  outline: none;
+}
+.sideHead[data-side="away"] .sideState {
+  flex-direction: row-reverse;
+}
+.sideState i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: none;
+}
+.sideState[data-state="official"] {
+  color: var(--ink);
+}
+.sideState[data-state="official"] i {
+  background: light-dark(#0f8a5f, #34d399);
+}
+.sideState[data-state="forecast"] i {
+  border: 1.5px solid var(--muted);
+  background: linear-gradient(90deg, var(--muted) 50%, transparent 50%);
+}
+.sideState[data-state="probable"] i {
+  border: 1.5px dashed var(--muted);
+}
+.sideState[data-state="probable"] {
+  cursor: default;
+}
+.sideState[data-state="probable"]:hover,
+.sideState[data-state="probable"]:focus-visible {
+  color: var(--ink);
+}
+.sideState[data-state="none"] {
+  color: var(--muted-light);
+}
+
+/* Our probable XI: the ring dashed and the portrait a shade back, the name in the body ink. */
+.probable .markerAvatar {
+  border-style: dashed;
+}
+.probable .markerAvatar img {
+  filter: saturate(0.5);
+  opacity: 0.82;
+}
+.probable:hover .markerAvatar img,
+.probable:focus-visible .markerAvatar img {
+  filter: none;
+  opacity: 1;
+}
+.probable .markerName {
+  color: var(--ink);
+  font-weight: 550;
+}
+.probable .markerNumber {
+  border-style: dashed;
+  color: var(--muted);
+}
+.bubbleReplaces {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 6px 0 0;
+  padding-top: 7px;
+  border-top: 1px solid var(--border);
+  color: var(--ink);
+}
+@media (max-width: 760px) {
+  .sidesHead {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+  .sideHead[data-side="away"] {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "crest name"
+      "crest state";
+    justify-items: start;
+    text-align: left;
+  }
+  .sideHead[data-side="away"] .sideName,
+  .sideHead[data-side="away"] .sideState {
+    flex-direction: row;
+  }
+  .sideName strong {
+    font-size: var(--text-md);
+  }
+}
 .ownGoal {
   filter: grayscale(1);
 }

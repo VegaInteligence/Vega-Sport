@@ -115,7 +115,7 @@ export function playerRows(payload) {
  * Each side's line-up with what happened to its players: goals and own goals, cards, the minute
  * a starter went off and a substitute came on (and for whom), his grade and photo.
  */
-export function lineupView(payload, events, rows, grades) {
+export function lineupView(payload, events, rows, grades, images) {
   const byId = new Map((rows || []).map((r) => [r.id, r]));
   const goals = new Map(), owns = new Map(), cards = new Map(), off = new Map(), on = new Map();
   const add = (map, id, value) => id && map.set(id, [...(map.get(id) || []), value]);
@@ -132,7 +132,7 @@ export function lineupView(payload, events, rows, grades) {
     const row = byId.get(p.player_id), grade = grades?.get?.(p.player_id);
     return {
       id: p.player_id || null, name: p.name, shirt: p.shirt_number || null, captain: Boolean(p.is_captain),
-      x: p.pitch_x, y: p.pitch_y, imageUrl: row?.imageUrl || grade?.imageUrl || null,
+      x: p.pitch_x, y: p.pitch_y, imageUrl: row?.imageUrl || grade?.imageUrl || images?.get?.(p.player_id) || null,
       grade: grade?.grade ?? row?.grade ?? null, minutes: row?.minutes ?? grade?.minutes ?? null,
       goals: goals.get(p.player_id) || [], ownGoals: owns.get(p.player_id) || [], cards: cards.get(p.player_id) || [],
       off: off.get(p.player_id) || null, on: on.get(p.player_id) || null,
@@ -152,6 +152,62 @@ export function lineupView(payload, events, rows, grades) {
     };
   };
   return { home: side("home"), away: side("away") };
+}
+
+/**
+ * Our probable XI of each side (GET /api/matches/{id}/lineups/probable, method probable-v1):
+ * { data: { match_id, method, computedAt, home|away: { formation, basis: { lineups, from, to },
+ * starters: [{ player_id, name, shirt_number, position_id, pitch_x, pitch_y, share, replaces?,
+ * image_url? }], absent: [{ player_id, name, kind, label, expectedReturn, matchesRemaining?,
+ * image_url? }] } | null } }. The starters in the shape of lineupView's, with no grade, goal or card;
+ * the absent in the shape of the absences' rows (services/team-absences.js).
+ */
+export function probableView(payload) {
+  const side = (key) => {
+    const probable = payload?.[key];
+    if (!probable?.starters?.length) return null;
+    const absent = (probable.absent || []).map((a) => ({
+      key: a.player_id || a.name,
+      player: { id: a.player_id || null, name: a.name, imageUrl: a.image_url || null, role: null },
+      kind: a.kind || null, label: a.label || null, expectedReturn: a.expectedReturn || null,
+      matchesRemaining: a.matchesRemaining ?? null,
+    }));
+    const kindOf = new Map(absent.map((a) => [a.player.id, a.kind]));
+    return {
+      state: "probable", formation: probable.formation || null, basis: probable.basis || null, coach: null,
+      starters: (probable.starters || []).map((p) => ({
+        id: p.player_id || null, name: p.name, shirt: p.shirt_number || null, captain: false,
+        x: p.pitch_x, y: p.pitch_y, imageUrl: p.image_url || null, grade: null, minutes: null,
+        goals: [], ownGoals: [], cards: [], off: null, on: null, probable: true,
+        share: Number.isFinite(p.share) ? p.share : null,
+        replaces: p.replaces ? { id: p.replaces.player_id || null, name: p.replaces.name, kind: kindOf.get(p.replaces.player_id) || null } : null,
+      })),
+      absent, entered: [], bench: [],
+    };
+  };
+  return { home: side("home"), away: side("away") };
+}
+
+/**
+ * The line-up each side shows: the provider's when it sent one (« official » when confirmed,
+ * « forecast » otherwise), else our probable XI, else none.
+ */
+export function lineupSides(view, probable) {
+  const pick = (key) => {
+    const provided = view?.[key];
+    if (provided) return { ...provided, state: provided.confirmed === false ? "forecast" : "official" };
+    return probable?.[key] || null;
+  };
+  return { home: pick("home"), away: pick("away") };
+}
+
+/** The portraits our probable XI carries (starters and absent), by player id. */
+export function probableImages(payload) {
+  const images = new Map();
+  for (const key of ["home", "away"])
+    for (const p of [...(payload?.[key]?.starters || []), ...(payload?.[key]?.absent || [])])
+      if (p.player_id && p.image_url) images.set(p.player_id, p.image_url);
+  return images;
 }
 
 /* ------------------------------------------------------- players board */

@@ -214,36 +214,40 @@ export function AbsenceBoard({ view, loading = false }) {
   );
 }
 
-function MatchSide({ team, state, match }) {
+/** A side's absent players in a list: portrait, name, reason, return (a match's sides; a probable XI's absents). */
+export function AbsentRows({ rows, asOf }) {
   const f = useFootball();
+  return (
+    <ul className={`${s.sideRows} ${chartTokens}`}>
+      {rows.map((a) => {
+        const kind = absenceKind(a);
+        return (
+          <li key={a.key} data-kind={kind}>
+            <Link className={s.who} href={f.href("/joueurs/", { id: a.player.id, q: "" })} prefetch={false}>
+              <PlayerAvatar player={a.player} size={28} />
+              <span>
+                <strong>{a.player.name}</strong>
+                <small>
+                  <AbsenceGlyph kind={kind} />
+                  {absenceReason(a)}
+                </small>
+              </span>
+            </Link>
+            <Back absence={a} asOf={asOf} />
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function MatchSide({ team, state, match }) {
   const view = absenceView(state.value, { match });
   let body;
   if (state.loading && !state.value) body = <p className={s.empty}>…</p>;
   else if (!view) body = <p className={s.empty}>Non renseignés</p>;
   else if (!view.rows.length) body = <p className={s.empty}>Aucun absent</p>;
-  else
-    body = (
-      <ul className={s.sideRows}>
-        {view.rows.map((a) => {
-          const kind = absenceKind(a);
-          return (
-            <li key={a.key} data-kind={kind}>
-              <Link className={s.who} href={f.href("/joueurs/", { id: a.player.id, q: "" })} prefetch={false}>
-                <PlayerAvatar player={a.player} size={28} />
-                <span>
-                  <strong>{a.player.name}</strong>
-                  <small>
-                    <AbsenceGlyph kind={kind} />
-                    {absenceReason(a)}
-                  </small>
-                </span>
-              </Link>
-              <Back absence={a} asOf={view.asOf} />
-            </li>
-          );
-        })}
-      </ul>
-    );
+  else body = <AbsentRows rows={view.rows} asOf={view.asOf} />;
   return (
     <section className={s.side}>
       <h3>
