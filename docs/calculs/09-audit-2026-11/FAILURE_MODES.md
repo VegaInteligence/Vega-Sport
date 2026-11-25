@@ -5671,3 +5671,58 @@ compétition où a lieu le match ».
   card reads `/api/standings?competition=l_0bfbkO&season=2026%2F2027` and shows « 6e » and « 8e » without form; while it
   loads, or when the table fails, no « 1er »; a Premier League match with league ranks: « 3e » and « 5e » with their
   form, and no standings read.
+
+## 70. A player hovered in « Compositions » before the kick-off: his last five matches by his position (hugo, 25 Nov 2026, 22 h 22 Paris; mock-up https://claude.ai/artifact/S4TWb3hGwjzhswwoeBYjj7 approved at 22 h 30 with « ajoute juste un bouton vers sa page joueur »; written before the tests)
+
+Before the kick-off, hovering a player of the line-up (official or probable) said « Aucune statistique. » and a click
+opened « Performance du joueur » saying « Le match n'a pas encore commencé. ». hugo: « soit on l'enlève soit on affiche
+ses stats sur les 5 derniers matchs toutes compétitions confondues, bien évidemment on n'affiche pas les mêmes stats
+pour un gardien, un défenseur, un milieu, un attaquant ».
+
+### 70.1 Rules
+
+- **When.** Only while the match has not started (`before`), for every player of the pitch with an id, official or
+  probable line-up alike. Once the match has started the bubble keeps the match's own statistics, unchanged.
+- **Which matches.** The player's season read (`/api/read/player?season=<the match's>&player=<id>&leagues=all`,
+  newest first, 12 matches): his appearances with minutes above 0, the match itself left out (it is listed before it is
+  played, every figure null), the 5 newest. An appearance on the bench without minutes is not a match played. Fewer
+  than 5: those he has; none: « aucun match joué cette saison ». National-team matches are not in the player's read
+  (season « 2026 » holds none for the players checked on 25 Nov): « toutes compétitions » is every club competition.
+- **His line.** From the line-up's position id when it names a line (`positionLineSql`: 0/11 goalkeeper; 1, 30–39, 51,
+  59 defender; 2, 50–79 midfielder; 3, 80–119 forward, the attacking midfielder read as a forward), else the most frequent
+  line of the matches read, else « Joueur » with the forward's figures withheld: no tiles.
+- **The bubble.** Name and the minutes-weighted mean grade of the matches of 20 minutes or more (none: no grade); the
+  line, the number of matches and the minutes; one cell per match (date dd/mm, the competition's short name, minutes,
+  the grade from 20 minutes, else « – »); four figures summed over those matches:
+  - goalkeeper: Arrêts, Buts encaissés, Buts évités (signed, one decimal), Sans encaisser (« n / m », 60 minutes or
+    more and none conceded);
+  - defender: Duels gagnés (won / (won + lost), %), Tacles + interc., Dégagements, Passes réussies (%);
+  - midfielder: Passes réussies (%), Occasions créées, Récupérations, Buts · passes d.;
+  - forward: Buts, Passes d., xG (one decimal), Tirs cadrés (« on target / shots »).
+  A figure no match carries shows « – », never 0.
+- **The button.** The bubble ends with « Voir la fiche du joueur », a link to his page (`/joueurs/?id=…`). For the
+  pointer to reach it, the bubble of this view stays open while the pointer goes from the player to it and while it is
+  over it, and a click (or a tap) on the player pins it open until Escape, a click elsewhere or a scroll. A click no
+  longer opens « Performance du joueur » before the kick-off.
+- **Reading.** The read starts on the first hover or focus of a player and is kept for the page; while it loads, the
+  bubble shows the name and « Lecture des derniers matchs… »; when it fails, « Derniers matchs indisponibles. » with the
+  button.
+- The probable line-up keeps « Remplace … » above the matches.
+
+### 70.2 Failure modes and expected outcomes
+
+- **R37** (`tests/player-recent.test.mjs`) `positionLine` maps the ids as above; `recentForm` on the real reads of
+  PSG – Roma (25 Nov 2026): Safonov goalkeeper, 5 matches, 450 min, mean 56, Arrêts 15, Buts encaissés 3, Buts évités
+  +1,1, Sans encaisser 3 / 5; Zabarnyi defender, Duels gagnés 62 %, Tacles + interc. 9, Dégagements 16, Passes réussies
+  94 %; Vítinha midfielder: his bench appearances skipped, the match itself skipped; Torres forward, Buts 1, Passes d. 0,
+  xG 1,5, Tirs cadrés 10 / 13; a 14-minute match shows « – » as its grade; no match played: none.
+- **R38** (`tests/player-recent-render.test.mjs`) the bubble's content: loading, failure, none, and the four tiles of
+  each line, with the link to the player's page in every state.
+- **R39** `useHoverBubble({ interactive: true })` (`HoverCard.jsx`): the bubble takes the pointer, a hide is delayed and
+  cancelled by entering the bubble, a click pins it, Escape closes it. The unit tests have no DOM to move a pointer
+  in: R40 checks it in a browser.
+- **R40** (`tests/e2e/match-before-kickoff.e2e.mjs`, « contexte et compositions », computer and phone) before the
+  kick-off, hovering (computer) or tapping (phone) a probable and an official starter shows « 5 derniers matchs joués ·
+  450 min » from a mocked season read holding the match itself and a bench appearance; on a computer, moving into the
+  bubble and clicking the player keep it open; Escape closes it; its link opens `/joueurs?…id=…`; no « Performance du
+  joueur » window. Red on main (both checks), green after.

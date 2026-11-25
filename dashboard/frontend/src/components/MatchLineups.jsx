@@ -8,8 +8,10 @@
  * else our probable XI (outlined markers, its absents in place of the bench); from 90 minutes
  * before the kick-off the line-ups are read again every minute until both are official. */
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ClubCrest, Empty, Media, Modal, Skeleton } from "./UI.jsx";
+import Link from "next/link";
+import { ClubCrest, Empty, Media, Skeleton } from "./UI.jsx";
 import { useHoverBubble } from "./HoverCard.jsx";
+import PlayerRecent from "./PlayerRecent.jsx";
 import { AbsenceGlyph, AbsentRows } from "./Absences.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import useMatchSection from "../hooks/useMatchSection.js";
@@ -110,11 +112,11 @@ function spot(p, side, standing) {
 }
 
 /** A probable starter: how often he started in the basis, whom he replaces. */
-function ProbableLine({ p, basis }) {
+function ProbableNotes({ p, basis }) {
   const starts = p.share != null && basis?.lineups ? Math.round(p.share * basis.lineups) : null;
+  if (starts == null && !p.replaces) return null;
   return (
     <>
-      <p className={s.bubbleHead}>{p.name}</p>
       {starts != null && (
         <p className={s.bubbleNote}>
           Titulaire {starts} fois sur {basis.lineups}
@@ -126,6 +128,15 @@ function ProbableLine({ p, basis }) {
           Remplace {p.replaces.name}
         </p>
       )}
+    </>
+  );
+}
+
+function ProbableLine({ p, basis }) {
+  return (
+    <>
+      <p className={s.bubbleHead}>{p.name}</p>
+      <ProbableNotes p={p} basis={basis} />
     </>
   );
 }
@@ -158,9 +169,23 @@ function PlayerLine({ p, row }) {
   );
 }
 
-function Marker({ p, side, standing, bubble, row, basis, onOpen }) {
+function Marker({ p, side, standing, bubble, row, basis, onOpen, recent }) {
   const at = spot(p, side, standing);
-  const line = p.probable ? <ProbableLine p={p} basis={basis} /> : <PlayerLine p={p} row={row} />;
+  // Before the kick-off: his last five matches and a link to his page (FAILURE_MODES § 70).
+  const line = recent && p.id ? (
+    <PlayerRecent
+      playerId={p.id}
+      name={p.name}
+      matchId={recent.matchId}
+      season={recent.season}
+      positionId={p.positionId}
+      replaces={p.probable ? <ProbableNotes p={p} basis={basis} /> : null}
+    />
+  ) : p.probable ? (
+    <ProbableLine p={p} basis={basis} />
+  ) : (
+    <PlayerLine p={p} row={row} />
+  );
   const body = (
     <>
       <span className={s.markerPhoto}>
@@ -196,7 +221,9 @@ function Marker({ p, side, standing, bubble, row, basis, onOpen }) {
       style={style}
       data-marker={p.probable ? "probable" : "lineup"}
       aria-label={`${p.name}${p.shirt ? `, n° ${p.shirt}` : ""}${p.replaces ? `, remplace ${p.replaces.name}` : ""}`}
-      onClick={() => {
+      onClick={(event) => {
+        // Before the kick-off a click (or a tap) pins the bubble, whose link opens his page.
+        if (recent) return bubble.pin(event.currentTarget, line);
         bubble.hide();
         onOpen(p.id);
       }}
@@ -231,11 +258,18 @@ function PitchLines({ standing }) {
   );
 }
 
-function BenchChips({ players, onOpen }) {
+function BenchChips({ players, onOpen, hrefOf }) {
   return (
     <div className={o.chips}>
       {players.map((p) => {
         const text = `${p.shirt ? `${p.shirt} · ` : ""}${p.name}`;
+        // Before the kick-off a substitute opens his page: the match has no performance yet (§ 70).
+        if (p.id && hrefOf)
+          return (
+            <Link key={p.id} className={`${o.open} ${o.chip}`} href={hrefOf(p.id)} prefetch={false}>
+              {text}
+            </Link>
+          );
         return p.id ? (
           <button type="button" key={p.id} className={`${o.open} ${o.chip}`} onClick={() => onOpen(p.id)}>
             {text}
@@ -250,7 +284,7 @@ function BenchChips({ players, onOpen }) {
   );
 }
 
-function SideBench({ side, team, data, before, asOf, onOpen }) {
+function SideBench({ side, team, data, before, asOf, onOpen, hrefOf }) {
   if (!data) return <p className={o.none}>Composition absente : {team?.name || side}</p>;
   const head = (
     <div className={o.benchHead}>
@@ -279,7 +313,7 @@ function SideBench({ side, team, data, before, asOf, onOpen }) {
           </p>
         )}
         <p className={o.label}>Remplaçants</p>
-        {data.bench.length ? <BenchChips players={data.bench} onOpen={onOpen} /> : <p className={o.none}>Non renseignés</p>}
+        {data.bench.length ? <BenchChips players={data.bench} onOpen={onOpen} hrefOf={hrefOf} /> : <p className={o.none}>Non renseignés</p>}
       </section>
     );
   return (
@@ -328,7 +362,6 @@ function SideBench({ side, team, data, before, asOf, onOpen }) {
 
 export default function MatchLineups({ match, before, now }) {
   const f = useFootball();
-  const [waitingPlayer, setWaitingPlayer] = useState(false);
   const lineupsSeen = useRef(null);
   // Watched until both sides are official, from 90 min before the kick-off to 30 min after it.
   const watch = lineupsWatched(match, lineupsSeen.current, now);
@@ -343,7 +376,9 @@ export default function MatchLineups({ match, before, now }) {
   const players = useMatchSection(match, "players", !before);
   const grades = useMatchGrades(match.id, !before);
   const standing = useStanding();
-  const bubble = useHoverBubble({ width: 280 });
+  const bubble = useHoverBubble({ width: before ? 300 : 280, interactive: before });
+  const recent = before ? { matchId: match.id, season: match.season || f.season } : null;
+  const playerHref = before ? (id) => f.href("/joueurs/", { id, season: recent.season, league: "", q: "" }) : null;
   const rows = useMemo(() => playerRows(players.data), [players.data]);
   const byId = useMemo(() => new Map(rows.map((r) => [r.id, r])), [rows]);
   const images = useMemo(() => probableImages(probable.data), [probable.data]);
@@ -355,10 +390,7 @@ export default function MatchLineups({ match, before, now }) {
   if (!settled.current || (wanted && probable.loading && !probable.data))
     return <Skeleton label="Chargement des compositions…" lines={4} />;
   if (!sides.home && !sides.away) return <Empty>Compositions non renseignées.</Empty>;
-  const open = (id) => {
-    if (before) setWaitingPlayer(true);
-    else f.setPlayer(`${match.id}:${id}`);
-  };
+  const open = (id) => f.setPlayer(`${match.id}:${id}`);
   const asOf = probable.data?.computedAt?.slice(0, 10) || null;
   const happened = ["home", "away"].some((side) =>
     (sides[side]?.starters || []).some((p) => p.goals.length || p.ownGoals.length || p.cards.length || p.off),
@@ -401,22 +433,18 @@ export default function MatchLineups({ match, before, now }) {
                     row={byId.get(p.id)}
                     basis={sides[side]?.basis}
                     onOpen={open}
+                    recent={recent}
                   />
                 )),
             )}
           </div>
         </div>
         <div className={o.benches}>
-          <SideBench side="home" team={match.home} data={sides.home} before={before} asOf={asOf} onOpen={open} />
-          <SideBench side="away" team={match.away} data={sides.away} before={before} asOf={asOf} onOpen={open} />
+          <SideBench side="home" team={match.home} data={sides.home} before={before} asOf={asOf} onOpen={open} hrefOf={playerHref} />
+          <SideBench side="away" team={match.away} data={sides.away} before={before} asOf={asOf} onOpen={open} hrefOf={playerHref} />
         </div>
       </div>
       {bubble.bubble}
-      {waitingPlayer && (
-        <Modal title="Performance du joueur" onClose={() => setWaitingPlayer(false)}>
-          <Empty>Le match n’a pas encore commencé.</Empty>
-        </Modal>
-      )}
     </section>
   );
 }

@@ -19,35 +19,87 @@ function place(box, width, point) {
 /**
  * Handlers for an element of your own and its bubble: `bind` goes on the element, `bubble` is
  * rendered after it. `follow`: the bubble follows the pointer (charts) rather than the element.
+ * `interactive` (FAILURE_MODES § 70): the bubble takes the pointer, so a link in it can be clicked. Leaving the
+ * element hides it a moment later, and entering the bubble cancels that; `pin` keeps it open until Escape, a
+ * click elsewhere or a scroll (a click or a tap on the element).
  */
-export function useHoverBubble({ width = 320, follow = false } = {}) {
+export function useHoverBubble({ width = 320, follow = false, interactive = false } = {}) {
   const [state, setState] = useState(null);
   const id = useId();
+  const timer = useRef(null);
+  const node = useRef(null);
+  const cancel = useCallback(() => {
+    clearTimeout(timer.current);
+    timer.current = null;
+  }, []);
+  const close = useCallback(() => {
+    cancel();
+    setState(null);
+  }, [cancel]);
+  useEffect(() => cancel, [cancel]);
   useEffect(() => {
     if (!state) return undefined;
-    const hide = () => setState(null);
+    const hide = () => close();
     window.addEventListener("scroll", hide, { passive: true, capture: true });
     window.addEventListener("resize", hide);
+    // A pinned bubble: Escape, or a press outside both it and its element, closes it.
+    const key = (event) => event.key === "Escape" && close();
+    const press = (event) => {
+      if (node.current?.contains(event.target) || state.target?.contains?.(event.target)) return;
+      close();
+    };
+    if (state.pinned) {
+      document.addEventListener("keydown", key);
+      document.addEventListener("pointerdown", press, true);
+    }
     return () => {
       window.removeEventListener("scroll", hide, { capture: true });
       window.removeEventListener("resize", hide);
+      document.removeEventListener("keydown", key);
+      document.removeEventListener("pointerdown", press, true);
     };
-  }, [state]);
+  }, [state, close]);
   const show = useCallback((target, content, event) => {
+    cancel();
     const box = target.getBoundingClientRect();
-    setState({ box, content, point: follow && event?.clientX != null ? { x: event.clientX, y: event.clientY } : null });
-  }, [follow]);
-  const hide = useCallback(() => setState(null), []);
+    setState((now) => ({
+      box, content, target,
+      // Hovering the pinned element again keeps it pinned.
+      pinned: Boolean(now?.pinned && now.target === target),
+      point: follow && event?.clientX != null ? { x: event.clientX, y: event.clientY } : null,
+    }));
+  }, [follow, cancel]);
+  const pin = useCallback((target, content) => {
+    cancel();
+    setState((now) =>
+      now?.pinned && now.target === target ? null : { box: target.getBoundingClientRect(), content, target, pinned: true, point: null },
+    );
+  }, [cancel]);
+  const hide = useCallback(() => {
+    if (!interactive) return setState(null);
+    cancel();
+    // Time for the pointer to cross the gap to the bubble.
+    timer.current = setTimeout(() => setState((now) => (now?.pinned ? now : null)), 160);
+  }, [interactive, cancel]);
   const bubble =
     state && typeof document !== "undefined"
       ? createPortal(
-          <div id={id} role="tooltip" className={s.bubble} style={{ ...place(state.box, width, state.point), width }}>
+          <div
+            id={id}
+            ref={node}
+            role={interactive ? "dialog" : "tooltip"}
+            className={`${s.bubble} ${interactive ? s.bubbleInteractive : ""}`.trim()}
+            style={{ ...place(state.box, width, state.point), width }}
+            data-pinned={state.pinned ? "" : undefined}
+            onMouseEnter={interactive ? cancel : undefined}
+            onMouseLeave={interactive ? hide : undefined}
+          >
             {state.content}
           </div>,
           document.body,
         )
       : null;
-  return { show, hide, bubble, open: Boolean(state), id };
+  return { show, hide, pin, close, bubble, open: Boolean(state), id };
 }
 
 /**

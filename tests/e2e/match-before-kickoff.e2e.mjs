@@ -10,7 +10,30 @@ const { chromium, devices } = createRequire(import.meta.url)(process.env.PLAYWRI
 const id = PROBABLE_MATCH_ID;
 const api = "/api/matches/" + id;
 const kickoff = new Date(PROBABLE_KICKOFF).toISOString();
-const message = "Le match n’a pas encore commencé.";
+// R40 (FAILURE_MODES § 70): before the kick-off a player's bubble shows his last five matches and a link to his page.
+const recentHead = /5 derniers matchs joués · 450 min/;
+const recentRows = [
+  // The match itself, listed before it is played, and a match on the bench: neither is a match played.
+  { matchId: id, date: kickoff.slice(0, 10), minutes: null, positionId: 34 },
+  { matchId: "m_e2e006", date: "2026-11-22", minutes: null, positionId: 2 },
+  ...["2026-11-21", "2026-11-14", "2026-11-07", "2026-11-04", "2026-10-31"].map((date, i) => ({
+    matchId: "m_e2e00" + i, date, minutes: 90, grade: 50 + i * 5, positionId: 34, leagueId: i % 2 ? "l_0bfbkO" : "l_3FJFUl",
+    duelsWon: 3, duelsLost: 1, tackles: 1, interceptions: 1, clearances: 2, passesAccurate: 45, passesAttempted: 50,
+    saves: null, goalsConceded: null,
+  })),
+];
+const recentBody = (url) => {
+  const params = new URL(url).searchParams, generation = params.get("generation") || "e2e";
+  return {
+    data: {
+      appearances: recentRows.map((r) => ({ playerId: params.get("player"), ...r })),
+      competitions: [{ id: "l_3FJFUl", name: "Ligue 1" }, { id: "l_0bfbkO", name: "Champions League" }],
+      fixtures: [], records: [],
+    },
+    meta: { generation, actor: { kind: "player", id: params.get("player") } },
+    pagination: { generation, page: 1, limit: 12, total: recentRows.length },
+  };
+};
 // Before kick-off the page has three tabs (issue #221, FAILURE_MODES § 62 and § 63): a game view's address
 // opens « Avant-match », the former « Joueurs » « Compositions », which holds it now.
 const TABS = ["Avant-match", "Compositions", "Classement"];
@@ -69,6 +92,7 @@ async function setup(label, device, { status = "not_started", minutes = -40, liv
     if (family === "shots" && started) return reply(route, { data: { periods: [] } });
     return reply(route, { error: "Donnée indisponible." }, 404);
   });
+  await context.route("**/api/read/player?*", (route) => reply(route, recentBody(route.request().url())));
   const lineups = { lineups: "home", probable: "both" };
   await serveLineups(context, lineups);
   await context.route("**/live/config", (route) => reply(route, live
@@ -138,7 +162,8 @@ try {
       });
       await check(label + " — contexte et compositions", {
         accessible: TABS,
-        probableAndOfficial: true, playerMessage: message, gameRequests: [],
+        probableAndOfficial: true, bubbles: ["5 derniers matchs joués · 450 min", "5 derniers matchs joués · 450 min"],
+        kept: true, link: "/joueurs/?id=…", performanceWindow: 0, gameRequests: [],
       }, async () => {
         // Reset the observations from the five tabs, even when recording a failing baseline.
         run.requests.length = 0;
@@ -152,21 +177,53 @@ try {
         const official = page.locator('[data-marker="lineup"]').first();
         await probable.waitFor();
         await official.waitFor();
-        const playerMessages = [];
+        const bubbles = [];
+        let kept = true;
+        const recent = page.locator("[data-player-recent]");
         for (const marker of [probable, official]) {
-          await marker.click();
-          const dialog = page.getByRole("dialog", { name: "Performance du joueur" });
-          await dialog.waitFor();
+          // R40: a mouse hovers, a phone taps (the tap pins the bubble). A scroll closes a bubble: the player is
+          // brought into view first, as a reader scrolls before tapping.
+          await marker.scrollIntoViewIfNeeded();
+          await page.waitForTimeout(300);
+          if (device === desktop) await marker.hover();
+          else await marker.click();
+          await recent.getByText(recentHead).waitFor();
+          bubbles.push((await recent.locator("p").nth(1).innerText()).trim());
+          if (device === desktop) {
+            // The pointer crosses to the bubble: it stays open; a click on the player pins it.
+            await recent.hover();
+            await page.waitForTimeout(400);
+            kept &&= await recent.isVisible();
+            await marker.click();
+            await page.waitForTimeout(200);
+            kept &&= await recent.isVisible();
+          }
           await page.screenshot({ path: join(out, label + "-composition-joueur.png") });
-          await dialog.locator(".modal-body").waitFor();
-          await page.waitForTimeout(350);
-          playerMessages.push((await dialog.locator(".modal-body").innerText()).trim());
-          await dialog.getByRole("button", { name: "Fermer" }).click();
+          await page.keyboard.press("Escape");
+          await recent.waitFor({ state: "detached" }).catch(() => {});
         }
+        const performanceWindow = await page.getByRole("dialog", { name: "Performance du joueur" }).count();
+        // The link opens his page.
+        // The pointer leaves the player first: hovering where it already is fires nothing.
+        await official.scrollIntoViewIfNeeded();
+        await page.waitForTimeout(300);
+        if (device === desktop) {
+          await page.mouse.move(2, 400);
+          await official.hover();
+        } else await official.click();
+        const link = recent.getByRole("link", { name: "Voir la fiche du joueur" });
+        await link.waitFor();
+        const href = await link.getAttribute("href");
+        await link.click();
+        await page.waitForURL(/\/joueurs\/?\?(?:.*&)?id=p_/, { timeout: 15000, waitUntil: "commit" });
         run.lineupRequests = [...run.requests];
-        assert.deepEqual(playerMessages, [message, message]);
+        assert.equal(bubbles.length, 2);
+        assert.ok(bubbles.every((b) => recentHead.test(b)));
+        assert.ok(kept);
+        assert.equal(performanceWindow, 0);
+        assert.match(href, /^\/joueurs\/?\?(?:.*&)?id=p_/);
         assert.deepEqual(forbidden(run), []);
-        return { playerMessages, lineups: fixture.lineups.reads };
+        return { bubbles, kept, href, performanceWindow, url: page.url(), lineups: fixture.lineups.reads };
       });
     } finally {
       await fixture.close();

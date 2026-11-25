@@ -143,7 +143,7 @@ export function lineupView(payload, events, rows, grades, images) {
     const row = byId.get(p.player_id), grade = grades?.get?.(p.player_id);
     return {
       id: p.player_id || null, name: p.name, shirt: p.shirt_number || null, captain: Boolean(p.is_captain),
-      x: p.pitch_x, y: p.pitch_y,
+      x: p.pitch_x, y: p.pitch_y, positionId: p.position_id ?? null,
       // The line-up's own photo (FAILURE_MODES § 67) is there before the statistics and the grades.
       imageUrl: row?.imageUrl || grade?.imageUrl || p.image_url || images?.get?.(p.player_id) || null,
       grade: grade?.grade ?? row?.grade ?? null, minutes: row?.minutes ?? grade?.minutes ?? null,
@@ -196,7 +196,7 @@ export function probableView(payload) {
       state: "probable", formation: probable.formation || null, basis: probable.basis || null, coach: null,
       starters: (probable.starters || []).map((p) => ({
         id: p.player_id || null, name: p.name, shirt: p.shirt_number || null, captain: false,
-        x: p.pitch_x, y: p.pitch_y, imageUrl: p.image_url || null, grade: null, minutes: null,
+        x: p.pitch_x, y: p.pitch_y, positionId: p.position_id ?? null, imageUrl: p.image_url || null, grade: null, minutes: null,
         goals: [], ownGoals: [], cards: [], off: null, on: null, probable: true,
         share: counts && Number.isFinite(p.share) ? p.share : null,
         replaces: p.replaces ? { id: p.replaces.player_id || null, name: p.replaces.name, kind: kindOf.get(p.replaces.player_id) || null } : null,
