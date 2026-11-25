@@ -1,5 +1,6 @@
 import { publicApiFetch, wasPublicApiThrottle } from "./public-api-fetch.js";
 import {
+  isExplicitPublication,
   notifyPublicationChanged,
   PUBLICATION_UNAVAILABLE,
 } from "./publication-change.js";
@@ -179,6 +180,8 @@ export async function readCompact(
       !params.generation ||
       params.versioned ||
       params.v ||
+      // A publication asked for by the link (?v=) is shown or refused, never another.
+      isExplicitPublication(params.generation) ||
       signal?.aborted
     )
       throw error;
@@ -409,7 +412,10 @@ export async function readCompactPages(
     }
     return final;
   }
-  const held = params.versioned ? undefined : params.generation;
+  const held = params.versioned ? undefined : params.generation,
+    // A publication asked for by the link (?v=): its pages are read again only when the
+    // selection's own version changed, and still at that publication.
+    explicit = !params.versioned && isExplicitPublication(params.generation);
   try {
     return await readAll();
   } catch (error) {
@@ -417,12 +423,14 @@ export async function readCompactPages(
     // between two of its pages (or the site holds a publication no longer served): it is
     // read again from the first one, once, without the stale fence. Its pages are then
     // all of the publication that first page gives, never of two.
-    if (error?.status !== 409 || signal?.aborted) throw error;
+    if (error?.status !== 409 || signal?.aborted || (explicit && !version))
+      throw error;
     if (!version) notifyPublicationChanged();
     pages.length = 0;
     seen.clear();
     version = expectedPages = expectedTotal = undefined;
-    generation = params.versioned ? params.generation : undefined;
+    generation =
+      params.versioned || explicit ? params.generation : undefined;
     const result = await readAll();
     return heldPublication(result, held);
   }

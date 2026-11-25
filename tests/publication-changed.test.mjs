@@ -29,6 +29,10 @@
  * F9  The competition preview, both pages of a newer publication: shown; pages of two
  *     publications: read again once, then a neutral error.
  * F10 No site source carries « Rechargez la première page » nor « La publication a changé ».
+ * F11 A publication the visitor asked for by its link (?v=, holdExplicitPublication): a read
+ *     pinned to it and refused is never read again at another publication nor relabelled
+ *     with it (single read: one request; paged read: no restart without its pin), the error
+ *     neutral; once released, the ordinary recovery applies again.
  */
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -40,7 +44,10 @@ import {
 } from "../dashboard/frontend/src/services/compact-reads.js";
 import { readFixturePage } from "../dashboard/frontend/src/services/match-pages.js";
 import { competitionFixturePreview } from "../dashboard/frontend/src/services/fixture-pages.js";
-import { onPublicationChanged } from "../dashboard/frontend/src/services/publication-change.js";
+import {
+  holdExplicitPublication,
+  onPublicationChanged,
+} from "../dashboard/frontend/src/services/publication-change.js";
 
 const STALE = /Rechargez|actualisées|actualisez/i;
 const changed = () =>
@@ -381,4 +388,57 @@ test("F10 no site source shows « Rechargez la première page » nor « La publi
   };
   walk(root);
   assert.deepEqual(found, []);
+});
+
+test("F11 a read pinned to the publication a ?v= link asked for is never read again at another", async () => {
+  const release = holdExplicitPublication("41");
+  try {
+    const single = [];
+    await assert.rejects(
+      readCompact(
+        "performance",
+        { season: "2026/2027", appearance: "m_aaaaaa:p_bbbbbb", generation: "41" },
+        {
+          fetcher: async (url) => {
+            single.push(params(url).get("generation"));
+            return params(url).get("generation") === "41" ? changed() : performance("42");
+          },
+        },
+      ),
+      (error) => error.status === 409 && !STALE.test(error.message),
+    );
+    assert.deepEqual(single, ["41"]);
+    const paged = [];
+    await assert.rejects(
+      readCompactPages(
+        "players",
+        { season: "2026/2027", generation: "41", limit: 1 },
+        {
+          fetcher: async (url) => {
+            const q = params(url);
+            paged.push([q.get("page"), q.get("generation")]);
+            return q.get("generation") === "41" && q.get("page") === "2" ? changed() : playersPage(Number(q.get("page")), q.get("generation") || "42");
+          },
+        },
+      ),
+      (error) => error.status === 409 && !STALE.test(error.message),
+    );
+    assert.ok(paged.every(([, generation]) => generation === "41"), JSON.stringify(paged));
+  } finally {
+    release();
+  }
+  // Released (the link left): the ordinary recovery again.
+  const calls = [];
+  const body = await readCompact(
+    "performance",
+    { season: "2026/2027", appearance: "m_aaaaaa:p_bbbbbb", generation: "41" },
+    {
+      fetcher: async (url) => {
+        calls.push(params(url).get("generation"));
+        return params(url).get("generation") === "41" ? changed() : performance("42");
+      },
+    },
+  );
+  assert.deepEqual(calls, ["41", null]);
+  assert.equal(body.meta.servedGeneration, "42");
 });

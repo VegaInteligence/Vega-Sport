@@ -23,3 +23,26 @@ export function notifyPublicationChanged() {
     }
   }
 }
+
+/**
+ * The publications a visitor asked for by their link (`?v=`, FootballContext): a read pinned
+ * to one of them shows it or fails, it is never read again at another publication nor
+ * labelled with it (compact-reads.js). Returns the release.
+ */
+const explicit = new Map();
+
+export function holdExplicitPublication(generation) {
+  if (!generation) return () => {};
+  explicit.set(generation, (explicit.get(generation) || 0) + 1);
+  let held = true;
+  return () => {
+    if (!held) return;
+    held = false;
+    const count = explicit.get(generation) - 1;
+    if (count > 0) explicit.set(generation, count);
+    else explicit.delete(generation);
+  };
+}
+
+export const isExplicitPublication = (generation) =>
+  Boolean(generation) && explicit.has(generation);

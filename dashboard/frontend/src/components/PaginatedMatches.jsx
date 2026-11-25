@@ -14,7 +14,7 @@ import {
   involvesFavourite,
 } from "../services/preference-effects.js";
 
-function Pages({ filters, upcoming, scopeKey }) {
+function Pages({ filters, upcoming, listKey, publication }) {
   const f = useFootball(),
     favouriteClubs = useFavourites().clubs;
   const [paging, setPaging] = useState({
@@ -24,10 +24,13 @@ function Pages({ filters, upcoming, scopeKey }) {
     attempt: 0,
   });
   const cursor = paging.cursors[paging.page];
-  const pageKey = (cursorKey, attempt) =>
-    `match-page:${scopeKey}:${cursorKey || "first"}:${attempt}`;
+  // The first page follows the site's publication (a new manifest reads it again); a next
+  // page is the one its cursors were given at, so the manifest re-read a recovered page
+  // asks for neither reads it again nor takes the list back to its first page.
+  const pageKey = (cursorKey, attempt, page, generation) =>
+    `match-page:${listKey}:${page ? generation : publication}:${cursorKey || "first"}:${attempt}`;
   const resource = useResource(
-    pageKey(cursor, paging.attempt),
+    pageKey(cursor, paging.attempt, paging.page, paging.generation),
     ({ signal } = {}) =>
       readFixturePage(filters, {
         cursor,
@@ -50,8 +53,9 @@ function Pages({ filters, upcoming, scopeKey }) {
     if (body.restarted && paging.page !== 0) {
       const attempt = paging.attempt + 1,
         { restarted, cursors, page, ...value } = body;
-      primeResource(pageKey(cursors[page], attempt), () =>
-        Promise.resolve(value),
+      primeResource(
+        pageKey(cursors[page], attempt, page, value.pagination.generation),
+        () => Promise.resolve(value),
       ).catch(() => {});
       setPaging({
         page,
@@ -177,14 +181,16 @@ export default function PaginatedMatches({ upcoming = false }) {
     week: search.get("week"),
     now,
   });
-  const scopeKey = JSON.stringify([
-    f.manifest.publicationVersion || f.manifest.scouting?.sourceDigest,
-    filters,
-  ]);
+  // Other filters, another list (from its first page). Another publication of the same
+  // list keeps its place: Pages reads it again where it needs to.
+  const listKey = JSON.stringify(filters);
   return (
     <Pages
-      key={scopeKey}
-      scopeKey={scopeKey}
+      key={listKey}
+      listKey={listKey}
+      publication={
+        f.manifest.publicationVersion || f.manifest.scouting?.sourceDigest
+      }
       filters={filters}
       upcoming={upcoming}
     />

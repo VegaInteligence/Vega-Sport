@@ -69,7 +69,10 @@ import { directoryCSV } from "../services/player-directory.js";
 import { enrichSeasonCompetitions } from "../services/competition-identity.js";
 import { clubDataTeam, loadClubSeason } from "../services/scouting-history.js";
 import { actorReadKey, actorReadParams } from "../services/actor-reads.js";
-import { onPublicationChanged } from "../services/publication-change.js";
+import {
+  holdExplicitPublication,
+  onPublicationChanged,
+} from "../services/publication-change.js";
 import { AsyncState, Skeleton } from "../components/UI.jsx";
 import LoadingPage from "../components/LoadingPage.jsx";
 import {
@@ -304,6 +307,13 @@ export function FootballProvider({ children, loadData = true, initialState }) {
   // club's reads once the profile had rendered (0.3 s, then 0.3 s more, on 11 November
   // 2026).
   const actorGeneration = compactGeneration(manifest.value);
+  // A versioned link (?v=) holds its publication: its reads are never recovered at
+  // another one (compact-reads.js).
+  const explicitGeneration = requestedVersion ? actorGeneration : "";
+  useEffect(
+    () => holdExplicitPublication(explicitGeneration),
+    [explicitGeneration],
+  );
   useEffect(() => {
     if (!actorId || !actorGeneration) return;
     const quiet = (start) => start().catch(() => {});
@@ -679,7 +689,11 @@ export function FootballProvider({ children, loadData = true, initialState }) {
       ({ signal }) => {
         if (!performanceContext.season)
           return Promise.reject(unavailablePerformance());
-        return readCompact("performance", performanceParams, { signal }).catch(
+        return readCompact("performance", performanceParams, {
+          signal,
+          // A versioned link's performance is its publication's, or an error.
+          recover: !requestedVersion,
+        }).catch(
           (error) => {
             if (error.status === 409) void refreshManifest().catch(() => {});
             throw error;
