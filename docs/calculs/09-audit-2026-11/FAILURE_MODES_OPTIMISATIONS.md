@@ -150,9 +150,23 @@ night.
 | GH220-w | Matches on the week's first day and on the day before it | the first day's listed, the day before's not |
 | GH220-x | The four players of GH220-t–w together, with their clubs | the same body as the base commit's code on the same base |
 
+- **The check after a Deploy (§ GH220.3) follows a visitor's list too.** It followed one club and one player, the case
+  that answered in 0.5 to 3.5 s while visitors' reads failed. A fourth read follows up to five players and three clubs:
+  the player and club it already follows, then the home's leaders (goals, then assists) and their clubs, each once. It
+  must answer as the others (200, private, its lists and generation), name each club with strength 1 and each player
+  somewhere (a favourite or « Vos joueurs »). Every read whose `Server-Timing` gives the base's time (`db;dur`) fails
+  past 3 000 ms (production's old code: 29 s for three clubs and five players); a read without it is not judged on it.
+
+| # | Situation | Expected |
+|---|---|---|
+| GH220-y | The real handler on the API seed (its player of the week, its leaders) | a fourth line, `favourites many 200 … checked: 3 clubs (strength 1), 5 players named` (as many as the home gives, at most those), the list asked once; exit 0; no name, key or body printed |
+| GH220-z | A read whose `db;dur` is 3 001 ms; 3 000 ms | `FAILED: db 3001 ms over 3000 ms` on its line, exit 1; passed |
+| GH220-aa | The home naming no player but the one followed (the operator's pair, a home without leaders) | `favourites many not checked (the home names no other player)`, the fourth read not asked; the exit of the three others |
+| GH220-ab | The fourth answer missing a club, or naming a player nowhere | exit 1, `FAILED: a club is not among the favourites with strength 1` / `a player is named nowhere` |
+
 GH220-t–x: `backend/api/test/home-favourites.test.mjs` (t red on the base commit, u–x green on both: they pin what the
-fix keeps). Production's own time: the check of § GH220.3 after the Deploy, and the route's 503s in the logs of the
-evening after.
+fix keeps). GH220-y–ab: `backend/api/test/smoke-favourites.test.mjs` (GH220-n's three lines become four). Production's
+own time: this check after the Deploy, and the route's 503s in the logs of the evening after.
 
 ## GH194. The isolated pilot: by hand from `main`, its own provider key, a bounded run (GH #194, VI-134)
 
