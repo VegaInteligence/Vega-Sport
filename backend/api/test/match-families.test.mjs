@@ -7,7 +7,8 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { get, skip } from "./context.mjs";
+import { createHash } from "node:crypto";
+import { context, get, skip } from "./context.mjs";
 
 // The shared seed runs first (context.mjs); this file's database is the real match only.
 before(() => {
@@ -36,8 +37,32 @@ async function read(suffix) {
 }
 
 test("the match and its line-ups, events, shots, momentum and head-to-head", { skip }, async () => {
-  for (const [suffix, name] of [["", "match"], ["/lineups", "lineups"], ["/events", "events"], ["/shots", "shots"], ["/momentum", "momentum"], ["/h2h", "h2h"]])
+  for (const [suffix, name] of [["", "match"], ["/events", "events"], ["/shots", "shots"], ["/momentum", "momentum"], ["/h2h", "h2h"]])
     assert.deepEqual(numbers(await read(suffix)), numbers(fixture(name)), name);
+});
+
+// R27 (FAILURE_MODES § 65): the provider's line-ups, each player with his photo in the base (or null), so the official
+// elevens have their photos before the player statistics are read.
+test("the line-ups, each player with his photo", { skip }, async () => {
+  const lineups = await read("/lineups");
+  const entries = (body) => ["home", "away"].flatMap((side) => [...body[side].starters, ...body[side].subs]);
+  const bare = structuredClone(lineups);
+  for (const p of entries(bare)) {
+    assert.ok("image_url" in p, p.player_id);
+    delete p.image_url;
+  }
+  assert.deepEqual(numbers(bare), numbers(fixture("lineups")));
+  const photos = new Map(fixture("players").map((r) => [r.player.id, r.player.image_url ?? null]));
+  for (const p of entries(lineups)) assert.equal(p.image_url, photos.get(p.player_id) ?? null, p.player_id);
+  assert.ok(lineups.home.starters.some((p) => p.image_url), "a starter has a photo");
+  // In the provider's order, the photo last.
+  assert.deepEqual(Object.keys(lineups.home.starters[0]).at(-1), "image_url");
+  // A client holding the former body (same match revision, no photos) does not get a 304 for it.
+  const [{ revision }] = await context.reader.read("SELECT revision FROM api.fixtures WHERE match_id=api.internal_id('match',$1)", ["m_08LEIz"]);
+  const former = `W/"match-v1-${createHash("sha256").update(`${BASE}/lineups||${revision}`).digest("hex")}"`;
+  const { response } = await get(BASE + "/lineups", { "if-none-match": former });
+  assert.equal(response.status, 200);
+  assert.notEqual(response.headers.get("etag"), former);
 });
 
 test("team statistics: groups, labels and display strings of every period", { skip }, async () => {

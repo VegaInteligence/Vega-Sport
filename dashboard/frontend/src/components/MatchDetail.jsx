@@ -42,7 +42,7 @@ import MatchPlayersBoard, { MatchLeaders } from "./MatchPlayersBoard.jsx";
 import MatchAnalyses from "./MatchAnalyses.jsx";
 import MatchLive from "./MatchLive.jsx";
 import { liveRunning, liveShootout, liveStatus } from "../services/match-live.js";
-import { LINEUPS_WATCH, lineupsBeforeKickoff } from "../services/match-tabs.js";
+import { LINEUPS_WATCH, lineupsBeforeKickoff, teamStatsFlagged } from "../services/match-tabs.js";
 import { periodShort } from "./PlayerMetrics.jsx";
 import { number, date, isNumber } from "../services/format.js";
 import {
@@ -596,7 +596,7 @@ export default function MatchDetail({ match }) {
           !upcoming && <MatchKpis match={match} />
         )}
       </section>
-      {match.coverage?.teamStatsReliable === false && (
+      {teamStatsFlagged(match) && (
         <p role="status" className="notice notice-warning">
           Statistiques d’équipe signalées comme incohérentes.
         </p>

@@ -5539,3 +5539,56 @@ si on a pas on reprend bleu et violet ».
   (webp|png|jpg)`), anything else is 404 without a fetch; a served file is `immutable`.
 - **R26** (`match-tabs.e2e.mjs`) the match page sets `--home` and `--away` from the crests (PSG's blue, Lorient's
   orange in the mocks), and keeps blue and violet when the crests do not load.
+
+## 65. PSG – Roma in play: the official line-ups without photos, and « incohérentes » without statistics (hugo, 25 Nov 2026, 21 h 10 Paris: « sur psg roma les compo officeile j'ai pas les images et aussi j'ai marqué statistique d'equipe signalé comme incoherente alors que y'a aucun stat »; written before the tests)
+
+Two causes, read in the code (`m_36394c`, in play at the time):
+
+- **Photos.** `GET /api/matches/{id}/lineups` (`lineupsBody`, `match-families.mjs`) carries no photo: the provider's
+  line-up has none. `lineupView` (`match-tabs.js`) takes a player's photo from his statistics row, his grade or our
+  probable eleven. The first two exist only once the match's player statistics are read (after the final whistle);
+  our probable eleven is read only while a side lacks the provider's eleven (`probableWanted`). From the moment both
+  official elevens are in until the player statistics arrive (about an hour before kick-off, then the whole match),
+  no player has a photo; a substitute or a starter our eleven did not name never has one before the final whistle.
+- **« Statistiques d'équipe signalées comme incohérentes ».** The former backend set `teamStatsReliable` false on a
+  match whose statistics were suspicious zeros (« Zéros suspects », `02-valeurs-absentes-et-fiabilite.md`). The read
+  API sets it to `team_stats_ok`, that is `match_coverage.team_stats = 'ok'` (`021_api_matches.sql`): false for every
+  match whose team statistics are not read yet (`pending`: before and during the match) or that the provider does
+  not have (`unavailable`). The read API never detects an inconsistency (`clubs.mjs`: « team statistics have one
+  source »). The page's three warnings (`MatchDetail.jsx`, `TeamStats` and `PlayerStats` in `MatchSections.jsx`)
+  read the flag alone, so they say « incohérentes » on matches that simply have no statistics yet.
+
+### 65.1 Rules
+
+- **Each line-up player carries his photo.** `lineupsBody` adds `image_url` to each starter and substitute: the
+  player's photo in the base (`core.players.photo_asset_id`, the same address as the statistics' and the events'
+  `player_image_url`), or null. It is read with the line-up, so it is there before kick-off and during the match,
+  whether or not the player has statistics. No migration: the route joins `api.player_profiles` on
+  `api.internal_id('player', player_id)`. The rest of the body is unchanged (the provider's fields, in their order).
+- **The former body is not kept.** The family's ETag is the hash of its address and the match's revision; the photos
+  change the body without a new revision, so a browser or CloudFront holding the former body would get a 304 and
+  keep it. The line-ups' ETag adds the body's shape (`photos`) to the hash.
+- **The site uses it last but one.** `lineupView`'s photo: the statistics row's, else the grade's, else the line-up's
+  own `image_url`, else our probable eleven's.
+- **« Incohérentes » only on statistics that exist.** `teamStatsFlagged(match)` (`match-tabs.js`) is true only when
+  `coverage.teamStatsReliable === false` **and** the match has team statistics (`match.stats` not empty). The three
+  warnings read it; nothing else changes. With the read API as it is, a match with team statistics has
+  `team_stats = 'ok'`, so the warning no longer shows; it comes back if the flag ever marks statistics that exist.
+- **Calculations unchanged.** `club-scout.js` and `club-analysis.js` keep reading the flag itself: a match whose team
+  statistics are not read is still left out of a club's averages.
+
+### 65.2 Failure modes and expected outcomes
+
+- **R27** (`backend/api/test/match-families.test.mjs`, the real match's round trip) `/lineups` equals the provider's
+  line-ups once each player's `image_url` is set aside; each player's `image_url` is his photo in the players'
+  fixture, or null for a player the base has no photo of; at least one starter has a photo; a request with the
+  former ETag (address and revision only) gets 200 and a new ETag.
+- **R28** (`tests/match-lineups-probable.test.mjs`) `lineupView` with no statistics rows, no grades and no probable
+  eleven gives each player the line-up's own `image_url`; a statistics row's photo still comes first; a player whose
+  line-up entry has none takes our probable eleven's.
+- **R29** (same file) `teamStatsFlagged`: false for a match in play whose flag is false and has no statistics (PSG –
+  Roma); false when the flag is true or absent; true when the flag is false and the match has statistics.
+- **R30** (same file) `MatchDetail.jsx` and `MatchSections.jsx` show « incohérent » warnings through
+  `teamStatsFlagged` only: neither reads `teamStatsReliable === false` itself.
+- **R31** (`tests/explorer.test.mjs`) the statistics and players sections of a match whose flag is false say
+  « incohérentes » when it has team statistics and say nothing of the kind when it has none.
