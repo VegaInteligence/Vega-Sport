@@ -5296,8 +5296,10 @@ disposable base (`test_models.py`: CI only, no local PostgreSQL in this session)
   stopped at their set-up, `duplicate key value violates unique constraint "teams_pkey"`, `(id)=(1)`. The case
   inserted its club without an id, and the identity of `core.teams` does not follow the ids the seed writes: a defect
   of the case, not of the code. The club now has its id (62020) and the set-up is inside the guarded block, so a
-  failure leaves nothing behind. None of their assertions had run at that commit: the pull request's next run is
-  their first reading.
+  failure leaves nothing behind. None of their assertions had run at that commit. The run on the merge of main
+  `492a13618a` (45653606318, `e43cb84733`) failed on the same line, alone among 1 094 tests. Third run, on
+  `5604429fe9` (45655753883): 1 094 tests green, 62r–62s among them, with the 16 cases of `test_forecast.py` and the
+  two earlier forecast cases of the models' base.
 - Measured (`measure.py`, main then the branch): a league of 190 matches left, 1 000 replays, 0.161 s on main, 0.202 s
   after (a quarter more, on two runs); the shares' moves of §62's opening, −0.1 to +0.3 point after.
 - The home goals of `draw_score` are a Poisson count whenever no correction is held at zero: in the rows of 0 and 1
