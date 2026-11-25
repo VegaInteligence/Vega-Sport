@@ -418,7 +418,8 @@ export default function MatchDetail({ match }) {
   const leading = leadingPlayers(
     players.length ? players : match.leadingPlayers,
     grades,
-    { match: match.id },
+    // Eight rows reach the foot of the shot map beside them (hugo, 25 Nov).
+    { match: match.id, count: 8 },
   );
   const competition = f.allCompetitions.find((c) => c.id === match.leagueId);
   const homeName = match.home.name ?? "Équipe non renseignée";

@@ -10,9 +10,11 @@
 // § 63 (hugo's review in production, 25 Nov 2026, 18 h 31) amends it: R1 six tabs, « Classement » of its own · R2 the
 // table and the projection · R3 each team on its side of the shot map · R4 the period choice · R5 the shoot-out on the
 // goal · R6 the finished match's strip in the Résumé · R7 the search in « Compositions » · R8 ten valued actions.
+// § 63.3 (hugo, 18 h 47): R9 no list under the shot map · R10 the best grades end with the shot map · R11 the
+// competition page's block in « Classement ».
 //
 // Failure modes (§ 62.2): M1 tabs and default · M2 Résumé's blocks · M3 the three views of « Le match minute par
-// minute » · M4 one view only · M5 the shots under the fold · M6 « Tous les joueurs » and the board in Compositions ·
+// minute » · M4 one view only · M5 (now R9) · M6 « Tous les joueurs » and the board in Compositions ·
 // M7 Analyses without momentum and halves · M8 the table in Avant-match, a final included · M9 the former addresses ·
 // M10 before kick-off · M11 phone without sideways scroll · M12 no page error · M14 the halves in Statistiques.
 import assert from "node:assert/strict";
@@ -257,19 +259,16 @@ try {
           return got;
         });
 
-      await check("R4 the period choice, the first half alone", { periods: ["Match", "1re mi-temps", "2e mi-temps", "Tirs au but"], firstHalf: { points: 3, rows: 3 } },
+      await check("R4 the period choice, the first half alone", { periods: ["Match", "1re mi-temps", "2e mi-temps", "Tirs au but"], firstHalf: { points: 3 } },
         async () => {
           const card = panel(page).locator(".card", { has: page.locator(".card-title", { hasText: "Carte des tirs" }) });
           const choice = card.getByRole("group", { name: "Période des tirs" });
           const periods = (await choice.locator("button").allInnerTexts()).map((t) => t.trim());
           await choice.getByRole("button", { name: "1re mi-temps", exact: true }).click();
           const points = await card.locator('[data-chart="match-shot-map"] [data-side]').count();
-          await card.getByRole("button", { name: /Voir les \d+ tirs?/ }).click();
-          const rows = await card.locator("ol.match-shot-list > li").count();
-          await card.getByRole("button", { name: /Masquer les \d+ tirs?/ }).click();
-          const got = { periods, firstHalf: { points, rows } };
+          const got = { periods, firstHalf: { points } };
           await choice.getByRole("button", { name: "Match", exact: true }).click();
-          assert.deepEqual(got, { periods: ["Match", "1re mi-temps", "2e mi-temps", "Tirs au but"], firstHalf: { points: 3, rows: 3 } });
+          assert.deepEqual(got, { periods: ["Match", "1re mi-temps", "2e mi-temps", "Tirs au but"], firstHalf: { points: 3 } });
           return got;
         });
 
@@ -309,16 +308,26 @@ try {
           return { choices };
         });
 
-      await check("M5 « Voir les 5 tirs » opens on the five shots", { button: "Voir les 5 tirs", rows: 5 }, async () => {
+      await check("R9 no list under the shot map, a label on each of the 5 marks", { list: 0, button: 0, labelled: 5 }, async () => {
         const card = panel(page).locator(".card", { has: page.locator(".card-title", { hasText: "Carte des tirs" }) });
-        const button = card.getByRole("button", { name: /Voir les \d+ tirs/ });
-        const text = (await button.innerText()).trim();
-        assert.equal(await button.getAttribute("aria-expanded"), "false");
-        await button.click();
-        const rows = await card.locator("ol.match-shot-list > li").count();
-        assert.equal(text, "Voir les 5 tirs");
-        assert.equal(rows, 5);
-        return { button: text, rows };
+        const got = {
+          list: await card.locator("ol.match-shot-list").count(),
+          button: await card.getByRole("button", { name: /(Voir|Masquer) les \d+ tirs?/ }).count(),
+          labelled: await card.locator('[data-chart="match-shot-map"] [data-side][aria-label]').count(),
+        };
+        assert.deepEqual(got, { list: 0, button: 0, labelled: 5 });
+        return got;
+      });
+
+      await check("R10 the best grades reach the foot of the shot map (1440 px)", { lastRowBelowPitch: true }, async () => {
+        const grades = panel(page).locator(".card", { has: page.locator(".card-title", { hasText: "Meilleures notes" }) });
+        const row = await grades.locator(".match-player-row").last().boundingBox();
+        const pitch = await panel(page).locator('[data-chart="match-shot-map"]').boundingBox();
+        await page.screenshot({ path: join(out, "resume-bureau-carte-et-notes.png"), fullPage: true });
+        const got = { lastRowFoot: Math.round(row.y + row.height), pitchFoot: Math.round(pitch.y + pitch.height) };
+        // The svg keeps a margin under the pitch's line: the rows must reach it within a row's padding.
+        assert.ok(got.lastRowFoot >= got.pitchFoot - 16, JSON.stringify(got));
+        return { lastRowBelowPitch: true, ...got };
       });
 
       await check("M6 « Tous les joueurs » opens Compositions, the board under the pitch (R6: no strip there)", { selected: "Compositions", view: "lineups", board: true, motm: null },
@@ -390,22 +399,28 @@ try {
           return got;
         });
 
-      await check("M8a/R2 « Classement »: the table and the projection; none in Avant-match", { table: 1, projection: 18, avantMatch: 0 }, async () => {
-        await page.getByRole("tab", { name: "Classement" }).click();
-        await page.waitForURL((url) => url.searchParams.get("view") === "standings");
-        await panel(page).locator(".match-standings-card").waitFor();
-        const card = panel(page).locator(".card", { has: page.locator(".card-title", { hasText: "Projection de fin de saison" }) });
-        await card.locator("table.season-projection tbody tr").first().waitFor();
-        const got = { table: await panel(page).locator(".match-standings-card").count(), projection: await card.locator("table.season-projection tbody tr").count() };
-        await page.screenshot({ path: join(out, "classement-bureau.png"), fullPage: true });
-        await page.getByRole("tab", { name: "Avant-match" }).click();
-        await page.waitForURL((url) => url.searchParams.get("view") === "context");
-        await page.waitForTimeout(1500);
-        got.avantMatch = await panel(page).locator(".match-standings-card").count();
-        await page.screenshot({ path: join(out, "avant-match-bureau.png"), fullPage: true });
-        assert.deepEqual(got, { table: 1, projection: 18, avantMatch: 0 });
-        return got;
-      });
+      await check("R11/M8a « Classement »: the competition page's block, its table and its projection; no table in Avant-match",
+        { views: ["Classement", "Matchs", "Projection"], table: true, projection: 18, avantMatch: 0 }, async () => {
+          await page.getByRole("tab", { name: "Classement" }).click();
+          await page.waitForURL((url) => url.searchParams.get("view") === "standings");
+          const views = panel(page).getByRole("group", { name: "Vue de la compétition" });
+          await views.waitFor();
+          const names = (await views.locator("button").allInnerTexts()).map((t) => t.trim());
+          await panel(page).locator(".competition-standings table.standings-table").first().waitFor({ timeout: 30000 });
+          await page.screenshot({ path: join(out, "classement-bureau.png"), fullPage: true });
+          await views.getByRole("button", { name: "Projection", exact: true }).click();
+          await panel(page).locator("table.season-projection tbody tr").first().waitFor();
+          const projection = await panel(page).locator("table.season-projection tbody tr").count();
+          await page.screenshot({ path: join(out, "classement-projection-bureau.png"), fullPage: true });
+          await page.getByRole("tab", { name: "Avant-match" }).click();
+          await page.waitForURL((url) => url.searchParams.get("view") === "context");
+          await page.waitForTimeout(1500);
+          const avantMatch = await panel(page).locator(".match-standings-card, .competition-standings").count();
+          await page.screenshot({ path: join(out, "avant-match-bureau.png"), fullPage: true });
+          const got = { views: names.filter((n) => ["Classement", "Matchs", "Projection"].includes(n)), table: true, projection, avantMatch };
+          assert.deepEqual(got, { views: ["Classement", "Matchs", "Projection"], table: true, projection: 18, avantMatch: 0 });
+          return { ...got, allViews: names };
+        });
 
       await check("M9 the former addresses", { shots: "Résumé", players: "Compositions", standings: "Classement", stats: "Statistiques" }, async () => {
         const got = {};
@@ -449,8 +464,8 @@ try {
       await settle(f.page);
       // Nothing lost: the former « Classement » tab showed the competition's table for every match.
       await check("M8b a final: the competition's table in « Classement »", { table: 1 }, async () => {
-        await panel(f.page).locator(".match-standings-card").waitFor();
-        const n = await panel(f.page).locator(".match-standings-card").count();
+        await panel(f.page).locator(".competition-standings table.standings-table").first().waitFor({ timeout: 30000 });
+        const n = await panel(f.page).locator(".competition-standings").count();
         assert.equal(n, 1);
         return { table: n };
       });

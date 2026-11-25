@@ -1391,8 +1391,7 @@ select optgroup {
 .match-overview-wide {
   grid-column: 1 / -1;
 }
-/* The Résumé (issue #221): the shot map's list under a fold, the best grades in one column
-   beside it, the line-ups' board under the pitch. */
+/* The Résumé (issue #221): the shot map, the best grades beside it down to the map's foot. */
 /* The finished match's strip, the whole row above the charts (FAILURE_MODES § 63). */
 .match-overview-grid > .match-leaders-strip {
   grid-column: 1 / -1;
@@ -1470,36 +1469,6 @@ select optgroup {
   gap: 16px;
   min-width: 0;
 }
-.match-shot-fold {
-  margin-top: 12px;
-  border-top: 1px solid var(--border);
-}
-.match-shot-fold-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  min-height: 40px;
-  padding: 0;
-  color: var(--ink);
-  font-size: var(--text-sm);
-  font-weight: 500;
-}
-.match-shot-fold-toggle:hover {
-  color: var(--ink-strong);
-}
-.match-shot-fold-toggle .icon {
-  transition: transform 0.15s ease;
-}
-.match-shot-fold-toggle .icon.is-open {
-  transform: rotate(180deg);
-}
-.match-shot-fold .match-shot-list {
-  max-height: 420px;
-}
-.match-shot-list li.is-goal strong {
-  font-weight: 600;
-}
 .match-leaders-list .match-player-row:last-child {
   border-bottom: 0;
 }
@@ -1556,6 +1525,15 @@ select optgroup {
   }
   .match-overview-grid > .match-leaders-card > .card-body {
     justify-content: flex-start;
+  }
+  /* The best grades end with the shot map beside them (hugo, 25 Nov): the rows share the card's height. */
+  .match-overview-grid > .match-leaders-card > .card-body > .match-leaders-list {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+  }
+  .match-overview-grid > .match-leaders-card .match-leaders-list > .match-player-row {
+    flex: 1 1 auto;
   }
   /* The goals keep their separators touching: each row grows, its content centred. */
   .match-overview-grid > .card > .card-body > .match-goals {
@@ -1993,59 +1971,6 @@ select optgroup {
 }
 .shot-team-selector {
   margin-bottom: 14px;
-}
-.match-shot-list {
-  max-height: 620px;
-  padding: 0;
-  margin: 0;
-  overflow: auto;
-  list-style: none;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-strong) transparent;
-}
-.match-shot-list li {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 9px 0;
-  border-bottom: 1px solid var(--border);
-}
-.shot-minute {
-  min-width: 30px;
-  color: var(--muted);
-  font-size: var(--text-sm);
-  font-weight: 600;
-}
-.match-shot-list button {
-  flex: 1;
-  text-align: left;
-  padding: 0;
-}
-.match-shot-list strong {
-  display: block;
-  color: var(--ink-strong);
-  font-size: var(--text-md);
-  font-weight: 500;
-}
-.match-shot-list button span {
-  display: block;
-  margin-top: 2px;
-  color: var(--muted);
-  font-size: var(--text-xs);
-}
-.shot-xg {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
-  color: var(--ink-strong);
-  font-size: var(--text-md);
-  font-weight: 650;
-}
-.shot-xg small {
-  color: var(--muted);
-  font-size: var(--text-2xs);
-  font-weight: 400;
 }
 .archive-select {
   display: flex;

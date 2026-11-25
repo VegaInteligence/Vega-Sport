@@ -1,14 +1,13 @@
 "use client";
 /* The Résumé's shot map (FAILURE_MODES § 63): one pitch, each team on its side (the home team attacks the left goal,
  * the away team the right one), a choice of the period among those with shots, and the shoot-out drawn on the goal
- * seen from the pitch, with a team choice. The shots' list under a fold follows what the map shows. */
-import React, { useId, useState } from "react";
+ * seen from the pitch, with a team choice. Each mark tells its shot on hover; there is no list under the map (hugo, 25 Nov). */
+import React, { useState } from "react";
 import { Card, Empty, Segments } from "./UI.jsx";
-import Icon from "./Icon.jsx";
 import { useHoverBubble } from "./HoverCard.jsx";
 import { ShotCard, eventId, shotText } from "./Charts.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
-import { isNumber, number } from "../services/format.js";
+import { isNumber } from "../services/format.js";
 
 /** The periods a shot can belong to, in the order of the match, and how the choice names them. */
 export const SHOT_PERIODS = [
@@ -193,15 +192,10 @@ function GoalMouth({ match, kicks, onPlayer }) {
   );
 }
 
-const outcomeOf = (s) => (s.isOwnGoal ? "CSC" : s.isGoal ? "But" : s.isOnTarget === true ? "Tir cadré" : "Tir");
-const kickOutcome = (s) => (s.isGoal ? "Réussi" : s.isOnTarget === true ? "Arrêté" : "Manqué");
-
 export default function MatchShotMap({ match }) {
   const f = useFootball();
   const [period, setPeriod] = useState("all");
   const [team, setTeam] = useState("all");
-  const [open, setOpen] = useState(false);
-  const listId = useId();
   if (match.coverage?.shots === false || !match.shots?.length)
     return (
       <Card title="Carte des tirs" className="match-shots-card">
@@ -217,7 +211,6 @@ export default function MatchShotMap({ match }) {
     ? kicks.filter((k) => team === "all" || k.teamId === team)
     : shotsOf(match.shots, current).sort((a, b) => (a.minute ?? Infinity) - (b.minute ?? Infinity));
   const openPlayer = (id) => f.setPlayer(id);
-  const count = shown.length;
   return (
     <Card
       title="Carte des tirs"
@@ -227,10 +220,7 @@ export default function MatchShotMap({ match }) {
           <Segments
             label="Période des tirs"
             value={current}
-            onChange={(value) => {
-              setPeriod(value);
-              setOpen(false);
-            }}
+            onChange={setPeriod}
             items={periods}
           />
         )
@@ -282,43 +272,6 @@ export default function MatchShotMap({ match }) {
           </>
         )}
       </div>
-      {count > 0 && (
-        <div className="match-shot-fold">
-          <button
-            type="button"
-            className="match-shot-fold-toggle"
-            aria-expanded={open}
-            aria-controls={listId}
-            onClick={() => setOpen((v) => !v)}
-          >
-            {open ? "Masquer" : "Voir"} les {number(count)} tir{count > 1 ? "s" : ""}
-            <Icon name="chevron" className={open ? "is-open" : ""} />
-          </button>
-          {open && (
-            <ol className="match-shot-list" id={listId}>
-              {shown.map((s, i) => (
-                <li key={s.id || i} className={s.isGoal && !s.isOwnGoal ? "is-goal" : undefined}>
-                  <span className="shot-minute">{shootout ? `#${s.order}` : `${number(s.minute)}′`}</span>
-                  <button onClick={() => s.playerId && f.setPlayer(`${match.id}:${s.playerId}`)} disabled={!s.playerId}>
-                    <strong>{s.playerName || "Joueur non renseigné"}</strong>
-                    <span>
-                      {sideOf(match, s) === "away" ? match.away.name : match.home.name}
-                      {" · "}
-                      {shootout ? kickOutcome(s) : outcomeOf(s)}
-                    </span>
-                  </button>
-                  {!shootout && (
-                    <span className="shot-xg">
-                      {number(s.xg, 2)}
-                      <small>xG</small>
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ol>
-          )}
-        </div>
-      )}
     </Card>
   );
 }

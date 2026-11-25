@@ -5305,3 +5305,31 @@ out of « Avant-match », in a tab of its own with the competition's projection.
   « Le match minute par minute »; « Compositions » has no « Meilleure note du match ».
 - **R7** « Compositions »: typing « demb » leaves Dembélé's row only; « zzz » shows « Aucun joueur ne correspond ».
 - **R8** « Les actions qui ont pesé le plus » with 12 players valued: 10 rows.
+
+### 63.3 Second review (hugo, 25 Nov 2026, 18 h 47, on the preview of PR #224; written before the tests)
+
+hugo's words: « y'a encore le bouton voir les tirs », « sur la droite la liste des joueurs est plus courte que la hauteur
+de la map des tirs », and for « Classement » the competition page's own block (his screenshots: the edition's head with
+« Classement · Matchs · Tableau · Projection », and the projection table with Top 8, Barrages, Éliminé, 8es…
+Vainqueur). Amends § 63.1.
+
+- **Carte des tirs.** No list and no « Voir / Masquer les N tirs » under the map: each mark is focusable and tells its
+  shot (its label, its card on hover), as before.
+- **Meilleures notes.** Up to 8 players (5 before); on a computer the card ends with the shot map beside it, its rows
+  sharing the card's height when they are fewer.
+- **Classement.** For a competition the site collects, the competitions page's block itself
+  (`components/CompetitionEdition.jsx`, moved out of `views/CompetitionsPage.jsx` unchanged): the edition's head, the
+  season choice and the views « Classement », « Matchs », « Tableau » (a cup), « Projection » (where the base projects
+  the season), on the match's season. Embedded, it leaves out the side cards of the competition page and does not
+  change the site's season. A cup read from the cup index keeps the match's table (`.match-standings-card`).
+
+Failure modes (E2E, same file):
+
+- **R9** the Résumé has no `ol.match-shot-list` and no button « Voir les … tirs »; the map's marks have a label each
+  (5 for the mock's 5 shots). Replaces M5.
+- **R10** at 1440 px, the last row of « Meilleures notes » ends within 16 px of the foot of the pitch's drawing beside
+  it (the two cards already shared their height: the rows, not the card, fell short).
+- **R11** « Classement » (Ligue 1, 2026/2027): the group « Vue de la compétition » holds « Classement », « Matchs »
+  and « Projection »; « Classement » shows the competition's table (`.competition-standings table.standings-table`);
+  « Projection » shows `table.season-projection` with a row per team of the projection (18). Replaces R2's table card;
+  a final (M8b) shows the same block.

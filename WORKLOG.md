@@ -8,6 +8,9 @@
 - Tabs: Résumé, Compositions, Statistiques, Analyses, Classement, Avant-match (before kick-off: Avant-match, Compositions, Classement); `view=standings` opens « Classement » (`MatchTable.jsx`: the table, then « Projection de fin de saison » when `/api/forecasts/season` answers). `Segments` gains `role="group"`.
 - Tests first: `match-tabs.e2e.mjs` R1–R8 added and M-checks moved to the new contract, red 13/20, then green 20/20; `match-before-kickoff.e2e.mjs` 7/7; site 1 042/1 042, build OK. Evidence: `/mnt/project-files/fusion-onglets-match/retours-e2e-*`.
 - Not done here: the redesign of the page's head (breadcrumb, actions, previous / next bar), asked by hugo at 18 h 39 with a mock-up first.
+- § 63.3, hugo's second review on the preview (18 h 47): no shots' list nor « Voir les N tirs » under the map (each mark keeps its label and card); « Meilleures notes » up to 8 rows, sharing the card's height so they reach the map's foot; « Classement » is now the competitions page's own block (`components/CompetitionEdition.jsx`, moved out of `views/CompetitionsPage.jsx` unchanged, `embedded`: no side cards, no change of the site's season), with Classement · Matchs · Tableau · Projection; a cup from the cup index keeps the match's table.
+- Tests first: R9–R11 red 18/21 (`retours2-e2e-rouge/`), green 21/21 (`retours2-e2e-vert/`); before kick-off 7/7; `competition-page.e2e.mjs` F1–F4 pass, then stops on `#matchday-choice` with or without the change (the replay snapshot lacks the matchday data).
+- Head mock-up (three directions A, B recommended, C), plain HTML at hugo's request: `/mnt/project-files/fusion-onglets-match/maquette-haut-page-match.html`; nothing coded until he picks one.
 
 ## La page match en cinq onglets — FAILURE_MODES § 62 (25 November 2026, branch `claude/fusion-onglets-match` from main 492a136, issue #221)
 
