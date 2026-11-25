@@ -19,6 +19,8 @@
   - the unknown-assist sentence stays in scope, verified end to end (§6.3).
 - **Language:** English, because this is the test contract shared with reviewers. The French
   calculation pages are reconciled in batch F.
+- **Batch files.** Sections named by their GitHub issue, outside this file's numbers:
+  [FAILURE_MODES_OPTIMISATIONS.md](FAILURE_MODES_OPTIMISATIONS.md) (GH220, GH194, GH137 with GH145).
 
 ## 0. Conventions used by every batch
 
