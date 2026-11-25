@@ -1,6 +1,6 @@
 # Pronostics de match et projections de fin de saison
 
-Code : [forecast.py](../../../backend/vega/forecast.py) ; lectures `/api/forecasts/match` et `/api/forecasts/season` ; sur le site, la carte « Probabilités » de l'avant-match et la vue « Projection » d'un championnat ou d'une coupe européenne. Version du modèle : `forecast-v2` (14 novembre 2026 ; la version 1, du 12 novembre, ne lisait que l'Elo).
+Code : [forecast.py](../../../backend/vega/forecast.py) ; lectures `/api/forecasts/match` et `/api/forecasts/season` ; sur le site, la carte « Probabilités » de l'avant-match et la vue « Projection » d'un championnat ou d'une coupe européenne. Version du modèle : `forecast-v3` (25 novembre 2026). La version 1, du 12 novembre, ne lisait que l'Elo ; la version 2, du 14 novembre, y ajoute la forme récente ; la version 3 ne change pas le pronostic d'un match mais la façon de rejouer une saison (plus bas, « Ce que la version 3 change »).
 
 ## Le pronostic d'un match
 
@@ -89,7 +89,42 @@ Pour chaque championnat national en cours (au moins 8 clubs, tours réguliers se
 
 La force d'un club n'est pas connue exactement et bougera d'ici la fin de saison : chaque simulation décale chaque force d'un tirage d'une loi normale d'écart-type **90 points Elo × √(part de ses matchs restant à jouer)**. Sans ce décalage, un leader de novembre était champion à 99,9 %.
 
+### Ce que la version 3 change (25 novembre 2026)
+
+Issue [#217](https://github.com/VegaInteligence/Vega-Sport/issues/217) ; cas d'échec et résultats attendus dans [FAILURE_MODES.md, § 62](../09-audit-2026-11/FAILURE_MODES.md) ; mesures dans `docs/calculs/09-audit-2026-11/evidence/projection-lot-1/`.
+
+**Chaque match compte une fois.** Chaque match régulier d'un championnat est exactement l'un de (`league_ledger` en donne le décompte par édition) :
+
+| Le match | Compte comme |
+|---|---|
+| Terminé ou gagné sur tapis vert (`awarded`), avec son score | un résultat du classement |
+| Pas commencé, ou résultat d'une journée encore ouverte | un match à jouer |
+| Reporté, suspendu, en cours, ou terminé sans score dans la base | un match à jouer, sauf si c'est une copie |
+| Copie : la même édition liste déjà le même club à domicile et le même à l'extérieur, comme résultat ou match à jouer | rien (la source a gardé l'ancienne ligne d'un match qu'elle a récrit) |
+| Annulé | rien |
+
+Jusque-là, un match reporté disparaissait de la saison une fois sa journée close, et un match gagné sur tapis vert ne rapportait aucun point.
+
+**Pas de projection sans Elo.** Un championnat dont un club qui a encore un match n'a pas d'Elo n'est pas projeté, comme une coupe. Jusque-là, les matchs de ce club étaient retirés sans le dire.
+
+**La loi du pronostic.** Un match rejoué est tiré dans la grille de scores de son pronostic : correction des petits scores comprise (ρ), buts arrêtés à 10. Jusque-là, deux lois de Poisson indépendantes, qui donnent trop peu de nuls. Cela vaut pour tout match entier rejoué, coupes et Ligue des nations comprises ; une prolongation reste tirée de deux lois de Poisson indépendantes, la correction étant ajustée sur des scores à la 90ᵉ minute.
+
+**Des tirages attachés à chaque match.** Chaque club a son propre générateur (son décalage de force, son départage), chaque match restant le sien (son score). Un changement ailleurs ne les déplace pas : une projection bouge avec ce qui a changé, plus avec tous les tirages qui suivaient. Mesuré sur un championnat fictif de 20 clubs à mi-saison, 1 000 simulations, 30 graines :
+
+| Changement d'entrée | Part déplacée | Version 2 | Version 3 |
+|---|---|---:|---:|
+| +1 point Elo au dernier | titre du leader | −2,9 à +2,9 points | −0,1 à +0,2 |
+| | trois dernières places, 16ᵉ | −5,4 à +4,4 | −0,1 à +0,3 |
+| Un match joué entre le 10ᵉ et le 11ᵉ | titre du leader | −3,9 à +6,0 | −0,1 à +0,2 |
+| | trois dernières places, 16ᵉ | −5,0 à +3,9 | −0,2 à +0,3 |
+
+L'écart à la valeur qu'on lirait sur un nombre infini de simulations reste le même (environ ±1,5 point à 1 000 simulations pour une part de 50 %) : il ne change plus d'un jour à l'autre. Un championnat de 190 matchs restants se rejoue en 0,20 s au lieu de 0,16 s, soit un quart de plus.
+
+Vaut pour un championnat et pour la phase de ligue d'une coupe européenne. Le tableau d'une coupe, une coupe nationale et la Ligue des nations gardent un générateur commun : leurs parts bougent encore de cette façon.
+
 ### Vérification sur des saisons passées
+
+Cette vérification date de la version 2 ; elle n'a pas été refaite avec la loi de la version 3.
 
 Les 55 saisons de championnat complètes de 2024/2025 et 2025/2026 (12 clubs ou plus), rejouées depuis leur mi-parcours avec un modèle ajusté sur les saisons précédentes ; perte logarithmique de trois événements par club :
 
@@ -386,6 +421,9 @@ Le niveau des adversaires ne dit rien du club lui-même : deux clubs au même ca
 
 - Les colonnes « 4 premiers » et « 3 derniers » sont des places, pas les zones du règlement de chaque championnat (qualifications européennes, barrages, nombre de relégués).
 - Un championnat à phases (tournois d'ouverture et de clôture, play-offs) est projeté sur ses seuls tours réguliers.
+- Dans un championnat où deux clubs se rencontrent plus d'une fois sur le même terrain, un match reporté reste hors de la saison rejouée dès que l'autre rencontre est listée : rien ne distingue alors un match encore dû d'une copie sans connaître le format de l'édition.
+- Un match stocké deux fois comme terminé compte deux fois ([FAILURE_MODES.md, § 43.3](../09-audit-2026-11/FAILURE_MODES.md)).
+- Une projection attend encore la fin de la journée tout en lisant les forces du jour (constat 7 de l'audit du 17 novembre).
 - Les coupes nationales et les compétitions internationales autres que les trois coupes européennes ne sont pas projetées (voir « Les coupes nationales et les clubs sans Elo »).
 - Les forces de deux championnats hors de l'échelle commune ne se comparent pas ; cela ne gêne pas un championnat national, dont tous les clubs sont sur la même échelle.
 - La forme récente et les compositions ne déplacent que le pronostic d'un match ; la projection d'un championnat et les points attendus de la colonne « Adv. à venir » au-delà de quatorze jours lisent les forces seules.

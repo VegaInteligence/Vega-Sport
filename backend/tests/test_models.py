@@ -815,6 +815,56 @@ class ModelsTest(unittest.TestCase):
             x("DELETE FROM agg.match_forecasts WHERE match_id BETWEEN 9200 AND 9216")
             x("DELETE FROM core.matches WHERE id BETWEEN 9200 AND 9215")
 
+    def test_zzzzz_every_league_match_counts_once_and_no_strength_gives_no_projection(self):
+        # FAILURE_MODES §62 (62r, 62s; #217), written before the code. A league's awarded match counts with its score, a
+        # postponed match alone is still to play, the source's old copy of a played match and a canceled match are not;
+        # a league one of whose clubs still to play has no Elo is not projected.
+        from datetime import date, timedelta
+
+        from vega import forecast
+
+        x = self.db.execute
+        day = lambda n: (date.today() + timedelta(days=n)).isoformat()
+        unrated = 62020  # a club the Elo has never read; its id is given, as the seed's are (the identity does not follow them)
+        rows = [(62000 + k, 62000, 'finished', h, h + 1, 1, 0, day(-40)) for k, h in enumerate((1, 3, 5, 7))]
+        rows += [(62004, 62000, 'awarded', 2, 1, 3, 0, day(-30)), (62005, 62000, 'postponed', 4, 3, None, None, day(-20)),
+                 (62006, 62000, 'postponed', 1, 2, None, None, day(-45)),  # the source's old copy of 62000
+                 (62007, 62000, 'canceled', 6, 5, None, None, day(-20)), (62008, 62000, 'not_started', 8, 7, None, None, day(10))]
+        rows += [(62010 + k, 62001, 'finished', h, h + 1, 1, 0, day(-40)) for k, h in enumerate((1, 3, 5))]
+        rows += [(62013, 62001, 'not_started', 7, unrated, None, None, day(10))]
+        minimum, forecast.MIN_FIT = forecast.MIN_FIT, 20
+        try:
+            x("INSERT INTO core.competitions(id, name) VALUES (62000, 'national-league-north'), (62001, 'national-league-south')")
+            x("""INSERT INTO core.competition_seasons(id, competition_id, season_id, native_label, cup_key) VALUES
+                 (62000, 62000, 2025, '2025/2026', 'open-matchday:ENG_6_national-league-north:2025/2026'),
+                 (62001, 62001, 2025, '2025/2026', 'open-matchday:ENG_6_national-league-south:2025/2026')""")
+            x("INSERT INTO core.teams(id, name) VALUES (%s, 'Unrated FC')", (unrated,))
+            for row in rows:
+                x("""INSERT INTO core.matches(id, competition_season_id, season_id, source, status, home_team_id, away_team_id, home_score, away_score, match_date)
+                     VALUES (%s, %s, 2025, 'openfootball', %s, %s, %s, %s, %s, %s)""", row)
+            forecast.refresh(self.db, 2025)
+            projected = {team: (played, points, float(mean)) for team, played, points, mean in x(
+                "SELECT team_id, played, points, projected_points FROM agg.season_projections WHERE competition_season_id = 62000").fetchall()}
+            self.assertEqual({team: row[:2] for team, row in projected.items()},
+                             {1: (2, 3), 2: (2, 3), 3: (1, 3), 4: (1, 0), 5: (1, 3), 6: (1, 0), 7: (1, 3), 8: (1, 0)})
+            for team in (3, 4, 7, 8):  # a match left: the postponed one, the one to play
+                self.assertGreater(projected[team][2], projected[team][1])
+            for team in (1, 2, 5, 6):  # none left: the old copy and the canceled match are not replayed
+                self.assertEqual(projected[team][2], projected[team][1])
+            # 62s: no Elo for a club still to play, no projection of its league.
+            self.assertEqual(self.one("SELECT count(*) FROM agg.season_projections WHERE competition_season_id = 62001")[0], 0)
+            self.assertEqual(self.one("SELECT count(*) FROM agg.season_projection_places WHERE competition_season_id = 62001")[0], 0)
+        finally:
+            forecast.MIN_FIT = minimum
+            # The base as it was found, for the cases that follow, whatever was written before a failure.
+            for statement in ("DELETE FROM agg.match_forecasts WHERE match_id BETWEEN 62000 AND 62013",
+                              "DELETE FROM agg.season_projections WHERE competition_season_id IN (62000, 62001)",
+                              "DELETE FROM core.matches WHERE id BETWEEN 62000 AND 62013",
+                              "DELETE FROM core.competition_seasons WHERE id IN (62000, 62001)",
+                              "DELETE FROM core.competitions WHERE id IN (62000, 62001)"):
+                x(statement)
+            x("DELETE FROM core.teams WHERE id = %s", (unrated,))
+
     # §60 (issue #105): the Ballon d'Or race on the Score Vega v9.1 with the three criteria, stage 1, computed by the
     # ranking's run beside the v8 race. The cases are named test_60*: they run before the cases that add a World Cup
     # final or matches to play (test_zzz*), and each puts the base back as it found it.

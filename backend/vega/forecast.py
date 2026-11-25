@@ -15,6 +15,16 @@ will move before the season ends: each replay shifts every strength by a draw of
 law of STRENGTH_SPREAD points × √(share of the club's matches still to play). Held at
 their present value, the strengths made a leader in November a champion at 99.9 %.
 
+Version 3 (25 November 2026, docs/calculs/09-audit-2026-11/FAILURE_MODES.md §62) changes
+the replays, not the forecast of a match:
+- each regular match of a league counts once (league_ledger): a result, a match to play,
+  a copy the source superseded, or a canceled match. A postponed match is still to play;
+- a replayed match is drawn from its forecast's law, the low-score correction included
+  (draw_score), where two independent Poisson laws gave too few draws;
+- each club and each fixture draws from a generator of its own: a projection moves with
+  what changed, not with every draw after it;
+- a league one of whose clubs still to play has no strength is not projected.
+
 Version 2 adds a club's recent form to its strength for the matches about to be played:
   Δ' = Δ + F_xG × (x_home − x_away) + F_luck × (l_home − l_away)
 x is a club's mean xG difference over its last FORM_MATCHES matches, l the mean of its
@@ -42,7 +52,7 @@ import random
 
 from .power import ELO_HOME, fit_poisson
 
-MODEL_VERSION = "forecast-v2"
+MODEL_VERSION = "forecast-v3"
 FORM_MATCHES = 10  # a club's last matches its form is read on
 FORM_MIN = 5  # of them with an xG for both sides, below which a club has no form
 FORM_HORIZON = timedelta(days=14)  # a match further ahead is forecast from the strengths alone
@@ -217,34 +227,128 @@ def _goals(rng, lam):
     return k
 
 
-def simulate(table, fixtures, model, strengths, *, simulations=SIMULATIONS, spread=STRENGTH_SPREAD, seed=0):
-    """Project a league. `table`: {team: (points, goals for, goals against, played)} so far;
-    `fixtures`: [(home, away)] still to play; `strengths`: {team: Elo}. Returns
-    {team: {"positions": [share of replays at 1st, 2nd, …], "points": mean final points}}.
-    A fixture of a club without a strength is left out of the replays."""
+def _count(x, k, p, c, lam):
+    """The goals at cumulative weight `x` of a Poisson law of mean `lam` whose terms up to `k` (the last one `p`)
+    weigh `c` together: one of the terms that follow, the tail going to MAX_GOALS as in poisson()."""
+    while k < MAX_GOALS - 1:
+        k += 1
+        p *= lam / k
+        c += p
+        if x < c:
+            return k
+    return MAX_GOALS
+
+
+def draw_score(u, v, lh, la, rho=0.0):
+    """A score of score_grid(lh, la, rho), read at two probabilities: the home goals at `u` in the grid's home
+    marginal, the away goals at `v` in its law given them. The forecast's law cell for cell: the four lowest
+    scores corrected (tau; a correction below zero held at zero), goals stopped at MAX_GOALS."""
+    t00 = t01 = t10 = t11 = 1.0
+    if rho:  # tau() of 0-0, 0-1, 1-0 and 1-1
+        t00, t01, t10, t11 = 1.0 - lh * la * rho, 1.0 + lh * rho, 1.0 + la * rho, 1.0 - rho
+        if t00 < 0.0 or t01 < 0.0 or t10 < 0.0 or t11 < 0.0:
+            return _draw_held(u, v, lh, la, max(0.0, t00), max(0.0, t01), max(0.0, t10), max(0.0, t11))
+    # No correction held at zero: in the rows of 0 and 1 home goal, what one score loses the other gains, so each
+    # row of the grid weighs what its Poisson term does. The home goals are a Poisson count; the correction only
+    # moves the away goals given 0 or 1.
+    p = exp(-lh)
+    if u < p:
+        home, s0, s1 = 0, t00, t01
+    else:
+        c = p + p * lh
+        home, s0, s1 = (1, t10, t11) if u < c else (_count(u, 1, p * lh, c, lh), 1.0, 1.0)
+    p = exp(-la)
+    c = p * s0
+    if v < c:
+        return home, 0
+    p *= la
+    c += p * s1
+    if v < c:
+        return home, 1
+    return home, _count(v, 1, p, c, la)
+
+
+def _draw_held(u, v, lh, la, t00, t01, t10, t11):
+    """draw_score where a correction is held at zero: the grid no longer weighs 1 before it is renormalised, and
+    the rows of 0 and 1 home goal no longer weigh their Poisson terms."""
+    h0 = exp(-lh)
+    h1 = h0 * lh
+    a0 = exp(-la)
+    a1 = a0 * la
+    r0 = 1.0 + a0 * (t00 - 1.0) + a1 * (t01 - 1.0)
+    r1 = 1.0 + a0 * (t10 - 1.0) + a1 * (t11 - 1.0)
+    w0, w1 = h0 * r0, h1 * r1
+    x = u * (1.0 + (w0 - h0) + (w1 - h1))
+    if x < w0:
+        home, row, s0, s1 = 0, r0, t00, t01
+    elif x < w0 + w1:
+        home, row, s0, s1 = 1, r1, t10, t11
+    else:
+        home, row, s0, s1 = _count(x, 1, h1, w0 + w1, lh), 1.0, 1.0, 1.0
+    y = v * row
+    c = a0 * s0
+    if y < c:
+        return home, 0
+    c += a1 * s1
+    if y < c:
+        return home, 1
+    return home, _count(y, 1, a1, c, la)
+
+
+def fixture_keys(fixtures):
+    """A key of its own for each fixture of a list: [(home, away, later)], `later` the number of fixtures after it
+    with the same home and away clubs. The last meeting of two clubs keeps its key once an earlier one is played."""
+    later, keys = defaultdict(int), []
+    for home, away in reversed(fixtures):
+        keys.append((home, away, later[(home, away)]))
+        later[(home, away)] += 1
+    return keys[::-1]
+
+
+def _stream(seed, *key):
+    """A generator of its own for one club or one fixture of a projection: what it draws does not depend on what
+    else is replayed, so a change elsewhere leaves its draws as they were."""
+    return random.Random("/".join(map(str, (seed, *key))))
+
+
+def _league(table, fixtures, strengths, spread):
+    """A league ready to replay: (teams, games, base, reach, elo), the clubs by their place in `teams`. games:
+    [(home, away)]; base: (points, goals for, goals against, played) so far; reach: how far a club's strength may
+    move, `spread` × √(share of its season still to play). A fixture of a club without a strength cannot be
+    replayed: ValueError."""
     teams = sorted(set(table) | {t for f in fixtures for t in f})
+    missing = sorted({t for f in fixtures for t in f if t not in strengths})
+    if missing:
+        raise ValueError(f"no strength for {missing}: their matches left cannot be replayed")
     index = {team: i for i, team in enumerate(teams)}
-    games = [(index[h], index[a]) for h, a in fixtures if h in strengths and a in strengths]
+    games = [(index[h], index[a]) for h, a in fixtures]
     left = [0] * len(teams)
     for h, a in games:
         left[h] += 1
         left[a] += 1
-    base = [tuple(table.get(team, (0, 0, 0, 0)))[:4] + (0,) * (4 - len(tuple(table.get(team, (0, 0, 0, 0)))[:4])) for team in teams]
-    # The share of each club's season still to play scales how far its strength may move.
+    base = [(tuple(table.get(team, ())) + (0, 0, 0, 0))[:4] for team in teams]
     reach = [spread * (left[i] / (left[i] + base[i][3])) ** 0.5 if left[i] + base[i][3] else 0.0 for i in range(len(teams))]
-    elo = [strengths.get(team, 0.0) for team in teams]
+    return teams, games, base, reach, [strengths.get(team, 0.0) for team in teams]
+
+
+def _replays(teams, games, base, reach, elo, model, simulations, seed):
+    """A league's matches left replayed `simulations` times: yields (the strengths of the replay, the clubs in
+    their final order, their points), the clubs by their place in `teams`. Each club draws its strength shift and
+    its tie-break from its own generator, each fixture its score from its own (fixture_keys)."""
     (ah, bh), (aa, ba) = model["home"], model["away"]
-    rng = random.Random(seed)
-    counts = [[0] * len(teams) for _ in teams]
-    points_sum = [0.0] * len(teams)
+    rho = model["rho"]
+    n = len(teams)
+    clubs = [_stream(seed, "club", team) for team in teams]
+    shift, tie = [club.gauss for club in clubs], [club.random for club in clubs]
+    keys = fixture_keys([(teams[h], teams[a]) for h, a in games])
+    plays = [(h, a, _stream(seed, "match", *key).random) for (h, a), key in zip(games, keys)]
+    start = [[b[k] for b in base] for k in range(3)]
     for _ in range(simulations):
-        now = [elo[i] + (rng.gauss(0.0, reach[i]) if reach[i] else 0.0) for i in range(len(teams))]
-        points = [b[0] for b in base]
-        scored = [b[1] for b in base]
-        conceded = [b[2] for b in base]
-        for h, a in games:
+        now = [elo[i] + (shift[i](0.0, reach[i]) if reach[i] else 0.0) for i in range(n)]
+        points, scored, conceded = start[0][:], start[1][:], start[2][:]
+        for h, a, draw in plays:
             d = (now[h] + ELO_HOME - now[a]) / 400
-            hs, as_ = _goals(rng, exp(ah + bh * d)), _goals(rng, exp(aa - ba * d))
+            hs, as_ = draw_score(draw(), draw(), exp(ah + bh * d), exp(aa - ba * d), rho)
             scored[h] += hs
             conceded[h] += as_
             scored[a] += as_
@@ -257,11 +361,23 @@ def simulate(table, fixtures, model, strengths, *, simulations=SIMULATIONS, spre
                 points[h] += 1
                 points[a] += 1
         # Ties beyond goals scored are split at random, as a replay cannot know the rest.
-        order = sorted(range(len(teams)), key=lambda i: (-points[i], -(scored[i] - conceded[i]), -scored[i], rng.random()))
+        split = [draw() for draw in tie]
+        yield now, sorted(range(n), key=lambda i: (-points[i], -(scored[i] - conceded[i]), -scored[i], split[i])), points
+
+
+def simulate(table, fixtures, model, strengths, *, simulations=SIMULATIONS, spread=STRENGTH_SPREAD, seed=0):
+    """Project a league. `table`: {team: (points, goals for, goals against, played)} so far;
+    `fixtures`: [(home, away)] still to play; `strengths`: {team: Elo}. Returns
+    {team: {"positions": [share of replays at 1st, 2nd, …], "points": mean final points}}.
+    ValueError when a club of a fixture has no strength."""
+    teams, games, base, reach, elo = _league(table, fixtures, strengths, spread)
+    counts = [[0] * len(teams) for _ in teams]
+    points_sum = [0.0] * len(teams)
+    for _, order, points in _replays(teams, games, base, reach, elo, model, simulations, seed):
         for position, i in enumerate(order):
             counts[i][position] += 1
             points_sum[i] += points[i]
-    return {team: {"positions": [c / simulations for c in counts[i]], "points": points_sum[i] / simulations} for team, i in index.items()}
+    return {team: {"positions": [c / simulations for c in counts[i]], "points": points_sum[i] / simulations} for i, team in enumerate(teams)}
 
 
 # A UEFA cup's knockout rounds, by the names the sources give them (the qualifying rounds
@@ -307,15 +423,14 @@ def _knockout_play(rng, model):
     played count as they are, the others are replayed, the seeded side at home second; level
     after the last leg: extra time, then penalties at 50/50 unless a played leg gives them),
     and a final (one match on neutral ground). Extra time and penalties: the user's choice,
-    16 November 2026."""
+    16 November 2026. A whole match is drawn from its forecast's law (draw_score); extra time
+    from two independent Poisson laws, the low-score correction being fitted on ninety minutes."""
     (ah, bh), (aa, ba) = model["home"], model["away"]
-
-    def goals(lam):
-        return _goals(rng, lam)
+    rho = model["rho"]
 
     def match(home, away, now, neutral=False, share=1.0):
         d = (now[home] + (0.0 if neutral else ELO_HOME) - now[away]) / 400
-        return goals(share * exp(ah + bh * d)), goals(share * exp(aa - ba * d))
+        return draw_score(rng.random(), rng.random(), share * exp(ah + bh * d), share * exp(aa - ba * d), rho if share == 1.0 else 0.0)
 
     def tie(a, b, legs, now, seeded=None):
         """The winner of a two-legged tie between a and b: the legs played count as they
@@ -360,19 +475,13 @@ def simulate_cup(table, fixtures, model, strengths, knockout, *, simulations=SIM
     goals, away goals, home penalties, away penalties)]}]} of the ties drawn or played; a
     leg without a score is still to play; a stage not given is drawn in each replay by the
     competition's rules. A tie already decided stays as it is. Returns {team: {"positions",
-    "points", "stages": {top8, playoff, out, r16, qf, sf, final, win}}}."""
-    teams = sorted(set(table) | {t for f in fixtures for t in f})
+    "points", "stages": {top8, playoff, out, r16, qf, sf, final, win}}}. The league phase draws
+    as a league does (each club and fixture its own generator); the bracket's draws come from one
+    generator. ValueError when a club of a fixture has no strength."""
+    teams, games, base, reach, elo = _league(table, fixtures, strengths, spread)
     index = {team: i for i, team in enumerate(teams)}
     n = len(teams)
-    games = [(index[h], index[a]) for h, a in fixtures if h in strengths and a in strengths]
-    left = [0] * n
-    for h, a in games:
-        left[h] += 1
-        left[a] += 1
-    base = [tuple(table.get(team, (0, 0, 0, 0))) for team in teams]
-    reach = [spread * (left[i] / (left[i] + base[i][3])) ** 0.5 if left[i] + base[i][3] else 0.0 for i in range(n)]
-    elo = [strengths.get(team, 0.0) for team in teams]
-    rng = random.Random(seed)
+    rng = random.Random(seed)  # the bracket's draws
     counts = [[0] * n for _ in range(n)]
     points_sum = [0.0] * n
     reached = {key: [0] * n for key in ("top8", "playoff", "out", "r16", "qf", "sf", "final", "win")}
@@ -382,25 +491,7 @@ def simulate_cup(table, fixtures, model, strengths, knockout, *, simulations=SIM
 
     match, tie, final = _knockout_play(rng, model)
 
-    for _ in range(simulations):
-        now = [elo[i] + (rng.gauss(0.0, reach[i]) if reach[i] else 0.0) for i in range(n)]
-        points = [b[0] for b in base]
-        scored = [b[1] for b in base]
-        conceded = [b[2] for b in base]
-        for h, a in games:
-            hs, as_ = match(h, a, now)
-            scored[h] += hs
-            conceded[h] += as_
-            scored[a] += as_
-            conceded[a] += hs
-            if hs > as_:
-                points[h] += 3
-            elif hs < as_:
-                points[a] += 3
-            else:
-                points[h] += 1
-                points[a] += 1
-        order = sorted(range(n), key=lambda i: (-points[i], -(scored[i] - conceded[i]), -scored[i], rng.random()))
+    for now, order, points in _replays(teams, games, base, reach, elo, model, simulations, seed):
         place = {team: k for k, team in enumerate(order)}
         for position, i in enumerate(order):
             counts[i][position] += 1
@@ -1032,22 +1123,68 @@ def league_state(rows, held=frozenset(), phases=frozenset()):
     cups (`phases`: their editions). table: {team: (points, goals for, goals against,
     played)}; fixtures: [(home, away)]. A finished match in `held` (its round is still open,
     rounds.py) counts as still to play: a league's projection moves once a whole matchweek
-    is over."""
-    tables, fixtures = defaultdict(lambda: defaultdict(lambda: [0, 0, 0, 0])), defaultdict(list)
-    coming = defaultdict(list)
+    is over. Each match counts once (_league_matches): a postponed match is still to play,
+    an awarded one counts with its score, a canceled one and a superseded copy do not."""
+    return {edition: state[:2] for edition, state in _leagues(rows, held, phases).items()}
+
+
+def league_ledger(rows, held=frozenset(), phases=frozenset()):
+    """How each regular match of the editions league_state gives counts: {edition: {"played", "to_play",
+    "superseded", "canceled", "outside"}}. Each match is one of them, so the five add up to the edition's regular
+    matches: none is lost, none counts twice (FAILURE_MODES §62)."""
+    return {edition: state[2] for edition, state in _leagues(rows, held, phases).items()}
+
+
+LEDGER = ("played", "to_play", "superseded", "canceled", "outside")
+SETTLED = ("finished", "awarded")  # a result, once the base holds its score
+
+
+def _league_matches(rows, held, phases):
+    """Each regular match of a domestic league or of a league phase, once, in the rows' order: [[edition, how it
+    counts, home, away, home goals, away goals, kick-off, its place in the rows]].
+    - "played": finished or awarded with its score, outside an open round (`held`);
+    - "to_play": not started, or a result of an open round;
+    - "canceled": never a result, never to play;
+    - any other row is unsettled (postponed, suspended, in play, a result whose score the base lacks): still to
+      play, unless the edition lists the same home and away clubs otherwise, the source having kept the old row of
+      a match it wrote again ("superseded"). Where two clubs meet twice on the same ground, a postponed meeting is
+      so left out as soon as the other is listed: no rule tells them apart without the edition's format."""
+    out, unsettled, listed = [], [], defaultdict(set)
     for order, (match, edition, home, away, _, status, hs, as_, regular, domestic, *rest) in enumerate(rows):
         if not (regular and (domestic or edition in phases)):
             continue
-        if status == "finished" and hs is not None and as_ is not None and match not in held:
+        result = status in SETTLED and hs is not None and as_ is not None
+        how = "canceled" if status == "canceled" else "played" if result and match not in held else "to_play" if result or status == "not_started" else None
+        item = [edition, how, home, away, hs, as_, rest[0] if rest else None, order]
+        if how is None:
+            unsettled.append(item)
+        elif how != "canceled":
+            listed[edition].add((home, away))
+        out.append(item)
+    for item in unsettled:
+        edition, _, home, away = item[:4]
+        item[1] = "superseded" if (home, away) in listed[edition] else "to_play"
+        listed[edition].add((home, away))
+    return out
+
+
+def _leagues(rows, held=frozenset(), phases=frozenset()):
+    """{edition: (table, fixtures, ledger)}: league_state and league_ledger together."""
+    tables, fixtures = defaultdict(lambda: defaultdict(lambda: [0, 0, 0, 0])), defaultdict(list)
+    coming = defaultdict(list)
+    ledgers = defaultdict(lambda: dict.fromkeys(LEDGER, 0))
+    for edition, how, home, away, hs, as_, kickoff, order in _league_matches(rows, held, phases):
+        if how == "played":
             for team, gf, ga in ((home, hs, as_), (away, as_, hs)):
                 entry = tables[edition][team]
                 entry[0] += 3 if gf > ga else 1 if gf == ga else 0
                 entry[1] += gf
                 entry[2] += ga
                 entry[3] += 1
-        elif status == "not_started" or match in held:
-            kickoff = rest[0] if rest else None
+        elif how == "to_play":
             coming[edition].append((kickoff is None, kickoff or 0, order, home, away))
+            continue
+        ledgers[edition][how] += 1
     for edition, games in coming.items():
         # A league phase holds LEAGUE_PHASE_MATCHES matches a club: a knockout match listed
         # before its round is set reads as regular, and is not replayed as one of the phase.
@@ -1055,14 +1192,16 @@ def league_state(rows, held=frozenset(), phases=frozenset()):
         for *_, home, away in sorted(games) if edition in phases else games:
             if edition in phases:
                 if max(count.get(home, 0), count.get(away, 0)) >= LEAGUE_PHASE_MATCHES:
+                    ledgers[edition]["outside"] += 1
                     continue
                 count[home] = count.get(home, 0) + 1
                 count[away] = count.get(away, 0) + 1
             fixtures[edition].append((home, away))
+            ledgers[edition]["to_play"] += 1
             tables[edition][home], tables[edition][away]  # a club that has not played yet is in the table
     # A league phase stays after its last round: its bracket is still to play.
     editions = set(fixtures) | (set(phases) & set(tables))
-    return {edition: ({team: tuple(v) for team, v in tables[edition].items()}, fixtures.get(edition, []))
+    return {edition: ({team: tuple(v) for team, v in tables[edition].items()}, fixtures.get(edition, []), dict(ledgers[edition]))
             for edition in editions if len(tables[edition]) >= MIN_LEAGUE}
 
 
@@ -1122,7 +1261,9 @@ def refresh(conn, season):
             if cup_over(brackets.get(edition, {})) or any(team not in strengths for team in table):
                 continue
             leagues[edition] = (table, simulate_cup(table, games, model, strengths, brackets.get(edition, {}), seed=edition))
-        else:
+        elif all(team in strengths for game in games for team in game):
+            # A league one of whose clubs still to play has no strength has no projection either: its
+            # matches cannot be replayed, and a season short of them is no projection.
             leagues[edition] = (table, simulate(table, games, model, strengths, seed=edition))
     # The domestic knockout cups whose next round is drawn (VI-19, 124): their rounds, from the one in play.
     for edition, odds in (knockout_projections(cup_rows, model, strengths, now.date()) if model else {}).items():

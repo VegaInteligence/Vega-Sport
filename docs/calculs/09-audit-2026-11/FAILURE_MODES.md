@@ -5206,3 +5206,102 @@ Not verified: that production's five leagues carry their PitchAPI key in `core.p
 the five, and P1a is used everywhere); how many of the window's opponents have an Elo (an unknown one counts a gap of
 150); the competition types production's editions get; the cost on production's base; the study's gain measured with
 `probable.py`'s absent and gone instead of its own. The bubble's wording of the score waits for hugo.
+
+## 62. The season projection: each match once, draws of its own for each match, the forecast's law (audit items 5 and 6, [#217](https://github.com/VegaInteligence/Vega-Sport/issues/217); 25 Nov 2026, written before the tests)
+
+Items 5 and 6 of the audit (`SOURCE_AUDIT.md` §5–6, handed off to VI-19 in §1) are still on main `de4d5cd32e`, and a
+third defect was measured on 25 Nov 2026. `backend/vega/forecast.py`:
+
+- **Matches leave the replayed season.** `league_state` keeps a `finished` match with its score and a `not_started`
+  one (or any match of an open round, `held`). Once its round is closed, a `postponed`, `suspended` or `in_play`
+  match, and a `finished` or `awarded` one without a score, is neither a result nor a match to play; an `awarded`
+  match with its score gives no point. `simulate` leaves out, silently, a fixture of a club without a strength.
+- **The published shares move for nothing.** One generator, seeded by the edition, gives every draw in turn, and a
+  score's draw (Knuth) takes a number of them that depends on the score. Any change of an input shifts every later
+  draw. Measured on a made-up league of 20 clubs at mid-season, 1 000 replays, 30 seeds: one Elo point more for the
+  last club moves the leader's title share by −2.9 to +2.9 points, the 16th's share of the last three places by −5.4
+  to +4.4 (the change's own effect, read on 2 × 200 000 replays, is below 0.3 point).
+- **A replayed match does not follow its forecast's law.** `forecast()` reads the score grid corrected by `rho`
+  (`score_grid`); the replays draw two independent Poisson counts and never read `rho`.
+
+Not read: how many matches of the production base each rule concerns (no base access from this session). The audit
+counts 46 pairs of one `finished` and one `postponed` row of the same match (§43.3).
+
+### 62.1 Rules
+
+- **Each regular match of a projected league is exactly one of four** (`league_ledger` gives the counts by edition):
+  - *played*: `finished` or `awarded`, both scores known, not in `held`. An `awarded` match counts with its score.
+  - *to play*: `not_started`; a result in `held` (as today); and an **unsettled** row — any other status
+    (`postponed`, `suspended`, `in_play`, none) or a `finished`/`awarded` row without a score — unless it is a
+    superseded copy.
+  - *superseded*: an unsettled row of an edition where another row with the same home club and the same away club
+    is played or to play (the source kept the old row when it wrote the match again under another id). Two unsettled
+    rows of the same home and away clubs with no other row: one is to play, the other superseded.
+  - *canceled*: `canceled`, in `held` or not. Never a result, never to play.
+  - A league phase adds a fifth, *outside*: a match beyond a club's eighth (unchanged rule, §« A league phase holds
+    eight matches a club »).
+- **Limit, kept as today.** Where two clubs meet more than once on the same ground in one edition, a postponed
+  meeting is superseded as soon as the other meeting is listed: it stays out, as on main. No rule tells the two apart
+  without the edition's format. Two `finished` rows of one match (§43.3) still count twice: their reviewed correction
+  is specified there, not here.
+- **No projection on a missing strength.** `simulate` and `simulate_cup` raise `ValueError`, naming the clubs, when a
+  club of a fixture has no strength. `refresh` does not project a league one of whose clubs still to play has none
+  (the rule a cup already has); the other leagues are projected.
+- **Draws of its own for each club and each fixture.** A club's generator (seed, club) gives its strength shift and
+  its tie-break of each replay; a fixture's generator (seed, home, away, the number of later fixtures of the same
+  home and away clubs in the list) gives the two probabilities its score is read at. A league and the league phase
+  of a UEFA cup are replayed so; a cup's bracket, a knockout cup and the Nations League keep one generator.
+- **The forecast's law.** A whole match replayed anywhere (league, league phase, brackets, Nations League) is drawn
+  from `score_grid(lh, la, rho)`: the home goals at the first probability in the grid's home marginal, the away goals
+  at the second in the grid's law given them. Goals stop at `MAX_GOALS` as in the grid. Extra time (a third of a
+  match) stays two independent Poisson counts: the correction is fitted on scores after ninety minutes.
+- **Unchanged:** `SIMULATIONS` (1 000), `STRENGTH_SPREAD` (90), the open-round rule (audit item 7), the tables'
+  shape (no migration). `MODEL_VERSION` becomes `forecast-v3`: the published projections change law.
+
+### 62.2 Failure modes and expected outcomes
+
+Pure functions, no base: `backend/tests/test_forecast.py`. Tolerances are fixed here, before the tests. « 4 SE » is
+four standard errors of the simulated frequency or mean at the stated number of replays. 62r–62s run on the models'
+disposable base (`test_models.py`: CI only, no local PostgreSQL in this session).
+
+| # | Situation | Expected | On main `de4d5cd32e` (run before the code: `evidence/projection-lot-1/red-before-the-code.txt`) |
+|---|---|---|---|
+| 62a | One edition of 12 clubs holding, beside finished results: an `awarded` 3–0; an `awarded` row without a score; a `postponed` row alone; a `postponed` row whose match is also `finished`; a `postponed` row whose match is also `not_started`; a `suspended` row; an `in_play` row; a `finished` row without a score; two `postponed` rows of one match; a `canceled` row with a score | the awarded 3–0 in the table (3 points, 3 goals); the rows alone to play, once each; the copies superseded; the canceled row nowhere; the ledger's five counts sum to the edition's regular rows | red: the awarded match's clubs are not in the table (`KeyError: 7`), every unsettled row is lost; no ledger (NC) |
+| 62b | `held`: a finished match, an awarded 3–0, a canceled match, a postponed match alone | the first two to play, the canceled one canceled, the postponed one to play | red: the canceled match is to play |
+| 62c | A pairing met twice on the same ground: one meeting `postponed`, the other `not_started` | one match to play, one superseded (the limit, kept) | green for the fixtures (the postponed row is lost); no ledger (NC) |
+| 62d | A knockout round's rows and an international edition's | in no table, no ledger | no ledger (NC); the tables already leave them out |
+| 62e | A league phase: a club with seven played, one `postponed` alone and two `not_started` | the postponed match is its eighth; the two others outside | red: the postponed match lost, a ninth match replayed |
+| 62f | `simulate`, one fixture, one of its clubs without a strength | `ValueError` naming the club | red: both clubs projected at 0 point |
+| 62g | `simulate_cup`, the same | `ValueError` | red: the fixture left out |
+| 62h | A pairing listed twice; the earlier one then played | each fixture a key of its own; the later one keeps its key | NC |
+| 62i | The same inputs and seed twice | the same projection | green (BC) |
+| 62j | The fixtures in another order | the same projection, exactly | red: other draws |
+| 62k | A 20-club league at mid-season, 1 000 replays, seeds 0–4: the last club gains one Elo point | every other club's title share and last-three share move by at most 0.005 | red: 0.022 at seed 0 (up to 0.054 on the measure's league) |
+| 62l | The same league: a fixture between the 10th and the 11th is played 1–1 | the shares of the 18 other clubs move by at most 0.01 (the two clubs' strength spread shrinks: a real, small effect) | red: 0.038 at seed 0 |
+| 62m | 200 000 scores drawn at (1.3, 1.3, −0.2), (1.6, 1.1, −0.03), (2.4, 0.7, 0.1), (6, 0.5, −0.2: a correction below zero, held at zero) and (9, 0.3, 0: goals beyond `MAX_GOALS`) | home win, draw, away win, the four lowest scores and 2–1 each within 4 SE of `score_grid`; 0–1 never drawn in the fourth case; no score above `MAX_GOALS` | NC (no such function) |
+| 62n | `simulate`, two level clubs, one fixture, rates 1.3 and 1.3, `rho` −0.2 then −0.03, no spread, 200 000 replays | each club's mean points within 4 SE of the forecast's (3 × win + draw) | red at −0.2 (0.025 point off, the tolerance is 0.012); green at −0.03 (the gap is below the tolerance: 62m reads it) |
+| 62o | The same fixture and seed, `rho` −0.2 and 0 | two different projections; fewer points in all with −0.2 (more draws) | red: the same replays |
+| 62p | A bracket's match (`_knockout_play`): 100 000 whole matches on neutral ground, then 100 000 extra times | whole match: the draw's frequency within 4 SE of the forecast's; extra time: within 4 SE of two independent Poisson counts of a third of the rates | red for the whole match at `rho` −0.2 |
+| 62q | `simulate_cup`, 36 clubs, a league phase to play: one club gains one Elo point | every other club's share of the first eight moves by at most 0.005 | red: 0.011 at seed 5 |
+| 62r | Models' base, a league edition of 8 rated clubs: four finished 1–0, an awarded 3–0, a postponed match alone, a postponed copy of a finished match, a canceled match, a match to play; `refresh` | 8 rows; the awarded winner has its 3 points and 2 matches played; the clubs of the postponed match alone and of the match to play are projected above their points; the four others exactly at their points | red: the awarded match and the postponed one lost |
+| 62s | The same base, another league edition one of whose clubs still to play has no Elo; `refresh` | no projection row for that edition; 62r's edition still projected | red: 8 rows |
+
+### 62.3 After the code (25 Nov 2026)
+
+- `test_forecast.py`: the 16 tests of §62.2 red before the code, 41 of 41 green after it (`evidence/projection-lot-1/`,
+  `red-before-the-code.txt` and `green-after-the-code.txt`). The whole backend suite: 643 tests, the same 50 import
+  errors as main (no `psycopg` in this session), 273 skipped for want of a base (main: 626, 50 and 272).
+- **62r and 62s run in CI only** (`test_models.py`, the models' disposable base; no PostgreSQL in this session).
+  First run, on `c1e5ef4b3c` (Actions run 45652001852, 1 080 tests): the 16 cases of `test_forecast.py` green; 62r–62s
+  stopped at their set-up, `duplicate key value violates unique constraint "teams_pkey"`, `(id)=(1)`. The case
+  inserted its club without an id, and the identity of `core.teams` does not follow the ids the seed writes: a defect
+  of the case, not of the code. The club now has its id (62020) and the set-up is inside the guarded block, so a
+  failure leaves nothing behind. None of their assertions had run at that commit. The run on the merge of main
+  `492a13618a` (45653606318, `e43cb84733`) failed on the same line, alone among 1 094 tests. Third run, on
+  `5604429fe9` (45655753883): 1 094 tests green, 62r–62s among them, with the 16 cases of `test_forecast.py` and the
+  two earlier forecast cases of the models' base.
+- Measured (`measure.py`, main then the branch): a league of 190 matches left, 1 000 replays, 0.161 s on main, 0.202 s
+  after (a quarter more, on two runs); the shares' moves of §62's opening, −0.1 to +0.3 point after.
+- The home goals of `draw_score` are a Poisson count whenever no correction is held at zero: in the rows of 0 and 1
+  home goal, what one score loses the other gains, so each row of the grid weighs its Poisson term. Only the case held at zero (62m's fourth) goes
+  through the renormalised grid (`_draw_held`).

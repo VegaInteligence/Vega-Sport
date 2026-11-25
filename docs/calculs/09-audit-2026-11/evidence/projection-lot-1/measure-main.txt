@@ -1,0 +1,14 @@
+# main de4d5cd32e — 2026-11-25T16:08:23Z
+model version: forecast-v2; python 3.12.3
+duration: 0.161 s for one league, 190 matches left, 1 000 replays (mean of 30)
+  title, leader    : mean  60.3 %, from  57.7 to  62.7 over 30 seeds
+  title, 2nd       : mean  26.8 %, from  25.1 to  29.7 over 30 seeds
+  last three, 16th : mean  31.5 %, from  28.3 to  34.5 over 30 seeds
+the last club gains one Elo point, same seed:
+  title, leader    : from -2.9 to +2.9 points (standard deviation 1.31)
+  title, 2nd       : from -3.6 to +3.4 points (standard deviation 1.36)
+  last three, 16th : from -5.4 to +4.4 points (standard deviation 2.19)
+a match between the 10th and the 11th is played 1-1, same seed:
+  title, leader    : from -3.9 to +6.0 points (standard deviation 2.02)
+  title, 2nd       : from -3.3 to +2.9 points (standard deviation 1.51)
+  last three, 16th : from -5.0 to +3.9 points (standard deviation 2.22)
