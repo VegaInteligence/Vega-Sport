@@ -72,13 +72,28 @@
 //  K5 Neither side known (404), or both reads failing: no card, « Probabilités » still there, no page error.
 //  K6 The same match finished (its detail answered as finished, 2–1): no « Absents » card.
 //  K7 Phone (393 px): the halves stacked, no sideways page scroll.
+//  « Composition probable » (FAILURE_MODES.md §61, mock-up validated by hugo on 25 Nov 2026), on a match not started
+//  (PROBABLE_MATCH, default the replay's PSG – Lorient m_1LWSAq, kick-off 28 Nov 2026 19:45 UTC), the page's clock set
+//  40 minutes before the kick-off. GET …/lineups and …/lineups/probable come from tests/e2e/support/probable.mjs, in the
+//  routes' exact shapes (backend/api/test/probable-lineups.test.mjs checks the real route against the same contract):
+//  C1 No provider line-up, our eleven for both sides (1440 px, dark): both heads « Composition probable », 22 probable
+//     markers, the pitch at most 900 px wide with the benches to its right, each side's « Absents » rows in place of its
+//     bench (PSG: Willian Pacho, Désiré Doué; Lorient: Montassar Talbi, Jean-Victor Makengo).
+//  C2 Hovering Marquinhos: « Titulaire 4 fois sur 10 » and « Remplace Willian Pacho ».
+//  C3 PSG's eleven confirmed by the provider, Lorient not: PSG « Composition officielle » with its coach and
+//     « Remplaçants », 11 provider markers; Lorient « Composition probable » with its « Absents ».
+//  C4 The switch on the fake clock: both probable → PSG official 61 s later (Lorient still probable) → both official
+//     after 61 s more; then no line-up read in 3 minutes; our eleven not read again once both are the provider's.
+//  C5 While the page is hidden, no line-up read in 3 minutes; visible again, the reads go on.
+//  C6 Phone (393 px): the pitch stands up, both sides probable, no sideways scroll.
+//  C7 Neither the provider's line-ups nor ours (404), or both reads failing: « Compositions non renseignées. », no page error.
 //  X1 No page error in the console during the run (failed loads of remote images and of the fake
 //     live host excluded).
 //
 // Run (local front against the API it proxies, or the public site):
 //   node tests/e2e/match-page.e2e.mjs <base url> <api base> <match id> <evidence dir>
 // e.g. node tests/e2e/match-page.e2e.mjs http://127.0.0.1:3000 http://127.0.0.1:8765 m_08LEIz /tmp/match-page-e2e
-// ONLY=N,L,D,T,A,V,F,P,K runs some sections (by the ids' letter); ONLY=K alone needs no summary of the match. It writes evidence.json (setup,
+// ONLY=N,L,D,T,A,V,F,P,K,C runs some sections (by the ids' letter); ONLY=K, ONLY=C or ONLY=K,C need no summary of the match. It writes evidence.json (setup,
 // inputs, expected, actual, console) and screenshots, desktop and phone, into the evidence dir;
 // exit code 1 when any check fails.
 import { createRequire } from "node:module";
@@ -86,6 +101,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { LIGUE1, LORIENT, PSG, lorientAnswer, psgAnswer, serveAbsences } from "./support/absences.mjs";
+import { PROBABLE_KICKOFF, PROBABLE_MATCH_ID, serveLineups } from "./support/probable.mjs";
 
 const [base = "http://127.0.0.1:3000", api = base, id = "m_08LEIz", out = path.join(os.tmpdir(), "match-page-e2e")] = process.argv.slice(2);
 await mkdir(out, { recursive: true });
@@ -198,16 +214,182 @@ async function absentChecks(browser) {
 }
 const shotOf = (page, name) => page.screenshot({ path: path.join(out, `${name}.png`), fullPage: true }).catch(() => {});
 const overflowOf = (page) => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-if (ONLY.length && ONLY.every((s) => s === "K")) {
+
+// ---------------------------------------------------------------- C: our probable eleven before the provider's
+const PROBABLE_MATCH = process.env.PROBABLE_MATCH || PROBABLE_MATCH_ID;
+async function probableChecks(browser) {
+  const IGNORE = /Failed to load resource|WebSocket|live\.invalid|ERR_NAME_NOT_RESOLVED|net::ERR_FAILED/;
+  const before40 = PROBABLE_KICKOFF - 40 * 60_000;
+  const openLineups = async (contextOptions, plan, label) => {
+    const ctx = await browser.newContext({ locale: "fr-FR", timezoneId: "Europe/Paris", colorScheme: "dark", ...contextOptions });
+    await ctx.addInitScript(() => {
+      try {
+        localStorage.setItem("statarena.theme", "dark");
+        localStorage.setItem("vega.consent.v1", JSON.stringify({ measurement: false, at: "2026-11-25T09:00:00.000Z" }));
+      } catch {}
+    });
+    await ctx.route(/va\.vercel-scripts\.com/, (r) => r.abort());
+    await serveLineups(ctx, plan, PROBABLE_MATCH);
+    const page = await ctx.newPage();
+    const start = consoleLog.length;
+    page.on("console", (m) => m.type() === "error" && !IGNORE.test(m.text()) && consoleLog.push(`[probable ${label}] ${m.text().slice(0, 300)}`));
+    page.on("pageerror", (e) => consoleLog.push(`[probable ${label}] pageerror ${e.message}`));
+    await page.clock.install({ time: before40 });
+    await page.goto(`${base}/matchs?${new URLSearchParams({ id: PROBABLE_MATCH, view: "lineups" })}`, { waitUntil: "domcontentloaded", timeout: 120000 });
+    await page.waitForFunction(() => document.querySelector("section[data-lineups]") || /Compositions non renseignées/.test(document.querySelector("#main")?.textContent || ""),
+      null, { timeout: 90000 }).catch(() => {});
+    await page.waitForTimeout(1500);
+    return { ctx, page, errors: () => consoleLog.slice(start).filter((l) => /pageerror/.test(l)) };
+  };
+  const read = (page) => page.evaluate(() => {
+    const heads = Object.fromEntries([...document.querySelectorAll("[data-side][data-lineup-state]")].map((e) => [e.dataset.side, { state: e.dataset.lineupState, text: e.textContent.replace(/\s+/g, " ").trim() }]));
+    const pitch = document.querySelector("[data-lineup-pitch]");
+    const box = pitch?.getBoundingClientRect();
+    const benches = [...document.querySelectorAll('section[aria-label^="Absents de"], section[aria-label^="Banc de"]')].map((b) => ({
+      label: b.getAttribute("aria-label"), state: b.dataset.lineupState || null, left: b.getBoundingClientRect().left,
+      labels: [...b.querySelectorAll("p")].map((p) => p.textContent.trim()).filter(Boolean),
+      absent: [...b.querySelectorAll("li a strong")].map((x) => x.textContent.trim()),
+    }));
+    return {
+      heads, benches, text: document.querySelector("#main")?.textContent || "",
+      markers: { probable: pitch?.querySelectorAll('[data-marker="probable"]').length ?? 0, lineup: pitch?.querySelectorAll('[data-marker="lineup"]').length ?? 0 },
+      pitch: box ? { width: Math.round(box.width), height: Math.round(box.height), right: Math.round(box.right) } : null,
+    };
+  });
+  const states = (got) => ({ home: got.heads.home?.state ?? null, away: got.heads.away?.state ?? null });
+  const desktop = { viewport: { width: 1440, height: 1100 } };
+
+  // C1, C2: both probable.
+  let plan = { lineups: 404, probable: "both" };
+  let k = await openLineups(desktop, plan, "both");
+  let got = await read(k.page);
+  await shotOf(k.page, "probable-both-desktop-dark");
+  const benchLeft = Math.min(...got.benches.map((b) => b.left));
+  check("C1 both sides probable: heads, 22 probable markers, pitch ≤ 900 px, each side's absents in place of its bench",
+    { states: { home: "probable", away: "probable" }, heads: "Composition probable", markers: 22, pitchWidth: "≤ 900", benchLeft: "≥ pitch right",
+      absent: [["Willian Pacho", "Désiré Doué"], ["Montassar Talbi", "Jean-Victor Makengo"]] },
+    { states: states(got), heads: Object.values(got.heads).map((h) => h.text), markers: got.markers, pitch: got.pitch, benchLeft, benches: got.benches },
+    JSON.stringify(states(got)) === JSON.stringify({ home: "probable", away: "probable" })
+      && Object.values(got.heads).every((h) => h.text.includes("Composition probable"))
+      && got.markers.probable === 22 && got.markers.lineup === 0 && got.pitch && got.pitch.width > 0 && got.pitch.width <= 900 && benchLeft >= got.pitch.right
+      && JSON.stringify(got.benches.map((b) => b.absent)) === JSON.stringify([["Willian Pacho", "Désiré Doué"], ["Montassar Talbi", "Jean-Victor Makengo"]]));
+  const marquinhos = k.page.locator("button[aria-label^='Marquinhos']");
+  await marquinhos.hover();
+  await k.page.waitForTimeout(400);
+  const bubble = await k.page.evaluate(() => [...document.querySelectorAll("body *")].filter((e) => /Titulaire \d+ fois sur \d+/.test(e.textContent) && /Remplace /.test(e.textContent))
+    .map((e) => e.textContent.replace(/\s+/g, " ").trim()).sort((a, b) => a.length - b.length)[0] || null);
+  await k.page.locator("section[data-lineups]").screenshot({ path: path.join(out, "probable-hover-replacement.png") }).catch(() => {});
+  check("C2 hovering a replacement: his starts in the window and whom he replaces", "« Titulaire 4 fois sur 10 » and « Remplace Willian Pacho »", bubble,
+    /Titulaire 4 fois sur 10/.test(bubble || "") && /Remplace Willian Pacho/.test(bubble || ""));
+  await k.ctx.close();
+
+  // C3: PSG confirmed by the provider, Lorient still ours.
+  plan = { lineups: "home", probable: "both" };
+  k = await openLineups(desktop, plan, "one-side");
+  got = await read(k.page);
+  await shotOf(k.page, "probable-one-side-confirmed-desktop-dark");
+  const [homeBench, awayBench] = got.benches;
+  check("C3 one side confirmed: PSG official (coach, « Remplaçants »), Lorient probable (its absents)",
+    { states: { home: "official", away: "probable" }, markers: { probable: 11, lineup: 11 }, home: ["Remplaçants"], away: ["Montassar Talbi", "Jean-Victor Makengo"] },
+    { states: states(got), markers: got.markers, home: homeBench, away: awayBench, heads: Object.values(got.heads).map((h) => h.text) },
+    JSON.stringify(states(got)) === JSON.stringify({ home: "official", away: "probable" }) && got.heads.home.text.includes("Composition officielle")
+      && got.markers.probable === 11 && got.markers.lineup === 11 && homeBench?.labels.includes("Remplaçants") && /Luis Enrique/.test(homeBench?.labels.join(" ") || "")
+      && JSON.stringify(awayBench?.absent) === JSON.stringify(["Montassar Talbi", "Jean-Victor Makengo"]));
+  await k.ctx.close();
+
+  // C4, C5: the switch on the fake clock, and the pause while the page is hidden.
+  plan = { lineups: 404, probable: "both" };
+  k = await openLineups(desktop, plan, "switch");
+  const until = async (want) => {
+    for (let i = 0; i < 60; i++) {
+      const s = states(await read(k.page));
+      if (s.home === want.home && s.away === want.away) return s;
+      await k.page.waitForTimeout(500);
+    }
+    return states(await read(k.page));
+  };
+  const lineupReads = () => plan.reads.filter((r) => r.family === "lineups").length;
+  const steps = [];
+  steps.push({ step: "both probable", got: await until({ home: "probable", away: "probable" }), reads: lineupReads() });
+  await shotOf(k.page, "switch-1-both-probable");
+  plan.lineups = "home";
+  await k.page.clock.runFor(61_000);
+  steps.push({ step: "PSG official after 61 s", got: await until({ home: "official", away: "probable" }), reads: lineupReads() });
+  await shotOf(k.page, "switch-2-psg-official");
+  plan.lineups = "both";
+  await k.page.clock.runFor(61_000);
+  steps.push({ step: "both official after 61 s more", got: await until({ home: "official", away: "official" }), reads: lineupReads() });
+  await shotOf(k.page, "switch-3-both-official");
+  const atBoth = plan.reads.length;
+  await k.page.clock.runFor(181_000);
+  await k.page.waitForTimeout(1500);
+  steps.push({ step: "3 minutes more", readsAfter: plan.reads.length - atBoth });
+  const want4 = [{ home: "probable", away: "probable" }, { home: "official", away: "probable" }, { home: "official", away: "official" }];
+  check("C4 the switch: each side flips on its own within a minute, no read once both are official",
+    { steps: want4, readsAfterBothOfficial: 0 }, steps,
+    steps.slice(0, 3).every((s, i) => JSON.stringify(s.got) === JSON.stringify(want4[i])) && steps[1].reads > steps[0].reads && steps[3].readsAfter === 0);
+  await k.ctx.close();
+
+  plan = { lineups: 404, probable: "both" };
+  k = await openLineups(desktop, plan, "hidden");
+  await until({ home: "probable", away: "probable" });
+  await k.page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  let before = lineupReads();
+  await k.page.clock.runFor(181_000);
+  await k.page.waitForTimeout(1000);
+  const hidden = lineupReads() - before;
+  await k.page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "visible" });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  before = lineupReads();
+  await k.page.clock.runFor(61_000);
+  await k.page.waitForTimeout(1000);
+  const visible = lineupReads() - before;
+  check("C5 hidden page: no line-up read in 3 minutes; visible again, read within a minute", { hidden: 0, visible: "≥ 1" }, { hidden, visible }, hidden === 0 && visible >= 1);
+  await k.ctx.close();
+
+  // C6: phone.
+  plan = { lineups: 404, probable: "both" };
+  k = await openLineups({ ...devices["iPhone 15"], viewport: { width: 393, height: 852 } }, plan, "phone");
+  got = await read(k.page);
+  const sideways = await overflowOf(k.page);
+  await shotOf(k.page, "probable-both-phone-dark");
+  check("C6 phone: the pitch stands up, both sides probable, no sideways scroll", { standing: true, states: { home: "probable", away: "probable" }, markers: 22, overflow: 0 },
+    { pitch: got.pitch, states: states(got), markers: got.markers, overflow: sideways },
+    got.pitch && got.pitch.height > got.pitch.width && JSON.stringify(states(got)) === JSON.stringify({ home: "probable", away: "probable" }) && got.markers.probable === 22 && sideways <= 0);
+  await k.ctx.close();
+
+  // C7: nothing from either.
+  const none = {};
+  for (const [label, entry] of [["404", 404], ["failure", "abort"]]) {
+    plan = { lineups: entry, probable: entry };
+    k = await openLineups(desktop, plan, `none-${label}`);
+    got = await read(k.page);
+    none[label] = { empty: /Compositions non renseignées\./.test(got.text), section: got.markers.probable + got.markers.lineup, errors: k.errors() };
+    await shotOf(k.page, `probable-none-${label}`);
+    await k.ctx.close();
+  }
+  check("C7 neither line-ups nor ours (404 or failing): the empty state, no page error", { "404": { empty: true, section: 0, errors: [] }, failure: { empty: true, section: 0, errors: [] } },
+    none, Object.values(none).every((v) => v.empty && v.section === 0 && !v.errors.length));
+}
+
+if (ONLY.length && ONLY.every((s) => s === "K" || s === "C")) {
   const browser = await chromium.launch();
-  await absentChecks(browser);
+  if (want("K")) await absentChecks(browser);
+  if (want("C")) await probableChecks(browser);
   await browser.close();
   check("X1 no page error", [], consoleLog, consoleLog.length === 0);
   const failed = results.filter((r) => r.ok === false);
   await writeFile(path.join(out, "evidence.json"), JSON.stringify({
     ranAt: new Date().toISOString(), base, api, match: ABSENT_MATCH, only: ONLY,
-    rerun: `ONLY=K ${process.env.ABSENT_MATCH ? `ABSENT_MATCH=${ABSENT_MATCH} ` : ""}node tests/e2e/match-page.e2e.mjs ${base} ${api} ${id} ${out}`,
+    rerun: `ONLY=${ONLY.join(",")} ${process.env.ABSENT_MATCH ? `ABSENT_MATCH=${ABSENT_MATCH} ` : ""}${process.env.PROBABLE_MATCH ? `PROBABLE_MATCH=${PROBABLE_MATCH} ` : ""}node tests/e2e/match-page.e2e.mjs ${base} ${api} ${id} ${out}`,
     absences: { served: "tests/e2e/support/absences.mjs", [PSG]: psgAnswer(), [LORIENT]: lorientAnswer() },
+    probable: { served: "tests/e2e/support/probable.mjs (probable-psg-lorient.json, lineups-psg-confirmed.json)", match: PROBABLE_MATCH,
+      kickoff: new Date(PROBABLE_KICKOFF).toISOString(), clock: new Date(PROBABLE_KICKOFF - 40 * 60_000).toISOString() },
     results, console: consoleLog, passed: results.filter((r) => r.ok === true).length, failed: failed.length, total: results.length,
   }, null, 2));
   console.log(`${results.filter((r) => r.ok === true).length} passed, ${failed.length} failed of ${results.length} · evidence in ${out}`);
@@ -871,6 +1053,7 @@ await section("P", async () => {
 });
 
 await section("K", () => absentChecks(browser));
+await section("C", () => probableChecks(browser));
 
 check("X1 no page error", [], consoleLog, consoleLog.length === 0);
 await browser.close();
