@@ -8,8 +8,9 @@ Failure modes, and what is expected:
 - the address of the page that read the API sent on -> Referrer-Policy no-referrer;
 - the security headers overriding the CORS the site depends on -> CorsConfig unchanged:
   any origin, GET/HEAD/OPTIONS, no credentials, the same exposed headers;
-- a behavior left without the policy -> the default behavior and live/* use it (data/*, the
-  image copies, and api/ops/* are left as they are: see the security headers report).
+- a behavior left without the policy -> the default behavior, api/league-history (its own cache
+  policy, FAILURE_MODES_OPTIMISATIONS.md, GH137) and live/* use it (data/*, the image copies, and api/ops/* are left
+  as they are: see the security headers report).
 """
 import re
 import unittest
@@ -67,9 +68,10 @@ class ApiSecurityHeadersTest(unittest.TestCase):
 
     def test_the_reads_carry_the_policy(self):
         distribution = block("Distribution")
-        self.assertEqual(distribution.count("ResponseHeadersPolicyId: !Ref ViewerHeaders"), 2)
-        live = re.search(r"- PathPattern: live/\*\n((?:            .*\n)+)", distribution).group(1)
-        self.assertIn("ResponseHeadersPolicyId: !Ref ViewerHeaders", live)
+        self.assertEqual(distribution.count("ResponseHeadersPolicyId: !Ref ViewerHeaders"), 3)
+        for pattern in (r"live/\*", "api/league-history"):
+            behavior = re.search(rf"- PathPattern: {pattern}\n((?:            .*\n)+)", distribution).group(1)
+            self.assertIn("ResponseHeadersPolicyId: !Ref ViewerHeaders", behavior, pattern)
         default = re.search(r"DefaultCacheBehavior:\n((?:          .*\n)+)", distribution).group(1)
         self.assertIn("ResponseHeadersPolicyId: !Ref ViewerHeaders", default)
 

@@ -137,6 +137,24 @@ Resources:
           QueryStringsConfig: {QueryStringBehavior: all}
           EnableAcceptEncodingBrotli: true
           EnableAcceptEncodingGzip: true
+  # GET /api/league-history (an archived season, s-maxage=3600): the default policy's cache key, but an hour at
+  # most instead of 60 s (FAILURE_MODES_OPTIMISATIONS.md, GH137; GH #145 for this route only). DefaultTTL 0: an answer that says
+  # nothing is not kept. A correction may stay an hour at a point of presence; an invalidation of
+  # /api/league-history* removes it sooner.
+  LeagueHistoryCache:
+    Type: AWS::CloudFront::CachePolicy
+    Properties:
+      CachePolicyConfig:
+        Name: vega-v2-api-league-history
+        MinTTL: 0
+        DefaultTTL: 0
+        MaxTTL: 3600
+        ParametersInCacheKeyAndForwardedToOrigin:
+          CookiesConfig: {CookieBehavior: none}
+          HeadersConfig: {HeaderBehavior: none}
+          QueryStringsConfig: {QueryStringBehavior: all}
+          EnableAcceptEncodingBrotli: true
+          EnableAcceptEncodingGzip: true
   # GET /live/matches/{id} (live.yaml): the full live state, cached 2 s (doc "Live").
   LiveCache:
     Type: AWS::CloudFront::CachePolicy
@@ -248,6 +266,16 @@ Resources:
             Compress: false
             CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
             OriginRequestPolicyId: !Ref OpsHeaders
+          # The archived seasons: the default behaviour, kept up to an hour (LeagueHistoryCache). This path only.
+          - PathPattern: api/league-history
+            TargetOriginId: api
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD, OPTIONS]
+            CachedMethods: [GET, HEAD]
+            Compress: true
+            CachePolicyId: !Ref LeagueHistoryCache
+            OriginRequestPolicyId: !Ref Validators
+            ResponseHeadersPolicyId: !Ref ViewerHeaders
         DefaultCacheBehavior:
           TargetOriginId: api
           ViewerProtocolPolicy: redirect-to-https
