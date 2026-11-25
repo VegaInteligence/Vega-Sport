@@ -8,14 +8,14 @@
  * else our probable XI (outlined markers, its absents in place of the bench); from 90 minutes
  * before the kick-off the line-ups are read again every minute until both are official. */
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ClubCrest, Empty, Media, Skeleton } from "./UI.jsx";
+import { ClubCrest, Empty, Media, Modal, Skeleton } from "./UI.jsx";
 import { useHoverBubble } from "./HoverCard.jsx";
 import { AbsenceGlyph, AbsentRows } from "./Absences.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import useMatchSection from "../hooks/useMatchSection.js";
 import { useMatchGrades } from "../services/match-grades.js";
 import {
-  LINEUPS_WATCH, lineupSides, lineupView, lineupsBeforeKickoff, lineupsWatched, playerRows, probableImages, probableView, probableWanted,
+  LINEUPS_WATCH, lineupSides, lineupView, lineupsWatched, playerRows, probableImages, probableView, probableWanted,
 } from "../services/match-tabs.js";
 import { absenceDate } from "../services/team-absences.js";
 import { number } from "../services/format.js";
@@ -31,16 +31,6 @@ const shortName = (name) => {
   return parts.length > 2 && PARTICLES.has(parts.at(-2).toLowerCase()) ? parts.slice(-2).join(" ") : parts.at(-1);
 };
 const gradeTone = (grade) => (grade == null ? "" : grade >= GRADE_HIGH ? s.gradeHigh : grade < 45 ? s.gradeLow : "");
-
-/** The time, read again every minute: the watch starts while the page stays open. */
-function useMinute() {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), LINEUPS_WATCH.every);
-    return () => clearInterval(timer);
-  }, []);
-  return now;
-}
 
 const STATE = {
   official: "Composition officielle",
@@ -336,10 +326,9 @@ function SideBench({ side, team, data, before, asOf, onOpen }) {
   );
 }
 
-export default function MatchLineups({ match }) {
+export default function MatchLineups({ match, before, now }) {
   const f = useFootball();
-  const now = useMinute();
-  const before = lineupsBeforeKickoff(match, now);
+  const [waitingPlayer, setWaitingPlayer] = useState(false);
   const lineupsSeen = useRef(null);
   // Watched until both sides are official, from 90 min before the kick-off to 30 min after it.
   const watch = lineupsWatched(match, lineupsSeen.current, now);
@@ -352,7 +341,7 @@ export default function MatchLineups({ match }) {
   const probable = useMatchSection(match, "lineups/probable", settled.current && wanted);
   const events = useMatchSection(match, "events", !before);
   const players = useMatchSection(match, "players", !before);
-  const grades = useMatchGrades(match.id);
+  const grades = useMatchGrades(match.id, !before);
   const standing = useStanding();
   const bubble = useHoverBubble({ width: 280 });
   const rows = useMemo(() => playerRows(players.data), [players.data]);
@@ -366,7 +355,10 @@ export default function MatchLineups({ match }) {
   if (!settled.current || (wanted && probable.loading && !probable.data))
     return <Skeleton label="Chargement des compositions…" lines={4} />;
   if (!sides.home && !sides.away) return <Empty>Compositions non renseignées.</Empty>;
-  const open = (id) => f.setPlayer(`${match.id}:${id}`);
+  const open = (id) => {
+    if (before) setWaitingPlayer(true);
+    else f.setPlayer(`${match.id}:${id}`);
+  };
   const asOf = probable.data?.computedAt?.slice(0, 10) || null;
   const happened = ["home", "away"].some((side) =>
     (sides[side]?.starters || []).some((p) => p.goals.length || p.ownGoals.length || p.cards.length || p.off),
@@ -420,6 +412,11 @@ export default function MatchLineups({ match }) {
         </div>
       </div>
       {bubble.bubble}
+      {waitingPlayer && (
+        <Modal title="Performance du joueur" onClose={() => setWaitingPlayer(false)}>
+          <Empty>Le match n’a pas encore commencé.</Empty>
+        </Modal>
+      )}
     </section>
   );
 }

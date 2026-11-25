@@ -209,8 +209,8 @@ const kickoffOf = (match) => Date.parse(match?.timeUtc || "");
 /** Not kicked off yet at `now` (the status first; it may lag behind the clock, then the kick-off and the score). */
 export function lineupsBeforeKickoff(match, now) {
   if (match?.status === "not_started") return true;
-  if (["finished", "postponed", "live", "inplay"].includes(match?.status)) return false;
-  const kickoff = kickoffOf(match);
+  if (["finished", "postponed", "canceled", "abandoned", "in_play", "live", "inplay"].includes(match?.status)) return false;
+  const kickoff = Date.parse(match?.timeUtc || match?.date || "");
   return Number.isFinite(kickoff) && kickoff > now && match?.home?.score == null && match?.away?.score == null;
 }
 

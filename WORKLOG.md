@@ -1,5 +1,12 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Onglets d’un match avant le coup d’envoi — 25 novembre 2026
+
+- Objectif : ne déclencher aucune lecture de données de jeu pour un match à venir et éviter l’erreur générique dans ses onglets. Travail isolé sur `codex/match-before-kickoff`, base `c83c53ef`. Aucun chevauchement actif trouvé dans Linear VI après lecture de VI-21 et VI-28. VI-47 et VI-153 sont terminés.
+- Reproduction publique sur PSG–Lorient (`m_1LWSAq`, `not_started`) : Statistiques et Tirs & xG affichent « Donnée indisponible » après une 404. Joueurs et Analyses demandent aussi des familles absentes, et la note est recherchée même dans la Vue d’ensemble.
+- Hugo a validé la maquette ordinateur et mobile le 25 novembre. Les cinq onglets conservent leurs liens directs et affichent « Le match n’a pas encore commencé. » sans monter les composants qui demandent les données de jeu. Avant-match, Classement et Compositions restent utilisables. Le clic sur un joueur des compositions garde sa fenêtre et affiche le même état d’attente. Le statut ou le direct confirme la reprise des lectures.
+- Vérifié localement : 7 scénarios E2E ciblés, 8 contrôles des compositions, 8 de l’avant-match, 16 sur un match terminé, 1 030 tests du site et build réussi. Sur la fiche locale PSG–Lorient connectée à l’API publique, seul le résumé du match est demandé lors du parcours des cinq onglets, sur ordinateur et mobile. Preuves : `/Users/lemonnierhugo/Agents/scratch/vega-match-before-kickoff/output/playwright/README.md`. Correctif local sur la branche de travail.
+
 ## « Compositions » tab, « Composition probable » — FAILURE_MODES § 61 (25 November 2026, branch `claude/composition-probable` from main 407c4c1, PR #215)
 
 - hugo validated the method (the study's P5, label `probable-v1`) and the mock-up (`/mnt/project-files/composition-probable/maquette/`); the mock-up's commit is the branch's first, reworded.
