@@ -171,7 +171,7 @@ function PlayerLine({ p, row }) {
 
 function Marker({ p, side, standing, bubble, row, basis, onOpen, recent }) {
   const at = spot(p, side, standing);
-  // Before the kick-off: his last five matches and a link to his page (FAILURE_MODES § 70).
+  // Before the kick-off: his last five matches and a link to his page (FAILURE_MODES § 71).
   const line = recent && p.id ? (
     <PlayerRecent
       playerId={p.id}
@@ -263,7 +263,7 @@ function BenchChips({ players, onOpen, hrefOf }) {
     <div className={o.chips}>
       {players.map((p) => {
         const text = `${p.shirt ? `${p.shirt} · ` : ""}${p.name}`;
-        // Before the kick-off a substitute opens his page: the match has no performance yet (§ 70).
+        // Before the kick-off a substitute opens his page: the match has no performance yet (§ 71).
         if (p.id && hrefOf)
           return (
             <Link key={p.id} className={`${o.open} ${o.chip}`} href={hrefOf(p.id)} prefetch={false}>

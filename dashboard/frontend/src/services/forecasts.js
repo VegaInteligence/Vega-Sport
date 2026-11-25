@@ -50,6 +50,13 @@ export function elevenWord(deviation) {
   return `${size >= ELEVEN_FAR ? "nettement " : ""}${deviation > 0 ? "plus fort" : "moins fort"} que son onze habituel`;
 }
 
+/** A side's eleven in a few words for the forecast card (§ 70), and its tone: same, up or down. */
+export function elevenTag(deviation) {
+  const words = elevenWord(deviation).replace("de son onze habituel", "de l'habituel").replace("que son onze habituel", "que l'habituel");
+  const size = Math.abs(deviation);
+  return { words, tone: !(size >= ELEVEN_NEAR) ? "same" : deviation > 0 ? "up" : "down" };
+}
+
 /**
  * What a match's card shows: the forecast that read the two confirmed line-ups when the
  * answer carries one (with what each eleven is against its club's usual one, and the
@@ -60,14 +67,22 @@ export function matchForecastReading(answer, home, away) {
   const read = answer.lineups?.forecast;
   // A match about to be played also reads each club's last ten matches (their chances, and what the results owe to something else).
   const recent = answer.form ? " et leurs dix derniers matchs (xG)" : "";
+  // What the model read, one chip each on the card (§ 70).
+  const sources = ["Force des deux équipes", ...(answer.form ? ["10 derniers matchs (xG)"] : [])];
   if (!read || !answer.lineups.home || !answer.lineups.away)
-    return { forecast: answer.forecast, lineups: false,
+    return { forecast: answer.forecast, lineups: false, sources, elevens: [], without: null,
       basis: `D’après la force des deux équipes avant le match${recent} ; le modèle ne connaît ni les compositions ni les absents.` };
   const before = answer.forecast;
   // A share and its sign are not split between two lines of the sentence.
   const whole = (value) => share(value).replace(/ /g, "\u00a0");
   return {
     forecast: read, lineups: true,
+    sources: [...sources, "Compositions confirmées"],
+    elevens: [
+      { side: "home", name: home, ...elevenTag(answer.lineups.home.deviation) },
+      { side: "away", name: away, ...elevenTag(answer.lineups.away.deviation) },
+    ],
+    without: before,
     basis: `D’après la force des deux équipes${answer.form ? ", leurs dix derniers matchs (xG)" : ""} et leurs compositions confirmées : le onze de ${home} est ${elevenWord(answer.lineups.home.deviation)}, celui de ${away} ${elevenWord(answer.lineups.away.deviation)}.`,
     before: `Sans les compositions : ${home} ${whole(before.home)} · nul ${whole(before.draw)} · ${away} ${whole(before.away)}.`,
   };

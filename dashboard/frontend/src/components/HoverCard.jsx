@@ -19,7 +19,7 @@ function place(box, width, point) {
 /**
  * Handlers for an element of your own and its bubble: `bind` goes on the element, `bubble` is
  * rendered after it. `follow`: the bubble follows the pointer (charts) rather than the element.
- * `interactive` (FAILURE_MODES § 70): the bubble takes the pointer, so a link in it can be clicked. Leaving the
+ * `interactive` (FAILURE_MODES § 71): the bubble takes the pointer, so a link in it can be clicked. Leaving the
  * element hides it a moment later, and entering the bubble cancels that; `pin` keeps it open until Escape, a
  * click elsewhere or a scroll (a click or a tap on the element).
  */

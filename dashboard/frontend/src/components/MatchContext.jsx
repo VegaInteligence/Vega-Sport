@@ -236,31 +236,27 @@ function Content({ match, value }) {
             <Empty>Aucun match antérieur collecté pour ces équipes.</Empty>
           )}
         </Card>
-        <Card
-          title="Confrontations précédentes"
-          action={
-            h2h.length > 0 && (
+        {/* With no previous meeting the card goes and the players' card takes the whole row,
+            one team per half (FAILURE_MODES § 70). */}
+        {h2h.length > 0 && (
+          <Card
+            title="Confrontations précédentes"
+            action={
               <span className="data-source-tag">
                 {match.home.name} {h2hRecord[match.home.id]} · Nuls{" "}
                 {h2hRecord.draws} · {match.away.name} {h2hRecord[match.away.id]}
               </span>
-            )
-          }
-        >
-          {h2h.length ? (
-            <>
-              {h2hNote && <p className="match-context-note">{h2hNote}</p>}
-              <div className="club-match-list">
-                {h2h.slice(0, 6).map((m) => (
-                  <MatchLink key={m.id} match={m} />
-                ))}
-              </div>
-            </>
-          ) : (
-            <Empty>Aucune confrontation antérieure collectée.</Empty>
-          )}
-        </Card>
-        <Card title="Joueurs les plus utilisés">
+            }
+          >
+            {h2hNote && <p className="match-context-note">{h2hNote}</p>}
+            <div className="club-match-list">
+              {h2h.slice(0, 6).map((m) => (
+                <MatchLink key={m.id} match={m} />
+              ))}
+            </div>
+          </Card>
+        )}
+        <Card title="Joueurs les plus utilisés" className={h2h.length ? "" : "match-overview-wide"}>
           <div className="context-players">
             {[home, away].map((club, i) => (
               <section key={club.id}>

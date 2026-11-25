@@ -1,4 +1,4 @@
-/* A player's last matches for the bubble of « Compositions » before the kick-off (FAILURE_MODES § 70): his season
+/* A player's last matches for the bubble of « Compositions » before the kick-off (FAILURE_MODES § 71): his season
  * read over every club competition, the matches he played, and four figures chosen by his line. */
 import { compactGeneration } from "./compact-reads.js";
 import { shortCompetition } from "./home-insights.js";

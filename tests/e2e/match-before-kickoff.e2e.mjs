@@ -10,7 +10,7 @@ const { chromium, devices } = createRequire(import.meta.url)(process.env.PLAYWRI
 const id = PROBABLE_MATCH_ID;
 const api = "/api/matches/" + id;
 const kickoff = new Date(PROBABLE_KICKOFF).toISOString();
-// R40 (FAILURE_MODES § 70): before the kick-off a player's bubble shows his last five matches and a link to his page.
+// R40 (FAILURE_MODES § 71): before the kick-off a player's bubble shows his last five matches and a link to his page.
 const recentHead = /5 derniers matchs joués · 450 min/;
 const recentRows = [
   // The match itself, listed before it is played, and a match on the bench: neither is a match played.

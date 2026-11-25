@@ -1,6 +1,6 @@
 "use client";
 /* A player of « Compositions » before the kick-off, in his bubble: his last five matches of the season, every club
- * competition, and four figures chosen by his line, then a link to his page (FAILURE_MODES § 70). */
+ * competition, and four figures chosen by his line, then a link to his page (FAILURE_MODES § 71). */
 import React from "react";
 import Link from "next/link";
 import { useFootball } from "../hooks/FootballContext.jsx";

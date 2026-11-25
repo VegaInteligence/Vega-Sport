@@ -93,11 +93,11 @@
   text-align: left;
   pointer-events: none;
 }
-/* A bubble with a link in it (FAILURE_MODES § 70): it takes the pointer. */
+/* A bubble with a link in it (FAILURE_MODES § 71): it takes the pointer. */
 .bubbleInteractive {
   pointer-events: auto;
 }
-/* A player's last matches before the kick-off (§ 70). */
+/* A player's last matches before the kick-off (§ 71). */
 .recent .bubbleHead {
   justify-content: space-between;
 }

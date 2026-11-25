@@ -3041,6 +3041,146 @@ th[aria-sort="descending"] .sort-indicator {
   font-size: var(--text-xs);
   line-height: 1.5;
 }
+/* The forecast in parts (FAILURE_MODES § 70, proposal A of the mock-up): two figures, what the
+   model read as chips, each eleven against its usual one, then with and without the line-ups. */
+.match-forecast-figures {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  margin-top: 16px;
+  border: 1px solid var(--border);
+  background: var(--border);
+}
+.match-forecast-figures > div {
+  min-width: 0;
+  padding: 10px 12px;
+  background: var(--surface);
+}
+.match-forecast-figures small,
+.match-forecast-read h4 {
+  display: block;
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.match-forecast-figures b {
+  color: var(--ink-strong);
+  font-size: var(--text-xl);
+  font-variant-numeric: tabular-nums;
+}
+.match-forecast-figures b i {
+  padding: 0 4px;
+  color: var(--muted-light);
+  font-style: normal;
+}
+.match-forecast-read {
+  margin-top: 16px;
+}
+.match-forecast-read h4 {
+  margin-bottom: 8px;
+}
+.match-forecast-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.match-forecast-chip {
+  padding: 2px 8px;
+  border: 1px solid var(--border-strong);
+  color: var(--ink);
+  font-size: var(--text-sm);
+}
+.match-forecast-read .match-forecast-note {
+  margin: 0;
+}
+.match-forecast-elevens {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.match-forecast-elevens li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 0;
+  border-top: 1px solid var(--border);
+  font-size: var(--text-md);
+}
+.match-forecast-elevens li > span:first-child {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.match-forecast-elevens i {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--home);
+}
+.match-forecast-elevens li[data-side="away"] i {
+  background: var(--away);
+}
+.match-forecast-elevens [data-tone] {
+  margin-left: auto;
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+.match-forecast-elevens [data-tone="same"] {
+  color: var(--muted);
+}
+.match-forecast-elevens [data-tone="up"] {
+  color: light-dark(#1f7a4d, #6fd3a0);
+}
+.match-forecast-elevens [data-tone="down"] {
+  color: var(--warning-ink);
+}
+.match-forecast-compare {
+  width: 100%;
+  margin-top: 16px;
+  border-collapse: collapse;
+  font-size: var(--text-md);
+  font-variant-numeric: tabular-nums;
+}
+.match-forecast-compare th,
+.match-forecast-compare td {
+  padding: 6px 4px;
+  border-top: 1px solid var(--border);
+  text-align: right;
+}
+.match-forecast-compare td {
+  white-space: nowrap;
+}
+.match-forecast-compare th:first-child {
+  color: var(--muted);
+  font-weight: 400;
+  text-align: left;
+}
+.match-forecast-compare thead th {
+  border-top: 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+@media (max-width: 480px) {
+  .match-forecast-elevens li {
+    flex-wrap: wrap;
+  }
+  .match-forecast-compare {
+    font-size: var(--text-sm);
+  }
+  .match-forecast-compare thead th {
+    letter-spacing: 0;
+  }
+}
 .season-projection td {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;

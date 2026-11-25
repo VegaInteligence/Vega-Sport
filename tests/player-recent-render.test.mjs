@@ -1,4 +1,4 @@
-// The bubble of a player in « Compositions » before the kick-off (FAILURE_MODES.md § 70): loading, failure, none, the
+// The bubble of a player in « Compositions » before the kick-off (FAILURE_MODES.md § 71): loading, failure, none, the
 // four figures of each line, and the link to his page in every state.
 import test from "node:test";
 import assert from "node:assert/strict";

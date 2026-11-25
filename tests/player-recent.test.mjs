@@ -1,4 +1,4 @@
-// A player's last five matches in the bubble of « Compositions » before the kick-off (FAILURE_MODES.md § 70; hugo,
+// A player's last five matches in the bubble of « Compositions » before the kick-off (FAILURE_MODES.md § 71; hugo,
 // 25 Nov 2026). The fixture is the season read of four PSG starters on the evening of PSG – Roma (m_36394c), trimmed.
 import test from "node:test";
 import assert from "node:assert/strict";
