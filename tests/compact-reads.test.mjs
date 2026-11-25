@@ -737,7 +737,7 @@ test("a selection's pages are read as many at a time as asked, after the first",
   );
 });
 
-test("parallel pages retry transient failures once after their batch, but never retry 409", async () => {
+test("parallel pages retry transient failures once after their batch, and a 409 restarts the read once from its first page", async () => {
   for (const status of [429, 502, 503, 504, 409]) {
     const attempts = new Map(),
       active = new Set(),
@@ -774,8 +774,12 @@ test("parallel pages retry transient failures once after their batch, but never 
       },
     );
     if (status === 409) {
-      await assert.rejects(promise, /unavailable/);
-      assert.equal(attempts.get(2), 1);
+      // The publication its pages were fenced by changed: all of it is read again, once.
+      const value = await promise;
+      assert.equal(value.pages.length, 3);
+      assert.equal(attempts.get(1), 2);
+      assert.equal(attempts.get(2), 2);
+      assert.ok(sequence.indexOf("start:1:2") > sequence.indexOf("end:3:1"));
     } else {
       const value = await promise;
       assert.equal(value.pages.length, 3);

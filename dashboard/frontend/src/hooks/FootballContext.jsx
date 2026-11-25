@@ -69,6 +69,10 @@ import { directoryCSV } from "../services/player-directory.js";
 import { enrichSeasonCompetitions } from "../services/competition-identity.js";
 import { clubDataTeam, loadClubSeason } from "../services/scouting-history.js";
 import { actorReadKey, actorReadParams } from "../services/actor-reads.js";
+import {
+  holdExplicitPublication,
+  onPublicationChanged,
+} from "../services/publication-change.js";
 import { AsyncState, Skeleton } from "../components/UI.jsx";
 import LoadingPage from "../components/LoadingPage.jsx";
 import {
@@ -263,6 +267,18 @@ export function FootballProvider({ children, loadData = true, initialState }) {
     [refreshCurrentManifest],
   );
   usePublishedDataRefresh(refreshManifest, Boolean(currentManifest.value));
+  // A read refused for naming an older publication recovered on its own
+  // (compact-reads.js, match-pages.js): the manifest is re-read now, not at the
+  // next four-minute check, at most every ten seconds whatever the reads refused.
+  useEffect(() => {
+    let last = -Infinity;
+    return onPublicationChanged(() => {
+      const now = Date.now();
+      if (now - last < 10_000) return;
+      last = now;
+      void Promise.resolve(refreshManifest()).catch(() => {});
+    });
+  }, [refreshManifest]);
   // Top 7 Europe + UEFA, extended to the national and super cups of the
   // seven countries present in the manifest.
   const EUROPE_FOCUS_IDS = useMemo(
@@ -291,6 +307,13 @@ export function FootballProvider({ children, loadData = true, initialState }) {
   // club's reads once the profile had rendered (0.3 s, then 0.3 s more, on 11 November
   // 2026).
   const actorGeneration = compactGeneration(manifest.value);
+  // A versioned link (?v=) holds its publication: its reads are never recovered at
+  // another one (compact-reads.js).
+  const explicitGeneration = requestedVersion ? actorGeneration : "";
+  useEffect(
+    () => holdExplicitPublication(explicitGeneration),
+    [explicitGeneration],
+  );
   useEffect(() => {
     if (!actorId || !actorGeneration) return;
     const quiet = (start) => start().catch(() => {});
@@ -658,14 +681,19 @@ export function FootballProvider({ children, loadData = true, initialState }) {
       season: performanceContext.season,
       appearance: player,
       leagues: compactScope(performanceContext.leagueIds),
-      generation: compactGeneration(manifest.value),
+      // A performance is a single read. Only a versioned link pins it to the manifest.
+      generation: requestedVersion ? actorGeneration : undefined,
     },
     performanceSummary = useResource(
-      `compact-performance:${performanceParams.season}:${player}:${performanceParams.leagues}:${performanceParams.generation}`,
+      `compact-performance:${performanceParams.season}:${player}:${performanceParams.leagues}:${performanceParams.generation ?? `current:${actorGeneration}`}`,
       ({ signal }) => {
         if (!performanceContext.season)
           return Promise.reject(unavailablePerformance());
-        return readCompact("performance", performanceParams, { signal }).catch(
+        return readCompact("performance", performanceParams, {
+          signal,
+          // A versioned link's performance is its publication's, or an error.
+          recover: !requestedVersion,
+        }).catch(
           (error) => {
             if (error.status === 409) void refreshManifest().catch(() => {});
             throw error;

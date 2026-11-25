@@ -49,8 +49,8 @@ export function gradesOf(body) {
 
 const NONE = new Map();
 
-export function useMatchGrades(matchId) {
-  const enabled = /^m_(?:[A-Za-z0-9]{6}|v\d{7})$/.test(matchId || "");
+export function useMatchGrades(matchId, shouldRead = true) {
+  const enabled = shouldRead && /^m_(?:[A-Za-z0-9]{6}|v\d{7})$/.test(matchId || "");
   const resource = useResource(
     `match-grades:${matchId || "none"}`,
     () =>

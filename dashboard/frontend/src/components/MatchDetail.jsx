@@ -42,6 +42,7 @@ import MatchPlayersBoard from "./MatchPlayersBoard.jsx";
 import MatchAnalyses from "./MatchAnalyses.jsx";
 import MatchLive from "./MatchLive.jsx";
 import { liveRunning, liveShootout, liveStatus } from "../services/match-live.js";
+import { LINEUPS_WATCH, lineupsBeforeKickoff } from "../services/match-tabs.js";
 import { periodShort } from "./PlayerMetrics.jsx";
 import { number, date, isNumber } from "../services/format.js";
 import {
@@ -167,18 +168,7 @@ const upcomingViews = [
   ...views.filter(([key]) => key === "context"),
   ...views.filter(([key]) => key !== "context"),
 ];
-/** A match that has not kicked off yet, even if the status lags behind. */
-export function isUpcomingMatch(match, now = Date.now()) {
-  if (match.status === "not_started") return true;
-  if (match.status === "finished" || match.status === "postponed") return false;
-  const kickoff = Date.parse(match.timeUtc || match.date || "");
-  return (
-    Number.isFinite(kickoff) &&
-    kickoff > now &&
-    match.home?.score == null &&
-    match.away?.score == null
-  );
-}
+const gameViews = new Set(["overview", "stats", "shots", "players", "analyses"]);
 function MatchViewTabs({ view, onChange, panelId, views }) {
   const refs = useRef([]);
   useEffect(() => {
@@ -471,27 +461,42 @@ export default function MatchDetail({ match }) {
   const f = useFootball(),
     search = useSearchParams(),
     panelId = useId();
-  // Before kick-off there is nothing to analyse yet: open on the context.
-  const upcoming = isUpcomingMatch(match);
+  const requestedView = search.get("view");
+  const [now, setNow] = useState(() => Date.now());
+  const beforeKickoff = lineupsBeforeKickoff(match, now);
+  const liveWindow = isLiveWindow(match, now);
+  const watchClock = beforeKickoff || liveWindow || requestedView === "lineups";
+  useEffect(() => {
+    if (!watchClock) return;
+    const update = () => setNow(Date.now());
+    update();
+    const timer = setInterval(update, LINEUPS_WATCH.every);
+    document.addEventListener("visibilitychange", update);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", update);
+    };
+  }, [watchClock]);
   // Live: the feed's minute and score until PitchAPI has the score, then core's.
-  const live = useLiveMatch(match.id, isLiveWindow(match));
+  const live = useLiveMatch(match.id, liveWindow);
   const running = liveRunning(live);
+  const liveStarted = live?.status && live.status !== "scheduled";
+  const upcoming = beforeKickoff && !liveStarted;
   const tabs = running
     ? [liveView, ...views]
     : upcoming
       ? upcomingViews
       : views;
   const defaultView = running ? "live" : upcoming ? "context" : "overview";
-  const view = tabs.some(([key]) => key === search.get("view"))
-    ? search.get("view")
-    : defaultView;
+  const view = tabs.some(([key]) => key === requestedView) ? requestedView : defaultView;
+  const contentView = upcoming && gameViews.has(view) ? "waiting" : view;
   const selectView = (value) => {
     const url = new URL(window.location.href);
     if (value === defaultView) url.searchParams.delete("view");
     else url.searchParams.set("view", value);
     window.history.replaceState(null, "", url.pathname + url.search);
   };
-  const grades = useMatchGrades(match.id);
+  const grades = useMatchGrades(match.id, contentView === "overview");
   const players = useMemo(
     () =>
       f.data.appearances
@@ -698,8 +703,13 @@ export default function MatchDetail({ match }) {
         role="tabpanel"
         aria-labelledby={`${panelId}-${view}`}
       >
-        {view === "live" && <MatchLive match={match} live={live} />}
-        {view === "overview" && (
+        {contentView === "waiting" && (
+          <section className="card">
+            <Empty>Le match n’a pas encore commencé.</Empty>
+          </section>
+        )}
+        {contentView === "live" && <MatchLive match={match} live={live} />}
+        {contentView === "overview" && (
           <div className="match-overview-grid">
             <Card
               title="Occasions au fil du match"
@@ -724,12 +734,7 @@ export default function MatchDetail({ match }) {
             <Card fold title="Les chiffres du match">
               <StatRows match={match} stats={overviewStats(match)} />
             </Card>
-            {(!upcoming || liveScore) && (
-              <MatchWinProbability
-                match={match}
-                live={liveScore ? live : null}
-              />
-            )}
+            <MatchWinProbability match={match} live={liveScore ? live : null} />
             <Card
               title="Meilleures notes"
               className="match-leaders-card match-overview-wide"
@@ -757,7 +762,7 @@ export default function MatchDetail({ match }) {
             </Card>
           </div>
         )}
-        {view === "context" && (
+        {contentView === "context" && (
           <Suspense
             fallback={
               <Skeleton data-page-loading="" label="Chargement du contexte…" />
@@ -769,21 +774,26 @@ export default function MatchDetail({ match }) {
             <MatchContext match={match} />
           </Suspense>
         )}
-        {view === "stats" && <MatchStatistics match={match} />}
-        {view === "standings" && <MatchStandings match={match} />}
-        {view === "shots" &&
+        {contentView === "stats" && <MatchStatistics match={match} />}
+        {contentView === "standings" && <MatchStandings match={match} />}
+        {contentView === "shots" &&
           (match.summaryVersion ? (
             <SummaryShots match={match} extraTime={past?.extraTime === true} />
           ) : (
             <MatchShots match={match} extraTime={past?.extraTime === true} />
           ))}
-        {view === "lineups" && (
-          <MatchLineups key={`${match.id}:lineups`} match={match} />
+        {contentView === "lineups" && (
+          <MatchLineups
+            key={`${match.id}:lineups`}
+            match={match}
+            before={upcoming}
+            now={now}
+          />
         )}
-        {view === "players" && (
+        {contentView === "players" && (
           <MatchPlayersBoard key={`${match.id}:players`} match={match} />
         )}
-        {view === "analyses" && (
+        {contentView === "analyses" && (
           <MatchAnalyses key={`${match.id}:analyses`} match={match} />
         )}
       </div>

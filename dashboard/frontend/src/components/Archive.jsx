@@ -256,10 +256,7 @@ function SeasonArchive({
           if (bounded && value.data.publicationChanged)
             return (
               <Card title="Archives actualisées">
-                <p>
-                  La publication a changé. Retrouvez ce match dans la liste
-                  actualisée.
-                </p>
+                <p>Retrouvez ce match dans la liste des archives.</p>
                 <BackLink
                   className="inline-link"
                   href={hrefWith({ m: null, av: null })}

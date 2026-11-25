@@ -1,5 +1,6 @@
 import { readPages } from "../season_data.js";
 import { readFixturePage } from "./match-pages.js";
+import { PUBLICATION_UNAVAILABLE } from "./publication-change.js";
 import { parisDay, shiftDay } from "./fixtures.js";
 
 /** Overview cards need a few results and upcoming games, not a season calendar. */
@@ -8,25 +9,31 @@ export async function competitionFixturePreview(
   { signal, fetcher = fetch } = {},
 ) {
   const common = { league, season, limit: "30" };
-  const pages = await Promise.all([
-    readFixturePage(
-      { ...common, status: "played", order: "desc" },
-      { signal, fetcher, generation: generation || null },
-    ),
-    readFixturePage(
-      {
-        ...common,
-        status: "upcoming",
-        order: "asc",
-        from: shiftDay(parisDay(now), -1),
-      },
-      { signal, fetcher, generation: generation || null },
-    ),
-  ]);
-  if (pages.some((page) => page.publicationChanged)) {
-    const error = new Error(
-      "La publication a changé. Actualisez les rencontres.",
-    );
+  const read = (held) =>
+    Promise.all([
+      readFixturePage(
+        { ...common, status: "played", order: "desc" },
+        { signal, fetcher, generation: held },
+      ),
+      readFixturePage(
+        {
+          ...common,
+          status: "upcoming",
+          order: "asc",
+          from: shiftDay(parisDay(now), -1),
+        },
+        { signal, fetcher, generation: held },
+      ),
+    ]);
+  // Both first pages of one publication, the site's or a newer one (its manifest is then
+  // re-read: readFixturePage). Pages of two publications are read again once.
+  const same = (pages) =>
+    pages.every((page) => page.pagination) &&
+    pages[0].pagination.generation === pages[1].pagination.generation;
+  let pages = await read(generation || null);
+  if (!same(pages)) pages = await read(null);
+  if (!same(pages)) {
+    const error = new Error(PUBLICATION_UNAVAILABLE);
     error.status = 409;
     throw error;
   }

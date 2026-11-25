@@ -127,9 +127,12 @@ async function absentChecks(browser) {
   const openContext = async (contextOptions, plan, finished = false) => {
     const ctx = await browser.newContext({ locale: "fr-FR", ...contextOptions });
     await ctx.route(/va\.vercel-scripts\.com/, (r) => r.abort());
-    if (finished) await ctx.route(new RegExp(`/api/matches/${ABSENT_MATCH}(\\?|$)`), async (route) => {
+    if (finished) await ctx.route(new RegExp(`/api/matches/${ABSENT_MATCH}/summary(\\?|$)`), async (route) => {
       const body = await (await route.fetch()).json();
-      Object.assign(body.data, { status: "finished", score_home: 2, score_away: 1 });
+      const match = body.data.match;
+      match.status = "finished";
+      match.home.score = 2;
+      match.away.score = 1;
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body), headers: { "access-control-allow-origin": "*" } });
     });
     await serveAbsences(ctx, plan);
