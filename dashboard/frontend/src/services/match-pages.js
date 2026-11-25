@@ -1,4 +1,5 @@
 import { publicApiFetch } from "./public-api-fetch.js";
+import { notifyPublicationChanged } from "./publication-change.js";
 import { apiUrl } from "../data-url.js";
 import { europeFocusIds } from "../../../shared/competition-scope.js";
 import { fixtureWeek, parisDay, shiftDay, validDay } from "./fixtures.js";
@@ -41,15 +42,60 @@ export function matchPageFilters({
   return filters;
 }
 
+/**
+ * One page of fixtures; `page` is its place in the list (0 for the first).
+ *
+ * The API refuses (409) a cursor of an older publication: it keeps the list from mixing
+ * the pages of two. Such a page, or a page of another publication than `generation` (the
+ * one its previous pages hold), is never shown as a refusal: the site re-reads its manifest
+ * (publication-change.js), and the list is read again from its first page, with the same
+ * filters and order, up to the requested place, all of the publication that first page
+ * gives. That page comes marked `restarted`, with `cursors` and `page`, for the list to
+ * take its new cursors (PaginatedMatches). Read again once only: refused again, it comes
+ * as `{ publicationUnsettled: true }`, for the list to keep its last pages.
+ */
 export async function readFixturePage(
   filters,
-  { cursor = null, generation = null, signal, fetcher = fetch } = {},
+  {
+    cursor = null,
+    generation = null,
+    page = cursor ? 1 : 0,
+    signal,
+    fetcher = fetch,
+  } = {},
 ) {
   if (!filters)
     return {
       data: { matches: [] },
       pagination: { nextCursor: null, generation: null },
     };
+  const body = await readFixtureBody(filters, cursor, { signal, fetcher });
+  if (
+    body &&
+    (generation === null || body.pagination.generation === generation)
+  )
+    return body;
+  notifyPublicationChanged();
+  // A first page of a newer publication is itself the restart.
+  if (body && !cursor)
+    return { ...body, restarted: true, cursors: [null], page: 0 };
+  let current = await readFixtureBody(filters, null, { signal, fetcher });
+  if (!current) return { publicationUnsettled: true };
+  const fresh = current.pagination.generation,
+    cursors = [null];
+  // Up to the requested place, or the last page if the list is now shorter.
+  while (cursors.length <= page && current.pagination.nextCursor) {
+    const next = current.pagination.nextCursor;
+    current = await readFixtureBody(filters, next, { signal, fetcher });
+    if (!current || current.pagination.generation !== fresh)
+      return { publicationUnsettled: true };
+    cursors.push(next);
+  }
+  return { ...current, restarted: true, cursors, page: cursors.length - 1 };
+}
+
+/** The page's body, or null when its publication was refused (409). */
+async function readFixtureBody(filters, cursor, { signal, fetcher }) {
   const params = new URLSearchParams(filters);
   if (cursor) params.set("cursor", cursor);
   const response = await publicApiFetch(
@@ -57,9 +103,7 @@ export async function readFixturePage(
     { signal },
     fetcher,
   );
-  // A changed publication requires an explicit reset, never appending or silently
-  // retrying through multiple generations until a page happens to succeed.
-  if (response.status === 409) return { publicationChanged: true };
+  if (response.status === 409) return null;
   if (!response.ok)
     throw new Error(`Rencontres indisponibles (HTTP ${response.status}).`);
   const body = await response.json();
@@ -74,7 +118,5 @@ export async function readFixturePage(
     )
   )
     throw new Error("Page de rencontres invalide.");
-  if (generation !== null && body.pagination.generation !== generation)
-    return { publicationChanged: true };
   return body;
 }

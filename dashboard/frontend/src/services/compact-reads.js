@@ -1,4 +1,8 @@
 import { publicApiFetch, wasPublicApiThrottle } from "./public-api-fetch.js";
+import {
+  notifyPublicationChanged,
+  PUBLICATION_UNAVAILABLE,
+} from "./publication-change.js";
 import { apiUrl } from "../data-url.js";
 import { europeFocusIds } from "../../../shared/competition-scope.js";
 import { advancedQuery, EMPTY_ADVANCED } from "./advanced-filters.js";
@@ -139,12 +143,56 @@ export function cohortGroupParams(manifest, group) {
     : { pos: GROUP_LINES[group] };
 }
 
-/** An advertised compact route must fail visibly; never fall back to a bulk read. */
+/** The answer of a read made under the current publication, given to the one the site
+ * holds: its callers keep their key and their check (`meta.generation` is the held one);
+ * `servedGeneration` says which publication answered. */
+function heldPublication(body, held) {
+  if (!held || !body?.meta || body.meta.generation === held) return body;
+  body.meta.servedGeneration = body.meta.generation;
+  body.meta.generation = held;
+  if (body.pagination) body.pagination.generation = held;
+  return body;
+}
+
+/**
+ * An advertised compact route must fail visibly; never fall back to a bulk read.
+ *
+ * A read pinned to the publication the site holds is refused (409) once the worker has
+ * published a newer one, until the site re-reads its manifest (every four minutes). It is
+ * then read once more without the pin, so the current publication answers it, and the site
+ * is told to re-read its manifest: the refusal is never shown (its text was, as it came,
+ * in the player's performance window).
+ * `recover: false` leaves the refusal to readCompactPages, which reads its pages again
+ * from the first.
+ */
 export async function readCompact(
   kind,
   params,
-  { signal, fetcher = fetch } = {},
+  { signal, fetcher = fetch, recover = true } = {},
 ) {
+  try {
+    return await readCompactOnce(kind, params, { signal, fetcher });
+  } catch (error) {
+    if (
+      !recover ||
+      error?.status !== 409 ||
+      !params.generation ||
+      params.versioned ||
+      params.v ||
+      signal?.aborted
+    )
+      throw error;
+    notifyPublicationChanged();
+    const body = await readCompactOnce(
+      kind,
+      { ...params, generation: undefined },
+      { signal, fetcher },
+    );
+    return heldPublication(body, params.generation);
+  }
+}
+
+async function readCompactOnce(kind, params, { signal, fetcher }) {
   signal?.throwIfAborted();
   // `versioned`: the API validates this read by its own version. Its address names no
   // publication, so what a browser or the distribution holds is not asked again in full
@@ -168,16 +216,23 @@ export async function readCompact(
   try {
     body = await response.json();
   } catch {
+    if (response.status === 409) {
+      const error = new Error(PUBLICATION_UNAVAILABLE);
+      error.status = 409;
+      throw error;
+    }
     throw new Error("La réponse des données est invalide.");
   }
   if (!response.ok || body.error) {
+    // A refused publication is the site's to recover, never the reader's to act on.
     const error = new Error(
-      body.error?.message ||
-        (response.status === 409
-          ? "La publication a changé. Actualisez les données."
-          : `Données indisponibles (HTTP ${response.status}).`),
+      response.status === 409
+        ? PUBLICATION_UNAVAILABLE
+        : body.error?.message ||
+            `Données indisponibles (HTTP ${response.status}).`,
     );
     error.status = response.status;
+    if (body.error?.code) error.code = body.error.code;
     error.throttled = wasPublicApiThrottle(response);
     throw error;
   }
@@ -268,7 +323,7 @@ export async function readCompactPages(
     readCompact(
       kind,
       { ...params, page, limit, generation, ...(version ? { v: version } : {}) },
-      { signal, fetcher },
+      { signal, fetcher, recover: false },
     );
   function accept(result, page) {
     signal?.throwIfAborted();
@@ -354,16 +409,22 @@ export async function readCompactPages(
     }
     return final;
   }
+  const held = params.versioned ? undefined : params.generation;
   try {
     return await readAll();
   } catch (error) {
-    // A selection fenced by its own version changed between two of its pages: it is
-    // read again from the first one, once.
-    if (!version || error?.status !== 409) throw error;
+    // The selection's version, or the publication its pages are fenced by, changed
+    // between two of its pages (or the site holds a publication no longer served): it is
+    // read again from the first one, once, without the stale fence. Its pages are then
+    // all of the publication that first page gives, never of two.
+    if (error?.status !== 409 || signal?.aborted) throw error;
+    if (!version) notifyPublicationChanged();
     pages.length = 0;
     seen.clear();
     version = expectedPages = expectedTotal = undefined;
-    return readAll();
+    generation = params.versioned ? params.generation : undefined;
+    const result = await readAll();
+    return heldPublication(result, held);
   }
 }
 

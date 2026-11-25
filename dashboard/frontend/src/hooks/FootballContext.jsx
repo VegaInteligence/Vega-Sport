@@ -69,6 +69,7 @@ import { directoryCSV } from "../services/player-directory.js";
 import { enrichSeasonCompetitions } from "../services/competition-identity.js";
 import { clubDataTeam, loadClubSeason } from "../services/scouting-history.js";
 import { actorReadKey, actorReadParams } from "../services/actor-reads.js";
+import { onPublicationChanged } from "../services/publication-change.js";
 import { AsyncState, Skeleton } from "../components/UI.jsx";
 import LoadingPage from "../components/LoadingPage.jsx";
 import {
@@ -263,6 +264,18 @@ export function FootballProvider({ children, loadData = true, initialState }) {
     [refreshCurrentManifest],
   );
   usePublishedDataRefresh(refreshManifest, Boolean(currentManifest.value));
+  // A read refused for naming an older publication recovered on its own
+  // (compact-reads.js, match-pages.js): the manifest is re-read now, not at the
+  // next four-minute check, at most every ten seconds whatever the reads refused.
+  useEffect(() => {
+    let last = -Infinity;
+    return onPublicationChanged(() => {
+      const now = Date.now();
+      if (now - last < 10_000) return;
+      last = now;
+      void Promise.resolve(refreshManifest()).catch(() => {});
+    });
+  }, [refreshManifest]);
   // Top 7 Europe + UEFA, extended to the national and super cups of the
   // seven countries present in the manifest.
   const EUROPE_FOCUS_IDS = useMemo(

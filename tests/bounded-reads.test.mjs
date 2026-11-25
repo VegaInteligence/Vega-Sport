@@ -275,9 +275,11 @@ test("a next cursor does not trigger another fetch until explicitly requested", 
   );
 });
 
-test("409 and generation mismatches require reset without loops or mixed data", async () => {
+// The owner, 25 November 2026: a changed publication is never shown to the reader. The
+// list restarts from the current first page by itself (tests/publication-changed.test.mjs).
+test("409 and generation mismatches restart from the current first page without loops or mixed data", async () => {
   let calls = 0;
-  const changed = await readFixturePage(fixtureFilters, {
+  const unsettled = await readFixturePage(fixtureFilters, {
     cursor: "old-cursor",
     generation: "41",
     fetcher: async () => {
@@ -285,15 +287,23 @@ test("409 and generation mismatches require reset without loops or mixed data", 
       return new Response(null, { status: 409 });
     },
   });
-  assert.deepEqual(changed, { publicationChanged: true });
-  assert.equal(calls, 1);
+  assert.deepEqual(unsettled, { publicationUnsettled: true });
+  assert.equal(calls, 2);
+  const cursors = [];
   const mixed = await readFixturePage(fixtureFilters, {
     cursor: "old-cursor",
     generation: "41",
-    fetcher: async () => Response.json(page()),
+    fetcher: async (path) => {
+      const cursor = new URL(path, "https://site.test").searchParams.get("cursor");
+      cursors.push(cursor);
+      return Response.json(page(cursor ? { data: { matches: [{ id: "m_second" }] } } : {}));
+    },
   });
-  assert.deepEqual(mixed, { publicationChanged: true });
-  assert.equal(mixed.data, undefined);
+  assert.deepEqual(cursors, ["old-cursor", null, "next-cursor"]);
+  assert.equal(mixed.restarted, true);
+  assert.equal(mixed.page, 1);
+  assert.equal(mixed.pagination.generation, "42");
+  assert.deepEqual(mixed.data.matches, [{ id: "m_second" }]);
 });
 
 test("empty scopes do not fetch and malformed or failed pages do not look complete", async () => {

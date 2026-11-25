@@ -6,6 +6,13 @@
 - Les ouvertures ordinaires demandent la performance courante du joueur pour le match, la saison et les compétitions sélectionnés. Les liens explicitement versionnés gardent la publication de leur manifeste. Le cache distingue les deux modes et suit les nouvelles publications.
 - Vérifié localement le 25 novembre : le même accueil périmé renvoyait 409 avant et ouvre la fiche en un seul appel 200 après, sur ordinateur et mobile. Les 4 parcours de rejeu passent (dont le lien versionné et la 404), ainsi que les 2 parcours du build local contre l’API publique, 1 030 tests du site et le build. [Preuves et commandes](/Users/lemonnierhugo/Agents/scratch/vega-performance-refresh/output/playwright/verification/README.md). Correctif local, prêt à publier.
 
+## Listes paginées et publication périmée (409) — 25 novembre 2026
+
+- Suite de la fiche ci-dessus, sur la même branche et la PR #216. Hugo a retenu une reprise centrale côté site, sans changement d’API : le contrôle 409 de l’API reste (il empêche de mêler deux publications).
+- `services/compact-reads.js` : une lecture épinglée refusée est relue une fois sans l’épingle ; une lecture paginée repart une fois de sa première page. `services/match-pages.js` : une page N refusée relit la page 1 puis ses curseurs jusqu’à N, à la nouvelle publication ; `PaginatedMatches` prend ces curseurs sans message. Un second refus garde la dernière liste et propose « Actualiser ». `services/publication-change.js` fait relire le manifeste (`FootballContext`, au plus toutes les 10 s).
+- Archives : liste déjà relue une fois, inchangée ; un match d’archive périmé garde son retour à la liste, sans « La publication a changé ».
+- Tests d’abord (`tests/publication-changed.test.mjs`, 10 rouges puis verts) ; 3 tests de l’ancien contrat mis à jour. Site 1 040/1 040, build OK. Non vérifié : parcours navigateur réel d’une page 2 périmée. Pas de Deploy backend.
+
 ## Onglets d’un match avant le coup d’envoi — 25 novembre 2026
 
 - Objectif : ne déclencher aucune lecture de données de jeu pour un match à venir et éviter l’erreur générique dans ses onglets. Travail isolé sur `codex/match-before-kickoff`, base `c83c53ef`. Aucun chevauchement actif trouvé dans Linear VI après lecture de VI-21 et VI-28. VI-47 et VI-153 sont terminés.
