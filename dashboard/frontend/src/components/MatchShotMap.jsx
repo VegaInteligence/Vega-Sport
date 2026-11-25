@@ -8,29 +8,9 @@ import { useHoverBubble } from "./HoverCard.jsx";
 import { ShotCard, eventId, shotText } from "./Charts.jsx";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { isNumber } from "../services/format.js";
+import { SHOOTOUT, shotPeriods, shotsOf } from "../services/match-shots.js";
 
-/** The periods a shot can belong to, in the order of the match, and how the choice names them. */
-export const SHOT_PERIODS = [
-  ["FirstHalf", "1re mi-temps"],
-  ["SecondHalf", "2e mi-temps"],
-  ["ExtraTime", "Prolongation"],
-  ["ExtraFirstHalf", "Prol. 1re mi-temps"],
-  ["ExtraSecondHalf", "Prol. 2e mi-temps"],
-  ["Penalties", "Tirs au but"],
-];
-const SHOOTOUT = "Penalties";
-
-/** The choice of periods: « Match » (every period but the shoot-out), then each period with a shot; none without periods. */
-export function shotPeriods(shots) {
-  const present = new Set((shots || []).map((s) => s.period).filter(Boolean));
-  const periods = SHOT_PERIODS.filter(([key]) => present.has(key));
-  return periods.length ? [["all", "Match"], ...periods] : [];
-}
-
-/** The shots of a period: « all » leaves the shoot-out out. */
-export function shotsOf(shots, period) {
-  return (shots || []).filter((s) => (period === "all" ? s.period !== SHOOTOUT : s.period === period));
-}
+export { SHOT_PERIODS, shotPeriods, shotsOf } from "../services/match-shots.js";
 
 const SIDE_COLOR = { home: "var(--home)", away: "var(--away)" };
 const sideOf = (match, shot) => (shot.teamId === match.away.id ? "away" : "home");
@@ -71,7 +51,7 @@ function Shot({ match, shot, x, y, r, onPlayer, bubble, label, data }) {
         cy={y}
         r={r}
         fill={color}
-        fillOpacity={shot.isGoal ? 0.95 : shot.isOnTarget ? 0.35 : 0}
+        fillOpacity={shot.isGoal ? 0.95 : shot.isOnTarget && !shot.isBlocked ? 0.35 : 0}
         stroke={color}
         strokeWidth={shot.isGoal ? 2 : 1.5}
         role={id ? "button" : "img"}

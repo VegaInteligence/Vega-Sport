@@ -15,7 +15,7 @@ export const LEADING_MINUTES = 60;
 
 /**
  * The match's best players (at most `count`), by Vega's grade from 60 minutes: the rows' own
- * normal score z when they carry it, else the grades' rank, each row then built from the grade
+ * normal score z when they carry it and are not fewer than the grades, else the grades' rank, each row then built from the grade
  * itself (its player's name, photo, team, minutes, goals) with the id of an appearance of
  * `match` (« match:player »), as the rows it stands in for.
  */
@@ -23,9 +23,11 @@ export function leadingPlayers(pool, grades, { match, count = 5 } = {}) {
   const graded = (pool || [])
     .filter((r) => r.minutes >= LEADING_MINUTES && isNumber(r.gradeZ))
     .sort((a, b) => b.gradeZ - a.gradeZ);
-  if (graded.length) return graded.slice(0, count);
-  return [...(grades || new Map()).entries()]
-    .filter(([, g]) => g.minutes >= LEADING_MINUTES && g.name)
+  const ranked = [...(grades || new Map()).entries()].filter(([, g]) => g.minutes >= LEADING_MINUTES && g.name);
+  // The rows decide while they hold as many graded players as the grades; a shorter pool (the summary's few leaders)
+  // gives way to the grades, every player graded (FAILURE_MODES § 63.5).
+  if (graded.length && (graded.length >= count || graded.length >= ranked.length)) return graded.slice(0, count);
+  return ranked
     .sort(([, a], [, b]) => a.rank - b.rank)
     .slice(0, count)
     .map(([playerId, g]) => ({

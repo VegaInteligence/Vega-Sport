@@ -11,7 +11,7 @@
 // table and the projection · R3 each team on its side of the shot map · R4 the period choice · R5 the shoot-out on the
 // goal · R6 the finished match's strip in the Résumé · R7 the search in « Compositions » · R8 ten valued actions.
 // § 63.3 (hugo, 18 h 47): R9 no list under the shot map · R10 the best grades end with the shot map · R11 the
-// competition page's block in « Classement ».
+// competition page's block in « Classement ». § 63.4 (Codex): R13 a blocked shot is not « Cadré ». § 63.5: R14 eight best grades.
 //
 // Failure modes (§ 62.2): M1 tabs and default · M2 Résumé's blocks · M3 the three views of « Le match minute par
 // minute » · M4 one view only · M5 (now R9) · M6 « Tous les joueurs » and the board in Compositions ·
@@ -60,7 +60,8 @@ SHOTS.forEach(([minute, side, pid, name, xg, goal, onTarget, x, y], i) =>
   shotsFamily.periods[minute > 45 ? 1 : 0].shots.push({
     id: "s" + i, player: { id: pid, name }, team_id: teamOf(side).id, x, y, expected_goals: xg, minute,
     event_type: goal ? "Goal" : onTarget ? "AttemptSaved" : "Miss", is_goal: goal, is_own_goal: false, is_on_target: onTarget,
-    goal_crossed_y: 34 + (i - 2), goal_crossed_z: 0.5 + i * 0.3,
+    // Pagis's shot is blocked yet marked on target, as the provider can (§ 63.4, R13).
+    is_blocked: i === 1, goal_crossed_y: 34 + (i - 2), goal_crossed_z: 0.5 + i * 0.3,
   }));
 // Twelve players valued (§ 63, R8): the list shows ten.
 const advancedPlayers = { players: Array.from({ length: 12 }, (_, i) => ({
@@ -102,7 +103,11 @@ const players = [
 const grades = { grades: players.map((p, i) => ({
   playerId: p.player.id, grade: [78, 61, 52, 47][i], rank: i + 1, name: p.player.name,
   team: p.team_id === HOME.id ? HOME.name : AWAY.name, teamId: p.team_id, minutes: [90, 90, 90, 77][i],
-})) };
+})).concat(Array.from({ length: 8 }, (_, i) => ({
+  // Eight more graded players the page's rows do not hold (§ 63.5, R14): « Meilleures notes » shows 8.
+  playerId: "p_gr" + String(i).padStart(4, "0"), grade: 45 - i * 2, rank: 5 + i, name: "Joueur noté " + (i + 1),
+  team: i % 2 ? AWAY.name : HOME.name, teamId: (i % 2 ? AWAY : HOME).id, minutes: 90,
+}))) };
 const momentum = { points: Array.from({ length: 90 }, (_, i) => ({ minute: i + 1, value: Math.round(Math.sin(i / 6) * 60) })) };
 const forecast = {
   match: id, points: Array.from({ length: 91 }, (_, minute) => {
@@ -316,6 +321,21 @@ try {
           labelled: await card.locator('[data-chart="match-shot-map"] [data-side][aria-label]').count(),
         };
         assert.deepEqual(got, { list: 0, button: 0, labelled: 5 });
+        return got;
+      });
+
+      await check("R13 a blocked shot marked on target is drawn with no fill", { blocked: "0", saved: null }, async () => {
+        const map = panel(page).locator('[data-chart="match-shot-map"]');
+        const blocked = await map.locator('[data-side][aria-label*="Pablo Pagis"]').getAttribute("fill-opacity");
+        assert.equal(blocked, "0");
+        return { blocked };
+      });
+
+      await check("R14 « Meilleures notes » shows 8 players of the match's grades", { rows: 8, first: "Ousmane Dembélé" }, async () => {
+        const card = panel(page).locator(".card", { has: page.locator(".card-title", { hasText: "Meilleures notes" }) });
+        await card.locator(".match-player-row").nth(7).waitFor();
+        const got = { rows: await card.locator(".match-player-row").count(), first: (await card.locator(".match-player-row .player-name").first().innerText()).trim() };
+        assert.deepEqual(got, { rows: 8, first: "Ousmane Dembélé" });
         return got;
       });
 

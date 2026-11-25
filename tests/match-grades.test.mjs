@@ -35,6 +35,24 @@ test("a match's best players: by Vega's grade from 60 minutes, the rows' own z f
   assert.deepEqual(leadingPlayers(undefined, undefined), []);
 });
 
+// hugo, 25 Nov 2026, 19 h 03 (FAILURE_MODES § 63.5): « au lieu d'en choisir que 4 augmente le nombre affiché ». A pool
+// that carries fewer graded rows than the grades (the summary's few leaders) gives way to the grades, every player
+// graded from 60 minutes by rank, up to `count`.
+test("R14 a short pool gives way to the match's grades, up to count", () => {
+  const grades = gradesOf({
+    match: "m_aaaaa1",
+    grades: Array.from({ length: 12 }, (_, i) => ({
+      playerId: "p_g" + String(i).padStart(4, "0"), name: "J" + i, team: "Club", minutes: i === 5 ? 30 : 90, grade: 90 - i, rank: i + 1,
+    })),
+  });
+  const pool = [0, 1, 2, 3].map((i) => ({ id: "m_aaaaa1:p_g" + String(i).padStart(4, "0"), playerId: "p_g" + String(i).padStart(4, "0"), minutes: 90, gradeZ: 2 - i / 10 }));
+  const leading = leadingPlayers(pool, grades, { match: "m_aaaaa1", count: 8 });
+  assert.deepEqual(leading.map((r) => r.playerId), ["p_g0000", "p_g0001", "p_g0002", "p_g0003", "p_g0004", "p_g0006", "p_g0007", "p_g0008"]);
+  assert.equal(new Set(leading.map((r) => r.id)).size, 8);
+  // A pool as long as count keeps its own order.
+  assert.equal(leadingPlayers(pool, grades, { match: "m_aaaaa1", count: 4 }).length, 4);
+});
+
 test("a match's grades by player, the ones shown only, with their rank in the match", () => {
   const grades = gradesOf({
     match: "m_aaaaa1",

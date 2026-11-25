@@ -5333,3 +5333,32 @@ Failure modes (E2E, same file):
   and « Projection »; « Classement » shows the competition's table (`.competition-standings table.standings-table`);
   « Projection » shows `table.season-projection` with a row per team of the projection (18). Replaces R2's table card;
   a final (M8b) shows the same block.
+
+### 63.4 Codex's review of PR #224 (25 Nov 2026, 17 h 48; checked against the code, written before the tests)
+
+- **Periods in both spellings.** A match without a summary version draws the shots it carries (the season's record,
+  `backend/api/src/match-record.mjs`), whose periods are the base's `first_half`, `second_half`, `extra_time`,
+  `penalties`; the shots family spells them `FirstHalf`, `SecondHalf`, `ExtraTime`, `Penalties`. Both read the same:
+  the period choice is offered and « Match » leaves the shoot-out out. The helpers move to `services/match-shots.js`.
+- **A blocked shot is not « Cadré ».** The provider can mark a blocked attempt on target (`match_m_08LEIz`); the map
+  draws it in outline, as its card says « Tir contré ».
+
+Failure modes:
+
+- **R12** (`tests/match-shots.test.mjs`) the base's spellings: `shotPeriods` gives « Match », « 1re mi-temps »,
+  « 2e mi-temps », « Tirs au but »; `shotsOf(…, "all")` leaves the `penalties` kicks out; `shotsOf(…, "FirstHalf")`
+  finds the `first_half` shots. The family's spellings give the same.
+- **R13** (`match-tabs.e2e.mjs`) a blocked shot marked on target is drawn with no fill.
+
+### 63.5 « Meilleures notes » longer (hugo, 25 Nov 2026, 19 h 03; written before the tests)
+
+hugo's words: « au lieu d'en choisir que 4 augmente le nombre affiché ». The card took its players from the rows the
+page holds (the summary's few leaders) as soon as one carried its grade, and never looked at the match's grades
+(`/api/rankings/match`), which hold every graded player. Rule: when the pool has fewer graded rows (from 60 minutes)
+than the grades, the grades decide, by rank, up to 8; the 60-minute floor stays (a cameo is shown in Compositions, not
+ranked here).
+
+- **R14** (`tests/match-grades.test.mjs`) a pool of 4 graded rows and 11 grades from 60 minutes: 8 rows, by rank, no
+  duplicate, the 30-minute cameo left out; a pool of `count` rows keeps its order.
+- **R14** (`match-tabs.e2e.mjs`) the page holds 4 players and the grades 12: « Meilleures notes » shows 8 rows,
+  Dembélé first.
