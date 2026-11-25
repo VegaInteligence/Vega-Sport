@@ -4,28 +4,47 @@ Display only (FAILURE_MODES.md §61; hugo, 25 Nov 2026): the forecast, the line-
 core.lineups neither read nor receive anything of it. The match page shows it for a side the provider has sent no
 line-up for yet.
 
-The method, probable-v1, is the study's P5 (blesses-suspendus/onze-probable/etude_onze_probable.py: `guess()` and the
-absence rule « B connue »), measured there before it was chosen:
+The method, probable-v2 (§61.3), is the study v4's H1 (blesses-suspendus/onze-probable/v4/etude_onze_melange.py:
+`predict_xis` and `route`), chosen there over probable-v1 on its validation (11 760 team-matches since 1 Aug 2026): 8.43
+starters found out of 11 against 7.91 (+0.518, 95 % interval [+0.491; +0.545]); in the clubs of the five leagues 8.18
+against 7.87, elsewhere 8.46 against 7.91.
+- the window, the absent and the gone: probable-v1's, below;
+- the weights (`similarity_weights`, the study's P7 with s 400, λ 0.3): 0.8^k × exp(−the gap between that opponent's
+  Elo and this one's / SIMILARITY), × OTHER_KIND when that match's competition type is not this one's, divided by the
+  largest;
+- each player's score (`scores`, the study's P10 with those weights, P11): his weighted starts over his weighted sheets
+  (starter or substitute), drawn towards the window's prior by PULL: a match he was not on the sheet of does not count;
+- a club of the five leagues (`five_clubs`): `guess` with the score first in each line, the absent and the gone
+  replaced by the best score of their line (P11);
+- any other club: the window's latest eleven, each absent or gone starter replaced by the best score of his line, else
+  of the other outfield lines, a keeper only by a keeper (P1a).
+`share` is that score (0 to 1), not a count of starts.
+
+probable-v1, still selectable (`predict(method="probable-v1")`), is the study's P5 (blesses-suspendus/onze-probable/
+etude_onze_probable.py: `guess()` and the absence rule « B connue »), measured there before it was chosen:
 - the window: the club's last WINDOW complete confirmed elevens (11 starters, `confirmed` true, a finished match, any
   competition, within LOOKBACK), each weighted 0.8^k, k = 0 for the most recent; fewer than MIN_RECENT: no eleven;
 - the eleven: the line split of greatest weight, in each line the players most started (weighted), and a removed
   player replaced by the most used available player of his line (a keeper only by a keeper);
 - removed: the absent (an injury or illness started before the match day with no match for his club since; a
   suspension of the match's competition, as the site's `absenceApplies`) and the gone (his latest club line-up is
-  another club's, or the club's Transfermarkt squad read after his last appearance does not hold him).
+  another club's, or the club's Transfermarkt squad read after his last appearance does not hold him);
+- `share`: his starts in the window / its elevens.
 
-A later method weighs each past eleven otherwise (the competition, the opponent): `window_weights` is the one place a
-window's weights are computed and `predict` the one function a method label goes through; the tables, the route and
-the site read `method` from the rows.
+`window_weights` is the one place a window's weights are computed and `predict` the one function a method label goes
+through; the tables, the route and the site read `method` from the rows.
 """
 
 from collections import Counter, defaultdict, namedtuple
 from datetime import timedelta
-from math import hypot
+from math import exp, hypot
 
-from .power import role_of
+from .forecast import LEAGUE_PHASE_CUPS
+from .lineup import year_of
+from .power import award_year, role_of
 
-METHOD = "probable-v1"
+METHOD = "probable-v2"  # the method the worker's step writes
+METHODS = ("probable-v1", "probable-v2")
 WINDOW = 10  # the club's last complete confirmed elevens, every competition
 MIN_RECENT = 5  # below this many in the window: no probable eleven for that side
 DECAY = 0.8  # weight 0.8^k, k = 0 for the most recent eleven
@@ -34,17 +53,27 @@ HORIZON = timedelta(days=7)  # matches not started whose kick-off falls in ]now,
 LOOKBACK = timedelta(days=400)  # elevens and appearances looked for in the LOOKBACK before now
 FRESH_DAYS = 45  # a suspension without an end counts while the player's suspensions were read this recently (174)
 EVERY = timedelta(minutes=15)  # the worker's step runs at most this often
+# probable-v2's constants, the study v4's (frozen there from v3's grids: P7 s 400, λ 0.3; P10 W 10, a 2).
+SIMILARITY = 400.0  # s: a gap of this much Elo between two opponents divides an eleven's weight by e
+OTHER_KIND = 0.3  # λ: an eleven of another competition type than the match's (or the match's unknown) weighs this much
+MISSING_GAP = 150.0  # the Elo gap counted when either opponent's Elo is unknown
+PULL = 2.0  # a: the prior's weight in a player's score
+PRIOR = 0.6  # the prior when no eleven of the window has a substitute on its sheet
 
 LINE = {"goalkeeper": "G", "centre_back": "D", "full_back": "D", "defensive_midfielder": "M", "central_midfielder": "M",
         "wide_midfielder": "M", "attacking_midfielder": "M", "winger": "A", "centre_forward": "A"}
 LINES = ("G", "D", "M", "A", "?")
 
 # One eleven of a window, the oldest first. Its first four fields are the study's entry: (day, starters, {player:
-# role}, players who appeared); then the match, its competition and the opponent (what a later method may weigh by),
-# the formation, {starter: (position_id, pitch_x, pitch_y)} and {player: shirt number}.
-Entry = namedtuple("Entry", "day starters roles came match_id competition_id opponent_id formation spots shirts")
-# A side to guess: its match, season, day (UTC), team, opponent, side and the match's competition.
-Target = namedtuple("Target", "match_id season_id day team_id opponent_id side competition_id")
+# role}, players who appeared); then the match, its competition and the opponent, the formation, {starter:
+# (position_id, pitch_x, pitch_y)}, {player: shirt number}; then what probable-v2 weighs by: the players on its sheet
+# (starters and substitutes), its competition type (`_KIND`: E, L, O or None) and the opponent's Elo (or None).
+Entry = namedtuple("Entry", "day starters roles came match_id competition_id opponent_id formation spots shirts sheet ctype opp_elo",
+                   defaults=(frozenset(), None, None))
+# A side to guess: its match, season, day (UTC), team, opponent, side and the match's competition; the match's
+# competition type, the opponent's latest Elo, and whether the club is of the five leagues that award year.
+Target = namedtuple("Target", "match_id season_id day team_id opponent_id side competition_id ctype opp_elo five",
+                    defaults=(None, None, False))
 
 
 def weights(n, decay=DECAY):
@@ -55,7 +84,50 @@ def window_weights(method, window, target):
     """Each eleven's weight in `window` (oldest first) for the match `target`: the one place a method weighs them."""
     if method == "probable-v1":
         return weights(len(window))
+    if method == "probable-v2":
+        return similarity_weights(window, target)
     raise ValueError(f"unknown method {method!r}")
+
+
+def similarity_weights(window, target, s=SIMILARITY, lam=OTHER_KIND):
+    """The study's P7 weights (its `sim_weights`): 0.8^k × exp(−|that opponent's Elo − the match's opponent's| / s),
+    MISSING_GAP when either is unknown, × lam when that eleven's competition type is not the match's or the match's is
+    unknown; then each divided by the largest."""
+    out = []
+    for e, w in zip(window, weights(len(window))):
+        w *= exp(-(abs(e.opp_elo - target.opp_elo) if e.opp_elo is not None and target.opp_elo is not None else MISSING_GAP) / s)
+        if target.ctype is None or e.ctype != target.ctype:
+            w *= lam
+        out.append(w)
+    top = max(out, default=1.0) or 1.0
+    return [w / top for w in out]
+
+
+def availability(window, wts):
+    """The study's P10 counts (its `avail`): ({player: Σ w started}, {player: Σ w on the sheet}, prior). On the sheet:
+    starter or substitute. The prior: 11 × Σ w / Σ (w × sheet size) over the elevens whose sheet holds a substitute,
+    PRIOR without any; an eleven without substitute counts for its starters only and not in the prior."""
+    started, listed, sw, sz = Counter(), Counter(), 0.0, 0.0
+    for e, w in zip(window, wts):
+        for p in e.sheet:
+            listed[p] += w
+        for p in e.starters:
+            started[p] += w
+        if len(e.sheet) > STARTERS:
+            sw, sz = sw + w, sz + w * len(e.sheet)
+    return started, listed, STARTERS * sw / sz if sz else PRIOR
+
+
+def scores(window, wts, a=PULL):
+    """Each player's score on the window (the study's `score11`): (Σ w started + a × prior) / (Σ w on the sheet + a)."""
+    started, listed, prior = availability(window, wts)
+    return {p: (started[p] + a * prior) / (v + a) for p, v in listed.items()}
+
+
+def latest_eleven(window, main_role):
+    """The window's latest eleven, [(player, line)], each in the line of his role in it, else of his latest role (P1)."""
+    last = window[-1]
+    return [(p, LINE.get(last.roles.get(p) or main_role(p), "?")) for p in last.starters]
 
 
 def _tally(entries, wts, main_role):
@@ -79,12 +151,15 @@ def _tally(entries, wts, main_role):
     return starts, apps, last, lines_of, shapes, chosen
 
 
-def guess(entries, wts, main_role, gone=frozenset()):
+def guess(entries, wts, main_role, gone=frozenset(), score=None, base=None):
     """The guessed eleven of a window (oldest first, weights of the same length): ([(player, line)], [(removed, line,
     replacement or None)]). The study's `guess()` as measured: the split of greatest weight (ties: the most recent);
     in each line the most started (weight), then the most appeared, then the most recent appearance, then the smallest
     id; a player's line is that of his starts. A removed player is replaced by the most used available player of his
-    line, else of another (a keeper by a keeper, an outfield player by an outfield one)."""
+    line, else of another (a keeper by a keeper, an outfield player by an outfield one).
+
+    The study v4's two additions (probable-v2): `score` {player: score} comes first in that order (P11); `base`, an
+    eleven [(player, line)], is kept as it is instead of the lines' choice, only its removed players replaced (P1a)."""
     starts, apps, last, lines_of, _, shape = _tally(entries, wts, main_role)
     line = {}
     for p in apps:
@@ -92,16 +167,18 @@ def guess(entries, wts, main_role, gone=frozenset()):
         line[p] = max(sorted(lc), key=lambda x: (round(lc[x], 9), x)) if lc else LINE.get(main_role(p), "?")  # never a starter: his role
 
     def key(p):
-        return round(starts[p], 9), round(apps[p], 9), last.get(p, -1), -p
+        k = round(starts[p], 9), round(apps[p], 9), last.get(p, -1), -p
+        return k if score is None else (round(score[p], 9),) + k
 
-    habitual, taken = [], set()
-    for ln, n in zip(LINES, shape):
-        cand = sorted((p for p in starts if line[p] == ln and p not in taken), key=key, reverse=True)[:n]
-        habitual += [(p, ln) for p in cand]
-        taken.update(cand)
-    for p in sorted((p for p in starts if p not in taken), key=key, reverse=True)[:STARTERS - len(habitual)]:
-        habitual.append((p, line[p]))
-        taken.add(p)
+    habitual, taken = list(base or ()), {p for p, _ in base or ()}
+    if base is None:
+        for ln, n in zip(LINES, shape):
+            cand = sorted((p for p in starts if line[p] == ln and p not in taken), key=key, reverse=True)[:n]
+            habitual += [(p, ln) for p in cand]
+            taken.update(cand)
+        for p in sorted((p for p in starts if p not in taken), key=key, reverse=True)[:STARTERS - len(habitual)]:
+            habitual.append((p, line[p]))
+            taken.add(p)
     used, xi, rep = set(taken), [], []
     for p, ln in habitual:
         if p not in gone:
@@ -140,21 +217,26 @@ def _complete(e):
     return all(e.spots.get(p) and e.spots[p][1] is not None and e.spots[p][2] is not None for p in e.starters)
 
 
-def place(xi, rep, window, wts, main_role):
+def place(xi, rep, window, wts, main_role, latest=False):
     """Each guessed player's slot: (formation, [(player, position_id, pitch_x, pitch_y)] in the template's order).
 
     The template: among the elevens of the chosen split, the formation of greatest weight (ties: the most recent) and
     its most recent eleven whose starters' places are all known (else the most recent of the split that has them,
-    else none: the places stay empty). A guessed player who started in it keeps his slot; a replacement takes the
-    removed player's slot when it is free; the others, most used first, the free slot nearest their weighted mean
-    place in the window (ties: the template's order)."""
+    else none: the places stay empty); `latest` (probable-v2's P1a): the latest eleven's formation, among every eleven
+    of the window. A guessed player who started in it keeps his slot; a replacement takes the removed player's slot
+    when it is free; the others, most used first, the free slot nearest their weighted mean place in the window (ties:
+    the template's order)."""
     starts, apps, last, _, shapes, chosen = _tally(window, wts, main_role)
-    split = [i for i in range(len(window)) if shapes[i] == chosen]
-    weight = Counter()
-    for i in split:
-        weight[window[i].formation] += wts[i]
-    top = max(weight.values())
-    formation = next(window[i].formation for i in reversed(split) if weight[window[i].formation] > top - 1e-9)
+    if latest:
+        split = list(range(len(window)))
+        formation = window[-1].formation
+    else:
+        split = [i for i in range(len(window)) if shapes[i] == chosen]
+        weight = Counter()
+        for i in split:
+            weight[window[i].formation] += wts[i]
+        top = max(weight.values())
+        formation = next(window[i].formation for i in reversed(split) if weight[window[i].formation] > top - 1e-9)
     template = next((window[i] for i in reversed(split) if window[i].formation == formation and _complete(window[i])), None) \
         or next((window[i] for i in reversed(split) if _complete(window[i])), None)
     if template is None:
@@ -199,13 +281,25 @@ def place(xi, rep, window, wts, main_role):
 def predict(window, target, main_role, absent, gone, method=METHOD):
     """One side's probable eleven by `method`: {formation, starters: [(player, position_id, pitch_x, pitch_y, share,
     replaces)], absent: [(player, episode)]}. `absent` {player: episode} and `gone` {player} are the window's removed
-    players; an absent one is listed and named by his replacement, a gone one neither."""
+    players; an absent one is listed and named by his replacement, a gone one neither.
+
+    probable-v1: `guess` on 0.8^k; share = his starts / the window's elevens. probable-v2 (the study v4's H1): a club of
+    the five leagues (`target.five`) `guess` with the score first (P11), any other the latest eleven with each removed
+    player replaced by the best score (P1a), both on `similarity_weights`; share = his score."""
     wts = window_weights(method, window, target)
-    xi, rep = guess(window, wts, main_role, frozenset(absent) | frozenset(gone))
-    formation, spots = place(xi, rep, window, wts, main_role)
+    removed = frozenset(absent) | frozenset(gone)
+    if method == "probable-v1":
+        xi, rep = guess(window, wts, main_role, removed)
+        formation, spots = place(xi, rep, window, wts, main_role)
+        count = Counter(p for e in window for p in e.starters)
+        share = {p: count[p] / len(window) for p, _ in xi}
+    else:
+        share = scores(window, wts)
+        base = None if target.five else latest_eleven(window, main_role)
+        xi, rep = guess(window, wts, main_role, removed, share, base)
+        formation, spots = place(xi, rep, window, wts, main_role, latest=base is not None)
     named = {pick: r for r, _, pick in rep if pick is not None and r in absent and r not in gone}
-    count = Counter(p for e in window for p in e.starters)
-    starters = [(p, pos, x, y, count[p] / len(window), named.get(p)) for p, pos, x, y in spots]
+    starters = [(p, pos, x, y, share[p], named.get(p)) for p, pos, x, y in spots]
     listed = [(p, e) for p, e in absent.items() if p not in gone]
     return {"formation": formation, "starters": starters, "absent": sorted(listed, key=lambda pe: _absent_order(*pe))}
 
@@ -226,33 +320,71 @@ _AT = "coalesce(m.kickoff_at, m.match_date::timestamp AT TIME ZONE 'UTC')"
 _QUARANTINED = """EXISTS (SELECT 1 FROM ops.provider_links k WHERE k.entity_type = 'player' AND k.provider = 'transfermarkt'
                   AND k.entity_id = {} AND k.quarantined_at IS NOT NULL)"""
 
+# probable-v2: a match's competition type, as the study v4 reads it (its KIND): E a competition of
+# forecast.LEAGUE_PHASE_CUPS (Champions, Europa and Conference League); NULL without an edition; O an archive edition;
+# a PitchAPI edition L when its competition has a country (not INT…) and is neither a cup nor international; a cup
+# source's edition L when it is an open-matchday league (not _CUP_); O otherwise. {cs}, {c}: the edition, the competition.
+_KIND = """CASE WHEN EXISTS (SELECT 1 FROM core.provider_ids k WHERE k.entity_type = 'competition' AND k.provider = 'pitchapi'
+                       AND k.entity_id = {cs}.competition_id AND k.provider_key = ANY(%(cups)s)) THEN 'E'
+  WHEN {cs}.id IS NULL THEN NULL WHEN {cs}.archive_key IS NOT NULL THEN 'O'
+  WHEN {cs}.cup_key IS NULL THEN CASE WHEN {c}.country_code IS NOT NULL AND left({c}.country_code, 3) <> 'INT'
+    AND {c}.kind IS DISTINCT FROM 'cup' AND {c}.kind IS DISTINCT FROM 'international' THEN 'L' ELSE 'O' END
+  WHEN {cs}.cup_key LIKE 'open-matchday:%%' AND split_part({cs}.cup_key, ':', 2) NOT LIKE '%%\\_CUP\\_%%' THEN 'L' ELSE 'O' END"""
+# probable-v2: a team's latest Elo before {at}, the elo_after of its latest rated match (agg.team_elo holds finished ones).
+_LATEST_ELO = """(SELECT x.elo_after FROM agg.team_elo x WHERE x.team_id = {team} AND x.kickoff_at < {at}
+   ORDER BY x.kickoff_at DESC, x.match_id DESC LIMIT 1)"""
+
+# With the match's competition type and each opponent's Elo (its elo_before in the match, else its latest).
 TARGETS = f"""
-SELECT m.id, m.season_id, {_DAY}, m.home_team_id, m.away_team_id, cs.competition_id
+SELECT m.id, m.season_id, {_DAY}, m.home_team_id, m.away_team_id, cs.competition_id, {_KIND.format(cs="cs", c="c")},
+  coalesce(eh.elo_before, {_LATEST_ELO.format(team="m.home_team_id", at="m.kickoff_at")}),
+  coalesce(ea.elo_before, {_LATEST_ELO.format(team="m.away_team_id", at="m.kickoff_at")})
 FROM core.matches m
 JOIN core.teams th ON th.id = m.home_team_id AND th.is_national IS NOT TRUE
 JOIN core.teams ta ON ta.id = m.away_team_id AND ta.is_national IS NOT TRUE
 LEFT JOIN core.competition_seasons cs ON cs.id = m.competition_season_id
+LEFT JOIN core.competitions c ON c.id = cs.competition_id
+LEFT JOIN agg.team_elo eh ON eh.match_id = m.id AND eh.team_id = m.home_team_id
+LEFT JOIN agg.team_elo ea ON ea.match_id = m.id AND ea.team_id = m.away_team_id
 WHERE m.status = 'not_started' AND m.kickoff_at > %(now)s AND m.kickoff_at <= %(until)s AND m.home_team_id <> m.away_team_id
 ORDER BY m.kickoff_at, m.id"""
 # Each team's last WINDOW complete confirmed elevens, most recent first. Per team, its finished matches of the lookback
-# newest first (OFFSET 0 keeps the order and the count below it), the starters counted only until WINDOW are found.
+# newest first (OFFSET 0 keeps the order and the count below it), the starters counted only until WINDOW are found; then,
+# for those elevens only, the competition and its type, and the opponent's Elo (his elo_before in it, else his latest).
 WINDOWS = f"""
-SELECT t.team_id, w.season_id, w.match_id, w.day, w.formation, w.competition_id, w.opponent_id
+SELECT t.team_id, w.season_id, w.match_id, w.day, w.formation, cs.competition_id, w.opponent_id, {_KIND.format(cs="cs", c="c")},
+  coalesce(e.elo_before, {_LATEST_ELO.format(team="w.opponent_id", at="w.at")})
 FROM unnest(%(teams)s::integer[]) AS t(team_id)
 CROSS JOIN LATERAL (
   SELECT c.* FROM (
-    SELECT l.season_id, l.match_id, {_DAY} AS day, l.formation, cs.competition_id,
+    SELECT l.season_id, l.match_id, {_DAY} AS day, l.formation, m.competition_season_id AS edition,
       CASE WHEN m.home_team_id = t.team_id THEN m.away_team_id ELSE m.home_team_id END AS opponent_id, {_AT} AS at
     FROM core.matches m
     JOIN core.lineups l ON l.season_id = m.season_id AND l.match_id = m.id AND l.team_id = t.team_id AND l.confirmed IS TRUE
-    LEFT JOIN core.competition_seasons cs ON cs.id = m.competition_season_id
     WHERE (m.home_team_id = t.team_id OR m.away_team_id = t.team_id) AND m.season_id >= %(first)s AND m.status = 'finished'
       AND {_AT} < %(now)s AND {_AT} >= %(since)s
     ORDER BY at DESC, m.id DESC OFFSET 0) c
   WHERE (SELECT count(*) FROM core.lineup_players p WHERE p.season_id = c.season_id AND p.match_id = c.match_id
          AND p.team_id = t.team_id AND p.is_starter) = {STARTERS}
   LIMIT %(window)s) w
+LEFT JOIN core.competition_seasons cs ON cs.id = w.edition
+LEFT JOIN core.competitions c ON c.id = cs.competition_id
+LEFT JOIN agg.team_elo e ON e.match_id = w.match_id AND e.team_id = w.opponent_id
 ORDER BY t.team_id, w.at DESC, w.match_id DESC"""
+# probable-v2: the clubs of the five leagues (FAILURE_MODES.md §61.3) among the teams asked, by award year: a match,
+# whatever its status, of a PitchAPI edition (no archive or cup key, as forecast.FITTED's) of a competition whose
+# PitchAPI key is one of tm_history.LEAGUES, its day in [start, end). Each match's two teams are joined to the teams
+# asked by equality (an OR of the two would compare every match with every team).
+FIVE = f"""
+SELECT DISTINCT s.team_id,
+  extract(year FROM {_DAY})::integer - CASE WHEN extract(month FROM {_DAY}) >= 8 THEN 0 ELSE 1 END
+FROM core.competition_seasons cs
+JOIN core.matches m ON m.competition_season_id = cs.id AND m.season_id = cs.season_id
+CROSS JOIN LATERAL (VALUES (m.home_team_id), (m.away_team_id)) AS s(team_id)
+JOIN unnest(%(teams)s::integer[]) AS t(team_id) ON t.team_id = s.team_id
+WHERE cs.archive_key IS NULL AND cs.cup_key IS NULL AND {_DAY} >= %(start)s AND {_DAY} < %(end)s
+  AND EXISTS (SELECT 1 FROM core.provider_ids k WHERE k.entity_type = 'competition' AND k.provider = 'pitchapi'
+              AND k.entity_id = cs.competition_id AND k.provider_key = ANY(%(leagues)s))"""
 SHEETS = """
 SELECT lp.match_id, lp.team_id, lp.player_id, coalesce(lp.is_starter, false), lp.position_id, lp.pitch_x, lp.pitch_y, lp.shirt_number,
   coalesce(s.minutes_played, 0) > 0
@@ -315,7 +447,8 @@ WHERE i.entity_type = 'player' AND i.provider = 'transfermarkt' AND i.is_current
 
 def _windows(conn, teams, now):
     """{team: [Entry]} (oldest first) of the teams with MIN_RECENT complete confirmed elevens or more."""
-    args = {"teams": sorted(teams), "now": now, "since": now - LOOKBACK, "first": (now - LOOKBACK).year - 1, "window": WINDOW}
+    args = {"teams": sorted(teams), "now": now, "since": now - LOOKBACK, "first": (now - LOOKBACK).year - 1, "window": WINDOW,
+            "cups": list(LEAGUE_PHASE_CUPS)}
     rows = conn.execute(WINDOWS, args).fetchall()
     keys = [(season, match, team) for team, season, match, *_ in rows]
     sheets = defaultdict(list)
@@ -323,7 +456,7 @@ def _windows(conn, teams, now):
         for row in conn.execute(SHEETS, ([k[0] for k in keys], [k[1] for k in keys], [k[2] for k in keys])).fetchall():
             sheets[(row[0], row[1])].append(row[2:])
     found = defaultdict(list)
-    for team, season, match, day, formation, competition, opponent in rows:
+    for team, season, match, day, formation, competition, opponent, ctype, opp_elo in rows:
         sheet = sheets[(match, team)]
         starters = tuple(p for p, starter, *_ in sheet if starter)
         top = max((pos for p, starter, pos, *_ in sheet if starter and pos), default=0)
@@ -332,23 +465,39 @@ def _windows(conn, teams, now):
         roles.update({p: None for p in came if p not in roles})
         spots = {p: (pos, x, y) for p, starter, pos, x, y, *_ in sheet if starter}
         shirts = {p: shirt for p, _, _, _, _, shirt, _ in sheet if shirt is not None}
-        found[team].append(Entry(day, starters, roles, came, match, competition, opponent, formation, spots, shirts))
+        found[team].append(Entry(day, starters, roles, came, match, competition, opponent, formation, spots, shirts,
+                                 frozenset(p for p, *_ in sheet), ctype, opp_elo))
     return {team: entries[::-1] for team, entries in found.items() if len(entries) >= MIN_RECENT}
 
 
-def compute(conn, now):
-    """Every side in scope: [(Target, window, result of predict)]. Reads only."""
+def five_clubs(conn, teams, years):
+    """{(team, award year)} of `teams` that are of the five leagues in one of `years` (FIVE; FAILURE_MODES.md §61.3)."""
+    from .sources.tm_history import LEAGUES  # vega.sources imports psycopg: read only where the base is
+
+    years = set(years)
+    if not teams or not years:
+        return set()
+    args = {"teams": sorted(teams), "leagues": sorted(LEAGUES.values()), "start": award_year(min(years))[0],
+            "end": award_year(max(years))[1]}
+    return {(team, year) for team, year in conn.execute(FIVE, args).fetchall() if year in years}
+
+
+def compute(conn, now, method=METHOD):
+    """Every side in scope: [(Target, window, result of predict by `method`)]. Reads only."""
     until = now + HORIZON
     targets = []
-    for match, season, day, home, away, competition in conn.execute(TARGETS, {"now": now, "until": until}).fetchall():
-        targets.append(Target(match, season, day, home, away, "home", competition))
-        targets.append(Target(match, season, day, away, home, "away", competition))
+    for match, season, day, home, away, competition, ctype, home_elo, away_elo in conn.execute(
+            TARGETS, {"now": now, "until": until, "cups": list(LEAGUE_PHASE_CUPS)}).fetchall():
+        targets.append(Target(match, season, day, home, away, "home", competition, ctype, away_elo))
+        targets.append(Target(match, season, day, away, home, "away", competition, ctype, home_elo))
     if not targets:
         return []
     windows = _windows(conn, {t.team_id for t in targets}, now)
     targets = [t for t in targets if t.team_id in windows]
     if not targets:
         return []
+    five = five_clubs(conn, {t.team_id for t in targets}, {year_of(t.day) for t in targets})
+    targets = [t._replace(five=(t.team_id, year_of(t.day)) in five) for t in targets]
     since = {}
     for entries in windows.values():
         for p in {p for e in entries for p in e.came}:
@@ -396,18 +545,18 @@ def compute(conn, now):
             episode = injury_absence(injuries.get(p, ()), last_app.get((t.team_id, p)), t.day)
             if episode is not None:
                 absent[p] = episode
-        out.append((t, window, predict(window, t, main_role, absent, gone)))
+        out.append((t, window, predict(window, t, main_role, absent, gone, method)))
     return out
 
 
-def refresh(conn, now):
-    """Compute every side in scope, then replace the stored rows in one transaction (the rows of a match out of scope
-    go). Returns {"matches", "sides", "deleted"}: matches and sides written, sides held before and not written again.
-    Nothing but agg.match_probable_lineups and agg.match_probable_lineup_players is written."""
-    sides = compute(conn, now)
+def refresh(conn, now, method=METHOD):
+    """Compute every side in scope by `method`, then replace the stored rows in one transaction (the rows of a match out
+    of scope go). Returns {"matches", "sides", "deleted"}: matches and sides written, sides held before and not written
+    again. Nothing but agg.match_probable_lineups and agg.match_probable_lineup_players is written."""
+    sides = compute(conn, now, method)
     side_rows, player_rows = [], []
     for t, window, result in sides:
-        side_rows.append((t.match_id, t.season_id, t.team_id, t.side, METHOD, now, len(window), window[0].day, window[-1].day,
+        side_rows.append((t.match_id, t.season_id, t.team_id, t.side, method, now, len(window), window[0].day, window[-1].day,
                           result["formation"]))
         shirt = {}
         for e in window:
