@@ -150,7 +150,8 @@ function Panel({ match, panel, goals, width, phone, labels, at, onPick, onLeave,
   );
 }
 
-export default function MatchMomentum({ match, points, events }) {
+/** `bare`: the chart without its own card (a view of the Résumé's « Le match minute par minute »). */
+export default function MatchMomentum({ match, points, events, bare = false }) {
   const data = momentumPanels(points, events, { homeId: match.home.id });
   const [ref, measured] = useBoxWidth(900);
   const [at, setAt] = useState(null);
@@ -195,8 +196,9 @@ export default function MatchMomentum({ match, points, events }) {
     setAt(null);
     bubble.hide();
   };
+  const Frame = bare ? React.Fragment : Card;
   return (
-    <Card title="Qui a dominé, minute par minute">
+    <Frame {...(bare ? {} : { title: "Qui a dominé, minute par minute" })}>
       <div ref={ref} data-chart="momentum" className={`${s.chart} ${phone ? s.stacked : ""}`.trim()}>
         {panels.map((panel, i) => (
           <Panel
@@ -215,6 +217,6 @@ export default function MatchMomentum({ match, points, events }) {
         ))}
       </div>
       {bubble.bubble}
-    </Card>
+    </Frame>
   );
 }

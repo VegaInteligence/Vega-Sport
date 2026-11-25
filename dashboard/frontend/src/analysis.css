@@ -1391,6 +1391,65 @@ select optgroup {
 .match-overview-wide {
   grid-column: 1 / -1;
 }
+/* The Résumé (issue #221): the shot map's list under a fold, the best grades in one column
+   beside it, the line-ups' board under the pitch. */
+.match-shots-card .chart-figure svg {
+  max-height: 380px;
+}
+.match-shot-fold {
+  margin-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.match-shot-fold-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 40px;
+  padding: 0;
+  color: var(--ink);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+.match-shot-fold-toggle:hover {
+  color: var(--ink-strong);
+}
+.match-shot-fold-toggle .icon {
+  transition: transform 0.15s ease;
+}
+.match-shot-fold-toggle .icon.is-open {
+  transform: rotate(180deg);
+}
+.match-shot-fold .match-shot-list {
+  max-height: 420px;
+}
+.match-shot-list li.is-goal strong {
+  font-weight: 600;
+}
+.match-leaders-list .match-player-row:last-child {
+  border-bottom: 0;
+}
+/* On a phone the views' choice takes the card's width, each label whole. */
+@media (max-width: 640px) {
+  .match-flow-card .card-actions,
+  .match-flow-card .segmented-control {
+    width: 100%;
+  }
+  .match-flow-card .segmented-control {
+    display: flex;
+  }
+  .match-flow-card .segmented-control button {
+    flex: 1 1 auto;
+    padding: 4px 6px;
+    white-space: normal;
+    line-height: 1.2;
+  }
+}
+.match-lineups-view {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
 /* Two cards side by side end together: the shorter one (the match's figures beside the xG
    chart, the season's markers beside the form, the goals beside the best grades) spreads
    its rows over the row's height instead of leaving it empty under it. */

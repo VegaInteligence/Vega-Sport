@@ -50,8 +50,9 @@ export function spreadChips(centres, widths, lo, hi) {
  * chip above the plot (the score it made, joined to its minute), and listed under the chart with
  * what it changed for the side that scored. The read-out beside it follows the pointer, else
  * gives the present or final state. `live`: the match's live state (hooks/useLiveMatch.js),
- * drawn from while the base has not read the match yet. */
-export default function MatchWinProbability({ match, live: feed = null }) {
+ * drawn from while the base has not read the match yet. `bare`: the chart without its own card (a view
+ * of the Résumé's « Le match minute par minute »). */
+export default function MatchWinProbability({ match, live: feed = null, bare = false }) {
   const chart = probabilityLines(withLive(useMatchWinProbability(match?.id), feed, match));
   const [ref, width] = useBoxWidth(900);
   const [at, setAt] = useState(null);
@@ -91,8 +92,10 @@ export default function MatchWinProbability({ match, live: feed = null }) {
   const lefts = spreadChips(goals.map((goal) => x(goal.minute)), widths, 0, width);
   const CHIP_TOP = 4,
     CHIP_H = 16;
+  const Frame = bare ? React.Fragment : Card;
+  const frame = bare ? {} : { title: "Probabilité de victoire", className: "match-overview-wide" };
   return (
-    <Card title="Probabilité de victoire" className="match-overview-wide">
+    <Frame {...frame}>
       <figure className={`chart-figure ${s.winFigure}`}>
         <div className={s.winBody}>
           <div ref={ref} className={s.winPlot}>
@@ -213,6 +216,6 @@ export default function MatchWinProbability({ match, live: feed = null }) {
           le score, l’heure et les expulsions, pas le jeu lui-même.
         </figcaption>
       </figure>
-    </Card>
+    </Frame>
   );
 }

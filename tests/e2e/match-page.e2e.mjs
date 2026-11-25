@@ -23,14 +23,14 @@
 //  D1 On the match's own page the dialog has « Fiche joueur » and no « Voir le match ».
 //  D2 A player with shots (per the API) gets a « Tirs » block with the API's shot count.
 //  D3 A player without shots gets no « Tirs » block.
-//  D4 A row click in the Joueurs tab opens the dialog with that row's player.
+//  D4 A row click in the players' board (« Compositions », the former « Joueurs » address) opens the dialog with that row's player.
 //  D5 Enter on a pass-network node opens the dialog with that node's player.
 //  T1 Hovering a shot on the shot map shows a role=tooltip with the shooter and an xG with a comma.
 //  T2 Escape hides that tooltip.
-//  T3 Same hover on « xG cumulés ».
+//  T3 Same hover on « xG cumulés » (the Résumé's « Le match minute par minute », issue #221).
 //  T4 Escape hides that tooltip.
 //  T5 Clicking a shot still opens the dialog of its shooter.
-//  A1 The pass network is the second block of the Analyses tab (the first when there is no momentum).
+//  A1 The pass network is the first block of the Analyses tab (the momentum moved to the Résumé, issue #221).
 //  A2 Focusing a network link shows a bubble whose two direction counts add up to its total.
 //  V1 In play: « Direct » is the first tab, selected, with no view in the address.
 //  V2 In play: the status reads « En direct · <minute>′ », the score is the feed's.
@@ -44,7 +44,7 @@
 //  V10 Shoot-out: « Tirs au but h–a » under the score and one mark per kick.
 //  V13 Shoot-out: the win-probability chart runs to the 120th minute (a « 120′ » tick, the extra-time
 //      lines) and its read-out ends on « Tirs au but 100 % », the kicks not being counted as goals.
-//  V11 Feed disabled (enabled:false): no « Direct » tab, the usual default view (overview).
+//  V11 Feed disabled (enabled:false): no « Direct » tab, the usual default view (« Résumé »).
 //  V12 Score family core: no « Direct » tab.
 //  F1 A finished match that went to extra time, on its usual page (feed off, the read API's answer
 //     mocked: a goal at the 98th): the overview's chart runs to the 120th (« 120′ » tick, the two
@@ -52,7 +52,7 @@
 //     « Après prolongation » stands under the score.
 //  F2 The same after a shoot-out (0–0, 4–3 on penalties): « Tirs au but 4–3 » under the score, the
 //     read-out ends on « Tirs au but 100 % » with « t.a.b. 4–3 ».
-//  F3 On the F1 page, « Occasions au fil du match » (svg.xg-timeline) runs to the 120th as the
+//  F3 On the F1 page, « xG cumulés » (svg.xg-timeline) runs to the 120th as the
 //     win-probability chart does: the same minute ticks (every 15 to « 120′ »), two extra-time lines,
 //     at the 90th and the 105th (on those ticks), and each side's line drawn to the 120th even when
 //     its last shot is earlier (#68, Argentina – France m_3Zw3cP stopped at the 90th).
@@ -563,7 +563,15 @@ async function section(name, fn) {
 }
 /** The overview's « xG cumulés » chart as minutes: its ticks, its extra-time lines and where each side's line ends,
  * each read from its x through the scale of the first and last ticks. */
+/** The Résumé's « Le match minute par minute » on « xG cumulés »: its choice when it offers several views. */
+async function showXg(page) {
+  const choice = page.locator(".match-flow-card .segmented-control button", { hasText: "xG cumulés" });
+  await page.locator(".match-flow-card").first().waitFor({ timeout: 90000 }).catch(() => {});
+  if (await choice.count()) await choice.first().click();
+}
+
 async function xgSpanOf(page) {
+  await showXg(page);
   const svg = page.locator("svg.xg-timeline").first();
   await svg.waitFor({ timeout: 90000 });
   await page.waitForTimeout(500);
@@ -756,7 +764,7 @@ await section("D", async () => {
   let page = await open(desktop, { view: "players" });
   const row = page.locator(".match-view-panel table tbody tr").first();
   await row.waitFor({ timeout: 90000 }).catch(() => {});
-  if (!(await row.count())) skip("D4 a Joueurs row opens its player", "a player row", "the Joueurs tab has no table for this match");
+  if (!(await row.count())) skip("D4 a Joueurs row opens its player", "a player row", "the players' board has no table for this match");
   else {
     const name = ((await row.locator("th").textContent()) || "").trim();
     await row.locator("td").last().click();
@@ -791,12 +799,11 @@ await section("T", async () => {
   const map = page.locator('svg[aria-label^="Carte des tirs"]');
   await map.locator("circle.shot-point").first().waitFor({ timeout: 90000 });
   await shotTooltip(page, map, "T1 shot map: tooltip with shooter and xG", "T2 shot map: Escape hides it", "desktop-shotmap-tooltip");
-  await page.getByRole("button", { name: "xG cumulés", exact: true }).click();
+  await showXg(page);
   const timeline = page.locator("svg.xg-timeline");
   await timeline.locator("circle.shot-point").first().waitFor({ timeout: 30000 });
   await page.waitForTimeout(300);
   await shotTooltip(page, timeline, "T3 xG cumulés: tooltip with shooter and xG", "T4 xG cumulés: Escape hides it", "desktop-xg-tooltip");
-  await page.getByRole("button", { name: "Carte des tirs", exact: true }).click();
   await map.locator("circle.shot-point").first().waitFor({ timeout: 30000 });
   const point = await topmostShot(map);
   const shooterName = ((await point?.getAttribute("aria-label")) || "").split(" · ")[0];
@@ -827,11 +834,11 @@ await section("A", async () => {
   const net = page.locator('svg[aria-label^="Réseau de passes"]').first();
   await net.waitFor({ timeout: 90000 });
   await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
-  const expectedIndex = momentum?.points?.length ? 1 : 0;
+  const expectedIndex = 0;
   const blocks = await page.locator(".match-view-panel > div").first().evaluate((stack) =>
     [...stack.children].map((c) => (c.querySelector(".card-title")?.textContent || c.className || "").trim().slice(0, 40)));
   const index = blocks.findIndex((t) => /Réseaux de passes/.test(t));
-  check("A1 the pass network is the second block", { index: expectedIndex, momentumInApi: Boolean(momentum?.points?.length) }, { index, blocks }, index === expectedIndex);
+  check("A1 the pass network is the first block", { index: expectedIndex, momentumInApi: Boolean(momentum?.points?.length) }, { index, blocks }, index === expectedIndex);
   const link = page.locator('line[tabindex="0"][aria-label*=" vers "]').first();
   const tip = page.locator('[role="tooltip"]');
   // Observed, not checked: a focus that has to scroll the page to reach the link.
@@ -945,8 +952,8 @@ await section("V", async () => {
     await p.waitForTimeout(2500);
     const names = (await tabs(p).allTextContents()).map((t) => t.trim());
     const selected = ((await p.locator('[role="tab"][aria-selected="true"]').textContent()) || "").trim();
-    check(cid, { direct: false, selected: "Vue d’ensemble", liveView: 0 }, { tabs: names, selected, liveView: await p.locator("[data-live-view]").count() },
-      !names.includes("Direct") && selected === "Vue d’ensemble" && (await p.locator("[data-live-view]").count()) === 0);
+    check(cid, { direct: false, selected: "Résumé", liveView: 0 }, { tabs: names, selected, liveView: await p.locator("[data-live-view]").count() },
+      !names.includes("Direct") && selected === "Résumé" && (await p.locator("[data-live-view]").count()) === 0);
     await shot(p, name);
     await p.close();
   }
@@ -981,11 +988,12 @@ await section("F", async () => {
   await page.locator('[data-chart="win-probability"]').first().scrollIntoViewIfNeeded().catch(() => {});
   await shot(page, "desktop-finished-extra-time");
   if (apiShots.length) {
-    const xg = await xgSpanOf(page);
+    // The win-probability chart's ticks first: « xG cumulés » takes its place in the same card.
     const winTicks = await page.locator('[data-chart="win-probability"] text').evaluateAll((ts) =>
       ts.map((t) => t.textContent.trim()).filter((t) => /^(\d+′|MT)$/.test(t)).map((t) => (t === "MT" ? 45 : parseInt(t, 10))));
+    const xg = await xgSpanOf(page);
     const want = [0, 15, 30, 45, 60, 75, 90, 105, 120];
-    check("F3 finished after extra time: « Occasions au fil du match » runs to the 120th, marks at the 90th and the 105th, as the win-probability chart",
+    check("F3 finished after extra time: « xG cumulés » runs to the 120th, marks at the 90th and the 105th, as the win-probability chart",
       { ticks: want, winTicks: want, extraAt: [90, 105], linesEndAt: 120 }, { ...xg, winTicks },
       JSON.stringify(xg.ticks) === JSON.stringify(want) && JSON.stringify(winTicks) === JSON.stringify(want)
         && JSON.stringify(xg.extraAt) === "[90,105]" && xg.linesEndAt.length > 0 && xg.linesEndAt.every((m) => m === 120));
@@ -997,7 +1005,7 @@ await section("F", async () => {
   if (apiShots.length) {
     page = await open(desktop, {}, { past: { ...forecast, status: "finished" } });
     const xg = await xgSpanOf(page);
-    check("F4 finished in 90 minutes: « Occasions au fil du match » ends at the 90th, no extra-time line",
+    check("F4 finished in 90 minutes: « xG cumulés » ends at the 90th, no extra-time line",
       { lastTick: 90, extraAt: [] }, xg, xg.ticks.at(-1) === 90 && xg.extraAt.length === 0);
     await page.close();
   } else skip("F4", "the xG chart to the 90th", "the API has no shot for this match");

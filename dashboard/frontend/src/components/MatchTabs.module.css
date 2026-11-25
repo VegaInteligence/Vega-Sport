@@ -932,20 +932,6 @@
   height: 100%;
   border-radius: 0;
 }
-.halves {
-  width: 100%;
-  min-width: 0 !important;
-}
-.halves th,
-.halves td {
-  padding: 7px 6px;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-.halves tbody th {
-  text-align: left;
-}
 .valueRow {
   display: grid;
   grid-template-columns: 32px minmax(0, 1fr) minmax(90px, 180px) 48px;
