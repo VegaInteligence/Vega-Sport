@@ -230,9 +230,12 @@ export function PlayerStats({
 }
 export function normalizeShots(payload) {
   return (payload.periods || [])
-    .flatMap((p) => p.shots || [])
+    .flatMap((p) => (p.shots || []).map((s) => ({ ...s, period: p.period ?? null })))
     .map((s) => ({
       id: s.id,
+      period: s.period,
+      goalY: s.goal_crossed_y,
+      goalZ: s.goal_crossed_z,
       playerId: s.player?.id,
       playerName: s.player?.name,
       teamId: s.team_id,

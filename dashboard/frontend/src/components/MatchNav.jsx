@@ -1,8 +1,10 @@
 "use client";
-/* The match page's way across its competition: the previous and next matches in kick-off
- * order (into the neighbouring round at either end) and a picker of every round's matches,
- * with a club search over the whole season. Nothing is drawn when the season has no list. */
-import React, { useEffect, useMemo, useRef, useState } from "react";
+/* The match page's head (FAILURE_MODES § 63.6, direction C « Le fil des matchs » chosen by hugo): the way back, the
+ * competition's button (its round picker, every round's matches with a club search over the whole season), the
+ * page's actions, then the thread of matches: the previous and next matches in kick-off order (into the
+ * neighbouring round at either end) around a strip of the six before and six after. Without the season's list the
+ * button is plain text and there is no thread. */
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useFootball } from "../hooks/FootballContext.jsx";
@@ -62,27 +64,49 @@ function useMatchHref(league, season) {
 }
 
 function Step({ match, href, direction }) {
-  if (!match) return <span className={s.step} aria-hidden="true" />;
-  const label = `${direction === "previous" ? "Match précédent" : "Match suivant"} : ${describe(match)}`;
-  return (
-    <Link
-      className={`${s.step} ${direction === "next" ? s.stepNext : ""}`.trim()}
-      href={href(match)}
-      aria-label={label}
-      title={label}
-      prefetch={false}
-    >
-      <Icon name={direction === "previous" ? "back" : "arrow"} />
-      <span className={s.stepTeams}>
-        <ClubCrest club={match.home} size={20} />
-        <span className={s.stepName}>{match.home.name}</span>
-        <strong className={played(match) ? s.score : s.kickoff}>
-          {played(match) ? result(match) : `${day(match)} ${result(match)}`}
-        </strong>
-        <span className={s.stepName}>{match.away.name}</span>
-        <ClubCrest club={match.away} size={20} />
+  const previous = direction === "previous";
+  if (!match)
+    return (
+      <span className={`${s.step} ${s.stepOff}`} aria-hidden="true">
+        <Icon name={previous ? "back" : "arrow"} />
       </span>
+    );
+  const label = `${previous ? "Match précédent" : "Match suivant"} : ${describe(match)}`;
+  return (
+    <Link className={s.step} href={href(match)} aria-label={label} title={label} prefetch={false}>
+      <Icon name={previous ? "back" : "arrow"} />
     </Link>
+  );
+}
+
+/** A round's short name on a tile: « J14 » for a numbered round, else its label. */
+const roundTag = (group) => (/^\d+$/.test(group.name) ? `J${group.name}` : group.label);
+
+function Tile({ match, group, current, href }) {
+  const score = played(match);
+  return (
+    <li>
+      <Link
+        className={s.tile}
+        href={href(match)}
+        data-match-tile={match.id}
+        aria-current={current ? "page" : undefined}
+        aria-label={describe(match)}
+        prefetch={false}
+      >
+        <small className={s.tileHead}>
+          {roundTag(group)} · {day(match)}
+          {!score && instant(match) && match.timeUtc ? ` · ${result(match)}` : ""}
+        </small>
+        {[match.home, match.away].map((side, i) => (
+          <span key={i} className={s.tileSide}>
+            <ClubCrest club={side} size={16} />
+            <span className={s.tileName}>{side.name}</span>
+            {score && <strong className={s.score}>{number(side.score)}</strong>}
+          </span>
+        ))}
+      </Link>
+    </li>
   );
 }
 
@@ -264,7 +288,38 @@ function Picker({ title, groups, current, currentGroup, href, onClose }) {
   );
 }
 
-export default function MatchNav({ match, competition }) {
+/** The tiles around the current match: up to `around` before and after, in the season's order. */
+function windowOf(groups, id, around = 6) {
+  const order = groups.flatMap((group) => group.matches.map((match) => ({ match, group })));
+  const at = order.findIndex((item) => item.match.id === id);
+  return at < 0 ? [] : order.slice(Math.max(0, at - around), at + around + 1);
+}
+
+function Thread({ groups, position, current, href }) {
+  const strip = useRef(null);
+  const tiles = useMemo(() => windowOf(groups, current), [groups, current]);
+  // The current tile in the middle of the strip, without moving the page.
+  useLayoutEffect(() => {
+    const box = strip.current, tile = box?.querySelector('[aria-current="page"]');
+    if (!box || !tile) return;
+    const li = tile.parentElement;
+    box.scrollLeft = li.offsetLeft - (box.clientWidth - li.offsetWidth) / 2;
+  }, [current, tiles]);
+  return (
+    <nav className={s.thread} aria-label="Matchs de la compétition">
+      <Step match={position.previous} href={href} direction="previous" />
+      <ol ref={strip} className={s.strip} data-match-strip="">
+        {tiles.map(({ match, group }) => (
+          <Tile key={match.id} match={match} group={group} current={match.id === current} href={href} />
+        ))}
+      </ol>
+      <Step match={position.next} href={href} direction="next" />
+    </nav>
+  );
+}
+
+/** The head of the match page: `back` (the way back), `logo` (the competition's), `actions` (report, bookmark). */
+export default function MatchHead({ match, competition, back, logo, actions }) {
   const f = useFootball();
   const league = match.leagueId || competition?.id || "";
   const season = match.season || "";
@@ -274,35 +329,52 @@ export default function MatchNav({ match, competition }) {
     Boolean(league && season && f.statusKnown),
   );
   const groups = useMemo(() => navRounds(resource.value), [resource.value]);
-  const position = useMemo(
-    () => navPosition(groups, match.id),
-    [groups, match.id],
-  );
+  const position = useMemo(() => navPosition(groups, match.id), [groups, match.id]);
   const href = useMatchHref(league, season);
   const [open, setOpen] = useState(false);
   useEffect(() => setOpen(false), [match.id]);
-  if (!league || !season) return null;
-  if (resource.loading && !resource.value)
-    return <div className={s.bar} data-loading aria-hidden="true" />;
-  if (!position) return null;
   const name = match.league || competition?.name || "Compétition";
+  const label = (
+    <>
+      {logo}
+      <span className={s.centerName}>{name}</span>
+      {season && <span className={s.centerSeason}>{season}</span>}
+      {position && (
+        <>
+          <span className={s.centerDot} aria-hidden="true">·</span>
+          <span>{position.group.label}</span>
+          <Icon name="chevron" />
+        </>
+      )}
+    </>
+  );
+  const loading = Boolean(league && season) && resource.loading && !resource.value;
   return (
-    <nav className={s.bar} aria-label="Matchs de la compétition">
-      <Step match={position.previous} href={href} direction="previous" />
-      <button
-        type="button"
-        className={s.center}
-        onClick={() => setOpen(true)}
-        aria-haspopup="dialog"
-        aria-expanded={open}
-      >
-        <span className={s.centerName}>{name}</span>
-        <span className={s.centerDot} aria-hidden="true">·</span>
-        <span>{position.group.label}</span>
-        <Icon name="chevron" />
-      </button>
-      <Step match={position.next} href={href} direction="next" />
-      {open && (
+    <div className="match-head">
+      <div className={s.top}>
+        <div className={s.crumbs}>
+          {back}
+          <span className={s.slash} aria-hidden="true">/</span>
+          {position ? (
+            <button
+              type="button"
+              className={s.center}
+              data-match-picker=""
+              onClick={() => setOpen(true)}
+              aria-haspopup="dialog"
+              aria-expanded={open}
+            >
+              {label}
+            </button>
+          ) : (
+            <span className={`${s.center} ${s.centerStatic}`}>{label}</span>
+          )}
+        </div>
+        <div className={s.actions}>{actions}</div>
+      </div>
+      {loading && <div className={s.threadLoading} data-loading aria-hidden="true" />}
+      {position && <Thread groups={groups} position={position} current={match.id} href={href} />}
+      {open && position && (
         <Picker
           title={`${name} · ${season}`}
           groups={groups}
@@ -312,6 +384,6 @@ export default function MatchNav({ match, competition }) {
           onClose={() => setOpen(false)}
         />
       )}
-    </nav>
+    </div>
   );
 }
