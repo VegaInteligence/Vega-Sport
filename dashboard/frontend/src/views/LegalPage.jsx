@@ -1,4 +1,4 @@
-// The legal pages (/confidentialite, /conditions-utilisation): a night banner with the title, « En bref », the
+// The legal pages (/confidentialite, /conditions-utilisation, /conditions-generales-de-vente): a night banner with the title, « En bref », the
 // Sommaire and the numbered sections. The text lives in src/content/legal-*.jsx; this view only lays it out.
 // A server component: the whole page is in the server's HTML; only the Sommaire's marking runs in the browser.
 import Link from "next/link";
@@ -7,7 +7,10 @@ import AccountArt from "../components/AccountArt.jsx";
 import LegalShell from "../components/LegalShell.jsx";
 import LegalToc from "../components/LegalToc.jsx";
 import { LegalAsterisk, frenchText, typeset } from "../components/Legal.jsx";
-import { missingLegalFields } from "../content/legal-identity.js";
+import {
+  missingLegalFields,
+  missingSaleFields,
+} from "../content/legal-identity.js";
 
 const SITE = "https://vegasport.vercel.app";
 const dateLabel = (iso) =>
@@ -41,7 +44,10 @@ export default function LegalPage({ page: source }) {
     ...source,
     title: frenchText(source.title),
     intro: typeset(source.intro),
-    sibling: { ...source.sibling, title: frenchText(source.sibling.title) },
+    siblings: source.siblings.map((sibling) => ({
+      ...sibling,
+      title: frenchText(sibling.title),
+    })),
     facts: (source.facts || []).map((fact) => ({
       ...fact,
       label: frenchText(fact.label),
@@ -63,7 +69,10 @@ export default function LegalPage({ page: source }) {
     // The Sommaire takes the short form of a long title.
     title: section.short || section.title,
   }));
-  const provisional = missingLegalFields().length > 0;
+  // The sales terms (`saleFields`) also wait for their own facts: SIRET, VAT, mediator, prices.
+  const provisional =
+    missingLegalFields().length > 0 ||
+    (source.saleFields && missingSaleFields().length > 0);
   return (
     <LegalShell path={page.path}>
       <article className="legal">
@@ -80,10 +89,16 @@ export default function LegalPage({ page: source }) {
                 Mise à jour le{" "}
                 <time dateTime={page.updated}>{dateLabel(page.updated)}</time>
               </span>
-              <Link className="legal-sibling" href={page.sibling.path}>
-                {page.sibling.title}
-                <ArrowRight size={15} strokeWidth={1.8} aria-hidden="true" />
-              </Link>
+              {page.siblings.map((sibling) => (
+                <Link
+                  key={sibling.path}
+                  className="legal-sibling"
+                  href={sibling.path}
+                >
+                  {sibling.title}
+                  <ArrowRight size={15} strokeWidth={1.8} aria-hidden="true" />
+                </Link>
+              ))}
             </p>
           </div>
         </header>

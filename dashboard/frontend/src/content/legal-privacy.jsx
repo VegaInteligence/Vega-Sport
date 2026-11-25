@@ -24,10 +24,14 @@ export const privacy = {
       traite, et comment vous pouvez agir.
     </>
   ),
-  sibling: {
-    path: "/conditions-utilisation/",
-    title: "Conditions d'utilisation",
-  },
+  // The other legal pages, linked in the banner.
+  siblings: [
+    { path: "/conditions-utilisation/", title: "Conditions d'utilisation" },
+    {
+      path: "/conditions-generales-de-vente/",
+      title: "Conditions générales de vente",
+    },
+  ],
   // « En bref »: each fact points to the section it sums up.
   facts: [
     {

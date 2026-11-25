@@ -11,8 +11,15 @@ export const terms = {
   title: "Conditions d’utilisation",
   description:
     "Les conditions d'utilisation de Vega Sport : le service, le compte, la gratuité, les données, notes et prévisions, les sources, la propriété intellectuelle et la responsabilité.",
-  updated: "2026-11-24",
-  sibling: { path: "/confidentialite/", title: "Confidentialité" },
+  updated: "2026-11-25",
+  // The other legal pages, linked in the banner.
+  siblings: [
+    { path: "/confidentialite/", title: "Confidentialité" },
+    {
+      path: "/conditions-generales-de-vente/",
+      title: "Conditions générales de vente",
+    },
+  ],
   facts: [
     {
       icon: BadgeEuro,
@@ -114,8 +121,12 @@ export const terms = {
             gratuit, avec ou sans compte.
           </p>
           <p>
-            Si des offres payantes sont ouvertes plus tard, leurs conditions
-            particulières vous seront présentées avant tout paiement.
+            Quand des abonnements payants seront ouverts, ils seront régis par
+            les «{" "}
+            <Link href="/conditions-generales-de-vente">
+              Conditions générales de vente
+            </Link>{" "}
+            », présentées et acceptées avant tout paiement.
           </p>
         </>
       ),

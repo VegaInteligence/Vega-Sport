@@ -23,6 +23,7 @@ const ACCOUNT_ROUTES = new Set(["/connexion", "/compte"]);
 export const STATIC_PAGES = new Set([
   "/confidentialite",
   "/conditions-utilisation",
+  "/conditions-generales-de-vente",
 ]);
 
 /** Pages with their own readers must not download a season before mounting. */

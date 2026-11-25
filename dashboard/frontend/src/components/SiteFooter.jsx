@@ -30,6 +30,7 @@ const groups = [
     links: [
       ["Confidentialité", "/confidentialite/"],
       ["Conditions d’utilisation", "/conditions-utilisation/"],
+      ["Conditions générales de vente", "/conditions-generales-de-vente/"],
     ],
     // Reopens the consent banner (Consent.jsx): a button, styled as the links above it (consent.css).
     after: <ConsentSettingsLink />,
