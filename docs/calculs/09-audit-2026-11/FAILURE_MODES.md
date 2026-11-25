@@ -5274,6 +5274,21 @@ changes. Display only, as 61.1.
 61ae–61an: `backend/tests/test_probable_lineups.py`; 61ao: a draft outside the repository
 (`/mnt/project-files/composition-probable/probable-v3/parity/`).
 
+#### 61.4.3 Evidence (25 Nov 2026, branch `claude/probable-v3`, PR #225)
+
+- Tests: `test_probable_lineups` red 18 of 41 (3 failures, 15 errors), then green 41/41; `test_worker` 47/47; site
+  1 042/1 042 (local PostgreSQL 18; `/mnt/project-files/composition-probable/probable-v3/tests/`).
+- 61ao: `parity_v3.py` loads the study without its main() and compares, at each of its five-league sides, its L75 with
+  `predict(…, "probable-v3")` on its 30 elevens and its q and ql: world 1 488 sides, world 2 168, 0 mismatched (eleven,
+  slots, formation, share); the study's own v2 parity on the same module 973 + 341 cases, 0. Control (production's λ at
+  0.5): 66 + 3 mismatched, so the comparison sees a change. Neither world has a side without an assignment: the
+  fallback is covered by 61ai only.
+- Cost (`cost/bench_v3.py`, `bench_v2.py`'s synthetic base: 3 000 sides, all of the five leagues, 30 elevens each): a
+  run 21.5–22.2 s against 9.5–10.0 s for `probable-v2`; reads 10.9 s against 6.0 s (SHEETS 6.9 s against 2.9 s, WINDOWS
+  1.8 s against 0.9 s), the rest the labels and assignments. Production has far fewer five-league sides per run.
+- Not verified: production's step time (the worker logs `seconds=`), its share of fallbacks to v2, and the study's
+  section 5 (matches since 26 Nov 2026), to re-run monthly.
+
 ## 62. The match page in five tabs (issue #221; hugo, 25 Nov 2026: mock-up https://claude.ai/artifact/3KkomqcnEFUSvY71pf6eWY validated, « ok code et push ses changements »; written before the tests)
 
 Site only (`MatchDetail.jsx` and the components it draws); no API, worker or migration. Each block of the eight tabs
