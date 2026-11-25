@@ -171,9 +171,13 @@ class GradesOnArrivalTest(unittest.TestCase):
     def edition_sums(cls):
         return sorted(cls.db.execute("SELECT * FROM agg.player_grade_editions WHERE season_id=2026 AND competition_season_id=2").fetchall())
 
-    def version(self, mid):
-        row = self.one("SELECT version FROM ops.resource_versions WHERE resource_kind='match' AND resource_id=%s", mid)
+    def version(self, mid, kind="match"):
+        row = self.one("SELECT version FROM ops.resource_versions WHERE resource_kind=%s AND resource_id=%s", kind, mid)
         return row[0] if row else 0
+
+    def edition_version(self):
+        """M's edition: a player's, a club's or a season's read is validated by its editions' versions alone."""
+        return self.version(2, "competition_season")
 
     def arrival(self, mid):
         return self.one("SELECT stats_at, graded_at, run_id, players FROM agg.match_grade_arrivals WHERE season_id=2026 AND match_id=%s", mid)
@@ -276,10 +280,11 @@ class GradesOnArrivalTest(unittest.TestCase):
         self.step_now()
         grades, arrival, version = self.db.execute(
             "SELECT max(changed_at) FROM agg.player_match_grades WHERE match_id=%s", (self.M,)).fetchone(), self.arrival(self.M), self.version(self.M)
+        edition = self.edition_version()
         self.assertEqual(self.step_now(), {"matches": 0, "players": 0})
         self.assertEqual(self.db.execute("SELECT max(changed_at) FROM agg.player_match_grades WHERE match_id=%s", (self.M,)).fetchone(), grades)
         self.assertEqual(self.arrival(self.M), arrival)
-        self.assertEqual(self.version(self.M), version)
+        self.assertEqual((self.version(self.M), self.edition_version()), (version, edition))
 
     def test_68f_rows_that_change_again_are_graded_again(self):
         self.race(self.M)
@@ -367,10 +372,10 @@ class GradesOnArrivalTest(unittest.TestCase):
         self.race(self.M)
         with self.db.transaction():
             self.db.execute("DELETE FROM agg.player_grade_editions WHERE season_id=2026 AND competition_season_id=2")
-        version = self.version(self.M)
+        version, edition = self.version(self.M), self.edition_version()
         latest = self.one("SELECT max(updated_at) FROM core.player_match_stats WHERE season_id=2026 AND match_id=%s", self.M)[0]
         self.step_now()
-        self.assertEqual(self.version(self.M), version + 1)
+        self.assertEqual((self.version(self.M), self.edition_version()), (version + 1, edition + 1))
         stats_at, graded_at, run, players = self.arrival(self.M)
         self.assertEqual((stats_at, run, players), (latest, self.year_run[0], len(self.graded)))
         # The match's players' sums, by the run's formula (the other players' rows were deleted above and stay so).

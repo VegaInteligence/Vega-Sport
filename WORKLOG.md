@@ -6,7 +6,8 @@
 - Choix : noter au plus tôt (à chaque tour de planification, toutes les 60 s) plutôt qu'à 10 min fixes, avec les références du dernier passage publié de l'année ; le passage complet garde sa cadence et corrige (`first_z` garde la note rapide).
 - Code : `vega/arrival_grades.py` (étape), `power.py` (références de contribution gardées par chaque passage, `restore_zeros` et `assign_roles` acceptent l'édition et les minutes de l'année, le passage ne supprime plus une note écrite après son début), `worker.match_grades`, migration 178 (`agg.player_contribution_refs`, `agg.match_grade_arrivals`).
 - Tests écrits d'abord : `backend/tests/test_grades_on_arrival.py` (68a à 68l) et `test_worker` (68m), rouges puis verts ; chaque règle vérifiée par une mutation qui fait échouer son test. Preuves : `/mnt/project-files/notes-match-par-match/tests/`.
-- Reste : PR, accord de hugo pour fusionner et déployer ; après le Deploy, lire `agg.match_grade_arrivals` et l'écart `first_z` / `z` au bout d'une semaine.
+- Relecture de Codex sur #238 (P2, vérifiée) : une lecture de joueur, de club ou de saison n'est validée que par les versions de ses éditions (`actorVersion`, `scopeVersion`), ni par la publication ni par le match ; l'étape avance donc aussi la version de l'édition des matchs notés, dans l'ordre de la collecte. 68e et 68j le vérifient (rouge puis vert).
+- Reste : PR #238 (accord de hugo pour fusionner et déployer, carte du 25 nov. à 22 h 24) ; après le Deploy, lire `agg.match_grade_arrivals` et l'écart `first_z` / `z` au bout d'une semaine.
 
 ## PSG – Roma en direct : photos des compositions et alerte « incohérentes » — FAILURE_MODES § 67 (25 novembre 2026, branche `claude/compo-photos-alerte-stats` depuis main 6e48b6c)
 

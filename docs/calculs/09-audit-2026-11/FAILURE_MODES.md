@@ -5703,7 +5703,12 @@ kept nowhere; `agg.team_elo` of a new match exists only after the next Elo pass.
   - one row of `agg.match_grade_arrivals` (178: the match, its rows' latest `updated_at`, when it was graded, the run,
     the players graded); rows of matches kicked off more than 7 days ago are deleted;
   - the match's resource version advanced (`ops.resource_versions`, kind `match`): the summary's ETag changes with the
-    next publication.
+    next publication;
+  - its edition's resource version advanced (kind `competition_season`, Codex's review of #238): a player's, a club's
+    or a season's read (`actorVersion`, `scopeVersion` in the read API) is validated by its editions' versions alone,
+    not by the publication or the match, so a read cached between the rows' arrival and the step would keep answering
+    without the grades until another change of the edition. The versions are advanced after the grades, in the order
+    of the collection (`store._flush_versions`: kind, then id).
   Nothing else: no ranking, no `agg.player_power_matches`, no level, no award race, no exclusion.
 - **The run.** Same cadence. It keeps its contribution references with its ranking (same transaction). Its grades
   replace the step's when they moved: `first_z` keeps the step's, so the drift between them can be read. Its delete of
@@ -5729,7 +5734,7 @@ Tests: `backend/tests/test_grades_on_arrival.py` (disposable local base `vega_v2
 | 68g | A run published after the step's grade, which did not read the match | its delete spares the step's grades; the step's next pass reads the match again and changes nothing |
 | 68h | A run that started after the step's grade and did not compute it (the row is gone from the year) | that grade deleted, as before |
 | 68i | A row of a third team; a row without any role | not graded; the match's other rows are |
-| 68j | What the step writes | the grades, the editions' sums equal to the run's formula, one arrival row, the match's resource version + 1; `agg.player_power`, `agg.player_power_matches`, `agg.player_contribution_refs` unchanged |
+| 68j | What the step writes | the grades, the editions' sums equal to the run's formula, one arrival row, the match's and its edition's resource versions + 1; `agg.player_power`, `agg.player_power_matches`, `agg.player_contribution_refs` unchanged |
 | 68k | The players' grade status (`api.player_grade_status`) before and after the step | `pending`, then `graded` or `below_display_threshold` |
 | 68l | The run keeps its contribution references | one row per role and indicator the run fitted, of its run; the expectations rebuilt from them equal the run's (to 1e-9) |
 | 68m | The worker: a planning round; the step failing | the step called with the worker's clock; the failure logged with its code, the job taken |

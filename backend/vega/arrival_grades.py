@@ -201,9 +201,16 @@ def refresh(conn, now, *, window=WINDOW, limit=LIMIT):
             """INSERT INTO agg.match_grade_arrivals(season_id, match_id, stats_at, graded_at, run_id, players) VALUES (%s, %s, %s, now(), %s, %s)
                ON CONFLICT (season_id, match_id) DO UPDATE SET stats_at = EXCLUDED.stats_at, graded_at = now(), run_id = EXCLUDED.run_id,
                  players = EXCLUDED.players""", arrivals)
-        for _, match in sorted(moved):
-            # The summary's ETag reads the publication: the match's version moves it at the next one.
-            conn.execute("""INSERT INTO ops.resource_versions(resource_kind, resource_id) VALUES ('match', %s)
+        # The summary's ETag reads the publication: the match's version moves it at the next one. A player's, a club's
+        # or a season's read is validated by its editions' versions alone (actorVersion, scopeVersion): the edition's
+        # moves them now. In the collection's order (store._flush_versions: kind, then id).
+        editions = {r[0] for r in conn.execute(
+            """SELECT DISTINCT m.competition_season_id FROM core.matches m
+               WHERE (m.season_id, m.id) IN (SELECT * FROM unnest(%s::smallint[], %s::integer[]))""",
+            ([s for s, _ in moved], [m for _, m in moved])).fetchall()} if moved else set()
+        versions = sorted({("competition_season", e) for e in editions} | {("match", m) for _, m in moved})
+        for kind, ident in versions:
+            conn.execute("""INSERT INTO ops.resource_versions(resource_kind, resource_id) VALUES (%s, %s)
                             ON CONFLICT (resource_kind, resource_id) DO UPDATE SET version = ops.resource_versions.version + 1, updated_at = now()""",
-                         (match,))
+                         (kind, ident))
         return {"matches": matches, "players": len(grades)}
