@@ -122,11 +122,11 @@ button:disabled {
   justify-content: center;
   flex-shrink: 0;
 }
-/* The asterisk alone, at its own proportions, at every width (tests/e2e/brand.e2e.mjs, B1). */
+/* Size both axes so Safari cannot use the SVG's intrinsic width for the flex link. */
 .brand-mark {
   display: block;
+  width: 25px;
   height: 28px;
-  aspect-ratio: 285 / 316;
 }
 /* The menus keep their room. The actions take what is left, set against the right edge,
    and of them only the search gives way: its field narrows, then, where a field no longer

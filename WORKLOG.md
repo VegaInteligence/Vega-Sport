@@ -1,6 +1,6 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
-## « Compositions » tab, « Composition probable » — FAILURE_MODES § 61 (25 November 2026, branch `claude/composition-probable` from main 407c4c1, local, not pushed)
+## « Compositions » tab, « Composition probable » — FAILURE_MODES § 61 (25 November 2026, branch `claude/composition-probable` from main 407c4c1, PR #215)
 
 - hugo validated the method (the study's P5, label `probable-v1`) and the mock-up (`/mnt/project-files/composition-probable/maquette/`); the mock-up's commit is the branch's first, reworded.
 - Failure modes first: § 61 (61a–61s), then the tests (red evidence `/mnt/project-files/composition-probable/implementation/evidence/red_*.txt`), then the code.
@@ -11,6 +11,12 @@
 - Cost, local synthetic base (3 000 sides, 1.62 M line-up players): 10–11 s a run (`implementation/evidence/cost/`); worker → read API chain checked on it.
 - Review of #215 (§61t): the route reads the sides and their players in one statement (one snapshot), not two reads that could straddle a worker run; test red (2 statements) then green.
 - Not verified: production's share of `confirmed` true line-ups and its cost. Needs a Deploy: migration 176, worker, read API, site.
+
+## Alignement de la navbar Safari / Chromium / Firefox — 25 novembre 2026
+
+- L’astérisque de 25 × 28 px reste aligné à gauche. Le lien du logo qui prenait 285 px dans Safari mesure 40 px sur ordinateur et 44 px sur téléphone. Direction approuvée dans [VI-61](https://linear.app/vegainteligence/issue/VI-61). Correctif livré sur `main` dans `a8d666a1`.
+- Safari macOS vérifié en clair et sombre, Safari iOS sur simulateur iPhone 17. Vérification ponctuelle E2E : 96/96 sous Chromium, Firefox et WebKit. Suite site : 1 026/1 026 et compilation réussie. Suite d’en-tête historique : mêmes trois échecs avant et après le correctif (34/37).
+- À la demande de Hugo, retirer le test ponctuel et nettoyer la branche, le worktree et le serveur de vérification après livraison. Preuves et reproduction : `/Users/lemonnierhugo/.codex/visualizations/2026/11/25/01a2125d-5f78-7cf2-89b2-f12e7a7b5244/navbar-verification.md`.
 
 ## Fiche joueur d'un match : zéros affichés — 25 novembre 2026
 
