@@ -1,5 +1,20 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Fiche « Performance du joueur » et publication périmée — 25 novembre 2026
+
+- Diagnostic, puis correction validée par Hugo sur `codex/performance-refresh` (base `eaf5ca01`). Aucun chevauchement actif identifié dans Linear VI. La carte de Mbappé (Real Madrid–PSV) imposait la publication de l’accueil à une lecture individuelle. Un décalage produisait le 409 « Rechargez la première page ».
+- Les ouvertures ordinaires demandent la performance courante du joueur pour le match, la saison et les compétitions sélectionnés. Les liens explicitement versionnés gardent la publication de leur manifeste. Le cache distingue les deux modes et suit les nouvelles publications.
+- Vérifié localement le 25 novembre : le même accueil périmé renvoyait 409 avant et ouvre la fiche en un seul appel 200 après, sur ordinateur et mobile. Les 4 parcours de rejeu passent (dont le lien versionné et la 404), ainsi que les 2 parcours du build local contre l’API publique, 1 030 tests du site et le build. [Preuves et commandes](/Users/lemonnierhugo/Agents/scratch/vega-performance-refresh/output/playwright/verification/README.md). Correctif local, prêt à publier.
+
+## Listes paginées et publication périmée (409) — 25 novembre 2026
+
+- Suite de la fiche ci-dessus, sur la même branche et la PR #216. Hugo a retenu une reprise centrale côté site, sans changement d’API : le contrôle 409 de l’API reste (il empêche de mêler deux publications).
+- `services/compact-reads.js` : une lecture épinglée refusée est relue une fois sans l’épingle ; une lecture paginée repart une fois de sa première page. `services/match-pages.js` : une page N refusée relit la page 1 puis ses curseurs jusqu’à N, à la nouvelle publication ; `PaginatedMatches` prend ces curseurs sans message. Un second refus garde la dernière liste et propose « Actualiser ». `services/publication-change.js` fait relire le manifeste (`FootballContext`, au plus toutes les 10 s).
+- Archives : liste déjà relue une fois, inchangée ; un match d’archive périmé garde son retour à la liste, sans « La publication a changé ».
+- Tests d’abord (`tests/publication-changed.test.mjs`, 10 rouges puis verts) ; 3 tests de l’ancien contrat mis à jour. Site 1 040/1 040, build OK. Pas de Deploy backend.
+- Revue de la PR (25 nov.), deux défauts confirmés puis corrigés : (1) `PaginatedMatches` remontait la liste à chaque nouvelle publication du manifeste — la relecture du manifeste demandée par la reprise ramenait en page 1 ; la liste est maintenant clé par ses filtres, la page 1 suit la publication du site, une page suivante celle de ses curseurs. (2) Un lien versionné (`?v=`) : ses lectures épinglées étaient reprises sans l’épingle et étiquetées de la publication demandée ; `holdExplicitPublication` (publication-change.js) les exclut de la reprise (lecture simple et paginée), et la performance d’un lien versionné passe `recover: false`. F11 écrit d’abord (rouge, puis vert) ; site 1 041/1 041.
+- E2E navigateur `tests/e2e/publication-changed.e2e.mjs` (doublure `tests/e2e/support/publication-api.mjs`, G1 → G2 entre le chargement et le clic) : rouge 10/18 avant le correctif (1) (retour en page 1, liste conservée perdue), 18/18 après — /matchs page 2 sans message (1440 et 390), « Actualiser » sur refus persistant puis reprise, /joueurs page 2, fiche « Performance du joueur » de l’accueil sans `generation`. Preuves : /mnt/project-files/erreur-409/e2e/. Non vérifié en E2E : lien versionné `?v=` (unitaire F11 seulement), API publique réelle.
+
 ## Onglets d’un match avant le coup d’envoi — 25 novembre 2026
 
 - Objectif : ne déclencher aucune lecture de données de jeu pour un match à venir et éviter l’erreur générique dans ses onglets. Travail isolé sur `codex/match-before-kickoff`, base `c83c53ef`. Aucun chevauchement actif trouvé dans Linear VI après lecture de VI-21 et VI-28. VI-47 et VI-153 sont terminés.

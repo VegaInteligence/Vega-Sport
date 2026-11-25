@@ -6,6 +6,7 @@ import {
   readCompact,
   readCompactPages,
 } from "../services/compact-reads.js";
+import { PUBLICATION_UNAVAILABLE } from "../services/publication-change.js";
 
 /** Keep only the same scope's previous publication while its replacement loads. */
 export default function useCompactRead(
@@ -21,6 +22,9 @@ export default function useCompactRead(
 ) {
   const query = compactQuery(params),
     scope = `${kind}:${allPages}:${compactQuery({ ...params, generation: undefined })}`,
+    // The same list whatever its page: a page refused for its publication even after
+    // readCompact read it again keeps the list's last page on screen.
+    list = `${kind}:${allPages}:${compactQuery({ ...params, generation: undefined, page: undefined })}`,
     resource = useResource(
       `${allPages ? "compact-cohort" : "compact"}:${kind}:${query}:${clock}`,
       ({ signal }) =>
@@ -54,9 +58,15 @@ export default function useCompactRead(
     previous = useRef(null);
   useEffect(() => {
     if (enabled && resource.value)
-      previous.current = { scope, value: resource.value };
-  }, [enabled, resource.value, scope]);
-  if (enabled && !resource.value && previous.current?.scope === scope) {
+      previous.current = { scope, list, value: resource.value };
+  }, [enabled, resource.value, scope, list]);
+  const unsettled =
+    resource.error === PUBLICATION_UNAVAILABLE && previous.current?.list === list;
+  if (
+    enabled &&
+    !resource.value &&
+    (previous.current?.scope === scope || unsettled)
+  ) {
     return {
       ...resource,
       value: previous.current.value,

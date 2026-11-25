@@ -391,17 +391,17 @@ test("a competition overview reads two bounded pages and never drains their curs
     preview.matches.map(({ id }) => id),
     ["played", "upcoming"],
   );
-  await assert.rejects(
-    competitionFixturePreview(
-      { league: "l_000001", season, generation: "42" },
-      {
-        fetcher: async () =>
-          Response.json({
-            data: { matches: [] },
-            pagination: { generation: "43", nextCursor: null },
-          }),
-      },
-    ),
-    (error) => error.status === 409,
+  // Both first pages of a newer publication are shown; never a refusal (the owner,
+  // 25 November 2026; mixed publications: tests/publication-changed.test.mjs F9).
+  const newer = await competitionFixturePreview(
+    { league: "l_000001", season, generation: "42" },
+    {
+      fetcher: async () =>
+        Response.json({
+          data: { matches: [] },
+          pagination: { generation: "43", nextCursor: null },
+        }),
+    },
   );
+  assert.deepEqual(newer.matches, []);
 });
