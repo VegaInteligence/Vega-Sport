@@ -119,12 +119,7 @@ test("player data retains match observations but no provider profile source", as
     "../services/glossary.js": { explain: () => null },
     react: React,
     "./UI.jsx": {
-      AsyncState: ({ children }) =>
-        children({
-          endpoints: {
-            players: { data: [{ player: { id: "p_1" }, stats: [] }] },
-          },
-        }),
+      AsyncState: ({ children }) => children(),
       Empty: () => null,
       Segments: () => null,
     },
@@ -133,13 +128,19 @@ test("player data retains match observations but no provider profile source", as
       default: () => e("div", null, "Statistiques du joueur"),
       periodShort: String,
     },
-    "../services/resources.js": {
-      useResource: (key) => {
-        requested.push(key);
-        return { loading: false };
+    "../hooks/useMatchPlayerStats.js": {
+      __esModule: true,
+      default: (match) => {
+        requested.push([match.id, "players/display"]);
+        return { data: [{ player: { id: "p_1" }, stats: [{ key: "top_stats", stats: {} }] }] };
       },
-      json: () => {},
-      download: () => {},
+    },
+    "../hooks/useMatchSection.js": {
+      __esModule: true,
+      default: (match, section) => {
+        requested.push([match.id, section]);
+        return { data: null };
+      },
     },
   };
   const mod = await loadComponent(
@@ -149,12 +150,11 @@ test("player data retains match observations but no provider profile source", as
   const html = renderToStaticMarkup(
     e(mod.default, {
       row: { id: "m_1:p_1", matchId: "m_1", playerId: "p_1" },
-      mode: "data",
     }),
   );
   assert.match(html, /Statistiques du joueur/);
   assert.doesNotMatch(html, /Données brutes|Télécharger JSON|playerId|teamId/);
-  assert.deepEqual(requested, ["player-match-source:m_1"]);
+  assert.deepEqual(requested, [["m_1", "players/display"], ["m_1", "players/halves"]]);
 });
 
 test("match data keeps its analyses and omits the raw provider match profile", async () => {

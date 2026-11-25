@@ -277,7 +277,7 @@ export function PlayerDialog() {
         </p>
       )}
       {view !== "overview" ? (
-        <PlayerData key={row.id} row={row} mode={view} />
+        <PlayerData key={row.id} row={row} match={match} />
       ) : (
         <>
           <dl className="pc-figures">

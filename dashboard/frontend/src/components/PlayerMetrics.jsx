@@ -96,8 +96,8 @@ const decimalsOf = (stat) =>
   (isNumber(stat.value) && !Number.isInteger(stat.value))
     ? 2
     : 0;
-function display(stat) {
-  if (stat?.value == null) return { text: "—" };
+function display(stat, showMissing) {
+  if (stat?.value == null) return { text: showMissing ? "Non renseigné" : "—", missing: true };
   if (stat.total != null && isNumber(stat.value) && isNumber(stat.total))
     return {
       text: `${number(stat.value, decimalsOf(stat))}/${number(stat.total, decimalsOf({ value: stat.total }))}`,
@@ -111,11 +111,33 @@ function display(stat) {
   return { text: String(stat.value) };
 }
 
-export default function PlayerMetrics({ row }) {
+const DETAIL_ROWS = [
+  ["top_stats", "Total shots", "total_shots"],
+  ["top_stats", "Expected goals (xG)", "expected_goals"],
+  ["attack", "Successful dribbles", "dribbles_succeeded"],
+  ["duels", "Was fouled", "was_fouled"],
+];
+
+function withMissingRows(groups) {
+  const stats = groups.flatMap((group) => Object.values(group.stats || {}));
+  // The keeper layout has different shot and duel measures.
+  if (stats.some(({ key }) => key === "saves" || key === "goals_conceded")) return groups;
+  const byGroup = new Map(groups.map((group) => [group.key, { ...group, stats: { ...group.stats } }]));
+  const keys = new Set(stats.map(({ key }) => key));
+  for (const [groupKey, label, key] of DETAIL_ROWS) {
+    if (keys.has(key)) continue;
+    if (!byGroup.has(groupKey)) byGroup.set(groupKey, { key: groupKey, stats: {} });
+    byGroup.get(groupKey).stats[label] = { key, stat: { value: null } };
+  }
+  return [...byGroup.values()];
+}
+
+export default function PlayerMetrics({ row, showMissing = false }) {
   if (!row?.stats?.length) return <Empty>Statistiques non renseignées.</Empty>;
+  const groups = showMissing ? withMissingRows(row.stats) : row.stats;
   return (
     <div className="source-metric-groups">
-      {row.stats.map((group, index) => {
+      {groups.map((group, index) => {
         const entries = Object.entries(group.stats || {}).filter(
           ([label]) => !HIDDEN.has(label),
         );
@@ -125,13 +147,13 @@ export default function PlayerMetrics({ row }) {
             <h3>{GROUPS[group.key] || group.title || group.key}</h3>
             <dl className="performance-stat-list">
               {entries.map(([label, item]) => {
-                const value = display(item.stat);
+                const value = display(item.stat, showMissing);
                 return (
                   <div key={label} data-metric-key={item.key || label}>
                     <dt>{LABELS[label] || label}</dt>
                     <dd
                       className={
-                        value.text === "—" ? "missing-value" : undefined
+                        value.missing ? "missing-value" : undefined
                       }
                     >
                       {value.text}
