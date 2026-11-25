@@ -711,6 +711,31 @@ class WorkerTest(unittest.TestCase):
             self.worker.run(max_jobs=1)
         self.assertEqual(len(re.findall(r"lineup forecasts error=WORKER_ZERODIVISIONERROR@test_worker\.py:\d+", out.getvalue())), 2)
 
+    def test_68m_a_planning_round_grades_the_matches_whose_statistics_arrived(self):
+        # FAILURE_MODES § 68: the collection's own round (the side process can be an hour into a season) grades the
+        # matches whose player statistics came after their year's run (arrival_grades.refresh), with the worker's clock.
+        from vega import arrival_grades
+
+        calls = []
+        self.addCleanup(setattr, arrival_grades, "refresh", arrival_grades.refresh)
+        arrival_grades.refresh = lambda conn, now: (calls.append((conn is self.worker.calc_conn, now)), {"matches": 1, "players": 24})[1]
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(self.worker.match_grades(), 1)
+        self.assertEqual(calls, [(True, self.now)])
+        self.assertEqual(out.getvalue().count("match grades matches=1 players=24"), 1)
+        # A pass that grades nothing says nothing.
+        arrival_grades.refresh = lambda conn, now: (calls.append((conn is self.worker.calc_conn, now)), {"matches": 0, "players": 0})[1]
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(self.worker.match_grades(), 0)
+        self.assertEqual(out.getvalue().count("match grades"), 1)
+        # Whatever fails there is logged with its code; the collection goes on, and its planning round calls the step.
+        arrival_grades.refresh = lambda conn, now: 1 / 0
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(self.worker.match_grades(), 0)
+            self.worker.run(max_jobs=1)
+        self.assertEqual(len(re.findall(r"match grades error=WORKER_ZERODIVISIONERROR@test_worker\.py:\d+", out.getvalue())), 2)
+
     def test_the_collection_goes_on_whatever_fails_around_it(self):
         # The daily pass, the calculator and the planner all fail on a bug: the worker
         # still takes its job. Before, the first of them ended the process, and the task
