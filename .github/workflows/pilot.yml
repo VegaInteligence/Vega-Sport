@@ -1,19 +1,29 @@
 name: Isolated pilot
-# Real PitchAPI data into a throwaway PostgreSQL 18 of the runner (the base's engine):
-# the pilot collection, then the worker loop on the real J-1..J+7 calendars and the
-# other sources. Measurements only leave the runner. The suites run in ci.yml.
+# Real PitchAPI data into a throwaway PostgreSQL 18 of the runner (the base's engine): the pilot collection, then the
+# worker loop on the real J-1..J+7 calendars and the other sources. Measurements only leave the runner. The suites, the
+# synthetic pilot (backend/tests/test_pilot.py) included, run in ci.yml.
+#
+# By hand only, from main (docs/calculs/09-audit-2026-11/FAILURE_MODES_OPTIMISATIONS.md, GH194): no push starts it. Its
+# own provider key, the SSM SecureString /vega/v2/pitchapi-pilot-key, read with the vega-v2-pilot role
+# (deploy-roles.yaml), which can read that parameter and nothing else: never the worker's key, no GitHub secret, no
+# fallback. Every provider command has a budget of attempts, retries included, and the deployed worker's pace (0.5 s).
+# The inputs reach the shell through the environment only, checked by the first step; the commands read its outputs.
 on:
-  push:
-    branches: [main, 'claude/v2-*']
-    paths: ['backend/**', '.github/workflows/pilot.yml']
   workflow_dispatch:
     inputs:
       max_matches:
-        description: Finished Ligue 1 2025/26 matches (1 to 306)
+        description: Finished Ligue 1 2025/26 matches collected in full (a whole number, 1 to 306)
         type: string
         default: '1'
-# The provider key is read from SSM (/vega/v2/pitchapi-key) with the vega-v2-pilot role,
-# which can read that parameter and nothing else; no GitHub secret.
+      regressions:
+        description: Also the four fixtures that once failed (ordinals 19, 20, 227, 228)
+        type: boolean
+        default: false
+      worker_jobs:
+        description: Worker jobs on the real J-1..J+7 calendars (0 skips the worker)
+        type: choice
+        options: ['0', '100', '300', '700']
+        default: '100'
 permissions:
   contents: read
   id-token: write
@@ -22,8 +32,12 @@ concurrency:
   cancel-in-progress: false
 jobs:
   pilot:
+    # Asked from another branch, the run does nothing (the role trusts refs/heads/main only).
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 100
+    # A full season: at most 7 640 attempts at 0.5 s (6 140 for 306 matches, 100 for the regressions, 1 400 for 700 worker
+    # jobs), about 64 minutes, more after a 429 (1 s between calls for 10 minutes), plus the worker's own work.
+    timeout-minutes: 120
     services:
       postgres:
         image: pgvector/pgvector:pg18
@@ -38,52 +52,78 @@ jobs:
       PYTHONPATH: backend
       V2_DATABASE_URL: postgresql://postgres:isolated-v2-only@127.0.0.1:5432/vega_v2_pilot
     steps:
-      - uses: actions/checkout@v7
+      - name: Bounds of this run
+        id: bounds
+        env:
+          MAX_MATCHES: ${{ inputs.max_matches }}
+          WORKER_JOBS: ${{ inputs.worker_jobs }}
+          REGRESSIONS: ${{ inputs.regressions }}
+        run: |
+          # Every input checked before any arithmetic: digits only, no sign, no leading zero, no space, 1 to 306.
+          if ! [[ "$MAX_MATCHES" =~ ^[1-9][0-9]{0,2}$ ]] || [ "$MAX_MATCHES" -gt 306 ]; then
+            echo "::error::max_matches must be a whole number from 1 to 306"; exit 1
+          fi
+          case "$WORKER_JOBS" in 0|100|300|700) ;; *) echo "::error::worker_jobs must be 0, 100, 300 or 700"; exit 1 ;; esac
+          case "$REGRESSIONS" in true|false) ;; *) echo "::error::regressions must be true or false"; exit 1 ;; esac
+          # Provider attempts each command may make, retries included: vega.pilot.default_budget, 20 per match plus 20
+          # (the regressions: their 4 matches); 2 per worker job. Spent, the client refuses the next attempt unsent.
+          {
+            echo "matches=$MAX_MATCHES"
+            echo "pilot=$((MAX_MATCHES * 20 + 20))"
+            if [ "$REGRESSIONS" = true ]; then echo "regressions=100"; else echo "regressions=0"; fi
+            echo "jobs=$WORKER_JOBS"
+            echo "worker=$((WORKER_JOBS * 2))"
+          } >> "$GITHUB_OUTPUT"
+      - name: Checkout
+        uses: actions/checkout@v7
         with:
           # The worker's sources run the site's readers (shared/, frontend services).
           sparse-checkout: |
             backend
             dashboard/shared
             dashboard/frontend/src
-      - uses: actions/setup-python@v7
+      - name: Python
+        uses: actions/setup-python@v7
         with: {python-version: '3.14'}
-      - uses: actions/setup-node@v7
+      - name: Node
+        uses: actions/setup-node@v7
         with: {node-version: '24', package-manager-cache: false}
-      - run: pip install -r backend/requirements.txt
-      - name: AWS session (vega-v2-pilot, provider key only)
+      - name: Dependencies
+        run: pip install -r backend/requirements.txt
+      - name: AWS session (vega-v2-pilot, the pilot key only)
         uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           role-to-assume: arn:aws:iam::361769570630:role/vega-v2-pilot
           aws-region: us-east-2
           role-duration-seconds: 900
-      - name: Provider key from SSM, masked
+      - name: Pilot key from SSM, masked
         run: |
-          key=$(aws ssm get-parameter --name /vega/v2/pitchapi-key --with-decryption --query Parameter.Value --output text)
-          echo "::add-mask::$key"
-          echo "PITCHAPI_API_KEY=$key" >> "$GITHUB_ENV"
-      - name: Verify previously failing event, shot and upstream-error fixtures
-        env:
-          MATCH_INPUT: ${{ inputs.max_matches }}
-        run: |
-          scope="${MATCH_INPUT:-$(cat backend/pilot-scope.txt)}"
-          if [ "$scope" = 306 ]; then
-            python -m vega.pilot --ordinals 19,20,227,228 --max-matches 4 --profile-limit 2 --interval 0.25 --report work/vega-v2-regressions.md
+          key=$(aws ssm get-parameter --name /vega/v2/pitchapi-pilot-key --with-decryption --query Parameter.Value --output text)
+          if [ -n "$key" ]; then echo "::add-mask::$key"; fi
+          # No key, no provider call: every step below needs it.
+          if ! [[ "$key" =~ ^pk_(live|test)_[A-Za-z0-9_-]+$ ]]; then
+            echo "::error::/vega/v2/pitchapi-pilot-key holds no PitchAPI key: no provider call was made"
+            exit 1
           fi
+          echo "PITCHAPI_API_KEY=$key" >> "$GITHUB_ENV"
+      - name: The four fixtures that once failed (event, shot, upstream error)
+        if: steps.bounds.outputs.regressions != '0'
+        env:
+          BUDGET: ${{ steps.bounds.outputs.regressions }}
+        run: python -m vega.pilot --ordinals 19,20,227,228 --max-matches 4 --profile-limit 2 --interval 0.5 --max-requests "$BUDGET" --report work/vega-v2-regressions.md
       - name: Fresh PitchAPI collection into local PostgreSQL only
         env:
-          MATCH_INPUT: ${{ inputs.max_matches }}
-        run: |
-          scope="${MATCH_INPUT:-$(cat backend/pilot-scope.txt)}"
-          if python -m vega.pilot --max-matches "$scope" --resume --profile-limit 2 --interval 0.25 --report work/vega-v2-pilot-initial.md; then
-            cp work/vega-v2-pilot-initial.md work/vega-v2-pilot.md
-          else
-            python -m vega.pilot --max-matches "$scope" --resume --profile-limit 2 --interval 0.25 --report work/vega-v2-pilot.md
-          fi
+          MATCHES: ${{ steps.bounds.outputs.matches }}
+          BUDGET: ${{ steps.bounds.outputs.pilot }}
+        run: python -m vega.pilot --max-matches "$MATCHES" --profile-limit 2 --interval 0.5 --max-requests "$BUDGET" --report work/vega-v2-pilot.md
       - name: Worker loop on the real J-1..J+7 calendars, local PostgreSQL only
-        # 700 jobs at most, fewer when the calendars give fewer: --until-idle ends the loop
-        # once nothing is due. Without it the loop waited for jobs that never came, up to
-        # the job's time limit (two runs cancelled at 100 minutes on 11 November 2026).
-        run: python -m vega.worker --max-jobs 700 --until-idle --interval 0.25 --cohort-delay 0 --report work/vega-v2-worker.md
+        if: steps.bounds.outputs.jobs != '0'
+        # --until-idle ends the loop once nothing is due. Without it the loop waited for jobs that never came, up to the
+        # job's time limit (two runs cancelled at 100 minutes on 11 November 2026).
+        env:
+          JOBS: ${{ steps.bounds.outputs.jobs }}
+          BUDGET: ${{ steps.bounds.outputs.worker }}
+        run: python -m vega.worker --max-jobs "$JOBS" --until-idle --interval 0.5 --max-requests "$BUDGET" --cohort-delay 0 --report work/vega-v2-worker.md
       - name: Export measurements only
         if: always()
         uses: actions/upload-artifact@v7

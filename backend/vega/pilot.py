@@ -11,7 +11,7 @@ import time
 
 import psycopg
 from .normalize import NormalizedFamily, NormalizationError, normalize_family
-from .pitchapi import PitchClient, PitchError
+from .pitchapi import API_KEY, PitchClient, PitchError
 from .store import FAMILY_TABLES, Store, StoreError, connect_local, migrate
 
 # Order reuses the names observed in lineups/basic stats before ID-only networks.
@@ -33,10 +33,10 @@ DETAILS = (
 
 
 class Pilot:
-    def __init__(self, store, key, *, interval=0.5):
+    def __init__(self, store, key, *, interval=0.5, max_requests=None):
         self.store = store
         self.events = []
-        self.client = PitchClient(key, interval=interval, on_attempt=self.events.append)
+        self.client = PitchClient(key, interval=interval, on_attempt=self.events.append, max_requests=max_requests)
         self.initial_interval = interval
         self.writes = defaultdict(list)
         self.results = Counter()
@@ -269,6 +269,7 @@ class Pilot:
             f"Selected matches: {self.selected_matches}",
             f"Completed match loops: {self.completed_matches}",
             f"HTTP attempts this run (including retries/profiles): {self.client.requests}",
+            f"Request budget (attempts, retries included): {self.client.max_requests or 'none'}",
             f"Wall seconds: {seconds:.2f}",
             f"Family failures: {sum(self.errors.values())}",
             "",
@@ -384,7 +385,21 @@ def safe_code(error):
     )
 
 
-def main():
+# The pilot's pace and work (FAILURE_MODES_OPTIMISATIONS.md, GH194): never faster than the deployed worker (0.5 s, the
+# provider's free rate), and a request budget counting every attempt, retries included: by default 20 per selected match
+# (13 families, their references, retries) plus 20 (catalogue, calendar, profiles). The cap is that budget for the whole
+# season (306 matches): 6 140, so that every count the workflow takes runs on its default budget.
+MIN_INTERVAL = 0.5
+
+
+def default_budget(matches):
+    return 20 * matches + 20
+
+
+MAX_REQUESTS = default_budget(306)
+
+
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--season", default="2025/2026")
     parser.add_argument("--league", default="Ligue 1")
@@ -397,14 +412,17 @@ def main():
         "--ordinals",
         help="Comma-separated 1-based match positions for bounded regression checks",
     )
-    parser.add_argument("--interval", type=float, default=0.5)
-    args = parser.parse_args()
+    parser.add_argument("--interval", type=float, default=MIN_INTERVAL)
+    parser.add_argument("--max-requests", type=int, help="provider attempts allowed, retries included (default 20 per match + 20)")
+    args = parser.parse_args(argv)
     if not 1 <= args.max_matches <= 306:
         parser.error("max-matches must be between 1 and 306")
     if not 0 <= args.profile_limit <= 100:
         parser.error("profile-limit must be between 0 and 100")
-    if not 0.25 <= args.interval <= 5:
-        parser.error("interval must be between 0.25 and 5 seconds")
+    if not MIN_INTERVAL <= args.interval <= 5:
+        parser.error(f"interval must be between {MIN_INTERVAL} and 5 seconds")
+    if args.max_requests is not None and not 1 <= args.max_requests <= MAX_REQUESTS:
+        parser.error(f"max-requests must be between 1 and {MAX_REQUESTS}")
     try:
         ordinals = (
             [int(value) for value in args.ordinals.split(",")]
@@ -418,15 +436,17 @@ def main():
             raise ValueError()
     except ValueError:
         parser.error("ordinals must be distinct match positions between 1 and 306")
+    # No key, nothing opened: neither the database nor the provider (the key's value is never printed).
+    key = os.environ.get("PITCHAPI_API_KEY", "")
+    if not API_KEY.fullmatch(key):
+        print("pilot_error=MISSING_API_KEY", flush=True)
+        return 1
+    budget = args.max_requests or default_budget(len(ordinals) if ordinals else args.max_matches)
     pilot = None
     try:
         with connect_local(os.environ.get("V2_DATABASE_URL", "")) as conn:
             migrate(conn, vector=args.vector)
-            pilot = Pilot(
-                Store(conn),
-                os.environ.get("PITCHAPI_API_KEY", ""),
-                interval=args.interval,
-            )
+            pilot = Pilot(Store(conn), key, interval=args.interval, max_requests=budget)
             try:
                 ok = pilot.run(
                     season=args.season,

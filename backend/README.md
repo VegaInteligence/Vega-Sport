@@ -245,7 +245,7 @@ cd backend/api && npm ci
 node --input-type=module -e "import {createReader} from './src/db.mjs'; import {createHandler} from './src/handler.mjs'; const h=createHandler(createReader(process.env.V2_READ_DATABASE_URL)); const r=await h(new Request('http://local/api/read/clubs?season=2025/2026&leagues=all')); console.log(r.status, await r.text())"
 ```
 
-Le pilote historique de la PR #53 reste disponible : `python -m vega.pilot --max-matches 1 --report work/pilot.md`.
+Le pilote historique de la PR #53 reste disponible : `python -m vega.pilot --max-matches 1 --report work/pilot.md` (une clé `PITCHAPI_API_KEY` valide est exigée avant toute connexion ; au moins 0,5 s entre deux appels ; au plus 20 tentatives par match plus 20, reprises comprises, sauf `--max-requests`, 6 140 au plus : une saison entière).
 
 ## Tests
 
@@ -256,4 +256,4 @@ python -m unittest discover -s backend/tests -v
 npm test --prefix backend/api
 ```
 
-Le workflow `Isolated pilot` lance les deux suites, le pilote Ligue 1, puis 700 travaux du worker sur les vrais calendriers J−1 à J+7, dans un PostgreSQL éphémère du runner. Il n'a aucun identifiant AWS : seul le secret PitchAPI lui est donné, et il n'exporte qu'un rapport de mesures (comptes, codes, chemins de champs, durées), jamais de données.
+Le workflow `Isolated pilot` se lance à la main depuis `main` seulement (aucune poussée ne le déclenche) : le pilote Ligue 1 (1 à 306 matchs, 1 par défaut, et sur demande les quatre matchs qui ont échoué autrefois), puis 0 à 700 travaux du worker sur les vrais calendriers J−1 à J+7, dans un PostgreSQL éphémère du runner, à 0,5 s entre deux appels, chaque commande avec son plafond de tentatives (reprises comprises), en 120 minutes au plus. Il lit sa propre clé PitchAPI, `/vega/v2/pitchapi-pilot-key` (SSM), avec le rôle `vega-v2-pilot`, qui ne lit rien d'autre : jamais la clé du worker. Sans cette clé, il s'arrête avant tout appel. Il n'exporte qu'un rapport de mesures (comptes, codes, chemins de champs, durées), jamais de données. Les suites, le pilote synthétique (`backend/tests/test_pilot.py`) compris, tournent dans `ci.yml`.

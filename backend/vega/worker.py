@@ -1159,6 +1159,7 @@ def main(argv=None):
     parser.add_argument("--until-idle", action="store_true", help="exit once every lane is empty")
     parser.add_argument("--max-jobs", type=int)
     parser.add_argument("--interval", type=float, default=0.5, help="minimum seconds between PitchAPI calls")
+    parser.add_argument("--max-requests", type=int, help="PitchAPI attempts allowed, retries included (a bounded run: the pilot); default none")
     parser.add_argument("--migrate", action="store_true")
     parser.add_argument("--report", help="write a measurements-only Markdown report")
     parser.add_argument("--cohort-delay", type=int, default=600, help="seconds a changed cohort waits before recalculation")
@@ -1184,13 +1185,15 @@ def main(argv=None):
         parser.error("--transfermarkt process/only is for the long-running worker")
     if args.side_work != "inline" and (args.lanes == "backfill" or args.until_idle or args.max_jobs is not None or args.report):
         parser.error("--side-work process/only is for the long-running worker")
+    if args.max_requests is not None and args.max_requests < 1:
+        parser.error("--max-requests must be 1 or more")
     dsn, key = os.environ.get("V2_DATABASE_URL"), os.environ.get("PITCHAPI_API_KEY")
     if not dsn or not key:
         print("V2_DATABASE_URL and PITCHAPI_API_KEY are required", file=sys.stderr)
         return 2
     calc_dsn = os.environ.get("V2_CALC_DATABASE_URL")
     bucket = os.environ.get("V2_MEDIA_BUCKET")
-    client = PitchClient(key, interval=args.interval)
+    client = PitchClient(key, interval=args.interval, max_requests=args.max_requests)
     stopping = []
     signal.signal(signal.SIGTERM, lambda *_: stopping.append(True))
     results, state = Counter(), {"done": 0, "migrate": args.migrate}

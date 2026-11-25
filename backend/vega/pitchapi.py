@@ -17,6 +17,8 @@ BASE_URL = "https://api.pitchapi.dev/v1"
 # share one key: without the return, one 429 kept the backfill at half its pace for the
 # rest of its run (10 November 2026: 3,400 jobs an hour instead of 5,700, 978,000 to do).
 RECOVER_AFTER = 600
+# A PitchAPI key's form: the client refuses any other value before it sends anything.
+API_KEY = re.compile(r"pk_(?:live|test)_[A-Za-z0-9_-]+")
 _ID = r"[A-Za-z0-9]{6}"
 _ENDPOINTS = (
     r"/leagues",
@@ -127,11 +129,17 @@ class PitchClient:
         sleep=time.sleep,
         monotonic=time.monotonic,
         on_attempt=None,
+        max_requests=None,
     ):
-        if not isinstance(key, str) or not re.fullmatch(
-            r"pk_(?:live|test)_[A-Za-z0-9_-]+", key
-        ):
+        if not isinstance(key, str) or not API_KEY.fullmatch(key):
             raise PitchError("INVALID_API_KEY")
+        # A bounded run (the isolated pilot, FAILURE_MODES_OPTIMISATIONS.md, GH194): every attempt counts, retries included; once
+        # spent, the next attempt is refused before it is sent. None: no bound (the deployed worker).
+        if max_requests is not None and (
+            not isinstance(max_requests, int) or isinstance(max_requests, bool) or max_requests < 1
+        ):
+            raise PitchError("INVALID_REQUEST_BUDGET")
+        self.max_requests = max_requests
         self._key, self.interval, self.retries, self.timeout = (
             key,
             interval,
@@ -187,6 +195,8 @@ class PitchClient:
         for attempt in range(self.retries + 1):
             if self._slowed_at is not None and self._clock() - self._slowed_at >= RECOVER_AFTER:
                 self.interval, self._slowed_at = self._own_interval, None
+            if self.max_requests is not None and self.requests >= self.max_requests:
+                raise PitchError("REQUEST_BUDGET_EXHAUSTED")
             if self._last is not None:
                 self._sleep(max(0, self.interval - (self._clock() - self._last)))
             self._last = self._clock()
