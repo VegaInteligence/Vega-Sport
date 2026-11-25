@@ -5188,3 +5188,21 @@ kept. Display only, as 61.1: nothing else changes.
 | 61ab | The worker's run under `vega_calc` | rows labelled `probable-v2`, `share` the score; each eleven's and match's type and opponent's Elo read; nothing else written (61k) |
 | 61ac | The site, rows of `probable-v2` / of `probable-v1` | no « Titulaire N fois sur M » / as before |
 | 61ad | Parity with the study (`etude_onze_melange.py`'s `predict_xis` on its self-test worlds and its unit cases) | `predict` gives H1's eleven and P1a's replacements, case by case |
+
+61u–61ab: `backend/tests/test_probable_lineups.py`; 61ac: `tests/match-lineups-probable.test.mjs`; 61ad: a draft outside
+the repository (`/mnt/project-files/composition-probable/probable-v2/parity/`) on the study's three self-test worlds
+and its unit windows: 88 552 cases (4 603 of the five leagues), 0 mismatched; its control, the route inverted,
+mismatches 11 812 of 35 675.
+
+Cost, on 61.1's synthetic base (3 000 clubs × 30 elevens, 1.62 M line-up players, 3 000 sides, every finished match
+rated in `agg.team_elo`): 11 reads instead of 10 (FIVE), the type and the Elo inside TARGETS and WINDOWS, the same
+write. A run: main's `probable-v1` 10.1–11.8 s, the branch's `probable-v1` 10.3–11.7 s (its rows identical to main's,
+33 000), `probable-v2` with no club of the five 11.0–12.9 s; with all 3 000 of the five, 15.9–17.0 s against 12.6–15.2 s
+for main's `probable-v1` run between them (the base slower in that phase for both); one computation without the write,
+9.5 s against 9.2 s. FIVE joined each match's two teams by an OR at first: 7.9 s with 3 000 clubs of the five; by
+equality, 0.2 s (`…/probable-v2/cost/`).
+
+Not verified: that production's five leagues carry their PitchAPI key in `core.provider_ids` (without it no club is of
+the five, and P1a is used everywhere); how many of the window's opponents have an Elo (an unknown one counts a gap of
+150); the competition types production's editions get; the cost on production's base; the study's gain measured with
+`probable.py`'s absent and gone instead of its own. The bubble's wording of the score waits for hugo.

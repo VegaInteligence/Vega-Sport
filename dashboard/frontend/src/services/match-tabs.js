@@ -154,15 +154,21 @@ export function lineupView(payload, events, rows, grades, images) {
   return { home: side("home"), away: side("away") };
 }
 
+// The methods whose `share` is a starter's starts in the basis / its elevens (« Titulaire N fois sur M »). probable-v2's
+// is a score, not a count (FAILURE_MODES §61.3): its markers carry no share.
+const STARTS_SHARE = new Set(["probable-v1"]);
+
 /**
- * Our probable XI of each side (GET /api/matches/{id}/lineups/probable, method probable-v1):
+ * Our probable XI of each side (GET /api/matches/{id}/lineups/probable, methods probable-v1 and probable-v2):
  * { data: { match_id, method, computedAt, home|away: { formation, basis: { lineups, from, to },
  * starters: [{ player_id, name, shirt_number, position_id, pitch_x, pitch_y, share, replaces?,
  * image_url? }], absent: [{ player_id, name, kind, label, expectedReturn, matchesRemaining?,
- * image_url? }] } | null } }. The starters in the shape of lineupView's, with no grade, goal or card;
- * the absent in the shape of the absences' rows (services/team-absences.js).
+ * image_url? }] } | null } }. The starters in the shape of lineupView's, with no grade, goal or card
+ * (their share only when it counts starts); the absent in the shape of the absences' rows
+ * (services/team-absences.js).
  */
 export function probableView(payload) {
+  const counts = STARTS_SHARE.has(payload?.method);
   const side = (key) => {
     const probable = payload?.[key];
     if (!probable?.starters?.length) return null;
@@ -179,7 +185,7 @@ export function probableView(payload) {
         id: p.player_id || null, name: p.name, shirt: p.shirt_number || null, captain: false,
         x: p.pitch_x, y: p.pitch_y, imageUrl: p.image_url || null, grade: null, minutes: null,
         goals: [], ownGoals: [], cards: [], off: null, on: null, probable: true,
-        share: Number.isFinite(p.share) ? p.share : null,
+        share: counts && Number.isFinite(p.share) ? p.share : null,
         replaces: p.replaces ? { id: p.replaces.player_id || null, name: p.replaces.name, kind: kindOf.get(p.replaces.player_id) || null } : null,
       })),
       absent, entered: [], bench: [],
