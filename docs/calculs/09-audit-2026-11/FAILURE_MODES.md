@@ -5648,3 +5648,26 @@ Two causes, read in the code (`m_36394c`, in play at the time):
   `teamStatsFlagged` only: neither reads `teamStatsReliable === false` itself.
 - **R32** (`tests/explorer.test.mjs`) the statistics and players sections of a match whose flag is false say
   « incohérentes » when it has team statistics and say nothing of the kind when it has none.
+
+## 68. The teams' rank on « Le choc de la semaine » is the one of the match's competition (hugo, 25 Nov 2026, 21 h 50; written before the tests)
+
+On the home page, « Le choc de la semaine » was Arsenal – Dortmund (Champions League): both teams read « 1er », their
+place in their own league (`ranks`: the home read's ranks exclude the cups, `home.mjs`). hugo: « je veux le rang de la
+compétition où a lieu le match ».
+
+### 68.1 Rules
+
+- **The match's competition.** A team's rank under its name is its place in the competition the match belongs to.
+  When the served rank is of that competition (`rank.leagueId` is the match's league), it is kept with its form, as
+  before. Otherwise the card reads the competition's table for the match's season (`/api/standings?competition=…&season=
+  …`, the table the competition's page shows: official, else computed from the results) and shows the team's
+  `position` there. That rank has no form beside it: the served form is of another competition.
+- **Never another competition's rank.** While that table loads, when it cannot be read or when the team is not in it,
+  no rank is shown.
+
+### 68.2 Failure modes and expected outcomes
+
+- **R28** (`tests/home-match-rank.test.mjs`) a Champions League match whose two teams have league ranks 1 and 1: the
+  card reads `/api/standings?competition=l_0bfbkO&season=2026%2F2027` and shows « 6e » and « 8e » without form; while it
+  loads, or when the table fails, no « 1er »; a Premier League match with league ranks: « 3e » and « 5e » with their
+  form, and no standings read.
