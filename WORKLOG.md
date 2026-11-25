@@ -1,5 +1,10 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Rotation du logo de la navbar — 25 novembre 2026
+
+- Hugo a validé l’aperçu desktop et mobile : l’astérisque tourne de 360° en 360 ms, puis le navigateur ouvre ou recharge l’accueil. La préférence de mouvement réduit déclenche la navigation immédiatement. Livraison directe sur `main` demandée.
+- Aucun chevauchement actif trouvé dans Linear. Le lien natif conserve la destination calculée par la navigation et les clics modifiés. La vérification E2E hors dépôt passe 10/10 sous Chromium, Firefox et WebKit, dont le nouvel onglet, le rechargement depuis l’accueil et le mouvement réduit. Suite site 1 026/1 026 et build réussis. Preuves : `/Users/lemonnierhugo/.codex/visualizations/2026/11/25/01a2125d-5f78-7cf2-89b2-f12e7a7b5244/vega-logo-360-e2e/verification.md`. Livraison directe depuis un worktree détaché, à nettoyer après le push.
+
 ## Alignement de la navbar Safari / Chromium / Firefox — 25 novembre 2026
 
 - L’astérisque de 25 × 28 px reste aligné à gauche. Le lien du logo qui prenait 285 px dans Safari mesure 40 px sur ordinateur et 44 px sur téléphone. Direction approuvée dans [VI-61](https://linear.app/vegainteligence/issue/VI-61). Correctif livré sur `main` dans `a8d666a1`.
