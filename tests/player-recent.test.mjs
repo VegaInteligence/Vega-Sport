@@ -7,7 +7,7 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const { positionLine, recentForm, recentParams, RECENT_MATCHES } = await import(
+const { positionLine, readRecent, recentForm, recentParams, RECENT_MATCHES, RECENT_PAGES } = await import(
   pathToFileURL(path.join(root, "dashboard/frontend/src/services/player-recent.js")).href
 );
 const reads = JSON.parse(fs.readFileSync(path.join(root, "tests/fixtures/player-recent-psg-roma.json"), "utf8"));
@@ -88,4 +88,30 @@ test("R37 a figure made of two parts is « – » when one part is unknown, neve
   assert.equal(tiles(defender)["Passes réussies"], "–");
   const midfielder = recentForm({ appearances: [row({ goals: 1, assists: null })] }, { playerId: "p_x", positionId: 66 });
   assert.equal(tiles(midfielder)["Buts · passes d."], "–");
+});
+
+test("R37 the read goes on to the next pages until five matches played, and stops there (Codex on #239)", async () => {
+  // A reserve goalkeeper: his twelve newest entries are the match itself and eleven benches without minutes.
+  const entry = (n, minutes) => ({ playerId: "p_x", matchId: `m_${String(n).padStart(3, "0")}`, date: `2026-${String(11 - Math.floor(n / 28)).padStart(2, "0")}-${String(28 - (n % 28)).padStart(2, "0")}`, leagueId: "l_3FJFUl", minutes, positionId: 0 });
+  const all = [entry(0, null), ...Array.from({ length: 11 }, (_, i) => entry(i + 1, null)), ...Array.from({ length: 30 }, (_, i) => entry(i + 12, i % 2 ? 90 : null))];
+  const asked = [];
+  const read = async (params) => {
+    asked.push(params.page || 1);
+    const page = params.page || 1, rows = all.slice((page - 1) * params.limit, page * params.limit);
+    return { data: { appearances: rows, competitions: [{ id: "l_3FJFUl", name: "Premier League" }] }, pagination: { page, limit: params.limit, total: all.length, pages: Math.ceil(all.length / params.limit) } };
+  };
+  const params = recentParams({ generation: "g1" }, "p_x", "2026/2027");
+  const body = await readRecent(read, params, { matchId: "m_000" });
+  const form = recentForm(body.data, { playerId: "p_x", matchId: "m_000", positionId: 0 });
+  assert.equal(form.matches.length, RECENT_MATCHES);
+  assert.deepEqual(form.matches.map((m) => m.matchId), ["m_013", "m_015", "m_017", "m_019", "m_021"]);
+  // Page 2 holds his five newest matches played: page 3 is not read.
+  assert.deepEqual(asked, [1, 2]);
+  assert.deepEqual(body.data.competitions.map((c) => c.id), ["l_3FJFUl"]);
+  // No more pages than the season has, and never more than RECENT_PAGES.
+  asked.length = 0;
+  const benches = all.map((a) => ({ ...a, minutes: null }));
+  const none = await readRecent(async (p) => { asked.push(p.page || 1); const page = p.page || 1; return { data: { appearances: benches.slice((page - 1) * p.limit, page * p.limit), competitions: [] }, pagination: { page, limit: p.limit, total: benches.length, pages: Math.ceil(benches.length / p.limit) } }; }, params, { matchId: "m_000" });
+  assert.deepEqual(asked, [1, 2, 3, 4].slice(0, Math.min(RECENT_PAGES, 4)));
+  assert.equal(recentForm(none.data, { playerId: "p_x", matchId: "m_000", positionId: 0 }).matches.length, 0);
 });

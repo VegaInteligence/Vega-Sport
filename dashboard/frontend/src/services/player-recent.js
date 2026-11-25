@@ -28,7 +28,35 @@ export function recentParams(manifest, id, season) {
   return { season, player: id, leagues: "all", limit: RECENT_READ, generation: compactGeneration(manifest) };
 }
 
-export const recentKey = (params) => `player-recent:${params.player}:${params.season}:${params.generation}`;
+export const recentKey = (params, matchId = "") => `player-recent:${params.player}:${params.season}:${params.generation}:${matchId}`;
+
+// The read pages by date without looking at minutes: a reserve's newest entries can all be benches. At most four
+// pages (48 matches, most of a season).
+export const RECENT_PAGES = 4;
+
+const playedIn = (appearances, matchId) =>
+  appearances.filter((a) => a.matchId !== matchId && has(a.minutes) && a.minutes > 0).length;
+
+/**
+ * The season read, page after page, until RECENT_MATCHES matches played (the match itself left out), the last page,
+ * or RECENT_PAGES. `read(params, { signal })` answers one page. The pages after the first keep its publication.
+ */
+export async function readRecent(read, params, { matchId, signal } = {}) {
+  const first = await read(params, { signal });
+  const data = first?.data || first || {};
+  const appearances = [...(data.appearances || [])];
+  const competitions = new Map((data.competitions || []).map((c) => [c.id, c]));
+  const pages = Number.isInteger(first?.pagination?.pages) ? first.pagination.pages : 1;
+  const generation = params.generation || first?.pagination?.generation || first?.meta?.generation;
+  for (let page = 2; page <= Math.min(pages, RECENT_PAGES) && playedIn(appearances, matchId) < RECENT_MATCHES; page += 1) {
+    signal?.throwIfAborted?.();
+    const next = await read({ ...params, generation, page }, { signal });
+    const more = next?.data || next || {};
+    appearances.push(...(more.appearances || []));
+    for (const c of more.competitions || []) if (!competitions.has(c.id)) competitions.set(c.id, c);
+  }
+  return { ...first, data: { ...data, appearances, competitions: [...competitions.values()] } };
+}
 
 const fr = (value, digits = 0) =>
   value.toLocaleString("fr-FR", { minimumFractionDigits: digits, maximumFractionDigits: digits });

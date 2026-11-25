@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useFootball } from "../hooks/FootballContext.jsx";
 import { useResource } from "../services/resources.js";
 import { readCompact } from "../services/compact-reads.js";
-import { LINE_LABEL, RECENT_MATCHES, recentForm, recentKey, recentParams } from "../services/player-recent.js";
+import { LINE_LABEL, RECENT_MATCHES, readRecent, recentForm, recentKey, recentParams } from "../services/player-recent.js";
 import { GRADE_HIGH } from "../services/grades.js";
 import s from "./MatchTabs.module.css";
 
@@ -17,7 +17,11 @@ const ddmm = (day) => (day ? `${day.slice(8, 10)}/${day.slice(5, 7)}` : "");
 export default function PlayerRecent({ playerId, name, matchId, positionId, season, replaces = null }) {
   const f = useFootball();
   const params = recentParams(f.manifest, playerId, season);
-  const read = useResource(recentKey(params), ({ signal } = {}) => readCompact("player", params, { signal }), Boolean(playerId && season));
+  const read = useResource(
+    recentKey(params, matchId),
+    ({ signal } = {}) => readRecent((page, options) => readCompact("player", page, options), params, { matchId, signal }),
+    Boolean(playerId && season),
+  );
   const value = read.value;
   const form = value ? recentForm(value.data || value, { playerId, matchId, positionId }) : null;
   const label = LINE_LABEL[form?.line] || "Joueur";
