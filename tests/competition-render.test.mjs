@@ -86,6 +86,7 @@ test("competition page renders a result-derived league table and its limits", as
     "../services/standings-zones.js": await import("../dashboard/frontend/src/services/standings-zones.js"),
     "../services/competition-standings.js": standings,
     "../services/competition-selector.js": selector,
+    "../services/season-snapshot-fixtures.js": { seasonSnapshotFixtures: async (_f, scoped, c, s) => scoped.fixtures.get(c.id + ":" + s) },
     "../services/cup-catalog.js": cups,
     "../services/sportscore-standings.js": sportscore,
     "../services/uefa-standings.js": uefa,
@@ -115,6 +116,20 @@ test("competition page renders a result-derived league table and its limits", as
     standingsModule, standingsModule.exports,
   );
   stubs["../components/CompetitionStandings.jsx"] = { __esModule: true, default: standingsModule.exports.default };
+  // The competition's block (CompetitionEdition.jsx, moved out of the page for the match's « Classement » tab, § 63.3),
+  // compiled with the same stubs: its own imports are relative to components/.
+  const editionFile = path.join(root, "dashboard/frontend/src/components/CompetitionEdition.jsx");
+  const editionCode = babel.transformSync(await fs.readFile(editionFile, "utf8"), { presets: [[preset, { runtime: "classic" }]], plugins: [commonjs], babelrc: false, configFile: false, filename: editionFile }).code;
+  const editionModule = { exports: {} };
+  vm.runInThisContext("(function(require,module,exports){" + editionCode + "\n})", { filename: editionFile })(
+    (name) => {
+      const key = name in stubs ? name : name.replace(/^\.\//, "../components/");
+      if (!(key in stubs)) throw Error("Unexpected import " + name);
+      return stubs[key];
+    },
+    editionModule, editionModule.exports,
+  );
+  stubs["../components/CompetitionEdition.jsx"] = { __esModule: true, default: editionModule.exports.default };
   const filename = path.join(root, "dashboard/frontend/src/views/CompetitionsPage.jsx");
   const source = await fs.readFile(filename, "utf8");
   const compiled = babel.transformSync(source, { presets: [[preset, { runtime: "classic" }]], plugins: [commonjs], babelrc: false, configFile: false, filename }).code;

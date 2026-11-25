@@ -2322,7 +2322,7 @@ th[aria-sort="descending"] .sort-indicator {
     .icon-button,
     .data-table th button,
     .home-scorer,
-    .match-breadcrumb a,
+    .match-head-back,
     .competition-highlights-more
   ) {
     position: relative;
@@ -2333,7 +2333,7 @@ th[aria-sort="descending"] .sort-indicator {
     .icon-button,
     .data-table th button,
     .home-scorer,
-    .match-breadcrumb a,
+    .match-head-back,
     .competition-highlights-more
   )::after {
     content: "";
@@ -3356,11 +3356,6 @@ html:not([data-route-skeleton]) .route-skeleton {
 }
 .report-link {
   margin-left: 20px;
-}
-.match-breadcrumb-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
 }
 
 /* The « i » beside a value's name (components/Hint.jsx) and its bubble, drawn over the page.

@@ -5262,3 +5262,154 @@ then `tests/e2e/match-before-kickoff.e2e.mjs` brought to the new contract.
 - **M12** no page error.
 - **M14** « Statistiques » offers « Match », « 1re mi-temps », « 2e mi-temps », the second half's own values drawn.
 - **M13** (`match-before-kickoff.e2e.mjs`, transition) once the feed runs: « Direct » first, « Résumé » still a tab.
+
+## 63. The match page after hugo's review of § 62 in production (hugo, 25 Nov 2026, 18 h 31; written before the tests)
+
+hugo's words: the shot map « est dégueulasse » (both teams' shots on the same goal, two blues): each team on its own
+side, a choice of the half (1re mi-temps, 2e mi-temps, prolongation…), and for the shoot-out only the goal with a team
+choice; in « Compositions » a search in the players' table; the finished match's strip (« Meilleure note du match »
+and its three leaders) moved to the Résumé; « Les actions qui ont pesé le plus » longer, to fill its holes; the table
+out of « Avant-match », in a tab of its own with the competition's projection. Site only. Amends § 62.1.
+
+### 63.1 Rules
+
+- **Tabs.** « Résumé », « Compositions », « Statistiques », « Analyses », « Classement », « Avant-match » (a finished
+  match); before kick-off « Avant-match », « Compositions », « Classement »; in play « Direct » then the six.
+  `view=standings` opens « Classement »; « Avant-match » no longer has the table.
+- **Classement.** The competition's table (`.match-standings-card`, as before) and, when the base projects the season
+  (`/api/forecasts/season`), « Projection de fin de saison » (the competition page's projection table).
+- **Carte des tirs.** One pitch, each team on its side: the home team's shots in the left half (they attack the left
+  goal), the away team's in the right half, each in its team colour (`var(--home)`, `var(--away)`), its name at its
+  end. A choice of the period among those with shots: « Match », « 1re mi-temps », « 2e mi-temps », « Prolongation »
+  (ExtraTime), « Tirs au but » (Penalties). « Tirs au but » draws the goal seen from the pitch
+  (`data-chart="goal-mouth"`, posts at y 30.34 and 37.66 m, bar at 2.44 m, from `goal_crossed_y/z`), one mark per kick
+  (scored, saved, missed), and a team choice (« Les deux », home, away). The list under the fold follows the period
+  (and, on the goal, the team).
+- **Résumé of a finished match.** The strip of « Compositions » (« Meilleure note du match », « Le plus dangereux »,
+  « Le plus présent », « Le plus solide ») opens the Résumé; « Compositions » no longer has it. Not before the end
+  (status `finished`).
+- **Compositions.** Above the players' table, a search field « Rechercher un joueur »: the rows whose name holds the
+  text (accents and case ignored), with the team choice; none: « Aucun joueur ne correspond à « … ». ».
+- **Analyses.** « Les actions qui ont pesé le plus » lists up to 10 players (6 before).
+
+### 63.2 Failure modes and expected outcomes (E2E, `tests/e2e/match-tabs.e2e.mjs`)
+
+- **R1** finished match: six tabs in the order above; before kick-off three; `view=standings` → « Classement ».
+- **R2** « Classement »: the table card and « Projection de fin de saison » with a row per team of the projection;
+  « Avant-match » without `.match-standings-card`.
+- **R3** the shot map: every home shot left of the halfway line, every away shot right of it (`data-side`), two colours.
+- **R4** the period choice lists « Match », « 1re mi-temps », « 2e mi-temps », « Tirs au but » (the mock's periods,
+  no extra time); « 1re mi-temps » leaves the first half's shots only (map and list).
+- **R5** « Tirs au but »: `data-chart="goal-mouth"`, one mark per kick; the team choice leaves one team's kicks.
+- **R6** the Résumé of a finished match opens with « Meilleure note du match » (the best grade's player) before
+  « Le match minute par minute »; « Compositions » has no « Meilleure note du match ».
+- **R7** « Compositions »: typing « demb » leaves Dembélé's row only; « zzz » shows « Aucun joueur ne correspond ».
+- **R8** « Les actions qui ont pesé le plus » with 12 players valued: 10 rows.
+
+### 63.3 Second review (hugo, 25 Nov 2026, 18 h 47, on the preview of PR #224; written before the tests)
+
+hugo's words: « y'a encore le bouton voir les tirs », « sur la droite la liste des joueurs est plus courte que la hauteur
+de la map des tirs », and for « Classement » the competition page's own block (his screenshots: the edition's head with
+« Classement · Matchs · Tableau · Projection », and the projection table with Top 8, Barrages, Éliminé, 8es…
+Vainqueur). Amends § 63.1.
+
+- **Carte des tirs.** No list and no « Voir / Masquer les N tirs » under the map: each mark is focusable and tells its
+  shot (its label, its card on hover), as before.
+- **Meilleures notes.** Up to 8 players (5 before); on a computer the card ends with the shot map beside it, its rows
+  sharing the card's height when they are fewer.
+- **Classement.** For a competition the site collects, the competitions page's block itself
+  (`components/CompetitionEdition.jsx`, moved out of `views/CompetitionsPage.jsx` unchanged): the edition's head, the
+  season choice and the views « Classement », « Matchs », « Tableau » (a cup), « Projection » (where the base projects
+  the season), on the match's season. Embedded, it leaves out the side cards of the competition page and does not
+  change the site's season. A cup read from the cup index keeps the match's table (`.match-standings-card`).
+
+Failure modes (E2E, same file):
+
+- **R9** the Résumé has no `ol.match-shot-list` and no button « Voir les … tirs »; the map's marks have a label each
+  (5 for the mock's 5 shots). Replaces M5.
+- **R10** at 1440 px, the last row of « Meilleures notes » ends within 16 px of the foot of the pitch's drawing beside
+  it (the two cards already shared their height: the rows, not the card, fell short).
+- **R11** « Classement » (Ligue 1, 2026/2027): the group « Vue de la compétition » holds « Classement », « Matchs »
+  and « Projection »; « Classement » shows the competition's table (`.competition-standings table.standings-table`);
+  « Projection » shows `table.season-projection` with a row per team of the projection (18). Replaces R2's table card;
+  a final (M8b) shows the same block.
+
+### 63.4 Codex's review of PR #224 (25 Nov 2026, 17 h 48; checked against the code, written before the tests)
+
+- **Periods in both spellings.** A match without a summary version draws the shots it carries (the season's record,
+  `backend/api/src/match-record.mjs`), whose periods are the base's `first_half`, `second_half`, `extra_time`,
+  `penalties`; the shots family spells them `FirstHalf`, `SecondHalf`, `ExtraTime`, `Penalties`. Both read the same:
+  the period choice is offered and « Match » leaves the shoot-out out. The helpers move to `services/match-shots.js`.
+- **A blocked shot is not « Cadré ».** The provider can mark a blocked attempt on target (`match_m_08LEIz`); the map
+  draws it in outline, as its card says « Tir contré ».
+
+Failure modes:
+
+- **R12** (`tests/match-shots.test.mjs`) the base's spellings: `shotPeriods` gives « Match », « 1re mi-temps »,
+  « 2e mi-temps », « Tirs au but »; `shotsOf(…, "all")` leaves the `penalties` kicks out; `shotsOf(…, "FirstHalf")`
+  finds the `first_half` shots. The family's spellings give the same.
+- **R13** (`match-tabs.e2e.mjs`) a blocked shot marked on target is drawn with no fill.
+
+### 63.5 « Meilleures notes » longer (hugo, 25 Nov 2026, 19 h 03; written before the tests)
+
+hugo's words: « au lieu d'en choisir que 4 augmente le nombre affiché ». The card took its players from the rows the
+page holds (the summary's few leaders) as soon as one carried its grade, and never looked at the match's grades
+(`/api/rankings/match`), which hold every graded player. Rule: when the pool has fewer graded rows (from 60 minutes)
+than the grades, the grades decide, by rank, up to 8; the 60-minute floor stays (a cameo is shown in Compositions, not
+ranked here).
+
+- **R14** (`tests/match-grades.test.mjs`) a pool of 4 graded rows and 11 grades from 60 minutes: 8 rows, by rank, no
+  duplicate, the 30-minute cameo left out; a pool of `count` rows keeps its order.
+- **R14** (`match-tabs.e2e.mjs`) the page holds 4 players and the grades 12: « Meilleures notes » shows 8 rows,
+  Dembélé first.
+
+### 63.6 The page's head, direction C « Le fil des matchs » (hugo, 25 Nov 2026, 19 h 03: « je choisi le C »; written before the tests)
+
+hugo found the head ugly (« il faut re design cette partie je la trouve laide », 18 h 39) and chose direction C of
+the mock-up `/mnt/project-files/fusion-onglets-match/maquette-haut-page-match.html`
+(https://claude.ai/artifact/VN84rchq6aR4NwBgin2tZK). It replaces the breadcrumb row, the previous / next bar and the
+scoreboard's top line (competition and date).
+
+- **Top row** (`.match-head`): on the left « ← Résultats » (or « Matchs à venir », as before), « / », then the
+  competition's button (its logo, its name, the season, « · » and the round, a chevron), which opens the round picker
+  (unchanged: rounds, a club search); on the right « Rapport du match » and « Enregistrer ». Without the season's list
+  the button is plain text (name and season), no picker.
+- **The thread** (`nav[aria-label="Matchs de la compétition"]`): « Match précédent » and « Match suivant » arrows (the
+  neighbours in the season's kick-off order, into the next round at either end, as before) around a strip of match
+  tiles: up to six before and six after the current one, each with its round and day, both teams and the score (or
+  the kick-off time); the current tile is marked (`aria-current="page"`) and scrolled into view. A tile opens its
+  match, keeping the address's view. While the list loads, a strip of the same height; without a list, no thread.
+- **Scoreboard.** No line above the teams: the status reads « Terminé · 28 nov. 2026 · 20:45 » (date and time in
+  Paris). Teams, score, shoot-out note and figures are unchanged.
+- Nothing lost: competition, season, round, previous, next, picker, report, bookmark, back link, date and time all
+  stay on the page.
+
+Failure modes (E2E, `match-tabs.e2e.mjs`, the season's fixtures mocked: rounds 13, 14 and 15, four matches each, the
+match in round 14):
+
+- **R15** the top row: « Résultats », the competition's button naming « Ligue 1 », « 2026/2027 » and the round
+  (« 14ᵉ journée », the site's label), « Rapport du match », « Enregistrer »; no `.match-breadcrumb-row`, no `.scoreboard-meta`; the status holds the date.
+- **R16** the thread: the tiles are the six before and six after in kick-off order, the current one marked and fully
+  inside the strip's visible width.
+- **R17** « Match précédent » / « Match suivant » point at the neighbours and keep `view`.
+- **R18** the competition's button opens the picker on round 14, the current match marked.
+- **R19** at 393 px: no sideways scroll, the current tile visible.
+
+### 63.7 Codex's second review of PR #224 (25 Nov 2026, 19 h 09; checked against the code, written before the tests)
+
+- **Goal crossings in both spellings.** The season's record of a match carries `goalCrossedY` / `goalCrossedZ`
+  (`match-record.mjs`), the shots family `goal_crossed_y/z` (normalised to `goalY` / `goalZ`): the shoot-out's goal
+  reads both (`shotGoal` in `services/match-shots.js`).
+- **The match's table keeps what « MatchStandings » did** (found while checking the finding): embedded, the
+  competition's block (a) highlights the match's two teams in the table (`data-match-team`, as before) and (b) when the
+  fixtures read gives an empty snapshot for a season the manifest holds, loads that competition's season partition
+  (`seasonSnapshotFixtures`, moved out of `MatchStandings.jsx`), so a deep-linked match of another season keeps its
+  table.
+
+Failure modes:
+
+- **R20** (`tests/match-shots.test.mjs`) `shotGoal` gives { y, z } from `goalY/goalZ` and from `goalCrossedY/Z`; null
+  without either.
+- **R21** (`match-tabs.e2e.mjs`) « Classement »: the table marks PSG's and Lorient's rows (`data-match-team`).
+- (b) has no E2E of its own here (it needs a manifest whose season is not the site's); it is the former loader's code,
+  moved unchanged and called the same way.

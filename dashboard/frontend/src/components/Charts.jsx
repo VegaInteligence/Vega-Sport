@@ -199,12 +199,12 @@ const shotMinute = (s) =>
     ? `${number(s.minute)}${isNumber(s.minuteAdded) && s.minuteAdded > 0 ? `+${number(s.minuteAdded)}` : ""}′`
     : "—";
 const xgText = (v) => (isNumber(v) ? number(v, 2) : "Non renseigné");
-const shotText = (s) =>
+export const shotText = (s) =>
   `${s.playerName || "Joueur inconnu"} · ${shotMinute(s)} · ${shotOutcome(s)} · xG : ${xgText(s.xg)}`;
-const eventId = (match, s) =>
+export const eventId = (match, s) =>
   s.playerId ? `${match.id}:${s.playerId}` : undefined;
 /** The bubble of a shot: who, when, for whom, its xG and how it ended. */
-function ShotCard({ match, shot }) {
+export function ShotCard({ match, shot }) {
   const home = shot.teamId === match.home.id;
   const team = home ? match.home : shot.teamId === match.away.id ? match.away : null;
   const rows = [
