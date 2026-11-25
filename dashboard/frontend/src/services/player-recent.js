@@ -50,7 +50,8 @@ const count = (value) => (value == null ? "–" : fr(value));
 const share = (part, whole) => (part == null || !whole ? "–" : `${fr((100 * part) / whole)} %`);
 
 function tilesOf(line, matches) {
-  const passes = share(total(matches, "passesAccurate"), total(matches, "passesAttempted"));
+  const accurate = total(matches, "passesAccurate"), attempted = total(matches, "passesAttempted");
+  const passes = accurate == null || attempted == null ? "–" : share(accurate, attempted);
   if (line === "G") {
     const prevented = total(matches, "goalsPrevented");
     const known = matches.filter((m) => has(m.goalsConceded));
@@ -69,7 +70,8 @@ function tilesOf(line, matches) {
   if (line === "D") {
     const won = total(matches, "duelsWon"), lost = total(matches, "duelsLost");
     return [
-      { label: "Duels gagnés", value: share(won, (won ?? 0) + (lost ?? 0)) },
+      // A share needs both parts: an unknown half is never read as zero.
+      { label: "Duels gagnés", value: won == null || lost == null ? "–" : share(won, won + lost) },
       { label: "Tacles + interc.", value: count(total(matches, "tackles", "interceptions")) },
       { label: "Dégagements", value: count(total(matches, "clearances")) },
       { label: "Passes réussies", value: passes },
@@ -81,7 +83,7 @@ function tilesOf(line, matches) {
       { label: "Passes réussies", value: passes },
       { label: "Occasions créées", value: count(total(matches, "chancesCreated")) },
       { label: "Récupérations", value: count(total(matches, "recoveries")) },
-      { label: "Buts · passes d.", value: goals == null && assists == null ? "–" : `${goals ?? 0} · ${assists ?? 0}` },
+      { label: "Buts · passes d.", value: goals == null || assists == null ? "–" : `${goals} · ${assists}` },
     ];
   }
   if (line === "A") {
@@ -90,7 +92,7 @@ function tilesOf(line, matches) {
       { label: "Buts", value: count(total(matches, "goals")) },
       { label: "Passes d.", value: count(total(matches, "assists")) },
       { label: "xG", value: xg == null ? "–" : fr(xg, 1) },
-      { label: "Tirs cadrés", value: shots == null ? "–" : `${onTarget ?? 0} / ${shots}` },
+      { label: "Tirs cadrés", value: shots == null || onTarget == null ? "–" : `${onTarget} / ${shots}` },
     ];
   }
   return [];

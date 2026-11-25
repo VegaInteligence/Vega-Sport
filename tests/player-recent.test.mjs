@@ -78,3 +78,14 @@ test("R37 a grade under 20 minutes is not shown; a figure no match carries is «
   assert.deepEqual(none.tiles, []);
   assert.equal(recentForm(null, { playerId: "p_x", matchId: MATCH }).matches.length, 0);
 });
+
+test("R37 a figure made of two parts is « – » when one part is unknown, never a zero (Codex on #239)", () => {
+  const row = (extra) => ({ playerId: "p_x", matchId: "m_c", date: "2026-11-03", leagueId: "l_3FJFUl", minutes: 90, ...extra });
+  const forward = recentForm({ appearances: [row({ goals: 1, assists: null, shots: 3, shotsOnTarget: null, xg: 0.4 })] }, { playerId: "p_x", positionId: 105 });
+  assert.equal(tiles(forward)["Tirs cadrés"], "–");
+  const defender = recentForm({ appearances: [row({ duelsWon: 4, duelsLost: null, passesAccurate: 30, passesAttempted: null })] }, { playerId: "p_x", positionId: 34 });
+  assert.equal(tiles(defender)["Duels gagnés"], "–");
+  assert.equal(tiles(defender)["Passes réussies"], "–");
+  const midfielder = recentForm({ appearances: [row({ goals: 1, assists: null })] }, { playerId: "p_x", positionId: 66 });
+  assert.equal(tiles(midfielder)["Buts · passes d."], "–");
+});
