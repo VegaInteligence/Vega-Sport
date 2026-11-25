@@ -36,11 +36,77 @@ export default function MatchForecast({ match }) {
           </li>
         ))}
       </ul>
-      <p className="match-forecast-note">
-        Score le plus probable {forecast.score[0]}–{forecast.score[1]} · buts attendus {goals(forecast.homeGoals)} –{" "}
-        {goals(forecast.awayGoals)}. {reading.basis}
-        {reading.before ? ` ${reading.before}` : ""}
-      </p>
+      {/* The forecast in parts (FAILURE_MODES § 70, proposal A of the mock-up hugo chose). */}
+      <div className="match-forecast-figures">
+        <div>
+          <small>Score le plus probable</small>
+          <b>
+            {forecast.score[0]}
+            <i>–</i>
+            {forecast.score[1]}
+          </b>
+        </div>
+        <div>
+          <small>Buts attendus</small>
+          <b>
+            {goals(forecast.homeGoals)}
+            <i>–</i>
+            {goals(forecast.awayGoals)}
+          </b>
+        </div>
+      </div>
+      <div className="match-forecast-read">
+        <h4>Ce que le modèle a lu</h4>
+        <div className="match-forecast-chips">
+          {reading.sources.map((source) => (
+            <span key={source} className="match-forecast-chip">
+              {source}
+            </span>
+          ))}
+        </div>
+        {reading.elevens.length ? (
+          <ul className="match-forecast-elevens">
+            {reading.elevens.map((eleven) => (
+              <li key={eleven.side} data-side={eleven.side}>
+                <span>
+                  <i aria-hidden="true" />
+                  Onze de {eleven.name}
+                </span>
+                <span data-tone={eleven.tone}>{eleven.words}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="match-forecast-note">Le modèle ne connaît ni les compositions ni les absents.</p>
+        )}
+      </div>
+      {reading.without && (
+        <table className="match-forecast-compare">
+          <thead>
+            <tr>
+              <th scope="col">
+                <span className="sr-only">Pronostic</span>
+              </th>
+              <th scope="col">{home}</th>
+              <th scope="col">Nul</th>
+              <th scope="col">{away}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[
+              ["Avec les compositions", forecast],
+              ["Sans les compositions", reading.without],
+            ].map(([label, values]) => (
+              <tr key={label}>
+                <th scope="row">{label}</th>
+                <td>{share(values.home)}</td>
+                <td>{share(values.draw)}</td>
+                <td>{share(values.away)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </Card>
   );
 }

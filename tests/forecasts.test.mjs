@@ -225,3 +225,22 @@ test("the chart's lines of an extra-time match", async () => {
   const plain = probabilityLines({ status: "finished", points: timeline(1.6, 1.1, events, inplay, -0.03, 90), events });
   assert.deepEqual([plain.span, plain.extra, plain.penalties, plain.lines.filter((p) => p.minute === 90).length], [90, false, null, 1]);
 });
+
+test("R33 the reading carries its inputs, each eleven's words and tone, and the forecast without the line-ups (§ 70)", () => {
+  const forecast = { home: 0.45, draw: 0.27, away: 0.28, homeGoals: 1.4, awayGoals: 1.1, score: [1, 1] };
+  const read = { home: 0.52, draw: 0.25, away: 0.23, homeGoals: 1.6, awayGoals: 1.0, score: [1, 0] };
+  const alone = matchForecastReading({ forecast }, "Lille", "Lens");
+  assert.deepEqual(alone.sources, ["Force des deux équipes"]);
+  assert.deepEqual(alone.elevens, []);
+  assert.equal(alone.without, null);
+  assert.deepEqual(matchForecastReading({ forecast, form: { home: 1, away: 2 } }, "Lille", "Lens").sources,
+    ["Force des deux équipes", "10 derniers matchs (xG)"]);
+  const both = matchForecastReading({ forecast, form: { home: 1, away: 2 }, lineups: { forecast: read, home: { deviation: 0.05 }, away: { deviation: -0.72 } } }, "Lille", "Lens");
+  assert.deepEqual(both.sources, ["Force des deux équipes", "10 derniers matchs (xG)", "Compositions confirmées"]);
+  assert.deepEqual(both.elevens, [
+    { side: "home", name: "Lille", words: "proche de l'habituel", tone: "same" },
+    { side: "away", name: "Lens", words: "nettement moins fort que l'habituel", tone: "down" },
+  ]);
+  assert.equal(both.without, forecast);
+  assert.equal(matchForecastReading({ forecast, lineups: { forecast: read, home: { deviation: 0.3 }, away: { deviation: 0 } } }, "A", "B").elevens[0].tone, "up");
+});
