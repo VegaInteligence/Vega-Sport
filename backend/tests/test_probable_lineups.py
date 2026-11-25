@@ -1,5 +1,5 @@
-"""« Composition probable »: our probable eleven before the provider's line-ups (FAILURE_MODES.md §61, 61a–61m and
-61u–61ad, written before these tests).
+"""« Composition probable »: our probable eleven before the provider's line-ups (FAILURE_MODES.md §61, 61a–61m,
+61u–61ad and 61ae–61an, written before these tests).
 
 probable-v1 is the study's P5 (`etude_onze_probable.py`, `guess()` and the absence rule « B connue »): its self-test's
 cases are ported in GuessTest, and its outputs before probable-v2 are frozen in V1FrozenTest. probable-v2 is the study
@@ -67,10 +67,10 @@ class GuessTest(unittest.TestCase):
         self.w = self.p.weights(len(self.hist))
 
     def test_61a_weights_and_method(self):
-        # 61.3: the worker writes probable-v2; probable-v1 stays selectable.
-        self.assertEqual(self.p.METHOD, "probable-v2")
-        self.assertEqual(self.p.METHODS, ("probable-v1", "probable-v2"))
-        self.assertEqual((self.p.WINDOW, self.p.MIN_RECENT, self.p.DECAY), (10, 5, 0.8))
+        # 61.4: the worker writes probable-v3; probable-v1 and probable-v2 stay selectable.
+        self.assertEqual(self.p.METHOD, "probable-v3")
+        self.assertEqual(self.p.METHODS, ("probable-v1", "probable-v2", "probable-v3"))
+        self.assertEqual((self.p.WINDOW, self.p.LONG, self.p.MIN_RECENT, self.p.DECAY), (10, 30, 5, 0.8))
         self.assertEqual(self.p.weights(3), [0.8 ** 2, 0.8, 1.0])
         # The one place a window's weights are computed (hugo, 25 Nov: a later method may weigh each eleven otherwise).
         self.assertEqual(self.p.window_weights("probable-v1", self.hist, None), self.w)
@@ -234,9 +234,9 @@ class ScoreTest(unittest.TestCase):
         self.assertGreater(off[13], off[14])
         self.assertLess(on_bench[13], off[13])  # on the bench, unused: those matches count against him
         # P11 (a club of the five leagues) takes him back; probable-v1 keeps 14; so does P1a (the latest eleven).
-        self.assertIn(13, xi_of(p.predict(back, target(five=True), mr2, {}, set())))
-        self.assertNotIn(14, xi_of(p.predict(back, target(five=True), mr2, {}, set())))
-        self.assertEqual(xi_of(p.predict(back, target(five=False), mr2, {}, set())), sorted(X442))
+        self.assertIn(13, xi_of(p.predict(back, target(five=True), mr2, {}, set(), method="probable-v2")))
+        self.assertNotIn(14, xi_of(p.predict(back, target(five=True), mr2, {}, set(), method="probable-v2")))
+        self.assertEqual(xi_of(p.predict(back, target(five=False), mr2, {}, set(), method="probable-v2")), sorted(X442))
         self.assertEqual(xi_of(p.predict(back, target(five=True), mr2, {}, set(), method="probable-v1")), sorted(X442))
 
 
@@ -278,7 +278,7 @@ class RouteTest(unittest.TestCase):
     def test_61u_the_route(self):
         p = self.p
         back = [entry(k, A442, unused=(14, 15, 6, 11, 20)) for k in range(6)] + [entry(k, X442, unused=(15, 6, 11, 20)) for k in range(6, 10)]
-        five, other = p.predict(back, target(five=True), mr2, {}, set()), p.predict(back, target(five=False), mr2, {}, set())
+        five, other = p.predict(back, target(five=True), mr2, {}, set(), method="probable-v2"), p.predict(back, target(five=False), mr2, {}, set(), method="probable-v2")
         self.assertEqual(xi_of(five), sorted(A442))  # P11: 13 back
         self.assertEqual(xi_of(other), sorted(X442))  # P1a: the latest eleven
         # share: the score (P11's) of each starter, either way.
@@ -289,7 +289,7 @@ class RouteTest(unittest.TestCase):
 
     def test_61w_p1a_replaces_by_the_best_score_of_his_line(self):
         p, h5 = self.p, self.h5
-        r = p.predict(h5, target(), mr2, {3: INJURY}, set())
+        r = p.predict(h5, target(), mr2, {3: INJURY}, set(), method="probable-v2")
         self.assertEqual(xi_of(r), sorted(set(B352) - {3} | {5}))
         self.assertEqual({q: rep for q, *_, rep in r["starters"]}[5], 3)
         self.assertEqual([q for q, _ in r["absent"]], [3])
@@ -298,7 +298,7 @@ class RouteTest(unittest.TestCase):
         self.assertEqual(base, [(q, p.LINE[ROLE2[q]]) for q in B352])
         self.assertEqual(p.guess(h5, p.weights(10), mr2, {3}, None, base)[1], [(3, "D", 6)])
         # No centre back available: the best score of the outfield lines (15), not v1's order (14).
-        r = p.predict(h5, target(), mr2, {3: INJURY, 5: INJURY, 6: INJURY}, set())
+        r = p.predict(h5, target(), mr2, {3: INJURY, 5: INJURY, 6: INJURY}, set(), method="probable-v2")
         self.assertEqual({q: rep for q, *_, rep in r["starters"]}.get(15), 3)
         self.assertNotIn(14, xi_of(r))
         self.assertEqual(p.guess(h5, p.weights(10), mr2, {3, 5, 6}, None, base)[1], [(3, "D", 14)])
@@ -306,18 +306,18 @@ class RouteTest(unittest.TestCase):
     def test_61w_a_keeper_only_by_a_keeper(self):
         p = self.p
         hist = [entry(k, A442) for k in range(4)] + [entry(k, B352) for k in range(4, 7)]
-        r = p.predict(hist, target(), mr2, {1: INJURY}, set())  # no other keeper: one short, 5 (on the sheets) not in goal
+        r = p.predict(hist, target(), mr2, {1: INJURY}, set(), method="probable-v2")  # no other keeper: one short, 5 (on the sheets) not in goal
         self.assertEqual(xi_of(r), sorted(set(B352) - {1}))
-        r = p.predict(hist[:-1] + [entry(6, B352, bench=(20,))], target(), mr2, {1: INJURY}, set())  # 20 came on once
+        r = p.predict(hist[:-1] + [entry(6, B352, bench=(20,))], target(), mr2, {1: INJURY}, set(), method="probable-v2")  # 20 came on once
         self.assertEqual(xi_of(r), sorted(set(B352) - {1} | {20}))
         self.assertEqual({q: rep for q, *_, rep in r["starters"]}[20], 1)
         # The same under P11.
-        self.assertEqual(len(p.predict(hist, target(five=True), mr2, {1: INJURY}, set())["starters"]), 10)
+        self.assertEqual(len(p.predict(hist, target(five=True), mr2, {1: INJURY}, set(), method="probable-v2")["starters"]), 10)
 
     def test_61w_a_gone_forward(self):
         p = self.p
         back = [entry(k, A442, unused=(14, 15, 6, 11, 20)) for k in range(6)] + [entry(k, X442, unused=(15, 6, 11, 20)) for k in range(6, 10)]
-        r = p.predict(back, target(), mr2, {}, {12})
+        r = p.predict(back, target(), mr2, {}, {12}, method="probable-v2")
         self.assertEqual(xi_of(r), sorted(set(X442) - {12} | {13}))
         self.assertIsNone({q: rep for q, *_, rep in r["starters"]}[13])  # gone: named by no one
         self.assertEqual(r["absent"], [])
@@ -326,14 +326,186 @@ class RouteTest(unittest.TestCase):
         p = self.p
         window = [entry(k, A442, bench=(6,), spots=True) for k in range(8)] + [entry(k, B352, bench=(5, 6), formation="3-5-2", spots=True) for k in range(8, 10)]
         # The 4-4-2 weighs more, but P1a draws the latest eleven (3-5-2) in its own slots; 5 (best score) takes 3's.
-        r = p.predict(window, target(), mr2, {3: INJURY}, set())
+        r = p.predict(window, target(), mr2, {3: INJURY}, set(), method="probable-v2")
         self.assertEqual(r["formation"], "3-5-2")
         slots = {q: (pos, x, y) for q, pos, x, y, _, _ in r["starters"]}
         self.assertEqual(slots[5], spot(3))
         for q in set(B352) - {3}:
             self.assertEqual(slots[q], spot(q))
         # P11 takes the 4-4-2 of greatest weight.
-        self.assertEqual(p.predict(window, target(five=True), mr2, {}, set())["formation"], "4-4-2")
+        self.assertEqual(p.predict(window, target(five=True), mr2, {}, set(), method="probable-v2")["formation"], "4-4-2")
+
+
+# probable-v3 (FAILURE_MODES §61.4, the study v5.1's V51): a 4-3-3 in the provider's slots (power.role_of with top 107).
+POS433 = ((11, 0.1, 0.5), (32, 0.3, 0.88), (34, 0.3, 0.63), (36, 0.3, 0.38), (38, 0.3, 0.13), (73, 0.6, 0.79), (75, 0.6, 0.5),
+          (77, 0.6, 0.21), (103, 0.87, 0.79), (105, 0.87, 0.5), (107, 0.87, 0.21))
+# 1 and 15 keepers; 2, 5 full backs; 3, 4, 6 centre backs; 7–9 midfielders; 10, 12, 14 wingers (10 on the right, 12 and 14
+# on the left); 11 and 13 centre forwards (13 never wide).
+ROLE3 = {1: "goalkeeper", 15: "goalkeeper", 2: "full_back", 5: "full_back", 3: "centre_back", 4: "centre_back", 6: "centre_back",
+         7: "central_midfielder", 8: "central_midfielder", 9: "central_midfielder", 10: "winger", 12: "winger", 14: "winger",
+         11: "centre_forward", 13: "centre_forward", 16: "full_back"}
+XI_A = (1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12)  # in POS433's order
+XI_B = (1, 2, 3, 4, 5, 7, 8, 9, 10, 13, 12)  # 13 at centre forward
+XI_C = (1, 2, 3, 4, 5, 7, 8, 9, 10, 13, 14)  # and 14 on the left wing
+
+
+def mr3(p):
+    return ROLE3.get(p)
+
+
+def e433(k, xi, bench=(), unused=(), spots=True):
+    came = (*xi, *bench)
+    return probable().Entry(
+        day=date(2026, 9, 6) + timedelta(days=7 * k), starters=tuple(xi), roles={p: ROLE3.get(p) for p in came}, came=frozenset(came),
+        match_id=6000 + k, competition_id=30, opponent_id=3, formation="4-3-3",
+        spots={p: POS433[i] for i, p in enumerate(xi)} if spots else {}, shirts={p: p for p in (*came, *unused)},
+        sheet=frozenset((*came, *unused)), ctype="L", opp_elo=1500.0)
+
+
+def psg_window(spots=True, keeper_on=False):
+    """The PSG – Roma case (61ae): 12 (left winger) started nine of ten; 13 (centre forward) three, at centre forward; 14 (left
+    winger) once, on the left; 6 and 15 on the sheet, never on the pitch (15 on once when keeper_on)."""
+    w = [e433(k, XI_A, (13,), (14, 6, 15), spots) for k in range(6)] + [e433(k, XI_B, (11,), (14, 6, 15), spots) for k in (6, 7)]
+    w += [e433(8, XI_C, (11, 12), (6, 15), spots), e433(9, XI_A, (13, 15) if keeper_on else (13,), (14, 6) if keeper_on else (14, 6, 15), spots)]
+    return w
+
+
+def slots_of(result):
+    return {p: pos for p, pos, *_ in result["starters"]}
+
+
+class V3Test(unittest.TestCase):
+    """61ae–61am: probable-v3 in the clubs of the five leagues; v2 elsewhere and wherever v3 cannot fill the slots."""
+
+    def setUp(self):
+        self.p = probable()
+        self.win = psg_window()
+
+    def v(self, method, window=None, absent=None, gone=(), five=True, **kw):
+        return self.p.predict(window or self.win, target(five=five), mr3, absent or {}, set(gone), method=method, **kw)
+
+    def test_61aj_labels_by_hand(self):
+        p = self.p
+        f532 = {1: (11, .1, .5), 2: (51, .37, .89), 3: (33, .36, .7), 4: (35, .36, .5), 5: (37, .36, .31), 6: (59, .37, .11),
+                7: (73, .61, .79), 8: (75, .61, .5), 9: (77, .61, .21), 10: (104, .87, .7), 11: (106, .87, .3)}
+        lb = p.labels("5-3-2", f532)
+        self.assertEqual((lb[1], lb[6], lb[5], lb[4], lb[3], lb[2], lb[9], lb[8], lb[7], lb[10], lb[11]),
+                         (("G", "C"), ("D", "L"), ("D", "C"), ("D", "C"), ("D", "C"), ("D", "R"), ("M", "L"), ("M", "C"), ("M", "R"), ("A", "C"), ("A", "C")))
+        f4231 = {1: (11, .1, .5), 2: (32, .29, .88), 3: (34, .29, .63), 4: (36, .29, .38), 5: (38, .29, .13), 6: (64, .49, .7), 7: (66, .49, .3),
+                 8: (83, .68, .84), 9: (85, .68, .5), 10: (87, .68, .16), 11: (115, .87, .5)}
+        lc = p.labels("4-2-3-1", f4231)
+        self.assertEqual((lc[5], lc[6], lc[7], lc[10], lc[9], lc[11], lc[8]), (("D", "L"), ("M", "C"), ("M", "C"), ("A", "L"), ("A", "C"), ("A", "C"), ("A", "R")))
+        self.assertNotIn(4, p.labels("5-3-2", {**f532, 4: (35, .36, None)}))  # no pitch_y: no label
+        self.assertNotIn(1, p.labels("5-3-2", {**f532, 1: (None, .1, .5)}))  # no slot: no label
+        self.assertEqual(p.labels("4-3-3", {}), {})
+
+    def test_61aj_role_shares_and_fit_by_hand(self):
+        p, win = self.p, self.win
+        sh = p.role_shares(win, mr3)
+        # Wingers: 20 labelled starts (10 on the right ten times, 12 on the left nine, 14 once): A-L half of them.
+        self.assertAlmostEqual(sh.label("winger", ("A", "L")), 0.5, places=12)
+        self.assertAlmostEqual(sh.line("winger", "A"), 1.0, places=12)
+        # Centre forwards: 10 labelled starts, under 20: the share of A-L among every labelled start (10 of 110); no line share.
+        self.assertAlmostEqual(sh.label("centre_forward", ("A", "L")), 10 / 110, places=12)
+        self.assertEqual(sh.line("centre_forward", "A"), 0.0)
+        self.assertAlmostEqual(sh.label(None, ("G", "C")), 10 / 110, places=12)  # no role: the all-starts share (« none » under 20)
+        wts = p.window_weights("probable-v3", win, target(five=True))
+        self.assertEqual(wts, p.similarity_weights(win, target(five=True)))
+        counts = p.fit_counts(win, wts)
+        self.assertAlmostEqual(p.fit(14, ("A", "L"), counts, sh, mr3), (wts[8] + 2 * 0.5) / (wts[8] + 2), places=12)
+        n13 = wts[6] + wts[7] + wts[8]
+        self.assertAlmostEqual(p.fit(13, ("A", "L"), counts, sh, mr3), (0 + 2 * 10 / 110) / (n13 + 2), places=12)
+        self.assertAlmostEqual(p.fit(13, ("A", "C"), counts, sh, mr3), (n13 + 2 * sh.label("centre_forward", ("A", "C"))) / (n13 + 2), places=12)
+        self.assertAlmostEqual(p.fit(15, ("G", "C"), counts, sh, mr3), sh.label("goalkeeper", ("G", "C")), places=12)  # never started: the share
+
+    def test_61ae_the_left_winger_takes_the_left_wing(self):
+        absent = {12: INJURY}
+        v2, v3 = self.v("probable-v2", absent=absent), self.v("probable-v3", absent=absent)
+        # v2 (P11): the best attacking score (13, a centre forward) in the absent left winger's slot.
+        self.assertEqual(slots_of(v2)[13], 107)
+        self.assertNotIn(14, slots_of(v2))
+        # v3: 14, a left winger, on the left; 11 at centre forward, 10 on the right; 13 out.
+        got = slots_of(v3)
+        self.assertEqual((got[14], got[11], got[10]), (107, 105, 103))
+        self.assertNotIn(13, got)
+        self.assertEqual(len(got), 11)
+        s = self.p.scores(self.win, self.p.window_weights("probable-v3", self.win, target(five=True)))
+        self.assertTrue(all(abs(share - s[q]) < 1e-12 for q, *_, share, _ in v3["starters"]))  # share: the score
+        self.assertEqual([q for q, _ in v3["absent"]], [12])
+
+    def test_61al_whom_each_replaces(self):
+        rep = {q: r for q, *_, r in self.v("probable-v3", absent={12: INJURY})["starters"]}
+        self.assertEqual(rep[14], 12)
+        self.assertTrue(all(r is None for q, r in rep.items() if q != 14))
+        gone = self.v("probable-v3", gone={12})
+        self.assertEqual(slots_of(gone)[14], 107)
+        self.assertTrue(all(r is None for *_, r in gone["starters"]))
+        self.assertEqual(gone["absent"], [])
+
+    def permitted_everywhere(self, result, history=None):
+        p, win = self.p, self.win
+        ok = p.permitted(history or win, mr3, p.role_shares(history or win, mr3))
+        line = {pos: ln for (pos, _, _), ln in zip(POS433, "GDDDDMMMAAA")}
+        for q, pos, *_ in result["starters"]:
+            self.assertIn(line[pos], ok(q), q)
+            self.assertEqual(line[pos] == "G", ROLE3[q] == "goalkeeper", q)
+
+    def test_61af_61ah_only_in_permitted_lines_and_keepers_in_goal(self):
+        for absent in ({12: INJURY}, {12: INJURY, 14: INJURY}, {10: INJURY, 12: INJURY}):
+            with self.subTest(absent=sorted(absent)):
+                self.permitted_everywhere(self.v("probable-v3", absent=absent))
+        # Two midfielders, or a full back, out: no assignment within the permitted lines (6 never came on): v2's (61ai).
+        for absent in ({7: INJURY, 8: INJURY}, {2: INJURY}):
+            with self.subTest(absent=sorted(absent)):
+                self.assertEqual(self.v("probable-v3", absent=absent), self.v("probable-v2", absent=absent))
+        # A full back who started in midfield only in the history's older elevens (beyond the window) may play there.
+        p, old = self.p, [e433(k - 20, (1, 2, 3, 4, 6, 7, 8, 5, 10, 11, 12), (13,), (14, 15)) for k in range(3)]
+        history = old + self.win
+        self.assertEqual(p.permitted(self.win, mr3, p.role_shares(self.win, mr3))(5), {"D"})
+        self.assertEqual(p.permitted(history, mr3, p.role_shares(history, mr3))(5), {"D", "M"})
+        # 16 (a full back) on from the bench every match, 7 out: 8 and 9 the only midfielders of the window.
+        win = [e._replace(came=e.came | {16}, sheet=e.sheet | {16}, roles={**e.roles, 16: ROLE3[16]}) for e in self.win]
+        alone = self.v("probable-v3", window=win, absent={7: INJURY})
+        self.assertEqual(alone, self.v("probable-v2", window=win, absent={7: INJURY}))
+        r = self.v("probable-v3", window=win, absent={7: INJURY}, history=old + win)
+        self.assertNotEqual(r, alone)
+        self.permitted_everywhere(r, old + win)
+        line = {pos: ln for (pos, _, _), ln in zip(POS433, "GDDDDMMMAAA")}
+        mid = {q for q, pos, *_ in r["starters"] if line[pos] == "M"}
+        self.assertEqual(len(mid), 3)
+        self.assertLessEqual({8, 9}, mid)
+        self.assertEqual(len(mid & {5, 16}), 1)
+
+    def test_61ag_few_starts_take_their_role_s_lines(self):
+        p = self.p
+        # 25 elevens where the wingers (10 right, 14 left) start: 10 in midfield (M-R, slot 73) five times, 14 on the left wing.
+        els = [e433(k, (1, 2, 3, 4, 5, 10 if k < 5 else 7, 8, 9, 13 if k < 5 else 10, 11, 14)) for k in range(25)]
+        sh = p.role_shares(els, lambda q: {**ROLE3, 60: "winger", 61: "attacking_midfielder"}.get(q))
+        self.assertAlmostEqual(sh.line("winger", "M"), 5 / 50, places=12)
+        ok = p.permitted(els, lambda q: {**ROLE3, 60: "winger", 61: "attacking_midfielder"}.get(q), sh)
+        self.assertEqual(ok(60), {"A", "M"})  # a newcomer winger: his role's line, and midfield (10 % of the wingers' starts)
+        self.assertEqual(ok(61), {"M"})  # a role under 20 labelled starts: his role's line only
+        self.assertEqual(ok(14), {"A"})  # 25 labelled starts, all on the left wing
+        self.assertEqual(ok(99), {"?"})  # no role, no start: nothing
+
+    def test_61ai_no_assignment_within_the_permitted_lines_gives_v2(self):
+        for absent in ({3: INJURY, 4: INJURY}, {1: INJURY}):  # 6 and 15 never came on: no centre back, no keeper in the pool
+            with self.subTest(absent=sorted(absent)):
+                self.assertEqual(self.v("probable-v3", absent=absent), self.v("probable-v2", absent=absent))
+        # 15 on once: in goal under v3.
+        win = psg_window(keeper_on=True)
+        self.assertEqual(slots_of(self.v("probable-v3", window=win, absent={1: INJURY}))[15], 11)
+
+    def test_61ak_v2_elsewhere_and_without_a_template(self):
+        absent = {12: INJURY}
+        self.assertEqual(self.v("probable-v3", absent=absent, five=False), self.v("probable-v2", absent=absent, five=False))
+        bare = psg_window(spots=False)
+        self.assertEqual(self.v("probable-v3", window=bare, absent=absent), self.v("probable-v2", window=bare, absent=absent))
+
+    def test_61am_v1_and_v2_unchanged(self):
+        # v2's eleven on this window, by v2's own rules (P11: 13 back in the attack, in 12's slot) and v1's.
+        self.assertEqual(xi_of(self.v("probable-v2", absent={12: INJURY})), sorted(set(XI_A) - {12} | {13}))
+        self.assertEqual(xi_of(self.v("probable-v1", absent={12: INJURY})), sorted(set(XI_A) - {12} | {13}))
 
 
 class MigrationTest(unittest.TestCase):
@@ -707,7 +879,7 @@ class RefreshTest(RefreshBase):
         self.assertEqual(len(side), 1)
         self.assertRegex(side[0][1], r"^m_")
         self.assertRegex(side[0][3], r"^t_")
-        self.assertEqual((side[0][4], side[0][5], side[0][6], side[0][7]), ("home", "probable-v2", 10, "4-3-3"))
+        self.assertEqual((side[0][4], side[0][5], side[0][6], side[0][7]), ("home", "probable-v3", 10, "4-3-3"))
         self.assertEqual(len(players), 11)
         self.assertTrue(all(p[0].startswith("p_") and p[1].startswith("Player ") and p[2] == "starter" for p in players))
 
@@ -730,13 +902,13 @@ class RefreshV2Test(RefreshBase):
     def compute(self):
         self.db.execute("SET ROLE vega_calc")
         try:
-            return {(t.match_id, t.team_id): (t, window, result) for t, window, result in probable().compute(self.db, NOW)}
+            return {(t.match_id, t.team_id): (t, window, result) for t, window, result in probable().compute(self.db, NOW, "probable-v2")}
         finally:
             self.db.execute("RESET ROLE")
 
     def test_61ab_scope_basis_and_share_under_v2(self):
         self.scenario()
-        counts = self.run_step()
+        counts = self.run_step(method="probable-v2")
         sides = self.sides()
         self.assertEqual(sorted(sides), [(TARGET, PSG), (CUP_TIE, PSG)])
         self.assertEqual(counts["sides"], 2)
@@ -755,7 +927,7 @@ class RefreshV2Test(RefreshBase):
         injury = """INSERT INTO core.player_injuries(player_id, kind, label, start_date, end_date, source, as_of)
                     VALUES (%s, %s, %s, %s, %s, 'transfermarkt', '2026-11-24')"""
         self.scenario([(injury, (103, "injury", "Thigh injury", date(2026, 11, 23), date(2026, 12, 6)))])
-        self.run_step()
+        self.run_step(method="probable-v2")
         starters = self.starters()
         self.assertNotIn(103, starters)
         pos, x, y, share, rep = starters[112]  # the only centre back left: in 103's slot, naming him
@@ -787,7 +959,7 @@ class RefreshV2Test(RefreshBase):
         s110, s114 = hand_score(w, sizes, range(6), range(6)), hand_score(w, sizes, range(6, 10), range(10))
         self.assertGreater(s110, s114)
         # Not of the five leagues: P1a keeps the latest eleven, 114 in 110's slot.
-        self.run_step()
+        self.run_step(method="probable-v2")
         starters = self.starters()
         self.assertNotIn(110, starters)
         self.assertEqual((starters[114][0], round(starters[114][1], 2), round(starters[114][2], 2)), SLOTS[110])
@@ -795,7 +967,7 @@ class RefreshV2Test(RefreshBase):
         self.assertEqual(self.sides()[(TARGET, PSG)][1], "probable-v2")
         # Ligue 1 given its PitchAPI key of tm_history.LEAGUES: PSG is of the five leagues, P11 takes 110 back, in that slot.
         x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('competition', 'pitchapi', 'l_3FJFUl', %s)", (L1,))
-        self.run_step()
+        self.run_step(method="probable-v2")
         starters = self.starters()
         self.assertNotIn(114, starters)
         self.assertEqual(sorted(starters), sorted(BASE))
@@ -858,6 +1030,39 @@ class RefreshV2Test(RefreshBase):
         self.assertEqual(got, {(PSG, 2026), (3101, 2026), (3102, 2026), (3103, 2025)})
         # In the step: PSG's sides are of the five leagues once Ligue 1 has its key.
         self.assertTrue(all(t.five for t, _, _ in self.compute().values()))
+
+
+class RefreshV3Test(RefreshBase):
+    """61an: probable-v3 in the worker's step, under the calculation role."""
+
+    def test_61an_label_basis_and_history(self):
+        x = self.db.execute
+        self.scenario()
+        x("INSERT INTO core.provider_ids(entity_type, provider, provider_key, entity_id) VALUES ('competition', 'pitchapi', 'l_3FJFUl', %s)", (L1,))
+        counts = self.run_step()
+        sides = self.sides()
+        self.assertEqual(counts["sides"], 2)
+        self.assertEqual(tuple(sides[(TARGET, PSG)][:5]), (2026, "probable-v3", 10, date(2026, 9, 20), date(2026, 11, 22)))
+        # The history: PSG's twelve complete confirmed elevens (LONG 30); the window, its last ten.
+        x("SET ROLE vega_calc")
+        try:
+            history = probable()._windows(self.db, {PSG}, NOW, probable().LONG)[PSG]
+            window = probable()._windows(self.db, {PSG}, NOW)[PSG]
+            got = {(t.match_id, t.team_id): (t, w, r) for t, w, r in probable().compute(self.db, NOW)}
+        finally:
+            x("RESET ROLE")
+        self.assertEqual([e.match_id for e in history], list(range(1001, 1013)))
+        self.assertEqual(window, history[-10:])
+        t, w, result = got[(TARGET, PSG)]
+        self.assertTrue(t.five)
+        self.assertEqual(w, window)
+        # The stored eleven is predict's on that window, with the history and the run's role shares.
+        stored = self.starters()
+        self.assertEqual([q for q, *_ in result["starters"]], list(stored))
+        self.assertEqual(sorted(stored), sorted(BASE))  # nobody absent: the eleven of the template
+        for q, (pos, px, py, share, rep) in stored.items():
+            self.assertEqual((pos, round(px, 2), round(py, 2)), SLOTS[q], q)
+            self.assertIsNone(rep)
 
 
 if __name__ == "__main__":
