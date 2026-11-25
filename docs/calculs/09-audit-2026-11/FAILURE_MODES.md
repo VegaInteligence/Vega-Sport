@@ -5648,3 +5648,41 @@ Two causes, read in the code (`m_36394c`, in play at the time):
   `teamStatsFlagged` only: neither reads `teamStatsReliable === false` itself.
 - **R32** (`tests/explorer.test.mjs`) the statistics and players sections of a match whose flag is false say
   « incohérentes » when it has team statistics and say nothing of the kind when it has none.
+
+## 69. The page of a match to come: four retouches (hugo, 25 Nov 2026, 21 h 52; mock-up https://claude.ai/artifact/Prb21eKP44eDYHLC3Xo3N8, proposal A chosen at 21 h 58; written before the tests)
+
+hugo, on Paris Saint-Germain – Roma before kick-off: the horizontal line glued to the buttons is ugly; « À venir · 25 nov. »
+sits in a square box; the forecast's text must be redesigned; without recent head-to-heads, « Joueurs les plus utilisés »
+takes the whole width, one half per team.
+
+### 69.1 Rules
+
+- **No line under the head.** The scoreboard has no top border (`.match-scoreboard`), on every match page.
+- **The status as text.** The status line (« À venir · 25 nov. 2026 », « Terminé · … », « En direct ») keeps its dot and
+  its words, without a box (no border, no background), on every match page.
+- **The forecast in parts (proposal A).** Under the bar and the three shares: two figures side by side, « Score le plus
+  probable » and « Buts attendus »; then « Ce que le modèle a lu »: one chip per input (« Force des deux équipes », « 10
+  derniers matchs (xG) » when the answer reads the form, « Compositions confirmées » with the line-ups), and with the
+  line-ups one row per team, its colour's dot, « Onze de <club> » and how its eleven compares with its usual one (« proche
+  de l'habituel », « plus fort … », « moins fort … », « nettement … »); then, with the line-ups, a table « Avec les
+  compositions » / « Sans les compositions » of the three shares. Without the line-ups: no table, and the note « Le
+  modèle ne connaît ni les compositions ni les absents. » (the mock-up's « Les compositions et les absents ne sont pas
+  encore connus. » would contradict the absents card on the same page, which lists them; this keeps E2E K3's sentence).
+  The paragraph of before goes.
+- **Without head-to-heads, the players take the row.** When no previous meeting is collected, the « Confrontations
+  précédentes » card is not shown and « Joueurs les plus utilisés » spans both columns (its two teams side by side, as
+  inside the card today; one under the other on a phone). With meetings, nothing changes.
+
+### 69.2 Failure modes and expected outcomes
+
+- **R33** (`tests/forecasts.test.mjs`) the reading carries its inputs, each eleven's short words and tone, and the
+  forecast without the line-ups.
+- **R34** (`tests/match-forecast-render.test.mjs`) with the line-ups: the two figures (« 1–0 », « 1,6 – 1,0 »), three chips,
+  two eleven rows, the table's two rows of shares, no « D’après » paragraph; without: two chips (one without the form), the
+  note, no table.
+- **R35** (`tests/match-context-render.test.mjs`) no head-to-head: no « Confrontations précédentes », the players' card
+  has `match-overview-wide`; with one: both cards, the players' card not wide. Above 851 px the wide card's
+  `.context-players` stays a two-column grid (the « end together » rule turned it into a column: the two teams fell
+  one under the other, found on the rendered page, test written red before the rule).
+- **R36** (`tests/match-head-style.test.mjs`) `.match-scoreboard` has no top border and `.match-status` no border nor
+  background in the stylesheets.
