@@ -1,5 +1,11 @@
 # WORKLOG — reprise des 24 critères ouverts de l’audit Vega-Sport (19–20 novembre 2026)
 
+## Fiche « Performance du joueur » et publication périmée — 25 novembre 2026
+
+- Diagnostic, puis correction validée par Hugo sur `codex/performance-refresh` (base `eaf5ca01`). Aucun chevauchement actif identifié dans Linear VI. La carte de Mbappé (Real Madrid–PSV) imposait la publication de l’accueil à une lecture individuelle. Un décalage produisait le 409 « Rechargez la première page ».
+- Les ouvertures ordinaires demandent la performance courante du joueur pour le match, la saison et les compétitions sélectionnés. Les liens explicitement versionnés gardent la publication de leur manifeste. Le cache distingue les deux modes et suit les nouvelles publications.
+- Vérifié localement le 25 novembre : le même accueil périmé renvoyait 409 avant et ouvre la fiche en un seul appel 200 après, sur ordinateur et mobile. Les 4 parcours de rejeu passent (dont le lien versionné et la 404), ainsi que les 2 parcours du build local contre l’API publique, 1 030 tests du site et le build. [Preuves et commandes](/Users/lemonnierhugo/Agents/scratch/vega-performance-refresh/output/playwright/verification/README.md). Correctif local, prêt à publier.
+
 ## Onglets d’un match avant le coup d’envoi — 25 novembre 2026
 
 - Objectif : ne déclencher aucune lecture de données de jeu pour un match à venir et éviter l’erreur générique dans ses onglets. Travail isolé sur `codex/match-before-kickoff`, base `c83c53ef`. Aucun chevauchement actif trouvé dans Linear VI après lecture de VI-21 et VI-28. VI-47 et VI-153 sont terminés.

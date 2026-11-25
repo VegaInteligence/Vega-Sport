@@ -658,10 +658,11 @@ export function FootballProvider({ children, loadData = true, initialState }) {
       season: performanceContext.season,
       appearance: player,
       leagues: compactScope(performanceContext.leagueIds),
-      generation: compactGeneration(manifest.value),
+      // A performance is a single read. Only a versioned link pins it to the manifest.
+      generation: requestedVersion ? actorGeneration : undefined,
     },
     performanceSummary = useResource(
-      `compact-performance:${performanceParams.season}:${player}:${performanceParams.leagues}:${performanceParams.generation}`,
+      `compact-performance:${performanceParams.season}:${player}:${performanceParams.leagues}:${performanceParams.generation ?? `current:${actorGeneration}`}`,
       ({ signal }) => {
         if (!performanceContext.season)
           return Promise.reject(unavailablePerformance());
