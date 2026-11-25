@@ -30,7 +30,7 @@ Pour la mesure sur main, donner à `measure.py` le dossier `backend` d'une copie
 | Parts déplacées par +1 point Elo au dernier, 1 000 rejeux, 30 graines | au plus 0,5 point | −0,1 à +0,3 (main : −5,4 à +4,4) | `measure-branch.txt`, `measure-main.txt` |
 | Parts déplacées par un match joué entre le 10ᵉ et le 11ᵉ | au plus 1 point | −0,2 à +0,3 (main : −5,0 à +6,0) | les mêmes |
 | Durée d'un championnat de 190 matchs restants, 1 000 rejeux | mesurée avant et après | 0,161 s puis 0,202 s (un quart de plus) | les mêmes |
-| 62r, 62s sur la base des modèles | 8 lignes justes pour l'édition 9300, aucune pour 9301 | **non lancé** : pas de PostgreSQL dans cette session | — |
+| 62r, 62s sur la base des modèles | 8 lignes justes pour l'édition 9300, aucune pour 9301 | pas de PostgreSQL dans cette session : CI seulement. Premier passage (run 45652001852, `c1e5ef4b3c`) : arrêt à la préparation, identifiant de club en double (`teams_pkey`, id 1), défaut du test corrigé ; aucune assertion lue à ce commit, voir la CI de la PR #219 pour le passage suivant | journal du run |
 
 ## Limites
 

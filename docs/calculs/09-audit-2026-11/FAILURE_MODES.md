@@ -5291,8 +5291,13 @@ disposable base (`test_models.py`: CI only, no local PostgreSQL in this session)
 - `test_forecast.py`: the 16 tests of §62.2 red before the code, 41 of 41 green after it (`evidence/projection-lot-1/`,
   `red-before-the-code.txt` and `green-after-the-code.txt`). The whole backend suite: 643 tests, the same 50 import
   errors as main (no `psycopg` in this session), 273 skipped for want of a base (main: 626, 50 and 272).
-- **Not run:** 62r and 62s (`test_models.py`, the models' disposable base): no PostgreSQL in this session. They
-  compile; CI runs them.
+- **62r and 62s run in CI only** (`test_models.py`, the models' disposable base; no PostgreSQL in this session).
+  First run, on `c1e5ef4b3c` (Actions run 45652001852, 1 080 tests): the 16 cases of `test_forecast.py` green; 62r–62s
+  stopped at their set-up, `duplicate key value violates unique constraint "teams_pkey"`, `(id)=(1)`. The case
+  inserted its club without an id, and the identity of `core.teams` does not follow the ids the seed writes: a defect
+  of the case, not of the code. The club now has its id (62020) and the set-up is inside the guarded block, so a
+  failure leaves nothing behind. None of their assertions had run at that commit: the pull request's next run is
+  their first reading.
 - Measured (`measure.py`, main then the branch): a league of 190 matches left, 1 000 replays, 0.161 s on main, 0.202 s
   after (a quarter more, on two runs); the shares' moves of §62's opening, −0.1 to +0.3 point after.
 - The home goals of `draw_score` are a Poisson count whenever no correction is held at zero: in the rows of 0 and 1
