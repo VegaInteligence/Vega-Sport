@@ -1115,7 +1115,7 @@ html[data-theme="light"] {
   font-variant-numeric: tabular-nums;
 }
 .home-dumbbells button,
-.home-scorers-list button {
+.home-scorers-list a {
   display: grid;
   align-items: center;
   gap: 10px;
@@ -1132,7 +1132,7 @@ html[data-theme="light"] {
   grid-template-columns: 28px minmax(0, 1fr) 44px;
 }
 .home-dumbbells button:hover strong,
-.home-scorers-list button:hover strong {
+.home-scorers-list a:hover strong {
   color: var(--accent);
 }
 .home-dumbbell-name {
@@ -1196,7 +1196,7 @@ html[data-theme="light"] {
 .home-scorers-list li + li {
   border-top: 1px solid var(--border);
 }
-.home-scorers-list button {
+.home-scorers-list a {
   grid-template-columns: 28px minmax(0, 1fr) auto;
 }
 .home-scorers-list strong {
@@ -1987,7 +1987,7 @@ html[data-theme="light"] {
   font-variant-numeric: tabular-nums;
   text-align: center;
 }
-.home-scorers-list button {
+.home-scorers-list a {
   grid-template-columns: 16px 28px minmax(0, 1fr) auto;
 }
 .home-tip-row b {
