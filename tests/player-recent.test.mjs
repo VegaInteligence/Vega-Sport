@@ -115,3 +115,32 @@ test("R37 the read goes on to the next pages until five matches played, and stop
   assert.deepEqual(asked, [1, 2, 3, 4].slice(0, Math.min(RECENT_PAGES, 4)));
   assert.equal(recentForm(none.data, { playerId: "p_x", matchId: "m_000", positionId: 0 }).matches.length, 0);
 });
+
+test("R37 the pages after the first are never recovered one by one: a publication change restarts the whole read (Codex on #239)", async () => {
+  const entry = (n, minutes) => ({ id: `a_${n}`, playerId: "p_x", matchId: `m_${String(n).padStart(3, "0")}`, date: `2026-11-${String(28 - n).padStart(2, "0")}`, leagueId: "l_3FJFUl", minutes, positionId: 0 });
+  // In publication g2 a newer bench was added: every page boundary moved by one.
+  const g1 = [entry(0, null), ...Array.from({ length: 20 }, (_, i) => entry(i + 1, i < 11 ? null : 90))];
+  const g2 = [{ ...entry(0, null), id: "a_new", matchId: "m_new", date: "2026-11-29" }, ...g1];
+  let current = "g1";
+  const calls = [];
+  const read = async (p, { recover = true } = {}) => {
+    const page = p.page || 1;
+    calls.push({ page, generation: p.generation, recover });
+    if (p.generation && p.generation !== current) {
+      if (!recover) throw Object.assign(new Error("409"), { status: 409 });
+      p = { ...p, generation: undefined };
+    }
+    const rows = (current === "g1" ? g1 : g2);
+    const body = { data: { appearances: rows.slice((page - 1) * p.limit, page * p.limit), competitions: [] }, meta: { generation: current }, pagination: { page, limit: p.limit, total: rows.length, pages: Math.ceil(rows.length / p.limit), generation: current } };
+    if (page === 1) current = "g2"; // the worker publishes while page 1 travels
+    return body;
+  };
+  const body = await readRecent(read, { ...recentParams({}, "p_x", "2026/2027"), generation: "g1" }, { matchId: "m_000" });
+  // Page 2 is fenced to page 1's publication and not recovered; its refusal restarts from page 1.
+  assert.deepEqual(calls.slice(0, 3).map((c) => [c.page, c.generation, c.recover]), [[1, "g1", true], [2, "g1", false], [1, "g1", true]]);
+  const ids = body.data.appearances.map((a) => a.id);
+  assert.equal(new Set(ids).size, ids.length);
+  assert.deepEqual(ids, g2.map((a) => a.id).slice(0, ids.length));
+  const form = recentForm(body.data, { playerId: "p_x", matchId: "m_000", positionId: 0 });
+  assert.deepEqual(form.matches.map((m) => m.matchId), ["m_012", "m_013", "m_014", "m_015", "m_016"]);
+});

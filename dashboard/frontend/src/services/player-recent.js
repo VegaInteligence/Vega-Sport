@@ -39,20 +39,38 @@ const playedIn = (appearances, matchId) =>
 
 /**
  * The season read, page after page, until RECENT_MATCHES matches played (the match itself left out), the last page,
- * or RECENT_PAGES. `read(params, { signal })` answers one page. The pages after the first keep its publication.
+ * or RECENT_PAGES. `read(params, { signal, recover })` answers one page (readCompact). The pages after the first are
+ * pinned to the publication that answered it and never recovered alone: a publication change between pages moves
+ * their boundaries, so it restarts the whole read, once.
  */
 export async function readRecent(read, params, { matchId, signal } = {}) {
+  try {
+    return await readPages(read, params, { matchId, signal });
+  } catch (error) {
+    if (error?.status !== 409 || signal?.aborted) throw error;
+    return readPages(read, params, { matchId, signal });
+  }
+}
+
+async function readPages(read, params, { matchId, signal }) {
   const first = await read(params, { signal });
   const data = first?.data || first || {};
   const appearances = [...(data.appearances || [])];
   const competitions = new Map((data.competitions || []).map((c) => [c.id, c]));
   const pages = Number.isInteger(first?.pagination?.pages) ? first.pagination.pages : 1;
-  const generation = params.generation || first?.pagination?.generation || first?.meta?.generation;
+  // The publication that answered page 1, even when the read recovered from an older pin.
+  const generation =
+    first?.meta?.servedGeneration || first?.pagination?.generation || first?.meta?.generation || params.generation;
+  const seen = new Set(appearances.map((a) => a.id).filter(Boolean));
   for (let page = 2; page <= Math.min(pages, RECENT_PAGES) && playedIn(appearances, matchId) < RECENT_MATCHES; page += 1) {
     signal?.throwIfAborted?.();
-    const next = await read({ ...params, generation, page }, { signal });
+    const next = await read({ ...params, generation, page }, { signal, recover: false });
     const more = next?.data || next || {};
-    appearances.push(...(more.appearances || []));
+    for (const a of more.appearances || []) {
+      if (a.id && seen.has(a.id)) continue;
+      if (a.id) seen.add(a.id);
+      appearances.push(a);
+    }
     for (const c of more.competitions || []) if (!competitions.has(c.id)) competitions.set(c.id, c);
   }
   return { ...first, data: { ...data, appearances, competitions: [...competitions.values()] } };

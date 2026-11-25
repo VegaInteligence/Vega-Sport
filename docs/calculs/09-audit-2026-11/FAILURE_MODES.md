@@ -5818,8 +5818,9 @@ pour un gardien, un défenseur, un milieu, un attaquant ».
   newest first, 12 matches): his appearances with minutes above 0, the match itself left out (it is listed before it is
   played, every figure null), the 5 newest. An appearance on the bench without minutes is not a match played. The read
   pages by date without looking at minutes, so a reserve's 12 newest entries can all be benches: the next pages are read,
-  with the first page's publication, until 5 matches played, the season's last page, or 4 pages (48 matches; Codex on
-  #239). Fewer than 5: those he has; none: « aucun match joué cette saison ». National-team matches are not in the player's read
+  pinned to the publication that answered the first page, until 5 matches played, the season's last page, or 4 pages
+  (48 matches; Codex on #239). A later page is never recovered alone from a newer publication (its boundaries may
+  have moved): its refusal (409) restarts the whole read, once; an appearance already read is not added twice. Fewer than 5: those he has; none: « aucun match joué cette saison ». National-team matches are not in the player's read
   (season « 2026 » holds none for the players checked on 25 Nov): « toutes compétitions » is every club competition.
 - **His line.** From the line-up's position id when it names a line (`positionLineSql`: 0/11 goalkeeper; 1, 30–39, 51,
   59 defender; 2, 50–79 midfielder; 3, 80–119 forward, the attacking midfielder read as a forward), else the most frequent
@@ -5850,7 +5851,8 @@ pour un gardien, un défenseur, un milieu, un attaquant ».
   94 %; Vítinha midfielder: his bench appearances skipped, the match itself skipped; Torres forward, Buts 1, Passes d. 0,
   xG 1,5, Tirs cadrés 10 / 13; a 14-minute match shows « – » as its grade; no match played: none; a figure of two parts
   with one unknown is « – »; `readRecent` on a reserve goalkeeper whose first page is the match and eleven benches reads
-  page 2, finds his five matches there and stops; with benches only it stops at the season's last page (4).
+  page 2, finds his five matches there and stops; with benches only it stops at the season's last page (4); a publication changing after page 1: page 2 asked pinned
+  and unrecovered, refused, the read restarts from page 1, no appearance twice.
 - **R38** (`tests/player-recent-render.test.mjs`) the bubble's content: loading, failure, none, and the four tiles of
   each line, with the link to the player's page in every state.
 - **R39** `useHoverBubble({ interactive: true })` (`HoverCard.jsx`): the bubble takes the pointer, a hide is delayed and
